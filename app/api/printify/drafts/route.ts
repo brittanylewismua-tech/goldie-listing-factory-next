@@ -20,7 +20,19 @@ type TemplateProduct = {
   }>;
 };
 
-function runtimeEnv() { return env as unknown as { DB?: D1Database; PRINTIFY_TOKEN_KEY?: string }; }
+type ArtworkBucket = { delete(key: string): Promise<void> };
+function runtimeEnv() { return env as unknown as { DB?: D1Database; ARTWORK?: ArtworkBucket; PRINTIFY_TOKEN_KEY?: string }; }
+
+async function signedArtworkUrl(request: Request, stagedId: string) {
+  const secret = runtimeEnv().PRINTIFY_TOKEN_KEY;
+  if (!secret) throw new Error("Secure artwork delivery is not configured.");
+  const expires = Math.floor(Date.now() / 1000) + 10 * 60;
+  const keyBytes = Uint8Array.from(secret.match(/.{1,2}/g) ?? [], (pair) => Number.parseInt(pair, 16));
+  const key = await crypto.subtle.importKey("raw", keyBytes, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const signed = new Uint8Array(await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(`${stagedId}.${expires}`)));
+  const signature = btoa(String.fromCharCode(...signed)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  return `${new URL(request.url).origin}/api/printify/staged/${encodeURIComponent(stagedId)}?expires=${expires}&signature=${signature}`;
+}
 
 async function decryptToken(value: string) {
   const secret = runtimeEnv().PRINTIFY_TOKEN_KEY;
@@ -72,8 +84,8 @@ export async function POST(request: Request) {
   const launchBlock = await customerLaunchBlock(user);
   if (launchBlock) return NextResponse.json({ error: launchBlock }, { status: 503 });
   try {
-    const body = (await request.json()) as { productUrl?: string; description?: string; fileName?: string; contents?: string };
-    if (!body.productUrl || !body.fileName || !body.contents) return NextResponse.json({ error: "The template and design file are required." }, { status: 400 });
+    const body = (await request.json()) as { productUrl?: string; description?: string; fileName?: string; stagedId?: string };
+    if (!body.productUrl || !body.fileName || !body.stagedId) return NextResponse.json({ error: "The template and design file are required." }, { status: 400 });
     const productId = productIdFromUrl(body.productUrl);
     if (!productId) return NextResponse.json({ error: "That is not a recognized Printify editor link." }, { status: 400 });
     const token = await tokenFor(user.userId);
@@ -87,10 +99,16 @@ export async function POST(request: Request) {
     }
     if (!shop || !template) return NextResponse.json({ error: "The template product was not found in the connected Printify account." }, { status: 404 });
 
-    const upload = await api<{ id: string }>("/uploads/images.json", token, {
-      method: "POST",
-      body: JSON.stringify({ file_name: body.fileName, contents: body.contents }),
-    });
+    const artworkUrl = await signedArtworkUrl(request, body.stagedId);
+    let upload: { id: string };
+    try {
+      upload = await api<{ id: string }>("/uploads/images.json", token, {
+        method: "POST",
+        body: JSON.stringify({ file_name: body.fileName, url: artworkUrl }),
+      });
+    } finally {
+      await runtimeEnv().ARTWORK?.delete(body.stagedId).catch(() => undefined);
+    }
     const title = body.fileName.replace(/\.[^.]+$/, "").replace(/[_-]+/g, " ").trim();
     const printAreas = template.print_areas.map((area) => ({
       variant_ids: area.variant_ids,

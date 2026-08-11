@@ -87,28 +87,24 @@ export default function Home() {
     finally { setLoadingTemplate(false); }
   }
 
-  function readAsBase64(file: Blob) {
-    return new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result).split(",")[1] ?? "");
-      reader.onerror = () => reject(new Error("The design file could not be read."));
-      reader.readAsDataURL(file);
-    });
-  }
-
   async function preparedUpload(file: File) {
-    // Printify recommends URL uploads above 5 MB. While this owner-only Site
-    // cannot expose temporary public URLs, keep base64 payloads safely below it.
-    const uploadLimit = Math.floor(4.5 * 1024 * 1024);
-    if (file.size <= uploadLimit) return { contents: await readAsBase64(file), fileName: file.name };
+    // Printify accepts PNG/JPEG files up to 100 MB. Keep a safety margin for
+    // transport while preserving every useful pixel the selected product can print.
+    const uploadLimit = 95 * 1024 * 1024;
     const bitmap = await createImageBitmap(file);
     const productScale = templateDetails?.maxPrintWidth && templateDetails?.maxPrintHeight
       ? Math.min(1, templateDetails.maxPrintWidth / bitmap.width, templateDetails.maxPrintHeight / bitmap.height)
       : 1;
     let width = Math.max(1, Math.round(bitmap.width * productScale));
     let height = Math.max(1, Math.round(bitmap.height * productScale));
+    const supportedPng = file.type === "image/png" || /\.png$/i.test(file.name);
+    const supportedJpeg = /image\/jpe?g/i.test(file.type) || /\.jpe?g$/i.test(file.name);
+    if (productScale === 1 && file.size <= uploadLimit && (supportedPng || supportedJpeg)) {
+      bitmap.close();
+      return { blob: file, fileName: file.name };
+    }
     let repacked: Blob | null = null;
-    const preserveTransparency = /\.png$/i.test(file.name);
+    const preserveTransparency = supportedPng || (!supportedJpeg && file.type !== "image/jpeg");
     while (!repacked || repacked.size > uploadLimit) {
       const canvas = document.createElement("canvas");
       canvas.width = width; canvas.height = height;
@@ -124,15 +120,25 @@ export default function Home() {
         }
       }
       if (repacked.size > uploadLimit) {
-        width = Math.max(1800, Math.round(width * 0.88));
-        height = Math.max(1800, Math.round(height * 0.88));
-        if (width === 1800 || height === 1800) break;
+        width = Math.max(1, Math.round(width * 0.9));
+        height = Math.max(1, Math.round(height * 0.9));
       }
     }
     bitmap.close();
-    if (!repacked || repacked.size > uploadLimit) throw new Error("Goldie couldn’t prepare this design without reducing its print quality. Use a less complex PNG or a high-quality JPG if transparency is not required.");
+    if (!repacked) throw new Error("This image could not be read. Choose a valid PNG or JPG file.");
     const fileName = preserveTransparency ? file.name.replace(/\.[^.]+$/, ".png") : file.name.replace(/\.[^.]+$/, ".jpg");
-    return { contents: await readAsBase64(repacked), fileName };
+    return { blob: repacked, fileName };
+  }
+
+  async function stageUpload(blob: Blob, fileName: string) {
+    const response = await fetch(`/api/printify/stage?fileName=${encodeURIComponent(fileName)}`, {
+      method: "POST",
+      headers: { "Content-Type": blob.type || "application/octet-stream" },
+      body: blob,
+    });
+    const result = await response.json() as { stagedId?: string; error?: string };
+    if (!response.ok || !result.stagedId) throw new Error(result.error || "The design could not be prepared for Printify.");
+    return result.stagedId;
   }
 
   async function runDrafts(targetFiles: DesignFile[], keepSuccessful = false) {
@@ -145,7 +151,8 @@ export default function Home() {
     for (const design of targetFiles) {
       try {
         const upload = await preparedUpload(design.file);
-        const response = await fetch("/api/printify/drafts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ productUrl: template, description, fileName: upload.fileName, contents: upload.contents }) });
+        const stagedId = await stageUpload(upload.blob, upload.fileName);
+        const response = await fetch("/api/printify/drafts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ productUrl: template, description, fileName: upload.fileName, stagedId }) });
         const result = await response.json() as { draft?: DraftResult; error?: string };
         if (!response.ok || !result.draft) throw new Error(result.error || "Printify did not create this draft.");
         setDrafts((current) => [...current, result.draft!]);

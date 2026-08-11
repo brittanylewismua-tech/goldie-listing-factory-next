@@ -44,7 +44,8 @@ test("uses individual shop-aware Printify editor buttons", async () => {
   assert.match(page, /MAX_BATCH_FILES = 20/);
   assert.match(page, /MAX_BATCH_BYTES = 500 \* 1024 \* 1024/);
   assert.match(page, /templateDetails\.maxPrintWidth \/ bitmap\.width/);
-  assert.match(page, /4\.5 \* 1024 \* 1024/);
+  assert.match(page, /95 \* 1024 \* 1024/);
+  assert.match(page, /\/api\/printify\/stage/);
   assert.match(page, /UPNG\.encode/);
   assert.match(page, /Add at least one design/);
   assert.match(page, /Load your product template/);
@@ -64,9 +65,9 @@ test("ships official brand assets and removes the starter", async () => {
   await assert.rejects(access(new URL("../app\/_sites-preview\/SkeletonPreview.tsx", import.meta.url)));
 });
 
-test("customer launch remains locked until secure URL uploads exist", async () => {
+test("customer launch remains locked while secure URL uploads are ready", async () => {
   const gate = await readFile(new URL("../app/customer-launch-gate.ts", import.meta.url), "utf8");
   assert.match(gate, /CUSTOMER_LAUNCH_ENABLED = false/);
-  assert.match(gate, /SECURE_URL_UPLOAD_IMPLEMENTED = false/);
+  assert.match(gate, /SECURE_URL_UPLOAD_IMPLEMENTED = true/);
   assert.match(gate, /Customer launch is locked until secure temporary-URL artwork delivery is implemented/);
 });

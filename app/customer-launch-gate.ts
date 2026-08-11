@@ -4,7 +4,7 @@ import type { ChatGPTUser } from "@/app/chatgpt-auth";
 // These two switches intentionally live in source control. Customer access
 // cannot be enabled by changing the Site's sharing setting alone.
 export const CUSTOMER_LAUNCH_ENABLED = false;
-export const SECURE_URL_UPLOAD_IMPLEMENTED = false;
+export const SECURE_URL_UPLOAD_IMPLEMENTED = true;
 
 type Runtime = { DB?: D1Database };
 
