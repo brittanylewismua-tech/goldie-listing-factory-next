@@ -76,6 +76,8 @@ test("uses individual shop-aware Printify editor buttons", async () => {
   assert.match(route, /primaryTemplateImageId/);
   assert.match(route, /image\.id === primaryTemplateImageId/);
   assert.match(route, /Add one placeholder design/);
+  assert.match(route, /placeholder\.images\?\.length/);
+  assert.match(route, /area\.placeholders\.length > 0/);
 });
 
 test("ships official brand assets and removes the starter", async () => {

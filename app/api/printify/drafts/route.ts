@@ -114,14 +114,14 @@ export async function POST(request: Request) {
     const title = body.fileName.replace(/\.[^.]+$/, "").replace(/[_-]+/g, " ").trim();
     const printAreas = template.print_areas.map((area) => ({
       variant_ids: area.variant_ids,
-      placeholders: area.placeholders.map((placeholder) => {
+      placeholders: area.placeholders.filter((placeholder) => (placeholder.images?.length ?? 0) > 0).map((placeholder) => {
         const images = (placeholder.images ?? []).map((image) => image.id === primaryTemplateImageId
           ? { id: upload.id, x: image.x ?? 0.5, y: image.y ?? 0.5, scale: image.scale ?? 1, angle: image.angle ?? 0 }
           : image);
         return { position: placeholder.position, images };
       }),
       ...(area.background ? { background: area.background } : {}),
-    }));
+    })).filter((area) => area.placeholders.length > 0);
     const created = await api<{ id: string }>(`/shops/${shop.id}/products.json`, token, {
       method: "POST",
       body: JSON.stringify({
