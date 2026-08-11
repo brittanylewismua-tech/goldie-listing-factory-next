@@ -56,7 +56,7 @@ test("uses individual shop-aware Printify editor buttons", async () => {
   assert.match(page, /Add at least one design/);
   assert.match(page, /Load your product template/);
   assert.match(page, /function startOver\(\)/);
-  assert.match(page, /Start over/);
+  assert.match(page, /Clear all \/ start over/);
   assert.match(page, /folderPicker\.current\.value = ""/);
   assert.match(page, /imagePicker\.current\.value = ""/);
   assert.match(page, /function openAllDrafts\(\)/);

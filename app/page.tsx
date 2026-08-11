@@ -345,7 +345,7 @@ export default function Home() {
             </div>
           )}
           <p className="launch-note">Listings remain unpublished until you publish them in Printify.</p>
-          {(template || description || files.length > 0 || drafts.length > 0) && <button className="start-over-button" disabled={running} onClick={startOver}>Start over</button>}
+          {(template || description || files.length > 0 || drafts.length > 0) && <button className="start-over-button" disabled={running} onClick={startOver}>Clear all / start over</button>}
 
           {complete && (
             <div className="draft-preview">
