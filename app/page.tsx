@@ -213,6 +213,14 @@ export default function Home() {
             <div><span>Publishing</span><b>Draft only</b></div>
           </div>
 
+          {running && (
+            <div className="batch-progress" role="status" aria-live="polite">
+              <div className="progress-ring" aria-hidden="true"><span>{processed}/{files.length}</span></div>
+              <div className="progress-copy"><b>Creating your Printify drafts</b><span>Keep this page open while Goldie finishes the batch.</span></div>
+              <div className="progress-track"><span style={{ width: `${files.length ? (processed / files.length) * 100 : 0}%` }} /></div>
+            </div>
+          )}
+
           {!complete ? (
             <button className="launch-button" disabled={!ready || running} onClick={createDrafts}>
               <span className="button-glint" />{running ? `Creating ${processed} of ${files.length}…` : "Create Printify drafts"}<span>→</span>
