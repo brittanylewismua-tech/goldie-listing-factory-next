@@ -62,6 +62,7 @@ test("uses individual shop-aware Printify editor buttons", async () => {
   assert.match(page, /imagePicker\.current\.value = ""/);
   assert.match(page, /function openAllDrafts\(\)/);
   assert.match(page, /Open all in Printify/);
+  assert.ok(page.indexOf("drafts.map") < page.indexOf("Open all in Printify"));
   assert.match(page, /Allow pop-ups for this site/);
   assert.match(route, /response\.status === 429/);
   assert.match(page, /clientId: design\.id/);

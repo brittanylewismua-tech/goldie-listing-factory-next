@@ -363,11 +363,11 @@ export default function Home() {
           {complete && (
             <div className="draft-preview">
               <div className="draft-title"><b>Latest batch</b><span>{drafts.length} results</span></div>
-              {drafts.filter((draft) => draft.status === "Created").length > 1 && <button className="open-all-button" onClick={openAllDrafts}>Open all in Printify</button>}
-              {openAllMessage && <p className="open-all-message" role="status">{openAllMessage}</p>}
               {drafts.map((draft) => (
                 <div className={`draft-row ${draft.status === "Failed" ? "draft-failed" : ""}`} key={draft.clientId}><span className="draft-check">{draft.status === "Created" ? "✓" : "!"}</span><div><b>{draft.name}</b><small>{draft.status === "Created" ? "Unpublished Printify draft" : draft.error}</small></div>{draft.editorUrl && draft.id ? <button className={`edit-draft-button ${openedDrafts.includes(draft.id) ? "opened" : ""}`} onClick={() => openDraft(draft)}><i />{openedDrafts.includes(draft.id) ? "Opened" : "Edit in Printify"}</button> : <span>—</span>}</div>
               ))}
+              {drafts.filter((draft) => draft.status === "Created").length > 1 && <button className="open-all-button" onClick={openAllDrafts}>Open all in Printify</button>}
+              {openAllMessage && <p className="open-all-message" role="status">{openAllMessage}</p>}
             </div>
           )}
         </aside>
