@@ -2,14 +2,9 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 
-type DesignFile = { name: string; size: number; id: string };
+type DesignFile = { name: string; size: number; id: string; file: File };
 type TemplateDetails = { id: string; title: string; provider: string; enabledVariants: number; shop: string };
-
-const demoDrafts = [
-  { name: "pink-dorm-collage.png", status: "Ready", variants: 3 },
-  { name: "rich-man-poster.png", status: "Ready", variants: 3 },
-  { name: "cowgirl-disco.png", status: "Ready", variants: 3 },
-];
+type DraftResult = { id?: string; name: string; editorUrl?: string; status: "Created" | "Failed"; error?: string };
 
 export default function Home() {
   const folderPicker = useRef<HTMLInputElement>(null);
@@ -27,6 +22,8 @@ export default function Home() {
   const [files, setFiles] = useState<DesignFile[]>([]);
   const [running, setRunning] = useState(false);
   const [complete, setComplete] = useState(false);
+  const [processed, setProcessed] = useState(0);
+  const [drafts, setDrafts] = useState<DraftResult[]>([]);
 
   const templateLoaded = templateDetails !== null;
   const ready = connected && templateLoaded && description.trim().length > 0 && files.length > 0;
@@ -44,9 +41,11 @@ export default function Home() {
     if (!list) return;
     const images = Array.from(list)
       .filter((file) => /\.(png|jpe?g|webp|tiff?)$/i.test(file.name))
-      .map((file) => ({ name: file.name, size: file.size, id: `${file.name}-${file.size}-${file.lastModified}` }));
+      .map((file) => ({ name: file.name, size: file.size, id: `${file.name}-${file.size}-${file.lastModified}`, file }));
     setFiles(images);
     setComplete(false);
+    setDrafts([]);
+    setProcessed(0);
   }
 
   async function connectPrintify() {
@@ -71,13 +70,39 @@ export default function Home() {
     finally { setLoadingTemplate(false); }
   }
 
-  function createDrafts() {
+  function fileContents(file: File) {
+    return new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result).split(",")[1] ?? "");
+      reader.onerror = () => reject(new Error("The design file could not be read."));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function createDrafts() {
     if (!ready) return;
     setRunning(true);
-    window.setTimeout(() => {
-      setRunning(false);
-      setComplete(true);
-    }, 1200);
+    setComplete(false);
+    setDrafts([]);
+    setProcessed(0);
+    for (const design of files) {
+      try {
+        const contents = await fileContents(design.file);
+        const response = await fetch("/api/printify/drafts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ productUrl: template, description, fileName: design.name, contents }) });
+        const result = await response.json() as { draft?: DraftResult; error?: string };
+        if (!response.ok || !result.draft) throw new Error(result.error || "Printify did not create this draft.");
+        setDrafts((current) => [...current, result.draft!]);
+      } catch (error) {
+        setDrafts((current) => [...current, { name: design.name, status: "Failed", error: error instanceof Error ? error.message : "Draft creation failed." }]);
+      }
+      setProcessed((current) => current + 1);
+    }
+    setRunning(false);
+    setComplete(true);
+  }
+
+  function openLatestBatch() {
+    drafts.filter((draft) => draft.editorUrl).forEach((draft) => window.open(draft.editorUrl, "_blank", "noopener,noreferrer"));
   }
 
   return (
@@ -177,8 +202,8 @@ export default function Home() {
           <div className="launch-top">
             <img src="/goldie-g.png" alt="" className="goldie-g" />
             <p className="mini-label">BATCH SUMMARY</p>
-            <h2>{complete ? "Drafts created" : "Current batch"}</h2>
-            <p>{complete ? "Open the latest batch to review placement and sizing in Printify." : "Complete the four sections to create unpublished drafts in Printify."}</p>
+            <h2>{running ? `Creating ${processed + 1} of ${files.length}` : complete ? "Batch finished" : "Current batch"}</h2>
+            <p>{complete ? `${drafts.filter((draft) => draft.status === "Created").length} of ${files.length} drafts were created in Printify.` : running ? "Goldie is uploading each design and creating its Printify draft." : "Complete the four sections to create unpublished drafts in Printify."}</p>
           </div>
 
           <div className="summary-list">
@@ -190,18 +215,18 @@ export default function Home() {
 
           {!complete ? (
             <button className="launch-button" disabled={!ready || running} onClick={createDrafts}>
-              <span className="button-glint" />{running ? "Building your drafts…" : "Create Printify drafts"}<span>→</span>
+              <span className="button-glint" />{running ? `Creating ${processed} of ${files.length}…` : "Create Printify drafts"}<span>→</span>
             </button>
           ) : (
-            <button className="launch-button" onClick={() => window.alert("Your newest batch will open in separate Printify tabs.")}><span className="button-glint" />Open latest batch<span>↗</span></button>
+            <button className="launch-button" disabled={!drafts.some((draft) => draft.editorUrl)} onClick={openLatestBatch}><span className="button-glint" />Open {drafts.filter((draft) => draft.editorUrl).length} drafts in Printify<span>↗</span></button>
           )}
           <p className="launch-note">Listings remain unpublished until you publish them in Printify.</p>
 
           {complete && (
             <div className="draft-preview">
-              <div className="draft-title"><b>Latest batch</b><span>{files.length || demoDrafts.length} drafts</span></div>
-              {(files.length ? files.slice(0, 3).map((file) => ({ name: file.name, status: "Ready", variants: 3 })) : demoDrafts).map((draft) => (
-                <div className="draft-row" key={draft.name}><span className="draft-check">✓</span><div><b>{draft.name}</b><small>{draft.variants} variants · {draft.status}</small></div><span>↗</span></div>
+              <div className="draft-title"><b>Latest batch</b><span>{drafts.length} results</span></div>
+              {drafts.map((draft) => (
+                <div className={`draft-row ${draft.status === "Failed" ? "draft-failed" : ""}`} key={draft.name}><span className="draft-check">{draft.status === "Created" ? "✓" : "!"}</span><div><b>{draft.name}</b><small>{draft.status === "Created" ? "Unpublished Printify draft" : draft.error}</small></div>{draft.editorUrl ? <a href={draft.editorUrl} target="_blank" rel="noreferrer" aria-label={`Open ${draft.name} in Printify`}>↗</a> : <span>—</span>}</div>
               ))}
             </div>
           )}

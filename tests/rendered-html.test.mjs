@@ -24,6 +24,7 @@ test("server-renders the branded Listing Factory", async () => {
   assert.match(html, /transparent-background PNG/);
   assert.match(html, /Create Printify drafts/);
   assert.match(html, /Listings remain unpublished/);
+  assert.doesNotMatch(html, /pink-dorm-collage|rich-man-poster|cowgirl-disco|newest batch will open/i);
   assert.doesNotMatch(html, /codex-preview|react-loading-skeleton/i);
 });
 
