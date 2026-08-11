@@ -14,7 +14,7 @@ type TemplateProduct = {
     variant_ids: number[];
     placeholders: Array<{
       position: string;
-      images?: Array<{ x?: number; y?: number; scale?: number; angle?: number }>;
+      images?: Array<{ id?: string; x?: number; y?: number; scale?: number; angle?: number }>;
     }>;
     background?: string;
   }>;
@@ -101,6 +101,11 @@ export async function POST(request: Request) {
     }
     if (!shop || !template) return NextResponse.json({ error: "The template product was not found in the connected Printify account." }, { status: 404 });
 
+    const primaryTemplateImageId = template.print_areas
+      .flatMap((area) => area.placeholders.flatMap((placeholder) => placeholder.images ?? []))
+      .find((image) => image.id)?.id;
+    if (!primaryTemplateImageId) throw new Error("Add one placeholder design to the Printify template before using it for a batch.");
+
     const artworkUrl = await signedArtworkUrl(request, body.stagedId);
     const upload = await api<{ id: string }>("/uploads/images.json", token, {
       method: "POST",
@@ -110,8 +115,10 @@ export async function POST(request: Request) {
     const printAreas = template.print_areas.map((area) => ({
       variant_ids: area.variant_ids,
       placeholders: area.placeholders.map((placeholder) => {
-        const placement = placeholder.images?.[0];
-        return { position: placeholder.position, images: [{ id: upload.id, x: placement?.x ?? 0.5, y: placement?.y ?? 0.5, scale: placement?.scale ?? 1, angle: placement?.angle ?? 0 }] };
+        const images = (placeholder.images ?? []).map((image) => image.id === primaryTemplateImageId
+          ? { id: upload.id, x: image.x ?? 0.5, y: image.y ?? 0.5, scale: image.scale ?? 1, angle: image.angle ?? 0 }
+          : image);
+        return { position: placeholder.position, images };
       }),
       ...(area.background ? { background: area.background } : {}),
     }));
