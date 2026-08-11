@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 type DesignFile = { name: string; size: number; id: string };
 type TemplateDetails = { id: string; title: string; provider: string; enabledVariants: number; shop: string };
@@ -17,6 +17,7 @@ export default function Home() {
   const [token, setToken] = useState("");
   const [connectionError, setConnectionError] = useState("");
   const [connecting, setConnecting] = useState(false);
+  const [checkingConnection, setCheckingConnection] = useState(true);
   const [template, setTemplate] = useState("");
   const [templateDetails, setTemplateDetails] = useState<TemplateDetails | null>(null);
   const [templateError, setTemplateError] = useState("");
@@ -29,6 +30,14 @@ export default function Home() {
   const templateLoaded = templateDetails !== null;
   const ready = connected && templateLoaded && description.trim().length > 0 && files.length > 0;
   const totalSize = useMemo(() => files.reduce((sum, file) => sum + file.size, 0), [files]);
+
+  useEffect(() => {
+    fetch("/api/printify")
+      .then((response) => response.json())
+      .then((result: { connected?: boolean }) => setConnected(Boolean(result.connected)))
+      .catch(() => setConnected(false))
+      .finally(() => setCheckingConnection(false));
+  }, []);
 
   function chooseFiles(list: FileList | null) {
     if (!list) return;
@@ -45,7 +54,7 @@ export default function Home() {
       const response = await fetch("/api/printify", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ token }) });
       const result = await response.json() as { connected?: boolean; error?: string };
       if (!response.ok || !result.connected) throw new Error(result.error || "Printify could not be connected.");
-      setConnected(true);
+      setConnected(true); setToken("");
     } catch (error) { setConnected(false); setConnectionError(error instanceof Error ? error.message : "Printify could not be connected."); }
     finally { setConnecting(false); }
   }
@@ -53,7 +62,7 @@ export default function Home() {
   async function loadTemplate() {
     setLoadingTemplate(true); setTemplateError(""); setTemplateDetails(null);
     try {
-      const response = await fetch("/api/printify", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ token, productUrl: template }) });
+      const response = await fetch("/api/printify", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ productUrl: template }) });
       const result = await response.json() as { product?: TemplateDetails; error?: string };
       if (!response.ok || !result.product) throw new Error(result.error || "The template could not be loaded.");
       setTemplateDetails(result.product);
@@ -100,15 +109,17 @@ export default function Home() {
             <div className="step-number">01</div>
             <div className="step-content">
               <div className="step-heading"><div><p className="mini-label">PRINTIFY CONNECTION</p><h2>Your Printify account</h2></div>{connected && <span className="done-mark">✓ Connected</span>}</div>
-              <p className="step-copy">Create drafts directly inside your own Printify shop. For this private test, your token is kept only for the current browser session.</p>
-              {!connected ? (
+              <p className="step-copy">Create drafts directly inside your own Printify shop. Connect once and Goldie will remember your Printify account securely.</p>
+              {checkingConnection ? (
+                <div className="connection-row"><span className="connection-icon">P</span><div><b>Checking Printify connection…</b><small>This takes just a moment</small></div></div>
+              ) : !connected ? (
                 <div className="connection-setup">
                   <div className="inline-field"><input type="password" value={token} onChange={(event) => setToken(event.target.value)} placeholder="Paste your Printify token" aria-label="Printify token" /><button onClick={connectPrintify} disabled={!token.trim() || connecting}>{connecting ? "Connecting…" : "Connect Printify"}</button></div>
-                  <small>Your token stays in this browser session and is used only for your requested Printify calls.</small>
+                  <small>Your token is encrypted before it is saved and is never displayed again.</small>
                   {connectionError && <p className="field-error" role="alert">{connectionError}</p>}
                 </div>
               ) : (
-                <div className="connection-row"><span className="connection-icon">P</span><div><b>Printify connected</b><small>Account verified through Printify</small></div><button onClick={() => { setConnected(false); setToken(""); setTemplateDetails(null); }}>Change</button></div>
+                <div className="connection-row"><span className="connection-icon">P</span><div><b>Printify connected</b><small>Your connection will be remembered</small></div><button onClick={async () => { await fetch("/api/printify", { method: "DELETE" }); setConnected(false); setToken(""); setTemplateDetails(null); }}>Disconnect</button></div>
               )}
             </div>
           </article>
