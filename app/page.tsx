@@ -234,7 +234,7 @@ export default function Home() {
 
       <section className="hero">
         <div>
-          <h1>Batch create your Printify listings... done for you.</h1>
+          <h1>Automate your Printify listing creation process, all in one place.</h1>
           <p className="hero-copy">Choose a product template, add your product description, and select a folder of finished designs.</p>
         </div>
         <img src="/goldie-g.png" alt="" className="hero-watermark" />

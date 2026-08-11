@@ -16,6 +16,7 @@ test("server-renders the branded Listing Factory", async () => {
   assert.equal(response.status, 200);
   const html = await response.text();
   assert.match(html, /Goldie Listing Factory/);
+  assert.match(html, /Automate your Printify listing creation process, all in one place\./);
   assert.match(html, /Secure workspace/);
   assert.doesNotMatch(html, /Private workspace/);
   assert.match(html, /Your Printify account/);

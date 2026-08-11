@@ -1,7 +1,7 @@
 html,body{background:#050504}
 .app-shell{background:radial-gradient(60rem 30rem at 82% 4%,rgba(222,165,52,.13),transparent 62%),radial-gradient(42rem 26rem at -8% 42%,rgba(187,126,22,.08),transparent 68%),#050504}
 .topbar{background:rgba(5,5,4,.88);backdrop-filter:blur(16px);border-bottom-color:rgba(234,184,76,.3)}
-.hero{padding-top:62px;padding-bottom:42px}.hero .eyebrow{color:#e7b64e}.hero h1,.hero h1 em{color:#f8edd8}.hero-copy{color:#b3a58d}
+.hero{padding-top:62px;padding-bottom:42px}.hero .eyebrow{color:#e7b64e}.hero h1,.hero h1 em{color:#f8edd8}.hero h1{font-family:"Hanken Grotesk",Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-weight:700;letter-spacing:-.04em}.hero-copy{color:#b3a58d}
 .batch-meter{background:rgba(15,13,9,.72);border-color:rgba(234,184,76,.5);box-shadow:0 0 24px rgba(234,184,76,.08)}.meter-label{color:#9d927e}.meter-label b{color:#e8bd65}.meter-track{background:#2a251c}.meter-track span{background:#eab84c;box-shadow:0 0 12px rgba(234,184,76,.85)}
 .step-card{background:#f5f0e6;border-color:rgba(234,184,76,.68);box-shadow:0 0 0 1px rgba(234,184,76,.06),0 0 24px rgba(213,153,36,.07),0 18px 45px rgba(0,0,0,.22)}
 .step-card:hover{background:#f8f4ec;border-color:#f2c967;box-shadow:0 0 0 1px rgba(255,213,111,.2),0 0 28px rgba(234,184,76,.14),0 18px 45px rgba(0,0,0,.28)}
