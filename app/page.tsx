@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 type DesignFile = { name: string; size: number; id: string; file: File };
 type TemplateDetails = { id: string; title: string; provider: string; enabledVariants: number; shop: string };
-type DraftResult = { id?: string; name: string; editorUrl?: string; status: "Created" | "Failed"; error?: string };
+type DraftResult = { id?: string; name: string; shopId?: number; editorUrl?: string; status: "Created" | "Failed"; error?: string };
 
 export default function Home() {
   const folderPicker = useRef<HTMLInputElement>(null);
@@ -24,6 +24,7 @@ export default function Home() {
   const [complete, setComplete] = useState(false);
   const [processed, setProcessed] = useState(0);
   const [drafts, setDrafts] = useState<DraftResult[]>([]);
+  const [openedDrafts, setOpenedDrafts] = useState<string[]>([]);
 
   const templateLoaded = templateDetails !== null;
   const ready = connected && templateLoaded && description.trim().length > 0 && files.length > 0;
@@ -70,7 +71,7 @@ export default function Home() {
     finally { setLoadingTemplate(false); }
   }
 
-  function fileContents(file: File) {
+  function readAsBase64(file: Blob) {
     return new Promise<string>((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => resolve(String(reader.result).split(",")[1] ?? "");
@@ -79,16 +80,42 @@ export default function Home() {
     });
   }
 
-  async function createDrafts() {
-    if (!ready) return;
+  async function preparedUpload(file: File) {
+    const uploadLimit = 8 * 1024 * 1024;
+    if (file.size <= uploadLimit) return { contents: await readAsBase64(file), fileName: file.name };
+    const bitmap = await createImageBitmap(file);
+    let width = bitmap.width;
+    let height = bitmap.height;
+    let repacked: Blob | null = null;
+    const preserveTransparency = /\.png$/i.test(file.name);
+    while (!repacked || repacked.size > uploadLimit) {
+      const canvas = document.createElement("canvas");
+      canvas.width = width; canvas.height = height;
+      canvas.getContext("2d")?.drawImage(bitmap, 0, 0, width, height);
+      repacked = await new Promise<Blob>((resolve, reject) => canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error("The large image could not be prepared.")), preserveTransparency ? "image/png" : "image/jpeg", 0.94));
+      if (repacked.size > uploadLimit) {
+        width = Math.max(3000, Math.round(width * 0.88));
+        height = Math.max(3000, Math.round(height * 0.88));
+        if (width === 3000 || height === 3000) break;
+      }
+    }
+    bitmap.close();
+    if (!repacked || repacked.size > uploadLimit) throw new Error("This image is still too large after safe upload preparation.");
+    const fileName = preserveTransparency ? file.name.replace(/\.[^.]+$/, ".png") : file.name.replace(/\.[^.]+$/, ".jpg");
+    return { contents: await readAsBase64(repacked), fileName };
+  }
+
+  async function runDrafts(targetFiles: DesignFile[], keepSuccessful = false) {
+    if (!ready || !targetFiles.length) return;
     setRunning(true);
     setComplete(false);
-    setDrafts([]);
+    if (!keepSuccessful) setDrafts([]);
+    else setDrafts((current) => current.filter((draft) => draft.status === "Created"));
     setProcessed(0);
-    for (const design of files) {
+    for (const design of targetFiles) {
       try {
-        const contents = await fileContents(design.file);
-        const response = await fetch("/api/printify/drafts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ productUrl: template, description, fileName: design.name, contents }) });
+        const upload = await preparedUpload(design.file);
+        const response = await fetch("/api/printify/drafts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ productUrl: template, description, fileName: upload.fileName, contents: upload.contents }) });
         const result = await response.json() as { draft?: DraftResult; error?: string };
         if (!response.ok || !result.draft) throw new Error(result.error || "Printify did not create this draft.");
         setDrafts((current) => [...current, result.draft!]);
@@ -101,8 +128,20 @@ export default function Home() {
     setComplete(true);
   }
 
-  function openLatestBatch() {
-    drafts.filter((draft) => draft.editorUrl).forEach((draft) => window.open(draft.editorUrl, "_blank", "noopener,noreferrer"));
+  function createDrafts() { void runDrafts(files); }
+
+  function retryFailed() {
+    const failedNames = new Set(drafts.filter((draft) => draft.status === "Failed").map((draft) => draft.name));
+    void runDrafts(files.filter((file) => failedNames.has(file.name)), true);
+  }
+
+  function openDraft(draft: DraftResult) {
+    if (!draft.id || !draft.editorUrl || !draft.shopId) return;
+    const printifyTab = window.open(`https://printify.com/app/store/${draft.shopId}/products/1`, "_blank");
+    setOpenedDrafts((current) => current.includes(draft.id!) ? current : [...current, draft.id!]);
+    window.setTimeout(() => {
+      if (printifyTab && !printifyTab.closed) printifyTab.location.href = draft.editorUrl!;
+    }, 2200);
   }
 
   return (
@@ -226,7 +265,9 @@ export default function Home() {
               <span className="button-glint" />{running ? `Creating ${processed} of ${files.length}…` : "Create Printify drafts"}<span>→</span>
             </button>
           ) : (
-            <button className="launch-button" disabled={!drafts.some((draft) => draft.editorUrl)} onClick={openLatestBatch}><span className="button-glint" />Open {drafts.filter((draft) => draft.editorUrl).length} drafts in Printify<span>↗</span></button>
+            <div className="batch-actions">
+              {drafts.some((draft) => draft.status === "Failed") && <button className="retry-button" onClick={retryFailed}>Retry {drafts.filter((draft) => draft.status === "Failed").length} failed designs</button>}
+            </div>
           )}
           <p className="launch-note">Listings remain unpublished until you publish them in Printify.</p>
 
@@ -234,7 +275,7 @@ export default function Home() {
             <div className="draft-preview">
               <div className="draft-title"><b>Latest batch</b><span>{drafts.length} results</span></div>
               {drafts.map((draft) => (
-                <div className={`draft-row ${draft.status === "Failed" ? "draft-failed" : ""}`} key={draft.name}><span className="draft-check">{draft.status === "Created" ? "✓" : "!"}</span><div><b>{draft.name}</b><small>{draft.status === "Created" ? "Unpublished Printify draft" : draft.error}</small></div>{draft.editorUrl ? <a href={draft.editorUrl} target="_blank" rel="noreferrer" aria-label={`Open ${draft.name} in Printify`}>↗</a> : <span>—</span>}</div>
+                <div className={`draft-row ${draft.status === "Failed" ? "draft-failed" : ""}`} key={draft.name}><span className="draft-check">{draft.status === "Created" ? "✓" : "!"}</span><div><b>{draft.name}</b><small>{draft.status === "Created" ? "Unpublished Printify draft" : draft.error}</small></div>{draft.editorUrl && draft.id ? <button className={`edit-draft-button ${openedDrafts.includes(draft.id) ? "opened" : ""}`} onClick={() => openDraft(draft)}><i />{openedDrafts.includes(draft.id) ? "Opened" : "Edit in Printify"}</button> : <span>—</span>}</div>
               ))}
             </div>
           )}

@@ -99,7 +99,7 @@ export async function POST(request: Request) {
         print_areas: printAreas,
       }),
     });
-    return NextResponse.json({ draft: { id: created.id, name: body.fileName, editorUrl: `https://printify.com/app/editor/${created.id}`, status: "Created" } });
+    return NextResponse.json({ draft: { id: created.id, name: body.fileName, shopId: shop.id, editorUrl: `https://printify.com/app/editor/${created.id}`, status: "Created" } });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "The draft could not be created." }, { status: 500 });
   }

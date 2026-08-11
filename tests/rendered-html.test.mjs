@@ -28,6 +28,18 @@ test("server-renders the branded Listing Factory", async () => {
   assert.doesNotMatch(html, /codex-preview|react-loading-skeleton/i);
 });
 
+test("uses individual shop-aware Printify editor buttons", async () => {
+  const [page, route] = await Promise.all([
+    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/printify/drafts/route.ts", import.meta.url), "utf8"),
+  ]);
+  assert.match(page, /Edit in Printify/);
+  assert.match(page, /openedDrafts/);
+  assert.match(page, /\/app\/store\/\$\{draft\.shopId\}\/products\/1/);
+  assert.doesNotMatch(page, /openLatestBatch|Open .* drafts in Printify/);
+  assert.match(route, /shopId: shop\.id/);
+});
+
 test("ships official brand assets and removes the starter", async () => {
   const [page, layout, packageJson] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
