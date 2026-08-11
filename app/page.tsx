@@ -173,6 +173,21 @@ export default function Home() {
     void runDrafts(files.filter((file) => failedNames.has(file.name)), true);
   }
 
+  function startOver() {
+    setTemplate("");
+    setTemplateDetails(null);
+    setTemplateError("");
+    setDescription("");
+    setFiles([]);
+    setFileError("");
+    setDrafts([]);
+    setProcessed(0);
+    setComplete(false);
+    setOpenedDrafts([]);
+    if (folderPicker.current) folderPicker.current.value = "";
+    if (imagePicker.current) imagePicker.current.value = "";
+  }
+
   function openDraft(draft: DraftResult) {
     if (!draft.id || !draft.editorUrl || !draft.shopId) return;
     const printifyTab = window.open(`https://printify.com/app/store/${draft.shopId}/products/1`, "_blank");
@@ -311,6 +326,7 @@ export default function Home() {
             </div>
           )}
           <p className="launch-note">Listings remain unpublished until you publish them in Printify.</p>
+          {(template || description || files.length > 0 || drafts.length > 0) && <button className="start-over-button" disabled={running} onClick={startOver}>Start over</button>}
 
           {complete && (
             <div className="draft-preview">
