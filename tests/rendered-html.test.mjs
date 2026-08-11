@@ -109,6 +109,8 @@ test("keeps the owner test page separate from mastermind access", async () => {
   assert.match(access, /crypto\.subtle\.digest/);
   assert.doesNotMatch(access, /GOLDIE-WOLF/);
   assert.match(page, /return_to=\/mastermind|chatGPTSignInPath\("\/mastermind"\)/);
+  assert.match(page, /target="_blank"/);
+  assert.match(page, /noopener noreferrer/);
   assert.match(page, /<ListingFactory \/>/);
   assert.match(redeem, /INSERT INTO mastermind_access/);
   assert.match(admin, /DELETE FROM printify_connections/);
