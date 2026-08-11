@@ -83,8 +83,10 @@ export async function POST(request: Request) {
   if (!user) return NextResponse.json({ error: "Sign in to continue." }, { status: 401 });
   const launchBlock = await customerLaunchBlock(user);
   if (launchBlock) return NextResponse.json({ error: launchBlock }, { status: 503 });
+  let stagedIdForCleanup = "";
   try {
-    const body = (await request.json()) as { productUrl?: string; description?: string; fileName?: string; stagedId?: string };
+    const body = (await request.json()) as { productUrl?: string; description?: string; fileName?: string; stagedId?: string; clientId?: string };
+    stagedIdForCleanup = body.stagedId ?? "";
     if (!body.productUrl || !body.fileName || !body.stagedId) return NextResponse.json({ error: "The template and design file are required." }, { status: 400 });
     const productId = productIdFromUrl(body.productUrl);
     if (!productId) return NextResponse.json({ error: "That is not a recognized Printify editor link." }, { status: 400 });
@@ -100,15 +102,10 @@ export async function POST(request: Request) {
     if (!shop || !template) return NextResponse.json({ error: "The template product was not found in the connected Printify account." }, { status: 404 });
 
     const artworkUrl = await signedArtworkUrl(request, body.stagedId);
-    let upload: { id: string };
-    try {
-      upload = await api<{ id: string }>("/uploads/images.json", token, {
-        method: "POST",
-        body: JSON.stringify({ file_name: body.fileName, url: artworkUrl }),
-      });
-    } finally {
-      await runtimeEnv().ARTWORK?.delete(body.stagedId).catch(() => undefined);
-    }
+    const upload = await api<{ id: string }>("/uploads/images.json", token, {
+      method: "POST",
+      body: JSON.stringify({ file_name: body.fileName, url: artworkUrl }),
+    });
     const title = body.fileName.replace(/\.[^.]+$/, "").replace(/[_-]+/g, " ").trim();
     const printAreas = template.print_areas.map((area) => ({
       variant_ids: area.variant_ids,
@@ -129,8 +126,10 @@ export async function POST(request: Request) {
         print_areas: printAreas,
       }),
     });
-    return NextResponse.json({ draft: { id: created.id, name: body.fileName, shopId: shop.id, editorUrl: `https://printify.com/app/editor/${created.id}`, status: "Created" } });
+    return NextResponse.json({ draft: { id: created.id, clientId: body.clientId ?? body.fileName, name: body.fileName, shopId: shop.id, editorUrl: `https://printify.com/app/editor/${created.id}`, status: "Created" } });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "The draft could not be created." }, { status: 500 });
+  } finally {
+    if (stagedIdForCleanup) await runtimeEnv().ARTWORK?.delete(stagedIdForCleanup).catch(() => undefined);
   }
 }

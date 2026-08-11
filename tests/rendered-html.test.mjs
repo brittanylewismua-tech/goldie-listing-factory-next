@@ -64,6 +64,15 @@ test("uses individual shop-aware Printify editor buttons", async () => {
   assert.match(page, /Open all in Printify/);
   assert.match(page, /Allow pop-ups for this site/);
   assert.match(route, /response\.status === 429/);
+  assert.match(page, /clientId: design\.id/);
+  assert.match(page, /failedIds\.has\(file\.id\)/);
+  assert.match(page, /key=\{draft\.clientId\}/);
+  assert.doesNotMatch(page, /\.tif|tiff\?/i);
+  assert.match(page, /Open help/);
+  assert.match(page, /all access scopes/);
+  assert.match(page, /printify\.com\/app\/account\/connections/);
+  assert.match(route, /stagedIdForCleanup/);
+  assert.match(route, /finally/);
 });
 
 test("ships official brand assets and removes the starter", async () => {
@@ -76,7 +85,7 @@ test("ships official brand assets and removes the starter", async () => {
   assert.match(layout, /Goldie Listing Factory/);
   assert.doesNotMatch(packageJson, /react-loading-skeleton/);
   await access(new URL("../public/goldie-logo.png", import.meta.url));
-  await assert.rejects(access(new URL("../app\/_sites-preview\/SkeletonPreview.tsx", import.meta.url)));
+  await assert.rejects(access(new URL("../app/_sites-preview/SkeletonPreview.tsx", import.meta.url)));
 });
 
 test("keeps the owner test page separate from mastermind access", async () => {
@@ -98,4 +107,12 @@ test("keeps the owner test page separate from mastermind access", async () => {
   assert.match(redeem, /INSERT INTO mastermind_access/);
   assert.match(admin, /DELETE FROM printify_connections/);
   assert.match(admin, /SELECT user_id FROM mastermind_access/);
+  assert.match(access, /toUpperCase/);
+});
+
+test("revalidates saved Printify tokens instead of showing a false connection", async () => {
+  const route = await readFile(new URL("../app/api/printify/route.ts", import.meta.url), "utf8");
+  assert.match(route, /await printify<Shop\[\]>\("\/shops\.json", token\)/);
+  assert.match(route, /expired or was revoked/);
+  assert.match(route, /DELETE FROM printify_connections WHERE user_id = \?/);
 });

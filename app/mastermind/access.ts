@@ -23,7 +23,7 @@ export async function codeMatches(value: string) {
   const expected = runtime().MASTERMIND_ACCESS_CODE;
   if (!expected || !value) return false;
   const encoder = new TextEncoder();
-  const [left, right] = await Promise.all([crypto.subtle.digest("SHA-256", encoder.encode(value.trim())), crypto.subtle.digest("SHA-256", encoder.encode(expected))]);
+  const [left, right] = await Promise.all([crypto.subtle.digest("SHA-256", encoder.encode(value.trim().toUpperCase())), crypto.subtle.digest("SHA-256", encoder.encode(expected.trim().toUpperCase()))]);
   const a = new Uint8Array(left); const b = new Uint8Array(right);
   let difference = a.length ^ b.length;
   for (let index = 0; index < Math.min(a.length, b.length); index += 1) difference |= a[index] ^ b[index];

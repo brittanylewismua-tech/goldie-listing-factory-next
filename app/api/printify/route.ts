@@ -61,8 +61,16 @@ function productIdFromUrl(value: string) {
 export async function GET() {
   const user = await getChatGPTUser();
   if (!user) return NextResponse.json({ error: "Sign in to continue." }, { status: 401 });
-  try { return NextResponse.json({ connected: Boolean(await storedToken(user.userId)) }); }
-  catch { return NextResponse.json({ connected: false }); }
+  try {
+    const token = await storedToken(user.userId);
+    if (!token) return NextResponse.json({ connected: false });
+    await printify<Shop[]>("/shops.json", token);
+    return NextResponse.json({ connected: true });
+  } catch {
+    const db = runtimeEnv().DB;
+    await db?.prepare("DELETE FROM printify_connections WHERE user_id = ?").bind(user.userId).run().catch(() => undefined);
+    return NextResponse.json({ connected: false, reason: "Your saved Printify token expired or was revoked. Connect a new token." });
+  }
 }
 
 export async function DELETE() {
@@ -98,7 +106,7 @@ export async function POST(request: Request) {
     try {
       const providers = await printify<Array<{ id: number; title: string }>>(`/catalog/blueprints/${found.product.blueprint_id}/print_providers.json`, token);
       provider = providers.find((item) => item.id === found!.product.print_provider_id)?.title ?? provider;
-    } catch {}
+    } catch { /* Provider names are optional; the numeric provider remains usable. */ }
     let maxPrintWidth: number | null = null;
     let maxPrintHeight: number | null = null;
     try {
@@ -113,7 +121,7 @@ export async function POST(request: Request) {
         .filter((placeholder) => Number(placeholder.width) > 0 && Number(placeholder.height) > 0)
         .sort((left, right) => Number(right.width) * Number(right.height) - Number(left.width) * Number(left.height));
       if (candidates[0]) { maxPrintWidth = Number(candidates[0].width); maxPrintHeight = Number(candidates[0].height); }
-    } catch {}
+    } catch { /* Print dimensions are an optimization; draft creation can continue without them. */ }
     return NextResponse.json({ product: { id: found.product.id, title: found.product.title, provider, enabledVariants: found.product.variants?.filter((variant) => variant.is_enabled).length ?? 0, shop: found.shop.title, maxPrintWidth, maxPrintHeight } });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Printify could not be reached." }, { status: 500 });

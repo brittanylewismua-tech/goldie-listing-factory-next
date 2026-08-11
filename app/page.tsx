@@ -5,7 +5,7 @@ import UPNG from "upng-js";
 
 type DesignFile = { name: string; size: number; id: string; file: File };
 type TemplateDetails = { id: string; title: string; provider: string; enabledVariants: number; shop: string; maxPrintWidth?: number | null; maxPrintHeight?: number | null };
-type DraftResult = { id?: string; name: string; shopId?: number; editorUrl?: string; status: "Created" | "Failed"; error?: string };
+type DraftResult = { id?: string; clientId: string; name: string; shopId?: number; editorUrl?: string; status: "Created" | "Failed"; error?: string };
 
 const MAX_BATCH_FILES = 20;
 const MAX_BATCH_BYTES = 500 * 1024 * 1024;
@@ -31,6 +31,7 @@ export default function Home() {
   const [drafts, setDrafts] = useState<DraftResult[]>([]);
   const [openedDrafts, setOpenedDrafts] = useState<string[]>([]);
   const [openAllMessage, setOpenAllMessage] = useState("");
+  const [showHelp, setShowHelp] = useState(false);
 
   const templateLoaded = templateDetails !== null;
   const ready = connected && templateLoaded && description.trim().length > 0 && files.length > 0;
@@ -41,16 +42,28 @@ export default function Home() {
   useEffect(() => {
     fetch("/api/printify")
       .then((response) => response.json())
-      .then((result: { connected?: boolean }) => setConnected(Boolean(result.connected)))
+      .then((result: { connected?: boolean; reason?: string }) => { setConnected(Boolean(result.connected)); if (result.reason) setConnectionError(result.reason); })
       .catch(() => setConnected(false))
       .finally(() => setCheckingConnection(false));
   }, []);
 
+  useEffect(() => {
+    if (!running) return;
+    const protectBatch = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ""; };
+    window.addEventListener("beforeunload", protectBatch);
+    return () => window.removeEventListener("beforeunload", protectBatch);
+  }, [running]);
+
   function chooseFiles(list: FileList | null) {
     if (!list) return;
     const images = Array.from(list)
-      .filter((file) => /\.(png|jpe?g|webp|tiff?)$/i.test(file.name))
-      .map((file) => ({ name: file.name, size: file.size, id: `${file.name}-${file.size}-${file.lastModified}`, file }));
+      .filter((file) => /\.(png|jpe?g|webp)$/i.test(file.name))
+      .map((file) => ({ name: file.name, size: file.size, id: `${(file as File & { webkitRelativePath?: string }).webkitRelativePath || file.name}-${file.size}-${file.lastModified}`, file }));
+    if (images.length === 0) {
+      setFileError("No supported designs were found. Choose PNG, JPG or WebP images.");
+      setFiles([]);
+      return;
+    }
     if (images.length > MAX_BATCH_FILES) {
       setFileError(`This batch has ${images.length} designs. Choose no more than ${MAX_BATCH_FILES} designs at a time.`);
       return;
@@ -154,12 +167,12 @@ export default function Home() {
       try {
         const upload = await preparedUpload(design.file);
         const stagedId = await stageUpload(upload.blob, upload.fileName);
-        const response = await fetch("/api/printify/drafts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ productUrl: template, description, fileName: upload.fileName, stagedId }) });
+        const response = await fetch("/api/printify/drafts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ productUrl: template, description, fileName: upload.fileName, stagedId, clientId: design.id }) });
         const result = await response.json() as { draft?: DraftResult; error?: string };
         if (!response.ok || !result.draft) throw new Error(result.error || "Printify did not create this draft.");
         setDrafts((current) => [...current, result.draft!]);
       } catch (error) {
-        setDrafts((current) => [...current, { name: design.name, status: "Failed", error: error instanceof Error ? error.message : "Draft creation failed." }]);
+        setDrafts((current) => [...current, { clientId: design.id, name: design.name, status: "Failed", error: error instanceof Error ? error.message : "Draft creation failed." }]);
       }
       setProcessed((current) => current + 1);
     }
@@ -170,8 +183,8 @@ export default function Home() {
   function createDrafts() { void runDrafts(files); }
 
   function retryFailed() {
-    const failedNames = new Set(drafts.filter((draft) => draft.status === "Failed").map((draft) => draft.name));
-    void runDrafts(files.filter((file) => failedNames.has(file.name)), true);
+    const failedIds = new Set(drafts.filter((draft) => draft.status === "Failed").map((draft) => draft.clientId));
+    void runDrafts(files.filter((file) => failedIds.has(file.id)), true);
   }
 
   function startOver() {
@@ -228,7 +241,7 @@ export default function Home() {
         </div>
         <div className="top-actions">
           <span className="secure-pill"><i /> Secure workspace</span>
-          <button className="help-button" aria-label="Open help">?</button>
+          <button className="help-button" aria-label="Open help" onClick={() => setShowHelp(true)}>?</button>
         </div>
       </header>
 
@@ -292,8 +305,8 @@ export default function Home() {
               <p className="step-copy">Build one focused batch of up to 20 finished designs. Upload a folder or select individual images.</p>
               <p className="batch-limits" aria-label="Batch limits"><span>20 designs maximum</span><i /> <span>500 MB per batch</span><i /> <span>Artwork is sized for the selected product</span></p>
               <div className="file-reminder"><b>Before uploading</b><span>Designs must already be upscaled if needed. For apparel—or any product where the background should not print—use a transparent-background PNG.</span></div>
-              <input ref={folderPicker} className="hidden-picker" type="file" multiple accept=".png,.jpg,.jpeg,.webp,.tif,.tiff" {...({ webkitdirectory: "", directory: "" } as React.InputHTMLAttributes<HTMLInputElement>)} onChange={(event) => chooseFiles(event.target.files)} />
-              <input ref={imagePicker} className="hidden-picker" type="file" multiple accept=".png,.jpg,.jpeg,.webp,.tif,.tiff" onChange={(event) => chooseFiles(event.target.files)} />
+              <input ref={folderPicker} className="hidden-picker" type="file" multiple accept=".png,.jpg,.jpeg,.webp" {...({ webkitdirectory: "", directory: "" } as React.InputHTMLAttributes<HTMLInputElement>)} onChange={(event) => chooseFiles(event.target.files)} />
+              <input ref={imagePicker} className="hidden-picker" type="file" multiple accept=".png,.jpg,.jpeg,.webp" onChange={(event) => chooseFiles(event.target.files)} />
               <div className="upload-actions">
               <button className="folder-drop" onClick={() => folderPicker.current?.click()}>
                 <span className="upload-icon" aria-hidden="true">↑</span>
@@ -353,7 +366,7 @@ export default function Home() {
               {drafts.filter((draft) => draft.status === "Created").length > 1 && <button className="open-all-button" onClick={openAllDrafts}>Open all in Printify</button>}
               {openAllMessage && <p className="open-all-message" role="status">{openAllMessage}</p>}
               {drafts.map((draft) => (
-                <div className={`draft-row ${draft.status === "Failed" ? "draft-failed" : ""}`} key={draft.name}><span className="draft-check">{draft.status === "Created" ? "✓" : "!"}</span><div><b>{draft.name}</b><small>{draft.status === "Created" ? "Unpublished Printify draft" : draft.error}</small></div>{draft.editorUrl && draft.id ? <button className={`edit-draft-button ${openedDrafts.includes(draft.id) ? "opened" : ""}`} onClick={() => openDraft(draft)}><i />{openedDrafts.includes(draft.id) ? "Opened" : "Edit in Printify"}</button> : <span>—</span>}</div>
+                <div className={`draft-row ${draft.status === "Failed" ? "draft-failed" : ""}`} key={draft.clientId}><span className="draft-check">{draft.status === "Created" ? "✓" : "!"}</span><div><b>{draft.name}</b><small>{draft.status === "Created" ? "Unpublished Printify draft" : draft.error}</small></div>{draft.editorUrl && draft.id ? <button className={`edit-draft-button ${openedDrafts.includes(draft.id) ? "opened" : ""}`} onClick={() => openDraft(draft)}><i />{openedDrafts.includes(draft.id) ? "Opened" : "Edit in Printify"}</button> : <span>—</span>}</div>
               ))}
             </div>
           )}
@@ -361,6 +374,7 @@ export default function Home() {
       </section>
 
       <footer><span>GOLDIE LISTING FACTORY</span><span>BE A WOLF BIZ · 2026</span></footer>
+      {showHelp && <div className="help-overlay" role="dialog" aria-modal="true" aria-labelledby="help-title"><div className="help-card"><button className="help-close" onClick={() => setShowHelp(false)} aria-label="Close help">×</button><p className="mini-label">QUICK START</p><h2 id="help-title">Before your first batch</h2><ol><li>Use the Listing Factory from desktop Chrome or Edge.</li><li>Create a Printify personal access token and turn on <b>all access scopes</b>. Printify only shows the token once, so copy it before leaving that page.</li><li>In Printify, prepare one unpublished product with the provider, colors, sizes, prices and placement you want copied.</li><li>Paste that product’s editor link here, add your description, and choose up to 20 PNG, JPG or WebP designs.</li><li>Keep this page open until every result appears. Failed designs can be retried without repeating successful ones.</li></ol><a href="https://printify.com/app/account/connections" target="_blank" rel="noreferrer">Create or replace your Printify token →</a></div></div>}
     </main>
   );
 }

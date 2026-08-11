@@ -19,6 +19,8 @@ export async function POST(request: Request) {
   const fileName = new URL(request.url).searchParams.get("fileName")?.slice(0, 240) || "design.png";
   const contentType = request.headers.get("content-type") || "application/octet-stream";
   if (!/^image\/(png|jpeg)$/i.test(contentType)) return NextResponse.json({ error: "Choose a valid PNG or JPG file." }, { status: 400 });
+  const contentLength = Number(request.headers.get("content-length") ?? 0);
+  if (Number.isFinite(contentLength) && contentLength > 100 * 1024 * 1024) return NextResponse.json({ error: "This image is larger than Printify can receive." }, { status: 413 });
   const stagedId = `${crypto.randomUUID()}-${fileName.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
   await artwork.put(stagedId, request.body ?? await request.arrayBuffer(), {
     httpMetadata: { contentType },
