@@ -79,9 +79,23 @@ test("ships official brand assets and removes the starter", async () => {
   await assert.rejects(access(new URL("../app\/_sites-preview\/SkeletonPreview.tsx", import.meta.url)));
 });
 
-test("customer launch remains locked while secure URL uploads are ready", async () => {
-  const gate = await readFile(new URL("../app/customer-launch-gate.ts", import.meta.url), "utf8");
-  assert.match(gate, /CUSTOMER_LAUNCH_ENABLED = false/);
-  assert.match(gate, /SECURE_URL_UPLOAD_IMPLEMENTED = true/);
-  assert.match(gate, /Customer launch is locked until secure temporary-URL artwork delivery is implemented/);
+test("keeps the owner test page separate from mastermind access", async () => {
+  const [gate, access, page, redeem, admin] = await Promise.all([
+    readFile(new URL("../app/customer-launch-gate.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/mastermind/access.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/mastermind/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/mastermind/redeem/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/mastermind/admin/route.ts", import.meta.url), "utf8"),
+  ]);
+  assert.match(gate, /state\.owner/);
+  assert.match(gate, /state\.active && state\.redeemed/);
+  assert.doesNotMatch(gate, /printify_connections/);
+  assert.match(access, /MASTERMIND_ACCESS_CODE/);
+  assert.match(access, /crypto\.subtle\.digest/);
+  assert.doesNotMatch(access, /GOLDIE-WOLF/);
+  assert.match(page, /return_to=\/mastermind|chatGPTSignInPath\("\/mastermind"\)/);
+  assert.match(page, /<ListingFactory \/>/);
+  assert.match(redeem, /INSERT INTO mastermind_access/);
+  assert.match(admin, /DELETE FROM printify_connections/);
+  assert.match(admin, /SELECT user_id FROM mastermind_access/);
 });
