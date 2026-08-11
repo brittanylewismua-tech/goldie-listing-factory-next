@@ -4,11 +4,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import UPNG from "upng-js";
 
 type DesignFile = { name: string; size: number; id: string; file: File };
-type TemplateDetails = { id: string; title: string; provider: string; enabledVariants: number; shop: string };
+type TemplateDetails = { id: string; title: string; provider: string; enabledVariants: number; shop: string; maxPrintWidth?: number | null; maxPrintHeight?: number | null };
 type DraftResult = { id?: string; name: string; shopId?: number; editorUrl?: string; status: "Created" | "Failed"; error?: string };
 
 const MAX_BATCH_FILES = 20;
-const MAX_FILE_BYTES = 75 * 1024 * 1024;
 const MAX_BATCH_BYTES = 500 * 1024 * 1024;
 
 export default function Home() {
@@ -52,11 +51,6 @@ export default function Home() {
       .map((file) => ({ name: file.name, size: file.size, id: `${file.name}-${file.size}-${file.lastModified}`, file }));
     if (images.length > MAX_BATCH_FILES) {
       setFileError(`This batch has ${images.length} designs. Choose no more than ${MAX_BATCH_FILES} designs at a time.`);
-      return;
-    }
-    const oversized = images.filter((image) => image.size > MAX_FILE_BYTES);
-    if (oversized.length) {
-      setFileError(`${oversized.length === 1 ? oversized[0].name : `${oversized.length} designs`} exceeds the 75 MB per-file limit.`);
       return;
     }
     const selectedBytes = images.reduce((sum, image) => sum + image.size, 0);
@@ -108,8 +102,11 @@ export default function Home() {
     const uploadLimit = Math.floor(4.5 * 1024 * 1024);
     if (file.size <= uploadLimit) return { contents: await readAsBase64(file), fileName: file.name };
     const bitmap = await createImageBitmap(file);
-    let width = bitmap.width;
-    let height = bitmap.height;
+    const productScale = templateDetails?.maxPrintWidth && templateDetails?.maxPrintHeight
+      ? Math.min(1, templateDetails.maxPrintWidth / bitmap.width, templateDetails.maxPrintHeight / bitmap.height)
+      : 1;
+    let width = Math.max(1, Math.round(bitmap.width * productScale));
+    let height = Math.max(1, Math.round(bitmap.height * productScale));
     let repacked: Blob | null = null;
     const preserveTransparency = /\.png$/i.test(file.name);
     while (!repacked || repacked.size > uploadLimit) {
@@ -251,7 +248,7 @@ export default function Home() {
             <div className="step-content">
               <div className="step-heading"><div><p className="mini-label">DESIGNS</p><h2>Add your finished designs</h2></div>{files.length > 0 && <span className="done-mark">✓ {files.length} loaded</span>}</div>
               <p className="step-copy">Build one focused batch of up to 20 finished designs. Upload a folder or select individual images.</p>
-              <p className="batch-limits" aria-label="Batch limits"><span>20 designs maximum</span><i /> <span>75 MB per design</span><i /> <span>500 MB per batch</span></p>
+              <p className="batch-limits" aria-label="Batch limits"><span>20 designs maximum</span><i /> <span>500 MB per batch</span><i /> <span>Artwork is sized for the selected product</span></p>
               <div className="file-reminder"><b>Before uploading</b><span>Designs must already be upscaled if needed. For apparel—or any product where the background should not print—use a transparent-background PNG.</span></div>
               <input ref={folderPicker} className="hidden-picker" type="file" multiple accept=".png,.jpg,.jpeg,.webp,.tif,.tiff" {...({ webkitdirectory: "", directory: "" } as React.InputHTMLAttributes<HTMLInputElement>)} onChange={(event) => chooseFiles(event.target.files)} />
               <input ref={imagePicker} className="hidden-picker" type="file" multiple accept=".png,.jpg,.jpeg,.webp,.tif,.tiff" onChange={(event) => chooseFiles(event.target.files)} />

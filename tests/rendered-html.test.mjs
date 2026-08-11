@@ -24,8 +24,8 @@ test("server-renders the branded Listing Factory", async () => {
   assert.match(html, /transparent-background PNG/);
   assert.match(html, /Connect Printify first/);
   assert.match(html, /20 finished designs/);
-  assert.match(html, /75 MB/);
   assert.match(html, /500 MB/);
+  assert.match(html, /sized for the selected product/);
   assert.match(html, /Listings remain unpublished/);
   assert.doesNotMatch(html, /pink-dorm-collage|rich-man-poster|cowgirl-disco|newest batch will open/i);
   assert.doesNotMatch(html, /codex-preview|react-loading-skeleton/i);
@@ -42,8 +42,8 @@ test("uses individual shop-aware Printify editor buttons", async () => {
   assert.doesNotMatch(page, /openLatestBatch|Open .* drafts in Printify/);
   assert.match(route, /shopId: shop\.id/);
   assert.match(page, /MAX_BATCH_FILES = 20/);
-  assert.match(page, /MAX_FILE_BYTES = 75 \* 1024 \* 1024/);
   assert.match(page, /MAX_BATCH_BYTES = 500 \* 1024 \* 1024/);
+  assert.match(page, /templateDetails\.maxPrintWidth \/ bitmap\.width/);
   assert.match(page, /4\.5 \* 1024 \* 1024/);
   assert.match(page, /UPNG\.encode/);
   assert.match(page, /Add at least one design/);

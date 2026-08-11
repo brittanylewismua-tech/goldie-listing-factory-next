@@ -5,7 +5,8 @@ import { customerLaunchBlock } from "@/app/customer-launch-gate";
 
 const PRINTIFY_API = "https://api.printify.com/v1";
 type Shop = { id: number; title: string };
-type Product = { id: string; title: string; blueprint_id: number; print_provider_id: number; variants?: Array<{ is_enabled?: boolean }> };
+type Product = { id: string; title: string; blueprint_id: number; print_provider_id: number; variants?: Array<{ id: number; is_enabled?: boolean }>; print_areas?: Array<{ placeholders?: Array<{ position?: string }> }> };
+type CatalogVariant = { id: number; placeholders?: Array<{ position?: string; width?: number; height?: number }> };
 
 function runtimeEnv() {
   return env as unknown as { DB?: D1Database; PRINTIFY_TOKEN_KEY?: string };
@@ -98,7 +99,22 @@ export async function POST(request: Request) {
       const providers = await printify<Array<{ id: number; title: string }>>(`/catalog/blueprints/${found.product.blueprint_id}/print_providers.json`, token);
       provider = providers.find((item) => item.id === found!.product.print_provider_id)?.title ?? provider;
     } catch {}
-    return NextResponse.json({ product: { id: found.product.id, title: found.product.title, provider, enabledVariants: found.product.variants?.filter((variant) => variant.is_enabled).length ?? 0, shop: found.shop.title } });
+    let maxPrintWidth: number | null = null;
+    let maxPrintHeight: number | null = null;
+    try {
+      const catalogResponse = await printify<CatalogVariant[] | { variants?: CatalogVariant[] }>(`/catalog/blueprints/${found.product.blueprint_id}/print_providers/${found.product.print_provider_id}/variants.json?show-out-of-stock=1`, token);
+      const catalogVariants = Array.isArray(catalogResponse) ? catalogResponse : catalogResponse.variants ?? [];
+      const enabledIds = new Set(found.product.variants?.filter((variant) => variant.is_enabled).map((variant) => variant.id) ?? []);
+      const usedPositions = new Set(found.product.print_areas?.flatMap((area) => area.placeholders?.map((placeholder) => placeholder.position).filter(Boolean) ?? []) ?? []);
+      const candidates = catalogVariants
+        .filter((variant) => enabledIds.size === 0 || enabledIds.has(variant.id))
+        .flatMap((variant) => variant.placeholders ?? [])
+        .filter((placeholder) => !placeholder.position || usedPositions.size === 0 || usedPositions.has(placeholder.position))
+        .filter((placeholder) => Number(placeholder.width) > 0 && Number(placeholder.height) > 0)
+        .sort((left, right) => Number(right.width) * Number(right.height) - Number(left.width) * Number(left.height));
+      if (candidates[0]) { maxPrintWidth = Number(candidates[0].width); maxPrintHeight = Number(candidates[0].height); }
+    } catch {}
+    return NextResponse.json({ product: { id: found.product.id, title: found.product.title, provider, enabledVariants: found.product.variants?.filter((variant) => variant.is_enabled).length ?? 0, shop: found.shop.title, maxPrintWidth, maxPrintHeight } });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Printify could not be reached." }, { status: 500 });
   }
