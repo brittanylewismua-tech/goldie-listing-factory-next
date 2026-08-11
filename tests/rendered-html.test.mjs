@@ -45,6 +45,7 @@ test("uses individual shop-aware Printify editor buttons", async () => {
   assert.match(page, /MAX_FILE_BYTES = 75 \* 1024 \* 1024/);
   assert.match(page, /MAX_BATCH_BYTES = 500 \* 1024 \* 1024/);
   assert.match(page, /4\.5 \* 1024 \* 1024/);
+  assert.match(page, /UPNG\.encode/);
   assert.match(page, /Add at least one design/);
   assert.match(page, /Load your product template/);
   assert.match(route, /response\.status === 429/);

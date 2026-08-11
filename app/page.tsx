@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import UPNG from "upng-js";
 
 type DesignFile = { name: string; size: number; id: string; file: File };
 type TemplateDetails = { id: string; title: string; provider: string; enabledVariants: number; shop: string };
@@ -114,8 +115,17 @@ export default function Home() {
     while (!repacked || repacked.size > uploadLimit) {
       const canvas = document.createElement("canvas");
       canvas.width = width; canvas.height = height;
-      canvas.getContext("2d")?.drawImage(bitmap, 0, 0, width, height);
+      const context = canvas.getContext("2d", { willReadFrequently: preserveTransparency });
+      context?.drawImage(bitmap, 0, 0, width, height);
       repacked = await new Promise<Blob>((resolve, reject) => canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error("The large image could not be prepared.")), preserveTransparency ? "image/png" : "image/jpeg", 0.94));
+      if (preserveTransparency && repacked.size > uploadLimit && context) {
+        const pixels = context.getImageData(0, 0, width, height);
+        for (const colorCount of [512, 256]) {
+          const optimized = new Blob([UPNG.encode([pixels.data.buffer], width, height, colorCount)], { type: "image/png" });
+          if (optimized.size < repacked.size) repacked = optimized;
+          if (repacked.size <= uploadLimit) break;
+        }
+      }
       if (repacked.size > uploadLimit) {
         width = Math.max(1800, Math.round(width * 0.88));
         height = Math.max(1800, Math.round(height * 0.88));
