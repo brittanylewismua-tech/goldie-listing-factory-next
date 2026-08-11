@@ -22,7 +22,7 @@ test("server-renders the branded Listing Factory", async () => {
   assert.match(html, /Choose individual images/);
   assert.match(html, /already be upscaled/);
   assert.match(html, /transparent-background PNG/);
-  assert.match(html, /Create Printify drafts/);
+  assert.match(html, /Connect Printify first/);
   assert.match(html, /20 finished designs/);
   assert.match(html, /75 MB/);
   assert.match(html, /500 MB/);
@@ -45,6 +45,8 @@ test("uses individual shop-aware Printify editor buttons", async () => {
   assert.match(page, /MAX_FILE_BYTES = 75 \* 1024 \* 1024/);
   assert.match(page, /MAX_BATCH_BYTES = 500 \* 1024 \* 1024/);
   assert.match(page, /4\.5 \* 1024 \* 1024/);
+  assert.match(page, /Add at least one design/);
+  assert.match(page, /Load your product template/);
   assert.match(route, /response\.status === 429/);
 });
 

@@ -33,6 +33,7 @@ export default function Home() {
 
   const templateLoaded = templateDetails !== null;
   const ready = connected && templateLoaded && description.trim().length > 0 && files.length > 0;
+  const missingRequirement = !connected ? "Connect Printify first" : !templateLoaded ? "Load your product template" : !description.trim() ? "Add your description" : files.length === 0 ? "Add at least one design" : "";
   const totalSize = useMemo(() => files.reduce((sum, file) => sum + file.size, 0), [files]);
 
   useEffect(() => {
@@ -217,7 +218,7 @@ export default function Home() {
               <div className="step-heading"><div><p className="mini-label">PRODUCT TEMPLATE</p><h2>Choose your Printify product template</h2></div>{templateLoaded && <span className="done-mark">✓ Loaded</span>}</div>
               <p className="step-copy">Paste the link from a product in My Products. Its provider, colors, sizes, pricing and print areas carry into the whole batch—so make sure the details are correctly set in the template listing before beginning.</p>
               <div className="inline-field">
-                <input value={template} onChange={(event) => { setTemplate(event.target.value); setTemplateDetails(null); setTemplateError(""); }} placeholder="Paste your Printify product link" aria-label="Printify product link" />
+                <input value={template} onChange={(event) => { setTemplate(event.target.value); setTemplateDetails(null); setTemplateError(""); }} onBlur={() => { if (connected && template.trim() && !templateLoaded && !loadingTemplate) void loadTemplate(); }} onKeyDown={(event) => { if (event.key === "Enter" && connected && template.trim() && !loadingTemplate) { event.preventDefault(); void loadTemplate(); } }} placeholder="Paste your Printify product link" aria-label="Printify product link" />
                 <button onClick={loadTemplate} disabled={!connected || !template.trim() || loadingTemplate}>{loadingTemplate ? "Loading…" : "Load template"}</button>
               </div>
               {templateError && <p className="field-error" role="alert">{templateError}</p>}
@@ -287,7 +288,7 @@ export default function Home() {
 
           {!complete ? (
             <button className="launch-button" disabled={!ready || running} onClick={createDrafts}>
-              <span className="button-glint" />{running ? `Creating ${processed} of ${files.length}…` : "Create Printify drafts"}<span>→</span>
+              <span className="button-glint" />{running ? `Creating ${processed} of ${files.length}…` : ready ? "Create Printify drafts" : missingRequirement}<span>→</span>
             </button>
           ) : (
             <div className="batch-actions">
