@@ -41,15 +41,24 @@ async function tokenFor(userId: string) {
 }
 
 async function api<T>(path: string, token: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${PRINTIFY_API}${path}`, {
-    ...init,
-    headers: { Authorization: `Bearer ${token}`, "User-Agent": "Goldie-Listing-Factory", "Content-Type": "application/json", ...(init?.headers ?? {}) },
-  });
-  if (!response.ok) {
+  const waits = [2000, 5000, 10000];
+  for (let attempt = 0; attempt <= waits.length; attempt += 1) {
+    const response = await fetch(`${PRINTIFY_API}${path}`, {
+      ...init,
+      headers: { Authorization: `Bearer ${token}`, "User-Agent": "Goldie-Listing-Factory", "Content-Type": "application/json", ...(init?.headers ?? {}) },
+    });
+    if (response.ok) return response.json() as Promise<T>;
+    if (response.status === 429 && attempt < waits.length) {
+      const requestedWait = Number(response.headers.get("retry-after"));
+      const wait = Number.isFinite(requestedWait) && requestedWait > 0 ? Math.min(requestedWait * 1000, 20000) : waits[attempt];
+      await new Promise((resolve) => setTimeout(resolve, wait));
+      continue;
+    }
+    if (response.status === 429) throw new Error("Printify is taking longer than expected. Retry this design when the batch finishes.");
     const detail = await response.text().catch(() => "");
     throw new Error(`Printify returned ${response.status}${detail ? `: ${detail.slice(0, 180)}` : ""}`);
   }
-  return response.json() as Promise<T>;
+  throw new Error("Printify could not complete this request.");
 }
 
 function productIdFromUrl(value: string) {

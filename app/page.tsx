@@ -6,6 +6,10 @@ type DesignFile = { name: string; size: number; id: string; file: File };
 type TemplateDetails = { id: string; title: string; provider: string; enabledVariants: number; shop: string };
 type DraftResult = { id?: string; name: string; shopId?: number; editorUrl?: string; status: "Created" | "Failed"; error?: string };
 
+const MAX_BATCH_FILES = 20;
+const MAX_FILE_BYTES = 75 * 1024 * 1024;
+const MAX_BATCH_BYTES = 500 * 1024 * 1024;
+
 export default function Home() {
   const folderPicker = useRef<HTMLInputElement>(null);
   const imagePicker = useRef<HTMLInputElement>(null);
@@ -20,6 +24,7 @@ export default function Home() {
   const [loadingTemplate, setLoadingTemplate] = useState(false);
   const [description, setDescription] = useState("");
   const [files, setFiles] = useState<DesignFile[]>([]);
+  const [fileError, setFileError] = useState("");
   const [running, setRunning] = useState(false);
   const [complete, setComplete] = useState(false);
   const [processed, setProcessed] = useState(0);
@@ -43,6 +48,21 @@ export default function Home() {
     const images = Array.from(list)
       .filter((file) => /\.(png|jpe?g|webp|tiff?)$/i.test(file.name))
       .map((file) => ({ name: file.name, size: file.size, id: `${file.name}-${file.size}-${file.lastModified}`, file }));
+    if (images.length > MAX_BATCH_FILES) {
+      setFileError(`This batch has ${images.length} designs. Choose no more than ${MAX_BATCH_FILES} designs at a time.`);
+      return;
+    }
+    const oversized = images.filter((image) => image.size > MAX_FILE_BYTES);
+    if (oversized.length) {
+      setFileError(`${oversized.length === 1 ? oversized[0].name : `${oversized.length} designs`} exceeds the 75 MB per-file limit.`);
+      return;
+    }
+    const selectedBytes = images.reduce((sum, image) => sum + image.size, 0);
+    if (selectedBytes > MAX_BATCH_BYTES) {
+      setFileError(`This batch is ${(selectedBytes / 1024 / 1024).toFixed(1)} MB. Reduce it to 500 MB or less.`);
+      return;
+    }
+    setFileError("");
     setFiles(images);
     setComplete(false);
     setDrafts([]);
@@ -81,7 +101,9 @@ export default function Home() {
   }
 
   async function preparedUpload(file: File) {
-    const uploadLimit = 8 * 1024 * 1024;
+    // Printify recommends URL uploads above 5 MB. While this owner-only Site
+    // cannot expose temporary public URLs, keep base64 payloads safely below it.
+    const uploadLimit = Math.floor(4.5 * 1024 * 1024);
     if (file.size <= uploadLimit) return { contents: await readAsBase64(file), fileName: file.name };
     const bitmap = await createImageBitmap(file);
     let width = bitmap.width;
@@ -94,13 +116,13 @@ export default function Home() {
       canvas.getContext("2d")?.drawImage(bitmap, 0, 0, width, height);
       repacked = await new Promise<Blob>((resolve, reject) => canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error("The large image could not be prepared.")), preserveTransparency ? "image/png" : "image/jpeg", 0.94));
       if (repacked.size > uploadLimit) {
-        width = Math.max(3000, Math.round(width * 0.88));
-        height = Math.max(3000, Math.round(height * 0.88));
-        if (width === 3000 || height === 3000) break;
+        width = Math.max(1800, Math.round(width * 0.88));
+        height = Math.max(1800, Math.round(height * 0.88));
+        if (width === 1800 || height === 1800) break;
       }
     }
     bitmap.close();
-    if (!repacked || repacked.size > uploadLimit) throw new Error("This image is still too large after safe upload preparation.");
+    if (!repacked || repacked.size > uploadLimit) throw new Error("Goldie couldn’t prepare this design without reducing its print quality. Use a less complex PNG or a high-quality JPG if transparency is not required.");
     const fileName = preserveTransparency ? file.name.replace(/\.[^.]+$/, ".png") : file.name.replace(/\.[^.]+$/, ".jpg");
     return { contents: await readAsBase64(repacked), fileName };
   }
@@ -217,14 +239,15 @@ export default function Home() {
             <div className="step-number">04</div>
             <div className="step-content">
               <div className="step-heading"><div><p className="mini-label">DESIGNS</p><h2>Add your finished designs</h2></div>{files.length > 0 && <span className="done-mark">✓ {files.length} loaded</span>}</div>
-              <p className="step-copy">Upload a complete folder or select individual images. PNG, JPG, WEBP and TIFF are supported.</p>
+              <p className="step-copy">Build one focused batch of up to 20 finished designs. Upload a folder or select individual images.</p>
+              <div className="batch-limits" aria-label="Batch limits"><span><b>20</b> designs maximum</span><span><b>75 MB</b> per design</span><span><b>500 MB</b> per batch</span></div>
               <div className="file-reminder"><b>Before uploading</b><span>Designs must already be upscaled if needed. For apparel—or any product where the background should not print—use a transparent-background PNG.</span></div>
               <input ref={folderPicker} className="hidden-picker" type="file" multiple accept=".png,.jpg,.jpeg,.webp,.tif,.tiff" {...({ webkitdirectory: "", directory: "" } as React.InputHTMLAttributes<HTMLInputElement>)} onChange={(event) => chooseFiles(event.target.files)} />
               <input ref={imagePicker} className="hidden-picker" type="file" multiple accept=".png,.jpg,.jpeg,.webp,.tif,.tiff" onChange={(event) => chooseFiles(event.target.files)} />
               <div className="upload-actions">
               <button className="folder-drop" onClick={() => folderPicker.current?.click()}>
                 <span className="upload-icon" aria-hidden="true">↑</span>
-                <span><b>{files.length ? `${files.length} designs ready` : "Choose a folder"}</b><small>{files.length ? `${(totalSize / 1024 / 1024).toFixed(1)} MB selected · Choose again to replace` : "Upload every design in one folder"}</small></span>
+                <span><b>{files.length ? `${files.length} of 20 designs ready` : "Choose a folder"}</b><small>{files.length ? `${(totalSize / 1024 / 1024).toFixed(1)} of 500 MB selected · Choose again to replace` : "Your folder can contain up to 20 designs"}</small></span>
                 <span className="browse-chip">Browse</span>
               </button>
               <button className="folder-drop" onClick={() => imagePicker.current?.click()}>
@@ -233,6 +256,8 @@ export default function Home() {
                 <span className="browse-chip">Browse</span>
               </button>
               </div>
+              {fileError && <p className="file-limit-error" role="alert"><b>That batch can’t be added.</b><span>{fileError}</span></p>}
+              {files.length > 0 && <div className="batch-capacity"><div><b>{files.length}/20 designs</b><span>{20 - files.length} spaces remaining</span></div><div className="capacity-track"><span style={{ width: `${(files.length / 20) * 100}%` }} /></div></div>}
             </div>
           </article>
         </div>
@@ -248,7 +273,7 @@ export default function Home() {
           <div className="summary-list">
             <div><span>Printify</span><b className={connected ? "ready-text" : "waiting-text"}>{connected ? "Connected" : "Waiting"}</b></div>
             <div><span>Template</span><b>{templateLoaded ? "Loaded" : "—"}</b></div>
-            <div><span>Designs</span><b>{files.length || "—"}</b></div>
+            <div><span>Designs</span><b>{files.length ? `${files.length} / 20` : "—"}</b></div>
             <div><span>Publishing</span><b>Draft only</b></div>
           </div>
 
