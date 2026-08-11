@@ -60,3 +60,10 @@ test("ships official brand assets and removes the starter", async () => {
   await access(new URL("../public/goldie-logo.png", import.meta.url));
   await assert.rejects(access(new URL("../app\/_sites-preview\/SkeletonPreview.tsx", import.meta.url)));
 });
+
+test("customer launch remains locked until secure URL uploads exist", async () => {
+  const gate = await readFile(new URL("../app/customer-launch-gate.ts", import.meta.url), "utf8");
+  assert.match(gate, /CUSTOMER_LAUNCH_ENABLED = false/);
+  assert.match(gate, /SECURE_URL_UPLOAD_IMPLEMENTED = false/);
+  assert.match(gate, /Customer launch is locked until secure temporary-URL artwork delivery is implemented/);
+});

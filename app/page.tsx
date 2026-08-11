@@ -240,7 +240,7 @@ export default function Home() {
             <div className="step-content">
               <div className="step-heading"><div><p className="mini-label">DESIGNS</p><h2>Add your finished designs</h2></div>{files.length > 0 && <span className="done-mark">✓ {files.length} loaded</span>}</div>
               <p className="step-copy">Build one focused batch of up to 20 finished designs. Upload a folder or select individual images.</p>
-              <div className="batch-limits" aria-label="Batch limits"><span><b>20</b> designs maximum</span><span><b>75 MB</b> per design</span><span><b>500 MB</b> per batch</span></div>
+              <p className="batch-limits" aria-label="Batch limits"><span>20 designs maximum</span><i /> <span>75 MB per design</span><i /> <span>500 MB per batch</span></p>
               <div className="file-reminder"><b>Before uploading</b><span>Designs must already be upscaled if needed. For apparel—or any product where the background should not print—use a transparent-background PNG.</span></div>
               <input ref={folderPicker} className="hidden-picker" type="file" multiple accept=".png,.jpg,.jpeg,.webp,.tif,.tiff" {...({ webkitdirectory: "", directory: "" } as React.InputHTMLAttributes<HTMLInputElement>)} onChange={(event) => chooseFiles(event.target.files)} />
               <input ref={imagePicker} className="hidden-picker" type="file" multiple accept=".png,.jpg,.jpeg,.webp,.tif,.tiff" onChange={(event) => chooseFiles(event.target.files)} />

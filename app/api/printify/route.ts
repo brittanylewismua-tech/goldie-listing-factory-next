@@ -1,6 +1,7 @@
 import { env } from "cloudflare:workers";
 import { NextResponse } from "next/server";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
+import { customerLaunchBlock } from "@/app/customer-launch-gate";
 
 const PRINTIFY_API = "https://api.printify.com/v1";
 type Shop = { id: number; title: string };
@@ -75,6 +76,8 @@ export async function DELETE() {
 export async function POST(request: Request) {
   const user = await getChatGPTUser();
   if (!user) return NextResponse.json({ error: "Sign in to continue." }, { status: 401 });
+  const launchBlock = await customerLaunchBlock(user);
+  if (launchBlock) return NextResponse.json({ error: launchBlock }, { status: 503 });
   try {
     const body = (await request.json()) as { token?: string; productUrl?: string };
     const token = body.token?.trim() || await storedToken(user.userId);
