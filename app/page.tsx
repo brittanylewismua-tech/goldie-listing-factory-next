@@ -30,6 +30,7 @@ export default function Home() {
   const [processed, setProcessed] = useState(0);
   const [drafts, setDrafts] = useState<DraftResult[]>([]);
   const [openedDrafts, setOpenedDrafts] = useState<string[]>([]);
+  const [openAllMessage, setOpenAllMessage] = useState("");
 
   const templateLoaded = templateDetails !== null;
   const ready = connected && templateLoaded && description.trim().length > 0 && files.length > 0;
@@ -184,6 +185,7 @@ export default function Home() {
     setProcessed(0);
     setComplete(false);
     setOpenedDrafts([]);
+    setOpenAllMessage("");
     if (folderPicker.current) folderPicker.current.value = "";
     if (imagePicker.current) imagePicker.current.value = "";
   }
@@ -195,6 +197,23 @@ export default function Home() {
     window.setTimeout(() => {
       if (printifyTab && !printifyTab.closed) printifyTab.location.href = draft.editorUrl!;
     }, 2200);
+  }
+
+  function openAllDrafts() {
+    const editableDrafts = drafts.filter((draft) => draft.id && draft.editorUrl && draft.shopId);
+    let opened = 0;
+    const openedIds: string[] = [];
+    editableDrafts.forEach((draft, index) => {
+      const printifyTab = window.open(`https://printify.com/app/store/${draft.shopId}/products/1`, "_blank");
+      if (!printifyTab) return;
+      opened += 1;
+      openedIds.push(draft.id!);
+      window.setTimeout(() => {
+        if (!printifyTab.closed) printifyTab.location.href = draft.editorUrl!;
+      }, 2200 + index * 120);
+    });
+    setOpenedDrafts((current) => [...new Set([...current, ...openedIds])]);
+    setOpenAllMessage(opened === editableDrafts.length ? `${opened} Printify editor tabs opened.` : `Your browser opened ${opened} of ${editableDrafts.length}. Allow pop-ups for this site to open the rest.`);
   }
 
   return (
@@ -331,6 +350,8 @@ export default function Home() {
           {complete && (
             <div className="draft-preview">
               <div className="draft-title"><b>Latest batch</b><span>{drafts.length} results</span></div>
+              {drafts.filter((draft) => draft.status === "Created").length > 1 && <button className="open-all-button" onClick={openAllDrafts}>Open all in Printify</button>}
+              {openAllMessage && <p className="open-all-message" role="status">{openAllMessage}</p>}
               {drafts.map((draft) => (
                 <div className={`draft-row ${draft.status === "Failed" ? "draft-failed" : ""}`} key={draft.name}><span className="draft-check">{draft.status === "Created" ? "✓" : "!"}</span><div><b>{draft.name}</b><small>{draft.status === "Created" ? "Unpublished Printify draft" : draft.error}</small></div>{draft.editorUrl && draft.id ? <button className={`edit-draft-button ${openedDrafts.includes(draft.id) ? "opened" : ""}`} onClick={() => openDraft(draft)}><i />{openedDrafts.includes(draft.id) ? "Opened" : "Edit in Printify"}</button> : <span>—</span>}</div>
               ))}
