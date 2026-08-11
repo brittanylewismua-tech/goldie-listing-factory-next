@@ -16,6 +16,8 @@ test("server-renders the branded Listing Factory", async () => {
   assert.equal(response.status, 200);
   const html = await response.text();
   assert.match(html, /Goldie Listing Factory/);
+  assert.match(html, /Secure workspace/);
+  assert.doesNotMatch(html, /Private workspace/);
   assert.match(html, /Your Printify account/);
   assert.match(html, /Choose your Printify product template/);
   assert.match(html, /Add your finished designs/);
@@ -44,6 +46,10 @@ test("uses individual shop-aware Printify editor buttons", async () => {
   assert.match(page, /MAX_BATCH_FILES = 20/);
   assert.match(page, /MAX_BATCH_BYTES = 500 \* 1024 \* 1024/);
   assert.match(page, /templateDetails\.maxPrintWidth \/ bitmap\.width/);
+  assert.match(page, /const activeItem = running \? Math\.min\(processed \+ 1, files\.length\) : processed/);
+  assert.match(page, /Creating \$\{activeItem\} of \$\{files\.length\}/);
+  assert.match(page, /\{activeItem\}\/\{files\.length\}/);
+  assert.doesNotMatch(page, /Creating \$\{processed \+ 1\} of/);
   assert.match(page, /95 \* 1024 \* 1024/);
   assert.match(page, /\/api\/printify\/stage/);
   assert.match(page, /UPNG\.encode/);

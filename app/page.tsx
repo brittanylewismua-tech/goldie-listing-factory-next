@@ -35,6 +35,7 @@ export default function Home() {
   const ready = connected && templateLoaded && description.trim().length > 0 && files.length > 0;
   const missingRequirement = !connected ? "Connect Printify first" : !templateLoaded ? "Load your product template" : !description.trim() ? "Add your description" : files.length === 0 ? "Add at least one design" : "";
   const totalSize = useMemo(() => files.reduce((sum, file) => sum + file.size, 0), [files]);
+  const activeItem = running ? Math.min(processed + 1, files.length) : processed;
 
   useEffect(() => {
     fetch("/api/printify")
@@ -192,7 +193,7 @@ export default function Home() {
           </div>
         </div>
         <div className="top-actions">
-          <span className="secure-pill"><i /> Private workspace</span>
+          <span className="secure-pill"><i /> Secure workspace</span>
           <button className="help-button" aria-label="Open help">?</button>
         </div>
       </header>
@@ -281,7 +282,7 @@ export default function Home() {
           <div className="launch-top">
             <img src="/goldie-g.png" alt="" className="goldie-g" />
             <p className="mini-label">BATCH SUMMARY</p>
-            <h2>{running ? `Creating ${processed + 1} of ${files.length}` : complete ? "Batch finished" : "Current batch"}</h2>
+            <h2>{running ? `Creating ${activeItem} of ${files.length}` : complete ? "Batch finished" : "Current batch"}</h2>
             <p>{complete ? `${drafts.filter((draft) => draft.status === "Created").length} of ${files.length} drafts were created in Printify.` : running ? "Goldie is uploading each design and creating its Printify draft." : "Complete the four sections to create unpublished drafts in Printify."}</p>
           </div>
 
@@ -294,7 +295,7 @@ export default function Home() {
 
           {running && (
             <div className="batch-progress" role="status" aria-live="polite">
-              <div className="progress-ring" aria-hidden="true"><span>{processed}/{files.length}</span></div>
+              <div className="progress-ring" aria-hidden="true"><span>{activeItem}/{files.length}</span></div>
               <div className="progress-copy"><b>Creating your Printify drafts</b><span>Keep this page open while Goldie finishes the batch.</span></div>
               <div className="progress-track"><span style={{ width: `${files.length ? (processed / files.length) * 100 : 0}%` }} /></div>
             </div>
@@ -302,7 +303,7 @@ export default function Home() {
 
           {!complete ? (
             <button className="launch-button" disabled={!ready || running} onClick={createDrafts}>
-              <span className="button-glint" />{running ? `Creating ${processed} of ${files.length}…` : ready ? "Create Printify drafts" : missingRequirement}<span>→</span>
+              <span className="button-glint" />{running ? `Creating ${activeItem} of ${files.length}…` : ready ? "Create Printify drafts" : missingRequirement}<span>→</span>
             </button>
           ) : (
             <div className="batch-actions">
