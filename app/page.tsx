@@ -12,7 +12,8 @@ const demoDrafts = [
 ];
 
 export default function Home() {
-  const picker = useRef<HTMLInputElement>(null);
+  const folderPicker = useRef<HTMLInputElement>(null);
+  const imagePicker = useRef<HTMLInputElement>(null);
   const [connected, setConnected] = useState(false);
   const [token, setToken] = useState("");
   const [connectionError, setConnectionError] = useState("");
@@ -151,14 +152,23 @@ export default function Home() {
           <article className={`step-card ${files.length ? "done" : ""}`}>
             <div className="step-number">04</div>
             <div className="step-content">
-              <div className="step-heading"><div><p className="mini-label">DESIGNS</p><h2>Select your design folder</h2></div>{files.length > 0 && <span className="done-mark">✓ {files.length} loaded</span>}</div>
-              <p className="step-copy">Choose one folder of finished, upscaled designs. PNG, JPG, WEBP and TIFF are supported.</p>
-              <input ref={picker} className="hidden-picker" type="file" multiple {...({ webkitdirectory: "", directory: "" } as React.InputHTMLAttributes<HTMLInputElement>)} onChange={(event) => chooseFiles(event.target.files)} />
-              <button className="folder-drop" onClick={() => picker.current?.click()}>
+              <div className="step-heading"><div><p className="mini-label">DESIGNS</p><h2>Add your finished designs</h2></div>{files.length > 0 && <span className="done-mark">✓ {files.length} loaded</span>}</div>
+              <p className="step-copy">Upload a complete folder or select individual images. PNG, JPG, WEBP and TIFF are supported.</p>
+              <div className="file-reminder"><b>Before uploading</b><span>Designs must already be upscaled if needed. For apparel—or any product where the background should not print—use a transparent-background PNG.</span></div>
+              <input ref={folderPicker} className="hidden-picker" type="file" multiple accept=".png,.jpg,.jpeg,.webp,.tif,.tiff" {...({ webkitdirectory: "", directory: "" } as React.InputHTMLAttributes<HTMLInputElement>)} onChange={(event) => chooseFiles(event.target.files)} />
+              <input ref={imagePicker} className="hidden-picker" type="file" multiple accept=".png,.jpg,.jpeg,.webp,.tif,.tiff" onChange={(event) => chooseFiles(event.target.files)} />
+              <div className="upload-actions">
+              <button className="folder-drop" onClick={() => folderPicker.current?.click()}>
                 <span className="upload-icon" aria-hidden="true">↑</span>
-                <span><b>{files.length ? `${files.length} designs ready` : "Choose a design folder"}</b><small>{files.length ? `${(totalSize / 1024 / 1024).toFixed(1)} MB selected · Choose again to replace` : "One folder becomes one clean batch"}</small></span>
+                <span><b>{files.length ? `${files.length} designs ready` : "Choose a folder"}</b><small>{files.length ? `${(totalSize / 1024 / 1024).toFixed(1)} MB selected · Choose again to replace` : "Upload every design in one folder"}</small></span>
                 <span className="browse-chip">Browse</span>
               </button>
+              <button className="folder-drop" onClick={() => imagePicker.current?.click()}>
+                <span className="upload-icon" aria-hidden="true">＋</span>
+                <span><b>Choose individual images</b><small>Select one image or several at once</small></span>
+                <span className="browse-chip">Browse</span>
+              </button>
+              </div>
             </div>
           </article>
         </div>

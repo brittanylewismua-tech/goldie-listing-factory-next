@@ -16,9 +16,12 @@ test("server-renders the branded Listing Factory", async () => {
   assert.equal(response.status, 200);
   const html = await response.text();
   assert.match(html, /Goldie Listing Factory/);
-  assert.match(html, /Connect Printify/);
+  assert.match(html, /Your Printify account/);
   assert.match(html, /Choose your Printify product template/);
-  assert.match(html, /Select your design folder/);
+  assert.match(html, /Add your finished designs/);
+  assert.match(html, /Choose individual images/);
+  assert.match(html, /already be upscaled/);
+  assert.match(html, /transparent-background PNG/);
   assert.match(html, /Create Printify drafts/);
   assert.match(html, /Listings remain unpublished/);
   assert.doesNotMatch(html, /codex-preview|react-loading-skeleton/i);
