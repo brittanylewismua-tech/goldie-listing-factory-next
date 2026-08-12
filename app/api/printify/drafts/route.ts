@@ -120,10 +120,12 @@ export async function POST(request: Request) {
     const stagedArtwork = await runtimeEnv().ARTWORK?.get(body.stagedId);
     if (!stagedArtwork) throw new Error("Goldie could not retrieve the staged artwork.");
     const artworkBytes = new Uint8Array(await stagedArtwork.arrayBuffer());
-    const upload = await api<UploadedImage>("/uploads/images.json", token, {
-      method: "POST",
-      body: JSON.stringify(printifyUploadPayload(body.fileName, artworkBytes)),
-    }, (attempt, status) => recordDiagnostic(runtimeEnv().DB, supportReference, { stage: diagnosticStage, event: "retry", attempt, httpStatus: status ?? null, shopId: shop!.id }));
+    const uploadArtwork = () => api<UploadedImage>("/uploads/images.json", token, {
+        method: "POST",
+        body: JSON.stringify(printifyUploadPayload(body.fileName!, artworkBytes)),
+      }, (attempt, status) => recordDiagnostic(runtimeEnv().DB, supportReference, { stage: "printify_upload", event: "retry", attempt, httpStatus: status ?? null, shopId: shop!.id }));
+    let upload = await uploadArtwork();
+    if (!upload.id) throw new Error("Printify accepted the artwork request but did not return an image ID.");
     await recordDiagnostic(runtimeEnv().DB, supportReference, { stage: diagnosticStage, event: "succeeded", shopId: shop.id });
     // The upload POST is authoritative for acceptance. Do not gate draft
     // creation on GET /uploads/{id}: live Printify accounts can return 404 from
@@ -131,27 +133,35 @@ export async function POST(request: Request) {
     // below is the authoritative registration check and retries only when
     // Printify itself returns image-not-ready error 8253.
     const title = body.fileName.replace(/\.[^.]+$/, "").replace(/[_-]+/g, " ").trim();
-    const printAreas = template.print_areas.map((area) => ({
-      variant_ids: area.variant_ids,
-      placeholders: area.placeholders.filter((placeholder) => (placeholder.images?.length ?? 0) > 0).map((placeholder) => {
-        const images = (placeholder.images ?? []).map((image) => image.id === primaryTemplateImageId
-          ? { id: upload.id, x: image.x ?? 0.5, y: image.y ?? 0.5, scale: image.scale ?? 1, angle: image.angle ?? 0 }
-          : image);
-        return { position: placeholder.position, images };
-      }),
-      ...(area.background ? { background: area.background } : {}),
-    })).filter((area) => area.placeholders.length > 0);
-    const productBody = JSON.stringify({
+    const productBody = () => JSON.stringify({
         title: title || "Untitled design",
         description: body.description ?? "",
         blueprint_id: template.blueprint_id,
         print_provider_id: template.print_provider_id,
         variants: template.variants.map(({ id, price, is_enabled }) => ({ id, price, is_enabled })),
-        print_areas: printAreas,
+        print_areas: template.print_areas.map((area) => ({
+          variant_ids: area.variant_ids,
+          placeholders: area.placeholders.filter((placeholder) => (placeholder.images?.length ?? 0) > 0).map((placeholder) => ({
+            position: placeholder.position,
+            images: (placeholder.images ?? []).map((image) => image.id === primaryTemplateImageId
+              ? { id: upload.id, x: image.x ?? 0.5, y: image.y ?? 0.5, scale: image.scale ?? 1, angle: image.angle ?? 0 }
+              : image),
+          })),
+          ...(area.background ? { background: area.background } : {}),
+        })).filter((area) => area.placeholders.length > 0),
     });
     diagnosticStage = "draft_creation";
     await recordDiagnostic(runtimeEnv().DB, supportReference, { stage: diagnosticStage, event: "started", shopId: shop.id });
-    const created = await createProductWithImageRetries<{ id: string }>({ path: `/shops/${shop.id}/products.json`, token, body: productBody, onRetry: (attempt, status, detail) => recordDiagnostic(runtimeEnv().DB, supportReference, { stage: diagnosticStage, event: "retry", attempt, httpStatus: status, message: detail, shopId: shop!.id }) });
+    const created = await createProductWithImageRetries<{ id: string }>({
+      path: `/shops/${shop.id}/products.json`, token, body: productBody,
+      onRetry: (attempt, status, detail) => recordDiagnostic(runtimeEnv().DB, supportReference, { stage: diagnosticStage, event: "retry", attempt, httpStatus: status, message: detail, shopId: shop!.id }),
+      onImageNotReady: async () => {
+        // Waiting on the same rejected ID cannot repair it. Replace it with a
+        // fresh direct upload and let the next product request use that ID.
+        upload = await uploadArtwork();
+        if (!upload.id) throw new Error("Printify did not return a replacement image ID.");
+      },
+    });
     await recordDiagnostic(runtimeEnv().DB, supportReference, { stage: diagnosticStage, event: "succeeded", shopId: shop.id });
     return NextResponse.json({ draft: { id: created.id, clientId: body.clientId ?? body.fileName, name: body.fileName, shopId: shop.id, editorUrl: `https://printify.com/app/editor/${created.id}`, status: "Created" } });
   } catch (error) {

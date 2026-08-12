@@ -7,10 +7,11 @@ export function isImageNotReady(status: number, detail: string) {
 export async function createProductWithImageRetries<T>(options: {
   path: string;
   token: string;
-  body: string;
+  body: string | (() => string);
   fetcher?: typeof fetch;
   sleeper?: (milliseconds: number) => Promise<void>;
   onRetry?: (attempt: number, status: number, detail: string) => Promise<void>;
+  onImageNotReady?: (attempt: number, detail: string) => Promise<void>;
 }): Promise<T> {
   const waits = [2000, 4000, 7000, 10000, 15000, 20000];
   const fetcher = options.fetcher ?? fetch;
@@ -21,7 +22,7 @@ export async function createProductWithImageRetries<T>(options: {
       response = await fetcher(`${PRINTIFY_API}${options.path}`, {
         method: "POST",
         headers: { Authorization: `Bearer ${options.token}`, "User-Agent": "Goldie-Listing-Factory", "Content-Type": "application/json" },
-        body: options.body,
+        body: typeof options.body === "function" ? options.body() : options.body,
       });
     } catch {
       if (attempt < waits.length) { await options.onRetry?.(attempt + 1, 0, "Network interruption"); await sleeper(waits[attempt]); continue; }
@@ -32,6 +33,7 @@ export async function createProductWithImageRetries<T>(options: {
     const retryable = isImageNotReady(response.status, detail) || response.status === 429 || response.status >= 500;
     if (retryable && attempt < waits.length) {
       await options.onRetry?.(attempt + 1, response.status, detail);
+      if (isImageNotReady(response.status, detail)) await options.onImageNotReady?.(attempt + 1, detail);
       const requestedWait = Number(response.headers.get("retry-after"));
       await sleeper(Number.isFinite(requestedWait) && requestedWait > 0 ? Math.min(requestedWait * 1000, 20000) : waits[attempt]);
       continue;

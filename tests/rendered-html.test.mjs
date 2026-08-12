@@ -51,7 +51,7 @@ test("uses individual shop-aware Printify editor buttons", async () => {
   assert.match(page, /Creating \$\{activeItem\} of \$\{files\.length\}/);
   assert.match(page, /\{activeItem\}\/\{files\.length\}/);
   assert.doesNotMatch(page, /Creating \$\{processed \+ 1\} of/);
-  assert.match(page, /12 \* 1024 \* 1024/);
+  assert.match(page, /4\.5 \* 1024 \* 1024/);
   assert.match(page, /\/api\/printify\/stage/);
   assert.match(page, /UPNG\.encode/);
   assert.match(page, /Add at least one design/);
@@ -104,7 +104,7 @@ test("sends staged artwork directly to Printify instead of a hosted URL", async 
     readFile(new URL("../app/api/printify/upload-payload.ts", import.meta.url), "utf8"),
   ]);
   assert.match(route, /ARTWORK\?\.get\(body\.stagedId\)/);
-  assert.match(route, /printifyUploadPayload\(body\.fileName, artworkBytes\)/);
+  assert.match(route, /printifyUploadPayload\(body\.fileName!, artworkBytes\)/);
   assert.match(payloadSource, /contents: base64FromBytes\(bytes\)/);
   assert.doesNotMatch(route, /signedArtworkUrl|url: artworkUrl/);
 
@@ -124,11 +124,16 @@ test("retries a real 8253 draft response and succeeds without an upload lookup",
     new Response(JSON.stringify({ status:"error", code:8253, errors:{ reason:"Provided images do not exist" } }), { status:400, headers:{ "content-type":"application/json" } }),
     new Response(JSON.stringify({ id:"draft-created" }), { status:200, headers:{ "content-type":"application/json" } }),
   ];
-  const result = await createProductWithImageRetries({ path:"/shops/1/products.json", token:"test-token", body:"{}", fetcher:async (url, init) => { requests.push({ url:String(url), method:init?.method }); return responses.shift(); }, sleeper:async()=>{}, onRetry:async(attempt,status)=>{ retries.push({attempt,status}); } });
+  let imageId = "first-image";
+  const replaced = [];
+  const result = await createProductWithImageRetries({ path:"/shops/1/products.json", token:"test-token", body:()=>JSON.stringify({imageId}), fetcher:async (url, init) => { requests.push({ url:String(url), method:init?.method, body:init?.body }); return responses.shift(); }, sleeper:async()=>{}, onRetry:async(attempt,status)=>{ retries.push({attempt,status}); }, onImageNotReady:async(attempt)=>{ replaced.push(attempt); imageId="replacement-image"; } });
   assert.deepEqual(result, { id:"draft-created" });
   assert.equal(requests.length, 2);
   assert.ok(requests.every((request)=>request.url.endsWith("/shops/1/products.json") && request.method === "POST"));
+  assert.match(String(requests[0].body), /first-image/);
+  assert.match(String(requests[1].body), /replacement-image/);
   assert.deepEqual(retries, [{ attempt:1, status:400 }]);
+  assert.deepEqual(replaced, [1]);
 });
 
 test("records permanent sanitized Printify diagnostics without blocking listings", async () => {

@@ -123,7 +123,7 @@ export default function Home() {
     // Direct delivery avoids Printify's unreliable remote-URL ingestion. Goldie
     // quietly optimizes larger originals to a memory-safe transport size; it
     // does not reject them merely because the original file is large.
-    const uploadLimit = 12 * 1024 * 1024;
+    const uploadLimit = 4.5 * 1024 * 1024;
     let bitmap: ImageBitmap;
     try { bitmap = await createImageBitmap(file); }
     catch { throw new Error("This image could not be decoded by the browser."); }
