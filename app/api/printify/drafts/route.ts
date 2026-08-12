@@ -2,6 +2,7 @@ import { env } from "cloudflare:workers";
 import { NextResponse } from "next/server";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { customerLaunchBlock } from "@/app/customer-launch-gate";
+import { uploadedImageIsReady, type UploadedImage } from "../upload-readiness";
 
 const PRINTIFY_API = "https://api.printify.com/v1";
 type Shop = { id: number; title: string };
@@ -85,7 +86,7 @@ async function api<T>(path: string, token: string, init?: RequestInit): Promise<
 const pause = (milliseconds: number) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 
 async function waitForUploadedImage(imageId: string, token: string) {
-  const waits = [1000, 2000, 4000, 7000];
+  const waits = [1000, 2000, 4000, 7000, 10000, 15000, 20000];
   for (let attempt = 0; attempt <= waits.length; attempt += 1) {
     let response: Response | undefined;
     try {
@@ -95,14 +96,17 @@ async function waitForUploadedImage(imageId: string, token: string) {
     } catch {
       // A transient lookup failure is handled by the same bounded wait below.
     }
-    if (response?.ok) return;
+    if (response?.ok) {
+      const image = await response.json().catch(() => null) as UploadedImage | null;
+      if (uploadedImageIsReady(image)) return image;
+    }
     if (response && response.status !== 404 && response.status !== 409 && response.status !== 429 && response.status < 500) {
       const detail = await response.text().catch(() => "");
       throw new Error(`Printify could not verify the uploaded image${detail ? `: ${detail.slice(0, 180)}` : ""}`);
     }
     if (attempt < waits.length) await pause(waits[attempt]);
   }
-  throw new Error("Printify received the image but did not finish processing it after Goldie waited and retried.");
+  throw new Error("Printify did not finish processing this image within one minute.");
 }
 
 function isImageNotReady(status: number, detail: string) {
@@ -110,7 +114,7 @@ function isImageNotReady(status: number, detail: string) {
 }
 
 async function createProductAfterImageIsReady<T>(path: string, token: string, body: string): Promise<T> {
-  const waits = [2000, 4000, 7000, 10000];
+  const waits = [2000, 4000, 7000, 10000, 15000, 20000];
   for (let attempt = 0; attempt <= waits.length; attempt += 1) {
     let response: Response;
     try {
@@ -131,7 +135,7 @@ async function createProductAfterImageIsReady<T>(path: string, token: string, bo
       await pause(Number.isFinite(requestedWait) && requestedWait > 0 ? Math.min(requestedWait * 1000, 20000) : waits[attempt]);
       continue;
     }
-    if (isImageNotReady(response.status, detail)) throw new Error("Printify received the image but did not finish processing it after Goldie waited and retried. Retry this design when the batch finishes.");
+    if (isImageNotReady(response.status, detail)) throw new Error("Printify did not finish registering this image within one minute. Retry this design when the batch finishes.");
     if (response.status === 429) throw new Error("Printify is taking longer than expected. Retry this design when the batch finishes.");
     if (response.status >= 500) throw new Error("Printify remained temporarily unavailable after Goldie retried automatically.");
     if (response.status === 401 || response.status === 403) throw new Error("Printify rejected the saved connection. Reconnect with a new token that has all scopes enabled.");
@@ -173,11 +177,15 @@ export async function POST(request: Request) {
     if (!primaryTemplateImageId) throw new Error("Add one placeholder design to the Printify template before using it for a batch.");
 
     const artworkUrl = await signedArtworkUrl(request, body.stagedId);
-    const upload = await api<{ id: string }>("/uploads/images.json", token, {
+    const upload = await api<UploadedImage>("/uploads/images.json", token, {
       method: "POST",
       body: JSON.stringify({ file_name: body.fileName, url: artworkUrl }),
     });
-    await waitForUploadedImage(upload.id, token);
+    // Printify's documented upload response is the completed image resource.
+    // Only poll when Printify returns an accepted-but-incomplete resource. A
+    // second GET can briefly return 404 even after a completed POST, so polling
+    // an already-complete upload creates a false failure.
+    if (!uploadedImageIsReady(upload)) await waitForUploadedImage(upload.id, token);
     const title = body.fileName.replace(/\.[^.]+$/, "").replace(/[_-]+/g, " ").trim();
     const printAreas = template.print_areas.map((area) => ({
       variant_ids: area.variant_ids,

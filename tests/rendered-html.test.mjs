@@ -88,12 +88,27 @@ test("uses individual shop-aware Printify editor buttons", async () => {
 });
 
 test("Printify image processing is confirmed and error 8253 is retried server-side", async () => {
-  const route = await readFile(new URL("../app/api/printify/drafts/route.ts", import.meta.url), "utf8");
-  assert.match(route, /waitForUploadedImage\(upload\.id, token\)/);
+  const [route, readinessSource] = await Promise.all([
+    readFile(new URL("../app/api/printify/drafts/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/printify/upload-readiness.ts", import.meta.url), "utf8"),
+  ]);
+  assert.match(route, /if \(!uploadedImageIsReady\(upload\)\) await waitForUploadedImage\(upload\.id, token\)/);
+  assert.match(readinessSource, /image\.preview_url/);
+  assert.match(readinessSource, /Number\(image\.width\) > 0/);
+  assert.match(readinessSource, /Number\(image\.height\) > 0/);
   assert.match(route, /\/uploads\/\$\{encodeURIComponent\(imageId\)\}\.json/);
   assert.match(route, /Provided images do not exist/);
   assert.match(route, /8253/);
   assert.match(route, /createProductAfterImageIsReady/);
+  assert.match(route, /15000, 20000/);
+});
+
+test("accepts a completed Printify upload without the false second lookup", async () => {
+  const { uploadedImageIsReady } = await import("../app/api/printify/upload-readiness.ts");
+  assert.equal(uploadedImageIsReady({ id: "image-1", preview_url: "https://images.printify.com/image-1", width: 6000, height: 9000 }), true);
+  assert.equal(uploadedImageIsReady({ id: "image-1" }), false);
+  assert.equal(uploadedImageIsReady({ id: "image-1", preview_url: "https://images.printify.com/image-1", width: 0, height: 9000 }), false);
+  assert.equal(uploadedImageIsReady(null), false);
 });
 
 test("ships an in-page support assistant with a comprehensive troubleshooting bank", async () => {

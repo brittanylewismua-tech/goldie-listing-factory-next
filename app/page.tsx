@@ -13,7 +13,7 @@ const MAX_BATCH_BYTES = 500 * 1024 * 1024;
 
 function friendlyUploadError(error: unknown) {
   const message = error instanceof Error ? error.message : String(error ?? "");
-  if (/8253|Provided images do not exist|did not finish processing/i.test(message)) return "Printify received the design but is still processing it after Goldie waited and retried. Use Retry failed designs when this batch finishes—do not upload the file again.";
+  if (/8253|Provided images do not exist|did not finish (?:processing|registering)/i.test(message)) return "Printify has not finished registering this design after one minute. Keep the successful drafts and use Retry failed designs when the batch finishes.";
   if (/image could not be decoded|could not be read|invalidstateerror|source image could not be decoded/i.test(message)) return "Goldie can see this filename, but cannot read the actual image. Download it fully to your computer, then upload it again as a PNG or JPG.";
   if (/failed to fetch|networkerror|load failed|secure artwork delivery|temporarily unavailable/i.test(message)) return "The upload connection was interrupted. Goldie retried automatically, but Printify still could not receive this design. Retry it when the batch finishes.";
   if (/401|token|unauthorized|not accept/i.test(message)) return "Printify rejected the saved connection. Disconnect Printify, create a new token with all scopes, and reconnect.";
