@@ -224,6 +224,7 @@ test("keeps the owner test page separate from mastermind access", async () => {
   assert.match(admin, /DELETE FROM printify_connections/);
   assert.match(admin, /SELECT user_id FROM mastermind_access/);
   assert.match(access, /toUpperCase/);
+  assert.match(access, /normalizedName === "brittany lewis"/);
 });
 
 test("revalidates saved Printify tokens instead of showing a false connection", async () => {
