@@ -51,7 +51,7 @@ test("uses individual shop-aware Printify editor buttons", async () => {
   assert.match(page, /Creating \$\{activeItem\} of \$\{files\.length\}/);
   assert.match(page, /\{activeItem\}\/\{files\.length\}/);
   assert.doesNotMatch(page, /Creating \$\{processed \+ 1\} of/);
-  assert.match(page, /95 \* 1024 \* 1024/);
+  assert.match(page, /12 \* 1024 \* 1024/);
   assert.match(page, /\/api\/printify\/stage/);
   assert.match(page, /UPNG\.encode/);
   assert.match(page, /Add at least one design/);
@@ -98,6 +98,24 @@ test("uses draft creation as the authoritative image-readiness check", async () 
   assert.match(creation, /15000, 20000/);
 });
 
+test("sends staged artwork directly to Printify instead of a hosted URL", async () => {
+  const [route, payloadSource] = await Promise.all([
+    readFile(new URL("../app/api/printify/drafts/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/printify/upload-payload.ts", import.meta.url), "utf8"),
+  ]);
+  assert.match(route, /ARTWORK\?\.get\(body\.stagedId\)/);
+  assert.match(route, /printifyUploadPayload\(body\.fileName, artworkBytes\)/);
+  assert.match(payloadSource, /contents: base64FromBytes\(bytes\)/);
+  assert.doesNotMatch(route, /signedArtworkUrl|url: artworkUrl/);
+
+  const { printifyUploadPayload } = await import("../app/api/printify/upload-payload.ts");
+  const bytes = Uint8Array.from([0, 1, 2, 127, 128, 254, 255]);
+  const payload = printifyUploadPayload("artwork.png", bytes);
+  assert.equal(payload.file_name, "artwork.png");
+  assert.equal(Object.hasOwn(payload, "url"), false);
+  assert.deepEqual(Uint8Array.from(Buffer.from(payload.contents, "base64")), bytes);
+});
+
 test("retries a real 8253 draft response and succeeds without an upload lookup", async () => {
   const { createProductWithImageRetries } = await import("../app/api/printify/product-creation.ts");
   const requests = [];
@@ -136,6 +154,7 @@ test("records permanent sanitized Printify diagnostics without blocking listings
   assert.match(diagnostics, /-30 days/);
   assert.match(diagnostics, /Bearer \[redacted\]/);
   assert.match(diagnostics, /Diagnostics must never block listing creation/);
+  assert.match(diagnostics, /error_code = COALESCE\(\?, error_code\)/);
   assert.match(schema, /printify_diagnostics/);
   assert.match(schema, /printify_diagnostic_events/);
   assert.match(adminPage, /outcome = 'failed'/);

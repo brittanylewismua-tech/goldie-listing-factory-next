@@ -120,7 +120,10 @@ export default function Home() {
   async function preparedUpload(file: File) {
     // Printify accepts PNG/JPEG files up to 100 MB. Keep a safety margin for
     // transport while preserving every useful pixel the selected product can print.
-    const uploadLimit = 95 * 1024 * 1024;
+    // Direct delivery avoids Printify's unreliable remote-URL ingestion. Goldie
+    // quietly optimizes larger originals to a memory-safe transport size; it
+    // does not reject them merely because the original file is large.
+    const uploadLimit = 12 * 1024 * 1024;
     let bitmap: ImageBitmap;
     try { bitmap = await createImageBitmap(file); }
     catch { throw new Error("This image could not be decoded by the browser."); }
@@ -145,7 +148,7 @@ export default function Home() {
       repacked = await new Promise<Blob>((resolve, reject) => canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error("The large image could not be prepared.")), preserveTransparency ? "image/png" : "image/jpeg", 0.94));
       if (preserveTransparency && repacked.size > uploadLimit && context) {
         const pixels = context.getImageData(0, 0, width, height);
-        for (const colorCount of [512, 256]) {
+        for (const colorCount of [0, 512, 256]) {
           const optimized = new Blob([UPNG.encode([pixels.data.buffer], width, height, colorCount)], { type: "image/png" });
           if (optimized.size < repacked.size) repacked = optimized;
           if (repacked.size <= uploadLimit) break;

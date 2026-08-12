@@ -39,7 +39,7 @@ export async function recordDiagnostic(db: D1Database | undefined, reference: st
   const errorCode = input.errorCode ?? diagnosticCode(message);
   const outcome = input.event === "failed" ? "failed" : input.event === "succeeded" && input.stage === "draft_creation" ? "succeeded" : "running";
   try { await db.batch([
-    db.prepare("UPDATE printify_diagnostics SET stage = ?, outcome = ?, retry_count = retry_count + ?, error_code = ?, http_status = ?, message = ?, template_product_id = COALESCE(?, template_product_id), shop_id = COALESCE(?, shop_id), updated_at = CURRENT_TIMESTAMP WHERE reference = ?")
+    db.prepare("UPDATE printify_diagnostics SET stage = ?, outcome = ?, retry_count = retry_count + ?, error_code = COALESCE(?, error_code), http_status = COALESCE(?, http_status), message = ?, template_product_id = COALESCE(?, template_product_id), shop_id = COALESCE(?, shop_id), updated_at = CURRENT_TIMESTAMP WHERE reference = ?")
       .bind(input.stage, outcome, input.event === "retry" ? 1 : 0, errorCode, input.httpStatus ?? null, message || null, input.templateProductId ?? null, input.shopId ?? null, reference),
     db.prepare("INSERT INTO printify_diagnostic_events (reference, stage, event, attempt, http_status, error_code, message) VALUES (?, ?, ?, ?, ?, ?, ?)")
       .bind(reference, input.stage, input.event, input.attempt ?? 0, input.httpStatus ?? null, errorCode, message || null),

@@ -4,6 +4,7 @@ import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { customerLaunchBlock } from "@/app/customer-launch-gate";
 import { publicSupportReference, recordDiagnostic } from "../diagnostics";
 import { createProductWithImageRetries } from "../product-creation";
+import { printifyUploadPayload } from "../upload-payload";
 
 const PRINTIFY_API = "https://api.printify.com/v1";
 type Shop = { id: number; title: string };
@@ -23,19 +24,9 @@ type TemplateProduct = {
   }>;
 };
 
-type ArtworkBucket = { delete(key: string): Promise<void> };
+type ArtworkObject = { arrayBuffer(): Promise<ArrayBuffer> };
+type ArtworkBucket = { get(key: string): Promise<ArtworkObject | null>; delete(key: string): Promise<void> };
 function runtimeEnv() { return env as unknown as { DB?: D1Database; ARTWORK?: ArtworkBucket; PRINTIFY_TOKEN_KEY?: string }; }
-
-async function signedArtworkUrl(request: Request, stagedId: string) {
-  const secret = runtimeEnv().PRINTIFY_TOKEN_KEY;
-  if (!secret) throw new Error("Secure artwork delivery is not configured.");
-  const expires = Math.floor(Date.now() / 1000) + 10 * 60;
-  const keyBytes = Uint8Array.from(secret.match(/.{1,2}/g) ?? [], (pair) => Number.parseInt(pair, 16));
-  const key = await crypto.subtle.importKey("raw", keyBytes, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
-  const signed = new Uint8Array(await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(`${stagedId}.${expires}`)));
-  const signature = btoa(String.fromCharCode(...signed)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-  return `${new URL(request.url).origin}/api/printify/staged/${encodeURIComponent(stagedId)}?expires=${expires}&signature=${signature}`;
-}
 
 async function decryptToken(value: string) {
   const secret = runtimeEnv().PRINTIFY_TOKEN_KEY;
@@ -124,12 +115,14 @@ export async function POST(request: Request) {
       .find((image) => image.id)?.id;
     if (!primaryTemplateImageId) throw new Error("Add one placeholder design to the Printify template before using it for a batch.");
 
-    const artworkUrl = await signedArtworkUrl(request, body.stagedId);
     diagnosticStage = "printify_upload";
     await recordDiagnostic(runtimeEnv().DB, supportReference, { stage: diagnosticStage, event: "started", shopId: shop.id });
+    const stagedArtwork = await runtimeEnv().ARTWORK?.get(body.stagedId);
+    if (!stagedArtwork) throw new Error("Goldie could not retrieve the staged artwork.");
+    const artworkBytes = new Uint8Array(await stagedArtwork.arrayBuffer());
     const upload = await api<UploadedImage>("/uploads/images.json", token, {
       method: "POST",
-      body: JSON.stringify({ file_name: body.fileName, url: artworkUrl }),
+      body: JSON.stringify(printifyUploadPayload(body.fileName, artworkBytes)),
     }, (attempt, status) => recordDiagnostic(runtimeEnv().DB, supportReference, { stage: diagnosticStage, event: "retry", attempt, httpStatus: status ?? null, shopId: shop!.id }));
     await recordDiagnostic(runtimeEnv().DB, supportReference, { stage: diagnosticStage, event: "succeeded", shopId: shop.id });
     // The upload POST is authoritative for acceptance. Do not gate draft
