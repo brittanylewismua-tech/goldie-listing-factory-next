@@ -191,6 +191,7 @@ test("provides an owner-only member-specific Printify health audit", async () =>
   assert.match(audit, /printify_connections/);
   assert.match(audit, /template_product_id/);
   assert.match(audit, /\/uploads\/\$\{encodeURIComponent\(id\)\}\.json/);
+  assert.match(audit, /accountDiagnosis/);
   assert.doesNotMatch(audit, /token:\s*token/);
 });
 

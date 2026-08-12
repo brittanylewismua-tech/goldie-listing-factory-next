@@ -46,11 +46,12 @@ export async function auditMemberPrintify(email: string) {
     connectionSavedAt: connection.updatedAt,
     latestFailure: diagnostic ?? null,
   };
-  if (shopsCheck.status !== 200 || !diagnostic?.shopId || !diagnostic.templateProductId) return result;
+  if (shopsCheck.status !== 200) { result.accountDiagnosis = "The saved Printify connection is invalid or expired."; return result; }
+  if (!diagnostic?.shopId || !diagnostic.templateProductId) { result.accountDiagnosis = "No Printify template was recorded for this failure."; return result; }
 
   const templateCheck = await status(`/shops/${diagnostic.shopId}/products/${diagnostic.templateProductId}.json`, token);
   result.templateHttpStatus = templateCheck.status;
-  if (!templateCheck.response.ok) return result;
+  if (!templateCheck.response.ok) { result.accountDiagnosis = "The template no longer exists in the connected Printify shop."; return result; }
   const product = await templateCheck.response.json() as Product;
   const placeholders = product.print_areas?.flatMap((area) => area.placeholders ?? []) ?? [];
   const inheritedIds = [...new Set(placeholders.flatMap((placeholder) => placeholder.images?.map((image) => image.id).filter(Boolean) ?? []))] as string[];
@@ -64,6 +65,13 @@ export async function auditMemberPrintify(email: string) {
     inheritedMediaUnavailable: mediaChecks.filter((code) => code !== 200).length,
     inheritedMediaStatuses: mediaChecks,
   };
+  result.accountDiagnosis = mediaChecks.some((code) => code !== 200)
+    ? "The template contains media references that no longer exist in this Printify account. Goldie will remove them before creating drafts."
+    : (product.variants?.filter((variant) => variant.is_enabled).length ?? 0) === 0
+      ? "The template has no enabled product variants."
+      : placeholders.length === 0
+        ? "The template has no configured print placements."
+        : "The saved connection, shop, template, variants, placements and template media are currently healthy.";
   return result;
 }
 
