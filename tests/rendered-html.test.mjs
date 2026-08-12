@@ -75,6 +75,7 @@ test("uses individual shop-aware Printify editor buttons", async () => {
   assert.match(page, /all access scopes/);
   assert.match(page, /printify\.com\/app\/account\/connections/);
   assert.match(page, /friendlyUploadError/);
+  assert.match(page, /8253\|Provided images do not exist/);
   assert.match(page, /Download it fully to your computer/);
   assert.match(page, /const waits = \[0, 1500, 4000\]/);
   assert.match(route, /stagedIdForCleanup/);
@@ -84,6 +85,15 @@ test("uses individual shop-aware Printify editor buttons", async () => {
   assert.match(route, /Add one placeholder design/);
   assert.match(route, /placeholder\.images\?\.length/);
   assert.match(route, /area\.placeholders\.length > 0/);
+});
+
+test("Printify image processing is confirmed and error 8253 is retried server-side", async () => {
+  const route = await readFile(new URL("../app/api/printify/drafts/route.ts", import.meta.url), "utf8");
+  assert.match(route, /waitForUploadedImage\(upload\.id, token\)/);
+  assert.match(route, /\/uploads\/\$\{encodeURIComponent\(imageId\)\}\.json/);
+  assert.match(route, /Provided images do not exist/);
+  assert.match(route, /8253/);
+  assert.match(route, /createProductAfterImageIsReady/);
 });
 
 test("ships official brand assets and removes the starter", async () => {

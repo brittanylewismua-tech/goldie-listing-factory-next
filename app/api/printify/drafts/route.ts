@@ -82,6 +82,64 @@ async function api<T>(path: string, token: string, init?: RequestInit): Promise<
   throw new Error("Printify could not complete this request.");
 }
 
+const pause = (milliseconds: number) => new Promise((resolve) => setTimeout(resolve, milliseconds));
+
+async function waitForUploadedImage(imageId: string, token: string) {
+  const waits = [1000, 2000, 4000, 7000];
+  for (let attempt = 0; attempt <= waits.length; attempt += 1) {
+    let response: Response | undefined;
+    try {
+      response = await fetch(`${PRINTIFY_API}/uploads/${encodeURIComponent(imageId)}.json`, {
+        headers: { Authorization: `Bearer ${token}`, "User-Agent": "Goldie-Listing-Factory" },
+      });
+    } catch {
+      // A transient lookup failure is handled by the same bounded wait below.
+    }
+    if (response?.ok) return;
+    if (response && response.status !== 404 && response.status !== 409 && response.status !== 429 && response.status < 500) {
+      const detail = await response.text().catch(() => "");
+      throw new Error(`Printify could not verify the uploaded image${detail ? `: ${detail.slice(0, 180)}` : ""}`);
+    }
+    if (attempt < waits.length) await pause(waits[attempt]);
+  }
+  throw new Error("Printify received the image but did not finish processing it after Goldie waited and retried.");
+}
+
+function isImageNotReady(status: number, detail: string) {
+  return status === 400 && (/Provided images do not exist/i.test(detail) || /[\"']?code[\"']?\s*:\s*8253/i.test(detail));
+}
+
+async function createProductAfterImageIsReady<T>(path: string, token: string, body: string): Promise<T> {
+  const waits = [2000, 4000, 7000, 10000];
+  for (let attempt = 0; attempt <= waits.length; attempt += 1) {
+    let response: Response;
+    try {
+      response = await fetch(`${PRINTIFY_API}${path}`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "User-Agent": "Goldie-Listing-Factory", "Content-Type": "application/json" },
+        body,
+      });
+    } catch {
+      if (attempt < waits.length) { await pause(waits[attempt]); continue; }
+      throw new Error("The connection to Printify was interrupted after Goldie retried automatically.");
+    }
+    if (response.ok) return response.json() as Promise<T>;
+    const detail = await response.text().catch(() => "");
+    const retryable = isImageNotReady(response.status, detail) || response.status === 429 || response.status >= 500;
+    if (retryable && attempt < waits.length) {
+      const requestedWait = Number(response.headers.get("retry-after"));
+      await pause(Number.isFinite(requestedWait) && requestedWait > 0 ? Math.min(requestedWait * 1000, 20000) : waits[attempt]);
+      continue;
+    }
+    if (isImageNotReady(response.status, detail)) throw new Error("Printify received the image but did not finish processing it after Goldie waited and retried. Retry this design when the batch finishes.");
+    if (response.status === 429) throw new Error("Printify is taking longer than expected. Retry this design when the batch finishes.");
+    if (response.status >= 500) throw new Error("Printify remained temporarily unavailable after Goldie retried automatically.");
+    if (response.status === 401 || response.status === 403) throw new Error("Printify rejected the saved connection. Reconnect with a new token that has all scopes enabled.");
+    throw new Error(`Printify returned ${response.status}${detail ? `: ${detail.slice(0, 180)}` : ""}`);
+  }
+  throw new Error("Printify could not create this draft.");
+}
+
 function productIdFromUrl(value: string) {
   return (value.match(/\/editor\/([a-zA-Z0-9]+)/) || value.match(/\/products\/([a-zA-Z0-9]+)/))?.[1] ?? "";
 }
@@ -119,6 +177,7 @@ export async function POST(request: Request) {
       method: "POST",
       body: JSON.stringify({ file_name: body.fileName, url: artworkUrl }),
     });
+    await waitForUploadedImage(upload.id, token);
     const title = body.fileName.replace(/\.[^.]+$/, "").replace(/[_-]+/g, " ").trim();
     const printAreas = template.print_areas.map((area) => ({
       variant_ids: area.variant_ids,
@@ -130,17 +189,15 @@ export async function POST(request: Request) {
       }),
       ...(area.background ? { background: area.background } : {}),
     })).filter((area) => area.placeholders.length > 0);
-    const created = await api<{ id: string }>(`/shops/${shop.id}/products.json`, token, {
-      method: "POST",
-      body: JSON.stringify({
+    const productBody = JSON.stringify({
         title: title || "Untitled design",
         description: body.description ?? "",
         blueprint_id: template.blueprint_id,
         print_provider_id: template.print_provider_id,
         variants: template.variants.map(({ id, price, is_enabled }) => ({ id, price, is_enabled })),
         print_areas: printAreas,
-      }),
     });
+    const created = await createProductAfterImageIsReady<{ id: string }>(`/shops/${shop.id}/products.json`, token, productBody);
     return NextResponse.json({ draft: { id: created.id, clientId: body.clientId ?? body.fileName, name: body.fileName, shopId: shop.id, editorUrl: `https://printify.com/app/editor/${created.id}`, status: "Created" } });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "The draft could not be created." }, { status: 500 });
