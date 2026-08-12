@@ -1,4 +1,5 @@
 html,body{background:#050504}
+.diagnostics-link{padding:8px 12px;border:1px solid #d9a541;border-radius:8px;color:#e7b64e;text-decoration:none;font-size:10px;font-weight:800;letter-spacing:.02em}.diagnostics-link:hover{background:#e7b64e;color:#17130d}
 .diagnostics-search{width:100%;margin:0 0 12px;padding:11px 12px;border:1px solid #cdbd9f;border-radius:8px;background:#fff;font:inherit;font-size:11px}
 .app-shell{background:radial-gradient(60rem 30rem at 82% 4%,rgba(222,165,52,.13),transparent 62%),radial-gradient(42rem 26rem at -8% 42%,rgba(187,126,22,.08),transparent 68%),#050504}
 .topbar{background:rgba(5,5,4,.88);backdrop-filter:blur(16px);border-bottom-color:rgba(234,184,76,.3)}

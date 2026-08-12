@@ -71,9 +71,9 @@ test("uses individual shop-aware Printify editor buttons", async () => {
   assert.match(page, /failedIds\.has\(file\.id\)/);
   assert.match(page, /key=\{draft\.clientId\}/);
   assert.doesNotMatch(page, /\.tif|tiff\?/i);
-  assert.match(page, /Open help/);
-  assert.match(page, /all access scopes/);
-  assert.match(page, /printify\.com\/app\/account\/connections/);
+  assert.match(page, /Goldie Diagnostics/);
+  assert.doesNotMatch(page, /className="help-button"|aria-label="Open help"/);
+  assert.match(page, /all scopes/);
   assert.match(page, /friendlyUploadError/);
   assert.match(page, /8253\|Provided images do not exist/);
   assert.match(page, /Download it fully to your computer/);

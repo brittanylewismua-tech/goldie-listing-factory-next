@@ -2,6 +2,7 @@ import { env } from "cloudflare:workers";
 import { NextResponse } from "next/server";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { customerLaunchBlock } from "@/app/customer-launch-gate";
+import { isOwner } from "@/app/mastermind/access";
 
 const PRINTIFY_API = "https://api.printify.com/v1";
 type Shop = { id: number; title: string };
@@ -63,13 +64,13 @@ export async function GET() {
   if (!user) return NextResponse.json({ error: "Sign in to continue." }, { status: 401 });
   try {
     const token = await storedToken(user.userId);
-    if (!token) return NextResponse.json({ connected: false });
+    if (!token) return NextResponse.json({ connected: false, owner: isOwner(user) });
     await printify<Shop[]>("/shops.json", token);
-    return NextResponse.json({ connected: true });
+    return NextResponse.json({ connected: true, owner: isOwner(user) });
   } catch {
     const db = runtimeEnv().DB;
     await db?.prepare("DELETE FROM printify_connections WHERE user_id = ?").bind(user.userId).run().catch(() => undefined);
-    return NextResponse.json({ connected: false, reason: "Your saved Printify token expired or was revoked. Connect a new token." });
+    return NextResponse.json({ connected: false, owner: isOwner(user), reason: "Your saved Printify token expired or was revoked. Connect a new token." });
   }
 }
 

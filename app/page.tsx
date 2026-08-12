@@ -46,7 +46,7 @@ export default function Home() {
   const [drafts, setDrafts] = useState<DraftResult[]>([]);
   const [openedDrafts, setOpenedDrafts] = useState<string[]>([]);
   const [openAllMessage, setOpenAllMessage] = useState("");
-  const [showHelp, setShowHelp] = useState(false);
+  const [owner, setOwner] = useState(false);
 
   const templateLoaded = templateDetails !== null;
   const ready = connected && templateLoaded && description.trim().length > 0 && files.length > 0;
@@ -57,7 +57,7 @@ export default function Home() {
   useEffect(() => {
     fetch("/api/printify")
       .then((response) => response.json())
-      .then((result: { connected?: boolean; reason?: string }) => { setConnected(Boolean(result.connected)); if (result.reason) setConnectionError(result.reason); })
+      .then((result: { connected?: boolean; owner?: boolean; reason?: string }) => { setConnected(Boolean(result.connected)); setOwner(Boolean(result.owner)); if (result.reason) setConnectionError(result.reason); })
       .catch(() => setConnected(false))
       .finally(() => setCheckingConnection(false));
   }, []);
@@ -271,8 +271,8 @@ export default function Home() {
           </div>
         </div>
         <div className="top-actions">
+          {owner && <a className="diagnostics-link" href="/mastermind-admin">Goldie Diagnostics</a>}
           <span className="secure-pill"><i /> Secure workspace</span>
-          <button className="help-button" aria-label="Open help" onClick={() => setShowHelp(true)}>?</button>
         </div>
       </header>
 
@@ -405,7 +405,6 @@ export default function Home() {
       </section>
 
       <footer><span>GOLDIE LISTING FACTORY</span><span>BE A WOLF BIZ · 2026</span></footer>
-      {showHelp && <div className="help-overlay" role="dialog" aria-modal="true" aria-labelledby="help-title"><div className="help-card"><button className="help-close" onClick={() => setShowHelp(false)} aria-label="Close help">×</button><p className="mini-label">QUICK START</p><h2 id="help-title">Before your first batch</h2><ol><li>Use the Listing Factory from desktop Chrome or Edge.</li><li>Create a Printify personal access token and turn on <b>all access scopes</b>. Printify only shows the token once, so copy it before leaving that page.</li><li>In Printify, prepare one unpublished product with the provider, colors, sizes, prices and placement you want copied.</li><li>Paste that product’s editor link here, add your description, and choose up to 20 PNG, JPG or WebP designs.</li><li>Keep this page open until every result appears. Failed designs can be retried without repeating successful ones.</li></ol><a href="https://printify.com/app/account/connections" target="_blank" rel="noreferrer">Create or replace your Printify token →</a></div></div>}
       <SupportChat />
     </main>
   );
