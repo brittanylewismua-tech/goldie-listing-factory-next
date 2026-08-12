@@ -35,10 +35,9 @@ test("server-renders the branded Listing Factory", async () => {
 });
 
 test("uses individual shop-aware Printify editor buttons", async () => {
-  const [page, route, worker] = await Promise.all([
+  const [page, route] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/api/printify/drafts/route.ts", import.meta.url), "utf8"),
-    readFile(new URL("../app/image-preparation.worker.ts", import.meta.url), "utf8"),
   ]);
   assert.match(page, /Edit in Printify/);
   assert.match(page, /openedDrafts/);
@@ -47,16 +46,14 @@ test("uses individual shop-aware Printify editor buttons", async () => {
   assert.match(route, /shopId: shop\.id/);
   assert.match(page, /MAX_BATCH_FILES = 20/);
   assert.match(page, /MAX_BATCH_BYTES = 500 \* 1024 \* 1024/);
-  assert.match(page, /new Worker\(new URL\("\.\/image-preparation\.worker\.ts"/);
-  assert.match(worker, /maxPrintWidth \/ bitmap\.width/);
+  assert.doesNotMatch(page, /new Worker|createImageBitmap|OffscreenCanvas|canvas|getImageData|UPNG/);
   assert.match(page, /const activeItem = running \? Math\.min\(processed \+ 1, files\.length\) : processed/);
   assert.match(page, /Creating \$\{activeItem\} of \$\{files\.length\}/);
   assert.match(page, /\{activeItem\}\/\{files\.length\}/);
   assert.doesNotMatch(page, /Creating \$\{processed \+ 1\} of/);
-  assert.match(worker, /4\.5 \* 1024 \* 1024/);
   assert.match(page, /\/api\/printify\/stage/);
-  assert.match(worker, /UPNG\.encode/);
-  assert.doesNotMatch(page, /UPNG\.encode|getImageData/);
+  assert.match(page, /pass its original bytes straight through/);
+  assert.match(page, /return \{ blob: file, fileName: file\.name \}/);
   assert.match(page, /fetchWithDeadline/);
   assert.match(page, /4 \* 60 \* 1000/);
   assert.match(page, /Add at least one design/);

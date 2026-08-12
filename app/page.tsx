@@ -84,10 +84,10 @@ export default function Home() {
   function chooseFiles(list: FileList | null) {
     if (!list) return;
     const images = Array.from(list)
-      .filter((file) => /\.(png|jpe?g|webp)$/i.test(file.name))
+      .filter((file) => /\.(png|jpe?g)$/i.test(file.name))
       .map((file) => ({ name: file.name, size: file.size, id: `${(file as File & { webkitRelativePath?: string }).webkitRelativePath || file.name}-${file.size}-${file.lastModified}`, file }));
     if (images.length === 0) {
-      setFileError("No supported designs were found. Choose PNG, JPG or WebP images.");
+      setFileError("No supported designs were found. Choose PNG or JPG images.");
       setFiles([]);
       return;
     }
@@ -130,32 +130,14 @@ export default function Home() {
   }
 
   async function preparedUpload(file: File) {
-    return new Promise<{ blob: Blob; fileName: string }>((resolve, reject) => {
-      const worker = new Worker(new URL("./image-preparation.worker.ts", import.meta.url), { type: "module" });
-      const timeout = window.setTimeout(() => {
-        worker.terminate();
-        reject(new Error("This image took too long to prepare."));
-      }, 5 * 60 * 1000);
-      worker.onmessage = (event: MessageEvent<{ type: string; message?: string; blob?: Blob; fileName?: string }>) => {
-        if (event.data.type === "progress") {
-          setPreparationMessage(event.data.message ?? "Preparing artwork");
-          return;
-        }
-        window.clearTimeout(timeout);
-        worker.terminate();
-        if (event.data.type === "complete" && event.data.blob && event.data.fileName) {
-          resolve({ blob: event.data.blob, fileName: event.data.fileName });
-        } else {
-          reject(new Error(event.data.message || "This image could not be prepared."));
-        }
-      };
-      worker.onerror = () => {
-        window.clearTimeout(timeout);
-        worker.terminate();
-        reject(new Error("This image could not be prepared by the browser."));
-      };
-      worker.postMessage({ file, maxPrintWidth: templateDetails?.maxPrintWidth, maxPrintHeight: templateDetails?.maxPrintHeight });
-    });
+    // Never decode, resize, draw, or recompress artwork in the browser. A
+    // high-resolution PNG can expand to hundreds of megabytes when decoded,
+    // which can make Chrome declare the entire page unresponsive. The File is
+    // already a streamable Blob, so pass its original bytes straight through.
+    if (!/\.(png|jpe?g)$/i.test(file.name) || !/^image\/(png|jpeg)$/i.test(file.type || "image/png")) {
+      throw new Error("Choose a PNG or JPG file. WebP artwork must be exported as PNG before uploading.");
+    }
+    return { blob: file, fileName: file.name };
   }
 
   async function stageUpload(blob: Blob, fileName: string, reference: string) {
@@ -189,6 +171,7 @@ export default function Home() {
       const referenceRoot = `GLF-${crypto.randomUUID().replace(/-/g, "").slice(0, 10).toUpperCase()}`;
       let finalError: Error | null = null;
       try {
+        setPreparationMessage(`Sending ${design.name} without opening or compressing it`);
         const upload = await preparedUpload(design.file);
         setPreparationMessage(`Sending ${design.name} to Printify`);
         for (let pipelineAttempt = 1; pipelineAttempt <= 3; pipelineAttempt += 1) {
@@ -349,8 +332,8 @@ export default function Home() {
               <p className="step-copy">Build one focused batch of up to 20 finished designs. Upload a folder or select individual images.</p>
               <p className="batch-limits" aria-label="Batch limits"><span>20 designs maximum</span><i /> <span>500 MB per batch</span><i /> <span>Artwork is sized for the selected product</span></p>
               <div className="file-reminder"><b>Before uploading</b><span>Designs must already be upscaled if needed. For apparel—or any product where the background should not print—use a transparent-background PNG.</span></div>
-              <input ref={folderPicker} className="hidden-picker" type="file" multiple accept=".png,.jpg,.jpeg,.webp" {...({ webkitdirectory: "", directory: "" } as React.InputHTMLAttributes<HTMLInputElement>)} onChange={(event) => chooseFiles(event.target.files)} />
-              <input ref={imagePicker} className="hidden-picker" type="file" multiple accept=".png,.jpg,.jpeg,.webp" onChange={(event) => chooseFiles(event.target.files)} />
+              <input ref={folderPicker} className="hidden-picker" type="file" multiple accept=".png,.jpg,.jpeg" {...({ webkitdirectory: "", directory: "" } as React.InputHTMLAttributes<HTMLInputElement>)} onChange={(event) => chooseFiles(event.target.files)} />
+              <input ref={imagePicker} className="hidden-picker" type="file" multiple accept=".png,.jpg,.jpeg" onChange={(event) => chooseFiles(event.target.files)} />
               <div className="upload-actions">
               <button className="folder-drop" onClick={() => folderPicker.current?.click()}>
                 <span className="upload-icon" aria-hidden="true">↑</span>
