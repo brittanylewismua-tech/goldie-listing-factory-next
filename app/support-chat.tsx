@@ -8,13 +8,13 @@ function SupportText({ text }: { text: string }) { const parts = text.split(/(\*
 
 export default function SupportChat() {
   const [open,setOpen]=useState(false); const [view,setView]=useState<"chat"|"contact">("chat"); const [query,setQuery]=useState("");
-  const [messages,setMessages]=useState<SupportTurn[]>([{role:"support",text:"Hi 👋 I’m here to help with the Goldie Listing Factory. Paste an error message or describe what happened, and I’ll work through it with you."}]);
+  const [messages,setMessages]=useState<SupportTurn[]>([{role:"support",text:"Hi 👋 I’m here to help with the Goldie Listing Factory. Tell me what happened or paste the error message you’re seeing, and we’ll work through it together."}]);
   const [suggestions,setSuggestions]=useState(SUGGESTIONS);
   const [email,setEmail]=useState(""); const [issue,setIssue]=useState(""); const [screenshot,setScreenshot]=useState<File|null>(null); const [contactStatus,setContactStatus]=useState(""); const [sending,setSending]=useState(false);
   const endRef=useRef<HTMLDivElement>(null);
   function answer(value:string){const clean=value.trim();if(!clean)return;setMessages(current=>{const response=supportResponse(clean,current);setSuggestions(response.suggestions??[]);return [...current,{role:"user",text:clean},{role:"support",text:response.text,articleId:response.articleId}];});setQuery("");}
-  useEffect(()=>{try{const saved=sessionStorage.getItem("goldie-listing-support");if(saved){const parsed=JSON.parse(saved) as SupportTurn[];if(Array.isArray(parsed)&&parsed.length)setMessages(parsed.slice(-30));}}catch{}},[]);
-  useEffect(()=>{try{sessionStorage.setItem("goldie-listing-support",JSON.stringify(messages.slice(-30)));}catch{}},[messages]);
+  useEffect(()=>{try{const saved=sessionStorage.getItem("goldie-listing-support-v2");if(saved){const parsed=JSON.parse(saved) as SupportTurn[];if(Array.isArray(parsed)&&parsed.length)setMessages(parsed.slice(-30));}}catch{}},[]);
+  useEffect(()=>{try{sessionStorage.setItem("goldie-listing-support-v2",JSON.stringify(messages.slice(-30)));}catch{}},[messages]);
   useEffect(()=>{const openWithError=(event:Event)=>{const detail=(event as CustomEvent<string>).detail;setOpen(true);setView("chat");if(detail)answer(detail);};window.addEventListener("goldie-support",openWithError);return()=>window.removeEventListener("goldie-support",openWithError);},[]);
   useEffect(()=>{endRef.current?.scrollIntoView({behavior:"smooth"});},[messages,open]);
   function submit(event:FormEvent){event.preventDefault();answer(query);}

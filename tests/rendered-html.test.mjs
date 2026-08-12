@@ -106,9 +106,9 @@ test("ships an in-page support assistant with a comprehensive troubleshooting ba
   ]);
   assert.match(page, /<SupportChat/);
   assert.match(page, /Get help with this error/);
-  assert.match(chat, /Paste an error message or describe what happened/);
+  assert.match(chat, /we’ll work through it together/);
   assert.match(chat, /goldie-support/);
-  assert.match(chat, /sessionStorage\.setItem\("goldie-listing-support"/);
+  assert.match(chat, /sessionStorage\.setItem\("goldie-listing-support-v2"/);
   assert.match(chat, /supportResponse\(clean,current\)/);
   assert.match(chat, /Contact Support/);
   assert.match(chat, /Screenshot of the error/);
@@ -116,12 +116,13 @@ test("ships an in-page support assistant with a comprehensive troubleshooting ba
   assert.match(supportCss, /width:460px/);
   assert.match(supportCss, /height:680px/);
   assert.match(supportCss, /width:60px;height:60px/);
+  assert.match(supportCss, /content:"\?"/);
   assert.match(knowledge, /Provided images do not exist/);
   assert.match(knowledge, /Printify will not connect/);
   assert.match(knowledge, /Template product not found/);
   assert.match(knowledge, /Open all does not open every tab/);
   assert.ok((knowledge.match(/id:/g) ?? []).length >= 20);
-  assert.match(engine, /I can diagnose it, but I need the point where it failed/);
+  assert.match(engine, /I’m sorry—that’s frustrating/);
   assert.match(engine, /After you clicked Retry failed designs/);
   assert.match(engine, /You already tried/);
   assert.match(engine, /userContext/);

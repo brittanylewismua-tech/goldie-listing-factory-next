@@ -21,9 +21,9 @@ export function supportResponse(query: string, turns: SupportTurn[]): SupportRes
   const previousArticle = lastArticle(turns);
 
   if (/^(that|this|it) (still )?(didn'?t|doesn'?t|did not|does not) work|same (thing|error)|still (failing|broken|not working)/i.test(lower)) {
-    if (!previousArticle) return { text: "Tell me the exact message showing now, or choose the part that is still not working.", suggestions: STAGES };
+    if (!previousArticle) return { text: "I’m sorry that didn’t fix it. What message are you seeing now? You can also choose the part that’s still giving you trouble below.", suggestions: STAGES };
     const followUps: Record<string, SupportResponse> = {
-      "image-8253": { text: "After you clicked Retry failed designs, did it return the same 8253 message, a different error, or is the retry still running?", suggestions: ["Same 8253 error", "A different error", "It is still running"] },
+      "image-8253": { text: "Thanks for letting me know. After you clicked Retry failed designs, did you see the same 8253 message, a different error, or is the retry still running?", suggestions: ["Same 8253 error", "A different error", "It is still running"] },
       "token-connect": { text: "What exact message appears directly under Connect Printify after you paste the new all-scopes token? Paste that text here.", suggestions: [] },
       "template-not-found": { text: "Does the template open normally inside the same Printify account you connected to Goldie, or does Printify itself say product not found?", suggestions: ["It opens normally in Printify", "Printify says product not found"] },
       "template-print-area": { text: "After saving the fresh template copy, what exact red error does Goldie show when you load or run it now? Paste that text here.", suggestions: [] },
@@ -54,13 +54,13 @@ export function supportResponse(query: string, turns: SupportTurn[]): SupportRes
   const hasSpecificSignal = /\b(8253|8150|8201|429|401|403|500|502|503|504)\b|provided images do not exist|validation failed|failed to fetch|could not be decoded|product not found|unauthorized|file\.size\.limit/i.test(clean);
   if (exactArticle && hasSpecificSignal) return { text: exactArticle.answer, articleId: exactArticle.id };
 
-  if (/connect(ing)? printify/i.test(lower)) return { text: "What exact message appears under the Connect Printify box after the connection fails? Paste it here. If no message appears, tell me whether the button changes to Connecting… first.", suggestions: ["It says unauthorized", "The button does nothing", "I have an error code"] };
-  if (/load(ing)? (the )?template/i.test(lower)) return { text: "What happens after you click Load template: does Goldie say the product was not found, show a different red message, or keep loading without finishing?", suggestions: ["Product was not found", "A different red message", "It keeps loading"] };
-  if (/adding designs/i.test(lower)) return { text: "Which describes it: the files never appear after you choose them, Goldie rejects the batch immediately, or the files load but fail later during draft creation?", suggestions: ["Files never appear", "Batch is rejected immediately", "They fail during draft creation"] };
-  if (/creating drafts/i.test(lower)) return { text: "Is the batch still actively counting through designs, or has it finished with one or more files marked Failed? If it finished, paste the exact error under one failed file.", suggestions: ["It is still counting", "It finished with failed files", "The progress stopped"] };
-  if (/opening drafts in printify/i.test(lower)) return { text: "What happens when you click Edit in Printify: a login screen, product not found, the wrong account, or no new tab at all?", suggestions: ["Printify login screen", "Product not found", "Wrong Printify account", "No tab opens"] };
+  if (/connect(ing)? printify/i.test(lower)) return { text: "Let’s get the connection sorted out. What message appears under the Connect Printify box? If there isn’t one, let me know whether the button changes to Connecting… first.", suggestions: ["It says unauthorized", "The button does nothing", "I have an error code"] };
+  if (/load(ing)? (the )?template/i.test(lower)) return { text: "Let’s narrow down what’s happening with the template. After you click Load template, does Goldie say the product wasn’t found, show a different red message, or keep loading without finishing?", suggestions: ["Product was not found", "A different red message", "It keeps loading"] };
+  if (/adding designs/i.test(lower)) return { text: "I’ll help you pinpoint where it’s getting stuck. Which feels closest: the files never appear after you choose them, the batch is rejected immediately, or the files load but fail later during draft creation?", suggestions: ["Files never appear", "Batch is rejected immediately", "They fail during draft creation"] };
+  if (/creating drafts/i.test(lower)) return { text: "Got it—we’re in the draft-creation step. Is the batch still counting through designs, or has it finished with one or more files marked Failed?", suggestions: ["It is still counting", "It finished with failed files", "The progress stopped"] };
+  if (/opening drafts in printify/i.test(lower)) return { text: "Okay, let’s fix the handoff into Printify. What happens when you click Edit in Printify: a login screen, product not found, the wrong account, or no new tab at all?", suggestions: ["Printify login screen", "Product not found", "Wrong Printify account", "No tab opens"] };
 
-  if (/design(s)? failed|draft(s)? failed|not working|won'?t work|doesn'?t work|problem|error/i.test(lower) && !hasSpecificSignal) return { text: "I can diagnose it, but I need the point where it failed. Choose the part you were on, or paste the exact error shown on the page.", suggestions: STAGES };
+  if (/design(s)? failed|draft(s)? failed|not working|won'?t work|doesn'?t work|problem|error/i.test(lower) && !hasSpecificSignal) return { text: "I’m sorry—that’s frustrating. Let’s figure out exactly where it stopped so I can give you the right fix. Which part were you on when the design failed?", suggestions: STAGES };
 
   if (/product was not found/i.test(lower)) return { text: "Does that same product open normally when you paste the link directly into a browser where you are signed into Printify?", suggestions: ["Yes, it opens normally in Printify", "No, Printify says product not found"] };
   if (/unauthorized/i.test(lower)) return { text: SUPPORT_ARTICLES.find((article)=>article.id==="token-connect")!.answer, articleId:"token-connect" };
@@ -77,5 +77,5 @@ export function supportResponse(query: string, turns: SupportTurn[]): SupportRes
   if (/no tab opens/i.test(lower)) return { text: "Your browser is blocking the new tab. Look for a blocked pop-up icon at the right side of the address bar. If you see it, click it and allow pop-ups for the Listing Factory.", articleId:"popups", suggestions:["I see the blocked pop-up icon","Nothing appears"] };
 
   if (exactArticle) return { text: exactArticle.answer, articleId: exactArticle.id };
-  return { text: "Tell me what you were trying to do and exactly what happened on the page. If there is an error message, paste it word for word. I’ll narrow it down from there." };
+  return { text: "I’m happy to help you sort it out. What were you trying to do, and what happened on the page? If you can see an error message, paste it here too." };
 }
