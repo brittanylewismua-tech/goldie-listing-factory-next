@@ -5,10 +5,11 @@ import { customerLaunchBlock } from "@/app/customer-launch-gate";
 import { publicSupportReference, recordDiagnostic } from "../diagnostics";
 import { createProductWithImageRetries } from "../product-creation";
 import { printifyUploadPayload } from "../upload-payload";
+import { printAreasWithOnlyCurrentArtwork } from "../product-payload";
 
 const PRINTIFY_API = "https://api.printify.com/v1";
 type Shop = { id: number; title: string };
-type UploadedImage = { id: string };
+type UploadedImage = { id: string; width?: number; height?: number; mime_type?: string };
 type TemplateProduct = {
   id: string;
   blueprint_id: number;
@@ -110,10 +111,9 @@ export async function POST(request: Request) {
     if (!shop || !template) throw new Error("The template product was not found in the connected Printify account.");
     await recordDiagnostic(runtimeEnv().DB, supportReference, { stage: diagnosticStage, event: "succeeded", templateProductId: productId, shopId: shop.id });
 
-    const primaryTemplateImageId = template.print_areas
-      .flatMap((area) => area.placeholders.flatMap((placeholder) => placeholder.images ?? []))
-      .find((image) => image.id)?.id;
-    if (!primaryTemplateImageId) throw new Error("Add one placeholder design to the Printify template before using it for a batch.");
+    const templateImageCount = template.print_areas
+      .flatMap((area) => area.placeholders.flatMap((placeholder) => placeholder.images ?? [])).length;
+    if (!templateImageCount) throw new Error("Add one placeholder design to the Printify template before using it for a batch.");
 
     diagnosticStage = "printify_upload";
     await recordDiagnostic(runtimeEnv().DB, supportReference, { stage: diagnosticStage, event: "started", shopId: shop.id });
@@ -139,16 +139,9 @@ export async function POST(request: Request) {
         blueprint_id: template.blueprint_id,
         print_provider_id: template.print_provider_id,
         variants: template.variants.map(({ id, price, is_enabled }) => ({ id, price, is_enabled })),
-        print_areas: template.print_areas.map((area) => ({
-          variant_ids: area.variant_ids,
-          placeholders: area.placeholders.filter((placeholder) => (placeholder.images?.length ?? 0) > 0).map((placeholder) => ({
-            position: placeholder.position,
-            images: (placeholder.images ?? []).map((image) => image.id === primaryTemplateImageId
-              ? { id: upload.id, x: image.x ?? 0.5, y: image.y ?? 0.5, scale: image.scale ?? 1, angle: image.angle ?? 0 }
-              : image),
-          })),
-          ...(area.background ? { background: area.background } : {}),
-        })).filter((area) => area.placeholders.length > 0),
+        // Never carry media-library IDs from the template into a different
+        // product request. Only the image uploaded in this request is valid.
+        print_areas: printAreasWithOnlyCurrentArtwork(template.print_areas, upload.id),
     });
     diagnosticStage = "draft_creation";
     await recordDiagnostic(runtimeEnv().DB, supportReference, { stage: diagnosticStage, event: "started", shopId: shop.id });

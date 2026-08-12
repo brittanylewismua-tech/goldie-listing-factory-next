@@ -81,11 +81,10 @@ test("uses individual shop-aware Printify editor buttons", async () => {
   assert.match(page, /const waits = \[0, 1500, 4000\]/);
   assert.match(route, /stagedIdForCleanup/);
   assert.match(route, /finally/);
-  assert.match(route, /primaryTemplateImageId/);
-  assert.match(route, /image\.id === primaryTemplateImageId/);
+  assert.match(route, /printAreasWithOnlyCurrentArtwork/);
+  assert.doesNotMatch(route, /image\.id === primaryTemplateImageId/);
   assert.match(route, /Add one placeholder design/);
-  assert.match(route, /placeholder\.images\?\.length/);
-  assert.match(route, /area\.placeholders\.length > 0/);
+  assert.match(route, /templateImageCount/);
 });
 
 test("uses draft creation as the authoritative image-readiness check", async () => {
@@ -134,6 +133,22 @@ test("retries a real 8253 draft response and succeeds without an upload lookup",
   assert.match(String(requests[1].body), /replacement-image/);
   assert.deepEqual(retries, [{ attempt:1, status:400 }]);
   assert.deepEqual(replaced, [1]);
+});
+
+test("removes every inherited template image ID from the outgoing Printify product", async () => {
+  const { printAreasWithOnlyCurrentArtwork } = await import("../app/api/printify/product-payload.ts");
+  const template = [{
+    variant_ids:[1,2],
+    placeholders:[
+      { position:"front", images:[{id:"stale-primary",x:0.4,y:0.6,scale:0.8,angle:2},{id:"stale-layer"}] },
+      { position:"back", images:[{id:"another-stale",x:0.5,y:0.5,scale:0.4,angle:0}] },
+    ],
+  }];
+  const result = printAreasWithOnlyCurrentArtwork(template, "fresh-upload");
+  const ids = result.flatMap((area)=>area.placeholders.flatMap((placeholder)=>placeholder.images.map((image)=>image.id)));
+  assert.deepEqual(ids, ["fresh-upload", "fresh-upload"]);
+  assert.doesNotMatch(JSON.stringify(result), /stale-primary|stale-layer|another-stale/);
+  assert.deepEqual(result[0].placeholders[0].images[0], {id:"fresh-upload",x:0.4,y:0.6,scale:0.8,angle:2});
 });
 
 test("records permanent sanitized Printify diagnostics without blocking listings", async () => {
