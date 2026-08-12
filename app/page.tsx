@@ -193,16 +193,31 @@ export default function Home() {
     else setDrafts((current) => current.filter((draft) => draft.status === "Created"));
     setProcessed(0);
     for (const design of targetFiles) {
-      const supportReference = `GLF-${crypto.randomUUID().replace(/-/g, "").slice(0, 10).toUpperCase()}`;
+      const referenceRoot = `GLF-${crypto.randomUUID().replace(/-/g, "").slice(0, 10).toUpperCase()}`;
+      let finalError: Error | null = null;
       try {
         const upload = await preparedUpload(design.file);
-        const staged = await stageUpload(upload.blob, upload.fileName, supportReference);
-        const response = await fetch("/api/printify/drafts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ productUrl: template, description, fileName: upload.fileName, stagedId: staged.stagedId, supportReference: staged.reference, clientId: design.id }) });
-        const result = await response.json() as { draft?: DraftResult; error?: string };
-        if (!response.ok || !result.draft) throw new Error(result.error || "Printify did not create this draft.");
-        setDrafts((current) => [...current, result.draft!]);
+        for (let pipelineAttempt = 1; pipelineAttempt <= 3; pipelineAttempt += 1) {
+          const supportReference = `${referenceRoot}-A${pipelineAttempt}`;
+          try {
+            const staged = await stageUpload(upload.blob, upload.fileName, supportReference);
+            const response = await fetch("/api/printify/drafts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ productUrl: template, description, fileName: upload.fileName, stagedId: staged.stagedId, supportReference: staged.reference, clientId: design.id }) });
+            const result = await response.json() as { draft?: DraftResult; error?: string };
+            if (!response.ok || !result.draft) throw new Error(result.error || "Printify did not create this draft.");
+            setDrafts((current) => [...current, result.draft!]);
+            finalError = null;
+            break;
+          } catch (attemptError) {
+            finalError = attemptError instanceof Error ? attemptError : new Error("The design failed.");
+            const permanent = /401|403|token|template product was not found|not a recognized|could not be decoded|could not be read|valid PNG or JPG/i.test(finalError.message);
+            if (permanent || pipelineAttempt === 3) break;
+            await new Promise((resolve) => window.setTimeout(resolve, pipelineAttempt * 5000));
+          }
+        }
+        if (finalError) throw finalError;
       } catch (error) {
         const rawMessage = error instanceof Error ? error.message : "The design failed.";
+        const supportReference = `${referenceRoot}-A3`;
         if (!/Support reference:/i.test(rawMessage)) {
           void fetch("/api/printify/diagnostics", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ reference: supportReference, fileName: design.name, stage: "browser_image_preparation", message: rawMessage }) });
         }

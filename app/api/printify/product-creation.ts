@@ -13,7 +13,7 @@ export async function createProductWithImageRetries<T>(options: {
   onRetry?: (attempt: number, status: number, detail: string) => Promise<void>;
   onImageNotReady?: (attempt: number, detail: string) => Promise<void>;
 }): Promise<T> {
-  const waits = [2000, 4000, 7000, 10000, 15000, 20000];
+  const waits = [3000, 7000, 15000, 20000, 30000, 45000];
   const fetcher = options.fetcher ?? fetch;
   const sleeper = options.sleeper ?? ((milliseconds: number) => new Promise((resolve) => setTimeout(resolve, milliseconds)));
   for (let attempt = 0; attempt <= waits.length; attempt += 1) {

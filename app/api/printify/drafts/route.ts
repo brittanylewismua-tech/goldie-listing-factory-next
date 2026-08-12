@@ -148,11 +148,13 @@ export async function POST(request: Request) {
     const created = await createProductWithImageRetries<{ id: string }>({
       path: `/shops/${shop.id}/products.json`, token, body: productBody,
       onRetry: (attempt, status, detail) => recordDiagnostic(runtimeEnv().DB, supportReference, { stage: diagnosticStage, event: "retry", attempt, httpStatus: status, message: detail, shopId: shop!.id }),
-      onImageNotReady: async () => {
-        // Waiting on the same rejected ID cannot repair it. Replace it with a
-        // fresh direct upload and let the next product request use that ID.
-        upload = await uploadArtwork();
-        if (!upload.id) throw new Error("Printify did not return a replacement image ID.");
+      onImageNotReady: async (attempt) => {
+        // Printify can briefly return 8253 while a valid upload is propagating.
+        // Give the same ID three product attempts; only then replace it once.
+        if (attempt === 3) {
+          upload = await uploadArtwork();
+          if (!upload.id) throw new Error("Printify did not return a replacement image ID.");
+        }
       },
     });
     await recordDiagnostic(runtimeEnv().DB, supportReference, { stage: diagnosticStage, event: "succeeded", shopId: shop.id });

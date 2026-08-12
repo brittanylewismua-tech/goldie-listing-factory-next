@@ -94,7 +94,8 @@ test("uses draft creation as the authoritative image-readiness check", async () 
   assert.match(creation, /Provided images do not exist/);
   assert.match(creation, /8253/);
   assert.match(route, /createProductWithImageRetries/);
-  assert.match(creation, /15000, 20000/);
+  assert.match(creation, /3000, 7000, 15000, 20000, 30000, 45000/);
+  assert.match(route, /attempt === 3/);
 });
 
 test("sends staged artwork directly to Printify instead of a hosted URL", async () => {
