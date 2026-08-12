@@ -184,6 +184,16 @@ test("records permanent sanitized Printify diagnostics without blocking listings
   assert.match(admin, /Artwork and tokens are never stored here/);
 });
 
+test("provides an owner-only member-specific Printify health audit", async () => {
+  const audit = await readFile(new URL("../app/api/mastermind/member-diagnostic/route.ts", import.meta.url), "utf8");
+  assert.match(audit, /isOwner\(owner\)/);
+  assert.match(audit, /mastermind_access/);
+  assert.match(audit, /printify_connections/);
+  assert.match(audit, /template_product_id/);
+  assert.match(audit, /\/uploads\/\$\{encodeURIComponent\(id\)\}\.json/);
+  assert.doesNotMatch(audit, /token:\s*token/);
+});
+
 test("ships an in-page support assistant with a comprehensive troubleshooting bank", async () => {
   const [page, chat, knowledge, engine, supportCss] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
