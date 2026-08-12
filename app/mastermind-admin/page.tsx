@@ -5,7 +5,7 @@ import AdminControl from "./admin-control";
 export default async function MastermindAdminPage() {
   const user = await getChatGPTUser();
   if (!user) return <div className="access-shell"><div className="access-card"><a className="access-link" href={chatGPTSignInPath("/mastermind-admin")} target="_blank" rel="noopener noreferrer">Owner sign in</a></div></div>;
-  if (!isOwner(user)) return <div className="access-shell"><div className="access-card"><h1>Not authorized</h1></div></div>;
+  if (!isOwner(user)) return <div className="access-shell"><div className="access-card"><h1>Not authorized</h1><p>Signed in as <b>{user.email}</b></p></div></div>;
   const db = runtime().DB;
   const [setting, count, diagnostics] = db ? await Promise.all([
     db.prepare("SELECT active FROM mastermind_settings WHERE id = 1").first<{ active: number }>(),
