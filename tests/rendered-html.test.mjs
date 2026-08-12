@@ -65,6 +65,8 @@ test("uses individual shop-aware Printify editor buttons", async () => {
   assert.ok(page.indexOf("drafts.map") < page.indexOf("Open all in Printify"));
   assert.match(page, /Allow pop-ups for this site/);
   assert.match(route, /response\.status === 429/);
+  assert.match(route, /response\.status >= 500/);
+  assert.match(route, /three automatic retries/);
   assert.match(page, /clientId: design\.id/);
   assert.match(page, /failedIds\.has\(file\.id\)/);
   assert.match(page, /key=\{draft\.clientId\}/);
@@ -72,6 +74,9 @@ test("uses individual shop-aware Printify editor buttons", async () => {
   assert.match(page, /Open help/);
   assert.match(page, /all access scopes/);
   assert.match(page, /printify\.com\/app\/account\/connections/);
+  assert.match(page, /friendlyUploadError/);
+  assert.match(page, /Download it fully to your computer/);
+  assert.match(page, /const waits = \[0, 1500, 4000\]/);
   assert.match(route, /stagedIdForCleanup/);
   assert.match(route, /finally/);
   assert.match(route, /primaryTemplateImageId/);

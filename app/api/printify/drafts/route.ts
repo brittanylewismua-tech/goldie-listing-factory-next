@@ -56,12 +56,18 @@ async function tokenFor(userId: string) {
 async function api<T>(path: string, token: string, init?: RequestInit): Promise<T> {
   const waits = [2000, 5000, 10000];
   for (let attempt = 0; attempt <= waits.length; attempt += 1) {
-    const response = await fetch(`${PRINTIFY_API}${path}`, {
-      ...init,
-      headers: { Authorization: `Bearer ${token}`, "User-Agent": "Goldie-Listing-Factory", "Content-Type": "application/json", ...(init?.headers ?? {}) },
-    });
+    let response: Response;
+    try {
+      response = await fetch(`${PRINTIFY_API}${path}`, {
+        ...init,
+        headers: { Authorization: `Bearer ${token}`, "User-Agent": "Goldie-Listing-Factory", "Content-Type": "application/json", ...(init?.headers ?? {}) },
+      });
+    } catch {
+      if (attempt < waits.length) { await new Promise((resolve) => setTimeout(resolve, waits[attempt])); continue; }
+      throw new Error("The connection to Printify was interrupted after three automatic retries.");
+    }
     if (response.ok) return response.json() as Promise<T>;
-    if (response.status === 429 && attempt < waits.length) {
+    if ((response.status === 429 || response.status >= 500) && attempt < waits.length) {
       const requestedWait = Number(response.headers.get("retry-after"));
       const wait = Number.isFinite(requestedWait) && requestedWait > 0 ? Math.min(requestedWait * 1000, 20000) : waits[attempt];
       await new Promise((resolve) => setTimeout(resolve, wait));
@@ -69,6 +75,8 @@ async function api<T>(path: string, token: string, init?: RequestInit): Promise<
     }
     if (response.status === 429) throw new Error("Printify is taking longer than expected. Retry this design when the batch finishes.");
     const detail = await response.text().catch(() => "");
+    if (response.status >= 500) throw new Error("Printify remained temporarily unavailable after three automatic retries.");
+    if (response.status === 401 || response.status === 403) throw new Error("Printify rejected the saved connection. Reconnect with a new token that has all scopes enabled.");
     throw new Error(`Printify returned ${response.status}${detail ? `: ${detail.slice(0, 180)}` : ""}`);
   }
   throw new Error("Printify could not complete this request.");

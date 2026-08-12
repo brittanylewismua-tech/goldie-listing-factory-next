@@ -10,6 +10,17 @@ type DraftResult = { id?: string; clientId: string; name: string; shopId?: numbe
 const MAX_BATCH_FILES = 20;
 const MAX_BATCH_BYTES = 500 * 1024 * 1024;
 
+function friendlyUploadError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error ?? "");
+  if (/image could not be decoded|could not be read|invalidstateerror|source image could not be decoded/i.test(message)) return "Goldie can see this filename, but cannot read the actual image. Download it fully to your computer, then upload it again as a PNG or JPG.";
+  if (/failed to fetch|networkerror|load failed|secure artwork delivery|temporarily unavailable/i.test(message)) return "The upload connection was interrupted. Goldie retried automatically, but Printify still could not receive this design. Retry it when the batch finishes.";
+  if (/401|token|unauthorized|not accept/i.test(message)) return "Printify rejected the saved connection. Disconnect Printify, create a new token with all scopes, and reconnect.";
+  if (/template product was not found|not found in the connected Printify/i.test(message)) return "This template belongs to a different Printify account or shop than the connected token.";
+  if (/8150|validation failed|print_areas|placeholder/i.test(message)) return "Printify rejected this template’s print-area setup. Reload the template; if it continues, use a freshly saved copy of the Printify product.";
+  if (/429|longer than expected|rate limit/i.test(message)) return "Printify is temporarily limiting requests. Goldie already waited and retried; retry this design when the batch finishes.";
+  return message || "Goldie could not create this draft. Retry it when the batch finishes.";
+}
+
 export default function Home() {
   const folderPicker = useRef<HTMLInputElement>(null);
   const imagePicker = useRef<HTMLInputElement>(null);
@@ -106,7 +117,9 @@ export default function Home() {
     // Printify accepts PNG/JPEG files up to 100 MB. Keep a safety margin for
     // transport while preserving every useful pixel the selected product can print.
     const uploadLimit = 95 * 1024 * 1024;
-    const bitmap = await createImageBitmap(file);
+    let bitmap: ImageBitmap;
+    try { bitmap = await createImageBitmap(file); }
+    catch { throw new Error("This image could not be decoded by the browser."); }
     const productScale = templateDetails?.maxPrintWidth && templateDetails?.maxPrintHeight
       ? Math.min(1, templateDetails.maxPrintWidth / bitmap.width, templateDetails.maxPrintHeight / bitmap.height)
       : 1;
@@ -146,14 +159,23 @@ export default function Home() {
   }
 
   async function stageUpload(blob: Blob, fileName: string) {
-    const response = await fetch(`/api/printify/stage?fileName=${encodeURIComponent(fileName)}`, {
-      method: "POST",
-      headers: { "Content-Type": blob.type || "application/octet-stream" },
-      body: blob,
-    });
-    const result = await response.json() as { stagedId?: string; error?: string };
-    if (!response.ok || !result.stagedId) throw new Error(result.error || "The design could not be prepared for Printify.");
-    return result.stagedId;
+    const waits = [0, 1500, 4000];
+    let lastError = "The design could not be prepared for Printify.";
+    for (const wait of waits) {
+      if (wait) await new Promise((resolve) => window.setTimeout(resolve, wait));
+      try {
+        const response = await fetch(`/api/printify/stage?fileName=${encodeURIComponent(fileName)}`, {
+          method: "POST",
+          headers: { "Content-Type": blob.type || "application/octet-stream" },
+          body: blob,
+        });
+        const result = await response.json() as { stagedId?: string; error?: string };
+        if (response.ok && result.stagedId) return result.stagedId;
+        lastError = result.error || lastError;
+        if (response.status >= 400 && response.status < 500 && response.status !== 429) break;
+      } catch (error) { lastError = error instanceof Error ? error.message : lastError; }
+    }
+    throw new Error(lastError);
   }
 
   async function runDrafts(targetFiles: DesignFile[], keepSuccessful = false) {
@@ -172,7 +194,7 @@ export default function Home() {
         if (!response.ok || !result.draft) throw new Error(result.error || "Printify did not create this draft.");
         setDrafts((current) => [...current, result.draft!]);
       } catch (error) {
-        setDrafts((current) => [...current, { clientId: design.id, name: design.name, status: "Failed", error: error instanceof Error ? error.message : "Draft creation failed." }]);
+        setDrafts((current) => [...current, { clientId: design.id, name: design.name, status: "Failed", error: friendlyUploadError(error) }]);
       }
       setProcessed((current) => current + 1);
     }
