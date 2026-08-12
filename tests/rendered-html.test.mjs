@@ -122,7 +122,8 @@ test("ships an in-page support assistant with a comprehensive troubleshooting ba
   assert.match(knowledge, /Template product not found/);
   assert.match(knowledge, /Open all does not open every tab/);
   assert.ok((knowledge.match(/id:/g) ?? []).length >= 20);
-  assert.match(engine, /I’m sorry—that’s frustrating/);
+  assert.match(engine, /Let’s narrow it down so I can give you the right fix/);
+  assert.doesNotMatch(engine, /I’m sorry|frustrating|Thanks for letting me know|I’m happy to help/);
   assert.match(engine, /After you clicked Retry failed designs/);
   assert.match(engine, /You already tried/);
   assert.match(engine, /userContext/);
