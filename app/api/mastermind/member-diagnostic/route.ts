@@ -25,20 +25,17 @@ async function status(path: string, token: string) {
   return { response, status: response.status };
 }
 
-export async function GET(request: Request) {
-  const owner = await getChatGPTUser();
-  if (!owner || !isOwner(owner)) return NextResponse.json({ error: "Not authorized." }, { status: 403 });
-  const email = new URL(request.url).searchParams.get("email")?.trim().toLowerCase() ?? "";
+export async function auditMemberPrintify(email: string) {
   const db = runtime().DB;
-  if (!db || !email) return NextResponse.json({ error: "Member email is required." }, { status: 400 });
+  if (!db || !email) return { error: "Member email is required." };
 
   const access = await db.prepare("SELECT user_id AS userId FROM mastermind_access WHERE lower(email) = ?").bind(email).first<{ userId: string }>();
-  if (!access) return NextResponse.json({ error: "That member has not redeemed access." }, { status: 404 });
+  if (!access) return { error: "That member has not redeemed access." };
   const [connection, diagnostic] = await Promise.all([
     db.prepare("SELECT encrypted_token AS encryptedToken, updated_at AS updatedAt FROM printify_connections WHERE user_id = ?").bind(access.userId).first<{ encryptedToken: string; updatedAt: string }>(),
     db.prepare("SELECT template_product_id AS templateProductId, shop_id AS shopId, error_code AS errorCode, stage, updated_at AS updatedAt FROM printify_diagnostics WHERE user_id = ? ORDER BY updated_at DESC LIMIT 1").bind(access.userId).first<{ templateProductId: string | null; shopId: number | null; errorCode: string | null; stage: string; updatedAt: string }>(),
   ]);
-  if (!connection) return NextResponse.json({ email, connection: "missing", latestFailure: diagnostic ?? null });
+  if (!connection) return { email, connection: "missing", latestFailure: diagnostic ?? null };
 
   const token = await decryptToken(connection.encryptedToken);
   const shopsCheck = await status("/shops.json", token);
@@ -49,11 +46,11 @@ export async function GET(request: Request) {
     connectionSavedAt: connection.updatedAt,
     latestFailure: diagnostic ?? null,
   };
-  if (shopsCheck.status !== 200 || !diagnostic?.shopId || !diagnostic.templateProductId) return NextResponse.json(result);
+  if (shopsCheck.status !== 200 || !diagnostic?.shopId || !diagnostic.templateProductId) return result;
 
   const templateCheck = await status(`/shops/${diagnostic.shopId}/products/${diagnostic.templateProductId}.json`, token);
   result.templateHttpStatus = templateCheck.status;
-  if (!templateCheck.response.ok) return NextResponse.json(result);
+  if (!templateCheck.response.ok) return result;
   const product = await templateCheck.response.json() as Product;
   const placeholders = product.print_areas?.flatMap((area) => area.placeholders ?? []) ?? [];
   const inheritedIds = [...new Set(placeholders.flatMap((placeholder) => placeholder.images?.map((image) => image.id).filter(Boolean) ?? []))] as string[];
@@ -67,5 +64,13 @@ export async function GET(request: Request) {
     inheritedMediaUnavailable: mediaChecks.filter((code) => code !== 200).length,
     inheritedMediaStatuses: mediaChecks,
   };
-  return NextResponse.json(result);
+  return result;
+}
+
+export async function GET(request: Request) {
+  const owner = await getChatGPTUser();
+  if (!owner || !isOwner(owner)) return NextResponse.json({ error: "Not authorized." }, { status: 403 });
+  const email = new URL(request.url).searchParams.get("email")?.trim().toLowerCase() ?? "";
+  const result = await auditMemberPrintify(email);
+  return NextResponse.json(result, { status: "error" in result ? 400 : 200 });
 }
