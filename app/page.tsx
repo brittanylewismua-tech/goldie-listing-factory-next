@@ -271,7 +271,7 @@ export default function Home() {
           </div>
         </div>
         <div className="top-actions">
-          {owner && <a className="diagnostics-link" href="/mastermind-admin">Goldie Diagnostics</a>}
+          {owner && <a className="diagnostics-link" href="/mastermind-admin" aria-label="Open Goldie Diagnostics" title="Goldie Diagnostics">★</a>}
           <span className="secure-pill"><i /> Secure workspace</span>
         </div>
       </header>

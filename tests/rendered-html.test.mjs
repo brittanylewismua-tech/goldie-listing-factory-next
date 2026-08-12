@@ -71,7 +71,8 @@ test("uses individual shop-aware Printify editor buttons", async () => {
   assert.match(page, /failedIds\.has\(file\.id\)/);
   assert.match(page, /key=\{draft\.clientId\}/);
   assert.doesNotMatch(page, /\.tif|tiff\?/i);
-  assert.match(page, /Goldie Diagnostics/);
+  assert.match(page, /aria-label="Open Goldie Diagnostics"/);
+  assert.match(page, /owner && <a className="diagnostics-link"/);
   assert.doesNotMatch(page, /className="help-button"|aria-label="Open help"/);
   assert.match(page, /all scopes/);
   assert.match(page, /friendlyUploadError/);
