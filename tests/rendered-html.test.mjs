@@ -35,9 +35,10 @@ test("server-renders the branded Listing Factory", async () => {
 });
 
 test("uses individual shop-aware Printify editor buttons", async () => {
-  const [page, route] = await Promise.all([
+  const [page, route, worker] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/api/printify/drafts/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/image-preparation.worker.ts", import.meta.url), "utf8"),
   ]);
   assert.match(page, /Edit in Printify/);
   assert.match(page, /openedDrafts/);
@@ -46,14 +47,18 @@ test("uses individual shop-aware Printify editor buttons", async () => {
   assert.match(route, /shopId: shop\.id/);
   assert.match(page, /MAX_BATCH_FILES = 20/);
   assert.match(page, /MAX_BATCH_BYTES = 500 \* 1024 \* 1024/);
-  assert.match(page, /templateDetails\.maxPrintWidth \/ bitmap\.width/);
+  assert.match(page, /new Worker\(new URL\("\.\/image-preparation\.worker\.ts"/);
+  assert.match(worker, /maxPrintWidth \/ bitmap\.width/);
   assert.match(page, /const activeItem = running \? Math\.min\(processed \+ 1, files\.length\) : processed/);
   assert.match(page, /Creating \$\{activeItem\} of \$\{files\.length\}/);
   assert.match(page, /\{activeItem\}\/\{files\.length\}/);
   assert.doesNotMatch(page, /Creating \$\{processed \+ 1\} of/);
-  assert.match(page, /4\.5 \* 1024 \* 1024/);
+  assert.match(worker, /4\.5 \* 1024 \* 1024/);
   assert.match(page, /\/api\/printify\/stage/);
-  assert.match(page, /UPNG\.encode/);
+  assert.match(worker, /UPNG\.encode/);
+  assert.doesNotMatch(page, /UPNG\.encode|getImageData/);
+  assert.match(page, /fetchWithDeadline/);
+  assert.match(page, /4 \* 60 \* 1000/);
   assert.match(page, /Add at least one design/);
   assert.match(page, /Load your product template/);
   assert.match(page, /function startOver\(\)/);
@@ -85,6 +90,39 @@ test("uses individual shop-aware Printify editor buttons", async () => {
   assert.doesNotMatch(route, /image\.id === primaryTemplateImageId/);
   assert.match(route, /Add one placeholder design/);
   assert.match(route, /templateImageCount/);
+});
+
+test("preflights the account once and reuses a protected batch session", async () => {
+  const [page, connection, drafts, schema, migration] = await Promise.all([
+    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/printify/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/printify/drafts/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../db/schema.ts", import.meta.url), "utf8"),
+    readFile(new URL("../drizzle/0004_broad_dazzler.sql", import.meta.url), "utf8"),
+  ]);
+  assert.match(connection, /printify_batch_sessions/);
+  assert.match(connection, /no enabled sizes or colors/);
+  assert.match(connection, /placeholder design to every print area/);
+  assert.match(connection, /expiresAt = Math\.floor\(Date\.now\(\) \/ 1000\) \+ 6 \* 60 \* 60/);
+  assert.match(page, /batchId: templateDetails\?\.batchId/);
+  assert.match(drafts, /FROM printify_batch_sessions WHERE id = \? AND user_id = \?/);
+  assert.doesNotMatch(drafts, /const shops = await api|for \(const candidate of shops\)/);
+  assert.match(schema, /printifyBatchSessions/);
+  assert.match(migration, /printify_batch_sessions/);
+});
+
+test("makes draft retries idempotent so a lost response cannot duplicate a listing", async () => {
+  const [drafts, schema, migration] = await Promise.all([
+    readFile(new URL("../app/api/printify/drafts/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../db/schema.ts", import.meta.url), "utf8"),
+    readFile(new URL("../drizzle/0004_broad_dazzler.sql", import.meta.url), "utf8"),
+  ]);
+  assert.match(drafts, /SHA-256/);
+  assert.match(drafts, /prior\?\.status === "succeeded"/);
+  assert.match(drafts, /status = 'succeeded'/);
+  assert.match(drafts, /still completing this exact draft/);
+  assert.match(schema, /printifyDraftResults/);
+  assert.match(migration, /printify_draft_results/);
 });
 
 test("uses draft creation as the authoritative image-readiness check", async () => {
@@ -136,6 +174,44 @@ test("retries a real 8253 draft response and succeeds without an upload lookup",
   assert.deepEqual(replaced, [1]);
 });
 
+test("recovers from Printify throttling and network interruption without changing the request", async () => {
+  const { createProductWithImageRetries } = await import("../app/api/printify/product-creation.ts");
+  const waits = [];
+  let calls = 0;
+  const result = await createProductWithImageRetries({
+    path:"/shops/7/products.json",
+    token:"test-token",
+    body:JSON.stringify({ title:"same-draft" }),
+    fetcher:async (_url, init) => {
+      calls += 1;
+      assert.equal(init?.body, JSON.stringify({ title:"same-draft" }));
+      if (calls === 1) throw new TypeError("network down");
+      if (calls === 2) return new Response("limited", { status:429, headers:{ "retry-after":"1" } });
+      return new Response(JSON.stringify({ id:"recovered" }), { status:200, headers:{ "content-type":"application/json" } });
+    },
+    sleeper:async(milliseconds)=>{ waits.push(milliseconds); },
+  });
+  assert.deepEqual(result, { id:"recovered" });
+  assert.equal(calls, 3);
+  assert.deepEqual(waits, [3000, 1000]);
+});
+
+test("does not retry permanent Printify validation failures", async () => {
+  const { createProductWithImageRetries } = await import("../app/api/printify/product-creation.ts");
+  let calls = 0;
+  await assert.rejects(
+    createProductWithImageRetries({
+      path:"/shops/7/products.json",
+      token:"test-token",
+      body:"{}",
+      fetcher:async()=>{ calls += 1; return new Response("invalid placement", { status:400 }); },
+      sleeper:async()=>{},
+    }),
+    /Printify returned 400: invalid placement/,
+  );
+  assert.equal(calls, 1);
+});
+
 test("removes every inherited template image ID from the outgoing Printify product", async () => {
   const { printAreasWithOnlyCurrentArtwork } = await import("../app/api/printify/product-payload.ts");
   const template = [{
@@ -182,6 +258,8 @@ test("records permanent sanitized Printify diagnostics without blocking listings
   assert.match(admin, /Recent failed operations/);
   assert.match(admin, /Search reference, member, design or code/);
   assert.match(admin, /Artwork and tokens are never stored here/);
+  assert.match(admin, /Diagnose this member’s Printify account/);
+  assert.match(admin, /member-audit\?email=/);
 });
 
 test("provides an owner-only member-specific Printify health audit", async () => {
@@ -208,7 +286,7 @@ test("ships an in-page support assistant with a comprehensive troubleshooting ba
   assert.match(chat, /we’ll work through it together/);
   assert.match(chat, /goldie-support/);
   assert.match(chat, /sessionStorage\.setItem\("goldie-listing-support-v2"/);
-  assert.match(chat, /supportResponse\(clean,current\)/);
+  assert.match(chat, /supportResponse\(clean, messages\)/);
   assert.match(chat, /Contact Support/);
   assert.match(chat, /Screenshot of the error/);
   assert.doesNotMatch(chat, /ChatGPT chat link|ChatGPT plan/);

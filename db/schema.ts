@@ -47,3 +47,23 @@ export const printifyDiagnosticEvents = sqliteTable("printify_diagnostic_events"
   message: text("message"),
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 }, (table) => [index("idx_printify_diagnostic_events_reference").on(table.reference)]);
+
+export const printifyBatchSessions = sqliteTable("printify_batch_sessions", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull(),
+  shopId: integer("shop_id").notNull(),
+  productId: text("product_id").notNull(),
+  templateJson: text("template_json").notNull(),
+  expiresAt: integer("expires_at").notNull(),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+}, (table) => [index("idx_printify_batch_sessions_user_expiry").on(table.userId, table.expiresAt)]);
+
+export const printifyDraftResults = sqliteTable("printify_draft_results", {
+  requestKey: text("request_key").primaryKey(),
+  userId: text("user_id").notNull(),
+  batchId: text("batch_id").notNull(),
+  clientId: text("client_id").notNull(),
+  status: text("status").notNull(),
+  responseJson: text("response_json"),
+  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+}, (table) => [index("idx_printify_draft_results_user_batch").on(table.userId, table.batchId)]);

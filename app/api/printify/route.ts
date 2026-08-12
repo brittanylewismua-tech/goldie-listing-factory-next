@@ -6,7 +6,18 @@ import { isOwner } from "@/app/mastermind/access";
 
 const PRINTIFY_API = "https://api.printify.com/v1";
 type Shop = { id: number; title: string };
-type Product = { id: string; title: string; blueprint_id: number; print_provider_id: number; variants?: Array<{ id: number; is_enabled?: boolean }>; print_areas?: Array<{ placeholders?: Array<{ position?: string }> }> };
+type Product = {
+  id: string;
+  title: string;
+  blueprint_id: number;
+  print_provider_id: number;
+  variants?: Array<{ id: number; price: number; is_enabled?: boolean }>;
+  print_areas?: Array<{
+    variant_ids: number[];
+    background?: string;
+    placeholders?: Array<{ position?: string; images?: Array<{ id?: string; x?: number; y?: number; scale?: number; angle?: number }> }>;
+  }>;
+};
 type CatalogVariant = { id: number; placeholders?: Array<{ position?: string; width?: number; height?: number }> };
 
 function runtimeEnv() {
@@ -103,6 +114,10 @@ export async function POST(request: Request) {
       if (response.ok) { found = { shop, product: (await response.json()) as Product }; break; }
     }
     if (!found) return NextResponse.json({ error: "This product was not found in any shop connected to that Printify account." }, { status: 404 });
+    const enabledVariants = found.product.variants?.filter((variant) => variant.is_enabled) ?? [];
+    if (enabledVariants.length === 0) return NextResponse.json({ error: "This Printify template has no enabled sizes or colors. Enable at least one variant, save it, and load it again." }, { status: 400 });
+    const configuredPlacements = found.product.print_areas?.flatMap((area) => area.placeholders ?? []).filter((placeholder) => placeholder.images?.[0]) ?? [];
+    if (configuredPlacements.length === 0) return NextResponse.json({ error: "Add one placeholder design to every print area you want Goldie to use, save the Printify template, and load it again." }, { status: 400 });
     let provider = `Provider ${found.product.print_provider_id}`;
     try {
       const providers = await printify<Array<{ id: number; title: string }>>(`/catalog/blueprints/${found.product.blueprint_id}/print_providers.json`, token);
@@ -123,7 +138,24 @@ export async function POST(request: Request) {
         .sort((left, right) => Number(right.width) * Number(right.height) - Number(left.width) * Number(left.height));
       if (candidates[0]) { maxPrintWidth = Number(candidates[0].width); maxPrintHeight = Number(candidates[0].height); }
     } catch { /* Print dimensions are an optimization; draft creation can continue without them. */ }
-    return NextResponse.json({ product: { id: found.product.id, title: found.product.title, provider, enabledVariants: found.product.variants?.filter((variant) => variant.is_enabled).length ?? 0, shop: found.shop.title, maxPrintWidth, maxPrintHeight } });
+    const db = runtimeEnv().DB;
+    if (!db) return NextResponse.json({ error: "Secure batch storage is unavailable." }, { status: 503 });
+    const batchId = crypto.randomUUID();
+    const expiresAt = Math.floor(Date.now() / 1000) + 6 * 60 * 60;
+    const safeTemplate = {
+      id: found.product.id,
+      blueprint_id: found.product.blueprint_id,
+      print_provider_id: found.product.print_provider_id,
+      variants: found.product.variants ?? [],
+      print_areas: found.product.print_areas ?? [],
+    };
+    await db.batch([
+      db.prepare("DELETE FROM printify_batch_sessions WHERE expires_at <= unixepoch()"),
+      db.prepare("DELETE FROM printify_draft_results WHERE updated_at < datetime('now', '-30 days')"),
+      db.prepare("INSERT INTO printify_batch_sessions (id, user_id, shop_id, product_id, template_json, expires_at) VALUES (?, ?, ?, ?, ?, ?)")
+        .bind(batchId, user.userId, found.shop.id, found.product.id, JSON.stringify(safeTemplate), expiresAt),
+    ]);
+    return NextResponse.json({ product: { id: found.product.id, batchId, title: found.product.title, provider, enabledVariants: enabledVariants.length, shop: found.shop.title, maxPrintWidth, maxPrintHeight } });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Printify could not be reached." }, { status: 500 });
   }

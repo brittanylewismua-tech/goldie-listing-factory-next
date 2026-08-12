@@ -1,15 +1,24 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import UPNG from "upng-js";
 import SupportChat from "./support-chat";
 
 type DesignFile = { name: string; size: number; id: string; file: File };
-type TemplateDetails = { id: string; title: string; provider: string; enabledVariants: number; shop: string; maxPrintWidth?: number | null; maxPrintHeight?: number | null };
+type TemplateDetails = { id: string; batchId: string; title: string; provider: string; enabledVariants: number; shop: string; maxPrintWidth?: number | null; maxPrintHeight?: number | null };
 type DraftResult = { id?: string; clientId: string; name: string; shopId?: number; editorUrl?: string; status: "Created" | "Failed"; error?: string };
 
 const MAX_BATCH_FILES = 20;
 const MAX_BATCH_BYTES = 500 * 1024 * 1024;
+
+async function fetchWithDeadline(input: RequestInfo | URL, init: RequestInit, milliseconds: number) {
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), milliseconds);
+  try { return await fetch(input, { ...init, signal: controller.signal }); }
+  catch (error) {
+    if (controller.signal.aborted) throw new Error("The request took too long and was stopped safely.");
+    throw error;
+  } finally { window.clearTimeout(timeout); }
+}
 
 function friendlyUploadError(error: unknown) {
   const message = error instanceof Error ? error.message : String(error ?? "");
@@ -18,6 +27,8 @@ function friendlyUploadError(error: unknown) {
   if (/8253|Provided images do not exist|did not finish (?:processing|registering)/i.test(message)) return withReference("Printify has not finished registering this design after one minute. Keep the successful drafts and use Retry failed designs when the batch finishes.");
   if (/image could not be decoded|could not be read|invalidstateerror|source image could not be decoded/i.test(message)) return withReference("Goldie can see this filename, but cannot read the actual image. Download it fully to your computer, then upload it again as a PNG or JPG.");
   if (/failed to fetch|networkerror|load failed|secure artwork delivery|temporarily unavailable/i.test(message)) return withReference("The upload connection was interrupted. Goldie retried automatically, but Printify still could not receive this design. Retry it when the batch finishes.");
+  if (/request took too long|still completing this exact draft/i.test(message)) return withReference("This draft took longer than the safe waiting period. Goldie recorded it so a retry will recover the same draft instead of creating a duplicate.");
+  if (/batch session expired/i.test(message)) return withReference("The protected batch session expired. Load the same Printify template again; your selected files will stay on this page.");
   if (/401|token|unauthorized|not accept/i.test(message)) return withReference("Printify rejected the saved connection. Disconnect Printify, create a new token with all scopes, and reconnect.");
   if (/template product was not found|not found in the connected Printify/i.test(message)) return withReference("This template belongs to a different Printify account or shop than the connected token.");
   if (/8150|validation failed|print_areas|placeholder/i.test(message)) return withReference("Printify rejected this template’s print-area setup. Reload the template; if it continues, use a freshly saved copy of the Printify product.");
@@ -47,6 +58,7 @@ export default function Home() {
   const [openedDrafts, setOpenedDrafts] = useState<string[]>([]);
   const [openAllMessage, setOpenAllMessage] = useState("");
   const [owner, setOwner] = useState(false);
+  const [preparationMessage, setPreparationMessage] = useState("");
 
   const templateLoaded = templateDetails !== null;
   const ready = connected && templateLoaded && description.trim().length > 0 && files.length > 0;
@@ -98,7 +110,7 @@ export default function Home() {
   async function connectPrintify() {
     setConnecting(true); setConnectionError("");
     try {
-      const response = await fetch("/api/printify", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ token }) });
+      const response = await fetchWithDeadline("/api/printify", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ token }) }, 60000);
       const result = await response.json() as { connected?: boolean; error?: string };
       if (!response.ok || !result.connected) throw new Error(result.error || "Printify could not be connected.");
       setConnected(true); setToken("");
@@ -109,7 +121,7 @@ export default function Home() {
   async function loadTemplate() {
     setLoadingTemplate(true); setTemplateError(""); setTemplateDetails(null);
     try {
-      const response = await fetch("/api/printify", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ productUrl: template }) });
+      const response = await fetchWithDeadline("/api/printify", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ productUrl: template }) }, 90000);
       const result = await response.json() as { product?: TemplateDetails; error?: string };
       if (!response.ok || !result.product) throw new Error(result.error || "The template could not be loaded.");
       setTemplateDetails(result.product);
@@ -118,51 +130,32 @@ export default function Home() {
   }
 
   async function preparedUpload(file: File) {
-    // Printify accepts PNG/JPEG files up to 100 MB. Keep a safety margin for
-    // transport while preserving every useful pixel the selected product can print.
-    // Direct delivery avoids Printify's unreliable remote-URL ingestion. Goldie
-    // quietly optimizes larger originals to a memory-safe transport size; it
-    // does not reject them merely because the original file is large.
-    const uploadLimit = 4.5 * 1024 * 1024;
-    let bitmap: ImageBitmap;
-    try { bitmap = await createImageBitmap(file); }
-    catch { throw new Error("This image could not be decoded by the browser."); }
-    const productScale = templateDetails?.maxPrintWidth && templateDetails?.maxPrintHeight
-      ? Math.min(1, templateDetails.maxPrintWidth / bitmap.width, templateDetails.maxPrintHeight / bitmap.height)
-      : 1;
-    let width = Math.max(1, Math.round(bitmap.width * productScale));
-    let height = Math.max(1, Math.round(bitmap.height * productScale));
-    const supportedPng = file.type === "image/png" || /\.png$/i.test(file.name);
-    const supportedJpeg = /image\/jpe?g/i.test(file.type) || /\.jpe?g$/i.test(file.name);
-    if (productScale === 1 && file.size <= uploadLimit && (supportedPng || supportedJpeg)) {
-      bitmap.close();
-      return { blob: file, fileName: file.name };
-    }
-    let repacked: Blob | null = null;
-    const preserveTransparency = supportedPng || (!supportedJpeg && file.type !== "image/jpeg");
-    while (!repacked || repacked.size > uploadLimit) {
-      const canvas = document.createElement("canvas");
-      canvas.width = width; canvas.height = height;
-      const context = canvas.getContext("2d", { willReadFrequently: preserveTransparency });
-      context?.drawImage(bitmap, 0, 0, width, height);
-      repacked = await new Promise<Blob>((resolve, reject) => canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error("The large image could not be prepared.")), preserveTransparency ? "image/png" : "image/jpeg", 0.94));
-      if (preserveTransparency && repacked.size > uploadLimit && context) {
-        const pixels = context.getImageData(0, 0, width, height);
-        for (const colorCount of [0, 512, 256]) {
-          const optimized = new Blob([UPNG.encode([pixels.data.buffer], width, height, colorCount)], { type: "image/png" });
-          if (optimized.size < repacked.size) repacked = optimized;
-          if (repacked.size <= uploadLimit) break;
+    return new Promise<{ blob: Blob; fileName: string }>((resolve, reject) => {
+      const worker = new Worker(new URL("./image-preparation.worker.ts", import.meta.url), { type: "module" });
+      const timeout = window.setTimeout(() => {
+        worker.terminate();
+        reject(new Error("This image took too long to prepare."));
+      }, 5 * 60 * 1000);
+      worker.onmessage = (event: MessageEvent<{ type: string; message?: string; blob?: Blob; fileName?: string }>) => {
+        if (event.data.type === "progress") {
+          setPreparationMessage(event.data.message ?? "Preparing artwork");
+          return;
         }
-      }
-      if (repacked.size > uploadLimit) {
-        width = Math.max(1, Math.round(width * 0.9));
-        height = Math.max(1, Math.round(height * 0.9));
-      }
-    }
-    bitmap.close();
-    if (!repacked) throw new Error("This image could not be read. Choose a valid PNG or JPG file.");
-    const fileName = preserveTransparency ? file.name.replace(/\.[^.]+$/, ".png") : file.name.replace(/\.[^.]+$/, ".jpg");
-    return { blob: repacked, fileName };
+        window.clearTimeout(timeout);
+        worker.terminate();
+        if (event.data.type === "complete" && event.data.blob && event.data.fileName) {
+          resolve({ blob: event.data.blob, fileName: event.data.fileName });
+        } else {
+          reject(new Error(event.data.message || "This image could not be prepared."));
+        }
+      };
+      worker.onerror = () => {
+        window.clearTimeout(timeout);
+        worker.terminate();
+        reject(new Error("This image could not be prepared by the browser."));
+      };
+      worker.postMessage({ file, maxPrintWidth: templateDetails?.maxPrintWidth, maxPrintHeight: templateDetails?.maxPrintHeight });
+    });
   }
 
   async function stageUpload(blob: Blob, fileName: string, reference: string) {
@@ -171,11 +164,11 @@ export default function Home() {
     for (const wait of waits) {
       if (wait) await new Promise((resolve) => window.setTimeout(resolve, wait));
       try {
-        const response = await fetch(`/api/printify/stage?fileName=${encodeURIComponent(fileName)}&reference=${encodeURIComponent(reference)}`, {
+        const response = await fetchWithDeadline(`/api/printify/stage?fileName=${encodeURIComponent(fileName)}&reference=${encodeURIComponent(reference)}`, {
           method: "POST",
           headers: { "Content-Type": blob.type || "application/octet-stream" },
           body: blob,
-        });
+        }, 90000);
         const result = await response.json() as { stagedId?: string; error?: string };
         if (response.ok && result.stagedId) return { stagedId: result.stagedId, reference };
         lastError = result.error || lastError;
@@ -197,11 +190,12 @@ export default function Home() {
       let finalError: Error | null = null;
       try {
         const upload = await preparedUpload(design.file);
+        setPreparationMessage(`Sending ${design.name} to Printify`);
         for (let pipelineAttempt = 1; pipelineAttempt <= 3; pipelineAttempt += 1) {
           const supportReference = `${referenceRoot}-A${pipelineAttempt}`;
           try {
             const staged = await stageUpload(upload.blob, upload.fileName, supportReference);
-            const response = await fetch("/api/printify/drafts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ productUrl: template, description, fileName: upload.fileName, stagedId: staged.stagedId, supportReference: staged.reference, clientId: design.id }) });
+            const response = await fetchWithDeadline("/api/printify/drafts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ batchId: templateDetails?.batchId, description, fileName: upload.fileName, stagedId: staged.stagedId, supportReference: staged.reference, clientId: design.id }) }, 4 * 60 * 1000);
             const result = await response.json() as { draft?: DraftResult; error?: string };
             if (!response.ok || !result.draft) throw new Error(result.error || "Printify did not create this draft.");
             setDrafts((current) => [...current, result.draft!]);
@@ -226,6 +220,7 @@ export default function Home() {
       setProcessed((current) => current + 1);
     }
     setRunning(false);
+    setPreparationMessage("");
     setComplete(true);
   }
 
@@ -392,7 +387,7 @@ export default function Home() {
           {running && (
             <div className="batch-progress" role="status" aria-live="polite">
               <div className="progress-ring" aria-hidden="true"><span>{activeItem}/{files.length}</span></div>
-              <div className="progress-copy"><b>Creating your Printify drafts</b><span>Keep this page open while Goldie finishes the batch.</span></div>
+              <div className="progress-copy"><b>Creating your Printify drafts</b><span>{preparationMessage || "Keep this page open while Goldie finishes the batch."}</span></div>
               <div className="progress-track"><span style={{ width: `${files.length ? (processed / files.length) * 100 : 0}%` }} /></div>
             </div>
           )}

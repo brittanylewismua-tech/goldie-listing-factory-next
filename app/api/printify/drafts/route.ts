@@ -8,7 +8,6 @@ import { printifyUploadPayload } from "../upload-payload";
 import { printAreasWithOnlyCurrentArtwork } from "../product-payload";
 
 const PRINTIFY_API = "https://api.printify.com/v1";
-type Shop = { id: number; title: string };
 type UploadedImage = { id: string; width?: number; height?: number; mime_type?: string };
 type TemplateProduct = {
   id: string;
@@ -27,6 +26,7 @@ type TemplateProduct = {
 
 type ArtworkObject = { arrayBuffer(): Promise<ArrayBuffer> };
 type ArtworkBucket = { get(key: string): Promise<ArtworkObject | null>; delete(key: string): Promise<void> };
+type BatchSession = { shop_id: number; product_id: string; template_json: string };
 function runtimeEnv() { return env as unknown as { DB?: D1Database; ARTWORK?: ArtworkBucket; PRINTIFY_TOKEN_KEY?: string }; }
 
 async function decryptToken(value: string) {
@@ -78,8 +78,9 @@ async function api<T>(path: string, token: string, init?: RequestInit, onRetry?:
   throw new Error("Printify could not complete this request.");
 }
 
-function productIdFromUrl(value: string) {
-  return (value.match(/\/editor\/([a-zA-Z0-9]+)/) || value.match(/\/products\/([a-zA-Z0-9]+)/))?.[1] ?? "";
+async function requestKey(batchId: string, clientId: string) {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`${batchId}:${clientId}`));
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
 export async function POST(request: Request) {
@@ -90,25 +91,33 @@ export async function POST(request: Request) {
   let stagedIdForCleanup = "";
   let supportReference = "";
   let diagnosticStage = "request_validation";
+  let idempotencyKey = "";
   try {
-    const body = (await request.json()) as { productUrl?: string; description?: string; fileName?: string; stagedId?: string; supportReference?: string; clientId?: string };
+    const body = (await request.json()) as { batchId?: string; description?: string; fileName?: string; stagedId?: string; supportReference?: string; clientId?: string };
     stagedIdForCleanup = body.stagedId ?? "";
     supportReference = body.supportReference?.replace(/[^A-Z0-9-]/gi, "").slice(0, 40) ?? "";
-    if (!body.productUrl || !body.fileName || !body.stagedId) return NextResponse.json({ error: "The template and design file are required." }, { status: 400 });
-    const productId = productIdFromUrl(body.productUrl);
-    if (!productId) return NextResponse.json({ error: "That is not a recognized Printify editor link." }, { status: 400 });
+    if (!body.batchId || !body.fileName || !body.stagedId) return NextResponse.json({ error: "The prepared batch and design file are required." }, { status: 400 });
+    const db = runtimeEnv().DB;
+    if (!db) throw new Error("Secure batch storage is unavailable.");
+    idempotencyKey = await requestKey(body.batchId, body.clientId ?? body.fileName);
+    const prior = await db.prepare("SELECT status, response_json, updated_at FROM printify_draft_results WHERE request_key = ? AND user_id = ?")
+      .bind(idempotencyKey, user.userId).first<{ status: string; response_json: string | null; updated_at: string }>();
+    if (prior?.status === "succeeded" && prior.response_json) return NextResponse.json({ draft: JSON.parse(prior.response_json) });
+    if (prior?.status === "running" && Date.now() - new Date(`${prior.updated_at.replace(" ", "T")}Z`).getTime() < 10 * 60 * 1000) {
+      return NextResponse.json({ error: "Goldie is still completing this exact draft. It will be checked again automatically." }, { status: 409 });
+    }
+    await db.prepare("INSERT INTO printify_draft_results (request_key, user_id, batch_id, client_id, status, updated_at) VALUES (?, ?, ?, ?, 'running', CURRENT_TIMESTAMP) ON CONFLICT(request_key) DO UPDATE SET status = 'running', response_json = NULL, updated_at = CURRENT_TIMESTAMP")
+      .bind(idempotencyKey, user.userId, body.batchId, body.clientId ?? body.fileName).run();
+    const session = await db.prepare("SELECT shop_id, product_id, template_json FROM printify_batch_sessions WHERE id = ? AND user_id = ? AND expires_at > unixepoch()")
+      .bind(body.batchId, user.userId).first<BatchSession>();
+    if (!session) throw new Error("This batch session expired. Load the Printify template again; your selected files will remain on this page.");
+    const productId = session.product_id;
+    const shop = { id: session.shop_id };
+    const template = JSON.parse(session.template_json) as TemplateProduct;
+    await db.prepare("UPDATE printify_batch_sessions SET expires_at = unixepoch() + 21600 WHERE id = ? AND user_id = ?").bind(body.batchId, user.userId).run();
     const token = await tokenFor(user.userId);
     diagnosticStage = "template_lookup";
     await recordDiagnostic(runtimeEnv().DB, supportReference, { stage: diagnosticStage, event: "started", templateProductId: productId });
-    const shops = await api<Shop[]>("/shops.json", token, undefined, (attempt, status) => recordDiagnostic(runtimeEnv().DB, supportReference, { stage: diagnosticStage, event: "retry", attempt, httpStatus: status ?? null }));
-
-    let shop: Shop | undefined;
-    let template: TemplateProduct | undefined;
-    for (const candidate of shops) {
-      const response = await fetch(`${PRINTIFY_API}/shops/${candidate.id}/products/${productId}.json`, { headers: { Authorization: `Bearer ${token}`, "User-Agent": "Goldie-Listing-Factory" } });
-      if (response.ok) { shop = candidate; template = (await response.json()) as TemplateProduct; break; }
-    }
-    if (!shop || !template) throw new Error("The template product was not found in the connected Printify account.");
     await recordDiagnostic(runtimeEnv().DB, supportReference, { stage: diagnosticStage, event: "succeeded", templateProductId: productId, shopId: shop.id });
 
     const templateImageCount = template.print_areas
@@ -123,7 +132,7 @@ export async function POST(request: Request) {
     const uploadArtwork = () => api<UploadedImage>("/uploads/images.json", token, {
         method: "POST",
         body: JSON.stringify(printifyUploadPayload(body.fileName!, artworkBytes)),
-      }, (attempt, status) => recordDiagnostic(runtimeEnv().DB, supportReference, { stage: "printify_upload", event: "retry", attempt, httpStatus: status ?? null, shopId: shop!.id }));
+      }, (attempt, status) => recordDiagnostic(runtimeEnv().DB, supportReference, { stage: "printify_upload", event: "retry", attempt, httpStatus: status ?? null, shopId: shop.id }));
     let upload = await uploadArtwork();
     if (!upload.id) throw new Error("Printify accepted the artwork request but did not return an image ID.");
     await recordDiagnostic(runtimeEnv().DB, supportReference, { stage: diagnosticStage, event: "succeeded", shopId: shop.id });
@@ -147,7 +156,7 @@ export async function POST(request: Request) {
     await recordDiagnostic(runtimeEnv().DB, supportReference, { stage: diagnosticStage, event: "started", shopId: shop.id });
     const created = await createProductWithImageRetries<{ id: string }>({
       path: `/shops/${shop.id}/products.json`, token, body: productBody,
-      onRetry: (attempt, status, detail) => recordDiagnostic(runtimeEnv().DB, supportReference, { stage: diagnosticStage, event: "retry", attempt, httpStatus: status, message: detail, shopId: shop!.id }),
+      onRetry: (attempt, status, detail) => recordDiagnostic(runtimeEnv().DB, supportReference, { stage: diagnosticStage, event: "retry", attempt, httpStatus: status, message: detail, shopId: shop.id }),
       onImageNotReady: async (attempt) => {
         // Printify can briefly return 8253 while a valid upload is propagating.
         // Give the same ID three product attempts; only then replace it once.
@@ -158,9 +167,12 @@ export async function POST(request: Request) {
       },
     });
     await recordDiagnostic(runtimeEnv().DB, supportReference, { stage: diagnosticStage, event: "succeeded", shopId: shop.id });
-    return NextResponse.json({ draft: { id: created.id, clientId: body.clientId ?? body.fileName, name: body.fileName, shopId: shop.id, editorUrl: `https://printify.com/app/editor/${created.id}`, status: "Created" } });
+    const draft = { id: created.id, clientId: body.clientId ?? body.fileName, name: body.fileName, shopId: shop.id, editorUrl: `https://printify.com/app/editor/${created.id}`, status: "Created" };
+    await db.prepare("UPDATE printify_draft_results SET status = 'succeeded', response_json = ?, updated_at = CURRENT_TIMESTAMP WHERE request_key = ?").bind(JSON.stringify(draft), idempotencyKey).run();
+    return NextResponse.json({ draft });
   } catch (error) {
     const message = error instanceof Error ? error.message : "The draft could not be created.";
+    if (idempotencyKey) await runtimeEnv().DB?.prepare("UPDATE printify_draft_results SET status = 'failed', updated_at = CURRENT_TIMESTAMP WHERE request_key = ? AND status != 'succeeded'").bind(idempotencyKey).run().catch(() => undefined);
     await recordDiagnostic(runtimeEnv().DB, supportReference, { stage: diagnosticStage, event: "failed", message });
     return NextResponse.json({ error: `${message}${publicSupportReference(supportReference)}` }, { status: 500 });
   } finally {
