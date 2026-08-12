@@ -97,16 +97,19 @@ test("Printify image processing is confirmed and error 8253 is retried server-si
 });
 
 test("ships an in-page support assistant with a comprehensive troubleshooting bank", async () => {
-  const [page, chat, knowledge, supportCss] = await Promise.all([
+  const [page, chat, knowledge, engine, supportCss] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/support-chat.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/support-knowledge.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/support-engine.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/support.css", import.meta.url), "utf8"),
   ]);
   assert.match(page, /<SupportChat/);
   assert.match(page, /Get help with this error/);
   assert.match(chat, /Paste an error message or describe what happened/);
   assert.match(chat, /goldie-support/);
+  assert.match(chat, /sessionStorage\.setItem\("goldie-listing-support"/);
+  assert.match(chat, /supportResponse\(clean,current\)/);
   assert.match(chat, /Contact Support/);
   assert.match(chat, /Screenshot of the error/);
   assert.doesNotMatch(chat, /ChatGPT chat link|ChatGPT plan/);
@@ -118,6 +121,10 @@ test("ships an in-page support assistant with a comprehensive troubleshooting ba
   assert.match(knowledge, /Template product not found/);
   assert.match(knowledge, /Open all does not open every tab/);
   assert.ok((knowledge.match(/id:/g) ?? []).length >= 20);
+  assert.match(engine, /I can diagnose it, but I need the point where it failed/);
+  assert.match(engine, /After you clicked Retry failed designs/);
+  assert.match(engine, /You already tried/);
+  assert.match(engine, /userContext/);
 });
 
 test("ships official brand assets and removes the starter", async () => {
