@@ -5,7 +5,7 @@ type Runtime = { DB?: D1Database; MASTERMIND_ACCESS_CODE?: string };
 export function runtime() { return env as unknown as Runtime; }
 
 export function isOwner(user: ChatGPTUser) {
-  return ["beawolfbiz@gmail.com", "brittany@beawolfbiz.com"].includes(user.email.trim().toLowerCase());
+  return ["beawolfbiz@gmail.com", "brittany@beawolfbiz.com", "brittanylewismua@gmail.com"].includes(user.email.trim().toLowerCase());
 }
 
 export async function mastermindState(user: ChatGPTUser) {
