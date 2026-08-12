@@ -129,6 +129,19 @@ test("ships an in-page support assistant with a comprehensive troubleshooting ba
   assert.match(engine, /userContext/);
 });
 
+test("support diagnoses vague reports before prescribing a fix", async () => {
+  const engine = await readFile(new URL("../app/support-engine.ts", import.meta.url), "utf8");
+  assert.match(engine, /Are you seeing an error message under Connect Printify/);
+  assert.match(engine, /That rules out missing token scopes/);
+  assert.match(engine, /the token step is already done/);
+  assert.match(engine, /does the button change to Connecting/);
+  assert.match(engine, /stored only in iCloud, OneDrive or Google Drive/);
+  assert.match(engine, /Where do they fail: before the files appear/);
+  assert.match(engine, /What exact message appears under one of the failed designs/);
+  assert.match(engine, /Does that product open normally/);
+  assert.doesNotMatch(engine, /if \(connectionIssue\).*Create a fresh personal access token/);
+});
+
 test("ships official brand assets and removes the starter", async () => {
   const [page, layout, packageJson] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
