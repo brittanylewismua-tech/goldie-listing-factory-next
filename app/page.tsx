@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import UPNG from "upng-js";
+import SupportChat from "./support-chat";
 
 type DesignFile = { name: string; size: number; id: string; file: File };
 type TemplateDetails = { id: string; title: string; provider: string; enabledVariants: number; shop: string; maxPrintWidth?: number | null; maxPrintHeight?: number | null };
@@ -387,7 +388,7 @@ export default function Home() {
             <div className="draft-preview">
               <div className="draft-title"><b>Latest batch</b><span>{drafts.length} results</span></div>
               {drafts.map((draft) => (
-                <div className={`draft-row ${draft.status === "Failed" ? "draft-failed" : ""}`} key={draft.clientId}><span className="draft-check">{draft.status === "Created" ? "✓" : "!"}</span><div><b>{draft.name}</b><small>{draft.status === "Created" ? "Unpublished Printify draft" : draft.error}</small></div>{draft.editorUrl && draft.id ? <button className={`edit-draft-button ${openedDrafts.includes(draft.id) ? "opened" : ""}`} onClick={() => openDraft(draft)}><i />{openedDrafts.includes(draft.id) ? "Opened" : "Edit in Printify"}</button> : <span>—</span>}</div>
+                <div className={`draft-row ${draft.status === "Failed" ? "draft-failed" : ""}`} key={draft.clientId}><span className="draft-check">{draft.status === "Created" ? "✓" : "!"}</span><div><b>{draft.name}</b><small>{draft.status === "Created" ? "Unpublished Printify draft" : draft.error}</small>{draft.status === "Failed" && <button className="error-help-link" onClick={() => window.dispatchEvent(new CustomEvent("goldie-support", { detail: draft.error ?? "A design failed" }))}>Get help with this error</button>}</div>{draft.editorUrl && draft.id ? <button className={`edit-draft-button ${openedDrafts.includes(draft.id) ? "opened" : ""}`} onClick={() => openDraft(draft)}><i />{openedDrafts.includes(draft.id) ? "Opened" : "Edit in Printify"}</button> : <span>—</span>}</div>
               ))}
               {drafts.filter((draft) => draft.status === "Created").length > 1 && <button className="open-all-button" onClick={openAllDrafts}>Open all in Printify</button>}
               {openAllMessage && <p className="open-all-message" role="status">{openAllMessage}</p>}
@@ -398,6 +399,7 @@ export default function Home() {
 
       <footer><span>GOLDIE LISTING FACTORY</span><span>BE A WOLF BIZ · 2026</span></footer>
       {showHelp && <div className="help-overlay" role="dialog" aria-modal="true" aria-labelledby="help-title"><div className="help-card"><button className="help-close" onClick={() => setShowHelp(false)} aria-label="Close help">×</button><p className="mini-label">QUICK START</p><h2 id="help-title">Before your first batch</h2><ol><li>Use the Listing Factory from desktop Chrome or Edge.</li><li>Create a Printify personal access token and turn on <b>all access scopes</b>. Printify only shows the token once, so copy it before leaving that page.</li><li>In Printify, prepare one unpublished product with the provider, colors, sizes, prices and placement you want copied.</li><li>Paste that product’s editor link here, add your description, and choose up to 20 PNG, JPG or WebP designs.</li><li>Keep this page open until every result appears. Failed designs can be retried without repeating successful ones.</li></ol><a href="https://printify.com/app/account/connections" target="_blank" rel="noreferrer">Create or replace your Printify token →</a></div></div>}
+      <SupportChat />
     </main>
   );
 }

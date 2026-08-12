@@ -96,6 +96,30 @@ test("Printify image processing is confirmed and error 8253 is retried server-si
   assert.match(route, /createProductAfterImageIsReady/);
 });
 
+test("ships an in-page support assistant with a comprehensive troubleshooting bank", async () => {
+  const [page, chat, knowledge, supportCss] = await Promise.all([
+    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/support-chat.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/support-knowledge.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/support.css", import.meta.url), "utf8"),
+  ]);
+  assert.match(page, /<SupportChat/);
+  assert.match(page, /Get help with this error/);
+  assert.match(chat, /Paste an error message or describe what happened/);
+  assert.match(chat, /goldie-support/);
+  assert.match(chat, /Contact Support/);
+  assert.match(chat, /Screenshot of the error/);
+  assert.doesNotMatch(chat, /ChatGPT chat link|ChatGPT plan/);
+  assert.match(supportCss, /width:460px/);
+  assert.match(supportCss, /height:680px/);
+  assert.match(supportCss, /width:60px;height:60px/);
+  assert.match(knowledge, /Provided images do not exist/);
+  assert.match(knowledge, /Printify will not connect/);
+  assert.match(knowledge, /Template product not found/);
+  assert.match(knowledge, /Open all does not open every tab/);
+  assert.ok((knowledge.match(/id:/g) ?? []).length >= 20);
+});
+
 test("ships official brand assets and removes the starter", async () => {
   const [page, layout, packageJson] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
