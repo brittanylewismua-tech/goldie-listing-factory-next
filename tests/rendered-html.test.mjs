@@ -88,29 +88,29 @@ test("uses individual shop-aware Printify editor buttons", async () => {
   assert.match(route, /area\.placeholders\.length > 0/);
 });
 
-test("Printify image processing is confirmed and error 8253 is retried server-side", async () => {
-  const [route, readinessSource] = await Promise.all([
-    readFile(new URL("../app/api/printify/drafts/route.ts", import.meta.url), "utf8"),
-    readFile(new URL("../app/api/printify/upload-readiness.ts", import.meta.url), "utf8"),
-  ]);
-  assert.match(route, /if \(!uploadedImageIsReady\(upload\)\) \{/);
-  assert.match(route, /await waitForUploadedImage\(upload\.id, token/);
-  assert.match(readinessSource, /image\.preview_url/);
-  assert.match(readinessSource, /Number\(image\.width\) > 0/);
-  assert.match(readinessSource, /Number\(image\.height\) > 0/);
-  assert.match(route, /\/uploads\/\$\{encodeURIComponent\(imageId\)\}\.json/);
-  assert.match(route, /Provided images do not exist/);
-  assert.match(route, /8253/);
-  assert.match(route, /createProductAfterImageIsReady/);
-  assert.match(route, /15000, 20000/);
+test("uses draft creation as the authoritative image-readiness check", async () => {
+  const [route, creation] = await Promise.all([readFile(new URL("../app/api/printify/drafts/route.ts", import.meta.url), "utf8"), readFile(new URL("../app/api/printify/product-creation.ts", import.meta.url), "utf8")]);
+  assert.doesNotMatch(route, /waitForUploadedImage|fetch\(`\$\{PRINTIFY_API\}\/uploads\/\$\{encodeURIComponent\(imageId\)\}/);
+  assert.match(route, /The upload POST is authoritative for acceptance/);
+  assert.match(creation, /Provided images do not exist/);
+  assert.match(creation, /8253/);
+  assert.match(route, /createProductWithImageRetries/);
+  assert.match(creation, /15000, 20000/);
 });
 
-test("accepts a completed Printify upload without the false second lookup", async () => {
-  const { uploadedImageIsReady } = await import("../app/api/printify/upload-readiness.ts");
-  assert.equal(uploadedImageIsReady({ id: "image-1", preview_url: "https://images.printify.com/image-1", width: 6000, height: 9000 }), true);
-  assert.equal(uploadedImageIsReady({ id: "image-1" }), false);
-  assert.equal(uploadedImageIsReady({ id: "image-1", preview_url: "https://images.printify.com/image-1", width: 0, height: 9000 }), false);
-  assert.equal(uploadedImageIsReady(null), false);
+test("retries a real 8253 draft response and succeeds without an upload lookup", async () => {
+  const { createProductWithImageRetries } = await import("../app/api/printify/product-creation.ts");
+  const requests = [];
+  const retries = [];
+  const responses = [
+    new Response(JSON.stringify({ status:"error", code:8253, errors:{ reason:"Provided images do not exist" } }), { status:400, headers:{ "content-type":"application/json" } }),
+    new Response(JSON.stringify({ id:"draft-created" }), { status:200, headers:{ "content-type":"application/json" } }),
+  ];
+  const result = await createProductWithImageRetries({ path:"/shops/1/products.json", token:"test-token", body:"{}", fetcher:async (url, init) => { requests.push({ url:String(url), method:init?.method }); return responses.shift(); }, sleeper:async()=>{}, onRetry:async(attempt,status)=>{ retries.push({attempt,status}); } });
+  assert.deepEqual(result, { id:"draft-created" });
+  assert.equal(requests.length, 2);
+  assert.ok(requests.every((request)=>request.url.endsWith("/shops/1/products.json") && request.method === "POST"));
+  assert.deepEqual(retries, [{ attempt:1, status:400 }]);
 });
 
 test("records permanent sanitized Printify diagnostics without blocking listings", async () => {
@@ -131,7 +131,7 @@ test("records permanent sanitized Printify diagnostics without blocking listings
   assert.match(stage, /recordDiagnostic/);
   assert.match(drafts, /template_lookup/);
   assert.match(drafts, /printify_upload/);
-  assert.match(drafts, /image_registration/);
+  assert.doesNotMatch(drafts, /diagnosticStage = "image_registration"/);
   assert.match(drafts, /draft_creation/);
   assert.match(diagnostics, /-30 days/);
   assert.match(diagnostics, /Bearer \[redacted\]/);

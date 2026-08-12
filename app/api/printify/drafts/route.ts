@@ -2,11 +2,12 @@ import { env } from "cloudflare:workers";
 import { NextResponse } from "next/server";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { customerLaunchBlock } from "@/app/customer-launch-gate";
-import { uploadedImageIsReady, type UploadedImage } from "../upload-readiness";
 import { publicSupportReference, recordDiagnostic } from "../diagnostics";
+import { createProductWithImageRetries } from "../product-creation";
 
 const PRINTIFY_API = "https://api.printify.com/v1";
 type Shop = { id: number; title: string };
+type UploadedImage = { id: string };
 type TemplateProduct = {
   id: string;
   blueprint_id: number;
@@ -85,68 +86,6 @@ async function api<T>(path: string, token: string, init?: RequestInit, onRetry?:
   throw new Error("Printify could not complete this request.");
 }
 
-const pause = (milliseconds: number) => new Promise((resolve) => setTimeout(resolve, milliseconds));
-
-async function waitForUploadedImage(imageId: string, token: string, onRetry?: (attempt: number, status?: number) => Promise<void>) {
-  const waits = [1000, 2000, 4000, 7000, 10000, 15000, 20000];
-  for (let attempt = 0; attempt <= waits.length; attempt += 1) {
-    let response: Response | undefined;
-    try {
-      response = await fetch(`${PRINTIFY_API}/uploads/${encodeURIComponent(imageId)}.json`, {
-        headers: { Authorization: `Bearer ${token}`, "User-Agent": "Goldie-Listing-Factory" },
-      });
-    } catch {
-      // A transient lookup failure is handled by the same bounded wait below.
-    }
-    if (response?.ok) {
-      const image = await response.json().catch(() => null) as UploadedImage | null;
-      if (uploadedImageIsReady(image)) return image;
-    }
-    if (response && response.status !== 404 && response.status !== 409 && response.status !== 429 && response.status < 500) {
-      const detail = await response.text().catch(() => "");
-      throw new Error(`Printify could not verify the uploaded image${detail ? `: ${detail.slice(0, 180)}` : ""}`);
-    }
-    if (attempt < waits.length) { await onRetry?.(attempt + 1, response?.status); await pause(waits[attempt]); }
-  }
-  throw new Error("Printify did not finish processing this image within one minute.");
-}
-
-function isImageNotReady(status: number, detail: string) {
-  return status === 400 && (/Provided images do not exist/i.test(detail) || /[\"']?code[\"']?\s*:\s*8253/i.test(detail));
-}
-
-async function createProductAfterImageIsReady<T>(path: string, token: string, body: string, onRetry?: (attempt: number, status: number, detail: string) => Promise<void>): Promise<T> {
-  const waits = [2000, 4000, 7000, 10000, 15000, 20000];
-  for (let attempt = 0; attempt <= waits.length; attempt += 1) {
-    let response: Response;
-    try {
-      response = await fetch(`${PRINTIFY_API}${path}`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}`, "User-Agent": "Goldie-Listing-Factory", "Content-Type": "application/json" },
-        body,
-      });
-    } catch {
-      if (attempt < waits.length) { await onRetry?.(attempt + 1, 0, "Network interruption"); await pause(waits[attempt]); continue; }
-      throw new Error("The connection to Printify was interrupted after Goldie retried automatically.");
-    }
-    if (response.ok) return response.json() as Promise<T>;
-    const detail = await response.text().catch(() => "");
-    const retryable = isImageNotReady(response.status, detail) || response.status === 429 || response.status >= 500;
-    if (retryable && attempt < waits.length) {
-      await onRetry?.(attempt + 1, response.status, detail);
-      const requestedWait = Number(response.headers.get("retry-after"));
-      await pause(Number.isFinite(requestedWait) && requestedWait > 0 ? Math.min(requestedWait * 1000, 20000) : waits[attempt]);
-      continue;
-    }
-    if (isImageNotReady(response.status, detail)) throw new Error("Printify did not finish registering this image within one minute. Retry this design when the batch finishes.");
-    if (response.status === 429) throw new Error("Printify is taking longer than expected. Retry this design when the batch finishes.");
-    if (response.status >= 500) throw new Error("Printify remained temporarily unavailable after Goldie retried automatically.");
-    if (response.status === 401 || response.status === 403) throw new Error(`Printify rejected the saved connection (HTTP ${response.status}). Reconnect with a new token that has all scopes enabled.`);
-    throw new Error(`Printify returned ${response.status}${detail ? `: ${detail.slice(0, 180)}` : ""}`);
-  }
-  throw new Error("Printify could not create this draft.");
-}
-
 function productIdFromUrl(value: string) {
   return (value.match(/\/editor\/([a-zA-Z0-9]+)/) || value.match(/\/products\/([a-zA-Z0-9]+)/))?.[1] ?? "";
 }
@@ -193,16 +132,11 @@ export async function POST(request: Request) {
       body: JSON.stringify({ file_name: body.fileName, url: artworkUrl }),
     }, (attempt, status) => recordDiagnostic(runtimeEnv().DB, supportReference, { stage: diagnosticStage, event: "retry", attempt, httpStatus: status ?? null, shopId: shop!.id }));
     await recordDiagnostic(runtimeEnv().DB, supportReference, { stage: diagnosticStage, event: "succeeded", shopId: shop.id });
-    // Printify's documented upload response is the completed image resource.
-    // Only poll when Printify returns an accepted-but-incomplete resource. A
-    // second GET can briefly return 404 even after a completed POST, so polling
-    // an already-complete upload creates a false failure.
-    if (!uploadedImageIsReady(upload)) {
-      diagnosticStage = "image_registration";
-      await recordDiagnostic(runtimeEnv().DB, supportReference, { stage: diagnosticStage, event: "started", shopId: shop.id });
-      await waitForUploadedImage(upload.id, token, (attempt, status) => recordDiagnostic(runtimeEnv().DB, supportReference, { stage: diagnosticStage, event: "retry", attempt, httpStatus: status ?? null, shopId: shop!.id }));
-      await recordDiagnostic(runtimeEnv().DB, supportReference, { stage: diagnosticStage, event: "succeeded", shopId: shop.id });
-    }
+    // The upload POST is authoritative for acceptance. Do not gate draft
+    // creation on GET /uploads/{id}: live Printify accounts can return 404 from
+    // that lookup even though the uploaded image ID is valid. Draft creation
+    // below is the authoritative registration check and retries only when
+    // Printify itself returns image-not-ready error 8253.
     const title = body.fileName.replace(/\.[^.]+$/, "").replace(/[_-]+/g, " ").trim();
     const printAreas = template.print_areas.map((area) => ({
       variant_ids: area.variant_ids,
@@ -224,7 +158,7 @@ export async function POST(request: Request) {
     });
     diagnosticStage = "draft_creation";
     await recordDiagnostic(runtimeEnv().DB, supportReference, { stage: diagnosticStage, event: "started", shopId: shop.id });
-    const created = await createProductAfterImageIsReady<{ id: string }>(`/shops/${shop.id}/products.json`, token, productBody, (attempt, status, detail) => recordDiagnostic(runtimeEnv().DB, supportReference, { stage: diagnosticStage, event: "retry", attempt, httpStatus: status, message: detail, shopId: shop!.id }));
+    const created = await createProductWithImageRetries<{ id: string }>({ path: `/shops/${shop.id}/products.json`, token, body: productBody, onRetry: (attempt, status, detail) => recordDiagnostic(runtimeEnv().DB, supportReference, { stage: diagnosticStage, event: "retry", attempt, httpStatus: status, message: detail, shopId: shop!.id }) });
     await recordDiagnostic(runtimeEnv().DB, supportReference, { stage: diagnosticStage, event: "succeeded", shopId: shop.id });
     return NextResponse.json({ draft: { id: created.id, clientId: body.clientId ?? body.fileName, name: body.fileName, shopId: shop.id, editorUrl: `https://printify.com/app/editor/${created.id}`, status: "Created" } });
   } catch (error) {
