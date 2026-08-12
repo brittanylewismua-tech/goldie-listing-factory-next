@@ -1,0 +1,2 @@
+CREATE INDEX `idx_printify_diagnostic_events_reference` ON `printify_diagnostic_events` (`reference`);--> statement-breakpoint
+CREATE INDEX `idx_printify_diagnostics_outcome_updated` ON `printify_diagnostics` (`outcome`,`updated_at`);

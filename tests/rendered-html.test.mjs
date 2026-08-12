@@ -92,7 +92,8 @@ test("Printify image processing is confirmed and error 8253 is retried server-si
     readFile(new URL("../app/api/printify/drafts/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/printify/upload-readiness.ts", import.meta.url), "utf8"),
   ]);
-  assert.match(route, /if \(!uploadedImageIsReady\(upload\)\) await waitForUploadedImage\(upload\.id, token\)/);
+  assert.match(route, /if \(!uploadedImageIsReady\(upload\)\) \{/);
+  assert.match(route, /await waitForUploadedImage\(upload\.id, token/);
   assert.match(readinessSource, /image\.preview_url/);
   assert.match(readinessSource, /Number\(image\.width\) > 0/);
   assert.match(readinessSource, /Number\(image\.height\) > 0/);
@@ -109,6 +110,37 @@ test("accepts a completed Printify upload without the false second lookup", asyn
   assert.equal(uploadedImageIsReady({ id: "image-1" }), false);
   assert.equal(uploadedImageIsReady({ id: "image-1", preview_url: "https://images.printify.com/image-1", width: 0, height: 9000 }), false);
   assert.equal(uploadedImageIsReady(null), false);
+});
+
+test("records permanent sanitized Printify diagnostics without blocking listings", async () => {
+  const [page, stage, drafts, diagnostics, admin, adminPage, schema] = await Promise.all([
+    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/printify/stage/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/printify/drafts/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/printify/diagnostics.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/mastermind-admin/admin-control.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/mastermind-admin/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../db/schema.ts", import.meta.url), "utf8"),
+  ]);
+  assert.match(page, /GLF-/);
+  assert.match(page, /supportReference: staged\.reference/);
+  assert.match(page, /Support reference:/);
+  assert.match(page, /\/api\/printify\/diagnostics/);
+  assert.match(stage, /startDiagnostic/);
+  assert.match(stage, /recordDiagnostic/);
+  assert.match(drafts, /template_lookup/);
+  assert.match(drafts, /printify_upload/);
+  assert.match(drafts, /image_registration/);
+  assert.match(drafts, /draft_creation/);
+  assert.match(diagnostics, /-30 days/);
+  assert.match(diagnostics, /Bearer \[redacted\]/);
+  assert.match(diagnostics, /Diagnostics must never block listing creation/);
+  assert.match(schema, /printify_diagnostics/);
+  assert.match(schema, /printify_diagnostic_events/);
+  assert.match(adminPage, /outcome = 'failed'/);
+  assert.match(admin, /Recent failed operations/);
+  assert.match(admin, /Search reference, member, design or code/);
+  assert.match(admin, /Artwork and tokens are never stored here/);
 });
 
 test("ships an in-page support assistant with a comprehensive troubleshooting bank", async () => {

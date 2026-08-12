@@ -13,13 +13,15 @@ const MAX_BATCH_BYTES = 500 * 1024 * 1024;
 
 function friendlyUploadError(error: unknown) {
   const message = error instanceof Error ? error.message : String(error ?? "");
-  if (/8253|Provided images do not exist|did not finish (?:processing|registering)/i.test(message)) return "Printify has not finished registering this design after one minute. Keep the successful drafts and use Retry failed designs when the batch finishes.";
-  if (/image could not be decoded|could not be read|invalidstateerror|source image could not be decoded/i.test(message)) return "Goldie can see this filename, but cannot read the actual image. Download it fully to your computer, then upload it again as a PNG or JPG.";
-  if (/failed to fetch|networkerror|load failed|secure artwork delivery|temporarily unavailable/i.test(message)) return "The upload connection was interrupted. Goldie retried automatically, but Printify still could not receive this design. Retry it when the batch finishes.";
-  if (/401|token|unauthorized|not accept/i.test(message)) return "Printify rejected the saved connection. Disconnect Printify, create a new token with all scopes, and reconnect.";
-  if (/template product was not found|not found in the connected Printify/i.test(message)) return "This template belongs to a different Printify account or shop than the connected token.";
-  if (/8150|validation failed|print_areas|placeholder/i.test(message)) return "Printify rejected this template’s print-area setup. Reload the template; if it continues, use a freshly saved copy of the Printify product.";
-  if (/429|longer than expected|rate limit/i.test(message)) return "Printify is temporarily limiting requests. Goldie already waited and retried; retry this design when the batch finishes.";
+  const supportReference = message.match(/Support reference:\s*([A-Z0-9-]+)/i)?.[1];
+  const withReference = (text: string) => `${text}${supportReference ? ` Support reference: ${supportReference}.` : ""}`;
+  if (/8253|Provided images do not exist|did not finish (?:processing|registering)/i.test(message)) return withReference("Printify has not finished registering this design after one minute. Keep the successful drafts and use Retry failed designs when the batch finishes.");
+  if (/image could not be decoded|could not be read|invalidstateerror|source image could not be decoded/i.test(message)) return withReference("Goldie can see this filename, but cannot read the actual image. Download it fully to your computer, then upload it again as a PNG or JPG.");
+  if (/failed to fetch|networkerror|load failed|secure artwork delivery|temporarily unavailable/i.test(message)) return withReference("The upload connection was interrupted. Goldie retried automatically, but Printify still could not receive this design. Retry it when the batch finishes.");
+  if (/401|token|unauthorized|not accept/i.test(message)) return withReference("Printify rejected the saved connection. Disconnect Printify, create a new token with all scopes, and reconnect.");
+  if (/template product was not found|not found in the connected Printify/i.test(message)) return withReference("This template belongs to a different Printify account or shop than the connected token.");
+  if (/8150|validation failed|print_areas|placeholder/i.test(message)) return withReference("Printify rejected this template’s print-area setup. Reload the template; if it continues, use a freshly saved copy of the Printify product.");
+  if (/429|longer than expected|rate limit/i.test(message)) return withReference("Printify is temporarily limiting requests. Goldie already waited and retried; retry this design when the batch finishes.");
   return message || "Goldie could not create this draft. Retry it when the batch finishes.";
 }
 
@@ -160,24 +162,24 @@ export default function Home() {
     return { blob: repacked, fileName };
   }
 
-  async function stageUpload(blob: Blob, fileName: string) {
+  async function stageUpload(blob: Blob, fileName: string, reference: string) {
     const waits = [0, 1500, 4000];
     let lastError = "The design could not be prepared for Printify.";
     for (const wait of waits) {
       if (wait) await new Promise((resolve) => window.setTimeout(resolve, wait));
       try {
-        const response = await fetch(`/api/printify/stage?fileName=${encodeURIComponent(fileName)}`, {
+        const response = await fetch(`/api/printify/stage?fileName=${encodeURIComponent(fileName)}&reference=${encodeURIComponent(reference)}`, {
           method: "POST",
           headers: { "Content-Type": blob.type || "application/octet-stream" },
           body: blob,
         });
         const result = await response.json() as { stagedId?: string; error?: string };
-        if (response.ok && result.stagedId) return result.stagedId;
+        if (response.ok && result.stagedId) return { stagedId: result.stagedId, reference };
         lastError = result.error || lastError;
         if (response.status >= 400 && response.status < 500 && response.status !== 429) break;
       } catch (error) { lastError = error instanceof Error ? error.message : lastError; }
     }
-    throw new Error(lastError);
+    throw new Error(`${lastError}${/Support reference:/i.test(lastError) ? "" : ` Support reference: ${reference}.`}`);
   }
 
   async function runDrafts(targetFiles: DesignFile[], keepSuccessful = false) {
@@ -188,15 +190,20 @@ export default function Home() {
     else setDrafts((current) => current.filter((draft) => draft.status === "Created"));
     setProcessed(0);
     for (const design of targetFiles) {
+      const supportReference = `GLF-${crypto.randomUUID().replace(/-/g, "").slice(0, 10).toUpperCase()}`;
       try {
         const upload = await preparedUpload(design.file);
-        const stagedId = await stageUpload(upload.blob, upload.fileName);
-        const response = await fetch("/api/printify/drafts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ productUrl: template, description, fileName: upload.fileName, stagedId, clientId: design.id }) });
+        const staged = await stageUpload(upload.blob, upload.fileName, supportReference);
+        const response = await fetch("/api/printify/drafts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ productUrl: template, description, fileName: upload.fileName, stagedId: staged.stagedId, supportReference: staged.reference, clientId: design.id }) });
         const result = await response.json() as { draft?: DraftResult; error?: string };
         if (!response.ok || !result.draft) throw new Error(result.error || "Printify did not create this draft.");
         setDrafts((current) => [...current, result.draft!]);
       } catch (error) {
-        setDrafts((current) => [...current, { clientId: design.id, name: design.name, status: "Failed", error: friendlyUploadError(error) }]);
+        const rawMessage = error instanceof Error ? error.message : "The design failed.";
+        if (!/Support reference:/i.test(rawMessage)) {
+          void fetch("/api/printify/diagnostics", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ reference: supportReference, fileName: design.name, stage: "browser_image_preparation", message: rawMessage }) });
+        }
+        setDrafts((current) => [...current, { clientId: design.id, name: design.name, status: "Failed", error: friendlyUploadError(new Error(`${rawMessage}${/Support reference:/i.test(rawMessage) ? "" : ` Support reference: ${supportReference}.`}`)) }]);
       }
       setProcessed((current) => current + 1);
     }

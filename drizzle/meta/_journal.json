@@ -15,6 +15,20 @@
       "when": 1786474325597,
       "tag": "0001_nifty_rictor",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1786545256435,
+      "tag": "0002_milky_lockjaw",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1786545292665,
+      "tag": "0003_sour_stark_industries",
+      "breakpoints": true
     }
   ]
 }
