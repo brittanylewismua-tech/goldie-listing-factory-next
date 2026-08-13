@@ -11,7 +11,7 @@ These rules are requirements, not optional optimizations.
 
 ## Memory and throughput
 
-- The browser processes one file at a time.
+- The browser processes at most two files concurrently; a 20-design batch is never launched without a bound.
 - Artwork moves as a streamable Blob; the browser never creates a pixel canvas.
 - Goldie's server stages the original stream in temporary object storage.
 - Printify receives a short-lived signed URL, which is its recommended method for files larger than 5 MB.

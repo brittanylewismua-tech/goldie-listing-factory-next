@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import SupportChat from "./support-chat";
+import { runBounded } from "./bounded-work";
 
 type DesignFile = { name: string; size: number; id: string; file: File };
 type TemplateDetails = { id: string; batchId: string; title: string; provider: string; enabledVariants: number; shop: string; maxPrintWidth?: number | null; maxPrintHeight?: number | null };
@@ -10,6 +11,7 @@ type DraftResult = { id?: string; clientId: string; name: string; shopId?: numbe
 
 const MAX_BATCH_FILES = 20;
 const MAX_BATCH_BYTES = 500 * 1024 * 1024;
+const MAX_CONCURRENT_DESIGNS = 2;
 
 async function fetchWithDeadline(input: RequestInfo | URL, init: RequestInit, milliseconds: number) {
   const controller = new AbortController();
@@ -66,7 +68,6 @@ export default function Home() {
   const ready = connected && templateLoaded && description.trim().length > 0 && files.length > 0;
   const missingRequirement = !connected ? "Connect Printify first" : !templateLoaded ? "Load your product template" : !description.trim() ? "Add your description" : files.length === 0 ? "Add at least one design" : "";
   const totalSize = useMemo(() => files.reduce((sum, file) => sum + file.size, 0), [files]);
-  const activeItem = running ? Math.min(processed + 1, runTotal) : processed;
 
   useEffect(() => {
     fetch("/api/printify")
@@ -174,21 +175,11 @@ export default function Home() {
     return null;
   }
 
-  async function runDrafts(targetFiles: DesignFile[], keepSuccessful = false) {
-    if (!ready || !targetFiles.length) return;
-    setRunning(true);
-    setRunTotal(targetFiles.length);
-    setComplete(false);
-    if (!keepSuccessful) setDrafts([]);
-    else setDrafts((current) => current.filter((draft) => draft.status === "Created"));
-    setProcessed(0);
-    for (const design of targetFiles) {
+  async function processDesign(design: DesignFile): Promise<DraftResult> {
       const referenceRoot = `GLF-${crypto.randomUUID().replace(/-/g, "").slice(0, 10).toUpperCase()}`;
       let finalError: Error | null = null;
       try {
-        setPreparationMessage(`Sending ${design.name} without opening or compressing it`);
         const upload = await preparedUpload(design.file);
-        setPreparationMessage(`Sending ${design.name} to Printify`);
         for (let pipelineAttempt = 1; pipelineAttempt <= 3; pipelineAttempt += 1) {
           const supportReference = `${referenceRoot}-A${pipelineAttempt}`;
           try {
@@ -200,9 +191,7 @@ export default function Home() {
               if (recovered) result.draft = recovered;
             }
             if (!result.draft) throw new Error(result.error || "Printify did not create this draft.");
-            setDrafts((current) => [...current, result.draft!]);
-            finalError = null;
-            break;
+            return result.draft;
           } catch (attemptError) {
             finalError = attemptError instanceof Error ? attemptError : new Error("The design failed.");
             const permanent = /\b(?:400|401|403)\b|token|template product was not found|not a recognized|could not be decoded|could not be read|valid PNG or JPG|file contents do not match|does not belong to the signed-in account|batch session expired/i.test(finalError.message);
@@ -210,17 +199,30 @@ export default function Home() {
             await new Promise((resolve) => window.setTimeout(resolve, pipelineAttempt * 5000));
           }
         }
-        if (finalError) throw finalError;
+        throw finalError ?? new Error("Printify did not create this draft.");
       } catch (error) {
         const rawMessage = error instanceof Error ? error.message : "The design failed.";
         const supportReference = `${referenceRoot}-A3`;
         if (!/Support reference:/i.test(rawMessage)) {
           void fetch("/api/printify/diagnostics", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ reference: supportReference, fileName: design.name, stage: "browser_image_preparation", message: rawMessage }) });
         }
-        setDrafts((current) => [...current, { clientId: design.id, name: design.name, status: "Failed", error: friendlyUploadError(new Error(`${rawMessage}${/Support reference:/i.test(rawMessage) ? "" : ` Support reference: ${supportReference}.`}`)) }]);
+        return { clientId: design.id, name: design.name, status: "Failed", error: friendlyUploadError(new Error(`${rawMessage}${/Support reference:/i.test(rawMessage) ? "" : ` Support reference: ${supportReference}.`}`)) };
       }
+  }
+
+  async function runDrafts(targetFiles: DesignFile[], keepSuccessful = false) {
+    if (!ready || !targetFiles.length) return;
+    setRunning(true);
+    setRunTotal(targetFiles.length);
+    setComplete(false);
+    setPreparationMessage(`Processing up to ${Math.min(MAX_CONCURRENT_DESIGNS, targetFiles.length)} designs at a time without opening or compressing them`);
+    if (!keepSuccessful) setDrafts([]);
+    else setDrafts((current) => current.filter((draft) => draft.status === "Created"));
+    setProcessed(0);
+    await runBounded(targetFiles, MAX_CONCURRENT_DESIGNS, processDesign, (result) => {
+      setDrafts((current) => [...current, result]);
       setProcessed((current) => current + 1);
-    }
+    });
     setRunning(false);
     setPreparationMessage("");
     setRunTotal(0);
@@ -370,7 +372,7 @@ export default function Home() {
           <div className="launch-top">
             <Image src="/goldie-g.png" width={2000} height={2000} alt="" className="goldie-g" />
             <p className="mini-label">BATCH SUMMARY</p>
-            <h2>{running ? `Creating ${activeItem} of ${runTotal}` : complete ? "Batch finished" : "Current batch"}</h2>
+            <h2>{running ? `${processed} of ${runTotal} complete` : complete ? "Batch finished" : "Current batch"}</h2>
             <p>{complete ? `${drafts.filter((draft) => draft.status === "Created").length} of ${files.length} drafts were created in Printify.` : running ? "Goldie is uploading each design and creating its Printify draft." : "Complete the four sections to create unpublished drafts in Printify."}</p>
           </div>
 
@@ -383,7 +385,7 @@ export default function Home() {
 
           {running && (
             <div className="batch-progress" role="status" aria-live="polite">
-              <div className="progress-ring" aria-hidden="true"><span>{activeItem}/{runTotal}</span></div>
+              <div className="progress-ring" aria-hidden="true"><span>{processed}/{runTotal}</span></div>
               <div className="progress-copy"><b>Creating your Printify drafts</b><span>{preparationMessage || "Keep this page open while Goldie finishes the batch."}</span></div>
               <div className="progress-track"><span style={{ width: `${runTotal ? (processed / runTotal) * 100 : 0}%` }} /></div>
             </div>
@@ -391,7 +393,7 @@ export default function Home() {
 
           {!complete ? (
             <button className="launch-button" disabled={!ready || running} onClick={createDrafts}>
-              <span className="button-glint" />{running ? `Creating ${activeItem} of ${runTotal}…` : ready ? "Create Printify drafts" : missingRequirement}<span>→</span>
+              <span className="button-glint" />{running ? `${processed} of ${runTotal} complete…` : ready ? "Create Printify drafts" : missingRequirement}<span>→</span>
             </button>
           ) : (
             <div className="batch-actions">

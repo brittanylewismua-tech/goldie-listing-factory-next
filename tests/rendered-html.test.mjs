@@ -48,9 +48,9 @@ test("uses individual shop-aware Printify editor buttons", async () => {
   assert.match(page, /MAX_BATCH_FILES = 20/);
   assert.match(page, /MAX_BATCH_BYTES = 500 \* 1024 \* 1024/);
   assert.doesNotMatch(page, /new Worker|createImageBitmap|OffscreenCanvas|canvas|getImageData|UPNG/);
-  assert.match(page, /const activeItem = running \? Math\.min\(processed \+ 1, runTotal\) : processed/);
-  assert.match(page, /Creating \$\{activeItem\} of \$\{runTotal\}/);
-  assert.match(page, /\{activeItem\}\/\{runTotal\}/);
+  assert.match(page, /MAX_CONCURRENT_DESIGNS = 2/);
+  assert.match(page, /\$\{processed\} of \$\{runTotal\} complete/);
+  assert.match(page, /\{processed\}\/\{runTotal\}/);
   assert.doesNotMatch(page, /Creating \$\{processed \+ 1\} of/);
   assert.match(page, /\/api\/printify\/stage/);
   assert.match(page, /pass its original bytes straight through/);
@@ -88,6 +88,30 @@ test("uses individual shop-aware Printify editor buttons", async () => {
   assert.doesNotMatch(route, /image\.id === primaryTemplateImageId/);
   assert.match(route, /Add one placeholder design/);
   assert.match(route, /templateImageCount/);
+});
+
+test("processes a 20-design batch with bounded two-at-a-time concurrency", async () => {
+  const [page, boundedSource] = await Promise.all([readFile(new URL("../app/page.tsx", import.meta.url), "utf8"), readFile(new URL("../app/bounded-work.ts", import.meta.url), "utf8")]);
+  assert.match(page, /const MAX_BATCH_FILES = 20/);
+  assert.match(page, /const MAX_CONCURRENT_DESIGNS = 2/);
+  assert.match(page, /async function processDesign/);
+  assert.match(page, /runBounded\(targetFiles, MAX_CONCURRENT_DESIGNS, processDesign/);
+  assert.match(page, /setProcessed\(\(current\) => current \+ 1\)/);
+  assert.match(boundedSource, /Math\.min\(limit, items\.length\)/);
+  const { runBounded } = await import("../app/bounded-work.ts");
+  let active = 0;
+  let maximumActive = 0;
+  const completed = [];
+  await runBounded(Array.from({ length: 20 }, (_, index) => index), 2, async (item) => {
+    active += 1;
+    maximumActive = Math.max(maximumActive, active);
+    await new Promise((resolve) => setTimeout(resolve, item % 2 ? 2 : 1));
+    active -= 1;
+    return item;
+  }, (item) => completed.push(item));
+  assert.equal(maximumActive, 2);
+  assert.equal(completed.length, 20);
+  assert.deepEqual([...completed].sort((a, b) => a - b), Array.from({ length: 20 }, (_, index) => index));
 });
 
 test("preflights the account once and reuses a protected batch session", async () => {
