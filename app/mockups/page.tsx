@@ -1,7 +1,6 @@
 "use client";
 
 import { ChangeEvent, DragEvent, useMemo, useRef, useState } from "react";
-import Link from "next/link";
 import "./mockups.css";
 
 type Point = [number, number];
@@ -86,7 +85,7 @@ export default function Home() {
   const calibrateClick=(e:React.MouseEvent<HTMLImageElement>)=>{if(!calibrating)return;const r=e.currentTarget.getBoundingClientRect();const next=[...points,[(e.clientX-r.left)/r.width,(e.clientY-r.top)/r.height] as Point];setPoints(next);if(next.length===4){setLibrary(x=>x.map(t=>t.id===calibrating.id?{...t,corners:next as Template["corners"]}:t));const remaining=library.filter(t=>t.custom&&t.theme===calibrating.theme&&t.id!==calibrating.id&&t.corners[0][0]===.15);setTimeout(()=>{setPoints([]);setCalibrating(remaining[0]||null)},250);}};
 
   return <main className="mockupFactory">
-    <header className="mockupTopbar"><div className="brand"><span className="brandGold">GOLDIE</span><span>MOCKUP FACTORY</span></div><nav className="factoryNav" aria-label="Goldie factories"><Link href="/">Listing Factory</Link><Link className="active" href="/mockups">Mockup Factory</Link></nav><span className="privateNote">Artwork never leaves your device</span></header>
+    <header className="mockupTopbar"><div className="brand"><span className="brandGold">GOLDIE</span><span>MOCKUP FACTORY</span></div><nav className="factoryNav" aria-label="Goldie factories"><a href="/">Listing Factory</a><a className="active" href="/mockups">Mockup Factory</a></nav><span className="privateNote">Artwork never leaves your device</span></header>
     <section className="mockupHero"><p className="mockupEyebrow">FROM FINISHED DESIGN TO LIFESTYLE MOCKUPS</p><h1>Batch-create your mockups.<br/><em>Done for you.</em></h1><p className="lede">Choose your finished poster designs once. Goldie places every design into the complete Pink Dorm collection—sized, angled, and ready to download.</p></section>
     <section className="mockupWorkspace">
       <div className="mockupStep"><div className="stepHead"><span>1</span><div><h2>Add your finished designs</h2><p>PNG, JPG, or WEBP · already upscaled if needed · up to 20 at a time</p></div></div>
