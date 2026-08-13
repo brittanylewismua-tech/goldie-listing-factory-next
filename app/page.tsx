@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import SupportChat from "./support-chat";
 import { runBounded } from "./bounded-work";
 
@@ -285,6 +286,7 @@ export default function Home() {
           </div>
         </div>
         <div className="top-actions">
+          <nav className="factory-switcher" aria-label="Goldie factories"><Link className="active" href="/">Listing Factory</Link><Link href="/mockups">Mockup Factory</Link></nav>
           {owner && <a className="diagnostics-link" href="/mastermind-admin" aria-label="Open Goldie Diagnostics" title="Goldie Diagnostics">★</a>}
           <span className="secure-pill"><i /> Secure workspace</span>
         </div>

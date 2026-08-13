@@ -1,0 +1,4 @@
+.factory-switcher{display:flex;align-items:center;gap:4px;padding:4px;border:1px solid rgba(214,157,45,.38);border-radius:999px;background:rgba(255,255,255,.04)}
+.factory-switcher a{padding:8px 13px;border-radius:999px;color:#bdb3a2;font-size:11px;font-weight:750;text-decoration:none;transition:160ms ease}
+.factory-switcher a:hover,.factory-switcher a.active{color:#15130f;background:#d6a33b}
+@media(max-width:650px){.factory-switcher a{padding:7px 9px;font-size:10px}.top-actions{gap:7px}}

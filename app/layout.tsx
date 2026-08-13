@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import "./globals.css";
+import "./factory-navigation.css";
 import "./theme.css";
 
 export async function generateMetadata(): Promise<Metadata> {

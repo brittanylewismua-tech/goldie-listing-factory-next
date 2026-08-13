@@ -1,0 +1,109 @@
+"use client";
+
+import { ChangeEvent, DragEvent, useMemo, useRef, useState } from "react";
+import Link from "next/link";
+import "./mockups.css";
+
+type Point = [number, number];
+type Template = { id: string; name: string; theme: string; src: string; corners: [Point, Point, Point, Point]; normalized?: boolean; custom?: boolean };
+type Rendered = { name: string; url: string; template: string };
+
+const templates: Template[] = [
+  { id:"pink-1",theme:"Pink Dorm",name:"Leaning frame",src:"/mockups/pink-dorm-01-leaning-frame.png",corners:[[230,382],[810,328],[798,1321],[197,1254]] },
+  { id:"pink-2",theme:"Pink Dorm",name:"Hanging the poster",src:"/mockups/pink-dorm-02-hanging-poster.png",corners:[[546,105],[1065,79],[1065,929],[546,896]] },
+  { id:"pink-3",theme:"Pink Dorm",name:"Maximalist bedroom",src:"/mockups/pink-dorm-03-maximalist-bed.png",corners:[[305,101],[878,125],[879,985],[305,988]] },
+  { id:"pink-4",theme:"Pink Dorm",name:"Chair and plants",src:"/mockups/pink-dorm-04-chair-and-plants.png",corners:[[346,104],[870,123],[868,930],[346,942]] },
+  { id:"pink-5",theme:"Pink Dorm",name:"Bed and plants",src:"/mockups/pink-dorm-05-bed-and-plants.png",corners:[[462,150],[868,150],[868,699],[462,699]] },
+];
+
+function loadImage(src: string) {
+  return new Promise<HTMLImageElement>((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = reject;
+    image.src = src;
+  });
+}
+
+function affine(ctx: CanvasRenderingContext2D, s: Point[], d: Point[]) {
+  const [s0,s1,s2] = s; const [d0,d1,d2] = d;
+  const den = s0[0]*(s1[1]-s2[1])+s1[0]*(s2[1]-s0[1])+s2[0]*(s0[1]-s1[1]);
+  const a = (d0[0]*(s1[1]-s2[1])+d1[0]*(s2[1]-s0[1])+d2[0]*(s0[1]-s1[1]))/den;
+  const c = (d0[0]*(s2[0]-s1[0])+d1[0]*(s0[0]-s2[0])+d2[0]*(s1[0]-s0[0]))/den;
+  const e = (d0[0]*(s1[0]*s2[1]-s2[0]*s1[1])+d1[0]*(s2[0]*s0[1]-s0[0]*s2[1])+d2[0]*(s0[0]*s1[1]-s1[0]*s0[1]))/den;
+  const b = (d0[1]*(s1[1]-s2[1])+d1[1]*(s2[1]-s0[1])+d2[1]*(s0[1]-s1[1]))/den;
+  const dd = (d0[1]*(s2[0]-s1[0])+d1[1]*(s0[0]-s2[0])+d2[1]*(s1[0]-s0[0]))/den;
+  const f = (d0[1]*(s1[0]*s2[1]-s2[0]*s1[1])+d1[1]*(s2[0]*s0[1]-s0[0]*s2[1])+d2[1]*(s0[0]*s1[1]-s1[0]*s0[1]))/den;
+  ctx.setTransform(a,b,c,dd,e,f);
+}
+
+function bilinear(c: Template["corners"], u: number, v: number): Point {
+  const [tl,tr,br,bl] = c;
+  return [
+    (1-u)*(1-v)*tl[0]+u*(1-v)*tr[0]+u*v*br[0]+(1-u)*v*bl[0],
+    (1-u)*(1-v)*tl[1]+u*(1-v)*tr[1]+u*v*br[1]+(1-u)*v*bl[1],
+  ];
+}
+
+function triangle(ctx: CanvasRenderingContext2D, image: HTMLImageElement, source: Point[], dest: Point[]) {
+  ctx.save();
+  ctx.beginPath(); ctx.moveTo(...dest[0]); ctx.lineTo(...dest[1]); ctx.lineTo(...dest[2]); ctx.closePath(); ctx.clip();
+  affine(ctx, source, dest); ctx.drawImage(image, 0, 0); ctx.restore();
+}
+
+async function makeMockup(file: File, template: Template): Promise<Rendered> {
+  const [master, art] = await Promise.all([loadImage(template.src), loadImage(URL.createObjectURL(file))]);
+  const canvas = document.createElement("canvas"); canvas.width = master.naturalWidth; canvas.height = master.naturalHeight;
+  const corners = template.normalized ? template.corners.map(([x,y])=>[x*master.naturalWidth,y*master.naturalHeight] as Point) as Template["corners"] : template.corners;
+  const ctx = canvas.getContext("2d", { alpha: false })!; ctx.drawImage(master,0,0);
+  const cols = 12, rows = 16;
+  for (let y=0;y<rows;y++) for (let x=0;x<cols;x++) {
+    const u0=x/cols,u1=(x+1)/cols,v0=y/rows,v1=(y+1)/rows;
+    const s00:[number,number]=[u0*art.width,v0*art.height],s10:[number,number]=[u1*art.width,v0*art.height],s11:[number,number]=[u1*art.width,v1*art.height],s01:[number,number]=[u0*art.width,v1*art.height];
+    const d00=bilinear(corners,u0,v0),d10=bilinear(corners,u1,v0),d11=bilinear(corners,u1,v1),d01=bilinear(corners,u0,v1);
+    triangle(ctx,art,[s00,s10,s11],[d00,d10,d11]); triangle(ctx,art,[s00,s11,s01],[d00,d11,d01]);
+  }
+  ctx.save(); ctx.beginPath(); corners.forEach((p,i)=>i?ctx.lineTo(...p):ctx.moveTo(...p)); ctx.closePath(); ctx.clip(); ctx.globalCompositeOperation="multiply"; ctx.globalAlpha=.12; ctx.drawImage(master,0,0); ctx.restore();
+  const blob = await new Promise<Blob>((resolve)=>canvas.toBlob(b=>resolve(b!),"image/jpeg",.93));
+  const safe=file.name.replace(/\.[^.]+$/," ").trim().replace(/[^a-z0-9]+/gi,"-").replace(/^-|-$/g,"");
+  return { name:`${safe}-${template.name.toLowerCase().replace(/[^a-z0-9]+/g,"-")}.jpg`, url:URL.createObjectURL(blob), template:template.name };
+}
+
+export default function Home() {
+  const [files,setFiles]=useState<File[]>([]); const [results,setResults]=useState<Rendered[]>([]); const [busy,setBusy]=useState(false); const [progress,setProgress]=useState(0); const [drag,setDrag]=useState(false);
+  const [library,setLibrary]=useState<Template[]>(templates); const [selected,setSelected]=useState<Set<string>>(new Set(templates.map(t=>t.id))); const [themeName,setThemeName]=useState("My mockup set"); const [calibrating,setCalibrating]=useState<Template|null>(null); const [points,setPoints]=useState<Point[]>([]);
+  const fileInput=useRef<HTMLInputElement>(null); const folderInput=useRef<HTMLInputElement>(null);
+  const mockupInput=useRef<HTMLInputElement>(null); const chosen=library.filter(t=>selected.has(t.id)); const total=files.length*chosen.length;
+  const add=(incoming:File[])=>{const valid=incoming.filter(f=>/^image\/(png|jpeg|webp)$/.test(f.type)); setFiles(prev=>[...prev,...valid].slice(0,20)); setResults([]);};
+  const changed=(e:ChangeEvent<HTMLInputElement>)=>add(Array.from(e.target.files||[]));
+  const dropped=(e:DragEvent)=>{e.preventDefault();setDrag(false);add(Array.from(e.dataTransfer.files));};
+  const generate=async()=>{setBusy(true);setResults([]);setProgress(0);const made:Rendered[]=[];for(const file of files){for(const template of chosen){made.push(await makeMockup(file,template));setProgress(made.length);setResults([...made]);await new Promise(r=>setTimeout(r,0));}}setBusy(false);};
+  const grouped=useMemo(()=>files.map(file=>({file,items:results.filter(r=>r.name.startsWith(file.name.replace(/\.[^.]+$/," ").trim().replace(/[^a-z0-9]+/gi,"-").replace(/^-|-$/g,"")))})),[files,results]);
+  const clear=()=>{results.forEach(r=>URL.revokeObjectURL(r.url));setFiles([]);setResults([]);setProgress(0);};
+  const downloadAll=()=>results.forEach((r,i)=>setTimeout(()=>{const a=document.createElement("a");a.href=r.url;a.download=r.name;a.click();},i*180));
+  const addMockups=(e:ChangeEvent<HTMLInputElement>)=>{const incoming=Array.from(e.target.files||[]).filter(f=>/^image\/(png|jpeg|webp)$/.test(f.type));const added=incoming.map((f,i):Template=>({id:`custom-${Date.now()}-${i}`,theme:themeName.trim()||"My mockup set",name:f.name.replace(/\.[^.]+$/,"")||`Mockup ${i+1}`,src:URL.createObjectURL(f),corners:[[.15,.12],[.85,.12],[.85,.88],[.15,.88]],normalized:true,custom:true}));setLibrary(x=>[...x,...added]);setSelected(x=>new Set([...x,...added.map(t=>t.id)]));if(added[0]){setPoints([]);setCalibrating(added[0]);}e.target.value="";};
+  const toggle=(id:string)=>setSelected(s=>{const n=new Set(s);n.has(id)?n.delete(id):n.add(id);return n});
+  const calibrateClick=(e:React.MouseEvent<HTMLImageElement>)=>{if(!calibrating)return;const r=e.currentTarget.getBoundingClientRect();const next=[...points,[(e.clientX-r.left)/r.width,(e.clientY-r.top)/r.height] as Point];setPoints(next);if(next.length===4){setLibrary(x=>x.map(t=>t.id===calibrating.id?{...t,corners:next as Template["corners"]}:t));const remaining=library.filter(t=>t.custom&&t.theme===calibrating.theme&&t.id!==calibrating.id&&t.corners[0][0]===.15);setTimeout(()=>{setPoints([]);setCalibrating(remaining[0]||null)},250);}};
+
+  return <main className="mockupFactory">
+    <header className="mockupTopbar"><div className="brand"><span className="brandGold">GOLDIE</span><span>MOCKUP FACTORY</span></div><nav className="factoryNav" aria-label="Goldie factories"><Link href="/">Listing Factory</Link><Link className="active" href="/mockups">Mockup Factory</Link></nav><span className="privateNote">Artwork never leaves your device</span></header>
+    <section className="mockupHero"><p className="mockupEyebrow">FROM FINISHED DESIGN TO LIFESTYLE MOCKUPS</p><h1>Batch-create your mockups.<br/><em>Done for you.</em></h1><p className="lede">Choose your finished poster designs once. Goldie places every design into the complete Pink Dorm collection—sized, angled, and ready to download.</p></section>
+    <section className="mockupWorkspace">
+      <div className="mockupStep"><div className="stepHead"><span>1</span><div><h2>Add your finished designs</h2><p>PNG, JPG, or WEBP · already upscaled if needed · up to 20 at a time</p></div></div>
+        <div className={`dropzone ${drag?"drag":""}`} onDragOver={e=>{e.preventDefault();setDrag(true)}} onDragLeave={()=>setDrag(false)} onDrop={dropped}>
+          <div className="uploadMark">＋</div><strong>Drop your designs here</strong><p>or choose exactly what you want to use</p><div className="uploadActions"><button onClick={()=>fileInput.current?.click()}>Choose images</button><button className="secondary" onClick={()=>folderInput.current?.click()}>Choose a folder</button></div>
+          <input ref={fileInput} hidden type="file" accept="image/png,image/jpeg,image/webp" multiple onChange={changed}/><input ref={folderInput} hidden type="file" accept="image/png,image/jpeg,image/webp" multiple onChange={changed} {...({webkitdirectory:""} as object)}/>
+        </div>
+        {files.length>0&&<div className="fileTray"><div className="trayTop"><strong>{files.length} design{files.length!==1?"s":""} ready</strong><button className="textButton" onClick={clear}>Clear all / start over</button></div><div className="chips">{files.map((f,i)=><div className="chip" key={f.name+i}><img src={URL.createObjectURL(f)} alt=""/><span>{f.name}</span><button aria-label={`Remove ${f.name}`} onClick={()=>setFiles(x=>x.filter((_,n)=>n!==i))}>×</button></div>)}</div></div>}
+      </div>
+      <div className="mockupStep"><div className="stepHead"><span>2</span><div><h2>Choose your mockups</h2><p>Select every scene—or only the exact ones you want for this batch.</p></div></div>
+        {[...new Set(library.map(t=>t.theme))].map(theme=><div className="collection" key={theme}><div className="collectionTitle"><div><span className="selected">MOCKUP SET</span><h3>{theme}</h3><p>{library.filter(t=>t.theme===theme&&selected.has(t.id)).length} of {library.filter(t=>t.theme===theme).length} selected</p></div><button className="selectSet" onClick={()=>{const ids=library.filter(t=>t.theme===theme).map(t=>t.id);const all=ids.every(id=>selected.has(id));setSelected(s=>{const n=new Set(s);ids.forEach(id=>all?n.delete(id):n.add(id));return n})}}>{library.filter(t=>t.theme===theme).every(t=>selected.has(t.id))?"Deselect all":"Select all"}</button></div><div className="thumbs">{library.filter(t=>t.theme===theme).map(t=><button className={`mockChoice ${selected.has(t.id)?"chosen":""}`} key={t.id} onClick={()=>toggle(t.id)}><img src={t.src} alt={t.name}/><span>{selected.has(t.id)?"✓ ":""}{t.name}</span>{t.custom&&<small onClick={e=>{e.stopPropagation();setPoints([]);setCalibrating(t)}}>Reset poster area</small>}</button>)}</div></div>)}
+        <div className="addSet"><div><strong>Add another themed mockup set</strong><p>Upload clean, blank mockups. Mark the four inside corners once; Goldie remembers exactly where the artwork belongs during this session.</p></div><div className="setControls"><input value={themeName} onChange={e=>setThemeName(e.target.value)} aria-label="Mockup set name"/><button onClick={()=>mockupInput.current?.click()}>Upload blank mockups</button><input ref={mockupInput} hidden type="file" accept="image/png,image/jpeg,image/webp" multiple onChange={addMockups}/></div></div>
+      </div>
+      <div className="mockupStep actionStep"><div className="stepHead"><span>3</span><div><h2>Create your mockups</h2><p>{files.length?`${files.length} designs × ${chosen.length} selected scenes = ${total} finished mockups`:"Add designs above to begin."}</p></div></div><button className="generate" disabled={!files.length||!chosen.length||busy} onClick={generate}>{busy?`Creating ${progress} of ${total}…`:`Create ${total||"my"} mockups`}</button>{busy&&<div className="progress"><i style={{width:`${total?progress/total*100:0}%`}}/></div>}</div>
+    </section>
+    {results.length>0&&<section className="mockupResults"><div className="resultsHead"><div><p className="mockupEyebrow">YOUR FINISHED MOCKUPS</p><h2>{busy?"They’re appearing as they finish.":`${results.length} mockups are ready.`}</h2></div>{!busy&&<button className="downloadAll" onClick={downloadAll}>Download all</button>}</div>{grouped.map(g=>g.items.length>0&&<article key={g.file.name}><h3>{g.file.name}</h3><div className="resultGrid">{g.items.map(item=><figure key={item.name}><img src={item.url} alt={`${g.file.name} in ${item.template}`}/><figcaption><span>{item.template}</span><a href={item.url} download={item.name}>Download</a></figcaption></figure>)}</div></article>)}</section>}
+    {calibrating&&<div className="modal"><div className="calibrator"><button className="close" onClick={()=>setCalibrating(null)}>×</button><p className="mockupEyebrow">SET THE POSTER AREA</p><h2>Click the {['top-left','top-right','bottom-right','bottom-left'][points.length]} inside corner.</h2><p>Four clicks and this mockup is ready to reuse.</p><div className="calImage"><img src={calibrating.src} alt="Blank mockup" onClick={calibrateClick}/>{points.map((p,i)=><i key={i} style={{left:`${p[0]*100}%`,top:`${p[1]*100}%`}}>{i+1}</i>)}</div><button className="resetPoints" onClick={()=>setPoints([])}>Start these four points over</button></div></div>}
+    <footer className="mockupFooter"><span>GOLDIE MOCKUP FACTORY</span><p>Fast production. Exact artwork. No AI regeneration.</p></footer>
+  </main>;
+}
