@@ -5,12 +5,12 @@ import { zipSync } from "fflate";
 import "./mockups.css";
 
 type Point = [number, number];
-type Template = { id: string; name: string; theme: string; src: string; corners: [Point, Point, Point, Point]; normalized?: boolean; custom?: boolean };
+type Template = { id: string; name: string; theme: string; src: string; corners: [Point, Point, Point, Point]; normalized?: boolean; custom?: boolean; foregroundPrompt?: string };
 type Rendered = { name: string; url: string; template: string };
 
 const templates: Template[] = [
-  { id:"pink-1",theme:"Pink Dorm",name:"Leaning frame",src:"/mockups/pink-dorm-01-leaning-frame.png",corners:[[230,382],[810,328],[798,1321],[197,1254]] },
-  { id:"pink-2",theme:"Pink Dorm",name:"Hanging the poster",src:"/mockups/pink-dorm-02-hanging-poster.png",corners:[[546,105],[1065,79],[1065,929],[546,896]] },
+  { id:"pink-1",theme:"Pink Dorm",name:"Leaning frame",src:"/mockups/pink-dorm-01-leaning-frame.png",corners:[[230,382],[810,328],[798,1321],[197,1254]],foregroundPrompt:"gold picture frame edges and anything visibly crossing in front of the framed poster" },
+  { id:"pink-2",theme:"Pink Dorm",name:"Hanging the poster",src:"/mockups/pink-dorm-02-hanging-poster.png",corners:[[546,105],[1065,79],[1065,929],[546,896]],foregroundPrompt:"woman, her hair, both arms, both hands, fingers, and the gold picture frame that overlap or sit in front of the poster" },
   { id:"pink-3",theme:"Pink Dorm",name:"Maximalist bedroom",src:"/mockups/pink-dorm-03-maximalist-bed.png",corners:[[305,101],[878,125],[879,985],[305,988]] },
   { id:"pink-4",theme:"Pink Dorm",name:"Chair and plants",src:"/mockups/pink-dorm-04-chair-and-plants.png",corners:[[346,104],[870,123],[868,930],[346,942]] },
   { id:"pink-5",theme:"Pink Dorm",name:"Bed and plants",src:"/mockups/pink-dorm-05-bed-and-plants.png",corners:[[462,150],[868,150],[868,699],[462,699]] },
@@ -19,10 +19,27 @@ const templates: Template[] = [
 function loadImage(src: string) {
   return new Promise<HTMLImageElement>((resolve, reject) => {
     const image = new Image();
+    image.crossOrigin = "anonymous";
     image.onload = () => resolve(image);
     image.onerror = reject;
     image.src = src;
   });
+}
+
+const foregroundCache = new Map<string, string[]>();
+
+async function imageForAnalysis(template: Template) {
+  if (!template.src.startsWith("blob:")) return new URL(template.src, window.location.origin).toString();
+  const blob = await (await fetch(template.src)).blob();
+  return await new Promise<string>((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result)); reader.onerror = () => reject(reader.error); reader.readAsDataURL(blob); });
+}
+
+async function foregroundLayers(template: Template) {
+  const cached = foregroundCache.get(template.id); if (cached) return cached;
+  const response = await fetch("/api/mockups/analyze", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ imageUrl:await imageForAnalysis(template), prompt:template.foregroundPrompt }) });
+  const result = await response.json() as { masks?: Array<{url:string}>; error?:string };
+  if (!response.ok || !result.masks?.length) throw new Error(result.error || `Goldie could not safely layer “${template.name}.”`);
+  const urls = result.masks.map(mask=>mask.url); foregroundCache.set(template.id, urls); return urls;
 }
 
 function affine(ctx: CanvasRenderingContext2D, s: Point[], d: Point[]) {
@@ -52,7 +69,7 @@ function triangle(ctx: CanvasRenderingContext2D, image: HTMLImageElement, source
 }
 
 async function makeMockup(file: File, template: Template): Promise<Rendered> {
-  const [master, art] = await Promise.all([loadImage(template.src), loadImage(URL.createObjectURL(file))]);
+  const [master, art, foregrounds] = await Promise.all([loadImage(template.src), loadImage(URL.createObjectURL(file)), foregroundLayers(template)]);
   const canvas = document.createElement("canvas"); canvas.width = master.naturalWidth; canvas.height = master.naturalHeight;
   const corners = template.normalized ? template.corners.map(([x,y])=>[x*master.naturalWidth,y*master.naturalHeight] as Point) as Template["corners"] : template.corners;
   const ctx = canvas.getContext("2d", { alpha: false })!; ctx.drawImage(master,0,0);
@@ -64,20 +81,21 @@ async function makeMockup(file: File, template: Template): Promise<Rendered> {
     triangle(ctx,art,[s00,s10,s11],[d00,d10,d11]); triangle(ctx,art,[s00,s11,s01],[d00,d11,d01]);
   }
   ctx.save(); ctx.beginPath(); corners.forEach((p,i)=>i?ctx.lineTo(...p):ctx.moveTo(...p)); ctx.closePath(); ctx.clip(); ctx.globalCompositeOperation="multiply"; ctx.globalAlpha=.12; ctx.drawImage(master,0,0); ctx.restore();
+  for (const foreground of foregrounds) ctx.drawImage(await loadImage(foreground),0,0,canvas.width,canvas.height);
   const blob = await new Promise<Blob>((resolve)=>canvas.toBlob(b=>resolve(b!),"image/jpeg",.93));
   const safe=file.name.replace(/\.[^.]+$/," ").trim().replace(/[^a-z0-9]+/gi,"-").replace(/^-|-$/g,"");
   return { name:`${safe}-${template.name.toLowerCase().replace(/[^a-z0-9]+/g,"-")}.jpg`, url:URL.createObjectURL(blob), template:template.name };
 }
 
 export default function Home() {
-  const [files,setFiles]=useState<File[]>([]); const [results,setResults]=useState<Rendered[]>([]); const [busy,setBusy]=useState(false); const [progress,setProgress]=useState(0); const [drag,setDrag]=useState(false);
+  const [files,setFiles]=useState<File[]>([]); const [results,setResults]=useState<Rendered[]>([]); const [busy,setBusy]=useState(false); const [progress,setProgress]=useState(0); const [drag,setDrag]=useState(false); const [generationError,setGenerationError]=useState("");
   const [library,setLibrary]=useState<Template[]>(templates); const [selected,setSelected]=useState<Set<string>>(new Set(templates.map(t=>t.id))); const [themeName,setThemeName]=useState("My mockup set"); const [calibrating,setCalibrating]=useState<Template|null>(null); const [points,setPoints]=useState<Point[]>([]);
   const fileInput=useRef<HTMLInputElement>(null); const folderInput=useRef<HTMLInputElement>(null);
   const mockupInput=useRef<HTMLInputElement>(null); const chosen=library.filter(t=>selected.has(t.id)); const total=files.length*chosen.length;
   const add=(incoming:File[])=>{const valid=incoming.filter(f=>/^image\/(png|jpeg|webp)$/.test(f.type)); setFiles(prev=>[...prev,...valid].slice(0,20)); setResults([]);};
   const changed=(e:ChangeEvent<HTMLInputElement>)=>add(Array.from(e.target.files||[]));
   const dropped=(e:DragEvent)=>{e.preventDefault();setDrag(false);add(Array.from(e.dataTransfer.files));};
-  const generate=async()=>{setBusy(true);setResults([]);setProgress(0);const made:Rendered[]=[];for(const file of files){for(const template of chosen){made.push(await makeMockup(file,template));setProgress(made.length);setResults([...made]);await new Promise(r=>setTimeout(r,0));}}setBusy(false);};
+  const generate=async()=>{setBusy(true);setGenerationError("");setResults([]);setProgress(0);const made:Rendered[]=[];try{for(const file of files){for(const template of chosen){made.push(await makeMockup(file,template));setProgress(made.length);setResults([...made]);await new Promise(r=>setTimeout(r,0));}}}catch(error){setGenerationError(error instanceof Error?error.message:"Goldie could not create a safe mockup.");}finally{setBusy(false);}};
   const grouped=useMemo(()=>files.map(file=>({file,items:results.filter(r=>r.name.startsWith(file.name.replace(/\.[^.]+$/," ").trim().replace(/[^a-z0-9]+/gi,"-").replace(/^-|-$/g,"")))})),[files,results]);
   const clear=()=>{results.forEach(r=>URL.revokeObjectURL(r.url));setFiles([]);setResults([]);setProgress(0);};
   const downloadAll=async()=>{const entries:Record<string,Uint8Array>={};for(const result of results){entries[result.name]=new Uint8Array(await (await fetch(result.url)).arrayBuffer());}const zip=zipSync(entries,{level:0});const url=URL.createObjectURL(new Blob([zip],{type:"application/zip"}));const a=document.createElement("a");a.href=url;a.download=`goldie-mockups-${new Date().toISOString().slice(0,10)}.zip`;a.style.display="none";document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);};
@@ -100,7 +118,7 @@ export default function Home() {
         {[...new Set(library.map(t=>t.theme))].map(theme=><div className="collection" key={theme}><div className="collectionTitle"><div><span className="selected">MOCKUP SET</span><h3>{theme}</h3><p>{library.filter(t=>t.theme===theme&&selected.has(t.id)).length} of {library.filter(t=>t.theme===theme).length} selected</p></div><button className="selectSet" onClick={()=>{const ids=library.filter(t=>t.theme===theme).map(t=>t.id);const all=ids.every(id=>selected.has(id));setSelected(s=>{const n=new Set(s);ids.forEach(id=>all?n.delete(id):n.add(id));return n})}}>{library.filter(t=>t.theme===theme).every(t=>selected.has(t.id))?"Deselect all":"Select all"}</button></div><div className="thumbs">{library.filter(t=>t.theme===theme).map(t=><button className={`mockChoice ${selected.has(t.id)?"chosen":""}`} aria-pressed={selected.has(t.id)} key={t.id} onClick={()=>toggle(t.id)}><span className="choiceVisual"><img src={t.src} alt={t.name}/>{selected.has(t.id)&&<i className="choiceCheck" aria-hidden="true">✓</i>}</span><span className="choiceName">{t.name}</span>{t.custom&&<small onClick={e=>{e.stopPropagation();setPoints([]);setCalibrating(t)}}>Reset poster area</small>}</button>)}</div></div>)}
         <div className="addSet"><div className="addSetIntro"><span className="addSetIcon" aria-hidden="true">＋</span><div><span className="addSetLabel">BUILD YOUR LIBRARY</span><strong>Add another themed mockup set</strong><p>Upload clean, blank mockups. Mark the four inside corners once; Goldie remembers exactly where the artwork belongs during this session.</p></div></div><div className="setControls"><label><span>Name this mockup set</span><input value={themeName} onChange={e=>setThemeName(e.target.value)} aria-label="Mockup set name" placeholder="Example: Neutral Bedroom"/></label><button onClick={()=>mockupInput.current?.click()}><span aria-hidden="true">↑</span> Choose blank mockups</button><small>PNG, JPG, or WEBP · select one or several</small><input ref={mockupInput} hidden type="file" accept="image/png,image/jpeg,image/webp" multiple onChange={addMockups}/></div></div>
       </div>
-      <div className="mockupStep actionStep"><div className="stepHead"><span>3</span><div><h2>Create your mockups</h2><p>{files.length?`${files.length} designs × ${chosen.length} selected scenes = ${total} finished mockups`:"Add designs above to begin."}</p></div></div><button className="generate" disabled={!files.length||!chosen.length||busy} onClick={generate}>{busy?`Creating ${progress} of ${total}…`:`Create ${total||"my"} mockups`}</button>{busy&&<div className="progress"><i style={{width:`${total?progress/total*100:0}%`}}/></div>}</div>
+      <div className="mockupStep actionStep"><div className="stepHead"><span>3</span><div><h2>Create your mockups</h2><p>{files.length?`${files.length} designs × ${chosen.length} selected scenes = ${total} finished mockups`:"Add designs above to begin."}</p></div></div><button className="generate" disabled={!files.length||!chosen.length||busy} onClick={generate}>{busy?`Analyzing and creating ${progress} of ${total}…`:`Create ${total||"my"} mockups`}</button>{busy&&<div className="progress"><i style={{width:`${total?progress/total*100:0}%`}}/></div>}{generationError&&<p className="smartError" role="alert"><b>This scene was not safe to render.</b><span>{generationError}</span></p>}</div>
     </section>
     {results.length>0&&<section className="mockupResults"><div className="resultsHead"><div><p className="mockupEyebrow">YOUR FINISHED MOCKUPS</p><h2>{busy?"They’re appearing as they finish.":`${results.length} mockups are ready.`}</h2></div>{!busy&&<button className="downloadAll" onClick={downloadAll}>Download all as ZIP</button>}</div>{grouped.map(g=>g.items.length>0&&<article key={g.file.name}><h3>{g.file.name}</h3><div className="resultGrid">{g.items.map(item=><figure key={item.name}><img src={item.url} alt={`${g.file.name} in ${item.template}`}/><figcaption><span>{item.template}</span><a href={item.url} download={item.name}>Download</a></figcaption></figure>)}</div></article>)}</section>}
     {calibrating&&<div className="modal"><div className="calibrator"><button className="close" onClick={()=>setCalibrating(null)}>×</button><p className="mockupEyebrow">SET THE POSTER AREA</p><h2>Click the {['top-left','top-right','bottom-right','bottom-left'][points.length]} inside corner.</h2><p>Four clicks and this mockup is ready to reuse.</p><div className="calImage"><img src={calibrating.src} alt="Blank mockup" onClick={calibrateClick}/>{points.map((p,i)=><i key={i} style={{left:`${p[0]*100}%`,top:`${p[1]*100}%`}}>{i+1}</i>)}</div><button className="resetPoints" onClick={()=>setPoints([])}>Start these four points over</button></div></div>}
