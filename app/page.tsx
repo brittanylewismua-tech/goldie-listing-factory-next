@@ -51,6 +51,7 @@ export default function Home() {
   const [templateDetails, setTemplateDetails] = useState<TemplateDetails | null>(null);
   const [templateError, setTemplateError] = useState("");
   const [loadingTemplate, setLoadingTemplate] = useState(false);
+  const [listingTitle, setListingTitle] = useState("");
   const [description, setDescription] = useState("");
   const [files, setFiles] = useState<DesignFile[]>([]);
   const [fileError, setFileError] = useState("");
@@ -184,7 +185,7 @@ export default function Home() {
           const supportReference = `${referenceRoot}-A${pipelineAttempt}`;
           try {
             const staged = await stageUpload(upload.blob, upload.fileName, supportReference);
-            const response = await fetchWithDeadline("/api/printify/drafts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ batchId: templateDetails?.batchId, description, fileName: upload.fileName, stagedId: staged.stagedId, supportReference: staged.reference, clientId: design.id }) }, 4 * 60 * 1000);
+            const response = await fetchWithDeadline("/api/printify/drafts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ batchId: templateDetails?.batchId, title: listingTitle.trim() || undefined, description, fileName: upload.fileName, stagedId: staged.stagedId, supportReference: staged.reference, clientId: design.id }) }, 4 * 60 * 1000);
             const result = await response.json() as { draft?: DraftResult; error?: string };
             if ((!response.ok || !result.draft) && (response.status === 409 || /still completing this exact draft/i.test(result.error ?? ""))) {
               const recovered = await recoverDraft(templateDetails!.batchId, design.id);
@@ -240,6 +241,7 @@ export default function Home() {
     setTemplate("");
     setTemplateDetails(null);
     setTemplateError("");
+    setListingTitle("");
     setDescription("");
     setFiles([]);
     setFileError("");
@@ -328,6 +330,12 @@ export default function Home() {
               </div>
               {templateError && <p className="field-error" role="alert">{templateError}</p>}
               {templateDetails && <div className="template-proof"><div className="product-thumb"><span>YOUR<br/>ART</span></div><div className="template-info"><b>{templateDetails.title}</b><span>Print provider · {templateDetails.provider}</span><span>{templateDetails.enabledVariants} enabled variants · {templateDetails.shop}</span></div><span className="template-badge">Verified</span></div>}
+              <div className="optional-title-field">
+                <label htmlFor="batch-listing-title"><b>Listing title</b> <span>Optional</span></label>
+                <p>If these designs use the same title, enter it once and Goldie will add it to every draft. Leave this blank to use each design’s filename as its title.</p>
+                <input id="batch-listing-title" value={listingTitle} onChange={(event) => setListingTitle(event.target.value)} placeholder="Paste the listing title for this batch" maxLength={255} />
+                <span className="character-count">{listingTitle.length}/255 characters</span>
+              </div>
             </div>
           </article>
 
@@ -401,7 +409,7 @@ export default function Home() {
             </div>
           )}
           <p className="launch-note">Listings remain unpublished until you publish them in Printify.</p>
-          {(template || description || files.length > 0 || drafts.length > 0) && <button className="start-over-button" disabled={running} onClick={startOver}>Clear all / start over</button>}
+          {(template || listingTitle || description || files.length > 0 || drafts.length > 0) && <button className="start-over-button" disabled={running} onClick={startOver}>Clear all / start over</button>}
 
           {complete && (
             <div className="draft-preview">

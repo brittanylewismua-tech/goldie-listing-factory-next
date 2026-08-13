@@ -107,7 +107,7 @@ export async function POST(request: Request) {
   let diagnosticStage = "request_validation";
   let idempotencyKey = "";
   try {
-    const body = (await request.json()) as { batchId?: string; description?: string; fileName?: string; stagedId?: string; supportReference?: string; clientId?: string };
+    const body = (await request.json()) as { batchId?: string; title?: string; description?: string; fileName?: string; stagedId?: string; supportReference?: string; clientId?: string };
     stagedIdForCleanup = body.stagedId ?? "";
     supportReference = body.supportReference?.replace(/[^A-Z0-9-]/gi, "").slice(0, 40) ?? "";
     if (!body.batchId || !body.fileName || !body.stagedId) return NextResponse.json({ error: "The prepared batch and design file are required." }, { status: 400 });
@@ -161,7 +161,7 @@ export async function POST(request: Request) {
     // that lookup even though the uploaded image ID is valid. Draft creation
     // below is the authoritative registration check and retries only when
     // Printify itself returns image-not-ready error 8253.
-    const title = body.fileName.replace(/\.[^.]+$/, "").replace(/[_-]+/g, " ").trim();
+    const title = body.title?.trim().slice(0, 255) || body.fileName.replace(/\.[^.]+$/, "").replace(/[_-]+/g, " ").trim();
     const productBody = () => JSON.stringify({
         title: title || "Untitled design",
         description: body.description ?? "",

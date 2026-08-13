@@ -21,6 +21,9 @@ test("server-renders the branded Listing Factory", async () => {
   assert.doesNotMatch(html, /Private workspace/);
   assert.match(html, /Your Printify account/);
   assert.match(html, /Choose your Printify product template/);
+  assert.match(html, /Listing title/);
+  assert.match(html, /Optional/);
+  assert.match(html, /Leave this blank to use each design’s filename as its title/);
   assert.match(html, /Add your finished designs/);
   assert.match(html, /Choose individual images/);
   assert.match(html, /already be upscaled/);
@@ -58,6 +61,8 @@ test("uses individual shop-aware Printify editor buttons", async () => {
   assert.match(page, /fetchWithDeadline/);
   assert.match(page, /4 \* 60 \* 1000/);
   assert.match(page, /Add at least one design/);
+  assert.match(page, /title: listingTitle\.trim\(\) \|\| undefined/);
+  assert.match(route, /body\.title\?\.trim\(\)\.slice\(0, 255\) \|\| body\.fileName/);
   assert.match(page, /Load your product template/);
   assert.match(page, /function startOver\(\)/);
   assert.match(page, /Clear all \/ start over/);
