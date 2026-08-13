@@ -133,22 +133,35 @@ test("uses draft creation as the authoritative image-readiness check", async () 
   assert.match(route, /attempt === 3/);
 });
 
-test("sends staged artwork directly to Printify instead of a hosted URL", async () => {
-  const [route, payloadSource] = await Promise.all([
+test("retries Printify remote-artwork download interruptions before failing the design", async () => {
+  const drafts = await readFile(new URL("../app/api/printify/drafts/route.ts", import.meta.url), "utf8");
+  assert.match(drafts, /10300/);
+  assert.match(drafts, /image download/);
+  assert.match(drafts, /remoteDownloadInterrupted/);
+  assert.match(drafts, /after three automatic retries/);
+});
+
+test("gives Printify a protected URL to the untouched original instead of buffering base64", async () => {
+  const [route, signedUrlSource, stagedRoute] = await Promise.all([
     readFile(new URL("../app/api/printify/drafts/route.ts", import.meta.url), "utf8"),
-    readFile(new URL("../app/api/printify/upload-payload.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/printify/staged-url.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/printify/staged/[id]/route.ts", import.meta.url), "utf8"),
   ]);
   assert.match(route, /ARTWORK\?\.get\(body\.stagedId\)/);
-  assert.match(route, /printifyUploadPayload\(body\.fileName!, artworkBytes\)/);
-  assert.match(payloadSource, /contents: base64FromBytes\(bytes\)/);
-  assert.doesNotMatch(route, /signedArtworkUrl|url: artworkUrl/);
+  assert.match(route, /signedArtworkUrl/);
+  assert.match(route, /url: artworkUrl/);
+  assert.doesNotMatch(route, /arrayBuffer\(\)|printifyUploadPayload|base64FromBytes|contents:/);
+  assert.match(signedUrlSource, /HMAC/);
+  assert.match(signedUrlSource, /20 \* 60/);
+  assert.match(stagedRoute, /verifyArtworkSignature/);
+  assert.match(stagedRoute, /X-Content-Type-Options/);
 
-  const { printifyUploadPayload } = await import("../app/api/printify/upload-payload.ts");
-  const bytes = Uint8Array.from([0, 1, 2, 127, 128, 254, 255]);
-  const payload = printifyUploadPayload("artwork.png", bytes);
-  assert.equal(payload.file_name, "artwork.png");
-  assert.equal(Object.hasOwn(payload, "url"), false);
-  assert.deepEqual(Uint8Array.from(Buffer.from(payload.contents, "base64")), bytes);
+  const { signedArtworkUrl, verifyArtworkSignature } = await import("../app/api/printify/staged-url.ts");
+  const secret = "11".repeat(32);
+  const url = new URL(await signedArtworkUrl("https://goldie.example", "original-file.png", secret));
+  assert.equal(url.pathname, "/api/printify/staged/original-file.png");
+  assert.equal(await verifyArtworkSignature("original-file.png", url.searchParams.get("expires"), url.searchParams.get("signature"), secret), true);
+  assert.equal(await verifyArtworkSignature("different-file.png", url.searchParams.get("expires"), url.searchParams.get("signature"), secret), false);
 });
 
 test("retries a real 8253 draft response and succeeds without an upload lookup", async () => {

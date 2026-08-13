@@ -4,8 +4,8 @@ import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { customerLaunchBlock } from "@/app/customer-launch-gate";
 import { publicSupportReference, recordDiagnostic } from "../diagnostics";
 import { createProductWithImageRetries } from "../product-creation";
-import { printifyUploadPayload } from "../upload-payload";
 import { printAreasWithOnlyCurrentArtwork } from "../product-payload";
+import { signedArtworkUrl } from "../staged-url";
 
 const PRINTIFY_API = "https://api.printify.com/v1";
 type UploadedImage = { id: string; width?: number; height?: number; mime_type?: string };
@@ -24,7 +24,7 @@ type TemplateProduct = {
   }>;
 };
 
-type ArtworkObject = { arrayBuffer(): Promise<ArrayBuffer> };
+type ArtworkObject = { body?: ReadableStream };
 type ArtworkBucket = { get(key: string): Promise<ArtworkObject | null>; delete(key: string): Promise<void> };
 type BatchSession = { shop_id: number; product_id: string; template_json: string };
 function runtimeEnv() { return env as unknown as { DB?: D1Database; ARTWORK?: ArtworkBucket; PRINTIFY_TOKEN_KEY?: string }; }
@@ -62,7 +62,9 @@ async function api<T>(path: string, token: string, init?: RequestInit, onRetry?:
       throw new Error("The connection to Printify was interrupted after three automatic retries.");
     }
     if (response.ok) return response.json() as Promise<T>;
-    if ((response.status === 429 || response.status >= 500) && attempt < waits.length) {
+    const detail = await response.text().catch(() => "");
+    const remoteDownloadInterrupted = response.status === 400 && (/\b10300\b|image download|could not resolve host|failed to download/i.test(detail));
+    if ((response.status === 429 || response.status >= 500 || remoteDownloadInterrupted) && attempt < waits.length) {
       await onRetry?.(attempt + 1, response.status);
       const requestedWait = Number(response.headers.get("retry-after"));
       const wait = Number.isFinite(requestedWait) && requestedWait > 0 ? Math.min(requestedWait * 1000, 20000) : waits[attempt];
@@ -70,7 +72,7 @@ async function api<T>(path: string, token: string, init?: RequestInit, onRetry?:
       continue;
     }
     if (response.status === 429) throw new Error("Printify is taking longer than expected. Retry this design when the batch finishes.");
-    const detail = await response.text().catch(() => "");
+    if (remoteDownloadInterrupted) throw new Error("Printify could not retrieve the protected artwork after three automatic retries.");
     if (response.status >= 500) throw new Error("Printify remained temporarily unavailable after three automatic retries.");
     if (response.status === 401 || response.status === 403) throw new Error(`Printify rejected the saved connection (HTTP ${response.status}). Reconnect with a new token that has all scopes enabled.`);
     throw new Error(`Printify returned ${response.status}${detail ? `: ${detail.slice(0, 180)}` : ""}`);
@@ -128,15 +130,19 @@ export async function POST(request: Request) {
     await recordDiagnostic(runtimeEnv().DB, supportReference, { stage: diagnosticStage, event: "started", shopId: shop.id });
     const stagedArtwork = await runtimeEnv().ARTWORK?.get(body.stagedId);
     if (!stagedArtwork) throw new Error("Goldie could not retrieve the staged artwork.");
-    const artworkBytes = new Uint8Array(await stagedArtwork.arrayBuffer());
+    const artworkSecret = runtimeEnv().PRINTIFY_TOKEN_KEY;
+    if (!artworkSecret) throw new Error("Secure artwork delivery is not configured.");
+    const artworkUrl = await signedArtworkUrl(new URL(request.url).origin, body.stagedId, artworkSecret);
     const uploadArtwork = () => api<UploadedImage>("/uploads/images.json", token, {
         method: "POST",
-        body: JSON.stringify(printifyUploadPayload(body.fileName!, artworkBytes)),
+        body: JSON.stringify({ file_name: body.fileName!, url: artworkUrl }),
       }, (attempt, status) => recordDiagnostic(runtimeEnv().DB, supportReference, { stage: "printify_upload", event: "retry", attempt, httpStatus: status ?? null, shopId: shop.id }));
     let upload = await uploadArtwork();
     if (!upload.id) throw new Error("Printify accepted the artwork request but did not return an image ID.");
     await recordDiagnostic(runtimeEnv().DB, supportReference, { stage: diagnosticStage, event: "succeeded", shopId: shop.id });
-    // The upload POST is authoritative for acceptance. Do not gate draft
+    // Printify retrieves the exact original bytes through a short-lived signed
+    // URL. Goldie never decodes, resizes, recompresses, buffers, or base64-
+    // expands the artwork. The upload POST is authoritative for acceptance.
     // creation on GET /uploads/{id}: live Printify accounts can return 404 from
     // that lookup even though the uploaded image ID is valid. Draft creation
     // below is the authoritative registration check and retries only when

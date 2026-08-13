@@ -28,7 +28,7 @@ export async function POST(request: Request) {
   try {
     await artwork.put(stagedId, request.body ?? await request.arrayBuffer(), {
       httpMetadata: { contentType },
-      customMetadata: { owner: user.userId, expires: String(Date.now() + 15 * 60 * 1000) },
+      customMetadata: { owner: user.userId, expires: String(Date.now() + 30 * 60 * 1000) },
     });
     await recordDiagnostic(runtimeEnv().DB, reference, { stage: "artwork_staging", event: "succeeded" });
     return NextResponse.json({ stagedId });
