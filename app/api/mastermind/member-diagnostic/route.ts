@@ -2,6 +2,7 @@ import { env } from "cloudflare:workers";
 import { NextResponse } from "next/server";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { isOwner } from "@/app/mastermind/access";
+import { decryptPrintifyToken } from "@/app/api/printify/token-crypto";
 
 const PRINTIFY_API = "https://api.printify.com/v1";
 type Runtime = { DB?: D1Database; PRINTIFY_TOKEN_KEY?: string };
@@ -12,12 +13,7 @@ function runtime() { return env as unknown as Runtime; }
 async function decryptToken(value: string) {
   const secret = runtime().PRINTIFY_TOKEN_KEY;
   if (!secret) throw new Error("Token encryption is unavailable.");
-  const keyBytes = Uint8Array.from(secret.match(/.{1,2}/g) ?? [], (pair) => Number.parseInt(pair, 16));
-  const key = await crypto.subtle.importKey("raw", keyBytes, "AES-GCM", false, ["decrypt"]);
-  const [ivValue, encryptedValue] = value.split(".");
-  const iv = Uint8Array.from(atob(ivValue), (character) => character.charCodeAt(0));
-  const encrypted = Uint8Array.from(atob(encryptedValue), (character) => character.charCodeAt(0));
-  return new TextDecoder().decode(await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, encrypted));
+  return decryptPrintifyToken(value, secret);
 }
 
 async function status(path: string, token: string) {

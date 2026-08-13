@@ -8,7 +8,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const host = requestHeaders.get("host") || "localhost:3000";
   const origin = `${host.startsWith("localhost") ? "http" : "https"}://${host}`;
   const title = "Goldie Listing Factory";
-  const description = "Turn a folder of finished designs into organized Printify drafts—fast.";
+  const description = "Batch-create unpublished Printify product drafts from finished designs and a saved product template.";
   return {
     metadataBase: new URL(origin),
     title,

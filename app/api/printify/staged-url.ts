@@ -15,7 +15,8 @@ function decodeBase64Url(value: string) {
 }
 
 async function hmacKey(secret: string, usage: KeyUsage[]) {
-  return crypto.subtle.importKey("raw", keyBytes(secret), { name:"HMAC", hash:"SHA-256" }, false, usage);
+  const derived = await crypto.subtle.digest("SHA-256", new Uint8Array([...new TextEncoder().encode("goldie-artwork-url-v1:"), ...keyBytes(secret)]));
+  return crypto.subtle.importKey("raw", derived, { name:"HMAC", hash:"SHA-256" }, false, usage);
 }
 
 export async function signedArtworkUrl(origin: string, id: string, secret: string, lifetimeSeconds = 20 * 60) {

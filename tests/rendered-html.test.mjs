@@ -41,15 +41,16 @@ test("uses individual shop-aware Printify editor buttons", async () => {
   ]);
   assert.match(page, /Edit in Printify/);
   assert.match(page, /openedDrafts/);
-  assert.match(page, /\/app\/store\/\$\{draft\.shopId\}\/products\/1/);
+  assert.match(page, /window\.open\(draft\.editorUrl/);
+  assert.doesNotMatch(page, /printifyTab\.location|\/app\/store\/\$\{draft\.shopId\}/);
   assert.doesNotMatch(page, /openLatestBatch|Open .* drafts in Printify/);
   assert.match(route, /shopId: shop\.id/);
   assert.match(page, /MAX_BATCH_FILES = 20/);
   assert.match(page, /MAX_BATCH_BYTES = 500 \* 1024 \* 1024/);
   assert.doesNotMatch(page, /new Worker|createImageBitmap|OffscreenCanvas|canvas|getImageData|UPNG/);
-  assert.match(page, /const activeItem = running \? Math\.min\(processed \+ 1, files\.length\) : processed/);
-  assert.match(page, /Creating \$\{activeItem\} of \$\{files\.length\}/);
-  assert.match(page, /\{activeItem\}\/\{files\.length\}/);
+  assert.match(page, /const activeItem = running \? Math\.min\(processed \+ 1, runTotal\) : processed/);
+  assert.match(page, /Creating \$\{activeItem\} of \$\{runTotal\}/);
+  assert.match(page, /\{activeItem\}\/\{runTotal\}/);
   assert.doesNotMatch(page, /Creating \$\{processed \+ 1\} of/);
   assert.match(page, /\/api\/printify\/stage/);
   assert.match(page, /pass its original bytes straight through/);
@@ -118,6 +119,10 @@ test("makes draft retries idempotent so a lost response cannot duplicate a listi
   assert.match(drafts, /prior\?\.status === "succeeded"/);
   assert.match(drafts, /status = 'succeeded'/);
   assert.match(drafts, /still completing this exact draft/);
+  assert.match(drafts, /export async function GET\(request: Request\)/);
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  assert.match(page, /async function recoverDraft/);
+  assert.match(page, /status === "succeeded"/);
   assert.match(schema, /printifyDraftResults/);
   assert.match(migration, /printify_draft_results/);
 });
@@ -162,6 +167,30 @@ test("gives Printify a protected URL to the untouched original instead of buffer
   assert.equal(url.pathname, "/api/printify/staged/original-file.png");
   assert.equal(await verifyArtworkSignature("original-file.png", url.searchParams.get("expires"), url.searchParams.get("signature"), secret), true);
   assert.equal(await verifyArtworkSignature("different-file.png", url.searchParams.get("expires"), url.searchParams.get("signature"), secret), false);
+});
+
+test("validates and isolates staged artwork without decoding or buffering it", async () => {
+  const [stage, drafts, cryptoSource] = await Promise.all([
+    readFile(new URL("../app/api/printify/stage/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/printify/drafts/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/printify/token-crypto.ts", import.meta.url), "utf8"),
+  ]);
+  assert.match(stage, /request\.body\.tee\(\)/);
+  assert.match(stage, /validateImageHeader/);
+  assert.doesNotMatch(stage, /request\.arrayBuffer\(\)/);
+  assert.match(stage, /customMetadata: \{ owner: user\.userId/);
+  assert.match(stage, /removeExpiredArtwork/);
+  assert.match(drafts, /customMetadata\?\.owner !== user\.userId/);
+  assert.match(drafts, /customMetadata\?\.expires/);
+  assert.match(cryptoSource, /\^\[a-f0-9\]\{64\}\$/i);
+  assert.match(cryptoSource, /iv\.length !== 12/);
+  const { encryptPrintifyToken, decryptPrintifyToken } = await import("../app/api/printify/token-crypto.ts");
+  const secret = "ab".repeat(32);
+  const encrypted = await encryptPrintifyToken("printify-secret-token", secret);
+  assert.notEqual(encrypted, "printify-secret-token");
+  assert.equal(await decryptPrintifyToken(encrypted, secret), "printify-secret-token");
+  await assert.rejects(decryptPrintifyToken(encrypted, "cd".repeat(32)), /could not be decrypted safely/);
+  await assert.rejects(encryptPrintifyToken("token", "not-a-valid-key"), /not configured correctly/);
 });
 
 test("retries a real 8253 draft response and succeeds without an upload lookup", async () => {
@@ -299,6 +328,8 @@ test("ships an in-page support assistant with a comprehensive troubleshooting ba
   assert.match(chat, /supportResponse\(clean, messages\)/);
   assert.match(chat, /Contact Support/);
   assert.match(chat, /Screenshot of the error/);
+  assert.match(chat, /fetch\("\/api\/support"/);
+  assert.doesNotMatch(chat, /web3forms|5b639ca5/);
   assert.doesNotMatch(chat, /ChatGPT chat link|ChatGPT plan/);
   assert.match(supportCss, /width:460px/);
   assert.match(supportCss, /height:680px/);
@@ -314,6 +345,15 @@ test("ships an in-page support assistant with a comprehensive troubleshooting ba
   assert.match(engine, /After you clicked Retry failed designs/);
   assert.match(engine, /You already tried/);
   assert.match(engine, /userContext/);
+});
+
+test("keeps support submission authenticated and server-side", async () => {
+  const supportRoute = await readFile(new URL("../app/api/support/route.ts", import.meta.url), "utf8");
+  assert.match(supportRoute, /getChatGPTUser/);
+  assert.match(supportRoute, /customerLaunchBlock/);
+  assert.match(supportRoute, /MAX_SCREENSHOT_BYTES/);
+  assert.match(supportRoute, /authenticated_member/);
+  assert.match(supportRoute, /api\.web3forms\.com/);
 });
 
 test("support diagnoses vague reports before prescribing a fix", async () => {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 
 export default function CodeGate({ email }: { email: string }) {
   const [code, setCode] = useState("");
@@ -13,5 +14,5 @@ export default function CodeGate({ email }: { email: string }) {
     if (response.ok && result.accepted) window.location.reload();
     else { setError(result.error || "That access code was not accepted."); setWorking(false); }
   }
-  return <div className="access-shell"><div className="access-card"><img src="/goldie-wordmark.webp" alt="Goldie" /><p className="mini-label">MASTERMIND ACCESS</p><h1>Enter your access code</h1><p>Signed in as {email}</p><form onSubmit={redeem}><input value={code} onChange={(event) => setCode(event.target.value)} placeholder="Mastermind code" autoCapitalize="characters" autoComplete="off" /><button disabled={working || !code.trim()}>{working ? "Checking…" : "Enter Listing Factory"}</button></form>{error && <p className="access-error" role="alert">{error}</p>}</div></div>;
+  return <div className="access-shell"><div className="access-card"><Image src="/goldie-wordmark.webp" width={236} height={120} alt="Goldie" /><p className="mini-label">MASTERMIND ACCESS</p><h1>Enter your access code</h1><p>Signed in as {email}</p><form onSubmit={redeem}><input value={code} onChange={(event) => setCode(event.target.value)} placeholder="Mastermind code" autoCapitalize="characters" autoComplete="off" /><button disabled={working || !code.trim()}>{working ? "Checking…" : "Enter Listing Factory"}</button></form>{error && <p className="access-error" role="alert">{error}</p>}</div></div>;
 }

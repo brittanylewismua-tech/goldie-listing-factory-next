@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import Image from "next/image";
 import SupportChat from "./support-chat";
 
 type DesignFile = { name: string; size: number; id: string; file: File };
@@ -59,17 +60,18 @@ export default function Home() {
   const [openAllMessage, setOpenAllMessage] = useState("");
   const [owner, setOwner] = useState(false);
   const [preparationMessage, setPreparationMessage] = useState("");
+  const [runTotal, setRunTotal] = useState(0);
 
   const templateLoaded = templateDetails !== null;
   const ready = connected && templateLoaded && description.trim().length > 0 && files.length > 0;
   const missingRequirement = !connected ? "Connect Printify first" : !templateLoaded ? "Load your product template" : !description.trim() ? "Add your description" : files.length === 0 ? "Add at least one design" : "";
   const totalSize = useMemo(() => files.reduce((sum, file) => sum + file.size, 0), [files]);
-  const activeItem = running ? Math.min(processed + 1, files.length) : processed;
+  const activeItem = running ? Math.min(processed + 1, runTotal) : processed;
 
   useEffect(() => {
     fetch("/api/printify")
       .then((response) => response.json())
-      .then((result: { connected?: boolean; owner?: boolean; reason?: string }) => { setConnected(Boolean(result.connected)); setOwner(Boolean(result.owner)); if (result.reason) setConnectionError(result.reason); })
+      .then((result: { connected?: boolean; owner?: boolean; reason?: string; warning?: string }) => { setConnected(Boolean(result.connected)); setOwner(Boolean(result.owner)); if (result.reason || result.warning) setConnectionError(result.reason || result.warning || ""); })
       .catch(() => setConnected(false))
       .finally(() => setCheckingConnection(false));
   }, []);
@@ -85,7 +87,7 @@ export default function Home() {
     if (!list) return;
     const images = Array.from(list)
       .filter((file) => /\.(png|jpe?g)$/i.test(file.name))
-      .map((file) => ({ name: file.name, size: file.size, id: `${(file as File & { webkitRelativePath?: string }).webkitRelativePath || file.name}-${file.size}-${file.lastModified}`, file }));
+      .map((file) => ({ name: file.name, size: file.size, id: crypto.randomUUID(), file }));
     if (images.length === 0) {
       setFileError("No supported designs were found. Choose PNG or JPG images.");
       setFiles([]);
@@ -148,7 +150,7 @@ export default function Home() {
       try {
         const response = await fetchWithDeadline(`/api/printify/stage?fileName=${encodeURIComponent(fileName)}&reference=${encodeURIComponent(reference)}`, {
           method: "POST",
-          headers: { "Content-Type": blob.type || "application/octet-stream" },
+          headers: { "Content-Type": blob.type || (/\.png$/i.test(fileName) ? "image/png" : "image/jpeg") },
           body: blob,
         }, 90000);
         const result = await response.json() as { stagedId?: string; error?: string };
@@ -160,9 +162,22 @@ export default function Home() {
     throw new Error(`${lastError}${/Support reference:/i.test(lastError) ? "" : ` Support reference: ${reference}.`}`);
   }
 
+  async function recoverDraft(batchId: string, clientId: string) {
+    const delays = [1000, 2000, 4000, 8000, 12000, 15000];
+    for (const delay of delays) {
+      await new Promise((resolve) => window.setTimeout(resolve, delay));
+      const response = await fetchWithDeadline(`/api/printify/drafts?batchId=${encodeURIComponent(batchId)}&clientId=${encodeURIComponent(clientId)}`, {}, 30000);
+      const result = await response.json() as { status?: string; draft?: DraftResult };
+      if (result.status === "succeeded" && result.draft) return result.draft;
+      if (result.status === "failed" || result.status === "not_found") return null;
+    }
+    return null;
+  }
+
   async function runDrafts(targetFiles: DesignFile[], keepSuccessful = false) {
     if (!ready || !targetFiles.length) return;
     setRunning(true);
+    setRunTotal(targetFiles.length);
     setComplete(false);
     if (!keepSuccessful) setDrafts([]);
     else setDrafts((current) => current.filter((draft) => draft.status === "Created"));
@@ -180,13 +195,17 @@ export default function Home() {
             const staged = await stageUpload(upload.blob, upload.fileName, supportReference);
             const response = await fetchWithDeadline("/api/printify/drafts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ batchId: templateDetails?.batchId, description, fileName: upload.fileName, stagedId: staged.stagedId, supportReference: staged.reference, clientId: design.id }) }, 4 * 60 * 1000);
             const result = await response.json() as { draft?: DraftResult; error?: string };
-            if (!response.ok || !result.draft) throw new Error(result.error || "Printify did not create this draft.");
+            if ((!response.ok || !result.draft) && (response.status === 409 || /still completing this exact draft/i.test(result.error ?? ""))) {
+              const recovered = await recoverDraft(templateDetails!.batchId, design.id);
+              if (recovered) result.draft = recovered;
+            }
+            if (!result.draft) throw new Error(result.error || "Printify did not create this draft.");
             setDrafts((current) => [...current, result.draft!]);
             finalError = null;
             break;
           } catch (attemptError) {
             finalError = attemptError instanceof Error ? attemptError : new Error("The design failed.");
-            const permanent = /401|403|token|template product was not found|not a recognized|could not be decoded|could not be read|valid PNG or JPG/i.test(finalError.message);
+            const permanent = /\b(?:400|401|403)\b|token|template product was not found|not a recognized|could not be decoded|could not be read|valid PNG or JPG|file contents do not match|does not belong to the signed-in account|batch session expired/i.test(finalError.message);
             if (permanent || pipelineAttempt === 3) break;
             await new Promise((resolve) => window.setTimeout(resolve, pipelineAttempt * 5000));
           }
@@ -204,6 +223,7 @@ export default function Home() {
     }
     setRunning(false);
     setPreparationMessage("");
+    setRunTotal(0);
     setComplete(true);
   }
 
@@ -231,26 +251,20 @@ export default function Home() {
   }
 
   function openDraft(draft: DraftResult) {
-    if (!draft.id || !draft.editorUrl || !draft.shopId) return;
-    const printifyTab = window.open(`https://printify.com/app/store/${draft.shopId}/products/1`, "_blank");
+    if (!draft.id || !draft.editorUrl) return;
+    window.open(draft.editorUrl, "_blank", "noopener,noreferrer");
     setOpenedDrafts((current) => current.includes(draft.id!) ? current : [...current, draft.id!]);
-    window.setTimeout(() => {
-      if (printifyTab && !printifyTab.closed) printifyTab.location.href = draft.editorUrl!;
-    }, 2200);
   }
 
   function openAllDrafts() {
-    const editableDrafts = drafts.filter((draft) => draft.id && draft.editorUrl && draft.shopId);
+    const editableDrafts = drafts.filter((draft) => draft.id && draft.editorUrl);
     let opened = 0;
     const openedIds: string[] = [];
-    editableDrafts.forEach((draft, index) => {
-      const printifyTab = window.open(`https://printify.com/app/store/${draft.shopId}/products/1`, "_blank");
+    editableDrafts.forEach((draft) => {
+      const printifyTab = window.open(draft.editorUrl!, "_blank", "noopener,noreferrer");
       if (!printifyTab) return;
       opened += 1;
       openedIds.push(draft.id!);
-      window.setTimeout(() => {
-        if (!printifyTab.closed) printifyTab.location.href = draft.editorUrl!;
-      }, 2200 + index * 120);
     });
     setOpenedDrafts((current) => [...new Set([...current, ...openedIds])]);
     setOpenAllMessage(opened === editableDrafts.length ? `${opened} Printify editor tabs opened.` : `Your browser opened ${opened} of ${editableDrafts.length}. Allow pop-ups for this site to open the rest.`);
@@ -260,7 +274,7 @@ export default function Home() {
     <main className="app-shell">
       <header className="topbar">
         <div className="brand-lockup">
-          <img src="/goldie-wordmark.webp" alt="Goldie" className="wordmark" />
+          <Image src="/goldie-wordmark.webp" width={236} height={120} alt="Goldie" className="wordmark" priority />
           <span className="brand-divider" />
           <div>
             <p className="product-name">Listing Factory</p>
@@ -277,7 +291,7 @@ export default function Home() {
           <h1>Automate your Printify listing creation process, all in one place.</h1>
           <p className="hero-copy">Choose a product template, add your product description, and select a folder of finished designs.</p>
         </div>
-        <img src="/goldie-g.png" alt="" className="hero-watermark" />
+        <Image src="/goldie-g.png" width={2000} height={2000} alt="" className="hero-watermark" />
       </section>
 
       <section className="workspace">
@@ -296,7 +310,7 @@ export default function Home() {
                   {connectionError && <p className="field-error" role="alert">{connectionError}</p>}
                 </div>
               ) : (
-                <div className="connection-row"><span className="connection-icon">P</span><div><b>Printify connected</b><small>Your connection will be remembered</small></div><button onClick={async () => { await fetch("/api/printify", { method: "DELETE" }); setConnected(false); setToken(""); setTemplateDetails(null); }}>Disconnect</button></div>
+                <><div className="connection-row"><span className="connection-icon">P</span><div><b>Printify connected</b><small>Your connection will be remembered</small></div><button onClick={async () => { await fetch("/api/printify", { method: "DELETE" }); setConnected(false); setToken(""); setTemplateDetails(null); setConnectionError(""); }}>Disconnect</button></div>{connectionError && <p className="field-warning" role="status">{connectionError}</p>}</>
               )}
             </div>
           </article>
@@ -354,9 +368,9 @@ export default function Home() {
 
         <aside className="launch-panel">
           <div className="launch-top">
-            <img src="/goldie-g.png" alt="" className="goldie-g" />
+            <Image src="/goldie-g.png" width={2000} height={2000} alt="" className="goldie-g" />
             <p className="mini-label">BATCH SUMMARY</p>
-            <h2>{running ? `Creating ${activeItem} of ${files.length}` : complete ? "Batch finished" : "Current batch"}</h2>
+            <h2>{running ? `Creating ${activeItem} of ${runTotal}` : complete ? "Batch finished" : "Current batch"}</h2>
             <p>{complete ? `${drafts.filter((draft) => draft.status === "Created").length} of ${files.length} drafts were created in Printify.` : running ? "Goldie is uploading each design and creating its Printify draft." : "Complete the four sections to create unpublished drafts in Printify."}</p>
           </div>
 
@@ -369,15 +383,15 @@ export default function Home() {
 
           {running && (
             <div className="batch-progress" role="status" aria-live="polite">
-              <div className="progress-ring" aria-hidden="true"><span>{activeItem}/{files.length}</span></div>
+              <div className="progress-ring" aria-hidden="true"><span>{activeItem}/{runTotal}</span></div>
               <div className="progress-copy"><b>Creating your Printify drafts</b><span>{preparationMessage || "Keep this page open while Goldie finishes the batch."}</span></div>
-              <div className="progress-track"><span style={{ width: `${files.length ? (processed / files.length) * 100 : 0}%` }} /></div>
+              <div className="progress-track"><span style={{ width: `${runTotal ? (processed / runTotal) * 100 : 0}%` }} /></div>
             </div>
           )}
 
           {!complete ? (
             <button className="launch-button" disabled={!ready || running} onClick={createDrafts}>
-              <span className="button-glint" />{running ? `Creating ${activeItem} of ${files.length}…` : ready ? "Create Printify drafts" : missingRequirement}<span>→</span>
+              <span className="button-glint" />{running ? `Creating ${activeItem} of ${runTotal}…` : ready ? "Create Printify drafts" : missingRequirement}<span>→</span>
             </button>
           ) : (
             <div className="batch-actions">

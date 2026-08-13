@@ -6,6 +6,7 @@ import { publicSupportReference, recordDiagnostic } from "../diagnostics";
 import { createProductWithImageRetries } from "../product-creation";
 import { printAreasWithOnlyCurrentArtwork } from "../product-payload";
 import { signedArtworkUrl } from "../staged-url";
+import { decryptPrintifyToken } from "../token-crypto";
 
 const PRINTIFY_API = "https://api.printify.com/v1";
 type UploadedImage = { id: string; width?: number; height?: number; mime_type?: string };
@@ -24,7 +25,7 @@ type TemplateProduct = {
   }>;
 };
 
-type ArtworkObject = { body?: ReadableStream };
+type ArtworkObject = { body?: ReadableStream; customMetadata?: Record<string, string> };
 type ArtworkBucket = { get(key: string): Promise<ArtworkObject | null>; delete(key: string): Promise<void> };
 type BatchSession = { shop_id: number; product_id: string; template_json: string };
 function runtimeEnv() { return env as unknown as { DB?: D1Database; ARTWORK?: ArtworkBucket; PRINTIFY_TOKEN_KEY?: string }; }
@@ -32,12 +33,7 @@ function runtimeEnv() { return env as unknown as { DB?: D1Database; ARTWORK?: Ar
 async function decryptToken(value: string) {
   const secret = runtimeEnv().PRINTIFY_TOKEN_KEY;
   if (!secret) throw new Error("Secure token storage is not configured.");
-  const keyBytes = Uint8Array.from(secret.match(/.{1,2}/g) ?? [], (pair) => Number.parseInt(pair, 16));
-  const key = await crypto.subtle.importKey("raw", keyBytes, "AES-GCM", false, ["decrypt"]);
-  const [ivValue, encryptedValue] = value.split(".");
-  const iv = Uint8Array.from(atob(ivValue), (character) => character.charCodeAt(0));
-  const encrypted = Uint8Array.from(atob(encryptedValue), (character) => character.charCodeAt(0));
-  return new TextDecoder().decode(await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, encrypted));
+  return decryptPrintifyToken(value, secret);
 }
 
 async function tokenFor(userId: string) {
@@ -85,6 +81,22 @@ async function requestKey(batchId: string, clientId: string) {
   return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
+export async function GET(request: Request) {
+  const user = await getChatGPTUser();
+  if (!user) return NextResponse.json({ error: "Sign in to continue." }, { status: 401 });
+  const url = new URL(request.url);
+  const batchId = url.searchParams.get("batchId") ?? "";
+  const clientId = url.searchParams.get("clientId") ?? "";
+  if (!batchId || !clientId) return NextResponse.json({ error: "Batch and design identifiers are required." }, { status: 400 });
+  const db = runtimeEnv().DB;
+  if (!db) return NextResponse.json({ error: "Secure batch storage is unavailable." }, { status: 503 });
+  const key = await requestKey(batchId, clientId);
+  const row = await db.prepare("SELECT status, response_json, updated_at FROM printify_draft_results WHERE request_key = ? AND user_id = ?")
+    .bind(key, user.userId).first<{ status: string; response_json: string | null; updated_at: string }>();
+  if (!row) return NextResponse.json({ status: "not_found" }, { status: 404 });
+  return NextResponse.json({ status: row.status, draft: row.status === "succeeded" && row.response_json ? JSON.parse(row.response_json) : undefined, updatedAt: row.updated_at });
+}
+
 export async function POST(request: Request) {
   const user = await getChatGPTUser();
   if (!user) return NextResponse.json({ error: "Sign in to continue." }, { status: 401 });
@@ -130,6 +142,8 @@ export async function POST(request: Request) {
     await recordDiagnostic(runtimeEnv().DB, supportReference, { stage: diagnosticStage, event: "started", shopId: shop.id });
     const stagedArtwork = await runtimeEnv().ARTWORK?.get(body.stagedId);
     if (!stagedArtwork) throw new Error("Goldie could not retrieve the staged artwork.");
+    if (stagedArtwork.customMetadata?.owner !== user.userId) throw new Error("This staged artwork does not belong to the signed-in account.");
+    if (Number(stagedArtwork.customMetadata?.expires ?? 0) <= Date.now()) throw new Error("The staged artwork expired before Printify could retrieve it.");
     const artworkSecret = runtimeEnv().PRINTIFY_TOKEN_KEY;
     if (!artworkSecret) throw new Error("Secure artwork delivery is not configured.");
     const artworkUrl = await signedArtworkUrl(new URL(request.url).origin, body.stagedId, artworkSecret);

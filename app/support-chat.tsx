@@ -4,7 +4,6 @@ import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { supportResponse, SupportTurn } from "./support-engine";
 
 const SUGGESTIONS = ["A design failed", "Printify won’t connect", "My template won’t load", "My image won’t upload"];
-const CONTACT_KEY = "5b639ca5-fea3-4f99-bf3e-a08f6e9482c2";
 const WELCOME: SupportTurn = { role:"support", text:"Hi 👋 I’m here to help with the Goldie Listing Factory. Tell me what happened or paste the error message you’re seeing, and we’ll work through it together." };
 
 function initialMessages() {
@@ -71,18 +70,14 @@ export default function SupportChat() {
     setSending(true);
     try {
       const form = new FormData();
-      form.append("access_key", CONTACT_KEY);
-      form.append("subject", `Goldie Listing Factory support — ${email}`);
-      form.append("from_name", "Goldie Listing Factory Support");
-      form.append("replyto", email);
       form.append("email", email);
       form.append("message", issue.trim());
       form.append("page", window.location.href);
       form.append("conversation", messages.map((message) => `${message.role === "user" ? "Member" : "Goldie Support"}: ${message.text}`).join("\n\n"));
       if (screenshot) form.append("attachment", screenshot, screenshot.name);
-      const response = await fetch("https://api.web3forms.com/submit", { method:"POST", body:form });
-      const result = await response.json() as { success?:boolean; message?:string };
-      if (!response.ok || !result.success) throw new Error(result.message || "Message failed");
+      const response = await fetch("/api/support", { method:"POST", body:form });
+      const result = await response.json() as { sent?:boolean; error?:string };
+      if (!response.ok || !result.sent) throw new Error(result.error || "Message failed");
       setContactStatus("Sent. We’ll reply to the email you provided.");
       setIssue("");
       setScreenshot(null);

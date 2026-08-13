@@ -1,6 +1,6 @@
 import { chatGPTSignInPath, getChatGPTUser } from "@/app/chatgpt-auth";
 import { isOwner, runtime } from "@/app/mastermind/access";
-import AdminControl from "./admin-control";
+import AdminControl, { type Diagnostic } from "./admin-control";
 
 export default async function MastermindAdminPage() {
   const user = await getChatGPTUser();
@@ -12,5 +12,5 @@ export default async function MastermindAdminPage() {
     db.prepare("SELECT COUNT(*) AS count FROM mastermind_access").first<{ count: number }>(),
     db.prepare("SELECT reference, user_email AS userEmail, file_name AS fileName, stage, outcome, retry_count AS retryCount, error_code AS errorCode, http_status AS httpStatus, message, updated_at AS updatedAt FROM printify_diagnostics WHERE outcome = 'failed' ORDER BY updated_at DESC LIMIT 50").all(),
   ]) : [null, null, { results: [] }];
-  return <AdminControl initialActive={setting?.active === 1} memberCount={count?.count ?? 0} initialDiagnostics={(diagnostics?.results ?? []) as never[]} />;
+  return <AdminControl initialActive={setting?.active === 1} memberCount={count?.count ?? 0} initialDiagnostics={(diagnostics?.results ?? []) as Diagnostic[]} />;
 }

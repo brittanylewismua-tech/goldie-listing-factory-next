@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { customerLaunchBlock } from "@/app/customer-launch-gate";
 import { isOwner } from "@/app/mastermind/access";
+import { decryptPrintifyToken, encryptPrintifyToken } from "./token-crypto";
 
 const PRINTIFY_API = "https://api.printify.com/v1";
 type Shop = { id: number; title: string };
@@ -19,31 +20,24 @@ type Product = {
   }>;
 };
 type CatalogVariant = { id: number; placeholders?: Array<{ position?: string; width?: number; height?: number }> };
+class PrintifyApiError extends Error {
+  constructor(public status: number, message: string) { super(message); }
+}
 
 function runtimeEnv() {
   return env as unknown as { DB?: D1Database; PRINTIFY_TOKEN_KEY?: string };
 }
 
-async function encryptionKey() {
-  const value = runtimeEnv().PRINTIFY_TOKEN_KEY;
-  if (!value) throw new Error("Secure token storage is not configured.");
-  const bytes = Uint8Array.from(value.match(/.{1,2}/g) ?? [], (pair) => Number.parseInt(pair, 16));
-  if (bytes.length !== 32) throw new Error("Secure token storage is not configured correctly.");
-  return crypto.subtle.importKey("raw", bytes, "AES-GCM", false, ["encrypt", "decrypt"]);
-}
-
 async function encryptToken(token: string) {
-  const iv = crypto.getRandomValues(new Uint8Array(12));
-  const encrypted = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv }, await encryptionKey(), new TextEncoder().encode(token)));
-  return `${btoa(String.fromCharCode(...iv))}.${btoa(String.fromCharCode(...encrypted))}`;
+  const secret = runtimeEnv().PRINTIFY_TOKEN_KEY;
+  if (!secret) throw new Error("Secure token storage is not configured.");
+  return encryptPrintifyToken(token, secret);
 }
 
 async function decryptToken(value: string) {
-  const [ivValue, encryptedValue] = value.split(".");
-  const iv = Uint8Array.from(atob(ivValue), (character) => character.charCodeAt(0));
-  const encrypted = Uint8Array.from(atob(encryptedValue), (character) => character.charCodeAt(0));
-  const clear = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, await encryptionKey(), encrypted);
-  return new TextDecoder().decode(clear);
+  const secret = runtimeEnv().PRINTIFY_TOKEN_KEY;
+  if (!secret) throw new Error("Secure token storage is not configured.");
+  return decryptPrintifyToken(value, secret);
 }
 
 async function storedToken(userId: string) {
@@ -61,8 +55,11 @@ async function saveToken(userId: string, token: string) {
 }
 
 async function printify<T>(path: string, token: string): Promise<T> {
-  const response = await fetch(`${PRINTIFY_API}${path}`, { headers: { Authorization: `Bearer ${token}`, "User-Agent": "Goldie-Listing-Factory" }, cache: "no-store" });
-  if (!response.ok) throw new Error(response.status === 401 ? "Printify did not accept that token." : `Printify returned ${response.status}.`);
+  let response: Response;
+  try {
+    response = await fetch(`${PRINTIFY_API}${path}`, { headers: { Authorization: `Bearer ${token}`, "User-Agent": "Goldie-Listing-Factory" }, cache: "no-store" });
+  } catch { throw new PrintifyApiError(0, "Printify could not be reached. Your saved connection has not been changed."); }
+  if (!response.ok) throw new PrintifyApiError(response.status, response.status === 401 || response.status === 403 ? "Printify did not accept that token." : `Printify returned ${response.status}. Your saved connection has not been changed.`);
   return response.json() as Promise<T>;
 }
 
@@ -78,10 +75,16 @@ export async function GET() {
     if (!token) return NextResponse.json({ connected: false, owner: isOwner(user) });
     await printify<Shop[]>("/shops.json", token);
     return NextResponse.json({ connected: true, owner: isOwner(user) });
-  } catch {
-    const db = runtimeEnv().DB;
-    await db?.prepare("DELETE FROM printify_connections WHERE user_id = ?").bind(user.userId).run().catch(() => undefined);
-    return NextResponse.json({ connected: false, owner: isOwner(user), reason: "Your saved Printify token expired or was revoked. Connect a new token." });
+  } catch (error) {
+    if (error instanceof PrintifyApiError && (error.status === 401 || error.status === 403)) {
+      const db = runtimeEnv().DB;
+      await db?.prepare("DELETE FROM printify_connections WHERE user_id = ?").bind(user.userId).run().catch(() => undefined);
+      return NextResponse.json({ connected: false, owner: isOwner(user), reason: "Your saved Printify token expired or was revoked. Connect a new token." });
+    }
+    if (error instanceof Error && /decrypt|encrypted|token storage/i.test(error.message)) {
+      return NextResponse.json({ connected: false, owner: isOwner(user), reason: "Your saved Printify connection could not be read safely. Disconnect it and connect a new token." });
+    }
+    return NextResponse.json({ connected: true, owner: isOwner(user), warning: error instanceof Error ? error.message : "Printify is temporarily unavailable." });
   }
 }
 
@@ -157,6 +160,7 @@ export async function POST(request: Request) {
     ]);
     return NextResponse.json({ product: { id: found.product.id, batchId, title: found.product.title, provider, enabledVariants: enabledVariants.length, shop: found.shop.title, maxPrintWidth, maxPrintHeight } });
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Printify could not be reached." }, { status: 500 });
+    const status = error instanceof PrintifyApiError && [400, 401, 403, 404, 429].includes(error.status) ? error.status : 500;
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Printify could not be reached." }, { status });
   }
 }

@@ -1,15 +1,15 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 
-type Diagnostic = { reference: string; userEmail: string; fileName: string; stage: string; outcome: string; retryCount: number; errorCode: string | null; httpStatus: number | null; message: string | null; updatedAt: string };
+export type Diagnostic = { reference: string; userEmail: string; fileName: string; stage: string; outcome: string; retryCount: number; errorCode: string | null; httpStatus: number | null; message: string | null; updatedAt: string };
 const stageLabel: Record<string,string> = { artwork_staging:"Receiving artwork", template_lookup:"Finding template", printify_upload:"Sending to Printify", image_registration:"Registering image", draft_creation:"Creating draft", request_validation:"Checking request" };
 
 function standardTime(value: string) {
-  const match = value.match(/^(\d{4}-\d{2}-\d{2})[ T](\d{2}):(\d{2}):(\d{2})/);
-  if (!match) return value;
-  const hour = Number(match[2]);
-  return `${match[1]} · ${hour % 12 || 12}:${match[3]}:${match[4]} ${hour >= 12 ? "PM" : "AM"}`;
+  const date = new Date(`${value.replace(" ", "T").replace(/Z$/i, "")}Z`);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat(undefined, { year:"numeric", month:"short", day:"numeric", hour:"numeric", minute:"2-digit", second:"2-digit" }).format(date);
 }
 
 export default function AdminControl({ initialActive, memberCount, initialDiagnostics }: { initialActive: boolean; memberCount: number; initialDiagnostics: Diagnostic[] }) {
@@ -34,7 +34,7 @@ export default function AdminControl({ initialActive, memberCount, initialDiagno
 
   return <div className="access-shell admin-access-shell"><div className="admin-dashboard">
     <div className="access-card">
-      <img src="/goldie-wordmark.webp" alt="Goldie" />
+      <Image src="/goldie-wordmark.webp" width={236} height={120} alt="Goldie" />
       <p className="mini-label">OWNER CONTROL</p>
       <h1>Mastermind testing</h1>
       <p><b>{active ? "Access is ON" : "Access is OFF"}</b><br />{memberCount} ChatGPT account{memberCount === 1 ? "" : "s"} redeemed the code.</p>
