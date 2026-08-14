@@ -16,6 +16,7 @@ type TemplateProduct = {
   blueprint_id: number;
   print_provider_id: number;
   description?:string;
+  shippingByVariant?:Record<number,number>;
   variants: Array<{ id: number; price: number; cost?: number; is_enabled: boolean }>;
   print_areas: Array<{
     variant_ids: number[];
@@ -182,7 +183,7 @@ export async function POST(request: Request) {
         description: body.description ?? template.description ?? "",
         blueprint_id: template.blueprint_id,
         print_provider_id: template.print_provider_id,
-        variants: template.variants.map(({ id, price, cost, is_enabled }) => ({ id, price: recommendedPrice(cost ?? price, body.pricing), is_enabled })),
+        variants: template.variants.map(({ id, price, cost, is_enabled }) => {const shipping=template.shippingByVariant?.[id];const rules=shipping==null?body.pricing:{...body.pricing,shippingCost:shipping,shippingCharged:shipping};return { id, price: recommendedPrice(cost ?? price, rules), is_enabled }}),
         tags: (body.tags ?? []).map(tag => String(tag).trim()).filter(Boolean).slice(0, 13),
         // Never carry media-library IDs from the template into a different
         // product request. Only the image uploaded in this request is valid.

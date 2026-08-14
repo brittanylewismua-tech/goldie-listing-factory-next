@@ -14,6 +14,7 @@ export async function POST(request: Request) {
   const user = await getChatGPTUser();
   if (!user) return NextResponse.json({ error: "Sign in to save seller preferences." }, { status: 401 });
   const { pricing } = await request.json() as { pricing?: Record<string, number> };
-  await getDb().insert(sellerPreferences).values({ userId: user.userId, pricingJson: JSON.stringify(pricing || {}) }).onConflictDoUpdate({ target: sellerPreferences.userId, set: { pricingJson: JSON.stringify(pricing || {}), updatedAt: new Date().toISOString() } });
+  const safe={etsyFeePercent:Math.max(0,Math.min(40,Number(pricing?.etsyFeePercent??9.5))),fixedFee:Math.max(0,Number(pricing?.fixedFee??.25)),listingFee:Math.max(0,Number(pricing?.listingFee??.20))};
+  await getDb().insert(sellerPreferences).values({ userId: user.userId, pricingJson: JSON.stringify(safe) }).onConflictDoUpdate({ target: sellerPreferences.userId, set: { pricingJson: JSON.stringify(safe), updatedAt: new Date().toISOString() } });
   return NextResponse.json({ ok: true });
 }

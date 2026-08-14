@@ -119,7 +119,8 @@ test("unifies recipes, listing editing, pricing, and mockups without the old fac
   assert.match(page, /IntegratedMockups/);
   assert.match(mockups, /Choose a mockup set/);
   assert.match(mockups, /Create .*mockups/);
-  assert.match(drafts, /recommendedPrice\(cost \?\? price, body\.pricing\)/);
+  assert.match(drafts, /recommendedPrice\(cost \?\? price, rules\)/);
+  assert.match(drafts, /template\.shippingByVariant\?\.\[id\]/);
   assert.match(drafts, /printifyImages/);
 });
 

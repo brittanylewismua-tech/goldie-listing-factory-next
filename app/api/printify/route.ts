@@ -133,7 +133,7 @@ export async function POST(request: Request) {
     } catch { /* Provider names are optional; the numeric provider remains usable. */ }
     let maxPrintWidth: number | null = null;
     let maxPrintHeight: number | null = null;
-    let standardShipping:number|null=null,shippingCurrency="USD";
+    let standardShipping:number|null=null,shippingCurrency="USD",shippingByVariant:Record<number,number>={};
     try {
       const catalogResponse = await printify<CatalogVariant[] | { variants?: CatalogVariant[] }>(`/catalog/blueprints/${found.product.blueprint_id}/print_providers/${found.product.print_provider_id}/variants.json?show-out-of-stock=1`, token);
       const catalogVariants = Array.isArray(catalogResponse) ? catalogResponse : catalogResponse.variants ?? [];
@@ -147,7 +147,7 @@ export async function POST(request: Request) {
         .sort((left, right) => Number(right.width) * Number(right.height) - Number(left.width) * Number(left.height));
       if (candidates[0]) { maxPrintWidth = Number(candidates[0].width); maxPrintHeight = Number(candidates[0].height); }
     } catch { /* Print dimensions are an optimization; draft creation can continue without them. */ }
-    try { const shipping=await printify<Shipping>(`/catalog/blueprints/${found.product.blueprint_id}/print_providers/${found.product.print_provider_id}/shipping.json`,token),enabledIds=new Set(enabledVariants.map(variant=>variant.id)),domestic=(shipping.profiles||[]).filter(profile=>profile.countries?.includes("US")&&(profile.variant_ids||[]).some(id=>enabledIds.has(id))),rates=domestic.map(profile=>Number(profile.first_item?.cost||0)).filter(cost=>cost>0);if(rates.length){standardShipping=Math.max(...rates)/100;shippingCurrency=domestic.find(profile=>profile.first_item?.currency)?.first_item?.currency||"USD"} } catch { /* Pricing can continue without shipping metadata. */ }
+    try { const shipping=await printify<Shipping>(`/catalog/blueprints/${found.product.blueprint_id}/print_providers/${found.product.print_provider_id}/shipping.json`,token),enabledIds=new Set(enabledVariants.map(variant=>variant.id)),domestic=(shipping.profiles||[]).filter(profile=>profile.countries?.includes("US")&&(profile.variant_ids||[]).some(id=>enabledIds.has(id))),rates=domestic.map(profile=>Number(profile.first_item?.cost||0)).filter(cost=>cost>0);for(const profile of domestic){const amount=Number(profile.first_item?.cost||0)/100;for(const id of profile.variant_ids||[])if(enabledIds.has(id)&&amount>0)shippingByVariant[id]=amount}if(rates.length){standardShipping=Math.max(...rates)/100;shippingCurrency=domestic.find(profile=>profile.first_item?.currency)?.first_item?.currency||"USD"} } catch { /* Pricing can continue without shipping metadata. */ }
     const db = runtimeEnv().DB;
     if (!db) return NextResponse.json({ error: "Secure batch storage is unavailable." }, { status: 503 });
     const batchId = crypto.randomUUID();
@@ -159,6 +159,7 @@ export async function POST(request: Request) {
       variants: found.product.variants ?? [],
       print_areas: found.product.print_areas ?? [],
       description: found.product.description ?? "",
+      shippingByVariant,
     };
     await db.batch([
       db.prepare("DELETE FROM printify_batch_sessions WHERE expires_at <= unixepoch()"),
