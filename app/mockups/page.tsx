@@ -1,6 +1,6 @@
 "use client";
 
-import { ChangeEvent, DragEvent, useMemo, useRef, useState } from "react";
+import { ChangeEvent, DragEvent, useEffect, useMemo, useRef, useState } from "react";
 import { zipSync } from "fflate";
 import "./mockups.css";
 
@@ -165,6 +165,7 @@ async function makeMockup(file: File, template: Template): Promise<Rendered> {
 
 export default function Home() {
   const [design,setDesign]=useState<File|null>(null); const [placementReference,setPlacementReference]=useState<File|null>(null); const [results,setResults]=useState<Rendered[]>([]); const [busy,setBusy]=useState(false); const [progress,setProgress]=useState(0); const [drag,setDrag]=useState(false); const [generationError,setGenerationError]=useState("");
+  const [expandedIndex,setExpandedIndex]=useState<number|null>(null);
   const [library,setLibrary]=useState<Template[]>(templates); const [selected,setSelected]=useState<Set<string>>(new Set(templates.map(t=>t.id))); const [themeName,setThemeName]=useState("My mockup set"); const [surfaceKind,setSurfaceKind]=useState<SurfaceKind>("rigid-flat"); const [calibrating,setCalibrating]=useState<Template|null>(null); const [points,setPoints]=useState<Point[]>([]);
   const fileInput=useRef<HTMLInputElement>(null); const referenceInput=useRef<HTMLInputElement>(null);
   const mockupInput=useRef<HTMLInputElement>(null); const chosen=library.filter(t=>selected.has(t.id)); const total=design?chosen.length:0;
@@ -174,7 +175,15 @@ export default function Home() {
   const dropped=(e:DragEvent)=>{e.preventDefault();setDrag(false);setDesign(validImage(Array.from(e.dataTransfer.files)[0]));setResults([]);};
   const generate=async()=>{if(!design)return;setBusy(true);setGenerationError("");setResults([]);setProgress(0);const made:Rendered[]=[];try{for(const template of chosen){made.push(await makeMockup(design,template));setProgress(made.length);setResults([...made]);await new Promise(r=>setTimeout(r,0));}}catch(error){setGenerationError(error instanceof Error?error.message:"Goldie could not create a safe mockup.");}finally{setBusy(false);}};
   const grouped=useMemo(()=>design?[{file:design,items:results}]:[],[design,results]);
-  const clear=()=>{results.forEach(r=>URL.revokeObjectURL(r.url));setDesign(null);setPlacementReference(null);setResults([]);setProgress(0);};
+  const clear=()=>{results.forEach(r=>URL.revokeObjectURL(r.url));setDesign(null);setPlacementReference(null);setResults([]);setProgress(0);setExpandedIndex(null);};
+  const moveExpanded=(direction:number)=>setExpandedIndex(index=>index===null?null:(index+direction+results.length)%results.length);
+  useEffect(()=>{
+    if(expandedIndex===null)return;
+    const previousOverflow=document.body.style.overflow; document.body.style.overflow="hidden";
+    const onKey=(event:KeyboardEvent)=>{if(event.key==="Escape")setExpandedIndex(null);if(event.key==="ArrowLeft")moveExpanded(-1);if(event.key==="ArrowRight")moveExpanded(1);};
+    window.addEventListener("keydown",onKey);
+    return()=>{document.body.style.overflow=previousOverflow;window.removeEventListener("keydown",onKey);};
+  },[expandedIndex,results.length]);
   const downloadAll=async()=>{const entries:Record<string,Uint8Array>={};for(const result of results){entries[result.name]=new Uint8Array(await (await fetch(result.url)).arrayBuffer());}const zip=zipSync(entries,{level:0});const url=URL.createObjectURL(new Blob([zip],{type:"application/zip"}));const a=document.createElement("a");a.href=url;a.download=`goldie-mockups-${new Date().toISOString().slice(0,10)}.zip`;a.style.display="none";document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);};
   const addMockups=(e:ChangeEvent<HTMLInputElement>)=>{const incoming=Array.from(e.target.files||[]).filter(f=>/^image\/(png|jpeg|webp)$/.test(f.type));const added=incoming.map((f,i):Template=>({id:`custom-${Date.now()}-${i}`,theme:themeName.trim()||"My mockup set",name:f.name.replace(/\.[^.]+$/,"")||`Mockup ${i+1}`,src:URL.createObjectURL(f),corners:[[.15,.12],[.85,.12],[.85,.88],[.15,.88]],normalized:true,custom:true,surfaceKind}));setLibrary(x=>[...x,...added]);setSelected(x=>new Set([...x,...added.map(t=>t.id)]));if(added[0]){setPoints([]);setCalibrating(added[0]);}e.target.value="";};
   const toggle=(id:string)=>setSelected(s=>{const n=new Set(s);n.has(id)?n.delete(id):n.add(id);return n});
@@ -199,7 +208,8 @@ export default function Home() {
       </div>
       <div className="mockupStep actionStep"><div className="stepHead"><span>3</span><div><h2>Create your mockups</h2><p>{design?`1 design × ${chosen.length} selected scenes = ${total} finished mockups`:"Add the required finished design above to begin."}</p></div></div><button className="generate" disabled={!design||!chosen.length||busy} onClick={generate}>{busy?`Analyzing and creating ${progress} of ${total}…`:`Create ${total||"my"} mockups`}</button>{busy&&<div className="progress"><i style={{width:`${total?progress/total*100:0}%`}}/></div>}{generationError&&<p className="smartError" role="alert"><b>This scene was not safe to render.</b><span>{generationError}</span></p>}</div>
     </section>
-    {results.length>0&&<section className="mockupResults"><div className="resultsHead"><div><p className="mockupEyebrow">YOUR FINISHED MOCKUPS</p><h2>{busy?"They’re appearing as they finish.":`${results.length} mockups are ready.`}</h2></div>{!busy&&<button className="downloadAll" onClick={downloadAll}>Download all as ZIP</button>}</div>{grouped.map(g=>g.items.length>0&&<article key={g.file.name}><h3>{g.file.name}</h3><div className="resultGrid">{g.items.map(item=><figure key={item.name}><img src={item.url} alt={`${g.file.name} in ${item.template}`}/><figcaption><span>{item.template}</span><a href={item.url} download={item.name}>Download</a></figcaption></figure>)}</div></article>)}</section>}
+    {results.length>0&&<section className="mockupResults"><div className="resultsHead"><div><p className="mockupEyebrow">YOUR FINISHED MOCKUPS</p><h2>{busy?"They’re appearing as they finish.":`${results.length} mockups are ready.`}</h2></div>{!busy&&<button className="downloadAll" onClick={downloadAll}>Download all as ZIP</button>}</div>{grouped.map(g=>g.items.length>0&&<article key={g.file.name}><h3>{g.file.name}</h3><div className="resultGrid">{g.items.map((item,index)=><figure key={item.name}><button className="expandMockup" onClick={()=>setExpandedIndex(index)} aria-label={`View ${item.template} mockup larger`}><img src={item.url} alt={`${g.file.name} in ${item.template}`}/><span>View larger</span></button><figcaption><span>{item.template}</span><a href={item.url} download={item.name}>Download</a></figcaption></figure>)}</div></article>)}</section>}
+    {expandedIndex!==null&&results[expandedIndex]&&<div className="mockupLightbox" role="dialog" aria-modal="true" aria-label={`${results[expandedIndex].template} mockup preview`} onMouseDown={event=>{if(event.target===event.currentTarget)setExpandedIndex(null)}}><button className="lightboxClose" onClick={()=>setExpandedIndex(null)} aria-label="Close enlarged mockup">×</button>{results.length>1&&<button className="lightboxPrevious" onClick={()=>moveExpanded(-1)} aria-label="Previous mockup">‹</button>}<div className="lightboxContent"><img src={results[expandedIndex].url} alt={`${results[expandedIndex].template} mockup enlarged`}/><div><strong>{results[expandedIndex].template}</strong><a href={results[expandedIndex].url} download={results[expandedIndex].name}>Download this mockup</a></div></div>{results.length>1&&<button className="lightboxNext" onClick={()=>moveExpanded(1)} aria-label="Next mockup">›</button>}</div>}
     {calibrating&&<div className="modal"><div className="calibrator"><button className="close" onClick={()=>setCalibrating(null)}>×</button><p className="mockupEyebrow">SET THE PRODUCT AREA</p><h2>Click the {['top-left','top-right','bottom-right','bottom-left'][points.length]} inside corner.</h2><p>Four clicks and this mockup is ready to reuse.</p><div className="calImage"><img src={calibrating.src} alt="Blank mockup" onClick={calibrateClick}/>{points.map((p,i)=><i key={i} style={{left:`${p[0]*100}%`,top:`${p[1]*100}%`}}>{i+1}</i>)}</div><button className="resetPoints" onClick={()=>setPoints([])}>Start these four points over</button></div></div>}
     <footer className="mockupFooter"><span>GOLDIE MOCKUP FACTORY</span><p>Fast production. Exact artwork. No AI regeneration.</p></footer>
   </main>;
