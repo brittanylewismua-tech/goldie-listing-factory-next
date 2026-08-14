@@ -11,7 +11,7 @@ type Rendered = { name: string; url: string; template: string };
 
 const templates: Template[] = [
   { id:"pink-1",theme:"Pink Dorm",name:"Leaning frame",src:"/mockups/pink-dorm-01-leaning-frame.png",corners:[[230,382],[810,328],[798,1321],[197,1254]] },
-  { id:"pink-2",theme:"Pink Dorm",name:"Hanging the poster",src:"/mockups/pink-dorm-02-hanging-poster.png",corners:[[546,105],[1065,79],[1065,929],[546,896]],foregroundPrompt:"woman" },
+  { id:"pink-2",theme:"Pink Dorm",name:"Hanging wall art",src:"/mockups/pink-dorm-02-hanging-poster.png",corners:[[546,105],[1065,79],[1065,929],[546,896]],foregroundPrompt:"woman" },
   { id:"pink-3",theme:"Pink Dorm",name:"Maximalist bedroom",src:"/mockups/pink-dorm-03-maximalist-bed.png",corners:[[305,101],[878,125],[879,985],[305,988]] },
   { id:"pink-4",theme:"Pink Dorm",name:"Chair and plants",src:"/mockups/pink-dorm-04-chair-and-plants.png",corners:[[346,104],[870,123],[868,930],[346,942]] },
   { id:"pink-5",theme:"Pink Dorm",name:"Bed and plants",src:"/mockups/pink-dorm-05-bed-and-plants.png",corners:[[462,150],[868,150],[868,699],[462,699]] },
@@ -36,6 +36,43 @@ function safeInset(corners:Template["corners"],width:number,height:number):Templ
   const cx=corners.reduce((s,p)=>s+p[0],0)/4,cy=corners.reduce((s,p)=>s+p[1],0)/4;
   const inset=Math.max(2,Math.min(width,height)*.002);
   return corners.map(([x,y])=>{const dx=cx-x,dy=cy-y,d=Math.hypot(dx,dy)||1;return [x+dx/d*inset,y+dy/d*inset] as Point}) as Template["corners"];
+}
+
+function refineRigidSurface(image: HTMLImageElement, seed: Template["corners"]): Template["corners"] {
+  const scan = document.createElement("canvas"); scan.width=image.naturalWidth; scan.height=image.naturalHeight;
+  const scanCtx=scan.getContext("2d",{willReadFrequently:true})!; scanCtx.drawImage(image,0,0);
+  const pixels=scanCtx.getImageData(0,0,scan.width,scan.height).data;
+  const gray=(x:number,y:number)=>{const ix=Math.max(0,Math.min(scan.width-1,Math.round(x))),iy=Math.max(0,Math.min(scan.height-1,Math.round(y))),i=(iy*scan.width+ix)*4;return pixels[i]*.299+pixels[i+1]*.587+pixels[i+2]*.114};
+  const center:Point=[seed.reduce((n,p)=>n+p[0],0)/4,seed.reduce((n,p)=>n+p[1],0)/4];
+  const search=Math.max(10,Math.min(28,Math.round(Math.min(scan.width,scan.height)*.022)));
+  const fit=(start:Point,end:Point):[Point,Point]=>{
+    const dx=end[0]-start[0],dy=end[1]-start[1],length=Math.hypot(dx,dy)||1;
+    let nx=-dy/length,ny=dx/length;
+    const mid:Point=[(start[0]+end[0])/2,(start[1]+end[1])/2];
+    if((center[0]-mid[0])*nx+(center[1]-mid[1])*ny<0){nx=-nx;ny=-ny;}
+    let best:[Point,Point]=[start,end],bestScore=-Infinity;
+    for(let a=-search;a<=search;a+=2) for(let b=-search;b<=search;b+=2){
+      let edge=0,insideNoise=0,samples=0;
+      for(let i=1;i<40;i++){
+        const t=i/40,offset=a+(b-a)*t,x=start[0]+dx*t+nx*offset,y=start[1]+dy*t+ny*offset;
+        edge+=Math.abs(gray(x+nx*2.5,y+ny*2.5)-gray(x-nx*2.5,y-ny*2.5));
+        insideNoise+=Math.abs(gray(x+nx*7,y+ny*7)-gray(x+nx*13,y+ny*13)); samples++;
+      }
+      const score=edge/samples-insideNoise/samples*.16-(Math.abs(a)+Math.abs(b))*.025;
+      if(score>bestScore){bestScore=score;best=[[start[0]+nx*a,start[1]+ny*a],[end[0]+nx*b,end[1]+ny*b]];}
+    }
+    return best;
+  };
+  const lines=seed.map((point,index)=>fit(point,seed[(index+1)%4]));
+  const intersection=(a:[Point,Point],b:[Point,Point]):Point=>{
+    const [[x1,y1],[x2,y2]]=a,[[x3,y3],[x4,y4]]=b,den=(x1-x2)*(y3-y4)-(y1-y2)*(x3-x4);
+    if(Math.abs(den)<.001)return a[1];
+    return [((x1*y2-y1*x2)*(x3-x4)-(x1-x2)*(x3*y4-y3*x4))/den,((x1*y2-y1*x2)*(y3-y4)-(y1-y2)*(x3*y4-y3*x4))/den];
+  };
+  const refined=[intersection(lines[3],lines[0]),intersection(lines[0],lines[1]),intersection(lines[1],lines[2]),intersection(lines[2],lines[3])] as Template["corners"];
+  const plausible=refined.every((point,index)=>Math.hypot(point[0]-seed[index][0],point[1]-seed[index][1])<=search*2.25);
+  if(!plausible)return seed;
+  try{validateSurface(refined,scan.width,scan.height);return refined;}catch{return seed;}
 }
 
 function loadImage(src: string) {
@@ -99,10 +136,11 @@ async function makeMockup(file: File, template: Template): Promise<Rendered> {
   const [master, art, foregrounds] = await Promise.all([loadImage(template.src), loadImage(URL.createObjectURL(file)), foregroundLayers(template)]);
   const canvas = document.createElement("canvas"); canvas.width = master.naturalWidth; canvas.height = master.naturalHeight;
   const rawCorners = template.normalized ? template.corners.map(([x,y])=>[x*master.naturalWidth,y*master.naturalHeight] as Point) as Template["corners"] : template.corners;
-  validateSurface(rawCorners,master.naturalWidth,master.naturalHeight);
   const kind=template.surfaceKind||"rigid-flat";
   if(kind!=="rigid-flat") throw new Error(`${SURFACE_LABELS[kind]} mockups require Goldie’s ${kind === "fabric" ? "fabric-drape" : kind === "curved" ? "curved-wrap" : "shape-mask"} renderer. This mockup was blocked instead of being rendered inaccurately.`);
-  const corners=safeInset(rawCorners,master.naturalWidth,master.naturalHeight);
+  const detectedCorners=refineRigidSurface(master,rawCorners);
+  validateSurface(detectedCorners,master.naturalWidth,master.naturalHeight);
+  const corners=safeInset(detectedCorners,master.naturalWidth,master.naturalHeight);
   const ctx = canvas.getContext("2d", { alpha: false })!; ctx.drawImage(master,0,0);
   // The entire artwork pass is clipped to the calibrated *inside* product
   // surface. Individual mesh triangles are still clipped below for the
@@ -144,31 +182,25 @@ export default function Home() {
 
   return <main className="mockupFactory">
     <header className="mockupTopbar"><div className="brand"><span className="brandGold">GOLDIE</span><span>MOCKUP FACTORY</span></div><nav className="factoryNav" aria-label="Goldie factories"><a href="/">Listing Factory</a><a className="active" href="/mockups">Mockup Factory</a></nav><span className="privateNote">Artwork never leaves your device</span></header>
-    <section className="mockupHero"><p className="mockupEyebrow">FROM FINISHED DESIGN TO LIFESTYLE MOCKUPS</p><h1>Batch-create your mockups.<br/><em>Done for you.</em></h1><p className="lede">Choose your finished poster designs once. Goldie places every design into the complete Pink Dorm collection—sized, angled, and ready to download.</p></section>
+    <section className="mockupHero"><p className="mockupEyebrow">FROM FINISHED DESIGN TO LIFESTYLE MOCKUPS</p><h1>Batch-create your mockups.<br/><em>Done for you.</em></h1><p className="lede">Add one finished design, then choose the mockups you want Goldie to create. Each result is sized, positioned, and ready to download.</p></section>
     <section className="mockupWorkspace">
       <div className="mockupStep"><div className="stepHead"><span>1</span><div><h2>Add this design</h2><p>One design at a time · PNG, JPG, or WEBP · already upscaled if needed</p></div></div>
-        <div className="uploadPair">
+        <div className="uploadPair singleUpload">
           <div className={`dropzone uploadSlot ${drag?"drag":""}`} onDragOver={e=>{e.preventDefault();setDrag(true)}} onDragLeave={()=>setDrag(false)} onDrop={dropped}>
             <span className="slotStatus required">REQUIRED</span><div className="uploadMark">＋</div><strong>Finished design</strong><p>The exact artwork Goldie will place into your selected mockups.</p><div className="uploadActions"><button onClick={()=>fileInput.current?.click()}>{design?"Replace design":"Choose design"}</button></div>
             <input ref={fileInput} hidden type="file" accept="image/png,image/jpeg,image/webp" onChange={changed}/>
             {design&&<div className="singleFile"><img src={URL.createObjectURL(design)} alt="Your finished design"/><span>{design.name}</span><button aria-label="Remove finished design" onClick={()=>{setDesign(null);setResults([])}}>×</button></div>}
           </div>
-          <div className="dropzone uploadSlot optionalSlot">
-            <span className="slotStatus optional">OPTIONAL</span><div className="uploadMark referenceMark">◎</div><strong>Placement reference</strong><p>Only add this when Goldie should copy an existing design’s size and position—usually for apparel. Posters do not need it.</p><div className="uploadActions"><button className="secondary" onClick={()=>referenceInput.current?.click()}>{placementReference?"Replace reference":"Add placement reference"}</button></div>
-            <input ref={referenceInput} hidden type="file" accept="image/png,image/jpeg,image/webp" onChange={referenceChanged}/>
-            {placementReference&&<div className="singleFile"><img src={URL.createObjectURL(placementReference)} alt="Placement reference"/><span>{placementReference.name}</span><button aria-label="Remove placement reference" onClick={()=>setPlacementReference(null)}>×</button></div>}
-          </div>
         </div>
-        {(design||placementReference)&&<div className="uploadFooter"><span>{design?"Required design added":"Add the required finished design to continue"}{placementReference?" · Placement reference added":""}</span><button className="textButton" onClick={clear}>Clear all / start over</button></div>}
+        {design&&<div className="uploadFooter"><span>Required design added</span><button className="textButton" onClick={clear}>Clear all / start over</button></div>}
       </div>
-      <div className="mockupStep"><div className="stepHead"><span>2</span><div><h2>Choose your mockups</h2><p>Select every scene—or only the exact ones you want for this batch.</p></div></div>
-        {[...new Set(library.map(t=>t.theme))].map(theme=><div className="collection" key={theme}><div className="collectionTitle"><div><span className="selected">MOCKUP SET</span><h3>{theme}</h3><p>{library.filter(t=>t.theme===theme&&selected.has(t.id)).length} of {library.filter(t=>t.theme===theme).length} selected</p></div><button className="selectSet" onClick={()=>{const ids=library.filter(t=>t.theme===theme).map(t=>t.id);const all=ids.every(id=>selected.has(id));setSelected(s=>{const n=new Set(s);ids.forEach(id=>all?n.delete(id):n.add(id));return n})}}>{library.filter(t=>t.theme===theme).every(t=>selected.has(t.id))?"Deselect all":"Select all"}</button></div><div className="thumbs">{library.filter(t=>t.theme===theme).map(t=><button className={`mockChoice ${selected.has(t.id)?"chosen":""}`} aria-pressed={selected.has(t.id)} key={t.id} onClick={()=>toggle(t.id)}><span className="choiceVisual"><img src={t.src} alt={t.name}/>{selected.has(t.id)&&<i className="choiceCheck" aria-hidden="true">✓</i>}</span><span className="choiceName">{t.name}</span>{t.custom&&<small onClick={e=>{e.stopPropagation();setPoints([]);setCalibrating(t)}}>Reset poster area</small>}</button>)}</div></div>)}
-        <div className="addSet"><div className="addSetIntro"><span className="addSetIcon" aria-hidden="true">＋</span><div><span className="addSetLabel">BUILD YOUR LIBRARY</span><strong>Add another themed mockup set</strong><p>Choose the actual product surface first. Goldie uses the matching geometry and blocks any mockup it cannot render accurately.</p></div></div><div className="setControls"><label><span>Product surface</span><select value={surfaceKind} onChange={e=>setSurfaceKind(e.target.value as SurfaceKind)}>{Object.entries(SURFACE_LABELS).map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label><label><span>Name this mockup set</span><input value={themeName} onChange={e=>setThemeName(e.target.value)} aria-label="Mockup set name" placeholder="Example: Neutral Bedroom"/></label><button onClick={()=>mockupInput.current?.click()}><span aria-hidden="true">↑</span> Choose blank mockups</button><small>PNG, JPG, or WEBP · select one or several</small><input ref={mockupInput} hidden type="file" accept="image/png,image/jpeg,image/webp" multiple onChange={addMockups}/></div></div>
+      <div className="mockupStep"><div className="stepHead"><span>2</span><div><h2>Choose your mockups</h2><p>Select every scene, or choose only the ones you want for this design.</p></div></div>
+        {[...new Set(library.map(t=>t.theme))].map(theme=><div className="collection" key={theme}><div className="collectionTitle"><div><span className="selected">MOCKUP SET</span><h3>{theme}</h3><p>{library.filter(t=>t.theme===theme&&selected.has(t.id)).length} of {library.filter(t=>t.theme===theme).length} selected</p></div><button className="selectSet" onClick={()=>{const ids=library.filter(t=>t.theme===theme).map(t=>t.id);const all=ids.every(id=>selected.has(id));setSelected(s=>{const n=new Set(s);ids.forEach(id=>all?n.delete(id):n.add(id));return n})}}>{library.filter(t=>t.theme===theme).every(t=>selected.has(t.id))?"Deselect all":"Select all"}</button></div><div className="thumbs">{library.filter(t=>t.theme===theme).map(t=><button className={`mockChoice ${selected.has(t.id)?"chosen":""}`} aria-pressed={selected.has(t.id)} key={t.id} onClick={()=>toggle(t.id)}><span className="choiceVisual"><img src={t.src} alt={t.name}/>{selected.has(t.id)&&<i className="choiceCheck" aria-hidden="true">✓</i>}</span><span className="choiceName">{t.name}</span>{t.custom&&<small onClick={e=>{e.stopPropagation();setPoints([]);setCalibrating(t)}}>Reset product area</small>}</button>)}</div></div>)}
       </div>
       <div className="mockupStep actionStep"><div className="stepHead"><span>3</span><div><h2>Create your mockups</h2><p>{design?`1 design × ${chosen.length} selected scenes = ${total} finished mockups`:"Add the required finished design above to begin."}</p></div></div><button className="generate" disabled={!design||!chosen.length||busy} onClick={generate}>{busy?`Analyzing and creating ${progress} of ${total}…`:`Create ${total||"my"} mockups`}</button>{busy&&<div className="progress"><i style={{width:`${total?progress/total*100:0}%`}}/></div>}{generationError&&<p className="smartError" role="alert"><b>This scene was not safe to render.</b><span>{generationError}</span></p>}</div>
     </section>
     {results.length>0&&<section className="mockupResults"><div className="resultsHead"><div><p className="mockupEyebrow">YOUR FINISHED MOCKUPS</p><h2>{busy?"They’re appearing as they finish.":`${results.length} mockups are ready.`}</h2></div>{!busy&&<button className="downloadAll" onClick={downloadAll}>Download all as ZIP</button>}</div>{grouped.map(g=>g.items.length>0&&<article key={g.file.name}><h3>{g.file.name}</h3><div className="resultGrid">{g.items.map(item=><figure key={item.name}><img src={item.url} alt={`${g.file.name} in ${item.template}`}/><figcaption><span>{item.template}</span><a href={item.url} download={item.name}>Download</a></figcaption></figure>)}</div></article>)}</section>}
-    {calibrating&&<div className="modal"><div className="calibrator"><button className="close" onClick={()=>setCalibrating(null)}>×</button><p className="mockupEyebrow">SET THE POSTER AREA</p><h2>Click the {['top-left','top-right','bottom-right','bottom-left'][points.length]} inside corner.</h2><p>Four clicks and this mockup is ready to reuse.</p><div className="calImage"><img src={calibrating.src} alt="Blank mockup" onClick={calibrateClick}/>{points.map((p,i)=><i key={i} style={{left:`${p[0]*100}%`,top:`${p[1]*100}%`}}>{i+1}</i>)}</div><button className="resetPoints" onClick={()=>setPoints([])}>Start these four points over</button></div></div>}
+    {calibrating&&<div className="modal"><div className="calibrator"><button className="close" onClick={()=>setCalibrating(null)}>×</button><p className="mockupEyebrow">SET THE PRODUCT AREA</p><h2>Click the {['top-left','top-right','bottom-right','bottom-left'][points.length]} inside corner.</h2><p>Four clicks and this mockup is ready to reuse.</p><div className="calImage"><img src={calibrating.src} alt="Blank mockup" onClick={calibrateClick}/>{points.map((p,i)=><i key={i} style={{left:`${p[0]*100}%`,top:`${p[1]*100}%`}}>{i+1}</i>)}</div><button className="resetPoints" onClick={()=>setPoints([])}>Start these four points over</button></div></div>}
     <footer className="mockupFooter"><span>GOLDIE MOCKUP FACTORY</span><p>Fast production. Exact artwork. No AI regeneration.</p></footer>
   </main>;
 }

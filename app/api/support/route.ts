@@ -23,7 +23,7 @@ export async function POST(request: Request) {
     }
     const outbound = new FormData();
     outbound.append("access_key", WEB3FORMS_ACCESS_KEY);
-    outbound.append("subject", `Goldie Listing Factory support — ${email}`);
+    outbound.append("subject", `Goldie Listing Factory support: ${email}`);
     outbound.append("from_name", "Goldie Listing Factory Support");
     outbound.append("replyto", email);
     outbound.append("email", email);
