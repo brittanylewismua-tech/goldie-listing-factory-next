@@ -26,8 +26,10 @@ export async function POST(request: NextRequest) {
     const result = await response.json() as { masks?: Array<{ url?: string }>; scores?: number[]; boxes?: number[][]; detail?: string; error?: string };
     if (!response.ok) return NextResponse.json({ error: result.detail || result.error || "The scene could not be analyzed." }, { status: 502 });
     const masks = (result.masks ?? []).map((mask, index) => ({ url: mask.url, score: result.scores?.[index] ?? null, box: result.boxes?.[index] ?? null })).filter(mask => Boolean(mask.url));
-    if (!masks.length) return NextResponse.json({ error: "Goldie did not find a dependable foreground layer in this scene." }, { status: 422 });
-    return NextResponse.json({ masks });
+    // No matching foreground is a valid analysis result. The client still
+    // enforces the calibrated product boundary; it simply has no occluding
+    // object to redraw above the artwork.
+    return NextResponse.json({ masks, foreground_found: masks.length > 0 });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "The scene could not be analyzed." }, { status: 500 });
   }
