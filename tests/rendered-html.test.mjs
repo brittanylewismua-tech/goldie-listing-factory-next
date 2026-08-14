@@ -466,7 +466,12 @@ test("shows one saved mockup set at a time", async () => {
   assert.match(page,/activeTheme===theme/);
   assert.match(page,/aria-expanded=\{open\}/);
   assert.match(page,/open&&<>/);
+  assert.match(page,/useState<Set<string>>\(new Set\(\)\)/);
+  assert.match(page,/Add your first mockup set/);
+  assert.match(page,/type="checkbox"/);
   assert.match(css,/\.collection\.collapsed/);
+  assert.match(css,/repeat\(auto-fill,minmax\(190px,1fr\)\)/);
+  assert.match(css,/\.collection\.open\{grid-column:1\/-1/);
 });
 
 test("routes each product surface deliberately and never releases a partial batch", async () => {
@@ -480,6 +485,9 @@ test("routes each product surface deliberately and never releases a partial batc
   assert.match(page,/setResults\(\[\]\);setGenerationError/);
   assert.match(route,/if\(!body\.reference\)/);
   assert.match(route,/DAILY_LIMIT/);
-  assert.match(renderers,/shirt-design/);
+  assert.match(renderers,/fashn\/tryon\/v1\.6/);
+  assert.match(renderers,/model_image:scene/);
+  assert.match(renderers,/garment_image:reference/);
+  assert.doesNotMatch(renderers,/shirt-design/);
   assert.match(renderers,/seedream\/v5\/lite\/edit/);
 });
