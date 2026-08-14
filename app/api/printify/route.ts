@@ -158,7 +158,8 @@ export async function POST(request: Request) {
       db.prepare("INSERT INTO printify_batch_sessions (id, user_id, shop_id, product_id, template_json, expires_at) VALUES (?, ?, ?, ?, ?, ?)")
         .bind(batchId, user.userId, found.shop.id, found.product.id, JSON.stringify(safeTemplate), expiresAt),
     ]);
-    return NextResponse.json({ product: { id: found.product.id, batchId, title: found.product.title, provider, enabledVariants: enabledVariants.length, shop: found.shop.title, maxPrintWidth, maxPrintHeight } });
+    const placementScale = Math.max(...configuredPlacements.map((placeholder) => Number(placeholder.images?.[0]?.scale || 1)));
+    return NextResponse.json({ product: { id: found.product.id, batchId, title: found.product.title, provider, enabledVariants: enabledVariants.length, shop: found.shop.title, maxPrintWidth, maxPrintHeight, placementScale } });
   } catch (error) {
     const status = error instanceof PrintifyApiError && [400, 401, 403, 404, 429].includes(error.status) ? error.status : 500;
     return NextResponse.json({ error: error instanceof Error ? error.message : "Printify could not be reached." }, { status });

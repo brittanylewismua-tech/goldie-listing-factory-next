@@ -111,13 +111,22 @@ test("unifies recipes, listing editing, pricing, and mockups without the old fac
   assert.match(recipes, /Save as my default pricing profile/);
   assert.match(page, /Import title CSV/);
   assert.match(page, /Exact title phrases/);
-  assert.match(page, /300 DPI target/);
+  assert.match(page, /300 DPI recommended/);
   assert.match(page, /Choose Printify flatlays/);
   assert.match(page, /IntegratedMockups/);
   assert.match(mockups, /Choose a mockup set/);
   assert.match(mockups, /Create .*mockups/);
   assert.match(drafts, /priceFor\(cost \?\? price\)/);
   assert.match(drafts, /printifyImages/);
+});
+
+test("matches Printify editor DPI instead of comparing against template pixel dimensions", async () => {
+  const { printifyDpi } = await import("../app/print-quality.ts");
+  assert.deepEqual(printifyDpi(5000, 7200, 1.126), { dpi: 185, level: "Medium" });
+  assert.deepEqual(printifyDpi(8100, 7200, 1.125), { dpi: 300, level: "High" });
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  assert.doesNotMatch(page, /Target:\s*\{templateDetails/);
+  assert.match(page, /DPI in Printify/);
 });
 
 test("processes a 20-design batch with bounded two-at-a-time concurrency", async () => {
