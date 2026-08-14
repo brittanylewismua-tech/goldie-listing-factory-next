@@ -12,7 +12,7 @@ type Product = {
   title: string;
   blueprint_id: number;
   print_provider_id: number;
-  variants?: Array<{ id: number; price: number; is_enabled?: boolean }>;
+  variants?: Array<{ id: number; price: number; cost?: number; is_enabled?: boolean }>;
   print_areas?: Array<{
     variant_ids: number[];
     background?: string;

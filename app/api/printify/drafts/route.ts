@@ -14,7 +14,7 @@ type TemplateProduct = {
   id: string;
   blueprint_id: number;
   print_provider_id: number;
-  variants: Array<{ id: number; price: number; is_enabled: boolean }>;
+  variants: Array<{ id: number; price: number; cost?: number; is_enabled: boolean }>;
   print_areas: Array<{
     variant_ids: number[];
     placeholders: Array<{
@@ -24,6 +24,7 @@ type TemplateProduct = {
     background?: string;
   }>;
 };
+type CreatedProduct = { id: string; title?: string; images?: Array<{ src?: string; is_default?: boolean }> };
 
 type ArtworkObject = { body?: ReadableStream; customMetadata?: Record<string, string> };
 type ArtworkBucket = { get(key: string): Promise<ArtworkObject | null>; delete(key: string): Promise<void> };
@@ -107,7 +108,7 @@ export async function POST(request: Request) {
   let diagnosticStage = "request_validation";
   let idempotencyKey = "";
   try {
-    const body = (await request.json()) as { batchId?: string; title?: string; description?: string; fileName?: string; stagedId?: string; supportReference?: string; clientId?: string };
+    const body = (await request.json()) as { batchId?: string; title?: string; tags?: string[]; description?: string; fileName?: string; stagedId?: string; supportReference?: string; clientId?: string; pricing?: { targetProfit?: number; etsyFeePercent?: number; fixedFee?: number; listingFee?: number; shippingCost?: number; shippingCharged?: number } };
     stagedIdForCleanup = body.stagedId ?? "";
     supportReference = body.supportReference?.replace(/[^A-Z0-9-]/gi, "").slice(0, 40) ?? "";
     if (!body.batchId || !body.fileName || !body.stagedId) return NextResponse.json({ error: "The prepared batch and design file are required." }, { status: 400 });
@@ -162,19 +163,26 @@ export async function POST(request: Request) {
     // below is the authoritative registration check and retries only when
     // Printify itself returns image-not-ready error 8253.
     const title = body.title?.trim().slice(0, 255) || body.fileName.replace(/\.[^.]+$/, "").replace(/[_-]+/g, " ").trim();
+    const priceFor = (cost: number) => {
+      if (!body.pricing?.targetProfit) return cost;
+      const percent = Math.max(0, Math.min(40, Number(body.pricing.etsyFeePercent || 0))) / 100;
+      const fixed = Number(body.pricing.fixedFee || 0) + Number(body.pricing.listingFee || 0) + Number(body.pricing.shippingCost || 0) - Number(body.pricing.shippingCharged || 0);
+      const dollars = (cost / 100 + Number(body.pricing.targetProfit) + fixed) / Math.max(0.01, 1 - percent);
+      return Math.max(cost, Math.ceil(dollars * 100));
+    };
     const productBody = () => JSON.stringify({
         title: title || "Untitled design",
         description: body.description ?? "",
         blueprint_id: template.blueprint_id,
         print_provider_id: template.print_provider_id,
-        variants: template.variants.map(({ id, price, is_enabled }) => ({ id, price, is_enabled })),
+        variants: template.variants.map(({ id, price, cost, is_enabled }) => ({ id, price: priceFor(cost ?? price), is_enabled })),
         // Never carry media-library IDs from the template into a different
         // product request. Only the image uploaded in this request is valid.
         print_areas: printAreasWithOnlyCurrentArtwork(template.print_areas, upload.id),
     });
     diagnosticStage = "draft_creation";
     await recordDiagnostic(runtimeEnv().DB, supportReference, { stage: diagnosticStage, event: "started", shopId: shop.id });
-    const created = await createProductWithImageRetries<{ id: string }>({
+    const created = await createProductWithImageRetries<CreatedProduct>({
       path: `/shops/${shop.id}/products.json`, token, body: productBody,
       onRetry: (attempt, status, detail) => recordDiagnostic(runtimeEnv().DB, supportReference, { stage: diagnosticStage, event: "retry", attempt, httpStatus: status, message: detail, shopId: shop.id }),
       onImageNotReady: async (attempt) => {
@@ -187,7 +195,11 @@ export async function POST(request: Request) {
       },
     });
     await recordDiagnostic(runtimeEnv().DB, supportReference, { stage: diagnosticStage, event: "succeeded", shopId: shop.id });
-    const draft = { id: created.id, clientId: body.clientId ?? body.fileName, name: body.fileName, shopId: shop.id, editorUrl: `https://printify.com/app/editor/${created.id}`, status: "Created" };
+    let previewUrl = created.images?.find((image) => image.is_default)?.src || created.images?.[0]?.src;
+    if (!previewUrl) {
+      try { const loaded = await api<CreatedProduct>(`/shops/${shop.id}/products/${created.id}.json`, token); previewUrl = loaded.images?.find((image) => image.is_default)?.src || loaded.images?.[0]?.src; } catch { /* Preview can appear moments later. */ }
+    }
+    const draft = { id: created.id, clientId: body.clientId ?? body.fileName, name: body.fileName, title, tags: body.tags ?? [], previewUrl, shopId: shop.id, editorUrl: `https://printify.com/app/editor/${created.id}`, status: "Created" };
     await db.prepare("UPDATE printify_draft_results SET status = 'succeeded', response_json = ?, updated_at = CURRENT_TIMESTAMP WHERE request_key = ?").bind(JSON.stringify(draft), idempotencyKey).run();
     return NextResponse.json({ draft });
   } catch (error) {

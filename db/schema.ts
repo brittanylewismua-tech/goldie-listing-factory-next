@@ -88,3 +88,25 @@ export const mockupRenderUsage = sqliteTable("mockup_render_usage", {
   count: integer("count").notNull().default(0),
   updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });
+
+export const productRecipes = sqliteTable("product_recipes", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull(),
+  name: text("name").notNull(),
+  templateUrl: text("template_url").notNull(),
+  description: text("description").notNull().default(""),
+  defaultTitle: text("default_title").notNull().default(""),
+  defaultMockupTheme: text("default_mockup_theme").notNull().default(""),
+  pricingJson: text("pricing_json").notNull().default("{}"),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+}, (table) => [index("idx_product_recipes_user").on(table.userId, table.updatedAt)]);
+
+export const keywordLists = sqliteTable("keyword_lists", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull(),
+  name: text("name").notNull(),
+  keywordsJson: text("keywords_json").notNull(),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+}, (table) => [index("idx_keyword_lists_user").on(table.userId, table.updatedAt)]);
