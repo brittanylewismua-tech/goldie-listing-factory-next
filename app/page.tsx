@@ -20,20 +20,22 @@ type DesignFile = { name: string; size: number; id: string; file: File; previewU
 type TemplateDetails = { id: string; batchId: string; title: string; description:string; blueprintId:number;blueprintTitle:string;brand:string;model:string;provider: string; enabledVariants: number; shop: string; standardShipping?:number|null;shippingCurrency?:string;maxPrintWidth?: number | null; maxPrintHeight?: number | null; placementScale?: number | null };
 type DraftResult = { id?: string; clientId: string; name: string; title?: string; tags?: string[]; previewUrl?: string; printifyImages?: string[]; shopId?: number; editorUrl?: string; status: "Created" | "Failed"; error?: string };
 type WorkflowStep = "connect" | "setup" | "designs" | "review" | "finish";
+type FinishPhase = "details" | "mockups" | "final";
 
 const WORKFLOW_STEPS: Array<{id:WorkflowStep;number:string;label:string}> = [
   {id:"connect",number:"01",label:"Connect Printify"},
-  {id:"setup",number:"02",label:"Choose setup"},
+  {id:"setup",number:"02",label:"Choose product"},
   {id:"designs",number:"03",label:"Add designs"},
   {id:"review",number:"04",label:"Review batch"},
   {id:"finish",number:"05",label:"Finish listings"},
 ];
+const PROGRESS_STEPS = ["Connect Printify","Choose product","Add designs","Review pricing","Create drafts","Titles + Etsy details","Images + mockups","Final review"];
 
 const MAX_BATCH_FILES = 20;
 const MAX_BATCH_BYTES = 500 * 1024 * 1024;
 const MAX_CONCURRENT_DESIGNS = 2;
 const DEFAULT_PRICING: Pricing = { targetProfit: 10, etsyFeePercent: 9.5, fixedFee: 0.25, listingFee: 0.20, shippingCost: 0, shippingCharged: 0 };
-function PrintifyImagePicker({ images,indices,onApplyAll,onSaveRecipe }: { images: string[];indices:number[];onApplyAll:(indices:number[])=>void;onSaveRecipe?:(indices:number[])=>void }) { const [selected, setSelected] = useState<Set<number>>(new Set(indices.length?indices:images.slice(0,3).map((_,i)=>i))); useEffect(()=>setSelected(new Set(indices.length?indices:images.slice(0,3).map((_,i)=>i))),[indices,images.length]); if (!images.length) return <p className="preview-processing">Printify is still processing its product mockups. Open the editor to view them once they appear.</p>; const chosen=[...selected].sort((a,b)=>a-b); return <details className="printify-image-picker"><summary>Choose Printify flatlays ({selected.size} selected)</summary><p>Goldie remembers these image positions for the final Etsy image mix. Printify does not expose its own saved mockup selection, so this does not alter the editor.</p><div>{images.map((src, index) => <label className={selected.has(index) ? "selected" : ""} key={src}><input type="checkbox" checked={selected.has(index)} onChange={() => setSelected(current => { const next = new Set(current); if (next.has(index)) next.delete(index); else next.add(index); return next; })}/><img src={src} alt={`Printify product mockup ${index + 1}`}/></label>)}</div><div className="image-pref-actions"><button onClick={()=>onApplyAll(chosen)}>Use for every listing</button>{onSaveRecipe&&<button onClick={()=>onSaveRecipe(chosen)}>Save to this listing setup</button>}</div></details>; }
+function PrintifyImagePicker({ images,indices,onApplyAll,onSaveRecipe }: { images: string[];indices:number[];onApplyAll:(indices:number[])=>void;onSaveRecipe?:(indices:number[])=>void }) { const [selected, setSelected] = useState<Set<number>>(new Set(indices.length?indices:images.slice(0,3).map((_,i)=>i))); useEffect(()=>setSelected(new Set(indices.length?indices:images.slice(0,3).map((_,i)=>i))),[indices,images.length]); if (!images.length) return <p className="preview-processing">Printify is still processing its product mockups. Open the editor to view them once they appear.</p>; const chosen=[...selected].sort((a,b)=>a-b); return <details className="printify-image-picker"><summary>Choose Printify flatlays ({selected.size} selected)</summary><p>Goldie remembers these image positions for the final Etsy image mix. Printify does not expose its own saved mockup selection, so this does not alter the editor.</p><div>{images.map((src, index) => <label className={selected.has(index) ? "selected" : ""} key={src}><input type="checkbox" checked={selected.has(index)} onChange={() => setSelected(current => { const next = new Set(current); if (next.has(index)) next.delete(index); else next.add(index); return next; })}/><img src={src} alt={`Printify product mockup ${index + 1}`}/></label>)}</div><div className="image-pref-actions"><button onClick={()=>onApplyAll(chosen)}>Use for every listing</button>{onSaveRecipe&&<button onClick={()=>onSaveRecipe(chosen)}>Save to this product</button>}</div></details>; }
 
 async function fetchWithDeadline(input: RequestInfo | URL, init: RequestInit, milliseconds: number) {
   const controller = new AbortController();
@@ -103,11 +105,15 @@ export default function Home() {
   const [workflowStep,setWorkflowStep]=useState<WorkflowStep>("connect");
   const [restoringBatch,setRestoringBatch]=useState(true);
   const [resumeProcessing,setResumeProcessing]=useState(false);
+  const [finishPhase,setFinishPhase]=useState<FinishPhase>("details");
 
   const templateLoaded = templateDetails !== null;
   const ready = connected && templateLoaded && files.length > 0;
-  const missingRequirement = !connected ? "Connect Printify first" : !templateLoaded ? "Choose or create a saved listing setup" : files.length === 0 ? "Add at least one design" : "";
+  const missingRequirement = !connected ? "Connect Printify first" : !templateLoaded ? "Choose or add a saved product" : files.length === 0 ? "Add at least one design" : "";
   const totalSize = useMemo(() => files.reduce((sum, file) => sum + file.size, 0), [files]);
+  const progressIndex = workflowStep==="finish" ? finishPhase==="details"?5:finishPhase==="mockups"?6:7 : workflowStep==="connect"?0:workflowStep==="setup"?1:workflowStep==="designs"?2:(preflightOpen||running)?4:3;
+
+  function openProgressStep(index:number){if(index===0)return goToStep("connect");if(index===1)return goToStep("setup");if(index===2)return goToStep("designs");if(index===3)return goToStep("review");if(index===4){goToStep("review");return createDrafts()}if(!complete)return;setFinishPhase(index===5?"details":index===6?"mockups":"final");goToStep("finish",false,true)}
 
   function canOpenStep(step:WorkflowStep){if(step==="connect")return true;if(step==="setup")return connected;if(step==="designs")return connected&&templateLoaded;if(step==="review")return ready;return complete}
   function goToStep(step:WorkflowStep,replace=false,force=false){if(!force&&!canOpenStep(step))return;setWorkflowStep(step);const url=new URL(window.location.href);url.searchParams.set("step",step);window.history[replace?"replaceState":"pushState"]({},"",url);window.scrollTo({top:0,behavior:"smooth"})}
@@ -118,7 +124,7 @@ export default function Home() {
   useEffect(()=>{if(checkingConnection||restoringBatch||canOpenStep(workflowStep))return;const fallback=!connected?"connect":!templateLoaded?"setup":!files.length?"designs":!complete?"review":"finish";goToStep(fallback,true,true);// eslint-disable-next-line react-hooks/exhaustive-deps
   },[checkingConnection,restoringBatch,connected,templateLoaded,files.length,complete,workflowStep]);
 
-  useEffect(()=>{void(async()=>{try{const id=window.localStorage.getItem("goldie-active-batch")||"";if(!id)return;const response=await fetch(`/api/batches?id=${encodeURIComponent(id)}`);if(!response.ok)return;const payload=await response.json() as {batch?:{id:string;step:WorkflowStep;status:string;state?:Record<string,unknown>}};if(!payload.batch?.state)return;const state=payload.batch.state as {template?:string;templateDetails?:TemplateDetails;description?:string;pricing?:Pricing;mockupTheme?:string;activeRecipe?:Recipe;designs?:Array<Omit<DesignFile,"file"|"previewUrl">>;drafts?:DraftResult[];complete?:boolean;bulkTitles?:string;printifyImageIndices?:number[]};const cached=await loadBatchFiles(id).catch(()=>[]);const designs=(state.designs||[]).map((design,index)=>{const file=cached[index];return file?{...design,file,previewUrl:URL.createObjectURL(file)}:null}).filter(Boolean) as DesignFile[];batchIdRef.current=id;setTemplate(state.template||"");setTemplateDetails(state.templateDetails||null);setDescription(state.description||"");if(state.pricing)setPricing(state.pricing);setMockupTheme(state.mockupTheme||"");setActiveRecipe(state.activeRecipe||null);setFiles(designs);setDrafts(state.drafts||[]);setComplete(Boolean(state.complete));setBulkTitles(state.bulkTitles||"");setPrintifyImageIndices(state.printifyImageIndices||[]);setResumeProcessing(payload.batch.status==="processing"&&designs.length>0);const step=state.complete?"finish":payload.batch.step;setWorkflowStep(step);const url=new URL(window.location.href);url.searchParams.set("step",step);window.history.replaceState({},"",url);if(payload.batch.status==="processing"&&state.template)void loadTemplateUrl(state.template)}finally{snapshotReady.current=true;setRestoringBatch(false)}})()},[]);
+  useEffect(()=>{void(async()=>{try{const url=new URL(window.location.href);const id=url.searchParams.get("batch")||"";if(!id)return;const response=await fetch(`/api/batches?id=${encodeURIComponent(id)}`);if(!response.ok)return;const payload=await response.json() as {batch?:{id:string;step:WorkflowStep;status:string;state?:Record<string,unknown>}};if(!payload.batch?.state)return;const state=payload.batch.state as {template?:string;templateDetails?:TemplateDetails;description?:string;pricing?:Pricing;mockupTheme?:string;activeRecipe?:Recipe;designs?:Array<Omit<DesignFile,"file"|"previewUrl">>;drafts?:DraftResult[];complete?:boolean;bulkTitles?:string;printifyImageIndices?:number[]};const cached=await loadBatchFiles(id).catch(()=>[]);const designs=(state.designs||[]).map((design,index)=>{const file=cached[index];return file?{...design,file,previewUrl:URL.createObjectURL(file)}:null}).filter(Boolean) as DesignFile[];batchIdRef.current=id;setTemplate(state.template||"");setTemplateDetails(state.templateDetails||null);setDescription(state.description||"");if(state.pricing)setPricing(state.pricing);setMockupTheme(state.mockupTheme||"");setActiveRecipe(state.activeRecipe||null);setFiles(designs);setDrafts(state.drafts||[]);setComplete(Boolean(state.complete));setBulkTitles(state.bulkTitles||"");setPrintifyImageIndices(state.printifyImageIndices||[]);setResumeProcessing(payload.batch.status==="processing"&&designs.length>0);const step=state.complete?"finish":payload.batch.step;setWorkflowStep(step);url.searchParams.set("step",step);window.history.replaceState({},"",url);if(payload.batch.status==="processing"&&state.template)void loadTemplateUrl(state.template)}finally{snapshotReady.current=true;setRestoringBatch(false)}})()},[]);
 
   useEffect(()=>{if(!resumeProcessing||resumeAttempted.current||!connected||!templateLoaded||!files.length)return;resumeAttempted.current=true;setResumeProcessing(false);const succeeded=new Set(drafts.filter(draft=>draft.status==="Created").map(draft=>draft.clientId));const remaining=files.filter(file=>!succeeded.has(file.id));if(remaining.length)void runDrafts(remaining,true)},[resumeProcessing,connected,templateLoaded,files,drafts]);
 
@@ -175,7 +181,7 @@ export default function Home() {
     }
     setFileError("");
     setFiles(images);
-    const durableBatchId=batchIdRef.current||crypto.randomUUID();batchIdRef.current=durableBatchId;window.localStorage.setItem("goldie-active-batch",durableBatchId);void saveBatchFiles(durableBatchId,images.map(image=>image.file));
+    const durableBatchId=batchIdRef.current||crypto.randomUUID();batchIdRef.current=durableBatchId;window.localStorage.setItem("goldie-active-batch",durableBatchId);const batchUrl=new URL(window.location.href);batchUrl.searchParams.set("batch",durableBatchId);window.history.replaceState({},"",batchUrl);void saveBatchFiles(durableBatchId,images.map(image=>image.file));
     setComplete(false);
     setDrafts([]);
     setProcessed(0);
@@ -311,7 +317,7 @@ export default function Home() {
     setPreparationMessage("");
     setRunTotal(0);
     setComplete(true);
-    goToStep("finish",false,true);
+    setFinishPhase("details");goToStep("finish",false,true);
   }
 
   async function syncListingFields(design:DesignFile,details?:EtsyDetails){const draft=drafts.find(item=>item.clientId===design.id);if(!draft?.id)throw new Error("The matching Printify draft could not be found.");const response=await fetch("/api/printify/drafts/update",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({productId:draft.id,title:design.title,tags:design.tags,description:[details?.blurb,description].filter(Boolean).join("\n\n"),etsyDetails:details})});const payload=await response.json() as {error?:string};if(!response.ok)throw new Error(payload.error||"Printify could not save the completed listing.")}
@@ -327,6 +333,7 @@ export default function Home() {
 
   function startOver() {
     const priorBatch=batchIdRef.current;if(priorBatch)void clearBatchFiles(priorBatch);batchIdRef.current="";window.localStorage.removeItem("goldie-active-batch");
+    const freshUrl=new URL(window.location.href);freshUrl.searchParams.delete("batch");window.history.replaceState({},"",freshUrl);
     setTemplate("");
     setTemplateDetails(null);
     setTemplateError("");
@@ -367,10 +374,10 @@ export default function Home() {
 
   const workflowHero = {
     connect: { eyebrow: "STEP 1 · PRINTIFY", title: "Connect Printify.", copy: "Goldie creates unpublished drafts in your own Printify shop. Connect once, then move on." },
-    setup: { eyebrow: "STEP 2 · LISTING SETUP", title: "Choose what you’re making.", copy: "Use a saved setup or connect a completed Printify template. Goldie imports the product, variants, shipping, and description for you." },
+    setup: { eyebrow: "STEP 2 · PRODUCT", title: "Choose what you’re making.", copy: "Choose a saved product or add one by connecting its completed Printify template. The template is required; Goldie imports its variants, shipping, costs, placement, and description." },
     designs: { eyebrow: "STEP 3 · DESIGNS", title: "Add this batch’s designs.", copy: "Upload up to 20 finished designs. Goldie keeps this batch saved while you move through the remaining steps." },
     review: { eyebrow: "STEP 4 · PREFLIGHT", title: "Review before creating drafts.", copy: "Confirm the product, design count, pricing target, keyword bank, and mockup defaults in one place." },
-    finish: { eyebrow: "STEP 5 · FINISH", title: "Finish your listings.", copy: "Use the real Printify previews to complete titles, matching tags, Etsy details, and final mockup choices." },
+    finish: finishPhase==="details" ? { eyebrow: "STEP 6 · LISTING DETAILS", title: "Build the listing details.", copy: "Choose keywords, complete each title, review the automatic Etsy details, and let Goldie generate matching tags." } : finishPhase==="mockups" ? { eyebrow: "STEP 7 · IMAGES + MOCKUPS", title: "Choose the listing images.", copy: "Review the real Printify previews, choose flatlays, and create optional Goldie lifestyle mockups." } : { eyebrow: "STEP 8 · FINAL REVIEW", title: "Review the finished batch.", copy: "Confirm the words, pricing, images, and mockups before you publish the listings from Printify." },
   }[workflowStep];
 
   return (
@@ -402,8 +409,8 @@ export default function Home() {
 
       <section className="workspace">
         <nav className="workflow-progress" aria-label="Listing Factory progress">
-          <div><p className="mini-label">YOUR BATCH</p><b>Step {WORKFLOW_STEPS.findIndex(item=>item.id===workflowStep)+1} of {WORKFLOW_STEPS.length}</b></div>
-          {WORKFLOW_STEPS.map((step,index)=>{const active=workflowStep===step.id,available=canOpenStep(step.id),done=index<WORKFLOW_STEPS.findIndex(item=>item.id===workflowStep);return <button key={step.id} className={`${active?"active":""} ${done?"done":""}`} disabled={!available} aria-current={active?"step":undefined} onClick={()=>goToStep(step.id)}><span>{done?"✓":step.number}</span><span><b>{step.label}</b><small>{active?"You are here":done?"Complete":available?"Ready":"Complete the prior step"}</small></span></button>})}
+          <div><p className="mini-label">YOUR BATCH</p><b>Step {progressIndex+1} of {PROGRESS_STEPS.length}</b></div>
+          {PROGRESS_STEPS.map((label,index)=>{const active=progressIndex===index,done=index<progressIndex,available=index===0||(index===1&&connected)||(index===2&&templateLoaded)||(index>=3&&index<=4&&ready)||(index>=5&&complete);return <button key={label} className={`${active?"active":""} ${done?"done":""}`} disabled={!available} aria-current={active?"step":undefined} onClick={()=>openProgressStep(index)}><span>{done?"✓":String(index+1).padStart(2,"0")}</span><span><b>{label}</b><small>{active?"You are here":done?"Complete":available?"Ready":"Complete the prior step"}</small></span></button>})}
           <p className="workflow-help">Goldie saves completed work. You can return to an earlier step without starting over.</p>
         </nav>
         <div className="workflow-stage">
@@ -417,6 +424,18 @@ export default function Home() {
                 <div className="connection-row"><span className="connection-icon">P</span><div><b>Checking Printify connection…</b><small>This takes just a moment</small></div></div>
               ) : !connected ? (
                 <div className="connection-setup">
+                  <details className="token-help">
+                    <summary>How to get your Printify token <span>Step-by-step instructions</span></summary>
+                    <div className="token-shop-warning"><b>Before you generate anything</b><span>Sign in to the Printify account that contains the shop and template products you want Goldie to use. The token connects the account; the Printify template you choose in Step 2 identifies the exact shop.</span></div>
+                    <ol>
+                      <li>In Printify, open <b>My Profile</b>, then choose <b>Connections</b>.</li>
+                      <li>If Printify asks for a developer contact email, enter one you check.</li>
+                      <li>Under Personal Access Tokens, select <b>Generate</b>.</li>
+                      <li>Name it <b>Goldie</b>, enable the product and upload access Goldie requests, then generate the token.</li>
+                      <li>Copy the token immediately—it is only shown once—and paste it below.</li>
+                    </ol>
+                    <a href="https://help.printify.com/hc/en-us/articles/4483626447249-How-can-I-generate-an-API-token" target="_blank" rel="noreferrer">Open Printify’s official token instructions ↗</a>
+                  </details>
                   <div className="inline-field"><input type="password" value={token} onChange={(event) => setToken(event.target.value)} placeholder="Paste your Printify token" aria-label="Printify token" /><button onClick={connectPrintify} disabled={!token.trim() || connecting}>{connecting ? "Connecting…" : "Connect Printify"}</button></div>
                   <small>Your token is encrypted before it is saved and is never displayed again.</small>
                   {connectionError && <p className="field-error" role="alert">{connectionError}</p>}
@@ -424,7 +443,7 @@ export default function Home() {
               ) : (
                 <><div className="connection-row"><span className="connection-icon">P</span><div><b>Printify connected</b><small>Your connection will be remembered</small></div><button onClick={async () => { await fetch("/api/printify", { method: "DELETE" }); setConnected(false); setToken(""); setTemplateDetails(null); setConnectionError(""); }}>Disconnect</button></div>{connectionError && <p className="field-warning" role="status">{connectionError}</p>}</>
               )}
-              {connected&&<button className="workflow-next" onClick={()=>goToStep("setup")}>Choose a listing setup <span>→</span></button>}
+              {connected&&<button className="workflow-next" onClick={()=>goToStep("setup")}>Choose a product <span>→</span></button>}
             </div>
           </article>
 
@@ -432,11 +451,12 @@ export default function Home() {
           {templateError && <p className="field-error recipe-error" role="alert">{templateError}</p>}
           {templateDetails && <><div className="template-proof recipe-proof"><div className="product-thumb"><span>YOUR<br/>ART</span></div><div className="template-info"><b>{templateDetails.blueprintTitle}</b><span>{templateDetails.provider} · {templateDetails.enabledVariants} enabled variants</span><span>{description?"Description imported":"No description found"} · {templateDetails.standardShipping!=null?`${templateDetails.shippingCurrency} ${templateDetails.standardShipping.toFixed(2)} standard shipping imported`:"Shipping checked during pricing"}</span></div><span className="template-badge">Product facts imported</span></div><button className="workflow-next" onClick={()=>goToStep("designs")}>Add finished designs <span>→</span></button></>}</div>
 
-          <article className={`step-card workflow-panel ${files.length ? "done" : ""} ${workflowStep==="finish"?"finish-mode":""} ${workflowStep==="designs"||workflowStep==="finish"?"active-panel":"hidden-panel"}`}>
-            <div className="step-number">03</div>
+          <article className={`step-card workflow-panel ${files.length ? "done" : ""} ${workflowStep==="finish"?"finish-mode":""} ${workflowStep==="designs"||(workflowStep==="finish"&&finishPhase==="details")?"active-panel":"hidden-panel"}`}>
+            <div className="step-number">{workflowStep==="finish"?"06":"03"}</div>
             <div className="step-content">
-              <div className="step-heading"><div><p className="mini-label">DESIGNS</p><h2>Add your finished designs</h2></div>{files.length > 0 && <span className="done-mark">✓ {files.length} loaded</span>}</div>
-              <p className="step-copy">Build one focused batch of up to 20 finished designs. Upload a folder or select individual images.</p>
+              <div className="step-heading"><div><p className="mini-label">{workflowStep==="finish"?"FINISH LISTINGS":"DESIGNS"}</p><h2>{workflowStep==="finish"?"Complete the listing details":"Add your finished designs"}</h2></div>{files.length > 0 && <span className="done-mark">✓ {files.length} {workflowStep==="finish"?"drafts ready":"loaded"}</span>}</div>
+              <p className="step-copy">{workflowStep==="finish"?"Work from top to bottom. Finish the words first, confirm Goldie’s Etsy details, then choose the images and mockups for each listing.":"Build one focused batch of up to 20 finished designs. Upload a folder or select individual images."}</p>
+              {workflowStep==="finish"&&<div className="finish-guide"><span><b>1</b> Choose keywords</span><span><b>2</b> Build titles + tags</span><span><b>3</b> Review Etsy details</span></div>}
               <p className="batch-limits" aria-label="Batch limits"><span>20 designs maximum</span><i /> <span>100 MB per design · 500 MB per batch</span><i /> <span>Large opaque artwork is optimized without changing DPI</span></p>
               <div className="file-reminder"><b>Before uploading</b><span>Designs must already be upscaled if needed. Use a transparent-background PNG whenever the background should not print.</span></div>
               <input ref={folderPicker} className="hidden-picker" type="file" multiple accept=".png,.jpg,.jpeg" {...({ webkitdirectory: "", directory: "" } as React.InputHTMLAttributes<HTMLInputElement>)} onChange={(event) => chooseFiles(event.target.files)} />
@@ -457,13 +477,14 @@ export default function Home() {
               {files.length > 0 && <div className="batch-capacity"><div><b>{files.length}/20 designs</b><span>{20 - files.length} spaces remaining</span></div><div className="capacity-track"><span style={{ width: `${(files.length / 20) * 100}%` }} /></div></div>}
               {files.length>0&&!complete&&workflowStep==="designs"&&<button className="workflow-next" onClick={()=>goToStep("review")}>Review this batch <span>→</span></button>}
               {files.length > 0 && complete && <div className="listing-editor">
-                <div className="editor-heading"><div><b>Finish every listing from its real Printify draft</b><span>Build the final title and tags here. Goldie automatically completes the unique introduction and product-specific Etsy details when you leave the field.</span></div><span>{files.length} listings</span></div>
-                <div className="bulk-title-box"><textarea value={bulkTitles} onChange={(e) => setBulkTitles(e.target.value)} rows={3} placeholder="Paste one title per line from eRank or a CSV column"/><div><button onClick={applyBulkTitles}>Apply titles in order</button><button className="secondary-import" onClick={() => csvPicker.current?.click()}>Import title CSV</button><input ref={csvPicker} hidden type="file" accept=".csv,text/csv" onChange={(event) => void importTitleCsv(event.target.files)}/></div></div>
-                <KeywordBank onAdd={addKeyword} preferredListId={activeRecipe?.keywordListId}/>
+                <div className="editor-heading"><div><b>1. Choose keywords and build each title</b><span>Select a saved keyword bank, click a listing below, then add the phrases that belong in its title. Matching Etsy tags generate automatically.</span></div><span>{files.length} listings</span></div>
+                <KeywordBank onAdd={addKeyword}/>
                 <div className="design-table">{files.map((design) => { const quality = design.width && templateDetails?.maxPrintWidth && templateDetails?.placementScale ? printifyDpi(design.width, templateDetails.maxPrintWidth, normalizedPlacementScale(templateDetails.placementScale, design.visibleBounds)) : null; const qualityReady = Boolean(quality && quality.dpi >= 300); return <article className={`design-line ${activeDesign === design.id ? "active" : ""}`} key={design.id} onClick={() => setActiveDesign(design.id)}><img src={design.previewUrl} alt=""/><div className="design-fields"><label>Title <span>{design.title.length}/140</span><input value={design.title} maxLength={140} onChange={(e) => { const title = e.target.value; updateDesign(design.id, { title, tags: tagsFromTitle(title),etsy:undefined }); }}/></label><label>Tags <span>{design.tags.length}/13</span><input value={design.tags.join(", ")} onChange={(e) => updateDesign(design.id, { tags: [...new Set(e.target.value.split(",").map((tag) => tag.trim().toLowerCase()).filter((tag) => tag && tag.length <= 20))].slice(0, 13),etsy:undefined })} placeholder="Exact title phrases, separated by commas"/></label><div className="tag-row">{design.tags.map((tag) => <span key={tag}>{tag}</span>)}{!design.tags.length && <small>Add comma-separated title phrases to generate matching Etsy tags.</small>}</div>{design.etsy&&<details className="etsy-auto"><summary>✓ Etsy details completed · {design.etsy.category}</summary><label>Design-specific introduction<textarea value={design.etsy.blurb} rows={3} onChange={e=>updateDesign(design.id,{etsy:{...design.etsy!,blurb:e.target.value}})}/></label><div className="etsy-attribute-grid">{Object.entries({...design.etsy.attributes,...design.etsy.optional}).map(([key,value])=><label key={key}>{key}<input value={value} onChange={e=>updateDesign(design.id,{etsy:{...design.etsy!,attributes:{...design.etsy!.attributes,[key]:e.target.value}}})}/></label>)}</div><small>Optional fields Goldie could not justify were left blank.</small></details>}{design.etsyError&&<small className="field-error">{design.etsyError}</small>}{design.paddingStatus==="trimmed"&&<small className="padding-note">✓ Transparent padding will be normalized to the template artwork</small>}</div><div className={`quality-pill ${qualityReady ? "pass" : "check"}`}><b>{!quality ? "Calculating Printify DPI…" : qualityReady ? `✓ ${quality.dpi} DPI in Printify` : `${quality.dpi} DPI in Printify`}</b><small>{quality ? `${quality.level} resolution · 300 DPI recommended` : design.width ? `${design.width} × ${design.height}px` : "Reading dimensions…"}</small></div></article>; })}</div>
+                <button className="workflow-next" onClick={()=>setFinishPhase("mockups")}>Choose images and mockups <span>→</span></button>
               </div>}
             </div>
           </article>
+          {workflowStep==="finish"&&finishPhase==="final"&&<article className="step-card final-review active-panel"><div className="step-number">08</div><div className="step-content"><div className="step-heading"><div><p className="mini-label">FINAL REVIEW</p><h2>Your batch is ready for its final check</h2></div><span className="done-mark">✓ {drafts.filter(draft=>draft.status==="Created").length} drafts</span></div><p className="step-copy">Confirm the checklist below. Goldie has not published anything; your listings remain unpublished in Printify until you decide they are ready.</p><div className="final-checklist"><span>✓ Variant pricing uses Printify costs, shipping, Etsy fees, and your profit target</span><span>✓ Titles and matching Etsy tags are attached to their exact drafts</span><span>✓ Product-specific Etsy details are available for review</span><span>✓ Printify flatlays and Goldie mockups remain editable per listing</span></div><div className="final-review-actions"><button onClick={()=>setFinishPhase("details")}>Review listing details</button><button onClick={()=>setFinishPhase("mockups")}>Review images + mockups</button></div></div></article>}
         </div>
 
         <aside className={`launch-panel workflow-panel ${workflowStep==="review"?"active-panel":"hidden-panel"}`}>
@@ -476,12 +497,12 @@ export default function Home() {
 
           <div className="summary-list">
             <div><span>Printify</span><b className={connected ? "ready-text" : "waiting-text"}>{connected ? "Connected" : "Waiting"}</b></div>
-            <div><span>Listing setup</span><b>{activeRecipe?.name||templateDetails?.blueprintTitle||"Not selected"}</b><button onClick={()=>goToStep("setup")}>Edit</button></div>
+            <div><span>Saved product</span><b>{activeRecipe?.name||templateDetails?.blueprintTitle||"Not selected"}</b><button onClick={()=>goToStep("setup")}>Edit</button></div>
             <div><span>Product</span><b>{templateDetails?.blueprintTitle||"Not selected"}</b></div>
             <div><span>Designs</span><b>{files.length ? `${files.length} / 20` : "Not added"}</b></div>
             <div><span>Profit target</span><b>${pricing.targetProfit.toFixed(2)} per item</b></div>
             <div><span>Standard shipping</span><b>{templateDetails?.standardShipping!=null?`${templateDetails.shippingCurrency} ${templateDetails.standardShipping.toFixed(2)}`:"Calculated from Printify"}</b></div>
-            <div><span>Keyword bank</span><b>{activeRecipe?.keywordListId?"Saved with setup":"Choose after drafts"}</b></div>
+            <div><span>Keyword bank</span><b>{activeRecipe?.keywordListId?"Saved with product":"Choose after drafts"}</b></div>
             <div><span>Mockup set</span><b>{mockupTheme||"Choose after drafts"}</b></div>
             <div><span>Publishing</span><b>Draft only</b></div>
           </div>
@@ -496,7 +517,7 @@ export default function Home() {
 
           {!complete ? (
             <button className="launch-button" disabled={!ready || running||preparingEtsy} onClick={createDrafts}>
-              <span className="button-glint" />{preparingEtsy?"Completing Etsy details…":running ? `${processed} of ${runTotal} complete…` : ready ? "Review and create drafts" : missingRequirement}<span>→</span>
+              <span className="button-glint" />{preparingEtsy?"Completing Etsy details…":running ? `${processed} of ${runTotal} complete…` : ready ? "Continue to create drafts" : missingRequirement}<span>→</span>
             </button>
           ) : (
             <div className="batch-actions">
@@ -510,7 +531,7 @@ export default function Home() {
         </div>
       </section>
 
-      {complete && workflowStep==="finish" && <section className="post-draft-workspace"><div className="post-draft-heading"><div><p className="mini-label">PRINTIFY DRAFTS + MOCKUPS</p><h2>Review the real product previews, then finish each listing.</h2><p>Only open Printify when a preview needs manual size or placement adjustment. Mockup choices can be different for every listing.</p></div>{drafts.filter((draft) => draft.status === "Created").length > 1 && <button className="open-all-button" onClick={openAllDrafts}>Open all in Printify</button>}</div>{openAllMessage && <p className="open-all-message" role="status">{openAllMessage}</p>}<div className="draft-card-grid">{drafts.map((draft) => { const design=files.find(file=>file.id===draft.clientId); return <article className={`draft-card ${draft.status === "Failed" ? "failed" : ""}`} key={draft.clientId}><div className="draft-card-top">{draft.previewUrl ? <img src={draft.previewUrl} alt={`Printify preview for ${draft.title || draft.name}`}/> : design ? <div className="pending-preview"><img src={design.previewUrl} alt="Design preview"/><span>Printify preview processing</span></div> : <span className="draft-check">!</span>}<div><span className="draft-state">{draft.status === "Created" ? "PRINTIFY DRAFT CREATED" : "DRAFT FAILED"}</span><h3>{draft.title || draft.name}</h3><small>{draft.status === "Created" ? "Unpublished · pricing, tags, and description applied" : draft.error}</small>{design?.tags?.length ? <div className="tag-row">{design.tags.map(tag=><span key={tag}>{tag}</span>)}</div> : null}</div>{draft.editorUrl && draft.id ? <button className={`edit-draft-button ${openedDrafts.includes(draft.id) ? "opened" : ""}`} onClick={() => openDraft(draft)}><i />{openedDrafts.includes(draft.id) ? "Opened" : "Adjust in Printify"}</button> : null}</div>{draft.status === "Created" && <PrintifyImagePicker images={(draft.printifyImages || []).filter(Boolean)} indices={printifyImageIndices} onApplyAll={setPrintifyImageIndices} onSaveRecipe={activeRecipe?(values)=>void saveImagePreferences(values):undefined}/>} {draft.status === "Created" && design && <details className="draft-mockups"><summary>Optional: create Goldie lifestyle mockups</summary><IntegratedMockups design={design.file} defaultTheme={mockupTheme} referenceUrl={draft.previewUrl} sharedSelection={sharedMockups} onShare={setSharedMockups}/></details>}{draft.status === "Failed" && <button className="error-help-link" onClick={() => window.dispatchEvent(new CustomEvent("goldie-support", { detail: draft.error ?? "A design failed" }))}>Get help with this error</button>}</article>})}</div></section>}
+      {complete && workflowStep==="finish" && finishPhase==="mockups" && <section className="post-draft-workspace"><div className="post-draft-heading"><div><p className="mini-label">3 · IMAGES + MOCKUPS</p><h2>Choose the final images for each listing.</h2><p>Review the real product preview, adjust in Printify only when needed, then choose Printify flatlays and optional Goldie lifestyle mockups.</p></div>{drafts.filter((draft) => draft.status === "Created").length > 1 && <button className="open-all-button" onClick={openAllDrafts}>Open all in Printify</button>}</div>{openAllMessage && <p className="open-all-message" role="status">{openAllMessage}</p>}<div className="draft-card-grid">{drafts.map((draft) => { const design=files.find(file=>file.id===draft.clientId); return <article className={`draft-card ${draft.status === "Failed" ? "failed" : ""}`} key={draft.clientId}><div className="draft-card-top">{draft.previewUrl ? <img src={draft.previewUrl} alt={`Printify preview for ${draft.title || draft.name}`}/> : design ? <div className="pending-preview"><img src={design.previewUrl} alt="Design preview"/><span>Printify preview processing</span></div> : <span className="draft-check">!</span>}<div><span className="draft-state">{draft.status === "Created" ? "PRINTIFY DRAFT CREATED" : "DRAFT FAILED"}</span><h3>{draft.title || draft.name}</h3><small>{draft.status === "Created" ? "Unpublished · pricing, tags, and description applied" : draft.error}</small>{design?.tags?.length ? <div className="tag-row">{design.tags.map(tag=><span key={tag}>{tag}</span>)}</div> : null}</div>{draft.editorUrl && draft.id ? <button className={`edit-draft-button ${openedDrafts.includes(draft.id) ? "opened" : ""}`} onClick={() => openDraft(draft)}><i />{openedDrafts.includes(draft.id) ? "Opened" : "Adjust in Printify"}</button> : null}</div>{draft.status === "Created" && <PrintifyImagePicker images={(draft.printifyImages || []).filter(Boolean)} indices={printifyImageIndices} onApplyAll={setPrintifyImageIndices} onSaveRecipe={activeRecipe?(values)=>void saveImagePreferences(values):undefined}/>} {draft.status === "Created" && design && <details className="draft-mockups"><summary>Optional: create Goldie lifestyle mockups</summary><IntegratedMockups design={design.file} defaultTheme={mockupTheme} referenceUrl={draft.previewUrl} sharedSelection={sharedMockups} onShare={setSharedMockups}/></details>}{draft.status === "Failed" && <button className="error-help-link" onClick={() => window.dispatchEvent(new CustomEvent("goldie-support", { detail: draft.error ?? "A design failed" }))}>Get help with this error</button>}</article>})}</div><button className="workflow-next mockup-next" onClick={()=>setFinishPhase("final")}>Continue to final review <span>→</span></button></section>}
 
       {preflightOpen && <div className="preflight-backdrop" role="presentation" onMouseDown={(e)=>{if(e.target===e.currentTarget)setPreflightOpen(false)}}><section className="preflight" role="dialog" aria-modal="true" aria-labelledby="preflight-title"><p className="mini-label">CREATE PRINTIFY DRAFTS</p><h2 id="preflight-title">Create {files.length} product {files.length===1?"draft":"drafts"}?</h2><div className="preflight-list"><div><span>Printify product</span><b>✓ {templateDetails?.blueprintTitle}</b></div><div><span>Design files</span><b>✓ {files.length} ready</b></div><div><span>Permanent description</span><b>{description.trim()?"✓ Imported from Printify":"None found — can be added later"}</b></div><div><span>Variant pricing</span><b>✓ Costs, shipping, fees, and profit applied</b></div><div><span>Publishing</span><b>Unpublished Printify drafts only</b></div></div><p className="preflight-explainer">After these drafts exist, Goldie will show their real previews and help finish each title, tags, unique introduction, Etsy details, and mockups.</p><div className="preflight-actions"><button className="preflight-cancel" onClick={()=>setPreflightOpen(false)}>Go back</button><button className="preflight-confirm" onClick={confirmDrafts}>Create Printify drafts →</button></div></section></div>}
 

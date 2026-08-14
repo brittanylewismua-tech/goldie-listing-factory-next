@@ -20,7 +20,10 @@ test("server-renders the branded Listing Factory", async () => {
   assert.match(html, /Secure workspace/);
   assert.doesNotMatch(html, /Private workspace/);
   assert.match(html, /Your Printify account/);
-  assert.match(html, /Use a saved setup or connect a new Printify template/);
+  assert.match(html, /Choose a saved product or add another/);
+  const pageSource = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  assert.match(pageSource, /How to get your Printify token/);
+  assert.match(pageSource, /token connects the account/);
   assert.match(html, /Connect this Printify template/);
   assert.match(html, /imports its product facts and permanent description/);
   assert.doesNotMatch(html, /Default title structure|Optional reusable description/);
@@ -66,7 +69,7 @@ test("uses individual shop-aware Printify editor buttons", async () => {
   assert.match(page, /title: design\.title \|\| undefined/);
   assert.doesNotMatch(page, /listingTitle/);
   assert.match(route, /body\.title\?\.trim\(\)\.slice\(0, 255\) \|\| body\.fileName/);
-  assert.match(page, /Choose or create a saved listing setup/);
+  assert.match(page, /Choose or add a saved product/);
   assert.match(page, /function startOver\(\)/);
   assert.match(page, /Clear all \/ start over/);
   assert.match(page, /folderPicker\.current\.value = ""/);
@@ -98,7 +101,7 @@ test("uses individual shop-aware Printify editor buttons", async () => {
   assert.match(route, /templateImageCount/);
 });
 
-test("unifies saved listing setups, editing, pricing, and mockups without the old factory toggle", async () => {
+test("unifies saved products, editing, pricing, and mockups without the old factory toggle", async () => {
   const [page, recipes, mockups, drafts] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/factory-tools.tsx", import.meta.url), "utf8"),
@@ -108,13 +111,14 @@ test("unifies saved listing setups, editing, pricing, and mockups without the ol
   assert.doesNotMatch(page, /factory-switcher/);
   assert.match(recipes, /Connect this Printify template/);
   assert.match(recipes, /imports its product facts and permanent description/);
-  assert.match(recipes, /saved listing setup/);
-  assert.match(recipes, /Add another setup/);
-  assert.match(recipes, /Listing setup saved and selected/);
+  assert.match(recipes, /saved product/);
+  assert.match(recipes, /Add another product/);
+  assert.match(recipes, /Product saved and selected/);
   assert.match(recipes, /props\.onUseRecipe\(saved\)/);
-  assert.match(recipes, /This setup only needs the profit you want/);
+  assert.match(recipes, /This saved product only needs the profit you want/);
   assert.doesNotMatch(recipes, /Shipping cost|Shipping charged|Payment fixed fee/);
-  assert.match(page, /Import title CSV/);
+  assert.doesNotMatch(page, /Apply titles in order|Import title CSV/);
+  assert.match(recipes, /keyword CSV becomes a saved bank/);
   assert.match(page, /Exact title phrases/);
   assert.match(page, /300 DPI recommended/);
   assert.match(page, /Choose Printify flatlays/);
@@ -126,14 +130,15 @@ test("unifies saved listing setups, editing, pricing, and mockups without the ol
   assert.match(drafts, /printifyImages/);
 });
 
-test("guides sellers through a resumable five-step create flow",async()=>{
+test("guides sellers through the complete resumable eight-step workflow",async()=>{
   const [page,batches,route,cache]=await Promise.all([
     readFile(new URL("../app/page.tsx",import.meta.url),"utf8"),
     readFile(new URL("../app/batches/page.tsx",import.meta.url),"utf8"),
     readFile(new URL("../app/api/batches/route.ts",import.meta.url),"utf8"),
     readFile(new URL("../app/batch-cache.ts",import.meta.url),"utf8"),
   ]);
-  assert.match(page,/Connect Printify/);assert.match(page,/Choose setup/);assert.match(page,/Add designs/);assert.match(page,/Review batch/);assert.match(page,/Finish listings/);
+  assert.match(page,/Connect Printify/);assert.match(page,/Choose product/);assert.match(page,/Add designs/);assert.match(page,/Review pricing/);assert.match(page,/Create drafts/);assert.match(page,/Titles \+ Etsy details/);assert.match(page,/Images \+ mockups/);assert.match(page,/Final review/);
+  assert.match(page,/searchParams\.get\("batch"\)/);assert.doesNotMatch(page,/const id=window\.localStorage\.getItem\("goldie-active-batch"\)/);
   assert.match(page,/aria-current=\{active\?"step"/);assert.match(page,/You are here/);assert.match(page,/Complete the prior step/);
   assert.match(page,/goldie-active-batch/);assert.match(page,/saveBatchFiles/);assert.match(page,/\/api\/batches/);
   assert.match(batches,/Pick up exactly where you left off/);assert.match(batches,/Resume batch/);assert.match(route,/listing_batches/);assert.match(cache,/indexedDB/);
@@ -160,7 +165,7 @@ test("imports shipping and keeps final listing edits attached to the exact Print
     readFile(new URL("../app/api/printify/drafts/update/route.ts",import.meta.url),"utf8"),
   ]);
   assert.match(printify,/shipping\.json/);assert.match(printify,/standardShipping/);
-  assert.match(page,/Finish every listing from its real Printify draft/);
+  assert.match(page,/Choose keywords and build each title/);
   assert.match(page,/api\/printify\/drafts\/update/);
   assert.match(page,/syncListingFields/);
   assert.match(page,/function syncPreparedListing/);
