@@ -76,6 +76,9 @@ test("uses individual shop-aware Printify editor buttons", async () => {
   assert.match(page, /folderPicker\.current\.value = ""/);
   assert.match(page, /imagePicker\.current\.value = ""/);
   assert.match(page, /function openAllDrafts\(\)/);
+  assert.match(page, /Wait—do you really want to leave\? Your files are still uploading/);
+  assert.match(page, /Keep this page open/);
+  assert.match(page, /beforeunload/);
   assert.match(page, /Open all in Printify/);
   assert.match(page, /drafts\.map/);
   assert.match(page, /Allow pop-ups for this site/);
@@ -203,7 +206,7 @@ test("processes a 20-design batch with bounded two-at-a-time concurrency", async
   assert.match(page, /async function processDesign/);
   assert.match(page, /runBounded\(targetFiles, batchConcurrency, processDesign/);
   assert.match(page, /batchBytes>LARGE_BATCH_THRESHOLD\?1:MAX_CONCURRENT_DESIGNS/);
-  assert.match(page, /setProcessed\(\(current\) => current \+ 1\)/);
+  assert.match(page, /setProcessed\(Math\.min\(completedDesignIds\.size,targetFiles\.length\)\)/);
   assert.match(boundedSource, /Math\.min\(limit, items\.length\)/);
   const { runBounded } = await import("../app/bounded-work.ts");
   let active = 0;
@@ -642,4 +645,11 @@ test("routes each product surface deliberately and never releases a partial batc
   assert.match(renderers,/garment_image:reference/);
   assert.doesNotMatch(renderers,/shirt-design/);
   assert.match(renderers,/seedream\/v5\/lite\/edit/);
+});
+
+test("draft progress cannot exceed the selected batch", async () => {
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  assert.match(page,/draftRunActive\.current/);
+  assert.match(page,/completedDesignIds\.has\(result\.clientId\)/);
+  assert.match(page,/Math\.min\(completedDesignIds\.size,targetFiles\.length\)/);
 });

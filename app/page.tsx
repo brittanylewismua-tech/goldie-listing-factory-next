@@ -72,6 +72,7 @@ export default function Home() {
   const batchIdRef=useRef("");
   const snapshotReady=useRef(false);
   const resumeAttempted=useRef(false);
+  const draftRunActive=useRef(false);
   const [connected, setConnected] = useState(false);
   const [token, setToken] = useState("");
   const [connectionError, setConnectionError] = useState("");
@@ -295,7 +296,9 @@ export default function Home() {
   }
 
   async function runDrafts(targetFiles: DesignFile[], keepSuccessful = false) {
-    if (!ready || !targetFiles.length) return;
+    if (!ready || !targetFiles.length || draftRunActive.current) return;
+    draftRunActive.current=true;
+    const completedDesignIds=new Set<string>();
     setRunning(true);
     setRunTotal(targetFiles.length);
     setComplete(false);
@@ -305,16 +308,22 @@ export default function Home() {
     if (!keepSuccessful) setDrafts([]);
     else setDrafts((current) => current.filter((draft) => draft.status === "Created"));
     setProcessed(0);
-    await runBounded(targetFiles, batchConcurrency, processDesign, (result) => {
-      setDrafts((current) => [...current, result]);
-      if(result.previewUrl)updateDesign(result.clientId,{previewUrl:result.previewUrl});
-      setProcessed((current) => current + 1);
-    });
-    setRunning(false);
-    setPreparationMessage("");
-    setRunTotal(0);
-    setComplete(true);
-    setFinishPhase("details");goToStep("finish",false,true);
+    try {
+      await runBounded(targetFiles, batchConcurrency, processDesign, (result) => {
+        if(completedDesignIds.has(result.clientId))return;
+        completedDesignIds.add(result.clientId);
+        setDrafts((current) => [...current, result]);
+        if(result.previewUrl)updateDesign(result.clientId,{previewUrl:result.previewUrl});
+        setProcessed(Math.min(completedDesignIds.size,targetFiles.length));
+      });
+      setComplete(true);
+      setFinishPhase("details");goToStep("finish",false,true);
+    } finally {
+      draftRunActive.current=false;
+      setRunning(false);
+      setPreparationMessage("");
+      setRunTotal(0);
+    }
   }
 
   async function syncListingFields(design:DesignFile,details?:EtsyDetails){const draft=drafts.find(item=>item.clientId===design.id);if(!draft?.id)throw new Error("The matching Printify draft could not be found.");const response=await fetch("/api/printify/drafts/update",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({productId:draft.id,title:design.title,tags:design.tags,description:[details?.blurb,description].filter(Boolean).join("\n\n"),etsyDetails:details})});const payload=await response.json() as {error?:string};if(!response.ok)throw new Error(payload.error||"Printify could not save the completed listing.")}
@@ -355,6 +364,8 @@ export default function Home() {
     setOpenedDrafts((current) => current.includes(draft.id!) ? current : [...current, draft.id!]);
   }
 
+  function guardNavigation(event:{preventDefault:()=>void},href:string){if(!running)return;event.preventDefault();if(window.confirm("Wait—do you really want to leave? Your files are still uploading. Leaving now may interrupt this batch."))window.location.href=href}
+
   function openAllDrafts() {
     const editableDrafts = drafts.filter((draft) => draft.id && draft.editorUrl);
     let opened = 0;
@@ -388,12 +399,14 @@ export default function Home() {
           </div>
         </div>
         <div className="top-actions">
-          <nav className="top-nav"><a className="active" href="/">Listing Factory</a><a href="/batches">Batch History</a><a href="/keywords">Keyword Banks</a><a href="/mockups">Mockup Sets</a></nav>
+          <nav className="top-nav"><a className="active" href="/" onClick={event=>guardNavigation(event,"/")}>Listing Factory</a><a href="/batches" onClick={event=>guardNavigation(event,"/batches")}>Batch History</a><a href="/keywords" onClick={event=>guardNavigation(event,"/keywords")}>Keyword Banks</a><a href="/mockups" onClick={event=>guardNavigation(event,"/mockups")}>Mockup Sets</a></nav>
           {owner && <a className="diagnostics-link" href="/mastermind-admin" aria-label="Open Goldie Diagnostics" title="Goldie Diagnostics">★</a>}
-          <a className="usage-link" href="/usage">Usage + plan</a>
+          <a className="usage-link" href="/usage" onClick={event=>guardNavigation(event,"/usage")}>Usage + plan</a>
           <span className="secure-pill"><i /> Secure workspace</span>
         </div>
       </header>
+
+      {running&&<div className="upload-guard" role="alert" aria-live="assertive"><span className="upload-guard-pulse"/><div><b>Keep this page open</b><span>Your files are still uploading to Printify. Leaving or refreshing may interrupt the batch.</span></div><strong>{processed}/{runTotal}</strong></div>}
 
       <section className="hero workflow-hero">
         <div>
