@@ -478,6 +478,32 @@ test("shows one saved mockup set at a time", async () => {
   assert.match(css,/\.collection\.open\{grid-column:1\/-1/);
 });
 
+test("caps mockup generation and saved themed sets", async () => {
+  const [page,libraryRoute] = await Promise.all([
+    readFile(new URL("../app/mockups/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/mockups/library/route.ts", import.meta.url), "utf8"),
+  ]);
+  assert.match(page,/MAX_SELECTED_MOCKUPS=10/);
+  assert.match(page,/MAX_MOCKUPS_PER_SET=50/);
+  assert.match(page,/of 10 selected/);
+  assert.match(page,/maximum 50 mockups per set/);
+  assert.match(libraryRoute,/MAX_MOCKUPS_PER_SET = 50/);
+  assert.match(libraryRoute,/existing\.length>=MAX_MOCKUPS_PER_SET/);
+});
+
+test("saved mockup sets can be renamed and deleted with confirmation", async () => {
+  const [page,libraryRoute] = await Promise.all([
+    readFile(new URL("../app/mockups/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/mockups/library/route.ts", import.meta.url), "utf8"),
+  ]);
+  assert.match(page,/aria-label={`Rename \${theme}`}/);
+  assert.match(page,/Yes, delete set/);
+  assert.match(page,/permanently removes the set and every saved mockup inside it/);
+  assert.match(libraryRoute,/export async function PATCH/);
+  assert.match(libraryRoute,/export async function DELETE/);
+  assert.match(libraryRoute,/ARTWORK\.delete\(row\.objectKey\)/);
+});
+
 test("routes each product surface deliberately and never releases a partial batch", async () => {
   const [page,renderers,route]=await Promise.all([
     readFile(new URL("../app/mockups/page.tsx", import.meta.url), "utf8"),

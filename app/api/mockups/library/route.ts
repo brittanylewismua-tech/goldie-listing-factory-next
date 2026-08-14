@@ -1,6 +1,6 @@
 import { env } from "cloudflare:workers";
 import { NextRequest, NextResponse } from "next/server";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { getDb } from "@/db";
 import { mockupTemplates } from "@/db/schema";
@@ -8,6 +8,7 @@ import { ensureMockupStorage } from "@/app/api/mockups/storage";
 
 const kinds = new Set(["rigid-flat", "apparel", "soft-goods", "curved", "irregular"]);
 const MAX_FILE = 25 * 1024 * 1024;
+const MAX_MOCKUPS_PER_SET = 50;
 
 export async function GET() {
   const user = await getChatGPTUser();
@@ -30,8 +31,32 @@ export async function POST(request: NextRequest) {
   const name = String(form.get("name") || "").trim().slice(0, 120), surfaceKind = String(form.get("surfaceKind") || "");
   if (!(image instanceof File) || !/^image\/(png|jpeg|webp)$/.test(image.type) || image.size > MAX_FILE) return NextResponse.json({ error: "Choose a PNG, JPG, or WEBP mockup under 25 MB." }, { status: 400 });
   if (!theme || !name || !kinds.has(surfaceKind)) return NextResponse.json({ error: "The mockup set details are incomplete." }, { status: 400 });
+  const existing = await getDb().select({ id:mockupTemplates.id }).from(mockupTemplates).where(and(eq(mockupTemplates.userId,user.userId),eq(mockupTemplates.theme,theme)));
+  if(existing.length>=MAX_MOCKUPS_PER_SET)return NextResponse.json({error:"This mockup set already contains 50 mockups. Create another themed set to add more."},{status:409});
   const id = crypto.randomUUID(), objectKey = `mockup-library/${user.userId}/${id}`;
   await env.ARTWORK.put(objectKey, await image.arrayBuffer(), { httpMetadata: { contentType: image.type } });
   await getDb().insert(mockupTemplates).values({ id, userId:user.userId, theme, name, surfaceKind, cornersJson:JSON.stringify([[.15,.12],[.85,.12],[.85,.88],[.15,.88]]), objectKey, contentType:image.type });
   return NextResponse.json({ template:{ id,theme,name,surfaceKind,corners:[[.15,.12],[.85,.12],[.85,.88],[.15,.88]],custom:true,normalized:true,src:`/api/mockups/library/${encodeURIComponent(id)}/image` } });
+}
+
+export async function PATCH(request:NextRequest){
+  const user=await getChatGPTUser(); if(!user)return NextResponse.json({error:"Sign in to update your mockup library."},{status:401});
+  await ensureMockupStorage();
+  const body=await request.json() as {oldTheme?:string;newTheme?:string},oldTheme=String(body.oldTheme||"").trim(),newTheme=String(body.newTheme||"").trim().slice(0,80);
+  if(!oldTheme||!newTheme)return NextResponse.json({error:"Enter a name for this mockup set."},{status:400});
+  const conflict=await getDb().select({id:mockupTemplates.id}).from(mockupTemplates).where(and(eq(mockupTemplates.userId,user.userId),eq(mockupTemplates.theme,newTheme)));
+  if(oldTheme!==newTheme&&conflict.length)return NextResponse.json({error:"You already have a mockup set with that name."},{status:409});
+  await getDb().update(mockupTemplates).set({theme:newTheme,updatedAt:new Date().toISOString()}).where(and(eq(mockupTemplates.userId,user.userId),eq(mockupTemplates.theme,oldTheme)));
+  return NextResponse.json({ok:true});
+}
+
+export async function DELETE(request:NextRequest){
+  const user=await getChatGPTUser(); if(!user)return NextResponse.json({error:"Sign in to update your mockup library."},{status:401});
+  await ensureMockupStorage();
+  const body=await request.json() as {theme?:string},theme=String(body.theme||"").trim();
+  if(!theme)return NextResponse.json({error:"Choose a mockup set to delete."},{status:400});
+  const rows=await getDb().select().from(mockupTemplates).where(and(eq(mockupTemplates.userId,user.userId),eq(mockupTemplates.theme,theme)));
+  await Promise.all(rows.map(row=>env.ARTWORK.delete(row.objectKey)));
+  await getDb().delete(mockupTemplates).where(and(eq(mockupTemplates.userId,user.userId),eq(mockupTemplates.theme,theme)));
+  return NextResponse.json({ok:true,deleted:rows.length});
 }
