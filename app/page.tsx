@@ -365,6 +365,14 @@ export default function Home() {
     setOpenAllMessage(opened === editableDrafts.length ? `${opened} Printify editor tabs opened.` : `Your browser opened ${opened} of ${editableDrafts.length}. Allow pop-ups for this site to open the rest.`);
   }
 
+  const workflowHero = {
+    connect: { eyebrow: "STEP 1 · PRINTIFY", title: "Connect Printify.", copy: "Goldie creates unpublished drafts in your own Printify shop. Connect once, then move on." },
+    setup: { eyebrow: "STEP 2 · LISTING SETUP", title: "Choose what you’re making.", copy: "Use a saved setup or connect a completed Printify template. Goldie imports the product, variants, shipping, and description for you." },
+    designs: { eyebrow: "STEP 3 · DESIGNS", title: "Add this batch’s designs.", copy: "Upload up to 20 finished designs. Goldie keeps this batch saved while you move through the remaining steps." },
+    review: { eyebrow: "STEP 4 · PREFLIGHT", title: "Review before creating drafts.", copy: "Confirm the product, design count, pricing target, keyword bank, and mockup defaults in one place." },
+    finish: { eyebrow: "STEP 5 · FINISH", title: "Finish your listings.", copy: "Use the real Printify previews to complete titles, matching tags, Etsy details, and final mockup choices." },
+  }[workflowStep];
+
   return (
     <main className="app-shell">
       <header className="topbar">
@@ -383,10 +391,11 @@ export default function Home() {
         </div>
       </header>
 
-      <section className="hero">
+      <section className="hero workflow-hero">
         <div>
-          <h1>From finished designs to listing-ready drafts, in one workflow.</h1>
-          <p className="hero-copy">Start with a saved listing setup—or connect a completed Printify template once—then create drafts, build titles in bulk, and finish the exact mockups each listing needs.</p>
+          <p className="eyebrow">{workflowHero.eyebrow}</p>
+          <h1>{workflowHero.title}</h1>
+          <p className="hero-copy">{workflowHero.copy}</p>
         </div>
         <Image src="/goldie-g.png" width={2000} height={2000} alt="" className="hero-watermark" />
       </section>
