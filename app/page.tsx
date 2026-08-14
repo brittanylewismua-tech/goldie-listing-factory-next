@@ -107,6 +107,7 @@ export default function Home() {
   const [restoringBatch,setRestoringBatch]=useState(true);
   const [resumeProcessing,setResumeProcessing]=useState(false);
   const [finishPhase,setFinishPhase]=useState<FinishPhase>("details");
+  const [uploadNoticeOpen,setUploadNoticeOpen]=useState(false);
 
   const templateLoaded = templateDetails !== null;
   const ready = connected && templateLoaded && files.length > 0;
@@ -114,7 +115,8 @@ export default function Home() {
   const totalSize = useMemo(() => files.reduce((sum, file) => sum + file.size, 0), [files]);
   const progressIndex = workflowStep==="finish" ? finishPhase==="details"?5:finishPhase==="mockups"?6:7 : workflowStep==="connect"?0:workflowStep==="setup"?1:workflowStep==="designs"?2:(preflightOpen||running)?4:3;
 
-  function openProgressStep(index:number){if(index===0)return goToStep("connect");if(index===1)return goToStep("setup");if(index===2)return goToStep("designs");if(index===3)return goToStep("review");if(index===4){goToStep("review");return createDrafts()}if(!complete)return;setFinishPhase(index===5?"details":index===6?"mockups":"final");goToStep("finish",false,true)}
+  function confirmUploadInterruption(){return !running||window.confirm("Are you sure you want to leave this step? Doing so may halt your current design uploads before the Printify drafts are finished.")}
+  function openProgressStep(index:number){if(!confirmUploadInterruption())return;if(index===0)return goToStep("connect");if(index===1)return goToStep("setup");if(index===2)return goToStep("designs");if(index===3)return goToStep("review");if(index===4){goToStep("review");return createDrafts()}if(!complete)return;setFinishPhase(index===5?"details":index===6?"mockups":"final");goToStep("finish",false,true)}
 
   function canOpenStep(step:WorkflowStep){if(step==="connect")return true;if(step==="setup")return connected;if(step==="designs")return connected&&templateLoaded;if(step==="review")return ready;return complete}
   function goToStep(step:WorkflowStep,replace=false,force=false){if(!force&&!canOpenStep(step))return;setWorkflowStep(step);const url=new URL(window.location.href);url.searchParams.set("step",step);window.history[replace?"replaceState":"pushState"]({},"",url);window.scrollTo({top:0,behavior:"smooth"})}
@@ -190,7 +192,19 @@ export default function Home() {
   function updateDesign(id: string, change: Partial<DesignFile>) { setFiles((current) => current.map((file) => file.id === id ? { ...file, ...change } : file)); if(change.title!==undefined)setDrafts(current=>current.map(draft=>draft.clientId===id?{...draft,title:change.title}:draft)); }
   function applyBulkTitles() { const titles = bulkTitles.split(/\r?\n/).map((v) => v.replace(/^"|"$/g, "").trim()).filter(Boolean); setFiles((current) => current.map((file, index) => titles[index] ? { ...file, title: titles[index], tags: tagsFromTitle(titles[index]),etsy:undefined,etsyError:"" } : file)); }
   async function importTitleCsv(list: FileList | null) { const file = list?.[0]; if (!file) return; const values = titlesFromCsv(await file.text()); setBulkTitles(values.join("\n")); setFiles((current) => current.map((design, index) => values[index] ? { ...design, title: values[index].slice(0, 140), tags: tagsFromTitle(values[index]),etsy:undefined,etsyError:"" } : design)); if (csvPicker.current) csvPicker.current.value = ""; }
-  function useRecipe(recipe: Recipe) { setActiveRecipe(recipe);setPrintifyImageIndices(recipe.printifyImageIndices||[]);setTemplate(recipe.templateUrl);setMockupTheme(recipe.defaultMockupTheme || ""); setPricing(current=>({ ...current, targetProfit:Number(recipe.pricing?.targetProfit??DEFAULT_PRICING.targetProfit) })); setTemplateDetails(null); void loadTemplateUrl(recipe.templateUrl); }
+  function clearCurrentBatch(clearProduct=true){
+    const priorBatch=batchIdRef.current;
+    if(priorBatch){void clearBatchFiles(priorBatch);void fetch(`/api/batches?id=${encodeURIComponent(priorBatch)}`,{method:"DELETE"})}
+    batchIdRef.current="";window.localStorage.removeItem("goldie-active-batch");
+    const freshUrl=new URL(window.location.href);freshUrl.searchParams.delete("batch");window.history.replaceState({},"",freshUrl);
+    files.forEach(file=>URL.revokeObjectURL(file.previewUrl));
+    setFiles([]);setFileError("");setDrafts([]);setProcessed(0);setRunTotal(0);setComplete(false);setOpenedDrafts([]);setOpenAllMessage("");setBulkTitles("");setActiveDesign("");setPreflightOpen(false);setUploadNoticeOpen(false);setPrintifyImageIndices([]);setSharedMockups(undefined);setFinishPhase("details");syncedListingSignatures.current.clear();
+    if(clearProduct){setTemplate("");setTemplateDetails(null);setTemplateError("");setDescription("");setMockupTheme("");setActiveRecipe(null);setPricing(current=>({...current,targetProfit:DEFAULT_PRICING.targetProfit,shippingCost:0,shippingCharged:0}))}
+    if (folderPicker.current) folderPicker.current.value = "";
+    if (imagePicker.current) imagePicker.current.value = "";
+    if (csvPicker.current) csvPicker.current.value = "";
+  }
+  function useRecipe(recipe: Recipe) { const changingProduct=Boolean((activeRecipe?.id&&activeRecipe.id!==recipe.id)||(template&&template!==recipe.templateUrl));if(changingProduct&&(files.length>0||drafts.length>0||complete)){const count=files.length;if(!window.confirm(`Switch to “${recipe.name}” and start a new batch? This removes ${count} ${count===1?"design":"designs"} and all work from the current batch on this page.`))return false;clearCurrentBatch(false)}setActiveRecipe(recipe);setPrintifyImageIndices(recipe.printifyImageIndices||[]);setTemplate(recipe.templateUrl);setMockupTheme(recipe.defaultMockupTheme || ""); setPricing(current=>({ ...current, targetProfit:Number(recipe.pricing?.targetProfit??DEFAULT_PRICING.targetProfit) })); setTemplateDetails(null); void loadTemplateUrl(recipe.templateUrl);return true; }
   async function saveImagePreferences(indices:number[]){if(!activeRecipe)return;setPrintifyImageIndices(indices);await fetch("/api/product-recipes",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({...activeRecipe,printifyImageIndices:indices})});setActiveRecipe({...activeRecipe,printifyImageIndices:indices})}
   function applyBatchTitle(title:string){const next=title.slice(0,140);setFiles(current=>current.map(file=>({...file,title:next,tags:tagsFromTitle(next),etsy:undefined,etsyError:""})))}
   function addBatchKeyword(keyword:string){const current=files.length&&files.every(file=>file.title===files[0].title)?files[0].title:"";const phrases=current.split(",").map(value=>value.trim().toLocaleLowerCase());if(phrases.includes(keyword.trim().toLocaleLowerCase()))return;applyBatchTitle(current?`${current}, ${keyword}`:keyword)}
@@ -302,6 +316,7 @@ export default function Home() {
     draftRunActive.current=true;
     const completedDesignIds=new Set<string>();
     setRunning(true);
+    setUploadNoticeOpen(true);
     setRunTotal(targetFiles.length);
     setComplete(false);
     const batchBytes=targetFiles.reduce((sum,file)=>sum+file.size,0);
@@ -340,23 +355,8 @@ export default function Home() {
   }
 
   function startOver() {
-    const priorBatch=batchIdRef.current;if(priorBatch)void clearBatchFiles(priorBatch);batchIdRef.current="";window.localStorage.removeItem("goldie-active-batch");
-    const freshUrl=new URL(window.location.href);freshUrl.searchParams.delete("batch");window.history.replaceState({},"",freshUrl);
-    setTemplate("");
-    setTemplateDetails(null);
-    setTemplateError("");
-    setDescription("");
-    setFiles([]);
-    setFileError("");
-    setDrafts([]);
-    setProcessed(0);
-    setComplete(false);
-    setOpenedDrafts([]);
-    syncedListingSignatures.current.clear();
-    setOpenAllMessage("");
-    if (folderPicker.current) folderPicker.current.value = "";
-    if (imagePicker.current) imagePicker.current.value = "";
-    if (csvPicker.current) csvPicker.current.value = "";
+    if((files.length||drafts.length||template)&&!window.confirm("Clear this batch and start over? This removes the selected product, uploaded designs, titles, pricing work, and draft results from Goldie. It does not delete products already created in Printify."))return;
+    clearCurrentBatch(true);
     goToStep(connected?"setup":"connect",true,true);
   }
 
@@ -410,6 +410,8 @@ export default function Home() {
 
       {running&&<div className="upload-guard" role="alert" aria-live="assertive"><span className="upload-guard-pulse"/><div><b>Keep this page open</b><span>Your files are still uploading to Printify. Leaving or refreshing may interrupt the batch.</span></div><strong>{processed}/{runTotal}</strong></div>}
 
+      {running&&uploadNoticeOpen&&<div className="upload-notice-backdrop" role="presentation"><section className="upload-notice" role="alertdialog" aria-modal="true" aria-labelledby="upload-notice-title" aria-describedby="upload-notice-copy"><span className="upload-notice-icon">!</span><p className="mini-label">UPLOADS IN PROGRESS</p><h2 id="upload-notice-title">Please keep this page open.</h2><p id="upload-notice-copy">Goldie is uploading your designs and creating the Printify drafts now. Leaving, refreshing, switching products, or closing this page may halt the unfinished uploads.</p><div className="upload-notice-progress"><span className="upload-guard-pulse"/><b>{processed} of {runTotal} finished</b></div><button autoFocus onClick={()=>setUploadNoticeOpen(false)}>I’ll keep this page open</button></section></div>}
+
       <section className="hero workflow-hero">
         <div>
           <p className="eyebrow">{workflowHero.eyebrow}</p>
@@ -421,7 +423,7 @@ export default function Home() {
 
       <section className="workspace">
         <nav className="workflow-progress" aria-label="Listing Factory progress">
-          <div><p className="mini-label">YOUR BATCH</p><b>Step {progressIndex+1} of {PROGRESS_STEPS.length}</b></div>
+          <div className="workflow-progress-head"><div><p className="mini-label">YOUR BATCH</p><b>Step {progressIndex+1} of {PROGRESS_STEPS.length}</b></div>{(template||files.length>0||drafts.length>0)&&<button className="start-new-batch" disabled={running} onClick={startOver}>Clear batch + start over</button>}</div>
           {PROGRESS_STEPS.map((label,index)=>{const active=progressIndex===index,done=index<progressIndex,available=index===0||(index===1&&connected)||(index===2&&templateLoaded)||(index>=3&&index<=4&&ready)||(index>=5&&complete);return <button key={label} className={`${active?"active":""} ${done?"done":""}`} disabled={!available} aria-current={active?"step":undefined} onClick={()=>openProgressStep(index)}><span>{done?"✓":String(index+1).padStart(2,"0")}</span><span><b>{label}</b><small>{active?"You are here":done?"Complete":available?"Ready":"Complete the prior step"}</small></span></button>})}
           <p className="workflow-help">Goldie saves completed work. You can return to an earlier step without starting over.</p>
         </nav>
@@ -537,7 +539,7 @@ export default function Home() {
             </div>
           )}
           <p className="launch-note">Listings remain unpublished until you publish them in Printify.</p>
-          {(template || description || files.length > 0 || drafts.length > 0) && <button className="start-over-button" disabled={running} onClick={startOver}>Clear all / start over</button>}
+          {(template || description || files.length > 0 || drafts.length > 0) && <button className="start-over-button" disabled={running} onClick={startOver}>Clear batch + start over</button>}
 
         </aside>
         </div>

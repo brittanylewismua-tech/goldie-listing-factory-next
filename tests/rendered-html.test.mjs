@@ -72,12 +72,17 @@ test("uses individual shop-aware Printify editor buttons", async () => {
   assert.match(route, /body\.title\?\.trim\(\)\.slice\(0, 255\) \|\| body\.fileName/);
   assert.match(page, /Choose or add a saved product/);
   assert.match(page, /function startOver\(\)/);
-  assert.match(page, /Clear all \/ start over/);
+  assert.match(page, /Clear batch \+ start over/);
+  assert.match(page, /Switch to “\$\{recipe\.name\}” and start a new batch/);
+  assert.match(page, /clearCurrentBatch\(false\)/);
   assert.match(page, /folderPicker\.current\.value = ""/);
   assert.match(page, /imagePicker\.current\.value = ""/);
   assert.match(page, /function openAllDrafts\(\)/);
   assert.match(page, /Wait—do you really want to leave\? Your files are still uploading/);
   assert.match(page, /Keep this page open/);
+  assert.match(page, /Please keep this page open/);
+  assert.match(page, /Doing so may halt your current design uploads/);
+  assert.match(page, /setUploadNoticeOpen\(true\)/);
   assert.match(page, /beforeunload/);
   assert.match(page, /Open all in Printify/);
   assert.match(page, /drafts\.map/);
