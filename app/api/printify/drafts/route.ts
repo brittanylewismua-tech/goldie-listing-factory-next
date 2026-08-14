@@ -15,6 +15,7 @@ type TemplateProduct = {
   id: string;
   blueprint_id: number;
   print_provider_id: number;
+  description?:string;
   variants: Array<{ id: number; price: number; cost?: number; is_enabled: boolean }>;
   print_areas: Array<{
     variant_ids: number[];
@@ -178,7 +179,7 @@ export async function POST(request: Request) {
     const title = body.title?.trim().slice(0, 255) || body.fileName.replace(/\.[^.]+$/, "").replace(/[_-]+/g, " ").trim();
     const productBody = () => JSON.stringify({
         title: title || "Untitled design",
-        description: body.description ?? "",
+        description: body.description ?? template.description ?? "",
         blueprint_id: template.blueprint_id,
         print_provider_id: template.print_provider_id,
         variants: template.variants.map(({ id, price, cost, is_enabled }) => ({ id, price: recommendedPrice(cost ?? price, body.pricing), is_enabled })),

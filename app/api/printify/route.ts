@@ -12,6 +12,7 @@ type Product = {
   title: string;
   blueprint_id: number;
   print_provider_id: number;
+  description?: string;
   variants?: Array<{ id: number; price: number; cost?: number; is_enabled?: boolean }>;
   print_areas?: Array<{
     variant_ids: number[];
@@ -19,7 +20,9 @@ type Product = {
     placeholders?: Array<{ position?: string; images?: Array<{ id?: string; x?: number; y?: number; scale?: number; angle?: number }> }>;
   }>;
 };
+type Blueprint={id:number;title?:string;description?:string;brand?:string;model?:string};
 type CatalogVariant = { id: number; placeholders?: Array<{ position?: string; width?: number; height?: number }> };
+type Shipping={profiles?:Array<{variant_ids?:number[];first_item?:{cost?:number;currency?:string};countries?:string[]}>};
 class PrintifyApiError extends Error {
   constructor(public status: number, message: string) { super(message); }
 }
@@ -122,12 +125,15 @@ export async function POST(request: Request) {
     const configuredPlacements = found.product.print_areas?.flatMap((area) => area.placeholders ?? []).filter((placeholder) => placeholder.images?.[0]) ?? [];
     if (configuredPlacements.length === 0) return NextResponse.json({ error: "Add one placeholder design to every print area you want Goldie to use, save the Printify template, and load it again." }, { status: 400 });
     let provider = `Provider ${found.product.print_provider_id}`;
+    let blueprint:Blueprint={id:found.product.blueprint_id};
+    try { blueprint=await printify<Blueprint>(`/catalog/blueprints/${found.product.blueprint_id}.json`,token); } catch { /* Product data remains sufficient if catalog metadata is unavailable. */ }
     try {
       const providers = await printify<Array<{ id: number; title: string }>>(`/catalog/blueprints/${found.product.blueprint_id}/print_providers.json`, token);
       provider = providers.find((item) => item.id === found!.product.print_provider_id)?.title ?? provider;
     } catch { /* Provider names are optional; the numeric provider remains usable. */ }
     let maxPrintWidth: number | null = null;
     let maxPrintHeight: number | null = null;
+    let standardShipping:number|null=null,shippingCurrency="USD";
     try {
       const catalogResponse = await printify<CatalogVariant[] | { variants?: CatalogVariant[] }>(`/catalog/blueprints/${found.product.blueprint_id}/print_providers/${found.product.print_provider_id}/variants.json?show-out-of-stock=1`, token);
       const catalogVariants = Array.isArray(catalogResponse) ? catalogResponse : catalogResponse.variants ?? [];
@@ -141,6 +147,7 @@ export async function POST(request: Request) {
         .sort((left, right) => Number(right.width) * Number(right.height) - Number(left.width) * Number(left.height));
       if (candidates[0]) { maxPrintWidth = Number(candidates[0].width); maxPrintHeight = Number(candidates[0].height); }
     } catch { /* Print dimensions are an optimization; draft creation can continue without them. */ }
+    try { const shipping=await printify<Shipping>(`/catalog/blueprints/${found.product.blueprint_id}/print_providers/${found.product.print_provider_id}/shipping.json`,token),enabledIds=new Set(enabledVariants.map(variant=>variant.id)),domestic=(shipping.profiles||[]).filter(profile=>profile.countries?.includes("US")&&(profile.variant_ids||[]).some(id=>enabledIds.has(id))),rates=domestic.map(profile=>Number(profile.first_item?.cost||0)).filter(cost=>cost>0);if(rates.length){standardShipping=Math.max(...rates)/100;shippingCurrency=domestic.find(profile=>profile.first_item?.currency)?.first_item?.currency||"USD"} } catch { /* Pricing can continue without shipping metadata. */ }
     const db = runtimeEnv().DB;
     if (!db) return NextResponse.json({ error: "Secure batch storage is unavailable." }, { status: 503 });
     const batchId = crypto.randomUUID();
@@ -151,6 +158,7 @@ export async function POST(request: Request) {
       print_provider_id: found.product.print_provider_id,
       variants: found.product.variants ?? [],
       print_areas: found.product.print_areas ?? [],
+      description: found.product.description ?? "",
     };
     await db.batch([
       db.prepare("DELETE FROM printify_batch_sessions WHERE expires_at <= unixepoch()"),
@@ -159,7 +167,7 @@ export async function POST(request: Request) {
         .bind(batchId, user.userId, found.shop.id, found.product.id, JSON.stringify(safeTemplate), expiresAt),
     ]);
     const placementScale = Math.max(...configuredPlacements.map((placeholder) => Number(placeholder.images?.[0]?.scale || 1)));
-    return NextResponse.json({ product: { id: found.product.id, batchId, title: found.product.title, provider, enabledVariants: enabledVariants.length, shop: found.shop.title, maxPrintWidth, maxPrintHeight, placementScale } });
+    return NextResponse.json({ product: { id: found.product.id, batchId, title: found.product.title, description:found.product.description??"", blueprintId:found.product.blueprint_id, blueprintTitle:blueprint.title||found.product.title, brand:blueprint.brand||"", model:blueprint.model||"", provider, enabledVariants: enabledVariants.length, shop: found.shop.title, standardShipping,shippingCurrency,maxPrintWidth, maxPrintHeight, placementScale } });
   } catch (error) {
     const status = error instanceof PrintifyApiError && [400, 401, 403, 404, 429].includes(error.status) ? error.status : 500;
     return NextResponse.json({ error: error instanceof Error ? error.message : "Printify could not be reached." }, { status });

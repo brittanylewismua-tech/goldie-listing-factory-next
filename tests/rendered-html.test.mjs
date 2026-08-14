@@ -22,8 +22,8 @@ test("server-renders the branded Listing Factory", async () => {
   assert.match(html, /Your Printify account/);
   assert.match(html, /Choose a saved recipe or build a new one/);
   assert.match(html, /Printify template link/);
-  assert.match(html, /paste it only once/);
-  assert.match(html, /Default title structure/);
+  assert.match(html, /permanent description and product facts from Printify/);
+  assert.doesNotMatch(html, /Default title structure|Optional reusable description/);
   assert.doesNotMatch(html, /factory-switcher/);
   assert.match(html, /Add your finished designs/);
   assert.match(html, /Choose individual images/);
@@ -106,10 +106,11 @@ test("unifies recipes, listing editing, pricing, and mockups without the old fac
   ]);
   assert.doesNotMatch(page, /factory-switcher/);
   assert.match(recipes, /Printify template link/);
-  assert.match(recipes, /paste it only once/);
+  assert.match(recipes, /permanent description and product facts from Printify/);
   assert.match(recipes, /saved recipe/);
   assert.match(recipes, /Add another recipe/);
-  assert.match(recipes, /Save as my default pricing profile/);
+  assert.match(recipes, /The only recipe decision is the profit you want/);
+  assert.doesNotMatch(recipes, /Shipping cost|Shipping charged|Payment fixed fee/);
   assert.match(page, /Import title CSV/);
   assert.match(page, /Exact title phrases/);
   assert.match(page, /300 DPI recommended/);
@@ -119,6 +120,33 @@ test("unifies recipes, listing editing, pricing, and mockups without the old fac
   assert.match(mockups, /Create .*mockups/);
   assert.match(drafts, /recommendedPrice\(cost \?\? price, body\.pricing\)/);
   assert.match(drafts, /printifyImages/);
+});
+
+test("imports Printify product facts and automatically prepares product-specific Etsy details",async()=>{
+  const [page,printify,intelligence,drafts]=await Promise.all([
+    readFile(new URL("../app/page.tsx",import.meta.url),"utf8"),
+    readFile(new URL("../app/api/printify/route.ts",import.meta.url),"utf8"),
+    readFile(new URL("../app/api/listing-intelligence/route.ts",import.meta.url),"utf8"),
+    readFile(new URL("../app/api/printify/drafts/route.ts",import.meta.url),"utf8"),
+  ]);
+  assert.match(printify,/blueprintTitle/);assert.match(printify,/description:found\.product\.description/);
+  assert.match(page,/Completing Etsy details/);assert.match(page,/Etsy details completed/);
+  assert.match(page,/design\.etsy\?\.blurb,description/);
+  assert.match(intelligence,/fields differ/);assert.match(intelligence,/Never fill holiday, occasion, recipient, or style/);
+  assert.match(drafts,/template\.description/);
+});
+
+test("imports shipping and keeps final listing edits attached to the exact Printify draft",async()=>{
+  const [page,printify,update]=await Promise.all([
+    readFile(new URL("../app/page.tsx",import.meta.url),"utf8"),
+    readFile(new URL("../app/api/printify/route.ts",import.meta.url),"utf8"),
+    readFile(new URL("../app/api/printify/drafts/update/route.ts",import.meta.url),"utf8"),
+  ]);
+  assert.match(printify,/shipping\.json/);assert.match(printify,/standardShipping/);
+  assert.match(page,/Finish every listing from its real Printify draft/);
+  assert.match(page,/api\/printify\/drafts\/update/);
+  assert.match(update,/json_extract\(response_json,'\$\.id'\)/);
+  assert.match(update,/method:"PUT"/);
 });
 
 test("matches Printify editor DPI instead of comparing against template pixel dimensions", async () => {
