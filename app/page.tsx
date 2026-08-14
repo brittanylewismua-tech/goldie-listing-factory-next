@@ -12,12 +12,22 @@ import { normalizedPlacementScale, printifyDpi } from "./print-quality";
 import { isPermanentUploadError, MAX_FILE_BYTES, oversizedFileMessage } from "./upload-policy";
 import { safeImagePreviewDataUrl } from "./client-image-preview";
 import { prepareArtworkFile } from "./client-artwork-upload";
+import { clearBatchFiles, loadBatchFiles, saveBatchFiles } from "./batch-cache";
 
 type VisibleBounds={left:number;top:number;right:number;bottom:number};
 type EtsyDetails={category:string;attributes:Record<string,string>;optional:Record<string,string>;blurb:string;confidence:"high"|"review"};
 type DesignFile = { name: string; size: number; id: string; file: File; previewUrl: string; title: string; tags: string[]; width?: number; height?: number; visibleBounds?:VisibleBounds; hasTransparency?:boolean; paddingStatus?:"checking"|"trimmed"|"full";etsy?:EtsyDetails;etsyError?:string };
 type TemplateDetails = { id: string; batchId: string; title: string; description:string; blueprintId:number;blueprintTitle:string;brand:string;model:string;provider: string; enabledVariants: number; shop: string; standardShipping?:number|null;shippingCurrency?:string;maxPrintWidth?: number | null; maxPrintHeight?: number | null; placementScale?: number | null };
 type DraftResult = { id?: string; clientId: string; name: string; title?: string; tags?: string[]; previewUrl?: string; printifyImages?: string[]; shopId?: number; editorUrl?: string; status: "Created" | "Failed"; error?: string };
+type WorkflowStep = "connect" | "setup" | "designs" | "review" | "finish";
+
+const WORKFLOW_STEPS: Array<{id:WorkflowStep;number:string;label:string}> = [
+  {id:"connect",number:"01",label:"Connect Printify"},
+  {id:"setup",number:"02",label:"Choose setup"},
+  {id:"designs",number:"03",label:"Add designs"},
+  {id:"review",number:"04",label:"Review batch"},
+  {id:"finish",number:"05",label:"Finish listings"},
+];
 
 const MAX_BATCH_FILES = 20;
 const MAX_BATCH_BYTES = 500 * 1024 * 1024;
@@ -57,6 +67,9 @@ export default function Home() {
   const imagePicker = useRef<HTMLInputElement>(null);
   const csvPicker = useRef<HTMLInputElement>(null);
   const syncedListingSignatures = useRef<Map<string,string>>(new Map());
+  const batchIdRef=useRef("");
+  const snapshotReady=useRef(false);
+  const resumeAttempted=useRef(false);
   const [connected, setConnected] = useState(false);
   const [token, setToken] = useState("");
   const [connectionError, setConnectionError] = useState("");
@@ -87,11 +100,30 @@ export default function Home() {
   const [printifyImageIndices,setPrintifyImageIndices]=useState<number[]>([]);
   const [sharedMockups,setSharedMockups]=useState<{theme:string;ids:string[]}|undefined>();
   const [preparingEtsy,setPreparingEtsy]=useState(false);
+  const [workflowStep,setWorkflowStep]=useState<WorkflowStep>("connect");
+  const [restoringBatch,setRestoringBatch]=useState(true);
+  const [resumeProcessing,setResumeProcessing]=useState(false);
 
   const templateLoaded = templateDetails !== null;
   const ready = connected && templateLoaded && files.length > 0;
   const missingRequirement = !connected ? "Connect Printify first" : !templateLoaded ? "Choose or create a saved listing setup" : files.length === 0 ? "Add at least one design" : "";
   const totalSize = useMemo(() => files.reduce((sum, file) => sum + file.size, 0), [files]);
+
+  function canOpenStep(step:WorkflowStep){if(step==="connect")return true;if(step==="setup")return connected;if(step==="designs")return connected&&templateLoaded;if(step==="review")return ready;return complete}
+  function goToStep(step:WorkflowStep,replace=false,force=false){if(!force&&!canOpenStep(step))return;setWorkflowStep(step);const url=new URL(window.location.href);url.searchParams.set("step",step);window.history[replace?"replaceState":"pushState"]({},"",url);window.scrollTo({top:0,behavior:"smooth"})}
+
+  useEffect(()=>{const read=()=>{const value=new URL(window.location.href).searchParams.get("step") as WorkflowStep|null;if(value&&WORKFLOW_STEPS.some(step=>step.id===value))setWorkflowStep(value)};read();window.addEventListener("popstate",read);return()=>window.removeEventListener("popstate",read)},[]);
+  useEffect(()=>{if(checkingConnection)return;if(workflowStep==="connect"&&connected)goToStep("setup",true);// eslint-disable-next-line react-hooks/exhaustive-deps
+  },[checkingConnection]);
+  useEffect(()=>{if(checkingConnection||restoringBatch||canOpenStep(workflowStep))return;const fallback=!connected?"connect":!templateLoaded?"setup":!files.length?"designs":!complete?"review":"finish";goToStep(fallback,true,true);// eslint-disable-next-line react-hooks/exhaustive-deps
+  },[checkingConnection,restoringBatch,connected,templateLoaded,files.length,complete,workflowStep]);
+
+  useEffect(()=>{void(async()=>{try{const id=window.localStorage.getItem("goldie-active-batch")||"";if(!id)return;const response=await fetch(`/api/batches?id=${encodeURIComponent(id)}`);if(!response.ok)return;const payload=await response.json() as {batch?:{id:string;step:WorkflowStep;status:string;state?:Record<string,unknown>}};if(!payload.batch?.state)return;const state=payload.batch.state as {template?:string;templateDetails?:TemplateDetails;description?:string;pricing?:Pricing;mockupTheme?:string;activeRecipe?:Recipe;designs?:Array<Omit<DesignFile,"file"|"previewUrl">>;drafts?:DraftResult[];complete?:boolean;bulkTitles?:string;printifyImageIndices?:number[]};const cached=await loadBatchFiles(id).catch(()=>[]);const designs=(state.designs||[]).map((design,index)=>{const file=cached[index];return file?{...design,file,previewUrl:URL.createObjectURL(file)}:null}).filter(Boolean) as DesignFile[];batchIdRef.current=id;setTemplate(state.template||"");setTemplateDetails(state.templateDetails||null);setDescription(state.description||"");if(state.pricing)setPricing(state.pricing);setMockupTheme(state.mockupTheme||"");setActiveRecipe(state.activeRecipe||null);setFiles(designs);setDrafts(state.drafts||[]);setComplete(Boolean(state.complete));setBulkTitles(state.bulkTitles||"");setPrintifyImageIndices(state.printifyImageIndices||[]);setResumeProcessing(payload.batch.status==="processing"&&designs.length>0);const step=state.complete?"finish":payload.batch.step;setWorkflowStep(step);const url=new URL(window.location.href);url.searchParams.set("step",step);window.history.replaceState({},"",url);if(payload.batch.status==="processing"&&state.template)void loadTemplateUrl(state.template)}finally{snapshotReady.current=true;setRestoringBatch(false)}})()},[]);
+
+  useEffect(()=>{if(!resumeProcessing||resumeAttempted.current||!connected||!templateLoaded||!files.length)return;resumeAttempted.current=true;setResumeProcessing(false);const succeeded=new Set(drafts.filter(draft=>draft.status==="Created").map(draft=>draft.clientId));const remaining=files.filter(file=>!succeeded.has(file.id));if(remaining.length)void runDrafts(remaining,true)},[resumeProcessing,connected,templateLoaded,files,drafts]);
+
+  useEffect(()=>{if(!snapshotReady.current||restoringBatch||(!template&&!files.length&&!drafts.length))return;const timer=window.setTimeout(()=>{const id=batchIdRef.current||crypto.randomUUID();batchIdRef.current=id;window.localStorage.setItem("goldie-active-batch",id);const designs=files.map(({file:ignoredFile,previewUrl:ignoredPreview,...design})=>design);void fetch("/api/batches",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,status:running?"processing":complete?drafts.some(draft=>draft.status==="Failed")?"needs_attention":"complete":"draft",step:workflowStep,setupName:activeRecipe?.name||"",productTitle:templateDetails?.blueprintTitle||"",designCount:files.length,state:{template,templateDetails,description,pricing,mockupTheme,activeRecipe,designs,drafts,complete,bulkTitles,printifyImageIndices}})})},700);return()=>window.clearTimeout(timer);// eslint-disable-next-line react-hooks/exhaustive-deps
+  },[restoringBatch,workflowStep,template,templateDetails,description,pricing,mockupTheme,activeRecipe,files.map(file=>`${file.id}:${file.title}:${file.tags.join("|")}:${JSON.stringify(file.etsy||{})}`).join(";"),drafts,complete,running,bulkTitles,printifyImageIndices]);
 
   useEffect(() => {
     fetch("/api/printify")
@@ -143,6 +175,7 @@ export default function Home() {
     }
     setFileError("");
     setFiles(images);
+    const durableBatchId=batchIdRef.current||crypto.randomUUID();batchIdRef.current=durableBatchId;window.localStorage.setItem("goldie-active-batch",durableBatchId);void saveBatchFiles(durableBatchId,images.map(image=>image.file));
     setComplete(false);
     setDrafts([]);
     setProcessed(0);
@@ -165,7 +198,7 @@ export default function Home() {
       const response = await fetchWithDeadline("/api/printify", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ token }) }, 60000);
       const result = await response.json() as { connected?: boolean; error?: string };
       if (!response.ok || !result.connected) throw new Error(result.error || "Printify could not be connected.");
-      setConnected(true); setToken("");
+      setConnected(true); setToken(""); window.setTimeout(()=>goToStep("setup"),250);
     } catch (error) { setConnected(false); setConnectionError(error instanceof Error ? error.message : "Printify could not be connected."); }
     finally { setConnecting(false); }
   }
@@ -278,6 +311,7 @@ export default function Home() {
     setPreparationMessage("");
     setRunTotal(0);
     setComplete(true);
+    goToStep("finish",false,true);
   }
 
   async function syncListingFields(design:DesignFile,details?:EtsyDetails){const draft=drafts.find(item=>item.clientId===design.id);if(!draft?.id)throw new Error("The matching Printify draft could not be found.");const response=await fetch("/api/printify/drafts/update",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({productId:draft.id,title:design.title,tags:design.tags,description:[details?.blurb,description].filter(Boolean).join("\n\n"),etsyDetails:details})});const payload=await response.json() as {error?:string};if(!response.ok)throw new Error(payload.error||"Printify could not save the completed listing.")}
@@ -292,6 +326,7 @@ export default function Home() {
   }
 
   function startOver() {
+    const priorBatch=batchIdRef.current;if(priorBatch)void clearBatchFiles(priorBatch);batchIdRef.current="";window.localStorage.removeItem("goldie-active-batch");
     setTemplate("");
     setTemplateDetails(null);
     setTemplateError("");
@@ -307,6 +342,7 @@ export default function Home() {
     if (folderPicker.current) folderPicker.current.value = "";
     if (imagePicker.current) imagePicker.current.value = "";
     if (csvPicker.current) csvPicker.current.value = "";
+    goToStep(connected?"setup":"connect",true,true);
   }
 
   function openDraft(draft: DraftResult) {
@@ -340,7 +376,7 @@ export default function Home() {
           </div>
         </div>
         <div className="top-actions">
-          <nav className="top-nav"><a className="active" href="/">Listing Factory</a><a href="/keywords">Keyword Banks</a><a href="/mockups">Mockup Sets</a></nav>
+          <nav className="top-nav"><a className="active" href="/">Listing Factory</a><a href="/batches">Batch History</a><a href="/keywords">Keyword Banks</a><a href="/mockups">Mockup Sets</a></nav>
           {owner && <a className="diagnostics-link" href="/mastermind-admin" aria-label="Open Goldie Diagnostics" title="Goldie Diagnostics">★</a>}
           <a className="usage-link" href="/usage">Usage + plan</a>
           <span className="secure-pill"><i /> Secure workspace</span>
@@ -356,8 +392,14 @@ export default function Home() {
       </section>
 
       <section className="workspace">
+        <nav className="workflow-progress" aria-label="Listing Factory progress">
+          <div><p className="mini-label">YOUR BATCH</p><b>Step {WORKFLOW_STEPS.findIndex(item=>item.id===workflowStep)+1} of {WORKFLOW_STEPS.length}</b></div>
+          {WORKFLOW_STEPS.map((step,index)=>{const active=workflowStep===step.id,available=canOpenStep(step.id),done=index<WORKFLOW_STEPS.findIndex(item=>item.id===workflowStep);return <button key={step.id} className={`${active?"active":""} ${done?"done":""}`} disabled={!available} aria-current={active?"step":undefined} onClick={()=>goToStep(step.id)}><span>{done?"✓":step.number}</span><span><b>{step.label}</b><small>{active?"You are here":done?"Complete":available?"Ready":"Complete the prior step"}</small></span></button>})}
+          <p className="workflow-help">Goldie saves completed work. You can return to an earlier step without starting over.</p>
+        </nav>
+        <div className="workflow-stage">
         <div className="steps-column">
-          <article className={`step-card ${connected ? "done" : ""}`}>
+          <article className={`step-card workflow-panel ${connected ? "done" : ""} ${workflowStep==="connect"?"active-panel":"hidden-panel"}`}>
             <div className="step-number">01</div>
             <div className="step-content">
               <div className="step-heading"><div><p className="mini-label">PRINTIFY CONNECTION</p><h2>Your Printify account</h2></div>{connected && <span className="done-mark">✓ Connected</span>}</div>
@@ -373,14 +415,15 @@ export default function Home() {
               ) : (
                 <><div className="connection-row"><span className="connection-icon">P</span><div><b>Printify connected</b><small>Your connection will be remembered</small></div><button onClick={async () => { await fetch("/api/printify", { method: "DELETE" }); setConnected(false); setToken(""); setTemplateDetails(null); setConnectionError(""); }}>Disconnect</button></div>{connectionError && <p className="field-warning" role="status">{connectionError}</p>}</>
               )}
+              {connected&&<button className="workflow-next" onClick={()=>goToStep("setup")}>Choose a listing setup <span>→</span></button>}
             </div>
           </article>
 
-          <SavedWorkflow connected={connected} templateUrl={template} mockupTheme={mockupTheme} pricing={pricing} templateVerified={templateLoaded} loadingTemplate={loadingTemplate} onTemplateUrl={(value) => { setTemplate(value); setTemplateDetails(null); setTemplateError(""); }} onUseRecipe={useRecipe} onVerifyTemplate={loadTemplateUrl} onPricing={setPricing} onMockupTheme={setMockupTheme} />
+          <div className={`workflow-panel ${workflowStep==="setup"?"active-panel":"hidden-panel"}`}><SavedWorkflow connected={connected} templateUrl={template} mockupTheme={mockupTheme} pricing={pricing} templateVerified={templateLoaded} loadingTemplate={loadingTemplate} onTemplateUrl={(value) => { setTemplate(value); setTemplateDetails(null); setTemplateError(""); }} onUseRecipe={useRecipe} onVerifyTemplate={loadTemplateUrl} onPricing={setPricing} onMockupTheme={setMockupTheme} />
           {templateError && <p className="field-error recipe-error" role="alert">{templateError}</p>}
-          {templateDetails && <div className="template-proof recipe-proof"><div className="product-thumb"><span>YOUR<br/>ART</span></div><div className="template-info"><b>{templateDetails.blueprintTitle}</b><span>{templateDetails.provider} · {templateDetails.enabledVariants} enabled variants</span><span>{description?"Description imported":"No description found"} · {templateDetails.standardShipping!=null?`${templateDetails.shippingCurrency} ${templateDetails.standardShipping.toFixed(2)} standard shipping imported`:"Shipping checked during pricing"}</span></div><span className="template-badge">Product facts imported</span></div>}
+          {templateDetails && <><div className="template-proof recipe-proof"><div className="product-thumb"><span>YOUR<br/>ART</span></div><div className="template-info"><b>{templateDetails.blueprintTitle}</b><span>{templateDetails.provider} · {templateDetails.enabledVariants} enabled variants</span><span>{description?"Description imported":"No description found"} · {templateDetails.standardShipping!=null?`${templateDetails.shippingCurrency} ${templateDetails.standardShipping.toFixed(2)} standard shipping imported`:"Shipping checked during pricing"}</span></div><span className="template-badge">Product facts imported</span></div><button className="workflow-next" onClick={()=>goToStep("designs")}>Add finished designs <span>→</span></button></>}</div>
 
-          <article className={`step-card ${files.length ? "done" : ""}`}>
+          <article className={`step-card workflow-panel ${files.length ? "done" : ""} ${workflowStep==="finish"?"finish-mode":""} ${workflowStep==="designs"||workflowStep==="finish"?"active-panel":"hidden-panel"}`}>
             <div className="step-number">03</div>
             <div className="step-content">
               <div className="step-heading"><div><p className="mini-label">DESIGNS</p><h2>Add your finished designs</h2></div>{files.length > 0 && <span className="done-mark">✓ {files.length} loaded</span>}</div>
@@ -403,6 +446,7 @@ export default function Home() {
               </div>
               {fileError && <p className="file-limit-error" role="alert"><b>That batch can’t be added.</b><span>{fileError}</span></p>}
               {files.length > 0 && <div className="batch-capacity"><div><b>{files.length}/20 designs</b><span>{20 - files.length} spaces remaining</span></div><div className="capacity-track"><span style={{ width: `${(files.length / 20) * 100}%` }} /></div></div>}
+              {files.length>0&&!complete&&workflowStep==="designs"&&<button className="workflow-next" onClick={()=>goToStep("review")}>Review this batch <span>→</span></button>}
               {files.length > 0 && complete && <div className="listing-editor">
                 <div className="editor-heading"><div><b>Finish every listing from its real Printify draft</b><span>Build the final title and tags here. Goldie automatically completes the unique introduction and product-specific Etsy details when you leave the field.</span></div><span>{files.length} listings</span></div>
                 <div className="bulk-title-box"><textarea value={bulkTitles} onChange={(e) => setBulkTitles(e.target.value)} rows={3} placeholder="Paste one title per line from eRank or a CSV column"/><div><button onClick={applyBulkTitles}>Apply titles in order</button><button className="secondary-import" onClick={() => csvPicker.current?.click()}>Import title CSV</button><input ref={csvPicker} hidden type="file" accept=".csv,text/csv" onChange={(event) => void importTitleCsv(event.target.files)}/></div></div>
@@ -413,7 +457,7 @@ export default function Home() {
           </article>
         </div>
 
-        <aside className="launch-panel">
+        <aside className={`launch-panel workflow-panel ${workflowStep==="review"?"active-panel":"hidden-panel"}`}>
           <div className="launch-top">
             <Image src="/goldie-g.png" width={2000} height={2000} alt="" className="goldie-g" />
             <p className="mini-label">BATCH SUMMARY</p>
@@ -423,8 +467,13 @@ export default function Home() {
 
           <div className="summary-list">
             <div><span>Printify</span><b className={connected ? "ready-text" : "waiting-text"}>{connected ? "Connected" : "Waiting"}</b></div>
-            <div><span>Listing setup</span><b>{templateLoaded ? "Ready" : "Not selected"}</b></div>
+            <div><span>Listing setup</span><b>{activeRecipe?.name||templateDetails?.blueprintTitle||"Not selected"}</b><button onClick={()=>goToStep("setup")}>Edit</button></div>
+            <div><span>Product</span><b>{templateDetails?.blueprintTitle||"Not selected"}</b></div>
             <div><span>Designs</span><b>{files.length ? `${files.length} / 20` : "Not added"}</b></div>
+            <div><span>Profit target</span><b>${pricing.targetProfit.toFixed(2)} per item</b></div>
+            <div><span>Standard shipping</span><b>{templateDetails?.standardShipping!=null?`${templateDetails.shippingCurrency} ${templateDetails.standardShipping.toFixed(2)}`:"Calculated from Printify"}</b></div>
+            <div><span>Keyword bank</span><b>{activeRecipe?.keywordListId?"Saved with setup":"Choose after drafts"}</b></div>
+            <div><span>Mockup set</span><b>{mockupTheme||"Choose after drafts"}</b></div>
             <div><span>Publishing</span><b>Draft only</b></div>
           </div>
 
@@ -449,9 +498,10 @@ export default function Home() {
           {(template || description || files.length > 0 || drafts.length > 0) && <button className="start-over-button" disabled={running} onClick={startOver}>Clear all / start over</button>}
 
         </aside>
+        </div>
       </section>
 
-      {complete && <section className="post-draft-workspace"><div className="post-draft-heading"><div><p className="mini-label">PRINTIFY DRAFTS + MOCKUPS</p><h2>Review the real product previews, then finish each listing.</h2><p>Only open Printify when a preview needs manual size or placement adjustment. Mockup choices can be different for every listing.</p></div>{drafts.filter((draft) => draft.status === "Created").length > 1 && <button className="open-all-button" onClick={openAllDrafts}>Open all in Printify</button>}</div>{openAllMessage && <p className="open-all-message" role="status">{openAllMessage}</p>}<div className="draft-card-grid">{drafts.map((draft) => { const design=files.find(file=>file.id===draft.clientId); return <article className={`draft-card ${draft.status === "Failed" ? "failed" : ""}`} key={draft.clientId}><div className="draft-card-top">{draft.previewUrl ? <img src={draft.previewUrl} alt={`Printify preview for ${draft.title || draft.name}`}/> : design ? <div className="pending-preview"><img src={design.previewUrl} alt="Design preview"/><span>Printify preview processing</span></div> : <span className="draft-check">!</span>}<div><span className="draft-state">{draft.status === "Created" ? "PRINTIFY DRAFT CREATED" : "DRAFT FAILED"}</span><h3>{draft.title || draft.name}</h3><small>{draft.status === "Created" ? "Unpublished · pricing, tags, and description applied" : draft.error}</small>{design?.tags?.length ? <div className="tag-row">{design.tags.map(tag=><span key={tag}>{tag}</span>)}</div> : null}</div>{draft.editorUrl && draft.id ? <button className={`edit-draft-button ${openedDrafts.includes(draft.id) ? "opened" : ""}`} onClick={() => openDraft(draft)}><i />{openedDrafts.includes(draft.id) ? "Opened" : "Adjust in Printify"}</button> : null}</div>{draft.status === "Created" && <PrintifyImagePicker images={(draft.printifyImages || []).filter(Boolean)} indices={printifyImageIndices} onApplyAll={setPrintifyImageIndices} onSaveRecipe={activeRecipe?(values)=>void saveImagePreferences(values):undefined}/>} {draft.status === "Created" && design && <details className="draft-mockups"><summary>Optional: create Goldie lifestyle mockups</summary><IntegratedMockups design={design.file} defaultTheme={mockupTheme} referenceUrl={draft.previewUrl} sharedSelection={sharedMockups} onShare={setSharedMockups}/></details>}{draft.status === "Failed" && <button className="error-help-link" onClick={() => window.dispatchEvent(new CustomEvent("goldie-support", { detail: draft.error ?? "A design failed" }))}>Get help with this error</button>}</article>})}</div></section>}
+      {complete && workflowStep==="finish" && <section className="post-draft-workspace"><div className="post-draft-heading"><div><p className="mini-label">PRINTIFY DRAFTS + MOCKUPS</p><h2>Review the real product previews, then finish each listing.</h2><p>Only open Printify when a preview needs manual size or placement adjustment. Mockup choices can be different for every listing.</p></div>{drafts.filter((draft) => draft.status === "Created").length > 1 && <button className="open-all-button" onClick={openAllDrafts}>Open all in Printify</button>}</div>{openAllMessage && <p className="open-all-message" role="status">{openAllMessage}</p>}<div className="draft-card-grid">{drafts.map((draft) => { const design=files.find(file=>file.id===draft.clientId); return <article className={`draft-card ${draft.status === "Failed" ? "failed" : ""}`} key={draft.clientId}><div className="draft-card-top">{draft.previewUrl ? <img src={draft.previewUrl} alt={`Printify preview for ${draft.title || draft.name}`}/> : design ? <div className="pending-preview"><img src={design.previewUrl} alt="Design preview"/><span>Printify preview processing</span></div> : <span className="draft-check">!</span>}<div><span className="draft-state">{draft.status === "Created" ? "PRINTIFY DRAFT CREATED" : "DRAFT FAILED"}</span><h3>{draft.title || draft.name}</h3><small>{draft.status === "Created" ? "Unpublished · pricing, tags, and description applied" : draft.error}</small>{design?.tags?.length ? <div className="tag-row">{design.tags.map(tag=><span key={tag}>{tag}</span>)}</div> : null}</div>{draft.editorUrl && draft.id ? <button className={`edit-draft-button ${openedDrafts.includes(draft.id) ? "opened" : ""}`} onClick={() => openDraft(draft)}><i />{openedDrafts.includes(draft.id) ? "Opened" : "Adjust in Printify"}</button> : null}</div>{draft.status === "Created" && <PrintifyImagePicker images={(draft.printifyImages || []).filter(Boolean)} indices={printifyImageIndices} onApplyAll={setPrintifyImageIndices} onSaveRecipe={activeRecipe?(values)=>void saveImagePreferences(values):undefined}/>} {draft.status === "Created" && design && <details className="draft-mockups"><summary>Optional: create Goldie lifestyle mockups</summary><IntegratedMockups design={design.file} defaultTheme={mockupTheme} referenceUrl={draft.previewUrl} sharedSelection={sharedMockups} onShare={setSharedMockups}/></details>}{draft.status === "Failed" && <button className="error-help-link" onClick={() => window.dispatchEvent(new CustomEvent("goldie-support", { detail: draft.error ?? "A design failed" }))}>Get help with this error</button>}</article>})}</div></section>}
 
       {preflightOpen && <div className="preflight-backdrop" role="presentation" onMouseDown={(e)=>{if(e.target===e.currentTarget)setPreflightOpen(false)}}><section className="preflight" role="dialog" aria-modal="true" aria-labelledby="preflight-title"><p className="mini-label">CREATE PRINTIFY DRAFTS</p><h2 id="preflight-title">Create {files.length} product {files.length===1?"draft":"drafts"}?</h2><div className="preflight-list"><div><span>Printify product</span><b>✓ {templateDetails?.blueprintTitle}</b></div><div><span>Design files</span><b>✓ {files.length} ready</b></div><div><span>Permanent description</span><b>{description.trim()?"✓ Imported from Printify":"None found — can be added later"}</b></div><div><span>Variant pricing</span><b>✓ Costs, shipping, fees, and profit applied</b></div><div><span>Publishing</span><b>Unpublished Printify drafts only</b></div></div><p className="preflight-explainer">After these drafts exist, Goldie will show their real previews and help finish each title, tags, unique introduction, Etsy details, and mockups.</p><div className="preflight-actions"><button className="preflight-cancel" onClick={()=>setPreflightOpen(false)}>Go back</button><button className="preflight-confirm" onClick={confirmDrafts}>Create Printify drafts →</button></div></section></div>}
 

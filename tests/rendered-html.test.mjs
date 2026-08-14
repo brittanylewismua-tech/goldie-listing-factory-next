@@ -126,6 +126,19 @@ test("unifies saved listing setups, editing, pricing, and mockups without the ol
   assert.match(drafts, /printifyImages/);
 });
 
+test("guides sellers through a resumable five-step create flow",async()=>{
+  const [page,batches,route,cache]=await Promise.all([
+    readFile(new URL("../app/page.tsx",import.meta.url),"utf8"),
+    readFile(new URL("../app/batches/page.tsx",import.meta.url),"utf8"),
+    readFile(new URL("../app/api/batches/route.ts",import.meta.url),"utf8"),
+    readFile(new URL("../app/batch-cache.ts",import.meta.url),"utf8"),
+  ]);
+  assert.match(page,/Connect Printify/);assert.match(page,/Choose setup/);assert.match(page,/Add designs/);assert.match(page,/Review batch/);assert.match(page,/Finish listings/);
+  assert.match(page,/aria-current=\{active\?"step"/);assert.match(page,/You are here/);assert.match(page,/Complete the prior step/);
+  assert.match(page,/goldie-active-batch/);assert.match(page,/saveBatchFiles/);assert.match(page,/\/api\/batches/);
+  assert.match(batches,/Pick up exactly where you left off/);assert.match(batches,/Resume batch/);assert.match(route,/listing_batches/);assert.match(cache,/indexedDB/);
+});
+
 test("imports Printify product facts and automatically prepares product-specific Etsy details",async()=>{
   const [page,printify,intelligence,drafts]=await Promise.all([
     readFile(new URL("../app/page.tsx",import.meta.url),"utf8"),

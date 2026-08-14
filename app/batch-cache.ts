@@ -1,0 +1,6 @@
+const DB_NAME="goldie-listing-factory";
+const STORE="batch-files";
+function openDb(){return new Promise<IDBDatabase>((resolve,reject)=>{const request=indexedDB.open(DB_NAME,1);request.onupgradeneeded=()=>{if(!request.result.objectStoreNames.contains(STORE))request.result.createObjectStore(STORE)};request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error)})}
+export async function saveBatchFiles(batchId:string,files:File[]){const database=await openDb();await new Promise<void>((resolve,reject)=>{const tx=database.transaction(STORE,"readwrite");tx.objectStore(STORE).put(files,batchId);tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error)});database.close()}
+export async function loadBatchFiles(batchId:string){const database=await openDb();const files=await new Promise<File[]>((resolve,reject)=>{const request=database.transaction(STORE).objectStore(STORE).get(batchId);request.onsuccess=()=>resolve((request.result||[]) as File[]);request.onerror=()=>reject(request.error)});database.close();return files}
+export async function clearBatchFiles(batchId:string){const database=await openDb();await new Promise<void>((resolve,reject)=>{const tx=database.transaction(STORE,"readwrite");tx.objectStore(STORE).delete(batchId);tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error)});database.close()}
