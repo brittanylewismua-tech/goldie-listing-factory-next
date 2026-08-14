@@ -220,7 +220,7 @@ test("sends private staged artwork directly to Printify without a public callbac
 test("parses real eRank exports and creates Etsy-valid title phrases", async () => {
   const { phrasesFromErank, tagsFromTitle, titlesFromCsv } = await import("../app/seo-utils.ts");
   assert.deepEqual(phrasesFromErank('Keyword,Searches,Competition\n"western wall art",1240,43000\n"pink dorm poster",720,18000'), ["western wall art", "pink dorm poster"]);
-  assert.deepEqual(tagsFromTitle("Western Cowgirl Wall Art, Motivational Office Poster, Entrepreneur Gift"), ["western cowgirl", "wall art", "motivational", "office poster", "entrepreneur gift"]);
+  assert.deepEqual(tagsFromTitle("Western Cowgirl Wall Art, Motivational Office Poster, Entrepreneur Gift"), ["western cowgirl", "wall art", "motivational office", "office poster", "entrepreneur gift"]);
   assert.deepEqual(titlesFromCsv('Title,Searches\n"Western Art, Cowgirl Decor",200\n"CEO Office Art",100'), ["Western Art, Cowgirl Decor", "CEO Office Art"]);
 });
 

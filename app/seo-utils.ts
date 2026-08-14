@@ -40,7 +40,14 @@ function splitLongPhrase(phrase: string) {
     }
     memo.set(index, best); return best;
   };
-  return partition(0);
+  const pieces = partition(0);
+  return pieces.map((piece) => {
+    if (piece.includes(" ") || words.length < 2) return piece;
+    const index = words.indexOf(piece);
+    const pair = index <= 0 ? words.slice(0, 2) : words.slice(index - 1, index + 1);
+    const replacement = pair.join(" ");
+    return replacement.length <= 20 ? replacement : piece;
+  });
 }
 
 export function tagsFromTitle(title: string) {
