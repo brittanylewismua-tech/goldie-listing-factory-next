@@ -1,6 +1,5 @@
 "use client";
 import { useEffect, useState } from "react";
-import { phrasesFromErank } from "./seo-utils";
 
 export type Pricing = { targetProfit: number; etsyFeePercent: number; fixedFee: number; listingFee: number; shippingCost: number; shippingCharged: number };
 export type Recipe = { id: string; name: string; templateUrl: string; description: string; defaultTitle: string; defaultMockupTheme: string; pricing: Pricing; keywordListId?:string; printifyImageIndices?:number[]; normalizePadding?:boolean };
@@ -37,14 +36,11 @@ export function SavedWorkflow(props: WorkflowProps) {
 }
 
 export function KeywordBank({ onAdd,preferredListId }: { onAdd: (keyword: string) => void;preferredListId?:string }) {
-  const [lists, setLists] = useState<KeywordList[]>([]), [name, setName] = useState(""), [raw, setRaw] = useState(""), [active, setActive] = useState(""), [message, setMessage] = useState("");
+  const [lists, setLists] = useState<KeywordList[]>([]), [active, setActive] = useState("");
   const reload = () => fetch("/api/keyword-lists").then((r) => r.json()).then((r) => setLists(r.lists || [])).catch(() => undefined);
   // Load the bank once without returning the fetch promise as an effect cleanup.
   useEffect(() => { void reload(); }, []);
   useEffect(()=>{if(preferredListId)setActive(preferredListId)},[preferredListId]);
-  const words = phrasesFromErank(raw.replace(/;/g, "\n"));
-  async function save() { const response = await fetch("/api/keyword-lists", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, keywords: words }) }); if (!response.ok) return setMessage("That keyword bank could not be saved."); setName(""); setRaw(""); setMessage("Keyword bank saved."); reload(); }
   const chosen = lists.find((list) => list.id === active);
-  async function remove() { if (!chosen || !window.confirm(`Delete “${chosen.name}”?`)) return; const response = await fetch("/api/keyword-lists", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: chosen.id }) }); if (!response.ok) return setMessage("That keyword bank could not be deleted."); setActive(""); setMessage("Keyword bank deleted."); reload(); }
-  return <details className="keyword-bank"><summary>Saved keyword banks + eRank import</summary><p>Paste an eRank column or CSV phrases, name the list, and reuse it across batches. Select a design row, then click phrases to build that title.</p><div className="keyword-save"><input value={name} onChange={(e) => setName(e.target.value)} placeholder="Keyword list name"/><textarea value={raw} onChange={(e) => setRaw(e.target.value)} placeholder="Paste keywords or CSV here" rows={3}/><button disabled={!name.trim() || !words.length} onClick={() => void save()}>Save keyword bank</button></div><div className="keyword-list-picker"><select value={active} onChange={(e) => setActive(e.target.value)}><option value="">Choose a saved keyword bank</option>{lists.map((list) => <option value={list.id} key={list.id}>{list.name}</option>)}</select>{chosen && <button className="delete-keyword-bank" onClick={() => void remove()}>Delete bank</button>}</div>{chosen && <div className="keyword-chips">{chosen.keywords.map((word) => <button key={word} onClick={() => onAdd(word)}>+ {word}</button>)}</div>}{message && <p className="field-warning" role="status">{message}</p>}</details>;
+  return <details className="keyword-bank"><summary>Use a saved keyword bank</summary><p>Choose a bank, select a design row, then click phrases to build that title.</p><div className="keyword-list-picker"><select value={active} onChange={(e) => setActive(e.target.value)}><option value="">Choose a saved keyword bank</option>{lists.map((list) => <option value={list.id} key={list.id}>{list.name}</option>)}</select><a href="/keywords">Manage keyword banks</a></div>{chosen && <div className="keyword-chips">{chosen.keywords.map((word) => <button key={word} onClick={() => onAdd(word)}>+ {word}</button>)}</div>}</details>;
 }

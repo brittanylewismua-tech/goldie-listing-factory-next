@@ -324,6 +324,7 @@ export default function Home() {
           </div>
         </div>
         <div className="top-actions">
+          <nav className="top-nav"><a className="active" href="/">Listing Factory</a><a href="/keywords">Keyword Banks</a><a href="/mockups">Mockup Sets</a></nav>
           {owner && <a className="diagnostics-link" href="/mastermind-admin" aria-label="Open Goldie Diagnostics" title="Goldie Diagnostics">★</a>}
           <a className="usage-link" href="/usage">Usage + plan</a>
           <span className="secure-pill"><i /> Secure workspace</span>
