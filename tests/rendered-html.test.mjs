@@ -147,6 +147,8 @@ test("imports shipping and keeps final listing edits attached to the exact Print
   assert.match(printify,/shipping\.json/);assert.match(printify,/standardShipping/);
   assert.match(page,/Finish every listing from its real Printify draft/);
   assert.match(page,/api\/printify\/drafts\/update/);
+  assert.match(page,/syncListingFields/);
+  assert.match(page,/syncedListingSignatures/);
   assert.match(update,/json_extract\(response_json,'\$\.id'\)/);
   assert.match(update,/method:"PUT"/);
 });
