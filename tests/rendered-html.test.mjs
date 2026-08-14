@@ -34,9 +34,9 @@ test("server-renders the branded Listing Factory", async () => {
   assert.match(html, /transparent-background PNG/);
   assert.match(html, /Connect Printify first/);
   assert.match(html, /20 finished designs/);
-  assert.match(html, /500 MB/);
+  assert.match(html, /no combined file-size cap/);
   assert.match(html, /100 MB per design/);
-  assert.match(html, /optimized without changing DPI/);
+  assert.match(html, /without lowering DPI/);
   assert.match(html, /Listings remain unpublished/);
   assert.doesNotMatch(html, /pink-dorm-collage|rich-man-poster|cowgirl-disco|newest batch will open/i);
   assert.doesNotMatch(html, /codex-preview|react-loading-skeleton/i);
@@ -54,7 +54,8 @@ test("uses individual shop-aware Printify editor buttons", async () => {
   assert.doesNotMatch(page, /openLatestBatch|Open .* drafts in Printify/);
   assert.match(route, /shopId: shop\.id/);
   assert.match(page, /MAX_BATCH_FILES = 20/);
-  assert.match(page, /MAX_BATCH_BYTES = 500 \* 1024 \* 1024/);
+  assert.doesNotMatch(page, /MAX_BATCH_BYTES|Reduce it to 500 MB/);
+  assert.match(page, /LARGE_BATCH_THRESHOLD = 400 \* 1024 \* 1024/);
   assert.doesNotMatch(page, /new Worker|OffscreenCanvas|UPNG/);
   assert.match(page, /analyzePadding/);
   assert.match(page, /MAX_CONCURRENT_DESIGNS = 2/);
@@ -200,7 +201,8 @@ test("processes a 20-design batch with bounded two-at-a-time concurrency", async
   assert.match(page, /const MAX_BATCH_FILES = 20/);
   assert.match(page, /const MAX_CONCURRENT_DESIGNS = 2/);
   assert.match(page, /async function processDesign/);
-  assert.match(page, /runBounded\(targetFiles, MAX_CONCURRENT_DESIGNS, processDesign/);
+  assert.match(page, /runBounded\(targetFiles, batchConcurrency, processDesign/);
+  assert.match(page, /batchBytes>LARGE_BATCH_THRESHOLD\?1:MAX_CONCURRENT_DESIGNS/);
   assert.match(page, /setProcessed\(\(current\) => current \+ 1\)/);
   assert.match(boundedSource, /Math\.min\(limit, items\.length\)/);
   const { runBounded } = await import("../app/bounded-work.ts");

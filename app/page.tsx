@@ -32,8 +32,8 @@ const WORKFLOW_STEPS: Array<{id:WorkflowStep;number:string;label:string}> = [
 const PROGRESS_STEPS = ["Connect Printify","Choose product","Add designs","Review pricing","Create drafts","Titles + Etsy details","Images + mockups","Final review"];
 
 const MAX_BATCH_FILES = 20;
-const MAX_BATCH_BYTES = 500 * 1024 * 1024;
 const MAX_CONCURRENT_DESIGNS = 2;
+const LARGE_BATCH_THRESHOLD = 400 * 1024 * 1024;
 const DEFAULT_PRICING: Pricing = { targetProfit: 10, etsyFeePercent: 9.5, fixedFee: 0.25, listingFee: 0.20, shippingCost: 0, shippingCharged: 0 };
 function PrintifyImagePicker({ images,indices,onApplyAll,onSaveRecipe }: { images: string[];indices:number[];onApplyAll:(indices:number[])=>void;onSaveRecipe?:(indices:number[])=>void }) { const [selected, setSelected] = useState<Set<number>>(new Set(indices.length?indices:images.slice(0,3).map((_,i)=>i))); useEffect(()=>setSelected(new Set(indices.length?indices:images.slice(0,3).map((_,i)=>i))),[indices,images.length]); if (!images.length) return <p className="preview-processing">Printify is still processing its product mockups. Open the editor to view them once they appear.</p>; const chosen=[...selected].sort((a,b)=>a-b); return <details className="printify-image-picker"><summary>Choose Printify flatlays ({selected.size} selected)</summary><p>Goldie remembers these image positions for the final Etsy image mix. Printify does not expose its own saved mockup selection, so this does not alter the editor.</p><div>{images.map((src, index) => <label className={selected.has(index) ? "selected" : ""} key={src}><input type="checkbox" checked={selected.has(index)} onChange={() => setSelected(current => { const next = new Set(current); if (next.has(index)) next.delete(index); else next.add(index); return next; })}/><img src={src} alt={`Printify product mockup ${index + 1}`}/></label>)}</div><div className="image-pref-actions"><button onClick={()=>onApplyAll(chosen)}>Use for every listing</button>{onSaveRecipe&&<button onClick={()=>onSaveRecipe(chosen)}>Save to this product</button>}</div></details>; }
 
@@ -174,14 +174,9 @@ export default function Home() {
       setFiles([]);
       return;
     }
-    const selectedBytes = images.reduce((sum, image) => sum + image.size, 0);
-    if (selectedBytes > MAX_BATCH_BYTES) {
-      setFileError(`This batch is ${(selectedBytes / 1024 / 1024).toFixed(1)} MB. Reduce it to 500 MB or less.`);
-      return;
-    }
     setFileError("");
     setFiles(images);
-    const durableBatchId=batchIdRef.current||crypto.randomUUID();batchIdRef.current=durableBatchId;window.localStorage.setItem("goldie-active-batch",durableBatchId);const batchUrl=new URL(window.location.href);batchUrl.searchParams.set("batch",durableBatchId);window.history.replaceState({},"",batchUrl);void saveBatchFiles(durableBatchId,images.map(image=>image.file));
+    const durableBatchId=batchIdRef.current||crypto.randomUUID();batchIdRef.current=durableBatchId;window.localStorage.setItem("goldie-active-batch",durableBatchId);const batchUrl=new URL(window.location.href);batchUrl.searchParams.set("batch",durableBatchId);window.history.replaceState({},"",batchUrl);void saveBatchFiles(durableBatchId,images.map(image=>image.file)).catch(()=>undefined);
     setComplete(false);
     setDrafts([]);
     setProcessed(0);
@@ -304,11 +299,13 @@ export default function Home() {
     setRunning(true);
     setRunTotal(targetFiles.length);
     setComplete(false);
-    setPreparationMessage(`Processing up to ${Math.min(MAX_CONCURRENT_DESIGNS, targetFiles.length)} designs at a time without opening or compressing them`);
+    const batchBytes=targetFiles.reduce((sum,file)=>sum+file.size,0);
+    const batchConcurrency=batchBytes>LARGE_BATCH_THRESHOLD?1:MAX_CONCURRENT_DESIGNS;
+    setPreparationMessage(batchConcurrency===1?"This is a large high-resolution batch, so Goldie is processing one design at a time safely":`Processing up to ${Math.min(batchConcurrency, targetFiles.length)} designs at a time without lowering their print resolution`);
     if (!keepSuccessful) setDrafts([]);
     else setDrafts((current) => current.filter((draft) => draft.status === "Created"));
     setProcessed(0);
-    await runBounded(targetFiles, MAX_CONCURRENT_DESIGNS, processDesign, (result) => {
+    await runBounded(targetFiles, batchConcurrency, processDesign, (result) => {
       setDrafts((current) => [...current, result]);
       if(result.previewUrl)updateDesign(result.clientId,{previewUrl:result.previewUrl});
       setProcessed((current) => current + 1);
@@ -457,14 +454,14 @@ export default function Home() {
               <div className="step-heading"><div><p className="mini-label">{workflowStep==="finish"?"FINISH LISTINGS":"DESIGNS"}</p><h2>{workflowStep==="finish"?"Complete the listing details":"Add your finished designs"}</h2></div>{files.length > 0 && <span className="done-mark">✓ {files.length} {workflowStep==="finish"?"drafts ready":"loaded"}</span>}</div>
               <p className="step-copy">{workflowStep==="finish"?"Work from top to bottom. Finish the words first, confirm Goldie’s Etsy details, then choose the images and mockups for each listing.":"Build one focused batch of up to 20 finished designs. Upload a folder or select individual images."}</p>
               {workflowStep==="finish"&&<div className="finish-guide"><span><b>1</b> Choose keywords</span><span><b>2</b> Build titles + tags</span><span><b>3</b> Review Etsy details</span></div>}
-              <p className="batch-limits" aria-label="Batch limits"><span>20 designs maximum</span><i /> <span>100 MB per design · 500 MB per batch</span><i /> <span>Large opaque artwork is optimized without changing DPI</span></p>
+              <p className="batch-limits" aria-label="Batch limits"><span>20 designs maximum</span><i /> <span>100 MB per design · no combined file-size cap</span><i /> <span>Large batches process one design at a time without lowering DPI</span></p>
               <div className="file-reminder"><b>Before uploading</b><span>Designs must already be upscaled if needed. Use a transparent-background PNG whenever the background should not print.</span></div>
               <input ref={folderPicker} className="hidden-picker" type="file" multiple accept=".png,.jpg,.jpeg" {...({ webkitdirectory: "", directory: "" } as React.InputHTMLAttributes<HTMLInputElement>)} onChange={(event) => chooseFiles(event.target.files)} />
               <input ref={imagePicker} className="hidden-picker" type="file" multiple accept=".png,.jpg,.jpeg" onChange={(event) => chooseFiles(event.target.files)} />
               <div className="upload-actions">
               <button className="folder-drop" onClick={() => folderPicker.current?.click()}>
                 <span className="upload-icon" aria-hidden="true">↑</span>
-                <span><b>{files.length ? `${files.length} of 20 designs ready` : "Choose a folder"}</b><small>{files.length ? `${(totalSize / 1024 / 1024).toFixed(1)} of 500 MB selected · Choose again to replace` : "Your folder can contain up to 20 designs"}</small></span>
+                <span><b>{files.length ? `${files.length} of 20 designs ready` : "Choose a folder"}</b><small>{files.length ? `${(totalSize / 1024 / 1024).toFixed(1)} MB selected${totalSize>LARGE_BATCH_THRESHOLD?" · will process one at a time":""} · Choose again to replace` : "Your folder can contain up to 20 designs"}</small></span>
                 <span className="browse-chip">Browse</span>
               </button>
               <button className="folder-drop" onClick={() => imagePicker.current?.click()}>
