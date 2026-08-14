@@ -468,6 +468,8 @@ test("shows one saved mockup set at a time", async () => {
   assert.match(page,/open&&<>/);
   assert.match(page,/useState<Set<string>>\(new Set\(\)\)/);
   assert.match(page,/Add your first mockup set/);
+  assert.match(page,/showAddSet&&<div className="addSet"/);
+  assert.match(page,/Close mockup set builder/);
   assert.match(page,/type="checkbox"/);
   assert.match(css,/\.collection\.collapsed/);
   assert.match(css,/repeat\(auto-fill,minmax\(190px,1fr\)\)/);
