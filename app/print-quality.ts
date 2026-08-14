@@ -13,3 +13,12 @@ export function printifyDpi(imageWidth: number, printAreaWidth: number, placemen
   const dpi = Math.floor(imageWidth / ((printAreaWidth / 300) * placementScale));
   return { dpi, level: dpi >= 300 ? "High" : dpi >= 150 ? "Medium" : "Low" };
 }
+
+export function normalizedPlacementScale(
+  placementScale: number,
+  visibleBounds?: { left: number; right: number } | null,
+): number {
+  if (!visibleBounds) return placementScale;
+  const visibleWidth = Math.max(0.05, visibleBounds.right - visibleBounds.left);
+  return placementScale / visibleWidth;
+}

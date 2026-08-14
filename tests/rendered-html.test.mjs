@@ -153,9 +153,11 @@ test("imports shipping and keeps final listing edits attached to the exact Print
 });
 
 test("matches Printify editor DPI instead of comparing against template pixel dimensions", async () => {
-  const { printifyDpi } = await import("../app/print-quality.ts");
+  const { normalizedPlacementScale, printifyDpi } = await import("../app/print-quality.ts");
   assert.deepEqual(printifyDpi(5000, 7200, 1.126), { dpi: 185, level: "Medium" });
   assert.deepEqual(printifyDpi(8100, 7200, 1.125), { dpi: 300, level: "High" });
+  assert.equal(normalizedPlacementScale(1, { left: .25, right: .75 }), 2);
+  assert.deepEqual(printifyDpi(7200, 7200, normalizedPlacementScale(1, { left: .25, right: .75 })), { dpi: 150, level: "Medium" });
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
   assert.doesNotMatch(page, /Target:\s*\{templateDetails/);
   assert.match(page, /DPI in Printify/);
@@ -251,12 +253,12 @@ test("retries Printify remote-artwork download interruptions before failing the 
   assert.match(drafts, /after three automatic retries/);
 });
 
-test("sends private staged artwork directly to Printify without a public callback", async () => {
+test("streams staged artwork to Printify through an expiring signed URL", async () => {
   const route = await readFile(new URL("../app/api/printify/drafts/route.ts", import.meta.url), "utf8");
   assert.match(route, /ARTWORK\?\.get\(body\.stagedId\)/);
-  assert.match(route, /contents = await artworkContents/);
-  assert.match(route, /contents \}\)/);
-  assert.doesNotMatch(route, /signedArtworkUrl|url: artworkUrl/);
+  assert.match(route, /signedArtworkUrl/);
+  assert.match(route, /file_name: body\.fileName!, url: artworkUrl/);
+  assert.doesNotMatch(route, /artworkContents/);
 });
 
 test("parses real eRank exports and creates Etsy-valid title phrases", async () => {
