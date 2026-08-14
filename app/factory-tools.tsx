@@ -38,7 +38,8 @@ export function SavedWorkflow(props: WorkflowProps) {
 export function KeywordBank({ onAdd }: { onAdd: (keyword: string) => void }) {
   const [lists, setLists] = useState<KeywordList[]>([]), [name, setName] = useState(""), [raw, setRaw] = useState(""), [active, setActive] = useState("");
   const reload = () => fetch("/api/keyword-lists").then((r) => r.json()).then((r) => setLists(r.lists || [])).catch(() => undefined);
-  useEffect(reload, []);
+  // Load the bank once without returning the fetch promise as an effect cleanup.
+  useEffect(() => { void reload(); }, []);
   const words = raw.split(/[\n,;\t]+/).map((v) => v.replace(/^"|"$/g, "").trim()).filter(Boolean);
   async function save() { await fetch("/api/keyword-lists", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, keywords: words }) }); setName(""); setRaw(""); reload(); }
   const chosen = lists.find((list) => list.id === active);
