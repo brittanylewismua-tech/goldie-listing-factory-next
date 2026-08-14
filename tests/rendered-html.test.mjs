@@ -20,9 +20,9 @@ test("server-renders the branded Listing Factory", async () => {
   assert.match(html, /Secure workspace/);
   assert.doesNotMatch(html, /Private workspace/);
   assert.match(html, /Your Printify account/);
-  assert.match(html, /Choose a saved recipe or build a new one/);
-  assert.match(html, /Printify template link/);
-  assert.match(html, /permanent description and product facts from Printify/);
+  assert.match(html, /Use a saved setup or connect a new Printify template/);
+  assert.match(html, /Connect this Printify template/);
+  assert.match(html, /imports its product facts and permanent description/);
   assert.doesNotMatch(html, /Default title structure|Optional reusable description/);
   assert.doesNotMatch(html, /factory-switcher/);
   assert.match(html, /Add your finished designs/);
@@ -32,6 +32,7 @@ test("server-renders the branded Listing Factory", async () => {
   assert.match(html, /Connect Printify first/);
   assert.match(html, /20 finished designs/);
   assert.match(html, /500 MB/);
+  assert.match(html, /60 MB per design/);
   assert.match(html, /sized for the selected product/);
   assert.match(html, /Listings remain unpublished/);
   assert.doesNotMatch(html, /pink-dorm-collage|rich-man-poster|cowgirl-disco|newest batch will open/i);
@@ -66,7 +67,7 @@ test("uses individual shop-aware Printify editor buttons", async () => {
   assert.match(page, /title: design\.title \|\| undefined/);
   assert.doesNotMatch(page, /listingTitle/);
   assert.match(route, /body\.title\?\.trim\(\)\.slice\(0, 255\) \|\| body\.fileName/);
-  assert.match(page, /Choose or verify a product recipe/);
+  assert.match(page, /Choose or create a saved listing setup/);
   assert.match(page, /function startOver\(\)/);
   assert.match(page, /Clear all \/ start over/);
   assert.match(page, /folderPicker\.current\.value = ""/);
@@ -98,7 +99,7 @@ test("uses individual shop-aware Printify editor buttons", async () => {
   assert.match(route, /templateImageCount/);
 });
 
-test("unifies recipes, listing editing, pricing, and mockups without the old factory toggle", async () => {
+test("unifies saved listing setups, editing, pricing, and mockups without the old factory toggle", async () => {
   const [page, recipes, mockups, drafts] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/factory-tools.tsx", import.meta.url), "utf8"),
@@ -106,11 +107,11 @@ test("unifies recipes, listing editing, pricing, and mockups without the old fac
     readFile(new URL("../app/api/printify/drafts/route.ts", import.meta.url), "utf8"),
   ]);
   assert.doesNotMatch(page, /factory-switcher/);
-  assert.match(recipes, /Printify template link/);
-  assert.match(recipes, /permanent description and product facts from Printify/);
-  assert.match(recipes, /saved recipe/);
-  assert.match(recipes, /Add another recipe/);
-  assert.match(recipes, /The only recipe decision is the profit you want/);
+  assert.match(recipes, /Connect this Printify template/);
+  assert.match(recipes, /imports its product facts and permanent description/);
+  assert.match(recipes, /saved listing setup/);
+  assert.match(recipes, /Add another setup/);
+  assert.match(recipes, /This setup only needs the profit you want/);
   assert.doesNotMatch(recipes, /Shipping cost|Shipping charged|Payment fixed fee/);
   assert.match(page, /Import title CSV/);
   assert.match(page, /Exact title phrases/);
@@ -287,6 +288,14 @@ test("validates and isolates staged artwork without decoding or buffering it", a
   assert.equal(await decryptPrintifyToken(encrypted, secret), "printify-secret-token");
   await assert.rejects(decryptPrintifyToken(encrypted, "cd".repeat(32)), /could not be decrypted safely/);
   await assert.rejects(encryptPrintifyToken("token", "not-a-valid-key"), /not configured correctly/);
+});
+
+test("rejects oversized Printify uploads immediately and never retries a 413", async () => {
+  const { MAX_FILE_BYTES, isPermanentUploadError, oversizedFileMessage } = await import("../app/upload-policy.ts");
+  assert.equal(MAX_FILE_BYTES, 60 * 1024 * 1024);
+  assert.equal(isPermanentUploadError('Printify returned 413: {"error":"The POST data is too large."}'), true);
+  assert.match(oversizedFileMessage("poster.png", 75 * 1024 * 1024), /poster\.png is 75\.0 MB/);
+  assert.match(oversizedFileMessage("poster.png", 75 * 1024 * 1024), /without reducing the pixel dimensions needed for 300 DPI/);
 });
 
 test("retries a real 8253 draft response and succeeds without an upload lookup", async () => {

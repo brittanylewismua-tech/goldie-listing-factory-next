@@ -9,6 +9,7 @@ import { KeywordBank, SavedWorkflow, type Pricing, type Recipe } from "./factory
 import IntegratedMockups from "./integrated-mockups";
 import { tagsFromTitle, titlesFromCsv } from "./seo-utils";
 import { printifyDpi } from "./print-quality";
+import { isPermanentUploadError, MAX_FILE_BYTES, oversizedFileMessage } from "./upload-policy";
 
 type VisibleBounds={left:number;top:number;right:number;bottom:number};
 type EtsyDetails={category:string;attributes:Record<string,string>;optional:Record<string,string>;blurb:string;confidence:"high"|"review"};
@@ -20,7 +21,7 @@ const MAX_BATCH_FILES = 20;
 const MAX_BATCH_BYTES = 500 * 1024 * 1024;
 const MAX_CONCURRENT_DESIGNS = 2;
 const DEFAULT_PRICING: Pricing = { targetProfit: 10, etsyFeePercent: 9.5, fixedFee: 0.25, listingFee: 0.20, shippingCost: 0, shippingCharged: 0 };
-function PrintifyImagePicker({ images,indices,onApplyAll,onSaveRecipe }: { images: string[];indices:number[];onApplyAll:(indices:number[])=>void;onSaveRecipe?:(indices:number[])=>void }) { const [selected, setSelected] = useState<Set<number>>(new Set(indices.length?indices:images.slice(0,3).map((_,i)=>i))); useEffect(()=>setSelected(new Set(indices.length?indices:images.slice(0,3).map((_,i)=>i))),[indices,images.length]); if (!images.length) return <p className="preview-processing">Printify is still processing its product mockups. Open the editor to view them once they appear.</p>; const chosen=[...selected].sort((a,b)=>a-b); return <details className="printify-image-picker"><summary>Choose Printify flatlays ({selected.size} selected)</summary><p>Goldie remembers these image positions for the final Etsy image mix. Printify does not expose its own saved mockup selection, so this does not alter the editor.</p><div>{images.map((src, index) => <label className={selected.has(index) ? "selected" : ""} key={src}><input type="checkbox" checked={selected.has(index)} onChange={() => setSelected(current => { const next = new Set(current); if (next.has(index)) next.delete(index); else next.add(index); return next; })}/><img src={src} alt={`Printify product mockup ${index + 1}`}/></label>)}</div><div className="image-pref-actions"><button onClick={()=>onApplyAll(chosen)}>Use for every listing</button>{onSaveRecipe&&<button onClick={()=>onSaveRecipe(chosen)}>Save to product recipe</button>}</div></details>; }
+function PrintifyImagePicker({ images,indices,onApplyAll,onSaveRecipe }: { images: string[];indices:number[];onApplyAll:(indices:number[])=>void;onSaveRecipe?:(indices:number[])=>void }) { const [selected, setSelected] = useState<Set<number>>(new Set(indices.length?indices:images.slice(0,3).map((_,i)=>i))); useEffect(()=>setSelected(new Set(indices.length?indices:images.slice(0,3).map((_,i)=>i))),[indices,images.length]); if (!images.length) return <p className="preview-processing">Printify is still processing its product mockups. Open the editor to view them once they appear.</p>; const chosen=[...selected].sort((a,b)=>a-b); return <details className="printify-image-picker"><summary>Choose Printify flatlays ({selected.size} selected)</summary><p>Goldie remembers these image positions for the final Etsy image mix. Printify does not expose its own saved mockup selection, so this does not alter the editor.</p><div>{images.map((src, index) => <label className={selected.has(index) ? "selected" : ""} key={src}><input type="checkbox" checked={selected.has(index)} onChange={() => setSelected(current => { const next = new Set(current); if (next.has(index)) next.delete(index); else next.add(index); return next; })}/><img src={src} alt={`Printify product mockup ${index + 1}`}/></label>)}</div><div className="image-pref-actions"><button onClick={()=>onApplyAll(chosen)}>Use for every listing</button>{onSaveRecipe&&<button onClick={()=>onSaveRecipe(chosen)}>Save to this listing setup</button>}</div></details>; }
 
 async function fetchWithDeadline(input: RequestInfo | URL, init: RequestInit, milliseconds: number) {
   const controller = new AbortController();
@@ -45,6 +46,7 @@ function friendlyUploadError(error: unknown) {
   if (/template product was not found|not found in the connected Printify/i.test(message)) return withReference("This template belongs to a different Printify account or shop than the connected token.");
   if (/8150|validation failed|print_areas|placeholder/i.test(message)) return withReference("Printify rejected this template’s print-area setup. Reload the template; if it continues, use a freshly saved copy of the Printify product.");
   if (/429|longer than expected|rate limit/i.test(message)) return withReference("Printify is temporarily limiting requests. Goldie already waited and retried; retry this design when the batch finishes.");
+  if (/413|post data is too large|file is too large/i.test(message)) return withReference("This design file is too large for Printify’s upload endpoint. Export an optimized PNG or JPG under 60 MB; do not reduce the pixel dimensions if they are needed for 300 DPI.");
   return message || "Goldie could not create this draft. Retry it when the batch finishes.";
 }
 
@@ -85,7 +87,7 @@ export default function Home() {
 
   const templateLoaded = templateDetails !== null;
   const ready = connected && templateLoaded && files.length > 0;
-  const missingRequirement = !connected ? "Connect Printify first" : !templateLoaded ? "Choose or verify a product recipe" : files.length === 0 ? "Add at least one design" : "";
+  const missingRequirement = !connected ? "Connect Printify first" : !templateLoaded ? "Choose or create a saved listing setup" : files.length === 0 ? "Add at least one design" : "";
   const totalSize = useMemo(() => files.reduce((sum, file) => sum + file.size, 0), [files]);
 
   useEffect(() => {
@@ -121,6 +123,12 @@ export default function Home() {
     }
     if (images.length > MAX_BATCH_FILES) {
       setFileError(`This batch has ${images.length} designs. Choose no more than ${MAX_BATCH_FILES} designs at a time.`);
+      return;
+    }
+    const oversized = images.find((image) => image.size > MAX_FILE_BYTES);
+    if (oversized) {
+      setFileError(oversizedFileMessage(oversized.name,oversized.size));
+      setFiles([]);
       return;
     }
     const selectedBytes = images.reduce((sum, image) => sum + image.size, 0);
@@ -231,7 +239,7 @@ export default function Home() {
             return result.draft;
           } catch (attemptError) {
             finalError = attemptError instanceof Error ? attemptError : new Error("The design failed.");
-            const permanent = /\b(?:400|401|403)\b|token|template product was not found|not a recognized|could not be decoded|could not be read|valid PNG or JPG|file contents do not match|does not belong to the signed-in account|batch session expired/i.test(finalError.message);
+            const permanent = isPermanentUploadError(finalError.message);
             if (permanent || pipelineAttempt === 3) break;
             await new Promise((resolve) => window.setTimeout(resolve, pipelineAttempt * 5000));
           }
@@ -336,7 +344,7 @@ export default function Home() {
       <section className="hero">
         <div>
           <h1>From finished designs to listing-ready drafts, in one workflow.</h1>
-          <p className="hero-copy">Start with a saved product recipe, build titles and pricing in bulk, create Printify drafts, then finish the exact mockups each listing needs.</p>
+          <p className="hero-copy">Start with a saved listing setup—or connect a completed Printify template once—then create drafts, build titles in bulk, and finish the exact mockups each listing needs.</p>
         </div>
         <Image src="/goldie-g.png" width={2000} height={2000} alt="" className="hero-watermark" />
       </section>
@@ -371,7 +379,7 @@ export default function Home() {
             <div className="step-content">
               <div className="step-heading"><div><p className="mini-label">DESIGNS</p><h2>Add your finished designs</h2></div>{files.length > 0 && <span className="done-mark">✓ {files.length} loaded</span>}</div>
               <p className="step-copy">Build one focused batch of up to 20 finished designs. Upload a folder or select individual images.</p>
-              <p className="batch-limits" aria-label="Batch limits"><span>20 designs maximum</span><i /> <span>500 MB per batch</span><i /> <span>Artwork is sized for the selected product</span></p>
+              <p className="batch-limits" aria-label="Batch limits"><span>20 designs maximum</span><i /> <span>60 MB per design · 500 MB per batch</span><i /> <span>Artwork is sized for the selected product</span></p>
               <div className="file-reminder"><b>Before uploading</b><span>Designs must already be upscaled if needed. Use a transparent-background PNG whenever the background should not print.</span></div>
               <input ref={folderPicker} className="hidden-picker" type="file" multiple accept=".png,.jpg,.jpeg" {...({ webkitdirectory: "", directory: "" } as React.InputHTMLAttributes<HTMLInputElement>)} onChange={(event) => chooseFiles(event.target.files)} />
               <input ref={imagePicker} className="hidden-picker" type="file" multiple accept=".png,.jpg,.jpeg" onChange={(event) => chooseFiles(event.target.files)} />
@@ -409,7 +417,7 @@ export default function Home() {
 
           <div className="summary-list">
             <div><span>Printify</span><b className={connected ? "ready-text" : "waiting-text"}>{connected ? "Connected" : "Waiting"}</b></div>
-            <div><span>Product recipe</span><b>{templateLoaded ? "Ready" : "Not selected"}</b></div>
+            <div><span>Listing setup</span><b>{templateLoaded ? "Ready" : "Not selected"}</b></div>
             <div><span>Designs</span><b>{files.length ? `${files.length} / 20` : "Not added"}</b></div>
             <div><span>Publishing</span><b>Draft only</b></div>
           </div>
