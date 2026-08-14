@@ -116,7 +116,7 @@ test("unifies recipes, listing editing, pricing, and mockups without the old fac
   assert.match(page, /IntegratedMockups/);
   assert.match(mockups, /Choose a mockup set/);
   assert.match(mockups, /Create .*mockups/);
-  assert.match(drafts, /priceFor\(cost \?\? price\)/);
+  assert.match(drafts, /recommendedPrice\(cost \?\? price, body\.pricing\)/);
   assert.match(drafts, /printifyImages/);
 });
 
@@ -127,6 +127,15 @@ test("matches Printify editor DPI instead of comparing against template pixel di
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
   assert.doesNotMatch(page, /Target:\s*\{templateDetails/);
   assert.match(page, /DPI in Printify/);
+});
+
+test("calculates every Printify variant price from its own cost and Etsy fee profile", async () => {
+  const { recommendedPrice } = await import("../app/pricing.ts");
+  const pricing = { targetProfit: 10, etsyFeePercent: 9.5, fixedFee: 0.25, listingFee: 0.20, shippingCost: 0, shippingCharged: 0 };
+  assert.equal(recommendedPrice(1034, pricing), 2298);
+  assert.equal(recommendedPrice(1184, pricing), 2463);
+  assert.equal(recommendedPrice(1760, pricing), 3100);
+  assert.equal(recommendedPrice(1034), 1034);
 });
 
 test("processes a 20-design batch with bounded two-at-a-time concurrency", async () => {

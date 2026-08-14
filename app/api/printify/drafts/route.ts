@@ -6,6 +6,7 @@ import { publicSupportReference, recordDiagnostic } from "../diagnostics";
 import { createProductWithImageRetries } from "../product-creation";
 import { printAreasWithOnlyCurrentArtwork } from "../product-payload";
 import { decryptPrintifyToken } from "../token-crypto";
+import { recommendedPrice } from "@/app/pricing";
 
 const PRINTIFY_API = "https://api.printify.com/v1";
 type UploadedImage = { id: string; width?: number; height?: number; mime_type?: string };
@@ -167,19 +168,12 @@ export async function POST(request: Request) {
     // below is the authoritative registration check and retries only when
     // Printify itself returns image-not-ready error 8253.
     const title = body.title?.trim().slice(0, 255) || body.fileName.replace(/\.[^.]+$/, "").replace(/[_-]+/g, " ").trim();
-    const priceFor = (cost: number) => {
-      if (!body.pricing?.targetProfit) return cost;
-      const percent = Math.max(0, Math.min(40, Number(body.pricing.etsyFeePercent || 0))) / 100;
-      const fixed = Number(body.pricing.fixedFee || 0) + Number(body.pricing.listingFee || 0) + Number(body.pricing.shippingCost || 0) - Number(body.pricing.shippingCharged || 0);
-      const dollars = (cost / 100 + Number(body.pricing.targetProfit) + fixed) / Math.max(0.01, 1 - percent);
-      return Math.max(cost, Math.ceil(dollars * 100));
-    };
     const productBody = () => JSON.stringify({
         title: title || "Untitled design",
         description: body.description ?? "",
         blueprint_id: template.blueprint_id,
         print_provider_id: template.print_provider_id,
-        variants: template.variants.map(({ id, price, cost, is_enabled }) => ({ id, price: priceFor(cost ?? price), is_enabled })),
+        variants: template.variants.map(({ id, price, cost, is_enabled }) => ({ id, price: recommendedPrice(cost ?? price, body.pricing), is_enabled })),
         // Never carry media-library IDs from the template into a different
         // product request. Only the image uploaded in this request is valid.
         print_areas: printAreasWithOnlyCurrentArtwork(template.print_areas, upload.id),
