@@ -21,9 +21,10 @@ export function SavedWorkflow(props: WorkflowProps) {
     setMessage("");
     if (!props.templateVerified && !(await props.onVerifyTemplate(props.templateUrl))) return setMessage("Connect the Printify template before saving this listing setup.");
     const response = await fetch("/api/product-recipes", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: editingId || undefined, name, templateUrl: props.templateUrl, defaultMockupTheme: props.mockupTheme, keywordListId, normalizePadding:true, pricing: {targetProfit:props.pricing.targetProfit} }) });
-    const result = await response.json() as { error?: string };
+    const result = await response.json() as { id?: string; error?: string };
     if (!response.ok) return setMessage(result.error || "The listing setup could not be saved.");
-    setName(""); setEditingId(""); setMessage(editingId ? "Listing setup updated." : "Listing setup saved. You will not need to paste this Printify template again."); setEditing(false); reload();
+    const saved:Recipe={id:result.id||editingId,name:name.trim(),templateUrl:props.templateUrl,description:"",defaultTitle:"",defaultMockupTheme:props.mockupTheme,keywordListId,normalizePadding:true,pricing:{targetProfit:props.pricing.targetProfit}};
+    setActiveId(saved.id);props.onUseRecipe(saved);setName(""); setEditingId(""); setMessage(editingId ? "Listing setup updated and selected." : "Listing setup saved and selected. You will not need to paste this Printify template again."); setEditing(false); reload();
   }
   async function remove(recipe: Recipe) { if (!window.confirm(`Delete “${recipe.name}”? This removes only the saved listing setup, not the connected Printify product.`)) return; await fetch("/api/product-recipes", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: recipe.id }) }); if (activeId === recipe.id) setActiveId(""); reload(); }
   return <article className="step-card recipe-card"><div className="step-number">02</div><div className="step-content"><div className="step-heading"><div><p className="mini-label">SAVED LISTING SETUP</p><h2>Use a saved setup or connect a new Printify template</h2></div>{props.templateVerified && <span className="done-mark">✓ Setup ready</span>}</div><p className="step-copy">Your Printify template is the foundation. A saved listing setup remembers that template plus your profit target, default keyword bank, and preferred mockup set—so you configure it once and reuse it.</p>

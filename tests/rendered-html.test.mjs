@@ -110,6 +110,8 @@ test("unifies saved listing setups, editing, pricing, and mockups without the ol
   assert.match(recipes, /imports its product facts and permanent description/);
   assert.match(recipes, /saved listing setup/);
   assert.match(recipes, /Add another setup/);
+  assert.match(recipes, /Listing setup saved and selected/);
+  assert.match(recipes, /props\.onUseRecipe\(saved\)/);
   assert.match(recipes, /This setup only needs the profit you want/);
   assert.doesNotMatch(recipes, /Shipping cost|Shipping charged|Payment fixed fee/);
   assert.match(page, /Import title CSV/);
