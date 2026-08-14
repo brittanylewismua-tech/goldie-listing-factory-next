@@ -17,7 +17,7 @@ export function rendererInput(kind:ProductKind,imageUrls:string[]){
       mode:"quality",
       garment_photo_type:"model",
       moderation_level:"permissive",
-      num_samples:1,
+      num_samples:2,
       segmentation_free:false,
       output_format:"png",
     };
