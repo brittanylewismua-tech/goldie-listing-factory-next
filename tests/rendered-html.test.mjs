@@ -442,3 +442,44 @@ test("revalidates saved Printify tokens instead of showing a false connection", 
   assert.match(route, /expired or was revoked/);
   assert.match(route, /DELETE FROM printify_connections WHERE user_id = \?/);
 });
+
+test("persists mockup sets by signed-in account and protects every image", async () => {
+  const [libraryRoute,imageRoute,page,storage] = await Promise.all([
+    readFile(new URL("../app/api/mockups/library/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/mockups/library/[id]/image/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/mockups/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/mockups/storage.ts", import.meta.url), "utf8"),
+  ]);
+  assert.match(libraryRoute,/getChatGPTUser/);
+  assert.match(libraryRoute,/env\.ARTWORK\.put/);
+  assert.match(imageRoute,/mockupTemplates\.userId/);
+  assert.match(storage,/CREATE TABLE IF NOT EXISTS mockup_templates/);
+  assert.match(page,/fetch\("\/api\/mockups\/library"\)/);
+  assert.doesNotMatch(page,/localStorage|sessionStorage|indexedDB/);
+});
+
+test("shows one saved mockup set at a time", async () => {
+  const [page,css]=await Promise.all([
+    readFile(new URL("../app/mockups/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/mockups/mockups.css", import.meta.url), "utf8"),
+  ]);
+  assert.match(page,/activeTheme===theme/);
+  assert.match(page,/aria-expanded=\{open\}/);
+  assert.match(page,/open&&<>/);
+  assert.match(css,/\.collection\.collapsed/);
+});
+
+test("routes each product surface deliberately and never releases a partial batch", async () => {
+  const [page,renderers,route]=await Promise.all([
+    readFile(new URL("../app/mockups/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/mockups/product-renderers.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/mockups/render/route.ts", import.meta.url), "utf8"),
+  ]);
+  assert.match(page,/"rigid-flat" \| "apparel" \| "soft-goods" \| "curved" \| "irregular"/);
+  assert.match(page,/made\.forEach\(item=>URL\.revokeObjectURL/);
+  assert.match(page,/setResults\(\[\]\);setGenerationError/);
+  assert.match(route,/if\(!body\.reference\)/);
+  assert.match(route,/DAILY_LIMIT/);
+  assert.match(renderers,/shirt-design/);
+  assert.match(renderers,/seedream\/v5\/lite\/edit/);
+});
