@@ -505,6 +505,8 @@ test("saved mockup sets can be renamed and deleted with confirmation", async () 
   assert.match(page,/sourceTheme/);
   assert.match(libraryRoute,/mockup_set_preferences/);
   assert.doesNotMatch(page,/items\.some\(item=>item\.custom\).*Rename/);
+  assert.match(page,/setTitleRow.*open&&<button[^>]+className="renameSet"/);
+  assert.doesNotMatch(page,/collectionActions"><button[^>]+className="renameSet"/);
 });
 
 test("routes each product surface deliberately and never releases a partial batch", async () => {

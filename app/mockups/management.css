@@ -1,4 +1,4 @@
-.collectionActions .renameSet {
+.setTitleRow .renameSet {
   width: auto;
   height: auto;
   flex: none;
@@ -13,7 +13,7 @@
   box-shadow: none;
 }
 
-.collectionActions .renameSet:hover {
+.setTitleRow .renameSet:hover {
   background: transparent;
   color: var(--gold);
 }
