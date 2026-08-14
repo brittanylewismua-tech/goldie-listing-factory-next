@@ -195,11 +195,12 @@ export async function POST(request: Request) {
       },
     });
     await recordDiagnostic(runtimeEnv().DB, supportReference, { stage: diagnosticStage, event: "succeeded", shopId: shop.id });
-    let previewUrl = created.images?.find((image) => image.is_default)?.src || created.images?.[0]?.src;
+    let productImages = created.images ?? [];
+    let previewUrl = productImages.find((image) => image.is_default)?.src || productImages[0]?.src;
     if (!previewUrl) {
-      try { const loaded = await api<CreatedProduct>(`/shops/${shop.id}/products/${created.id}.json`, token); previewUrl = loaded.images?.find((image) => image.is_default)?.src || loaded.images?.[0]?.src; } catch { /* Preview can appear moments later. */ }
+      try { const loaded = await api<CreatedProduct>(`/shops/${shop.id}/products/${created.id}.json`, token); productImages = loaded.images ?? []; previewUrl = productImages.find((image) => image.is_default)?.src || productImages[0]?.src; } catch { /* Preview can appear moments later. */ }
     }
-    const draft = { id: created.id, clientId: body.clientId ?? body.fileName, name: body.fileName, title, tags: body.tags ?? [], previewUrl, shopId: shop.id, editorUrl: `https://printify.com/app/editor/${created.id}`, status: "Created" };
+    const draft = { id: created.id, clientId: body.clientId ?? body.fileName, name: body.fileName, title, tags: body.tags ?? [], previewUrl, printifyImages: productImages.map((image) => image.src).filter(Boolean), shopId: shop.id, editorUrl: `https://printify.com/app/editor/${created.id}`, status: "Created" };
     await db.prepare("UPDATE printify_draft_results SET status = 'succeeded', response_json = ?, updated_at = CURRENT_TIMESTAMP WHERE request_key = ?").bind(JSON.stringify(draft), idempotencyKey).run();
     return NextResponse.json({ draft });
   } catch (error) {

@@ -18,6 +18,10 @@ export async function POST(request: Request) {
   const name = String(body.name || "").trim().slice(0, 80), templateUrl = String(body.templateUrl || "").trim();
   if (!name || !templateUrl) return NextResponse.json({ error: "Name the recipe and add its Printify template." }, { status: 400 });
   const id = body.id || crypto.randomUUID();
+  if (body.id) {
+    const [owned] = await getDb().select({ id: productRecipes.id }).from(productRecipes).where(and(eq(productRecipes.id, id), eq(productRecipes.userId, user.userId))).limit(1);
+    if (!owned) return NextResponse.json({ error: "That product recipe could not be found." }, { status: 404 });
+  }
   await getDb().insert(productRecipes).values({ id, userId: user.userId, name, templateUrl, description: String(body.description || ""), defaultTitle: String(body.defaultTitle || "").slice(0, 255), defaultMockupTheme: String(body.defaultMockupTheme || "").slice(0, 80), pricingJson: JSON.stringify(body.pricing || {}) }).onConflictDoUpdate({ target: productRecipes.id, set: { name, templateUrl, description: String(body.description || ""), defaultTitle: String(body.defaultTitle || "").slice(0, 255), defaultMockupTheme: String(body.defaultMockupTheme || "").slice(0, 80), pricingJson: JSON.stringify(body.pricing || {}), updatedAt: new Date().toISOString() } });
   return NextResponse.json({ id });
 }

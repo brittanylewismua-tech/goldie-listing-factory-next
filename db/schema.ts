@@ -110,3 +110,9 @@ export const keywordLists = sqliteTable("keyword_lists", {
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
   updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 }, (table) => [index("idx_keyword_lists_user").on(table.userId, table.updatedAt)]);
+
+export const sellerPreferences = sqliteTable("seller_preferences", {
+  userId: text("user_id").primaryKey(),
+  pricingJson: text("pricing_json").notNull().default("{}"),
+  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+});

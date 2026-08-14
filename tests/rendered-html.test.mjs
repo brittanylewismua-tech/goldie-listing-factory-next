@@ -16,14 +16,15 @@ test("server-renders the branded Listing Factory", async () => {
   assert.equal(response.status, 200);
   const html = await response.text();
   assert.match(html, /Goldie Listing Factory/);
-  assert.match(html, /Automate your Printify listing creation process, all in one place\./);
+  assert.match(html, /From finished designs to listing-ready drafts, in one workflow\./);
   assert.match(html, /Secure workspace/);
   assert.doesNotMatch(html, /Private workspace/);
   assert.match(html, /Your Printify account/);
-  assert.match(html, /Choose your Printify product template/);
-  assert.match(html, /Listing title/);
-  assert.match(html, /Optional/);
-  assert.match(html, /Leave this blank to use each design’s filename as its title/);
+  assert.match(html, /Choose a saved recipe or build a new one/);
+  assert.match(html, /Printify template link/);
+  assert.match(html, /paste it only once/);
+  assert.match(html, /Default title structure/);
+  assert.doesNotMatch(html, /factory-switcher/);
   assert.match(html, /Add your finished designs/);
   assert.match(html, /Choose individual images/);
   assert.match(html, /already be upscaled/);
@@ -42,7 +43,7 @@ test("uses individual shop-aware Printify editor buttons", async () => {
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/api/printify/drafts/route.ts", import.meta.url), "utf8"),
   ]);
-  assert.match(page, /Edit in Printify/);
+  assert.match(page, /Adjust in Printify/);
   assert.match(page, /openedDrafts/);
   assert.match(page, /window\.open\(draft\.editorUrl/);
   assert.doesNotMatch(page, /printifyTab\.location|\/app\/store\/\$\{draft\.shopId\}/);
@@ -63,14 +64,14 @@ test("uses individual shop-aware Printify editor buttons", async () => {
   assert.match(page, /Add at least one design/);
   assert.match(page, /title: design\.title \|\| listingTitle\.trim\(\) \|\| undefined/);
   assert.match(route, /body\.title\?\.trim\(\)\.slice\(0, 255\) \|\| body\.fileName/);
-  assert.match(page, /Load your product template/);
+  assert.match(page, /Choose or verify a product recipe/);
   assert.match(page, /function startOver\(\)/);
   assert.match(page, /Clear all \/ start over/);
   assert.match(page, /folderPicker\.current\.value = ""/);
   assert.match(page, /imagePicker\.current\.value = ""/);
   assert.match(page, /function openAllDrafts\(\)/);
   assert.match(page, /Open all in Printify/);
-  assert.ok(page.indexOf("drafts.map") < page.indexOf("Open all in Printify"));
+  assert.match(page, /drafts\.map/);
   assert.match(page, /Allow pop-ups for this site/);
   assert.match(route, /response\.status === 429/);
   assert.match(route, /response\.status >= 500/);
@@ -93,6 +94,30 @@ test("uses individual shop-aware Printify editor buttons", async () => {
   assert.doesNotMatch(route, /image\.id === primaryTemplateImageId/);
   assert.match(route, /Add one placeholder design/);
   assert.match(route, /templateImageCount/);
+});
+
+test("unifies recipes, listing editing, pricing, and mockups without the old factory toggle", async () => {
+  const [page, recipes, mockups, drafts] = await Promise.all([
+    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/factory-tools.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/integrated-mockups.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/printify/drafts/route.ts", import.meta.url), "utf8"),
+  ]);
+  assert.doesNotMatch(page, /factory-switcher/);
+  assert.match(recipes, /Printify template link/);
+  assert.match(recipes, /paste it only once/);
+  assert.match(recipes, /saved recipe/);
+  assert.match(recipes, /Add another recipe/);
+  assert.match(recipes, /Save as my default pricing profile/);
+  assert.match(page, /Import title CSV/);
+  assert.match(page, /Exact title phrases/);
+  assert.match(page, /300 DPI target/);
+  assert.match(page, /Choose Printify flatlays/);
+  assert.match(page, /IntegratedMockups/);
+  assert.match(mockups, /Choose a mockup set/);
+  assert.match(mockups, /Create .*mockups/);
+  assert.match(drafts, /priceFor\(cost \?\? price\)/);
+  assert.match(drafts, /printifyImages/);
 });
 
 test("processes a 20-design batch with bounded two-at-a-time concurrency", async () => {

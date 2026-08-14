@@ -3,20 +3,21 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
-import Link from "next/link";
 import SupportChat from "./support-chat";
 import { runBounded } from "./bounded-work";
 import { KeywordBank, SavedWorkflow, type Pricing, type Recipe } from "./factory-tools";
+import IntegratedMockups from "./integrated-mockups";
 
 type DesignFile = { name: string; size: number; id: string; file: File; previewUrl: string; title: string; tags: string[]; width?: number; height?: number };
 type TemplateDetails = { id: string; batchId: string; title: string; provider: string; enabledVariants: number; shop: string; maxPrintWidth?: number | null; maxPrintHeight?: number | null };
-type DraftResult = { id?: string; clientId: string; name: string; title?: string; tags?: string[]; previewUrl?: string; shopId?: number; editorUrl?: string; status: "Created" | "Failed"; error?: string };
+type DraftResult = { id?: string; clientId: string; name: string; title?: string; tags?: string[]; previewUrl?: string; printifyImages?: string[]; shopId?: number; editorUrl?: string; status: "Created" | "Failed"; error?: string };
 
 const MAX_BATCH_FILES = 20;
 const MAX_BATCH_BYTES = 500 * 1024 * 1024;
 const MAX_CONCURRENT_DESIGNS = 2;
 const DEFAULT_PRICING: Pricing = { targetProfit: 10, etsyFeePercent: 9.5, fixedFee: 0.25, listingFee: 0.20, shippingCost: 0, shippingCharged: 0 };
 function tagsFromTitle(title: string) { return [...new Set(title.split(/[,|]/).map((v) => v.trim().toLowerCase()).filter((v) => v.length > 1 && v.length <= 20))].slice(0, 13); }
+function PrintifyImagePicker({ images }: { images: string[] }) { const [selected, setSelected] = useState<Set<string>>(new Set(images.slice(0, 3))); if (!images.length) return <p className="preview-processing">Printify is still processing its product mockups. Open the editor to view them once they appear.</p>; return <details className="printify-image-picker"><summary>Choose Printify flatlays ({selected.size} selected)</summary><p>Select the Printify images you want mixed with the Goldie lifestyle mockups. Goldie will attach and order these automatically after the Etsy connection is approved.</p><div>{images.map((src, index) => <label className={selected.has(src) ? "selected" : ""} key={src}><input type="checkbox" checked={selected.has(src)} onChange={() => setSelected(current => { const next = new Set(current); if (next.has(src)) next.delete(src); else next.add(src); return next; })}/><img src={src} alt={`Printify product mockup ${index + 1}`}/></label>)}</div></details>; }
 
 async function fetchWithDeadline(input: RequestInfo | URL, init: RequestInit, milliseconds: number) {
   const controller = new AbortController();
@@ -47,6 +48,7 @@ function friendlyUploadError(error: unknown) {
 export default function Home() {
   const folderPicker = useRef<HTMLInputElement>(null);
   const imagePicker = useRef<HTMLInputElement>(null);
+  const csvPicker = useRef<HTMLInputElement>(null);
   const [connected, setConnected] = useState(false);
   const [token, setToken] = useState("");
   const [connectionError, setConnectionError] = useState("");
@@ -76,7 +78,7 @@ export default function Home() {
 
   const templateLoaded = templateDetails !== null;
   const ready = connected && templateLoaded && description.trim().length > 0 && files.length > 0;
-  const missingRequirement = !connected ? "Connect Printify first" : !templateLoaded ? "Load your product template" : !description.trim() ? "Add your description" : files.length === 0 ? "Add at least one design" : "";
+  const missingRequirement = !connected ? "Connect Printify first" : !templateLoaded ? "Choose or verify a product recipe" : !description.trim() ? "Complete the recipe description" : files.length === 0 ? "Add at least one design" : "";
   const totalSize = useMemo(() => files.reduce((sum, file) => sum + file.size, 0), [files]);
 
   useEffect(() => {
@@ -123,7 +125,8 @@ export default function Home() {
 
   function updateDesign(id: string, change: Partial<DesignFile>) { setFiles((current) => current.map((file) => file.id === id ? { ...file, ...change } : file)); }
   function applyBulkTitles() { const titles = bulkTitles.split(/\r?\n/).map((v) => v.replace(/^"|"$/g, "").trim()).filter(Boolean); setFiles((current) => current.map((file, index) => titles[index] ? { ...file, title: titles[index], tags: tagsFromTitle(titles[index]) } : file)); }
-  function useRecipe(recipe: Recipe) { setTemplate(recipe.templateUrl); setDescription(recipe.description || ""); setListingTitle(recipe.defaultTitle || ""); setMockupTheme(recipe.defaultMockupTheme || ""); setPricing({ ...DEFAULT_PRICING, ...(recipe.pricing || {}) }); setTemplateDetails(null); window.setTimeout(() => document.getElementById("load-recipe-template")?.click(), 0); }
+  async function importTitleCsv(list: FileList | null) { const file = list?.[0]; if (!file) return; const text = await file.text(); const lines = text.split(/\r?\n/).map((line) => line.split(",")[0]?.replace(/^"|"$/g, "").trim()).filter(Boolean); const values = /title/i.test(lines[0] || "") ? lines.slice(1) : lines; setBulkTitles(values.join("\n")); setFiles((current) => current.map((design, index) => values[index] ? { ...design, title: values[index].slice(0, 140), tags: tagsFromTitle(values[index]) } : design)); if (csvPicker.current) csvPicker.current.value = ""; }
+  function useRecipe(recipe: Recipe) { setTemplate(recipe.templateUrl); setDescription(recipe.description || ""); setListingTitle(recipe.defaultTitle || ""); setMockupTheme(recipe.defaultMockupTheme || ""); setPricing({ ...DEFAULT_PRICING, ...(recipe.pricing || {}) }); setTemplateDetails(null); void loadTemplateUrl(recipe.templateUrl); }
   function addKeyword(keyword: string) { const id = activeDesign || files[0]?.id; if (!id) return; setFiles((current) => current.map((file) => { if (file.id !== id) return file; const title = file.title ? `${file.title}, ${keyword}` : keyword; return { ...file, title: title.slice(0, 140), tags: tagsFromTitle(title) }; })); }
 
   async function connectPrintify() {
@@ -137,14 +140,14 @@ export default function Home() {
     finally { setConnecting(false); }
   }
 
-  async function loadTemplate() {
+  async function loadTemplateUrl(productUrl = template) {
     setLoadingTemplate(true); setTemplateError(""); setTemplateDetails(null);
     try {
-      const response = await fetchWithDeadline("/api/printify", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ productUrl: template }) }, 90000);
+      const response = await fetchWithDeadline("/api/printify", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ productUrl }) }, 90000);
       const result = await response.json() as { product?: TemplateDetails; error?: string };
       if (!response.ok || !result.product) throw new Error(result.error || "The template could not be loaded.");
-      setTemplateDetails(result.product);
-    } catch (error) { setTemplateError(error instanceof Error ? error.message : "The template could not be loaded."); }
+      setTemplateDetails(result.product); return true;
+    } catch (error) { setTemplateError(error instanceof Error ? error.message : "The template could not be loaded."); return false; }
     finally { setLoadingTemplate(false); }
   }
 
@@ -267,6 +270,7 @@ export default function Home() {
     setOpenAllMessage("");
     if (folderPicker.current) folderPicker.current.value = "";
     if (imagePicker.current) imagePicker.current.value = "";
+    if (csvPicker.current) csvPicker.current.value = "";
   }
 
   function openDraft(draft: DraftResult) {
@@ -296,11 +300,10 @@ export default function Home() {
           <Image src="/goldie-wordmark.webp" width={236} height={120} alt="Goldie" className="wordmark" priority />
           <span className="brand-divider" />
           <div>
-            <p className="product-name">Listing Factory</p>
+            <p className="product-name">Listing + Mockup Factory</p>
           </div>
         </div>
         <div className="top-actions">
-          <nav className="factory-switcher" aria-label="Goldie factories"><Link className="active" href="/">Listing Factory</Link><Link href="/mockups">Mockup Factory</Link></nav>
           {owner && <a className="diagnostics-link" href="/mastermind-admin" aria-label="Open Goldie Diagnostics" title="Goldie Diagnostics">★</a>}
           <span className="secure-pill"><i /> Secure workspace</span>
         </div>
@@ -308,15 +311,14 @@ export default function Home() {
 
       <section className="hero">
         <div>
-          <h1>Automate your Printify listing creation process, all in one place.</h1>
-          <p className="hero-copy">Choose a product template, add your product description, and select a folder of finished designs.</p>
+          <h1>From finished designs to listing-ready drafts, in one workflow.</h1>
+          <p className="hero-copy">Start with a saved product recipe, build titles and pricing in bulk, create Printify drafts, then finish the exact mockups each listing needs.</p>
         </div>
         <Image src="/goldie-g.png" width={2000} height={2000} alt="" className="hero-watermark" />
       </section>
 
       <section className="workspace">
         <div className="steps-column">
-          <SavedWorkflow templateUrl={template} description={description} defaultTitle={listingTitle} mockupTheme={mockupTheme} pricing={pricing} onUseRecipe={useRecipe} onPricing={setPricing} onMockupTheme={setMockupTheme} />
           <article className={`step-card ${connected ? "done" : ""}`}>
             <div className="step-number">01</div>
             <div className="step-content">
@@ -336,38 +338,12 @@ export default function Home() {
             </div>
           </article>
 
-          <article className={`step-card ${templateLoaded ? "done" : ""}`}>
-            <div className="step-number">02</div>
-            <div className="step-content">
-              <div className="step-heading"><div><p className="mini-label">PRODUCT TEMPLATE</p><h2>Choose your Printify product template</h2></div>{templateLoaded && <span className="done-mark">✓ Loaded</span>}</div>
-              <p className="step-copy">Paste the link from a product in My Products. Its provider, colors, sizes, pricing and print areas carry into the whole batch, so make sure the details are correctly set in the template listing before beginning.</p>
-              <div className="inline-field">
-                <input value={template} onChange={(event) => { setTemplate(event.target.value); setTemplateDetails(null); setTemplateError(""); }} onBlur={() => { if (connected && template.trim() && !templateLoaded && !loadingTemplate) void loadTemplate(); }} onKeyDown={(event) => { if (event.key === "Enter" && connected && template.trim() && !loadingTemplate) { event.preventDefault(); void loadTemplate(); } }} placeholder="Paste your Printify product link" aria-label="Printify product link" />
-                <button id="load-recipe-template" onClick={loadTemplate} disabled={!connected || !template.trim() || loadingTemplate}>{loadingTemplate ? "Loading…" : "Load template"}</button>
-              </div>
-              {templateError && <p className="field-error" role="alert">{templateError}</p>}
-              {templateDetails && <div className="template-proof"><div className="product-thumb"><span>YOUR<br/>ART</span></div><div className="template-info"><b>{templateDetails.title}</b><span>Print provider · {templateDetails.provider}</span><span>{templateDetails.enabledVariants} enabled variants · {templateDetails.shop}</span></div><span className="template-badge">Verified</span></div>}
-              <div className="optional-title-field">
-                <label htmlFor="batch-listing-title"><b>Listing title</b> <span>Optional</span></label>
-                <p>If these designs use the same title, enter it once and Goldie will add it to every draft. Leave this blank to use each design’s filename as its title.</p>
-                <input id="batch-listing-title" value={listingTitle} onChange={(event) => setListingTitle(event.target.value)} placeholder="Paste the listing title for this batch" maxLength={255} />
-                <span className="character-count">{listingTitle.length}/255 characters</span>
-              </div>
-            </div>
-          </article>
-
-          <article className={`step-card ${description.trim() ? "done" : ""}`}>
-            <div className="step-number">03</div>
-            <div className="step-content">
-              <div className="step-heading"><div><p className="mini-label">DESCRIPTION</p><h2>Add the batch description</h2></div>{description.trim() && <span className="done-mark">✓ Added</span>}</div>
-              <p className="step-copy">This exact description goes into every draft. You can personalize individual listings later.</p>
-              <textarea value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Paste your product description here" rows={5} />
-              <span className="character-count">{description.length.toLocaleString()} characters</span>
-            </div>
-          </article>
+          <SavedWorkflow connected={connected} templateUrl={template} description={description} defaultTitle={listingTitle} mockupTheme={mockupTheme} pricing={pricing} templateVerified={templateLoaded} loadingTemplate={loadingTemplate} onTemplateUrl={(value) => { setTemplate(value); setTemplateDetails(null); setTemplateError(""); }} onDescription={setDescription} onDefaultTitle={setListingTitle} onUseRecipe={useRecipe} onVerifyTemplate={loadTemplateUrl} onPricing={setPricing} onMockupTheme={setMockupTheme} />
+          {templateError && <p className="field-error recipe-error" role="alert">{templateError}</p>}
+          {templateDetails && <div className="template-proof recipe-proof"><div className="product-thumb"><span>YOUR<br/>ART</span></div><div className="template-info"><b>{templateDetails.title}</b><span>Print provider · {templateDetails.provider}</span><span>{templateDetails.enabledVariants} enabled variants · {templateDetails.shop}</span></div><span className="template-badge">Verified recipe template</span></div>}
 
           <article className={`step-card ${files.length ? "done" : ""}`}>
-            <div className="step-number">04</div>
+            <div className="step-number">03</div>
             <div className="step-content">
               <div className="step-heading"><div><p className="mini-label">DESIGNS</p><h2>Add your finished designs</h2></div>{files.length > 0 && <span className="done-mark">✓ {files.length} loaded</span>}</div>
               <p className="step-copy">Build one focused batch of up to 20 finished designs. Upload a folder or select individual images.</p>
@@ -389,7 +365,12 @@ export default function Home() {
               </div>
               {fileError && <p className="file-limit-error" role="alert"><b>That batch can’t be added.</b><span>{fileError}</span></p>}
               {files.length > 0 && <div className="batch-capacity"><div><b>{files.length}/20 designs</b><span>{20 - files.length} spaces remaining</span></div><div className="capacity-track"><span style={{ width: `${(files.length / 20) * 100}%` }} /></div></div>}
-              {files.length > 0 && <div className="listing-editor"><div className="bulk-title-box"><textarea value={bulkTitles} onChange={(e) => setBulkTitles(e.target.value)} rows={3} placeholder="Paste one title per line from eRank or a CSV column"/><button onClick={applyBulkTitles}>Apply titles in order</button></div><KeywordBank onAdd={addKeyword}/><div className="design-table">{files.map((design) => { const qualityReady = Boolean(design.width && design.height && (!templateDetails?.maxPrintWidth || (design.width >= templateDetails.maxPrintWidth && design.height >= (templateDetails.maxPrintHeight || 0)))); return <article className={`design-line ${activeDesign === design.id ? "active" : ""}`} key={design.id} onClick={() => setActiveDesign(design.id)}><img src={design.previewUrl} alt=""/><div className="design-fields"><input value={design.title} maxLength={140} onChange={(e) => { const title = e.target.value; updateDesign(design.id, { title, tags: tagsFromTitle(title) }); }}/><div className="tag-row">{design.tags.map((tag) => <span key={tag}>{tag}</span>)}{!design.tags.length && <small>Add comma-separated title phrases to generate matching Etsy tags.</small>}</div></div><div className={`quality-pill ${qualityReady ? "pass" : "check"}`}><b>{qualityReady ? "✓ Size ready" : "Check size"}</b><small>{design.width ? `${design.width} × ${design.height}px` : "Reading dimensions…"}</small></div></article>; })}</div></div>}
+              {files.length > 0 && <div className="listing-editor">
+                <div className="editor-heading"><div><b>Build every listing before creating drafts</b><span>Titles and tags stay editable. Select a row before clicking phrases from a keyword bank.</span></div><span>{files.length} listings</span></div>
+                <div className="bulk-title-box"><textarea value={bulkTitles} onChange={(e) => setBulkTitles(e.target.value)} rows={3} placeholder="Paste one title per line from eRank or a CSV column"/><div><button onClick={applyBulkTitles}>Apply titles in order</button><button className="secondary-import" onClick={() => csvPicker.current?.click()}>Import title CSV</button><input ref={csvPicker} hidden type="file" accept=".csv,text/csv" onChange={(event) => void importTitleCsv(event.target.files)}/></div></div>
+                <KeywordBank onAdd={addKeyword}/>
+                <div className="design-table">{files.map((design) => { const qualityKnown = Boolean(templateDetails?.maxPrintWidth && templateDetails?.maxPrintHeight); const qualityReady = Boolean(qualityKnown && design.width && design.height && design.width >= templateDetails!.maxPrintWidth! && design.height >= templateDetails!.maxPrintHeight!); return <article className={`design-line ${activeDesign === design.id ? "active" : ""}`} key={design.id} onClick={() => setActiveDesign(design.id)}><img src={design.previewUrl} alt=""/><div className="design-fields"><label>Title <span>{design.title.length}/140</span><input value={design.title} maxLength={140} onChange={(e) => { const title = e.target.value; updateDesign(design.id, { title, tags: tagsFromTitle(title) }); }}/></label><label>Tags <span>{design.tags.length}/13</span><input value={design.tags.join(", ")} onChange={(e) => updateDesign(design.id, { tags: [...new Set(e.target.value.split(",").map((tag) => tag.trim().toLowerCase()).filter((tag) => tag && tag.length <= 20))].slice(0, 13) })} placeholder="Exact title phrases, separated by commas"/></label><div className="tag-row">{design.tags.map((tag) => <span key={tag}>{tag}</span>)}{!design.tags.length && <small>Add comma-separated title phrases to generate matching Etsy tags.</small>}</div></div><div className={`quality-pill ${qualityReady ? "pass" : "check"}`}><b>{!qualityKnown ? "Waiting for recipe" : qualityReady ? "✓ 300 DPI target met" : "Below 300 DPI target"}</b><small>{design.width ? `${design.width} × ${design.height}px` : "Reading dimensions…"}</small>{qualityKnown && <small>Target: {templateDetails!.maxPrintWidth} × {templateDetails!.maxPrintHeight}px</small>}</div></article>; })}</div>
+              </div>}
             </div>
           </article>
         </div>
@@ -399,12 +380,12 @@ export default function Home() {
             <Image src="/goldie-g.png" width={2000} height={2000} alt="" className="goldie-g" />
             <p className="mini-label">BATCH SUMMARY</p>
             <h2>{running ? `${processed} of ${runTotal} complete` : complete ? "Batch finished" : "Current batch"}</h2>
-            <p>{complete ? `${drafts.filter((draft) => draft.status === "Created").length} of ${files.length} drafts were created in Printify.` : running ? "Goldie is uploading each design and creating its Printify draft." : "Complete the four sections to create unpublished drafts in Printify."}</p>
+            <p>{complete ? `${drafts.filter((draft) => draft.status === "Created").length} of ${files.length} drafts were created in Printify.` : running ? "Goldie is uploading each design and creating its Printify draft." : "Complete the three sections to create unpublished drafts in Printify."}</p>
           </div>
 
           <div className="summary-list">
             <div><span>Printify</span><b className={connected ? "ready-text" : "waiting-text"}>{connected ? "Connected" : "Waiting"}</b></div>
-            <div><span>Template</span><b>{templateLoaded ? "Loaded" : "Not added"}</b></div>
+            <div><span>Product recipe</span><b>{templateLoaded ? "Ready" : "Not selected"}</b></div>
             <div><span>Designs</span><b>{files.length ? `${files.length} / 20` : "Not added"}</b></div>
             <div><span>Publishing</span><b>Draft only</b></div>
           </div>
@@ -429,18 +410,10 @@ export default function Home() {
           <p className="launch-note">Listings remain unpublished until you publish them in Printify.</p>
           {(template || listingTitle || description || files.length > 0 || drafts.length > 0) && <button className="start-over-button" disabled={running} onClick={startOver}>Clear all / start over</button>}
 
-          {complete && (
-            <div className="draft-preview">
-              <div className="draft-title"><b>Latest batch</b><span>{drafts.length} results</span></div>
-              {drafts.map((draft) => (
-                <div className={`draft-row draft-visual ${draft.status === "Failed" ? "draft-failed" : ""}`} key={draft.clientId}>{draft.previewUrl ? <img src={draft.previewUrl} alt={`Printify preview for ${draft.title || draft.name}`}/> : <span className="draft-check">{draft.status === "Created" ? "✓" : "!"}</span>}<div><b>{draft.title || draft.name}</b><small>{draft.status === "Created" ? "Unpublished Printify draft" : draft.error}</small>{draft.status === "Created" && <details className="draft-mockups"><summary>Choose listing mockups</summary><label>Mockup set<input value={mockupTheme} onChange={(e) => setMockupTheme(e.target.value)} placeholder="Choose or change this listing’s set"/></label><small>Your saved set is the starting point. Open Mockup Factory to select and generate the exact images for this listing.</small><a href="/mockups">Open integrated Mockup Factory →</a></details>}{draft.status === "Failed" && <button className="error-help-link" onClick={() => window.dispatchEvent(new CustomEvent("goldie-support", { detail: draft.error ?? "A design failed" }))}>Get help with this error</button>}</div>{draft.editorUrl && draft.id ? <button className={`edit-draft-button ${openedDrafts.includes(draft.id) ? "opened" : ""}`} onClick={() => openDraft(draft)}><i />{openedDrafts.includes(draft.id) ? "Opened" : "Edit in Printify"}</button> : <span>Not available</span>}</div>
-              ))}
-              {drafts.filter((draft) => draft.status === "Created").length > 1 && <button className="open-all-button" onClick={openAllDrafts}>Open all in Printify</button>}
-              {openAllMessage && <p className="open-all-message" role="status">{openAllMessage}</p>}
-            </div>
-          )}
         </aside>
       </section>
+
+      {complete && <section className="post-draft-workspace"><div className="post-draft-heading"><div><p className="mini-label">PRINTIFY DRAFTS + MOCKUPS</p><h2>Review the real product previews, then finish each listing.</h2><p>Only open Printify when a preview needs manual size or placement adjustment. Mockup choices can be different for every listing.</p></div>{drafts.filter((draft) => draft.status === "Created").length > 1 && <button className="open-all-button" onClick={openAllDrafts}>Open all in Printify</button>}</div>{openAllMessage && <p className="open-all-message" role="status">{openAllMessage}</p>}<div className="draft-card-grid">{drafts.map((draft) => { const design=files.find(file=>file.id===draft.clientId); return <article className={`draft-card ${draft.status === "Failed" ? "failed" : ""}`} key={draft.clientId}><div className="draft-card-top">{draft.previewUrl ? <img src={draft.previewUrl} alt={`Printify preview for ${draft.title || draft.name}`}/> : design ? <div className="pending-preview"><img src={design.previewUrl} alt="Design preview"/><span>Printify preview processing</span></div> : <span className="draft-check">!</span>}<div><span className="draft-state">{draft.status === "Created" ? "PRINTIFY DRAFT CREATED" : "DRAFT FAILED"}</span><h3>{draft.title || draft.name}</h3><small>{draft.status === "Created" ? "Unpublished · pricing and description applied" : draft.error}</small>{design?.tags?.length ? <div className="tag-row">{design.tags.map(tag=><span key={tag}>{tag}</span>)}</div> : null}</div>{draft.editorUrl && draft.id ? <button className={`edit-draft-button ${openedDrafts.includes(draft.id) ? "opened" : ""}`} onClick={() => openDraft(draft)}><i />{openedDrafts.includes(draft.id) ? "Opened" : "Adjust in Printify"}</button> : null}</div>{draft.status === "Created" && <PrintifyImagePicker images={(draft.printifyImages || []).filter(Boolean)}/>} {draft.status === "Created" && design && <details className="draft-mockups" open><summary>Optional: create Goldie lifestyle mockups</summary><IntegratedMockups design={design.file} defaultTheme={mockupTheme}/></details>}{draft.status === "Failed" && <button className="error-help-link" onClick={() => window.dispatchEvent(new CustomEvent("goldie-support", { detail: draft.error ?? "A design failed" }))}>Get help with this error</button>}</article>})}</div></section>}
 
       <footer><span>GOLDIE LISTING FACTORY</span><span>BE A WOLF BIZ · 2026</span></footer>
       <SupportChat />
