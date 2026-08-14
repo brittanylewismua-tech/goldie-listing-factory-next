@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
     const response = await fetch("https://fal.run/fal-ai/sam-3/image", {
       method: "POST",
       headers: { "Authorization": `Key ${key}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ image_url: imageUrl, prompt, apply_mask: true, return_multiple_masks: true, max_masks: 8, include_scores: true, include_boxes: true, output_format: "png", sync_mode: true }),
+      body: JSON.stringify({ image_url: imageUrl, prompt, apply_mask: true, return_multiple_masks: false, max_masks: 1, include_scores: true, include_boxes: true, output_format: "png" }),
     });
     const result = await response.json() as { masks?: Array<{ url?: string }>; scores?: number[]; boxes?: number[][]; detail?: string; error?: string };
     if (!response.ok) return NextResponse.json({ error: result.detail || result.error || "The scene could not be analyzed." }, { status: 502 });
