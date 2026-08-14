@@ -32,8 +32,8 @@ test("server-renders the branded Listing Factory", async () => {
   assert.match(html, /Connect Printify first/);
   assert.match(html, /20 finished designs/);
   assert.match(html, /500 MB/);
-  assert.match(html, /60 MB per design/);
-  assert.match(html, /sized for the selected product/);
+  assert.match(html, /100 MB per design/);
+  assert.match(html, /optimized without changing DPI/);
   assert.match(html, /Listings remain unpublished/);
   assert.doesNotMatch(html, /pink-dorm-collage|rich-man-poster|cowgirl-disco|newest batch will open/i);
   assert.doesNotMatch(html, /codex-preview|react-loading-skeleton/i);
@@ -59,8 +59,7 @@ test("uses individual shop-aware Printify editor buttons", async () => {
   assert.match(page, /\{processed\}\/\{runTotal\}/);
   assert.doesNotMatch(page, /Creating \$\{processed \+ 1\} of/);
   assert.match(page, /\/api\/printify\/stage/);
-  assert.match(page, /pass its original bytes straight through/);
-  assert.match(page, /return \{ blob: file, fileName: file\.name \}/);
+  assert.match(page, /prepareArtworkFile/);
   assert.match(page, /fetchWithDeadline/);
   assert.match(page, /4 \* 60 \* 1000/);
   assert.match(page, /Add at least one design/);
@@ -253,12 +252,11 @@ test("retries Printify remote-artwork download interruptions before failing the 
   assert.match(drafts, /after three automatic retries/);
 });
 
-test("streams staged artwork to Printify through an expiring signed URL", async () => {
+test("sends optimized staged artwork directly to Printify", async () => {
   const route = await readFile(new URL("../app/api/printify/drafts/route.ts", import.meta.url), "utf8");
   assert.match(route, /ARTWORK\?\.get\(body\.stagedId\)/);
-  assert.match(route, /signedArtworkUrl/);
-  assert.match(route, /file_name: body\.fileName!, url: artworkUrl/);
-  assert.doesNotMatch(route, /artworkContents/);
+  assert.match(route, /contents = await artworkContents/);
+  assert.match(route, /file_name: body\.fileName!, contents/);
 });
 
 test("parses real eRank exports and creates Etsy-valid title phrases", async () => {
@@ -294,10 +292,10 @@ test("validates and isolates staged artwork without decoding or buffering it", a
 
 test("rejects oversized Printify uploads immediately and never retries a 413", async () => {
   const { MAX_FILE_BYTES, isPermanentUploadError, oversizedFileMessage } = await import("../app/upload-policy.ts");
-  assert.equal(MAX_FILE_BYTES, 60 * 1024 * 1024);
+  assert.equal(MAX_FILE_BYTES, 100 * 1024 * 1024);
   assert.equal(isPermanentUploadError('Printify returned 413: {"error":"The POST data is too large."}'), true);
-  assert.match(oversizedFileMessage("poster.png", 75 * 1024 * 1024), /poster\.png is 75\.0 MB/);
-  assert.match(oversizedFileMessage("poster.png", 75 * 1024 * 1024), /without reducing the pixel dimensions needed for 300 DPI/);
+  assert.match(oversizedFileMessage("poster.png", 125 * 1024 * 1024), /poster\.png is 125\.0 MB/);
+  assert.match(oversizedFileMessage("poster.png", 125 * 1024 * 1024), /without reducing the pixel dimensions needed for 300 DPI/);
 });
 
 test("retries a real 8253 draft response and succeeds without an upload lookup", async () => {

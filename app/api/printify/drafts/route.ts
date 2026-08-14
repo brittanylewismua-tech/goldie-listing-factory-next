@@ -8,7 +8,6 @@ import { printAreasWithOnlyCurrentArtwork } from "../product-payload";
 import { planFor } from "@/app/plan-limits";
 import { decryptPrintifyToken } from "../token-crypto";
 import { recommendedPrice } from "@/app/pricing";
-import { signedArtworkUrl } from "../staged-url";
 
 const PRINTIFY_API = "https://api.printify.com/v1";
 type UploadedImage = { id: string; width?: number; height?: number; mime_type?: string };
@@ -86,6 +85,14 @@ async function requestKey(batchId: string, clientId: string) {
   return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
+async function artworkContents(stream?: ReadableStream) {
+  if (!stream) throw new Error("Goldie could not read the staged artwork.");
+  const bytes = new Uint8Array(await new Response(stream).arrayBuffer());
+  let binary = "";
+  for (let index = 0; index < bytes.length; index += 0x8000) binary += String.fromCharCode(...bytes.subarray(index, index + 0x8000));
+  return btoa(binary);
+}
+
 export async function GET(request: Request) {
   const user = await getChatGPTUser();
   if (!user) return NextResponse.json({ error: "Sign in to continue." }, { status: 401 });
@@ -156,18 +163,16 @@ export async function POST(request: Request) {
     if (!stagedArtwork) throw new Error("Goldie could not retrieve the staged artwork.");
     if (stagedArtwork.customMetadata?.owner !== user.userId) throw new Error("This staged artwork does not belong to the signed-in account.");
     if (Number(stagedArtwork.customMetadata?.expires ?? 0) <= Date.now()) throw new Error("The staged artwork expired before Printify could retrieve it.");
-    const artworkSecret = runtimeEnv().PRINTIFY_TOKEN_KEY;
-    if (!artworkSecret) throw new Error("Secure artwork delivery is not configured.");
-    const artworkUrl = await signedArtworkUrl(new URL(request.url).origin, body.stagedId, artworkSecret);
+    const contents = await artworkContents(stagedArtwork.body);
     const uploadArtwork = () => api<UploadedImage>("/uploads/images.json", token, {
         method: "POST",
-        body: JSON.stringify({ file_name: body.fileName!, url: artworkUrl }),
+        body: JSON.stringify({ file_name: body.fileName!, contents }),
       }, (attempt, status) => recordDiagnostic(runtimeEnv().DB, supportReference, { stage: "printify_upload", event: "retry", attempt, httpStatus: status ?? null, shopId: shop.id }));
     let upload = await uploadArtwork();
     if (!upload.id) throw new Error("Printify accepted the artwork request but did not return an image ID.");
     await recordDiagnostic(runtimeEnv().DB, supportReference, { stage: diagnosticStage, event: "succeeded", shopId: shop.id });
-    // Printify receives the exact staged bytes through a short-lived signed URL.
-    // The unguessable URL expires quickly and avoids memory-heavy base64 requests.
+    // The private app sends the staged bytes directly to Printify. Large opaque
+    // artwork is optimized in the browser first so this request stays reliable.
     // creation on GET /uploads/{id}: live Printify accounts can return 404 from
     // that lookup even though the uploaded image ID is valid. Draft creation
     // below is the authoritative registration check and retries only when

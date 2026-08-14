@@ -11,10 +11,11 @@ import { tagsFromTitle, titlesFromCsv } from "./seo-utils";
 import { normalizedPlacementScale, printifyDpi } from "./print-quality";
 import { isPermanentUploadError, MAX_FILE_BYTES, oversizedFileMessage } from "./upload-policy";
 import { safeImagePreviewDataUrl } from "./client-image-preview";
+import { prepareArtworkFile } from "./client-artwork-upload";
 
 type VisibleBounds={left:number;top:number;right:number;bottom:number};
 type EtsyDetails={category:string;attributes:Record<string,string>;optional:Record<string,string>;blurb:string;confidence:"high"|"review"};
-type DesignFile = { name: string; size: number; id: string; file: File; previewUrl: string; title: string; tags: string[]; width?: number; height?: number; visibleBounds?:VisibleBounds; paddingStatus?:"checking"|"trimmed"|"full";etsy?:EtsyDetails;etsyError?:string };
+type DesignFile = { name: string; size: number; id: string; file: File; previewUrl: string; title: string; tags: string[]; width?: number; height?: number; visibleBounds?:VisibleBounds; hasTransparency?:boolean; paddingStatus?:"checking"|"trimmed"|"full";etsy?:EtsyDetails;etsyError?:string };
 type TemplateDetails = { id: string; batchId: string; title: string; description:string; blueprintId:number;blueprintTitle:string;brand:string;model:string;provider: string; enabledVariants: number; shop: string; standardShipping?:number|null;shippingCurrency?:string;maxPrintWidth?: number | null; maxPrintHeight?: number | null; placementScale?: number | null };
 type DraftResult = { id?: string; clientId: string; name: string; title?: string; tags?: string[]; previewUrl?: string; printifyImages?: string[]; shopId?: number; editorUrl?: string; status: "Created" | "Failed"; error?: string };
 
@@ -47,7 +48,7 @@ function friendlyUploadError(error: unknown) {
   if (/template product was not found|not found in the connected Printify/i.test(message)) return withReference("This template belongs to a different Printify account or shop than the connected token.");
   if (/8150|validation failed|print_areas|placeholder/i.test(message)) return withReference("Printify rejected this template’s print-area setup. Reload the template; if it continues, use a freshly saved copy of the Printify product.");
   if (/429|longer than expected|rate limit/i.test(message)) return withReference("Printify is temporarily limiting requests. Goldie already waited and retried; retry this design when the batch finishes.");
-  if (/413|post data is too large|file is too large/i.test(message)) return withReference("This design file is too large for Printify’s upload endpoint. Export an optimized PNG or JPG under 60 MB; do not reduce the pixel dimensions if they are needed for 300 DPI.");
+  if (/413|post data is too large|file is too large/i.test(message)) return withReference("This design is still too large for Printify after safe preparation. Export an optimized PNG or JPG under 40 MB; keep the pixel dimensions needed for 300 DPI.");
   return message || "Goldie could not create this draft. Retry it when the batch finishes.";
 }
 
@@ -146,7 +147,7 @@ export default function Home() {
     void analyzePadding(images);
   }
 
-  async function analyzePadding(images:DesignFile[]) { for(const design of images){ if(!/\.png$/i.test(design.name)){updateDesign(design.id,{visibleBounds:{left:0,top:0,right:1,bottom:1},paddingStatus:"full"});continue} try{const bitmap=await createImageBitmap(design.file,{resizeWidth:512,resizeHeight:512,resizeQuality:"low"});const canvas=document.createElement("canvas");canvas.width=bitmap.width;canvas.height=bitmap.height;const context=canvas.getContext("2d",{willReadFrequently:true})!;context.drawImage(bitmap,0,0);bitmap.close();const pixels=context.getImageData(0,0,canvas.width,canvas.height).data;let left=canvas.width,top=canvas.height,right=-1,bottom=-1;for(let y=0;y<canvas.height;y++)for(let x=0;x<canvas.width;x++)if(pixels[(y*canvas.width+x)*4+3]>8){left=Math.min(left,x);right=Math.max(right,x);top=Math.min(top,y);bottom=Math.max(bottom,y)}const bounds=right<0?{left:0,top:0,right:1,bottom:1}:{left:left/canvas.width,top:top/canvas.height,right:(right+1)/canvas.width,bottom:(bottom+1)/canvas.height};const trimmed=bounds.left>.015||bounds.top>.015||bounds.right<.985||bounds.bottom<.985;updateDesign(design.id,{visibleBounds:bounds,paddingStatus:trimmed?"trimmed":"full"})}catch{updateDesign(design.id,{visibleBounds:{left:0,top:0,right:1,bottom:1},paddingStatus:"full"})} } }
+  async function analyzePadding(images:DesignFile[]) { for(const design of images){ if(!/\.png$/i.test(design.name)){updateDesign(design.id,{visibleBounds:{left:0,top:0,right:1,bottom:1},hasTransparency:false,paddingStatus:"full"});continue} try{const bitmap=await createImageBitmap(design.file,{resizeWidth:512,resizeHeight:512,resizeQuality:"low"});const canvas=document.createElement("canvas");canvas.width=bitmap.width;canvas.height=bitmap.height;const context=canvas.getContext("2d",{willReadFrequently:true})!;context.drawImage(bitmap,0,0);bitmap.close();const pixels=context.getImageData(0,0,canvas.width,canvas.height).data;let left=canvas.width,top=canvas.height,right=-1,bottom=-1,hasTransparency=false;for(let y=0;y<canvas.height;y++)for(let x=0;x<canvas.width;x++){const alpha=pixels[(y*canvas.width+x)*4+3];if(alpha<250)hasTransparency=true;if(alpha>8){left=Math.min(left,x);right=Math.max(right,x);top=Math.min(top,y);bottom=Math.max(bottom,y)}}const bounds=right<0?{left:0,top:0,right:1,bottom:1}:{left:left/canvas.width,top:top/canvas.height,right:(right+1)/canvas.width,bottom:(bottom+1)/canvas.height};const trimmed=bounds.left>.015||bounds.top>.015||bounds.right<.985||bounds.bottom<.985;updateDesign(design.id,{visibleBounds:bounds,hasTransparency,paddingStatus:trimmed?"trimmed":"full"})}catch{updateDesign(design.id,{visibleBounds:{left:0,top:0,right:1,bottom:1},hasTransparency:true,paddingStatus:"full"})} } }
 
   function updateDesign(id: string, change: Partial<DesignFile>) { setFiles((current) => current.map((file) => file.id === id ? { ...file, ...change } : file)); if(change.title!==undefined)setDrafts(current=>current.map(draft=>draft.clientId===id?{...draft,title:change.title}:draft)); }
   function applyBulkTitles() { const titles = bulkTitles.split(/\r?\n/).map((v) => v.replace(/^"|"$/g, "").trim()).filter(Boolean); setFiles((current) => current.map((file, index) => titles[index] ? { ...file, title: titles[index], tags: tagsFromTitle(titles[index]),etsy:undefined,etsyError:"" } : file)); }
@@ -177,15 +178,15 @@ export default function Home() {
     finally { setLoadingTemplate(false); }
   }
 
-  async function preparedUpload(file: File) {
-    // Never decode, resize, draw, or recompress artwork in the browser. A
-    // high-resolution PNG can expand to hundreds of megabytes when decoded,
-    // which can make Chrome declare the entire page unresponsive. The File is
-    // already a streamable Blob, so pass its original bytes straight through.
+  async function preparedUpload(design: DesignFile) {
+    // Preserve original bytes whenever Printify can accept them directly.
+    // Oversized opaque artwork is recompressed without changing dimensions;
+    // transparent artwork is never flattened or silently degraded.
+    const file=design.file;
     if (!/\.(png|jpe?g)$/i.test(file.name) || !/^image\/(png|jpeg)$/i.test(file.type || "image/png")) {
       throw new Error("Choose a PNG or JPG file. WebP artwork must be exported as PNG before uploading.");
     }
-    return { blob: file, fileName: file.name };
+    return prepareArtworkFile(file, design.hasTransparency !== false);
   }
 
   async function stageUpload(blob: Blob, fileName: string, reference: string) {
@@ -224,7 +225,7 @@ export default function Home() {
       const referenceRoot = `GLF-${crypto.randomUUID().replace(/-/g, "").slice(0, 10).toUpperCase()}`;
       let finalError: Error | null = null;
       try {
-        const upload = await preparedUpload(design.file);
+        const upload = await preparedUpload(design);
         for (let pipelineAttempt = 1; pipelineAttempt <= 3; pipelineAttempt += 1) {
           const supportReference = `${referenceRoot}-A${pipelineAttempt}`;
           try {
@@ -379,7 +380,7 @@ export default function Home() {
             <div className="step-content">
               <div className="step-heading"><div><p className="mini-label">DESIGNS</p><h2>Add your finished designs</h2></div>{files.length > 0 && <span className="done-mark">✓ {files.length} loaded</span>}</div>
               <p className="step-copy">Build one focused batch of up to 20 finished designs. Upload a folder or select individual images.</p>
-              <p className="batch-limits" aria-label="Batch limits"><span>20 designs maximum</span><i /> <span>60 MB per design · 500 MB per batch</span><i /> <span>Artwork is sized for the selected product</span></p>
+              <p className="batch-limits" aria-label="Batch limits"><span>20 designs maximum</span><i /> <span>100 MB per design · 500 MB per batch</span><i /> <span>Large opaque artwork is optimized without changing DPI</span></p>
               <div className="file-reminder"><b>Before uploading</b><span>Designs must already be upscaled if needed. Use a transparent-background PNG whenever the background should not print.</span></div>
               <input ref={folderPicker} className="hidden-picker" type="file" multiple accept=".png,.jpg,.jpeg" {...({ webkitdirectory: "", directory: "" } as React.InputHTMLAttributes<HTMLInputElement>)} onChange={(event) => chooseFiles(event.target.files)} />
               <input ref={imagePicker} className="hidden-picker" type="file" multiple accept=".png,.jpg,.jpeg" onChange={(event) => chooseFiles(event.target.files)} />
