@@ -63,7 +63,8 @@ test("uses individual shop-aware Printify editor buttons", async () => {
   assert.match(page, /fetchWithDeadline/);
   assert.match(page, /4 \* 60 \* 1000/);
   assert.match(page, /Add at least one design/);
-  assert.match(page, /title: design\.title \|\| listingTitle\.trim\(\) \|\| undefined/);
+  assert.match(page, /title: design\.title \|\| undefined/);
+  assert.doesNotMatch(page, /listingTitle/);
   assert.match(route, /body\.title\?\.trim\(\)\.slice\(0, 255\) \|\| body\.fileName/);
   assert.match(page, /Choose or verify a product recipe/);
   assert.match(page, /function startOver\(\)/);
@@ -165,6 +166,7 @@ test("calculates every Printify variant price from its own cost and Etsy fee pro
   assert.equal(recommendedPrice(1184, pricing), 2463);
   assert.equal(recommendedPrice(1760, pricing), 3100);
   assert.equal(recommendedPrice(1034), 1034);
+  assert.equal(recommendedPrice(1000, { targetProfit: 10, etsyFeePercent: 10, fixedFee: .25, listingFee: .20, shippingCost: 5, shippingCharged: 5 }), 2328);
 });
 
 test("processes a 20-design batch with bounded two-at-a-time concurrency", async () => {
