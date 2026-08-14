@@ -184,7 +184,7 @@ test("makes draft retries idempotent so a lost response cannot duplicate a listi
 test("uses draft creation as the authoritative image-readiness check", async () => {
   const [route, creation] = await Promise.all([readFile(new URL("../app/api/printify/drafts/route.ts", import.meta.url), "utf8"), readFile(new URL("../app/api/printify/product-creation.ts", import.meta.url), "utf8")]);
   assert.doesNotMatch(route, /waitForUploadedImage|fetch\(`\$\{PRINTIFY_API\}\/uploads\/\$\{encodeURIComponent\(imageId\)\}/);
-  assert.match(route, /The upload POST is authoritative for acceptance/);
+  assert.match(route, /draft creation[\s\S]*authoritative registration check/i);
   assert.match(creation, /Provided images do not exist/);
   assert.match(creation, /8253/);
   assert.match(route, /createProductWithImageRetries/);
@@ -200,27 +200,19 @@ test("retries Printify remote-artwork download interruptions before failing the 
   assert.match(drafts, /after three automatic retries/);
 });
 
-test("gives Printify a protected URL to the untouched original instead of buffering base64", async () => {
-  const [route, signedUrlSource, stagedRoute] = await Promise.all([
-    readFile(new URL("../app/api/printify/drafts/route.ts", import.meta.url), "utf8"),
-    readFile(new URL("../app/api/printify/staged-url.ts", import.meta.url), "utf8"),
-    readFile(new URL("../app/api/printify/staged/[id]/route.ts", import.meta.url), "utf8"),
-  ]);
+test("sends private staged artwork directly to Printify without a public callback", async () => {
+  const route = await readFile(new URL("../app/api/printify/drafts/route.ts", import.meta.url), "utf8");
   assert.match(route, /ARTWORK\?\.get\(body\.stagedId\)/);
-  assert.match(route, /signedArtworkUrl/);
-  assert.match(route, /url: artworkUrl/);
-  assert.doesNotMatch(route, /arrayBuffer\(\)|printifyUploadPayload|base64FromBytes|contents:/);
-  assert.match(signedUrlSource, /HMAC/);
-  assert.match(signedUrlSource, /20 \* 60/);
-  assert.match(stagedRoute, /verifyArtworkSignature/);
-  assert.match(stagedRoute, /X-Content-Type-Options/);
+  assert.match(route, /contents = await artworkContents/);
+  assert.match(route, /contents \}\)/);
+  assert.doesNotMatch(route, /signedArtworkUrl|url: artworkUrl/);
+});
 
-  const { signedArtworkUrl, verifyArtworkSignature } = await import("../app/api/printify/staged-url.ts");
-  const secret = "11".repeat(32);
-  const url = new URL(await signedArtworkUrl("https://goldie.example", "original-file.png", secret));
-  assert.equal(url.pathname, "/api/printify/staged/original-file.png");
-  assert.equal(await verifyArtworkSignature("original-file.png", url.searchParams.get("expires"), url.searchParams.get("signature"), secret), true);
-  assert.equal(await verifyArtworkSignature("different-file.png", url.searchParams.get("expires"), url.searchParams.get("signature"), secret), false);
+test("parses real eRank exports and creates Etsy-valid title phrases", async () => {
+  const { phrasesFromErank, tagsFromTitle, titlesFromCsv } = await import("../app/seo-utils.ts");
+  assert.deepEqual(phrasesFromErank('Keyword,Searches,Competition\n"western wall art",1240,43000\n"pink dorm poster",720,18000'), ["western wall art", "pink dorm poster"]);
+  assert.deepEqual(tagsFromTitle("Western Cowgirl Wall Art, Motivational Office Poster, Entrepreneur Gift"), ["western cowgirl", "wall art", "motivational", "office poster", "entrepreneur gift"]);
+  assert.deepEqual(titlesFromCsv('Title,Searches\n"Western Art, Cowgirl Decor",200\n"CEO Office Art",100'), ["Western Art, Cowgirl Decor", "CEO Office Art"]);
 });
 
 test("validates and isolates staged artwork without decoding or buffering it", async () => {

@@ -7,6 +7,7 @@ import SupportChat from "./support-chat";
 import { runBounded } from "./bounded-work";
 import { KeywordBank, SavedWorkflow, type Pricing, type Recipe } from "./factory-tools";
 import IntegratedMockups from "./integrated-mockups";
+import { tagsFromTitle, titlesFromCsv } from "./seo-utils";
 
 type DesignFile = { name: string; size: number; id: string; file: File; previewUrl: string; title: string; tags: string[]; width?: number; height?: number };
 type TemplateDetails = { id: string; batchId: string; title: string; provider: string; enabledVariants: number; shop: string; maxPrintWidth?: number | null; maxPrintHeight?: number | null };
@@ -16,7 +17,6 @@ const MAX_BATCH_FILES = 20;
 const MAX_BATCH_BYTES = 500 * 1024 * 1024;
 const MAX_CONCURRENT_DESIGNS = 2;
 const DEFAULT_PRICING: Pricing = { targetProfit: 10, etsyFeePercent: 9.5, fixedFee: 0.25, listingFee: 0.20, shippingCost: 0, shippingCharged: 0 };
-function tagsFromTitle(title: string) { return [...new Set(title.split(/[,|]/).map((v) => v.trim().toLowerCase()).filter((v) => v.length > 1 && v.length <= 20))].slice(0, 13); }
 function PrintifyImagePicker({ images }: { images: string[] }) { const [selected, setSelected] = useState<Set<string>>(new Set(images.slice(0, 3))); if (!images.length) return <p className="preview-processing">Printify is still processing its product mockups. Open the editor to view them once they appear.</p>; return <details className="printify-image-picker"><summary>Choose Printify flatlays ({selected.size} selected)</summary><p>Select the Printify images you want mixed with the Goldie lifestyle mockups. Goldie will attach and order these automatically after the Etsy connection is approved.</p><div>{images.map((src, index) => <label className={selected.has(src) ? "selected" : ""} key={src}><input type="checkbox" checked={selected.has(src)} onChange={() => setSelected(current => { const next = new Set(current); if (next.has(src)) next.delete(src); else next.add(src); return next; })}/><img src={src} alt={`Printify product mockup ${index + 1}`}/></label>)}</div></details>; }
 
 async function fetchWithDeadline(input: RequestInfo | URL, init: RequestInit, milliseconds: number) {
@@ -125,7 +125,7 @@ export default function Home() {
 
   function updateDesign(id: string, change: Partial<DesignFile>) { setFiles((current) => current.map((file) => file.id === id ? { ...file, ...change } : file)); }
   function applyBulkTitles() { const titles = bulkTitles.split(/\r?\n/).map((v) => v.replace(/^"|"$/g, "").trim()).filter(Boolean); setFiles((current) => current.map((file, index) => titles[index] ? { ...file, title: titles[index], tags: tagsFromTitle(titles[index]) } : file)); }
-  async function importTitleCsv(list: FileList | null) { const file = list?.[0]; if (!file) return; const text = await file.text(); const lines = text.split(/\r?\n/).map((line) => line.split(",")[0]?.replace(/^"|"$/g, "").trim()).filter(Boolean); const values = /title/i.test(lines[0] || "") ? lines.slice(1) : lines; setBulkTitles(values.join("\n")); setFiles((current) => current.map((design, index) => values[index] ? { ...design, title: values[index].slice(0, 140), tags: tagsFromTitle(values[index]) } : design)); if (csvPicker.current) csvPicker.current.value = ""; }
+  async function importTitleCsv(list: FileList | null) { const file = list?.[0]; if (!file) return; const values = titlesFromCsv(await file.text()); setBulkTitles(values.join("\n")); setFiles((current) => current.map((design, index) => values[index] ? { ...design, title: values[index].slice(0, 140), tags: tagsFromTitle(values[index]) } : design)); if (csvPicker.current) csvPicker.current.value = ""; }
   function useRecipe(recipe: Recipe) { setTemplate(recipe.templateUrl); setDescription(recipe.description || ""); setListingTitle(recipe.defaultTitle || ""); setMockupTheme(recipe.defaultMockupTheme || ""); setPricing({ ...DEFAULT_PRICING, ...(recipe.pricing || {}) }); setTemplateDetails(null); void loadTemplateUrl(recipe.templateUrl); }
   function addKeyword(keyword: string) { const id = activeDesign || files[0]?.id; if (!id) return; setFiles((current) => current.map((file) => { if (file.id !== id) return file; const title = file.title ? `${file.title}, ${keyword}` : keyword; return { ...file, title: title.slice(0, 140), tags: tagsFromTitle(title) }; })); }
 
