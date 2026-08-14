@@ -36,11 +36,13 @@ export function SavedWorkflow(props: WorkflowProps) {
   </div></article>;
 }
 
-export function KeywordBank({ onAdd }: { onAdd: (keyword: string) => void }) {
+let keywordListsCache:KeywordList[]|null=null;
+let keywordListsRequest:Promise<KeywordList[]>|null=null;
+function loadKeywordLists(){if(keywordListsCache)return Promise.resolve(keywordListsCache);if(!keywordListsRequest)keywordListsRequest=fetch("/api/keyword-lists").then(r=>r.json()).then(r=>{keywordListsCache=r.lists||[];return keywordListsCache!}).catch(()=>[]).finally(()=>{keywordListsRequest=null});return keywordListsRequest}
+
+export function KeywordBank({ onAdd,title="Choose a keyword bank for this batch",copy="Choose one saved bank, then click phrases to add them to every listing title.",compact=false }: { onAdd: (keyword: string) => void;title?:string;copy?:string;compact?:boolean }) {
   const [lists, setLists] = useState<KeywordList[]>([]), [active, setActive] = useState("");
-  const reload = () => fetch("/api/keyword-lists").then((r) => r.json()).then((r) => setLists(r.lists || [])).catch(() => undefined);
-  // Load the bank once without returning the fetch promise as an effect cleanup.
-  useEffect(() => { void reload(); }, []);
+  useEffect(() => { void loadKeywordLists().then(setLists); }, []);
   const chosen = lists.find((list) => list.id === active);
-  return <section className="keyword-bank keyword-workspace"><div className="keyword-workspace-heading"><div><b>Choose a keyword bank for this batch</b><span>A keyword CSV becomes a saved bank after you upload it once. You do not need to upload it again here.</span></div><a href="/keywords">Upload or manage keyword banks</a></div><div className="keyword-list-picker"><select value={active} onChange={(e) => setActive(e.target.value)}><option value="">Choose a keyword bank</option>{lists.map((list) => <option value={list.id} key={list.id}>{list.name}</option>)}</select></div>{chosen ? <><p>Select a listing below, then click the phrases you want to add to its title.</p><div className="keyword-chips">{chosen.keywords.map((word) => <button key={word} onClick={() => onAdd(word)}>+ {word}</button>)}</div></> : <p>Choose a bank to see its keyword phrases.</p>}</section>;
+  return <section className={`keyword-bank keyword-workspace ${compact?"compact-keywords":""}`}><div className="keyword-workspace-heading"><div><b>{title}</b><span>{copy}</span></div>{!compact&&<a href="/keywords" target="_blank" rel="noopener noreferrer">Upload or manage keyword banks ↗</a>}</div><div className="keyword-list-picker"><select value={active} onChange={(e) => setActive(e.target.value)}><option value="">Choose a keyword bank</option>{lists.map((list) => <option value={list.id} key={list.id}>{list.name}</option>)}</select></div>{chosen ? <><p>Click any phrase to add it.</p><div className="keyword-chips">{chosen.keywords.map((word) => <button type="button" key={word} onClick={() => onAdd(word)}>+ {word}</button>)}</div></> : <p>Choose a bank to see its keyword phrases.</p>}</section>;
 }

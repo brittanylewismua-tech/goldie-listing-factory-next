@@ -122,7 +122,7 @@ test("unifies saved products, editing, pricing, and mockups without the old fact
   assert.match(recipes, /This saved product only needs the profit you want/);
   assert.doesNotMatch(recipes, /Shipping cost|Shipping charged|Payment fixed fee/);
   assert.doesNotMatch(page, /Apply titles in order|Import title CSV/);
-  assert.match(recipes, /keyword CSV becomes a saved bank/);
+  assert.match(recipes, /saved bank/);
   assert.match(page, /Exact title phrases/);
   assert.match(page, /300 DPI recommended/);
   assert.match(page, /Choose Printify flatlays/);
@@ -169,7 +169,7 @@ test("imports shipping and keeps final listing edits attached to the exact Print
     readFile(new URL("../app/api/printify/drafts/update/route.ts",import.meta.url),"utf8"),
   ]);
   assert.match(printify,/shipping\.json/);assert.match(printify,/standardShipping/);
-  assert.match(page,/Choose keywords and build each title/);
+  assert.match(page,/Build titles for the whole batch/);
   assert.match(page,/api\/printify\/drafts\/update/);
   assert.match(page,/syncListingFields/);
   assert.match(page,/function syncPreparedListing/);
@@ -414,6 +414,17 @@ test("makes keyword bank saving unmistakable and prevents accidental duplicates"
   assert.match(page,/goldie-active-batch/);assert.match(page,/Save changes/);assert.match(page,/Create another bank/);
   assert.match(route,/already exists\. Open that bank to update it instead/);
   assert.match(home,/href="\/keywords" target="_blank"/);assert.match(home,/href="\/mockups" target="_blank"/);
+});
+
+test("supports shared batch titles with collapsed per-listing keyword overrides", async()=>{
+  const [page,tools]=await Promise.all([
+    readFile(new URL("../app/page.tsx",import.meta.url),"utf8"),
+    readFile(new URL("../app/factory-tools.tsx",import.meta.url),"utf8"),
+  ]);
+  assert.match(page,/Create a single title for this batch/);assert.match(page,/applyBatchTitle/);assert.match(page,/addBatchKeyword/);
+  assert.match(page,/Create an individual title for this listing/);assert.match(page,/These keyword clicks update only this listing/);
+  assert.match(page,/tags:tagsFromTitle\(next\)/);assert.match(page,/tags:tagsFromTitle\(title\)/);
+  assert.match(tools,/keywordListsCache/);assert.match(tools,/compact-keywords/);
 });
 
 test("records permanent sanitized Printify diagnostics without blocking listings", async () => {
