@@ -5,6 +5,7 @@ import { customerLaunchBlock } from "@/app/customer-launch-gate";
 import { publicSupportReference, recordDiagnostic } from "../diagnostics";
 import { createProductWithImageRetries } from "../product-creation";
 import { printAreasWithOnlyCurrentArtwork } from "../product-payload";
+import { planFor } from "@/app/plan-limits";
 import { decryptPrintifyToken } from "../token-crypto";
 import { recommendedPrice } from "@/app/pricing";
 
@@ -116,7 +117,7 @@ export async function POST(request: Request) {
   let diagnosticStage = "request_validation";
   let idempotencyKey = "";
   try {
-    const body = (await request.json()) as { batchId?: string; title?: string; tags?: string[]; description?: string; fileName?: string; stagedId?: string; supportReference?: string; clientId?: string; pricing?: { targetProfit?: number; etsyFeePercent?: number; fixedFee?: number; listingFee?: number; shippingCost?: number; shippingCharged?: number } };
+    const body = (await request.json()) as { batchId?: string; title?: string; tags?: string[]; description?: string; visibleBounds?:{left:number;top:number;right:number;bottom:number}; fileName?: string; stagedId?: string; supportReference?: string; clientId?: string; pricing?: { targetProfit?: number; etsyFeePercent?: number; fixedFee?: number; listingFee?: number; shippingCost?: number; shippingCharged?: number } };
     stagedIdForCleanup = body.stagedId ?? "";
     supportReference = body.supportReference?.replace(/[^A-Z0-9-]/gi, "").slice(0, 40) ?? "";
     if (!body.batchId || !body.fileName || !body.stagedId) return NextResponse.json({ error: "The prepared batch and design file are required." }, { status: 400 });
@@ -131,6 +132,13 @@ export async function POST(request: Request) {
     }
     await db.prepare("INSERT INTO printify_draft_results (request_key, user_id, batch_id, client_id, status, updated_at) VALUES (?, ?, ?, ?, 'running', CURRENT_TIMESTAMP) ON CONFLICT(request_key) DO UPDATE SET status = 'running', response_json = NULL, updated_at = CURRENT_TIMESTAMP")
       .bind(idempotencyKey, user.userId, body.batchId, body.clientId ?? body.fileName).run();
+    const planRow = await db.prepare("SELECT plan_key FROM account_plans WHERE user_id=?").bind(user.userId).first<{plan_key:string}>();
+    const plan = planFor(planRow?.plan_key);
+    const reserved = await db.prepare("SELECT COUNT(*) count FROM printify_draft_results WHERE user_id=? AND ((status='succeeded' AND updated_at>=datetime('now','start of month')) OR (status='running' AND updated_at>=datetime('now','-10 minutes')))").bind(user.userId).first<{count:number}>();
+    if (Number(reserved?.count || 0) > plan.drafts) {
+      await db.prepare("UPDATE printify_draft_results SET status='failed', updated_at=CURRENT_TIMESTAMP WHERE request_key=?").bind(idempotencyKey).run();
+      return NextResponse.json({ error: `You have used all ${plan.drafts} successful drafts in your ${plan.name} plan. Your allowance resets next month.` }, { status: 429 });
+    }
     const session = await db.prepare("SELECT shop_id, product_id, template_json FROM printify_batch_sessions WHERE id = ? AND user_id = ? AND expires_at > unixepoch()")
       .bind(body.batchId, user.userId).first<BatchSession>();
     if (!session) throw new Error("This batch session expired. Load the Printify template again; your selected files will remain on this page.");
@@ -174,9 +182,10 @@ export async function POST(request: Request) {
         blueprint_id: template.blueprint_id,
         print_provider_id: template.print_provider_id,
         variants: template.variants.map(({ id, price, cost, is_enabled }) => ({ id, price: recommendedPrice(cost ?? price, body.pricing), is_enabled })),
+        tags: (body.tags ?? []).map(tag => String(tag).trim()).filter(Boolean).slice(0, 13),
         // Never carry media-library IDs from the template into a different
         // product request. Only the image uploaded in this request is valid.
-        print_areas: printAreasWithOnlyCurrentArtwork(template.print_areas, upload.id),
+        print_areas: printAreasWithOnlyCurrentArtwork(template.print_areas, upload.id, body.visibleBounds),
     });
     diagnosticStage = "draft_creation";
     await recordDiagnostic(runtimeEnv().DB, supportReference, { stage: diagnosticStage, event: "started", shopId: shop.id });

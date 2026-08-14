@@ -98,6 +98,9 @@ export const productRecipes = sqliteTable("product_recipes", {
   defaultTitle: text("default_title").notNull().default(""),
   defaultMockupTheme: text("default_mockup_theme").notNull().default(""),
   pricingJson: text("pricing_json").notNull().default("{}"),
+  keywordListId: text("keyword_list_id").notNull().default(""),
+  printifyImageIndicesJson: text("printify_image_indices_json").notNull().default("[]"),
+  normalizePadding: integer("normalize_padding", { mode: "boolean" }).notNull().default(true),
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
   updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 }, (table) => [index("idx_product_recipes_user").on(table.userId, table.updatedAt)]);
@@ -114,5 +117,11 @@ export const keywordLists = sqliteTable("keyword_lists", {
 export const sellerPreferences = sqliteTable("seller_preferences", {
   userId: text("user_id").primaryKey(),
   pricingJson: text("pricing_json").notNull().default("{}"),
+  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const accountPlans = sqliteTable("account_plans", {
+  userId: text("user_id").primaryKey(),
+  planKey: text("plan_key").notNull().default("goldie"),
   updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });

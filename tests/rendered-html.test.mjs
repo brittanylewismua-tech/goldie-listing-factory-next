@@ -51,7 +51,8 @@ test("uses individual shop-aware Printify editor buttons", async () => {
   assert.match(route, /shopId: shop\.id/);
   assert.match(page, /MAX_BATCH_FILES = 20/);
   assert.match(page, /MAX_BATCH_BYTES = 500 \* 1024 \* 1024/);
-  assert.doesNotMatch(page, /new Worker|createImageBitmap|OffscreenCanvas|canvas|getImageData|UPNG/);
+  assert.doesNotMatch(page, /new Worker|OffscreenCanvas|UPNG/);
+  assert.match(page, /analyzePadding/);
   assert.match(page, /MAX_CONCURRENT_DESIGNS = 2/);
   assert.match(page, /\$\{processed\} of \$\{runTotal\} complete/);
   assert.match(page, /\{processed\}\/\{runTotal\}/);
@@ -526,6 +527,21 @@ test("caps mockup generation and saved themed sets", async () => {
   assert.match(libraryRoute,/existing\.length>=MAX_MOCKUPS_PER_SET/);
 });
 
+test("enforces paid-plan usage on the server and exposes honest usage", async()=>{
+  const [plans,drafts,renders,library,usage]=await Promise.all([
+    readFile(new URL("../app/plan-limits.ts",import.meta.url),"utf8"),
+    readFile(new URL("../app/api/printify/drafts/route.ts",import.meta.url),"utf8"),
+    readFile(new URL("../app/api/mockups/render/route.ts",import.meta.url),"utf8"),
+    readFile(new URL("../app/api/mockups/library/route.ts",import.meta.url),"utf8"),
+    readFile(new URL("../app/api/usage/route.ts",import.meta.url),"utf8"),
+  ]);
+  assert.match(plans,/price: 29, drafts: 200, aiMockups: 100, mockupSets: 10/);
+  assert.match(drafts,/plan\.drafts/);assert.match(drafts,/status='succeeded'/);
+  assert.match(renders,/plan\.aiMockups/);assert.match(renders,/MAX\(0,/);
+  assert.match(library,/plan\.mockupSets/);assert.match(library,/COUNT\(DISTINCT theme\)/);
+  assert.match(usage,/nextReset/);assert.match(usage,/COALESCE\(SUM\(count\),0\)/);
+});
+
 test("saved mockup sets can be renamed and deleted with confirmation", async () => {
   const [page,libraryRoute] = await Promise.all([
     readFile(new URL("../app/mockups/page.tsx", import.meta.url), "utf8"),
@@ -554,7 +570,8 @@ test("routes each product surface deliberately and never releases a partial batc
   assert.match(page,/made\.forEach\(item=>URL\.revokeObjectURL/);
   assert.match(page,/setResults\(\[\]\);setGenerationError/);
   assert.match(route,/if\(!body\.reference\)/);
-  assert.match(route,/DAILY_LIMIT/);
+  assert.match(route,/plan\.aiMockups/);
+  assert.match(route,/monthKey/);
   assert.match(renderers,/fashn\/tryon\/v1\.6/);
   assert.match(renderers,/model_image:scene/);
   assert.match(renderers,/garment_image:reference/);
