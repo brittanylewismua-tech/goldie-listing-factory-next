@@ -1,0 +1,19 @@
+.collectionActions .renameSet {
+  width: auto;
+  height: auto;
+  flex: none;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #bfa36d;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  padding: 5px 4px;
+  box-shadow: none;
+}
+
+.collectionActions .renameSet:hover {
+  background: transparent;
+  color: var(--gold);
+}
