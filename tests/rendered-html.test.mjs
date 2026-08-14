@@ -184,6 +184,8 @@ test("matches Printify editor DPI instead of comparing against template pixel di
   assert.deepEqual(printifyDpi(8100, 7200, 1.125), { dpi: 300, level: "High" });
   assert.equal(normalizedPlacementScale(1, { left: .25, right: .75 }), 2);
   assert.deepEqual(printifyDpi(7200, 7200, normalizedPlacementScale(1, { left: .25, right: .75 })), { dpi: 150, level: "Medium" });
+  assert.equal(normalizedPlacementScale(1, { left: .06, right: .94 }, 1), 1);
+  assert.deepEqual(printifyDpi(6144, 7200, normalizedPlacementScale(1, { left: .06, right: .94 }, 1)), { dpi: 256, level: "Medium" });
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
   assert.doesNotMatch(page, /Target:\s*\{templateDetails/);
   assert.match(page, /DPI in Printify/);
@@ -398,6 +400,20 @@ test("removes every inherited template image ID from the outgoing Printify produ
   assert.deepEqual(ids, ["fresh-upload", "fresh-upload"]);
   assert.doesNotMatch(JSON.stringify(result), /stale-primary|stale-layer|another-stale/);
   assert.deepEqual(result[0].placeholders[0].images[0], {id:"fresh-upload",x:0.4,y:0.6,scale:0.8,angle:2});
+  const qualityProtected = printAreasWithOnlyCurrentArtwork(template, "fresh-upload", {left:.06,top:0,right:.94,bottom:1}, .8);
+  assert.equal(qualityProtected[0].placeholders[0].images[0].scale, .8);
+});
+
+test("makes keyword bank saving unmistakable and prevents accidental duplicates", async () => {
+  const [page,route,home]=await Promise.all([
+    readFile(new URL("../app/keywords/page.tsx",import.meta.url),"utf8"),
+    readFile(new URL("../app/api/keyword-lists/route.ts",import.meta.url),"utf8"),
+    readFile(new URL("../app/page.tsx",import.meta.url),"utf8"),
+  ]);
+  assert.match(page,/goldie-wordmark\.webp/);assert.match(page,/save-toast/);assert.match(page,/Back to Listing Factory/);
+  assert.match(page,/goldie-active-batch/);assert.match(page,/Save changes/);assert.match(page,/Create another bank/);
+  assert.match(route,/already exists\. Open that bank to update it instead/);
+  assert.match(home,/href="\/keywords" target="_blank"/);assert.match(home,/href="\/mockups" target="_blank"/);
 });
 
 test("records permanent sanitized Printify diagnostics without blocking listings", async () => {

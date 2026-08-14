@@ -17,8 +17,10 @@ export function printifyDpi(imageWidth: number, printAreaWidth: number, placemen
 export function normalizedPlacementScale(
   placementScale: number,
   visibleBounds?: { left: number; right: number } | null,
+  maxPlacementScale?: number | null,
 ): number {
   if (!visibleBounds) return placementScale;
   const visibleWidth = Math.max(0.05, visibleBounds.right - visibleBounds.left);
-  return placementScale / visibleWidth;
+  const requestedScale = placementScale / visibleWidth;
+  return Number.isFinite(maxPlacementScale) && Number(maxPlacementScale) > 0 ? Math.min(requestedScale, Number(maxPlacementScale)) : requestedScale;
 }

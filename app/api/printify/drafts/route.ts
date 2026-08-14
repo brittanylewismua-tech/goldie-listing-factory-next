@@ -119,7 +119,7 @@ export async function POST(request: Request) {
   let diagnosticStage = "request_validation";
   let idempotencyKey = "";
   try {
-    const body = (await request.json()) as { batchId?: string; title?: string; tags?: string[]; description?: string; visibleBounds?:{left:number;top:number;right:number;bottom:number}; fileName?: string; stagedId?: string; supportReference?: string; clientId?: string; pricing?: { targetProfit?: number; etsyFeePercent?: number; fixedFee?: number; listingFee?: number; shippingCost?: number; shippingCharged?: number } };
+    const body = (await request.json()) as { batchId?: string; title?: string; tags?: string[]; description?: string; visibleBounds?:{left:number;top:number;right:number;bottom:number}; maxPlacementScale?:number; fileName?: string; stagedId?: string; supportReference?: string; clientId?: string; pricing?: { targetProfit?: number; etsyFeePercent?: number; fixedFee?: number; listingFee?: number; shippingCost?: number; shippingCharged?: number } };
     stagedIdForCleanup = body.stagedId ?? "";
     supportReference = body.supportReference?.replace(/[^A-Z0-9-]/gi, "").slice(0, 40) ?? "";
     if (!body.batchId || !body.fileName || !body.stagedId) return NextResponse.json({ error: "The prepared batch and design file are required." }, { status: 400 });
@@ -187,7 +187,7 @@ export async function POST(request: Request) {
         tags: (body.tags ?? []).map(tag => String(tag).trim()).filter(Boolean).slice(0, 13),
         // Never carry media-library IDs from the template into a different
         // product request. Only the image uploaded in this request is valid.
-        print_areas: printAreasWithOnlyCurrentArtwork(template.print_areas, upload.id, body.visibleBounds),
+        print_areas: printAreasWithOnlyCurrentArtwork(template.print_areas, upload.id, body.visibleBounds, body.maxPlacementScale),
     });
     diagnosticStage = "draft_creation";
     await recordDiagnostic(runtimeEnv().DB, supportReference, { stage: diagnosticStage, event: "started", shopId: shop.id });

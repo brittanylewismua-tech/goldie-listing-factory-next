@@ -5,14 +5,14 @@ type TemplateArea = {
   background?: string;
 };
 
-export function printAreasWithOnlyCurrentArtwork(areas: TemplateArea[], currentImageId: string, bounds?:{left:number;top:number;right:number;bottom:number}) {
+export function printAreasWithOnlyCurrentArtwork(areas: TemplateArea[], currentImageId: string, bounds?:{left:number;top:number;right:number;bottom:number}, maxPlacementScale?:number) {
   if (!currentImageId) throw new Error("The current Printify image ID is missing.");
   const result = areas.map((area) => ({
     variant_ids: area.variant_ids,
     placeholders: area.placeholders.flatMap((placeholder) => {
       const placement = placeholder.images?.[0];
       if (!placement) return [];
-      const width=Math.max(.05,(bounds?.right??1)-(bounds?.left??0)),centerX=((bounds?.left??0)+(bounds?.right??1))/2,centerY=((bounds?.top??0)+(bounds?.bottom??1))/2,scale=(placement.scale??1)/width;
+      const width=Math.max(.05,(bounds?.right??1)-(bounds?.left??0)),centerX=((bounds?.left??0)+(bounds?.right??1))/2,centerY=((bounds?.top??0)+(bounds?.bottom??1))/2,requestedScale=(placement.scale??1)/width,scale=Math.min(requestedScale,Number.isFinite(maxPlacementScale)&&Number(maxPlacementScale)>0?Number(maxPlacementScale):requestedScale);
       return [{
         position: placeholder.position,
         images: [{
