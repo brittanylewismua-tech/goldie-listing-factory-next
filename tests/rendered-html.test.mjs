@@ -770,6 +770,8 @@ test("keeps pricing simple while using a real Etsy shipping profile and exact te
   assert.match(page,/Discard changes/);
   assert.match(page,/Save or discard shipping changes first/);
   assert.match(page,/Printify fulfillment shipping/);
+  assert.match(page,/Confirm the numbers below, then create your Printify drafts/);
+  assert.doesNotMatch(page,/pricing target, keyword bank, and mockup defaults/);
   assert.match(page,/variant\.templatePrice/);
   assert.match(page,/See how Goldie calculated these prices/);
   assert.doesNotMatch(page,/Split it 50\/50|Custom buyer shipping price|shippingPercent/);

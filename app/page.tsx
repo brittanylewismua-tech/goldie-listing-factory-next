@@ -499,7 +499,7 @@ export default function Home() {
     connect: { eyebrow: "STEP 1 · PRINTIFY", title: "Connect Printify.", copy: "Goldie creates unpublished drafts in your own Printify shop. Connect once, then move on." },
     setup: { eyebrow: "STEP 2 · PRODUCT", title: "Choose what you’re making.", copy: "Choose a saved product or add one by connecting its completed Printify template. The template is required; Goldie imports its variants, shipping, costs, placement, and description." },
     designs: { eyebrow: "STEP 3 · DESIGNS", title: "Add this batch’s designs.", copy: "Upload up to 20 finished designs. Goldie keeps this batch saved while you move through the remaining steps." },
-    review: { eyebrow: "STEP 4 · PREFLIGHT", title: "Review before creating drafts.", copy: "Confirm the product, design count, pricing target, keyword bank, and mockup defaults in one place." },
+    review: { eyebrow: "STEP 4 · PRICING", title: "Review shipping and prices.", copy: "Confirm the numbers below, then create your Printify drafts." },
     finish: finishPhase==="details" ? { eyebrow: "STEP 6 · TITLES + DESCRIPTIONS", title: "Finish the words, then review Etsy details.", copy: "Build the Printify titles, tags, and descriptions first. Goldie then prepares only the Etsy-specific category and product attributes." } : finishPhase==="mockups" ? { eyebrow: "STEP 7 · IMAGES + MOCKUPS", title: "Choose the listing images.", copy: "Review the real Printify previews, choose flatlays, and add your own mockups." } : { eyebrow: "STEP 8 · FINAL REVIEW", title: "Review the finished batch.", copy: "Confirm the words, pricing, images, and mockups before you publish the listings from Printify." },
   }[workflowStep];
 
@@ -620,8 +620,8 @@ export default function Home() {
           <div className="launch-top">
             <Image src="/goldie-g.png" width={2000} height={2000} alt="" className="goldie-g" />
             <p className="mini-label">BATCH SUMMARY</p>
-            <h2>{running ? `${processed} of ${runTotal} complete` : complete ? "Batch finished" : "Current batch"}</h2>
-            <p>{complete ? `${drafts.filter((draft) => draft.status === "Created").length} of ${files.length} drafts were created in Printify.` : running ? "Goldie is uploading each design and creating its Printify draft." : "Complete the three sections to create unpublished drafts in Printify."}</p>
+            <h2>{running ? `${processed} of ${runTotal} complete` : complete ? "Batch finished" : workflowStep==="review"?"Pricing review":"Current batch"}</h2>
+            <p>{complete ? `${drafts.filter((draft) => draft.status === "Created").length} of ${files.length} drafts were created in Printify.` : running ? "Goldie is uploading each design and creating its Printify draft." : workflowStep==="review"?"Confirm shipping and item prices, then continue.":"Complete this step to create unpublished drafts in Printify."}</p>
           </div>
 
           {pricedVariants.length>0&&<PricingReview variants={pricedVariants} pricing={pricing} prices={variantPrices} profiles={etsyShippingProfiles} selectedProfileId={etsyShippingProfileId} profilesLoading={shippingProfilesLoading} profilesError={shippingProfilesError} approved={pricingApproved} onPricing={value=>{setPricing(value);setPricingApproved(false)}} onPrices={value=>{setVariantPrices(value);setPricingApproved(false)}} onSelectProfile={value=>{setEtsyShippingProfileId(value);setPricingApproved(false)}} onCreateProfile={createCustomShippingProfile} onApprove={()=>setPricingApproved(true)}/>}
