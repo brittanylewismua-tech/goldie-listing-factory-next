@@ -495,7 +495,9 @@ test("creates unique validated AI titles in bulk with per-listing overrides", as
   assert.match(page,/Create a different title with AI/);assert.match(page,/Create title for this design/);
   assert.match(page,/autoTitleForDesign/);assert.match(page,/tagsFromTitle\(item\.result\.keywords\.join/);
   assert.match(page,/unique titles and matching tags created/);assert.match(page,/Goldie selects the best phrases for each individual design/);
-  assert.ok(page.indexOf('className="permanent-description"')>page.indexOf('className="design-table"'),"The batch description belongs below all listing titles and tags.");
+  assert.ok(page.indexOf('className="permanent-description batch-description"')<page.indexOf('className="design-table"'),"The collapsible batch description belongs directly above the individual listings.");
+  assert.match(page,/Customize description for this listing/);assert.match(page,/custom opening can be added inside any listing below/);
+  assert.match(page,/customOpening,description/);assert.match(page,/scrollIntoView/);
   assert.match(tools,/keywordListsCache/);assert.match(tools,/selectionOnly/);assert.match(tools,/onSelect/);
   assert.match(intelligence,/selected_keywords/);assert.match(intelligence,/allowedByLower/);assert.match(intelligence,/Reject irrelevant phrases/);
 });
