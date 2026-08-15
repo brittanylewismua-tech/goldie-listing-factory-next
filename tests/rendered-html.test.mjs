@@ -759,6 +759,8 @@ test("keeps pricing simple while using a real Etsy shipping profile and exact te
   assert.match(page,/setEtsyShippingProfileId\(current=>current\|\|templateProfileId\)/);
   assert.match(page,/Domestic shipping/);
   assert.match(page,/International shipping/);
+  assert.match(page,/international-shipping-editor/);
+  assert.match(page,/Domestic shipping — \{selectedProfile\.originCountry\}/);
   assert.match(page,/Save this custom profile for this product/);
   assert.match(page,/Use Goldie’s recommended prices/);
   assert.match(page,/variant\.templatePrice/);
