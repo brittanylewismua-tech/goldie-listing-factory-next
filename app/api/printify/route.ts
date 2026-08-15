@@ -13,6 +13,8 @@ type Product = {
   blueprint_id: number;
   print_provider_id: number;
   description?: string;
+  external?: Array<{ id?: string; handle?: string; shipping_template_id?: string }>;
+  sales_channel_properties?: Array<Record<string, unknown>>;
   variants?: Array<{ id: number; title?: string; options?: number[]; price: number; cost?: number; is_enabled?: boolean }>;
   print_areas?: Array<{
     variant_ids: number[];
@@ -106,10 +108,20 @@ export async function POST(request: Request) {
   const launchBlock = await customerLaunchBlock(user);
   if (launchBlock) return NextResponse.json({ error: launchBlock }, { status: 503 });
   try {
-    const body = (await request.json()) as { token?: string; productUrl?: string };
+    const body = (await request.json()) as { token?: string; productUrl?: string; inspectShippingProfiles?: boolean };
     const token = body.token?.trim() || await storedToken(user.userId);
     if (!token) return NextResponse.json({ error: "Connect your Printify account first." }, { status: 400 });
     const shops = await printify<Shop[]>("/shops.json", token);
+    if (body.inspectShippingProfiles && isOwner(user)) {
+      const evidence: Array<{shopId:number;shop:string;productId:string;title:string;external:Product["external"];salesChannelProperties:Product["sales_channel_properties"]}> = [];
+      for (const shop of shops) {
+        const page = await printify<{data?:Product[]}>(`/shops/${shop.id}/products.json?limit=50`, token);
+        for (const product of page.data ?? []) {
+          if (product.external?.some(item=>item.shipping_template_id)||product.sales_channel_properties?.length) evidence.push({shopId:shop.id,shop:shop.title,productId:product.id,title:product.title,external:product.external,salesChannelProperties:product.sales_channel_properties});
+        }
+      }
+      return NextResponse.json({evidence});
+    }
     if (!body.productUrl) { await saveToken(user.userId, token); return NextResponse.json({ connected: true }); }
 
     const productId = productIdFromUrl(body.productUrl.trim());
