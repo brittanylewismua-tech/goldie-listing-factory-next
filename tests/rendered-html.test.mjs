@@ -161,14 +161,20 @@ test("requires explicit review of every Printify variant and starts new products
   assert.doesNotMatch(page, /staged for all/);
 });
 
-test("hands each finished mockup group to its exact Printify product", async () => {
-  const mockups = await readFile(new URL("../app/integrated-mockups.tsx", import.meta.url), "utf8");
-  assert.match(mockups, /Download mockups \+ open in Printify/);
-  assert.match(mockups, /View all mockups → Upload/);
-  assert.match(mockups, /Only the Goldie model mockups are downloaded/);
-  assert.match(mockups, /zipSync\(entries/);
-  assert.match(mockups, /window\.open\(resolvedEditorUrl/);
-  assert.doesNotMatch(mockups, /staged for Etsy/);
+test("stages each finished mockup group for its exact Etsy listing", async () => {
+  const [mockups,images,page] = await Promise.all([
+    readFile(new URL("../app/integrated-mockups.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/etsy/images/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+  ]);
+  assert.match(mockups, /productId/);
+  assert.match(mockups, /stageForEtsy/);
+  assert.match(mockups, /added automatically when this listing publishes/);
+  assert.doesNotMatch(mockups, /zipSync/);
+  assert.match(images, /etsy-listing-images/);
+  assert.match(images, /kind==="size-guide"/);
+  assert.match(page, /Add one size guide to every Etsy listing/);
+  assert.match(page, /printifyImageIndices/);
 });
 
 test("renders Mockup Sets as management only", async () => {
@@ -188,7 +194,7 @@ test("guides sellers through the complete resumable eight-step workflow",async()
     readFile(new URL("../app/api/batches/route.ts",import.meta.url),"utf8"),
     readFile(new URL("../app/batch-cache.ts",import.meta.url),"utf8"),
   ]);
-  assert.match(page,/Connect Printify/);assert.match(page,/Choose product/);assert.match(page,/Add designs/);assert.match(page,/Review pricing/);assert.match(page,/Create drafts/);assert.match(page,/Titles \+ Etsy details/);assert.match(page,/Images \+ mockups/);assert.match(page,/Final review/);
+  assert.match(page,/Connect Printify/);assert.match(page,/Choose product/);assert.match(page,/Add designs/);assert.match(page,/Review pricing/);assert.match(page,/Create drafts/);assert.match(page,/Titles \+ descriptions/);assert.match(page,/Images \+ mockups/);assert.match(page,/Final review/);
   assert.match(page,/searchParams\.get\("batch"\)/);assert.doesNotMatch(page,/const id=window\.localStorage\.getItem\("goldie-active-batch"\)/);
   assert.match(page,/aria-current=\{active\?"step"/);assert.match(page,/You are here/);assert.match(page,/Complete the prior step/);
   assert.match(page,/goldie-active-batch/);assert.match(page,/saveBatchFiles/);assert.match(page,/\/api\/batches/);
@@ -806,6 +812,9 @@ test("connects Etsy with PKCE and finishes only the exact Printify-linked Etsy l
   assert.doesNotMatch(publish,/sort_on|newest|title.*match/i);
   assert.match(finish,/listing\.shop_id/);
   assert.match(finish,/Goldie stopped without editing it/);
+  assert.match(finish,/applyEtsyDetails/);
+  assert.match(finish,/applyListingImages/);
+  assert.doesNotMatch(finish,/body\.set\("title"/);
   assert.match(migration,/etsy_connections/);
   assert.match(migration,/etsy_listing_links/);
 });

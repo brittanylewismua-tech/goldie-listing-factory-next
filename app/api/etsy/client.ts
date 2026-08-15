@@ -6,7 +6,7 @@ type Runtime={DB:D1Database;ETSY_API_KEY?:string;ETSY_API_SECRET?:string;ETSY_TO
 const runtime=()=>env as unknown as Runtime;
 const secret=()=>runtime().ETSY_TOKEN_KEY||runtime().PRINTIFY_TOKEN_KEY||"";
 export const apiKey=()=>{const value=runtime().ETSY_API_KEY?.trim();if(!value)throw new Error("Etsy API access is not configured yet.");return value};
-const apiCredential=()=>{const secretValue=runtime().ETSY_API_SECRET?.trim();if(!secretValue)throw new Error("Etsy API access is not configured yet.");return `${apiKey()}:${secretValue}`};
+export const etsyApiCredential=()=>{const secretValue=runtime().ETSY_API_SECRET?.trim();if(!secretValue)throw new Error("Etsy API access is not configured yet.");return `${apiKey()}:${secretValue}`};
 
 export async function encryptEtsy(value:string){return encryptPrintifyToken(value,secret())}
 export async function decryptEtsy(value:string){return decryptPrintifyToken(value,secret())}
@@ -28,7 +28,7 @@ export async function etsyConnection(userId:string){
 }
 
 export async function etsyFetch<T>(path:string,token:string,init?:RequestInit):Promise<T>{
-  const response=await fetch(`${API}${path}`,{...init,headers:{"x-api-key":apiCredential(),Authorization:`Bearer ${token}`,...(init?.body?{"Content-Type":"application/x-www-form-urlencoded"}:{}),...(init?.headers||{})}});
+  const response=await fetch(`${API}${path}`,{...init,headers:{"x-api-key":etsyApiCredential(),Authorization:`Bearer ${token}`,...(init?.body instanceof URLSearchParams?{"Content-Type":"application/x-www-form-urlencoded"}:{}),...(init?.headers||{})}});
   const text=await response.text();let payload:unknown={};try{payload=text?JSON.parse(text):{}}catch{payload={error:text}}
   if(!response.ok)throw new Error(typeof payload==="object"&&payload&&"error" in payload?String((payload as {error:unknown}).error):`Etsy returned ${response.status}.`);
   return payload as T;
