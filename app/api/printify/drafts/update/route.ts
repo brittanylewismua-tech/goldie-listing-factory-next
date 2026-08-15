@@ -22,7 +22,7 @@ export async function PATCH(request:Request){
     placementPayload=(current.print_areas||[]).map(area=>({
       variant_ids:area.variant_ids,
       ...(area.background?{background:area.background}:{}),
-      placeholders:(area.placeholders||[]).map(placeholder=>({
+      placeholders:(area.placeholders||[]).filter(placeholder=>placeholder.images?.some(image=>image.id)).map(placeholder=>({
         position:placeholder.position,
         images:(placeholder.images||[]).filter(image=>image.id).map(image=>({
           id:image.id,
