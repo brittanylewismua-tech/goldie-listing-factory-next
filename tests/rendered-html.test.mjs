@@ -468,7 +468,8 @@ test("supports shared batch titles with collapsed per-listing keyword overrides"
   ]);
   assert.match(page,/Create a single title for this batch/);assert.match(page,/applyBatchTitle/);assert.match(page,/addBatchKeyword/);
   assert.match(page,/Create an individual title for this listing/);assert.match(page,/These keyword clicks update only this listing/);
-  assert.match(page,/tags:tagsFromTitle\(next\)/);assert.match(page,/tags:tagsFromTitle\(title\)/);
+  assert.match(page,/explicitTags\|\|tagsFromTitle\(next\)/);assert.match(page,/tags:tagsFromTitle\(title\)/);
+  assert.match(page,/batchKeywords/);assert.match(page,/Matching tags were rebuilt from your validated phrases/);
   assert.match(tools,/keywordListsCache/);assert.match(tools,/compact-keywords/);
 });
 
