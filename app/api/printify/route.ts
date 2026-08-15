@@ -13,7 +13,7 @@ type Product = {
   blueprint_id: number;
   print_provider_id: number;
   description?: string;
-  variants?: Array<{ id: number; price: number; cost?: number; is_enabled?: boolean }>;
+  variants?: Array<{ id: number; title?: string; options?: number[]; price: number; cost?: number; is_enabled?: boolean }>;
   print_areas?: Array<{
     variant_ids: number[];
     background?: string;
@@ -168,7 +168,7 @@ export async function POST(request: Request) {
         .bind(batchId, user.userId, found.shop.id, found.product.id, JSON.stringify(safeTemplate), expiresAt),
     ]);
     const placementScale = Math.max(...configuredPlacements.map((placeholder) => Number(placeholder.images?.[0]?.scale || 1)));
-    return NextResponse.json({ product: { id: found.product.id, batchId, title: found.product.title, description:found.product.description??"", blueprintId:found.product.blueprint_id, blueprintTitle:blueprint.title||found.product.title, brand:blueprint.brand||"", model:blueprint.model||"", provider, enabledVariants: enabledVariants.length, shop: found.shop.title, standardShipping,shippingCurrency,maxPrintWidth, maxPrintHeight, placementScale } });
+    return NextResponse.json({ product: { id: found.product.id, batchId, title: found.product.title, description:found.product.description??"", blueprintId:found.product.blueprint_id, blueprintTitle:blueprint.title||found.product.title, brand:blueprint.brand||"", model:blueprint.model||"", provider, enabledVariants: enabledVariants.length, variants:enabledVariants.map(variant=>({id:variant.id,title:variant.title||`Variant ${variant.id}`,cost:Number(variant.cost??variant.price),templatePrice:Number(variant.price),shipping:shippingByVariant[variant.id]??standardShipping,options:variant.options||[]})), shop: found.shop.title, standardShipping,shippingCurrency,maxPrintWidth, maxPrintHeight, placementScale } });
   } catch (error) {
     const status = error instanceof PrintifyApiError && [400, 401, 403, 404, 429].includes(error.status) ? error.status : 500;
     return NextResponse.json({ error: error instanceof Error ? error.message : "Printify could not be reached." }, { status });

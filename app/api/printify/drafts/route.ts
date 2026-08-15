@@ -119,7 +119,7 @@ export async function POST(request: Request) {
   let diagnosticStage = "request_validation";
   let idempotencyKey = "";
   try {
-    const body = (await request.json()) as { batchId?: string; title?: string; tags?: string[]; description?: string; visibleBounds?:{left:number;top:number;right:number;bottom:number}; maxPlacementScale?:number; fileName?: string; stagedId?: string; supportReference?: string; clientId?: string; pricing?: { targetProfit?: number; etsyFeePercent?: number; fixedFee?: number; listingFee?: number; shippingCost?: number; shippingCharged?: number } };
+    const body = (await request.json()) as { batchId?: string; title?: string; tags?: string[]; description?: string; visibleBounds?:{left:number;top:number;right:number;bottom:number}; maxPlacementScale?:number; fileName?: string; stagedId?: string; supportReference?: string; clientId?: string; variantPrices?:Record<string,number>; pricing?: { targetProfit?: number; etsyFeePercent?: number; fixedFee?: number; listingFee?: number; shippingCost?: number; shippingCharged?: number } };
     stagedIdForCleanup = body.stagedId ?? "";
     supportReference = body.supportReference?.replace(/[^A-Z0-9-]/gi, "").slice(0, 40) ?? "";
     if (!body.batchId || !body.fileName || !body.stagedId) return NextResponse.json({ error: "The prepared batch and design file are required." }, { status: 400 });
@@ -183,7 +183,7 @@ export async function POST(request: Request) {
         description: body.description ?? template.description ?? "",
         blueprint_id: template.blueprint_id,
         print_provider_id: template.print_provider_id,
-        variants: template.variants.map(({ id, price, cost, is_enabled }) => {const shipping=template.shippingByVariant?.[id];const rules=shipping==null?body.pricing:{...body.pricing,shippingCost:shipping,shippingCharged:shipping};return { id, price: recommendedPrice(cost ?? price, rules), is_enabled }}),
+        variants: template.variants.map(({ id, price, cost, is_enabled }) => {const shipping=template.shippingByVariant?.[id];const rules=shipping==null?body.pricing:{...body.pricing,shippingCost:shipping,shippingCharged:shipping};const approved=Number(body.variantPrices?.[String(id)]);const calculated=recommendedPrice(cost ?? price,rules);const finalPrice=Number.isInteger(approved)&&approved>=Number(cost??price)&&approved<=1000000?approved:calculated;return { id, price:finalPrice, is_enabled }}),
         tags: (body.tags ?? []).map(tag => String(tag).trim()).filter(Boolean).slice(0, 13),
         // Never carry media-library IDs from the template into a different
         // product request. Only the image uploaded in this request is valid.

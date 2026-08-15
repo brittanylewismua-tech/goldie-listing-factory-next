@@ -134,9 +134,29 @@ test("unifies saved products, editing, pricing, and mockups without the old fact
   assert.match(page, /IntegratedMockups/);
   assert.match(mockups, /Choose a mockup set/);
   assert.match(mockups, /Create .*mockups/);
-  assert.match(drafts, /recommendedPrice\(cost \?\? price, rules\)/);
+  assert.match(drafts, /approved>=Number\(cost\?\?price\)/);
+  assert.match(drafts, /finalPrice/);
   assert.match(drafts, /template\.shippingByVariant\?\.\[id\]/);
   assert.match(drafts, /printifyImages/);
+});
+
+test("requires explicit review of every Printify variant and starts new products blank", async () => {
+  const [page, recipes, printify] = await Promise.all([
+    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/factory-tools.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/printify/route.ts", import.meta.url), "utf8"),
+  ]);
+  assert.match(page, /See and approve every enabled variant/);
+  assert.match(page, /Printify cost/);
+  assert.match(page, /Projected profit/);
+  assert.match(page, /Approve all variant prices/);
+  assert.match(page, /variantPrices/);
+  assert.match(page, /pricingApproved/);
+  assert.match(printify, /variants:enabledVariants\.map/);
+  assert.match(recipes, /onStartNewProduct/);
+  assert.match(page, /function startNewProduct/);
+  assert.match(page, /clearCurrentBatch\(true\)/);
+  assert.doesNotMatch(page, /staged for all/);
 });
 
 test("hands each finished mockup group to its exact Printify product", async () => {
