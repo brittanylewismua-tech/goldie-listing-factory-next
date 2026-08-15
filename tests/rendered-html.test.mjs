@@ -26,7 +26,7 @@ test("server-renders the branded Listing Factory", async () => {
   assert.match(pageSource, /How to get your Printify token/);
   assert.match(pageSource, /token connects the account/);
   assert.match(html, /Connect this Printify template/);
-  assert.match(html, /imports its product facts and permanent description/);
+  assert.match(html, /imports the product facts and permanent description/);
   assert.doesNotMatch(html, /Default title structure|Optional reusable description/);
   assert.doesNotMatch(html, /factory-switcher/);
   assert.match(html, /Add your finished designs/);
@@ -121,12 +121,12 @@ test("unifies saved products, editing, pricing, and mockups without the old fact
   ]);
   assert.doesNotMatch(page, /factory-switcher/);
   assert.match(recipes, /Connect this Printify template/);
-  assert.match(recipes, /imports its product facts and permanent description/);
+  assert.match(recipes, /imports the product facts and permanent description/);
   assert.match(recipes, /saved product/);
   assert.match(recipes, /Add another product/);
   assert.match(recipes, /Product saved and selected/);
   assert.match(recipes, /props\.onUseRecipe\(saved\)/);
-  assert.match(recipes, /This saved product only needs the profit you want/);
+  assert.match(recipes, /Pricing and mockups are chosen later/);
   assert.doesNotMatch(recipes, /Shipping cost|Shipping charged|Payment fixed fee/);
   assert.doesNotMatch(page, /Apply titles in order|Import title CSV/);
   assert.match(recipes, /saved bank/);
@@ -148,10 +148,10 @@ test("requires explicit review of every Printify variant and starts new products
     readFile(new URL("../app/factory-tools.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/api/printify/route.ts", import.meta.url), "utf8"),
   ]);
-  assert.match(page, /See and approve every enabled variant/);
-  assert.match(page, /Printify cost/);
-  assert.match(page, /Projected profit/);
-  assert.match(page, /Approve all variant prices/);
+  assert.match(page, /Review the prices already on your template/);
+  assert.match(page, /variant\.templatePrice/);
+  assert.match(page, /Your estimated profit/);
+  assert.match(page, /Approve pricing \+ shipping/);
   assert.match(page, /variantPrices/);
   assert.match(page, /pricingApproved/);
   assert.match(printify, /variants:enabledVariants\.map/);
@@ -746,31 +746,28 @@ test("draft progress cannot exceed the selected batch", async () => {
   assert.match(page,/Math\.min\(completedDesignIds\.size,targetFiles\.length\)/);
 });
 
-test("shows the complete Etsy fee equation and uses the imported shipping profile", async () => {
-  const [page,drafts] = await Promise.all([
+test("keeps pricing simple while using a real Etsy shipping profile and exact template prices", async () => {
+  const [page,drafts,profiles,publish] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/api/printify/drafts/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/etsy/shipping-profiles/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/printify/drafts/publish/route.ts", import.meta.url), "utf8"),
   ]);
-  assert.match(page,/Printify product cost/);
-  assert.match(page,/Domestic shipping charged by your imported profile/);
-  assert.match(page,/Shipping profile imported from your Printify product/);
-  assert.match(page,/Split it 50\/50/);
-  assert.match(page,/Buyer pays \$\{\(referenceShipping\*\.5\)\.toFixed\(2\)\}/);
-  assert.match(page,/Custom buyer shipping price/);
-  assert.match(page,/Built into price/);
-  assert.match(page,/Etsy % fee/);
-  assert.match(page,/Fixed payment fee/);
-  assert.match(page,/Listing fee/);
-  assert.match(page,/Total Etsy fees/);
-  assert.match(page,/Review or change Etsy fee profile/);
-  assert.match(page,/copies that saved profile to every draft/);
+  assert.match(page,/Etsy shipping profile for this batch/);
+  assert.match(page,/Buyer pays domestically/);
+  assert.match(page,/International shipping/);
+  assert.match(page,/Goldie applies this exact Etsy profile/);
+  assert.match(page,/Use Goldie’s recommended prices/);
+  assert.match(page,/variant\.templatePrice/);
+  assert.match(page,/See how Goldie calculated these prices/);
+  assert.doesNotMatch(page,/Split it 50\/50|Custom buyer shipping price|shippingPercent/);
+  assert.match(profiles,/shipping-profiles/);
+  assert.match(profiles,/domesticPrimary/);
+  assert.match(publish,/etsyShippingProfileId/);
   assert.match(drafts,/shipping_template_id:template\.shippingTemplateId/);
-  assert.match(drafts,/buyerCharge=Math\.max\(0,\.\.\.Object\.values/);
-  assert.match(page,/state\.shippingPercent\?\?/);
+  assert.match(drafts,/etsyBuyerShipping/);
   assert.match(page,/loadTemplateUrl\(recipe\.templateUrl,nextPricing\)/);
-  assert.match(page,/pricingOverride\|\|pricing/);
   assert.match(page,/Math\.max\(variant\.cost\/100/);
-  assert.doesNotMatch(page,/Buyer pays Printify shipping/);
 });
 
 test("keeps management headings readable and shows the complete workflow map on phones", async () => {

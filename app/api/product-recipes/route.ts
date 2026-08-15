@@ -14,7 +14,7 @@ export async function GET() {
 export async function POST(request: Request) {
   const user = await getChatGPTUser();
   if (!user) return NextResponse.json({ error: "Sign in to save product recipes." }, { status: 401 });
-  const body = await request.json() as { id?: string; name?: string; templateUrl?: string; description?: string; defaultTitle?: string; defaultMockupTheme?: string; pricing?: unknown; keywordListId?:string; printifyImageIndices?:number[]; normalizePadding?:boolean };
+  const body = await request.json() as { id?: string; name?: string; templateUrl?: string; keywordListId?:string; printifyImageIndices?:number[]; normalizePadding?:boolean };
   const name = String(body.name || "").trim().slice(0, 80), templateUrl = String(body.templateUrl || "").trim();
   if (!name || !templateUrl) return NextResponse.json({ error: "Name the recipe and add its Printify template." }, { status: 400 });
   const id = body.id || crypto.randomUUID();
@@ -23,7 +23,7 @@ export async function POST(request: Request) {
     if (!owned) return NextResponse.json({ error: "That product recipe could not be found." }, { status: 404 });
   }
   const extras={keywordListId:String(body.keywordListId||""),printifyImageIndicesJson:JSON.stringify((body.printifyImageIndices||[]).filter(Number.isInteger).slice(0,20)),normalizePadding:body.normalizePadding!==false};
-  await getDb().insert(productRecipes).values({ id, userId: user.userId, name, templateUrl, description: String(body.description || ""), defaultTitle: String(body.defaultTitle || "").slice(0, 255), defaultMockupTheme: String(body.defaultMockupTheme || "").slice(0, 80), pricingJson: JSON.stringify(body.pricing || {}),...extras }).onConflictDoUpdate({ target: productRecipes.id, set: { name, templateUrl, description: String(body.description || ""), defaultTitle: String(body.defaultTitle || "").slice(0, 255), defaultMockupTheme: String(body.defaultMockupTheme || "").slice(0, 80), pricingJson: JSON.stringify(body.pricing || {}),...extras, updatedAt: new Date().toISOString() } });
+  await getDb().insert(productRecipes).values({ id, userId: user.userId, name, templateUrl, description:"",defaultTitle:"",defaultMockupTheme:"",pricingJson:"{}",...extras }).onConflictDoUpdate({ target: productRecipes.id, set: { name, templateUrl,description:"",defaultTitle:"",defaultMockupTheme:"",pricingJson:"{}",...extras,updatedAt:new Date().toISOString() } });
   return NextResponse.json({ id });
 }
 
