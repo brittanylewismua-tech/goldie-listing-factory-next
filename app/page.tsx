@@ -497,7 +497,7 @@ export default function Home() {
         </div>
         <div className="top-actions">
           <nav className="top-nav"><a className="active" href="/" onClick={event=>guardNavigation(event,"/")}>Listing Factory</a><a href="/batches" onClick={event=>guardNavigation(event,"/batches")}>Batch History</a><a href="/keywords" target="_blank" rel="noopener noreferrer">Keyword Banks ↗</a><a href="/mockups" target="_blank" rel="noopener noreferrer">Mockup Sets ↗</a></nav>
-          {owner && <><a className="diagnostics-link" href="/mastermind-admin" aria-label="Open Goldie Diagnostics" title="Goldie Diagnostics">★</a><a href="/api/printify?shippingProfiles=1">Profile sync check</a></>}
+          {owner && <><a className="diagnostics-link" href="/mastermind-admin" aria-label="Open Goldie Diagnostics" title="Goldie Diagnostics">★</a><a href="/profile-sync">Profile sync check</a></>}
           <a className="usage-link" href="/usage" onClick={event=>guardNavigation(event,"/usage")}>Usage + plan</a>
           <span className="secure-pill"><i /> Secure workspace</span>
         </div>
