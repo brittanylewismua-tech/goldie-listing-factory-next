@@ -768,7 +768,12 @@ test("keeps pricing simple while using a real Etsy shipping profile and exact te
   assert.match(drafts,/etsyBuyerShipping/);
   assert.match(page,/loadTemplateUrl\(recipe\.templateUrl,nextPricing\)/);
   assert.match(page,/PriceField value=\{itemCents\} minimum=\{variant\.cost\/100\}/);
-  assert.match(page,/Save as a new Etsy shipping profile/);
+  assert.match(page,/Create a custom shipping profile for this seller/);
+  assert.match(page,/Shipping profile name/);
+  assert.match(page,/First item — buyer pays domestically/);
+  assert.match(page,/Each additional item — buyer pays/);
+  assert.match(page,/Save this custom profile for this product/);
+  assert.match(page,/not every seller or every shipping profile/);
   assert.match(page,/setDraft\(event\.target\.value\)/);
   assert.match(page,/onBlur=\{commit\}/);
   assert.match(profiles,/export async function POST/);

@@ -28,11 +28,11 @@ function destinationParams(destination:Destination,primary:number,secondary:numb
 export async function POST(request:Request){
   const user=await getChatGPTUser();if(!user)return NextResponse.json({error:"Sign in before creating an Etsy shipping profile."},{status:401});
   try{
-    const {baseProfileId,domesticPrimary}=await request.json() as {baseProfileId?:number;domesticPrimary?:number},charge=Number(domesticPrimary);
-    if(!Number.isInteger(Number(baseProfileId))||Number(baseProfileId)<=0||!Number.isFinite(charge)||charge<0)return NextResponse.json({error:"Choose a shipping profile and enter a valid domestic charge."},{status:400});
+    const {baseProfileId,domesticPrimary,domesticAdditional,title:requestedTitle}=await request.json() as {baseProfileId?:number;domesticPrimary?:number;domesticAdditional?:number;title?:string},charge=Number(domesticPrimary),additional=Number(domesticAdditional),customTitle=String(requestedTitle||"").trim().slice(0,60);
+    if(!Number.isInteger(Number(baseProfileId))||Number(baseProfileId)<=0||!Number.isFinite(charge)||charge<0||!Number.isFinite(additional)||additional<0||!customTitle)return NextResponse.json({error:"Name the profile and enter valid first-item and additional-item domestic charges."},{status:400});
     const connection=await etsyConnection(user.userId),base=await etsyFetch<Profile>(`/shops/${connection.shopId}/shipping-profiles/${Number(baseProfileId)}`,connection.token),destinations=base.shipping_profile_destinations||[],domestic=destinations.find(item=>item.destination_country_iso===base.origin_country_iso);
     if(!domestic)throw new Error("The selected Etsy profile does not contain a domestic destination Goldie can safely copy.");
-    const title=`Goldie · ${base.title} · $${charge.toFixed(2)} domestic`.slice(0,60),create=destinationParams(domestic,charge,amount(domestic.secondary_cost));create.set("title",title);create.set("origin_country_iso",base.origin_country_iso);if(base.origin_postal_code)create.set("origin_postal_code",base.origin_postal_code);
+    const title=customTitle,create=destinationParams(domestic,charge,additional);create.set("title",title);create.set("origin_country_iso",base.origin_country_iso);if(base.origin_postal_code)create.set("origin_postal_code",base.origin_postal_code);
     const saved=await etsyFetch<Profile>(`/shops/${connection.shopId}/shipping-profiles`,connection.token,{method:"POST",body:create});
     for(const destination of destinations.filter(item=>item!==domestic)){const params=destinationParams(destination,amount(destination.primary_cost),amount(destination.secondary_cost));await etsyFetch(`/shops/${connection.shopId}/shipping-profiles/${saved.shipping_profile_id}/destinations`,connection.token,{method:"POST",body:params})}
     return NextResponse.json({id:saved.shipping_profile_id,title});
