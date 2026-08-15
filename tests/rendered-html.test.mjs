@@ -753,7 +753,10 @@ test("keeps pricing simple while using a real Etsy shipping profile and exact te
     readFile(new URL("../app/api/etsy/shipping-profiles/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/printify/drafts/publish/route.ts", import.meta.url), "utf8"),
   ]);
-  assert.match(page,/Etsy shipping profile for this batch/);
+  assert.match(page,/Shipping profile/);
+  assert.match(page,/automatically selects the profile saved on your product template/);
+  assert.match(page,/templateProfileId=Number\(templateDetails\?\.shippingTemplateId\)/);
+  assert.match(page,/setEtsyShippingProfileId\(current=>current\|\|templateProfileId\)/);
   assert.match(page,/Domestic shipping/);
   assert.match(page,/International shipping/);
   assert.match(page,/Save this custom profile for this product/);
