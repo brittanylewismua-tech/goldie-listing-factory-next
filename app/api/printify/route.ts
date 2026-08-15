@@ -13,6 +13,8 @@ type Product = {
   blueprint_id: number;
   print_provider_id: number;
   description?: string;
+  external?: { shipping_template_id?: string };
+  sales_channel_properties?: { free_shipping?: boolean };
   variants?: Array<{ id: number; title?: string; options?: number[]; price: number; cost?: number; is_enabled?: boolean }>;
   print_areas?: Array<{
     variant_ids: number[];
@@ -113,17 +115,21 @@ export async function POST(request: Request) {
     if (!body.productUrl) { await saveToken(user.userId, token); return NextResponse.json({ connected: true }); }
 
     const productId = productIdFromUrl(body.productUrl.trim());
-    if (!productId) return NextResponse.json({ error: "That is not a recognized Printify product-editor link." }, { status: 400 });
+    if (!productId) return NextResponse.json({ error: "This Printify product cannot be used yet.", issues:["Paste a complete Printify product-editor link."] }, { status: 400 });
     let found: { shop: Shop; product: Product } | undefined;
     for (const shop of shops) {
       const response = await fetch(`${PRINTIFY_API}/shops/${shop.id}/products/${productId}.json`, { headers: { Authorization: `Bearer ${token}`, "User-Agent": "Goldie-Listing-Factory" }, cache: "no-store" });
       if (response.ok) { found = { shop, product: (await response.json()) as Product }; break; }
     }
-    if (!found) return NextResponse.json({ error: "This product was not found in any shop connected to that Printify account." }, { status: 404 });
+    if (!found) return NextResponse.json({ error: "This Printify product cannot be used yet.", issues:["Use a product from the Printify shop connected to Goldie."] }, { status: 404 });
+    const shippingTemplateId=String(found.product.external?.shipping_template_id||"").trim();
     const enabledVariants = found.product.variants?.filter((variant) => variant.is_enabled) ?? [];
-    if (enabledVariants.length === 0) return NextResponse.json({ error: "This Printify template has no enabled sizes or colors. Enable at least one variant, save it, and load it again." }, { status: 400 });
     const configuredPlacements = found.product.print_areas?.flatMap((area) => area.placeholders ?? []).filter((placeholder) => placeholder.images?.[0]) ?? [];
-    if (configuredPlacements.length === 0) return NextResponse.json({ error: "Add one placeholder design to every print area you want Goldie to use, save the Printify template, and load it again." }, { status: 400 });
+    const issues:string[]=[];
+    if(!shippingTemplateId)issues.push("Publish this product to Etsy once with the shipping profile you want Goldie to copy.");
+    if(enabledVariants.length===0)issues.push("Enable at least one size or color and save the product.");
+    if(configuredPlacements.length===0)issues.push("Place one design in every print area Goldie should copy, then save the product.");
+    if(issues.length)return NextResponse.json({error:"This Printify product cannot be used yet.",issues},{status:400});
     let provider = `Provider ${found.product.print_provider_id}`;
     let blueprint:Blueprint={id:found.product.blueprint_id};
     try { blueprint=await printify<Blueprint>(`/catalog/blueprints/${found.product.blueprint_id}.json`,token); } catch { /* Product data remains sufficient if catalog metadata is unavailable. */ }
@@ -160,6 +166,8 @@ export async function POST(request: Request) {
       print_areas: found.product.print_areas ?? [],
       description: found.product.description ?? "",
       shippingByVariant,
+      shippingTemplateId,
+      freeShipping:Boolean(found.product.sales_channel_properties?.free_shipping),
     };
     await db.batch([
       db.prepare("DELETE FROM printify_batch_sessions WHERE expires_at <= unixepoch()"),
@@ -168,7 +176,7 @@ export async function POST(request: Request) {
         .bind(batchId, user.userId, found.shop.id, found.product.id, JSON.stringify(safeTemplate), expiresAt),
     ]);
     const placementScale = Math.max(...configuredPlacements.map((placeholder) => Number(placeholder.images?.[0]?.scale || 1)));
-    return NextResponse.json({ product: { id: found.product.id, batchId, title: found.product.title, description:found.product.description??"", blueprintId:found.product.blueprint_id, blueprintTitle:blueprint.title||found.product.title, brand:blueprint.brand||"", model:blueprint.model||"", provider, enabledVariants: enabledVariants.length, variants:enabledVariants.map(variant=>({id:variant.id,title:variant.title||`Variant ${variant.id}`,cost:Number(variant.cost??variant.price),templatePrice:Number(variant.price),shipping:shippingByVariant[variant.id]??standardShipping,options:variant.options||[]})), shop: found.shop.title, standardShipping,shippingCurrency,maxPrintWidth, maxPrintHeight, placementScale } });
+    return NextResponse.json({ product: { id: found.product.id, batchId, title: found.product.title, description:found.product.description??"", blueprintId:found.product.blueprint_id, blueprintTitle:blueprint.title||found.product.title, brand:blueprint.brand||"", model:blueprint.model||"", provider, enabledVariants: enabledVariants.length, variants:enabledVariants.map(variant=>({id:variant.id,title:variant.title||`Variant ${variant.id}`,cost:Number(variant.cost??variant.price),templatePrice:Number(variant.price),shipping:shippingByVariant[variant.id]??standardShipping,options:variant.options||[]})), shop: found.shop.title, standardShipping,shippingCurrency,shippingTemplateId,freeShipping:Boolean(found.product.sales_channel_properties?.free_shipping),maxPrintWidth, maxPrintHeight, placementScale } });
   } catch (error) {
     const status = error instanceof PrintifyApiError && [400, 401, 403, 404, 429].includes(error.status) ? error.status : 500;
     return NextResponse.json({ error: error instanceof Error ? error.message : "Printify could not be reached." }, { status });

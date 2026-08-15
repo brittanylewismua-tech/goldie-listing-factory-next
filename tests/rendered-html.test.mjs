@@ -292,8 +292,9 @@ test("preflights the account once and reuses a protected batch session", async (
     readFile(new URL("../drizzle/0004_broad_dazzler.sql", import.meta.url), "utf8"),
   ]);
   assert.match(connection, /printify_batch_sessions/);
-  assert.match(connection, /no enabled sizes or colors/);
-  assert.match(connection, /placeholder design to every print area/);
+  assert.match(connection, /Enable at least one size or color/);
+  assert.match(connection, /Place one design in every print area/);
+  assert.match(connection, /Publish this product to Etsy once with the shipping profile/);
   assert.match(connection, /expiresAt = Math\.floor\(Date\.now\(\) \/ 1000\) \+ 6 \* 60 \* 60/);
   assert.match(page, /batchId: templateDetails\?\.batchId/);
   assert.match(drafts, /FROM printify_batch_sessions WHERE id = \? AND user_id = \?/);
@@ -739,16 +740,14 @@ test("draft progress cannot exceed the selected batch", async () => {
   assert.match(page,/Math\.min\(completedDesignIds\.size,targetFiles\.length\)/);
 });
 
-test("shows the complete Etsy fee equation and a clear shipping profile selector", async () => {
+test("shows the complete Etsy fee equation and uses the imported shipping profile", async () => {
   const [page,drafts] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/api/printify/drafts/route.ts", import.meta.url), "utf8"),
   ]);
   assert.match(page,/Printify product cost/);
-  assert.match(page,/aria-label="Buyer shipping charge used for pricing"/);
-  assert.match(page,/Buyer pays the Printify rate/);
-  assert.match(page,/Free shipping — buyer pays \$0\.00/);
-  assert.match(page,/Choose a different buyer charge/);
+  assert.match(page,/Domestic shipping charged by your imported profile/);
+  assert.match(page,/Shipping profile imported from your Printify product/);
   assert.match(page,/Split it 50\/50/);
   assert.match(page,/Buyer pays \$\{\(referenceShipping\*\.5\)\.toFixed\(2\)\}/);
   assert.match(page,/Custom buyer shipping price/);
@@ -758,15 +757,13 @@ test("shows the complete Etsy fee equation and a clear shipping profile selector
   assert.match(page,/Listing fee/);
   assert.match(page,/Total Etsy fees/);
   assert.match(page,/Review or change Etsy fee profile/);
-  assert.match(page,/automatically assign and update the correct shipping profile/);
-  assert.match(page,/matching Etsy shipping profile/);
+  assert.match(page,/copies that saved profile to every draft/);
+  assert.match(drafts,/shipping_template_id:template\.shippingTemplateId/);
   assert.match(drafts,/buyerCharge=Math\.max\(0,\.\.\.Object\.values/);
   assert.match(page,/state\.shippingPercent\?\?/);
   assert.match(page,/loadTemplateUrl\(recipe\.templateUrl,nextPricing\)/);
   assert.match(page,/pricingOverride\|\|pricing/);
   assert.match(page,/Math\.max\(variant\.cost\/100/);
-  assert.match(page,/Partial shipping must be confirmed in Etsy/);
-  assert.match(page,/cannot be applied by Printify/);
   assert.doesNotMatch(page,/Buyer pays Printify shipping/);
 });
 

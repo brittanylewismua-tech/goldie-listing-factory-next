@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import "./globals.css";
 import "./factory-navigation.css";
 import "./theme.css";
+import ReliableNavigation from "./reliable-navigation";
 
 export async function generateMetadata(): Promise<Metadata> {
   const requestHeaders = await headers();
@@ -21,5 +22,5 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="en"><body>{children}</body></html>;
+  return <html lang="en"><body><ReliableNavigation/>{children}</body></html>;
 }
