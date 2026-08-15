@@ -754,6 +754,7 @@ test("shows the complete Etsy fee equation and supports exact partial shipping s
   assert.match(page,/Fixed payment fee/);
   assert.match(page,/Listing fee/);
   assert.match(page,/Total Etsy fees/);
+  assert.match(page,/Review or change Etsy fee profile/);
   assert.match(drafts,/buyerCharge=Math\.max\(0,\.\.\.Object\.values/);
   assert.match(page,/state\.shippingPercent\?\?/);
   assert.match(page,/loadTemplateUrl\(recipe\.templateUrl,nextPricing\)/);
@@ -762,4 +763,22 @@ test("shows the complete Etsy fee equation and supports exact partial shipping s
   assert.match(page,/Partial shipping must be confirmed in Etsy/);
   assert.match(page,/cannot be applied by Printify/);
   assert.doesNotMatch(page,/Buyer pays Printify shipping/);
+});
+
+test("keeps management headings readable and shows the complete workflow map on phones", async () => {
+  const css = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+  assert.match(css,/management-page>header h1,.usage-page>header h1\{color:#f7f0e4\}/);
+  assert.match(css,/management-page \.management-nav a\.active,.usage-page \.management-nav a\.active\{color:#fff\}/);
+  assert.match(css,/@media\(max-width:600px\)\{\.workflow-progress\{display:grid;grid-template-columns:repeat\(2/);
+});
+
+test("keeps batch history useful instead of accumulating unmanageable empty sessions", async () => {
+  const [page,batches] = await Promise.all([
+    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/batches/page.tsx", import.meta.url), "utf8"),
+  ]);
+  assert.match(page,/\(!files\.length&&!drafts\.length\)\)return/);
+  assert.match(batches,/Remove from history/);
+  assert.match(batches,/does not delete products from Printify or listings from Etsy/);
+  assert.match(batches,/method:"DELETE"/);
 });
