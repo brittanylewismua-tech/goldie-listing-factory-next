@@ -490,6 +490,7 @@ test("creates unique validated AI titles in bulk with per-listing overrides", as
   assert.match(page,/Create a different title with AI/);assert.match(page,/Create title for this design/);
   assert.match(page,/autoTitleForDesign/);assert.match(page,/tagsFromTitle\(item\.result\.keywords\.join/);
   assert.match(page,/unique titles and matching tags created/);assert.match(page,/Goldie cannot invent keywords/);
+  assert.ok(page.indexOf('className="permanent-description"')>page.indexOf('className="design-table"'),"The batch description belongs below all listing titles and tags.");
   assert.match(tools,/keywordListsCache/);assert.match(tools,/selectionOnly/);assert.match(tools,/onSelect/);
   assert.match(intelligence,/selected_keywords/);assert.match(intelligence,/allowedByLower/);assert.match(intelligence,/Reject irrelevant phrases/);
 });
