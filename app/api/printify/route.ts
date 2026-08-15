@@ -13,8 +13,6 @@ type Product = {
   blueprint_id: number;
   print_provider_id: number;
   description?: string;
-  external?: unknown;
-  sales_channel_properties?: Array<Record<string, unknown>>;
   variants?: Array<{ id: number; title?: string; options?: number[]; price: number; cost?: number; is_enabled?: boolean }>;
   print_areas?: Array<{
     variant_ids: number[];
@@ -72,18 +70,13 @@ function productIdFromUrl(value: string) {
   return (value.match(/\/editor\/([a-zA-Z0-9]+)/) || value.match(/\/products\/([a-zA-Z0-9]+)/))?.[1] ?? "";
 }
 
-export async function GET(request:Request) {
+export async function GET() {
   const user = await getChatGPTUser();
   if (!user) return NextResponse.json({ error: "Sign in to continue." }, { status: 401 });
   try {
     const token = await storedToken(user.userId);
     if (!token) return NextResponse.json({ connected: false, owner: isOwner(user) });
-    const shops=await printify<Shop[]>("/shops.json", token);
-    if(new URL(request.url).searchParams.get("shippingProfiles")==="1"&&isOwner(user)){
-      const evidence: Array<{shopId:number;shop:string;productId:string;title:string;external:Product["external"];salesChannelProperties:Product["sales_channel_properties"]}> = [];
-      for(const shop of shops){const page=await printify<{data?:Product[]}>(`/shops/${shop.id}/products.json?limit=50`,token);for(const product of page.data??[])if(product.external||product.sales_channel_properties?.length)evidence.push({shopId:shop.id,shop:shop.title,productId:product.id,title:product.title,external:product.external,salesChannelProperties:product.sales_channel_properties})}
-      return NextResponse.json({evidence});
-    }
+    await printify<Shop[]>("/shops.json", token);
     return NextResponse.json({ connected: true, owner: isOwner(user) });
   } catch (error) {
     if (error instanceof PrintifyApiError && (error.status === 401 || error.status === 403)) {
@@ -113,20 +106,10 @@ export async function POST(request: Request) {
   const launchBlock = await customerLaunchBlock(user);
   if (launchBlock) return NextResponse.json({ error: launchBlock }, { status: 503 });
   try {
-    const body = (await request.json()) as { token?: string; productUrl?: string; inspectShippingProfiles?: boolean };
+    const body = (await request.json()) as { token?: string; productUrl?: string };
     const token = body.token?.trim() || await storedToken(user.userId);
     if (!token) return NextResponse.json({ error: "Connect your Printify account first." }, { status: 400 });
     const shops = await printify<Shop[]>("/shops.json", token);
-    if (body.inspectShippingProfiles && isOwner(user)) {
-      const evidence: Array<{shopId:number;shop:string;productId:string;title:string;external:Product["external"];salesChannelProperties:Product["sales_channel_properties"]}> = [];
-      for (const shop of shops) {
-        const page = await printify<{data?:Product[]}>(`/shops/${shop.id}/products.json?limit=50`, token);
-        for (const product of page.data ?? []) {
-          if (product.external||product.sales_channel_properties?.length) evidence.push({shopId:shop.id,shop:shop.title,productId:product.id,title:product.title,external:product.external,salesChannelProperties:product.sales_channel_properties});
-        }
-      }
-      return NextResponse.json({evidence});
-    }
     if (!body.productUrl) { await saveToken(user.userId, token); return NextResponse.json({ connected: true }); }
 
     const productId = productIdFromUrl(body.productUrl.trim());

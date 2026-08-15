@@ -75,11 +75,11 @@ function PricingReview({variants,pricing,prices,shippingPercent,approved,onPrici
         <label>Profit target<input type="number" min="0" step="0.01" value={pricing.targetProfit} onChange={event=>changeProfit(Number(event.target.value))}/></label>
         <div className="shipping-split">
           <label className="shipping-profile-select">
-            <span>Shipping profile</span>
-            <select aria-label="Shipping profile" value={shippingProfile} onChange={event=>changeShippingProfile(event.target.value)}>
-              <option value="printify">Printify automatic rates — buyer pays {moneyRange(shippingMin,referenceShipping)}</option>
+            <span>Buyer shipping charge used for pricing</span>
+            <select aria-label="Buyer shipping charge used for pricing" value={shippingProfile} onChange={event=>changeShippingProfile(event.target.value)}>
+              <option value="printify">Buyer pays the Printify rate — {moneyRange(shippingMin,referenceShipping)}</option>
               <option value="free">Free shipping — buyer pays $0.00</option>
-              <option value="custom">Custom Etsy profile — choose buyer amount</option>
+              <option value="custom">Choose a different buyer charge</option>
             </select>
           </label>
           <p>{shippingProfile==="printify"?"Printify will automatically assign and update the correct shipping profile when these products publish to Etsy.":shippingProfile==="free"?"Goldie builds the Printify shipping cost into every variant’s item price.":"Choose what the buyer pays. Goldie builds the rest of Printify’s shipping cost into every variant’s item price."}</p>
@@ -497,7 +497,7 @@ export default function Home() {
         </div>
         <div className="top-actions">
           <nav className="top-nav"><a className="active" href="/" onClick={event=>guardNavigation(event,"/")}>Listing Factory</a><a href="/batches" onClick={event=>guardNavigation(event,"/batches")}>Batch History</a><a href="/keywords" target="_blank" rel="noopener noreferrer">Keyword Banks ↗</a><a href="/mockups" target="_blank" rel="noopener noreferrer">Mockup Sets ↗</a></nav>
-          {owner && <><a className="diagnostics-link" href="/mastermind-admin" aria-label="Open Goldie Diagnostics" title="Goldie Diagnostics">★</a><a href="/profile-sync">Profile sync check</a></>}
+          {owner && <a className="diagnostics-link" href="/mastermind-admin" aria-label="Open Goldie Diagnostics" title="Goldie Diagnostics">★</a>}
           <a className="usage-link" href="/usage" onClick={event=>guardNavigation(event,"/usage")}>Usage + plan</a>
           <span className="secure-pill"><i /> Secure workspace</span>
         </div>

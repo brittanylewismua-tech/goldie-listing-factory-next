@@ -745,10 +745,10 @@ test("shows the complete Etsy fee equation and a clear shipping profile selector
     readFile(new URL("../app/api/printify/drafts/route.ts", import.meta.url), "utf8"),
   ]);
   assert.match(page,/Printify product cost/);
-  assert.match(page,/aria-label="Shipping profile"/);
-  assert.match(page,/Printify automatic rates/);
+  assert.match(page,/aria-label="Buyer shipping charge used for pricing"/);
+  assert.match(page,/Buyer pays the Printify rate/);
   assert.match(page,/Free shipping — buyer pays \$0\.00/);
-  assert.match(page,/Custom Etsy profile — choose buyer amount/);
+  assert.match(page,/Choose a different buyer charge/);
   assert.match(page,/Split it 50\/50/);
   assert.match(page,/Buyer pays \$\{\(referenceShipping\*\.5\)\.toFixed\(2\)\}/);
   assert.match(page,/Custom buyer shipping price/);
