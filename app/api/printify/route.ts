@@ -13,7 +13,7 @@ type Product = {
   blueprint_id: number;
   print_provider_id: number;
   description?: string;
-  external?: Array<{ id?: string; handle?: string; shipping_template_id?: string }>;
+  external?: unknown;
   sales_channel_properties?: Array<Record<string, unknown>>;
   variants?: Array<{ id: number; title?: string; options?: number[]; price: number; cost?: number; is_enabled?: boolean }>;
   print_areas?: Array<{
@@ -81,7 +81,7 @@ export async function GET(request:Request) {
     const shops=await printify<Shop[]>("/shops.json", token);
     if(new URL(request.url).searchParams.get("shippingProfiles")==="1"&&isOwner(user)){
       const evidence: Array<{shopId:number;shop:string;productId:string;title:string;external:Product["external"];salesChannelProperties:Product["sales_channel_properties"]}> = [];
-      for(const shop of shops){const page=await printify<{data?:Product[]}>(`/shops/${shop.id}/products.json?limit=50`,token);for(const product of page.data??[])if(product.external?.some(item=>item.shipping_template_id)||product.sales_channel_properties?.length)evidence.push({shopId:shop.id,shop:shop.title,productId:product.id,title:product.title,external:product.external,salesChannelProperties:product.sales_channel_properties})}
+      for(const shop of shops){const page=await printify<{data?:Product[]}>(`/shops/${shop.id}/products.json?limit=50`,token);for(const product of page.data??[])if(product.external||product.sales_channel_properties?.length)evidence.push({shopId:shop.id,shop:shop.title,productId:product.id,title:product.title,external:product.external,salesChannelProperties:product.sales_channel_properties})}
       return NextResponse.json({evidence});
     }
     return NextResponse.json({ connected: true, owner: isOwner(user) });
@@ -122,7 +122,7 @@ export async function POST(request: Request) {
       for (const shop of shops) {
         const page = await printify<{data?:Product[]}>(`/shops/${shop.id}/products.json?limit=50`, token);
         for (const product of page.data ?? []) {
-          if (product.external?.some(item=>item.shipping_template_id)||product.sales_channel_properties?.length) evidence.push({shopId:shop.id,shop:shop.title,productId:product.id,title:product.title,external:product.external,salesChannelProperties:product.sales_channel_properties});
+          if (product.external||product.sales_channel_properties?.length) evidence.push({shopId:shop.id,shop:shop.title,productId:product.id,title:product.title,external:product.external,salesChannelProperties:product.sales_channel_properties});
         }
       }
       return NextResponse.json({evidence});
