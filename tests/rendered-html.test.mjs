@@ -734,3 +734,19 @@ test("draft progress cannot exceed the selected batch", async () => {
   assert.match(page,/completedDesignIds\.has\(result\.clientId\)/);
   assert.match(page,/Math\.min\(completedDesignIds\.size,targetFiles\.length\)/);
 });
+
+test("shows the complete Etsy fee equation and supports exact partial shipping splits", async () => {
+  const [page,drafts] = await Promise.all([
+    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/printify/drafts/route.ts", import.meta.url), "utf8"),
+  ]);
+  assert.match(page,/\[0,50,100\]\.map/);
+  assert.match(page,/Custom percent of shipping paid by buyer/);
+  assert.match(page,/Built into price/);
+  assert.match(page,/Etsy % fee/);
+  assert.match(page,/Fixed payment fee/);
+  assert.match(page,/Listing fee/);
+  assert.match(page,/Total Etsy fees/);
+  assert.match(drafts,/shipping\*percent\/100/);
+  assert.doesNotMatch(page,/Buyer pays Printify shipping/);
+});
