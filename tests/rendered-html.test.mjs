@@ -188,17 +188,19 @@ test("renders Mockup Sets as management only", async () => {
 });
 
 test("guides sellers through the complete resumable eight-step workflow",async()=>{
-  const [page,batches,route,cache]=await Promise.all([
+  const [page,batches,route,cache,styles]=await Promise.all([
     readFile(new URL("../app/page.tsx",import.meta.url),"utf8"),
     readFile(new URL("../app/batches/page.tsx",import.meta.url),"utf8"),
     readFile(new URL("../app/api/batches/route.ts",import.meta.url),"utf8"),
     readFile(new URL("../app/batch-cache.ts",import.meta.url),"utf8"),
+    readFile(new URL("../app/globals.css",import.meta.url),"utf8"),
   ]);
   assert.match(page,/Connect Printify/);assert.match(page,/Choose product/);assert.match(page,/Add designs/);assert.match(page,/Review pricing/);assert.match(page,/Create drafts/);assert.match(page,/Titles \+ descriptions/);assert.match(page,/Images \+ mockups/);assert.match(page,/Final review/);
   assert.match(page,/searchParams\.get\("batch"\)/);assert.doesNotMatch(page,/const id=window\.localStorage\.getItem\("goldie-active-batch"\)/);
   assert.match(page,/aria-current=\{active\?"step"/);assert.match(page,/You are here/);assert.match(page,/Complete the prior step/);
   assert.match(page,/goldie-active-batch/);assert.match(page,/saveBatchFiles/);assert.match(page,/\/api\/batches/);
   assert.match(batches,/Pick up exactly where you left off/);assert.match(batches,/Resume batch/);assert.match(route,/listing_batches/);assert.match(cache,/indexedDB/);
+  assert.match(styles,/post-draft-heading>div\{display:none\}/);assert.match(styles,/post-draft-workspace \.open-all-button\{width:auto/);
 });
 
 test("imports Printify product facts and automatically prepares product-specific Etsy details",async()=>{
