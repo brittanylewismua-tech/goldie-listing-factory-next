@@ -16,7 +16,7 @@ export async function PATCH(request:Request){
     const currentResponse=await fetch(url,{headers:{Authorization:`Bearer ${token}`,"User-Agent":"Goldie-Listing-Factory"}});
     if(!currentResponse.ok)return NextResponse.json({error:`Printify could not load this draft (${currentResponse.status}).`},{status:currentResponse.status});
     const current=await currentResponse.json() as {print_areas?:Array<{variant_ids:number[];background?:string;placeholders?:Array<{position:string;images?:Array<{id?:string;x?:number;y?:number;scale?:number;angle?:number}>}>}>};
-    placementPayload=(current.print_areas||[]).map(area=>({...area,placeholders:(area.placeholders||[]).map(placeholder=>({...placeholder,images:(placeholder.images||[]).map(image=>({...image,x:Math.max(0,Math.min(1,body.placement!.x)),y:Math.max(0,Math.min(1,body.placement!.y)),scale:Math.max(.05,Math.min(3,body.placement!.scale))}))}))}));
+    placementPayload=(current.print_areas||[]).map(area=>({...area,placeholders:(area.placeholders||[]).map(placeholder=>({...placeholder,images:(placeholder.images||[]).map(image=>({...image,x:Math.max(0,Math.min(1,Number(image.x??.5)+body.placement!.x)),y:Math.max(0,Math.min(1,Number(image.y??.5)+body.placement!.y)),scale:Math.max(.05,Math.min(3,Number(image.scale??1)*body.placement!.scale))}))}))}));
   }
   const updateBody:Record<string,unknown>={};
   if(body.title!==undefined)updateBody.title=String(body.title||"").slice(0,255);

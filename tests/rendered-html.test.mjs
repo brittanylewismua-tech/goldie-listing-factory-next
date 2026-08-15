@@ -78,9 +78,9 @@ test("uses individual shop-aware Printify editor buttons", async () => {
   assert.match(page, /folderPicker\.current\.value = ""/);
   assert.match(page, /imagePicker\.current\.value = ""/);
   assert.match(page, /function openAllDrafts\(\)/);
-  assert.match(page, /Wait—do you really want to leave\? Your files are still uploading/);
-  assert.match(page, /Keep this page open/);
-  assert.match(page, /Please keep this page open/);
+  assert.match(page, /Wait—your files are still uploading/);
+  assert.match(page, /Leaving now may stop the unfinished uploads/);
+  assert.doesNotMatch(page, /className="upload-guard"/);
   assert.match(page, /Doing so may halt your current design uploads/);
   assert.match(page, /setUploadNoticeOpen\(true\)/);
   assert.match(page, /beforeunload/);

@@ -8,9 +8,9 @@ function jpegBlob(canvas: HTMLCanvasElement, quality: number) {
   ));
 }
 
-export async function prepareArtworkFile(file: File, hasTransparency: boolean) {
+export async function prepareArtworkFile(file: File, hasTransparency: boolean, allowWhiteFlatten = false) {
   if (file.size <= MAX_DIRECT_PRINTIFY_BYTES) return { blob: file as Blob, fileName: file.name };
-  if (hasTransparency) throw new Error("This transparent PNG is too large for Printify's upload request. Export an optimized transparent PNG under 40 MB; keep the same pixel dimensions so the DPI does not change.");
+  if (hasTransparency && !allowWhiteFlatten) throw new Error("This transparent PNG is too large for Printify's upload request. Export an optimized transparent PNG under 40 MB; keep the same pixel dimensions so the DPI does not change.");
 
   const bitmap = await createImageBitmap(file);
   const canvas = document.createElement("canvas");
