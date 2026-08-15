@@ -148,7 +148,7 @@ test("requires explicit review of every Printify variant and starts new products
     readFile(new URL("../app/factory-tools.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/api/printify/route.ts", import.meta.url), "utf8"),
   ]);
-  assert.match(page, /Review the prices already on your template/);
+  assert.match(page, /Review shipping and item prices/);
   assert.match(page, /variant\.templatePrice/);
   assert.match(page, /Your estimated profit/);
   assert.match(page, /Approve pricing \+ shipping/);
@@ -757,12 +757,14 @@ test("keeps pricing simple while using a real Etsy shipping profile and exact te
   assert.match(page,/automatically selects the profile saved on your product template/);
   assert.match(page,/templateProfileId=Number\(templateDetails\?\.shippingTemplateId\)/);
   assert.match(page,/setEtsyShippingProfileId\(current=>current\|\|templateProfileId\)/);
-  assert.match(page,/Domestic shipping/);
+  assert.match(page,/Domestic —/);
   assert.match(page,/International shipping/);
   assert.match(page,/international-shipping-editor/);
-  assert.match(page,/Domestic shipping — \{selectedProfile\.originCountry\}/);
-  assert.match(page,/Save this custom profile for this product/);
-  assert.match(page,/Calculate every size for/);
+  assert.match(page,/Domestic — \{selectedProfile\.originCountry\}/);
+  assert.match(page,/Save new shipping profile/);
+  assert.match(page,/Item prices by size/);
+  assert.match(page,/Update prices/);
+  assert.match(page,/Change shipping prices \(optional\)/);
   assert.match(page,/Your current prices already meet this profit goal/);
   assert.match(page,/recommendation-result/);
   assert.match(page,/variant\.templatePrice/);
@@ -775,15 +777,14 @@ test("keeps pricing simple while using a real Etsy shipping profile and exact te
   assert.match(drafts,/etsyBuyerShipping/);
   assert.match(page,/loadTemplateUrl\(recipe\.templateUrl,nextPricing\)/);
   assert.match(page,/PriceField value=\{itemCents\} minimum=\{variant\.cost\/100\}/);
-  assert.match(page,/Create a custom shipping profile for this seller/);
-  assert.match(page,/Shipping profile name/);
+  assert.match(page,/Change shipping prices \(optional\)/);
+  assert.match(page,/New profile name/);
   assert.match(page,/International shipping/);
   assert.match(page,/Additional item/);
   assert.match(page,/international:InternationalShippingRate\[\]/);
   assert.match(page,/First item/);
   assert.match(page,/Additional item/);
-  assert.match(page,/Save this custom profile for this product/);
-  assert.match(page,/never changes the starting profile/);
+  assert.match(page,/Save new shipping profile/);
   assert.match(page,/setDraft\(event\.target\.value\)/);
   assert.match(page,/onBlur=\{commit\}/);
   assert.match(profiles,/export async function POST/);
