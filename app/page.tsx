@@ -49,7 +49,7 @@ function PricingReview({variants,pricing,prices,shippingPercent,approved,onPrici
   const referenceShipping=Math.max(0,...shippingRates);
   const shippingProfile=normalizedPercent===100?"printify":normalizedPercent===0?"free":"custom";
   const buyerShipping=(_shipping:number,percent=normalizedPercent)=>referenceShipping*percent/100;
-  const moneyRange=(minimum:number,maximum:number)=>minimum===maximum?`${minimum.toFixed(2)}`:`${minimum.toFixed(2)}–${maximum.toFixed(2)}`;
+  const moneyRange=(minimum:number,maximum:number)=>minimum===maximum?`$${minimum.toFixed(2)}`:`$${minimum.toFixed(2)}–$${maximum.toFixed(2)}`;
   const recalculate=(nextPricing=pricing,nextPercent=normalizedPercent)=>onPrices(Object.fromEntries(variants.map(variant=>{const shipping=Number(variant.shipping||0);return[String(variant.id),recommendedPrice(variant.cost,{...nextPricing,shippingCost:shipping,shippingCharged:buyerShipping(shipping,nextPercent)})]})));
   function changeProfit(value:number){const next={...pricing,targetProfit:Math.max(0,value)};onPricing(next);recalculate(next);}
   function changeShipping(value:number){const next=Math.max(0,Math.min(100,value||0));onShippingPercent(next);recalculate(pricing,next)}
