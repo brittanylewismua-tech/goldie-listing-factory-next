@@ -762,7 +762,9 @@ test("keeps pricing simple while using a real Etsy shipping profile and exact te
   assert.match(page,/international-shipping-editor/);
   assert.match(page,/Domestic shipping — \{selectedProfile\.originCountry\}/);
   assert.match(page,/Save this custom profile for this product/);
-  assert.match(page,/Use Goldie’s recommended prices/);
+  assert.match(page,/Calculate every size for/);
+  assert.match(page,/Your current prices already meet this profit goal/);
+  assert.match(page,/recommendation-result/);
   assert.match(page,/variant\.templatePrice/);
   assert.match(page,/See how Goldie calculated these prices/);
   assert.doesNotMatch(page,/Split it 50\/50|Custom buyer shipping price|shippingPercent/);
