@@ -183,7 +183,7 @@ export async function POST(request: Request) {
         description: body.description ?? template.description ?? "",
         blueprint_id: template.blueprint_id,
         print_provider_id: template.print_provider_id,
-        variants: template.variants.map(({ id, price, cost, is_enabled }) => {const shipping=template.shippingByVariant?.[id],percent=Math.max(0,Math.min(100,Number(body.shippingPercent??100)));const rules=shipping==null?body.pricing:{...body.pricing,shippingCost:shipping,shippingCharged:shipping*percent/100};const approved=Number(body.variantPrices?.[String(id)]);const calculated=recommendedPrice(cost ?? price,rules);const finalPrice=Number.isInteger(approved)&&approved>=Number(cost??price)&&approved<=1000000?approved:calculated;return { id, price:finalPrice, is_enabled }}),
+        variants: template.variants.map(({ id, price, cost, is_enabled }) => {const shipping=template.shippingByVariant?.[id],percent=Math.max(0,Math.min(100,Number(body.shippingPercent??100)));const buyerCharge=Math.max(0,...Object.values(template.shippingByVariant||{}))*percent/100,rules=shipping==null?body.pricing:{...body.pricing,shippingCost:shipping,shippingCharged:buyerCharge};const approved=Number(body.variantPrices?.[String(id)]);const calculated=recommendedPrice(cost ?? price,rules);const finalPrice=Number.isInteger(approved)&&approved>=Number(cost??price)&&approved<=1000000?approved:calculated;return { id, price:finalPrice, is_enabled }}),
         tags: (body.tags ?? []).map(tag => String(tag).trim()).filter(Boolean).slice(0, 13),
         // Never carry media-library IDs from the template into a different
         // product request. Only the image uploaded in this request is valid.

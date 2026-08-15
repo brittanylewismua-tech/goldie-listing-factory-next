@@ -252,6 +252,10 @@ test("calculates every Printify variant price from its own cost and Etsy fee pro
   assert.equal(recommendedPrice(1760, pricing), 3100);
   assert.equal(recommendedPrice(1034), 1034);
   assert.equal(recommendedPrice(1000, { targetProfit: 10, etsyFeePercent: 10, fixedFee: .25, listingFee: .20, shippingCost: 5, shippingCharged: 5 }), 2328);
+  assert.equal(recommendedPrice(1000, { targetProfit: 10, etsyFeePercent: 9.5, fixedFee: .25, listingFee: .20, shippingCost: 6, shippingCharged: 3 }), 2623);
+  assert.equal(recommendedPrice(1000, { targetProfit: 10, etsyFeePercent: 9.5, fixedFee: .25, listingFee: .20, shippingCost: 4, shippingCharged: 3 }), 2402);
+  assert.equal(recommendedPrice(1000, { targetProfit: 0, etsyFeePercent: 9.5, fixedFee: .25, listingFee: .20, shippingCost: 6, shippingCharged: 3 }), 1518);
+  assert.equal(recommendedPrice(1000, { targetProfit: 10, etsyFeePercent: 9.5, fixedFee: .25, listingFee: .20, shippingCost: 4, shippingCharged: 6 }), 2323);
 });
 
 test("processes a 20-design batch with bounded two-at-a-time concurrency", async () => {
@@ -747,6 +751,12 @@ test("shows the complete Etsy fee equation and supports exact partial shipping s
   assert.match(page,/Fixed payment fee/);
   assert.match(page,/Listing fee/);
   assert.match(page,/Total Etsy fees/);
-  assert.match(drafts,/shipping\*percent\/100/);
+  assert.match(drafts,/buyerCharge=Math\.max\(0,\.\.\.Object\.values/);
+  assert.match(page,/state\.shippingPercent\?\?/);
+  assert.match(page,/loadTemplateUrl\(recipe\.templateUrl,nextPricing\)/);
+  assert.match(page,/pricingOverride\|\|pricing/);
+  assert.match(page,/Math\.max\(variant\.cost\/100/);
+  assert.match(page,/Partial shipping must be confirmed in Etsy/);
+  assert.match(page,/cannot be applied by Printify/);
   assert.doesNotMatch(page,/Buyer pays Printify shipping/);
 });
