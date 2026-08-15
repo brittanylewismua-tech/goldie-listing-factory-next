@@ -22,6 +22,7 @@ test("server-renders the branded Listing Factory", async () => {
   assert.match(html, /Your Printify account/);
   assert.match(html, /Choose a saved product or add another/);
   const pageSource = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const globalCss = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
   assert.match(pageSource, /How to get your Printify token/);
   assert.match(pageSource, /token connects the account/);
   assert.match(html, /Connect this Printify template/);
@@ -38,6 +39,7 @@ test("server-renders the branded Listing Factory", async () => {
   assert.match(html, /100 MB per design/);
   assert.match(html, /without lowering DPI/);
   assert.match(html, /Listings remain unpublished/);
+  assert.match(globalCss, /@media\(max-width:650px\).*\.top-nav\{flex-wrap:wrap;white-space:normal/s);
   assert.doesNotMatch(html, /pink-dorm-collage|rich-man-poster|cowgirl-disco|newest batch will open/i);
   assert.doesNotMatch(html, /codex-preview|react-loading-skeleton/i);
 });
