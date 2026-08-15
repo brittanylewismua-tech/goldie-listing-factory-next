@@ -744,8 +744,11 @@ test("shows the complete Etsy fee equation and supports exact partial shipping s
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/api/printify/drafts/route.ts", import.meta.url), "utf8"),
   ]);
-  assert.match(page,/\[0,50,100\]\.map/);
-  assert.match(page,/Custom percent of shipping paid by buyer/);
+  assert.match(page,/Printify product cost/);
+  assert.match(page,/Printify shipping for this product/);
+  assert.match(page,/Split it 50\/50/);
+  assert.match(page,/Buyer pays \$\{\(referenceShipping\/2\)\.toFixed\(2\)\}/);
+  assert.match(page,/Custom buyer shipping price/);
   assert.match(page,/Built into price/);
   assert.match(page,/Etsy % fee/);
   assert.match(page,/Fixed payment fee/);
