@@ -739,15 +739,18 @@ test("draft progress cannot exceed the selected batch", async () => {
   assert.match(page,/Math\.min\(completedDesignIds\.size,targetFiles\.length\)/);
 });
 
-test("shows the complete Etsy fee equation and supports exact partial shipping splits", async () => {
+test("shows the complete Etsy fee equation and a clear shipping profile selector", async () => {
   const [page,drafts] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/api/printify/drafts/route.ts", import.meta.url), "utf8"),
   ]);
   assert.match(page,/Printify product cost/);
-  assert.match(page,/Printify shipping for this product/);
+  assert.match(page,/aria-label="Shipping profile"/);
+  assert.match(page,/Printify automatic rates/);
+  assert.match(page,/Free shipping — buyer pays \$0\.00/);
+  assert.match(page,/Custom Etsy profile — choose buyer amount/);
   assert.match(page,/Split it 50\/50/);
-  assert.match(page,/Buyer pays \$\{\(referenceShipping\/2\)\.toFixed\(2\)\}/);
+  assert.match(page,/Buyer pays \$\{\(referenceShipping\*\.5\)\.toFixed\(2\)\}/);
   assert.match(page,/Custom buyer shipping price/);
   assert.match(page,/Built into price/);
   assert.match(page,/Etsy % fee/);
@@ -755,6 +758,8 @@ test("shows the complete Etsy fee equation and supports exact partial shipping s
   assert.match(page,/Listing fee/);
   assert.match(page,/Total Etsy fees/);
   assert.match(page,/Review or change Etsy fee profile/);
+  assert.match(page,/automatically assign and update the correct shipping profile/);
+  assert.match(page,/matching Etsy shipping profile/);
   assert.match(drafts,/buyerCharge=Math\.max\(0,\.\.\.Object\.values/);
   assert.match(page,/state\.shippingPercent\?\?/);
   assert.match(page,/loadTemplateUrl\(recipe\.templateUrl,nextPricing\)/);
