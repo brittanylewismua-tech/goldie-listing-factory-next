@@ -84,6 +84,7 @@ export default function Home() {
   const snapshotReady=useRef(false);
   const resumeAttempted=useRef(false);
   const draftRunActive=useRef(false);
+  const templateLoadVersion=useRef(0);
   const [connected, setConnected] = useState(false);
   const [token, setToken] = useState("");
   const [connectionError, setConnectionError] = useState("");
@@ -219,7 +220,7 @@ export default function Home() {
     batchIdRef.current="";window.localStorage.removeItem("goldie-active-batch");
     const freshUrl=new URL(window.location.href);freshUrl.searchParams.delete("batch");window.history.replaceState({},"",freshUrl);
     files.forEach(file=>URL.revokeObjectURL(file.previewUrl));
-    setFiles([]);setFileError("");setDrafts([]);setProcessed(0);setRunTotal(0);setComplete(false);setOpenedDrafts([]);setOpenAllMessage("");setBulkTitles("");setBatchKeywords([]);setActiveDesign("");setPreflightOpen(false);setUploadNoticeOpen(false);setPrintifyImageIndices([]);setSharedMockups(undefined);setFinishPhase("details");setVariantPrices({});setShippingMode("buyer");setPricingApproved(false);syncedListingSignatures.current.clear();
+    templateLoadVersion.current+=1;setLoadingTemplate(false);setFiles([]);setFileError("");setDrafts([]);setProcessed(0);setRunTotal(0);setComplete(false);setOpenedDrafts([]);setOpenAllMessage("");setBulkTitles("");setBatchKeywords([]);setActiveDesign("");setPreflightOpen(false);setUploadNoticeOpen(false);setPrintifyImageIndices([]);setSharedMockups(undefined);setFinishPhase("details");setVariantPrices({});setShippingMode("buyer");setPricingApproved(false);syncedListingSignatures.current.clear();
     if(clearProduct){setTemplate("");setTemplateDetails(null);setTemplateError("");setDescription("");setMockupTheme("");setActiveRecipe(null);setPricing(current=>({...current,targetProfit:DEFAULT_PRICING.targetProfit,shippingCost:0,shippingCharged:0}))}
     if (folderPicker.current) folderPicker.current.value = "";
     if (imagePicker.current) imagePicker.current.value = "";
@@ -251,14 +252,16 @@ export default function Home() {
   }
 
   async function loadTemplateUrl(productUrl = template) {
+    const requestVersion=++templateLoadVersion.current;
     setLoadingTemplate(true); setTemplateError(""); setTemplateDetails(null);
     try {
       const response = await fetchWithDeadline("/api/printify", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ productUrl }) }, 90000);
       const result = await response.json() as { product?: TemplateDetails; error?: string };
+      if(requestVersion!==templateLoadVersion.current)return false;
       if (!response.ok || !result.product) throw new Error(result.error || "The template could not be loaded.");
       setTemplateDetails(result.product);setDescription(result.product.description||"");if(result.product.standardShipping!=null)setPricing(current=>({...current,shippingCost:result.product!.standardShipping!,shippingCharged:result.product!.standardShipping!}));setVariantPrices(Object.fromEntries((result.product.variants||[]).map(variant=>[String(variant.id),recommendedPrice(variant.cost,{...pricing,shippingCost:Number(variant.shipping||0),shippingCharged:Number(variant.shipping||0)})])));setShippingMode("buyer");setPricingApproved(false); return true;
-    } catch (error) { setTemplateError(error instanceof Error ? error.message : "The template could not be loaded."); return false; }
-    finally { setLoadingTemplate(false); }
+    } catch (error) { if(requestVersion===templateLoadVersion.current)setTemplateError(error instanceof Error ? error.message : "The template could not be loaded."); return false; }
+    finally { if(requestVersion===templateLoadVersion.current)setLoadingTemplate(false); }
   }
 
   async function preparedUpload(design: DesignFile) {
@@ -491,7 +494,7 @@ export default function Home() {
             </div>
           </article>
 
-          <div className={`workflow-panel ${workflowStep==="setup"?"active-panel":"hidden-panel"}`}><SavedWorkflow connected={connected} templateUrl={template} mockupTheme={mockupTheme} pricing={pricing} templateVerified={templateLoaded} loadingTemplate={loadingTemplate} onTemplateUrl={(value) => { setTemplate(value); setTemplateDetails(null); setTemplateError(""); }} onUseRecipe={useRecipe} onStartNewProduct={startNewProduct} onVerifyTemplate={loadTemplateUrl} onPricing={setPricing} onMockupTheme={setMockupTheme} />
+          <div className={`workflow-panel ${workflowStep==="setup"?"active-panel":"hidden-panel"}`}><SavedWorkflow connected={connected} templateUrl={template} mockupTheme={mockupTheme} pricing={pricing} templateVerified={templateLoaded} loadingTemplate={loadingTemplate} onTemplateUrl={(value) => { templateLoadVersion.current+=1;setLoadingTemplate(false);setTemplate(value);setTemplateDetails(null);setTemplateError(""); }} onUseRecipe={useRecipe} onStartNewProduct={startNewProduct} onVerifyTemplate={loadTemplateUrl} onPricing={setPricing} onMockupTheme={setMockupTheme} />
           {templateError && <p className="field-error recipe-error" role="alert">{templateError}</p>}
           {templateDetails && <><div className="template-proof recipe-proof"><div className="product-thumb"><span>YOUR<br/>ART</span></div><div className="template-info"><b>{templateDetails.blueprintTitle}</b><span>{templateDetails.provider} · {templateDetails.enabledVariants} enabled variants</span><span>{description?"Description imported":"No description found"} · {templateDetails.standardShipping!=null?`${templateDetails.shippingCurrency} ${templateDetails.standardShipping.toFixed(2)} standard shipping imported`:"Shipping checked during pricing"}</span></div><span className="template-badge">Product facts imported</span></div><button className="workflow-next" onClick={()=>goToStep("designs")}>Add finished designs <span>→</span></button></>}</div>
 
