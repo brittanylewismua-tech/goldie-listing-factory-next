@@ -2,11 +2,11 @@ import assert from "node:assert/strict";
 import { access, readFile } from "node:fs/promises";
 import test from "node:test";
 
-async function render() {
+async function render(path = "/") {
   const workerUrl = new URL("../dist/server/index.js", import.meta.url);
   workerUrl.searchParams.set("test", `${process.pid}-${Date.now()}`);
   const { default: worker } = await import(workerUrl.href);
-  return worker.fetch(new Request("http://localhost/", { headers: { accept: "text/html" } }), {
+  return worker.fetch(new Request(`http://localhost${path}`, { headers: { accept: "text/html" } }), {
     ASSETS: { fetch: async () => new Response("Not found", { status: 404 }) },
   }, { waitUntil() {}, passThroughOnException() {} });
 }
@@ -137,6 +137,26 @@ test("unifies saved products, editing, pricing, and mockups without the old fact
   assert.match(drafts, /recommendedPrice\(cost \?\? price, rules\)/);
   assert.match(drafts, /template\.shippingByVariant\?\.\[id\]/);
   assert.match(drafts, /printifyImages/);
+});
+
+test("hands each finished mockup group to its exact Printify product", async () => {
+  const mockups = await readFile(new URL("../app/integrated-mockups.tsx", import.meta.url), "utf8");
+  assert.match(mockups, /Download mockups \+ open in Printify/);
+  assert.match(mockups, /View all mockups → Upload/);
+  assert.match(mockups, /Only the Goldie model mockups are downloaded/);
+  assert.match(mockups, /zipSync\(entries/);
+  assert.match(mockups, /window\.open\(resolvedEditorUrl/);
+  assert.doesNotMatch(mockups, /staged for Etsy/);
+});
+
+test("renders Mockup Sets as management only", async () => {
+  const response = await render("/mockups");
+  const html = await response.text();
+  assert.match(html, /Manage your mockup sets/);
+  assert.match(html, /Add mockup set/);
+  assert.match(html, /Manage here\. Create inside Listing Factory/);
+  assert.doesNotMatch(html, /Add this design/);
+  assert.doesNotMatch(html, /Create your mockups/);
 });
 
 test("guides sellers through the complete resumable eight-step workflow",async()=>{
