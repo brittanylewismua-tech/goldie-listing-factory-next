@@ -12,6 +12,7 @@ export async function PATCH(request:Request){
   if(!connection||!secret)return NextResponse.json({error:"Reconnect Printify to update this draft."},{status:401});
   const token=await decryptPrintifyToken(connection.encrypted_token,secret),url=`https://api.printify.com/v1/shops/${draft.shopId}/products/${productId}.json`;
   let placementPayload:unknown;
+  let placementScale:number|undefined;
   if(body.placement){
     const currentResponse=await fetch(url,{headers:{Authorization:`Bearer ${token}`,"User-Agent":"Goldie-Listing-Factory"}});
     if(!currentResponse.ok)return NextResponse.json({error:`Printify could not load this draft (${currentResponse.status}).`},{status:currentResponse.status});
@@ -24,13 +25,11 @@ export async function PATCH(request:Request){
       ...(area.background?{background:area.background}:{}),
       placeholders:(area.placeholders||[]).filter(placeholder=>placeholder.images?.some(image=>image.id)).map(placeholder=>({
         position:placeholder.position,
-        images:(placeholder.images||[]).filter(image=>image.id).map(image=>({
-          id:image.id,
-          x:Math.max(0,Math.min(1,Number(image.x??.5)+body.placement!.x)),
-          y:Math.max(0,Math.min(1,Number(image.y??.5)+body.placement!.y)),
-          scale:Math.max(.05,Math.min(3,Number(image.scale??1)*body.placement!.scale)),
-          angle:Number(image.angle??0),
-        })),
+        images:(placeholder.images||[]).filter(image=>image.id).map(image=>{
+          const scale=Math.max(.05,Math.min(3,Number(image.scale??1)*body.placement!.scale));
+          placementScale=Math.max(placementScale??0,scale);
+          return {id:image.id,x:Math.max(0,Math.min(1,Number(image.x??.5)+body.placement!.x)),y:Math.max(0,Math.min(1,Number(image.y??.5)+body.placement!.y)),scale,angle:Number(image.angle??0)};
+        }),
       })),
     }));
   }
@@ -45,7 +44,7 @@ export async function PATCH(request:Request){
     return NextResponse.json({error:`Printify could not update this draft (${response.status})${detail?`: ${detail}`:"."}`},{status:response.status});
   }
   const updated=await response.json().catch(()=>({})) as {images?:Array<{src?:string;is_default?:boolean}>};
-  const stored={...draft,...(body.title!==undefined?{title:String(body.title||"").slice(0,255)}:{}),...(body.tags!==undefined?{tags:(body.tags||[]).slice(0,13)}:{}),...(body.description!==undefined?{description:String(body.description||"")}:{}) ,...(body.etsyDetails!==undefined?{etsyDetails:body.etsyDetails||null}:{}),...(body.placement?{placement:body.placement}:{}),...(updated.images?{printifyImages:updated.images.map(image=>image.src).filter(Boolean),previewUrl:updated.images.find(image=>image.is_default)?.src||updated.images[0]?.src}: {})};
+  const stored={...draft,...(body.title!==undefined?{title:String(body.title||"").slice(0,255)}:{}),...(body.tags!==undefined?{tags:(body.tags||[]).slice(0,13)}:{}),...(body.description!==undefined?{description:String(body.description||"")}:{}) ,...(body.etsyDetails!==undefined?{etsyDetails:body.etsyDetails||null}:{}),...(body.placement?{placement:body.placement,placementScale}:{}),...(updated.images?{printifyImages:updated.images.map(image=>image.src).filter(Boolean),previewUrl:updated.images.find(image=>image.is_default)?.src||updated.images[0]?.src}: {})};
   await env.DB.prepare("UPDATE printify_draft_results SET response_json=? WHERE user_id=? AND status='succeeded' AND json_extract(response_json,'$.id')=?").bind(JSON.stringify(stored),user.userId,productId).run();
   return NextResponse.json({ok:true,draft:stored});
 }

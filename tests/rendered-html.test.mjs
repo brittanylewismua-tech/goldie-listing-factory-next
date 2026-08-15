@@ -223,6 +223,8 @@ test("imports shipping and keeps final listing edits attached to the exact Print
   assert.match(update,/method:"PUT"/);
   assert.match(update,/filter\(placeholder=>placeholder\.images\?\.some\(image=>image\.id\)\)/);
   assert.doesNotMatch(update,/\.\.\.area,placeholders/);
+  assert.match(update,/placementScale=Math\.max/);
+  assert.match(page,/draft\.placementScale\|\|templateScale/);
 });
 
 test("matches Printify editor DPI instead of comparing against template pixel dimensions", async () => {
