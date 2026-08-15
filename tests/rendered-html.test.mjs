@@ -148,7 +148,7 @@ test("requires explicit review of every Printify variant and starts new products
     readFile(new URL("../app/factory-tools.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/api/printify/route.ts", import.meta.url), "utf8"),
   ]);
-  assert.match(page, /Review shipping and item prices/);
+  assert.match(page, /Shipping and prices/);
   assert.match(page, /variant\.templatePrice/);
   assert.match(page, /Your estimated profit/);
   assert.match(page, /Approve pricing \+ shipping/);
@@ -754,19 +754,22 @@ test("keeps pricing simple while using a real Etsy shipping profile and exact te
     readFile(new URL("../app/api/printify/drafts/publish/route.ts", import.meta.url), "utf8"),
   ]);
   assert.match(page,/Shipping profile/);
-  assert.match(page,/automatically selects the profile saved on your product template/);
+  assert.match(page,/Selected automatically from your product template/);
   assert.match(page,/templateProfileId=Number\(templateDetails\?\.shippingTemplateId\)/);
   assert.match(page,/setEtsyShippingProfileId\(current=>current\|\|templateProfileId\)/);
-  assert.match(page,/Domestic —/);
-  assert.match(page,/International shipping/);
+  assert.match(page,/buyer pays/);
+  assert.match(page,/International rates/);
   assert.match(page,/international-shipping-editor/);
-  assert.match(page,/Domestic — \{selectedProfile\.originCountry\}/);
-  assert.match(page,/Save new shipping profile/);
-  assert.match(page,/Item prices by size/);
+  assert.match(page,/\{selectedProfile\.originCountry\} buyer pays/);
+  assert.match(page,/Save new profile/);
+  assert.match(page,/2\. Item prices/);
   assert.match(page,/Update prices/);
   assert.match(page,/Change shipping prices \(optional\)/);
   assert.match(page,/Your current prices already meet this profit goal/);
   assert.match(page,/recommendation-result/);
+  assert.match(page,/Discard changes/);
+  assert.match(page,/Save or discard shipping changes first/);
+  assert.match(page,/Printify fulfillment shipping/);
   assert.match(page,/variant\.templatePrice/);
   assert.match(page,/See how Goldie calculated these prices/);
   assert.doesNotMatch(page,/Split it 50\/50|Custom buyer shipping price|shippingPercent/);
@@ -779,12 +782,12 @@ test("keeps pricing simple while using a real Etsy shipping profile and exact te
   assert.match(page,/PriceField value=\{itemCents\} minimum=\{variant\.cost\/100\}/);
   assert.match(page,/Change shipping prices \(optional\)/);
   assert.match(page,/New profile name/);
-  assert.match(page,/International shipping/);
-  assert.match(page,/Additional item/);
+  assert.match(page,/International rates/);
+  assert.match(page,/Additional/);
   assert.match(page,/international:InternationalShippingRate\[\]/);
   assert.match(page,/First item/);
-  assert.match(page,/Additional item/);
-  assert.match(page,/Save new shipping profile/);
+  assert.match(page,/Additional/);
+  assert.match(page,/Save new profile/);
   assert.match(page,/setDraft\(event\.target\.value\)/);
   assert.match(page,/onBlur=\{commit\}/);
   assert.match(profiles,/export async function POST/);
