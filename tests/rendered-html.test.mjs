@@ -754,9 +754,9 @@ test("keeps pricing simple while using a real Etsy shipping profile and exact te
     readFile(new URL("../app/api/printify/drafts/publish/route.ts", import.meta.url), "utf8"),
   ]);
   assert.match(page,/Etsy shipping profile for this batch/);
-  assert.match(page,/Buyer pays domestically/);
+  assert.match(page,/Domestic shipping/);
   assert.match(page,/International shipping/);
-  assert.match(page,/Goldie applies this exact Etsy profile/);
+  assert.match(page,/Save this custom profile for this product/);
   assert.match(page,/Use Goldie’s recommended prices/);
   assert.match(page,/variant\.templatePrice/);
   assert.match(page,/See how Goldie calculated these prices/);
@@ -770,10 +770,13 @@ test("keeps pricing simple while using a real Etsy shipping profile and exact te
   assert.match(page,/PriceField value=\{itemCents\} minimum=\{variant\.cost\/100\}/);
   assert.match(page,/Create a custom shipping profile for this seller/);
   assert.match(page,/Shipping profile name/);
-  assert.match(page,/First item — buyer pays domestically/);
-  assert.match(page,/Each additional item — buyer pays/);
+  assert.match(page,/International shipping/);
+  assert.match(page,/Additional item/);
+  assert.match(page,/international:InternationalShippingRate\[\]/);
+  assert.match(page,/First item/);
+  assert.match(page,/Additional item/);
   assert.match(page,/Save this custom profile for this product/);
-  assert.match(page,/not every seller or every shipping profile/);
+  assert.match(page,/never changes the starting profile/);
   assert.match(page,/setDraft\(event\.target\.value\)/);
   assert.match(page,/onBlur=\{commit\}/);
   assert.match(profiles,/export async function POST/);
