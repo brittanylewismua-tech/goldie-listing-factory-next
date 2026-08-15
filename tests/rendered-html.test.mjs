@@ -224,7 +224,7 @@ test("imports shipping and keeps final listing edits attached to the exact Print
     readFile(new URL("../app/api/printify/drafts/update/route.ts",import.meta.url),"utf8"),
   ]);
   assert.match(printify,/shipping\.json/);assert.match(printify,/standardShipping/);
-  assert.match(page,/Auto-create every title/);
+  assert.match(page,/Create titles for the whole batch/);
   assert.match(page,/api\/printify\/drafts\/update/);
   assert.match(page,/syncListingFields/);
   assert.match(page,/function syncPreparedListing/);
@@ -488,10 +488,12 @@ test("creates unique validated AI titles in bulk with per-listing overrides", as
     readFile(new URL("../app/factory-tools.tsx",import.meta.url),"utf8"),
     readFile(new URL("../app/api/listing-intelligence/route.ts",import.meta.url),"utf8"),
   ]);
-  assert.match(page,/Auto-create every title/);assert.match(page,/Auto-create all titles/);assert.match(page,/runBounded\(files,2/);
+  assert.match(page,/Create titles for the whole batch/);assert.match(page,/Auto-create all titles/);assert.match(page,/runBounded\(files,2/);
+  assert.match(page,/Goldie chooses keywords/);assert.match(page,/I choose keywords/);assert.match(page,/Click keywords in the order you want them/);
+  assert.match(page,/removeBatchKeyword/);assert.match(page,/clearBatchKeywords/);assert.match(page,/Applied to every listing below/);
   assert.match(page,/Create a different title with AI/);assert.match(page,/Create title for this design/);
   assert.match(page,/autoTitleForDesign/);assert.match(page,/tagsFromTitle\(item\.result\.keywords\.join/);
-  assert.match(page,/unique titles and matching tags created/);assert.match(page,/Goldie cannot invent keywords/);
+  assert.match(page,/unique titles and matching tags created/);assert.match(page,/Goldie selects the best phrases for each individual design/);
   assert.ok(page.indexOf('className="permanent-description"')>page.indexOf('className="design-table"'),"The batch description belongs below all listing titles and tags.");
   assert.match(tools,/keywordListsCache/);assert.match(tools,/selectionOnly/);assert.match(tools,/onSelect/);
   assert.match(intelligence,/selected_keywords/);assert.match(intelligence,/allowedByLower/);assert.match(intelligence,/Reject irrelevant phrases/);
