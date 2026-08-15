@@ -2,6 +2,8 @@
 
 .factoryNav{display:flex;gap:4px;padding:4px;border:1px solid #4f3d20;border-radius:999px}.factoryNav a{padding:8px 12px;border-radius:999px;color:#bdb2a2;text-decoration:none;font-size:11px;font-weight:800}.factoryNav a:hover,.factoryNav a.active{background:var(--gold);color:var(--black)}@media(max-width:760px){.factoryNav{margin-left:auto}.factoryNav a{padding:7px 9px;font-size:10px}}
 
+.mockupWorkspace>.mockupStep:first-child,.mockupWorkspace>.mockupStep.actionStep{display:none}.mockupWorkspace>.mockupStep:nth-child(2) .selectionLimit,.mockupWorkspace>.mockupStep:nth-child(2) .selectionNotice{display:none}
+
 /* High-clarity template selection */
 .mockChoice{border:3px solid transparent;background:#24211d;color:#d4cab9;text-align:left;padding:0;border-radius:14px;overflow:hidden;position:relative;transition:border-color .16s,box-shadow .16s,transform .16s,background .16s}
 .mockChoice:hover{border-color:#8e7955;transform:translateY(-1px)}
