@@ -178,6 +178,10 @@ export default function Home() {
   const [titleBuildMessage,setTitleBuildMessage]=useState("");
   const [batchKeywords,setBatchKeywords]=useState<string[]>([]);
   const [blockingModal,setBlockingModal]=useState<{title:string;issues:string[];copy?:string}|null>(null);
+  const [etsyConnected,setEtsyConnected]=useState(false);
+  const [etsyShop,setEtsyShop]=useState("");
+  const [etsyConnecting,setEtsyConnecting]=useState(false);
+  const [etsyError,setEtsyError]=useState("");
 
   const templateLoaded = templateDetails !== null;
   const ready = connected && templateLoaded && files.length > 0;
@@ -215,6 +219,8 @@ export default function Home() {
       .finally(() => setCheckingConnection(false));
   }, []);
 
+  useEffect(()=>{fetch("/api/etsy").then(response=>response.json()).then((result:{connected?:boolean;shopName?:string})=>{setEtsyConnected(Boolean(result.connected));setEtsyShop(result.shopName||"")}).catch(()=>setEtsyConnected(false));const message=new URL(window.location.href).searchParams.get("etsy");if(message){if(message==="connected"){setEtsyConnected(true);setEtsyError("")}else setEtsyError(message);const url=new URL(window.location.href);url.searchParams.delete("etsy");window.history.replaceState({},"",url)}},[]);
+
   useEffect(() => {
     if (!running) return;
     const protectBatch = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ""; };
@@ -229,14 +235,14 @@ export default function Home() {
       let issues:string[]=[];
       if(element.classList.contains("mockup-next")&&!printifyImageIndices.length)issues=["Select at least one Printify image and apply it to the batch."];
       if(element.classList.contains("publish-all-button")){
-        issues=[...missingPublishFields().map(field=>`${field} must be completed before publishing.`),...(!printifyImageIndices.length?["Select at least one Printify listing image."]:[]),...requiredForStep("finish")];
+        issues=[...(!etsyConnected?["Connect the Etsy shop that will receive these listings."]:[]),...missingPublishFields().map(field=>`${field} must be completed before publishing.`),...(!printifyImageIndices.length?["Select at least one Printify listing image."]:[]),...requiredForStep("finish")];
       }
       if(!issues.length)return;
       event.preventDefault();event.stopImmediatePropagation();stopWith("Complete every required item before continuing.",[...new Set(issues)]);
     };
     document.addEventListener("click",guardFinalActions,true);
     return()=>document.removeEventListener("click",guardFinalActions,true);
-  },[files,description,printifyImageIndices,pricingApproved,complete,drafts,connected,templateDetails]);
+  },[files,description,printifyImageIndices,pricingApproved,complete,drafts,connected,templateDetails,etsyConnected]);
 
   useEffect(()=>{if(!complete)return;const pending=files.filter(file=>!file.etsy&&file.title.trim());if(!pending.length)return;const timer=window.setTimeout(()=>{setPreparingEtsy(true);void runBounded(pending,2,async file=>{await prepareOne(file);return file},()=>undefined).finally(()=>setPreparingEtsy(false))},900);return()=>window.clearTimeout(timer);// eslint-disable-next-line react-hooks/exhaustive-deps
   },[complete,files.map(file=>`${file.id}:${file.title}:${file.tags.join("|")}`).join(";")]);
@@ -307,7 +313,7 @@ export default function Home() {
 
   function missingPublishFields(){const missing:string[]=[];if(files.some(file=>!file.title.trim()))missing.push("Titles");if(files.some(file=>!file.tags.length))missing.push("Tags");if(!description.trim())missing.push("Permanent product description");if(files.some(file=>!file.etsy))missing.push("Etsy details");return missing}
   function openPublishConfirmation(){const missing=missingPublishFields();if(missing.length)return void stopWith("Complete every required listing field.",missing.map(field=>`${field} must be completed before publishing.`));if(!printifyImageIndices.length)return void stopWith("Choose the listing images first.",["Select at least one Printify image and apply it to the batch."]);const workflowIssues=requiredForStep("finish");if(workflowIssues.length)return void stopWith("This batch cannot be published yet.",workflowIssues);setPublishConfirmOpen(true)}
-  async function publishAll(){const ids=drafts.filter(draft=>draft.status==="Created"&&draft.id).map(draft=>draft.id!);if(!ids.length)return;setPublishConfirmOpen(false);setPublishing(true);setPublishMessage("");try{const response=await fetch("/api/printify/drafts/publish",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({productIds:ids})}),payload=await response.json() as {published?:string[];error?:string};if(!response.ok)throw new Error(payload.error||"The batch could not be published.");setPublishMessage(`${payload.published?.length||ids.length} listings were published to Etsy through Printify.`)}catch(error){setPublishMessage(error instanceof Error?error.message:"The batch could not be published.")}finally{setPublishing(false)}}
+  async function publishAll(){const ids=drafts.filter(draft=>draft.status==="Created"&&draft.id).map(draft=>draft.id!);if(!ids.length)return;setPublishConfirmOpen(false);setPublishing(true);setPublishMessage("");try{const response=await fetch("/api/printify/drafts/publish",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({productIds:ids})}),payload=await response.json() as {published?:string[];finished?:Array<{etsyListingId:number;url:string}>;error?:string};if(!response.ok)throw new Error(payload.error||"The batch could not be published.");setPublishMessage(`${payload.finished?.length||ids.length} listings are live and fully updated in Etsy.`)}catch(error){setPublishMessage(error instanceof Error?error.message:"The batch could not be published.")}finally{setPublishing(false)}}
 
   async function connectPrintify() {
     setConnecting(true); setConnectionError("");
@@ -319,6 +325,8 @@ export default function Home() {
     } catch (error) { setConnected(false); setConnectionError(error instanceof Error ? error.message : "Printify could not be connected."); }
     finally { setConnecting(false); }
   }
+
+  async function connectEtsy(){setEtsyConnecting(true);setEtsyError("");try{const response=await fetch("/api/etsy",{method:"POST"}),result=await response.json() as {authorizeUrl?:string;error?:string};if(!response.ok||!result.authorizeUrl)throw new Error(result.error||"Etsy connection could not start.");window.location.href=result.authorizeUrl}catch(error){setEtsyError(error instanceof Error?error.message:"Etsy connection could not start.");setEtsyConnecting(false)}}
 
   async function loadTemplateUrl(productUrl = template, pricingOverride?:Pricing) {
     const requestVersion=++templateLoadVersion.current;
@@ -556,6 +564,8 @@ export default function Home() {
               ) : (
                 <><div className="connection-row"><span className="connection-icon">P</span><div><b>Printify connected</b><small>Your connection will be remembered</small></div><button onClick={async () => { await fetch("/api/printify", { method: "DELETE" }); setConnected(false); setToken(""); setTemplateDetails(null); setConnectionError(""); }}>Disconnect</button></div>{connectionError && <p className="field-warning" role="status">{connectionError}</p>}</>
               )}
+              <div className={`connection-row etsy-connection ${etsyConnected?"connected":""}`}><span className="connection-icon">E</span><div><b>{etsyConnected?`Etsy connected · ${etsyShop||"your shop"}`:"Connect Etsy before publishing"}</b><small>{etsyConnected?"Goldie can finish the exact Etsy listings created by this batch":"Required only for the final publish step"}</small></div>{etsyConnected?<button onClick={async()=>{await fetch("/api/etsy",{method:"DELETE"});setEtsyConnected(false);setEtsyShop("")}}>Disconnect</button>:<button onClick={()=>void connectEtsy()} disabled={etsyConnecting}>{etsyConnecting?"Opening Etsy…":"Connect Etsy"}</button>}</div>
+              {etsyError&&<p className="field-error" role="alert">{etsyError}</p>}
               {connected&&<button className="workflow-next" onClick={()=>goToStep("setup")}>Choose a product <span>→</span></button>}
             </div>
           </article>

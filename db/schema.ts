@@ -125,3 +125,32 @@ export const accountPlans = sqliteTable("account_plans", {
   planKey: text("plan_key").notNull().default("goldie"),
   updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });
+
+export const etsyConnections = sqliteTable("etsy_connections", {
+  userId: text("user_id").primaryKey(),
+  encryptedAccessToken: text("encrypted_access_token").notNull(),
+  encryptedRefreshToken: text("encrypted_refresh_token").notNull(),
+  expiresAt: integer("expires_at").notNull(),
+  etsyUserId: integer("etsy_user_id").notNull(),
+  shopId: integer("shop_id").notNull(),
+  shopName: text("shop_name").notNull(),
+  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const etsyOauthStates = sqliteTable("etsy_oauth_states", {
+  state: text("state").primaryKey(),
+  userId: text("user_id").notNull(),
+  codeVerifier: text("code_verifier").notNull(),
+  redirectUri: text("redirect_uri").notNull(),
+  expiresAt: integer("expires_at").notNull(),
+}, (table) => [index("idx_etsy_oauth_states_user_expiry").on(table.userId, table.expiresAt)]);
+
+export const etsyListingLinks = sqliteTable("etsy_listing_links", {
+  printifyProductId: text("printify_product_id").primaryKey(),
+  userId: text("user_id").notNull(),
+  batchId: text("batch_id").notNull(),
+  etsyListingId: integer("etsy_listing_id").notNull(),
+  status: text("status").notNull(),
+  lastError: text("last_error"),
+  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+}, (table) => [index("idx_etsy_listing_links_user_batch").on(table.userId, table.batchId)]);

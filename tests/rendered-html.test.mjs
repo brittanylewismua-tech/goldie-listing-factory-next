@@ -784,3 +784,28 @@ test("keeps batch history useful instead of accumulating unmanageable empty sess
   assert.match(batches,/does not delete products from Printify or listings from Etsy/);
   assert.match(batches,/method:"DELETE"/);
 });
+
+test("connects Etsy with PKCE and finishes only the exact Printify-linked Etsy listing", async()=>{
+  const [page,oauth,callback,client,publish,finish,migration]=await Promise.all([
+    readFile(new URL("../app/page.tsx",import.meta.url),"utf8"),
+    readFile(new URL("../app/api/etsy/route.ts",import.meta.url),"utf8"),
+    readFile(new URL("../app/api/etsy/callback/route.ts",import.meta.url),"utf8"),
+    readFile(new URL("../app/api/etsy/client.ts",import.meta.url),"utf8"),
+    readFile(new URL("../app/api/printify/drafts/publish/route.ts",import.meta.url),"utf8"),
+    readFile(new URL("../app/api/etsy/finish.ts",import.meta.url),"utf8"),
+    readFile(new URL("../drizzle/0009_etsy_connection.sql",import.meta.url),"utf8"),
+  ]);
+  assert.match(page,/Connect Etsy before publishing/);
+  assert.match(oauth,/code_challenge_method:"S256"/);
+  assert.match(oauth,/listings_r listings_w shops_r shops_w/);
+  assert.match(callback,/grant_type:"authorization_code"/);
+  assert.match(client,/grant_type:"refresh_token"/);
+  assert.match(client,/ETSY_API_SECRET/);
+  assert.match(publish,/waitForEtsyListing/);
+  assert.match(publish,/product\.external\?\.id/);
+  assert.doesNotMatch(publish,/sort_on|newest|title.*match/i);
+  assert.match(finish,/listing\.shop_id/);
+  assert.match(finish,/Goldie stopped without editing it/);
+  assert.match(migration,/etsy_connections/);
+  assert.match(migration,/etsy_listing_links/);
+});
