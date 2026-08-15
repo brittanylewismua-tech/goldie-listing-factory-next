@@ -3,8 +3,8 @@ import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { etsyConnection, etsyFetch } from "../client";
 
 type Money={amount:number;divisor:number;currency_code:string};
-type Destination={destination_country_iso?:string|null;destination_region?:string|null;primary_cost?:Money;secondary_cost?:Money};
-type Profile={shipping_profile_id:number;title:string;origin_country_iso:string;is_deleted?:boolean;shipping_profile_destinations?:Destination[]};
+type Destination={destination_country_iso?:string|null;destination_region?:string|null;primary_cost?:Money;secondary_cost?:Money;shipping_carrier_id?:number;mail_class?:string;min_delivery_days?:number;max_delivery_days?:number};
+type Profile={shipping_profile_id:number;title:string;origin_country_iso:string;origin_postal_code?:string;is_deleted?:boolean;shipping_profile_destinations?:Destination[]};
 const amount=(money?:Money)=>money?.divisor?money.amount/money.divisor:0;
 
 export async function GET(){
@@ -21,4 +21,20 @@ export async function GET(){
     });
     return NextResponse.json({profiles,shopName:connection.shopName});
   }catch(error){return NextResponse.json({error:error instanceof Error?error.message:"Etsy shipping profiles could not be loaded."},{status:500})}
+}
+
+function destinationParams(destination:Destination,primary:number,secondary:number){const params=new URLSearchParams({primary_cost:primary.toFixed(2),secondary_cost:secondary.toFixed(2)});if(destination.destination_country_iso)params.set("destination_country_iso",destination.destination_country_iso);else if(destination.destination_region)params.set("destination_region",destination.destination_region);if(destination.shipping_carrier_id&&destination.mail_class){params.set("shipping_carrier_id",String(destination.shipping_carrier_id));params.set("mail_class",destination.mail_class)}else{params.set("min_delivery_days",String(Math.max(1,Number(destination.min_delivery_days)||1)));params.set("max_delivery_days",String(Math.max(Number(destination.min_delivery_days)||1,Number(destination.max_delivery_days)||10)))}return params}
+
+export async function POST(request:Request){
+  const user=await getChatGPTUser();if(!user)return NextResponse.json({error:"Sign in before creating an Etsy shipping profile."},{status:401});
+  try{
+    const {baseProfileId,domesticPrimary}=await request.json() as {baseProfileId?:number;domesticPrimary?:number},charge=Number(domesticPrimary);
+    if(!Number.isInteger(Number(baseProfileId))||Number(baseProfileId)<=0||!Number.isFinite(charge)||charge<0)return NextResponse.json({error:"Choose a shipping profile and enter a valid domestic charge."},{status:400});
+    const connection=await etsyConnection(user.userId),base=await etsyFetch<Profile>(`/shops/${connection.shopId}/shipping-profiles/${Number(baseProfileId)}`,connection.token),destinations=base.shipping_profile_destinations||[],domestic=destinations.find(item=>item.destination_country_iso===base.origin_country_iso);
+    if(!domestic)throw new Error("The selected Etsy profile does not contain a domestic destination Goldie can safely copy.");
+    const title=`Goldie · ${base.title} · $${charge.toFixed(2)} domestic`.slice(0,60),create=destinationParams(domestic,charge,amount(domestic.secondary_cost));create.set("title",title);create.set("origin_country_iso",base.origin_country_iso);if(base.origin_postal_code)create.set("origin_postal_code",base.origin_postal_code);
+    const saved=await etsyFetch<Profile>(`/shops/${connection.shopId}/shipping-profiles`,connection.token,{method:"POST",body:create});
+    for(const destination of destinations.filter(item=>item!==domestic)){const params=destinationParams(destination,amount(destination.primary_cost),amount(destination.secondary_cost));await etsyFetch(`/shops/${connection.shopId}/shipping-profiles/${saved.shipping_profile_id}/destinations`,connection.token,{method:"POST",body:params})}
+    return NextResponse.json({id:saved.shipping_profile_id,title});
+  }catch(error){return NextResponse.json({error:error instanceof Error?error.message:"The Etsy shipping profile could not be created."},{status:500})}
 }

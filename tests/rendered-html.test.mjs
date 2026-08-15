@@ -767,7 +767,14 @@ test("keeps pricing simple while using a real Etsy shipping profile and exact te
   assert.match(drafts,/shipping_template_id:template\.shippingTemplateId/);
   assert.match(drafts,/etsyBuyerShipping/);
   assert.match(page,/loadTemplateUrl\(recipe\.templateUrl,nextPricing\)/);
-  assert.match(page,/Math\.max\(variant\.cost\/100/);
+  assert.match(page,/PriceField value=\{itemCents\} minimum=\{variant\.cost\/100\}/);
+  assert.match(page,/Save as a new Etsy shipping profile/);
+  assert.match(page,/setDraft\(event\.target\.value\)/);
+  assert.match(page,/onBlur=\{commit\}/);
+  assert.match(profiles,/export async function POST/);
+  assert.match(profiles,/destinations\.filter\(item=>item!==domestic\)/);
+  const recipes=await readFile(new URL("../app/api/product-recipes/route.ts",import.meta.url),"utf8");
+  assert.match(recipes,/etsyShippingProfileId/);
 });
 
 test("keeps management headings readable and shows the complete workflow map on phones", async () => {
