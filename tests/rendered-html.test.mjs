@@ -129,7 +129,7 @@ test("unifies saved products, editing, pricing, and mockups without the old fact
   assert.match(recipes, /Pricing and mockups are chosen later/);
   assert.doesNotMatch(recipes, /Shipping cost|Shipping charged|Payment fixed fee/);
   assert.doesNotMatch(page, /Apply titles in order|Import title CSV/);
-  assert.match(recipes, /saved bank/);
+  assert.match(recipes, /validated phrases available to Goldie/);
   assert.match(page, /Exact title phrases/);
   assert.match(page, /300 DPI recommended/);
   assert.match(page, /Choose Printify flatlays/);
@@ -222,7 +222,7 @@ test("imports shipping and keeps final listing edits attached to the exact Print
     readFile(new URL("../app/api/printify/drafts/update/route.ts",import.meta.url),"utf8"),
   ]);
   assert.match(printify,/shipping\.json/);assert.match(printify,/standardShipping/);
-  assert.match(page,/Build titles for the whole batch/);
+  assert.match(page,/Auto-create every title/);
   assert.match(page,/api\/printify\/drafts\/update/);
   assert.match(page,/syncListingFields/);
   assert.match(page,/function syncPreparedListing/);
@@ -480,16 +480,18 @@ test("makes keyword bank saving unmistakable and prevents accidental duplicates"
   assert.match(home,/href="\/keywords" target="_blank"/);assert.match(home,/href="\/mockups" target="_blank"/);
 });
 
-test("supports shared batch titles with collapsed per-listing keyword overrides", async()=>{
-  const [page,tools]=await Promise.all([
+test("creates unique validated AI titles in bulk with per-listing overrides", async()=>{
+  const [page,tools,intelligence]=await Promise.all([
     readFile(new URL("../app/page.tsx",import.meta.url),"utf8"),
     readFile(new URL("../app/factory-tools.tsx",import.meta.url),"utf8"),
+    readFile(new URL("../app/api/listing-intelligence/route.ts",import.meta.url),"utf8"),
   ]);
-  assert.match(page,/Create a single title for this batch/);assert.match(page,/applyBatchTitle/);assert.match(page,/addBatchKeyword/);
-  assert.match(page,/Create an individual title for this listing/);assert.match(page,/These keyword clicks update only this listing/);
-  assert.match(page,/explicitTags\|\|tagsFromTitle\(next\)/);assert.match(page,/tags:tagsFromTitle\(title\)/);
-  assert.match(page,/batchKeywords/);assert.match(page,/Matching tags were rebuilt from your validated phrases/);
-  assert.match(tools,/keywordListsCache/);assert.match(tools,/compact-keywords/);
+  assert.match(page,/Auto-create every title/);assert.match(page,/Auto-create all titles/);assert.match(page,/runBounded\(files,2/);
+  assert.match(page,/Create a different title with AI/);assert.match(page,/Create title for this design/);
+  assert.match(page,/autoTitleForDesign/);assert.match(page,/tagsFromTitle\(item\.result\.keywords\.join/);
+  assert.match(page,/unique titles and matching tags created/);assert.match(page,/Goldie cannot invent keywords/);
+  assert.match(tools,/keywordListsCache/);assert.match(tools,/selectionOnly/);assert.match(tools,/onSelect/);
+  assert.match(intelligence,/selected_keywords/);assert.match(intelligence,/allowedByLower/);assert.match(intelligence,/Reject irrelevant phrases/);
 });
 
 test("records permanent sanitized Printify diagnostics without blocking listings", async () => {
