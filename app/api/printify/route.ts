@@ -72,13 +72,18 @@ function productIdFromUrl(value: string) {
   return (value.match(/\/editor\/([a-zA-Z0-9]+)/) || value.match(/\/products\/([a-zA-Z0-9]+)/))?.[1] ?? "";
 }
 
-export async function GET() {
+export async function GET(request:Request) {
   const user = await getChatGPTUser();
   if (!user) return NextResponse.json({ error: "Sign in to continue." }, { status: 401 });
   try {
     const token = await storedToken(user.userId);
     if (!token) return NextResponse.json({ connected: false, owner: isOwner(user) });
-    await printify<Shop[]>("/shops.json", token);
+    const shops=await printify<Shop[]>("/shops.json", token);
+    if(new URL(request.url).searchParams.get("shippingProfiles")==="1"&&isOwner(user)){
+      const evidence: Array<{shopId:number;shop:string;productId:string;title:string;external:Product["external"];salesChannelProperties:Product["sales_channel_properties"]}> = [];
+      for(const shop of shops){const page=await printify<{data?:Product[]}>(`/shops/${shop.id}/products.json?limit=50`,token);for(const product of page.data??[])if(product.external?.some(item=>item.shipping_template_id)||product.sales_channel_properties?.length)evidence.push({shopId:shop.id,shop:shop.title,productId:product.id,title:product.title,external:product.external,salesChannelProperties:product.sales_channel_properties})}
+      return NextResponse.json({evidence});
+    }
     return NextResponse.json({ connected: true, owner: isOwner(user) });
   } catch (error) {
     if (error instanceof PrintifyApiError && (error.status === 401 || error.status === 403)) {
