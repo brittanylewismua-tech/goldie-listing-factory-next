@@ -16,7 +16,23 @@ export async function PATCH(request:Request){
     const currentResponse=await fetch(url,{headers:{Authorization:`Bearer ${token}`,"User-Agent":"Goldie-Listing-Factory"}});
     if(!currentResponse.ok)return NextResponse.json({error:`Printify could not load this draft (${currentResponse.status}).`},{status:currentResponse.status});
     const current=await currentResponse.json() as {print_areas?:Array<{variant_ids:number[];background?:string;placeholders?:Array<{position:string;images?:Array<{id?:string;x?:number;y?:number;scale?:number;angle?:number}>}>}>};
-    placementPayload=(current.print_areas||[]).map(area=>({...area,placeholders:(area.placeholders||[]).map(placeholder=>({...placeholder,images:(placeholder.images||[]).map(image=>({...image,x:Math.max(0,Math.min(1,Number(image.x??.5)+body.placement!.x)),y:Math.max(0,Math.min(1,Number(image.y??.5)+body.placement!.y)),scale:Math.max(.05,Math.min(3,Number(image.scale??1)*body.placement!.scale))}))}))}));
+    // Printify's product response contains read-only image metadata. Sending that
+    // metadata back in an update is rejected for some apparel products, so rebuild
+    // the documented writable print-area shape instead of spreading the GET body.
+    placementPayload=(current.print_areas||[]).map(area=>({
+      variant_ids:area.variant_ids,
+      ...(area.background?{background:area.background}:{}),
+      placeholders:(area.placeholders||[]).map(placeholder=>({
+        position:placeholder.position,
+        images:(placeholder.images||[]).filter(image=>image.id).map(image=>({
+          id:image.id,
+          x:Math.max(0,Math.min(1,Number(image.x??.5)+body.placement!.x)),
+          y:Math.max(0,Math.min(1,Number(image.y??.5)+body.placement!.y)),
+          scale:Math.max(.05,Math.min(3,Number(image.scale??1)*body.placement!.scale)),
+          angle:Number(image.angle??0),
+        })),
+      })),
+    }));
   }
   const updateBody:Record<string,unknown>={};
   if(body.title!==undefined)updateBody.title=String(body.title||"").slice(0,255);
@@ -24,7 +40,10 @@ export async function PATCH(request:Request){
   if(body.tags!==undefined)updateBody.tags=(body.tags||[]).slice(0,13);
   if(placementPayload)updateBody.print_areas=placementPayload;
   const response=await fetch(url,{method:"PUT",headers:{Authorization:`Bearer ${token}`,"Content-Type":"application/json","User-Agent":"Goldie-Listing-Factory"},body:JSON.stringify(updateBody)});
-  if(!response.ok)return NextResponse.json({error:`Printify could not update this draft (${response.status}).`},{status:response.status});
+  if(!response.ok){
+    const detail=(await response.text().catch(()=>"")).replace(/[<>]/g,"").trim().slice(0,300);
+    return NextResponse.json({error:`Printify could not update this draft (${response.status})${detail?`: ${detail}`:"."}`},{status:response.status});
+  }
   const updated=await response.json().catch(()=>({})) as {images?:Array<{src?:string;is_default?:boolean}>};
   const stored={...draft,...(body.title!==undefined?{title:String(body.title||"").slice(0,255)}:{}),...(body.tags!==undefined?{tags:(body.tags||[]).slice(0,13)}:{}),...(body.description!==undefined?{description:String(body.description||"")}:{}) ,...(body.etsyDetails!==undefined?{etsyDetails:body.etsyDetails||null}:{}),...(body.placement?{placement:body.placement}:{}),...(updated.images?{printifyImages:updated.images.map(image=>image.src).filter(Boolean),previewUrl:updated.images.find(image=>image.is_default)?.src||updated.images[0]?.src}: {})};
   await env.DB.prepare("UPDATE printify_draft_results SET response_json=? WHERE user_id=? AND status='succeeded' AND json_extract(response_json,'$.id')=?").bind(JSON.stringify(stored),user.userId,productId).run();
