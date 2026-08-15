@@ -19,12 +19,11 @@
 }
 
 .managementLibraryHead h2 {
-  font-size: 0;
+  font: 650 34px/1.05 Georgia, serif;
 }
 
 .managementLibraryHead h2::after {
-  content: "Your mockup sets";
-  font: 650 34px/1.05 Georgia, serif;
+  content: none;
 }
 
 @media (max-width: 760px) {
