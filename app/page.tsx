@@ -454,7 +454,7 @@ export default function Home() {
         <Image src="/goldie-g.png" width={2000} height={2000} alt="" className="hero-watermark" />
       </section>
 
-      <section className="workspace">
+      <section className={`workspace ${complete&&workflowStep==="finish"&&finishPhase==="mockups"?"mockup-workspace":""}`}>
         <nav className="workflow-progress" aria-label="Listing Factory progress">
           <div className="workflow-progress-head"><div><p className="mini-label">YOUR BATCH</p><b>Step {progressIndex+1} of {PROGRESS_STEPS.length}</b></div>{(template||files.length>0||drafts.length>0)&&<button className="start-new-batch" disabled={running} onClick={startOver}>Clear batch + start over</button>}</div>
           {PROGRESS_STEPS.map((label,index)=>{const active=progressIndex===index,done=index<progressIndex,available=index===0||(index===1&&connected)||(index===2&&templateLoaded)||(index>=3&&index<=4&&ready)||(index>=5&&complete);return <button key={label} className={`${active?"active":""} ${done?"done":""}`} disabled={!available} aria-current={active?"step":undefined} onClick={()=>openProgressStep(index)}><span>{done?"✓":String(index+1).padStart(2,"0")}</span><span><b>{label}</b><small>{active?"You are here":done?"Complete":available?"Ready":"Complete the prior step"}</small></span></button>})}
