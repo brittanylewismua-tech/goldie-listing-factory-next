@@ -822,3 +822,10 @@ test("connects Etsy with PKCE and finishes only the exact Printify-linked Etsy l
   assert.match(migration,/etsy_connections/);
   assert.match(migration,/etsy_listing_links/);
 });
+
+test("preserves the final plain-text description and applies it directly to Etsy", async()=>{
+  const [page,finish]=await Promise.all([readFile(new URL("../app/page.tsx",import.meta.url),"utf8"),readFile(new URL("../app/api/etsy/finish.ts",import.meta.url),"utf8")]);
+  assert.match(page,/\.join\("\\n\\n"\)/);
+  assert.match(finish,/shipping_profile_id:String\(shippingProfileId\),description/);
+  assert.match(finish,/String\(draft\.description\|\|""\)/);
+});
