@@ -134,7 +134,9 @@ test("places item pricing before shipping in the pricing review", async () => {
   assert.match(page, /<small className="profit-fee-note">All Etsy fees included<\/small>/);
   assert.match(page, /className="pricing-section-heading shipping-section-heading"/);
   assert.match(page, /<h4>2\. Shipping<\/h4>/);
-  assert.match(css, /\.app-shell \.pricing-section-heading h4\{[\s\S]*font-size:22px!important/);
+  assert.match(css, /\.app-shell \.pricing-section-heading h4\{[\s\S]*font-size:26px!important/);
+  assert.match(css, /\.app-shell \.item-pricing-section\{[\s\S]*border-radius:18px/);
+  assert.match(css, /\.app-shell \.shipping-pricing-section\{[\s\S]*border-radius:18px/);
 });
 
 test("uses the Goldie palette while Printify drafts are being created", async () => {

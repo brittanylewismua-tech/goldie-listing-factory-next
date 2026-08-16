@@ -472,15 +472,15 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 }
 .app-shell .pricing-section-heading{
   align-items:flex-end;
-  margin:0 0 16px;
-  padding:0 0 14px;
+  margin:0 0 18px;
+  padding:0 0 16px;
   border-bottom:1px solid rgba(139,89,137,.2);
 }
 .app-shell .pricing-section-heading h4{
   margin:0 0 6px!important;
   color:#4b283e!important;
   font-family:'DM Serif Display',Georgia,serif;
-  font-size:22px!important;
+  font-size:26px!important;
   font-weight:400;
   line-height:1.1;
 }
@@ -493,12 +493,19 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 }
 .app-shell .item-pricing-section{
   margin-top:24px!important;
-  padding-top:24px!important;
+  padding:22px!important;
+  border:1px solid rgba(139,89,137,.2)!important;
+  border-radius:18px;
+  background:linear-gradient(145deg,rgba(255,255,255,.52),rgba(248,235,249,.46));
+  box-shadow:0 12px 30px rgba(74,42,62,.06);
 }
 .app-shell .shipping-pricing-section{
-  margin-top:28px;
-  padding-top:24px;
-  border-top:2px solid rgba(137,88,132,.22);
+  margin-top:22px;
+  padding:22px;
+  border:1px solid rgba(139,89,137,.2);
+  border-radius:18px;
+  background:linear-gradient(145deg,rgba(255,255,255,.52),rgba(248,235,249,.46));
+  box-shadow:0 12px 30px rgba(74,42,62,.06);
 }
 .app-shell .shipping-pricing-section .pricing-controls{margin:0 0 12px!important}
 .app-shell .shipping-profile-select>span{
