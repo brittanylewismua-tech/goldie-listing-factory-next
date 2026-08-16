@@ -4,9 +4,7 @@ import { requireChatGPTUser } from "@/app/chatgpt-auth";
 export const dynamic = "force-dynamic";
 
 export default async function DesignLab(){
-  if (process.env.NODE_ENV === "production") {
-    await requireChatGPTUser("/design-lab?background=saturated");
-  }
+  await requireChatGPTUser("/design-lab?background=saturated");
   return <main className="design-reference">
     <iframe title="Approved Goldie design" src="/goldie-real.html" />
   </main>;
