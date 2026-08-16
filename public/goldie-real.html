@@ -422,6 +422,10 @@ function connectionMessage(message,type='info'){
   const box=card.querySelector('[data-connection-message]');if(!box)return;
   box.className=`connection-message show ${type}`;box.innerHTML=message;
 }
+function clearConnectionMessage(){
+  const box=card.querySelector('[data-connection-message]');if(!box)return;
+  box.className='connection-message';box.textContent='';
+}
 function updateConnectionGate(){
   if(connections.size===2){completed.add(0);next.classList.add('go')}else{completed.delete(0);next.classList.remove('go')}
   menu.querySelectorAll('button').forEach((button,index)=>button.disabled=!canOpenStep(index));
@@ -450,6 +454,7 @@ function handleSignedOut(service){
 }
 async function checkConnections(){
   if(current!==0)return;connectionsChecked=true;
+  clearConnectionMessage();
   const rows=[...card.querySelectorAll('[data-connection]')];rows.forEach(row=>row.classList.add('busy'));
   rows.forEach(row=>{const button=row.querySelector('button');button.disabled=true;button.textContent='Checking…'});
   try{
@@ -460,9 +465,7 @@ async function checkConnections(){
     if(etsyResponse.ok&&etsy.connected){connections.add('etsy');connectionDetails.etsy=etsy}else connections.delete('etsy');
     renderConnectionState();
     if(connections.size===2)connectionMessage('Printify and Etsy are connected. You can continue.');
-  }catch(error){
-    renderConnectionState();connectionMessage(isLocalPreview?'The local preview server is not available right now. Reopen the preview, then try again. Your saved connections were not removed.':'Goldie could not reach the secure connection service. Try again in a moment. Your saved connections were not removed.','error');
-  }
+  }catch{renderConnectionState()}
 }
 async function connectPrintify(token){
   const row=card.querySelector('[data-connection="printify"]'),button=row?.querySelector('button'),submit=card.querySelector('[data-printify-form] button');
