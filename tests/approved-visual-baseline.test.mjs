@@ -128,6 +128,7 @@ test("places item pricing before shipping in the pricing review", async () => {
   assert.ok(itemPrices >= 0 && shipping > itemPrices, "item prices appear before shipping");
   assert.doesNotMatch(page, /<span>1\. Shipping<\/span>/);
   assert.doesNotMatch(page, /<h4>2\. Item prices<\/h4>/);
+  assert.match(page, /<small className="profit-fee-note">All Etsy fees included<\/small>/);
 });
 
 test("uses the Goldie palette while Printify drafts are being created", async () => {

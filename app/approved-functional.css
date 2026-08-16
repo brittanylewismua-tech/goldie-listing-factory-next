@@ -461,6 +461,15 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
   border:1px solid rgba(139,89,137,.22)!important;
   background:rgba(225,194,231,.34)!important;
 }
+.app-shell .variant-table .profit-fee-note{
+  display:block;
+  margin-top:3px;
+  color:rgba(74,42,62,.58)!important;
+  font-size:8px;
+  font-weight:500;
+  line-height:1.25;
+  white-space:normal;
+}
 
 /* Final cascade lock: every visible step-card icon uses the same ring,
    optical center, and inner surface as Step 1. */
