@@ -129,3 +129,16 @@ test("gives Step 6 a cohesive titles, tags, and descriptions layout", async () =
   assert.match(css, /\.app-shell \.quality-pill\.pass,\.app-shell \.quality-pill\.check\{[^}]*background:linear-gradient/);
   assert.match(css, /\.app-shell \.finish-mode \.listing-editor>\.workflow-next\{display:flex;width:min\(250px,100%\);margin:28px auto 2px/);
 });
+
+test("keeps required dialogs and selected controls inside the approved palette", async () => {
+  const [page, css] = await Promise.all([
+    readFile(new URL("app/page.tsx", root), "utf8"),
+    readFile(new URL("app/approved-functional.css", root), "utf8"),
+  ]);
+  assert.match(page, /Finish all sections first\./);
+  assert.doesNotMatch(page, /listing words/i);
+  assert.match(page, /className="publish-confirm blocking-modal"/);
+  assert.match(css, /\.blocking-modal>\.publish-confirm-icon,\.blocking-modal>\.mini-label\{[^}]*text-align:center!important/);
+  assert.match(css, /\.title-style-toggle button\.active\{[^}]*background:linear-gradient\(145deg,#6a3456,#4b283e\)!important/);
+  assert.match(css, /\.new-recipe\.active,\.live-dpi\.check,\.batch-size-guide/);
+});
