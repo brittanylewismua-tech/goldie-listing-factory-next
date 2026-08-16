@@ -139,7 +139,7 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
   .app-shell .connect-step .etsy-connection>div{display:grid;align-content:center;gap:1px}
   .app-shell .connect-step .etsy-shop-name{display:block;max-width:100%;overflow:hidden;color:rgba(56,50,55,.76);font-size:12px;font-weight:500;font-style:italic;line-height:1.25;text-overflow:ellipsis;white-space:nowrap}
   .app-shell .connect-step .connected-connection-stack{width:100%}
-  .app-shell .connect-step .connected-connection-stack>.connection-row{width:100%;min-height:82px;margin-left:0;margin-right:0;padding:14px 15px;box-sizing:border-box}
+.app-shell .connect-step .connected-connection-stack>.connection-row{width:100%;height:84px;min-height:84px;margin-left:0;margin-right:0;padding:14px 15px;box-sizing:border-box}
   .app-shell .connect-step .service-row>button,
   .app-shell .connect-step .connection-row>button,
   .app-shell .connect-step .connection-row button.secondary-action{width:124px;min-width:124px;max-width:124px;white-space:nowrap}

@@ -67,7 +67,7 @@ test("stacks the connected Etsy shop name for long shop names", async () => {
   const css = await readFile(new URL("app/approved-functional.css", root), "utf8");
   assert.match(page, /<b>\{etsyConnected\?"Etsy connected":"Etsy"\}<\/b>\{etsyConnected&&<em className="etsy-shop-name">/);
   assert.match(css, /\.etsy-shop-name\{display:block;[^}]*font-style:italic;[^}]*text-overflow:ellipsis;white-space:nowrap\}/);
-  assert.match(css, /\.connected-connection-stack>\.connection-row\{width:100%;min-height:82px;[^}]*padding:14px 15px;box-sizing:border-box\}/);
+assert.match(css, /\.connected-connection-stack>\.connection-row\{width:100%;height:84px;min-height:84px;[^}]*padding:14px 15px;box-sizing:border-box\}/);
 });
 
 test("preview navigation renders the real later-step experiences", async () => {
