@@ -202,13 +202,45 @@ main{padding:38px 54px 30px;display:flex;flex-direction:column;min-width:0;min-h
 .receipt-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:22px 0}.receipt-metrics div{padding:16px 10px;border-radius:14px;background:rgba(252,244,254,.5)}.receipt-metrics b{display:block;font-family:'DM Serif Display',serif;font-size:25px;font-weight:400}.receipt-metrics span{font-size:10px;color:var(--plum55)}
 .listing-image-workspace{display:grid;gap:14px;text-align:left}.batch-image-tools{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;border-radius:16px;background:rgba(252,244,254,.5);border:1px solid rgba(255,255,255,.72)}.batch-image-tools div{display:grid;gap:3px}.batch-image-tools b{font-size:12.5px}.batch-image-tools span{font-size:10.5px;color:var(--plum55)}.small-action{border:1px solid rgba(74,42,62,.18);border-radius:99px;background:rgba(255,255,255,.62);color:var(--plum);padding:9px 13px;font:600 10.5px 'Manrope',sans-serif;cursor:pointer;white-space:nowrap}.listing-image-card{padding:15px;border-radius:18px;background:rgba(252,244,254,.48);border:1px solid rgba(255,255,255,.76)}.listing-image-head{display:flex;align-items:center;gap:12px;margin-bottom:13px}.listing-image-head img{width:58px;height:58px;border-radius:12px;object-fit:cover;background:rgba(255,255,255,.55)}.listing-image-head div{display:grid;gap:3px;min-width:0}.listing-image-head b{font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.listing-image-head span{font-size:10.5px;color:var(--plum55)}.printify-image-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.printify-image{position:relative;display:grid;gap:6px;padding:7px;border:1px solid rgba(74,42,62,.13);border-radius:12px;background:rgba(255,255,255,.35);color:var(--plum);font:600 9.5px 'Manrope',sans-serif;cursor:pointer;text-align:left}.printify-image img{width:100%;aspect-ratio:1.2;object-fit:cover;border-radius:8px}.printify-image.selected{border-color:#8c4d82;box-shadow:0 0 0 2px rgba(255,255,255,.72),0 8px 18px -14px rgba(74,42,62,.8);background:rgba(246,220,244,.78)}.printify-image.selected::after{content:'✓';position:absolute;right:10px;top:10px;width:19px;height:19px;border-radius:50%;display:grid;place-items:center;background:var(--plum);color:white;font-size:9px}.listing-image-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:11px}.listing-image-actions label,.listing-image-actions button{border:1px solid rgba(74,42,62,.17);border-radius:99px;background:rgba(255,255,255,.52);color:var(--plum);padding:9px 12px;font:600 9.5px 'Manrope',sans-serif;cursor:pointer}.listing-image-actions input{position:absolute;width:1px;height:1px;opacity:0}.mockup-panel{display:none;margin-top:11px;padding:12px;border-radius:14px;background:rgba(255,255,255,.42);border:1px solid rgba(255,255,255,.7)}.mockup-panel.open{display:grid;gap:10px}.mockup-panel select{width:100%;padding:10px;border:1px solid rgba(74,42,62,.16);border-radius:10px;background:rgba(255,255,255,.68);color:var(--plum)}.mockup-thumbs{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}.mockup-thumbs button{padding:5px;border:1px solid rgba(74,42,62,.12);border-radius:10px;background:rgba(255,255,255,.45);cursor:pointer}.mockup-thumbs button.selected{border-color:#8c4d82;box-shadow:0 0 0 2px rgba(221,166,222,.3)}.mockup-thumbs img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:7px}.mockup-status{font-size:10.5px;color:var(--plum55)}.generated-mockups{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}.generated-mockups img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:9px}.image-file-note{font-size:9.5px;color:var(--plum55);margin-top:7px}
 
-footer{position:sticky;bottom:0;z-index:12;display:flex;align-items:center;justify-content:space-between;margin-top:14px;padding:14px 0 2px;border-top:1px solid rgba(74,42,62,.1);background:transparent}
+footer{position:relative;z-index:12;display:flex;align-items:center;justify-content:space-between;margin-top:22px;padding:18px 0 2px;border-top:1px solid rgba(74,42,62,.1);background:transparent}
 .saved{font-size:12px;font-weight:300;color:#171217}
 .next{font-family:'Manrope',sans-serif;font-size:14.5px;font-weight:600;background:rgba(252,244,254,.7);
   color:var(--plum40);border:none;padding:15px 34px;border-radius:99px;cursor:not-allowed;
   box-shadow:0 12px 28px -20px rgba(74,42,62,.45);transition:all .38s var(--ease)}
 .next.go{background:var(--plum);color:var(--pearl);cursor:pointer;box-shadow:0 16px 34px -18px rgba(74,42,62,.72)}
 .next.go:hover{transform:translateY(-3px)}
+
+/* Readability and interaction pass */
+.tokenlink{min-height:44px;margin-top:16px;padding:10px 8px;font-size:16px;font-weight:600;color:var(--plum)}
+.tokenlink svg{width:16px;height:16px}
+.step-bubbles button{font-size:10px}.step-bubbles i{width:30px;height:30px;font-size:10px}
+.choice span,.dropzone span{font-size:12.5px;color:var(--plum75)}
+.dropzone small{font-size:11.5px;color:var(--plum55)}
+.field-sample label{font-size:11.5px;color:var(--plum75)}
+.field-sample input,.field-sample select,.field-sample textarea{min-height:48px;font-size:13px}
+.price-grid.head{font-size:10.5px;color:var(--plum75)}
+.price-grid b,.price-grid input,.profit-value{font-size:12.5px}
+.keyword-chips button{min-height:40px;padding:9px 13px;font-size:12px}
+.generated-preview b{font-size:12.5px}.generated-preview span{font-size:12px;color:var(--plum75)}
+.confirm-panel b{font-size:14px}.confirm-panel span{font-size:12.5px;color:var(--plum75)}
+.confirm-panel .confirm-publish{min-height:44px;font-size:13px}
+.review-item b{font-size:13.5px}.review-item span{font-size:12px;color:var(--plum75)}
+.connection-form label{font-size:12px}.connection-form input{min-height:46px;font-size:13px}.connection-form button{min-height:46px;font-size:12px}
+.connection-message{font-size:13px}
+.connection-card{min-height:68px;padding:14px 15px}.connection-card b{font-size:13.5px}.connection-card small{font-size:12px;color:var(--plum75)}
+.connection-card button{min-height:42px;padding:10px 15px;font-size:12px}
+.instructions{font-size:13px;line-height:1.65;color:var(--plum75)}
+.instructions>b{font-size:15px}.instructions .token-warning span{font-size:12px;color:var(--plum75)}
+.instructions ol{gap:10px}.instructions a{min-height:40px;align-items:center;font-size:13px}
+.step-menu button{min-height:42px;font-size:13px}
+.receipt-metrics span{font-size:11.5px;color:var(--plum75)}
+.batch-image-tools b,.listing-image-head b{font-size:13.5px}
+.batch-image-tools span,.listing-image-head span,.mockup-status{font-size:12px;color:var(--plum75)}
+.small-action,.listing-image-actions label,.listing-image-actions button{min-height:40px;padding:10px 13px;font-size:11.5px}
+.printify-image{font-size:11.5px}.image-file-note{font-size:11.5px;color:var(--plum75)}
+button:focus-visible,a:focus-visible,label:has(input:focus-visible),select:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px solid rgba(117,67,108,.48);outline-offset:3px}
+button:disabled{opacity:.58}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
 @media(max-height:820px) and (min-width:761px){
   main{padding-top:24px}.track{margin:10px 0 12px}.step-bubbles{margin-bottom:12px}.step-bubbles span{display:none}.head h1{font-size:30px}.stage{align-items:flex-start;padding-top:18px}
   .card{padding-top:30px;padding-bottom:28px}.emblem{width:58px;height:58px;margin-bottom:18px}.emblem span{width:52px;height:52px}.emblem svg{width:25px;height:25px}
