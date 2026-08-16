@@ -441,7 +441,7 @@ function renderConnectionState(){
 async function readApiResponse(response){
   const text=await response.text();try{return text?JSON.parse(text):{}}catch{return {error:text||'The server returned an unexpected response.'}}
 }
-const isLocalPreview=['localhost','127.0.0.1'].includes(window.top.location.hostname);
+const isLocalPreview=['localhost','127.0.0.1'].includes(window.location.hostname);
 function redirectToSignIn(){window.top.location.assign('/signin-with-chatgpt?return_to=%2Fdesign-lab%3Fbackground%3Dsaturated')}
 function handleSignedOut(service){
   if(!isLocalPreview){redirectToSignIn();return}
