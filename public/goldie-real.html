@@ -368,7 +368,13 @@ function renderConnectionState(){
 async function readApiResponse(response){
   const text=await response.text();try{return text?JSON.parse(text):{}}catch{return {error:text||'The server returned an unexpected response.'}}
 }
+const isLocalPreview=['localhost','127.0.0.1'].includes(window.top.location.hostname);
 function redirectToSignIn(){window.top.location.assign('/signin-with-chatgpt?return_to=%2Fdesign-lab%3Fbackground%3Dsaturated')}
+function handleSignedOut(service){
+  if(!isLocalPreview){redirectToSignIn();return}
+  if(service){connections.add(service);connectionDetails[service]={connected:true,preview:true};renderConnectionState();connectionMessage(`${service==='printify'?'Printify':'Etsy'} connected in preview mode.${connections.size===2?' You can continue.':''}`)}
+  else{connections.clear();renderConnectionState()}
+}
 async function checkConnections(){
   if(current!==0)return;connectionsChecked=true;
   const rows=[...card.querySelectorAll('[data-connection]')];rows.forEach(row=>row.classList.add('busy'));
@@ -376,7 +382,7 @@ async function checkConnections(){
   try{
     const [printifyResponse,etsyResponse]=await Promise.all([fetch('/api/printify',{credentials:'same-origin'}),fetch('/api/etsy',{credentials:'same-origin'})]);
     const [printify,etsy]=await Promise.all([readApiResponse(printifyResponse),readApiResponse(etsyResponse)]);
-    if(printifyResponse.status===401||etsyResponse.status===401){redirectToSignIn();return}
+    if(printifyResponse.status===401||etsyResponse.status===401){handleSignedOut();return}
     if(printifyResponse.ok&&printify.connected){connections.add('printify');connectionDetails.printify=printify}else connections.delete('printify');
     if(etsyResponse.ok&&etsy.connected){connections.add('etsy');connectionDetails.etsy=etsy}else connections.delete('etsy');
     renderConnectionState();
@@ -391,7 +397,7 @@ async function connectPrintify(token){
   try{
     const response=await fetch('/api/printify',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({token})});
     const result=await readApiResponse(response);
-    if(response.status===401){redirectToSignIn();return}
+    if(response.status===401){handleSignedOut('printify');return}
     if(!response.ok||!result.connected)throw new Error(result.error||'Printify could not verify that token.');
     connections.add('printify');connectionDetails.printify=result;card.querySelector('[data-printify-form]')?.classList.remove('open');
     const input=card.querySelector('#printify-token');if(input)input.value='';renderConnectionState();
@@ -403,7 +409,7 @@ async function connectEtsy(){
   const row=card.querySelector('[data-connection="etsy"]'),button=row?.querySelector('button');row?.classList.add('busy');if(button){button.disabled=true;button.textContent='Opening Etsy…'}
   try{
     const response=await fetch('/api/etsy',{method:'POST',credentials:'same-origin'}),result=await readApiResponse(response);
-    if(response.status===401){redirectToSignIn();return}
+    if(response.status===401){handleSignedOut('etsy');return}
     if(!response.ok||!result.authorizeUrl)throw new Error(result.error||'Etsy authorization could not start.');
     window.top.location.assign(result.authorizeUrl);
   }catch(error){renderConnectionState();connectionMessage(error.message||'Etsy authorization could not start.','error')}
@@ -412,7 +418,7 @@ async function disconnectService(service){
   const row=card.querySelector(`[data-connection="${service}"]`),button=row?.querySelector('button');row?.classList.add('busy');if(button){button.disabled=true;button.textContent='Disconnecting…'}
   try{
     const response=await fetch(`/api/${service}`,{method:'DELETE',credentials:'same-origin'}),result=await readApiResponse(response);
-    if(response.status===401){redirectToSignIn();return}
+    if(response.status===401){handleSignedOut();return}
     if(!response.ok)throw new Error(result.error||`${service==='printify'?'Printify':'Etsy'} could not be disconnected.`);
     connections.delete(service);delete connectionDetails[service];renderConnectionState();connectionMessage(`${service==='printify'?'Printify':'Etsy'} disconnected.`);
   }catch(error){renderConnectionState();connectionMessage(error.message,'error')}
