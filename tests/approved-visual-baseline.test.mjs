@@ -161,8 +161,12 @@ test("warns before continuing with designs below Printify's recommended pixels",
   assert.match(page, /setPixelWarningOpen\(true\)/);
   assert.match(page, /below Printify’s recommended pixel size/);
   assert.match(page, /Proceed anyway/);
+  assert.match(page, /className="pixel-comparison-head"[\s\S]*Uploaded size[\s\S]*Printify recommends/);
+  assert.match(page, /belowRecommendedPixels\.map\(file=>/);
+  assert.match(page, /recommendedPixelSize\.width\.toLocaleString\(\)/);
   assert.match(css, /\.app-shell \.pixel-warning-inline\{/);
   assert.match(css, /\.app-shell \.pixel-warning-modal \.pixel-proceed\{/);
+  assert.match(css, /\.app-shell \.pixel-comparison-row\{display:grid;grid-template-columns:/);
 });
 
 test("gives Step 6 a cohesive titles, tags, and descriptions layout", async () => {
