@@ -716,6 +716,7 @@ export default function Home() {
         </div>
 
         <aside className={`launch-panel workflow-panel ${workflowStep==="review"?"active-panel":"hidden-panel"}`}>
+          <div className={`step-number launch-step-icon ${progressIndex===4?"create-drafts-icon":"pricing-icon"}`}>{String(progressIndex+1).padStart(2,"0")}</div>
           <div className="launch-top">
             <Image src="/goldie-g.png" width={2000} height={2000} alt="" className="goldie-g" />
             <p className="mini-label">BATCH SUMMARY</p>
