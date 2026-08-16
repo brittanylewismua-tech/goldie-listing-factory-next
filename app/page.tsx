@@ -619,13 +619,16 @@ export default function Home() {
                 <div className="connection-setup">
                   <details className="token-help">
                     <summary>How to get your Printify token <span>Step-by-step instructions</span></summary>
-                    <div className="token-shop-warning"><b>Before you generate anything</b><span>Sign in to the Printify account that contains the shop and template products you want Goldie to use. The token connects the account; the Printify template you choose in Step 2 identifies the exact shop.</span></div>
+                    <div className="token-shop-warning"><b>First, make sure you are in the right Printify account</b><span>Sign in to the account that contains the Etsy shop and template products you want Goldie to use. A token connects the whole Printify account. In Step 2, your template tells Goldie which exact shop to use.</span></div>
                     <ol>
-                      <li>In Printify, open <b>My Profile</b>, then choose <b>Connections</b>.</li>
-                      <li>If Printify asks for a developer contact email, enter one you check.</li>
-                      <li>Under Personal Access Tokens, select <b>Generate</b>.</li>
-                      <li>Name it <b>Goldie</b>, enable the product and upload access Goldie requests, then generate the token.</li>
-                      <li>Copy the token immediately. It is only shown once, so paste it below.</li>
+                      <li>Open Printify and click your profile icon.</li>
+                      <li>Choose <b>My Profile</b>, then open <b>Connections</b>.</li>
+                      <li>If Printify asks for a developer contact email, enter an email address you check and save it.</li>
+                      <li>Find <b>Personal Access Tokens</b> and click <b>Generate</b>.</li>
+                      <li>Name the token <b>Goldie Listing Factory</b>.</li>
+                      <li>Turn on these permissions: <b>shops.read, catalog.read, products.read, products.write, uploads.read, uploads.write, and print_providers.read</b>. Goldie does not need order permissions.</li>
+                      <li>Click <b>Generate token</b>, then copy it immediately. Printify only shows the full token once.</li>
+                      <li>Come back to this page, paste the token below, and click <b>Connect Printify</b>. Goldie will verify the account before letting you continue.</li>
                     </ol>
                     <a href="https://help.printify.com/hc/en-us/articles/4483626447249-How-can-I-generate-an-API-token" target="_blank" rel="noreferrer">Open Printify’s official token instructions ↗</a>
                   </details>
