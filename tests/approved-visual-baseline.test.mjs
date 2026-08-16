@@ -115,3 +115,17 @@ test("uses the Goldie palette while Printify drafts are being created", async ()
   assert.match(css, /\.app-shell \.progress-track span\{background:linear-gradient\(90deg,#a765a0,#d992c5,#b6a8ff\)!important/);
   assert.match(css, /\.app-shell \.upload-notice\{border-color:rgba\(183,119,176,\.58\)!important/);
 });
+
+test("gives Step 6 a cohesive titles, tags, and descriptions layout", async () => {
+  const [page, css] = await Promise.all([
+    readFile(new URL("app/page.tsx", root), "utf8"),
+    readFile(new URL("app/approved-functional.css", root), "utf8"),
+  ]);
+  assert.match(page, /Finish titles, tags, and descriptions/);
+  assert.doesNotMatch(page, /Complete the listing words/);
+  assert.match(page, /draftPreview=drafts\.find\(draft=>draft\.clientId===design\.id\)\?\.previewUrl\|\|design\.previewUrl/);
+  assert.match(page, /className="listing-preview-button"/);
+  assert.match(css, /\.app-shell \.design-line\{grid-template-columns:152px minmax\(0,1fr\) 138px/);
+  assert.match(css, /\.app-shell \.quality-pill\.pass,\.app-shell \.quality-pill\.check\{[^}]*background:linear-gradient/);
+  assert.match(css, /\.app-shell \.finish-mode \.listing-editor>\.workflow-next\{display:flex;width:min\(250px,100%\);margin:28px auto 2px/);
+});
