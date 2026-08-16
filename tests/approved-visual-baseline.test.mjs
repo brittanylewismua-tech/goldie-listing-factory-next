@@ -91,6 +91,9 @@ assert.equal((page.match(/Clear batch \+ start over/g) || []).length, 1, "Only o
 assert.match(css, /UX readability lock[\s\S]*\.app-shell \.batch-limits\{[\s\S]*justify-content:center[\s\S]*font-size:12px!important/);
 assert.match(css, /\.app-shell \.folder-drop small\{[\s\S]*font-size:12px!important/);
 assert.match(css, /\.app-shell \.variant-table th\{font-size:12px!important/);
+assert.match(page, /"Save new shipping profile"/);
+assert.match(css, /\.app-shell \.custom-shipping-actions button:first-child\{[\s\S]*background:linear-gradient\(145deg,#6a3456,#4b283e\)!important/);
+assert.match(css, /\.app-shell \.custom-shipping-actions button\{[\s\S]*font-size:12\.5px!important[\s\S]*text-transform:none!important/);
 });
 
 test("preview navigation renders the real later-step experiences", async () => {
