@@ -414,6 +414,54 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
   .app-shell>footer{display:none!important}
 }
 
+/* Step 2 saved-product palette lock. Product information and actions are
+   plum, never legacy olive, green, gold, or brown. Green remains reserved
+   for true success and progress feedback elsewhere in the workflow. */
+.app-shell .recipe-card .recipe-library-head>span,
+.app-shell .recipe-card .recipe-tile,
+.app-shell .recipe-card .recipe-copy small,
+.app-shell .recipe-card .recipe-copy em,
+.app-shell .recipe-card .edit-recipe,
+.app-shell .recipe-card .recipe-library-head button,
+.app-shell .recipe-card .first-recipe-callout,
+.app-shell .recipe-card .first-recipe-callout p,
+.app-shell .recipe-card .active-recipe,
+.app-shell .recipe-card .active-recipe button{
+  color:#654362!important;
+}
+.app-shell .recipe-card .recipe-copy b,
+.app-shell .recipe-card .first-recipe-callout b,
+.app-shell .recipe-card .recipe-form-heading b{
+  color:#4b283e!important;
+}
+.app-shell .recipe-card .recipe-tile{
+  border-color:rgba(139,89,137,.2)!important;
+  background:rgba(255,255,255,.5)!important;
+}
+.app-shell .recipe-card .recipe-tile.selected{
+  border-color:#b777b0!important;
+  background:linear-gradient(145deg,rgba(252,244,254,.76),rgba(246,229,248,.62))!important;
+  box-shadow:0 0 0 3px rgba(183,119,176,.13),0 14px 30px rgba(74,42,62,.08)!important;
+}
+.app-shell .recipe-card .recipe-use{color:#654362!important}
+.app-shell .recipe-card .recipe-icon,
+.app-shell .recipe-card .first-recipe-callout>span{
+  background:linear-gradient(145deg,#d591c3,#a86ba2)!important;
+  color:#fff!important;
+}
+.app-shell .recipe-card .edit-recipe:hover,
+.app-shell .recipe-card .recipe-library-head button:hover{color:#4b283e!important}
+.app-shell .recipe-card .delete-recipe{color:rgba(74,42,62,.52)!important}
+.app-shell .recipe-card .delete-recipe:hover{background:rgba(236,205,232,.52)!important;color:#6a3456!important}
+.app-shell .recipe-card .first-recipe-callout{
+  border-color:rgba(139,89,137,.28)!important;
+  background:rgba(255,255,255,.48)!important;
+}
+.app-shell .recipe-card .active-recipe{
+  border:1px solid rgba(139,89,137,.22)!important;
+  background:rgba(225,194,231,.34)!important;
+}
+
 /* Final cascade lock: every visible step-card icon uses the same ring,
    optical center, and inner surface as Step 1. */
 @media(min-width:821px){

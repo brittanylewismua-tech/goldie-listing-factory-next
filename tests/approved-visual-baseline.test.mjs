@@ -112,6 +112,15 @@ test("locks workflow states to the Goldie lilac, pink, and plum palette", async 
   assert.match(css, /\.app-shell \.final-checklist span\{border-color:rgba\(139,89,137,\.22\)!important/);
 });
 
+test("keeps Step 2 saved-product text and selections in the plum palette", async () => {
+  const css = await readFile(new URL("app/approved-functional.css", root), "utf8");
+  assert.match(css, /Step 2 saved-product palette lock/);
+  assert.match(css, /\.app-shell \.recipe-card \.recipe-copy small,[\s\S]*color:#654362!important/);
+  assert.match(css, /\.app-shell \.recipe-card \.recipe-tile\.selected\{[\s\S]*border-color:#b777b0!important/);
+  assert.match(css, /\.app-shell \.recipe-card \.recipe-icon,[\s\S]*linear-gradient\(145deg,#d591c3,#a86ba2\)!important/);
+  assert.match(css, /\.app-shell \.recipe-card \.active-recipe\{[\s\S]*background:rgba\(225,194,231,\.34\)!important/);
+});
+
 test("places item pricing before shipping in the pricing review", async () => {
   const page = await readFile(new URL("app/page.tsx", root), "utf8");
   const itemPrices = page.indexOf('<h4>1. Item prices</h4>');
