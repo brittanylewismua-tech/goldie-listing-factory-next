@@ -16,10 +16,10 @@ test("server-renders the branded Listing Factory", async () => {
   assert.equal(response.status, 200);
   const html = await response.text();
   assert.match(html, /Goldie Listing Factory/);
-  assert.match(html, /Create a full batch of Etsy listings from finished designs/);
+  assert.match(html, /Connect Printify/);
   assert.match(html, /Secure connection/);
   assert.doesNotMatch(html, /Private workspace/);
-  assert.match(html, /Your Printify account/);
+  assert.match(html, /Connect Printify/);
   assert.match(html, /Choose a saved product or add another/);
   const pageSource = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
   const globalCss = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
@@ -794,7 +794,7 @@ test("keeps pricing simple while using a real Etsy shipping profile and exact te
   assert.match(page,/Discard changes/);
   assert.match(page,/Save or discard shipping profile changes first/);
   assert.match(page,/Printify fulfillment shipping/);
-  assert.match(page,/Review the complete cost, shipping, Etsy fees, and profit for every enabled variant/);
+  assert.match(page,/Review every enabled variation before Goldie creates the drafts/);
   assert.doesNotMatch(page,/pricing target, keyword bank, and mockup defaults/);
   assert.match(page,/variant\.templatePrice/);
   assert.match(page,/See how Goldie calculated these prices/);

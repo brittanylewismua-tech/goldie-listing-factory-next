@@ -558,11 +558,11 @@ export default function Home() {
   }
 
   const workflowHero = {
-    connect: { eyebrow: "THE LISTING FACTORY", title: "Create a full batch of Etsy listings from finished designs.", copy: "Upload up to 20 designs. Goldie creates the matching Printify products, calculates every variant price, builds titles and tags from your keyword bank, completes the Etsy details, and prepares the listing images." },
-    setup: { eyebrow: "STEP 2 · CHOOSE PRODUCT", title: "Start with a product that already works.", copy: "Choose a saved product or connect one completed template. Goldie brings in the variants, costs, placement, shipping profile, and description." },
-    designs: { eyebrow: "STEP 3 · ADD DESIGNS", title: "Your designs are ready. Let’s turn them into products.", copy: "Add up to 20 finished designs. Goldie preserves the original artwork and checks print quality against the real product size." },
-    review: { eyebrow: "STEP 4 · REVIEW PRICING", title: "Every size priced. Every margin visible.", copy: "Review the complete cost, shipping, Etsy fees, and profit for every enabled variant before Goldie creates anything." },
-    finish: finishPhase==="details" ? { eyebrow: "STEP 6 · TITLES + DESCRIPTION", title: "Finish the listing words in one place.", copy: "Build titles from validated keyword banks, generate matching tags, and apply one reusable description with optional listing-specific edits." } : finishPhase==="etsy" ? { eyebrow: "STEP 7 · ETSY DETAILS", title: "Your Etsy details are ready to review.", copy: "Review the category and product-specific fields. If an optional detail does not apply, Goldie leaves it blank." } : finishPhase==="mockups" ? { eyebrow: "STEP 8 · IMAGES + MOCKUPS", title: "Build the final image set.", copy: "Review the real Printify placement, choose flatlays, add an optional size guide, and prepare your own lifestyle mockups." } : { eyebrow: "STEP 9 · FINAL REVIEW", title: "Everything is ready for one final check.", copy: "Confirm the words, pricing, Etsy details, and images. Publishing will send these listings live, not to Etsy drafts." },
+    connect: { eyebrow: "STEP 1 OF 9", title: "Connect Printify", copy: "Connect the Printify shop where Goldie will create your product drafts." },
+    setup: { eyebrow: "STEP 2 OF 9", title: "Choose product", copy: "Choose a saved product or connect a completed Printify template." },
+    designs: { eyebrow: "STEP 3 OF 9", title: "Add your designs", copy: "Add up to 20 finished designs for this batch." },
+    review: { eyebrow: "STEP 4 OF 9", title: "Review pricing", copy: "Review every enabled variation before Goldie creates the drafts." },
+    finish: finishPhase==="details" ? { eyebrow: "STEP 6 OF 9", title: "Titles + description", copy: "Build every title from validated keywords and finish the descriptions." } : finishPhase==="etsy" ? { eyebrow: "STEP 7 OF 9", title: "Etsy listing details", copy: "Review the Etsy category and product-specific details." } : finishPhase==="mockups" ? { eyebrow: "STEP 8 OF 9", title: "Images + mockups", copy: "Choose the final images for every listing." } : { eyebrow: "STEP 9 OF 9", title: "Final review", copy: "Review every listing before publishing it live on Etsy." },
   }[workflowStep];
 
   return (
@@ -596,6 +596,7 @@ export default function Home() {
 
       {!returningHome&&<section className={`workspace ${complete&&workflowStep==="finish"&&finishPhase==="mockups"?"mockup-workspace":""}`}>
         <nav className="workflow-progress" aria-label="Listing Factory progress">
+          <p className="approved-step-count">Step {progressIndex+1} of {PROGRESS_STEPS.length}</p>
           <div className="workflow-progress-head"><div><p className="mini-label">YOUR BATCH</p><b>Step {progressIndex+1} of {PROGRESS_STEPS.length}</b></div>{(template||files.length>0||drafts.length>0)&&<button className="start-new-batch" disabled={running} onClick={startOver}>Clear batch + start over</button>}</div>
           {localPreview&&<p className="preview-mode-note">Preview mode · every step is unlocked <a href="/design-lab">Open design lab →</a></p>}
           {PROGRESS_STEPS.map((label,index)=>{const active=progressIndex===index,done=index<progressIndex,available=localPreview||index===0||(index===1&&connected)||(index===2&&templateLoaded)||(index>=3&&index<=4&&ready)||(index>=5&&complete);return <button key={label} className={`${active?"active":""} ${done?"done":""}`} disabled={!available} aria-current={active?"step":undefined} onClick={()=>openProgressStep(index)}><span>{done?"✓":String(index+1).padStart(2,"0")}</span><span><b>{label}</b><small>{localPreview&&!active?"Open preview":progressStatus(index,active,done)}</small></span></button>})}
@@ -608,11 +609,11 @@ export default function Home() {
         {progressIndex===5&&titleCount>0&&<ActionReceipt items={[{value:`${titleCount} titles ready`,label:"Validated keyword phrases only"},{value:`${files.reduce((sum,file)=>sum+file.tags.length,0)} matching tags`,label:"Zero invented keywords"}]}/>}
         {progressIndex>0&&<button className="workflow-back" type="button" onClick={goBackOneStep}><span aria-hidden="true">←</span> Back</button>}
         <div className="steps-column">
-          <article className={`step-card workflow-panel ${connected ? "done" : ""} ${workflowStep==="connect"?"active-panel":"hidden-panel"}`}>
+          <article className={`step-card connect-step workflow-panel ${connected ? "done" : ""} ${workflowStep==="connect"?"active-panel":"hidden-panel"}`}>
             <div className="step-number">01</div>
             <div className="step-content">
-              <div className="step-heading"><div><p className="mini-label">PRINTIFY CONNECTION</p><h2>Your Printify account</h2></div>{connected && <span className="done-mark">✓ Connected</span>}</div>
-              <p className="step-copy">Connect the Printify account where you want Goldie to create the product drafts. You will connect Etsy separately before publishing.</p>
+              <div className="step-heading"><div><p className="mini-label">PRINTIFY CONNECTION</p><h2>Connect Printify</h2></div>{connected && <span className="done-mark">✓ Connected</span>}</div>
+              <p className="step-copy">Connect the Printify shop where Goldie will create your product drafts.</p>
               <div className="connection-trust"><span aria-hidden="true">✓</span><div><b>Secure connection</b><small>Your token is encrypted, saved securely, and never displayed again.</small></div></div>
               {checkingConnection ? (
                 <div className="connection-row"><span className="connection-icon">P</span><div><b>Checking Printify connection…</b><small>This takes just a moment</small></div></div>
@@ -651,7 +652,7 @@ export default function Home() {
           {templateError && <p className="field-error recipe-error" role="alert">{templateError}</p>}
           {templateDetails && <><div className="template-proof recipe-proof"><div className="product-thumb"><span>YOUR<br/>ART</span></div><div className="template-info"><b>{templateDetails.blueprintTitle}</b><span>{templateDetails.provider} · {templateDetails.enabledVariants} enabled variants</span><span>✓ Product, placement, variants, and shipping profile imported</span></div><span className="template-badge">Product ready</span></div><button className="workflow-next" onClick={()=>goToStep("designs")}>Add finished designs <span>→</span></button></>}</div>
 
-          <article className={`step-card workflow-panel ${files.length ? "done" : ""} ${workflowStep==="finish"?"finish-mode":""} ${workflowStep==="designs"||(workflowStep==="finish"&&finishPhase==="details")?"active-panel":"hidden-panel"}`}>
+          <article className={`step-card designs-step workflow-panel ${files.length ? "done" : ""} ${workflowStep==="finish"?"finish-mode":""} ${workflowStep==="designs"||(workflowStep==="finish"&&finishPhase==="details")?"active-panel":"hidden-panel"}`}>
             <div className="step-number">{workflowStep==="finish"?"06":"03"}</div>
             <div className="step-content">
               <div className="step-heading"><div><p className="mini-label">{workflowStep==="finish"?"TITLES + DESCRIPTION":"DESIGNS"}</p><h2>{workflowStep==="finish"?"Complete the listing words":"Add your finished designs"}</h2></div>{files.length > 0 && <span className="done-mark">✓ {files.length} {workflowStep==="finish"?"listings":"loaded"}</span>}</div>
