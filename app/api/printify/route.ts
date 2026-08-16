@@ -4,6 +4,7 @@ import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { customerLaunchBlock } from "@/app/customer-launch-gate";
 import { isOwner } from "@/app/mastermind/access";
 import { decryptPrintifyToken, encryptPrintifyToken } from "./token-crypto";
+import { etsyConnection, etsyFetch } from "../etsy/client";
 
 const PRINTIFY_API = "https://api.printify.com/v1";
 type Shop = { id: number; title: string };
@@ -13,7 +14,7 @@ type Product = {
   blueprint_id: number;
   print_provider_id: number;
   description?: string;
-  external?: { shipping_template_id?: string };
+  external?: { id?: string; shipping_template_id?: string };
   sales_channel_properties?: { free_shipping?: boolean };
   variants?: Array<{ id: number; title?: string; options?: number[]; price: number; cost?: number; is_enabled?: boolean }>;
   print_areas?: Array<{
@@ -122,7 +123,19 @@ export async function POST(request: Request) {
       if (response.ok) { found = { shop, product: (await response.json()) as Product }; break; }
     }
     if (!found) return NextResponse.json({ error: "This Printify product cannot be used yet.", issues:["Use a product from the Printify shop connected to Goldie."] }, { status: 404 });
-    const shippingTemplateId=String(found.product.external?.shipping_template_id||"").trim();
+    let shippingTemplateId=String(found.product.external?.shipping_template_id||"").trim();
+    // Printify does not consistently return shipping_template_id for older or
+    // already-published products. The linked Etsy listing is authoritative in
+    // that case, so recover the profile instead of falsely rejecting a valid
+    // template.
+    const externalListingId=Number(found.product.external?.id);
+    if(!shippingTemplateId&&externalListingId>0){
+      try{
+        const connection=await etsyConnection(user.userId);
+        const listing=await etsyFetch<{shipping_profile_id?:number}>(`/listings/${externalListingId}`,connection.token);
+        if(Number(listing.shipping_profile_id)>0)shippingTemplateId=String(listing.shipping_profile_id);
+      }catch{/* The normal validation message below remains accurate if Etsy is disconnected. */}
+    }
     const enabledVariants = found.product.variants?.filter((variant) => variant.is_enabled) ?? [];
     const configuredPlacements = found.product.print_areas?.flatMap((area) => area.placeholders ?? []).filter((placeholder) => placeholder.images?.[0]) ?? [];
     const issues:string[]=[];

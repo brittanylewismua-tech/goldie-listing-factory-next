@@ -16,8 +16,8 @@ test("server-renders the branded Listing Factory", async () => {
   assert.equal(response.status, 200);
   const html = await response.text();
   assert.match(html, /Goldie Listing Factory/);
-  assert.match(html, /Connect Printify\./);
-  assert.match(html, /Secure workspace/);
+  assert.match(html, /Turn finished designs into ready-to-publish Etsy listings/);
+  assert.match(html, /Secure connection/);
   assert.doesNotMatch(html, /Private workspace/);
   assert.match(html, /Your Printify account/);
   assert.match(html, /Choose a saved product or add another/);
@@ -198,7 +198,7 @@ test("guides sellers through the complete resumable nine-step workflow",async()=
   ]);
   assert.match(page,/Connect Printify/);assert.match(page,/Choose product/);assert.match(page,/Add designs/);assert.match(page,/Review pricing/);assert.match(page,/Create drafts/);assert.match(page,/Titles \+ description/);assert.match(page,/Etsy listing details/);assert.match(page,/Images \+ mockups/);assert.match(page,/Final review/);
   assert.match(page,/searchParams\.get\("batch"\)/);assert.doesNotMatch(page,/const id=window\.localStorage\.getItem\("goldie-active-batch"\)/);
-  assert.match(page,/aria-current=\{active\?"step"/);assert.match(page,/You are here/);assert.match(page,/Complete the prior step/);
+  assert.match(page,/aria-current=\{active\?"step"/);assert.match(page,/progressStatus/);assert.match(page,/designs ready/);assert.match(page,/Ready to publish/);assert.match(page,/Complete the prior step/);
   assert.match(page,/goldie-active-batch/);assert.match(page,/saveBatchFiles/);assert.match(page,/\/api\/batches/);
   assert.match(batches,/Pick up exactly where you left off/);assert.match(batches,/Resume batch/);assert.match(route,/listing_batches/);assert.match(cache,/indexedDB/);
   assert.match(styles,/post-draft-workspace \.open-all-button\{width:auto/);
@@ -491,11 +491,11 @@ test("creates unique validated AI titles in bulk with per-listing overrides", as
     readFile(new URL("../app/api/listing-intelligence/route.ts",import.meta.url),"utf8"),
   ]);
   assert.match(page,/Create titles for the whole batch/);assert.match(page,/Auto-create all titles/);assert.match(page,/runBounded\(files,2/);
-  assert.match(page,/Goldie chooses keywords/);assert.match(page,/I choose keywords/);assert.match(page,/Click keywords in the order you want them/);
+  assert.match(page,/Goldie selects from my bank/);assert.match(page,/I choose from my bank/);assert.match(page,/Click keywords in the order you want them/);
   assert.match(page,/removeBatchKeyword/);assert.match(page,/clearBatchKeywords/);assert.match(page,/Applied to every listing below/);
   assert.match(page,/Create a different title with AI/);assert.match(page,/Create title for this design/);
   assert.match(page,/autoTitleForDesign/);assert.match(page,/tagsFromTitle\(item\.result\.keywords\.join/);
-  assert.match(page,/unique titles and matching tags created/);assert.match(page,/Goldie selects the best phrases for each individual design/);
+  assert.match(page,/unique titles and matching tags created/);assert.match(page,/Goldie selects only exact phrases from this bank/);assert.match(page,/Goldie never adds keywords/);
   assert.ok(page.indexOf('className="permanent-description batch-description"')<page.indexOf('className="design-table"'),"The collapsible batch description belongs directly above the individual listings.");
   assert.match(page,/Customize this listing’s description/);assert.match(page,/The complete description is shown below/);
   assert.match(page,/descriptionOverride/);assert.match(page,/scrollIntoView/);
@@ -611,7 +611,7 @@ test("ships official brand assets and removes the starter", async () => {
     readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
     readFile(new URL("../package.json", import.meta.url), "utf8"),
   ]);
-  assert.match(page, /goldie-wordmark\.webp/);
+  assert.match(page, /goldie-wordmark-clean\.png/);
   assert.match(layout, /Goldie Listing Factory/);
   assert.doesNotMatch(packageJson, /react-loading-skeleton/);
   await access(new URL("../public/goldie-logo.png", import.meta.url));
@@ -781,7 +781,7 @@ test("keeps pricing simple while using a real Etsy shipping profile and exact te
   assert.match(page,/Discard changes/);
   assert.match(page,/Save or discard shipping profile changes first/);
   assert.match(page,/Printify fulfillment shipping/);
-  assert.match(page,/Confirm the numbers below, then create your Printify drafts/);
+  assert.match(page,/Review the complete cost, shipping, Etsy fees, and profit for every enabled variant/);
   assert.doesNotMatch(page,/pricing target, keyword bank, and mockup defaults/);
   assert.match(page,/variant\.templatePrice/);
   assert.match(page,/See how Goldie calculated these prices/);
@@ -885,4 +885,45 @@ test("preserves the final plain-text description and applies it directly to Etsy
   assert.match(page,/\.join\("\\n\\n"\)/);
   assert.match(finish,/shipping_profile_id:String\(shippingProfileId\),description/);
   assert.match(finish,/String\(draft\.description\|\|""\)/);
+});
+
+test("makes progress satisfying and returns a precise outcome receipt", async()=>{
+  const [page,ui,theme]=await Promise.all([
+    readFile(new URL("../app/page.tsx",import.meta.url),"utf8"),
+    readFile(new URL("../app/goldie-ui.tsx",import.meta.url),"utf8"),
+    readFile(new URL("../app/lilac-theme.css",import.meta.url),"utf8"),
+  ]);
+  assert.match(page,/WorkflowMomentum/);assert.match(page,/OutcomeReceipt/);assert.match(page,/setBatchReceipt/);
+  assert.match(ui,/Autosave on/);assert.match(ui,/steps complete/);assert.match(ui,/exactly what happened/);
+  assert.match(ui,/Open Etsy listing/);assert.match(ui,/Duplicate this workflow/);assert.match(ui,/Choose another product/);assert.match(ui,/View batch history/);
+  assert.match(theme,/workflow-momentum/);assert.match(theme,/outcome-receipt/);assert.match(theme,/prefers-reduced-motion/);
+});
+
+test("turns Goldie into a returning-user command center with contextual intelligence",async()=>{
+  const [page,dashboard,theme,system]=await Promise.all([
+    readFile(new URL("../app/page.tsx",import.meta.url),"utf8"),
+    readFile(new URL("../app/returning-command-center.tsx",import.meta.url),"utf8"),
+    readFile(new URL("../app/lilac-theme.css",import.meta.url),"utf8"),
+    readFile(new URL("../DESIGN_SYSTEM.md",import.meta.url),"utf8"),
+  ]);
+  assert.match(dashboard,/Resume your last batch/);assert.match(dashboard,/Start another batch/);assert.match(dashboard,/Recent products/);
+  assert.match(dashboard,/Keyword banks/);assert.match(dashboard,/Mockup sets/);assert.match(dashboard,/listings created this month/);
+  assert.match(dashboard,/GoldieCommandBar/);assert.match(dashboard,/metaKey/);assert.match(page,/GoldieInsight/);assert.match(page,/currentInsight/);
+  assert.match(page,/progressIndex>0&&<WorkflowMomentum/);assert.match(page,/lowDpiCount/);assert.match(page,/variants approved/);
+  assert.match(theme,/--g-plum-700/);assert.match(theme,/step-resolve/);assert.match(theme,/item-arrive/);
+  assert.match(system,/Fixed palette/);assert.match(system,/Canonical components/);assert.match(system,/Visual-change protocol/);
+});
+
+test("recovers published-template shipping and constrains Etsy categories by product type",async()=>{
+  const [printify,taxonomy,page]=await Promise.all([
+    readFile(new URL("../app/api/printify/route.ts",import.meta.url),"utf8"),
+    readFile(new URL("../app/api/etsy/taxonomy/route.ts",import.meta.url),"utf8"),
+    readFile(new URL("../app/page.tsx",import.meta.url),"utf8"),
+  ]);
+  assert.match(printify,/externalListingId/);
+  assert.match(printify,/shipping_profile_id/);
+  assert.match(taxonomy,/productCategoryScore/);
+  assert.match(taxonomy,/art & collectibles › prints ›/);
+  assert.match(taxonomy,/t-shirts\|tees/);
+  assert.match(page,/product:\{blueprintTitle:templateDetails/);
 });
