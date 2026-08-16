@@ -214,7 +214,7 @@ export default function Home() {
 
   return <main className="mockupFactory managementOnly">
     <header className="mockupTopbar"><div className="brand"><span className="brandGold">GOLDIE</span><span>MOCKUP SETS</span></div><nav className="factoryNav" aria-label="Goldie tools"><a href="/">Listing Factory</a><a href="/keywords">Keyword Banks</a><a className="active" href="/mockups">Mockup Sets</a><a href="/usage">Usage + Plan</a></nav><span className="privateNote">Saved mockup library</span></header>
-    <section className="mockupHero"><p className="mockupEyebrow">YOUR SAVED MOCKUP LIBRARY</p><h1>Manage your mockup sets.</h1><p className="lede">Add and organize reusable blank scenes here. Choose them and create finished product mockups inside Listing Factory.</p></section>
+    <section className="mockupHero"><p className="mockupEyebrow">YOUR SAVED MOCKUP LIBRARY</p><h1>Manage your mockup sets.</h1><p className="lede">Add and organize blank mockups here. You can choose from these sets when you create listing images in the Listing Factory.</p></section>
     <section className="mockupWorkspace"><div className="mockupStep managementLibrary"><div className="managementLibraryHead"><div><p className="mockupEyebrow">SAVED SETS</p><h2>{library.some(item=>item.custom)?"Your mockup sets":"Create your first mockup set"}</h2><p>Each set can hold up to 50 blank mockups.</p></div><button className="newSetButton" onClick={()=>setShowAddSet(true)}>＋ Add mockup set</button></div>
       {generationError&&<p className="smartError" role="alert"><b>Goldie couldn’t complete that change.</b><span>{generationError}</span></p>}
       {libraryBusy&&<div className="librarySaving" role="status"><span className="librarySpinner"/><div><b>Saving {libraryProgress} of {libraryTotal} mockups…</b><small>Please keep this page open until every file is saved.</small></div></div>}
@@ -229,7 +229,7 @@ export default function Home() {
 
   return <main className="mockupFactory">
     <header className="mockupTopbar"><div className="brand"><span className="brandGold">GOLDIE</span><span>MOCKUP SETS</span></div><nav className="factoryNav" aria-label="Goldie tools"><a href="/">Listing Factory</a><a href="/keywords">Keyword Banks</a><a className="active" href="/mockups">Mockup Sets</a><a href="/usage">Usage + Plan</a></nav><span className="privateNote">Saved mockup library</span></header>
-    <section className="mockupHero"><p className="mockupEyebrow">YOUR SAVED MOCKUP LIBRARY</p><h1>Manage your mockup sets.</h1><p className="lede">Create, rename, calibrate, and delete reusable sets here. Choose and generate mockups inside Listing Factory.</p></section>
+    <section className="mockupHero"><p className="mockupEyebrow">YOUR SAVED MOCKUP LIBRARY</p><h1>Manage your mockup sets.</h1><p className="lede">Create, rename, adjust, or delete your saved sets here. Use them to create listing images in the Listing Factory.</p></section>
     <section className="mockupWorkspace">
       <div className="mockupStep"><div className="stepHead"><span>1</span><div><h2>Add this design</h2><p>One design at a time · PNG, JPG, or WEBP · already upscaled if needed</p></div></div>
         <div className="uploadPair">
