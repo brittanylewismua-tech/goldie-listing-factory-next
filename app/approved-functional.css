@@ -470,6 +470,54 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
   line-height:1.25;
   white-space:normal;
 }
+.app-shell .pricing-section-heading{
+  align-items:flex-end;
+  margin:0 0 16px;
+  padding:0 0 14px;
+  border-bottom:1px solid rgba(139,89,137,.2);
+}
+.app-shell .pricing-section-heading h4{
+  margin:0 0 6px!important;
+  color:#4b283e!important;
+  font-family:'DM Serif Display',Georgia,serif;
+  font-size:22px!important;
+  font-weight:400;
+  line-height:1.1;
+}
+.app-shell .pricing-section-heading p{
+  max-width:660px;
+  margin:0!important;
+  color:rgba(74,42,62,.67)!important;
+  font-size:11px!important;
+  line-height:1.5;
+}
+.app-shell .item-pricing-section{
+  margin-top:24px!important;
+  padding-top:24px!important;
+}
+.app-shell .shipping-pricing-section{
+  margin-top:28px;
+  padding-top:24px;
+  border-top:2px solid rgba(137,88,132,.22);
+}
+.app-shell .shipping-pricing-section .pricing-controls{margin:0 0 12px!important}
+.app-shell .shipping-profile-select>span{
+  color:#5b304f!important;
+  font-size:11px!important;
+  font-weight:800!important;
+}
+.app-shell .variant-table th{
+  color:#5b304f!important;
+  font-size:10px!important;
+  font-weight:850!important;
+  letter-spacing:.02em;
+}
+.app-shell .custom-shipping-builder>summary,
+.app-shell .pricing-math>summary{
+  color:#5b304f!important;
+  font-size:12px!important;
+  font-weight:800!important;
+}
 
 /* Final cascade lock: every visible step-card icon uses the same ring,
    optical center, and inner surface as Step 1. */

@@ -122,13 +122,19 @@ test("keeps Step 2 saved-product text and selections in the plum palette", async
 });
 
 test("places item pricing before shipping in the pricing review", async () => {
-  const page = await readFile(new URL("app/page.tsx", root), "utf8");
+  const [page, css] = await Promise.all([
+    readFile(new URL("app/page.tsx", root), "utf8"),
+    readFile(new URL("app/approved-functional.css", root), "utf8"),
+  ]);
   const itemPrices = page.indexOf('<h4>1. Item prices</h4>');
-  const shipping = page.indexOf('<span>2. Shipping</span>');
+  const shipping = page.indexOf('<h4>2. Shipping</h4>');
   assert.ok(itemPrices >= 0 && shipping > itemPrices, "item prices appear before shipping");
   assert.doesNotMatch(page, /<span>1\. Shipping<\/span>/);
   assert.doesNotMatch(page, /<h4>2\. Item prices<\/h4>/);
   assert.match(page, /<small className="profit-fee-note">All Etsy fees included<\/small>/);
+  assert.match(page, /className="pricing-section-heading shipping-section-heading"/);
+  assert.match(page, /<h4>2\. Shipping<\/h4>/);
+  assert.match(css, /\.app-shell \.pricing-section-heading h4\{[\s\S]*font-size:22px!important/);
 });
 
 test("uses the Goldie palette while Printify drafts are being created", async () => {
