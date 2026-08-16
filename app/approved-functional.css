@@ -139,9 +139,9 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
   .app-shell .connect-step .service-row>button,
   .app-shell .connect-step .connection-row>button,
   .app-shell .connect-step .connection-row button.secondary-action{width:124px;min-width:124px;max-width:124px;white-space:nowrap}
-  .app-shell .workflow-next{justify-content:center;gap:10px}
+  .app-shell .workflow-next{justify-content:center;gap:10px;margin-left:auto;margin-right:auto}
   .app-shell .connect-step>.step-number{--approved-ring-angle:200deg;background:conic-gradient(from var(--approved-ring-angle),#b9adff,#d37bdd,#ff8eba,#f6a5ca,#b9adff);animation:approved-ring-colors 90s linear infinite;transform:none}
-  .app-shell .connect-step>.step-number:after{animation:none;transform:none;position:relative;top:-2px}
+  .app-shell .connect-step>.step-number:after{position:absolute;left:50%;top:50%;animation:none;transform:translate(-50%,-50%)!important}
 @keyframes approved-ring-colors{to{--approved-ring-angle:560deg}}
 
 /* Step 8 lives outside the shared workflow stage because it expands to the

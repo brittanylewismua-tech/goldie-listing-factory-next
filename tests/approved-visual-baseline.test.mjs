@@ -45,7 +45,12 @@ test("uses intentional workflow icons instead of placeholder glyphs", async () =
 
 test("keeps the connection icon optically centered without rotating the link", async () => {
   const css = await readFile(new URL("app/approved-functional.css", root), "utf8");
-  assert.match(css, /\.app-shell \.connect-step>\.step-number:after\{animation:none;transform:none;position:relative;top:-2px\}/);
+  assert.match(css, /\.app-shell \.connect-step>\.step-number:after\{position:absolute;left:50%;top:50%;animation:none;transform:translate\(-50%,-50%\)!important\}/);
+});
+
+test("centers every next-step button as one balanced control", async () => {
+  const css = await readFile(new URL("app/approved-functional.css", root), "utf8");
+  assert.match(css, /\.app-shell \.workflow-next\{justify-content:center;gap:10px;margin-left:auto;margin-right:auto\}/);
 });
 
 test("preview navigation renders the real later-step experiences", async () => {
