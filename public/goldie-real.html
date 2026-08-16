@@ -475,7 +475,10 @@ async function connectPrintify(token){
     connections.add('printify');connectionDetails.printify=result;card.querySelector('[data-printify-form]')?.classList.remove('open');
     const input=card.querySelector('#printify-token');if(input)input.value='';renderConnectionState();
     connectionMessage(connections.size===2?'Printify and Etsy are connected. You can continue.':'Printify is connected. Connect Etsy to continue.');
-  }catch(error){connectionMessage(error.message||'Printify could not verify that token.','error')}
+  }catch(error){
+    const networkFailure=error instanceof TypeError&&/fetch|network|load/i.test(error.message||'');
+    connectionMessage(networkFailure?(isLocalPreview?'Goldie’s local preview disconnected. Reopen the preview, then paste your token again. Your token was not saved or changed.':'Goldie could not reach the secure connection service. Try again in a moment. Your token was not saved or changed.'):(error.message||'Printify could not verify that token.'),'error')
+  }
   finally{row?.classList.remove('busy');if(button)button.disabled=false;if(submit){submit.disabled=false;submit.textContent='Connect securely'}}
 }
 async function connectEtsy(){
