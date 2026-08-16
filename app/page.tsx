@@ -582,7 +582,13 @@ export default function Home() {
           <div className="approved-brand" aria-label="Goldie Listing Factory"><div className="approved-wm">Gold<span className="approved-i">ı<span>✦</span></span>e</div><div className="approved-sub">Listing Factory</div></div>
         </div>
         <div className="top-actions">
-          <nav className="top-nav" aria-label="Goldie navigation"><span className="nav-group primary-nav"><a className="active" href="/" onClick={event=>guardNavigation(event,"/")}>Listing Factory</a><a href="/batches" onClick={event=>guardNavigation(event,"/batches")}>Batch History</a></span><span className="nav-group resource-nav"><a href="/keywords" target="_blank" rel="noopener noreferrer">Keyword Banks ↗</a><a href="/mockups" target="_blank" rel="noopener noreferrer">Mockup Sets ↗</a></span></nav>
+          <nav className="top-nav" aria-label="Goldie navigation">
+            <a className="active" href="/" onClick={event=>guardNavigation(event,"/")}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9l1-4h16l1 4M3 9h18M3 9v10a1 1 0 001 1h16a1 1 0 001-1V9M9 13h6"/></svg>Listing Factory</a>
+            <a href="/batches" onClick={event=>guardNavigation(event,"/batches")}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 106 5.3L3 8"/><path d="M12 7v5l3 2"/></svg>Batch History</a>
+            <a href="/keywords" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5a3 3 0 00-3 3 3 3 0 00-2 5.2A3 3 0 009 19a3 3 0 006 0 3 3 0 002-5.8A3 3 0 0015 8a3 3 0 00-3-3z"/><path d="M12 5v14"/></svg>Keyword Banks</a>
+            <a href="/mockups" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M21 16l-5-5-6 6"/></svg>Mockup Sets</a>
+            <a href="/usage" onClick={event=>guardNavigation(event,"/usage")}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l8 3.5v5c0 4.6-3.2 8.6-8 9.5-4.8-.9-8-4.9-8-9.5v-5L12 3z"/><path d="M9.2 12.2l1.9 1.9 3.9-3.9"/></svg>Usage</a>
+          </nav>
           <GoldieCommandBar data={commandCenterData} onUseProduct={recipe=>{if(useRecipe(recipe))goToStep("setup")}} onStartBlank={()=>{clearCurrentBatch(true);goToStep("setup")}}/>
           {owner && <a className="diagnostics-link" href="/mastermind-admin" aria-label="Open Goldie Diagnostics" title="Goldie Diagnostics">★</a>}
           <a className="usage-link" href="/usage" onClick={event=>guardNavigation(event,"/usage")}>Usage + plan</a>
@@ -622,7 +628,7 @@ export default function Home() {
           <article className={`step-card connect-step workflow-panel ${connected ? "done" : ""} ${workflowStep==="connect"?"active-panel":"hidden-panel"}`}>
             <div className="step-number">01</div>
             <div className="step-content">
-              <div className="step-heading"><div><p className="mini-label">PRINTIFY CONNECTION</p><h2>Connect <em>Printify</em></h2></div>{connected && <span className="done-mark">✓ Connected</span>}</div>
+              <div className="step-heading"><div><h2>Connect <em>Printify</em></h2></div></div>
               <p className="connect-timing">◷ Connecting usually takes about 2 minutes.</p>
               <p className="step-copy">Connect the Printify shop where Goldie will create your product drafts.</p>
               {checkingConnection ? (
@@ -633,9 +639,9 @@ export default function Home() {
                   {showTokenForm&&<div className="inline-field approved-token-form"><label>Paste the token you copied from Printify</label><input type="password" value={token} onChange={(event) => setToken(event.target.value)} placeholder="Paste token here" aria-label="Printify token" /><button onClick={connectPrintify} disabled={!token.trim() || connecting}>{connecting ? "Connecting…" : "Connect securely"}</button></div>}
                   {connectionError && <p className="field-error" role="alert">{connectionError}</p>}
                   <div className={`connection-row etsy-connection service-row ${etsyConnected?"connected":""}`}><span className="connection-icon"><img src="/etsy-logo.svg" alt="" /></span><div><b>{etsyConnected?`Etsy connected · ${etsyShop||"your shop"}`:"Etsy"}</b><span className="sr-only">Connect Etsy before publishing</span><small>{etsyConnected?"Connected and verified.":"Required before Goldie publishes and finishes your listings."}</small></div>{etsyConnected?<button className="secondary-action" onClick={async()=>{await fetch("/api/etsy",{method:"DELETE"});setEtsyConnected(false);setEtsyShop("")}}>Disconnect</button>:<button className="secondary-action" onClick={()=>void connectEtsy()} disabled={etsyConnecting}>{etsyConnecting?"Opening Etsy…":"Connect Etsy"}</button>}</div>
-                  <details className="token-help">
-                    <summary>How to get your Printify token <span>Step-by-step instructions</span></summary>
-                    <div className="token-shop-warning"><b>First, make sure you are in the right Printify account</b><span>Sign in to the account that contains the Etsy shop and template products you want Goldie to use. A token connects the whole Printify account. In Step 2, your template tells Goldie which exact shop to use.</span></div>
+                  <details className="token-help approved-token-help">
+                    <summary>How to get your Printify token <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></summary>
+                    <div className="approved-token-instructions"><b>Get your Printify token step by step</b><div className="token-shop-warning"><b>First, make sure you are in the right Printify account</b><span>Sign in to the account that contains the Etsy shop and template products you want Goldie to use. A token connects the whole Printify account. In Step 2, your template tells Goldie which exact shop to use.</span></div>
                     <ol>
                       <li>Open Printify and click your profile icon.</li>
                       <li>Choose <b>My Profile</b>, then open <b>Connections</b>.</li>
@@ -646,7 +652,7 @@ export default function Home() {
                       <li>Click <b>Generate token</b>, then copy it immediately. Printify only shows the full token once.</li>
                       <li>Come back to this page, paste the token below, and click <b>Connect Printify</b>. Goldie will verify the account before letting you continue.</li>
                     </ol>
-                    <a href="https://help.printify.com/hc/en-us/articles/4483626447249-How-can-I-generate-an-API-token" target="_blank" rel="noreferrer">Open Printify’s official token instructions ↗</a>
+                    <a href="https://help.printify.com/hc/en-us/articles/4483626447249-How-can-I-generate-an-API-token" target="_blank" rel="noreferrer">Open Printify’s official token instructions ↗</a></div>
                   </details>
                   <small className="secure-copy">♢ Encrypted and saved securely.</small>
                 </div>
