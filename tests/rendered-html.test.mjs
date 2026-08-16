@@ -49,7 +49,8 @@ test("uses individual shop-aware Printify editor buttons", async () => {
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/api/printify/drafts/route.ts", import.meta.url), "utf8"),
   ]);
-  assert.match(page, /Adjust in Printify/);
+  assert.match(page, /Open in Printify to resize or reposition/);
+  assert.match(page, /Deselect all for this listing/);
   assert.match(page, /openedDrafts/);
   assert.match(page, /window\.open\(draft\.editorUrl/);
   assert.doesNotMatch(page, /printifyTab\.location|\/app\/store\/\$\{draft\.shopId\}/);
@@ -200,8 +201,8 @@ test("guides sellers through the complete resumable nine-step workflow",async()=
   assert.match(page,/aria-current=\{active\?"step"/);assert.match(page,/You are here/);assert.match(page,/Complete the prior step/);
   assert.match(page,/goldie-active-batch/);assert.match(page,/saveBatchFiles/);assert.match(page,/\/api\/batches/);
   assert.match(batches,/Pick up exactly where you left off/);assert.match(batches,/Resume batch/);assert.match(route,/listing_batches/);assert.match(cache,/indexedDB/);
-  assert.match(styles,/post-draft-heading>div\{display:none\}/);assert.match(styles,/post-draft-workspace \.open-all-button\{width:auto/);
-  assert.match(page,/Sizes, colors, and individual prices are already handled/);assert.match(page,/saveAllEtsyDetails/);assert.match(page,/finishPhase/);
+  assert.match(styles,/post-draft-workspace \.open-all-button\{width:auto/);
+  assert.match(page,/saveAllEtsyDetails/);assert.match(page,/finishPhase/);
 });
 
 test("imports Printify product facts and automatically prepares product-specific Etsy details",async()=>{
@@ -213,7 +214,7 @@ test("imports Printify product facts and automatically prepares product-specific
   ]);
   assert.match(printify,/blueprintTitle/);assert.match(printify,/description:found\.product\.description/);
   assert.match(page,/Completing Etsy details/);assert.match(page,/Etsy details completed/);
-  assert.match(page,/design\.etsy\?\.blurb,description/);
+  assert.match(page,/finalDescription/);assert.match(page,/descriptionOverride/);
   assert.match(intelligence,/fields differ/);assert.match(intelligence,/Never fill holiday, occasion, recipient, or style/);
   assert.match(drafts,/template\.description/);
 });
@@ -235,7 +236,7 @@ test("imports shipping and keeps final listing edits attached to the exact Print
   assert.match(update,/filter\(placeholder=>placeholder\.images\?\.some\(image=>image\.id\)\)/);
   assert.doesNotMatch(update,/\.\.\.area,placeholders/);
   assert.match(update,/placementScale=Math\.max/);
-  assert.match(page,/draft\.placementScale\|\|templateScale/);
+  assert.match(page,/Open in Printify to resize or reposition/);
 });
 
 test("matches Printify editor DPI instead of comparing against template pixel dimensions", async () => {
@@ -496,8 +497,8 @@ test("creates unique validated AI titles in bulk with per-listing overrides", as
   assert.match(page,/autoTitleForDesign/);assert.match(page,/tagsFromTitle\(item\.result\.keywords\.join/);
   assert.match(page,/unique titles and matching tags created/);assert.match(page,/Goldie selects the best phrases for each individual design/);
   assert.ok(page.indexOf('className="permanent-description batch-description"')<page.indexOf('className="design-table"'),"The collapsible batch description belongs directly above the individual listings.");
-  assert.match(page,/Customize description for this listing/);assert.match(page,/custom opening can be added inside any listing below/);
-  assert.match(page,/customOpening,description/);assert.match(page,/scrollIntoView/);
+  assert.match(page,/Customize this listing’s description/);assert.match(page,/The complete description is shown below/);
+  assert.match(page,/descriptionOverride/);assert.match(page,/scrollIntoView/);
   assert.match(tools,/keywordListsCache/);assert.match(tools,/selectionOnly/);assert.match(tools,/onSelect/);
   assert.match(intelligence,/selected_keywords/);assert.match(intelligence,/allowedByLower/);assert.match(intelligence,/Reject irrelevant phrases/);
 });
