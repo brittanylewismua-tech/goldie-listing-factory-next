@@ -165,3 +165,14 @@ test("centers autosave feedback beneath each workflow panel", async () => {
   assert.match(css, /\.workflow-footer-actions\{position:relative;[^}]*justify-content:flex-start/);
   assert.match(css, /\.autosave-note\{position:absolute;left:50%;[^}]*transform:translateX\(-50%\)/);
 });
+
+test("keeps Step 8 controls ordered, separated, and inside the warm Goldie palette", async () => {
+  const css = await readFile(new URL("app/approved-functional.css", root), "utf8");
+  assert.match(css, /Step 8 final lock/);
+  assert.match(css, /\.app-shell \.draft-card>\.draft-mockups\{order:3\}/);
+  assert.match(css, /\.app-shell \.draft-card>\.individual-size-guide\{order:4\}/);
+  assert.match(css, /\.app-shell \.integrated-mockups \.generate-inline,[\s\S]*linear-gradient\(145deg,#6a3456,#4b283e\)!important/);
+  assert.match(css, /\.app-shell \.inline-mockup-grid label\.selected\{[\s\S]*border-color:#b777b0!important/);
+  assert.match(css, /\.app-shell \.post-draft-workspace>\.mockup-next\{[\s\S]*margin:34px auto 16px!important/);
+  assert.match(css, /\.app-shell \.publish-live-warning\{[\s\S]*rgba\(239,211,237,\.66\)/);
+});

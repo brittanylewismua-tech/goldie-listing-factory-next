@@ -293,6 +293,70 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
   .mobile-saved{margin-top:22px;padding-top:20px;border-top:1px solid rgba(74,42,62,.14);color:rgba(74,42,62,.58);font-size:12px}.mobile-footer{text-align:center;color:rgba(74,42,62,.58);font-size:10px;letter-spacing:.08em}
 }
 
+/* Step 8 final lock: one warm-plum action system, clear vertical order, and
+   enough separation for every optional image control. */
+.app-shell .post-draft-workspace{padding-bottom:42px}
+.app-shell .batch-size-guide button,
+.app-shell .integrated-mockups .generate-inline,
+.app-shell .integrated-mockups .batch-mockup-button,
+.app-shell .post-draft-workspace .workflow-next{
+  border:0!important;
+  border-radius:14px!important;
+  background:linear-gradient(145deg,#6a3456,#4b283e)!important;
+  color:#fff!important;
+  box-shadow:0 12px 24px -18px rgba(74,42,62,.8)!important;
+}
+.app-shell .batch-size-guide{
+  border-color:rgba(139,89,137,.22)!important;
+  background:linear-gradient(145deg,rgba(252,244,254,.72),rgba(246,229,248,.56))!important;
+}
+.app-shell .draft-card{display:flex;flex-direction:column}
+.app-shell .draft-card>.draft-card-top{order:1}
+.app-shell .draft-card>.printify-image-picker{order:2}
+.app-shell .draft-card>.draft-mockups{order:3}
+.app-shell .draft-card>.individual-size-guide{order:4}
+.app-shell .draft-card>.error-help-link{order:5}
+.app-shell .individual-size-guide{
+  border-color:rgba(139,89,137,.2)!important;
+  background:rgba(249,236,247,.68)!important;
+}
+.app-shell .individual-size-guide button{
+  border-color:rgba(137,88,132,.28)!important;
+  background:rgba(255,255,255,.58)!important;
+  color:#654362!important;
+}
+.app-shell .inline-mockup-grid label{
+  border:2px solid rgba(139,89,137,.14)!important;
+  background:rgba(246,229,248,.56)!important;
+}
+.app-shell .inline-mockup-grid label.selected{
+  border-color:#b777b0!important;
+  background:rgba(239,211,237,.72)!important;
+  box-shadow:0 0 0 3px rgba(183,119,176,.13)!important;
+}
+.app-shell .inline-mockup-grid input{accent-color:#8f5689}
+.app-shell .integrated-mockups .batch-mockup-button,
+.app-shell .integrated-mockups .generate-inline{
+  position:static!important;
+  width:min(100%,340px);
+  min-height:46px;
+  margin:18px 0 0!important;
+  padding:12px 18px;
+  font-weight:800;
+}
+.app-shell .integrated-mockups .generate-inline{margin-top:12px!important}
+.app-shell .integrated-mockups .automatic-reference{clear:both;margin-top:14px}
+.app-shell .post-draft-workspace>.mockup-next{
+  display:flex;
+  width:min(100%,260px);
+  margin:34px auto 16px!important;
+}
+.app-shell .publish-live-warning{
+  border-color:rgba(139,89,137,.32)!important;
+  background:linear-gradient(145deg,rgba(252,244,254,.8),rgba(239,211,237,.66))!important;
+  color:#5b304f!important;
+}
+
 @property --approved-ring-angle{syntax:"<angle>";inherits:false;initial-value:200deg}
 /* Approved visual lock: these values come directly from public/goldie-real.html. */
 @media(min-width:821px){
