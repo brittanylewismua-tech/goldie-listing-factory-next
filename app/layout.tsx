@@ -4,6 +4,7 @@ import "./globals.css";
 import "./factory-navigation.css";
 import "./theme.css";
 import "./lilac-theme.css";
+import "./approved-functional.css";
 import ReliableNavigation from "./reliable-navigation";
 
 export async function generateMetadata(): Promise<Metadata> {
