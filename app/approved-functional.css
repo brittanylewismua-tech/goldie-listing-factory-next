@@ -66,6 +66,26 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .approved-powered,.approved-sidebar-footer>small{color:rgba(74,42,62,.58)}
 .mobile-gate{display:none}
 
+/* Preserve the approved sidebar and connection-card styling over legacy theme rules. */
+.app-shell .top-nav{padding:0;border:0;border-radius:0;background:transparent}
+.app-shell .top-nav .resource-nav{margin-left:0;padding-left:0;border-left:0}
+.app-shell .top-nav a.active{border:0;border-radius:14px}
+.app-shell .step-card.done{border-color:rgba(255,255,255,.78)!important}
+.app-shell .connect-step .connection-row button.secondary-action{
+  min-height:42px;
+  height:42px;
+  padding:10px 15px;
+  border:1px solid rgba(74,42,62,.18);
+  border-radius:99px!important;
+  background:rgba(255,255,255,.62);
+  color:var(--ink);
+  font-size:12px;
+  font-weight:750;
+  line-height:1;
+  box-shadow:none;
+  text-decoration:none;
+}
+
 @media(min-width:821px){
   .brand-lockup{margin-bottom:42px}
   .connect-step>.step-number{position:relative;width:64px;height:64px;margin-top:40px;background:transparent;isolation:isolate}
