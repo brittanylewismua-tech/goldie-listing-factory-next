@@ -213,7 +213,10 @@ export default function Home() {
   const designsPreparing=Math.max(0,files.length-designsReady);
   const designsFinished=files.length>0&&designsPreparing===0;
   const progressIndex = workflowStep==="finish" ? finishPhase==="details"?5:finishPhase==="etsy"?6:finishPhase==="mockups"?7:8 : workflowStep==="connect"?0:workflowStep==="setup"?1:workflowStep==="designs"?2:(preflightOpen||running)?4:3;
-  const returningHome=workflowStep==="connect"&&!template&&!files.length&&!drafts.length&&Boolean(commandCenterData&&(commandCenterData.batches.length||commandCenterData.recipes.length));
+  // The guided factory always opens on the real connection step. The returning
+  // dashboard remains available as a component, but must never replace step 1
+  // or appear when a seller uses Back from the product step.
+  const returningHome=false;
   const pricedVariants=useMemo(()=>templateDetails?.variants||[],[templateDetails]);
   const createdDraftCount=drafts.filter(draft=>draft.status==="Created").length,titleCount=files.filter(file=>file.title.trim()).length,etsyReadyCount=files.filter(file=>file.etsy).length;
   const lowDpiCount=files.filter(file=>{const scale=isRigidPaperProduct(templateDetails)?Math.min(templateDetails?.placementScale||1,1):templateDetails?.placementScale;return Boolean(file.width&&templateDetails?.maxPrintWidth&&scale&&printifyDpi(file.width,templateDetails.maxPrintWidth,scale).dpi<300)}).length;
@@ -249,8 +252,8 @@ export default function Home() {
 
   useEffect(()=>{const read=()=>{const url=new URL(window.location.href),value=url.searchParams.get("step") as WorkflowStep|null,phase=url.searchParams.get("phase") as FinishPhase|null;if(value&&WORKFLOW_STEPS.some(step=>step.id===value))setWorkflowStep(value);if(phase&&["details","etsy","mockups","final"].includes(phase))setFinishPhase(phase)};read();window.addEventListener("popstate",read);return()=>window.removeEventListener("popstate",read)},[]);
   useEffect(()=>{if(workflowStep!=="finish")return;const url=new URL(window.location.href);url.searchParams.set("phase",finishPhase);window.history.replaceState({},"",url)},[workflowStep,finishPhase]);
-  useEffect(()=>{if(checkingConnection)return;if(workflowStep==="connect"&&connected)goToStep("setup",true);// eslint-disable-next-line react-hooks/exhaustive-deps
-  },[checkingConnection]);
+  // Do not auto-skip the connection screen. Sellers need to see the status of
+  // both accounts and use the explicit Continue action.
   useEffect(()=>{if(localPreview||checkingConnection||restoringBatch||canOpenStep(workflowStep))return;const fallback=!connected?"connect":!templateLoaded?"setup":!files.length?"designs":!complete?"review":"finish";goToStep(fallback,true,true);// eslint-disable-next-line react-hooks/exhaustive-deps
   },[localPreview,checkingConnection,restoringBatch,connected,templateLoaded,files.length,complete,workflowStep]);
 
@@ -584,7 +587,7 @@ export default function Home() {
 
       {running&&uploadNoticeOpen&&<div className="upload-notice-backdrop" role="presentation"><section className="upload-notice" role="alertdialog" aria-modal="true" aria-labelledby="upload-notice-title" aria-describedby="upload-notice-copy"><span className="upload-notice-icon">!</span><p className="mini-label">UPLOADS IN PROGRESS</p><h2 id="upload-notice-title">Wait. Your files are still uploading.</h2><p id="upload-notice-copy">Are you sure you want to leave? Leaving now may stop the unfinished uploads.</p><div className="upload-notice-progress"><span className="upload-guard-pulse"/><b>{processed} of {runTotal} finished</b></div><div className="upload-notice-actions"><button autoFocus onClick={()=>{setUploadNoticeOpen(false);setLeaveTarget("")}}>Stay on this page</button><button className="danger" onClick={()=>{if(leaveTarget)window.location.href=leaveTarget}}>Leave and stop uploads</button></div></section></div>}
 
-      {workflowStep==="connect"&&!template&&!files.length&&!drafts.length&&<ReturningCommandCenter printifyConnected={connected} etsyConnected={etsyConnected} onData={setCommandCenterData} onUseProduct={recipe=>{if(useRecipe(recipe))goToStep("setup")}} onStartBlank={()=>{clearCurrentBatch(true);goToStep("setup")}}/>}
+      {false&&<ReturningCommandCenter printifyConnected={connected} etsyConnected={etsyConnected} onData={setCommandCenterData} onUseProduct={recipe=>{if(useRecipe(recipe))goToStep("setup")}} onStartBlank={()=>{clearCurrentBatch(true);goToStep("setup")}}/>}
 
       {!returningHome&&<section className="hero workflow-hero">
         <div>
