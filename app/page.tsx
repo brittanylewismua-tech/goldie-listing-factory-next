@@ -635,10 +635,10 @@ export default function Home() {
                 <div className="connection-row"><span className="connection-icon">P</span><div><b>Secure connection check…</b><small>This takes just a moment</small></div></div>
               ) : !connected ? (
                 <div className="connection-stack connection-setup">
+                  <section className="printify-service-group">
                   <div className="connection-row service-row"><span className="connection-icon"><img src="/printify-logo.svg" alt="" /></span><div><b>Printify</b><small>Create and update your product drafts.</small></div><button onClick={()=>setShowTokenForm(value=>!value)}>{showTokenForm?"Close":"Connect Printify"}</button></div>
                   {showTokenForm&&<div className="inline-field approved-token-form"><label>Paste the token you copied from Printify</label><input type="password" value={token} onChange={(event) => setToken(event.target.value)} placeholder="Paste token here" aria-label="Printify token" /><button onClick={connectPrintify} disabled={!token.trim() || connecting}>{connecting ? "Connecting…" : "Connect securely"}</button></div>}
                   {connectionError && <p className="field-error" role="alert">{connectionError}</p>}
-                  <div className={`connection-row etsy-connection service-row ${etsyConnected?"connected":""}`}><span className="connection-icon"><img src="/etsy-logo.svg" alt="" /></span><div><b>{etsyConnected?`Etsy connected · ${etsyShop||"your shop"}`:"Etsy"}</b><span className="sr-only">Connect Etsy before publishing</span><small>{etsyConnected?"Connected and verified.":"Required before Goldie publishes and finishes your listings."}</small></div>{etsyConnected?<button className="secondary-action" onClick={async()=>{await fetch("/api/etsy",{method:"DELETE"});setEtsyConnected(false);setEtsyShop("")}}>Disconnect</button>:<button className="secondary-action" onClick={()=>void connectEtsy()} disabled={etsyConnecting}>{etsyConnecting?"Opening Etsy…":"Connect Etsy"}</button>}</div>
                   <details className="token-help approved-token-help">
                     <summary>How to get your Printify token <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></summary>
                     <div className="approved-token-instructions"><b>Get your Printify token step by step</b><div className="token-shop-warning"><b>First, make sure you are in the right Printify account</b><span>Sign in to the account that contains the Etsy shop and template products you want Goldie to use. A token connects the whole Printify account. In Step 2, your template tells Goldie which exact shop to use.</span></div>
@@ -654,6 +654,8 @@ export default function Home() {
                     </ol>
                     <a href="https://help.printify.com/hc/en-us/articles/4483626447249-How-can-I-generate-an-API-token" target="_blank" rel="noreferrer">Open Printify’s official token instructions ↗</a></div>
                   </details>
+                  </section>
+                  <div className={`connection-row etsy-connection service-row ${etsyConnected?"connected":""}`}><span className="connection-icon"><img src="/etsy-logo.svg" alt="" /></span><div><b>{etsyConnected?`Etsy connected · ${etsyShop||"your shop"}`:"Etsy"}</b><span className="sr-only">Connect Etsy before publishing</span><small>{etsyConnected?"Connected and verified.":"Required before Goldie publishes and finishes your listings."}</small></div>{etsyConnected?<button className="secondary-action" onClick={async()=>{await fetch("/api/etsy",{method:"DELETE"});setEtsyConnected(false);setEtsyShop("")}}>Disconnect</button>:<button className="secondary-action" onClick={()=>void connectEtsy()} disabled={etsyConnecting}>{etsyConnecting?"Opening Etsy…":"Connect Etsy"}</button>}</div>
                   <small className="secure-copy">♢ Encrypted and saved securely.</small>
                 </div>
               ) : (
