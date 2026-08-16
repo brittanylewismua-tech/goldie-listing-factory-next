@@ -461,7 +461,7 @@ async function checkConnections(){
     renderConnectionState();
     if(connections.size===2)connectionMessage('Printify and Etsy are connected. You can continue.');
   }catch(error){
-    renderConnectionState();connectionMessage('Goldie could not check your connections. Make sure you are using the live Goldie preview, then try again.','error');
+    renderConnectionState();connectionMessage(isLocalPreview?'The local preview server is not available right now. Reopen the preview, then try again. Your saved connections were not removed.':'Goldie could not reach the secure connection service. Try again in a moment. Your saved connections were not removed.','error');
   }
 }
 async function connectPrintify(token){
