@@ -22,6 +22,11 @@ test("keeps Printify token help inside the Printify connection section", async (
   assert.ok(etsy > groupEnd, "Etsy remains a separate row after Printify");
 });
 
+test("keeps the Printify and Etsy panels visually separated", async () => {
+  const css = await readFile(new URL("app/approved-functional.css", root), "utf8");
+  assert.match(css, /\.connect-step \.connection-stack\{display:grid;gap:18px;/);
+});
+
 test("documents the approved baseline as a frozen change-control contract", async () => {
   const baseline = await readFile(new URL("docs/APPROVED_VISUAL_BASELINE.md", root), "utf8");
   assert.match(baseline, /Usage card is bottom-anchored/);
