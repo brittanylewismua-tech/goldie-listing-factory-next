@@ -57,9 +57,6 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 @media(min-width:821px){
   .connect-step>.step-number:after{content:""!important;background:var(--ink);mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71'/%3E%3Cpath d='M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71'/%3E%3C/svg%3E") center/contain no-repeat}
   .designs-step>.step-number:after{content:"↑"!important}
-  .finish-mode>.step-number:after{content:"T"!important;font-family:'DM Serif Display',Georgia,serif!important;font-size:24px!important}
-  .etsy-details-step>.step-number:after{content:"✓"!important;font-family:'Manrope',sans-serif!important;font-size:22px!important}
-  .final-review>.step-number:after{content:"✓"!important;font-family:'Manrope',sans-serif!important;font-size:22px!important}
   .product-step .step-number:after{content:"▣"!important;mask:none!important;background:transparent!important;color:var(--ink)!important;font-size:25px!important}
   .workflow-back{border-color:rgba(74,42,62,.24)!important;background:rgba(255,249,253,.72)!important;color:var(--ink)!important;box-shadow:0 10px 24px rgba(74,42,62,.09)!important;font-weight:700!important;opacity:1!important}
 }
@@ -68,53 +65,6 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .approved-i>span{top:-.06em}.approved-sub{margin-top:1px}.approved-footer-i i{top:-.04em}
 .approved-powered,.approved-sidebar-footer>small{color:rgba(74,42,62,.58)}
 .mobile-gate{display:none}
-
-/* Canonical controls: old factory selectors must not override the approved system. */
-.app-shell .connect-step .service-row>button,
-.app-shell .connect-step .connection-row button.secondary-action{
-  min-height:42px!important;
-  height:42px!important;
-  padding:10px 15px!important;
-  border:1px solid rgba(74,42,62,.18)!important;
-  border-radius:999px!important;
-  background:rgba(255,255,255,.72)!important;
-  color:var(--ink)!important;
-  font-size:12px!important;
-  font-weight:650!important;
-  line-height:1.15!important;
-  box-shadow:none!important;
-  text-decoration:none!important;
-}
-.app-shell .inline-field>button,
-.app-shell .save-recipe,
-.app-shell .workflow-next,
-.app-shell .launch-button,
-.app-shell .approve-pricing,
-.app-shell .preflight-confirm,
-.app-shell .generate-inline,
-.app-shell .mockup-next{
-  border:0!important;
-  border-radius:14px!important;
-  background:linear-gradient(145deg,#5b304f,#45263c)!important;
-  color:#fff!important;
-  font-family:'Manrope','Hanken Grotesk',Inter,sans-serif!important;
-  font-weight:700!important;
-  box-shadow:0 14px 28px -20px rgba(74,42,62,.75)!important;
-}
-.app-shell .inline-field>button:hover,
-.app-shell .save-recipe:hover,
-.app-shell .workflow-next:hover,
-.app-shell .launch-button:hover,
-.app-shell .approve-pricing:hover,
-.app-shell .preflight-confirm:hover,
-.app-shell .generate-inline:hover,
-.app-shell .mockup-next:hover{background:linear-gradient(145deg,#6a3a5d,#4b283e)!important}
-.app-shell :is(.inline-field>button,.save-recipe,.workflow-next,.launch-button,.approve-pricing,.preflight-confirm,.generate-inline,.mockup-next):disabled{
-  background:rgba(255,255,255,.46)!important;
-  color:rgba(74,42,62,.38)!important;
-  box-shadow:none!important;
-  cursor:not-allowed!important;
-}
 
 @media(min-width:821px){
   .brand-lockup{margin-bottom:42px}
