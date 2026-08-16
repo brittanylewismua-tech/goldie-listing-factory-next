@@ -107,3 +107,11 @@ test("places item pricing before shipping in the pricing review", async () => {
   assert.doesNotMatch(page, /<span>1\. Shipping<\/span>/);
   assert.doesNotMatch(page, /<h4>2\. Item prices<\/h4>/);
 });
+
+test("uses the Goldie palette while Printify drafts are being created", async () => {
+  const css = await readFile(new URL("app/approved-functional.css", root), "utf8");
+  assert.match(css, /\.app-shell \.batch-progress\{border-color:rgba\(139,89,137,\.28\)!important/);
+  assert.match(css, /\.app-shell \.progress-ring\{background:conic-gradient\(#b777b0 0 25%,rgba\(224,195,241,\.62\) 25% 100%\)!important/);
+  assert.match(css, /\.app-shell \.progress-track span\{background:linear-gradient\(90deg,#a765a0,#d992c5,#b6a8ff\)!important/);
+  assert.match(css, /\.app-shell \.upload-notice\{border-color:rgba\(183,119,176,\.58\)!important/);
+});

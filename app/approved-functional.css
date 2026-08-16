@@ -110,6 +110,17 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .app-shell .variant-pricing.approved{border-color:rgba(139,89,137,.28)!important;background:rgba(252,244,254,.62)!important}
 .app-shell .approved .approve-pricing{background:linear-gradient(145deg,#5b304f,#45263c)!important}
 .app-shell .final-checklist span{border-color:rgba(139,89,137,.22)!important;background:linear-gradient(145deg,rgba(252,244,254,.68),rgba(246,229,248,.54))!important;color:#63435e!important}
+.app-shell .batch-progress{border-color:rgba(139,89,137,.28)!important;background:linear-gradient(145deg,rgba(252,244,254,.74),rgba(246,229,248,.58))!important}
+.app-shell .progress-ring{background:conic-gradient(#b777b0 0 25%,rgba(224,195,241,.62) 25% 100%)!important}
+.app-shell .progress-ring:before{background:#faf1f9!important}
+.app-shell .progress-ring span{color:#5b304f!important}
+.app-shell .progress-copy span{color:rgba(74,42,62,.68)!important}
+.app-shell .progress-track{background:rgba(176,122,171,.16)!important}
+.app-shell .progress-track span{background:linear-gradient(90deg,#a765a0,#d992c5,#b6a8ff)!important}
+.app-shell .upload-notice{border-color:rgba(183,119,176,.58)!important;background:linear-gradient(145deg,rgba(255,250,253,.96),rgba(246,229,248,.94))!important;color:#4b283e!important}
+.app-shell .upload-notice-icon{background:linear-gradient(145deg,#d591c3,#a86ba2)!important;color:#fff!important}
+.app-shell .upload-notice-progress{color:#633f5c!important}
+.app-shell .upload-notice button:not(.danger){background:linear-gradient(145deg,#5b304f,#45263c)!important;color:#fff!important}
 .app-shell .recipe-icon{background:linear-gradient(145deg,#d591c3,#a86ba2)!important;color:#fff!important}
 .app-shell .field-warning{color:#704d75!important}
 .app-shell .ai-title-button{background:linear-gradient(145deg,#6a3c61,#4b2c47)!important;color:#fff!important}
