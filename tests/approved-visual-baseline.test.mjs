@@ -147,6 +147,19 @@ test("uses the Goldie palette while Printify drafts are being created", async ()
   assert.match(css, /\.app-shell \.upload-notice\{border-color:rgba\(183,119,176,\.58\)!important/);
 });
 
+test("warns before continuing with designs below Printify's recommended pixels", async () => {
+  const [page, css] = await Promise.all([
+    readFile(new URL("app/page.tsx", root), "utf8"),
+    readFile(new URL("app/approved-functional.css", root), "utf8"),
+  ]);
+  assert.match(page, /const belowRecommendedPixels=useMemo/);
+  assert.match(page, /setPixelWarningOpen\(true\)/);
+  assert.match(page, /below Printify’s recommended pixel size/);
+  assert.match(page, /Proceed anyway/);
+  assert.match(css, /\.app-shell \.pixel-warning-inline\{/);
+  assert.match(css, /\.app-shell \.pixel-warning-modal \.pixel-proceed\{/);
+});
+
 test("gives Step 6 a cohesive titles, tags, and descriptions layout", async () => {
   const [page, css] = await Promise.all([
     readFile(new URL("app/page.tsx", root), "utf8"),
