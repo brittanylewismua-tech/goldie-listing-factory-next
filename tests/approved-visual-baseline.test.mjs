@@ -55,6 +55,13 @@ test("centers every next-step button as one balanced control", async () => {
   assert.match(css, /\.app-shell \.workflow-next\{justify-content:center;gap:10px;margin-left:auto;margin-right:auto\}/);
 });
 
+test("places the connection subtitle before the centered timing note", async () => {
+  const page = await readFile(new URL("app/page.tsx", root), "utf8");
+  const css = await readFile(new URL("app/approved-functional.css", root), "utf8");
+  assert.match(page, /Connect the Printify shop where Goldie will create your product drafts\.<\/p>\s*<p className="connect-timing">/);
+  assert.match(css, /\.connect-timing\{margin:0 auto 22px!important;[^}]*text-align:center\}/);
+});
+
 test("preview navigation renders the real later-step experiences", async () => {
   const page = await readFile(new URL("app/page.tsx", root), "utf8");
   assert.match(page, /if\(index>=3&&!templateDetails\)await loadPreviewDemo\(\)/);

@@ -629,8 +629,8 @@ export default function Home() {
             <div className="step-number">01</div>
             <div className="step-content">
               <div className="step-heading"><div><h2>Connect <em>Printify</em></h2></div></div>
-              <p className="connect-timing">◷ Connecting usually takes about 2 minutes.</p>
               <p className="step-copy">Connect the Printify shop where Goldie will create your product drafts.</p>
+              <p className="connect-timing">◷ Connecting usually takes about 2 minutes.</p>
               {checkingConnection ? (
                 <div className="connection-row"><span className="connection-icon">P</span><div><b>Secure connection check…</b><small>This takes just a moment</small></div></div>
               ) : !connected ? (
