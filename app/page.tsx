@@ -571,6 +571,11 @@ export default function Home() {
 
   return (
     <main className="app-shell">
+      <section className="mobile-gate" aria-label="Desktop required">
+        <div className="mobile-brand"><div className="approved-wm">Gold<span className="approved-i">ı<span>✦</span></span>e</div><div className="approved-sub">Listing Factory</div></div>
+        <div className="mobile-card"><div className="mobile-command">⌘</div><h1>Oops, this one needs a bigger screen.</h1><p>Goldie Listing Factory is built for desktop. Hop onto your computer and sign in. Your saved work will be waiting for you.</p><div className="mobile-saved">✓ Your progress is saved automatically.</div></div>
+        <div className="mobile-footer">Powered by Goldie AI · © 2026 Be A Wolf Biz</div>
+      </section>
       <header className="topbar">
         <div className="brand-lockup">
           <div className="approved-brand" aria-label="Goldie Listing Factory"><div className="approved-wm">Gold<span className="approved-i">ı<span>✦</span></span>e</div><div className="approved-sub">Listing Factory</div></div>
@@ -611,7 +616,7 @@ export default function Home() {
         {progressIndex>0&&<GoldieInsight>{currentInsight()}</GoldieInsight>}
         {progressIndex===3&&files.length>0&&<ActionReceipt items={[{value:`${files.length} designs checked`,label:"Original artwork resolution preserved"},{value:`${pricedVariants.length} variants`,label:pricingApproved?"Pricing approved":"Ready for pricing review"}]}/>}
         {progressIndex===5&&titleCount>0&&<ActionReceipt items={[{value:`${titleCount} titles ready`,label:"Validated keyword phrases only"},{value:`${files.reduce((sum,file)=>sum+file.tags.length,0)} matching tags`,label:"Zero invented keywords"}]}/>}
-        {progressIndex>0&&<button className="workflow-back" type="button" onClick={goBackOneStep}><span aria-hidden="true">←</span> Back</button>}
+        <div className="workflow-footer-actions">{progressIndex>0&&<button className="workflow-back" type="button" onClick={goBackOneStep}><span aria-hidden="true">←</span> Back</button>}<span className="autosave-note">Saved automatically</span></div>
         <div className={`steps-column ${workflowStep}-column`}>
           <article className={`step-card connect-step workflow-panel ${connected ? "done" : ""} ${workflowStep==="connect"?"active-panel":"hidden-panel"}`}>
             <div className="step-number">01</div>
@@ -645,7 +650,7 @@ export default function Home() {
                   <small className="secure-copy">♢ Encrypted and saved securely.</small>
                 </div>
               ) : (
-                <><div className="connection-row"><span className="connection-icon">P</span><div><b>Printify connected</b><small>Your connection will be remembered</small></div><button onClick={async () => { await fetch("/api/printify", { method: "DELETE" }); setConnected(false); setToken(""); setTemplateDetails(null); setConnectionError(""); }}>Disconnect</button></div>{connectionError && <p className="field-warning" role="status">{connectionError}</p>}</>
+                <><div className="connection-row"><span className="connection-icon"><img src="/printify-logo.svg" alt="" /></span><div><b>Printify connected</b><small>Your connection will be remembered</small></div><button onClick={async () => { await fetch("/api/printify", { method: "DELETE" }); setConnected(false); setToken(""); setTemplateDetails(null); setConnectionError(""); }}>Disconnect</button></div>{connectionError && <p className="field-warning" role="status">{connectionError}</p>}</>
               )}
               {connected&&<div className={`connection-row etsy-connection service-row ${etsyConnected?"connected":""}`}><span className="connection-icon"><img src="/etsy-logo.svg" alt="" /></span><div><b>{etsyConnected?`Etsy connected · ${etsyShop||"your shop"}`:"Etsy"}</b><small>{etsyConnected?"Connected and verified.":"Required before Goldie publishes and finishes your listings."}</small></div>{etsyConnected?<button className="secondary-action" onClick={async()=>{await fetch("/api/etsy",{method:"DELETE"});setEtsyConnected(false);setEtsyShop("")}}>Disconnect</button>:<button className="secondary-action" onClick={()=>void connectEtsy()} disabled={etsyConnecting}>{etsyConnecting?"Opening Etsy…":"Connect Etsy"}</button>}</div>}
               {etsyError&&<p className="field-error" role="alert">{etsyError}</p>}
