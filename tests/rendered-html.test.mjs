@@ -149,7 +149,7 @@ test("requires explicit review of every Printify variant and starts new products
     readFile(new URL("../app/factory-tools.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/api/printify/route.ts", import.meta.url), "utf8"),
   ]);
-  assert.match(page, /Shipping and prices/);
+  assert.match(page, /Review item prices and shipping/);
   assert.match(page, /variant\.templatePrice/);
   assert.match(page, /Your estimated profit/);
   assert.match(page, /Approve pricing \+ shipping/);
@@ -786,7 +786,8 @@ test("keeps pricing simple while using a real Etsy shipping profile and exact te
   assert.match(page,/international-shipping-editor/);
   assert.match(page,/\{selectedProfile\.originCountry\} buyer pays/);
   assert.match(page,/Save new shipping profile/);
-  assert.match(page,/2\. Item prices/);
+  assert.match(page,/1\. Item prices/);
+  assert.match(page,/2\. Shipping/);
   assert.match(page,/Update prices/);
   assert.match(page,/Create a custom shipping profile \(optional\)/);
   assert.match(page,/Your current prices already meet this profit goal/);

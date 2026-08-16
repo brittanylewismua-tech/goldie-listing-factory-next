@@ -98,3 +98,12 @@ test("locks workflow states to the Goldie lilac, pink, and plum palette", async 
   assert.match(css, /\.app-shell \.variant-pricing\.approved\{border-color:rgba\(139,89,137,\.28\)!important/);
   assert.match(css, /\.app-shell \.final-checklist span\{border-color:rgba\(139,89,137,\.22\)!important/);
 });
+
+test("places item pricing before shipping in the pricing review", async () => {
+  const page = await readFile(new URL("app/page.tsx", root), "utf8");
+  const itemPrices = page.indexOf('<h4>1. Item prices</h4>');
+  const shipping = page.indexOf('<span>2. Shipping</span>');
+  assert.ok(itemPrices >= 0 && shipping > itemPrices, "item prices appear before shipping");
+  assert.doesNotMatch(page, /<span>1\. Shipping<\/span>/);
+  assert.doesNotMatch(page, /<h4>2\. Item prices<\/h4>/);
+});
