@@ -24,7 +24,9 @@ test("keeps Printify token help inside the Printify connection section", async (
 
 test("keeps the Printify and Etsy panels visually separated", async () => {
   const css = await readFile(new URL("app/approved-functional.css", root), "utf8");
+  const page = await readFile(new URL("app/page.tsx", root), "utf8");
   assert.match(css, /\.connect-step \.connection-stack\{display:grid;gap:18px;/);
+  assert.match(page, /connection-stack connection-setup connected-connection-stack/);
 });
 
 test("documents the approved baseline as a frozen change-control contract", async () => {
