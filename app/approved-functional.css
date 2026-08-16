@@ -31,6 +31,104 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
   .launch-panel,.post-draft-workspace{border-radius:28px}.recommended-listing-photos{width:min(930px,100%)}
 }
 
+/* Final palette lock. Legacy factory states may communicate information,
+   progress, and success, but they may not reintroduce the old gold/green UI. */
+.app-shell .file-reminder,
+.app-shell .manual-image-note,
+.app-shell .shipping-api-note,
+.app-shell .shipping-builder-intro,
+.app-shell .mockup-placement-lock,
+.app-shell .modalSaving,
+.app-shell .batch-description{
+  border-color:rgba(142,88,134,.24)!important;
+  background:linear-gradient(145deg,rgba(251,241,249,.72),rgba(239,223,247,.58))!important;
+  color:rgba(74,42,62,.72)!important;
+}
+.app-shell .file-reminder{border-left:3px solid #b56fa6!important}
+.app-shell .file-reminder b,
+.app-shell .shipping-api-note b,
+.app-shell .shipping-builder-intro b{color:var(--ink)!important}
+.app-shell .folder-drop{
+  border-color:rgba(132,83,127,.3)!important;
+  background:rgba(252,244,254,.56)!important;
+  color:var(--ink)!important;
+}
+.app-shell .folder-drop:hover{border-color:#a76c9f!important;background:rgba(255,250,254,.82)!important}
+.app-shell .upload-icon{
+  border-color:rgba(145,93,150,.5)!important;
+  background:linear-gradient(145deg,rgba(224,195,241,.58),rgba(248,209,230,.62))!important;
+  color:#6d4167!important;
+}
+.app-shell .browse-chip{border-color:rgba(129,82,132,.28)!important;background:rgba(255,255,255,.74)!important;color:#5b3656!important}
+.app-shell .batch-capacity,
+.app-shell .design-preparation-status,
+.app-shell .design-preparation-status.ready{
+  border-color:rgba(142,88,134,.26)!important;
+  background:rgba(252,244,254,.58)!important;
+  box-shadow:0 8px 22px rgba(74,42,62,.07)!important;
+}
+.app-shell .design-preparation-status b{color:var(--ink)!important}
+.app-shell .design-preparation-status small,
+.app-shell .batch-capacity span{color:rgba(74,42,62,.66)!important}
+.app-shell .design-preparation-status strong{color:#704d75!important}
+.app-shell .design-status-icon,
+.app-shell .design-preparation-status.ready .design-status-icon{
+  border-color:#b777b0!important;
+  border-top-color:transparent!important;
+  color:#704d75!important;
+}
+.app-shell .design-status-track,
+.app-shell .capacity-track{background:rgba(151,104,153,.15)!important}
+.app-shell .design-status-track i,
+.app-shell .design-preparation-status.ready .design-status-track i,
+.app-shell .capacity-track span{background:linear-gradient(90deg,#a765a0,#d992c5,#b6a8ff)!important}
+.app-shell .done-mark,
+.app-shell .variant-pricing-head>span,
+.app-shell .recommendation-result,
+.app-shell .etsy-ready-status,
+.app-shell .shipping-saved-state,
+.app-shell .automatic-reference,
+.app-shell .publish-message,
+.app-shell .active-recipe,
+.app-shell .variant-transfer-note{
+  border-color:rgba(139,89,137,.22)!important;
+  background:rgba(225,194,231,.34)!important;
+  color:#654362!important;
+}
+.app-shell .variant-transfer-note>span,
+.app-shell .draft-check{
+  background:linear-gradient(145deg,#a866a0,#7b4a76)!important;
+  color:#fff!important;
+}
+.app-shell .variant-transfer-note small{color:rgba(74,42,62,.68)!important}
+.app-shell .template-badge,
+.app-shell .ready-text,
+.app-shell .profit-pass,
+.app-shell .title-build-message,
+.app-shell .padding-note,
+.app-shell .individual-size-guide p{color:#704d75!important}
+.app-shell .variant-pricing.approved{border-color:rgba(139,89,137,.28)!important;background:rgba(252,244,254,.62)!important}
+.app-shell .approved .approve-pricing{background:linear-gradient(145deg,#5b304f,#45263c)!important}
+.app-shell .final-checklist span{border-color:rgba(139,89,137,.22)!important;background:linear-gradient(145deg,rgba(252,244,254,.68),rgba(246,229,248,.54))!important;color:#63435e!important}
+.app-shell .recipe-icon{background:linear-gradient(145deg,#d591c3,#a86ba2)!important;color:#fff!important}
+.app-shell .field-warning{color:#704d75!important}
+.app-shell .ai-title-button{background:linear-gradient(145deg,#6a3c61,#4b2c47)!important;color:#fff!important}
+.app-shell .item-pricing-section{border-top-color:rgba(137,88,132,.22)!important}
+.app-shell .shipping-profile-select select{border-color:rgba(137,88,132,.36)!important;background:rgba(255,255,255,.72)!important;color:var(--ink)!important}
+.app-shell .shipping-profile-select select:focus{outline-color:rgba(190,126,180,.22)!important}
+.app-shell .summary-list div button,
+.app-shell .fee-profile-summary a,
+.app-shell .individual-description>summary,
+.app-shell .individual-description button{color:#704d75!important}
+.app-shell .batch-description>summary em,
+.app-shell .batch-description>summary:after{color:#704d75!important}
+.app-shell .etsy-detail-card label em{background:rgba(221,191,228,.42)!important;color:#704d75!important}
+.app-shell .individual-size-guide button{border-color:rgba(137,88,132,.28)!important;background:rgba(249,236,247,.7)!important;color:#654362!important}
+.app-shell .edit-draft-button,
+.app-shell .edit-draft-button.opened{border-color:rgba(137,88,132,.28)!important;background:rgba(249,236,247,.72)!important;color:#654362!important}
+.app-shell .edit-draft-button i,
+.app-shell .edit-draft-button.opened i{background:#a765a0!important;box-shadow:0 0 0 3px rgba(167,101,160,.13)!important}
+
 /* Exact approved shell measurements from goldie-real.html. */
 @media(min-width:821px){
   html,body{background:#e8b1c8 url('/goldie-background-reference.jpg') center/100% 100% fixed no-repeat}
