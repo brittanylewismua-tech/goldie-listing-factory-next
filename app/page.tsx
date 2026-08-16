@@ -548,7 +548,7 @@ export default function Home() {
   }
 
   const workflowHero = {
-    connect: { eyebrow: "THE LISTING FACTORY", title: "Turn finished designs into ready-to-publish Etsy listings.", copy: "Connect Printify once. Goldie handles the repetitive setup from here so you do not have to rebuild every product by hand." },
+    connect: { eyebrow: "THE LISTING FACTORY", title: "Create a full batch of Etsy listings from finished designs.", copy: "Upload up to 20 designs. Goldie creates the matching Printify products, calculates every variant price, builds titles and tags from your keyword bank, completes the Etsy details, and prepares the listing images." },
     setup: { eyebrow: "STEP 2 · CHOOSE PRODUCT", title: "Start with a product that already works.", copy: "Choose a saved product or connect one completed template. Goldie brings in the variants, costs, placement, shipping profile, and description." },
     designs: { eyebrow: "STEP 3 · ADD DESIGNS", title: "Your designs are ready. Let’s turn them into products.", copy: "Add up to 20 finished designs. Goldie preserves the original artwork and checks print quality against the real product size." },
     review: { eyebrow: "STEP 4 · REVIEW PRICING", title: "Every size priced. Every margin visible.", copy: "Review the complete cost, shipping, Etsy fees, and profit for every enabled variant before Goldie creates anything." },
@@ -579,7 +579,7 @@ export default function Home() {
           <p className="eyebrow">{workflowHero.eyebrow}</p>
           <h1>{workflowHero.title}</h1>
           <p className="hero-copy">{workflowHero.copy}</p>
-          {workflowStep==="connect"&&<div className="value-proof" aria-label="What Goldie completes"><span><b>Up to 20</b> listings in one batch</span><span><b>Every size</b> priced for profit</span><span><b>One workflow</b> for titles, tags, details, and images</span></div>}
+          {workflowStep==="connect"&&<div className="value-proof" aria-label="What this batch supports"><span><b>Up to 20 designs</b><small>in one batch</small></span><span><b>Costs and fees</b><small>shown for every variant</small></span><span><b>You approve</b><small>before anything goes live</small></span></div>}
         </div>
       </section>}
 
@@ -600,7 +600,7 @@ export default function Home() {
             <div className="step-number">01</div>
             <div className="step-content">
               <div className="step-heading"><div><p className="mini-label">PRINTIFY CONNECTION</p><h2>Your Printify account</h2></div>{connected && <span className="done-mark">✓ Connected</span>}</div>
-              <p className="step-copy">Create drafts directly inside your own Printify shop. Connect once and Goldie will remember your Printify account securely.</p>
+              <p className="step-copy">Connect the Printify account where you want Goldie to create the product drafts. You will connect Etsy separately before publishing.</p>
               <div className="connection-trust"><span aria-hidden="true">✓</span><div><b>Secure connection</b><small>Your token is encrypted, saved securely, and never displayed again.</small></div></div>
               {checkingConnection ? (
                 <div className="connection-row"><span className="connection-icon">P</span><div><b>Checking Printify connection…</b><small>This takes just a moment</small></div></div>

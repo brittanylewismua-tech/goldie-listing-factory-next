@@ -16,7 +16,7 @@ test("server-renders the branded Listing Factory", async () => {
   assert.equal(response.status, 200);
   const html = await response.text();
   assert.match(html, /Goldie Listing Factory/);
-  assert.match(html, /Turn finished designs into ready-to-publish Etsy listings/);
+  assert.match(html, /Create a full batch of Etsy listings from finished designs/);
   assert.match(html, /Secure connection/);
   assert.doesNotMatch(html, /Private workspace/);
   assert.match(html, /Your Printify account/);
