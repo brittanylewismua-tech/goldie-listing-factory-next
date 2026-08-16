@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Goldie — Connect Printify</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Manrope:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --plum:   #4A2A3E;
+  --plum75: rgba(74,42,62,.75);
+  --plum55: rgba(74,42,62,.55);
+  --plum40: rgba(74,42,62,.40);
+  --plum14: rgba(74,42,62,.14);
+  --pearl:  #FCF4FE;
+  --ease: cubic-bezier(.32,1.26,.5,1);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  font-family:'Manrope',system-ui,sans-serif;color:var(--plum);
+  -webkit-font-smoothing:antialiased;overflow:hidden;
+  /* the gradient is viewport-fixed, so anything else that paints it
+     with the same rule lines up on top of it exactly */
+  background:#E8B1C8;
+}
+body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:url('goldie-background-reference.jpg') center/100% 100% no-repeat;
+  filter:saturate(1.24) contrast(1.025)}
+
+/* ══ the actual mymind gradient, extracted from the screenshot ══
+      two copies, one mirrored, drifting against each other so it
+      breathes without ever looking like a CSS gradient          ══ */
+/* a soft drifting highlight for life — an overlay, so it never
+   knocks the fixed gradient out of alignment with the card */
+.sheen{position:fixed;inset:-20%;z-index:1;pointer-events:none;opacity:.12;
+  background:radial-gradient(38% 34% at 50% 44%,rgba(255,252,255,.9),rgba(255,252,255,0) 70%);
+  animation:pan 46s ease-in-out infinite alternate}
+@keyframes pan{0%{transform:translate(-2%,1%) scale(1)}100%{transform:translate(3%,-2%) scale(1.22)}}
+
+.grain{position:fixed;inset:0;z-index:6;pointer-events:none;opacity:.07;mix-blend-mode:overlay;
+ background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='.5'/%3E%3C/svg%3E")}
+
+.app{position:relative;z-index:3;display:grid;grid-template-columns:288px 1fr;height:100vh;height:100dvh;overflow:hidden}
+
+/* ───────── sidebar ───────── */
+aside{padding:40px 26px 34px;display:flex;flex-direction:column;
+  background:linear-gradient(180deg,rgba(255,250,253,.34),rgba(255,246,251,.16));
+  backdrop-filter:blur(18px) saturate(1.1);
+  border-right:1px solid rgba(255,255,255,.42)}
+/* ── wordmark lockup: star rides above the right shoulder of the
+      word (clear of the i's own dot), Listing Factory beneath ── */
+.brand{width:236px;margin:0 0 46px 0;text-align:center;color:var(--plum)}
+.wm{font-family:'DM Serif Display',serif;font-size:68px;line-height:.92;
+  letter-spacing:-.025em;display:inline-block;white-space:nowrap;color:var(--plum)}
+.wm-i{position:relative;display:inline-block}
+.wm-i .sp{position:absolute;top:-.18em;left:50%;font-size:.31em;line-height:1;
+  transform:translateX(-50%);animation:tw-dot 5s ease-in-out infinite}
+.wmsub{margin-top:6px;font-family:'Manrope',sans-serif;font-size:13px;font-weight:600;
+  letter-spacing:.245em;text-transform:uppercase;color:var(--plum)}
+@keyframes tw{0%,100%{opacity:1;transform:scale(1) rotate(0)}
+              50%{opacity:.42;transform:scale(.76) rotate(32deg)}}
+@keyframes tw-dot{0%,100%{opacity:1;transform:translateX(-50%) scale(1) rotate(0)}
+                  50%{opacity:.42;transform:translateX(-50%) scale(.76) rotate(32deg)}}
+
+.powered{margin-top:18px;display:flex;align-items:baseline;gap:7px;padding-left:2px}
+.powered .pb{font-family:'Manrope',sans-serif;font-size:9.5px;font-weight:600;
+  letter-spacing:.2em;text-transform:uppercase;color:var(--plum40)}
+.powered .pg{font-family:'DM Serif Display',serif;font-size:18px;line-height:1;
+  position:relative;display:inline-block;color:var(--plum75)}
+.powered .pg .sp{position:absolute;top:-.02em;right:-.32em;font-size:.30em;
+  animation:tw 5s ease-in-out infinite}
+
+nav{display:flex;flex-direction:column;gap:3px}
+nav a{display:flex;align-items:center;gap:14px;text-decoration:none;font-size:14.5px;
+  color:var(--plum55);padding:13px 16px;border-radius:14px;
+  transition:color .34s var(--ease),background .34s var(--ease),transform .34s var(--ease)}
+nav a:hover{color:var(--plum);background:rgba(252,244,254,.42);transform:translateX(3px)}
+nav a.on{color:var(--plum);background:rgba(252,244,254,.76);font-weight:600}
+nav svg{width:19px;height:19px;stroke:currentColor;stroke-width:1.4;fill:none;
+  stroke-linecap:round;stroke-linejoin:round;opacity:.8;flex-shrink:0}
+
+.plan{margin-top:auto;padding:18px;border-radius:18px;
+  background:rgba(252,244,254,.38);border:1px solid rgba(252,244,254,.46)}
+.plan b{display:block;font-family:'DM Serif Display',serif;font-size:19px;font-weight:400;margin-bottom:8px}
+.plan .bar{height:3px;border-radius:99px;background:var(--plum14);overflow:hidden;margin-bottom:9px}
+.plan .bar i{display:block;height:100%;width:41%;border-radius:99px;background:var(--plum)}
+.plan span{font-size:12px;font-weight:300;color:var(--plum55)}
+.account-row{margin-top:auto;display:flex;align-items:center;gap:9px;padding:11px 12px;border-radius:15px;background:rgba(252,244,254,.42);border:1px solid rgba(255,255,255,.5)}.account-avatar{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:var(--plum);color:white;font-size:11px;font-weight:700}.account-copy{display:grid;gap:1px;min-width:0}.account-copy b{font-size:10.5px}.account-copy small{font-size:9px;color:var(--plum55)}.account-row [data-account-toggle]{margin-left:auto;border:0;background:transparent;color:var(--plum75);font:600 9.5px 'Manrope',sans-serif;cursor:pointer;text-decoration:none}.account-row [data-account-toggle]:hover{text-decoration:underline}
+
+/* ───────── main ───────── */
+main{padding:38px 54px 30px;display:flex;flex-direction:column;min-width:0;min-height:0;overflow-y:auto;scrollbar-gutter:stable}
+.stepno{font-size:11px;font-weight:600;letter-spacing:.19em;text-transform:uppercase;color:var(--plum55)}
+.track{margin:14px 0 22px;height:2px;background:var(--plum14);border-radius:99px;overflow:hidden}
+.track i{display:block;height:100%;width:11.1%;background:var(--plum);border-radius:99px}
+.head{display:flex;align-items:center;justify-content:space-between}
+.head h1{font-family:'DM Serif Display',serif;font-size:34px;font-weight:400;letter-spacing:-.015em}
+.viewall{display:flex;align-items:center;gap:9px;text-decoration:none;font-size:13.5px;font-weight:500;
+  color:var(--plum75);padding:10px 18px;border-radius:99px;transition:all .34s var(--ease)}
+.viewall:hover{background:rgba(252,244,254,.55);color:var(--plum)}
+.viewall svg{width:14px;height:14px;stroke:currentColor;stroke-width:1.8;fill:none;stroke-linecap:round;stroke-linejoin:round}
+
+.stage{flex:1;display:flex;align-items:center;justify-content:center;position:relative}
+.timing{position:absolute;right:0;top:50%;transform:translateY(-186px);display:flex;align-items:center;gap:10px;
+  font-size:13px;color:var(--plum55)}
+.timing svg{width:16px;height:16px;stroke:currentColor;stroke-width:1.5;fill:none;stroke-linecap:round;stroke-linejoin:round}
+
+/* the card is the SAME gradient, viewport-locked so it continues
+   the background exactly — then washed lighter so it still reads
+   as a distinct surface */
+.card{width:524px;padding:44px 54px 38px;text-align:center;
+  background:
+    linear-gradient(158deg,rgba(255,255,255,.62),rgba(255,252,255,.50)),
+    url('goldie-background-reference.jpg') center/100% 100% fixed no-repeat;
+  border:1px solid rgba(255,255,255,.78);border-radius:30px;
+  box-shadow:0 1px 0 rgba(255,255,255,.95) inset,
+             0 -1px 0 rgba(255,255,255,.42) inset,
+             0 30px 64px -34px rgba(74,42,62,.32),
+             0 84px 130px -70px rgba(74,42,62,.28);
+  animation:rise .9s var(--ease) both}
+@keyframes rise{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+
+.emblem{position:relative;width:74px;height:74px;margin:0 auto 30px;border-radius:50%;display:grid;place-items:center}
+.emblem::before{content:"";position:absolute;inset:0;border-radius:inherit;
+  background:conic-gradient(from 200deg,#B6A8FF,#D17CDE,#FF8EBA,#F7A6C8,#B8B2FF,#B6A8FF);
+  animation:ring-shift 90s linear infinite}
+@keyframes ring-shift{to{transform:rotate(360deg)}}
+.emblem span{position:relative;z-index:1;width:68px;height:68px;border-radius:50%;
+  background:rgba(252,244,254,.96);display:grid;place-items:center;
+  box-shadow:0 0 0 1px rgba(255,255,255,.34) inset}
+.emblem svg{width:30px;height:30px;stroke:var(--plum);stroke-width:1.9;fill:none;stroke-linecap:round;stroke-linejoin:round}
+
+.card h2{font-family:'DM Serif Display',serif;font-size:50px;font-weight:400;line-height:1.04;
+  letter-spacing:-.022em;margin-bottom:16px}
+.card h2 em{font-style:italic}
+.card p{font-size:15.5px;font-weight:300;line-height:1.68;color:var(--plum75);max-width:380px;margin:0 auto 34px}
+
+.btn{font-family:'Manrope',sans-serif;font-size:15px;font-weight:600;background:var(--plum);color:var(--pearl);
+  border:none;width:100%;padding:19px 32px;border-radius:99px;cursor:pointer;
+  box-shadow:0 18px 40px -22px rgba(74,42,62,.95);
+  transition:transform .38s var(--ease),box-shadow .38s var(--ease),background .3s ease}
+.btn:hover{transform:translateY(-3px);background:#5C3550;box-shadow:0 28px 54px -24px rgba(74,42,62,1)}
+
+.tokenlink{display:inline-flex;align-items:center;gap:7px;margin-top:24px;text-decoration:none;
+  font-size:14px;font-weight:500;color:var(--plum75);transition:color .3s ease,gap .3s var(--ease)}
+.tokenlink:hover{color:var(--plum);gap:11px}
+.tokenlink svg{width:13px;height:13px;stroke:currentColor;stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round}
+
+.secure{display:flex;align-items:center;justify-content:center;gap:9px;margin-top:28px;padding-top:24px;
+  border-top:1px solid var(--plum14);font-size:13px;font-weight:300;color:var(--plum55)}
+.secure svg{width:15px;height:15px;stroke:currentColor;stroke-width:1.5;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.card-timing{display:flex;align-items:center;justify-content:center;gap:8px;margin:12px 0 8px;
+  color:var(--plum55);font-size:12.5px;font-weight:400}
+.card-timing svg{width:15px;height:15px;stroke:currentColor;stroke-width:1.5;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.card-timing+p{margin-top:0}
+
+/* Shared workflow-page components */
+.card.wide{width:min(720px,72vw);padding:34px 38px 32px}.card.compact{padding-top:36px}
+.step-icon{width:58px;height:58px;margin:0 auto 20px;border-radius:50%;display:grid;place-items:center;
+  color:var(--plum);font-size:24px;background:rgba(252,244,254,.7);border:1px solid rgba(255,255,255,.8)}
+.card h3{font-family:'DM Serif Display',serif;font-size:36px;font-weight:400;line-height:1.05;margin-bottom:10px}
+.card .step-intro{margin-bottom:24px}.choice-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;text-align:left}
+.choice{position:relative;padding:17px;border:1px solid rgba(255,255,255,.68);border-radius:16px;background:rgba(252,244,254,.38);
+  color:var(--plum);cursor:pointer;transition:.25s ease}.choice:hover,.choice.selected{background:rgba(252,244,254,.78);border-color:rgba(255,255,255,.96);transform:translateY(-2px)}
+.choice.selected{border-color:#9f5b92;background:linear-gradient(145deg,rgba(250,225,244,.94),rgba(226,191,238,.9));box-shadow:0 0 0 3px rgba(255,255,255,.58),0 14px 28px -18px rgba(91,47,83,.75)}
+.choice[data-product].selected::after{content:"✓";position:absolute;right:11px;top:10px;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;background:var(--plum);color:white;font-size:11px;font-weight:800;box-shadow:0 5px 12px -6px rgba(74,42,62,.8)}
+.choice[data-image-choice].toggle-selected::after{content:"✓";position:absolute;right:11px;top:10px;width:20px;height:20px;border-radius:50%;display:grid;place-items:center;background:var(--plum);color:white;font-size:10px;font-weight:800}
+.choice b{display:block;font-size:14px;margin-bottom:4px}.choice span{display:block;color:var(--plum55);font-size:11.5px;line-height:1.45}
+.dropzone{display:grid;place-items:center;gap:7px;min-height:156px;padding:26px;border:1.5px dashed rgba(74,42,62,.3);border-radius:20px;background:linear-gradient(145deg,rgba(255,255,255,.5),rgba(247,231,250,.42));text-align:center;box-shadow:0 12px 36px -30px rgba(74,42,62,.4) inset}
+.dropzone-icon{width:48px;height:48px;border-radius:15px;display:grid;place-items:center;background:rgba(255,255,255,.58);border:1px solid rgba(255,255,255,.8);color:var(--plum);font-size:22px;box-shadow:0 10px 24px -18px rgba(74,42,62,.65)}.dropzone b{display:block;font-size:15px;margin-top:2px}.dropzone span{font-size:11.5px;color:var(--plum55)}.dropzone small{font-size:10px;color:var(--plum40)}
+.mini-row{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:13px 0;border-bottom:1px solid var(--plum14);text-align:left}
+.mini-row:last-child{border-bottom:0}.mini-row b{font-size:13px}.mini-row span{color:var(--plum55);font-size:12px}.status-pill{padding:6px 10px;border-radius:99px;background:rgba(252,244,254,.7);font-size:10px!important;font-weight:600;color:var(--plum)!important}
+.field-sample{display:grid;gap:6px;text-align:left}.field-sample label{font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--plum55)}
+.fake-input{min-height:45px;padding:12px 14px;border:1px solid rgba(74,42,62,.13);border-radius:12px;background:rgba(252,244,254,.5);font-size:12px;line-height:1.5}
+.field-sample input,.field-sample select,.field-sample textarea{width:100%;min-height:45px;padding:11px 13px;border:1px solid rgba(74,42,62,.16);border-radius:12px;background:rgba(252,244,254,.64);color:var(--plum);font:500 12px/1.45 'Manrope',sans-serif;outline:none}.field-sample textarea{min-height:88px;resize:vertical}.field-sample input:focus,.field-sample select:focus,.field-sample textarea:focus{border-color:rgba(129,75,120,.5);box-shadow:0 0 0 3px rgba(217,166,224,.22)}
+.upload-input{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}.dropzone{cursor:pointer;transition:.25s ease}.dropzone:hover{background:rgba(252,244,254,.7);border-color:rgba(74,42,62,.55)}
+.upload-results{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:12px}.upload-results figure{position:relative;aspect-ratio:1;border-radius:12px;overflow:hidden;background:rgba(252,244,254,.55);border:1px solid rgba(255,255,255,.72)}.upload-results img{width:100%;height:100%;object-fit:cover}.upload-results figcaption{position:absolute;inset:auto 0 0;padding:14px 6px 5px;background:linear-gradient(transparent,rgba(74,42,62,.72));color:white;font-size:8.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.price-grid{display:grid;grid-template-columns:1.25fr .8fr .8fr .9fr;gap:8px;align-items:center;padding:10px 0;border-bottom:1px solid var(--plum14);text-align:left}.price-grid.head{font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--plum55)}.price-grid b{font-size:11.5px}.price-grid input{width:100%;padding:8px 9px;border:1px solid rgba(74,42,62,.15);border-radius:9px;background:rgba(252,244,254,.62);color:var(--plum);font:600 11px 'Manrope',sans-serif}.profit-value{font-size:11px;font-weight:700;color:#765275}.keyword-chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px}.keyword-chips button{border:1px solid rgba(74,42,62,.15);border-radius:99px;background:rgba(252,244,254,.48);color:var(--plum75);padding:7px 10px;font:500 10px 'Manrope',sans-serif;cursor:pointer}.keyword-chips button.selected{background:rgba(211,161,220,.55);color:var(--plum);border-color:rgba(74,42,62,.25)}
+.generated-preview{margin-top:12px;padding:12px 14px;border-radius:13px;background:rgba(252,244,254,.52);text-align:left}.generated-preview b{display:block;font-size:11px;margin-bottom:4px}.generated-preview span{font-size:10.5px;line-height:1.45;color:var(--plum55)}
+.choice input{position:absolute;opacity:0}.choice.toggle-selected{background:rgba(231,191,230,.7);border-color:rgba(74,42,62,.28)}
+.confirm-panel{display:grid;gap:12px;margin-top:16px;padding:18px;border:1px solid rgba(136,74,112,.24);border-radius:16px;background:rgba(252,244,254,.68);text-align:left}.confirm-panel b{font-size:13px}.confirm-panel span{font-size:11px;line-height:1.5;color:var(--plum55)}.confirm-panel .confirm-publish{border:0;border-radius:99px;background:var(--plum);color:white;padding:13px;font:600 12px 'Manrope',sans-serif;cursor:pointer}
+.review-list{display:grid;gap:8px;text-align:left}.review-item{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:13px;background:rgba(252,244,254,.42)}
+.review-item i{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;background:rgba(183,151,222,.38);font-style:normal;font-size:12px}.review-item div{display:grid;gap:2px}.review-item b{font-size:12.5px}.review-item span{font-size:10.5px;color:var(--plum55)}
+.prototype-action{margin-top:22px}.progress-block{display:grid;gap:10px}.progress-line{height:7px;border-radius:99px;background:var(--plum14);overflow:hidden}.progress-line i{display:block;width:72%;height:100%;background:linear-gradient(90deg,#B6A8FF,#E17FD0,#FF9DBA);border-radius:inherit}
+.connection-stack{display:grid;gap:10px;text-align:left}.connection-card{display:flex;align-items:center;gap:13px;padding:13px 14px;border:1px solid rgba(74,42,62,.13);border-radius:15px;background:rgba(252,244,254,.46)}
+.connection-card>div{min-width:0;flex:1}.connection-card button{flex:0 0 auto}.connection-card.busy{opacity:.72}.connection-card.connected{border-color:rgba(91,153,112,.42);background:rgba(245,255,248,.6)}
+.connection-form{display:none;grid-template-columns:1fr auto;gap:8px;padding:12px;border:1px solid rgba(74,42,62,.14);border-radius:15px;background:rgba(255,255,255,.48)}.connection-form.open{display:grid}.connection-form label{grid-column:1/-1;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--plum)}.connection-form input{min-width:0;border:1px solid rgba(74,42,62,.2);border-radius:12px;background:rgba(255,255,255,.72);padding:11px 12px;color:var(--plum);font:inherit}.connection-form button{border:0;border-radius:12px;background:var(--plum);color:#fff;padding:0 16px;font-weight:800}.connection-message{display:none;align-items:flex-start;gap:9px;padding:11px 13px;border-radius:13px;font-size:12px;line-height:1.45;text-align:left}.connection-message.show{display:flex}.connection-message.error{background:rgba(166,48,74,.09);color:#7f2942}.connection-message.info{background:rgba(89,63,145,.09);color:var(--plum)}.connection-message a{color:inherit;font-weight:800}.connection-card .disconnect{background:transparent;color:var(--plum);border:1px solid rgba(74,42,62,.2)}
+.connection-card .service{position:relative;width:36px;height:36px;flex:0 0 36px;border-radius:11px;display:grid;place-items:center;background:linear-gradient(145deg,rgba(244,185,215,.92),rgba(207,154,213,.82));overflow:hidden;box-shadow:0 1px 0 rgba(255,255,255,.65) inset,0 6px 16px -10px rgba(74,42,62,.55)}
+.connection-card .service::after{content:"";position:absolute;inset:0;background:rgba(226,132,178,.34);mix-blend-mode:color;pointer-events:none}
+.connection-card .service img{display:block;width:23px;height:23px;object-fit:contain;filter:grayscale(.28) saturate(.58) contrast(.9);opacity:.88}.connection-card .service.etsy img{width:24px;height:24px}
+.connection-card div{display:grid;gap:2px;min-width:0}.connection-card b{font-size:12.5px}.connection-card small{font-size:10.5px;line-height:1.4;color:var(--plum55)}.connection-card button{margin-left:auto;white-space:nowrap;border:1px solid rgba(74,42,62,.18);border-radius:99px;background:rgba(255,255,255,.62);color:var(--plum);padding:9px 13px;font:600 10.5px 'Manrope',sans-serif;cursor:pointer}
+.connection-card.connected{border-color:rgba(116,88,145,.25);background:rgba(244,235,252,.72)}.connection-card.connected button{background:var(--plum);color:var(--pearl)}
+.action-feedback{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:14px;color:var(--plum);font-size:11.5px;font-weight:600}.action-feedback i{width:21px;height:21px;border-radius:50%;display:grid;place-items:center;background:rgba(183,151,222,.42);font-style:normal}
+.instructions{display:none;margin-top:14px;padding:14px 16px;border-radius:14px;background:rgba(252,244,254,.54);text-align:left;font-size:11.5px;line-height:1.6;color:var(--plum75)}.instructions.open{display:block}.instructions b{display:block;color:var(--plum);margin-bottom:3px}
+.step-menu{position:absolute;z-index:20;right:54px;top:124px;width:260px;padding:10px;border:1px solid rgba(255,255,255,.72);border-radius:18px;background:rgba(252,244,254,.88);box-shadow:0 22px 60px rgba(74,42,62,.18);backdrop-filter:blur(24px);display:none}
+.step-menu.open{display:grid}.step-menu button{border:0;background:transparent;padding:10px 12px;border-radius:10px;text-align:left;color:var(--plum);font:500 12px/1.3 'Manrope',sans-serif}.step-menu button:hover,.step-menu button.on{background:rgba(213,184,235,.38)}
+.step-menu button:disabled{color:var(--plum40);cursor:not-allowed}.step-menu button:disabled:hover{background:transparent}
+.footer-left{display:flex;align-items:center;gap:16px}.back{border:0;background:transparent;color:var(--plum75);font:500 12px 'Manrope',sans-serif;cursor:pointer}.back[hidden]{display:none}
+.receipt-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:22px 0}.receipt-metrics div{padding:16px 10px;border-radius:14px;background:rgba(252,244,254,.5)}.receipt-metrics b{display:block;font-family:'DM Serif Display',serif;font-size:25px;font-weight:400}.receipt-metrics span{font-size:10px;color:var(--plum55)}
+.listing-image-workspace{display:grid;gap:14px;text-align:left}.batch-image-tools{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;border-radius:16px;background:rgba(252,244,254,.5);border:1px solid rgba(255,255,255,.72)}.batch-image-tools div{display:grid;gap:3px}.batch-image-tools b{font-size:12.5px}.batch-image-tools span{font-size:10.5px;color:var(--plum55)}.small-action{border:1px solid rgba(74,42,62,.18);border-radius:99px;background:rgba(255,255,255,.62);color:var(--plum);padding:9px 13px;font:600 10.5px 'Manrope',sans-serif;cursor:pointer;white-space:nowrap}.listing-image-card{padding:15px;border-radius:18px;background:rgba(252,244,254,.48);border:1px solid rgba(255,255,255,.76)}.listing-image-head{display:flex;align-items:center;gap:12px;margin-bottom:13px}.listing-image-head img{width:58px;height:58px;border-radius:12px;object-fit:cover;background:rgba(255,255,255,.55)}.listing-image-head div{display:grid;gap:3px;min-width:0}.listing-image-head b{font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.listing-image-head span{font-size:10.5px;color:var(--plum55)}.printify-image-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.printify-image{position:relative;display:grid;gap:6px;padding:7px;border:1px solid rgba(74,42,62,.13);border-radius:12px;background:rgba(255,255,255,.35);color:var(--plum);font:600 9.5px 'Manrope',sans-serif;cursor:pointer;text-align:left}.printify-image img{width:100%;aspect-ratio:1.2;object-fit:cover;border-radius:8px}.printify-image.selected{border-color:#8c4d82;box-shadow:0 0 0 2px rgba(255,255,255,.72),0 8px 18px -14px rgba(74,42,62,.8);background:rgba(246,220,244,.78)}.printify-image.selected::after{content:'✓';position:absolute;right:10px;top:10px;width:19px;height:19px;border-radius:50%;display:grid;place-items:center;background:var(--plum);color:white;font-size:9px}.listing-image-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:11px}.listing-image-actions label,.listing-image-actions button{border:1px solid rgba(74,42,62,.17);border-radius:99px;background:rgba(255,255,255,.52);color:var(--plum);padding:9px 12px;font:600 9.5px 'Manrope',sans-serif;cursor:pointer}.listing-image-actions input{position:absolute;width:1px;height:1px;opacity:0}.mockup-panel{display:none;margin-top:11px;padding:12px;border-radius:14px;background:rgba(255,255,255,.42);border:1px solid rgba(255,255,255,.7)}.mockup-panel.open{display:grid;gap:10px}.mockup-panel select{width:100%;padding:10px;border:1px solid rgba(74,42,62,.16);border-radius:10px;background:rgba(255,255,255,.68);color:var(--plum)}.mockup-thumbs{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}.mockup-thumbs button{padding:5px;border:1px solid rgba(74,42,62,.12);border-radius:10px;background:rgba(255,255,255,.45);cursor:pointer}.mockup-thumbs button.selected{border-color:#8c4d82;box-shadow:0 0 0 2px rgba(221,166,222,.3)}.mockup-thumbs img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:7px}.mockup-status{font-size:10.5px;color:var(--plum55)}.generated-mockups{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}.generated-mockups img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:9px}.image-file-note{font-size:9.5px;color:var(--plum55);margin-top:7px}
+
+footer{position:sticky;bottom:0;z-index:12;display:flex;align-items:center;justify-content:space-between;margin-top:14px;padding:14px 0 2px;border-top:1px solid rgba(74,42,62,.1);background:transparent}
+.saved{font-size:12px;font-weight:300;color:var(--plum40)}
+.next{font-family:'Manrope',sans-serif;font-size:14.5px;font-weight:600;background:rgba(252,244,254,.7);
+  color:var(--plum40);border:none;padding:15px 34px;border-radius:99px;cursor:not-allowed;
+  box-shadow:0 12px 28px -20px rgba(74,42,62,.45);transition:all .38s var(--ease)}
+.next.go{background:var(--plum);color:var(--pearl);cursor:pointer;box-shadow:0 16px 34px -18px rgba(74,42,62,.72)}
+.next.go:hover{transform:translateY(-3px)}
+@media(max-height:820px) and (min-width:761px){
+  main{padding-top:24px}.track{margin:10px 0 14px}.head h1{font-size:30px}.stage{align-items:flex-start;padding-top:18px}
+  .card{padding-top:30px;padding-bottom:28px}.emblem{width:58px;height:58px;margin-bottom:18px}.emblem span{width:52px;height:52px}.emblem svg{width:25px;height:25px}
+  .card h2{font-size:42px;margin-bottom:10px}.card p{margin-bottom:22px}.tokenlink{margin-top:16px}.secure{margin-top:18px;padding-top:16px}
+}
+.mobile-gate{display:none}
+@media(max-width:760px){
+  body{overflow:hidden;background:#E8B1C8}.app{display:none}
+  .mobile-gate{position:relative;z-index:3;display:flex;min-height:100vh;flex-direction:column;padding:28px 22px 24px}
+  .mobile-brand{text-align:center;color:var(--plum)}.mobile-brand .wm{font-size:56px}.mobile-brand .wmsub{margin-top:5px;font-size:10px}
+  .mobile-card{margin:auto 0;padding:38px 26px 34px;border:1px solid rgba(255,255,255,.84);border-radius:28px;
+    background:linear-gradient(158deg,rgba(255,255,255,.66),rgba(255,252,255,.52)),url('goldie-background-reference.jpg') center/100% 100% fixed no-repeat;
+    box-shadow:0 1px 0 rgba(255,255,255,.95) inset,0 34px 70px -36px rgba(74,42,62,.35);text-align:center}
+  .mobile-card .step-icon{width:64px;height:64px;margin-bottom:24px;font-size:25px}.mobile-card h1{font-family:'DM Serif Display',serif;font-size:38px;font-weight:400;line-height:1.04;letter-spacing:-.025em}
+  .mobile-card p{margin:18px auto 0;max-width:300px;color:var(--plum75);font-size:14px;font-weight:300;line-height:1.65}
+  .mobile-saved{display:flex;align-items:center;justify-content:center;gap:7px;margin-top:22px;padding-top:20px;border-top:1px solid var(--plum14);color:var(--plum55);font-size:12px}
+  .mobile-footer{text-align:center;color:var(--plum40);font-size:10px;letter-spacing:.08em}
+}
+</style>
+</head>
+<body>
+
+<div class="sheen"></div>
+<div class="grain"></div>
+
+<section class="mobile-gate" aria-label="Desktop required">
+  <div class="mobile-brand">
+    <div class="wm">Gold<span class="wm-i">ı<span class="sp">&#10022;</span></span>e</div>
+    <div class="wmsub">Listing Factory</div>
+  </div>
+  <div class="mobile-card">
+    <div class="step-icon">⌘</div>
+    <h1>Oops, this one needs a bigger screen.</h1>
+    <p>Goldie Listing Factory is built for desktop. Hop onto your computer and sign in. Your saved work will be waiting for you.</p>
+    <div class="mobile-saved">✓ Your progress is saved automatically.</div>
+  </div>
+  <div class="mobile-footer">POWERED BY GOLDIE</div>
+</section>
+
+<div class="app">
+  <aside>
+    <div class="brand">
+      <div class="wm">Gold<span class="wm-i">ı<span class="sp">&#10022;</span></span>e</div>
+      <div class="wmsub">Listing Factory</div>
+    </div>
+    <nav>
+      <a href="/design-lab" target="_top" class="on"><svg viewBox="0 0 24 24"><path d="M3 9l1-4h16l1 4M3 9h18M3 9v10a1 1 0 001 1h16a1 1 0 001-1V9M9 13h6"/></svg>Listing Factory</a>
+      <a href="/batches" target="_top"><svg viewBox="0 0 24 24"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 106 5.3L3 8"/><path d="M12 7v5l3 2"/></svg>Batch History</a>
+      <a href="/keywords" target="_top"><svg viewBox="0 0 24 24"><path d="M12 5a3 3 0 00-3 3 3 3 0 00-2 5.2A3 3 0 009 19a3 3 0 006 0 3 3 0 002-5.8A3 3 0 0015 8a3 3 0 00-3-3z"/><path d="M12 5v14"/></svg>Keyword Banks</a>
+      <a href="/mockups" target="_top"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M21 16l-5-5-6 6"/></svg>Mockup Sets</a>
+      <a href="/usage" target="_top"><svg viewBox="0 0 24 24"><path d="M12 3l8 3.5v5c0 4.6-3.2 8.6-8 9.5-4.8-.9-8-4.9-8-9.5v-5L12 3z"/><path d="M9.2 12.2l1.9 1.9 3.9-3.9"/></svg>Usage</a>
+    </nav>
+    <div class="account-row"><span class="account-avatar">G</span><span class="account-copy"><b>Goldie Studio</b><small data-account-status>Checking account…</small></span><a data-account-toggle href="/signin-with-chatgpt?return_to=%2Fdesign-lab%3Fbackground%3Dsaturated" target="_top">Sign in</a></div>
+    <div class="plan" style="margin-top:10px"><b>Usage</b><div class="bar"><i></i></div><span>412 listings left this month</span></div>
+    <div class="powered">
+      <span class="pb">Powered by</span>
+      <span class="pg">Goldie<span class="sp">&#10022;</span></span>
+    </div>
+  </aside>
+
+  <main>
+    <div class="stepno" id="step-number">Step 1 of 9</div>
+    <div class="track"><i id="step-progress"></i></div>
+    <div class="head">
+      <h1 id="page-title">Connect Printify</h1>
+      <a href="#" class="viewall" id="view-steps">View all steps<svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></a>
+    </div>
+    <div class="step-menu" id="step-menu"></div>
+
+    <div class="stage">
+      <div class="card" id="workflow-card">
+        <div class="emblem"><span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></span></div>
+        <h2>Connect <em>Printify</em></h2>
+        <div class="card-timing"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Connecting usually takes about 2 minutes.</div>
+        <p>Connect the Printify shop where Goldie will create your product drafts.</p>
+        <div class="connection-stack">
+          <div class="connection-card" data-connection="printify"><span class="service"><img src="printify-logo.svg" alt="Printify logo"></span><div><b>Printify</b><small data-connection-copy="printify">Create and update your product drafts.</small></div><button data-connect="printify">Connect Printify</button></div>
+          <form class="connection-form" data-printify-form><label for="printify-token">Paste your Printify token</label><input id="printify-token" name="token" type="password" autocomplete="off" spellcheck="false" required><button type="submit">Connect securely</button></form>
+          <div class="connection-card" data-connection="etsy"><span class="service etsy"><img src="etsy-logo.svg" alt="Etsy logo"></span><div><b>Etsy</b><small data-connection-copy="etsy">Required before Goldie publishes and finishes your listings.</small></div><button data-connect="etsy">Connect Etsy</button></div>
+        </div>
+        <a href="#" class="tokenlink" data-token-help>How to get your Printify token<svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></a>
+        <div class="instructions" data-instructions><b>Getting your Printify token</b>Open Printify, switch to the shop Goldie should use, then create and copy a personal access token. Goldie verifies the token before saving it.</div>
+        <div class="connection-message" data-connection-message role="status" aria-live="polite"></div>
+        <div class="secure"><svg viewBox="0 0 24 24"><path d="M12 3l7 3v5.5c0 4.2-2.9 7.8-7 8.5-4.1-.7-7-4.3-7-8.5V6l7-3z"/><path d="M9.5 12l1.8 1.8 3.4-3.6"/></svg>Encrypted and saved securely.</div>
+      </div>
+    </div>
+
+    <footer>
+      <div class="footer-left"><button class="back" id="back-step" hidden>← Back</button><span class="saved">Saved automatically</span></div>
+      <button class="next" id="next-step">Continue</button>
+    </footer>
+  </main>
+</div>
+<script>
+const firstStep=document.getElementById('workflow-card').innerHTML;
+const steps=[
+ {title:'Connect Printify',wide:false,html:firstStep},
+ {title:'Choose product',wide:true,html:`<div class="step-icon">□</div><h3>Choose your product</h3><p class="step-intro">Select the saved product you want to use for this batch.</p><div class="choice-grid"><button class="choice" data-product="shirt"><b>Comfort Colors 1717</b><span>T-shirt · 14 colors · saved shipping profile</span></button><button class="choice" data-product="poster"><b>Matte vertical poster</b><span>Poster · 7 sizes · saved shipping profile</span></button></div><div class="action-feedback" data-product-feedback hidden><i>✓</i><span></span></div>`},
+ {title:'Add designs',wide:true,html:`<div class="step-icon">↑</div><h3>Add finished designs</h3><p class="step-intro">Choose up to 20 PNG or JPG files. Goldie reads and saves them before you continue.</p><label class="dropzone" for="design-upload"><span class="dropzone-icon">↑</span><b>Choose finished designs</b><span>Click here to select your files</span><small>PNG or JPG · up to 20 designs</small></label><input class="upload-input" id="design-upload" data-design-upload type="file" accept="image/png,image/jpeg" multiple><div class="upload-results" data-upload-results></div><div class="mini-row"><b>Upload status</b><span class="status-pill" data-quality>No designs selected</span></div>`},
+ {title:'Review pricing',wide:true,html:`<div class="step-icon">$</div><h3>Review pricing</h3><p class="step-intro">Edit anything you want. The button below saves these prices and moves on.</p><div class="field-sample"><label>Shipping profile</label><select data-shipping><option>Poster shipping · US $4.00</option><option>Apparel shipping · US $4.49</option><option>Free US shipping</option></select></div><div class="price-grid head"><span>Size</span><span>Cost</span><span>Buyer pays</span><span>Profit</span></div><div class="price-grid"><b>Small–XL</b><span>$11.24</span><input data-price value="29.00" inputmode="decimal"><span class="profit-value">$10.42</span></div><div class="price-grid"><b>2XL</b><span>$13.80</span><input data-price value="33.00" inputmode="decimal"><span class="profit-value">$11.06</span></div><div class="price-grid"><b>3XL–4XL</b><span>$16.25</span><input data-price value="38.00" inputmode="decimal"><span class="profit-value">$13.12</span></div>`},
+ {title:'Create drafts',wide:false,html:`<div class="step-icon">✓</div><h3>Create Printify drafts</h3><p class="step-intro">Goldie will create one unpublished Printify draft for every uploaded design.</p><div class="progress-block"><div class="mini-row"><b data-draft-count>Designs ready</b><span class="status-pill">No errors</span></div><div class="progress-line"><i data-progress-bar style="width:0"></i></div><span data-progress-copy style="font-size:11px;color:var(--plum55)">Nothing is sent until you click below.</span></div><button class="btn prototype-action" data-create-drafts>Create drafts</button>`},
+ {title:'Titles + description',wide:true,html:`<div class="step-icon">Aa</div><h3>Create titles and descriptions</h3><p class="step-intro">Choose validated phrases from a keyword bank. Goldie never adds unvalidated keywords.</p><div class="choice-grid"><div class="field-sample"><label>Keyword bank</label><select data-keyword-bank><option>Western shirts · 48 phrases</option><option>Bachelorette party · 36 phrases</option></select></div><div class="field-sample"><label>Title style</label><select data-title-style><option>Titles with commas</option><option>Titles without commas</option></select></div></div><div class="keyword-chips"><button data-keyword>western shirt</button><button data-keyword>cowgirl tee</button><button data-keyword>retro western top</button><button data-keyword>country concert shirt</button></div><div class="field-sample" style="margin-top:14px"><label>Batch description</label><textarea data-description>Soft, comfortable, and ready for everyday wear. Choose your favorite color and size above.</textarea></div><div class="generated-preview" data-title-preview><b>Title preview</b><span>Select keywords or let Goldie choose from this validated bank.</span></div><button class="btn prototype-action" data-generate-titles>Create all titles</button>`},
+ {title:'Etsy listing details',wide:true,html:`<div class="step-icon">E</div><h3>Review Etsy details</h3><p class="step-intro">These match Etsy’s fields. Change anything that needs it, then save and continue.</p><div class="choice-grid"><div class="field-sample"><label>Etsy category</label><select data-etsy-field><option>Clothing · Tops & Tees · T-shirts</option><option>Home & Living · Wall Decor · Prints</option></select></div><div class="field-sample"><label>Who made it?</label><select data-etsy-field><option>Another company or person</option><option>I did</option></select></div><div class="field-sample"><label>When was it made?</label><select data-etsy-field><option>Made to order</option><option>2020–2026</option></select></div><div class="field-sample"><label>Occasion</label><select data-etsy-field><option value="">Not applicable</option><option>Bachelorette party</option><option>Birthday</option></select></div></div>`},
+ {title:'Images + mockups',wide:true,html:`<div class="step-icon">▧</div><h3>Choose each listing’s images</h3><p class="step-intro">Choose Printify images for each listing. Size guides and your own or Goldie-generated mockups are optional.</p><div class="listing-image-workspace"><div class="batch-image-tools"><div><b>Optional batch size guide</b><span>Choose once to add the same guide to every listing.</span></div><label class="small-action">Choose size guide<input type="file" accept="image/png,image/jpeg,image/webp" data-batch-size-guide></label></div><div data-listing-images></div></div>`},
+ {title:'Final review',wide:true,html:`<div class="step-icon">✓</div><h3>Ready to publish</h3><p class="step-intro">Everything required is complete. These listings will go live on Etsy, not to Etsy drafts.</p><div class="review-list"><div class="review-item"><i>✓</i><div><b data-final-count>Printify products</b><span>Drafts created and connected to this batch</span></div></div><div class="review-item"><i>✓</i><div><b>Titles, tags, descriptions, and pricing</b><span>Reviewed and ready</span></div></div><div class="review-item"><i>✓</i><div><b>Etsy details and images</b><span>Saved for every listing</span></div></div></div><button class="btn prototype-action" data-open-confirm>Publish all live on Etsy</button><div data-confirm-slot></div>`}
+];
+let current=0,unlockedStep=0,completed=new Set(),connections=new Set(),connectionDetails={},connectionsChecked=false,selectedProduct='',uploadedDesigns=[],selectedKeywords=new Set(),selectedImages={},listingAssets={},batchSizeGuide='',mockupLibrary=[],pricingState=['29.00','33.00','38.00'],shippingState='Poster shipping · US $4.00',descriptionState='Soft, comfortable, and ready for everyday wear. Choose your favorite color and size above.',etsyState=['Clothing · Tops & Tees · T-shirts','Another company or person','Made to order',''];
+const card=document.getElementById('workflow-card'),title=document.getElementById('page-title'),number=document.getElementById('step-number'),progress=document.getElementById('step-progress'),next=document.getElementById('next-step'),back=document.getElementById('back-step'),menu=document.getElementById('step-menu');
+const SAVED_WORKFLOW_KEY='goldie-listing-factory-preview-v2',DESIGN_DB='goldie-listing-factory-files-v1';
+menu.innerHTML=steps.map((step,index)=>`<button data-step="${index}">${index+1}. ${step.title}</button>`).join('');
+function saveWorkflow(){
+  const savedAssets=Object.fromEntries(Object.entries(listingAssets).map(([key,value])=>[key,{...value,generated:[],uploadUrls:[]}]))
+  const state={current,unlockedStep,completed:[...completed].filter(step=>step!==0),selectedProduct,selectedKeywords:[...selectedKeywords],selectedImages,listingAssets:savedAssets,batchSizeGuide,pricingState,shippingState,descriptionState,etsyState};
+  localStorage.setItem(SAVED_WORKFLOW_KEY,JSON.stringify(state));
+  const saved=document.querySelector('.saved');if(saved){saved.textContent='Saved';clearTimeout(saveWorkflow.timer);saveWorkflow.timer=setTimeout(()=>saved.textContent='Saved automatically',1200)}
+}
+function loadWorkflow(){
+  try{const state=JSON.parse(localStorage.getItem(SAVED_WORKFLOW_KEY)||'null');if(!state)return;current=Math.max(0,Math.min(steps.length-1,Number(state.current)||0));unlockedStep=Math.max(current,Math.min(steps.length-1,Number(state.unlockedStep)||0));completed=new Set(Array.isArray(state.completed)?state.completed.filter(step=>Number(step)>0):[]);selectedProduct=state.selectedProduct||'';selectedKeywords=new Set(state.selectedKeywords||[]);selectedImages=state.selectedImages&&typeof state.selectedImages==='object'&&!Array.isArray(state.selectedImages)?state.selectedImages:{};listingAssets=state.listingAssets||{};batchSizeGuide=state.batchSizeGuide||'';pricingState=Array.isArray(state.pricingState)?state.pricingState:pricingState;shippingState=state.shippingState||shippingState;descriptionState=state.descriptionState||descriptionState;etsyState=Array.isArray(state.etsyState)?state.etsyState:etsyState}catch{}
+}
+function openDesignDb(){return new Promise((resolve,reject)=>{const request=indexedDB.open(DESIGN_DB,1);request.onupgradeneeded=()=>request.result.createObjectStore('files',{keyPath:'name'});request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error)})}
+async function saveDesignFiles(){try{const db=await openDesignDb(),transaction=db.transaction('files','readwrite'),store=transaction.objectStore('files');store.clear();uploadedDesigns.forEach(item=>item.file&&store.put({name:item.name,file:item.file,width:item.width,height:item.height}));await new Promise((resolve,reject)=>{transaction.oncomplete=resolve;transaction.onerror=()=>reject(transaction.error)});db.close()}catch{}}
+async function loadDesignFiles(){try{const db=await openDesignDb(),transaction=db.transaction('files','readonly'),request=transaction.objectStore('files').getAll(),records=await new Promise((resolve,reject)=>{request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error)});db.close();uploadedDesigns=records.map(item=>({name:item.name,file:item.file,width:item.width,height:item.height,url:URL.createObjectURL(item.file)}));if(uploadedDesigns.length)completed.add(2)}catch{uploadedDesigns=[]}}
+async function clearSavedDesignFiles(){try{const db=await openDesignDb(),transaction=db.transaction('files','readwrite');transaction.objectStore('files').clear();db.close()}catch{}}
+function restoreVisibleState(){
+  if(current===0){renderConnectionState();if(!connectionsChecked)checkConnections()}
+  if(current===1){card.querySelectorAll('[data-product]').forEach(button=>button.classList.toggle('selected',button.dataset.product===selectedProduct));if(selectedProduct){const feedback=card.querySelector('[data-product-feedback]');feedback.hidden=false;feedback.querySelector('span').textContent=`${selectedProduct==='shirt'?'Comfort Colors 1717':'Matte vertical poster'} selected`;completed.add(1)}}
+  if(current===2)renderUploads();
+  if(current===3){const rows=[...card.querySelectorAll('.price-grid:not(.head)')],names=selectedProduct==='poster'?['8×10','12×18','24×36']:['Small–XL','2XL','3XL–4XL'],costs=selectedProduct==='poster'?['$6.50','$10.25','$18.50']:['$11.24','$13.80','$16.25'];rows.forEach((row,index)=>{row.children[0].textContent=names[index];row.children[1].textContent=costs[index]});card.querySelector('[data-shipping]').value=shippingState;card.querySelectorAll('[data-price]').forEach((input,index)=>input.value=pricingState[index]);recalculatePrices();completed.add(3)}
+  if(current===4){card.querySelector('[data-draft-count]').textContent=`${uploadedDesigns.length} ${uploadedDesigns.length===1?'design':'designs'} ready`;if(completed.has(4)){card.querySelector('[data-progress-bar]').style.width='100%';card.querySelector('[data-progress-copy]').textContent=`${uploadedDesigns.length} Printify ${uploadedDesigns.length===1?'draft':'drafts'} created.`;const create=card.querySelector('[data-create-drafts]');create.textContent='✓ Drafts created';create.disabled=true}}
+  if(current===5){card.querySelector('[data-description]').value=descriptionState;card.querySelectorAll('[data-keyword]').forEach(button=>button.classList.toggle('selected',selectedKeywords.has(button.textContent)));updateTitlePreview()}
+  if(current===6){card.querySelectorAll('[data-etsy-field]').forEach((field,index)=>field.value=etsyState[index]);completed.add(6)}
+  if(current===7){renderListingImages();void loadMockupLibrary();completed.add(7)}
+  if(current===8)card.querySelector('[data-final-count]').textContent=`${uploadedDesigns.length} Printify ${uploadedDesigns.length===1?'product':'products'}`;
+}
+function canOpenStep(index){return index<=unlockedStep}
+function connectionMessage(message,type='info'){
+  const box=card.querySelector('[data-connection-message]');if(!box)return;
+  box.className=`connection-message show ${type}`;box.innerHTML=message;
+}
+function updateConnectionGate(){
+  if(connections.size===2){completed.add(0);next.classList.add('go')}else{completed.delete(0);next.classList.remove('go')}
+}
+function renderConnectionState(){
+  ['printify','etsy'].forEach(service=>{
+    const row=card.querySelector(`[data-connection="${service}"]`);if(!row)return;
+    const button=row.querySelector('[data-connect]'),copy=row.querySelector(`[data-connection-copy="${service}"]`),connected=connections.has(service);
+    row.classList.toggle('connected',connected);row.classList.remove('busy');button.disabled=false;
+    button.classList.toggle('disconnect',connected);button.dataset.action=connected?'disconnect':'connect';
+    button.textContent=connected?'Disconnect':`Connect ${service==='printify'?'Printify':'Etsy'}`;
+    if(copy)copy.textContent=connected?(service==='etsy'&&connectionDetails.etsy?.shopName?`Connected to ${connectionDetails.etsy.shopName}.`:'Connected and verified.'):(service==='printify'?'Create and update your product drafts.':'Required before Goldie publishes and finishes your listings.');
+  });
+  updateConnectionGate();
+}
+async function readApiResponse(response){
+  const text=await response.text();try{return text?JSON.parse(text):{}}catch{return {error:text||'The server returned an unexpected response.'}}
+}
+function signInMessage(){return `Sign in to Goldie before connecting your accounts. <a href="/signin-with-chatgpt?return_to=%2Fdesign-lab%3Fbackground%3Dsaturated" target="_top">Sign in with ChatGPT</a>`}
+function setAccountState(signedIn){const status=document.querySelector('[data-account-status]'),link=document.querySelector('[data-account-toggle]'),avatar=document.querySelector('.account-avatar');if(status)status.textContent=signedIn?'Signed in':'Sign in required';if(link){link.textContent=signedIn?'Sign out':'Sign in';link.href=signedIn?'/signout-with-chatgpt?return_to=%2Fdesign-lab%3Fbackground%3Dsaturated':'/signin-with-chatgpt?return_to=%2Fdesign-lab%3Fbackground%3Dsaturated'}if(avatar)avatar.textContent=signedIn?'B':'G'}
+async function checkConnections(){
+  if(current!==0)return;connectionsChecked=true;
+  const rows=[...card.querySelectorAll('[data-connection]')];rows.forEach(row=>row.classList.add('busy'));
+  rows.forEach(row=>{const button=row.querySelector('button');button.disabled=true;button.textContent='Checking…'});
+  try{
+    const [printifyResponse,etsyResponse]=await Promise.all([fetch('/api/printify',{credentials:'same-origin'}),fetch('/api/etsy',{credentials:'same-origin'})]);
+    const [printify,etsy]=await Promise.all([readApiResponse(printifyResponse),readApiResponse(etsyResponse)]);
+    if(printifyResponse.status===401||etsyResponse.status===401){setAccountState(false);connections.clear();renderConnectionState();connectionMessage(signInMessage(),'error');return}
+    setAccountState(true);
+    if(printifyResponse.ok&&printify.connected){connections.add('printify');connectionDetails.printify=printify}else connections.delete('printify');
+    if(etsyResponse.ok&&etsy.connected){connections.add('etsy');connectionDetails.etsy=etsy}else connections.delete('etsy');
+    renderConnectionState();
+    if(connections.size===2)connectionMessage('Printify and Etsy are connected. You can continue.');
+  }catch(error){
+    renderConnectionState();connectionMessage('Goldie could not check your connections. Make sure you are using the live Goldie preview, then try again.','error');
+  }
+}
+async function connectPrintify(token){
+  const row=card.querySelector('[data-connection="printify"]'),button=row?.querySelector('button'),submit=card.querySelector('[data-printify-form] button');
+  row?.classList.add('busy');if(button)button.disabled=true;if(submit){submit.disabled=true;submit.textContent='Verifying…'}
+  try{
+    const response=await fetch('/api/printify',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({token})});
+    const result=await readApiResponse(response);
+    if(response.status===401){connectionMessage(signInMessage(),'error');return}
+    if(!response.ok||!result.connected)throw new Error(result.error||'Printify could not verify that token.');
+    connections.add('printify');connectionDetails.printify=result;card.querySelector('[data-printify-form]')?.classList.remove('open');
+    const input=card.querySelector('#printify-token');if(input)input.value='';renderConnectionState();
+    connectionMessage(connections.size===2?'Printify and Etsy are connected. You can continue.':'Printify is connected. Connect Etsy to continue.');
+  }catch(error){connectionMessage(error.message||'Printify could not verify that token.','error')}
+  finally{row?.classList.remove('busy');if(button)button.disabled=false;if(submit){submit.disabled=false;submit.textContent='Connect securely'}}
+}
+async function connectEtsy(){
+  const row=card.querySelector('[data-connection="etsy"]'),button=row?.querySelector('button');row?.classList.add('busy');if(button){button.disabled=true;button.textContent='Opening Etsy…'}
+  try{
+    const response=await fetch('/api/etsy',{method:'POST',credentials:'same-origin'}),result=await readApiResponse(response);
+    if(response.status===401){renderConnectionState();connectionMessage(signInMessage(),'error');return}
+    if(!response.ok||!result.authorizeUrl)throw new Error(result.error||'Etsy authorization could not start.');
+    window.top.location.assign(result.authorizeUrl);
+  }catch(error){renderConnectionState();connectionMessage(error.message||'Etsy authorization could not start.','error')}
+}
+async function disconnectService(service){
+  const row=card.querySelector(`[data-connection="${service}"]`),button=row?.querySelector('button');row?.classList.add('busy');if(button){button.disabled=true;button.textContent='Disconnecting…'}
+  try{
+    const response=await fetch(`/api/${service}`,{method:'DELETE',credentials:'same-origin'}),result=await readApiResponse(response);
+    if(response.status===401){renderConnectionState();connectionMessage(signInMessage(),'error');return}
+    if(!response.ok)throw new Error(result.error||`${service==='printify'?'Printify':'Etsy'} could not be disconnected.`);
+    connections.delete(service);delete connectionDetails[service];renderConnectionState();connectionMessage(`${service==='printify'?'Printify':'Etsy'} disconnected.`);
+  }catch(error){renderConnectionState();connectionMessage(error.message,'error')}
+}
+function render(){const step=steps[current];title.textContent=step.title;number.textContent=`Step ${current+1} of ${steps.length}`;progress.style.width=`${(current+1)/steps.length*100}%`;card.innerHTML=step.html;card.className=`card ${step.wide?'wide compact':''}`;back.hidden=current===0;menu.querySelectorAll('button').forEach((button,index)=>{button.classList.toggle('on',index===current);button.disabled=!canOpenStep(index)});menu.classList.remove('open');restoreVisibleState();menu.querySelectorAll('button').forEach((button,index)=>button.disabled=!canOpenStep(index));const labels={3:'Save prices + continue',5:'Review titles + continue',6:'Save details + continue',7:'Save images + continue',8:'Finish preview'};next.textContent=labels[current]||'Continue';next.hidden=current===4&&!completed.has(4);next.classList.toggle('go',completed.has(current))}
+function renderReceipt(){const count=uploadedDesigns.length,tags=count*13,minutes=Math.max(12,Math.round(count*11.1));title.textContent='Batch complete';number.textContent='Workflow complete';progress.style.width='100%';card.className='card wide compact';card.innerHTML=`<div class="step-icon">✓</div><h3>Your batch is ready</h3><p class="step-intro">You finished the complete Listing Factory workflow.</p><div class="receipt-metrics"><div><b>${count}</b><span>listings prepared</span></div><div><b>${tags}</b><span>tags created</span></div><div><b>${minutes}m</b><span>estimated time saved</span></div></div><div class="review-list"><div class="review-item"><i>✓</i><div><b>Products, pricing, and shipping</b><span>Completed across the full batch</span></div></div><div class="review-item"><i>✓</i><div><b>Titles, descriptions, Etsy details, and images</b><span>Reviewed and ready</span></div></div></div><button class="btn prototype-action" data-start-over>Start another batch</button>`;back.hidden=true;next.hidden=true;menu.classList.remove('open')}
+function renderUploads(){const results=card.querySelector('[data-upload-results]'),quality=card.querySelector('[data-quality]'),label=card.querySelector('label[for="design-upload"]');if(!results||!quality)return;results.innerHTML=uploadedDesigns.slice(0,4).map(item=>`<figure><img src="${item.url}" alt="${item.name}"><figcaption>${item.name} · ${item.width}×${item.height}</figcaption></figure>`).join('');const smallest=uploadedDesigns.reduce((low,item)=>!low||item.width*item.height<low.width*low.height?item:low,null);quality.textContent=smallest?`${uploadedDesigns.length} ${uploadedDesigns.length===1?'design':'designs'} saved · smallest is ${smallest.width}×${smallest.height}px`:'No designs selected';if(label&&uploadedDesigns.length)label.innerHTML=`<span class="dropzone-icon">✓</span><b>Add or replace designs</b><span>${uploadedDesigns.length} of 20 designs saved</span><small>Your files will still be here after a refresh</small>`}
+function previewImages(design){const poster=['/mockups/pink-dorm-01-leaning-frame.png','/mockups/pink-dorm-02-hanging-poster.png','/mockups/pink-dorm-03-maximalist-bed.png'];return selectedProduct==='poster'?poster:[design.url,design.url,design.url]}
+function imageSelections(design,index){const key=design.name||String(index);if(!Array.isArray(selectedImages[key]))selectedImages[key]=[0,1,2];return selectedImages[key]}
+function safeText(value){return String(value||'').replace(/[&<>"']/g,character=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]))}
+function renderListingImages(){const host=card.querySelector('[data-listing-images]');if(!host)return;const designs=uploadedDesigns.length?uploadedDesigns:[{name:'Example listing',url:'/mockups/pink-dorm-01-leaning-frame.png'}];host.innerHTML=designs.map((design,index)=>{const key=design.name||String(index),assets=listingAssets[key]||{},images=previewImages(design),selected=imageSelections(design,index);return `<article class="listing-image-card" data-listing-key="${safeText(key)}"><div class="listing-image-head"><img src="${design.url}" alt=""><div><b>${safeText(design.name)}</b><span>Choose this listing’s Printify images individually.</span></div></div><div class="printify-image-grid">${images.map((source,imageIndex)=>`<button class="printify-image ${selected.includes(imageIndex)?'selected':''}" data-printify-image="${imageIndex}"><img src="${source}" alt="Printify option ${imageIndex+1}"><span>${['Primary','Detail','Lifestyle'][imageIndex]}</span></button>`).join('')}</div><div class="listing-image-actions"><button data-deselect-listing>Deselect all Printify images</button><label>${assets.sizeGuide?'Replace':'Add'} size guide<input type="file" accept="image/png,image/jpeg,image/webp" data-listing-size-guide></label><label>${assets.uploadCount?`Add more own mockups (${assets.uploadCount})`:'Upload your own mockups'}<input type="file" multiple accept="image/png,image/jpeg,image/webp" data-own-mockups></label><button data-auto-mockups>Auto-create Goldie mockups</button></div>${assets.sizeGuide?`<div class="image-file-note">✓ Individual size guide: ${safeText(assets.sizeGuide)}</div>`:''}${assets.uploadCount?`<div class="image-file-note">✓ ${assets.uploadCount} uploaded ${assets.uploadCount===1?'mockup':'mockups'} saved for this listing</div>`:''}<div class="mockup-panel ${assets.panelOpen?'open':''}" data-mockup-panel><b>Auto-create mockups for this listing</b><span class="mockup-status">Goldie uses the real Printify preview as the placement reference.</span><select data-mockup-set><option value="">Choose a saved mockup set</option>${[...new Set(mockupLibrary.map(item=>item.theme))].map(theme=>`<option ${assets.theme===theme?'selected':''}>${safeText(theme)}</option>`).join('')}</select><div class="mockup-thumbs">${mockupLibrary.filter(item=>!assets.theme||item.theme===assets.theme).slice(0,8).map(item=>`<button class="${(assets.templateIds||[]).includes(item.id)?'selected':''}" data-mockup-template="${safeText(item.id)}"><img src="${item.src}" alt="${safeText(item.name)}"></button>`).join('')}</div><button class="small-action" data-generate-mockups ${assets.generating?'disabled':''}>${assets.generating?'Creating mockups…':'Create selected mockups'}</button><div class="mockup-status">${safeText(assets.status||'')}</div>${assets.generated?.length?`<div class="generated-mockups">${assets.generated.map(source=>`<img src="${source}" alt="Generated mockup">`).join('')}</div>`:''}</div></article>`}).join('');if(batchSizeGuide){const label=card.querySelector('[data-batch-size-guide]')?.closest('label');if(label)label.childNodes[0].textContent=`Replace ${batchSizeGuide}`}}
+async function loadMockupLibrary(){if(mockupLibrary.length)return;try{const response=await fetch('/api/mockups/library',{credentials:'same-origin'}),payload=await readApiResponse(response);if(response.ok)mockupLibrary=payload.templates||[]}catch{}if(current===7)renderListingImages()}
+function fileDataUrl(file){return new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=()=>reject(reader.error);reader.readAsDataURL(file)})}
+async function urlDataUrl(url){const blob=await(await fetch(url)).blob();return fileDataUrl(blob)}
+async function generateListingMockups(key){const design=uploadedDesigns.find(item=>item.name===key);if(!design?.file)return;const assets=listingAssets[key]||{},chosen=mockupLibrary.filter(item=>(assets.templateIds||[]).includes(item.id));if(!chosen.length){assets.status='Choose at least one mockup first.';listingAssets[key]=assets;renderListingImages();return}assets.generating=true;assets.status=`Creating 0 of ${chosen.length}…`;assets.generated=[];listingAssets[key]=assets;renderListingImages();try{const designData=await fileDataUrl(design.file),reference=await urlDataUrl(previewImages(design)[0]);for(const template of chosen){if((template.surfaceKind||'rigid-flat')==='rigid-flat'){assets.generated.push(template.src)}else{const scene=await urlDataUrl(template.src),response=await fetch('/api/mockups/render',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({kind:template.surfaceKind,scene,design:designData,reference})}),payload=await readApiResponse(response);if(!response.ok||!payload.image)throw new Error(payload.error||'Goldie could not create this mockup.');assets.generated.push(payload.image)}assets.status=`Creating ${assets.generated.length} of ${chosen.length}…`;listingAssets[key]=assets;renderListingImages()}assets.status=`✓ ${assets.generated.length} mockups created and saved for this listing.`}catch(error){assets.status=error.message||'Goldie could not create these mockups.'}finally{assets.generating=false;listingAssets[key]=assets;renderListingImages();saveWorkflow()}}
+function inspectImage(file){return new Promise(resolve=>{const url=URL.createObjectURL(file),image=new Image();image.onload=()=>resolve({name:file.name,file,url,width:image.naturalWidth,height:image.naturalHeight});image.onerror=()=>resolve({name:file.name,file,url,width:0,height:0});image.src=url})}
+function resetForProduct(product){uploadedDesigns.forEach(item=>item.url&&URL.revokeObjectURL(item.url));uploadedDesigns=[];clearSavedDesignFiles();selectedKeywords.clear();selectedImages={};listingAssets={};batchSizeGuide='';unlockedStep=2;for(let step=2;step<9;step++)completed.delete(step);if(product==='poster'){pricingState=['16.00','24.00','38.00'];shippingState='Poster shipping · US $4.00';etsyState=['Home & Living · Wall Decor · Prints','Another company or person','Made to order','']}else{pricingState=['29.00','33.00','38.00'];shippingState='Apparel shipping · US $4.49';etsyState=['Clothing · Tops & Tees · T-shirts','Another company or person','Made to order','']}}
+function recalculatePrices(){card.querySelectorAll('.price-grid:not(.head)').forEach(row=>{const cost=Number(row.children[1].textContent.replace('$','')),price=Number(row.querySelector('[data-price]').value)||0,fees=price*.095+.45,profit=price-cost-fees;row.querySelector('.profit-value').textContent=`$${profit.toFixed(2)}`;row.querySelector('.profit-value').style.color=profit<5?'#a33c58':''})}
+function updateTitlePreview(){const preview=card.querySelector('[data-title-preview] span');if(!preview)return;const words=[...selectedKeywords];preview.textContent=words.length?`${words.join(', ')} · matching Etsy tags created automatically`:'Select keywords or let Goldie choose from this validated bank.'}
+document.getElementById('view-steps').addEventListener('click',event=>{event.preventDefault();menu.classList.toggle('open')});
+menu.addEventListener('click',event=>{const button=event.target.closest('[data-step]');if(button&&!button.disabled){current=Number(button.dataset.step);render();saveWorkflow()}});
+card.addEventListener('click',event=>{
+  const tokenHelp=event.target.closest('[data-token-help]');if(tokenHelp){event.preventDefault();card.querySelector('[data-instructions]')?.classList.toggle('open');return}
+  const connect=event.target.closest('[data-connect]');if(connect){const service=connect.dataset.connect;if(connect.dataset.action==='disconnect'){disconnectService(service);return}if(service==='printify'){card.querySelector('[data-printify-form]')?.classList.toggle('open');card.querySelector('#printify-token')?.focus()}else connectEtsy();return}
+  const product=event.target.closest('[data-product]');if(product){const newProduct=product.dataset.product;if(newProduct!==selectedProduct)resetForProduct(newProduct);selectedProduct=newProduct;card.querySelectorAll('[data-product]').forEach(item=>item.classList.toggle('selected',item===product));const feedback=card.querySelector('[data-product-feedback]');feedback.hidden=false;feedback.querySelector('span').textContent=`${product.querySelector('b').textContent} selected`;completed.add(1);next.classList.add('go');return}
+  const keyword=event.target.closest('[data-keyword]');if(keyword){const word=keyword.textContent;if(selectedKeywords.has(word))selectedKeywords.delete(word);else selectedKeywords.add(word);keyword.classList.toggle('selected',selectedKeywords.has(word));updateTitlePreview();return}
+  const listingCard=event.target.closest('[data-listing-key]'),listingKey=listingCard?.dataset.listingKey;
+  const printifyImage=event.target.closest('[data-printify-image]');if(printifyImage&&listingKey){const values=selectedImages[listingKey]||[],imageIndex=Number(printifyImage.dataset.printifyImage);selectedImages[listingKey]=values.includes(imageIndex)?values.filter(value=>value!==imageIndex):[...values,imageIndex];renderListingImages();saveWorkflow();return}
+  if(event.target.closest('[data-deselect-listing]')&&listingKey){selectedImages[listingKey]=[];renderListingImages();saveWorkflow();return}
+  if(event.target.closest('[data-auto-mockups]')&&listingKey){const assets=listingAssets[listingKey]||{};assets.panelOpen=!assets.panelOpen;listingAssets[listingKey]=assets;renderListingImages();void loadMockupLibrary();saveWorkflow();return}
+  const mockupTemplate=event.target.closest('[data-mockup-template]');if(mockupTemplate&&listingKey){const assets=listingAssets[listingKey]||{},ids=assets.templateIds||[],id=mockupTemplate.dataset.mockupTemplate;assets.templateIds=ids.includes(id)?ids.filter(value=>value!==id):[...ids,id];assets.panelOpen=true;listingAssets[listingKey]=assets;renderListingImages();saveWorkflow();return}
+  if(event.target.closest('[data-generate-mockups]')&&listingKey){void generateListingMockups(listingKey);return}
+  const createDrafts=event.target.closest('[data-create-drafts]');if(createDrafts){createDrafts.disabled=true;createDrafts.textContent='Creating drafts…';const bar=card.querySelector('[data-progress-bar]'),copy=card.querySelector('[data-progress-copy]');bar.style.width='45%';copy.textContent='Uploading designs to Printify…';setTimeout(()=>{bar.style.width='100%';copy.textContent=`${uploadedDesigns.length} Printify ${uploadedDesigns.length===1?'draft':'drafts'} created.`;createDrafts.textContent='✓ Drafts created';completed.add(4);unlockedStep=Math.max(unlockedStep,5);saveWorkflow();setTimeout(()=>{current=5;render();saveWorkflow()},450)},650);return}
+  const generateTitles=event.target.closest('[data-generate-titles]');if(generateTitles){if(!selectedKeywords.size){['western shirt','cowgirl tee','retro western top'].forEach(word=>selectedKeywords.add(word));card.querySelectorAll('[data-keyword]').forEach(button=>button.classList.toggle('selected',selectedKeywords.has(button.textContent)))}updateTitlePreview();generateTitles.textContent='✓ Titles and tags created';generateTitles.disabled=true;completed.add(5);next.classList.add('go');return}
+  const openConfirm=event.target.closest('[data-open-confirm]');if(openConfirm){card.querySelector('[data-confirm-slot]').innerHTML=`<div class="confirm-panel" role="dialog" aria-label="Confirm Etsy publishing"><b>Publish these listings live on Etsy?</b><span>They will not be sent to Etsy drafts. This preview will not publish anything, but the real workflow requires this second confirmation.</span><button class="confirm-publish" data-confirm-publish>Yes, publish all live</button></div>`;openConfirm.disabled=true;return}
+  if(event.target.closest('[data-confirm-publish]')){completed.add(8);next.classList.add('go');card.querySelector('[data-confirm-slot]').innerHTML=`<div class="action-feedback" role="status"><i>✓</i>Publish confirmation complete</div>`;return}
+  if(event.target.closest('[data-start-over]')){current=0;unlockedStep=connections.size===2?1:0;completed.clear();if(connections.size===2)completed.add(0);uploadedDesigns.forEach(item=>item.url&&URL.revokeObjectURL(item.url));uploadedDesigns=[];selectedKeywords.clear();selectedProduct='';selectedImages={};listingAssets={};batchSizeGuide='';pricingState=['29.00','33.00','38.00'];shippingState='Poster shipping · US $4.00';descriptionState='Soft, comfortable, and ready for everyday wear. Choose your favorite color and size above.';etsyState=['Clothing · Tops & Tees · T-shirts','Another company or person','Made to order',''];localStorage.removeItem(SAVED_WORKFLOW_KEY);clearSavedDesignFiles();render();return}
+  setTimeout(saveWorkflow,0);
+});
+card.addEventListener('click',()=>setTimeout(saveWorkflow,0),true);
+card.addEventListener('submit',event=>{const form=event.target.closest('[data-printify-form]');if(!form)return;event.preventDefault();const token=form.elements.token.value.trim();if(!token){connectionMessage('Paste your Printify token first.','error');form.elements.token.focus();return}connectPrintify(token)});
+card.addEventListener('input',event=>{if(event.target.matches('[data-price]')){const inputs=[...card.querySelectorAll('[data-price]')];pricingState=inputs.map(input=>input.value);recalculatePrices()}if(event.target.matches('[data-description]'))descriptionState=event.target.value;saveWorkflow()});
+card.addEventListener('change',async event=>{if(event.target.matches('[data-shipping]')){shippingState=event.target.value;saveWorkflow();return}if(event.target.matches('[data-etsy-field]')){etsyState=[...card.querySelectorAll('[data-etsy-field]')].map(field=>field.value);saveWorkflow();return}const listingCard=event.target.closest('[data-listing-key]'),listingKey=listingCard?.dataset.listingKey;if(event.target.matches('[data-batch-size-guide]')){const file=event.target.files?.[0];if(file){batchSizeGuide=file.name;uploadedDesigns.forEach(design=>{listingAssets[design.name]={...(listingAssets[design.name]||{}),sizeGuide:file.name}});renderListingImages();saveWorkflow()}return}if(event.target.matches('[data-listing-size-guide]')&&listingKey){const file=event.target.files?.[0];if(file){listingAssets[listingKey]={...(listingAssets[listingKey]||{}),sizeGuide:file.name};renderListingImages();saveWorkflow()}return}if(event.target.matches('[data-own-mockups]')&&listingKey){const files=[...event.target.files||[]].filter(file=>/^image\/(png|jpeg|webp)$/.test(file.type));if(files.length){const assets=listingAssets[listingKey]||{};assets.uploadCount=(assets.uploadCount||0)+files.length;listingAssets[listingKey]=assets;renderListingImages();saveWorkflow()}return}if(event.target.matches('[data-mockup-set]')&&listingKey){const assets=listingAssets[listingKey]||{};assets.theme=event.target.value;assets.templateIds=[];assets.panelOpen=true;listingAssets[listingKey]=assets;renderListingImages();saveWorkflow();return}if(!event.target.matches('[data-design-upload]'))return;const files=[...event.target.files].filter(file=>file.type==='image/png'||file.type==='image/jpeg').slice(0,20);const quality=card.querySelector('[data-quality]');if(quality)quality.textContent=`Uploading ${files.length} ${files.length===1?'design':'designs'}… keep this page open`;uploadedDesigns.forEach(item=>item.url&&URL.revokeObjectURL(item.url));uploadedDesigns=await Promise.all(files.map(inspectImage));selectedImages={};listingAssets={};renderUploads();if(uploadedDesigns.length){completed.add(2);next.classList.add('go')}else{completed.delete(2);next.classList.remove('go')}await saveDesignFiles();saveWorkflow()});
+next.addEventListener('click',()=>{if(!next.classList.contains('go'))return;unlockedStep=Math.max(unlockedStep,current+1);if(current<steps.length-1){current++;render();saveWorkflow()}else{renderReceipt()}});
+back.addEventListener('click',()=>{if(current>0){current--;render();saveWorkflow()}});
+async function initializeWorkflow(){loadWorkflow();await loadDesignFiles();render()}
+initializeWorkflow();
+</script>
+</body>
+</html>
