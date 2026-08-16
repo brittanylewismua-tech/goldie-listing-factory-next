@@ -629,7 +629,6 @@ export default function Home() {
         {progressIndex>0&&<GoldieInsight>{currentInsight()}</GoldieInsight>}
         {progressIndex===3&&files.length>0&&<ActionReceipt items={[{value:`${files.length} designs checked`,label:"Original artwork resolution preserved"},{value:`${pricedVariants.length} variants`,label:pricingApproved?"Pricing approved":"Ready for pricing review"}]}/>}
         {progressIndex===5&&titleCount>0&&<ActionReceipt items={[{value:`${titleCount} titles ready`,label:"Validated keyword phrases only"},{value:`${files.reduce((sum,file)=>sum+file.tags.length,0)} matching tags`,label:"Zero invented keywords"}]}/>}
-        <div className="workflow-footer-actions">{progressIndex>0&&<button className="workflow-back" type="button" onClick={goBackOneStep}><span aria-hidden="true">←</span> Back</button>}<span className="autosave-note"><i aria-hidden="true">✓</i> Saved automatically</span></div>
         <div className={`steps-column ${workflowStep}-column`}>
           <article className={`step-card connect-step workflow-panel ${connected ? "done" : ""} ${workflowStep==="connect"?"active-panel":"hidden-panel"}`}>
             <div className="step-number">01</div>
@@ -762,9 +761,8 @@ export default function Home() {
             </div>
           )}
           <p className="launch-note">This step creates unpublished Printify drafts. The final Goldie step publishes them live to Etsy only after a second confirmation.</p>
-          {(template || description || files.length > 0 || drafts.length > 0) && <button className="start-over-button" disabled={running} onClick={startOver}>Clear batch + start over</button>}
-
         </aside>
+        <div className="workflow-footer-actions">{progressIndex>0&&<button className="workflow-back" type="button" onClick={goBackOneStep}><span aria-hidden="true">←</span> Back</button>}<span className="autosave-note"><i aria-hidden="true">✓</i> Saved automatically</span></div>
         </div>
       </section>}
 

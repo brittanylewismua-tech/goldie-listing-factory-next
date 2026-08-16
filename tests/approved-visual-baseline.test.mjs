@@ -86,6 +86,11 @@ assert.match(css, /\.app-shell \.recipe-card>\.step-number:after\{[\s\S]*M12 16V
 assert.match(page, /launch-step-icon.*create-drafts-icon.*pricing-icon/);
 assert.match(css, /\.launch-panel>\.pricing-icon:after\{[\s\S]*rect x='4' y='3'/);
 assert.match(css, /\.launch-panel>\.create-drafts-icon:after\{[\s\S]*M11 13h4/);
+assert.ok(page.indexOf('className="workflow-footer-actions"') > page.indexOf('className={`launch-panel workflow-panel'), "Back and autosave must render after the active step content");
+assert.equal((page.match(/Clear batch \+ start over/g) || []).length, 1, "Only one clear-batch control should be present");
+assert.match(css, /UX readability lock[\s\S]*\.app-shell \.batch-limits\{[\s\S]*justify-content:center[\s\S]*font-size:12px!important/);
+assert.match(css, /\.app-shell \.folder-drop small\{[\s\S]*font-size:12px!important/);
+assert.match(css, /\.app-shell \.variant-table th\{font-size:12px!important/);
 });
 
 test("preview navigation renders the real later-step experiences", async () => {

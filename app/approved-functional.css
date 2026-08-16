@@ -31,6 +31,75 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
   .launch-panel,.post-draft-workspace{border-radius:28px}.recommended-listing-photos{width:min(930px,100%)}
 }
 
+/* UX readability lock: operational copy must be effortless to scan, and the
+   navigation row always sits below the active step instead of inside it. */
+.app-shell .batch-limits{
+  display:flex!important;
+  align-items:center;
+  justify-content:center;
+  flex-wrap:wrap;
+  gap:7px 11px;
+  width:min(100%,680px);
+  margin:18px auto!important;
+  padding:11px 15px;
+  border:1px solid rgba(139,89,137,.2);
+  border-radius:14px;
+  background:rgba(255,255,255,.48);
+  color:#4b283e!important;
+  font-size:12px!important;
+  font-weight:650!important;
+  line-height:1.45!important;
+  text-align:center!important;
+}
+.app-shell .batch-limits i{width:4px!important;height:4px!important;border-radius:50%;background:#a765a0!important}
+.app-shell .file-reminder{font-size:12px!important;line-height:1.55!important}
+.app-shell .file-reminder b{font-size:13px!important}
+.app-shell .folder-drop b{color:#4b283e!important;font-size:14px!important;line-height:1.35!important}
+.app-shell .folder-drop small{color:rgba(74,42,62,.76)!important;font-size:12px!important;line-height:1.45!important}
+.app-shell .browse-chip{font-size:12px!important;font-weight:750!important}
+.app-shell .design-preparation-status b{font-size:14px!important;line-height:1.35!important}
+.app-shell .design-preparation-status small{color:rgba(74,42,62,.74)!important;font-size:11.5px!important;line-height:1.45!important}
+.app-shell .batch-capacity span{color:rgba(74,42,62,.72)!important;font-size:11.5px!important}
+.app-shell .pixel-warning-inline small{font-size:11.5px!important}
+
+.app-shell .variant-table th{font-size:12px!important;line-height:1.35!important}
+.app-shell .variant-table td{font-size:12px!important;line-height:1.4!important}
+.app-shell .variant-table .profit-fee-note{font-size:10.5px!important;line-height:1.35!important}
+.app-shell .pricing-section-heading p{font-size:12px!important;line-height:1.55!important}
+.app-shell .profit-goal-control label,
+.app-shell .shipping-profile-select>span{font-size:12px!important}
+.app-shell .shipping-profile-select small,
+.app-shell .pricing-math p,
+.app-shell .custom-shipping-body small,
+.app-shell .custom-shipping-body label,
+.app-shell .shipping-builder-intro span,
+.app-shell .launch-note{color:rgba(74,42,62,.72)!important;font-size:11.5px!important;line-height:1.5!important}
+.app-shell .custom-shipping-builder>summary,
+.app-shell .pricing-math>summary{font-size:13px!important}
+
+.app-shell .start-new-batch{
+  min-height:38px;
+  padding:9px 14px!important;
+  border:1px solid rgba(91,48,79,.28)!important;
+  border-radius:999px!important;
+  background:rgba(255,255,255,.5)!important;
+  color:#5b304f!important;
+  font-size:11.5px!important;
+  font-weight:750!important;
+  line-height:1!important;
+  box-shadow:0 8px 20px rgba(74,42,62,.05)!important;
+}
+.app-shell .start-new-batch:hover{background:rgba(255,255,255,.76)!important}
+@media(min-width:821px){
+  .app-shell .workflow-footer-actions{
+    order:9;
+    width:min(930px,100%);
+    min-height:52px;
+    margin:20px auto 0;
+  }
+  .app-shell .workflow-footer-actions .autosave-note{color:rgba(74,42,62,.72);font-size:11.5px}
+}
+
 /* Step 6: titles, tags, and descriptions workspace. */
 .app-shell .finish-mode .finish-guide{gap:10px;margin:4px 0 22px}
 .app-shell .finish-mode .finish-guide span{padding:12px 14px;border-color:rgba(139,89,137,.22);border-radius:12px;background:linear-gradient(145deg,rgba(252,244,254,.7),rgba(246,229,248,.54));color:#5f3d59}
@@ -631,3 +700,20 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
     mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M7 3h8l4 4v14H7z'/%3E%3Cpath d='M15 3v5h5M4 7v12'/%3E%3Cpath d='M11 13h4M13 11v4'/%3E%3C/svg%3E") center/contain no-repeat;
   }
 }
+
+/* Final readability guard. Keep these values last so older step-specific
+   rules cannot shrink essential pricing and shipping information again. */
+.app-shell .variant-table th{font-size:12px!important;line-height:1.35!important}
+.app-shell .variant-table td{font-size:12px!important;line-height:1.4!important}
+.app-shell .variant-table .profit-fee-note{font-size:10.5px!important;line-height:1.35!important}
+.app-shell .pricing-section-heading p{font-size:12px!important;line-height:1.55!important}
+.app-shell .profit-goal-control label,
+.app-shell .shipping-profile-select>span{font-size:12px!important}
+.app-shell .shipping-profile-select small,
+.app-shell .pricing-math p,
+.app-shell .custom-shipping-body small,
+.app-shell .custom-shipping-body label,
+.app-shell .shipping-builder-intro span,
+.app-shell .launch-note{color:rgba(74,42,62,.72)!important;font-size:11.5px!important;line-height:1.5!important}
+.app-shell .custom-shipping-builder>summary,
+.app-shell .pricing-math>summary{font-size:13px!important}
