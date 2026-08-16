@@ -133,6 +133,7 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
   .app-shell .top-nav svg{width:19px;height:19px;flex:0 0 19px;fill:none;stroke:currentColor;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round;opacity:.8}
   .app-shell .connect-step .service-row>div{min-width:0}
   .app-shell .connect-step .service-row>button,
+  .app-shell .connect-step .connection-row>button,
   .app-shell .connect-step .connection-row button.secondary-action{width:124px;min-width:124px;max-width:124px;white-space:nowrap}
   .app-shell .workflow-next{justify-content:center;gap:10px}
   .app-shell .connect-step>.step-number{--approved-ring-angle:200deg;background:conic-gradient(from var(--approved-ring-angle),#b9adff,#d37bdd,#ff8eba,#f6a5ca,#b9adff);animation:approved-ring-colors 90s linear infinite;transform:none}
