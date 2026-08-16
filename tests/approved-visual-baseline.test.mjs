@@ -45,6 +45,19 @@ test("uses intentional workflow icons instead of placeholder glyphs", async () =
   assert.match(css, /\.final-review>\.step-number:after/);
 });
 
+test("keeps Step 7 clear and its icon locked to the optical center", async () => {
+  const page = await readFile(new URL("app/page.tsx", root), "utf8");
+  const css = await readFile(new URL("app/approved-functional.css", root), "utf8");
+  assert.match(page, /Review your Etsy listing details/);
+  assert.match(page, /Goldie filled in the Etsy category and product details for each listing\. Review the selections and change anything that does not fit\./);
+  assert.match(page, /Titles, tags, descriptions, sizes, colors, and prices are set\./);
+  assert.match(page, /This step contains additional Etsy category and product fields\./);
+  assert.doesNotMatch(page, /standardized attributes/);
+  assert.doesNotMatch(page, /are already handled/);
+  assert.match(css, /\.app-shell \.step-card>\.step-number:after,[\s\S]*left:50%;[\s\S]*top:50%;[\s\S]*transform:translate\(-50%,-50%\)!important/);
+  assert.match(css, /\.app-shell \.etsy-details-step>\.step-number:after\{[\s\S]*mask:url\([\s\S]*center\/contain no-repeat!important/);
+});
+
 test("keeps the connection icon optically centered without rotating the link", async () => {
   const css = await readFile(new URL("app/approved-functional.css", root), "utf8");
   assert.match(css, /\.app-shell \.connect-step>\.step-number:after\{position:absolute;left:50%;top:50%;animation:none;transform:translate\(-50%,-50%\)!important\}/);
