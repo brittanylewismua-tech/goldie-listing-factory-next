@@ -49,9 +49,9 @@ test("keeps Step 7 clear and its icon locked to the optical center", async () =>
   const page = await readFile(new URL("app/page.tsx", root), "utf8");
   const css = await readFile(new URL("app/approved-functional.css", root), "utf8");
   assert.match(page, /Review your Etsy listing details/);
-  assert.match(page, /Goldie filled in the Etsy category and product details for each listing\. Review the selections and change anything that does not fit\./);
+  assert.match(page, /Goldie has pre-filled the Etsy category and every product field it could confidently match for each listing\. Look everything over and change any selection that does not fit\./);
   assert.match(page, /Titles, tags, descriptions, sizes, colors, and prices are set\./);
-  assert.match(page, /This step contains additional Etsy category and product fields\./);
+  assert.match(page, /This step contains additional Etsy category and product fields\. Optional fields stay blank when there is not a clear match\./);
   assert.doesNotMatch(page, /standardized attributes/);
   assert.doesNotMatch(page, /are already handled/);
   assert.match(css, /\.app-shell \.step-card>\.step-number:after,[\s\S]*left:50%;[\s\S]*top:50%;[\s\S]*transform:translate\(-50%,-50%\)!important/);

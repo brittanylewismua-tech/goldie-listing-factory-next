@@ -215,7 +215,7 @@ test("imports Printify product facts and automatically prepares product-specific
   assert.match(printify,/blueprintTitle/);assert.match(printify,/description:found\.product\.description/);
   assert.match(page,/Completing Etsy details/);assert.match(page,/Etsy details completed/);
   assert.match(page,/finalDescription/);assert.match(page,/descriptionOverride/);
-  assert.match(intelligence,/fields differ/);assert.match(intelligence,/Never fill holiday, occasion, recipient, or style/);
+  assert.match(intelligence,/fields differ/);assert.match(intelligence,/include every physical or product attribute you can confidently support/);assert.match(intelligence,/Do not stop at required fields/);assert.match(intelligence,/Fill holiday, occasion, recipient, or style only when/);assert.match(intelligence,/Never guess simply to make a field non-empty/);
   assert.match(drafts,/template\.description/);
 });
 
