@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import "./globals.css";
 import "./factory-navigation.css";
 import "./theme.css";
+import "./lilac-theme.css";
 import ReliableNavigation from "./reliable-navigation";
 
 export async function generateMetadata(): Promise<Metadata> {

@@ -827,6 +827,20 @@ test("keeps the custom shipping profile name beside its field", async()=>{
   assert.match(css,/\.custom-shipping-body>label>input\{width:100%;min-width:0\}/);
 });
 
+test("uses the premium lilac command-center design system across Goldie",async()=>{
+  const [layout,theme]=await Promise.all([
+    readFile(new URL("../app/layout.tsx",import.meta.url),"utf8"),
+    readFile(new URL("../app/lilac-theme.css",import.meta.url),"utf8"),
+  ]);
+  assert.match(layout,/lilac-theme\.css/);
+  assert.match(theme,/--violet:#7052ca/);
+  assert.match(theme,/\.workflow-progress button\.active/);
+  assert.match(theme,/\.workflow-next/);
+  assert.match(theme,/\.mockupFactory\{/);
+  assert.match(theme,/@media\(max-width:700px\)/);
+  assert.match(theme,/@media\(prefers-reduced-motion:reduce\)/);
+});
+
 test("keeps batch history useful instead of accumulating unmanageable empty sessions", async () => {
   const [page,batches] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),

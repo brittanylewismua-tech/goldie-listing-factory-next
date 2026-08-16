@@ -1,0 +1,139 @@
+:root{
+  --ink:#181426;
+  --black:#100d1d;
+  --cream:#eeeafd;
+  --paper:#fbfaff;
+  --white:#fff;
+  --muted:#6f6980;
+  --line:#d9d3ed;
+  --gold:#8467d7;
+  --gold-soft:#cfc1ff;
+  --green:#257454;
+  --violet:#7052ca;
+  --violet-dark:#4c348f;
+  --lilac:#c7b2ff;
+  --pink:#f2a9df;
+  --surface:#fbfaff;
+  --surface-soft:#f3f0fc;
+  --shadow:0 20px 55px rgba(27,20,60,.12);
+}
+
+html,body{background:#100d1d}
+body{font-family:"Avenir Next",Avenir,"SF Pro Text",Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;letter-spacing:-.006em}
+button,input,select,textarea{font:inherit}
+button,a,input,select,textarea,summary{transition:border-color .16s ease,background-color .16s ease,color .16s ease,box-shadow .16s ease,transform .16s ease}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible{outline:3px solid rgba(132,103,215,.28);outline-offset:2px}
+
+.app-shell{background:
+  radial-gradient(55rem 36rem at 88% -5%,rgba(236,143,219,.22),transparent 63%),
+  radial-gradient(46rem 34rem at 7% 16%,rgba(104,78,204,.28),transparent 65%),
+  linear-gradient(145deg,#100d1d 0%,#171329 45%,#0d0b18 100%)}
+.topbar{height:76px;padding-inline:clamp(22px,4vw,64px);background:rgba(15,12,29,.82);border-bottom:1px solid rgba(201,181,255,.18);box-shadow:0 10px 35px rgba(4,2,12,.18);backdrop-filter:blur(24px) saturate(135%)}
+.wordmark{width:108px;filter:brightness(0) invert(1);opacity:.94}
+.brand-divider{background:rgba(218,205,255,.25)}
+.product-name{color:#ebe4ff;font-size:13px;font-weight:700;letter-spacing:.01em}
+.top-actions{gap:10px}
+.top-nav{gap:4px;padding:4px;border:1px solid rgba(213,196,255,.13);border-radius:11px;background:rgba(255,255,255,.035)}
+.top-nav a{padding:8px 10px;border-radius:8px;color:#b8afcf;font-size:10px;font-weight:700}
+.top-nav a:hover{color:#f5f1ff;background:rgba(255,255,255,.065)}
+.top-nav a.active{color:#241940;background:linear-gradient(135deg,#d7ccff,#efb8e6);box-shadow:0 4px 15px rgba(211,168,242,.2)}
+.usage-link,.secure-pill{color:#bfb6d4}.usage-link{padding:8px 4px}.usage-link:hover{color:#f5f1ff}
+.secure-pill{border-color:rgba(202,188,235,.18);background:rgba(255,255,255,.035)}
+.secure-pill i{background:#6fe0a5;box-shadow:0 0 0 4px rgba(75,205,139,.1)}
+.diagnostics-link{border-color:rgba(204,183,255,.38);color:#c9b5ff;filter:none}.diagnostics-link:hover{background:#b99aff;color:#1b1235;filter:none}
+
+.hero{max-width:1400px;padding-top:54px;padding-bottom:35px;min-height:220px}
+.workflow-hero{padding-top:42px;padding-bottom:32px}
+.hero .eyebrow,.eyebrow,.mini-label{color:#b9a4fa;font-size:9px;font-weight:800;letter-spacing:.2em}
+.hero h1,.hero h1 em,.workflow-hero h1{max-width:850px;color:#f2edff;font-family:"Avenir Next",Avenir,"SF Pro Display",sans-serif;font-weight:650;letter-spacing:-.055em;text-wrap:balance}
+.workflow-hero h1{font-size:clamp(38px,4vw,58px)}
+.hero-copy,.workflow-hero .hero-copy{max-width:720px;color:#bbb3cd;font-size:14px;line-height:1.62}
+.hero-watermark{right:clamp(20px,5vw,80px);width:clamp(120px,16vw,210px);opacity:.08;filter:hue-rotate(35deg) drop-shadow(0 0 32px rgba(205,160,255,.55))}
+
+.workspace{max-width:1400px;grid-template-columns:244px minmax(0,1fr);gap:28px;padding-inline:clamp(22px,4vw,64px);padding-bottom:80px}
+.workflow-progress{top:18px;padding:18px 12px;border:1px solid rgba(207,190,255,.26);border-radius:18px;background:linear-gradient(155deg,rgba(40,32,70,.96),rgba(22,18,42,.98));box-shadow:0 24px 70px rgba(3,2,12,.3);backdrop-filter:blur(18px)}
+.workflow-progress>div{padding:4px 9px 16px;border-bottom-color:rgba(216,201,255,.14)}
+.workflow-progress .mini-label{color:#bda7ff}
+.workflow-progress>div b{color:#f0ebff;font-family:inherit;font-size:18px;font-weight:700}
+.workflow-progress button{padding:13px 8px;color:#d8d0e8;border-radius:11px}
+.workflow-progress button:hover:not(:disabled){background:rgba(255,255,255,.05)}
+.workflow-progress button:not(:last-of-type):after{background:rgba(196,181,230,.2)}
+.workflow-progress button>span:first-child{border-color:rgba(208,194,240,.34);background:#211a3b;color:#c9bddf}
+.workflow-progress button b{font-size:11px;font-weight:700}.workflow-progress button small{color:#9188a7}
+.workflow-progress button.active{background:linear-gradient(135deg,rgba(179,149,255,.2),rgba(238,155,218,.12));box-shadow:inset 0 0 0 1px rgba(207,184,255,.18)}
+.workflow-progress button.active>span:first-child{border-color:#cbb6ff;background:linear-gradient(135deg,#8061d6,#b56bb7);color:#fff;box-shadow:0 0 0 4px rgba(180,146,255,.12),0 6px 18px rgba(117,74,191,.3)}
+.workflow-progress button.done>span:first-child{border-color:#55ba8b;background:#267456}.workflow-progress button.done:after{background:#377e65}
+.workflow-progress button:disabled{opacity:.36}.workflow-help{border-top-color:rgba(216,201,255,.14);color:#938ba7}
+.start-new-batch,.workflow-progress .start-new-batch{border-color:rgba(210,189,255,.22);background:rgba(255,255,255,.04);color:#d9cfff}.start-new-batch:hover{background:rgba(191,161,255,.13);border-color:rgba(210,189,255,.42)}
+
+.workflow-stage>.steps-column,.workflow-stage>.launch-panel{width:min(960px,100%)}
+.workflow-back{margin-bottom:10px!important;color:#c6bbdc!important;background:transparent!important;border-color:rgba(211,195,245,.25)!important}.workflow-back:hover{color:#fff!important;background:rgba(255,255,255,.06)!important}
+.step-card,.finish-mode{border:1px solid rgba(203,187,232,.75);border-radius:18px;background:rgba(251,250,255,.985);box-shadow:0 24px 70px rgba(3,2,13,.28),0 1px 0 rgba(255,255,255,.7) inset;overflow:hidden}
+.step-card:hover{background:#fff;border-color:#bca9e9;box-shadow:0 28px 75px rgba(3,2,13,.34)}
+.step-card:focus-within{border-color:#8d70da;box-shadow:0 0 0 4px rgba(132,103,215,.1),0 28px 75px rgba(3,2,13,.3)}
+.step-number{width:auto;padding-top:24px;border-right:1px solid #e2ddef;background:linear-gradient(180deg,#f2eefe,#f9f7ff);color:#7256be;font-size:10px}
+.step-content{padding:24px 28px 28px}
+.step-heading h2{color:#1c1728;font-size:22px;font-weight:700;letter-spacing:-.035em}
+.step-copy{max-width:740px;color:#6f6980;font-size:12px;line-height:1.62}
+.done-mark{color:#216347;background:#e6f5ed;box-shadow:inset 0 0 0 1px #c7e7d5}
+.mini-label{color:#7659c3}
+
+.workflow-next,.primary-button,.launch-button,.inline-field button,.save-recipe,.management-create-foot button,.approve-pricing,.publish-all-button{border:1px solid rgba(76,52,143,.18);border-radius:10px;background:linear-gradient(135deg,#6647bd,#8f63d1 58%,#b56fab);color:#fff;box-shadow:0 9px 24px rgba(89,56,165,.22);font-weight:750}
+.workflow-next{min-width:210px;padding:13px 17px}
+.workflow-next:hover,.primary-button:hover,.launch-button:hover,.inline-field button:hover,.save-recipe:hover,.management-create-foot button:hover,.approve-pricing:hover,.publish-all-button:hover{background:linear-gradient(135deg,#5939ae,#7d53c5 58%,#a65f9d);box-shadow:0 12px 30px rgba(89,56,165,.3);transform:translateY(-1px)}
+button:disabled{transform:none!important;box-shadow:none!important}
+.inline-field input,input,select,textarea{border-color:#d8d1e8;background:#fff;color:#211a2e;border-radius:9px}
+.inline-field input:focus,input:focus,select:focus,textarea:focus{border-color:#8a6bd6;box-shadow:0 0 0 4px rgba(132,103,215,.1);outline:0}
+.folder-drop,.token-help,.template-proof,.recipe-proof,.batch-capacity,.keyword-workspace,.batch-title-builder,.permanent-description,.batch-size-guide{border-color:#d8cfed;background:#f7f4fd}
+.folder-drop:hover{border-color:#9579d8;background:#fbfaff}.upload-icon{border-color:#9b80da;color:#7052b4;background:#f0ebfc}
+.browse-chip{border-color:#d4c9ec;color:#553b95}.template-badge{color:#267454}
+.connection-row{border-color:#c9e1d4;background:#edf8f2}.connection-icon{background:linear-gradient(135deg,#338b61,#56c38a)}
+.token-shop-warning,.preflight-warning{border-color:#dcba68;background:#fff6db}
+
+.variant-pricing,.listing-editor,.post-draft-workspace,.draft-card,.etsy-detail-card,.management-create,.bank-library,.usage-card,.pricing-profile,.upgrade-card{border-color:#d8d0e8!important;background:#fbfaff!important;box-shadow:var(--shadow)}
+.variant-pricing-head,.item-pricing-heading{border-color:#ded6ed}.shipping-quick-summary span{background:#f0ecf9}.custom-shipping-builder{border-color:#d8d0e8;background:#fff}.shipping-builder-intro{background:linear-gradient(135deg,#eee8ff,#faeaf5);color:#33254f}.shipping-rate-row{border-color:#ded6eb}.recommendation-result,.etsy-ready-status,.automatic-reference,.publish-message{background:#eaf6ef;color:#236348}
+.variant-table th{background:#f0ecf8;color:#554c65}.variant-table tr:hover td{background:#f8f5fd}
+.pricing-math,.individual-title-builder,.individual-description,.printify-image-picker,.draft-mockups,.individual-size-guide{border-color:#ddd5eb!important;background:#f8f6fc!important}
+.title-style-toggle button.active{background:#6547b5;border-color:#6547b5}.tag-row span,.keyword-chips button{background:#eee9fa!important;color:#51436f!important;border-color:#d7caef!important}
+
+.post-draft-workspace{margin-top:-18px;border-radius:20px;padding-top:24px!important;background:transparent!important;box-shadow:none}
+.post-draft-heading{border-top:0}.post-draft-heading h2{font-family:inherit;color:#f2edff;font-weight:650}.post-draft-heading p{color:#b7afc8}.draft-card{border-radius:18px}.printify-preview-button{border-color:#d8d0e8;background:#f5f2fb}.edit-draft-button,.open-all-button{border-color:#c9b9e9;background:#f1ecfb;color:#563b98}.edit-draft-button:hover{border-color:#9271d7;background:#e9e1fa}.open-all-button:hover{background:#e8e0f8}
+.batch-size-guide{border-width:1px}.batch-size-guide button{background:#241b3e}.publish-live-warning{border-color:#d7b7ca;background:#fff0f7}.publish-all-button{background:linear-gradient(135deg,#247556,#36a872)}
+
+.preflight-backdrop,.publish-confirm-backdrop,.upload-notice-backdrop,.inline-lightbox{background:rgba(9,6,20,.78);backdrop-filter:blur(10px)}
+.preflight,.publish-confirm,.upload-notice,.help-card{border:1px solid rgba(211,193,246,.9);background:#fbfaff;box-shadow:0 35px 100px rgba(4,2,15,.52)}
+.preflight h2,.publish-confirm h2,.upload-notice h2,.help-card h2{font-family:inherit;letter-spacing:-.04em}
+
+.management-page,.usage-page,.keyword-page{background:radial-gradient(48rem 28rem at 85% 0,rgba(227,141,216,.17),transparent 65%),linear-gradient(145deg,#100d1d,#171329 48%,#0d0b18);max-width:none;padding-inline:max(clamp(20px,5vw,70px),calc((100vw - 1260px)/2));color:#efeaff}
+.management-nav{border-bottom-color:rgba(212,196,246,.18)}.management-nav a{color:#aaa0bd}.management-nav a:hover,.management-nav a.active{color:#f3efff}
+.management-page>header h1,.usage-page>header h1{font-family:"Avenir Next",Avenir,sans-serif;font-weight:650;letter-spacing:-.05em;color:#f3efff}.management-page>header>p:last-child,.usage-page>header>p:last-child{color:#b6aec6}
+.management-create,.bank-library,.usage-card,.pricing-profile,.upgrade-card{color:#211b2f;border-radius:17px!important}
+.bank-grid article,.batch-history article,.empty-history{border-color:#d9d1e9;background:#fbfaff;color:#211b2f;box-shadow:0 14px 40px rgba(4,2,16,.16)}
+.batch-history h2{font-family:inherit;font-weight:700}.batch-history button,.empty-history a{background:#684ab8}
+.plan-banner{background:linear-gradient(135deg,#302353,#634789 62%,#a75f98);box-shadow:0 20px 50px rgba(6,3,18,.25)}
+.usage-track{background:#e6e0f1}.usage-track i{background:linear-gradient(90deg,#7659c8,#dd82c3)}
+
+.management-topbar,.mockupTopbar{background:rgba(15,12,29,.92)!important;border-bottom-color:rgba(211,195,246,.18)!important;backdrop-filter:blur(20px)}
+.management-topbar nav a,.factoryNav a{color:#b5acc7!important}.management-topbar nav a:hover,.management-topbar nav a.active,.factoryNav a:hover,.factoryNav a.active{color:#f6f1ff!important;background:rgba(195,163,255,.12)!important}
+.keyword-hero,.mockupHero{background:radial-gradient(32rem 20rem at 80% 0,rgba(238,146,219,.22),transparent 65%),linear-gradient(145deg,#100d1d,#19142c)!important}
+.keyword-hero h1,.mockupHero h1{font-family:"Avenir Next",Avenir,"SF Pro Display",sans-serif!important;font-weight:650!important;letter-spacing:-.055em!important}.keyword-hero>div>p:last-child,.mockupHero .lede{color:#b9b0ca!important}.return-to-work{border-color:rgba(203,183,244,.25);background:rgba(255,255,255,.045)}.return-to-work:hover{border-color:#ab8ce8;background:rgba(183,146,255,.1)}.return-to-work>span{color:#c3adff}
+
+.mockupFactory{--black:#100d1d;--cream:#fbfaff;--cream2:#f1ecfa;--gold:#8467d7;--pink:#dc83c5;--green:#5bc88d;--ink:#181426;--muted:#716a80;background:radial-gradient(50rem 30rem at 85% 0,rgba(235,139,218,.2),transparent 62%),linear-gradient(145deg,#100d1d,#171329 50%,#0d0b18);font-family:"Avenir Next",Avenir,"SF Pro Text",sans-serif}
+.mockupFactory .brandGold{color:#c8b3ff;font-family:inherit;font-style:normal;font-weight:800}.mockupFactory .privateNote{color:#aaa1bb}.mockupFactory .mockupEyebrow{color:#baa4f7}.mockupFactory .mockupHero h1 em{color:#e29acb}.mockupFactory .mockupStep{border:1px solid #d8d0e8;border-radius:18px;background:#fbfaff;box-shadow:0 24px 70px rgba(3,2,13,.28)}.mockupFactory .stepHead>span{background:linear-gradient(135deg,#6849bc,#a564a5);color:#fff}.mockupFactory .stepHead h2,.mockupFactory .managementLibraryHead h2,.mockupFactory .managementLibraryHead h2:after{font-family:inherit!important;font-weight:700!important;letter-spacing:-.04em}.mockupFactory .dropzone{border-color:#c7b8e5;background:#f7f4fd}.mockupFactory .dropzone.drag{border-color:#9b74dc;background:#f5ebff}.mockupFactory .uploadMark{background:#2b204a;color:#c7b0ff}.mockupFactory .uploadActions button,.mockupFactory .generate,.mockupFactory .newSetButton{background:linear-gradient(135deg,#6548b8,#8d5dcb 58%,#b468a8);color:#fff;box-shadow:0 8px 22px rgba(93,57,166,.22)}.mockupFactory .uploadActions button.secondary{background:#261d3f;box-shadow:none}.mockupFactory .collection{border-color:#7f67b8;background:linear-gradient(145deg,#211a39,#31244e)}.mockupFactory .selected{color:#7de1a9}.mockupFactory .check{background:#4fc586}.mockupFactory .librarySaving{border-color:#cbbbe8;background:#f3effc}.mockupFactory .librarySpinner{border-color:#ddd4ef;border-top-color:#7457bd}.mockupFactory .mockupFooter{border-top-color:rgba(205,188,240,.18);color:#958da4}
+
+.support-launcher{border-color:rgba(200,175,255,.5);background:#211833;color:#cbb2ff;box-shadow:0 14px 38px rgba(3,2,12,.38)}.support-launcher span:after{color:#cbb2ff}
+
+@media(max-width:900px){
+  .workspace{grid-template-columns:1fr;gap:16px}
+  .workflow-progress{display:flex;position:static;border-radius:15px;padding:10px}
+  .workflow-progress button{min-width:148px}
+  .post-draft-workspace{margin-inline:16px}
+}
+@media(max-width:700px){
+  .topbar{padding:12px 16px}.top-actions{gap:6px}.top-nav{background:transparent;border:0;padding:0}.top-nav a{padding:7px 8px}
+  .hero{padding-inline:19px}.workflow-hero h1{font-size:36px}.hero-watermark{display:none}
+  .workspace{padding-inline:12px}.step-card{grid-template-columns:42px minmax(0,1fr);border-radius:14px}.step-content{padding:20px 16px 22px}
+  .workflow-next{width:100%;min-width:0}.custom-shipping-actions{grid-template-columns:1fr}.draft-card{padding:12px}
+}
+
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
