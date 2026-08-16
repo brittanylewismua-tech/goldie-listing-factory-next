@@ -81,7 +81,7 @@ test("uses individual shop-aware Printify editor buttons", async () => {
   assert.match(page, /folderPicker\.current\.value = ""/);
   assert.match(page, /imagePicker\.current\.value = ""/);
   assert.match(page, /function openAllDrafts\(\)/);
-  assert.match(page, /Wait—your files are still uploading/);
+  assert.match(page, /Wait\. Your files are still uploading/);
   assert.match(page, /Leaving now may stop the unfinished uploads/);
   assert.doesNotMatch(page, /className="upload-guard"/);
   assert.match(page, /Doing so may halt your current design uploads/);
@@ -894,7 +894,7 @@ test("makes progress satisfying and returns a precise outcome receipt", async()=
     readFile(new URL("../app/lilac-theme.css",import.meta.url),"utf8"),
   ]);
   assert.match(page,/WorkflowMomentum/);assert.match(page,/OutcomeReceipt/);assert.match(page,/setBatchReceipt/);
-  assert.match(ui,/Autosave on/);assert.match(ui,/steps complete/);assert.match(ui,/exactly what happened/);
+  assert.match(ui,/Autosave on/);assert.match(ui,/steps complete/);assert.match(ui,/quick summary of what Goldie completed/);
   assert.match(ui,/Open Etsy listing/);assert.match(ui,/Duplicate this workflow/);assert.match(ui,/Choose another product/);assert.match(ui,/View batch history/);
   assert.match(theme,/workflow-momentum/);assert.match(theme,/outcome-receipt/);assert.match(theme,/prefers-reduced-motion/);
 });

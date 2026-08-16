@@ -39,8 +39,8 @@ export async function etsyFetch<T>(path:string,token:string,init?:RequestInit):P
       continue;
     }
     const detail=typeof payload==="object"&&payload&&"error" in payload?String((payload as {error:unknown}).error):`Etsy returned ${response.status}.`;
-    if(response.status===429)throw new Error("Etsy is temporarily busy. Your changes are still in the form—wait a moment, then click Save new shipping profile again.");
+    if(response.status===429)throw new Error("Etsy is temporarily busy. Your changes are still in the form. Wait a moment, then click Save new shipping profile again.");
     throw new Error(detail);
   }
-  throw new Error("Etsy is temporarily busy. Your changes are still in the form—wait a moment, then try again.");
+  throw new Error("Etsy is temporarily busy. Your changes are still in the form. Wait a moment, then try again.");
 }

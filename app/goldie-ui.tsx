@@ -19,7 +19,7 @@ export function WorkflowMomentum({current,total,label}:{current:number;total:num
 }
 
 export function GoldieInsight({children}:{children:ReactNode}){
-  return <aside className="goldie-insight" aria-label="Goldie insight"><span aria-hidden="true">G</span><div><b>Goldie noticed</b><p>{children}</p></div></aside>;
+  return <aside className="goldie-insight" aria-label="Helpful information"><span aria-hidden="true">G</span><div><b>Good to know</b><p>{children}</p></div></aside>;
 }
 
 export function ActionReceipt({items}:{items:Array<{value:string;label:string}>}){
@@ -33,7 +33,7 @@ export function OutcomeReceipt({receipt,productName,shippingProfile,imageCount,s
     <div className="receipt-celebration" aria-hidden="true"><span>✓</span></div>
     <p className="mini-label">BATCH COMPLETE</p>
     <h2>{receipt.publishedCount} {receipt.publishedCount===1?"listing is":"listings are"} live on Etsy.</h2>
-    <p>Goldie finished the batch and verified the handoff. Here is exactly what happened.</p>
+    <p>Your batch is finished. Here is a quick summary of what Goldie completed.</p>
     <div className="receipt-value-strip"><div><b>{tagCount}</b><span>tags generated</span></div><div><b>{mockupCount}</b><span>mockups prepared</span></div><div><b>{variantCount}</b><span>variant prices approved</span></div><div><b>{Math.floor(minutesSaved/60)}h {minutesSaved%60}m</b><span>estimated setup time saved</span></div></div>
     <div className="receipt-grid">
       <article><span>Published</span><b>{receipt.publishedCount} Etsy {receipt.publishedCount===1?"listing":"listings"}</b></article>
