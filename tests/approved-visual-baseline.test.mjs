@@ -160,6 +160,7 @@ test("warns before continuing with designs below Printify's recommended pixels",
   assert.match(page, /const belowRecommendedPixels=useMemo/);
   assert.match(page, /setPixelWarningOpen\(true\)/);
   assert.match(page, /below Printify’s recommended pixel size/);
+  assert.match(page, /One or more of these designs fall below Printify’s pixel size recommendations for this product\./);
   assert.match(page, /Proceed anyway/);
   assert.match(page, /className="pixel-comparison-head"[\s\S]*Uploaded size[\s\S]*Printify recommends/);
   assert.match(page, /belowRecommendedPixels\.map\(file=>/);
