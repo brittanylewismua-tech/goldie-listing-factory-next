@@ -142,3 +142,13 @@ test("keeps required dialogs and selected controls inside the approved palette",
   assert.match(css, /\.title-style-toggle button\.active\{[^}]*background:linear-gradient\(145deg,#6a3456,#4b283e\)!important/);
   assert.match(css, /\.new-recipe\.active,\.live-dpi\.check,\.batch-size-guide/);
 });
+
+test("centers autosave feedback beneath each workflow panel", async () => {
+  const [page, css] = await Promise.all([
+    readFile(new URL("app/page.tsx", root), "utf8"),
+    readFile(new URL("app/approved-functional.css", root), "utf8"),
+  ]);
+  assert.match(page, /<i aria-hidden="true">✓<\/i> Saved automatically/);
+  assert.match(css, /\.workflow-footer-actions\{position:relative;[^}]*justify-content:flex-start/);
+  assert.match(css, /\.autosave-note\{position:absolute;left:50%;[^}]*transform:translateX\(-50%\)/);
+});
