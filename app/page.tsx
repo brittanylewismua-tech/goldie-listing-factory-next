@@ -136,6 +136,7 @@ export default function Home() {
   const templateLoadVersion=useRef(0);
   const [connected, setConnected] = useState(false);
   const [token, setToken] = useState("");
+  const [showTokenForm, setShowTokenForm] = useState(false);
   const [connectionError, setConnectionError] = useState("");
   const [connecting, setConnecting] = useState(false);
   const [checkingConnection, setCheckingConnection] = useState(true);
@@ -608,17 +609,21 @@ export default function Home() {
         {progressIndex===3&&files.length>0&&<ActionReceipt items={[{value:`${files.length} designs checked`,label:"Original artwork resolution preserved"},{value:`${pricedVariants.length} variants`,label:pricingApproved?"Pricing approved":"Ready for pricing review"}]}/>}
         {progressIndex===5&&titleCount>0&&<ActionReceipt items={[{value:`${titleCount} titles ready`,label:"Validated keyword phrases only"},{value:`${files.reduce((sum,file)=>sum+file.tags.length,0)} matching tags`,label:"Zero invented keywords"}]}/>}
         {progressIndex>0&&<button className="workflow-back" type="button" onClick={goBackOneStep}><span aria-hidden="true">←</span> Back</button>}
-        <div className="steps-column">
+        <div className={`steps-column ${workflowStep}-column`}>
           <article className={`step-card connect-step workflow-panel ${connected ? "done" : ""} ${workflowStep==="connect"?"active-panel":"hidden-panel"}`}>
             <div className="step-number">01</div>
             <div className="step-content">
-              <div className="step-heading"><div><p className="mini-label">PRINTIFY CONNECTION</p><h2>Connect Printify</h2></div>{connected && <span className="done-mark">✓ Connected</span>}</div>
+              <div className="step-heading"><div><p className="mini-label">PRINTIFY CONNECTION</p><h2>Connect <em>Printify</em></h2></div>{connected && <span className="done-mark">✓ Connected</span>}</div>
+              <p className="connect-timing">◷ Connecting usually takes about 2 minutes.</p>
               <p className="step-copy">Connect the Printify shop where Goldie will create your product drafts.</p>
-              <div className="connection-trust"><span aria-hidden="true">✓</span><div><b>Secure connection</b><small>Your token is encrypted, saved securely, and never displayed again.</small></div></div>
               {checkingConnection ? (
-                <div className="connection-row"><span className="connection-icon">P</span><div><b>Checking Printify connection…</b><small>This takes just a moment</small></div></div>
+                <div className="connection-row"><span className="connection-icon">P</span><div><b>Secure connection check…</b><small>This takes just a moment</small></div></div>
               ) : !connected ? (
-                <div className="connection-setup">
+                <div className="connection-stack connection-setup">
+                  <div className="connection-row service-row"><span className="connection-icon"><img src="/printify-logo.svg" alt="" /></span><div><b>Printify</b><small>Create and update your product drafts.</small></div><button onClick={()=>setShowTokenForm(value=>!value)}>{showTokenForm?"Close":"Connect Printify"}</button></div>
+                  {showTokenForm&&<div className="inline-field approved-token-form"><label>Paste the token you copied from Printify</label><input type="password" value={token} onChange={(event) => setToken(event.target.value)} placeholder="Paste token here" aria-label="Printify token" /><button onClick={connectPrintify} disabled={!token.trim() || connecting}>{connecting ? "Connecting…" : "Connect securely"}</button></div>}
+                  {connectionError && <p className="field-error" role="alert">{connectionError}</p>}
+                  <div className={`connection-row etsy-connection service-row ${etsyConnected?"connected":""}`}><span className="connection-icon"><img src="/etsy-logo.svg" alt="" /></span><div><b>{etsyConnected?`Etsy connected · ${etsyShop||"your shop"}`:"Etsy"}</b><span className="sr-only">Connect Etsy before publishing</span><small>{etsyConnected?"Connected and verified.":"Required before Goldie publishes and finishes your listings."}</small></div>{etsyConnected?<button className="secondary-action" onClick={async()=>{await fetch("/api/etsy",{method:"DELETE"});setEtsyConnected(false);setEtsyShop("")}}>Disconnect</button>:<button className="secondary-action" onClick={()=>void connectEtsy()} disabled={etsyConnecting}>{etsyConnecting?"Opening Etsy…":"Connect Etsy"}</button>}</div>
                   <details className="token-help">
                     <summary>How to get your Printify token <span>Step-by-step instructions</span></summary>
                     <div className="token-shop-warning"><b>First, make sure you are in the right Printify account</b><span>Sign in to the account that contains the Etsy shop and template products you want Goldie to use. A token connects the whole Printify account. In Step 2, your template tells Goldie which exact shop to use.</span></div>
@@ -634,14 +639,12 @@ export default function Home() {
                     </ol>
                     <a href="https://help.printify.com/hc/en-us/articles/4483626447249-How-can-I-generate-an-API-token" target="_blank" rel="noreferrer">Open Printify’s official token instructions ↗</a>
                   </details>
-                  <div className="inline-field"><input type="password" value={token} onChange={(event) => setToken(event.target.value)} placeholder="Paste your Printify token" aria-label="Printify token" /><button onClick={connectPrintify} disabled={!token.trim() || connecting}>{connecting ? "Connecting…" : "Connect Printify"}</button></div>
-                  <small>Your token is encrypted before it is saved and is never displayed again.</small>
-                  {connectionError && <p className="field-error" role="alert">{connectionError}</p>}
+                  <small className="secure-copy">♢ Encrypted and saved securely.</small>
                 </div>
               ) : (
                 <><div className="connection-row"><span className="connection-icon">P</span><div><b>Printify connected</b><small>Your connection will be remembered</small></div><button onClick={async () => { await fetch("/api/printify", { method: "DELETE" }); setConnected(false); setToken(""); setTemplateDetails(null); setConnectionError(""); }}>Disconnect</button></div>{connectionError && <p className="field-warning" role="status">{connectionError}</p>}</>
               )}
-              <div className={`connection-row etsy-connection ${etsyConnected?"connected":""}`}><span className="connection-icon">E</span><div><b>{etsyConnected?`Etsy connected · ${etsyShop||"your shop"}`:"Connect Etsy before publishing"}</b><small>{etsyConnected?"Goldie can finish the exact Etsy listings created by this batch":"You can do this later. Etsy is only required before the final publish step."}</small></div>{etsyConnected?<button className="secondary-action" onClick={async()=>{await fetch("/api/etsy",{method:"DELETE"});setEtsyConnected(false);setEtsyShop("")}}>Disconnect</button>:<button className="secondary-action" onClick={()=>void connectEtsy()} disabled={etsyConnecting}>{etsyConnecting?"Opening Etsy…":"Connect Etsy"}</button>}</div>
+              {connected&&<div className={`connection-row etsy-connection service-row ${etsyConnected?"connected":""}`}><span className="connection-icon"><img src="/etsy-logo.svg" alt="" /></span><div><b>{etsyConnected?`Etsy connected · ${etsyShop||"your shop"}`:"Etsy"}</b><small>{etsyConnected?"Connected and verified.":"Required before Goldie publishes and finishes your listings."}</small></div>{etsyConnected?<button className="secondary-action" onClick={async()=>{await fetch("/api/etsy",{method:"DELETE"});setEtsyConnected(false);setEtsyShop("")}}>Disconnect</button>:<button className="secondary-action" onClick={()=>void connectEtsy()} disabled={etsyConnecting}>{etsyConnecting?"Opening Etsy…":"Connect Etsy"}</button>}</div>}
               {etsyError&&<p className="field-error" role="alert">{etsyError}</p>}
               {(connected||localPreview)&&<button className="workflow-next" onClick={()=>goToStep("setup",false,localPreview)}>{localPreview&&!connected?"Preview without connecting":"Choose a product"} <span>→</span></button>}
             </div>
