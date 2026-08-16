@@ -28,8 +28,19 @@ export async function etsyConnection(userId:string){
 }
 
 export async function etsyFetch<T>(path:string,token:string,init?:RequestInit):Promise<T>{
-  const response=await fetch(`${API}${path}`,{...init,headers:{"x-api-key":etsyApiCredential(),Authorization:`Bearer ${token}`,...(init?.body instanceof URLSearchParams?{"Content-Type":"application/x-www-form-urlencoded"}:{}),...(init?.headers||{})}});
-  const text=await response.text();let payload:unknown={};try{payload=text?JSON.parse(text):{}}catch{payload={error:text}}
-  if(!response.ok)throw new Error(typeof payload==="object"&&payload&&"error" in payload?String((payload as {error:unknown}).error):`Etsy returned ${response.status}.`);
-  return payload as T;
+  for(let attempt=0;attempt<5;attempt+=1){
+    const response=await fetch(`${API}${path}`,{...init,headers:{"x-api-key":etsyApiCredential(),Authorization:`Bearer ${token}`,...(init?.body instanceof URLSearchParams?{"Content-Type":"application/x-www-form-urlencoded"}:{}),...(init?.headers||{})}});
+    const text=await response.text();let payload:unknown={};try{payload=text?JSON.parse(text):{}}catch{payload={error:text}}
+    if(response.ok)return payload as T;
+    if((response.status===429||response.status>=500)&&attempt<4){
+      const retryAfter=Number(response.headers.get("retry-after"));
+      const wait=Number.isFinite(retryAfter)&&retryAfter>0?Math.min(retryAfter*1000,8000):Math.min(750*2**attempt,6000);
+      await new Promise(resolve=>setTimeout(resolve,wait));
+      continue;
+    }
+    const detail=typeof payload==="object"&&payload&&"error" in payload?String((payload as {error:unknown}).error):`Etsy returned ${response.status}.`;
+    if(response.status===429)throw new Error("Etsy is temporarily busy. Your changes are still in the form—wait a moment, then click Save new shipping profile again.");
+    throw new Error(detail);
+  }
+  throw new Error("Etsy is temporarily busy. Your changes are still in the form—wait a moment, then try again.");
 }
