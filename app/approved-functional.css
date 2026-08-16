@@ -136,6 +136,8 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
   .app-shell .top-nav a.active{color:var(--ink);background:rgba(252,244,254,.76);font-weight:600;box-shadow:none}
   .app-shell .top-nav svg{width:19px;height:19px;flex:0 0 19px;fill:none;stroke:currentColor;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round;opacity:.8}
   .app-shell .connect-step .service-row>div{min-width:0}
+  .app-shell .connect-step .etsy-connection>div{display:grid;align-content:center;gap:1px}
+  .app-shell .connect-step .etsy-shop-name{display:block;max-width:100%;overflow:hidden;color:rgba(56,50,55,.76);font-size:12px;font-weight:500;font-style:italic;line-height:1.25;text-overflow:ellipsis;white-space:nowrap}
   .app-shell .connect-step .service-row>button,
   .app-shell .connect-step .connection-row>button,
   .app-shell .connect-step .connection-row button.secondary-action{width:124px;min-width:124px;max-width:124px;white-space:nowrap}

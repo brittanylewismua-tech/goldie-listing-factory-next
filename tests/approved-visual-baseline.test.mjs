@@ -62,6 +62,13 @@ test("places the connection subtitle before the centered timing note", async () 
   assert.match(css, /\.connect-timing\{margin:0 auto 22px!important;[^}]*text-align:center\}/);
 });
 
+test("stacks the connected Etsy shop name for long shop names", async () => {
+  const page = await readFile(new URL("app/page.tsx", root), "utf8");
+  const css = await readFile(new URL("app/approved-functional.css", root), "utf8");
+  assert.match(page, /<b>\{etsyConnected\?"Etsy connected":"Etsy"\}<\/b>\{etsyConnected&&<em className="etsy-shop-name">/);
+  assert.match(css, /\.etsy-shop-name\{display:block;[^}]*font-style:italic;[^}]*text-overflow:ellipsis;white-space:nowrap\}/);
+});
+
 test("preview navigation renders the real later-step experiences", async () => {
   const page = await readFile(new URL("app/page.tsx", root), "utf8");
   assert.match(page, /if\(index>=3&&!templateDetails\)await loadPreviewDemo\(\)/);
