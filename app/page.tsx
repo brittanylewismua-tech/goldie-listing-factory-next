@@ -586,7 +586,7 @@ export default function Home() {
       {!returningHome&&<section className={`workspace ${complete&&workflowStep==="finish"&&finishPhase==="mockups"?"mockup-workspace":""}`}>
         <nav className="workflow-progress" aria-label="Listing Factory progress">
           <div className="workflow-progress-head"><div><p className="mini-label">YOUR BATCH</p><b>Step {progressIndex+1} of {PROGRESS_STEPS.length}</b></div>{(template||files.length>0||drafts.length>0)&&<button className="start-new-batch" disabled={running} onClick={startOver}>Clear batch + start over</button>}</div>
-          {localPreview&&<p className="preview-mode-note">Preview mode · every step is unlocked</p>}
+          {localPreview&&<p className="preview-mode-note">Preview mode · every step is unlocked <a href="/design-lab">Open design lab →</a></p>}
           {PROGRESS_STEPS.map((label,index)=>{const active=progressIndex===index,done=index<progressIndex,available=localPreview||index===0||(index===1&&connected)||(index===2&&templateLoaded)||(index>=3&&index<=4&&ready)||(index>=5&&complete);return <button key={label} className={`${active?"active":""} ${done?"done":""}`} disabled={!available} aria-current={active?"step":undefined} onClick={()=>openProgressStep(index)}><span>{done?"✓":String(index+1).padStart(2,"0")}</span><span><b>{label}</b><small>{localPreview&&!active?"Open preview":progressStatus(index,active,done)}</small></span></button>})}
           <p className="workflow-help">Goldie saves completed work. You can return to an earlier step without starting over.</p>
         </nav>
