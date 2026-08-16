@@ -15,6 +15,7 @@ export async function POST(request:Request){
   if(!owned)return NextResponse.json({error:"That Printify draft does not belong to this Goldie account."},{status:403});
   const prefix=`etsy-listing-images/${user.userId}/${productId}/${kind==="size-guide"?"size-guide":"mockup"}/`;
   if(kind==="size-guide"){const existing=await runtime().ARTWORK.list({prefix});await Promise.all(existing.objects.map(object=>runtime().ARTWORK.delete(object.key)))}
+  if(kind!=="size-guide"){const existing=await runtime().ARTWORK.list({prefix,limit:5});if(existing.objects.length>=4)return NextResponse.json({error:"Each listing can have up to four Goldie-generated lifestyle mockups."},{status:409})}
   const key=`${prefix}${crypto.randomUUID()}-${safeName(file.name)}`;
   await runtime().ARTWORK.put(key,await file.arrayBuffer(),{httpMetadata:{contentType:file.type},customMetadata:{name:safeName(file.name)}});
   return NextResponse.json({ok:true,key,name:file.name});
