@@ -821,6 +821,12 @@ test("keeps management headings readable and shows the complete workflow map on 
   assert.match(css,/@media\(max-width:600px\)\{\.workflow-progress\{display:grid;grid-template-columns:repeat\(2/);
 });
 
+test("keeps the custom shipping profile name beside its field", async()=>{
+  const css=await readFile(new URL("../app/globals.css",import.meta.url),"utf8");
+  assert.match(css,/\.custom-shipping-body>label\{display:grid/);
+  assert.match(css,/\.custom-shipping-body>label>input\{width:100%;min-width:0\}/);
+});
+
 test("keeps batch history useful instead of accumulating unmanageable empty sessions", async () => {
   const [page,batches] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
