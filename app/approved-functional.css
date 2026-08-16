@@ -182,3 +182,57 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
   .app-shell .workflow-stage:has(.approved-token-help[open])>.steps-column{margin-top:18px}
   .app-shell>footer{display:none!important}
 }
+
+/* Final cascade lock: every visible step-card icon uses the same ring,
+   optical center, and inner surface as Step 1. */
+@media(min-width:821px){
+  .app-shell .step-card>.step-number,
+  .app-shell .connect-step>.step-number{
+    --approved-ring-angle:200deg;
+    position:relative;
+    isolation:isolate;
+    display:grid;
+    place-items:center;
+    align-self:center;
+    width:64px;
+    height:64px;
+    margin:40px 0 -6px;
+    padding:0;
+    overflow:hidden;
+    border:0;
+    border-radius:50%;
+    background:conic-gradient(from var(--approved-ring-angle),#b9adff,#d37bdd,#ff8eba,#f6a5ca,#b9adff);
+    box-shadow:0 10px 30px rgba(82,47,72,.13);
+    animation:approved-ring-colors 90s linear infinite;
+    font-size:0;
+    transform:none;
+  }
+  .app-shell .step-card>.step-number:before,
+  .app-shell .connect-step>.step-number:before{
+    content:"";
+    position:absolute;
+    inset:3px;
+    width:auto;
+    height:auto;
+    z-index:0;
+    border-radius:50%;
+    background:rgba(252,244,254,.96);
+  }
+  .app-shell .step-card>.step-number:after,
+  .app-shell .connect-step>.step-number:after{
+    position:absolute;
+    left:50%;
+    top:50%;
+    z-index:1;
+    width:28px;
+    height:28px;
+    margin:0;
+    animation:none;
+    transform:translate(-50%,-50%)!important;
+  }
+  .app-shell .recipe-card>.step-number:after{
+    content:""!important;
+    background:var(--ink)!important;
+    mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 16V4m0 0L7.5 8.5M12 4l4.5 4.5'/%3E%3Cpath d='M5 14v5h14v-5'/%3E%3C/svg%3E") center/contain no-repeat!important;
+  }
+}
