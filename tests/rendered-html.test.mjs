@@ -24,7 +24,7 @@ test("server-renders the branded Listing Factory", async () => {
   const pageSource = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
   const globalCss = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
   assert.match(pageSource, /How to get your Printify token/);
-  assert.match(pageSource, /token connects the account/);
+  assert.match(pageSource, /token connects the whole Printify account/);
   assert.match(html, /Connect this Printify template/);
   assert.match(html, /imports the product facts and permanent description/);
   assert.doesNotMatch(html, /Default title structure|Optional reusable description/);
@@ -611,7 +611,8 @@ test("ships official brand assets and removes the starter", async () => {
     readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
     readFile(new URL("../package.json", import.meta.url), "utf8"),
   ]);
-  assert.match(page, /goldie-wordmark-clean\.png/);
+  assert.match(page, /approved-brand/);
+  assert.match(page, /approved-wm/);
   assert.match(layout, /Goldie Listing Factory/);
   assert.doesNotMatch(packageJson, /react-loading-skeleton/);
   await access(new URL("../public/goldie-logo.png", import.meta.url));
@@ -632,9 +633,7 @@ test("keeps the owner test page separate from mastermind access", async () => {
   assert.match(access, /MASTERMIND_ACCESS_CODE/);
   assert.match(access, /crypto\.subtle\.digest/);
   assert.doesNotMatch(access, /GOLDIE-WOLF/);
-  assert.match(page, /return_to=\/mastermind|chatGPTSignInPath\("\/mastermind"\)/);
-  assert.match(page, /target="_blank"/);
-  assert.match(page, /noopener noreferrer/);
+  assert.match(page, /requireChatGPTUser\("\/mastermind"\)/);
   assert.match(page, /<ListingFactory \/>/);
   assert.match(redeem, /INSERT INTO mastermind_access/);
   assert.match(admin, /DELETE FROM printify_connections/);
@@ -696,6 +695,20 @@ test("caps mockup generation and saved themed sets", async () => {
   assert.match(page,/maximum 50 mockups per set/);
   assert.match(libraryRoute,/MAX_MOCKUPS_PER_SET = 50/);
   assert.match(libraryRoute,/existing\.length>=MAX_MOCKUPS_PER_SET/);
+});
+
+test("limits each listing to four lifestyle mockups and shows the recommended photo mix", async () => {
+  const [mockups, page] = await Promise.all([
+    readFile(new URL("../app/integrated-mockups.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+  ]);
+  assert.match(mockups, /MAX_MOCKUPS_PER_LISTING=4/);
+  assert.match(mockups, /next\.size>=MAX_MOCKUPS_PER_LISTING/);
+  assert.match(mockups, /Goldie recommends choosing three/);
+  assert.match(page, /Recommended listing photos/);
+  assert.match(page, /3 lifestyle model mockups/);
+  assert.match(page, /Printify flatlays of each color offered/);
+  assert.match(page, /1 item-specific size guide/);
 });
 
 test("enforces paid-plan usage on the server and exposes honest usage", async()=>{
