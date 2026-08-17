@@ -135,8 +135,10 @@ test("places item pricing before shipping in the pricing review", async () => {
     readFile(new URL("app/approved-functional.css", root), "utf8"),
   ]);
   const itemPrices = page.indexOf('<h4>1. Item prices</h4>');
+  const pricingMath = page.indexOf('className="pricing-math"');
   const shipping = page.indexOf('<h4>2. Shipping</h4>');
   assert.ok(itemPrices >= 0 && shipping > itemPrices, "item prices appear before shipping");
+  assert.ok(pricingMath > itemPrices && pricingMath < shipping, "the pricing explanation stays with item prices, before shipping");
   assert.doesNotMatch(page, /<span>1\. Shipping<\/span>/);
   assert.doesNotMatch(page, /<h4>2\. Item prices<\/h4>/);
   assert.match(page, /<small className="profit-fee-note">All Etsy fees included<\/small>/);
@@ -182,6 +184,11 @@ test("gives Step 6 a cohesive titles, tags, and descriptions layout", async () =
   assert.doesNotMatch(page, /Complete the listing words/);
   assert.match(page, /draftPreview=drafts\.find\(draft=>draft\.clientId===design\.id\)\?\.previewUrl\|\|design\.previewUrl/);
   assert.match(page, /className="listing-preview-button"/);
+  assert.match(page, /<b>2\. Edit description<\/b>/);
+  assert.match(page, /Build this title yourself from a keyword bank/);
+  assert.match(page, /It does not verify that the keyword bank itself matches the design, and it will not reject mismatched phrases\./);
+  assert.match(css, /\.app-shell \.finish-mode \.batch-limits,[\s\S]*display:none!important/);
+  assert.match(css, /\.app-shell \.batch-description>summary b\{[^}]*font-size:18px!important/);
   assert.match(css, /\.app-shell \.design-line\{grid-template-columns:152px minmax\(0,1fr\) 138px/);
   assert.match(css, /\.app-shell \.quality-pill\.pass,\.app-shell \.quality-pill\.check\{[^}]*background:linear-gradient/);
   assert.match(css, /\.app-shell \.finish-mode \.listing-editor>\.workflow-next\{display:flex;width:min\(250px,100%\);margin:28px auto 2px/);
