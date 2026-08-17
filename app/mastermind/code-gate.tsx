@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
 
 export default function CodeGate({ email }: { email: string }) {
   const [code, setCode] = useState("");
@@ -14,5 +13,5 @@ export default function CodeGate({ email }: { email: string }) {
     if (response.ok && result.accepted) window.location.reload();
     else { setError(result.error || "That access code was not accepted."); setWorking(false); }
   }
-  return <div className="access-shell"><div className="access-card"><Image src="/goldie-wordmark.webp" width={236} height={120} alt="Goldie" /><p className="mini-label">MASTERMIND BETA</p><h1>Enter your beta code</h1><p>Your free 48-hour beta begins when you enter the code. It includes up to 20 AI lifestyle mockups.</p><p>Signed in as {email}</p><form onSubmit={redeem}><input value={code} onChange={(event) => setCode(event.target.value)} placeholder="Mastermind beta code" autoCapitalize="characters" autoComplete="off" /><button disabled={working || !code.trim()}>{working ? "Checking…" : "Start my 48-hour beta"}</button></form>{error && <p className="access-error" role="alert">{error}</p>}</div></div>;
+  return <main className="beta-shell"><div className="beta-orb beta-orb-one"/><div className="beta-orb beta-orb-two"/><div className="beta-brand" aria-label="Goldie Listing Factory"><span>Gold<span className="beta-i">ı<i>✦</i></span>e</span><b>LISTING FACTORY</b></div><section className="beta-card"><p className="beta-eyebrow">PRIVATE MASTERMIND BETA</p><h1>Enter your beta code.</h1><p className="beta-intro">Your 48 hours begin as soon as your code is accepted.</p><div className="beta-limit-grid"><div><b>20</b><span>listings</span></div><div><b>20</b><span>lifestyle mockups</span></div><div><b>48</b><span>hours of access</span></div></div><form className="beta-form" onSubmit={redeem}><label htmlFor="mastermind-code">Mastermind beta code</label><input id="mastermind-code" value={code} onChange={(event) => setCode(event.target.value)} placeholder="Enter your code" autoCapitalize="characters" autoComplete="off" autoFocus/><button className="beta-primary" disabled={working || !code.trim()}>{working ? "Checking your code…" : "Start my 48-hour beta"}</button></form><p className="beta-account">Signed in as <b>{email}</b></p>{error && <p className="beta-error" role="alert">{error}</p>}</section><p className="beta-powered">POWERED BY GOLDIE AI · © 2026 BE A WOLF BIZ</p></main>;
 }

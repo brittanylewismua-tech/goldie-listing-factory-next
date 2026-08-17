@@ -637,7 +637,9 @@ test("keeps the owner test page separate from mastermind access", async () => {
   assert.match(access, /MASTERMIND_ACCESS_CODE/);
   assert.match(access, /crypto\.subtle\.digest/);
   assert.doesNotMatch(access, /GOLDIE-WOLF/);
-  assert.match(page, /requireChatGPTUser\("\/mastermind"\)/);
+  assert.match(page, /getChatGPTUser\(\)/);
+  assert.match(page, /chatGPTSignInPath\("\/mastermind"\)/);
+  assert.match(page, /20 listings and 20 AI lifestyle mockups/);
   assert.match(page, /<ListingFactory \/>/);
   assert.match(redeem, /INSERT INTO mastermind_access/);
   assert.match(admin, /DELETE FROM printify_connections/);
