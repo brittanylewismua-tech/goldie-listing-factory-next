@@ -24,7 +24,7 @@ type EtsyPropertySelection={propertyId:number;label:string;required:boolean;mult
 type PersonalizationQuestion={id:string;type:"text_input"|"dropdown"|"unlabeled_upload";question:string;instructions:string;required:boolean;maxCharacters:number;maxFiles:number;options:string[]};
 type EtsyPersonalization={enabled:boolean;questions:PersonalizationQuestion[]};
 type EtsyDetails={category:string;taxonomyId?:number;properties?:EtsyPropertySelection[];attributes:Record<string,string>;optional:Record<string,string>;blurb:string;confidence:"high"|"review";personalization?:EtsyPersonalization};
-type DesignFile = { name: string; size: number; id: string; file: File; previewUrl: string; title: string; tags: string[]; blurb?:string; descriptionOverride?:string; sizeGuideName?:string; width?: number; height?: number; visibleBounds?:VisibleBounds; hasTransparency?:boolean; paddingStatus?:"checking"|"trimmed"|"full";etsy?:EtsyDetails;etsyError?:string };
+type DesignFile = { name: string; size: number; id: string; file: File; previewUrl: string; title: string; tags: string[]; contentHash?:string; blurb?:string; descriptionOverride?:string; sizeGuideName?:string; width?: number; height?: number; visibleBounds?:VisibleBounds; hasTransparency?:boolean; paddingStatus?:"checking"|"trimmed"|"full";etsy?:EtsyDetails;etsyError?:string };
 type ProductVariant={id:number;title:string;cost:number;templatePrice:number;shipping?:number|null;options?:number[]};
 type InternationalShippingRate={key:string;label:string;primary:number;additional:number};
 type EditableInternationalShippingRate={key:string;label:string;primary:string;additional:string};
@@ -169,6 +169,7 @@ export default function Home() {
   const [loadingTemplate, setLoadingTemplate] = useState(false);
   const [description, setDescription] = useState("");
   const [files, setFiles] = useState<DesignFile[]>([]);
+  const [fileNotice,setFileNotice]=useState("");
   const [fileError, setFileError] = useState("");
   const [running, setRunning] = useState(false);
   const [complete, setComplete] = useState(false);
@@ -339,34 +340,39 @@ export default function Home() {
   useEffect(()=>{if(localPreview||!complete||preparingEtsy)return;const prepared=files.filter(file=>file.etsy);if(!prepared.length)return;const timer=window.setTimeout(()=>{void runBounded(prepared,2,async file=>{try{await syncPreparedListing(file,file.etsy!);updateDesign(file.id,{etsyError:""})}catch(error){updateDesign(file.id,{etsyError:error instanceof Error?error.message:"The listing changes could not be saved."})}return file},()=>undefined)},1200);return()=>window.clearTimeout(timer);// eslint-disable-next-line react-hooks/exhaustive-deps
   },[localPreview,complete,preparingEtsy,files.map(file=>file.etsy?`${file.id}:${file.title}:${file.tags.join("|")}:${JSON.stringify(file.etsy)}`:"").join(";")]);
 
-  function chooseFiles(list: FileList | null) {
+  async function fileContentHash(file:File){const bytes=await file.arrayBuffer(),digest=await crypto.subtle.digest("SHA-256",bytes);return Array.from(new Uint8Array(digest),byte=>byte.toString(16).padStart(2,"0")).join("")}
+
+  async function chooseFiles(list: FileList | null) {
     if (!list) return;
-    const images = Array.from(list)
-      .filter((file) => /\.(png|jpe?g)$/i.test(file.name))
-      .map((file) => ({ name: file.name, size: file.size, id: crypto.randomUUID(), file, previewUrl: URL.createObjectURL(file), title:"", tags:[],paddingStatus:"checking" as const }));
-    if (images.length === 0) {
+    const selected = Array.from(list).filter((file) => /\.(png|jpe?g)$/i.test(file.name));
+    if (selected.length === 0) {
+      setFileNotice("");
       setFileError("No supported designs were found. Choose PNG or JPG images.");
-      setFiles([]);
       return;
     }
-    if (images.length > MAX_BATCH_FILES) {
-      setFileError(`This batch has ${images.length} designs. Choose no more than ${MAX_BATCH_FILES} designs at a time.`);
-      return;
-    }
-    const oversized = images.find((image) => image.size > MAX_FILE_BYTES);
+    const oversized = selected.find((image) => image.size > MAX_FILE_BYTES);
     if (oversized) {
+      setFileNotice("");
       setFileError(oversizedFileMessage(oversized.name,oversized.size));
-      setFiles([]);
       return;
     }
-    setFileError("");
-    setFiles(images);
-    const durableBatchId=batchIdRef.current||crypto.randomUUID();batchIdRef.current=durableBatchId;window.localStorage.setItem("goldie-active-batch",durableBatchId);const batchUrl=new URL(window.location.href);batchUrl.searchParams.set("batch",durableBatchId);window.history.replaceState({},"",batchUrl);void saveBatchFiles(durableBatchId,images.map(image=>image.file)).catch(()=>undefined);
+    const existingHashes=new Set<string>();
+    for(const design of files){const hash=design.contentHash||await fileContentHash(design.file);existingHashes.add(hash)}
+    const unique:DesignFile[]=[];let duplicateCount=0;
+    for(const file of selected){const contentHash=await fileContentHash(file);if(existingHashes.has(contentHash)){duplicateCount+=1;continue}existingHashes.add(contentHash);unique.push({name:file.name,size:file.size,id:crypto.randomUUID(),file,previewUrl:URL.createObjectURL(file),title:"",tags:[],contentHash,paddingStatus:"checking"})}
+    const available=Math.max(0,MAX_BATCH_FILES-files.length),images=unique.slice(0,available),limitCount=unique.length-images.length;
+    if(!images.length){if(duplicateCount){setFileError("");setFileNotice(`${duplicateCount===1?"That design is":"Those designs are"} already in this batch. No duplicate was added.`)}else{setFileNotice("");setFileError(`This batch already has ${MAX_BATCH_FILES} designs.`)}if(folderPicker.current)folderPicker.current.value="";if(imagePicker.current)imagePicker.current.value="";return}
+    const combined=[...files,...images];
+    setFileError("");setFileNotice([`${images.length} ${images.length===1?"design was":"designs were"} added.`,duplicateCount?`${duplicateCount} exact ${duplicateCount===1?"duplicate was":"duplicates were"} skipped.`:"",limitCount?`${limitCount} ${limitCount===1?"design was":"designs were"} not added because this batch is limited to ${MAX_BATCH_FILES}.`:""].filter(Boolean).join(" "));
+    setFiles(combined);
+    const durableBatchId=batchIdRef.current||crypto.randomUUID();batchIdRef.current=durableBatchId;window.localStorage.setItem("goldie-active-batch",durableBatchId);const batchUrl=new URL(window.location.href);batchUrl.searchParams.set("batch",durableBatchId);window.history.replaceState({},"",batchUrl);void saveBatchFiles(durableBatchId,combined.map(image=>image.file)).catch(()=>undefined);
     setComplete(false);
     setDrafts([]);
     setProcessed(0);
     images.forEach((design) => { const probe = document.createElement("img"); probe.onload = () => { setFiles((current) => current.map((item) => item.id === design.id ? { ...item, width: probe.naturalWidth, height: probe.naturalHeight } : item)); URL.revokeObjectURL(probe.src); }; probe.src = URL.createObjectURL(design.file); });
     void analyzePadding(images);
+    if(folderPicker.current)folderPicker.current.value="";
+    if(imagePicker.current)imagePicker.current.value="";
   }
 
   async function analyzePadding(images:DesignFile[]) { for(const design of images){ if(!/\.png$/i.test(design.name)){updateDesign(design.id,{visibleBounds:{left:0,top:0,right:1,bottom:1},hasTransparency:false,paddingStatus:"full"});continue} try{const bitmap=await createImageBitmap(design.file,{resizeWidth:512,resizeHeight:512,resizeQuality:"low"});const canvas=document.createElement("canvas");canvas.width=bitmap.width;canvas.height=bitmap.height;const context=canvas.getContext("2d",{willReadFrequently:true})!;context.drawImage(bitmap,0,0);bitmap.close();const pixels=context.getImageData(0,0,canvas.width,canvas.height).data;let left=canvas.width,top=canvas.height,right=-1,bottom=-1,hasTransparency=false;for(let y=0;y<canvas.height;y++)for(let x=0;x<canvas.width;x++){const alpha=pixels[(y*canvas.width+x)*4+3];if(alpha<250)hasTransparency=true;if(alpha>8){left=Math.min(left,x);right=Math.max(right,x);top=Math.min(top,y);bottom=Math.max(bottom,y)}}const bounds=right<0?{left:0,top:0,right:1,bottom:1}:{left:left/canvas.width,top:top/canvas.height,right:(right+1)/canvas.width,bottom:(bottom+1)/canvas.height};const trimmed=bounds.left>.015||bounds.top>.015||bounds.right<.985||bounds.bottom<.985;updateDesign(design.id,{visibleBounds:bounds,hasTransparency,paddingStatus:trimmed?"trimmed":"full"})}catch{updateDesign(design.id,{visibleBounds:{left:0,top:0,right:1,bottom:1},hasTransparency:true,paddingStatus:"full"})} } }
@@ -710,12 +716,12 @@ export default function Home() {
               {workflowStep==="finish"&&<div className="finish-guide"><span><b>1</b> Create titles + tags</span><span><b>2</b> Review each listing</span><span><b>3</b> Confirm description</span></div>}
               <p className="batch-limits" aria-label="Batch limits"><span>20 designs maximum</span><i /> <span>100 MB per design · no combined file-size cap</span><i /> <span>Large batches process one design at a time without lowering DPI</span></p>
               <div className="file-reminder"><b>Before uploading</b><span>Designs must already be upscaled if needed. Use a transparent-background PNG whenever the background should not print.</span></div>
-              <input ref={folderPicker} className="hidden-picker" type="file" multiple accept=".png,.jpg,.jpeg" {...({ webkitdirectory: "", directory: "" } as React.InputHTMLAttributes<HTMLInputElement>)} onChange={(event) => chooseFiles(event.target.files)} />
-              <input ref={imagePicker} className="hidden-picker" type="file" multiple accept=".png,.jpg,.jpeg" onChange={(event) => chooseFiles(event.target.files)} />
+              <input ref={folderPicker} className="hidden-picker" type="file" multiple accept=".png,.jpg,.jpeg" {...({ webkitdirectory: "", directory: "" } as React.InputHTMLAttributes<HTMLInputElement>)} onChange={(event) => void chooseFiles(event.target.files)} />
+              <input ref={imagePicker} className="hidden-picker" type="file" multiple accept=".png,.jpg,.jpeg" onChange={(event) => void chooseFiles(event.target.files)} />
               <div className="upload-actions">
               <button className="folder-drop" onClick={() => folderPicker.current?.click()}>
                 <span className="upload-icon" aria-hidden="true">↑</span>
-                <span><b>{files.length ? designsFinished?`${files.length} of 20 designs ready`:`Preparing designs: ${designsReady} of ${files.length} ready` : "Choose a folder"}</b><small>{files.length ? `${(totalSize / 1024 / 1024).toFixed(1)} MB selected${totalSize>LARGE_BATCH_THRESHOLD?" · will process one at a time":""} · Choose again to replace` : "Your folder can contain up to 20 designs"}</small></span>
+                <span><b>{files.length ? designsFinished?`${files.length} of 20 designs ready`:`Preparing designs: ${designsReady} of ${files.length} ready` : "Choose a folder"}</b><small>{files.length ? `${(totalSize / 1024 / 1024).toFixed(1)} MB selected${totalSize>LARGE_BATCH_THRESHOLD?" · will process one at a time":""} · Choose again to add more` : "Your folder can contain up to 20 designs"}</small></span>
                 <span className="browse-chip">Browse</span>
               </button>
               <button className="folder-drop" onClick={() => imagePicker.current?.click()}>
@@ -725,6 +731,7 @@ export default function Home() {
               </button>
               </div>
               {fileError && <p className="file-limit-error" role="alert"><b>That batch can’t be added.</b><span>{fileError}</span></p>}
+              {fileNotice&&<p className="file-add-notice" role="status"><b>Upload updated</b><span>{fileNotice}</span></p>}
               {files.length>0&&<section className={`design-preparation-status ${designsFinished?"ready":"working"}`} role="status" aria-live="polite"><span className="design-status-icon" aria-hidden="true">{designsFinished?"✓":""}</span><div><b>{designsFinished?`All ${files.length} designs are ready`:`Goldie is preparing your designs: ${designsReady} of ${files.length} ready`}</b><small>{designsFinished?"Dimensions and print-quality information are loaded. You can continue.":"Keep this page open. Goldie is reading every file and checking its dimensions before you can continue."}</small><div className="design-status-track"><i style={{width:`${files.length?designsReady/files.length*100:0}%`}}/></div></div><strong>{designsReady}/{files.length}</strong></section>}
               {files.length > 0 && <div className="batch-capacity"><div><b>{files.length}/20 designs</b><span>{20 - files.length} spaces remaining</span></div><div className="capacity-track"><span style={{ width: `${(files.length / 20) * 100}%` }} /></div></div>}
               {files.length>0&&!complete&&workflowStep==="designs"&&<>{designsFinished&&belowRecommendedPixels.length>0&&<div className="pixel-warning-inline" role="status"><span>!</span><div><b>{belowRecommendedPixels.length===1?"One design is":"Some designs are"} below Printify’s recommended pixel size.</b><small>You can still continue, but Goldie will ask you to confirm first.</small></div></div>}<button className="workflow-next" disabled={!designsFinished} onClick={continueFromDesigns}>{designsFinished?"Next step":`Preparing ${designsPreparing} ${designsPreparing===1?"design":"designs"}…`} {designsFinished&&<span>→</span>}</button></>}

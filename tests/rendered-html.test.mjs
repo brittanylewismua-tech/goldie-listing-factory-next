@@ -997,3 +997,14 @@ test("supports Etsy's current multi-question personalization workflow", async ()
   assert.match(finish, /max_allowed_files/);
   assert.match(finish, /method:"DELETE"/);
 });
+
+test("appends later design selections and skips only exact file duplicates", async () => {
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  assert.match(page, /crypto\.subtle\.digest\("SHA-256",bytes\)/);
+  assert.match(page, /const combined=\[\.\.\.files,\.\.\.images\]/);
+  assert.match(page, /setFiles\(combined\)/);
+  assert.match(page, /exact \$\{duplicateCount===1\?"duplicate was":"duplicates were"\} skipped/);
+  assert.match(page, /saveBatchFiles\(durableBatchId,combined\.map/);
+  assert.match(page, /Choose again to add more/);
+  assert.match(page, /className="file-add-notice"/);
+});
