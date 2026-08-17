@@ -31,6 +31,9 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
   .launch-panel,.post-draft-workspace{border-radius:28px}.recommended-listing-photos{width:min(930px,100%)}
 }
 
+.app-shell .profit-goal-control label{align-items:start}
+.app-shell .profit-goal-control label>small{display:block;margin-top:2px;color:rgba(74,42,62,.65);font-size:10.5px;font-weight:500;line-height:1.35;white-space:nowrap}
+
 /* UX readability lock: operational copy must be effortless to scan, and the
    navigation row always sits below the active step instead of inside it. */
 .app-shell .batch-limits{

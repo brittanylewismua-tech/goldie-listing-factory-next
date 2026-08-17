@@ -791,7 +791,9 @@ test("keeps pricing simple while using a real Etsy shipping profile and exact te
   assert.match(page,/className="printify-product-cost"/);
   assert.match(page,/Product only/);
   assert.match(page,/2\. Shipping/);
-  assert.match(page,/Update prices/);
+  assert.doesNotMatch(page,/Update prices/);
+  assert.match(page,/Prices update automatically/);
+  assert.match(page,/changeProfit\(value:number\)[\s\S]*recalculate\(nextPricing\)/);
   assert.match(page,/Create a custom shipping profile \(optional\)/);
   assert.match(page,/Your current prices already meet this profit goal/);
   assert.match(page,/recommendation-result/);
