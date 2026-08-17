@@ -41,7 +41,7 @@ export default function SignupClient({ signedIn, checkout, returnTo = "/listing-
   ];
 
   return <main className="signup-page">
-    <header className="signup-topbar"><div className="signup-brand"><span>Goldie</span><b>LISTING FACTORY</b></div>{signedIn ? <p>Signed in securely</p> : <a href={`/signin-with-chatgpt?return_to=${encodeURIComponent(returnTo)}`}>Already have an account? <b>Sign in</b></a>}</header>
+    <header className="signup-topbar"><div className="signup-brand" aria-label="Goldie Listing Factory"><div className="approved-wm">Gold<span className="approved-i">ı<span>✦</span></span>e</div><div className="approved-sub">Listing Factory</div></div>{signedIn ? <p>Signed in securely</p> : <a href={`/signin-with-chatgpt?return_to=${encodeURIComponent(returnTo)}`}>Already have an account? <b>Sign in</b></a>}</header>
     <section className="signup-hero"><span className="signup-eyebrow">YOUR LISTING WORKFLOW, AUTOMATED</span><h1>Automated Etsy listings like you’ve never seen before.</h1><p>Let Goldie AI be your ultimate automation assistant.</p><div className="signup-proof"><span>Printify drafts</span><span>Pricing + Etsy details</span><span>AI lifestyle mockups</span></div></section>
     {checkout === "success" && <div className="signup-notice success"><b>Your Listing Factory access is being activated.</b><span>If this is your first subscription, your three-day trial starts now. Stripe is confirming everything securely.</span><a href={returnTo}>Open Listing Factory</a></div>}
     {checkout === "canceled" && <div className="signup-notice"><b>No charge was made.</b><span>Your plan is still waiting whenever you are ready.</span></div>}

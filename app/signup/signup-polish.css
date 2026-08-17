@@ -26,7 +26,38 @@
 .signup-topbar > a { text-decoration: none; }
 .signup-topbar > a b { color: #4b283e; }
 
-.signup-brand span { font-size: 52px; }
+.signup-brand .approved-wm {
+  color: #4b283e;
+  font: 400 52px / 0.92 "DM Serif Display", Georgia, serif;
+  letter-spacing: -0.025em;
+  white-space: nowrap;
+}
+
+.signup-brand .approved-i {
+  position: relative;
+  display: inline-block;
+}
+
+.signup-brand .approved-i > span {
+  position: absolute;
+  top: -0.18em;
+  left: 50%;
+  color: #4b283e;
+  font-size: 0.31em;
+  line-height: 1;
+  transform: translateX(-50%);
+  animation: approved-star 5s ease-in-out infinite;
+}
+
+.signup-brand .approved-sub {
+  margin-top: 7px;
+  color: #4b283e;
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.245em;
+  text-align: center;
+  text-transform: uppercase;
+}
 
 .signup-hero {
   margin: 58px auto 42px;
