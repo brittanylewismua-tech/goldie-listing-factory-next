@@ -12,7 +12,7 @@ export async function POST(request:Request){
   if(!productId||!(file instanceof File)||!/^image\/(png|jpeg|webp)$/i.test(file.type))return NextResponse.json({error:"Choose a PNG, JPG, or WEBP listing image."},{status:400});
   if(file.size>20*1024*1024)return NextResponse.json({error:"Each Etsy listing image must be 20 MB or smaller."},{status:413});
   const owned=await runtime().DB.prepare("SELECT 1 FROM printify_draft_results WHERE user_id=? AND status='succeeded' AND json_extract(response_json,'$.id')=? LIMIT 1").bind(user.userId,productId).first();
-  if(!owned)return NextResponse.json({error:"That Printify draft does not belong to this Goldie account."},{status:403});
+  if(!owned)return NextResponse.json({error:"That Printify draft does not belong to this Listing Factory account."},{status:403});
   const prefix=`etsy-listing-images/${user.userId}/${productId}/${kind==="size-guide"?"size-guide":"mockup"}/`;
   if(kind==="size-guide"){const existing=await runtime().ARTWORK.list({prefix});await Promise.all(existing.objects.map(object=>runtime().ARTWORK.delete(object.key)))}
   if(kind!=="size-guide"){const existing=await runtime().ARTWORK.list({prefix,limit:5});if(existing.objects.length>=4)return NextResponse.json({error:"Each listing can have up to four Goldie-generated lifestyle mockups."},{status:409})}

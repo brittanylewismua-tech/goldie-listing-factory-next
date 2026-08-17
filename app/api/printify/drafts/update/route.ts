@@ -7,7 +7,7 @@ export async function PATCH(request:Request){
   const user=await getChatGPTUser();if(!user)return NextResponse.json({error:"Sign in to update this draft."},{status:401});
   const body=await request.json() as {productId?:string;title?:string;tags?:string[];description?:string;etsyDetails?:unknown;placement?:{x:number;y:number;scale:number}},productId=String(body.productId||"");
   const owned=await env.DB.prepare("SELECT response_json FROM printify_draft_results WHERE user_id=? AND status='succeeded' AND json_extract(response_json,'$.id')=? LIMIT 1").bind(user.userId,productId).first<{response_json:string}>();
-  if(!owned)return NextResponse.json({error:"That Printify draft was not created by this Goldie account."},{status:404});
+  if(!owned)return NextResponse.json({error:"That Printify draft was not created by this Listing Factory account."},{status:404});
   const draft=JSON.parse(owned.response_json) as {shopId:number},connection=await env.DB.prepare("SELECT encrypted_token FROM printify_connections WHERE user_id=?").bind(user.userId).first<{encrypted_token:string}>(),secret=(env as unknown as {PRINTIFY_TOKEN_KEY?:string}).PRINTIFY_TOKEN_KEY;
   if(!connection||!secret)return NextResponse.json({error:"Reconnect Printify to update this draft."},{status:401});
   const token=await decryptPrintifyToken(connection.encrypted_token,secret),url=`https://api.printify.com/v1/shops/${draft.shopId}/products/${productId}.json`;

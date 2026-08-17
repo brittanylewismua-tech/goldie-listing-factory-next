@@ -12,7 +12,7 @@ export async function POST(request:Request){
   if(!ids.length)return NextResponse.json({error:"Choose at least one completed listing."},{status:400});
   if(!Number.isInteger(etsyShippingProfileId)||etsyShippingProfileId<=0)return NextResponse.json({error:"Choose an Etsy shipping profile before publishing."},{status:400});
   const rows=await env.DB.prepare(`SELECT response_json FROM printify_draft_results WHERE user_id=? AND status='succeeded' AND json_extract(response_json,'$.id') IN (${ids.map(()=>"?").join(",")})`).bind(user.userId,...ids).all<{response_json:string}>();
-  if(rows.results.length!==ids.length)return NextResponse.json({error:"One or more listings do not belong to this Goldie account."},{status:403});
+  if(rows.results.length!==ids.length)return NextResponse.json({error:"One or more listings do not belong to this Listing Factory account."},{status:403});
   const etsy=await env.DB.prepare("SELECT shop_id FROM etsy_connections WHERE user_id=?").bind(user.userId).first<{shop_id:number}>();if(!etsy)return NextResponse.json({error:"Connect Etsy before publishing. Goldie will not publish listings it cannot finish safely."},{status:400});
   const connection=await env.DB.prepare("SELECT encrypted_token FROM printify_connections WHERE user_id=?").bind(user.userId).first<{encrypted_token:string}>(),secret=(env as unknown as {PRINTIFY_TOKEN_KEY?:string}).PRINTIFY_TOKEN_KEY;
   if(!connection||!secret)return NextResponse.json({error:"Reconnect Printify before publishing."},{status:401});

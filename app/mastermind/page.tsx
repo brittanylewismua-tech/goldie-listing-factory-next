@@ -24,7 +24,7 @@ export default async function MastermindPage({ searchParams }: { searchParams?:P
   if (!user) return <WelcomeScreen/>;
   const state = await mastermindState(user);
   if (!state.active) return <BetaShell><p className="beta-eyebrow">MASTERMIND BETA</p><h1>Testing is closed.</h1><p className="beta-intro">This mastermind testing period is not currently accepting new testers.</p></BetaShell>;
-  if (state.expired) return <BetaShell><p className="beta-eyebrow">MASTERMIND BETA</p><h1>Your beta has ended.</h1><p className="beta-intro">Your free 48-hour Goldie beta is complete. Your saved work will still be here if you choose a plan.</p><a className="beta-primary" href="/signup">See Goldie plans</a></BetaShell>;
+  if (state.expired) return <BetaShell><p className="beta-eyebrow">MASTERMIND BETA</p><h1>Your beta has ended.</h1><p className="beta-intro">Your free 48-hour Listing Factory beta is complete. Your saved work will still be here if you choose a plan.</p><a className="beta-primary" href="/signup">See Listing Factory plans</a></BetaShell>;
   if (!state.redeemed) return <CodeGate email={user.email} />;
   return <><BetaCountdown expiresAt={state.expiresAt}/><ListingFactory /></>;
 }

@@ -5,12 +5,12 @@ import { PLANS, type PlanKey } from "@/app/plan-limits";
 
 export async function POST(request:Request) {
   const user = await getChatGPTUser();
-  if(!user)return NextResponse.json({error:"Sign in before choosing a Goldie plan."},{status:401});
+  if(!user)return NextResponse.json({error:"Sign in before choosing a Listing Factory plan."},{status:401});
   const body = await request.json().catch(()=>({})) as {plan?:string};
-  if (!body.plan || !(body.plan in PLANS)) return NextResponse.json({error:"Choose a Goldie plan."},{status:400});
+  if (!body.plan || !(body.plan in PLANS)) return NextResponse.json({error:"Choose a Listing Factory plan."},{status:400});
   const plan = body.plan as PlanKey;
   const current = await billingState(user);
-  if (current.active) return NextResponse.json({error:"You already have an active Goldie subscription. Manage it from Usage + Plan."},{status:409});
+  if (current.active) return NextResponse.json({error:"You already have an active Listing Factory subscription. Manage it from Usage + Plan."},{status:409});
   const customer = await customerFor(user), origin = siteOrigin(request), includeTrial=await trialAvailable(user);
   const params = new URLSearchParams({
     mode:"subscription", customer, client_reference_id:user.userId,

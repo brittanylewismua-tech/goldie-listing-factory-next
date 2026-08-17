@@ -11,5 +11,5 @@ export async function customerLaunchBlock(user: ChatGPTUser) {
   const [state,billing] = await Promise.all([mastermindState(user),billingState(user)]);
   if (state.owner || billing.active || (state.active && state.redeemed && SECURE_URL_UPLOAD_IMPLEMENTED)) return null;
   if (CUSTOMER_LAUNCH_ENABLED) return null;
-  return "Choose a Goldie subscription before using the Listing Factory.";
+  return "Choose a Listing Factory subscription before using the Listing Factory.";
 }
