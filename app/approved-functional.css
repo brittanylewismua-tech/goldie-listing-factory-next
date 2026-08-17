@@ -79,6 +79,39 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .app-shell .custom-shipping-builder>summary,
 .app-shell .pricing-math>summary{font-size:13px!important}
 
+/* Step 4 footer: keep every control in its own lane beneath the pricing card. */
+@media(min-width:821px){
+  .app-shell .workflow-stage>.workflow-footer-actions{
+    width:min(720px,72vw)!important;
+    min-height:56px!important;
+    margin:24px auto 0!important;
+    display:grid!important;
+    grid-template-columns:1fr auto 1fr!important;
+    align-items:center!important;
+    gap:20px!important;
+  }
+  .app-shell .workflow-footer-actions .workflow-back{
+    grid-column:1!important;
+    justify-self:start!important;
+    min-width:150px!important;
+    margin:0!important;
+  }
+  .app-shell .workflow-footer-actions .autosave-note{
+    position:static!important;
+    grid-column:2!important;
+    justify-self:center!important;
+    transform:none!important;
+    white-space:nowrap!important;
+  }
+  .app-shell .launch-panel .launch-note{
+    position:static!important;
+    clear:both!important;
+    margin:18px auto 0!important;
+    padding:0 12px 2px!important;
+    max-width:640px!important;
+  }
+}
+
 /* Step 8 listing summary: keep long titles and tag sets readable without
    forcing the image controls far down the card. */
 .app-shell .draft-state{color:#865675!important}

@@ -62,6 +62,14 @@ test("uses one Goldie aesthetic across every linked management page", async () =
   assert.doesNotMatch(css, /#dcae43|#080808|#d69d2d/);
 });
 
+test("keeps the Step 4 footer controls below the pricing card without collisions", async () => {
+  const css = await readFile(new URL("app/approved-functional.css", root), "utf8");
+  assert.match(css,/workflow-stage>\.workflow-footer-actions/);
+  assert.match(css,/grid-template-columns:1fr auto 1fr/);
+  assert.match(css,/workflow-footer-actions \.autosave-note[\s\S]*position:static!important/);
+  assert.match(css,/launch-panel \.launch-note[\s\S]*margin:18px auto 0!important/);
+});
+
 test("keeps Step 7 clear and its icon locked to the optical center", async () => {
   const page = await readFile(new URL("app/page.tsx", root), "utf8");
   const css = await readFile(new URL("app/approved-functional.css", root), "utf8");
