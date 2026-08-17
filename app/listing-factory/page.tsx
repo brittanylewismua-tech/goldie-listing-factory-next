@@ -6,16 +6,18 @@ import SignupClient from "@/app/signup/signup-client";
 import "@/app/signup/signup.css";
 import "@/app/signup/signup-copy.css";
 
-export default async function ListingFactoryRoute(){
+export default async function ListingFactoryRoute({searchParams}:{searchParams:Promise<{offer?:string}>}){
+  const offerValue = (await searchParams).offer;
+  const initialOffer = offerValue === "trial" || offerValue === "goldie" || offerValue === "scale" ? offerValue : undefined;
   const user = await getChatGPTUser();
-  if (!user) return <SignupClient signedIn={false} returnTo="/listing-factory"/>;
+  if (!user) return <SignupClient signedIn={false} returnTo="/listing-factory" initialOffer={initialOffer}/>;
 
   const [billing, mastermind] = await Promise.all([
     billingState(user),
     mastermindState(user),
   ]);
   const hasAccess = billing.active || mastermind.owner || (mastermind.active && mastermind.redeemed);
-  if (!hasAccess) return <SignupClient signedIn returnTo="/listing-factory"/>;
+  if (!hasAccess) return <SignupClient signedIn returnTo="/listing-factory" initialOffer={initialOffer}/>;
 
   return <ListingFactory/>;
 }
