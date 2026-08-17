@@ -980,3 +980,20 @@ test("shows every public plan on Usage and Billing with direct plan controls", a
   assert.match(styles, /\.usage-plan-grid/);
   assert.match(styles, /article\.current/);
 });
+
+test("supports Etsy's current multi-question personalization workflow", async () => {
+  const [page, finish] = await Promise.all([
+    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/etsy/finish.ts", import.meta.url), "utf8"),
+  ]);
+  assert.match(page, /PersonalizationEditor/);
+  assert.match(page, /Text answer/);
+  assert.match(page, /Dropdown choices/);
+  assert.match(page, /File upload/);
+  assert.match(page, /questions\.length<5/);
+  assert.match(page, /personalizationProblem/);
+  assert.match(finish, /supports_multiple_personalization_questions=true/);
+  assert.match(finish, /max_allowed_characters/);
+  assert.match(finish, /max_allowed_files/);
+  assert.match(finish, /method:"DELETE"/);
+});
