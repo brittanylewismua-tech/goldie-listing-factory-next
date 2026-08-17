@@ -1023,3 +1023,30 @@ test("keeps a verified Printify template usable when its Etsy listing is inactiv
   assert.match(printify, /!profile\.is_deleted/);
   assert.match(printify, /UPDATE product_recipes SET pricing_json/);
 });
+
+test("supports simple saved product bundles without complicating the single-product workflow", async () => {
+  const [page, workflow, api, schema, ui, styles] = await Promise.all([
+    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/factory-tools.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/product-bundles/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../db/schema.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/goldie-ui.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
+  ]);
+  assert.match(schema, /productBundles = sqliteTable\("product_bundles"/);
+  assert.match(api, /Choose at least two saved products/);
+  assert.match(api, /up to four products/);
+  assert.match(api, /eq\(productRecipes\.userId,user\.userId\)/);
+  assert.match(workflow, /Product bundles/);
+  assert.match(workflow, /Upload once, then finish one product at a time/);
+  assert.match(workflow, /Choose the products in the order you want to complete them/);
+  assert.match(page, /function useBundle/);
+  assert.match(page, /function continueBundle/);
+  assert.match(page, /activeBundle,bundleRecipes,bundleIndex/);
+  assert.match(page, /previewUrl:URL\.createObjectURL\(file\.file\)/);
+  assert.match(page, /descriptionOverride:undefined/);
+  assert.match(page, /setWorkflowStep\("review"\)/);
+  assert.match(ui, /Continue bundle with/);
+  assert.match(ui, /pricing, shipping, description, Etsy details, and images separately/);
+  assert.match(styles, /\.bundle-progress/);
+});

@@ -105,6 +105,15 @@ export const productRecipes = sqliteTable("product_recipes", {
   updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 }, (table) => [index("idx_product_recipes_user").on(table.userId, table.updatedAt)]);
 
+export const productBundles = sqliteTable("product_bundles", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull(),
+  name: text("name").notNull(),
+  recipeIdsJson: text("recipe_ids_json").notNull().default("[]"),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+}, (table) => [index("idx_product_bundles_user").on(table.userId, table.updatedAt)]);
+
 export const keywordLists = sqliteTable("keyword_lists", {
   id: text("id").primaryKey(),
   userId: text("user_id").notNull(),
