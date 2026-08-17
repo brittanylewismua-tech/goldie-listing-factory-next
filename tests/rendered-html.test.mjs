@@ -185,7 +185,9 @@ test("renders Mockup Sets as management only", async () => {
   const html = await response.text();
   assert.match(html, /Manage your mockup sets/);
   assert.match(html, /Add mockup set/);
-  assert.match(html, /Manage here\. Create inside Listing Factory/);
+  assert.match(html, /class="management-nav"/);
+  assert.match(html, />Listing Factory<\/a>/);
+  assert.doesNotMatch(html, /mockupFooter/);
   assert.doesNotMatch(html, /Add this design/);
   assert.doesNotMatch(html, /Create your mockups/);
 });

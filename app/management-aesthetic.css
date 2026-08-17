@@ -218,3 +218,65 @@
   .keyword-page .keyword-workspace,
   .mockupFactory.managementOnly .mockupWorkspace{padding:8px 0 70px!important}
 }
+
+/* Management-page readability lock. These pages share one hierarchy and
+   contrast standard so headings, supporting copy, labels, and card details
+   remain legible against the glass surfaces. */
+:is(.management-page,.usage-page,.keyword-page,.mockupFactory.managementOnly)>header h1{
+  margin-bottom:0!important;
+}
+:is(.management-page,.usage-page,.keyword-page,.mockupFactory.managementOnly)>header :is(p:last-child,.lede),
+.keyword-page>header>div>p:last-child{
+  margin:18px 0 0!important;
+  max-width:760px!important;
+  color:rgba(74,42,62,.82)!important;
+  font-size:16px!important;
+  line-height:1.65!important;
+}
+:is(.management-page,.usage-page,.keyword-page,.mockupFactory.managementOnly) .mini-label,
+.mockupFactory.managementOnly .mockupEyebrow{
+  color:#744d69!important;
+  font-size:11px!important;
+  font-weight:800!important;
+  letter-spacing:.16em!important;
+}
+:is(.management-page,.usage-page,.keyword-page,.mockupFactory.managementOnly)>.management-nav a{
+  color:rgba(74,42,62,.72)!important;
+}
+:is(.management-page,.usage-page,.keyword-page,.mockupFactory.managementOnly) :is(p,small){
+  text-rendering:optimizeLegibility;
+}
+.management-page .batch-history :is(p,small),
+.usage-page :is(.usage-note,.usage-card p,.pricing-profile>div>p:last-child,.pricing-caveat),
+.keyword-page :is(.management-create-foot>span,.empty-bank p,.bank-grid p,.bank-grid small),
+.mockupFactory.managementOnly :is(.managementLibraryHead p,.collection p,.setControls small,.librarySaving small){
+  color:rgba(74,42,62,.78)!important;
+}
+.management-page .batch-history p,
+.usage-page .usage-card p,
+.keyword-page :is(.empty-bank p,.bank-grid p),
+.mockupFactory.managementOnly :is(.managementLibraryHead p,.collection p){
+  font-size:13px!important;
+  line-height:1.55!important;
+}
+.management-page .batch-history small,
+.usage-page :is(.usage-note,.pricing-caveat),
+.keyword-page :is(.management-create-foot>span,.bank-grid small),
+.mockupFactory.managementOnly :is(.setControls small,.librarySaving small){
+  font-size:12px!important;
+  line-height:1.5!important;
+}
+.usage-page .plan-banner>div>span{
+  color:#704861!important;
+  font-size:12px!important;
+  font-weight:850!important;
+  letter-spacing:.14em!important;
+}
+.usage-page .plan-banner p{
+  color:rgba(74,42,62,.8)!important;
+}
+.usage-page .pricing-profile-grid :is(label,small){
+  color:#5f4056!important;
+}
+.usage-page .pricing-profile-grid label{font-size:12px!important}
+.usage-page .pricing-profile-grid small{font-size:11px!important;line-height:1.45!important}
