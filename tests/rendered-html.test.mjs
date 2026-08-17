@@ -640,6 +640,8 @@ test("keeps the owner test page separate from mastermind access", async () => {
   assert.match(page, /getChatGPTUser\(\)/);
   assert.match(page, /chatGPTSignInPath\("\/mastermind"\)/);
   assert.match(page, /20 listings and 20 AI lifestyle mockups/);
+  assert.match(page, /BetaCountdown/);
+  assert.match(page, /preview === "welcome"/);
   assert.match(page, /<ListingFactory \/>/);
   assert.match(redeem, /INSERT INTO mastermind_access/);
   assert.match(admin, /DELETE FROM printify_connections/);
