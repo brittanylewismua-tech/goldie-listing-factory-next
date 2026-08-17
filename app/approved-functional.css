@@ -77,6 +77,87 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .app-shell .custom-shipping-builder>summary,
 .app-shell .pricing-math>summary{font-size:13px!important}
 
+/* Workflow readability and Step 7/8 hierarchy lock. */
+.app-shell .etsy-preparing-note{
+  max-width:620px;
+  margin:12px auto 0;
+  color:rgba(74,42,62,.72);
+  font-size:12px;
+  line-height:1.55;
+  text-align:center;
+}
+.app-shell .variant-transfer-note b{font-size:13px!important;line-height:1.4!important}
+.app-shell .variant-transfer-note small{font-size:12px!important;line-height:1.55!important}
+.app-shell .etsy-detail-card label,
+.app-shell .optional-note{font-size:12px!important;line-height:1.45!important}
+.app-shell .step-content small,
+.app-shell .post-draft-workspace small{font-size:11.5px!important;line-height:1.5!important}
+.app-shell .step-copy,
+.app-shell .post-draft-heading p,
+.app-shell .printify-image-picker p,
+.app-shell .etsy-note{font-size:12px!important;line-height:1.6!important}
+.app-shell .mini-label{font-size:10.5px!important;line-height:1.35!important}
+
+.app-shell .workspace.mockup-workspace+.recommended-listing-photos{
+  grid-row:3;
+  width:auto;
+  max-width:none;
+  margin:0 auto 20px;
+  padding:0;
+  border:0;
+  border-radius:0;
+  background:transparent;
+  box-shadow:none;
+  backdrop-filter:none;
+  color:#5b304f;
+  text-align:center;
+}
+.app-shell .recommended-listing-photos>summary{
+  cursor:pointer;
+  font-size:12.5px;
+  font-weight:800;
+  text-decoration:underline;
+  text-underline-offset:4px;
+}
+.app-shell .recommended-listing-photos ul{justify-content:center;font-size:12px!important;line-height:1.5}
+.app-shell .workspace.mockup-workspace+.recommended-listing-photos+.post-draft-workspace .post-draft-heading{
+  display:grid!important;
+  justify-items:center!important;
+  gap:18px;
+  padding:4px 0 24px!important;
+  text-align:center;
+}
+.app-shell .workspace.mockup-workspace+.recommended-listing-photos+.post-draft-workspace .post-draft-heading>div{
+  display:grid!important;
+  justify-items:center;
+  gap:7px;
+}
+.app-shell .post-draft-heading .open-all-button{
+  width:auto!important;
+  min-width:310px!important;
+  min-height:46px;
+  margin:0 auto!important;
+  padding:12px 20px!important;
+  border:0!important;
+  border-radius:14px!important;
+  background:linear-gradient(145deg,#6a3456,#4b283e)!important;
+  color:#fff!important;
+  box-shadow:0 12px 24px -18px rgba(74,42,62,.8)!important;
+  font-size:0!important;
+  font-weight:800;
+}
+.app-shell .post-draft-heading .open-all-button:after{content:"Open all listings to review in Printify";font-size:12.5px}
+.app-shell .integrated-mockups .batch-mockup-button,
+.app-shell .integrated-mockups .generate-inline{
+  display:block!important;
+  width:min(100%,290px)!important;
+  min-height:42px!important;
+  padding:10px 15px!important;
+  font-size:11.5px!important;
+}
+.app-shell .integrated-mockups .batch-mockup-button{margin:18px 0 0!important}
+.app-shell .integrated-mockups .generate-inline{margin:16px 0 0!important}
+
 /* Resolution warning: compare every affected file without making the seller
    decode a sentence or hunt for the recommended dimensions. */
 .app-shell .pixel-warning-modal{width:min(760px,calc(100vw - 40px))!important;max-height:min(88vh,820px);overflow:auto;padding:32px!important}

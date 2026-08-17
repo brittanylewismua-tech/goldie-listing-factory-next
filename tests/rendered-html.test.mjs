@@ -705,7 +705,7 @@ test("limits each listing to four lifestyle mockups and shows the recommended ph
   assert.match(mockups, /MAX_MOCKUPS_PER_LISTING=4/);
   assert.match(mockups, /next\.size>=MAX_MOCKUPS_PER_LISTING/);
   assert.match(mockups, /Goldie recommends choosing three/);
-  assert.match(page, /Recommended listing photos/);
+  assert.match(page, /Recommended listing photo mix/);
   assert.match(page, /3 lifestyle model mockups/);
   assert.match(page, /Printify flatlays of each color offered/);
   assert.match(page, /1 item-specific size guide/);

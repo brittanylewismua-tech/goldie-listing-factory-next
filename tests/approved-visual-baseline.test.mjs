@@ -218,7 +218,10 @@ test("centers autosave feedback beneath each workflow panel", async () => {
 });
 
 test("keeps Step 8 controls ordered, separated, and inside the warm Goldie palette", async () => {
-  const css = await readFile(new URL("app/approved-functional.css", root), "utf8");
+  const [page, css] = await Promise.all([
+    readFile(new URL("app/page.tsx", root), "utf8"),
+    readFile(new URL("app/approved-functional.css", root), "utf8"),
+  ]);
   assert.match(css, /Step 8 final lock/);
   assert.match(css, /\.app-shell \.draft-card>\.draft-mockups\{order:3\}/);
   assert.match(css, /\.app-shell \.draft-card>\.individual-size-guide\{order:4\}/);
@@ -226,4 +229,20 @@ test("keeps Step 8 controls ordered, separated, and inside the warm Goldie palet
   assert.match(css, /\.app-shell \.inline-mockup-grid label\.selected\{[\s\S]*border-color:#b777b0!important/);
   assert.match(css, /\.app-shell \.post-draft-workspace>\.mockup-next\{[\s\S]*margin:34px auto 16px!important/);
   assert.match(css, /\.app-shell \.publish-live-warning\{[\s\S]*rgba\(239,211,237,\.66\)/);
+  assert.match(page, /Recommended listing photo mix/);
+  assert.match(css, /\.post-draft-heading \.open-all-button:after\{content:"Open all listings to review in Printify"/);
+  assert.match(css, /\.integrated-mockups \.batch-mockup-button,[\s\S]*width:min\(100%,290px\)!important/);
+  assert.match(css, /\.integrated-mockups \.generate-inline\{margin:16px 0 0!important\}/);
+});
+
+test("keeps supporting workflow copy readable and explains slower Etsy preparation", async () => {
+  const [page, css] = await Promise.all([
+    readFile(new URL("app/page.tsx", root), "utf8"),
+    readFile(new URL("app/approved-functional.css", root), "utf8"),
+  ]);
+  assert.match(page, /This can take a moment when your batch has several listings\. Keep this page open while Goldie prepares each one\./);
+  assert.match(css, /\.app-shell \.etsy-preparing-note\{[\s\S]*font-size:12px/);
+  assert.match(css, /\.app-shell \.variant-transfer-note small\{font-size:12px!important/);
+  assert.match(css, /\.app-shell \.step-content small,[\s\S]*font-size:11\.5px!important/);
+  assert.match(css, /\.app-shell \.etsy-detail-card label,[\s\S]*font-size:12px!important/);
 });
