@@ -65,6 +65,8 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .app-shell .variant-table th{font-size:12px!important;line-height:1.35!important}
 .app-shell .variant-table td{font-size:12px!important;line-height:1.4!important}
 .app-shell .variant-table .profit-fee-note{font-size:10.5px!important;line-height:1.35!important}
+.app-shell .variant-table .printify-product-cost b{color:var(--ink);font-variant-numeric:tabular-nums}
+.app-shell .variant-table .printify-product-cost small{font-size:10.5px!important;line-height:1.35!important}
 .app-shell .pricing-section-heading p{font-size:12px!important;line-height:1.55!important}
 .app-shell .profit-goal-control label,
 .app-shell .shipping-profile-select>span{font-size:12px!important}

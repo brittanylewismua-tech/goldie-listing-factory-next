@@ -787,6 +787,9 @@ test("keeps pricing simple while using a real Etsy shipping profile and exact te
   assert.match(page,/\{selectedProfile\.originCountry\} buyer pays/);
   assert.match(page,/Save new shipping profile/);
   assert.match(page,/1\. Item prices/);
+  assert.match(page,/Printify product cost/);
+  assert.match(page,/className="printify-product-cost"/);
+  assert.match(page,/Product only/);
   assert.match(page,/2\. Shipping/);
   assert.match(page,/Update prices/);
   assert.match(page,/Create a custom shipping profile \(optional\)/);
