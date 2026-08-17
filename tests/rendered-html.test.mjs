@@ -949,3 +949,14 @@ test("recovers published-template shipping and constrains Etsy categories by pro
   assert.match(taxonomy,/t-shirts\|tees/);
   assert.match(page,/product:\{blueprintTitle:templateDetails/);
 });
+
+test("places each step count directly below its page title", async () => {
+  const [page, styles] = await Promise.all([
+    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/approved-functional.css", import.meta.url), "utf8"),
+  ]);
+  assert.match(page, /<h1>\{workflowHero\.title\}<\/h1>\s*<p className="hero-step-count">Step \{progressIndex\+1\} of \{PROGRESS_STEPS\.length\}<\/p>/);
+  assert.doesNotMatch(page, /className="approved-step-count"/);
+  assert.match(styles, /\.app-shell \.hero-step-count/);
+  assert.match(styles, /\.app-shell \.hero\{padding-bottom:30px!important\}/);
+});

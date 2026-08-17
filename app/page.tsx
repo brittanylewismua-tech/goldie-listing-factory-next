@@ -616,6 +616,7 @@ export default function Home() {
         <div>
           <p className="eyebrow">{workflowHero.eyebrow}</p>
           <h1>{workflowHero.title}</h1>
+          <p className="hero-step-count">Step {progressIndex+1} of {PROGRESS_STEPS.length}</p>
           <p className="hero-copy">{workflowHero.copy}</p>
           {workflowStep==="connect"&&<div className="value-proof" aria-label="What this batch supports"><span><b>Up to 20 designs</b><small>in one batch</small></span><span><b>Costs and fees</b><small>shown for every variant</small></span><span><b>You approve</b><small>before anything goes live</small></span></div>}
         </div>
@@ -623,7 +624,6 @@ export default function Home() {
 
       {!returningHome&&<section className={`workspace ${complete&&workflowStep==="finish"&&finishPhase==="mockups"?"mockup-workspace":""}`}>
         <nav className="workflow-progress" aria-label="Listing Factory progress">
-          <p className="approved-step-count">Step {progressIndex+1} of {PROGRESS_STEPS.length}</p>
           <div className="workflow-progress-head"><div><p className="mini-label">YOUR BATCH</p><b>Step {progressIndex+1} of {PROGRESS_STEPS.length}</b></div>{(template||files.length>0||drafts.length>0)&&<button className="start-new-batch" disabled={running} onClick={startOver}>Clear batch + start over</button>}</div>
           {localPreview&&<p className="preview-mode-note">Preview mode · every step is unlocked <a href="/design-lab">Open design lab →</a></p>}
           {PROGRESS_STEPS.map((label,index)=>{const active=progressIndex===index,done=index<progressIndex,accountsReady=connected&&etsyConnected,available=localPreview||index===0||(index===1&&accountsReady)||(index===2&&accountsReady&&templateLoaded)||(index>=3&&index<=4&&accountsReady&&ready)||(index>=5&&accountsReady&&complete);return <button key={label} className={`${active?"active":""} ${done?"done":""}`} disabled={!available} aria-current={active?"step":undefined} onClick={()=>openProgressStep(index)}><span>{done?"✓":String(index+1).padStart(2,"0")}</span><span><b>{label}</b><small>{localPreview&&!active?"Open preview":progressStatus(index,active,done)}</small></span></button>})}

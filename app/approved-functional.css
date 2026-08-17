@@ -997,3 +997,12 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
   .app-shell .workflow-footer-actions .workflow-back{position:static!important;grid-column:1!important;justify-self:start!important;min-width:150px!important;margin:0!important;transform:none!important}
   .app-shell .workflow-footer-actions .autosave-note{position:static!important;grid-column:2!important;justify-self:center!important;margin:0!important;transform:none!important;white-space:nowrap!important}
 }
+
+/* Shared step header: progress first, then title and its step count, then the card. */
+.app-shell .hero-step-count{margin:8px 0 0;color:rgba(74,42,62,.64);font-size:11px;font-weight:650;letter-spacing:.18em;text-transform:uppercase}
+@media(min-width:821px){
+  .app-shell .workflow-progress{padding-top:2px!important}
+  .app-shell .workflow-progress:before{top:29px!important}
+  .app-shell .workflow-progress button{padding-top:12px!important}
+  .app-shell .hero{padding-bottom:30px!important}
+}
