@@ -26,6 +26,7 @@ type Product = {
 type Blueprint={id:number;title?:string;description?:string;brand?:string;model?:string};
 type CatalogVariant = { id: number; placeholders?: Array<{ position?: string; width?: number; height?: number }> };
 type Shipping={profiles?:Array<{variant_ids?:number[];first_item?:{cost?:number;currency?:string};countries?:string[]}>};
+type EtsyShippingProfile={shipping_profile_id:number;is_deleted?:boolean};
 class PrintifyApiError extends Error {
   constructor(public status: number, message: string) { super(message); }
 }
@@ -109,7 +110,7 @@ export async function POST(request: Request) {
   const launchBlock = await customerLaunchBlock(user);
   if (launchBlock) return NextResponse.json({ error: launchBlock }, { status: 503 });
   try {
-    const body = (await request.json()) as { token?: string; productUrl?: string };
+    const body = (await request.json()) as { token?: string; productUrl?: string;savedShippingProfileId?:number };
     const token = body.token?.trim() || await storedToken(user.userId);
     if (!token) return NextResponse.json({ error: "Connect your Printify account first." }, { status: 400 });
     const shops = await printify<Shop[]>("/shops.json", token);
@@ -135,6 +136,18 @@ export async function POST(request: Request) {
         const listing=await etsyFetch<{shipping_profile_id?:number}>(`/listings/${externalListingId}`,connection.token);
         if(Number(listing.shipping_profile_id)>0)shippingTemplateId=String(listing.shipping_profile_id);
       }catch{/* The normal validation message below remains accurate if Etsy is disconnected. */}
+    }
+    // A saved product remembers the Etsy profile Goldie already verified. Etsy
+    // can temporarily stop returning the linked listing after deactivation, so
+    // validate the remembered profile against this connected shop instead of
+    // incorrectly invalidating the Printify template.
+    const rememberedProfileId=Number(body.savedShippingProfileId);
+    if(!shippingTemplateId&&Number.isInteger(rememberedProfileId)&&rememberedProfileId>0){
+      try{
+        const connection=await etsyConnection(user.userId);
+        const profile=await etsyFetch<EtsyShippingProfile>(`/shops/${connection.shopId}/shipping-profiles/${rememberedProfileId}`,connection.token);
+        if(Number(profile.shipping_profile_id)===rememberedProfileId&&!profile.is_deleted)shippingTemplateId=String(rememberedProfileId);
+      }catch{/* A missing, deleted, or foreign profile must not bypass template validation. */}
     }
     const enabledVariants = found.product.variants?.filter((variant) => variant.is_enabled) ?? [];
     const configuredPlacements = found.product.print_areas?.flatMap((area) => area.placeholders ?? []).filter((placeholder) => placeholder.images?.[0]) ?? [];
@@ -188,6 +201,12 @@ export async function POST(request: Request) {
       db.prepare("INSERT INTO printify_batch_sessions (id, user_id, shop_id, product_id, template_json, expires_at) VALUES (?, ?, ?, ?, ?, ?)")
         .bind(batchId, user.userId, found.shop.id, found.product.id, JSON.stringify(safeTemplate), expiresAt),
     ]);
+    // Repair older saved products the next time their linked Etsy listing can
+    // be read, so future deactivation does not break them again.
+    try{
+      const saved=await db.prepare("SELECT id, pricing_json FROM product_recipes WHERE user_id = ? AND template_url = ?").bind(user.userId,body.productUrl.trim()).all<{id:string;pricing_json:string}>();
+      for(const row of saved.results||[]){const pricing=JSON.parse(row.pricing_json||"{}");if(Number(pricing.etsyShippingProfileId)===Number(shippingTemplateId))continue;pricing.etsyShippingProfileId=Number(shippingTemplateId);await db.prepare("UPDATE product_recipes SET pricing_json = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?").bind(JSON.stringify(pricing),row.id,user.userId).run()}
+    }catch{/* Recipe repair is best-effort and must never block a valid template. */}
     const placementScale = Math.max(...configuredPlacements.map((placeholder) => Number(placeholder.images?.[0]?.scale || 1)));
     return NextResponse.json({ product: { id: found.product.id, batchId, title: found.product.title, description:found.product.description??"", blueprintId:found.product.blueprint_id, blueprintTitle:blueprint.title||found.product.title, brand:blueprint.brand||"", model:blueprint.model||"", provider, enabledVariants: enabledVariants.length, variants:enabledVariants.map(variant=>({id:variant.id,title:variant.title||`Variant ${variant.id}`,cost:Number(variant.cost??variant.price),templatePrice:Number(variant.price),shipping:shippingByVariant[variant.id]??standardShipping,options:variant.options||[]})), shop: found.shop.title, standardShipping,shippingCurrency,shippingTemplateId,freeShipping:Boolean(found.product.sales_channel_properties?.free_shipping),maxPrintWidth, maxPrintHeight, placementScale } });
   } catch (error) {

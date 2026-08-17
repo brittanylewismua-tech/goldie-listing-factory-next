@@ -7,7 +7,8 @@ export type KeywordList = { id: string; name: string; keywords: string[] };
 
 type WorkflowProps = {
   connected: boolean; templateUrl: string; templateVerified: boolean; loadingTemplate: boolean;
-  onTemplateUrl: (value: string) => void; onUseRecipe: (recipe: Recipe) => boolean; onStartNewProduct: () => boolean; onVerifyTemplate: (url: string) => Promise<boolean>;
+  verifiedShippingProfileId:number;
+  onTemplateUrl: (value: string) => void; onUseRecipe: (recipe: Recipe) => boolean; onStartNewProduct: () => boolean; onVerifyTemplate: (url: string) => Promise<{shippingTemplateId:string}|null>;
 };
 
 export function SavedWorkflow(props: WorkflowProps) {
@@ -18,11 +19,13 @@ export function SavedWorkflow(props: WorkflowProps) {
   useEffect(() => { reload(); fetch("/api/keyword-lists").then(r=>r.json()).then(r=>setKeywordLists(r.lists||[])); }, []);
   async function save() {
     setMessage("");
-    if (!props.templateVerified && !(await props.onVerifyTemplate(props.templateUrl))) return setMessage("Connect the Printify template before saving this product.");
-    const existing=recipes.find(recipe=>recipe.id===editingId);const response = await fetch("/api/product-recipes", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: editingId || undefined, name, templateUrl: props.templateUrl, keywordListId, normalizePadding:true,etsyShippingProfileId:existing?.etsyShippingProfileId||0 }) });
+    const existing=recipes.find(recipe=>recipe.id===editingId);
+    let shippingProfileId=props.verifiedShippingProfileId||Number(existing?.etsyShippingProfileId)||0;
+    if (!props.templateVerified) {const verified=await props.onVerifyTemplate(props.templateUrl);if(!verified)return setMessage("Connect the Printify template before saving this product.");shippingProfileId=Number(verified.shippingTemplateId)||shippingProfileId}
+    const response = await fetch("/api/product-recipes", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: editingId || undefined, name, templateUrl: props.templateUrl, keywordListId, normalizePadding:true,etsyShippingProfileId:shippingProfileId }) });
     const result = await response.json() as { id?: string; error?: string };
     if (!response.ok) return setMessage(result.error || "The product could not be saved.");
-    const saved:Recipe={id:result.id||editingId,name:name.trim(),templateUrl:props.templateUrl,description:"",defaultTitle:"",keywordListId,normalizePadding:true,etsyShippingProfileId:existing?.etsyShippingProfileId||0};
+    const saved:Recipe={id:result.id||editingId,name:name.trim(),templateUrl:props.templateUrl,description:"",defaultTitle:"",keywordListId,normalizePadding:true,etsyShippingProfileId:shippingProfileId};
     if(props.onUseRecipe(saved))setActiveId(saved.id);setName(""); setEditingId(""); setMessage(editingId ? "Product updated and selected." : "Product saved and selected. You will not need to paste this Printify template again."); setEditing(false); reload();
   }
   async function remove(recipe: Recipe) { if (!window.confirm(`Delete “${recipe.name}”? This removes only the saved product, not the connected Printify product.`)) return; await fetch("/api/product-recipes", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: recipe.id }) }); if (activeId === recipe.id) setActiveId(""); reload(); }

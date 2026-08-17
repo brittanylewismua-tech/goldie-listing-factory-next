@@ -819,7 +819,7 @@ test("keeps pricing simple while using a real Etsy shipping profile and exact te
   assert.match(publish,/etsyShippingProfileId/);
   assert.match(drafts,/shipping_template_id:template\.shippingTemplateId/);
   assert.match(drafts,/etsyBuyerShipping/);
-  assert.match(page,/loadTemplateUrl\(recipe\.templateUrl,nextPricing\)/);
+  assert.match(page,/loadTemplateUrl\(recipe\.templateUrl,nextPricing,Number\(recipe\.etsyShippingProfileId\)\|\|0\)/);
   assert.match(page,/PriceField value=\{itemCents\} minimum=\{variant\.cost\/100\}/);
   assert.match(page,/Create a custom shipping profile \(optional\)/);
   assert.match(page,/Name your new shipping profile/);
@@ -1007,4 +1007,19 @@ test("appends later design selections and skips only exact file duplicates", asy
   assert.match(page, /saveBatchFiles\(durableBatchId,combined\.map/);
   assert.match(page, /Choose again to add more/);
   assert.match(page, /className="file-add-notice"/);
+});
+
+test("keeps a verified Printify template usable when its Etsy listing is inactive", async () => {
+  const [page, workflow, printify] = await Promise.all([
+    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/factory-tools.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/printify/route.ts", import.meta.url), "utf8"),
+  ]);
+  assert.match(workflow, /verifiedShippingProfileId/);
+  assert.match(workflow, /etsyShippingProfileId:shippingProfileId/);
+  assert.match(page, /savedShippingProfileId/);
+  assert.match(page, /Number\(recipe\.etsyShippingProfileId\)\|\|0/);
+  assert.match(printify, /shipping-profiles\/\$\{rememberedProfileId\}/);
+  assert.match(printify, /!profile\.is_deleted/);
+  assert.match(printify, /UPDATE product_recipes SET pricing_json/);
 });
