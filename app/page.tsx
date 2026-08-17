@@ -230,6 +230,7 @@ export default function Home() {
   const [sizeGuideName,setSizeGuideName]=useState("");
   const [sizeGuideStatus,setSizeGuideStatus]=useState("");
   const [commandCenterData,setCommandCenterData]=useState<CommandCenterData|null>(null);
+  const [sidebarUsage,setSidebarUsage]=useState<{used:number;limit:number}>({used:0,limit:100});
   const [preparedMockupCounts,setPreparedMockupCounts]=useState<Record<string,number>>({});
   const [titlePulseIds,setTitlePulseIds]=useState<Set<string>>(new Set());
 
@@ -245,6 +246,7 @@ export default function Home() {
   // dashboard remains available as a component, but must never replace step 1
   // or appear when a seller uses Back from the product step.
   const returningHome=false;
+  useEffect(()=>{fetch("/api/usage").then(async response=>{if(!response.ok)return null;return response.json() as Promise<{usage?:{drafts?:number};plan?:{drafts?:number}}>}).then(result=>{if(result?.usage&&result.plan)setSidebarUsage({used:Number(result.usage.drafts||0),limit:Number(result.plan.drafts||100)})}).catch(()=>undefined)},[]);
   const pricedVariants=useMemo(()=>templateDetails?.variants||[],[templateDetails]);
   const createdDraftCount=drafts.filter(draft=>draft.status==="Created").length,titleCount=files.filter(file=>file.title.trim()).length,etsyReadyCount=files.filter(file=>file.etsy).length;
   const lowDpiCount=files.filter(file=>{const scale=isRigidPaperProduct(templateDetails)?Math.min(templateDetails?.placementScale||1,1):templateDetails?.placementScale;return Boolean(file.width&&templateDetails?.maxPrintWidth&&scale&&printifyDpi(file.width,templateDetails.maxPrintWidth,scale).dpi<300)}).length;
@@ -644,7 +646,7 @@ export default function Home() {
           <a className="usage-link" href="/usage" onClick={event=>guardNavigation(event,"/usage")}>Usage + plan</a>
           {signedIn!==null&&(localPreview&&!signedIn?<span className="account-link" title="ChatGPT sign-in is available on the published Goldie site.">Preview mode</span>:<a className="account-link" href={signedIn?"/signout-with-chatgpt?return_to=%2Fmastermind":"/signin-with-chatgpt?return_to=%2Fmastermind"}>{signedIn?"Sign out":"Sign in"}</a>)}
         </div>
-        <div className="approved-sidebar-footer"><a className="approved-usage" href="/usage"><b>Usage</b><span>View listings, mockups, and plan limits</span></a><div className="approved-powered"><span>Powered by</span><b>Gold<span className="approved-footer-i">ı<i>✦</i></span>e AI</b></div><small>© 2026 Be A Wolf Biz</small></div>
+        <div className="approved-sidebar-footer"><a className="approved-usage" href="/usage"><b>Usage</b><span>{sidebarUsage.used} / {sidebarUsage.limit} listings</span><div className="approved-usage-track" aria-hidden="true"><i style={{width:`${Math.min(100,sidebarUsage.used/sidebarUsage.limit*100)}%`}} /></div></a><div className="approved-powered"><span>Powered by</span><b>Gold<span className="approved-footer-i">ı<i>✦</i></span>e AI</b></div><small>© 2026 Be A Wolf Biz</small></div>
       </header>
 
       {running&&uploadNoticeOpen&&<div className="upload-notice-backdrop" role="presentation"><section className="upload-notice" role="alertdialog" aria-modal="true" aria-labelledby="upload-notice-title" aria-describedby="upload-notice-copy"><span className="upload-notice-icon">!</span><p className="mini-label">UPLOADS IN PROGRESS</p><h2 id="upload-notice-title">Wait. Your files are still uploading.</h2><p id="upload-notice-copy">Are you sure you want to leave? Leaving now may stop the unfinished uploads.</p><div className="upload-notice-progress"><span className="upload-guard-pulse"/><b>{processed} of {runTotal} finished</b></div><div className="upload-notice-actions"><button autoFocus onClick={()=>{setUploadNoticeOpen(false);setLeaveTarget("")}}>Stay on this page</button><button className="danger" onClick={()=>{if(leaveTarget)window.location.href=leaveTarget}}>Leave and stop uploads</button></div></section></div>}
