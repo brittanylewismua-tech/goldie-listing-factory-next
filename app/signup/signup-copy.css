@@ -25,3 +25,21 @@
   letter-spacing: -0.025em;
   text-align: center;
 }
+
+.signup-plans.signup-plans-three {
+  max-width: 1180px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.signup-resume {
+  max-width: 1180px;
+  margin: 18px auto 0;
+  color: rgba(74, 42, 62, 0.78);
+  text-align: center;
+}
+
+@media (max-width: 920px) {
+  .signup-plans.signup-plans-three {
+    grid-template-columns: 1fr;
+  }
+}
