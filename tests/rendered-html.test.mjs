@@ -966,3 +966,17 @@ test("places each step count directly below its page title", async () => {
   assert.match(styles, /\.app-shell \.hero-step-count/);
   assert.match(styles, /\.app-shell \.hero\{padding-bottom:30px!important\}/);
 });
+
+test("shows every public plan on Usage and Billing with direct plan controls", async () => {
+  const [page, styles] = await Promise.all([
+    readFile(new URL("../app/usage/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/management-aesthetic.css", import.meta.url), "utf8"),
+  ]);
+  assert.match(page, /Free Trial/);
+  assert.match(page, />Listing Factory</);
+  assert.match(page, /Listing Factory Scale/);
+  assert.match(page, /Manage current plan/);
+  assert.match(page, /choosePlan\("scale"\)/);
+  assert.match(styles, /\.usage-plan-grid/);
+  assert.match(styles, /article\.current/);
+});
