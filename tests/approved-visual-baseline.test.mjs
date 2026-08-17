@@ -68,6 +68,18 @@ test("centers every next-step button as one balanced control", async () => {
   assert.match(css, /\.app-shell \.workflow-next\{justify-content:center;gap:10px;margin-left:auto;margin-right:auto\}/);
 });
 
+test("keeps Step 8 listing summaries compact and on-brand", async () => {
+  const css = await readFile(new URL("app/approved-functional.css", root), "utf8");
+  assert.match(css, /\.app-shell \.draft-state\{color:#865675!important\}/);
+  assert.match(css, /\.app-shell \.draft-card-top\{[\s\S]*grid-template-columns:minmax\(320px,48%\) minmax\(0,1fr\)!important/);
+  assert.match(css, /\.app-shell \.draft-card-top \.tag-row\{[\s\S]*max-height:82px;[\s\S]*overflow:auto/);
+});
+
+test("returns every finish-phase transition to the top", async () => {
+  const page = await readFile(new URL("app/page.tsx", root), "utf8");
+  assert.match(page, /useEffect\(\(\)=>\{if\(workflowStep==="finish"\)window\.scrollTo\(\{top:0,behavior:"smooth"\}\)\},\[workflowStep,finishPhase\]\)/);
+});
+
 test("places the connection subtitle before the centered timing note", async () => {
   const page = await readFile(new URL("app/page.tsx", root), "utf8");
   const css = await readFile(new URL("app/approved-functional.css", root), "utf8");

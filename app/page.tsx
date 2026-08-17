@@ -263,6 +263,7 @@ export default function Home() {
 
   useEffect(()=>{const read=()=>{const url=new URL(window.location.href),value=url.searchParams.get("step") as WorkflowStep|null,phase=url.searchParams.get("phase") as FinishPhase|null;if(value&&WORKFLOW_STEPS.some(step=>step.id===value))setWorkflowStep(value);if(phase&&["details","etsy","mockups","final"].includes(phase))setFinishPhase(phase)};read();window.addEventListener("popstate",read);return()=>window.removeEventListener("popstate",read)},[]);
   useEffect(()=>{if(workflowStep!=="finish")return;const url=new URL(window.location.href);url.searchParams.set("phase",finishPhase);window.history.replaceState({},"",url)},[workflowStep,finishPhase]);
+  useEffect(()=>{if(workflowStep==="finish")window.scrollTo({top:0,behavior:"smooth"})},[workflowStep,finishPhase]);
   // Do not auto-skip the connection screen. Sellers need to see the status of
   // both accounts and use the explicit Continue action.
   useEffect(()=>{if(localPreview||checkingConnection||restoringBatch||canOpenStep(workflowStep))return;const fallback=!connected||!etsyConnected?"connect":!templateLoaded?"setup":!files.length?"designs":!complete?"review":"finish";goToStep(fallback,true,true);// eslint-disable-next-line react-hooks/exhaustive-deps
