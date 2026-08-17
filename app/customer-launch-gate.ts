@@ -1,4 +1,5 @@
 import type { ChatGPTUser } from "@/app/chatgpt-auth";
+import { billingState } from "@/app/billing";
 import { mastermindState } from "@/app/mastermind/access";
 
 // These two switches intentionally live in source control. Customer access
@@ -7,9 +8,8 @@ export const CUSTOMER_LAUNCH_ENABLED = false;
 export const SECURE_URL_UPLOAD_IMPLEMENTED = true;
 
 export async function customerLaunchBlock(user: ChatGPTUser) {
-  const state = await mastermindState(user);
-  if (state.owner || (state.active && state.redeemed && SECURE_URL_UPLOAD_IMPLEMENTED)) return null;
-  if (!state.active) return "Mastermind access is currently closed.";
-  if (!state.redeemed) return "Enter the mastermind access code before using the Listing Factory.";
-  return CUSTOMER_LAUNCH_ENABLED ? null : "Goldie Listing Factory access is unavailable.";
+  const [state,billing] = await Promise.all([mastermindState(user),billingState(user)]);
+  if (state.owner || billing.active || (state.active && state.redeemed && SECURE_URL_UPLOAD_IMPLEMENTED)) return null;
+  if (CUSTOMER_LAUNCH_ENABLED) return null;
+  return "Choose a Goldie subscription before using the Listing Factory.";
 }

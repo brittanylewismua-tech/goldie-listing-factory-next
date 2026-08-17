@@ -1,7 +1,7 @@
 import { env } from "cloudflare:workers";
 import type { ChatGPTUser } from "@/app/chatgpt-auth";
 
-type Runtime = { DB?: D1Database; MASTERMIND_ACCESS_CODE?: string };
+type Runtime = { DB?: D1Database; MASTERMIND_ACCESS_CODE?: string; MASTERMIND_BETA_REDEEM_UNTIL?:string };
 export function runtime() { return env as unknown as Runtime; }
 
 export function isOwner(user: ChatGPTUser) {
@@ -9,14 +9,16 @@ export function isOwner(user: ChatGPTUser) {
 }
 
 export async function mastermindState(user: ChatGPTUser) {
-  if (isOwner(user)) return { active: true, redeemed: true, owner: true };
+  if (isOwner(user)) return { active: true, redeemed: true, expired:false, owner: true, expiresAt: null };
   const db = runtime().DB;
-  if (!db) return { active: false, redeemed: false, owner: false };
+  if (!db) return { active: false, redeemed: false, expired:false, owner: false, expiresAt: null };
   const [setting, access] = await Promise.all([
     db.prepare("SELECT active FROM mastermind_settings WHERE id = 1").first<{ active: number }>(),
-    db.prepare("SELECT 1 AS redeemed FROM mastermind_access WHERE user_id = ?").bind(user.userId).first<{ redeemed: number }>(),
+    db.prepare("SELECT redeemed_at redeemedAt, datetime(redeemed_at, '+48 hours') expiresAt FROM mastermind_access WHERE user_id = ?").bind(user.userId).first<{ redeemedAt:string;expiresAt:string }>(),
   ]);
-  return { active: setting?.active === 1, redeemed: access?.redeemed === 1, owner: false };
+  const redeemed=Boolean(access?.redeemedAt),notExpired=Boolean(access?.expiresAt&&new Date(`${access.expiresAt.replace(" ","T")}Z`).getTime()>Date.now());
+  const redeemUntil=runtime().MASTERMIND_BETA_REDEEM_UNTIL, enrollmentOpen=Boolean(setting?.active===1&&redeemUntil&&new Date(redeemUntil).getTime()>Date.now());
+  return { active: enrollmentOpen||notExpired, enrollmentOpen, redeemed:redeemed&&notExpired, expired:redeemed&&!notExpired, owner: false, expiresAt: access?.expiresAt||null };
 }
 
 export async function codeMatches(value: string) {

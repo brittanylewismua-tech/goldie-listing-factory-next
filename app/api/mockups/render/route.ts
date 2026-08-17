@@ -6,6 +6,7 @@ import { mockupRenderUsage } from "@/db/schema";
 import { rendererFor, rendererInput, type ProductKind } from "@/app/mockups/product-renderers";
 import { ensureMockupStorage } from "@/app/api/mockups/storage";
 import { monthKey, planFor } from "@/app/plan-limits";
+import { customerLaunchBlock } from "@/app/customer-launch-gate";
 
 const MAX_DATA_URL_LENGTH=18*1024*1024;
 const valid=(value:unknown):value is string=>typeof value==="string"&&/^data:image\/(png|jpeg|webp);base64,/i.test(value)&&value.length<=MAX_DATA_URL_LENGTH;
@@ -38,6 +39,7 @@ export async function POST(request:NextRequest){
   let reservedKey="";
   try{
     const user=await getChatGPTUser(); if(!user)return NextResponse.json({error:"Sign in to create product mockups."},{status:401});
+    const launchBlock=await customerLaunchBlock(user);if(launchBlock)return NextResponse.json({error:launchBlock},{status:403});
     await ensureMockupStorage();
     const body=await request.json() as {kind?:ProductKind;scene?:string;design?:string;reference?:string};
     if(!body.kind||!["apparel","soft-goods","curved","irregular"].includes(body.kind)||!valid(body.scene)||!valid(body.design)||body.reference&&!valid(body.reference))return NextResponse.json({error:"The mockup files could not be read safely."},{status:400});

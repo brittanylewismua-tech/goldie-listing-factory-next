@@ -6,6 +6,7 @@ import { getDb } from "@/db";
 import { mockupTemplates } from "@/db/schema";
 import { ensureMockupStorage } from "@/app/api/mockups/storage";
 import { planFor } from "@/app/plan-limits";
+import { customerLaunchBlock } from "@/app/customer-launch-gate";
 
 const kinds = new Set(["rigid-flat", "apparel", "soft-goods", "curved", "irregular"]);
 const MAX_FILE = 25 * 1024 * 1024;
@@ -27,6 +28,7 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   const user = await getChatGPTUser();
   if (!user) return NextResponse.json({ error: "Sign in to save your mockup library." }, { status: 401 });
+  const launchBlock=await customerLaunchBlock(user);if(launchBlock)return NextResponse.json({error:launchBlock},{status:403});
   await ensureMockupStorage();
   const form = await request.formData();
   const image = form.get("image"), theme = String(form.get("theme") || "").trim().slice(0, 80);
