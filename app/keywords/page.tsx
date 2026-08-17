@@ -1,5 +1,4 @@
 "use client";
-import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import { phrasesFromErank } from "../seo-utils";
 
@@ -29,8 +28,8 @@ export default function KeywordBanks() {
 
   return <main className="keyword-page">
     <header className="management-topbar">
-      <a className="management-brand" href={returnHref} aria-label="Return to Goldie Listing Factory"><Image src="/goldie-wordmark.webp" width={236} height={120} alt="Goldie" priority/><span/><b>Keyword Banks</b></a>
-      <nav aria-label="Goldie tools"><a href={returnHref}>Listing Factory</a><a className="active" href="/keywords">Keyword Banks</a><a href="/mockups">Mockup Sets</a><a href="/usage">Usage + Plan</a></nav>
+      <a className="management-brand" href={returnHref} aria-label="Return to Goldie Listing Factory"><span/><b>Listing Factory</b></a>
+      <nav aria-label="Goldie tools"><a href={returnHref}>Listing Factory</a><a href="/batches">Batch History</a><a className="active" href="/keywords">Keyword Banks</a><a href="/mockups">Mockup Sets</a><a href="/usage">Usage + Plan</a></nav>
     </header>
     <section className="keyword-hero"><div><p className="mini-label">KEYWORD LIBRARY</p><h1>Your keyword banks</h1><p>Save your organized eRank phrases here, then choose the bank you want while building listing titles.</p></div><a className="return-to-work" href={returnHref}><span>←</span><div><small>RETURN TO YOUR WORK</small><b>Back to Listing Factory</b></div></a></section>
     <div className="keyword-workspace">

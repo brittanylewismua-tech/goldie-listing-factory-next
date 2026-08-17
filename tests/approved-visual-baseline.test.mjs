@@ -51,6 +51,17 @@ test("uses product and artwork icons for Steps 2 and 3 instead of transfer arrow
   assert.match(css, /\.app-shell \.designs-step:not\(\.finish-mode\)>\.step-number:after\{[\s\S]*%3Crect x='3' y='4' width='18' height='16'/);
 });
 
+test("uses one Goldie aesthetic across every linked management page", async () => {
+  const layout = await readFile(new URL("app/layout.tsx", root), "utf8");
+  const css = await readFile(new URL("app/management-aesthetic.css", root), "utf8");
+  assert.match(layout, /import "\.\/management-aesthetic\.css"/);
+  assert.match(css, /:is\(\.management-page,\.usage-page,\.keyword-page,\.mockupFactory\)/);
+  assert.match(css, /\.keyword-page \.management-topbar/);
+  assert.match(css, /\.managementOnly \.mockupTopbar/);
+  assert.match(css, /\.usage-page \.usage-track i\{background:linear-gradient/);
+  assert.doesNotMatch(css, /#dcae43|#080808|#d69d2d/);
+});
+
 test("keeps Step 7 clear and its icon locked to the optical center", async () => {
   const page = await readFile(new URL("app/page.tsx", root), "utf8");
   const css = await readFile(new URL("app/approved-functional.css", root), "utf8");

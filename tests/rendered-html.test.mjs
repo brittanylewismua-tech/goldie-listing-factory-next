@@ -478,7 +478,7 @@ test("makes keyword bank saving unmistakable and prevents accidental duplicates"
     readFile(new URL("../app/api/keyword-lists/route.ts",import.meta.url),"utf8"),
     readFile(new URL("../app/page.tsx",import.meta.url),"utf8"),
   ]);
-  assert.match(page,/goldie-wordmark\.webp/);assert.match(page,/save-toast/);assert.match(page,/Back to Listing Factory/);
+  assert.doesNotMatch(page,/goldie-wordmark\.webp/);assert.match(page,/>Listing Factory<\/b>/);assert.match(page,/save-toast/);assert.match(page,/Back to Listing Factory/);
   assert.match(page,/goldie-active-batch/);assert.match(page,/Save changes/);assert.match(page,/Create another bank/);
   assert.match(route,/already exists\. Open that bank to update it instead/);
   assert.match(home,/href="\/keywords" target="_blank"/);assert.match(home,/href="\/mockups" target="_blank"/);
