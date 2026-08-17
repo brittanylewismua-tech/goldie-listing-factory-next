@@ -51,6 +51,7 @@ export async function stripeRequest<T>(path: string, init: {method?: string; bod
     method: init.method || "GET",
     headers: { Authorization: `Bearer ${secret}`, "Stripe-Version":"2026-06-24.dahlia", ...(init.body ? {"Content-Type":"application/x-www-form-urlencoded"} : {}), ...(init.idempotencyKey?{"Idempotency-Key":init.idempotencyKey}:{}) },
     body: init.body,
+    signal: AbortSignal.timeout(15000),
   });
   const payload = await response.json() as T & {error?:{message?:string}};
   if (!response.ok) throw new Error(payload.error?.message || "Stripe could not complete that request.");
