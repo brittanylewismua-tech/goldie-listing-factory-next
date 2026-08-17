@@ -152,7 +152,9 @@ test("requires explicit review of every Printify variant and starts new products
   assert.match(page, /Review item prices and shipping/);
   assert.match(page, /variant\.templatePrice/);
   assert.match(page, /Your estimated profit/);
-  assert.match(page, /Approve pricing \+ shipping/);
+  assert.doesNotMatch(page, /Approve pricing \+ shipping/);
+  assert.match(page, /Continue to create drafts/);
+  assert.match(page, /onApprovalChange\(Boolean\(selectedProfile&&!customDirty\)\)/);
   assert.match(page, /variantPrices/);
   assert.match(page, /pricingApproved/);
   assert.match(printify, /variants:enabledVariants\.map/);
@@ -798,7 +800,8 @@ test("keeps pricing simple while using a real Etsy shipping profile and exact te
   assert.match(page,/Your current prices already meet this profit goal/);
   assert.match(page,/recommendation-result/);
   assert.match(page,/Discard changes/);
-  assert.match(page,/Save or discard shipping profile changes first/);
+  assert.match(page,/save or discard any custom shipping profile changes/i);
+  assert.doesNotMatch(page,/Approve pricing \+ shipping/);
   assert.match(page,/Printify fulfillment shipping/);
   assert.match(page,/Review every enabled variation before Goldie creates the drafts/);
   assert.doesNotMatch(page,/pricing target, keyword bank, and mockup defaults/);
