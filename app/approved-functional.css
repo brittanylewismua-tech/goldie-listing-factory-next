@@ -112,6 +112,22 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
   .app-shell .draft-card-top>.edit-draft-button{grid-column:1;grid-row:auto}
 }
 
+/* Steps 2 and 3 use object icons, never transfer arrows. The product icon is
+   a shirt and the design icon is an image, so neither can read as download. */
+@media(min-width:821px){
+  .app-shell .product-step>.step-number:after,
+  .app-shell .recipe-card>.step-number:after{
+    content:""!important;
+    background:var(--ink)!important;
+    mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8.5 4.5 4 6.8 2.5 11l3.2 1.4L7 10.2V20h10v-9.8l1.3 2.2 3.2-1.4L20 6.8l-4.5-2.3C14.8 6 13.6 6.8 12 6.8S9.2 6 8.5 4.5Z'/%3E%3C/svg%3E") center/contain no-repeat!important;
+  }
+  .app-shell .designs-step:not(.finish-mode)>.step-number:after{
+    content:""!important;
+    background:var(--ink)!important;
+    mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4' width='18' height='16' rx='2'/%3E%3Ccircle cx='8.5' cy='9' r='1.5'/%3E%3Cpath d='m5 17 4.5-4.5 3 3 2-2L19 17'/%3E%3C/svg%3E") center/contain no-repeat!important;
+  }
+}
+
 /* Workflow readability and Step 7/8 hierarchy lock. */
 .app-shell .etsy-preparing-note{
   max-width:620px;

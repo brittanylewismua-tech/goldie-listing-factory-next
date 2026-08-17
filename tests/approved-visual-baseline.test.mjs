@@ -45,6 +45,12 @@ test("uses intentional workflow icons instead of placeholder glyphs", async () =
   assert.match(css, /\.final-review>\.step-number:after/);
 });
 
+test("uses product and artwork icons for Steps 2 and 3 instead of transfer arrows", async () => {
+  const css = await readFile(new URL("app/approved-functional.css", root), "utf8");
+  assert.match(css, /\.app-shell \.product-step>\.step-number:after,[\s\S]*mask:url\("data:image\/svg\+xml[^}]*M8\.5 4\.5/);
+  assert.match(css, /\.app-shell \.designs-step:not\(\.finish-mode\)>\.step-number:after\{[\s\S]*%3Crect x='3' y='4' width='18' height='16'/);
+});
+
 test("keeps Step 7 clear and its icon locked to the optical center", async () => {
   const page = await readFile(new URL("app/page.tsx", root), "utf8");
   const css = await readFile(new URL("app/approved-functional.css", root), "utf8");
