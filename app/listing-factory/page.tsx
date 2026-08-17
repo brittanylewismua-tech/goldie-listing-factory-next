@@ -4,6 +4,7 @@ import { billingState } from "@/app/billing";
 import { mastermindState } from "@/app/mastermind/access";
 import SignupClient from "@/app/signup/signup-client";
 import "@/app/signup/signup.css";
+import "@/app/signup/signup-copy.css";
 
 export default async function ListingFactoryRoute(){
   const user = await getChatGPTUser();
