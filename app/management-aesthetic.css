@@ -81,3 +81,140 @@
 .usage-page .usage-load-error{max-width:1080px;padding:30px;border:1px solid rgba(255,255,255,.68);border-radius:22px;background:linear-gradient(145deg,rgba(255,250,253,.76),rgba(246,229,248,.59));box-shadow:0 24px 70px rgba(74,42,62,.12);backdrop-filter:blur(24px)}
 .usage-page .usage-load-error h2{margin:0 0 8px;font:400 30px/1.1 'DM Serif Display',Georgia,serif}.usage-page .usage-load-error p{color:rgba(74,42,62,.68)}.usage-page .usage-load-error a{display:inline-flex;margin-top:12px;padding:12px 18px;border-radius:14px;background:linear-gradient(145deg,#5b304f,#45263c);color:#fff;font-weight:750}
 .keyword-page .keyword-hero h1,.managementOnly .mockupHero h1{color:var(--ink)!important;font-family:'DM Serif Display',Georgia,serif!important;font-weight:400!important}
+
+/* Frozen management shell: Keyword Banks and Mockup Sets use the same
+   page frame as Batch History and Usage + Plan. Keep this block last so
+   legacy page-level styles cannot reintroduce gray panels or side rails. */
+:is(.keyword-page,.mockupFactory.managementOnly).management-page{
+  max-width:none!important;
+  min-height:100vh!important;
+  margin:0!important;
+  padding:42px 54px 90px 342px!important;
+  overflow-x:clip!important;
+  color:var(--ink)!important;
+  background:transparent!important;
+}
+:is(.keyword-page,.mockupFactory.managementOnly).management-page::before,
+:is(.keyword-page,.mockupFactory.managementOnly).management-page::after{
+  content:none!important;
+  display:none!important;
+}
+:is(.keyword-page,.mockupFactory.managementOnly).management-page>.management-nav{
+  position:fixed!important;
+  z-index:80!important;
+  inset:0 auto 0 0!important;
+  width:288px!important;
+  height:100vh!important;
+  padding:38px 26px 28px!important;
+  display:flex!important;
+  flex-direction:column!important;
+  gap:4px!important;
+  border:0!important;
+  border-right:1px solid rgba(255,255,255,.48)!important;
+  background:linear-gradient(180deg,rgba(255,250,253,.38),rgba(255,246,251,.2))!important;
+  box-shadow:none!important;
+  backdrop-filter:blur(20px) saturate(1.12)!important;
+}
+:is(.keyword-page,.mockupFactory.managementOnly).management-page>.management-nav::before{
+  content:"Goldie"!important;
+  display:block!important;
+  margin:0 0 4px!important;
+  text-align:center!important;
+  color:var(--ink)!important;
+  font:400 66px/.92 'DM Serif Display',Georgia,serif!important;
+  letter-spacing:-.025em!important;
+}
+:is(.keyword-page,.mockupFactory.managementOnly).management-page>.management-nav::after{
+  content:"LISTING FACTORY"!important;
+  position:absolute!important;
+  top:104px!important;
+  left:0!important;
+  width:100%!important;
+  display:block!important;
+  text-align:center!important;
+  color:var(--ink)!important;
+  font-size:12px!important;
+  font-weight:650!important;
+  letter-spacing:.245em!important;
+}
+:is(.keyword-page,.mockupFactory.managementOnly).management-page>.management-nav a{
+  display:flex!important;
+  align-items:center!important;
+  min-height:46px!important;
+  padding:0 15px!important;
+  border:0!important;
+  border-radius:14px!important;
+  color:rgba(74,42,62,.58)!important;
+  background:transparent!important;
+  box-shadow:none!important;
+  font-size:13px!important;
+  font-weight:650!important;
+  text-decoration:none!important;
+}
+:is(.keyword-page,.mockupFactory.managementOnly).management-page>.management-nav a:first-of-type{margin-top:72px!important}
+:is(.keyword-page,.mockupFactory.managementOnly).management-page>.management-nav a:hover,
+:is(.keyword-page,.mockupFactory.managementOnly).management-page>.management-nav a.active{
+  color:var(--ink)!important;
+  background:rgba(255,255,255,.53)!important;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.54)!important;
+}
+:is(.keyword-page,.mockupFactory.managementOnly).management-page>header{
+  display:block!important;
+  max-width:1080px!important;
+  margin:18px auto 30px!important;
+  padding:0!important;
+  border:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+  color:var(--ink)!important;
+}
+:is(.keyword-page,.mockupFactory.managementOnly).management-page>header h1{
+  margin:0!important;
+  color:var(--ink)!important;
+  font:400 clamp(44px,5vw,64px)/1 'DM Serif Display',Georgia,serif!important;
+  letter-spacing:-.035em!important;
+}
+:is(.keyword-page,.mockupFactory.managementOnly).management-page>header :is(p,.lede){
+  max-width:720px!important;
+  color:rgba(74,42,62,.7)!important;
+  font-size:14px!important;
+  line-height:1.6!important;
+}
+.keyword-page .keyword-workspace,
+.mockupFactory.managementOnly .mockupWorkspace{
+  width:100%!important;
+  max-width:1080px!important;
+  margin:0 auto!important;
+  padding:14px 0 90px!important;
+  border:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+}
+:is(.keyword-page,.mockupFactory.managementOnly) :is(.management-topbar,.mockupTopbar,.mockupFooter){display:none!important}
+
+@media(max-width:820px){
+  :is(.keyword-page,.mockupFactory.managementOnly).management-page{
+    padding:20px 18px 70px!important;
+    overflow-x:hidden!important;
+  }
+  :is(.keyword-page,.mockupFactory.managementOnly).management-page>.management-nav{
+    position:static!important;
+    width:auto!important;
+    height:auto!important;
+    margin:-20px -18px 24px!important;
+    padding:16px 18px!important;
+    display:flex!important;
+    flex-direction:row!important;
+    overflow-x:auto!important;
+    white-space:nowrap!important;
+    border:0!important;
+    border-bottom:1px solid rgba(255,255,255,.48)!important;
+    background:rgba(255,250,253,.34)!important;
+  }
+  :is(.keyword-page,.mockupFactory.managementOnly).management-page>.management-nav::before,
+  :is(.keyword-page,.mockupFactory.managementOnly).management-page>.management-nav::after{display:none!important}
+  :is(.keyword-page,.mockupFactory.managementOnly).management-page>.management-nav a:first-of-type{margin-top:0!important}
+  :is(.keyword-page,.mockupFactory.managementOnly).management-page>header{margin:18px auto 24px!important}
+  .keyword-page .keyword-workspace,
+  .mockupFactory.managementOnly .mockupWorkspace{padding:8px 0 70px!important}
+}
