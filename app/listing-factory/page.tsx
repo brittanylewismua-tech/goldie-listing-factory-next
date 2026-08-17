@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
+import ListingFactory from "@/app/page";
 
 export default function ListingFactoryRoute(){
-  redirect("/mastermind");
+  return <ListingFactory/>;
 }
