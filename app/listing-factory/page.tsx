@@ -1,5 +1,20 @@
 import ListingFactory from "@/app/page";
+import { getChatGPTUser } from "@/app/chatgpt-auth";
+import { billingState } from "@/app/billing";
+import { mastermindState } from "@/app/mastermind/access";
+import SignupClient from "@/app/signup/signup-client";
+import "@/app/signup/signup.css";
 
-export default function ListingFactoryRoute(){
+export default async function ListingFactoryRoute(){
+  const user = await getChatGPTUser();
+  if (!user) return <SignupClient signedIn={false} returnTo="/listing-factory"/>;
+
+  const [billing, mastermind] = await Promise.all([
+    billingState(user),
+    mastermindState(user),
+  ]);
+  const hasAccess = billing.active || mastermind.owner || (mastermind.active && mastermind.redeemed);
+  if (!hasAccess) return <SignupClient signedIn returnTo="/listing-factory"/>;
+
   return <ListingFactory/>;
 }
