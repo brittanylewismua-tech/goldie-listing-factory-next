@@ -4,7 +4,7 @@ import { codeMatches, mastermindState, runtime } from "@/app/mastermind/access";
 
 export async function POST(request: Request) {
   const user = await getChatGPTUser();
-  if (!user) return NextResponse.json({ error: "Sign in with ChatGPT first." }, { status: 401 });
+  if (!user) return NextResponse.json({ error: "Sign in first." }, { status: 401 });
   const state = await mastermindState(user);
   const db = runtime().DB;
   if (!db) return NextResponse.json({ error: "Access storage is unavailable." }, { status: 503 });

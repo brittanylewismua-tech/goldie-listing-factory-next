@@ -644,7 +644,7 @@ export default function Home() {
           <GoldieCommandBar data={commandCenterData} onUseProduct={recipe=>{if(useRecipe(recipe))goToStep("setup")}} onStartBlank={()=>{clearCurrentBatch(true);goToStep("setup")}}/>
           {owner && <a className="diagnostics-link" href="/mastermind-admin" aria-label="Open Goldie Diagnostics" title="Goldie Diagnostics">★</a>}
           <a className="usage-link" href="/usage" onClick={event=>guardNavigation(event,"/usage")}>Usage + plan</a>
-          {signedIn!==null&&(localPreview&&!signedIn?<span className="account-link" title="ChatGPT sign-in is available on the published Goldie site.">Preview mode</span>:<a className="account-link" href={signedIn?"/signout-with-chatgpt?return_to=%2Fmastermind":"/signin-with-chatgpt?return_to=%2Fmastermind"}>{signedIn?"Sign out":"Sign in"}</a>)}
+          {signedIn!==null&&(localPreview&&!signedIn?<span className="account-link" title="Account sign-in is available on the published Listing Factory site.">Preview mode</span>:<a className="account-link" href={signedIn?"/account/sign-out?return_to=%2Fmastermind":"/account/sign-in?return_to=%2Fmastermind"}>{signedIn?"Sign out":"Sign in"}</a>)}
         </div>
         <div className="approved-sidebar-footer"><a className="approved-usage" href="/usage"><b>Usage</b><span>{sidebarUsage.used} / {sidebarUsage.limit} listings</span><div className="approved-usage-track" aria-hidden="true"><i style={{width:`${Math.min(100,sidebarUsage.used/sidebarUsage.limit*100)}%`}} /></div></a><div className="approved-powered"><span>Powered by</span><b>Gold<span className="approved-footer-i">ı<i>✦</i></span>e AI</b></div><small>© 2026 Be A Wolf Biz</small></div>
       </header>

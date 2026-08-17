@@ -44,6 +44,31 @@ test("server-renders the branded Listing Factory", async () => {
   assert.doesNotMatch(html, /codex-preview|react-loading-skeleton/i);
 });
 
+test("offers real account sign-in choices and preserves the selected destination", async () => {
+  const response = await render("/account/sign-in?return_to=%2Fmastermind");
+  assert.equal(response.status, 200);
+  const html = await response.text();
+  assert.match(html, /Sign in to your Listing Factory/);
+  assert.match(html, /Continue with Google/);
+  assert.match(html, /Email me a sign-in link/);
+  assert.match(html, /Continue with ChatGPT/);
+  assert.match(html, /No password to remember/);
+  assert.match(html, /return_to=%2Fmastermind/);
+
+  const [client, auth, callback, signout] = await Promise.all([
+    readFile(new URL("../app/account/sign-in/sign-in-client.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/chatgpt-auth.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/auth/callback/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/account/sign-out/route.ts", import.meta.url), "utf8"),
+  ]);
+  assert.match(client, /signInWithOAuth\(\{ provider: "google"/);
+  assert.match(client, /signInWithOtp/);
+  assert.match(auth, /supabase:/);
+  assert.match(auth, /accountSignInPath/);
+  assert.match(callback, /exchangeCodeForSession/);
+  assert.match(signout, /auth\.signOut/);
+});
+
 test("uses individual shop-aware Printify editor buttons", async () => {
   const [page, route] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
@@ -638,7 +663,7 @@ test("keeps the owner test page separate from mastermind access", async () => {
   assert.match(access, /crypto\.subtle\.digest/);
   assert.doesNotMatch(access, /GOLDIE-WOLF/);
   assert.match(page, /getChatGPTUser\(\)/);
-  assert.match(page, /chatGPTSignInPath\("\/mastermind"\)/);
+  assert.match(page, /accountSignInPath\("\/mastermind"\)/);
   assert.match(page, /20 listings and 20 AI lifestyle mockups/);
   assert.match(page, /BetaCountdown/);
   assert.match(page, /preview === "welcome"/);

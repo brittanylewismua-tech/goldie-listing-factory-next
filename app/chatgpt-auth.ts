@@ -1,5 +1,6 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { createSupabaseServerClient } from "@/app/supabase-auth";
 
 export type ChatGPTUser = {
   userId: string;
@@ -22,21 +23,22 @@ export async function getChatGPTUser(): Promise<ChatGPTUser | null> {
   const requestHeaders = await headers();
   const userId = requestHeaders.get(USER_ID_HEADER);
   const email = requestHeaders.get(USER_EMAIL_HEADER);
-  if (!userId || !email) return null;
-
-  const encodedFullName = requestHeaders.get(USER_FULL_NAME_HEADER);
-  const fullName =
-    encodedFullName &&
-    requestHeaders.get(USER_FULL_NAME_ENCODING_HEADER) === PERCENT_ENCODED_UTF8
+  if (userId && email) {
+    const encodedFullName = requestHeaders.get(USER_FULL_NAME_HEADER);
+    const fullName = encodedFullName && requestHeaders.get(USER_FULL_NAME_ENCODING_HEADER) === PERCENT_ENCODED_UTF8
       ? safeDecodeURIComponent(encodedFullName)
       : null;
-
-  return {
-    userId,
-    displayName: fullName ?? email,
-    email,
-    fullName,
-  };
+    return { userId, displayName: fullName ?? email, email, fullName };
+  }
+  try {
+    const supabase = await createSupabaseServerClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user?.email) return null;
+    const fullName = typeof user.user_metadata?.full_name === "string" ? user.user_metadata.full_name : null;
+    return { userId: `supabase:${user.id}`, displayName: fullName ?? user.email, email: user.email, fullName };
+  } catch {
+    return null;
+  }
 }
 
 export async function requireChatGPTUser(
@@ -45,7 +47,12 @@ export async function requireChatGPTUser(
   const user = await getChatGPTUser();
   if (user) return user;
 
-  redirect(chatGPTSignInPath(returnTo));
+  redirect(accountSignInPath(returnTo));
+}
+
+export function accountSignInPath(returnTo: string): string {
+  const safeReturnTo = safeRelativeReturnPath(returnTo);
+  return `/account/sign-in?return_to=${encodeURIComponent(safeReturnTo)}`;
 }
 
 export function chatGPTSignInPath(returnTo: string): string {
