@@ -1,0 +1,192 @@
+.signup-page {
+  padding: 30px clamp(24px, 5vw, 72px) 34px;
+  background:
+    radial-gradient(46rem 28rem at 50% 8%, rgba(180, 159, 255, 0.7), transparent 67%),
+    radial-gradient(40rem 30rem at 50% 88%, rgba(255, 159, 126, 0.42), transparent 70%),
+    linear-gradient(120deg, #f6c8dc, #f3bdd4 58%, #efb8cf);
+}
+
+.signup-topbar {
+  width: min(1180px, 100%);
+  margin: 0 auto;
+  padding-bottom: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(74, 42, 62, 0.14);
+}
+
+.signup-topbar > p,
+.signup-topbar > a {
+  margin: 0;
+  color: rgba(74, 42, 62, 0.7);
+  font-size: 13px;
+}
+
+.signup-topbar > a { text-decoration: none; }
+.signup-topbar > a b { color: #4b283e; }
+
+.signup-brand span { font-size: 52px; }
+
+.signup-hero {
+  margin: 58px auto 42px;
+}
+
+.signup-eyebrow {
+  display: block;
+  margin-bottom: 18px;
+  color: #714b68;
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: 0.18em;
+}
+
+.signup-hero h1 {
+  max-width: 850px;
+  margin-inline: auto;
+  font-size: clamp(44px, 5.2vw, 70px);
+  line-height: 0.98;
+}
+
+.signup-hero > p {
+  margin-top: 22px;
+  font-size: 18px;
+}
+
+.signup-proof {
+  margin-top: 26px;
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.signup-proof span {
+  padding: 9px 14px;
+  border: 1px solid rgba(255,255,255,.62);
+  border-radius: 999px;
+  background: rgba(255,255,255,.32);
+  color: rgba(74,42,62,.76);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.signup-plan-heading {
+  margin-top: 0;
+  margin-bottom: 24px;
+  font-size: clamp(34px, 3.5vw, 46px);
+}
+
+.signup-plans.signup-plans-three {
+  gap: 18px;
+}
+
+.signup-plans article {
+  padding: 30px;
+  border-color: rgba(255,255,255,.72);
+  border-radius: 24px;
+  background: linear-gradient(155deg, rgba(255,252,254,.78), rgba(250,236,248,.62));
+  box-shadow: 0 20px 55px rgba(74,42,62,.1);
+}
+
+.signup-plans article.featured {
+  transform: translateY(-8px);
+  border-color: rgba(104,59,91,.34);
+  background: linear-gradient(155deg, rgba(255,255,255,.9), rgba(245,222,242,.78));
+  box-shadow: 0 28px 70px rgba(90,49,78,.19), inset 0 0 0 1px rgba(255,255,255,.64);
+}
+
+.plan-ribbon {
+  right: 20px;
+  top: 20px;
+  padding: 6px 9px;
+  border-radius: 999px;
+  background: rgba(91,48,79,.1);
+  font-size: 9px;
+}
+
+.offer-heading {
+  min-height: 66px;
+  padding-right: 62px;
+}
+
+.offer-heading > p {
+  margin: 0 0 8px;
+  color: #4b283e;
+  font-size: 17px;
+  font-weight: 850;
+}
+
+.offer-heading > span {
+  display: block;
+  color: rgba(74,42,62,.64);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.signup-plans h2 {
+  margin: 22px 0 25px;
+  font-size: 50px;
+}
+
+.signup-plans h2 small {
+  margin-left: 5px;
+  color: rgba(74,42,62,.64);
+}
+
+.signup-plans ul {
+  min-height: 188px;
+  margin-bottom: 24px;
+}
+
+.signup-plans li {
+  padding: 12px 0;
+  color: rgba(74,42,62,.74);
+  line-height: 1.35;
+}
+
+.signup-plans .offer-button {
+  border-radius: 13px;
+  box-shadow: 0 10px 24px rgba(70,38,60,.16);
+  transition: transform .16s ease, box-shadow .16s ease;
+}
+
+.signup-plans .offer-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 28px rgba(70,38,60,.22);
+}
+
+.offer-trial .offer-button {
+  background: rgba(255,255,255,.58);
+  color: #4b283e;
+  box-shadow: inset 0 0 0 1px rgba(75,40,62,.26);
+}
+
+.signup-next {
+  width: min(1180px, 100%);
+  margin: 34px auto 0;
+  padding: 22px 26px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  border: 1px solid rgba(255,255,255,.64);
+  border-radius: 20px;
+  background: rgba(255,255,255,.3);
+}
+
+.signup-next div { display: grid; gap: 5px; }
+.signup-next b { font-size: 13px; }
+.signup-next span { color: rgba(74,42,62,.65); font-size: 12px; line-height: 1.45; }
+
+.signup-footer {
+  max-width: 1180px;
+  margin-top: 26px;
+  padding-top: 18px;
+}
+
+@media (max-width: 920px) {
+  .signup-topbar > p,
+  .signup-topbar > a { display: none; }
+  .signup-plans article.featured { transform: none; }
+  .signup-next { grid-template-columns: 1fr; gap: 16px; }
+}
