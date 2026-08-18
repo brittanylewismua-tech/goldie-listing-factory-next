@@ -759,7 +759,7 @@ test("enforces paid-plan usage on the server and exposes honest usage", async()=
     readFile(new URL("../app/api/mockups/library/route.ts",import.meta.url),"utf8"),
     readFile(new URL("../app/api/usage/route.ts",import.meta.url),"utf8"),
   ]);
-  assert.match(plans,/price: 29, drafts: 200, aiMockups: 100, mockupSets: 10/);
+  assert.match(plans,/price: 29, drafts: 200, dailyListings: 40, aiMockups: 100, mockupSets: 10/);
   assert.match(drafts,/plan\.drafts/);assert.match(drafts,/status='succeeded'/);
   assert.match(renders,/plan\.aiMockups/);assert.match(renders,/MAX\(0,/);
   assert.match(library,/plan\.mockupSets/);assert.match(library,/COUNT\(DISTINCT theme\)/);
@@ -913,12 +913,13 @@ test("keeps batch history useful instead of accumulating unmanageable empty sess
 });
 
 test("connects Etsy with PKCE and finishes only the exact Printify-linked Etsy listing", async()=>{
-  const [page,oauth,callback,client,publish,finish,migration]=await Promise.all([
+  const [page,oauth,callback,client,publish,queue,finish,migration]=await Promise.all([
     readFile(new URL("../app/page.tsx",import.meta.url),"utf8"),
     readFile(new URL("../app/api/etsy/route.ts",import.meta.url),"utf8"),
     readFile(new URL("../app/api/etsy/callback/route.ts",import.meta.url),"utf8"),
     readFile(new URL("../app/api/etsy/client.ts",import.meta.url),"utf8"),
     readFile(new URL("../app/api/printify/drafts/publish/route.ts",import.meta.url),"utf8"),
+    readFile(new URL("../app/api/printify/drafts/publish/queue.ts",import.meta.url),"utf8"),
     readFile(new URL("../app/api/etsy/finish.ts",import.meta.url),"utf8"),
     readFile(new URL("../drizzle/0009_etsy_connection.sql",import.meta.url),"utf8"),
   ]);
@@ -932,9 +933,9 @@ test("connects Etsy with PKCE and finishes only the exact Printify-linked Etsy l
   assert.match(client,/ETSY_REDIRECT_URI/);
   assert.match(client,/goldie-listing-factory-next\.brittanylewismua\.chatgpt\.site\/api\/etsy\/callback/);
   assert.match(client,/ETSY_API_SECRET/);
-  assert.match(publish,/waitForEtsyListing/);
-  assert.match(publish,/product\.external\?\.id/);
-  assert.doesNotMatch(publish,/sort_on|newest|title.*match/i);
+  assert.match(queue,/waitForEtsyListing/);
+  assert.match(queue,/product\.external\?\.id/);
+  assert.doesNotMatch(`${publish}\n${queue}`,/sort_on|newest|title.*match/i);
   assert.match(finish,/listing\.shop_id/);
   assert.match(finish,/Goldie stopped without editing it/);
   assert.match(finish,/applyEtsyDetails/);
@@ -1085,7 +1086,7 @@ test("enforces and explains the 48-hour mastermind beta", async () => {
   assert.match(access, /redeemed&&!notExpired/);
   assert.match(countdown, /window\.setInterval\(update,1000\)/);
   assert.match(redeem, /plan_key='mastermind_beta'/);
-  assert.match(plans, /drafts: 20, aiMockups: 20/);
+  assert.match(plans, /drafts: 20, dailyListings: 20, aiMockups: 20/);
 });
 
 test("blocks the factory workflow on mobile while preserving saved work", async () => {
@@ -1166,4 +1167,40 @@ test("explains every Printify template requirement and the exact link to paste",
   assert.match(source,/Set the shipping profile and publish to Etsy once/);
   assert.match(source,/open its product editor/);
   assert.match(source,/Do not use: the Etsy listing URL or a product ID by itself/);
+});
+
+test("queues Etsy publishing durably and protects shared API capacity",async()=>{
+  const [route,queue,client,finish,schema,migration,plans,page,usage]=await Promise.all([
+    readFile(new URL("../app/api/printify/drafts/publish/route.ts",import.meta.url),"utf8"),
+    readFile(new URL("../app/api/printify/drafts/publish/queue.ts",import.meta.url),"utf8"),
+    readFile(new URL("../app/api/etsy/client.ts",import.meta.url),"utf8"),
+    readFile(new URL("../app/api/etsy/finish.ts",import.meta.url),"utf8"),
+    readFile(new URL("../db/schema.ts",import.meta.url),"utf8"),
+    readFile(new URL("../drizzle/0011_etsy_publish_queue.sql",import.meta.url),"utf8"),
+    readFile(new URL("../app/plan-limits.ts",import.meta.url),"utf8"),
+    readFile(new URL("../app/page.tsx",import.meta.url),"utf8"),
+    readFile(new URL("../app/api/usage/route.ts",import.meta.url),"utf8"),
+  ]);
+  assert.match(plans,/drafts: 200, dailyListings: 40/);
+  assert.match(route,/published_at>=datetime\('now','-24 hours'\)/);
+  assert.match(route,/status IN \('queued','running'\)/);
+  assert.match(route,/ON CONFLICT\(user_id,product_id\)/);
+  assert.match(route,/ON CONFLICT\(user_id,batch_id\)/);
+  assert.match(queue,/status='running'.*status='queued'/s);
+  assert.match(queue,/locked_at<\?/);
+  assert.match(queue,/attempt<5/);
+  assert.match(queue,/processNextGlobalPublishItem/);
+  assert.match(queue,/etsy_listing_usage/);
+  assert.match(client,/Math\.floor\(limit\*\.8\)/);
+  assert.match(client,/etsy_api_usage_buckets/);
+  assert.match(client,/x-limit-per-day/);
+  assert.match(client,/recordEtsyCall\(response\)/);
+  assert.match(finish,/recordEtsyCall\(response\)/);
+  assert.match(schema,/etsyPublishJobs/);
+  assert.match(schema,/etsyApiUsageBuckets/);
+  assert.match(migration,/CREATE UNIQUE INDEX `idx_etsy_publish_items_user_product`/);
+  assert.match(migration,/CREATE UNIQUE INDEX `idx_etsy_publish_jobs_user_batch`/);
+  assert.match(page,/goldie-active-publish-job/);
+  assert.match(page,/safely resuming your queued batch/);
+  assert.match(usage,/AVG\(api_calls\)/);
 });

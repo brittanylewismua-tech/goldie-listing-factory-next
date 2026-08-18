@@ -2,13 +2,25 @@ import { env } from "cloudflare:workers";
 import { decryptPrintifyToken, encryptPrintifyToken } from "../printify/token-crypto";
 
 const API="https://api.etsy.com/v3/application";
-type Runtime={DB:D1Database;ETSY_API_KEY?:string;ETSY_API_SECRET?:string;ETSY_TOKEN_KEY?:string;PRINTIFY_TOKEN_KEY?:string;ETSY_REDIRECT_URI?:string;GOLDIE_SITE_URL?:string};
+type Runtime={DB:D1Database;ETSY_API_KEY?:string;ETSY_API_SECRET?:string;ETSY_TOKEN_KEY?:string;PRINTIFY_TOKEN_KEY?:string;ETSY_REDIRECT_URI?:string;GOLDIE_SITE_URL?:string;ETSY_QPD_LIMIT?:string};
 const runtime=()=>env as unknown as Runtime;
 const secret=()=>runtime().ETSY_TOKEN_KEY||runtime().PRINTIFY_TOKEN_KEY||"";
 export const apiKey=()=>{const value=runtime().ETSY_API_KEY?.trim();if(!value)throw new Error("Etsy API access is not configured yet.");return value};
 export const etsyRedirectUri=()=>runtime().ETSY_REDIRECT_URI?.trim()||"https://goldie-listing-factory-next.brittanylewismua.chatgpt.site/api/etsy/callback";
 export const goldieSiteUrl=()=>runtime().GOLDIE_SITE_URL?.trim().replace(/\/$/,"")||"https://thegoldiesuite.com";
 export const etsyApiCredential=()=>{const secretValue=runtime().ETSY_API_SECRET?.trim();if(!secretValue)throw new Error("Etsy API access is not configured yet.");return `${apiKey()}:${secretValue}`};
+const hourBucket=(date=new Date())=>date.toISOString().slice(0,13);
+export const etsyQpdLimit=()=>Math.max(100,Number(runtime().ETSY_QPD_LIMIT)||5000);
+export async function recordEtsyCall(response:Response){
+  const bucket=hourBucket(),observedLimit=Math.max(0,Number(response.headers.get("x-limit-per-day"))||0);
+  await runtime().DB.prepare("INSERT INTO etsy_api_usage_buckets (bucket,calls,rate_limited,qpd_limit,updated_at) VALUES (?,1,?,?,CURRENT_TIMESTAMP) ON CONFLICT(bucket) DO UPDATE SET calls=calls+1,rate_limited=rate_limited+excluded.rate_limited,qpd_limit=CASE WHEN excluded.qpd_limit>0 THEN excluded.qpd_limit ELSE qpd_limit END,updated_at=CURRENT_TIMESTAMP").bind(bucket,response.status===429?1:0,observedLimit).run();
+}
+export async function etsyBudget(){
+  const since=new Date(Date.now()-24*60*60*1000).toISOString().slice(0,13);
+  const [row,observed]=await Promise.all([runtime().DB.prepare("SELECT COALESCE(SUM(calls),0) calls,COALESCE(SUM(rate_limited),0) rate_limited FROM etsy_api_usage_buckets WHERE bucket>=?").bind(since).first<{calls:number;rate_limited:number}>(),runtime().DB.prepare("SELECT qpd_limit FROM etsy_api_usage_buckets WHERE qpd_limit>0 ORDER BY updated_at DESC LIMIT 1").first<{qpd_limit:number}>()]);
+  const limit=Number(observed?.qpd_limit)||etsyQpdLimit(),usable=Math.floor(limit*.8),used=Number(row?.calls||0);
+  return {limit,usable,used,remaining:Math.max(0,usable-used),reserved:limit-usable,rateLimited:Number(row?.rate_limited||0)};
+}
 
 export async function encryptEtsy(value:string){return encryptPrintifyToken(value,secret())}
 export async function decryptEtsy(value:string){return decryptPrintifyToken(value,secret())}
@@ -32,6 +44,7 @@ export async function etsyConnection(userId:string){
 export async function etsyFetch<T>(path:string,token:string,init?:RequestInit):Promise<T>{
   for(let attempt=0;attempt<5;attempt+=1){
     const response=await fetch(`${API}${path}`,{...init,headers:{"x-api-key":etsyApiCredential(),Authorization:`Bearer ${token}`,...(init?.body instanceof URLSearchParams?{"Content-Type":"application/x-www-form-urlencoded"}:{}),...(init?.headers||{})}});
+    await recordEtsyCall(response);
     const text=await response.text();let payload:unknown={};try{payload=text?JSON.parse(text):{}}catch{payload={error:text}}
     if(response.ok)return payload as T;
     if((response.status===429||response.status>=500)&&attempt<4){

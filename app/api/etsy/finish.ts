@@ -1,5 +1,5 @@
 import { env } from "cloudflare:workers";
-import { etsyApiCredential, etsyConnection, etsyFetch } from "./client";
+import { etsyApiCredential, etsyConnection, etsyFetch, recordEtsyCall } from "./client";
 
 type Listing={listing_id:number;shop_id:number;title?:string};
 type PersonalizationQuestion={id?:string;type:"text_input"|"dropdown"|"unlabeled_upload";question:string;instructions?:string;required:boolean;maxCharacters?:number;maxFiles?:number;options?:string[]};
@@ -37,7 +37,7 @@ async function applyListingImages(userId:string,token:string,shopId:number,listi
   const current=await etsyFetch<{results?:Array<{listing_image_id:number;rank?:number}>}>(`/listings/${listingId}/images`,token),images=current.results||[],keep=new Set(keptPrintifyIndices);
   for(let index=0;index<images.length;index++)if(!keep.has(index))await etsyFetch(`/shops/${shopId}/listings/${listingId}/images/${images[index].listing_image_id}`,token,{method:"DELETE"});
   const prefix=`etsy-listing-images/${userId}/${productId}/`,stored=await runtime().ARTWORK.list({prefix}),ordered=[...stored.objects].sort((a,b)=>a.key.includes("/size-guide/")?1:b.key.includes("/size-guide/")?-1:a.uploaded.getTime()-b.uploaded.getTime()),available=Math.max(0,10-Math.min(10,keep.size));
-  for(const object of ordered.slice(0,available)){const value=await runtime().ARTWORK.get(object.key);if(!value)continue;const form=new FormData(),fileName=value.customMetadata?.name||object.key.split("/").pop()||"listing-image.jpg";form.set("image",new File([await value.arrayBuffer()],fileName,{type:value.httpMetadata?.contentType||"image/jpeg"}));const response=await fetch(`https://api.etsy.com/v3/application/shops/${shopId}/listings/${listingId}/images`,{method:"POST",headers:{"x-api-key":etsyApiCredential(),Authorization:`Bearer ${token}`},body:form});if(!response.ok)throw new Error(`Etsy rejected ${fileName} (${response.status}).`)}
+  for(const object of ordered.slice(0,available)){const value=await runtime().ARTWORK.get(object.key);if(!value)continue;const form=new FormData(),fileName=value.customMetadata?.name||object.key.split("/").pop()||"listing-image.jpg";form.set("image",new File([await value.arrayBuffer()],fileName,{type:value.httpMetadata?.contentType||"image/jpeg"}));const response=await fetch(`https://api.etsy.com/v3/application/shops/${shopId}/listings/${listingId}/images`,{method:"POST",headers:{"x-api-key":etsyApiCredential(),Authorization:`Bearer ${token}`},body:form});await recordEtsyCall(response);if(!response.ok)throw new Error(`Etsy rejected ${fileName} (${response.status}).`)}
 }
 
 export async function finishEtsyListing(userId:string,draft:DraftData,listingId:number,printifyImageIndices:number[]){

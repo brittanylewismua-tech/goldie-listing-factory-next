@@ -1,10 +1,10 @@
 export const PLANS = {
-  goldie: { key: "goldie", name: "Listing Factory", price: 29, drafts: 200, aiMockups: 100, mockupSets: 10, mockupsPerSet: 50 },
-  scale: { key: "scale", name: "Listing Factory Scale", price: 59, drafts: 750, aiMockups: 300, mockupSets: 30, mockupsPerSet: 50 },
+  goldie: { key: "goldie", name: "Listing Factory", price: 29, drafts: 200, dailyListings: 40, aiMockups: 100, mockupSets: 10, mockupsPerSet: 50 },
+  scale: { key: "scale", name: "Listing Factory Scale", price: 59, drafts: 750, dailyListings: 100, aiMockups: 300, mockupSets: 30, mockupsPerSet: 50 },
 } as const;
 
-export const TRIAL_PLAN = { key: "trial", name: "Listing Factory trial", price: 0, drafts: 10, aiMockups: 5, mockupSets: 1, mockupsPerSet: 10 } as const;
-export const MASTERMIND_BETA_PLAN = { key: "mastermind_beta", name: "Mastermind beta", price: 0, drafts: 20, aiMockups: 20, mockupSets: 10, mockupsPerSet: 50 } as const;
+export const TRIAL_PLAN = { key: "trial", name: "Listing Factory trial", price: 0, drafts: 10, dailyListings: 10, aiMockups: 5, mockupSets: 1, mockupsPerSet: 10 } as const;
+export const MASTERMIND_BETA_PLAN = { key: "mastermind_beta", name: "Mastermind beta", price: 0, drafts: 20, dailyListings: 20, aiMockups: 20, mockupSets: 10, mockupsPerSet: 50 } as const;
 
 export type PlanKey = keyof typeof PLANS;
 export const planFor = (key?: string | null) => key === "trial" ? TRIAL_PLAN : key === "mastermind_beta" ? MASTERMIND_BETA_PLAN : PLANS[(key && key in PLANS ? key : "goldie") as PlanKey];

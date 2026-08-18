@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 export const printifyConnections = sqliteTable("printify_connections", {
   userId: text("user_id").primaryKey(),
@@ -163,3 +163,50 @@ export const etsyListingLinks = sqliteTable("etsy_listing_links", {
   lastError: text("last_error"),
   updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 }, (table) => [index("idx_etsy_listing_links_user_batch").on(table.userId, table.batchId)]);
+
+export const etsyPublishJobs = sqliteTable("etsy_publish_jobs", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull(),
+  batchId: text("batch_id").notNull(),
+  status: text("status").notNull().default("queued"),
+  total: integer("total").notNull(),
+  completed: integer("completed").notNull().default(0),
+  failed: integer("failed").notNull().default(0),
+  settingsJson: text("settings_json").notNull().default("{}"),
+  lastError: text("last_error"),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+}, (table) => [index("idx_etsy_publish_jobs_user_updated").on(table.userId, table.updatedAt), uniqueIndex("idx_etsy_publish_jobs_user_batch").on(table.userId, table.batchId)]);
+
+export const etsyPublishItems = sqliteTable("etsy_publish_items", {
+  id: text("id").primaryKey(),
+  jobId: text("job_id").notNull(),
+  userId: text("user_id").notNull(),
+  productId: text("product_id").notNull(),
+  status: text("status").notNull().default("queued"),
+  attempts: integer("attempts").notNull().default(0),
+  availableAt: integer("available_at").notNull().default(0),
+  lockedAt: integer("locked_at"),
+  resultJson: text("result_json"),
+  lastError: text("last_error"),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+}, (table) => [index("idx_etsy_publish_items_job_status").on(table.jobId, table.status), index("idx_etsy_publish_items_status_available").on(table.status, table.availableAt, table.createdAt), index("idx_etsy_publish_items_status_locked").on(table.status, table.lockedAt), uniqueIndex("idx_etsy_publish_items_user_product").on(table.userId, table.productId)]);
+
+export const etsyApiUsageBuckets = sqliteTable("etsy_api_usage_buckets", {
+  bucket: text("bucket").primaryKey(),
+  calls: integer("calls").notNull().default(0),
+  rateLimited: integer("rate_limited").notNull().default(0),
+  qpdLimit: integer("qpd_limit").notNull().default(0),
+  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const etsyListingUsage = sqliteTable("etsy_listing_usage", {
+  userProduct: text("user_product").primaryKey(),
+  userId: text("user_id").notNull(),
+  productId: text("product_id").notNull(),
+  jobId: text("job_id").notNull(),
+  etsyListingId: integer("etsy_listing_id").notNull(),
+  apiCalls: integer("api_calls").notNull().default(0),
+  publishedAt: text("published_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+}, (table) => [index("idx_etsy_listing_usage_user_published").on(table.userId, table.publishedAt)]);
