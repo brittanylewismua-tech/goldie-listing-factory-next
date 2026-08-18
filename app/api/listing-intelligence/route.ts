@@ -4,6 +4,17 @@ import { getChatGPTUser } from "@/app/chatgpt-auth";
 type Details={category:string;attributes:Record<string,string>;optional:Record<string,string>;blurb:string;confidence:"high"|"review"};
 const validImage=(value:unknown):value is string=>typeof value==="string"&&/^data:image\/(png|jpeg|webp);base64,/i.test(value)&&value.length<18*1024*1024;
 const clean=(value:unknown)=>String(value||"").replace(/[<>]/g,"").trim().slice(0,300);
+const normalize=(value:string)=>value.toLocaleLowerCase().replace(/[^a-z0-9]+/g," ").trim();
+const TEXT_SUPPORTED_OPTIONAL=/^(room|holiday|occasion|recipient)$/i;
+function supportedOptional(input:unknown,context:string){
+  const entries=Object.entries(input&&typeof input==="object"?input:{}).map(([key,value])=>[clean(key).slice(0,60),clean(value).slice(0,120)] as const).filter(([key,value])=>key&&value);
+  const normalizedContext=` ${normalize(context)} `;
+  return Object.fromEntries(entries.filter(([key,value])=>{
+    if(!TEXT_SUPPORTED_OPTIONAL.test(key))return true;
+    const phrase=normalize(value);if(!phrase)return false;
+    return normalizedContext.includes(` ${phrase} `);
+  }));
+}
 export async function POST(request:Request){
   const user=await getChatGPTUser();if(!user)return NextResponse.json({error:"Sign in to prepare Etsy details."},{status:401});
   const body=await request.json() as {mode?:"details"|"title";image?:string;product?:{blueprintTitle?:string;brand?:string;model?:string;description?:string};title?:string;tags?:string[];keywords?:string[];useCommas?:boolean};
@@ -18,5 +29,7 @@ export async function POST(request:Request){
   const payload=await response.json() as {output?:string;detail?:string};if(!response.ok)return NextResponse.json({error:payload.detail||"Goldie could not prepare Etsy details."},{status:502});
   const match=payload.output?.match(/\{[\s\S]*\}/);if(!match)return NextResponse.json({error:"Goldie could not read the prepared Etsy details."},{status:502});
   const raw=JSON.parse(match[0]) as Partial<Details>,record=(input:unknown)=>Object.fromEntries(Object.entries(input&&typeof input==="object"?input:{}).map(([k,v])=>[clean(k).slice(0,60),clean(v).slice(0,120)]).filter(([k,v])=>k&&v));
-  return NextResponse.json({details:{category:clean(raw.category)||"Needs review",attributes:record(raw.attributes),optional:record(raw.optional),blurb:clean(raw.blurb),confidence:raw.confidence==="high"?"high":"review"} satisfies Details});
+  const contextualText=[body.title,...(body.tags||[])].map(clean).join(" ");
+  const attributes=supportedOptional(raw.attributes,contextualText),optional=supportedOptional(raw.optional,contextualText);
+  return NextResponse.json({details:{category:clean(raw.category)||"Needs review",attributes,optional,blurb:clean(raw.blurb),confidence:raw.confidence==="high"?"high":"review"} satisfies Details});
 }

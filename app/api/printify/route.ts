@@ -151,8 +151,9 @@ export async function POST(request: Request) {
     }
     const enabledVariants = found.product.variants?.filter((variant) => variant.is_enabled) ?? [];
     const configuredPlacements = found.product.print_areas?.flatMap((area) => area.placeholders ?? []).filter((placeholder) => placeholder.images?.[0]) ?? [];
+    const shippingProfileNeedsSelection=!shippingTemplateId&&externalListingId>0;
     const issues:string[]=[];
-    if(!shippingTemplateId)issues.push("Publish this product to Etsy once with the shipping profile you want Goldie to copy.");
+    if(!shippingTemplateId&&!shippingProfileNeedsSelection)issues.push("Publish this product to Etsy once with the shipping profile you want Goldie to copy.");
     if(enabledVariants.length===0)issues.push("Enable at least one size or color and save the product.");
     if(configuredPlacements.length===0)issues.push("Place one design in every print area Goldie should copy, then save the product.");
     if(issues.length)return NextResponse.json({error:"This Printify product cannot be used yet.",issues},{status:400});
@@ -193,6 +194,7 @@ export async function POST(request: Request) {
       description: found.product.description ?? "",
       shippingByVariant,
       shippingTemplateId,
+      shippingProfileNeedsSelection,
       freeShipping:Boolean(found.product.sales_channel_properties?.free_shipping),
     };
     await db.batch([
@@ -205,10 +207,10 @@ export async function POST(request: Request) {
     // be read, so future deactivation does not break them again.
     try{
       const saved=await db.prepare("SELECT id, pricing_json FROM product_recipes WHERE user_id = ? AND template_url = ?").bind(user.userId,body.productUrl.trim()).all<{id:string;pricing_json:string}>();
-      for(const row of saved.results||[]){const pricing=JSON.parse(row.pricing_json||"{}");if(Number(pricing.etsyShippingProfileId)===Number(shippingTemplateId))continue;pricing.etsyShippingProfileId=Number(shippingTemplateId);await db.prepare("UPDATE product_recipes SET pricing_json = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?").bind(JSON.stringify(pricing),row.id,user.userId).run()}
+      if(shippingTemplateId)for(const row of saved.results||[]){const pricing=JSON.parse(row.pricing_json||"{}");if(Number(pricing.etsyShippingProfileId)===Number(shippingTemplateId))continue;pricing.etsyShippingProfileId=Number(shippingTemplateId);await db.prepare("UPDATE product_recipes SET pricing_json = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?").bind(JSON.stringify(pricing),row.id,user.userId).run()}
     }catch{/* Recipe repair is best-effort and must never block a valid template. */}
     const placementScale = Math.max(...configuredPlacements.map((placeholder) => Number(placeholder.images?.[0]?.scale || 1)));
-    return NextResponse.json({ product: { id: found.product.id, batchId, title: found.product.title, description:found.product.description??"", blueprintId:found.product.blueprint_id, blueprintTitle:blueprint.title||found.product.title, brand:blueprint.brand||"", model:blueprint.model||"", provider, enabledVariants: enabledVariants.length, variants:enabledVariants.map(variant=>({id:variant.id,title:variant.title||`Variant ${variant.id}`,cost:Number(variant.cost??variant.price),templatePrice:Number(variant.price),shipping:shippingByVariant[variant.id]??standardShipping,options:variant.options||[]})), shop: found.shop.title, standardShipping,shippingCurrency,shippingTemplateId,freeShipping:Boolean(found.product.sales_channel_properties?.free_shipping),maxPrintWidth, maxPrintHeight, placementScale } });
+    return NextResponse.json({ product: { id: found.product.id, batchId, title: found.product.title, description:found.product.description??"", blueprintId:found.product.blueprint_id, blueprintTitle:blueprint.title||found.product.title, brand:blueprint.brand||"", model:blueprint.model||"", provider, enabledVariants: enabledVariants.length, variants:enabledVariants.map(variant=>({id:variant.id,title:variant.title||`Variant ${variant.id}`,cost:Number(variant.cost??variant.price),templatePrice:Number(variant.price),shipping:shippingByVariant[variant.id]??standardShipping,options:variant.options||[]})), shop: found.shop.title, standardShipping,shippingCurrency,shippingTemplateId,shippingProfileNeedsSelection,freeShipping:Boolean(found.product.sales_channel_properties?.free_shipping),maxPrintWidth, maxPrintHeight, placementScale } });
   } catch (error) {
     const status = error instanceof PrintifyApiError && [400, 401, 403, 404, 429].includes(error.status) ? error.status : 500;
     return NextResponse.json({ error: error instanceof Error ? error.message : "Printify could not be reached." }, { status });

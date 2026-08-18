@@ -842,7 +842,7 @@ test("keeps pricing simple while using a real Etsy shipping profile and exact te
   assert.match(profiles,/shipping-profiles/);
   assert.match(profiles,/domesticPrimary/);
   assert.match(publish,/etsyShippingProfileId/);
-  assert.match(drafts,/shipping_template_id:template\.shippingTemplateId/);
+  assert.match(drafts,/shipping_template_id:selectedShippingTemplateId/);
   assert.match(drafts,/etsyBuyerShipping/);
   assert.match(page,/loadTemplateUrl\(recipe\.templateUrl,nextPricing,Number\(recipe\.etsyShippingProfileId\)\|\|0\)/);
   assert.match(page,/PriceField value=\{itemCents\} minimum=\{variant\.cost\/100\}/);
@@ -1035,10 +1035,11 @@ test("appends later design selections and skips only exact file duplicates", asy
 });
 
 test("keeps a verified Printify template usable when its Etsy listing is inactive", async () => {
-  const [page, workflow, printify] = await Promise.all([
+  const [page, workflow, printify, drafts] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/factory-tools.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/api/printify/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/printify/drafts/route.ts", import.meta.url), "utf8"),
   ]);
   assert.match(workflow, /verifiedShippingProfileId/);
   assert.match(workflow, /etsyShippingProfileId:shippingProfileId/);
@@ -1046,7 +1047,46 @@ test("keeps a verified Printify template usable when its Etsy listing is inactiv
   assert.match(page, /Number\(recipe\.etsyShippingProfileId\)\|\|0/);
   assert.match(printify, /shipping-profiles\/\$\{rememberedProfileId\}/);
   assert.match(printify, /!profile\.is_deleted/);
+  assert.match(printify, /shippingProfileNeedsSelection=!shippingTemplateId&&externalListingId>0/);
+  assert.match(page, /!templateDetails\?\.shippingTemplateId&&!templateDetails\?\.shippingProfileNeedsSelection/);
+  assert.match(page, /shippingTemplateId:etsyShippingProfileId/);
+  assert.match(drafts, /selectedShippingTemplateId/);
+  assert.match(drafts, /external:\{shipping_template_id:selectedShippingTemplateId\}/);
   assert.match(printify, /UPDATE product_recipes SET pricing_json/);
+});
+
+test("does not invent high-risk Etsy context fields", async () => {
+  const intelligence = await readFile(new URL("../app/api/listing-intelligence/route.ts", import.meta.url), "utf8");
+  assert.match(intelligence, /TEXT_SUPPORTED_OPTIONAL=\/\^\(room\|holiday\|occasion\|recipient\)\$\/i/);
+  assert.match(intelligence, /normalizedContext\.includes/);
+  assert.match(intelligence, /supportedOptional\(raw\.attributes,contextualText\)/);
+  assert.match(intelligence, /supportedOptional\(raw\.optional,contextualText\)/);
+});
+
+test("enforces and explains the 48-hour mastermind beta", async () => {
+  const [access, countdown, redeem, plans] = await Promise.all([
+    readFile(new URL("../app/mastermind/access.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/mastermind/beta-countdown.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/mastermind/redeem/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/plan-limits.ts", import.meta.url), "utf8"),
+  ]);
+  assert.match(access, /datetime\(redeemed_at, '\+48 hours'\)/);
+  assert.match(access, /redeemed&&!notExpired/);
+  assert.match(countdown, /window\.setInterval\(update,1000\)/);
+  assert.match(redeem, /plan_key='mastermind_beta'/);
+  assert.match(plans, /drafts: 20, aiMockups: 20/);
+});
+
+test("blocks the factory workflow on mobile while preserving saved work", async () => {
+  const [page, styles] = await Promise.all([
+    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/approved-functional.css", import.meta.url), "utf8"),
+  ]);
+  assert.match(page, /className="mobile-gate"/);
+  assert.match(page, /built for desktop/);
+  assert.match(page, /Your saved work will be waiting for you/);
+  assert.match(styles, /@media\(max-width:820px\)/);
+  assert.match(styles, /\.app-shell>:not\(\.mobile-gate\)\{display:none!important\}/);
 });
 
 test("supports simple saved product bundles without complicating the single-product workflow", async () => {

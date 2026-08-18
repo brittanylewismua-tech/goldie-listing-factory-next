@@ -9,7 +9,7 @@ export type KeywordList = { id: string; name: string; keywords: string[] };
 type WorkflowProps = {
   connected: boolean; templateUrl: string; templateVerified: boolean; loadingTemplate: boolean;
   verifiedShippingProfileId:number;
-  onTemplateUrl: (value: string) => void; onUseRecipe: (recipe: Recipe) => boolean;onUseBundle:(bundle:ProductBundle,recipes:Recipe[])=>boolean; onStartNewProduct: () => boolean; onVerifyTemplate: (url: string) => Promise<{shippingTemplateId:string}|null>;
+  onTemplateUrl: (value: string) => void; onUseRecipe: (recipe: Recipe) => boolean;onUseBundle:(bundle:ProductBundle,recipes:Recipe[])=>boolean; onStartNewProduct: () => boolean; onVerifyTemplate: (url: string) => Promise<{shippingTemplateId:string;shippingProfileNeedsSelection?:boolean}|null>;
 };
 
 export function SavedWorkflow(props: WorkflowProps) {
