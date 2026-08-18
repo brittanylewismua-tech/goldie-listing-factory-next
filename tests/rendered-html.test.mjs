@@ -1126,6 +1126,22 @@ test("supports simple saved product bundles without complicating the single-prod
   assert.match(styles, /\.bundle-progress/);
 });
 
+test("downloads each listing's selected Printify photos and created mockups as one local ZIP",async()=>{
+  const [page,route,styles]=await Promise.all([
+    readFile(new URL("../app/page.tsx",import.meta.url),"utf8"),
+    readFile(new URL("../app/api/listing-photos/download/route.ts",import.meta.url),"utf8"),
+    readFile(new URL("../app/approved-functional.css",import.meta.url),"utf8"),
+  ]);
+  assert.match(page,/Download this listing’s photos/);
+  assert.match(page,/Preparing photos…/);
+  assert.match(page,/printifyImageIndices:indices/);
+  assert.match(route,/SELECT response_json FROM printify_draft_results/);
+  assert.match(route,/01-printify/);
+  assert.match(route,/02-lifestyle-mockups/);
+  assert.match(route,/zipSync/);
+  assert.match(styles,/\.listing-photo-download/);
+});
+
 test("explains every Printify template requirement and the exact link to paste",async()=>{
   const source=await readFile(new URL("../app/factory-tools.tsx",import.meta.url),"utf8");
   assert.match(source,/Finish this product in Printify first/);
