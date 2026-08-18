@@ -1101,13 +1101,14 @@ test("blocks the factory workflow on mobile while preserving saved work", async 
 });
 
 test("supports simple saved product bundles without complicating the single-product workflow", async () => {
-  const [page, workflow, api, schema, ui, styles] = await Promise.all([
+  const [page, workflow, api, schema, ui, styles, approvedStyles] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/factory-tools.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/api/product-bundles/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../db/schema.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/goldie-ui.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
+    readFile(new URL("../app/approved-functional.css", import.meta.url), "utf8"),
   ]);
   assert.match(schema, /productBundles = sqliteTable\("product_bundles"/);
   assert.match(api, /Choose at least two saved products/);
@@ -1134,6 +1135,10 @@ test("supports simple saved product bundles without complicating the single-prod
   assert.match(ui, /Continue bundle with/);
   assert.match(ui, /pricing, shipping, description, Etsy details, and images separately/);
   assert.match(styles, /\.bundle-progress/);
+  assert.match(approvedStyles, /\.app-shell \.recipe-card \.edit-recipe\{position:static!important/);
+  assert.match(approvedStyles, /\.app-shell \.recipe-card \.delete-recipe\{position:static!important/);
+  assert.match(approvedStyles, /\.app-shell \.recipe-card \.recipe-use,[\s\S]*?grid-column:1\/-1!important/);
+  assert.match(approvedStyles, /Collision safeguards shared by every workflow step/);
 });
 
 test("downloads each listing's selected Printify photos and created mockups as one local ZIP",async()=>{
