@@ -35,7 +35,9 @@ export function SavedWorkflow(props: WorkflowProps) {
       const result = await response.json() as { id?: string; error?: string };
       if (!response.ok){setMessage(result.error || "The product could not be saved.");return}
       const saved:Recipe={id:result.id||editingId,name:name.trim(),templateUrl:props.templateUrl,description:"",defaultTitle:"",keywordListId,normalizePadding:true,etsyShippingProfileId:shippingProfileId};
-      if(await props.onUseRecipe(saved))setActiveId(saved.id);setName(""); setEditingId(""); setMessage(editingId ? "Product updated and selected." : "Product saved and selected. You will not need to paste this Printify template again."); setEditing(false); await reload();
+      const selected=await props.onUseRecipe(saved);
+      if(!selected){setMessage("The product was saved, but its Printify template could not be loaded. Check the template and try again.");await reload();return}
+      setActiveId(saved.id);setName(""); setEditingId(""); setMessage(editingId ? "Product updated and selected." : "Product saved and selected. You will not need to paste this Printify template again."); setEditing(false); await reload();
     }catch{setMessage("The product could not be saved. Try again.")}
     finally{actionLock.current=false;setPendingAction("")}
   }
