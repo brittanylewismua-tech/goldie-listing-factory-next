@@ -1019,6 +1019,17 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .app-shell .template-instructions-toggle>summary:after{content:"↓";font-size:13px;text-decoration:none;transition:transform .18s ease}
 .app-shell .template-instructions-toggle[open]>summary:after{transform:rotate(180deg)}
 .app-shell .template-instructions-toggle .template-requirements{margin-top:14px}
+.app-shell .recipe-card .bundle-library{display:block!important;margin-top:26px!important;padding-top:18px!important;border-top:1px solid rgba(91,48,79,.14)!important}
+.app-shell .recipe-card .bundle-library>summary{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:18px!important;padding:14px 16px!important;border:1px solid rgba(91,48,79,.16)!important;border-radius:13px!important;background:rgba(255,255,255,.34)!important;color:#4a2a3e!important;cursor:pointer!important;list-style:none!important}
+.app-shell .recipe-card .bundle-library>summary::-webkit-details-marker{display:none}
+.app-shell .recipe-card .bundle-library>summary>span{font-size:14px!important;font-weight:800!important}
+.app-shell .recipe-card .bundle-library>summary>small{display:flex!important;align-items:center!important;gap:8px!important;color:rgba(74,42,62,.68)!important;font-size:11px!important}
+.app-shell .recipe-card .bundle-library>summary>small:after{content:"↓";color:#704b67;font-size:14px;transition:transform .18s ease}
+.app-shell .recipe-card .bundle-library>summary em{padding:3px 7px;border-radius:999px;background:rgba(255,255,255,.58);color:#7b526e;font-size:8px;font-style:normal;font-weight:850;letter-spacing:.08em;text-transform:uppercase}
+.app-shell .recipe-card .bundle-library[open]>summary>small:after{transform:rotate(180deg)}
+.app-shell .recipe-card .bundle-library-content{display:grid;gap:14px;padding:16px 2px 2px}
+.app-shell .recipe-card .recipe-tile.selected .recipe-copy em,.app-shell .recipe-card .bundle-tile.selected .bundle-use em{color:#713d62!important;font-weight:900!important}
+@media(max-width:800px){.app-shell .recipe-card .bundle-library>summary{align-items:flex-start;flex-direction:column;gap:6px}.app-shell .recipe-card .bundle-library>summary>small{width:100%;justify-content:space-between}}
 .approved-usage-track{height:7px;margin-top:8px;overflow:hidden;border-radius:99px;background:rgba(74,42,62,.12)}
 .approved-usage-track i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#d994c9,#9f70bc);transition:width .35s ease}
 
