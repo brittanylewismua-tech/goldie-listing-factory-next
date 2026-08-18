@@ -1033,6 +1033,14 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .app-shell .recipe-card .bundle-library[open]>summary>small:after{transform:rotate(180deg)}
 .app-shell .recipe-card .bundle-library-content{display:grid;gap:14px;padding:16px 2px 2px}
 .app-shell .recipe-card .recipe-tile.selected .recipe-copy em,.app-shell .recipe-card .bundle-tile.selected .bundle-use em{color:#713d62!important;font-weight:900!important}
+.app-shell .recipe-card .recipe-tile.selecting,
+.app-shell .recipe-card .bundle-tile.selecting{border-color:#b96aa6!important;box-shadow:0 0 0 3px rgba(225,145,207,.28),0 14px 34px rgba(91,48,79,.12)!important}
+.app-shell .recipe-card .recipe-tile.selecting .recipe-icon,
+.app-shell .recipe-card .bundle-tile.selecting .bundle-icon{animation:goldie-action-pulse 1s ease-in-out infinite}
+.app-shell button[aria-busy="true"]{cursor:wait!important}
+.app-shell button[aria-busy="true"]::after{content:"";display:inline-block;width:.85em;height:.85em;margin-left:.55em;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;vertical-align:-.1em;animation:goldie-action-spin .72s linear infinite}
+@keyframes goldie-action-spin{to{transform:rotate(360deg)}}
+@keyframes goldie-action-pulse{0%,100%{transform:scale(1);filter:saturate(1)}50%{transform:scale(1.04);filter:saturate(1.2)}}
 @media(max-width:800px){.app-shell .recipe-card .bundle-library>summary{align-items:flex-start;flex-direction:column;gap:6px}.app-shell .recipe-card .bundle-library>summary>small{width:100%;justify-content:space-between}}
 
 /* Saved-product and bundle cards: content and utility actions occupy separate

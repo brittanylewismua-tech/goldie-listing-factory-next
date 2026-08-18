@@ -1219,3 +1219,22 @@ test("runs the Etsy queue every minute and gives the owner operational controls"
   assert.match(operations,/Etsy operations/);assert.match(operations,/Shared Etsy quota/);assert.match(operations,/Measured API cost/);assert.match(operations,/Failed listings/);assert.match(api,/retry_failed/);assert.match(api,/run_now/);assert.match(api,/isOwner/);
   assert.match(schema,/etsyQueueState/);assert.match(schema,/etsyWorkerRuns/);assert.match(migration,/etsy_queue_state/);assert.match(migration,/etsy_worker_runs/);
 });
+
+test("acknowledges slow workflow actions immediately and blocks repeat clicks",async()=>{
+  const [workflow,page,mockups,styles]=await Promise.all([
+    readFile(new URL("../app/factory-tools.tsx",import.meta.url),"utf8"),
+    readFile(new URL("../app/page.tsx",import.meta.url),"utf8"),
+    readFile(new URL("../app/integrated-mockups.tsx",import.meta.url),"utf8"),
+    readFile(new URL("../app/approved-functional.css",import.meta.url),"utf8"),
+  ]);
+  assert.match(workflow,/setPendingAction\(`recipe:\$\{recipe\.id\}`\)/);
+  assert.match(workflow,/Loading product details…/);
+  assert.match(workflow,/Loading every product in this bundle…/);
+  assert.match(workflow,/actionLock\.current/);
+  assert.match(page,/aria-busy=\{preparingEtsy\}/);
+  assert.match(page,/aria-busy=\{running\|\|preparingEtsy\}/);
+  assert.match(page,/aria-busy=\{publishing\}/);
+  assert.match(mockups,/aria-busy=\{busy\}/);
+  assert.match(styles,/button\[aria-busy="true"\]/);
+  assert.match(styles,/goldie-action-spin/);
+});
