@@ -2,10 +2,12 @@ import { env } from "cloudflare:workers";
 import { decryptPrintifyToken, encryptPrintifyToken } from "../printify/token-crypto";
 
 const API="https://api.etsy.com/v3/application";
-type Runtime={DB:D1Database;ETSY_API_KEY?:string;ETSY_API_SECRET?:string;ETSY_TOKEN_KEY?:string;PRINTIFY_TOKEN_KEY?:string};
+type Runtime={DB:D1Database;ETSY_API_KEY?:string;ETSY_API_SECRET?:string;ETSY_TOKEN_KEY?:string;PRINTIFY_TOKEN_KEY?:string;ETSY_REDIRECT_URI?:string;GOLDIE_SITE_URL?:string};
 const runtime=()=>env as unknown as Runtime;
 const secret=()=>runtime().ETSY_TOKEN_KEY||runtime().PRINTIFY_TOKEN_KEY||"";
 export const apiKey=()=>{const value=runtime().ETSY_API_KEY?.trim();if(!value)throw new Error("Etsy API access is not configured yet.");return value};
+export const etsyRedirectUri=()=>runtime().ETSY_REDIRECT_URI?.trim()||"https://goldie-listing-factory-next.brittanylewismua.chatgpt.site/api/etsy/callback";
+export const goldieSiteUrl=()=>runtime().GOLDIE_SITE_URL?.trim().replace(/\/$/,"")||"https://thegoldiesuite.com";
 export const etsyApiCredential=()=>{const secretValue=runtime().ETSY_API_SECRET?.trim();if(!secretValue)throw new Error("Etsy API access is not configured yet.");return `${apiKey()}:${secretValue}`};
 
 export async function encryptEtsy(value:string){return encryptPrintifyToken(value,secret())}

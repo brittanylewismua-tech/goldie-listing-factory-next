@@ -918,8 +918,12 @@ test("connects Etsy with PKCE and finishes only the exact Printify-linked Etsy l
   assert.match(page,/Connect Etsy before publishing/);
   assert.match(oauth,/code_challenge_method:"S256"/);
   assert.match(oauth,/listings_r listings_w shops_r shops_w/);
+  assert.match(oauth,/etsyRedirectUri/);
   assert.match(callback,/grant_type:"authorization_code"/);
+  assert.match(callback,/goldieSiteUrl/);
   assert.match(client,/grant_type:"refresh_token"/);
+  assert.match(client,/ETSY_REDIRECT_URI/);
+  assert.match(client,/goldie-listing-factory-next\.brittanylewismua\.chatgpt\.site\/api\/etsy\/callback/);
   assert.match(client,/ETSY_API_SECRET/);
   assert.match(publish,/waitForEtsyListing/);
   assert.match(publish,/product\.external\?\.id/);
