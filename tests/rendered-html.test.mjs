@@ -1119,3 +1119,14 @@ test("supports simple saved product bundles without complicating the single-prod
   assert.match(ui, /pricing, shipping, description, Etsy details, and images separately/);
   assert.match(styles, /\.bundle-progress/);
 });
+
+test("explains every Printify template requirement and the exact link to paste",async()=>{
+  const source=await readFile(new URL("../app/factory-tools.tsx",import.meta.url),"utf8");
+  assert.match(source,/Finish this product in Printify first/);
+  assert.match(source,/Add any design and set its placement/);
+  assert.match(source,/Choose every size and color you want to sell/);
+  assert.match(source,/Choose the Printify mockups/);
+  assert.match(source,/Set the shipping profile and publish to Etsy once/);
+  assert.match(source,/open its product editor/);
+  assert.match(source,/Do not use: the Etsy listing URL or a product ID by itself/);
+});
