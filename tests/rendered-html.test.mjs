@@ -284,7 +284,7 @@ test("matches Printify editor DPI instead of comparing against template pixel di
 });
 
 test("calculates every Printify variant price from its own cost and Etsy fee profile", async () => {
-  const { recommendedPrice } = await import("../app/pricing.ts");
+  const { estimatedProfit, recommendedPrice } = await import("../app/pricing.ts");
   const pricing = { targetProfit: 10, etsyFeePercent: 9.5, fixedFee: 0.25, listingFee: 0.20, shippingCost: 0, shippingCharged: 0 };
   assert.equal(recommendedPrice(1034, pricing), 2298);
   assert.equal(recommendedPrice(1184, pricing), 2463);
@@ -294,7 +294,14 @@ test("calculates every Printify variant price from its own cost and Etsy fee pro
   assert.equal(recommendedPrice(1000, { targetProfit: 10, etsyFeePercent: 9.5, fixedFee: .25, listingFee: .20, shippingCost: 6, shippingCharged: 3 }), 2623);
   assert.equal(recommendedPrice(1000, { targetProfit: 10, etsyFeePercent: 9.5, fixedFee: .25, listingFee: .20, shippingCost: 4, shippingCharged: 3 }), 2402);
   assert.equal(recommendedPrice(1000, { targetProfit: 0, etsyFeePercent: 9.5, fixedFee: .25, listingFee: .20, shippingCost: 6, shippingCharged: 3 }), 1518);
-  assert.equal(recommendedPrice(1000, { targetProfit: 10, etsyFeePercent: 9.5, fixedFee: .25, listingFee: .20, shippingCost: 4, shippingCharged: 6 }), 2323);
+  const overCollectedShipping = { targetProfit: 10, etsyFeePercent: 9.5, fixedFee: .25, listingFee: .20, shippingCost: 4, shippingCharged: 6 };
+  assert.equal(recommendedPrice(1000, overCollectedShipping), 2102);
+  assert.ok(estimatedProfit(2102, 1000, overCollectedShipping) >= 10);
+  assert.ok(estimatedProfit(2102, 1000, overCollectedShipping) < 10.02);
+  const crewneck = { targetProfit: 10, etsyFeePercent: 9.5, fixedFee: .25, listingFee: .20, shippingCost: 11.49, shippingCharged: 25 };
+  const crewneckPrice = recommendedPrice(3100, crewneck);
+  assert.ok(estimatedProfit(crewneckPrice, 3100, crewneck) >= 10);
+  assert.ok(estimatedProfit(crewneckPrice, 3100, crewneck) < 10.02);
 });
 
 test("processes a 20-design batch with bounded two-at-a-time concurrency", async () => {
@@ -1116,6 +1123,9 @@ test("supports simple saved product bundles without complicating the single-prod
   assert.match(workflow, /aria-busy=\{bundleSaving\}/);
   assert.match(api, /deduplicated:true/);
   assert.match(page, /function useBundle/);
+  assert.match(page, /You are working on \{bundleRecipes\[bundleIndex\]\?\.name\}/);
+  assert.match(page, /1\. Item prices <span>· \{productName\}<\/span>/);
+  assert.match(page, /2\. Shipping <span>· \{productName\}<\/span>/);
   assert.match(page, /function continueBundle/);
   assert.match(page, /activeBundle,bundleRecipes,bundleIndex/);
   assert.match(page, /previewUrl:URL\.createObjectURL\(file\.file\)/);
