@@ -63,4 +63,11 @@ export async function drainGlobalPublishQueue(maxItems=MAX_CONCURRENT_LISTINGS){
   }catch(error){const message=error instanceof Error?error.message:"The Etsy worker stopped unexpectedly.";await runtime().DB.batch([runtime().DB.prepare("UPDATE etsy_worker_runs SET status='failed',error=?,finished_at=CURRENT_TIMESTAMP WHERE id=?").bind(message,runId),runtime().DB.prepare("INSERT INTO etsy_queue_state (id,last_worker_at,last_worker_status,last_error,updated_at) VALUES (1,CURRENT_TIMESTAMP,'failed',?,CURRENT_TIMESTAMP) ON CONFLICT(id) DO UPDATE SET last_worker_at=CURRENT_TIMESTAMP,last_worker_status='failed',last_error=excluded.last_error,updated_at=CURRENT_TIMESTAMP").bind(message)]);throw error}
 }
 
+export async function kickGlobalPublishQueueIfDue(){
+  const claim=await runtime().DB.prepare("UPDATE etsy_queue_state SET last_worker_status='running',updated_at=CURRENT_TIMESTAMP WHERE id=1 AND manually_paused=0 AND paused_until<=unixepoch() AND (last_worker_status!='running' OR updated_at<datetime('now','-5 minutes')) AND (last_worker_at IS NULL OR last_worker_at<datetime('now','-50 seconds'))").run();
+  if(!claim.meta.changes)return {started:false};
+  await drainGlobalPublishQueue();
+  return {started:true};
+}
+
 export async function publishJobPayload(userId:string,jobId:string){const job=await runtime().DB.prepare("SELECT id,status,total,completed,failed,last_error,created_at,updated_at FROM etsy_publish_jobs WHERE id=? AND user_id=?").bind(jobId,userId).first<{id:string;status:string;total:number;completed:number;failed:number;last_error?:string;created_at:string;updated_at:string}>();if(!job)return null;const rows=await runtime().DB.prepare("SELECT status,result_json,last_error,available_at FROM etsy_publish_items WHERE job_id=? AND user_id=? ORDER BY created_at,id").bind(jobId,userId).all<{status:string;result_json?:string;last_error?:string;available_at:number}>(),finished=rows.results.flatMap(row=>row.result_json?[JSON.parse(row.result_json)]:[]),nextRetry=Math.min(...rows.results.filter(row=>row.status==="queued"&&row.available_at>0).map(row=>row.available_at),Infinity);return {...job,finished,queued:rows.results.filter(row=>row.status==="queued").length,processing:rows.results.filter(row=>row.status==="running").length,nextRetry:Number.isFinite(nextRetry)?nextRetry:null,budget:await etsyBudget()}}
