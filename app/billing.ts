@@ -8,6 +8,8 @@ type BillingRuntime = {
   STRIPE_WEBHOOK_SECRET?: string;
   STRIPE_GOLDIE_PRICE_ID?: string;
   STRIPE_SCALE_PRICE_ID?: string;
+  RESEND_API_KEY?: string;
+  GOLDIE_EMAIL_LOGO_URL?: string;
   GOLDIE_SITE_URL?: string;
 };
 
@@ -20,6 +22,7 @@ export async function ensureBillingTables(db = billingRuntime().DB) {
     db.prepare("CREATE TABLE IF NOT EXISTS account_plans (user_id TEXT PRIMARY KEY, plan_key TEXT NOT NULL, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)"),
     db.prepare("CREATE TABLE IF NOT EXISTS billing_trials (user_id TEXT PRIMARY KEY, started_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)"),
     db.prepare("CREATE TABLE IF NOT EXISTS stripe_events (event_id TEXT PRIMARY KEY, event_type TEXT NOT NULL, processed_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)"),
+    db.prepare("CREATE TABLE IF NOT EXISTS trial_reminder_emails (user_id TEXT PRIMARY KEY, subscription_id TEXT NOT NULL, resend_email_id TEXT NOT NULL, scheduled_for INTEGER NOT NULL, canceled_at TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)"),
   ]);
 }
 
