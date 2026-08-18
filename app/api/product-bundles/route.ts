@@ -24,6 +24,11 @@ export async function POST(request:Request){
   if(recipeIds.length>4)return NextResponse.json({error:"A product bundle can include up to four products."},{status:400});
   const owned=await getDb().select({id:productRecipes.id}).from(productRecipes).where(and(eq(productRecipes.userId,user.userId),inArray(productRecipes.id,recipeIds)));
   if(owned.length!==recipeIds.length)return NextResponse.json({error:"One of those saved products is no longer available."},{status:400});
+  if(!body.id){
+    const existing=await getDb().select().from(productBundles).where(eq(productBundles.userId,user.userId));
+    const duplicate=existing.find(bundle=>bundle.name.trim().toLocaleLowerCase()===name.toLocaleLowerCase()&&JSON.stringify(storedIds(bundle.recipeIdsJson))===JSON.stringify(recipeIds));
+    if(duplicate)return NextResponse.json({id:duplicate.id,deduplicated:true});
+  }
   const id=body.id||crypto.randomUUID();
   if(body.id){const [bundle]=await getDb().select({id:productBundles.id}).from(productBundles).where(and(eq(productBundles.id,id),eq(productBundles.userId,user.userId))).limit(1);if(!bundle)return NextResponse.json({error:"That product bundle could not be found."},{status:404})}
   await getDb().insert(productBundles).values({id,userId:user.userId,name,recipeIdsJson:JSON.stringify(recipeIds)}).onConflictDoUpdate({target:productBundles.id,set:{name,recipeIdsJson:JSON.stringify(recipeIds),updatedAt:new Date().toISOString()}});
