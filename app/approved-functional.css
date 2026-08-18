@@ -1011,6 +1011,14 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .app-shell .recipe-card .recipe-form-heading{display:grid!important;grid-template-columns:1fr!important;gap:8px!important;padding-bottom:18px!important}
 .app-shell .recipe-card .recipe-form-heading b{display:block;font-size:24px!important;line-height:1.15!important}
 .app-shell .recipe-card .recipe-form-heading span{display:block;max-width:820px;color:rgba(74,42,62,.7)!important;font-size:14px!important;line-height:1.55!important}
+.app-shell .recipe-card .recipe-library-head .add-product-button{min-height:42px;padding:10px 16px!important;border:1px solid rgba(104,68,95,.2)!important;border-radius:12px!important;background:linear-gradient(135deg,#5b394f,#7b526e)!important;color:#fff!important;box-shadow:0 9px 20px rgba(74,42,62,.14)!important;font-size:12px!important;font-weight:750!important;text-decoration:none!important;cursor:pointer}
+.app-shell .recipe-card .recipe-library-head .add-product-button:hover{background:linear-gradient(135deg,#4c3044,#69445f)!important;color:#fff!important;transform:translateY(-1px)}
+.app-shell .template-instructions-toggle{grid-column:1/-1;margin:0 0 4px}
+.app-shell .template-instructions-toggle>summary{display:inline-flex;align-items:center;gap:7px;color:#704b67;font-size:12px;font-weight:750;text-decoration:underline;text-underline-offset:3px;cursor:pointer;list-style:none}
+.app-shell .template-instructions-toggle>summary::-webkit-details-marker{display:none}
+.app-shell .template-instructions-toggle>summary:after{content:"↓";font-size:13px;text-decoration:none;transition:transform .18s ease}
+.app-shell .template-instructions-toggle[open]>summary:after{transform:rotate(180deg)}
+.app-shell .template-instructions-toggle .template-requirements{margin-top:14px}
 .approved-usage-track{height:7px;margin-top:8px;overflow:hidden;border-radius:99px;background:rgba(74,42,62,.12)}
 .approved-usage-track i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#d994c9,#9f70bc);transition:width .35s ease}
 
