@@ -42,6 +42,9 @@ const worker = {
 
     return handler.fetch(request, env, ctx);
   },
+  async scheduled(_controller: ScheduledController, _env: Env, ctx: ExecutionContext): Promise<void> {
+    ctx.waitUntil(import("../app/api/printify/drafts/publish/queue").then(({ drainGlobalPublishQueue }) => drainGlobalPublishQueue()).then(()=>undefined));
+  },
 };
 
 export default worker;

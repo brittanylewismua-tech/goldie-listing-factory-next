@@ -38,6 +38,7 @@ export default function AdminControl({ initialActive, memberCount, initialDiagno
       <p className="mini-label">OWNER CONTROL</p>
       <h1>Mastermind testing</h1>
       <p><b>{active ? "Access is ON" : "Access is OFF"}</b><br />{memberCount} ChatGPT account{memberCount === 1 ? "" : "s"} redeemed the code.</p>
+      <a className="access-link" href="/operations">Open Etsy operations</a>
       <button className={active ? "revoke-button" : "activate-button"} disabled={working} onClick={toggle}>{working ? "Updating…" : active ? "Revoke access for everyone" : "Turn mastermind access back on"}</button>
       {error && <p className="access-error" role="alert">{error}</p>}
       <p className="admin-note">Turning access off also removes saved Printify tokens for mastermind testers. Your owner test page remains available.</p>

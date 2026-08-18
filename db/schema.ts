@@ -210,3 +210,23 @@ export const etsyListingUsage = sqliteTable("etsy_listing_usage", {
   apiCalls: integer("api_calls").notNull().default(0),
   publishedAt: text("published_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 }, (table) => [index("idx_etsy_listing_usage_user_published").on(table.userId, table.publishedAt)]);
+
+export const etsyQueueState = sqliteTable("etsy_queue_state", {
+  id: integer("id").primaryKey(),
+  pausedUntil: integer("paused_until").notNull().default(0),
+  manuallyPaused: integer("manually_paused").notNull().default(0),
+  lastWorkerAt: text("last_worker_at"),
+  lastWorkerStatus: text("last_worker_status"),
+  lastWorkerProcessed: integer("last_worker_processed").notNull().default(0),
+  lastError: text("last_error"),
+  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const etsyWorkerRuns = sqliteTable("etsy_worker_runs", {
+  id: text("id").primaryKey(),
+  status: text("status").notNull(),
+  processed: integer("processed").notNull().default(0),
+  error: text("error"),
+  startedAt: text("started_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  finishedAt: text("finished_at"),
+}, (table) => [index("idx_etsy_worker_runs_started").on(table.startedAt)]);
