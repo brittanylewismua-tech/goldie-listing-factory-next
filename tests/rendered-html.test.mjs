@@ -26,7 +26,7 @@ test("server-renders the branded Listing Factory", async () => {
   const approvedCss = await readFile(new URL("../app/approved-functional.css", import.meta.url), "utf8");
   assert.match(pageSource, /The term &apos;Etsy&apos; is a trademark of Etsy, Inc\./);
   assert.match(pageSource, /not endorsed or certified by Etsy, Inc\./);
-  assert.match(approvedCss, /\.factory-legal-footer small/);
+  assert.match(approvedCss, /\.etsy-api-disclosure/);
   assert.match(pageSource, /How to get your Printify token/);
   assert.match(pageSource, /token connects the whole Printify account/);
   assert.match(html, /Connect this Printify template/);

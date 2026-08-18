@@ -613,7 +613,7 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .pricing-cost-snapshot>div,.custom-shipping,.fee-profile-summary span,.placement-editor,.inline-generated figure,.mockup-enlarge{border-color:rgba(139,89,137,.16)!important;background:rgba(255,255,255,.58)!important;color:var(--ink)!important}
 .inline-mockup-grid label{border-color:transparent!important;background:rgba(246,229,248,.56)!important}
 .inline-mockup-grid label.selected{border-color:#b777b0!important;background:rgba(239,211,237,.7)!important;box-shadow:0 0 0 2px rgba(183,119,176,.1)!important}
-.factory-legal-footer{display:grid;grid-template-columns:max-content minmax(240px,680px) max-content;justify-content:space-between}.factory-legal-footer small{color:inherit;font-size:10px;font-weight:400;letter-spacing:.015em;line-height:1.45;text-align:center;text-transform:none;opacity:.82}@media(max-width:900px){.factory-legal-footer{grid-template-columns:1fr;justify-items:center;padding-block:20px}.factory-legal-footer small{max-width:620px}}
+.etsy-api-disclosure{max-width:210px;margin:10px 0 0;color:rgba(74,42,62,.58);font-size:8px;font-weight:400;letter-spacing:.01em;line-height:1.4;text-align:left}
 
 @media(max-width:820px){
   html,body{min-height:100%;overflow:hidden;background:#e8b1c8 url('/goldie-background-reference.jpg') center/cover fixed no-repeat}
