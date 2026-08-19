@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import { phrasesFromErank } from "../seo-utils";
+import GoldieWordmark from "../goldie-wordmark";
 
 type List = { id: string; name: string; keywords: string[] };
 type Notice = { kind:"success"|"error"; title:string; detail:string } | null;
@@ -36,7 +37,7 @@ export default function KeywordBanks() {
   async function remove(list:List){if(!window.confirm(`Delete “${list.name}”?`))return;await fetch("/api/keyword-lists",{method:"DELETE",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:list.id})});if(savedId===list.id)startAnother();void reload()}
 
   return <main className="management-page keyword-page">
-    <nav className="management-nav" aria-label="Goldie tools"><a href={returnHref}>Listing Factory</a><a href="/batches">Batch History</a><a className="active" href="/keywords">Keyword Banks</a><a href="/mockups">Mockup Sets</a><a href="/usage">Usage + Plan</a></nav>
+    <nav className="management-nav" aria-label="Goldie tools"><GoldieWordmark/><a href={returnHref}>Listing Factory</a><a href="/batches">Batch History</a><a className="active" href="/keywords">Keyword Banks</a><a href="/mockups">Mockup Sets</a><a href="/usage">Usage + Plan</a></nav>
     <header className="keyword-hero"><div><p className="mini-label">KEYWORD LIBRARY</p><h1>Your keyword banks</h1><p>Save your organized eRank phrases here, then choose the bank you want while building listing titles.</p></div></header>
     <div className="keyword-workspace">
       <section className="management-create"><div className="section-heading"><div><p className="mini-label">ADD OR UPDATE</p><h2>{savedId?"Edit saved keyword bank":"Create a keyword bank"}</h2></div>{savedId&&<button className="new-bank-button" onClick={startAnother}>＋ Create another bank</button>}</div><label>Bank name<input value={name} onChange={e=>setName(e.target.value)} placeholder="Example: Western shirts"/></label><label>eRank phrases or CSV column<textarea value={raw} onChange={e=>setRaw(e.target.value)} rows={6} placeholder="Paste one keyword phrase per line"/></label><label className="file-label">Or upload an eRank CSV or text file<input type="file" accept=".csv,.txt,text/csv,text/plain" onChange={async e=>{const file=e.target.files?.[0];if(file)setRaw(await file.text());e.currentTarget.value=""}}/></label><div className="management-create-foot"><span>{words.length} valid phrases found</span><button disabled={!name.trim()||!words.length||saving} onClick={()=>void save()}>{saving?"Saving…":savedId?"Save changes":"Save keyword bank"}</button></div></section>

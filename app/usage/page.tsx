@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import "../pricing-profile.css";
+import GoldieWordmark from "../goldie-wordmark";
 type PlanKey="trial"|"goldie"|"pro"|"scale"|"mastermind_beta";
 type Data={plan:{key:PlanKey;name:string;price:number;drafts:number;dailyListings:number;aiMockups:number;mockupSets:number;mockupsPerSet:number};resetAt:string;usage:{drafts:number;aiMockups:number;mockupSets:number;publishedToday:number;publishing:number};billing?:{active:boolean;subscription?:{status:string;currentPeriodEnd:number|null;cancelAtPeriodEnd:number}|null}};
 type Fees={etsyFeePercent:number;fixedFee:number;listingFee:number};
@@ -13,7 +14,7 @@ export default function UsagePage(){
   async function manageBilling(){setBillingMessage("Opening secure billing…");const response=await fetch("/api/billing/portal",{method:"POST"}),result=await response.json() as {url?:string;error?:string};if(response.ok&&result.url){window.location.href=result.url;return}setBillingMessage(result.error||"Billing could not be opened.")}
   async function choosePlan(plan:"goldie"|"pro"|"scale"){if(data?.billing?.active){await manageBilling();return}setCheckoutPlan(plan);setBillingMessage("");const response=await fetch("/api/billing/checkout",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({plan})}),result=await response.json() as {url?:string;error?:string};if(response.ok&&result.url){window.location.href=result.url;return}setBillingMessage(result.error||"Secure checkout could not be opened.");setCheckoutPlan(null)}
   return <main className="usage-page">
-    <nav className="management-nav"><Link href="/listing-factory">Listing Factory</Link><Link href="/batches">Batch History</Link><Link href="/keywords">Keyword Banks</Link><Link href="/mockups">Mockup Sets</Link><Link className="active" href="/usage">Usage + Plan</Link></nav>
+    <nav className="management-nav"><GoldieWordmark/><Link href="/listing-factory">Listing Factory</Link><Link href="/batches">Batch History</Link><Link href="/keywords">Keyword Banks</Link><Link href="/mockups">Mockup Sets</Link><Link className="active" href="/usage">Usage + Plan</Link></nav>
     <header><p className="mini-label">USAGE + PLAN</p><h1>Your Listing Factory plan</h1><p>Your included credits reset automatically each month. Failed listing attempts and failed AI renders never use your allowance.</p></header>
     {loadError?<section className="usage-load-error" role="alert"><h2>Sign in to view your plan and usage</h2><p>{loadError}</p><Link href="/listing-factory">Return to Listing Factory</Link></section>:!data?<p>Loading your usage…</p>:<>
       <section className="plan-banner"><div><span>CURRENT PLAN</span><h2>{data.plan.name}</h2><p>{data.plan.price?`$${data.plan.price}/month`:"3-day trial"}</p></div><div><p>Resets {new Date(data.resetAt).toLocaleDateString(undefined,{month:"long",day:"numeric",year:"numeric"})}</p>{data.billing?.active&&<button onClick={()=>void manageBilling()}>Manage billing</button>}{billingMessage&&<small role="status">{billingMessage}</small>}</div></section>

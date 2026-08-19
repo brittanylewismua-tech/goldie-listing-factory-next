@@ -11,10 +11,9 @@
   background:linear-gradient(180deg,rgba(255,250,253,.38),rgba(255,246,251,.2));
   backdrop-filter:blur(20px) saturate(1.12);
 }
-:is(.management-page,.usage-page)>.management-nav:before{content:"Goldie";display:block;margin:0 0 4px;text-align:center;color:var(--ink);font:400 66px/.92 'DM Serif Display',Georgia,serif;letter-spacing:-.025em}
-:is(.management-page,.usage-page)>.management-nav:after{content:"LISTING FACTORY";order:-1;display:block;margin:66px 0 -57px;text-align:center;color:var(--ink);font-size:12px;font-weight:650;letter-spacing:.245em}
+:is(.management-page,.usage-page)>.management-nav>.goldie-wordmark-lockup{margin-bottom:30px}
 :is(.management-page,.usage-page)>.management-nav a{display:flex;align-items:center;min-height:46px;padding:0 15px;border-radius:14px;color:rgba(74,42,62,.58)!important;font-size:13px;font-weight:650;text-decoration:none}
-:is(.management-page,.usage-page)>.management-nav a:first-of-type{margin-top:34px}
+:is(.management-page,.usage-page)>.management-nav a:first-of-type{margin-top:0}
 :is(.management-page,.usage-page)>.management-nav a:hover,
 :is(.management-page,.usage-page)>.management-nav a.active{color:var(--ink)!important;background:rgba(255,255,255,.53);box-shadow:inset 0 0 0 1px rgba(255,255,255,.54)}
 
@@ -125,28 +124,6 @@
   box-shadow:none!important;
   backdrop-filter:blur(20px) saturate(1.12)!important;
 }
-:is(.keyword-page,.mockupFactory.managementOnly).management-page>.management-nav::before{
-  content:"Goldie"!important;
-  display:block!important;
-  margin:0 0 4px!important;
-  text-align:center!important;
-  color:var(--ink)!important;
-  font:400 66px/.92 'DM Serif Display',Georgia,serif!important;
-  letter-spacing:-.025em!important;
-}
-:is(.keyword-page,.mockupFactory.managementOnly).management-page>.management-nav::after{
-  content:"LISTING FACTORY"!important;
-  position:absolute!important;
-  top:104px!important;
-  left:0!important;
-  width:100%!important;
-  display:block!important;
-  text-align:center!important;
-  color:var(--ink)!important;
-  font-size:12px!important;
-  font-weight:650!important;
-  letter-spacing:.245em!important;
-}
 :is(.keyword-page,.mockupFactory.managementOnly).management-page>.management-nav a{
   display:flex!important;
   align-items:center!important;
@@ -161,7 +138,7 @@
   font-weight:650!important;
   text-decoration:none!important;
 }
-:is(.keyword-page,.mockupFactory.managementOnly).management-page>.management-nav a:first-of-type{margin-top:72px!important}
+:is(.keyword-page,.mockupFactory.managementOnly).management-page>.management-nav a:first-of-type{margin-top:0!important}
 :is(.keyword-page,.mockupFactory.managementOnly).management-page>.management-nav a:hover,
 :is(.keyword-page,.mockupFactory.managementOnly).management-page>.management-nav a.active{
   color:var(--ink)!important;

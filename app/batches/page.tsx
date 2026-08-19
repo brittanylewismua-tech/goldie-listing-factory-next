@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import GoldieWordmark from "../goldie-wordmark";
 type Batch = { id:string; status:string; step:string; setup_name:string; product_title:string; design_count:number; created_at:string; updated_at:string };
 export default function BatchesPage() {
   const [batches,setBatches] = useState<Batch[]>([]);
@@ -12,7 +13,7 @@ export default function BatchesPage() {
     if(response.ok)setBatches(current=>current.filter(item=>item.id!==batch.id));
   }
   return <main className="management-page">
-    <nav className="management-nav"><a href="/listing-factory">Listing Factory</a><a className="active" href="/batches">Batch History</a><a href="/keywords">Keyword Banks</a><a href="/mockups">Mockup Sets</a><a href="/usage">Usage + Plan</a></nav>
+    <nav className="management-nav"><GoldieWordmark/><a href="/listing-factory">Listing Factory</a><a className="active" href="/batches">Batch History</a><a href="/keywords">Keyword Banks</a><a href="/mockups">Mockup Sets</a><a href="/usage">Usage + Plan</a></nav>
     <header><p className="mini-label">BATCH HISTORY</p><h1>Continue where you left off.</h1><p>Your product, listing work, results, and errors are saved with each batch. Any Printify drafts you already created will still be there when you return.</p></header>
     <section className="batch-history">
       {loading ? <p>Loading saved batches…</p> : !batches.length ? <div className="empty-history"><h2>No saved batches yet</h2><p>Your first batch appears here as soon as you add designs.</p><a href="/listing-factory">Start a batch</a></div> : batches.map(batch => <article key={batch.id}><div><span className={`batch-status ${batch.status}`}>{batch.status.replace("_"," ")}</span><h2>{batch.product_title || batch.setup_name || "Untitled batch"}</h2><p>{batch.setup_name || "Custom product"} · {batch.design_count} {batch.design_count === 1 ? "design" : "designs"}</p></div><div><small>Last saved {new Date(`${batch.updated_at.replace(" ","T")}Z`).toLocaleString()}</small><span className="batch-history-actions"><button onClick={() => resume(batch.id)}>{batch.status === "complete" ? "Open results" : "Resume batch"} →</button><button className="remove-batch" onClick={()=>void remove(batch)}>Remove from history</button></span></div></article>)}
