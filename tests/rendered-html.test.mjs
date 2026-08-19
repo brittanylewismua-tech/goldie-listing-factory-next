@@ -183,6 +183,11 @@ test("groups equal-cost Printify variants while preserving individual review and
   assert.match(page, /Lowest estimated profit/);
   assert.match(page, /normalizePricesByCost/);
   assert.match(page, /changeCostGroupPrice/);
+  assert.match(page, /grouped\.set\(variant\.cost/);
+  assert.match(page, /item\.cost===cost/);
+  assert.match(page, /exact same Printify product cost/);
+  assert.match(page, /color, size, material, finish, or other option costs more/);
+  assert.doesNotMatch(page, /Sizes and colors shown below/);
   assert.match(page, /edit one separately/i);
   assert.doesNotMatch(page, /Approve pricing \+ shipping/);
   assert.match(page, /Continue to create drafts/);
@@ -880,7 +885,7 @@ test("keeps pricing simple while using a real Etsy shipping profile and exact te
   assert.match(profiles,/setTimeout\(resolve,250\)/);
   const etsyClient=await readFile(new URL("../app/api/etsy/client.ts",import.meta.url),"utf8");
   assert.match(etsyClient,/response\.status===429/);assert.match(etsyClient,/retry-after/);assert.match(etsyClient,/attempt<5/);
-  assert.match(page,/function variantSize/);assert.match(page,/changeCostGroupPrice/);assert.match(page,/with a \$\$\{\(cost\/100\)\.toFixed\(2\)\} Printify cost/);assert.match(page,/changeIndividualPrice/);
+  assert.match(page,/changeCostGroupPrice/);assert.match(page,/with a \$\$\{\(cost\/100\)\.toFixed\(2\)\} Printify cost/);assert.match(page,/changeIndividualPrice/);
   const recipes=await readFile(new URL("../app/api/product-recipes/route.ts",import.meta.url),"utf8");
   assert.match(recipes,/etsyShippingProfileId/);
 });
