@@ -79,7 +79,7 @@ test("uses individual shop-aware Printify editor buttons", async () => {
     readFile(new URL("../app/api/printify/drafts/route.ts", import.meta.url), "utf8"),
   ]);
   assert.match(page, /Open in Printify to resize or reposition/);
-  assert.match(page, /Clear selections/);
+  assert.match(page, /Clear this listing’s selections/);
   assert.match(page, /openedDrafts/);
   assert.match(page, /window\.open\(draft\.editorUrl/);
   assert.doesNotMatch(page, /printifyTab\.location|\/app\/store\/\$\{draft\.shopId\}/);
@@ -235,10 +235,14 @@ test("stages each finished mockup group for its exact Etsy listing", async () =>
   ]);
   assert.match(mockups, /productId/);
   assert.match(mockups, /stageForEtsy/);
+  assert.match(mockups, /form\.set\("replace","true"\)/);
+  assert.doesNotMatch(mockups, /kind=mockup`,\{method:"DELETE"/);
   assert.match(mockups, /added automatically when this listing publishes/);
   assert.doesNotMatch(mockups, /zipSync/);
   assert.match(images, /etsy-listing-images/);
   assert.match(images, /kind==="size-guide"/);
+  assert.match(images, /existing\.objects\.map\(object=>runtime\(\)\.ARTWORK\.delete\(object\.key\)\)/);
+  assert.match(images, /catch\(error\)\{await Promise\.all\(saved\.map/);
   assert.match(page, /Add one size guide to every Etsy listing/);
   assert.match(page, /printifyImageIndices/);
 });
@@ -1087,7 +1091,7 @@ test("supports whole-number pricing, unclipped profit columns, and optional titl
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
   ]);
   assert.match(page, /Create whole-number pricing/);
-  assert.match(page, /Math\.round\(current\/100\)\*100/);
+  assert.match(page, /Math\.ceil\(current\/100\)\*100/);
   assert.match(page, /Auto Caps \{titleCaps\?"on":"off"\}/);
   assert.match(page, /Titles, tags, and descriptions complete/);
   assert.match(styles, /\.price-group-row,.price-group-row>div\{min-width:0\}/);
@@ -1378,7 +1382,7 @@ test("explains and styles every Printify photo selection action",async()=>{
     readFile(new URL("../app/approved-functional.css",import.meta.url),"utf8"),
   ]);
   assert.match(page,/Remove every selected Printify photo from this listing only/);
-  assert.match(page,/Use these same Printify photos across the entire batch/);
+  assert.match(page,/Choose the same Printify photos across the entire batch/);
   assert.match(page,/Preselect these photos whenever you use this saved product again/);
   assert.match(page,/Applied to every listing/);
   assert.match(page,/Saved for future batches/);
@@ -1430,12 +1434,16 @@ test("requires a photo on every listing and lets sellers set Etsy photo order",a
     readFile(new URL("../app/api/etsy/images/route.ts",import.meta.url),"utf8"),
     readFile(new URL("../app/api/etsy/finish.ts",import.meta.url),"utf8"),
   ]);
-  assert.match(page,/Please add at least one image to every listing before going to the next step/);
-  assert.match(page,/preparedMockupCounts\[item\.id!\]/);
-  assert.match(page,/if\(imageStepError&&\(printifyImageIndices\.length/);
+  assert.match(page,/Add at least one photo to/);
+  assert.match(page,/createdListingsMissingImages\(\)/);
+  assert.match(page,/preparedMockupCounts\[draft\.id\]/);
+  assert.match(page,/if\(imageStepError&&allCreatedListingsHaveImages\(\)\)/);
+  assert.match(page,/At least one image on every listing/);
+  assert.match(page,/Personalization settings/);
   assert.match(organizer,/draggable/);
   assert.match(organizer,/Rearrange listing photos/);
   assert.match(organizer,/onDragEnter/);
+  assert.match(organizer,/orderRef\.current/);
   assert.match(organizer,/Move \$\{photo\.name\} earlier/);
   assert.match(organizer,/Photo order saved in preview/);
   assert.match(images,/order\.json/);
