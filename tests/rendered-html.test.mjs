@@ -1308,3 +1308,12 @@ test("centers the complete images and mockups heading group",async()=>{
   assert.match(styles,/\.post-draft-workspace \.post-draft-heading>div\{[\s\S]*?justify-items:center/);
   assert.match(styles,/\.post-draft-heading \.open-all-button\{[\s\S]*?margin:0 auto!important/);
 });
+
+test("keeps each Printify editing action with its listing details",async()=>{
+  const [page,styles]=await Promise.all([
+    readFile(new URL("../app/page.tsx",import.meta.url),"utf8"),
+    readFile(new URL("../app/approved-functional.css",import.meta.url),"utf8"),
+  ]);
+  assert.match(page,/tag-row[\s\S]*?draft\.editorUrl[\s\S]*?Open in Printify to resize or reposition[\s\S]*?<\/div><\/div>/);
+  assert.match(styles,/div:not\(\.pending-preview\)>\.edit-draft-button\{margin:16px 0 0;align-self:flex-start\}/);
+});

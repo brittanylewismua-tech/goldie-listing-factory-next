@@ -126,8 +126,8 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 }
 .app-shell .draft-card-top>.printify-preview-button,
 .app-shell .draft-card-top>.pending-preview{grid-column:1;grid-row:1/3}
-.app-shell .draft-card-top>div:not(.pending-preview){grid-column:2;grid-row:1;min-width:0}
-.app-shell .draft-card-top>.edit-draft-button{grid-column:2;grid-row:2;justify-self:start;margin:0}
+.app-shell .draft-card-top>div:not(.pending-preview){grid-column:2;grid-row:1;display:flex;min-width:0;flex-direction:column;align-items:flex-start}
+.app-shell .draft-card-top>div:not(.pending-preview)>.edit-draft-button{margin:16px 0 0;align-self:flex-start}
 .app-shell .draft-card h3{max-width:none;overflow-wrap:anywhere;line-height:1.3}
 .app-shell .draft-card-top .tag-row{
   display:flex;
@@ -146,8 +146,7 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
   .app-shell .draft-card-top{grid-template-columns:1fr!important}
   .app-shell .draft-card-top>.printify-preview-button,
   .app-shell .draft-card-top>.pending-preview,
-  .app-shell .draft-card-top>div:not(.pending-preview),
-  .app-shell .draft-card-top>.edit-draft-button{grid-column:1;grid-row:auto}
+  .app-shell .draft-card-top>div:not(.pending-preview){grid-column:1;grid-row:auto}
 }
 
 /* Steps 2 and 3 use object icons, never transfer arrows. The product icon is
