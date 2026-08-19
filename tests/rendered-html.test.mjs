@@ -1356,3 +1356,26 @@ test("makes lifestyle mockup actions an explicit create-then-reuse sequence",asy
   assert.match(mockups,/Use this selection for every listing/);
   assert.match(styles,/\.app-shell \.mockup-action-sequence\{display:grid/);
 });
+
+test("creates selected lifestyle mockups concurrently without changing scene order",async()=>{
+  const mockups=await readFile(new URL("../app/integrated-mockups.tsx",import.meta.url),"utf8");
+  assert.match(mockups,/Promise\.all\(chosen\.map/);
+  assert.match(mockups,/completed\.entries\(\)\]\.sort/);
+  assert.doesNotMatch(mockups,/for\(const t of chosen\)/);
+  assert.match(mockups,/A T-shirt scene should not be used for a sweatshirt or hoodie listing/);
+});
+
+test("requires a photo on every listing and lets sellers set Etsy photo order",async()=>{
+  const [page,organizer,images,finish]=await Promise.all([
+    readFile(new URL("../app/page.tsx",import.meta.url),"utf8"),
+    readFile(new URL("../app/listing-photo-order.tsx",import.meta.url),"utf8"),
+    readFile(new URL("../app/api/etsy/images/route.ts",import.meta.url),"utf8"),
+    readFile(new URL("../app/api/etsy/finish.ts",import.meta.url),"utf8"),
+  ]);
+  assert.match(page,/Select at least one Printify photo or create at least one lifestyle mockup for every listing/);
+  assert.match(page,/preparedMockupCounts\[item\.id!\]/);
+  assert.match(organizer,/draggable/);
+  assert.match(organizer,/Lifestyle first · Printify next · size guide last/);
+  assert.match(images,/order\.json/);
+  assert.match(finish,/form\.set\("rank",String\(rank\)\)/);
+});
