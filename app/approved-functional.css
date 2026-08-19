@@ -708,6 +708,16 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 }
 .app-shell .integrated-mockups .generate-inline{margin-top:12px!important}
 .app-shell .integrated-mockups .automatic-reference{clear:both;margin-top:14px}
+.app-shell .mockup-action-sequence{display:grid;gap:12px;margin-top:18px}
+.app-shell .mockup-primary-action,.app-shell .mockup-batch-option{display:grid;grid-template-columns:32px minmax(0,1fr) auto;gap:12px;align-items:center;padding:16px;border:1px solid rgba(139,89,137,.18);border-radius:14px;background:rgba(255,255,255,.58)}
+.app-shell .mockup-primary-action>span,.app-shell .mockup-batch-option>span{width:32px;height:32px;display:grid;place-items:center;border-radius:50%;background:linear-gradient(145deg,#b777b0,#744d75);color:#fff;font-weight:900}
+.app-shell .mockup-primary-action>div,.app-shell .mockup-batch-option>div{display:grid;gap:4px}
+.app-shell .mockup-primary-action b,.app-shell .mockup-batch-option b{color:var(--ink);font-size:13px}
+.app-shell .mockup-primary-action small,.app-shell .mockup-batch-option small{max-width:520px;color:#765f70;font-size:11px;line-height:1.45}
+.app-shell .mockup-primary-action .generate-inline,.app-shell .mockup-batch-option .batch-mockup-button{margin:0!important}
+.app-shell .mockup-batch-option{background:rgba(248,235,247,.48)}
+.app-shell .mockup-batch-option .batch-mockup-button{border:1px solid rgba(112,77,117,.3)!important;background:rgba(255,255,255,.78)!important;color:#5c3656!important;box-shadow:none!important}
+@media(max-width:850px){.app-shell .mockup-primary-action,.app-shell .mockup-batch-option{grid-template-columns:32px 1fr}.app-shell .mockup-primary-action button,.app-shell .mockup-batch-option button{grid-column:1/-1;width:100%!important}}
 .app-shell .post-draft-workspace>.mockup-next{
   display:flex;
   width:min(100%,260px);

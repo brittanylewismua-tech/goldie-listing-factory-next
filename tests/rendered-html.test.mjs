@@ -1344,3 +1344,15 @@ test("shows each saved mockup once with visible controls and a real enlarged pre
   assert.match(styles,/\.managementSetList \.collectionActions \{[\s\S]*?position: static/);
   assert.match(styles,/\.savedMockupPreview \{/);
 });
+
+test("makes lifestyle mockup actions an explicit create-then-reuse sequence",async()=>{
+  const [mockups,styles]=await Promise.all([
+    readFile(new URL("../app/integrated-mockups.tsx",import.meta.url),"utf8"),
+    readFile(new URL("../app/approved-functional.css",import.meta.url),"utf8"),
+  ]);
+  assert.ok(mockups.indexOf('className="generate-inline"')<mockups.indexOf('className="batch-mockup-button"'));
+  assert.match(mockups,/Create mockups for this listing/);
+  assert.match(mockups,/Optional\. This preselects the same mockups on every other listing/);
+  assert.match(mockups,/Use this selection for every listing/);
+  assert.match(styles,/\.app-shell \.mockup-action-sequence\{display:grid/);
+});
