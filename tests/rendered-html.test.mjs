@@ -1378,9 +1378,9 @@ test("acknowledges slow workflow actions immediately and blocks repeat clicks",a
 
 test("centers the complete images and mockups heading group",async()=>{
   const styles=await readFile(new URL("../app/approved-functional.css",import.meta.url),"utf8");
-  assert.match(styles,/\.post-draft-workspace \.post-draft-heading\{[\s\S]*?justify-items:center!important/);
-  assert.match(styles,/\.post-draft-workspace \.post-draft-heading>div\{[\s\S]*?justify-items:center/);
-  assert.match(styles,/\.post-draft-heading \.open-all-button\{[\s\S]*?margin:0 auto!important/);
+  assert.match(styles,/\.post-draft-workspace>\.post-draft-heading\{[\s\S]*?grid-template-columns:minmax\(0,1fr\)!important;[\s\S]*?width:100%!important;[\s\S]*?justify-items:center!important/);
+  assert.match(styles,/\.post-draft-workspace>\.post-draft-heading>div\{[\s\S]*?grid-column:1;[\s\S]*?justify-self:stretch!important;[\s\S]*?justify-items:center!important/);
+  assert.match(styles,/\.post-draft-workspace>\.post-draft-heading>\.open-all-button\{[\s\S]*?grid-column:1;[\s\S]*?justify-self:center!important/);
 });
 
 test("keeps each Printify editing action with its listing details",async()=>{
