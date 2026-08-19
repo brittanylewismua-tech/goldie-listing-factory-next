@@ -306,6 +306,10 @@ test("calculates every Printify variant price from its own cost and Etsy fee pro
   const crewneckPrice = recommendedPrice(3100, crewneck);
   assert.ok(estimatedProfit(crewneckPrice, 3100, crewneck) >= 10);
   assert.ok(estimatedProfit(crewneckPrice, 3100, crewneck) < 10.02);
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  assert.match(page, /stillUsingTemplatePrices/);
+  assert.match(page, /Goldie calculated every price from your profit goal, product costs, shipping, and Etsy fees/);
+  assert.match(page, /if\(profile\)recalculate\(pricing,profile\.domesticPrimary\)/);
 });
 
 test("processes a 20-design batch with bounded two-at-a-time concurrency", async () => {
