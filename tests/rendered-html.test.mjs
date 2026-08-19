@@ -713,6 +713,15 @@ test("keeps the owner test page separate from mastermind access", async () => {
   assert.match(access, /brittanylewismua@gmail\.com/);
 });
 
+test("uses the explicitly selected Google or email account before a stale ChatGPT session", async () => {
+  const auth = await readFile(new URL("../app/chatgpt-auth.ts", import.meta.url), "utf8");
+  const supabaseLookup = auth.indexOf("createSupabaseServerClient()");
+  const platformHeaderLookup = auth.indexOf("requestHeaders.get(USER_ID_HEADER)");
+  assert.ok(supabaseLookup >= 0, "Supabase account lookup is present");
+  assert.ok(platformHeaderLookup > supabaseLookup, "The newly selected app account takes precedence over platform headers");
+  assert.match(auth, /userId: `supabase:\$\{user\.id\}`/);
+});
+
 test("revalidates saved Printify tokens instead of showing a false connection", async () => {
   const route = await readFile(new URL("../app/api/printify/route.ts", import.meta.url), "utf8");
   assert.match(route, /await printify<Shop\[\]>\("\/shops\.json", token\)/);

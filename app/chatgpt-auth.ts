@@ -20,6 +20,22 @@ const SIGN_OUT_PATH = "/signout-with-chatgpt";
 const CALLBACK_PATH = "/callback";
 
 export async function getChatGPTUser(): Promise<ChatGPTUser | null> {
+  // A visitor can have both a Sites/ChatGPT identity header and an app-owned
+  // Supabase session in the same browser. The explicit Google/email sign-in is
+  // the account they just chose, so it must win. Otherwise an older ChatGPT
+  // session can silently expose another account's saved products and
+  // connections after OAuth returns.
+  try {
+    const supabase = await createSupabaseServerClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user?.email) {
+      const fullName = typeof user.user_metadata?.full_name === "string" ? user.user_metadata.full_name : null;
+      return { userId: `supabase:${user.id}`, displayName: fullName ?? user.email, email: user.email, fullName };
+    }
+  } catch {
+    // Fall through to the platform identity when no app session is available.
+  }
+
   const requestHeaders = await headers();
   const userId = requestHeaders.get(USER_ID_HEADER);
   const email = requestHeaders.get(USER_EMAIL_HEADER);
@@ -30,15 +46,7 @@ export async function getChatGPTUser(): Promise<ChatGPTUser | null> {
       : null;
     return { userId, displayName: fullName ?? email, email, fullName };
   }
-  try {
-    const supabase = await createSupabaseServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user?.email) return null;
-    const fullName = typeof user.user_metadata?.full_name === "string" ? user.user_metadata.full_name : null;
-    return { userId: `supabase:${user.id}`, displayName: fullName ?? user.email, email: user.email, fullName };
-  } catch {
-    return null;
-  }
+  return null;
 }
 
 export async function requireChatGPTUser(
