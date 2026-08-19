@@ -509,6 +509,32 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .app-shell .edit-draft-button i,
 .app-shell .edit-draft-button.opened i{background:#a765a0!important;box-shadow:0 0 0 3px rgba(167,101,160,.13)!important}
 
+.app-shell .printify-image-picker>.image-pref-actions{
+  display:grid!important;
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  gap:10px!important;
+  margin-top:14px;
+}
+.app-shell .printify-image-picker>.image-pref-actions button{
+  display:grid;
+  gap:4px;
+  min-height:82px;
+  padding:13px 14px;
+  border:1px solid rgba(111,65,99,.2);
+  border-radius:13px;
+  background:rgba(255,255,255,.66);
+  color:#56314c;
+  font:inherit;
+  text-align:left;
+  cursor:pointer;
+}
+.app-shell .printify-image-picker>.image-pref-actions button:hover{border-color:rgba(145,82,133,.46);background:rgba(255,247,252,.88);transform:translateY(-1px)}
+.app-shell .printify-image-picker>.image-pref-actions button:focus-visible{outline:3px solid rgba(194,130,187,.35);outline-offset:2px}
+.app-shell .printify-image-picker>.image-pref-actions button.clear{border-color:rgba(151,77,88,.22);color:#7e3440}
+.app-shell .printify-image-picker>.image-pref-actions b{font-size:12px;line-height:1.25}
+.app-shell .printify-image-picker>.image-pref-actions small{color:rgba(74,42,62,.66);font-size:10px!important;line-height:1.45!important}
+@media(max-width:900px){.app-shell .printify-image-picker>.image-pref-actions{grid-template-columns:1fr!important}}
+
 /* Exact approved shell measurements from goldie-real.html. */
 @media(min-width:821px){
   html,body{background:#e8b1c8 url('/goldie-background-reference.jpg') center/100% 100% fixed no-repeat}

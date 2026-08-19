@@ -79,7 +79,7 @@ test("uses individual shop-aware Printify editor buttons", async () => {
     readFile(new URL("../app/api/printify/drafts/route.ts", import.meta.url), "utf8"),
   ]);
   assert.match(page, /Open in Printify to resize or reposition/);
-  assert.match(page, /Deselect all for this listing/);
+  assert.match(page, /Clear selections/);
   assert.match(page, /openedDrafts/);
   assert.match(page, /window\.open\(draft\.editorUrl/);
   assert.doesNotMatch(page, /printifyTab\.location|\/app\/store\/\$\{draft\.shopId\}/);
@@ -1316,4 +1316,16 @@ test("keeps each Printify editing action with its listing details",async()=>{
   ]);
   assert.match(page,/tag-row[\s\S]*?draft\.editorUrl[\s\S]*?Open in Printify to resize or reposition[\s\S]*?<\/div><\/div>/);
   assert.match(styles,/div:not\(\.pending-preview\)>\.edit-draft-button\{margin:16px 0 0;align-self:flex-start\}/);
+});
+
+test("explains and styles every Printify photo selection action",async()=>{
+  const [page,styles]=await Promise.all([
+    readFile(new URL("../app/page.tsx",import.meta.url),"utf8"),
+    readFile(new URL("../app/approved-functional.css",import.meta.url),"utf8"),
+  ]);
+  assert.match(page,/Remove every selected Printify photo from this listing only/);
+  assert.match(page,/Use these same Printify photos across the entire batch/);
+  assert.match(page,/Preselect these photos whenever you use this saved product again/);
+  assert.match(styles,/printify-image-picker>\.image-pref-actions\{[\s\S]*?grid-template-columns:repeat\(3,minmax\(0,1fr\)\)!important/);
+  assert.match(styles,/image-pref-actions button\{[\s\S]*?cursor:pointer/);
 });
