@@ -260,6 +260,10 @@ test("guides sellers through the complete resumable nine-step workflow",async()=
   assert.match(batches,/Continue where you left off/);assert.match(batches,/Resume batch/);assert.match(route,/listing_batches/);assert.match(cache,/indexedDB/);
   assert.match(styles,/post-draft-workspace \.open-all-button\{width:auto/);
   assert.match(page,/saveAllEtsyDetails/);assert.match(page,/finishPhase/);
+  assert.match(page,/etsyPreparationActive\.current/);
+  assert.match(page,/etsySaveActive\.current/);
+  assert.match(page,/url\.searchParams\.set\("phase","mockups"\)/);
+  assert.match(page,/version!==etsyPreparationVersion\.current/);
 });
 
 test("imports Printify product facts and automatically prepares product-specific Etsy details",async()=>{

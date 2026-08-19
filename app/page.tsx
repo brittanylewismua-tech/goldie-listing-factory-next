@@ -204,6 +204,9 @@ export default function Home() {
   const resumeAttempted=useRef(false);
   const draftRunActive=useRef(false);
   const templateLoadVersion=useRef(0);
+  const etsyPreparationVersion=useRef(0);
+  const etsyPreparationActive=useRef(false);
+  const etsySaveActive=useRef(false);
   const [connected, setConnected] = useState(false);
   const [token, setToken] = useState("");
   const [showTokenForm, setShowTokenForm] = useState(false);
@@ -659,8 +662,30 @@ export default function Home() {
   async function prepareOne(design:DesignFile){try{const response=await fetch("/api/listing-intelligence",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({image:await safeImagePreviewDataUrl(design.file,1200,false),product:{blueprintTitle:templateDetails?.blueprintTitle,brand:templateDetails?.brand,model:templateDetails?.model,description},title:design.title,tags:design.tags})}),payload=await response.json() as {details?:EtsyDetails;error?:string};if(!response.ok||!payload.details)throw new Error(payload.error||"Etsy details could not be prepared.");const initial={...payload.details,blurb:design.blurb?.trim()||payload.details.blurb},details=await resolveEtsyOptions(initial);const updatedDesign={...design,blurb:details.blurb};await syncListingFields(updatedDesign,details);updateDesign(design.id,{blurb:details.blurb,etsy:details,etsyError:""});return details}catch(error){updateDesign(design.id,{etsyError:error instanceof Error?error.message:"Etsy details could not be prepared."});return null}}
   async function retryOneEtsyListing(design:DesignFile){if(preparingListingId)return;setPreparingListingId(design.id);try{await prepareOne(design)}finally{setPreparingListingId("")}}
   async function changeEtsyCategory(design:DesignFile,taxonomyId:number){if(!design.etsy)return;try{const details=await resolveEtsyOptions(design.etsy,taxonomyId);updateDesign(design.id,{etsy:details,etsyError:""})}catch(error){updateDesign(design.id,{etsyError:error instanceof Error?error.message:"Etsy options could not be loaded."})}}
-  async function continueToEtsyDetails(){const missing:string[]=[];if(files.some(file=>!file.title.trim()))missing.push("Every listing needs a title.");if(files.some(file=>!file.tags.length))missing.push("Every listing needs at least one tag.");if(!description.trim())missing.push("Add the reusable product description.");if(missing.length)return void stopWith("Finish all sections first.",missing);setPreparingEtsy(true);try{let failed=0;await runBounded(files,2,prepareOne,result=>{if(!result)failed+=1});if(failed)return void stopWith("Goldie could not complete every Etsy listing.",[`${failed} ${failed===1?"listing needs":"listings need"} another attempt. Use the retry button beside each listing.`]);setFinishPhase("etsy");window.scrollTo({top:0,behavior:"smooth"})}finally{setPreparingEtsy(false)}}
-  async function saveAllEtsyDetails(){const unfinished=files.filter(file=>!file.etsy);if(unfinished.length)return void stopWith("Finish every Etsy listing first.",unfinished.map(file=>`${file.name} still needs Etsy details.`));const invalid=files.map(file=>({file,problem:personalizationProblem(file.etsy)})).filter(item=>item.problem);if(invalid.length)return void stopWith("Finish the personalization options first.",invalid.map(item=>`${item.file.name}: ${item.problem}`));setSavingEtsyDetails(true);try{let failed=0;await runBounded(files,2,async design=>{try{await syncListingFields(design,design.etsy!);return true}catch(error){updateDesign(design.id,{etsyError:error instanceof Error?error.message:"Etsy details could not be saved."});return false}},saved=>{if(!saved)failed+=1});if(failed)return void stopWith("Some Etsy details were not saved.",[`${failed} ${failed===1?"listing needs":"listings need"} another attempt.`]);setFinishPhase("mockups");window.scrollTo({top:0,behavior:"smooth"})}finally{setSavingEtsyDetails(false)}}
+  async function continueToEtsyDetails(){
+    if(etsyPreparationActive.current)return;
+    const missing:string[]=[];
+    if(files.some(file=>!file.title.trim()))missing.push("Every listing needs a title.");
+    if(files.some(file=>!file.tags.length))missing.push("Every listing needs at least one tag.");
+    if(!description.trim())missing.push("Add the reusable product description.");
+    if(missing.length)return void stopWith("Finish all sections first.",missing);
+    etsyPreparationActive.current=true;
+    const version=++etsyPreparationVersion.current;
+    setPreparingEtsy(true);
+    try{
+      let failed=0;
+      await runBounded(files,2,prepareOne,result=>{if(!result)failed+=1});
+      if(version!==etsyPreparationVersion.current)return;
+      if(failed)return void stopWith("Goldie could not complete every Etsy listing.",[`${failed} ${failed===1?"listing needs":"listings need"} another attempt. Use the retry button beside each listing.`]);
+      setFinishPhase("etsy");
+      const url=new URL(window.location.href);url.searchParams.set("step","finish");url.searchParams.set("phase","etsy");window.history.replaceState({},"",url);
+      window.scrollTo({top:0,behavior:"smooth"});
+    }finally{
+      if(version===etsyPreparationVersion.current)setPreparingEtsy(false);
+      etsyPreparationActive.current=false;
+    }
+  }
+  async function saveAllEtsyDetails(){if(etsySaveActive.current)return;const unfinished=files.filter(file=>!file.etsy);if(unfinished.length)return void stopWith("Finish every Etsy listing first.",unfinished.map(file=>`${file.name} still needs Etsy details.`));const invalid=files.map(file=>({file,problem:personalizationProblem(file.etsy)})).filter(item=>item.problem);if(invalid.length)return void stopWith("Finish the personalization options first.",invalid.map(item=>`${item.file.name}: ${item.problem}`));etsySaveActive.current=true;++etsyPreparationVersion.current;setPreparingEtsy(false);setSavingEtsyDetails(true);try{let failed=0;await runBounded(files,2,async design=>{try{await syncListingFields(design,design.etsy!);return true}catch(error){updateDesign(design.id,{etsyError:error instanceof Error?error.message:"Etsy details could not be saved."});return false}},saved=>{if(!saved)failed+=1});if(failed)return void stopWith("Some Etsy details were not saved.",[`${failed} ${failed===1?"listing needs":"listings need"} another attempt.`]);setFinishPhase("mockups");const url=new URL(window.location.href);url.searchParams.set("step","finish");url.searchParams.set("phase","mockups");window.history.replaceState({},"",url);window.scrollTo({top:0,behavior:"smooth"})}finally{etsySaveActive.current=false;setSavingEtsyDetails(false)}}
   function createDrafts() {const issues=requiredForStep("review");if(issues.length)return void stopWith("This batch isn’t ready to create.",issues);if(!etsyShippingProfileId)return void stopWith("Choose shipping before creating drafts.",["Choose the Etsy shipping profile Goldie should apply to every listing."]);if(!pricingApproved)return void stopWith("Finish shipping first.",["Choose a shipping profile, then save or discard any custom shipping profile changes."]);setPreflightOpen(true);}
   function confirmDrafts() { setPreflightOpen(false); void runDrafts(files); }
 
