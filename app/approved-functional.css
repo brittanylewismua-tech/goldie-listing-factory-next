@@ -1189,3 +1189,14 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .app-shell .step-success-banner>div{display:grid;gap:2px;min-width:0}
 .app-shell .step-success-banner b{font-size:12px;line-height:1.25}
 .app-shell .step-success-banner small{color:#47745a;font-size:10px;line-height:1.4}
+
+/* Keep the Step 6 batch count readable as one compact badge. */
+.app-shell .finish-mode .editor-heading>span{
+  display:inline-flex!important;
+  flex:0 0 auto!important;
+  align-items:center;
+  justify-content:center;
+  min-width:max-content!important;
+  margin-left:16px;
+  white-space:nowrap!important;
+}

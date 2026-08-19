@@ -1044,6 +1044,13 @@ test("moves completed upload feedback above the next step card", async () => {
   assert.match(styles, /border:1px solid rgba\(47,122,78,\.34\)/);
 });
 
+test("keeps the Step 6 listing count on one line", async () => {
+  const styles = await readFile(new URL("../app/approved-functional.css", import.meta.url), "utf8");
+  assert.match(styles, /\.app-shell \.finish-mode \.editor-heading>span\{/);
+  assert.match(styles, /white-space:nowrap!important/);
+  assert.match(styles, /min-width:max-content!important/);
+});
+
 test("shows every public plan on Usage and Billing with direct plan controls", async () => {
   const [page, styles] = await Promise.all([
     readFile(new URL("../app/usage/page.tsx", import.meta.url), "utf8"),
