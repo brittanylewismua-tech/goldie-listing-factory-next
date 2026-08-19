@@ -172,7 +172,7 @@ test("unifies saved products, editing, pricing, and mockups without the old fact
   assert.match(drafts, /printifyImages/);
 });
 
-test("requires explicit review of every Printify variant and starts new products blank", async () => {
+test("groups equal-cost Printify variants while preserving individual review and starts new products blank", async () => {
   const [page, recipes, printify] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/factory-tools.tsx", import.meta.url), "utf8"),
@@ -180,7 +180,10 @@ test("requires explicit review of every Printify variant and starts new products
   ]);
   assert.match(page, /Review item prices and shipping/);
   assert.match(page, /variant\.templatePrice/);
-  assert.match(page, /Your estimated profit/);
+  assert.match(page, /Lowest estimated profit/);
+  assert.match(page, /normalizePricesByCost/);
+  assert.match(page, /changeCostGroupPrice/);
+  assert.match(page, /edit one separately/i);
   assert.doesNotMatch(page, /Approve pricing \+ shipping/);
   assert.match(page, /Continue to create drafts/);
   assert.match(page, /onApprovalChange\(Boolean\(selectedProfile&&!customDirty\)\)/);
@@ -836,8 +839,8 @@ test("keeps pricing simple while using a real Etsy shipping profile and exact te
   assert.match(page,/Save new shipping profile/);
   assert.match(page,/1\. Item prices/);
   assert.match(page,/Printify product cost/);
-  assert.match(page,/className="printify-product-cost"/);
-  assert.match(page,/Product only/);
+  assert.match(page,/price-group-list/);
+  assert.match(page,/Printify cost/);
   assert.match(page,/2\. Shipping/);
   assert.doesNotMatch(page,/Update prices/);
   assert.match(page,/Prices update automatically/);
@@ -877,7 +880,7 @@ test("keeps pricing simple while using a real Etsy shipping profile and exact te
   assert.match(profiles,/setTimeout\(resolve,250\)/);
   const etsyClient=await readFile(new URL("../app/api/etsy/client.ts",import.meta.url),"utf8");
   assert.match(etsyClient,/response\.status===429/);assert.match(etsyClient,/retry-after/);assert.match(etsyClient,/attempt<5/);
-  assert.match(page,/function variantSize/);assert.match(page,/changeVariantPrice/);assert.match(page,/applied to all \$\{matching\.length\} \$\{size\} color variants/);
+  assert.match(page,/function variantSize/);assert.match(page,/changeCostGroupPrice/);assert.match(page,/with a \$\$\{\(cost\/100\)\.toFixed\(2\)\} Printify cost/);assert.match(page,/changeIndividualPrice/);
   const recipes=await readFile(new URL("../app/api/product-recipes/route.ts",import.meta.url),"utf8");
   assert.match(recipes,/etsyShippingProfileId/);
 });
