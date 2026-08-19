@@ -153,7 +153,8 @@ test("unifies saved products, editing, pricing, and mockups without the old fact
   assert.match(mockups, /Create .*mockups/);
   assert.match(drafts, /approved>=Number\(cost\?\?price\)/);
   assert.match(drafts, /finalPrice/);
-  assert.match(drafts, /template\.shippingByVariant\?\.\[id\]/);
+  assert.doesNotMatch(drafts, /template\.shippingByVariant\?\.\[id\]/);
+  assert.match(page, /Buyer-paid shipping is handled separately/);
   assert.match(drafts, /printifyImages/);
 });
 
@@ -711,10 +712,10 @@ test("keeps the owner test page separate from mastermind access", async () => {
   assert.match(access, /crypto\.subtle\.digest/);
   assert.doesNotMatch(access, /GOLDIE-WOLF/);
   assert.match(page, /getChatGPTUser\(\)/);
-  assert.match(page, /accountSignInPath\("\/mastermind"\)/);
+  assert.match(page, /accountSignInPath\("\/mastermind\?stage=code"\)/);
   assert.match(page, /20 listings and 20 AI lifestyle mockups/);
   assert.match(page, /BetaCountdown/);
-  assert.match(page, /preview === "welcome"/);
+  assert.match(page, /params\?\.stage !== "code"/);
   assert.match(page, /<ListingFactory \/>/);
   assert.match(redeem, /INSERT INTO mastermind_access/);
   assert.match(admin, /DELETE FROM printify_connections/);
@@ -1383,6 +1384,17 @@ test("centers the complete images and mockups heading group",async()=>{
   assert.match(styles,/\.post-draft-workspace>\.post-draft-heading>\.open-all-button\{[\s\S]*?grid-column:1;[\s\S]*?justify-self:center!important/);
 });
 
+test("renders final publishing readiness with the defined personalization validator",async()=>{
+  const page=await readFile(new URL("../app/page.tsx",import.meta.url),"utf8");
+  assert.match(page,/files\.every\(file=>!personalizationProblem\(file\.etsy\)\)/);
+  assert.doesNotMatch(page,/personalizationIssue\(/);
+  assert.match(page,/map\(draft=>draft\.title\|\|draft\.name\)/);
+  assert.doesNotMatch(page,/draft\.fileName/);
+  assert.match(page,/async function selectRecipe\(recipe:Recipe\):Promise<TemplateDetails\|null>/);
+  assert.doesNotMatch(page,/return Boolean\(await loadTemplateUrl/);
+  assert.match(page,/if\(!localPreview\)await runBounded\(files,2/);
+});
+
 test("keeps each Printify editing action with its listing details",async()=>{
   const [page,styles]=await Promise.all([
     readFile(new URL("../app/page.tsx",import.meta.url),"utf8"),
@@ -1437,7 +1449,7 @@ test("keeps lifestyle mockup creation specific to each listing",async()=>{
 
 test("creates selected lifestyle mockups concurrently without changing scene order",async()=>{
   const mockups=await readFile(new URL("../app/integrated-mockups.tsx",import.meta.url),"utf8");
-  assert.match(mockups,/Promise\.all\(chosen\.map/);
+  assert.match(mockups,/Promise\.allSettled\(chosen\.map/);
   assert.match(mockups,/completed\.entries\(\)\]\.sort/);
   assert.doesNotMatch(mockups,/for\(const t of chosen\)/);
   assert.match(mockups,/A T-shirt scene should not be used for a sweatshirt or hoodie listing/);
