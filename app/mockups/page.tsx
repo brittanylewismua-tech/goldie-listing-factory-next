@@ -4,6 +4,7 @@ import { ChangeEvent, DragEvent, useEffect, useMemo, useRef, useState } from "re
 import { zipSync } from "fflate";
 import "./mockups.css";
 import "./management.css";
+import GoldieWordmark from "../goldie-wordmark";
 
 type Point = [number, number];
 type SurfaceKind = "rigid-flat" | "apparel" | "soft-goods" | "curved" | "irregular";
@@ -207,7 +208,7 @@ export default function Home() {
   const addMockupsManaged=async(e:ChangeEvent<HTMLInputElement>)=>{const count=e.target.files?.length||0;if(!count)return;setLibraryBusy(true);setLibraryProgress(0);setLibraryTotal(count);try{const theme=themeName.trim()||"My mockup set",existing=library.filter(item=>item.custom&&item.theme===theme).length;if(existing>=MAX_MOCKUPS_PER_SET){e.target.value="";setGenerationError("This mockup set already contains 50 mockups. Create another themed set to add more.");return}if(count>MAX_MOCKUPS_PER_SET-existing){e.target.value="";setGenerationError(`Choose no more than ${MAX_MOCKUPS_PER_SET-existing} additional mockups for this set.`);return}await addMockups(e);setShowAddSet(false)}finally{setLibraryBusy(false);setLibraryProgress(0);setLibraryTotal(0)}};
 
   return <main className="management-page mockupFactory managementOnly">
-    <nav className="management-nav" aria-label="Goldie tools"><a href="/listing-factory">Listing Factory</a><a href="/batches">Batch History</a><a href="/keywords">Keyword Banks</a><a className="active" href="/mockups">Mockup Sets</a><a href="/usage">Usage + Plan</a></nav>
+    <nav className="management-nav" aria-label="Goldie tools"><GoldieWordmark/><a href="/listing-factory">Listing Factory</a><a href="/batches">Batch History</a><a href="/keywords">Keyword Banks</a><a className="active" href="/mockups">Mockup Sets</a><a href="/usage">Usage + Plan</a></nav>
     <header className="mockupHero"><p className="mockupEyebrow">YOUR SAVED MOCKUP LIBRARY</p><h1>Manage your mockup sets.</h1><p className="lede">Add and organize blank mockups here. You can choose from these sets when you create listing images in the Listing Factory.</p></header>
     <section className="mockupWorkspace"><div className="mockupStep managementLibrary"><div className="managementLibraryHead"><div><p className="mockupEyebrow">SAVED SETS</p><h2>{library.length?"Your mockup sets":"Create your first mockup set"}</h2><p>Each set can hold up to 50 blank mockups.</p></div><button className="newSetButton" onClick={()=>setShowAddSet(true)}>＋ Add mockup set</button></div>
       {generationError&&<p className="smartError" role="alert"><b>Goldie couldn’t complete that change.</b><span>{generationError}</span></p>}

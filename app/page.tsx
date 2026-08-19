@@ -19,6 +19,7 @@ import { ActionReceipt, GoldieInsight, OutcomeReceipt, WorkflowMomentum, type Ba
 import { GoldieCommandBar, ReturningCommandCenter, type CommandCenterData } from "./returning-command-center";
 import FinalListingReview from "./final-listing-review";
 import ContextHelp from "./context-help";
+import GoldieWordmark from "./goldie-wordmark";
 
 type VisibleBounds={left:number;top:number;right:number;bottom:number};
 type EtsyCategoryOption={id:number;path:string};
@@ -711,7 +712,7 @@ export default function Home() {
       </section>
       <header className="topbar">
         <div className="brand-lockup">
-          <div className="approved-brand" aria-label="Goldie Listing Factory"><div className="approved-wm">Gold<span className="approved-i">ı<span>✦</span></span>e</div><div className="approved-sub">Listing Factory</div></div>
+          <GoldieWordmark className="approved-brand" />
         </div>
         <div className="top-actions">
           <nav className="top-nav" aria-label="Goldie navigation">
