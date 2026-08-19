@@ -699,7 +699,7 @@ export default function Home() {
         </div>
         <div className="top-actions">
           <nav className="top-nav" aria-label="Goldie navigation">
-            <a className="active" href="/" onClick={event=>guardNavigation(event,"/")}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9l1-4h16l1 4M3 9h18M3 9v10a1 1 0 001 1h16a1 1 0 001-1V9M9 13h6"/></svg>Listing Factory</a>
+            <a className="active" href="/listing-factory" onClick={event=>guardNavigation(event,"/listing-factory")}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9l1-4h16l1 4M3 9h18M3 9v10a1 1 0 001 1h16a1 1 0 001-1V9M9 13h6"/></svg>Listing Factory</a>
             <a href="/batches" onClick={event=>guardNavigation(event,"/batches")}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 106 5.3L3 8"/><path d="M12 7v5l3 2"/></svg>Batch History</a>
             <a href="/keywords" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5a3 3 0 00-3 3 3 3 0 00-2 5.2A3 3 0 009 19a3 3 0 006 0 3 3 0 002-5.8A3 3 0 0015 8a3 3 0 00-3-3z"/><path d="M12 5v14"/></svg>Keyword Banks</a>
             <a href="/mockups" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M21 16l-5-5-6 6"/></svg>Mockup Sets</a>
@@ -708,7 +708,7 @@ export default function Home() {
           <GoldieCommandBar data={commandCenterData} onUseProduct={recipe=>{void useRecipe(recipe).then(selected=>{if(selected)goToStep("setup")})}} onStartBlank={()=>{clearCurrentBatch(true);goToStep("setup")}}/>
           {owner && <a className="diagnostics-link" href="/mastermind-admin" aria-label="Open Goldie Diagnostics" title="Goldie Diagnostics">★</a>}
           <a className="usage-link" href="/usage" onClick={event=>guardNavigation(event,"/usage")}>Usage + plan</a>
-          {signedIn!==null&&(localPreview&&!signedIn?<span className="account-link" title="Account sign-in is available on the published Listing Factory site.">Preview mode</span>:<a className="account-link" href={signedIn?"/account/sign-out?return_to=%2Fmastermind":"/account/sign-in?return_to=%2Fmastermind"}>{signedIn?"Sign out":"Sign in"}</a>)}
+          {signedIn!==null&&(localPreview&&!signedIn?<span className="account-link" title="Account sign-in is available on the published Listing Factory site.">Preview mode</span>:<a className="account-link" href={signedIn?"/account/sign-out?return_to=%2Flisting-factory":"/account/sign-in?return_to=%2Flisting-factory"}>{signedIn?"Sign out":"Sign in"}</a>)}
         </div>
         <div className="approved-sidebar-footer"><a className="approved-usage" href="/usage"><b>Usage</b><span>{sidebarUsage.used} / {sidebarUsage.limit} listings</span><div className="approved-usage-track" aria-hidden="true"><i style={{width:`${Math.min(100,sidebarUsage.used/sidebarUsage.limit*100)}%`}} /></div></a><div className="approved-powered"><span>Powered by</span><b>Gold<span className="approved-footer-i">ı<i>✦</i></span>e AI</b></div><small>© 2026 Be A Wolf Biz</small><p className="etsy-api-disclosure">The term &apos;Etsy&apos; is a trademark of Etsy, Inc. This application uses the Etsy API but is not endorsed or certified by Etsy, Inc.</p></div>
       </header>
