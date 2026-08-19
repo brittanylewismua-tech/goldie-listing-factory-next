@@ -547,6 +547,7 @@ test("makes keyword bank saving unmistakable and prevents accidental duplicates"
   ]);
   assert.doesNotMatch(page,/goldie-wordmark\.webp/);assert.match(page,/className="management-nav"/);assert.match(page,/<a href=\{returnHref\}>Listing Factory<\/a>/);assert.match(page,/save-toast/);assert.doesNotMatch(page,/return-to-work/);
   assert.match(page,/goldie-active-batch/);assert.match(page,/Save changes/);assert.match(page,/Create another bank/);
+  assert.match(page,/if\(editingId\)/);assert.match(page,/setName\(""\)/);assert.match(page,/setRaw\(""\)/);
   assert.match(route,/already exists\. Open that bank to update it instead/);
   assert.match(home,/href="\/keywords" target="_blank"/);assert.match(home,/href="\/mockups" target="_blank"/);
 });

@@ -14,14 +14,23 @@ export default function KeywordBanks() {
   const words=useMemo(()=>phrasesFromErank(raw.replace(/;/g,"\n")),[raw]);
 
   async function save(){
+    const editingId=savedId;
+    const savedName=name.trim();
+    const savedWords=[...words];
     setSaving(true);
-    const response=await fetch("/api/keyword-lists",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:savedId||undefined,name,keywords:words})});
+    const response=await fetch("/api/keyword-lists",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:editingId||undefined,name:savedName,keywords:savedWords})});
     const payload=await response.json() as {id?:string;error?:string};
     setSaving(false);
     if(!response.ok){setNotice({kind:"error",title:"Keyword bank not saved",detail:payload.error||"Please try again."});return}
-    setSavedId(payload.id||savedId);
-    setNotice({kind:"success",title:`“${name.trim()}” is saved`,detail:`${words.length} keyword ${words.length===1?"phrase":"phrases"} are ready to use in Listing Factory.`});
-    void reload();
+    setNotice({kind:"success",title:editingId?`“${savedName}” was updated`:`“${savedName}” was created`,detail:`${savedWords.length} keyword ${savedWords.length===1?"phrase":"phrases"} are ready to use in Listing Factory.`});
+    await reload();
+    if(editingId){
+      setSavedId(payload.id||editingId);
+    }else{
+      setName("");
+      setRaw("");
+      setSavedId("");
+    }
   }
   function startAnother(){setName("");setRaw("");setSavedId("");setNotice(null)}
   async function remove(list:List){if(!window.confirm(`Delete “${list.name}”?`))return;await fetch("/api/keyword-lists",{method:"DELETE",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:list.id})});if(savedId===list.id)startAnother();void reload()}
