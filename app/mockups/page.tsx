@@ -10,13 +10,7 @@ type SurfaceKind = "rigid-flat" | "apparel" | "soft-goods" | "curved" | "irregul
 type Template = { id: string; name: string; theme: string; sourceTheme?: string; src: string; corners: [Point, Point, Point, Point]; normalized?: boolean; custom?: boolean; foregroundPrompt?: string; surfaceKind?: SurfaceKind };
 type Rendered = { name: string; url: string; template: string };
 
-const templates: Template[] = [
-  { id:"pink-1",theme:"Pink Dorm",sourceTheme:"Pink Dorm",name:"Leaning frame",src:"/mockups/pink-dorm-01-leaning-frame.png",corners:[[230,382],[810,328],[798,1321],[197,1254]] },
-  { id:"pink-2",theme:"Pink Dorm",sourceTheme:"Pink Dorm",name:"Hanging wall art",src:"/mockups/pink-dorm-02-hanging-poster.png",corners:[[546,105],[1065,79],[1065,929],[546,896]],foregroundPrompt:"woman" },
-  { id:"pink-3",theme:"Pink Dorm",sourceTheme:"Pink Dorm",name:"Maximalist bedroom",src:"/mockups/pink-dorm-03-maximalist-bed.png",corners:[[305,101],[878,125],[879,985],[305,988]] },
-  { id:"pink-4",theme:"Pink Dorm",sourceTheme:"Pink Dorm",name:"Chair and plants",src:"/mockups/pink-dorm-04-chair-and-plants.png",corners:[[346,104],[870,123],[868,930],[346,942]] },
-  { id:"pink-5",theme:"Pink Dorm",sourceTheme:"Pink Dorm",name:"Bed and plants",src:"/mockups/pink-dorm-05-bed-and-plants.png",corners:[[462,150],[868,150],[868,699],[462,699]] },
-];
+const templates: Template[] = [];
 
 const SURFACE_LABELS: Record<SurfaceKind,string> = {
   "rigid-flat":"Poster, canvas, framed art, card or sticker",
