@@ -1081,12 +1081,16 @@ test("supports Etsy's current multi-question personalization workflow", async ()
   assert.match(page, /PersonalizationEditor/);
   assert.match(page, /Text answer/);
   assert.match(page, /Dropdown choices/);
+  assert.match(page, /Etsy allows up to 30 choices, with 20 characters per choice/);
+  assert.match(page, /slice\(0,30\)/);
   assert.match(page, /File upload/);
   assert.match(page, /questions\.length<5/);
   assert.match(page, /personalizationProblem/);
   assert.match(finish, /supports_multiple_personalization_questions=true/);
   assert.match(finish, /max_allowed_characters/);
   assert.match(finish, /max_allowed_files/);
+  assert.match(finish, /slice\(0,30\)/);
+  assert.match(finish, /label\.trim\(\)\.slice\(0,20\)/);
   assert.match(finish, /method:"DELETE"/);
 });
 

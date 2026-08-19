@@ -26,7 +26,7 @@ async function applyPersonalization(token:string,shopId:number,listingId:number,
   if(!details.personalization.enabled){await etsyFetch(`/shops/${shopId}/listings/${listingId}/personalization`,token,{method:"DELETE"},meter);return}
   const questions=details.personalization.questions.slice(0,5).map(question=>{
     const base={question_text:String(question.question||"Personalization").trim().slice(0,120),question_type:question.type,required:Boolean(question.required)};
-    if(question.type==="dropdown")return{...base,options:(question.options||[]).map(label=>({label:label.trim()})).filter(option=>option.label).slice(0,20)};
+    if(question.type==="dropdown")return{...base,options:(question.options||[]).map(label=>({label:label.trim().slice(0,20)})).filter(option=>option.label).slice(0,30)};
     if(question.type==="unlabeled_upload")return{...base,instructions:String(question.instructions||"").trim().slice(0,120),max_allowed_files:Math.max(1,Math.min(10,Number(question.maxFiles)||1))};
     return{...base,instructions:String(question.instructions||"").trim().slice(0,120),max_allowed_characters:Math.max(1,Math.min(1024,Number(question.maxCharacters)||256))};
   });
