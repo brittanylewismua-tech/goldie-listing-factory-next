@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 
 export type Pricing = { targetProfit: number; etsyFeePercent: number; fixedFee: number; listingFee: number; shippingCost: number; shippingCharged: number };
-export type Recipe = { id: string; name: string; templateUrl: string; description: string; defaultTitle: string; keywordListId?:string; printifyImageIndices?:number[]; normalizePadding?:boolean;etsyShippingProfileId?:number };
+export type Recipe = { id: string; name: string; templateUrl: string; description: string; defaultTitle: string; keywordListId?:string; printifyImageIndices?:number[]; normalizePadding?:boolean;etsyShippingProfileId?:number;defaultColorIds?:number[] };
 export type ProductBundle = { id:string;name:string;recipeIds:string[] };
 export type KeywordList = { id: string; name: string; keywords: string[] };
 

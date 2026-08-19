@@ -179,7 +179,8 @@ test("groups equal-cost Printify variants while preserving individual review and
   assert.match(page, /onApprovalChange\(Boolean\(selectedProfile&&!customDirty\)\)/);
   assert.match(page, /variantPrices/);
   assert.match(page, /pricingApproved/);
-  assert.match(printify, /variants:enabledVariants\.map/);
+  assert.match(printify, /variants:selectableVariants\.map/);
+  assert.match(printify, /colorOptions:/);
   assert.match(recipes, /onStartNewProduct/);
   assert.match(page, /function startNewProduct/);
   assert.match(page, /clearCurrentBatch\(true\)/);
@@ -894,7 +895,7 @@ test("keeps pricing simple while using a real Etsy shipping profile and exact te
   assert.match(publish,/etsyShippingProfileId/);
   assert.match(drafts,/shipping_template_id:selectedShippingTemplateId/);
   assert.match(drafts,/etsyBuyerShipping/);
-  assert.match(page,/loadTemplateUrl\(recipe\.templateUrl,nextPricing,Number\(recipe\.etsyShippingProfileId\)\|\|0\)/);
+  assert.match(page,/loadTemplateUrl\(recipe\.templateUrl,nextPricing,Number\(recipe\.etsyShippingProfileId\)\|\|0,recipe\.defaultColorIds\|\|\[\]\)/);
   assert.match(page,/PriceField value=\{itemCents\} minimum=\{variant\.cost\/100\}/);
   assert.match(page,/Create a custom shipping profile \(optional\)/);
   assert.match(page,/Name your new shipping profile/);
@@ -1455,4 +1456,24 @@ test("requires a photo on every listing and lets sellers set Etsy photo order",a
   assert.match(organizer,/Photo order saved in preview/);
   assert.match(images,/order\.json/);
   assert.match(finish,/form\.set\("rank",String\(rank\)\)/);
+});
+
+test("chooses exact available Printify colors per batch and remembers optional defaults",async()=>{
+  const [page,printify,drafts,recipes,css]=await Promise.all([
+    readFile(new URL("../app/page.tsx",import.meta.url),"utf8"),
+    readFile(new URL("../app/api/printify/route.ts",import.meta.url),"utf8"),
+    readFile(new URL("../app/api/printify/drafts/route.ts",import.meta.url),"utf8"),
+    readFile(new URL("../app/api/product-recipes/route.ts",import.meta.url),"utf8"),
+    readFile(new URL("../app/globals.css",import.meta.url),"utf8"),
+  ]);
+  assert.match(page,/Choose the colors you want to offer/);
+  assert.match(page,/Choose at least one available color before continuing/);
+  assert.match(page,/Remember these colors for future batches/);
+  assert.match(page,/selectedVariantIds:pricedVariants\.map/);
+  assert.match(printify,/enabledNonColorIds/);
+  assert.match(printify,/availableColorIds/);
+  assert.match(printify,/templateEnabled:Boolean\(variant\.is_enabled\)/);
+  assert.match(drafts,/body\.selectedVariantIds\.includes\(id\)/);
+  assert.match(recipes,/defaultColorIds/);
+  assert.match(css,/\.product-color-selector/);
 });

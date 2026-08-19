@@ -16,6 +16,7 @@ type Product = {
   description?: string;
   external?: { id?: string; shipping_template_id?: string };
   sales_channel_properties?: { free_shipping?: boolean };
+  options?: Array<{ name?: string; type?: string; values?: Array<{ id: number; title?: string; colors?: string[] }> }>;
   variants?: Array<{ id: number; title?: string; options?: number[]; price: number; cost?: number; is_enabled?: boolean }>;
   print_areas?: Array<{
     variant_ids: number[];
@@ -150,6 +151,16 @@ export async function POST(request: Request) {
       }catch{/* A missing, deleted, or foreign profile must not bypass template validation. */}
     }
     const enabledVariants = found.product.variants?.filter((variant) => variant.is_enabled) ?? [];
+    const colorOption=found.product.options?.find(option=>/color|colour/i.test(`${option.type||""} ${option.name||""}`));
+    const colorIds=new Set((colorOption?.values||[]).map(value=>value.id));
+    const templateColorIds=new Set(enabledVariants.flatMap(variant=>(variant.options||[]).filter(id=>colorIds.has(id))));
+    const enabledNonColorIds=new Set(enabledVariants.flatMap(variant=>(variant.options||[]).filter(id=>!colorIds.has(id))));
+    const selectableVariants=(found.product.variants||[]).filter(variant=>{
+      if(!colorIds.size)return Boolean(variant.is_enabled);
+      const nonColors=(variant.options||[]).filter(id=>!colorIds.has(id));
+      return nonColors.every(id=>enabledNonColorIds.has(id));
+    });
+    const availableColorIds=new Set(selectableVariants.flatMap(variant=>(variant.options||[]).filter(id=>colorIds.has(id))));
     const configuredPlacements = found.product.print_areas?.flatMap((area) => area.placeholders ?? []).filter((placeholder) => placeholder.images?.[0]) ?? [];
     const shippingProfileNeedsSelection=!shippingTemplateId&&externalListingId>0;
     const issues:string[]=[];
@@ -210,7 +221,7 @@ export async function POST(request: Request) {
       if(shippingTemplateId)for(const row of saved.results||[]){const pricing=JSON.parse(row.pricing_json||"{}");if(Number(pricing.etsyShippingProfileId)===Number(shippingTemplateId))continue;pricing.etsyShippingProfileId=Number(shippingTemplateId);await db.prepare("UPDATE product_recipes SET pricing_json = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?").bind(JSON.stringify(pricing),row.id,user.userId).run()}
     }catch{/* Recipe repair is best-effort and must never block a valid template. */}
     const placementScale = Math.max(...configuredPlacements.map((placeholder) => Number(placeholder.images?.[0]?.scale || 1)));
-    return NextResponse.json({ product: { id: found.product.id, batchId, title: found.product.title, description:found.product.description??"", blueprintId:found.product.blueprint_id, blueprintTitle:blueprint.title||found.product.title, brand:blueprint.brand||"", model:blueprint.model||"", provider, enabledVariants: enabledVariants.length, variants:enabledVariants.map(variant=>({id:variant.id,title:variant.title||`Variant ${variant.id}`,cost:Number(variant.cost??variant.price),templatePrice:Number(variant.price),shipping:shippingByVariant[variant.id]??standardShipping,options:variant.options||[]})), shop: found.shop.title, standardShipping,shippingCurrency,shippingTemplateId,shippingProfileNeedsSelection,freeShipping:Boolean(found.product.sales_channel_properties?.free_shipping),maxPrintWidth, maxPrintHeight, placementScale } });
+    return NextResponse.json({ product: { id: found.product.id, batchId, title: found.product.title, description:found.product.description??"", blueprintId:found.product.blueprint_id, blueprintTitle:blueprint.title||found.product.title, brand:blueprint.brand||"", model:blueprint.model||"", provider, enabledVariants: enabledVariants.length, colorOptions:(colorOption?.values||[]).map(value=>({id:value.id,title:value.title||`Color ${value.id}`,swatch:value.colors?.[0]||"",available:availableColorIds.has(value.id),templateEnabled:templateColorIds.has(value.id)})), variants:selectableVariants.map(variant=>({id:variant.id,title:variant.title||`Variant ${variant.id}`,cost:Number(variant.cost??variant.price),templatePrice:Number(variant.price),shipping:shippingByVariant[variant.id]??standardShipping,options:variant.options||[],colorId:(variant.options||[]).find(id=>colorIds.has(id))||null,templateEnabled:Boolean(variant.is_enabled)})), shop: found.shop.title, standardShipping,shippingCurrency,shippingTemplateId,shippingProfileNeedsSelection,freeShipping:Boolean(found.product.sales_channel_properties?.free_shipping),maxPrintWidth, maxPrintHeight, placementScale } });
   } catch (error) {
     const status = error instanceof PrintifyApiError && [400, 401, 403, 404, 429].includes(error.status) ? error.status : 500;
     return NextResponse.json({ error: error instanceof Error ? error.message : "Printify could not be reached." }, { status });
