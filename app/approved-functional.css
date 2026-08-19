@@ -1128,3 +1128,34 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 }
 .app-shell .workflow-progress button.active .progress-bubble-label{color:#5b304f}
 .app-shell .workflow-progress button.done .progress-bubble-label{color:#855079}
+
+/* Keep progress controls unmistakably circular and remove legacy card hovers. */
+.app-shell .workflow-progress button,
+.app-shell .workflow-progress button:hover:not(:disabled),
+.app-shell .workflow-progress button.active{
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+}
+.app-shell .workflow-progress button>span:first-of-type{
+  display:grid!important;
+  place-items:center!important;
+  width:34px!important;
+  height:34px!important;
+  border:1px solid rgba(91,48,79,.2)!important;
+  border-radius:50%!important;
+  background:rgba(255,250,253,.72)!important;
+  box-shadow:0 4px 16px rgba(74,42,62,.1)!important;
+}
+.app-shell .workflow-progress button.active>span:first-of-type{
+  border-color:rgba(255,255,255,.92)!important;
+  background:linear-gradient(145deg,#5b304f,#8a4e7b)!important;
+  color:#fff!important;
+  box-shadow:0 0 0 4px rgba(231,174,215,.3),0 0 24px rgba(97,48,87,.36)!important;
+}
+.app-shell .workflow-progress button.done>span:first-of-type{
+  border-color:#dca5d7!important;
+  background:linear-gradient(145deg,#ebbce4,#c88dce)!important;
+  color:#fff!important;
+  box-shadow:0 0 16px rgba(206,132,200,.34)!important;
+}

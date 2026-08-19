@@ -1022,6 +1022,17 @@ test("labels every progress bubble with a short workflow name", async () => {
   assert.match(styles, /\.app-shell \.progress-bubble-label\{/);
 });
 
+test("keeps product context only on product-specific steps and progress controls circular", async () => {
+  const [globalStyles, approvedStyles] = await Promise.all([
+    readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
+    readFile(new URL("../app/approved-functional.css", import.meta.url), "utf8"),
+  ]);
+  assert.doesNotMatch(globalStyles, /\.designs-step\.active-panel \.step-content:before/);
+  assert.match(globalStyles, /margin:0 auto 18px/);
+  assert.match(approvedStyles, /\.workflow-progress button:hover:not\(:disabled\)/);
+  assert.match(approvedStyles, /border-radius:50%!important/);
+});
+
 test("shows every public plan on Usage and Billing with direct plan controls", async () => {
   const [page, styles] = await Promise.all([
     readFile(new URL("../app/usage/page.tsx", import.meta.url), "utf8"),
@@ -1157,7 +1168,7 @@ test("supports simple saved product bundles without complicating the single-prod
   assert.match(ui, /pricing, shipping, description, Etsy details, and images separately/);
   assert.match(styles, /\.bundle-progress/);
   assert.match(styles, /CURRENT PRODUCT ·/);
-  assert.match(styles, /\.designs-step\.active-panel \.step-content:before/);
+  assert.doesNotMatch(styles, /\.designs-step\.active-panel \.step-content:before/);
   assert.match(styles, /\.etsy-details-step\.active-panel \.step-content:before/);
   assert.match(styles, /\.final-review\.active-panel \.step-content:before/);
   assert.match(styles, /\.launch-panel\.active-panel \.launch-top:before/);

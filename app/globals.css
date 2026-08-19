@@ -70,9 +70,7 @@
 .bundle-progress>div b{font-size:18px;line-height:1.15}.bundle-progress>div small{font-size:10px;color:rgba(74,42,62,.72)}.pricing-section-heading h4 span{color:#8b4f7a;font:inherit}
 
 /* Repeat the active product inside every product-specific working card. */
-.app-shell[data-product-selected="true"] .designs-step.active-panel .step-content:before,
 .app-shell[data-product-selected="true"] .etsy-details-step.active-panel .step-content:before,
 .app-shell[data-product-selected="true"] .final-review.active-panel .step-content:before,
 .app-shell[data-product-selected="true"] .launch-panel.active-panel .launch-top:before,
-.app-shell[data-product-selected="true"] .post-draft-heading>div:before{content:"CURRENT PRODUCT · " var(--active-product);display:block;width:max-content;max-width:100%;margin:0 0 14px;padding:8px 13px;overflow:hidden;border:1px solid rgba(108,54,92,.2);border-radius:999px;background:linear-gradient(115deg,rgba(250,213,232,.8),rgba(221,202,250,.76));color:#542b49;font-size:11px;font-weight:850;letter-spacing:.045em;line-height:1.2;text-overflow:ellipsis;text-transform:uppercase;white-space:nowrap}
-.app-shell[data-product-selected="true"] .launch-panel.active-panel .launch-top:before{margin-left:auto;margin-right:auto}
+.app-shell[data-product-selected="true"] .post-draft-heading>div:before{content:"CURRENT PRODUCT · " var(--active-product);display:block;width:max-content;max-width:100%;margin:0 auto 18px;padding:8px 13px;overflow:hidden;border:1px solid rgba(108,54,92,.2);border-radius:999px;background:linear-gradient(115deg,rgba(250,213,232,.8),rgba(221,202,250,.76));color:#542b49;font-size:11px;font-weight:850;letter-spacing:.045em;line-height:1.2;text-overflow:ellipsis;text-transform:uppercase;white-space:nowrap}
