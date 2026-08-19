@@ -1270,6 +1270,26 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
   height:1px!important;
   opacity:0;
 }
+
+/* Verified focus and pricing refinements. */
+.app-shell .pricing-heading-actions{display:flex;align-items:flex-end;justify-content:flex-end;gap:18px;flex-wrap:wrap}
+.app-shell .whole-pricing-toggle{display:flex!important;align-items:center;gap:8px;min-height:38px;padding:8px 11px;border:1px solid rgba(91,48,79,.2);border-radius:10px;background:rgba(255,255,255,.58);color:#5a304e;cursor:pointer}
+.app-shell .whole-pricing-toggle input{position:absolute!important;opacity:0;pointer-events:none}
+.app-shell .whole-pricing-toggle>span{position:relative;width:18px;height:18px;flex:0 0 18px;border:1px solid rgba(91,48,79,.45);border-radius:5px;background:#fff}
+.app-shell .whole-pricing-toggle input:checked+span{border-color:#8c4d7b;background:linear-gradient(135deg,#d98fc8,#8d5db7)}
+.app-shell .whole-pricing-toggle input:checked+span:after{content:"✓";position:absolute;inset:0;display:grid;place-items:center;color:#fff;font-size:11px;font-weight:900}
+.app-shell .whole-pricing-toggle b{font-size:10px;white-space:nowrap}
+.app-shell .price-group,.app-shell .price-group-row,.app-shell .price-group-row>div{min-width:0}
+.app-shell .price-group-row{grid-template-columns:minmax(150px,1.2fr) minmax(112px,.75fr) minmax(145px,.9fr) minmax(155px,1fr);width:100%;overflow:hidden}
+.app-shell .price-group-row>div:last-child{padding-right:2px}
+.app-shell .price-group-row small,.app-shell .price-group-row b{max-width:100%;overflow-wrap:anywhere}
+.app-shell .price-group-row input{max-width:100%}
+.app-shell .workflow-panel.active-panel,.app-shell .launch-panel.active-panel{border-color:rgba(153,79,130,.7);box-shadow:0 0 0 3px rgba(255,255,255,.42),0 18px 50px rgba(91,48,79,.12)}
+.app-shell .item-pricing-section:focus-within,.app-shell .shipping-pricing-section:focus-within,.app-shell .batch-title-builder:focus-within,.app-shell .batch-description:focus-within,.app-shell .etsy-detail-card:focus-within,.app-shell .draft-card:focus-within{border-color:rgba(153,79,130,.72);background:rgba(255,255,255,.72);box-shadow:0 0 0 4px rgba(192,125,177,.12)}
+.app-shell .title-capitalization-control{display:flex;align-items:center;justify-content:space-between;gap:18px;margin:14px 0;padding:12px 14px;border:1px solid rgba(91,48,79,.16);border-radius:12px;background:rgba(255,255,255,.55)}
+.app-shell .title-capitalization-control>div{display:grid;gap:3px}.app-shell .title-capitalization-control b{color:#542d49;font-size:11px}.app-shell .title-capitalization-control span{color:#80677a;font-size:9px;line-height:1.4}.app-shell .title-capitalization-control button{min-width:112px;padding:9px 12px;border:1px solid rgba(91,48,79,.24);border-radius:999px;background:#fff;color:#653955;font-size:9px;font-weight:850;cursor:pointer}.app-shell .title-capitalization-control button.active{border-color:#a75f94;background:linear-gradient(115deg,rgba(250,213,232,.95),rgba(221,202,250,.92));box-shadow:0 5px 15px rgba(91,48,79,.1)}
+@media(max-width:760px){.app-shell .pricing-heading-actions{align-items:stretch;flex-direction:column}.app-shell .whole-pricing-toggle{justify-content:center}.app-shell .price-group-row{grid-template-columns:repeat(2,minmax(0,1fr))}.app-shell .title-capitalization-control{align-items:stretch;flex-direction:column}.app-shell .title-capitalization-control button{width:100%}}
+@media(max-width:480px){.app-shell .price-group-row{grid-template-columns:1fr}}
 .app-shell .personalization-switch>span{
   position:absolute;
   z-index:2;

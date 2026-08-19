@@ -1067,15 +1067,31 @@ test("keeps product context only on product-specific steps and progress controls
   assert.match(approvedStyles, /border-radius:50%!important/);
 });
 
-test("moves completed upload feedback above the next step card", async () => {
+test("shows accurate completion feedback above each next step card", async () => {
   const [page, styles] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/approved-functional.css", import.meta.url), "utf8"),
   ]);
-  assert.match(page, /fileNotice&&workflowStep!=="designs"&&<div className="step-success-banner"/);
   assert.match(page, /fileNotice&&workflowStep==="designs"&&<p className="file-add-notice"/);
+  assert.match(page, /Titles, tags, and descriptions complete/);
+  assert.match(page, /Etsy details complete/);
+  assert.match(page, /Listing photos complete/);
+  assert.doesNotMatch(page, /fileNotice&&workflowStep!=="designs"/);
   assert.match(styles, /\.app-shell \.step-success-banner\{/);
   assert.match(styles, /border:1px solid rgba\(47,122,78,\.34\)/);
+});
+
+test("supports whole-number pricing, unclipped profit columns, and optional title caps", async () => {
+  const [page, styles] = await Promise.all([
+    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
+  ]);
+  assert.match(page, /Create whole-number pricing/);
+  assert.match(page, /Math\.round\(current\/100\)\*100/);
+  assert.match(page, /Auto Caps \{titleCaps\?"on":"off"\}/);
+  assert.match(page, /Titles, tags, and descriptions complete/);
+  assert.match(styles, /\.price-group-row,.price-group-row>div\{min-width:0\}/);
+  assert.match(styles, /\.workflow-panel\.active-panel/);
 });
 
 test("keeps the Step 6 listing count on one line", async () => {
