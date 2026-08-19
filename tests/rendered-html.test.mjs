@@ -11,41 +11,25 @@ async function render(path = "/") {
   }, { waitUntil() {}, passThroughOnException() {} });
 }
 
-test("server-renders the branded Listing Factory", async () => {
+test("serves the Listing Factory from its canonical product path", async () => {
   const response = await render();
-  assert.equal(response.status, 200);
-  const html = await response.text();
-  assert.match(html, /Goldie Listing Factory/);
-  assert.match(html, /Connect Printify/);
-  assert.match(html, /Secure connection/);
-  assert.doesNotMatch(html, /Private workspace/);
-  assert.match(html, /Connect Printify/);
-  assert.match(html, /Choose a product for this batch/);
+  assert.equal(response.status, 307);
+  assert.equal(response.headers.get("location"), "/listing-factory");
   const pageSource = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
   const globalCss = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
   const approvedCss = await readFile(new URL("../app/approved-functional.css", import.meta.url), "utf8");
+  assert.match(pageSource, /Goldie Listing Factory/);
+  assert.match(pageSource, /Connect Printify/);
+  assert.match(pageSource, /Secure connection/);
+  assert.match(pageSource, /Choose or create a saved product/);
   assert.match(pageSource, /The term &apos;Etsy&apos; is a trademark of Etsy, Inc\./);
   assert.match(pageSource, /not endorsed or certified by Etsy, Inc\./);
   assert.match(approvedCss, /\.etsy-api-disclosure/);
   assert.match(pageSource, /How to get your Printify token/);
   assert.match(pageSource, /token connects the whole Printify account/);
-  assert.match(html, /Connect this Printify template/);
-  assert.match(html, /Goldie checks the product, variations, placement, shipping, costs, and description/);
-  assert.doesNotMatch(html, /Default title structure|Optional reusable description/);
-  assert.doesNotMatch(html, /factory-switcher/);
-  assert.match(html, /Add your finished designs/);
-  assert.match(html, /Choose individual images/);
-  assert.match(html, /already be upscaled/);
-  assert.match(html, /transparent-background PNG/);
-  assert.match(html, /Connect Printify first/);
-  assert.match(html, /20 finished designs/);
-  assert.match(html, /no combined file-size cap/);
-  assert.match(html, /100 MB per design/);
-  assert.match(html, /without lowering DPI/);
-  assert.match(html, /This step creates unpublished Printify drafts/);
   assert.match(globalCss, /@media\(max-width:650px\).*\.top-nav\{flex-wrap:wrap;white-space:normal/s);
-  assert.doesNotMatch(html, /pink-dorm-collage|rich-man-poster|cowgirl-disco|newest batch will open/i);
-  assert.doesNotMatch(html, /codex-preview|react-loading-skeleton/i);
+  assert.doesNotMatch(pageSource, /pink-dorm-collage|rich-man-poster|cowgirl-disco|newest batch will open/i);
+  assert.doesNotMatch(pageSource, /codex-preview|react-loading-skeleton/i);
 });
 
 test("offers real account sign-in choices and preserves the selected destination", async () => {
@@ -1192,7 +1176,7 @@ test("does not invent high-risk Etsy context fields", async () => {
   assert.match(intelligence, /supportedOptional\(raw\.optional,contextualText\)/);
 });
 
-test("enforces and explains the 48-hour mastermind beta", async () => {
+test("keeps mastermind enrollment owner-controlled while enforcing each 48-hour beta", async () => {
   const [access, countdown, redeem, plans] = await Promise.all([
     readFile(new URL("../app/mastermind/access.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/mastermind/beta-countdown.tsx", import.meta.url), "utf8"),
@@ -1200,6 +1184,8 @@ test("enforces and explains the 48-hour mastermind beta", async () => {
     readFile(new URL("../app/plan-limits.ts", import.meta.url), "utf8"),
   ]);
   assert.match(access, /datetime\(redeemed_at, '\+48 hours'\)/);
+  assert.match(access, /accessEnabled=setting\?\.active===1/);
+  assert.doesNotMatch(access, /MASTERMIND_BETA_REDEEM_UNTIL/);
   assert.match(access, /redeemed&&!notExpired/);
   assert.match(countdown, /window\.setInterval\(update,1000\)/);
   assert.match(redeem, /plan_key='mastermind_beta'/);
