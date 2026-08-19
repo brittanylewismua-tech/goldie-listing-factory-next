@@ -201,6 +201,32 @@ test("groups equal-cost Printify variants while preserving individual review and
   assert.doesNotMatch(page, /staged for all/);
 });
 
+test("provides thorough contextual help throughout all nine Listing Factory steps", async () => {
+  const [page, help, css] = await Promise.all([
+    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/context-help.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
+  ]);
+  assert.match(page, /const WORKFLOW_HELP = \[/);
+  assert.match(page, /WORKFLOW_HELP\[progressIndex\]/);
+  assert.match(page, /Connect Printify and Etsy/);
+  assert.match(page, /Choose or create a saved product/);
+  assert.match(page, /Add finished artwork/);
+  assert.match(page, /Review prices and shipping/);
+  assert.match(page, /Create the Printify drafts/);
+  assert.match(page, /Create titles, tags, and descriptions/);
+  assert.match(page, /Review Etsy details/);
+  assert.match(page, /Choose and arrange listing images/);
+  assert.match(page, /Complete the final review/);
+  assert.match(page, /Explain item pricing/);
+  assert.match(page, /Explain shipping profiles/);
+  assert.match(help, /aria-haspopup="dialog"/);
+  assert.match(help, /event\.key === "Escape"/);
+  assert.match(help, /role="dialog"/);
+  assert.match(css, /\.context-help-trigger/);
+  assert.match(css, /\.context-help-dialog/);
+});
+
 test("stages each finished mockup group for its exact Etsy listing", async () => {
   const [mockups,images,page] = await Promise.all([
     readFile(new URL("../app/integrated-mockups.tsx", import.meta.url), "utf8"),
@@ -1014,7 +1040,7 @@ test("places each step count directly below its page title", async () => {
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/approved-functional.css", import.meta.url), "utf8"),
   ]);
-  assert.match(page, /<h1>\{workflowHero\.title\}<\/h1>\s*<p className="hero-step-count">Step \{progressIndex\+1\} of \{PROGRESS_STEPS\.length\}<\/p>/);
+  assert.match(page, /<div className="heading-with-help hero-title-help"><h1>\{workflowHero\.title\}<\/h1><ContextHelp[\s\S]*?<\/div>\s*<p className="hero-step-count">Step \{progressIndex\+1\} of \{PROGRESS_STEPS\.length\}<\/p>/);
   assert.doesNotMatch(page, /className="approved-step-count"/);
   assert.match(styles, /\.app-shell \.hero-step-count/);
   assert.match(styles, /\.app-shell \.hero\{padding-bottom:30px!important\}/);
