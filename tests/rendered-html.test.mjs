@@ -51,6 +51,7 @@ test("offers real account sign-in choices and preserves the selected destination
   ]);
   assert.match(client, /signInWithOAuth\(\{ provider: "google"/);
   assert.match(client, /signInWithOtp/);
+  assert.match(client, /className="account-footer"/);
   assert.match(auth, /supabase:/);
   assert.match(auth, /accountSignInPath/);
   assert.match(callback, /exchangeCodeForSession/);

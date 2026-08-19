@@ -24,7 +24,7 @@ export default function SignInClient({ returnTo }: { returnTo: string }) {
     if (authError) { setBusy(null); setError(authError.message); }
   }
 
-  return <main className="account-page"><section className="account-card">
+  return <main className="account-page" style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",paddingBottom:24}}><section className="account-card">
     <div className="account-wordmark" aria-label="Goldie Listing Factory"><div>Gold<span>ı<i>✦</i></span>e</div><small>LISTING FACTORY</small></div>
     <p className="account-eyebrow">WELCOME</p><h1>Sign in to your Listing Factory.</h1>
     <p className="account-intro">Choose the easiest option for you. Your saved products, batches, keyword banks, and plan stay with your account.</p>
@@ -34,5 +34,5 @@ export default function SignInClient({ returnTo }: { returnTo: string }) {
     <a className="account-chatgpt" href={`/signin-with-chatgpt?return_to=${encodeURIComponent(returnTo)}`}>Continue with ChatGPT</a>
     {message && <p className="account-message" role="status">{message}</p>}{error && <p className="account-error" role="alert">{error}</p>}
     <p className="account-fine">No password to remember. Email sign-in uses a secure, one-time link.</p>
-  </section><footer>Powered by Goldie AI · © 2026 Be A Wolf Biz</footer></main>;
+  </section><footer className="account-footer" style={{position:"static",width:"auto",minHeight:0,margin:"22px 0 0",padding:0,border:0,borderRadius:0,background:"transparent",boxShadow:"none",fontSize:11,lineHeight:1.4,textAlign:"center"}}>Powered by Goldie AI · © 2026 Be A Wolf Biz</footer></main>;
 }
