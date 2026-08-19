@@ -44,6 +44,7 @@ const WORKFLOW_STEPS: Array<{id:WorkflowStep;number:string;label:string}> = [
   {id:"finish",number:"05",label:"Finish listings"},
 ];
 const PROGRESS_STEPS = ["Connect Printify","Choose product","Add designs","Review pricing","Create drafts","Titles, tags + descriptions","Etsy listing details","Images + mockups","Final review"];
+const PROGRESS_SHORT_LABELS = ["Connect","Product","Designs","Pricing","Drafts","Titles + tags","Etsy details","Photos","Publish"];
 
 const MAX_BATCH_FILES = 20;
 const MAX_CONCURRENT_DESIGNS = 2;
@@ -691,7 +692,7 @@ export default function Home() {
         <nav className="workflow-progress" aria-label="Listing Factory progress">
           <div className="workflow-progress-head"><div><p className="mini-label">YOUR BATCH</p><b>Step {progressIndex+1} of {PROGRESS_STEPS.length}</b></div>{(template||files.length>0||drafts.length>0)&&<button className="start-new-batch" disabled={running} onClick={startOver}>Clear batch + start over</button>}</div>
           {localPreview&&<p className="preview-mode-note">Preview mode · every step is unlocked <a href="/design-lab">Open design lab →</a></p>}
-          {PROGRESS_STEPS.map((label,index)=>{const active=progressIndex===index,done=index<progressIndex,accountsReady=connected&&etsyConnected,available=localPreview||index===0||(index===1&&accountsReady)||(index===2&&accountsReady&&productSelected&&templateLoaded)||(index>=3&&index<=4&&accountsReady&&ready)||(index>=5&&accountsReady&&productSelected&&complete);return <button key={label} className={`${active?"active":""} ${done?"done":""}`} disabled={!available} aria-current={active?"step":undefined} onClick={()=>openProgressStep(index)}><span>{done?"✓":String(index+1).padStart(2,"0")}</span><span><b>{label}</b><small>{localPreview&&!active?"Open preview":progressStatus(index,active,done)}</small></span></button>})}
+          {PROGRESS_STEPS.map((label,index)=>{const active=progressIndex===index,done=index<progressIndex,accountsReady=connected&&etsyConnected,available=localPreview||index===0||(index===1&&accountsReady)||(index===2&&accountsReady&&productSelected&&templateLoaded)||(index>=3&&index<=4&&accountsReady&&ready)||(index>=5&&accountsReady&&productSelected&&complete);return <button key={label} className={`${active?"active":""} ${done?"done":""}`} disabled={!available} aria-current={active?"step":undefined} onClick={()=>openProgressStep(index)}><em className="progress-bubble-label">{PROGRESS_SHORT_LABELS[index]}</em><span>{done?"✓":String(index+1).padStart(2,"0")}</span><span><b>{label}</b><small>{localPreview&&!active?"Open preview":progressStatus(index,active,done)}</small></span></button>})}
           <p className="workflow-help">Goldie saves completed work. You can return to an earlier step without starting over.</p>
         </nav>
         <div className="workflow-stage">

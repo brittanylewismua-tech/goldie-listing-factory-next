@@ -1012,6 +1012,16 @@ test("places each step count directly below its page title", async () => {
   assert.match(styles, /\.app-shell \.hero\{padding-bottom:30px!important\}/);
 });
 
+test("labels every progress bubble with a short workflow name", async () => {
+  const [page, styles] = await Promise.all([
+    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/approved-functional.css", import.meta.url), "utf8"),
+  ]);
+  assert.match(page, /const PROGRESS_SHORT_LABELS = \["Connect","Product","Designs","Pricing","Drafts","Titles \+ tags","Etsy details","Photos","Publish"\]/);
+  assert.match(page, /className="progress-bubble-label"/);
+  assert.match(styles, /\.app-shell \.progress-bubble-label\{/);
+});
+
 test("shows every public plan on Usage and Billing with direct plan controls", async () => {
   const [page, styles] = await Promise.all([
     readFile(new URL("../app/usage/page.tsx", import.meta.url), "utf8"),

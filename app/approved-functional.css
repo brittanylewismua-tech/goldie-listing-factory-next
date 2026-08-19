@@ -1106,3 +1106,25 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 }
 @keyframes goldie-next-gradient{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
 @media(prefers-reduced-motion:reduce){.app-shell .workflow-next{animation:none}}
+
+/* Tiny scan labels make the numbered progress bubbles self-explanatory. */
+.app-shell .workflow-progress button{padding-top:22px!important}
+.app-shell .workflow-progress:before{top:39px!important}
+.app-shell .progress-bubble-label{
+  position:absolute;
+  top:3px;
+  left:50%;
+  width:max-content;
+  max-width:104px;
+  transform:translateX(-50%);
+  overflow:hidden;
+  color:rgba(74,42,62,.68);
+  font:800 8px/1.1 'Manrope',sans-serif;
+  font-style:normal;
+  letter-spacing:.055em;
+  text-overflow:ellipsis;
+  text-transform:uppercase;
+  white-space:nowrap;
+}
+.app-shell .workflow-progress button.active .progress-bubble-label{color:#5b304f}
+.app-shell .workflow-progress button.done .progress-bubble-label{color:#855079}
