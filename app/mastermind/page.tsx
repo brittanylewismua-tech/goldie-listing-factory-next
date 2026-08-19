@@ -15,11 +15,12 @@ function BetaShell({ children }: { children: React.ReactNode }) {
 }
 
 function WelcomeScreen() {
-  return <BetaShell><p className="beta-eyebrow">PRIVATE MASTERMIND BETA</p><h1>Your Listing Factory beta is ready.</h1><p className="beta-intro">Sign in to unlock 48 hours inside the Listing Factory. You can create up to 20 listings and 20 AI lifestyle mockups while you test.</p><div className="beta-limit-grid"><div><b>20</b><span>listings</span></div><div><b>20</b><span>lifestyle mockups</span></div><div><b>48</b><span>hours of access</span></div></div><a className="beta-primary" href={accountSignInPath("/mastermind")}>Sign in to start</a><p className="beta-fine-print">You will enter your mastermind beta code after signing in. No card required.</p></BetaShell>;
+  return <BetaShell><p className="beta-eyebrow">PRIVATE MASTERMIND BETA</p><h1>Your Listing Factory beta is ready.</h1><p className="beta-intro">Sign in to unlock 48 hours inside the Listing Factory. You can create up to 20 listings and 20 AI lifestyle mockups while you test.</p><div className="beta-limit-grid"><div><b>20</b><span>listings</span></div><div><b>20</b><span>lifestyle mockups</span></div><div><b>48</b><span>hours of access</span></div></div><a className="beta-primary" href={accountSignInPath("/mastermind?stage=code")}>Sign in to start</a><p className="beta-fine-print">You will enter your mastermind beta code after signing in. No card required.</p></BetaShell>;
 }
 
-export default async function MastermindPage({ searchParams }: { searchParams?:Promise<{preview?:string}> }) {
-  if ((await searchParams)?.preview === "welcome") return <WelcomeScreen/>;
+export default async function MastermindPage({ searchParams }: { searchParams?:Promise<{preview?:string;stage?:string}> }) {
+  const params = await searchParams;
+  if (params?.stage !== "code") return <WelcomeScreen/>;
   const user = await getChatGPTUser();
   if (!user) return <WelcomeScreen/>;
   const state = await mastermindState(user);
