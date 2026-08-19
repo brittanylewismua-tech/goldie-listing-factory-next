@@ -1380,6 +1380,11 @@ test("explains and styles every Printify photo selection action",async()=>{
   assert.match(page,/Remove every selected Printify photo from this listing only/);
   assert.match(page,/Use these same Printify photos across the entire batch/);
   assert.match(page,/Preselect these photos whenever you use this saved product again/);
+  assert.match(page,/Applied to every listing/);
+  assert.match(page,/Saved for future batches/);
+  assert.match(page,/printify-photo-lightbox/);
+  assert.match(page,/Object\.fromEntries\(drafts\.filter\(item=>item\.id\)/);
+  assert.match(styles,/image-pref-actions button\.confirmed/);
   assert.match(styles,/printify-image-picker>\.image-pref-actions\{[\s\S]*?grid-template-columns:repeat\(3,minmax\(0,1fr\)\)!important/);
   assert.match(styles,/image-pref-actions button\{[\s\S]*?cursor:pointer/);
 });
@@ -1399,15 +1404,14 @@ test("shows each saved mockup once with visible controls and a real enlarged pre
   assert.match(styles,/\.savedMockupPreview \{/);
 });
 
-test("makes lifestyle mockup actions an explicit create-then-reuse sequence",async()=>{
+test("keeps lifestyle mockup creation specific to each listing",async()=>{
   const [mockups,styles]=await Promise.all([
     readFile(new URL("../app/integrated-mockups.tsx",import.meta.url),"utf8"),
     readFile(new URL("../app/approved-functional.css",import.meta.url),"utf8"),
   ]);
-  assert.ok(mockups.indexOf('className="generate-inline"')<mockups.indexOf('className="batch-mockup-button"'));
   assert.match(mockups,/Create mockups for this listing/);
-  assert.match(mockups,/Optional\. This preselects the same mockups on every other listing/);
-  assert.match(mockups,/Use this selection for every listing/);
+  assert.doesNotMatch(mockups,/Want the same scenes on the rest of the batch/);
+  assert.doesNotMatch(mockups,/Use this selection for every listing/);
   assert.match(styles,/\.app-shell \.mockup-action-sequence\{display:grid/);
 });
 
@@ -1426,11 +1430,13 @@ test("requires a photo on every listing and lets sellers set Etsy photo order",a
     readFile(new URL("../app/api/etsy/images/route.ts",import.meta.url),"utf8"),
     readFile(new URL("../app/api/etsy/finish.ts",import.meta.url),"utf8"),
   ]);
-  assert.match(page,/Select at least one Printify photo or create at least one lifestyle mockup for every listing/);
+  assert.match(page,/Please add at least one image to every listing before going to the next step/);
   assert.match(page,/preparedMockupCounts\[item\.id!\]/);
   assert.match(page,/if\(imageStepError&&\(printifyImageIndices\.length/);
   assert.match(organizer,/draggable/);
-  assert.match(organizer,/Lifestyle first · Printify next · size guide last/);
+  assert.match(organizer,/Rearrange listing photos/);
+  assert.match(organizer,/onDragEnter/);
+  assert.match(organizer,/Move \$\{photo\.name\} earlier/);
   assert.match(organizer,/Photo order saved in preview/);
   assert.match(images,/order\.json/);
   assert.match(finish,/form\.set\("rank",String\(rank\)\)/);

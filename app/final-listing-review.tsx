@@ -10,7 +10,7 @@ export default function FinalListingReview({drafts,files,selections,defaultIndic
     <div className="final-listing-grid">{drafts.map(draft=>{const design=files.find(file=>file.id===draft.clientId),selectedCount=draft.id?(selections[draft.id]??defaultIndices).length:defaultIndices.length;return <article className={`final-listing-card ${draft.status==="Failed"?"failed":""}`} key={draft.clientId}>
       {draft.previewUrl?<img src={draft.previewUrl} alt={`Preview for ${design?.title||draft.title||draft.name}`}/>:design?<img src={design.previewUrl} alt={`Preview for ${design.title||design.name}`}/>:<span className="final-listing-no-image">No preview</span>}
       <div><b>{design?.title||draft.title||draft.name}</b><small>{design?.tags?.length||0} tags · {selectedCount} Printify images{design?.sizeGuideName||batchSizeGuide?" · size guide ready":""}</small><span className={draft.status==="Created"?"ready":"needs-attention"}>{draft.status==="Created"?"✓ Ready for final publish":"! Needs attention"}</span></div>
-      <div className="final-listing-links"><button onClick={()=>onEdit("details")}>Edit words</button><button onClick={()=>onEdit("mockups")}>Edit images</button>{draft.editorUrl&&<a href={draft.editorUrl} target="_blank" rel="noopener noreferrer">View in Printify ↗</a>}</div>
+      <div className="final-listing-links"><button onClick={()=>onEdit("details")}>Edit titles</button><button onClick={()=>onEdit("mockups")}>Edit images</button>{draft.editorUrl&&<a href={draft.editorUrl} target="_blank" rel="noopener noreferrer">View in Printify ↗</a>}</div>
     </article>})}</div>
   </section>
 }
