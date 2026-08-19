@@ -318,22 +318,26 @@ test("calculates every Printify variant price from its own cost and Etsy fee pro
   assert.equal(recommendedPrice(1184, pricing), 2463);
   assert.equal(recommendedPrice(1760, pricing), 3100);
   assert.equal(recommendedPrice(1034), 1034);
-  assert.equal(recommendedPrice(1000, { targetProfit: 10, etsyFeePercent: 10, fixedFee: .25, listingFee: .20, shippingCost: 5, shippingCharged: 5 }), 2328);
-  assert.equal(recommendedPrice(1000, { targetProfit: 10, etsyFeePercent: 9.5, fixedFee: .25, listingFee: .20, shippingCost: 6, shippingCharged: 3 }), 2623);
-  assert.equal(recommendedPrice(1000, { targetProfit: 10, etsyFeePercent: 9.5, fixedFee: .25, listingFee: .20, shippingCost: 4, shippingCharged: 3 }), 2402);
-  assert.equal(recommendedPrice(1000, { targetProfit: 0, etsyFeePercent: 9.5, fixedFee: .25, listingFee: .20, shippingCost: 6, shippingCharged: 3 }), 1518);
+  assert.equal(recommendedPrice(1000, { targetProfit: 10, etsyFeePercent: 10, fixedFee: .25, listingFee: .20, shippingCost: 5, shippingCharged: 5 }), 2273);
+  assert.equal(recommendedPrice(1000, { targetProfit: 10, etsyFeePercent: 9.5, fixedFee: .25, listingFee: .20, shippingCost: 6, shippingCharged: 3 }), 2260);
+  assert.equal(recommendedPrice(1000, { targetProfit: 10, etsyFeePercent: 9.5, fixedFee: .25, listingFee: .20, shippingCost: 4, shippingCharged: 3 }), 2260);
+  assert.equal(recommendedPrice(1000, { targetProfit: 0, etsyFeePercent: 9.5, fixedFee: .25, listingFee: .20, shippingCost: 6, shippingCharged: 3 }), 1155);
   const overCollectedShipping = { targetProfit: 10, etsyFeePercent: 9.5, fixedFee: .25, listingFee: .20, shippingCost: 4, shippingCharged: 6 };
-  assert.equal(recommendedPrice(1000, overCollectedShipping), 2102);
-  assert.ok(estimatedProfit(2102, 1000, overCollectedShipping) >= 10);
-  assert.ok(estimatedProfit(2102, 1000, overCollectedShipping) < 10.02);
+  assert.equal(recommendedPrice(1000, overCollectedShipping), 2260);
+  assert.ok(estimatedProfit(2260, 1000, overCollectedShipping) >= 10);
+  assert.ok(estimatedProfit(2260, 1000, overCollectedShipping) < 10.02);
+  assert.equal(estimatedProfit(2800,979,{...pricing,shippingCost:4.75,shippingCharged:4.75}),estimatedProfit(2800,979,{...pricing,shippingCost:7.99,shippingCharged:7.99}),"identical product costs and prices always show identical item profit");
   const crewneck = { targetProfit: 10, etsyFeePercent: 9.5, fixedFee: .25, listingFee: .20, shippingCost: 11.49, shippingCharged: 25 };
   const crewneckPrice = recommendedPrice(3100, crewneck);
   assert.ok(estimatedProfit(crewneckPrice, 3100, crewneck) >= 10);
   assert.ok(estimatedProfit(crewneckPrice, 3100, crewneck) < 10.02);
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const drafts = await readFile(new URL("../app/api/printify/drafts/route.ts", import.meta.url), "utf8");
   assert.match(page, /stillUsingTemplatePrices/);
-  assert.match(page, /Goldie calculated every price from your profit goal, product costs, shipping, and Etsy fees/);
-  assert.match(page, /if\(profile\)recalculate\(pricing,profile\.domesticPrimary\)/);
+  assert.match(page, /Goldie calculated every price from your profit goal, product costs, and Etsy fees\. Shipping is handled separately/);
+  assert.match(page, /if\(profile\)recalculate\(pricing\)/);
+  assert.doesNotMatch(page, /estimatedProfit\([^\n]+shippingCost/);
+  assert.doesNotMatch(drafts, /shipping==null\?body\.pricing/);
 });
 
 test("processes a 20-design batch with bounded two-at-a-time concurrency", async () => {
