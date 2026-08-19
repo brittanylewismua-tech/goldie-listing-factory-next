@@ -1329,3 +1329,18 @@ test("explains and styles every Printify photo selection action",async()=>{
   assert.match(styles,/printify-image-picker>\.image-pref-actions\{[\s\S]*?grid-template-columns:repeat\(3,minmax\(0,1fr\)\)!important/);
   assert.match(styles,/image-pref-actions button\{[\s\S]*?cursor:pointer/);
 });
+
+test("shows each saved mockup once with visible controls and a real enlarged preview",async()=>{
+  const [page,styles]=await Promise.all([
+    readFile(new URL("../app/mockups/page.tsx",import.meta.url),"utf8"),
+    readFile(new URL("../app/mockups/management.css",import.meta.url),"utf8"),
+  ]);
+  const managementMarkup=page.slice(page.indexOf('managementSetList'),page.indexOf('{showAddSet&&'));
+  assert.doesNotMatch(managementMarkup,/setPreview/);
+  assert.doesNotMatch(managementMarkup,/items\.slice\(0,3\)/);
+  assert.match(managementMarkup,/savedMockupPreview/);
+  assert.match(page,/libraryPreview\.src/);
+  assert.match(page,/previewSavedSelection/);
+  assert.match(styles,/\.managementSetList \.collectionActions \{[\s\S]*?position: static/);
+  assert.match(styles,/\.savedMockupPreview \{/);
+});

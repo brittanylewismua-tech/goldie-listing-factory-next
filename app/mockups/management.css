@@ -26,6 +26,112 @@
   content: none;
 }
 
+.managementSetList .collectionActions {
+  position: static;
+  z-index: auto;
+  justify-content: flex-end;
+  gap: 10px;
+  margin: 0;
+  padding: 4px 0 18px;
+}
+
+.managementSetList .collectionActions button {
+  min-width: 112px;
+  border-radius: 10px;
+  padding: 10px 14px;
+  opacity: 1;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.managementSetList .selectSet,
+.managementSetList .selectSet:hover {
+  border: 1px solid #866077;
+  background: #f7eaf4;
+  color: #563149;
+}
+
+.managementSetList .selectSet:hover {
+  background: #ecd7e8;
+}
+
+.managementSetList .deleteSet {
+  border: 1px solid #b56f7b;
+  background: #fff5f6;
+  color: #8a3f4d;
+}
+
+.managementSetList .deleteSet:hover {
+  border-color: #954b59;
+  background: #f6dfe3;
+  color: #71313d;
+}
+
+.savedMockupPreview {
+  position: relative;
+  display: block;
+  width: 100%;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: 10px;
+  background: #eee4ec;
+  cursor: zoom-in;
+}
+
+.savedMockupPreview img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  object-fit: cover;
+  transition: filter .18s, transform .18s;
+}
+
+.savedMockupPreview span {
+  position: absolute;
+  left: 50%;
+  bottom: 12px;
+  transform: translate(-50%, 8px);
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: rgba(69, 35, 58, .92);
+  color: white;
+  font-size: 11px;
+  font-weight: 800;
+  opacity: 0;
+  transition: opacity .18s, transform .18s;
+}
+
+.savedMockupPreview:hover img,
+.savedMockupPreview:focus-visible img {
+  filter: brightness(.82);
+  transform: scale(1.01);
+}
+
+.savedMockupPreview:hover span,
+.savedMockupPreview:focus-visible span {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+.previewSavedSelection {
+  display: block;
+  width: calc(100% - 22px);
+  margin: 0 11px 9px;
+  padding: 8px 10px;
+  border: 1px solid #806174;
+  border-radius: 8px;
+  background: #f5e7f2;
+  color: #553248;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: zoom-in;
+}
+
+.previewSavedSelection:hover {
+  background: #ead4e5;
+}
+
 @media (max-width: 760px) {
   .managementOnly .mockupTopbar {
     height: auto;
