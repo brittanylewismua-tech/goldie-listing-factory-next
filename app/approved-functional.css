@@ -209,14 +209,14 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
   text-underline-offset:4px;
 }
 .app-shell .recommended-listing-photos ul{justify-content:center;font-size:12px!important;line-height:1.5}
-.app-shell .workspace.mockup-workspace+.recommended-listing-photos+.post-draft-workspace .post-draft-heading{
+.app-shell .post-draft-workspace .post-draft-heading{
   display:grid!important;
   justify-items:center!important;
   gap:18px;
   padding:4px 0 24px!important;
   text-align:center;
 }
-.app-shell .workspace.mockup-workspace+.recommended-listing-photos+.post-draft-workspace .post-draft-heading>div{
+.app-shell .post-draft-workspace .post-draft-heading>div{
   display:grid!important;
   justify-items:center;
   gap:7px;

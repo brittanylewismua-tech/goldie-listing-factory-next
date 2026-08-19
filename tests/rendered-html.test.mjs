@@ -1301,3 +1301,10 @@ test("acknowledges slow workflow actions immediately and blocks repeat clicks",a
   assert.match(styles,/button\[aria-busy="true"\]/);
   assert.match(styles,/goldie-action-spin/);
 });
+
+test("centers the complete images and mockups heading group",async()=>{
+  const styles=await readFile(new URL("../app/approved-functional.css",import.meta.url),"utf8");
+  assert.match(styles,/\.post-draft-workspace \.post-draft-heading\{[\s\S]*?justify-items:center!important/);
+  assert.match(styles,/\.post-draft-workspace \.post-draft-heading>div\{[\s\S]*?justify-items:center/);
+  assert.match(styles,/\.post-draft-heading \.open-all-button\{[\s\S]*?margin:0 auto!important/);
+});
