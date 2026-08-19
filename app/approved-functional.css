@@ -1159,3 +1159,33 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
   color:#fff!important;
   box-shadow:0 0 16px rgba(206,132,200,.34)!important;
 }
+
+/* Step-to-step success belongs above the next task, never inside its card. */
+.app-shell .step-success-banner{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  width:min(760px,100%);
+  margin:0 auto 16px;
+  padding:13px 16px;
+  border:1px solid rgba(47,122,78,.34);
+  border-radius:14px;
+  background:linear-gradient(115deg,rgba(237,250,241,.94),rgba(247,253,248,.84));
+  color:#245d3b;
+  box-shadow:0 8px 22px rgba(39,105,66,.08);
+}
+.app-shell .step-success-banner>span{
+  display:grid;
+  flex:0 0 auto;
+  place-items:center;
+  width:30px;
+  height:30px;
+  border-radius:50%;
+  background:#3f9a63;
+  color:#fff;
+  font-size:13px;
+  font-weight:900;
+}
+.app-shell .step-success-banner>div{display:grid;gap:2px;min-width:0}
+.app-shell .step-success-banner b{font-size:12px;line-height:1.25}
+.app-shell .step-success-banner small{color:#47745a;font-size:10px;line-height:1.4}

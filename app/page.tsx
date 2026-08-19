@@ -706,6 +706,7 @@ export default function Home() {
         {progressIndex===3&&files.length>0&&<ActionReceipt items={[{value:`${files.length} designs checked`,label:"Original artwork resolution preserved"},{value:`${pricedVariants.length} variants`,label:pricingApproved?"Pricing approved":"Ready for pricing review"}]}/>}
         {progressIndex===5&&titleCount>0&&<ActionReceipt items={[{value:`${titleCount} titles ready`,label:"Validated keyword phrases only"},{value:`${files.reduce((sum,file)=>sum+file.tags.length,0)} matching tags`,label:"Zero invented keywords"}]}/>}
         <div className={`steps-column ${workflowStep}-column`}>
+          {fileNotice&&workflowStep!=="designs"&&<div className="step-success-banner" role="status"><span aria-hidden="true">✓</span><div><b>Design upload complete</b><small>{fileNotice}</small></div></div>}
           <article className={`step-card connect-step workflow-panel ${connected ? "done" : ""} ${workflowStep==="connect"?"active-panel":"hidden-panel"}`}>
             <div className="step-number">01</div>
             <div className="step-content">
@@ -781,7 +782,7 @@ export default function Home() {
               </button>
               </div>
               {fileError && <p className="file-limit-error" role="alert"><b>That batch can’t be added.</b><span>{fileError}</span></p>}
-              {fileNotice&&<p className="file-add-notice" role="status"><b>Upload updated</b><span>{fileNotice}</span></p>}
+              {fileNotice&&workflowStep==="designs"&&<p className="file-add-notice" role="status"><b>Upload updated</b><span>{fileNotice}</span></p>}
               {files.length>0&&<section className={`design-preparation-status ${designsFinished?"ready":"working"}`} role="status" aria-live="polite"><span className="design-status-icon" aria-hidden="true">{designsFinished?"✓":""}</span><div><b>{designsFinished?`All ${files.length} designs are ready`:`Goldie is preparing your designs: ${designsReady} of ${files.length} ready`}</b><small>{designsFinished?"Dimensions and print-quality information are loaded. You can continue.":"Keep this page open. Goldie is reading every file and checking its dimensions before you can continue."}</small><div className="design-status-track"><i style={{width:`${files.length?designsReady/files.length*100:0}%`}}/></div></div><strong>{designsReady}/{files.length}</strong></section>}
               {files.length > 0 && <div className="batch-capacity"><div><b>{files.length}/20 designs</b><span>{20 - files.length} spaces remaining</span></div><div className="capacity-track"><span style={{ width: `${(files.length / 20) * 100}%` }} /></div></div>}
               {files.length>0&&!complete&&workflowStep==="designs"&&<>{designsFinished&&belowRecommendedPixels.length>0&&<div className="pixel-warning-inline" role="status"><span>!</span><div><b>{belowRecommendedPixels.length===1?"One design is":"Some designs are"} below Printify’s recommended pixel size.</b><small>You can still continue, but Goldie will ask you to confirm first.</small></div></div>}<button className="workflow-next" disabled={!designsFinished} onClick={continueFromDesigns}>{designsFinished?"Next step":`Preparing ${designsPreparing} ${designsPreparing===1?"design":"designs"}…`} {designsFinished&&<span>→</span>}</button></>}

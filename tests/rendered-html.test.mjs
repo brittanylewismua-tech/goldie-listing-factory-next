@@ -1033,6 +1033,17 @@ test("keeps product context only on product-specific steps and progress controls
   assert.match(approvedStyles, /border-radius:50%!important/);
 });
 
+test("moves completed upload feedback above the next step card", async () => {
+  const [page, styles] = await Promise.all([
+    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/approved-functional.css", import.meta.url), "utf8"),
+  ]);
+  assert.match(page, /fileNotice&&workflowStep!=="designs"&&<div className="step-success-banner"/);
+  assert.match(page, /fileNotice&&workflowStep==="designs"&&<p className="file-add-notice"/);
+  assert.match(styles, /\.app-shell \.step-success-banner\{/);
+  assert.match(styles, /border:1px solid rgba\(47,122,78,\.34\)/);
+});
+
 test("shows every public plan on Usage and Billing with direct plan controls", async () => {
   const [page, styles] = await Promise.all([
     readFile(new URL("../app/usage/page.tsx", import.meta.url), "utf8"),
