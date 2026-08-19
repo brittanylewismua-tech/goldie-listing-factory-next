@@ -241,6 +241,7 @@ export default function Home() {
 
   const templateLoaded = templateDetails !== null;
   const productSelected = Boolean(activeRecipe);
+  const currentProductName=activeRecipe?.name||templateDetails?.blueprintTitle||"This product";
   const ready = connected && productSelected && templateLoaded && files.length > 0;
   const missingRequirement = !connected ? "Connect Printify first" : !productSelected ? "Choose or add a saved product" : !templateLoaded ? "Connect its Printify template" : files.length === 0 ? "Add at least one design" : "";
   const totalSize = useMemo(() => files.reduce((sum, file) => sum + file.size, 0), [files]);
@@ -646,7 +647,7 @@ export default function Home() {
   }[workflowStep];
 
   return (
-    <main className="app-shell">
+    <main className="app-shell" data-product-selected={templateDetails?"true":"false"} style={{"--active-product":`"${currentProductName.replace(/["\\]/g,"")}"`} as React.CSSProperties}>
       <section className="mobile-gate" aria-label="Desktop required">
         <div className="mobile-brand"><div className="approved-wm">Gold<span className="approved-i">ı<span>✦</span></span>e</div><div className="approved-sub">Listing Factory</div></div>
         <div className="mobile-card"><div className="mobile-command">⌘</div><h1>Oops, this one needs a bigger screen.</h1><p>Goldie Listing Factory is built for desktop. Hop onto your computer and sign in. Your saved work will be waiting for you.</p><div className="mobile-saved">✓ Your progress is saved automatically.</div></div>

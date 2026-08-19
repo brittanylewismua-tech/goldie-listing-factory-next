@@ -1136,6 +1136,8 @@ test("supports simple saved product bundles without complicating the single-prod
   assert.match(page, /You are working on \{bundleRecipes\[bundleIndex\]\?\.name\}/);
   assert.match(page, /1\. Item prices <span>· \{productName\}<\/span>/);
   assert.match(page, /2\. Shipping <span>· \{productName\}<\/span>/);
+  assert.match(page, /data-product-selected=\{templateDetails\?"true":"false"\}/);
+  assert.match(page, /--active-product/);
   assert.match(page, /function continueBundle/);
   assert.match(page, /activeBundle,bundleRecipes,bundleIndex/);
   assert.match(page, /previewUrl:URL\.createObjectURL\(file\.file\)/);
@@ -1144,6 +1146,12 @@ test("supports simple saved product bundles without complicating the single-prod
   assert.match(ui, /Continue bundle with/);
   assert.match(ui, /pricing, shipping, description, Etsy details, and images separately/);
   assert.match(styles, /\.bundle-progress/);
+  assert.match(styles, /CURRENT PRODUCT ·/);
+  assert.match(styles, /\.designs-step\.active-panel \.step-content:before/);
+  assert.match(styles, /\.etsy-details-step\.active-panel \.step-content:before/);
+  assert.match(styles, /\.final-review\.active-panel \.step-content:before/);
+  assert.match(styles, /\.launch-panel\.active-panel \.launch-top:before/);
+  assert.match(styles, /\.post-draft-heading>div:before/);
   assert.match(approvedStyles, /\.app-shell \.recipe-card \.edit-recipe\{position:static!important/);
   assert.match(approvedStyles, /\.app-shell \.recipe-card \.delete-recipe\{position:static!important/);
   assert.match(approvedStyles, /\.app-shell \.recipe-card \.recipe-use,[\s\S]*?grid-column:1\/-1!important/);
