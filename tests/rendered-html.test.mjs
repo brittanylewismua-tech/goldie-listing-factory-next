@@ -799,7 +799,9 @@ test("enforces paid-plan usage on the server and exposes honest usage", async()=
     readFile(new URL("../app/api/mockups/library/route.ts",import.meta.url),"utf8"),
     readFile(new URL("../app/api/usage/route.ts",import.meta.url),"utf8"),
   ]);
-  assert.match(plans,/price: 29, drafts: 200, dailyListings: 40, aiMockups: 100, mockupSets: 10/);
+  assert.match(plans,/name: "Starter", price: 29, drafts: 100, dailyListings: 40, aiMockups: 50, mockupSets: 10/);
+  assert.match(plans,/name: "Pro", price: 59, drafts: 300, dailyListings: 75, aiMockups: 150, mockupSets: 30/);
+  assert.match(plans,/name: "Scale", price: 99, drafts: 750, dailyListings: 100, aiMockups: 300, mockupSets: 75/);
   assert.match(drafts,/plan\.drafts/);assert.match(drafts,/status='succeeded'/);
   assert.match(renders,/plan\.aiMockups/);assert.match(renders,/MAX\(0,/);
   assert.match(library,/plan\.mockupSets/);assert.match(library,/COUNT\(DISTINCT theme\)/);
@@ -1123,8 +1125,9 @@ test("shows every public plan on Usage and Billing with direct plan controls", a
     readFile(new URL("../app/management-aesthetic.css", import.meta.url), "utf8"),
   ]);
   assert.match(page, /Free Trial/);
-  assert.match(page, />Listing Factory</);
-  assert.match(page, /Listing Factory Scale/);
+  assert.match(page, />Starter</);
+  assert.match(page, />Pro</);
+  assert.match(page, />Scale</);
   assert.match(page, /Manage current plan/);
   assert.match(page, /choosePlan\("scale"\)/);
   assert.match(styles, /\.usage-plan-grid/);
@@ -1308,7 +1311,8 @@ test("queues Etsy publishing durably and protects shared API capacity",async()=>
     readFile(new URL("../app/page.tsx",import.meta.url),"utf8"),
     readFile(new URL("../app/api/usage/route.ts",import.meta.url),"utf8"),
   ]);
-  assert.match(plans,/drafts: 200, dailyListings: 40/);
+  assert.match(plans,/drafts: 100, dailyListings: 40/);
+  assert.match(plans,/drafts: 300, dailyListings: 75/);
   assert.match(route,/published_at>=datetime\('now','-24 hours'\)/);
   assert.match(route,/status IN \('queued','running'\)/);
   assert.match(route,/ON CONFLICT\(user_id,product_id\)/);

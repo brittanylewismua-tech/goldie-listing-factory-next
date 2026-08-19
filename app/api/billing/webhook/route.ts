@@ -22,7 +22,7 @@ export async function POST(request:Request){
     if(userId&&subscription){const plan=(object.metadata?.plan_key||"goldie");await db.prepare("INSERT INTO account_plans (user_id,plan_key) VALUES (?,?) ON CONFLICT(user_id) DO UPDATE SET plan_key=excluded.plan_key,updated_at=CURRENT_TIMESTAMP").bind(userId,plan).run();}
   }
   if(event.type.startsWith("customer.subscription.")){
-    const userId=object.metadata?.user_id,customer=object.customer,priceId=object.items?.data?.[0]?.price?.id,plan=(object.metadata?.plan_key as "goldie"|"scale"|undefined)||planForPrice(priceId);
+    const userId=object.metadata?.user_id,customer=object.customer,priceId=object.items?.data?.[0]?.price?.id,plan=(object.metadata?.plan_key as "goldie"|"pro"|"scale"|undefined)||planForPrice(priceId);
     if(userId&&customer&&plan){
       await db.prepare("INSERT INTO billing_subscriptions (user_id,stripe_customer_id,stripe_subscription_id,status,plan_key,current_period_end,cancel_at_period_end) VALUES (?,?,?,?,?,?,?) ON CONFLICT(user_id) DO UPDATE SET stripe_customer_id=excluded.stripe_customer_id,stripe_subscription_id=excluded.stripe_subscription_id,status=excluded.status,plan_key=excluded.plan_key,current_period_end=excluded.current_period_end,cancel_at_period_end=excluded.cancel_at_period_end,updated_at=CURRENT_TIMESTAMP")
         .bind(userId,customer,object.id,object.status||"incomplete",plan,object.current_period_end||null,object.cancel_at_period_end?1:0).run();

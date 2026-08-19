@@ -9,7 +9,7 @@ import "@/app/signup/signup-polish.css";
 
 export default async function ListingFactoryRoute({searchParams}:{searchParams:Promise<{offer?:string}>}){
   const offerValue = (await searchParams).offer;
-  const initialOffer = offerValue === "trial" || offerValue === "goldie" || offerValue === "scale" ? offerValue : undefined;
+  const initialOffer = offerValue === "trial" || offerValue === "goldie" || offerValue === "pro" || offerValue === "scale" ? offerValue : undefined;
   const user = await getChatGPTUser();
   if (!user) return <SignupClient signedIn={false} returnTo="/listing-factory" initialOffer={initialOffer}/>;
 

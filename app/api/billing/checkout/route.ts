@@ -13,10 +13,11 @@ export async function POST(request:Request) {
     const current = await billingState(user);
     if (current.active) return NextResponse.json({error:"You already have an active Listing Factory subscription. Manage it from Usage + Plan."},{status:409});
     const customer = await customerFor(user), origin = siteOrigin(request), includeTrial=await trialAvailable(user);
+    const priceId = priceForPlan(plan), planDetails = PLANS[plan];
     const params = new URLSearchParams({
       mode:"subscription", customer, client_reference_id:user.userId,
       integration_identifier:`goldie_${crypto.randomUUID().replace(/-/g,"").slice(0,8)}`,
-      "line_items[0][price]":priceForPlan(plan), "line_items[0][quantity]":"1",
+      "line_items[0][quantity]":"1",
       success_url:`${origin}/signup?checkout=success`, cancel_url:`${origin}/signup?checkout=canceled`,
       allow_promotion_codes:"true", billing_address_collection:"auto",
       payment_method_collection:"always",
@@ -24,6 +25,14 @@ export async function POST(request:Request) {
       "subscription_data[metadata][plan_key]":plan,
       "metadata[user_id]":user.userId, "metadata[plan_key]":plan,
     });
+    if (priceId) params.set("line_items[0][price]", priceId);
+    else {
+      params.set("line_items[0][price_data][currency]", "usd");
+      params.set("line_items[0][price_data][unit_amount]", String(planDetails.price * 100));
+      params.set("line_items[0][price_data][recurring][interval]", "month");
+      params.set("line_items[0][price_data][product_data][name]", `The Goldie Listing Factory — ${planDetails.name}`);
+      params.set("line_items[0][price_data][product_data][metadata][plan_key]", plan);
+    }
     if(includeTrial)params.set("subscription_data[trial_period_days]","3");
     const session = await stripeRequest<{url:string}>("checkout/sessions",{method:"POST",body:params,idempotencyKey:`goldie-checkout-${user.userId}-${plan}-${new Date().toISOString().slice(0,10)}`});
     return NextResponse.json({url:session.url});

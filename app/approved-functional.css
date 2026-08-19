@@ -731,6 +731,8 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
   background:linear-gradient(145deg,rgba(252,244,254,.8),rgba(239,211,237,.66))!important;
   color:#5b304f!important;
 }
+.app-shell .publish-live-warning small{display:block;margin-top:6px;color:rgba(74,42,62,.72);font-size:11px;line-height:1.5}
+.app-shell .etsy-listing-fee-note{padding:12px 14px;border-radius:12px;background:rgba(239,211,237,.55);color:#66465d;font-size:12px;line-height:1.55}
 
 @property --approved-ring-angle{syntax:"<angle>";inherits:false;initial-value:200deg}
 /* Approved visual lock: these values come directly from public/goldie-real.html. */

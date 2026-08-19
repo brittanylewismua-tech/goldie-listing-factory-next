@@ -7,7 +7,9 @@ type BillingRuntime = {
   STRIPE_SECRET_KEY?: string;
   STRIPE_WEBHOOK_SECRET?: string;
   STRIPE_GOLDIE_PRICE_ID?: string;
+  STRIPE_PRO_PRICE_ID?: string;
   STRIPE_SCALE_PRICE_ID?: string;
+  STRIPE_SCALE_99_PRICE_ID?: string;
   RESEND_API_KEY?: string;
   GOLDIE_EMAIL_LOGO_URL?: string;
   GOLDIE_SITE_URL?: string;
@@ -23,20 +25,35 @@ export async function ensureBillingTables(db = billingRuntime().DB) {
     db.prepare("CREATE TABLE IF NOT EXISTS billing_trials (user_id TEXT PRIMARY KEY, started_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)"),
     db.prepare("CREATE TABLE IF NOT EXISTS stripe_events (event_id TEXT PRIMARY KEY, event_type TEXT NOT NULL, processed_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)"),
     db.prepare("CREATE TABLE IF NOT EXISTS trial_reminder_emails (user_id TEXT PRIMARY KEY, subscription_id TEXT NOT NULL, resend_email_id TEXT NOT NULL, scheduled_for INTEGER NOT NULL, canceled_at TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)"),
+    db.prepare("CREATE TABLE IF NOT EXISTS billing_migrations (key TEXT PRIMARY KEY, completed_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)"),
   ]);
+  const migrationKey = "2026-08-19-scale-to-pro";
+  const migrated = await db.prepare("SELECT 1 done FROM billing_migrations WHERE key=?").bind(migrationKey).first<{done:number}>();
+  if (!migrated) {
+    await db.batch([
+      db.prepare("UPDATE billing_subscriptions SET plan_key='pro',updated_at=CURRENT_TIMESTAMP WHERE plan_key='scale'"),
+      db.prepare("UPDATE account_plans SET plan_key='pro',updated_at=CURRENT_TIMESTAMP WHERE plan_key='scale'"),
+      db.prepare("INSERT OR IGNORE INTO billing_migrations (key) VALUES (?)").bind(migrationKey),
+    ]);
+  }
 }
 
 export function priceForPlan(plan: PlanKey) {
   const runtime = billingRuntime();
-  const price = plan === "scale" ? runtime.STRIPE_SCALE_PRICE_ID : runtime.STRIPE_GOLDIE_PRICE_ID;
-  if (!price) throw new Error(`Stripe pricing is not configured for ${plan}.`);
-  return price;
+  // The original STRIPE_SCALE_PRICE_ID is the existing $59 price. Treat it as
+  // Pro for backward compatibility. A dedicated $99 Scale price can be added
+  // without interrupting checkout because Checkout can create the recurring
+  // price inline until that environment value is present.
+  if (plan === "goldie") return runtime.STRIPE_GOLDIE_PRICE_ID || null;
+  if (plan === "pro") return runtime.STRIPE_PRO_PRICE_ID || runtime.STRIPE_SCALE_PRICE_ID || null;
+  return runtime.STRIPE_SCALE_99_PRICE_ID || null;
 }
 
 export function planForPrice(priceId?: string | null): PlanKey | null {
   const runtime = billingRuntime();
   if (priceId && priceId === runtime.STRIPE_GOLDIE_PRICE_ID) return "goldie";
-  if (priceId && priceId === runtime.STRIPE_SCALE_PRICE_ID) return "scale";
+  if (priceId && (priceId === runtime.STRIPE_PRO_PRICE_ID || priceId === runtime.STRIPE_SCALE_PRICE_ID)) return "pro";
+  if (priceId && priceId === runtime.STRIPE_SCALE_99_PRICE_ID) return "scale";
   return null;
 }
 
