@@ -840,9 +840,9 @@ test("routes each product surface deliberately and never releases a partial batc
   assert.match(route,/if\(!body\.reference\)/);
   assert.match(route,/plan\.aiMockups/);
   assert.match(route,/monthKey/);
-  assert.match(renderers,/fashn\/tryon\/v1\.6/);
-  assert.match(renderers,/model_image:scene/);
-  assert.match(renderers,/garment_image:reference/);
+  assert.doesNotMatch(renderers,/fashn\/tryon/);
+  assert.match(renderers,/Do not create, replace, redraw, layer, or paste in a new shirt or garment/);
+  assert.match(renderers,/only visible change.*design printed on the original garment/);
   assert.doesNotMatch(renderers,/shirt-design/);
   assert.match(renderers,/seedream\/v5\/lite\/edit/);
 });

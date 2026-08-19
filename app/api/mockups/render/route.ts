@@ -11,33 +11,19 @@ import { customerLaunchBlock } from "@/app/customer-launch-gate";
 const MAX_DATA_URL_LENGTH=18*1024*1024;
 const valid=(value:unknown):value is string=>typeof value==="string"&&/^data:image\/(png|jpeg|webp);base64,/i.test(value)&&value.length<=MAX_DATA_URL_LENGTH;
 
-async function judgeApparel(key:string,scene:string,candidates:string[]){
-  const response=await fetch("https://fal.run/openrouter/router/vision",{method:"POST",headers:{Authorization:`Key ${key}`,"Content-Type":"application/json"},body:JSON.stringify({
-    image_urls:[scene,...candidates],model:"google/gemini-2.5-flash",temperature:0,
-    system_prompt:"Return only compact valid JSON. Do not use markdown.",
-    prompt:`Image 1 is the original blank apparel mockup. Images 2 through ${candidates.length+1} are generated candidates. Inspect the entire person and scene, not only the printed design. Reject any candidate with malformed or fused hands, fingers, arms, legs, torso, face, clothing, furniture, or background; any invented object; any black blob or unexplained shape; any changed pose or composition; or any obviously distorted garment. Choose the cleanest candidate that preserves the original scene and has a natural shirt. Always return the best candidate number starting at 1, even when none is fully acceptable. Return {"acceptable":true,"best":1} or {"acceptable":false,"best":1}.`
-  })});
-  if(!response.ok)throw new Error("Goldie could not complete the mockup quality check.");
-  const payload=await response.json() as {output?:string};const match=payload.output?.match(/\{[\s\S]*\}/);if(!match)throw new Error("Goldie could not read the mockup quality check.");
-  const verdict=JSON.parse(match[0]) as {acceptable?:boolean;best?:number};
-  const best=Number.isInteger(verdict.best)&&verdict.best!>0&&verdict.best!<=candidates.length?candidates[verdict.best!-1]:candidates[0];
-  return {approved:Boolean(verdict.acceptable),best};
-}
-
 async function renderProduct(key:string,kind:ProductKind,scene:string,design:string,reference:string){
-  let fallback="",lastError="";
-  for(let attempt=0;attempt<3;attempt++){
+  let lastError="";
+  for(let attempt=0;attempt<2;attempt++){
     try{
-      const response=await fetch(`https://fal.run/${rendererFor(kind)}`,{method:"POST",headers:{Authorization:`Key ${key}`,"Content-Type":"application/json"},body:JSON.stringify(rendererInput(kind,[scene,design,reference]))});
+      const input=rendererInput(kind,[scene,design,reference]) as Record<string,unknown>;
+      const response=await fetch(`https://fal.run/${rendererFor(kind)}`,{method:"POST",headers:{Authorization:`Key ${key}`,"Content-Type":"application/json"},body:JSON.stringify(input),signal:AbortSignal.timeout(attempt===0?65_000:45_000)});
       const result=await response.json() as {images?:Array<{url?:string}>;detail?:string;error?:string};
       const candidates=(result.images||[]).map(image=>image.url).filter((url):url is string=>Boolean(url));
       if(!response.ok||!candidates.length){lastError=result.detail||result.error||"Goldie could not finish this mockup.";continue}
-      if(kind!=="apparel")return {image:candidates[0]};
-      const verdict=await judgeApparel(key,scene,candidates);fallback=verdict.best||fallback;if(verdict.approved)return {image:verdict.best};
+      return {image:candidates[0],warning:attempt?"Goldie recovered after the first render took too long. Review the finished placement before publishing.":undefined};
     }catch(error){lastError=error instanceof Error?error.message:"Goldie could not finish this mockup."}
   }
-  if(fallback)return {image:fallback,warning:"Goldie created the best available version after automatic retries. Review it closely before publishing."};
-  throw new Error(lastError||"Goldie could not finish this mockup after automatic retries.");
+  throw new Error(lastError||"Goldie could not finish this mockup after its automatic recovery attempt.");
 }
 
 export async function POST(request:NextRequest){
@@ -56,7 +42,7 @@ export async function POST(request:NextRequest){
     if(Number(usage?.count||0)>plan.aiMockups){await db.update(mockupRenderUsage).set({count:sql`MAX(0,${mockupRenderUsage.count}-1)`}).where(eq(mockupRenderUsage.userDay,userDay));reservedKey="";return NextResponse.json({error:`You have used all ${plan.aiMockups} AI-rendered mockups in your ${plan.name} plan. Your allowance resets next month.`},{status:429});}
     const key=process.env.FAL_KEY;if(!key)throw new Error("Product rendering is temporarily unavailable.");
     const result=await renderProduct(key,body.kind,body.scene,body.design,body.reference);
-    const rendered=await fetch(result.image);if(!rendered.ok)throw new Error("Goldie created the mockup but could not deliver the finished file.");
+    const rendered=await fetch(result.image,{signal:AbortSignal.timeout(20_000)});if(!rendered.ok)throw new Error("Goldie created the mockup but could not deliver the finished file.");
     const bytes=new Uint8Array(await rendered.arrayBuffer());let binary="";for(let offset=0;offset<bytes.length;offset+=32768)binary+=String.fromCharCode(...bytes.subarray(offset,offset+32768));
     reservedKey="";
     return NextResponse.json({image:`data:${rendered.headers.get("content-type")||"image/png"};base64,${btoa(binary)}`,warning:result.warning});
