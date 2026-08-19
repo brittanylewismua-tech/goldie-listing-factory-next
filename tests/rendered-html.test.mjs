@@ -1052,11 +1052,15 @@ test("keeps the Step 6 listing count on one line", async () => {
 });
 
 test("renders personalization as an On-left Off-right toggle", async () => {
-  const styles = await readFile(new URL("../app/approved-functional.css", import.meta.url), "utf8");
+  const [page,styles] = await Promise.all([
+    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/approved-functional.css", import.meta.url), "utf8"),
+  ]);
   assert.match(styles, /\.app-shell \.personalization-switch\{/);
   assert.match(styles, /\.personalization-switch:before\{content:"On"\}/);
   assert.match(styles, /\.personalization-switch:after\{content:"Off"\}/);
   assert.match(styles, /\.personalization-switch:has\(input:checked\)>span\{transform:translateX\(-58px\)\}/);
+  assert.match(page, /role="switch" aria-label="Personalization" aria-checked=\{enabled\}/);
 });
 
 test("shows every public plan on Usage and Billing with direct plan controls", async () => {
@@ -1374,8 +1378,10 @@ test("requires a photo on every listing and lets sellers set Etsy photo order",a
   ]);
   assert.match(page,/Select at least one Printify photo or create at least one lifestyle mockup for every listing/);
   assert.match(page,/preparedMockupCounts\[item\.id!\]/);
+  assert.match(page,/if\(imageStepError&&\(printifyImageIndices\.length/);
   assert.match(organizer,/draggable/);
   assert.match(organizer,/Lifestyle first · Printify next · size guide last/);
+  assert.match(organizer,/Photo order saved in preview/);
   assert.match(images,/order\.json/);
   assert.match(finish,/form\.set\("rank",String\(rank\)\)/);
 });
