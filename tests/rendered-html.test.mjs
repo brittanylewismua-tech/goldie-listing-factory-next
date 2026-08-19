@@ -1051,6 +1051,14 @@ test("keeps the Step 6 listing count on one line", async () => {
   assert.match(styles, /min-width:max-content!important/);
 });
 
+test("renders personalization as an On-left Off-right toggle", async () => {
+  const styles = await readFile(new URL("../app/approved-functional.css", import.meta.url), "utf8");
+  assert.match(styles, /\.app-shell \.personalization-switch\{/);
+  assert.match(styles, /\.personalization-switch:before\{content:"On"\}/);
+  assert.match(styles, /\.personalization-switch:after\{content:"Off"\}/);
+  assert.match(styles, /\.personalization-switch:has\(input:checked\)>span\{transform:translateX\(-58px\)\}/);
+});
+
 test("shows every public plan on Usage and Billing with direct plan controls", async () => {
   const [page, styles] = await Promise.all([
     readFile(new URL("../app/usage/page.tsx", import.meta.url), "utf8"),

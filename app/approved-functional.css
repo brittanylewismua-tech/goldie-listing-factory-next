@@ -1200,3 +1200,57 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
   margin-left:16px;
   white-space:nowrap!important;
 }
+
+/* Personalization uses a true two-position control: On left, Off right. */
+.app-shell .personalization-switch{
+  position:relative;
+  display:grid!important;
+  grid-template-columns:1fr 1fr!important;
+  flex:0 0 auto;
+  width:118px;
+  height:38px;
+  padding:3px!important;
+  overflow:hidden;
+  border:1px solid rgba(91,48,79,.22);
+  border-radius:999px;
+  background:rgba(255,255,255,.68);
+  color:#75566c;
+  cursor:pointer;
+  isolation:isolate;
+}
+.app-shell .personalization-switch:before,
+.app-shell .personalization-switch:after{
+  z-index:1;
+  display:grid;
+  place-items:center;
+  font-size:10px;
+  font-weight:850;
+  pointer-events:none;
+}
+.app-shell .personalization-switch:before{content:"On"}
+.app-shell .personalization-switch:after{content:"Off"}
+.app-shell .personalization-switch input{
+  position:absolute!important;
+  width:1px!important;
+  height:1px!important;
+  opacity:0;
+}
+.app-shell .personalization-switch>span{
+  position:absolute;
+  z-index:2;
+  top:3px;
+  right:3px;
+  display:grid;
+  place-items:center;
+  width:54px;
+  height:30px;
+  border-radius:999px;
+  background:linear-gradient(135deg,#6d3a60,#9b5b8b);
+  color:#fff;
+  font-size:10px;
+  font-weight:850;
+  box-shadow:0 4px 12px rgba(91,48,79,.2);
+  transition:transform .2s ease;
+}
+.app-shell .personalization-switch:has(input:checked)>span{transform:translateX(-58px)}
+.app-shell .personalization-switch:focus-within{outline:3px solid rgba(202,135,190,.3);outline-offset:2px}
