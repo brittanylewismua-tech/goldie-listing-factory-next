@@ -131,7 +131,7 @@ function bilinear(c: Template["corners"], u: number, v: number): Point {
   ];
 }
 
-function triangle(ctx: CanvasRenderingContext2D, image: HTMLImageElement, source: Point[], dest: Point[]) {
+function triangle(ctx: CanvasRenderingContext2D, image: CanvasImageSource, source: Point[], dest: Point[]) {
   ctx.save();
   ctx.beginPath(); ctx.moveTo(...dest[0]); ctx.lineTo(...dest[1]); ctx.lineTo(...dest[2]); ctx.closePath(); ctx.clip();
   affine(ctx, source, dest); ctx.drawImage(image, 0, 0); ctx.restore();
@@ -143,6 +143,9 @@ async function makeMockup(file: File, template: Template): Promise<Rendered> {
   const rawCorners = template.normalized ? template.corners.map(([x,y])=>[x*master.naturalWidth,y*master.naturalHeight] as Point) as Template["corners"] : template.corners;
   const kind=template.surfaceKind||"rigid-flat";
   if(!isCalibratedSurface(kind)) throw new Error(`${SURFACE_LABELS[kind]} mockups require product-aware rendering.`);
+  const renderArt=document.createElement("canvas");renderArt.width=art.naturalWidth;renderArt.height=art.naturalHeight;
+  const artScale=kind==="rigid-flat"?1:.42,artWidth=art.naturalWidth*artScale,artHeight=art.naturalHeight*artScale;
+  renderArt.getContext("2d")!.drawImage(art,(art.naturalWidth-artWidth)/2,(art.naturalHeight-artHeight)/2,artWidth,artHeight);
   const detectedCorners=kind==="rigid-flat"?refineRigidSurface(master,rawCorners):rawCorners;
   validateSurface(detectedCorners,master.naturalWidth,master.naturalHeight);
   const corners=safeInset(detectedCorners,master.naturalWidth,master.naturalHeight);
@@ -156,9 +159,9 @@ async function makeMockup(file: File, template: Template): Promise<Rendered> {
   const cols = 12, rows = 16;
   for (let y=0;y<rows;y++) for (let x=0;x<cols;x++) {
     const u0=x/cols,u1=(x+1)/cols,v0=y/rows,v1=(y+1)/rows;
-    const s00:[number,number]=[u0*art.width,v0*art.height],s10:[number,number]=[u1*art.width,v0*art.height],s11:[number,number]=[u1*art.width,v1*art.height],s01:[number,number]=[u0*art.width,v1*art.height];
+    const s00:[number,number]=[u0*renderArt.width,v0*renderArt.height],s10:[number,number]=[u1*renderArt.width,v0*renderArt.height],s11:[number,number]=[u1*renderArt.width,v1*renderArt.height],s01:[number,number]=[u0*renderArt.width,v1*renderArt.height];
     const d00=bilinear(corners,u0,v0),d10=bilinear(corners,u1,v0),d11=bilinear(corners,u1,v1),d01=bilinear(corners,u0,v1);
-    triangle(ctx,art,[s00,s10,s11],[d00,d10,d11]); triangle(ctx,art,[s00,s11,s01],[d00,d11,d01]);
+    triangle(ctx,renderArt,[s00,s10,s11],[d00,d10,d11]); triangle(ctx,renderArt,[s00,s11,s01],[d00,d11,d01]);
   }
   ctx.globalCompositeOperation="multiply"; ctx.globalAlpha=.16; ctx.drawImage(master,0,0);
   ctx.restore();
