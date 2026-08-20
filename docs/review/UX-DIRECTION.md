@@ -273,6 +273,146 @@ line, not a substitute for them.
 
 ---
 
+---
+
+# Part C — Edge cases that must be answered before building
+
+Every item in Part B changes something from "seller produces it" to "Goldie
+produces it, seller adjusts." That swap creates the same class of question every
+time: what happens on revisit, on failure, on conflict, and when Goldie has no
+good answer. B1a covers this for titles. These are the equivalents for
+everything else. **Do not implement a Part B item until its Part C entry is
+answered.**
+
+## C1. Changing the Etsy category invalidates the attributes (B2)
+
+Etsy attributes are **category-specific** — the fields for a T-shirt are not the
+fields for a mug. If the seller changes the category dropdown after attributes
+are seeded, the seeded values may no longer be valid fields at all.
+
+**Required behaviour:** changing the category clears attribute values that do not
+exist on the new category, keeps the ones that do, and re-seeds from the
+blueprint for the new category. Warn before discarding: *"Changing the category
+will clear 4 fields that don't apply to Mugs."* Never silently keep a value on a
+field the new category doesn't have — Etsy will reject it at publish.
+
+## C2. The blueprint may not map cleanly to Etsy's value list (B2)
+
+Printify describes a blank in free text ("100% ring-spun cotton"). Etsy's
+Materials field is a fixed vocabulary. A mapping will sometimes fail.
+
+**Required behaviour:** when a blueprint value has no confident match in Etsy's
+list, **leave the field blank.** Do not guess — guessing is what produces the
+current "Occasion filled on 2 of 3 identical listings" behaviour. A blank field
+the seller fills is correct; a wrong field they don't notice is not.
+The summary line should be honest about it: `Etsy details · 6 of 11 set`, not a
+green tick implying completeness.
+
+## C3. Where does the seller edit a collapsed summary? (B2)
+
+B2 collapses 11 dropdowns to one line per listing. That line must expand in place
+to the full field set, and the expanded state must persist while they work — it
+cannot collapse on every re-render. If they change a field, the summary line
+updates to reflect it and the listing is marked edited (per B1a's rule).
+
+## C4. "Recommended photo set" is not the same for every product (B3)
+
+I wrote "front flat, folded, on-model front, on-model side, two lifestyle, size
+chart." That vocabulary is a T-shirt vocabulary. A mug, a poster and a tote have
+entirely different mockup types, and the available mockups come from the Printify
+blueprint, not from a fixed list.
+
+**Required behaviour:** define the recommended set as a **ranked preference list
+that degrades**, not a fixed list. Rank the blueprint's available mockups by type
+and take the best N that exist. If a product has no "on-model" mockups, it takes
+more flatlays instead. Never leave a listing with zero photos because the
+preferred types were missing — that is the current blocking-validation failure in
+a new costume.
+
+## C5. Etsy's 20-photo cap versus colours × mockups (B3)
+
+Pre-selecting a set across every colour a listing offers will frequently exceed
+20 photos. Nothing currently defines what gets cut.
+
+**Required behaviour:** cap at 20, and define the priority explicitly — one photo
+per offered colour first (so every variant is represented), then fill remaining
+slots by mockup-type rank, then the size guide last. Show the count against the
+cap so the seller can see why something was excluded.
+
+## C6. Photo order is not the same as photo selection (B3)
+
+Etsy uses the **first** photo as the listing thumbnail — it is the single most
+important image in the listing. Selecting a set does not define its order.
+`ListingPhotoOrder` already exists in the codebase, so ordering is a real concept
+that pre-selection must respect.
+
+**Required behaviour:** the pre-selected set arrives in a deliberate order with
+the strongest image first, not in Printify's array order. If the seller reorders,
+that order survives revisiting the step.
+
+## C7. "Apply to every listing" when selections already differ (B3)
+
+Once photos are pre-selected per listing, the listings are no longer identical, so
+"Apply these photos to every listing" is now a destructive action rather than a
+convenience.
+
+**Required behaviour:** confirm before overwriting: *"This replaces the photos on
+4 other listings. Continue?"* And state what it does to listings whose colours
+differ from the source listing.
+
+## C8. Tags follow titles, so tag edits need the same protection (B1a)
+
+Tags are derived from the title generation result. If the seller edits **tags**
+but not the title, regenerating the title will silently replace their tags.
+
+**Required behaviour:** track edited state on tags independently of titles. A
+title regeneration must not overwrite hand-edited tags without the same
+confirmation B1a requires for titles.
+
+## C9. Where do the moved preferences live? (B4)
+
+B4 moves title capitalization and comma style onto the saved product. They then
+need somewhere to be changed, or they become invisible settings the seller cannot
+find.
+
+**Required behaviour:** surface them in the saved-product editor alongside the
+keyword bank and colours, and show their current values as read-only text on the
+titles step with an "edit product defaults" link. Moving a setting is only an
+improvement if the seller can still find it.
+
+## C10. Changing prices after drafts exist (A1)
+
+A1 restores a forward path on the Pricing step for batches that already have
+drafts. That surfaces a question the current code avoids by hiding the button:
+**if the seller changes a price after Printify drafts are created, do the drafts
+update?**
+
+**Required behaviour:** decide and state it in the UI. Either the change
+propagates to the existing drafts, or the screen says plainly that it will not
+and offers to update them. Silently accepting a price change that never reaches
+Printify is a money bug — the seller believes they are selling at one price and
+Printify holds another.
+
+## C11. The transition message must not lie (B7)
+
+B7's copy says "titles are already written, photos are already picked." If
+generation partially failed, or the seller has three listings still empty, that
+sentence is false at the exact moment they are being asked to trust the tool.
+
+**Required behaviour:** make it conditional on actual state. If anything is
+incomplete, say what: *"Drafts created. 17 of 20 titles written — 3 need a look."*
+
+## C12. Pre-fill must not silently spend money (B1, B2, B3)
+
+Generate-on-arrival means vision-API calls fire without the seller pressing
+anything. Combined with revisits, retries and bundles, that can multiply.
+
+**Required behaviour:** generation runs once per listing per batch and the result
+is persisted. Re-entering a step never re-runs it. Any regeneration is explicitly
+requested by the seller.
+
+---
+
 ## Order to build
 
 1. **B2 and B3 pre-fill** — biggest change in felt effort, and both write to
