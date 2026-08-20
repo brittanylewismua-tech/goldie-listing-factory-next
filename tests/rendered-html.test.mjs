@@ -143,7 +143,8 @@ test("unifies saved products, editing, pricing, and mockups without the old fact
   assert.match(recipes, /props\.onUseRecipe\(saved\)/);
   assert.match(page, /Adjust what changed\. Keep everything else\./);
   assert.match(page, /Everything else/);
-  assert.match(page, /MOCKUPS FOR THIS BATCH/);
+  assert.match(page, /From your last batch — change it anytime/);
+  assert.doesNotMatch(page, />Not chosen</);
   assert.doesNotMatch(recipes, /Shipping cost|Shipping charged|Payment fixed fee/);
   assert.doesNotMatch(page, /Apply titles in order|Import title CSV/);
   assert.match(recipes, /validated phrases available to Goldie/);
@@ -180,7 +181,8 @@ test("groups equal-cost Printify variants while preserving individual review and
   assert.match(page, /edit one separately/i);
   assert.doesNotMatch(page, /Approve pricing \+ shipping/);
   assert.match(page, /Continue to create drafts/);
-  assert.match(page, /onApprovalChange\(Boolean\(selectedProfile&&!customDirty\)\)/);
+  assert.match(page, /Approve prices and shipping/);
+  assert.doesNotMatch(page, /onApprovalChange\(Boolean\(selectedProfile&&!customDirty\)\)/);
   assert.match(page, /variantPrices/);
   assert.match(page, /pricingApproved/);
   assert.match(printify, /variants:selectableVariants\.map/);

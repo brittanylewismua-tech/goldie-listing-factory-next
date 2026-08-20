@@ -1133,6 +1133,25 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .app-shell .final-listing-card>div:not(.final-listing-links)>b{display:block!important;max-width:100%!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important}
 @media(max-width:1100px){.app-shell .listing-editor .design-line{grid-template-columns:56px minmax(0,1fr)!important}.app-shell .listing-editor .quality-pill{display:none!important}.app-shell .post-draft-workspace .draft-card>*{grid-column:1!important}}
 
+/* Audit pass 2: make the returning workflow honest and action-led. */
+.app-shell .disconnect-link{min-height:0!important;padding:2px 0!important;border:0!important;background:transparent!important;box-shadow:none!important;color:#7b526e!important;font-size:10px!important;text-decoration:none!important}
+.app-shell .disconnect-link:hover{color:#4a2a3e!important;text-decoration:underline!important}
+.app-shell .saved-product-batch-page .batch-page-intro .mini-label,.app-shell .saved-product-batch-page .product-color-selector .mini-label,.app-shell .saved-product-batch-page .mockup-default-block .mini-label{display:none!important}
+.app-shell .saved-product-batch-page .everything-else>summary small{display:none!important}
+.app-shell .saved-settings-summary{display:flex!important;flex-wrap:wrap!important;gap:7px!important;margin:12px 0!important}
+.app-shell .saved-settings-summary span{padding:7px 10px!important;border:1px solid rgba(91,48,79,.14)!important;border-radius:999px!important;background:rgba(255,255,255,.5)!important;color:#5b304f!important;font-size:10px!important;font-weight:750!important}
+.app-shell .keyword-bank-required{display:grid!important;gap:3px!important;width:100%!important;margin:12px 0!important;padding:14px 16px!important;border:1px solid rgba(157,80,130,.32)!important;border-radius:12px!important;background:#fff1f8!important;color:#4f2944!important;text-align:left!important;box-shadow:none!important}
+.app-shell .keyword-bank-required b{font-size:12px!important}.app-shell .keyword-bank-required span{font-size:10px!important;font-weight:600!important}
+.app-shell .setup-forward{width:100%!important;margin:18px 0 6px!important}
+.app-shell .recipe-card .add-product-button{border:1px solid rgba(91,48,79,.18)!important;background:rgba(255,255,255,.58)!important;color:#5b304f!important;box-shadow:none!important}
+.app-shell .recipe-card .recipe-use em{display:inline-block!important;margin-top:4px!important;padding:5px 9px!important;border-radius:999px!important;background:#673452!important;color:#fff!important;font-weight:850!important}
+.app-shell .recipe-card .delete-recipe{width:auto!important;min-width:48px!important;padding:4px 7px!important;font-size:0!important}
+.app-shell .recipe-card .delete-recipe:after{content:"Delete";font-size:9px;font-weight:800}
+.app-shell .pricing-approval-button{width:100%!important;margin-top:16px!important;padding:14px 18px!important;border:1px solid rgba(91,48,79,.18)!important;border-radius:11px!important;background:#663650!important;color:#fff!important;font-weight:850!important}
+.app-shell .pricing-approval-button.approved{background:#e8f5eb!important;color:#27663f!important}
+.app-shell .pricing-approval-button:disabled{opacity:.5!important;cursor:not-allowed!important}
+.app-shell .whole-pricing-toggle{order:2!important;background:transparent!important;border-color:rgba(91,48,79,.12)!important;font-weight:650!important}
+
 /* Saved-product and bundle cards: content and utility actions occupy separate
    rows so long names can never sit underneath Edit or Delete. */
 .app-shell .recipe-card .recipe-tile,
@@ -1377,3 +1396,16 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 }
 .app-shell .personalization-switch:has(input:checked)>span{transform:translateX(-58px)}
 .app-shell .personalization-switch:focus-within{outline:3px solid rgba(202,135,190,.3);outline-offset:2px}
+
+/* Audit pass 2: the frequent action is primary; setup and destructive actions recede. */
+.app-shell[data-product-selected="true"] .recipe-library-head,
+.app-shell[data-product-selected="true"] .recipe-tile:not(.selected),
+.app-shell[data-product-selected="true"] .bundle-library{display:none!important}
+.app-shell[data-product-selected="true"] .recipe-grid{grid-template-columns:1fr!important}
+.app-shell .variant-pricing .heading-with-help>button{display:none!important}
+.keyword-page .keyword-workspace{display:flex!important;flex-direction:column!important}
+.keyword-page .bank-library{order:1}
+.keyword-page .management-create{order:2}
+.keyword-page .new-bank-button,
+.mockupFactory .newSetButton{border:0!important;background:transparent!important;box-shadow:none!important;color:#6b4661!important;text-decoration:underline!important;text-underline-offset:3px}
+.usage-page .usage-card b span{display:block;margin-top:3px;font-size:11px!important}
