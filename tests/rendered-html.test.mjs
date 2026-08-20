@@ -912,7 +912,7 @@ test("restores batch colors and blocks publishing until every listing has a phot
     readFile(new URL("../app/final-listing-review.tsx", import.meta.url), "utf8"),
   ]);
   assert.match(page,/selectedColorIds\?:number\[\]/);
-  assert.match(page,/state:\{template,templateDetails,description,pricing,selectedColorIds,/);
+  assert.match(page,/function batchStateSnapshot\(\).*selectedColorIds,/s);
   assert.match(page,/setSelectedColorIds\(state\.selectedColorIds\?\.length/);
   assert.match(page,/disabled=\{publishing\|\|drafts\.some\(draft=>draft\.status==="Failed"\)\|\|!allCreatedListingsHaveImages\(\)\}/);
   assert.match(page,/Add a photo to every listing before publishing/);
@@ -1635,6 +1635,25 @@ test("keeps the saved-product batch page compact and makes permanent settings ed
   assert.match(recipes,/const description=String\(body\.description/);
   assert.match(styles,/\.remembered-color-row/);
   assert.match(styles,/@media\(min-width:821px\) and \(max-width:1050px\)/);
+});
+
+test("lets a seller name and resume a finished batch without publishing it",async()=>{
+  const [page,history,css]=await Promise.all([
+    readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8"),
+    readFile(new URL("../app/batches/page.tsx",import.meta.url),"utf8"),
+    readFile(new URL("../app/globals.css",import.meta.url),"utf8"),
+  ]);
+  assert.match(page,/Keep as Printify drafts for now/);
+  assert.match(page,/suggestedBatchName/);
+  assert.match(page,/Save to Batch History/);
+  assert.match(page,/Great—this batch is waiting for you/);
+  assert.match(page,/status:"draft",step:"finish"/);
+  assert.match(page,/keptAsDrafts\?"draft"/);
+  assert.match(history,/\/listing-factory\?batch=/);
+  assert.match(history,/batch\.setup_name \|\| batch\.product_title/);
+  assert.match(history,/Printify drafts/);
+  assert.match(css,/\.keep-drafts-button/);
+  assert.match(css,/\.save-draft-modal/);
 });
 
 test("renders Finish as a compact horizontal labeled subrail",async()=>{
