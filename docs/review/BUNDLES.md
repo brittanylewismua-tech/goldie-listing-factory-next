@@ -28,7 +28,16 @@ No new concept. A bundle is a saved product with more than one thing in it.
 
 ---
 
-## 1. Quota is the first thing to solve, not the last
+## 1. Quota — corrected
+
+> **CORRECTION.** An earlier version of this file said 20 designs on a 3-product
+> bundle would consume three months of plan. That was based on the beta account's
+> 20-listing cap, not the real plans. Actual tiers are Starter 100/month, Pro
+> 300/month, Scale 750/month. **60 listings fits Starter comfortably. Bundles do
+> not require a pricing change.** The only pinch is the Free Trial at 10 listing
+> creations, where a 4-design 3-product bundle is 12 and blows the trial.
+
+## 1a. Quota still needs to be visible before the drop
 
 20 designs on a 3-product bundle is **60 listings**. On the current plan that is
 three times the allowance, consumed in one drop.
