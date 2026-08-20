@@ -45,7 +45,5 @@ yarn-error.log*
 .projects/vault
 .projects/state.test.json
 .projects/state.local.test.json
-.env
-.env.*
 !.env.example
 _HANDOFF-read-me-on-other-laptop/

@@ -63,6 +63,7 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .app-shell .design-preparation-status b{font-size:14px!important;line-height:1.35!important}
 .app-shell .design-preparation-status small{color:rgba(74,42,62,.74)!important;font-size:11.5px!important;line-height:1.45!important}
 .app-shell .batch-capacity span{color:rgba(74,42,62,.72)!important;font-size:11.5px!important}
+.app-shell .design-upload-review{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px;margin-top:12px}.app-shell .design-upload-review article{display:grid;grid-template-columns:58px minmax(0,1fr) auto;align-items:center;gap:10px;padding:9px;border:1px solid rgba(74,42,62,.16);border-radius:10px;background:rgba(255,255,255,.58)}.app-shell .design-upload-review img{width:58px;height:58px;object-fit:contain;border-radius:7px;background:rgba(255,255,255,.78)}.app-shell .design-upload-review article>div{min-width:0;display:grid;gap:3px}.app-shell .design-upload-review b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11.5px;color:#4a2a3e}.app-shell .design-upload-review small{font-size:10px;color:rgba(74,42,62,.68)}.app-shell .design-upload-review button{border:0;background:transparent;color:#8c3d60;text-decoration:underline;font-size:10px;font-weight:700;cursor:pointer}
 .app-shell .pixel-warning-inline small{font-size:11.5px!important}
 
 .app-shell .variant-table th{font-size:12px!important;line-height:1.35!important}

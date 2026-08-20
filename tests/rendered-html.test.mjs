@@ -166,13 +166,14 @@ test("groups equal-cost Printify variants while preserving individual review and
   ]);
   assert.match(page, /Review item prices and shipping/);
   assert.match(page, /variant\.templatePrice/);
-  assert.match(page, /Lowest estimated profit/);
+  assert.match(page, /Lowest estimated item profit/);
+  assert.match(page, /Shipping not included/);
   assert.match(page, /normalizePricesByCost/);
   assert.match(page, /changeCostGroupPrice/);
   assert.match(page, /grouped\.set\(variant\.cost/);
   assert.match(page, /item\.cost===cost/);
   assert.match(page, /exact same Printify product cost/);
-  assert.match(page, /color, size, material, finish, or other option costs more/);
+  assert.match(page, /color, size, material, finish, capacity, or model stays in a separate group/);
   assert.doesNotMatch(page, /Sizes and colors shown below/);
   assert.match(page, /edit one separately/i);
   assert.doesNotMatch(page, /Approve pricing \+ shipping/);
@@ -313,7 +314,7 @@ test("matches Printify editor DPI instead of comparing against template pixel di
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
   assert.match(page, /maxPlacementScale:isRigidPaperProduct\(templateDetails\)\?1:undefined/);
   assert.doesNotMatch(page, /Target:\s*\{templateDetails/);
-  assert.match(page, /DPI in Printify/);
+  assert.match(page, /DPI · good to print/);
 });
 
 test("calculates every Printify variant price from its own cost and Etsy fee profile", async () => {
@@ -339,7 +340,7 @@ test("calculates every Printify variant price from its own cost and Etsy fee pro
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
   const drafts = await readFile(new URL("../app/api/printify/drafts/route.ts", import.meta.url), "utf8");
   assert.match(page, /stillUsingTemplatePrices/);
-  assert.match(page, /Goldie calculated every price from your profit goal, product costs, and Etsy fees\. Shipping is handled separately/);
+  assert.match(page, /Goldie calculated every price from your profit goal, product costs, and Etsy fees\. Buyer-paid shipping stays separate/);
   assert.match(page, /if\(profile\)recalculate\(pricing\)/);
   assert.doesNotMatch(page, /estimatedProfit\([^\n]+shippingCost/);
   assert.doesNotMatch(drafts, /shipping==null\?body\.pricing/);
@@ -1057,7 +1058,7 @@ test("places each step count directly below its page title", async () => {
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/approved-functional.css", import.meta.url), "utf8"),
   ]);
-  assert.match(page, /<div className="heading-with-help hero-title-help"><h1>\{workflowHero\.title\}<\/h1><ContextHelp[\s\S]*?<\/div>\s*<p className="hero-step-count">Step \{progressIndex\+1\} of \{PROGRESS_STEPS\.length\}<\/p>/);
+  assert.match(page, /<p className="hero-step-count">\{railInFinish\?/);
   assert.doesNotMatch(page, /className="approved-step-count"/);
   assert.match(styles, /\.app-shell \.hero-step-count/);
   assert.match(styles, /\.app-shell \.hero\{padding-bottom:30px!important\}/);
@@ -1496,4 +1497,35 @@ test("chooses exact available Printify colors per batch and remembers optional d
   assert.match(drafts,/body\.selectedVariantIds\.includes\(id\)/);
   assert.match(recipes,/defaultColorIds/);
   assert.match(css,/\.product-color-selector/);
+});
+
+test("keeps buyer-paid shipping separate from item profit",async()=>{
+  const page=await readFile(new URL("../app/page.tsx",import.meta.url),"utf8");
+  assert.match(page,/Lowest estimated item profit/);
+  assert.match(page,/Shipping not included/);
+  assert.match(page,/Buyer-paid shipping stays separate/);
+  assert.doesNotMatch(page,/estimatedProfit\([^)]*shipping/i);
+});
+
+test("protects batch allowance and lets sellers review uploaded designs",async()=>{
+  const [page,styles]=await Promise.all([
+    readFile(new URL("../app/page.tsx",import.meta.url),"utf8"),
+    readFile(new URL("../app/approved-functional.css",import.meta.url),"utf8"),
+  ]);
+  assert.match(page,/planDraftsRemaining/);
+  assert.match(page,/Plan allowance/);
+  assert.match(page,/removeDesign/);
+  assert.match(page,/design-upload-review/);
+  assert.match(styles,/\.design-upload-review/);
+});
+
+test("remembers safe Etsy product defaults without design-specific assumptions",async()=>{
+  const [page,recipes]=await Promise.all([
+    readFile(new URL("../app/page.tsx",import.meta.url),"utf8"),
+    readFile(new URL("../app/api/product-recipes/route.ts",import.meta.url),"utf8"),
+  ]);
+  assert.match(page,/PHYSICAL_ETSY_FIELDS/);
+  assert.match(page,/productEtsyDefaults/);
+  assert.match(page,/etsyDefaults/);
+  assert.match(recipes,/etsyDefaults/);
 });
