@@ -67,7 +67,8 @@ modules") and the workflow now lives in **`app/listing-factory-app.tsx`**
 ## Reading order
 
 1. **`README.md`** ← you are here
-2. **`SCREEN-AUDIT.md`** — every screen walked, findings S0.1–S5.5
+2. **`AUDIT-PASS-2.md`** — newest findings, against the current build. Supersedes steps 1–2 of SCREEN-AUDIT.
+3. **`SCREEN-AUDIT.md`** — every screen walked, findings S0.1–S5.5
 3. **`UX-DIRECTION.md`** — Part A defects, Part B pre-fill, Part C edge cases
 4. **`PRODUCT-MODEL.md`** — how the saved product works
 5. **`ROWS-SPEC.md`** — the review table
