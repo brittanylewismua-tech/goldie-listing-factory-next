@@ -29,7 +29,7 @@ const worker = {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
 
-    if(env.DB&&url.pathname==="/api/printify/drafts/publish")ctx.waitUntil(import("../app/api/printify/drafts/publish/queue").then(({ kickGlobalPublishQueueIfDue }) => kickGlobalPublishQueueIfDue()).then(()=>undefined));
+    if(env?.DB&&url.pathname==="/api/printify/drafts/publish")ctx.waitUntil(import("../app/api/printify/drafts/publish/queue").then(({ kickGlobalPublishQueueIfDue }) => kickGlobalPublishQueueIfDue()).then(()=>undefined));
 
     if (url.pathname === "/_vinext/image") {
       const allowedWidths = [...DEFAULT_DEVICE_SIZES, ...DEFAULT_IMAGE_SIZES];
