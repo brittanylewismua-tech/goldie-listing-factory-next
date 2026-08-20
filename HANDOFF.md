@@ -60,6 +60,9 @@ Three real bugs in one function, all confirmed from source:
 
 ## Full review
 
+**Start at `docs/review/README.md`.** It is the single entry point and lists what is already shipped versus still open, verified against the code.
+
+
 `docs/review/FULL-UX-REVIEW.md` — the complete walkthrough (514 lines). Everything
 below is a summary; that file has the evidence, the measurements, and the reasoning.
 
