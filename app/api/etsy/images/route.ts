@@ -33,13 +33,13 @@ export async function POST(request:Request){
   const user=await getChatGPTUser();if(!user)return NextResponse.json({error:"Sign in to save listing images."},{status:401});
   const form=await request.formData(),productId=String(form.get("productId")||""),kind=String(form.get("kind")||"mockup"),replace=String(form.get("replace")||"")==="true",files=form.getAll("file").filter((value):value is File=>value instanceof File);
   if(!productId||!files.length||files.some(file=>!/^image\/(png|jpeg|webp)$/i.test(file.type)))return NextResponse.json({error:"Choose PNG, JPG, or WEBP listing images."},{status:400});
-  if(files.length>4)return NextResponse.json({error:"Each listing can have up to four Goldie-generated lifestyle mockups."},{status:409});
+  if(files.length>8)return NextResponse.json({error:"Each listing can have up to eight Goldie-generated lifestyle mockups."},{status:409});
   if(files.some(file=>file.size>20*1024*1024))return NextResponse.json({error:"Each Etsy listing image must be 20 MB or smaller."},{status:413});
   const owned=await ownsDraft(user.userId,productId);
   if(!owned)return NextResponse.json({error:"That Printify draft does not belong to this Listing Factory account."},{status:403});
   const prefix=`${basePrefix(user.userId,productId)}${kind==="size-guide"?"size-guide":"mockup"}/`;
   const existing=await runtime().ARTWORK.list({prefix,limit:10});
-  if(kind!=="size-guide"&&!replace&&existing.objects.length+files.length>4)return NextResponse.json({error:"Each listing can have up to four Goldie-generated lifestyle mockups."},{status:409});
+  if(kind!=="size-guide"&&!replace&&existing.objects.length+files.length>8)return NextResponse.json({error:"Each listing can have up to eight Goldie-generated lifestyle mockups."},{status:409});
   const saved:string[]=[];
   try{for(const file of files){const key=`${prefix}${crypto.randomUUID()}-${safeName(file.name)}`;await runtime().ARTWORK.put(key,await file.arrayBuffer(),{httpMetadata:{contentType:file.type},customMetadata:{name:safeName(file.name)}});saved.push(key)}
     if(kind==="size-guide"||replace)await Promise.all(existing.objects.map(object=>runtime().ARTWORK.delete(object.key)));

@@ -247,7 +247,7 @@ test("anchors Printify selectors to each photo and keeps batch actions honest",a
   assert.match(approved,/\.printify-image-grid \.printify-image-option\{position:relative/);
   assert.match(approved,/\.printify-photo-selector\{position:absolute!important/);
   assert.match(approved,/\.mockup-product-warning\{display:none!important\}/);
-  assert.match(mockups,/className="mockup-product-warning"/);
+  assert.doesNotMatch(mockups,/className="mockup-product-warning"/);
 });
 
 test("stages each finished mockup group for its exact Etsy listing", async () => {
@@ -824,14 +824,15 @@ test("caps mockup generation and saved themed sets", async () => {
   assert.match(libraryRoute,/existing\.length>=MAX_MOCKUPS_PER_SET/);
 });
 
-test("limits each listing to four lifestyle mockups and shows the recommended photo mix", async () => {
+test("handles up to eight lifestyle mockups in a reliable queue and shows the recommended photo mix", async () => {
   const [mockups, page] = await Promise.all([
     readFile(new URL("../app/integrated-mockups.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
   ]);
-  assert.match(mockups, /MAX_MOCKUPS_PER_LISTING=4/);
+  assert.match(mockups, /MAX_MOCKUPS_PER_LISTING=8/);
   assert.match(mockups, /next\.size>=MAX_MOCKUPS_PER_LISTING/);
-  assert.match(mockups, /Goldie recommends choosing three/);
+  assert.match(mockups, /runBounded\(jobs,2/);
+  assert.match(mockups, /withRecovery/);
   assert.match(page, /Recommended listing photo mix/);
   assert.match(page, /3 lifestyle model mockups/);
   assert.match(page, /Printify flatlays of each color offered/);
@@ -889,7 +890,8 @@ test("routes each product surface deliberately and never releases a partial batc
   assert.match(renderers,/Do not create, replace, redraw, layer, or paste in a new shirt or garment/);
   assert.match(renderers,/only visible change.*design printed on the original garment/);
   assert.doesNotMatch(renderers,/shirt-design/);
-  assert.match(renderers,/seedream\/v5\/lite\/edit/);
+  assert.match(renderers,/flux-2-flex\/edit/);
+  assert.match(renderers,/guidance_scale:2\.5/);
 });
 
 test("draft progress cannot exceed the selected batch", async () => {
@@ -1422,7 +1424,7 @@ test("renders final publishing readiness with the defined personalization valida
   const page=await readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8");
   assert.match(page,/files\.every\(file=>!personalizationProblem\(file\.etsy\)\)/);
   assert.doesNotMatch(page,/personalizationIssue\(/);
-  assert.match(page,/const labelForDraft=/);assert.match(page,/draft\.title\|\|file\?\.title\|\|draft\.name\|\|file\?\.name/);
+  assert.match(page,/missingPhotoDraftIds/);assert.match(page,/Product and design preview/);
   assert.doesNotMatch(page,/draft\.fileName/);
   assert.match(page,/async function selectRecipe\(recipe:Recipe\):Promise<TemplateDetails\|null>/);
   assert.doesNotMatch(page,/return Boolean\(await loadTemplateUrl/);
@@ -1483,10 +1485,12 @@ test("keeps lifestyle mockup creation specific to each listing",async()=>{
 
 test("creates selected lifestyle mockups concurrently without changing scene order",async()=>{
   const mockups=await readFile(new URL("../app/integrated-mockups.tsx",import.meta.url),"utf8");
-  assert.match(mockups,/Promise\.allSettled\(chosen\.map/);
+  assert.match(mockups,/runBounded\(jobs,2/);
+  assert.match(mockups,/made\.length!==chosen\.length/);
   assert.match(mockups,/completed\.entries\(\)\]\.sort/);
   assert.doesNotMatch(mockups,/for\(const t of chosen\)/);
-  assert.match(mockups,/A T-shirt scene should not be used for a sweatshirt or hoodie listing/);
+  assert.doesNotMatch(mockups,/scene needs another try/);
+  assert.match(mockups,/createPortal\(<div className="inline-lightbox"/);
 });
 
 test("requires a photo on every listing and lets sellers set Etsy photo order",async()=>{
@@ -1496,7 +1500,10 @@ test("requires a photo on every listing and lets sellers set Etsy photo order",a
     readFile(new URL("../app/api/etsy/images/route.ts",import.meta.url),"utf8"),
     readFile(new URL("../app/api/etsy/finish.ts",import.meta.url),"utf8"),
   ]);
-  assert.match(page,/Add at least one photo to/);
+  assert.match(page,/missingPhotoDraftIds/);
+  assert.match(page,/missing-photo-modal/);
+  assert.match(page,/Go to this listing/);
+  assert.match(page,/Product and design preview/);
   assert.match(page,/createdListingsMissingImages\(\)/);
   assert.match(page,/preparedMockupCounts\[draft\.id\]/);
   assert.match(page,/if\(imageStepError&&allCreatedListingsHaveImages\(\)\)/);

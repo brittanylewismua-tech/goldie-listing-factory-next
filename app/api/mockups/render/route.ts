@@ -16,7 +16,7 @@ async function renderProduct(key:string,kind:ProductKind,scene:string,design:str
   for(let attempt=0;attempt<2;attempt++){
     try{
       const input=rendererInput(kind,[scene,design,reference]) as Record<string,unknown>;
-      const response=await fetch(`https://fal.run/${rendererFor(kind)}`,{method:"POST",headers:{Authorization:`Key ${key}`,"Content-Type":"application/json"},body:JSON.stringify(input),signal:AbortSignal.timeout(attempt===0?65_000:45_000)});
+      const response=await fetch(`https://fal.run/${rendererFor(kind)}`,{method:"POST",headers:{Authorization:`Key ${key}`,"Content-Type":"application/json"},body:JSON.stringify(input),signal:AbortSignal.timeout(120_000)});
       const result=await response.json() as {images?:Array<{url?:string}>;detail?:string;error?:string};
       const candidates=(result.images||[]).map(image=>image.url).filter((url):url is string=>Boolean(url));
       if(!response.ok||!candidates.length){lastError=result.detail||result.error||"Goldie could not finish this mockup.";continue}
