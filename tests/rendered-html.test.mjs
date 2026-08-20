@@ -1529,3 +1529,25 @@ test("remembers safe Etsy product defaults without design-specific assumptions",
   assert.match(page,/etsyDefaults/);
   assert.match(recipes,/etsyDefaults/);
 });
+
+test("renders Finish as a compact horizontal labeled subrail",async()=>{
+  const [page,styles]=await Promise.all([
+    readFile(new URL("../app/page.tsx",import.meta.url),"utf8"),
+    readFile(new URL("../app/clarity-pass.css",import.meta.url),"utf8"),
+  ]);
+  assert.match(page,/FINISH_RAIL_LABELS = \["Titles \+ tags","Etsy details","Images \+ mockups","Review \+ publish"\]/);
+  assert.match(page,/done\?"✓":position\+1/);
+  assert.match(styles,/\.rail-substeps \{[\s\S]*?grid-column: 1 \/ -1;[\s\S]*?grid-template-columns: repeat\(4/);
+  assert.match(styles,/\.rail-substep > span:last-child \{ display: grid !important/);
+  assert.doesNotMatch(styles,/\.rail-substeps \{[\s\S]{0,180}flex-direction: column/);
+});
+
+test("loads real saved-work data into the command bar",async()=>{
+  const [page,commandCenter]=await Promise.all([
+    readFile(new URL("../app/page.tsx",import.meta.url),"utf8"),
+    readFile(new URL("../app/returning-command-center.tsx",import.meta.url),"utf8"),
+  ]);
+  assert.match(commandCenter,/export async function loadCommandCenterData/);
+  assert.match(page,/loadCommandCenterData\(\)\.then\(setCommandCenterData\)/);
+  assert.doesNotMatch(page,/commandCenterData:CommandCenterData\|null=null/);
+});
