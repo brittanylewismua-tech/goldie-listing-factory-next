@@ -1722,3 +1722,13 @@ test("records startup failures before the Listing Factory bundle mounts",async()
   assert.match(route,/\[listing-factory-client-startup\]/);
   assert.match(route,/return new NextResponse\(null, \{ status: 204 \}\)/);
 });
+
+test("counts every bundle product as a separate listing before setup",async()=>{
+  const app=await readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8");
+  assert.match(app,/How many designs are in this \$\{bundle\.name\} batch/);
+  assert.match(app,/designs × \$\{recipes\.length\} products = \$\{plannedListings\} listings/);
+  assert.match(app,/There is no bundle discount/);
+  assert.match(app,/Math\.floor\(planDraftsRemaining\/bundleProductCount\)/);
+  assert.match(app,/requestedListingCount>planDraftsRemaining/);
+  assert.match(app,/The bundle total changed/);
+});
