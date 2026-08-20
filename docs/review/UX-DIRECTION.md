@@ -138,6 +138,48 @@ on finished titles they can edit.
 saved product (`Recipe`), set once. They currently sit between the seller and
 their titles on every single batch.
 
+### B1a. Edit preservation — the part that makes B1 safe or dangerous
+
+Generate-on-arrival is destructive unless title state is tracked explicitly.
+Without this, revisiting the step regenerates over hand-edited titles. Implement
+this before B1, not after.
+
+Track a state per listing: **`empty`** (never generated), **`generated`** (AI
+wrote it, untouched since), **`edited`** (the seller changed it).
+
+Rules:
+
+- **On arrival, generate only for listings in `empty`.** Never touch `generated`
+  or `edited` on a revisit. This also stops the step burning vision-API calls
+  every time the seller navigates back into it.
+- **A seller keystroke in a title field moves that listing to `edited`** and it
+  stays there.
+- **"Auto-create all titles" becomes "Regenerate all"** and stays on screen — a
+  redo, not the way in. If any listing is `edited`, it must confirm first:
+  *"3 titles you edited will be replaced. Regenerate anyway?"* Never silently
+  overwrite the seller's own writing.
+- **Add per-row "Regenerate this one."** Most of the time the seller wants to redo
+  one bad title, not all twenty. Today the only granular option is buried in the
+  "Create a different title with AI" accordion.
+- **Mark edited rows** with a small "edited" tag so the seller can see at a glance
+  which titles are theirs and which are Goldie's.
+- **Do not add a "clear all titles" button.** Empty fields are not a state anyone
+  wants to arrive at, and it is one misclick from destroying a batch of work.
+  Undo-to-generated on a single row is the useful version of that idea: if a row
+  is `edited`, offer "restore Goldie's version."
+
+Two more cases that need defining before this ships:
+
+- **No keyword bank set on the recipe.** Generation cannot run. This is the one
+  question worth interrupting for, and it should be the only thing on screen:
+  *"Which keyword bank should Goldie use for this batch?"* Once chosen, save it to
+  `Recipe.keywordListId` so it is never asked again for that product.
+- **Partial failure.** Generation currently reports "N titles created, M need to be
+  retried individually." With generate-on-arrival the seller lands on a partly
+  filled screen, so failures must be visible per row with an inline retry — not
+  summarised in a message above the list where a failed row looks identical to an
+  empty one.
+
 ## B2. Etsy details should arrive filled, not blank
 
 **Now:** 11 dropdowns per listing, 8–9 sitting on "Not applicable," and the copy
@@ -235,7 +277,16 @@ line, not a substitute for them.
 
 1. **B2 and B3 pre-fill** — biggest change in felt effort, and both write to
    `Recipe` fields that already exist on the type.
-2. **B1 generate-on-arrival** — same principle applied to titles.
+2. **B1a edit-state tracking, then B1 generate-on-arrival.** B1a is not optional
+   and must land first — generate-on-arrival without it will overwrite
+   hand-edited titles the moment the seller revisits the step.
+
+**The same question applies to B2 and B3.** Both pre-fill things the seller can
+then change, so both need the same rule: only pre-fill what is untouched, never
+overwrite an edit on revisit, and make "reset to Goldie's choice" available per
+row rather than as a global wipe. For photos specifically, that means a manual
+selection must survive re-entering the step — pre-fill only when the listing has
+no selection at all.
 3. **A1** — the missing forward button is blocking.
 4. **A2, A3, A4** — placement and legibility, all small.
 5. **B4, B5** — moving preferences off the batch screens.
