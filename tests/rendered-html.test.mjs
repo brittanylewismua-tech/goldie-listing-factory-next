@@ -1572,6 +1572,13 @@ test("keeps the Listing Factory application outside route modules",async()=>{
   assert.doesNotMatch(factoryRoute,/from "@\/app\/page"/);
 });
 
+test("passes the defined saved-product selector into the product workflow",async()=>{
+  const app=await readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8");
+  assert.match(app,/async function chooseRecipe\(recipe: Recipe\)/);
+  assert.match(app,/onUseRecipe=\{chooseRecipe\}/);
+  assert.doesNotMatch(app,/onUseRecipe=\{useRecipe\}/);
+});
+
 test("does not crash when the production worker starts without injected bindings",async()=>{
   const worker=await readFile(new URL("../worker/index.ts",import.meta.url),"utf8");
   assert.match(worker,/if\(env\?\.DB&&url\.pathname==="\/api\/printify\/drafts\/publish"\)/);
