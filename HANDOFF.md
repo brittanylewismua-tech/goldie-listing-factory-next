@@ -94,6 +94,7 @@ hierarchy problem, and the clarity fixes ranked by impact per hour.
 
 `docs/review/UX-DIRECTION.md` — **nine defects with exact fixes, plus the UX strategy translated into per-screen changes. Read this first.**
 `docs/review/STRUCTURAL.md` — **the shape of the tool, not the contents of its screens. Read this before any of the others.**
+`docs/review/THE-BIG-IDEA.md` — **where the product should go. Etsy's 2026 algorithm rewards conversion, not keywords, and Goldie stops at publish. Read this first.**
 `docs/review/PRODUCT-MODEL.md` — how the saved product works, and the batch screen layout. Answers template-vs-recipe.
 `docs/review/SCREEN-AUDIT.md` — every screen walked, findings numbered S0.1–S5.5.
 `docs/review/ROWS-SPEC.md` — full spec for rows instead of stacked cards, the largest remaining change.
