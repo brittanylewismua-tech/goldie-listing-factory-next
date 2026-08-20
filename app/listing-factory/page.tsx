@@ -13,10 +13,13 @@ export default async function ListingFactoryRoute({searchParams}:{searchParams:P
   const user = await getChatGPTUser();
   if (!user) return <SignupClient signedIn={false} returnTo="/listing-factory" initialOffer={initialOffer}/>;
 
-  const [billing, mastermind] = await Promise.all([
-    billingState(user),
-    mastermindState(user),
-  ]);
+  // Owner access is authoritative and must not depend on the billing database.
+  // Running billingState in parallel used to make the owner route fail with a
+  // 500 whenever billing initialization hit a transient D1 error.
+  const mastermind = await mastermindState(user);
+  if (mastermind.owner) return <ListingFactory/>;
+
+  const billing = await billingState(user);
   const hasAccess = billing.active || mastermind.owner || (mastermind.active && mastermind.redeemed);
   if (!hasAccess) return <SignupClient signedIn returnTo="/listing-factory" initialOffer={initialOffer}/>;
 

@@ -1541,3 +1541,10 @@ test("renders Finish as a compact horizontal labeled subrail",async()=>{
   assert.match(styles,/\.rail-substep > span:last-child \{ display: grid !important/);
   assert.doesNotMatch(styles,/\.rail-substeps \{[\s\S]{0,180}flex-direction: column/);
 });
+
+test("does not make owner access depend on billing database initialization",async()=>{
+  const route=await readFile(new URL("../app/listing-factory/page.tsx",import.meta.url),"utf8");
+  assert.match(route,/const mastermind = await mastermindState\(user\);/);
+  assert.match(route,/if \(mastermind\.owner\) return <ListingFactory\/>;/);
+  assert.doesNotMatch(route,/Promise\.all\(\[\s*billingState\(user\),\s*mastermindState\(user\)/);
+});
