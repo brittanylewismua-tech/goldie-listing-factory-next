@@ -1,6 +1,6 @@
 export type ProductKind = "apparel" | "soft-goods" | "curved" | "irregular";
 
-export function rendererFor(kind: ProductKind) {
+export function rendererFor(_kind: ProductKind) {
   return "fal-ai/bytedance/seedream/v5/lite/edit";
 }
 

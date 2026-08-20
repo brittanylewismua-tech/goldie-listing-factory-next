@@ -177,7 +177,7 @@ export async function POST(request: Request) {
     } catch { /* Provider names are optional; the numeric provider remains usable. */ }
     let maxPrintWidth: number | null = null;
     let maxPrintHeight: number | null = null;
-    let standardShipping:number|null=null,shippingCurrency="USD",shippingByVariant:Record<number,number>={};
+    let standardShipping:number|null=null,shippingCurrency="USD";const shippingByVariant:Record<number,number>={};
     try {
       const catalogResponse = await printify<CatalogVariant[] | { variants?: CatalogVariant[] }>(`/catalog/blueprints/${found.product.blueprint_id}/print_providers/${found.product.print_provider_id}/variants.json?show-out-of-stock=1`, token);
       const catalogVariants = Array.isArray(catalogResponse) ? catalogResponse : catalogResponse.variants ?? [];

@@ -16,7 +16,7 @@ export async function GET(request:Request){
   const prefix=basePrefix(user.userId,productId);
   if(key){if(!key.startsWith(prefix)||key.endsWith("order.json"))return NextResponse.json({error:"That listing image is not available."},{status:403});const object=await runtime().ARTWORK.get(key);if(!object)return NextResponse.json({error:"That listing image was not found."},{status:404});return new Response(object.body,{headers:{"Content-Type":object.httpMetadata?.contentType||"image/jpeg","Cache-Control":"private, max-age=300"}})}
   const stored=await runtime().ARTWORK.list({prefix}),images=stored.objects.filter(object=>!object.key.endsWith("order.json")).map(object=>({id:`stored:${object.key}`,key:object.key,kind:object.key.includes("/size-guide/")?"size-guide":"mockup",name:object.customMetadata?.name||object.key.split("/").pop()||"Listing image",src:`/api/etsy/images?productId=${encodeURIComponent(productId)}&key=${encodeURIComponent(object.key)}`}));
-  const orderObject=await runtime().ARTWORK.get(`${prefix}order.json`);let order:string[]=[];if(orderObject)try{order=JSON.parse(await orderObject.text()) as string[]}catch{}
+  const orderObject=await runtime().ARTWORK.get(`${prefix}order.json`);let order:string[]=[];if(orderObject)try{order=JSON.parse(await orderObject.text()) as string[]}catch{order=[]}
   return NextResponse.json({images,order});
 }
 
