@@ -1,3 +1,13 @@
+> **Correction, 20 Aug 2026.** Brittany sells on Etsy and pushed back on most of
+> this. Production partner disclosure is standard practice among POD sellers and
+> Etsy does not police it closely — it is not a meaningful deactivation risk. The
+> $6 shipping visibility penalty is real but small, not a lever. And the
+> photo-attribution idea does not fit the way the flow works.
+>
+> Those claims came from POD marketing blogs, not primary Etsy sources, and I
+> weighted them too heavily. **The one item here she rated valuable is bundles** —
+> see `BUNDLES.md`. Read the rest as context, not as a plan.
+
 # What would make this epic
 
 Grounded in what Etsy's algorithm rewards in 2026 and what POD sellers actually
