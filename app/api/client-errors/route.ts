@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
-  let payload: { message?: string; source?: string; line?: number; column?: number; kind?: string } = {};
+  let payload: { message?: string; source?: string; line?: number; column?: number; kind?: string; digest?: string } = {};
   try {
     payload = await request.json() as typeof payload;
   } catch {
@@ -13,6 +13,7 @@ export async function POST(request: Request) {
     source: String(payload.source || "").replace(/^https?:\/\/[^/]+/, "").slice(0, 300),
     line: Number(payload.line || 0),
     column: Number(payload.column || 0),
+    digest: String(payload.digest || "").slice(0, 120),
   };
   console.error("[listing-factory-client-startup]", JSON.stringify(safe));
   return new NextResponse(null, { status: 204 });

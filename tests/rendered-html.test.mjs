@@ -1544,8 +1544,8 @@ test("renders Finish as a compact horizontal labeled subrail",async()=>{
 
 test("does not make owner access depend on billing database initialization",async()=>{
   const route=await readFile(new URL("../app/listing-factory/page.tsx",import.meta.url),"utf8");
-  assert.match(route,/const mastermind = await mastermindState\(user\);/);
-  assert.match(route,/if \(mastermind\.owner\) return <ListingFactoryApp\/>;/);
+  assert.match(route,/if \(isOwner\(user\)\) return <ListingFactoryApp\/>;/);
+  assert.match(route,/mastermind = await mastermindState\(user\);/);
   assert.doesNotMatch(route,/Promise\.all\(\[\s*billingState\(user\),\s*mastermindState\(user\)/);
 });
 
@@ -1555,8 +1555,8 @@ test("keeps every owner login and billing outage from crashing the factory route
     readFile(new URL("../app/listing-factory/page.tsx",import.meta.url),"utf8"),
   ]);
   assert.match(access,/goldie@beawolfbiz\.com/);
-  assert.match(route,/try \{\s*billing = await billingState\(user\);\s*\} catch \{/);
-  assert.match(route,/catch \{[\s\S]*return <SignupClient signedIn/);
+  assert.match(route,/try \{\s*billing = await billingState\(user\);\s*\} catch \(error\) \{/);
+  assert.match(route,/billing access[\s\S]*return <SignupClient signedIn/);
 });
 
 test("keeps the Listing Factory application outside route modules",async()=>{
