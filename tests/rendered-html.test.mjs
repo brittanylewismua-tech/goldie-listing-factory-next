@@ -214,9 +214,25 @@ test("provides thorough contextual help throughout all nine Listing Factory step
   assert.match(help, /event\.key === "Escape"/);
   assert.match(help, /role="dialog"/);
   assert.match(help, /className="context-help-close"/);
+  assert.match(help, /createPortal/);
+  assert.match(help, /document\.body/);
+  assert.match(help, /document\.body\.style\.overflow = "hidden"/);
   assert.doesNotMatch(help, />Got it</);
   assert.match(css, /\.context-help-trigger/);
   assert.match(css, /\.context-help-dialog/);
+});
+
+test("keeps Finish guidance, title actions, tags, and flatlays visually unambiguous",async()=>{
+  const [clarity,approved]=await Promise.all([
+    readFile(new URL("../app/clarity-pass.css",import.meta.url),"utf8"),
+    readFile(new URL("../app/approved-functional.css",import.meta.url),"utf8"),
+  ]);
+  assert.match(approved,/\.finish-guide:before/);
+  assert.match(approved,/\.finish-guide span\{[^}]*border:0[^}]*background:transparent/);
+  assert.match(clarity,/\.individual-title-builder > summary \{[\s\S]*text-decoration: none/);
+  assert.match(approved,/\.draft-card-top \.tag-row\{[\s\S]*overflow-y:scroll/);
+  assert.match(approved,/\.tag-row::-webkit-scrollbar-thumb/);
+  assert.match(approved,/\.image-pref-actions\+div/);
 });
 
 test("stages each finished mockup group for its exact Etsy listing", async () => {

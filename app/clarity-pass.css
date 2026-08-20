@@ -47,13 +47,13 @@
 }
 
 .app-shell .design-fields .individual-title-builder > summary {
-  padding: 5px 0;
-  background: transparent;
-  color: rgba(74, 42, 62, .5);
-  font-size: 10px;
-  font-weight: 600;
-  text-decoration: underline;
-  text-underline-offset: 3px;
+  padding: 10px 12px;
+  border-radius: 9px;
+  background: rgba(225, 199, 239, .78);
+  color: #3f1f39;
+  font-size: 10.5px;
+  font-weight: 800;
+  text-decoration: none;
 }
 
 .app-shell .design-fields .individual-title-builder[open] > summary {
