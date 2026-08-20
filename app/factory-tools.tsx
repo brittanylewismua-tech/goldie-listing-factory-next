@@ -38,10 +38,10 @@ export function SavedWorkflow(props: WorkflowProps) {
       const existing=recipes.find(recipe=>recipe.id===editingId);
       let shippingProfileId=props.verifiedShippingProfileId||Number(existing?.etsyShippingProfileId)||0;
       if (!props.templateVerified) {const verified=await props.onVerifyTemplate(props.templateUrl);if(!verified){setMessage("Connect the Printify template before saving this product.");return}shippingProfileId=Number(verified.shippingTemplateId)||shippingProfileId}
-      const response = await fetch("/api/product-recipes", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: editingId || undefined, name, templateUrl: props.templateUrl, keywordListId, normalizePadding:true,etsyShippingProfileId:shippingProfileId }) });
+      const response = await fetch("/api/product-recipes", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: editingId || undefined, name, templateUrl: props.templateUrl, keywordListId, normalizePadding:true,etsyShippingProfileId:shippingProfileId,defaultColorIds:existing?.defaultColorIds,printifyImageIndices:existing?.printifyImageIndices,etsyDefaults:existing?.etsyDefaults }) });
       const result = await response.json() as { id?: string; error?: string };
       if (!response.ok){setMessage(result.error || "The product could not be saved.");return}
-      const saved:Recipe={id:result.id||editingId,name:name.trim(),templateUrl:props.templateUrl,description:"",defaultTitle:"",keywordListId,normalizePadding:true,etsyShippingProfileId:shippingProfileId};
+      const saved:Recipe={id:result.id||editingId,name:name.trim(),templateUrl:props.templateUrl,description:"",defaultTitle:"",keywordListId,normalizePadding:true,etsyShippingProfileId:shippingProfileId,defaultColorIds:existing?.defaultColorIds,printifyImageIndices:existing?.printifyImageIndices,etsyDefaults:existing?.etsyDefaults};
       const selected=await props.onUseRecipe(saved);
       if(!selected){setMessage("The product was saved, but its Printify template could not be loaded. Check the template and try again.");await reload();return}
       setActiveId(saved.id);setName(""); setEditingId(""); setMessage(editingId ? "Product updated and selected." : "Product saved and selected. You will not need to paste this Printify template again."); setEditing(false); await reload();
