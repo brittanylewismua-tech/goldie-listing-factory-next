@@ -81,14 +81,12 @@
   color: rgba(74, 42, 62, .62) !important;
   font-size: 12.5px !important;
   font-weight: 600 !important;
-  text-decoration: underline;
-  text-decoration-color: rgba(74, 42, 62, .25);
-  text-underline-offset: 4px;
+  text-decoration: none !important;
 }
 
 .app-shell .workflow-back:hover {
   color: var(--ink) !important;
-  text-decoration-color: rgba(74, 42, 62, .6);
+  text-decoration: none !important;
 }
 
 
@@ -177,10 +175,13 @@
 .app-shell .rail-substeps .rail-substep:disabled { opacity: .45; cursor: default; }
 
 .app-shell .rail-substeps .rail-substep.active {
-  background: rgba(255, 255, 255, .5) !important;
+  background: transparent !important;
   color: var(--ink);
-  box-shadow: 0 6px 16px -12px rgba(74, 42, 62, .5);
+  box-shadow: none !important;
 }
+
+/* Step 3 uses the complete page-level help; do not repeat it inside the card. */
+.app-shell .designs-step:not(.finish-mode) .step-heading .context-help-trigger { display: none !important; }
 
 .app-shell .rail-substeps .rail-substep > span:last-child { display: grid !important; gap: 2px; padding: 0 !important; }
 .app-shell .rail-substeps .rail-substep b { display: block; font-size: 10px; line-height: 1.25; font-weight: 750; }

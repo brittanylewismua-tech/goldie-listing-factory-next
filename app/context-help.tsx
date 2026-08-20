@@ -26,7 +26,6 @@ export default function ContextHelp({ label, title, intro, sections }: { label: 
           <p>{section.copy}</p>
           {section.bullets?.length ? <ul>{section.bullets.map(item => <li key={item}>{item}</li>)}</ul> : null}
         </article>)}</div>
-        <button type="button" className="context-help-done" onClick={() => setOpen(false)}>Got it</button>
       </section>
     </div>}
   </>;

@@ -21,7 +21,7 @@ test("serves the Listing Factory from its canonical product path", async () => {
   assert.match(pageSource, /Goldie Listing Factory/);
   assert.match(pageSource, /Connect Printify/);
   assert.match(pageSource, /Secure connection/);
-  assert.match(pageSource, /Choose or create a saved product/);
+  assert.match(pageSource, /Prepare the Printify product Goldie will copy/);
   assert.match(pageSource, /The term &apos;Etsy&apos; is a trademark of Etsy, Inc\./);
   assert.match(pageSource, /not endorsed or certified by Etsy, Inc\./);
   assert.match(approvedCss, /\.etsy-api-disclosure/);
@@ -198,7 +198,9 @@ test("provides thorough contextual help throughout all nine Listing Factory step
   assert.match(page, /const WORKFLOW_HELP = \[/);
   assert.match(page, /WORKFLOW_HELP\[progressIndex\]/);
   assert.match(page, /Connect Printify and Etsy/);
-  assert.match(page, /Choose or create a saved product/);
+  assert.match(page, /Prepare the Printify product Goldie will copy/);
+  assert.match(page, /The product must already be published to Etsy/);
+  assert.match(page, /Copy the URL only from the Printify design editor/);
   assert.match(page, /Add finished artwork/);
   assert.match(page, /Review prices and shipping/);
   assert.match(page, /Create the Printify drafts/);
@@ -211,6 +213,8 @@ test("provides thorough contextual help throughout all nine Listing Factory step
   assert.match(help, /aria-haspopup="dialog"/);
   assert.match(help, /event\.key === "Escape"/);
   assert.match(help, /role="dialog"/);
+  assert.match(help, /className="context-help-close"/);
+  assert.doesNotMatch(help, />Got it</);
   assert.match(css, /\.context-help-trigger/);
   assert.match(css, /\.context-help-dialog/);
 });
@@ -1302,13 +1306,11 @@ test("downloads each listing's selected Printify photos and created mockups as o
 
 test("explains every Printify template requirement and the exact link to paste",async()=>{
   const source=await readFile(new URL("../app/factory-tools.tsx",import.meta.url),"utf8");
-  assert.match(source,/Finish this product in Printify first/);
-  assert.match(source,/Add any design and set its placement/);
-  assert.match(source,/Choose every size and color you want to sell/);
-  assert.match(source,/Choose the Printify mockups/);
-  assert.match(source,/Set the shipping profile and publish to Etsy once/);
-  assert.match(source,/open its product editor/);
-  assert.match(source,/Do not use: the Etsy listing URL or a product ID by itself/);
+  assert.match(source,/Publish the product to Etsy first/);
+  assert.match(source,/Add temporary artwork and set its placement/);
+  assert.match(source,/Publish the product from Printify to Etsy/);
+  assert.match(source,/Copy the URL only from the Printify design editor/);
+  assert.match(source,/Do not use: an Etsy URL, public product URL, Printify product-list URL, or product ID alone/);
 });
 
 test("queues Etsy publishing durably and protects shared API capacity",async()=>{
@@ -1489,7 +1491,7 @@ test("chooses exact available Printify colors per batch and remembers optional d
   ]);
   assert.match(page,/Choose the colors you want to offer/);
   assert.match(page,/Choose at least one available color before continuing/);
-  assert.match(page,/Remember these colors for future batches/);
+  assert.match(page,/Remember these colors for future batches of this specific product template/);
   assert.match(page,/selectedVariantIds:pricedVariants\.map/);
   assert.match(printify,/enabledNonColorIds/);
   assert.match(printify,/availableColorIds/);
@@ -1497,6 +1499,20 @@ test("chooses exact available Printify colors per batch and remembers optional d
   assert.match(drafts,/body\.selectedVariantIds\.includes\(id\)/);
   assert.match(recipes,/defaultColorIds/);
   assert.match(css,/\.product-color-selector/);
+});
+
+test("makes Printify publishing, editor links, and shipping differences explicit", async () => {
+  const [page,tools,css] = await Promise.all([
+    readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8"),
+    readFile(new URL("../app/factory-tools.tsx",import.meta.url),"utf8"),
+    readFile(new URL("../app/clarity-pass.css",import.meta.url),"utf8"),
+  ]);
+  assert.match(tools, /Publish the product to Etsy first/);
+  assert.match(tools, /Copy the URL only from the Printify design editor/);
+  assert.match(page, /Your Etsy profile charges/);
+  assert.match(page, /Shipping still remains separate from the item-profit calculation/);
+  assert.match(css, /\.rail-substeps \.rail-substep\.active \{[\s\S]*background: transparent !important/);
+  assert.match(css, /\.workflow-back[\s\S]*text-decoration: none !important/);
 });
 
 test("keeps buyer-paid shipping separate from item profit",async()=>{
