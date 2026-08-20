@@ -93,6 +93,7 @@ proper wizard, 6-8 are a worksheet wearing wizard chrome), the measured weight
 hierarchy problem, and the clarity fixes ranked by impact per hour.
 
 `docs/review/UX-DIRECTION.md` — **nine defects with exact fixes, plus the UX strategy translated into per-screen changes. Read this first.**
+`docs/review/STRUCTURAL.md` — **the shape of the tool, not the contents of its screens. Read this before any of the others.**
 `docs/review/SCREEN-AUDIT.md` — every screen walked, findings numbered S0.1–S5.5.
 `docs/review/ROWS-SPEC.md` — full spec for rows instead of stacked cards, the largest remaining change.
 `docs/review/BACKLOG.md` — **every remaining recommendation, prioritised and ready to work from.** Start here for what to do next.
