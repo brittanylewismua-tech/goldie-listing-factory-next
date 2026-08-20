@@ -19,7 +19,13 @@ export default async function ListingFactoryRoute({searchParams}:{searchParams:P
   const mastermind = await mastermindState(user);
   if (mastermind.owner) return <ClientFactory/>;
 
-  const billing = await billingState(user);
+  let billing;
+  try {
+    billing = await billingState(user);
+  } catch {
+    // Access checks must fail closed without taking down the public route.
+    return <SignupClient signedIn returnTo="/listing-factory" initialOffer={initialOffer}/>;
+  }
   const hasAccess = billing.active || mastermind.owner || (mastermind.active && mastermind.redeemed);
   if (!hasAccess) return <SignupClient signedIn returnTo="/listing-factory" initialOffer={initialOffer}/>;
 

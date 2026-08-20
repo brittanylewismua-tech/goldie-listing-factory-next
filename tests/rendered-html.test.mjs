@@ -1556,3 +1556,13 @@ test("mounts the browser-only Listing Factory after the authenticated server she
   assert.match(clientFactory,/if \(!mounted\)/);
   assert.match(clientFactory,/return <ListingFactory\/>/);
 });
+
+test("keeps every owner login and billing outage from crashing the factory route",async()=>{
+  const [access,route]=await Promise.all([
+    readFile(new URL("../app/mastermind/access.ts",import.meta.url),"utf8"),
+    readFile(new URL("../app/listing-factory/page.tsx",import.meta.url),"utf8"),
+  ]);
+  assert.match(access,/goldie@beawolfbiz\.com/);
+  assert.match(route,/try \{\s*billing = await billingState\(user\);\s*\} catch \{/);
+  assert.match(route,/catch \{[\s\S]*return <SignupClient signedIn/);
+});
