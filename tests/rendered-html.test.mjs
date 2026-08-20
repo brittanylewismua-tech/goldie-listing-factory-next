@@ -934,7 +934,7 @@ test("keeps pricing simple while using a real Etsy shipping profile and exact te
     readFile(new URL("../app/api/printify/drafts/publish/route.ts", import.meta.url), "utf8"),
   ]);
   assert.match(page,/Shipping profile/);
-  assert.match(page,/Selected automatically from your product template/);
+  assert.match(page,/Selected automatically from your saved product/);
   assert.match(page,/templateProfileId=Number\(templateDetails\?\.shippingTemplateId\)/);
   assert.match(page,/setEtsyShippingProfileId\(current=>current\|\|templateProfileId\)/);
   assert.match(page,/buyer pays/);
@@ -1614,6 +1614,27 @@ test("remembers safe Etsy product defaults without design-specific assumptions",
   assert.match(page,/completed\.length} of {properties\.length} set/);
   assert.match(recipes,/etsyDefaults/);
   assert.match(styles,/\.etsy-details-editor>summary/);
+});
+
+test("keeps the saved-product batch page compact and makes permanent settings editable",async()=>{
+  const [page,tools,recipes,styles]=await Promise.all([
+    readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8"),
+    readFile(new URL("../app/factory-tools.tsx",import.meta.url),"utf8"),
+    readFile(new URL("../app/api/product-recipes/route.ts",import.meta.url),"utf8"),
+    readFile(new URL("../app/globals.css",import.meta.url),"utf8"),
+  ]);
+  assert.match(page,/remembered-color-row/);
+  assert.match(page,/Change colors/);
+  assert.match(page,/mockup-set-preview/);
+  assert.match(page,/Shipping profile for this batch/);
+  assert.match(page,/Description for this batch/);
+  assert.match(page,/Save this description as the default/);
+  assert.match(page,/else if\(!pricedVariants\.length\)/);
+  assert.match(tools,/Rename \/ reconnect/);
+  assert.match(tools,/editingId&&<button[^>]+secondary-action/);
+  assert.match(recipes,/const description=String\(body\.description/);
+  assert.match(styles,/\.remembered-color-row/);
+  assert.match(styles,/@media\(min-width:821px\) and \(max-width:1050px\)/);
 });
 
 test("renders Finish as a compact horizontal labeled subrail",async()=>{
