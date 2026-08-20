@@ -906,7 +906,7 @@ test("routes each product surface deliberately and never releases a partial batc
   assert.match(renderers,/guidance_scale:2\.5/);
 });
 
-test("restores batch colors and blocks publishing until every listing has a photo", async () => {
+test("restores batch colors and blocks publishing until every selected listing has a photo", async () => {
   const [page,review]=await Promise.all([
     readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/final-listing-review.tsx", import.meta.url), "utf8"),
@@ -914,8 +914,9 @@ test("restores batch colors and blocks publishing until every listing has a phot
   assert.match(page,/selectedColorIds\?:number\[\]/);
   assert.match(page,/function batchStateSnapshot\(\).*selectedColorIds,/s);
   assert.match(page,/setSelectedColorIds\(state\.selectedColorIds\?\.length/);
-  assert.match(page,/disabled=\{publishing\|\|drafts\.some\(draft=>draft\.status==="Failed"\)\|\|!allCreatedListingsHaveImages\(\)\}/);
-  assert.match(page,/Add a photo to every listing before publishing/);
+  assert.match(page,/selectedPublishDrafts\(\)/);
+  assert.match(page,/Add a photo to every selected listing before publishing/);
+  assert.match(review,/Choose exactly which listings to publish/);
   assert.match(review,/Add at least one listing photo/);
 });
 
@@ -1532,7 +1533,7 @@ test("requires a photo on every listing and lets sellers set Etsy photo order",a
   assert.match(page,/createdListingsMissingImages\(\)/);
   assert.match(page,/preparedMockupCounts\[draft\.id\]/);
   assert.match(page,/if\(imageStepError&&allCreatedListingsHaveImages\(\)\)/);
-  assert.match(page,/At least one image on every listing/);
+  assert.match(page,/At least one image on every selected listing/);
   assert.match(page,/Personalization settings/);
   assert.match(organizer,/draggable/);
   assert.match(organizer,/Rearrange listing photos/);
@@ -1731,4 +1732,27 @@ test("counts every bundle product as a separate listing before setup",async()=>{
   assert.match(app,/Math\.floor\(planDraftsRemaining\/bundleProductCount\)/);
   assert.match(app,/requestedListingCount>planDraftsRemaining/);
   assert.match(app,/The bundle total changed/);
+});
+
+test("keeps bundle titles, placement decisions, review, and failures product-specific",async()=>{
+  const [app,workflow,review]=await Promise.all([
+    readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8"),
+    readFile(new URL("../app/factory-tools.tsx",import.meta.url),"utf8"),
+    readFile(new URL("../app/final-listing-review.tsx",import.meta.url),"utf8"),
+  ]);
+  assert.match(workflow,/bundle-as-product/);
+  assert.match(app,/autoTitleForDesign\(file,bank\.keywords,titleJoiner===", ",nextDetails\)/);
+  assert.match(app,/bundleQualityIssues/);
+  assert.match(app,/Below recommended size for <strong>\{issue\.productName\}/);
+  assert.match(app,/Proceed anyway/);
+  assert.match(app,/Exclude this listing/);
+  assert.match(app,/Nothing is skipped silently/);
+  assert.match(app,/dpi<215/);
+  assert.match(app,/VERY LOW RESOLUTION/);
+  assert.match(app,/below 215 DPI/);
+  assert.match(app,/selectedPublishDrafts\(\)/);
+  assert.match(app,/status: "NeedsRetry"/);
+  assert.match(review,/final-design-group/);
+  assert.match(review,/Choose exactly which listings to publish/);
+  assert.match(review,/Retry this listing/);
 });
