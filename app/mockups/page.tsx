@@ -27,6 +27,8 @@ const SURFACE_LABELS: Record<SurfaceKind,string> = {
 
 function isCalibratedSurface(kind:SurfaceKind){return["rigid-flat","t-shirt","sweatshirt","hoodie","other-apparel","apparel"].includes(kind)}
 
+function cleanArtworkBackground(image:HTMLImageElement){const canvas=document.createElement("canvas");canvas.width=image.naturalWidth;canvas.height=image.naturalHeight;const ctx=canvas.getContext("2d",{willReadFrequently:true})!;ctx.drawImage(image,0,0);const frame=ctx.getImageData(0,0,canvas.width,canvas.height),pixels=frame.data,total=canvas.width*canvas.height,seen=new Uint8Array(total),queue=new Uint32Array(total);let head=0,tail=0;const removable=(index:number)=>{const offset=index*4,r=pixels[offset],g=pixels[offset+1],b=pixels[offset+2];return pixels[offset+3]===0||(Math.max(r,g,b)-Math.min(r,g,b)<38&&(r+g+b)/3>138)};const add=(index:number)=>{if(seen[index]||!removable(index))return;seen[index]=1;queue[tail++]=index};for(let x=0;x<canvas.width;x++){add(x);add((canvas.height-1)*canvas.width+x)}for(let y=0;y<canvas.height;y++){add(y*canvas.width);add(y*canvas.width+canvas.width-1)}while(head<tail){const index=queue[head++],x=index%canvas.width;pixels[index*4+3]=0;if(x)add(index-1);if(x<canvas.width-1)add(index+1);if(index>=canvas.width)add(index-canvas.width);if(index<total-canvas.width)add(index+canvas.width)}ctx.putImageData(frame,0,0);return canvas}
+
 function polygonArea(points: Point[]) { return Math.abs(points.reduce((sum,[x,y],i)=>{const [nx,ny]=points[(i+1)%points.length];return sum+x*ny-nx*y},0)/2); }
 function cross(a:Point,b:Point,c:Point){return (b[0]-a[0])*(c[1]-b[1])-(b[1]-a[1])*(c[0]-b[0]);}
 function validateSurface(corners: Template["corners"], width:number, height:number) {
@@ -145,7 +147,7 @@ async function makeMockup(file: File, template: Template): Promise<Rendered> {
   if(!isCalibratedSurface(kind)) throw new Error(`${SURFACE_LABELS[kind]} mockups require product-aware rendering.`);
   const renderArt=document.createElement("canvas");renderArt.width=art.naturalWidth;renderArt.height=art.naturalHeight;
   const artScale=kind==="rigid-flat"?1:.42,artWidth=art.naturalWidth*artScale,artHeight=art.naturalHeight*artScale;
-  renderArt.getContext("2d")!.drawImage(art,(art.naturalWidth-artWidth)/2,(art.naturalHeight-artHeight)/2,artWidth,artHeight);
+  renderArt.getContext("2d")!.drawImage(cleanArtworkBackground(art),(art.naturalWidth-artWidth)/2,(art.naturalHeight-artHeight)/2,artWidth,artHeight);
   const detectedCorners=kind==="rigid-flat"?refineRigidSurface(master,rawCorners):rawCorners;
   validateSurface(detectedCorners,master.naturalWidth,master.naturalHeight);
   const corners=safeInset(detectedCorners,master.naturalWidth,master.naturalHeight);
