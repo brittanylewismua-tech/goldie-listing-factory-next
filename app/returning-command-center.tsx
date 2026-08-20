@@ -10,7 +10,7 @@ type Mockup={id:string;theme:string;name:string};
 type Usage={usage?:{drafts:number;aiMockups:number;mockupSets:number}};
 export type CommandCenterData={batches:Batch[];recipes:Recipe[];keywords:KeywordBank[];mockups:Mockup[];draftsThisMonth:number};
 
-export async function loadCommandCenterData():Promise<CommandCenterData>{
+async function loadCommandCenterData():Promise<CommandCenterData>{
   const [batches,recipes,keywords,mockups,usage]=await Promise.all([
     fetch("/api/batches").then(r=>r.ok?r.json():{batches:[]}),fetch("/api/product-recipes").then(r=>r.ok?r.json():{recipes:[]}),
     fetch("/api/keyword-lists").then(r=>r.ok?r.json():{lists:[]}),fetch("/api/mockups/library").then(r=>r.ok?r.json():{templates:[]}),fetch("/api/usage").then(r=>r.ok?r.json():{}),

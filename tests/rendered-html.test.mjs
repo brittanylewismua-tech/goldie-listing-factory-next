@@ -1547,7 +1547,8 @@ test("loads real saved-work data into the command bar",async()=>{
     readFile(new URL("../app/page.tsx",import.meta.url),"utf8"),
     readFile(new URL("../app/returning-command-center.tsx",import.meta.url),"utf8"),
   ]);
-  assert.match(commandCenter,/export async function loadCommandCenterData/);
-  assert.match(page,/loadCommandCenterData\(\)\.then\(setCommandCenterData\)/);
+  assert.doesNotMatch(commandCenter,/export async function loadCommandCenterData/);
+  assert.match(page,/fetch\("\/api\/product-recipes"\)/);
+  assert.match(page,/setCommandCenterData\(\{batches:/);
   assert.doesNotMatch(page,/commandCenterData:CommandCenterData\|null=null/);
 });
