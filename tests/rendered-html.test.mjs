@@ -875,14 +875,19 @@ test("saved mockup sets can be renamed and deleted with confirmation", async () 
 });
 
 test("routes each product surface deliberately and never releases a partial batch", async () => {
-  const [page,renderers,route]=await Promise.all([
+  const [page,integrated,renderers,route]=await Promise.all([
     readFile(new URL("../app/mockups/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/integrated-mockups.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/mockups/product-renderers.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/mockups/render/route.ts", import.meta.url), "utf8"),
   ]);
   assert.match(page,/"rigid-flat" \| "t-shirt" \| "sweatshirt" \| "hoodie" \| "other-apparel" \| "apparel" \| "soft-goods" \| "curved" \| "irregular"/);
   assert.match(page,/made\.forEach\(item=>URL\.revokeObjectURL/);
   assert.match(page,/setResults\(\[\]\);setGenerationError/);
+  assert.match(page,/isCalibratedSurface\(kind\)\?await makeMockup/);
+  assert.match(page,/if\(isCalibratedSurface\(template\.surfaceKind\|\|"rigid-flat"\)\)return makeMockup/);
+  assert.match(integrated,/if\(isCalibratedSurface\(t\.surfaceKind\|\|"rigid-flat"\)\)return/);
+  assert.match(integrated,/needsReference=chosen\.some\(t=>!isCalibratedSurface/);
   assert.match(route,/if\(!body\.reference\)/);
   assert.match(route,/plan\.aiMockups/);
   assert.match(route,/monthKey/);
