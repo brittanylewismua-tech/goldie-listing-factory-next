@@ -787,7 +787,7 @@ export default function Home() {
         <div>
           <p className="eyebrow">{workflowHero.eyebrow}</p>
           <div className="heading-with-help hero-title-help"><h1>{workflowHero.title}</h1><ContextHelp label={`Open detailed help for ${PROGRESS_STEPS[progressIndex]}`} title={WORKFLOW_HELP[progressIndex].title} intro={WORKFLOW_HELP[progressIndex].intro} sections={WORKFLOW_HELP[progressIndex].sections}/></div>
-          <p className="hero-step-count">Step {progressIndex+1} of {PROGRESS_STEPS.length}</p>
+          <p className="hero-step-count">{railInFinish?`Finish · ${PROGRESS_SHORT_LABELS[progressIndex]} (${progressIndex-RAIL_FINISH_FIRST+1} of ${RAIL_FINISH.length})`:`Step ${railTopNumber} of ${RAIL_TOP.length+1}`}</p>
           <p className="hero-copy">{workflowHero.copy}</p>
           {workflowStep==="connect"&&<div className="value-proof" aria-label="What this batch supports"><span><b>Up to 20 designs</b><small>in one batch</small></span><span><b>Costs and fees</b><small>shown for every variant</small></span><span><b>You approve</b><small>before anything goes live</small></span></div>}
         </div>

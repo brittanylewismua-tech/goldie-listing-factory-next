@@ -313,7 +313,7 @@ test("matches Printify editor DPI instead of comparing against template pixel di
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
   assert.match(page, /maxPlacementScale:isRigidPaperProduct\(templateDetails\)\?1:undefined/);
   assert.doesNotMatch(page, /Target:\s*\{templateDetails/);
-  assert.match(page, /DPI in Printify/);
+  assert.match(page, /DPI · good to print/);
 });
 
 test("calculates every Printify variant price from its own cost and Etsy fee profile", async () => {
@@ -578,7 +578,7 @@ test("creates unique validated AI titles in bulk with per-listing overrides", as
   assert.match(page,/Customize this listing’s description/);assert.match(page,/The complete description is shown below/);
   assert.match(page,/descriptionOverride/);assert.match(page,/scrollIntoView/);
   assert.match(tools,/keywordListsCache/);assert.match(tools,/selectionOnly/);assert.match(tools,/onSelect/);
-  assert.match(intelligence,/selected_keywords/);assert.match(intelligence,/allowedByLower/);assert.match(intelligence,/Reject irrelevant phrases/);
+  assert.match(intelligence,/selected_keywords/);assert.match(intelligence,/allowedByLower/);assert.match(intelligence,/PRODUCT TYPE RULE/);
 });
 
 test("records permanent sanitized Printify diagnostics without blocking listings", async () => {
@@ -1057,7 +1057,7 @@ test("places each step count directly below its page title", async () => {
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/approved-functional.css", import.meta.url), "utf8"),
   ]);
-  assert.match(page, /<div className="heading-with-help hero-title-help"><h1>\{workflowHero\.title\}<\/h1><ContextHelp[\s\S]*?<\/div>\s*<p className="hero-step-count">Step \{progressIndex\+1\} of \{PROGRESS_STEPS\.length\}<\/p>/);
+  assert.match(page, /<p className="hero-step-count">\{railInFinish\?/);
   assert.doesNotMatch(page, /className="approved-step-count"/);
   assert.match(styles, /\.app-shell \.hero-step-count/);
   assert.match(styles, /\.app-shell \.hero\{padding-bottom:30px!important\}/);
