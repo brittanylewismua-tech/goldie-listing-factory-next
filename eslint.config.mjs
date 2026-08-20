@@ -48,11 +48,26 @@ const eslintConfig = defineConfig([
       "@next/next/no-img-element": "off",
       // Dialog focus is deliberate for destructive and interruption prompts.
       "jsx-a11y/no-autofocus": "off",
+      "@typescript-eslint/no-unused-vars": ["error", { "argsIgnorePattern": "^(ignored|_)", "varsIgnorePattern": "^(ignored|_)" }],
+    },
+  },
+  {
+    files: ["app/page.tsx", "app/integrated-mockups.tsx", "app/mockups/page.tsx", "app/returning-command-center.tsx"],
+    rules: {
+      // These files implement dismissible modal backdrops and draggable image
+      // surfaces. Keyboard users use the dialog buttons, Escape, and explicit
+      // move controls rather than the pointer-only backdrop/drag surface.
       "jsx-a11y/no-noninteractive-element-interactions": "off",
       "jsx-a11y/click-events-have-key-events": "off",
       "jsx-a11y/no-static-element-interactions": "off",
+    },
+  },
+  {
+    files: ["app/page.tsx", "app/factory-tools.tsx"],
+    rules: {
+      // These compact controls wrap their inputs and visible text; the rule
+      // cannot resolve the association through the nested generated markup.
       "jsx-a11y/label-has-associated-control": "off",
-      "@typescript-eslint/no-unused-vars": ["error", { "argsIgnorePattern": "^(ignored|_)", "varsIgnorePattern": "^(ignored|_)" }],
     },
   },
 ]);

@@ -126,25 +126,50 @@
 }
 
 .app-shell .rail-substeps {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  margin: 2px 0 6px 18px;
-  padding-left: 14px;
-  border-left: 2px solid rgba(139, 89, 137, .22);
+  position: relative;
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin: 12px 6% 0;
+  padding: 22px 0 0;
+}
+
+.app-shell .rail-substeps::before {
+  content: "";
+  position: absolute;
+  left: 90.5%;
+  top: -13px;
+  width: 1px;
+  height: 18px;
+  background: rgba(74, 42, 62, .2);
+}
+
+.app-shell .rail-substeps::after {
+  content: "";
+  position: absolute;
+  left: 12.5%;
+  right: 12.5%;
+  top: 33px;
+  height: 1px;
+  background: rgba(74, 42, 62, .18);
 }
 
 .app-shell .rail-substeps .rail-substep {
-  display: flex;
-  align-items: center;
-  gap: 9px;
+  position: relative;
+  z-index: 1;
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  justify-items: center;
+  gap: 7px !important;
   width: 100%;
-  padding: 7px 9px;
+  min-width: 0;
+  padding: 0 6px 8px !important;
   border: 0;
   border-radius: 9px;
   background: transparent;
   color: rgba(74, 42, 62, .72);
-  text-align: left;
+  text-align: center;
   cursor: pointer;
 }
 
@@ -152,26 +177,34 @@
 .app-shell .rail-substeps .rail-substep:disabled { opacity: .45; cursor: default; }
 
 .app-shell .rail-substeps .rail-substep.active {
-  background: rgba(255, 255, 255, .72);
+  background: rgba(255, 255, 255, .5) !important;
   color: var(--ink);
   box-shadow: 0 6px 16px -12px rgba(74, 42, 62, .5);
 }
 
-.app-shell .rail-substeps .rail-substep b { display: block; font-size: 11.5px; font-weight: 700; }
-.app-shell .rail-substeps .rail-substep small { display: block; font-size: 9.5px; opacity: .72; }
+.app-shell .rail-substeps .rail-substep > span:last-child { display: grid !important; gap: 2px; padding: 0 !important; }
+.app-shell .rail-substeps .rail-substep b { display: block; font-size: 10px; line-height: 1.25; font-weight: 750; }
+.app-shell .rail-substeps .rail-substep small { display: block; font-size: 8.5px; line-height: 1.3; opacity: .72; }
 
 .app-shell .rail-substeps .rail-substep-dot {
-  flex: 0 0 auto;
-  width: 14px; height: 14px;
+  position: relative;
+  z-index: 2;
+  width: 24px; height: 24px;
   display: grid; place-items: center;
   border: 1.5px solid rgba(139, 89, 137, .4);
   border-radius: 50%;
-  font-size: 8px; line-height: 1;
+  background: rgba(255,250,253,.9);
+  font-size: 9px; line-height: 1;
   color: #4a2a3e;
 }
 
-.app-shell .rail-substeps .rail-substep.active .rail-substep-dot { border-color: #b777b0; background: #b777b0; }
-.app-shell .rail-substeps .rail-substep.done .rail-substep-dot { border-color: rgba(52, 112, 76, .5); color: #34704c; }
+.app-shell .rail-substeps .rail-substep.active .rail-substep-dot { border-color: #70405f; background: #70405f; color: #fff; box-shadow: 0 0 0 4px rgba(183,119,176,.14); }
+.app-shell .rail-substeps .rail-substep.done .rail-substep-dot { border-color: #bc83ae; background: #ead2e3; color: #70405f; }
+
+@media (max-width: 1050px) {
+  .app-shell .rail-substeps { gap: 6px; margin-inline: 2%; }
+  .app-shell .rail-substeps .rail-substep b { font-size: 9px; }
+}
 
 
 /* Section headers sit clearly below the card title */
