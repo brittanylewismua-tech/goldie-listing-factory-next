@@ -1576,3 +1576,21 @@ test("keeps the Listing Factory application outside route modules",async()=>{
   assert.match(clientFactory,/from "@\/app\/listing-factory-app"/);
   assert.doesNotMatch(clientFactory,/from "@\/app\/page"/);
 });
+
+test("does not crash when the production worker starts without injected bindings",async()=>{
+  const worker=await readFile(new URL("../worker/index.ts",import.meta.url),"utf8");
+  assert.match(worker,/if\(env\?\.DB&&url\.pathname==="\/api\/printify\/drafts\/publish"\)/);
+  assert.doesNotMatch(worker,/if\(env\.DB&&url\.pathname==="\/api\/printify\/drafts\/publish"\)/);
+});
+
+test("records startup failures before the Listing Factory bundle mounts",async()=>{
+  const [layout,route]=await Promise.all([
+    readFile(new URL("../app/layout.tsx",import.meta.url),"utf8"),
+    readFile(new URL("../app/api/client-errors/route.ts",import.meta.url),"utf8"),
+  ]);
+  assert.match(layout,/window\.addEventListener\('error'/);
+  assert.match(layout,/window\.addEventListener\('unhandledrejection'/);
+  assert.match(layout,/navigator\.sendBeacon\('\/api\/client-errors'/);
+  assert.match(route,/\[listing-factory-client-startup\]/);
+  assert.match(route,/return new NextResponse\(null, \{ status: 204 \}\)/);
+});

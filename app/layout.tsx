@@ -26,5 +26,6 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="en"><body><ReliableNavigation/>{children}</body></html>;
+  const diagnostics = `(function(){function send(kind,message,source,line,column){try{navigator.sendBeacon('/api/client-errors',new Blob([JSON.stringify({kind:kind,message:String(message||'Unknown browser startup error'),source:String(source||''),line:Number(line||0),column:Number(column||0)})],{type:'application/json'}))}catch(_){}}window.addEventListener('error',function(event){send('error',event.message,event.filename,event.lineno,event.colno)});window.addEventListener('unhandledrejection',function(event){var reason=event.reason;send('unhandledrejection',reason&&reason.message?reason.message:String(reason||'Unhandled promise rejection'),'','','')})})();`;
+  return <html lang="en"><head><script dangerouslySetInnerHTML={{__html:diagnostics}}/></head><body><ReliableNavigation/>{children}</body></html>;
 }
