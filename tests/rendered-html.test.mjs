@@ -1597,14 +1597,21 @@ test("protects batch allowance and lets sellers review uploaded designs",async()
 });
 
 test("remembers safe Etsy product defaults without design-specific assumptions",async()=>{
-  const [page,recipes]=await Promise.all([
+  const [page,recipes,styles]=await Promise.all([
     readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8"),
     readFile(new URL("../app/api/product-recipes/route.ts",import.meta.url),"utf8"),
+    readFile(new URL("../app/globals.css",import.meta.url),"utf8"),
   ]);
   assert.match(page,/PHYSICAL_ETSY_FIELDS/);
   assert.match(page,/productEtsyDefaults/);
   assert.match(page,/etsyDefaults/);
+  assert.match(page,/derived\["Clothing style"\]/);
+  assert.match(page,/derived\.Size="Unisex"/);
+  assert.match(page,/if\(firstPrepared\)await rememberEtsyDefaults\(firstPrepared\)/);
+  assert.match(page,/className="etsy-details-editor"/);
+  assert.match(page,/completed\.length} of {properties\.length} set/);
   assert.match(recipes,/etsyDefaults/);
+  assert.match(styles,/\.etsy-details-editor>summary/);
 });
 
 test("renders Finish as a compact horizontal labeled subrail",async()=>{
