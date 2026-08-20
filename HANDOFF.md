@@ -73,8 +73,12 @@ Findings in it that are NOT repeated below:
   "Apply these photos to every listing" exists but sits 2,087px below the top of a
   collapsed accordion, under all 148 thumbnails — you find it after doing the work
   it saves. The copy explaining it renders at 0x0 pixels.
-- **Uploaded designs are never shown** — no thumbnails, no filenames, no way to
-  remove one. The DPI modal says "Go back and review" with nothing to review.
+- **Designs are not visible on the upload step** — counts and a progress bar only,
+  no thumbnails, no filenames, no way to remove one. Thumbnails do appear later on
+  the titles step, but that is *after* Printify drafts exist and the listings have
+  been charged against the plan quota, so a wrong file is only visible once it has
+  already cost you. The DPI modal also says "Go back and review" when the screen it
+  returns you to has nothing to review.
 - **Four widgets report the same fact** on the designs step.
 - **Batch cap (20) vs plan quota** are different numbers; only the permissive one
   is shown. The create-drafts confirmation never mentions quota.

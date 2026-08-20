@@ -194,7 +194,7 @@ Fix: show net profit after the shipping delta, or at minimum flag "your shipping
 
 ### 8. Smaller stuff
 
-- **Uploaded designs are never shown.** Step 3 tells you "3 of 20 designs ready" but no thumbnails, no filenames, no way to remove one. Then the DPI modal says "Go back and review" — review with what? There's nothing to look at.
+- **Designs are not visible on the upload step.** Step 3 reports "3 of 20 designs ready" with no thumbnails, no filenames, and no way to remove one. They *are* shown later on the titles step — but that is after Printify drafts are created and quota is spent, so a wrong file only becomes visible once it has already cost a listing. The DPI modal compounds it by saying "Go back and review" when the screen it returns you to has nothing to look at.
 - **Four separate widgets on step 3 tell you the same fact.** "3 of 20 designs ready," "Upload updated — 3 designs were added," "All 3 designs are ready 3/3," "3/20 designs — 17 spaces remaining." Pick one.
 - **"17 spaces remaining" vs. 13 listings left on your plan.** The batch cap (20) and the quota (13 remaining) are different numbers and the app only shows you the one that lets you overcommit. The "Create 3 product drafts?" confirmation doesn't mention quota at all.
 - **Step 1 is titled "Connect Printify"** but it handles Etsy too.
