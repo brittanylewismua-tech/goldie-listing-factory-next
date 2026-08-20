@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
 const root = new URL("../", import.meta.url);
+const listingFactoryPage = new URL("app/listing-factory-app.tsx", root);
 
 test("keeps the frozen sidebar footer anchored beneath navigation", async () => {
   const html = await readFile(new URL("public/goldie-real.html", root), "utf8");
@@ -24,7 +25,7 @@ test("keeps Printify token help inside the Printify connection section", async (
 
 test("keeps the Printify and Etsy panels visually separated", async () => {
   const css = await readFile(new URL("app/approved-functional.css", root), "utf8");
-  const page = await readFile(new URL("app/page.tsx", root), "utf8");
+  const page = await readFile(listingFactoryPage, "utf8");
   assert.match(css, /\.connect-step \.connection-stack\{display:grid;gap:18px;/);
   assert.match(page, /connection-stack connection-setup connected-connection-stack/);
 });
@@ -71,7 +72,7 @@ test("keeps the Step 4 footer controls below the pricing card without collisions
 });
 
 test("keeps Step 7 clear and its icon locked to the optical center", async () => {
-  const page = await readFile(new URL("app/page.tsx", root), "utf8");
+  const page = await readFile(listingFactoryPage, "utf8");
   const css = await readFile(new URL("app/approved-functional.css", root), "utf8");
   assert.match(page, /Review your Etsy listing details/);
   assert.match(page, /Goldie has pre-filled the Etsy category and every product field it could confidently match for each listing\. Look everything over and change any selection that does not fit\./);
@@ -101,19 +102,19 @@ test("keeps Step 8 listing summaries compact and on-brand", async () => {
 });
 
 test("returns every finish-phase transition to the top", async () => {
-  const page = await readFile(new URL("app/page.tsx", root), "utf8");
-  assert.match(page, /useEffect\(\(\)=>\{if\(workflowStep==="finish"\)window\.scrollTo\(\{top:0,behavior:"smooth"\}\)\},\[workflowStep,finishPhase\]\)/);
+  const page = await readFile(listingFactoryPage, "utf8");
+  assert.match(page, /useEffect\(\(\)=>\{window\.scrollTo\(\{top:0,behavior:"auto"\}\)\},\[workflowStep,finishPhase\]\)/);
 });
 
 test("places the connection subtitle before the centered timing note", async () => {
-  const page = await readFile(new URL("app/page.tsx", root), "utf8");
+  const page = await readFile(listingFactoryPage, "utf8");
   const css = await readFile(new URL("app/approved-functional.css", root), "utf8");
   assert.match(page, /Connect the Printify shop where Goldie will create your product drafts\.<\/p>\s*<p className="connect-timing">/);
   assert.match(css, /\.connect-timing\{margin:0 auto 22px!important;[^}]*text-align:center\}/);
 });
 
 test("stacks the connected Etsy shop name for long shop names", async () => {
-  const page = await readFile(new URL("app/page.tsx", root), "utf8");
+  const page = await readFile(listingFactoryPage, "utf8");
   const css = await readFile(new URL("app/approved-functional.css", root), "utf8");
   assert.match(page, /<b>\{etsyConnected\?"Etsy connected":"Etsy"\}<\/b>\{etsyConnected&&<em className="etsy-shop-name">/);
   assert.match(css, /\.etsy-shop-name\{display:block;[^}]*font-style:italic;[^}]*text-overflow:ellipsis;white-space:nowrap\}/);
@@ -134,7 +135,7 @@ assert.match(css, /\.app-shell \.custom-shipping-actions button\{[\s\S]*font-siz
 });
 
 test("preview navigation renders the real later-step experiences", async () => {
-  const page = await readFile(new URL("app/page.tsx", root), "utf8");
+  const page = await readFile(listingFactoryPage, "utf8");
   assert.match(page, /if\(index>=3&&!templateDetails\)await loadPreviewDemo\(\)/);
   assert.match(page, /if\(index===4\)\{goToStep\("review",false,true\);setPreflightOpen\(true\);return\}/);
   assert.match(page, /setFinishPhase\(index===5\?"details":index===6\?"etsy":index===7\?"mockups":"final"\)/);
@@ -168,7 +169,7 @@ test("keeps Step 2 saved-product text and selections in the plum palette", async
 
 test("places item pricing before shipping in the pricing review", async () => {
   const [page, css] = await Promise.all([
-    readFile(new URL("app/page.tsx", root), "utf8"),
+    readFile(listingFactoryPage, "utf8"),
     readFile(new URL("app/approved-functional.css", root), "utf8"),
   ]);
   const itemPrices = page.indexOf('<h4>1. Item prices <span>');
@@ -178,7 +179,7 @@ test("places item pricing before shipping in the pricing review", async () => {
   assert.ok(pricingMath > itemPrices && pricingMath < shipping, "the pricing explanation stays with item prices, before shipping");
   assert.doesNotMatch(page, /<span>1\. Shipping<\/span>/);
   assert.doesNotMatch(page, /<h4>2\. Item prices<\/h4>/);
-  assert.match(page, /<small className="profit-fee-note">All Etsy fees included<\/small>/);
+  assert.match(page, /<small className="profit-fee-note">Shipping not included<\/small>/);
   assert.match(page, /className="pricing-section-heading shipping-section-heading"/);
   assert.match(page, /<h4>2\. Shipping <span>/);
   assert.match(css, /\.app-shell \.pricing-section-heading h4\{[\s\S]*font-size:26px!important/);
@@ -187,7 +188,7 @@ test("places item pricing before shipping in the pricing review", async () => {
 });
 
 test("keeps later workflow footers usable and removes obsolete description language", async () => {
-  const page = await readFile(new URL("app/page.tsx", root), "utf8");
+  const page = await readFile(listingFactoryPage, "utf8");
   const css = await readFile(new URL("app/approved-functional.css", root), "utf8");
   assert.match(page, /className="workflow-footer-actions post-draft-footer"/);
   assert.doesNotMatch(page, /unique introduction/);
@@ -204,7 +205,7 @@ test("uses the Goldie palette while Printify drafts are being created", async ()
 
 test("warns before continuing with designs below Printify's recommended pixels", async () => {
   const [page, css] = await Promise.all([
-    readFile(new URL("app/page.tsx", root), "utf8"),
+    readFile(listingFactoryPage, "utf8"),
     readFile(new URL("app/approved-functional.css", root), "utf8"),
   ]);
   assert.match(page, /const belowRecommendedPixels=useMemo/);
@@ -222,7 +223,7 @@ test("warns before continuing with designs below Printify's recommended pixels",
 
 test("gives Step 6 a cohesive titles, tags, and descriptions layout", async () => {
   const [page, css] = await Promise.all([
-    readFile(new URL("app/page.tsx", root), "utf8"),
+    readFile(listingFactoryPage, "utf8"),
     readFile(new URL("app/approved-functional.css", root), "utf8"),
   ]);
   assert.match(page, /Finish titles, tags, and descriptions/);
@@ -241,7 +242,7 @@ test("gives Step 6 a cohesive titles, tags, and descriptions layout", async () =
 
 test("keeps required dialogs and selected controls inside the approved palette", async () => {
   const [page, css] = await Promise.all([
-    readFile(new URL("app/page.tsx", root), "utf8"),
+    readFile(listingFactoryPage, "utf8"),
     readFile(new URL("app/approved-functional.css", root), "utf8"),
   ]);
   assert.match(page, /Finish all sections first\./);
@@ -254,7 +255,7 @@ test("keeps required dialogs and selected controls inside the approved palette",
 
 test("centers autosave feedback beneath each workflow panel", async () => {
   const [page, css] = await Promise.all([
-    readFile(new URL("app/page.tsx", root), "utf8"),
+    readFile(listingFactoryPage, "utf8"),
     readFile(new URL("app/approved-functional.css", root), "utf8"),
   ]);
   assert.match(page, /<i aria-hidden="true">✓<\/i> Saved automatically/);
@@ -264,7 +265,7 @@ test("centers autosave feedback beneath each workflow panel", async () => {
 
 test("keeps Step 8 controls ordered, separated, and inside the warm Goldie palette", async () => {
   const [page, css] = await Promise.all([
-    readFile(new URL("app/page.tsx", root), "utf8"),
+    readFile(listingFactoryPage, "utf8"),
     readFile(new URL("app/approved-functional.css", root), "utf8"),
   ]);
   assert.match(css, /Step 8 final lock/);
@@ -282,7 +283,7 @@ test("keeps Step 8 controls ordered, separated, and inside the warm Goldie palet
 
 test("keeps supporting workflow copy readable and explains slower Etsy preparation", async () => {
   const [page, css] = await Promise.all([
-    readFile(new URL("app/page.tsx", root), "utf8"),
+    readFile(listingFactoryPage, "utf8"),
     readFile(new URL("app/approved-functional.css", root), "utf8"),
   ]);
   assert.match(page, /This can take a moment when your batch has several listings\. Keep this page open while Goldie prepares each one\./);
