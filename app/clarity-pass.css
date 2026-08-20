@@ -112,6 +112,19 @@
    of Pricing. Indices are unchanged; only the grouping is new.
    ------------------------------------------------------------ */
 
+/* The rail grid was hardcoded to 9 columns and the connector line ran the full
+   width regardless, so with 5 nodes the line trailed off past the last dot.
+   Five even columns, line drawn only between the first and last bubble. */
+.app-shell .workflow-progress { grid-template-columns: repeat(5, minmax(0, 1fr)) !important; }
+.app-shell .workflow-progress:before { left: 10% !important; right: 10% !important; }
+
+@media (max-width: 1180px) {
+  .app-shell .workflow-progress {
+    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+    overflow-x: visible !important;
+  }
+}
+
 .app-shell .rail-substeps {
   display: flex;
   flex-direction: column;
