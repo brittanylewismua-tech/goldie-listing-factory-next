@@ -1544,7 +1544,7 @@ test("renders Finish as a compact horizontal labeled subrail",async()=>{
 
 test("does not make owner access depend on billing database initialization",async()=>{
   const route=await readFile(new URL("../app/listing-factory/page.tsx",import.meta.url),"utf8");
-  assert.match(route,/if \(isOwner\(user\)\) return <ListingFactoryApp\/>;/);
+  assert.match(route,/if \(isOwner\(user\)\) return <ListingFactoryClientEntry\/>;/);
   assert.match(route,/mastermind = await mastermindState\(user\);/);
   assert.doesNotMatch(route,/Promise\.all\(\[\s*billingState\(user\),\s*mastermindState\(user\)/);
 });
@@ -1560,12 +1560,15 @@ test("keeps every owner login and billing outage from crashing the factory route
 });
 
 test("keeps the Listing Factory application outside route modules",async()=>{
-  const [rootRoute,factoryRoute]=await Promise.all([
+  const [rootRoute,factoryRoute,clientEntry]=await Promise.all([
     readFile(new URL("../app/page.tsx",import.meta.url),"utf8"),
     readFile(new URL("../app/listing-factory/page.tsx",import.meta.url),"utf8"),
+    readFile(new URL("../app/listing-factory/client-entry.tsx",import.meta.url),"utf8"),
   ]);
   assert.match(rootRoute,/export \{ default \} from "\.\/listing-factory-app"/);
-  assert.match(factoryRoute,/from "@\/app\/listing-factory-app"/);
+  assert.match(factoryRoute,/from "\.\/client-entry"/);
+  assert.match(clientEntry,/from "@\/app\/listing-factory-app"/);
+  assert.match(clientEntry,/if \(!browserReady\)/);
   assert.doesNotMatch(factoryRoute,/from "@\/app\/page"/);
 });
 

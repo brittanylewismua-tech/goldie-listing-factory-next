@@ -1,4 +1,4 @@
-import ListingFactoryApp from "@/app/listing-factory-app";
+import ListingFactoryClientEntry from "./client-entry";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { billingState } from "@/app/billing";
 import { isOwner, mastermindState } from "@/app/mastermind/access";
@@ -22,7 +22,7 @@ export default async function ListingFactoryRoute({searchParams}:{searchParams:P
   // Owner access is authoritative and must not depend on the billing database.
   // Running billingState in parallel used to make the owner route fail with a
   // 500 whenever billing initialization hit a transient D1 error.
-  if (isOwner(user)) return <ListingFactoryApp/>;
+  if (isOwner(user)) return <ListingFactoryClientEntry/>;
 
   let mastermind;
   try {
@@ -43,5 +43,5 @@ export default async function ListingFactoryRoute({searchParams}:{searchParams:P
   const hasAccess = billing.active || mastermind.owner || (mastermind.active && mastermind.redeemed);
   if (!hasAccess) return <SignupClient signedIn returnTo="/listing-factory" initialOffer={initialOffer}/>;
 
-  return <ListingFactoryApp/>;
+  return <ListingFactoryClientEntry/>;
 }
