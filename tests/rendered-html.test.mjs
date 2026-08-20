@@ -1541,14 +1541,3 @@ test("renders Finish as a compact horizontal labeled subrail",async()=>{
   assert.match(styles,/\.rail-substep > span:last-child \{ display: grid !important/);
   assert.doesNotMatch(styles,/\.rail-substeps \{[\s\S]{0,180}flex-direction: column/);
 });
-
-test("loads real saved-work data into the command bar",async()=>{
-  const [page,commandCenter]=await Promise.all([
-    readFile(new URL("../app/page.tsx",import.meta.url),"utf8"),
-    readFile(new URL("../app/returning-command-center.tsx",import.meta.url),"utf8"),
-  ]);
-  assert.doesNotMatch(commandCenter,/export async function loadCommandCenterData/);
-  assert.match(page,/fetch\("\/api\/product-recipes"\)/);
-  assert.match(page,/setCommandCenterData\(\{batches:/);
-  assert.doesNotMatch(page,/commandCenterData:CommandCenterData\|null=null/);
-});

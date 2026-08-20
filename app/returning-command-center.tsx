@@ -10,17 +10,12 @@ type Mockup={id:string;theme:string;name:string};
 type Usage={usage?:{drafts:number;aiMockups:number;mockupSets:number}};
 export type CommandCenterData={batches:Batch[];recipes:Recipe[];keywords:KeywordBank[];mockups:Mockup[];draftsThisMonth:number};
 
-async function loadCommandCenterData():Promise<CommandCenterData>{
-  const [batches,recipes,keywords,mockups,usage]=await Promise.all([
-    fetch("/api/batches").then(r=>r.ok?r.json():{batches:[]}),fetch("/api/product-recipes").then(r=>r.ok?r.json():{recipes:[]}),
-    fetch("/api/keyword-lists").then(r=>r.ok?r.json():{lists:[]}),fetch("/api/mockups/library").then(r=>r.ok?r.json():{templates:[]}),fetch("/api/usage").then(r=>r.ok?r.json():{}),
-  ]);
-  return {batches:batches.batches||[],recipes:recipes.recipes||[],keywords:keywords.lists||[],mockups:mockups.templates||[],draftsThisMonth:(usage as Usage).usage?.drafts||0};
-}
-
 export function ReturningCommandCenter({printifyConnected,etsyConnected,onUseProduct,onStartBlank,onData}:{printifyConnected:boolean;etsyConnected:boolean;onUseProduct:(recipe:Recipe)=>void;onStartBlank:()=>void;onData?:(data:CommandCenterData)=>void}){
   const [data,setData]=useState<CommandCenterData|null>(null),[loading,setLoading]=useState(true);
-  useEffect(()=>{void loadCommandCenterData().then(next=>{setData(next);onData?.(next)}).finally(()=>setLoading(false))},[]);
+  useEffect(()=>{void Promise.all([
+    fetch("/api/batches").then(r=>r.ok?r.json():{batches:[]}),fetch("/api/product-recipes").then(r=>r.ok?r.json():{recipes:[]}),
+    fetch("/api/keyword-lists").then(r=>r.ok?r.json():{lists:[]}),fetch("/api/mockups/library").then(r=>r.ok?r.json():{templates:[]}),fetch("/api/usage").then(r=>r.ok?r.json():{}),
+  ]).then(([batches,recipes,keywords,mockups,usage])=>{const next={batches:batches.batches||[],recipes:recipes.recipes||[],keywords:keywords.lists||[],mockups:mockups.templates||[],draftsThisMonth:(usage as Usage).usage?.drafts||0};setData(next);onData?.(next)}).finally(()=>setLoading(false))},[]);
   const sets=useMemo(()=>data?[...new Set(data.mockups.map(item=>item.theme))]:[],[data]);
   if(loading)return <section className="command-center-loading"><span/><div><b>Opening your Goldie workspace</b><small>Loading recent products and batches…</small></div></section>;
   if(!data||(!data.batches.length&&!data.recipes.length))return null;
