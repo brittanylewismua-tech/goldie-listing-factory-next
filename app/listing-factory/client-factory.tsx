@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import ListingFactory from "@/app/page";
+import ListingFactory from "@/app/listing-factory-app";
 
 export default function ClientFactory() {
   const [mounted, setMounted] = useState(false);

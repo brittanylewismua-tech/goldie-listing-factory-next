@@ -52,7 +52,7 @@ const eslintConfig = defineConfig([
     },
   },
   {
-    files: ["app/page.tsx", "app/integrated-mockups.tsx", "app/mockups/page.tsx", "app/returning-command-center.tsx"],
+    files: ["app/listing-factory-app.tsx", "app/integrated-mockups.tsx", "app/mockups/page.tsx", "app/returning-command-center.tsx"],
     rules: {
       // These files implement dismissible modal backdrops and draggable image
       // surfaces. Keyboard users use the dialog buttons, Escape, and explicit
@@ -63,7 +63,7 @@ const eslintConfig = defineConfig([
     },
   },
   {
-    files: ["app/page.tsx", "app/factory-tools.tsx"],
+    files: ["app/listing-factory-app.tsx", "app/factory-tools.tsx"],
     rules: {
       // These compact controls wrap their inputs and visible text; the rule
       // cannot resolve the association through the nested generated markup.

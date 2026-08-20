@@ -15,7 +15,7 @@ test("serves the Listing Factory from its canonical product path", async () => {
   const response = await render();
   assert.equal(response.status, 307);
   assert.equal(response.headers.get("location"), "/listing-factory");
-  const pageSource = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const pageSource = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
   const globalCss = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
   const approvedCss = await readFile(new URL("../app/approved-functional.css", import.meta.url), "utf8");
   assert.match(pageSource, /Goldie Listing Factory/);
@@ -60,7 +60,7 @@ test("offers real account sign-in choices and preserves the selected destination
 
 test("uses individual shop-aware Printify editor buttons", async () => {
   const [page, route] = await Promise.all([
-    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/api/printify/drafts/route.ts", import.meta.url), "utf8"),
   ]);
   assert.match(page, /Open in Printify to resize or reposition/);
@@ -129,7 +129,7 @@ test("uses individual shop-aware Printify editor buttons", async () => {
 
 test("unifies saved products, editing, pricing, and mockups without the old factory toggle", async () => {
   const [page, recipes, mockups, drafts] = await Promise.all([
-    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/factory-tools.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/integrated-mockups.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/api/printify/drafts/route.ts", import.meta.url), "utf8"),
@@ -160,7 +160,7 @@ test("unifies saved products, editing, pricing, and mockups without the old fact
 
 test("groups equal-cost Printify variants while preserving individual review and starts new products blank", async () => {
   const [page, recipes, printify] = await Promise.all([
-    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/factory-tools.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/api/printify/route.ts", import.meta.url), "utf8"),
   ]);
@@ -191,7 +191,7 @@ test("groups equal-cost Printify variants while preserving individual review and
 
 test("provides thorough contextual help throughout all nine Listing Factory steps", async () => {
   const [page, help, css] = await Promise.all([
-    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/context-help.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
   ]);
@@ -219,7 +219,7 @@ test("stages each finished mockup group for its exact Etsy listing", async () =>
   const [mockups,images,page] = await Promise.all([
     readFile(new URL("../app/integrated-mockups.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/api/etsy/images/route.ts", import.meta.url), "utf8"),
-    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
   ]);
   assert.match(mockups, /productId/);
   assert.match(mockups, /stageForEtsy/);
@@ -249,7 +249,7 @@ test("renders Mockup Sets as management only", async () => {
 
 test("guides sellers through the complete resumable nine-step workflow",async()=>{
   const [page,batches,route,cache,styles]=await Promise.all([
-    readFile(new URL("../app/page.tsx",import.meta.url),"utf8"),
+    readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8"),
     readFile(new URL("../app/batches/page.tsx",import.meta.url),"utf8"),
     readFile(new URL("../app/api/batches/route.ts",import.meta.url),"utf8"),
     readFile(new URL("../app/batch-cache.ts",import.meta.url),"utf8"),
@@ -270,7 +270,7 @@ test("guides sellers through the complete resumable nine-step workflow",async()=
 
 test("imports Printify product facts and automatically prepares product-specific Etsy details",async()=>{
   const [page,printify,intelligence,drafts]=await Promise.all([
-    readFile(new URL("../app/page.tsx",import.meta.url),"utf8"),
+    readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8"),
     readFile(new URL("../app/api/printify/route.ts",import.meta.url),"utf8"),
     readFile(new URL("../app/api/listing-intelligence/route.ts",import.meta.url),"utf8"),
     readFile(new URL("../app/api/printify/drafts/route.ts",import.meta.url),"utf8"),
@@ -284,7 +284,7 @@ test("imports Printify product facts and automatically prepares product-specific
 
 test("imports shipping and keeps final listing edits attached to the exact Printify draft",async()=>{
   const [page,printify,update]=await Promise.all([
-    readFile(new URL("../app/page.tsx",import.meta.url),"utf8"),
+    readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8"),
     readFile(new URL("../app/api/printify/route.ts",import.meta.url),"utf8"),
     readFile(new URL("../app/api/printify/drafts/update/route.ts",import.meta.url),"utf8"),
   ]);
@@ -311,7 +311,7 @@ test("matches Printify editor DPI instead of comparing against template pixel di
   assert.equal(normalizedPlacementScale(1, { left: .06, right: .94 }, 1), 1);
   assert.deepEqual(printifyDpi(6144, 7200, normalizedPlacementScale(1, { left: .06, right: .94 }, 1)), { dpi: 256, level: "Medium" });
   assert.deepEqual(printifyDpi(6144, 7200, Math.min(1.125, 1)), { dpi: 256, level: "Medium" });
-  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const page = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
   assert.match(page, /maxPlacementScale:isRigidPaperProduct\(templateDetails\)\?1:undefined/);
   assert.doesNotMatch(page, /Target:\s*\{templateDetails/);
   assert.match(page, /DPI · good to print/);
@@ -337,7 +337,7 @@ test("calculates every Printify variant price from its own cost and Etsy fee pro
   const crewneckPrice = recommendedPrice(3100, crewneck);
   assert.ok(estimatedProfit(crewneckPrice, 3100, crewneck) >= 10);
   assert.ok(estimatedProfit(crewneckPrice, 3100, crewneck) < 10.02);
-  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const page = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
   const drafts = await readFile(new URL("../app/api/printify/drafts/route.ts", import.meta.url), "utf8");
   assert.match(page, /stillUsingTemplatePrices/);
   assert.match(page, /Goldie calculated every price from your profit goal, product costs, and Etsy fees\. Buyer-paid shipping stays separate/);
@@ -347,7 +347,7 @@ test("calculates every Printify variant price from its own cost and Etsy fee pro
 });
 
 test("processes a 20-design batch with bounded two-at-a-time concurrency", async () => {
-  const [page, boundedSource] = await Promise.all([readFile(new URL("../app/page.tsx", import.meta.url), "utf8"), readFile(new URL("../app/bounded-work.ts", import.meta.url), "utf8")]);
+  const [page, boundedSource] = await Promise.all([readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"), readFile(new URL("../app/bounded-work.ts", import.meta.url), "utf8")]);
   assert.match(page, /const MAX_BATCH_FILES = 20/);
   assert.match(page, /const MAX_CONCURRENT_DESIGNS = 2/);
   assert.match(page, /async function processDesign/);
@@ -373,7 +373,7 @@ test("processes a 20-design batch with bounded two-at-a-time concurrency", async
 
 test("preflights the account once and reuses a protected batch session", async () => {
   const [page, connection, drafts, schema, migration] = await Promise.all([
-    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/api/printify/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/printify/drafts/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../db/schema.ts", import.meta.url), "utf8"),
@@ -402,7 +402,7 @@ test("makes draft retries idempotent so a lost response cannot duplicate a listi
   assert.match(drafts, /status = 'succeeded'/);
   assert.match(drafts, /still completing this exact draft/);
   assert.match(drafts, /export async function GET\(request: Request\)/);
-  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const page = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
   assert.match(page, /async function recoverDraft/);
   assert.match(page, /status === "succeeded"/);
   assert.match(schema, /printifyDraftResults/);
@@ -554,7 +554,7 @@ test("makes keyword bank saving unmistakable and prevents accidental duplicates"
   const [page,route,home]=await Promise.all([
     readFile(new URL("../app/keywords/page.tsx",import.meta.url),"utf8"),
     readFile(new URL("../app/api/keyword-lists/route.ts",import.meta.url),"utf8"),
-    readFile(new URL("../app/page.tsx",import.meta.url),"utf8"),
+    readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8"),
   ]);
   assert.doesNotMatch(page,/goldie-wordmark\.webp/);assert.match(page,/className="management-nav"/);assert.match(page,/<a href=\{returnHref\}>Listing Factory<\/a>/);assert.match(page,/save-toast/);assert.doesNotMatch(page,/return-to-work/);
   assert.match(page,/goldie-active-batch/);assert.match(page,/Save changes/);assert.match(page,/Create another bank/);
@@ -565,7 +565,7 @@ test("makes keyword bank saving unmistakable and prevents accidental duplicates"
 
 test("creates unique validated AI titles in bulk with per-listing overrides", async()=>{
   const [page,tools,intelligence]=await Promise.all([
-    readFile(new URL("../app/page.tsx",import.meta.url),"utf8"),
+    readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8"),
     readFile(new URL("../app/factory-tools.tsx",import.meta.url),"utf8"),
     readFile(new URL("../app/api/listing-intelligence/route.ts",import.meta.url),"utf8"),
   ]);
@@ -584,7 +584,7 @@ test("creates unique validated AI titles in bulk with per-listing overrides", as
 
 test("records permanent sanitized Printify diagnostics without blocking listings", async () => {
   const [page, stage, drafts, diagnostics, admin, adminPage, schema] = await Promise.all([
-    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/api/printify/stage/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/printify/drafts/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/printify/diagnostics.ts", import.meta.url), "utf8"),
@@ -629,7 +629,7 @@ test("provides an owner-only member-specific Printify health audit", async () =>
 
 test("ships an in-page support assistant with a comprehensive troubleshooting bank", async () => {
   const [page, chat, knowledge, engine, supportCss] = await Promise.all([
-    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/support-chat.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/support-knowledge.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/support-engine.ts", import.meta.url), "utf8"),
@@ -686,7 +686,7 @@ test("support diagnoses vague reports before prescribing a fix", async () => {
 
 test("ships official brand assets and removes the starter", async () => {
   const [page, layout, packageJson] = await Promise.all([
-    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
     readFile(new URL("../package.json", import.meta.url), "utf8"),
   ]);
@@ -792,7 +792,7 @@ test("caps mockup generation and saved themed sets", async () => {
 test("limits each listing to four lifestyle mockups and shows the recommended photo mix", async () => {
   const [mockups, page] = await Promise.all([
     readFile(new URL("../app/integrated-mockups.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
   ]);
   assert.match(mockups, /MAX_MOCKUPS_PER_LISTING=4/);
   assert.match(mockups, /next\.size>=MAX_MOCKUPS_PER_LISTING/);
@@ -858,7 +858,7 @@ test("routes each product surface deliberately and never releases a partial batc
 });
 
 test("draft progress cannot exceed the selected batch", async () => {
-  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const page = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
   assert.match(page,/draftRunActive\.current/);
   assert.match(page,/completedDesignIds\.has\(result\.clientId\)/);
   assert.match(page,/Math\.min\(completedDesignIds\.size,targetFiles\.length\)/);
@@ -866,7 +866,7 @@ test("draft progress cannot exceed the selected batch", async () => {
 
 test("keeps pricing simple while using a real Etsy shipping profile and exact template prices", async () => {
   const [page,drafts,profiles,publish] = await Promise.all([
-    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/api/printify/drafts/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/etsy/shipping-profiles/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/printify/drafts/publish/route.ts", import.meta.url), "utf8"),
@@ -957,7 +957,7 @@ test("uses the premium lilac command-center design system across Goldie",async()
 
 test("keeps batch history useful instead of accumulating unmanageable empty sessions", async () => {
   const [page,batches] = await Promise.all([
-    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/batches/page.tsx", import.meta.url), "utf8"),
   ]);
   assert.match(page,/\(!files\.length&&!drafts\.length\)\)return/);
@@ -968,7 +968,7 @@ test("keeps batch history useful instead of accumulating unmanageable empty sess
 
 test("connects Etsy with PKCE and finishes only the exact Printify-linked Etsy listing", async()=>{
   const [page,oauth,callback,client,publish,queue,finish,migration]=await Promise.all([
-    readFile(new URL("../app/page.tsx",import.meta.url),"utf8"),
+    readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8"),
     readFile(new URL("../app/api/etsy/route.ts",import.meta.url),"utf8"),
     readFile(new URL("../app/api/etsy/callback/route.ts",import.meta.url),"utf8"),
     readFile(new URL("../app/api/etsy/client.ts",import.meta.url),"utf8"),
@@ -1000,7 +1000,7 @@ test("connects Etsy with PKCE and finishes only the exact Printify-linked Etsy l
 });
 
 test("preserves the final plain-text description and applies it directly to Etsy", async()=>{
-  const [page,finish]=await Promise.all([readFile(new URL("../app/page.tsx",import.meta.url),"utf8"),readFile(new URL("../app/api/etsy/finish.ts",import.meta.url),"utf8")]);
+  const [page,finish]=await Promise.all([readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8"),readFile(new URL("../app/api/etsy/finish.ts",import.meta.url),"utf8")]);
   assert.match(page,/\.join\("\\n\\n"\)/);
   assert.match(finish,/shipping_profile_id:String\(shippingProfileId\),description/);
   assert.match(finish,/String\(draft\.description\|\|""\)/);
@@ -1008,7 +1008,7 @@ test("preserves the final plain-text description and applies it directly to Etsy
 
 test("makes progress satisfying and returns a precise outcome receipt", async()=>{
   const [page,ui,theme]=await Promise.all([
-    readFile(new URL("../app/page.tsx",import.meta.url),"utf8"),
+    readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8"),
     readFile(new URL("../app/goldie-ui.tsx",import.meta.url),"utf8"),
     readFile(new URL("../app/lilac-theme.css",import.meta.url),"utf8"),
   ]);
@@ -1020,7 +1020,7 @@ test("makes progress satisfying and returns a precise outcome receipt", async()=
 
 test("turns Goldie into a returning-user command center with contextual intelligence",async()=>{
   const [page,dashboard,theme,system]=await Promise.all([
-    readFile(new URL("../app/page.tsx",import.meta.url),"utf8"),
+    readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8"),
     readFile(new URL("../app/returning-command-center.tsx",import.meta.url),"utf8"),
     readFile(new URL("../app/lilac-theme.css",import.meta.url),"utf8"),
     readFile(new URL("../DESIGN_SYSTEM.md",import.meta.url),"utf8"),
@@ -1037,7 +1037,7 @@ test("recovers published-template shipping and constrains Etsy categories by pro
   const [printify,taxonomy,page]=await Promise.all([
     readFile(new URL("../app/api/printify/route.ts",import.meta.url),"utf8"),
     readFile(new URL("../app/api/etsy/taxonomy/route.ts",import.meta.url),"utf8"),
-    readFile(new URL("../app/page.tsx",import.meta.url),"utf8"),
+    readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8"),
   ]);
   assert.match(printify,/externalListingId/);
   assert.match(printify,/shipping_profile_id/);
@@ -1055,7 +1055,7 @@ test("recovers published-template shipping and constrains Etsy categories by pro
 
 test("places each step count directly below its page title", async () => {
   const [page, styles] = await Promise.all([
-    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/approved-functional.css", import.meta.url), "utf8"),
   ]);
   assert.match(page, /<p className="hero-step-count">\{railInFinish\?/);
@@ -1066,7 +1066,7 @@ test("places each step count directly below its page title", async () => {
 
 test("labels every progress bubble with a short workflow name", async () => {
   const [page, styles] = await Promise.all([
-    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/approved-functional.css", import.meta.url), "utf8"),
   ]);
   assert.match(page, /const PROGRESS_SHORT_LABELS = \["Connect","Product","Designs","Pricing","Drafts","Titles \+ tags","Etsy details","Photos","Publish"\]/);
@@ -1087,7 +1087,7 @@ test("keeps product context only on product-specific steps and progress controls
 
 test("shows accurate completion feedback above each next step card", async () => {
   const [page, styles] = await Promise.all([
-    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/approved-functional.css", import.meta.url), "utf8"),
   ]);
   assert.match(page, /fileNotice&&workflowStep==="designs"&&<p className="file-add-notice"/);
@@ -1101,7 +1101,7 @@ test("shows accurate completion feedback above each next step card", async () =>
 
 test("supports whole-number pricing, unclipped profit columns, and optional title caps", async () => {
   const [page, styles] = await Promise.all([
-    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
   ]);
   assert.match(page, /Create whole-number pricing/);
@@ -1121,7 +1121,7 @@ test("keeps the Step 6 listing count on one line", async () => {
 
 test("renders personalization as an On-left Off-right toggle", async () => {
   const [page,styles] = await Promise.all([
-    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/approved-functional.css", import.meta.url), "utf8"),
   ]);
   assert.match(styles, /\.app-shell \.personalization-switch\{/);
@@ -1148,7 +1148,7 @@ test("shows every public plan on Usage and Billing with direct plan controls", a
 
 test("supports Etsy's current multi-question personalization workflow", async () => {
   const [page, finish] = await Promise.all([
-    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/api/etsy/finish.ts", import.meta.url), "utf8"),
   ]);
   assert.match(page, /PersonalizationEditor/);
@@ -1168,7 +1168,7 @@ test("supports Etsy's current multi-question personalization workflow", async ()
 });
 
 test("appends later design selections and skips only exact file duplicates", async () => {
-  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const page = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
   assert.match(page, /crypto\.subtle\.digest\("SHA-256",bytes\)/);
   assert.match(page, /const combined=\[\.\.\.files,\.\.\.images\]/);
   assert.match(page, /setFiles\(combined\)/);
@@ -1180,7 +1180,7 @@ test("appends later design selections and skips only exact file duplicates", asy
 
 test("keeps a verified Printify template usable when its Etsy listing is inactive", async () => {
   const [page, workflow, printify, drafts] = await Promise.all([
-    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/factory-tools.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/api/printify/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/printify/drafts/route.ts", import.meta.url), "utf8"),
@@ -1225,7 +1225,7 @@ test("keeps mastermind enrollment owner-controlled while enforcing each 48-hour 
 
 test("blocks the factory workflow on mobile while preserving saved work", async () => {
   const [page, styles] = await Promise.all([
-    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/approved-functional.css", import.meta.url), "utf8"),
   ]);
   assert.match(page, /className="mobile-gate"/);
@@ -1237,7 +1237,7 @@ test("blocks the factory workflow on mobile while preserving saved work", async 
 
 test("supports simple saved product bundles without complicating the single-product workflow", async () => {
   const [page, workflow, api, schema, ui, styles, approvedStyles] = await Promise.all([
-    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/factory-tools.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/api/product-bundles/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../db/schema.ts", import.meta.url), "utf8"),
@@ -1286,7 +1286,7 @@ test("supports simple saved product bundles without complicating the single-prod
 
 test("downloads each listing's selected Printify photos and created mockups as one local ZIP",async()=>{
   const [page,route,styles]=await Promise.all([
-    readFile(new URL("../app/page.tsx",import.meta.url),"utf8"),
+    readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8"),
     readFile(new URL("../app/api/listing-photos/download/route.ts",import.meta.url),"utf8"),
     readFile(new URL("../app/approved-functional.css",import.meta.url),"utf8"),
   ]);
@@ -1320,7 +1320,7 @@ test("queues Etsy publishing durably and protects shared API capacity",async()=>
     readFile(new URL("../db/schema.ts",import.meta.url),"utf8"),
     readFile(new URL("../drizzle/0011_etsy_publish_queue.sql",import.meta.url),"utf8"),
     readFile(new URL("../app/plan-limits.ts",import.meta.url),"utf8"),
-    readFile(new URL("../app/page.tsx",import.meta.url),"utf8"),
+    readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8"),
     readFile(new URL("../app/api/usage/route.ts",import.meta.url),"utf8"),
   ]);
   assert.match(plans,/drafts: 100, dailyListings: 40/);
@@ -1362,7 +1362,7 @@ test("runs the Etsy queue every minute and gives the owner operational controls"
 test("acknowledges slow workflow actions immediately and blocks repeat clicks",async()=>{
   const [workflow,page,mockups,styles]=await Promise.all([
     readFile(new URL("../app/factory-tools.tsx",import.meta.url),"utf8"),
-    readFile(new URL("../app/page.tsx",import.meta.url),"utf8"),
+    readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8"),
     readFile(new URL("../app/integrated-mockups.tsx",import.meta.url),"utf8"),
     readFile(new URL("../app/approved-functional.css",import.meta.url),"utf8"),
   ]);
@@ -1386,7 +1386,7 @@ test("centers the complete images and mockups heading group",async()=>{
 });
 
 test("renders final publishing readiness with the defined personalization validator",async()=>{
-  const page=await readFile(new URL("../app/page.tsx",import.meta.url),"utf8");
+  const page=await readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8");
   assert.match(page,/files\.every\(file=>!personalizationProblem\(file\.etsy\)\)/);
   assert.doesNotMatch(page,/personalizationIssue\(/);
   assert.match(page,/const labelForDraft=/);assert.match(page,/draft\.title\|\|file\?\.title\|\|draft\.name\|\|file\?\.name/);
@@ -1398,7 +1398,7 @@ test("renders final publishing readiness with the defined personalization valida
 
 test("keeps each Printify editing action with its listing details",async()=>{
   const [page,styles]=await Promise.all([
-    readFile(new URL("../app/page.tsx",import.meta.url),"utf8"),
+    readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8"),
     readFile(new URL("../app/approved-functional.css",import.meta.url),"utf8"),
   ]);
   assert.match(page,/tag-row[\s\S]*?draft\.editorUrl[\s\S]*?Open in Printify to resize or reposition[\s\S]*?<\/div><\/div>/);
@@ -1407,7 +1407,7 @@ test("keeps each Printify editing action with its listing details",async()=>{
 
 test("explains and styles every Printify photo selection action",async()=>{
   const [page,styles]=await Promise.all([
-    readFile(new URL("../app/page.tsx",import.meta.url),"utf8"),
+    readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8"),
     readFile(new URL("../app/approved-functional.css",import.meta.url),"utf8"),
   ]);
   assert.match(page,/Remove every selected Printify photo from this listing only/);
@@ -1458,7 +1458,7 @@ test("creates selected lifestyle mockups concurrently without changing scene ord
 
 test("requires a photo on every listing and lets sellers set Etsy photo order",async()=>{
   const [page,organizer,images,finish]=await Promise.all([
-    readFile(new URL("../app/page.tsx",import.meta.url),"utf8"),
+    readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8"),
     readFile(new URL("../app/listing-photo-order.tsx",import.meta.url),"utf8"),
     readFile(new URL("../app/api/etsy/images/route.ts",import.meta.url),"utf8"),
     readFile(new URL("../app/api/etsy/finish.ts",import.meta.url),"utf8"),
@@ -1481,7 +1481,7 @@ test("requires a photo on every listing and lets sellers set Etsy photo order",a
 
 test("chooses exact available Printify colors per batch and remembers optional defaults",async()=>{
   const [page,printify,drafts,recipes,css]=await Promise.all([
-    readFile(new URL("../app/page.tsx",import.meta.url),"utf8"),
+    readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8"),
     readFile(new URL("../app/api/printify/route.ts",import.meta.url),"utf8"),
     readFile(new URL("../app/api/printify/drafts/route.ts",import.meta.url),"utf8"),
     readFile(new URL("../app/api/product-recipes/route.ts",import.meta.url),"utf8"),
@@ -1500,7 +1500,7 @@ test("chooses exact available Printify colors per batch and remembers optional d
 });
 
 test("keeps buyer-paid shipping separate from item profit",async()=>{
-  const page=await readFile(new URL("../app/page.tsx",import.meta.url),"utf8");
+  const page=await readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8");
   assert.match(page,/Lowest estimated item profit/);
   assert.match(page,/Shipping not included/);
   assert.match(page,/Buyer-paid shipping stays separate/);
@@ -1509,7 +1509,7 @@ test("keeps buyer-paid shipping separate from item profit",async()=>{
 
 test("protects batch allowance and lets sellers review uploaded designs",async()=>{
   const [page,styles]=await Promise.all([
-    readFile(new URL("../app/page.tsx",import.meta.url),"utf8"),
+    readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8"),
     readFile(new URL("../app/approved-functional.css",import.meta.url),"utf8"),
   ]);
   assert.match(page,/planDraftsRemaining/);
@@ -1521,7 +1521,7 @@ test("protects batch allowance and lets sellers review uploaded designs",async()
 
 test("remembers safe Etsy product defaults without design-specific assumptions",async()=>{
   const [page,recipes]=await Promise.all([
-    readFile(new URL("../app/page.tsx",import.meta.url),"utf8"),
+    readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8"),
     readFile(new URL("../app/api/product-recipes/route.ts",import.meta.url),"utf8"),
   ]);
   assert.match(page,/PHYSICAL_ETSY_FIELDS/);
@@ -1532,7 +1532,7 @@ test("remembers safe Etsy product defaults without design-specific assumptions",
 
 test("renders Finish as a compact horizontal labeled subrail",async()=>{
   const [page,styles]=await Promise.all([
-    readFile(new URL("../app/page.tsx",import.meta.url),"utf8"),
+    readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8"),
     readFile(new URL("../app/clarity-pass.css",import.meta.url),"utf8"),
   ]);
   assert.match(page,/FINISH_RAIL_LABELS = \["Titles \+ tags","Etsy details","Images \+ mockups","Review \+ publish"\]/);
@@ -1565,4 +1565,14 @@ test("keeps every owner login and billing outage from crashing the factory route
   assert.match(access,/goldie@beawolfbiz\.com/);
   assert.match(route,/try \{\s*billing = await billingState\(user\);\s*\} catch \{/);
   assert.match(route,/catch \{[\s\S]*return <SignupClient signedIn/);
+});
+
+test("keeps the Listing Factory application outside route modules",async()=>{
+  const [rootRoute,clientFactory]=await Promise.all([
+    readFile(new URL("../app/page.tsx",import.meta.url),"utf8"),
+    readFile(new URL("../app/listing-factory/client-factory.tsx",import.meta.url),"utf8"),
+  ]);
+  assert.match(rootRoute,/export \{ default \} from "\.\/listing-factory-app"/);
+  assert.match(clientFactory,/from "@\/app\/listing-factory-app"/);
+  assert.doesNotMatch(clientFactory,/from "@\/app\/page"/);
 });
