@@ -8,7 +8,7 @@ import { ensureMockupStorage } from "@/app/api/mockups/storage";
 import { planFor } from "@/app/plan-limits";
 import { customerLaunchBlock } from "@/app/customer-launch-gate";
 
-const kinds = new Set(["rigid-flat", "apparel", "soft-goods", "curved", "irregular"]);
+const kinds = new Set(["rigid-flat", "t-shirt", "sweatshirt", "hoodie", "other-apparel", "apparel", "soft-goods", "curved", "irregular"]);
 const MAX_FILE = 25 * 1024 * 1024;
 const MAX_MOCKUPS_PER_SET = 50;
 

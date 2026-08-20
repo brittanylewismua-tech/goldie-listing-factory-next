@@ -880,18 +880,34 @@ test("routes each product surface deliberately and never releases a partial batc
     readFile(new URL("../app/mockups/product-renderers.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/mockups/render/route.ts", import.meta.url), "utf8"),
   ]);
-  assert.match(page,/"rigid-flat" \| "apparel" \| "soft-goods" \| "curved" \| "irregular"/);
+  assert.match(page,/"rigid-flat" \| "t-shirt" \| "sweatshirt" \| "hoodie" \| "other-apparel" \| "apparel" \| "soft-goods" \| "curved" \| "irregular"/);
   assert.match(page,/made\.forEach\(item=>URL\.revokeObjectURL/);
   assert.match(page,/setResults\(\[\]\);setGenerationError/);
   assert.match(route,/if\(!body\.reference\)/);
   assert.match(route,/plan\.aiMockups/);
   assert.match(route,/monthKey/);
+  assert.match(route,/queue\.fal\.run/);
+  assert.match(route,/mockup_render_jobs/);
+  assert.match(route,/statusPayload\.status!=="COMPLETED"/);
   assert.doesNotMatch(renderers,/fashn\/tryon/);
   assert.match(renderers,/Do not create, replace, redraw, layer, or paste in a new shirt or garment/);
   assert.match(renderers,/only visible change.*design printed on the original garment/);
   assert.doesNotMatch(renderers,/shirt-design/);
   assert.match(renderers,/flux-2-flex\/edit/);
   assert.match(renderers,/guidance_scale:2\.5/);
+});
+
+test("restores batch colors and blocks publishing until every listing has a photo", async () => {
+  const [page,review]=await Promise.all([
+    readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/final-listing-review.tsx", import.meta.url), "utf8"),
+  ]);
+  assert.match(page,/selectedColorIds\?:number\[\]/);
+  assert.match(page,/state:\{template,templateDetails,description,pricing,selectedColorIds,/);
+  assert.match(page,/setSelectedColorIds\(state\.selectedColorIds\?\.length/);
+  assert.match(page,/disabled=\{publishing\|\|drafts\.some\(draft=>draft\.status==="Failed"\)\|\|!allCreatedListingsHaveImages\(\)\}/);
+  assert.match(page,/Add a photo to every listing before publishing/);
+  assert.match(review,/Add at least one listing photo/);
 });
 
 test("draft progress cannot exceed the selected batch", async () => {
