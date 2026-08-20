@@ -146,7 +146,7 @@ async function makeMockup(file: File, template: Template): Promise<Rendered> {
   if(!isCalibratedSurface(kind)) throw new Error(`${SURFACE_LABELS[kind]} mockups require product-aware rendering.`);
   const renderArt=document.createElement("canvas");renderArt.width=art.naturalWidth;renderArt.height=art.naturalHeight;
   const artScale=kind==="rigid-flat"?1:.42,artWidth=art.naturalWidth*artScale,artHeight=art.naturalHeight*artScale;
-  renderArt.getContext("2d")!.drawImage(cleanArtworkBackground(art),(art.naturalWidth-artWidth)/2,(art.naturalHeight-artHeight)/2,artWidth,artHeight);
+  renderArt.getContext("2d")!.drawImage(art,(art.naturalWidth-artWidth)/2,(art.naturalHeight-artHeight)/2,artWidth,artHeight);
   const detectedCorners=kind==="rigid-flat"?refineRigidSurface(master,rawCorners):rawCorners;
   validateSurface(detectedCorners,master.naturalWidth,master.naturalHeight);
   const corners=safeInset(detectedCorners,master.naturalWidth,master.naturalHeight);

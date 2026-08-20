@@ -888,6 +888,8 @@ test("routes each product surface deliberately and never releases a partial batc
   assert.match(page,/if\(isCalibratedSurface\(template\.surfaceKind\|\|"rigid-flat"\)\)return makeMockup/);
   assert.match(integrated,/if\(isCalibratedSurface\(t\.surfaceKind\|\|"rigid-flat"\)\)return/);
   assert.match(integrated,/needsReference=chosen\.some\(t=>!isCalibratedSurface/);
+  assert.doesNotMatch(page,/cleanArtworkBackground/);
+  assert.doesNotMatch(integrated,/cleanArtworkBackground/);
   assert.match(route,/if\(!body\.reference\)/);
   assert.match(route,/plan\.aiMockups/);
   assert.match(route,/monthKey/);
