@@ -1545,6 +1545,14 @@ test("renders Finish as a compact horizontal labeled subrail",async()=>{
 test("does not make owner access depend on billing database initialization",async()=>{
   const route=await readFile(new URL("../app/listing-factory/page.tsx",import.meta.url),"utf8");
   assert.match(route,/const mastermind = await mastermindState\(user\);/);
-  assert.match(route,/if \(mastermind\.owner\) return <ListingFactory\/>;/);
+  assert.match(route,/if \(mastermind\.owner\) return <ClientFactory\/>;/);
   assert.doesNotMatch(route,/Promise\.all\(\[\s*billingState\(user\),\s*mastermindState\(user\)/);
+});
+
+test("mounts the browser-only Listing Factory after the authenticated server shell",async()=>{
+  const clientFactory=await readFile(new URL("../app/listing-factory/client-factory.tsx",import.meta.url),"utf8");
+  assert.match(clientFactory,/"use client"/);
+  assert.match(clientFactory,/useEffect\(\(\) => setMounted\(true\), \[\]\)/);
+  assert.match(clientFactory,/if \(!mounted\)/);
+  assert.match(clientFactory,/return <ListingFactory\/>/);
 });
