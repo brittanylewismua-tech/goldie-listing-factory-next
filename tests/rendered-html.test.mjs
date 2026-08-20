@@ -579,7 +579,7 @@ test("creates unique validated AI titles in bulk with per-listing overrides", as
   assert.match(page,/Customize this listing’s description/);assert.match(page,/The complete description is shown below/);
   assert.match(page,/descriptionOverride/);assert.match(page,/scrollIntoView/);
   assert.match(tools,/keywordListsCache/);assert.match(tools,/selectionOnly/);assert.match(tools,/onSelect/);
-  assert.match(intelligence,/selected_keywords/);assert.match(intelligence,/allowedByLower/);assert.match(intelligence,/PRODUCT TYPE RULE/);
+  assert.match(intelligence,/selected_keywords/);assert.match(intelligence,/allowedByLower/);assert.match(intelligence,/PRODUCT TYPE RULE/);assert.match(intelligence,/if\(!selected\.length\).*status:422/);
 });
 
 test("records permanent sanitized Printify diagnostics without blocking listings", async () => {
