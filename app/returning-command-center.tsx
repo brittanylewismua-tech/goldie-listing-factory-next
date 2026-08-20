@@ -15,7 +15,7 @@ export function ReturningCommandCenter({printifyConnected,etsyConnected,onUsePro
   useEffect(()=>{void Promise.all([
     fetch("/api/batches").then(r=>r.ok?r.json():{batches:[]}),fetch("/api/product-recipes").then(r=>r.ok?r.json():{recipes:[]}),
     fetch("/api/keyword-lists").then(r=>r.ok?r.json():{lists:[]}),fetch("/api/mockups/library").then(r=>r.ok?r.json():{templates:[]}),fetch("/api/usage").then(r=>r.ok?r.json():{}),
-  ]).then(([batches,recipes,keywords,mockups,usage])=>{const next={batches:batches.batches||[],recipes:recipes.recipes||[],keywords:keywords.lists||[],mockups:mockups.templates||[],draftsThisMonth:(usage as Usage).usage?.drafts||0};setData(next);onData?.(next)}).finally(()=>setLoading(false))},[]);// eslint-disable-line react-hooks/exhaustive-deps
+  ]).then(([batches,recipes,keywords,mockups,usage])=>{const next={batches:batches.batches||[],recipes:recipes.recipes||[],keywords:keywords.lists||[],mockups:mockups.templates||[],draftsThisMonth:(usage as Usage).usage?.drafts||0};setData(next);onData?.(next)}).finally(()=>setLoading(false))},[]);
   const sets=useMemo(()=>data?[...new Set(data.mockups.map(item=>item.theme))]:[],[data]);
   if(loading)return <section className="command-center-loading"><span/><div><b>Opening your Goldie workspace</b><small>Loading recent products and batches…</small></div></section>;
   if(!data||(!data.batches.length&&!data.recipes.length))return null;

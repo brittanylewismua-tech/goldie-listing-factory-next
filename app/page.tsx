@@ -1,6 +1,4 @@
 "use client";
-/* eslint-disable @next/next/no-img-element, jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions */
-
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Image from "next/image";
@@ -9,7 +7,7 @@ import { runBounded } from "./bounded-work";
 import { KeywordBank, SavedWorkflow, type KeywordList, type Pricing, type ProductBundle, type Recipe } from "./factory-tools";
 import IntegratedMockups from "./integrated-mockups";
 import ListingPhotoOrder from "./listing-photo-order";
-import { tagsFromTitle, titlesFromCsv } from "./seo-utils";
+import { tagsFromTitle } from "./seo-utils";
 import { printifyDpi } from "./print-quality";
 import { isPermanentUploadError, MAX_FILE_BYTES, oversizedFileMessage } from "./upload-policy";
 import { safeImagePreviewDataUrl } from "./client-image-preview";
@@ -17,7 +15,7 @@ import { prepareArtworkFile } from "./client-artwork-upload";
 import { clearBatchFiles, loadBatchFiles, saveBatchFiles } from "./batch-cache";
 import { estimatedProfit, recommendedPrice } from "./pricing";
 import { ActionReceipt, GoldieInsight, OutcomeReceipt, WorkflowMomentum, type BatchReceipt } from "./goldie-ui";
-import { GoldieCommandBar, ReturningCommandCenter, type CommandCenterData } from "./returning-command-center";
+import { GoldieCommandBar, type CommandCenterData } from "./returning-command-center";
 import FinalListingReview from "./final-listing-review";
 import ContextHelp from "./context-help";
 import GoldieWordmark from "./goldie-wordmark";
@@ -214,7 +212,6 @@ function friendlyUploadError(error: unknown) {
 export default function Home() {
   const folderPicker = useRef<HTMLInputElement>(null);
   const imagePicker = useRef<HTMLInputElement>(null);
-  const csvPicker = useRef<HTMLInputElement>(null);
   const sizeGuidePicker = useRef<HTMLInputElement>(null);
   const listingResultsRef = useRef<HTMLDivElement>(null);
   const syncedListingSignatures = useRef<Map<string,string>>(new Map());
@@ -305,7 +302,7 @@ export default function Home() {
   const [etsyCategories,setEtsyCategories]=useState<EtsyCategoryOption[]>([]);
   const [sizeGuideName,setSizeGuideName]=useState("");
   const [sizeGuideStatus,setSizeGuideStatus]=useState("");
-  const [commandCenterData,setCommandCenterData]=useState<CommandCenterData|null>(null);
+  const commandCenterData:CommandCenterData|null=null;
   const [sidebarUsage,setSidebarUsage]=useState<{used:number;limit:number}|null>(null);
   const [preparedMockupCounts,setPreparedMockupCounts]=useState<Record<string,number>>({});
   const [imageStepError,setImageStepError]=useState("");
@@ -386,17 +383,17 @@ export default function Home() {
   useEffect(()=>{window.scrollTo({top:0,behavior:"auto"})},[workflowStep,finishPhase]);
   // Do not auto-skip the connection screen. Sellers need to see the status of
   // both accounts and use the explicit Continue action.
-  useEffect(()=>{if(localPreview||checkingConnection||restoringBatch||canOpenStep(workflowStep))return;const fallback=!connected||!etsyConnected?"connect":!templateLoaded?"setup":!files.length?"designs":!complete?"review":"finish";goToStep(fallback,true,true);// eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(()=>{if(localPreview||checkingConnection||restoringBatch||canOpenStep(workflowStep))return;const fallback=!connected||!etsyConnected?"connect":!templateLoaded?"setup":!files.length?"designs":!complete?"review":"finish";goToStep(fallback,true,true);
   },[localPreview,checkingConnection,restoringBatch,connected,etsyConnected,templateLoaded,files.length,complete,workflowStep]);
 
   useEffect(()=>{void(async()=>{try{const url=new URL(window.location.href);const id=url.searchParams.get("batch")||"";if(!id)return;const response=await fetch(`/api/batches?id=${encodeURIComponent(id)}`);if(!response.ok)return;const payload=await response.json() as {batch?:{id:string;step:WorkflowStep;status:string;state?:Record<string,unknown>}};if(!payload.batch?.state)return;const state=payload.batch.state as {template?:string;templateDetails?:TemplateDetails;description?:string;pricing?:Pricing;mockupTheme?:string;activeRecipe?:Recipe;activeBundle?:ProductBundle;bundleRecipes?:Recipe[];bundleIndex?:number;designs?:Array<Omit<DesignFile,"file"|"previewUrl">>;drafts?:DraftResult[];complete?:boolean;finishPhase?:FinishPhase;bulkTitles?:string;printifyImageIndices?:number[];printifyImageSelections?:Record<string,number[]>;variantPrices?:Record<string,number>;etsyShippingProfileId?:number;pricingApproved?:boolean;sizeGuideName?:string;batchKeywords?:string[];titleJoiner?:string;titleBuilderMode?:"ai"|"manual";autoTitleBankId?:string;manualKeywordBankId?:string;sharedMockups?:{theme:string;ids:string[]};preparedMockupCounts?:Record<string,number>};const cached=await loadBatchFiles(id).catch(()=>[]);const designs=(state.designs||[]).map((design,index)=>{const file=cached[index];return file?{...design,file,previewUrl:URL.createObjectURL(file)}:null}).filter(Boolean) as DesignFile[];batchIdRef.current=id;setTemplate(state.template||"");setTemplateDetails(state.templateDetails||null);setDescription(state.description||"");if(state.pricing)setPricing(state.pricing);setVariantPrices(state.variantPrices||{});setEtsyShippingProfileId(Number(state.etsyShippingProfileId)||0);setPricingApproved(Boolean(state.pricingApproved));setMockupTheme(state.mockupTheme||"");setActiveRecipe(state.activeRecipe||null);setActiveBundle(state.activeBundle||null);setBundleRecipes(state.bundleRecipes||[]);setBundleIndex(Math.max(0,Number(state.bundleIndex)||0));setFiles(designs);setDrafts(state.drafts||[]);setComplete(Boolean(state.complete));setFinishPhase(state.finishPhase||"details");setBulkTitles(state.bulkTitles||"");setBatchKeywords(state.batchKeywords||[]);setTitleJoiner(state.titleJoiner||", ");setTitleBuilderMode(state.titleBuilderMode||"ai");setAutoTitleBankId(state.autoTitleBankId||"");setManualKeywordBankId(state.manualKeywordBankId||"");setSharedMockups(state.sharedMockups);setPreparedMockupCounts(state.preparedMockupCounts||{});setPrintifyImageIndices(state.printifyImageIndices||[]);setPrintifyImageSelections(state.printifyImageSelections||{});setSizeGuideName(state.sizeGuideName||"");setResumeProcessing(payload.batch.status==="processing"&&designs.length>0);const step=payload.batch.step||"connect";setWorkflowStep(step);url.searchParams.set("step",step);window.history.replaceState({},"",url);if(payload.batch.status==="processing"&&state.template)void loadTemplateUrl(state.template)}finally{snapshotReady.current=true;setRestoringBatch(false)}})()},[]);
   useEffect(()=>{setLocalPreview(["localhost","127.0.0.1"].includes(window.location.hostname));fetch("/api/account").then(response=>response.json()).then((result:{signedIn?:boolean})=>setSignedIn(Boolean(result.signedIn))).catch(()=>setSignedIn(null))},[]);
-  useEffect(()=>{if(signedIn!==true||publishing)return;const jobId=window.localStorage.getItem("goldie-active-publish-job");if(jobId)void monitorPublishJob(jobId);// eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(()=>{if(signedIn!==true||publishing)return;const jobId=window.localStorage.getItem("goldie-active-publish-job");if(jobId)void monitorPublishJob(jobId);
   },[signedIn]);
 
   useEffect(()=>{if(!resumeProcessing||resumeAttempted.current||!connected||!templateLoaded||!files.length)return;resumeAttempted.current=true;setResumeProcessing(false);const succeeded=new Set(drafts.filter(draft=>draft.status==="Created").map(draft=>draft.clientId));const remaining=files.filter(file=>!succeeded.has(file.id));if(remaining.length)void runDrafts(remaining,true)},[resumeProcessing,connected,templateLoaded,files,drafts]);
 
-  useEffect(()=>{if(!snapshotReady.current||restoringBatch||(!files.length&&!drafts.length))return;const timer=window.setTimeout(()=>{const id=batchIdRef.current||crypto.randomUUID();batchIdRef.current=id;window.localStorage.setItem("goldie-active-batch",id);const designs=files.map(({file:ignoredFile,previewUrl:ignoredPreview,...design})=>design);void fetch("/api/batches",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,status:running?"processing":complete?drafts.some(draft=>draft.status==="Failed")?"needs_attention":"complete":"draft",step:workflowStep,setupName:activeBundle?.name||activeRecipe?.name||"",productTitle:templateDetails?.blueprintTitle||"",designCount:files.length,state:{template,templateDetails,description,pricing,variantPrices,etsyShippingProfileId,pricingApproved,mockupTheme,activeRecipe,activeBundle,bundleRecipes,bundleIndex,designs,drafts,complete,finishPhase,bulkTitles,batchKeywords,titleJoiner,titleBuilderMode,autoTitleBankId,manualKeywordBankId,sharedMockups,preparedMockupCounts,printifyImageIndices,printifyImageSelections,sizeGuideName}})})},700);return()=>window.clearTimeout(timer);// eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(()=>{if(!snapshotReady.current||restoringBatch||(!files.length&&!drafts.length))return;const timer=window.setTimeout(()=>{const id=batchIdRef.current||crypto.randomUUID();batchIdRef.current=id;window.localStorage.setItem("goldie-active-batch",id);const designs=files.map(({file:ignoredFile,previewUrl:ignoredPreview,...design})=>design);void fetch("/api/batches",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,status:running?"processing":complete?drafts.some(draft=>draft.status==="Failed")?"needs_attention":"complete":"draft",step:workflowStep,setupName:activeBundle?.name||activeRecipe?.name||"",productTitle:templateDetails?.blueprintTitle||"",designCount:files.length,state:{template,templateDetails,description,pricing,variantPrices,etsyShippingProfileId,pricingApproved,mockupTheme,activeRecipe,activeBundle,bundleRecipes,bundleIndex,designs,drafts,complete,finishPhase,bulkTitles,batchKeywords,titleJoiner,titleBuilderMode,autoTitleBankId,manualKeywordBankId,sharedMockups,preparedMockupCounts,printifyImageIndices,printifyImageSelections,sizeGuideName}})})},700);return()=>window.clearTimeout(timer);
   },[restoringBatch,workflowStep,finishPhase,template,templateDetails,description,pricing,variantPrices,etsyShippingProfileId,pricingApproved,mockupTheme,activeRecipe,activeBundle,bundleRecipes,bundleIndex,files.map(file=>`${file.id}:${file.title}:${file.tags.join("|")}:${file.blurb||""}:${file.descriptionOverride??""}:${file.sizeGuideName||""}:${JSON.stringify(file.etsy||{})}`).join(";"),drafts,complete,running,bulkTitles,batchKeywords,titleJoiner,titleBuilderMode,autoTitleBankId,manualKeywordBankId,sharedMockups,preparedMockupCounts,printifyImageIndices,printifyImageSelections,sizeGuideName]);
 
   useEffect(() => {
@@ -436,12 +433,12 @@ export default function Home() {
     return()=>document.removeEventListener("click",guardFinalActions,true);
   },[files,description,printifyImageIndices,pricingApproved,complete,drafts,connected,templateDetails,etsyConnected,localPreview]);
 
-  useEffect(()=>{if(localPreview||!complete)return;const pending=files.filter(file=>!file.etsy&&file.title.trim());if(!pending.length)return;const timer=window.setTimeout(()=>{setPreparingEtsy(true);void runBounded(pending,2,async file=>{await prepareOne(file);return file},()=>undefined).finally(()=>setPreparingEtsy(false))},900);return()=>window.clearTimeout(timer);// eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(()=>{if(localPreview||!complete)return;const pending=files.filter(file=>!file.etsy&&file.title.trim());if(!pending.length)return;const timer=window.setTimeout(()=>{setPreparingEtsy(true);void runBounded(pending,2,async file=>{await prepareOne(file);return file},()=>undefined).finally(()=>setPreparingEtsy(false))},900);return()=>window.clearTimeout(timer);
   },[localPreview,complete,files.map(file=>`${file.id}:${file.title}:${file.tags.join("|")}`).join(";")]);
-  useEffect(()=>{if(localPreview||!complete)return;const pending=files.filter(file=>{const draft=drafts.find(item=>item.clientId===file.id);const signature=`${file.title}\n${file.tags.join("|")}`;return Boolean(draft?.id&&file.title.trim()&&syncedListingSignatures.current.get(file.id)!==signature)});if(!pending.length)return;setDrafts(current=>current.map(draft=>{const file=files.find(item=>item.id===draft.clientId);return file?{...draft,title:file.title,tags:file.tags}:draft}));const timer=window.setTimeout(()=>{void Promise.all(pending.map(async file=>{try{await syncListingFields(file);syncedListingSignatures.current.set(file.id,`${file.title}\n${file.tags.join("|")}`)}catch(error){updateDesign(file.id,{etsyError:error instanceof Error?error.message:"Printify could not save this listing."})}}))},600);return()=>window.clearTimeout(timer);// eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(()=>{if(localPreview||!complete)return;const pending=files.filter(file=>{const draft=drafts.find(item=>item.clientId===file.id);const signature=`${file.title}\n${file.tags.join("|")}`;return Boolean(draft?.id&&file.title.trim()&&syncedListingSignatures.current.get(file.id)!==signature)});if(!pending.length)return;setDrafts(current=>current.map(draft=>{const file=files.find(item=>item.id===draft.clientId);return file?{...draft,title:file.title,tags:file.tags}:draft}));const timer=window.setTimeout(()=>{void Promise.all(pending.map(async file=>{try{await syncListingFields(file);syncedListingSignatures.current.set(file.id,`${file.title}\n${file.tags.join("|")}`)}catch(error){updateDesign(file.id,{etsyError:error instanceof Error?error.message:"Printify could not save this listing."})}}))},600);return()=>window.clearTimeout(timer);
   },[localPreview,complete,drafts.map(draft=>draft.id||draft.clientId).join(";"),files.map(file=>`${file.id}:${file.title}:${file.tags.join("|")}`).join(";")]);
 
-  useEffect(()=>{if(localPreview||!complete||preparingEtsy)return;const prepared=files.filter(file=>file.etsy);if(!prepared.length)return;const timer=window.setTimeout(()=>{void runBounded(prepared,2,async file=>{try{await syncPreparedListing(file,file.etsy!);updateDesign(file.id,{etsyError:""})}catch(error){updateDesign(file.id,{etsyError:error instanceof Error?error.message:"The listing changes could not be saved."})}return file},()=>undefined)},1200);return()=>window.clearTimeout(timer);// eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(()=>{if(localPreview||!complete||preparingEtsy)return;const prepared=files.filter(file=>file.etsy);if(!prepared.length)return;const timer=window.setTimeout(()=>{void runBounded(prepared,2,async file=>{try{await syncPreparedListing(file,file.etsy!);updateDesign(file.id,{etsyError:""})}catch(error){updateDesign(file.id,{etsyError:error instanceof Error?error.message:"The listing changes could not be saved."})}return file},()=>undefined)},1200);return()=>window.clearTimeout(timer);
   },[localPreview,complete,preparingEtsy,files.map(file=>file.etsy?`${file.id}:${file.title}:${file.tags.join("|")}:${JSON.stringify(file.etsy)}`:"").join(";")]);
 
   async function fileContentHash(file:File){const bytes=await file.arrayBuffer(),digest=await crypto.subtle.digest("SHA-256",bytes);return Array.from(new Uint8Array(digest),byte=>byte.toString(16).padStart(2,"0")).join("")}
@@ -485,8 +482,6 @@ export default function Home() {
 
   function updateDesign(id: string, change: Partial<DesignFile>) { const nextChange=change.title!==undefined&&titleCaps?{...change,title:change.title.replace(/\b[\p{L}\p{N}]/gu,character=>character.toLocaleUpperCase())}:change;setFiles((current) => current.map((file) => file.id === id ? { ...file, ...nextChange } : file)); if(nextChange.title!==undefined)setDrafts(current=>current.map(draft=>draft.clientId===id?{...draft,title:nextChange.title}:draft)); }
   function pulseTitle(id:string){setTitlePulseIds(current=>new Set(current).add(id));window.setTimeout(()=>setTitlePulseIds(current=>{const next=new Set(current);next.delete(id);return next}),520)}
-  function applyBulkTitles() { const titles = bulkTitles.split(/\r?\n/).map((v) => v.replace(/^"|"$/g, "").trim()).filter(Boolean); setFiles((current) => current.map((file, index) => titles[index] ? { ...file, title: titles[index], tags: tagsFromTitle(titles[index]),etsy:undefined,etsyError:"" } : file)); }
-  async function importTitleCsv(list: FileList | null) { const file = list?.[0]; if (!file) return; const values = titlesFromCsv(await file.text()); setBulkTitles(values.join("\n")); setFiles((current) => current.map((design, index) => values[index] ? { ...design, title: values[index].slice(0, 140), tags: tagsFromTitle(values[index]),etsy:undefined,etsyError:"" } : design)); if (csvPicker.current) csvPicker.current.value = ""; }
   function clearCurrentBatch(clearProduct=true){
     const priorBatch=batchIdRef.current;
     if(priorBatch){void clearBatchFiles(priorBatch);void fetch(`/api/batches?id=${encodeURIComponent(priorBatch)}`,{method:"DELETE"})}
@@ -498,10 +493,9 @@ export default function Home() {
     if(clearProduct){setTemplate("");setTemplateDetails(null);setTemplateError("");setDescription("");setMockupTheme("");setActiveRecipe(null);setActiveBundle(null);setBundleRecipes([]);setBundleIndex(0);setBundleColorProducts({});setBundleColorChoices({});setPricing(current=>({...current,targetProfit:DEFAULT_PRICING.targetProfit,shippingCost:0,shippingCharged:0}))}
     if (folderPicker.current) folderPicker.current.value = "";
     if (imagePicker.current) imagePicker.current.value = "";
-    if (csvPicker.current) csvPicker.current.value = "";
   }
   async function selectRecipe(recipe:Recipe):Promise<TemplateDetails|null>{setActiveRecipe(recipe);setPrintifyImageIndices(recipe.printifyImageIndices||[]);setEtsyShippingProfileId(Number(recipe.etsyShippingProfileId)||0);setTemplate(recipe.templateUrl);setMockupTheme("");const nextPricing={...pricing,targetProfit:DEFAULT_PRICING.targetProfit,shippingCost:0,shippingCharged:0};setPricing(nextPricing);setTemplateDetails(null);return await loadTemplateUrl(recipe.templateUrl,nextPricing,Number(recipe.etsyShippingProfileId)||0,recipe.defaultColorIds||[])}
-  async function useRecipe(recipe: Recipe) { const changingProduct=Boolean((activeRecipe?.id&&activeRecipe.id!==recipe.id)||(template&&template!==recipe.templateUrl));if(changingProduct&&(files.length>0||drafts.length>0||complete)){const count=files.length;if(!window.confirm(`Switch to “${recipe.name}” and start a new batch? This removes ${count} ${count===1?"design":"designs"} and all work from the current batch on this page.`))return false;clearCurrentBatch(false)}setActiveBundle(null);setBundleRecipes([]);setBundleIndex(0);return Boolean(await selectRecipe(recipe)); }
+  async function chooseRecipe(recipe: Recipe) { const changingProduct=Boolean((activeRecipe?.id&&activeRecipe.id!==recipe.id)||(template&&template!==recipe.templateUrl));if(changingProduct&&(files.length>0||drafts.length>0||complete)){const count=files.length;if(!window.confirm(`Switch to “${recipe.name}” and start a new batch? This removes ${count} ${count===1?"design":"designs"} and all work from the current batch on this page.`))return false;clearCurrentBatch(false)}setActiveBundle(null);setBundleRecipes([]);setBundleIndex(0);return Boolean(await selectRecipe(recipe)); }
   async function useBundle(bundle:ProductBundle,recipes:Recipe[]){
     if(recipes.length<2){stopWith("This product bundle needs attention.",["Choose at least two available saved products."]);return false}
     if((files.length>0||drafts.length>0||complete)&&!window.confirm(`Start “${bundle.name}” and clear the current batch? Your current designs and unfinished work will be removed.`))return false;
@@ -782,7 +776,7 @@ export default function Home() {
             <a href="/mockups" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M21 16l-5-5-6 6"/></svg>Mockup Sets</a>
             <a href="/usage" onClick={event=>guardNavigation(event,"/usage")}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l8 3.5v5c0 4.6-3.2 8.6-8 9.5-4.8-.9-8-4.9-8-9.5v-5L12 3z"/><path d="M9.2 12.2l1.9 1.9 3.9-3.9"/></svg>Usage</a>
           </nav>
-          <GoldieCommandBar data={commandCenterData} onUseProduct={recipe=>{void useRecipe(recipe).then(selected=>{if(selected)goToStep("setup")})}} onStartBlank={()=>{clearCurrentBatch(true);goToStep("setup")}}/>
+          <GoldieCommandBar data={commandCenterData} onUseProduct={recipe=>{void chooseRecipe(recipe).then(selected=>{if(selected)goToStep("setup")})}} onStartBlank={()=>{clearCurrentBatch(true);goToStep("setup")}}/>
           {owner && <a className="diagnostics-link" href="/mastermind-admin" aria-label="Open Goldie Diagnostics" title="Goldie Diagnostics">★</a>}
           <a className="usage-link" href="/usage" onClick={event=>guardNavigation(event,"/usage")}>Usage + plan</a>
           {signedIn!==null&&(localPreview&&!signedIn?<span className="account-link" title="Account sign-in is available on the published Listing Factory site.">Preview mode</span>:<a className="account-link" href={signedIn?"/account/sign-out?return_to=%2Flisting-factory":"/account/sign-in?return_to=%2Flisting-factory"}>{signedIn?"Sign out":"Sign in"}</a>)}
@@ -791,8 +785,6 @@ export default function Home() {
       </header>
 
       {running&&uploadNoticeOpen&&<div className="upload-notice-backdrop" role="presentation"><section className="upload-notice" role="alertdialog" aria-modal="true" aria-labelledby="upload-notice-title" aria-describedby="upload-notice-copy"><span className="upload-notice-icon">!</span><p className="mini-label">UPLOADS IN PROGRESS</p><h2 id="upload-notice-title">Wait. Your files are still uploading.</h2><p id="upload-notice-copy">Are you sure you want to leave? Leaving now may stop the unfinished uploads.</p><div className="upload-notice-progress"><span className="upload-guard-pulse"/><b>{processed} of {runTotal} finished</b></div><div className="upload-notice-actions"><button autoFocus onClick={()=>{setUploadNoticeOpen(false);setLeaveTarget("")}}>Stay on this page</button><button className="danger" onClick={()=>{if(leaveTarget)window.location.href=leaveTarget}}>Leave and stop uploads</button></div></section></div>}
-
-      {false&&<ReturningCommandCenter printifyConnected={connected} etsyConnected={etsyConnected} onData={setCommandCenterData} onUseProduct={recipe=>{void useRecipe(recipe).then(selected=>{if(selected)goToStep("setup")})}} onStartBlank={()=>{clearCurrentBatch(true);goToStep("setup")}}/>}
 
       {!returningHome&&<section className="hero workflow-hero">
         <div>

@@ -11,7 +11,7 @@ export async function GET(){
   return NextResponse.json(row?{connected:true,shopId:row.shop_id,shopName:row.shop_name}:{connected:false});
 }
 
-export async function POST(request:Request){
+export async function POST(){
   const user=await getChatGPTUser();if(!user)return NextResponse.json({error:"Sign in before connecting Etsy."},{status:401});
   try{
     const redirectUri=etsyRedirectUri(),state=base64url(crypto.getRandomValues(new Uint8Array(24))),verifier=base64url(crypto.getRandomValues(new Uint8Array(48))),digest=new Uint8Array(await crypto.subtle.digest("SHA-256",new TextEncoder().encode(verifier))),challenge=base64url(digest);

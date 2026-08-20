@@ -26,9 +26,9 @@ export function SavedWorkflow(props: WorkflowProps) {
   const bundleSaveLock=useRef(false);
   const [pendingAction,setPendingAction]=useState("");
   const actionLock=useRef(false);
-  const [keywordLists,setKeywordLists]=useState<KeywordList[]>([]),[keywordListId,setKeywordListId]=useState("");
+  const [,setKeywordLists]=useState<KeywordList[]>([]),[keywordListId,setKeywordListId]=useState("");
   const reload = () => Promise.all([fetch("/api/product-recipes").then((r) => r.json()),fetch("/api/product-bundles").then(r=>r.json())]).then(([products,groups])=>{setRecipes(products.recipes||[]);setBundles(groups.bundles||[])}).catch(() => undefined);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+
   useEffect(() => { reload(); fetch("/api/keyword-lists").then(r=>r.json()).then(r=>setKeywordLists(r.lists||[])); }, []);
   async function save() {
     if(actionLock.current)return;

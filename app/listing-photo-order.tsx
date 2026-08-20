@@ -1,5 +1,5 @@
 "use client";
-/* eslint-disable @next/next/no-img-element */
+
 import { useEffect, useMemo, useRef, useState } from "react";
 
 type StoredImage={id:string;key:string;kind:"mockup"|"size-guide";name:string;src:string};
