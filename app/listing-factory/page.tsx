@@ -1,4 +1,4 @@
-import ClientFactory from "@/app/listing-factory/client-factory";
+import ListingFactoryApp from "@/app/listing-factory-app";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { billingState } from "@/app/billing";
 import { mastermindState } from "@/app/mastermind/access";
@@ -17,7 +17,7 @@ export default async function ListingFactoryRoute({searchParams}:{searchParams:P
   // Running billingState in parallel used to make the owner route fail with a
   // 500 whenever billing initialization hit a transient D1 error.
   const mastermind = await mastermindState(user);
-  if (mastermind.owner) return <ClientFactory/>;
+  if (mastermind.owner) return <ListingFactoryApp/>;
 
   let billing;
   try {
@@ -29,5 +29,5 @@ export default async function ListingFactoryRoute({searchParams}:{searchParams:P
   const hasAccess = billing.active || mastermind.owner || (mastermind.active && mastermind.redeemed);
   if (!hasAccess) return <SignupClient signedIn returnTo="/listing-factory" initialOffer={initialOffer}/>;
 
-  return <ClientFactory/>;
+  return <ListingFactoryApp/>;
 }
