@@ -138,10 +138,10 @@
 .app-shell .rail-substeps::before {
   content: "";
   position: absolute;
-  left: 90.5%;
+  left: 95.5%;
   top: -13px;
   width: 1px;
-  height: 18px;
+  height: 47px;
   background: rgba(74, 42, 62, .2);
 }
 
@@ -149,7 +149,7 @@
   content: "";
   position: absolute;
   left: 12.5%;
-  right: 12.5%;
+  right: 4.5%;
   top: 33px;
   height: 1px;
   background: rgba(74, 42, 62, .18);
