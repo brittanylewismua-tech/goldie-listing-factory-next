@@ -58,6 +58,41 @@ Three real bugs in one function, all confirmed from source:
 
 ---
 
+## Full review
+
+`docs/review/FULL-UX-REVIEW.md` — the complete walkthrough (514 lines). Everything
+below is a summary; that file has the evidence, the measurements, and the reasoning.
+
+Findings in it that are NOT repeated below:
+
+- **Shipping loses money on every US order.** The Etsy profile collects $4.75 first
+  item; Printify charges $7.99 to fulfil. The pricing screen says "$10.00 profit"
+  and "shipping is handled separately" — real margin is closer to $6.76. The item
+  pricing math itself is correct; it is solving for the wrong number.
+- **Photo picking is 148 checkboxes per listing** (2,960 for a 20-design batch).
+  "Apply these photos to every listing" exists but sits 2,087px below the top of a
+  collapsed accordion, under all 148 thumbnails — you find it after doing the work
+  it saves. The copy explaining it renders at 0x0 pixels.
+- **Uploaded designs are never shown** — no thumbnails, no filenames, no way to
+  remove one. The DPI modal says "Go back and review" with nothing to review.
+- **Four widgets report the same fact** on the designs step.
+- **Batch cap (20) vs plan quota** are different numbers; only the permissive one
+  is shown. The create-drafts confirmation never mentions quota.
+- **Batch History** labels abandoned batches "COMPLETE" and names every batch
+  identically, so only the timestamp distinguishes them.
+- **Blocked below 820px**, which locks out iPad portrait.
+- Step 6's three chips do not match its body numbering.
+- Usage flashes wrong data on load ("0 / 100" before correcting to the real number).
+
+It also contains the UX analysis: the wizard-vs-worksheet framing (steps 1-4 are a
+proper wizard, 6-8 are a worksheet wearing wizard chrome), the measured weight
+hierarchy problem, and the clarity fixes ranked by impact per hour.
+
+`docs/review/CHANGES-APPLIED.md` — what was changed and why, with before/after.
+`docs/review/STACK-NOTES.md` — stack and repo reference.
+
+---
+
 ## Still open
 
 **Sticky action bar.** Prototyped on the live site; `.workflow-footer-actions` sits inside a `display:contents` wrapper so `position:sticky` doesn't bite. Needs a running app to verify it won't cover content.
