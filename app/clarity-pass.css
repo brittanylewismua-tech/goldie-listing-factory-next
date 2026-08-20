@@ -1,0 +1,113 @@
+/* ============================================================
+   clarity-pass.css
+   UX clarity pass — Aug 2026.
+   Loaded LAST in layout.tsx so it wins over earlier overrides.
+   Everything in this file is presentational. Deleting this file
+   and its import returns the app to its previous appearance.
+   ============================================================ */
+
+
+/* ------------------------------------------------------------
+   1. Listing card: establish a weight hierarchy
+   Before: every element in .design-fields rendered at 10px /
+   font-weight 850 / 304px wide — the title input, the tags
+   input, and both optional accordions were visually identical,
+   so nothing read as the primary control.
+   After: title dominates, tags second, optional actions recede.
+   ------------------------------------------------------------ */
+
+.app-shell .design-fields > label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  color: rgba(74, 42, 62, .6);
+}
+
+/* Title — the one field you must fill */
+.app-shell .design-fields > label:nth-of-type(1) > input {
+  font-size: 15px;
+  font-weight: 550;
+  line-height: 1.4;
+  padding: 13px;
+}
+
+/* Tags — secondary */
+.app-shell .design-fields > label:nth-of-type(2) > input {
+  font-size: 13px;
+  font-weight: 500;
+  padding: 11px 13px;
+}
+
+/* Optional per-listing actions become quiet links, not full-weight rows */
+.app-shell .design-fields .individual-title-builder {
+  margin-top: 6px;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.app-shell .design-fields .individual-title-builder > summary {
+  padding: 5px 0;
+  background: transparent;
+  color: rgba(74, 42, 62, .5);
+  font-size: 10px;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.app-shell .design-fields .individual-title-builder[open] > summary {
+  border-bottom: 0;
+  color: #76531c;
+}
+
+.app-shell .design-fields .individual-manual-title { margin-top: 2px; }
+
+
+/* ------------------------------------------------------------
+   2. Back is a secondary action, so it should look like one
+   Before: .workflow-back was redefined 7 times in
+   approved-functional.css, ending on the same dark gradient as
+   the primary button — the recessive action was one of the
+   heaviest objects on screen.
+   ------------------------------------------------------------ */
+
+.app-shell .workflow-back {
+  min-width: 0 !important;
+  padding: 12px 6px !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: rgba(74, 42, 62, .62) !important;
+  font-size: 12.5px !important;
+  font-weight: 600 !important;
+  text-decoration: underline;
+  text-decoration-color: rgba(74, 42, 62, .25);
+  text-underline-offset: 4px;
+}
+
+.app-shell .workflow-back:hover {
+  color: var(--ink) !important;
+  text-decoration-color: rgba(74, 42, 62, .6);
+}
+
+
+/* ------------------------------------------------------------
+   3. Type scale: the page H1 must outrank the card H2
+   Before (step 7, measured): H1 34px, H2 36px — the page title
+   rendered smaller than the card title restating it.
+   ------------------------------------------------------------ */
+
+.app-shell .step-heading h2,
+.app-shell .post-draft-heading h2,
+.app-shell .launch-top h2 {
+  font-size: clamp(21px, 2.1vw, 27px);
+  line-height: 1.2;
+}
+
+/* Section headers sit clearly below the card title */
+.app-shell .variant-pricing-head h3,
+.app-shell .item-pricing-head h3 {
+  font-size: 18px;
+  line-height: 1.25;
+}

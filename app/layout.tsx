@@ -6,6 +6,7 @@ import "./theme.css";
 import "./lilac-theme.css";
 import "./approved-functional.css";
 import "./management-aesthetic.css";
+import "./clarity-pass.css";
 import ReliableNavigation from "./reliable-navigation";
 
 export async function generateMetadata(): Promise<Metadata> {
