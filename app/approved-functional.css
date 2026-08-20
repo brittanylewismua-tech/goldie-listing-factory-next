@@ -1101,6 +1101,38 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 @keyframes goldie-action-pulse{0%,100%{transform:scale(1);filter:saturate(1)}50%{transform:scale(1.04);filter:saturate(1.2)}}
 @media(max-width:800px){.app-shell .recipe-card .bundle-library>summary{align-items:flex-start;flex-direction:column;gap:6px}.app-shell .recipe-card .bundle-library>summary>small{width:100%;justify-content:space-between}}
 
+/* Finish workspace: dense rows with one in-place editor instead of stacked cards. */
+.app-shell .listing-editor .design-table,.app-shell .etsy-detail-list,.app-shell .draft-card-grid{display:grid!important;gap:8px!important;margin-top:18px!important}
+.app-shell .listing-editor .design-line{display:grid!important;grid-template-columns:56px minmax(0,1fr) 116px!important;gap:14px!important;align-items:start!important;min-height:78px!important;padding:10px 12px!important;border:1px solid rgba(91,48,79,.14)!important;border-radius:12px!important;background:rgba(255,255,255,.45)!important;box-shadow:none!important}
+.app-shell .listing-editor .listing-preview-button{width:56px!important;height:56px!important;min-height:56px!important;padding:0!important;border-radius:9px!important;overflow:hidden!important}
+.app-shell .listing-editor .listing-preview-button img{width:100%!important;height:100%!important;object-fit:cover!important}
+.app-shell .listing-editor .listing-preview-button span{display:none!important}
+.app-shell .listing-editor .design-fields{display:grid!important;grid-template-columns:minmax(0,1.45fr) minmax(210px,1fr)!important;gap:10px!important;align-items:start!important;min-width:0!important}
+.app-shell .listing-editor .design-fields>label{min-width:0!important}
+.app-shell .listing-editor .design-fields>label:nth-of-type(1) input{white-space:nowrap!important;text-overflow:ellipsis!important;overflow:hidden!important}
+.app-shell .listing-editor .design-fields>.tag-row{display:none!important;max-height:58px!important;overflow-y:scroll!important;scrollbar-gutter:stable!important}
+.app-shell .listing-editor .design-line:not(.active) .individual-title-builder,.app-shell .listing-editor .design-line:not(.active) .individual-description,.app-shell .listing-editor .design-line:not(.active) .etsy-auto,.app-shell .listing-editor .design-line:not(.active) .padding-note{display:none!important}
+.app-shell .listing-editor .design-line.active{padding-bottom:16px!important;background:rgba(255,255,255,.72)!important;border-color:rgba(137,78,123,.34)!important}
+.app-shell .listing-editor .design-line.active .design-fields{grid-template-columns:minmax(0,1.45fr) minmax(210px,1fr)!important}
+.app-shell .listing-editor .design-line.active .design-fields>.tag-row{display:flex!important;grid-column:1/-1!important}
+.app-shell .listing-editor .design-line.active .individual-title-builder,.app-shell .listing-editor .design-line.active .individual-description,.app-shell .listing-editor .design-line.active .etsy-auto,.app-shell .listing-editor .design-line.active .padding-note{grid-column:1/-1!important}
+.app-shell .listing-editor .quality-pill{width:116px!important;min-width:0!important;padding:9px!important;border-radius:9px!important}
+.app-shell .etsy-detail-card{display:grid!important;grid-template-columns:56px minmax(0,1fr)!important;gap:14px!important;align-items:start!important;min-height:78px!important;padding:10px 12px!important;border:1px solid rgba(91,48,79,.14)!important;border-radius:12px!important;background:rgba(255,255,255,.45)!important;box-shadow:none!important}
+.app-shell .etsy-detail-card>img{width:56px!important;height:56px!important;border-radius:9px!important;object-fit:cover!important}
+.app-shell .etsy-details-editor>summary{min-height:42px!important;padding:8px 10px!important}
+.app-shell .post-draft-workspace .draft-card-grid{grid-template-columns:1fr!important}
+.app-shell .post-draft-workspace .draft-card{display:grid!important;grid-template-columns:1fr!important;gap:10px!important;padding:10px 12px!important;border-radius:12px!important;box-shadow:none!important}
+.app-shell .post-draft-workspace .draft-card-top{position:static!important;display:grid!important;grid-template-columns:72px minmax(0,1fr)!important;gap:12px!important;align-items:start!important;min-height:72px!important}
+.app-shell .post-draft-workspace .draft-card-top .printify-preview-button{width:72px!important;height:72px!important;min-height:72px!important;padding:0!important;overflow:hidden!important;border-radius:9px!important}
+.app-shell .post-draft-workspace .draft-card-top .printify-preview-button img{width:100%!important;height:100%!important;object-fit:cover!important}
+.app-shell .post-draft-workspace .draft-card-top .printify-preview-button span{display:none!important}
+.app-shell .post-draft-workspace .draft-card>.printify-image-picker,.app-shell .post-draft-workspace .draft-card>.draft-mockups,.app-shell .post-draft-workspace .draft-card>.individual-size-guide,.app-shell .post-draft-workspace .draft-card>.listing-photo-download,.app-shell .post-draft-workspace .draft-card>.listing-photo-order{grid-column:1!important}
+.app-shell .final-listing-grid{display:grid!important;gap:6px!important}
+.app-shell .final-listing-card{display:grid!important;grid-template-columns:28px 56px minmax(0,1fr) auto!important;min-height:72px!important;padding:8px 10px!important;border-radius:10px!important;box-shadow:none!important}
+.app-shell .final-listing-card>img{width:56px!important;height:56px!important;object-fit:cover!important;border-radius:8px!important}
+.app-shell .final-listing-card>div:not(.final-listing-links)>b{display:block!important;max-width:100%!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important}
+@media(max-width:1100px){.app-shell .listing-editor .design-line{grid-template-columns:56px minmax(0,1fr)!important}.app-shell .listing-editor .quality-pill{display:none!important}.app-shell .post-draft-workspace .draft-card>*{grid-column:1!important}}
+
 /* Saved-product and bundle cards: content and utility actions occupy separate
    rows so long names can never sit underneath Edit or Delete. */
 .app-shell .recipe-card .recipe-tile,

@@ -1732,6 +1732,9 @@ test("counts every bundle product as a separate listing before setup",async()=>{
   assert.match(app,/Math\.floor\(planDraftsRemaining\/bundleProductCount\)/);
   assert.match(app,/requestedListingCount>planDraftsRemaining/);
   assert.match(app,/The bundle total changed/);
+  assert.match(app,/Proceed with \$\{allowedDesigns\} designs instead/);
+  assert.match(app,/Math\.floor\(planDraftsRemaining\/recipes\.length\)/);
+  assert.match(app,/Goldie will limit this batch before you upload anything/);
 });
 
 test("keeps bundle titles, placement decisions, review, and failures product-specific",async()=>{
@@ -1751,8 +1754,23 @@ test("keeps bundle titles, placement decisions, review, and failures product-spe
   assert.match(app,/VERY LOW RESOLUTION/);
   assert.match(app,/below 215 DPI/);
   assert.match(app,/selectedPublishDrafts\(\)/);
+  assert.match(app,/allCreatedListingsHaveImages\(selectedPublishDrafts\(\)\)/);
+  assert.match(app,/Listings that need another try stay here while successful listings can publish now/);
   assert.match(app,/status: "NeedsRetry"/);
   assert.match(review,/final-design-group/);
   assert.match(review,/Choose exactly which listings to publish/);
+  assert.match(review,/\/140 characters/);
+  assert.match(review,/\/13 tags/);
   assert.match(review,/Retry this listing/);
+});
+
+test("renders every Finish phase as compact expandable rows",async()=>{
+  const [css,review]=await Promise.all([readFile(new URL("../app/approved-functional.css",import.meta.url),"utf8"),readFile(new URL("../app/final-listing-review.tsx",import.meta.url),"utf8")]);
+  assert.match(css,/Finish workspace: dense rows with one in-place editor/);
+  assert.match(css,/\.listing-editor \.design-line/);
+  assert.match(css,/\.design-line:not\(\.active\) \.individual-title-builder/);
+  assert.match(css,/\.etsy-detail-card/);
+  assert.match(css,/\.post-draft-workspace \.draft-card-top/);
+  assert.match(css,/\.final-listing-card/);
+  assert.match(review,/loading="lazy"/);
 });
