@@ -235,6 +235,21 @@ test("keeps Finish guidance, title actions, tags, and flatlays visually unambigu
   assert.match(approved,/\.image-pref-actions\+div/);
 });
 
+test("anchors Printify selectors to each photo and keeps batch actions honest",async()=>{
+  const [page,approved,mockups]=await Promise.all([
+    readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8"),
+    readFile(new URL("../app/approved-functional.css",import.meta.url),"utf8"),
+    readFile(new URL("../app/integrated-mockups.tsx",import.meta.url),"utf8"),
+  ]);
+  assert.match(page,/className="printify-image-grid"/);
+  assert.match(page,/className="printify-photo-selector"/);
+  assert.match(page,/Select a Printify photo below first/);
+  assert.match(approved,/\.printify-image-grid \.printify-image-option\{position:relative/);
+  assert.match(approved,/\.printify-photo-selector\{position:absolute!important/);
+  assert.match(approved,/\.mockup-product-warning\{display:none!important\}/);
+  assert.match(mockups,/className="mockup-product-warning"/);
+});
+
 test("stages each finished mockup group for its exact Etsy listing", async () => {
   const [mockups,images,page] = await Promise.all([
     readFile(new URL("../app/integrated-mockups.tsx", import.meta.url), "utf8"),
