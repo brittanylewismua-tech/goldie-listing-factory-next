@@ -135,13 +135,15 @@ test("unifies saved products, editing, pricing, and mockups without the old fact
     readFile(new URL("../app/api/printify/drafts/route.ts", import.meta.url), "utf8"),
   ]);
   assert.doesNotMatch(page, /factory-switcher/);
-  assert.match(recipes, /Connect this Printify template/);
-  assert.match(recipes, /Goldie checks the product, variations, placement, shipping, costs, and description/);
+  assert.match(recipes, /Printify product link/);
+  assert.match(recipes, /Goldie imports the variations, placement, shipping, costs, and description/);
   assert.match(recipes, /saved product/);
   assert.match(recipes, /Add another product/);
   assert.match(recipes, /Product saved and selected/);
   assert.match(recipes, /props\.onUseRecipe\(saved\)/);
-  assert.match(recipes, /You will set pricing and listing photos later/);
+  assert.match(page, /Adjust what changed\. Keep everything else\./);
+  assert.match(page, /Everything else/);
+  assert.match(page, /MOCKUPS FOR THIS BATCH/);
   assert.doesNotMatch(recipes, /Shipping cost|Shipping charged|Payment fixed fee/);
   assert.doesNotMatch(page, /Apply titles in order|Import title CSV/);
   assert.match(recipes, /validated phrases available to Goldie/);
@@ -1150,7 +1152,7 @@ test("shows accurate completion feedback above each next step card", async () =>
     readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/approved-functional.css", import.meta.url), "utf8"),
   ]);
-  assert.match(page, /fileNotice&&workflowStep==="designs"&&<p className="file-add-notice"/);
+  assert.match(page, /fileNotice&&\(workflowStep==="setup"\|\|workflowStep==="designs"\)&&<p className="file-add-notice"/);
   assert.match(page, /Titles, tags, and descriptions complete/);
   assert.match(page, /Etsy details complete/);
   assert.match(page, /Listing photos complete/);
@@ -1552,7 +1554,7 @@ test("chooses exact available Printify colors per batch and remembers optional d
   ]);
   assert.match(page,/Choose the colors you want to offer/);
   assert.match(page,/Choose at least one available color before continuing/);
-  assert.match(page,/Remember these colors for future batches of this specific product template/);
+  assert.match(page,/Save these as this product’s default colors/);
   assert.match(page,/selectedVariantIds:pricedVariants\.map/);
   assert.match(printify,/enabledNonColorIds/);
   assert.match(printify,/availableColorIds/);
