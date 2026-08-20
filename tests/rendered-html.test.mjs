@@ -578,7 +578,7 @@ test("creates unique validated AI titles in bulk with per-listing overrides", as
   assert.match(page,/Customize this listing’s description/);assert.match(page,/The complete description is shown below/);
   assert.match(page,/descriptionOverride/);assert.match(page,/scrollIntoView/);
   assert.match(tools,/keywordListsCache/);assert.match(tools,/selectionOnly/);assert.match(tools,/onSelect/);
-  assert.match(intelligence,/selected_keywords/);assert.match(intelligence,/allowedByLower/);assert.match(intelligence,/Reject irrelevant phrases/);
+  assert.match(intelligence,/selected_keywords/);assert.match(intelligence,/allowedByLower/);assert.match(intelligence,/PRODUCT TYPE RULE/);assert.match(intelligence,/if\(!selected\.length\).*status:422/);
 });
 
 test("records permanent sanitized Printify diagnostics without blocking listings", async () => {
@@ -1388,7 +1388,7 @@ test("renders final publishing readiness with the defined personalization valida
   const page=await readFile(new URL("../app/page.tsx",import.meta.url),"utf8");
   assert.match(page,/files\.every\(file=>!personalizationProblem\(file\.etsy\)\)/);
   assert.doesNotMatch(page,/personalizationIssue\(/);
-  assert.match(page,/map\(draft=>draft\.title\|\|draft\.name\)/);
+  assert.match(page,/const labelForDraft=/);assert.match(page,/draft\.title\|\|file\?\.title\|\|draft\.name\|\|file\?\.name/);
   assert.doesNotMatch(page,/draft\.fileName/);
   assert.match(page,/async function selectRecipe\(recipe:Recipe\):Promise<TemplateDetails\|null>/);
   assert.doesNotMatch(page,/return Boolean\(await loadTemplateUrl/);

@@ -1,0 +1,169 @@
+/* ============================================================
+   clarity-pass.css
+   UX clarity pass — Aug 2026.
+   Loaded LAST in layout.tsx so it wins over earlier overrides.
+   Everything in this file is presentational. Deleting this file
+   and its import returns the app to its previous appearance.
+   ============================================================ */
+
+
+/* ------------------------------------------------------------
+   1. Listing card: establish a weight hierarchy
+   Before: every element in .design-fields rendered at 10px /
+   font-weight 850 / 304px wide — the title input, the tags
+   input, and both optional accordions were visually identical,
+   so nothing read as the primary control.
+   After: title dominates, tags second, optional actions recede.
+   ------------------------------------------------------------ */
+
+.app-shell .design-fields > label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  color: rgba(74, 42, 62, .6);
+}
+
+/* Title — the one field you must fill */
+.app-shell .design-fields > label:nth-of-type(1) > input {
+  font-size: 15px;
+  font-weight: 550;
+  line-height: 1.4;
+  padding: 13px;
+}
+
+/* Tags — secondary */
+.app-shell .design-fields > label:nth-of-type(2) > input {
+  font-size: 13px;
+  font-weight: 500;
+  padding: 11px 13px;
+}
+
+/* Optional per-listing actions become quiet links, not full-weight rows */
+.app-shell .design-fields .individual-title-builder {
+  margin-top: 6px;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.app-shell .design-fields .individual-title-builder > summary {
+  padding: 5px 0;
+  background: transparent;
+  color: rgba(74, 42, 62, .5);
+  font-size: 10px;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.app-shell .design-fields .individual-title-builder[open] > summary {
+  border-bottom: 0;
+  color: #76531c;
+}
+
+.app-shell .design-fields .individual-manual-title { margin-top: 2px; }
+
+
+/* ------------------------------------------------------------
+   2. Back is a secondary action, so it should look like one
+   Before: .workflow-back was redefined 7 times in
+   approved-functional.css, ending on the same dark gradient as
+   the primary button — the recessive action was one of the
+   heaviest objects on screen.
+   ------------------------------------------------------------ */
+
+.app-shell .workflow-back {
+  min-width: 0 !important;
+  padding: 12px 6px !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: rgba(74, 42, 62, .62) !important;
+  font-size: 12.5px !important;
+  font-weight: 600 !important;
+  text-decoration: underline;
+  text-decoration-color: rgba(74, 42, 62, .25);
+  text-underline-offset: 4px;
+}
+
+.app-shell .workflow-back:hover {
+  color: var(--ink) !important;
+  text-decoration-color: rgba(74, 42, 62, .6);
+}
+
+
+/* ------------------------------------------------------------
+   3. Type scale: the page H1 must outrank the card H2
+   Before (step 7, measured): H1 34px, H2 36px — the page title
+   rendered smaller than the card title restating it.
+   ------------------------------------------------------------ */
+
+.app-shell .step-heading h2,
+.app-shell .post-draft-heading h2,
+.app-shell .launch-top h2 {
+  font-size: clamp(21px, 2.1vw, 27px);
+  line-height: 1.2;
+}
+
+/* ------------------------------------------------------------
+   4. Rail: the four Finish phases nest under one Finish node
+   The rail used to show 9 equal peers over a 5-value state
+   machine, including a "Drafts" node that is really the outcome
+   of Pricing. Indices are unchanged; only the grouping is new.
+   ------------------------------------------------------------ */
+
+.app-shell .rail-substeps {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 2px 0 6px 18px;
+  padding-left: 14px;
+  border-left: 2px solid rgba(139, 89, 137, .22);
+}
+
+.app-shell .rail-substeps .rail-substep {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 7px 9px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: rgba(74, 42, 62, .72);
+  text-align: left;
+  cursor: pointer;
+}
+
+.app-shell .rail-substeps .rail-substep:hover:not(:disabled) { background: rgba(255, 255, 255, .45); }
+.app-shell .rail-substeps .rail-substep:disabled { opacity: .45; cursor: default; }
+
+.app-shell .rail-substeps .rail-substep.active {
+  background: rgba(255, 255, 255, .72);
+  color: var(--ink);
+  box-shadow: 0 6px 16px -12px rgba(74, 42, 62, .5);
+}
+
+.app-shell .rail-substeps .rail-substep b { display: block; font-size: 11.5px; font-weight: 700; }
+.app-shell .rail-substeps .rail-substep small { display: block; font-size: 9.5px; opacity: .72; }
+
+.app-shell .rail-substeps .rail-substep-dot {
+  flex: 0 0 auto;
+  width: 14px; height: 14px;
+  display: grid; place-items: center;
+  border: 1.5px solid rgba(139, 89, 137, .4);
+  border-radius: 50%;
+  font-size: 8px; line-height: 1;
+  color: #4a2a3e;
+}
+
+.app-shell .rail-substeps .rail-substep.active .rail-substep-dot { border-color: #b777b0; background: #b777b0; }
+.app-shell .rail-substeps .rail-substep.done .rail-substep-dot { border-color: rgba(52, 112, 76, .5); color: #34704c; }
+
+
+/* Section headers sit clearly below the card title */
+.app-shell .variant-pricing-head h3,
+.app-shell .item-pricing-head h3 {
+  font-size: 18px;
+  line-height: 1.25;
+}

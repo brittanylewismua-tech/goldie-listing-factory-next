@@ -2,7 +2,14 @@
 import { useEffect, useRef, useState } from "react";
 
 export type Pricing = { targetProfit: number; etsyFeePercent: number; fixedFee: number; listingFee: number; shippingCost: number; shippingCharged: number };
-export type Recipe = { id: string; name: string; templateUrl: string; description: string; defaultTitle: string; keywordListId?:string; printifyImageIndices?:number[]; normalizePadding?:boolean;etsyShippingProfileId?:number;defaultColorIds?:number[] };
+/* etsyDefaults: Etsy attribute values that are properties of the blank itself
+   (materials, sleeve length, neckline, …) rather than of any one design.
+   Stored on the saved product so they are remembered like defaultColorIds
+   instead of being re-inferred from the artwork on every listing of every
+   batch — which currently fills only 2–3 of 11 fields and is not stable
+   across listings in the same batch. */
+export type RecipeEtsyDefaults = Record<string, string | number | null>;
+export type Recipe = { id: string; name: string; templateUrl: string; description: string; defaultTitle: string; keywordListId?:string; printifyImageIndices?:number[]; normalizePadding?:boolean;etsyShippingProfileId?:number;defaultColorIds?:number[];etsyDefaults?:RecipeEtsyDefaults };
 export type ProductBundle = { id:string;name:string;recipeIds:string[] };
 export type KeywordList = { id: string; name: string; keywords: string[] };
 

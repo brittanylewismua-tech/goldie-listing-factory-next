@@ -48,3 +48,4 @@ yarn-error.log*
 .env
 .env.*
 !.env.example
+_HANDOFF-read-me-on-other-laptop/
