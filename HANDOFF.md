@@ -92,6 +92,7 @@ It also contains the UX analysis: the wizard-vs-worksheet framing (steps 1-4 are
 proper wizard, 6-8 are a worksheet wearing wizard chrome), the measured weight
 hierarchy problem, and the clarity fixes ranked by impact per hour.
 
+`docs/review/BACKLOG.md` — **every remaining recommendation, prioritised and ready to work from.** Start here for what to do next.
 `docs/review/CHANGES-APPLIED.md` — what was changed and why, with before/after.
 `docs/review/STACK-NOTES.md` — stack and repo reference.
 
