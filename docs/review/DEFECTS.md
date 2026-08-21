@@ -1820,3 +1820,26 @@ P3): the number was never wrong, the framing was.
 those — *"2 of 3 required set"*. When it has none it states what was added and
 that the rest are optional — *"5 added · all optional"*.
 >>>>>>> Stashed changes
+
+### Functional pass, round 2 — Finish phase controls
+
+| control | test | result |
+|---|---|---|
+| Photo checkbox | select one, change phase, return | 9 → **10** → **10** ✓ |
+| "Clear this listing's selections" | click | 10 → **6** (cleared 4) ✓ |
+| Photo restore | re-check snapshot | back to 10 ✓ |
+| Etsy attribute revert | set back to blank | 6 of 11 → **5 of 11** ✓ |
+
+### D110 — verification pending deploy, not yet confirmed
+
+The D109 half is live: the option now reads **"No mockups for this batch"**.
+Clearing still reverts to "BACH TEES" on the deployed build — but the D110 fix
+(seed-once ref, and removing `mockupTheme` from the forward gate) shipped in
+`f1fc3ee`, and **D111 in `44cc3b6` is confirmed NOT deployed**, so the running
+build predates part of the fix.
+
+**Do not read the current revert as "D110 is still broken."** Re-test once the
+Etsy details summary reads *"5 added · all optional"* — that string is the
+marker that everything through `44cc3b6` is live. If the mockup selection still
+reverts at that point, the cause is a component remount resetting the ref, and
+the seed guard needs to move up to the parent's state instead.
