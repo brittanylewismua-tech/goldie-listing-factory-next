@@ -555,7 +555,7 @@ click it and lose their place.
 - **Publish rows grouped by design filename** with real counts:
   "25/140 characters · 2/13 tags · 12 photos". (`BUNDLES.md` grouping)
 
-### D64 · The publish screen shows the evidence and ignores it · OPEN · **HIGH**
+### D64 · The publish screen shows the evidence and ignores it · **FIXED** · **HIGH**
 On one row, verbatim:
 
 > **Bachelorette Koozies, Bachelorette Coozies**
