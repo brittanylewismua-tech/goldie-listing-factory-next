@@ -2031,7 +2031,7 @@ test("confirms and visually quiets destructive mockup deletion (fixes D87)",asyn
   const css=await readFile(new URL("../app/mockups/management.css",import.meta.url),"utf8");
   assert.match(page,/Delete “\{deletingTheme\}”\?/);
   assert.match(page,/Yes, delete set/);
-  assert.match(css,/\.managementSetList \.deleteSet \{[\s\S]*?background: transparent;[\s\S]*?text-decoration: underline/);
+  assert.match(css,/\.managementSetList \.collectionActions \.deleteSet \{[\s\S]*?min-width: auto;[\s\S]*?background: transparent;[\s\S]*?text-decoration: underline/);
 });
 
 test("reports published listings instead of workflow completion (fixes D88)",async()=>{

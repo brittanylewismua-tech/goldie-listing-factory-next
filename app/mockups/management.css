@@ -82,16 +82,17 @@
   background: #ecd7e8;
 }
 
-.managementSetList .deleteSet {
+.managementSetList .collectionActions .deleteSet {
   min-width: auto;
   border: 0;
   background: transparent;
   color: #8a3f4d;
+  padding-inline: 4px;
   text-decoration: underline;
   text-underline-offset: 3px;
 }
 
-.managementSetList .deleteSet:hover {
+.managementSetList .collectionActions .deleteSet:hover {
   background: transparent;
   color: #71313d;
 }
