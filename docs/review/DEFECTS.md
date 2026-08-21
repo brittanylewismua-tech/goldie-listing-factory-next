@@ -13,7 +13,7 @@ Last verified against the live site and `main`: 20 Aug 2026.
 
 ## Blocking
 
-### D73 · Nothing advances past the first Finish phase on a resumed batch · OPEN · **NEW BLOCKER**
+### D73 · Nothing advances past the first Finish phase on a resumed batch · **FIXED**
 Verified live on batch `9a78b187`:
 
 | Clicked | Step counter before | after |
@@ -669,6 +669,8 @@ listings with 25-character titles and 2 tags. Same category as D64 — "set" is
 doing the work "complete" was doing.
 
 ### D73 · Resumed batches cannot move through Finish · **FIXED**
+**Duplicate follow-up record for the blocker above.** Kept here for history;
+the canonical status is the D73 entry in Blocking.
 On a resumed completed-draft batch, the Finish sub-step rail and Next buttons
 look enabled but phase navigation is rejected by a different gate. Photos never
 renders and the seller receives no inline reason. One shared navigation gate

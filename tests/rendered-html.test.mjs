@@ -3,6 +3,16 @@ import { access, readFile } from "node:fs/promises";
 import test from "node:test";
 import { navigationIssues } from "../app/workflow-gates.ts";
 
+test("keeps both connected-account Disconnect actions visually quiet", async () => {
+  const [page, css] = await Promise.all([
+    readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/approved-functional.css", import.meta.url), "utf8"),
+  ]);
+  assert.equal((page.match(/className="disconnect-link"/g) || []).length, 3);
+  assert.match(css, /service-row>button:not\(\.disconnect-link\)/);
+  assert.match(css, /connection-row>button\.disconnect-link\{width:auto!important;min-width:0!important;max-width:none!important;background:transparent!important/);
+});
+
 async function render(path = "/") {
   const workerUrl = new URL("../dist/server/index.js", import.meta.url);
   workerUrl.searchParams.set("test", `${process.pid}-${Date.now()}`);
