@@ -607,7 +607,7 @@ A batch-level "Choose size guide", a per-listing "Size guide for this listing ·
 Using the batch size guide", and "Use a different size guide". The hierarchy is
 correct but three controls for one concept on one screen needs collapsing.
 
-### D71 · Etsy attribute fill is still non-deterministic across identical products · OPEN
+### D71 · Etsy attribute fill is still non-deterministic across identical products · **FIXED**
 Three listings, same Gildan tee:
 - "3 of 11 set · Short sleeve, Crew, T-shirt"
 - "3 of 11 set · Short sleeve, Crew"   ← count says 3, two values listed
