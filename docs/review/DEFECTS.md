@@ -749,7 +749,7 @@ mismatch. Fixed by seeding from the Printify blueprint (`UX-DIRECTION.md` B2).
 listings with 25-character titles and 2 tags. Same category as D64 — "set" is
 doing the work "complete" was doing.
 
-### D73 · Resumed batches cannot move through Finish · **FIXED**
+### Verification for D73 · Resumed batches can move through Finish · **FIXED**
 **Duplicate follow-up record for the blocker above.** Kept here for history;
 the canonical status is the D73 entry in Blocking.
 On a resumed completed-draft batch, the Finish sub-step rail and Next buttons
@@ -974,7 +974,7 @@ the top, see nothing, and the form you cannot see is the one refusing to save.
 button. The app already knows exactly which phrases are wrong — asking her to
 find them by hand was the wrong ask.
 
-### D79 follow-up · The carried-designs path kept the old tag behaviour · **FIXED HERE**
+### Follow-up for D79 · The carried-designs path kept the old tag behaviour · **FIXED HERE**
 
 `428074d` separated tags from the title correctly in the API and wired two of
 the three client paths. The third — designs carried into a new batch — still
@@ -986,7 +986,7 @@ Three call sites, one changed rule, one missed. Same shape as D90.
 **Fixed:** all three paths use the ranked `tags` the API returns. Guarded by a
 test that fails on any `tagsFromTitle(result.…)` call.
 
-### D80 follow-up · `scrollIntoView` is swallowed by an `overflow-x:clip` ancestor · **FIXED HERE**
+### Follow-up for D80 · `scrollIntoView` is swallowed by an `overflow-x:clip` ancestor · **FIXED HERE**
 
 The first D80 fix replaced `window.scrollTo({top:0})` with
 `scrollIntoView({block:"start"})` on the compose form. Verified live: **it did
@@ -1111,7 +1111,7 @@ background goes dark again without the text following it.
 **Same root cause as D94:** a change was made correctly, and the thing that
 depended on it was never re-checked.
 
-### D77 follow-up · The fix failed 2 of 3 real listings · **FIXED HERE** · **BLOCKER**
+### Follow-up for D77 · The fix failed 2 of 3 real listings · **FIXED HERE** · **BLOCKER**
 
 `842c8ba` / `3906b1c` enforced D77 by requiring at least 8 title phrases and
 every available tag, retrying once, then rejecting the row.
@@ -1149,7 +1149,7 @@ of a batch on first contact.
 Ran the real workflow rather than reading diffs. **Auto-create all titles** on
 the live 3-design batch, BACHELORETTE TEES bank, Gildan Tee.
 
-### D77 — resolved, measured
+### Verification for D77 — resolved, measured
 
 | | title chars | tags |
 |---|---|---|
@@ -1162,7 +1162,7 @@ the live 3-design batch, BACHELORETTE TEES bank, Gildan Tee.
 Zero row errors. Zero tags over 20 characters, zero fragments (D75 holding).
 Zero wrong-product phrases in any title or tag (D74/D78/D90 holding).
 
-### D76 — resolved, confirmed by screenshot
+### Verification for D76 — resolved, confirmed by screenshot
 
 Row 1 renders: *"No phrase in this bank matches this design. Add one, or write
 the title yourself."* Row 2, whose design does match the bank, correctly shows
@@ -1565,7 +1565,7 @@ selection rather than partially adding, says what to do, and consumes nothing �
 
 Re-ran with 4 designs: accepted cleanly, "4 designs ready".
 
-### D23 / A5 — "✓ Approved" before approval — **fixed, confirmed**
+### Verification for D23 / A5 — "✓ Approved" before approval — **fixed, confirmed**
 
 This could only ever be judged on a batch that had never been approved, which is
 why it stayed open. On the fresh batch:
@@ -1658,8 +1658,7 @@ step or any earlier step. An unfinished batch still cannot deep-link forward
 past its saved progress; a completed batch keeps D53/D73's ability to reopen
 any Finish phase.
 
-<<<<<<< Updated upstream
-### D109 · Signed-in account without access has no way to switch accounts · **FIXED HERE** · **HIGH**
+### D113 · Signed-in account without access has no way to switch accounts · **FIXED HERE** · **HIGH**
 
 Refreshing the Listing Factory with a valid session for an account that does
 not own a plan rendered the pricing page and only said “Signed in securely.”
@@ -1668,14 +1667,14 @@ way to leave that account. The screen now names the signed-in email and offers
 “Use a different account,” which signs out both app and platform sessions and
 returns directly to the Listing Factory sign-in screen.
 
-### D110 · Owner testing account was treated as an expired 20-listing beta · **FIXED HERE** · **BLOCKER**
+### D114 · Owner testing account was treated as an expired 20-listing beta · **FIXED HERE** · **BLOCKER**
 
 The Chrome account used for live testing, `shesawolfclothing@gmail.com`, was
 missing from the owner allowlist. Refresh therefore sent it to plan selection,
 and its saved beta plan still imposed the 20-listing ceiling. The account is now
 recognized as an owner everywhere, and owner testing uses a separate 10,000
 listing allowance without deleting draft records or changing customer plans.
-=======
+
 ### D109 · "Change it anytime" with no way to change or remove · **FIXED HERE** · **HIGH**
 
 **Brittany found this too.**
@@ -1709,7 +1708,6 @@ sets ↗"** link beside the control.
 
 **Same class as D101** — copy that describes a capability the surrounding
 controls do not provide.
->>>>>>> Stashed changes
 
 ### Promise-vs-control sweep — the class D101 and D109 belong to
 
@@ -1772,7 +1770,6 @@ requires colours and a keyword bank.
 screen and looked fixed. D110 was only visible by clicking the control and
 checking the state four seconds later. Rendering was never the problem.
 
-<<<<<<< Updated upstream
 ### D111 · The workflow had no visible, safe restart path · **FIXED HERE** · **HIGH**
 
 The old “Clear batch + start over” control lived inside a progress header that
@@ -1782,7 +1779,6 @@ sidebar on every step, including while a long step is scrolled. It offers Cancel
 batch + start new. Saving preserves the batch record and files; both restart
 paths preserve saved products, defaults, keyword banks, mockup sets, and any
 Printify drafts already created.
-=======
 ---
 
 ## Functional pass — operating controls, not reading them · 21 Aug 2026
@@ -1802,7 +1798,7 @@ measured. All values were restored afterwards.
 | Etsy attribute | set Primary color = Beige | summary **5 of 11 → 6 of 11** ✓ |
 | Mockup set | set to empty | **reverted** ✗ → **D110** |
 
-### D111 · The Etsy details summary invents work that does not exist · **FIXED HERE** · **UX**
+### D112 · The Etsy details summary invents work that does not exist · **FIXED HERE** · **UX**
 
 Measured on a Gildan tee: **all 11 Etsy attribute fields are optional.**
 `required` is false on every one. The summary nonetheless read:
@@ -1819,8 +1815,6 @@ P3): the number was never wrong, the framing was.
 **Fixed:** when a category genuinely has required attributes the summary counts
 those — *"2 of 3 required set"*. When it has none it states what was added and
 that the rest are optional — *"5 added · all optional"*.
->>>>>>> Stashed changes
-
 ### Functional pass, round 2 — Finish phase controls
 
 | control | test | result |
@@ -1830,7 +1824,7 @@ that the rest are optional — *"5 added · all optional"*.
 | Photo restore | re-check snapshot | back to 10 ✓ |
 | Etsy attribute revert | set back to blank | 6 of 11 → **5 of 11** ✓ |
 
-### D110 — verification pending deploy, not yet confirmed
+### Verification for D110 — pending deploy, not yet confirmed
 
 The D109 half is live: the option now reads **"No mockups for this batch"**.
 Clearing still reverts to "BACH TEES" on the deployed build — but the D110 fix

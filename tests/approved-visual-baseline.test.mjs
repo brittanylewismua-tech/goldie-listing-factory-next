@@ -541,7 +541,7 @@ test("a cleared mockup selection stays cleared — D110", async () => {
     "Mockups are optional; gating the forward control on them makes 'no mockups' unreachable.");
 });
 
-test("the Etsy details summary does not invent work on optional-only fields — D111", async () => {
+test("the Etsy details summary does not invent work on optional-only fields — D112", async () => {
   const page = await readFile(listingFactoryPage, "utf8");
 
   /* Measured live on a Gildan tee: all 11 Etsy attribute fields are OPTIONAL —
@@ -555,5 +555,5 @@ test("the Etsy details summary does not invent work on optional-only fields — 
   assert.match(page, /required\.length\?`\$\{requiredDone\.length\} of \$\{required\.length\} required set`:`\$\{completed\.length\} added · all optional`/,
     "The summary must count required fields, or state that the rest are optional.");
   assert.doesNotMatch(page, /<small>\{completed\.length\} of \{properties\.length\} set/,
-    "Counting every optional attribute as outstanding work is the D111 defect.");
+    "Counting every optional attribute as outstanding work is the D112 defect.");
 });
