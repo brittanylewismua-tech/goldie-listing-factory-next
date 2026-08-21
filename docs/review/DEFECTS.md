@@ -993,3 +993,23 @@ clip container. Guarded by a test that rejects both `scrollIntoView` and
 
 Worth knowing generally: **any `scrollIntoView` under `.management-page` is
 already broken**, on every management screen.
+
+### D92 · Every `scrollIntoView` on a management screen is dead · **FIXED HERE** · **MEDIUM**
+
+Generalised from the D80 follow-up. `.management-page` carries
+`overflow-x:clip!important`, and all five management screens use that class.
+Any `scrollIntoView` inside them resolves against a container that cannot
+scroll and does nothing — silently, with no console output.
+
+Found and verified live:
+
+| Call site | Effect |
+|---|---|
+| `keywords/page.tsx` — "Edit bank" | **broken** — form stayed below the fold (D80) |
+| `mockups/page.tsx` — "+ Add mockup set" | **dead but harmless** — panel opens at top 119px, already in view |
+
+The mockup one is latent: it does nothing today only because the panel happens
+to open where you are already looking.
+
+**Fixed:** both use `window.scrollTo` computed from the element's own offset. A
+test now fails if `scrollIntoView` appears in any management screen.

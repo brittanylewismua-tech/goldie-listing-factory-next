@@ -103,3 +103,19 @@ test("no auto-title path re-derives tags from the title — D79", async () => {
   assert.match(page, /tags:result\.tags\}/, "carried-designs path must use the ranked tags");
   assert.match(page, /onApply\(result\.title,result\.tags\)/, "individual path must use the ranked tags");
 });
+
+test("no management screen relies on scrollIntoView — it is clipped away", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const files = ["keywords/page.tsx", "mockups/page.tsx", "batches/page.tsx", "usage/page.tsx"];
+
+  /* app/management-aesthetic.css sets overflow-x:clip!important on
+   * .management-page. `clip` makes it a clipping container, so scrollIntoView
+   * resolves against an element that cannot scroll and silently does nothing —
+   * no error, no console output, the page just never moves. Every one of these
+   * screens carries .management-page, so the call is dead on all of them. */
+  for (const file of files) {
+    const source = await readFile(new URL(`../app/${file}`, import.meta.url), "utf8");
+    assert.doesNotMatch(source, /scrollIntoView/,
+      `${file} calls scrollIntoView, which is a no-op under .management-page's overflow-x:clip. Use window.scrollTo with the element's own offset.`);
+  }
+});
