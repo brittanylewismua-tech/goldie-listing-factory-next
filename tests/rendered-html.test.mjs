@@ -17,7 +17,9 @@ test("shows which products use each keyword bank and blocks wrong-product phrase
   const page = await readFile(new URL("../app/keywords/page.tsx", import.meta.url), "utf8");
   assert.match(page, /Used by:/);
   assert.match(page, /Fix wrong-product phrases before saving/);
-  assert.match(page, /NON_SHIRT_PRODUCT/);
+  // Was NON_SHIRT_PRODUCT — a second hand-written regex that had drifted from
+  // the list the title generator uses. Both now read product-type-utils (D90).
+  assert.match(page, /namesExcludedProduct\(word, ?SHIRT_EXCLUDED_NOUNS\)/);
   assert.match(page, /disabled=\{!name\.trim\(\)\|\|!words\.length\|\|saving\|\|mismatchedWords\.length>0\}/);
 });
 

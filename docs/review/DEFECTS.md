@@ -751,7 +751,7 @@ must drive control availability, its displayed reason, and the click path.
 ## Deep-scan pass — 21 Aug 2026
 
 Every page and interaction state walked visually and measured in the live DOM,
-after ChatGPT's `b826386`. Findings D78–D89.
+after ChatGPT's `b826386`. Findings D78–D91.
 
 ---
 
@@ -923,3 +923,42 @@ Guarded by a test that fails on any `vw`-based width for these columns.
 **Not a defect (checked):** the step cards still carry `01`–`09` in the markup
 after the nine-to-five rail change, but `font-size:0` renders them as icons, so
 no stale number is visible next to "4 of 4".
+
+### D90 · The same rule implemented twice, differently · **FIXED HERE** · **HIGH**
+
+Wrong-product detection existed in two places that disagreed:
+
+| | `app/keywords/page.tsx` | `app/product-type-utils.ts` |
+|---|---|---|
+| form | hand-written `NON_SHIRT_PRODUCT` regex | `PRODUCT_NOUN_GROUPS` |
+| plurals | yes | **no** (D78) |
+| sunglasses / tapestry / tattoo | yes | **no** |
+| runs when | saving a bank | generating a title |
+
+So `bachelorette koozies` was blocked at save time and **allowed into a title**.
+Two implementations of one rule always drift; this is the mechanism behind most
+of this list.
+
+**Fixed:** the page now imports `excludedProductNouns` / `namesExcludedProduct`.
+One list, both paths. A test fails if `NON_SHIRT_PRODUCT` ever reappears.
+
+### D91 · Her existing bank is locked and cannot be edited · **FIXED HERE** · **BLOCKER**
+
+The save-time validation shipped in `b826386` only guards *new* saves. Her
+**BACHELORETTE TEES** bank was saved before it existed, so opening it now shows:
+
+> **13 wrong-product phrases** — Remove: bachelorette coozies, bachelorette
+> koozie, bachelorette koozies, bachelorette party sash, …
+
+…with **Save changes permanently disabled.** To change anything at all — even a
+typo — she must hand-delete 13 specific lines from a 50-line textarea, hunting
+each one by name, with the warning only listing the first four.
+
+Verified live: `saveButtonDisabled: true`, `50 valid phrases found`.
+
+Combined with D80 this was near-invisible: click **Edit bank**, get scrolled to
+the top, see nothing, and the form you cannot see is the one refusing to save.
+
+**Fixed:** the warning now carries a **"Remove all 13 and keep the rest"**
+button. The app already knows exactly which phrases are wrong — asking her to
+find them by hand was the wrong ask.

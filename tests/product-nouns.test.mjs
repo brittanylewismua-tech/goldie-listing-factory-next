@@ -54,3 +54,21 @@ test("each product family excludes the others but never itself", () => {
       `"${blueprint}" excludes its own product noun — every phrase for it would be rejected.`);
   }
 });
+
+test("the keyword bank page and the title generator share one noun list — D90", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const page = await readFile(new URL("../app/keywords/page.tsx", import.meta.url), "utf8");
+
+  /* There used to be two denylists: a hand-written NON_SHIRT_PRODUCT regex on
+   * this page, and PRODUCT_NOUN_GROUPS in product-type-utils. They disagreed —
+   * the page blocked "koozies" on save while the generator let it into a title.
+   * Two implementations of one rule always drift. */
+  assert.doesNotMatch(page, /NON_SHIRT_PRODUCT/,
+    "The page has its own product-noun regex again. It must read product-type-utils.");
+  assert.match(page, /namesExcludedProduct\(word, ?SHIRT_EXCLUDED_NOUNS\)/);
+  assert.match(page, /excludedProductNouns\("tee"\)/);
+
+  // D91: a bank saved before the rule existed must be repairable in one click.
+  assert.match(page, /className="strip-mismatched"/,
+    "No way to remove wrong-product phrases. Save is disabled while they exist, so the bank is locked.");
+});
