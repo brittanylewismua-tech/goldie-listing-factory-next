@@ -422,18 +422,18 @@ UI, but Batch History now shows a batch with **9 designs** at that timestamp.
 The batch row is created and the design count persisted before the quota check
 rejects the upload, leaving junk in history from an action that was refused.
 
-### D55 · Every batch in history has the same name · OPEN
+### D55 · Every batch in history has the same name · **FIXED**
 Four rows all read "Gildan Tee / Unisex Heavy Cotton Tee". Only the timestamp
 and design count differ. Design filenames exist (`austin-bach.png`, …) and would
 distinguish them.
 **Fix:** name batches after their designs, and show a thumbnail — the page is a
 visual product showing no visuals.
 
-### D56 · "Remove from history" sits next to the primary button · OPEN
+### D56 · "Remove from history" sits next to the primary button · **FIXED**
 A permanent delete, styled as a small text link, immediately beside the large
 filled "Resume batch". No confirmation.
 
-### D57 · Two button labels for the same action, one of which lies · OPEN
+### D57 · Two button labels for the same action, one of which lies · **FIXED**
 Rows show either "Resume batch →" or "Open results →" depending on status. The
 split is reasonable, but "Open results" lands on step 3 (see D53).
 
