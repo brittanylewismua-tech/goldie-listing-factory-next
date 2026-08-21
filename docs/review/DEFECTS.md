@@ -13,7 +13,7 @@ Last verified against the live site and `main`: 20 Aug 2026.
 
 ## Blocking
 
-### D74 · Wrong garment type in titles — the koozie bug, mutated · OPEN · **HIGH**
+### D74 · Wrong garment type in titles — the koozie bug, mutated · **FIXED** · **HIGH**
 
 Live run, 3 fresh designs on the **Gildan Tee**, bank = BACHELORETTE TEES:
 
@@ -33,7 +33,7 @@ hoodie, crewneck, sweater, tank top, long sleeve, and vice versa for every other
 blank. Derive the excluded set from `templateDetails.blueprintTitle` rather than
 a fixed list.
 
-### D75 · Tags are being shredded into meaningless fragments · OPEN · **HIGH**
+### D75 · Tags are being shredded into meaningless fragments · **FIXED** · **HIGH**
 
 Same run. Generated tags for listing 1:
 

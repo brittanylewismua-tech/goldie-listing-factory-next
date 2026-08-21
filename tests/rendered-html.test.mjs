@@ -524,8 +524,24 @@ test("sends optimized staged artwork directly to Printify", async () => {
 test("parses real eRank exports and creates Etsy-valid title phrases", async () => {
   const { phrasesFromErank, tagsFromTitle, titlesFromCsv } = await import("../app/seo-utils.ts");
   assert.deepEqual(phrasesFromErank('Keyword,Searches,Competition\n"western wall art",1240,43000\n"pink dorm poster",720,18000'), ["western wall art", "pink dorm poster"]);
-  assert.deepEqual(tagsFromTitle("Western Cowgirl Wall Art, Motivational Office Poster, Entrepreneur Gift"), ["western cowgirl", "wall art", "motivational office", "office poster", "entrepreneur gift"]);
+  assert.deepEqual(tagsFromTitle("Bachelorette Girls Gone Mild, Girls Gone Mild, Fresh Off The Market Bachelorette, Fresh Off The Market, Bride Crew"), ["girls gone mild", "fresh off the market", "bride crew"]);
+  assert.deepEqual(tagsFromTitle("Fresh Off The Market Bachelorette"), [], "long bank phrases must remain title-only, never split into fabricated tags");
   assert.deepEqual(titlesFromCsv('Title,Searches\n"Western Art, Cowgirl Decor",200\n"CEO Office Art",100'), ["Western Art, Cowgirl Decor", "CEO Office Art"]);
+});
+
+test("rejects wrong garment nouns using the exact Printify blueprint", async () => {
+  const intelligence = await readFile(new URL("../app/api/listing-intelligence/route.ts", import.meta.url), "utf8");
+  const { excludedProductNouns, namesExcludedProduct } = await import("../app/product-type-utils.ts");
+  assert.match(intelligence, /excludedProductNouns\(body\.product\?\.blueprintTitle/);
+  assert.match(intelligence, /!namesExcludedProduct\(value,excludedNouns\)/);
+  const teeExclusions = excludedProductNouns("Unisex Heavy Cotton Tee | Gildan 5000");
+  assert.equal(namesExcludedProduct("Wifey Sweatshirt", teeExclusions), true);
+  assert.equal(namesExcludedProduct("Future Mrs Sweatshirt", teeExclusions), true);
+  assert.equal(namesExcludedProduct("Bride Hoodie", teeExclusions), true);
+  assert.equal(namesExcludedProduct("Bride T Shirt", teeExclusions), false);
+  const hoodieExclusions = excludedProductNouns("Unisex Heavy Blend Hooded Sweatshirt");
+  assert.equal(namesExcludedProduct("Bride Shirt", hoodieExclusions), true);
+  assert.equal(namesExcludedProduct("Bride Hoodie", hoodieExclusions), false);
 });
 
 test("validates and isolates staged artwork without decoding or buffering it", async () => {

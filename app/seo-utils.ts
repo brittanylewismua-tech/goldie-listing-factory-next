@@ -25,35 +25,11 @@ export function phrasesFromErank(raw: string) {
   return [...new Set(values.map((value) => value.trim()).filter((value) => value && !HEADER.test(value) && !/^[$%\d,.]+$/.test(value)))];
 }
 
-function splitLongPhrase(phrase: string) {
-  const words = phrase.split(/\s+/).filter(Boolean), memo = new Map<number, string[]>();
-  const partition = (index: number): string[] => {
-    if (index >= words.length) return [];
-    const cached = memo.get(index); if (cached) return cached;
-    let best: string[] = [];
-    for (let count = 1; count <= 3 && index + count <= words.length; count += 1) {
-      const candidate = words.slice(index, index + count).join(" ");
-      if (candidate.length > 20) continue;
-      const option = [candidate, ...partition(index + count)];
-      const score = (items: string[]) => items.length + items.filter((item) => !item.includes(" ")).length * 10;
-      if (!best.length || score(option) < score(best)) best = option;
-    }
-    memo.set(index, best); return best;
-  };
-  const pieces = partition(0);
-  return pieces.map((piece) => {
-    if (piece.includes(" ") || words.length < 2) return piece;
-    const index = words.indexOf(piece);
-    const pair = index <= 0 ? words.slice(0, 2) : words.slice(index - 1, index + 1);
-    const replacement = pair.join(" ");
-    return replacement.length <= 20 ? replacement : piece;
-  });
-}
-
 export function tagsFromTitle(title: string) {
   const phrases = title.split(/[,|]/).map((value) => value.trim().toLowerCase()).filter(Boolean);
-  const tags = phrases.flatMap((phrase) => phrase.length <= 20 ? [phrase] : splitLongPhrase(phrase));
-  return [...new Set(tags.filter((tag) => tag.length > 1 && tag.length <= 20))].slice(0, 13);
+  // Etsy treats a tag as one phrase. Splitting a validated bank phrase creates
+  // fragments the seller never researched, so long phrases stay title-only.
+  return [...new Set(phrases.filter((phrase) => phrase.length > 1 && phrase.length <= 20))].slice(0, 13);
 }
 
 export function titlesFromCsv(raw: string) {

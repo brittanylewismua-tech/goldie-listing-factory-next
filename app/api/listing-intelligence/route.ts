@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
+import { excludedProductNouns, namesExcludedProduct } from "@/app/product-type-utils";
 
 type Details={category:string;attributes:Record<string,string>;optional:Record<string,string>;blurb:string;confidence:"high"|"review"};
 const validImage=(value:unknown):value is string=>typeof value==="string"&&/^data:image\/(png|jpeg|webp);base64,/i.test(value)&&value.length<18*1024*1024;
@@ -22,14 +23,15 @@ export async function POST(request:Request){
   const key=process.env.FAL_KEY;if(!key)return NextResponse.json({error:"Automatic Etsy details are temporarily unavailable."},{status:503});
   if(body.mode==="title"){
     const keywords=[...new Set((body.keywords||[]).map(clean).filter(Boolean))].slice(0,100);if(!keywords.length)return NextResponse.json({error:"Choose a keyword bank before asking Goldie to build the title."},{status:400});
+    const excludedNouns=excludedProductNouns(body.product?.blueprintTitle||"");
     const titleResponse=await fetch("https://fal.run/openrouter/router/vision",{method:"POST",headers:{Authorization:`Key ${key}`,"Content-Type":"application/json"},body:JSON.stringify({image_urls:[body.image],model:"google/gemini-2.5-flash",temperature:0,system_prompt:"Return only compact valid JSON. Never use markdown.",prompt:`Inspect this specific design and select the exact phrases from this seller-validated keyword bank that best fit it: ${JSON.stringify(keywords)}. Product: ${JSON.stringify(body.product||{})}.
 
-PRODUCT TYPE RULE (most important): this listing is for the physical product named above. Never select a phrase that names a different product type. If the product is a shirt or tee, reject phrases containing koozie, coozie, sash, sunglasses, tapestry, tattoo, sticker, mug, tumbler, cup, banner, decor, decorations, poster, print, blanket, or any other product noun that is not this product. A phrase that names the wrong product is always wrong, no matter how strong its search data.
+PRODUCT TYPE RULE (most important): this listing is for the physical product named above. Reject every phrase that names any different product type. For this exact Printify blueprint, the excluded product nouns are: ${JSON.stringify(excludedNouns)}. A phrase containing any excluded noun is always wrong, no matter how strong its search data.
 
 HOW MANY: order your selections most relevant first, then keep going. Select between 8 and 13 phrases when the bank contains that many that genuinely fit the design and the product type. The seller's phrases will be joined into one Etsy title with a 140 character limit, so aim to give enough phrases to use most of that limit. Quality still wins: never pad with a phrase that does not fit the design or names the wrong product.
 
 Avoid duplicate meaning. Do not rewrite, combine, expand, correct, or invent any phrase. Copy each phrase exactly as it appears in the bank. Return only {"selected_keywords":["exact phrase copied from the bank"]}.`})});
-    const titlePayload=await titleResponse.json() as {output?:string;detail?:string};if(!titleResponse.ok)return NextResponse.json({error:titlePayload.detail||"Goldie could not build this title."},{status:502});const match=titlePayload.output?.match(/\{[\s\S]*\}/);if(!match)return NextResponse.json({error:"Goldie could not read the prepared title."},{status:502});const parsed=JSON.parse(match[0]) as {selected_keywords?:string[]},allowedByLower=new Map(keywords.map(keyword=>[keyword.toLocaleLowerCase(),keyword])),selected=[...new Set((parsed.selected_keywords||[]).map(value=>allowedByLower.get(clean(value).toLocaleLowerCase())).filter((value):value is string=>Boolean(value)))].slice(0,13);
+    const titlePayload=await titleResponse.json() as {output?:string;detail?:string};if(!titleResponse.ok)return NextResponse.json({error:titlePayload.detail||"Goldie could not build this title."},{status:502});const match=titlePayload.output?.match(/\{[\s\S]*\}/);if(!match)return NextResponse.json({error:"Goldie could not read the prepared title."},{status:502});const parsed=JSON.parse(match[0]) as {selected_keywords?:string[]},allowedByLower=new Map(keywords.map(keyword=>[keyword.toLocaleLowerCase(),keyword])),selected=[...new Set((parsed.selected_keywords||[]).map(value=>allowedByLower.get(clean(value).toLocaleLowerCase())).filter((value):value is string=>Boolean(value)&&!namesExcludedProduct(value,excludedNouns)))].slice(0,13);
     // Previously: chosen = selected.length ? selected : keywords.slice(0,13)
     // That fallback silently took the first 13 phrases in bank order (banks are
     // stored alphabetically), so a design the model could not match produced a
