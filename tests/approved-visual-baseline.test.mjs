@@ -491,3 +491,12 @@ test("the setup step has exactly one forward control, and it gates every section
   // the real gate must keep naming what is missing
   assert.match(page, /!selectedColorIds\.length\?"Choose product colors to continue":!autoTitleBankId\?"Pick a keyword bank to continue"/);
 });
+
+test("a saved later step cannot overwrite an explicit safe return to setup — D108",async()=>{
+  const page=await readFile(listingFactoryPage,"utf8");
+  assert.match(page,/function restoredWorkflowStep\(saved:WorkflowStep,requested:string\|null,complete:boolean\)/);
+  assert.match(page,/complete\|\|order\.indexOf\(target\)<=order\.indexOf\(saved\)\?target:saved/,
+    "Backward navigation must respect the requested URL while unfinished batches still cannot deep-link forward past gates.");
+  assert.match(page,/restoredWorkflowStep\(payload\.batch\.step\|\|"connect",url\.searchParams\.get\("step"\),Boolean\(state\.complete\)\)/);
+  assert.doesNotMatch(page,/const step=payload\.batch\.step\|\|"connect";setWorkflowStep\(step\)/);
+});

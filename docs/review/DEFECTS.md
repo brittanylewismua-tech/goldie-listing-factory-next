@@ -1641,3 +1641,19 @@ not by pressing the forward button a seller would press. Rail clicks call
 `goToStep`, which runs the gates; the in-page button calls its own handler,
 which does not. Auditing navigation without using the actual forward control
 cannot find this class of defect.
+
+### D108 · Restored batch state overwrites an explicit return to setup · **FIXED HERE** · **BLOCKER**
+
+Found while verifying D107 through the live seller path. After using the one
+correct setup control, requesting `?step=setup` still redirected to the batch's
+saved `?step=designs`. The duplicate button was gone, but Colours and Mockups
+became unreachable again after the first forward navigation.
+
+**Cause:** batch restoration always replaced the requested URL with
+`payload.batch.step`. It never considered whether the seller was deliberately
+returning to an earlier safe step.
+
+**Fixed:** restoration now honors a valid requested step when it is the saved
+step or any earlier step. An unfinished batch still cannot deep-link forward
+past its saved progress; a completed batch keeps D53/D73's ability to reopen
+any Finish phase.
