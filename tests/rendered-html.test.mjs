@@ -1876,3 +1876,12 @@ test("counts and caps every listing at Etsy's 20-photo limit (fixes D67)",async(
   assert.match(app,/reservedPhotos=\{\(preparedMockupCounts\[draft\.id\]\|\|0\)\+\(design\?\.sizeGuideName\|\|sizeGuideName\?1:0\)\}/);
   assert.match(app,/values\.slice\(0,Math\.max\(0,20-reserved\)\)/);
 });
+
+test("uses one deterministic Etsy product baseline across a batch (fixes D71)",async()=>{
+  const app=await readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8");
+  assert.match(app,/etsyProductBaseline=useRef/);
+  assert.match(app,/runBounded\(pending,1,/);
+  assert.match(app,/prepared=baseline\?\{\.\.\.initial,taxonomyId:baseline\.taxonomyId,category:baseline\.category,attributes:\{\.\.\.initial\.attributes,\.\.\.baseline\.attributes\}\}:initial/);
+  assert.match(app,/etsyProductBaseline\.current=\{taxonomyId:details\.taxonomyId,category:details\.category,attributes:physical\}/);
+  assert.match(app,/etsyProductBaseline\.current=null;setActiveRecipe\(recipe\)/);
+});
