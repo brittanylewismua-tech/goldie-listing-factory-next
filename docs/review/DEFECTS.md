@@ -476,3 +476,61 @@ That alone makes the warning self-explanatory rather than alarming.
 the loss for variants that ship cheaper. `shippingByVariant` is already computed
 in the same function — use it to show a range, or the figure for the variants
 actually in this batch.
+
+
+---
+
+## Titles phase — rows have landed, the column widths are inverted
+
+The row layout from `ROWS-SPEC.md` is live. Measured on a real listing row:
+
+```
+row            668 x 193 px
+grid-template  56px  442px  116px      (thumb | fields | quality pill)
+fields block   442 x  70 px            <- actual content
+quality pill   116 x 171 px            <- a two-word status
+title input    222 px wide, 15px font
+```
+
+### D59 · A status badge is 171px tall; the content it sits beside is 70px · OPEN
+The DPI pill renders "243 DPI · review before printing" stacked over four lines,
+plus "Medium resolution · 300 DPI recommended" beneath it. At **171px tall** it
+sets the row height single-handedly — the row is 193px while its actual content
+is 70px. **123px of every row is empty space created by a status badge.**
+
+At 20 listings that is ~2,500px of nothing.
+
+**Fix:** one-line inline badge — `243 DPI ⚠` — around 60px wide, sitting with the
+other counts. Row height drops to roughly 80px. Twenty listings goes from
+~3,900px of scroll to ~1,600px.
+
+### D60 · The title field truncates the thing you are here to review · OPEN
+The title input is **222px** — it shares the 442px fields column with tags. Etsy
+titles run to 140 characters; 222px at 15px shows roughly 30. Every row reads
+"Palm Springs Bachelor…", "Nashville Bachelorette …", "Bachelorette Koozies, …".
+
+**You cannot review a title you cannot read**, and reviewing titles is the entire
+purpose of this screen. It is also how the koozie title survived — at a glance
+all three rows look similar.
+
+**Fix:** give the title the full row width on its own line, tags beneath it.
+`ROWS-SPEC.md` called for truncate-at-rest with expand-on-focus; there is
+currently no expansion, so the text is simply unreachable.
+
+**Note:** with the pill fixed (D59) there is 116px of width to reclaim, and the
+row can be a full-width title with a counts strip underneath.
+
+### D61 · "Auto Caps on" is a toggle that neither reads as one nor is legible · OPEN
+Pale lavender pill, pale text, no on/off affordance and no state change feedback.
+Same class of problem as D3 and D48.
+**Also:** per D8 this is a preference, not a batch decision — it belongs on the
+saved product.
+
+### D62 · "BATCH TITLE BUILDER" eyebrow above "Create titles for the whole batch" · OPEN
+Another instance of D8 on a different screen. The eyebrow restates the heading.
+
+### D63 · "Upload or manage keyword banks ↗" navigates out mid-batch · OPEN
+An external-arrow link inside the bank picker, positioned where a seller lands
+when they have no bank selected — which is exactly when they are most likely to
+click it and lose their place.
+**Fix:** open bank management in a panel or new tab, never in-place mid-flow.
