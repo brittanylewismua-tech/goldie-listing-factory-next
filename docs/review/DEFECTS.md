@@ -1448,3 +1448,43 @@ intact — but the transient copy states the opposite of the truth.
 deep Titles + tags URL mounted in **941ms / 946ms / 883ms**. No blank paint, no
 `[vinext]` prefetch warning, and no console error occurred. This remains a watch
 item rather than a numbered defect unless it recurs outside a deployment window.
+
+### Full-flow sweep — all five steps clean
+
+Every step walked on the deployed build, scrolled top to bottom, then measured.
+
+| step | truncated | off-screen | sideways scroll | duplicate IDs |
+|---|---|---|---|---|
+| 2 · Choose product / Build this batch | **0** | 0 | no | 0 |
+| 3 · Add your designs | **0** | 0 | no | 0 |
+| 4 · Review pricing | **0** | 0 | no | 0 |
+| Finish 1 · Titles + tags | **0** | 0 | no | 0 |
+| Finish 2 · Etsy details | **0** | 0 | no | 0 |
+| Finish 3 · Images + mockups | **0** | 0 | no | 0 |
+| Finish 4 · Review + publish | **0** | 0 | no | 0 |
+
+### Confirmed fixed on this run
+
+- **Step 3 states the binding limit, not the batch cap.** "Build one focused
+  batch of up to **4** finished designs" and "3 of 4 designs ready · 1 more
+  available · 4 listings remain on your plan" — at 16/20 the real constraint is
+  4, and that is the number shown. (D29 / P10)
+- **Design rows carry filename, pixel dimensions and Remove**, thumbnails at
+  76×76. (D31, D9)
+- **Pricing headings are ordered and named**: "1. Item prices · Gildan Tee",
+  "2. Etsy shipping profile — what buyers pay · Gildan Tee". (D58)
+- **One help button on Pricing**, not three. (D25 / A7)
+- **Profit goal sits beside the prices it changes**, with "Prices update
+  automatically". (D22 / A2)
+
+### Still untestable from here
+
+- **A5 / D23 — "✓ Approved" before approval.** The badge is correct on this
+  batch because its pricing genuinely was approved. Confirming the defect needs
+  a batch that has never been approved, which requires uploading fresh artwork.
+- **Quota ceiling behaviour.** The counts display correctly at 16/20, but what
+  happens when a batch is submitted that exceeds the remaining 4 has not been
+  exercised. Needs an upload to test.
+
+Both are blocked on adding designs, which cannot be done from this session —
+file upload is unavailable here.
