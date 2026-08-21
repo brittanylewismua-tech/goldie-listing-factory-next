@@ -2074,3 +2074,19 @@ test("warns on the exact listing when its bank misses the design text (fixes D76
   assert.match(app,/className="title-match-warning" role="status"/);
   assert.match(app,/titleWarning:item\.result\.titleWarning/);
 });
+
+test("the Etsy category select always shows the category that is set — D106", async () => {
+  const page = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+
+  /* `etsyCategories` is only populated by the taxonomy fetch that runs during
+   * auto-detection. On a RESTORED batch the saved details carry taxonomyId and
+   * the category path, but the list is empty — so the select rendered zero
+   * options and appeared completely blank, while every attribute beneath it
+   * showed a value and the caption read "These are Etsy's actual fields for the
+   * selected category".
+   *
+   * The seller could neither see which category was set nor change it. */
+  assert.match(page, /Boolean\(details\.taxonomyId\)&&!categories\.some\(category=>category\.id===details\.taxonomyId\)&&<option value=\{details\.taxonomyId\}>/,
+    "A set category must still render an option when the category list has not loaded.");
+  assert.match(page, /details\.category\|\|"Category already chosen for this listing"/);
+});

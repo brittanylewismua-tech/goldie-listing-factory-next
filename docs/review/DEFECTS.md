@@ -1488,3 +1488,33 @@ Every step walked on the deployed build, scrolled top to bottom, then measured.
 
 Both are blocked on adding designs, which cannot be done from this session —
 file upload is unavailable here.
+
+### D106 · The Etsy category dropdown is blank on every restored batch · **FIXED HERE** · **HIGH**
+
+Found while trying to reproduce D103. Confirmed by screenshot on the live build.
+
+The **Etsy category** select renders **zero options and displays nothing**,
+while every attribute beneath it shows a value — Materials "Cotton", Sleeve
+length "Short sleeve", Neckline "Crew", Occasion "Bachelorette party" — and the
+caption reads *"These are Etsy's actual fields for the selected category."*
+
+A category **is** set. The seller simply cannot see which one, and cannot change
+it.
+
+**Cause:** `etsyCategories` is populated only by the taxonomy fetch that runs
+during auto-detection. A restored batch loads `details.taxonomyId` and
+`details.category` from saved state, but nothing refetches the list, so
+`categories` is `[]`. The existing markup renders a placeholder option only when
+`taxonomyId` is falsy — so with an id set and an empty list, the select has no
+options at all.
+
+This affects **every batch reopened from Batch History**, which is the normal
+way a seller returns to work.
+
+**Fixed:** when the set `taxonomyId` is not present in the loaded list, the
+select renders an option for it using the saved `details.category` path. The
+category is visible again and the control is usable.
+
+**Note on D103** (changing category silently discards fields): still **OPEN**
+and still untested — it could not be exercised because the dropdown had no
+options to change to. Retest once D106 is deployed.
