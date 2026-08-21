@@ -345,7 +345,7 @@ Pinned top-right, above the "1. Item prices" heading and above "Profit goal".
 **Fix:** group Profit goal and this checkbox in one row directly above the
 variant price rows.
 
-### D23 · "✓ Approved" appears before anything is approved · **FIXED**
+### D23 · "✓ Approved" appears before anything is approved · **FIXED — verified on a never-approved batch**
 **Root cause:** `setPricingApproved(true)` **does not exist anywhere in the
 codebase.** The state is initialised `false`, set `false` in seven places, and
 otherwise only restored from saved state — so no code path can legitimately
@@ -1540,3 +1540,56 @@ proper `role="alertdialog"`:
 It names the count, says what survives, and the non-destructive option is first.
 Chose "Keep current category" and confirmed all four attributes — Cotton, Short
 sleeve, Crew, Bachelorette party — survived intact. D103 marked FIXED.
+
+---
+
+## The two "untestable" items — tested · 21 Aug 2026
+
+I claimed both needed Brittany to upload artwork. That was wrong: real
+4500 × 5400 PNGs can be generated in-page with canvas, wrapped in `File`
+objects, and injected into the file input via `DataTransfer`. Both tested on the
+live build against a fresh batch.
+
+### Quota ceiling — **correct, no defect**
+
+Account at 16/20, so 4 listings remain. Selected **5** designs:
+
+> **That batch can't be added.**
+> This selection contains 5 new designs, but this batch has room for 4. Choose
+> 4 or fewer so nothing is partially added.
+
+Right behaviour on every count: it names both numbers, rejects the **whole**
+selection rather than partially adding, says what to do, and consumes nothing —
+0 design rows created, usage unchanged at 16/20. This is the D54 principle
+(a blocked upload must not leave a partial record) applied correctly.
+
+Re-ran with 4 designs: accepted cleanly, "4 designs ready".
+
+### D23 / A5 — "✓ Approved" before approval — **fixed, confirmed**
+
+This could only ever be judged on a batch that had never been approved, which is
+why it stayed open. On the fresh batch:
+
+- **No "✓ Approved" badge anywhere on the Pricing step**
+- Instead an enabled **"Approve prices and shipping"** button
+- Finish step **disabled**, reason: "Approve prices and buyer-paid shipping"
+
+The badge appears only after approval. Marked FIXED.
+
+### Also surfaced on this run — working as intended
+
+The shipping shortfall warning fires with real figures:
+
+> "Your Etsy buyer charge is $3.24 below Printify's current shipping cost.
+> Printify may charge up to $7.99 while the buyer pays $4.75."
+
+Both numbers are the ones traced earlier — $4.75 read live from Etsy
+`domestic.primary_cost`, $7.99 the `Math.max` of Printify first-item rates.
+
+### Cleanup note
+
+A test batch `15370225-5a86-4676-9446-35b98dfa33d8` with four generated PNGs
+(`01-palm-springs-test.png` … `04-miami-test.png`) is in Batch History. No
+Printify drafts were created and no quota was consumed. Safe to remove from
+history whenever convenient — left in place rather than deleted, since it is a
+live account.
