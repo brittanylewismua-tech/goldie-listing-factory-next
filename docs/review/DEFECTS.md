@@ -1771,3 +1771,13 @@ requires colours and a keyword bank.
 **This is the lesson from today, concretely.** D109 was found by reading the
 screen and looked fixed. D110 was only visible by clicking the control and
 checking the state four seconds later. Rendering was never the problem.
+
+### D111 · The workflow had no visible, safe restart path · **FIXED HERE** · **HIGH**
+
+The old “Clear batch + start over” control lived inside a progress header that
+the approved layout hides, so sellers had no visible exit once a batch was in
+progress. A subtle “Start a new batch” control now stays beside every workflow
+heading. It offers Cancel, Save to Batch History + start new, and Discard this
+batch + start new. Saving preserves the batch record and files; both restart
+paths preserve saved products, defaults, keyword banks, mockup sets, and any
+Printify drafts already created.

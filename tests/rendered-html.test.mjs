@@ -2141,3 +2141,17 @@ test("photo recommendations and defaults follow the saved product — D105",asyn
   assert.doesNotMatch(page,/3 lifestyle model mockups/);
   assert.doesNotMatch(page,/Printify flatlays of each color offered/);
 });
+
+test("restart is visible everywhere and preserves a batch only after saving — D111", async () => {
+  const [app, clarity] = await Promise.all([
+    readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8"),
+  ]);
+  assert.match(app, /workflow-restart-button[\s\S]{0,180}Start a new batch/);
+  assert.match(app, /Save to Batch History \+ start new/);
+  assert.match(app, /Discard this batch \+ start new/);
+  assert.match(app, /clearCurrentBatch\(true,preserveSavedBatch\)/);
+  assert.match(app, /if\(priorBatch&&!preserveSavedBatch\)/);
+  assert.match(app, /step:workflowStep/);
+  assert.match(clarity, /\.app-shell \.workflow-restart-button\{/);
+});

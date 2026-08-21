@@ -348,6 +348,9 @@ export default function ListingFactoryApp() {
   const [publishConfirmOpen,setPublishConfirmOpen]=useState(false);
   const [draftSaveOpen,setDraftSaveOpen]=useState(false);
   const [draftSavedOpen,setDraftSavedOpen]=useState(false);
+  const [restartBatchOpen,setRestartBatchOpen]=useState(false);
+  const [restartBatchName,setRestartBatchName]=useState("");
+  const [restartingBatch,setRestartingBatch]=useState(false);
   const [batchDisplayName,setBatchDisplayName]=useState("");
   const [savingDraftBatch,setSavingDraftBatch]=useState(false);
   const [keptAsDrafts,setKeptAsDrafts]=useState(false);
@@ -583,11 +586,11 @@ export default function ListingFactoryApp() {
 
   function updateDesign(id: string, change: Partial<DesignFile>) { const clearedChange=change.title!==undefined&&change.titleError===undefined?{...change,titleError:"",titleWarning:""}:change;const nextChange=clearedChange.title!==undefined&&titleCaps?{...clearedChange,title:clearedChange.title.replace(/\b[\p{L}\p{N}]/gu,character=>character.toLocaleUpperCase())}:clearedChange;setFiles((current) => current.map((file) => file.id === id ? { ...file, ...nextChange } : file)); if(nextChange.title!==undefined)setDrafts(current=>current.map(draft=>draft.clientId===id?{...draft,title:nextChange.title}:draft)); }
   function pulseTitle(id:string){setTitlePulseIds(current=>new Set(current).add(id));window.setTimeout(()=>setTitlePulseIds(current=>{const next=new Set(current);next.delete(id);return next}),520)}
-  function clearCurrentBatch(clearProduct=true){
+  function clearCurrentBatch(clearProduct=true,preserveSavedBatch=false){
     etsyProductBaseline.current=null;
     const priorBatch=batchIdRef.current;
-    if(priorBatch){void clearBatchFiles(priorBatch);void fetch(`/api/batches?id=${encodeURIComponent(priorBatch)}`,{method:"DELETE"})}
-    drafts.forEach(draft=>{if(draft.id)void fetch(`/api/etsy/images?productId=${encodeURIComponent(draft.id)}`,{method:"DELETE"})});
+    if(priorBatch&&!preserveSavedBatch){void clearBatchFiles(priorBatch);void fetch(`/api/batches?id=${encodeURIComponent(priorBatch)}`,{method:"DELETE"})}
+    if(!preserveSavedBatch)drafts.forEach(draft=>{if(draft.id)void fetch(`/api/etsy/images?productId=${encodeURIComponent(draft.id)}`,{method:"DELETE"})});
     batchIdRef.current="";window.localStorage.removeItem("goldie-active-batch");
     const freshUrl=new URL(window.location.href);freshUrl.searchParams.delete("batch");window.history.replaceState({},"",freshUrl);
     files.forEach(file=>URL.revokeObjectURL(file.previewUrl));
@@ -844,10 +847,12 @@ export default function ListingFactoryApp() {
   }
 
   function startOver() {
-    if((files.length||drafts.length||template)&&!window.confirm("Clear this batch and start over? This removes the selected product, uploaded designs, titles, pricing work, and draft results from Goldie. It does not delete products already created in Printify."))return;
-    clearCurrentBatch(true);
-    goToStep(connected?"setup":"connect",true,true);
+    setRestartBatchName(batchDisplayName||suggestedBatchName());
+    setRestartBatchOpen(true);
   }
+
+  function finishRestart(preserveSavedBatch=false){clearCurrentBatch(true,preserveSavedBatch);setRestartBatchOpen(false);setRestartBatchName("");goToStep(connected?"setup":"connect",true,true)}
+  async function saveAndRestart(){const name=restartBatchName.trim();if(!name)return;setRestartingBatch(true);try{const id=batchIdRef.current||crypto.randomUUID();batchIdRef.current=id;await saveBatchFiles(id,files.map(file=>file.file));if(!localPreview){const response=await fetch("/api/batches",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,status:"draft",step:workflowStep,setupName:name,productTitle:templateDetails?.blueprintTitle||"",designCount:files.length,state:{...batchStateSnapshot(),keptAsDrafts:true}})});if(!response.ok)throw new Error("Goldie could not save this batch.")}finishRestart(true)}catch(error){stopWith("This batch was not saved.",[error instanceof Error?error.message:"Try again in a moment."])}finally{setRestartingBatch(false)}}
 
   function openDraft(draft: DraftResult) {
     if (!draft.id || !draft.editorUrl) return;
@@ -918,6 +923,7 @@ export default function ListingFactoryApp() {
           <p className="hero-copy">{workflowHero.copy}</p>
           {workflowStep==="connect"&&<div className="value-proof" aria-label="What this batch supports"><span><b>Up to 20 designs</b><small>in one batch</small></span><span><b>Costs and fees</b><small>shown for every variant</small></span><span><b>You approve</b><small>before anything goes live</small></span></div>}
         </div>
+        <button className="workflow-restart-button" type="button" disabled={running} onClick={startOver}><span aria-hidden="true">↻</span> Start a new batch</button>
       </section>}
 
       {!returningHome&&<section className={`workspace ${complete&&workflowStep==="finish"&&finishPhase==="mockups"?"mockup-workspace":""}`}>
@@ -1132,6 +1138,8 @@ export default function ListingFactoryApp() {
       {draftSaveOpen&&<div className="publish-confirm-backdrop" role="presentation" onMouseDown={event=>{if(event.target===event.currentTarget&&!savingDraftBatch)setDraftSaveOpen(false)}}><section className="publish-confirm save-draft-modal" role="dialog" aria-modal="true" aria-labelledby="save-draft-title"><button type="button" className="missing-photo-close" aria-label="Close" disabled={savingDraftBatch} onClick={()=>setDraftSaveOpen(false)}>×</button><span className="publish-confirm-icon">✓</span><p className="mini-label">SAVE FOR LATER</p><h2 id="save-draft-title">Keep these listings as Printify drafts?</h2><p>Great—this batch will be waiting for you in Batch History. Nothing will publish to Etsy until you return and choose to publish it.</p><label><span>Name this batch</span><input autoFocus maxLength={160} value={batchDisplayName} onChange={event=>setBatchDisplayName(event.target.value)} placeholder="Example: Gildan Tee · Bachelorette designs"/><small>Goldie suggested a name from the saved product and first listing topic. Change it to anything you will recognize.</small></label><div className="publish-confirm-actions"><button disabled={savingDraftBatch} onClick={()=>setDraftSaveOpen(false)}>Cancel</button><button className="save-draft-confirm" aria-busy={savingDraftBatch} disabled={savingDraftBatch||!batchDisplayName.trim()} onClick={()=>void saveDraftBatch()}>{savingDraftBatch?"Saving batch…":"Save to Batch History"}</button></div></section></div>}
 
       {draftSavedOpen&&<div className="publish-confirm-backdrop" role="presentation"><section className="publish-confirm save-draft-success" role="dialog" aria-modal="true" aria-labelledby="draft-saved-title"><span className="publish-confirm-icon">✓</span><p className="mini-label">BATCH SAVED</p><h2 id="draft-saved-title">Great—this batch is waiting for you.</h2><p><b>{batchDisplayName}</b> is saved in Batch History. The products remain unpublished Printify drafts, and every title, Etsy detail, and photo choice will be here when you return.</p><div className="publish-confirm-actions"><button onClick={()=>setDraftSavedOpen(false)}>Keep working here</button><button className="save-draft-confirm" onClick={()=>{window.location.href="/batches"}}>View Batch History</button></div></section></div>}
+
+      {restartBatchOpen&&<div className="publish-confirm-backdrop" role="presentation" onMouseDown={event=>{if(event.target===event.currentTarget&&!restartingBatch)setRestartBatchOpen(false)}}><section className="publish-confirm restart-batch-modal" role="alertdialog" aria-modal="true" aria-labelledby="restart-batch-title"><button type="button" className="missing-photo-close" aria-label="Close" disabled={restartingBatch} onClick={()=>setRestartBatchOpen(false)}>×</button><span className="publish-confirm-icon" aria-hidden="true">↻</span><p className="mini-label">START A NEW BATCH</p><h2 id="restart-batch-title">What should Goldie do with this batch?</h2><p>Your saved products, product defaults, keyword banks, and mockup sets will stay exactly as they are.</p>{(files.length>0||drafts.length>0)&&<label><span>Name this batch before saving</span><input maxLength={160} value={restartBatchName} onChange={event=>setRestartBatchName(event.target.value)} placeholder="Example: Gildan Tee · Bachelorette designs"/></label>}<div className="restart-batch-actions"><button type="button" disabled={restartingBatch} onClick={()=>setRestartBatchOpen(false)}>Cancel</button>{(files.length>0||drafts.length>0)&&<button type="button" className="save-restart" aria-busy={restartingBatch} disabled={restartingBatch||!restartBatchName.trim()} onClick={()=>void saveAndRestart()}>{restartingBatch?"Saving…":"Save to Batch History + start new"}</button>}<button type="button" className="discard-restart" disabled={restartingBatch} onClick={()=>finishRestart(false)}>{files.length||drafts.length?"Discard this batch + start new":"Start new batch"}</button></div><small className="restart-printify-note">Existing Printify drafts are not deleted from Printify.</small></section></div>}
 
       {blockingModal&&<div className="publish-confirm-backdrop" role="presentation"><section className="publish-confirm blocking-modal" role="alertdialog" aria-modal="true" aria-labelledby="blocking-modal-title"><span className="publish-confirm-icon">!</span><p className="mini-label">REQUIRED BEFORE CONTINUING</p><h2 id="blocking-modal-title">{blockingModal.title}</h2>{blockingModal.copy&&<p>{blockingModal.copy}</p>}<div className="publish-missing"><b>Fix these items:</b><ul>{blockingModal.issues.map(issue=><li key={issue}>{issue}</li>)}</ul></div><div className="publish-confirm-actions"><button autoFocus onClick={()=>setBlockingModal(null)}>Got it. I’ll fix this</button></div></section></div>}
       {pendingCategoryChange&&<div className="publish-confirm-backdrop" role="presentation"><section className="publish-confirm" role="alertdialog" aria-modal="true" aria-labelledby="category-change-title"><span className="publish-confirm-icon">!</span><p className="mini-label">ETSY CATEGORY CHANGE</p><h2 id="category-change-title">Change this listing’s Etsy category?</h2><p>{pendingCategoryChange.clearedCount} completed {pendingCategoryChange.clearedCount===1?"field does":"fields do"} not exist in the new category and will be cleared. Any compatible values will stay filled.</p><div className="publish-confirm-actions"><button autoFocus onClick={()=>setPendingCategoryChange(null)}>Keep current category</button><button className="danger" onClick={()=>{const pending=pendingCategoryChange;setPendingCategoryChange(null);updateDesign(pending.designId,{etsy:pending.details,etsyError:""})}}>Change category and clear {pendingCategoryChange.clearedCount}</button></div></section></div>}

@@ -270,3 +270,18 @@
   text-underline-offset:3px;
 }
 .app-shell .manage-mockup-sets:hover{color:#4f2944}
+
+/* D111 · One quiet, persistent escape beside every workflow heading. */
+.app-shell .workflow-hero{position:relative}
+.app-shell .workflow-restart-button{position:absolute;top:4px;right:0;display:inline-flex;align-items:center;gap:6px;min-height:34px;padding:7px 11px;border:1px solid rgba(74,42,62,.16);border-radius:999px;background:rgba(255,255,255,.38);color:#66465d;font-size:10px;font-weight:650;cursor:pointer}
+.app-shell .workflow-restart-button:hover:not(:disabled){border-color:rgba(91,48,79,.34);background:rgba(255,255,255,.7);color:#4b2b42}
+.app-shell .workflow-restart-button:disabled{cursor:not-allowed;opacity:.48}
+.restart-batch-modal label{display:grid;gap:7px;margin-top:18px;text-align:left;color:#4b2b42;font-size:11px;font-weight:750}
+.restart-batch-modal input{width:100%;min-height:44px;padding:10px 12px;border:1px solid rgba(91,48,79,.22);background:#fff;color:#4b2b42}
+.restart-batch-actions{display:grid;gap:9px;margin-top:22px}
+.restart-batch-actions button{min-height:44px;padding:11px 14px;border-radius:6px;font-weight:700;cursor:pointer}
+.restart-batch-actions>button:first-child{border:1px solid rgba(91,48,79,.16);background:transparent;color:#65495d}
+.restart-batch-actions .save-restart{border:0;background:#5b304f;color:#fff}
+.restart-batch-actions .discard-restart{border:1px solid rgba(145,54,76,.25);background:#fff4f6;color:#8a3048}
+.restart-printify-note{display:block;margin-top:12px;color:#7a6574;font-size:10px}
+@media(max-width:760px){.app-shell .workflow-restart-button{position:static;margin-top:14px}.app-shell .workflow-hero{display:block}}
