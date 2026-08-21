@@ -1772,6 +1772,7 @@ requires colours and a keyword bank.
 screen and looked fixed. D110 was only visible by clicking the control and
 checking the state four seconds later. Rendering was never the problem.
 
+<<<<<<< Updated upstream
 ### D111 · The workflow had no visible, safe restart path · **FIXED HERE** · **HIGH**
 
 The old “Clear batch + start over” control lived inside a progress header that
@@ -1781,3 +1782,41 @@ sidebar on every step, including while a long step is scrolled. It offers Cancel
 batch + start new. Saving preserves the batch record and files; both restart
 paths preserve saved products, defaults, keyword banks, mockup sets, and any
 Printify drafts already created.
+=======
+---
+
+## Functional pass — operating controls, not reading them · 21 Aug 2026
+
+Every control below was **clicked or changed**, then the resulting state was
+measured. All values were restored afterwards.
+
+| control | test | result |
+|---|---|---|
+| Colour swatch | toggle on, toggle off | 4 → **5** → 4 ✓ |
+| Product description | edit, leave step, return | marker survived ✓ |
+| Remove design | click Remove | 2 rows → **1** ✓ |
+| Profit goal | $25 → $10 | profit $25.00 → **$10.00**, costs unchanged ✓ |
+| Whole-number pricing | toggle on at goal $11.37 | retail **$23.88 → $24.00**, **$25.93 → $26.00** ✓ |
+| Listing title | edit, change phase, return | survived ✓ |
+| Listing tags | edit, change phase, return | survived ✓ |
+| Etsy attribute | set Primary color = Beige | summary **5 of 11 → 6 of 11** ✓ |
+| Mockup set | set to empty | **reverted** ✗ → **D110** |
+
+### D111 · The Etsy details summary invents work that does not exist · **FIXED HERE** · **UX**
+
+Measured on a Gildan tee: **all 11 Etsy attribute fields are optional.**
+`required` is false on every one. The summary nonetheless read:
+
+> "Etsy details **5 of 11 set** · Cotton, Unisex, Short sleeve"
+
+A completion fraction over a set with nothing to complete. It reads as 45%
+done, six things outstanding. Across a 20-listing batch that is **120 chores
+that do not exist** — on the screen whose entire promise is doing less work.
+
+This is why "3 of 11 set" kept getting reported as a status contradiction (D16,
+P3): the number was never wrong, the framing was.
+
+**Fixed:** when a category genuinely has required attributes the summary counts
+those — *"2 of 3 required set"*. When it has none it states what was added and
+that the rest are optional — *"5 added · all optional"*.
+>>>>>>> Stashed changes

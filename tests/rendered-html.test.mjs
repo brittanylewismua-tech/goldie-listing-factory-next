@@ -1722,7 +1722,11 @@ test("remembers safe Etsy product defaults without design-specific assumptions",
   assert.match(page,/derived\.Size="Unisex"/);
   assert.match(page,/if\(firstPrepared\)await rememberEtsyDefaults\(firstPrepared\)/);
   assert.match(page,/className="etsy-details-editor"/);
-  assert.match(page,/completed\.length} of {properties\.length} set/);
+  /* Was "{completed.length} of {properties.length} set". Every attribute on a
+   * tee is optional, so that fraction read as 45% done and invented work that
+   * did not exist. Now counts required fields, or says the rest are optional.
+   * See D111. */
+  assert.match(page,/required\.length\?`\$\{requiredDone\.length\} of \$\{required\.length\} required set`/);
   assert.match(recipes,/etsyDefaults/);
   assert.match(styles,/\.etsy-details-editor>summary/);
 });

@@ -540,3 +540,20 @@ test("a cleared mockup selection stays cleared — D110", async () => {
   assert.doesNotMatch(page, /disabled=\{!complete&&\(!selectedColorIds\.length\|\|!autoTitleBankId\|\|!mockupTheme\)\}/,
     "Mockups are optional; gating the forward control on them makes 'no mockups' unreachable.");
 });
+
+test("the Etsy details summary does not invent work on optional-only fields — D111", async () => {
+  const page = await readFile(listingFactoryPage, "utf8");
+
+  /* Measured live on a Gildan tee: all 11 Etsy attribute fields are OPTIONAL —
+   * `required` is false on every one — yet the summary read "5 of 11 set".
+   * A completion fraction over a set with nothing to complete reads as 45%
+   * done. Across a 20-listing batch that manufactures 120 chores that do not
+   * exist, on the screen whose whole promise is doing less work.
+   *
+   * When a category genuinely has required attributes, count those. When it has
+   * none, say what was added and that the rest are optional. */
+  assert.match(page, /required\.length\?`\$\{requiredDone\.length\} of \$\{required\.length\} required set`:`\$\{completed\.length\} added · all optional`/,
+    "The summary must count required fields, or state that the rest are optional.");
+  assert.doesNotMatch(page, /<small>\{completed\.length\} of \{properties\.length\} set/,
+    "Counting every optional attribute as outstanding work is the D111 defect.");
+});
