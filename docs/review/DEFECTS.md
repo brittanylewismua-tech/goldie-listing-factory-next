@@ -1593,3 +1593,51 @@ A test batch `15370225-5a86-4676-9446-35b98dfa33d8` with four generated PNGs
 Printify drafts were created and no quota was consumed. Safe to remove from
 history whenever convenient — left in place rather than deleted, since it is a
 live account.
+
+---
+
+### D107 · Uploading designs spawns a second forward button that skips Colours and Mockups · **FIXED HERE** · **BLOCKER**
+
+**Brittany found this, after a full day of my testing. I should have caught it.**
+
+> "I just chose my saved listing, and then I uploaded my designs and hit next.
+> And it took me to titles and tags when I hadn't even been able to fill out
+> colors yet."
+
+Reproduced exactly on the live build. Measured vertical positions on the setup
+step, before and after uploading designs:
+
+| control / section | before upload | after upload |
+|---|---|---|
+| "Drop your designs here" | 934 | 934 |
+| **"Review this batch →"** *(enabled)* | — | **1548** |
+| **Colours** | 1445 | **1725** |
+| **Mockups** | 2185 | **2464** |
+| "Pick a keyword bank to continue →" *(disabled)* | 2884 | 3164 |
+
+The moment designs finish preparing, an **enabled** forward control appears
+**177px above the Colours heading**. Press it and you skip Colours and Mockups.
+
+The correct control is the one at the bottom — `.setup-forward` — which gates on
+`selectedColorIds.length && autoTitleBankId && mockupTheme` and names whichever
+is missing ("Choose product colors to continue" / "Pick a keyword bank to
+continue"). The designs-block button calls `continueFromDesigns` and bypasses
+all three gates.
+
+**Cause:** that button was correct when Designs was its own step. Moving the
+designs block onto the setup screen — above Colours and Mockups — turned a valid
+forward control into a trap. Nothing re-checked it after the layout changed.
+**Fifth instance of the same root cause:** a change was correct, and the thing
+that depended on it was never re-checked (D60, D95, D96, D100, D107).
+
+**Fixed:** the designs-block forward button no longer renders on the setup step.
+The single gated control at the bottom is the only way forward.
+
+**Rule, now pinned by a test:** *a step may present one forward control, and it
+must sit after every section it depends on.*
+
+**Why my testing missed it:** I navigated between steps by clicking the rail,
+not by pressing the forward button a seller would press. Rail clicks call
+`goToStep`, which runs the gates; the in-page button calls its own handler,
+which does not. Auditing navigation without using the actual forward control
+cannot find this class of defect.

@@ -463,3 +463,31 @@ test("unfinished setup items are not formatted as settled values — D101", asyn
     "The summary is repeating the instruction the alert below it already gives.");
   assert.match(clarity, /\.setup-todo\{[\s\S]*color:#8a5a12/);
 });
+
+test("the setup step has exactly one forward control, and it gates every section — D107", async () => {
+  const page = await readFile(listingFactoryPage, "utf8");
+
+  /* Reported by Brittany after a full day of testing, which is the worst way to
+   * find it. Choose a saved product, upload designs, press the button that
+   * appears — and you land past Colours and Mockups without ever seeing them.
+   *
+   * Measured on the live build. Uploading designs spawned a SECOND, enabled
+   * forward control inside the designs block:
+   *   "Review this batch →"                  enabled,  top 1548
+   *   "Colours"  heading                                top 1725
+   *   "Mockups"  heading                                top 2464
+   *   "Pick a keyword bank to continue →"    disabled, top 3164
+   *
+   * The correct control is the bottom one — `.setup-forward` gates on
+   * selectedColorIds AND autoTitleBankId AND mockupTheme and names whichever is
+   * missing. The designs-block button calls continueFromDesigns and bypasses
+   * all three. It was correct when Designs was its own step; embedding the
+   * designs block above Colours on the setup screen turned it into a trap.
+   *
+   * RULE: a step may present one forward control, positioned after every
+   * section it depends on. */
+  assert.match(page, /\{workflowStep!=="setup"&&<button className="workflow-next" disabled=\{!designsFinished\} onClick=\{continueFromDesigns\}>/,
+    "The designs-block forward button renders on the setup step again, above Colours and Mockups.");
+  // the real gate must keep naming what is missing
+  assert.match(page, /!selectedColorIds\.length\?"Choose product colors to continue":!autoTitleBankId\?"Pick a keyword bank to continue"/);
+});
