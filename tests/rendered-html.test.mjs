@@ -917,10 +917,10 @@ test("handles up to eight lifestyle mockups in a reliable queue and shows the re
   assert.match(mockups, /next\.size>=MAX_MOCKUPS_PER_LISTING/);
   assert.match(mockups, /runBounded\(jobs,2/);
   assert.match(mockups, /withRecovery/);
-  assert.match(page, /Recommended listing photo mix/);
-  assert.match(page, /3 lifestyle model mockups/);
-  assert.match(page, /Printify flatlays of each color offered/);
-  assert.match(page, /1 item-specific size guide/);
+  assert.match(page, /Recommended photos for \{templateDetails\?\.blueprintTitle/);
+  assert.match(page, /Lifestyle scenes that match this exact garment type/);
+  assert.match(page, /Room scenes that show realistic scale/);
+  assert.match(page, /An in-use scene that matches this exact drinkware/);
 });
 
 test("enforces paid-plan usage on the server and exposes honest usage", async()=>{
@@ -2100,4 +2100,14 @@ test("changing Etsy category preserves compatible values and warns before cleari
   assert.match(page,/Keep current category/);
   assert.match(page,/finishPhase!=="etsy"\|\|etsyCategories\.length/,
     "Restored batches must load the full category list so the visible category control can actually change.");
+});
+
+test("photo recommendations and defaults follow the saved product — D105",async()=>{
+  const page=await readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8");
+  assert.match(page,/function productPhotoGuide\(blueprintTitle:string,availableCount:number\)/);
+  assert.match(page,/productFamily\(blueprintTitle\)/);
+  assert.match(page,/Recommended photos for \{templateDetails\?\.blueprintTitle/);
+  assert.match(page,/setPrintifyImageSelections\(defaults\)/);
+  assert.doesNotMatch(page,/3 lifestyle model mockups/);
+  assert.doesNotMatch(page,/Printify flatlays of each color offered/);
 });

@@ -283,7 +283,7 @@ test("keeps Step 8 controls ordered, separated, and inside the warm Goldie palet
   assert.match(css, /\.app-shell \.inline-mockup-grid label\.selected\{[\s\S]*border-color:#b777b0!important/);
   assert.match(css, /\.app-shell \.post-draft-workspace>\.mockup-next\{[\s\S]*margin:34px auto 16px!important/);
   assert.match(css, /\.app-shell \.publish-live-warning\{[\s\S]*rgba\(239,211,237,\.66\)/);
-  assert.match(page, /Recommended listing photo mix/);
+  assert.match(page, /Recommended photos for \{templateDetails\?\.blueprintTitle/);
   assert.match(css, /\.post-draft-heading \.open-all-button:after\{content:"Open all listings to review in Printify"/);
   assert.match(css, /\.integrated-mockups \.batch-mockup-button,[\s\S]*width:min\(100%,290px\)!important/);
   assert.match(css, /\.integrated-mockups \.generate-inline\{margin:16px 0 0!important\}/);

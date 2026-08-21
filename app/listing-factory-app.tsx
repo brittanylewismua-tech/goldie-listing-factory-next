@@ -20,6 +20,7 @@ import { GoldieCommandBar } from "./returning-command-center";
 import FinalListingReview from "./final-listing-review";
 import ContextHelp from "./context-help";
 import GoldieWordmark from "./goldie-wordmark";
+import { productFamily } from "./product-type-utils";
 
 type VisibleBounds={left:number;top:number;right:number;bottom:number};
 
@@ -59,6 +60,16 @@ function preserveCompatibleEtsyProperties(current:EtsyPropertySelection[],next:E
   });
   const clearedCount=current.filter(property=>property.value.trim()&&!preservedIds.has(property.propertyId)).length;
   return {properties,clearedCount};
+}
+
+function productPhotoGuide(blueprintTitle:string,availableCount:number){
+  const count=Math.max(1,Math.min(5,availableCount||1)),family=productFamily(blueprintTitle);
+  if(["tee","hoodie","crewneck","tank","longSleeve"].includes(family))return {count,items:["A clear front product view","Available angles or colour views that show the real garment","Lifestyle scenes that match this exact garment type","A size guide when buyers need sizing help"]};
+  if(family==="poster")return {count,items:["A clear straight-on artwork view","Available framed or unframed Printify views","Room scenes that show realistic scale","A size reference when sizes vary"]};
+  if(family==="mug"||family==="tumbler")return {count,items:["A clear view of the full design","Available opposite-side and handle or lid angles","An in-use scene that matches this exact drinkware","A size or capacity reference when useful"]};
+  if(family==="tote")return {count,items:["A clear front view of the full design","Available side or detail views","An in-use scene that shows the bag’s scale","A size reference when useful"]};
+  if(family==="sticker")return {count,items:["A clear close-up of the full design","Available Printify product views","An application scene that shows realistic scale"]};
+  return {count,items:["The clearest available Printify product view","Available alternate angles that add new information","A product-appropriate lifestyle scene","A size or scale reference when useful"]};
 }
 
 function friendlyShippingProfileTitle(title?:string){if(!title)return"Shipping profile needed";if(/^standard:/i.test(title))return"Standard shipping";return title.length>42?`${title.slice(0,39).trim()}…`:title}
@@ -367,6 +378,7 @@ export default function ListingFactoryApp() {
 
   useEffect(()=>{if(imageStepError&&allCreatedListingsHaveImages())setImageStepError("")},[imageStepError,printifyImageIndices,printifyImageSelections,preparedMockupCounts,drafts]);
   useEffect(()=>{if(finishPhase!=="etsy"||etsyCategories.length)return;const restored=files.find(file=>file.etsy)?.etsy;if(!restored)return;void resolveEtsyOptions(restored,restored.taxonomyId).catch(()=>undefined)},[finishPhase,etsyCategories.length,files]);
+  useEffect(()=>{if(finishPhase!=="mockups"||printifyImageIndices.length||Object.keys(printifyImageSelections).length)return;const guide=productPhotoGuide(templateDetails?.blueprintTitle||"",drafts.find(draft=>draft.printifyImages?.length)?.printifyImages?.length||0),defaults=Object.fromEntries(drafts.filter(draft=>draft.id&&draft.status==="Created"&&draft.printifyImages?.length).map(draft=>[draft.id!,Array.from({length:Math.min(guide.count,draft.printifyImages!.length)},(_,index)=>index)]));if(Object.keys(defaults).length)setPrintifyImageSelections(defaults)},[finishPhase,printifyImageIndices.length,printifyImageSelections,drafts,templateDetails?.blueprintTitle]);
   useEffect(()=>{const created=drafts.filter(draft=>draft.status==="Created"&&draft.id).map(draft=>draft.id!);setSelectedPublishIds(current=>[...new Set([...current.filter(id=>created.includes(id)),...created])])},[drafts]);
   useEffect(()=>{const select=(event:Event)=>setSelectedPublishIds((event as CustomEvent<string[]>).detail||[]),retry=(event:Event)=>{const clientId=(event as CustomEvent<string>).detail;const design=files.find(file=>file.id===clientId);if(design)void runDrafts([design],true)};window.addEventListener("goldie-publish-selection",select);window.addEventListener("goldie-retry-listing",retry);return()=>{window.removeEventListener("goldie-publish-selection",select);window.removeEventListener("goldie-retry-listing",retry)}},[files,drafts]);
 
@@ -1079,7 +1091,7 @@ export default function ListingFactoryApp() {
         </div>
       </section>}
 
-      {complete && workflowStep==="finish" && finishPhase==="mockups" && <details className="recommended-listing-photos"><summary>Recommended listing photo mix</summary><ul><li>3 lifestyle model mockups</li><li>Printify flatlays of each color offered</li><li>1 item-specific size guide</li></ul></details>}
+      {complete && workflowStep==="finish" && finishPhase==="mockups" && (()=>{const available=drafts.find(draft=>draft.printifyImages?.length)?.printifyImages?.length||0,guide=productPhotoGuide(templateDetails?.blueprintTitle||"",available);return <details className="recommended-listing-photos"><summary>Recommended photos for {templateDetails?.blueprintTitle||"this product"}</summary><p>Goldie found {available} Printify {available===1?"view":"views"} and starts with the best available {Math.min(guide.count,available)}. Change any selection below.</p><ul>{guide.items.map(item=><li key={item}>{item}</li>)}</ul></details>})()}
       {complete && workflowStep==="finish" && finishPhase==="mockups" && <section className="post-draft-workspace">
         <div className="post-draft-heading"><div><h2>Review placement and choose listing images.</h2><p>The large preview below is the real Printify placement Goldie uses as the required reference for lifestyle mockups.</p></div>{drafts.filter(draft=>draft.status==="Created").length>1&&<button className="open-all-button" onClick={openAllDrafts}>Open all in Printify</button>}</div>
         <section className="batch-size-guide"><div><p className="mini-label">OPTIONAL · APPLY TO THE WHOLE BATCH</p><h3>Add one size guide to every Etsy listing</h3><span>Choose it once. Goldie attaches it to every listing in this batch automatically when you publish.</span></div><input ref={sizeGuidePicker} type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={event=>{const file=event.target.files?.[0];if(file)void applySizeGuide(file)}}/><button onClick={()=>sizeGuidePicker.current?.click()}>{sizeGuideName?"Replace size guide":"Choose size guide"}</button>{sizeGuideStatus&&<p role="status">{sizeGuideStatus}</p>}</section>

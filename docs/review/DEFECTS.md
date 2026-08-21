@@ -1400,7 +1400,7 @@ used at publish becomes the next saved default. This matches the remembered
 colour behavior instead of showing “Not chosen” under a promise that Goldie
 started with the last batch's choices.
 
-### D103 · Changing Etsy category discards fields without warning · **OPEN** · **MEDIUM**
+### D103 · Changing Etsy category discards fields without warning · **FIXED** · **MEDIUM**
 
 Formerly `UX-DIRECTION.md` Part C, C1. The category change correctly requests
 the new taxonomy and replaces the old category-specific property collection,
@@ -1413,13 +1413,19 @@ category, state how many values will be cleared, and require confirmation when
 the count is nonzero. Preserve values whose property and allowed value still
 exist in the new category.
 
+**Verified live:** changed a restored Gildan Tee listing toward Adult Bibs. The
+dialog correctly reported that five completed fields would be cleared. Choosing
+“Keep current category” closed the dialog and the row still read **6 of 11 set ·
+Cotton, Unisex, Short sleeve**. The restored category list contained 2,503 real
+options, so the D106 fallback is no longer a one-option dead end.
+
 ### D104 · Collapsed Etsy-detail summaries had no durable editing path · **FIXED**
 
 Formerly `UX-DIRECTION.md` Part C, C3. Each listing summary expands in place to
 the full Etsy field set, remains open while keyed row updates render, and its
 `x of y set` summary updates from the current properties.
 
-### D105 · Photo recommendations are still T-shirt-specific · **OPEN** · **MEDIUM**
+### D105 · Photo recommendations are still T-shirt-specific · **FIXED HERE** · **MEDIUM**
 
 Formerly `UX-DIRECTION.md` Part C, C4. The Images + mockups phase still displays
 a fixed recommendation — three lifestyle model mockups, flatlays for each
@@ -1430,6 +1436,13 @@ mug, poster, tote, or another blueprint.
 mockup types for the selected blueprint. Use a ranked preference list that
 degrades to the best available images and never produces zero recommended
 photos merely because a product has no on-model scenes.
+
+**Fixed:** the recommendation now follows the saved product family (apparel,
+poster, drinkware, tote, sticker, or a product-safe fallback), reports the real
+number of available Printify views, and preselects up to five of the best
+available views only when the seller has not already chosen or cleared photos.
+No product is told to use a T-shirt model or clothing flatlay unless it is an
+apparel blueprint.
 
 ### Blank first paint — watch, not yet reproducible
 
