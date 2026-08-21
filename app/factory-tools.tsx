@@ -15,6 +15,7 @@ export type KeywordList = { id: string; name: string; keywords: string[] };
 
 type WorkflowProps = {
   connected: boolean; templateUrl: string; templateVerified: boolean; loadingTemplate: boolean;
+  selectedProductId:string;
   verifiedShippingProfileId:number;
   onTemplateUrl: (value: string) => void; onUseRecipe: (recipe: Recipe) => Promise<boolean>;onUseBundle:(bundle:ProductBundle,recipes:Recipe[])=>Promise<boolean>; onStartNewProduct: () => boolean; onChangeProduct: () => boolean; onVerifyTemplate: (url: string) => Promise<{shippingTemplateId:string;shippingProfileNeedsSelection?:boolean}|null>;
 };
@@ -30,6 +31,7 @@ export function SavedWorkflow(props: WorkflowProps) {
   const reload = () => Promise.all([fetch("/api/product-recipes").then((r) => r.json()),fetch("/api/product-bundles").then(r=>r.json())]).then(([products,groups])=>{setRecipes(products.recipes||[]);setBundles(groups.bundles||[])}).catch(() => undefined);
 
   useEffect(() => { reload(); fetch("/api/keyword-lists").then(r=>r.json()).then(r=>setKeywordLists(r.lists||[])); }, []);
+  useEffect(()=>setActiveId(props.selectedProductId),[props.selectedProductId]);
   async function save() {
     if(actionLock.current)return;
     actionLock.current=true;setPendingAction("save-product");

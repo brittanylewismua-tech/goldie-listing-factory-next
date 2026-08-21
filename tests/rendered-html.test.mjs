@@ -1831,7 +1831,9 @@ test("keeps product creation visible and lets a selected product be changed (fix
   assert.match(workflow,/＋ Add another product/);
   assert.match(workflow,/className="change-product"[\s\S]{0,300}Change product/);
   assert.match(workflow,/onChangeProduct: \(\) => boolean/);
+  assert.match(workflow,/useEffect\(\(\)=>setActiveId\(props\.selectedProductId\),\[props\.selectedProductId\]\)/);
   assert.match(app,/onChangeProduct=\{changeProduct\}/);
+  assert.match(app,/selectedProductId=\{activeBundle\?`bundle:\$\{activeBundle\.id\}`:activeRecipe\?\.id\|\|""\}/);
   assert.match(app,/function changeProduct\(\)[\s\S]{0,400}clearCurrentBatch\(true\);return true/);
   assert.doesNotMatch(css,/data-product-selected="true"\] \.recipe-library-head/);
 });
