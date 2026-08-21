@@ -277,7 +277,7 @@ test("stages each finished mockup group for its exact Etsy listing", async () =>
 test("renders Mockup Sets as management only", async () => {
   const response = await render("/mockups");
   const html = await response.text();
-  assert.match(html, /Manage your mockup sets/);
+  assert.match(html, /Your mockup library/);
   assert.match(html, /Add mockup set/);
   assert.match(html, /class="management-nav"/);
   assert.match(html, />Listing Factory<\/a>/);
@@ -1491,8 +1491,9 @@ test("shows each saved mockup once with visible controls and a real enlarged pre
     readFile(new URL("../app/mockups/management.css",import.meta.url),"utf8"),
   ]);
   const managementMarkup=page.slice(page.indexOf('managementSetList'),page.indexOf('{showAddSet&&'));
-  assert.doesNotMatch(managementMarkup,/setPreview/);
-  assert.doesNotMatch(managementMarkup,/items\.slice\(0,3\)/);
+  assert.match(managementMarkup,/setPreview/);
+  assert.match(managementMarkup,/items\.slice\(0,5\)/);
+  assert.match(managementMarkup,/!open&&/);
   assert.match(managementMarkup,/savedMockupPreview/);
   assert.match(page,/libraryPreview\.src/);
   assert.match(page,/previewSavedSelection/);
@@ -1598,7 +1599,8 @@ test("protects batch allowance and lets sellers review uploaded designs",async()
   assert.match(page,/Plan allowance/);
   assert.match(page,/removeDesign/);
   assert.match(page,/design-upload-review/);
-  assert.match(styles,/\.design-upload-review/);
+  assert.match(styles,/\.design-upload-review article\{grid-template-columns:76px/);
+  assert.match(styles,/\.design-upload-review img\{width:76px!important;height:76px/);
 });
 
 test("remembers safe Etsy product defaults without design-specific assumptions",async()=>{

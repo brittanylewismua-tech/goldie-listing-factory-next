@@ -1434,6 +1434,35 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .app-shell .draft-mockups>summary{font-size:0!important}
 .app-shell .draft-mockups>summary:after{content:"Create lifestyle mockups from your Mockup Library (optional)";font-size:11px;font-weight:850}
 
+/* PASS 2A layout: D13, D14 and D50. */
+.app-shell .everything-else{border-radius:18px 18px 0 0!important}
+.app-shell .everything-else-body>section:nth-of-type(3){grid-template-columns:minmax(0,1fr)!important;align-items:stretch!important}
+.app-shell .everything-else-body>section:nth-of-type(3)>select{width:100%!important;max-width:none!important}
+.app-shell .everything-else-body>section:nth-of-type(3)>.save-product-default{justify-self:start!important}
+.app-shell .description-default-editor textarea{min-height:190px!important;max-height:420px!important;overflow-y:scroll!important;resize:vertical!important;scrollbar-gutter:stable!important;line-height:1.55!important}
+.app-shell .saved-settings-summary{width:min(980px,calc(100% - 32px))!important;margin:-15px auto 12px!important;padding:0 21px 17px!important;border:1px solid rgba(91,48,79,.18)!important;border-top:0!important;border-radius:0 0 18px 18px!important;background:rgba(255,255,255,.62)!important;box-shadow:0 12px 35px rgba(91,48,79,.07)!important}
+.app-shell .saved-settings-summary span{background:#fff!important}
+
+/* PASS 2B title-row geometry: D59 and D60. */
+.app-shell .listing-editor .design-line{grid-template-columns:56px minmax(0,1fr)!important;grid-template-rows:auto auto!important;align-items:start!important}
+.app-shell .listing-editor .design-fields,.app-shell .listing-editor .design-line.active .design-fields{grid-template-columns:minmax(0,1fr)!important;width:100%!important}
+.app-shell .listing-editor .design-fields>label{grid-column:1!important;width:100%!important}
+.app-shell .listing-editor .design-fields input{width:100%!important}
+.app-shell .listing-editor .quality-pill{grid-column:2!important;grid-row:2!important;justify-self:end!important;width:auto!important;min-height:0!important;padding:5px 9px!important;border-radius:999px!important}
+.app-shell .listing-editor .quality-pill b{white-space:nowrap!important;font-size:9px!important;line-height:1.2!important}
+.app-shell .listing-editor .quality-pill small{display:none!important}
+
+/* PASS 2C remaining layout defects: D31 and D70. */
+.app-shell .design-upload-review article{grid-template-columns:76px minmax(0,1fr) auto!important;min-height:94px!important}
+.app-shell .design-upload-review img{width:76px!important;height:76px!important;object-fit:contain!important;border-radius:8px!important}
+.app-shell .individual-size-guide{display:flex!important;align-items:center!important;min-height:0!important;margin-top:12px!important;padding:5px 2px!important;border:0!important;border-radius:0!important;background:transparent!important}
+.app-shell .individual-size-guide>div{display:flex!important;align-items:center!important;gap:7px!important}
+.app-shell .individual-size-guide b{display:none!important}
+.app-shell .individual-size-guide small{font-size:9px!important;font-weight:750!important}
+.app-shell .individual-size-guide button{min-height:0!important;margin-left:auto!important;padding:4px 0!important;border:0!important;background:transparent!important;box-shadow:none!important;color:#68445f!important;font-size:9px!important;text-decoration:underline!important;text-underline-offset:3px!important}
+.app-shell .individual-size-guide p{flex-basis:100%!important}
+.managementOnly .managementSetList .setPreview{grid-template-columns:repeat(5,minmax(0,1fr))!important;gap:5px!important}
+
 /* Audit pass 2: the frequent action is primary; setup and destructive actions recede. */
 .app-shell[data-product-selected="true"] .recipe-library-head,
 .app-shell[data-product-selected="true"] .recipe-tile:not(.selected),

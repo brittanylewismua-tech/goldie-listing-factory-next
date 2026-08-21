@@ -162,7 +162,7 @@ priority; this placement works against that.
 *These only appear after clicking Edit. Found by opening the panel, not by
 reading the page at rest.*
 
-### D13 · The shipping profile row is broken · OPEN
+### D13 · The shipping profile row is broken · **FIXED**
 **Wrong:** "Shipping profile" wraps onto two lines inside a collapsed ~60px label
 column, and its helper text renders as a vertical ribbon beside the dropdown —
 "The am… cus… pays… separate from item profit." — one or two words per line.
@@ -170,7 +170,7 @@ Every other field in the panel is full-width and stacked; this row alone uses a
 two-column layout whose left column has collapsed.
 **Fix:** make it match the other fields — label above, control below, full width.
 
-### D14 · Product description textarea clips its own content · OPEN
+### D14 · Product description textarea clips its own content · **FIXED**
 **Wrong:** text runs off the bottom mid-word ("…personalized appare"), with no
 visible scrollbar and no resize affordance.
 **Fix:** taller default, visible scroll, or auto-grow.
@@ -255,7 +255,7 @@ are ready 3/3" with a progress bar · "3/7 designs available this batch".
 Its title becomes "3 of 20 designs ready" after upload while the adjacent card
 still reads "Choose individual images".
 
-### D31 · Design thumbnails are ~40px circles · OPEN
+### D31 · Design thumbnails are ~40px circles · **FIXED**
 Too small to tell twenty similar designs apart.
 **Fix:** square, ~72px, artwork edge to edge.
 
@@ -316,7 +316,7 @@ already in the title prompt, applied one step earlier where it can be fixed.
 
 ## Mockup Sets
 
-### D42 · A set containing 10 mockups displays zero mockups · OPEN
+### D42 · A set containing 10 mockups displays zero mockups · **FIXED**
 "BACH TEES / 10 mockups" above ~200px of empty white. A visual library showing no
 visuals.
 **Fix:** thumbnail strip of the first 4–5 on the card face.
@@ -401,7 +401,7 @@ All on screen simultaneously:
 apart. Worse than the four-readout version originally logged as D28.
 **Fix:** one line, using the binding constraint.
 
-### D50 · The "Everything else" chips float outside their own card · OPEN
+### D50 · The "Everything else" chips float outside their own card · **FIXED**
 The header row ("Everything else · Edit") is a card; the chips beneath it
 ($10 profit, Standard shipping, Description ready, Etsy details 3 of 11 set) sit
 on the page background below it, visually orphaned.
@@ -497,7 +497,7 @@ quality pill   116 x 171 px            <- a two-word status
 title input    222 px wide, 15px font
 ```
 
-### D59 · A status badge is 171px tall; the content it sits beside is 70px · OPEN
+### D59 · A status badge is 171px tall; the content it sits beside is 70px · **FIXED**
 The DPI pill renders "243 DPI · review before printing" stacked over four lines,
 plus "Medium resolution · 300 DPI recommended" beneath it. At **171px tall** it
 sets the row height single-handedly — the row is 193px while its actual content
@@ -509,7 +509,7 @@ At 20 listings that is ~2,500px of nothing.
 other counts. Row height drops to roughly 80px. Twenty listings goes from
 ~3,900px of scroll to ~1,600px.
 
-### D60 · The title field truncates the thing you are here to review · OPEN
+### D60 · The title field truncates the thing you are here to review · **FIXED**
 The title input is **222px** — it shares the 442px fields column with tags. Etsy
 titles run to 140 characters; 222px at 15px shows roughly 30. Every row reads
 "Palm Springs Bachelor…", "Nashville Bachelorette …", "Bachelorette Koozies, …".
@@ -602,7 +602,7 @@ sliver visible where it overflows its container.
 
 Same pattern as D8 and D62.
 
-### D70 · Three size-guide controls on one screen · OPEN
+### D70 · Three size-guide controls on one screen · **FIXED**
 A batch-level "Choose size guide", a per-listing "Size guide for this listing ·
 Using the batch size guide", and "Use a different size guide". The hierarchy is
 correct but three controls for one concept on one screen needs collapsing.
