@@ -126,3 +126,26 @@ test("no management screen relies on scrollIntoView — it is clipped away", asy
       `${file} asks for a smooth scroll. Verified live: smooth scrolling never moves these pages. Scroll instantly.`);
   }
 });
+
+test("a thin title fails on its own length, not on phrase count — D77", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const route = await readFile(new URL("../app/api/listing-intelligence/route.ts", import.meta.url), "utf8");
+
+  /* D77 is about listings that come out thin: one row produced 45 of 140
+   * characters while its siblings produced 130.
+   *
+   * The first attempt to enforce this gated on phrase count (>=8). Measured
+   * live on a real 3-design batch, that FAILED 2 of 3 listings — one of them
+   * because it returned "7 of 8 required title phrases and 13 of 13 available
+   * Etsy tags". Seven phrases and a full tag set is a good listing. Refusing
+   * to build it is worse than the defect being fixed.
+   *
+   * The gate must judge the assembled title. */
+  assert.match(route, /const TITLE_FILL_FLOOR=90;/);
+  assert.match(route, /if\(couldHaveDoneBetter&&title\.length<TITLE_FILL_FLOOR\)/,
+    "The failure gate must test the finished title's length.");
+  assert.doesNotMatch(route, /selected\.length<minimumTitlePhrases\|\|tags\.length<requiredTagCount\)return NextResponse/,
+    "Hard-failing a row on phrase count rejects good listings. Judge the assembled title instead.");
+  // The retry itself may still use phrase count — it is cheap and harmless.
+  assert.match(route, /selection=await requestSelection\(1\)/);
+});

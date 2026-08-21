@@ -2051,7 +2051,12 @@ test("retries thin AI title output once and then rejects the row (fixes D77)",as
   assert.match(route,/minimumTitlePhrases=titleCandidates\.length>=8\?8:1/);
   assert.match(route,/requiredTagCount=Math\.min\(13,tagCandidates\.length\)/);
   assert.match(route,/selection=await requestSelection\(0\);if\(selection\.selected\.length<minimumTitlePhrases\|\|selection\.tags\.length<requiredTagCount\)selection=await requestSelection\(1\)/);
-  assert.match(route,/after two attempts/);
+  /* The retry still fires on phrase count — cheap and harmless. But the row is
+   * only REJECTED on the assembled title's length. Gating rejection on phrase
+   * count failed 2 of 3 real listings, one at "7 of 8 required title phrases
+   * and 13 of 13 available Etsy tags". See D77 in DEFECTS.md. */
+  assert.match(route,/if\(couldHaveDoneBetter&&title\.length<TITLE_FILL_FLOOR\)/);
+  assert.match(route,/of 140 title characters for this design/);
   assert.doesNotMatch(route,/tagCandidates\.filter\(candidate=>!rankedTags\.includes\(candidate\)\)/);
   assert.match(app,/titleError:item\.error/);
   assert.match(app,/each affected listing explains why below/);

@@ -1110,3 +1110,34 @@ background goes dark again without the text following it.
 
 **Same root cause as D94:** a change was made correctly, and the thing that
 depended on it was never re-checked.
+
+### D77 follow-up · The fix failed 2 of 3 real listings · **FIXED HERE** · **BLOCKER**
+
+`842c8ba` / `3906b1c` enforced D77 by requiring at least 8 title phrases and
+every available tag, retrying once, then rejecting the row.
+
+**Measured on a live 3-design batch:**
+
+> "1 titles created. 2 need another try; each affected listing explains why below."
+
+The row error:
+
+> "It found **7 of 8** required title phrases and **13 of 13** available Etsy tags."
+
+Seven phrases and a complete tag set is a good listing. The gate rejected it for
+being one phrase under an arbitrary count. **Before the fix, D77 meant some
+listings came out thin. After it, listings failed to generate at all** — 2 of 3,
+on the same bank and product that previously produced 3 usable titles.
+
+The count was never the thing that mattered. D77's actual symptom is a title
+that comes out at **45 of 140 characters** while its siblings hit 130.
+
+**Fixed:** the retry still fires on phrase count — cheap and harmless — but the
+row is rejected only when the *assembled title* comes in under **90 of 140
+characters** and the bank had 8+ phrases fitting the product. A 7-phrase,
+130-character title now passes, which is correct. The error names real numbers:
+*"Goldie built only 45 of 140 title characters for this design from 2 phrases."*
+
+**This is the third time today a fix was verified by reading the code rather
+than running it.** It passed review, passed its own tests, and broke two thirds
+of a batch on first contact.
