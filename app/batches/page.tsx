@@ -6,7 +6,7 @@ export default function BatchesPage() {
   const [batches,setBatches] = useState<Batch[]>([]);
   const [loading,setLoading] = useState(true);
   useEffect(() => { fetch("/api/batches").then(response => response.json()).then(data => setBatches(data.batches || [])).finally(() => setLoading(false)); }, []);
-  function resume(id:string) { window.location.href = `/listing-factory?batch=${encodeURIComponent(id)}`; }
+  function resume(id:string) { window.location.href = `/listing-factory?batch=${encodeURIComponent(id)}&open=results`; }
   async function remove(batch:Batch) {
     if (!window.confirm(`Remove “${batch.setup_name || batch.product_title || "Untitled batch"}” from Goldie history? This does not delete products from Printify or listings from Etsy.`)) return;
     const response=await fetch(`/api/batches?id=${encodeURIComponent(batch.id)}`,{method:"DELETE"});

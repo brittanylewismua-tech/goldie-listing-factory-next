@@ -1776,3 +1776,13 @@ test("renders every Finish phase as compact expandable rows",async()=>{
   assert.match(css,/\.final-listing-card/);
   assert.match(review,/loading="lazy"/);
 });
+
+test("restores completed draft batches to reachable Finish results (fixes D53)",async()=>{
+  const [app,batches]=await Promise.all([readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8"),readFile(new URL("../app/batches/page.tsx",import.meta.url),"utf8")]);
+  assert.match(app,/hasCreatedDrafts=complete&&drafts\.some\(draft=>draft\.status==="Created"\)/);
+  assert.match(app,/if\(!pricingApproved\)setPricingApproved\(true\)/);
+  assert.match(app,/url\.searchParams\.set\("step","finish"\)/);
+  assert.match(app,/setWorkflowStep\("finish"\)/);
+  assert.match(app,/if\(complete&&drafts\.some\(draft=>draft\.status==="Created"\)&&!pricingApproved\)setPricingApproved\(true\)/);
+  assert.match(batches,/&open=results/);
+});

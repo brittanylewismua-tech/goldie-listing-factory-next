@@ -13,7 +13,7 @@ Last verified against the live site and `main`: 20 Aug 2026.
 
 ## Blocking
 
-### D53 · A resumed batch cannot reach its own drafts · OPEN · **WORST DEFECT FOUND**
+### D53 · A resumed batch cannot reach its own drafts · **FIXED** · **WORST DEFECT FOUND**
 
 **Symptom.** Open a batch from Batch History that already has Printify drafts:
 - The card's button says **"Open results"** — it lands you on **step 3, "Add your designs."**
@@ -61,6 +61,11 @@ is exactly the path Batch History advertises.
    and only reveals the reason if you force the route.
 
 **Also fix the label:** "Open results" must open the results, not step 3.
+
+**Fixed:** Created drafts now establish that their validated pricing was
+approved, including after restoration. Batch History carries an explicit
+results intent; completed draft runs open their saved Finish phase, while an
+unfinished batch safely discards that intent and resumes its saved step.
 
 
 ### D1 · No forward button once a batch has drafts · OPEN
