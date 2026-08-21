@@ -1837,3 +1837,33 @@ Etsy details summary reads *"5 added · all optional"* — that string is the
 marker that everything through `44cc3b6` is live. If the mockup selection still
 reverts at that point, the cause is a component remount resetting the ref, and
 the seed guard needs to move up to the parent's state instead.
+
+### D112 · "Edit bank" still does not scroll — the third attempt · **FIXED HERE** · **HIGH**
+
+D80 → D92 → D93 → **D112**. Four attempts at one behaviour, each verified by a
+different method, each revealing the previous fix was insufficient:
+
+| attempt | approach | why it failed |
+|---|---|---|
+| D80 | `scrollTo({top:0})` | K1 had moved the form *below* the library |
+| D92 | `scrollIntoView` | swallowed by `overflow-x:clip` on `.management-page` |
+| D93 | `scrollTo({behavior:"smooth"})` | smooth scrolling never fires on these screens |
+| **D112** | `scrollTo` inside the **click handler** | **lost to React's re-render** |
+
+Measured on the deployed build, from `scrollY: 0`: five samples over 2s, all
+**0**, while the bank loaded correctly and the editor sat at **797px** — below
+an 812px viewport. Proof the handler itself was live: repeating the click from
+`scrollY: 678` left the form visible at 119px, because no scroll was needed.
+
+**Cause:** the handler sets three pieces of state (`setName`, `setRaw`,
+`setSavedId`) and then scrolls. React commits the re-render after the handler
+returns, and the scroll is discarded. `requestAnimationFrame` was not late
+enough.
+
+**Fixed:** the handler now sets `scrollToEditor`, and a `useEffect` keyed on
+that flag performs the scroll after the commit. Instant, not smooth (D93).
+
+**The pattern worth keeping:** every one of these four fixes was correct against
+the cause it was written for, and every one shipped without being operated on
+the deployed build. Only clicking the control and sampling `scrollY` afterwards
+found each next layer.

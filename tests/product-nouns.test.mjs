@@ -81,6 +81,13 @@ test("the keyword bank page and the title generator share one noun list — D90"
     "scrollIntoView is swallowed by the overflow-x:clip container on .management-page.");
   assert.doesNotMatch(page, /window\.scrollTo\(\{top:0/,
     "Scrolling to the top scrolls away from the edit form, which sits below the library.");
+  /* And it must run in an EFFECT, not the click handler. Measured live on the
+   * deployed build: scrolling from the handler was lost to React's re-render —
+   * the page stayed at scrollY 0 across five samples while the editor sat 797px
+   * below the fold, with the bank correctly loaded. See D112. */
+  assert.match(page, /setSavedId\(list\.id\);setScrollToEditor\(true\)/,
+    "Edit bank must flag the scroll, not perform it inline.");
+  assert.match(page, /useEffect\(\(\)=>\{\s*if\(!scrollToEditor\)return;/);
   assert.match(page, /window\.scrollTo\(0,form\.getBoundingClientRect\(\)\.top\+window\.scrollY/);
   /* And not smoothly. Verified live: window.scrollTo({behavior:"smooth"}) never
    * moves the page on a management screen — scrollY stays 0 indefinitely —
