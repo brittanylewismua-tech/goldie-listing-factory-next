@@ -1849,3 +1849,13 @@ test("records real pricing approval and invalidates it after edits (fixes D23 an
   assert.doesNotMatch(app,/if\(complete&&drafts\.some\(draft=>draft\.status==="Created"\)&&!pricingApproved\)setPricingApproved\(true\)/);
   assert.doesNotMatch(app,/✓ Every enabled variation and price was reviewed/);
 });
+
+test("shows one binding design-capacity status after uploads (fixes D28 and D49)",async()=>{
+  const app=await readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8");
+  assert.match(app,/files\.length > 0 && designsFinished && <div className="batch-capacity">/);
+  assert.match(app,/\$\{files\.length\} of \$\{batchDesignLimit\} designs ready · \$\{additionalDesignsAvailable\} more available · \$\{planDraftsRemaining\} listings left on your plan/);
+  assert.match(app,/!files\.length&&<p className="batch-limits"/);
+  assert.match(app,/files\.length>0&&!designsFinished&&<section className="design-preparation-status working"/);
+  assert.doesNotMatch(app,/All \$\{files\.length\} designs are ready/);
+  assert.doesNotMatch(app,/\$\{files\.length\} of 20 designs ready/);
+});
