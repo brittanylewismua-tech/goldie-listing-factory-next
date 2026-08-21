@@ -455,6 +455,11 @@ test("unfinished setup items are not formatted as settled values — D101", asyn
     "The keyword-bank to-do is back inline with the settled values.");
   assert.match(page, /className="setup-todo"/,
     "Outstanding setup items must render separately from the settled summary.");
-  assert.match(page, /Pick a keyword bank so Goldie can write your titles/);
+  /* A dedicated 720x66 alert already sits 169px below this summary carrying the
+   * full instruction. The summary must not repeat that sentence — it only has
+   * to stop listing an unfinished item as though it were settled. */
+  assert.match(page, /still to set/);
+  assert.doesNotMatch(page, /setup-todo">\{\[\.\.\.\(!activeRecipe\?\.keywordListId\?\["Pick a keyword bank/,
+    "The summary is repeating the instruction the alert below it already gives.");
   assert.match(clarity, /\.setup-todo\{[\s\S]*color:#8a5a12/);
 });

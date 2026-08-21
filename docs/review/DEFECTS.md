@@ -1347,9 +1347,20 @@ Goldie to build the title."
 Logged as **P2 in `AUDIT-PASS-2.md`** and never given a defect number, so it was
 never fixed. The full run surfaced it again.
 
-**Fixed:** settled values stay in the summary line; anything outstanding renders
-beneath it in amber as an instruction — *"Pick a keyword bank so Goldie can
-write your titles"*. Pinned by a test.
+**Correction to my own fix.** My first version printed the full instruction
+*"Pick a keyword bank so Goldie can write your titles"* under the summary. Then
+I measured the live page: a dedicated **720 × 66px** alert already sits **169px
+below** that summary carrying exactly that sentence. My fix would have shown the
+same instruction twice, 169px apart.
+
+The real defect is narrower than I first wrote it: the to-do does not need more
+prominence — it already has an alert — it just must not appear in the settled
+list as though it were done.
+
+**Fixed:** unfinished items are removed from the settled values and the summary
+ends with a short status — *"keyword bank still to set"*. The existing alert
+below keeps the instruction. Pinned by a test that fails if the summary starts
+repeating it.
 
 ### Blank first paint — watch, not yet reproducible
 
