@@ -425,3 +425,16 @@ test("seller-authored names wrap instead of inheriting the title truncation patt
   assert.match(page,/profile\.title\.replace\(\/\\\.\{2,\}\$\/,"…"\)/,
     "Shipping profile display names can regress to the literal two-dot truncation from Etsy.");
 });
+
+test("the title and tags textareas span their label's full width — D100", async () => {
+  const css = await readFile(new URL("app/approved-functional.css", root), "utf8");
+
+  /* `.design-fields input{width:100%}` matches input only. When the tags field
+   * became a textarea (D96) it fell out of that rule and auto-placed into the
+   * 139px column of its two-column label — 138px wide against 219px of content,
+   * 32% visible, worse than the 37% D96 set out to fix.
+   *
+   * Any future input->textarea swap in this grid needs the same treatment. */
+  assert.match(css, /textarea\.listing-tags-field,[\s\S]*textarea\.listing-title-field\{[\s\S]*grid-column:1\/-1!important;[\s\S]*width:100%!important/,
+    "The listing textareas must span the label grid and take its full width.");
+});

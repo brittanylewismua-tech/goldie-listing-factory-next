@@ -1269,3 +1269,43 @@ Walked all four phases on the live batch. **Did not publish.**
 
 The publish gate copy is honest and the flow completes. Stopped at the publish
 button by design.
+
+### D100 · My D96 fix made the tags field worse · **FIXED HERE** · **HIGH**
+
+Caught by re-measuring the field I had just "fixed", on the deployed build.
+
+Swapping the tags `<input>` for a `<textarea>` (D96) took it out of the only
+rule that gave the field its width — `.design-fields input{width:100%}` matches
+`input` only. The tags `<label>` is a two-column grid (**139px / 427px**), so
+the unsized textarea auto-placed into the **narrow** column.
+
+| | width | content | visible |
+|---|---|---|---|
+| before D96 (input) | 570px | 1521px | 37% |
+| after D96 (textarea) | **138px** | 219px tall in 69px | **32%** |
+| after D100 | 570px | fits in 69px | **100%** |
+
+**My fix made the thing it was fixing worse.** The title textarea was unaffected
+because its label is single-column, which is why it looked fine and this did not.
+
+**Fixed:** both listing textareas get `grid-column:1/-1` and `width:100%`.
+Verified on the deployed page: all three tag fields and all three title fields
+render at 570px with zero overflow, and the phase reports **0 truncated
+elements**.
+
+**Rule for this grid:** any `input` → `textarea` swap inside `.design-fields`
+must carry the width and grid-column with it. Pinned by a test.
+
+### Truncation sweep — clean
+
+After `55dcbdb` and this fix, measured on the deployed build:
+
+| screen | truncated elements |
+|---|---|
+| Titles + tags | **0** |
+| Etsy details | **0** |
+| Images + mockups | **0** |
+| Review + publish | **0** |
+
+Publish-screen titles read 100% at 130/139/137 characters. Zero
+`white-space:nowrap` + `text-overflow:ellipsis` pairs remain in any stylesheet.

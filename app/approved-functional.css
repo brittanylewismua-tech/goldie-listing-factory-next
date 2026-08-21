@@ -1557,3 +1557,20 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
   overflow:visible!important;
   overflow-wrap:anywhere!important;
 }
+
+/* D100 · My own D96 regression.
+ *
+ * Swapping the tags <input> for a <textarea> left it outside the one rule that
+ * gave the field its width: `.design-fields input{width:100%}` matches input
+ * only. The tags label is a two-column grid (139px / 427px), so the textarea
+ * auto-placed into the NARROW column: 138px wide holding 219px of content —
+ * 32% visible, worse than the 37% the change was meant to fix.
+ *
+ * The title textarea sat in a single-column label and happened to be fine,
+ * which is why this showed up on one field and not the other. */
+.app-shell .listing-editor .design-fields textarea.listing-tags-field,
+.app-shell .listing-editor .design-fields textarea.listing-title-field{
+  grid-column:1/-1!important;
+  width:100%!important;
+  min-width:0!important;
+}
