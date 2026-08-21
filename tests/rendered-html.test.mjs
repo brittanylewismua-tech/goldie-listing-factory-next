@@ -141,8 +141,8 @@ test("unifies saved products, editing, pricing, and mockups without the old fact
   assert.match(recipes, /Add another product/);
   assert.match(recipes, /Product saved and selected/);
   assert.match(recipes, /props\.onUseRecipe\(saved\)/);
-  assert.match(page, /Adjust what changed\. Keep everything else\./);
-  assert.match(page, /Everything else/);
+  assert.doesNotMatch(page, /Adjust what changed\. Keep everything else\./);
+  assert.match(page, /Saved for this product/);
   assert.match(page, /From your last batch — change it anytime/);
   assert.doesNotMatch(page, />Not chosen</);
   assert.doesNotMatch(recipes, /Shipping cost|Shipping charged|Payment fixed fee/);
@@ -1556,7 +1556,7 @@ test("chooses exact available Printify colors per batch and remembers optional d
     readFile(new URL("../app/api/product-recipes/route.ts",import.meta.url),"utf8"),
     readFile(new URL("../app/globals.css",import.meta.url),"utf8"),
   ]);
-  assert.match(page,/Choose the colors you want to offer/);
+  assert.match(page,/<h3>Colours<\/h3>/);
   assert.match(page,/Choose at least one available color before continuing/);
   assert.match(page,/Save these as this product’s default colors/);
   assert.match(page,/selectedVariantIds:pricedVariants\.map/);

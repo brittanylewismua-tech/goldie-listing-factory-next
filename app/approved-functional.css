@@ -1403,14 +1403,8 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .app-shell .recipe-card .bundle-tile.selected em{color:#fff!important;background:#673452!important}
 .app-shell .recipe-card .edit-recipe{font-size:0!important}
 .app-shell .recipe-card .edit-recipe:after{content:"Rename";font-size:10px;font-weight:800}
-.app-shell .saved-product-batch-page .batch-page-intro h2{display:none!important}
-.app-shell .product-color-selector h3,.app-shell .mockup-default-block h3{font-size:0!important}
-.app-shell .product-color-selector h3:after{content:"Colours";font:400 25px/1.15 'DM Serif Display',Georgia,serif}
-.app-shell .mockup-default-block h3:after{content:"Mockups";font:400 25px/1.15 'DM Serif Display',Georgia,serif}
 .app-shell .mockup-set-preview figcaption{display:none!important}
 .app-shell .mockup-default-block .batch-default-heading>b{display:none!important}
-.app-shell .everything-else>summary b{font-size:0!important}
-.app-shell .everything-else>summary b:after{content:"Saved for this product";font-size:13px}
 .app-shell .everything-else>summary span:after{content:"Usually no changes needed";display:block;margin-top:3px;color:#80677a;font-size:9px;font-weight:600}
 .app-shell .variant-pricing :is(.item-pricing-section,.shipping-pricing-section) .heading-with-help>button{display:none!important}
 .app-shell .setup-forward:disabled{background:#ddd2df!important;color:#563b50!important;opacity:1!important;text-shadow:none!important}
@@ -1422,9 +1416,7 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .app-shell .batch-size-guide>button{border:1px solid rgba(91,48,79,.2)!important;background:rgba(255,255,255,.7)!important;color:#5b304f!important;box-shadow:none!important}
 .app-shell .draft-card .tag-row{display:flex!important;max-width:100%!important;overflow:visible!important;flex-wrap:wrap!important}
 .app-shell .draft-card .tag-row span{max-width:100%!important;overflow-wrap:anywhere!important}
-.app-shell .batch-size-guide .mini-label,.app-shell .draft-state,.app-shell .final-listing-review-heading .mini-label{display:none!important}
-.app-shell .variant-transfer-note b{font-size:0!important}
-.app-shell .variant-transfer-note b:after{content:"Core listing information is ready for your review.";font-size:12px}
+.app-shell .batch-size-guide .mini-label,.app-shell .final-listing-review-heading .mini-label{display:none!important}
 .app-shell .summary-list>div:has(>span:first-child){min-width:0}
 .app-shell .top-nav a[href="/usage"],.app-shell .approved-usage-card>div:first-child{font-size:0!important}
 .app-shell .top-nav a[href="/usage"]:after,.app-shell .approved-usage-card>div:first-child:after{content:"Usage + Plan";font-size:11px}

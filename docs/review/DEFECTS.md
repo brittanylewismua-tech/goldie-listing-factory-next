@@ -122,12 +122,12 @@ reconnect, and the word implies something is broken.
 replaced Printify product, put it inside that flow with an explanation, not in
 the label.
 
-### D7 · "Everything else" reads as a junk drawer · **FIXED**
+### D7 · "Everything else" reads as a junk drawer · OPEN
 **Fix:** **"Saved for this product"**, with the hint "usually no changes needed".
 Contents are pricing, shipping, description, Etsy attributes and keyword bank —
 not leftovers.
 
-### D8 · Section headings are sentences, not labels · **FIXED**
+### D8 · Section headings are sentences, not labels · OPEN
 | Now | Fix |
 |---|---|
 | Adjust what changed. Keep everything else. | **delete** — the `<h1>` already says "Build this batch" |
@@ -226,7 +226,7 @@ produce this badge.
 **Fix:** find what is setting it, then either wire a real Approve action or remove
 the badge.
 
-### D24 · "Pricing review" restates "Review pricing" directly above it · **FIXED**
+### D24 · "Pricing review" restates "Review pricing" directly above it · OPEN
 
 ### D25 · Three `?` help buttons in one screenful · **FIXED**
 **Fix:** one help affordance per screen, at the page title.
@@ -595,7 +595,7 @@ many are allowed.
 The chip row beside each draft preview is cut off at the right edge with a dark
 sliver visible where it overflows its container.
 
-### D69 · Three eyebrow/heading duplications on these phases · **FIXED**
+### D69 · Three eyebrow/heading duplications on these phases · OPEN
 - `OPTIONAL · APPLY TO THE WHOLE BATCH` above "Add one size guide to every Etsy listing"
 - `PRINTIFY DRAFT CREATED` above the listing title
 - `EVERY LISTING IN THIS BATCH` above "Choose exactly which listings to publish"
@@ -617,7 +617,7 @@ Different fill states for the same blank, and on the middle row the count and th
 listed values disagree. Confirms the earlier finding and adds a count/label
 mismatch. Fixed by seeding from the Printify blueprint (`UX-DIRECTION.md` B2).
 
-### D72 · The reassurance box overclaims · **FIXED**
+### D72 · The reassurance box overclaims · OPEN
 "Titles, tags, descriptions, sizes, colors, and prices are set." shown above
 listings with 25-character titles and 2 tags. Same category as D64 — "set" is
 doing the work "complete" was doing.
