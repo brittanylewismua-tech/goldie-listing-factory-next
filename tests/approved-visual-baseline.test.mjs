@@ -337,3 +337,22 @@ test("the listing title field shows the whole title, not an ellipsis — D60", a
   assert.match(css, /\.listing-title-field\{[\s\S]*white-space:pre-wrap!important/);
   assert.doesNotMatch(css, /\.listing-title-field\{[\s\S]*text-overflow:ellipsis/);
 });
+
+test("the step rail is dark-on-light, matching its transparent background — D95", async () => {
+  const clarity = await readFile(new URL("app/clarity-pass.css", root), "utf8");
+  const functional = await readFile(new URL("app/approved-functional.css", root), "utf8");
+
+  /* approved-functional.css deliberately sets .workflow-progress to
+   * background:transparent, but lilac-theme.css still carried the light text
+   * colours written for the dark panel it replaced. Measured on the live page:
+   *   "Titles + tags"     #fff9fc on #e9e7e4 -> 1.19:1
+   *   "3 titles complete" #c2b2be on #e9e7e4 -> 1.64:1
+   * Both need 4.5:1. The sub-labels were invisible — on the primary navigation
+   * of the main workflow screen. */
+  assert.match(functional, /\.workflow-progress\{[^}]*background:transparent/,
+    "The rail background changed. If it is dark again, the dark-on-light text overrides below are wrong.");
+  assert.match(clarity, /\.app-shell \.workflow-progress button b\{color:#2f1f2d!important/);
+  assert.match(clarity, /\.app-shell \.workflow-progress button small\{[\s\S]*color:#635360!important/);
+  assert.doesNotMatch(clarity, /\.app-shell \.workflow-progress button (b|small)\{color:#f{3,}/i,
+    "Rail text is near-white again over a transparent background.");
+});

@@ -1068,3 +1068,34 @@ are visible at once. `white-space:pre-wrap`, no ellipsis. Guarded by a test.
 the outcome it was supposed to produce. Worth re-measuring anything on this
 list whose numbers moved after it was closed — D77's fill figures are the
 obvious next candidate.
+
+### D95 · The step rail was invisible · **FIXED HERE** · **BLOCKER**
+
+Found by measuring contrast on a screen the list already called clean. **This
+is the primary navigation on the main workflow screen.**
+
+`approved-functional.css:10` deliberately sets `.workflow-progress` to
+`background:transparent`, moving the rail out of a dark card and onto the page.
+`lilac-theme.css:238` still carried the text colours written for that dark card.
+Nobody updated the text when the background changed.
+
+Measured on the live page:
+
+| element | colour | on | ratio | needs |
+|---|---|---|---|---|
+| "Titles + tags" | `#fff9fc` | `#e9e7e4` | **1.19:1** | 4.5 |
+| "3 titles complete" | `#c2b2be` | `#e9e7e4` | **1.64:1** | 4.5 |
+| "Etsy details" | `#fff9fc` | `#e9e7e4` | **1.19:1** | 4.5 |
+| "3 listings ready" | `#c2b2be` | `#e9e7e4` | **1.64:1** | 4.5 |
+
+Near-white on near-white. Confirmed by screenshot: the four Finish sub-steps
+and every status line beneath them were effectively invisible.
+
+**Fixed:** dark-on-light rail text in `clarity-pass.css` (imported last), and
+sub-labels raised 8.5px → 11px. Verified by injecting the rule on the live page
+before committing — rail low-contrast elements went 11 → **0**, and the labels
+are legible in the screenshot. Guarded by a test that also fails if the rail
+background goes dark again without the text following it.
+
+**Same root cause as D94:** a change was made correctly, and the thing that
+depended on it was never re-checked.

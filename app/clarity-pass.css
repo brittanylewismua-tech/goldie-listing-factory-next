@@ -214,3 +214,32 @@
   font-size: 18px;
   line-height: 1.25;
 }
+
+/* ── D95 · The step rail was styled for a dark panel that no longer exists ──
+ *
+ * approved-functional.css:10 deliberately sets .workflow-progress to
+ * background:transparent so the rail sits on the page instead of inside a dark
+ * card. lilac-theme.css:238 still carries the text colours written for that
+ * dark card — #fff9fc labels and #c2b2be sub-labels.
+ *
+ * Near-white text on the light lavender page. Measured contrast:
+ *   "Titles + tags"      #fff9fc on #e9e7e4 → 1.19:1   (needs 4.5)
+ *   "3 titles complete"  #c2b2be on #e9e7e4 → 1.64:1   (needs 4.5)
+ * The sub-labels were effectively invisible. This is the primary navigation on
+ * the main workflow screen.
+ *
+ * The background change was correct; the text colours simply never followed it. */
+.app-shell .workflow-progress .mini-label{color:#7a5573!important}
+.app-shell .workflow-progress>div b{color:#332230!important}
+.app-shell .workflow-progress button{color:#3b2838!important}
+.app-shell .workflow-progress button b{color:#2f1f2d!important;font-weight:700!important}
+.app-shell .workflow-progress button small{
+  color:#635360!important;
+  font-size:11px!important;
+  line-height:1.4!important;
+}
+.app-shell .workflow-progress button:disabled,
+.app-shell .workflow-progress button[aria-disabled="true"]{color:#6f6070!important}
+.app-shell .workflow-progress button:disabled small,
+.app-shell .workflow-progress button[aria-disabled="true"] small{color:#7b6c79!important}
+.app-shell .workflow-progress button.active b{color:#251723!important}
