@@ -1477,10 +1477,10 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .managementOnly .managementSetList .setPreview{grid-template-columns:repeat(5,minmax(0,1fr))!important;gap:5px!important}
 
 /* Audit pass 2: the frequent action is primary; setup and destructive actions recede. */
-.app-shell[data-product-selected="true"] .recipe-library-head,
 .app-shell[data-product-selected="true"] .recipe-tile:not(.selected),
 .app-shell[data-product-selected="true"] .bundle-library{display:none!important}
 .app-shell[data-product-selected="true"] .recipe-grid{grid-template-columns:1fr!important}
+.app-shell .recipe-card .change-product{position:absolute;right:72px;bottom:12px;z-index:2;border:0;background:transparent;color:#68445f;font-size:10px;font-weight:850;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
 .app-shell .variant-pricing .heading-with-help>button{display:none!important}
 .keyword-page .keyword-workspace{display:flex!important;flex-direction:column!important}
 .keyword-page .bank-library{order:1}

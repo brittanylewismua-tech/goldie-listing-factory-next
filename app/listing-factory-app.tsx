@@ -580,6 +580,10 @@ export default function ListingFactoryApp() {
     clearCurrentBatch(true);
     return true;
   }
+  function changeProduct(){
+    if((files.length>0||drafts.length>0||complete)&&!window.confirm("Change products and start a new batch? Your uploaded designs and unfinished work in this batch will be removed."))return false;
+    clearCurrentBatch(true);return true;
+  }
   async function saveImagePreferences(indices:number[]){if(!activeRecipe)return;const response=await fetch("/api/product-recipes",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({...activeRecipe,printifyImageIndices:indices})});if(!response.ok)throw new Error("These Printify photo preferences could not be saved. Please try again.");setPrintifyImageIndices(indices);setActiveRecipe({...activeRecipe,printifyImageIndices:indices})}
   function styledTitle(title:string){return (titleCaps?title.replace(/\b[\p{L}\p{N}]/gu,character=>character.toLocaleUpperCase()):title).slice(0,140)}
   function applyBatchTitle(title:string,explicitTags?:string[]){const next=styledTitle(title);setFiles(current=>current.map(file=>({...file,title:next,tags:explicitTags||tagsFromTitle(next),etsy:undefined,etsyError:""})))}
@@ -935,7 +939,7 @@ export default function ListingFactoryApp() {
             </div>
           </article>
 
-          <div className={`product-step workflow-panel ${workflowStep==="setup"?"active-panel":"hidden-panel"}`}><SavedWorkflow connected={connected||localPreview} templateUrl={template} templateVerified={templateLoaded} loadingTemplate={loadingTemplate} verifiedShippingProfileId={Number(templateDetails?.shippingTemplateId)||0} onTemplateUrl={(value) => { templateLoadVersion.current+=1;setLoadingTemplate(false);setTemplate(value);setTemplateDetails(null);setTemplateError(""); }} onUseRecipe={chooseRecipe} onUseBundle={useBundle} onStartNewProduct={startNewProduct} onVerifyTemplate={loadTemplateUrl} />
+          <div className={`product-step workflow-panel ${workflowStep==="setup"?"active-panel":"hidden-panel"}`}><SavedWorkflow connected={connected||localPreview} templateUrl={template} templateVerified={templateLoaded} loadingTemplate={loadingTemplate} verifiedShippingProfileId={Number(templateDetails?.shippingTemplateId)||0} onTemplateUrl={(value) => { templateLoadVersion.current+=1;setLoadingTemplate(false);setTemplate(value);setTemplateDetails(null);setTemplateError(""); }} onUseRecipe={chooseRecipe} onUseBundle={useBundle} onStartNewProduct={startNewProduct} onChangeProduct={changeProduct} onVerifyTemplate={loadTemplateUrl} />
           {localPreview&&!templateDetails&&<button className="preview-demo-button" onClick={()=>void loadPreviewDemo()}>Load a complete poster demo to review every step</button>}
           {templateError && <p className="field-error recipe-error" role="alert">{templateError}</p>}
           {templateDetails && <div className="template-proof recipe-proof"><div className="product-thumb"><span>YOUR<br/>ART</span></div><div className="template-info"><b>{templateDetails.blueprintTitle}</b><span>{templateDetails.provider} · {pricedVariants.length} selected variants</span><span>✓ Product, placement, sizes, and shipping profile imported</span></div><span className="template-badge">{productSelected?"Product selected":"Save this product"}</span></div>}

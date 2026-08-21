@@ -1825,3 +1825,13 @@ test("orders designs before colours, mockups, and saved settings on the batch sc
   assert.match(css,/\.steps-column\.setup-column \.mockup-default-block\{order:40/);
   assert.match(css,/\.steps-column\.setup-column \.everything-else\{order:50/);
 });
+
+test("keeps product creation visible and lets a selected product be changed (fixes D4 and D5)",async()=>{
+  const [app,workflow,css]=await Promise.all([readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8"),readFile(new URL("../app/factory-tools.tsx",import.meta.url),"utf8"),readFile(new URL("../app/approved-functional.css",import.meta.url),"utf8")]);
+  assert.match(workflow,/＋ Add another product/);
+  assert.match(workflow,/className="change-product"[\s\S]{0,300}Change product/);
+  assert.match(workflow,/onChangeProduct: \(\) => boolean/);
+  assert.match(app,/onChangeProduct=\{changeProduct\}/);
+  assert.match(app,/function changeProduct\(\)[\s\S]{0,400}clearCurrentBatch\(true\);return true/);
+  assert.doesNotMatch(css,/data-product-selected="true"\] \.recipe-library-head/);
+});
