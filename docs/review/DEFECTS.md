@@ -416,7 +416,7 @@ steps deep-link fine.
 that advances the flow appears before the content it is waiting on.
 
 
-### D54 · A blocked upload still created a batch record · OPEN
+### D54 · A blocked upload still created a batch record · **FIXED**
 Uploading 9 designs against a 7-listing allowance reported `0 uploaded` in the
 UI, but Batch History now shows a batch with **9 designs** at that timestamp.
 The batch row is created and the design count persisted before the quota check
