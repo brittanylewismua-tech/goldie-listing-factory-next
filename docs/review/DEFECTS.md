@@ -94,7 +94,7 @@ something to confirm rather than choose cold.
 **Unlocked by this:** mockup thumbnails can render the seller's actual design
 instead of a stock blank.
 
-### D3 · "✓ Ready for this batch" is unreadable · OPEN
+### D3 · "✓ Ready for this batch" is unreadable · **FIXED**
 **Where:** the selected product card. Class **`.recipe-use`**.
 **Wrong:** text colour `rgb(101, 67, 98)` on a dark plum filled pill. Dark purple
 on dark purple. The button was promoted to a filled style and kept its old dark
@@ -115,19 +115,19 @@ selected, the only escape is Back or "Clear batch + start over".
 **Fix:** a "Change product" link on the selected card.
 **Introduced by:** `feb73c2`.
 
-### D6 · "Rename / reconnect" — reconnect is meaningless · OPEN
+### D6 · "Rename / reconnect" — reconnect is meaningless · **FIXED**
 **Wrong:** the Printify link is stored on the saved product. There is nothing to
 reconnect, and the word implies something is broken.
 **Fix:** label it **"Rename"**. If a re-link path is genuinely needed for a
 replaced Printify product, put it inside that flow with an explanation, not in
 the label.
 
-### D7 · "Everything else" reads as a junk drawer · OPEN
+### D7 · "Everything else" reads as a junk drawer · **FIXED**
 **Fix:** **"Saved for this product"**, with the hint "usually no changes needed".
 Contents are pricing, shipping, description, Etsy attributes and keyword bank —
 not leftovers.
 
-### D8 · Section headings are sentences, not labels · OPEN
+### D8 · Section headings are sentences, not labels · **FIXED**
 | Now | Fix |
 |---|---|
 | Adjust what changed. Keep everything else. | **delete** — the `<h1>` already says "Build this batch" |
@@ -138,14 +138,14 @@ not leftovers.
 Keep "From your last batch — change any" — that line tells the seller something
 they did not know.
 
-### D9 · Mockup thumbnails show internal filenames · OPEN
+### D9 · Mockup thumbnails show internal filenames · **FIXED**
 **Wrong:** each thumbnail is captioned "ChatGPT Image Aug 14, 2026, 10_42_04 A…".
 **Fix:** no caption, or a meaningful one. Never expose upload filenames.
 
 ### D10 · Mockup block shows 4 of 10 with no indication there are more · OPEN
 **Fix:** "+6 more" or a count.
 
-### D11 · "BACH TEES" appears twice · OPEN
+### D11 · "BACH TEES" appears twice · **FIXED**
 Once as a label top-right of the block, once in the dropdown below it.
 
 ### D12 · The bundle row is sandwiched mid-flow · OPEN
@@ -226,9 +226,9 @@ produce this badge.
 **Fix:** find what is setting it, then either wire a real Approve action or remove
 the badge.
 
-### D24 · "Pricing review" restates "Review pricing" directly above it · OPEN
+### D24 · "Pricing review" restates "Review pricing" directly above it · **FIXED**
 
-### D25 · Three `?` help buttons in one screenful · OPEN
+### D25 · Three `?` help buttons in one screenful · **FIXED**
 **Fix:** one help affordance per screen, at the page title.
 
 ### D26 · Bottom summary repeats figures reconciled 200px above it · OPEN
@@ -291,7 +291,7 @@ It drives every profit figure on the Pricing step. Nobody debugging a wrong
 profit number will look under Usage + Plan.
 **Fix:** surface it from Pricing, and include it in "Saved for this product".
 
-### D38 · Sidebar label inconsistent · OPEN
+### D38 · Sidebar label inconsistent · **FIXED**
 "Usage + Plan" on that page, "Usage" inside the Listing Factory.
 
 ---
@@ -321,11 +321,11 @@ already in the title prompt, applied one step earlier where it can be fixed.
 visuals.
 **Fix:** thumbnail strip of the first 4–5 on the card face.
 
-### D43 · Four heading levels for one page · OPEN
+### D43 · Four heading levels for one page · **FIXED**
 "YOUR SAVED MOCKUP LIBRARY" → "Manage your mockup sets." → "SAVED SETS" → "Your
 mockup sets".
 
-### D44 · Naming does not match the Listing Factory · OPEN
+### D44 · Naming does not match the Listing Factory · **FIXED**
 This page says "Mockup Sets"; the Photos step says "Add Your Own Mockups
 (Optional)". A seller will not connect the two.
 
@@ -381,7 +381,7 @@ specificity bug, not a markup difference.
 **Fix:** find the overriding rule and make both match. Both should be text links
 (see D20).
 
-### D48 · "Pick a keyword bank to continue" is unreadable · OPEN
+### D48 · "Pick a keyword bank to continue" is unreadable · **FIXED**
 **Where:** batch screen, the disabled forward button.
 **Wrong:** pale grey text on a pale lavender gradient. Verified by zoom — the
 label is barely distinguishable from its own background.
@@ -442,7 +442,7 @@ split is reasonable, but "Open results" lands on step 3 (see D53).
 
 ## Shipping — two different things share one name
 
-### D58 · "Shipping profile" means two unrelated things and the labels don't say which · OPEN
+### D58 · "Shipping profile" means two unrelated things and the labels don't say which · **FIXED**
 
 **Traced through the code, both numbers are real and come from different systems.**
 
@@ -525,13 +525,13 @@ currently no expansion, so the text is simply unreachable.
 **Note:** with the pill fixed (D59) there is 116px of width to reclaim, and the
 row can be a full-width title with a counts strip underneath.
 
-### D61 · "Auto Caps on" is a toggle that neither reads as one nor is legible · OPEN
+### D61 · "Auto Caps on" is a toggle that neither reads as one nor is legible · **FIXED**
 Pale lavender pill, pale text, no on/off affordance and no state change feedback.
 Same class of problem as D3 and D48.
 **Also:** per D8 this is a preference, not a batch decision — it belongs on the
 saved product.
 
-### D62 · "BATCH TITLE BUILDER" eyebrow above "Create titles for the whole batch" · OPEN
+### D62 · "BATCH TITLE BUILDER" eyebrow above "Create titles for the whole batch" · **FIXED**
 Another instance of D8 on a different screen. The eyebrow restates the heading.
 
 ### D63 · "Upload or manage keyword banks ↗" navigates out mid-batch · OPEN
@@ -580,7 +580,7 @@ Same root cause as **D53/D23** — `pricingApproved` can never be true, so this
 checkmark either renders from stale saved state or is hardcoded. Either way it
 claims a review that the code cannot record.
 
-### D66 · The loudest control on the photos screen is an exit · OPEN
+### D66 · The loudest control on the photos screen is an exit · **FIXED**
 "Open all listings to review in Printify" is a large dark filled button at the
 top of the phase — the most prominent element on the screen sends the seller out
 of Goldie. "Choose size guide" beside it is also dark filled, so two filled
@@ -591,11 +591,11 @@ The flatlay picker still holds **148 checkboxes** and shows no running count and
 no cap. One listing in this batch carries 12 photos with nothing indicating how
 many are allowed.
 
-### D68 · Tag chips are clipped on the photos phase · OPEN
+### D68 · Tag chips are clipped on the photos phase · **FIXED**
 The chip row beside each draft preview is cut off at the right edge with a dark
 sliver visible where it overflows its container.
 
-### D69 · Three eyebrow/heading duplications on these phases · OPEN
+### D69 · Three eyebrow/heading duplications on these phases · **FIXED**
 - `OPTIONAL · APPLY TO THE WHOLE BATCH` above "Add one size guide to every Etsy listing"
 - `PRINTIFY DRAFT CREATED` above the listing title
 - `EVERY LISTING IN THIS BATCH` above "Choose exactly which listings to publish"
@@ -617,7 +617,7 @@ Different fill states for the same blank, and on the middle row the count and th
 listed values disagree. Confirms the earlier finding and adds a count/label
 mismatch. Fixed by seeding from the Printify blueprint (`UX-DIRECTION.md` B2).
 
-### D72 · The reassurance box overclaims · OPEN
+### D72 · The reassurance box overclaims · **FIXED**
 "Titles, tags, descriptions, sizes, colors, and prices are set." shown above
 listings with 25-character titles and 2 tags. Same category as D64 — "set" is
 doing the work "complete" was doing.

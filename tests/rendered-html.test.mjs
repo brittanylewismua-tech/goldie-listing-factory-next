@@ -167,7 +167,7 @@ test("groups equal-cost Printify variants while preserving individual review and
     readFile(new URL("../app/factory-tools.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/api/printify/route.ts", import.meta.url), "utf8"),
   ]);
-  assert.match(page, /Review item prices and shipping/);
+  assert.match(page, /Item prices \+ buyer-paid shipping/);
   assert.match(page, /variant\.templatePrice/);
   assert.match(page, /Lowest estimated item profit/);
   assert.match(page, /Shipping not included/);
@@ -943,13 +943,13 @@ test("keeps pricing simple while using a real Etsy shipping profile and exact te
   assert.match(page,/buyer pays/);
   assert.match(page,/international rates/i);
   assert.match(page,/international-shipping-editor/);
-  assert.match(page,/\{selectedProfile\.originCountry\} buyer pays/);
+  assert.match(page,/Etsy buyer charge · \{selectedProfile\.originCountry\}/);
   assert.match(page,/Save new shipping profile/);
   assert.match(page,/1\. Item prices/);
   assert.match(page,/Printify product cost/);
   assert.match(page,/price-group-list/);
   assert.match(page,/Printify cost/);
-  assert.match(page,/2\. Shipping/);
+  assert.match(page,/2\. Etsy shipping profile — what buyers pay/);
   assert.doesNotMatch(page,/Update prices/);
   assert.match(page,/Prices update automatically/);
   assert.match(page,/changeProfit\(value:number\)[\s\S]*recalculate\(nextPricing\)/);
@@ -959,7 +959,7 @@ test("keeps pricing simple while using a real Etsy shipping profile and exact te
   assert.match(page,/Discard changes/);
   assert.match(page,/save or discard any custom shipping profile changes/i);
   assert.doesNotMatch(page,/Approve pricing \+ shipping/);
-  assert.match(page,/Printify fulfillment shipping/);
+  assert.match(page,/Printify shipping cost — what you pay/);
   assert.match(page,/Review every enabled variation before Goldie creates the drafts/);
   assert.doesNotMatch(page,/pricing target, keyword bank, and mockup defaults/);
   assert.match(page,/variant\.templatePrice/);
@@ -1171,7 +1171,7 @@ test("supports whole-number pricing, unclipped profit columns, and optional titl
   ]);
   assert.match(page, /Create whole-number pricing/);
   assert.match(page, /Math\.ceil\(current\/100\)\*100/);
-  assert.match(page, /Auto Caps \{titleCaps\?"on":"off"\}/);
+  assert.match(page, /Capitalization: \{titleCaps\?"On":"Off"\}/);
   assert.match(page, /Titles, tags, and descriptions complete/);
   assert.match(styles, /\.price-group-row,.price-group-row>div\{min-width:0\}/);
   assert.match(styles, /\.workflow-panel\.active-panel/);
@@ -1326,7 +1326,7 @@ test("supports simple saved product bundles without complicating the single-prod
   assert.match(page, /function useBundle/);
   assert.match(page, /You are working on \{bundleRecipes\[bundleIndex\]\?\.name\}/);
   assert.match(page, /1\. Item prices <span>· \{productName\}<\/span>/);
-  assert.match(page, /2\. Shipping <span>· \{productName\}<\/span>/);
+  assert.match(page, /2\. Etsy shipping profile — what buyers pay <span>· \{productName\}<\/span>/);
   assert.match(page, /data-product-selected=\{templateDetails\?"true":"false"\}/);
   assert.match(page, /--active-product/);
   assert.match(page, /function continueBundle/);
@@ -1575,7 +1575,7 @@ test("makes Printify publishing, editor links, and shipping differences explicit
   ]);
   assert.match(tools, /Publish the product to Etsy first/);
   assert.match(tools, /Copy the URL only from the Printify design editor/);
-  assert.match(page, /Your Etsy profile charges/);
+  assert.match(page, /Your Etsy buyer charge is/);
   assert.match(page, /Shipping still remains separate from the item-profit calculation/);
   assert.match(css, /\.rail-substeps \.rail-substep\.active \{[\s\S]*background: transparent !important/);
   assert.match(css, /\.workflow-back[\s\S]*text-decoration: none !important/);
