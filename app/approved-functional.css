@@ -1109,7 +1109,6 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .app-shell .listing-editor .listing-preview-button span{display:none!important}
 .app-shell .listing-editor .design-fields{display:grid!important;grid-template-columns:minmax(0,1.45fr) minmax(210px,1fr)!important;gap:10px!important;align-items:start!important;min-width:0!important}
 .app-shell .listing-editor .design-fields>label{min-width:0!important}
-.app-shell .listing-editor .design-fields>label:nth-of-type(1) input{white-space:nowrap!important;text-overflow:ellipsis!important;overflow:hidden!important}
 .app-shell .listing-editor .design-fields>.tag-row{display:none!important;max-height:58px!important;overflow-y:scroll!important;scrollbar-gutter:stable!important}
 .app-shell .listing-editor .design-line:not(.active) .individual-title-builder,.app-shell .listing-editor .design-line:not(.active) .individual-description,.app-shell .listing-editor .design-line:not(.active) .etsy-auto,.app-shell .listing-editor .design-line:not(.active) .padding-note{display:none!important}
 .app-shell .listing-editor .design-line.active{padding-bottom:16px!important;background:rgba(255,255,255,.72)!important;border-color:rgba(137,78,123,.34)!important}
@@ -1544,4 +1543,17 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
   min-height:70px!important;
   line-height:1.5!important;
   font:inherit!important;
+}
+
+/* Seller-authored and seller-selected names must remain readable wherever
+ * they are reviewed. These were the remaining instances of the D60/D94/D96/
+ * D98 single-line clipping pattern. Compact controls may grow vertically. */
+.app-shell .draft-row b,
+.app-shell .final-design-group>summary span,
+.app-shell[data-product-selected="true"] .post-draft-heading>div:before,
+.app-shell .connect-step .etsy-shop-name{
+  white-space:normal!important;
+  text-overflow:clip!important;
+  overflow:visible!important;
+  overflow-wrap:anywhere!important;
 }

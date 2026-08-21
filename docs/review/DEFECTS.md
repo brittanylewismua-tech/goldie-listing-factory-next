@@ -1246,7 +1246,7 @@ short titles that never grew when titles reached 140 characters. Worth a sweep
 for any remaining `white-space:nowrap` + `text-overflow:ellipsis` pair on
 seller-authored content.
 
-### D99 · Shipping profile name truncated with ".." in the DOM · **OPEN** · **LOW**
+### D99 · Shipping profile name truncated with ".." in the DOM · **FIXED HERE** · **LOW**
 
 Publish checklist reads:
 

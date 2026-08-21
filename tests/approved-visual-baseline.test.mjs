@@ -410,3 +410,18 @@ test("the publish list shows full titles — D98", async () => {
   assert.doesNotMatch(css, /\.app-shell \.final-listing-card>div:not\(\.final-listing-links\)>b\{[^}]*white-space:nowrap/,
     "Publish-list titles are clipped to one line again.");
 });
+
+test("seller-authored names wrap instead of inheriting the title truncation pattern — D99 sweep", async () => {
+  const [page,css,mockupCss]=await Promise.all([
+    readFile(listingFactoryPage,"utf8"),
+    readFile(new URL("app/approved-functional.css",root),"utf8"),
+    readFile(new URL("app/mockups/mockups.css",root),"utf8"),
+  ]);
+  assert.doesNotMatch(css,/design-fields>label:nth-of-type\(1\) input\{[^}]*text-overflow:ellipsis/);
+  assert.match(css,/\.app-shell \.draft-row b,[\s\S]*white-space:normal!important/);
+  assert.match(css,/\.app-shell \.final-design-group>summary span/);
+  assert.match(css,/post-draft-heading>div:before/);
+  assert.match(mockupCss,/\.collectionToggle h3\{white-space:normal;overflow:visible;text-overflow:clip/);
+  assert.match(page,/profile\.title\.replace\(\/\\\.\{2,\}\$\/,"…"\)/,
+    "Shipping profile display names can regress to the literal two-dot truncation from Etsy.");
+});
