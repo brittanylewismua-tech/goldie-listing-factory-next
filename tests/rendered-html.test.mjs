@@ -2090,3 +2090,14 @@ test("the Etsy category select always shows the category that is set — D106", 
     "A set category must still render an option when the category list has not loaded.");
   assert.match(page, /details\.category\|\|"Category already chosen for this listing"/);
 });
+
+test("changing Etsy category preserves compatible values and warns before clearing others — D103",async()=>{
+  const page=await readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8");
+  assert.match(page,/function preserveCompatibleEtsyProperties/);
+  assert.match(page,/option\.value_id===previous\.valueId\|\|option\.name\.toLowerCase\(\)===previous\.value\.trim\(\)\.toLowerCase\(\)/);
+  assert.match(page,/setPendingCategoryChange\(\{designId:design\.id,details,clearedCount:merged\.clearedCount\}\)/);
+  assert.match(page,/Change category and clear \{pendingCategoryChange\.clearedCount\}/);
+  assert.match(page,/Keep current category/);
+  assert.match(page,/finishPhase!=="etsy"\|\|etsyCategories\.length/,
+    "Restored batches must load the full category list so the visible category control can actually change.");
+});
