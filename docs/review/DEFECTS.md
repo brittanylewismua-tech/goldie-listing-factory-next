@@ -194,7 +194,7 @@ they did not know.
 ### D11 · "BACH TEES" appears twice · **FIXED**
 Once as a label top-right of the block, once in the dropdown below it.
 
-### D12 · The bundle row is sandwiched mid-flow · OPEN
+### D12 · The bundle row is sandwiched mid-flow · **FIXED**
 **Wrong:** "Using this design on multiple products? · OPTIONAL" sits between the
 product list and the confirmation of what was just selected. Reading order is
 choose → unrelated optional feature → what you chose.
@@ -221,13 +221,13 @@ two-column layout whose left column has collapsed.
 visible scrollbar and no resize affordance.
 **Fix:** taller default, visible scroll, or auto-grow.
 
-### D15 · "Listing photos" is a status shaped like a control · OPEN
+### D15 · "Listing photos" is a status shaped like a control · **FIXED**
 **Wrong:** "Listing photos — Choose after previews are created" renders as a tile
 identical to "Etsy details — 3 product facts remembered", which *is* actionable.
 Same treatment, different behaviour.
 **Fix:** status text must not look like a button.
 
-### D16 · Etsy details described two different ways on one screen · OPEN
+### D16 · Etsy details described two different ways on one screen · **FIXED**
 **Wrong:** "3 product facts remembered" inside the panel, "Etsy details 3 of 11
 set" in the summary chip below it. The first hides the denominator.
 **Fix:** one phrasing, always with the denominator.
@@ -332,7 +332,7 @@ missing.
 ### D36 · "Plenty of room" at 65% used · **FIXED**
 **Fix:** amber past ~75%, and state what remains in units the seller thinks in.
 
-### D37 · The Etsy fee profile lives on the billing page · OPEN
+### D37 · The Etsy fee profile lives on the billing page · **FIXED**
 It drives every profit figure on the Pricing step. Nobody debugging a wrong
 profit number will look under Usage + Plan.
 **Fix:** surface it from Pricing, and include it in "Saved for this product".
@@ -379,7 +379,7 @@ This page says "Mockup Sets"; the Photos step says "Add Your Own Mockups
 
 ## Systemic
 
-### D45 · The rare or destructive action is the loudest on six screens · OPEN
+### D45 · The rare or destructive action is the loudest on six screens · **FIXED**
 | Screen | Loud | Quiet |
 |---|---|---|
 | Pricing | whole-number checkbox | the prices it changes |
@@ -393,7 +393,7 @@ This page says "Mockup Sets"; the Photos step says "Add Your Own Mockups
 **Rule to adopt:** the action taken most often gets the filled button; setup and
 destructive actions get links.
 
-### D46 · Finish sub-steps unreachable from outside Finish · OPEN
+### D46 · Finish sub-steps unreachable from outside Finish · **FIXED**
 They only render when `workflowStep === "finish"`, so from Designs you cannot
 jump to Photos.
 
