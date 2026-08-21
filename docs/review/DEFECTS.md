@@ -13,6 +13,52 @@ Last verified against the live site and `main`: 20 Aug 2026.
 
 ## Blocking
 
+### D73 · Nothing advances past the first Finish phase on a resumed batch · OPEN · **NEW BLOCKER**
+Verified live on batch `9a78b187`:
+
+| Clicked | Step counter before | after |
+|---|---|---|
+| "Etsy details" sub-step (enabled) | Finish · Titles + tags (1 of 4) | unchanged |
+| "Publish" sub-step (enabled) | Finish · Titles + tags (1 of 4) | unchanged |
+| "Next step" button | Finish · Titles + tags (1 of 4) | unchanged |
+
+The **Photos** sub-step does not render at all. No error is shown in any case.
+
+Same shape as D53 — an enabled control that silently does nothing — moved down
+one level. D53 fixed getting *into* Finish; nothing moves *through* it, so a
+resumed batch lands on titles and stops there permanently. D64, D67 and the
+whole publish screen are unverifiable while this holds.
+
+---
+
+### GUARD · `app/workflow-gates.ts` + `tests/workflow-traversal.test.mjs` · **ADDED**
+
+Every navigation blocker shipped so far came from one place: gate logic defined
+inline in `listing-factory-app.tsx` and read by three callers — the step rail,
+the Next button, and the URL handler. Changing a condition for one silently
+closed the path for the others.
+
+`app/workflow-gates.ts` extracts `canOpenStep`, `canOpenPhase`,
+`blockedReasons` and `resumeStep` as pure functions over an explicit
+`GateState`. `tests/workflow-traversal.test.mjs` asserts the properties that
+must always hold.
+
+**Wiring required:** `listing-factory-app.tsx` must import these instead of
+defining its own copies, so all three callers share one source of truth. Until
+that happens the guard protects the module but not the app.
+
+**Verified:** 7/7 pass against the corrected logic. Reintroducing D53's
+condition fails 4 of 7 with:
+> *A batch with real Printify drafts cannot open "finish". The seller has
+> already paid for these listings and must always be able to reach them.*
+
+**Two rules the guard encodes:**
+1. **Completion overrides everything.** Once drafts exist, every step and phase
+   stays open. No condition may close a completed batch.
+2. **No silent no-ops.** If `blockedReasons` is non-empty the control must be
+   disabled and show the reason. Never render it enabled and inert.
+
+
 ### D53 · A resumed batch cannot reach its own drafts · **FIXED** · **WORST DEFECT FOUND**
 
 **Symptom.** Open a batch from Batch History that already has Printify drafts:
