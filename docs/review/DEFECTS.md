@@ -83,7 +83,7 @@ phase last visited. **No screen may render without a forward path.**
 
 ## Batch screen (step 2)
 
-### D2 · Section order is wrong — designs must come first · OPEN
+### D2 · Section order is wrong — designs must come first · **FIXED**
 **Wrong:** Colours and Mockups sit above the designs drop zone. Both are decisions
 *about* the designs. You cannot judge which shirt colours suit artwork that has
 not been uploaded, and a mockup picker rendered before any design exists can only
