@@ -905,6 +905,7 @@ export default function ListingFactoryApp() {
             <a href="/mockups" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M21 16l-5-5-6 6"/></svg>Mockup Library</a>
             <a href="/usage" onClick={event=>guardNavigation(event,"/usage")}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l8 3.5v5c0 4.6-3.2 8.6-8 9.5-4.8-.9-8-4.9-8-9.5v-5L12 3z"/><path d="M9.2 12.2l1.9 1.9 3.9-3.9"/></svg>Usage</a>
           </nav>
+          <button className="workflow-restart-button" type="button" disabled={running} onClick={startOver}><span aria-hidden="true">↻</span> Start a new batch</button>
           <GoldieCommandBar data={commandCenterData} onUseProduct={recipe=>{void chooseRecipe(recipe).then(selected=>{if(selected)goToStep("setup")})}} onStartBlank={()=>{clearCurrentBatch(true);goToStep("setup")}}/>
           {owner && <a className="diagnostics-link" href="/mastermind-admin" aria-label="Open Goldie Diagnostics" title="Goldie Diagnostics">★</a>}
           <a className="usage-link" href="/usage" onClick={event=>guardNavigation(event,"/usage")}>Usage + Plan</a>
@@ -923,7 +924,6 @@ export default function ListingFactoryApp() {
           <p className="hero-copy">{workflowHero.copy}</p>
           {workflowStep==="connect"&&<div className="value-proof" aria-label="What this batch supports"><span><b>Up to 20 designs</b><small>in one batch</small></span><span><b>Costs and fees</b><small>shown for every variant</small></span><span><b>You approve</b><small>before anything goes live</small></span></div>}
         </div>
-        <button className="workflow-restart-button" type="button" disabled={running} onClick={startOver}><span aria-hidden="true">↻</span> Start a new batch</button>
       </section>}
 
       {!returningHome&&<section className={`workspace ${complete&&workflowStep==="finish"&&finishPhase==="mockups"?"mockup-workspace":""}`}>

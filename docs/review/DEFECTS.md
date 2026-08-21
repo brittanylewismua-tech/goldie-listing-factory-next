@@ -1776,8 +1776,8 @@ checking the state four seconds later. Rendering was never the problem.
 
 The old “Clear batch + start over” control lived inside a progress header that
 the approved layout hides, so sellers had no visible exit once a batch was in
-progress. A subtle “Start a new batch” control now stays beside every workflow
-heading. It offers Cancel, Save to Batch History + start new, and Discard this
+progress. A subtle “Start a new batch” control now stays in the fixed workflow
+sidebar on every step, including while a long step is scrolled. It offers Cancel, Save to Batch History + start new, and Discard this
 batch + start new. Saving preserves the batch record and files; both restart
 paths preserve saved products, defaults, keyword banks, mockup sets, and any
 Printify drafts already created.
