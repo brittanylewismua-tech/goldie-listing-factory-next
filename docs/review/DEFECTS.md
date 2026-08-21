@@ -431,3 +431,48 @@ filled "Resume batch". No confirmation.
 ### D57 · Two button labels for the same action, one of which lies · OPEN
 Rows show either "Resume batch →" or "Open results →" depending on status. The
 split is reasonable, but "Open results" lands on step 3 (see D53).
+
+
+---
+
+## Shipping — two different things share one name
+
+### D58 · "Shipping profile" means two unrelated things and the labels don't say which · OPEN
+
+**Traced through the code, both numbers are real and come from different systems.**
+
+**$4.75 — what the buyer pays.** Read live from **Etsy**:
+`GET /shops/{shopId}/shipping-profiles` -> `domestic.primary_cost`
+(`app/api/etsy/shipping-profiles/route.ts`). Not from Printify, not from the
+saved product.
+
+**$7.99 — what Printify charges to fulfil.** From Printify's catalogue:
+`/catalog/blueprints/{id}/print_providers/{id}/shipping.json`, filtered to US
+profiles covering the enabled variants, then
+`standardShipping = Math.max(...rates)/100` (`app/api/printify/route.ts`).
+It is the **highest** first-item rate across those profiles — hence "up to".
+
+**Why they differ:** Printify creates Etsy shipping profiles when it syncs
+products, so the Etsy profile was probably created *by* Printify. After that the
+two drift independently — Printify's fulfilment rates change, the Etsy profile
+stays where it was set. Nothing syncs them. Both figures are current and correct;
+the gap is real.
+
+**The defect is naming.** Three places, three vocabularies, none saying which
+system it means:
+| Where | Says | Actually |
+|---|---|---|
+| Pricing dropdown | "Shipping profile", helper "Selected automatically from your product template" | an **Etsy** profile — but the helper implies Printify |
+| Batch summary | "Printify fulfillment shipping USD 7.99 cost" | Printify's cost |
+| Warning box | "Your Etsy profile" vs "Printify's current estimate" | correct, but the only place it is stated |
+
+**Fix:** name them everywhere.
+- **"Etsy shipping profile — what buyers pay"**
+- **"Printify shipping cost — what you pay"**
+
+That alone makes the warning self-explanatory rather than alarming.
+
+**Secondary:** since $7.99 is a *maximum* across variants, the warning overstates
+the loss for variants that ship cheaper. `shippingByVariant` is already computed
+in the same function — use it to show a range, or the figure for the variants
+actually in this batch.
