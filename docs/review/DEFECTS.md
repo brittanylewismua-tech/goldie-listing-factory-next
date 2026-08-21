@@ -27,46 +27,38 @@ The drafts are fine — forcing the route client-side renders
 broken.** From the seller's side their work has vanished, on a page headed
 "Continue where you left off."
 
-**Root cause.** In the resume path in `app/listing-factory-app.tsx`:
+**ROOT CAUSE — corrected 20 Aug.** My first diagnosis blamed the IndexedDB
+design-file cache. That was wrong. Forcing the route reveals a blocking modal
+that names it exactly:
 
-```ts
-const cached = await loadBatchFiles(id).catch(() => []);
-const designs = (state.designs || []).map((design, index) => {
-  const file = cached[index];
-  return file ? { ...design, file, previewUrl: URL.createObjectURL(file) } : null;
-}).filter(Boolean) as DesignFile[];
-...
-setFiles(designs);
+> **Finish all sections first.**
+> Fix these items: *Review and approve every enabled variant price.*
+
+The Finish step is gated on `pricingApproved`. Counting every call site in
+`app/listing-factory-app.tsx`:
+
+```
+ 1 x  setPricingApproved(Boolean(state.pricingApproved))   <- restore from saved state
+ 9 x  setPricingApproved(false)
+ 0 x  setPricingApproved(true)                             <- DOES NOT EXIST
 ```
 
-Designs are only restored **if their raw file bytes are still in local IndexedDB**
-(`app/batch-cache.ts`, DB `goldie-listing-factory`, store `batch-files`). If that
-cache is missing, every design maps to `null`, `files` becomes `[]`, and the
-Finish gate fails — so the step silently refuses to open.
+**Nothing in the codebase can ever set pricing to approved.** Saved state is
+therefore always `false`, so every restore restores `false`, so the Finish gate
+can never pass on a resumed batch. This is the same bug as **D23** — the badge
+and the gate share one unreachable flag.
 
-The `.catch(() => [])` swallows the failure. Nothing is logged and nothing is
-shown.
+Going *forward* through the wizard in a single session still works, because the
+flow advances without consulting the gate. **Resuming is what is broken**, which
+is exactly the path Batch History advertises.
 
-**Why this is severe:** IndexedDB is per-browser and per-device. This means a
-batch is stranded if the seller
-- resumes on a different computer or browser,
-- clears browsing data,
-- or is evicted by the browser under storage pressure.
-
-Everything else — drafts, titles, tags, photo selections — is saved server-side
-and comes back fine. Only the raw design files are local, and their absence
-takes the whole batch down with them.
-
-**Fix, in order:**
-1. **Do not gate Finish on `files`.** Once `complete` is true the drafts are the
-   source of truth; the seller does not need the original PNGs to finish titles,
-   Etsy details, photos or publishing.
-2. When the cache is empty but `state.designs` exists, rebuild the design list
-   from server state with the Printify preview as the thumbnail, and mark the
-   rows "original file not on this device" — degraded, not deleted.
-3. Never fail silently. If a resume drops files, say so.
-4. Long term: designs are already uploaded to R2. Restore previews from there
-   rather than from browser storage.
+**Fix:**
+1. Wire a real approve action, or drop `pricingApproved` from the Finish gate
+   entirely — prices are already validated on the pricing step.
+2. Remove the "✓ Approved" badge until it reflects something real (D23).
+3. When a required step blocks navigation, the blocked control must say so
+   inline. Today the Finish rail button looks enabled, does nothing on click,
+   and only reveals the reason if you force the route.
 
 **Also fix the label:** "Open results" must open the results, not step 3.
 
