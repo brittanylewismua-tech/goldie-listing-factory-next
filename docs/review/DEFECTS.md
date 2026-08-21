@@ -534,3 +534,85 @@ An external-arrow link inside the bank picker, positioned where a seller lands
 when they have no bank selected — which is exactly when they are most likely to
 click it and lose their place.
 **Fix:** open bank management in a panel or new tab, never in-place mid-flow.
+
+
+---
+
+## Etsy details, Photos and Publish phases
+
+### Landed and working — do not rebuild
+- **Etsy details collapsed to summary rows** with a working denominator:
+  "Etsy details · 3 of 11 set · Short sleeve, Crew, T-shirt" + Edit. (B2)
+- **"Apply these photos to every listing" moved above the grid** — measured at
+  **71px** from the top of the accordion, was 2,087px. (D-original, fixed)
+- **Per-listing publish selection** with checkboxes and "Choose exactly which
+  listings to publish". (`STRUCTURAL.md` S2)
+- **Publish rows grouped by design filename** with real counts:
+  "25/140 characters · 2/13 tags · 12 photos". (`BUNDLES.md` grouping)
+
+### D64 · The publish screen shows the evidence and ignores it · OPEN · **HIGH**
+On one row, verbatim:
+
+> **Bachelorette Koozies, Bachelorette Coozies**
+> 42/140 characters · 2/13 tags · 3 photos
+> **✓ Ready for final publish**
+
+The counts are now displayed correctly — and the readiness verdict directly
+above them ignores every one. A koozie title on a t-shirt with 2 of 13 tags is
+marked Ready. The checklist at the top of the same screen adds "✓ Titles are
+complete" and "✓ Tags are complete".
+
+This is the sharpest form of the original problem: the data proving a listing is
+weak is now rendered two lines below the badge saying it is fine.
+
+**Fix:** readiness must read the same numbers it displays. Under ~100 characters
+or under 13 tags is not "complete" — amber, not green. Do not block publishing
+(that stays the seller's call, per earlier decisions) but stop asserting the
+opposite of what is on screen.
+
+### D65 · "✓ Every enabled variation and price was reviewed" is unreachable · OPEN
+Same root cause as **D53/D23** — `pricingApproved` can never be true, so this
+checkmark either renders from stale saved state or is hardcoded. Either way it
+claims a review that the code cannot record.
+
+### D66 · The loudest control on the photos screen is an exit · OPEN
+"Open all listings to review in Printify" is a large dark filled button at the
+top of the phase — the most prominent element on the screen sends the seller out
+of Goldie. "Choose size guide" beside it is also dark filled, so two filled
+buttons compete before any listing content appears.
+
+### D67 · No count against Etsy's 20-photo limit · OPEN
+The flatlay picker still holds **148 checkboxes** and shows no running count and
+no cap. One listing in this batch carries 12 photos with nothing indicating how
+many are allowed.
+
+### D68 · Tag chips are clipped on the photos phase · OPEN
+The chip row beside each draft preview is cut off at the right edge with a dark
+sliver visible where it overflows its container.
+
+### D69 · Three eyebrow/heading duplications on these phases · OPEN
+- `OPTIONAL · APPLY TO THE WHOLE BATCH` above "Add one size guide to every Etsy listing"
+- `PRINTIFY DRAFT CREATED` above the listing title
+- `EVERY LISTING IN THIS BATCH` above "Choose exactly which listings to publish"
+
+Same pattern as D8 and D62.
+
+### D70 · Three size-guide controls on one screen · OPEN
+A batch-level "Choose size guide", a per-listing "Size guide for this listing ·
+Using the batch size guide", and "Use a different size guide". The hierarchy is
+correct but three controls for one concept on one screen needs collapsing.
+
+### D71 · Etsy attribute fill is still non-deterministic across identical products · OPEN
+Three listings, same Gildan tee:
+- "3 of 11 set · Short sleeve, Crew, T-shirt"
+- "3 of 11 set · Short sleeve, Crew"   ← count says 3, two values listed
+- "4 of 11 set · Short sleeve, Crew, T-shirt"
+
+Different fill states for the same blank, and on the middle row the count and the
+listed values disagree. Confirms the earlier finding and adds a count/label
+mismatch. Fixed by seeding from the Printify blueprint (`UX-DIRECTION.md` B2).
+
+### D72 · The reassurance box overclaims · OPEN
+"Titles, tags, descriptions, sizes, colors, and prices are set." shown above
+listings with 25-character titles and 2 tags. Same category as D64 — "set" is
+doing the work "complete" was doing.
