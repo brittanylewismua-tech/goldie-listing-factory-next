@@ -15,7 +15,7 @@ import { prepareArtworkFile } from "./client-artwork-upload";
 import { clearBatchFiles, loadBatchFiles, saveBatchFiles } from "./batch-cache";
 import { estimatedProfit, recommendedPrice } from "./pricing";
 import { ActionReceipt, GoldieInsight, OutcomeReceipt, WorkflowMomentum, type BatchReceipt } from "./goldie-ui";
-import { navigationIssues, type NavigationGateState } from "./navigation-gates";
+import { navigationIssues, type NavigationGateState } from "./workflow-gates";
 import { GoldieCommandBar } from "./returning-command-center";
 import FinalListingReview from "./final-listing-review";
 import ContextHelp from "./context-help";
