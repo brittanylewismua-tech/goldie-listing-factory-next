@@ -239,7 +239,7 @@ set" in the summary chip below it. The first hides the denominator.
 ### D17 · Etsy shows a white Disconnect bar, Printify does not · **FIXED**
 Reported by Brittany. Needs verification and a matching treatment.
 
-### D18 · The step contains no decisions for a returning seller · OPEN
+### D18 · The step contains no decisions for a returning seller · **FIXED**
 Both accounts connected — the screen is two green confirmations and a Next
 button, occupying a slot in "Step 1 of 5".
 **Fix:** move connection status to the sidebar; interrupt the flow only when a
@@ -305,7 +305,7 @@ still reads "Choose individual images".
 Too small to tell twenty similar designs apart.
 **Fix:** square, ~72px, artwork edge to edge.
 
-### D32 · "Remove" has no confirmation once drafts exist · OPEN
+### D32 · "Remove" has no confirmation once drafts exist · **FIXED**
 
 ---
 
@@ -320,7 +320,7 @@ Now reads "2 listings need at least one photo". The old `, .` bug is gone but at
 
 ## Usage + Plan
 
-### D34 · The trial end date is never shown · OPEN
+### D34 · The trial end date is never shown · **FIXED**
 Card says "Mastermind beta", "3-day trial", "Resets August 31, 2026". A 3-day
 trial that resets monthly is incoherent, and the one date a trial user needs is
 missing.

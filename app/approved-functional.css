@@ -1156,6 +1156,7 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .app-shell .steps-column.setup-column .color-default-block{order:30;width:min(980px,calc(100% - 32px));margin-inline:auto}
 .app-shell .steps-column.setup-column .bundle-color-selectors{order:31}
 .app-shell .steps-column.setup-column .mockup-default-block{order:40;width:min(980px,calc(100% - 32px));margin-inline:auto}
+.app-shell .steps-column.setup-column .fee-profile-product-summary{order:45;width:min(980px,calc(100% - 32px));margin-inline:auto}
 .app-shell .steps-column.setup-column .everything-else{order:50;width:min(980px,calc(100% - 32px));margin-inline:auto}
 .app-shell .steps-column.setup-column .saved-settings-summary{order:51}
 .app-shell .steps-column.setup-column .keyword-bank-required{order:52}
@@ -1173,6 +1174,10 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .app-shell .recipe-card .recipe-use em{display:inline-block!important;justify-self:start!important;width:auto!important;max-width:max-content!important;margin-top:4px!important;padding:5px 9px!important;border-radius:999px!important;background:#673452!important;color:#fff!important;font-weight:850!important}
 .app-shell .recipe-card .delete-recipe{width:auto!important;min-width:48px!important;padding:4px 7px!important;font-size:0!important}
 .app-shell .recipe-card .delete-recipe:after{content:"Delete";font-size:9px;font-weight:800}
+.app-shell .everything-else-body .saved-setting-list>span:first-child{display:none!important}
+.app-shell .everything-else-body .saved-setting-list>span:last-child{padding:4px 0!important;border:0!important;background:transparent!important;box-shadow:none!important}
+.app-shell .fee-profile-product-summary{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 18px;padding:13px 16px;border:1px solid rgba(91,48,79,.14);border-radius:12px;background:rgba(255,255,255,.4);color:#5b304f;text-decoration:none}
+.app-shell .fee-profile-product-summary b{font-size:11px}.app-shell .fee-profile-product-summary span{font-size:9px}.app-shell .fee-profile-product-summary em{grid-column:2;grid-row:1/3;align-self:center;font-size:9px;font-style:normal;font-weight:850}
 .app-shell .pricing-approval-button{width:100%!important;margin-top:16px!important;padding:14px 18px!important;border:1px solid rgba(91,48,79,.18)!important;border-radius:11px!important;background:#663650!important;color:#fff!important;font-weight:850!important}
 .app-shell .pricing-approval-button.approved{background:#e8f5eb!important;color:#27663f!important}
 .app-shell .pricing-approval-button:disabled{opacity:.5!important;cursor:not-allowed!important}

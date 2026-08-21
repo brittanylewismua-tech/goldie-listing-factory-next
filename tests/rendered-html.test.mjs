@@ -33,6 +33,22 @@ test("uses the binding batch limit and keeps setup actions in the right hierarch
   assert.match(css, /managementOnly \.newSetButton\{border:0!important;background:transparent!important/);
 });
 
+test("places the selected-product proof before bundle setup and exposes Finish phases after drafts", async () => {
+  const [app, tools] = await Promise.all([
+    readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/factory-tools.tsx", import.meta.url), "utf8"),
+  ]);
+  assert.match(app, /selectedSummary=\{templateDetails\?</);
+  assert.match(tools, /\{activeId&&props\.selectedSummary\}[\s\S]*<details className="bundle-library"/);
+  assert.match(app, /\{\(railInFinish\|\|complete\)&&<div className="rail-substeps"/);
+});
+
+test("shows a trial subscriber the trial end date instead of the monthly reset date", async () => {
+  const usage = await readFile(new URL("../app/usage/page.tsx", import.meta.url), "utf8");
+  assert.match(usage, /plan\.key==="trial"&&data\.billing\?\.subscription\?\.status==="trialing"/);
+  assert.match(usage, /`Trial ends \$\{new Date\(data\.billing\.subscription\.currentPeriodEnd\*1000\)/);
+});
+
 async function render(path = "/") {
   const workerUrl = new URL("../dist/server/index.js", import.meta.url);
   workerUrl.searchParams.set("test", `${process.pid}-${Date.now()}`);
