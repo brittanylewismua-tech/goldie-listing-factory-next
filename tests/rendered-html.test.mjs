@@ -323,10 +323,10 @@ test("stages each finished mockup group for its exact Etsy listing", async () =>
   assert.match(page, /printifyImageIndices/);
 });
 
-test("renders Mockup Sets as management only", async () => {
+test("renders Mockup Library as management only", async () => {
   const response = await render("/mockups");
   const html = await response.text();
-  assert.match(html, /Your mockup library/);
+  assert.match(html, /<h1>Mockup Library<\/h1>/);
   assert.match(html, /Add mockup set/);
   assert.match(html, /class="management-nav"/);
   assert.match(html, />Listing Factory<\/a>/);
@@ -553,7 +553,7 @@ test("uses the full Mockup Library width and previews up to ten scenes before ex
   ]);
   assert.match(page, /items\.slice\(0,10\)/);
   assert.match(css, /\.managementSetList\s*\{\s*grid-template-columns:\s*minmax\(0, 1fr\)/);
-  assert.match(css, /\.managementSetList \.setPreview\s*\{[\s\S]*grid-template-columns:\s*repeat\(10, minmax\(64px, 1fr\)\)/);
+  assert.match(css, /\.managementSetList \.setPreview\s*\{[\s\S]*grid-template-columns:\s*repeat\(5, minmax\(120px, 1fr\)\)/);
   assert.match(css, /\.managementSetList \.setPreview img\s*\{[\s\S]*aspect-ratio:\s*4 \/ 5/);
 });
 
@@ -671,7 +671,7 @@ test("makes keyword bank saving unmistakable and prevents accidental duplicates"
     readFile(new URL("../app/api/keyword-lists/route.ts",import.meta.url),"utf8"),
     readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8"),
   ]);
-  assert.doesNotMatch(page,/goldie-wordmark\.webp/);assert.match(page,/className="management-nav"/);assert.match(page,/<a href=\{returnHref\}>Listing Factory<\/a>/);assert.match(page,/save-toast/);assert.doesNotMatch(page,/return-to-work/);
+  assert.doesNotMatch(page,/goldie-wordmark\.webp/);assert.match(page,/ManagementNav active="keywords" listingFactoryHref=\{returnHref\}/);assert.match(page,/save-toast/);assert.doesNotMatch(page,/return-to-work/);
   assert.match(page,/goldie-active-batch/);assert.match(page,/Save changes/);assert.match(page,/Create another bank/);
   assert.match(page,/if\(editingId\)/);assert.match(page,/setName\(""\)/);assert.match(page,/setRaw\(""\)/);
   assert.match(route,/already exists\. Open that bank to update it instead/);
@@ -1749,7 +1749,7 @@ test("makes Batch History visual, identifiable, reversible, and truthful",async(
   ]);
   assert.match(route,/designName/);assert.match(route,/thumbnail_url/);assert.match(route,/state\.keptAsDrafts/);
   assert.match(history,/batch-history-thumbnail/);assert.match(history,/Permanently remove/);assert.match(history,/window\.confirm/);
-  assert.match(history,/Open finished batch/);assert.match(history,/batch\.status==="complete"\?"&open=results":""/);
+  assert.match(history,/Open published batch/);assert.match(history,/batch\.status==="complete"\?"&open=results":""/);
   assert.match(styles,/\.batch-history-thumbnail/);assert.match(styles,/\.batch-history-controls/);
 });
 
@@ -2005,4 +2005,42 @@ test("traverses every workflow phase with one shared gate and never enables an i
   assert.match(app,/disabled=\{preparingEtsy\|\|progressGateIssues\(6\)\.length>0\}/);
   assert.match(app,/function markShippingEdit\(\)\{onApprovalChange\(false\)/);
   assert.doesNotMatch(app,/if\(!selectedProfile\|\|customDirty\)onApprovalChange/);
+});
+
+test("uses one management navigation vocabulary everywhere (fixes D84)",async()=>{
+  const nav=await readFile(new URL("../app/management-nav.tsx",import.meta.url),"utf8");
+  assert.match(nav,/label:"Mockup Library"/);
+  assert.match(nav,/label:"Usage \+ Plan"/);
+  for(const page of ["batches","keywords","mockups","usage"]){
+    const source=await readFile(new URL(`../app/${page}/page.tsx`,import.meta.url),"utf8");
+    assert.match(source,/ManagementNav/);
+  }
+});
+
+test("expands keyword cards and aligns their actions (fixes D85 and D86)",async()=>{
+  const page=await readFile(new URL("../app/keywords/page.tsx",import.meta.url),"utf8");
+  const css=await readFile(new URL("../app/globals.css",import.meta.url),"utf8");
+  assert.match(page,/className="bank-keyword-toggle" aria-expanded=\{expanded\}/);
+  assert.match(page,/Show all \$\{list\.keywords\.length\} phrases/);
+  assert.match(css,/\.bank-grid article\{display:flex;flex-direction:column\}/);
+  assert.match(css,/\.bank-grid \.edit-bank\{margin-top:auto\}/);
+});
+
+test("confirms and visually quiets destructive mockup deletion (fixes D87)",async()=>{
+  const page=await readFile(new URL("../app/mockups/page.tsx",import.meta.url),"utf8");
+  const css=await readFile(new URL("../app/mockups/management.css",import.meta.url),"utf8");
+  assert.match(page,/Delete “\{deletingTheme\}”\?/);
+  assert.match(page,/Yes, delete set/);
+  assert.match(css,/\.managementSetList \.deleteSet \{[\s\S]*?background: transparent;[\s\S]*?text-decoration: underline/);
+});
+
+test("reports published listings instead of workflow completion (fixes D88)",async()=>{
+  const api=await readFile(new URL("../app/api/batches/route.ts",import.meta.url),"utf8");
+  const page=await readFile(new URL("../app/batches/page.tsx",import.meta.url),"utf8");
+  const app=await readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8");
+  assert.match(api,/published_count:Math\.max\(0,Number\(state\.batchReceipt\?\.publishedCount\)\|\|0\)/);
+  assert.match(page,/DRAFTS READY · 0 PUBLISHED/);
+  assert.doesNotMatch(page,/status\.replace\("_"," "\)/);
+  assert.match(app,/keptAsDrafts,batchReceipt\}/);
+  assert.match(app,/keptAsDrafts,batchReceipt\]\);/);
 });

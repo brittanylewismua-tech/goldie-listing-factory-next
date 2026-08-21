@@ -1484,7 +1484,8 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .app-shell .individual-size-guide small{font-size:9px!important;font-weight:750!important}
 .app-shell .individual-size-guide button{min-height:0!important;margin-left:auto!important;padding:4px 0!important;border:0!important;background:transparent!important;box-shadow:none!important;color:#68445f!important;font-size:9px!important;text-decoration:underline!important;text-underline-offset:3px!important}
 .app-shell .individual-size-guide p{flex-basis:100%!important}
-.managementOnly .managementSetList .setPreview{grid-template-columns:repeat(5,minmax(0,1fr))!important;gap:5px!important}
+.managementOnly .managementSetList .setPreview{grid-template-columns:repeat(5,minmax(120px,1fr))!important;gap:10px!important}
+.managementOnly .managementSetList .setPreview img{aspect-ratio:4/5!important}
 
 /* Audit pass 2: the frequent action is primary; setup and destructive actions recede. */
 .app-shell[data-product-selected="true"] .recipe-tile:not(.selected),

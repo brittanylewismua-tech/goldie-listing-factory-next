@@ -844,7 +844,7 @@ its right. Expanded is fine (175×218). The default state is the broken one.
 **Fix:** show mockups at a usable size by default and let the grid use the
 width it already has.
 
-### D84 · The two library pages disagree with themselves · **OPEN** · **MEDIUM**
+### D84 · The two library pages disagree with themselves · **FIXED** · **MEDIUM**
 
 `/mockups` is labelled four ways: sidebar **"Mockup Sets"** (5 files) vs
 **"Mockup Library"** (1 file), page `<h1>` **"Your mockup library"**, section
@@ -854,26 +854,26 @@ width it already has.
 Cause: nav markup is hand-copied into each page rather than shared.
 **Fix:** one nav component, one label per destination.
 
-### D85 · "+ 38 more" looks like a control and is inert · **OPEN** · **MEDIUM**
+### D85 · "+ 38 more" looks like a control and is inert · **FIXED** · **MEDIUM**
 
 Keyword bank cards show 12 phrases, then `+ 38 more` as a bare `<small>` —
 `cursor: auto`, no handler. On a 50-phrase bank she cannot see 76% of her own
 keywords without opening the editor.
 **Fix:** make it expand, or say "50 phrases · open to view all".
 
-### D86 · Keyword bank cards misalign · **OPEN** · **LOW**
+### D86 · Keyword bank cards misalign · **FIXED** · **LOW**
 
 Grid cards size to content, so the two **Edit bank** buttons sit **57px apart**
 vertically and the shorter card has dead space beneath its button.
 **Fix:** `align-items: stretch` and push the action to the card foot.
 
-### D87 · "Delete set" is styled like "Rename set" · **OPEN** · **MEDIUM**
+### D87 · "Delete set" is styled like "Rename set" · **FIXED** · **MEDIUM**
 
 `/mockups` expanded. Identical size, shape and position; the only difference is
 a faint pink tint. Same loud-destructive pattern catalogued in `AUDIT-PASS-3`.
 Keyword banks confirm properly (`window.confirm`) — mockup sets should match.
 
-### D88 · Batch History says COMPLETE for batches that published nothing · **OPEN** · **MEDIUM**
+### D88 · Batch History says COMPLETE for batches that published nothing · **FIXED** · **MEDIUM**
 
 Two batches badged **COMPLETE**; a third badged **PRINTIFY DRAFTS**. All three
 have only unpublished Printify drafts — **zero listings live on Etsy.**
