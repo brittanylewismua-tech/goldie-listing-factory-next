@@ -64,10 +64,19 @@ modules") and the workflow now lives in **`app/listing-factory-app.tsx`**
 
 ---
 
+## THE WORKING LIST
+
+**`DEFECTS.md` is the running defect list — 46 numbered items, each with where it is,
+what is wrong, and what to do. Work from that. Mark items FIXED, do not delete
+them. Reference them in commits as `fixes D14`.**
+
+---
+
 ## Reading order
 
 1. **`README.md`** ← you are here
-2. **`AUDIT-PASS-3.md`** — Usage/Plan and Keyword Banks, plus the consolidated prominence-inversion pattern and a correction to the bundle quota advice.
+2. **`DEFECTS.md`** — the running list. Start here.
+3. **`AUDIT-PASS-3.md`** — Usage/Plan and Keyword Banks, plus the consolidated prominence-inversion pattern and a correction to the bundle quota advice.
 3. **`AUDIT-PASS-2.md`** — newest findings, against the current build. Supersedes steps 1–2 of SCREEN-AUDIT.
 3. **`SCREEN-AUDIT.md`** — every screen walked, findings S0.1–S5.5
 3. **`UX-DIRECTION.md`** — Part A defects, Part B pre-fill, Part C edge cases
