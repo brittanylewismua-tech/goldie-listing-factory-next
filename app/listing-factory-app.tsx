@@ -56,7 +56,7 @@ const WORKFLOW_STEPS: Array<{id:WorkflowStep;number:string;label:string}> = [
   {id:"finish",number:"05",label:"Finish listings"},
 ];
 const PROGRESS_STEPS = ["Connect Printify","Choose product","Add designs","Review pricing","Create drafts","Titles, tags + descriptions","Etsy listing details","Images + mockups","Final review"];
-const PROGRESS_SHORT_LABELS = ["Connect","Product","Designs","Pricing","Drafts","Titles + tags","Etsy details","Photos","Publish"];
+const PROGRESS_SHORT_LABELS = ["Connect","Product","Designs","Pricing","Drafts","Titles + tags","Etsy details","Images + mockups","Publish"];
 /* The rail used to show all 9 PROGRESS_STEPS as equal peers. That did not match
    the real state machine (WorkflowStep has 5 values) and it invented a "Drafts"
    step that is really the outcome of Pricing. The indices below are unchanged —

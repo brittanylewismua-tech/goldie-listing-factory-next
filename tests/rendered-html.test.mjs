@@ -1135,7 +1135,7 @@ test("labels every progress bubble with a short workflow name", async () => {
     readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/approved-functional.css", import.meta.url), "utf8"),
   ]);
-  assert.match(page, /const PROGRESS_SHORT_LABELS = \["Connect","Product","Designs","Pricing","Drafts","Titles \+ tags","Etsy details","Photos","Publish"\]/);
+  assert.match(page, /const PROGRESS_SHORT_LABELS = \["Connect","Product","Designs","Pricing","Drafts","Titles \+ tags","Etsy details","Images \+ mockups","Publish"\]/);
   assert.match(page, /className="progress-bubble-label"/);
   assert.match(styles, /\.app-shell \.progress-bubble-label\{/);
 });
