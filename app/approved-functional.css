@@ -1150,6 +1150,7 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .app-shell .steps-column.setup-column .template-proof,
 .app-shell .steps-column.setup-column .recipe-error{order:11;width:min(980px,calc(100% - 32px));margin-inline:auto}
 .app-shell .steps-column.setup-column>.designs-step{order:20}
+.app-shell .steps-column.setup-column>.batch-preferences-after-designs{order:30;display:grid;gap:14px;width:100%}
 .app-shell .steps-column.setup-column .batch-page-intro{order:25;width:min(980px,calc(100% - 32px));margin:8px auto 0}
 .app-shell .steps-column.setup-column .color-default-block{order:30;width:min(980px,calc(100% - 32px));margin-inline:auto}
 .app-shell .steps-column.setup-column .bundle-color-selectors{order:31}

@@ -1815,8 +1815,11 @@ test("keeps a forward path from setup, designs, and pricing after drafts exist (
 });
 
 test("orders designs before colours, mockups, and saved settings on the batch screen (fixes D2)",async()=>{
-  const css=await readFile(new URL("../app/approved-functional.css",import.meta.url),"utf8");
+  const [app,css]=await Promise.all([readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8"),readFile(new URL("../app/approved-functional.css",import.meta.url),"utf8")]);
+  assert.match(app,/BatchPreferencesPortal/);
+  assert.match(app,/id="batch-preferences-after-designs"/);
   assert.match(css,/\.steps-column\.setup-column>\.designs-step\{order:20\}/);
+  assert.match(css,/\.steps-column\.setup-column>\.batch-preferences-after-designs\{order:30/);
   assert.match(css,/\.steps-column\.setup-column \.color-default-block\{order:30/);
   assert.match(css,/\.steps-column\.setup-column \.mockup-default-block\{order:40/);
   assert.match(css,/\.steps-column\.setup-column \.everything-else\{order:50/);
