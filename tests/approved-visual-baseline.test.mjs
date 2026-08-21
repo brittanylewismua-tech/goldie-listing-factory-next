@@ -363,3 +363,22 @@ test("the step rail is dark-on-light, matching its transparent background — D9
   assert.doesNotMatch(clarity, /\.app-shell \.workflow-progress button (b|small)\{color:#f{3,}/i,
     "Rail text is near-white again over a transparent background.");
 });
+
+test("the tags field shows all 13 tags, not 5 — D96", async () => {
+  const [page, css] = await Promise.all([
+    readFile(listingFactoryPage, "utf8"),
+    readFile(new URL("app/approved-functional.css", root), "utf8"),
+  ]);
+
+  /* D79 raised tags from 4-7 to a full 13, which is correct. But 13 phrases is
+   * 238 characters, and they were still going into the same 570px single-line
+   * input — 1521px of content, 37% visible, 5 of 13 tags readable.
+   *
+   * The field did not change; what it had to hold tripled. Identical shape to
+   * D60/D94, one field further down the same card. Measured live before the
+   * fix: 37%. After: 238 chars in 81px with zero overflow. */
+  assert.match(page, /<textarea className="listing-tags-field" rows=\{3\} value=\{design\.tags\.join\(", "\)\}/,
+    "Tags are a single-line input again. 13 tags is 238 characters and will not fit.");
+  assert.match(css, /\.listing-tags-field\{[\s\S]*white-space:pre-wrap!important/);
+  assert.doesNotMatch(css, /\.listing-tags-field\{[\s\S]*text-overflow:ellipsis/);
+});

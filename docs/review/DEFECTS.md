@@ -1141,3 +1141,50 @@ characters** and the bank had 8+ phrases fitting the product. A 7-phrase,
 **This is the third time today a fix was verified by reading the code rather
 than running it.** It passed review, passed its own tests, and broke two thirds
 of a batch on first contact.
+
+---
+
+## Launch verification — 21 Aug 2026
+
+Ran the real workflow rather than reading diffs. **Auto-create all titles** on
+the live 3-design batch, BACHELORETTE TEES bank, Gildan Tee.
+
+### D77 — resolved, measured
+
+| | title chars | tags |
+|---|---|---|
+| original defect | 132 / **45** / 126 | 8 / **3** / 8 |
+| after `842c8ba`+`3906b1c` | **1 built, 2 hard-failed** | — |
+| after `16f0f8d` | **139 / 130 / 137** | **13 / 13 / 13** |
+
+> "✓ 3 unique titles and separately ranked Etsy tags created."
+
+Zero row errors. Zero tags over 20 characters, zero fragments (D75 holding).
+Zero wrong-product phrases in any title or tag (D74/D78/D90 holding).
+
+### D76 — resolved, confirmed by screenshot
+
+Row 1 renders: *"No phrase in this bank matches this design. Add one, or write
+the title yourself."* Row 2, whose design does match the bank, correctly shows
+no warning. Advisory rather than blocking, which is right — it still builds the
+best title it can and tells her why it may be off.
+
+### D96 · The tags field truncated at 37% · **FIXED HERE** · **HIGH**
+
+Found in the same screenshot. D79 raised tags from 4–7 to a full 13 — correct —
+but 13 phrases is **238 characters** going into the same 570px single-line
+input, against **1521px** of content. **37% visible: 5 of 13 tags.**
+
+The field never changed; what it had to hold tripled. Identical to D60/D94, one
+field further down the same card, introduced by the fix immediately above it.
+
+**Fixed:** wrapping textarea. Verified live before committing — 238 characters
+and all 13 tags render in 81px with zero overflow.
+
+### Standing pattern
+
+Four times today a change was correct and the thing depending on it was never
+re-checked: D60 (field widened, titles grew), D95 (rail background changed,
+text colours stayed), D77 (gate enforced a count, not the symptom), D96 (tags
+tripled into an unchanged field). Worth checking the *neighbours* of any fix,
+not just the fix.

@@ -1525,3 +1525,18 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
   padding:13px!important;
 }
 .app-shell .title-match-warning{display:block;margin:10px 0;padding:10px 12px;border:1px solid #c18a42;border-radius:10px;background:#fff4dc;color:#5a3710;font-size:12px;line-height:1.45;font-weight:750}
+
+/* D96 · The tags field had the same problem the title field just had.
+ * D79 raised tags from 4-7 to a full 13, which is correct — but 13 phrases is
+ * 238 characters, and they were going into a 570px single-line input against
+ * 1521px of content: 37% visible, 5 of 13 tags readable. The field did not
+ * change; what it had to hold tripled. Same shape as D60/D94. */
+.app-shell .listing-editor .design-fields .listing-tags-field{
+  white-space:pre-wrap!important;
+  text-overflow:clip!important;
+  overflow:hidden!important;
+  resize:none!important;
+  min-height:70px!important;
+  line-height:1.5!important;
+  font:inherit!important;
+}
