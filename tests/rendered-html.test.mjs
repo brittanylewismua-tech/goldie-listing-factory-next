@@ -1837,3 +1837,13 @@ test("keeps product creation visible and lets a selected product be changed (fix
   assert.match(app,/function changeProduct\(\)[\s\S]{0,400}clearCurrentBatch\(true\);return true/);
   assert.doesNotMatch(css,/data-product-selected="true"\] \.recipe-library-head/);
 });
+
+test("records real pricing approval and invalidates it after edits (fixes D23 and D65)",async()=>{
+  const app=await readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8");
+  assert.match(app,/Approve prices and shipping/);
+  assert.match(app,/onClick=\{\(\)=>onApprovalChange\(true\)\}/);
+  assert.match(app,/onPricing=\{value=>\{setPricing\(value\);setPricingApproved\(false\)\}\}/);
+  assert.match(app,/onPrices=\{value=>\{setVariantPrices\(value\);setPricingApproved\(false\)\}\}/);
+  assert.match(app,/pricingApproved\?"✓ Prices and buyer-paid shipping were approved":"! Prices and buyer-paid shipping need review"/);
+  assert.doesNotMatch(app,/✓ Every enabled variation and price was reviewed/);
+});
