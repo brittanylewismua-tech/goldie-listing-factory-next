@@ -1785,7 +1785,7 @@ test("restores completed draft batches to reachable Finish results (fixes D53)",
   assert.match(app,/if\(!pricingApproved\)setPricingApproved\(true\)/);
   assert.match(app,/url\.searchParams\.set\("step","finish"\)/);
   assert.match(app,/setWorkflowStep\("finish"\)/);
-  assert.match(app,/if\(complete&&drafts\.some\(draft=>draft\.status==="Created"\)&&!pricingApproved\)setPricingApproved\(true\)/);
+  assert.match(app,/setPricingApproved\(Boolean\(state\.pricingApproved\)\|\|Boolean\(state\.complete&&\(state\.drafts\|\|\[\]\)\.some\(draft=>draft\.status==="Created"\)\)\)/);
   assert.match(batches,/&open=results/);
 });
 
@@ -1845,5 +1845,7 @@ test("records real pricing approval and invalidates it after edits (fixes D23 an
   assert.match(app,/onPricing=\{value=>\{setPricing\(value\);setPricingApproved\(false\)\}\}/);
   assert.match(app,/onPrices=\{value=>\{setVariantPrices\(value\);setPricingApproved\(false\)\}\}/);
   assert.match(app,/pricingApproved\?"✓ Prices and buyer-paid shipping were approved":"! Prices and buyer-paid shipping need review"/);
+  assert.match(app,/setPricingApproved\(Boolean\(state\.pricingApproved\)\|\|Boolean\(state\.complete&&\(state\.drafts\|\|\[\]\)\.some\(draft=>draft\.status==="Created"\)\)\)/);
+  assert.doesNotMatch(app,/if\(complete&&drafts\.some\(draft=>draft\.status==="Created"\)&&!pricingApproved\)setPricingApproved\(true\)/);
   assert.doesNotMatch(app,/✓ Every enabled variation and price was reviewed/);
 });
