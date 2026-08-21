@@ -1867,3 +1867,12 @@ test("names every listing missing a required photo (fixes D33)",async()=>{
   assert.match(app,/Product and design preview/);
   assert.match(app,/jumpToMissingPhotoListing\(clientId\)/);
 });
+
+test("counts and caps every listing at Etsy's 20-photo limit (fixes D67)",async()=>{
+  const app=await readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8");
+  assert.match(app,/slotsLeft=Math\.max\(0,20-reservedPhotos-selected\.size\)/);
+  assert.match(app,/Etsy allows 20 listing photos/);
+  assert.match(app,/disabled=\{!selected\.has\(index\)&&atLimit\}/);
+  assert.match(app,/reservedPhotos=\{\(preparedMockupCounts\[draft\.id\]\|\|0\)\+\(design\?\.sizeGuideName\|\|sizeGuideName\?1:0\)\}/);
+  assert.match(app,/values\.slice\(0,Math\.max\(0,20-reserved\)\)/);
+});
