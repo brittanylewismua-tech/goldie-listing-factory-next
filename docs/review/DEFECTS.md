@@ -48,11 +48,11 @@ text colour.
 must be ≥ 4.5:1.
 **Introduced by:** `feb73c2`.
 
-### D4 · "+ Add another product" has disappeared · OPEN
-**Wrong:** enumerated every visible button on step 2 — it does not exist. A seller
-with zero saved products has no way to add their first one on the screen whose
-job is choosing one.
-**Introduced by:** `feb73c2`.
+### D4 · "+ Add another product" disappears once a product is selected · OPEN
+**Corrected 20 Aug:** the button *is* present before selection — my first report
+said it was gone entirely, which was wrong. It vanishes **after** you pick a
+product, so you cannot add a second product without first clearing the batch.
+**Fix:** keep it visible in both states.
 
 ### D5 · No way to unselect a product · OPEN
 **Wrong:** nothing matching unselect / change product / choose a different. Once
@@ -144,14 +144,15 @@ button, occupying a slot in "Step 1 of 5".
 **Fix:** move connection status to the sidebar; interrupt the flow only when a
 connection is broken. Common case becomes four steps.
 
-### D19 · "Connecting usually takes about 2 minutes" shows while connected · OPEN
+### D19 · "Connecting usually takes about 2 minutes" shows while connected · **FIXED**
+Now reads "Both connections are verified. Goldie will remember them for future batches."
 
 ### D20 · Two Disconnect buttons outrank the forward action · OPEN
 Both are solid white above a soft-gradient "Next step".
 **Fix:** Disconnect becomes a text link inside each row.
 
-### D21 · `<h1>` says "Connect Printify" but the screen handles Etsy too · OPEN
-**Fix:** "Connect your accounts".
+### D21 · `<h1>` says "Connect Printify" but the screen handles Etsy too · **FIXED**
+Now reads "Connect your accounts".
 
 ---
 
@@ -307,3 +308,54 @@ jump to Photos.
 - **Defects hide in interaction states, not at rest.** D13–D16 were only visible
   after expanding a panel. Open every collapsible and select every option before
   calling a screen done.
+
+
+---
+
+## Visual pass — 20 Aug, found by looking rather than querying
+
+### D47 · Printify and Etsy "Disconnect" render completely differently · OPEN
+**Where:** Connect step. **Both buttons share the class `.disconnect-link`.**
+**Wrong:** computed styles differ — Printify `background: rgba(0,0,0,0)` with
+colour `rgb(123,82,110)`; Etsy `background: rgba(255,255,255,0.72)` with colour
+`rgb(75,40,62)`. Printify renders as bare text, Etsy as a white pill. Same
+action, stacked directly on top of each other, two treatments.
+**Cause:** a more specific selector is matching only one of them — likely
+positional (`:nth-child` / `:last-of-type`) or a parent class. This is a CSS
+specificity bug, not a markup difference.
+**Fix:** find the overriding rule and make both match. Both should be text links
+(see D20).
+
+### D48 · "Pick a keyword bank to continue" is unreadable · OPEN
+**Where:** batch screen, the disabled forward button.
+**Wrong:** pale grey text on a pale lavender gradient. Verified by zoom — the
+label is barely distinguishable from its own background.
+**Note:** the *behaviour* here is right and worth keeping — a disabled button
+that states its own unblock condition is good design. It just cannot be read.
+**Fix:** disabled state needs a darker label or a more muted background.
+
+### D49 · Five status readouts on the designs section, with conflicting numbers · OPEN
+All on screen simultaneously:
+- "7 designs available for this batch · 7 listings remain on your plan"
+- "**3 of 20 designs ready** · 1.9 MB selected"
+- "Upload updated / 3 designs were added"
+- "All 3 designs are ready · 3/3" with a progress bar
+- "**3/7 designs available this batch** · 4 more available · 7 left on your plan"
+
+**Wrong:** two of these state different maximums — **20 and 7** — roughly 250px
+apart. Worse than the four-readout version originally logged as D28.
+**Fix:** one line, using the binding constraint.
+
+### D50 · The "Everything else" chips float outside their own card · OPEN
+The header row ("Everything else · Edit") is a card; the chips beneath it
+($10 profit, Standard shipping, Description ready, Etsy details 3 of 11 set) sit
+on the page background below it, visually orphaned.
+**Fix:** chips belong inside the card they summarise.
+
+### D51 · `?step=connect` silently redirects to `step=setup` · OPEN
+Deep-linking to the connect step is impossible; the URL rewrites itself. Other
+steps deep-link fine.
+
+### D52 · The forward button sits above the section it depends on · OPEN
+"Pick a keyword bank to continue" renders above the designs area, so the action
+that advances the flow appears before the content it is waiting on.
