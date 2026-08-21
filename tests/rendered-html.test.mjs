@@ -1788,3 +1788,19 @@ test("restores completed draft batches to reachable Finish results (fixes D53)",
   assert.match(app,/if\(complete&&drafts\.some\(draft=>draft\.status==="Created"\)&&!pricingApproved\)setPricingApproved\(true\)/);
   assert.match(batches,/&open=results/);
 });
+
+test("shows underfilled titles and tags as an amber non-blocking review state (fixes D64)",async()=>{
+  const [app,review,css]=await Promise.all([
+    readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8"),
+    readFile(new URL("../app/final-listing-review.tsx",import.meta.url),"utf8"),
+    readFile(new URL("../app/approved-functional.css",import.meta.url),"utf8"),
+  ]);
+  assert.match(review,/design\.title\.trim\(\)\.length<100/);
+  assert.match(review,/design\.tags\.length<13/);
+  assert.match(review,/publishing is still available/);
+  assert.match(review,/review\.needed\?"content-review":"ready"/);
+  assert.match(app,/One or more titles need review/);
+  assert.match(app,/One or more listings have fewer than 13 tags/);
+  assert.match(css,/\.final-listing-card \.content-review\{color:#8a5a12!important/);
+  assert.doesNotMatch(review,/review\.needed[^\n]{0,200}disabled/);
+});

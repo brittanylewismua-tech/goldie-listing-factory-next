@@ -1131,6 +1131,9 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .app-shell .final-listing-card{display:grid!important;grid-template-columns:28px 56px minmax(0,1fr) auto!important;min-height:72px!important;padding:8px 10px!important;border-radius:10px!important;box-shadow:none!important}
 .app-shell .final-listing-card>img{width:56px!important;height:56px!important;object-fit:cover!important;border-radius:8px!important}
 .app-shell .final-listing-card>div:not(.final-listing-links)>b{display:block!important;max-width:100%!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important}
+.app-shell .final-listing-card.review-needed{border-color:#d9ad65!important;background:#fff9ed!important}
+.app-shell .final-listing-card .content-review{color:#8a5a12!important;font-size:10px!important;font-weight:850!important}
+.app-shell .final-checklist .content-review{border-color:#dfbd7f!important;background:#fff5dd!important;color:#7a5010!important}
 @media(max-width:1100px){.app-shell .listing-editor .design-line{grid-template-columns:56px minmax(0,1fr)!important}.app-shell .listing-editor .quality-pill{display:none!important}.app-shell .post-draft-workspace .draft-card>*{grid-column:1!important}}
 
 /* Audit pass 2: make the returning workflow honest and action-led. */
