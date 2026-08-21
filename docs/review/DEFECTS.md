@@ -586,7 +586,7 @@ top of the phase — the most prominent element on the screen sends the seller o
 of Goldie. "Choose size guide" beside it is also dark filled, so two filled
 buttons compete before any listing content appears.
 
-### D67 · No count against Etsy's 20-photo limit · OPEN
+### D67 · No count against Etsy's 20-photo limit · **FIXED**
 The flatlay picker still holds **148 checkboxes** and shows no running count and
 no cap. One listing in this batch carries 12 photos with nothing indicating how
 many are allowed.
