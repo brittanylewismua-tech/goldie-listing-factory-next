@@ -68,7 +68,7 @@ results intent; completed draft runs open their saved Finish phase, while an
 unfinished batch safely discards that intent and resumes its saved step.
 
 
-### D1 · No forward button once a batch has drafts · OPEN
+### D1 · No forward button once a batch has drafts · **FIXED**
 **Where:** Pricing, Designs, and the new batch screen — verified on all three by
 enumerating every visible `<button>`.
 **Wrong:** the only controls are help icons, Edit, and Back. The forward action is
