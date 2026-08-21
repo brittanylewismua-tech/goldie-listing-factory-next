@@ -1309,3 +1309,57 @@ After `55dcbdb` and this fix, measured on the deployed build:
 
 Publish-screen titles read 100% at 130/139/137 characters. Zero
 `white-space:nowrap` + `text-overflow:ellipsis` pairs remain in any stylesheet.
+
+---
+
+## Full live run — 21 Aug 2026
+
+Fresh batch started from the beginning as a real user would, on the deployed
+build. Findings D101 onward.
+
+### Working, verified on this run
+
+- **Connect is skipped** when both accounts are already connected. Fresh batch
+  opens at "Step 2 of 5". (C1)
+- **Weight hierarchy is correct** on Choose product: "Choose this product →" is
+  the filled button; "+ Add another product", "Rename" and "Delete" are quiet
+  text links. (D45, D4)
+- **"✓ Ready for this batch" is legible.** (D3)
+- **"Change product" exists** — a selected product can be unselected. (D5)
+- **"Everything else" is now "Saved for this product".** (D7)
+- **Section order is Product → Designs → Colours → Mockups**, measured by
+  vertical offset: 315 / 926 / 1445 / 2185. This is the order Brittany asked
+  for and it is correct on screen, not just in the DOM.
+- **Bundles disabled with a real reason** — "Save 2 products first".
+
+### D101 · An unfinished task is formatted as a settled value · **FIXED HERE** · **HIGH**
+
+The collapsed summary read:
+
+> Saved for this product · **$10 profit · Standard shipping · Choose a keyword
+> bank · description from Printify · Etsy details 5 saved**
+
+Four settled values and one **to-do**, in the same size, colour and separator,
+buried in the middle of the list. It is also the single item whose absence makes
+title generation fail two steps later with "Choose a keyword bank before asking
+Goldie to build the title."
+
+Logged as **P2 in `AUDIT-PASS-2.md`** and never given a defect number, so it was
+never fixed. The full run surfaced it again.
+
+**Fixed:** settled values stay in the summary line; anything outstanding renders
+beneath it in amber as an instruction — *"Pick a keyword bank so Goldie can
+write your titles"*. Pinned by a test.
+
+### Blank first paint — watch, not yet reproducible
+
+The first navigation to a deep Finish link rendered **nothing but background**
+for ~10s, with four `[vinext] RSC prefetch setup error: TypeError: d is not a
+function` errors from `link-*.js`. A reload recovered it fully. Most likely a
+mid-deploy state serving new HTML against a stale chunk. Recorded because a
+blank first paint is what a new trial user would see; if it recurs outside a
+deploy window it needs a defect number.
+
+Also: on that reload the sub-rail showed **"Choose a saved product"** on all
+four Finish phases for several seconds before the batch restored. The batch was
+intact — but the transient copy states the opposite of the truth.

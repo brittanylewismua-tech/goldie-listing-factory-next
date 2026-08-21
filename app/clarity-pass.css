@@ -243,3 +243,18 @@
 .app-shell .workflow-progress button:disabled small,
 .app-shell .workflow-progress button[aria-disabled="true"] small{color:#7b6c79!important}
 .app-shell .workflow-progress button.active b{color:#251723!important}
+
+/* D101 · An unfinished task was formatted exactly like the settled ones.
+ * "Saved for this product · $10 profit · Standard shipping · Choose a keyword
+ * bank · description from Printify · Etsy details 5 saved" — four values and
+ * one to-do, same size, same colour, same separator, buried in the middle. And
+ * it is the one that makes title generation fail two steps later. */
+.app-shell .everything-else summary .setup-todo{
+  display:block;
+  margin-top:6px;
+  color:#8a5a12;
+  font-size:11.5px;
+  font-weight:800;
+  line-height:1.4;
+}
+.app-shell .everything-else summary .setup-todo:before{content:"▲  ";font-size:9px;vertical-align:1px}

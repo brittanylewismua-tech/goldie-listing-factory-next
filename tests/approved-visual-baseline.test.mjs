@@ -438,3 +438,23 @@ test("the title and tags textareas span their label's full width — D100", asyn
   assert.match(css, /textarea\.listing-tags-field,[\s\S]*textarea\.listing-title-field\{[\s\S]*grid-column:1\/-1!important;[\s\S]*width:100%!important/,
     "The listing textareas must span the label grid and take its full width.");
 });
+
+test("unfinished setup items are not formatted as settled values — D101", async () => {
+  const [page, clarity] = await Promise.all([
+    readFile(listingFactoryPage, "utf8"),
+    readFile(new URL("app/clarity-pass.css", root), "utf8"),
+  ]);
+
+  /* The summary read "$10 profit · Standard shipping · Choose a keyword bank ·
+   * description from Printify · Etsy details 5 saved" — four settled values and
+   * one to-do, identical formatting, buried in the middle. Missing the keyword
+   * bank is what makes title generation fail two steps later, so it is the one
+   * item that must not read as done. Logged as P2 in AUDIT-PASS-2 and unfixed
+   * until the full run surfaced it again. */
+  assert.doesNotMatch(page, /activeRecipe\?\.keywordListId\?"Keyword bank saved":"Choose a keyword bank"/,
+    "The keyword-bank to-do is back inline with the settled values.");
+  assert.match(page, /className="setup-todo"/,
+    "Outstanding setup items must render separately from the settled summary.");
+  assert.match(page, /Pick a keyword bank so Goldie can write your titles/);
+  assert.match(clarity, /\.setup-todo\{[\s\S]*color:#8a5a12/);
+});
