@@ -1141,6 +1141,23 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .app-shell .disconnect-link:hover{color:#4a2a3e!important;text-decoration:underline!important}
 .app-shell .saved-product-batch-page .batch-page-intro .mini-label,.app-shell .saved-product-batch-page .product-color-selector .mini-label,.app-shell .saved-product-batch-page .mockup-default-block .mini-label{display:none!important}
 .app-shell .saved-product-batch-page .everything-else>summary small{display:none!important}
+
+/* D2: once a product is selected, show the artwork before batch-specific choices. */
+.app-shell .steps-column.setup-column{display:flex!important;flex-direction:column!important}
+.app-shell .steps-column.setup-column>.product-step,
+.app-shell .steps-column.setup-column .saved-product-batch-page{display:contents!important}
+.app-shell .steps-column.setup-column .recipe-card{order:10}
+.app-shell .steps-column.setup-column .template-proof,
+.app-shell .steps-column.setup-column .recipe-error{order:11;width:min(980px,calc(100% - 32px));margin-inline:auto}
+.app-shell .steps-column.setup-column>.designs-step{order:20}
+.app-shell .steps-column.setup-column .batch-page-intro{order:25;width:min(980px,calc(100% - 32px));margin:8px auto 0}
+.app-shell .steps-column.setup-column .color-default-block{order:30;width:min(980px,calc(100% - 32px));margin-inline:auto}
+.app-shell .steps-column.setup-column .bundle-color-selectors{order:31}
+.app-shell .steps-column.setup-column .mockup-default-block{order:40;width:min(980px,calc(100% - 32px));margin-inline:auto}
+.app-shell .steps-column.setup-column .everything-else{order:50;width:min(980px,calc(100% - 32px));margin-inline:auto}
+.app-shell .steps-column.setup-column .saved-settings-summary{order:51}
+.app-shell .steps-column.setup-column .keyword-bank-required{order:52}
+.app-shell .steps-column.setup-column .setup-forward{order:53}
 .app-shell .saved-settings-summary{display:flex!important;flex-wrap:wrap!important;gap:7px!important;margin:12px 0!important}
 .app-shell .saved-settings-summary span{padding:7px 10px!important;border:1px solid rgba(91,48,79,.14)!important;border-radius:999px!important;background:rgba(255,255,255,.5)!important;color:#5b304f!important;font-size:10px!important;font-weight:750!important}
 .app-shell .keyword-bank-required{display:grid!important;gap:3px!important;width:100%!important;margin:12px 0!important;padding:14px 16px!important;border:1px solid rgba(157,80,130,.32)!important;border-radius:12px!important;background:#fff1f8!important;color:#4f2944!important;text-align:left!important;box-shadow:none!important}

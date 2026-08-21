@@ -1813,3 +1813,11 @@ test("keeps a forward path from setup, designs, and pricing after drafts exist (
   assert.match(app,/files\.length>0&&complete&&workflowStep==="designs"/);
   assert.match(app,/className="batch-actions"[\s\S]{0,500}Back to finishing your listings/);
 });
+
+test("orders designs before colours, mockups, and saved settings on the batch screen (fixes D2)",async()=>{
+  const css=await readFile(new URL("../app/approved-functional.css",import.meta.url),"utf8");
+  assert.match(css,/\.steps-column\.setup-column>\.designs-step\{order:20\}/);
+  assert.match(css,/\.steps-column\.setup-column \.color-default-block\{order:30/);
+  assert.match(css,/\.steps-column\.setup-column \.mockup-default-block\{order:40/);
+  assert.match(css,/\.steps-column\.setup-column \.everything-else\{order:50/);
+});
