@@ -188,7 +188,7 @@ they did not know.
 **Wrong:** each thumbnail is captioned "ChatGPT Image Aug 14, 2026, 10_42_04 A…".
 **Fix:** no caption, or a meaningful one. Never expose upload filenames.
 
-### D10 · Mockup block shows 4 of 10 with no indication there are more · OPEN
+### D10 · Mockup block shows 4 of 10 with no indication there are more · **FIXED**
 **Fix:** "+6 more" or a count.
 
 ### D11 · "BACH TEES" appears twice · **FIXED**
@@ -236,7 +236,7 @@ set" in the summary chip below it. The first hides the denominator.
 
 ## Connect (step 1)
 
-### D17 · Etsy shows a white Disconnect bar, Printify does not · OPEN
+### D17 · Etsy shows a white Disconnect bar, Printify does not · **FIXED**
 Reported by Brittany. Needs verification and a matching treatment.
 
 ### D18 · The step contains no decisions for a returning seller · OPEN
@@ -248,7 +248,7 @@ connection is broken. Common case becomes four steps.
 ### D19 · "Connecting usually takes about 2 minutes" shows while connected · **FIXED**
 Now reads "Both connections are verified. Goldie will remember them for future batches."
 
-### D20 · Two Disconnect buttons outrank the forward action · OPEN
+### D20 · Two Disconnect buttons outrank the forward action · **FIXED**
 Both are solid white above a soft-gradient "Next step".
 **Fix:** Disconnect becomes a text link inside each row.
 
@@ -325,11 +325,11 @@ Card says "Mastermind beta", "3-day trial", "Resets August 31, 2026". A 3-day
 trial that resets monthly is incoherent, and the one date a trial user needs is
 missing.
 
-### D35 · Two different limits both rendered as "/20", side by side · OPEN
+### D35 · Two different limits both rendered as "/20", side by side · **FIXED**
 "Listing creations 13 / 20 this month" beside "Listings published in 24 hours
 0 / 20". One is a monthly quota, the other a daily rate limit.
 
-### D36 · "Plenty of room" at 65% used · OPEN
+### D36 · "Plenty of room" at 65% used · **FIXED**
 **Fix:** amber past ~75%, and state what remains in units the seller thinks in.
 
 ### D37 · The Etsy fee profile lives on the billing page · OPEN
@@ -344,7 +344,7 @@ profit number will look under Usage + Plan.
 
 ## Keyword Banks
 
-### D39 · The create form occupies the primary position · OPEN
+### D39 · The create form occupies the primary position · **FIXED**
 Empty name field, empty textarea and file picker at the top; your saved banks
 below. Creating is occasional; choosing is why you came.
 
@@ -415,7 +415,7 @@ jump to Photos.
 
 ## Visual pass — 20 Aug, found by looking rather than querying
 
-### D47 · Printify and Etsy "Disconnect" render completely differently · OPEN
+### D47 · Printify and Etsy "Disconnect" render completely differently · **FIXED**
 **Where:** Connect step. **Both buttons share the class `.disconnect-link`.**
 **Wrong:** computed styles differ — Printify `background: rgba(0,0,0,0)` with
 colour `rgb(123,82,110)`; Etsy `background: rgba(255,255,255,0.72)` with colour
@@ -453,7 +453,7 @@ The header row ("Everything else · Edit") is a card; the chips beneath it
 on the page background below it, visually orphaned.
 **Fix:** chips belong inside the card they summarise.
 
-### D51 · `?step=connect` silently redirects to `step=setup` · OPEN
+### D51 · `?step=connect` silently redirects to `step=setup` · **FIXED**
 Deep-linking to the connect step is impossible; the URL rewrites itself. Other
 steps deep-link fine.
 
@@ -580,7 +580,7 @@ saved product.
 ### D62 · "BATCH TITLE BUILDER" eyebrow above "Create titles for the whole batch" · **FIXED**
 Another instance of D8 on a different screen. The eyebrow restates the heading.
 
-### D63 · "Upload or manage keyword banks ↗" navigates out mid-batch · OPEN
+### D63 · "Upload or manage keyword banks ↗" navigates out mid-batch · **FIXED**
 An external-arrow link inside the bank picker, positioned where a seller lands
 when they have no bank selected — which is exactly when they are most likely to
 click it and lose their place.

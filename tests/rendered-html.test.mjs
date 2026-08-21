@@ -13,6 +13,14 @@ test("keeps both connected-account Disconnect actions visually quiet", async () 
   assert.match(css, /connection-row>button\.disconnect-link\{width:auto!important;min-width:0!important;max-width:none!important;background:transparent!important/);
 });
 
+test("shows which products use each keyword bank and blocks wrong-product phrases", async () => {
+  const page = await readFile(new URL("../app/keywords/page.tsx", import.meta.url), "utf8");
+  assert.match(page, /Used by:/);
+  assert.match(page, /Fix wrong-product phrases before saving/);
+  assert.match(page, /NON_SHIRT_PRODUCT/);
+  assert.match(page, /disabled=\{!name\.trim\(\)\|\|!words\.length\|\|saving\|\|mismatchedWords\.length>0\}/);
+});
+
 async function render(path = "/") {
   const workerUrl = new URL("../dist/server/index.js", import.meta.url);
   workerUrl.searchParams.set("test", `${process.pid}-${Date.now()}`);
