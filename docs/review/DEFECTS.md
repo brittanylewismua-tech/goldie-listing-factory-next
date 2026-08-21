@@ -668,7 +668,7 @@ mismatch. Fixed by seeding from the Printify blueprint (`UX-DIRECTION.md` B2).
 listings with 25-character titles and 2 tags. Same category as D64 — "set" is
 doing the work "complete" was doing.
 
-### D73 · Resumed batches cannot move through Finish · OPEN
+### D73 · Resumed batches cannot move through Finish · **FIXED**
 On a resumed completed-draft batch, the Finish sub-step rail and Next buttons
 look enabled but phase navigation is rejected by a different gate. Photos never
 renders and the seller receives no inline reason. One shared navigation gate
