@@ -546,6 +546,17 @@ test("rejects wrong garment nouns using the exact Printify blueprint", async () 
   assert.equal(namesExcludedProduct("Bride Hoodie", hoodieExclusions), false);
 });
 
+test("uses the full Mockup Library width and previews up to ten scenes before expansion — D83", async () => {
+  const [page, css] = await Promise.all([
+    readFile(new URL("../app/mockups/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/mockups/management.css", import.meta.url), "utf8"),
+  ]);
+  assert.match(page, /items\.slice\(0,10\)/);
+  assert.match(css, /\.managementSetList\s*\{\s*grid-template-columns:\s*minmax\(0, 1fr\)/);
+  assert.match(css, /\.managementSetList \.setPreview\s*\{[\s\S]*grid-template-columns:\s*repeat\(10, minmax\(64px, 1fr\)\)/);
+  assert.match(css, /\.managementSetList \.setPreview img\s*\{[\s\S]*aspect-ratio:\s*4 \/ 5/);
+});
+
 test("validates and isolates staged artwork without decoding or buffering it", async () => {
   const [stage, drafts, cryptoSource] = await Promise.all([
     readFile(new URL("../app/api/printify/stage/route.ts", import.meta.url), "utf8"),
@@ -677,13 +688,17 @@ test("creates unique validated AI titles in bulk with per-listing overrides", as
   assert.match(page,/Goldie selects from my bank/);assert.match(page,/I choose from my bank/);assert.match(page,/Click keywords in the order you want them/);
   assert.match(page,/removeBatchKeyword/);assert.match(page,/clearBatchKeywords/);assert.match(page,/Applied to every listing below/);
   assert.match(page,/Create a different title with AI/);assert.match(page,/Create title for this design/);
-  assert.match(page,/autoTitleForDesign/);assert.match(page,/tagsFromTitle\(item\.result\.keywords\.join/);
-  assert.match(page,/unique titles and matching tags created/);assert.match(page,/Goldie selects only exact phrases from this bank/);assert.match(page,/Goldie never adds keywords/);
+  assert.match(page,/autoTitleForDesign/);assert.match(page,/tags:item\.result\.tags/);
+  assert.match(page,/separately ranked Etsy tags created/);assert.match(page,/Goldie selects only exact phrases from this bank/);assert.match(page,/Goldie never adds keywords/);
   assert.ok(page.indexOf('className="permanent-description batch-description"')<page.indexOf('className="design-table"'),"The collapsible batch description belongs directly above the individual listings.");
   assert.match(page,/Customize this listing’s description/);assert.match(page,/The complete description is shown below/);
   assert.match(page,/descriptionOverride/);assert.match(page,/scrollIntoView/);
   assert.match(tools,/keywordListsCache/);assert.match(tools,/selectionOnly/);assert.match(tools,/onSelect/);
   assert.match(intelligence,/selected_keywords/);assert.match(intelligence,/allowedByLower/);assert.match(intelligence,/PRODUCT TYPE RULE/);assert.match(intelligence,/if\(!selected\.length\).*status:422/);
+  assert.match(intelligence,/tagCandidates=keywords\.filter/);
+  assert.match(intelligence,/tag_keywords/);
+  assert.match(intelligence,/tags=\[\.\.\.rankedTags,\.\.\.tagCandidates\.filter/);
+  assert.match(intelligence,/return NextResponse\.json\(\{title,keywords:included,tags\}\)/);
 });
 
 test("records permanent sanitized Printify diagnostics without blocking listings", async () => {
@@ -1557,7 +1572,7 @@ test("shows each saved mockup once with visible controls and a real enlarged pre
   ]);
   const managementMarkup=page.slice(page.indexOf('managementSetList'),page.indexOf('{showAddSet&&'));
   assert.match(managementMarkup,/setPreview/);
-  assert.match(managementMarkup,/items\.slice\(0,5\)/);
+  assert.match(managementMarkup,/items\.slice\(0,10\)/);
   assert.match(managementMarkup,/!open&&/);
   assert.match(managementMarkup,/savedMockupPreview/);
   assert.match(page,/libraryPreview\.src/);

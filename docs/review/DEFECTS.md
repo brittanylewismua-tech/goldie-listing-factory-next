@@ -778,7 +778,7 @@ group covering the party goods that share bachelorette banks with apparel.
 Pinned by `tests/product-nouns.test.mjs` — 4 tests, including every plural by
 name, plus a check that no product family ever excludes its own noun.
 
-### D79 · Tags collapse to a third of the bank · **OPEN** · **HIGH**
+### D79 · Tags collapse to a third of the bank · **FIXED** · **HIGH**
 
 The D75 fix stopped fragmenting long phrases — correct — but tags are still
 derived from *the title only*, and only phrases ≤20 chars survive.
@@ -832,7 +832,7 @@ list.
 test now asserts the *conditional* timing note and state-swapped copy rather
 than pinning a literal string. **161/161 green.**
 
-### D83 · Mockup thumbnails are 27×27px · **OPEN** · **HIGH**
+### D83 · Mockup thumbnails are 27×27px · **FIXED** · **HIGH**
 
 `/mockups`, collapsed state. Measured: thumbnails **27×27px**; the page `<h1>`
 is **64px**. On the one page whose entire purpose is looking at mockups, the
