@@ -338,6 +338,13 @@ test("the listing title field shows the whole title, not an ellipsis — D60", a
   assert.doesNotMatch(css, /\.listing-title-field\{[\s\S]*text-overflow:ellipsis/);
 });
 
+test("the wrapping title field owns the full row and grows to its content — D94 live follow-up",async()=>{
+  const css=await readFile(new URL("../app/approved-functional.css",import.meta.url),"utf8");
+  assert.match(css,/\.listing-title-field\{[\s\S]*?grid-column:1\/-1!important;[\s\S]*?width:100%!important;/);
+  assert.match(css,/field-sizing:content!important/);
+  assert.match(css,/font-size:15px!important/);
+});
+
 test("the step rail is dark-on-light, matching its transparent background — D95", async () => {
   const clarity = await readFile(new URL("app/clarity-pass.css", root), "utf8");
   const functional = await readFile(new URL("app/approved-functional.css", root), "utf8");

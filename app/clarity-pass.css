@@ -24,7 +24,7 @@
 }
 
 /* Title — the one field you must fill */
-.app-shell .design-fields > label:nth-of-type(1) > input {
+.app-shell .design-fields > label:nth-of-type(1) > :is(input,textarea) {
   font-size: 15px;
   font-weight: 550;
   line-height: 1.4;
