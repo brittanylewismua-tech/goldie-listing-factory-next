@@ -103,13 +103,13 @@ text colour.
 must be ≥ 4.5:1.
 **Introduced by:** `feb73c2`.
 
-### D4 · "+ Add another product" disappears once a product is selected · OPEN
+### D4 · "+ Add another product" disappears once a product is selected · **FIXED**
 **Corrected 20 Aug:** the button *is* present before selection — my first report
 said it was gone entirely, which was wrong. It vanishes **after** you pick a
 product, so you cannot add a second product without first clearing the batch.
 **Fix:** keep it visible in both states.
 
-### D5 · No way to unselect a product · OPEN
+### D5 · No way to unselect a product · **FIXED**
 **Wrong:** nothing matching unselect / change product / choose a different. Once
 selected, the only escape is Back or "Clear batch + start over".
 **Fix:** a "Change product" link on the selected card.
