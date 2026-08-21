@@ -1710,3 +1710,28 @@ sets ↗"** link beside the control.
 **Same class as D101** — copy that describes a capability the surrounding
 controls do not provide.
 >>>>>>> Stashed changes
+
+### Promise-vs-control sweep — the class D101 and D109 belong to
+
+Rather than wait for the next one to be found by hand, I swept every screen for
+the underlying pattern: **copy that claims something can be changed, removed or
+managed, with no control nearby that does it.**
+
+Method: find every leaf text node matching a promise phrase ("change it
+anytime", "edit them", "remove these", "manage…", "…later"), walk up to the
+nearest container holding interactive elements, and count enabled controls.
+
+| screen | promises found | unbacked |
+|---|---|---|
+| Step 2 · Build this batch | 3 | **1** → D109 (mockups) |
+| Step 4 · Review pricing | 1 | 0 (63 controls) |
+| Finish · Etsy details | 0 | 0 |
+| Finish · Images + mockups | 1 | 0 (979 controls) |
+| Finish · Publish | 0 | 0 |
+
+**The mockup block was the only unbacked promise in the workflow.** The colours
+section, checked directly, offers 43 toggleable swatches with 4 selected — it
+honours its copy.
+
+This sweep is worth re-running whenever section copy changes; it is cheap and it
+catches the exact class of defect that Brittany has had to report twice.
