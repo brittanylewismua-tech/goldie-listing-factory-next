@@ -1491,3 +1491,4 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .keyword-page .new-bank-button,
 .mockupFactory .newSetButton{border:0!important;background:transparent!important;box-shadow:none!important;color:#6b4661!important;text-decoration:underline!important;text-underline-offset:3px}
 .usage-page .usage-card b span{display:block;margin-top:3px;font-size:11px!important}
+.missing-photo-list article>b{overflow-wrap:anywhere;color:#4b283e;font-size:11px;line-height:1.35;text-align:left}

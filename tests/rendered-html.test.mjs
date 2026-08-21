@@ -1859,3 +1859,11 @@ test("shows one binding design-capacity status after uploads (fixes D28 and D49)
   assert.doesNotMatch(app,/All \$\{files\.length\} designs are ready/);
   assert.doesNotMatch(app,/\$\{files\.length\} of 20 designs ready/);
 });
+
+test("names every listing missing a required photo (fixes D33)",async()=>{
+  const app=await readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8");
+  assert.match(app,/missingPhotoDraftIds\.map\(clientId=>/);
+  assert.match(app,/design\?\.name\|\|draft\?\.name\|\|"Listing"/);
+  assert.match(app,/Product and design preview/);
+  assert.match(app,/jumpToMissingPhotoListing\(clientId\)/);
+});
