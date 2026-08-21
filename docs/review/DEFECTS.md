@@ -1657,3 +1657,12 @@ returning to an earlier safe step.
 step or any earlier step. An unfinished batch still cannot deep-link forward
 past its saved progress; a completed batch keeps D53/D73's ability to reopen
 any Finish phase.
+
+### D109 · Signed-in account without access has no way to switch accounts · **FIXED HERE** · **HIGH**
+
+Refreshing the Listing Factory with a valid session for an account that does
+not own a plan rendered the pricing page and only said “Signed in securely.”
+The sign-in link disappeared, no account identity was shown, and there was no
+way to leave that account. The screen now names the signed-in email and offers
+“Use a different account,” which signs out both app and platform sessions and
+returns directly to the Listing Factory sign-in screen.

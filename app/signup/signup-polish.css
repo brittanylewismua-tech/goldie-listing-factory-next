@@ -25,6 +25,11 @@
 
 .signup-topbar > a { text-decoration: none; }
 .signup-topbar > a b { color: #4b283e; }
+.signup-account-state { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; text-align: right; }
+.signup-account-state p { margin: 0; }
+.signup-account-state a { color: #4b283e; font-size: 13px; font-weight: 750; text-decoration: none; }
+.signup-account-state a:hover,
+.signup-account-state a:focus-visible { text-decoration: underline; }
 
 .signup-brand .approved-wm {
   color: #4b283e;

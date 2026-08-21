@@ -853,6 +853,17 @@ test("uses the explicitly selected Google or email account before a stale ChatGP
   assert.match(auth, /userId: `supabase:\$\{user\.id\}`/);
 });
 
+test("never strands a signed-in account on the plan screen", async () => {
+  const [signup, route] = await Promise.all([
+    readFile(new URL("../app/signup/signup-client.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/listing-factory/page.tsx", import.meta.url), "utf8"),
+  ]);
+  assert.match(signup, /Signed in securely\{signedInEmail/);
+  assert.match(signup, /Use a different account/);
+  assert.match(signup, /account\/sign-out\?return_to=/);
+  assert.match(route, /signedInEmail=\{user\.email\}/);
+});
+
 test("revalidates saved Printify tokens instead of showing a false connection", async () => {
   const route = await readFile(new URL("../app/api/printify/route.ts", import.meta.url), "utf8");
   assert.match(route, /await printify<Shop\[\]>\("\/shops\.json", token\)/);

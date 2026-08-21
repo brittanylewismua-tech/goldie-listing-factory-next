@@ -39,10 +39,10 @@ export default async function ListingFactoryRoute({searchParams}:{searchParams:P
   } catch (error) {
     console.error("[listing-factory-server-startup] billing access", error);
     // Access checks must fail closed without taking down the public route.
-    return <SignupClient signedIn returnTo="/listing-factory" initialOffer={initialOffer}/>;
+    return <SignupClient signedIn signedInEmail={user.email} returnTo="/listing-factory" initialOffer={initialOffer}/>;
   }
   const hasAccess = billing.active || mastermind.owner || (mastermind.active && mastermind.redeemed);
-  if (!hasAccess) return <SignupClient signedIn returnTo="/listing-factory" initialOffer={initialOffer}/>;
+  if (!hasAccess) return <SignupClient signedIn signedInEmail={user.email} returnTo="/listing-factory" initialOffer={initialOffer}/>;
 
   return <ListingFactoryClientEntry/>;
 }

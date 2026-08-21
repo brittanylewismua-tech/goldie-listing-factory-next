@@ -5,7 +5,7 @@ import { PLANS, type PlanKey } from "@/app/plan-limits";
 
 type OfferKey = "trial" | PlanKey;
 
-export default function SignupClient({ signedIn, checkout, returnTo = "/listing-factory", initialOffer }: { signedIn: boolean; checkout?: string; returnTo?: string; initialOffer?: OfferKey }) {
+export default function SignupClient({ signedIn, signedInEmail, checkout, returnTo = "/listing-factory", initialOffer }: { signedIn: boolean; signedInEmail?: string; checkout?: string; returnTo?: string; initialOffer?: OfferKey }) {
   const [loading, setLoading] = useState<OfferKey | null>(null);
   const [error, setError] = useState("");
   const resumed = useRef(false);
@@ -41,7 +41,7 @@ export default function SignupClient({ signedIn, checkout, returnTo = "/listing-
   ];
 
   return <main className="signup-page">
-    <header className="signup-topbar"><div className="signup-brand" aria-label="Goldie Listing Factory"><div className="approved-wm">Gold<span className="approved-i">ı<span>✦</span></span>e</div><div className="approved-sub">Listing Factory</div></div>{signedIn ? <p>Signed in securely</p> : <a href={`/account/sign-in?return_to=${encodeURIComponent(returnTo)}`}>Already have an account? <b>Sign in</b></a>}</header>
+    <header className="signup-topbar"><div className="signup-brand" aria-label="Goldie Listing Factory"><div className="approved-wm">Gold<span className="approved-i">ı<span>✦</span></span>e</div><div className="approved-sub">Listing Factory</div></div>{signedIn ? <div className="signup-account-state"><p>Signed in securely{signedInEmail ? ` as ${signedInEmail}` : ""}</p><a href={`/account/sign-out?return_to=${encodeURIComponent(`/account/sign-in?return_to=${returnTo}`)}`}>Use a different account</a></div> : <a href={`/account/sign-in?return_to=${encodeURIComponent(returnTo)}`}>Already have an account? <b>Sign in</b></a>}</header>
     <section className="signup-hero"><span className="signup-eyebrow">THE GOLDIE LISTING FACTORY</span><h1>Automated Etsy listings like you’ve never seen before.</h1><p>Let Goldie AI be your ultimate automation assistant.</p><div className="signup-proof"><span>Listing creation</span><span>Pricing + Etsy details</span><span>AI lifestyle mockups</span></div></section>
     {checkout === "success" && <div className="signup-notice success"><b>Your Listing Factory access is being activated.</b><span>If this is your first subscription, your three-day trial starts now. Stripe is confirming everything securely.</span><a href={returnTo}>Open Listing Factory</a></div>}
     {checkout === "canceled" && <div className="signup-notice"><b>No charge was made.</b><span>Your plan is still waiting whenever you are ready.</span></div>}
