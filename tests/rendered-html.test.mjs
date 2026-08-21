@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { access, readFile } from "node:fs/promises";
 import test from "node:test";
+import { navigationIssues } from "../app/navigation-gates.ts";
 
 async function render(path = "/") {
   const workerUrl = new URL("../dist/server/index.js", import.meta.url);
@@ -1906,4 +1907,21 @@ test("rejects over-capacity uploads before creating a batch record (fixes D54)",
   assert.match(app,/Math\.min\(MAX_BATCH_FILES-files\.length,batchDesignLimit-files\.length\)/);
   assert.match(app,/No designs were added and no batch was created/);
   assert.match(app,/Choose \$\{available\} or fewer so nothing is partially added/);
+});
+
+test("traverses every workflow phase with one shared gate and never enables an inert control (fixes D73)",async()=>{
+  const blank={connected:false,etsyConnected:false,productSelected:false,templateReady:false,shippingReady:false,variantsReady:false,colorsReady:false,pricesReady:false,designCount:0,designsReady:false,etsyShippingProfileReady:false,pricingApproved:false,draftsComplete:false,createdDraftCount:0,titlesReady:false,tagsReady:false,descriptionReady:false,etsyDetailsReady:false,personalizationReady:false,imagesReady:false};
+  const designs={...blank,connected:true,etsyConnected:true,productSelected:true,templateReady:true,shippingReady:true,variantsReady:true,colorsReady:true,pricesReady:true,designCount:3,designsReady:true};
+  const drafts={...designs,etsyShippingProfileReady:true,pricingApproved:true,draftsComplete:true,createdDraftCount:3,titlesReady:true,tagsReady:true,descriptionReady:true};
+  const complete={...drafts,etsyDetailsReady:true,personalizationReady:true,imagesReady:true};
+  assert.deepEqual(navigationIssues(0,blank),[]);
+  for(const index of [0,1,2,3])assert.deepEqual(navigationIssues(index,designs),[]);
+  for(const index of [0,1,2,3,4,5,6])assert.deepEqual(navigationIssues(index,drafts),[]);
+  for(const index of [0,1,2,3,4,5,6,7,8])assert.deepEqual(navigationIssues(index,complete),[]);
+  assert.match(navigationIssues(7,drafts).join(" "),/Etsy details/);
+  assert.match(navigationIssues(8,{...complete,imagesReady:false}).join(" "),/photo/);
+  const app=await readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8");
+  assert.match(app,/disabled=\{Boolean\(issues\.length\)\}/);
+  assert.match(app,/issues\[0\]\|\|progressStatus/);
+  assert.match(app,/disabled=\{preparingEtsy\|\|progressGateIssues\(6\)\.length>0\}/);
 });
