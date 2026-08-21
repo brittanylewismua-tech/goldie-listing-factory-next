@@ -1528,6 +1528,15 @@ way a seller returns to work.
 select renders an option for it using the saved `details.category` path. The
 category is visible again and the control is usable.
 
-**Note on D103** (changing category silently discards fields): still **OPEN**
-and still untested — it could not be exercised because the dropdown had no
-options to change to. Retest once D106 is deployed.
+**D103 retested after D106 deployed — it is fixed.** With 2,503 categories now
+loading, changing the category on a listing with filled attributes raises a
+proper `role="alertdialog"`:
+
+> **Change this listing's Etsy category?**
+> 5 completed fields do not exist in the new category and will be cleared. Any
+> compatible values will stay filled.
+> [ Keep current category ] [ Change category and clear 5 ]
+
+It names the count, says what survives, and the non-destructive option is first.
+Chose "Keep current category" and confirmed all four attributes — Cotton, Short
+sleeve, Crew, Bachelorette party — survived intact. D103 marked FIXED.
