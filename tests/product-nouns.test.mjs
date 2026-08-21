@@ -72,3 +72,23 @@ test("the keyword bank page and the title generator share one noun list — D90"
   assert.match(page, /className="strip-mismatched"/,
     "No way to remove wrong-product phrases. Save is disabled while they exist, so the bank is locked.");
 });
+
+test("no auto-title path re-derives tags from the title — D79", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const page = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+
+  /* Etsy title and tags are separate fields with separate limits. Deriving tags
+   * from the finished title throws away every bank phrase over 20 characters:
+   * on the real BACHELORETTE TEES bank that is 43 phrases down to 13 eligible,
+   * so 13 tag slots got filled with 4-7 tags.
+   *
+   * The API now ranks tag candidates across the whole bank and returns them as
+   * `tags`. Three client paths consume a title result — batch, individual, and
+   * designs carried into a new batch. The carried path was still calling
+   * tagsFromTitle and silently kept the old behaviour. */
+  assert.doesNotMatch(page, /tagsFromTitle\(result\./,
+    "An auto-title path is deriving tags from the title again. Use the `tags` the API returns.");
+  assert.match(page, /tags:item\.result\.tags/, "batch path must use the ranked tags");
+  assert.match(page, /tags:result\.tags\}/, "carried-designs path must use the ranked tags");
+  assert.match(page, /onApply\(result\.title,result\.tags\)/, "individual path must use the ranked tags");
+});

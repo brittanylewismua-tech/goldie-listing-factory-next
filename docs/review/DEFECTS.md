@@ -962,3 +962,15 @@ the top, see nothing, and the form you cannot see is the one refusing to save.
 **Fixed:** the warning now carries a **"Remove all 13 and keep the rest"**
 button. The app already knows exactly which phrases are wrong — asking her to
 find them by hand was the wrong ask.
+
+### D79 follow-up · The carried-designs path kept the old tag behaviour · **FIXED HERE**
+
+`428074d` separated tags from the title correctly in the API and wired two of
+the three client paths. The third — designs carried into a new batch — still
+called `tagsFromTitle(result.keywords.join(", "))`, so those listings silently
+kept the collapsed 4–7 tag behaviour while the other two got 13.
+
+Three call sites, one changed rule, one missed. Same shape as D90.
+
+**Fixed:** all three paths use the ranked `tags` the API returns. Guarded by a
+test that fails on any `tagsFromTitle(result.…)` call.
