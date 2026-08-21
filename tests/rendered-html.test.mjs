@@ -1026,7 +1026,7 @@ test("keeps batch history useful instead of accumulating unmanageable empty sess
     readFile(new URL("../app/batches/page.tsx", import.meta.url), "utf8"),
   ]);
   assert.match(page,/\(!files\.length&&!drafts\.length\)\)return/);
-  assert.match(batches,/Remove from history/);
+  assert.match(batches,/Permanently remove from history/);
   assert.match(batches,/does not delete products from Printify or listings from Etsy/);
   assert.match(batches,/method:"DELETE"/);
 });
@@ -1655,10 +1655,22 @@ test("lets a seller name and resume a finished batch without publishing it",asyn
   assert.match(page,/status:"draft",step:"finish"/);
   assert.match(page,/keptAsDrafts\?"draft"/);
   assert.match(history,/\/listing-factory\?batch=/);
-  assert.match(history,/batch\.setup_name \|\| batch\.product_title/);
+  assert.match(history,/batch\.display_name/);
   assert.match(history,/Printify drafts/);
   assert.match(css,/\.keep-drafts-button/);
   assert.match(css,/\.save-draft-modal/);
+});
+
+test("makes Batch History visual, identifiable, reversible, and truthful",async()=>{
+  const [history,route,styles]=await Promise.all([
+    readFile(new URL("../app/batches/page.tsx",import.meta.url),"utf8"),
+    readFile(new URL("../app/api/batches/route.ts",import.meta.url),"utf8"),
+    readFile(new URL("../app/batch-history.css",import.meta.url),"utf8"),
+  ]);
+  assert.match(route,/designName/);assert.match(route,/thumbnail_url/);assert.match(route,/state\.keptAsDrafts/);
+  assert.match(history,/batch-history-thumbnail/);assert.match(history,/Permanently remove/);assert.match(history,/window\.confirm/);
+  assert.match(history,/Open finished batch/);assert.match(history,/batch\.status==="complete"\?"&open=results":""/);
+  assert.match(styles,/\.batch-history-thumbnail/);assert.match(styles,/\.batch-history-controls/);
 });
 
 test("renders Finish as a compact horizontal labeled subrail",async()=>{
