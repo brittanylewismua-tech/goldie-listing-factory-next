@@ -13,6 +13,64 @@ Last verified against the live site and `main`: 20 Aug 2026.
 
 ## Blocking
 
+### D53 · A resumed batch cannot reach its own drafts · OPEN · **WORST DEFECT FOUND**
+
+**Symptom.** Open a batch from Batch History that already has Printify drafts:
+- The card's button says **"Open results"** — it lands you on **step 3, "Add your designs."**
+- The **Finish** node in the rail is **enabled** (`disabled: false`) and clicking it
+  **does nothing**. Step counter stays "Step 3 of 5". No error, no message.
+- Navigating directly to `?step=finish&phase=details` **rewrites the URL back to
+  `step=designs`** on load.
+
+The drafts are fine — forcing the route client-side renders
+"Finish · Publish (4 of 4)" correctly. **The data exists; the navigation to it is
+broken.** From the seller's side their work has vanished, on a page headed
+"Continue where you left off."
+
+**Root cause.** In the resume path in `app/listing-factory-app.tsx`:
+
+```ts
+const cached = await loadBatchFiles(id).catch(() => []);
+const designs = (state.designs || []).map((design, index) => {
+  const file = cached[index];
+  return file ? { ...design, file, previewUrl: URL.createObjectURL(file) } : null;
+}).filter(Boolean) as DesignFile[];
+...
+setFiles(designs);
+```
+
+Designs are only restored **if their raw file bytes are still in local IndexedDB**
+(`app/batch-cache.ts`, DB `goldie-listing-factory`, store `batch-files`). If that
+cache is missing, every design maps to `null`, `files` becomes `[]`, and the
+Finish gate fails — so the step silently refuses to open.
+
+The `.catch(() => [])` swallows the failure. Nothing is logged and nothing is
+shown.
+
+**Why this is severe:** IndexedDB is per-browser and per-device. This means a
+batch is stranded if the seller
+- resumes on a different computer or browser,
+- clears browsing data,
+- or is evicted by the browser under storage pressure.
+
+Everything else — drafts, titles, tags, photo selections — is saved server-side
+and comes back fine. Only the raw design files are local, and their absence
+takes the whole batch down with them.
+
+**Fix, in order:**
+1. **Do not gate Finish on `files`.** Once `complete` is true the drafts are the
+   source of truth; the seller does not need the original PNGs to finish titles,
+   Etsy details, photos or publishing.
+2. When the cache is empty but `state.designs` exists, rebuild the design list
+   from server state with the Printify preview as the thumbnail, and mark the
+   rows "original file not on this device" — degraded, not deleted.
+3. Never fail silently. If a resume drops files, say so.
+4. Long term: designs are already uploaded to R2. Restore previews from there
+   rather than from browser storage.
+
+**Also fix the label:** "Open results" must open the results, not step 3.
+
+
 ### D1 · No forward button once a batch has drafts · OPEN
 **Where:** Pricing, Designs, and the new batch screen — verified on all three by
 enumerating every visible `<button>`.
@@ -359,3 +417,25 @@ steps deep-link fine.
 ### D52 · The forward button sits above the section it depends on · OPEN
 "Pick a keyword bank to continue" renders above the designs area, so the action
 that advances the flow appears before the content it is waiting on.
+
+
+### D54 · A blocked upload still created a batch record · OPEN
+Uploading 9 designs against a 7-listing allowance reported `0 uploaded` in the
+UI, but Batch History now shows a batch with **9 designs** at that timestamp.
+The batch row is created and the design count persisted before the quota check
+rejects the upload, leaving junk in history from an action that was refused.
+
+### D55 · Every batch in history has the same name · OPEN
+Four rows all read "Gildan Tee / Unisex Heavy Cotton Tee". Only the timestamp
+and design count differ. Design filenames exist (`austin-bach.png`, …) and would
+distinguish them.
+**Fix:** name batches after their designs, and show a thumbnail — the page is a
+visual product showing no visuals.
+
+### D56 · "Remove from history" sits next to the primary button · OPEN
+A permanent delete, styled as a small text link, immediately beside the large
+filled "Resume batch". No confirmation.
+
+### D57 · Two button labels for the same action, one of which lies · OPEN
+Rows show either "Resume batch →" or "Open results →" depending on status. The
+split is reasonable, but "Open results" lands on step 3 (see D53).
