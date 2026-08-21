@@ -1188,3 +1188,40 @@ re-checked: D60 (field widened, titles grew), D95 (rail background changed,
 text colours stayed), D77 (gate enforced a count, not the symptom), D96 (tags
 tripled into an unchanged field). Worth checking the *neighbours* of any fix,
 not just the fix.
+
+### D97 · 477 images load eagerly on the photos phase · **FIXED HERE** · **HIGH**
+
+Found on a physical walkthrough of Finish, which had not been done before.
+
+Measured on **Images + mockups**, real 3-design batch:
+
+| | |
+|---|---|
+| rendered `<img>` tags | **477** |
+| lazy-loaded | **1** |
+| outside the viewport on load | **441 (92%)** |
+| per listing | ~159 |
+| projected at the 20-design batch limit | **~3,180 images** |
+
+Every Printify colour × angle for every listing is requested immediately, whether
+or not the seller ever scrolls to it. At three designs it is merely slow. At
+twenty — which the product advertises — it is thousands of simultaneous requests
+on one page.
+
+**Fixed:** `loading="lazy" decoding="async"` on all six repeated image tags in
+the listing flow. 92% of requests on this batch become deferred. Guarded by a
+test that fails if any of them loses the attribute.
+
+### Walkthrough notes — not defects, recorded for context
+
+- **Recovery works.** Regenerating a title correctly invalidates that listing's
+  Etsy details ("Etsy details still need to be created"), and **Try this listing
+  again** repaired both affected rows.
+- **Transient status lag.** Immediately after the retries the rail read
+  "2 of 3 ready" with no retry control visible and phases 3–4 locked — it
+  settled to "3 listings ready" within a few seconds. Not a dead end, but the
+  intermediate state looks like one.
+- **Phase 2 sub-label contradicts phase 1.** "Etsy details · Complete the prior
+  step" while phase 1 reads "3 titles complete" and is ticked. Cosmetic.
+- **Two `<h1>`s on the Etsy phase** — "Oops, this one needs a bigger screen." is
+  present but hidden (0×0). Semantics only, not visible.

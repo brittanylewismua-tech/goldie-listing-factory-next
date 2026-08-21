@@ -382,3 +382,19 @@ test("the tags field shows all 13 tags, not 5 — D96", async () => {
   assert.match(css, /\.listing-tags-field\{[\s\S]*white-space:pre-wrap!important/);
   assert.doesNotMatch(css, /\.listing-tags-field\{[\s\S]*text-overflow:ellipsis/);
 });
+
+test("listing and mockup images are lazy-loaded — D97", async () => {
+  const page = await readFile(listingFactoryPage, "utf8");
+
+  /* Measured on the Images + mockups phase of a real 3-design batch: 477
+   * rendered <img> tags, exactly one of them lazy. 159 images per listing, so
+   * the 20-design batch limit projects to roughly 3,180 images loading eagerly
+   * on a single page.
+   *
+   * 92% of them (441 of 477) sit outside the viewport on load. */
+  const eagerImg = /<img src=\{(src|item\.src|design\.previewUrl|file\.previewUrl|draftPreview)\}(?![^>]*loading="lazy")/;
+  assert.doesNotMatch(page, eagerImg,
+    "A repeated listing/mockup image is loading eagerly. On a 20-design batch that is thousands of simultaneous requests.");
+  assert.ok((page.match(/loading="lazy" decoding="async"/g) || []).length >= 5,
+    "Expected every repeated image in the listing flow to be lazy-loaded.");
+});
