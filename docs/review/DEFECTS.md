@@ -259,7 +259,7 @@ Now reads "Connect your accounts".
 
 ## Pricing (step 4)
 
-### D22 · Whole-number pricing checkbox is detached from the prices it changes · OPEN
+### D22 · Whole-number pricing checkbox is detached from the prices it changes · **FIXED**
 Pinned top-right, above the "1. Item prices" heading and above "Profit goal".
 **Fix:** group Profit goal and this checkbox in one row directly above the
 variant price rows.
@@ -277,11 +277,11 @@ the badge.
 ### D25 · Three `?` help buttons in one screenful · **FIXED**
 **Fix:** one help affordance per screen, at the page title.
 
-### D26 · Bottom summary repeats figures reconciled 200px above it · OPEN
+### D26 · Bottom summary repeats figures reconciled 200px above it · **FIXED**
 "Profit target $10.00" and "Printify fulfillment shipping USD 7.99" appear again
 below the warning box that already explains the gap between them.
 
-### D27 · Pricing summary carries rows for steps that have not happened · OPEN
+### D27 · Pricing summary carries rows for steps that have not happened · **FIXED**
 "Keyword bank — Choose after drafts", "Mockup set — Choose after drafts".
 
 ---
@@ -293,11 +293,11 @@ below the warning box that already explains the gap between them.
 are ready 3/3" with a progress bar · "3/7 designs available this batch".
 **Fix:** one line. The quota version is the useful one.
 
-### D29 · Two different maximums stated 400px apart · OPEN
+### D29 · Two different maximums stated 400px apart · **FIXED**
 "20 designs maximum" in the limits row versus the plan quota below it.
 **Fix:** state only the binding constraint.
 
-### D30 · The upload card stops saying what it does · OPEN
+### D30 · The upload card stops saying what it does · **FIXED**
 Its title becomes "3 of 20 designs ready" after upload while the adjacent card
 still reads "Choose individual images".
 
