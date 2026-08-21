@@ -1480,7 +1480,10 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .app-shell[data-product-selected="true"] .recipe-tile:not(.selected),
 .app-shell[data-product-selected="true"] .bundle-library{display:none!important}
 .app-shell[data-product-selected="true"] .recipe-grid{grid-template-columns:1fr!important}
-.app-shell .recipe-card .change-product{position:absolute;right:72px;bottom:12px;z-index:2;border:0;background:transparent;color:#68445f;font-size:10px;font-weight:850;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.app-shell .recipe-card .recipe-tile{grid-template-columns:minmax(0,1fr) auto auto auto!important}
+.app-shell .recipe-card .change-product{position:static;grid-column:2;justify-self:end;margin:7px 2px 8px 0;padding:6px 9px;border:0;background:transparent;color:#68445f;font-size:10px;font-weight:850;text-decoration:underline;text-underline-offset:3px;white-space:nowrap;cursor:pointer}
+.app-shell .recipe-card .recipe-tile>.edit-recipe{grid-column:3}
+.app-shell .recipe-card .recipe-tile>.delete-recipe{grid-column:4}
 .app-shell .variant-pricing .heading-with-help>button{display:none!important}
 .keyword-page .keyword-workspace{display:flex!important;flex-direction:column!important}
 .keyword-page .bank-library{order:1}
