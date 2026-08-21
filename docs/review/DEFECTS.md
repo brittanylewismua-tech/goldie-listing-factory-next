@@ -751,7 +751,7 @@ must drive control availability, its displayed reason, and the click path.
 ## Deep-scan pass — 21 Aug 2026
 
 Every page and interaction state walked visually and measured in the live DOM,
-after ChatGPT's `b826386`. Findings D78–D88.
+after ChatGPT's `b826386`. Findings D78–D89.
 
 ---
 
@@ -892,3 +892,34 @@ sub-24px targets found on: **Finish · Etsy details**, **Keyword Banks**,
 Remaining geometry issues: 4 title inputs on **Titles + tags** (570px visible
 against up to 1032px of content — see D60 follow-up) and 2 clipped titles on
 **Finish · Publish** (295px against 735px).
+
+### D89 · The workflow overflows the window below ~1400px · **FIXED HERE** · **HIGH**
+
+`.steps-column`, `.launch-panel` and `.workflow-footer-actions` were sized
+`width:min(720px,72vw)`. They live inside `.app-shell`, which is inset by a
+**288px sidebar** — but `vw` measures the whole viewport and knows nothing
+about that inset.
+
+Measured at an 860px window:
+
+| | before | after |
+|---|---|---|
+| column width | 619px | 572px |
+| page scroll width | 883px (viewport 860) | **860px** |
+| elements past the right edge | 4 | **0** |
+
+So the page scrolled sideways and the **Back button sat off-screen**. The
+footer was affected too, through a separate `!important` rule carrying the same
+value.
+
+It is not only a small-screen bug — the arithmetic fails from about **1400px
+down**, a few pixels at a time, which is why it survived every audit at 1440.
+
+**Fixed:** all four occurrences now use `min(720px,100%)`, matching the pattern
+already used correctly elsewhere in the same file. Verified live by injecting
+the rule before committing: horizontal scroll gone, zero off-screen elements.
+Guarded by a test that fails on any `vw`-based width for these columns.
+
+**Not a defect (checked):** the step cards still carry `01`–`09` in the markup
+after the nine-to-five rail change, but `font-size:0` renders them as icons, so
+no stale number is visible next to "4 of 4".

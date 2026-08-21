@@ -300,3 +300,22 @@ test("keeps supporting workflow copy readable and explains slower Etsy preparati
   assert.match(css, /\.app-shell \.step-content small,[\s\S]*font-size:11\.5px!important/);
   assert.match(css, /\.app-shell \.etsy-detail-card label,[\s\S]*font-size:12px!important/);
 });
+
+test("the workflow column is sized against its container, never the viewport — D89", async () => {
+  const css = await readFile(new URL("app/approved-functional.css", root), "utf8");
+
+  /* .steps-column, .launch-panel and .workflow-footer-actions all live inside
+   * .app-shell, which is inset by a 288px sidebar. A vw unit measures the whole
+   * viewport and knows nothing about that inset, so `min(720px,72vw)` made the
+   * column wider than the box holding it: at 860px the page gained 23px of
+   * horizontal scroll and the Back button sat off-screen. It also overflowed at
+   * 1400px, four pixels at a time, which is why it went unnoticed.
+   *
+   * Percentages resolve against the container and are correct at every width. */
+  assert.doesNotMatch(css, /\.(steps-column|launch-panel|workflow-footer-actions)[^{}]*\{[^}]*width:\s*min\([^)]*vw/,
+    "A workflow column is sized in vw. Use a percentage — vw ignores the 288px sidebar inset and overflows the shell.");
+  assert.doesNotMatch(css, /72vw/,
+    "72vw was the specific value that overflowed .app-shell. It must not come back.");
+
+  assert.match(css, /\.workflow-stage>\.steps-column,\.workflow-stage>\.launch-panel\{width:min\(720px,100%\)\}/);
+});
