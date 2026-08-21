@@ -1818,6 +1818,7 @@ test("orders designs before colours, mockups, and saved settings on the batch sc
   const [app,css]=await Promise.all([readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8"),readFile(new URL("../app/approved-functional.css",import.meta.url),"utf8")]);
   assert.match(app,/BatchPreferencesPortal/);
   assert.match(app,/id="batch-preferences-after-designs"/);
+  assert.match(app,/useEffect\(\(\)=>setTarget\(document\.getElementById\("batch-preferences-after-designs"\)\)\);/);
   assert.match(css,/\.steps-column\.setup-column>\.designs-step\{order:20\}/);
   assert.match(css,/\.steps-column\.setup-column>\.batch-preferences-after-designs\{order:30/);
   assert.match(css,/\.steps-column\.setup-column \.color-default-block\{order:30/);

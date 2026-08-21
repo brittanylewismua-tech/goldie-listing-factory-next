@@ -24,7 +24,7 @@ type VisibleBounds={left:number;top:number;right:number;bottom:number};
 
 function BatchPreferencesPortal({children}:{children:ReactNode}){
   const [target,setTarget]=useState<HTMLElement|null>(null);
-  useEffect(()=>setTarget(document.getElementById("batch-preferences-after-designs")),[]);
+  useEffect(()=>setTarget(document.getElementById("batch-preferences-after-designs")));
   return target?createPortal(children,target):null;
 }
 type EtsyCategoryOption={id:number;path:string};
