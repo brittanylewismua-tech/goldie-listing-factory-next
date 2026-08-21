@@ -13,6 +13,76 @@ Last verified against the live site and `main`: 20 Aug 2026.
 
 ## Blocking
 
+### D74 · Wrong garment type in titles — the koozie bug, mutated · OPEN · **HIGH**
+
+Live run, 3 fresh designs on the **Gildan Tee**, bank = BACHELORETTE TEES:
+
+> Listing 3 title: *"Fresh Off The Market, Off The Market, She Said Yes, Shes Off
+> The Market, **Wifey Sweatshirt, Future Mrs Sweatshirt, Bride Hoodie**"*
+
+A t-shirt listing containing **sweatshirt** twice and **hoodie** once.
+
+**Why the existing guard missed it.** The PRODUCT TYPE RULE denylist I wrote
+covers non-garments — koozie, coozie, sash, sunglasses, tapestry, tattoo,
+sticker, mug, tumbler, cup, banner, decor, poster, print, blanket. Sweatshirt
+and hoodie are garments, so they pass. But they are the **wrong** garment.
+
+**Fix:** the rule is not "reject non-garments", it is **"reject any product noun
+that is not this product"**. For a t-shirt that must also exclude sweatshirt,
+hoodie, crewneck, sweater, tank top, long sleeve, and vice versa for every other
+blank. Derive the excluded set from `templateDetails.blueprintTitle` rather than
+a fixed list.
+
+### D75 · Tags are being shredded into meaningless fragments · OPEN · **HIGH**
+
+Same run. Generated tags for listing 1:
+
+> `bachelorette girls, gone mild, girls gone mild, girls gone, mild bachelorette,
+> fresh off the market, fresh off the, market bachelorette`
+
+**Six of eight are fragments**, not keywords: *"gone mild"*, *"girls gone"*,
+*"bachelorette girls"*, *"mild bachelorette"*, *"fresh off the"*,
+*"market bachelorette"*. Listing 3 produces *"future mrs"*, *"mrs sweatshirt"*,
+*"off the"*.
+
+**Cause:** `splitLongPhrase` in `app/seo-utils.ts`. Etsy caps a tag at 20
+characters, so any bank phrase longer than that gets chopped into ≤20-char word
+groups. *"fresh off the market bachelorette"* is 33 characters, so it becomes
+*"fresh off the"* + *"market bachelorette"*.
+
+Etsy matches tags as whole phrases. *"fresh off the"* is worth nothing, and it
+occupies a slot that a real keyword could hold. **The tag count going from 2/13
+to 8/13 is not an improvement if six of them are noise.**
+
+**Fix:** never fabricate a tag by splitting. If a bank phrase exceeds 20
+characters, drop it from tags (keep it in the title, where 140 characters
+applies) and fill the slot from the next phrase that fits. Better: ask the model
+for tag-length phrases directly rather than deriving them from the title.
+
+### D76 · Titles do not describe the design · OPEN
+The three designs read SCOTTSDALE / SAVANNAH / TULUM. None of the generated
+titles mention any of them, because the bank contains no Scottsdale, Savannah or
+Tulum phrase — it has Palm Springs, Nashville, Vegas and New Orleans.
+
+Behaviour is technically correct: the model may only use bank phrases. But the
+result is three listings whose titles have nothing to do with the artwork.
+
+**Fix:** when no bank phrase matches the design's own text, say so per row —
+*"No phrase in this bank matches this design. Add one, or write the title
+yourself."* This is the honest version of the fallback D53-era code used to hide.
+
+### D77 · Fill quality varies wildly across one batch · OPEN
+Same batch, same bank, same product:
+| Listing | Title | Tags |
+|---|---|---|
+| 1 | 132/140 | 8/13 |
+| 2 | **45/140** | **3/13** |
+| 3 | 126/140 | 8/13 |
+
+Listing 2 got roughly a third of the fill for no visible reason. The 8–13 phrase
+instruction is not being applied consistently.
+
+
 ### D73 · Nothing advances past the first Finish phase on a resumed batch · **FIXED**
 Verified live on batch `9a78b187`:
 
