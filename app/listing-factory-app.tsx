@@ -513,10 +513,12 @@ export default function ListingFactoryApp() {
     for(const design of files){const hash=design.contentHash||await fileContentHash(design.file);existingHashes.add(hash)}
     const unique:DesignFile[]=[];let duplicateCount=0;
     for(const file of selected){const contentHash=await fileContentHash(file);if(existingHashes.has(contentHash)){duplicateCount+=1;continue}existingHashes.add(contentHash);unique.push({name:file.name,size:file.size,id:crypto.randomUUID(),file,previewUrl:URL.createObjectURL(file),title:"",tags:[],contentHash,paddingStatus:"checking"})}
-    const available=Math.max(0,MAX_BATCH_FILES-files.length),images=unique.slice(0,available),limitCount=unique.length-images.length;
+    const available=Math.max(0,Math.min(MAX_BATCH_FILES-files.length,batchDesignLimit-files.length));
+    if(unique.length>available){unique.forEach(image=>URL.revokeObjectURL(image.previewUrl));setFileNotice(duplicateCount?`${duplicateCount} exact ${duplicateCount===1?"duplicate was":"duplicates were"} skipped.`:"");setFileError(available?`This selection contains ${unique.length} new designs, but this batch has room for ${available}. Choose ${available} or fewer so nothing is partially added.`:"This batch has no listing allowance left. No designs were added and no batch was created.");if(folderPicker.current)folderPicker.current.value="";if(imagePicker.current)imagePicker.current.value="";return}
+    const images=unique;
     if(!images.length){if(duplicateCount){setFileError("");setFileNotice(`${duplicateCount===1?"That design is":"Those designs are"} already in this batch. No duplicate was added.`)}else{setFileNotice("");setFileError(`This batch already has ${MAX_BATCH_FILES} designs.`)}if(folderPicker.current)folderPicker.current.value="";if(imagePicker.current)imagePicker.current.value="";return}
     const combined=[...files,...images];
-    setFileError("");setFileNotice([duplicateCount?`${duplicateCount} exact ${duplicateCount===1?"duplicate was":"duplicates were"} skipped.`:"",limitCount?`${limitCount} ${limitCount===1?"design was":"designs were"} not added because this batch is limited to ${MAX_BATCH_FILES}.`:""].filter(Boolean).join(" "));
+    setFileError("");setFileNotice(duplicateCount?`${duplicateCount} exact ${duplicateCount===1?"duplicate was":"duplicates were"} skipped.`:"");
     setFiles(combined);
     const durableBatchId=batchIdRef.current||crypto.randomUUID();batchIdRef.current=durableBatchId;window.localStorage.setItem("goldie-active-batch",durableBatchId);const batchUrl=new URL(window.location.href);batchUrl.searchParams.set("batch",durableBatchId);window.history.replaceState({},"",batchUrl);void saveBatchFiles(durableBatchId,combined.map(image=>image.file)).catch(()=>undefined);
     setComplete(false);

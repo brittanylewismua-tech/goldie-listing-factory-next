@@ -1885,3 +1885,13 @@ test("uses one deterministic Etsy product baseline across a batch (fixes D71)",a
   assert.match(app,/etsyProductBaseline\.current=\{taxonomyId:details\.taxonomyId,category:details\.category,attributes:physical\}/);
   assert.match(app,/etsyProductBaseline\.current=null;setActiveRecipe\(recipe\)/);
 });
+
+test("rejects over-capacity uploads before creating a batch record (fixes D54)",async()=>{
+  const app=await readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8");
+  const capacity=app.indexOf("if(unique.length>available)");
+  const batchId=app.indexOf("const durableBatchId=batchIdRef.current||crypto.randomUUID()",capacity);
+  assert.ok(capacity>0&&batchId>capacity);
+  assert.match(app,/Math\.min\(MAX_BATCH_FILES-files\.length,batchDesignLimit-files\.length\)/);
+  assert.match(app,/No designs were added and no batch was created/);
+  assert.match(app,/Choose \$\{available\} or fewer so nothing is partially added/);
+});
