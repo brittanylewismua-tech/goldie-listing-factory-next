@@ -113,10 +113,11 @@ function ProductColorSelector({product,selected,onChange,onRemember,remembering,
 }
 
 function MockupSetSelector({value,onChange,savedValue,onSaveDefault,saving}:{value:string;onChange:(value:string)=>void;savedValue:string;onSaveDefault:()=>void;saving:boolean}){
-  const [templates,setTemplates]=useState<Array<{theme:string;name:string;src:string}>>([]);
+  const [templates,setTemplates]=useState<Array<{theme:string;name:string;src:string}>>([]),savedInitialChoice=useRef(false);
   useEffect(()=>{fetch("/api/mockups/library").then(response=>response.json()).then((payload:{templates?:Array<{theme?:string;name?:string;src?:string}>})=>setTemplates((payload.templates||[]).map(item=>({theme:String(item.theme||"").trim(),name:String(item.name||"Mockup"),src:String(item.src||"")})).filter(item=>item.theme&&item.src))).catch(()=>undefined)},[]);
   const themes=[...new Set(templates.map(item=>item.theme))],previews=templates.filter(item=>item.theme===value).slice(0,4);
   useEffect(()=>{if(!value&&themes.length)onChange(savedValue&&themes.includes(savedValue)?savedValue:themes[0])},[value,savedValue,themes.join("|")]);
+  useEffect(()=>{if(savedInitialChoice.current||savedValue||!value||!themes.includes(value)||saving)return;savedInitialChoice.current=true;onSaveDefault()},[value,savedValue,saving,themes.join("|")]);
   const changed=value!==savedValue;
   return <section className="batch-default-block mockup-default-block"><div className="batch-default-heading"><div><h3>Choose the look you want</h3><span>{savedValue?"From your last batch — change it anytime.":value?"Goldie chose a starting set. Change it anytime.":"Loading your saved mockup choices…"}</span></div><b>{value||"Loading…"}</b></div>{previews.length>0&&<div className="mockup-set-preview" aria-label={`${value} preview`}>{previews.map(item=><figure key={`${item.theme}:${item.name}`}><img src={item.src} alt=""/><figcaption>{item.name}</figcaption></figure>)}</div>}<label><span>Mockup set</span><select value={value} onChange={event=>onChange(event.target.value)} disabled={!themes.length}><option value="">Loading mockup sets…</option>{themes.map(theme=><option key={theme} value={theme}>{theme}</option>)}</select></label>{changed&&value&&<button type="button" className="save-product-default" disabled={saving} onClick={onSaveDefault}>{saving?"Saving…":`Save ${value} as the default`}</button>}<small>Goldie remembers the set by name and resolves its matching scenes for the colors in each batch.</small></section>
 }
