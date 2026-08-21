@@ -842,6 +842,21 @@ test("keeps the owner test page separate from mastermind access", async () => {
   assert.match(admin, /SELECT user_id FROM mastermind_access/);
   assert.match(access, /toUpperCase/);
   assert.match(access, /brittanylewismua@gmail\.com/);
+  assert.match(access, /shesawolfclothing@gmail\.com/);
+});
+
+test("gives the owner testing account room to run real batches", async () => {
+  const [limits, usage, drafts, publish] = await Promise.all([
+    readFile(new URL("../app/plan-limits.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/usage/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/printify/drafts/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/printify/drafts/publish/route.ts", import.meta.url), "utf8"),
+  ]);
+  assert.match(limits, /OWNER_TEST_PLAN[\s\S]*drafts: 10000/);
+  assert.match(limits, /owner \? OWNER_TEST_PLAN/);
+  assert.match(usage, /planFor\(planRow\?\.plan_key, isOwner\(user\)\)/);
+  assert.match(drafts, /planFor\(planRow\?\.plan_key, isOwner\(user\)\)/);
+  assert.match(publish, /planFor\(planRow\?\.plan_key,isOwner\(user\)\)/);
 });
 
 test("uses the explicitly selected Google or email account before a stale ChatGPT session", async () => {

@@ -8,6 +8,7 @@ import { rendererFor, rendererInput, type ProductKind } from "@/app/mockups/prod
 import { ensureMockupStorage } from "@/app/api/mockups/storage";
 import { monthKey, planFor } from "@/app/plan-limits";
 import { customerLaunchBlock } from "@/app/customer-launch-gate";
+import { isOwner } from "@/app/mastermind/access";
 
 const MAX_DATA_URL_LENGTH=18*1024*1024;
 const valid=(value:unknown):value is string=>typeof value==="string"&&/^data:image\/(png|jpeg|webp);base64,/i.test(value)&&value.length<=MAX_DATA_URL_LENGTH;
@@ -29,7 +30,7 @@ export async function POST(request:NextRequest){
     if(!body.kind||!requestedKinds.has(body.kind)||!valid(body.scene)||!valid(body.design)||body.reference&&!valid(body.reference))return NextResponse.json({error:"The mockup files could not be read safely."},{status:400});
     if(!body.reference)return NextResponse.json({error:"Add one placement reference for this product so Goldie can match the print size and position."},{status:400});
     const day=monthKey(),userDay=`${user.userId}:${day}`,db=getDb();
-    const planRow=await db.all<{plan_key:string}>(sql`SELECT plan_key FROM account_plans WHERE user_id=${user.userId} LIMIT 1`),plan=planFor(planRow[0]?.plan_key);
+    const planRow=await db.all<{plan_key:string}>(sql`SELECT plan_key FROM account_plans WHERE user_id=${user.userId} LIMIT 1`),plan=planFor(planRow[0]?.plan_key,isOwner(user));
     await db.insert(mockupRenderUsage).values({userDay,userId:user.userId,day,count:1}).onConflictDoUpdate({target:mockupRenderUsage.userDay,set:{count:sql`${mockupRenderUsage.count}+1`,updatedAt:new Date().toISOString()}});reservedKey=userDay;
     const [usage]=await db.select().from(mockupRenderUsage).where(eq(mockupRenderUsage.userDay,userDay)).limit(1);
     if(Number(usage?.count||0)>plan.aiMockups){await db.update(mockupRenderUsage).set({count:sql`MAX(0,${mockupRenderUsage.count}-1)`}).where(eq(mockupRenderUsage.userDay,userDay));reservedKey="";return NextResponse.json({error:`You have used all ${plan.aiMockups} AI-rendered mockups in your ${plan.name} plan. Your allowance resets next month.`},{status:429})}

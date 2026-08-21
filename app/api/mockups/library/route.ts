@@ -7,6 +7,7 @@ import { mockupTemplates } from "@/db/schema";
 import { ensureMockupStorage } from "@/app/api/mockups/storage";
 import { planFor } from "@/app/plan-limits";
 import { customerLaunchBlock } from "@/app/customer-launch-gate";
+import { isOwner } from "@/app/mastermind/access";
 
 const kinds = new Set(["rigid-flat", "t-shirt", "sweatshirt", "hoodie", "other-apparel", "apparel", "soft-goods", "curved", "irregular"]);
 const MAX_FILE = 25 * 1024 * 1024;
@@ -35,7 +36,7 @@ export async function POST(request: NextRequest) {
   const name = String(form.get("name") || "").trim().slice(0, 120), surfaceKind = String(form.get("surfaceKind") || "");
   if (!(image instanceof File) || !/^image\/(png|jpeg|webp)$/.test(image.type) || image.size > MAX_FILE) return NextResponse.json({ error: "Choose a PNG, JPG, or WEBP mockup under 25 MB." }, { status: 400 });
   if (!theme || !name || !kinds.has(surfaceKind)) return NextResponse.json({ error: "The mockup set details are incomplete." }, { status: 400 });
-  const planRow=await env.DB.prepare("SELECT plan_key FROM account_plans WHERE user_id=?").bind(user.userId).first<{plan_key:string}>(),plan=planFor(planRow?.plan_key);
+  const planRow=await env.DB.prepare("SELECT plan_key FROM account_plans WHERE user_id=?").bind(user.userId).first<{plan_key:string}>(),plan=planFor(planRow?.plan_key,isOwner(user));
   const setCount=await env.DB.prepare("SELECT COUNT(DISTINCT theme) count FROM mockup_templates WHERE user_id=?").bind(user.userId).first<{count:number}>();
   const setExists=await env.DB.prepare("SELECT 1 found FROM mockup_templates WHERE user_id=? AND theme=? LIMIT 1").bind(user.userId,theme).first();
   if(!setExists&&Number(setCount?.count||0)>=plan.mockupSets)return NextResponse.json({error:`Your ${plan.name} plan includes ${plan.mockupSets} custom mockup sets. Delete a set or upgrade to add another.`},{status:429});

@@ -8,6 +8,7 @@ import { printAreasWithOnlyCurrentArtwork } from "../product-payload";
 import { planFor } from "@/app/plan-limits";
 import { decryptPrintifyToken } from "../token-crypto";
 import { recommendedPrice } from "@/app/pricing";
+import { isOwner } from "@/app/mastermind/access";
 
 const PRINTIFY_API = "https://api.printify.com/v1";
 type UploadedImage = { id: string; width?: number; height?: number; mime_type?: string };
@@ -137,7 +138,7 @@ export async function POST(request: Request) {
     await db.prepare("INSERT INTO printify_draft_results (request_key, user_id, batch_id, client_id, status, updated_at) VALUES (?, ?, ?, ?, 'running', CURRENT_TIMESTAMP) ON CONFLICT(request_key) DO UPDATE SET status = 'running', response_json = NULL, updated_at = CURRENT_TIMESTAMP")
       .bind(idempotencyKey, user.userId, body.batchId, body.clientId ?? body.fileName).run();
     const planRow = await db.prepare("SELECT plan_key FROM account_plans WHERE user_id=?").bind(user.userId).first<{plan_key:string}>();
-    const plan = planFor(planRow?.plan_key);
+    const plan = planFor(planRow?.plan_key, isOwner(user));
     const reserved = await db.prepare("SELECT COUNT(*) count FROM printify_draft_results WHERE user_id=? AND ((status='succeeded' AND updated_at>=datetime('now','start of month')) OR (status='running' AND updated_at>=datetime('now','-10 minutes')))").bind(user.userId).first<{count:number}>();
     if (Number(reserved?.count || 0) > plan.drafts) {
       await db.prepare("UPDATE printify_draft_results SET status='failed', updated_at=CURRENT_TIMESTAMP WHERE request_key=?").bind(idempotencyKey).run();

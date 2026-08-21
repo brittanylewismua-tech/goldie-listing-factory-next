@@ -3,6 +3,7 @@ import { env } from "cloudflare:workers";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { monthKey, nextReset, planFor } from "@/app/plan-limits";
 import { billingState } from "@/app/billing";
+import { isOwner } from "@/app/mastermind/access";
 
 export async function GET() {
   const user = await getChatGPTUser();
@@ -18,6 +19,6 @@ export async function GET() {
     env.DB.prepare("SELECT COUNT(*) count FROM etsy_publish_items WHERE user_id=? AND status IN ('queued','running')").bind(user.userId).first<{count:number}>(),
     env.DB.prepare("SELECT ROUND(AVG(api_calls),1) average FROM etsy_listing_usage WHERE published_at>=datetime('now','-30 days') AND api_calls>0").first<{average:number}>(),
   ]);
-  const plan = planFor(planRow?.plan_key);
+  const plan = planFor(planRow?.plan_key, isOwner(user));
   return NextResponse.json({ plan, resetAt: nextReset(), usage: { drafts: Number(drafts?.count || 0), aiMockups: Number(renders?.count || 0), mockupSets: Number(sets?.count || 0), publishedToday:Number(publishedToday?.count||0), publishing:Number(publishing?.count||0) }, operations:{averageEtsyCallsPerListing:Number(callAverage?.average||0)}, billing });
 }

@@ -1666,3 +1666,11 @@ The sign-in link disappeared, no account identity was shown, and there was no
 way to leave that account. The screen now names the signed-in email and offers
 “Use a different account,” which signs out both app and platform sessions and
 returns directly to the Listing Factory sign-in screen.
+
+### D110 · Owner testing account was treated as an expired 20-listing beta · **FIXED HERE** · **BLOCKER**
+
+The Chrome account used for live testing, `shesawolfclothing@gmail.com`, was
+missing from the owner allowlist. Refresh therefore sent it to plan selection,
+and its saved beta plan still imposed the 20-listing ceiling. The account is now
+recognized as an owner everywhere, and owner testing uses a separate 10,000
+listing allowance without deleting draft records or changing customer plans.
