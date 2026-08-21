@@ -1503,3 +1503,18 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .mockupFactory .newSetButton{border:0!important;background:transparent!important;box-shadow:none!important;color:#6b4661!important;text-decoration:underline!important;text-underline-offset:3px}
 .usage-page .usage-card b span{display:block;margin-top:3px;font-size:11px!important}
 .missing-photo-list article>b{overflow-wrap:anywhere;color:#4b283e;font-size:11px;line-height:1.35;text-align:left}
+
+/* D60 (properly this time). The title is the thing the seller is on this screen
+ * to read, and it was a single-line input forced to nowrap + ellipsis: a
+ * 132-character title showed 55% of itself in a 570px field against 1032px of
+ * content. Making it ellipsis rather than a hard cut was not a fix.
+ * A wrapping field shows all 140 characters at once. */
+.app-shell .listing-editor .design-fields>label:nth-of-type(1) .listing-title-field{
+  white-space:pre-wrap!important;
+  text-overflow:clip!important;
+  overflow:hidden!important;
+  resize:none!important;
+  min-height:76px!important;
+  line-height:1.45!important;
+  font:inherit!important;
+}

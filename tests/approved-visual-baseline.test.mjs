@@ -319,3 +319,21 @@ test("the workflow column is sized against its container, never the viewport —
 
   assert.match(css, /\.workflow-stage>\.steps-column,\.workflow-stage>\.launch-panel\{width:min\(720px,100%\)\}/);
 });
+
+test("the listing title field shows the whole title, not an ellipsis — D60", async () => {
+  const [page, css] = await Promise.all([
+    readFile(listingFactoryPage, "utf8"),
+    readFile(new URL("app/approved-functional.css", root), "utf8"),
+  ]);
+
+  /* D60 was marked fixed while the field still truncated. Measured live on a
+   * real batch: a 132-character title in a 570px input against 1032px of
+   * content — 55% visible. The earlier fix only added text-overflow:ellipsis,
+   * which makes truncation tidier, not readable.
+   *
+   * Reviewing the title is the entire purpose of this screen. */
+  assert.match(page, /<textarea className="listing-title-field" rows=\{3\} value=\{design\.title\} maxLength=\{140\}/,
+    "The title is a single-line input again. 140 characters cannot fit on one line at this width.");
+  assert.match(css, /\.listing-title-field\{[\s\S]*white-space:pre-wrap!important/);
+  assert.doesNotMatch(css, /\.listing-title-field\{[\s\S]*text-overflow:ellipsis/);
+});

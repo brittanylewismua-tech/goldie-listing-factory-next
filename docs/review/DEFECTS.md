@@ -625,7 +625,7 @@ At 20 listings that is ~2,500px of nothing.
 other counts. Row height drops to roughly 80px. Twenty listings goes from
 ~3,900px of scroll to ~1,600px.
 
-### D60 · The title field truncates the thing you are here to review · **FIXED**
+### D60 · The title field truncates the thing you are here to review · **REOPENED → FIXED**
 The title input is **222px** — it shares the 442px fields column with tags. Etsy
 titles run to 140 characters; 222px at 15px shows roughly 30. Every row reads
 "Palm Springs Bachelor…", "Nashville Bachelorette …", "Bachelorette Koozies, …".
@@ -1043,3 +1043,28 @@ never moves.
 correctly can still do nothing at runtime. Twice in a row here. Scroll,
 focus and visibility changes have to be measured on the live page — asserting
 the code is right is not the same as asserting the behaviour is right.
+
+### D94 · D60 was marked FIXED while still truncating · **FIXED HERE** · **HIGH**
+
+Caught by re-measuring an item the list already called fixed.
+
+Measured live, Titles + tags, real batch:
+
+| field | chars | visible width | content width | readable |
+|---|---|---|---|---|
+| title 1 | 132 | 570px | 1032px | **55%** |
+| title 2 | 135 | 570px | 856px | **67%** |
+
+The D60 fix widened the field from 222px to 570px and added
+`text-overflow:ellipsis`. But titles grew from ~25 characters to ~132 in the
+same period, so the field still cannot show one. **Ellipsis makes truncation
+tidier, not readable.** Reviewing the title is the entire purpose of this
+screen.
+
+**Fixed:** the title is now a 3-row wrapping textarea, so all 140 characters
+are visible at once. `white-space:pre-wrap`, no ellipsis. Guarded by a test.
+
+**Process note:** D60 was closed against the change that was made, not against
+the outcome it was supposed to produce. Worth re-measuring anything on this
+list whose numbers moved after it was closed — D77's fill figures are the
+obvious next candidate.
