@@ -521,3 +521,22 @@ test("the mockup section can actually be changed and cleared — D109", async ()
   assert.match(page, /className="manage-mockup-sets" href="\/mockups"/,
     "The mockup section must offer a route to create or edit sets.");
 });
+
+test("a cleared mockup selection stays cleared — D110", async () => {
+  const page = await readFile(listingFactoryPage, "utf8");
+
+  /* D109 relabelled the empty option to "No mockups for this batch". Testing it
+   * by operating the control rather than reading it showed the label alone was
+   * not enough: an effect re-selected the saved set the instant the value went
+   * empty. Measured live — setting the mockup select to "" reverted to
+   * "BACH TEES" within 4s, while the identical change on the keyword-bank
+   * select stuck.
+   *
+   * Two things had to change: seed the default only once, and stop gating the
+   * forward control on mockupTheme, since choosing "no mockups" otherwise
+   * disabled the only way forward. */
+  assert.match(page, /if\(seededDefault\.current\|\|value\|\|!themes\.length\)return;seededDefault\.current=true;/,
+    "The mockup default must seed once, not re-apply whenever the value is empty.");
+  assert.doesNotMatch(page, /disabled=\{!complete&&\(!selectedColorIds\.length\|\|!autoTitleBankId\|\|!mockupTheme\)\}/,
+    "Mockups are optional; gating the forward control on them makes 'no mockups' unreachable.");
+});

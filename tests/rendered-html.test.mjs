@@ -1926,7 +1926,11 @@ test("shows underfilled titles and tags as an amber non-blocking review state (f
 test("keeps a forward path from setup, designs, and pricing after drafts exist (fixes D1)",async()=>{
   const app=await readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8");
   assert.equal((app.match(/Back to finishing your listings/g)||[]).length,3);
-  assert.match(app,/disabled=\{!complete&&\(!selectedColorIds\.length\|\|!autoTitleBankId\|\|!mockupTheme\)\}/);
+  /* mockupTheme was removed from this gate. Mockups are optional - the Finish
+   * step selects listing images separately - and requiring one made "No mockups
+   * for this batch" unreachable: choosing it disabled the only way forward.
+   * See D110. */
+  assert.match(app,/disabled=\{!complete&&\(!selectedColorIds\.length\|\|!autoTitleBankId\)\}/);
   assert.match(app,/complete\?goToStep\("finish",false,true\):goToStep\("designs"\)/);
   assert.match(app,/files\.length>0&&complete&&workflowStep==="designs"/);
   assert.match(app,/className="batch-actions"[\s\S]{0,500}Back to finishing your listings/);

@@ -1735,3 +1735,39 @@ honours its copy.
 
 This sweep is worth re-running whenever section copy changes; it is cheap and it
 catches the exact class of defect that Brittany has had to report twice.
+
+### D110 · The mockup selection cannot be cleared — an effect undoes it · **FIXED HERE** · **HIGH**
+
+**Found by operating the control instead of reading it.** D109 relabelled the
+empty option to "No mockups for this batch"; that alone would have shipped a
+label that still did nothing.
+
+Measured live, same technique on two selects:
+
+| control | set to `""` | result after 4s |
+|---|---|---|
+| keyword bank | `""` | **stays `""`** ✓ |
+| mockup set | `""` | **reverts to "BACH TEES"** ✗ |
+
+Cause, in `MockupSetSelector`:
+
+```js
+useEffect(()=>{ if(!value&&themes.length) onChange(savedValue&&themes.includes(savedValue)?savedValue:themes[0]) },[value,savedValue,themes.join("|")]);
+```
+
+It runs **every time `value` is empty**, so a deliberate clear is reverted within
+a frame. The effect exists to seed a starting set — good intent, but it makes
+"none" permanently unreachable.
+
+**Second half of the same defect:** the forward control was disabled on
+`!mockupTheme`. Even if clearing had worked, choosing "no mockups" would have
+disabled the only way forward — so the option could never have been used.
+
+**Fixed:** the default seeds **once** via a ref, so a deliberate clear survives;
+and `mockupTheme` is removed from the forward gate, since mockups are optional —
+the Finish step selects listing images separately. `.setup-forward` still
+requires colours and a keyword bank.
+
+**This is the lesson from today, concretely.** D109 was found by reading the
+screen and looked fixed. D110 was only visible by clicking the control and
+checking the state four seconds later. Rendering was never the problem.
