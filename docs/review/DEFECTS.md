@@ -218,7 +218,7 @@ Pinned top-right, above the "1. Item prices" heading and above "Profit goal".
 **Fix:** group Profit goal and this checkbox in one row directly above the
 variant price rows.
 
-### D23 · "✓ Approved" appears before anything is approved · OPEN
+### D23 · "✓ Approved" appears before anything is approved · **FIXED**
 **Root cause:** `setPricingApproved(true)` **does not exist anywhere in the
 codebase.** The state is initialised `false`, set `false` in seven places, and
 otherwise only restored from saved state — so no code path can legitimately
@@ -575,7 +575,7 @@ or under 13 tags is not "complete" — amber, not green. Do not block publishing
 (that stays the seller's call, per earlier decisions) but stop asserting the
 opposite of what is on screen.
 
-### D65 · "✓ Every enabled variation and price was reviewed" is unreachable · OPEN
+### D65 · "✓ Every enabled variation and price was reviewed" is unreachable · **FIXED**
 Same root cause as **D53/D23** — `pricingApproved` can never be true, so this
 checkmark either renders from stale saved state or is hardcoded. Either way it
 claims a review that the code cannot record.
