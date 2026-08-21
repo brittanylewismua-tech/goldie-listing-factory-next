@@ -81,7 +81,12 @@ test("the keyword bank page and the title generator share one noun list — D90"
     "scrollIntoView is swallowed by the overflow-x:clip container on .management-page.");
   assert.doesNotMatch(page, /window\.scrollTo\(\{top:0/,
     "Scrolling to the top scrolls away from the edit form, which sits below the library.");
-  assert.match(page, /window\.scrollTo\(\{top:form\.getBoundingClientRect\(\)\.top\+window\.scrollY/);
+  assert.match(page, /window\.scrollTo\(0,form\.getBoundingClientRect\(\)\.top\+window\.scrollY/);
+  /* And not smoothly. Verified live: window.scrollTo({behavior:"smooth"}) never
+   * moves the page on a management screen — scrollY stays 0 indefinitely —
+   * while the same call without `behavior` scrolls instantly. */
+  assert.doesNotMatch(page, /behavior:"smooth"/,
+    "Smooth scrolling does not work on management screens. Scroll instantly.");
 });
 
 test("no auto-title path re-derives tags from the title — D79", async () => {
@@ -117,5 +122,7 @@ test("no management screen relies on scrollIntoView — it is clipped away", asy
     const source = await readFile(new URL(`../app/${file}`, import.meta.url), "utf8");
     assert.doesNotMatch(source, /scrollIntoView/,
       `${file} calls scrollIntoView, which is a no-op under .management-page's overflow-x:clip. Use window.scrollTo with the element's own offset.`);
+    assert.doesNotMatch(source, /behavior:"smooth"/,
+      `${file} asks for a smooth scroll. Verified live: smooth scrolling never moves these pages. Scroll instantly.`);
   }
 });

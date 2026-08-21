@@ -1013,3 +1013,33 @@ to open where you are already looking.
 
 **Fixed:** both use `window.scrollTo` computed from the element's own offset. A
 test now fails if `scrollIntoView` appears in any management screen.
+
+### D93 · Smooth scrolling silently does nothing on management screens · **FIXED HERE** · **HIGH**
+
+Caught only because I tested the D80 fix on the live page instead of trusting
+it. **My first two D80 fixes were both non-fixes**, for two different reasons:
+
+1. `scrollIntoView` — swallowed by `overflow-x:clip` (D92).
+2. `window.scrollTo({top, behavior:"smooth"})` — **also does nothing.**
+
+Measured on `/keywords`:
+
+| call | result |
+|---|---|
+| `window.scrollTo({top:600, behavior:"smooth"})` | `scrollY` **0** after 2.5s |
+| `window.scrollTo({top:600})` | **600**, immediately |
+| `window.scrollTo(0,600)` | **600**, immediately |
+| `document.scrollingElement.scrollTop = 700` | **700** |
+
+`prefers-reduced-motion` is `false`, `scroll-behavior` is `auto`, and the
+document is scrollable (`scrollHeight 1461`, `clientHeight 643`). Smooth
+scrolling specifically is dead — no error, no console output, the page just
+never moves.
+
+**Fixed:** both call sites scroll instantly. Tests reject `scrollIntoView` and
+`behavior:"smooth"` anywhere in the management screens.
+
+**The lesson worth keeping:** a fix that compiles, passes review and reads
+correctly can still do nothing at runtime. Twice in a row here. Scroll,
+focus and visibility changes have to be measured on the live page — asserting
+the code is right is not the same as asserting the behaviour is right.
