@@ -1225,3 +1225,47 @@ test that fails if any of them loses the attribute.
   step" while phase 1 reads "3 titles complete" and is ticked. Cosmetic.
 - **Two `<h1>`s on the Etsy phase** — "Oops, this one needs a bigger screen." is
   present but hidden (0×0). Semantics only, not visible.
+
+### D98 · The publish screen showed 38% of each title · **FIXED HERE** · **HIGH**
+
+**The last screen before listings go live on Etsy.** Titles were clipped to a
+single `nowrap` line: 295px visible against up to 781px of content.
+
+| row | chars | visible |
+|---|---|---|
+| 1 | 130 | **41%** |
+| 2 | 139 | **38%** |
+| 3 | 137 | **39%** |
+
+"Choose exactly which listings to publish" — while showing two fifths of what
+each one says. Verified after the fix: all three render fully in 50px, zero
+overflow.
+
+**Fourth instance of one shape** — D60, D94, D96, D98 are all a field sized for
+short titles that never grew when titles reached 140 characters. Worth a sweep
+for any remaining `white-space:nowrap` + `text-overflow:ellipsis` pair on
+seller-authored content.
+
+### D99 · Shipping profile name truncated with ".." in the DOM · **OPEN** · **LOW**
+
+Publish checklist reads:
+
+> "✓ Standard: SwiftPOD, Kids clothes, Long-sleeve, T-Shirt, Tank Top, V-neck,
+> Bags, Trous**..** will be applied automatically"
+
+Truncated mid-word in the string itself, with a two-dot ellipsis, not CSS.
+Cosmetic, but it is on the final confirmation screen.
+
+### Walkthrough result — Finish phases end to end
+
+Walked all four phases on the live batch. **Did not publish.**
+
+| phase | result |
+|---|---|
+| 1 · Titles + tags | 139/130/137 chars, 13/13/13 tags, 0 errors |
+| 2 · Etsy details | retry recovered both invalidated rows; settled at "3 listings ready" |
+| 3 · Images + mockups | photo select works; counter correct at "3 selected · 17 of 20 photo slots"; **Apply these photos to every listing** correctly disabled until a photo is picked, then applied 3 → 9 across all listings |
+| 4 · Review + publish | checklist all green; "Nothing is published until you use the final button"; 3 of 3 selected |
+
+The publish gate copy is honest and the flow completes. Stopped at the publish
+button by design.

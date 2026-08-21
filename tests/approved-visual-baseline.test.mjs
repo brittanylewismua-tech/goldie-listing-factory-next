@@ -398,3 +398,15 @@ test("listing and mockup images are lazy-loaded — D97", async () => {
   assert.ok((page.match(/loading="lazy" decoding="async"/g) || []).length >= 5,
     "Expected every repeated image in the listing flow to be lazy-loaded.");
 });
+
+test("the publish list shows full titles — D98", async () => {
+  const css = await readFile(new URL("app/approved-functional.css", root), "utf8");
+
+  /* Final review is the last screen before listings go live on Etsy. Measured
+   * live: titles clipped to a single nowrap line, 295px visible against up to
+   * 781px of content — 38-41% readable. You cannot confirm what you cannot
+   * read. Fourth instance of the same shape: D60, D94, D96, D98. */
+  assert.match(css, /\.app-shell \.final-listing-card>div:not\(\.final-listing-links\)>b\{[^}]*white-space:normal!important/);
+  assert.doesNotMatch(css, /\.app-shell \.final-listing-card>div:not\(\.final-listing-links\)>b\{[^}]*white-space:nowrap/,
+    "Publish-list titles are clipped to one line again.");
+});

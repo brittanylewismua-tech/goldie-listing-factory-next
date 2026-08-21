@@ -1130,7 +1130,12 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .app-shell .final-listing-grid{display:grid!important;gap:6px!important}
 .app-shell .final-listing-card{display:grid!important;grid-template-columns:28px 56px minmax(0,1fr) auto!important;min-height:72px!important;padding:8px 10px!important;border-radius:10px!important;box-shadow:none!important}
 .app-shell .final-listing-card>img{width:56px!important;height:56px!important;object-fit:cover!important;border-radius:8px!important}
-.app-shell .final-listing-card>div:not(.final-listing-links)>b{display:block!important;max-width:100%!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important}
+/* D98 · This is the last screen before listings go live on Etsy, and it showed
+ * 38-41% of each title: 295px of visible width against up to 781px of content,
+ * clipped to a single nowrap line. Confirming what you are about to publish
+ * requires being able to read it. Same family as D60/D94/D96 — a field sized
+ * for short titles that never grew when titles reached 140 characters. */
+.app-shell .final-listing-card>div:not(.final-listing-links)>b{display:block!important;max-width:100%!important;overflow:visible!important;text-overflow:clip!important;white-space:normal!important;overflow-wrap:anywhere!important;line-height:1.4!important}
 .app-shell .final-listing-card.review-needed{border-color:#d9ad65!important;background:#fff9ed!important}
 .app-shell .final-listing-card .content-review{color:#8a5a12!important;font-size:10px!important;font-weight:850!important}
 .app-shell .final-checklist .content-review{border-color:#dfbd7f!important;background:#fff5dd!important;color:#7a5010!important}
