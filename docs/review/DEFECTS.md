@@ -265,7 +265,7 @@ Too small to tell twenty similar designs apart.
 
 ## Photo validation
 
-### D33 · The error no longer names the listings · OPEN
+### D33 · The error no longer names the listings · **FIXED**
 Now reads "2 listings need at least one photo". The old `, .` bug is gone but at
 20 designs you cannot tell which two.
 **Fix:** name them, resolving the label from `files` via `clientId`.
