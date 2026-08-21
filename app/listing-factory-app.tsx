@@ -961,7 +961,7 @@ export default function ListingFactoryApp() {
             <div className="step-number">{workflowStep==="finish"?"06":"03"}</div>
             <div className="step-content">
               <div className="step-heading"><div><p className="mini-label">{workflowStep==="finish"?"TITLES, TAGS + DESCRIPTIONS":"DESIGNS FOR THIS BATCH"}</p><div className="heading-with-help"><h2>{workflowStep==="finish"?"Finish titles, tags, and descriptions":"Drop your designs here"}</h2></div></div>{files.length > 0 && workflowStep==="finish" && <span className="done-mark">✓ {files.length} listings</span>}</div>
-              <p className="step-copy">{workflowStep==="finish"?"Create titles and matching tags, review each listing, and confirm the description shared across the batch.":"Build one focused batch of up to 20 finished designs. Upload a folder or select individual images."}</p>
+              <p className="step-copy">{workflowStep==="finish"?"Create titles and matching tags, review each listing, and confirm the description shared across the batch.":`Build one focused batch of up to ${batchDesignLimit} finished designs. Upload a folder or select individual images.`}</p>
               {workflowStep==="finish"&&<div className="finish-guide"><span><b>1</b> Create titles + tags</span><span><b>2</b> Review each listing</span><span><b>3</b> Confirm description</span></div>}
               {!files.length&&<p className="batch-limits" aria-label="Batch limits"><span>{planDraftsRemaining===null?"Checking your plan limit…":`${batchDesignLimit} designs available for this batch`}</span><i /> <span>{activeBundle?`${bundleProductCount} listings per design`:`${planDraftsRemaining??"—"} listings remain on your plan`}</span><i /> <span>100 MB per design · original print quality preserved</span></p>}
               <div className="file-reminder"><b>Before uploading</b><span>Designs should already be full size. Save as a PNG with a see-through background if you don’t want a colored box printed behind your art.</span></div>
@@ -970,7 +970,7 @@ export default function ListingFactoryApp() {
               <div className="upload-actions">
               <button className="folder-drop" onClick={() => folderPicker.current?.click()}>
                 <span className="upload-icon" aria-hidden="true">↑</span>
-                <span><b>{files.length ? designsFinished?"Choose a folder to add more":`Preparing designs: ${designsReady} of ${files.length} ready` : "Choose a folder"}</b><small>{files.length ? `${(totalSize / 1024 / 1024).toFixed(1)} MB selected${totalSize>LARGE_BATCH_THRESHOLD?" · will process one at a time":""} · Choose again to add more` : "Your folder can contain up to 20 designs"}</small></span>
+                <span><b>{files.length ? designsFinished?"Choose a folder to add more":`Choose a folder · preparing ${designsReady} of ${files.length}` : "Choose a folder"}</b><small>{files.length ? `${files.length} design${files.length===1?"":"s"} ready · ${(totalSize / 1024 / 1024).toFixed(1)} MB selected${totalSize>LARGE_BATCH_THRESHOLD?" · will process one at a time":""} · Choose again to add more` : `Add up to ${batchDesignLimit} designs in this batch`}</small></span>
                 <span className="browse-chip">Browse</span>
               </button>
               <button className="folder-drop" onClick={() => imagePicker.current?.click()}>
@@ -1033,10 +1033,6 @@ export default function ListingFactoryApp() {
             <div><span>Saved product</span><b>{activeRecipe?.name||templateDetails?.blueprintTitle||"Not selected"}</b><button onClick={()=>goToStep("setup")}>Edit</button></div>
             <div><span>Product</span><b>{templateDetails?.blueprintTitle||"Not selected"}</b></div>
             <div><span>Designs</span><b>{files.length ? `${files.length} / 20` : "Not added"}</b></div>
-            <div><span>Profit target</span><b>${pricing.targetProfit.toFixed(2)} per item</b></div>
-            <div><span>Printify shipping cost — what you pay</span><b>{templateDetails?.standardShipping!=null?`${templateDetails.shippingCurrency} ${templateDetails.standardShipping.toFixed(2)} cost`:"Calculated by Printify"}</b></div>
-            <div><span>Keyword bank</span><b>{activeRecipe?.keywordListId?"Saved with product":"Choose after drafts"}</b></div>
-            <div><span>Mockup set</span><b>{mockupTheme||"Choose after drafts"}</b></div>
             <div><span>This step creates</span><b>Unpublished Printify drafts</b></div>
           </div>
 

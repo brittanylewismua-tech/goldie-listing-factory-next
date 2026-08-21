@@ -1166,6 +1166,10 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .app-shell .keyword-bank-required b{font-size:12px!important}.app-shell .keyword-bank-required span{font-size:10px!important;font-weight:600!important}
 .app-shell .setup-forward{width:100%!important;margin:18px 0 6px!important}
 .app-shell .recipe-card .add-product-button{border:1px solid rgba(91,48,79,.18)!important;background:rgba(255,255,255,.58)!important;color:#5b304f!important;box-shadow:none!important}
+.app-shell .recipe-card .recipe-library-head .add-product-button{border:0!important;background:transparent!important;color:#704d75!important;box-shadow:none!important;text-decoration:underline!important}
+.app-shell .recipe-card .recipe-library-head .add-product-button:hover{background:transparent!important;color:#4a2a3e!important;transform:none!important}
+.mockupFactory.managementOnly .newSetButton{border:0!important;background:transparent!important;color:#704d75!important;box-shadow:none!important;text-decoration:underline!important}
+.app-shell .listing-editor .individual-title-builder{border-color:transparent!important;background:rgba(255,255,255,.34)!important}
 .app-shell .recipe-card .recipe-use em{display:inline-block!important;justify-self:start!important;width:auto!important;max-width:max-content!important;margin-top:4px!important;padding:5px 9px!important;border-radius:999px!important;background:#673452!important;color:#fff!important;font-weight:850!important}
 .app-shell .recipe-card .delete-recipe{width:auto!important;min-width:48px!important;padding:4px 7px!important;font-size:0!important}
 .app-shell .recipe-card .delete-recipe:after{content:"Delete";font-size:9px;font-weight:800}

@@ -348,10 +348,10 @@ profit number will look under Usage + Plan.
 Empty name field, empty textarea and file picker at the top; your saved banks
 below. Creating is occasional; choosing is why you came.
 
-### D40 · Banks never show which product uses them · OPEN
+### D40 · Banks never show which product uses them · **FIXED**
 **Fix:** "Used by: Gildan Tee" on each bank.
 
-### D41 · Bank contents are unvalidated · OPEN
+### D41 · Bank contents are unvalidated · **FIXED**
 A bank named "BACHELORETTE TEES" contained koozie, coozie, sash, sunglasses,
 tapestry and hoodie phrases — 13 of 50 for other products. That is what produced
 the koozie title.
@@ -457,7 +457,7 @@ on the page background below it, visually orphaned.
 Deep-linking to the connect step is impossible; the URL rewrites itself. Other
 steps deep-link fine.
 
-### D52 · The forward button sits above the section it depends on · OPEN
+### D52 · The forward button sits above the section it depends on · **FIXED**
 "Pick a keyword bank to continue" renders above the designs area, so the action
 that advances the flow appears before the content it is waiting on.
 

@@ -21,6 +21,18 @@ test("shows which products use each keyword bank and blocks wrong-product phrase
   assert.match(page, /disabled=\{!name\.trim\(\)\|\|!words\.length\|\|saving\|\|mismatchedWords\.length>0\}/);
 });
 
+test("uses the binding batch limit and keeps setup actions in the right hierarchy", async () => {
+  const [page, css] = await Promise.all([
+    readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/approved-functional.css", import.meta.url), "utf8"),
+  ]);
+  assert.match(page, /up to \$\{batchDesignLimit\} finished designs/);
+  assert.match(page, /Add up to \$\{batchDesignLimit\} designs in this batch/);
+  assert.doesNotMatch(page, /Your folder can contain up to 20 designs/);
+  assert.match(css, /recipe-library-head \.add-product-button\{border:0!important;background:transparent!important/);
+  assert.match(css, /managementOnly \.newSetButton\{border:0!important;background:transparent!important/);
+});
+
 async function render(path = "/") {
   const workerUrl = new URL("../dist/server/index.js", import.meta.url);
   workerUrl.searchParams.set("test", `${process.pid}-${Date.now()}`);
