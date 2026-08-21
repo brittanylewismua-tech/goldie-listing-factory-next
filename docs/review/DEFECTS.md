@@ -242,7 +242,7 @@ below the warning box that already explains the gap between them.
 
 ## Designs (step 3)
 
-### D28 · Four status readouts for one fact · OPEN
+### D28 · Four status readouts for one fact · **FIXED**
 `✓ 3 loaded` badge · "3 of 20 designs ready · 1.1 MB selected" · "All 3 designs
 are ready 3/3" with a progress bar · "3/7 designs available this batch".
 **Fix:** one line. The quota version is the useful one.
@@ -389,7 +389,7 @@ label is barely distinguishable from its own background.
 that states its own unblock condition is good design. It just cannot be read.
 **Fix:** disabled state needs a darker label or a more muted background.
 
-### D49 · Five status readouts on the designs section, with conflicting numbers · OPEN
+### D49 · Five status readouts on the designs section, with conflicting numbers · **FIXED**
 All on screen simultaneously:
 - "7 designs available for this batch · 7 listings remain on your plan"
 - "**3 of 20 designs ready** · 1.9 MB selected"
