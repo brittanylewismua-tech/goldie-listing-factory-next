@@ -105,8 +105,8 @@ test("no auto-title path re-derives tags from the title — D79", async () => {
   assert.doesNotMatch(page, /tagsFromTitle\(result\./,
     "An auto-title path is deriving tags from the title again. Use the `tags` the API returns.");
   assert.match(page, /tags:item\.result\.tags/, "batch path must use the ranked tags");
-  assert.match(page, /tags:result\.tags\}/, "carried-designs path must use the ranked tags");
-  assert.match(page, /onApply\(result\.title,result\.tags\)/, "individual path must use the ranked tags");
+  assert.match(page, /tags:result\.tags,titleWarning:result\.titleWarning/, "carried-designs path must use the ranked tags");
+  assert.match(page, /onApply\(result\.title,result\.tags,result\.titleWarning\)/, "individual path must use the ranked tags");
 });
 
 test("no management screen relies on scrollIntoView — it is clipped away", async () => {

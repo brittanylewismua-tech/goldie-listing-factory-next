@@ -1518,3 +1518,4 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
   line-height:1.45!important;
   font:inherit!important;
 }
+.app-shell .title-match-warning{display:block;margin:10px 0;padding:10px 12px;border:1px solid #c18a42;border-radius:10px;background:#fff4dc;color:#5a3710;font-size:12px;line-height:1.45;font-weight:750}

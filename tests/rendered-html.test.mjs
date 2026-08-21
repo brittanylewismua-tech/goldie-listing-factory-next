@@ -535,7 +535,7 @@ test("rejects wrong garment nouns using the exact Printify blueprint", async () 
   const intelligence = await readFile(new URL("../app/api/listing-intelligence/route.ts", import.meta.url), "utf8");
   const { excludedProductNouns, namesExcludedProduct } = await import("../app/product-type-utils.ts");
   assert.match(intelligence, /excludedProductNouns\(body\.product\?\.blueprintTitle/);
-  assert.match(intelligence, /!namesExcludedProduct\(value,excludedNouns\)/);
+  assert.match(intelligence, /titleCandidates=keywords\.filter\(keyword=>!namesExcludedProduct\(keyword,excludedNouns\)\)/);
   const teeExclusions = excludedProductNouns("Unisex Heavy Cotton Tee | Gildan 5000");
   assert.equal(namesExcludedProduct("Wifey Sweatshirt", teeExclusions), true);
   assert.equal(namesExcludedProduct("Future Mrs Sweatshirt", teeExclusions), true);
@@ -697,8 +697,8 @@ test("creates unique validated AI titles in bulk with per-listing overrides", as
   assert.match(intelligence,/selected_keywords/);assert.match(intelligence,/allowedByLower/);assert.match(intelligence,/PRODUCT TYPE RULE/);assert.match(intelligence,/if\(!selected\.length\).*status:422/);
   assert.match(intelligence,/tagCandidates=keywords\.filter/);
   assert.match(intelligence,/tag_keywords/);
-  assert.match(intelligence,/tags=\[\.\.\.rankedTags,\.\.\.tagCandidates\.filter/);
-  assert.match(intelligence,/return NextResponse\.json\(\{title,keywords:included,tags\}\)/);
+  assert.match(intelligence,/requiredTagCount=Math\.min\(13,tagCandidates\.length\)/);
+  assert.match(intelligence,/return NextResponse\.json\(\{title,keywords:included,tags,titleWarning,designText\}\)/);
 });
 
 test("records permanent sanitized Printify diagnostics without blocking listings", async () => {
@@ -2043,4 +2043,26 @@ test("reports published listings instead of workflow completion (fixes D88)",asy
   assert.doesNotMatch(page,/status\.replace\("_"," "\)/);
   assert.match(app,/keptAsDrafts,batchReceipt\}/);
   assert.match(app,/keptAsDrafts,batchReceipt\]\);/);
+});
+
+test("retries thin AI title output once and then rejects the row (fixes D77)",async()=>{
+  const route=await readFile(new URL("../app/api/listing-intelligence/route.ts",import.meta.url),"utf8");
+  const app=await readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8");
+  assert.match(route,/minimumTitlePhrases=titleCandidates\.length>=8\?8:1/);
+  assert.match(route,/requiredTagCount=Math\.min\(13,tagCandidates\.length\)/);
+  assert.match(route,/selection=await requestSelection\(0\);if\(selection\.selected\.length<minimumTitlePhrases\|\|selection\.tags\.length<requiredTagCount\)selection=await requestSelection\(1\)/);
+  assert.match(route,/after two attempts/);
+  assert.doesNotMatch(route,/tagCandidates\.filter\(candidate=>!rankedTags\.includes\(candidate\)\)/);
+  assert.match(app,/titleError:item\.error/);
+  assert.match(app,/each affected listing explains why below/);
+});
+
+test("warns on the exact listing when its bank misses the design text (fixes D76)",async()=>{
+  const route=await readFile(new URL("../app/api/listing-intelligence/route.ts",import.meta.url),"utf8");
+  const app=await readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8");
+  assert.match(route,/design_text/);
+  assert.match(route,/bankMatchesDesignText\(titleCandidates,designText\)/);
+  assert.match(route,/No phrase in this bank matches this design\. Add one, or write the title yourself\./);
+  assert.match(app,/className="title-match-warning" role="status"/);
+  assert.match(app,/titleWarning:item\.result\.titleWarning/);
 });
