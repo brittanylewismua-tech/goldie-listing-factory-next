@@ -1924,6 +1924,6 @@ test("traverses every workflow phase with one shared gate and never enables an i
   assert.match(app,/disabled=\{Boolean\(issues\.length\)\}/);
   assert.match(app,/issues\[0\]\|\|progressStatus/);
   assert.match(app,/disabled=\{preparingEtsy\|\|progressGateIssues\(6\)\.length>0\}/);
-  assert.match(app,/if\(customDirty\)onApprovalChange\(false\)/);
+  assert.match(app,/function markShippingEdit\(\)\{onApprovalChange\(false\)/);
   assert.doesNotMatch(app,/if\(!selectedProfile\|\|customDirty\)onApprovalChange/);
 });
