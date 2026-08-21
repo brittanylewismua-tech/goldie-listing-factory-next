@@ -1658,6 +1658,7 @@ step or any earlier step. An unfinished batch still cannot deep-link forward
 past its saved progress; a completed batch keeps D53/D73's ability to reopen
 any Finish phase.
 
+<<<<<<< Updated upstream
 ### D109 · Signed-in account without access has no way to switch accounts · **FIXED HERE** · **HIGH**
 
 Refreshing the Listing Factory with a valid session for an account that does
@@ -1674,3 +1675,38 @@ missing from the owner allowlist. Refresh therefore sent it to plan selection,
 and its saved beta plan still imposed the 20-listing ceiling. The account is now
 recognized as an owner everywhere, and owner testing uses a separate 10,000
 listing allowance without deleting draft records or changing customer plans.
+=======
+### D109 · "Change it anytime" with no way to change or remove · **FIXED HERE** · **HIGH**
+
+**Brittany found this too.**
+
+> "There's four mockups saved to the saved product, and it says change these
+> anytime, but there's no option to remove the mockups or change them anywhere."
+
+Reproduced on the live setup step. The Mockups section renders:
+
+- the copy **"From your last batch — change it anytime"**
+- 4 mockup thumbnails and **"+6 more"**
+- exactly **one** control: a `<select>` containing **"Loading mockup sets…"** and
+  **"BACH TEES"**
+
+Three separate failures in one small block:
+
+1. **`"Loading mockup sets…"` is a permanent option**, not a loading state. It
+   stays in the list forever as `value=""` — so the only way to clear the
+   selection is to pick something that reads like a bug.
+2. **No way to remove the mockups.** With one saved set there is nothing to
+   change *to*, and no "none" choice.
+3. **No route to the Mockup Library** from the place that invites you to change
+   sets — creating or editing one is only reachable from the sidebar.
+
+The copy makes a promise the UI cannot honour.
+
+**Fixed:** once sets have loaded the placeholder becomes a real choice, **"No
+mockups for this batch"**, so the selection can be cleared; "Loading mockup
+sets…" now only shows while actually loading. Added a **"Create or edit mockup
+sets ↗"** link beside the control.
+
+**Same class as D101** — copy that describes a capability the surrounding
+controls do not provide.
+>>>>>>> Stashed changes

@@ -500,3 +500,24 @@ test("a saved later step cannot overwrite an explicit safe return to setup — D
   assert.match(page,/restoredWorkflowStep\(payload\.batch\.step\|\|"connect",url\.searchParams\.get\("step"\),Boolean\(state\.complete\)\)/);
   assert.doesNotMatch(page,/const step=payload\.batch\.step\|\|"connect";setWorkflowStep\(step\)/);
 });
+
+test("the mockup section can actually be changed and cleared — D109", async () => {
+  const page = await readFile(listingFactoryPage, "utf8");
+
+  /* Brittany: "there's four mockups saved to the saved product, and it says
+   * change these anytime, but there's no option to remove the mockups or
+   * change them anywhere."
+   *
+   * Measured on the live setup step: the section renders 4 thumbnails, "+6
+   * more", the copy "From your last batch — change it anytime", and exactly one
+   * control — a <select> whose only entries were "Loading mockup sets…" (a
+   * placeholder that never went away) and the single saved set. No clear
+   * option, no way to reach the Mockup Library. The promise was unactionable.
+   *
+   * A control that claims something can be changed must offer a way to change
+   * it, including back to none. */
+  assert.match(page, /\{themes\.length\?<option value="">No mockups for this batch<\/option>:<option value="">Loading mockup sets…<\/option>\}/,
+    "The loading placeholder must become a real 'no mockups' choice once sets have loaded.");
+  assert.match(page, /className="manage-mockup-sets" href="\/mockups"/,
+    "The mockup section must offer a route to create or edit sets.");
+});

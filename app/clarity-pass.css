@@ -258,3 +258,15 @@
   line-height:1.4;
 }
 .app-shell .everything-else summary .setup-todo:before{content:"▲  ";font-size:9px;vertical-align:1px}
+
+/* D109 · "change it anytime" with nothing to change it with. */
+.app-shell .manage-mockup-sets{
+  display:inline-block;
+  margin-top:8px;
+  color:#7a4f70;
+  font-size:11.5px;
+  font-weight:750;
+  text-decoration:underline;
+  text-underline-offset:3px;
+}
+.app-shell .manage-mockup-sets:hover{color:#4f2944}
