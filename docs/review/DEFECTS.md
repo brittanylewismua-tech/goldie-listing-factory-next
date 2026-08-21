@@ -1362,6 +1362,75 @@ ends with a short status — *"keyword bank still to set"*. The existing alert
 below keeps the instruction. Pinned by a test that fails if the summary starts
 repeating it.
 
+---
+
+## Older-review label reconciliation
+
+Audited `AUDIT-PASS-2.md`, `AUDIT-PASS-3.md`, `SCREEN-AUDIT.md`, and
+`UX-DIRECTION.md` after D101 exposed that P2 had never entered this numbered
+list. This table is the permanent cross-reference; a finding is not considered
+tracked merely because it remains in an older narrative review.
+
+| Older label | Numbered coverage |
+|---|---|
+| C1, C2, C3, C4 (`AUDIT-PASS-2`) | D18, D19, D20, D21 |
+| P1 | D102 |
+| P2 | D101 |
+| P3 | D16 |
+| P4 | D1 |
+| P5 | D8 |
+| P6 | D2 + D45 |
+| P7 | D45 |
+| P8 | D45 (label, confirmation, and destructive-action hierarchy) |
+| P9 | D12 |
+| P10 | D29 + D49 + D54 |
+| U1, U2, U3, U4, U5 | D34, D35, D36, D37, D38 |
+| K1, K2, K3 | D39, D40, D41 |
+| S0.1 | D1 |
+| A2, A5, A7 | D22, D23, D25 |
+| C1 (`UX-DIRECTION` Part C) | D103 |
+| C2 (`UX-DIRECTION` Part C) | D71 |
+| C3 (`UX-DIRECTION` Part C) | D104 |
+| C4 (`UX-DIRECTION` Part C) | D105 |
+
+### D102 · Saved mockups were not restored with the saved product · **FIXED**
+
+Formerly P1. Saved products now load `defaultMockupTheme`, and the selection
+used at publish becomes the next saved default. This matches the remembered
+colour behavior instead of showing “Not chosen” under a promise that Goldie
+started with the last batch's choices.
+
+### D103 · Changing Etsy category discards fields without warning · **OPEN** · **MEDIUM**
+
+Formerly `UX-DIRECTION.md` Part C, C1. The category change correctly requests
+the new taxonomy and replaces the old category-specific property collection,
+so invalid fields are not retained. What never shipped is the required warning
+before populated fields disappear. A seller can change category and silently
+lose reviewed values.
+
+**Fix:** before changing taxonomy, compare populated property IDs with the new
+category, state how many values will be cleared, and require confirmation when
+the count is nonzero. Preserve values whose property and allowed value still
+exist in the new category.
+
+### D104 · Collapsed Etsy-detail summaries had no durable editing path · **FIXED**
+
+Formerly `UX-DIRECTION.md` Part C, C3. Each listing summary expands in place to
+the full Etsy field set, remains open while keyed row updates render, and its
+`x of y set` summary updates from the current properties.
+
+### D105 · Photo recommendations are still T-shirt-specific · **OPEN** · **MEDIUM**
+
+Formerly `UX-DIRECTION.md` Part C, C4. The Images + mockups phase still displays
+a fixed recommendation — three lifestyle model mockups, flatlays for each
+colour, and a size guide — regardless of whether the saved product is a shirt,
+mug, poster, tote, or another blueprint.
+
+**Fix:** derive recommendation copy and defaults from the available Printify
+mockup types for the selected blueprint. Use a ranked preference list that
+degrades to the best available images and never produces zero recommended
+photos merely because a product has no on-model scenes.
+
 ### Blank first paint — watch, not yet reproducible
 
 The first navigation to a deep Finish link rendered **nothing but background**
@@ -1374,3 +1443,8 @@ deploy window it needs a defect number.
 Also: on that reload the sub-rail showed **"Choose a saved product"** on all
 four Finish phases for several seconds before the batch restored. The batch was
 intact — but the transient copy states the opposite of the truth.
+
+**Outside-deploy retest:** three fresh navigations from Batch History to the
+deep Titles + tags URL mounted in **941ms / 946ms / 883ms**. No blank paint, no
+`[vinext]` prefetch warning, and no console error occurred. This remains a watch
+item rather than a numbered defect unless it recurs outside a deployment window.
