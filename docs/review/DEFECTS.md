@@ -59,7 +59,7 @@ characters, drop it from tags (keep it in the title, where 140 characters
 applies) and fill the slot from the next phrase that fits. Better: ask the model
 for tag-length phrases directly rather than deriving them from the title.
 
-### D76 · Titles do not describe the design · OPEN
+### D76 · Titles do not describe the design · **FIXED AND VERIFIED LIVE**
 The three designs read SCOTTSDALE / SAVANNAH / TULUM. None of the generated
 titles mention any of them, because the bank contains no Scottsdale, Savannah or
 Tulum phrase — it has Palm Springs, Nashville, Vegas and New Orleans.
@@ -71,7 +71,10 @@ result is three listings whose titles have nothing to do with the artwork.
 *"No phrase in this bank matches this design. Add one, or write the title
 yourself."* This is the honest version of the fallback D53-era code used to hide.
 
-### D77 · Fill quality varies wildly across one batch · OPEN
+Verified on the live three-design batch: the warning rendered on the affected
+listing with the exact copy above. The browser console remained clean.
+
+### D77 · Fill quality varies wildly across one batch · **FIXED AND VERIFIED LIVE**
 Same batch, same bank, same product:
 | Listing | Title | Tags |
 |---|---|---|
@@ -81,6 +84,14 @@ Same batch, same bank, same product:
 
 Listing 2 got roughly a third of the fill for no visible reason. The 8–13 phrase
 instruction is not being applied consistently.
+
+The API now requires eight selected title phrases whenever at least eight valid
+bank candidates exist, and all available eligible tags up to Etsy's 13 slots.
+It retries one thin response once and rejects that row after a second thin
+response. The live three-design run produced one complete 139/140, 13/13 row
+and explicitly rejected the other two after both returned only 7 of 8 required
+title phrases. Rejected rows now block the forward gate until the seller edits
+the title or successfully regenerates it; editing clears the row error.
 
 
 ### D73 · Nothing advances past the first Finish phase on a resumed batch · **FIXED**

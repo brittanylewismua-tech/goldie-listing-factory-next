@@ -2055,6 +2055,9 @@ test("retries thin AI title output once and then rejects the row (fixes D77)",as
   assert.doesNotMatch(route,/tagCandidates\.filter\(candidate=>!rankedTags\.includes\(candidate\)\)/);
   assert.match(app,/titleError:item\.error/);
   assert.match(app,/each affected listing explains why below/);
+  assert.match(app,/Boolean\(file\.title\.trim\(\)\)&&!file\.titleError/);
+  assert.match(app,/file\.tags\.length>0&&!file\.titleError/);
+  assert.match(app,/change\.title!==undefined&&change\.titleError===undefined/);
 });
 
 test("warns on the exact listing when its bank misses the design text (fixes D76)",async()=>{
