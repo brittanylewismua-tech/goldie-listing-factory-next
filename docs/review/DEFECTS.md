@@ -745,3 +745,150 @@ On a resumed completed-draft batch, the Finish sub-step rail and Next buttons
 look enabled but phase navigation is rejected by a different gate. Photos never
 renders and the seller receives no inline reason. One shared navigation gate
 must drive control availability, its displayed reason, and the click path.
+
+---
+
+## Deep-scan pass — 21 Aug 2026
+
+Every page and interaction state walked visually and measured in the live DOM,
+after ChatGPT's `b826386`. Findings D78–D88.
+
+---
+
+### D78 · D74 is not actually fixed — plurals walk straight through · **FIXED HERE** · **BLOCKER**
+
+`namesExcludedProduct` matched whole words only, so the denylist blocked
+`koozie` but not `koozies`, and `coozie` but not `coozies`. Sellers write
+keyword banks in the plural far more often than the singular, so the common
+case was the unguarded one.
+
+Measured against the real **BACHELORETTE TEES** bank (50 phrases, Gildan Tee):
+
+| | before | after |
+|---|---|---|
+| wrong-product phrases caught | 8 | **12** |
+| still reaching a tee title | `bachelorette coozies`, `bachelorette koozies`, `bachelorette sunglasses`, `bachelorette tapestry`, `bachelorette tattoos`, `camp bachelorette decorations` | none |
+
+Three of the five nouns Brittany originally named — sunglasses, tapestry,
+tattoo — were not in the list at all.
+
+**Fixed:** `nounForms()` adds plural forms (`y→ies`, `s/x/z/ch/sh→es`, else
+`+s`) and singularises entries already stored plural. Added an `accessory`
+group covering the party goods that share bachelorette banks with apparel.
+Pinned by `tests/product-nouns.test.mjs` — 4 tests, including every plural by
+name, plus a check that no product family ever excludes its own noun.
+
+### D79 · Tags collapse to a third of the bank · **OPEN** · **HIGH**
+
+The D75 fix stopped fragmenting long phrases — correct — but tags are still
+derived from *the title only*, and only phrases ≤20 chars survive.
+
+Her bank, for a tee, after the D78 filter: **43 phrases → 31 usable → 13 tag-eligible.**
+
+So the model must pick exactly those 13, in a title capped at 140 characters,
+to fill Etsy's 13 tag slots. In practice it selects 8–13 phrases by relevance
+and only the short ones become tags, so she lands on **4–7 tags out of 13.**
+Etsy tag slots left empty are pure lost surface area.
+
+**Fix:** stop deriving tags from the title. Title and tags are separate Etsy
+fields with separate limits. Select tags from the **whole bank** — every phrase
+≤20 chars that fits the design and passes the product-noun filter — ranked by
+fit, take 13. All seller-researched, none fragmented, slots full every time.
+
+### D80 · "Edit bank" appears to do nothing · **FIXED HERE** · **HIGH**
+
+Keyword Banks. Clicking **Edit bank** loads the bank into the compose form,
+then calls `window.scrollTo({top:0})`.
+
+The K1 fix moved the form *below* the library (`.bank-library{order:1}`,
+`.management-create{order:2}`). The scroll call was written for the old order.
+Measured live: after clicking, the populated form sits **779px down, entirely
+below the fold**, and the page scrolls to the top — away from it. The heading
+correctly reads "Edit saved keyword bank"; she never sees it.
+
+A fix that broke a different fix. Exactly the pattern she asked how to stop.
+
+**Fixed:** `.management-create` is now scrolled into view directly, so it
+cannot drift again if the visual order changes.
+
+### D81 · `npm test` never ran the traversal guard · **FIXED HERE** · **HIGH**
+
+The test script was `node --test tests/rendered-html.test.mjs` — one file.
+`workflow-traversal.test.mjs`, written specifically to stop D53/D73 recurring,
+**was never executed by the test command.** The guard against the regressions
+she is most frustrated by was not guarding anything.
+
+**Fixed:** `node --test 'tests/**/*.test.mjs'`. Now 161 tests across 4 files.
+
+### D82 · Three baseline tests were red · **FIXED HERE** · **HIGH**
+
+`approved-visual-baseline.test.mjs` had 3 failures pinned to copy that earlier
+fixes deliberately changed (the 9→5 step rail, and C1/C2/C4 on Connect). None
+were real defects — but a suite that is habitually red is a suite whose real
+failures get ignored, which is the mechanism behind every regression on this
+list.
+
+**Fixed:** rewritten against current behaviour, and strengthened — the Connect
+test now asserts the *conditional* timing note and state-swapped copy rather
+than pinning a literal string. **161/161 green.**
+
+### D83 · Mockup thumbnails are 27×27px · **OPEN** · **HIGH**
+
+`/mockups`, collapsed state. Measured: thumbnails **27×27px**; the page `<h1>`
+is **64px**. On the one page whose entire purpose is looking at mockups, the
+mockups are less than half the height of the heading, and only 5 of 10 show.
+
+The card is 234px wide inside a 1044px container — **810px of empty space** to
+its right. Expanded is fine (175×218). The default state is the broken one.
+
+**Fix:** show mockups at a usable size by default and let the grid use the
+width it already has.
+
+### D84 · The two library pages disagree with themselves · **OPEN** · **MEDIUM**
+
+`/mockups` is labelled four ways: sidebar **"Mockup Sets"** (5 files) vs
+**"Mockup Library"** (1 file), page `<h1>` **"Your mockup library"**, section
+`<h2>` **"Saved mockups"**, card eyebrow **"MOCKUP SET"**.
+`/usage` is **"Usage + Plan"** (6) and **"Usage + plan"** (1).
+
+Cause: nav markup is hand-copied into each page rather than shared.
+**Fix:** one nav component, one label per destination.
+
+### D85 · "+ 38 more" looks like a control and is inert · **OPEN** · **MEDIUM**
+
+Keyword bank cards show 12 phrases, then `+ 38 more` as a bare `<small>` —
+`cursor: auto`, no handler. On a 50-phrase bank she cannot see 76% of her own
+keywords without opening the editor.
+**Fix:** make it expand, or say "50 phrases · open to view all".
+
+### D86 · Keyword bank cards misalign · **OPEN** · **LOW**
+
+Grid cards size to content, so the two **Edit bank** buttons sit **57px apart**
+vertically and the shorter card has dead space beneath its button.
+**Fix:** `align-items: stretch` and push the action to the card foot.
+
+### D87 · "Delete set" is styled like "Rename set" · **OPEN** · **MEDIUM**
+
+`/mockups` expanded. Identical size, shape and position; the only difference is
+a faint pink tint. Same loud-destructive pattern catalogued in `AUDIT-PASS-3`.
+Keyword banks confirm properly (`window.confirm`) — mockup sets should match.
+
+### D88 · Batch History says COMPLETE for batches that published nothing · **OPEN** · **MEDIUM**
+
+Two batches badged **COMPLETE**; a third badged **PRINTIFY DRAFTS**. All three
+have only unpublished Printify drafts — **zero listings live on Etsy.**
+"Complete" means "finished the Goldie workflow"; it reads as "listings are up".
+Same category as D64 and D72.
+**Fix:** badge the actual state — `DRAFTS READY · 0 PUBLISHED`.
+
+---
+
+### Clean on this pass
+
+No overflow, clipping, off-screen elements, unnamed controls, duplicate IDs or
+sub-24px targets found on: **Finish · Etsy details**, **Keyword Banks**,
+**Usage + Plan**, **Batch History**. Console clean throughout.
+
+Remaining geometry issues: 4 title inputs on **Titles + tags** (570px visible
+against up to 1032px of content — see D60 follow-up) and 2 clipped titles on
+**Finish · Publish** (295px against 735px).

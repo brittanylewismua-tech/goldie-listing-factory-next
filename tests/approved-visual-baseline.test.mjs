@@ -71,12 +71,14 @@ test("keeps the Step 4 footer controls below the pricing card without collisions
   assert.match(css,/launch-panel \.launch-note[\s\S]*margin:18px auto 0!important/);
 });
 
-test("keeps Step 7 clear and its icon locked to the optical center", async () => {
+test("keeps the Etsy details step clear and its icon locked to the optical center", async () => {
   const page = await readFile(listingFactoryPage, "utf8");
   const css = await readFile(new URL("app/approved-functional.css", root), "utf8");
   assert.match(page, /Review your Etsy listing details/);
   assert.match(page, /Goldie has pre-filled the Etsy category and every product field it could confidently match for each listing\. Look everything over and change any selection that does not fit\./);
-  assert.match(page, /Titles, tags, descriptions, sizes, colors, and prices are set\./);
+  // Copy updated when the nine-step rail became five. The banner is now a
+  // completion confirmation rather than a list of what the previous step did.
+  assert.match(page, /<b>Titles, tags, and descriptions complete<\/b>/);
   assert.match(page, /This step contains additional Etsy category and product fields\. Optional fields stay blank when there is not a clear match\./);
   assert.doesNotMatch(page, /standardized attributes/);
   assert.doesNotMatch(page, /are already handled/);
@@ -106,10 +108,16 @@ test("returns every finish-phase transition to the top", async () => {
   assert.match(page, /useEffect\(\(\)=>\{window\.scrollTo\(\{top:0,behavior:"auto"\}\)\},\[workflowStep,finishPhase\]\)/);
 });
 
-test("places the connection subtitle before the centered timing note", async () => {
+test("the connect step swaps its copy on state and hides the timing note once connected", async () => {
   const page = await readFile(listingFactoryPage, "utf8");
   const css = await readFile(new URL("app/approved-functional.css", root), "utf8");
-  assert.match(page, /Connect the Printify shop where Goldie will create your product drafts\.<\/p>\s*<p className="connect-timing">/);
+  // C4: the heading covers both accounts, not just Printify.
+  assert.match(page, /<h2>Connect your accounts<\/h2>/);
+  // C2: "usually takes about 2 minutes" used to render underneath two already-
+  // connected accounts. It must only appear when something is still unconnected.
+  assert.match(page, /\{\(!connected\|\|!etsyConnected\)&&<p className="connect-timing">/);
+  // C1: a returning seller sees a confirmation, not setup instructions.
+  assert.match(page, /connected&&etsyConnected\?"Both connections are verified\./);
   assert.match(css, /\.connect-timing\{margin:0 auto 22px!important;[^}]*text-align:center\}/);
 });
 
@@ -174,14 +182,14 @@ test("places item pricing before shipping in the pricing review", async () => {
   ]);
   const itemPrices = page.indexOf('<h4>1. Item prices <span>');
   const pricingMath = page.indexOf('className="pricing-math"');
-  const shipping = page.indexOf('<h4>2. Shipping <span>');
+  const shipping = page.indexOf('<h4>2. Etsy shipping profile');
   assert.ok(itemPrices >= 0 && shipping > itemPrices, "item prices appear before shipping");
   assert.ok(pricingMath > itemPrices && pricingMath < shipping, "the pricing explanation stays with item prices, before shipping");
   assert.doesNotMatch(page, /<span>1\. Shipping<\/span>/);
   assert.doesNotMatch(page, /<h4>2\. Item prices<\/h4>/);
   assert.match(page, /<small className="profit-fee-note">Shipping not included<\/small>/);
   assert.match(page, /className="pricing-section-heading shipping-section-heading"/);
-  assert.match(page, /<h4>2\. Shipping <span>/);
+  assert.match(page, /<h4>2\. Etsy shipping profile — what buyers pay <span>/);
   assert.match(css, /\.app-shell \.pricing-section-heading h4\{[\s\S]*font-size:26px!important/);
   assert.match(css, /\.app-shell \.item-pricing-section\{[\s\S]*border-radius:18px/);
   assert.match(css, /\.app-shell \.shipping-pricing-section\{[\s\S]*border-radius:18px/);
