@@ -1,3 +1,38 @@
+> ## CORRECTION — the section order in this document is wrong
+>
+> The layout below puts Colours and Mockups **above** the designs drop zone.
+> That was built and it is wrong. Colours and mockups are decisions *about* the
+> designs: you cannot judge which shirt colours suit artwork you have not
+> uploaded, and a mockup picker rendered before any design exists can only show
+> blank garments.
+>
+> **Correct order:**
+>
+> ```
+> Product                  <- collapses to one line once chosen
+> Drop your designs        <- the actual input, moves UP
+> Colours                  <- now judgeable against the real artwork
+> Mockups                  <- previews can now render the seller's own design
+> Saved for this product   <- was "Everything else"
+> ```
+>
+> The "remembered from your last batch" behaviour is unchanged — colours and
+> mockups still arrive pre-filled. They simply arrive *below* the designs, as
+> something to confirm rather than choose cold.
+>
+> **Unlocked by the reorder:** once designs are uploaded, mockup thumbnails
+> should render the seller's actual design rather than a stock blank. That is
+> what makes the section useful instead of decorative.
+>
+> **Also rename "Everything else"** — it reads as a junk drawer. Use
+> **"Saved for this product"** with a hint of "usually no changes needed".
+>
+> **Also: section headings should be nouns, not sentences.** "Choose the colors
+> you want to offer" -> "Colours". "Choose the look you want" -> "Mockups".
+> "Adjust what changed. Keep everything else." should be deleted entirely — the
+> page h1 already says "Build this batch", and the useful line underneath it
+> ("Goldie started with the choices from your last batch") should stay.
+
 # The saved product — one concept, not two
 
 Answers the open question: template vs recipe, and what the batch screen looks
