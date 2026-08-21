@@ -974,3 +974,22 @@ Three call sites, one changed rule, one missed. Same shape as D90.
 
 **Fixed:** all three paths use the ranked `tags` the API returns. Guarded by a
 test that fails on any `tagsFromTitle(result.…)` call.
+
+### D80 follow-up · `scrollIntoView` is swallowed by an `overflow-x:clip` ancestor · **FIXED HERE**
+
+The first D80 fix replaced `window.scrollTo({top:0})` with
+`scrollIntoView({block:"start"})` on the compose form. Verified live: **it did
+nothing.** Ten scroll samples over four seconds, all `scrollY: 0`.
+
+Cause: `app/management-aesthetic.css:102` sets `overflow-x:clip!important` on
+`.management-page`. `clip` makes that element a clipping container, so
+`scrollIntoView` resolves against it instead of the document — and it cannot
+scroll, so the call is a silent no-op. No error, nothing in the console.
+
+**Fixed:** an explicit `window.scrollTo` computed from the form's own position,
+inside a `requestAnimationFrame` so it runs after React commits. Immune to the
+clip container. Guarded by a test that rejects both `scrollIntoView` and
+`scrollTo({top:0})` on this page.
+
+Worth knowing generally: **any `scrollIntoView` under `.management-page` is
+already broken**, on every management screen.

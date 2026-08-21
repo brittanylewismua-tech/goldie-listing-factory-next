@@ -71,6 +71,17 @@ test("the keyword bank page and the title generator share one noun list — D90"
   // D91: a bank saved before the rule existed must be repairable in one click.
   assert.match(page, /className="strip-mismatched"/,
     "No way to remove wrong-product phrases. Save is disabled while they exist, so the bank is locked.");
+
+  /* D80: "Edit bank" must bring the form it just filled into view. The form
+   * sits below the library, so the original scrollTo(0) scrolled away from it.
+   * scrollIntoView does not work either — .management-page sets
+   * overflow-x:clip, which makes it a clipping container that swallows the
+   * call, so the page never moved. Scroll the window explicitly. */
+  assert.doesNotMatch(page, /scrollIntoView/,
+    "scrollIntoView is swallowed by the overflow-x:clip container on .management-page.");
+  assert.doesNotMatch(page, /window\.scrollTo\(\{top:0/,
+    "Scrolling to the top scrolls away from the edit form, which sits below the library.");
+  assert.match(page, /window\.scrollTo\(\{top:form\.getBoundingClientRect\(\)\.top\+window\.scrollY/);
 });
 
 test("no auto-title path re-derives tags from the title — D79", async () => {
