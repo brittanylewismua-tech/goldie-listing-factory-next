@@ -1890,7 +1890,7 @@ no real bank, set or batch was modified.
 exactly what is lost, and offers the safe option first. It is a better
 confirmation than the keyword bank's `window.confirm`.
 
-### D113 · Shipping profile names show raw HTML entities · **FIXED HERE** · **MEDIUM**
+### D116 · Shipping profile names show raw HTML entities · **FIXED HERE** · **MEDIUM**
 
 Measured live on the Pricing step dropdown:
 
@@ -1905,7 +1905,7 @@ bracket would be too.
 is applied both in the dropdown and in `friendlyShippingProfileTitle`, which
 feeds the "Saved for this product" summary and the publish checklist.
 
-### D114 · The shipping profile dropdown lists 94 unrelated profiles · **OPEN** · **HIGH · UX**
+### D117 · The shipping profile dropdown lists 94 unrelated profiles · **OPEN** · **HIGH · UX**
 
 The Pricing step asks the seller to confirm the Etsy shipping profile for a
 **T-shirt** batch, and offers **94 options** in one flat list, including:

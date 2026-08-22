@@ -558,7 +558,7 @@ test("the Etsy details summary does not invent work on optional-only fields — 
     "Counting every optional attribute as outstanding work is the D112 defect.");
 });
 
-test("Etsy shipping profile names are decoded, not shown as raw entities — D113", async () => {
+test("Etsy shipping profile names are decoded, not shown as raw entities — D116", async () => {
   const page = await readFile(listingFactoryPage, "utf8");
 
   /* Measured live on the shipping-profile dropdown: two options rendered as
