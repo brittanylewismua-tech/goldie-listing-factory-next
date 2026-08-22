@@ -84,7 +84,7 @@ test("the keyword bank page and the title generator share one noun list — D90"
   /* And it must run in an EFFECT, not the click handler. Measured live on the
    * deployed build: scrolling from the handler was lost to React's re-render —
    * the page stayed at scrollY 0 across five samples while the editor sat 797px
-   * below the fold, with the bank correctly loaded. See D112. */
+   * below the fold, with the bank correctly loaded. See D115. */
   assert.match(page, /setSavedId\(list\.id\);setScrollToEditor\(true\)/,
     "Edit bank must flag the scroll, not perform it inline.");
   assert.match(page, /useEffect\(\(\)=>\{\s*if\(!scrollToEditor\)return;/);

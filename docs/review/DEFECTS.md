@@ -1838,9 +1838,9 @@ marker that everything through `44cc3b6` is live. If the mockup selection still
 reverts at that point, the cause is a component remount resetting the ref, and
 the seed guard needs to move up to the parent's state instead.
 
-### D112 · "Edit bank" still does not scroll — the third attempt · **FIXED HERE** · **HIGH**
+### D115 · "Edit bank" still does not scroll — the fourth attempt · **FIXED HERE** · **HIGH**
 
-D80 → D92 → D93 → **D112**. Four attempts at one behaviour, each verified by a
+D80 → D92 → D93 → **D115**. Four attempts at one behaviour, each verified by a
 different method, each revealing the previous fix was insufficient:
 
 | attempt | approach | why it failed |
@@ -1848,7 +1848,7 @@ different method, each revealing the previous fix was insufficient:
 | D80 | `scrollTo({top:0})` | K1 had moved the form *below* the library |
 | D92 | `scrollIntoView` | swallowed by `overflow-x:clip` on `.management-page` |
 | D93 | `scrollTo({behavior:"smooth"})` | smooth scrolling never fires on these screens |
-| **D112** | `scrollTo` inside the **click handler** | **lost to React's re-render** |
+| **D115** | `scrollTo` inside the **click handler** | **lost to React's re-render** |
 
 Measured on the deployed build, from `scrollY: 0`: five samples over 2s, all
 **0**, while the bank loaded correctly and the editor sat at **797px** — below
