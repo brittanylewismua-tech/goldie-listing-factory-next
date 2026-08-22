@@ -1879,7 +1879,7 @@ test("counts every bundle product as a separate listing, without a native prompt
   assert.doesNotMatch(app,/window\.prompt/,"Selecting a bundle must not open a native prompt.");
   assert.doesNotMatch(app,/How many designs are in this/);
   assert.doesNotMatch(app,/The bundle total changed/);
-  assert.doesNotMatch(app,/bundlePlannedDesignCount/);
+  assert.doesNotMatch(app,/bundlePlannedDesignCount/i,"Removing the prediction must also remove every reference to its setter.");
 
   // the real protection stays, in the page, at upload time
   assert.match(app,/requestedListingCount>planDraftsRemaining/);

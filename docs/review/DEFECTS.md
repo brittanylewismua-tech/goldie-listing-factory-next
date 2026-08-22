@@ -2317,6 +2317,13 @@ standing rule about not touching `db/` or `drizzle/` held.
 
 ### D135 · A product bundle cannot be selected at all · **FIXED** · **BLOCKER**
 
+**Root cause confirmed live:** D129 removed `bundlePlannedDesignCount` state but
+left `setBundlePlannedDesignCount(0)` in `clearCurrentBatch`. Bundle selection
+is the first path that calls `clearCurrentBatch(true)`, so it threw a synchronous
+`ReferenceError` before loading either product. The old regression test missed
+the orphaned setter because its match was case-sensitive. The call is removed
+and the check is now case-insensitive.
+
 Found by pressure-testing bundles after Brittany added a third saved product.
 D129 (the native-dialog gauntlet) was masking this — once the prompt was gone,
 the real failure was visible underneath.
