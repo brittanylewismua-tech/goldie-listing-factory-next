@@ -2148,3 +2148,37 @@ copy, but the framing is still wrong.
 heading "Set up <product name>", the same blocks in the same order, but phrased
 as choices being made for the first time and ending in "Save these as this
 product's defaults". Once defaults exist, the current returning view is correct.
+
+### D126 · "Saved for this product" was five problems in one block · **FIXED HERE** · **HIGH · UX**
+
+Reported wholesale, and correctly:
+
+> *"why is there a weird purple rectangle outline around the top of this card…
+> why is keyword bank still to set brown… why does it jump from profit goal to
+> keyword bank to shipping profile to product description… there's weird things
+> that look like buttons but aren't."*
+
+| # | problem | cause |
+|---|---|---|
+| 1 | Nested purple frame | `.everything-else` carried its own border, radius, panel background and shadow **inside** the product card — a card in a card |
+| 2 | Brown warning text | `#8a5a12`, which **I chose in D101**. Mud on lavender, matching nothing else in the app |
+| 3 | No order | Profit · Keyword bank · Shipping · Description · Etsy details — alternating between money and listing content |
+| 4 | Contradiction | `summary span:after` printed *"Usually no changes needed"* directly beneath an outstanding-item warning |
+| 5 | Status read as controls | the summary line was styled at control weight rather than as information |
+
+**Fixed together, because it was one problem — no hierarchy, no grouping:**
+
+- the block is now a section of the product card (top rule only, transparent, no shadow)
+- the outstanding item is a quiet plum chip `#8a3f66`, matching the existing `.keyword-bank-required` alert it refers to
+- grouped **money** (Profit goal, Shipping profile) → **listing content** (Keyword bank, Description, Etsy details) → **connection**, via `order` so no JSX moved
+- "Usually no changes needed" is suppressed whenever something is outstanding
+- the summary line is set at 11.5px/500 in muted plum, clearly information
+
+Verified live before committing: transparent background, no shadow, chip
+`rgb(138,63,102)`, and measured visual order Profit goal → Shipping profile →
+Keyword bank → Product description → Etsy details → Product connection.
+
+**Note on D101.** The brown was mine. I added an outstanding-item line without
+giving it a colour from the existing palette, and it shipped looking like a
+defect. Colour choices need to come from what the app already uses for that
+meaning — here, the plum of the alert directly below it.

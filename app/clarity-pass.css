@@ -310,3 +310,62 @@
   gap:6px;
   white-space:nowrap;
 }
+
+/* ── D126 · "Saved for this product" was a mess ─────────────────────────────
+ *
+ * Reported wholesale: a nested purple frame, brown warning text, fields in no
+ * discernible order, a detached prompt at the bottom, and status text that
+ * reads like buttons. Fixed together, because they were one problem: the block
+ * had no visual hierarchy and no grouping. */
+
+/* 1. It is a section of the product card, not a card inside a card. The border,
+ *    shadow and panel background drew the second frame. */
+.app-shell .everything-else{
+  border:0!important;
+  border-top:1px solid rgba(91,48,79,.14)!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+  padding:18px 0 0!important;
+  margin-top:20px!important;
+}
+
+/* 2. The outstanding-item line was #8a5a12 — mud on lavender. Use the plum the
+ *    app already uses for "needs attention", and give it the same quiet chip
+ *    treatment as the alert it refers to, so it reads as status not decoration. */
+.app-shell .everything-else summary .setup-todo{
+  display:inline-block;
+  margin-top:7px;
+  padding:4px 10px;
+  border:1px solid rgba(157,80,130,.32);
+  border-radius:999px;
+  background:#fdf2f8;
+  color:#8a3f66!important;
+  font-size:11px;
+  font-weight:800;
+  letter-spacing:.01em;
+}
+
+/* 3. "Usually no changes needed" contradicted the warning directly above it. */
+.app-shell .everything-else>summary:has(.setup-todo) span:after{content:none!important}
+
+/* 4. Group what belongs together: money, then listing content, then plumbing.
+ *    Source order is Profit · Keyword bank · Shipping · Description · Etsy
+ *    details · Connection, which alternates between the two subjects. */
+.app-shell .everything-else .everything-else-body{display:flex!important;flex-direction:column!important}
+.app-shell .everything-else .everything-else-body>*:nth-child(1){order:1}  /* Profit goal   */
+.app-shell .everything-else .everything-else-body>*:nth-child(3){order:2}  /* Shipping      */
+.app-shell .everything-else .everything-else-body>*:nth-child(2){order:3}  /* Keyword bank  */
+.app-shell .everything-else .everything-else-body>*:nth-child(4){order:4}  /* Description   */
+.app-shell .everything-else .everything-else-body>.saved-setting-list{order:5}
+.app-shell .everything-else .everything-else-body>.product-connection-details{order:6}
+
+/* 5. The status line in the summary is information, not controls. */
+.app-shell .everything-else>summary small{
+  display:block;
+  margin-top:4px;
+  color:rgba(74,42,62,.62)!important;
+  font-size:11.5px!important;
+  font-weight:500!important;
+  line-height:1.5!important;
+}
