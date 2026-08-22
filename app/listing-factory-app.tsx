@@ -24,6 +24,20 @@ import GoldieWordmark from "./goldie-wordmark";
 import { productFamily } from "./product-type-utils";
 import { photoStats, PHOTO_SAMPLE_SIZE } from "./product-photo";
 
+/* D202 · "25 selected variants" is Printify's word, not a seller's. A seller
+ * picked five colours and five sizes; "variants" is the internal name for the
+ * product of those two choices, and the number on its own does not say which
+ * choices produced it. Say the choices instead — they multiply to the same
+ * figure and need no glossary. Falls back to the count when an axis is missing,
+ * which is the one-size and no-colour products. */
+function variantSummary(colors:number,sizes:number,total:number){
+  if(colors>0&&sizes>0)return `${colors} colors × ${sizes} sizes`;
+  if(colors>0)return `${colors} ${colors===1?"color":"colors"}`;
+  if(sizes>0)return `${sizes} ${sizes===1?"size":"sizes"}`;
+  return `${total} ${total===1?"option":"options"}`;
+}
+
+
 type VisibleBounds={left:number;top:number;right:number;bottom:number};
 
 function BatchPreferencesPortal({children}:{children:ReactNode}){
@@ -1194,7 +1208,7 @@ export default function ListingFactoryApp() {
             </div>
           </article>
 
-          <div className={`product-step workflow-panel ${workflowStep==="setup"?"active-panel":"hidden-panel"}`}><SavedWorkflow connected={connected||localPreview} templateUrl={template} templateVerified={templateLoaded} loadingTemplate={loadingTemplate} suggestedProductName={templateDetails?[templateDetails.brand,templateDetails.model].filter(Boolean).join(" ").trim()||templateDetails.blueprintTitle||"":""} selectedProductId={activeBundle?`bundle:${activeBundle.id}`:activeRecipe?.id||""} selectedSummary={templateDetails?<div className="template-proof recipe-proof"><div className="product-thumb"><span>YOUR<br/>ART</span></div><div className="template-info"><b>{templateDetails.blueprintTitle}</b><span>{templateDetails.provider} · {pricedVariants.length} selected variants</span><span>✓ Product, placement, sizes, and shipping profile imported</span></div><span className="template-badge">{productSelected?"Product selected":"Save this product"}</span></div>:null} verifiedShippingProfileId={Number(templateDetails?.shippingTemplateId)||0} onTemplateUrl={(value) => { templateLoadVersion.current+=1;setLoadingTemplate(false);setTemplate(value);setTemplateDetails(null);setTemplateError(""); }} onUseRecipe={chooseRecipe} onUseBundle={useBundle} onStartNewProduct={startNewProduct} onChangeProduct={changeProduct} onVerifyTemplate={loadTemplateUrl} />
+          <div className={`product-step workflow-panel ${workflowStep==="setup"?"active-panel":"hidden-panel"}`}><SavedWorkflow connected={connected||localPreview} templateUrl={template} templateVerified={templateLoaded} loadingTemplate={loadingTemplate} suggestedProductName={templateDetails?[templateDetails.brand,templateDetails.model].filter(Boolean).join(" ").trim()||templateDetails.blueprintTitle||"":""} selectedProductId={activeBundle?`bundle:${activeBundle.id}`:activeRecipe?.id||""} selectedSummary={templateDetails?<div className="template-proof recipe-proof"><div className="product-thumb"><span>YOUR<br/>ART</span></div><div className="template-info"><b>{templateDetails.blueprintTitle}</b><span>{templateDetails.provider} · {variantSummary(selectedColorIds.length,selectedSizeIds.length,pricedVariants.length)}</span><span>✓ Product, placement, sizes, and shipping profile imported</span></div><span className="template-badge">{productSelected?"Product selected":"Save this product"}</span></div>:null} verifiedShippingProfileId={Number(templateDetails?.shippingTemplateId)||0} onTemplateUrl={(value) => { templateLoadVersion.current+=1;setLoadingTemplate(false);setTemplate(value);setTemplateDetails(null);setTemplateError(""); }} onUseRecipe={chooseRecipe} onUseBundle={useBundle} onStartNewProduct={startNewProduct} onChangeProduct={changeProduct} onVerifyTemplate={loadTemplateUrl} />
           {localPreview&&!templateDetails&&<button className="preview-demo-button" onClick={()=>void loadPreviewDemo()}>Load a complete poster demo to review every step</button>}
           {templateError && <p className="field-error recipe-error" role="alert">{templateError}</p>}
           <BatchPreferencesPortal>

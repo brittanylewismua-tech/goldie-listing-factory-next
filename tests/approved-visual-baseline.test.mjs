@@ -1282,3 +1282,32 @@ test("D198: recipeSummary reports saved detail and is honest when there is none"
   );
   assert.equal(recipeSummary({ defaultMockupTheme: "BACH TEES" }), "No details saved yet");
 });
+
+test("D202: the art placeholder joins the plum palette and drops the 7px label", async () => {
+  const css = await readFile(new URL("app/clarity-pass.css", root), "utf8");
+  const theme = await readFile(new URL("app/theme.css", root), "utf8");
+
+  // theme.css still carries the legacy rule; clarity-pass.css loads last and wins.
+  assert.match(theme, /\.product-thumb\{[^}]*background:#f3ead7/, "the legacy rule is what we are overriding");
+  assert.match(css, /\.app-shell \.product-thumb\{[^}]*background:rgba\(255,255,255,\.55\)!important/);
+  assert.match(css, /\.app-shell \.product-thumb\{[^}]*color:#654362!important/);
+  assert.doesNotMatch(css, /\.app-shell \.product-thumb\{[^}]*font-size:7px/);
+  assert.match(css, /\.app-shell \.product-thumb\{[^}]*font-size:8px!important/);
+});
+
+test("D202: the product summary states the choices, not Printify's word for them", async () => {
+  const app = await readFile(new URL("app/listing-factory-app.tsx", root), "utf8");
+  const code = app.replace(/\/\*[\s\S]*?\*\//g, "");
+  assert.doesNotMatch(code, /selected variants/, "'variants' is internal vocabulary");
+  assert.match(app, /function variantSummary\(colors:number,sizes:number,total:number\)/);
+
+  const body = app.slice(app.indexOf("function variantSummary"));
+  const source = body.slice(0, body.indexOf("\n}") + 2).replace(/:number/g, "");
+  const variantSummary = new Function(`${source}; return variantSummary;`)();
+
+  assert.equal(variantSummary(5, 5, 25), "5 colors × 5 sizes", "the choices multiply to the old figure");
+  assert.equal(variantSummary(3, 0, 3), "3 colors");
+  assert.equal(variantSummary(0, 1, 1), "1 size");
+  assert.equal(variantSummary(0, 0, 1), "1 option", "one-size, no-colour products still read correctly");
+  assert.equal(variantSummary(0, 0, 12), "12 options");
+});

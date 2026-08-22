@@ -1181,3 +1181,20 @@
   overflow:hidden!important;
   text-overflow:ellipsis!important;
 }
+
+/* D202 · The "YOUR ART" placeholder was the last of the legacy palette on this
+ * screen: cream #f3ead7 behind near-black #2b261e inside a #2c261d border,
+ * sitting in a card where everything else is plum. The approved-functional
+ * palette lock already says product information and actions are plum and never
+ * legacy olive, green, gold or brown; this tile predates it in theme.css and
+ * was simply missed. Measured after: 8.29:1 contrast, comfortably past AA.
+ *
+ * The label was also set at 7px, below anything legible; 8px with a little
+ * letter-spacing fits the same 42px tile. */
+.app-shell .product-thumb{
+  border:1px solid rgba(139,89,137,.25)!important;
+  background:rgba(255,255,255,.55)!important;
+  color:#654362!important;
+  font-size:8px!important;
+  letter-spacing:.04em!important;
+}
