@@ -1047,10 +1047,11 @@ test("saved-product tiles line up regardless of name length — D162", async () 
    * The taller button overflowed its 161.5px grid row upward by 12px, so the
    * Choose buttons and Edit/Delete rows each sat at two different heights.
    * After: .recipe-use 474/474/474, Choose pill 589/589/589, Edit 649/649/649. */
-  assert.match(clarity, /\.app-shell \.recipe-tile\{grid-template-rows:1fr auto!important\}/,
-    "The tile footer must be pinned so it cannot move with the name.");
-  assert.match(clarity, /\.app-shell \.recipe-use\{height:100%!important\}/,
-    "The button must fill its row rather than overflow it.");
+  /* D190 replaced the 1fr pin: tiles stretch to the tallest in their row, so on a
+   * shorter tile the 1fr row consumed the full height and pushed the footer 36px
+   * below the card. Auto rows size to content and stay inside. */
+  assert.match(clarity, /\.app-shell \.recipe-tile\{grid-template-rows:auto auto!important;align-content:start!important\}/);
+  assert.match(clarity, /\.app-shell \.recipe-use\{height:auto!important\}/);
   /* D166 replaced the two-line reservation: it aligned the rows but left a 24px
    * hole under one-line names. Wider tiles (250px min instead of 170px) give the
    * name column 226px instead of 117px, so names fit on one line and there is no

@@ -638,8 +638,13 @@
  * The name is clamped to two lines, so the button carries title={recipe.name}
  * for anything longer. Measured after: 474 / 474 / 474, 589 / 589 / 589,
  * 649 / 649 / 649 — every tile identical. */
-.app-shell .recipe-tile{grid-template-rows:1fr auto!important}
-.app-shell .recipe-use{height:100%!important}
+/* D190 · D162 pinned the tile footer with `grid-template-rows:1fr auto` and
+   `.recipe-use{height:100%}`. Tiles in a grid row all stretch to the tallest, so on
+   the shorter unselected tiles the 1fr row ate the whole 163px and the footer row
+   landed 36px BELOW the card. `overflow:hidden` had been hiding that; removing it
+   for D186 made it visible. Auto rows size to content and stay inside. */
+.app-shell .recipe-tile{grid-template-rows:auto auto!important;align-content:start!important}
+.app-shell .recipe-use{height:auto!important}
 /* D166 · Reserving two lines for every name kept the rows aligned but left a
    24px hole under the one-line ones, which is what made the cards look
    unconsidered. The real cause was width: in a 642px container the tiles were
