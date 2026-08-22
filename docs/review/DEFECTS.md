@@ -2185,10 +2185,10 @@ meaning — here, the plum of the alert directly below it.
 D117, D122 and D123 were each assigned twice, by ChatGPT and me working in
 parallel. The two older entries are renumbered **D127** (sizes come from
 Printify) and **D128** (choosing a product removed the bundle option). The open
-items keep the numbers already quoted in conversation. 128 entries, no
+items keep the numbers already quoted in conversation. 132 entries, no
 duplicates.
 
-### D129 · Selecting a product crashes in the Colours block · **FIXED HERE** · **BLOCKER**
+### D131 · Selecting a product crashes in the Colours block · **FIXED HERE** · **BLOCKER**
 
 Live verification of D123/D125 caught `ReferenceError: productFirstRun is not
 defined` immediately after selecting the saved crewneck. The first-run value
@@ -2202,9 +2202,9 @@ test scopes the selector source and fails if that value becomes undeclared
 again. This defect was found by clicking the live control after deployment;
 the prior build and render checks did not catch the runtime scope error.
 
-### D130 · A contaminated crewneck record still displays tee-only scenes · **FIXED HERE** · **BLOCKER**
+### D132 · A contaminated crewneck record still displays tee-only scenes · **FIXED HERE** · **BLOCKER**
 
-After D129 was repaired live, the saved crewneck still opened with `BACH TEES`.
+After D131 was repaired live, the saved crewneck still opened with `BACH TEES`.
 That value had already been written by the old D122 fallback before D122 was
 fixed. Preventing new contamination did not repair existing product records,
 and the product-step picker was not checking each scene's garment type.

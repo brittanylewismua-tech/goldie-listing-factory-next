@@ -723,14 +723,14 @@ test("new products require completed setup and saved products own exact mockup s
   assert.match(finish,/goldie-batch-mockups/);
 });
 
-test("the colour selector never reads parent-only first-run state — D129", async () => {
+test("the colour selector never reads parent-only first-run state — D131", async () => {
   const page=await readFile(listingFactoryPage,"utf8");
   const selector=page.slice(page.indexOf("function ProductColorSelector"),page.indexOf("function MockupSetSelector"));
   assert.match(selector,/const productFirstRun=false/,
     "ProductColorSelector must define every value it reads instead of crashing after product selection.");
 });
 
-test("saved mockup scenes must match the selected garment — D130", async () => {
+test("saved mockup scenes must match the selected garment — D132", async () => {
   const page=await readFile(listingFactoryPage,"utf8");
   assert.match(page,/function productAcceptsMockup\(surfaceKind:string,productName:string\)/);
   assert.match(page,/compatibleTemplates=templates\.filter\(item=>productAcceptsMockup\(item\.surfaceKind,productName\)\)/);
