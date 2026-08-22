@@ -722,3 +722,10 @@ test("new products require completed setup and saved products own exact mockup s
   assert.match(page,/Click any scene to remove or re-add it/);
   assert.match(finish,/goldie-batch-mockups/);
 });
+
+test("the colour selector never reads parent-only first-run state — D129", async () => {
+  const page=await readFile(listingFactoryPage,"utf8");
+  const selector=page.slice(page.indexOf("function ProductColorSelector"),page.indexOf("function MockupSetSelector"));
+  assert.match(selector,/const productFirstRun=false/,
+    "ProductColorSelector must define every value it reads instead of crashing after product selection.");
+});

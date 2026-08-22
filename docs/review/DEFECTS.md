@@ -2187,3 +2187,17 @@ parallel. The two older entries are renumbered **D127** (sizes come from
 Printify) and **D128** (choosing a product removed the bundle option). The open
 items keep the numbers already quoted in conversation. 128 entries, no
 duplicates.
+
+### D129 · Selecting a product crashes in the Colours block · **FIXED HERE** · **BLOCKER**
+
+Live verification of D123/D125 caught `ReferenceError: productFirstRun is not
+defined` immediately after selecting the saved crewneck. The first-run value
+was declared inside `ListingFactoryApp` but read inside the separate
+`ProductColorSelector` component, where it did not exist. The production error
+boundary replaced the workflow with the startup-problem screen.
+
+**Fixed:** first-run framing is owned by the product setup container and the
+reusable colour selector no longer depends on parent-only state. A regression
+test scopes the selector source and fails if that value becomes undeclared
+again. This defect was found by clicking the live control after deployment;
+the prior build and render checks did not catch the runtime scope error.
