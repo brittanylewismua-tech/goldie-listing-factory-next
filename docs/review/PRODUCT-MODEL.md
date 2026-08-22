@@ -1,4 +1,9 @@
-> ## CORRECTION — the section order in this document is wrong
+> #> **Note (D182).** The batch page described below was the saved-product setup page,
+> reused. It has been replaced by a computed readiness card — one per product, for a
+> single product and for every bundle member. "Saved for this product" is now
+> "<product> settings" and is the editor behind the card's chips, not the page.
+
+# CORRECTION — the section order in this document is wrong
 >
 > The layout below puts Colours and Mockups **above** the designs drop zone.
 > That was built and it is wrong. Colours and mockups are decisions *about* the

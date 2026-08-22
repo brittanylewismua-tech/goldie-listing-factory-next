@@ -1952,6 +1952,11 @@ Measured on the setup step:
 | Colours | **43 toggle buttons**, own section | Step 2 |
 | Sizes | **none, anywhere in the app** | — |
 
+> **SUPERSEDED by D164 and D182.** Sizes are now chosen in Goldie, per product,
+> and saved on the recipe. The Printify template is only where the blueprint,
+> print provider, artwork placement and first publish happen — its enabled
+> variants are Printify defaults, never treated as the seller's choice.
+
 Sizes are inherited from the Printify product. The only mention in the entire
 flow is one line in the product confirmation — *"Product, placement, sizes, and
 shipping profile imported"* — and sizes do not become visible until the Pricing
@@ -3116,4 +3121,126 @@ product list with "Product saved. Choose it below when you want to build with it
 reproduced — the saved bundle (`ZZ TEST BUNDLE`) contains exactly two products, Gildan Hoodie
 and Gildan Tee, so one member card beneath the active product is correct. If a three-product
 bundle does it, that is still open.
+
+## D166 — product card names wrapped, so the tiles were widened and lost density
+Widening the tiles to 250px stopped "gildan crewneck" wrapping but turned a long
+product list into a wall of large cards. Superseded the same day by D170: keep the
+tiles at 184px minimum and buy the room from the icon (36px → 26px) and the name
+(16px → 13px). Tile 215px → 163px tall, three per row, names on one line.
+
+## D170 — compact tiles restored
+See D166. `repeat(auto-fill,minmax(184px,1fr))`.
+
+## D171 — the size-block strip lost to its own base rule
+D168 put the context strip in `globals.css`, but the base card rule for that block
+is in `clarity-pass.css`, which loads last at equal specificity. Measured on the
+**deployed** build: colour 644px at x542, size still 612px at x558 — the same
+detached box, "fixed" but not fixed. The strip moved to the layer that wins.
+
+## D172 — the setup column ran at three different widths
+Eleven stacked sections, only some carrying `width:min(980px,calc(100% - 32px))`,
+and nested ones applying it twice against an already-inset parent. Measured:
+`recipe-card` 720@504, `color-default-block` 688@520, `mockup-default-block`
+688@520, `keyword-bank-required` 720@504. Cards sat 16px inside the heading above
+them and the button below. All ten now 720@504.
+
+## D173 — selecting a product blew the product list up
+`approved-functional.css:1510` collapsed `.recipe-grid` to `1fr` whenever
+`data-product-selected="true"`. The attribute selector outranked the plain class
+rule, so the compact grid was discarded exactly when the seller was most likely to
+be scanning the list. Tiles 207px → **642px** wide; twelve products ≈ 1,900px of
+stacked full-width cards.
+
+## D174 — the bundle banner used the wrong typeface and repeated its own eyebrow
+"You are working on Gildan Hoodie" as an 18px Manrope `<b>`, wrapping to two lines,
+directly above headings set in Fraunces — and the phrase restated the eyebrow above
+it ("PRODUCT BUNDLE · PRODUCT 1 OF 2"). Now the product name alone, 24px Fraunces.
+
+## D175 — the bundle screen promoted an arbitrary member
+`bundleRecipes[0]` got the full setup treatment purely because it was index 0;
+every other member went into "Other products in this bundle", a section built for
+colours only. Replaced with one map rendering every member identically.
+Also exposed `previewImage` — the API returned no product image at all.
+
+## D176 — Edit bundle opened a form nobody could see
+Two faults. D169 gated the create/edit form on `!activeId.startsWith("bundle:")`
+along with the grid, so once a bundle was selected there was **no way to edit it**.
+And opening the form scrolled nothing — it expands hundreds of pixels down behind
+the "Want one batch…" summary. Form stays reachable, scrolls into view, and the
+header reads "Editing <name>" while open.
+
+## D177 — two duplicate "NEW BATCH" banners
+`.product-setup-framing` and `.batch-page-intro` both announced
+"NEW BATCH · <product>", and contradicted each other on where the defaults came
+from ("saved for this product" vs "from your last batch"). Both removed; only
+genuine first-run guidance remains.
+
+## D178 — the product photo showed the seller's own placeholder design
+`previewImage` was taken from `found.product.images`, which are the seller's
+Printify product mockups and therefore carry whatever artwork is in their template
+— so a hoodie card showed one of her designs while she was working on another.
+Now the blueprint catalog image: the blank garment.
+
+## D179 — the mockup card's dead column
+`.mockup-default-block` is `minmax(0,1fr) minmax(210px,290px)`. With no mockup set
+saved, the right column held only a 17px link — ~290px of empty space through the
+middle of the card. **Reported five times.** It survived that long because the fix
+was verified by injecting CSS into the live page and never written to the
+stylesheet: it only ever existed in a browser tab.
+
+## D180 — one mockup set and one keyword bank for a whole bundle
+Mockup sets are filtered by product type (`productAcceptsMockup`), so the list was
+narrowed to whichever product happened to be active and then applied to every
+product in the bundle — a t-shirt set on a hoodie and a sweatshirt. The keyword
+bank had the same problem. Both moved per product.
+
+## D181 — a bundle could pass setup with one product's keyword bank
+D180 made the bank per-product; the forward gate still checked only the active
+product's. A three-product bundle would pass setup and reach product two with
+nothing to write titles from. Measured: all three saved products had
+`keywordListId` empty, so this was not hypothetical.
+
+## D182 — the batch page was the product-setup page, reused
+Introduced in `679f182` ("Simplify batches around saved products") and never
+questioned since. Two consequences: every batch re-presented a full product
+configuration UI for settings that are saved permanently on the recipe, and every
+bundle bug above was the same root cause — product-level settings rendered at batch
+level.
+
+Replaced with a computed readiness model (`app/product-readiness.ts`):
+
+- `setupComplete` is **not** trustworthy — the API reads it as
+  `saved.setupComplete !== false`, so it is true for any recipe that never stored
+  false. Measured: three saved products all reporting `setupComplete: true` with
+  `defaultColorIds: []`, `defaultSizeIds: []`, `keywordListId: ""`.
+- **Presence is not readiness.** All three had `defaultMockupTheme: "BACH TEES"` —
+  a t-shirt set — against a hoodie and a sweatshirt. A presence check calls that
+  ready; the product is unusable, which is why the hoodie's mockup card was blank.
+- **Colours and sizes are never inherited from the template.** The app's own
+  Printify instructions are: choose the product and print provider, set the artwork
+  placement, publish once. Colours and sizes are not mentioned, so enabled variants
+  are Printify defaults. Inheriting them would publish listings in colours the
+  seller never chose.
+- Wizard rule: a facet with exactly one valid answer is not a question.
+
+The page now renders one readiness card per product — a single product is a list of
+one, a bundle a list of N — with a chip per setting. Choices save to the recipe
+immediately, so a product establishes itself on first use instead of needing four
+separate "save as default" buttons.
+
+## D183 — shipping, profit and Etsy details were batch-level too
+The same class as D180, in the "Saved for this product" block. Now computed per
+product on its card. Shipping copies the profile Printify already attached when the
+product was published to Etsy — a required setup step — so it is rarely a question.
+
+## D184 — the product step also collected designs
+538px of dropzone, quota and "before uploading" copy rendered at the top of step 2,
+while "Add designs" is step 3. It was the first thing on a step called
+"Choose product".
+
+## D185 — every facet chip now opens its setting
+Colours, sizes, mockups and keywords open in the card. Shipping, profit and Etsy
+details open the settings block and scroll to it — the same scroll failure as D176.
+A chip for a product that is not the current one in a bundle stays a fact rather
+than a control that cannot work.
 
