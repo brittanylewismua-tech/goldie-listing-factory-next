@@ -2450,3 +2450,30 @@ attention. Verified live: status now 0px border / 8px radius / 600, button still
 
 **Nothing that cannot be clicked gets a button's box.** That is the check to run
 whenever a chip or badge is added.
+
+### D140 · Product names split across a heading's line break · **FIXED HERE** · **LOW**
+
+Pricing headings carry the product name in a `<span>`:
+
+> "2. Etsy shipping profile — what buyers pay **· Gildan Tee**"
+
+The span wrapped as normal text, so at the real card width the heading broke
+mid-name and left **"Tee"** alone on its own line. The heading is allowed to
+wrap; a product name is not. `white-space:nowrap` on the name span in both
+pricing headings. Verified live: name now stays on one line.
+
+### Pricing step — otherwise clean
+
+Walked and screenshotted at the real width:
+
+- "1. Item prices · Gildan Tee" with the profit goal and whole-number toggle
+  grouped to its right
+- A green confirmation line explaining what the numbers include
+- Two cost groups rendered clearly — **16 variants at $9.79 → $22.37** and
+  **4 variants at $11.64 → $24.41**, each showing "Lowest estimated item profit
+  $10.00 · Shipping not included"
+- Per-group "View included variants or edit one separately" disclosure
+- "See how Goldie calculated these prices" disclosure
+- "2. Etsy shipping profile — what buyers pay · Gildan Tee" beneath
+
+No nested frames, no orphaned controls, no status styled as buttons.

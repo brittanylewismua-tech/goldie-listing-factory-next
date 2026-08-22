@@ -514,3 +514,10 @@
   color:#8a3f66!important;
   font-weight:750!important;
 }
+
+/* D140 · Section headings carry the product name in a <span> — "2. Etsy
+ * shipping profile — what buyers pay · Gildan Tee". The span wraps like normal
+ * text, so at this width the heading broke mid-name and left "Tee" alone on its
+ * own line. The heading may wrap; a product name may not. */
+.app-shell .pricing-section-heading h4>span,
+.app-shell .item-pricing-heading h4>span{white-space:nowrap!important}
