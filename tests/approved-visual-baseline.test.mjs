@@ -1181,3 +1181,15 @@ test("a selected product tile does not clip its own actions — D186", async () 
   assert.doesNotMatch(clarity, /\.recipe-grid \.recipe-tile\{[^}]*flex-wrap:wrap/,
     "Flex made each action take its own row.");
 });
+
+test("keyword bank cards size to their own content — D195", async () => {
+  const clarity = await readFile(new URL("app/clarity-pass.css", root), "utf8");
+
+  /* Measured on /keywords with two banks of 17 and 50 phrases: both cards 406px,
+   * with 77px of dead space above "Edit bank" in the shorter one against 14px in
+   * the taller. Delete also rendered at 16px — larger than the phrase chips — so
+   * the destructive action was the loudest element on the card.
+   * After: 334px and 397px, 14px gap in both, Delete at 11px. */
+  assert.match(clarity, /\.keyword-page \.bank-grid\{align-items:start!important\}/);
+  assert.match(clarity, /\.keyword-page \.bank-grid article button:not\(\.bank-keyword-toggle\)\{font-size:11px!important\}/);
+});

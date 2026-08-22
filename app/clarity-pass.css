@@ -1108,3 +1108,11 @@
   font-weight:850;
   cursor:pointer;
 }
+
+/* D195 · Keyword bank cards stretched to the tallest in their row, so the shorter
+ * card carried 77px of dead space above its "Edit bank" button while the taller
+ * one had 14px. Same fault as the product tiles. And "Delete" rendered at 16px —
+ * larger than the card's own phrase chips — making the destructive action the
+ * loudest thing on it. */
+.keyword-page .bank-grid{align-items:start!important}
+.keyword-page .bank-grid article button:not(.bank-keyword-toggle){font-size:11px!important}

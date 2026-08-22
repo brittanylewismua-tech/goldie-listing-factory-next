@@ -2238,3 +2238,14 @@ test("a title never repeats a phrase it already contains — D157", async () => 
     assert.ok(kept.some(k => normalise(k).includes(normalise(dropped))),
       `"${dropped}" was dropped without surviving inside a kept phrase`);
 });
+
+test("Batch History does not label a bundle with one member's product — D196", async () => {
+  const route = await readFile(new URL("../app/api/batches/route.ts", import.meta.url), "utf8");
+
+  /* A bundle batch stores the ACTIVE product's blueprint in product_title, so the
+   * list showed "Unisex Midweight Softstyle Fleece Hoodie · 3 designs" for a
+   * three-product bundle — naming one member as though it were the whole batch.
+   * The row already parses state_json, so the bundle was knowable all along. */
+  assert.match(route, /type BatchListState=\{activeBundle\?:\{name\?:string\};bundleRecipes\?:unknown\[\]/);
+  assert.match(route, /state\.activeBundle&&\(state\.bundleRecipes\|\|\[\]\)\.length>1\)\?`\$\{\(state\.bundleRecipes\|\|\[\]\)\.length\} products`/);
+});
