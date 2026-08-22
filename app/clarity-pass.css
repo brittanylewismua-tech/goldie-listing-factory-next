@@ -1253,3 +1253,20 @@
  * Appears once per draft card, so three times on a three-design batch.
  * Measured after: #654362 at 10.5px, 8.29:1. */
 .app-shell .individual-size-guide small{color:#654362!important;font-size:10.5px!important}
+
+/* D208 · Brittany could not find the reset and believed it had never been built.
+ * It had: `.workflow-restart-button` in the sidebar on every workflow step, plus
+ * "Discard this batch + start new" on the final step. Both worked.
+ *
+ * Measured: the button renders at 10px against nav links at 14.5px, making it
+ * the smallest text in the sidebar — a footnote sitting below the navigation,
+ * where the eye has already stopped. Contrast was never the problem (8.08:1).
+ * Size and weight were. Matching it to the nav scale makes it read as the
+ * control it is. */
+.app-shell .workflow-restart-button{
+  font-size:13px!important;
+  font-weight:700!important;
+  min-height:40px!important;
+  background:rgba(255,255,255,.62)!important;
+  border-color:rgba(74,42,62,.24)!important;
+}

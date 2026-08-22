@@ -1441,3 +1441,18 @@ test("D205: establishing a facet refreshes the saved-product tiles", async () =>
   // Must not refetch on the first render — reload() already runs on mount.
   assert.match(tools, /if \(firstRevision\.current\) \{ firstRevision\.current = false; return; \}/);
 });
+
+test("D208: the reset control is sized like a control, not a footnote", async () => {
+  const css = await readFile(new URL("app/clarity-pass.css", root), "utf8");
+  const app = await readFile(new URL("app/listing-factory-app.tsx", root), "utf8");
+
+  /* The reset existed all along and was reported as missing. Measured at 10px
+     against 14.5px nav links — the smallest text in the sidebar. */
+  assert.match(css, /\.app-shell \.workflow-restart-button\{[^}]*font-size:13px!important/);
+  assert.match(css, /\.app-shell \.workflow-restart-button\{[^}]*min-height:40px!important/);
+
+  // Both entry points must stay wired.
+  assert.match(app, /className="workflow-restart-button"[^>]*onClick=\{startOver\}/);
+  assert.match(app, /function startOver\(\)/);
+  assert.match(app, /Discard this batch \+ start new/);
+});
