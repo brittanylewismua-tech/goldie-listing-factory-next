@@ -2513,3 +2513,43 @@ single character.
 **One false alarm I checked before reporting:** row 1 showed 6/13 tags against
 row 2's 13/13. Regenerating produced **13/13/13**, so it was stale data from
 before the D79 fix, not a live defect.
+
+### D142 · Batches named after machine-generated filenames · **FIXED HERE** · **MEDIUM · UX**
+
+Seen in Brittany's own Batch History while reviewing the page:
+
+> **"ChatGPT Image Aug 21, 2026, 05 32 41 PM (2) + 3 more"**
+
+`designLabel()` cleaned up the first design's filename, and that result took
+precedence over both `setup_name` and `product_title`. So the batch name is
+whatever the file happened to be called — which for AI art, phone cameras and
+screenshots is a timestamp.
+
+This is not an edge case. Sellers making print-on-demand art overwhelmingly
+upload files named `ChatGPT Image …`, `IMG_4821`, `Screenshot 2026-08-21` or
+`20260821_113244`.
+
+**Fixed:** a filename is only used when a human plausibly chose it. Generic
+prefixes (ChatGPT, DALL·E, Midjourney, Gemini, Firefly, Stable Diffusion, IMG,
+DSC, PXL, Screenshot, Untitled, Download, Export, Scan, Capture) and names with
+fewer than four letters fall through to the product name instead.
+
+Verified against real cases:
+
+| filename | result |
+|---|---|
+| `scottsdale-bachelorette.png` | **kept** → "scottsdale bachelorette" |
+| `palm-springs-desert-disco.png` | **kept** → "palm springs desert disco" |
+| `ChatGPT Image Aug 21, 2026, 05_32_41 PM (2).png` | dropped → product name |
+| `IMG_4821.png` · `DSC_0031.jpg` · `Screenshot 2026-08-21.png` | dropped → product name |
+| `20260821_113244.png` · `untitled-1.png` | dropped → product name |
+
+### Management pages — walked and screenshotted
+
+- **Mockup Library** — thumbnails now **172×214** in a five-across grid with all
+  ten visible (D83 fixed), heading matches the sidebar (D84 fixed).
+- **Usage + Plan** — four uniform cards, each limit distinctly labelled with its
+  own denominator and remaining count; the 24-hour cap reads as a rate, not a
+  quota (D34, D35, D36 all holding).
+- **Batch History** — every badge reads "DRAFTS READY · 0 PUBLISHED" (D88
+  holding); 16 batches, mostly test artefacts from today.

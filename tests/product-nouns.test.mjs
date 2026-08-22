@@ -172,3 +172,21 @@ test("both Printify product links work, and a bare id too — D116", async () =>
   assert.doesNotMatch(route, /Paste a complete Printify product-editor link\./,
     "The error must not claim only the editor link works.");
 });
+
+test("machine-default filenames do not become batch names — D142", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const route = await readFile(new URL("../app/api/batches/route.ts", import.meta.url), "utf8");
+
+  /* Seen in Brittany's own Batch History:
+   *   "ChatGPT Image Aug 21, 2026, 05 32 41 PM (2) + 3 more"
+   *
+   * `designLabel` cleaned the filename and that name took precedence over the
+   * product name, so any seller uploading AI art, phone photos or screenshots —
+   * which is most of them — gets batches named after a timestamp. A filename is
+   * only a good batch name when a human chose it. */
+  assert.match(route, /const GENERIC_DESIGN_NAME=/);
+  assert.match(route, /chatgpt image\|dall\[- \]\?e\|midjourney/);
+  assert.match(route, /if\(GENERIC_DESIGN_NAME\.test\(cleaned\)\)return "";/);
+  assert.match(route, /const letters=cleaned\.replace\(\/\[\^a-z\]\/gi,""\)\.length;/,
+    "A name that is mostly digits is a machine default too.");
+});
