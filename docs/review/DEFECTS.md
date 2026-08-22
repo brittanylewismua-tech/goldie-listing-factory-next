@@ -2861,3 +2861,25 @@ before and **0** after.
 pinned the green border hex; updated — its point is that the banner is styled, not that it
 is green.
 
+## D157 — generated titles repeated phrases they already contained
+**Where:** every title the title builder produces. Found on Finish · Review + publish.
+**Measured — all three live titles in batch `103d12f0`:**
+| title | chars | redundancy |
+|---|---|---|
+| "Vegas Bachelorette, … Off The Market, Fresh Off The Market" | 130 | "off the market" inside "fresh off the market" |
+| "Bachelorette Girls Gone Mild, **Girls Gone Mild**, Fresh Off The Market, **Off The Market**, She Said Yes, **Shes Off The Market**, …" | 139 | "girls gone mild" ×2, "off the market" ×3 |
+| "Bachelorette Girls Gone Mild, **Girls Gone Mild**, Bikinis And Martinis, **Bikinis And Martinis Bachelorette**, …" | 137 | "girls gone mild" ×2, "bikinis and martinis" ×2 |
+One title literally reads "Bachelorette Girls Gone Mild, Girls Gone Mild," back to back.
+**Cause:** `selected` is built with `[...new Set(...)]`, which removes only **exact**
+duplicates. "girls gone mild" and "bachelorette girls gone mild" are different strings, so
+both were appended. Nothing checked containment.
+**Why it matters:** Etsy gives 140 title characters. Repeating a phrase spends them twice for
+one keyword and reads as stuffing — the opposite of what this tool is sold to do.
+**Fix:** before assembly, drop any phrase wholly contained in a longer selected phrase. The
+longer phrase still carries the shorter as a substring, so keyword coverage is unchanged and
+the freed characters let a genuinely new phrase in.
+**Re-ran the three real cases through the fix:** 7→6 phrases (114 chars), 7→5 (106), 6→4 (98)
+— all still clear `TITLE_FILL_FLOOR` (90), and every dropped phrase survives inside a kept one.
+**Guard:** `tests/rendered-html.test.mjs` — "a title never repeats a phrase it already contains",
+which asserts both the source predicate and the behaviour on the live data.
+

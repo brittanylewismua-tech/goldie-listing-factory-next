@@ -2190,3 +2190,40 @@ test("restart is visible everywhere and preserves a batch only after saving — 
   assert.match(app, /step:workflowStep/);
   assert.match(clarity, /\.app-shell \.workflow-restart-button\{/);
 });
+
+test("a title never repeats a phrase it already contains — D157", async () => {
+  const route = await readFile(new URL("../app/api/listing-intelligence/route.ts", import.meta.url), "utf8");
+
+  /* Measured on the Publish screen of batch 103d12f0 — all three live titles:
+   *   "Vegas Bachelorette, ... Off The Market, Fresh Off The Market"        (130)
+   *   "Bachelorette Girls Gone Mild, Girls Gone Mild, Fresh Off The Market,
+   *    Off The Market, ... Shes Off The Market, ..."                        (139)
+   *   "Bachelorette Girls Gone Mild, Girls Gone Mild, Bikinis And Martinis,
+   *    Bikinis And Martinis Bachelorette, ..."                              (137)
+   * `selected` is de-duplicated with a Set, which only catches EXACT repeats, so
+   * "girls gone mild" and "bachelorette girls gone mild" both survived and landed
+   * next to each other. "off the market" appeared inside three separate phrases.
+   * On a 140-character Etsy title that is wasted space and reads as stuffing. */
+  assert.match(route, /const normalisePhrase=\(value:string\)=>value\.toLocaleLowerCase\(\)/);
+  assert.match(route, /const chosen=selected\.filter\(phrase=>\{const inner=normalisePhrase\(phrase\);/);
+  assert.match(route, /outer\.length>inner\.length&&outer\.includes\(inner\)/);
+
+  /* Re-run of the three real cases through the same predicate:
+   *   7 phrases -> 6, 114 chars | 7 -> 5, 106 chars | 6 -> 4, 98 chars
+   * all still over TITLE_FILL_FLOOR (90), and every dropped phrase survives as a
+   * substring of one that was kept, so no keyword is lost. */
+  const normalise = v => v.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  const keep = sel => sel.filter(p => { const i = normalise(p);
+    return !sel.some(o => o !== p && normalise(o).length > i.length && normalise(o).includes(i)); });
+
+  const live = ["Bachelorette Girls Gone Mild", "Girls Gone Mild", "Fresh Off The Market",
+    "Off The Market", "She Said Yes", "Shes Off The Market", "Going To The Chapel"];
+  const kept = keep(live);
+  assert.ok(!kept.includes("Girls Gone Mild"), "the contained phrase must be dropped");
+  assert.ok(kept.includes("Bachelorette Girls Gone Mild"), "the longer phrase must be kept");
+  assert.ok(!kept.includes("Off The Market"));
+  assert.ok(kept.join(", ").length >= 90, "the deduplicated title must still clear the fill floor");
+  for (const dropped of live.filter(p => !kept.includes(p)))
+    assert.ok(kept.some(k => normalise(k).includes(normalise(dropped))),
+      `"${dropped}" was dropped without surviving inside a kept phrase`);
+});

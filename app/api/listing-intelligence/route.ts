@@ -59,7 +59,18 @@ Avoid duplicate meaning. Do not rewrite, combine, expand, correct, or invent any
     // stored alphabetically), so a design the model could not match produced a
     // confident-looking title built from arbitrary phrases. Fail loudly instead.
     if(!selected.length)return NextResponse.json({error:"Goldie could not find phrases in this bank that match this design. Pick a different keyword bank, or build this title yourself."},{status:422});
-    const chosen=selected,joiner=body.useCommas?", ":" ";let title="";const included:string[]=[];for(const phrase of chosen){const candidate=title?`${title}${joiner}${phrase}`:phrase;if(candidate.length>140)continue;title=candidate;included.push(phrase)}if(!title)return NextResponse.json({error:"Goldie could not build a usable title."},{status:502});
+    /* D157: `selected` is de-duplicated for exact matches only, so a bank holding
+     * both "girls gone mild" and "bachelorette girls gone mild" put BOTH in the
+     * title — one row literally read "Bachelorette Girls Gone Mild, Girls Gone
+     * Mild, ...", and "off the market" appeared inside three separate phrases.
+     * Drop any phrase wholly contained in a longer selected phrase: the longer one
+     * still carries the shorter as a substring, so no keyword coverage is lost,
+     * and the freed characters let a genuinely new phrase in. */
+    const normalisePhrase=(value:string)=>value.toLocaleLowerCase().replace(/[^a-z0-9]+/g," ").trim();
+    const chosen=selected.filter(phrase=>{const inner=normalisePhrase(phrase);
+      return !selected.some(other=>{if(other===phrase)return false;const outer=normalisePhrase(other);
+        return outer.length>inner.length&&outer.includes(inner)})}),
+      joiner=body.useCommas?", ":" ";let title="";const included:string[]=[];for(const phrase of chosen){const candidate=title?`${title}${joiner}${phrase}`:phrase;if(candidate.length>140)continue;title=candidate;included.push(phrase)}if(!title)return NextResponse.json({error:"Goldie could not build a usable title."},{status:502});
     /* D77 is about listings that come out thin — one row got 45 of 140
      * characters while its siblings got 130. Judge that directly.
      *
