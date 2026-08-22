@@ -2060,3 +2060,91 @@ different money consequences — and every other screen has one.
 
 Count across the workflow went from 4 `ContextHelp` instances to **3**: one
 page-level (all five steps) plus the two on Pricing.
+
+---
+
+### D122 · A new product silently inherits another product's mockups · **FIXED HERE** · **BLOCKER**
+
+Brittany: *"I uploaded a new product, which is the crew neck, and instead of
+starting from... like, it was a fresh batch, it just loaded the T shirt recipe."*
+
+The cause, in the mockup seed effect:
+
+```js
+onChange(savedValue && themes.includes(savedValue) ? savedValue : themes[0])
+```
+
+`savedValue` is the **recipe's own** saved default. For a brand-new product it
+is empty — so the fallback `themes[0]` assigned **whichever mockup set happens
+to be first in the library**. Saving a crew neck produced a product card already
+wearing the tee's BACH TEES mockups, captioned *"From your last batch"* for a
+product that has never had a batch.
+
+`startNewProduct()` does clear state correctly (`clearCurrentBatch(true)` nulls
+the recipe and empties `mockupTheme`). The seed effect then re-filled it.
+
+**Fixed:** a product adopts only the set it saved. No library fallback. Where a
+product has no set, the block now says *"No mockup set chosen for this product
+yet."* instead of claiming a previous batch.
+
+### D124 · The Etsy fee profile appeared under Mockups on the product step · **FIXED HERE** · **UX**
+
+Brittany: *"why is Etsy fee profile randomly below mockups? Nothing about that
+product's pricing. Just a random Etsy fee section?"*
+
+It rendered **twice**: `fee-profile-summary` on **Pricing**, beside the profit
+figures it actually affects, and `fee-profile-product-summary` on the **product
+step**, under Mockups, related to nothing around it.
+
+The fee profile is an **account-level** input — Etsy's percentages are the same
+for every product — so it is not a product property at all. Removed from the
+product step; the Pricing copy stays.
+
+### D123 · Mockups can only be chosen as a whole set, never per product · **OPEN** · **HIGH**
+
+Brittany: *"it's about selecting the specific mockups you wanna use for that
+specific listing recipe... it's still not letting me edit the mockups I'm using
+as if they're inside the recipe."*
+
+She is right, and the D109 "Create or edit mockup sets ↗" link does **not**
+address it — that opens the library, which edits the set for every product that
+uses it.
+
+What exists today:
+
+| where | granularity |
+|---|---|
+| Product step (recipe) | **whole set only** — pick "BACH TEES" or nothing |
+| Finish → Images + mockups | **per mockup** — `toggleTemplate`, up to 8 per listing |
+
+So the granular control exists, but only after designs are uploaded and only for
+that one batch. A saved product cannot record *which* of its set's 10 mockups it
+uses, so a crew neck and a tee sharing a set must share all ten scenes.
+
+**Recommendation:** store the chosen ids on the recipe — `Recipe.mockupIds?:
+string[]` alongside the existing `defaultMockupTheme` — and render the set's
+mockups as toggles in the product step's Mockups block, defaulting to all
+selected. Finish already reads a per-batch selection, so it would seed from the
+recipe instead of the whole set. `sharedMockups:{theme,ids}` already exists in
+batch state, which is the same shape.
+
+Not built same-day: it changes what a saved product means and needs a schema
+field, so it deserves a deliberate pass rather than a patch.
+
+### D125 · Saving a new product drops you into a returning-product screen · **OPEN** · **HIGH · UX**
+
+Brittany: *"when a new product is saved, what you enter should not be what looks
+like the saved recipe. It should look like a new product setup flow."*
+
+Saving a product auto-selects it and lands on the same "Build this batch" view a
+returning seller sees — colours, mockups and "Saved for this product" all
+pre-populated, with copy about a last batch that never happened. Nothing marks
+this as first-time setup.
+
+Partly mitigated by D122 (no inherited mockups) and the corrected empty-state
+copy, but the framing is still wrong.
+
+**Recommendation:** a first-run state for a product with no saved defaults —
+heading "Set up <product name>", the same blocks in the same order, but phrased
+as choices being made for the first time and ending in "Save these as this
+product's defaults". Once defaults exist, the current returning view is correct.

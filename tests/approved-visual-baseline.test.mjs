@@ -648,3 +648,25 @@ test("one help bubble per screen unless the subject is genuinely different — D
   assert.equal((page.match(/<ContextHelp label="/g) || []).length, 2,
     "Only the two Pricing bubbles should remain as card-level help.");
 });
+
+test("a new saved product does not inherit another product's setup — D122/D124", async () => {
+  const page = await readFile(listingFactoryPage, "utf8");
+
+  /* D122 — the mockup seed fell back to `themes[0]`, so a brand-new product
+   * silently adopted whichever set happened to be first in the library. Saving
+   * a crew neck produced a card already wearing the tee's "BACH TEES" mockups,
+   * captioned "From your last batch" for a product that has never had a batch.
+   * A product may only adopt the set IT saved. */
+  assert.match(page, /seededDefault\.current=true;if\(savedValue&&themes\.includes\(savedValue\)\)onChange\(savedValue\)/,
+    "A product must never inherit the first mockup set in the library.");
+  assert.doesNotMatch(page, /onChange\(savedValue&&themes\.includes\(savedValue\)\?savedValue:themes\[0\]\)/);
+  assert.match(page, /themes\.length\?"No mockup set chosen for this product yet\."/,
+    "A product with no saved set must say so, not claim a previous batch.");
+
+  /* D124 — the Etsy fee profile is an account-level pricing input. Pricing
+   * already shows it beside the profit figures it affects; the product step had
+   * a second copy sitting under Mockups, unrelated to anything around it. */
+  assert.doesNotMatch(page, /fee-profile-product-summary/,
+    "The fee profile belongs on Pricing, not on the product step.");
+  assert.match(page, /className="fee-profile-summary"/);
+});
