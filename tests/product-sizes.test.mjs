@@ -353,7 +353,8 @@ test("a suggestion is never displayed as a decision — D189/D191", async () => 
    * was being confirmed or where the number came from. D191 states the action
    * plainly and puts the shortcut next to it, naming its source. */
   assert.doesNotMatch(app, /Confirm \$\{suggestedCount\}/);
-  assert.match(app, /Use Printify&rsquo;s \{suggestion\}/);
+  assert.match(app, /Use Printify&rsquo;s \{suggestion\} \{facet\.name==="colors"\?/,
+    "D204: the label names the noun as well as the source.");
   assert.match(app, /className="batch-product-rows"/);
   assert.match(clarity, /\.app-shell \.batch-product-rows\{/);
 });
@@ -377,7 +378,8 @@ test("a suggestion has exactly one control — D193", async () => {
   assert.doesNotMatch(app, /className="facet-confirm"/,
     "The standalone confirm bar is replaced by the row shortcut.");
   assert.doesNotMatch(app, /Goldie suggests \{/);
-  assert.match(app, /Use Printify&rsquo;s \{suggestion\}/);
+  assert.match(app, /Use Printify&rsquo;s \{suggestion\} \{facet\.name==="colors"\?/,
+    "D204: the label names the noun as well as the source.");
 });
 
 test("the product photo picks the catalog shot that actually shows the garment — D194", async () => {

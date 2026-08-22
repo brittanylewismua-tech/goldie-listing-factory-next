@@ -1299,17 +1299,12 @@ test("D202: the product summary states the choices, not Printify's word for them
   const app = await readFile(new URL("app/listing-factory-app.tsx", root), "utf8");
   const code = app.replace(/\/\*[\s\S]*?\*\//g, "");
   assert.doesNotMatch(code, /selected variants/, "'variants' is internal vocabulary");
-  assert.match(app, /function variantSummary\(colors:number,sizes:number,total:number\)/);
 
-  const body = app.slice(app.indexOf("function variantSummary"));
-  const source = body.slice(0, body.indexOf("\n}") + 2).replace(/:number/g, "");
-  const variantSummary = new Function(`${source}; return variantSummary;`)();
 
-  assert.equal(variantSummary(5, 5, 25), "5 colors × 5 sizes", "the choices multiply to the old figure");
-  assert.equal(variantSummary(3, 0, 3), "3 colors");
-  assert.equal(variantSummary(0, 1, 1), "1 size");
-  assert.equal(variantSummary(0, 0, 1), "1 option", "one-size, no-colour products still read correctly");
-  assert.equal(variantSummary(0, 0, 12), "12 options");
+  /* The arithmetic itself moved to the D204 test below, which covers the
+     axis-aware signature. What this test still guards is that Printify's
+     internal word for a variant never reaches the seller. */
+  assert.match(app, /function variantSummary\(axes:\{colorsChosen:boolean/);
 });
 
 test("D203: one nav renders both sidebars, so icons cannot go missing on half the app", async () => {
@@ -1350,4 +1345,75 @@ test("D203: cross-screen alignment and destructive-action faults are fixed", asy
   // A batch's first initial is not information — "0 las vegas..." rendered "0".
   assert.doesNotMatch(batches, /display_name\.slice\(0,1\)\.toUpperCase\(\)/, "no initial-as-thumbnail");
   assert.match(batches, /batch-history-thumbnail empty" aria-hidden="true"><svg/, "a neutral no-photo glyph instead");
+});
+
+test("D204: the product line never reports template defaults as the seller's choices", async () => {
+  const app = await readFile(new URL("app/listing-factory-app.tsx", root), "utf8");
+
+  // The line asks the same readiness the facet rows do.
+  assert.match(app, /function summaryAxes\(product:TemplateDetails,recipe:Recipe\|null\)/);
+  assert.match(app, /const readiness=readinessFor\(product,recipe\);/);
+  assert.match(app, /colorsChosen:!asked\.has\("colors"\)/);
+  assert.match(app, /sizesChosen:!asked\.has\("sizes"\)/);
+  assert.match(app, /variantSummary\(summaryAxes\(templateDetails,activeRecipe\)\)/);
+  assert.doesNotMatch(
+    app,
+    /variantSummary\(selectedColorIds\.length,selectedSizeIds\.length/,
+    "the line no longer reads raw selection state",
+  );
+
+  const body = app.slice(app.indexOf("function variantSummary("));
+  const source = body.slice(0, body.indexOf("\n}") + 2)
+    .replace(/:\{[^}]*\}/, "")
+    .replace(/:string\[\]/g, "").replace(/\(n:number,word:string\)/, "(n,word)");
+  const variantSummary = new Function(`${source}; return variantSummary;`)();
+
+  const base = { colors: 4, sizes: 6, availableColors: 25, availableSizes: 8, total: 200 };
+
+  // Established product: report the choices, which multiply out.
+  assert.equal(
+    variantSummary({ ...base, colorsChosen: true, sizesChosen: true }),
+    "4 colors × 6 sizes",
+  );
+
+  // The live hoodie: nothing chosen. It must describe the product, not claim
+  // "4 colors × 6 sizes" while the rows below say "Pick colors".
+  assert.equal(
+    variantSummary({ ...base, colorsChosen: false, sizesChosen: false }),
+    "25 colors available · 8 sizes available",
+  );
+
+  // Mixed: each axis reported honestly on its own terms.
+  assert.equal(
+    variantSummary({ ...base, colorsChosen: true, sizesChosen: false }),
+    "4 colors · 8 sizes available",
+  );
+  assert.equal(
+    variantSummary({ ...base, colorsChosen: false, sizesChosen: true }),
+    "25 colors available · 6 sizes",
+  );
+
+  // One-size, no-colour products still fall back to a plain count.
+  assert.equal(
+    variantSummary({ colors: 0, sizes: 0, availableColors: 0, availableSizes: 0, total: 1, colorsChosen: true, sizesChosen: true }),
+    "1 option",
+  );
+  assert.equal(
+    variantSummary({ colors: 1, sizes: 0, availableColors: 1, availableSizes: 0, total: 1, colorsChosen: true, sizesChosen: true }),
+    "1 color",
+  );
+});
+
+test("D204: the suggestion button names what it will set", async () => {
+  const app = await readFile(new URL("app/listing-factory-app.tsx", root), "utf8");
+  const code = app.replace(/\/\*[\s\S]*?\*\//g, "");
+
+  /* "Use Printify's 4" gave a number with no noun, next to a row reading
+     "25 available" — 4 of what, and why 4? It also credited the choice to
+     Printify on a screen whose whole point is that the seller chooses. */
+  /* D191 deliberately named Printify as the source so the number is explained,
+     and that stays. What was missing is the noun: "Use Printify's 4" beside a
+     row reading "25 available" never said 4 of what. */
+  assert.doesNotMatch(code, /Use Printify&rsquo;s \{suggestion\}<\/button>/, "the bare number is gone");
+  assert.match(app, /Use Printify&rsquo;s \{suggestion\} \{facet\.name==="colors"\?\(suggestion===1\?"color":"colors"\):\(suggestion===1\?"size":"sizes"\)\}/);
 });
