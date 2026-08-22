@@ -1854,17 +1854,28 @@ test("records startup failures before the Listing Factory bundle mounts",async()
   assert.match(route,/return new NextResponse\(null, \{ status: 204 \}\)/);
 });
 
-test("counts every bundle product as a separate listing before setup",async()=>{
+test("counts every bundle product as a separate listing, without a native prompt",async()=>{
   const app=await readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8");
-  assert.match(app,/How many designs are in this \$\{bundle\.name\} batch/);
-  assert.match(app,/designs × \$\{recipes\.length\} products = \$\{plannedListings\} listings/);
-  assert.match(app,/There is no bundle discount/);
-  assert.match(app,/Math\.floor\(planDraftsRemaining\/bundleProductCount\)/);
+
+  /* Selecting a bundle used to fire window.prompt("How many designs are in this
+   * batch?") followed by up to three more native dialogs, and stored the answer
+   * only to block the seller later if her upload did not match it ("The bundle
+   * total changed"). Measured live: the prompt blocks the renderer, so the page
+   * appears frozen.
+   *
+   * The upload-time guard already multiplies designs by products against the
+   * remaining allowance and explains it in the page, so the prediction was
+   * redundant and its only unique effect was a failure the seller could not
+   * avoid. See D129. */
+  assert.doesNotMatch(app,/window\.prompt/,"Selecting a bundle must not open a native prompt.");
+  assert.doesNotMatch(app,/How many designs are in this/);
+  assert.doesNotMatch(app,/The bundle total changed/);
+  assert.doesNotMatch(app,/bundlePlannedDesignCount/);
+
+  // the real protection stays, in the page, at upload time
   assert.match(app,/requestedListingCount>planDraftsRemaining/);
-  assert.match(app,/The bundle total changed/);
-  assert.match(app,/Proceed with \$\{allowedDesigns\} designs instead/);
-  assert.match(app,/Math\.floor\(planDraftsRemaining\/recipes\.length\)/);
-  assert.match(app,/Goldie will limit this batch before you upload anything/);
+  assert.match(app,/designs × \$\{bundleProductCount\} products = \$\{requestedListingCount\} listings/);
+  assert.match(app,/Math\.floor\(planDraftsRemaining\/bundleProductCount\)/);
 });
 
 test("keeps bundle titles, placement decisions, review, and failures product-specific",async()=>{

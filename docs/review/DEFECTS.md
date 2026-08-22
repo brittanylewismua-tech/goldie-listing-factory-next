@@ -2215,3 +2215,47 @@ crewneck, sweatshirt, or hoodie; an incompatible legacy value clears from the
 batch without silently overwriting the saved product. Compatible legacy
 whole-set preferences resolve once to their first eight visible scenes so the
 seller can see, remove, re-add, and explicitly save the exact selection.
+
+---
+
+### D129 · Selecting a bundle opens a chain of native browser dialogs · **FIXED HERE** · **BLOCKER**
+
+Found by pressure-testing bundles for the first time, which only became possible
+once three saved products existed.
+
+Clicking **"Choose this bundle →"** fired, in sequence:
+
+1. `window.prompt` — *"How many designs are in this ZZ TEST BUNDLE batch? Enter 1–20 so Goldie can show the exact listing total before you begin."*
+2. `window.alert` — if the number was not 1–20
+3. `window.confirm` — *"You're about to create N listings… There is no bundle discount. Do you want to proceed?"*
+4. `window.confirm` — *"Start '…' and clear the current batch?"*
+
+**Symptom during testing:** every automated call timed out at 45s and the tab
+appeared frozen. It was not a hang — a native `prompt` blocks the renderer, and
+nothing in the page could respond until it was dismissed by hand.
+
+**The prediction was worse than redundant.** `bundlePlannedDesignCount` stored
+the answer for exactly one purpose — to compare against the real upload count
+and then refuse:
+
+> "The bundle total changed. 20 designs were confirmed before setup, but 3 are
+> uploaded now. Go back and restart."
+
+So Goldie asked the seller to guess a number before she had opened her design
+folder, then blocked the batch when the guess was wrong.
+
+Meanwhile the upload-time guard already does the job properly, in the page:
+
+> "This batch is larger than your remaining plan allowance. **3 designs × 2
+> products = 6 listings**… 4 listings remaining this month."
+
+**Fixed:** no prompt, no alert, no quota confirm. Choosing a bundle selects it.
+The one remaining `confirm` is the destructive "clear the current batch" case,
+which matches the single-product path. `bundlePlannedDesignCount` and the
+"total changed" refusal are deleted. Quota protection is unchanged — it was
+never in the prompt.
+
+**Why this mattered and was never caught:** bundles could not be exercised
+without two saved products, so every audit and every test run to this point
+walked around this path. The moment it was walked, the first click froze the
+page.
