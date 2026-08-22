@@ -807,3 +807,17 @@ test("the publish checklist is one column and warns in warning colours — D141"
     "Readiness items must carry a state class so a warning can be coloured.");
   assert.match(clarity, /\.final-safety-readiness>span\.needs-review\{[\s\S]*color:#8a3f66!important/);
 });
+
+test("tile CTAs size to their label, not the column — D143", async () => {
+  const clarity = await readFile(new URL("app/clarity-pass.css", root), "utf8");
+
+  /* D130 set the CTA to width:100%, which was only needed for the long
+   * "Choose this product →" label in a 117px column. D130 also shortened that
+   * label. The side effect: choosing a product collapses the grid to one 642px
+   * column, so every CTA stretched to 553px and the two products the seller did
+   * NOT choose became the loudest elements on screen, while her actual
+   * selection rendered as a pale full-width bar that reads as disabled. */
+  assert.match(clarity, /:is\(\.recipe-use,\.bundle-use\) em\{[\s\S]*width:fit-content!important/,
+    "The CTA must size to its label so it cannot dominate the post-selection layout.");
+  assert.doesNotMatch(clarity, /:is\(\.recipe-use,\.bundle-use\) em\{[^}]*width:100%!important/);
+});

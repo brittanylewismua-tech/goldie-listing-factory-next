@@ -2553,3 +2553,36 @@ Verified against real cases:
   quota (D34, D35, D36 all holding).
 - **Batch History** — every badge reads "DRAFTS READY · 0 PUBLISHED" (D88
   holding); 16 batches, mostly test artefacts from today.
+
+### D143 · My D130 fix made unselected products the loudest thing on screen · **FIXED HERE** · **HIGH · UX**
+
+Found by clicking a real pixel with a mouse instead of calling `.click()` on a
+selector — the first genuinely user-shaped pass.
+
+Choosing a product collapses the product grid from three columns to one
+(pre-existing, and fine). But **D130** had set the tile CTA to `width:100%`,
+which in a 642px single column made every button **553px wide**:
+
+| tile | state | CTA | width | fill |
+|---|---|---|---|---|
+| Gildan Tee | **chosen** | "✓ Ready" | 553px | pale tint — read as a *disabled input* |
+| Gildan Hoodie | not chosen | "Choose →" | **553px** | **dark gradient** |
+| gildan crewneck | not chosen | "Choose →" | **553px** | **dark gradient** |
+
+So after choosing a product, the two loudest elements on the screen were the two
+products she **did not** choose, and her actual selection looked disabled. That
+is the D45 inversion, reintroduced by me.
+
+`width:100%` was only ever needed because the label was "Choose this product →"
+in a 117px column. D130 also shortened it to **"Choose →"**, so the constraint
+no longer applies.
+
+**Fixed:** `width:fit-content; max-width:100%`. Verified in both layouts —
+single column: "✓ Ready" 71px, "Choose →" 81px, nothing clipped; narrow
+three-column: still fits.
+
+**Why this took a real click to find.** Every previous pass drove the app with
+`querySelector(...).click()` and measured the DOM. That reaches the same
+handlers but never asks *what does this look like once state changes*. The
+inversion only exists in the post-selection layout, which no measurement I ran
+had rendered and looked at.

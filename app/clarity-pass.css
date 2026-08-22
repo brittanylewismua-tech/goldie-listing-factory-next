@@ -382,12 +382,16 @@
   align-items:center!important;
   justify-content:center!important;
   gap:5px!important;
-  width:100%!important;
+  /* fit-content, not 100%. Full width was needed when the label was
+   * "Choose this product →" in a 117px column; with the shorter "Choose →" it
+   * fits, and stretching it made the UNSELECTED products the loudest thing on
+   * screen once the grid collapses to one column on selection. */
+  width:fit-content!important;
   max-width:100%!important;
   box-sizing:border-box!important;
   min-height:30px!important;
   margin-top:8px!important;
-  padding:0 10px!important;
+  padding:0 14px!important;
   border-radius:999px!important;
   background:linear-gradient(135deg,#6b3a58,#8a4f73)!important;
   color:#fff!important;
