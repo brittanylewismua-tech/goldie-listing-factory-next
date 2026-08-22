@@ -25,7 +25,12 @@ export function recipeSummary(recipe: Recipe): string {
   const sizes = (recipe.defaultSizeIds || []).length;
   if (colors) parts.push(`${colors} color${colors === 1 ? "" : "s"}`);
   if (sizes) parts.push(`${sizes} size${sizes === 1 ? "" : "s"}`);
-  if (recipe.defaultMockupTheme) parts.push(recipe.defaultMockupTheme);
+  /* Deliberately NOT the saved mockup theme. Whether a set fits depends on its
+   * surfaceKind against the product's blueprint title, and this screen never
+   * loads either — it would take one Printify fetch per card. Two of the three
+   * saved products here carry "BACH TEES", a tee set, against a hoodie and a
+   * crewneck, so the card would have asserted a set the wizard immediately
+   * calls incompatible. Report only what this screen can actually verify. */
   if (recipe.keywordListId) parts.push("keyword bank");
   return parts.length ? parts.join(" \u00b7 ") : "No details saved yet";
 }

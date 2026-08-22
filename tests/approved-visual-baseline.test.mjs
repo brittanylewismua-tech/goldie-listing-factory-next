@@ -1273,8 +1273,12 @@ test("D198: recipeSummary reports saved detail and is honest when there is none"
   assert.equal(recipeSummary({ defaultColorIds: [], defaultSizeIds: [] }), "No details saved yet");
   assert.equal(recipeSummary({ defaultColorIds: [1] }), "1 color");
   assert.equal(recipeSummary({ defaultColorIds: [1, 2], defaultSizeIds: [3, 4, 5] }), "2 colors · 3 sizes");
+  // The mockup theme is deliberately excluded: this screen cannot verify that a
+  // set fits the product, and asserting an incompatible one contradicts the
+  // wizard on the very next screen.
   assert.equal(
     recipeSummary({ defaultColorIds: [1], defaultMockupTheme: "BACH TEES", keywordListId: "k1" }),
-    "1 color · BACH TEES · keyword bank",
+    "1 color · keyword bank",
   );
+  assert.equal(recipeSummary({ defaultMockupTheme: "BACH TEES" }), "No details saved yet");
 });
