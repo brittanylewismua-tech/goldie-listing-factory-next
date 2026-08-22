@@ -458,6 +458,8 @@ export default function ListingFactoryApp() {
   const [selectedSizeIds,setSelectedSizeIds]=useState<number[]>([]);
   const [openFacet,setOpenFacet]=useState<Record<string,string>>({});
   const [bestPhoto,setBestPhoto]=useState<Record<string,string>>({});
+  /* D205 · Bumped after every establish() so the saved-product tiles refetch. */
+  const [savedRevision,setSavedRevision]=useState(0);
   const photoProbe=useRef<Set<string>>(new Set());
   function pickProductPhoto(product:TemplateDetails){
     const candidates=(product.previewImages||[]).filter(Boolean);
@@ -542,6 +544,10 @@ export default function ListingFactoryApp() {
     if(activeRecipe&&activeRecipe.id===recipe.id)setActiveRecipe(updated);
     setBundleRecipes(current=>current.map(item=>item.id===recipe.id?updated:item));
     await fetch("/api/product-recipes",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(updated)}).catch(()=>undefined);
+    /* The saved-product tiles read a list fetched once on mount, so without this
+       the card kept saying "No details saved yet" about a product we had just
+       written colors and sizes to. */
+    setSavedRevision(current=>current+1);
   }
   const [rememberingSizes,setRememberingSizes]=useState(false);
   const [sizesRemembered,setSizesRemembered]=useState(false);
@@ -1242,7 +1248,7 @@ export default function ListingFactoryApp() {
             </div>
           </article>
 
-          <div className={`product-step workflow-panel ${workflowStep==="setup"?"active-panel":"hidden-panel"}`}><SavedWorkflow connected={connected||localPreview} templateUrl={template} templateVerified={templateLoaded} loadingTemplate={loadingTemplate} suggestedProductName={templateDetails?[templateDetails.brand,templateDetails.model].filter(Boolean).join(" ").trim()||templateDetails.blueprintTitle||"":""} selectedProductId={activeBundle?`bundle:${activeBundle.id}`:activeRecipe?.id||""} selectedSummary={templateDetails?<div className="template-proof recipe-proof"><div className="product-thumb"><span>YOUR<br/>ART</span></div><div className="template-info"><b>{templateDetails.blueprintTitle}</b><span>{templateDetails.provider} · {variantSummary(summaryAxes(templateDetails,activeRecipe))}</span><span>✓ Product, placement, sizes, and shipping profile imported</span></div><span className="template-badge">{productSelected?"Product selected":"Save this product"}</span></div>:null} verifiedShippingProfileId={Number(templateDetails?.shippingTemplateId)||0} onTemplateUrl={(value) => { templateLoadVersion.current+=1;setLoadingTemplate(false);setTemplate(value);setTemplateDetails(null);setTemplateError(""); }} onUseRecipe={chooseRecipe} onUseBundle={useBundle} onStartNewProduct={startNewProduct} onChangeProduct={changeProduct} onVerifyTemplate={loadTemplateUrl} />
+          <div className={`product-step workflow-panel ${workflowStep==="setup"?"active-panel":"hidden-panel"}`}><SavedWorkflow savedRevision={savedRevision} connected={connected||localPreview} templateUrl={template} templateVerified={templateLoaded} loadingTemplate={loadingTemplate} suggestedProductName={templateDetails?[templateDetails.brand,templateDetails.model].filter(Boolean).join(" ").trim()||templateDetails.blueprintTitle||"":""} selectedProductId={activeBundle?`bundle:${activeBundle.id}`:activeRecipe?.id||""} selectedSummary={templateDetails?<div className="template-proof recipe-proof"><div className="product-thumb"><span>YOUR<br/>ART</span></div><div className="template-info"><b>{templateDetails.blueprintTitle}</b><span>{templateDetails.provider} · {variantSummary(summaryAxes(templateDetails,activeRecipe))}</span><span>✓ Product, placement, sizes, and shipping profile imported</span></div><span className="template-badge">{productSelected?"Product selected":"Save this product"}</span></div>:null} verifiedShippingProfileId={Number(templateDetails?.shippingTemplateId)||0} onTemplateUrl={(value) => { templateLoadVersion.current+=1;setLoadingTemplate(false);setTemplate(value);setTemplateDetails(null);setTemplateError(""); }} onUseRecipe={chooseRecipe} onUseBundle={useBundle} onStartNewProduct={startNewProduct} onChangeProduct={changeProduct} onVerifyTemplate={loadTemplateUrl} />
           {localPreview&&!templateDetails&&<button className="preview-demo-button" onClick={()=>void loadPreviewDemo()}>Load a complete poster demo to review every step</button>}
           {templateError && <p className="field-error recipe-error" role="alert">{templateError}</p>}
           <BatchPreferencesPortal>

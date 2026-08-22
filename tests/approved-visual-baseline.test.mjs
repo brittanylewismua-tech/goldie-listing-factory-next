@@ -1417,3 +1417,27 @@ test("D204: the suggestion button names what it will set", async () => {
   assert.doesNotMatch(code, /Use Printify&rsquo;s \{suggestion\}<\/button>/, "the bare number is gone");
   assert.match(app, /Use Printify&rsquo;s \{suggestion\} \{facet\.name==="colors"\?\(suggestion===1\?"color":"colors"\):\(suggestion===1\?"size":"sizes"\)\}/);
 });
+
+test("D205: establishing a facet refreshes the saved-product tiles", async () => {
+  const app = await readFile(new URL("app/listing-factory-app.tsx", root), "utf8");
+  const tools = await readFile(new URL("app/factory-tools.tsx", root), "utf8");
+
+  /* Live: picking 4 colors and 8 sizes on the hoodie persisted correctly — the
+     API returned defaultColorIds of length 4 and defaultSizeIds of length 8 —
+     while its card above still read "No details saved yet". The data was right
+     and the screen contradicted it, because SavedWorkflow fetches the recipe
+     list once on mount and establish() never told it anything had changed. */
+  assert.match(app, /const \[savedRevision,setSavedRevision\]=useState\(0\);/);
+  assert.match(app, /setSavedRevision\(current=>current\+1\);/, "establish bumps the revision");
+  assert.match(app, /<SavedWorkflow savedRevision=\{savedRevision\}/, "and passes it down");
+
+  // The bump must land inside establish(), after the write.
+  const establish = app.slice(app.indexOf("async function establish("));
+  const body = establish.slice(0, establish.indexOf("\n  }") + 4);
+  assert.match(body, /api\/product-recipes[\s\S]*setSavedRevision/, "bump comes after the POST");
+
+  assert.match(tools, /savedRevision\?: number;/);
+  assert.match(tools, /\}, \[props\.savedRevision\]\);/, "the child reloads when it changes");
+  // Must not refetch on the first render — reload() already runs on mount.
+  assert.match(tools, /if \(firstRevision\.current\) \{ firstRevision\.current = false; return; \}/);
+});

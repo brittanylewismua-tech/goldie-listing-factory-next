@@ -43,6 +43,10 @@ type WorkflowProps = {
   selectedSummary?:ReactNode;
   suggestedProductName?:string;
   verifiedShippingProfileId:number;
+  /* D205 · Incremented by the workflow whenever establishing a facet writes to a
+     recipe, so the saved-product tiles refetch instead of showing what the list
+     looked like on mount. */
+  savedRevision?: number;
   onTemplateUrl: (value: string) => void; onUseRecipe: (recipe: Recipe) => Promise<boolean>;onUseBundle:(bundle:ProductBundle,recipeIds:string[])=>Promise<boolean>; onStartNewProduct: () => boolean; onChangeProduct: () => boolean; onVerifyTemplate: (url: string) => Promise<{shippingTemplateId:string;shippingProfileNeedsSelection?:boolean}|null>;
 };
 
@@ -66,6 +70,15 @@ export function SavedWorkflow(props: WorkflowProps) {
   const reload = () => Promise.all([fetch("/api/product-recipes").then((r) => r.json()),fetch("/api/product-bundles").then(r=>r.json())]).then(([products,groups])=>{setRecipes(products.recipes||[]);setBundles(groups.bundles||[])}).catch(() => undefined);
 
   useEffect(() => { reload(); fetch("/api/keyword-lists").then(r=>r.json()).then(r=>setKeywordLists(r.lists||[])); }, []);
+  /* Establishing colors, sizes, mockups or a keyword bank saves straight to the
+     recipe, but the tiles above were loaded once on mount. Picking 4 colors and
+     8 sizes on the hoodie persisted correctly and its card still read "No
+     details saved yet" — the data was right and the screen contradicted it. */
+  const firstRevision = useRef(true);
+  useEffect(() => {
+    if (firstRevision.current) { firstRevision.current = false; return; }
+    void reload();
+  }, [props.savedRevision]);
   useEffect(()=>setActiveId(props.selectedProductId),[props.selectedProductId]);
   async function save() {
     if(actionLock.current)return;
