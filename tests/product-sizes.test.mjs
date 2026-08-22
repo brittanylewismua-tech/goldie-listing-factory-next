@@ -358,21 +358,13 @@ test("a suggestion is never displayed as a decision — D189/D191", async () => 
   assert.match(clarity, /\.app-shell \.batch-product-rows\{/);
 });
 
-test("the product photo is visible against the card — D188", async () => {
+test("the product photo is visible against the card — D188/D192", async () => {
   const clarity = await read("app/clarity-pass.css");
-  /* The blueprint catalog image is a blank garment on white. Measured: the image
-   * loaded at 2048px and rendered as an empty square, because a white tee on the
-   * card's plum gradient at 52px is invisible. */
-  /* D192: the square looked empty although the image was loading and painting.
-   * `contain` plus 3px padding shrank a pale-on-cream catalog shot inside a 52px
-   * box. Filling the box and lifting contrast makes the garment legible. */
-  /* contain letterboxed the whole catalog frame — mostly empty studio background —
-   * into 52px. A contrast filter fixed one product and blew another out to white,
-   * because the catalog shots have different exposure. cover crops to the garment. */
+  /* Superseded by D192: the fix was never the plate colour. `contain` letterboxed
+   * the whole catalog frame — mostly empty studio background — into 52px, so the
+   * garment was a few pixels tall. cover crops to it. */
   assert.match(clarity, /\.app-shell \.bundle-product-photo\{[^}]*object-fit:cover!important/);
-  assert.match(clarity, /object-position:50% 38%!important/);
-  assert.doesNotMatch(clarity, /\.bundle-product-photo\{[^}]*filter:contrast/);
-  assert.match(clarity, /\.app-shell \.bundle-product-photo\{[^}]*object-fit:contain!important/);
+  assert.doesNotMatch(clarity, /\.bundle-product-photo\{[^}]*object-fit:contain/);
 });
 
 test("a suggestion has exactly one control — D193", async () => {
