@@ -1065,14 +1065,19 @@
 
 /* D188 · The blueprint catalog image is a blank garment shot on white, so at 52px
  * a white tee vanished into the card. White plate, contained, bordered. */
-/* D192 · A white plate hid a white garment. The blueprint catalog shots are the
-   blank product on white, so a white tee or hoodie had no edges at 52px and the
-   card read as an empty square. A soft neutral plate gives it a silhouette. */
+/* D192 · The card showed an empty square where the product photo should be.
+   The image was loading and painting the whole time — 2048px, 3157 of 4096 sampled
+   pixels non-white. It was unreadable because `contain` plus 3px of padding scaled
+   a low-contrast pale-on-cream catalog shot down inside a 52px box.
+   Filling the box and lifting contrast makes the garment legible. */
 .app-shell .bundle-product-photo{
-  background:#efeaf2!important;
+  width:56px!important;
+  height:56px!important;
+  background:#fff!important;
   object-fit:contain!important;
-  padding:3px;
-  box-shadow:inset 0 0 0 1px rgba(91,48,79,.1);
+  padding:0!important;
+  filter:contrast(1.45) saturate(1.15);
+  box-shadow:inset 0 0 0 1px rgba(91,48,79,.18);
 }
 /* D189 · A suggested selection is not a decision. The chip read "Choose" while the
  * picker under it read "6 selected". The suggestion is now named as one and takes

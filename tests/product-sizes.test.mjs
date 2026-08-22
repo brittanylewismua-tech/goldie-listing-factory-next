@@ -363,9 +363,11 @@ test("the product photo is visible against the card — D188", async () => {
   /* The blueprint catalog image is a blank garment on white. Measured: the image
    * loaded at 2048px and rendered as an empty square, because a white tee on the
    * card's plum gradient at 52px is invisible. */
-  /* D192: a white plate hid a white garment — the blueprint shots are the blank
-   * product on white, so a white hoodie had no edges at 52px. */
-  assert.match(clarity, /\.app-shell \.bundle-product-photo\{[^}]*background:#efeaf2!important/);
+  /* D192: the square looked empty although the image was loading and painting.
+   * `contain` plus 3px padding shrank a pale-on-cream catalog shot inside a 52px
+   * box. Filling the box and lifting contrast makes the garment legible. */
+  assert.match(clarity, /\.app-shell \.bundle-product-photo\{[^}]*filter:contrast\(1\.45\)/);
+  assert.match(clarity, /\.app-shell \.bundle-product-photo\{[^}]*padding:0!important/);
   assert.match(clarity, /\.app-shell \.bundle-product-photo\{[^}]*object-fit:contain!important/);
 });
 
