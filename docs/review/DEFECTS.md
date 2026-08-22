@@ -2744,3 +2744,45 @@ scrolling the row brings the chip fully inside it.
 **Guard:** `tests/approved-visual-baseline.test.mjs` — "the 13th tag chip cannot escape its row".
 **Pattern (again):** a fix that is correct for one axis is not automatically correct for the
 other. The broad rule needed horizontal overflow; it used the shorthand and reset both.
+
+## D150 — the main Printify placement button rendered at 9px
+**Where:** Finish · Images + mockups, every listing card.
+**Measured:** `.edit-draft-button` computed font-size **9px**, its `<small>` sub-line 8.5px,
+against a 16px baseline for every other button on the page (the smallest legitimate label
+anywhere else is 11px). Source: `app/theme.css:24`, the original gold-era rule. The lilac
+re-theme (`lilac-theme.css:117`) recoloured this button and never resized it.
+**Fix:** `.app-shell .edit-draft-button{font-size:12.5px!important}`, sub-line 10.5px.
+**Guard:** "the Printify placement button is readable — D150".
+
+## D151 — six buttons were relabelled in CSS over hidden DOM text
+**Pattern:** `font-size:0!important` on the element + `::after{content:"real label"}`.
+Someone renamed buttons by overwriting them in the stylesheet instead of editing the JSX.
+**Instances found:** `.open-all-button` (relabelled **twice**, lines 246 and 1468),
+`.draft-mockups>summary`, `.recipe-card .edit-recipe`, `.recipe-card .delete-recipe`,
+`.top-nav a[href="/usage"]`, `.approved-usage>b`.
+**Measured consequences:**
+- `.draft-mockups>summary` lost its ▶ disclosure marker (`font-size:0` collapses `::marker`),
+  so "Create lifestyle mockups…" read as inert text beside "▶ Choose Printify flatlays".
+  That is exactly why it did not look clickable in the screenshot.
+- DOM text and visible text disagreed completely: the DOM said "Add Your Own Mockups
+  (Optional)" while the screen said "Create lifestyle mockups from your Mockup Library".
+  Accessible name, find-in-page and every text assertion read the hidden string.
+- `.approved-usage-card` was targeted by one of these rules and does not exist in any TSX —
+  dead CSS.
+**Fix:** real labels moved into the TSX; all `font-size:0!important` relabels deleted.
+**Guard:** "no button is relabelled by CSS over hidden DOM text".
+
+## D152 — the bundle's "Edit bundle" button rendered as "Rename"
+**Cause:** `.app-shell .recipe-card .edit-recipe{font-size:0}` +
+`:after{content:"Rename"}` was written for the saved-product card, but the bundle grid
+(`.recipe-grid.unified-bundle-grid`) sits **inside** the same `.step-card.recipe-card`, so the
+bundle's Edit button matched too.
+**Proven, not inferred:** injected a `<button class="edit-recipe">Edit bundle</button>` into the
+live `.unified-bundle-grid` → computed font-size `0px`, `::after` content `"Rename"`.
+**Also caught:** the saved-product button's DOM text was "Rename / reconnect" but it displayed
+as "Rename". Reconnecting a Printify template has no other control on that card, so the only
+route to it was hidden behind a label that did not mention it.
+**Fix:** "Edit" (with `title="Rename this product or reconnect its Printify template"`) and
+"Edit bundle" as real text; `×` delete buttons now read "Delete" in the DOM too.
+**Pattern (again):** a rule written for one card matched a second card nested inside it.
+

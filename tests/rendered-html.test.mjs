@@ -150,7 +150,7 @@ test("uses individual shop-aware Printify editor buttons", async () => {
   assert.match(page, /Doing so may halt your current design uploads/);
   assert.match(page, /setUploadNoticeOpen\(true\)/);
   assert.match(page, /beforeunload/);
-  assert.match(page, /Open all in Printify/);
+  assert.match(page, /Review all listings in Printify/); // D151: real DOM label, was a CSS ::after
   assert.match(page, /drafts\.map/);
   assert.match(page, /Allow pop-ups for this site/);
   assert.match(route, /response\.status === 429/);
@@ -1758,7 +1758,10 @@ test("keeps the saved-product batch page compact and makes permanent settings ed
   assert.match(page,/Description for this batch/);
   assert.match(page,/Save this description as the default/);
   assert.match(page,/else if\(!pricedVariants\.length\)/);
-  assert.match(tools,/Rename \/ reconnect/);
+  /* D152: "Rename / reconnect" was DOM text hidden under a CSS ::after reading
+   * "Rename" — and that same rule also relabelled the bundle's "Edit bundle"
+   * button. The button is now plain "Edit" with the full meaning in its title. */
+  assert.match(tools,/className="edit-recipe" title="Rename this product or reconnect its Printify template"/);
   assert.match(tools,/editingId&&<button[^>]+secondary-action/);
   assert.match(recipes,/const description=String\(body\.description/);
   assert.match(styles,/\.remembered-color-row/);

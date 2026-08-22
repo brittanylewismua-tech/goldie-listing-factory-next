@@ -287,7 +287,12 @@ test("keeps Step 8 controls ordered, separated, and inside the warm Goldie palet
   assert.match(css, /\.app-shell \.post-draft-workspace>\.mockup-next\{[\s\S]*margin:34px auto 16px!important/);
   assert.match(css, /\.app-shell \.publish-live-warning\{[\s\S]*rgba\(239,211,237,\.66\)/);
   assert.match(page, /Recommended photos for \{templateDetails\?\.blueprintTitle/);
-  assert.match(css, /\.post-draft-heading \.open-all-button:after\{content:"Open all listings to review in Printify"/);
+  /* D151: this label used to be a CSS ::after over font-size:0 DOM text.
+   * It now lives in the TSX, so assert it there and assert the hack is gone. */
+  assert.doesNotMatch(css, /\.open-all-button:after/,
+    "The open-all button must not be relabelled in CSS.");
+  const appSource = await readFile(new URL("app/listing-factory-app.tsx", root), "utf8");
+  assert.match(appSource, /Review all listings in Printify/);
   assert.match(css, /\.integrated-mockups \.batch-mockup-button,[\s\S]*width:min\(100%,290px\)!important/);
   assert.match(css, /\.integrated-mockups \.generate-inline\{margin:16px 0 0!important\}/);
 });
@@ -898,4 +903,36 @@ test("the 13th tag chip cannot escape its row and hit the button below — D149"
 
   assert.match(approved, /\.app-shell \.draft-card-top \.tag-row\{[^}]*overflow-y:scroll/,
     "The tag row must keep its scroller so overflowing chips stay inside it.");
+});
+
+test("no button is relabelled by CSS over hidden DOM text — D150/D151/D152", async () => {
+  const approved = await readFile(new URL("app/approved-functional.css", root), "utf8");
+
+  /* The app had six buttons whose visible label came from `font-size:0` on the
+   * element plus a `::after{content:"..."}`. Measured consequences:
+   *   - .draft-mockups>summary lost its ▶ disclosure marker (font-size:0 collapses
+   *     ::marker), so it read as inert text next to "▶ Choose Printify flatlays".
+   *   - .open-all-button carried TWO stacked ::after relabels (lines 246 and 1468).
+   *   - .recipe-card .edit-recipe{content:"Rename"} also matched the BUNDLE card's
+   *     "Edit bundle" button. Proven by injecting that exact button into the live
+   *     .unified-bundle-grid: computed font-size 0px, ::after "Rename".
+   *   - the accessible name, find-in-page and any text assertion all read the
+   *     hidden DOM text, never the label on screen.
+   * Real labels now live in the TSX. */
+  assert.doesNotMatch(approved, /font-size:0!important/,
+    "Relabelling a button via font-size:0 + ::after hides the real DOM text. Put the label in the TSX.");
+});
+
+test("the Printify placement button is readable — D150", async () => {
+  const approved = await readFile(new URL("app/approved-functional.css", root), "utf8");
+  const theme = await readFile(new URL("app/theme.css", root), "utf8");
+
+  /* theme.css:24 is the original gold-era rule: .edit-draft-button{...font-size:9px}.
+   * The lilac re-theme recoloured the button but never resized it, so the main
+   * "Open in Printify to resize or reposition" action rendered at 9px with an
+   * 8.5px sub-line, against a 16px baseline for every other button on the page. */
+  assert.match(theme, /\.edit-draft-button\{[^}]*font-size:9px/,
+    "Guard assumes the stale 9px rule is still in theme.css; update this test if it moved.");
+  assert.match(approved, /\.app-shell \.edit-draft-button\{[^}]*font-size:12\.5px!important/,
+    "The placement button must override theme.css's 9px with a readable size.");
 });
