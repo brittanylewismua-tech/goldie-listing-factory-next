@@ -215,3 +215,24 @@ test("every bundle product is presented identically — D175", async () => {
   /* previewImage had to be exposed; the API never returned a product image. */
   assert.match(route, /previewImage:\(found\.product\.images\|\|\[\]\)\.find\(image=>image\.is_default\)\?\.src/);
 });
+
+test("Edit bundle visibly does something — D176", async () => {
+  const tools = await read("app/factory-tools.tsx");
+
+  /* Two faults, both mine. D169 gated the create/edit form on
+   * !activeId.startsWith("bundle:") along with the grid — so once a bundle was
+   * the selection there was NO way to edit it at all. And opening the form
+   * scrolled nothing: it expands several hundred pixels down, behind the
+   * "Want one batch to cover several products?" summary, so from anywhere but
+   * the bottom of the page the button looked dead.
+   *
+   * The grid stays hidden when a bundle is selected (it was re-offering the
+   * bundle you already picked); the form does not. */
+  assert.doesNotMatch(tools, /\{!activeId\.startsWith\("bundle:"\)&&<details className="bundle-library"/,
+    "The edit form must stay reachable while a bundle is selected.");
+  assert.match(tools, /<details className="bundle-library" open=\{bundleForm\}>/);
+  assert.match(tools, /document\.querySelector\("\.bundle-library"\)\?\.scrollIntoView\(\{block:"start"\}\)/,
+    "Opening the form must bring it into view. Instant — smooth scrolling never fires here (D146).");
+  /* And the header has to say what just happened, or it still reads as inert. */
+  assert.match(tools, /\{bundleForm\?\(editingBundleId\?`Editing \$\{bundleName\|\|"this bundle"\}`:"New product bundle"\)/);
+});
