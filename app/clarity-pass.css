@@ -617,3 +617,27 @@
 .app-shell .printify-photo-expand img{
   background:linear-gradient(145deg,rgba(246,229,248,.72),rgba(238,222,247,.58));
 }
+
+/* D162 · The saved-product tiles are one grid row, all 215px tall, but their
+ * insides were staggered by whichever name wrapped to two lines. Measured with
+ * three products ("Gildan Tee", "Gildan Hoodie", "gildan crewneck"):
+ *   .recipe-use top   480 / 480 / 474   (its height 138 / 138 / 162, so the
+ *                                        taller button overflowed its 161.5px row)
+ *   Edit row top      643 / 643 / 649
+ * so the Choose buttons and the Edit/Delete rows each sat at two different
+ * heights across otherwise identical cards.
+ *
+ * Pin the footer to the bottom, let the button fill the row, and reserve two
+ * lines for every name (line-height is 24px on 16px, so two lines is 3em).
+ * The name is clamped to two lines, so the button carries title={recipe.name}
+ * for anything longer. Measured after: 474 / 474 / 474, 589 / 589 / 589,
+ * 649 / 649 / 649 — every tile identical. */
+.app-shell .recipe-tile{grid-template-rows:1fr auto!important}
+.app-shell .recipe-use{height:100%!important}
+.app-shell .recipe-copy>b:first-child{
+  display:-webkit-box;
+  -webkit-line-clamp:2;
+  -webkit-box-orient:vertical;
+  overflow:hidden;
+  min-height:3em;
+}

@@ -1024,3 +1024,26 @@ test("an unloaded Printify thumbnail looks pending, not missing — D161", async
   assert.match(clarity, /\.app-shell \.printify-photo-expand\{[^}]*background:linear-gradient/,
     "The photo tile needs a pending background so it never reads as empty.");
 });
+
+test("saved-product tiles line up regardless of name length — D162", async () => {
+  const clarity = await readFile(new URL("app/clarity-pass.css", root), "utf8");
+  const tools = await readFile(new URL("app/factory-tools.tsx", root), "utf8");
+
+  /* Measured with three saved products, one of whose names wraps to two lines.
+   * All three tiles were 215px tall and started at y=473, but inside them:
+   *   .recipe-use  top 480 / 480 / 474   height 138 / 138 / 162
+   *   Edit row     top 643 / 643 / 649
+   * The taller button overflowed its 161.5px grid row upward by 12px, so the
+   * Choose buttons and Edit/Delete rows each sat at two different heights.
+   * After: .recipe-use 474/474/474, Choose pill 589/589/589, Edit 649/649/649. */
+  assert.match(clarity, /\.app-shell \.recipe-tile\{grid-template-rows:1fr auto!important\}/,
+    "The tile footer must be pinned so it cannot move with the name.");
+  assert.match(clarity, /\.app-shell \.recipe-use\{height:100%!important\}/,
+    "The button must fill its row rather than overflow it.");
+  assert.match(clarity, /\.app-shell \.recipe-copy>b:first-child\{[^}]*min-height:3em/,
+    "Every name must reserve two lines (24px line-height on 16px = 3em).");
+
+  /* The name is clamped to two lines, so the full name must stay reachable. */
+  assert.match(tools, /className="recipe-use" title=\{recipe\.name\}/);
+  assert.match(tools, /className="recipe-use" title=\{bundle\.name\}/);
+});

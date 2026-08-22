@@ -2939,3 +2939,24 @@ a smaller source would cut ~2MB per open, but that needs a Printify CDN resize p
 which I could not verify, so I did not guess at one.
 **Guard:** "an unloaded Printify thumbnail looks pending, not missing".
 
+## D162 — saved-product tiles staggered by whichever name wrapped
+**Where:** Step 2 · Choose product, the saved-products grid.
+**Measured** with "Gildan Tee", "Gildan Hoodie", "gildan crewneck" (the third wraps to two
+lines). All three tiles were identical — top 473, height 215 — but their insides were not:
+| | Gildan Tee | Gildan Hoodie | gildan crewneck |
+|---|---|---|---|
+| `.recipe-use` top | 480 | 480 | **474** |
+| `.recipe-use` height | 138 | 138 | **162** |
+| Edit row top | 643 | 643 | **649** |
+The tile's grid rows resolve to `161.5px 45px`; the two-line name made its button 162px, so
+the button overflowed its own row **upward** by 12px while the footer dropped 6px. The
+result is three side-by-side cards whose Choose buttons and Edit/Delete rows each sit at two
+different heights.
+**Fix:** `grid-template-rows:1fr auto` pins the footer, `height:100%` makes the button fill
+its row instead of overflowing it, and the name reserves two lines (`min-height:3em` —
+line-height is 24px on a 16px font). The name is clamped to two lines, so the button now
+carries `title={recipe.name}` and the bundle equivalent, keeping longer names reachable.
+**Measured after:** `.recipe-use` 474/474/474, Choose pill 589/589/589, Edit 649/649/649 —
+every tile identical.
+**Guard:** "saved-product tiles line up regardless of name length".
+
