@@ -2312,3 +2312,68 @@ without saving, so the product default is untouched.
 Implementation note worth keeping: `mockupIds` is stored inside the existing
 `pricingJson` blob on `product_recipes`, so no migration was needed and the
 standing rule about not touching `db/` or `drizzle/` held.
+
+---
+
+### D135 · A product bundle cannot be selected at all · **OPEN** · **BLOCKER**
+
+Found by pressure-testing bundles after Brittany added a third saved product.
+D129 (the native-dialog gauntlet) was masking this — once the prompt was gone,
+the real failure was visible underneath.
+
+**Reproduction:** create a bundle of two saved products, click
+"Choose this bundle →".
+
+**Measured, repeatedly:**
+
+| observation | value |
+|---|---|
+| tile label on click | flashes **"Loading bundle…"** |
+| reverts to "2 products · Choose this bundle →" after | **2 ms** |
+| `data-product-selected` | stays **`false`** for 18s+ |
+| rail Designs / Pricing / Finish | **disabled**, reason *"Choose a saved product."* |
+| on-page error message | **none** |
+| dialogs fired (confirm/prompt/alert stubbed and logged) | **none** |
+| network requests | **none** — 2ms is synchronous |
+
+**Not the data.** `/api/product-bundles` returns both recipe ids and both
+resolve in `/api/product-recipes`:
+
+```
+bundle ZZ TEST BUNDLE -> 02f90230… (Gildan Hoodie), e8bc2932… (Gildan Tee)
+```
+
+The tile subtitle correctly reads "Gildan Hoodie · Gildan Tee", and the button
+is not disabled — so `included.length >= 2` at render time.
+
+**Not the product.** Gildan Hoodie selected on its own works normally:
+"Loading Gildan Hoodie…" for ~4s, then `data-product-selected: true`, "✓ Ready".
+
+**Lead.** A 2ms synchronous `false` with no dialog and no request leaves only an
+early return in `useBundle`. The first is:
+
+```js
+if(recipes.length<2){stopWith("This product bundle needs attention.",[…]);return false}
+```
+
+That fits the timing exactly — and note **`stopWith` produced no visible
+message**, so even when it fires the seller sees nothing at all. Two things to
+check: why the `recipes` array reaching `useBundle` is shorter than the
+`included` array the tile rendered from, and why `stopWith` is silent here.
+
+**Impact:** bundles are unusable end to end. Nothing downstream of selection —
+per-product colours, the bundle progress rail, carrying designs across products
+— has ever been exercised, because selection is the first step and it fails.
+
+### D136 · The same bundle renders twice with contradictory state · **OPEN** · **MEDIUM**
+
+The product step shows each bundle in two places:
+
+| location | class | label when selected |
+|---|---|---|
+| top grid, beside products | `.recipe-tile.bundle-as-product` | **"2 products · Choose this bundle →"** |
+| bundle library below | `.bundle-tile.selected` | **"✓ Ready for this batch"** |
+
+The top-grid card has **no selected branch** in its JSX — it always renders the
+call to action — so one card claims the bundle is ready while the other invites
+you to choose it, on the same screen.
