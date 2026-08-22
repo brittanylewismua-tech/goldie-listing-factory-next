@@ -571,7 +571,7 @@ test("Etsy shipping profile names are decoded, not shown as raw entities — D11
   assert.match(page, /function friendlyShippingProfileTitle\(raw\?:string\)\{const title=raw\?decodeProfileTitle\(raw\):raw;/);
 });
 
-test("the Colours section explains that sizes come from Printify — D115", async () => {
+test("the Colours section explains that sizes come from Printify — D123", async () => {
   const page = await readFile(listingFactoryPage, "utf8");
 
   /* Verified live: the setup step has 43 colour toggles and NO size control
@@ -604,7 +604,7 @@ test("shipping profiles are product-aware, searchable, and never hard-filtered �
   assert.match(styles,/\.app-shell \.shipping-profile-search\{/);
 });
 
-test("the product step stays usable after a product is chosen — D117/D119/D120", async () => {
+test("the product step stays usable after a product is chosen — D122/D119/D120", async () => {
   const [tools, page, functional, clarity] = await Promise.all([
     readFile(new URL("app/factory-tools.tsx", root), "utf8"),
     readFile(listingFactoryPage, "utf8"),
@@ -612,7 +612,7 @@ test("the product step stays usable after a product is chosen — D117/D119/D120
     readFile(new URL("app/clarity-pass.css", root), "utf8"),
   ]);
 
-  /* D117 — adding a saved product auto-selects it, and selecting a product hid
+  /* D122 — adding a saved product auto-selects it, and selecting a product hid
    * the bundle block entirely, so the seller had no route to a bundle except
    * unselecting the product they had just added. It is a collapsed <details>;
    * it can stay. */

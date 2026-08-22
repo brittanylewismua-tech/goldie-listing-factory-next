@@ -1493,7 +1493,7 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 
 /* Audit pass 2: the frequent action is primary; setup and destructive actions recede. */
 .app-shell[data-product-selected="true"] .recipe-tile:not(.selected),
-/* D117 · Hiding the bundle block once a product is selected trapped sellers:
+/* D122 · Hiding the bundle block once a product is selected trapped sellers:
  * adding a product auto-selects it, the bundle option vanished, and the only
  * way back was to unselect. It is a collapsed <details> — one summary line —
  * so it can stay visible without adding noise. */

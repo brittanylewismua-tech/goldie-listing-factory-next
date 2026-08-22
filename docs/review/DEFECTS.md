@@ -1939,7 +1939,7 @@ Unknown or unmatched profiles remain reachable; Goldie never changes the saved
 selection automatically. Choosing a profile whose name does not clearly match
 the product shows a review warning before approval.
 
-### D115 · Colours are editable, sizes are invisible and unexplained · **FIXED HERE** · **MEDIUM · UX**
+### D123 · Colours are editable, sizes are invisible and unexplained · **FIXED HERE** · **MEDIUM · UX**
 
 Raised by Brittany: *"we're not telling people to choose what sizes in the
 Printify template, and there is no ability to select sizes in the listing
@@ -1981,7 +1981,7 @@ setting, not shadow it.
 
 ---
 
-### D117 · Choosing a product removes the bundle option · **FIXED HERE** · **BLOCKER**
+### D122 · Choosing a product removes the bundle option · **FIXED HERE** · **BLOCKER**
 
 Brittany: *"I added a crew neck product, and it automatically chose that
 product. And the option to create a batch disappeared."*
