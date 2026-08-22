@@ -22,6 +22,7 @@ import FinalListingReview from "./final-listing-review";
 import ContextHelp from "./context-help";
 import GoldieWordmark from "./goldie-wordmark";
 import { productFamily } from "./product-type-utils";
+import { photoStats, PHOTO_SAMPLE_SIZE } from "./product-photo";
 
 type VisibleBounds={left:number;top:number;right:number;bottom:number};
 
@@ -444,26 +445,28 @@ export default function ListingFactoryApp() {
     if(!photoProbe.current.has(key)){
       photoProbe.current.add(key);
       void (async()=>{
-        let winner=candidates[0],bestSpread=-1;
-        for(const src of candidates.slice(0,4)){
-          const spread=await new Promise<number>(resolve=>{
+        /* D200 · Score every candidate on subject isolation, not on how much of
+           the frame it fills. See app/product-photo.ts for the measurements —
+           the old "most ink wins" rule selected a macro shot of a folded corner
+           and ranked the only usable flat lay last. All six are sampled now,
+           not four: the winning tee shot was candidate #2 but the hoodie's was
+           #4, so a slice(0,4) would have missed it. */
+        let winner=candidates[0],bestScore=-Infinity;
+        for(const src of candidates.slice(0,6)){
+          const score=await new Promise<number>(resolve=>{
             const image=document.createElement("img"); image.crossOrigin="anonymous";
             image.onload=()=>{try{
-              const canvas=document.createElement("canvas"); canvas.width=32; canvas.height=32;
+              const size=PHOTO_SAMPLE_SIZE;
+              const canvas=document.createElement("canvas"); canvas.width=size; canvas.height=size;
               const ctx=canvas.getContext("2d",{willReadFrequently:true});
-              if(!ctx)return resolve(-1);
-              ctx.drawImage(image,0,0,32,32);
-              const data=ctx.getImageData(0,0,32,32).data;
-              /* Count how much of the frame is NOT studio background. A white
-                 garment on white scores near zero however it is cropped. */
-              let ink=0;
-              for(let i=0;i<data.length;i+=4){const v=(data[i]+data[i+1]+data[i+2])/3;if(v<225)ink++;}
-              resolve(ink);
-            }catch{resolve(-1)}};
-            image.onerror=()=>resolve(-1);
+              if(!ctx)return resolve(-Infinity);
+              ctx.drawImage(image,0,0,size,size);
+              resolve(photoStats(ctx.getImageData(0,0,size,size).data,size).score);
+            }catch{resolve(-Infinity)}};
+            image.onerror=()=>resolve(-Infinity);
             image.src=src;
           });
-          if(spread>bestSpread){bestSpread=spread;winner=src}
+          if(score>bestScore){bestScore=score;winner=src}
         }
         setBestPhoto(current=>({...current,[key]:winner}));
       })();

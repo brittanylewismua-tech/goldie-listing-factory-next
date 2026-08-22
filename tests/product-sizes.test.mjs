@@ -394,7 +394,14 @@ test("the product photo picks the catalog shot that actually shows the garment â
    * scores near zero and loses. */
   assert.match(route, /previewImages:\(blueprint\.images\|\|\[\]\)\.slice\(0,6\)/);
   assert.match(app, /function pickProductPhoto\(product:TemplateDetails\)/);
-  assert.match(app, /if\(v<225\)ink\+\+/, "Score by how much of the frame is not studio background.");
+  /* D200 retires the D194 metric. "Most non-background pixels" rewards whatever
+   * fills the frame, and on the live tee that was a macro shot of a folded
+   * corner (99% ink) while the only usable flat lay ranked last (64%). Scoring
+   * moved to app/product-photo.ts and is covered by tests/product-photo.test.mjs;
+   * what remains asserted here is that the client still samples rather than
+   * trusting index 0. */
+  assert.doesNotMatch(app, /if\(v<225\)ink\+\+/, "the inverted D194 metric is gone");
+  assert.match(app, /photoStats\(ctx\.getImageData/, "scoring runs through the shared module");
   assert.match(app, /if\(candidates\.length<2\)return product\.previewImage/,
     "One candidate is not a choice â€” do not probe.");
   /* next/image shadows the global Image constructor in this file. */
