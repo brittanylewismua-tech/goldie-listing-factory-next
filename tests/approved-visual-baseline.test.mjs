@@ -580,8 +580,12 @@ test("Etsy shipping profile names are decoded, not shown as raw entities — D11
    * they were printed straight into an <option>, so the seller reads the raw
    * entity instead of an apostrophe. */
   assert.match(page, /function decodeProfileTitle\(title:string\)\{/);
-  assert.match(page, /<option key=\{profile\.id\} value=\{profile\.id\}>\{decodeProfileTitle\(profile\.title\)\}<\/option>/,
+  /* D209 moved the shipping select into the readiness card, where options are
+     built by shippingProfileOptionLabel. The decode requirement is unchanged —
+     it just lives one function along, and now carries the price too. */
+  assert.match(page, /function shippingProfileOptionLabel\(profile:EtsyShippingProfile\)\{return`\$\{decodeProfileTitle\(profile\.title\)\}/,
     "Profile options must decode the title before rendering.");
+  assert.match(page, /<option key=\{profile\.id\} value=\{profile\.id\}>\{shippingProfileOptionLabel\(profile\)\}<\/option>/);
   assert.match(page, /function friendlyShippingProfileTitle\(raw\?:string\)\{const title=raw\?decodeProfileTitle\(raw\):raw;/);
 });
 

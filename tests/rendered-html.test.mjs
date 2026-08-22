@@ -1766,7 +1766,11 @@ test("keeps the saved-product batch page compact and makes permanent settings ed
   assert.match(page,/remembered-color-row/);
   assert.match(page,/Change colors/);
   assert.match(page,/product-mockup-scenes/);
-  assert.match(page,/Shipping profile for this batch/);
+  /* D209: shipping is no longer a batch-level control. It opens in the
+     readiness card, labelled with the product it belongs to, because in a
+     bundle "for this batch" was a single product's value wearing the batch's
+     name. */
+  assert.match(page,/aria-label=\{`Shipping profile for \$\{recipe\.name\}`\}/);
   assert.match(page,/Description for this batch/);
   assert.match(page,/Save this description as the default/);
   assert.match(page,/else if\(!pricedVariants\.length\)/);

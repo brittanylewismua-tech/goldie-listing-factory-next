@@ -482,6 +482,31 @@ test("D209: a row never offers to Close a panel it cannot open", async () => {
   /* The open facet defaults to the first unanswered question. On the hoodie
    * that was "shipping", which never opens in the card — so the button read
    * "Close", and clicking it scrolled to the bottom of the page. */
-  assert.match(app, /\{inCard&&open===facet\.name\?"Close":needed\?"Choose":"Change"\}/);
+  /* D210 goes further: a row that navigates somewhere else says so. Etsy
+     details is the only row left outside the card, and "Change" promised
+     editing in place before throwing the seller 1,487px down the page. */
+  assert.match(app, /\{inCard\?\(open===facet\.name\?"Close":needed\?"Choose":"Change"\):"Open settings"\}/);
   assert.doesNotMatch(app, /\{open===facet\.name\?"Close":needed\?"Choose":"Change"\}/);
+});
+
+test("D210: profit and shipping exist in exactly one place", async () => {
+  const app = await read("app/listing-factory-app.tsx");
+  const block = app.slice(app.indexOf("everything-else-body"), app.indexOf("</details>", app.indexOf("everything-else-body")));
+
+  /* D209 put profit and shipping in the readiness card but left the originals
+   * in the legacy settings block, so two controls wrote the same value — and
+   * the block's copies read activeRecipe, meaning in a bundle they edited a
+   * different product than the row the seller came from. */
+  assert.doesNotMatch(block, /<b>Profit goal<\/b>/, "profit lives in the card only");
+  assert.doesNotMatch(block, /<b>Shipping profile<\/b>/, "shipping lives in the card only");
+  assert.doesNotMatch(block, /Shipping profile for this batch/);
+
+  // What legitimately remains there.
+  assert.match(block, /<b>Product description<\/b>/);
+  assert.match(block, /<b>Etsy details<\/b>/);
+
+  // Landing 1,487px away needs a signal it is the thing you clicked.
+  assert.match(app, /block\.classList\.add\("just-opened"\)/);
+  const css = await read("app/clarity-pass.css");
+  assert.match(css, /\.app-shell \.everything-else\.just-opened\{/);
 });

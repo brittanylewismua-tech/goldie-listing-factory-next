@@ -1318,3 +1318,22 @@
 .app-shell .batch-product-rows .row-panel small{
   font-size:11px; color:#6b4a66;
 }
+
+/* D210 · Etsy details is the one row that still lives outside the card, so its
+ * control now says "Open settings" instead of "Change" — measured, that click
+ * scrolls 1,487px and leaves the row you clicked 398px above the viewport, and
+ * a button labelled "Change" promises editing in place. It also flashes the
+ * block it lands on, because arriving that far from the thing you clicked with
+ * no signal is what made the whole section look random.
+ *
+ * Profit and Shipping were removed from that block entirely in D209 — they open
+ * in the card now, and leaving them in both places meant two controls writing
+ * the same value, one of them scoped to the wrong product in a bundle. */
+.app-shell .everything-else.just-opened{
+  animation:goldie-just-opened 1.6s ease-out 1;
+  border-radius:16px;
+}
+@keyframes goldie-just-opened{
+  0%   { box-shadow:0 0 0 3px rgba(183,119,176,.55); }
+  100% { box-shadow:0 0 0 3px rgba(183,119,176,0); }
+}
