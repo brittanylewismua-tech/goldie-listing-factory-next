@@ -819,5 +819,8 @@ test("tile CTAs size to their label, not the column — D143", async () => {
    * selection rendered as a pale full-width bar that reads as disabled. */
   assert.match(clarity, /:is\(\.recipe-use,\.bundle-use\) em\{[\s\S]*width:fit-content!important/,
     "The CTA must size to its label so it cannot dominate the post-selection layout.");
-  assert.doesNotMatch(clarity, /:is\(\.recipe-use,\.bundle-use\) em\{[^}]*width:100%!important/);
+  /* Careful: "max-width:100%" contains "width:100%". Anchor on the property
+   * start so the guard checks the real declaration, not a substring. */
+  assert.doesNotMatch(clarity, /:is\(\.recipe-use,\.bundle-use\) em\{[^}]*[;{]\s*width:100%!important/,
+    "The CTA must not stretch to its column again.");
 });
