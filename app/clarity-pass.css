@@ -553,9 +553,21 @@
   border:1px solid rgba(91,48,79,.14)!important;
   border-radius:12px!important;
 }
+/* D155 · The two readiness ticks sat directly under the five .final-checklist
+ * ticks in the same 642px column, but in a different type system: centred,
+ * 12px/750, vs. left-aligned 11px/400. Nine "everything is fine" lines in one
+ * column in two styles. Match the checklist so they read as one list; the
+ * .needs-review state below keeps its own louder treatment on purpose. */
+.app-shell .final-safety-readiness>span{
+  text-align:left!important;
+  font-size:11px!important;
+  line-height:1.45!important;
+}
 .app-shell .final-safety-readiness>span.ready{
-  background:rgba(255,255,255,.42)!important;
-  color:rgba(99,67,94,.92)!important;
+  background:linear-gradient(145deg,rgba(252,244,254,.68),rgba(246,229,248,.54))!important;
+  border-color:rgba(139,89,137,.22)!important;
+  color:#63435e!important;
+  font-weight:400!important;
 }
 .app-shell .final-safety-readiness>span.needs-review{
   border-color:rgba(157,80,130,.34)!important;
@@ -574,4 +586,18 @@
   background:linear-gradient(155deg,#efe6ef,#f7f1f6)!important;
   object-fit:contain!important;
   padding:3px!important;
+}
+
+/* D156 · The Publish screen showed THREE success languages at once: plum ticks
+ * (.final-checklist, .final-safety-readiness), a green banner
+ * (.step-success-banner, text #245d3b, ✓ circle #3f9a63) and green chips
+ * (.ready — #34704c text, #e7f5ea/#286340 chip) left over from globals.css.
+ * DESIGN_SYSTEM.md's frozen palette contains no green at all, and states the
+ * signature gradient is "reserved for ... completion moments". So the banner's
+ * tick now uses the same gradient as the rail's completed step, and the chips
+ * use the plum the rest of the screen already uses. */
+.app-shell .ready{color:#63435e!important}
+.app-shell .final-design-group>summary em.ready{
+  background:linear-gradient(145deg,rgba(252,244,254,.78),rgba(246,229,248,.62))!important;
+  color:#63435e!important;
 }

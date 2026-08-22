@@ -955,3 +955,27 @@ test("the publish checklist's needs-review chip is plum, not gold — D153", asy
   assert.match(approved, /\.app-shell \.final-checklist \.content-review\{[^}]*color:#8a3f66!important/,
     "The needs-review chip must use the app's plum 'needs attention' colour.");
 });
+
+test("the Publish screen uses one success language, not three — D155/D156", async () => {
+  const approved = await readFile(new URL("app/approved-functional.css", root), "utf8");
+  const clarity = await readFile(new URL("app/clarity-pass.css", root), "utf8");
+
+  /* Measured on the Publish phase, all three listings ready:
+   *   .final-checklist span        left-aligned 11px/400, plum #63435e   (5 rows)
+   *   .final-safety-readiness .ready CENTRED 12px/750                     (2 rows)
+   *   .step-success-banner         green text #245d3b, ✓ circle #3f9a63
+   *   em.ready / .ready            green #286340 on #e7f5ea, #34704c
+   * Nine "everything is fine" lines, three visual systems, one screen.
+   *
+   * DESIGN_SYSTEM.md's frozen palette contains no green, and reserves the
+   * signature gradient for "completion moments" — so the banner tick now uses the
+   * same gradient as the rail's completed step. */
+  assert.doesNotMatch(approved, /#245d3b|#3f9a63|#47745a/,
+    "The success banner must not use the old green palette.");
+  assert.match(approved, /\.app-shell \.step-success-banner>span\{[^}]*background:linear-gradient\(145deg,#e8b7e1,#c990d0\)/,
+    "The banner tick must use the app's completion gradient.");
+  assert.match(clarity, /\.app-shell \.ready\{color:#63435e!important\}/,
+    "Ready chips must use the plum, not green.");
+  assert.match(clarity, /\.app-shell \.final-safety-readiness>span\{[^}]*text-align:left!important/,
+    "Readiness rows must match the checklist rows they sit under.");
+});

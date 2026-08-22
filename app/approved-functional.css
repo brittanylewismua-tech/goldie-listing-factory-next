@@ -1324,11 +1324,11 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
   width:min(760px,100%);
   margin:0 auto 16px;
   padding:13px 16px;
-  border:1px solid rgba(47,122,78,.34);
+  border:1px solid rgba(139,89,137,.28);
   border-radius:14px;
-  background:linear-gradient(115deg,rgba(237,250,241,.94),rgba(247,253,248,.84));
-  color:#245d3b;
-  box-shadow:0 8px 22px rgba(39,105,66,.08);
+  background:linear-gradient(115deg,rgba(252,244,254,.94),rgba(248,238,250,.84));
+  color:#5b304f;
+  box-shadow:0 8px 22px rgba(74,42,62,.08);
 }
 .app-shell .step-success-banner>span{
   display:grid;
@@ -1337,14 +1337,14 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
   width:30px;
   height:30px;
   border-radius:50%;
-  background:#3f9a63;
+  background:linear-gradient(145deg,#e8b7e1,#c990d0);
   color:#fff;
   font-size:13px;
   font-weight:900;
 }
 .app-shell .step-success-banner>div{display:grid;gap:2px;min-width:0}
 .app-shell .step-success-banner b{font-size:12px;line-height:1.25}
-.app-shell .step-success-banner small{color:#47745a;font-size:10px;line-height:1.4}
+.app-shell .step-success-banner small{color:#80677a;font-size:10px;line-height:1.4}
 
 /* Keep the Step 6 batch count readable as one compact badge. */
 .app-shell .finish-mode .editor-heading>span{

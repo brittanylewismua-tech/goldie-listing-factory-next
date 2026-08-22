@@ -2827,3 +2827,37 @@ work on a step that was ready the whole time.
 **Guard:** `tests/workflow-traversal.test.mjs` — "an open step never claims you must
 complete the prior one".
 
+## D155 — the Publish checklist was nine "all fine" rows in two type systems
+**Measured** on Finish · Review + publish, all three listings ready. One 642px column:
+- `.final-checklist span` × 5 — `text-align:start`, 11px, weight 400, lavender chip
+- `.final-safety-readiness>span.ready` × 2 — **centred**, 12px, weight **750**, white chip
+
+Five left-aligned rows followed by two centred bolder ones, for no reason a seller can see.
+(Two further `.final-checklist` rows are `display:none` — they duplicate the readiness rows
+verbatim; hidden in CSS rather than removed.)
+**Fix:** the readiness rows now take the checklist's alignment, size and weight. The
+`.needs-review` variant keeps its louder plum treatment on purpose — a warning must not
+look like a tick.
+**Verified live:** all 7 visible rows now report `642px | 11px | 400 | rgb(99,67,94)`.
+
+## D156 — three different success languages on the Publish screen
+**Measured**, on one screen:
+| element | treatment |
+|---|---|
+| `.final-checklist` / `.final-safety-readiness` ticks | plum `#63435e` |
+| `.step-success-banner` | green text `#245d3b`, ✓ circle `#3f9a63`, green border/shadow |
+| `em.ready` chip, `.ready` text | green `#286340` on `#e7f5ea`, `#34704c` |
+**Why this is a defect, not taste:** `DESIGN_SYSTEM.md` is the frozen baseline and its palette
+contains **no green whatsoever**. It also states the signature gradient is "reserved for
+primary actions, active navigation, the current step, selected cards, and completion
+moments", and that changes "must not introduce a second version of an existing component".
+The green is gold-era residue in `globals.css` that the lilac re-theme never reached.
+**Fix:** banner recoloured to the plum surface; its tick now uses
+`linear-gradient(145deg,#e8b7e1,#c990d0)` — the exact gradient the rail's completed step
+uses. `.ready` chips take the plum.
+**Verified live:** a full-page scan for green foreground/background returned 7 elements
+before and **0** after.
+**Guard:** "the Publish screen uses one success language, not three". One existing test
+pinned the green border hex; updated — its point is that the banner is styled, not that it
+is green.
+

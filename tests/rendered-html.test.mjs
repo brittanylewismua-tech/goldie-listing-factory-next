@@ -1268,7 +1268,9 @@ test("shows accurate completion feedback above each next step card", async () =>
   assert.match(page, /Listing photos complete/);
   assert.doesNotMatch(page, /fileNotice&&workflowStep!=="designs"/);
   assert.match(styles, /\.app-shell \.step-success-banner\{/);
-  assert.match(styles, /border:1px solid rgba\(47,122,78,\.34\)/);
+  /* D156 recoloured this from green to the app palette; the point of this test is
+   * that the banner exists and is styled, not that it is green. */
+  assert.match(styles, /border:1px solid rgba\(139,89,137,\.28\)/);
 });
 
 test("supports whole-number pricing, unclipped profit columns, and optional title caps", async () => {
