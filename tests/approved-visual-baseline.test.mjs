@@ -824,3 +824,21 @@ test("tile CTAs size to their label, not the column — D143", async () => {
   assert.doesNotMatch(clarity, /:is\(\.recipe-use,\.bundle-use\) em\{[^}]*[;{]\s*width:100%!important/,
     "The CTA must not stretch to its column again.");
 });
+
+test("the chosen-product confirmation sits with the products, not inside the bundles — D144", async () => {
+  const tools = await readFile(new URL("app/factory-tools.tsx", root), "utf8");
+
+  /* Seen while scrolling the real page: the order ran
+   *   saved products → SAVED PRODUCT BUNDLE list → "PRODUCT SELECTED" summary
+   *   → "Want one batch to cover several products?" prompt → designs
+   * so the confirmation of the product you just chose was wedged between the
+   * two halves of the bundle section. Bundle content either side of an
+   * unrelated confirmation is the D12 "sandwiched mid-flow" complaint again. */
+  const summary = tools.indexOf("{activeId&&props.selectedSummary}");
+  const bundles = tools.indexOf('{bundles.length>0&&<><div className="recipe-library-head bundle-card-heading"');
+  const bundleLibrary = tools.indexOf('<details className="bundle-library"');
+  assert.ok(summary > 0 && bundles > 0 && bundleLibrary > 0);
+  assert.ok(summary < bundles,
+    "The chosen-product confirmation must render before the bundle list, not between the bundle list and the bundle prompt.");
+  assert.ok(bundles < bundleLibrary);
+});

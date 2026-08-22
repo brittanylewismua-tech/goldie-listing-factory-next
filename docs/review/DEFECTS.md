@@ -2586,3 +2586,27 @@ three-column: still fits.
 handlers but never asks *what does this look like once state changes*. The
 inversion only exists in the post-selection layout, which no measurement I ran
 had rendered and looked at.
+
+### D144 · The chosen-product confirmation was wedged inside the bundle section · **FIXED HERE** · **MEDIUM · UX**
+
+Seen by scrolling the product step with a wheel and reading the screen. The
+order was:
+
+1. `3 SAVED PRODUCTS` — the product cards
+2. `1 SAVED PRODUCT BUNDLE` — the bundle cards
+3. **`Unisex Heavy Cotton Tee · SwiftPOD · 20 selected variants · PRODUCT SELECTED`**
+4. `Want one batch to cover several products?` — the bundle prompt
+5. `Drop your designs here`
+
+So the confirmation of the product she had just chosen sat **between the two
+halves of the bundle section**, and the bundle prompt appeared *after* the
+bundle list it introduces.
+
+This is the D12 / P9 complaint — "the bundle row is sandwiched mid-flow" — in a
+new arrangement: now it is the bundle section that is split, by something
+unrelated to it.
+
+**Fixed:** `{activeId&&props.selectedSummary}` now renders directly beneath the
+saved-product grid, so choosing a product confirms itself where the choice was
+made. Bundle list and bundle prompt are contiguous again. Guarded by a test that
+asserts the source order.
