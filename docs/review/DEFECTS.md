@@ -2724,3 +2724,23 @@ matches this design"* appears above a listing that has a complete 139-character
 title. That reads oddly but is correct and is the entire point of D76 — the
 title is built from real bank phrases, none of which describe the SCOTTSDALE
 artwork. Leaving as is.
+
+## D149 — the 13th tag chip painted on top of the "Open in Printify" button
+**Where:** Finish · Images + mockups, any listing whose tags fill all 13 slots.
+**Found by:** real-user pass (screenshot showed the button overlapping chips), then measured.
+**Measured before:** `.draft-card-top .tag-row` clientHeight 80, scrollHeight 118, computed
+`overflow-y: visible`. Chip "mermaid bachelorette" occupied 269–301; `.edit-draft-button`
+top 280 — the chip painted over the button.
+**Cause:** `.app-shell .draft-card-top .tag-row` (approved-functional.css:133) sets
+`max-height:82px; overflow-y:scroll` with a painted scrollbar. A later, broader rule at
+line 1470, `.app-shell .draft-card .tag-row{...overflow:visible!important...}`, was added to
+stop chips being clipped horizontally and took the vertical scroll down with it — the
+`max-height` still applied, so the box stayed 80px while its content escaped.
+**Fix:** dropped `overflow:visible!important` from the broad rule; kept `display:flex`,
+`max-width`, `flex-wrap`.
+**Measured after:** computed `overflow-y: scroll`, row bottom 264, button top 280, 16px gap.
+`elementFromPoint` over the chip returns the card, not the chip (clipped, not painted), and
+scrolling the row brings the chip fully inside it.
+**Guard:** `tests/approved-visual-baseline.test.mjs` — "the 13th tag chip cannot escape its row".
+**Pattern (again):** a fix that is correct for one axis is not automatically correct for the
+other. The broad rule needed horizontal overflow; it used the shorthand and reset both.

@@ -1467,7 +1467,7 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .app-shell .post-draft-heading .open-all-button{border:0!important;background:transparent!important;color:#68445f!important;box-shadow:none!important;text-decoration:underline!important;text-underline-offset:3px}
 .app-shell .post-draft-heading .open-all-button:after{content:"Review all listings in Printify ↗"!important}
 .app-shell .batch-size-guide>button{border:1px solid rgba(91,48,79,.2)!important;background:rgba(255,255,255,.7)!important;color:#5b304f!important;box-shadow:none!important}
-.app-shell .draft-card .tag-row{display:flex!important;max-width:100%!important;overflow:visible!important;flex-wrap:wrap!important}
+.app-shell .draft-card .tag-row{display:flex!important;max-width:100%!important;flex-wrap:wrap!important}
 .app-shell .draft-card .tag-row span{max-width:100%!important;overflow-wrap:anywhere!important}
 .app-shell .batch-size-guide .mini-label,.app-shell .final-listing-review-heading .mini-label{display:none!important}
 .app-shell .summary-list>div:has(>span:first-child){min-width:0}

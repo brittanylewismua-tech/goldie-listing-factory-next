@@ -875,3 +875,27 @@ test("nothing in the app relies on smooth scrolling — D146", async () => {
       `${file} uses smooth scrolling, which never fires in this app. Scroll instantly.`);
   }
 });
+
+test("the 13th tag chip cannot escape its row and hit the button below — D149", async () => {
+  const approved = await readFile(new URL("app/approved-functional.css", root), "utf8");
+
+  /* .draft-card-top .tag-row is deliberately a scroller: max-height 82px, a
+   * painted scrollbar thumb, scrollbar-gutter:stable. A later, broader rule
+   * (.app-shell .draft-card .tag-row) added overflow:visible!important to stop
+   * chips being clipped horizontally, and took the vertical scroll down with it.
+   *
+   * Measured on a 13-tag listing at 1440 wide, before:
+   *   row clientHeight 80, scrollHeight 118, computed overflow-y "visible"
+   *   chip "mermaid bachelorette" 269-301, .edit-draft-button top 280
+   *   -> the chip painted on top of the button.
+   * After: computed overflow-y "scroll", row bottom 264, button top 280,
+   * 16px gap, chip clipped (elementFromPoint returns the card, not the chip)
+   * and reachable by scrolling the row. */
+  const broadRule = approved.match(/^\.app-shell \.draft-card \.tag-row\{.*$/m);
+  assert.ok(broadRule, "The .draft-card .tag-row rule should still exist.");
+  assert.doesNotMatch(broadRule[0], /overflow(-y)?:\s*visible/,
+    "This rule must not re-enable vertical overflow — the tag row is a scroller.");
+
+  assert.match(approved, /\.app-shell \.draft-card-top \.tag-row\{[^}]*overflow-y:scroll/,
+    "The tag row must keep its scroller so overflowing chips stay inside it.");
+});
