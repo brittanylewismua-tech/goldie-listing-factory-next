@@ -188,42 +188,50 @@ test("the size block strip lives in the layer that wins — D171", async () => {
   assert.match(clarity, /\.app-shell \.saved-product-batch-page \.product-size-selector,[^{]*\{[^}]*background:transparent!important/);
 });
 
-test("every bundle product is presented identically — D175", async () => {
+test("one card renders a single product and every bundle member — D182", async () => {
   const app = await read("app/listing-factory-app.tsx");
-  const route = await read("app/api/printify/route.ts");
 
-  /* The bundle screen reused the single-product setup wholesale: bundleRecipes[0]
-   * was promoted into the main slot (banner, Colours, Sizes, Mockups) purely
-   * because it was index 0, and every other member was pushed into a section
-   * called "Other products in this bundle" that had been built for colours only.
-   * Two formats for the same thing on one screen, with an arbitrary favourite.
+  /* The batch page was the saved-product SETUP page, reused. bundleRecipes[0] got
+   * promoted into a main slot and the rest went into an "other products" section.
+   * Now there is one card component and one map: a single product is a list of
+   * one, a bundle is a list of N, and nothing is promoted.
    *
-   * Now: no member is promoted, and all of them render from one map as collapsed
-   * rows carrying the product photo, the seller's name, the real Printify product
-   * name, and a summary of what is set. */
-  assert.match(app, /\{!\(activeBundle&&bundleRecipes\.length>1\)&&<div className="batch-default-block color-default-block">/,
-    "The promoted colour/size block must not render while a bundle is running.");
-  assert.match(app, /\{bundleRecipes\.map\(\(recipe,index\)=>\{const isActive=index===bundleIndex;/,
-    "Every member, not slice(1), and the active one is just the one that is current.");
-  assert.match(app, /className="bundle-product-photo" src=\{product\.previewImage\}/,
-    "Each row shows what the product actually is.");
-  /* The product being worked on stays open; the rest collapse. With bundleIndex
-   * at 0 on arrival that means the first product is expanded, and the open
-   * section follows the run as it advances. */
-  assert.match(app, /key=\{recipe\.id\} open=\{isActive\}>/);
-  assert.match(app, /<b>\{recipe\.name\}<\/b><small>\{product\.blueprintTitle\}<\/small>/,
-    "The seller's name for it, and the real Printify product beneath.");
-  assert.doesNotMatch(app, /OTHER PRODUCTS IN THIS BUNDLE/,
-    "There is no 'other' any more — they are all the same.");
+   * Batch is a feature. The single-product path is the primary one and uses the
+   * identical component. */
+  assert.match(app, /\{\(activeBundle&&bundleRecipes\.length>1\?bundleRecipes:\(activeRecipe\?\[activeRecipe\]:\[\]\)\)\.map\(\(recipe,index\)=>\{/,
+    "One map covers both paths.");
+  assert.match(app, /className=\{`batch-product-card \$\{ready\.established\?"is-ready":"needs-setup"\}`\}/,
+    "The card has two states, driven by computed readiness.");
+  assert.match(app, /const ready=readinessFor\(product,recipe\)/);
+  assert.doesNotMatch(app, /OTHER PRODUCTS IN THIS BUNDLE/);
+  assert.doesNotMatch(app, /className="bundle-color-selectors"/,
+    "The afterthought section is gone.");
 
-  /* previewImage had to be exposed; the API never returned a product image.
-   * It must come from the BLUEPRINT catalog, not the seller's own product: the
-   * product's images are its Printify mockups, which carry whatever placeholder
-   * artwork is in the template — so the card showed one of the seller's designs
-   * on a product they were not working on. The blueprint image is the blank garment. */
-  assert.match(route, /previewImage:\(blueprint\.images\|\|\[\]\)\[0\]\|\|""/);
-  assert.doesNotMatch(route, /previewImage:\(found\.product\.images/,
-    "The seller's own product mockups carry their placeholder design.");
+  /* Readiness is computed, never read from the flag that reports true for empty
+   * recipes. */
+  assert.match(app, /function readinessFor\(product:TemplateDetails,recipe:Recipe\|null\):Readiness/);
+});
+
+test("every setting a batch needs is a facet on the card — D182", async () => {
+  const app = await read("app/listing-factory-app.tsx");
+
+  /* Colours, sizes, mockups and the keyword bank were spread across a batch-level
+   * colour block, a batch-level mockup picker, a "Saved for this product"
+   * disclosure and a separate keyword prompt — four places, some of them
+   * batch-level for settings that are per-product. All four are chips on the card,
+   * and only the ones that still need an answer open a control. */
+  for (const facet of ["colours", "sizes", "mockups", "keywords"])
+    assert.match(app, new RegExp(`open==="${facet}"&&`), `${facet} must open from the card`);
+  assert.doesNotMatch(app, /className="saved-settings-summary"/,
+    "The summary chips duplicated the card's chips.");
+  assert.doesNotMatch(app, /className="keyword-bank-required"/,
+    "The keyword prompt was a third place saying what the chip says.");
+
+  /* Choosing something in a batch IS establishing the product, so it persists
+   * immediately rather than behind a separate save-as-default button. */
+  assert.match(app, /async function establish\(recipe:Recipe,change:Partial<Recipe>\)/);
+  assert.match(app, /void establish\(recipe,\{defaultColorIds:ids\}\)/);
+  assert.match(app, /void establish\(recipe,\{keywordListId:id\}\)/);
 });
 
 test("Edit bundle visibly does something — D176", async () => {
@@ -265,25 +273,7 @@ test("the setup screen does not announce itself twice — D177", async () => {
     "First-run guidance is the only case that earns a banner.");
 });
 
-test("mockups and keyword banks are per product in a bundle — D180", async () => {
-  const app = await read("app/listing-factory-app.tsx");
 
-  /* A bundle runs several different product types. The setup screen offered ONE
-   * mockup set and ONE keyword bank for the whole batch. Mockup sets are filtered
-   * by product type (productAcceptsMockup), so the list was narrowed to whichever
-   * product happened to be active and that set was then applied to all of them —
-   * a t-shirt set on a hoodie and a sweatshirt. The keyword bank has the same
-   * problem: three products rarely share one set of search terms.
-   *
-   * Both are already per-product on the saved recipe (defaultMockupTheme/mockupIds,
-   * keywordListId); only the UI was batch-level. */
-  assert.match(app, /\{templateDetails&&productSelected&&!\(activeBundle&&bundleRecipes\.length>1\)&&<MockupSetSelector/,
-    "The batch-level mockup picker must not render for a bundle.");
-  assert.match(app, /<MockupSetSelector productName=\{product\.blueprintTitle\}/,
-    "Each product filters mockup sets by its own product type.");
-  assert.match(app, /className="bundle-product-keywords"/,
-    "Each product picks its own keyword bank.");
-});
 
 test("every product in a bundle needs its own keyword bank before continuing — D181", async () => {
   const app = await read("app/listing-factory-app.tsx");

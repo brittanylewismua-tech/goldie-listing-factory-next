@@ -948,3 +948,82 @@
 .app-shell .bundle-product-keywords>div:first-child{display:grid;gap:2px}
 .app-shell .bundle-product-keywords b{color:#4c293f;font-size:13px}
 .app-shell .bundle-product-keywords span{color:#75576b;font-size:11px}
+
+/* D182 · The batch page is a readiness check, not a builder. One card per
+ * product: photo, the seller's name for it, the real Printify product, a state
+ * chip, and one chip per setting. A settled setting is a quiet fact; only a
+ * setting that still needs an answer is a control. */
+.app-shell .batch-products{display:grid;gap:12px;width:100%}
+.app-shell .batch-product-card{
+  border:1px solid rgba(91,48,79,.16);
+  border-radius:16px;
+  background:rgba(255,255,255,.5);
+  overflow:hidden;
+}
+.app-shell .batch-product-card.needs-setup{border-color:rgba(157,80,130,.4);background:#fdf6fb}
+.app-shell .batch-product-card>header{
+  display:grid;
+  grid-template-columns:52px minmax(0,1fr) auto;
+  align-items:center;
+  gap:14px;
+  padding:14px 16px;
+}
+.app-shell .batch-product-state{
+  padding:6px 11px;
+  border-radius:999px;
+  background:rgba(232,183,225,.5);
+  color:#4b283e;
+  font-size:10px;
+  font-weight:850;
+  white-space:nowrap;
+}
+.app-shell .batch-product-state.attention{background:#f6d3da;color:#8a3650}
+.app-shell .batch-product-chips{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  padding:0 16px 14px;
+}
+.app-shell .batch-product-chips .facet{
+  display:grid;
+  gap:1px;
+  padding:8px 12px;
+  border:1px solid rgba(91,48,79,.16);
+  border-radius:12px;
+  background:rgba(255,255,255,.7);
+  text-align:left;
+  cursor:pointer;
+}
+.app-shell .batch-product-chips .facet em{
+  color:#80677a;
+  font-size:8.5px;
+  font-style:normal;
+  font-weight:850;
+  letter-spacing:.14em;
+  text-transform:uppercase;
+}
+.app-shell .batch-product-chips .facet b{color:#4c293f;font-size:12px}
+.app-shell .batch-product-chips .facet small{color:#80677a;font-size:9px}
+.app-shell .batch-product-chips .facet.is-ask{
+  border-color:rgba(157,80,130,.45);
+  background:#fdf2f8;
+}
+.app-shell .batch-product-chips .facet.is-ask b{color:#8a3f66}
+.app-shell .batch-product-chips .facet.open{
+  border-color:#a2578d;
+  background:linear-gradient(120deg,rgba(250,218,236,.9),rgba(225,207,248,.85));
+}
+/* An opened control sits inside the card, stripped of its own card chrome. */
+.app-shell .batch-product-card>.product-color-selector,
+.app-shell .batch-product-card>.product-size-selector,
+.app-shell .batch-product-card>.mockup-default-block,
+.app-shell .batch-product-card>.bundle-product-keywords{
+  width:100%!important;
+  margin:0!important;
+  padding:14px 16px!important;
+  border:0!important;
+  border-top:1px solid rgba(91,48,79,.12)!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+}
