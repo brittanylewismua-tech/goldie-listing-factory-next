@@ -1460,3 +1460,16 @@ test("D208: the reset control is sized like a control, not a footnote", async ()
   assert.match(app, /function startOver\(\)/);
   assert.match(app, /Discard this batch \+ start new/);
 });
+
+test("D212: adding a product can be cancelled, the same as editing one", async () => {
+  const tools = await readFile(new URL("app/factory-tools.tsx", root), "utf8");
+
+  /* Cancel was gated on editingId, which is empty when adding. "Add another
+     product" therefore opened a form whose only control was "Save product",
+     disabled until the form validated. Escapable only by clicking a saved
+     product, which nothing announced. */
+  assert.match(tools, /\{editing&&<button type="button" className="secondary-action"/);
+  assert.doesNotMatch(tools, /\{editingId&&<button type="button" className="secondary-action"/);
+  // Cancel must clear what the form was holding, including the keyword choice.
+  assert.match(tools, /setEditing\(false\);setEditingId\(""\);setName\(""\);setKeywordListId\(""\);setMessage\(""\)\}\}>Cancel<\/button>/);
+});

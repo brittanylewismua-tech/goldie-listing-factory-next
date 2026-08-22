@@ -1778,7 +1778,9 @@ test("keeps the saved-product batch page compact and makes permanent settings ed
    * "Rename" — and that same rule also relabelled the bundle's "Edit bundle"
    * button. The button is now plain "Edit" with the full meaning in its title. */
   assert.match(tools,/className="edit-recipe" title="Rename this product or reconnect its Printify template"/);
-  assert.match(tools,/editingId&&<button[^>]+secondary-action/);
+  /* D212: Cancel is gated on `editing`, not `editingId` — adding a product had
+     no way out because editingId is empty until you edit an existing one. */
+  assert.match(tools,/editing&&<button[^>]+secondary-action/);
   assert.match(recipes,/const description=String\(body\.description/);
   assert.match(styles,/\.remembered-color-row/);
   assert.match(styles,/@media\(min-width:821px\) and \(max-width:1050px\)/);
