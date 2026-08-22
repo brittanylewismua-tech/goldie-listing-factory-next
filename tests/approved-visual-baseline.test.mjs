@@ -516,7 +516,7 @@ test("the mockup section can actually be changed and cleared — D109", async ()
    *
    * A control that claims something can be changed must offer a way to change
    * it, including back to none. */
-  assert.match(page, /\{themes\.length\?<option value="">No mockups for this batch<\/option>:<option value="">Loading mockup sets…<\/option>\}/,
+  assert.match(page, /loaded\?"No compatible mockup sets for this product":"Loading mockup sets…"/,
     "The loading placeholder must become a real 'no mockups' choice once sets have loaded.");
   assert.match(page, /className="manage-mockup-sets" href="\/mockups"/,
     "The mockup section must offer a route to create or edit sets.");
