@@ -826,3 +826,30 @@
   color:#4c293f;
   font:650 19px/1.2 "Fraunces",Georgia,serif;
 }
+
+/* D172 · The setup column stacks eleven ordered sections, and only some carried
+ * `width:min(980px,calc(100% - 32px))`. Nested ones applied it a second time
+ * against an already-inset parent. Measured on the deployed build with a bundle
+ * selected — every section's width @ left edge:
+ *   .recipe-card                720@504
+ *   .product-setup-framing      720@504
+ *   .color-default-block        688@520
+ *   .bundle-color-selectors     688@520
+ *   .mockup-default-block       688@520
+ *   .everything-else            688@520
+ *   .saved-settings-summary     688@520
+ *   .keyword-bank-required      720@504
+ *   .setup-forward              720@504
+ * so the cards sat 16px inside the heading above them and the Continue button
+ * below — which is what made the screen look untended. One column, one edge.
+ * After: all ten sections 720@504. */
+.app-shell .steps-column.setup-column > *,
+.app-shell .steps-column.setup-column .saved-product-batch-page,
+.app-shell .steps-column.setup-column .saved-product-batch-page > *,
+.app-shell .steps-column.setup-column .batch-preferences-after-designs,
+.app-shell .steps-column.setup-column .batch-preferences-after-designs > *,
+.app-shell .steps-column.setup-column .bundle-color-selectors{
+  width:100%!important;
+  max-width:none!important;
+  margin-inline:0!important;
+}

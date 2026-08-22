@@ -1098,3 +1098,19 @@ test("management pages meet AA too — D165", async () => {
     "The price cadence next to the plan prices must be readable.");
   assert.match(clarity, /\.usage-page \.usage-plan-fineprint\{color:rgba\(74,42,62,\.82\)!important\}/);
 });
+
+test("every section of the setup column shares one edge — D172", async () => {
+  const clarity = await readFile(new URL("app/clarity-pass.css", root), "utf8");
+
+  /* Eleven ordered sections, only some carrying width:min(980px,100% - 32px),
+   * and the nested ones applying it twice against an already-inset parent.
+   * Measured on the deployed build with a bundle selected, width@left:
+   *   recipe-card 720@504, product-setup-framing 720@504,
+   *   color-default-block 688@520, bundle-color-selectors 688@520,
+   *   mockup-default-block 688@520, everything-else 688@520,
+   *   saved-settings-summary 688@520, keyword-bank-required 720@504
+   * so the cards sat 16px inside the heading above and the button below.
+   * After: all ten measure 720@504. */
+  assert.match(clarity, /\.app-shell \.steps-column\.setup-column > \*,[\s\S]*?\.app-shell \.steps-column\.setup-column \.batch-preferences-after-designs > \*,[\s\S]*?width:100%!important/,
+    "Nested setup sections must not re-apply the column inset.");
+});
