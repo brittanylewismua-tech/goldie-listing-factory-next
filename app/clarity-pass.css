@@ -249,15 +249,7 @@
  * bank · description from Printify · Etsy details 5 saved" — four values and
  * one to-do, same size, same colour, same separator, buried in the middle. And
  * it is the one that makes title generation fail two steps later. */
-.app-shell .everything-else summary .setup-todo{
-  display:block;
-  margin-top:6px;
-  color:#8a5a12;
-  font-size:11.5px;
-  font-weight:800;
-  line-height:1.4;
-}
-.app-shell .everything-else summary .setup-todo:before{content:"▲  ";font-size:9px;vertical-align:1px}
+/* (superseded by the D126 chip treatment below) */
 
 /* D109 · "change it anytime" with nothing to change it with. */
 .app-shell .manage-mockup-sets{

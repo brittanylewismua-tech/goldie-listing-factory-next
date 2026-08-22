@@ -461,7 +461,7 @@ test("unfinished setup items are not formatted as settled values — D101", asyn
   assert.match(page, /still to set/);
   assert.doesNotMatch(page, /setup-todo">\{\[\.\.\.\(!activeRecipe\?\.keywordListId\?\["Pick a keyword bank/,
     "The summary is repeating the instruction the alert below it already gives.");
-  assert.match(clarity, /\.setup-todo\{[\s\S]*color:#8a5a12/);
+  assert.match(clarity, /\.setup-todo\{[\s\S]*color:#8a3f66!important/);
 });
 
 test("the setup step has exactly one forward control, and it gates every section — D107", async () => {
