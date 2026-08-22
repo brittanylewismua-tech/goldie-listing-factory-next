@@ -126,3 +126,11 @@ test("the size card's promise matches what the gate actually enforces — D164",
   assert.match(app, /issues\.push\("Choose at least one product size for this batch\."\)/);
   assert.match(app, /Boolean\(templateDetails\?\.sizeOptions\?\.length\)&&!selectedSizeIds\.length\?"Choose product sizes to continue"/);
 });
+
+test("no size action can leave the seller with nothing selected — D164", async () => {
+  const app = await read("app/listing-factory-app.tsx");
+  /* "Match Printify template" selects the template's enabled sizes. If those
+   * happened to be unavailable it would select nothing and then block Continue,
+   * with no hint as to why. It falls back to every available size instead. */
+  assert.match(app, /onChange\(templateSizes\.length\?templateSizes:available\.map\(size=>size\.id\)\)/);
+});
