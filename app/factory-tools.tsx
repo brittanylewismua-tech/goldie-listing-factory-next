@@ -82,7 +82,8 @@ export function SavedWorkflow(props: WorkflowProps) {
     try{
       if(await props.onUseBundle(bundle,bundle.recipeIds)){setEditing(false);setBundleForm(false);return}
       setActiveId("");setMessage("Goldie could not load every saved product in this bundle. Edit the bundle or refresh the page, then try again.");
-    }catch{
+    }catch(error){
+      console.error("Bundle selection failed",error);
       setActiveId("");setMessage("Goldie could not load this bundle. Try again in a moment.");
     }finally{actionLock.current=false;setPendingAction("")}
   }
