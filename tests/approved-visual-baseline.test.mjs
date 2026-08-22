@@ -936,3 +936,22 @@ test("the Printify placement button is readable — D150", async () => {
   assert.match(approved, /\.app-shell \.edit-draft-button\{[^}]*font-size:12\.5px!important/,
     "The placement button must override theme.css's 9px with a readable size.");
 });
+
+test("the publish checklist's needs-review chip is plum, not gold — D153", async () => {
+  const approved = await readFile(new URL("app/approved-functional.css", root), "utf8");
+
+  /* Brittany rejected this brown once already ("why is keyword bank still to set
+   * brown?"). D101/D126 replaced it with plum #8a3f66 — but only on
+   * .everything-else summary .setup-todo. The publish checklist kept a full
+   * gold-era chip: border #dfbd7f, background #fff5dd, text #7a5010, plus
+   * .final-listing-card .content-review at #8a5a12 — sitting directly beside the
+   * plum "✓" chips from .final-checklist span. Same defect, second surface.
+   * .content-review is live markup: every unmet item on Review + publish
+   * ("! One or more titles need review") renders with it. */
+  for (const gold of ["#8a5a12", "#7a5010", "#dfbd7f", "#fff5dd"]) {
+    assert.ok(!approved.includes(gold),
+      `${gold} is a gold-era colour and reads as mud on the lavender cards.`);
+  }
+  assert.match(approved, /\.app-shell \.final-checklist \.content-review\{[^}]*color:#8a3f66!important/,
+    "The needs-review chip must use the app's plum 'needs attention' colour.");
+});

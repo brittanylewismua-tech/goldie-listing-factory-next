@@ -2786,3 +2786,20 @@ route to it was hidden behind a label that did not mention it.
 "Edit bundle" as real text; `×` delete buttons now read "Delete" in the DOM too.
 **Pattern (again):** a rule written for one card matched a second card nested inside it.
 
+## D153 — the publish checklist's "needs review" chip was still gold-era brown
+**Where:** Finish · Review + publish. Every unmet checklist item
+("! One or more titles need review", "! Prices and buyer-paid shipping need review").
+**Measured:** `.final-checklist .content-review` = border `#dfbd7f`, background `#fff5dd`,
+text `#7a5010`; `.final-listing-card .content-review` = `#8a5a12`. These sat directly beside
+the plum "✓" chips from `.final-checklist span` (`#63435e` on a lavender gradient).
+**Why it survived:** Brittany rejected this brown once already, and D101/D126 replaced it —
+but only on `.everything-else summary .setup-todo`. The publish checklist is a different
+surface and kept the whole gold chip.
+**Not dead CSS:** `.content-review` is applied live in `listing-factory-app.tsx` via
+`className={pricingApproved?"":"content-review"}` and two siblings.
+**Fix:** the plum "needs attention" language already in the app — border
+`rgba(157,80,130,.32)`, background `#fdf2f8`, text `#8a3f66`.
+**Guard:** "the publish checklist's needs-review chip is plum, not gold". The D64 test that
+pinned the amber hex was updated: D64's point is a distinct non-blocking state, not amber.
+**Pattern (again):** fixed on one surface, not the other.
+

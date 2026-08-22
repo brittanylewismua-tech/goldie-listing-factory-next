@@ -1938,7 +1938,7 @@ test("restores completed draft batches to reachable Finish results (fixes D53)",
   assert.match(batches,/&open=results/);
 });
 
-test("shows underfilled titles and tags as an amber non-blocking review state (fixes D64)",async()=>{
+test("shows underfilled titles and tags as a non-blocking review state (fixes D64, recoloured D153)",async()=>{
   const [app,review,css]=await Promise.all([
     readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8"),
     readFile(new URL("../app/final-listing-review.tsx",import.meta.url),"utf8"),
@@ -1950,7 +1950,9 @@ test("shows underfilled titles and tags as an amber non-blocking review state (f
   assert.match(review,/review\.needed\?"content-review":"ready"/);
   assert.match(app,/One or more titles need review/);
   assert.match(app,/One or more listings have fewer than 13 tags/);
-  assert.match(css,/\.final-listing-card \.content-review\{color:#8a5a12!important/);
+  /* D153 recoloured this from the gold-era #8a5a12 to the app's plum. The point
+   * of D64 is that it is a distinct non-blocking review state, not that it is amber. */
+  assert.match(css,/\.final-listing-card \.content-review\{color:#8a3f66!important/);
   assert.doesNotMatch(review,/review\.needed[^\n]{0,200}disabled/);
 });
 
