@@ -22,24 +22,35 @@ const tee = {
   saved: {},
 };
 
-test("an unconfigured product asks nothing it can answer itself", () => {
+test("colours and sizes are always asked once, never taken from the template", () => {
   const result = productReadiness(tee);
-  /* Colours and sizes come from the Printify template. One compatible mockup set
-   * and one keyword bank are not choices. So a brand-new product with this data
-   * is established without asking the seller anything. */
-  assert.deepEqual(result.questions, []);
-  assert.equal(result.established, true);
-  assert.deepEqual(result.autoResolved.colourIds, [1, 2]);
-  assert.deepEqual(result.autoResolved.sizeIds, [14, 15]);
-  assert.equal(result.autoResolved.mockupTheme, "BACH TEES");
+  /* The Printify template is where you pick the blueprint, the print provider and
+   * the artwork placement — not colours and sizes. Whatever variants are enabled
+   * there are Printify's defaults, so inheriting them would publish listings in
+   * colours the seller never chose. They are asked once, per product. */
+  /* Only one keyword bank exists in this fixture, so that one is not a question. */
+  assert.deepEqual(result.questions, ["colours", "sizes"]);
   assert.equal(result.autoResolved.keywordListId, "b1");
+  assert.equal(result.established, false);
+  assert.equal(result.autoResolved.colourIds, undefined);
+  assert.equal(result.autoResolved.sizeIds, undefined);
+
+  /* The template's enabled variants still open the picker pre-selected — a
+   * starting point, not an answer. */
+  const colours = result.facets.find((f) => f.name === "colours");
+  assert.deepEqual(colours.suggested.colourIds, [1, 2]);
+  const sizes = result.facets.find((f) => f.name === "sizes");
+  assert.deepEqual(sizes.suggested.sizeIds, [14, 15]);
+
+  /* One compatible mockup set is genuinely not a choice. */
+  assert.equal(result.autoResolved.mockupTheme, "BACH TEES");
 });
 
 test("a saved mockup set that does not fit the product is not readiness", () => {
   /* The hoodie case: BACH TEES saved, but no tee set is compatible with a hoodie,
    * so compatibleMockupThemes is empty. Presence said ready; the product was
    * unusable and the mockup card rendered blank. */
-  const hoodie = { ...tee, compatibleMockupThemes: [], saved: { defaultMockupTheme: "BACH TEES" } };
+  const hoodie = { ...tee, compatibleMockupThemes: [], saved: { defaultMockupTheme: "BACH TEES", defaultColorIds: [1], defaultSizeIds: [14], keywordListId: "b1" } };
   const mockups = productReadiness(hoodie).facets.find((f) => f.name === "mockups");
   assert.equal(mockups.label, "No mockups");
   assert.match(mockups.note, /BACH TEES does not fit this product/);
@@ -49,18 +60,14 @@ test("a saved mockup set that does not fit the product is not readiness", () => 
   assert.equal(productReadiness(hoodie).established, true);
 });
 
-test("only genuinely ambiguous facets become questions", () => {
-  const ambiguous = {
-    ...tee,
-    compatibleMockupThemes: ["BACH TEES", "PALM SPRINGS"],
-    keywordBanks: [{ id: "b1", name: "BACHELORETTE TEES" }, { id: "b2", name: "JANE AUSTEN TEE" }],
-  };
-  const result = productReadiness(ambiguous);
-  assert.deepEqual(result.questions, ["mockups", "keywords"]);
-  assert.equal(result.established, false);
-  /* Colours and sizes still resolve themselves — two open questions, not four. */
-  assert.deepEqual(result.autoResolved.colourIds, [1, 2]);
-  assert.deepEqual(result.autoResolved.sizeIds, [14, 15]);
+test("an established product asks nothing at all", () => {
+  /* This is the state a product reaches after its first batch: every choice is
+   * saved on the recipe, so a later batch shows a summary and no controls. */
+  const established = { ...tee, saved: { defaultColorIds: [1, 2], defaultSizeIds: [14, 15], keywordListId: "b1", defaultMockupTheme: "BACH TEES" } };
+  const result = productReadiness(established);
+  assert.deepEqual(result.questions, []);
+  assert.equal(result.established, true);
+  assert.deepEqual(result.facets.map((f) => f.state), ["ready", "ready", "ready", "ready"]);
 });
 
 test("saved choices win over template defaults", () => {
@@ -71,32 +78,33 @@ test("saved choices win over template defaults", () => {
   assert.equal(result.facets.find((f) => f.name === "colours").label, "1 colour");
 });
 
-test("saved values that are no longer available fall back rather than sticking", () => {
+test("saved values that are no longer available reopen the question", () => {
   /* A colour removed from the Printify product must not keep a product "ready"
-   * against a variant that cannot be ordered. */
+   * against a variant that cannot be ordered — and must not silently swap in a
+   * different colour either. It gets asked again. */
   const stale = { ...tee, saved: { defaultColorIds: [404], defaultSizeIds: [404] } };
   const result = productReadiness(stale);
-  assert.equal(result.facets.find((f) => f.name === "colours").state, "auto");
-  assert.deepEqual(result.autoResolved.colourIds, [1, 2]);
-  assert.deepEqual(result.autoResolved.sizeIds, [14, 15]);
+  assert.equal(result.facets.find((f) => f.name === "colours").state, "ask");
+  assert.equal(result.facets.find((f) => f.name === "sizes").state, "ask");
+  assert.equal(result.autoResolved.colourIds, undefined);
 });
 
 test("a product with no size axis is not asked about sizes", () => {
-  const mug = { ...tee, sizeOptions: [] };
+  const mug = { ...tee, sizeOptions: [], saved: { defaultColorIds: [1] } };
   const sizes = productReadiness(mug).facets.find((f) => f.name === "sizes");
   assert.equal(sizes.state, "ready");
   assert.equal(sizes.label, "One size");
 });
 
 test("no keyword banks at all is a real question", () => {
-  const noBanks = { ...tee, keywordBanks: [] };
+  const noBanks = { ...tee, keywordBanks: [], saved: { defaultColorIds: [1], defaultSizeIds: [14] } };
   const result = productReadiness(noBanks);
   assert.deepEqual(result.questions, ["keywords"]);
   assert.match(result.facets.find((f) => f.name === "keywords").note, /Create a keyword bank first/);
 });
 
 test("declining mockups is a real answer, not a gap", () => {
-  const declined = { ...tee, compatibleMockupThemes: ["A", "B"], saved: { mockupsDeclined: true } };
+  const declined = { ...tee, compatibleMockupThemes: ["A", "B"], saved: { mockupsDeclined: true, defaultColorIds: [1], defaultSizeIds: [14], keywordListId: "b1" } };
   const mockups = productReadiness(declined).facets.find((f) => f.name === "mockups");
   assert.equal(mockups.state, "ready");
   assert.equal(mockups.label, "No mockups");

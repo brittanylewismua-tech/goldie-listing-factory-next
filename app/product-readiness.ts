@@ -1,5 +1,17 @@
 /* Readiness for one product in a batch.
  *
+ * WHERE CHOICES LIVE. The Printify template is not where a seller picks colours
+ * and sizes. The three things the app tells them to do there are: choose the
+ * product and print provider, set the artwork placement, and publish once to Etsy
+ * so a shipping profile exists. Whatever variants are enabled on that product are
+ * therefore incidental — Printify's defaults, or the minimum needed to publish.
+ * Treating them as the seller's intent would put listings live in colours they
+ * never chose, so `templateEnabled` only ever SUGGESTS a starting selection; it
+ * can never mark a product ready.
+ *
+ * Colours and sizes are chosen in the Listing Factory, once per product. The
+ * wizard is not "ask nothing" — it is "ask once, then never again".
+ *
  * Two things this exists to fix.
  *
  * 1. `setupComplete` on the recipe is not trustworthy. The API reads it as
@@ -26,6 +38,9 @@ export type Facet = {
   state: ReadinessState;
   label: string;
   resolved?: { colourIds?: number[]; sizeIds?: number[]; mockupTheme?: string; mockupIds?: string[]; keywordListId?: string };
+  /* A starting selection for a facet that must still be confirmed. Never treated
+   * as an answer. */
+  suggested?: { colourIds?: number[]; sizeIds?: number[] };
   note?: string;
 };
 
@@ -59,11 +74,16 @@ function colourFacet(input: ReadinessInput): Facet {
     return { name: "colours", state: "ready", label: `${saved.length} ${saved.length === 1 ? "colour" : "colours"}`, note: names.slice(0, 3).join(", ") };
   }
   if (!available.length) return { name: "colours", state: "ready", label: "No colour choices" };
-  /* The Printify template already says which colours this product sells in.
-   * That is an answer, not a question. */
-  const fromTemplate = available.filter((colour) => colour.templateEnabled).map((colour) => colour.id);
-  const chosen = fromTemplate.length ? fromTemplate : available.map((colour) => colour.id);
-  return { name: "colours", state: "auto", label: `${chosen.length} ${chosen.length === 1 ? "colour" : "colours"}`, resolved: { colourIds: chosen } };
+  /* Never auto-resolve. The template's enabled colours are Printify's doing, not
+   * the seller's, so they open the picker pre-selected and wait for confirmation. */
+  const suggested = available.filter((colour) => colour.templateEnabled).map((colour) => colour.id);
+  return {
+    name: "colours",
+    state: "ask",
+    label: "",
+    suggested: { colourIds: suggested.length ? suggested : available.map((colour) => colour.id) },
+    note: `${available.length} available`,
+  };
 }
 
 function sizeFacet(input: ReadinessInput): Facet {
@@ -72,9 +92,14 @@ function sizeFacet(input: ReadinessInput): Facet {
   const saved = (input.saved.defaultSizeIds || []).filter((id) => available.some((size) => size.id === id));
   if (saved.length) return { name: "sizes", state: "ready", label: `${saved.length} ${saved.length === 1 ? "size" : "sizes"}` };
   if (!available.length) return { name: "sizes", state: "ready", label: "One size" };
-  const fromTemplate = available.filter((size) => size.templateEnabled).map((size) => size.id);
-  const chosen = fromTemplate.length ? fromTemplate : available.map((size) => size.id);
-  return { name: "sizes", state: "auto", label: `${chosen.length} ${chosen.length === 1 ? "size" : "sizes"}`, resolved: { sizeIds: chosen } };
+  const suggested = available.filter((size) => size.templateEnabled).map((size) => size.id);
+  return {
+    name: "sizes",
+    state: "ask",
+    label: "",
+    suggested: { sizeIds: suggested.length ? suggested : available.map((size) => size.id) },
+    note: `${available.length} available`,
+  };
 }
 
 function mockupFacet(input: ReadinessInput): Facet {
