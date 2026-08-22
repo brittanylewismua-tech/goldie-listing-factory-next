@@ -150,3 +150,52 @@ test("a saved profit goal and Etsy attributes read as settled", () => {
   assert.equal(result.facets.find((f) => f.name === "profit").label, "$25 per item");
   assert.equal(result.facets.find((f) => f.name === "etsy").state, "ready");
 });
+
+/* Shared base so these fixtures carry every required input; only the axis under
+   test varies. */
+const base = { compatibleMockupThemes: [], keywordBanks: [], shippingProfiles: [{ id: 7, title: "Standard" }], templateShippingProfileId: 7, etsyFieldsRequired: 0 };
+
+test("D201: a counted facet names its values and never drops any silently", () => {
+  const colorOptions = [
+    { id: 1, title: "White", available: true, templateEnabled: true },
+    { id: 2, title: "Sport Grey", available: true, templateEnabled: true },
+    { id: 3, title: "Daisy", available: true, templateEnabled: true },
+    { id: 4, title: "Heather Sport Dark Navy", available: true, templateEnabled: true },
+    { id: 5, title: "Irish Green", available: true, templateEnabled: true },
+  ];
+  const sizeOptions = ["S", "M", "L", "XL", "2XL"].map((title, i) => ({ id: 10 + i, title, available: true, templateEnabled: true }));
+
+  const readiness = productReadiness({
+    ...base, colorOptions, sizeOptions,
+    saved: { defaultColorIds: [1, 2, 3, 4, 5], defaultSizeIds: [10, 11, 12, 13, 14] },
+  });
+
+  const colors = readiness.facets.find((f) => f.name === "colors");
+  assert.equal(colors.label, "5 colors");
+  assert.equal(colors.note, "White, Sport Grey, Daisy +2 more",
+    "the row said '5 colors' over a list of three, with no sign two were hidden");
+
+  const sizes = readiness.facets.find((f) => f.name === "sizes");
+  assert.equal(sizes.label, "5 sizes");
+  assert.equal(sizes.note, "S, M, L, XL, 2XL", "sizes named nothing at all before");
+});
+
+test("D201: a facet at or under its limit lists everything with no suffix", () => {
+  const colorOptions = [
+    { id: 1, title: "White", available: true, templateEnabled: true },
+    { id: 2, title: "Black", available: true, templateEnabled: true },
+  ];
+  const readiness = productReadiness({ ...base, colorOptions, sizeOptions: [], saved: { defaultColorIds: [1, 2] } });
+  const colors = readiness.facets.find((f) => f.name === "colors");
+  assert.equal(colors.note, "White, Black");
+  assert.doesNotMatch(colors.note, /more/);
+});
+
+test("D201: sizes disclose a remainder too once past their limit", () => {
+  const sizeOptions = ["S", "M", "L", "XL", "2XL", "3XL", "4XL", "5XL"]
+    .map((title, i) => ({ id: 10 + i, title, available: true, templateEnabled: true }));
+  const readiness = productReadiness({ ...base, colorOptions: [], sizeOptions, saved: { defaultSizeIds: sizeOptions.map((s) => s.id) } });
+  const sizes = readiness.facets.find((f) => f.name === "sizes");
+  assert.equal(sizes.label, "8 sizes");
+  assert.equal(sizes.note, "S, M, L, XL, 2XL, 3XL +2 more");
+});

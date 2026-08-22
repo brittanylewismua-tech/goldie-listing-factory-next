@@ -75,12 +75,28 @@ export type Readiness = {
   autoResolved: NonNullable<Facet["resolved"]>;
 };
 
+/* D201 · A ready facet listed the first three names and silently dropped the
+ * rest, so the Colors row read "5 colors" above "White, Sport Grey, Daisy" —
+ * the label and the list disagreed on the same row, and there was no way to
+ * tell whether the other two were missing or simply not shown. Sizes named
+ * nothing at all, so two facets the seller picks the same way were reported
+ * differently. Always disclose the remainder, and never leave a counted facet
+ * unnamed.
+ *
+ * The limits differ because the names do: colour names run long ("Heather
+ * Sport Dark Navy"), size names are one to three characters. */
+function nameList(names: string[], limit: number): string {
+  if (!names.length) return "";
+  if (names.length <= limit) return names.join(", ");
+  return `${names.slice(0, limit).join(", ")} +${names.length - limit} more`;
+}
+
 function colorFacet(input: ReadinessInput): Facet {
   const available = input.colorOptions.filter((color) => color.available);
   const saved = (input.saved.defaultColorIds || []).filter((id) => available.some((color) => color.id === id));
   if (saved.length) {
-    const names = saved.map((id) => available.find((color) => color.id === id)?.title).filter(Boolean);
-    return { name: "colors", state: "ready", label: `${saved.length} ${saved.length === 1 ? "color" : "colors"}`, note: names.slice(0, 3).join(", ") };
+    const names = saved.map((id) => available.find((color) => color.id === id)?.title).filter(Boolean) as string[];
+    return { name: "colors", state: "ready", label: `${saved.length} ${saved.length === 1 ? "color" : "colors"}`, note: nameList(names, 3) };
   }
   if (!available.length) return { name: "colors", state: "ready", label: "No color choices" };
   /* Never auto-resolve. The template's enabled colors are Printify's doing, not
@@ -99,7 +115,10 @@ function sizeFacet(input: ReadinessInput): Facet {
   if (!input.sizeOptions.length) return { name: "sizes", state: "ready", label: "One size" };
   const available = input.sizeOptions.filter((size) => size.available);
   const saved = (input.saved.defaultSizeIds || []).filter((id) => available.some((size) => size.id === id));
-  if (saved.length) return { name: "sizes", state: "ready", label: `${saved.length} ${saved.length === 1 ? "size" : "sizes"}` };
+  if (saved.length) {
+    const names = saved.map((id) => available.find((size) => size.id === id)?.title).filter(Boolean) as string[];
+    return { name: "sizes", state: "ready", label: `${saved.length} ${saved.length === 1 ? "size" : "sizes"}`, note: nameList(names, 6) };
+  }
   if (!available.length) return { name: "sizes", state: "ready", label: "One size" };
   const suggested = available.filter((size) => size.templateEnabled).map((size) => size.id);
   return {
