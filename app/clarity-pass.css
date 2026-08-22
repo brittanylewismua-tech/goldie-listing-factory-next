@@ -922,3 +922,29 @@
 }
 .app-shell .bundle-progress>div span{letter-spacing:.16em}
 .app-shell .bundle-progress>div small{margin-top:4px}
+
+/* D180 · A bundle runs several different product types. One batch-level mockup
+ * set and one batch-level keyword bank could not be right for all of them —
+ * a mockup set is filtered by product type (productAcceptsMockup), so the list
+ * was filtered to whichever product happened to be active and then applied to
+ * every product in the bundle. Both now live inside each product's section,
+ * alongside its colours and sizes. */
+.app-shell .bundle-color-product>.mockup-default-block{
+  margin:0!important;
+  padding:14px 16px!important;
+  border:0!important;
+  border-top:1px solid rgba(91,48,79,.12)!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+  width:100%!important;
+}
+.app-shell .bundle-product-keywords{
+  display:grid;
+  gap:8px;
+  padding:14px 16px;
+  border-top:1px solid rgba(91,48,79,.12);
+}
+.app-shell .bundle-product-keywords>div:first-child{display:grid;gap:2px}
+.app-shell .bundle-product-keywords b{color:#4c293f;font-size:13px}
+.app-shell .bundle-product-keywords span{color:#75576b;font-size:11px}

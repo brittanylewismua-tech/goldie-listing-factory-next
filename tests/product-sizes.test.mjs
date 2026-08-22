@@ -264,3 +264,23 @@ test("the setup screen does not announce itself twice — D177", async () => {
   assert.match(app, /activeRecipe\?\.setupComplete===false&&<div className="product-setup-framing first-product-setup">/,
     "First-run guidance is the only case that earns a banner.");
 });
+
+test("mockups and keyword banks are per product in a bundle — D180", async () => {
+  const app = await read("app/listing-factory-app.tsx");
+
+  /* A bundle runs several different product types. The setup screen offered ONE
+   * mockup set and ONE keyword bank for the whole batch. Mockup sets are filtered
+   * by product type (productAcceptsMockup), so the list was narrowed to whichever
+   * product happened to be active and that set was then applied to all of them —
+   * a t-shirt set on a hoodie and a sweatshirt. The keyword bank has the same
+   * problem: three products rarely share one set of search terms.
+   *
+   * Both are already per-product on the saved recipe (defaultMockupTheme/mockupIds,
+   * keywordListId); only the UI was batch-level. */
+  assert.match(app, /\{templateDetails&&productSelected&&!\(activeBundle&&bundleRecipes\.length>1\)&&<MockupSetSelector/,
+    "The batch-level mockup picker must not render for a bundle.");
+  assert.match(app, /<MockupSetSelector productName=\{product\.blueprintTitle\}/,
+    "Each product filters mockup sets by its own product type.");
+  assert.match(app, /className="bundle-product-keywords"/,
+    "Each product picks its own keyword bank.");
+});
