@@ -1116,3 +1116,44 @@
  * loudest thing on it. */
 .keyword-page .bank-grid{align-items:start!important}
 .keyword-page .bank-grid article button:not(.bank-keyword-toggle){font-size:11px!important}
+
+/* D197 · The product tile. Two faults, both measured on the live page:
+ *
+ * 1. Tile padding computed to 0px, so Edit and Delete sat flush against the
+ *    left and bottom edges with no margin at all. Measured children on a 207px
+ *    tile: recipe-use(left 1, right 1), edit(left 89, right 75),
+ *    delete(left 145, right 10) — the actions crowded into whatever the auto
+ *    columns left over, hard against the frame.
+ * 2. The 26px round icon read "P" on every single product card — Printify's
+ *    initial, identical across all three, carrying no information while taking
+ *    the most prominent position on the tile. On the bundle tile the same slot
+ *    reads "3", the member count, which IS information. So hide it for products
+ *    and keep it for bundles rather than removing it outright.
+ *
+ * The layout other tools use for this (Notion, Linear, Airtable row cards) is a
+ * primary click target filling the top, a hairline, then secondary actions
+ * right-aligned in a footer. That is what this builds: padding moves off the
+ * tile and onto the children so the primary button can span edge to edge
+ * without negative margins, which measured 181px in a 207px tile when tried.
+ *
+ * Measured after: tile 207 wide / 169 tall, recipe-use 205 (full width inside
+ * the 1px border), action row inset 13px right and 13px bottom, nothing
+ * overflowing the frame, icon hidden on products and shown on the bundle. */
+.app-shell .recipe-grid .recipe-tile{
+  grid-template-columns:1fr auto auto auto!important;
+  padding:0!important;
+  column-gap:8px!important;
+  row-gap:0!important;
+  align-items:center!important;
+}
+.app-shell .recipe-grid .recipe-tile>.recipe-use{
+  grid-column:1/-1!important;
+  width:100%!important;
+  margin:0 0 12px!important;
+  padding:14px!important;
+  border-bottom:1px solid rgba(91,48,79,.12)!important;
+}
+.app-shell .recipe-grid .recipe-tile>button:not(.recipe-use){margin-bottom:12px!important}
+.app-shell .recipe-grid .recipe-tile>button:not(.recipe-use):last-child{margin-right:12px!important}
+.app-shell .recipe-grid .recipe-tile:not(.bundle-as-product) .recipe-icon{display:none!important}
+.app-shell .recipe-grid .recipe-tile:not(.bundle-as-product) .recipe-use{grid-template-columns:minmax(0,1fr)!important}

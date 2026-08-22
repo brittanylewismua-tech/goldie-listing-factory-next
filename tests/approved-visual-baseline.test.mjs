@@ -1193,3 +1193,43 @@ test("keyword bank cards size to their own content — D195", async () => {
   assert.match(clarity, /\.keyword-page \.bank-grid\{align-items:start!important\}/);
   assert.match(clarity, /\.keyword-page \.bank-grid article button:not\(\.bank-keyword-toggle\)\{font-size:11px!important\}/);
 });
+
+test("D197: product tiles pad their actions and drop the meaningless Printify initial", async () => {
+  const css = await readFile(new URL("app/clarity-pass.css", root), "utf8");
+
+  // Padding moved off the tile and onto the children, so Edit/Delete stop
+  // sitting flush against the frame (measured 0px padding, delete right:10).
+  assert.match(css, /\.app-shell \.recipe-grid \.recipe-tile\{[^}]*padding:0!important/);
+  assert.match(
+    css,
+    /\.app-shell \.recipe-grid \.recipe-tile>button:not\(\.recipe-use\):last-child\{margin-right:12px!important\}/,
+    "the last action keeps a right margin off the tile edge",
+  );
+  assert.match(
+    css,
+    /\.app-shell \.recipe-grid \.recipe-tile>button:not\(\.recipe-use\)\{margin-bottom:12px!important\}/,
+    "the action row keeps a bottom margin off the tile edge",
+  );
+
+  // The primary button spans the tile via width, not negative margins — those
+  // measured 181px inside a 207px tile and left the hairline stopping short.
+  assert.match(css, /\.app-shell \.recipe-grid \.recipe-tile>\.recipe-use\{[^}]*width:100%!important/);
+  assert.doesNotMatch(
+    css,
+    /\.app-shell \.recipe-grid \.recipe-tile>\.recipe-use\{[^}]*margin:0 -12px/,
+    "no negative-margin bleed on the primary button",
+  );
+
+  // "P" on every product card is Printify's initial and identical across all of
+  // them; "3" on a bundle tile is the member count and stays.
+  assert.match(
+    css,
+    /\.app-shell \.recipe-grid \.recipe-tile:not\(\.bundle-as-product\) \.recipe-icon\{display:none!important\}/,
+    "product tiles hide the icon",
+  );
+  assert.doesNotMatch(
+    css,
+    /\.app-shell \.recipe-grid \.recipe-tile \.recipe-icon\{display:none/,
+    "the bundle tile keeps its member-count badge",
+  );
+});
