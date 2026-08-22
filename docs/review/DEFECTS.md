@@ -2803,3 +2803,27 @@ surface and kept the whole gold chip.
 pinned the amber hex was updated: D64's point is a distinct non-blocking state, not amber.
 **Pattern (again):** fixed on one surface, not the other.
 
+## D154 — open steps told you to "Complete the prior step"
+**Where:** the Finish rail (and the top rail, same code path).
+**Measured live** on batch `103d12f0` with all three listings drafted and photos chosen —
+label vs. the button's own `disabled` property:
+| viewing | step | label | disabled |
+|---|---|---|---|
+| Titles + tags | Images + mockups | "Complete the prior step" | **false** |
+| Titles + tags | Review + publish  | "Complete the prior step" | **false** |
+| Etsy details  | Images + mockups | "Complete the prior step" | **false** |
+| Etsy details  | Review + publish  | "Complete the prior step" | **false** |
+| Images+mockups| Review + publish  | "Complete the prior step" | **false** |
+Clicking "Review + publish" opened it instantly, and the rail *then* flipped to
+"Ready to publish" and marked Images + mockups "Listing images reviewed". The gate was
+never closed; the label was.
+**Cause:** both rails render `` issues[0] || progressStatus(...) ``, so `progressStatus`
+is only reached when `progressGateIssues()` returned **empty** — i.e. the step is open.
+Its fallback still returned "Complete the prior step" for any step that was not `active`.
+**Fix:** `progressStatus(index, active, done, blocked)` with `const live = active || !blocked`;
+every branch now keys off `live`, so an open step reads its real state.
+**Impact:** this is the "I'm stuck and can't tell why" failure — the user hunts for missing
+work on a step that was ready the whole time.
+**Guard:** `tests/workflow-traversal.test.mjs` — "an open step never claims you must
+complete the prior one".
+

@@ -1,5 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import {
   canOpenStep, canOpenPhase, blockedReasons, resumeStep,
   WORKFLOW_ORDER, FINISH_ORDER,
@@ -123,4 +124,31 @@ test("a requested Finish phase survives a reload — D147", async () => {
   assert.match(source, /return complete\|\|order\.indexOf\(target\)<=order\.indexOf\(saved\)\?target:saved;/);
   assert.match(source, /setFinishPhase\(restoredFinishPhase\(state\.finishPhase\|\|"details",url\.searchParams\.get\("phase"\),Boolean\(state\.complete\)\)\)/,
     "Restoration must honour the requested phase, not overwrite it with the saved one.");
+});
+
+test("an open step never claims you must complete the prior one — D154", async () => {
+  const source = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+
+  /* Both rails render `issues[0] || progressStatus(...)`, so progressStatus is only
+   * reached when progressGateIssues() came back EMPTY — the step is open. Its
+   * fallback branch nonetheless returned "Complete the prior step" whenever the
+   * step was not the active one.
+   *
+   * Measured live on batch 103d12f0 (all three listings drafted, photos chosen):
+   *   on Titles + tags  -> "Images + mockups" says "Complete the prior step", disabled false
+   *   on Titles + tags  -> "Review + publish" says "Complete the prior step", disabled false
+   *   on Etsy details   -> both of the above, disabled false
+   *   on Images+mockups -> "Review + publish" says "Complete the prior step", disabled false
+   * Clicking "Review + publish" opened it immediately and the rail then flipped to
+   * "Ready to publish" — the label was stale, not the gate.
+   *
+   * Fix: progressStatus takes `blocked` and treats an open step like the active one. */
+  assert.match(source, /function progressStatus\(index:number,active:boolean,done:boolean,blocked:boolean\)\{const live=active\|\|!blocked;/,
+    "progressStatus must know whether the step is actually gated.");
+  assert.equal((source.match(/progressStatus\(index,active,done,Boolean\(issues\.length\)\)/g) || []).length, 2,
+    "Both rails must pass the real gate state.");
+
+  const body = source.split("\n")[505];
+  assert.ok(!/[^a-zA-Z]active\?/.test(body),
+    "No branch in progressStatus may key off `active` alone; use `live`.");
 });
