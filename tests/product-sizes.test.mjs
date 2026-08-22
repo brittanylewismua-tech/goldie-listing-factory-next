@@ -379,3 +379,24 @@ test("a suggestion has exactly one control — D193", async () => {
   assert.doesNotMatch(app, /Goldie suggests \{/);
   assert.match(app, /Use Printify&rsquo;s \{suggestion\}/);
 });
+
+test("the product photo picks the catalog shot that actually shows the garment — D194", async () => {
+  const app = await read("app/listing-factory-app.tsx");
+  const route = await read("app/api/printify/route.ts");
+
+  /* Blueprint catalog images are inconsistent: some are model shots, some are a
+   * white garment on a white background that reads as a blank square at 52px
+   * however it is cropped or filtered. Measured across three products — the
+   * hoodie and sweatshirt have usable shots at index 0, the tee does not.
+   *
+   * Rather than trusting index 0, the client samples the first few candidates and
+   * keeps the one with the most non-background pixels. A white-on-white frame
+   * scores near zero and loses. */
+  assert.match(route, /previewImages:\(blueprint\.images\|\|\[\]\)\.slice\(0,6\)/);
+  assert.match(app, /function pickProductPhoto\(product:TemplateDetails\)/);
+  assert.match(app, /if\(v<225\)ink\+\+/, "Score by how much of the frame is not studio background.");
+  assert.match(app, /if\(candidates\.length<2\)return product\.previewImage/,
+    "One candidate is not a choice — do not probe.");
+  /* next/image shadows the global Image constructor in this file. */
+  assert.match(app, /const image=document\.createElement\("img"\)/);
+});
