@@ -2293,3 +2293,22 @@ outlined pills with **no type changes**; destructive stays a text link. The tile
 CTA is now **"Choose →"** and **"✓ Ready"**, which fit the column with no
 clipping. Verified live: 0 tiles overflowing, product name still on its own
 line, pill 30px at 10.5px/700.
+
+### D123 — verified live, 21 Aug 2026
+
+Measured on the product step, Gildan Tee, after the D129 prompt removal:
+
+| | |
+|---|---|
+| mockups rendered as toggles | **10** |
+| selected on load | **8** (the per-listing maximum) |
+| toggle one off | **7** |
+| toggle a second off | **6** |
+| save control | **"Save these 6 mockups as this product's default"** |
+
+Copy reads *"Saved for this product — remove or add any scene."* Restored to 8
+without saving, so the product default is untouched.
+
+Implementation note worth keeping: `mockupIds` is stored inside the existing
+`pricingJson` blob on `product_recipes`, so no migration was needed and the
+standing rule about not touching `db/` or `drizzle/` held.
