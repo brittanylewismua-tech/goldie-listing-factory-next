@@ -787,3 +787,23 @@ test("status chips are visually distinct from buttons — D139", async () => {
   assert.doesNotMatch(clarity, /\.app-shell \.saved-settings-summary span\{[^}]*border-radius:999px/,
     "Status must not borrow the pill radius that marks a control.");
 });
+
+test("the publish checklist is one column and warns in warning colours — D141", async () => {
+  const [page, clarity] = await Promise.all([
+    readFile(listingFactoryPage, "utf8"),
+    readFile(new URL("app/clarity-pass.css", root), "utf8"),
+  ]);
+
+  /* Measured on Publish: `.final-checklist` is a single 642px column of five
+   * ticks, then `.final-safety-readiness` is a separate 316px+316px grid with
+   * the last two — five full-width rows followed by two half-width ones.
+   *
+   * And "! Etsy details and personalization still need review" rendered in the
+   * same colour as every tick (rgb(99,67,94), transparent). On the last screen
+   * before listings go live, a warning must not look like a tick. */
+  assert.match(clarity, /\.app-shell \.final-safety-readiness\{[\s\S]*grid-template-columns:1fr!important/,
+    "The readiness row must match the checklist's single column.");
+  assert.match(page, /className=\{allCreatedListingsHaveImages\(selectedPublishDrafts\(\)\)\?"ready":"needs-review"\}/,
+    "Readiness items must carry a state class so a warning can be coloured.");
+  assert.match(clarity, /\.final-safety-readiness>span\.needs-review\{[\s\S]*color:#8a3f66!important/);
+});

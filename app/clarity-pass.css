@@ -521,3 +521,35 @@
  * own line. The heading may wrap; a product name may not. */
 .app-shell .pricing-section-heading h4>span,
 .app-shell .item-pricing-heading h4>span{white-space:nowrap!important}
+
+/* ── D141 · The publish checklist split across two grids, and a warning looked
+ *          identical to a tick ──────────────────────────────────────────────
+ *
+ * Measured on the Publish phase: `.final-checklist` is a single 642px column
+ * holding five ticks, then `.final-safety-readiness` is a SEPARATE 316px+316px
+ * grid holding the last two — so five full-width rows are followed by two
+ * half-width ones for no reason a seller can see.
+ *
+ * Worse, "! Etsy details and personalization still need review" rendered in the
+ * same colour as every "✓" item (rgb(99,67,94), transparent) — the only
+ * difference was the character. On the last screen before listings go live, a
+ * warning must not look like a tick. */
+.app-shell .final-safety-readiness{
+  grid-template-columns:1fr!important;
+  gap:8px!important;
+}
+.app-shell .final-safety-readiness>span{
+  padding:11px 14px!important;
+  border:1px solid rgba(91,48,79,.14)!important;
+  border-radius:12px!important;
+}
+.app-shell .final-safety-readiness>span.ready{
+  background:rgba(255,255,255,.42)!important;
+  color:rgba(99,67,94,.92)!important;
+}
+.app-shell .final-safety-readiness>span.needs-review{
+  border-color:rgba(157,80,130,.34)!important;
+  background:#fdf2f8!important;
+  color:#8a3f66!important;
+  font-weight:750!important;
+}

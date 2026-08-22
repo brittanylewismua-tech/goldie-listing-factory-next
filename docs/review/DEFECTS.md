@@ -2477,3 +2477,39 @@ Walked and screenshotted at the real width:
 - "2. Etsy shipping profile — what buyers pay · Gildan Tee" beneath
 
 No nested frames, no orphaned controls, no status styled as buttons.
+
+### D141 · The publish checklist splits into two grids, and a warning looks like a tick · **FIXED HERE** · **HIGH · UX**
+
+Found by screenshotting the Publish phase rather than measuring it.
+
+**Two problems on the last screen before listings go live:**
+
+1. **Inconsistent layout.** `.final-checklist` is a single **642px** column of
+   five ticks; `.final-safety-readiness` is a **separate 316px + 316px grid**
+   holding the final two. Five full-width rows, then two half-width ones, for no
+   reason visible to the seller.
+2. **A warning styled as a tick.** *"! Etsy details and personalization still
+   need review"* rendered at `rgb(99,67,94)` on a transparent background —
+   **exactly** the same as every "✓" row. The only difference was the character.
+
+**Fixed:** the readiness row is one column matching the checklist, and the two
+items now carry `ready` / `needs-review` classes so an outstanding item gets the
+plum attention treatment (`#8a3f66` on `#fdf2f8` with a tinted border) while
+settled items stay quiet. Verified live — both rows now 642px, warning renders
+`rgb(138,63,102)` on `rgb(253,242,248)`, tick unchanged.
+
+Same family as **D139**: state has to be legible from the styling, not from a
+single character.
+
+### Finish phases — walked and screenshotted
+
+| phase | result |
+|---|---|
+| 1 · Titles + tags | titles wrap fully (139/130/137 of 140), tags wrap fully, **13/13/13** after regeneration, DPI chips present |
+| 2 · Etsy details | **"6 added · all optional"** (D111 live), full category path (D106 live), clean two-column field grid |
+| 3 · Images + mockups | 477-image picker still correctly lazy-loaded |
+| 4 · Publish | titles fully readable, per-listing "130/140 characters · 13/13 tags · 4 photos", "Nothing is published until you use the final button" |
+
+**One false alarm I checked before reporting:** row 1 showed 6/13 tags against
+row 2's 13/13. Regenerating produced **13/13/13**, so it was stale data from
+before the D79 fix, not a live defect.
