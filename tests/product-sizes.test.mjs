@@ -284,3 +284,21 @@ test("mockups and keyword banks are per product in a bundle — D180", async () 
   assert.match(app, /className="bundle-product-keywords"/,
     "Each product picks its own keyword bank.");
 });
+
+test("every product in a bundle needs its own keyword bank before continuing — D181", async () => {
+  const app = await read("app/listing-factory-app.tsx");
+
+  /* D180 made the keyword bank per-product. The forward gate still only checked
+   * the ACTIVE product's bank, so a three-product bundle would pass setup with
+   * one bank chosen and then reach product two with nothing to write titles from.
+   *
+   * Measured on the live account: all three saved products had keywordListId
+   * "(none)", so this was not hypothetical. */
+  assert.match(app, /const bundleKeywordGaps=useMemo\(\(\)=>\{/);
+  assert.match(app, /if\(bundleKeywordGaps\.length\)issues\.push\(`Choose a keyword bank for \$\{bundleKeywordGaps\.join\(", "\)\}\.`\)/,
+    "The step gate must name the products still missing a bank.");
+  assert.match(app, /\|\|bundleKeywordGaps\.length>0\|\|/,
+    "Continue stays disabled until every product has one.");
+  assert.match(app, /bundleKeywordGaps\.length\?`Pick a keyword bank for \$\{bundleKeywordGaps\.join\(", "\)\}`/,
+    "And it says which products, not just that something is missing.");
+});
