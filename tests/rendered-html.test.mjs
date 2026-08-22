@@ -188,8 +188,14 @@ test("unifies saved products, editing, pricing, and mockups without the old fact
   assert.match(recipes, /Goldie imports the variations, placement, shipping, costs, and description/);
   assert.match(recipes, /saved product/);
   assert.match(recipes, /Add another product/);
-  assert.match(recipes, /Product saved and selected/);
-  assert.match(recipes, /props\.onUseRecipe\(saved\)/);
+  /* D169: saving a product no longer selects it — creating and choosing are
+   * different intentions. The seller returns to the list and picks deliberately. */
+  assert.match(recipes, /Product saved\. Choose it below when you want to build with it\./);
+  assert.doesNotMatch(recipes, /onUseRecipe\(saved\)/);
+  /* D169: saving no longer auto-selects, so this asserts the opposite now.
+   * onUseRecipe is still the path used when the seller taps Choose. */
+  assert.doesNotMatch(recipes, /props\.onUseRecipe\(saved\)/);
+  assert.match(recipes, /props\.onUseRecipe\(recipe\)/);
   assert.doesNotMatch(page, /Adjust what changed\. Keep everything else\./);
   assert.match(page, /Saved for this product/);
   assert.match(page, /Saved for this product — remove or add any scene/);

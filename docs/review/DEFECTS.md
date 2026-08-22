@@ -3096,3 +3096,24 @@ tiny text, escaping children — run on whatever page was loaded. I never select
 so I never rendered the screen I had just changed. Structural scans do not substitute for
 opening the screen you edited.
 
+## D169 — the bundle library re-offered the bundle you had just selected
+**Found by Brittany.** After choosing a bundle, its member products were listed, and then
+underneath that the saved-bundles grid and the "Want one batch to cover several products?"
+form both still rendered — offering the same bundle again.
+**Fix:** both bundle blocks are now gated on `!activeId.startsWith("bundle:")`. A bundle
+selection already lists its members above, so the grid beneath was pure repetition. Choosing
+an individual product still shows them, which is when they are useful.
+
+## D169b — saving a product immediately started building with it
+**Found by Brittany:** "if you create a product, that doesn't necessarily mean it starts to
+build that product. Let them create the product and then select it."
+**Cause:** `save()` ended with `await props.onUseRecipe(saved)` plus `setActiveId(saved.id)`,
+so creating a product selected it and dropped you into its setup.
+**Fix:** creating and choosing are separate intentions. The Printify link is already verified
+earlier in `save()`, so nothing needed loading at that point. Saving now returns to the
+product list with "Product saved. Choose it below when you want to build with it."
+**Note:** the bundle "no colours or sizes for the third product" report could not be
+reproduced — the saved bundle (`ZZ TEST BUNDLE`) contains exactly two products, Gildan Hoodie
+and Gildan Tee, so one member card beneath the active product is correct. If a three-product
+bundle does it, that is still open.
+
