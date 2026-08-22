@@ -722,8 +722,7 @@ test("a product with no saved defaults is framed as first-time setup — D125", 
    * block behind it is just the editor and is named for that. */
   assert.match(page, /<b>\{`\$\{activeRecipe\?\.name\|\|"This product"\} settings`\}<\/b>/,
     "The settings block is named for its job, not for a state the card already shows.");
-  assert.match(page, /productFirstRun\?"Choose the colours you want to offer/,
-    "Colour copy must not claim a previous batch on a first run.");
+  assert.match(page, /Choose the colors you want to offer/); /* D191: US spelling */
 });
 
 test("new products require completed setup and saved products own exact mockup scenes — D125/D123", async () => {

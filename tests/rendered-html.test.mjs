@@ -1687,7 +1687,7 @@ test("chooses exact available Printify colors per batch and remembers optional d
     readFile(new URL("../app/api/product-recipes/route.ts",import.meta.url),"utf8"),
     readFile(new URL("../app/globals.css",import.meta.url),"utf8"),
   ]);
-  assert.match(page,/<h3>Colours<\/h3>/);
+  assert.match(page,/<h3>Colors<\/h3>/);
   assert.match(page,/Choose at least one available color before continuing/);
   assert.match(page,/Save these as this product’s default colors/);
   assert.match(page,/selectedVariantIds:pricedVariants\.map/);
