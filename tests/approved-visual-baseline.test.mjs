@@ -1174,7 +1174,10 @@ test("a selected product tile does not clip its own actions — D186", async () 
    * card, so "Delete" was cut at the edge. Measured on the deployed build twice:
    * the first fix was verified by injecting CSS into the page and never written
    * here — the same way the mockup dead column survived five reports. */
-  assert.match(clarity, /\.app-shell \.recipe-grid \.recipe-tile\{[^}]*flex-wrap:wrap!important/,
-    "Actions must wrap rather than clip.");
-  assert.match(clarity, /\.app-shell \.recipe-grid \.recipe-tile>\.recipe-use\{[^}]*flex:1 0 100%!important/);
+  /* The wrapping-flex attempt made it worse — one button per row, tile 163px ->
+   * 296px. The grid was nearly right; the label was too long. */
+  assert.match(clarity, /\.app-shell \.recipe-grid \.recipe-tile\{overflow:visible!important\}/);
+  assert.match(clarity, /\.app-shell \.recipe-card \.change-product:after\{content:"Change"/);
+  assert.doesNotMatch(clarity, /\.recipe-grid \.recipe-tile\{[^}]*flex-wrap:wrap/,
+    "Flex made each action take its own row.");
 });

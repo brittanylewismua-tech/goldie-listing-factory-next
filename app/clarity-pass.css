@@ -1028,29 +1028,21 @@
   box-shadow:none!important;
 }
 
-/* D186 · The saved-product tile is a 4-column grid (0 102px 46px 37px) with the
- * actions locked to columns 2-4 and overflow:hidden. The selected tile gains a
- * third action ("Change product"), so 102+46+37 plus gaps exceeds the 207px card
- * and "Delete" is cut at the edge. Measured on the deployed build, twice — the
- * first fix was verified by injecting CSS and never written to the stylesheet,
- * the same way D179 survived five reports.
+/* D186 · The saved-product tile is a 4-column grid whose columns size to content:
+ * 102px "Change product" + 46px Edit + 37px Delete + 20px gaps = 205px in a 207px
+ * card, so Delete touched the edge and overflow:hidden cut it.
  *
- * Flex instead of a rigid grid, so a third action wraps rather than clipping. */
-.app-shell .recipe-grid .recipe-tile{
-  display:flex!important;
-  flex-wrap:wrap!important;
-  align-items:center!important;
-  justify-content:flex-end!important;
-  gap:6px!important;
-  padding:0 12px 12px!important;
-  overflow:visible!important;
+ * A first attempt replaced the grid with wrapping flex. That was worse — each
+ * button took its own row and the tile went 163px -> 296px tall. Measured on the
+ * deployed build, which is the only reason I caught it. The grid was nearly right;
+ * the label was too long and the overflow was hiding the evidence. */
+.app-shell .recipe-grid .recipe-tile{overflow:visible!important}
+.app-shell .recipe-card .change-product{
+  font-size:0!important;
+  padding:4px 9px!important;
+  min-width:0!important;
 }
-.app-shell .recipe-grid .recipe-tile>.recipe-use{
-  flex:1 0 100%!important;
-  width:auto!important;
-  margin:0 -12px 4px!important;
-}
-.app-shell .recipe-grid .recipe-tile>button:not(.recipe-use){flex:0 0 auto!important}
+.app-shell .recipe-card .change-product:after{content:"Change";font-size:9px;font-weight:800}
 
 /* D188 · The blueprint catalog image is a blank garment shot on white, so at 52px
  * a white tee vanished into the card. White plate, contained, bordered. */
