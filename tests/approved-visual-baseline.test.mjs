@@ -503,7 +503,7 @@ test("the setup step has exactly one forward control, and it gates every section
   assert.match(page, /\{workflowStep!=="setup"&&<button className="workflow-next" disabled=\{!designsFinished\} onClick=\{continueFromDesigns\}>/,
     "The designs-block forward button renders on the setup step again, above Colours and Mockups.");
   // the real gate must keep naming what is missing
-  assert.match(page, /!selectedColorIds\.length\?"Choose product colors to continue":!autoTitleBankId\?"Pick a keyword bank to continue"/);
+  assert.match(page, /!selectedColorIds\.length\?"Choose product colors to continue":Boolean\(templateDetails\?\.sizeOptions\?\.length\)&&!selectedSizeIds\.length\?"Choose product sizes to continue":!autoTitleBankId\?"Pick a keyword bank to continue"/ /* D164 gates sizes the same way */);
 });
 
 test("a saved later step cannot overwrite an explicit safe return to setup — D108",async()=>{
@@ -585,19 +585,21 @@ test("Etsy shipping profile names are decoded, not shown as raw entities — D11
   assert.match(page, /function friendlyShippingProfileTitle\(raw\?:string\)\{const title=raw\?decodeProfileTitle\(raw\):raw;/);
 });
 
-test("the Colours section explains that sizes come from Printify — D123", async () => {
+test("sizes are chosen in Goldie, not just inherited from Printify — D123, superseded by D164", async () => {
   const page = await readFile(listingFactoryPage, "utf8");
 
-  /* Verified live: the setup step has 43 colour toggles and NO size control
-   * anywhere in the Listing Factory. Sizes are inherited from the Printify
-   * product and first become visible on the Pricing step as cost groups
-   * (16 variants at $9.79, 4 at $11.64 for 2XL).
-   *
-   * That is a deliberate design — the Printify product is the source of truth —
-   * but a seller who can change colours here will reasonably expect to change
-   * sizes here too, and nothing said where to go instead. */
-  assert.match(page, /className="sizes-note">Sizes come from your Printify product and apply to every listing\./,
-    "The Colours section must say where sizes are controlled.");
+  /* D123 measured that the setup step had 43 colour toggles and NO size control,
+   * and settled for a note pointing sellers at Printify. That note's own
+   * rationale was: "a seller who can change colours here will reasonably expect
+   * to change sizes here too". D164 does the real thing instead — sizes are a
+   * selectable axis with a per-product default, so the note is now false and
+   * must not come back. */
+  assert.doesNotMatch(page, /Sizes come from your Printify product/,
+    "That note is obsolete: sizes are chosen here now.");
+  assert.match(page, /<p className="mini-label">SIZES FOR THIS BATCH<\/p>/,
+    "The setup step must offer sizes beside colours.");
+  assert.match(page, /Save these as this product’s default sizes/,
+    "Sizes must be savable per product, exactly like colours.");
 });
 
 test("shipping profiles are product-aware, searchable, and never hard-filtered — D117", async () => {

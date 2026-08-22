@@ -1077,7 +1077,7 @@ test("keeps pricing simple while using a real Etsy shipping profile and exact te
   assert.match(publish,/etsyShippingProfileId/);
   assert.match(drafts,/shipping_template_id:selectedShippingTemplateId/);
   assert.match(drafts,/etsyBuyerShipping/);
-  assert.match(page,/loadTemplateUrl\(recipe\.templateUrl,nextPricing,Number\(recipe\.etsyShippingProfileId\)\|\|0,recipe\.defaultColorIds\|\|\[\]\)/);
+  assert.match(page,/loadTemplateUrl\(recipe\.templateUrl,nextPricing,Number\(recipe\.etsyShippingProfileId\)\|\|0,recipe\.defaultColorIds\|\|\[\],recipe\.defaultSizeIds\|\|\[\]\)/ /* D164 added the size argument */);
   assert.match(page,/PriceField value=\{itemCents\} minimum=\{variant\.cost\/100\}/);
   assert.match(page,/Create a custom shipping profile \(optional\)/);
   assert.match(page,/Name your new shipping profile/);
@@ -1681,7 +1681,7 @@ test("chooses exact available Printify colors per batch and remembers optional d
   assert.match(page,/Choose at least one available color before continuing/);
   assert.match(page,/Save these as this product’s default colors/);
   assert.match(page,/selectedVariantIds:pricedVariants\.map/);
-  assert.match(printify,/enabledNonColorIds/);
+  assert.match(printify,/enabledOtherIds/ /* D164: renamed — size is now selectable, so only the OTHER axes stay gated */);
   assert.match(printify,/availableColorIds/);
   assert.match(printify,/templateEnabled:Boolean\(variant\.is_enabled\)/);
   assert.match(drafts,/body\.selectedVariantIds\.includes\(id\)/);
@@ -1965,7 +1965,7 @@ test("keeps a forward path from setup, designs, and pricing after drafts exist (
    * step selects listing images separately - and requiring one made "No mockups
    * for this batch" unreachable: choosing it disabled the only way forward.
    * See D110. */
-  assert.match(app,/disabled=\{!complete&&\(!selectedColorIds\.length\|\|!autoTitleBankId\|\|activeRecipe\?\.setupComplete===false\)\}/);
+  assert.match(app,/disabled=\{!complete&&\(!selectedColorIds\.length\|\|\(Boolean\(templateDetails\?\.sizeOptions\?\.length\)&&!selectedSizeIds\.length\)\|\|!autoTitleBankId\|\|activeRecipe\?\.setupComplete===false\)\}/ /* D164 gates sizes too */);
   assert.match(app,/complete\?goToStep\("finish",false,true\):goToStep\("designs"\)/);
   assert.match(app,/files\.length>0&&complete&&workflowStep==="designs"/);
   assert.match(app,/className="batch-actions"[\s\S]{0,500}Back to finishing your listings/);

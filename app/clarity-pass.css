@@ -664,3 +664,61 @@
 .app-shell .approved-powered>span,
 .app-shell .approved-sidebar-footer>small,
 .app-shell .etsy-api-disclosure{color:rgba(74,42,62,.95)!important}
+
+/* D164 · Sizes became a selectable axis, so they get the colour card's idiom.
+ * Size labels are short and their order is meaningful (S, M, L, 2XL), so they
+ * render as a compact ordered row rather than the colour grid's 145px columns. */
+.app-shell .product-size-selector{
+  display:grid;
+  gap:16px;
+  width:min(980px,calc(100% - 32px));
+  margin:18px auto;
+  padding:20px;
+  border:1px solid rgba(91,48,79,.2);
+  border-radius:17px;
+  background:rgba(255,255,255,.58);
+  box-shadow:0 12px 35px rgba(91,48,79,.08);
+}
+.app-shell .size-selector-head{display:flex;align-items:end;justify-content:space-between;gap:20px}
+.app-shell .size-selector-head>div{display:grid;gap:4px}
+.app-shell .size-selector-head h3{margin:0;color:#4c293f;font:650 25px/1.12 "Fraunces",Georgia,serif}
+.app-shell .size-selector-head span{max-width:670px;color:#75576b;font-size:11px;line-height:1.5}
+.app-shell .size-selector-head>b{flex:0 0 auto;padding:7px 10px;border-radius:999px;background:rgba(244,212,237,.75);color:#623a56;font-size:10px}
+.app-shell .size-choice-grid{display:flex;flex-wrap:wrap;gap:9px}
+.app-shell .size-choice-grid button{
+  position:relative;
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  min-width:74px;
+  min-height:44px;
+  padding:10px 14px;
+  border:1px solid rgba(91,48,79,.15);
+  border-radius:11px;
+  background:rgba(255,255,255,.72);
+  color:#563047;
+  cursor:pointer;
+}
+.app-shell .size-choice-grid button:hover{border-color:rgba(153,79,130,.52)}
+.app-shell .size-choice-grid button.selected{border-color:#a2578d;background:linear-gradient(120deg,rgba(250,218,236,.92),rgba(225,207,248,.87));box-shadow:0 0 0 2px rgba(255,255,255,.72)}
+.app-shell .size-choice-grid button:disabled{opacity:.42;cursor:not-allowed}
+.app-shell .size-choice-grid span{font-size:11px;font-weight:800;white-space:nowrap}
+.app-shell .size-choice-grid em{display:grid;place-items:center;width:19px;height:19px;border-radius:50%;background:#5c304f;color:#fff;font-size:9px;font-style:normal}
+.app-shell .size-choice-grid small{color:#795e70;font-size:8px}
+.app-shell .size-selector-actions{display:flex;flex-wrap:wrap;gap:8px;padding-top:2px}
+.app-shell .size-selector-actions button{min-height:38px;padding:9px 13px;border:1px solid rgba(91,48,79,.2);border-radius:999px;background:rgba(255,255,255,.75);color:#603750;font-size:9px;font-weight:850;cursor:pointer}
+.app-shell .size-selector-actions button:last-child{margin-left:auto;background:#5c304f;color:#fff}
+.app-shell .size-selector-actions button.remembered{border-color:rgba(157,80,130,.4);background:linear-gradient(145deg,rgba(232,183,225,.55),rgba(201,144,208,.45));color:#4b283e}
+.app-shell .size-required{margin:0;padding:10px 12px;border:1px solid #bd7188;border-radius:9px;background:#fff3f7;color:#79374e;font-size:10px;font-weight:800}
+@media(max-width:650px){
+  .app-shell .size-selector-head{align-items:start;flex-direction:column}
+  .app-shell .size-selector-actions{display:grid}
+  .app-shell .size-selector-actions button:last-child{margin-left:0}
+}
+/* The colour card's "saved" pill was the last green in this flow (#78a98a /
+ * #e8f5ec / #276543) — same leftover family as D156. */
+.app-shell .color-selector-actions button.remembered{
+  border-color:rgba(157,80,130,.4)!important;
+  background:linear-gradient(145deg,rgba(232,183,225,.55),rgba(201,144,208,.45))!important;
+  color:#4b283e!important;
+}
