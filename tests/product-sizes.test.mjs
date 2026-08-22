@@ -307,9 +307,14 @@ test("shipping, profit and Etsy details are per-product facts — D183", async (
   assert.match(app, /templateShippingProfileId:Number\(product\.shippingTemplateId\)\|\|0/);
   assert.match(app, /etsyShippingProfileId:recipe\?\.etsyShippingProfileId,defaultProfitTarget:recipe\?\.defaultProfitTarget,etsyDefaults:recipe\?\.etsyDefaults/);
 
-  /* Only the four that can be edited from the card render as buttons; the rest
-   * are facts, so they do not pretend to be controls. */
-  assert.match(app, /const editable=\["colours","sizes","mockups","keywords"\]\.includes\(facet\.name\)/);
+  /* Every chip does something. Colours, sizes, mockups and keywords open in the
+   * card; shipping, profit and Etsy details open the product-settings block and
+   * scroll to it. A chip for a product that is not the current one in a bundle
+   * stays a fact rather than a control that cannot work. */
+  assert.match(app, /const inCard=\["colours","sizes","mockups","keywords"\]\.includes\(facet\.name\);const editable=inCard\|\|isActive;/);
+  assert.match(app, /const block=document\.querySelector<HTMLDetailsElement>\("\.everything-else"\);/);
+  assert.match(app, /block\.open=true;block\.scrollIntoView\(\{block:"start"\}\)/,
+    "Opening a setting must bring it into view — the same failure as Edit bundle.");
 });
 
 test("the product step does not also collect designs — D184", async () => {
