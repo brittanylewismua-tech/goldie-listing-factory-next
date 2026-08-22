@@ -409,3 +409,42 @@ test("the product photo picks the catalog shot that actually shows the garment �
   /* next/image shadows the global Image constructor in this file. */
   assert.match(app, /const image=document\.createElement\("img"\)/);
 });
+
+test("D207: a bundle facet shortcut never writes another product's choice into the active one", async () => {
+  const app = await read("app/listing-factory-app.tsx");
+
+  /* Live, on a three-product bundle: clicking "Use Printify's 3 colors" on the
+   * crewneck card wrote those ids into the global selectedColorIds, which price
+   * and validate the ACTIVE product — the hoodie. The hoodie has no variants in
+   * crewneck colours, so pricedVariants emptied and Continue threw
+   * "The selected colors do not contain any available variants" over cards that
+   * all showed Colors ✓.
+   *
+   * The pickers already guarded this with isActive and wrote to
+   * bundleColorChoices / bundleSizeChoices for inactive members. The row
+   * shortcut was the one path that skipped the guard. */
+  const shortcut = app.slice(app.indexOf('className="row-shortcut"'));
+  const handler = shortcut.slice(0, shortcut.indexOf("</button>"));
+
+  assert.match(handler, /if\(isActive\)\{setSelectedColorIds\(ids\);setPricingApproved\(false\)\}else setBundleColorChoices/);
+  assert.match(handler, /if\(isActive\)\{setSelectedSizeIds\(ids\);setPricingApproved\(false\)\}else setBundleSizeChoices/);
+  assert.doesNotMatch(
+    handler,
+    /const ids=facet\.suggested\?\.colorIds\|\|\[\];setSelectedColorIds\(ids\)/,
+    "the unguarded write is gone",
+  );
+  // The choice must still persist to the recipe either way.
+  assert.match(handler, /void establish\(recipe,\{defaultColorIds:ids\}\)/);
+  assert.match(handler, /void establish\(recipe,\{defaultSizeIds:ids\}\)/);
+});
+
+test("D207: the dead-end variant message names the product and says what to do", async () => {
+  const app = await read("app/listing-factory-app.tsx");
+  const code = app.replace(/\/\*[\s\S]*?\*\//g, "");
+
+  /* "The selected colors do not contain any available variants." names no
+   * product — useless in a bundle — and no action. */
+  assert.doesNotMatch(code, /"The selected colors do not contain any available variants\."/);
+  assert.match(app, /No color and size combination you picked is available for \$\{templateDetails\?\.blueprintTitle\|\|"this product"\}/);
+  assert.match(app, /Open its Colors or Sizes and choose a pairing Printify offers/);
+});
