@@ -183,3 +183,31 @@ test("the size block strip lives in the layer that wins — D171", async () => {
     "The strip must be in clarity-pass, which loads last, or the base card rule wins.");
   assert.match(clarity, /\.app-shell \.saved-product-batch-page \.product-size-selector,[^{]*\{[^}]*background:transparent!important/);
 });
+
+test("every bundle product is presented identically — D175", async () => {
+  const app = await read("app/listing-factory-app.tsx");
+  const route = await read("app/api/printify/route.ts");
+
+  /* The bundle screen reused the single-product setup wholesale: bundleRecipes[0]
+   * was promoted into the main slot (banner, Colours, Sizes, Mockups) purely
+   * because it was index 0, and every other member was pushed into a section
+   * called "Other products in this bundle" that had been built for colours only.
+   * Two formats for the same thing on one screen, with an arbitrary favourite.
+   *
+   * Now: no member is promoted, and all of them render from one map as collapsed
+   * rows carrying the product photo, the seller's name, the real Printify product
+   * name, and a summary of what is set. */
+  assert.match(app, /\{!\(activeBundle&&bundleRecipes\.length>1\)&&<div className="batch-default-block color-default-block">/,
+    "The promoted colour/size block must not render while a bundle is running.");
+  assert.match(app, /\{bundleRecipes\.map\(\(recipe,index\)=>\{const isActive=index===bundleIndex;/,
+    "Every member, not slice(1), and the active one is just the one that is current.");
+  assert.match(app, /className="bundle-product-photo" src=\{product\.previewImage\}/,
+    "Each row shows what the product actually is.");
+  assert.match(app, /<b>\{recipe\.name\}<\/b><small>\{product\.blueprintTitle\}<\/small>/,
+    "The seller's name for it, and the real Printify product beneath.");
+  assert.doesNotMatch(app, /OTHER PRODUCTS IN THIS BUNDLE/,
+    "There is no 'other' any more — they are all the same.");
+
+  /* previewImage had to be exposed; the API never returned a product image. */
+  assert.match(route, /previewImage:\(found\.product\.images\|\|\[\]\)\.find\(image=>image\.is_default\)\?\.src/);
+});

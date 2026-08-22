@@ -1435,7 +1435,7 @@ test("supports simple saved product bundles without complicating the single-prod
    * before any design has been uploaded, so it asked about something that did
    * not exist yet. See D118. */
   assert.match(workflow, /Want one batch to cover several products\?/);
-  assert.match(workflow, /Ready for this batch/);
+  assert.match(workflow, /"✓ Ready"/); /* D175: shortened so it fits a compact tile */
   assert.match(workflow, /Choose the products in the order you want to complete them/);
   assert.match(workflow, /bundleSaveLock\.current/);
   assert.match(workflow, /Saving bundle…/);
@@ -1448,7 +1448,9 @@ test("supports simple saved product bundles without complicating the single-prod
   assert.match(workflow, /Goldie could not load every saved product in this bundle/);
   /* D136: a bundle has one tile and therefore one selected state. */
   assert.equal((workflow.match(/bundles\.map\(/g)||[]).length,1);
-  assert.match(workflow, /selected\?"✓ Ready for this batch"/);
+  /* D175: the bundle tile label was "N products · Choose this bundle →", which
+   * overflowed a 207px tile on both sides. Shortened to match the product tiles. */
+  assert.match(workflow, /selected\?"✓ Ready":"Choose →"/);
   assert.match(api, /deduplicated:true/);
   assert.match(page, /function useBundle/);
   /* D174: the banner names the current product; "You are working on" repeated

@@ -813,19 +813,58 @@
   margin:15px 0 0!important;
   padding:15px 0 0!important;
 }
-/* Each bundle product is a card in its own right; its name was a bare <b>. */
+/* D175 · Every bundle member is now the same collapsed row: product photo,
+   the seller's name for it, the real Printify product beneath, and a summary of
+   what is set. No member is promoted. */
 .app-shell .bundle-color-product{
-  padding:16px 18px;
   border:1px solid rgba(91,48,79,.16);
   border-radius:16px;
   background:rgba(255,255,255,.42);
+  overflow:hidden;
 }
-.app-shell .bundle-color-product>b{
-  display:block;
-  margin-bottom:6px;
+.app-shell .bundle-color-product+.bundle-color-product{margin-top:10px}
+.app-shell .bundle-color-product>summary{
+  display:grid;
+  grid-template-columns:52px minmax(0,1fr) auto;
+  align-items:center;
+  gap:14px;
+  padding:12px 16px;
+  cursor:pointer;
+  list-style:none;
+}
+.app-shell .bundle-color-product>summary::-webkit-details-marker{display:none}
+.app-shell .bundle-product-photo{
+  width:52px;
+  height:52px;
+  border-radius:11px;
+  object-fit:cover;
+  background:linear-gradient(145deg,rgba(246,229,248,.9),rgba(226,208,246,.75));
+  border:1px solid rgba(91,48,79,.14);
+}
+.app-shell .bundle-product-photo.placeholder{display:block}
+.app-shell .bundle-product-id{display:grid;gap:2px;min-width:0}
+.app-shell .bundle-product-id>b{
   color:#4c293f;
-  font:650 19px/1.2 "Fraunces",Georgia,serif;
+  font:650 18px/1.2 "Fraunces",Georgia,serif;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
 }
+.app-shell .bundle-product-id>small{color:#75576b;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.app-shell .bundle-product-summary{
+  flex:0 0 auto;
+  padding:6px 11px;
+  border-radius:999px;
+  background:rgba(244,212,237,.6);
+  color:#623a56;
+  font-size:10px;
+  font-weight:800;
+  white-space:nowrap;
+}
+.app-shell .bundle-color-product[open]>summary{border-bottom:1px solid rgba(91,48,79,.12)}
+.app-shell .bundle-color-product>.product-color-selector,
+.app-shell .bundle-color-product>.product-size-selector{padding:14px 16px!important}
+.app-shell .bundle-product-loading{margin:0;padding:12px 16px;color:#75576b;font-size:11px}
 
 /* D172 · The setup column stacks eleven ordered sections, and only some carried
  * `width:min(980px,calc(100% - 32px))`. Nested ones applied it a second time
