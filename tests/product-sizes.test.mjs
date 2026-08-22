@@ -363,6 +363,21 @@ test("the product photo is visible against the card — D188", async () => {
   /* The blueprint catalog image is a blank garment on white. Measured: the image
    * loaded at 2048px and rendered as an empty square, because a white tee on the
    * card's plum gradient at 52px is invisible. */
-  assert.match(clarity, /\.app-shell \.bundle-product-photo\{[^}]*background:#fff!important/);
+  /* D192: a white plate hid a white garment — the blueprint shots are the blank
+   * product on white, so a white hoodie had no edges at 52px. */
+  assert.match(clarity, /\.app-shell \.bundle-product-photo\{[^}]*background:#efeaf2!important/);
   assert.match(clarity, /\.app-shell \.bundle-product-photo\{[^}]*object-fit:contain!important/);
+});
+
+test("a suggestion has exactly one control — D193", async () => {
+  const app = await read("app/listing-factory-app.tsx");
+
+  /* D191 moved the suggestion shortcut into its row ("Use Printify's 4"), but the
+   * standalone confirm bar underneath the list survived the edit — so the card
+   * showed two controls for the same action: the row button, and
+   * "Goldie suggests 4 colors from your Printify product. [Use these]". */
+  assert.doesNotMatch(app, /className="facet-confirm"/,
+    "The standalone confirm bar is replaced by the row shortcut.");
+  assert.doesNotMatch(app, /Goldie suggests \{/);
+  assert.match(app, /Use Printify&rsquo;s \{suggestion\}/);
 });
