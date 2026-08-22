@@ -327,3 +327,16 @@ test("the product step does not also collect designs — D184", async () => {
   assert.match(app, /\$\{workflowStep==="designs"\|\|\(workflowStep==="finish"&&finishPhase==="details"\)\?"active-panel":"hidden-panel"\}/,
     "The designs panel belongs to the designs step, not the product step.");
 });
+
+test("opening a facet shows the choices, not a summary — D187", async () => {
+  const app = await read("app/listing-factory-app.tsx");
+
+  /* ProductColorSelector collapses behind a "Change colors" summary when
+   * `remembered` is true, and captions itself "From your last batch — change any."
+   * Wiring the card with `remembered` meant clicking the Colours chip produced a
+   * collapsed summary you had to click again, captioned with a last batch that
+   * never happened. Opening the chip IS the request to choose. */
+  assert.doesNotMatch(app, /onRemember=\{\(\)=>\{\}\} remembering=\{false\} remembered\/>/,
+    "The card's pickers must open expanded.");
+  assert.equal((app.match(/onRemember=\{\(\)=>\{\}\} remembering=\{false\} remembered=\{false\}\/>/g) || []).length, 2);
+});

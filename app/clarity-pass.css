@@ -1027,3 +1027,27 @@
   background:transparent!important;
   box-shadow:none!important;
 }
+
+/* D186 · The saved-product tile is a 4-column grid (0 102px 46px 37px) with the
+ * actions locked to columns 2-4 and overflow:hidden. The selected tile gains a
+ * third action ("Change product"), so 102+46+37 plus gaps exceeds the 207px card
+ * and "Delete" is cut at the edge. Measured on the deployed build, twice — the
+ * first fix was verified by injecting CSS and never written to the stylesheet,
+ * the same way D179 survived five reports.
+ *
+ * Flex instead of a rigid grid, so a third action wraps rather than clipping. */
+.app-shell .recipe-grid .recipe-tile{
+  display:flex!important;
+  flex-wrap:wrap!important;
+  align-items:center!important;
+  justify-content:flex-end!important;
+  gap:6px!important;
+  padding:0 12px 12px!important;
+  overflow:visible!important;
+}
+.app-shell .recipe-grid .recipe-tile>.recipe-use{
+  flex:1 0 100%!important;
+  width:auto!important;
+  margin:0 -12px 4px!important;
+}
+.app-shell .recipe-grid .recipe-tile>button:not(.recipe-use){flex:0 0 auto!important}

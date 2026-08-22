@@ -1165,3 +1165,16 @@ test("the mockup card has no dead column — D179", async () => {
   assert.match(clarity, /\.app-shell \.mockup-default-block\{grid-template-columns:minmax\(0,1fr\)!important\}/,
     "One column, so nothing is stranded when there is no mockup set.");
 });
+
+test("a selected product tile does not clip its own actions — D186", async () => {
+  const clarity = await readFile(new URL("app/clarity-pass.css", root), "utf8");
+
+  /* The tile is a rigid 4-column grid with overflow:hidden. A selected tile gains
+   * a third action ("Change product"), and 102+46+37px plus gaps exceeds the 207px
+   * card, so "Delete" was cut at the edge. Measured on the deployed build twice:
+   * the first fix was verified by injecting CSS into the page and never written
+   * here — the same way the mockup dead column survived five reports. */
+  assert.match(clarity, /\.app-shell \.recipe-grid \.recipe-tile\{[^}]*flex-wrap:wrap!important/,
+    "Actions must wrap rather than clip.");
+  assert.match(clarity, /\.app-shell \.recipe-grid \.recipe-tile>\.recipe-use\{[^}]*flex:1 0 100%!important/);
+});
