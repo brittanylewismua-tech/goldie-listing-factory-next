@@ -1451,7 +1451,9 @@ test("supports simple saved product bundles without complicating the single-prod
   assert.match(workflow, /selected\?"✓ Ready for this batch"/);
   assert.match(api, /deduplicated:true/);
   assert.match(page, /function useBundle/);
-  assert.match(page, /You are working on \{bundleRecipes\[bundleIndex\]\?\.name\}/);
+  /* D174: the banner names the current product; "You are working on" repeated
+   * the eyebrow above it and was set in the wrong face. */
+  assert.match(page, /<b>\{bundleRecipes\[bundleIndex\]\?\.name\}<\/b>/);
   assert.match(page, /1\. Item prices <span>· \{productName\}<\/span>/);
   assert.match(page, /2\. Etsy shipping profile — what buyers pay <span>· \{productName\}<\/span>/);
   assert.match(page, /data-product-selected=\{templateDetails\?"true":"false"\}/);

@@ -1130,3 +1130,16 @@ test("selecting a product does not blow the product list up — D173", async () 
   assert.match(clarity, /\.app-shell\[data-product-selected="true"\] \.recipe-grid\{\s*grid-template-columns:repeat\(auto-fill,minmax\(184px,1fr\)\)!important;?\s*\}/,
     "The compact grid must survive selection.");
 });
+
+test("the bundle banner uses the app's heading face — D174", async () => {
+  const app = await readFile(new URL("app/listing-factory-app.tsx", root), "utf8");
+  const clarity = await readFile(new URL("app/clarity-pass.css", root), "utf8");
+
+  /* It read "You are working on Gildan Hoodie" as an 18px Manrope <b>, wrapping
+   * to two lines, immediately above section headings set in Fraunces. The phrase
+   * also repeated the eyebrow directly above it ("PRODUCT BUNDLE · PRODUCT 1 OF 2"). */
+  assert.doesNotMatch(app, /You are working on/,
+    "The eyebrow already says which product of the bundle this is.");
+  assert.match(clarity, /\.app-shell \.bundle-progress>div b\{[^}]*"Fraunces"/,
+    "The banner heading must use the same face as every other heading on the page.");
+});

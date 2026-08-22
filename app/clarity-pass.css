@@ -865,3 +865,15 @@
 .app-shell[data-product-selected="true"] .recipe-grid{
   grid-template-columns:repeat(auto-fill,minmax(184px,1fr))!important;
 }
+
+/* D174 · The bundle banner read "You are working on Gildan Hoodie" as an 18px
+ * Manrope <b>, wrapping to two lines, directly above section headings set in
+ * Fraunces ("Colours", "Sizes", "Mockups"). Wrong face, wrong size, and the
+ * phrase repeated what the eyebrow above it already said
+ * ("PRODUCT BUNDLE · PRODUCT 1 OF 2"). The product name alone is the heading. */
+.app-shell .bundle-progress>div b{
+  font:650 24px/1.15 "Fraunces",Georgia,serif!important;
+  color:#4c293f;
+}
+.app-shell .bundle-progress>div span{letter-spacing:.16em}
+.app-shell .bundle-progress>div small{margin-top:4px}
