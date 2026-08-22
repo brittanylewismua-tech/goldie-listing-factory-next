@@ -866,8 +866,12 @@ test("the mockup scene grid spans its block — D145", async () => {
    * instead of under them.
    *
    * Measured after: grid 340px -> 644px, two columns -> four, caption below. */
-  assert.match(clarity, /\.app-shell \.product-mockup-scenes,\s*\.app-shell \.mockup-default-block>small\{grid-column:1\/-1!important\}/,
-    "The scene grid and its caption must span both columns of the mockup block.");
+  /* D179 made the block a single column, so spanning is moot for the caption —
+   * but the rule stays as the guarantee that neither is stranded in a side column. */
+  assert.match(clarity, /\.app-shell \.mockup-default-block>small\{grid-column:1\/-1!important\}/,
+    "The scene caption must never be stranded in a side column.");
+  assert.match(clarity, /\.app-shell \.product-mockup-scenes/,
+    "The scene grid keeps its full-width rule.");
 });
 
 test("nothing in the app relies on smooth scrolling — D146", async () => {
@@ -1142,4 +1146,19 @@ test("the bundle banner uses the app's heading face — D174", async () => {
     "The eyebrow already says which product of the bundle this is.");
   assert.match(clarity, /\.app-shell \.bundle-progress>div b\{[^}]*"Fraunces"/,
     "The banner heading must use the same face as every other heading on the page.");
+});
+
+test("the mockup card has no dead column — D179", async () => {
+  const clarity = await readFile(new URL("app/clarity-pass.css", root), "utf8");
+
+  /* .mockup-default-block is grid-template-columns: minmax(0,1fr) minmax(210px,290px).
+   * With no mockup set saved, the right column contains only the 17px
+   * "Create or edit mockup sets" link — ~290px of empty space through the middle
+   * of the card, reported five times.
+   *
+   * It stayed broken because the fix was verified by injecting CSS into the live
+   * page and never written to the stylesheet. Measured after, in source:
+   * one 676px column. */
+  assert.match(clarity, /\.app-shell \.mockup-default-block\{grid-template-columns:minmax\(0,1fr\)!important\}/,
+    "One column, so nothing is stranded when there is no mockup set.");
 });

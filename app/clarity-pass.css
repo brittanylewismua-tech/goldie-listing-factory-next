@@ -477,6 +477,12 @@
  * two columns while the right-hand half of the card sat empty and the "8 of 8
  * selected" note floated beside them instead of underneath. Both span. */
 .app-shell .product-mockup-scenes,
+/* D179 · The mockup block is a two-column grid (minmax(0,1fr) minmax(210px,290px)).
+   When there is no mockup set the right column holds only the 17px
+   "Create or edit mockup sets" link, leaving ~290px of dead space through the
+   middle of the card. One column; nothing gets stranded. */
+.app-shell .mockup-default-block{grid-template-columns:minmax(0,1fr)!important}
+.app-shell .mockup-default-block>.manage-mockup-sets{justify-self:start}
 .app-shell .mockup-default-block>small{grid-column:1/-1!important}
 .app-shell .product-mockup-scenes{
   display:grid!important;
