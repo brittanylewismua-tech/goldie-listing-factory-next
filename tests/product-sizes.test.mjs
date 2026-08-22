@@ -169,6 +169,10 @@ test("print-quality decisions are grouped per design, not per design-and-product
     "A bulk control is needed for the common case where the answer is the same.");
   assert.match(app, /\{bundleQualityGroups\.length\} of \{files\.length\}/,
     "The count must read in designs, which is what the seller uploaded.");
+
+  const clarity = await read("app/clarity-pass.css");
+  assert.match(clarity, /\.app-shell \.bundle-quality-bulk\{[^}]*justify-content:flex-end/,
+    "The bulk actions sit right-aligned in the card.");
 });
 
 test("the size block strip lives in the layer that wins — D171", async () => {

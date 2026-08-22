@@ -767,7 +767,7 @@
  * product. A 3-design bundle across 3 products produced 6 flagged pairs and
  * would not continue until all 6 were clicked individually. Decisions are now
  * grouped per design, with a bulk control for the usual case. */
-.app-shell .bundle-quality-bulk{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.app-shell .bundle-quality-bulk{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px;margin-top:10px}
 .app-shell .bundle-quality-bulk button{
   min-height:34px;
   padding:8px 14px;
