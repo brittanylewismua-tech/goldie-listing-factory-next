@@ -853,3 +853,15 @@
   max-width:none!important;
   margin-inline:0!important;
 }
+
+/* D173 · approved-functional.css:1510 collapses the saved-product grid to a
+ * single full-width column the moment a product is selected:
+ *   .app-shell[data-product-selected="true"] .recipe-grid{grid-template-columns:1fr!important}
+ * The attribute selector outranks the plain class rule, so D170's compact grid
+ * was silently discarded exactly when the seller is most likely to be looking at
+ * the list. Measured: tiles 207px -> 642px wide, ~158px tall each. With twelve
+ * saved products that is roughly 1,900px of stacked full-width cards.
+ * Selecting a product is no reason to make the list harder to scan. */
+.app-shell[data-product-selected="true"] .recipe-grid{
+  grid-template-columns:repeat(auto-fill,minmax(184px,1fr))!important;
+}

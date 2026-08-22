@@ -1114,3 +1114,19 @@ test("every section of the setup column shares one edge — D172", async () => {
   assert.match(clarity, /\.app-shell \.steps-column\.setup-column > \*,[\s\S]*?\.app-shell \.steps-column\.setup-column \.batch-preferences-after-designs > \*,[\s\S]*?width:100%!important/,
     "Nested setup sections must not re-apply the column inset.");
 });
+
+test("selecting a product does not blow the product list up — D173", async () => {
+  const approved = await readFile(new URL("app/approved-functional.css", root), "utf8");
+  const clarity = await readFile(new URL("app/clarity-pass.css", root), "utf8");
+
+  /* approved-functional.css collapses the grid to one full-width column whenever
+   * data-product-selected="true". The attribute selector outranks the plain class
+   * rule, so the compact grid was discarded exactly when the seller is most
+   * likely to be scanning the list.
+   * Measured: tile 207px -> 642px wide, ~158px tall. Twelve saved products would
+   * be ~1,900px of stacked full-width cards. */
+  assert.match(approved, /\.app-shell\[data-product-selected="true"\] \.recipe-grid\{grid-template-columns:1fr!important\}/,
+    "Guard assumes the collapsing rule still exists; update this test if it is removed.");
+  assert.match(clarity, /\.app-shell\[data-product-selected="true"\] \.recipe-grid\{\s*grid-template-columns:repeat\(auto-fill,minmax\(184px,1fr\)\)!important;?\s*\}/,
+    "The compact grid must survive selection.");
+});
