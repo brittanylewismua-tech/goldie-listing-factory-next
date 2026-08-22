@@ -2384,3 +2384,42 @@ The product step shows each bundle in two places:
 The top-grid card has **no selected branch** in its JSX — it always renders the
 call to action — so one card claims the bundle is ready while the other invites
 you to choose it, on the same screen.
+
+---
+
+### D137 · A separator dot dangles at the end of the batch-limits line · **FIXED HERE** · **LOW**
+
+`.batch-limits` is a wrapping flex row of three facts with `<i>` dots between
+them. At the real card width it wraps after the second fact, so the dot that
+should separate items ends a line instead:
+
+> 20 designs available for this batch • 9984 listings remain on your plan **•**
+> 100 MB per design · original print quality preserved
+
+**Fixed:** the two quota facts share a row that carries the dot between them;
+the file-size guidance is its own muted line that never needs a separator.
+
+### D138 · The product-step mockup grid: blank tiles, raw filenames, half a card of whitespace · **FIXED HERE** · **HIGH · UX**
+
+Found by scrolling the product step and looking, rather than measuring.
+
+**Three problems in one block:**
+
+1. **Tiles paint blank and fill in late.** My **D97** change added
+   `loading="lazy"` to every repeated image. That is correct for the Printify
+   photo picker — 477 images, 92% off-screen — and **wrong here**: ~10 images,
+   all on screen, so the seller watches empty rectangles resolve as she scrolls.
+   Screenshotted twice: the first pass showed all ten blank, the second showed
+   the top two filled and the rest still empty.
+2. **Raw upload filenames as labels** — *"ChatGPT Image Aug 14, 2026, 10_42_04
+   AM (4)"* under every scene. This is D9 reappearing in a grid built after it
+   was closed.
+3. **Two columns in a ~670px card** (`340px 290px`), leaving the right half of
+   the block empty while the pictures stayed small.
+
+**Fixed:** these ten images load eagerly; the label is now **"Scene 1…10"**; the
+grid is `auto-fill minmax(132px,1fr)` so it fills the card, with 4:5 covers.
+
+**The lesson, which is the same one as D96 → D100:** a fix that is correct for
+one surface is not automatically correct for another. D97 was measured against
+the 477-image picker and applied globally without checking the small grids.

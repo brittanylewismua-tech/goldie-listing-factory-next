@@ -392,11 +392,17 @@ test("listing and mockup images are lazy-loaded — D97", async () => {
    * on a single page.
    *
    * 92% of them (441 of 477) sit outside the viewport on load. */
-  const eagerImg = /<img src=\{(src|item\.src|design\.previewUrl|file\.previewUrl|draftPreview)\}(?![^>]*loading="lazy")/;
+  /* Lazy-loading is right for the Printify photo picker (477 images, 92%
+   * off-screen). It is WRONG for the product-step mockup grid: only ~10 images,
+   * all in view, and lazy-loading made them paint blank and fill in late while
+   * the seller scrolled. Scope it to the big grids. See D138. */
+  const eagerImg = /<img src=\{(src|design\.previewUrl|file\.previewUrl|draftPreview)\}(?![^>]*loading="lazy")/;
   assert.doesNotMatch(page, eagerImg,
-    "A repeated listing/mockup image is loading eagerly. On a 20-design batch that is thousands of simultaneous requests.");
-  assert.ok((page.match(/loading="lazy" decoding="async"/g) || []).length >= 5,
-    "Expected every repeated image in the listing flow to be lazy-loaded.");
+    "A repeated listing image is loading eagerly. On a 20-design batch that is thousands of simultaneous requests.");
+  assert.ok((page.match(/loading="lazy" decoding="async"/g) || []).length >= 4,
+    "The large repeated grids must stay lazy-loaded.");
+  assert.match(page, /<img src=\{item\.src\} alt=\{`Scene \$\{index \+ 1\}`\}\/>|<img src=\{item\.src\} alt=\{`Scene \$\{index\+1\}`\}\/>/,
+    "The ~10 product-step mockups must load eagerly - they are all on screen.");
 });
 
 test("the publish list shows full titles — D98", async () => {

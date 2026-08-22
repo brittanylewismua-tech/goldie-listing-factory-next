@@ -438,3 +438,48 @@
   color:rgba(74,42,62,.5)!important;
   box-shadow:none!important;
 }
+
+/* D137 · The batch-limits row is a wrapping flex with dot separators between
+ * three items. At this width it wraps after the second item, leaving the
+ * separator dot dangling at the end of the line:
+ *
+ *   "20 designs available for this batch • 9984 listings remain on your plan •"
+ *   "100 MB per design · original print quality preserved"
+ *
+ * The two quota facts now share a row that carries the dot between them, and
+ * the file-size note is a separate line that never needs one. */
+.app-shell .batch-limits{display:block!important;text-align:center!important}
+.app-shell .batch-limits .batch-limits-quota{
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  flex-wrap:wrap!important;
+  gap:6px 10px!important;
+}
+.app-shell .batch-limits .batch-limits-quota b{font-weight:650!important}
+.app-shell .batch-limits .batch-limits-note{
+  display:block!important;
+  margin-top:4px!important;
+  color:rgba(75,40,62,.62)!important;
+  font-weight:500!important;
+}
+
+/* D138 · The product-step mockup grid showed two columns in a ~670px card,
+ * leaving half of it empty, and labelled each scene with its raw upload
+ * filename ("ChatGPT Image Aug 14, 2026, 10_42_04 AM (4)"). Fill the width and
+ * let the pictures do the work. */
+.app-shell .product-mockup-scenes{
+  display:grid!important;
+  grid-template-columns:repeat(auto-fill,minmax(132px,1fr))!important;
+  gap:12px!important;
+  width:100%!important;
+}
+.app-shell .product-mockup-scenes>label{min-width:0!important}
+.app-shell .product-mockup-scenes>label>img{width:100%!important;height:auto!important;aspect-ratio:4/5!important;object-fit:cover!important;border-radius:10px!important}
+.app-shell .product-mockup-scenes>label>span{
+  display:block!important;
+  margin-top:6px!important;
+  color:rgba(75,40,62,.6)!important;
+  font-size:10.5px!important;
+  font-weight:650!important;
+}
