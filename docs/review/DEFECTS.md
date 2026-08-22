@@ -2672,3 +2672,29 @@ missing-photo jump, and the mockup phase advance) and **1 in `support-chat.tsx`*
 one surface, fixed it there, and assumed the rest of the app differed. It did
 not. When a browser-level behaviour is broken, check whether it is broken
 everywhere before scoping the fix.
+
+### D147 · A requested Finish phase is discarded on load · **FIXED HERE** · **HIGH**
+
+D108 fixed this for **steps**. Phases were never covered, and I only noticed
+because I navigated to a phase by URL the way a bookmark would.
+
+Measured on the deployed build, fresh page loads:
+
+| requested | landed on |
+|---|---|
+| `?phase=details` | **`final`** |
+| `?phase=etsy` | **`details`** |
+
+Restoration overwrote the requested phase with whatever the batch last saved, so
+the destination changes depending on where the seller happened to stop last
+time. In-app phase navigation works fine — this only bites on a reload, a
+bookmark, or a link.
+
+**Fixed:** `restoredFinishPhase()` mirrors `restoredWorkflowStep()` exactly — a
+completed batch may open any phase, an unfinished one any phase up to the
+furthest it reached. Pinned in the traversal guard alongside the D53/D73 tests.
+
+**Worth noting:** D108's commit message said "preserve explicit backward
+navigation", and it did — for steps. The phase equivalent sat one line below the
+line that was changed. When a fix is about a navigation rule, check every axis
+the app navigates on.

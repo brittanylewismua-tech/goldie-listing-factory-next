@@ -105,3 +105,22 @@ test("no gate condition can close a completed batch", () => {
     }
   }
 });
+
+/* D147 — the phase half of D108.
+ *
+ * Restoration replaced the requested Finish phase with the batch's saved one.
+ * Measured on the deployed build: loading ?phase=etsy landed on phase=details,
+ * and an earlier load of ?phase=details landed on phase=final. So a bookmark or
+ * a browser reload on any Finish phase silently sends the seller somewhere else.
+ *
+ * Same rule as steps: a completed batch may open any phase; an unfinished one
+ * may open any phase up to the furthest it reached. */
+test("a requested Finish phase survives a reload — D147", async () => {
+  const source = await (await import("node:fs/promises"))
+    .readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+
+  assert.match(source, /function restoredFinishPhase\(saved:FinishPhase,requested:string\|null,complete:boolean\):FinishPhase\{/);
+  assert.match(source, /return complete\|\|order\.indexOf\(target\)<=order\.indexOf\(saved\)\?target:saved;/);
+  assert.match(source, /setFinishPhase\(restoredFinishPhase\(state\.finishPhase\|\|"details",url\.searchParams\.get\("phase"\),Boolean\(state\.complete\)\)\)/,
+    "Restoration must honour the requested phase, not overwrite it with the saved one.");
+});
