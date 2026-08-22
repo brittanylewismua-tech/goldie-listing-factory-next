@@ -31,13 +31,13 @@
  * control. Only genuinely ambiguous facets are asked. */
 
 export type ReadinessState = "ready" | "auto" | "ask";
-export type FacetName = "colours" | "sizes" | "mockups" | "keywords";
+export type FacetName = "colours" | "sizes" | "mockups" | "keywords" | "shipping" | "profit" | "etsy";
 
 export type Facet = {
   name: FacetName;
   state: ReadinessState;
   label: string;
-  resolved?: { colourIds?: number[]; sizeIds?: number[]; mockupTheme?: string; mockupIds?: string[]; keywordListId?: string };
+  resolved?: { colourIds?: number[]; sizeIds?: number[]; mockupTheme?: string; mockupIds?: string[]; keywordListId?: string; shippingProfileId?: number; profitTarget?: number };
   /* A starting selection for a facet that must still be confirmed. Never treated
    * as an answer. */
   suggested?: { colourIds?: number[]; sizeIds?: number[] };
@@ -49,6 +49,12 @@ export type ReadinessInput = {
   sizeOptions: Array<{ id: number; title: string; available: boolean; templateEnabled: boolean }>;
   compatibleMockupThemes: string[];
   keywordBanks: Array<{ id: string; name: string }>;
+  /* Etsy shipping profiles available on the connected shop. */
+  shippingProfiles: Array<{ id: number; title: string }>;
+  /* The shipping profile Printify already has attached to this product, if any. */
+  templateShippingProfileId?: number;
+  /* Etsy attributes this blueprint requires, and how many the recipe has set. */
+  etsyFieldsRequired: number;
   saved: {
     defaultColorIds?: number[];
     defaultSizeIds?: number[];
@@ -56,6 +62,9 @@ export type ReadinessInput = {
     mockupIds?: string[];
     keywordListId?: string;
     mockupsDeclined?: boolean;
+    etsyShippingProfileId?: number;
+    defaultProfitTarget?: number;
+    etsyDefaults?: Record<string, unknown>;
   };
 };
 
@@ -134,8 +143,37 @@ function keywordFacet(input: ReadinessInput): Facet {
   return { name: "keywords", state: "ask", label: "", note: `${banks.length} banks to choose from` };
 }
 
+function shippingFacet(input: ReadinessInput): Facet {
+  const saved = Number(input.saved.etsyShippingProfileId) || 0;
+  const match = input.shippingProfiles.find((profile) => profile.id === saved);
+  if (match) return { name: "shipping", state: "ready", label: match.title };
+  /* Printify already published this product to Etsy with a profile attached.
+   * Copying it is not a decision the seller needs to make again. */
+  const fromTemplate = input.shippingProfiles.find((profile) => profile.id === Number(input.templateShippingProfileId || 0));
+  if (fromTemplate) return { name: "shipping", state: "auto", label: fromTemplate.title, resolved: { shippingProfileId: fromTemplate.id } };
+  if (input.shippingProfiles.length === 1) return { name: "shipping", state: "auto", label: input.shippingProfiles[0].title, resolved: { shippingProfileId: input.shippingProfiles[0].id } };
+  if (!input.shippingProfiles.length) return { name: "shipping", state: "ask", label: "", note: "No Etsy shipping profiles found" };
+  return { name: "shipping", state: "ask", label: "", note: `${input.shippingProfiles.length} profiles on your shop` };
+}
+
+function profitFacet(input: ReadinessInput): Facet {
+  const saved = Number(input.saved.defaultProfitTarget);
+  if (Number.isFinite(saved) && saved > 0) return { name: "profit", state: "ready", label: `$${saved.toFixed(0)} per item` };
+  /* A profit goal always has a workable default, so it is never a blocker. */
+  return { name: "profit", state: "auto", label: "$10 per item", resolved: { profitTarget: 10 } };
+}
+
+function etsyFacet(input: ReadinessInput): Facet {
+  const set = Object.keys(input.saved.etsyDefaults || {}).length;
+  const required = input.etsyFieldsRequired;
+  if (!required) return { name: "etsy", state: "ready", label: "Nothing required" };
+  if (set >= required) return { name: "etsy", state: "ready", label: `${set} of ${required} set` };
+  /* Etsy attributes are optional to publish — a gap is worth showing, not blocking. */
+  return { name: "etsy", state: "auto", label: `${set} of ${required} set`, note: set ? "" : "Etsy will use its own defaults" };
+}
+
 export function productReadiness(input: ReadinessInput): Readiness {
-  const facets = [colourFacet(input), sizeFacet(input), mockupFacet(input), keywordFacet(input)];
+  const facets = [colourFacet(input), sizeFacet(input), mockupFacet(input), keywordFacet(input), shippingFacet(input), profitFacet(input), etsyFacet(input)];
   const autoResolved: NonNullable<Facet["resolved"]> = {};
   for (const facet of facets) if (facet.state === "auto" && facet.resolved) Object.assign(autoResolved, facet.resolved);
   const questions = facets.filter((facet) => facet.state === "ask").map((facet) => facet.name);

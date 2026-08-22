@@ -19,6 +19,9 @@ const tee = {
   ],
   compatibleMockupThemes: ["BACH TEES"],
   keywordBanks: [{ id: "b1", name: "BACHELORETTE TEES" }],
+  shippingProfiles: [{ id: 7, title: "Standard" }],
+  templateShippingProfileId: 7,
+  etsyFieldsRequired: 11,
   saved: {},
 };
 
@@ -67,14 +70,14 @@ test("an established product asks nothing at all", () => {
   const result = productReadiness(established);
   assert.deepEqual(result.questions, []);
   assert.equal(result.established, true);
-  assert.deepEqual(result.facets.map((f) => f.state), ["ready", "ready", "ready", "ready"]);
+  assert.deepEqual(result.facets.filter(f=>["colours","sizes","mockups","keywords"].includes(f.name)).map((f) => f.state), ["ready", "ready", "ready", "ready"]);
 });
 
 test("saved choices win over template defaults", () => {
   const configured = { ...tee, saved: { defaultColorIds: [3], defaultSizeIds: [99], keywordListId: "b1", defaultMockupTheme: "BACH TEES" } };
   const result = productReadiness(configured);
   assert.equal(result.established, true);
-  assert.deepEqual(result.facets.map((f) => f.state), ["ready", "ready", "ready", "ready"]);
+  assert.deepEqual(result.facets.filter(f=>["colours","sizes","mockups","keywords"].includes(f.name)).map((f) => f.state), ["ready", "ready", "ready", "ready"]);
   assert.equal(result.facets.find((f) => f.name === "colours").label, "1 colour");
 });
 
@@ -108,4 +111,42 @@ test("declining mockups is a real answer, not a gap", () => {
   const mockups = productReadiness(declined).facets.find((f) => f.name === "mockups");
   assert.equal(mockups.state, "ready");
   assert.equal(mockups.label, "No mockups");
+});
+
+test("shipping copies the profile Printify already attached — D183", () => {
+  /* Publishing the product to Etsy once is a required setup step, so a profile is
+   * already attached. Asking the seller to pick it again is asking a question that
+   * has an answer. */
+  const shipping = productReadiness(tee).facets.find((f) => f.name === "shipping");
+  assert.equal(shipping.state, "auto");
+  assert.equal(shipping.label, "Standard");
+  assert.equal(shipping.resolved.shippingProfileId, 7);
+});
+
+test("shipping is only a question when the answer is genuinely unknown", () => {
+  const many = { ...tee, templateShippingProfileId: 0, shippingProfiles: [{ id: 1, title: "A" }, { id: 2, title: "B" }] };
+  assert.equal(productReadiness(many).facets.find((f) => f.name === "shipping").state, "ask");
+  const none = { ...tee, templateShippingProfileId: 0, shippingProfiles: [] };
+  assert.match(productReadiness(none).facets.find((f) => f.name === "shipping").note, /No Etsy shipping profiles/);
+});
+
+test("profit and Etsy attributes never block a batch", () => {
+  /* Both have workable defaults: $10, and Etsy's own attribute defaults. They are
+   * shown so the seller can change them, not to stop the batch. */
+  const result = productReadiness(tee);
+  const profit = result.facets.find((f) => f.name === "profit");
+  const etsy = result.facets.find((f) => f.name === "etsy");
+  assert.equal(profit.state, "auto");
+  assert.equal(profit.label, "$10 per item");
+  assert.equal(etsy.state, "auto");
+  assert.equal(etsy.label, "0 of 11 set");
+  assert.ok(!result.questions.includes("profit"));
+  assert.ok(!result.questions.includes("etsy"));
+});
+
+test("a saved profit goal and Etsy attributes read as settled", () => {
+  const configured = { ...tee, saved: { defaultProfitTarget: 25, etsyDefaults: Object.fromEntries(Array.from({ length: 11 }, (_, i) => [`f${i}`, "x"])) } };
+  const result = productReadiness(configured);
+  assert.equal(result.facets.find((f) => f.name === "profit").label, "$25 per item");
+  assert.equal(result.facets.find((f) => f.name === "etsy").state, "ready");
 });

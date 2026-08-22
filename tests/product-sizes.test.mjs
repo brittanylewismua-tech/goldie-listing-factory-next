@@ -292,3 +292,33 @@ test("every product in a bundle needs its own keyword bank before continuing —
   assert.match(app, /bundleKeywordGaps\.length\?`Pick a keyword bank for \$\{bundleKeywordGaps\.join\(", "\)\}`/,
     "And it says which products, not just that something is missing.");
 });
+
+test("shipping, profit and Etsy details are per-product facts — D183", async () => {
+  const app = await read("app/listing-factory-app.tsx");
+
+  /* These three lived in "Saved for this product", a single batch-level block —
+   * the same mistake as the batch-level mockup picker. In a bundle they were
+   * silently the active product's values presented as the batch's.
+   *
+   * They now compute per product and render on that product's card. Shipping
+   * copies the profile Printify already attached when the product was published
+   * to Etsy, which is a required setup step, so it is rarely a question at all. */
+  assert.match(app, /shippingProfiles:etsyShippingProfiles\.map\(profile=>\(\{id:profile\.id,title:friendlyShippingProfileTitle\(profile\.title\)/);
+  assert.match(app, /templateShippingProfileId:Number\(product\.shippingTemplateId\)\|\|0/);
+  assert.match(app, /etsyShippingProfileId:recipe\?\.etsyShippingProfileId,defaultProfitTarget:recipe\?\.defaultProfitTarget,etsyDefaults:recipe\?\.etsyDefaults/);
+
+  /* Only the four that can be edited from the card render as buttons; the rest
+   * are facts, so they do not pretend to be controls. */
+  assert.match(app, /const editable=\["colours","sizes","mockups","keywords"\]\.includes\(facet\.name\)/);
+});
+
+test("the product step does not also collect designs — D184", async () => {
+  const app = await read("app/listing-factory-app.tsx");
+
+  /* Measured on the deployed build: 538px of dropzone, quota and "before
+   * uploading" copy rendered at the top of step 2, while "Add designs" is step 3.
+   * One job in two places, and it was the first thing on a step called
+   * "Choose product". */
+  assert.match(app, /\$\{workflowStep==="designs"\|\|\(workflowStep==="finish"&&finishPhase==="details"\)\?"active-panel":"hidden-panel"\}/,
+    "The designs panel belongs to the designs step, not the product step.");
+});
