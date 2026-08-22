@@ -203,6 +203,10 @@ test("every bundle product is presented identically — D175", async () => {
     "Every member, not slice(1), and the active one is just the one that is current.");
   assert.match(app, /className="bundle-product-photo" src=\{product\.previewImage\}/,
     "Each row shows what the product actually is.");
+  /* The product being worked on stays open; the rest collapse. With bundleIndex
+   * at 0 on arrival that means the first product is expanded, and the open
+   * section follows the run as it advances. */
+  assert.match(app, /key=\{recipe\.id\} open=\{isActive\}>/);
   assert.match(app, /<b>\{recipe\.name\}<\/b><small>\{product\.blueprintTitle\}<\/small>/,
     "The seller's name for it, and the real Printify product beneath.");
   assert.doesNotMatch(app, /OTHER PRODUCTS IN THIS BUNDLE/,
