@@ -1048,8 +1048,11 @@ test("saved-product tiles line up regardless of name length — D162", async () 
    * hole under one-line names. Wider tiles (250px min instead of 170px) give the
    * name column 226px instead of 117px, so names fit on one line and there is no
    * hole to reserve. The full name stays reachable via title={recipe.name}. */
-  assert.match(clarity, /\.app-shell \.recipe-grid\{grid-template-columns:repeat\(auto-fit,minmax\(250px,1fr\)\)!important\}/,
-    "Tiles must be wide enough that a product name fits on one line.");
+  /* D170: 250px tiles fixed the wrapping but cost density — with many saved
+   * products that is a wall of large cards. Room comes from the icon and type
+   * instead: 26px icon, 13px name, tile 215px tall -> 163px, 3 per row. */
+  assert.match(clarity, /\.app-shell \.recipe-grid\{grid-template-columns:repeat\(auto-fill,minmax\(184px,1fr\)\)!important/,
+    "Tiles must stay compact so a long product list does not become a wall of cards.");
   assert.match(clarity, /\.app-shell \.recipe-copy>b:first-child\{[^}]*text-overflow:ellipsis/,
     "A name too long for one line truncates rather than reflowing the card.");
 

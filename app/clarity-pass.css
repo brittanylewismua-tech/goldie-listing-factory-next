@@ -639,13 +639,24 @@
    unconsidered. The real cause was width: in a 642px container the tiles were
    206px and the name column only 117px, so even "Gildan Tee" wrapped. Wider
    tiles let every name sit on one line, and the hole disappears with the clamp. */
-.app-shell .recipe-grid{grid-template-columns:repeat(auto-fit,minmax(250px,1fr))!important}
+/* D170 · D166 widened the tiles to stop names wrapping, which cost density —
+   with more than a handful of products that is a wall of large cards. Keep the
+   tiles compact and buy the room back from the icon and the type instead:
+   26px icon and 13px name fit "gildan crewneck" on one line at 207px, and the
+   tile drops from 215px tall to 163px. */
+.app-shell .recipe-grid{grid-template-columns:repeat(auto-fill,minmax(184px,1fr))!important;gap:10px!important}
+.app-shell .recipe-tile .recipe-icon{width:26px!important;height:26px!important;font-size:11px!important}
+.app-shell .recipe-use{padding:12px!important}
+.app-shell .recipe-copy>small{font-size:10px!important}
+.app-shell .recipe-copy em{font-size:10px!important}
 .app-shell .recipe-copy>b:first-child{
   display:block;
   min-height:0;
   white-space:nowrap;
   overflow:hidden;
   text-overflow:ellipsis;
+  font-size:13px;
+  line-height:1.25;
 }
 /* Edit sat in an outlined pill next to Delete as bare text — two treatments for
    one pair of equally-weighted actions. */
