@@ -2960,3 +2960,27 @@ carries `title={recipe.name}` and the bundle equivalent, keeping longer names re
 every tile identical.
 **Guard:** "saved-product tiles line up regardless of name length".
 
+## D163 — eight text styles failed contrast, including an enabled control that looked disabled
+**Method:** composited every text node against its actually-painted background — walking up
+the tree for the first opaque layer and averaging gradient stops. Worth noting: a first pass
+that read only `background-color` reported a 1.11:1 "invisible" bundle CTA, which turned out
+to be white on a plum **gradient** pill and perfectly legible. I checked that against a
+screenshot before reporting it, and fixed the scanner instead.
+**Genuine failures (WCAG AA for the given size):**
+| element | ratio | needed |
+|---|---|---|
+| `.delete-recipe` "Delete" | **3.00** | 4.5 |
+| `.hero-step-count` "Step 2 of 5" | 3.14 | 4.5 |
+| usage count "16 / 10000 listings" | 3.45 | 4.5 |
+| `.account-link` "Sign out" | 3.46 | 4.5 |
+| "Powered by", "© 2026 Be A Wolf Biz", `.etsy-api-disclosure` | 3.46 | 4.5 |
+| `.progress-bubble-label` | 4.21 | 4.5 |
+"Delete" is the one that matters most: it is an **enabled** button that read as disabled,
+which is why it looks inert next to the white "Edit" pill.
+**Palette limitation found:** the sidebar is painted on pink `rgb(232,177,200)`. Against that,
+the app ink `#4a2a3e` reaches only **4.43:1 at alpha 0.80** — it cannot pass AA at any alpha
+below ~0.95. Those tokens are now near-opaque; lightening the ink there is not an option
+without changing the sidebar colour, which is a design-system decision, not a bug fix.
+**Measured after:** 0 of 8 failing.
+**Guard:** "small text meets AA against the surface it is painted on".
+

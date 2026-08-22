@@ -641,3 +641,26 @@
   overflow:hidden;
   min-height:3em;
 }
+
+/* D163 · Contrast audit. Composited every text node against its real painted
+ * background (walking up for the first opaque layer, and averaging gradient
+ * stops — an earlier pass that read only background-color produced a false
+ * 1.11:1 on the bundle CTA, which is actually white on a plum gradient pill).
+ * Eight text styles failed WCAG AA for their size, ratios 3.00-4.24:
+ *   .delete-recipe        3.00  (an ENABLED control reading as disabled)
+ *   .hero-step-count      3.14  "Step 2 of 5"
+ *   usage count           3.45  "16 / 10000 listings"
+ *   .account-link         3.46  "Sign out"
+ *   "Powered by", ©, .etsy-api-disclosure  3.46
+ *   .progress-bubble-label 4.21
+ * Note the sidebar sits on pink rgb(232,177,200): at alpha .80 the app ink only
+ * reaches 4.43, so those tokens need to be near-opaque — lightening the ink is
+ * not an option there. Measured after: 0 of 8 failing. */
+.app-shell .recipe-card .delete-recipe{color:rgba(74,42,62,.72)!important}
+.app-shell .hero-step-count{color:rgba(74,42,62,.9)!important}
+.app-shell .progress-bubble-label{color:rgba(74,42,62,.85)!important}
+.app-shell .account-link,
+.app-shell .approved-usage span,
+.app-shell .approved-powered>span,
+.app-shell .approved-sidebar-footer>small,
+.app-shell .etsy-api-disclosure{color:rgba(74,42,62,.95)!important}

@@ -1047,3 +1047,17 @@ test("saved-product tiles line up regardless of name length — D162", async () 
   assert.match(tools, /className="recipe-use" title=\{recipe\.name\}/);
   assert.match(tools, /className="recipe-use" title=\{bundle\.name\}/);
 });
+
+test("small text meets AA against the surface it is painted on — D163", async () => {
+  const clarity = await readFile(new URL("app/clarity-pass.css", root), "utf8");
+
+  /* Measured by compositing each text node over its real painted background.
+   * Eight styles failed AA for their size (3.00-4.24:1); worst was
+   * .delete-recipe at 3.00 — an enabled control that read as disabled.
+   * The sidebar's pink rgb(232,177,200) cannot carry the app ink at AA below
+   * ~0.95 alpha (at 0.80 it tops out at 4.43), hence the near-opaque tokens.
+   * After: 0 of 8 failing. */
+  assert.match(clarity, /\.app-shell \.recipe-card \.delete-recipe\{color:rgba\(74,42,62,\.72\)!important\}/);
+  assert.match(clarity, /\.app-shell \.hero-step-count\{color:rgba\(74,42,62,\.9\)!important\}/);
+  assert.match(clarity, /\.app-shell \.etsy-api-disclosure\{color:rgba\(74,42,62,\.95\)!important\}/);
+});
