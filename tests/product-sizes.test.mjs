@@ -134,3 +134,39 @@ test("no size action can leave the seller with nothing selected — D164", async
    * with no hint as to why. It falls back to every available size instead. */
   assert.match(app, /onChange\(templateSizes\.length\?templateSizes:available\.map\(size=>size\.id\)\)/);
 });
+
+test("the size block is stripped in every context the colour block is — D168", async () => {
+  const globals = await read("app/globals.css");
+  const clarity = await read("app/clarity-pass.css");
+
+  /* The size card was added to product setup and to each bundle product without
+   * those screens ever being rendered. Measured on a selected bundle:
+   *   .product-color-selector  644px, margin 0, padding 0, border 0, transparent
+   *   .product-size-selector   612px, margin 18px 16px, padding 20px, 1px border,
+   *                            white .58 background
+   * Two rules in globals.css strip the colour block inside .saved-product-batch-page
+   * and .bundle-color-product. The size block had no equivalent, so it rendered as
+   * a detached white box inset 16px inside a transparent section.
+   * After: both contexts measure identical width and left edge. */
+  assert.match(globals, /\.bundle-color-product \.product-size-selector\{width:100%;margin:0;padding:15px\}/);
+  assert.match(globals, /\.saved-product-batch-page \.product-size-selector\{width:100%;margin:0;border:0;box-shadow:none;background:transparent;padding:0\}/);
+  assert.match(clarity, /\.app-shell \.saved-product-batch-page \.product-size-selector,\s*\n\.app-shell \.bundle-color-product \.product-size-selector\{[^}]*border-top:1px solid/,
+    "Stripped of its own card, the size block needs a divider or it runs into the colour actions.");
+});
+
+test("print-quality decisions are grouped per design, not per design-and-product — D167", async () => {
+  const app = await read("app/listing-factory-app.tsx");
+
+  /* Measured by Brittany: a bundle of 3 products with 3 designs produced SIX
+   * separate flagged pairs, each needing its own "Proceed anyway" click before
+   * the batch could continue. The per-product detail is real — the same art can
+   * be sharp on a tee and too small on a tote — but the decision belongs to the
+   * design. Excluding still removes only the flagged pairs, so a design that is
+   * fine on one product still publishes there. */
+  assert.match(app, /const bundleQualityGroups=useMemo/);
+  assert.match(app, /function decideQualityGroup\(keys:string\[\],value:"include"\|"exclude"\)/);
+  assert.match(app, /function decideAllQuality\(value:"include"\|"exclude"\)/,
+    "A bulk control is needed for the common case where the answer is the same.");
+  assert.match(app, /\{bundleQualityGroups\.length\} of \{files\.length\}/,
+    "The count must read in designs, which is what the seller uploaded.");
+});

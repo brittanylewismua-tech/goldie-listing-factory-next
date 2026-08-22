@@ -3057,3 +3057,42 @@ state change, which looked like a dead button. A synthetic click on the same ele
 it straight to "Creating 3 titles…" — so the handler was fine and my clicks were not
 reaching the page. Checked before filing it as a defect.*
 
+## D167 — a bundle asked for one print-quality decision per design PER PRODUCT
+**Found by Brittany.** Three designs across a three-product bundle produced **six** flagged
+pairs, each with its own "Proceed anyway" / "Exclude" buttons, and `createDrafts()` refused
+to continue until every one was clicked.
+**Cause:** `bundleQualityIssues` is `files.flatMap(file => bundleRecipes.flatMap(recipe => …))`
+— a pair per design × product. Up to nine decisions for three designs.
+**Why the data is still right:** the same artwork genuinely can be sharp on a tee and too
+small on a tote, so the per-product detail matters. But the *decision* belongs to the design.
+**Fix:** group the pairs by design. One choice settles every product it affects, plus
+"Proceed with all" / "Exclude all". Excluding still removes only the flagged pairs, so a
+design that is fine on one product still publishes there. The heading now counts designs
+("2 of 3 designs need a print decision") rather than pairs.
+
+## D168 — the size card rendered as a detached box on product setup and in bundles
+**Found by Brittany**, and caused by me: I added `ProductSizeSelector` to the product setup
+screen and to each bundle product in D164 **without ever rendering those screens**.
+**Measured on a selected bundle:**
+| | width | margin | padding | border | background |
+|---|---|---|---|---|---|
+| `.product-color-selector` | 644px | 0 | 0 | 0 | transparent |
+| `.product-size-selector` | 612px | 18px 16px | 20px | 1px | white .58 |
+`globals.css` has two context rules that strip the colour block inside
+`.saved-product-batch-page` and `.bundle-color-product`. The size block had no equivalent, so
+it floated as a white bordered box inset 16px inside an otherwise transparent section — the
+"completely detached" Brittany described.
+**Fix:** the stripping rules are now paired for both blocks in `globals.css`. Stripped of its
+own card the size block then butted into the colour actions with only the parent's 14px gap,
+so it also gets a 22px divider. Each bundle product is now a card with a real heading instead
+of a bare `<b>`.
+**Measured after:** `.saved-product-batch-page` colour 644 / size 644, same left edge;
+`.bundle-color-product` colour 688 / size 688, same left edge.
+**Also checked, because it would have cost money:** the hoodie showed "8 selected". Its
+Printify template genuinely has all eight sizes enabled, so nothing was being over-enabled.
+
+**Process failure worth recording:** my page sweeps were structural — contrast, overflow,
+tiny text, escaping children — run on whatever page was loaded. I never selected a bundle,
+so I never rendered the screen I had just changed. Structural scans do not substitute for
+opening the screen you edited.
+

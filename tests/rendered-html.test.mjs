@@ -1901,7 +1901,8 @@ test("keeps bundle titles, placement decisions, review, and failures product-spe
   assert.match(workflow,/bundle-as-product/);
   assert.match(app,/autoTitleForDesign\(file,bank\.keywords,titleJoiner===", ",nextDetails\)/);
   assert.match(app,/bundleQualityIssues/);
-  assert.match(app,/Below recommended size for <strong>\{issue\.productName\}/);
+  /* D167 groups these per design instead of per design-AND-product. */
+  assert.match(app,/is below the recommended size for <strong>\{productList\.join\(", "\)\}/);
   assert.match(app,/Proceed anyway/);
   assert.match(app,/Exclude this listing/);
   assert.match(app,/Nothing is skipped silently/);

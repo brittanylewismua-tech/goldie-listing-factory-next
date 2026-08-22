@@ -751,3 +751,53 @@
 .usage-page .usage-plan-fineprint{color:rgba(74,42,62,.82)!important}
 /* .usage-note and its siblings are fixed at source in management-aesthetic.css. */
 .usage-page .usage-plan-heading>p:last-child{color:rgba(74,42,62,.82)!important}
+
+/* D167 · The print-quality review asked for one decision per design AND per
+ * product. A 3-design bundle across 3 products produced 6 flagged pairs and
+ * would not continue until all 6 were clicked individually. Decisions are now
+ * grouped per design, with a bulk control for the usual case. */
+.app-shell .bundle-quality-bulk{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.app-shell .bundle-quality-bulk button{
+  min-height:34px;
+  padding:8px 14px;
+  border:1px solid rgba(91,48,79,.22);
+  border-radius:999px;
+  background:rgba(255,255,255,.72);
+  color:#5b304f;
+  font-size:10px;
+  font-weight:850;
+  cursor:pointer;
+}
+.app-shell .bundle-quality-bulk button:hover{border-color:rgba(153,79,130,.5)}
+
+/* D168 · The size card was added to the product setup and to each bundle product
+ * without ever rendering those screens. Measured on a selected bundle:
+ *   .product-color-selector  644px wide, margin 0, padding 0, border 0, transparent
+ *   .product-size-selector   612px wide, margin 18px 16px, padding 20px,
+ *                            1px border, white .58 background
+ * Two context rules in globals.css strip the colour block inside
+ * .saved-product-batch-page and .bundle-color-product; the size block had no
+ * equivalent, so it rendered as a detached white box inset 16px inside a
+ * transparent section. The stripping rules are now paired in globals.css.
+ *
+ * With both stripped they butted together with only the parent's 14px gap and no
+ * divider, so "SIZES FOR THIS BATCH" ran straight into the colour actions. */
+.app-shell .saved-product-batch-page .product-size-selector,
+.app-shell .bundle-color-product .product-size-selector{
+  margin-top:22px!important;
+  padding-top:22px!important;
+  border-top:1px solid rgba(91,48,79,.14)!important;
+}
+/* Each bundle product is a card in its own right; its name was a bare <b>. */
+.app-shell .bundle-color-product{
+  padding:16px 18px;
+  border:1px solid rgba(91,48,79,.16);
+  border-radius:16px;
+  background:rgba(255,255,255,.42);
+}
+.app-shell .bundle-color-product>b{
+  display:block;
+  margin-bottom:6px;
+  color:#4c293f;
+  font:650 19px/1.2 "Fraunces",Georgia,serif;
+}
