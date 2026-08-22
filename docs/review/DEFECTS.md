@@ -2259,3 +2259,37 @@ never in the prompt.
 without two saved products, so every audit and every test run to this point
 walked around this path. The moment it was walked, the first click froze the
 page.
+
+### D130 · In-card buttons were heavier, smaller and tighter than the ones outside · **FIXED HERE** · **UX**
+
+Brittany: *"the dark purple buttons and the font in the buttons and how
+unformatted they are sometimes are not it… the ones inside the steps or cards.
+Outside them for whatever reason is fine."*
+
+Measured, which shows exactly why the inside ones read worse:
+
+| | font | padding | height |
+|---|---|---|---|
+| outside a card (`.workflow-restart-button`) | 10px / **650** | 7px 11px | **34px** |
+| inside a card (`.recipe-use em`) | 10px / **850** | 5px 9px | **25px** |
+
+A full 200 weight heavier, 9px shorter and tighter — white on dark plum, so it
+reads dense rather than crisp.
+
+**Two traps found while fixing it, both caught in the browser, not the editor:**
+
+1. The quiet in-card buttons (`.edit-recipe`, `.delete-recipe`) use
+   **`font-size:0` with a `::after` supplying the label**. Setting any
+   font-size on them un-hides the original text — the first attempt rendered
+   **"Rename / reconnectRename"** in every tile.
+2. The primary pill lives in a **117px** column. "Choose this product →" cannot
+   fit at any reasonable size — and D120's `white-space:nowrap` had converted
+   the old wrap into an overflow past the card edge. **The label had to shorten,
+   not the type.**
+
+**Fixed:** one in-card system — primary and save actions on the same plum
+gradient, 700 weight, 30–38px tall, pill radius, soft lift; quiet actions as
+outlined pills with **no type changes**; destructive stays a text link. The tile
+CTA is now **"Choose →"** and **"✓ Ready"**, which fit the column with no
+clipping. Verified live: 0 tiles overflowing, product name still on its own
+line, pill 30px at 10.5px/700.

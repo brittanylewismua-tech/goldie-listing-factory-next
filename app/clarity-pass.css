@@ -361,3 +361,80 @@
   font-weight:500!important;
   line-height:1.5!important;
 }
+
+/* ── D130 · In-card buttons ────────────────────────────────────────────────
+ *
+ * Measured against the out-of-card buttons, which read fine:
+ *   outside (.workflow-restart-button)  10px / 650 · 7px 11px · 34px tall
+ *   inside  (.recipe-use em)            10px / 850 · 5px  9px · 25px tall
+ *
+ * The in-card primary is smaller, a full 200 weight heavier and tighter, so
+ * white-on-plum reads dense and unformatted.
+ *
+ * IMPORTANT: several quiet buttons here use `font-size:0` on the element with a
+ * ::after supplying the visible label. Setting a font-size on them un-hides the
+ * original text and you get "Rename / reconnectRename". Only the box is touched
+ * below; type is left to the existing rules. */
+
+/* Primary action inside a card - roomier and lighter, sized to fit the tile */
+.app-shell :is(.step-card,.recipe-card) :is(.recipe-use,.bundle-use) em{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:5px!important;
+  width:100%!important;
+  max-width:100%!important;
+  box-sizing:border-box!important;
+  min-height:30px!important;
+  margin-top:8px!important;
+  padding:0 10px!important;
+  border-radius:999px!important;
+  background:linear-gradient(135deg,#6b3a58,#8a4f73)!important;
+  color:#fff!important;
+  font-size:10.5px!important;
+  font-weight:700!important;
+  letter-spacing:.01em!important;
+  line-height:1!important;
+  white-space:nowrap!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+  box-shadow:0 4px 12px rgba(85,45,70,.18)!important;
+}
+.app-shell :is(.step-card,.recipe-card) .recipe-tile:hover :is(.recipe-use,.bundle-use) em{
+  background:linear-gradient(135deg,#5a2f4a,#7a4364)!important;
+}
+.app-shell :is(.step-card,.recipe-card) .recipe-tile.selected :is(.recipe-use,.bundle-use) em{
+  background:rgba(107,58,88,.12)!important;
+  color:#5f3352!important;
+  box-shadow:none!important;
+}
+
+/* Quiet actions - box only, no type changes (see note above) */
+.app-shell :is(.step-card,.recipe-card) :is(.edit-recipe,.change-product,.add-product-button){
+  min-height:30px!important;
+  padding:0 12px!important;
+  border:1px solid rgba(107,58,88,.2)!important;
+  border-radius:999px!important;
+  background:rgba(255,255,255,.55)!important;
+  text-decoration:none!important;
+}
+.app-shell :is(.step-card,.recipe-card) :is(.edit-recipe,.change-product,.add-product-button):hover{
+  border-color:rgba(107,58,88,.38)!important;
+  background:#fff!important;
+}
+
+/* Save / confirm actions match the primary */
+.app-shell :is(.step-card,.recipe-card) :is(.save-recipe,.workflow-next){
+  min-height:38px!important;
+  padding:0 20px!important;
+  border:0!important;
+  border-radius:999px!important;
+  background:linear-gradient(135deg,#6b3a58,#8a4f73)!important;
+  color:#fff!important;
+  box-shadow:0 5px 14px rgba(85,45,70,.2)!important;
+}
+.app-shell :is(.step-card,.recipe-card) :is(.save-recipe,.workflow-next):disabled{
+  background:rgba(107,58,88,.14)!important;
+  color:rgba(74,42,62,.5)!important;
+  box-shadow:none!important;
+}

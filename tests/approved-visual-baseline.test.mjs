@@ -739,3 +739,28 @@ test("saved mockup scenes must match the selected garment — D130", async () =>
   assert.match(page,/matchingTemplates\.slice\(0,8\)\.map\(item=>item\.id\)/,
     "Legacy whole-set preferences must resolve to visible scene selections.");
 });
+
+test("in-card buttons are one system and fit their column — D130", async () => {
+  const [clarity, tools] = await Promise.all([
+    readFile(new URL("app/clarity-pass.css", root), "utf8"),
+    readFile(new URL("app/factory-tools.tsx", root), "utf8"),
+  ]);
+
+  /* Measured on the live product step:
+   *   outside a card (.workflow-restart-button)  10px / 650 · 34px tall
+   *   inside  a card (.recipe-use em)            10px / 850 · 25px tall
+   * The in-card primary was smaller, 200 weight heavier and tighter, which is
+   * why it read as dense and unformatted.
+   *
+   * Two traps found while fixing it, both verified in the browser:
+   *  - the quiet buttons use font-size:0 with a ::after label, so setting any
+   *    font-size on them un-hides the original text ("Rename / reconnectRename")
+   *  - the pill lives in a 117px column, so "Choose this product →" cannot fit
+   *    at any sane size — the label had to shorten, not the type */
+  assert.match(clarity, /:is\(\.recipe-use,\.bundle-use\) em\{[\s\S]*font-weight:700!important/);
+  assert.doesNotMatch(clarity, /:is\(\.edit-recipe,\.change-product,\.add-product-button\)\{[^}]*font-size/,
+    "Never set font-size on the font-size:0 buttons — it duplicates their label.");
+  assert.match(tools, /"Choose →"/,
+    "The tile CTA must fit its column without clipping.");
+  assert.doesNotMatch(tools, /"Choose this product →"/);
+});
