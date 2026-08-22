@@ -563,3 +563,15 @@
   color:#8a3f66!important;
   font-weight:750!important;
 }
+
+/* D148 · Listing thumbnails showed the Printify preview — a white garment on
+ * white, cropped to 54px — so all three listings in a batch were identical
+ * blank squares. The thumbnail's only job in this list is telling one listing
+ * from another, and the artwork does that; the garment preview does not.
+ * Artwork is usually a transparent PNG, so it needs something to sit on. */
+.app-shell .design-line .printify-preview-button img,
+.app-shell .final-listing-card>img{
+  background:linear-gradient(155deg,#efe6ef,#f7f1f6)!important;
+  object-fit:contain!important;
+  padding:3px!important;
+}

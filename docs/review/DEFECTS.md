@@ -2698,3 +2698,29 @@ furthest it reached. Pinned in the traversal guard alongside the D53/D73 tests.
 navigation", and it did — for steps. The phase equivalent sat one line below the
 line that was changed. When a fix is about a navigation rule, check every axis
 the app navigates on.
+
+### D148 · Every listing thumbnail is the same blank white square · **FIXED HERE** · **MEDIUM · UX**
+
+Seen by scrolling the Titles + tags phase and looking at the three listings side
+by side: all three thumbnails were **identical blank white squares**.
+
+Not broken images — they load fine at **1200×1200**. They are the *Printify
+preview*: a white garment photographed on white, cropped to **54px**. At that
+size a cream tee is a blank square, and it is the same blank square for every
+design in the batch.
+
+The thumbnail's only job in this list is telling one listing from another, and
+the garment cannot do that — the **artwork** can.
+
+**Fixed:** `draftPreview` now prefers `design.previewUrl` (the uploaded artwork)
+and falls back to the Printify preview when the file cache is unavailable, e.g.
+a batch restored on another machine. Artwork is typically a transparent PNG, so
+the thumbnail gets a soft tinted background and `object-fit:contain` instead of
+`cover`, so the art is visible rather than cropped into. The Printify garment
+preview is still one click away via **Enlarge**.
+
+**Also checked and NOT a defect:** the D76 warning *"No phrase in this bank
+matches this design"* appears above a listing that has a complete 139-character
+title. That reads oddly but is correct and is the entire point of D76 — the
+title is built from real bank phrases, none of which describe the SCOTTSDALE
+artwork. Leaving as is.

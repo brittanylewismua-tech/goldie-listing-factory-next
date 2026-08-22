@@ -236,7 +236,10 @@ test("gives Step 6 a cohesive titles, tags, and descriptions layout", async () =
   ]);
   assert.match(page, /Finish titles, tags, and descriptions/);
   assert.doesNotMatch(page, /Complete the listing words/);
-  assert.match(page, /draftPreview=drafts\.find\(draft=>draft\.clientId===design\.id\)\?\.previewUrl\|\|design\.previewUrl/);
+  /* Order reversed in D148: the Printify preview is a white garment on white,
+   * cropped to 54px, so every listing in a batch rendered as the same blank
+   * square. The artwork identifies the listing; the garment does not. */
+  assert.match(page, /draftPreview=design\.previewUrl\|\|drafts\.find\(draft=>draft\.clientId===design\.id\)\?\.previewUrl/);
   assert.match(page, /className="listing-preview-button"/);
   assert.match(page, /<b>2\. Edit description<\/b>/);
   assert.match(page, /Build this title yourself from a keyword bank/);
