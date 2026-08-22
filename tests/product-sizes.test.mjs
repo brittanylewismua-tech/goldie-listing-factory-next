@@ -240,3 +240,21 @@ test("Edit bundle visibly does something — D176", async () => {
   /* And the header has to say what just happened, or it still reads as inert. */
   assert.match(tools, /\{bundleForm\?\(editingBundleId\?`Editing \$\{bundleName\|\|"this bundle"\}`:"New product bundle"\)/);
 });
+
+test("the setup screen does not announce itself twice — D177", async () => {
+  const app = await read("app/listing-factory-app.tsx");
+
+  /* Two banners sat above the setup, both reading "NEW BATCH · <product>":
+   *   .product-setup-framing  "Goldie started with the choices saved for this product."
+   *   .batch-page-intro       "Goldie started with the choices from your last batch."
+   * Neither told the seller anything they could not see, and they contradicted
+   * each other about where the defaults came from. Both removed.
+   *
+   * The first-run variant stays: a product that has never been set up genuinely
+   * needs to be told nothing was copied from another product. */
+  assert.doesNotMatch(app, /className="batch-page-intro"/);
+  assert.doesNotMatch(app, /Goldie started with the choices/,
+    "Steady-state 'we prefilled this' banners are noise on an already dense page.");
+  assert.match(app, /activeRecipe\?\.setupComplete===false&&<div className="product-setup-framing first-product-setup">/,
+    "First-run guidance is the only case that earns a banner.");
+});
