@@ -156,3 +156,19 @@ test("a thin title fails on its own length, not on phrase count — D77", async 
   // The retry itself may still use phrase count — it is cheap and harmless.
   assert.match(route, /selection=await requestSelection\(1\)/);
 });
+
+test("both Printify product links work, and a bare id too — D116", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const route = await readFile(new URL("../app/api/printify/route.ts", import.meta.url), "utf8");
+
+  /* The parser already accepted /editor/<id> and /products/<id>, so the product
+   * page a seller is on while writing the description works — but the error
+   * copy said "Paste a complete Printify product-editor link", which is
+   * narrower than the truth and sends people back to the wrong page. A bare id
+   * was rejected outright even though people copy it on its own. */
+  assert.match(route, /const bare = value\.trim\(\);/);
+  assert.match(route, /\/\^\[a-f0-9\]\{20,32\}\$\/i\.test\(bare\)/);
+  assert.match(route, /Either the design-editor page or the product page works\./);
+  assert.doesNotMatch(route, /Paste a complete Printify product-editor link\./,
+    "The error must not claim only the editor link works.");
+});

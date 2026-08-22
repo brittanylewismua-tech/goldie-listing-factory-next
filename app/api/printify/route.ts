@@ -71,8 +71,20 @@ async function printify<T>(path: string, token: string): Promise<T> {
   return response.json() as Promise<T>;
 }
 
+/* Which Printify links work.
+ *
+ * Both the design-editor page and the product page carry the product id, so
+ * both are accepted — a seller who copies the URL while writing the product
+ * description should not be turned away. A bare id is accepted too, because
+ * people copy it out of the address bar on its own.
+ *
+ * What genuinely cannot work: the My Products list, the catalogue/blueprint
+ * pages and the orders page. None of them identify a single saved product. */
 function productIdFromUrl(value: string) {
-  return (value.match(/\/editor\/([a-zA-Z0-9]+)/) || value.match(/\/products\/([a-zA-Z0-9]+)/))?.[1] ?? "";
+  const fromPath = (value.match(/\/editor\/([a-zA-Z0-9]+)/) || value.match(/\/products\/([a-zA-Z0-9]+)/))?.[1];
+  if (fromPath) return fromPath;
+  const bare = value.trim();
+  return /^[a-f0-9]{20,32}$/i.test(bare) ? bare : "";
 }
 
 export async function GET() {
@@ -118,7 +130,7 @@ export async function POST(request: Request) {
     if (!body.productUrl) { await saveToken(user.userId, token); return NextResponse.json({ connected: true }); }
 
     const productId = productIdFromUrl(body.productUrl.trim());
-    if (!productId) return NextResponse.json({ error: "This Printify product cannot be used yet.", issues:["Paste a complete Printify product-editor link."] }, { status: 400 });
+    if (!productId) return NextResponse.json({ error: "Goldie could not find a product in that link.", issues:["Open the product in Printify and copy the address bar. Either the design-editor page or the product page works.","The My Products list, the catalogue and the orders page do not identify a single product, so their links cannot be used."] }, { status: 400 });
     let found: { shop: Shop; product: Product } | undefined;
     for (const shop of shops) {
       const response = await fetch(`${PRINTIFY_API}/shops/${shop.id}/products/${productId}.json`, { headers: { Authorization: `Bearer ${token}`, "User-Agent": "Goldie-Listing-Factory" }, cache: "no-store" });
