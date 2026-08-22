@@ -216,8 +216,14 @@ test("every bundle product is presented identically — D175", async () => {
   assert.doesNotMatch(app, /OTHER PRODUCTS IN THIS BUNDLE/,
     "There is no 'other' any more — they are all the same.");
 
-  /* previewImage had to be exposed; the API never returned a product image. */
-  assert.match(route, /previewImage:\(found\.product\.images\|\|\[\]\)\.find\(image=>image\.is_default\)\?\.src/);
+  /* previewImage had to be exposed; the API never returned a product image.
+   * It must come from the BLUEPRINT catalog, not the seller's own product: the
+   * product's images are its Printify mockups, which carry whatever placeholder
+   * artwork is in the template — so the card showed one of the seller's designs
+   * on a product they were not working on. The blueprint image is the blank garment. */
+  assert.match(route, /previewImage:\(blueprint\.images\|\|\[\]\)\[0\]\|\|""/);
+  assert.doesNotMatch(route, /previewImage:\(found\.product\.images/,
+    "The seller's own product mockups carry their placeholder design.");
 });
 
 test("Edit bundle visibly does something — D176", async () => {
