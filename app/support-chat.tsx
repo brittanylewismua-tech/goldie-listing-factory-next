@@ -57,7 +57,7 @@ export default function SupportChat() {
     return () => window.removeEventListener("goldie-support", openWithError);
   }, [answer]);
 
-  useEffect(() => { endRef.current?.scrollIntoView({ behavior:"smooth" }); }, [messages, open]);
+  useEffect(() => { endRef.current?.scrollIntoView(); }, [messages, open]);
 
   function submit(event: FormEvent) { event.preventDefault(); answer(query); }
 

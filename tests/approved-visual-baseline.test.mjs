@@ -857,3 +857,18 @@ test("the mockup scene grid spans its block — D145", async () => {
   assert.match(clarity, /\.app-shell \.product-mockup-scenes,\s*\.app-shell \.mockup-default-block>small\{grid-column:1\/-1!important\}/,
     "The scene grid and its caption must span both columns of the mockup block.");
 });
+
+test("nothing in the app relies on smooth scrolling — D146", async () => {
+  const files = ["listing-factory-app.tsx", "support-chat.tsx", "factory-tools.tsx"];
+  for (const file of files) {
+    const source = await readFile(new URL(`app/${file}`, root), "utf8");
+    /* Measured on BOTH surfaces, not assumed:
+     *   /keywords (.management-page)  scrollTo({behavior:"smooth"}) -> 0
+     *   /listing-factory (.app-shell) scrollTo({behavior:"smooth"}) -> 0
+     *   both, without `behavior`                                   -> 1200
+     * Smooth scrolling never fires anywhere in this app, so every call using it
+     * is a silent no-op with no error and no console output. */
+    assert.doesNotMatch(source, /behavior:\s*"smooth"/,
+      `${file} uses smooth scrolling, which never fires in this app. Scroll instantly.`);
+  }
+});

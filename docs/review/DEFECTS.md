@@ -2639,3 +2639,36 @@ the same as the layout being right. I verified `grid-template-columns` was
 winning the cascade and concluded the fix had shipped; it had, and the result
 was still wrong because the parent constrained it. Check the rendered width, not
 just the computed property.
+
+### D146 · Smooth scrolling never fires anywhere in the app · **FIXED HERE** · **HIGH**
+
+D93 established that `behavior:"smooth"` was dead on the management pages. I
+scoped the fix to those screens and assumed the listing factory was fine. It is
+not.
+
+Measured on **both** surfaces:
+
+| page | `scrollTo({top:1200, behavior:"smooth"})` | `scrollTo(0,1200)` |
+|---|---|---|
+| `/keywords` (`.management-page`) | **0** | 1200 |
+| `/listing-factory` (`.app-shell`) | **0** | 1200 |
+
+Every smooth scroll in the app is a silent no-op — no error, nothing in the
+console, the page simply never moves.
+
+**Found by clicking the thing a seller clicks.** The prompt *"Pick a keyword
+bank so Goldie can write your titles"* is a button. Clicking it opened the
+"Saved for this product" section (`opened: true`) and then **did not scroll** —
+six samples, all `scrollY 3577`. So it expands a section below the fold and
+leaves the seller exactly where she was, looking at an unchanged screen.
+
+**Fixed:** that handler now scrolls instantly to the section, and every
+remaining `behavior:"smooth"` in the app is gone — **5 in
+`listing-factory-app.tsx`** (including the step-change scroll-to-top, the
+missing-photo jump, and the mockup phase advance) and **1 in `support-chat.tsx`**
+(the message autoscroll). A test now fails on `behavior:"smooth"` anywhere.
+
+**The lesson, and it is the same one as D97 → D138:** I measured a problem on
+one surface, fixed it there, and assumed the rest of the app differed. It did
+not. When a browser-level behaviour is broken, check whether it is broken
+everywhere before scoping the fix.
