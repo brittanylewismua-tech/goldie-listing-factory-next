@@ -1233,3 +1233,48 @@ test("D197: product tiles pad their actions and drop the meaningless Printify in
     "the bundle tile keeps its member-count badge",
   );
 });
+
+test("D198: the card CTA spans the tile and the subtitle says something real", async () => {
+  const css = await readFile(new URL("app/clarity-pass.css", root), "utf8");
+  const tools = await readFile(new URL("app/factory-tools.tsx", root), "utf8");
+
+  // The pill measured 81px in a 205px card while the whole card was clickable.
+  assert.match(
+    css,
+    /\.app-shell \.recipe-grid \.recipe-tile \.recipe-copy em\{[^}]*width:100%!important/,
+    "the Choose CTA spans the card instead of leaving 111px of dead space",
+  );
+
+  // A real summary can run long; one line keeps tiles the same height.
+  assert.match(
+    css,
+    /\.app-shell \.recipe-grid \.recipe-tile \.recipe-copy small\{[^}]*text-overflow:ellipsis!important/,
+    "the subtitle is clamped so tiles cannot go ragged",
+  );
+
+  // "Printify product connected" was true of every saved product by definition.
+  // Strip comments first — the D198 note in the source quotes the old string.
+  const code = tools.replace(/\/\*[\s\S]*?\*\//g, "");
+  assert.doesNotMatch(code, /"Printify product connected"/, "the dead subtitle string is gone");
+  assert.match(tools, /export function recipeSummary\(recipe: Recipe\): string/);
+  assert.match(tools, /return parts\.length \? parts\.join\(" \\u00b7 "\) : "No details saved yet"/);
+  assert.match(tools, /<small>\{selecting\?"Loading product details…":recipeSummary\(recipe\)\}<\/small>/);
+});
+
+test("D198: recipeSummary reports saved detail and is honest when there is none", async () => {
+  const tools = await readFile(new URL("app/factory-tools.tsx", root), "utf8");
+  const body = tools.slice(tools.indexOf("export function recipeSummary"));
+  const source = body.slice(0, body.indexOf("\n}") + 2)
+    .replace("export function recipeSummary(recipe: Recipe): string", "function recipeSummary(recipe)")
+    .replace(/: string\[\]/g, "");
+  const recipeSummary = new Function(`${source}; return recipeSummary;`)();
+
+  assert.equal(recipeSummary({}), "No details saved yet");
+  assert.equal(recipeSummary({ defaultColorIds: [], defaultSizeIds: [] }), "No details saved yet");
+  assert.equal(recipeSummary({ defaultColorIds: [1] }), "1 color");
+  assert.equal(recipeSummary({ defaultColorIds: [1, 2], defaultSizeIds: [3, 4, 5] }), "2 colors · 3 sizes");
+  assert.equal(
+    recipeSummary({ defaultColorIds: [1], defaultMockupTheme: "BACH TEES", keywordListId: "k1" }),
+    "1 color · BACH TEES · keyword bank",
+  );
+});

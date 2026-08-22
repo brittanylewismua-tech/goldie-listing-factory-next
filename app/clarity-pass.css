@@ -1157,3 +1157,27 @@
 .app-shell .recipe-grid .recipe-tile>button:not(.recipe-use):last-child{margin-right:12px!important}
 .app-shell .recipe-grid .recipe-tile:not(.bundle-as-product) .recipe-icon{display:none!important}
 .app-shell .recipe-grid .recipe-tile:not(.bundle-as-product) .recipe-use{grid-template-columns:minmax(0,1fr)!important}
+
+/* D198 · Two leftovers on the same card, both measured live.
+ *
+ * The "Choose →" pill was 81px wide sitting in a 205px card with 111px of dead
+ * space to its right. The whole 205x106 region is the click target, so the
+ * loudest, most button-looking element on the tile covered 40% of the width and
+ * implied the rest was not clickable. Span it. Measured after: 177px wide with
+ * even 14px gutters, tile 165px tall.
+ *
+ * The subtitle is now a real summary of what is saved (see recipeSummary in
+ * factory-tools.tsx), so clamp it to one line — a product with colors, sizes, a
+ * mockup set and a keyword bank would otherwise wrap and make its tile taller
+ * than its neighbours, which is the ragged-row fault D190 and D195 already fixed
+ * twice elsewhere. */
+.app-shell .recipe-grid .recipe-tile .recipe-copy em{
+  width:100%!important;
+  min-height:32px!important;
+  margin-top:2px!important;
+}
+.app-shell .recipe-grid .recipe-tile .recipe-copy small{
+  white-space:nowrap!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+}
