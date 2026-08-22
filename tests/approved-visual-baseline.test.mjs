@@ -693,3 +693,16 @@ test("the 'Saved for this product' block is one grouped section — D126", async
   assert.match(clarity, /:has\(\.setup-todo\) span:after\{content:none!important\}/,
     "'Usually no changes needed' must not sit under an outstanding-item warning.");
 });
+
+test("a product with no saved defaults is framed as first-time setup — D125", async () => {
+  const page = await readFile(listingFactoryPage, "utf8");
+
+  /* Saving a new product auto-selects it and landed on the returning-product
+   * view: "Saved for this product", "From your last batch — change any", for a
+   * product that has never had a batch. */
+  assert.match(page, /const productFirstRun=Boolean\(activeRecipe\)&&!activeBundle/);
+  assert.match(page, /productFirstRun\?`Set up \$\{activeRecipe\?\.name\|\|"this product"\}`:"Saved for this product"/,
+    "A first-run product must be framed as setup, not as saved settings.");
+  assert.match(page, /productFirstRun\?"Choose the colours you want to offer/,
+    "Colour copy must not claim a previous batch on a first run.");
+});

@@ -1939,7 +1939,7 @@ Unknown or unmatched profiles remain reachable; Goldie never changes the saved
 selection automatically. Choosing a profile whose name does not clearly match
 the product shows a review warning before approval.
 
-### D123 · Colours are editable, sizes are invisible and unexplained · **FIXED HERE** · **MEDIUM · UX**
+### D127 · Colours are editable, sizes are invisible and unexplained · **FIXED HERE** · **MEDIUM · UX**
 
 Raised by Brittany: *"we're not telling people to choose what sizes in the
 Printify template, and there is no ability to select sizes in the listing
@@ -1981,7 +1981,7 @@ setting, not shadow it.
 
 ---
 
-### D122 · Choosing a product removes the bundle option · **FIXED HERE** · **BLOCKER**
+### D128 · Choosing a product removes the bundle option · **FIXED HERE** · **BLOCKER**
 
 Brittany: *"I added a crew neck product, and it automatically chose that
 product. And the option to create a batch disappeared."*
@@ -2182,3 +2182,29 @@ Keyword bank → Product description → Etsy details → Product connection.
 giving it a colour from the existing palette, and it shipped looking like a
 defect. Colour choices need to come from what the app already uses for that
 meaning — here, the plum of the alert directly below it.
+
+### D125 · Saving a new product drops you into a returning-product screen · **FIXED HERE** · **HIGH · UX**
+
+Decision made rather than escalated: a product that has saved **none** of its
+own defaults — no colours, no mockup set, no keyword bank — is being set up for
+the first time, and the returning-product framing is simply false for it.
+
+`productFirstRun` now drives the copy:
+
+| | first run | returning |
+|---|---|---|
+| block heading | **"Set up Gildan Crewneck"** | "Saved for this product" |
+| colours | **"Choose the colours you want to offer, then save them as this product's default."** | "From your last batch — change any." |
+| mockups | "No mockup set chosen for this product yet." (D122) | "From your last batch — change it anytime." |
+
+The blocks, order and controls are identical — only the framing changes, so
+there is no second flow to maintain. Once a product saves any default it reads
+as a returning product, which is correct.
+
+### Numbering correction
+
+D117, D122 and D123 were each assigned twice, by ChatGPT and me working in
+parallel. The two older entries are renumbered **D127** (sizes come from
+Printify) and **D128** (choosing a product removed the bundle option). The open
+items keep the numbers already quoted in conversation. 128 entries, no
+duplicates.
