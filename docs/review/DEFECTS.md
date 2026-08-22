@@ -2921,3 +2921,21 @@ this one element.
 `linear-gradient(145deg,rgba(232,183,225,.62),rgba(201,144,208,.5))` on `#4b283e`.
 **Verified live:** green count on `/batches` 1 → 0.
 
+## D161 — the Printify photo picker shows blank tiles for the first second
+**Measured** on the 148-photo Gildan Tee, opening "Choose Printify flatlays":
+- 117 thumbnail requests, **1.97MB** total
+- median load **508ms**, slowest **994ms**
+- source images are **1200×1200**, rendered into **88×88** tiles
+- 1.2s after opening: 16 tiles in the viewport, **0** painted; at 7s all 16 complete
+
+`.printify-photo-expand` (the tile button) and its `img` are both transparent, so an
+unloaded tile is a blank white square with a lone checkbox floating in it — which is
+exactly what a screenshot at t+1s shows. The picker is not broken; it reads as broken,
+and a seller choosing photos sees empty boxes.
+**Fix:** a pending plum tint on the tile and the image, the same remedy as D148, so an
+unloaded photo looks like it is arriving.
+**Not fixed here:** the tiles still download full 1200×1200 files for an 88px slot. Serving
+a smaller source would cut ~2MB per open, but that needs a Printify CDN resize parameter
+which I could not verify, so I did not guess at one.
+**Guard:** "an unloaded Printify thumbnail looks pending, not missing".
+

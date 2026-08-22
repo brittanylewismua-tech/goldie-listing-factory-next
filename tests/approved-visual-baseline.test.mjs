@@ -1011,3 +1011,16 @@ test("keyword phrases are readable — D158", async () => {
   assert.match(management, /\.bank-grid article span\{[^}]*font-size:11px\}/,
     "The lilac layer must resize these chips, not just recolour them.");
 });
+
+test("an unloaded Printify thumbnail looks pending, not missing — D161", async () => {
+  const clarity = await readFile(new URL("app/clarity-pass.css", root), "utf8");
+
+  /* Measured on a 148-photo product, opening "Choose Printify flatlays":
+   *   117 thumbnail requests, ~1.97MB, median 508ms, slowest 994ms
+   *   sources are 1200x1200; tiles render at 88x88 css px
+   *   1.2s after opening: 16 tiles in view, 0 painted
+   * .printify-photo-expand and its img were both transparent, so every unloaded
+   * tile was a blank white square with a lone checkbox. Same remedy as D148. */
+  assert.match(clarity, /\.app-shell \.printify-photo-expand\{[^}]*background:linear-gradient/,
+    "The photo tile needs a pending background so it never reads as empty.");
+});

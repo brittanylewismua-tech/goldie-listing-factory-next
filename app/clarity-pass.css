@@ -601,3 +601,19 @@
   background:linear-gradient(145deg,rgba(252,244,254,.78),rgba(246,229,248,.62))!important;
   color:#63435e!important;
 }
+
+/* D161 · Opening "Choose Printify flatlays" fires ~117 thumbnail requests
+ * (~2MB; median 508ms, slowest 994ms) for 1200x1200 source images rendered into
+ * 88x88 tiles. Both the tile button and the img are transparent, so for the
+ * first second every unloaded tile is a blank white square with a lone
+ * checkbox — measured on a 148-photo product: 16 tiles in view, 0 painted.
+ * It isn't broken, but it reads as broken. Give the tile a pending tint so an
+ * unloaded photo looks like it is arriving rather than missing. */
+.app-shell .printify-photo-expand{
+  background:linear-gradient(145deg,rgba(246,229,248,.72),rgba(238,222,247,.58))!important;
+  border-radius:10px;
+  overflow:hidden;
+}
+.app-shell .printify-photo-expand img{
+  background:linear-gradient(145deg,rgba(246,229,248,.72),rgba(238,222,247,.58));
+}
