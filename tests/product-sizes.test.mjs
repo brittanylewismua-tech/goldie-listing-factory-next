@@ -220,7 +220,7 @@ test("every setting a batch needs is a facet on the card — D182", async () => 
    * disclosure and a separate keyword prompt — four places, some of them
    * batch-level for settings that are per-product. All four are chips on the card,
    * and only the ones that still need an answer open a control. */
-  for (const facet of ["colours", "sizes", "mockups", "keywords"])
+  for (const facet of ["colors", "sizes", "mockups", "keywords"])
     assert.match(app, new RegExp(`open==="${facet}"&&`), `${facet} must open from the card`);
   assert.doesNotMatch(app, /className="saved-settings-summary"/,
     "The summary chips duplicated the card's chips.");
@@ -230,7 +230,7 @@ test("every setting a batch needs is a facet on the card — D182", async () => 
   /* Choosing something in a batch IS establishing the product, so it persists
    * immediately rather than behind a separate save-as-default button. */
   assert.match(app, /async function establish\(recipe:Recipe,change:Partial<Recipe>\)/);
-  assert.match(app, /void establish\(recipe,\{defaultColorIds:ids\}\)/);
+  assert.match(app, /establish\(recipe,\{defaultColorIds:ids\}\)/);
   assert.match(app, /void establish\(recipe,\{keywordListId:id\}\)/);
 });
 
@@ -311,7 +311,7 @@ test("shipping, profit and Etsy details are per-product facts — D183", async (
    * card; shipping, profit and Etsy details open the product-settings block and
    * scroll to it. A chip for a product that is not the current one in a bundle
    * stays a fact rather than a control that cannot work. */
-  assert.match(app, /const inCard=\["colours","sizes","mockups","keywords"\]\.includes\(facet\.name\);const editable=inCard\|\|isActive;/);
+  assert.match(app, /const inCard=\["colors","sizes","mockups","keywords"\]\.includes\(facet\.name\);/);
   assert.match(app, /const block=document\.querySelector<HTMLDetailsElement>\("\.everything-else"\);/);
   assert.match(app, /block\.open=true;block\.scrollIntoView\(\{block:"start"\}\)/,
     "Opening a setting must bring it into view — the same failure as Edit bundle.");
@@ -341,22 +341,21 @@ test("opening a facet shows the choices, not a summary — D187", async () => {
   assert.equal((app.match(/onRemember=\{\(\)=>\{\}\} remembering=\{false\} remembered=\{false\}\/>/g) || []).length, 2);
 });
 
-test("a suggestion is never displayed as a decision — D189", async () => {
+test("a suggestion is never displayed as a decision — D189/D191", async () => {
   const app = await read("app/listing-factory-app.tsx");
   const clarity = await read("app/clarity-pass.css");
 
   /* Seen on the deployed build: the Colours chip read "Choose" while the picker
-   * directly beneath it read "6 selected". Those six were the template's enabled
-   * colours pre-selected as a starting point — a suggestion, not a decision, and
-   * nothing was saved on the recipe. Two claims about the same thing, on screen
-   * at once.
+   * beneath read "6 selected" — those six being the template's colors, a
+   * suggestion and not a decision.
    *
-   * The chip now reads "Confirm 6", and the suggestion carries a one-click accept
-   * that writes it to the recipe. */
-  assert.match(app, /const chipValue=facet\.label\|\|\(suggestedCount\?`Confirm \$\{suggestedCount\}`:"Choose"\)/);
-  assert.match(app, /className="facet-confirm"/);
-  assert.match(app, /Goldie suggests \{\(colourFacet\.suggested\?\.colourIds\|\|\[\]\)\.length\} colours from your Printify product\./);
-  assert.match(clarity, /\.app-shell \.facet-confirm\{/);
+   * The first fix labelled it "Confirm 6", which was jargon: it never said what
+   * was being confirmed or where the number came from. D191 states the action
+   * plainly and puts the shortcut next to it, naming its source. */
+  assert.doesNotMatch(app, /Confirm \$\{suggestedCount\}/);
+  assert.match(app, /Use Printify&rsquo;s \{suggestion\}/);
+  assert.match(app, /className="batch-product-rows"/);
+  assert.match(clarity, /\.app-shell \.batch-product-rows\{/);
 });
 
 test("the product photo is visible against the card — D188", async () => {

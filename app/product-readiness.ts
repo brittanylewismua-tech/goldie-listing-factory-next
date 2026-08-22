@@ -1,22 +1,22 @@
 /* Readiness for one product in a batch.
  *
- * WHERE CHOICES LIVE. The Printify template is not where a seller picks colours
+ * WHERE CHOICES LIVE. The Printify template is not where a seller picks colors
  * and sizes. The three things the app tells them to do there are: choose the
  * product and print provider, set the artwork placement, and publish once to Etsy
  * so a shipping profile exists. Whatever variants are enabled on that product are
  * therefore incidental — Printify's defaults, or the minimum needed to publish.
- * Treating them as the seller's intent would put listings live in colours they
+ * Treating them as the seller's intent would put listings live in colors they
  * never chose, so `templateEnabled` only ever SUGGESTS a starting selection; it
  * can never mark a product ready.
  *
- * Colours and sizes are chosen in the Listing Factory, once per product. The
+ * Colors and sizes are chosen in the Listing Factory, once per product. The
  * wizard is not "ask nothing" — it is "ask once, then never again".
  *
  * Two things this exists to fix.
  *
  * 1. `setupComplete` on the recipe is not trustworthy. The API reads it as
  *    `saved.setupComplete !== false`, so it is true for every recipe that never
- *    explicitly stored false — including recipes with no colours, no sizes and no
+ *    explicitly stored false — including recipes with no colors, no sizes and no
  *    keyword bank. Measured on the live account: three saved products, all
  *    reporting setupComplete true, all with defaultColorIds [], defaultSizeIds []
  *    and keywordListId "". Readiness has to be computed from the data.
@@ -31,21 +31,21 @@
  * control. Only genuinely ambiguous facets are asked. */
 
 export type ReadinessState = "ready" | "auto" | "ask";
-export type FacetName = "colours" | "sizes" | "mockups" | "keywords" | "shipping" | "profit" | "etsy";
+export type FacetName = "colors" | "sizes" | "mockups" | "keywords" | "shipping" | "profit" | "etsy";
 
 export type Facet = {
   name: FacetName;
   state: ReadinessState;
   label: string;
-  resolved?: { colourIds?: number[]; sizeIds?: number[]; mockupTheme?: string; mockupIds?: string[]; keywordListId?: string; shippingProfileId?: number; profitTarget?: number };
+  resolved?: { colorIds?: number[]; sizeIds?: number[]; mockupTheme?: string; mockupIds?: string[]; keywordListId?: string; shippingProfileId?: number; profitTarget?: number };
   /* A starting selection for a facet that must still be confirmed. Never treated
    * as an answer. */
-  suggested?: { colourIds?: number[]; sizeIds?: number[] };
+  suggested?: { colorIds?: number[]; sizeIds?: number[] };
   note?: string;
 };
 
 export type ReadinessInput = {
-  colourOptions: Array<{ id: number; title: string; available: boolean; templateEnabled: boolean }>;
+  colorOptions: Array<{ id: number; title: string; available: boolean; templateEnabled: boolean }>;
   sizeOptions: Array<{ id: number; title: string; available: boolean; templateEnabled: boolean }>;
   compatibleMockupThemes: string[];
   keywordBanks: Array<{ id: string; name: string }>;
@@ -75,22 +75,22 @@ export type Readiness = {
   autoResolved: NonNullable<Facet["resolved"]>;
 };
 
-function colourFacet(input: ReadinessInput): Facet {
-  const available = input.colourOptions.filter((colour) => colour.available);
-  const saved = (input.saved.defaultColorIds || []).filter((id) => available.some((colour) => colour.id === id));
+function colorFacet(input: ReadinessInput): Facet {
+  const available = input.colorOptions.filter((color) => color.available);
+  const saved = (input.saved.defaultColorIds || []).filter((id) => available.some((color) => color.id === id));
   if (saved.length) {
-    const names = saved.map((id) => available.find((colour) => colour.id === id)?.title).filter(Boolean);
-    return { name: "colours", state: "ready", label: `${saved.length} ${saved.length === 1 ? "colour" : "colours"}`, note: names.slice(0, 3).join(", ") };
+    const names = saved.map((id) => available.find((color) => color.id === id)?.title).filter(Boolean);
+    return { name: "colors", state: "ready", label: `${saved.length} ${saved.length === 1 ? "color" : "colors"}`, note: names.slice(0, 3).join(", ") };
   }
-  if (!available.length) return { name: "colours", state: "ready", label: "No colour choices" };
-  /* Never auto-resolve. The template's enabled colours are Printify's doing, not
+  if (!available.length) return { name: "colors", state: "ready", label: "No color choices" };
+  /* Never auto-resolve. The template's enabled colors are Printify's doing, not
    * the seller's, so they open the picker pre-selected and wait for confirmation. */
-  const suggested = available.filter((colour) => colour.templateEnabled).map((colour) => colour.id);
+  const suggested = available.filter((color) => color.templateEnabled).map((color) => color.id);
   return {
-    name: "colours",
+    name: "colors",
     state: "ask",
     label: "",
-    suggested: { colourIds: suggested.length ? suggested : available.map((colour) => colour.id) },
+    suggested: { colorIds: suggested.length ? suggested : available.map((color) => color.id) },
     note: `${available.length} available`,
   };
 }
@@ -173,7 +173,7 @@ function etsyFacet(input: ReadinessInput): Facet {
 }
 
 export function productReadiness(input: ReadinessInput): Readiness {
-  const facets = [colourFacet(input), sizeFacet(input), mockupFacet(input), keywordFacet(input), shippingFacet(input), profitFacet(input), etsyFacet(input)];
+  const facets = [colorFacet(input), sizeFacet(input), mockupFacet(input), keywordFacet(input), shippingFacet(input), profitFacet(input), etsyFacet(input)];
   const autoResolved: NonNullable<Facet["resolved"]> = {};
   for (const facet of facets) if (facet.state === "auto" && facet.resolved) Object.assign(autoResolved, facet.resolved);
   const questions = facets.filter((facet) => facet.state === "ask").map((facet) => facet.name);

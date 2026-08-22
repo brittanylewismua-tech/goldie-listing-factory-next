@@ -7,7 +7,7 @@ import { productReadiness } from "../app/product-readiness.ts";
  * keywordListId "" — and all three had "BACH TEES", a t-shirt set, saved as
  * their default including the hoodie and the sweatshirt. */
 const tee = {
-  colourOptions: [
+  colorOptions: [
     { id: 1, title: "White", available: true, templateEnabled: true },
     { id: 2, title: "Black", available: true, templateEnabled: true },
     { id: 3, title: "Cocoa", available: true, templateEnabled: false },
@@ -25,23 +25,23 @@ const tee = {
   saved: {},
 };
 
-test("colours and sizes are always asked once, never taken from the template", () => {
+test("colors and sizes are always asked once, never taken from the template", () => {
   const result = productReadiness(tee);
   /* The Printify template is where you pick the blueprint, the print provider and
-   * the artwork placement — not colours and sizes. Whatever variants are enabled
+   * the artwork placement — not colors and sizes. Whatever variants are enabled
    * there are Printify's defaults, so inheriting them would publish listings in
-   * colours the seller never chose. They are asked once, per product. */
+   * colors the seller never chose. They are asked once, per product. */
   /* Only one keyword bank exists in this fixture, so that one is not a question. */
-  assert.deepEqual(result.questions, ["colours", "sizes"]);
+  assert.deepEqual(result.questions, ["colors", "sizes"]);
   assert.equal(result.autoResolved.keywordListId, "b1");
   assert.equal(result.established, false);
-  assert.equal(result.autoResolved.colourIds, undefined);
+  assert.equal(result.autoResolved.colorIds, undefined);
   assert.equal(result.autoResolved.sizeIds, undefined);
 
   /* The template's enabled variants still open the picker pre-selected — a
    * starting point, not an answer. */
-  const colours = result.facets.find((f) => f.name === "colours");
-  assert.deepEqual(colours.suggested.colourIds, [1, 2]);
+  const colors = result.facets.find((f) => f.name === "colors");
+  assert.deepEqual(colors.suggested.colorIds, [1, 2]);
   const sizes = result.facets.find((f) => f.name === "sizes");
   assert.deepEqual(sizes.suggested.sizeIds, [14, 15]);
 
@@ -70,15 +70,15 @@ test("an established product asks nothing at all", () => {
   const result = productReadiness(established);
   assert.deepEqual(result.questions, []);
   assert.equal(result.established, true);
-  assert.deepEqual(result.facets.filter(f=>["colours","sizes","mockups","keywords"].includes(f.name)).map((f) => f.state), ["ready", "ready", "ready", "ready"]);
+  assert.deepEqual(result.facets.filter(f=>["colors","sizes","mockups","keywords"].includes(f.name)).map((f) => f.state), ["ready", "ready", "ready", "ready"]);
 });
 
 test("saved choices win over template defaults", () => {
   const configured = { ...tee, saved: { defaultColorIds: [3], defaultSizeIds: [99], keywordListId: "b1", defaultMockupTheme: "BACH TEES" } };
   const result = productReadiness(configured);
   assert.equal(result.established, true);
-  assert.deepEqual(result.facets.filter(f=>["colours","sizes","mockups","keywords"].includes(f.name)).map((f) => f.state), ["ready", "ready", "ready", "ready"]);
-  assert.equal(result.facets.find((f) => f.name === "colours").label, "1 colour");
+  assert.deepEqual(result.facets.filter(f=>["colors","sizes","mockups","keywords"].includes(f.name)).map((f) => f.state), ["ready", "ready", "ready", "ready"]);
+  assert.equal(result.facets.find((f) => f.name === "colors").label, "1 color");
 });
 
 test("saved values that are no longer available reopen the question", () => {
@@ -87,9 +87,9 @@ test("saved values that are no longer available reopen the question", () => {
    * different colour either. It gets asked again. */
   const stale = { ...tee, saved: { defaultColorIds: [404], defaultSizeIds: [404] } };
   const result = productReadiness(stale);
-  assert.equal(result.facets.find((f) => f.name === "colours").state, "ask");
+  assert.equal(result.facets.find((f) => f.name === "colors").state, "ask");
   assert.equal(result.facets.find((f) => f.name === "sizes").state, "ask");
-  assert.equal(result.autoResolved.colourIds, undefined);
+  assert.equal(result.autoResolved.colorIds, undefined);
 });
 
 test("a product with no size axis is not asked about sizes", () => {
