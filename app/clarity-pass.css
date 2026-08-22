@@ -292,3 +292,12 @@
   font-size:11.5px;
   line-height:1.45;
 }
+
+/* D117 · Make a large Etsy shipping-profile library navigable without hiding
+ * any money-affecting choice or changing the profile attached to the product. */
+.app-shell .shipping-profile-picker{display:grid;gap:8px;width:100%}
+.app-shell .shipping-profile-search{width:100%;min-height:42px;padding:10px 12px;border:1px solid rgba(119,70,109,.3);border-radius:8px;background:rgba(255,255,255,.82);color:#392435;font-size:12px}
+.app-shell .shipping-profile-empty{margin:0;padding:9px 11px;border-radius:8px;background:rgba(173,113,42,.09);color:#76501e;font-size:11px;font-weight:700}
+.app-shell .shipping-profile-family-warning{display:grid;gap:3px;margin:10px 0;padding:11px 13px;border:1px solid rgba(173,113,42,.24);border-radius:9px;background:rgba(255,240,210,.58);color:#6e491b}
+.app-shell .shipping-profile-family-warning b{font-size:12px}
+.app-shell .shipping-profile-family-warning span{font-size:11px;line-height:1.45}

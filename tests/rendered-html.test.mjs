@@ -1043,7 +1043,8 @@ test("keeps pricing simple while using a real Etsy shipping profile and exact te
     readFile(new URL("../app/api/printify/drafts/publish/route.ts", import.meta.url), "utf8"),
   ]);
   assert.match(page,/Shipping profile/);
-  assert.match(page,/Selected automatically from your saved product/);
+  assert.match(page,/Currently attached to this product/);
+  assert.match(page,/Current profile first · product matches next · every profile remains available/);
   assert.match(page,/templateProfileId=Number\(templateDetails\?\.shippingTemplateId\)/);
   assert.match(page,/setEtsyShippingProfileId\(current=>current\|\|templateProfileId\)/);
   assert.match(page,/buyer pays/);

@@ -1905,7 +1905,7 @@ bracket would be too.
 is applied both in the dropdown and in `friendlyShippingProfileTitle`, which
 feeds the "Saved for this product" summary and the publish checklist.
 
-### D117 · The shipping profile dropdown lists 94 unrelated profiles · **OPEN** · **HIGH · UX**
+### D117 · The shipping profile dropdown lists 94 unrelated profiles · **FIXED HERE** · **HIGH · UX**
 
 The Pricing step asks the seller to confirm the Etsy shipping profile for a
 **T-shirt** batch, and offers **94 options** in one flat list, including:
@@ -1931,9 +1931,13 @@ tee and the buyer is charged the wrong postage.
    `product-type-utils.ts` already computes.
 3. **Make it searchable** once past ~20 entries.
 
-Not fixed here: filtering by product family touches money-affecting behaviour
-and deserves a deliberate decision rather than a same-day change. Logged with
-the numbers so it can be scheduled.
+**Fixed without hard filtering:** the profile already attached to the saved
+product stays first and is explicitly labelled. Clearly matching product-family
+profiles follow, then related apparel, then every remaining profile. Lists over
+20 gain search, and every option shows first-item and additional-item charges.
+Unknown or unmatched profiles remain reachable; Goldie never changes the saved
+selection automatically. Choosing a profile whose name does not clearly match
+the product shows a review warning before approval.
 
 ### D115 · Colours are editable, sizes are invisible and unexplained · **FIXED HERE** · **MEDIUM · UX**
 

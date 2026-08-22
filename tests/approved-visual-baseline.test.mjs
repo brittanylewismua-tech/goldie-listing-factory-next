@@ -585,3 +585,21 @@ test("the Colours section explains that sizes come from Printify — D115", asyn
   assert.match(page, /className="sizes-note">Sizes come from your Printify product and apply to every listing\./,
     "The Colours section must say where sizes are controlled.");
 });
+
+test("shipping profiles are product-aware, searchable, and never hard-filtered — D117", async () => {
+  const [page,styles]=await Promise.all([
+    readFile(listingFactoryPage,"utf8"),
+    readFile(new URL("../app/clarity-pass.css",import.meta.url),"utf8"),
+  ]);
+  assert.match(page,/profiles\.length>20&&<input className="shipping-profile-search"/,
+    "Large profile libraries need search where the seller chooses shipping.");
+  assert.match(page,/Currently attached to this product/);
+  assert.match(page,/Recommended for \$\{productName\}/);
+  assert.match(page,/Other apparel profiles/);
+  assert.match(page,/All other shipping profiles/,
+    "Non-matching profiles must remain reachable; classification cannot silently hide a money-affecting option.");
+  assert.match(page,/shippingProfileOptionLabel\(profile\)/,
+    "Options must expose first-item and additional-item buyer charges.");
+  assert.match(page,/selectedProfileNeedsReview&&<div className="shipping-profile-family-warning"/);
+  assert.match(styles,/\.app-shell \.shipping-profile-search\{/);
+});
