@@ -2984,3 +2984,43 @@ without changing the sidebar colour, which is a design-system decision, not a bu
 **Measured after:** 0 of 8 failing.
 **Guard:** "small text meets AA against the surface it is painted on".
 
+## D164 — sizes are now chosen in Goldie, per saved product, exactly like colours
+**Why:** colours had a picker and sizes did not, so a seller had to remember to set their
+size range in the Printify template. D123 had already noticed this and settled for a note in
+the Colours card pointing at Printify; that note's own rationale was "a seller who can change
+colours here will reasonably expect to change sizes here too". This does the real thing.
+
+**Governing safety property:** *default behaviour is identical to before.* This is the code
+path that feeds pricing and Printify draft creation, so only an explicit user action may
+change which variants go live. Every piece below is built around that.
+
+**How it is made safe**
+| risk | how it is handled |
+|---|---|
+| Blueprint with no size axis (mug, sticker) | `sizeIds` stays empty, every expression collapses to the previous colour-only behaviour, and the selector renders `null` |
+| Other axes (style, paper, cut) | still gated to the template via `enabledOtherIds` — they are not selectable in Goldie, so offering combinations would produce variants the seller cannot price |
+| Existing saved products | seeding falls through to "what the template had enabled", i.e. exactly today's set |
+| Batches saved before this change | their restored `templateDetails` has no `sizeOptions` and their variants no `sizeId`, so they skip the size filter entirely |
+| An empty size selection | `pricedVariants` returns the colour-filtered set instead. An empty variant set would price nothing and enable nothing on the draft — the one failure here that costs money rather than looks wrong |
+| A partial recipe save | `pricingJson` used to be rebuilt from scratch on every POST, so any caller that omitted a field wiped it. It now **merges** — an omitted key survives, an explicit `[]` still clears |
+| The card promising something the gate ignores | the step gate and the forward button both check sizes, conditional on `sizeOptions` existing — otherwise it would be a D154-class lie |
+
+**Verified against the live Printify product before building:** "Unisex Heavy Cotton Tee"
+returns 195 selectable variants, 21 template-enabled, 174 not — and **every non-enabled
+variant carries a cost** (`notEnabledMissingCost: 0`). So pricing beyond the template is
+safe; this was the question that decided whether the feature was buildable at all.
+
+**Seeding precedence** (identical to colours): saved product default → this browser's last
+choice → what the Printify template had enabled → every available size. The last step means
+the selection can never be empty.
+
+**Also fixed in passing:** the colour card's "saved" pill was green (`#78a98a`/`#e8f5ec`/
+`#276543`) — the last of the D156 leftovers in this flow.
+
+**Guards:** `tests/product-sizes.test.mjs`, 11 tests covering axis detection and its
+fallback, other-axis gating, the empty-selection guard, old-batch passthrough, seeding
+precedence, persistence across reload/restore/bundle-hop, merge semantics (behavioural, not
+just source-matched), and gate/UI agreement. Three older tests that pinned the previous
+behaviour were updated rather than deleted, including D123's note test which now asserts the
+note is gone.
+
