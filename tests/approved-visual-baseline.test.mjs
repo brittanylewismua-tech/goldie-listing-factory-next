@@ -717,8 +717,11 @@ test("a product with no saved defaults is framed as first-time setup — D125", 
    * view: "Saved for this product", "From your last batch — change any", for a
    * product that has never had a batch. */
   assert.match(page, /const productFirstRun=Boolean\(activeRecipe\)&&!activeBundle/);
-  assert.match(page, /productFirstRun\?`Set up \$\{activeRecipe\?\.name\|\|"this product"\}`:"Saved for this product"/,
-    "A first-run product must be framed as setup, not as saved settings.");
+  /* D182 superseded the first-run/returning copy switch. Readiness is computed
+   * per product now, so the card itself says what is set and what is not — the
+   * block behind it is just the editor and is named for that. */
+  assert.match(page, /<b>\{`\$\{activeRecipe\?\.name\|\|"This product"\} settings`\}<\/b>/,
+    "The settings block is named for its job, not for a state the card already shows.");
   assert.match(page, /productFirstRun\?"Choose the colours you want to offer/,
     "Colour copy must not claim a previous batch on a first run.");
 });
