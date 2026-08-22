@@ -301,3 +301,12 @@
 .app-shell .shipping-profile-family-warning{display:grid;gap:3px;margin:10px 0;padding:11px 13px;border:1px solid rgba(173,113,42,.24);border-radius:9px;background:rgba(255,240,210,.58);color:#6e491b}
 .app-shell .shipping-profile-family-warning b{font-size:12px}
 .app-shell .shipping-profile-family-warning span{font-size:11px;line-height:1.45}
+
+/* D120 · "Choose this product →" wrapped the arrow onto its own line in the
+ * product tiles. Keep the label and its arrow together. */
+.app-shell .recipe-tile .recipe-use em{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  white-space:nowrap;
+}

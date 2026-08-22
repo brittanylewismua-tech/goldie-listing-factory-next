@@ -1423,7 +1423,10 @@ test("supports simple saved product bundles without complicating the single-prod
   assert.match(api, /eq\(productRecipes\.userId,user\.userId\)/);
   assert.match(workflow, /Product bundles/);
   assert.match(workflow, /Upload each design once, then Goldie carries it through every product/);
-  assert.match(workflow, /Using this design on multiple products/);
+  /* Was "Using this design on multiple products?" — shown on the product step,
+   * before any design has been uploaded, so it asked about something that did
+   * not exist yet. See D118. */
+  assert.match(workflow, /Want one batch to cover several products\?/);
   assert.match(workflow, /Ready for this batch/);
   assert.match(workflow, /Choose the products in the order you want to complete them/);
   assert.match(workflow, /bundleSaveLock\.current/);

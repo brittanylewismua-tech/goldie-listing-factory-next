@@ -1978,3 +1978,54 @@ is the source of truth for variants, and adding a second place to enable or
 disable them invites the two lists drifting apart — the same failure mode as
 D90's duplicated denylist. If sellers ask for it, it should replace the Printify
 setting, not shadow it.
+
+---
+
+### D117 · Choosing a product removes the bundle option · **FIXED HERE** · **BLOCKER**
+
+Brittany: *"I added a crew neck product, and it automatically chose that
+product. And the option to create a batch disappeared."*
+
+Reproduced exactly. `approved-functional.css:1496`:
+
+```css
+.app-shell[data-product-selected="true"] .bundle-library{display:none!important}
+```
+
+Measured: with nothing selected the bundle CTA is present and enabled
+("＋ Create a product bundle"). After clicking "Choose this product" the
+control count drops to **zero** and the words "product bundle" leave the page
+entirely.
+
+Adding a saved product auto-selects it, so **the act of creating the second
+product needed for a bundle is what removes the bundle option.** The only
+escape is to unselect the product you just made.
+
+Presumably added to answer D12/P9 ("the bundle row is sandwiched mid-flow") —
+but that asked for it to be *moved*, not deleted. It is a collapsed `<details>`,
+one summary line, so it costs nothing to leave visible.
+
+**Fixed:** `display:block`. Test asserts it.
+
+### D118 · The bundle prompt asked about a design that does not exist yet · **FIXED HERE** · **UX**
+
+> "Using this design on multiple products?"
+
+Shown on the **product** step, before any design has been uploaded. Brittany:
+*"why are you talking about this design? I haven't even uploaded anything yet."*
+Changed to **"Want one batch to cover several products?"**
+
+### D119 · The product name has to be typed when Goldie already knows it · **FIXED HERE** · **UX**
+
+Connecting the Printify product imports the brand, model and blueprint title —
+then asks the seller to name the product from scratch. The name field now
+pre-fills from `brand + model` (e.g. "Gildan 5000") the moment the product
+verifies, and only while the field is untouched and empty. Typing anything sets
+`nameTouched` and Goldie never overwrites it. Editing an existing product is
+excluded.
+
+### D120 · The arrow wrapped onto its own line · **FIXED HERE** · **LOW**
+
+"Choose this product →" in the saved-product tiles broke after "product",
+leaving the arrow alone on line two in all three cards. `.recipe-use em` is now
+an inline-flex with `white-space:nowrap`.

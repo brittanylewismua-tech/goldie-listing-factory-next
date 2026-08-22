@@ -603,3 +603,27 @@ test("shipping profiles are product-aware, searchable, and never hard-filtered �
   assert.match(page,/selectedProfileNeedsReview&&<div className="shipping-profile-family-warning"/);
   assert.match(styles,/\.app-shell \.shipping-profile-search\{/);
 });
+
+test("the product step stays usable after a product is chosen — D117/D119/D120", async () => {
+  const [tools, page, functional, clarity] = await Promise.all([
+    readFile(new URL("app/factory-tools.tsx", root), "utf8"),
+    readFile(listingFactoryPage, "utf8"),
+    readFile(new URL("app/approved-functional.css", root), "utf8"),
+    readFile(new URL("app/clarity-pass.css", root), "utf8"),
+  ]);
+
+  /* D117 — adding a saved product auto-selects it, and selecting a product hid
+   * the bundle block entirely, so the seller had no route to a bundle except
+   * unselecting the product they had just added. It is a collapsed <details>;
+   * it can stay. */
+  assert.match(functional, /\.app-shell\[data-product-selected="true"\] \.bundle-library\{display:block!important\}/,
+    "Selecting a product must not remove the bundle option.");
+
+  /* D119 — the connected Printify product already knows what it is. */
+  assert.match(page, /suggestedProductName=\{templateDetails\?\[templateDetails\.brand,templateDetails\.model\]/);
+  assert.match(tools, /if\(nameTouched\.current\|\|editingId\|\|!props\.suggestedProductName\)return;/,
+    "The suggested name must never overwrite something the seller typed.");
+
+  /* D120 — the arrow wrapped onto its own line inside the product tiles. */
+  assert.match(clarity, /\.app-shell \.recipe-tile \.recipe-use em\{[\s\S]*white-space:nowrap/);
+});
