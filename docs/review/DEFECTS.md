@@ -2883,3 +2883,41 @@ the freed characters let a genuinely new phrase in.
 **Guard:** `tests/rendered-html.test.mjs` — "a title never repeats a phrase it already contains",
 which asserts both the source predicate and the behaviour on the live data.
 
+## D158 — keyword phrases rendered at 9px on the Keyword Banks page
+**Where:** `/keywords`, every phrase chip — i.e. the actual content of the page.
+**Measured:** all 17 chips of "JANE AUSTEN TEE" and all 50 of "BACHELORETTE TEES" compute to
+`font-size: 9px`, chip height 24px.
+**Cause:** `globals.css:11` — `.bank-grid article span{background:#eee5d5;...;font-size:9px}`,
+a gold-era rule (that background is a tan). `management-aesthetic.css:53` recoloured it to
+plum and never touched the size. Exactly the same miss as D150 in `theme.css`.
+**Fix:** 11px in the lilac layer, matching the other secondary labels in the system.
+**Guard:** "keyword phrases are readable".
+
+## D159 — the sidebar jumped 72px between management pages
+**Measured**, top edge of the first nav link ("Listing Factory") at 1440×812:
+| page | nav top |
+|---|---|
+| /keywords | 146 |
+| /mockups | 146 |
+| **/batches** | **218** |
+| **/usage** | **218** |
+So the whole sidebar shifts down as you move from Keyword Banks to Batch History and back.
+**Cause:** `:is(.management-page,.usage-page)>.management-nav a:first-of-type{margin-top:72px}`
+applied to all four pages, and a later `!important` reset returned it to 0 for
+`:is(.keyword-page,.mockupFactory.managementOnly)` **only**. Batch History and Usage were
+never added to the reset, so they kept the offset.
+**Fix:** removed the stray 72px rule — line 16 of the same file already sets `margin-top:0` —
+plus the two now-redundant per-page resets.
+**Verified:** /usage moved 218 → 146, matching the pages that were already right.
+**Pattern (again):** a fix applied to the surfaces someone happened to be looking at.
+
+## D160 — Batch History's "complete" chip was the last green in the app
+**Measured:** `.management-page .batch-status.complete` = `rgba(206,239,218,.72)` /
+`#286547` — green — while its three siblings in the same rule are all in-palette
+(`base` pale plum, `processing` lavender, `needs_attention` rose `#8a3650`).
+Same root cause as D156, one page further on; a full-page green scan of `/batches` returned
+this one element.
+**Fix:** the completion gradient, matching D156 —
+`linear-gradient(145deg,rgba(232,183,225,.62),rgba(201,144,208,.5))` on `#4b283e`.
+**Verified live:** green count on `/batches` 1 → 0.
+

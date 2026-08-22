@@ -37,7 +37,7 @@
 
 /* Batch History */
 .management-page .batch-history{gap:15px}.management-page .batch-history article{padding:24px 26px}.management-page .batch-history h2{color:var(--ink);font-family:'DM Serif Display',Georgia,serif;font-size:25px;font-weight:400}.management-page .batch-history p,.management-page .batch-history small{color:rgba(74,42,62,.66)}
-.management-page .batch-status{background:rgba(220,177,218,.28);color:#67465f}.management-page .batch-status.complete{background:rgba(206,239,218,.72);color:#286547}.management-page .batch-status.processing{background:rgba(226,197,245,.58);color:#67465f}.management-page .batch-status.needs_attention{background:rgba(246,211,218,.78);color:#8a3650}
+.management-page .batch-status{background:rgba(220,177,218,.28);color:#67465f}.management-page .batch-status.complete{background:linear-gradient(145deg,rgba(232,183,225,.62),rgba(201,144,208,.5));color:#4b283e}.management-page .batch-status.processing{background:rgba(226,197,245,.58);color:#67465f}.management-page .batch-status.needs_attention{background:rgba(246,211,218,.78);color:#8a3650}
 .management-page .remove-batch{background:transparent!important;color:#87435d!important;box-shadow:none!important}
 
 /* Owner Etsy operations */
@@ -50,7 +50,7 @@
 .keyword-page .management-topbar nav{display:grid;width:100%;gap:4px}.keyword-page .management-topbar nav a{display:flex;align-items:center;min-height:46px;padding:0 15px;border-radius:14px;color:rgba(74,42,62,.58);font-size:13px;font-weight:650}.keyword-page .management-topbar nav a:hover,.keyword-page .management-topbar nav a.active{color:var(--ink);background:rgba(255,255,255,.53);box-shadow:inset 0 0 0 1px rgba(255,255,255,.54)}
 .keyword-page .keyword-hero{max-width:1188px;margin:0 auto;padding:58px 54px 26px;background:transparent;color:var(--ink)}.keyword-page .keyword-hero h1{color:var(--ink);font-family:'DM Serif Display',Georgia,serif;font-weight:400}.keyword-page .keyword-hero>div>p:last-child{color:rgba(74,42,62,.7);font-size:14px}.keyword-page .return-to-work{border-color:rgba(255,255,255,.68);background:rgba(255,249,253,.52);color:var(--ink);box-shadow:0 12px 34px rgba(74,42,62,.08)}.keyword-page .return-to-work>span,.keyword-page .return-to-work small{color:#8d5c82}
 .keyword-page .keyword-workspace{max-width:1080px!important;padding:14px 54px 90px!important}.keyword-page .management-create,.keyword-page .bank-library{padding:26px;margin-top:18px}.keyword-page .section-heading h2,.keyword-page .bank-library h2{font-family:'DM Serif Display',Georgia,serif;font-size:30px;font-weight:400}.keyword-page .file-label{border-color:rgba(139,89,137,.28);background:rgba(255,255,255,.4)}.keyword-page .new-bank-button{border-color:rgba(74,42,62,.16);background:rgba(255,255,255,.46);color:var(--ink)}
-.keyword-page .bank-grid article{border-color:rgba(74,42,62,.14);border-radius:16px;background:rgba(255,255,255,.42)}.keyword-page .bank-grid article.current{border-color:#b777b0;box-shadow:0 0 0 3px rgba(183,119,176,.14)}.keyword-page .bank-grid article span{background:rgba(234,205,231,.55);color:#65445d}.keyword-page .bank-grid .edit-bank{width:100%}.keyword-page .save-toast{border-color:rgba(255,255,255,.55);background:linear-gradient(145deg,#5b304f,#45263c);box-shadow:0 24px 70px rgba(74,42,62,.28)}
+.keyword-page .bank-grid article{border-color:rgba(74,42,62,.14);border-radius:16px;background:rgba(255,255,255,.42)}.keyword-page .bank-grid article.current{border-color:#b777b0;box-shadow:0 0 0 3px rgba(183,119,176,.14)}.keyword-page .bank-grid article span{background:rgba(234,205,231,.55);color:#65445d;font-size:11px}.keyword-page .bank-grid .edit-bank{width:100%}.keyword-page .save-toast{border-color:rgba(255,255,255,.55);background:linear-gradient(145deg,#5b304f,#45263c);box-shadow:0 24px 70px rgba(74,42,62,.28)}
 
 /* Usage */
 .usage-page .plan-banner{padding:28px}.usage-page .plan-banner span{color:#efd0e7}.usage-page .plan-banner h2{font-family:'DM Serif Display',Georgia,serif;font-size:34px;font-weight:400}.usage-page .plan-banner p{color:rgba(74,42,62,.66)}
@@ -86,7 +86,6 @@
 .usage-plan-fineprint{max-width:850px;margin:20px auto 0;color:rgba(74,42,62,.66);font-size:11px;line-height:1.6;text-align:center}
 @media(max-width:1100px){.usage-plan-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 :is(.management-page,.usage-page)>.management-nav:after{position:absolute;top:104px;left:0;width:100%;margin:0;display:block;text-align:center}
-:is(.management-page,.usage-page)>.management-nav a:first-of-type{margin-top:72px}
 .usage-page .usage-load-error{max-width:1080px;padding:30px;border:1px solid rgba(255,255,255,.68);border-radius:22px;background:linear-gradient(145deg,rgba(255,250,253,.76),rgba(246,229,248,.59));box-shadow:0 24px 70px rgba(74,42,62,.12);backdrop-filter:blur(24px)}
 .usage-page .usage-load-error h2{margin:0 0 8px;font:400 30px/1.1 'DM Serif Display',Georgia,serif}.usage-page .usage-load-error p{color:rgba(74,42,62,.68)}.usage-page .usage-load-error a{display:inline-flex;margin-top:12px;padding:12px 18px;border-radius:14px;background:linear-gradient(145deg,#5b304f,#45263c);color:#fff;font-weight:750}
 .keyword-page .keyword-hero h1,.managementOnly .mockupHero h1{color:var(--ink)!important;font-family:'DM Serif Display',Georgia,serif!important;font-weight:400!important}
@@ -138,7 +137,6 @@
   font-weight:650!important;
   text-decoration:none!important;
 }
-:is(.keyword-page,.mockupFactory.managementOnly).management-page>.management-nav a:first-of-type{margin-top:0!important}
 :is(.keyword-page,.mockupFactory.managementOnly).management-page>.management-nav a:hover,
 :is(.keyword-page,.mockupFactory.managementOnly).management-page>.management-nav a.active{
   color:var(--ink)!important;
@@ -200,8 +198,7 @@
   }
   :is(.keyword-page,.mockupFactory.managementOnly).management-page>.management-nav::before,
   :is(.keyword-page,.mockupFactory.managementOnly).management-page>.management-nav::after{display:none!important}
-  :is(.keyword-page,.mockupFactory.managementOnly).management-page>.management-nav a:first-of-type{margin-top:0!important}
-  :is(.keyword-page,.mockupFactory.managementOnly).management-page>header{margin:18px auto 24px!important}
+    :is(.keyword-page,.mockupFactory.managementOnly).management-page>header{margin:18px auto 24px!important}
   .keyword-page .keyword-workspace,
   .mockupFactory.managementOnly .mockupWorkspace{padding:8px 0 70px!important}
 }

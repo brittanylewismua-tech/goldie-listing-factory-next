@@ -979,3 +979,35 @@ test("the Publish screen uses one success language, not three — D155/D156", as
   assert.match(clarity, /\.app-shell \.final-safety-readiness>span\{[^}]*text-align:left!important/,
     "Readiness rows must match the checklist rows they sit under.");
 });
+
+test("the sidebar sits in the same place on every management page — D159", async () => {
+  const css = await readFile(new URL("app/management-aesthetic.css", root), "utf8");
+
+  /* Measured, first nav link ("Listing Factory") top edge at 1440x812:
+   *   /keywords 146   /mockups 146   /batches 218   /usage 218
+   * a 72px jump in the sidebar as you move between pages in the same nav.
+   * Cause: `:is(.management-page,.usage-page)>.management-nav a:first-of-type
+   * {margin-top:72px}` set it for all four, and a later !important reset put it
+   * back to 0 for `.keyword-page` and `.mockupFactory.managementOnly` only —
+   * Batch History and Usage were never covered. Removed the stray rule (line 16
+   * already sets 0) and the two now-redundant resets.
+   * Verified: /usage moved 218 -> 146, matching the other two. */
+  assert.doesNotMatch(css, /a:first-of-type\{margin-top:72px\}/,
+    "The 72px nav offset only ever applied to two of the four management pages.");
+  assert.doesNotMatch(css, /\.mockupFactory\.managementOnly\)\.management-page>\.management-nav a:first-of-type\{margin-top:0!important\}/,
+    "The per-page reset is redundant once the stray offset is gone.");
+});
+
+test("keyword phrases are readable — D158", async () => {
+  const globals = await readFile(new URL("app/globals.css", root), "utf8");
+  const management = await readFile(new URL("app/management-aesthetic.css", root), "utf8");
+
+  /* The phrase chips ARE the content of the Keyword Banks page, and they rendered
+   * at 9px — measured on all 17 chips of "JANE AUSTEN TEE". Source is the gold-era
+   * globals.css rule (background #eee5d5, a tan); management-aesthetic.css
+   * recoloured it to plum but never resized it — the same miss as D150. */
+  assert.match(globals, /\.bank-grid article span\{[^}]*font-size:9px/,
+    "Guard assumes the stale 9px rule is still in globals.css; update if it moved.");
+  assert.match(management, /\.bank-grid article span\{[^}]*font-size:11px\}/,
+    "The lilac layer must resize these chips, not just recolour them.");
+});
