@@ -1934,3 +1934,43 @@ tee and the buyer is charged the wrong postage.
 Not fixed here: filtering by product family touches money-affecting behaviour
 and deserves a deliberate decision rather than a same-day change. Logged with
 the numbers so it can be scheduled.
+
+### D115 · Colours are editable, sizes are invisible and unexplained · **FIXED HERE** · **MEDIUM · UX**
+
+Raised by Brittany: *"we're not telling people to choose what sizes in the
+Printify template, and there is no ability to select sizes in the listing
+factory."* Verified — she is right on both counts.
+
+Measured on the setup step:
+
+| | control | where |
+|---|---|---|
+| Colours | **43 toggle buttons**, own section | Step 2 |
+| Sizes | **none, anywhere in the app** | — |
+
+Sizes are inherited from the Printify product. The only mention in the entire
+flow is one line in the product confirmation — *"Product, placement, sizes, and
+shipping profile imported"* — and sizes do not become visible until the Pricing
+step, as cost groups:
+
+- **16 variants** · Light Pink / L · Light Pink / M · +14 more · cost **$9.79**
+- **4 variants** · Light Pink / 2XL · Natural / 2XL · +2 more · cost **$11.64**
+
+**This is not a money bug.** Per-group pricing gives each cost group its own
+retail price, so the $1.85 2XL difference does not erode the profit goal.
+Confirmed by the whole-number and profit-goal tests.
+
+**It is an expectation gap.** A seller who just toggled 43 colours will expect
+sizes to work the same way. Nothing on screen says they do not, or where to go
+instead — the answer is "edit the product in Printify", which the app never
+states.
+
+**Fixed:** a line under the colour swatches — *"Sizes come from your Printify
+product and apply to every listing. To offer different sizes, change them on
+the product in Printify."*
+
+**Deliberately not built:** size selection inside Goldie. The Printify product
+is the source of truth for variants, and adding a second place to enable or
+disable them invites the two lists drifting apart — the same failure mode as
+D90's duplicated denylist. If sellers ask for it, it should replace the Printify
+setting, not shadow it.

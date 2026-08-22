@@ -570,3 +570,18 @@ test("Etsy shipping profile names are decoded, not shown as raw entities — D11
     "Profile options must decode the title before rendering.");
   assert.match(page, /function friendlyShippingProfileTitle\(raw\?:string\)\{const title=raw\?decodeProfileTitle\(raw\):raw;/);
 });
+
+test("the Colours section explains that sizes come from Printify — D115", async () => {
+  const page = await readFile(listingFactoryPage, "utf8");
+
+  /* Verified live: the setup step has 43 colour toggles and NO size control
+   * anywhere in the Listing Factory. Sizes are inherited from the Printify
+   * product and first become visible on the Pricing step as cost groups
+   * (16 variants at $9.79, 4 at $11.64 for 2XL).
+   *
+   * That is a deliberate design — the Printify product is the source of truth —
+   * but a seller who can change colours here will reasonably expect to change
+   * sizes here too, and nothing said where to go instead. */
+  assert.match(page, /className="sizes-note">Sizes come from your Printify product and apply to every listing\./,
+    "The Colours section must say where sizes are controlled.");
+});
