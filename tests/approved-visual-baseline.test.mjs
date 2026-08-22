@@ -770,3 +770,20 @@ test("in-card buttons are one system and fit their column — D130", async () =>
     "The tile CTA must fit its column without clipping.");
   assert.doesNotMatch(tools, /"Choose this product →"/);
 });
+
+test("status chips are visually distinct from buttons — D139", async () => {
+  const clarity = await readFile(new URL("app/clarity-pass.css", root), "utf8");
+
+  /* Measured on the live product step:
+   *   .saved-settings-summary span (status)  white · 1px border · 999px · 750
+   *   .edit-recipe                (button)   white · 1px border · 999px · 650
+   * Identical boxes, so "$10 profit" and "Description ready" read as controls.
+   *
+   * Rule: a control is white with a border and a pill radius. A status is
+   * tinted, borderless, softer, and squarer. Nothing unclickable gets a
+   * button's box. */
+  assert.match(clarity, /\.app-shell \.saved-settings-summary span\{[\s\S]*border:0!important/);
+  assert.match(clarity, /\.app-shell \.saved-settings-summary span\{[\s\S]*cursor:default!important/);
+  assert.doesNotMatch(clarity, /\.app-shell \.saved-settings-summary span\{[^}]*border-radius:999px/,
+    "Status must not borrow the pill radius that marks a control.");
+});

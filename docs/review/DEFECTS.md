@@ -2423,3 +2423,30 @@ grid is `auto-fill minmax(132px,1fr)` so it fills the card, with 4:5 covers.
 **The lesson, which is the same one as D96 → D100:** a fix that is correct for
 one surface is not automatically correct for another. D97 was measured against
 the 477-image picker and applied globally without checking the small grids.
+
+### D139 · Status chips were styled exactly like secondary buttons · **FIXED HERE** · **HIGH · UX**
+
+Brittany: *"there's weird things that look like buttons but aren't… ten dollar
+profit, shipping profile needed, description ready, Etsy details zero of eleven
+set. If you're gonna do that, then colour code to let people know that those
+aren't buttons, they're notifications."*
+
+Measured side by side, and she is exactly right:
+
+| | background | border | radius | weight | height |
+|---|---|---|---|---|---|
+| `.saved-settings-summary span` — **status** | white | 1px | 999px | 750 | 31px |
+| `.edit-recipe` — **a real button** | white | 1px | 999px | 650 | 30px |
+
+The same box, so "$10 profit" and "Description ready" invite a click that does
+nothing.
+
+**Fixed, and written down as a rule:** a **control** is white with a border and
+a pill radius. A **status** is tinted, borderless, lighter and squarer —
+`rgba(107,58,88,.07)` at 8px radius, 600 weight, `cursor:default`. Anything
+outstanding keeps the plum treatment so one thing on the block asks for
+attention. Verified live: status now 0px border / 8px radius / 600, button still
+1px / 999px / 850.
+
+**Nothing that cannot be clicked gets a button's box.** That is the check to run
+whenever a chip or badge is added.

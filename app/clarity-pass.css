@@ -483,3 +483,34 @@
   font-size:10.5px!important;
   font-weight:650!important;
 }
+
+/* ── D139 · Status chips were styled exactly like secondary buttons ─────────
+ *
+ * Reported: "there's weird things that look like buttons but aren't at the
+ * bottom that says ten dollar profit, shipping profile needed, description
+ * ready, Etsy details zero of eleven set. If you're gonna do that, then colour
+ * code to let people know that those aren't buttons, they're notifications."
+ *
+ * Measured, and she is exactly right:
+ *   .saved-settings-summary span  white · 1px border · 999px · 750 · 31px
+ *   .edit-recipe (a real button)  white · 1px border · 999px · 650 · 30px
+ *
+ * One rule from here on: a control is white with a border. A status is tinted,
+ * borderless and lighter. Nothing that cannot be clicked gets a button's box. */
+.app-shell .saved-settings-summary span{
+  border:0!important;
+  border-radius:8px!important;
+  padding:5px 9px!important;
+  background:rgba(107,58,88,.07)!important;
+  color:rgba(75,40,62,.78)!important;
+  font-size:11px!important;
+  font-weight:600!important;
+  letter-spacing:.01em!important;
+  cursor:default!important;
+}
+/* anything still outstanding reads as the one thing that needs attention */
+.app-shell .saved-settings-summary span:is([data-state="todo"],.todo){
+  background:#fdf2f8!important;
+  color:#8a3f66!important;
+  font-weight:750!important;
+}
