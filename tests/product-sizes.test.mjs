@@ -170,3 +170,16 @@ test("print-quality decisions are grouped per design, not per design-and-product
   assert.match(app, /\{bundleQualityGroups\.length\} of \{files\.length\}/,
     "The count must read in designs, which is what the seller uploaded.");
 });
+
+test("the size block strip lives in the layer that wins — D171", async () => {
+  const clarity = await read("app/clarity-pass.css");
+
+  /* D168 put the strip in globals.css. The base card rule for this block is in
+   * clarity-pass.css, which loads last at equal specificity, so the strip lost.
+   * Measured on the DEPLOYED build: colour 644px at x542, size still 612px at
+   * x558 — the same detached box, "fixed" but not actually fixed.
+   * After: 644/644 at x542 in setup, 650/650 at x539 in a bundle product. */
+  assert.match(clarity, /\.app-shell \.saved-product-batch-page \.product-size-selector,\s*\n\.app-shell \.bundle-color-product \.product-size-selector\{[^}]*width:100%!important/,
+    "The strip must be in clarity-pass, which loads last, or the base card rule wins.");
+  assert.match(clarity, /\.app-shell \.saved-product-batch-page \.product-size-selector,[^{]*\{[^}]*background:transparent!important/);
+});

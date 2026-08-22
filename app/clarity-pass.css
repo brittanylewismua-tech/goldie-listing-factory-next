@@ -793,11 +793,25 @@
  *
  * With both stripped they butted together with only the parent's 14px gap and no
  * divider, so "SIZES FOR THIS BATCH" ran straight into the colour actions. */
+/* D171 · D168 put the context strip in globals.css, but the base card rule for
+   this block lives in clarity-pass.css, which loads LAST and has equal
+   specificity — so the strip lost and the size block was still 612px inset at
+   558 while colours sat 644 wide at 542. Verified on the deployed build before
+   fixing. The strip has to live in the layer that wins. */
 .app-shell .saved-product-batch-page .product-size-selector,
 .app-shell .bundle-color-product .product-size-selector{
-  margin-top:22px!important;
-  padding-top:22px!important;
+  width:100%!important;
+  margin:22px 0 0!important;
+  padding:22px 0 0!important;
+  border:0!important;
   border-top:1px solid rgba(91,48,79,.14)!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+}
+.app-shell .bundle-color-product .product-size-selector{
+  margin:15px 0 0!important;
+  padding:15px 0 0!important;
 }
 /* Each bundle product is a card in its own right; its name was a bare <b>. */
 .app-shell .bundle-color-product{
