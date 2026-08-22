@@ -366,8 +366,12 @@ test("the product photo is visible against the card — D188", async () => {
   /* D192: the square looked empty although the image was loading and painting.
    * `contain` plus 3px padding shrank a pale-on-cream catalog shot inside a 52px
    * box. Filling the box and lifting contrast makes the garment legible. */
-  assert.match(clarity, /\.app-shell \.bundle-product-photo\{[^}]*filter:contrast\(1\.45\)/);
-  assert.match(clarity, /\.app-shell \.bundle-product-photo\{[^}]*padding:0!important/);
+  /* contain letterboxed the whole catalog frame — mostly empty studio background —
+   * into 52px. A contrast filter fixed one product and blew another out to white,
+   * because the catalog shots have different exposure. cover crops to the garment. */
+  assert.match(clarity, /\.app-shell \.bundle-product-photo\{[^}]*object-fit:cover!important/);
+  assert.match(clarity, /object-position:50% 38%!important/);
+  assert.doesNotMatch(clarity, /\.bundle-product-photo\{[^}]*filter:contrast/);
   assert.match(clarity, /\.app-shell \.bundle-product-photo\{[^}]*object-fit:contain!important/);
 });
 

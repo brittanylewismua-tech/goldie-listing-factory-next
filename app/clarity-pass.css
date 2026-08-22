@@ -1066,17 +1066,21 @@
 /* D188 · The blueprint catalog image is a blank garment shot on white, so at 52px
  * a white tee vanished into the card. White plate, contained, bordered. */
 /* D192 · The card showed an empty square where the product photo should be.
-   The image was loading and painting the whole time — 2048px, 3157 of 4096 sampled
-   pixels non-white. It was unreadable because `contain` plus 3px of padding scaled
-   a low-contrast pale-on-cream catalog shot down inside a 52px box.
-   Filling the box and lifting contrast makes the garment legible. */
+   The image was loading and painting the whole time — 2048px, real tonal range
+   (min 6, max 248). `object-fit:contain` was letterboxing the WHOLE catalog
+   frame into 52px, and those frames are mostly empty studio background, so the
+   garment ended up a few pixels tall against white.
+
+   Measured through three wrong attempts, each verified on the deployed build:
+   a white plate (the image covers the plate, so it did nothing), a tinted plate
+   (same), and contrast(1.45) — which fixed the hoodie and blew the crewneck out
+   to pure white, because the two catalog shots have completely different
+   exposure. `cover`, cropped slightly above centre, lands on the garment. */
 .app-shell .bundle-product-photo{
-  width:56px!important;
-  height:56px!important;
+  object-fit:cover!important;
+  object-position:50% 38%!important;
   background:#fff!important;
-  object-fit:contain!important;
   padding:0!important;
-  filter:contrast(1.45) saturate(1.15);
   box-shadow:inset 0 0 0 1px rgba(91,48,79,.18);
 }
 /* D189 · A suggested selection is not a decision. The chip read "Choose" while the
