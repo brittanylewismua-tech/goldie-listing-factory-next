@@ -627,3 +627,24 @@ test("the product step stays usable after a product is chosen — D117/D119/D120
   /* D120 — the arrow wrapped onto its own line inside the product tiles. */
   assert.match(clarity, /\.app-shell \.recipe-tile \.recipe-use em\{[\s\S]*white-space:nowrap/);
 });
+
+test("one help bubble per screen unless the subject is genuinely different — D121", async () => {
+  const page = await readFile(listingFactoryPage, "utf8");
+
+  /* Connect showed TWO "?" bubbles side by side — one on the step headline and
+   * one on the card beneath it — both explaining how to connect, with different
+   * text in each. Brittany: "all of the information on both is important, but
+   * why is it in two separate ideas?"
+   *
+   * The page-level bubble (WORKFLOW_HELP) is the screen's help. A card-level
+   * bubble is only justified when it covers a genuinely separate subject —
+   * Pricing keeps two because item pricing and buyer-paid shipping are
+   * different topics with different consequences. */
+  assert.doesNotMatch(page, /<ContextHelp label="Explain account connections"/,
+    "Connect must not carry a second help bubble duplicating the step help.");
+  assert.match(page, /\{heading:"Use matching accounts"/,
+    "The unique guidance from the removed bubble must survive in the step help.");
+  assert.match(page, /\{heading:"Your publishing safeguard"/);
+  assert.equal((page.match(/<ContextHelp label="/g) || []).length, 2,
+    "Only the two Pricing bubbles should remain as card-level help.");
+});

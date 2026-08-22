@@ -2029,3 +2029,34 @@ excluded.
 "Choose this product →" in the saved-product tiles broke after "product",
 leaving the arrow alone on line two in all three cards. `.recipe-use em` is now
 an inline-flex with `white-space:nowrap`.
+
+### D121 · Two help bubbles on one screen, saying different halves of one idea · **FIXED HERE** · **UX**
+
+Brittany: *"connect your accounts, the main headline of step one — there's a
+question mark by it. And then connect your accounts, the headline on the actual
+card — there's a question mark by it. All of the information on both is
+important, but why is it in two separate ideas?"*
+
+Confirmed. The Connect step rendered **two** `ContextHelp` bubbles within a few
+hundred pixels:
+
+| bubble | content |
+|---|---|
+| step headline (`WORKFLOW_HELP[0]`) | Printify connection · Etsy connection · Nothing publishes here |
+| card headline ("Explain account connections") | Printify creates the products · Etsy finishes and publishes · **Use matching accounts** · **Your publishing safeguard** |
+
+Overlapping on the first two points, and each holding something the other did
+not. A seller has to open both to get the whole answer, and has no way to know
+that.
+
+**Fixed:** the two ideas unique to the card bubble — *Use matching accounts* and
+*Your publishing safeguard* — moved into the step-level help, and the duplicate
+bubble removed. Connect now has **one** "?".
+
+**The rule, now pinned by a test:** the step headline carries the screen's help.
+A second bubble is only justified for a genuinely separate subject. Pricing
+keeps two — item pricing and buyer-paid shipping are different topics with
+different money consequences — and every other screen has one.
+
+Count across the workflow went from 4 `ContextHelp` instances to **3**: one
+page-level (all five steps) plus the two on Pricing.
