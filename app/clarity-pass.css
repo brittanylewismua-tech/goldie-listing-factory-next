@@ -472,6 +472,12 @@
  * leaving half of it empty, and labelled each scene with its raw upload
  * filename ("ChatGPT Image Aug 14, 2026, 10_42_04 AM (4)"). Fill the width and
  * let the pictures do the work. */
+/* The mockup block is a two-column grid (340px / 290px). The scene grid and its
+ * caption auto-placed into the 340px column, so the pictures were squeezed into
+ * two columns while the right-hand half of the card sat empty and the "8 of 8
+ * selected" note floated beside them instead of underneath. Both span. */
+.app-shell .product-mockup-scenes,
+.app-shell .mockup-default-block>small{grid-column:1/-1!important}
 .app-shell .product-mockup-scenes{
   display:grid!important;
   grid-template-columns:repeat(auto-fill,minmax(132px,1fr))!important;

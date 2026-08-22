@@ -2610,3 +2610,32 @@ unrelated to it.
 saved-product grid, so choosing a product confirms itself where the choice was
 made. Bundle list and bundle prompt are contiguous again. Guarded by a test that
 asserts the source order.
+
+### D145 · The mockup scene grid was trapped in a 340px column · **FIXED HERE** · **MEDIUM · UX**
+
+D138 set `.product-mockup-scenes` to `repeat(auto-fill,minmax(132px,1fr))` and
+it *still* rendered two columns. The rule was applied correctly — I checked the
+cascade and both my declarations were winning. **The container was the problem.**
+
+`.batch-default-block.mockup-default-block` is a two-column grid — `340px 290px`
+— and its five children auto-place:
+
+| child | lands in | width |
+|---|---|---|
+| heading | spans | 644px |
+| "Mockup set" select | column 1 | 340px |
+| "Create or edit mockup sets ↗" | column 2 | 290px |
+| **scene grid** | **column 1** | **340px** |
+| "8 of 8 selected…" caption | column 2 | 290px |
+
+So the pictures were squeezed into 340px while the right half of the card stayed
+empty, and the caption floated *beside* the tiles rather than beneath them.
+
+**Fixed:** the scene grid and its caption take `grid-column:1/-1`. Measured after
+— grid **340px → 644px**, **two columns → four**, tiles 152px, caption below.
+
+**Worth noting for the next one of these:** the declaration being applied is not
+the same as the layout being right. I verified `grid-template-columns` was
+winning the cascade and concluded the fix had shipped; it had, and the result
+was still wrong because the parent constrained it. Check the rendered width, not
+just the computed property.

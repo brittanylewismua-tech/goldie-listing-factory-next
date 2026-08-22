@@ -842,3 +842,18 @@ test("the chosen-product confirmation sits with the products, not inside the bun
     "The chosen-product confirmation must render before the bundle list, not between the bundle list and the bundle prompt.");
   assert.ok(bundles < bundleLibrary);
 });
+
+test("the mockup scene grid spans its block — D145", async () => {
+  const clarity = await readFile(new URL("app/clarity-pass.css", root), "utf8");
+
+  /* D138 set the scene grid to auto-fill minmax(132px,1fr) and it still rendered
+   * two columns. The rule was applied; the container was the problem —
+   * .batch-default-block.mockup-default-block is a 340px/290px grid, and the
+   * scene grid auto-placed into the 340px column while the right half of the
+   * card sat empty and the "8 of 8 selected" caption floated beside the tiles
+   * instead of under them.
+   *
+   * Measured after: grid 340px -> 644px, two columns -> four, caption below. */
+  assert.match(clarity, /\.app-shell \.product-mockup-scenes,\s*\.app-shell \.mockup-default-block>small\{grid-column:1\/-1!important\}/,
+    "The scene grid and its caption must span both columns of the mockup block.");
+});
