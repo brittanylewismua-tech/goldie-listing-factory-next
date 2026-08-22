@@ -2201,3 +2201,17 @@ reusable colour selector no longer depends on parent-only state. A regression
 test scopes the selector source and fails if that value becomes undeclared
 again. This defect was found by clicking the live control after deployment;
 the prior build and render checks did not catch the runtime scope error.
+
+### D130 · A contaminated crewneck record still displays tee-only scenes · **FIXED HERE** · **BLOCKER**
+
+After D129 was repaired live, the saved crewneck still opened with `BACH TEES`.
+That value had already been written by the old D122 fallback before D122 was
+fixed. Preventing new contamination did not repair existing product records,
+and the product-step picker was not checking each scene's garment type.
+
+**Fixed:** mockup sets and scenes are now filtered against the selected saved
+product before they render. A tee-only saved set cannot appear as valid for a
+crewneck, sweatshirt, or hoodie; an incompatible legacy value clears from the
+batch without silently overwriting the saved product. Compatible legacy
+whole-set preferences resolve once to their first eight visible scenes so the
+seller can see, remove, re-add, and explicitly save the exact selection.

@@ -535,7 +535,7 @@ test("a cleared mockup selection stays cleared — D110", async () => {
    * Two things had to change: seed the default only once, and stop gating the
    * forward control on mockupTheme, since choosing "no mockups" otherwise
    * disabled the only way forward. */
-  assert.match(page, /if\(seededDefault\.current\|\|value\|\|!themes\.length\)return;seededDefault\.current=true;/,
+  assert.match(page, /if\(!productName\|\|seededDefault\.current\|\|!templates\.length\)return;seededDefault\.current=true;/,
     "The mockup default must seed once, not re-apply whenever the value is empty.");
   assert.doesNotMatch(page, /disabled=\{!complete&&\(!selectedColorIds\.length\|\|!autoTitleBankId\|\|!mockupTheme\)\}/,
     "Mockups are optional; gating the forward control on them makes 'no mockups' unreachable.");
@@ -657,7 +657,7 @@ test("a new saved product does not inherit another product's setup — D122/D124
    * a crew neck produced a card already wearing the tee's "BACH TEES" mockups,
    * captioned "From your last batch" for a product that has never had a batch.
    * A product may only adopt the set IT saved. */
-  assert.match(page, /seededDefault\.current=true;if\(savedValue&&themes\.includes\(savedValue\)\)/,
+  assert.match(page, /if\(!value&&savedValue&&themes\.includes\(savedValue\)\)/,
     "A product must never inherit the first mockup set in the library.");
   assert.doesNotMatch(page, /onChange\(savedValue&&themes\.includes\(savedValue\)\?savedValue:themes\[0\]\)/);
   assert.match(page, /themes\.length\?"No mockup set chosen for this product yet\."/,
@@ -728,4 +728,14 @@ test("the colour selector never reads parent-only first-run state — D129", asy
   const selector=page.slice(page.indexOf("function ProductColorSelector"),page.indexOf("function MockupSetSelector"));
   assert.match(selector,/const productFirstRun=false/,
     "ProductColorSelector must define every value it reads instead of crashing after product selection.");
+});
+
+test("saved mockup scenes must match the selected garment — D130", async () => {
+  const page=await readFile(listingFactoryPage,"utf8");
+  assert.match(page,/function productAcceptsMockup\(surfaceKind:string,productName:string\)/);
+  assert.match(page,/compatibleTemplates=templates\.filter\(item=>productAcceptsMockup\(item\.surfaceKind,productName\)\)/);
+  assert.match(page,/if\(value&&!themes\.includes\(value\)\)\{onChange\("",\[\]\);return\}/,
+    "A tee-only saved set must be cleared from a crewneck batch instead of displayed as valid.");
+  assert.match(page,/matchingTemplates\.slice\(0,8\)\.map\(item=>item\.id\)/,
+    "Legacy whole-set preferences must resolve to visible scene selections.");
 });
