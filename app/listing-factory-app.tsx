@@ -647,8 +647,12 @@ export default function ListingFactoryApp() {
   async function rememberBatchDefaultsAfterPublish(){if(!activeRecipe)return;const updated={...activeRecipe,defaultColorIds:selectedColorIds,defaultMockupTheme:mockupTheme,mockupIds:sharedMockups?.theme===mockupTheme?sharedMockups.ids:[]};const response=await fetch("/api/product-recipes",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(updated)});if(response.ok){setActiveRecipe(updated);setColorsRemembered(true)}}
   async function completeProductSetup(){if(!activeRecipe)return;await saveProductDefaults({setupComplete:true,defaultColorIds:selectedColorIds,defaultMockupTheme:mockupTheme,mockupIds:sharedMockups?.theme===mockupTheme?sharedMockups.ids:[]},"initial-setup")}
   async function chooseRecipe(recipe: Recipe) { const changingProduct=Boolean((activeRecipe?.id&&activeRecipe.id!==recipe.id)||(template&&template!==recipe.templateUrl));if(changingProduct&&(files.length>0||drafts.length>0||complete)){const count=files.length;if(!window.confirm(`Switch to “${recipe.name}” and start a new batch? This removes ${count} ${count===1?"design":"designs"} and all work from the current batch on this page.`))return false;clearCurrentBatch(false)}setActiveBundle(null);setBundleRecipes([]);setBundleIndex(0);return Boolean(await selectRecipe(recipe)); }
-  async function useBundle(bundle:ProductBundle,recipes:Recipe[]){
-    if(recipes.length<2){stopWith("This product bundle needs attention.",["Choose at least two available saved products."]);return false}
+  async function useBundle(bundle:ProductBundle,recipeIds:string[]){
+    const requestedIds=[...new Set(recipeIds.filter(Boolean))];
+    if(requestedIds.length<2){stopWith("This product bundle needs attention.",["Choose at least two available saved products."]);return false}
+    const payload=await fetch("/api/product-recipes").then(response=>response.ok?response.json():Promise.reject(new Error("Saved products could not be loaded."))).catch(()=>({recipes:[]})) as {recipes?:Recipe[]};
+    const available=payload.recipes||[],recipes=requestedIds.map(id=>available.find(recipe=>recipe.id===id)).filter(Boolean) as Recipe[];
+    if(recipes.length!==requestedIds.length){stopWith("This product bundle needs attention.",["One or more saved products in this bundle are missing. Edit the bundle and choose the products again."]);return false}
     /* Selecting a bundle used to open a chain of native browser dialogs asking
      * the seller to predict her design count, then stored that number only to
      * block her later if the upload did not match it. The upload-time guard

@@ -2315,7 +2315,7 @@ standing rule about not touching `db/` or `drizzle/` held.
 
 ---
 
-### D135 · A product bundle cannot be selected at all · **OPEN** · **BLOCKER**
+### D135 · A product bundle cannot be selected at all · **FIXED** · **BLOCKER**
 
 Found by pressure-testing bundles after Brittany added a third saved product.
 D129 (the native-dialog gauntlet) was masking this — once the prompt was gone,
@@ -2365,7 +2365,7 @@ check: why the `recipes` array reaching `useBundle` is shorter than the
 per-product colours, the bundle progress rail, carrying designs across products
 — has ever been exercised, because selection is the first step and it fails.
 
-### D136 · The same bundle renders twice with contradictory state · **OPEN** · **MEDIUM**
+### D136 · The same bundle renders twice with contradictory state · **FIXED** · **MEDIUM**
 
 The product step shows each bundle in two places:
 

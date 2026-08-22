@@ -1432,6 +1432,15 @@ test("supports simple saved product bundles without complicating the single-prod
   assert.match(workflow, /bundleSaveLock\.current/);
   assert.match(workflow, /Saving bundle…/);
   assert.match(workflow, /aria-busy=\{bundleSaving\}/);
+  /* D135: selection resolves the bundle's persisted ids against current server
+   * data instead of trusting a transient array assembled by the tile. */
+  assert.match(workflow, /props\.onUseBundle\(bundle,bundle\.recipeIds\)/);
+  assert.match(page, /fetch\("\/api\/product-recipes"\)/);
+  assert.match(page, /recipes\.length!==requestedIds\.length/);
+  assert.match(workflow, /Goldie could not load every saved product in this bundle/);
+  /* D136: a bundle has one tile and therefore one selected state. */
+  assert.equal((workflow.match(/bundles\.map\(/g)||[]).length,1);
+  assert.match(workflow, /selected\?"✓ Ready for this batch"/);
   assert.match(api, /deduplicated:true/);
   assert.match(page, /function useBundle/);
   assert.match(page, /You are working on \{bundleRecipes\[bundleIndex\]\?\.name\}/);
