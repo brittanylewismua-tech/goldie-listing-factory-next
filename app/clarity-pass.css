@@ -722,3 +722,17 @@
   background:linear-gradient(145deg,rgba(232,183,225,.55),rgba(201,144,208,.45))!important;
   color:#4b283e!important;
 }
+
+/* D165 · Contrast sweep of the management pages. The eyebrow (.mini-label) is
+ * fixed at source in management-aesthetic.css; these four are on the Usage +
+ * Plan page, which is the billing screen, so they are the worst place in the app
+ * to have unreadable text. Measured against their painted beds:
+ *   h3 small "/month" next to $29 / $59 / $99   3.28:1
+ *   .usage-plan-fineprint (what a credit means)  4.19:1
+ *   .usage-note                                  4.24:1
+ *   .usage-plan-heading>p:last-child             4.42:1 */
+.app-shell .usage-page h3 small,
+.usage-page h3 small{color:rgba(74,42,62,.8)!important}
+.usage-page .usage-plan-fineprint{color:rgba(74,42,62,.82)!important}
+/* .usage-note and its siblings are fixed at source in management-aesthetic.css. */
+.usage-page .usage-plan-heading>p:last-child{color:rgba(74,42,62,.82)!important}

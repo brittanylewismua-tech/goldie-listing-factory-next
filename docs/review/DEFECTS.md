@@ -3024,3 +3024,36 @@ just source-matched), and gate/UI agreement. Three older tests that pinned the p
 behaviour were updated rather than deleted, including D123's note test which now asserts the
 note is gone.
 
+## D165 — contrast sweep of the four management pages
+D163 covered the workflow shell. Running the same compositing method over
+`/batches`, `/keywords`, `/mockups` and `/usage` found six more, measured against their
+painted beds:
+| element | ratio | note |
+|---|---|---|
+| `.mini-label` `#744d69` | **3.84** | the eyebrow on **every** management page — "BATCH HISTORY", "YOUR LIBRARY", "MOCKUP SET", "PLANS + BILLING" |
+| shared secondary-text token `.78` | 4.24 | one rule covering all four pages at 12px |
+| `h3 small` "/month" | **3.28** | sits directly beside $29 / $59 / $99 |
+| `.usage-plan-fineprint` | 4.19 | the text explaining what a credit is |
+| `.usage-plan-heading>p:last-child` | 4.42 | plan section intro |
+Four of those are on **Usage + Plan**, which is the billing screen — the worst place in the
+app to have text a buyer cannot read.
+**Fixed at source** where a shared token was responsible (`.mini-label` → `#653f5c`, 4.78:1;
+the secondary token `.78` → `.86`) rather than layering more overrides, and in
+`clarity-pass.css` for the three Usage-only cases.
+**Measured after:** `/batches` 0 failing.
+
+### D157 verified on live data
+Regenerated all three titles in batch `103d12f0` against the deployed fix.
+**Before:** 139/130/137 characters, six redundancies —
+"Girls Gone Mild" ⊂ "Bachelorette Girls Gone Mild", "Off The Market" inside both
+"Fresh Off The Market" and "Shes Off The Market", "Bikinis And Martinis" ⊂
+"Bikinis And Martinis Bachelorette".
+**After:** 128/114/111 characters, **zero** redundancies, all above the 90-character floor —
+and the freed characters pulled in genuinely new phrases ("Bikinis And Martinis",
+"Last Splash Bachelorette") rather than repeats. That is the whole point of the fix.
+
+*Process note: two real pixel clicks on "Auto-create all titles" produced no request and no
+state change, which looked like a dead button. A synthetic click on the same element flipped
+it straight to "Creating 3 titles…" — so the handler was fine and my clicks were not
+reaching the page. Checked before filing it as a defect.*
+

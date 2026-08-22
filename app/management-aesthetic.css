@@ -217,9 +217,12 @@
   font-size:16px!important;
   line-height:1.65!important;
 }
+/* D165 · #744d69 measured 3.84:1 against the pink page gradient at 11px — the
+   eyebrow appears on every management page ("BATCH HISTORY", "YOUR LIBRARY",
+   "MOCKUP SET", "PLANS + BILLING"). #653f5c measures 4.78:1 on the same bed. */
 :is(.management-page,.usage-page,.keyword-page,.mockupFactory.managementOnly) .mini-label,
 .mockupFactory.managementOnly .mockupEyebrow{
-  color:#744d69!important;
+  color:#653f5c!important;
   font-size:11px!important;
   font-weight:800!important;
   letter-spacing:.16em!important;
@@ -234,7 +237,10 @@
 .usage-page :is(.usage-note,.usage-card p,.pricing-profile>div>p:last-child,.pricing-caveat),
 .keyword-page :is(.management-create-foot>span,.empty-bank p,.bank-grid p,.bank-grid small),
 .mockupFactory.managementOnly :is(.managementLibraryHead p,.collection p,.setControls small,.librarySaving small){
-  color:rgba(74,42,62,.78)!important;
+  /* D165 · This is the shared secondary-text token for all four management
+     pages. At .78 it measured 4.24:1 against its painted bed — under AA for
+     12px. .86 clears it without changing the type's weight on the page. */
+  color:rgba(74,42,62,.86)!important;
 }
 .management-page .batch-history p,
 .usage-page .usage-card p,

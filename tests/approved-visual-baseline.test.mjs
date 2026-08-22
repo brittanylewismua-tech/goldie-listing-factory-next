@@ -1063,3 +1063,27 @@ test("small text meets AA against the surface it is painted on — D163", async 
   assert.match(clarity, /\.app-shell \.hero-step-count\{color:rgba\(74,42,62,\.9\)!important\}/);
   assert.match(clarity, /\.app-shell \.etsy-api-disclosure\{color:rgba\(74,42,62,\.95\)!important\}/);
 });
+
+test("management pages meet AA too — D165", async () => {
+  const management = await readFile(new URL("app/management-aesthetic.css", root), "utf8");
+  const clarity = await readFile(new URL("app/clarity-pass.css", root), "utf8");
+
+  /* D163 fixed the workflow shell. Sweeping the four management pages with the
+   * same compositing method found two more, measured against their painted beds:
+   *   .mini-label   #744d69  3.84:1  — the eyebrow on EVERY management page
+   *                                    ("BATCH HISTORY", "YOUR LIBRARY", ...)
+   *   shared secondary text  .78     4.24:1 at 12px
+   * and four on Usage + Plan, which is the billing screen and so the worst place
+   * in the app for unreadable text:
+   *   h3 small "/month" beside $29/$59/$99   3.28:1
+   *   .usage-plan-fineprint (what a credit is) 4.19:1
+   *   .usage-plan-heading>p:last-child         4.42:1
+   * Measured after: /batches 0 failing. */
+  assert.match(management, /color:#653f5c!important/,
+    "The management eyebrow must clear AA on the pink page gradient (#744d69 was 3.84:1).");
+  assert.doesNotMatch(management, /color:rgba\(74,42,62,\.78\)!important/,
+    "The shared secondary-text token was 4.24:1 at 12px.");
+  assert.match(clarity, /\.usage-page h3 small,?\s*\n?\.usage-page h3 small\{color:rgba\(74,42,62,\.8\)!important\}|\.usage-page h3 small\{color:rgba\(74,42,62,\.8\)!important\}/,
+    "The price cadence next to the plan prices must be readable.");
+  assert.match(clarity, /\.usage-page \.usage-plan-fineprint\{color:rgba\(74,42,62,\.82\)!important\}/);
+});
