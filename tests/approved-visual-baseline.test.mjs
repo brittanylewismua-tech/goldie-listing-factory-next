@@ -557,3 +557,16 @@ test("the Etsy details summary does not invent work on optional-only fields — 
   assert.doesNotMatch(page, /<small>\{completed\.length\} of \{properties\.length\} set/,
     "Counting every optional attribute as outstanding work is the D112 defect.");
 });
+
+test("Etsy shipping profile names are decoded, not shown as raw entities — D113", async () => {
+  const page = await readFile(listingFactoryPage, "utf8");
+
+  /* Measured live on the shipping-profile dropdown: two options rendered as
+   * "Kid&#39;s Hero Tee 1598202917". Etsy returns these titles HTML-escaped and
+   * they were printed straight into an <option>, so the seller reads the raw
+   * entity instead of an apostrophe. */
+  assert.match(page, /function decodeProfileTitle\(title:string\)\{/);
+  assert.match(page, /<option key=\{profile\.id\} value=\{profile\.id\}>\{decodeProfileTitle\(profile\.title\)\}<\/option>/,
+    "Profile options must decode the title before rendering.");
+  assert.match(page, /function friendlyShippingProfileTitle\(raw\?:string\)\{const title=raw\?decodeProfileTitle\(raw\):raw;/);
+});

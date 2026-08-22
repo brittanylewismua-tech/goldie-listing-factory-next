@@ -1889,3 +1889,48 @@ no real bank, set or batch was modified.
 **D87 is properly fixed** — the mockup delete confirmation names the set, states
 exactly what is lost, and offers the safe option first. It is a better
 confirmation than the keyword bank's `window.confirm`.
+
+### D113 · Shipping profile names show raw HTML entities · **FIXED HERE** · **MEDIUM**
+
+Measured live on the Pricing step dropdown:
+
+> "Kid**&#39;**s Hero Tee 1598202917"
+
+Etsy returns profile titles HTML-escaped; they were printed straight into an
+`<option>`, so the seller reads the entity instead of an apostrophe. Two of her
+94 profiles are affected, and any profile with a quote, ampersand or angle
+bracket would be too.
+
+**Fixed:** `decodeProfileTitle()` decodes numeric, hex and named entities, and
+is applied both in the dropdown and in `friendlyShippingProfileTitle`, which
+feeds the "Saved for this product" summary and the publish checklist.
+
+### D114 · The shipping profile dropdown lists 94 unrelated profiles · **OPEN** · **HIGH · UX**
+
+The Pricing step asks the seller to confirm the Etsy shipping profile for a
+**T-shirt** batch, and offers **94 options** in one flat list, including:
+
+> Printful Bean-bag (default) Flat Rate · Printful Canvas (24×36) Flat Rate ·
+> Printful Framed-poster (18×24) Flat Rate · Kiss-Cut Stickers 1 / 2 / 3 ·
+> Mug 11oz · iphone cases · Premium Matte vertical posters · Cropped Hoodies
+
+These are every shipping profile the shop has ever created, across every
+product type and print provider. Choosing the right tee profile means reading
+94 lines, most of which cannot apply to the product in the batch.
+
+This is the single largest remaining friction point in the flow, and it is on
+the screen where a wrong choice costs real money — pick a poster profile for a
+tee and the buyer is charged the wrong postage.
+
+**Recommendation, in order of value:**
+
+1. **Sort by relevance, not alphabetically.** The profile already attached to
+   the Printify product should be first and labelled "Currently attached".
+2. **Group the list** — `Used by this product` / `Other apparel` / `Everything
+   else` — using the profile title and the blueprint's product family, which
+   `product-type-utils.ts` already computes.
+3. **Make it searchable** once past ~20 entries.
+
+Not fixed here: filtering by product family touches money-affecting behaviour
+and deserves a deliberate decision rather than a same-day change. Logged with
+the numbers so it can be scheduled.
