@@ -1270,3 +1270,51 @@
   background:rgba(255,255,255,.62)!important;
   border-color:rgba(74,42,62,.24)!important;
 }
+
+/* D209 · The readiness card had seven rows and only four of them opened in it.
+ * Shipping, Profit and Etsy details were still wired to `.everything-else`, a
+ * legacy <details> block at the bottom of the page titled "<product> settings /
+ * Usually no changes needed" — uncarded, visually unrelated, and reached by a
+ * scroll jump with no explanation. Clicking "Shipping" threw you to the end of
+ * the page and left you looking at a stray Profit goal input.
+ *
+ * Worse, that block reads activeRecipe, so in a bundle it always showed the
+ * ACTIVE product's settings. Opening Shipping from the crewneck row scrolled
+ * you to the hoodie's.
+ *
+ * Shipping and Profit now open in the card like the other rows, scoped to the
+ * row's own recipe. Etsy details keeps its own step, and the button on that row
+ * no longer claims "Close" for a panel that never opens here. */
+.app-shell .batch-product-rows .row-panel{
+  grid-column:1/-1;
+  display:grid;
+  gap:6px;
+  padding:14px 16px 16px;
+  border-top:1px solid rgba(139,89,137,.16);
+  background:rgba(255,255,255,.42);
+}
+.app-shell .batch-product-rows .row-panel label{
+  display:grid; gap:6px;
+  font-size:12px; font-weight:750; color:#4b283e;
+}
+.app-shell .batch-product-rows .row-panel select{
+  width:100%; min-height:40px;
+  padding:8px 12px;
+  border:1px solid rgba(139,89,137,.3);
+  border-radius:10px;
+  background:#fff; color:#3f2338; font-size:13px;
+}
+.app-shell .batch-product-rows .profit-input{
+  display:inline-flex; align-items:center; gap:6px;
+  font-size:15px; font-weight:800; color:#4b283e;
+}
+.app-shell .batch-product-rows .profit-input input{
+  width:110px; min-height:40px;
+  padding:8px 12px;
+  border:1px solid rgba(139,89,137,.3);
+  border-radius:10px;
+  background:#fff; font-size:15px; font-weight:800; color:#3f2338;
+}
+.app-shell .batch-product-rows .row-panel small{
+  font-size:11px; color:#6b4a66;
+}

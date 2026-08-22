@@ -307,14 +307,20 @@ test("shipping, profit and Etsy details are per-product facts — D183", async (
   assert.match(app, /templateShippingProfileId:Number\(product\.shippingTemplateId\)\|\|0/);
   assert.match(app, /etsyShippingProfileId:recipe\?\.etsyShippingProfileId,defaultProfitTarget:recipe\?\.defaultProfitTarget,etsyDefaults:recipe\?\.etsyDefaults/);
 
-  /* Every chip does something. Colours, sizes, mockups and keywords open in the
-   * card; shipping, profit and Etsy details open the product-settings block and
-   * scroll to it. A chip for a product that is not the current one in a bundle
-   * stays a fact rather than a control that cannot work. */
-  assert.match(app, /const inCard=\["colors","sizes","mockups","keywords"\]\.includes\(facet\.name\);/);
+  /* D209 supersedes the second half of this test. It used to assert that
+   * shipping, profit and Etsy details opened the legacy .everything-else block
+   * and scrolled to it — a deliberate choice at the time, and wrong in use:
+   * clicking Shipping threw the seller to the foot of the page, to an uncarded
+   * "<product> settings" block with a stray Profit goal above it, and in a
+   * bundle that block always showed the ACTIVE product regardless of which
+   * row was clicked. Shipping and profit now open in the card, scoped to the
+   * row's recipe. What survives here is the per-product computation above.
+   *
+   * Etsy details still uses the scroll-away path, and keeps this assertion. */
+  assert.match(app, /const inCard=\["colors","sizes","mockups","keywords","shipping","profit"\]\.includes\(facet\.name\);/);
   assert.match(app, /const block=document\.querySelector<HTMLDetailsElement>\("\.everything-else"\);/);
   assert.match(app, /block\.open=true;block\.scrollIntoView\(\{block:"start"\}\)/,
-    "Opening a setting must bring it into view — the same failure as Edit bundle.");
+    "Etsy details still opens its block, and must bring it into view.");
 });
 
 test("the product step does not also collect designs — D184", async () => {
@@ -447,4 +453,35 @@ test("D207: the dead-end variant message names the product and says what to do",
   assert.doesNotMatch(code, /"The selected colors do not contain any available variants\."/);
   assert.match(app, /No color and size combination you picked is available for \$\{templateDetails\?\.blueprintTitle\|\|"this product"\}/);
   assert.match(app, /Open its Colors or Sizes and choose a pairing Printify offers/);
+});
+
+test("D209: every readiness row that offers to open, opens in the card", async () => {
+  const app = await read("app/listing-factory-app.tsx");
+
+  /* Four of seven rows opened in the card. Shipping, Profit and Etsy details
+   * were wired to `.everything-else` — a legacy <details> at the foot of the
+   * page — so clicking Shipping scrolled you away from the card entirely, to a
+   * bare "<product> settings" block with a stray Profit goal above it. */
+  assert.match(app, /const inCard=\["colors","sizes","mockups","keywords","shipping","profit"\]\.includes\(facet\.name\);/);
+
+  // Both new panels render inside the card, scoped to the row's own recipe.
+  assert.match(app, /open==="shipping"&&<div className="row-panel shipping-row-panel">/);
+  assert.match(app, /open==="profit"&&<div className="row-panel profit-row-panel">/);
+  assert.match(app, /void establish\(recipe,\{etsyShippingProfileId:id\}\)/);
+  assert.match(app, /void establish\(recipe,\{defaultProfitTarget:value\}\)/);
+
+  /* The legacy block reads activeRecipe, so in a bundle it always showed the
+     active product. These panels must read the row's recipe instead. */
+  assert.match(app, /value=\{isActive\?etsyShippingProfileId:\(Number\(recipe\.etsyShippingProfileId\)\|\|0\)\}/);
+  assert.match(app, /value=\{isActive\?pricing\.targetProfit:\(Number\(recipe\.defaultProfitTarget\)\|\|DEFAULT_PRICING\.targetProfit\)\}/);
+});
+
+test("D209: a row never offers to Close a panel it cannot open", async () => {
+  const app = await read("app/listing-factory-app.tsx");
+
+  /* The open facet defaults to the first unanswered question. On the hoodie
+   * that was "shipping", which never opens in the card — so the button read
+   * "Close", and clicking it scrolled to the bottom of the page. */
+  assert.match(app, /\{inCard&&open===facet\.name\?"Close":needed\?"Choose":"Change"\}/);
+  assert.doesNotMatch(app, /\{open===facet\.name\?"Close":needed\?"Choose":"Change"\}/);
 });
