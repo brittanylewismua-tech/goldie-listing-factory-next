@@ -467,6 +467,22 @@ test("D209: every readiness row that offers to open, opens in the card", async (
   // Both new panels render inside the card, scoped to the row's own recipe.
   assert.match(app, /open==="shipping"&&<div className="row-panel shipping-row-panel">/);
   assert.match(app, /open==="profit"&&<div className="row-panel profit-row-panel">/);
+
+  /* D211 · The panels are SIBLINGS of .batch-product-rows, both direct children
+     of .batch-product-card — the same slot the colour picker uses. The D209 CSS
+     was written as a descendant of .batch-product-rows and therefore selected
+     nothing at all. Pin the relationship so the stylesheet can be checked
+     against it rather than against its own spelling. */
+  const rowsAt = app.indexOf('className="batch-product-rows"');
+  const colorPickerAt = app.lastIndexOf("<ProductColorSelector");
+  const sizePickerAt = app.lastIndexOf("<ProductSizeSelector");
+  const shippingAt = app.lastIndexOf('className="row-panel shipping-row-panel"');
+  const profitAt = app.lastIndexOf('className="row-panel profit-row-panel"');
+
+  assert.ok(rowsAt > 0 && colorPickerAt > rowsAt, "the pickers render after the rows container");
+  assert.ok(shippingAt > sizePickerAt && sizePickerAt > colorPickerAt,
+    "the shipping panel sits in the same sibling slot as the colour and size pickers");
+  assert.ok(profitAt > shippingAt, "and the profit panel directly after it");
   assert.match(app, /void establish\(recipe,\{etsyShippingProfileId:id\}\)/);
   assert.match(app, /void establish\(recipe,\{defaultProfitTarget:value\}\)/);
 
@@ -509,4 +525,32 @@ test("D210: profit and shipping exist in exactly one place", async () => {
   assert.match(app, /block\.classList\.add\("just-opened"\)/);
   const css = await read("app/clarity-pass.css");
   assert.match(css, /\.app-shell \.everything-else\.just-opened\{/);
+});
+
+test("D211: the row-panel stylesheet selects the element it is written for", async () => {
+  const css = await read("app/clarity-pass.css");
+  const app = await read("app/listing-factory-app.tsx");
+  const rules = css.replace(/\/\*[\s\S]*?\*\//g, "");
+
+  /* Measured on the deployed D209 build: the panel computed padding 0, no
+   * background, no border — every rule written for it matched nothing, because
+   * `.batch-product-rows .row-panel` describes a descendant and the panel is a
+   * sibling. The D209 test passed the whole time; it asserted the text was in
+   * the file, not that it selected anything. Same failure as D179. */
+  assert.doesNotMatch(rules, /\.batch-product-rows\s+\.row-panel/,
+    "a descendant selector here matches nothing");
+  assert.match(rules, /\.app-shell \.batch-product-card>\.row-panel\{/);
+
+  /* The panel really is a direct child of the card. The card's class is built
+     from a template literal, so it is not the string `className="batch-product-card`. */
+  assert.match(app, /batch-product-card \$\{ready\.established/);
+  assert.match(app, /<div className="row-panel shipping-row-panel">/);
+
+  /* 93 shipping profiles with long names sized the grid track to 843px inside a
+   * 720px card. width:100% alone does not constrain a track sized to its
+   * longest option — min-width:0 and max-width are both load-bearing. */
+  const selectRule = rules.slice(rules.indexOf(".app-shell .batch-product-card>.row-panel select{"));
+  const body = selectRule.slice(0, selectRule.indexOf("}"));
+  assert.match(body, /max-width:100%/);
+  assert.match(body, /min-width:0/);
 });

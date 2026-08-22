@@ -1285,39 +1285,50 @@
  * Shipping and Profit now open in the card like the other rows, scoped to the
  * row's own recipe. Etsy details keeps its own step, and the button on that row
  * no longer claims "Close" for a panel that never opens here. */
-.app-shell .batch-product-rows .row-panel{
-  grid-column:1/-1;
-  display:grid;
-  gap:6px;
+/* D211 · The D209 panel selectors never matched. They were written as
+ * `.batch-product-rows .row-panel`, but the panel renders as a SIBLING of
+ * `.batch-product-rows` — both are direct children of `.batch-product-card`,
+ * the same place the colour picker lives. Measured on the deployed build:
+ * padding 0, no background, no border, and the 93-option shipping select sized
+ * to its longest option at 843px inside a 720px card, overflowing by 124px.
+ * The panel was raw unstyled markup under the card.
+ *
+ * The D209 test asserted the CSS text existed in this file. It did. It selected
+ * nothing. Same failure as D179 — assert structure, not spelling.
+ *
+ * Measured after: panel inset 1px each side like the colour picker, select
+ * 686px and 17px clear of the card edge. */
+.app-shell .batch-product-card>.row-panel{
+  display:grid; gap:6px; min-width:0;
   padding:14px 16px 16px;
   border-top:1px solid rgba(139,89,137,.16);
   background:rgba(255,255,255,.42);
 }
-.app-shell .batch-product-rows .row-panel label{
-  display:grid; gap:6px;
+.app-shell .batch-product-card>.row-panel label{
+  display:grid; gap:6px; min-width:0;
   font-size:12px; font-weight:750; color:#4b283e;
 }
-.app-shell .batch-product-rows .row-panel select{
-  width:100%; min-height:40px;
+/* min-width:0 and max-width are both required: a grid track sizes to the
+   longest <option>, so width:100% alone does not constrain it. */
+.app-shell .batch-product-card>.row-panel select{
+  width:100%; max-width:100%; min-width:0; min-height:40px;
   padding:8px 12px;
   border:1px solid rgba(139,89,137,.3);
   border-radius:10px;
   background:#fff; color:#3f2338; font-size:13px;
 }
-.app-shell .batch-product-rows .profit-input{
+.app-shell .batch-product-card>.row-panel .profit-input{
   display:inline-flex; align-items:center; gap:6px;
   font-size:15px; font-weight:800; color:#4b283e;
 }
-.app-shell .batch-product-rows .profit-input input{
+.app-shell .batch-product-card>.row-panel .profit-input input{
   width:110px; min-height:40px;
   padding:8px 12px;
   border:1px solid rgba(139,89,137,.3);
   border-radius:10px;
   background:#fff; font-size:15px; font-weight:800; color:#3f2338;
 }
-.app-shell .batch-product-rows .row-panel small{
-  font-size:11px; color:#6b4a66;
-}
+.app-shell .batch-product-card>.row-panel small{ font-size:11px; color:#6b4a66; }
 
 /* D210 · Etsy details is the one row that still lives outside the card, so its
  * control now says "Open settings" instead of "Change" — measured, that click
