@@ -340,3 +340,30 @@ test("opening a facet shows the choices, not a summary — D187", async () => {
     "The card's pickers must open expanded.");
   assert.equal((app.match(/onRemember=\{\(\)=>\{\}\} remembering=\{false\} remembered=\{false\}\/>/g) || []).length, 2);
 });
+
+test("a suggestion is never displayed as a decision — D189", async () => {
+  const app = await read("app/listing-factory-app.tsx");
+  const clarity = await read("app/clarity-pass.css");
+
+  /* Seen on the deployed build: the Colours chip read "Choose" while the picker
+   * directly beneath it read "6 selected". Those six were the template's enabled
+   * colours pre-selected as a starting point — a suggestion, not a decision, and
+   * nothing was saved on the recipe. Two claims about the same thing, on screen
+   * at once.
+   *
+   * The chip now reads "Confirm 6", and the suggestion carries a one-click accept
+   * that writes it to the recipe. */
+  assert.match(app, /const chipValue=facet\.label\|\|\(suggestedCount\?`Confirm \$\{suggestedCount\}`:"Choose"\)/);
+  assert.match(app, /className="facet-confirm"/);
+  assert.match(app, /Goldie suggests \{\(colourFacet\.suggested\?\.colourIds\|\|\[\]\)\.length\} colours from your Printify product\./);
+  assert.match(clarity, /\.app-shell \.facet-confirm\{/);
+});
+
+test("the product photo is visible against the card — D188", async () => {
+  const clarity = await read("app/clarity-pass.css");
+  /* The blueprint catalog image is a blank garment on white. Measured: the image
+   * loaded at 2048px and rendered as an empty square, because a white tee on the
+   * card's plum gradient at 52px is invisible. */
+  assert.match(clarity, /\.app-shell \.bundle-product-photo\{[^}]*background:#fff!important/);
+  assert.match(clarity, /\.app-shell \.bundle-product-photo\{[^}]*object-fit:contain!important/);
+});

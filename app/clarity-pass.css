@@ -1051,3 +1051,36 @@
   margin:0 -12px 4px!important;
 }
 .app-shell .recipe-grid .recipe-tile>button:not(.recipe-use){flex:0 0 auto!important}
+
+/* D188 · The blueprint catalog image is a blank garment shot on white, so at 52px
+ * a white tee vanished into the card. White plate, contained, bordered. */
+.app-shell .bundle-product-photo{
+  background:#fff!important;
+  object-fit:contain!important;
+  padding:3px;
+}
+/* D189 · A suggested selection is not a decision. The chip read "Choose" while the
+ * picker under it read "6 selected". The suggestion is now named as one and takes
+ * a single click to accept. */
+.app-shell .facet-confirm{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding:12px 16px;
+  border-top:1px solid rgba(91,48,79,.12);
+  background:rgba(253,242,248,.6);
+}
+.app-shell .facet-confirm span{color:#75576b;font-size:11px}
+.app-shell .facet-confirm button{
+  min-height:34px;
+  padding:8px 16px;
+  border:0;
+  border-radius:999px;
+  background:#5c304f;
+  color:#fff;
+  font-size:10px;
+  font-weight:850;
+  cursor:pointer;
+}
