@@ -1042,8 +1042,14 @@ test("saved-product tiles line up regardless of name length — D162", async () 
     "The tile footer must be pinned so it cannot move with the name.");
   assert.match(clarity, /\.app-shell \.recipe-use\{height:100%!important\}/,
     "The button must fill its row rather than overflow it.");
-  assert.match(clarity, /\.app-shell \.recipe-copy>b:first-child\{[^}]*min-height:3em/,
-    "Every name must reserve two lines (24px line-height on 16px = 3em).");
+  /* D166 replaced the two-line reservation: it aligned the rows but left a 24px
+   * hole under one-line names. Wider tiles (250px min instead of 170px) give the
+   * name column 226px instead of 117px, so names fit on one line and there is no
+   * hole to reserve. The full name stays reachable via title={recipe.name}. */
+  assert.match(clarity, /\.app-shell \.recipe-grid\{grid-template-columns:repeat\(auto-fit,minmax\(250px,1fr\)\)!important\}/,
+    "Tiles must be wide enough that a product name fits on one line.");
+  assert.match(clarity, /\.app-shell \.recipe-copy>b:first-child\{[^}]*text-overflow:ellipsis/,
+    "A name too long for one line truncates rather than reflowing the card.");
 
   /* The name is clamped to two lines, so the full name must stay reachable. */
   assert.match(tools, /className="recipe-use" title=\{recipe\.name\}/);

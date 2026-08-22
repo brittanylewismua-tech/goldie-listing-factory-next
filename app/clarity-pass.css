@@ -634,12 +634,27 @@
  * 649 / 649 / 649 — every tile identical. */
 .app-shell .recipe-tile{grid-template-rows:1fr auto!important}
 .app-shell .recipe-use{height:100%!important}
+/* D166 · Reserving two lines for every name kept the rows aligned but left a
+   24px hole under the one-line ones, which is what made the cards look
+   unconsidered. The real cause was width: in a 642px container the tiles were
+   206px and the name column only 117px, so even "Gildan Tee" wrapped. Wider
+   tiles let every name sit on one line, and the hole disappears with the clamp. */
+.app-shell .recipe-grid{grid-template-columns:repeat(auto-fit,minmax(250px,1fr))!important}
 .app-shell .recipe-copy>b:first-child{
-  display:-webkit-box;
-  -webkit-line-clamp:2;
-  -webkit-box-orient:vertical;
+  display:block;
+  min-height:0;
+  white-space:nowrap;
   overflow:hidden;
-  min-height:3em;
+  text-overflow:ellipsis;
+}
+/* Edit sat in an outlined pill next to Delete as bare text — two treatments for
+   one pair of equally-weighted actions. */
+.app-shell .recipe-card .delete-recipe{
+  min-height:30px;
+  padding:6px 12px!important;
+  border:1px solid rgba(91,48,79,.18)!important;
+  border-radius:999px!important;
+  background:rgba(255,255,255,.6)!important;
 }
 
 /* D163 · Contrast audit. Composited every text node against its real painted
