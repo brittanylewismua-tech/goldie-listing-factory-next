@@ -1311,3 +1311,43 @@ test("D202: the product summary states the choices, not Printify's word for them
   assert.equal(variantSummary(0, 0, 1), "1 option", "one-size, no-colour products still read correctly");
   assert.equal(variantSummary(0, 0, 12), "12 options");
 });
+
+test("D203: one nav renders both sidebars, so icons cannot go missing on half the app", async () => {
+  const icons = await readFile(new URL("app/nav-icons.tsx", root), "utf8");
+  const management = await readFile(new URL("app/management-nav.tsx", root), "utf8");
+  const app = await readFile(new URL("app/listing-factory-app.tsx", root), "utf8");
+
+  /* Batch History, Keyword Banks, Mockup Library and Usage render
+     ManagementNav, which had bare text links, while the workflow rendered its
+     own .top-nav with icons. Same five destinations, two components. */
+  for (const key of ["listingFactory", "batches", "keywords", "mockups", "usage", "operations"]) {
+    assert.match(icons, new RegExp(`case "${key}":`), `${key} has a shared icon`);
+  }
+  assert.match(management, /import \{ NavIcon \} from "\.\/nav-icons"/);
+  assert.match(management, /<NavIcon name="listingFactory"\/>Listing Factory/);
+  assert.match(management, /<NavIcon name=\{link\.key\}\/>\{link\.label\}/);
+
+  // The workflow nav renders from the same source rather than inline markup.
+  const navBlock = app.slice(app.indexOf('<nav className="top-nav"'), app.indexOf("</nav>", app.indexOf('<nav className="top-nav"')));
+  assert.doesNotMatch(navBlock, /<svg/, "no inline icon markup left to drift");
+  assert.equal((navBlock.match(/<NavIcon /g) || []).length, 5);
+});
+
+test("D203: cross-screen alignment and destructive-action faults are fixed", async () => {
+  const css = await readFile(new URL("app/clarity-pass.css", root), "utf8");
+  const batches = await readFile(new URL("app/batches/page.tsx", root), "utf8");
+
+  // Back pinned to the top of a centred 64px footer row on every workflow step.
+  assert.match(css, /\.workflow-footer-actions>\.workflow-back\{align-self:center!important\}/);
+  // The "?" beside every step heading hung 5px low on a hardcoded margin.
+  assert.match(css, /\.heading-with-help>\.context-help-trigger\{margin:0!important/);
+  // Permanent delete was 9px underlined text 14px under the primary button.
+  assert.match(css, /\.remove-batch\{[^}]*font-size:11px!important/);
+  assert.match(css, /\.remove-batch\{[^}]*margin-top:14px!important/);
+  // Legacy warm brown at 9px, 2.8:1.
+  assert.match(css, /\.individual-size-guide small\{color:#654362!important;font-size:10\.5px!important\}/);
+
+  // A batch's first initial is not information — "0 las vegas..." rendered "0".
+  assert.doesNotMatch(batches, /display_name\.slice\(0,1\)\.toUpperCase\(\)/, "no initial-as-thumbnail");
+  assert.match(batches, /batch-history-thumbnail empty" aria-hidden="true"><svg/, "a neutral no-photo glyph instead");
+});

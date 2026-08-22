@@ -1198,3 +1198,58 @@
   font-size:8px!important;
   letter-spacing:.04em!important;
 }
+
+/* D203 · Three faults that all cross screen boundaries.
+ *
+ * 1. `.workflow-back` carried align-self:flex-start inside a footer row that
+ *    sets align-items:center, so it pinned to the top of a 64px row while
+ *    "Saved automatically" centred in it. Measured 9px apart on every step of
+ *    the workflow, not just one. Measured after: 0px.
+ *
+ * 2. Batch History rendered a permanent delete as 9px underlined text sitting
+ *    14px below a large filled "Resume batch" button. It was the smallest type
+ *    on the card and the closest thing to the primary action — the two worst
+ *    properties a destructive control can have. It keeps its quiet treatment,
+ *    because it should not compete with Resume, but at a legible size, with
+ *    real separation from the primary, and a hover state that says what it is.
+ *
+ * 3. The no-thumbnail placeholder printed the first letter of the batch name,
+ *    so a bundle called "ZZ TEST BUNDLE" showed a large "Z". That is the same
+ *    empty signal as the "P" removed in D197: an initial is not information.
+ *    It is now a neutral image glyph, which honestly says "no photo yet". */
+.workflow-footer-actions>.workflow-back{align-self:center!important}
+
+/* 4. The round "?" beside every step heading carried a hardcoded margin-top of
+ *    10px inside a flex row that already sets align-items:center, so it hung
+ *    5px below the title's centre on every screen in the workflow. Measured
+ *    after: 0px. */
+.heading-with-help>.context-help-trigger{margin:0!important;align-self:center!important}
+
+.management-page .remove-batch,
+.batch-history .remove-batch{
+  margin-top:14px!important;
+  padding:6px 10px!important;
+  border-radius:999px!important;
+  font-size:11px!important;
+  text-decoration:none!important;
+  color:#87435d!important;
+}
+.management-page .remove-batch:hover,
+.batch-history .remove-batch:hover{
+  background:rgba(139,63,53,.09)!important;
+  color:#7a2f28!important;
+  text-decoration:underline!important;
+}
+.batch-history-thumbnail.empty>svg{
+  width:30px;height:30px;
+  fill:none;stroke:rgba(114,84,107,.55);stroke-width:1.6;
+  stroke-linecap:round;stroke-linejoin:round;
+}
+
+/* D203 continued · 5. `.individual-size-guide small` was still legacy warm brown
+ * rgb(119,109,93) at 9px on white: 2.8:1, well under the 4.5:1 AA needs for
+ * small text, and the wrong palette besides. The `p` beside it had already been
+ * converted to plum in approved-functional.css and the `small` was missed.
+ * Appears once per draft card, so three times on a three-design batch.
+ * Measured after: #654362 at 10.5px, 8.29:1. */
+.app-shell .individual-size-guide small{color:#654362!important;font-size:10.5px!important}

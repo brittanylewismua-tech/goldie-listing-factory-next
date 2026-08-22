@@ -1,4 +1,5 @@
 import GoldieWordmark from "./goldie-wordmark";
+import { NavIcon } from "./nav-icons";
 
 type Destination="batches"|"keywords"|"mockups"|"usage"|"operations";
 
@@ -10,5 +11,5 @@ export default function ManagementNav({active,listingFactoryHref="/listing-facto
     {key:"usage",href:"/usage",label:"Usage + Plan"},
   ];
   if(showOperations)links.push({key:"operations",href:"/operations",label:"Operations"});
-  return <nav className="management-nav" aria-label="Goldie tools"><GoldieWordmark/><a href={listingFactoryHref}>Listing Factory</a>{links.map(link=><a key={link.key} className={active===link.key?"active":undefined} href={link.href}>{link.label}</a>)}</nav>;
+  return <nav className="management-nav" aria-label="Goldie tools"><GoldieWordmark/><a href={listingFactoryHref}><NavIcon name="listingFactory"/>Listing Factory</a>{links.map(link=><a key={link.key} className={active===link.key?"active":undefined} href={link.href}><NavIcon name={link.key}/>{link.label}</a>)}</nav>;
 }

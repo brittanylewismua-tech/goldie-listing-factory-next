@@ -23,6 +23,7 @@ import ContextHelp from "./context-help";
 import GoldieWordmark from "./goldie-wordmark";
 import { productFamily } from "./product-type-utils";
 import { photoStats, PHOTO_SAMPLE_SIZE } from "./product-photo";
+import { NavIcon } from "./nav-icons";
 
 /* D202 · "25 selected variants" is Printify's word, not a seller's. A seller
  * picked five colours and five sizes; "variants" is the internal name for the
@@ -1113,11 +1114,11 @@ export default function ListingFactoryApp() {
         </div>
         <div className="top-actions">
           <nav className="top-nav" aria-label="Goldie navigation">
-            <a className="active" href="/listing-factory" onClick={event=>guardNavigation(event,"/listing-factory")}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9l1-4h16l1 4M3 9h18M3 9v10a1 1 0 001 1h16a1 1 0 001-1V9M9 13h6"/></svg>Listing Factory</a>
-            <a href="/batches" onClick={event=>guardNavigation(event,"/batches")}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 106 5.3L3 8"/><path d="M12 7v5l3 2"/></svg>Batch History</a>
-            <a href="/keywords" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5a3 3 0 00-3 3 3 3 0 00-2 5.2A3 3 0 009 19a3 3 0 006 0 3 3 0 002-5.8A3 3 0 0015 8a3 3 0 00-3-3z"/><path d="M12 5v14"/></svg>Keyword Banks</a>
-            <a href="/mockups" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M21 16l-5-5-6 6"/></svg>Mockup Library</a>
-            <a href="/usage" onClick={event=>guardNavigation(event,"/usage")}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l8 3.5v5c0 4.6-3.2 8.6-8 9.5-4.8-.9-8-4.9-8-9.5v-5L12 3z"/><path d="M9.2 12.2l1.9 1.9 3.9-3.9"/></svg>Usage + Plan</a>
+            <a className="active" href="/listing-factory" onClick={event=>guardNavigation(event,"/listing-factory")}><NavIcon name="listingFactory"/>Listing Factory</a>
+            <a href="/batches" onClick={event=>guardNavigation(event,"/batches")}><NavIcon name="batches"/>Batch History</a>
+            <a href="/keywords" target="_blank" rel="noopener noreferrer"><NavIcon name="keywords"/>Keyword Banks</a>
+            <a href="/mockups" target="_blank" rel="noopener noreferrer"><NavIcon name="mockups"/>Mockup Library</a>
+            <a href="/usage" onClick={event=>guardNavigation(event,"/usage")}><NavIcon name="usage"/>Usage + Plan</a>
           </nav>
           <button className="workflow-restart-button" type="button" disabled={running} onClick={startOver}><span aria-hidden="true">↻</span> Start a new batch</button>
           <GoldieCommandBar data={commandCenterData} onUseProduct={recipe=>{void chooseRecipe(recipe).then(selected=>{if(selected)goToStep("setup")})}} onStartBlank={()=>{clearCurrentBatch(true);goToStep("setup")}}/>
