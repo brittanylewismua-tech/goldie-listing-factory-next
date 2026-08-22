@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { safeImagePreviewDataUrl } from "./client-image-preview";
 import { runBounded } from "./bounded-work";
@@ -37,9 +37,11 @@ async function product(file:File,t:Template,reference:File):Promise<Result>{
 }
 async function withRecovery<T>(task:()=>Promise<T>){let lastError:unknown;for(let attempt=0;attempt<3;attempt++){try{return await task()}catch(error){lastError=error;if(attempt<2)await new Promise(resolve=>window.setTimeout(resolve,1200*(attempt+1)))}}throw lastError instanceof Error?lastError:new Error("This mockup could not be created after automatic recovery.")}
 
-export default function IntegratedMockups({design,productId,productName="",defaultTheme,referenceUrl,onPrepared}:{design:File;productId:string;productName?:string;defaultTheme:string;referenceUrl?:string;onPrepared?:(count:number)=>void}){
+export default function IntegratedMockups({design,productId,productName="",defaultTheme,defaultTemplateIds=[],referenceUrl,onPrepared}:{design:File;productId:string;productName?:string;defaultTheme:string;defaultTemplateIds?:string[];referenceUrl?:string;onPrepared?:(count:number)=>void}){
  const[library,setLibrary]=useState<Template[]>([]),[theme,setTheme]=useState(defaultTheme),[selected,setSelected]=useState<Set<string>>(new Set()),[results,setResults]=useState<Result[]>([]),[busy,setBusy]=useState(false),[error,setError]=useState(""),[expanded,setExpanded]=useState<Result|null>(null),[etsyStatus,setEtsyStatus]=useState(""),[adjustments,setAdjustments]=useState<Record<string,Adjustment>>({}),[renderStatus,setRenderStatus]=useState("");
+ const seededDefaults=useRef(false);
  useEffect(()=>{fetch("/api/mockups/library").then(r=>r.json()).then(p=>setLibrary(p.templates||[]));},[]);
+ useEffect(()=>{if(seededDefaults.current||!library.length)return;seededDefaults.current=true;let session:{theme?:string;ids?:string[]}|null=null;try{session=JSON.parse(window.sessionStorage.getItem("goldie-batch-mockups")||"null")}catch{}const ids=defaultTemplateIds.length?defaultTemplateIds:Array.isArray(session?.ids)?session.ids:[],expectedTheme=defaultTheme||session?.theme||"";const valid=ids.filter(id=>library.some(item=>item.id===id&&(!expectedTheme||item.theme===expectedTheme))).slice(0,MAX_MOCKUPS_PER_LISTING);setSelected(new Set(valid))},[library,defaultTheme,defaultTemplateIds.join("|")]);
  useEffect(()=>{if(selected.size<=MAX_MOCKUPS_PER_LISTING)return;setSelected(new Set([...selected].slice(0,MAX_MOCKUPS_PER_LISTING)));setError("You can create up to eight lifestyle mockups for one listing.")},[selected]);
  const compatibleLibrary=library.filter(template=>compatibleTemplate(template,productName)),themes=[...new Set(compatibleLibrary.map(t=>t.theme))],items=theme==="__all"?compatibleLibrary:compatibleLibrary.filter(t=>t.theme===theme),chosen=compatibleLibrary.filter(t=>selected.has(t.id)).slice(0,MAX_MOCKUPS_PER_LISTING),needsReference=chosen.some(t=>!isCalibratedSurface(t.surfaceKind||"rigid-flat"));
  async function stageForEtsy(made:Result[]){setEtsyStatus(`Saving ${made.length} mockups for Etsy…`);const form=new FormData();form.set("productId",productId);form.set("kind","mockup");form.set("replace","true");for(const result of made){const blob=await(await fetch(result.url)).blob();form.append("file",new File([blob],result.name,{type:blob.type||"image/jpeg"}))}const response=await fetch("/api/etsy/images",{method:"POST",body:form}),payload=await response.json() as {error?:string};if(!response.ok)throw new Error(payload.error||"Goldie could not safely replace this listing’s mockups. Your previous mockups were kept.");onPrepared?.(made.length);setEtsyStatus(`✓ ${made.length} mockups will be added automatically when this listing publishes.`)}

@@ -657,7 +657,7 @@ test("a new saved product does not inherit another product's setup — D122/D124
    * a crew neck produced a card already wearing the tee's "BACH TEES" mockups,
    * captioned "From your last batch" for a product that has never had a batch.
    * A product may only adopt the set IT saved. */
-  assert.match(page, /seededDefault\.current=true;if\(savedValue&&themes\.includes\(savedValue\)\)onChange\(savedValue\)/,
+  assert.match(page, /seededDefault\.current=true;if\(savedValue&&themes\.includes\(savedValue\)\)/,
     "A product must never inherit the first mockup set in the library.");
   assert.doesNotMatch(page, /onChange\(savedValue&&themes\.includes\(savedValue\)\?savedValue:themes\[0\]\)/);
   assert.match(page, /themes\.length\?"No mockup set chosen for this product yet\."/,
@@ -705,4 +705,20 @@ test("a product with no saved defaults is framed as first-time setup — D125", 
     "A first-run product must be framed as setup, not as saved settings.");
   assert.match(page, /productFirstRun\?"Choose the colours you want to offer/,
     "Colour copy must not claim a previous batch on a first run.");
+});
+
+test("new products require completed setup and saved products own exact mockup scenes — D125/D123", async () => {
+  const [page,tools,api,finish] = await Promise.all([
+    readFile(listingFactoryPage,"utf8"),
+    readFile(new URL("../app/factory-tools.tsx",import.meta.url),"utf8"),
+    readFile(new URL("../app/api/product-recipes/route.ts",import.meta.url),"utf8"),
+    readFile(new URL("../app/integrated-mockups.tsx",import.meta.url),"utf8"),
+  ]);
+  assert.match(tools,/setupComplete=editingId\?existing\?\.setupComplete!==false:false/);
+  assert.match(page,/Save these as \$\{activeRecipe\.name\}’s defaults/);
+  assert.match(page,/activeRecipe\?\.setupComplete===false\?"Save this product’s defaults to continue"/);
+  assert.match(api,/mockupIds:Array\.isArray\(saved\.mockupIds\)/);
+  assert.match(page,/className="product-mockup-scenes"/);
+  assert.match(page,/Click any scene to remove or re-add it/);
+  assert.match(finish,/goldie-batch-mockups/);
 });

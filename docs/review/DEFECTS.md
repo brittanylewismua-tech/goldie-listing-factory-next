@@ -2100,7 +2100,7 @@ The fee profile is an **account-level** input — Etsy's percentages are the sam
 for every product — so it is not a product property at all. Removed from the
 product step; the Pricing copy stays.
 
-### D123 · Mockups can only be chosen as a whole set, never per product · **OPEN** · **HIGH**
+### D123 · Mockups can only be chosen as a whole set, never per product · **FIXED HERE** · **HIGH**
 
 Brittany: *"it's about selecting the specific mockups you wanna use for that
 specific listing recipe... it's still not letting me edit the mockups I'm using
@@ -2121,17 +2121,15 @@ So the granular control exists, but only after designs are uploaded and only for
 that one batch. A saved product cannot record *which* of its set's 10 mockups it
 uses, so a crew neck and a tee sharing a set must share all ten scenes.
 
-**Recommendation:** store the chosen ids on the recipe — `Recipe.mockupIds?:
-string[]` alongside the existing `defaultMockupTheme` — and render the set's
-mockups as toggles in the product step's Mockups block, defaulting to all
-selected. Finish already reads a per-batch selection, so it would seed from the
-recipe instead of the whole set. `sharedMockups:{theme,ids}` already exists in
-batch state, which is the same shape.
+**Fixed:** `Recipe.mockupIds` is stored with the product's existing persisted
+extras, beside `defaultMockupTheme`. The product step renders every scene in
+the chosen set as a visible toggle, limits the selection to Etsy's eight-scene
+workflow, and lets the seller remove and re-add individual scenes before saving
+them as this product's default. The exact `{theme,ids}` selection seeds Finish.
+Legacy products remain valid: their existing whole-set default resolves once
+to the first eight scenes, and is not written back until the seller saves it.
 
-Not built same-day: it changes what a saved product means and needs a schema
-field, so it deserves a deliberate pass rather than a patch.
-
-### D125 · Saving a new product drops you into a returning-product screen · **OPEN** · **HIGH · UX**
+### D125 · Saving a new product drops you into a returning-product screen · **FIXED HERE** · **HIGH · UX**
 
 Brittany: *"when a new product is saved, what you enter should not be what looks
 like the saved recipe. It should look like a new product setup flow."*
@@ -2141,13 +2139,12 @@ returning seller sees — colours, mockups and "Saved for this product" all
 pre-populated, with copy about a last batch that never happened. Nothing marks
 this as first-time setup.
 
-Partly mitigated by D122 (no inherited mockups) and the corrected empty-state
-copy, but the framing is still wrong.
-
-**Recommendation:** a first-run state for a product with no saved defaults —
-heading "Set up <product name>", the same blocks in the same order, but phrased
-as choices being made for the first time and ending in "Save these as this
-product's defaults". Once defaults exist, the current returning view is correct.
+**Fixed:** newly created products are persisted with `setupComplete:false` and
+open in an explicit **Set up <product name>** state. Nothing is inherited from
+another saved product. The seller chooses the product's colours and exact
+mockup scenes, then uses one filled **Save these as <product>'s defaults**
+button. The forward button explains why it is unavailable until that save.
+Existing products and legacy records remain in the returning-batch state.
 
 ### D126 · "Saved for this product" was five problems in one block · **FIXED HERE** · **HIGH · UX**
 
@@ -2182,24 +2179,6 @@ Keyword bank → Product description → Etsy details → Product connection.
 giving it a colour from the existing palette, and it shipped looking like a
 defect. Colour choices need to come from what the app already uses for that
 meaning — here, the plum of the alert directly below it.
-
-### D125 · Saving a new product drops you into a returning-product screen · **FIXED HERE** · **HIGH · UX**
-
-Decision made rather than escalated: a product that has saved **none** of its
-own defaults — no colours, no mockup set, no keyword bank — is being set up for
-the first time, and the returning-product framing is simply false for it.
-
-`productFirstRun` now drives the copy:
-
-| | first run | returning |
-|---|---|---|
-| block heading | **"Set up Gildan Crewneck"** | "Saved for this product" |
-| colours | **"Choose the colours you want to offer, then save them as this product's default."** | "From your last batch — change any." |
-| mockups | "No mockup set chosen for this product yet." (D122) | "From your last batch — change it anytime." |
-
-The blocks, order and controls are identical — only the framing changes, so
-there is no second flow to maintain. Once a product saves any default it reads
-as a returning product, which is correct.
 
 ### Numbering correction
 

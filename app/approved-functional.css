@@ -1170,6 +1170,24 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .app-shell .keyword-bank-required{display:grid!important;gap:3px!important;width:100%!important;margin:12px 0!important;padding:14px 16px!important;border:1px solid rgba(157,80,130,.32)!important;border-radius:12px!important;background:#fff1f8!important;color:#4f2944!important;text-align:left!important;box-shadow:none!important}
 .app-shell .keyword-bank-required b{font-size:12px!important}.app-shell .keyword-bank-required span{font-size:10px!important;font-weight:600!important}
 .app-shell .setup-forward{width:100%!important;margin:18px 0 6px!important}
+
+/* D125/D123 · A saved product owns its setup and exact mockup scenes. The
+   legacy framing and whole-set picker remain mounted only to preserve batch
+   state while older saved batches restore; the operative controls are the
+   product-scoped controls below. */
+.app-shell .saved-product-batch-page>.batch-page-intro,
+.app-shell .saved-product-batch-page>.mockup-default-block{display:none!important}
+.app-shell .product-setup-framing{order:1;width:100%;padding:20px 22px;border:1px solid rgba(87,48,78,.16);border-radius:20px;background:rgba(255,255,255,.56)}
+.app-shell .product-setup-framing p{margin:0 0 5px}.app-shell .product-setup-framing span{display:block;color:#674c61}
+.app-shell .product-setup-framing.first-product-setup{border-color:#8e5d85;background:#fff8fd}
+.app-shell .saved-product-batch-page{order:2}.app-shell .saved-product-batch-page+.mockup-default-block{order:3;width:100%}
+.app-shell .product-mockup-scenes{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:12px;width:100%;margin:16px 0 10px}
+.app-shell .product-mockup-scenes label{position:relative;display:grid;gap:7px;padding:8px;border:2px solid transparent;border-radius:14px;background:rgba(255,255,255,.66);cursor:pointer}
+.app-shell .product-mockup-scenes label.selected{border-color:#71416a;background:#fff}
+.app-shell .product-mockup-scenes input{position:absolute;top:12px;left:12px;width:20px;height:20px;accent-color:#71416a;z-index:1}
+.app-shell .product-mockup-scenes img{width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:9px}.app-shell .product-mockup-scenes span{font-weight:700;color:#4f3048}
+.app-shell .save-initial-product-setup{order:51;width:100%;min-height:58px;border:0;border-radius:16px;background:#603653;color:#fff;font-weight:800;font-size:16px;cursor:pointer}
+.app-shell .save-initial-product-setup:disabled{background:#ddd2df;color:#563b50;cursor:not-allowed}
 .app-shell .recipe-card .add-product-button{border:1px solid rgba(91,48,79,.18)!important;background:rgba(255,255,255,.58)!important;color:#5b304f!important;box-shadow:none!important}
 .app-shell .recipe-card .recipe-library-head .add-product-button{border:0!important;background:transparent!important;color:#704d75!important;box-shadow:none!important;text-decoration:underline!important}
 .app-shell .recipe-card .recipe-library-head .add-product-button:hover{background:transparent!important;color:#4a2a3e!important;transform:none!important}

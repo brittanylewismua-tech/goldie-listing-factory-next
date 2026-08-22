@@ -192,7 +192,7 @@ test("unifies saved products, editing, pricing, and mockups without the old fact
   assert.match(recipes, /props\.onUseRecipe\(saved\)/);
   assert.doesNotMatch(page, /Adjust what changed\. Keep everything else\./);
   assert.match(page, /Saved for this product/);
-  assert.match(page, /From your last batch — change it anytime/);
+  assert.match(page, /Saved for this product — remove or add any scene/);
   assert.doesNotMatch(page, />Not chosen</);
   assert.doesNotMatch(recipes, /Shipping cost|Shipping charged|Payment fixed fee/);
   assert.doesNotMatch(page, /Apply titles in order|Import title CSV/);
@@ -1744,7 +1744,7 @@ test("keeps the saved-product batch page compact and makes permanent settings ed
   ]);
   assert.match(page,/remembered-color-row/);
   assert.match(page,/Change colors/);
-  assert.match(page,/mockup-set-preview/);
+  assert.match(page,/product-mockup-scenes/);
   assert.match(page,/Shipping profile for this batch/);
   assert.match(page,/Description for this batch/);
   assert.match(page,/Save this description as the default/);
@@ -1938,7 +1938,7 @@ test("keeps a forward path from setup, designs, and pricing after drafts exist (
    * step selects listing images separately - and requiring one made "No mockups
    * for this batch" unreachable: choosing it disabled the only way forward.
    * See D110. */
-  assert.match(app,/disabled=\{!complete&&\(!selectedColorIds\.length\|\|!autoTitleBankId\)\}/);
+  assert.match(app,/disabled=\{!complete&&\(!selectedColorIds\.length\|\|!autoTitleBankId\|\|activeRecipe\?\.setupComplete===false\)\}/);
   assert.match(app,/complete\?goToStep\("finish",false,true\):goToStep\("designs"\)/);
   assert.match(app,/files\.length>0&&complete&&workflowStep==="designs"/);
   assert.match(app,/className="batch-actions"[\s\S]{0,500}Back to finishing your listings/);
