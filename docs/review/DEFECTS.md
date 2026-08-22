@@ -1867,3 +1867,25 @@ that flag performs the scroll after the commit. Instant, not smooth (D93).
 the cause it was written for, and every one shipped without being operated on
 the deployed build. Only clicking the control and sampling `scrollY` afterwards
 found each next layer.
+
+### Functional pass, round 3 — library CRUD and history
+
+Every control operated on the deployed build. All test data removed afterwards;
+no real bank, set or batch was modified.
+
+| control | test | result |
+|---|---|---|
+| Batch History badge | read after D88 | "DRAFTS READY · 0 PUBLISHED" ✓ |
+| **Resume batch** | click on a completed batch | restored to Finish · Images + mockups with 3 designs, 20 variants, 3 drafts ✓ |
+| Keyword bank **create** | name + 3 phrases + Save | 2 banks → **3**, "3 valid phrases found" ✓ |
+| Keyword bank **edit + save** | 3 phrases → 5, Save changes | card shows **5 phrases**, no duplicate created ✓ |
+| Keyword bank **delete** | Delete → confirm | 3 → **2**, prompt named the bank: *Delete "ZZ TEST BANK"?* ✓ |
+| Mockup **Delete set** | click | `role="alertdialog"`: *"Delete 'BACH TEES'? This permanently removes the set and every saved mockup inside it."* — **"Keep this set" first** ✓ |
+| Delete set **cancel** | click "Keep this set" | dialog closed, set intact ✓ |
+| Mockup **Rename set** | click | dialog prefilled with "BACH TEES", Cancel + Save new name ✓ |
+| Rename **cancel** | click Cancel | dialog closed, name unchanged ✓ |
+| "Choose size guide" | click | opens a hidden native file picker — **not observable to automation, not a defect** |
+
+**D87 is properly fixed** — the mockup delete confirmation names the set, states
+exactly what is lost, and offers the safe option first. It is a better
+confirmation than the keyword bank's `window.confirm`.
