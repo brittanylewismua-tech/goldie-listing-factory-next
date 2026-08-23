@@ -42,7 +42,12 @@ test("places the selected-product proof before bundle setup and exposes Finish p
   ]);
   assert.match(app, /selectedSummary=\{templateDetails\?</);
   assert.match(tools, /\{activeId&&props\.selectedSummary\}[\s\S]*<details className="bundle-library"/);
-  assert.match(app, /\{\(railInFinish\|\|complete\)&&<div className="rail-substeps"/);
+  /* D220 retired the Finish node and its four-phase subrail. The workflow is now
+     four stages - Product, Images, Listing, Publish - and the phases that used to
+     nest under Finish were merged onto those pages: draft creation and mockups
+     onto Images, Etsy details alongside titles on Listing. */
+  assert.match(app, /const RAIL_STAGES: Array<\{label:string;title:string;index:number;covers:number\[\]\}>/);
+  assert.doesNotMatch(app, /className="rail-substeps"/, "no nested subrail remains");
 });
 
 test("shows a trial subscriber the trial end date instead of the monthly reset date", async () => {
@@ -1242,7 +1247,9 @@ test("places each step count directly below its page title", async () => {
     readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/approved-functional.css", import.meta.url), "utf8"),
   ]);
-  assert.match(page, /<p className="hero-step-count">\{railInFinish\?/);
+  /* D220: four stages, so the counter is "Step 2 of 4 · Images" rather than a
+     top-level count with a nested "Finish · phase (n of 4)" variant. */
+  assert.match(page, /<p className="hero-step-count">\{`Step \$\{railTopNumber\} of \$\{RAIL_STAGES\.length\} · \$\{currentStage\.label\}`\}<\/p>/);
   assert.doesNotMatch(page, /className="approved-step-count"/);
   assert.match(styles, /\.app-shell \.hero-step-count/);
   assert.match(styles, /\.app-shell \.hero\{padding-bottom:30px!important\}/);
@@ -1823,16 +1830,25 @@ test("makes Batch History visual, identifiable, reversible, and truthful",async(
   assert.match(styles,/\.batch-history-thumbnail/);assert.match(styles,/\.batch-history-controls/);
 });
 
-test("renders Finish as a compact horizontal labeled subrail",async()=>{
-  const [page,styles]=await Promise.all([
-    readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8"),
-    readFile(new URL("../app/clarity-pass.css",import.meta.url),"utf8"),
-  ]);
-  assert.match(page,/FINISH_RAIL_LABELS = \["Titles \+ tags","Etsy details","Images \+ mockups","Review \+ publish"\]/);
-  assert.match(page,/done\?"✓":position\+1/);
-  assert.match(styles,/\.rail-substeps \{[\s\S]*?grid-column: 1 \/ -1;[\s\S]*?grid-template-columns: repeat\(4/);
-  assert.match(styles,/\.rail-substep > span:last-child \{ display: grid !important/);
-  assert.doesNotMatch(styles,/\.rail-substeps \{[\s\S]{0,180}flex-direction: column/);
+test("D220: the rail is four stages, and every legacy phase has a home",async()=>{
+  const page=await readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8");
+
+  /* This test used to pin the Finish subrail: four phases nested under a fifth
+     bubble. The workflow is four pages now - Product, Images, Listing, Publish -
+     so the subrail is gone and its phases were merged onto those pages.
+     What matters is that no legacy index was orphaned by the merge. */
+  const stages=page.slice(page.indexOf("const RAIL_STAGES"),page.indexOf("const RAIL_TOP"));
+  assert.match(stages,/\{label:"Product",index:1,.*covers:\[1\]\}/);
+  assert.match(stages,/\{label:"Images",index:2,.*covers:\[2,3,4,7\]\}/,
+    "designs, draft creation and mockups share the Images page");
+  assert.match(stages,/\{label:"Listing",index:5,.*covers:\[5,6\]\}/,
+    "titles and Etsy details share the Listing page");
+  assert.match(stages,/\{label:"Publish",index:8,.*covers:\[8\]\}/);
+
+  const covered=[...stages.matchAll(/covers:\[([0-9,]+)\]/g)].flatMap(m=>m[1].split(",").map(Number));
+  for(const index of [1,2,3,4,5,6,7,8]){
+    assert.ok(covered.includes(index),`PROGRESS_STEPS index ${index} has no page`);
+  }
 });
 
 test("does not make owner access depend on billing database initialization",async()=>{
@@ -2089,7 +2105,10 @@ test("traverses every workflow phase with one shared gate and never enables an i
   assert.match(navigationIssues(8,{...complete,imagesReady:false}).join(" "),/photo/);
   const app=await readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8");
   assert.match(app,/disabled=\{Boolean\(issues\.length\)\}/);
-  assert.match(app,/issues\[0\]\|\|progressStatus/);
+  /* D220: the rail composes its own status line, so the fallback now reads
+     issues[0] || `${progressStatus(...)}${draftLine}`. The rule is unchanged -
+     a gate issue always wins over a computed status. */
+  assert.match(app,/issues\[0\]\|\|`\$\{progressStatus/);
   assert.match(app,/disabled=\{preparingEtsy\|\|progressGateIssues\(6\)\.length>0\}/);
   assert.match(app,/function markShippingEdit\(\)\{onApprovalChange\(false\)/);
   assert.doesNotMatch(app,/if\(!selectedProfile\|\|customDirty\)onApprovalChange/);

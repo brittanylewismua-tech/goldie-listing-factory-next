@@ -145,8 +145,15 @@ test("an open step never claims you must complete the prior one — D154", async
    * Fix: progressStatus takes `blocked` and treats an open step like the active one. */
   assert.match(source, /function progressStatus\(index:number,active:boolean,done:boolean,blocked:boolean\)\{const live=active\|\|!blocked;/,
     "progressStatus must know whether the step is actually gated.");
-  assert.equal((source.match(/progressStatus\(index,active,done,Boolean\(issues\.length\)\)/g) || []).length, 2,
-    "Both rails must pass the real gate state.");
+  /* D220 collapsed the two rails into one four-stage rail, so the call site is
+     progressStatus(stage.index, ...). What D154 requires is unchanged: EVERY
+     progressStatus call must receive the real gate state, never a constant. */
+  const calls = source.match(/progressStatus\([^)]*\)/g) || [];
+  assert.ok(calls.length > 0, "progressStatus is called");
+  for (const call of calls) {
+    if (call.startsWith("progressStatus(index:")) continue;
+    assert.match(call, /Boolean\(issues\.length\)?$/, `${call} must pass the real gate state`);
+  }
 
   const body = source.split("\n")[505];
   assert.ok(!/[^a-zA-Z]active\?/.test(body),
