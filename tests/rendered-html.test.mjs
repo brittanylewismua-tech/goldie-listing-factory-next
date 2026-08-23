@@ -1260,7 +1260,13 @@ test("labels every progress bubble with a short workflow name", async () => {
     readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/approved-functional.css", import.meta.url), "utf8"),
   ]);
-  assert.match(page, /const PROGRESS_SHORT_LABELS = \["Connect","Product","Designs","Drafts","Drafts","Titles \+ tags","Etsy details","Images \+ mockups","Publish"\]/);
+  /* D222 · RAIL_STAGES carries the labels now, one per page, so the parallel
+     nine-entry short-label array is gone. */
+  assert.match(page, /\{label:"Product",index:1,title:"Choose product"/);
+  assert.match(page, /\{label:"Images",index:2,title:"Designs \+ images"/);
+  assert.match(page, /\{label:"Listing",index:5,title:"Titles \+ Etsy details"/);
+  assert.match(page, /\{label:"Publish",index:8,title:"Review \+ publish"/);
+  assert.match(page, /<em className="progress-bubble-label">\{stage\.label\}<\/em>/);
   assert.match(page, /className="progress-bubble-label"/);
   assert.match(styles, /\.app-shell \.progress-bubble-label\{/);
 });
