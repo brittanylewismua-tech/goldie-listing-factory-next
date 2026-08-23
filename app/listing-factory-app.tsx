@@ -340,6 +340,29 @@ function PricingReview({variants,pricing,prices,productName,profiles,selectedPro
   function recalculate(nextPricing=pricing){const calculated=Object.fromEntries(variants.map(variant=>[String(variant.id),wholePrice(recommendedPrice(variant.cost,nextPricing))])),next=normalizePricesByCost(variants,calculated),changed=variants.filter(variant=>next[String(variant.id)]!==(prices[String(variant.id)]??variant.templatePrice)).length;onPrices(next);setRecommendationMessage(changed?`✓ Updated ${changed} ${changed===1?"price":"prices"}. Review each cost group below before continuing.`:"✓ Your current prices already meet this profit goal. Nothing needed to change.")}
   const initialPriceSignature=variants.map(variant=>`${variant.id}:${variant.cost}:${variant.shipping||0}:${variant.templatePrice}`).join("|");
   useEffect(()=>{if(!selectedProfile||!variants.length)return;const stillUsingTemplatePrices=variants.every(variant=>(prices[String(variant.id)]??variant.templatePrice)===variant.templatePrice);if(!stillUsingTemplatePrices)return;const calculated=Object.fromEntries(variants.map(variant=>[String(variant.id),recommendedPrice(variant.cost,pricing)]));onPrices(normalizePricesByCost(variants,calculated));setRecommendationMessage("✓ Goldie calculated every price from your profit goal, product costs, and Etsy fees. Buyer-paid shipping stays separate.")},[selectedProfile?.id,initialPriceSignature]);
+  /* D320 · Prices shown on arrival were never calculated. `prices` starts empty
+     and every read falls through to `variant.templatePrice` — the retail price
+     already sitting on the Printify template. So the section opened showing
+     Printify's prices while the ✓ banner said "Goldie calculated every price
+     from your profit goal, product costs, and Etsy fees", and the profit figures
+     were derived backwards FROM those prices, which is why they were internally
+     consistent and had nothing to do with the goal. A $10 goal against a $25.07
+     cost showed $100.00 because $100.00 is what the template said.
+
+     recalculate() existed and was only ever reached by changing the goal or
+     picking a shipping profile. It runs once when the variants first load, so
+     the goal actually drives the prices. Guarded on an untouched price map and
+     unapproved pricing, so it can never overwrite an edit or an approval. */
+  const pricingSeeded=useRef("");
+  useEffect(()=>{
+    if(!variants.length||approved)return;
+    if(Object.keys(prices).length)return;
+    const key=variants.map(variant=>variant.id).join(",");
+    if(pricingSeeded.current===key)return;
+    pricingSeeded.current=key;
+    recalculate(pricing);
+  },[variants,approved,prices,pricing]);
+
   function changeProfit(value:number){const nextPricing={...pricing,targetProfit:Math.max(0,value)};onPricing(nextPricing);recalculate(nextPricing);}
   function changeCostGroupPrice(cost:number,cents:number){const matching=variants.filter(item=>item.cost===cost),safeCents=Math.max(wholePrice(cents),cost),next={...prices};for(const item of matching)next[String(item.id)]=safeCents;onPrices(next);setRecommendationMessage(`✓ $${(safeCents/100).toFixed(2)} applied to all ${matching.length} ${matching.length===1?"variant":"variants"} with a $${(cost/100).toFixed(2)} Printify cost.`)}
   function changeIndividualPrice(variant:ProductVariant,cents:number){onPrices({...prices,[String(variant.id)]:Math.max(wholePrice(cents),variant.cost)});setRecommendationMessage(`✓ ${variant.title} now has its own price. The rest of its cost group was not changed.`)}

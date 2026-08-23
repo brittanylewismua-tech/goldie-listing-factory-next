@@ -1876,7 +1876,14 @@ body:has(.management-nav) .usage-card h2{
  * belongs.
  * ========================================================================== */
 .app-shell{min-width:1180px!important}
-html,body{overflow-x:auto!important}
+/* D321 · `overflow-x:auto` on <html> was the wrong way to get that scroll.
+   Setting overflow on the root stops the body background propagating to the
+   page canvas, so everything past the viewport painted the browser's default
+   grey and the gradient looked like it had vanished. The min-width above is
+   enough to make the document scroll on its own. The background is
+   `attachment:fixed`, so it anchors to the viewport — but its BOX still has to
+   span the scrollable width, which is what min-width on body does. */
+body{min-width:1180px!important}
 
 /* ============================================================================
  * D309 · CENTRED CARD HEADERS — SUPERSEDES THE ALIGNMENT IN D249 / D279 / D287
