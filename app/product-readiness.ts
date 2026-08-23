@@ -30,6 +30,18 @@
  * resolves itself and reports "auto", so the UI shows a settled fact instead of a
  * control. Only genuinely ambiguous facets are asked. */
 
+/* D228 · NEVER persist an empty colour or size selection to a recipe.
+ *
+ * Measured on the live account: Gildan Tee had five saved colours in the morning
+ * and zero by the afternoon, while the hoodie and crewneck kept theirs. A recipe
+ * with no colours is not a saved preference — it is a product that can no longer
+ * be used, and it is silent, because the card just stops mentioning colours.
+ *
+ * Every path that writes colours or sizes back to a recipe now requires at least
+ * one id. Clearing a selection for THIS batch stays possible; erasing the
+ * product's saved setup does not.
+ */
+
 export type ReadinessState = "ready" | "auto" | "ask";
 export type FacetName = "colors" | "sizes" | "mockups" | "keywords" | "shipping" | "profit" | "etsy";
 

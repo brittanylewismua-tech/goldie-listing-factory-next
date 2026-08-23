@@ -673,3 +673,24 @@ test("D222: the Images page continues to Listing, not past it to Publish", async
   assert.doesNotMatch(handler, /setFinishPhase\("final"\)/, "not straight to Publish");
   assert.match(handler, /Continue to titles/);
 });
+
+test("D228: an empty colour or size selection is never written to a recipe", async () => {
+  const app = await read("app/listing-factory-app.tsx");
+
+  /* Measured on the live account across one session: Gildan Tee held five saved
+   * colours in the morning and zero by the afternoon, while the hoodie and
+   * crewneck kept theirs. A recipe with no colours is not a preference — it is a
+   * product that can no longer be used — and the loss is silent, because the
+   * card simply stops mentioning colours.
+   *
+   * Clearing a selection for the current batch stays possible. Erasing the
+   * product's saved setup does not. */
+  const unguarded = app.match(/(?<!if\(ids\.length\))void establish\(recipe,\{default(Color|Size)Ids:ids\}\)/g) || [];
+  assert.deepEqual(unguarded, [], "every write of colours or sizes must require at least one id");
+
+  assert.equal((app.match(/if\(ids\.length\)void establish\(recipe,\{defaultColorIds:ids\}\)/g) || []).length, 2);
+  assert.equal((app.match(/if\(ids\.length\)void establish\(recipe,\{defaultSizeIds:ids\}\)/g) || []).length, 2);
+
+  const readiness = await read("app/product-readiness.ts");
+  assert.match(readiness, /NEVER persist an empty colour or size selection to a recipe/);
+});
