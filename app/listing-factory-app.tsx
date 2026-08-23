@@ -1457,7 +1457,7 @@ export default function ListingFactoryApp() {
           </div>
 
           <article className={`step-card designs-step workflow-panel ${workflowStep==="setup"?"batch-design-drop":""} ${files.length ? "done" : ""} ${workflowStep==="finish"?"finish-mode":""} ${workflowStep==="designs"||(workflowStep==="finish"&&finishPhase==="details")?"active-panel":"hidden-panel"}`}>{/* D238 · Choosing the mockup SET lived on Product while the mockups it controls are generated here on Images. Same setting, two pages — the exact split that caused the keyword-bank and shipping duplication. */}<MockupSetSelector value={mockupTheme} savedValue={activeRecipe?.defaultMockupTheme||""} onChange={setMockupTheme} saving={savingProductDefault==="mockups"} onSaveDefault={()=>void saveProductDefaults({defaultMockupTheme:mockupTheme},"mockups")}/>
-            <div className="step-number">{workflowStep==="finish"?"06":"03"}</div>
+            <div className="step-number" aria-hidden="true"/>
             <div className="step-content">
               <div className="step-heading"><div><p className="mini-label">{workflowStep==="finish"?"TITLES, TAGS + DESCRIPTIONS":"DESIGNS FOR THIS BATCH"}</p><div className="heading-with-help"><h2>{workflowStep==="finish"?"Finish titles, tags, and descriptions":"Drop your designs here"}</h2></div></div>{files.length > 0 && workflowStep==="finish" && <span className="done-mark">✓ {files.length} listings</span>}</div>
               <p className="step-copy">{workflowStep==="finish"?"Create titles and matching tags, review each listing, and confirm the description shared across the batch.":`Build one focused batch of up to ${batchDesignLimit} finished designs. Upload a folder or select individual images.`}</p>
@@ -1515,7 +1515,7 @@ export default function ListingFactoryApp() {
             on one screen as intended. It stays an explicit button rather than something
             Continue does silently, because creating drafts spends listing quota. */}
         <aside className={`launch-panel workflow-panel ${workflowStep==="designs"&&!complete?"active-panel":"hidden-panel"}`}>
-          <div className={`step-number launch-step-icon create-drafts-icon`}>{String(progressIndex+1).padStart(2,"0")}</div>
+          <div className={`step-number launch-step-icon create-drafts-icon`} aria-hidden="true"/>
           <div className="launch-top">
             <Image src="/goldie-g.png" width={2000} height={2000} alt="" className="goldie-g" />
             {(running||workflowStep!=="review")&&<h2>{running ? `${processed} of ${runTotal} complete` : complete ? "Drafts created" : "Create your Printify drafts"}</h2>}

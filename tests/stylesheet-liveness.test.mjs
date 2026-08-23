@@ -70,3 +70,27 @@ test("no stylesheet has an orphaned selector list", async () => {
   assert.deepEqual(orphans, [], `a selector list is missing its declaration block, so it is
 absorbing the next rule:\n${orphans.join("\n")}`);
 });
+
+/* D244 · A card's icon must follow the class that says what the card IS, never
+   its position among siblings. `.step-card:first-child>.step-number:after`
+   outranked every semantic rule because :first-child adds specificity, so the
+   four-page restructure silently handed each card the previous occupant's icon.
+   Positional selectors are how markup moves break styling without any rule
+   going dead — the liveness test above cannot see this, because every class
+   involved is real. */
+test("no icon is chosen by DOM position", async () => {
+  const offenders = [];
+  for (const file of await readdir(new URL("app/", root))) {
+    if (!file.endsWith(".css")) continue;
+    const css = (await readFile(new URL(`app/${file}`, root), "utf8"))
+      .replace(/\/\*[\s\S]*?\*\//g, "");
+    for (const [rule] of css.matchAll(/[^{}]+\{[^}]*\}/g)) {
+      const sel = rule.slice(0, rule.indexOf("{"));
+      if (!/step-number:after|:after\{[^}]*mask-image/.test(rule)) continue;
+      if (/:(?:first-child|last-child|nth-child|nth-of-type|first-of-type)/.test(sel))
+        offenders.push(`${file}: ${sel.trim()}`);
+    }
+  }
+  assert.deepEqual(offenders, [], `these icons are picked by position, so moving a
+card changes its meaning:\n${offenders.join("\n")}`);
+});
