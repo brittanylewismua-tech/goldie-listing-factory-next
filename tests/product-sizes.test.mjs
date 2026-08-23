@@ -840,3 +840,18 @@ test("a card picker always opens on the choices — D312", async () => {
   assert.match(app, /unless you save them as the product default/,
     "the non-card head still describes a real, manual save");
 });
+
+/* D315 · "Match Printify template" existed on sizes and not on colours, though
+   both option types carry templateEnabled and both rows already offer the
+   Printify shortcut. One capability, present in one panel and missing from the
+   other. D213's rule holds for the new one too: an empty template matches
+   nothing rather than quietly selecting the whole blueprint. */
+test("both pickers can match the Printify template — D315", async () => {
+  const app = await read("app/listing-factory-app.tsx");
+  assert.equal((app.match(/Match Printify template<\/button>/g) || []).length, 2,
+    "colours and sizes each offer it");
+  assert.match(app, /colorOptions\|\|\[\]\)\.filter\(color=>color\.available&&color\.templateEnabled\)/);
+  assert.match(app, /sizeOptions\|\|\[\]\)\.filter\(size=>size\.available&&size\.templateEnabled\)/);
+  assert.doesNotMatch(app, /Matching Printify-cost groups still share one price/,
+    "D314 · the whole-number confirmation must not explain interface mechanics");
+});

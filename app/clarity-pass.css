@@ -1963,12 +1963,24 @@ body:has(.management-nav) .usage-card h2{
 
 /* D311 · The saved-state line that replaced the redundant save button in the
    card. It reports; it is not a control, so it must not look like one. */
+/* D313 · Measured on the deployed panel: 8px above the text, 17px below. The
+   parent is a flex row, so this span STRETCHED to the height of the buttons
+   beside it while its own content stayed pinned at the top — padding alone
+   cannot centre anything in a stretched flex item. It centres its own content
+   now and matches the buttons' height, so it sits on their baseline instead of
+   floating in a taller pill. */
 .app-shell .default-saved-state{
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  align-self:center!important;
+  min-height:38px!important;
   margin-left:auto!important;
-  padding:9px 13px!important;
+  padding:0 15px!important;
   border-radius:999px!important;
   color:#75576b!important;
   font:800 11px/1 "Manrope",system-ui,sans-serif!important;
+  white-space:nowrap!important;
 }
 .app-shell .default-saved-state.saved{
   background:#e8f5ec!important;
