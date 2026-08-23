@@ -2153,7 +2153,13 @@ test("reports published listings instead of workflow completion (fixes D88)",asy
   const page=await readFile(new URL("../app/batches/page.tsx",import.meta.url),"utf8");
   const app=await readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8");
   assert.match(api,/published_count:Math\.max\(0,Number\(state\.batchReceipt\?\.publishedCount\)\|\|0\)/);
-  assert.match(page,/DRAFTS READY · 0 PUBLISHED/);
+  /* D225 · "DRAFTS READY" was the fallback for every unpublished batch, whether
+     or not a draft existed. Measured across all 17 saved batches: none had a
+     draft in its snapshot and all 17 claimed drafts were ready. The label now
+     counts them, and says so plainly when there are none. */
+  assert.match(api,/draft_count:\(state\.drafts\|\|\[\]\)\.length/);
+  assert.match(page,/\$\{batch\.draft_count\} \$\{batch\.draft_count===1\?"DRAFT":"DRAFTS"\} READY · 0 PUBLISHED/);
+  assert.match(page,/SAVED · NOT YET DRAFTED/);
   assert.doesNotMatch(page,/status\.replace\("_"," "\)/);
   assert.match(app,/keptAsDrafts,batchReceipt\}/);
   assert.match(app,/keptAsDrafts,batchReceipt\]\);/);
