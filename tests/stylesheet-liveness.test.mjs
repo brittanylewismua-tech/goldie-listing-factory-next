@@ -49,3 +49,24 @@ test("clarity-pass.css never styles markup that no longer exists", async () => {
   assert.deepEqual(dead, [],
     `these classes are styled but never rendered — delete the rules or fix the selector: ${dead.join(", ")}`);
 });
+
+/* D236 · An orphaned selector list is invisible and contagious. D234 removed a
+   rule's declaration block and left `a, b, c,` with a trailing comma; the next
+   rule's selector joined that list, so three panels silently took
+   `overflow:visible` and the rule below was applied to elements it was never
+   written for. A blank line inside a selector list is never deliberate. */
+test("no stylesheet has an orphaned selector list", async () => {
+  const orphans = [];
+  for (const file of await readdir(new URL("app/", root))) {
+    if (!file.endsWith(".css")) continue;
+    const raw = await readFile(new URL(`app/${file}`, root), "utf8");
+    const bare = raw.replace(/\/\*[\s\S]*?\*\//g, "\n");
+    for (const chunk of bare.split("}")) {
+      const head = chunk.slice(0, chunk.indexOf("{"));
+      if (chunk.indexOf("{") === -1 || !head.includes(",")) continue;
+      if (/,\s*\n\s*\n/.test(head)) orphans.push(`${file}: ${head.trim().split("\n")[0]} …`);
+    }
+  }
+  assert.deepEqual(orphans, [], `a selector list is missing its declaration block, so it is
+absorbing the next rule:\n${orphans.join("\n")}`);
+});

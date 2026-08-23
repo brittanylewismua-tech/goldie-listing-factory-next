@@ -412,7 +412,11 @@
  * caption auto-placed into the 340px column, so the pictures were squeezed into
  * two columns while the right-hand half of the card sat empty and the "8 of 8
  * selected" note floated beside them instead of underneath. Both span. */
-.app-shell .product-mockup-scenes,
+/* D236 · `.product-mockup-scenes` used to hang off the front of the D179 rule
+   below on a trailing comma, so it received D179's `grid-template-columns`
+   instead of the span D138 asked for ("Both span"). The template it was handed
+   is overridden eight lines further down anyway, so the fused selector did
+   nothing except hide the fact that the span was never written. */
 /* D179 · The mockup block is a two-column grid (minmax(0,1fr) minmax(210px,290px)).
    When there is no mockup set the right column holds only the 17px
    "Create or edit mockup sets" link, leaving ~290px of dead space through the
@@ -422,6 +426,7 @@
 .app-shell .mockup-default-block>small{grid-column:1/-1!important}
 .app-shell .product-mockup-scenes{
   display:grid!important;
+  grid-column:1/-1!important;  /* D138's "both span", finally written down */
   grid-template-columns:repeat(auto-fill,minmax(132px,1fr))!important;
   gap:12px!important;
   width:100%!important;
@@ -950,12 +955,11 @@
   .app-shell .batch-product-row{grid-template-columns:22px minmax(0,1fr);row-gap:6px}
   .app-shell .row-value,.app-shell .row-shortcut,.app-shell .row-open{grid-column:2}
 }
-/* An opened control sits inside the card, stripped of its own card chrome. */
-.app-shell .batch-product-card .product-color-selector,
-.app-shell .batch-product-card .product-size-selector,
-.app-shell .batch-product-card .mockup-default-block,
-
-
+/* D236 · This selector list was orphaned by D234 — its declaration block was
+   removed and the trailing comma swallowed the D186 rule below, so these three
+   panels were silently taking `overflow:visible` instead of any padding, and
+   D186's tile rule was being applied to them too. The panel shell now lives in
+   one place at the end of this file. */
 /* D186 · The saved-product tile is a 4-column grid whose columns size to content:
  * 102px "Change product" + 46px Edit + 37px Delete + 20px gaps = 205px in a 207px
  * card, so Delete touched the edge and overflow:hidden cut it.
@@ -1297,12 +1301,6 @@
    1px from the right. Second time a selector in this file has described a DOM
    that had already moved (see D211) — so these are descendant selectors, which
    survive the panel being renested. */
-.app-shell .batch-product-card .product-color-selector,
-.app-shell .batch-product-card .product-size-selector{
-  padding:16px!important;
-  border-top:1px solid rgba(139,89,137,.14)!important;
-  background:rgba(255,255,255,.4)!important;
-}
 /* The action buttons inside those panels sit on the panel's padding, not the
    card edge. */
 .app-shell .batch-product-card .product-color-selector>*:last-child,
@@ -1410,4 +1408,65 @@
   font-weight: 800 !important;
   letter-spacing: .12em !important;
   text-transform: uppercase !important;
+}
+
+/* ============================================================================
+ * D236 · ONE HEADING SCALE, ONE PANEL SHELL
+ *
+ * Measured on the live product page: TEN distinct heading styles on a single
+ * screen, against the five D233 allows. The colour panel was the worst of it —
+ * it wore CARD TITLE (22px DM Serif) for what is structurally a GROUP, inside a
+ * card that already had a title, directly under a row that already said
+ * "Colors". Three names for one thing, in three type styles.
+ *
+ * Pricing was already correct (15px/800 Manrope group titles, 22px inset). So
+ * the fix is to make everything else match PRICING, not to invent a sixth style.
+ * ========================================================================== */
+.app-shell{
+  --panel-pad:22px;      /* = .item-pricing-section padding */
+  --panel-radius:18px;   /* = .item-pricing-section radius  */
+}
+
+/* CARD TITLE · the product name was Fraunces 18/650 — a fourth family, and
+   smaller than the panel heading nested two levels inside it. */
+.app-shell .bundle-product-id>b{
+  font:400 22px/1.15 "DM Serif Display",Georgia,serif!important;
+  color:#4c293f!important;
+}
+
+/* GROUP TITLE · any panel heading that survives (bundle context, no-colors
+   fallback) drops from card-title size to the pricing group-title style. */
+.app-shell .color-selector-head h3,
+.app-shell .size-selector-head h3,
+.app-shell .product-color-selector.no-colors h3{
+  font:800 15px/1.3 "Manrope",system-ui,sans-serif!important;
+  color:#4c293f!important;
+}
+
+/* HELP TEXT · the one line a panel is allowed to say about itself in-card.
+   Documented as the sixth entry in the D233 scale rather than left ad hoc. */
+.app-shell .panel-help{
+  margin:0 0 14px!important;
+  color:#75576b!important;
+  font:500 12px/1.5 "Manrope",system-ui,sans-serif!important;
+}
+
+/* EYEBROW · 11/700 in the top nav, 10/800 everywhere else. */
+.app-shell .top-nav b:first-child{font-size:10px!important;font-weight:800!important}
+
+/* The nav carried two serif sizes for peer items: "Usage + Plan" at 19px next to
+   the 18px wordmark. Selector taken from the live DOM, not guessed — the first
+   attempt invented two class names that render nowhere, which the liveness test
+   caught before this shipped. */
+.app-shell .approved-usage>b{font-size:18px!important}
+
+/* PANEL SHELL · the in-card panel is an inset surface with the same padding and
+   radius as a pricing section, so the two read as the same kind of object. */
+.app-shell .batch-product-card .product-color-selector,
+.app-shell .batch-product-card .product-size-selector{
+  padding:var(--panel-pad)!important;
+  margin:0 var(--panel-pad) var(--panel-pad)!important;
+  border:1px solid rgba(139,89,137,.14)!important;
+  border-radius:var(--panel-radius)!important;
+  background:rgba(255,255,255,.4)!important;
 }

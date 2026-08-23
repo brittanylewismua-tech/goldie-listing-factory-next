@@ -176,7 +176,13 @@ test("the size block is stripped in every context the colour block is — D168",
    * a detached white box inset 16px inside a transparent section.
    * After: both contexts measure identical width and left edge. */
   assert.match(globals, /\.bundle-color-product \.product-size-selector\{width:100%;margin:0;padding:15px\}/);
-  assert.match(globals, /\.saved-product-batch-page \.product-size-selector\{width:100%;margin:0;border:0;box-shadow:none;background:transparent;padding:0\}/);
+  /* D236 · This rule flattens the panel's own card chrome because the panel now
+     sits on a surface that already has chrome. It must NOT also zero the
+     padding: that is what left the colour grid flush to the card edge for
+     three deploys running. Padding has exactly one owner, in clarity-pass. */
+  assert.match(globals, /\.saved-product-batch-page \.product-size-selector\{width:100%;margin:0;border:0;box-shadow:none;background:transparent\}/);
+  assert.doesNotMatch(globals, /\.saved-product-batch-page \.product-size-selector\{[^}]*padding/,
+    "a panel must never be stripped of its padding");
   assert.match(clarity, /\.app-shell \.saved-product-batch-page \.product-size-selector,\s*\n\.app-shell \.bundle-color-product \.product-size-selector\{[^}]*border-top:1px solid/,
     "Stripped of its own card, the size block needs a divider or it runs into the colour actions.");
 });
@@ -403,9 +409,9 @@ test("opening a facet shows the choices, not a summary — D187", async () => {
    * Wiring the card with `remembered` meant clicking the Colours chip produced a
    * collapsed summary you had to click again, captioned with a last batch that
    * never happened. Opening the chip IS the request to choose. */
-  assert.doesNotMatch(app, /onRemember=\{\(\)=>\{\}\} remembering=\{false\} remembered\/>/,
+  assert.doesNotMatch(app, /onRemember=\{\(\)=>\{\}\} remembering=\{false\} remembered[ /]/,
     "The card's pickers must open expanded.");
-  assert.equal((app.match(/onRemember=\{\(\)=>\{\}\} remembering=\{false\} remembered=\{false\}\/>/g) || []).length, 2);
+  assert.equal((app.match(/onRemember=\{\(\)=>\{\}\} remembering=\{false\} remembered=\{false\} inCard\/>/g) || []).length, 2);
 });
 
 test("a suggestion is never displayed as a decision — D189/D191", async () => {
