@@ -1864,48 +1864,22 @@ body:has(.management-nav) .usage-card h2{
 .app-shell .size-selector-actions button:last-child{margin-right:4px!important}
 
 /* ============================================================================
- * D308 · A NARROW DESKTOP WINDOW IS STILL A DESKTOP
+ * D316 · A DESKTOP APP HOLDS ITS LAYOUT AND SCROLLS — REPLACES D308
  *
- * D307 stopped the mobile gate from firing on width alone. That exposes the
- * narrow layout underneath it, which had never been reachable and so had never
- * been right: below 820px `.topbar` was set to display:none, which removes the
- * ONLY navigation — no Batch History, no Keyword Banks, no Usage.
+ * D308 tried to reflow the app for narrow windows: shrink the rail, then lay it
+ * across the top. I could not reach a narrow viewport to look at it, and it
+ * shipped broken — the rail became a full-width stack that pushed the actual
+ * page below the fold. Inventing a layout I cannot see is how that happens.
  *
- * The rail is 288px fixed at left:0 with the shell padded to match, so the two
- * numbers have to move together at every step.
+ * The standard answer for a tool built at a fixed desktop width is not to
+ * reflow at all: give the shell a min-width and let the window scroll. The
+ * layout stays exactly as designed at every window size, nothing rearranges,
+ * and there is nothing new for me to have got wrong. The mobile gate from D307
+ * still catches real touch devices, which is where a different layout genuinely
+ * belongs.
  * ========================================================================== */
-@media (max-width:1180px){
-  .app-shell{padding-left:214px!important}
-  .app-shell .topbar{width:214px!important;padding-inline:14px!important}
-  .app-shell .top-nav a{font-size:12px!important}
-}
-
-/* Below 820px on a real pointer the rail lies down across the top instead of
-   disappearing, so every destination stays reachable. */
-@media (max-width:820px) and (pointer:fine){
-  .app-shell{padding-left:0!important}
-  .app-shell .topbar{
-    display:flex!important;
-    position:static!important;
-    width:100%!important;
-    height:auto!important;
-    flex-flow:row wrap!important;
-    align-items:center!important;
-    gap:10px 16px!important;
-    padding:12px 16px!important;
-    border-right:0!important;
-    border-bottom:1px solid rgba(91,48,79,.16)!important;
-  }
-  .app-shell .top-nav{flex-flow:row wrap!important;gap:8px 14px!important;margin:0!important}
-  .app-shell .brand-lockup{margin:0 auto 0 0!important}
-  .app-shell .approved-sidebar-footer{flex:1 1 100%!important;margin-top:4px!important}
-  .app-shell .workspace{padding-inline:16px!important}
-  /* The step rail was still sized for the retired nine-step flow. */
-  .app-shell .workflow-progress{
-    grid-template-columns:repeat(var(--rail-count,4),minmax(64px,1fr))!important;
-    overflow-x:auto!important;
-  }
-}
+.app-shell{min-width:1180px!important}
+html,body{overflow-x:auto!important}
 
 /* ============================================================================
  * D309 · CENTRED CARD HEADERS — SUPERSEDES THE ALIGNMENT IN D249 / D279 / D287
@@ -1985,4 +1959,28 @@ body:has(.management-nav) .usage-card h2{
 .app-shell .default-saved-state.saved{
   background:#e8f5ec!important;
   color:#276543!important;
+}
+
+/* D317 · The fee row measured a 0px gap to the price list above it — it sat
+   flush against the card. D303 removed the <details> that used to wrap it and
+   left the bare row behind, so it lost the wrapper's spacing along with the
+   prose. Removing a container has to carry its spacing forward. */
+.app-shell .fee-profile-summary{
+  margin-top:18px!important;
+  padding-top:16px!important;
+  border-top:1px solid rgba(91,48,79,.12)!important;
+  gap:10px!important;
+  flex-wrap:wrap!important;
+  align-items:center!important;
+}
+
+/* D317b · Swept every block sitting flush against its previous sibling. Most
+   were intentional — a panel attached to its own row, a disclosure body under
+   its summary that already carries padding. Two were not: these open directly
+   against the summary with no separation at all. */
+.app-shell .individual-variant-list,
+.app-shell .international-rate-list{
+  margin-top:12px!important;
+  padding-top:12px!important;
+  border-top:1px solid rgba(91,48,79,.12)!important;
 }
