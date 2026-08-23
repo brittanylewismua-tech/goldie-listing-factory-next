@@ -899,3 +899,29 @@ test("step 1 keeps one title in both states — D322", async () => {
   assert.equal((app.match(/title: "Choose product"/g) || []).length, 2,
     "both branches of step 1 use the name the rail already uses");
 });
+
+/* D324 · Twice now the pricing section has shown prices that do not meet the
+   profit goal beside it. First because nothing ever calculated them (D320 —
+   they were the Printify template's own prices). Then because the calculation
+   ran ONCE, at whatever the target happened to be at that moment, and a later
+   change to the goal did not recompute: $31.59 cost under a $10 goal showed
+   $55.84, which is exactly a $18.50 target.
+
+   The invariant: while pricing is unapproved and untouched, the prices ARE the
+   goal's output and must follow it. */
+test("unapproved prices follow the profit goal — D324", async () => {
+  const app = await read("app/listing-factory-app.tsx");
+
+  assert.match(app, /if\(!variants\.length\|\|approved\|\|manualPriceEdit\.current\)return;/,
+    "recalculation stops at approval or a hand-edited price, and nowhere else");
+  assert.match(app, /\},\[variants,approved,pricing,prices\]\);/,
+    "it must re-run when the goal changes, not once per variant set");
+  assert.match(app, /function changeCostGroupPrice\(cost:number,cents:number\)\{manualPriceEdit\.current=true;/,
+    "editing a price by hand must stop the goal overwriting it");
+
+  /* The arithmetic the effect leans on, checked directly. */
+  const price = (31.59 + 10 + 0.45) / (1 - 0.095);
+  const profit = price - 31.59 - price * 0.095 - 0.45;
+  assert.equal(price.toFixed(2), "46.45");
+  assert.equal(profit.toFixed(2), "10.00");
+});
