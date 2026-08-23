@@ -385,9 +385,29 @@ test("shipping, profit and Etsy details are per-product facts — D183", async (
      computed from them. Keeping them on the card too put two controls for one
      value on one screen. */
   assert.match(app, /const inCard=\["colors","sizes"\]\.includes\(facet\.name\);/);
-  assert.match(app, /const block=document\.querySelector<HTMLDetailsElement>\("\.everything-else"\);/);
-  assert.match(app, /block\.open=true;block\.scrollIntoView\(\{block:"start"\}\)/,
-    "Etsy details still opens its block, and must bring it into view.");
+/* D237 · This used to assert the row handler opened `.everything-else`. D232
+     deleted that block, so the assertion was pinning a querySelector that could
+     only ever return null — five dead buttons per card, and a test that called
+     it correct. Assert the destinations RESOLVE instead: every facet must point
+     at a step and a selector that is really rendered somewhere in the app. */
+  const table = app.slice(app.indexOf("export const FACET_DESTINATION"));
+  const rows = [...table.slice(0, table.indexOf("};")).matchAll(
+    /(\w+):\{step:"(\w+)",selector:"\.([\w-]+)"\}/g)];
+  assert.ok(rows.length >= 5, "every non-in-card facet needs a destination");
+  for (const [, facet, step, cls] of rows) {
+    assert.ok(["setup", "designs", "finish"].includes(step), `${facet} -> unknown step ${step}`);
+    assert.ok(app.includes(`"${cls}`) || app.includes(`${cls}"`) || app.includes(`${cls} `),
+      `${facet} points at .${cls}, which is rendered nowhere`);
+  }
+  assert.doesNotMatch(app, /querySelector<[^>]*>\("\.everything-else"\)|querySelector\("\.everything-else"\)/,
+    "nothing may look up the block D232 deleted");
+  /* The destination no longer has to be a <details> to open — the settings live
+     on their own steps now — but it must still be brought into view, or the row
+     appears to do nothing even when the navigation worked. */
+  assert.match(app, /block\.scrollIntoView\(\{block:"start"\}\)/,
+    "a facet row must bring its destination into view");
+  assert.match(app, /if\(dest\.step!==workflowStep\)goToStep\(dest\.step\)/,
+    "and must switch steps when the destination lives on another one");
 });
 
 test("the product step does not also collect designs — D184", async () => {

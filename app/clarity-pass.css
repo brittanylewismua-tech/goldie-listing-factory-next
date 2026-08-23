@@ -1470,3 +1470,16 @@
   border-radius:var(--panel-radius)!important;
   background:rgba(255,255,255,.4)!important;
 }
+
+/* D243 · Two heading styles still off the D233 scale, measured on the deployed
+   page rather than assumed: the sidebar wordmark eyebrow at 11px/700 (scale says
+   10/800) and a numbered sub-heading inside the shipping editor at 11px/400 —
+   sitting as a peer to the 15px/800 numbered headings it shares a card with. */
+.app-shell .goldie-wordmark-lockup>b{font-size:10px!important;font-weight:800!important}
+/* The app contains exactly one <h5> (the shipping editor's step 2). Targeting
+   the tag is honest; the three wrapper classes I guessed at first render
+   nowhere, which the liveness test caught before this shipped. Again. */
+.app-shell h5{
+  font:800 15px/1.3 "Manrope",system-ui,sans-serif!important;
+  color:#4c293f!important;
+}
