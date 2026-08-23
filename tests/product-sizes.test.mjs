@@ -1032,3 +1032,21 @@ test("every bundle product gets its own pricing card — D332", async () => {
   assert.match(app, /role=\{inCard\?"button":undefined\}/,
     "the row itself opens its panel, not only the Change button");
 });
+
+/* D335 · The Printify link is the source of truth for a saved product — it is
+   what Goldie verifies, and what the name is derived from. It used to sit BELOW
+   a name field, so the seller had to invent a name before Goldie knew what the
+   product was. Link first, name filled in from the verified Printify brand and
+   model, and still editable. */
+test("the Printify link comes before the product name — D335", async () => {
+  const tools = await read("app/factory-tools.tsx");
+  const link = tools.indexOf("<span>Printify product link</span>");
+  const name = tools.indexOf("<span>Product name</span>");
+  assert.ok(link >= 0 && name >= 0);
+  assert.ok(link < name, "the link is pasted first; the name comes from it");
+
+  /* The auto-name must stay overridable — a manual edit has to survive a
+     re-verify, which is what nameTouched guards. */
+  assert.match(tools, /if\(nameTouched\.current\|\|editingId\|\|!props\.suggestedProductName\)return;/);
+  assert.match(tools, /setName\(props\.suggestedProductName\);/);
+});
