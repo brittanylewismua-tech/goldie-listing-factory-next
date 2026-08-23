@@ -233,7 +233,10 @@ function ProductColorSelector({product,selected,onChange,onRemember,remembering,
                    carry templateEnabled and the row shortcut offers it for both. Same
                    capability, one panel had the control and the other did not. Follows
                    D213: if the template enables nothing, match nothing rather than
-                   quietly selecting the whole blueprint. */onChange(templateColors)}}>Match Printify template</button><button type="button" onClick={()=>onChange([])}>Clear all</button>{selected.length>0&&<button type="button" onClick={()=>setExpanded(false)}>Done choosing colors</button>}{inCard?<span className={`default-saved-state${remembered?" saved":""}`}>{/* D311 · In the card these choices are already written to the product the
+                   quietly selecting the whole blueprint. */onChange(templateColors)}}>Match Printify template</button><button type="button" onClick={()=>onChange([])}>Clear all</button>{/* D318 · "Done choosing colors" existed on colours and not on sizes, and it
+                  collapsed the panel back to a summary — which the row's own Close
+                  button already does, for both. One job, two controls, and only on
+                  one of the two pickers. */}{inCard?<span className={`default-saved-state${remembered?" saved":""}`}>{/* D311 · In the card these choices are already written to the product the
                   moment they change — that is what establish() does, and it is the
                   behaviour Brittany prefers. Leaving a "Save these as this product's
                   default colors" button next to it asked for a click that was never
@@ -255,7 +258,9 @@ function ProductSizeSelector({product,selected,onChange,onRemember,remembering,r
                    template had none enabled, so a button reading "Match Printify
                    template" quietly selected the whole blueprint. If there is
                    nothing to match, match nothing and let the seller choose. */
-                onChange(templateSizes)}}>Match Printify template</button>{inCard?<span className={`default-saved-state${remembered?" saved":""}`}>{remembered?"✓ Saved as this product’s default":"Saving…"}</span>:<button type="button" className={remembered?"remembered":""} disabled={!selected.length||remembering||remembered} onClick={onRemember}>{remembering?"Saving…":remembered?"✓ Saved for this product":"Save these as this product’s default sizes"}</button>}</div>
+                onChange(templateSizes)}}>Match Printify template</button><button type="button" onClick={()=>onChange([])}>Clear all</button>{/* D318 · Colours had Clear all and sizes did not. Both pickers now offer the
+                  same three actions in the same order: Select all available,
+                  Match Printify template, Clear all. */}{inCard?<span className={`default-saved-state${remembered?" saved":""}`}>{remembered?"✓ Saved as this product’s default":"Saving…"}</span>:<button type="button" className={remembered?"remembered":""} disabled={!selected.length||remembering||remembered} onClick={onRemember}>{remembering?"Saving…":remembered?"✓ Saved for this product":"Save these as this product’s default sizes"}</button>}</div>
     {!selected.length&&<p className="size-required" role="alert">Choose at least one size before continuing.</p>}
   </section>
 }

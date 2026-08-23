@@ -855,3 +855,21 @@ test("both pickers can match the Printify template — D315", async () => {
   assert.doesNotMatch(app, /Matching Printify-cost groups still share one price/,
     "D314 · the whole-number confirmation must not explain interface mechanics");
 });
+
+/* D318 · The colour and size pickers do the same job and kept drifting apart —
+   "Match Printify template" on sizes only (D315), "Done choosing colors" and
+   "Clear all" on colours only. Pin the pair together so the next change to one
+   has to be made to both. */
+test("the colour and size pickers offer the same actions — D318", async () => {
+  const app = await read("app/listing-factory-app.tsx");
+  const actions = (cls) => {
+    const seg = app.slice(app.indexOf(`className="${cls}"`));
+    return [...seg.slice(0, 1600).matchAll(/>([A-Z][^<{>]{3,44})<\/button>/g)].map((m) => m[1]);
+  };
+  assert.deepEqual(actions("size-selector-actions"), actions("color-selector-actions"),
+    "both pickers must offer the same actions in the same order");
+
+  /* "Done choosing colors" collapsed the panel — a job the row's Close button
+     already does for both pickers. */
+  assert.doesNotMatch(app, /onClick=\{\(\)=>setExpanded\(false\)\}>Done choosing/);
+});
