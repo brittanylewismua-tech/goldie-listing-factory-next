@@ -269,8 +269,12 @@ test("every setting a batch needs is a facet on the card — D182", async () => 
      each in ONE place, just not all on this card. */
   for (const facet of ["colors", "sizes"])
     assert.match(app, new RegExp(`open==="${facet}"&&`), `${facet} must open from the card`);
-  assert.doesNotMatch(app, /open==="shipping"&&/, "shipping lives in the pricing panel");
-  assert.doesNotMatch(app, /open==="profit"&&/, "so does the profit goal");
+  /* D334 · Colours, sizes, pricing and shipping are now four panels on the ONE
+     product card, because in a bundle the risk is losing track of which product
+     you are configuring. Every decision for a product lives in that product's
+     card; moving to the next card is moving to the next product. */
+  for (const facet of ["profit", "shipping"])
+    assert.match(app, new RegExp(`open==="${facet}"&&`), `${facet} must open from the card too`);
   assert.doesNotMatch(app, /open==="mockups"&&/, "mockups belong to the Images page");
   assert.doesNotMatch(app, /open==="keywords"&&/, "the keyword bank belongs to the Listing page");
   assert.doesNotMatch(app, /className="saved-settings-summary"/,
@@ -394,7 +398,7 @@ test("shipping, profit and Etsy details are per-product facts — D183", async (
      profit goal and the shipping profile, because the per-variant prices are
      computed from them. Keeping them on the card too put two controls for one
      value on one screen. */
-  assert.match(app, /const inCard=\["colors","sizes"\]\.includes\(facet\.name\);/);
+  assert.match(app, /const inCard=\["colors","sizes","profit","shipping"\]\.includes\(facet\.name\);/);
 /* D237 · This used to assert the row handler opened `.everything-else`. D232
      deleted that block, so the assertion was pinning a querySelector that could
      only ever return null — five dead buttons per card, and a test that called
@@ -583,7 +587,7 @@ test("D209: every readiness row that offers to open, opens in the card", async (
      profit goal and the shipping profile, because the per-variant prices are
      computed from them. Keeping them on the card too put two controls for one
      value on one screen. */
-  assert.match(app, /const inCard=\["colors","sizes"\]\.includes\(facet\.name\);/);
+  assert.match(app, /const inCard=\["colors","sizes","profit","shipping"\]\.includes\(facet\.name\);/);
 
   // Both new panels render inside the card, scoped to the row's own recipe.
   /* D223 · These two moved into the pricing panel below the card. */
@@ -1004,8 +1008,11 @@ test("every bundle product gets its own pricing card — D332", async () => {
 
   assert.match(app, /function variantsFor\(details:TemplateDetails\|null\|undefined,colorIds:number\[\],sizeIds:number\[\]\)/,
     "the variant filter must take a product rather than close over the active one");
-  assert.match(app, /bundleSelected&&bundleRecipes\.filter\(recipe=>recipe\.id!==activeRecipe\?\.id\)\.map\(/,
-    "the other products each get a card");
+  /* D334 · These started as separate cards below the product cards, which split a
+     product's colours from its prices. They are panels on the product's own card
+     now, so the assertion is that the pricing panel is built per recipe. */
+  assert.match(app, /const pricingPanelFor=\(which:"prices"\|"shipping"\)=>\{/,
+    "each product card builds its own pricing and shipping panels");
   for (const [state, why] of [
     ["bundlePrices", "prices"],
     ["bundlePricing", "profit goal"],
@@ -1018,5 +1025,10 @@ test("every bundle product gets its own pricing card — D332", async () => {
   assert.match(app, /void establish\(recipe,\{etsyShippingProfileId:value\}\)/);
 
   /* One panel at a time: only the first product opens. */
-  assert.match(app, /openFacet\[recipe\.id\]\?\?\(index===0\?\["colors","sizes"\]:\[\]\)/);
+  /* D334 · With four panels on the card, only the FIRST panel of the FIRST
+     product opens. Everything else is one click away, so selecting a bundle
+     never lands you in three open colour grids. */
+  assert.match(app, /openFacet\[recipe\.id\]\?\?\(index===0\?\["colors"\]:\[\]\)/);
+  assert.match(app, /role=\{inCard\?"button":undefined\}/,
+    "the row itself opens its panel, not only the Change button");
 });
