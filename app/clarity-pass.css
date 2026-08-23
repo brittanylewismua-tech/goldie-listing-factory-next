@@ -1756,3 +1756,19 @@ body:has(.management-nav) .usage-card h2{
    title with no separation, unlike every other card title + help pair. */
 .pricing-profile h2{margin-bottom:6px!important}
 .pricing-profile h2+p{margin-top:0!important;line-height:1.6!important}
+
+/* D290 · The Printify photo grid holds up to 48 tiles per listing and the
+   images are loading="lazy", so scrolling shows a wall of empty boxes that
+   reads as broken until each one fetches. Measured: 72 of 144 unfetched below
+   the fold — nothing failing, just nothing drawn. A tinted tile with a slow
+   shimmer says "arriving" instead of "missing". */
+.app-shell .printify-photo-selector{
+  background:linear-gradient(100deg,rgba(244,228,244,.55) 30%,rgba(255,255,255,.75) 50%,rgba(244,228,244,.55) 70%)!important;
+  background-size:220% 100%!important;
+  animation:goldie-tile-wait 1.6s ease-in-out infinite!important;
+}
+.app-shell .printify-photo-selector:has(img[src]){animation:none!important;background:none!important}
+@keyframes goldie-tile-wait{0%{background-position:120% 0}100%{background-position:-20% 0}}
+@media (prefers-reduced-motion:reduce){
+  .app-shell .printify-photo-selector{animation:none!important}
+}
