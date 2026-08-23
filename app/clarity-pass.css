@@ -1483,3 +1483,49 @@
   font:800 15px/1.3 "Manrope",system-ui,sans-serif!important;
   color:#4c293f!important;
 }
+
+/* ============================================================================
+ * D249 · CARD HEADERS ALL POINT THE SAME WAY
+ *
+ * Measured across Listing and Publish: every card built on `.step-heading`
+ * centres its eyebrow, title and help text, while product cards, pricing
+ * sections and every panel D236 touched are left-aligned. So the same object —
+ * a card header — reads two different ways depending which page it is on.
+ *
+ * Left is the one that matches the rest of the app, including the page title
+ * and the rail, so the centred ones move.
+ * ========================================================================== */
+.app-shell .step-heading,
+.app-shell .step-heading>div,
+.app-shell .step-heading .heading-with-help,
+.app-shell .step-copy,
+.app-shell .final-review .step-content>p{
+  text-align:left!important;
+  justify-content:flex-start!important;
+}
+.app-shell .step-heading{align-items:flex-start!important}
+
+/* The step icon was centred above the title as part of that block; with a
+   left-aligned header it belongs on the same axis as everything else. */
+.app-shell .step-card>.step-number{margin-left:0!important;align-self:flex-start!important}
+
+/* D250 · Status was drawn with literal "✓" and "!" characters typed into the
+   sentence ("! One or more titles need review"). Everywhere else in the app a
+   status is a `.row-mark` chip. Text glyphs cannot be coloured, sized or
+   announced correctly, and "!" is not an icon. Give the checklist rows the same
+   chip treatment the product rows already use. */
+.app-shell .final-checklist>span{
+  display:grid!important;
+  grid-template-columns:18px minmax(0,1fr)!important;
+  align-items:center!important;
+  gap:10px!important;
+}
+
+/* D251 · Full-width primaries appear only on Images, Listing and Publish, and
+   on Publish the SECONDARY was full width too, giving two equally weighted
+   buttons stacked. A secondary never spans the card. */
+.app-shell .keep-drafts-button{
+  width:auto!important;
+  min-width:260px!important;
+  margin-inline:auto!important;
+}
