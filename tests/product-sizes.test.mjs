@@ -873,3 +873,29 @@ test("the colour and size pickers offer the same actions — D318", async () => 
      already does for both pickers. */
   assert.doesNotMatch(app, /onClick=\{\(\)=>setExpanded\(false\)\}>Done choosing/);
 });
+
+/* D323 · Clicking Edit on a saved product opened the form below the saved
+   bundles and the bundle disclosure — a long way from the tile that was
+   clicked, and often off screen. The form edits products, so it belongs
+   directly under them. */
+test("the product edit form renders under the products it edits — D323", async () => {
+  const tools = await read("app/factory-tools.tsx");
+  const productsGrid = tools.indexOf('className="recipe-grid"');
+  const form = tools.indexOf('className="recipe-form"');
+  const bundles = tools.indexOf("bundle-card-heading");
+  assert.ok(productsGrid >= 0 && form >= 0 && bundles >= 0);
+  assert.ok(form > productsGrid, "the form comes after the products it edits");
+  assert.ok(form < bundles, "and before the saved bundles, not after them");
+});
+
+/* D322 · Step 1 renamed itself once a product was selected — "Choose product"
+   became "Build this batch" — so the page appeared to become a different page
+   mid-step, and the new name described the whole flow rather than the step,
+   while the rail and eyebrow both still read PRODUCT. */
+test("step 1 keeps one title in both states — D322", async () => {
+  const app = await read("app/listing-factory-app.tsx");
+  assert.doesNotMatch(app, /title: "Build this batch"/,
+    "a step may not rename itself when something is selected");
+  assert.equal((app.match(/title: "Choose product"/g) || []).length, 2,
+    "both branches of step 1 use the name the rail already uses");
+});

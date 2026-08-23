@@ -1430,7 +1430,13 @@ export default function ListingFactoryApp() {
   const workflowHero = {
     connect: { eyebrow: "ACCOUNT SETUP", title: "Connect your accounts", copy: connected&&etsyConnected?"Both accounts are connected and ready.":"Connect Printify and Etsy so Goldie can build and publish your listings." },
     setup: templateDetails&&productSelected
-      ? { eyebrow: "STEP 1 OF 4", title: "Build this batch", copy: "Check each product’s colours, sizes and pricing, then continue to your designs." }
+      /* D322 · This title changed once a product was selected — "Choose product"
+         became "Build this batch" — so step 1 renamed itself mid-step and started
+         describing the whole flow rather than the step you are on, while the rail
+         and eyebrow both still read PRODUCT. The rail's own stage title is
+         "Choose product", so that is the name three places already agree on. The
+         title stays put; the copy carries the state. */
+      ? { eyebrow: "STEP 1 OF 4", title: "Choose product", copy: "Check this product’s colours, sizes and pricing, then continue to your designs." }
       : { eyebrow: "STEP 1 OF 4", title: "Choose product", copy: "Choose a saved product or connect a completed Printify product." },
     designs: { eyebrow: "STEP 2 OF 4", title: "Designs + images", copy: "Add up to 20 finished designs, then choose the photos and mockups for each listing." },
     review: { eyebrow: "STEP 3 OF 4", title: "Create Printify drafts", copy: "Goldie creates an unpublished draft in Printify for every design in this batch." },
