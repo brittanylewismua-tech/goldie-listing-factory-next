@@ -819,3 +819,22 @@ test("an in-card panel's margins are not cancelled by its width — D310", async
     "the panel must yield its width to the margins, not overflow past them");
   assert.match(block, /max-width:none!important/);
 });
+
+/* D312 · D187 fixed "opening a facet shows the choices, not a summary". D306
+   then made `remembered` true whenever the selection matches the saved default
+   — which is ALWAYS, now that selections auto-save — and `expanded` is
+   initialised from `!remembered`. So clicking Colors reopened the collapsed
+   summary and demanded a second click. Regressed the exact defect D187 names,
+   in the commit after it. In the card, opening the row IS the request. */
+test("a card picker always opens on the choices — D312", async () => {
+  const app = await read("app/listing-factory-app.tsx");
+  assert.match(app, /useState\(inCard\?true:!remembered\)/,
+    "in the card the picker opens expanded regardless of remembered");
+  assert.doesNotMatch(app, /useState\(!remembered\)/,
+    "remembered must not decide whether the grid is shown in the card");
+
+  /* And the copy must not still offer a save that now happens by itself. */
+  assert.doesNotMatch(app, /unless you save them as the product default/,
+    "auto-save means the panel cannot describe saving as optional");
+  assert.match(app, /Every change saves to this product automatically\./);
+});
