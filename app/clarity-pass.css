@@ -1041,10 +1041,10 @@
   .app-shell .row-value,.app-shell .row-shortcut,.app-shell .row-open{grid-column:2}
 }
 /* An opened control sits inside the card, stripped of its own card chrome. */
-.app-shell .batch-product-card>.product-color-selector,
-.app-shell .batch-product-card>.product-size-selector,
-.app-shell .batch-product-card>.mockup-default-block,
-.app-shell .batch-product-card>.bundle-product-keywords{
+.app-shell .batch-product-card .product-color-selector,
+.app-shell .batch-product-card .product-size-selector,
+.app-shell .batch-product-card .mockup-default-block,
+.app-shell .batch-product-card .bundle-product-keywords{
   width:100%!important;
   margin:0!important;
   padding:14px 16px!important;
@@ -1306,37 +1306,37 @@
  *
  * Measured after: panel inset 1px each side like the colour picker, select
  * 686px and 17px clear of the card edge. */
-.app-shell .batch-product-card>.row-panel{
+.app-shell .batch-product-card .row-panel{
   display:grid; gap:6px; min-width:0;
   padding:14px 16px 16px;
   border-top:1px solid rgba(139,89,137,.16);
   background:rgba(255,255,255,.42);
 }
-.app-shell .batch-product-card>.row-panel label{
+.app-shell .batch-product-card .row-panel label{
   display:grid; gap:6px; min-width:0;
   font-size:12px; font-weight:750; color:#4b283e;
 }
 /* min-width:0 and max-width are both required: a grid track sizes to the
    longest <option>, so width:100% alone does not constrain it. */
-.app-shell .batch-product-card>.row-panel select{
+.app-shell .batch-product-card .row-panel select{
   width:100%; max-width:100%; min-width:0; min-height:40px;
   padding:8px 12px;
   border:1px solid rgba(139,89,137,.3);
   border-radius:10px;
   background:#fff; color:#3f2338; font-size:13px;
 }
-.app-shell .batch-product-card>.row-panel .profit-input{
+.app-shell .batch-product-card .row-panel .profit-input{
   display:inline-flex; align-items:center; gap:6px;
   font-size:15px; font-weight:800; color:#4b283e;
 }
-.app-shell .batch-product-card>.row-panel .profit-input input{
+.app-shell .batch-product-card .row-panel .profit-input input{
   width:110px; min-height:40px;
   padding:8px 12px;
   border:1px solid rgba(139,89,137,.3);
   border-radius:10px;
   background:#fff; font-size:15px; font-weight:800; color:#3f2338;
 }
-.app-shell .batch-product-card>.row-panel small{ font-size:11px; color:#6b4a66; }
+.app-shell .batch-product-card .row-panel small{ font-size:11px; color:#6b4a66; }
 
 /* D210 · Etsy details is the one row that still lives outside the card, so its
  * control now says "Open settings" instead of "Change" — measured, that click
@@ -1434,17 +1434,24 @@
  * sides, and "Save these as this product's default colors" sitting 1px from the
  * card's right edge. Every control inside a card needs the same inset as the
  * rows above it, which is 16px. */
-.app-shell .batch-product-card>.product-color-selector,
-.app-shell .batch-product-card>.product-size-selector,
-.app-shell .batch-product-card>.row-panel{
+/* D234 · These were written as direct children of .batch-product-card and
+   matched nothing: D218 moved the panels INSIDE .batch-product-rows so each one
+   sits under the row that opened it. Measured after shipping D232: computed
+   padding still 0px, panel still 1px from both card edges, the save button still
+   1px from the right. Second time a selector in this file has described a DOM
+   that had already moved (see D211) — so these are descendant selectors, which
+   survive the panel being renested. */
+.app-shell .batch-product-card .product-color-selector,
+.app-shell .batch-product-card .product-size-selector,
+.app-shell .batch-product-card .row-panel{
   padding:16px!important;
   border-top:1px solid rgba(139,89,137,.14)!important;
   background:rgba(255,255,255,.4)!important;
 }
 /* The action buttons inside those panels sit on the panel's padding, not the
    card edge. */
-.app-shell .batch-product-card>.product-color-selector>*:last-child,
-.app-shell .batch-product-card>.product-size-selector>*:last-child{
+.app-shell .batch-product-card .product-color-selector>*:last-child,
+.app-shell .batch-product-card .product-size-selector>*:last-child{
   margin-bottom:0!important;
 }
 

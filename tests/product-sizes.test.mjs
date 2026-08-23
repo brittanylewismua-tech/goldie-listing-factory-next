@@ -624,7 +624,16 @@ test("D211: the row-panel stylesheet selects the element it is written for", asy
    * the file, not that it selected anything. Same failure as D179. */
   assert.doesNotMatch(rules, /\.batch-product-rows\s+\.row-panel/,
     "a descendant selector here matches nothing");
-  assert.match(rules, /\.app-shell \.batch-product-card>\.row-panel\{/);
+  /* D234 · This assertion pinned a DIRECT-CHILD selector. D218 then moved the
+     panels inside .batch-product-rows so each opens under its own row — and the
+     selector went dead while this test kept passing, because it only ever checked
+     that the text existed in the file. That is the exact failure D211 was written
+     to prevent, repeated inside the test meant to prevent it.
+     The selectors are descendants now, and the assertion pins the DOM
+     relationship as well as the rule. */
+  assert.match(rules, /\.app-shell \.batch-product-card \.row-panel\{/);
+  assert.doesNotMatch(rules, /\.batch-product-card>\.(row-panel|product-color-selector|product-size-selector)/,
+    "a direct-child selector breaks the moment a panel is renested");
 
   /* The panel really is a direct child of the card. The card's class is built
      from a template literal, so it is not the string `className="batch-product-card`. */
@@ -634,7 +643,7 @@ test("D211: the row-panel stylesheet selects the element it is written for", asy
   /* 93 shipping profiles with long names sized the grid track to 843px inside a
    * 720px card. width:100% alone does not constrain a track sized to its
    * longest option — min-width:0 and max-width are both load-bearing. */
-  const selectRule = rules.slice(rules.indexOf(".app-shell .batch-product-card>.row-panel select{"));
+  const selectRule = rules.slice(rules.indexOf(".app-shell .batch-product-card .row-panel select{"));
   const body = selectRule.slice(0, selectRule.indexOf("}"));
   assert.match(body, /max-width:100%/);
   assert.match(body, /min-width:0/);
