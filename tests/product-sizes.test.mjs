@@ -445,7 +445,12 @@ test("opening a facet shows the choices, not a summary — D187", async () => {
   assert.doesNotMatch(app, /onRemember=\{\(\)=>\{\}\}/,
     "a save button may not be wired to a no-op");
   assert.match(app, /remembering=\{savingProductDefault===`colors:\$\{recipe\.id\}`\}/);
-  assert.match(app, /remembered=\{savedProductDefault===`sizes:\$\{recipe\.id\}`\}/);
+  /* D306 · The saved state is derived from the selection, not from a timer, so
+     "✓ Saved for this product" holds until a colour or size actually changes. */
+  assert.match(app, /remembered=\{sameIdSet\(shownSizes,recipe\.defaultSizeIds\)\}/);
+  assert.match(app, /remembered=\{sameIdSet\(shownColors,recipe\.defaultColorIds\)\}/);
+  assert.doesNotMatch(app, /setSavedProductDefault/,
+    "a confirmation must not expire on a timer while the seller is looking at it");
 });
 
 test("a suggestion is never displayed as a decision — D189/D191", async () => {

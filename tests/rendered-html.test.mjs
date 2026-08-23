@@ -1817,7 +1817,7 @@ test("keeps the saved-product batch page compact and makes permanent settings ed
   /* D212: Cancel is gated on `editing`, not `editingId` — adding a product had
      no way out because editingId is empty until you edit an existing one. */
   assert.match(tools,/editing&&<button[^>]+secondary-action/);
-  assert.match(recipes,/const description=String\(body\.description/);
+  assert.match(recipes,/const description=body\.description!==undefined\?String\(body\.description/);
   assert.match(styles,/\.remembered-color-row/);
   assert.match(styles,/@media\(min-width:821px\) and \(max-width:1050px\)/);
 });

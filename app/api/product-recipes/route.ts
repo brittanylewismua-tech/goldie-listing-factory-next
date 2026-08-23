@@ -19,13 +19,22 @@ export async function POST(request: Request) {
   if (!name || !templateUrl) return NextResponse.json({ error: "Name the recipe and add its Printify template." }, { status: 400 });
   const id = body.id || crypto.randomUUID();
   let existingSaved: Record<string, unknown> = {};
+  /* D305 · pricingJson merges (see below), but these top-level COLUMNS were
+     written unconditionally, so any caller that omitted one wiped it — a
+     partial save would silently clear the description, the keyword bank, the
+     mockup set or the saved photo choices. Every caller happens to send the
+     whole recipe today, which is why nothing has broken; that is caller
+     discipline, not a guarantee. Keep the stored value when a key is absent. */
+  let existingRow: { description?: string|null; defaultMockupTheme?: string|null; keywordListId?: string|null; printifyImageIndicesJson?: string|null } | null = null;
   if (body.id) {
-    const [owned] = await getDb().select({ id: productRecipes.id, pricingJson: productRecipes.pricingJson }).from(productRecipes).where(and(eq(productRecipes.id, id), eq(productRecipes.userId, user.userId))).limit(1);
+    const [owned] = await getDb().select({ id: productRecipes.id, pricingJson: productRecipes.pricingJson, description: productRecipes.description, defaultMockupTheme: productRecipes.defaultMockupTheme, keywordListId: productRecipes.keywordListId, printifyImageIndicesJson: productRecipes.printifyImageIndicesJson }).from(productRecipes).where(and(eq(productRecipes.id, id), eq(productRecipes.userId, user.userId))).limit(1);
     if (!owned) return NextResponse.json({ error: "That product recipe could not be found." }, { status: 404 });
     try { existingSaved = JSON.parse(owned.pricingJson || "{}") as Record<string, unknown>; } catch { existingSaved = {}; }
+    existingRow = owned;
   }
   const etsyDefaults=Object.fromEntries(Object.entries(body.etsyDefaults&&typeof body.etsyDefaults==="object"?body.etsyDefaults:{}).map(([key,value])=>[String(key).trim().slice(0,60),String(value??"").trim().slice(0,120)]).filter(([key,value])=>key&&value));
-  const description=String(body.description||"").trim().slice(0,12000),defaultMockupTheme=String(body.defaultMockupTheme||"").trim().slice(0,80);
+  const description=body.description!==undefined?String(body.description||"").trim().slice(0,12000):String(existingRow?.description||"");
+  const defaultMockupTheme=body.defaultMockupTheme!==undefined?String(body.defaultMockupTheme||"").trim().slice(0,80):String(existingRow?.defaultMockupTheme||"");
   /* pricingJson is a blob, and it used to be rebuilt from scratch on every POST.
      Any caller that did not resend a field wiped it — renaming a product through
      the saved-products form would have dropped defaultSizeIds the same way it
@@ -41,7 +50,7 @@ export async function POST(request: Request) {
   if (body.mockupIds !== undefined) patch.mockupIds = Array.isArray(body.mockupIds) ? body.mockupIds.map(id=>String(id).trim()).filter(Boolean).slice(0,8) : undefined;
   if (body.setupComplete !== undefined) patch.setupComplete = body.setupComplete !== false;
   const merged = { etsyShippingProfileId: 0, defaultColorIds: [], defaultSizeIds: [], defaultProfitTarget: 10, etsyDefaults: {}, setupComplete: true, ...existingSaved, ...patch };
-  const extras={keywordListId:String(body.keywordListId||""),printifyImageIndicesJson:JSON.stringify((body.printifyImageIndices||[]).filter(Number.isInteger).slice(0,20)),normalizePadding:body.normalizePadding!==false,pricingJson:JSON.stringify(merged)};
+  const extras={keywordListId:body.keywordListId!==undefined?String(body.keywordListId||""):String(existingRow?.keywordListId||""),printifyImageIndicesJson:body.printifyImageIndices!==undefined?JSON.stringify((body.printifyImageIndices||[]).filter(Number.isInteger).slice(0,20)):String(existingRow?.printifyImageIndicesJson||"[]"),normalizePadding:body.normalizePadding!==false,pricingJson:JSON.stringify(merged)};
   await getDb().insert(productRecipes).values({ id, userId: user.userId, name, templateUrl, description,defaultTitle:"",defaultMockupTheme,...extras }).onConflictDoUpdate({ target: productRecipes.id, set: { name, templateUrl,description,defaultTitle:"",defaultMockupTheme,...extras,updatedAt:new Date().toISOString() } });
   return NextResponse.json({ id });
 }
