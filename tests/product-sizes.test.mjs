@@ -49,7 +49,12 @@ test("batches saved before sizes existed behave exactly as they did", async () =
   const app = await read("app/listing-factory-app.tsx");
   /* Their restored templateDetails has no sizeOptions and their variants carry no
    * sizeId, so they fall straight through the size filter. */
-  assert.match(app, /if\(!templateDetails\?\.sizeOptions\?\.length\)return byColor;/);
+  /* D328 · The filter moved into variantsFor(details,…) so every product in a
+     bundle can price from its own template. The guard itself is unchanged — it
+     is now written against the passed-in details rather than the active
+     product's. */
+  assert.match(app, /if\(!details\?\.sizeOptions\?\.length\)return byColor;/,
+    "a template with no size axis still falls straight through")
 });
 
 test("D213: seeding stops at the recipe — the template is never a choice", async () => {
@@ -607,8 +612,13 @@ test("D209: every readiness row that offers to open, opens in the card", async (
   }
 
   // And the row emits it directly beneath itself, not after the list.
-  assert.match(app, /<\/div>\{isOpen\(facet\.name\)\?panelFor\(facet\.name\):null\}<\/Fragment>/,
+  /* D329 · The panel still follows its own row; it now carries a closing control
+     at its foot as well, so after scrolling a 39-colour grid the way out is
+     where you already are rather than back at the top. */
+  assert.match(app, /<\/div>\{isOpen\(facet\.name\)\?<>\{panelFor\(facet\.name\)\}/,
     "the panel follows its own row");
+  assert.match(app, /className="panel-collapse-foot" onClick=\{\(\)=>toggle\(facet\.name\)\}/,
+    "and closes from the bottom as well as the top");
   /* D223 · Shipping and profit moved into the pricing panel, and establish moved
      with them — a value set there still becomes the product's default. */
   assert.match(app, /establish\(activeRecipe,\{etsyShippingProfileId:value\}\)/);
@@ -978,4 +988,29 @@ test("saved-product and shipping guidance stays plain and brief — D331", async
   const app = await read("app/listing-factory-app.tsx");
   assert.match(app, /Your saved product will keep working if the original Etsy listing sells out, becomes inactive, or is deleted\. Just keep the product in Printify\./);
   assert.match(app, /Goldie starts with the shipping profile already used for this product\. Change it only if needed\./);
+/* D328 · A bundle showed ONE pricing card — the active product's — and no way
+   to price the others at all. Colours and sizes were already per product; only
+   pricing was still a single set of globals. Each product carries its own
+   template, costs, profit goal and shipping profile, which is exactly what its
+   recipe already stores. */
+test("every bundle product gets its own pricing card — D328", async () => {
+  const app = await read("app/listing-factory-app.tsx");
+
+  assert.match(app, /function variantsFor\(details:TemplateDetails\|null\|undefined,colorIds:number\[\],sizeIds:number\[\]\)/,
+    "the variant filter must take a product rather than close over the active one");
+  assert.match(app, /bundleSelected&&bundleRecipes\.filter\(recipe=>recipe\.id!==activeRecipe\?\.id\)\.map\(/,
+    "the other products each get a card");
+  for (const [state, why] of [
+    ["bundlePrices", "prices"],
+    ["bundlePricing", "profit goal"],
+    ["bundleShipping", "shipping profile"],
+    ["bundleApproved", "approval"],
+  ]) assert.ok(app.includes(`${state}[recipe.id]`), `${why} is per product`);
+
+  /* Each product's own choices persist to its own recipe, not the active one. */
+  assert.match(app, /void establish\(recipe,\{defaultProfitTarget:value\.targetProfit\}\)/);
+  assert.match(app, /void establish\(recipe,\{etsyShippingProfileId:value\}\)/);
+
+  /* One panel at a time: only the first product opens. */
+  assert.match(app, /openFacet\[recipe\.id\]\?\?\(index===0\?\["colors","sizes"\]:\[\]\)/);
 });

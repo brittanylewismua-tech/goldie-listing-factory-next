@@ -2073,3 +2073,72 @@ body{min-width:1180px!important}
   font-weight:600!important;
   box-shadow:none!important;
 }
+
+/* ============================================================================
+ * D329 · ONE PANEL AT A TIME
+ *
+ * A three-product bundle put every product's colours, sizes and pricing on
+ * screen at once. The ask: work one product at a time — open it, close it, move
+ * to the next — so the arrow has to be at the BOTTOM as well as the top. After
+ * scrolling through a 39-colour grid, the control to close it should be where
+ * you already are, not back at the top.
+ * ========================================================================== */
+.app-shell .bundle-pricing-card{
+  display:grid;
+  margin-top:14px;
+  border:1px solid rgba(91,48,79,.18);
+  border-radius:18px;
+  background:rgba(255,255,255,.55);
+  overflow:hidden;
+}
+.app-shell .bundle-pricing-toggle{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:space-between!important;
+  gap:14px!important;
+  width:100%!important;
+  padding:16px 20px!important;
+  border:0!important;
+  background:transparent!important;
+  background-image:none!important;
+  color:#4c293f!important;
+  text-align:left!important;
+  cursor:pointer!important;
+  box-shadow:none!important;
+}
+.app-shell .bundle-pricing-toggle>span{display:grid;gap:3px}
+.app-shell .bundle-pricing-toggle b{
+  font:400 22px/1.15 "DM Serif Display",Georgia,serif!important;color:#4c293f!important;
+}
+.app-shell .bundle-pricing-toggle small{
+  color:#75576b!important;font:500 12px/1.4 "Manrope",system-ui,sans-serif!important;
+}
+.app-shell .bundle-pricing-toggle>em{
+  font-style:normal!important;font-size:17px!important;color:#704b67!important;
+  transition:transform .18s ease!important;
+}
+.app-shell .bundle-pricing-card.open .bundle-pricing-toggle>em{transform:rotate(180deg)!important}
+
+/* The same control at the foot of an open panel. */
+.app-shell .bundle-pricing-collapse,
+.app-shell .panel-collapse-foot{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:8px!important;
+  width:calc(100% - 40px)!important;
+  margin:4px 20px 18px!important;
+  min-height:38px!important;
+  border:1px solid rgba(91,48,79,.16)!important;
+  border-radius:999px!important;
+  background:rgba(255,255,255,.6)!important;
+  background-image:none!important;
+  color:#68405a!important;
+  font:800 11px/1 "Manrope",system-ui,sans-serif!important;
+  cursor:pointer!important;
+  box-shadow:none!important;
+}
+.app-shell .bundle-pricing-collapse:hover,
+.app-shell .panel-collapse-foot:hover{background:rgba(244,212,237,.45)!important}
+.app-shell .bundle-pricing-collapse>em,
+.app-shell .panel-collapse-foot>em{font-style:normal!important;font-size:14px!important}

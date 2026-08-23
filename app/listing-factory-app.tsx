@@ -621,6 +621,15 @@ export default function ListingFactoryApp() {
   const [bundleIndex,setBundleIndex]=useState(0);
   const [bundleColorProducts,setBundleColorProducts]=useState<Record<string,TemplateDetails>>({});
   const [bundleColorChoices,setBundleColorChoices]=useState<Record<string,number[]>>({}),[bundleSizeChoices,setBundleSizeChoices]=useState<Record<string,number[]>>({}),[bundleMockupChoices,setBundleMockupChoices]=useState<Record<string,{theme:string;ids:string[]}>>({}),[bundleKeywordChoices,setBundleKeywordChoices]=useState<Record<string,string>>({});
+  /* D328 · Pricing state was a single set of globals, so a bundle could only ever
+     price the active product. These hold the other products' pricing. The active
+     product keeps using the original state, so the single-product path — the one
+     that is finally working — is untouched. */
+  const [openPricing,setOpenPricing]=useState<string[]>([]);
+  const [bundlePrices,setBundlePrices]=useState<Record<string,Record<string,number>>>({});
+  const [bundlePricing,setBundlePricing]=useState<Record<string,Pricing>>({});
+  const [bundleShipping,setBundleShipping]=useState<Record<string,number>>({});
+  const [bundleApproved,setBundleApproved]=useState<Record<string,boolean>>({});
   const [bundleQualityDecisions,setBundleQualityDecisions]=useState<Record<string,"include"|"exclude">>({});
   const [preflightOpen, setPreflightOpen] = useState(false);
   const [printifyImageIndices,setPrintifyImageIndices]=useState<number[]>([]);
@@ -817,21 +826,27 @@ export default function ListingFactoryApp() {
   const batchDesignLimit=Math.min(MAX_BATCH_FILES,planDraftsRemaining===null?MAX_BATCH_FILES:Math.floor(planDraftsRemaining/bundleProductCount));
   const requestedListingCount=Math.max(0,files.length*bundleProductCount-Object.values(bundleQualityDecisions).filter(value=>value==="exclude").length);
   const additionalDesignsAvailable=Math.max(0,batchDesignLimit-files.length);
-  const pricedVariants=useMemo(()=>{
-    const variants=templateDetails?.variants||[];
-    const byColor=!templateDetails?.colorOptions?.length?variants:(()=>{const selected=new Set(selectedColorIds);return variants.filter(variant=>variant.colorId==null||selected.has(variant.colorId))})();
+  /* D328 · This filter used to be inlined for the active product only, which is
+     why a bundle priced one product and ignored the rest. Every product in a
+     bundle has its own template, colours and sizes, so the rule has to be
+     callable per product rather than closed over the active one. Behaviour is
+     unchanged — the guards below are the originals. */
+  function variantsFor(details:TemplateDetails|null|undefined,colorIds:number[],sizeIds:number[]){
+    const variants=details?.variants||[];
+    const byColor=!details?.colorOptions?.length?variants:(()=>{const selected=new Set(colorIds);return variants.filter(variant=>variant.colorId==null||selected.has(variant.colorId))})();
     /* Batches saved before sizes were selectable restore a templateDetails with no
        sizeOptions, and their variants carry no sizeId — so they fall straight
        through here and behave exactly as they did before. */
-    if(!templateDetails?.sizeOptions?.length)return byColor;
-    const chosen=new Set(selectedSizeIds);
+    if(!details?.sizeOptions?.length)return byColor;
+    const chosen=new Set(sizeIds);
     /* Never let the size axis empty the variant set. An empty selection would
        price nothing and enable nothing on the Printify draft, which is the one
        failure here that costs money rather than looks wrong. */
     if(!chosen.size)return byColor;
     const bySize=byColor.filter(variant=>variant.sizeId==null||chosen.has(variant.sizeId));
     return bySize.length?bySize:byColor;
-  },[templateDetails,selectedColorIds,selectedSizeIds]);
+  }
+  const pricedVariants=useMemo(()=>variantsFor(templateDetails,selectedColorIds,selectedSizeIds),[templateDetails,selectedColorIds,selectedSizeIds]);
   useEffect(()=>{if(!templateDetails?.id||!selectedColorIds.length)return;window.localStorage.setItem(`goldie-colors-${templateDetails.id}`,JSON.stringify(selectedColorIds))},[templateDetails?.id,selectedColorIds]);
   useEffect(()=>{if(!templateDetails?.id||!selectedSizeIds.length)return;window.localStorage.setItem(`goldie-sizes-${templateDetails.id}`,JSON.stringify(selectedSizeIds))},[templateDetails?.id,selectedSizeIds]);
   const createdDraftCount=drafts.filter(draft=>draft.status==="Created").length,titleCount=files.filter(file=>file.title.trim()).length,etsyReadyCount=files.filter(file=>etsyRequiredComplete(file.etsy)).length;
@@ -1606,7 +1621,10 @@ export default function ListingFactoryApp() {
              past — "the colors and the sizes should probably just be expanded so
              people don't accidentally miss them". Both can be open at once, so this
              holds a list rather than a single name. */
-          const openList=openFacet[recipe.id]??["colors","sizes"];
+          /* D329 · Every product used to open colours AND sizes at once, so a three
+                 product bundle put three full colour grids on screen together. Only
+                 the first product starts open; the others are one click away. */
+              const openList=openFacet[recipe.id]??(index===0?["colors","sizes"]:[]);
           const isOpen=(name:string)=>openList.includes(name);const toggle=(name:string)=>setOpenFacet(current=>{const list=current[recipe.id]??["colors","sizes"];return {...current,[recipe.id]:list.includes(name)?list.filter(item=>item!==name):[...list,name]}});
           /* D218 · Every picker used to render after the whole row list, so clicking
              Change on Colours opened the palette below Etsy details and the seller had
@@ -1614,7 +1632,7 @@ export default function ListingFactoryApp() {
              JSX is unchanged; it is emitted inside the row map now, directly beneath
              the row that opened it. The parameter shadows `open` so the existing
              guards read correctly without rewriting them. */
-          const panelFor=(open:string)=><>{open==="colors"&&<ProductColorSelector product={product} selected={shownColors} onChange={ids=>{if(isActive){setSelectedColorIds(ids);setPricingApproved(false)}else setBundleColorChoices(current=>({...current,[recipe.id]:ids}));if(ids.length)void establish(recipe,{defaultColorIds:ids})}} onRemember={()=>void saveProductDefaults({defaultColorIds:shownColors},`colors:${recipe.id}`)} remembering={savingProductDefault===`colors:${recipe.id}`} remembered={sameIdSet(shownColors,recipe.defaultColorIds)} inCard/>}{open==="sizes"&&<ProductSizeSelector product={product} selected={shownSizes} onChange={ids=>{if(isActive){setSelectedSizeIds(ids);setPricingApproved(false)}else setBundleSizeChoices(current=>({...current,[recipe.id]:ids}));if(ids.length)void establish(recipe,{defaultSizeIds:ids})}} onRemember={()=>void saveProductDefaults({defaultSizeIds:shownSizes},`sizes:${recipe.id}`)} remembering={savingProductDefault===`sizes:${recipe.id}`} remembered={sameIdSet(shownSizes,recipe.defaultSizeIds)} inCard/>}</>;const colorFacet=ready.facets.find(facet=>facet.name==="colors");const sizeFacet=ready.facets.find(facet=>facet.name==="sizes");const shownColors=(isActive?selectedColorIds:bundleColorChoices[recipe.id])||recipe.defaultColorIds||colorFacet?.suggested?.colorIds||[];const shownSizes=(isActive?selectedSizeIds:bundleSizeChoices[recipe.id])||recipe.defaultSizeIds||sizeFacet?.suggested?.sizeIds||[];return <article className={`batch-product-card ${ready.established?"is-ready":"needs-setup"} ${bundleSelected?"in-batch":""}`} key={recipe.id}><header>{pickProductPhoto(product)?<img className="bundle-product-photo" src={pickProductPhoto(product)} alt="" loading="lazy" decoding="async"/>:<span className="bundle-product-photo placeholder" aria-hidden="true"/>}<span className="bundle-product-id">{bundleSelected&&<em className="batch-product-position">Product {index+1} of {bundleRecipes.length}</em>}<b>{recipe.name}</b><small>{product.blueprintTitle}</small></span><span className={`batch-product-state ${ready.established?"":"attention"}`}>{ready.established?"Ready":`${ready.questions.length} to set`}</span></header><div className="batch-product-rows">{[...ready.facets].sort((a,b)=>(a.state==="ask"?0:1)-(b.state==="ask"?0:1)).map(facet=>{const label=({colors:"Colors",sizes:"Sizes",mockups:"Mockups",keywords:"Keywords",shipping:"Shipping",profit:"Profit",etsy:"Etsy details"} as Record<string,string>)[facet.name];const action=({colors:"Pick colors",sizes:"Pick sizes",mockups:"Pick a mockup set",keywords:"Pick a keyword bank",shipping:"Pick a shipping profile",profit:"Set a profit goal",etsy:"Add Etsy details"} as Record<string,string>)[facet.name];const needed=facet.state==="ask";const inCard=["colors","sizes"].includes(facet.name);const suggestion=(facet.suggested?.colorIds||facet.suggested?.sizeIds||[]).length;const openThis=()=>{if(inCard){toggle(facet.name);return}const dest=FACET_DESTINATION[facet.name];if(!dest)return;if(dest.step!==workflowStep)goToStep(dest.step);window.setTimeout(()=>{const block=document.querySelector<HTMLElement>(dest.selector);if(!block)return;block.scrollIntoView({block:"start"});block.classList.add("just-opened");window.setTimeout(()=>block.classList.remove("just-opened"),1600)},dest.step!==workflowStep?260:0)};return <Fragment key={facet.name}><div className={`batch-product-row ${needed?"needed":"settled"} ${isOpen(facet.name)?"open":""}`}><span className="row-mark" aria-hidden="true">{needed?"!":"\u2713"}</span><span className="row-label">{label}</span><span className="row-value">{needed?action:facet.label}{facet.note?<small>{facet.note}</small>:null}</span>{needed&&suggestion>0?<button type="button" className="row-shortcut" onClick={()=>{if(facet.name==="colors"){const ids=facet.suggested?.colorIds||[];if(isActive){setSelectedColorIds(ids);setPricingApproved(false)}else setBundleColorChoices(current=>({...current,[recipe.id]:ids}));if(ids.length)void establish(recipe,{defaultColorIds:ids})}else{const ids=facet.suggested?.sizeIds||[];if(isActive){setSelectedSizeIds(ids);setPricingApproved(false)}else setBundleSizeChoices(current=>({...current,[recipe.id]:ids}));if(ids.length)void establish(recipe,{defaultSizeIds:ids})}}}>Use Printify&rsquo;s {suggestion} {facet.name==="colors"?(suggestion===1?"color":"colors"):(suggestion===1?"size":"sizes")}</button>:null}<button type="button" className="row-open" onClick={openThis}>{isOpen(facet.name)?"Close":needed?"Choose":"Change"}</button></div>{isOpen(facet.name)?panelFor(facet.name):null}</Fragment>;})}</div></article>})}</section>{/* D232 · The "<product> — description and Etsy details" block is gone. It held
+          const panelFor=(open:string)=><>{open==="colors"&&<ProductColorSelector product={product} selected={shownColors} onChange={ids=>{if(isActive){setSelectedColorIds(ids);setPricingApproved(false)}else setBundleColorChoices(current=>({...current,[recipe.id]:ids}));if(ids.length)void establish(recipe,{defaultColorIds:ids})}} onRemember={()=>void saveProductDefaults({defaultColorIds:shownColors},`colors:${recipe.id}`)} remembering={savingProductDefault===`colors:${recipe.id}`} remembered={sameIdSet(shownColors,recipe.defaultColorIds)} inCard/>}{open==="sizes"&&<ProductSizeSelector product={product} selected={shownSizes} onChange={ids=>{if(isActive){setSelectedSizeIds(ids);setPricingApproved(false)}else setBundleSizeChoices(current=>({...current,[recipe.id]:ids}));if(ids.length)void establish(recipe,{defaultSizeIds:ids})}} onRemember={()=>void saveProductDefaults({defaultSizeIds:shownSizes},`sizes:${recipe.id}`)} remembering={savingProductDefault===`sizes:${recipe.id}`} remembered={sameIdSet(shownSizes,recipe.defaultSizeIds)} inCard/>}</>;const colorFacet=ready.facets.find(facet=>facet.name==="colors");const sizeFacet=ready.facets.find(facet=>facet.name==="sizes");const shownColors=(isActive?selectedColorIds:bundleColorChoices[recipe.id])||recipe.defaultColorIds||colorFacet?.suggested?.colorIds||[];const shownSizes=(isActive?selectedSizeIds:bundleSizeChoices[recipe.id])||recipe.defaultSizeIds||sizeFacet?.suggested?.sizeIds||[];return <article className={`batch-product-card ${ready.established?"is-ready":"needs-setup"} ${bundleSelected?"in-batch":""}`} key={recipe.id}><header>{pickProductPhoto(product)?<img className="bundle-product-photo" src={pickProductPhoto(product)} alt="" loading="lazy" decoding="async"/>:<span className="bundle-product-photo placeholder" aria-hidden="true"/>}<span className="bundle-product-id">{bundleSelected&&<em className="batch-product-position">Product {index+1} of {bundleRecipes.length}</em>}<b>{recipe.name}</b><small>{product.blueprintTitle}</small></span><span className={`batch-product-state ${ready.established?"":"attention"}`}>{ready.established?"Ready":`${ready.questions.length} to set`}</span></header><div className="batch-product-rows">{[...ready.facets].sort((a,b)=>(a.state==="ask"?0:1)-(b.state==="ask"?0:1)).map(facet=>{const label=({colors:"Colors",sizes:"Sizes",mockups:"Mockups",keywords:"Keywords",shipping:"Shipping",profit:"Profit",etsy:"Etsy details"} as Record<string,string>)[facet.name];const action=({colors:"Pick colors",sizes:"Pick sizes",mockups:"Pick a mockup set",keywords:"Pick a keyword bank",shipping:"Pick a shipping profile",profit:"Set a profit goal",etsy:"Add Etsy details"} as Record<string,string>)[facet.name];const needed=facet.state==="ask";const inCard=["colors","sizes"].includes(facet.name);const suggestion=(facet.suggested?.colorIds||facet.suggested?.sizeIds||[]).length;const openThis=()=>{if(inCard){toggle(facet.name);return}const dest=FACET_DESTINATION[facet.name];if(!dest)return;if(dest.step!==workflowStep)goToStep(dest.step);window.setTimeout(()=>{const block=document.querySelector<HTMLElement>(dest.selector);if(!block)return;block.scrollIntoView({block:"start"});block.classList.add("just-opened");window.setTimeout(()=>block.classList.remove("just-opened"),1600)},dest.step!==workflowStep?260:0)};return <Fragment key={facet.name}><div className={`batch-product-row ${needed?"needed":"settled"} ${isOpen(facet.name)?"open":""}`}><span className="row-mark" aria-hidden="true">{needed?"!":"\u2713"}</span><span className="row-label">{label}</span><span className="row-value">{needed?action:facet.label}{facet.note?<small>{facet.note}</small>:null}</span>{needed&&suggestion>0?<button type="button" className="row-shortcut" onClick={()=>{if(facet.name==="colors"){const ids=facet.suggested?.colorIds||[];if(isActive){setSelectedColorIds(ids);setPricingApproved(false)}else setBundleColorChoices(current=>({...current,[recipe.id]:ids}));if(ids.length)void establish(recipe,{defaultColorIds:ids})}else{const ids=facet.suggested?.sizeIds||[];if(isActive){setSelectedSizeIds(ids);setPricingApproved(false)}else setBundleSizeChoices(current=>({...current,[recipe.id]:ids}));if(ids.length)void establish(recipe,{defaultSizeIds:ids})}}}>Use Printify&rsquo;s {suggestion} {facet.name==="colors"?(suggestion===1?"color":"colors"):(suggestion===1?"size":"sizes")}</button>:null}<button type="button" className="row-open" onClick={openThis}>{isOpen(facet.name)?"Close":needed?"Choose":"Change"}</button></div>{isOpen(facet.name)?<>{panelFor(facet.name)}<button type="button" className="panel-collapse-foot" onClick={()=>toggle(facet.name)}><em aria-hidden="true">⌃</em> Close {label.toLowerCase()}</button></>:null}</Fragment>;})}</div></article>})}</section>{/* D232 · The "<product> — description and Etsy details" block is gone. It held
               Keyword bank, Product description, Etsy details and Listing photos — every
               one of which now lives on the Listing or Images page. It was a fifth,
               uncarded copy of four settings, sitting on the PRODUCT page where none of
@@ -1654,6 +1672,51 @@ export default function ListingFactoryApp() {
             onCreateProfile={createCustomShippingProfile}
             onApprovalChange={setPricingApproved}
           />}
+          {/* D328 · A bundle used to show one pricing card — the active product's —
+              and silently no way to price the others. Each product carries its own
+              template, costs, profit goal and shipping profile, so each gets its
+              own card. The first is open; the rest start collapsed so a three
+              product bundle is one decision at a time rather than a wall. */}
+          {bundleSelected&&bundleRecipes.filter(recipe=>recipe.id!==activeRecipe?.id).map(recipe=>{
+            const details=bundleColorProducts[recipe.id];
+            if(!details)return null;
+            const colorIds=bundleColorChoices[recipe.id]||recipe.defaultColorIds||[];
+            const sizeIds=bundleSizeChoices[recipe.id]||recipe.defaultSizeIds||[];
+            const recipePricing=bundlePricing[recipe.id]||{...pricing,targetProfit:Number(recipe.defaultProfitTarget)||DEFAULT_PRICING.targetProfit};
+            const open=openPricing.includes(recipe.id);
+            return <section className={`bundle-pricing-card${open?" open":""}`} key={recipe.id}>
+              <button type="button" className="bundle-pricing-toggle" aria-expanded={open}
+                onClick={()=>setOpenPricing(current=>current.includes(recipe.id)?current.filter(id=>id!==recipe.id):[...current,recipe.id])}>
+                <span><b>{recipe.name}</b><small>Pricing and shipping</small></span>
+                <em aria-hidden="true">⌄</em>
+              </button>
+              {open&&<>
+                <PricingReview
+                  variants={variantsFor(details,colorIds,sizeIds)}
+                  pricing={recipePricing}
+                  prices={bundlePrices[recipe.id]||{}}
+                  productName={recipe.name}
+                  profiles={etsyShippingProfiles}
+                  selectedProfileId={bundleShipping[recipe.id]||Number(recipe.etsyShippingProfileId)||0}
+                  templateShippingProfileId={Number(details.shippingTemplateId)||0}
+                  profilesLoading={shippingProfilesLoading}
+                  profilesError={shippingProfilesError}
+                  approved={Boolean(bundleApproved[recipe.id])}
+                  onPricing={value=>{setBundlePricing(current=>({...current,[recipe.id]:value}));setBundleApproved(current=>({...current,[recipe.id]:false}));
+                    if(value.targetProfit!==Number(recipe.defaultProfitTarget))void establish(recipe,{defaultProfitTarget:value.targetProfit})}}
+                  onPrices={value=>{setBundlePrices(current=>({...current,[recipe.id]:value}));setBundleApproved(current=>({...current,[recipe.id]:false}))}}
+                  onSelectProfile={value=>{setBundleShipping(current=>({...current,[recipe.id]:value}));setBundleApproved(current=>({...current,[recipe.id]:false}));
+                    if(value&&value!==Number(recipe.etsyShippingProfileId))void establish(recipe,{etsyShippingProfileId:value})}}
+                  onCreateProfile={createCustomShippingProfile}
+                  onApprovalChange={value=>setBundleApproved(current=>({...current,[recipe.id]:value}))}
+                />
+                <button type="button" className="bundle-pricing-collapse"
+                  onClick={()=>setOpenPricing(current=>current.filter(id=>id!==recipe.id))}>
+                  <em aria-hidden="true">⌃</em> Close {recipe.name}
+                </button>
+              </>}
+            </section>;
+          })}
           {templateDetails&&productSelected&&<button type="button" className="workflow-next setup-forward" disabled={!complete&&(!selectedColorIds.length||(Boolean(templateDetails?.sizeOptions?.length)&&!selectedSizeIds.length))} onClick={()=>complete?goToStep("finish",false,true):goToStep("designs")}>{complete?"Back to finishing your listings":activeRecipe?.setupComplete===false?"Save this product’s defaults to continue":!selectedColorIds.length?"Choose product colors to continue":Boolean(templateDetails?.sizeOptions?.length)&&!selectedSizeIds.length?"Choose product sizes to continue":false?"":bundleKeywordGaps.length?`Pick a keyword bank for ${bundleKeywordGaps.join(", ")}`:"Continue to images"} <span>→</span></button>}
           </BatchPreferencesPortal>
           </div>
