@@ -1603,11 +1603,24 @@ body:has(.management-nav) .usage-card h2{
 
 /* D263 · The three action buttons on each Publish row were stacked vertically —
    a pattern used nowhere else; every other button group in the app is a row. */
+/* D281 · D263 made these three buttons a row, which is right — but they sat in
+   the grid's `auto` track, so the row grew the track from ~150px to 336px and
+   squeezed the title track to 101px in a 582px card. Measured on the deployed
+   page. That is the exact regression D98 fixed: this is the last screen before
+   listings go live, and it went back to showing a third of each title.
+   The buttons get their own row so they can be horizontal AND the title can
+   have the full width. */
+.app-shell .final-listing-card{
+  grid-template-columns:28px 56px minmax(0,1fr)!important;
+}
 .app-shell .final-listing-links{
+  grid-column:1/-1!important;
   display:flex!important;
   flex-wrap:wrap!important;
   align-items:center!important;
+  justify-content:flex-end!important;
   gap:8px!important;
+  margin-top:8px!important;
 }
 
 /* D264 · "Capitalization: On" was a filled dark pill — the primary-action
@@ -1683,3 +1696,14 @@ body:has(.management-nav) .usage-card h2{
 /* And the step icon sat flush at the card's left edge (1px) while the heading
    started at 26px, so the one thing above the title was off the content axis. */
 .app-shell .step-card>.step-number{margin-left:26px!important}
+
+/* D283 · The last gold attention surface. `.title-match-warning` is
+   rgb(255,244,220) on a rgb(193,138,66) border — measured live — while the same
+   "this needs your attention" state everywhere else (the Publish checklist,
+   the listing rows since D262) is the pink #fdf2f8. Gold reads as a different
+   severity when it is really the same one. */
+.app-shell .title-match-warning{
+  border-color:rgba(157,80,130,.32)!important;
+  background:#fdf2f8!important;
+  color:#8a3f66!important;
+}
