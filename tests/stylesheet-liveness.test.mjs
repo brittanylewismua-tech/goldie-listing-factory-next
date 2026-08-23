@@ -106,3 +106,22 @@ test("nav icons carry their own size and stroke", async () => {
   assert.doesNotMatch(src, /<svg viewBox="0 0 24 24" aria-hidden="true">/,
     "a bare <svg> here renders 150px black wherever the factory stylesheet is absent");
 });
+
+/* D254 · The factory pages and the management pages were running two different
+   type scales — 64px page titles against 34px, and seven sizes for one card
+   title. Anything that reintroduces a hard-coded heading size outside the
+   D233 scale should be visible in review, so keep the scale itself in one file
+   and assert the sizes it declares are the ones the app is allowed to use. */
+test("headings use the D233 scale only", async () => {
+  const css = (await readFile(new URL("app/clarity-pass.css", root), "utf8"))
+    .replace(/\/\*[\s\S]*?\*\//g, "");
+  const allowed = new Set(["34px", "22px", "15px", "12px", "10px", "18px"]);
+  const bad = [];
+  for (const [rule] of css.matchAll(/[^{}]+\{[^}]*\}/g)) {
+    const sel = rule.slice(0, rule.indexOf("{"));
+    if (!/\bh[1-5]\b/.test(sel)) continue;
+    for (const [, size] of rule.matchAll(/font(?:-size)?:[^;}]*?(\d+px)/g))
+      if (!allowed.has(size)) bad.push(`${sel.trim().slice(0, 60)} -> ${size}`);
+  }
+  assert.deepEqual(bad, [], `heading sizes outside the D233 scale:\n${bad.join("\n")}`);
+});

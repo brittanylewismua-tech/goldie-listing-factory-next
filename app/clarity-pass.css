@@ -96,10 +96,13 @@
    rendered smaller than the card title restating it.
    ------------------------------------------------------------ */
 
+/* D254 · This clamp let one card title be anything from 21px to 27px depending
+   on viewport, so the same role rendered a different size on every screen and
+   could never match the 22px CARD TITLE the rest of the app uses. */
 .app-shell .step-heading h2,
 .app-shell .post-draft-heading h2,
 .app-shell .launch-top h2 {
-  font-size: clamp(21px, 2.1vw, 27px);
+  font-size: 22px;
   line-height: 1.2;
 }
 
@@ -655,7 +658,9 @@
 }
 .app-shell .size-selector-head{display:flex;align-items:end;justify-content:space-between;gap:20px}
 .app-shell .size-selector-head>div{display:grid;gap:4px}
-.app-shell .size-selector-head h3{margin:0;color:#4c293f;font:650 25px/1.12 "Fraunces",Georgia,serif}
+/* D254 · superseded by the GROUP TITLE rule below; it was still declaring
+   25px Fraunces, a fourth family, and only lost on !important. */
+.app-shell .size-selector-head h3{margin:0}
 .app-shell .size-selector-head span{max-width:670px;color:#75576b;font-size:11px;line-height:1.5}
 .app-shell .size-selector-head>b{flex:0 0 auto;padding:7px 10px;border-radius:999px;background:rgba(244,212,237,.75);color:#623a56;font-size:10px}
 .app-shell .size-choice-grid{display:flex;flex-wrap:wrap;gap:9px}
@@ -1528,4 +1533,40 @@
   width:auto!important;
   min-width:260px!important;
   margin-inline:auto!important;
+}
+
+/* ============================================================================
+ * D254 · THE MANAGEMENT PAGES WERE RUNNING A SECOND TYPE SCALE
+ *
+ * Measured on the deployed Batch History, Keyword Banks, Mockup Library and
+ * Usage pages. Every page title is 64px; the factory pages use 34px. Card
+ * titles across the four pages come in SEVEN sizes — 16, 23, 25, 30, 34,
+ * 34-faux-bold and 36 — for one role.
+ *
+ * The Usage page alone carries four different <h2> sizes:
+ *     .plan-banner h2         34/400
+ *     .usage-card h2          15/400   (a card title smaller than a field label)
+ *     .pricing-profile h2     30/400
+ *     .usage-plan-heading h2  36/400
+ *
+ * The Mockup Library is built with its own camelCase class names, which is why
+ * it never inherited anything — the shared scale was never wired to it.
+ *
+ * Scoped with :has(.management-nav) so it follows the section, not a list of
+ * page classes that will drift the next time a page is added.
+ * ========================================================================== */
+body:has(.management-nav) h1{
+  font:400 34px/1.05 "DM Serif Display",Georgia,serif!important;
+  color:#4c293f!important;
+}
+body:has(.management-nav) h2,
+body:has(.management-nav) .setTitleRow h3,
+body:has(.management-nav) .keyword-workspace h3{
+  font:400 22px/1.15 "DM Serif Display",Georgia,serif!important;
+  color:#4c293f!important;
+}
+/* The usage tiles label a number; that is a field label, not a card title. */
+body:has(.management-nav) .usage-card h2{
+  font:800 12px/1.3 "Manrope",system-ui,sans-serif!important;
+  color:#75576b!important;
 }
