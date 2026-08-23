@@ -1459,7 +1459,11 @@ export default function ListingFactoryApp() {
           <article className={`step-card designs-step workflow-panel ${workflowStep==="setup"?"batch-design-drop":""} ${files.length ? "done" : ""} ${workflowStep==="finish"?"finish-mode":""} ${workflowStep==="designs"||(workflowStep==="finish"&&finishPhase==="details")?"active-panel":"hidden-panel"}`}>{/* D238 · Choosing the mockup SET lived on Product while the mockups it controls are generated here on Images. Same setting, two pages — the exact split that caused the keyword-bank and shipping duplication. */}<MockupSetSelector value={mockupTheme} savedValue={activeRecipe?.defaultMockupTheme||""} onChange={setMockupTheme} saving={savingProductDefault==="mockups"} onSaveDefault={()=>void saveProductDefaults({defaultMockupTheme:mockupTheme},"mockups")}/>
             <div className="step-number" aria-hidden="true"/>
             <div className="step-content">
-              <div className="step-heading"><div><p className="mini-label">{workflowStep==="finish"?"TITLES, TAGS + DESCRIPTIONS":"DESIGNS FOR THIS BATCH"}</p><div className="heading-with-help">{workflowStep!=="finish"&&<h2>Drop your designs here</h2>}{/* D248 · on Listing this
+              <div className="step-heading"><div>{workflowStep!=="finish"&&<p className="mini-label">DESIGNS FOR THIS BATCH</p>}{/* D278 · On
+                Listing this eyebrow read "TITLES, TAGS + DESCRIPTIONS" — the page
+                title D256 retired — directly under the page eyebrow "STEP 3 OF 4 ·
+                LISTING". Removing the card title in D248 left it as the only text
+                in the header, still naming the step a third way. */}<div className="heading-with-help">{workflowStep!=="finish"&&<h2>Drop your designs here</h2>}{/* D248 · on Listing this
                 read "Finish titles, tags, and descriptions" directly under the page
                 title "Titles, tags + descriptions" — the same words, two serial-comma
                 styles, 200px apart. The page title already names the step. */}</div></div>{files.length > 0 && workflowStep==="finish" && <span className="done-mark">✓ {files.length} listings</span>}</div>

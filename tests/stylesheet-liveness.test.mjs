@@ -151,3 +151,29 @@ test("management-page rules are not scoped to the factory shell", async () => {
   assert.deepEqual([...new Set(bad)], [],
     `these target management-page elements but require .app-shell, which those pages do not render:\n${bad.join("\n")}`);
 });
+
+/* D280 · `display:grid` on an element whose content is a bare text node makes
+   every WORD a grid item. It shipped on the Publish checklist and rendered the
+   whole list one word per line. A rule may only impose grid or flex on an
+   element the markup fills with real child ELEMENTS. */
+test("no grid or flex is imposed on text-only containers", async () => {
+  const css = (await readFile(new URL("app/clarity-pass.css", root), "utf8"))
+    .replace(/\/\*[\s\S]*?\*\//g, "");
+  const app = await readFile(new URL("app/listing-factory-app.tsx", root), "utf8");
+  const offenders = [];
+  for (const [rule] of css.matchAll(/[^{}]+\{[^}]*\}/g)) {
+    const sel = rule.slice(0, rule.indexOf("{"));
+    const body = rule.slice(rule.indexOf("{"));
+    if (!/display:\s*(grid|flex)/.test(body)) continue;
+    if (!/grid-template-columns|gap/.test(body)) continue;
+    /* Only child-combinator span/em/small targets — the shapes that in this app
+       are written as <span>{"text"}</span> rather than as containers. */
+    const m = sel.match(/>\s*(span|em|small|b|p)\s*$/);
+    if (!m) continue;
+    const parent = sel.match(/\.([\w-]+)\s*>/);
+    if (!parent) continue;
+    const rendered = new RegExp(`className="${parent[1]}"[^>]*>\\s*\\{`).test(app);
+    if (rendered) offenders.push(`${sel.trim().slice(0, 60)} lays out a text-only child`);
+  }
+  assert.deepEqual(offenders, [], offenders.join("\n"));
+});

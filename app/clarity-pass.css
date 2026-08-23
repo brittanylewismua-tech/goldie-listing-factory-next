@@ -1525,11 +1525,16 @@
    status is a `.row-mark` chip. Text glyphs cannot be coloured, sized or
    announced correctly, and "!" is not an icon. Give the checklist rows the same
    chip treatment the product rows already use. */
+/* D280 · The rule that was here applied `display:grid` with two columns to a
+   <span> whose entire content is ONE text node ("✓ Prices and buyer-paid
+   shipping were approved"). Grid makes each child a grid item, and for a text
+   node that means every WORD became its own item — the whole checklist rendered
+   one word per line, live, on the last screen before publishing to Etsy.
+   Splitting a glyph off its sentence needs a wrapper element in the markup, not
+   a layout mode. Until that markup exists this stays flow layout. */
 .app-shell .final-checklist>span{
-  display:grid!important;
-  grid-template-columns:18px minmax(0,1fr)!important;
-  align-items:center!important;
-  gap:10px!important;
+  display:block!important;
+  line-height:1.5!important;
 }
 
 /* D251 · Full-width primaries appear only on Images, Listing and Publish, and
@@ -1668,3 +1673,13 @@ body:has(.management-nav) .usage-card h2{
 .not-found-page{max-width:none!important;width:100%!important}
 .not-found-page>*{max-width:640px!important;width:100%!important}
 .not-found-page{justify-items:start!important}
+
+/* D279 · Measured on the deployed Listing card after D249 left-aligned the
+   header: `.step-copy` is text-align:left but carries `margin:10px 144px 24px`,
+   so the BOX is inset 144px on both sides and the copy still reads as centred
+   under a left-aligned heading. Alignment is not just text-align. */
+.app-shell .step-copy{margin-inline:0!important;max-width:64ch!important}
+
+/* And the step icon sat flush at the card's left edge (1px) while the heading
+   started at 26px, so the one thing above the title was off the content axis. */
+.app-shell .step-card>.step-number{margin-left:26px!important}
