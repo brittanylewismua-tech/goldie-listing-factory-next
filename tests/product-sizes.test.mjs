@@ -770,4 +770,20 @@ test("Etsy readiness means required properties are set — D294", async () => {
     "no gate may treat the mere presence of an Etsy object as readiness");
   assert.doesNotMatch(app, /etsyReadyCount=files\.filter\(file=>file\.etsy\)\.length/,
     "and neither may the count behind the pill");
+
+  /* D295 · Fixing the obvious spelling left three more. "Ready" was written
+     four different ways and my first pass only matched one of them, so the
+     pill still read 3/3 ready on the deployed page above three rows saying
+     0 of 1 required set. Every GATE must use the helper. */
+  for (const gate of [
+    /files\.filter\(file=>etsyRequiredComplete\(file\.etsy\)\)\.length\}\/\{files\.length\} ready/,
+    /etsyDetailsReady:files\.length>0&&files\.every\(file=>etsyRequiredComplete/,
+    /chosenFiles\.some\(file=>!etsyRequiredComplete\(file\.etsy\)\)/,
+    /const unfinished=files\.filter\(file=>!etsyRequiredComplete\(file\.etsy\)\)/,
+  ]) assert.match(app, gate);
+
+  /* But the prefill bookkeeping legitimately asks "does this file have an Etsy
+     object yet", and must NOT be swept up in that. */
+  assert.match(app, /files\.filter\(file=>!file\.etsy&&file\.title\.trim\(\)\)/,
+    "the prefill queue still asks whether prefill has happened at all");
 });
