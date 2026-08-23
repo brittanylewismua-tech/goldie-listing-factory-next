@@ -622,3 +622,40 @@ test("D211: the row-panel stylesheet selects the element it is written for", asy
   assert.match(body, /max-width:100%/);
   assert.match(body, /min-width:0/);
 });
+
+test("D222: a product cannot join a bundle until it has been set up", async () => {
+  const tools = await read("app/factory-tools.tsx");
+
+  /* Creating a product means going through its setup. Colours and sizes are the
+   * seller's choices and cannot be inherited from the Printify template, so a
+   * product with neither has not been set up. Letting one into a bundle is how
+   * an unconfigured product reached a batch and had to be answered for there —
+   * the thing the recipe exists to prevent. */
+  assert.match(tools, /export function recipeIsSetUp\(recipe: Recipe\)/);
+  assert.match(tools, /return Boolean\(\(recipe\.defaultColorIds \|\| \[\]\)\.length\) && Boolean\(\(recipe\.defaultSizeIds \|\| \[\]\)\.length\);/);
+  assert.match(tools, /disabled=\{!recipeIsSetUp\(recipe\)\|\|/, "the checkbox is disabled");
+  assert.match(tools, /Finish this product’s setup first/, "and the row says why, not just a tooltip");
+
+  const body = tools.slice(tools.indexOf("export function recipeIsSetUp"));
+  const source = body.slice(0, body.indexOf("\n}") + 2).replace("export function recipeIsSetUp(recipe: Recipe)", "function recipeIsSetUp(recipe)");
+  const recipeIsSetUp = new Function(`${source}; return recipeIsSetUp;`)();
+
+  assert.equal(recipeIsSetUp({ defaultColorIds: [1], defaultSizeIds: [2] }), true);
+  assert.equal(recipeIsSetUp({ defaultColorIds: [1] }), false, "colours alone is not set up");
+  assert.equal(recipeIsSetUp({ defaultSizeIds: [2] }), false, "sizes alone is not set up");
+  assert.equal(recipeIsSetUp({}), false);
+  assert.equal(recipeIsSetUp({ defaultColorIds: [], defaultSizeIds: [] }), false);
+});
+
+test("D222: the Images page continues to Listing, not past it to Publish", async () => {
+  const app = await read("app/listing-factory-app.tsx");
+
+  /* The photo control used to end the mockups PHASE and jump to final review.
+   * With photos on the Images PAGE that would skip Listing entirely - titles,
+   * tags, descriptions and Etsy details - and land on Publish. */
+  const button = app.slice(app.indexOf('className="workflow-next mockup-next"'));
+  const handler = button.slice(0, button.indexOf("</button>"));
+  assert.match(handler, /setFinishPhase\("details"\)/, "Images advances to the Listing page");
+  assert.doesNotMatch(handler, /setFinishPhase\("final"\)/, "not straight to Publish");
+  assert.match(handler, /Continue to titles/);
+});

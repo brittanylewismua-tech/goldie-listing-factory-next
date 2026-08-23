@@ -1383,3 +1383,14 @@
   text-transform:uppercase;
   color:#8b5989;
 }
+
+/* D222 · A product that has not been set up cannot join a bundle, and the reason
+ * is stated on the row rather than hidden in a tooltip nobody hovers. */
+.app-shell .needs-setup-note{
+  display:block;
+  margin-top:2px;
+  font-style:normal;
+  font-size:10px;
+  font-weight:750;
+  color:#8b3f35;
+}
