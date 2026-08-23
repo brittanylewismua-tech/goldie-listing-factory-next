@@ -1451,3 +1451,101 @@
 /* A product card needs real separation from whatever sits above it — it was
  * butted up against the panel above with no gap. */
 .app-shell .batch-products{display:grid!important;gap:22px!important;margin-top:26px!important}
+
+/* ============================================================
+   D233 · ONE HEADING SYSTEM FOR THE WHOLE APP
+   ============================================================
+   Measured on the Product page alone, before this:
+
+     h1  34px  DM Serif Display   "Build this batch"
+     h2  27px  DM Serif Display   "Product"
+     h3  25px  Fraunces           "Colors"
+     h3  18px  Manrope            "Item prices + buyer-paid shipping"
+     h4  26px  DM Serif Display   "1. Item prices · gildan crewneck"
+
+   Three typefaces in one heading scale. Two h3s that differ by 7px AND by
+   typeface. An h4 that is LARGER than the h3 it sits beneath. And across pages,
+   the same role rendered two ways: workflow page titles are DM Serif Display at
+   34px while management page titles are Fraunces at 40-50px.
+
+   That is why one section reads as labelled above the card in big letters and
+   the next reads as labelled inside the card in small ones — there was no
+   system, only accumulated one-off rules.
+
+   FOUR ROLES. Two typefaces: DM Serif Display for titles, Manrope for anything
+   functional. Fraunces leaves the heading scale entirely.
+
+     1 PAGE TITLE    34px  DM Serif Display 400   one per page, under its eyebrow
+     2 CARD TITLE    22px  DM Serif Display 400   always INSIDE the card, at the top
+     3 GROUP TITLE   15px  Manrope 800            a labelled group within a card
+     4 FIELD LABEL   12px  Manrope 800            sits on the control it names
+       EYEBROW       10px  Manrope 800 uppercase  step line, or a group of cards
+
+   The rule that follows: a card is never titled from outside itself, and no
+   child heading is ever larger than its parent.
+   ------------------------------------------------------------ */
+
+/* 1 · PAGE TITLE — the same everywhere, workflow and management alike. */
+.app-shell .workflow-hero h1,
+.app-shell .hero h1,
+.app-shell .management-page h1,
+.app-shell .mockupHero h1 {
+  font-family: "DM Serif Display", Georgia, serif !important;
+  font-size: 34px !important;
+  font-weight: 400 !important;
+  line-height: 1.12 !important;
+  letter-spacing: -.02em !important;
+  color: #3f2338 !important;
+}
+
+/* 2 · CARD TITLE — every h2 and h3 that names a card or panel. */
+.app-shell .workflow-stage h2,
+.app-shell .workflow-stage h3,
+.app-shell .management-page h2,
+.app-shell .management-page h3,
+.app-shell .managementOnly h2,
+.app-shell .managementOnly h3 {
+  font-family: "DM Serif Display", Georgia, serif !important;
+  font-size: 22px !important;
+  font-weight: 400 !important;
+  line-height: 1.2 !important;
+  letter-spacing: -.012em !important;
+  color: #3f2338 !important;
+  text-transform: none !important;
+}
+
+/* 3 · GROUP TITLE — a labelled group inside a card. Must never outweigh its
+      card title, which is what "1. Item prices" at 26px was doing. */
+.app-shell .workflow-stage h4,
+.app-shell .management-page h4,
+.app-shell .managementOnly h4 {
+  font-family: Manrope, "Hanken Grotesk", Inter, system-ui, sans-serif !important;
+  font-size: 15px !important;
+  font-weight: 800 !important;
+  line-height: 1.35 !important;
+  letter-spacing: -.01em !important;
+  color: #4b283e !important;
+  text-transform: none !important;
+}
+
+/* 4 · FIELD LABEL — already correct on the readiness rows; stated here so the
+      scale is complete and the next label matches it rather than inventing one. */
+.app-shell .row-label,
+.app-shell .batch-product-rows .row-label {
+  font-family: Manrope, "Hanken Grotesk", Inter, system-ui, sans-serif !important;
+  font-size: 12px !important;
+  font-weight: 800 !important;
+  letter-spacing: -.01em !important;
+}
+
+/* EYEBROW — a step line, or the label for a GROUP of cards. Never a card title. */
+.app-shell .eyebrow,
+.app-shell .mini-label,
+.app-shell .recipe-library-head > span,
+.app-shell .mockupEyebrow {
+  font-family: Manrope, "Hanken Grotesk", Inter, system-ui, sans-serif !important;
+  font-size: 10px !important;
+  font-weight: 800 !important;
+  letter-spacing: .12em !important;
+  text-transform: uppercase !important;
+}

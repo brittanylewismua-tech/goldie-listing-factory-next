@@ -1492,3 +1492,38 @@ test("D215: selecting a product does not break the other product tiles", async (
   // The rule it was wrongly attached to still does its own job.
   assert.match(rules, /\.app-shell\[data-product-selected="true"\] \.bundle-library\{display:block!important\}/);
 });
+
+test("D233: one heading system, two typefaces, no child larger than its parent", async () => {
+  const css = await readFile(new URL("app/clarity-pass.css", root), "utf8");
+
+  /* Measured on the Product page before this, in one viewport:
+   *   h1 34px DM Serif Display · h2 27px DM Serif Display
+   *   h3 25px Fraunces · h3 18px Manrope · h4 26px DM Serif Display
+   * Three typefaces in one scale, two h3s differing by 7px AND typeface, and an
+   * h4 LARGER than the h3 above it. Across pages the same role rendered two
+   * ways: workflow titles DM Serif Display 34px, management titles Fraunces 40px.
+   *
+   * Four roles, two typefaces. Titles are DM Serif Display, anything functional
+   * is Manrope, and Fraunces leaves the heading scale. */
+  assert.match(css, /D233 · ONE HEADING SYSTEM FOR THE WHOLE APP/);
+
+  const scale = css.slice(css.indexOf("D233 · ONE HEADING SYSTEM"));
+  const sizeOf = (selector) => {
+    const block = scale.slice(scale.indexOf(selector));
+    return Number(/font-size:\s*(\d+)px/.exec(block.slice(0, block.indexOf("}")))?.[1]);
+  };
+
+  const page = sizeOf(".app-shell .workflow-hero h1");
+  const card = sizeOf(".app-shell .workflow-stage h2");
+  const group = sizeOf(".app-shell .workflow-stage h4");
+
+  assert.ok(page > card, `page title ${page} must outrank card title ${card}`);
+  assert.ok(card > group, `card title ${card} must outrank group title ${group}`);
+
+  /* Management and workflow page titles must be the same role, one size. */
+  assert.match(scale, /\.app-shell \.management-page h1[\s\S]{0,120}font-size: 34px/);
+  /* And Fraunces must not reappear in a heading RULE — the comment above the
+     scale names it as the thing being removed, so strip comments first. */
+  const rules = scale.slice(scale.indexOf("*/") + 2).replace(/\/\*[\s\S]*?\*\//g, "");
+  assert.doesNotMatch(rules, /Fraunces/);
+});
