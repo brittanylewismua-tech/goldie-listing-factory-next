@@ -201,3 +201,51 @@ test("D227: a run where every draft fails does not pretend to have succeeded", a
   /* And the rail must never disable the stage the seller is on. */
   assert.match(source, /disabled=\{!active&&Boolean\(issues\.length\)\}/);
 });
+
+test("D229: no disabled control is silent about why", async () => {
+  const source = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+
+  /* Measured live: the Images page showed "Continue to create drafts" greyed out
+   * with Printify connected, the product chosen and 3 of 20 designs ready. The
+   * button was disabled because prices were not approved — approval is
+   * invalidated when designs change — but its label only covered the !ready
+   * branch, so the reason appeared nowhere on the page. The rail knew; the
+   * button did not say. */
+  const launch = source.slice(source.indexOf('className="launch-button"'));
+  const label = launch.slice(0, launch.indexOf("</button>"));
+
+  assert.match(label, /!pricingApproved \? "Approve prices on the Product page to continue"/,
+    "the pricing-approval branch must have a label");
+
+  /* Every condition in `disabled` needs a matching branch in the label. */
+  const disabled = /disabled=\{([^}]*)\}/.exec(launch)[1];
+  for (const condition of ["ready", "pricingApproved", "running", "preparingEtsy"]) {
+    assert.ok(disabled.includes(condition), `${condition} still gates the button`);
+    assert.ok(label.includes(condition), `${condition} must be reflected in the label`);
+  }
+});
+
+test("D229: the pricing approval button names every reason it is disabled", async () => {
+  const source = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+
+  /* Measured live on a real batch: the Gildan Hoodie's saved Etsy shipping
+   * profile (259760087290) was not among the 94 profiles on the shop, so nothing
+   * was selected, "Approve prices and shipping" was dead, and no message
+   * appeared anywhere. The Images page said to approve prices on the Product
+   * page; the Product page silently refused. The seller is stuck between two
+   * screens, each pointing at the other. */
+  const button = source.slice(source.indexOf('className={`pricing-approval-button'));
+  const label = button.slice(0, button.indexOf("</button>"));
+
+  assert.match(label, /customDirty\?"Save or discard your custom profile to continue"/);
+  assert.match(label, /!selectedProfile\?"Choose a shipping profile to continue"/);
+
+  const disabled = /disabled=\{([^}]*)\}/.exec(button)[1];
+  for (const condition of ["selectedProfile", "customDirty"]) {
+    assert.ok(disabled.includes(condition));
+    assert.ok(label.includes(condition), `${condition} must be reflected in the label`);
+  }
+
+  /* And a profile that has disappeared from the shop is called out. */
+  assert.match(source, /The shipping profile saved for this product is no longer on your Etsy shop\./);
+});

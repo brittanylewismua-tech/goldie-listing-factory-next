@@ -2190,7 +2190,11 @@ test("warns on the exact listing when its bank misses the design text (fixes D76
   const app=await readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8");
   assert.match(route,/design_text/);
   assert.match(route,/bankMatchesDesignText\(titleCandidates,designText\)/);
-  assert.match(route,/No phrase in this bank matches this design\. Add one, or write the title yourself\./);
+  /* D230 · Same rule, corrected wording. This warning fires when the bank does
+     not match the ARTWORK, but a title has already been built from that bank —
+     so the old text printed "No phrase in this bank matches this design"
+     directly beneath a finished title made from nine of its phrases. */
+  assert.match(route,/This title was built from a bank that may not describe this design\./);
   assert.match(app,/className="title-match-warning" role="status"/);
   assert.match(app,/titleWarning:item\.result\.titleWarning/);
 });
@@ -2330,4 +2334,20 @@ test("D226: a listing waiting for its title is not shown as a failure", async ()
   assert.match(page, /\{files\.every\(file=>file\.etsy\)&&<div className="variant-transfer-note">/);
 
   assert.match(css, /\.app-shell \.etsy-detail-pending\{/);
+});
+
+test("D230: a warning never contradicts the title sitting above it", async () => {
+  const api = await readFile(new URL("../app/api/listing-intelligence/route.ts", import.meta.url), "utf8");
+  const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+
+  /* Measured live: a nautical design titled from a Jane Austen bank rendered
+   * "No phrase in this bank matches this design" immediately below a finished
+   * 120-character title built from nine phrases of that bank. The warning is
+   * about the ARTWORK, not the phrases, and it read as a flat contradiction. */
+  assert.doesNotMatch(api, /No phrase in this bank matches this design/);
+  assert.match(api, /This title was built from a bank that may not describe this design\./);
+
+  /* And the count message must agree with itself: "1 titles created" was live. */
+  assert.match(app, /\$\{files\.length-failed===1\?"title":"titles"\} created/);
+  assert.match(app, /\$\{failed===1\?"needs":"need"\} another try/);
 });
