@@ -227,8 +227,13 @@ test("one card renders a single product and every bundle member — D182", async
    * identical component. */
   assert.match(app, /\{\(activeBundle&&bundleRecipes\.length>1\?bundleRecipes:\(activeRecipe\?\[activeRecipe\]:\[\]\)\)\.map\(\(recipe,index\)=>\{/,
     "One map covers both paths.");
-  assert.match(app, /className=\{`batch-product-card \$\{ready\.established\?"is-ready":"needs-setup"\}`\}/,
-    "The card has two states, driven by computed readiness.");
+  /* D219 added a third class: in-batch, which tints the card and shows
+     "Product N of M". A batch is the same four pages as a single product with
+     one panel per product, so it has to be unmistakable which one you are on. */
+  assert.match(app, /batch-product-card \$\{ready\.established\?"is-ready":"needs-setup"\} \$\{bundleSelected\?"in-batch":""\}/,
+    "The card has two readiness states plus a batch marker.");
+  assert.match(app, /Product \{index\+1\} of \{bundleRecipes\.length\}/,
+    "Each card states its position in the batch.");
   assert.match(app, /const ready=readinessFor\(product,recipe\)/);
   assert.doesNotMatch(app, /OTHER PRODUCTS IN THIS BUNDLE/);
   assert.doesNotMatch(app, /className="bundle-color-selectors"/,

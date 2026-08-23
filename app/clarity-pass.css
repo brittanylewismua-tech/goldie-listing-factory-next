@@ -1360,3 +1360,26 @@
  * ::after goes: "usually no changes needed" tells a seller not to look, which is
  * the opposite of useful on the one section they have to open to finish. */
 .app-shell .everything-else>summary span:after{content:none!important;}
+
+/* D219 · A batch is the same four pages as a single product, with one panel per
+ * product instead of one. That only works if it is unmistakable which product
+ * you are looking at, so in batch mode each card is tinted and states its
+ * position. A single product gets neither — there is nothing to disambiguate. */
+.app-shell .batch-product-card.in-batch{
+  background:linear-gradient(180deg,rgba(243,233,247,.78),rgba(252,246,250,.72))!important;
+  border-color:rgba(139,89,137,.32)!important;
+}
+.app-shell .batch-product-card.in-batch>header{
+  background:rgba(233,218,240,.5)!important;
+  border-bottom:1px solid rgba(139,89,137,.22)!important;
+}
+.app-shell .batch-product-position{
+  display:block;
+  margin-bottom:2px;
+  font-style:normal;
+  font-size:9.5px;
+  font-weight:900;
+  letter-spacing:.1em;
+  text-transform:uppercase;
+  color:#8b5989;
+}
