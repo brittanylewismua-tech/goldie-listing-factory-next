@@ -129,7 +129,10 @@ test("stacks the connected Etsy shop name for long shop names", async () => {
 assert.match(css, /\.connected-connection-stack>\.connection-row\{width:100%;height:84px;min-height:84px;[^}]*padding:14px 15px;box-sizing:border-box\}/);
 assert.match(css, /Final cascade lock:[\s\S]*\.app-shell \.step-card>\.step-number,[\s\S]*width:64px;[\s\S]*height:64px;[\s\S]*background:conic-gradient/);
 assert.match(css, /\.app-shell \.recipe-card>\.step-number:after\{[\s\S]*M12 16V4[\s\S]*center\/contain no-repeat!important/);
-assert.match(page, /launch-step-icon.*create-drafts-icon.*pricing-icon/);
+  /* D224 · This panel moved onto the Images page, where its only job is creating
+     drafts, so the icon is no longer conditional on a pricing step that no longer
+     exists — it was rendering a calculator on a page about drafts. */
+  assert.match(page, /launch-step-icon create-drafts-icon/);
 assert.match(css, /\.launch-panel>\.pricing-icon:after\{[\s\S]*rect x='4' y='3'/);
 assert.match(css, /\.launch-panel>\.create-drafts-icon:after\{[\s\S]*M11 13h4/);
 assert.ok(page.indexOf('className="workflow-footer-actions"') > page.indexOf('className={`launch-panel workflow-panel'), "Back and autosave must render after the active step content");

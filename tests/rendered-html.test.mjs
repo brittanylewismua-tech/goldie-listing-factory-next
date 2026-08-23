@@ -1483,7 +1483,7 @@ test("supports simple saved product bundles without complicating the single-prod
   assert.match(page, /activeBundle,bundleRecipes,bundleIndex/);
   assert.match(page, /previewUrl:URL\.createObjectURL\(file\.file\)/);
   assert.match(page, /descriptionOverride:undefined/);
-  assert.match(page, /setWorkflowStep\("review"\)/);
+  assert.match(page, /setWorkflowStep\("designs"\)/);
   assert.match(ui, /Continue bundle with/);
   assert.match(ui, /pricing, shipping, description, Etsy details, and images separately/);
   assert.match(styles, /\.bundle-progress/);

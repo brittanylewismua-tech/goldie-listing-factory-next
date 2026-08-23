@@ -159,3 +159,27 @@ test("an open step never claims you must complete the prior one — D154", async
   assert.ok(!/[^a-zA-Z]active\?/.test(body),
     "No branch in progressStatus may key off `active` alone; use `live`.");
 });
+
+test("D224: no saved batch can land on a step that has no page", async () => {
+  const source = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+
+  /* Measured live: resuming a saved batch opened ?step=review and rendered a
+   * heading, a rail, a Back button and nothing else. Draft creation had moved
+   * onto the Images page, so the review step had no panel left — but batches
+   * saved before that change still store step:"review".
+   *
+   * Every entry point normalises: goToStep, the URL reader, and restored batch
+   * state. */
+  assert.match(source, /function normalizeStep\(step:WorkflowStep\):WorkflowStep\{return step==="review"\?"designs":step\}/);
+  assert.match(source, /function goToStep\(rawStep:WorkflowStep,replace=false,force=false\)\{\s*const step=normalizeStep\(rawStep\);/);
+
+  const setters = source.match(/setWorkflowStep\([^)]*\)/g) || [];
+  for (const setter of setters) {
+    const literal = /setWorkflowStep\(["'](\w+)["']/.exec(setter);
+    if (literal) {
+      assert.notEqual(literal[1], "review", `${setter} sends the seller to a page that does not exist`);
+    } else {
+      assert.match(setter, /normalizeStep/, `${setter} must normalise a non-literal step`);
+    }
+  }
+});
