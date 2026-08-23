@@ -973,3 +973,9 @@ test("loading a template applies its verified Etsy shipping profile immediately 
   assert.match(app, /const verifiedProfileId=Number\(result\.product\.shippingTemplateId\)\|\|0;/);
   assert.match(app, /if\(verifiedProfileId\)setEtsyShippingProfileId\(verifiedProfileId\);/);
 });
+
+test("saved-product and shipping guidance stays plain and brief — D331", async () => {
+  const app = await read("app/listing-factory-app.tsx");
+  assert.match(app, /Your saved product will keep working if the original Etsy listing sells out, becomes inactive, or is deleted\. Just keep the product in Printify\./);
+  assert.match(app, /Goldie starts with the shipping profile already used for this product\. Change it only if needed\./);
+});
