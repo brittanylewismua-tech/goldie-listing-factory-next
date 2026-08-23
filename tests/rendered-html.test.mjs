@@ -2308,3 +2308,26 @@ test("D214: Printify product photos are visible, not folded away", async () => {
   assert.match(page, /Printify product photos — \{selected\.size\} selected/);
   assert.doesNotMatch(page, /<summary>Choose Printify flatlays/);
 });
+
+test("D226: a listing waiting for its title is not shown as a failure", async () => {
+  const page = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+  const css = await readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8");
+
+  /* Measured live: a freshly drafted batch showed "Etsy details still need to be
+   * created" twice in red, each with a "Try this listing again" button, under a
+   * green tick reading "Core listing information is ready for your review".
+   * Three states on one screen, two of them wrong.
+   *
+   * Nothing was broken. Etsy details fill in automatically once a title exists,
+   * and no titles had been created yet — so the correct state was "waiting", and
+   * the retry button could not have succeeded. */
+  assert.match(page, /className=\{design\.title\.trim\(\)\?"etsy-detail-error":"etsy-detail-pending"\}/);
+  assert.match(page, /Waiting for this listing’s title\./);
+  assert.match(page, /\{design\.title\.trim\(\)&&<button aria-busy=\{preparingListingId===design\.id\}/,
+    "the retry button only appears when retrying could work");
+
+  /* And the success banner must not claim readiness while listings are waiting. */
+  assert.match(page, /\{files\.every\(file=>file\.etsy\)&&<div className="variant-transfer-note">/);
+
+  assert.match(css, /\.app-shell \.etsy-detail-pending\{/);
+});

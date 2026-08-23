@@ -1402,3 +1402,16 @@
   font-weight:750;
   color:#8b3f35;
 }
+
+/* D226 · A listing with no title yet is waiting, not failing. It used to render
+ * the same red "Etsy details still need to be created" card as a genuine
+ * failure, with a retry button that could not succeed, because Etsy details are
+ * filled in automatically once a title exists. */
+.app-shell .etsy-detail-pending{
+  padding:14px 16px;
+  border-radius:12px;
+  border:1px solid rgba(139,89,137,.22);
+  background:rgba(247,240,250,.7);
+}
+.app-shell .etsy-detail-pending b{display:block;color:#4b283e;font-size:13px}
+.app-shell .etsy-detail-pending span{display:block;margin-top:4px;color:#6b4a66;font-size:11.5px;line-height:1.45}
