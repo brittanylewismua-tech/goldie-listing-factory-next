@@ -833,8 +833,10 @@ test("a card picker always opens on the choices — D312", async () => {
   assert.doesNotMatch(app, /useState\(!remembered\)/,
     "remembered must not decide whether the grid is shown in the card");
 
-  /* And the copy must not still offer a save that now happens by itself. */
-  assert.doesNotMatch(app, /unless you save them as the product default/,
-    "auto-save means the panel cannot describe saving as optional");
-  assert.match(app, /Every change saves to this product automatically\./);
+  /* And the IN-CARD copy must not still offer a save that now happens by
+     itself. Outside the card — the bundle editor — nothing auto-saves, so the
+     original wording there is correct and must survive. */
+  assert.match(app, /inCard\?<p className="panel-help">Every change saves to this product automatically\.<\/p>/);
+  assert.match(app, /unless you save them as the product default/,
+    "the non-card head still describes a real, manual save");
 });
