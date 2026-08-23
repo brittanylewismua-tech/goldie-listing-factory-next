@@ -345,8 +345,18 @@ function PricingReview({variants,pricing,prices,productName,profiles,selectedPro
      price already on the Printify template — while the banner claimed Goldie had
      calculated them from the profit goal.
 
-     D324 · The first fix seeded once per variant set and never again, so it was
-     still wrong: selectRecipe sets the target from the recipe, the seed ran at
+     D324 · The first fix never ran AT ALL. It was guarded on "only calculate if
+     no price is set yet", but loading a product does this:
+
+         setVariantPrices(... variant.templatePrice ...)
+
+     so the map is full of Printify's own prices before the effect ever looks at
+     it. That is where $55.84 against a $31.59 cost came from — it is not a
+     calculation, it is what Printify has on the variant. Never assume an empty
+     map means "nothing has decided this yet".
+
+     The seed also ran once per variant set, which was wrong for a second
+     reason: selectRecipe sets the target from the recipe, the seed ran at
      THAT number, and a later reset to the default 10 changed the goal without
      recalculating. The result was prices computed at $18.50 sitting under a goal
      reading $10 — two different costs both showing exactly $18.50 profit, which

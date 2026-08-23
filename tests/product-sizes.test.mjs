@@ -925,3 +925,15 @@ test("unapproved prices follow the profit goal — D324", async () => {
   assert.equal(price.toFixed(2), "46.45");
   assert.equal(profit.toFixed(2), "10.00");
 });
+
+/* D324b · The reason D320 silently never ran: loading a product fills the price
+   map with Printify's template prices, so a guard of "only calculate when no
+   price is set" is a guard that never passes. Nothing may gate recalculation on
+   the price map being empty. */
+test("recalculation is not gated on an empty price map — D324", async () => {
+  const app = await read("app/listing-factory-app.tsx");
+  assert.match(app, /setVariantPrices\(Object\.fromEntries\(\(result\.product\.variants\|\|\[\]\)\.map\(variant=>\[String\(variant\.id\),variant\.templatePrice\]\)\)\)/,
+    "loading a product still seeds the map from the template");
+  assert.doesNotMatch(app, /if\(Object\.keys\(prices\)\.length\)return;/,
+    "so an empty-map guard can never fire and must not be used");
+});
