@@ -1112,18 +1112,38 @@ export default function ListingFactoryApp() {
     if (!keepSuccessful) setDrafts([]);
     else setDrafts((current) => current.filter((draft) => draft.status === "Created"));
     setProcessed(0);
+    const createdDesignResults:Array<{status?:string;id?:string|null;error?:string}>=[];
     try {
       await runBounded(targetFiles, batchConcurrency, processDesign, (result) => {
         if(completedDesignIds.has(result.clientId))return;
         completedDesignIds.add(result.clientId);
         const productResult={...result,productName:activeRecipe?.name||templateDetails?.blueprintTitle||"Saved product"};
+        createdDesignResults.push(productResult);
         setDrafts((current) => [...current, productResult]);
         if(result.id)setPrintifyImageSelections(current=>current[result.id!]?current:{...current,[result.id!]:printifyImageIndices});
         if(result.previewUrl)updateDesign(result.clientId,{previewUrl:result.previewUrl});
         setProcessed(Math.min(completedDesignIds.size,targetFiles.length));
       });
-      setComplete(true);
-      setFinishPhase("details");goToStep("finish",false,true);
+      /* D227 · Only move on if a draft actually exists. runDrafts used to set
+         complete and jump to the Listing page whatever came back, so a run in
+         which every draft failed looked exactly like a run in which every draft
+         succeeded: the seller was carried forward, generated titles, and only
+         then met "The matching Printify draft could not be found" beside each
+         listing, with the rail refusing the page they were standing on and no
+         route back. Measured on a real batch: both drafts came back
+         status:"NeedsRetry" with a null id, and the app advanced anyway. */
+      const createdNow=createdDesignResults.filter(result=>result.status==="Created"&&result.id).length;
+      if(createdNow>0){
+        setComplete(true);
+        setFinishPhase("details");goToStep("finish",false,true);
+      }else{
+        setComplete(false);
+        stopWith(
+          targetFiles.length===1?"That draft could not be created.":"None of these drafts could be created.",
+          [...new Set(createdDesignResults.map(result=>result.error).filter(Boolean) as string[])].slice(0,3),
+          "Nothing was charged against your plan. Fix the reason below and use Create Printify drafts again.",
+        );
+      }
     } finally {
       draftRunActive.current=false;
       setRunning(false);
@@ -1272,7 +1292,10 @@ export default function ListingFactoryApp() {
             const done=stagePosition>=0&&position<stagePosition;
             const issues=progressGateIssues(stage.index);
             const draftLine=stage.label==="Images"&&complete?` · ${createdDraftCount} drafts created`:"";
-            return <button key={stage.label} className={`${active?"active":""} ${done?"done":""}`} disabled={Boolean(issues.length)} aria-current={active?"step":undefined} title={issues[0]||undefined} onClick={()=>openProgressStep(stage.index)}><em className="progress-bubble-label">{stage.label}</em><span>{done?"✓":String(position+1).padStart(2,"0")}</span><span><b>{stage.title}</b><small>{issues[0]||`${progressStatus(stage.index,active,done,Boolean(issues.length))}${draftLine}`}</small></span></button>})}
+            /* D227 · Never disable the stage the seller is currently on. When drafts failed,
+               the rail greyed out Listing while the seller was standing on Listing —
+               a control refusing the page it was already showing. */
+            return <button key={stage.label} className={`${active?"active":""} ${done?"done":""}`} disabled={!active&&Boolean(issues.length)} aria-current={active?"step":undefined} title={issues[0]||undefined} onClick={()=>openProgressStep(stage.index)}><em className="progress-bubble-label">{stage.label}</em><span>{done?"✓":String(position+1).padStart(2,"0")}</span><span><b>{stage.title}</b><small>{issues[0]||`${progressStatus(stage.index,active,done,Boolean(issues.length))}${draftLine}`}</small></span></button>})}
           <p className="workflow-help">Goldie saves completed work. You can return to an earlier step without starting over.</p>
         </nav>
         <div className="workflow-stage">

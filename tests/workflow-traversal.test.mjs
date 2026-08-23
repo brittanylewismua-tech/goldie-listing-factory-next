@@ -183,3 +183,21 @@ test("D224: no saved batch can land on a step that has no page", async () => {
     }
   }
 });
+
+test("D227: a run where every draft fails does not pretend to have succeeded", async () => {
+  const source = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+
+  /* Measured on a real batch: both drafts came back status:"NeedsRetry" with a
+   * null id, and runDrafts set complete and jumped to the Listing page anyway.
+   * The seller then generated titles, and only afterwards met "The matching
+   * Printify draft could not be found" beside every listing — with the rail
+   * refusing the page they were standing on and no route back to retry. */
+  assert.match(source, /const createdNow=createdDesignResults\.filter\(result=>result\.status==="Created"&&result\.id\)\.length;/);
+  assert.match(source, /if\(createdNow>0\)\{\s*setComplete\(true\);/);
+  assert.match(source, /\}else\{\s*setComplete\(false\);/, "a total failure must not mark the batch complete");
+  assert.match(source, /None of these drafts could be created\./);
+  assert.match(source, /Nothing was charged against your plan/);
+
+  /* And the rail must never disable the stage the seller is on. */
+  assert.match(source, /disabled=\{!active&&Boolean\(issues\.length\)\}/);
+});
