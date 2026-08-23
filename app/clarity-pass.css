@@ -1772,3 +1772,44 @@ body:has(.management-nav) .usage-card h2{
 @media (prefers-reduced-motion:reduce){
   .app-shell .printify-photo-selector{animation:none!important}
 }
+
+/* ============================================================================
+ * D292 · THE HELP DIALOG RENDERS OUTSIDE .app-shell
+ *
+ * Third time tonight, same root cause as D246 (nav icons) and D277 (management
+ * headings): a component rendered in a shell that the rules were never scoped
+ * to reach. Verified live — document.querySelector('.app-shell .context-help
+ * -dialog') is null; it is portalled to the body.
+ *
+ * Consequences, measured on the deployed page with a help panel open:
+ *   .mini-label   fell back to ARIAL — the only Arial text in the product
+ *   h2            42px/650 Fraunces — LARGER than the 34px page title behind
+ *                 it, and the last surviving Fraunces anywhere in the app
+ *   h3            15px/400 where the GROUP TITLE scale is 15px/800
+ * ========================================================================== */
+.context-help-dialog .mini-label{
+  font:800 10px/1.3 "Manrope",system-ui,sans-serif!important;
+  letter-spacing:.14em!important;
+  text-transform:uppercase!important;
+  color:#8a6b80!important;
+}
+.context-help-dialog h2{
+  font:400 22px/1.15 "DM Serif Display",Georgia,serif!important;
+  color:#4c293f!important;
+}
+.context-help-dialog h3{
+  font:800 15px/1.3 "Manrope",system-ui,sans-serif!important;
+  color:#4c293f!important;
+}
+.context-help-dialog .context-help-intro,
+.context-help-dialog p{
+  font-family:"Manrope",system-ui,sans-serif!important;
+}
+
+/* D293 · The bundle rule line: says why a control is unavailable before you
+   click a dead one. */
+.app-shell .bundle-rule{
+  margin:0 0 10px!important;
+  color:#75576b!important;
+  font:500 12px/1.5 "Manrope",system-ui,sans-serif!important;
+}

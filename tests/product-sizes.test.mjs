@@ -734,3 +734,22 @@ test("D228: an empty colour or size selection is never written to a recipe", asy
   const readiness = await read("app/product-readiness.ts");
   assert.match(readiness, /NEVER persist an empty colour or size selection to a recipe/);
 });
+
+/* D293 · A disabled control must say why it is disabled. The bundle editor
+   capped at 4 products and required 2, and enforced both by nothing more than
+   `disabled` — the same defect as the dead facet rows in D237: the control is
+   present, it does nothing, and the screen never explains it. */
+test("bundle limits explain themselves — D293", async () => {
+  const tools = await read("app/factory-tools.tsx");
+
+  assert.match(tools, /bundleIds\.length>=4\)\?"A bundle holds up to 4 saved products/,
+    "the capped checkbox must carry the reason");
+  assert.match(tools, /className="bundle-rule"/,
+    "and the rule must be on screen, not only in a title attribute");
+  assert.match(tools, /Choose at least 2 saved products/,
+    "the minimum must be stated too");
+
+  /* The enforcement itself must stay. */
+  assert.match(tools, /bundleIds\.length>=4/);
+  assert.match(tools, /bundleIds\.length<2/);
+});

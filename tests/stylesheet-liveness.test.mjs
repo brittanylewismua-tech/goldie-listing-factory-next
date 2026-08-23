@@ -134,8 +134,11 @@ test("headings use the D233 scale only", async () => {
 test("management-page rules are not scoped to the factory shell", async () => {
   const css = (await readFile(new URL("app/clarity-pass.css", root), "utf8"))
     .replace(/\/\*[\s\S]*?\*\//g, "");
+  /* D292 · The help dialog is portalled to <body>, so it is outside .app-shell
+     too — the same trap as the management pages. */
   const managementOnly = ["management-nav", "bank-delete", "management-page",
-    "usage-card", "usage-page", "keyword-workspace", "mockupHero", "setTitleRow"];
+    "usage-card", "usage-page", "keyword-workspace", "mockupHero", "setTitleRow",
+    "context-help-dialog"];
   const bad = [];
   for (const [rule] of css.matchAll(/[^{}]+\{[^}]*\}/g)) {
     const group = rule.slice(0, rule.indexOf("{")).split(",").map((x) => x.trim());
