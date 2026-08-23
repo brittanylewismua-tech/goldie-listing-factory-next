@@ -1235,6 +1235,13 @@ export default function ListingFactoryApp() {
       /* D213 · Same rule as colours: no template seeding. */
             const sizeDefaults=rememberedSizes.length?rememberedSizes:sessionSizeIds;
       setSelectedSizeIds(sizeDefaults);setSizesRemembered(Boolean(rememberedSizes.length));
+      /* D329 · Apply the verified Etsy profile from this exact template response.
+         Waiting for the independent profile-list and invalid-saved-id effects to
+         race left the picker on its placeholder even after the server recovered
+         the right profile from Etsy. The later profile-list validation still
+         clears an id that genuinely is not on the connected shop. */
+      const verifiedProfileId=Number(result.product.shippingTemplateId)||0;
+      if(verifiedProfileId)setEtsyShippingProfileId(verifiedProfileId);
       setTemplateDetails(result.product);setDescription(result.product.description||"");if(result.product.standardShipping!=null)setPricing(current=>({...current,shippingCost:result.product!.standardShipping!,shippingCharged:0}));setVariantPrices(Object.fromEntries((result.product.variants||[]).map(variant=>[String(variant.id),variant.templatePrice])));setPricingApproved(false); return result.product;
     } catch (error) { if(requestVersion===templateLoadVersion.current)setTemplateError(error instanceof Error ? error.message : "The template could not be loaded."); return null; }
     finally { if(requestVersion===templateLoadVersion.current)setLoadingTemplate(false); }

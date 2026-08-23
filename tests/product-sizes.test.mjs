@@ -967,3 +967,9 @@ test("the shipping combobox shows its default and its rows are not buttons — D
     "options must beat the .pricing-controls button fill");
   assert.match(block, /background:transparent!important/);
 });
+
+test("loading a template applies its verified Etsy shipping profile immediately — D329", async () => {
+  const app = await read("app/listing-factory-app.tsx");
+  assert.match(app, /const verifiedProfileId=Number\(result\.product\.shippingTemplateId\)\|\|0;/);
+  assert.match(app, /if\(verifiedProfileId\)setEtsyShippingProfileId\(verifiedProfileId\);/);
+});
