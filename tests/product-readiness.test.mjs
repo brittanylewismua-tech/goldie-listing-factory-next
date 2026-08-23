@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { productReadiness } from "../app/product-readiness.ts";
+import { productReadiness, mockupFacet, keywordFacet, etsyFacet } from "../app/product-readiness.ts";
 
 /* Real shapes from the live account. Three saved products all reported
  * setupComplete: true while having defaultColorIds [], defaultSizeIds [] and
@@ -31,9 +31,10 @@ test("colors and sizes are always asked once, never taken from the template", ()
    * the artwork placement — not colors and sizes. Whatever variants are enabled
    * there are Printify's defaults, so inheriting them would publish listings in
    * colors the seller never chose. They are asked once, per product. */
-  /* Only one keyword bank exists in this fixture, so that one is not a question. */
+  /* D221 · Product readiness is product setup only. The keyword bank moved to the
+     Listing page and the mockup set to the Images page, so neither appears here. */
   assert.deepEqual(result.questions, ["colors", "sizes"]);
-  assert.equal(result.autoResolved.keywordListId, "b1");
+  assert.deepEqual(result.facets.map((f) => f.name), ["colors", "sizes", "shipping", "profit"]);
   assert.equal(result.established, false);
   assert.equal(result.autoResolved.colorIds, undefined);
   assert.equal(result.autoResolved.sizeIds, undefined);
@@ -45,8 +46,11 @@ test("colors and sizes are always asked once, never taken from the template", ()
   const sizes = result.facets.find((f) => f.name === "sizes");
   assert.deepEqual(sizes.suggested.sizeIds, [14, 15]);
 
-  /* One compatible mockup set is genuinely not a choice. */
-  assert.equal(result.autoResolved.mockupTheme, "BACH TEES");
+  /* The mockup rule is unchanged, it just belongs to the Images page now: one
+     compatible set is genuinely not a choice. */
+  assert.equal(mockupFacet(tee).resolved.mockupTheme, "BACH TEES");
+  /* And the single keyword bank still resolves itself, on the Listing page. */
+  assert.equal(keywordFacet(tee).resolved.keywordListId, "b1");
 });
 
 test("a saved mockup set that does not fit the product is not readiness", () => {
@@ -54,13 +58,15 @@ test("a saved mockup set that does not fit the product is not readiness", () => 
    * so compatibleMockupThemes is empty. Presence said ready; the product was
    * unusable and the mockup card rendered blank. */
   const hoodie = { ...tee, compatibleMockupThemes: [], saved: { defaultMockupTheme: "BACH TEES", defaultColorIds: [1], defaultSizeIds: [14], keywordListId: "b1" } };
-  const mockups = productReadiness(hoodie).facets.find((f) => f.name === "mockups");
+  /* D221 · The mockup rule now lives with the photos on the Images page, so it is
+     checked directly rather than through product readiness. */
+  const mockups = mockupFacet(hoodie);
   assert.equal(mockups.label, "No mockups");
   assert.match(mockups.note, /BACH TEES does not fit this product/);
   /* Having no compatible set is a fact, not a blocker — you can publish without
    * lifestyle mockups. */
   assert.equal(mockups.state, "auto");
-  assert.equal(productReadiness(hoodie).established, true);
+  assert.equal(productReadiness(hoodie).established, true, "and it never blocked product setup");
 });
 
 test("an established product asks nothing at all", () => {
@@ -70,14 +76,25 @@ test("an established product asks nothing at all", () => {
   const result = productReadiness(established);
   assert.deepEqual(result.questions, []);
   assert.equal(result.established, true);
-  assert.deepEqual(result.facets.filter(f=>["colors","sizes","mockups","keywords"].includes(f.name)).map((f) => f.state), ["ready", "ready", "ready", "ready"]);
+  /* colours and sizes are the seller's, saved on the recipe; shipping copies the
+     profile Printify attached and profit falls back to $10 — both editable, both
+     "auto" rather than a question. */
+  assert.deepEqual(result.facets.map((f) => f.state), ["ready", "ready", "auto", "auto"]);
+  /* The choices that moved are still settled on their own pages. */
+  assert.equal(mockupFacet(established).state, "ready");
+  assert.equal(keywordFacet(established).state, "ready");
 });
 
 test("saved choices win over template defaults", () => {
   const configured = { ...tee, saved: { defaultColorIds: [3], defaultSizeIds: [99], keywordListId: "b1", defaultMockupTheme: "BACH TEES" } };
   const result = productReadiness(configured);
   assert.equal(result.established, true);
-  assert.deepEqual(result.facets.filter(f=>["colors","sizes","mockups","keywords"].includes(f.name)).map((f) => f.state), ["ready", "ready", "ready", "ready"]);
+  /* colours and sizes are the seller's, saved on the recipe; shipping copies the
+     profile Printify attached and profit falls back to $10 — both editable, both
+     "auto" rather than a question. */
+  assert.deepEqual(result.facets.map((f) => f.state), ["ready", "ready", "auto", "auto"]);
+  assert.equal(mockupFacet(configured).state, "ready");
+  assert.equal(keywordFacet(configured).state, "ready");
   assert.equal(result.facets.find((f) => f.name === "colors").label, "1 color");
 });
 
@@ -101,14 +118,18 @@ test("a product with no size axis is not asked about sizes", () => {
 
 test("no keyword banks at all is a real question", () => {
   const noBanks = { ...tee, keywordBanks: [], saved: { defaultColorIds: [1], defaultSizeIds: [14] } };
-  const result = productReadiness(noBanks);
-  assert.deepEqual(result.questions, ["keywords"]);
-  assert.match(result.facets.find((f) => f.name === "keywords").note, /Create a keyword bank first/);
+  /* D221 · Asked on the Listing page now, where the titles that consume the bank
+     are built — not as a condition of finishing product setup. */
+  const keywords = keywordFacet(noBanks);
+  assert.equal(keywords.state, "ask");
+  assert.match(keywords.note, /Create a keyword bank first/);
+  assert.ok(!productReadiness(noBanks).questions.includes("keywords"),
+    "a missing bank must not block the Product page");
 });
 
 test("declining mockups is a real answer, not a gap", () => {
   const declined = { ...tee, compatibleMockupThemes: ["A", "B"], saved: { mockupsDeclined: true, defaultColorIds: [1], defaultSizeIds: [14], keywordListId: "b1" } };
-  const mockups = productReadiness(declined).facets.find((f) => f.name === "mockups");
+  const mockups = mockupFacet(declined);
   assert.equal(mockups.state, "ready");
   assert.equal(mockups.label, "No mockups");
 });
@@ -135,20 +156,21 @@ test("profit and Etsy attributes never block a batch", () => {
    * shown so the seller can change them, not to stop the batch. */
   const result = productReadiness(tee);
   const profit = result.facets.find((f) => f.name === "profit");
-  const etsy = result.facets.find((f) => f.name === "etsy");
   assert.equal(profit.state, "auto");
   assert.equal(profit.label, "$10 per item");
+  assert.ok(!result.questions.includes("profit"));
+  /* Etsy attributes moved to the Listing page; they still never block. */
+  const etsy = etsyFacet(tee);
   assert.equal(etsy.state, "auto");
   assert.equal(etsy.label, "0 of 11 set");
-  assert.ok(!result.questions.includes("profit"));
-  assert.ok(!result.questions.includes("etsy"));
+  assert.ok(!result.facets.some((f) => f.name === "etsy"));
 });
 
 test("a saved profit goal and Etsy attributes read as settled", () => {
   const configured = { ...tee, saved: { defaultProfitTarget: 25, etsyDefaults: Object.fromEntries(Array.from({ length: 11 }, (_, i) => [`f${i}`, "x"])) } };
   const result = productReadiness(configured);
   assert.equal(result.facets.find((f) => f.name === "profit").label, "$25 per item");
-  assert.equal(result.facets.find((f) => f.name === "etsy").state, "ready");
+  assert.equal(etsyFacet(configured).state, "ready");
 });
 
 /* Shared base so these fixtures carry every required input; only the axis under

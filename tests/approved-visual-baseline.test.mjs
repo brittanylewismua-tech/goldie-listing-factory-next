@@ -146,7 +146,7 @@ test("preview navigation renders the real later-step experiences", async () => {
   const page = await readFile(listingFactoryPage, "utf8");
   assert.match(page, /if\(index>=3&&!templateDetails\)await loadPreviewDemo\(\)/);
   assert.match(page, /if\(index===4\)\{goToStep\("review",false,true\);setPreflightOpen\(true\);return\}/);
-  assert.match(page, /setFinishPhase\(index===5\?"details":index===6\?"etsy":index===7\?"mockups":"final"\)/);
+  assert.match(page, /setFinishPhase\(index===8\?"final":"details"\)/);
 });
 
 test("images and mockups begins with real content instead of an empty stage", async () => {
@@ -503,7 +503,7 @@ test("the setup step has exactly one forward control, and it gates every section
   assert.match(page, /\{workflowStep!=="setup"&&<button className="workflow-next" disabled=\{!designsFinished\} onClick=\{continueFromDesigns\}>/,
     "The designs-block forward button renders on the setup step again, above Colours and Mockups.");
   // the real gate must keep naming what is missing
-  assert.match(page, /!selectedColorIds\.length\?"Choose product colors to continue":Boolean\(templateDetails\?\.sizeOptions\?\.length\)&&!selectedSizeIds\.length\?"Choose product sizes to continue":!autoTitleBankId\?"Pick a keyword bank to continue"/ /* D164 gates sizes the same way */);
+  assert.match(page, /!selectedColorIds\.length\?"Choose product colors to continue":Boolean\(templateDetails\?\.sizeOptions\?\.length\)&&!selectedSizeIds\.length\?"Choose product sizes to continue"/  /* D164 gates sizes the same way */);
 });
 
 test("a saved later step cannot overwrite an explicit safe return to setup — D108",async()=>{

@@ -130,7 +130,7 @@ function sizeFacet(input: ReadinessInput): Facet {
   };
 }
 
-function mockupFacet(input: ReadinessInput): Facet {
+export function mockupFacet(input: ReadinessInput): Facet {
   const compatible = input.compatibleMockupThemes;
   const savedTheme = (input.saved.defaultMockupTheme || "").trim();
   /* A saved set this blueprint cannot use is worse than none: it reads as
@@ -152,7 +152,7 @@ function mockupFacet(input: ReadinessInput): Facet {
   return { name: "mockups", state: "ask", label: "", note: `${compatible.length} sets fit this product` };
 }
 
-function keywordFacet(input: ReadinessInput): Facet {
+export function keywordFacet(input: ReadinessInput): Facet {
   const banks = input.keywordBanks;
   const savedId = (input.saved.keywordListId || "").trim();
   const saved = banks.find((bank) => bank.id === savedId);
@@ -182,7 +182,7 @@ function profitFacet(input: ReadinessInput): Facet {
   return { name: "profit", state: "auto", label: "$10 per item", resolved: { profitTarget: 10 } };
 }
 
-function etsyFacet(input: ReadinessInput): Facet {
+export function etsyFacet(input: ReadinessInput): Facet {
   const set = Object.keys(input.saved.etsyDefaults || {}).length;
   const required = input.etsyFieldsRequired;
   if (!required) return { name: "etsy", state: "ready", label: "Nothing required" };
@@ -192,7 +192,17 @@ function etsyFacet(input: ReadinessInput): Facet {
 }
 
 export function productReadiness(input: ReadinessInput): Readiness {
-  const facets = [colorFacet(input), sizeFacet(input), mockupFacet(input), keywordFacet(input), shippingFacet(input), profitFacet(input), etsyFacet(input)];
+  /* D221 · The product card carries product setup and nothing else: colours,
+   * sizes, pricing and shipping. Mockups belong with the photos on the Images
+   * page, the keyword bank belongs with the titles that use it on the Listing
+   * page, and Etsy details belong beside those titles too. Having them here
+   * meant the same choice appeared in two places and the Product page blocked
+   * Continue on a decision that is made two pages later.
+   *
+   * mockupFacet, keywordFacet and etsyFacet are kept and still exported through
+   * the type — the pages that own those choices use the same compatibility and
+   * completeness rules — they are simply no longer part of product readiness. */
+  const facets = [colorFacet(input), sizeFacet(input), shippingFacet(input), profitFacet(input)];
   const autoResolved: NonNullable<Facet["resolved"]> = {};
   for (const facet of facets) if (facet.state === "auto" && facet.resolved) Object.assign(autoResolved, facet.resolved);
   const questions = facets.filter((facet) => facet.state === "ask").map((facet) => facet.name);

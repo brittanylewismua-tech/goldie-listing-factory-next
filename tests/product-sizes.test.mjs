@@ -252,8 +252,14 @@ test("every setting a batch needs is a facet on the card — D182", async () => 
    * disclosure and a separate keyword prompt — four places, some of them
    * batch-level for settings that are per-product. All four are chips on the card,
    * and only the ones that still need an answer open a control. */
-  for (const facet of ["colors", "sizes", "mockups", "keywords"])
+  /* D221 · The card carries product setup: colours, sizes, shipping, profit.
+     Mockups went to the Images page with the photos and the keyword bank to the
+     Listing page with the titles that use it — the D182 point stands, they are
+     each in ONE place, just not all on this card. */
+  for (const facet of ["colors", "sizes", "shipping", "profit"])
     assert.match(app, new RegExp(`open==="${facet}"&&`), `${facet} must open from the card`);
+  assert.doesNotMatch(app, /open==="mockups"&&/, "mockups belong to the Images page");
+  assert.doesNotMatch(app, /open==="keywords"&&/, "the keyword bank belongs to the Listing page");
   assert.doesNotMatch(app, /className="saved-settings-summary"/,
     "The summary chips duplicated the card's chips.");
   assert.doesNotMatch(app, /className="keyword-bank-required"/,
@@ -263,7 +269,12 @@ test("every setting a batch needs is a facet on the card — D182", async () => 
    * immediately rather than behind a separate save-as-default button. */
   assert.match(app, /async function establish\(recipe:Recipe,change:Partial<Recipe>\)/);
   assert.match(app, /establish\(recipe,\{defaultColorIds:ids\}\)/);
-  assert.match(app, /void establish\(recipe,\{keywordListId:id\}\)/);
+  assert.match(app, /establish\(recipe,\{defaultSizeIds:ids\}\)/);
+  assert.match(app, /void establish\(recipe,\{etsyShippingProfileId:id\}\)/);
+  assert.match(app, /void establish\(recipe,\{defaultProfitTarget:value\}\)/);
+  /* D221 · The keyword bank is chosen on the Listing page now, and still
+     persists to the recipe from there. */
+  assert.match(app, /establish\(activeRecipe,\{keywordListId:list\.id\}\)/);
 });
 
 test("Edit bundle visibly does something — D176", async () => {
@@ -317,12 +328,16 @@ test("every product in a bundle needs its own keyword bank before continuing —
    * Measured on the live account: all three saved products had keywordListId
    * "(none)", so this was not hypothetical. */
   assert.match(app, /const bundleKeywordGaps=useMemo\(\(\)=>\{/);
-  assert.match(app, /if\(bundleKeywordGaps\.length\)issues\.push\(`Choose a keyword bank for \$\{bundleKeywordGaps\.join\(", "\)\}\.`\)/,
-    "The step gate must name the products still missing a bank.");
-  assert.match(app, /\|\|bundleKeywordGaps\.length>0\|\|/,
-    "Continue stays disabled until every product has one.");
-  assert.match(app, /bundleKeywordGaps\.length\?`Pick a keyword bank for \$\{bundleKeywordGaps\.join\(", "\)\}`/,
-    "And it says which products, not just that something is missing.");
+
+  /* D221 · The rule is unchanged; it moved pages. The bank is chosen on the
+     Listing page, where the titles that consume it are written, so gating the
+     PRODUCT page on it was blocking Continue on a decision made two pages later.
+     The gate now applies to the step that needs it, and still names the products
+     that are missing one rather than saying something is wrong. */
+  assert.match(app, /if\(step==="finish"&&bundleKeywordGaps\.length\)issues\.push\(`Choose a keyword bank for \$\{bundleKeywordGaps\.join\(", "\)\}\.`\)/,
+    "The Listing step names the products still missing a bank.");
+  assert.doesNotMatch(app, /\|\|bundleKeywordGaps\.length>0\|\|/,
+    "and the Product page no longer blocks on it");
 });
 
 test("shipping, profit and Etsy details are per-product facts — D183", async () => {
@@ -349,7 +364,13 @@ test("shipping, profit and Etsy details are per-product facts — D183", async (
    * row's recipe. What survives here is the per-product computation above.
    *
    * Etsy details still uses the scroll-away path, and keeps this assertion. */
-  assert.match(app, /const inCard=\["colors","sizes","mockups","keywords","shipping","profit"\]\.includes\(facet\.name\);/);
+  /* D221 · The product card is product setup only: colours, sizes, shipping,
+     profit. Mockups moved to the Images page with the photos and the keyword
+     bank to the Listing page with the titles that use it — they were asked in
+     two places, and the Product page blocked Continue on a choice made two pages
+     later. Their rules are unchanged and still covered, in
+     tests/product-readiness.test.mjs against the exported facet functions. */
+  assert.match(app, /const inCard=\["colors","sizes","shipping","profit"\]\.includes\(facet\.name\);/);
   assert.match(app, /const block=document\.querySelector<HTMLDetailsElement>\("\.everything-else"\);/);
   assert.match(app, /block\.open=true;block\.scrollIntoView\(\{block:"start"\}\)/,
     "Etsy details still opens its block, and must bring it into view.");
@@ -494,7 +515,13 @@ test("D209: every readiness row that offers to open, opens in the card", async (
    * were wired to `.everything-else` — a legacy <details> at the foot of the
    * page — so clicking Shipping scrolled you away from the card entirely, to a
    * bare "<product> settings" block with a stray Profit goal above it. */
-  assert.match(app, /const inCard=\["colors","sizes","mockups","keywords","shipping","profit"\]\.includes\(facet\.name\);/);
+  /* D221 · The product card is product setup only: colours, sizes, shipping,
+     profit. Mockups moved to the Images page with the photos and the keyword
+     bank to the Listing page with the titles that use it — they were asked in
+     two places, and the Product page blocked Continue on a choice made two pages
+     later. Their rules are unchanged and still covered, in
+     tests/product-readiness.test.mjs against the exported facet functions. */
+  assert.match(app, /const inCard=\["colors","sizes","shipping","profit"\]\.includes\(facet\.name\);/);
 
   // Both new panels render inside the card, scoped to the row's own recipe.
   assert.match(app, /open==="shipping"&&<div className="row-panel shipping-row-panel">/);
@@ -517,7 +544,7 @@ test("D209: every readiness row that offers to open, opens in the card", async (
 
   // Every in-card facet must still have a panel inside that function.
   const body = app.slice(panelForAt, rowsAt);
-  for (const facet of ["colors", "sizes", "shipping", "profit", "mockups", "keywords"]) {
+  for (const facet of ["colors", "sizes", "shipping", "profit"]) {
     assert.match(body, new RegExp(`open==="${facet}"`), `${facet} still has a panel`);
   }
 

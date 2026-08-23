@@ -366,7 +366,7 @@ test("guides sellers through the complete resumable nine-step workflow",async()=
   assert.match(page,/saveAllEtsyDetails/);assert.match(page,/finishPhase/);
   assert.match(page,/etsyPreparationActive\.current/);
   assert.match(page,/etsySaveActive\.current/);
-  assert.match(page,/url\.searchParams\.set\("phase","mockups"\)/);
+  assert.match(page,/url\.searchParams\.set\("phase","final"\)/);
   assert.match(page,/version!==etsyPreparationVersion\.current/);
 });
 
@@ -2004,7 +2004,7 @@ test("keeps a forward path from setup, designs, and pricing after drafts exist (
    * step selects listing images separately - and requiring one made "No mockups
    * for this batch" unreachable: choosing it disabled the only way forward.
    * See D110. */
-  assert.match(app,/disabled=\{!complete&&\(!selectedColorIds\.length\|\|\(Boolean\(templateDetails\?\.sizeOptions\?\.length\)&&!selectedSizeIds\.length\)\|\|!autoTitleBankId\|\|bundleKeywordGaps\.length>0\|\|activeRecipe\?\.setupComplete===false\)\}/ /* D164 sizes, D181 per-product keyword banks */);
+  assert.match(app,/disabled=\{!complete&&\(!selectedColorIds\.length\|\|\(Boolean\(templateDetails\?\.sizeOptions\?\.length\)&&!selectedSizeIds\.length\)\)\}/  /* D164 sizes, D181 per-product keyword banks */);
   assert.match(app,/complete\?goToStep\("finish",false,true\):goToStep\("designs"\)/);
   assert.match(app,/files\.length>0&&complete&&workflowStep==="designs"/);
   assert.match(app,/className="batch-actions"[\s\S]{0,500}Back to finishing your listings/);
