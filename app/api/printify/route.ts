@@ -139,12 +139,12 @@ export async function POST(request: Request) {
     }
     if (!found) return NextResponse.json({ error: "This Printify product cannot be used yet.", issues:["Use a product from the Printify shop connected to Goldie."] }, { status: 404 });
     let shippingTemplateId=String(found.product.external?.shipping_template_id||"").trim();
-    // Printify does not consistently return shipping_template_id for older or
-    // already-published products. The linked Etsy listing is authoritative in
-    // that case, so recover the profile instead of falsely rejecting a valid
-    // template.
+    // Printify's shipping_template_id and Etsy's shipping_profile_id are not the
+    // same identifier. The linked Etsy listing is authoritative whenever it is
+    // available; otherwise a populated Printify id can prevent the real Etsy
+    // profile from ever being selected in the pricing picker.
     const externalListingId=Number(found.product.external?.id);
-    if(!shippingTemplateId&&externalListingId>0){
+    if(externalListingId>0){
       try{
         const connection=await etsyConnection(user.userId);
         const listing=await etsyFetch<{shipping_profile_id?:number}>(`/listings/${externalListingId}`,connection.token);

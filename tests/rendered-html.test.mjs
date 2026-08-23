@@ -1248,6 +1248,8 @@ test("recovers published-template shipping and constrains Etsy categories by pro
   ]);
   assert.match(printify,/externalListingId/);
   assert.match(printify,/shipping_profile_id/);
+  assert.match(printify,/if\(externalListingId>0\)/);
+  assert.doesNotMatch(printify,/if\(!shippingTemplateId&&externalListingId>0\)/);
   assert.match(taxonomy,/productCategoryScore/);
   assert.match(taxonomy,/art & collectibles › prints ›/);
   assert.match(taxonomy,/exactLeaf/);
