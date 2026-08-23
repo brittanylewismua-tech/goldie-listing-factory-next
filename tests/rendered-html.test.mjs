@@ -75,7 +75,7 @@ test("serves the Listing Factory from its canonical product path", async () => {
   assert.match(pageSource, /Goldie Listing Factory/);
   assert.match(pageSource, /Connect Printify/);
   assert.match(pageSource, /Secure connection/);
-  assert.match(pageSource, /Prepare the Printify product Goldie will copy/);
+  assert.match(pageSource, /Prepare your product in Printify/);
   assert.match(pageSource, /The term &apos;Etsy&apos; is a trademark of Etsy, Inc\./);
   assert.match(pageSource, /not endorsed or certified by Etsy, Inc\./);
   assert.match(approvedCss, /\.etsy-api-disclosure/);
@@ -265,9 +265,9 @@ test("provides thorough contextual help throughout all nine Listing Factory step
   assert.match(page, /const WORKFLOW_HELP = \[/);
   assert.match(page, /WORKFLOW_HELP\[progressIndex\]/);
   assert.match(page, /Connect Printify and Etsy/);
-  assert.match(page, /Prepare the Printify product Goldie will copy/);
-  assert.match(page, /The product must already be published to Etsy/);
-  assert.match(page, /Copy the URL only from the Printify design editor/);
+  assert.match(page, /Prepare your product in Printify/);
+  assert.match(page, /still only a Printify draft will not work/);
+  assert.match(page, /Copy the correct Printify URL/);
   assert.match(page, /Add finished artwork/);
   assert.match(page, /Review prices and shipping/);
   assert.match(page, /Create the Printify drafts/);

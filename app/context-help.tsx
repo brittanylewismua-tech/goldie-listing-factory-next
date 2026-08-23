@@ -3,7 +3,7 @@
 import { useEffect, useId, useState } from "react";
 import { createPortal } from "react-dom";
 
-export type HelpSection = { heading: string; copy: string; bullets?: string[] };
+export type HelpSection = { heading: string; copy: string; bullets?: string[]; steps?: string[] };
 
 export default function ContextHelp({ label, title, intro, sections }: { label: string; title: string; intro: string; sections: HelpSection[] }) {
   const [open, setOpen] = useState(false);
@@ -25,6 +25,7 @@ export default function ContextHelp({ label, title, intro, sections }: { label: 
       <div className="context-help-sections">{sections.map(section => <article key={section.heading}>
         <h3>{section.heading}</h3><p>{section.copy}</p>
         {section.bullets?.length ? <ul>{section.bullets.map(item => <li key={item}>{item}</li>)}</ul> : null}
+        {section.steps?.length ? <ol>{section.steps.map(item => <li key={item}>{item}</li>)}</ol> : null}
       </article>)}</div>
     </section>
   </div>, document.body) : null;
