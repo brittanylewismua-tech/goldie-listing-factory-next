@@ -391,6 +391,14 @@ function PricingReview({variants,pricing,prices,productName,profiles,selectedPro
   const selectedProfileGroup=selectedProfile?shippingProfileGroup(selectedProfile.title,productName):"other";
   const selectedProfileNeedsReview=Boolean(selectedProfile&&selectedProfile.id!==attachedProfile?.id&&selectedProfileGroup!=="recommended");
   const selectedOutsideSearch=selectedProfile&&!searchedProfiles.some(profile=>profile.id===selectedProfile.id)?selectedProfile:null;
+  /* D325 · The trigger showed "Choose your Etsy shipping profile" even when
+     Goldie had already inherited the profile this product ships with on Etsy.
+     That profile IS the default until the seller picks another (D296), so the
+     control has to say so — and be it, not just display it. */
+  useEffect(()=>{
+    if(profilesLoading||selectedProfileId||!attachedProfile)return;
+    onSelectProfile(attachedProfile.id);
+  },[profilesLoading,selectedProfileId,attachedProfile]);
   const [comboOpen,setComboOpen]=useState(false);
   const comboRef=useRef<HTMLDivElement|null>(null);
   /* D319 · Clicking away closes the list, the way every other picker behaves. */
@@ -446,7 +454,7 @@ function PricingReview({variants,pricing,prices,productName,profiles,selectedPro
             <button type="button" className="shipping-combobox-trigger" disabled={profilesLoading}
               aria-haspopup="listbox" aria-expanded={comboOpen} aria-labelledby="shipping-combobox-label"
               onClick={()=>setComboOpen(open=>!open)}>
-              <span>{profilesLoading?"Loading your shipping profiles…":selectedProfile?shippingProfileOptionLabel(selectedProfile):"Choose your Etsy shipping profile"}</span>
+              <span>{profilesLoading?"Loading your shipping profiles…":selectedProfile?shippingProfileOptionLabel(selectedProfile):attachedProfile?shippingProfileOptionLabel(attachedProfile):"Choose your Etsy shipping profile"}</span>
               <em aria-hidden="true">⌄</em>
             </button>
             {comboOpen&&<div className="shipping-combobox-panel">

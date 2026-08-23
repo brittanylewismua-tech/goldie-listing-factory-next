@@ -937,3 +937,24 @@ test("recalculation is not gated on an empty price map — D324", async () => {
   assert.doesNotMatch(app, /if\(Object\.keys\(prices\)\.length\)return;/,
     "so an empty-map guard can never fire and must not be used");
 });
+
+/* D325/D326 · The combobox that replaced the native select regressed two things.
+   It showed "Choose your Etsy shipping profile" even when Goldie had already
+   inherited the profile the product ships with — that profile IS the default
+   until the seller picks another (D296). And it sits inside `.pricing-controls`,
+   which paints every button it contains solid plum with !important, so 94
+   option rows became 94 filled buttons. */
+test("the shipping combobox shows its default and its rows are not buttons — D325", async () => {
+  const app = await read("app/listing-factory-app.tsx");
+  const css = await read("app/clarity-pass.css");
+
+  assert.match(app, /:attachedProfile\?shippingProfileOptionLabel\(attachedProfile\)/,
+    "the trigger falls back to the inherited profile before the prompt");
+  assert.match(app, /if\(profilesLoading\|\|selectedProfileId\|\|!attachedProfile\)return;/,
+    "and it is actually selected, not merely displayed");
+
+  const block = css.slice(css.indexOf("D326 ·"));
+  assert.match(block, /\.app-shell \.pricing-controls \.shipping-combobox-option/,
+    "options must beat the .pricing-controls button fill");
+  assert.match(block, /background:transparent!important/);
+});

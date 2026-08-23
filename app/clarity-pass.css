@@ -2037,3 +2037,39 @@ body{min-width:1180px!important}
   margin:0;padding:6px;color:#75576b;
   font:500 11px/1.4 "Manrope",system-ui,sans-serif;
 }
+
+/* D326 · The combobox sits inside `.pricing-controls`, and that block paints
+   EVERY button it contains with `linear-gradient(145deg,#6a3456,#4b283e)` and
+   white text, both !important. So all 94 profile rows rendered as filled plum
+   buttons — a wall of purple for what is a list of options. A row in a list is
+   not an action button; only the trigger is. */
+.app-shell .pricing-controls .shipping-combobox-option,
+.app-shell .shipping-combobox-option{
+  border:0!important;
+  background:transparent!important;
+  background-image:none!important;
+  color:#4f2b42!important;
+  font-weight:600!important;
+  box-shadow:none!important;
+}
+.app-shell .pricing-controls .shipping-combobox-option:hover,
+.app-shell .shipping-combobox-option:hover{
+  background:rgba(244,212,237,.45)!important;
+  background-image:none!important;
+}
+.app-shell .pricing-controls .shipping-combobox-option.selected,
+.app-shell .shipping-combobox-option.selected{
+  background:#f7e6f3!important;
+  background-image:none!important;
+  color:#4c293f!important;
+  font-weight:800!important;
+}
+/* The trigger is the one control here, so it reads as a field, not a CTA. */
+.app-shell .pricing-controls .shipping-combobox-trigger{
+  border:1px solid rgba(91,48,79,.22)!important;
+  background:#fff!important;
+  background-image:none!important;
+  color:#4f2b42!important;
+  font-weight:600!important;
+  box-shadow:none!important;
+}
