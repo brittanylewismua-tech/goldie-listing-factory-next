@@ -256,8 +256,10 @@ test("every setting a batch needs is a facet on the card — D182", async () => 
      Mockups went to the Images page with the photos and the keyword bank to the
      Listing page with the titles that use it — the D182 point stands, they are
      each in ONE place, just not all on this card. */
-  for (const facet of ["colors", "sizes", "shipping", "profit"])
+  for (const facet of ["colors", "sizes"])
     assert.match(app, new RegExp(`open==="${facet}"&&`), `${facet} must open from the card`);
+  assert.doesNotMatch(app, /open==="shipping"&&/, "shipping lives in the pricing panel");
+  assert.doesNotMatch(app, /open==="profit"&&/, "so does the profit goal");
   assert.doesNotMatch(app, /open==="mockups"&&/, "mockups belong to the Images page");
   assert.doesNotMatch(app, /open==="keywords"&&/, "the keyword bank belongs to the Listing page");
   assert.doesNotMatch(app, /className="saved-settings-summary"/,
@@ -270,8 +272,10 @@ test("every setting a batch needs is a facet on the card — D182", async () => 
   assert.match(app, /async function establish\(recipe:Recipe,change:Partial<Recipe>\)/);
   assert.match(app, /establish\(recipe,\{defaultColorIds:ids\}\)/);
   assert.match(app, /establish\(recipe,\{defaultSizeIds:ids\}\)/);
-  assert.match(app, /void establish\(recipe,\{etsyShippingProfileId:id\}\)/);
-  assert.match(app, /void establish\(recipe,\{defaultProfitTarget:value\}\)/);
+  /* D223 · Shipping and profit moved into the pricing panel, and establish moved
+     with them — a value set there still becomes the product's default. */
+  assert.match(app, /establish\(activeRecipe,\{etsyShippingProfileId:value\}\)/);
+  assert.match(app, /establish\(activeRecipe,\{defaultProfitTarget:value\.targetProfit\}\)/);
   /* D221 · The keyword bank is chosen on the Listing page now, and still
      persists to the recipe from there. */
   assert.match(app, /establish\(activeRecipe,\{keywordListId:list\.id\}\)/);
@@ -370,7 +374,11 @@ test("shipping, profit and Etsy details are per-product facts — D183", async (
      two places, and the Product page blocked Continue on a choice made two pages
      later. Their rules are unchanged and still covered, in
      tests/product-readiness.test.mjs against the exported facet functions. */
-  assert.match(app, /const inCard=\["colors","sizes","shipping","profit"\]\.includes\(facet\.name\);/);
+  /* D223 · The card is colours and sizes; the pricing panel beneath it owns the
+     profit goal and the shipping profile, because the per-variant prices are
+     computed from them. Keeping them on the card too put two controls for one
+     value on one screen. */
+  assert.match(app, /const inCard=\["colors","sizes"\]\.includes\(facet\.name\);/);
   assert.match(app, /const block=document\.querySelector<HTMLDetailsElement>\("\.everything-else"\);/);
   assert.match(app, /block\.open=true;block\.scrollIntoView\(\{block:"start"\}\)/,
     "Etsy details still opens its block, and must bring it into view.");
@@ -521,11 +529,16 @@ test("D209: every readiness row that offers to open, opens in the card", async (
      two places, and the Product page blocked Continue on a choice made two pages
      later. Their rules are unchanged and still covered, in
      tests/product-readiness.test.mjs against the exported facet functions. */
-  assert.match(app, /const inCard=\["colors","sizes","shipping","profit"\]\.includes\(facet\.name\);/);
+  /* D223 · The card is colours and sizes; the pricing panel beneath it owns the
+     profit goal and the shipping profile, because the per-variant prices are
+     computed from them. Keeping them on the card too put two controls for one
+     value on one screen. */
+  assert.match(app, /const inCard=\["colors","sizes"\]\.includes\(facet\.name\);/);
 
   // Both new panels render inside the card, scoped to the row's own recipe.
-  assert.match(app, /open==="shipping"&&<div className="row-panel shipping-row-panel">/);
-  assert.match(app, /open==="profit"&&<div className="row-panel profit-row-panel">/);
+  /* D223 · These two moved into the pricing panel below the card. */
+  assert.doesNotMatch(app, /row-panel shipping-row-panel/);
+  assert.doesNotMatch(app, /row-panel profit-row-panel/);
 
   /* D211 · The panels are SIBLINGS of .batch-product-rows, both direct children
      of .batch-product-card — the same slot the colour picker uses. The D209 CSS
@@ -544,20 +557,21 @@ test("D209: every readiness row that offers to open, opens in the card", async (
 
   // Every in-card facet must still have a panel inside that function.
   const body = app.slice(panelForAt, rowsAt);
-  for (const facet of ["colors", "sizes", "shipping", "profit"]) {
+  for (const facet of ["colors", "sizes"]) {
     assert.match(body, new RegExp(`open==="${facet}"`), `${facet} still has a panel`);
   }
 
   // And the row emits it directly beneath itself, not after the list.
   assert.match(app, /<\/div>\{inCard&&open===facet\.name\?panelFor\(facet\.name\):null\}<\/Fragment>/,
     "the panel follows its own row");
-  assert.match(app, /void establish\(recipe,\{etsyShippingProfileId:id\}\)/);
-  assert.match(app, /void establish\(recipe,\{defaultProfitTarget:value\}\)/);
+  /* D223 · Shipping and profit moved into the pricing panel, and establish moved
+     with them — a value set there still becomes the product's default. */
+  assert.match(app, /establish\(activeRecipe,\{etsyShippingProfileId:value\}\)/);
+  assert.match(app, /establish\(activeRecipe,\{defaultProfitTarget:value\.targetProfit\}\)/);
 
   /* The legacy block reads activeRecipe, so in a bundle it always showed the
      active product. These panels must read the row's recipe instead. */
-  assert.match(app, /value=\{isActive\?etsyShippingProfileId:\(Number\(recipe\.etsyShippingProfileId\)\|\|0\)\}/);
-  assert.match(app, /value=\{isActive\?pricing\.targetProfit:\(Number\(recipe\.defaultProfitTarget\)\|\|DEFAULT_PRICING\.targetProfit\)\}/);
+  /* D223 · per-product scoping for these now lives in the pricing panel. */
 });
 
 test("D209: a row never offers to Close a panel it cannot open", async () => {
@@ -612,7 +626,7 @@ test("D211: the row-panel stylesheet selects the element it is written for", asy
   /* The panel really is a direct child of the card. The card's class is built
      from a template literal, so it is not the string `className="batch-product-card`. */
   assert.match(app, /batch-product-card \$\{ready\.established/);
-  assert.match(app, /<div className="row-panel shipping-row-panel">/);
+  assert.doesNotMatch(app, /row-panel shipping-row-panel/);
 
   /* 93 shipping profiles with long names sized the grid track to 843px inside a
    * 720px card. width:100% alone does not constrain a track sized to its

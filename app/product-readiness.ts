@@ -162,7 +162,7 @@ export function keywordFacet(input: ReadinessInput): Facet {
   return { name: "keywords", state: "ask", label: "", note: `${banks.length} banks to choose from` };
 }
 
-function shippingFacet(input: ReadinessInput): Facet {
+export function shippingFacet(input: ReadinessInput): Facet {
   const saved = Number(input.saved.etsyShippingProfileId) || 0;
   const match = input.shippingProfiles.find((profile) => profile.id === saved);
   if (match) return { name: "shipping", state: "ready", label: match.title };
@@ -175,7 +175,7 @@ function shippingFacet(input: ReadinessInput): Facet {
   return { name: "shipping", state: "ask", label: "", note: `${input.shippingProfiles.length} profiles on your shop` };
 }
 
-function profitFacet(input: ReadinessInput): Facet {
+export function profitFacet(input: ReadinessInput): Facet {
   const saved = Number(input.saved.defaultProfitTarget);
   if (Number.isFinite(saved) && saved > 0) return { name: "profit", state: "ready", label: `$${saved.toFixed(0)} per item` };
   /* A profit goal always has a workable default, so it is never a blocker. */
@@ -202,7 +202,12 @@ export function productReadiness(input: ReadinessInput): Readiness {
    * mockupFacet, keywordFacet and etsyFacet are kept and still exported through
    * the type — the pages that own those choices use the same compatibility and
    * completeness rules — they are simply no longer part of product readiness. */
-  const facets = [colorFacet(input), sizeFacet(input), shippingFacet(input), profitFacet(input)];
+  /* D223 · Colours and sizes only. The pricing panel directly below the card owns
+   * the profit goal and the Etsy shipping profile — it has to, because the
+   * per-variant prices are computed from them — so carrying them on the card too
+   * put two controls for one value on the same screen. That is the split
+   * Brittany described: pick the colours and sizes, then price them underneath. */
+  const facets = [colorFacet(input), sizeFacet(input)];
   const autoResolved: NonNullable<Facet["resolved"]> = {};
   for (const facet of facets) if (facet.state === "auto" && facet.resolved) Object.assign(autoResolved, facet.resolved);
   const questions = facets.filter((facet) => facet.state === "ask").map((facet) => facet.name);

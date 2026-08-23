@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { productReadiness, mockupFacet, keywordFacet, etsyFacet } from "../app/product-readiness.ts";
+import { productReadiness, mockupFacet, keywordFacet, etsyFacet, shippingFacet, profitFacet } from "../app/product-readiness.ts";
 
 /* Real shapes from the live account. Three saved products all reported
  * setupComplete: true while having defaultColorIds [], defaultSizeIds [] and
@@ -34,7 +34,11 @@ test("colors and sizes are always asked once, never taken from the template", ()
   /* D221 · Product readiness is product setup only. The keyword bank moved to the
      Listing page and the mockup set to the Images page, so neither appears here. */
   assert.deepEqual(result.questions, ["colors", "sizes"]);
-  assert.deepEqual(result.facets.map((f) => f.name), ["colors", "sizes", "shipping", "profit"]);
+  /* D223 · Colours and sizes only. The pricing panel below the card owns the
+     profit goal and the shipping profile — the per-variant prices are computed
+     from them — so keeping them on the card put two controls for one value on
+     one screen. */
+  assert.deepEqual(result.facets.map((f) => f.name), ["colors", "sizes"]);
   assert.equal(result.established, false);
   assert.equal(result.autoResolved.colorIds, undefined);
   assert.equal(result.autoResolved.sizeIds, undefined);
@@ -79,7 +83,7 @@ test("an established product asks nothing at all", () => {
   /* colours and sizes are the seller's, saved on the recipe; shipping copies the
      profile Printify attached and profit falls back to $10 — both editable, both
      "auto" rather than a question. */
-  assert.deepEqual(result.facets.map((f) => f.state), ["ready", "ready", "auto", "auto"]);
+  assert.deepEqual(result.facets.map((f) => f.state), ["ready", "ready"]);
   /* The choices that moved are still settled on their own pages. */
   assert.equal(mockupFacet(established).state, "ready");
   assert.equal(keywordFacet(established).state, "ready");
@@ -92,7 +96,7 @@ test("saved choices win over template defaults", () => {
   /* colours and sizes are the seller's, saved on the recipe; shipping copies the
      profile Printify attached and profit falls back to $10 — both editable, both
      "auto" rather than a question. */
-  assert.deepEqual(result.facets.map((f) => f.state), ["ready", "ready", "auto", "auto"]);
+  assert.deepEqual(result.facets.map((f) => f.state), ["ready", "ready"]);
   assert.equal(mockupFacet(configured).state, "ready");
   assert.equal(keywordFacet(configured).state, "ready");
   assert.equal(result.facets.find((f) => f.name === "colors").label, "1 color");
@@ -138,7 +142,9 @@ test("shipping copies the profile Printify already attached — D183", () => {
   /* Publishing the product to Etsy once is a required setup step, so a profile is
    * already attached. Asking the seller to pick it again is asking a question that
    * has an answer. */
-  const shipping = productReadiness(tee).facets.find((f) => f.name === "shipping");
+  /* D223 · Shipping lives in the pricing panel now, so it is checked directly.
+     The rule is unchanged. */
+  const shipping = shippingFacet(tee);
   assert.equal(shipping.state, "auto");
   assert.equal(shipping.label, "Standard");
   assert.equal(shipping.resolved.shippingProfileId, 7);
@@ -146,16 +152,16 @@ test("shipping copies the profile Printify already attached — D183", () => {
 
 test("shipping is only a question when the answer is genuinely unknown", () => {
   const many = { ...tee, templateShippingProfileId: 0, shippingProfiles: [{ id: 1, title: "A" }, { id: 2, title: "B" }] };
-  assert.equal(productReadiness(many).facets.find((f) => f.name === "shipping").state, "ask");
+  assert.equal(shippingFacet(many).state, "ask");
   const none = { ...tee, templateShippingProfileId: 0, shippingProfiles: [] };
-  assert.match(productReadiness(none).facets.find((f) => f.name === "shipping").note, /No Etsy shipping profiles/);
+  assert.match(shippingFacet(none).note, /No Etsy shipping profiles/);
 });
 
 test("profit and Etsy attributes never block a batch", () => {
   /* Both have workable defaults: $10, and Etsy's own attribute defaults. They are
    * shown so the seller can change them, not to stop the batch. */
   const result = productReadiness(tee);
-  const profit = result.facets.find((f) => f.name === "profit");
+  const profit = profitFacet(tee);
   assert.equal(profit.state, "auto");
   assert.equal(profit.label, "$10 per item");
   assert.ok(!result.questions.includes("profit"));
@@ -169,7 +175,7 @@ test("profit and Etsy attributes never block a batch", () => {
 test("a saved profit goal and Etsy attributes read as settled", () => {
   const configured = { ...tee, saved: { defaultProfitTarget: 25, etsyDefaults: Object.fromEntries(Array.from({ length: 11 }, (_, i) => [`f${i}`, "x"])) } };
   const result = productReadiness(configured);
-  assert.equal(result.facets.find((f) => f.name === "profit").label, "$25 per item");
+  assert.equal(profitFacet(configured).label, "$25 per item");
   assert.equal(etsyFacet(configured).state, "ready");
 });
 

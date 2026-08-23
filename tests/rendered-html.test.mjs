@@ -1789,7 +1789,8 @@ test("keeps the saved-product batch page compact and makes permanent settings ed
      readiness card, labelled with the product it belongs to, because in a
      bundle "for this batch" was a single product's value wearing the batch's
      name. */
-  assert.match(page,/aria-label=\{`Shipping profile for \$\{recipe\.name\}`\}/);
+  /* D223 · the shipping select is the pricing panel's, labelled for the product. */
+  assert.match(page,/Etsy shipping profile — what buyers pay/);
   assert.match(page,/Description for this batch/);
   assert.match(page,/Save this description as the default/);
   assert.match(page,/else if\(!pricedVariants\.length\)/);
@@ -2044,7 +2045,7 @@ test("records real pricing approval and invalidates it after edits (fixes D23 an
   const app=await readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8");
   assert.match(app,/Approve prices and shipping/);
   assert.match(app,/onClick=\{\(\)=>onApprovalChange\(true\)\}/);
-  assert.match(app,/onPricing=\{value=>\{setPricing\(value\);setPricingApproved\(false\)\}\}/);
+  assert.match(app,/onPricing=\{value=>\{setPricing\(value\);setPricingApproved\(false\);/);
   assert.match(app,/onPrices=\{value=>\{setVariantPrices\(value\);setPricingApproved\(false\)\}\}/);
   assert.match(app,/pricingApproved\?"✓ Prices and buyer-paid shipping were approved":"! Prices and buyer-paid shipping need review"/);
   assert.match(app,/setPricingApproved\(Boolean\(state\.pricingApproved\)\|\|Boolean\(state\.complete&&\(state\.drafts\|\|\[\]\)\.some\(draft=>draft\.status==="Created"\)\)\)/);
