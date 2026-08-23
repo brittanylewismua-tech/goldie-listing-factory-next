@@ -1501,7 +1501,19 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .managementOnly .managementSetList .setPreview img{aspect-ratio:4/5!important}
 
 /* Audit pass 2: the frequent action is primary; setup and destructive actions recede. */
-.app-shell[data-product-selected="true"] .recipe-tile:not(.selected),
+/* D215 · `.app-shell[data-product-selected="true"] .recipe-tile:not(.selected)`
+ * used to be grouped into the rule below, so every UNSELECTED product tile was
+ * forced to display:block the moment any product was chosen. That killed the
+ * grid the tile is laid out with, and its Edit and Delete buttons fell back to
+ * normal flow — flush against the left edge with 108px of dead space on the
+ * right, while the selected tile beside them stayed correct.
+ *
+ * It only appeared after selecting a product, which is why the D197 measurements
+ * missed it: nothing was selected then, so every tile had the same two buttons
+ * and the same broken-but-consistent layout. The selector is higher specificity
+ * than anything in clarity-pass.css, so no later rule could win.
+ *
+ * The display:block was only ever meant for .bundle-library. */
 /* D122 · Hiding the bundle block once a product is selected trapped sellers:
  * adding a product auto-selects it, the bundle option vanished, and the only
  * way back was to unselect. It is a collapsed <details> — one summary line —

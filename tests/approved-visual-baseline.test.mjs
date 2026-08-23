@@ -1478,3 +1478,31 @@ test("D212: adding a product can be cancelled, the same as editing one", async (
   // Cancel must clear what the form was holding, including the keyword choice.
   assert.match(tools, /setEditing\(false\);setEditingId\(""\);setName\(""\);setKeywordListId\(""\);setMessage\(""\)\}\}>Cancel<\/button>/);
 });
+
+test("D215: selecting a product does not break the other product tiles", async () => {
+  const css = await readFile(new URL("app/approved-functional.css", root), "utf8");
+  const rules = css.replace(/\/\*[\s\S]*?\*\//g, "");
+
+  /* Measured live with Gildan Tee selected: the selected tile's actions sat at
+   * rightInset 13, and the Hoodie and crewneck beside it at leftInset 1 /
+   * rightInset 108 — flush left with 108px of dead space. Cause: this selector
+   * was grouped into the .bundle-library display:block rule, so every unselected
+   * tile lost `display:grid` the moment any product was chosen, and its buttons
+   * fell back to normal flow.
+   *
+   * It is invisible until something is selected, which is exactly why the D197
+   * measurements missed it. */
+  assert.doesNotMatch(
+    rules,
+    /\[data-product-selected="true"\]\s*\.recipe-tile:not\(\.selected\)\s*,/,
+    "unselected tiles must not be grouped into the bundle-library display:block rule",
+  );
+  assert.doesNotMatch(
+    rules,
+    /\[data-product-selected="true"\]\s*\.recipe-tile:not\(\.selected\)\s*\{[^}]*display:\s*block/,
+    "and must not be given display:block anywhere",
+  );
+
+  // The rule it was wrongly attached to still does its own job.
+  assert.match(rules, /\.app-shell\[data-product-selected="true"\] \.bundle-library\{display:block!important\}/);
+});

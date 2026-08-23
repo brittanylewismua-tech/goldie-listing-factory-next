@@ -205,7 +205,10 @@ test("unifies saved products, editing, pricing, and mockups without the old fact
   assert.match(recipes, /validated phrases available to Goldie/);
   assert.match(page, /Exact title phrases/);
   assert.match(page, /300 DPI recommended/);
-  assert.match(page, /Choose Printify flatlays/);
+  /* D214: renamed and opened by default. It was a closed <details> reading
+     "Choose Printify flatlays", so a seller who never found it published with
+     no product photographs at all. */
+  assert.match(page, /Printify product photos — \{selected\.size\} selected/);
   assert.match(page, /IntegratedMockups/);
   assert.match(mockups, /Choose a mockup set/);
   assert.match(mockups, /Create .*mockups/);
@@ -2254,4 +2257,19 @@ test("Batch History does not label a bundle with one member's product — D196",
    * The row already parses state_json, so the bundle was knowable all along. */
   assert.match(route, /type BatchListState=\{activeBundle\?:\{name\?:string\};bundleRecipes\?:unknown\[\]/);
   assert.match(route, /state\.activeBundle&&\(state\.bundleRecipes\|\|\[\]\)\.length>1\)\?`\$\{\(state\.bundleRecipes\|\|\[\]\)\.length\} products`/);
+});
+
+test("D214: Printify product photos are visible, not folded away", async () => {
+  const page = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+
+  /* Measured live: all three saved products had printifyImageIndices of length
+   * zero, and the picker rendered as a CLOSED <details> labelled "Choose
+   * Printify flatlays", sitting below the lifestyle mockup grid. A seller who
+   * never opened that fold published listings with lifestyle mockups and no
+   * product photographs at all — and had no way to know, because the section
+   * that would have told them was shut. */
+  assert.match(page, /<details className="printify-image-picker" open>/,
+    "the product photos must be visible without hunting for them");
+  assert.match(page, /Printify product photos — \{selected\.size\} selected/);
+  assert.doesNotMatch(page, /<summary>Choose Printify flatlays/);
 });
