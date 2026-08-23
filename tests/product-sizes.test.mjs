@@ -948,10 +948,19 @@ test("the shipping combobox shows its default and its rows are not buttons — D
   const app = await read("app/listing-factory-app.tsx");
   const css = await read("app/clarity-pass.css");
 
-  assert.match(app, /:attachedProfile\?shippingProfileOptionLabel\(attachedProfile\)/,
-    "the trigger falls back to the inherited profile before the prompt");
-  assert.match(app, /if\(profilesLoading\|\|selectedProfileId\|\|!attachedProfile\)return;/,
-    "and it is actually selected, not merely displayed");
+  /* D327 · The default is the PRINTIFY TEMPLATE's profile for this product,
+     preselected until the seller saves a choice of their own. D325 tried to do
+     this from `attachedProfile`, which is derived from selectedProfileId — so
+     when nothing was selected there was nothing to fall back to and the fix did
+     nothing at all. */
+  assert.match(app, /:templateProfile\?shippingProfileOptionLabel\(templateProfile\)/,
+    "the trigger shows the template's profile rather than an empty prompt");
+  assert.match(app, /const fromTemplate=profiles\.find\(profile=>profile\.id===Number\(templateShippingProfileId\|\|0\)\);/,
+    "the template id is matched against the seller's real Etsy profiles first");
+  assert.match(app, /if\(fromTemplate\)onSelectProfile\(fromTemplate\.id\);/,
+    "and only selected when it resolves — an unmatched id is the D231 deadlock");
+  assert.match(app, /templateShippingProfileId=\{Number\(templateDetails\?\.shippingTemplateId\)\|\|0\}/,
+    "and the value has to reach PricingReview at all");
 
   const block = css.slice(css.indexOf("D326 ·"));
   assert.match(block, /\.app-shell \.pricing-controls \.shipping-combobox-option/,

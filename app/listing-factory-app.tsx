@@ -324,7 +324,7 @@ function IndividualSizeGuide({productId,name,onSaved}:{productId:string;name?:st
 
 function DownloadListingPhotos({productId,name,indices}:{productId:string;name:string;indices:number[]}){const [downloading,setDownloading]=useState(false),[message,setMessage]=useState("");async function download(){if(downloading)return;setDownloading(true);setMessage("");try{const response=await fetch("/api/listing-photos/download",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({productId,printifyImageIndices:indices})});if(!response.ok){const payload=await response.json() as {error?:string};throw new Error(payload.error||"These listing photos could not be downloaded.")}const blob=await response.blob(),url=URL.createObjectURL(blob),link=document.createElement("a");link.href=url;link.download=`${name.replace(/[^a-z0-9._-]+/gi,"-").slice(0,90)||"listing"}-listing-photos.zip`;document.body.appendChild(link);link.click();link.remove();URL.revokeObjectURL(url);setMessage("✓ Download ready.")}catch(error){setMessage(error instanceof Error?error.message:"These listing photos could not be downloaded.")}finally{setDownloading(false)}}return <div className="listing-photo-download"><div><b>Keep a local copy</b><small>Selected Printify photos and created lifestyle mockups in one ZIP.</small></div><button type="button" aria-busy={downloading} disabled={downloading} onClick={()=>void download()}>{downloading?"Preparing photos…":"Download this listing’s photos"}</button>{message&&<p role="status">{message}</p>}</div>}
 
-function PricingReview({variants,pricing,prices,productName,profiles,selectedProfileId,profilesLoading,profilesError,approved,onPricing,onPrices,onSelectProfile,onCreateProfile,onApprovalChange}:{variants:ProductVariant[];pricing:Pricing;prices:Record<string,number>;productName:string;profiles:EtsyShippingProfile[];selectedProfileId:number;profilesLoading:boolean;profilesError:string;approved:boolean;onPricing:(value:Pricing)=>void;onPrices:(value:Record<string,number>)=>void;onSelectProfile:(id:number)=>void;onCreateProfile:(baseId:number,charge:number,additional:number,title:string,international:InternationalShippingRate[])=>Promise<void>;onApprovalChange:(ready:boolean)=>void}){
+function PricingReview({variants,pricing,prices,productName,profiles,selectedProfileId,templateShippingProfileId,profilesLoading,profilesError,approved,onPricing,onPrices,onSelectProfile,onCreateProfile,onApprovalChange}:{variants:ProductVariant[];pricing:Pricing;prices:Record<string,number>;productName:string;profiles:EtsyShippingProfile[];selectedProfileId:number;templateShippingProfileId:number;profilesLoading:boolean;profilesError:string;approved:boolean;onPricing:(value:Pricing)=>void;onPrices:(value:Record<string,number>)=>void;onSelectProfile:(id:number)=>void;onCreateProfile:(baseId:number,charge:number,additional:number,title:string,international:InternationalShippingRate[])=>Promise<void>;onApprovalChange:(ready:boolean)=>void}){
   const selectedProfile=profiles.find(profile=>profile.id===selectedProfileId);
   const printifyShipping=Math.max(0,...variants.map(variant=>Number(variant.shipping)||0));
   const shippingShortfall=selectedProfile?printifyShipping-selectedProfile.domesticPrimary:0;
@@ -391,14 +391,21 @@ function PricingReview({variants,pricing,prices,productName,profiles,selectedPro
   const selectedProfileGroup=selectedProfile?shippingProfileGroup(selectedProfile.title,productName):"other";
   const selectedProfileNeedsReview=Boolean(selectedProfile&&selectedProfile.id!==attachedProfile?.id&&selectedProfileGroup!=="recommended");
   const selectedOutsideSearch=selectedProfile&&!searchedProfiles.some(profile=>profile.id===selectedProfile.id)?selectedProfile:null;
-  /* D325 · The trigger showed "Choose your Etsy shipping profile" even when
-     Goldie had already inherited the profile this product ships with on Etsy.
-     That profile IS the default until the seller picks another (D296), so the
-     control has to say so — and be it, not just display it. */
+  /* D327 · The default is the shipping profile the PRINTIFY TEMPLATE uses for
+     this product. Until the seller saves a choice of their own, that is what
+     should already be selected — they change it only if they want to.
+
+     D325 tried to do this from `attachedProfile`, which was a no-op: that value
+     is derived from selectedProfileId, so when nothing was selected there was
+     nothing to fall back to. The template's id is the real source, and it is
+     validated against the seller's actual Etsy profiles first — an id that
+     matches none of them must not be selected, which is the D231 deadlock. */
   useEffect(()=>{
-    if(profilesLoading||selectedProfileId||!attachedProfile)return;
-    onSelectProfile(attachedProfile.id);
-  },[profilesLoading,selectedProfileId,attachedProfile]);
+    if(profilesLoading||selectedProfileId||!profiles.length)return;
+    const fromTemplate=profiles.find(profile=>profile.id===Number(templateShippingProfileId||0));
+    if(fromTemplate)onSelectProfile(fromTemplate.id);
+  },[profilesLoading,selectedProfileId,profiles,templateShippingProfileId]);
+  const templateProfile=profiles.find(profile=>profile.id===Number(templateShippingProfileId||0));
   const [comboOpen,setComboOpen]=useState(false);
   const comboRef=useRef<HTMLDivElement|null>(null);
   /* D319 · Clicking away closes the list, the way every other picker behaves. */
@@ -454,7 +461,7 @@ function PricingReview({variants,pricing,prices,productName,profiles,selectedPro
             <button type="button" className="shipping-combobox-trigger" disabled={profilesLoading}
               aria-haspopup="listbox" aria-expanded={comboOpen} aria-labelledby="shipping-combobox-label"
               onClick={()=>setComboOpen(open=>!open)}>
-              <span>{profilesLoading?"Loading your shipping profiles…":selectedProfile?shippingProfileOptionLabel(selectedProfile):attachedProfile?shippingProfileOptionLabel(attachedProfile):"Choose your Etsy shipping profile"}</span>
+              <span>{profilesLoading?"Loading your shipping profiles…":selectedProfile?shippingProfileOptionLabel(selectedProfile):templateProfile?shippingProfileOptionLabel(templateProfile):"Choose your Etsy shipping profile"}</span>
               <em aria-hidden="true">⌄</em>
             </button>
             {comboOpen&&<div className="shipping-combobox-panel">
@@ -1625,6 +1632,7 @@ export default function ListingFactoryApp() {
             productName={activeRecipe?.name||templateDetails?.blueprintTitle||"This product"}
             profiles={etsyShippingProfiles}
             selectedProfileId={etsyShippingProfileId}
+            templateShippingProfileId={Number(templateDetails?.shippingTemplateId)||0}
             profilesLoading={shippingProfilesLoading}
             profilesError={shippingProfilesError}
             approved={pricingApproved}
