@@ -724,8 +724,13 @@ test("a product with no saved defaults is framed as first-time setup — D125", 
   /* D182 superseded the first-run/returning copy switch. Readiness is computed
    * per product now, so the card itself says what is set and what is not — the
    * block behind it is just the editor and is named for that. */
-  assert.match(page, /<b>\{`\$\{activeRecipe\?\.name\|\|"This product"\} settings`\}<\/b>/,
-    "The settings block is named for its job, not for a state the card already shows.");
+  /* D213 narrows the name further. "settings" was accurate when the block held
+     profit, shipping, the keyword bank, the description and Etsy details. D209
+     moved the first three into the readiness card, so the block now holds two
+     things and is named for them — otherwise it advertises contents it does not
+     have, under a heading that repeats the card directly above it. */
+  assert.match(page, /<b>\{`\$\{activeRecipe\?\.name\|\|"This product"\} — description and Etsy details`\}<\/b>/,
+    "The block is named for what it actually contains.");
   assert.match(page, /Choose the colors you want to offer/); /* D191: US spelling */
 });
 

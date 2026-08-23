@@ -52,15 +52,34 @@ test("batches saved before sizes existed behave exactly as they did", async () =
   assert.match(app, /if\(!templateDetails\?\.sizeOptions\?\.length\)return byColor;/);
 });
 
-test("size seeding uses the same four-step precedence as colour", async () => {
+test("D213: seeding stops at the recipe — the template is never a choice", async () => {
   const app = await read("app/listing-factory-app.tsx");
-  /* saved product default -> this browser's last choice -> what the template had
-   * enabled -> every available size. Step three is what makes an EXISTING product
-   * behave exactly as it did before sizes were selectable. */
+
+  /* This test used to require the opposite, in these words: "saved product
+   * default -> this browser's last choice -> what the template had enabled ->
+   * every available size", with a final assertion that the selection must never
+   * be empty.
+   *
+   * That rule is wrong, and it is the one that matters most. The seller chooses
+   * colors and sizes once, in the saved-product setup, and that becomes the
+   * recipe. A product with no recipe defaults has NOT been set up. Falling back
+   * to Printify's templateEnabled made it look decided and would publish in
+   * colors the seller never picked; falling back to every available size was
+   * worse still.
+   *
+   * Empty is the honest state. productReadiness already marks these facets
+   * "ask", gates Continue, and opens the picker pre-selected with the template
+   * as a suggestion the seller has to accept. */
   assert.match(app, /const rememberedSizes=rememberedSizeIds\.filter\(id=>sizeAvailable\.has\(id\)\)/);
-  assert.match(app, /const sizeDefaults=rememberedSizes\.length\?rememberedSizes:sessionSizeIds\.length\?sessionSizeIds:\(result\.product\.sizeOptions\|\|\[\]\)\.filter\(size=>size\.available&&size\.templateEnabled\)\.map\(size=>size\.id\)/);
-  assert.match(app, /setSelectedSizeIds\(sizeDefaults\.length\?sizeDefaults:\[\.\.\.sizeAvailable\]\)/,
-    "The final fallback must be every available size, so the selection is never empty.");
+  assert.match(app, /const sizeDefaults=rememberedSizes\.length\?rememberedSizes:sessionSizeIds;/);
+  assert.doesNotMatch(app, /setSelectedSizeIds\(sizeDefaults\.length\?sizeDefaults:\[\.\.\.sizeAvailable\]\)/,
+    "no all-available fallback");
+  assert.doesNotMatch(app, /setSelectedColorIds\(defaults\.length\?defaults:\[\.\.\.available\]\)/,
+    "no all-available fallback for colours either");
+  assert.match(app, /const defaults=remembered\.length\?remembered:session;setSelectedColorIds\(defaults\);/);
+
+  // A bundle member with no saved colours is left empty so its card asks.
+  assert.match(app, /const ids=\(recipe\.defaultColorIds\|\|\[\]\)\.filter\(id=>available\.has\(id\)\);choices\[recipe\.id\]=ids/);
 });
 
 test("sizes survive a reload, a batch restore and a bundle hop", async () => {
@@ -127,12 +146,20 @@ test("the size card's promise matches what the gate actually enforces — D164",
   assert.match(app, /Boolean\(templateDetails\?\.sizeOptions\?\.length\)&&!selectedSizeIds\.length\?"Choose product sizes to continue"/);
 });
 
-test("no size action can leave the seller with nothing selected — D164", async () => {
+test("D213: \"Match Printify template\" matches the template, and nothing more", async () => {
   const app = await read("app/listing-factory-app.tsx");
-  /* "Match Printify template" selects the template's enabled sizes. If those
-   * happened to be unavailable it would select nothing and then block Continue,
-   * with no hint as to why. It falls back to every available size instead. */
-  assert.match(app, /onChange\(templateSizes\.length\?templateSizes:available\.map\(size=>size\.id\)\)/);
+
+  /* D164 made this button fall back to every available size when the template
+   * had none enabled, to avoid leaving Continue blocked. So a control reading
+   * "Match Printify template" could quietly select the entire blueprint — the
+   * seller clicks a button naming one thing and gets another, in the one place
+   * where the wrong answer publishes real listings.
+   *
+   * If there is nothing to match, match nothing. The facet stays unanswered,
+   * the card keeps asking, and Continue stays gated with a label that says
+   * which product needs what. */
+  assert.match(app, /onChange\(templateSizes\)/);
+  assert.doesNotMatch(app, /onChange\(templateSizes\.length\?templateSizes:available\.map\(size=>size\.id\)\)/);
 });
 
 test("the size block is stripped in every context the colour block is — D168", async () => {

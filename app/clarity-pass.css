@@ -1348,3 +1348,15 @@
   0%   { box-shadow:0 0 0 3px rgba(183,119,176,.55); }
   100% { box-shadow:0 0 0 3px rgba(183,119,176,0); }
 }
+
+/* D213 · This block was titled "<product> settings" with a CSS ::after reading
+ * "Usually no changes needed", and its summary line listed profit, shipping and
+ * the keyword bank. All three of those moved into the readiness card in D209,
+ * so the block advertised contents it no longer had, under a heading that
+ * duplicated the card directly above it — a title, a dismissive subtitle, and
+ * nothing visible under either.
+ *
+ * It holds two things now, description and Etsy details, and says so. The
+ * ::after goes: "usually no changes needed" tells a seller not to look, which is
+ * the opposite of useful on the one section they have to open to finish. */
+.app-shell .everything-else>summary span:after{content:none!important;}
