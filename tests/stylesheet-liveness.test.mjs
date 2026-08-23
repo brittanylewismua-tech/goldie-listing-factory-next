@@ -94,3 +94,15 @@ test("no icon is chosen by DOM position", async () => {
   assert.deepEqual(offenders, [], `these icons are picked by position, so moving a
 card changes its meaning:\n${offenders.join("\n")}`);
 });
+
+/* D246 · A component rendered in two shells cannot rely on a stylesheet scoped
+   to one of them. The nav icons had no intrinsic size, and the only rules that
+   sized them were `.app-shell .top-nav svg` — so on every management page they
+   fell back to ~150px of solid black over the labels. */
+test("nav icons carry their own size and stroke", async () => {
+  const src = await readFile(new URL("app/nav-icons.tsx", root), "utf8");
+  for (const key of ["width", "height", "stroke", "fill"])
+    assert.match(src, new RegExp(`${key}:`), `nav icons must set ${key} on the element`);
+  assert.doesNotMatch(src, /<svg viewBox="0 0 24 24" aria-hidden="true">/,
+    "a bare <svg> here renders 150px black wherever the factory stylesheet is absent");
+});
