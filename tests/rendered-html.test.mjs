@@ -2353,7 +2353,7 @@ test("D226: a listing waiting for its title is not shown as a failure", async ()
     "the retry button only appears when retrying could work");
 
   /* And the success banner must not claim readiness while listings are waiting. */
-  assert.match(page, /\{files\.every\(file=>file\.etsy\)&&<div className="variant-transfer-note">/);
+  assert.match(page, /\{files\.every\(file=>etsyRequiredComplete\(file\.etsy\)\)&&<div className="variant-transfer-note">/);
 
   assert.match(css, /\.app-shell \.etsy-detail-pending\{/);
 });

@@ -753,3 +753,21 @@ test("bundle limits explain themselves — D293", async () => {
   assert.match(tools, /bundleIds\.length>=4/);
   assert.match(tools, /bundleIds\.length<2/);
 });
+
+/* D294 · The Etsy details card read "3/3 ready" directly above three rows each
+   reading "0 of 1 required set". Both were right about different things: the
+   pill counted listings that HAD an Etsy object, the rows counted required
+   properties actually filled. One word, two meanings, on the screen that gates
+   publishing to Etsy. */
+test("Etsy readiness means required properties are set — D294", async () => {
+  const app = await read("app/listing-factory-app.tsx");
+
+  assert.match(app, /export function etsyRequiredComplete/);
+  assert.match(app, /required\.every\(property=>Boolean\(\(property\.value\|\|""\)\.trim\(\)\)\)/,
+    "ready must mean every required property carries a value");
+
+  assert.doesNotMatch(app, /files\.every\(file=>file\.etsy\)/,
+    "no gate may treat the mere presence of an Etsy object as readiness");
+  assert.doesNotMatch(app, /etsyReadyCount=files\.filter\(file=>file\.etsy\)\.length/,
+    "and neither may the count behind the pill");
+});
