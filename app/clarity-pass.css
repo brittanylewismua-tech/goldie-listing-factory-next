@@ -1629,3 +1629,17 @@ body:has(.management-nav) .usage-card h2{
    and were built to different shapes: the bundle's Choose button did not fill
    its card and its title was uppercase 12px against the product's 14px. */
 .app-shell .bundle-tile>button{width:100%!important}
+
+/* D268 · Deleting a keyword bank was a bare red text link, while deleting a
+   saved product is a bordered button. Same destructiveness, two weights — and
+   the bare link is the easier of the two to hit by accident. */
+.app-shell .bank-delete{
+  min-height:34px!important;
+  padding:0 13px!important;
+  border:1px solid rgba(91,48,79,.2)!important;
+  border-radius:999px!important;
+  background:rgba(255,255,255,.75)!important;
+  color:#8a3f52!important;
+  font:800 11px/1 "Manrope",system-ui,sans-serif!important;
+  cursor:pointer!important;
+}

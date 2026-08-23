@@ -340,7 +340,11 @@ test("stages each finished mockup group for its exact Etsy listing", async () =>
 test("renders Mockup Library as management only", async () => {
   const response = await render("/mockups");
   const html = await response.text();
-  assert.match(html, /<h1>Mockup Library<\/h1>/);
+  /* D267 · The eyebrow already reads MOCKUP LIBRARY and the nav item is
+     "Mockup Library"; the h1 repeated it a third time on one screen. It names
+     the content now, matching Keyword Banks ("Your keyword banks"). */
+  assert.match(html, /<h1>Your mockup sets<\/h1>/);
+  assert.match(html, /MOCKUP LIBRARY/);
   assert.match(html, /Add mockup set/);
   assert.match(html, /class="management-nav"/);
   assert.match(html, />Listing Factory<\/a>/);
