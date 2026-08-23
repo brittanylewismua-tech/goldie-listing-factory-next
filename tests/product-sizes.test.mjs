@@ -500,16 +500,25 @@ test("D209: every readiness row that offers to open, opens in the card", async (
      was written as a descendant of .batch-product-rows and therefore selected
      nothing at all. Pin the relationship so the stylesheet can be checked
      against it rather than against its own spelling. */
+  /* D218 supersedes the placement this used to assert. The panels rendered
+     AFTER the whole row list, so opening Colours put the palette below Etsy
+     details and the seller had to scroll past six rows to reach it. They are
+     emitted inside the row map now, immediately after the row that opened them,
+     through panelFor. */
+  const panelForAt = app.indexOf("const panelFor=(open:string)=>");
   const rowsAt = app.indexOf('className="batch-product-rows"');
-  const colorPickerAt = app.lastIndexOf("<ProductColorSelector");
-  const sizePickerAt = app.lastIndexOf("<ProductSizeSelector");
-  const shippingAt = app.lastIndexOf('className="row-panel shipping-row-panel"');
-  const profitAt = app.lastIndexOf('className="row-panel profit-row-panel"');
+  assert.ok(panelForAt > 0, "panels are built by panelFor in the card scope");
+  assert.ok(panelForAt < rowsAt, "panelFor is defined before the row list renders");
 
-  assert.ok(rowsAt > 0 && colorPickerAt > rowsAt, "the pickers render after the rows container");
-  assert.ok(shippingAt > sizePickerAt && sizePickerAt > colorPickerAt,
-    "the shipping panel sits in the same sibling slot as the colour and size pickers");
-  assert.ok(profitAt > shippingAt, "and the profit panel directly after it");
+  // Every in-card facet must still have a panel inside that function.
+  const body = app.slice(panelForAt, rowsAt);
+  for (const facet of ["colors", "sizes", "shipping", "profit", "mockups", "keywords"]) {
+    assert.match(body, new RegExp(`open==="${facet}"`), `${facet} still has a panel`);
+  }
+
+  // And the row emits it directly beneath itself, not after the list.
+  assert.match(app, /<\/div>\{inCard&&open===facet\.name\?panelFor\(facet\.name\):null\}<\/Fragment>/,
+    "the panel follows its own row");
   assert.match(app, /void establish\(recipe,\{etsyShippingProfileId:id\}\)/);
   assert.match(app, /void establish\(recipe,\{defaultProfitTarget:value\}\)/);
 
