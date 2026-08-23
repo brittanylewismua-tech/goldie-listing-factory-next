@@ -1813,3 +1813,52 @@ body:has(.management-nav) .usage-card h2{
   color:#75576b!important;
   font:500 12px/1.5 "Manrope",system-ui,sans-serif!important;
 }
+
+/* ============================================================================
+ * D299 · A CLICK MUST SHOW THAT IT LANDED
+ *
+ * Reported from the product: "you click it, and there's no responsiveness.
+ * Nothing happens." Two separate causes, both real.
+ *
+ * 1. Nothing in this app had a :active state, so a press produced no visual
+ *    change at all. Even when the handler ran, the click looked ignored.
+ * 2. Async buttons only showed a label swap once their request resolved, which
+ *    on a slow call is a second or more of apparent deadness.
+ *
+ * Applies to every button in the app rather than the ones that were reported,
+ * because the complaint is about the rule, not the instance.
+ * ========================================================================== */
+.app-shell button:not(:disabled),
+.management-page button:not(:disabled),
+.context-help-dialog button:not(:disabled){
+  transition:transform .09s ease, box-shadow .09s ease, filter .09s ease!important;
+}
+.app-shell button:not(:disabled):active,
+.management-page button:not(:disabled):active,
+.context-help-dialog button:not(:disabled):active{
+  transform:translateY(1px) scale(.985)!important;
+  filter:brightness(.94)!important;
+}
+/* A keyboard user needs the same confirmation a mouse user gets. */
+.app-shell button:focus-visible,
+.management-page button:focus-visible,
+.context-help-dialog button:focus-visible{
+  outline:2px solid #8e4c78!important;
+  outline-offset:2px!important;
+}
+/* While a button is working, say so rather than sitting inert. */
+.app-shell button[aria-busy="true"],
+.app-shell button[aria-busy="true"]:active{
+  opacity:.72!important;
+  cursor:progress!important;
+  transform:none!important;
+}
+
+/* D300 · The "Save these as this product's default…" buttons were pushed to the
+   panel's right edge by `margin-left:auto` with nothing holding them off it —
+   measured 3px of clearance. The auto margin is what right-aligns them, so the
+   fix is a real gap, not removing the alignment. */
+.app-shell .color-selector-actions,
+.app-shell .size-selector-actions{padding-right:2px!important}
+.app-shell .color-selector-actions button:last-child,
+.app-shell .size-selector-actions button:last-child{margin-right:4px!important}

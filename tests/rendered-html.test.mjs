@@ -1100,7 +1100,9 @@ test("keeps pricing simple while using a real Etsy shipping profile and exact te
   assert.match(page, /Goldie creates an unpublished draft in Printify for every design in this batch/);
   assert.doesNotMatch(page,/pricing target, keyword bank, and mockup defaults/);
   assert.match(page,/variant\.templatePrice/);
-  assert.match(page,/See how Goldie calculated these prices/);
+  /* D303 · Replaced by the ✓ line above it; the fee controls remain. */
+  assert.match(page,/fee-profile-summary/);
+  assert.match(page,/Change fee settings/);
   assert.doesNotMatch(page,/Split it 50\/50|Custom buyer shipping price|shippingPercent/);
   assert.match(profiles,/shipping-profiles/);
   assert.match(profiles,/domesticPrimary/);
@@ -2108,7 +2110,7 @@ test("uses one deterministic Etsy product baseline across a batch (fixes D71)",a
   assert.match(app,/runBounded\(pending,1,/);
   assert.match(app,/prepared=baseline\?\{\.\.\.initial,taxonomyId:baseline\.taxonomyId,category:baseline\.category,attributes:\{\.\.\.initial\.attributes,\.\.\.baseline\.attributes\}\}:initial/);
   assert.match(app,/etsyProductBaseline\.current=\{taxonomyId:details\.taxonomyId,category:details\.category,attributes:physical\}/);
-  assert.match(app,/etsyProductBaseline\.current=null;setActiveRecipe\(recipe\)/);
+  assert.match(app,/etsyProductBaseline\.current=null;[\s\S]{0,600}?setActiveRecipe\(recipe\)/);
 });
 
 test("rejects over-capacity uploads before creating a batch record (fixes D54)",async()=>{

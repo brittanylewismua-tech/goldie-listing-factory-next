@@ -301,7 +301,12 @@ test("Edit bundle visibly does something — D176", async () => {
    * bundle you already picked); the form does not. */
   assert.doesNotMatch(tools, /\{!activeId\.startsWith\("bundle:"\)&&<details className="bundle-library"/,
     "The edit form must stay reachable while a bundle is selected.");
-  assert.match(tools, /<details className="bundle-library" open=\{bundleForm\}>/);
+/* D302 · The disclosure now IS the create action, so it carries an onToggle.
+     `open={bundleForm}` still has to drive it — that is what makes "Edit bundle"
+     on a saved bundle card open this block with the form already filled in. */
+  assert.match(tools, /<details className="bundle-library" open=\{bundleForm\} onToggle=/);
+  assert.match(tools, /if\(open&&!bundleForm&&recipes\.length>=2&&!pendingAction\)openBundle\(\)/,
+    "opening the section must open the form, not reveal a second button");
   assert.match(tools, /document\.querySelector\("\.bundle-library"\)\?\.scrollIntoView\(\{block:"start"\}\)/,
     "Opening the form must bring it into view. Instant — smooth scrolling never fires here (D146).");
   /* And the header has to say what just happened, or it still reads as inert. */
@@ -431,7 +436,16 @@ test("opening a facet shows the choices, not a summary — D187", async () => {
    * never happened. Opening the chip IS the request to choose. */
   assert.doesNotMatch(app, /onRemember=\{\(\)=>\{\}\} remembering=\{false\} remembered[ /]/,
     "The card's pickers must open expanded.");
-  assert.equal((app.match(/onRemember=\{\(\)=>\{\}\} remembering=\{false\} remembered=\{false\} inCard\/>/g) || []).length, 2);
+  /* D297 · These two were the arity check for the card's pickers. They were also
+     the evidence that both "Save these as this product's default…" buttons were
+     wired to a no-op: onRemember={()=>{}} with remembering and remembered hard
+     false, so the button could not act and could not report. They now call
+     saveProductDefaults and reflect its state. */
+  assert.equal((app.match(/onRemember=\{\(\)=>void saveProductDefaults\(/g) || []).length, 2);
+  assert.doesNotMatch(app, /onRemember=\{\(\)=>\{\}\}/,
+    "a save button may not be wired to a no-op");
+  assert.match(app, /remembering=\{savingProductDefault===`colors:\$\{recipe\.id\}`\}/);
+  assert.match(app, /remembered=\{savedProductDefault===`sizes:\$\{recipe\.id\}`\}/);
 });
 
 test("a suggestion is never displayed as a decision — D189/D191", async () => {

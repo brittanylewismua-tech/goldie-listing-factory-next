@@ -104,8 +104,21 @@ export function SavedWorkflow(props: WorkflowProps) {
     setMessage("");
     try{
       const existing=recipes.find(recipe=>recipe.id===editingId);
-      let shippingProfileId=props.verifiedShippingProfileId||Number(existing?.etsyShippingProfileId)||0;
-      if (!props.templateVerified) {const verified=await props.onVerifyTemplate(props.templateUrl);if(!verified){setMessage("Connect the Printify product before saving it.");return}shippingProfileId=Number(verified.shippingTemplateId)||shippingProfileId}
+      /* D296 · The Printify template's shipping profile is the DEFAULT for a
+         product that has never had one chosen — it is whatever this product
+         already ships with on Etsy, so it is not a decision worth asking for
+         twice. Once the seller picks a different profile and saves it, that
+         choice IS the product's default and nothing may quietly replace it.
+         This line used to overwrite the saved choice with the template value
+         every time the template was re-verified, which happens whenever a saved
+         product is edited. */
+      const savedChoice=Number(existing?.etsyShippingProfileId)||0;
+      let shippingProfileId=savedChoice||props.verifiedShippingProfileId||0;
+      if (!props.templateVerified) {
+        const verified=await props.onVerifyTemplate(props.templateUrl);
+        if(!verified){setMessage("Connect the Printify product before saving it.");return}
+        if(!savedChoice)shippingProfileId=Number(verified.shippingTemplateId)||shippingProfileId;
+      }
       const setupComplete=editingId?existing?.setupComplete!==false:false;
       const response = await fetch("/api/product-recipes", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: editingId || undefined, name, templateUrl: props.templateUrl, description:existing?.description, keywordListId, normalizePadding:true,etsyShippingProfileId:shippingProfileId,defaultColorIds:existing?.defaultColorIds,defaultSizeIds:existing?.defaultSizeIds,printifyImageIndices:existing?.printifyImageIndices,etsyDefaults:existing?.etsyDefaults,defaultMockupTheme:existing?.defaultMockupTheme,mockupIds:existing?.mockupIds,setupComplete,defaultProfitTarget:existing?.defaultProfitTarget }) });
       const result = await response.json() as { id?: string; error?: string };
@@ -163,10 +176,14 @@ export function SavedWorkflow(props: WorkflowProps) {
          mistake. */}
 {editing&&<button type="button" className="secondary-action" onClick={()=>{setEditing(false);setEditingId("");setName("");setKeywordListId("");setMessage("")}}>Cancel</button>}</div>}
     {message && <p className="field-warning" role="status">{message}</p>}
-    <details className="bundle-library" open={bundleForm}>{/* D232 · "Want one batch to cover several products?" is a pitch for a feature you
+    <details className="bundle-library" open={bundleForm} onToggle={event=>{const open=(event.currentTarget as HTMLDetailsElement).open;if(open&&!bundleForm&&recipes.length>=2&&!pendingAction)openBundle();if(!open&&bundleForm)setBundleForm(false);}}>{/* D302 · This was a door onto another door: the section read "Product
+           bundles", and opening it revealed an explainer and a "＋ Create a
+           product bundle" button that opened the actual form. The saved bundles
+           are already listed above this, so the section has exactly one job.
+           Opening it now opens the form. */}{/* D232 · "Want one batch to cover several products?" is a pitch for a feature you
            have already used. Once a bundle exists it is a place to make another one, so
            it says that instead. */}
-      <summary><span>{bundleForm?(editingBundleId?`Editing ${bundleName||"this bundle"}`:"New product bundle"):bundles.length?"Product bundles":"Want one batch to cover several products?"}</span><small>{bundleForm?"Choose which saved products belong to it, then save.":bundles.length?<>Create another bundle, or edit one you have <em>Optional</em></>:<>Create or edit a product bundle <em>Optional</em></>}</small></summary><div className="bundle-library-content"><div className="recipe-library-head"><div>{/* D271 · the <summary> that opens this block already reads "Product bundles"; this repeated it immediately below. */}<small>Combine two to four saved products. Upload each design once, then Goldie carries it through every product.</small></div><button disabled={recipes.length<2||Boolean(pendingAction)} onClick={()=>openBundle()}>{recipes.length<2?"Save 2 products first":"＋ Create a product bundle"}</button></div>{bundleForm&&<div className="bundle-form"><div><b>{editingBundleId?"Edit product bundle":"New product bundle"}</b><span>Choose the products in the order you want to complete them.</span></div><label>Bundle name<input value={bundleName} onChange={event=>setBundleName(event.target.value)} placeholder="Example: Tee + sweatshirt + hoodie"/></label><fieldset><legend>Products</legend>{/* D293 · The 4-product cap and the 2-product minimum were enforced only by
+      <summary><span>{bundleForm?(editingBundleId?`Editing ${bundleName||"this bundle"}`:"New product bundle"):"Create a product bundle"}</span><small>{bundleForm?"Choose which saved products belong to it, then save.":recipes.length<2?<>Save 2 products first <em>Optional</em></>:<>Combine two to four saved products <em>Optional</em></>}</small></summary><div className="bundle-library-content"><div className="recipe-library-head"><div>{/* D271 · the <summary> that opens this block already reads "Product bundles"; this repeated it immediately below. */}<small>Combine two to four saved products. Upload each design once, then Goldie carries it through every product.</small></div></div>{bundleForm&&<div className="bundle-form"><div><b>{editingBundleId?"Edit product bundle":"New product bundle"}</b><span>Choose the products in the order you want to complete them.</span></div><label>Bundle name<input value={bundleName} onChange={event=>setBundleName(event.target.value)} placeholder="Example: Tee + sweatshirt + hoodie"/></label><fieldset><legend>Products</legend>{/* D293 · The 4-product cap and the 2-product minimum were enforced only by
             disabling controls. A checkbox that goes dead with no reason is the same
             defect as the dead rows in D237 — the control is there, it does nothing,
             and nothing says why. */}

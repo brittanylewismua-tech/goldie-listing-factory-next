@@ -190,10 +190,17 @@ test("places item pricing before shipping in the pricing review", async () => {
     readFile(new URL("app/approved-functional.css", root), "utf8"),
   ]);
   const itemPrices = page.indexOf('<h4>1. Item prices <span>');
-  const pricingMath = page.indexOf('className="pricing-math"');
+  /* D303 · The "See how Goldie calculated these prices" expander is gone. The ✓
+     line at the top of the card already states the calculation, and saying it
+     twice on one card is what this was. The FEE FIGURES it contained are a
+     control, not an explanation, so they stayed — and they still have to sit
+     with item prices, before shipping. */
+  const feeSummary = page.indexOf('className="fee-profile-summary"');
   const shipping = page.indexOf('<h4>2. Etsy shipping profile');
   assert.ok(itemPrices >= 0 && shipping > itemPrices, "item prices appear before shipping");
-  assert.ok(pricingMath > itemPrices && pricingMath < shipping, "the pricing explanation stays with item prices, before shipping");
+  assert.ok(feeSummary > itemPrices && feeSummary < shipping, "the fee figures stay with item prices, before shipping");
+  assert.doesNotMatch(page, /See how Goldie calculated these prices/,
+    "the card must not explain the calculation a second time");
   assert.doesNotMatch(page, /<span>1\. Shipping<\/span>/);
   assert.doesNotMatch(page, /<h4>2\. Item prices<\/h4>/);
   assert.match(page, /<small className="profit-fee-note">Shipping not included<\/small>/);
