@@ -981,19 +981,25 @@ test("the shipping combobox shows its default and its rows are not buttons — D
 test("loading a template applies its verified Etsy shipping profile immediately — D329", async () => {
   const app = await read("app/listing-factory-app.tsx");
   assert.match(app, /const verifiedProfileId=Number\(result\.product\.shippingTemplateId\)\|\|0;/);
-  assert.match(app, /if\(verifiedProfileId\)setEtsyShippingProfileId\(verifiedProfileId\);/);
+  /* D333 · Applied only when nothing is chosen yet. selectRecipe sets the
+     seller's saved profile immediately before this, so setting it
+     unconditionally replaced a saved choice with the template's on every
+     selection. Keeping what is current preserves both behaviours. */
+  assert.match(app, /if\(verifiedProfileId\)setEtsyShippingProfileId\(current=>current\|\|verifiedProfileId\);/);
 });
 
 test("saved-product and shipping guidance stays plain and brief — D331", async () => {
   const app = await read("app/listing-factory-app.tsx");
   assert.match(app, /Your saved product will keep working if the original Etsy listing sells out, becomes inactive, or is deleted\. Just keep the product in Printify\./);
   assert.match(app, /Goldie starts with the shipping profile already used for this product\. Change it only if needed\./);
-/* D328 · A bundle showed ONE pricing card — the active product's — and no way
+});
+
+/* D332 · A bundle showed ONE pricing card — the active product's — and no way
    to price the others at all. Colours and sizes were already per product; only
    pricing was still a single set of globals. Each product carries its own
    template, costs, profit goal and shipping profile, which is exactly what its
    recipe already stores. */
-test("every bundle product gets its own pricing card — D328", async () => {
+test("every bundle product gets its own pricing card — D332", async () => {
   const app = await read("app/listing-factory-app.tsx");
 
   assert.match(app, /function variantsFor\(details:TemplateDetails\|null\|undefined,colorIds:number\[\],sizeIds:number\[\]\)/,

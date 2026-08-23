@@ -1256,7 +1256,15 @@ export default function ListingFactoryApp() {
          the right profile from Etsy. The later profile-list validation still
          clears an id that genuinely is not on the connected shop. */
       const verifiedProfileId=Number(result.product.shippingTemplateId)||0;
-      if(verifiedProfileId)setEtsyShippingProfileId(verifiedProfileId);
+      /* D333 · Applied only when nothing is already chosen. selectRecipe sets the
+         seller's saved profile just before this runs, so an unconditional set
+         replaced their saved choice with the Printify template's every time the
+         product was selected — the D296 rule in reverse. The functional form
+         reads the value that is actually current rather than a stale closure:
+         keep what is there, otherwise take the template's. D329's own case, an
+         empty picker after the server recovered the profile from Etsy, still
+         works, because in that case there is nothing to keep. */
+      if(verifiedProfileId)setEtsyShippingProfileId(current=>current||verifiedProfileId);
       setTemplateDetails(result.product);setDescription(result.product.description||"");if(result.product.standardShipping!=null)setPricing(current=>({...current,shippingCost:result.product!.standardShipping!,shippingCharged:0}));setVariantPrices(Object.fromEntries((result.product.variants||[]).map(variant=>[String(variant.id),variant.templatePrice])));setPricingApproved(false); return result.product;
     } catch (error) { if(requestVersion===templateLoadVersion.current)setTemplateError(error instanceof Error ? error.message : "The template could not be loaded."); return null; }
     finally { if(requestVersion===templateLoadVersion.current)setLoadingTemplate(false); }
