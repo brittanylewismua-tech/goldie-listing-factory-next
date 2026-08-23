@@ -1076,7 +1076,10 @@ test("keeps pricing simple while using a real Etsy shipping profile and exact te
   assert.match(page,/save or discard any custom shipping profile changes/i);
   assert.doesNotMatch(page,/Approve pricing \+ shipping/);
   assert.match(page,/Printify shipping cost — what you pay/);
-  assert.match(page,/Review every enabled variation before Goldie creates the drafts/);
+  /* D217: pricing moved onto the Product page, so this step is draft creation
+     and is described as that. The pricing UI itself is asserted intact by
+     tests/feature-inventory.test.mjs. */
+  assert.match(page, /Goldie creates an unpublished draft in Printify for every design in this batch/);
   assert.doesNotMatch(page,/pricing target, keyword bank, and mockup defaults/);
   assert.match(page,/variant\.templatePrice/);
   assert.match(page,/See how Goldie calculated these prices/);
@@ -1250,7 +1253,7 @@ test("labels every progress bubble with a short workflow name", async () => {
     readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/approved-functional.css", import.meta.url), "utf8"),
   ]);
-  assert.match(page, /const PROGRESS_SHORT_LABELS = \["Connect","Product","Designs","Pricing","Drafts","Titles \+ tags","Etsy details","Images \+ mockups","Publish"\]/);
+  assert.match(page, /const PROGRESS_SHORT_LABELS = \["Connect","Product","Designs","Drafts","Drafts","Titles \+ tags","Etsy details","Images \+ mockups","Publish"\]/);
   assert.match(page, /className="progress-bubble-label"/);
   assert.match(styles, /\.app-shell \.progress-bubble-label\{/);
 });

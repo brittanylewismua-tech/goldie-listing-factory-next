@@ -146,8 +146,11 @@ const WORKFLOW_STEPS: Array<{id:WorkflowStep;number:string;label:string}> = [
   {id:"review",number:"04",label:"Review batch"},
   {id:"finish",number:"05",label:"Finish listings"},
 ];
-const PROGRESS_STEPS = ["Connect Printify","Choose product","Add designs","Review pricing","Create drafts","Titles, tags + descriptions","Etsy listing details","Images + mockups","Final review"];
-const PROGRESS_SHORT_LABELS = ["Connect","Product","Designs","Pricing","Drafts","Titles + tags","Etsy details","Images + mockups","Publish"];
+/* D217 · Index 3 was "Review pricing". Pricing now lives on the Product page,
+   directly under the colours and sizes that decide which variants exist, so this
+   step is only draft creation and is named for that. */
+const PROGRESS_STEPS = ["Connect Printify","Choose product","Add designs","Create Printify drafts","Create drafts","Titles, tags + descriptions","Etsy listing details","Images + mockups","Final review"];
+const PROGRESS_SHORT_LABELS = ["Connect","Product","Designs","Drafts","Drafts","Titles + tags","Etsy details","Images + mockups","Publish"];
 /* The rail used to show all 9 PROGRESS_STEPS as equal peers. That did not match
    the real state machine (WorkflowStep has 5 values) and it invented a "Drafts"
    step that is really the outcome of Pricing. The indices below are unchanged —
@@ -1163,11 +1166,11 @@ export default function ListingFactoryApp() {
   const workflowHero = {
     connect: { eyebrow: "ACCOUNT SETUP", title: "Connect your accounts", copy: connected&&etsyConnected?"Both accounts are connected and ready.":"Connect Printify and Etsy so Goldie can build and publish your listings." },
     setup: templateDetails&&productSelected
-      ? { eyebrow: "NEW BATCH", title: "Build this batch", copy: "Adjust the choices that changed, then add your finished designs." }
-      : { eyebrow: "STEP 2 OF 9", title: "Choose product", copy: "Choose a saved product or connect a completed Printify product." },
-    designs: { eyebrow: "STEP 3 OF 9", title: "Add your designs", copy: "Add up to 20 finished designs for this batch." },
-    review: { eyebrow: "STEP 4 OF 9", title: "Review pricing", copy: "Review every enabled variation before Goldie creates the drafts." },
-    finish: finishPhase==="details" ? { eyebrow: "STEP 6 OF 9", title: "Titles, tags + descriptions", copy: "Create the titles and tags, then review the description for every listing." } : finishPhase==="etsy" ? { eyebrow: "STEP 7 OF 9", title: "Etsy listing details", copy: "Review the Etsy category and product-specific details." } : finishPhase==="mockups" ? { eyebrow: "STEP 8 OF 9", title: "Images + mockups", copy: "Choose the final images for every listing." } : { eyebrow: "STEP 9 OF 9", title: "Final review", copy: "Review every listing before publishing it live on Etsy." },
+      ? { eyebrow: "STEP 1 OF 4", title: "Build this batch", copy: "Check each product’s colours, sizes and pricing, then continue to your designs." }
+      : { eyebrow: "STEP 1 OF 4", title: "Choose product", copy: "Choose a saved product or connect a completed Printify product." },
+    designs: { eyebrow: "STEP 2 OF 4", title: "Add your designs", copy: "Add up to 20 finished designs for this batch." },
+    review: { eyebrow: "STEP 3 OF 4", title: "Create Printify drafts", copy: "Goldie creates an unpublished draft in Printify for every design in this batch." },
+    finish: finishPhase==="details" ? { eyebrow: "STEP 4 OF 4 · TITLES + TAGS", title: "Titles, tags + descriptions", copy: "Create the titles and tags, then review the description for every listing." } : finishPhase==="etsy" ? { eyebrow: "STEP 4 OF 4 · ETSY DETAILS", title: "Etsy listing details", copy: "Review the Etsy category and product-specific details." } : finishPhase==="mockups" ? { eyebrow: "STEP 4 OF 4 · IMAGES", title: "Images + mockups", copy: "Choose the final images for every listing." } : { eyebrow: "STEP 4 OF 4 · REVIEW", title: "Final review", copy: "Review every listing before publishing it live on Etsy." },
   }[workflowStep];
 
   return (
@@ -1291,6 +1294,29 @@ export default function ListingFactoryApp() {
           
           
           {templateDetails&&productSelected&&activeRecipe?.setupComplete===false&&<button type="button" className="save-initial-product-setup" disabled={!selectedColorIds.length||savingProductDefault==="initial-setup"} onClick={()=>void completeProductSetup()}>{savingProductDefault==="initial-setup"?"Saving this product’s defaults…":`Save these as ${activeRecipe.name}’s defaults`}</button>}
+          {/* D217 · Pricing moves onto the Product page. Colours and sizes decide which
+              variants exist, and the price is set per variant, so pricing could never
+              be answered before them — it was a whole separate step for a panel that
+              belongs directly underneath the thing it prices. This is the existing
+              PricingReview component moved intact: grouped per-size prices, the
+              matching-cost grouping, whole-number pricing and the shipping profile all
+              come with it. Nothing here is rebuilt. */}
+          {pricedVariants.length>0&&<PricingReview
+            variants={pricedVariants}
+            pricing={pricing}
+            prices={variantPrices}
+            productName={activeRecipe?.name||templateDetails?.blueprintTitle||"This product"}
+            profiles={etsyShippingProfiles}
+            selectedProfileId={etsyShippingProfileId}
+            profilesLoading={shippingProfilesLoading}
+            profilesError={shippingProfilesError}
+            approved={pricingApproved}
+            onPricing={value=>{setPricing(value);setPricingApproved(false)}}
+            onPrices={value=>{setVariantPrices(value);setPricingApproved(false)}}
+            onSelectProfile={value=>{setEtsyShippingProfileId(value);setPricingApproved(false)}}
+            onCreateProfile={createCustomShippingProfile}
+            onApprovalChange={setPricingApproved}
+          />}
           {templateDetails&&productSelected&&<button type="button" className="workflow-next setup-forward" disabled={!complete&&(!selectedColorIds.length||(Boolean(templateDetails?.sizeOptions?.length)&&!selectedSizeIds.length)||!autoTitleBankId||bundleKeywordGaps.length>0||activeRecipe?.setupComplete===false)} onClick={()=>complete?goToStep("finish",false,true):goToStep("designs")}>{complete?"Back to finishing your listings":activeRecipe?.setupComplete===false?"Save this product’s defaults to continue":!selectedColorIds.length?"Choose product colors to continue":Boolean(templateDetails?.sizeOptions?.length)&&!selectedSizeIds.length?"Choose product sizes to continue":!autoTitleBankId?"Pick a keyword bank to continue":bundleKeywordGaps.length?`Pick a keyword bank for ${bundleKeywordGaps.join(", ")}`:"Continue to designs"} <span>→</span></button>}
           </BatchPreferencesPortal>
           </div>
@@ -1346,25 +1372,10 @@ export default function ListingFactoryApp() {
           <div className="launch-top">
             <Image src="/goldie-g.png" width={2000} height={2000} alt="" className="goldie-g" />
             {(running||workflowStep!=="review")&&<h2>{running ? `${processed} of ${runTotal} complete` : complete ? "Batch finished" : "Current batch"}</h2>}
-            <p>{running ? "Goldie is uploading each design and creating its Printify draft." : workflowStep==="review" ? "Confirm shipping and item prices, then continue." : complete ? `${drafts.filter((draft) => draft.status === "Created").length} of ${files.length} drafts were created in Printify.` : "Complete this step to create unpublished drafts in Printify."}</p>
+            <p>{running ? "Goldie is uploading each design and creating its Printify draft." : workflowStep==="review" ? "Goldie creates an unpublished Printify draft for every design in this batch." : complete ? `${drafts.filter((draft) => draft.status === "Created").length} of ${files.length} drafts were created in Printify.` : "Complete this step to create unpublished drafts in Printify."}</p>
           </div>
 
-          {pricedVariants.length>0&&<PricingReview
-            variants={pricedVariants}
-            pricing={pricing}
-            prices={variantPrices}
-            productName={activeRecipe?.name||templateDetails?.blueprintTitle||"This product"}
-            profiles={etsyShippingProfiles}
-            selectedProfileId={etsyShippingProfileId}
-            profilesLoading={shippingProfilesLoading}
-            profilesError={shippingProfilesError}
-            approved={pricingApproved}
-            onPricing={value=>{setPricing(value);setPricingApproved(false)}}
-            onPrices={value=>{setVariantPrices(value);setPricingApproved(false)}}
-            onSelectProfile={value=>{setEtsyShippingProfileId(value);setPricingApproved(false)}}
-            onCreateProfile={createCustomShippingProfile}
-            onApprovalChange={setPricingApproved}
-          />}
+          
 
           <div className="summary-list">
             <div><span>Printify</span><b className={connected ? "ready-text" : "waiting-text"}>{connected ? "Connected" : "Waiting"}</b></div>
