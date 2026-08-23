@@ -1862,3 +1862,115 @@ body:has(.management-nav) .usage-card h2{
 .app-shell .size-selector-actions{padding-right:2px!important}
 .app-shell .color-selector-actions button:last-child,
 .app-shell .size-selector-actions button:last-child{margin-right:4px!important}
+
+/* ============================================================================
+ * D308 · A NARROW DESKTOP WINDOW IS STILL A DESKTOP
+ *
+ * D307 stopped the mobile gate from firing on width alone. That exposes the
+ * narrow layout underneath it, which had never been reachable and so had never
+ * been right: below 820px `.topbar` was set to display:none, which removes the
+ * ONLY navigation — no Batch History, no Keyword Banks, no Usage.
+ *
+ * The rail is 288px fixed at left:0 with the shell padded to match, so the two
+ * numbers have to move together at every step.
+ * ========================================================================== */
+@media (max-width:1180px){
+  .app-shell{padding-left:214px!important}
+  .app-shell .topbar{width:214px!important;padding-inline:14px!important}
+  .app-shell .top-nav a{font-size:12px!important}
+}
+
+/* Below 820px on a real pointer the rail lies down across the top instead of
+   disappearing, so every destination stays reachable. */
+@media (max-width:820px) and (pointer:fine){
+  .app-shell{padding-left:0!important}
+  .app-shell .topbar{
+    display:flex!important;
+    position:static!important;
+    width:100%!important;
+    height:auto!important;
+    flex-flow:row wrap!important;
+    align-items:center!important;
+    gap:10px 16px!important;
+    padding:12px 16px!important;
+    border-right:0!important;
+    border-bottom:1px solid rgba(91,48,79,.16)!important;
+  }
+  .app-shell .top-nav{flex-flow:row wrap!important;gap:8px 14px!important;margin:0!important}
+  .app-shell .brand-lockup{margin:0 auto 0 0!important}
+  .app-shell .approved-sidebar-footer{flex:1 1 100%!important;margin-top:4px!important}
+  .app-shell .workspace{padding-inline:16px!important}
+  /* The step rail was still sized for the retired nine-step flow. */
+  .app-shell .workflow-progress{
+    grid-template-columns:repeat(var(--rail-count,4),minmax(64px,1fr))!important;
+    overflow-x:auto!important;
+  }
+}
+
+/* ============================================================================
+ * D309 · CENTRED CARD HEADERS — SUPERSEDES THE ALIGNMENT IN D249 / D279 / D287
+ *
+ * D249 left-aligned these headers because Publish and Listing were centred
+ * while product cards and pricing sections were left, and something had to
+ * give. I picked left. Wrong call: these cards lead with a large circular icon
+ * that is itself centred, so a left-aligned title under a centred icon reads as
+ * a mistake — which is exactly how it looked once it shipped.
+ *
+ * The rule is the FORMAT, not the page: a step card with the circular icon
+ * centres its icon, eyebrow, title and lead copy. Everything below that header
+ * — sections, rows, fields, buttons — stays left, because that is body content
+ * and centring it would be unreadable.
+ * ========================================================================== */
+.app-shell .step-card>.step-number{
+  margin-left:auto!important;
+  margin-right:auto!important;
+  align-self:center!important;
+}
+.app-shell .step-card>.step-content>.step-heading,
+.app-shell .step-card>.step-content>.step-heading>div,
+.app-shell .step-card>.step-content>.step-heading .heading-with-help,
+.app-shell .step-card>.step-content>.step-copy,
+.app-shell .post-draft-heading,
+.app-shell .post-draft-heading>div,
+.app-shell .post-draft-heading h2,
+.app-shell .post-draft-heading p{
+  text-align:center!important;
+  justify-content:center!important;
+}
+.app-shell .step-card>.step-content>.step-heading{align-items:center!important}
+.app-shell .step-card>.step-content>.step-copy{
+  margin-inline:auto!important;
+  max-width:62ch!important;
+}
+/* The count chip belongs on the card's edge, not in the centred stack. */
+.app-shell .step-card>.step-content>.step-heading>.done-mark{
+  position:absolute!important;
+  top:0!important;
+  right:0!important;
+}
+.app-shell .step-card>.step-content>.step-heading{position:relative!important}
+
+/* D310 · Measured on the deployed card: panel 718px inside a 720px card WITH
+   22px margins each side, so its right edge sat 21px PAST the card. D236 added
+   horizontal margins to a panel that globals.css still sizes `width:100%`, and
+   100% + 44px of margin overflows by 44px — all of it to the right, because the
+   left margin lands first. The margins are the intent, so the width gives way. */
+.app-shell .batch-product-card .product-color-selector,
+.app-shell .batch-product-card .product-size-selector{
+  width:auto!important;
+  max-width:none!important;
+}
+
+/* D311 · The saved-state line that replaced the redundant save button in the
+   card. It reports; it is not a control, so it must not look like one. */
+.app-shell .default-saved-state{
+  margin-left:auto!important;
+  padding:9px 13px!important;
+  border-radius:999px!important;
+  color:#75576b!important;
+  font:800 11px/1 "Manrope",system-ui,sans-serif!important;
+}
+.app-shell .default-saved-state.saved{
+  background:#e8f5ec!important;
+  color:#276543!important;
+}

@@ -15,7 +15,7 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .post-draft-heading{color:var(--ink)!important}.post-draft-heading h2,.post-draft-heading .mini-label{color:var(--ink)!important}.post-draft-heading p{color:rgba(74,42,62,.68)!important}footer{margin-left:0;background:rgba(74,42,62,.78);border:0;color:rgba(255,255,255,.7)}
 .recommended-listing-photos{width:min(930px,100%);margin:0 auto 18px;padding:18px 22px;border:1px solid rgba(255,255,255,.68);border-radius:18px;background:rgba(255,249,253,.5);box-shadow:0 12px 34px rgba(74,42,62,.08);backdrop-filter:blur(16px)}.recommended-listing-photos b{font-family:'DM Serif Display',Georgia,serif;font-size:20px;font-weight:400}.recommended-listing-photos ul{display:flex;flex-wrap:wrap;gap:8px 24px;margin:10px 0 0;padding:0;list-style:none;color:rgba(74,42,62,.68);font-size:12px}.recommended-listing-photos li:before{content:"✓";margin-right:7px;color:#8d5ea2}.mockup-limit-note{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:12px;padding:12px 14px;border-radius:12px;background:rgba(218,169,219,.14);color:var(--ink)}.mockup-limit-note span{color:rgba(74,42,62,.65);font-size:12px}
 @media(max-width:1050px){.app-shell{padding-left:240px}.topbar{width:240px;padding-inline:20px}.wordmark{width:180px}.hero,.workspace{padding-inline:30px}.workflow-progress button b{font-size:8px}}
-@media(max-width:820px){.app-shell{padding-left:0}.topbar{display:none}.hero{padding-top:32px}.workspace{padding-inline:18px}.workflow-progress{grid-template-columns:repeat(9,90px);overflow-x:auto}.workflow-progress:before{display:none}.step-card{grid-template-columns:1fr}.step-number{display:none}}
+@media(max-width:820px){.app-shell{padding-left:0}.topbar{display:none}.hero{padding-top:32px}.workspace{padding-inline:18px}.workflow-progress{grid-template-columns:repeat(var(--rail-count,4),minmax(64px,1fr));overflow-x:auto}.workflow-progress:before{display:none}.step-card{grid-template-columns:1fr}.step-number{display:none}}
 
 /* Preserve the approved wizard composition while the original factory logic runs inside it. */
 @media(min-width:821px){
@@ -662,7 +662,13 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .inline-mockup-grid label.selected{border-color:#b777b0!important;background:rgba(239,211,237,.7)!important;box-shadow:0 0 0 2px rgba(183,119,176,.1)!important}
 .etsy-api-disclosure{max-width:210px;margin:10px 0 0;color:rgba(74,42,62,.58);font-size:8px;font-weight:400;letter-spacing:.01em;line-height:1.4;text-align:left}
 
-@media(max-width:820px){
+/* D307 · This gate fired on WIDTH ALONE, so narrowing a desktop Chrome window
+   replaced the entire app with "Oops, this one needs a bigger screen." Goldie is
+   a desktop tool, but a desktop window that is not maximised is still a desktop.
+   `pointer:coarse` is what actually distinguishes a phone or tablet from a
+   narrow window: a mouse reports `fine`, a finger reports `coarse`. Both
+   conditions must hold now. */
+@media(max-width:820px) and (pointer:coarse){
   html,body{min-height:100%;overflow:hidden;background:#e8b1c8 url('/goldie-background-reference.jpg') center/cover fixed no-repeat}
   .app-shell{display:block;min-height:100vh;padding:0}
   .app-shell>:not(.mobile-gate){display:none!important}

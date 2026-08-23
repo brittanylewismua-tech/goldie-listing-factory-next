@@ -806,3 +806,16 @@ test("Etsy readiness means required properties are set — D294", async () => {
   assert.match(app, /files\.filter\(file=>!file\.etsy&&file\.title\.trim\(\)\)/,
     "the prefill queue still asks whether prefill has happened at all");
 });
+
+/* D310 · A panel sized width:100% cannot also carry horizontal margins: the two
+   rules add up and the overflow lands entirely on the right. Measured on the
+   deployed card — 718px panel, 720px card, 22px margins, right edge 21px past
+   the card. This is the same class of bug as D211 and D234: two rules describing
+   the same box without agreeing. */
+test("an in-card panel's margins are not cancelled by its width — D310", async () => {
+  const clarity = await read("app/clarity-pass.css");
+  const block = clarity.slice(clarity.indexOf("D310 ·"));
+  assert.match(block, /width:auto!important/,
+    "the panel must yield its width to the margins, not overflow past them");
+  assert.match(block, /max-width:none!important/);
+});
