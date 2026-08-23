@@ -2006,8 +2006,16 @@ test("shows underfilled titles and tags as a non-blocking review state (fixes D6
   assert.match(review,/design\.tags\.length<13/);
   assert.match(review,/publishing is still available/);
   assert.match(review,/review\.needed\?"content-review":"ready"/);
-  assert.match(app,/One or more titles need review/);
-  assert.match(app,/One or more listings have fewer than 13 tags/);
+  /* D255 · This used to be "One or more titles need review" — vaguer than the
+     rows immediately below it, which name every listing individually. The
+     checklist now counts them, so the summary is at least as specific as the
+     detail it summarises. */
+  assert.match(app,/titles need review/);
+  assert.match(app,/\$\{files\.filter\(file=>file\.title\.trim\(\)\.length<100\)\.length\} of \$\{files\.length\}/,
+    "the checklist must count the listings that need review");
+  assert.match(app,/listings have fewer than 13 tags/);
+  assert.match(app,/\$\{files\.filter\(file=>file\.tags\.length<13\)\.length\} of \$\{files\.length\}/,
+    "and must count them, the same as the titles line");
   /* D153 recoloured this from the gold-era #8a5a12 to the app's plum. The point
    * of D64 is that it is a distinct non-blocking review state, not that it is amber. */
   assert.match(css,/\.final-listing-card \.content-review\{color:#8a3f66!important/);
