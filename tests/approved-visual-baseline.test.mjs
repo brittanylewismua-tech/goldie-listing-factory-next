@@ -618,8 +618,16 @@ test("shipping profiles are product-aware, searchable, and never hard-filtered â
     readFile(listingFactoryPage,"utf8"),
     readFile(new URL("../app/clarity-pass.css",import.meta.url),"utf8"),
   ]);
-  assert.match(page,/profiles\.length>20&&<input className="shipping-profile-search"/,
-    "Large profile libraries need search where the seller chooses shipping.");
+  /* D319 Â· Search used to be an input ABOVE a native <select>, shown only past
+     20 profiles. It filtered the <option> list, which is invisible while the
+     dropdown is closed â€” so typing appeared to do nothing and connect to
+     nothing. The search now lives INSIDE the open list, above the options it
+     filters, and is always present rather than appearing at a threshold. */
+  assert.match(page,/className="shipping-combobox-search"/,
+    "search must sit inside the open list, above the options it filters");
+  assert.match(page,/role="listbox"/);
+  assert.doesNotMatch(page,/profiles\.length>20&&<input/,
+    "search is not gated behind a profile count any more");
   assert.match(page,/Currently attached to this product/);
   assert.match(page,/Recommended for \$\{productName\}/);
   assert.match(page,/Other apparel profiles/);
@@ -628,7 +636,9 @@ test("shipping profiles are product-aware, searchable, and never hard-filtered â
   assert.match(page,/shippingProfileOptionLabel\(profile\)/,
     "Options must expose first-item and additional-item buyer charges.");
   assert.match(page,/selectedProfileNeedsReview&&<div className="shipping-profile-family-warning"/);
-  assert.match(styles,/\.app-shell \.shipping-profile-search\{/);
+  assert.match(styles,/\.app-shell \.shipping-combobox-search\{/);
+  assert.match(styles,/\.app-shell \.shipping-combobox-panel\{/,
+    "the list needs a panel to render into, above the page");
 });
 
 test("the product step stays usable after a product is chosen â€” D122/D119/D120", async () => {

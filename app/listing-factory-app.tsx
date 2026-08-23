@@ -357,6 +357,24 @@ function PricingReview({variants,pricing,prices,productName,profiles,selectedPro
   const selectedProfileGroup=selectedProfile?shippingProfileGroup(selectedProfile.title,productName):"other";
   const selectedProfileNeedsReview=Boolean(selectedProfile&&selectedProfile.id!==attachedProfile?.id&&selectedProfileGroup!=="recommended");
   const selectedOutsideSearch=selectedProfile&&!searchedProfiles.some(profile=>profile.id===selectedProfile.id)?selectedProfile:null;
+  const [comboOpen,setComboOpen]=useState(false);
+  const comboRef=useRef<HTMLDivElement|null>(null);
+  /* D319 · Clicking away closes the list, the way every other picker behaves. */
+  useEffect(()=>{
+    if(!comboOpen)return;
+    const away=(event:MouseEvent)=>{if(comboRef.current&&!comboRef.current.contains(event.target as Node)){setComboOpen(false);setProfileSearch("")}};
+    document.addEventListener("mousedown",away);
+    return()=>document.removeEventListener("mousedown",away);
+  },[comboOpen]);
+  /* The same grouping the <optgroup>s used, so the ordering sellers already know
+     survives the change of control. */
+  const comboGroups=[
+    {label:"Current selection",items:selectedOutsideSearch?[selectedOutsideSearch]:[]},
+    {label:"Currently attached to this product",items:attachedProfile&&(!normalizedProfileSearch||searchedProfiles.some(profile=>profile.id===attachedProfile.id))?[attachedProfile]:[]},
+    {label:`Recommended for ${productName}`,items:recommendedProfiles},
+    {label:"Other apparel profiles",items:relatedProfiles},
+    {label:"All other shipping profiles",items:otherProfiles},
+  ];
   const renderProfileOptions=(items:EtsyShippingProfile[])=>items.map(profile=><option key={profile.id} value={profile.id}>{shippingProfileOptionLabel(profile)}</option>);
   return (
     <section className={"variant-pricing "+(approved?"approved":"")}>
@@ -382,7 +400,46 @@ function PricingReview({variants,pricing,prices,productName,profiles,selectedPro
       <section className="shipping-pricing-section">
       <div className="pricing-section-heading shipping-section-heading"><div><div className="heading-with-help"><h4>2. Etsy shipping profile <span>· {productName}</span></h4><ContextHelp label="Explain shipping profiles" title="Choose the shipping buyers will see on Etsy" intro="Goldie starts with the Etsy shipping profile attached to your saved product. You can keep it or create a new reusable copy for this batch." sections={[{heading:"Keep the saved profile",copy:"If the first-item, additional-item, and international rates are already correct, leave the selected profile unchanged."},{heading:"Create a custom profile",copy:"Open the optional custom-profile section, name the new profile, and edit any domestic or international charge. Goldie creates a copy. Your original Etsy profile is not changed."},{heading:"Understand first and additional item",copy:"First item is what a buyer pays for one product. Additional item is the extra shipping charge when the same order contains another eligible product."},{heading:"Separate from item profit",copy:"Shipping is configured here and charged to the buyer separately. It does not change the item-profit figures in the pricing section above."}]}/></div><p>Review the Etsy shipping profile that sets the shipping price for every listing in this batch.</p></div></div>
       <div className="pricing-controls">
-        <div className="shipping-profile-picker"><label className="shipping-profile-select"><span>Etsy shipping profile</span>{profiles.length>20&&<input className="shipping-profile-search" type="search" value={profileSearch} placeholder={`Search ${profiles.length} shipping profiles`} aria-label="Search shipping profiles" onChange={event=>setProfileSearch(event.target.value)}/>}<select value={selectedProfileId||""} disabled={profilesLoading} onChange={event=>chooseProfile(Number(event.target.value))}><option value="">{profilesLoading?"Loading your shipping profiles…":"Choose your Etsy shipping profile"}</option>{selectedOutsideSearch&&<optgroup label="Current selection">{renderProfileOptions([selectedOutsideSearch])}</optgroup>}{attachedProfile&&(!normalizedProfileSearch||searchedProfiles.some(profile=>profile.id===attachedProfile.id))&&<optgroup label="Currently attached to this product">{renderProfileOptions([attachedProfile])}</optgroup>}{recommendedProfiles.length>0&&<optgroup label={`Recommended for ${productName}`}>{renderProfileOptions(recommendedProfiles)}</optgroup>}{relatedProfiles.length>0&&<optgroup label="Other apparel profiles">{renderProfileOptions(relatedProfiles)}</optgroup>}{otherProfiles.length>0&&<optgroup label="All other shipping profiles">{renderProfileOptions(otherProfiles)}</optgroup>}</select><small>{normalizedProfileSearch?`${searchedProfiles.length} matching profiles · clear search to see all ${profiles.length}`:""}</small></label>{normalizedProfileSearch&&!searchedProfiles.length&&<p className="shipping-profile-empty" role="status">No shipping profiles match “{profileSearch.trim()}”. Clear the search to see all profiles.</p>}</div>
+        <div className="shipping-profile-picker">
+          {/* D319 · This was a native <select> with a separate search box above it.
+              Typing filtered the <option> list — which you cannot see, because the
+              dropdown is closed while you type. The only feedback was a line
+              counting the matches, so the search appeared to do nothing and
+              connect to nothing. A native select cannot be filtered while open;
+              the control has to own its own list. */}
+          <div className="shipping-combobox" ref={comboRef}>
+            <span className="shipping-combobox-label" id="shipping-combobox-label">Etsy shipping profile</span>
+            <button type="button" className="shipping-combobox-trigger" disabled={profilesLoading}
+              aria-haspopup="listbox" aria-expanded={comboOpen} aria-labelledby="shipping-combobox-label"
+              onClick={()=>setComboOpen(open=>!open)}>
+              <span>{profilesLoading?"Loading your shipping profiles…":selectedProfile?shippingProfileOptionLabel(selectedProfile):"Choose your Etsy shipping profile"}</span>
+              <em aria-hidden="true">⌄</em>
+            </button>
+            {comboOpen&&<div className="shipping-combobox-panel">
+              <input className="shipping-combobox-search" type="search" autoFocus value={profileSearch}
+                placeholder={`Search ${profiles.length} shipping profiles`} aria-label="Search shipping profiles"
+                onChange={event=>setProfileSearch(event.target.value)}
+                onKeyDown={event=>{if(event.key==="Escape"){setComboOpen(false);setProfileSearch("")}}}/>
+              <div className="shipping-combobox-list" role="listbox" aria-labelledby="shipping-combobox-label">
+                {comboGroups.map(group=>group.items.length>0&&<Fragment key={group.label}>
+                  <p className="shipping-combobox-group">{group.label}</p>
+                  {group.items.map(profile=><button type="button" role="option" key={profile.id}
+                    aria-selected={profile.id===selectedProfileId}
+                    className={`shipping-combobox-option${profile.id===selectedProfileId?" selected":""}`}
+                    onClick={()=>{chooseProfile(profile.id);setComboOpen(false);setProfileSearch("")}}>
+                    {shippingProfileOptionLabel(profile)}
+                  </button>)}
+                </Fragment>)}
+                {!searchedProfiles.length&&<p className="shipping-combobox-empty" role="status">
+                  No shipping profiles match “{profileSearch.trim()}”.
+                </p>}
+              </div>
+              {normalizedProfileSearch&&searchedProfiles.length>0&&<p className="shipping-combobox-count">
+                {searchedProfiles.length} of {profiles.length} profiles
+              </p>}
+            </div>}
+          </div>
+        </div>
       </div>
       {profilesError&&<div className="shipping-api-note error"><b>Shipping profiles could not be loaded.</b><span>{profilesError}</span></div>}
       {selectedProfile&&<>{selectedProfileNeedsReview&&<div className="shipping-profile-family-warning" role="status"><b>Double-check this profile for {productName}.</b><span>Its name does not clearly match this product type. Goldie has not changed it; confirm the buyer charges below before approving.</span></div>}{/* D232 · Three chips — "Etsy buyer charge", "Printify shipping cost — what you

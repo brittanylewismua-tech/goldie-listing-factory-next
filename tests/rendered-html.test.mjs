@@ -1062,7 +1062,10 @@ test("keeps pricing simple while using a real Etsy shipping profile and exact te
   ]);
   assert.match(page,/Shipping profile/);
   assert.match(page,/Currently attached to this product/);
-  assert.match(page,/\$\{searchedProfiles\.length\} matching profiles/);
+  /* D319 · The match count used to be the ONLY feedback that search worked,
+     because the filtered list was hidden inside a closed <select>. It is now a
+     quiet footnote under a list you can actually see. */
+  assert.match(page,/\{searchedProfiles\.length\} of \{profiles\.length\} profiles/);
   assert.match(page,/templateProfileId=Number\(templateDetails\?\.shippingTemplateId\)/);
   assert.match(page,/setEtsyShippingProfileId\(current=>current\|\|templateProfileId\)/);
   assert.match(page,/buyer pays/);

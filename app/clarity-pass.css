@@ -238,10 +238,7 @@
 
 /* D117 · Make a large Etsy shipping-profile library navigable without hiding
  * any money-affecting choice or changing the profile attached to the product. */
-.app-shell .shipping-profile-picker{display:grid;gap:8px;width:100%}
-.app-shell .shipping-profile-search{width:100%;min-height:42px;padding:10px 12px;border:1px solid rgba(119,70,109,.3);border-radius:8px;background:rgba(255,255,255,.82);color:#392435;font-size:12px}
-.app-shell .shipping-profile-empty{margin:0;padding:9px 11px;border-radius:8px;background:rgba(173,113,42,.09);color:#76501e;font-size:11px;font-weight:700}
-.app-shell .shipping-profile-family-warning{display:grid;gap:3px;margin:10px 0;padding:11px 13px;border:1px solid rgba(173,113,42,.24);border-radius:9px;background:rgba(255,240,210,.58);color:#6e491b}
+.app-shell .shipping-profile-picker{display:grid;gap:8px;width:100%}.app-shell .shipping-profile-family-warning{display:grid;gap:3px;margin:10px 0;padding:11px 13px;border:1px solid rgba(173,113,42,.24);border-radius:9px;background:rgba(255,240,210,.58);color:#6e491b}
 .app-shell .shipping-profile-family-warning b{font-size:12px}
 .app-shell .shipping-profile-family-warning span{font-size:11px;line-height:1.45}
 
@@ -1983,4 +1980,53 @@ html,body{overflow-x:auto!important}
   margin-top:12px!important;
   padding-top:12px!important;
   border-top:1px solid rgba(91,48,79,.12)!important;
+}
+
+/* D319 · The shipping profile combobox that replaced the native <select>. The
+   search sits INSIDE the open panel, above the list it filters, so typing has
+   something visible to act on. */
+.app-shell .shipping-combobox{position:relative;display:grid;gap:6px}
+.app-shell .shipping-combobox-label{
+  color:#5b304f;font:800 12px/1.3 "Manrope",system-ui,sans-serif;
+}
+.app-shell .shipping-combobox-trigger{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  width:100%;min-height:45px;padding:0 14px;
+  border:1px solid rgba(91,48,79,.22);border-radius:11px;
+  background:#fff;color:#4f2b42;text-align:left;cursor:pointer;
+  font:600 12px/1.4 "Manrope",system-ui,sans-serif;
+}
+.app-shell .shipping-combobox-trigger>span{
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.app-shell .shipping-combobox-trigger>em{font-style:normal;font-size:15px;color:#704b67}
+.app-shell .shipping-combobox-trigger[aria-expanded="true"]>em{transform:rotate(180deg)}
+.app-shell .shipping-combobox-panel{
+  position:absolute;z-index:40;top:calc(100% + 6px);left:0;right:0;
+  display:grid;gap:8px;padding:10px;
+  border:1px solid rgba(91,48,79,.22);border-radius:14px;
+  background:#fff;box-shadow:0 24px 48px -24px rgba(74,42,62,.55);
+}
+.app-shell .shipping-combobox-search{
+  width:100%;min-height:40px;padding:0 12px;
+  border:1px solid rgba(91,48,79,.22);border-radius:10px;
+  font:500 12px/1.4 "Manrope",system-ui,sans-serif;
+}
+.app-shell .shipping-combobox-list{max-height:320px;overflow:auto;display:grid;gap:2px}
+.app-shell .shipping-combobox-group{
+  margin:8px 0 2px;padding:0 6px;
+  color:#8a6b80;font:800 10px/1.3 "Manrope",system-ui,sans-serif;
+  letter-spacing:.12em;text-transform:uppercase;
+}
+.app-shell .shipping-combobox-option{
+  width:100%;padding:9px 10px;border:0;border-radius:9px;
+  background:transparent;color:#4f2b42;text-align:left;cursor:pointer;
+  font:600 12px/1.45 "Manrope",system-ui,sans-serif;
+}
+.app-shell .shipping-combobox-option:hover{background:rgba(244,212,237,.5)}
+.app-shell .shipping-combobox-option.selected{background:#f4d8ec;font-weight:800}
+.app-shell .shipping-combobox-empty,
+.app-shell .shipping-combobox-count{
+  margin:0;padding:6px;color:#75576b;
+  font:500 11px/1.4 "Manrope",system-ui,sans-serif;
 }
