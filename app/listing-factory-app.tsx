@@ -809,6 +809,15 @@ export default function ListingFactoryApp() {
   async function loadEtsyShippingProfiles(preselect=0){setShippingProfilesLoading(true);setShippingProfilesError("");try{const response=await fetch("/api/etsy/shipping-profiles"),result=await response.json() as {profiles?:EtsyShippingProfile[];error?:string};if(!response.ok)throw new Error(result.error||"Your Etsy shipping profiles could not be loaded.");const profiles=(result.profiles||[]).map(profile=>({...profile,title:profile.title.replace(/\.{2,}$/,"…")}));setEtsyShippingProfiles(profiles);setEtsyShippingProfileId(current=>{const wanted=preselect||current;return wanted&&profiles.some(profile=>profile.id===wanted)?wanted:0})}catch(error){setShippingProfilesError(error instanceof Error?error.message:"Your Etsy shipping profiles could not be loaded.")}finally{setShippingProfilesLoading(false)}}
   useEffect(()=>{if(etsyConnected)void loadEtsyShippingProfiles()},[etsyConnected]);
   useEffect(()=>{const templateProfileId=Number(templateDetails?.shippingTemplateId);if(!templateProfileId||!etsyShippingProfiles.some(profile=>profile.id===templateProfileId))return;setEtsyShippingProfileId(current=>current||templateProfileId)},[templateDetails?.shippingTemplateId,etsyShippingProfiles]);
+  /* D231 · A saved shipping profile that is not on the shop is worse than none.
+     Measured live: Gildan Hoodie and gildan crewneck both held 259760087290 as
+     their etsyShippingProfileId, which is the PRINTIFY shippingTemplateId for
+     that product - a Printify id sitting in a field meant for an Etsy profile
+     id. It matches none of the 94 profiles on the shop, so the picker showed
+     nothing selected, "Approve prices and shipping" was disabled, and the batch
+     could not move. Treat an unusable id as unset so the picker asks for a real
+     one and the D229 notice explains why. */
+  useEffect(()=>{if(!etsyShippingProfiles.length)return;setEtsyShippingProfileId(current=>current&&!etsyShippingProfiles.some(profile=>profile.id===current)?0:current)},[etsyShippingProfiles]);
 
   useEffect(() => {
     if (!running) return;

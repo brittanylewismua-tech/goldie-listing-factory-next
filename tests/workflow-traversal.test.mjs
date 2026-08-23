@@ -249,3 +249,27 @@ test("D229: the pricing approval button names every reason it is disabled", asyn
   /* And a profile that has disappeared from the shop is called out. */
   assert.match(source, /The shipping profile saved for this product is no longer on your Etsy shop\./);
 });
+
+test("D231: a saved shipping profile that is not on the shop is treated as unset", async () => {
+  const source = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+
+  /* Measured live: Gildan Hoodie and gildan crewneck both held 259760087290 as
+   * their etsyShippingProfileId. That number is the PRINTIFY shippingTemplateId
+   * for the product — a Printify id stored in a field meant for an Etsy profile
+   * id — so it matched none of the 94 profiles on the shop. The picker showed
+   * nothing selected, the approval button was disabled, and the batch could not
+   * move forward from either screen.
+   *
+   * An id that cannot resolve is worse than no id: it looks configured and
+   * behaves broken. It resolves to unset, so the picker asks and D229 explains. */
+  assert.match(
+    source,
+    /setEtsyShippingProfileId\(current=>current&&!etsyShippingProfiles\.some\(profile=>profile\.id===current\)\?0:current\)/,
+  );
+
+  /* The template id may only be adopted when it IS a real Etsy profile. */
+  assert.match(
+    source,
+    /if\(!templateProfileId\|\|!etsyShippingProfiles\.some\(profile=>profile\.id===templateProfileId\)\)return;/,
+  );
+});
