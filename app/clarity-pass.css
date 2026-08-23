@@ -131,88 +131,34 @@
   }
 }
 
-.app-shell .rail-substeps {
-  position: relative;
-  grid-column: 1 / -1;
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
-  margin: 12px 6% 0;
-  padding: 22px 0 0;
-}
 
-.app-shell .rail-substeps::before {
-  content: "";
-  position: absolute;
-  left: 95.5%;
-  top: -13px;
-  width: 1px;
-  height: 47px;
-  background: rgba(74, 42, 62, .2);
-}
 
-.app-shell .rail-substeps::after {
-  content: "";
-  position: absolute;
-  left: 12.5%;
-  right: 4.5%;
-  top: 33px;
-  height: 1px;
-  background: rgba(74, 42, 62, .18);
-}
 
-.app-shell .rail-substeps .rail-substep {
-  position: relative;
-  z-index: 1;
-  display: grid !important;
-  grid-template-columns: 1fr !important;
-  justify-items: center;
-  gap: 7px !important;
-  width: 100%;
-  min-width: 0;
-  padding: 0 6px 8px !important;
-  border: 0;
-  border-radius: 9px;
-  background: transparent;
-  color: rgba(74, 42, 62, .72);
-  text-align: center;
-  cursor: pointer;
-}
 
-.app-shell .rail-substeps .rail-substep:hover:not(:disabled) { background: rgba(255, 255, 255, .45); }
-.app-shell .rail-substeps .rail-substep:disabled { opacity: .45; cursor: default; }
 
-.app-shell .rail-substeps .rail-substep.active {
-  background: transparent !important;
-  color: var(--ink);
-  box-shadow: none !important;
-}
+
+
+
+
+
+
+
 
 /* Step 3 uses the complete page-level help; do not repeat it inside the card. */
 .app-shell .designs-step:not(.finish-mode) .step-heading .context-help-trigger { display: none !important; }
 
-.app-shell .rail-substeps .rail-substep > span:last-child { display: grid !important; gap: 2px; padding: 0 !important; }
-.app-shell .rail-substeps .rail-substep b { display: block; font-size: 10px; line-height: 1.25; font-weight: 750; }
-.app-shell .rail-substeps .rail-substep small { display: block; font-size: 8.5px; line-height: 1.3; opacity: .72; }
 
-.app-shell .rail-substeps .rail-substep-dot {
-  position: relative;
-  z-index: 2;
-  width: 24px; height: 24px;
-  display: grid; place-items: center;
-  border: 1.5px solid rgba(139, 89, 137, .4);
-  border-radius: 50%;
-  background: rgba(255,250,253,.9);
-  font-size: 9px; line-height: 1;
-  color: #4a2a3e;
-}
 
-.app-shell .rail-substeps .rail-substep.active .rail-substep-dot { border-color: #70405f; background: #70405f; color: #fff; box-shadow: 0 0 0 4px rgba(183,119,176,.14); }
-.app-shell .rail-substeps .rail-substep.done .rail-substep-dot { border-color: #bc83ae; background: #ead2e3; color: #70405f; }
+
+
+
+
+
+
 
 @media (max-width: 1050px) {
-  .app-shell .rail-substeps { gap: 6px; margin-inline: 2%; }
-  .app-shell .rail-substeps .rail-substep b { font-size: 9px; }
+
+  
 }
 
 
@@ -285,13 +231,7 @@
 .restart-printify-note{display:block;margin-top:12px;color:#7a6574;font-size:10px}
 
 /* D123 · Colours are editable here, sizes are not, and nothing said so. */
-.app-shell .sizes-note{
-  display:block;
-  margin-top:6px;
-  color:#6b5a67;
-  font-size:11.5px;
-  line-height:1.45;
-}
+
 
 /* D117 · Make a large Etsy shipping-profile library navigable without hiding
  * any money-affecting choice or changing the profile attached to the product. */
@@ -333,21 +273,9 @@
 /* 2. The outstanding-item line was #8a5a12 — mud on lavender. Use the plum the
  *    app already uses for "needs attention", and give it the same quiet chip
  *    treatment as the alert it refers to, so it reads as status not decoration. */
-.app-shell .everything-else summary .setup-todo{
-  display:inline-block;
-  margin-top:7px;
-  padding:4px 10px;
-  border:1px solid rgba(157,80,130,.32);
-  border-radius:999px;
-  background:#fdf2f8;
-  color:#8a3f66!important;
-  font-size:11px;
-  font-weight:800;
-  letter-spacing:.01em;
-}
 
-/* 3. "Usually no changes needed" contradicted the warning directly above it. */
-.app-shell .everything-else>summary:has(.setup-todo) span:after{content:none!important}
+
+
 
 /* 4. Group what belongs together: money, then listing content, then plumbing.
  *    Source order is Profit · Keyword bank · Shipping · Description · Etsy
@@ -533,11 +461,7 @@
   cursor:default!important;
 }
 /* anything still outstanding reads as the one thing that needs attention */
-.app-shell .saved-settings-summary span:is([data-state="todo"],.todo){
-  background:#fdf2f8!important;
-  color:#8a3f66!important;
-  font-weight:750!important;
-}
+
 
 /* D140 · Section headings carry the product name in a <span> — "2. Etsy
  * shipping profile — what buyers pay · Gildan Tee". The span wraps like normal
@@ -870,16 +794,7 @@
   white-space:nowrap;
 }
 .app-shell .bundle-product-id>small{color:#75576b;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.app-shell .bundle-product-summary{
-  flex:0 0 auto;
-  padding:6px 11px;
-  border-radius:999px;
-  background:rgba(244,212,237,.6);
-  color:#623a56;
-  font-size:10px;
-  font-weight:800;
-  white-space:nowrap;
-}
+
 .app-shell .bundle-color-product[open]>summary{border-bottom:1px solid rgba(91,48,79,.12)}
 .app-shell .bundle-color-product>.product-color-selector,
 .app-shell .bundle-color-product>.product-size-selector{padding:14px 16px!important}
@@ -952,15 +867,10 @@
   box-shadow:none!important;
   width:100%!important;
 }
-.app-shell .bundle-product-keywords{
-  display:grid;
-  gap:8px;
-  padding:14px 16px;
-  border-top:1px solid rgba(91,48,79,.12);
-}
-.app-shell .bundle-product-keywords>div:first-child{display:grid;gap:2px}
-.app-shell .bundle-product-keywords b{color:#4c293f;font-size:13px}
-.app-shell .bundle-product-keywords span{color:#75576b;font-size:11px}
+
+
+
+
 
 /* D182 · The batch page is a readiness check, not a builder. One card per
  * product: photo, the seller's name for it, the real Printify product, a state
@@ -1044,16 +954,7 @@
 .app-shell .batch-product-card .product-color-selector,
 .app-shell .batch-product-card .product-size-selector,
 .app-shell .batch-product-card .mockup-default-block,
-.app-shell .batch-product-card .bundle-product-keywords{
-  width:100%!important;
-  margin:0!important;
-  padding:14px 16px!important;
-  border:0!important;
-  border-top:1px solid rgba(91,48,79,.12)!important;
-  border-radius:0!important;
-  background:transparent!important;
-  box-shadow:none!important;
-}
+
 
 /* D186 · The saved-product tile is a 4-column grid whose columns size to content:
  * 102px "Change product" + 46px Edit + 37px Delete + 20px gaps = 205px in a 207px
@@ -1091,31 +992,9 @@
   padding:0!important;
   box-shadow:inset 0 0 0 1px rgba(91,48,79,.18);
 }
-/* D189 · A suggested selection is not a decision. The chip read "Choose" while the
- * picker under it read "6 selected". The suggestion is now named as one and takes
- * a single click to accept. */
-.app-shell .facet-confirm{
-  display:flex;
-  flex-wrap:wrap;
-  align-items:center;
-  justify-content:space-between;
-  gap:10px;
-  padding:12px 16px;
-  border-top:1px solid rgba(91,48,79,.12);
-  background:rgba(253,242,248,.6);
-}
-.app-shell .facet-confirm span{color:#75576b;font-size:11px}
-.app-shell .facet-confirm button{
-  min-height:34px;
-  padding:8px 16px;
-  border:0;
-  border-radius:999px;
-  background:#5c304f;
-  color:#fff;
-  font-size:10px;
-  font-weight:850;
-  cursor:pointer;
-}
+
+
+
 
 /* D195 · Keyword bank cards stretched to the tallest in their row, so the shorter
  * card carried 77px of dead space above its "Edit bank" button while the taller
@@ -1306,37 +1185,14 @@
  *
  * Measured after: panel inset 1px each side like the colour picker, select
  * 686px and 17px clear of the card edge. */
-.app-shell .batch-product-card .row-panel{
-  display:grid; gap:6px; min-width:0;
-  padding:14px 16px 16px;
-  border-top:1px solid rgba(139,89,137,.16);
-  background:rgba(255,255,255,.42);
-}
-.app-shell .batch-product-card .row-panel label{
-  display:grid; gap:6px; min-width:0;
-  font-size:12px; font-weight:750; color:#4b283e;
-}
+
+
 /* min-width:0 and max-width are both required: a grid track sizes to the
    longest <option>, so width:100% alone does not constrain it. */
-.app-shell .batch-product-card .row-panel select{
-  width:100%; max-width:100%; min-width:0; min-height:40px;
-  padding:8px 12px;
-  border:1px solid rgba(139,89,137,.3);
-  border-radius:10px;
-  background:#fff; color:#3f2338; font-size:13px;
-}
-.app-shell .batch-product-card .row-panel .profit-input{
-  display:inline-flex; align-items:center; gap:6px;
-  font-size:15px; font-weight:800; color:#4b283e;
-}
-.app-shell .batch-product-card .row-panel .profit-input input{
-  width:110px; min-height:40px;
-  padding:8px 12px;
-  border:1px solid rgba(139,89,137,.3);
-  border-radius:10px;
-  background:#fff; font-size:15px; font-weight:800; color:#3f2338;
-}
-.app-shell .batch-product-card .row-panel small{ font-size:11px; color:#6b4a66; }
+
+
+
+
 
 /* D210 · Etsy details is the one row that still lives outside the card, so its
  * control now says "Open settings" instead of "Change" — measured, that click
@@ -1442,8 +1298,7 @@
    that had already moved (see D211) — so these are descendant selectors, which
    survive the panel being renested. */
 .app-shell .batch-product-card .product-color-selector,
-.app-shell .batch-product-card .product-size-selector,
-.app-shell .batch-product-card .row-panel{
+.app-shell .batch-product-card .product-size-selector{
   padding:16px!important;
   border-top:1px solid rgba(139,89,137,.14)!important;
   background:rgba(255,255,255,.4)!important;

@@ -631,7 +631,10 @@ test("D211: the row-panel stylesheet selects the element it is written for", asy
      to prevent, repeated inside the test meant to prevent it.
      The selectors are descendants now, and the assertion pins the DOM
      relationship as well as the rule. */
-  assert.match(rules, /\.app-shell \.batch-product-card \.row-panel\{/);
+  /* D235 · .row-panel went with the shipping and profit panels in D223. What this
+     rule now covers is the colour and size selectors, which is where the padding
+     was missing. */
+  assert.match(rules, /\.app-shell \.batch-product-card \.product-color-selector,/);
   assert.doesNotMatch(rules, /\.batch-product-card>\.(row-panel|product-color-selector|product-size-selector)/,
     "a direct-child selector breaks the moment a panel is renested");
 
@@ -640,13 +643,12 @@ test("D211: the row-panel stylesheet selects the element it is written for", asy
   assert.match(app, /batch-product-card \$\{ready\.established/);
   assert.doesNotMatch(app, /row-panel shipping-row-panel/);
 
-  /* 93 shipping profiles with long names sized the grid track to 843px inside a
-   * 720px card. width:100% alone does not constrain a track sized to its
-   * longest option — min-width:0 and max-width are both load-bearing. */
-  const selectRule = rules.slice(rules.indexOf(".app-shell .batch-product-card .row-panel select{"));
-  const body = selectRule.slice(0, selectRule.indexOf("}"));
-  assert.match(body, /max-width:100%/);
-  assert.match(body, /min-width:0/);
+  /* The 93-option shipping select that needed min-width:0 and max-width:100% was
+     in .row-panel. D223 moved shipping into the pricing panel, which has its own
+     layout and was measured clean on the live page, so there is no longer a rule
+     here to assert. Recorded rather than deleted silently: the constraint still
+     matters wherever a long-option select sits inside a fixed-width card. */
+  assert.doesNotMatch(rules, /row-panel/, "the panel this guarded no longer exists");
 });
 
 test("D222: a product cannot join a bundle until it has been set up", async () => {

@@ -1737,7 +1737,6 @@ test("makes Printify publishing, editor links, and shipping differences explicit
   assert.match(tools, /Copy the URL only from the Printify design editor/);
   assert.match(page, /Your Etsy buyer charge is/);
   assert.match(page, /Shipping still remains separate from the item-profit calculation/);
-  assert.match(css, /\.rail-substeps \.rail-substep\.active \{[\s\S]*background: transparent !important/);
   assert.match(css, /\.workflow-back[\s\S]*text-decoration: none !important/);
 });
 

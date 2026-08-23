@@ -686,26 +686,15 @@ test("a new saved product does not inherit another product's setup — D122/D124
 });
 
 test("the 'Saved for this product' block is one grouped section — D126", async () => {
-  const clarity = await readFile(new URL("app/clarity-pass.css", root), "utf8");
+  const page = await readFile(listingFactoryPage, "utf8");
 
-  /* Reported wholesale: a nested purple frame, brown warning text, fields in no
-   * order, and status text that reads like buttons. One problem — the block had
-   * no hierarchy and no grouping.
-   *
-   * Verified live after the fix: background transparent, no shadow, the
-   * outstanding chip is plum rgb(138,63,102) not brown #8a5a12, and the visual
-   * order top-to-bottom is Profit goal, Shipping profile, Keyword bank, Product
-   * description, Etsy details, Product connection — money together, listing
-   * content together, plumbing last. */
-  assert.match(clarity, /\.app-shell \.everything-else\{[\s\S]*background:transparent!important/,
-    "The block must not render as a card inside a card.");
-  assert.match(clarity, /\.setup-todo\{[\s\S]*color:#8a3f66!important/,
-    "The outstanding-item colour must be the app's plum, not #8a5a12 mud.");
-  assert.doesNotMatch(clarity, /\.setup-todo\{[\s\S]*color:#8a5a12/);
-  assert.match(clarity, /everything-else-body>\*:nth-child\(3\)\{order:2\}/,
-    "Shipping must sit with Profit goal, not after the keyword bank.");
-  assert.match(clarity, /:has\(\.setup-todo\) span:after\{content:none!important\}/,
-    "'Usually no changes needed' must not sit under an outstanding-item warning.");
+  /* D126 grouped the "Saved for this product" disclosure and stopped "Usually no
+   * changes needed" sitting under an outstanding-item warning. D232 deleted that
+   * block outright — every setting in it moved to the page that owns it — so
+   * there is no longer a grouped block to police, and the dismissive subtitle is
+   * gone with it. */
+  assert.doesNotMatch(page, /className="everything-else"/);
+  assert.doesNotMatch(page, /Usually no changes needed/);
 });
 
 test("a product with no saved defaults is framed as first-time setup — D125", async () => {
