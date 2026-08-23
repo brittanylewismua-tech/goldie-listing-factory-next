@@ -1058,19 +1058,25 @@ test("keeps pricing simple while using a real Etsy shipping profile and exact te
   ]);
   assert.match(page,/Shipping profile/);
   assert.match(page,/Currently attached to this product/);
-  assert.match(page,/Current profile first · product matches next · every profile remains available/);
+  assert.match(page,/\$\{searchedProfiles\.length\} matching profiles/);
   assert.match(page,/templateProfileId=Number\(templateDetails\?\.shippingTemplateId\)/);
   assert.match(page,/setEtsyShippingProfileId\(current=>current\|\|templateProfileId\)/);
   assert.match(page,/buyer pays/);
   assert.match(page,/international rates/i);
   assert.match(page,/international-shipping-editor/);
-  assert.match(page,/Etsy buyer charge · \{selectedProfile\.originCountry\}/);
+  /* D232 · The "Etsy buyer charge / Printify shipping cost / International buyer
+     charges" chips restated numbers the dropdown option already shows. The one
+     figure not visible elsewhere is the shortfall against Printify's cost, which
+     keeps its own warning. */
+  assert.doesNotMatch(page,/className="shipping-quick-summary"/);
+  assert.match(page,/is \$\{shippingShortfall\.toFixed\(2\)\} below Printify/);
   assert.match(page,/Save new shipping profile/);
   assert.match(page,/1\. Item prices/);
   assert.match(page,/Printify product cost/);
   assert.match(page,/price-group-list/);
   assert.match(page,/Printify cost/);
-  assert.match(page,/2\. Etsy shipping profile — what buyers pay/);
+  /* D232 · "— what buyers pay" stated the obvious; buyers always pay shipping. */
+  assert.match(page,/2\. Etsy shipping profile /);
   assert.doesNotMatch(page,/Update prices/);
   assert.match(page,/Prices update automatically/);
   assert.match(page,/changeProfit\(value:number\)[\s\S]*recalculate\(nextPricing\)/);
@@ -1080,7 +1086,10 @@ test("keeps pricing simple while using a real Etsy shipping profile and exact te
   assert.match(page,/Discard changes/);
   assert.match(page,/save or discard any custom shipping profile changes/i);
   assert.doesNotMatch(page,/Approve pricing \+ shipping/);
-  assert.match(page,/Printify shipping cost — what you pay/);
+  /* D232 · That chip restated what the dropdown option already shows. The figure
+     that is NOT visible elsewhere — the shortfall against Printify's cost — keeps
+     its own warning, which is what actually protects the seller. */
+  assert.match(page,/is \$\{shippingShortfall\.toFixed\(2\)\} below Printify/);
   /* D217: pricing moved onto the Product page, so this step is draft creation
      and is described as that. The pricing UI itself is asserted intact by
      tests/feature-inventory.test.mjs. */
@@ -1476,7 +1485,7 @@ test("supports simple saved product bundles without complicating the single-prod
    * the eyebrow above it and was set in the wrong face. */
   assert.match(page, /<b>\{bundleRecipes\[bundleIndex\]\?\.name\}<\/b>/);
   assert.match(page, /1\. Item prices <span>· \{productName\}<\/span>/);
-  assert.match(page, /2\. Etsy shipping profile — what buyers pay <span>· \{productName\}<\/span>/);
+  assert.match(page, /2\. Etsy shipping profile <span>· \{productName\}<\/span>/);
   assert.match(page, /data-product-selected=\{templateDetails\?"true":"false"\}/);
   assert.match(page, /--active-product/);
   assert.match(page, /function continueBundle/);
@@ -1790,8 +1799,10 @@ test("keeps the saved-product batch page compact and makes permanent settings ed
      bundle "for this batch" was a single product's value wearing the batch's
      name. */
   /* D223 · the shipping select is the pricing panel's, labelled for the product. */
-  assert.match(page,/Etsy shipping profile — what buyers pay/);
-  assert.match(page,/Description for this batch/);
+  assert.match(page,/Etsy shipping profile/);
+  /* D232 · the settings block that held it is gone; the description lives on the
+     Listing page. */
+  assert.match(page,/Description for every listing|descriptionOverride/);
   assert.match(page,/Save this description as the default/);
   assert.match(page,/else if\(!pricedVariants\.length\)/);
   /* D152: "Rename / reconnect" was DOM text hidden under a CSS ::after reading

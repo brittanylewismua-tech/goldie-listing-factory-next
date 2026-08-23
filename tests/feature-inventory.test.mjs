@@ -55,9 +55,15 @@ const FEATURES = [
   ["AI titles for the whole batch", /Create titles for the whole batch/],
   ["manual title building from a bank", /Build this title yourself from a keyword bank/],
   ["per-listing description override", /Customize this listing’s description/],
+  /* D232 · Deleting the settings block took this with it and no pin caught it —
+     the shared editor survived, the way to keep the wording for future batches
+     did not. A capability can be lost while its neighbour still renders. */
+  ["a shared description for the whole batch", /Description for every listing/],
+  ["saving that description as the product default", /Save this description as the default/],
   ["Etsy category selection", /Choose an Etsy category/],
   ["personalization questions", /<PersonalizationEditor/],
-  ["Etsy shipping profile choice", /Etsy shipping profile — what buyers pay/],
+  /* D232 renamed this heading: "— what buyers pay" stated the obvious. */
+  ["Etsy shipping profile choice", /<h4>Etsy shipping profile<\/h4>|Etsy shipping profile</],
   ["Printify draft creation", /Create Printify drafts →/],
   ["final review before publish", /<FinalListingReview/],
   ["the command bar", /<GoldieCommandBar/],

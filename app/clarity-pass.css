@@ -1428,3 +1428,26 @@
   font-size:12px;
   font-weight:700;
 }
+
+/* D232 · The expanded colour and size panels had no padding at all. Measured on
+ * the live card: computed padding 0px, panel edges 1px from the card on both
+ * sides, and "Save these as this product's default colors" sitting 1px from the
+ * card's right edge. Every control inside a card needs the same inset as the
+ * rows above it, which is 16px. */
+.app-shell .batch-product-card>.product-color-selector,
+.app-shell .batch-product-card>.product-size-selector,
+.app-shell .batch-product-card>.row-panel{
+  padding:16px!important;
+  border-top:1px solid rgba(139,89,137,.14)!important;
+  background:rgba(255,255,255,.4)!important;
+}
+/* The action buttons inside those panels sit on the panel's padding, not the
+   card edge. */
+.app-shell .batch-product-card>.product-color-selector>*:last-child,
+.app-shell .batch-product-card>.product-size-selector>*:last-child{
+  margin-bottom:0!important;
+}
+
+/* A product card needs real separation from whatever sits above it — it was
+ * butted up against the panel above with no gap. */
+.app-shell .batch-products{display:grid!important;gap:22px!important;margin-top:26px!important}

@@ -192,7 +192,7 @@ test("places item pricing before shipping in the pricing review", async () => {
   assert.doesNotMatch(page, /<h4>2\. Item prices<\/h4>/);
   assert.match(page, /<small className="profit-fee-note">Shipping not included<\/small>/);
   assert.match(page, /className="pricing-section-heading shipping-section-heading"/);
-  assert.match(page, /<h4>2\. Etsy shipping profile — what buyers pay <span>/);
+  assert.match(page, /<h4>2\. Etsy shipping profile <span>/);
   assert.match(css, /\.app-shell \.pricing-section-heading h4\{[\s\S]*font-size:26px!important/);
   assert.match(css, /\.app-shell \.item-pricing-section\{[\s\S]*border-radius:18px/);
   assert.match(css, /\.app-shell \.shipping-pricing-section\{[\s\S]*border-radius:18px/);
@@ -457,28 +457,19 @@ test("the title and tags textareas span their label's full width — D100", asyn
 });
 
 test("unfinished setup items are not formatted as settled values — D101", async () => {
-  const [page, clarity] = await Promise.all([
-    readFile(listingFactoryPage, "utf8"),
-    readFile(new URL("app/clarity-pass.css", root), "utf8"),
-  ]);
+  const page = await readFile(listingFactoryPage, "utf8");
 
-  /* The summary read "$10 profit · Standard shipping · Choose a keyword bank ·
-   * description from Printify · Etsy details 5 saved" — four settled values and
-   * one to-do, identical formatting, buried in the middle. Missing the keyword
-   * bank is what makes title generation fail two steps later, so it is the one
-   * item that must not read as done. Logged as P2 in AUDIT-PASS-2 and unfixed
-   * until the full run surfaced it again. */
-  assert.doesNotMatch(page, /activeRecipe\?\.keywordListId\?"Keyword bank saved":"Choose a keyword bank"/,
-    "The keyword-bank to-do is back inline with the settled values.");
-  assert.match(page, /className="setup-todo"/,
-    "Outstanding setup items must render separately from the settled summary.");
-  /* A dedicated 720x66 alert already sits 169px below this summary carrying the
-   * full instruction. The summary must not repeat that sentence — it only has
-   * to stop listing an unfinished item as though it were settled. */
-  assert.match(page, /still to set/);
-  assert.doesNotMatch(page, /setup-todo">\{\[\.\.\.\(!activeRecipe\?\.keywordListId\?\["Pick a keyword bank/,
-    "The summary is repeating the instruction the alert below it already gives.");
-  assert.match(clarity, /\.setup-todo\{[\s\S]*color:#8a3f66!important/);
+  /* D101 guarded a summary line that read "$10 profit · Standard shipping ·
+   * Choose a keyword bank · description from Printify · Etsy details 5 saved" —
+   * four settled values and one to-do in identical formatting. That line lived
+   * in the "<product> settings" block, which D232 deleted: every setting in it
+   * now lives on the page that owns it, each with its own state.
+   *
+   * The rule it protected still holds — an unanswered facet must never be
+   * formatted like a settled one — and is enforced by the readiness states
+   * themselves, covered in tests/product-readiness.test.mjs. */
+  assert.doesNotMatch(page, /className="everything-else"/, "the mixed summary block is gone");
+  assert.doesNotMatch(page, /activeRecipe\?\.keywordListId\?"Keyword bank saved":"Choose a keyword bank"/);
 });
 
 test("the setup step has exactly one forward control, and it gates every section — D107", async () => {
@@ -720,20 +711,12 @@ test("the 'Saved for this product' block is one grouped section — D126", async
 test("a product with no saved defaults is framed as first-time setup — D125", async () => {
   const page = await readFile(listingFactoryPage, "utf8");
 
-  /* Saving a new product auto-selects it and landed on the returning-product
-   * view: "Saved for this product", "From your last batch — change any", for a
-   * product that has never had a batch. */
+  /* Saving a new product auto-selects it and used to land on the returning-product
+   * view: "Saved for this product", "From your last batch", for a product that had
+   * never had a batch. Readiness replaced that copy switch, and D232 removed the
+   * settings block this test tracked through three renamings. */
   assert.match(page, /const productFirstRun=Boolean\(activeRecipe\)&&!activeBundle/);
-  /* D182 superseded the first-run/returning copy switch. Readiness is computed
-   * per product now, so the card itself says what is set and what is not — the
-   * block behind it is just the editor and is named for that. */
-  /* D213 narrows the name further. "settings" was accurate when the block held
-     profit, shipping, the keyword bank, the description and Etsy details. D209
-     moved the first three into the readiness card, so the block now holds two
-     things and is named for them — otherwise it advertises contents it does not
-     have, under a heading that repeats the card directly above it. */
-  assert.match(page, /<b>\{`\$\{activeRecipe\?\.name\|\|"This product"\} — description and Etsy details`\}<\/b>/,
-    "The block is named for what it actually contains.");
+  assert.doesNotMatch(page, /className="everything-else"/);
   assert.match(page, /Choose the colors you want to offer/); /* D191: US spelling */
 });
 

@@ -562,7 +562,7 @@ test("D209: every readiness row that offers to open, opens in the card", async (
   }
 
   // And the row emits it directly beneath itself, not after the list.
-  assert.match(app, /<\/div>\{inCard&&open===facet\.name\?panelFor\(facet\.name\):null\}<\/Fragment>/,
+  assert.match(app, /<\/div>\{isOpen\(facet\.name\)\?panelFor\(facet\.name\):null\}<\/Fragment>/,
     "the panel follows its own row");
   /* D223 · Shipping and profit moved into the pricing panel, and establish moved
      with them — a value set there still becomes the product's default. */
@@ -583,8 +583,11 @@ test("D209: a row never offers to Close a panel it cannot open", async () => {
   /* D210 goes further: a row that navigates somewhere else says so. Etsy
      details is the only row left outside the card, and "Change" promised
      editing in place before throwing the seller 1,487px down the page. */
-  assert.match(app, /\{inCard\?\(open===facet\.name\?"Close":needed\?"Choose":"Change"\):"Open settings"\}/);
-  assert.doesNotMatch(app, /\{open===facet\.name\?"Close":needed\?"Choose":"Change"\}/);
+  /* D232 · Every facet on the card opens in the card, so there is no
+     "Open settings" branch left — the block it pointed at is gone. */
+  assert.match(app, /\{isOpen\(facet\.name\)\?"Close":needed\?"Choose":"Change"\}/);
+  assert.doesNotMatch(app, /"Open settings"/);
+
 });
 
 test("D210: profit and shipping exist in exactly one place", async () => {
@@ -600,8 +603,8 @@ test("D210: profit and shipping exist in exactly one place", async () => {
   assert.doesNotMatch(block, /Shipping profile for this batch/);
 
   // What legitimately remains there.
-  assert.match(block, /<b>Product description<\/b>/);
-  assert.match(block, /<b>Etsy details<\/b>/);
+
+
 
   // Landing 1,487px away needs a signal it is the thing you clicked.
   assert.match(app, /block\.classList\.add\("just-opened"\)/);
