@@ -125,3 +125,29 @@ test("headings use the D233 scale only", async () => {
   }
   assert.deepEqual(bad, [], `heading sizes outside the D233 scale:\n${bad.join("\n")}`);
 });
+
+/* D275 · `.app-shell` wraps the Listing Factory only. Verified on the deployed
+   site: document.querySelector('.app-shell') is null on /keywords, /mockups,
+   /batches and /usage. Two rules written tonight for management-page elements
+   were scoped to it and therefore matched nothing — the same shape as D246,
+   twice more. A rule for a management-only class must not require .app-shell. */
+test("management-page rules are not scoped to the factory shell", async () => {
+  const css = (await readFile(new URL("app/clarity-pass.css", root), "utf8"))
+    .replace(/\/\*[\s\S]*?\*\//g, "");
+  const managementOnly = ["management-nav", "bank-delete", "management-page",
+    "usage-card", "usage-page", "keyword-workspace", "mockupHero", "setTitleRow"];
+  const bad = [];
+  for (const [rule] of css.matchAll(/[^{}]+\{[^}]*\}/g)) {
+    const group = rule.slice(0, rule.indexOf("{")).split(",").map((x) => x.trim());
+    for (const sel of group) {
+      if (!sel.includes(".app-shell")) continue;
+      if (!managementOnly.some((cls) => sel.includes(`.${cls}`))) continue;
+      /* A group may carry both the scoped and unscoped form; that is fine. */
+      const unscoped = sel.replace(/\.app-shell\s*/, "").trim();
+      if (group.includes(unscoped)) continue;
+      bad.push(sel.slice(0, 70));
+    }
+  }
+  assert.deepEqual([...new Set(bad)], [],
+    `these target management-page elements but require .app-shell, which those pages do not render:\n${bad.join("\n")}`);
+});

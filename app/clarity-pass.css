@@ -710,7 +710,7 @@
  *   .usage-plan-fineprint (what a credit means)  4.19:1
  *   .usage-note                                  4.24:1
  *   .usage-plan-heading>p:last-child             4.42:1 */
-.app-shell .usage-page h3 small,
+.usage-page h3 small,
 .usage-page h3 small{color:rgba(74,42,62,.8)!important}
 .usage-page .usage-plan-fineprint{color:rgba(74,42,62,.82)!important}
 /* .usage-note and its siblings are fixed at source in management-aesthetic.css. */
@@ -1350,11 +1350,17 @@
    child heading is ever larger than its parent.
    ------------------------------------------------------------ */
 
-/* 1 · PAGE TITLE — the same everywhere, workflow and management alike. */
+/* 1 · PAGE TITLE — the same everywhere, workflow and management alike.
+   D277 · That is what this block claimed, and then every management selector
+   in it was scoped to .app-shell, which only the Listing Factory renders.
+   Verified live: document.querySelector('.app-shell') is null on /keywords,
+   /mockups, /batches and /usage. So the D233 scale never reached the
+   management pages at all, and the "second type scale" I chased through D254
+   was simply this rule not applying. The scoping is the bug. */
 .app-shell .workflow-hero h1,
 .app-shell .hero h1,
-.app-shell .management-page h1,
-.app-shell .mockupHero h1 {
+.management-page h1,
+.mockupHero h1 {
   font-family: "DM Serif Display", Georgia, serif !important;
   font-size: 34px !important;
   font-weight: 400 !important;
@@ -1366,10 +1372,10 @@
 /* 2 · CARD TITLE — every h2 and h3 that names a card or panel. */
 .app-shell .workflow-stage h2,
 .app-shell .workflow-stage h3,
-.app-shell .management-page h2,
-.app-shell .management-page h3,
-.app-shell .managementOnly h2,
-.app-shell .managementOnly h3 {
+.management-page h2,
+.management-page h3,
+.managementOnly h2,
+.managementOnly h3 {
   font-family: "DM Serif Display", Georgia, serif !important;
   font-size: 22px !important;
   font-weight: 400 !important;
@@ -1382,8 +1388,8 @@
 /* 3 · GROUP TITLE — a labelled group inside a card. Must never outweigh its
       card title, which is what "1. Item prices" at 26px was doing. */
 .app-shell .workflow-stage h4,
-.app-shell .management-page h4,
-.app-shell .managementOnly h4 {
+.management-page h4,
+.managementOnly h4 {
   font-family: Manrope, "Hanken Grotesk", Inter, system-ui, sans-serif !important;
   font-size: 15px !important;
   font-weight: 800 !important;
@@ -1633,7 +1639,7 @@ body:has(.management-nav) .usage-card h2{
 /* D268 · Deleting a keyword bank was a bare red text link, while deleting a
    saved product is a bordered button. Same destructiveness, two weights — and
    the bare link is the easier of the two to hit by accident. */
-.app-shell .bank-delete{
+.bank-delete{
   min-height:34px!important;
   padding:0 13px!important;
   border:1px solid rgba(91,48,79,.2)!important;
@@ -1643,3 +1649,22 @@ body:has(.management-nav) .usage-card h2{
   font:800 11px/1 "Manrope",system-ui,sans-serif!important;
   cursor:pointer!important;
 }
+
+/* D273 · D246 gave the nav icons an intrinsic 18px so they would render in any
+   shell. On the management pages that exposed the next layer of the same bug:
+   `.management-nav a` is a flex row with no gap, and the icon was only ever
+   held off the label by the enormous box it used to occupy. Measured on the
+   deployed page: icon right edge 59px, label left edge 59px. */
+.management-nav a{
+  display:flex!important;
+  align-items:center!important;
+  gap:10px!important;
+}
+.management-nav a>svg{flex:0 0 18px!important}
+
+/* D276 · The branded 404 put its background on a 640px column, so the page
+   rendered as a pale stripe down the middle of a different gradient. The
+   background belongs to the page; the 640px belongs to the text. */
+.not-found-page{max-width:none!important;width:100%!important}
+.not-found-page>*{max-width:640px!important;width:100%!important}
+.not-found-page{justify-items:start!important}

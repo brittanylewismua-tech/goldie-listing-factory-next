@@ -1514,7 +1514,7 @@ test("D233: one heading system, two typefaces, no child larger than its parent",
   assert.ok(card > group, `card title ${card} must outrank group title ${group}`);
 
   /* Management and workflow page titles must be the same role, one size. */
-  assert.match(scale, /\.app-shell \.management-page h1[\s\S]{0,120}font-size: 34px/);
+  assert.match(scale, /\.management-page h1[\s\S]{0,160}font-size: 34px/);
   /* And Fraunces must not reappear in a heading RULE — the comment above the
      scale names it as the thing being removed, so strip comments first. */
   const rules = scale.slice(scale.indexOf("*/") + 2).replace(/\/\*[\s\S]*?\*\//g, "");
