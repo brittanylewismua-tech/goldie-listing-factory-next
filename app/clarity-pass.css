@@ -1707,3 +1707,52 @@ body:has(.management-nav) .usage-card h2{
   background:#fdf2f8!important;
   color:#8a3f66!important;
 }
+
+/* D286 · Three <details> on the Images step kept the browser's native
+   disclosure marker (list-style-type: disclosure-closed/open, drawn as ▶ / ▼)
+   while the bundle block on Product uses a custom chevron. D265 unified the
+   glyphs the app draws itself and missed the ones the browser draws. */
+.app-shell .recommended-listing-photos>summary,
+.app-shell .printify-image-picker>summary,
+.app-shell .draft-mockups>summary{
+  list-style:none!important;
+  display:flex!important;
+  align-items:center!important;
+  gap:10px!important;
+  cursor:pointer!important;
+}
+.app-shell .recommended-listing-photos>summary::-webkit-details-marker,
+.app-shell .printify-image-picker>summary::-webkit-details-marker,
+.app-shell .draft-mockups>summary::-webkit-details-marker{display:none!important}
+.app-shell .recommended-listing-photos>summary:after,
+.app-shell .printify-image-picker>summary:after,
+.app-shell .draft-mockups>summary:after{
+  content:"⌄"!important;
+  margin-left:auto!important;
+  font-size:15px!important;
+  color:#704b67!important;
+  transition:transform .18s ease!important;
+}
+.app-shell .recommended-listing-photos[open]>summary:after,
+.app-shell .printify-image-picker[open]>summary:after,
+.app-shell .draft-mockups[open]>summary:after{transform:rotate(180deg)!important}
+
+/* D287 · The Images card header centres its eyebrow, title and copy while every
+   other card header has been left-aligned since D249. Same object, two
+   directions, one step apart. */
+.app-shell .post-draft-heading,
+.app-shell .post-draft-heading>div,
+.app-shell .post-draft-heading h2,
+.app-shell .post-draft-heading p{text-align:left!important}
+.app-shell .post-draft-heading:before{margin-inline:0!important}
+
+/* D288 · Usage centres its plans block ("PLANS + BILLING" / "Choose the plan
+   that fits your listing volume") while the four cards above it are left
+   aligned. */
+.usage-plan-heading,
+.usage-plan-heading *{text-align:left!important}
+
+/* D289 · On the Etsy fee profile card the description sits flush against the
+   title with no separation, unlike every other card title + help pair. */
+.pricing-profile h2{margin-bottom:6px!important}
+.pricing-profile h2+p{margin-top:0!important;line-height:1.6!important}

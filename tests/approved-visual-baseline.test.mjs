@@ -112,7 +112,13 @@ test("the connect step swaps its copy on state and hides the timing note once co
   const page = await readFile(listingFactoryPage, "utf8");
   const css = await readFile(new URL("app/approved-functional.css", root), "utf8");
   // C4: the heading covers both accounts, not just Printify.
-  assert.match(page, /<h2>Connect your accounts<\/h2>/);
+  /* D284 · The page title already reads "Connect your accounts"; this card
+     repeated it word for word directly beneath, the same defect as the Colors
+     panel (D236) and the Product card (D257). The step still names itself —
+     that is the page title's job. */
+  assert.match(page, /title: "Connect your accounts"/);
+  assert.doesNotMatch(page, /<h2>Connect your accounts<\/h2>/,
+    "the card must not restate the page title");
   // C2: "usually takes about 2 minutes" used to render underneath two already-
   // connected accounts. It must only appear when something is still unconnected.
   assert.match(page, /\{\(!connected\|\|!etsyConnected\)&&<p className="connect-timing">/);
