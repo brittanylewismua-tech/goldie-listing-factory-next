@@ -2482,9 +2482,13 @@ test("D377: the publish checklist names the shipping profile readably", async ()
 test("D414: a chosen bank always produces a title, ranked by fit", async () => {
   const route = await readFile(new URL("../app/api/listing-intelligence/route.ts", import.meta.url), "utf8");
 
-  assert.match(route, /export function bestFitFromBank/);
-  assert.match(route, /scored\.sort\(\(a,b\)=>b\.score-a\.score\|\|a\.index-b\.index\)/,
-    "ranked by fit, ties keeping bank order so the result is stable");
+  const ranking = await readFile(new URL("../app/keyword-ranking.ts", import.meta.url), "utf8");
+  assert.match(ranking, /export function bestFitFromBank/);
+  /* D429 · Ties now prefer the more specific phrase before falling back to bank
+     order, and absolute hits replaced the fraction that let a vague one-word
+     match outrank a phrase matching several times. */
+  assert.match(ranking, /scored\.sort\(\(a,b\)=>b\.score-a\.score\|\|a\.parts-b\.parts\|\|a\.index-b\.index\)/,
+    "ranked by fit, then specificity, ties keeping bank order so the result is stable");
   assert.match(route, /const picked=selected\.length\?selected:bestFitFromBank/);
 
   /* Refusal is reserved for an empty bank. */
@@ -2655,4 +2659,38 @@ test("a batch that no longer exists says so instead of silently resetting", asyn
   assert.match(app, /batch-restore-notice/);
   assert.match(css, /\.batch-restore-notice\{/);
   assert.doesNotMatch(css, /\.batch-restore-notice\{[\s\S]{0,200}#c62828/, "muted, not alarm red");
+});
+
+test("a bank phrase that is not in the artwork does not reach the listing — D429", async () => {
+  const route = await readFile(new URL("../app/api/listing-intelligence/route.ts", import.meta.url), "utf8");
+  const { bestFitFromBank } = await import("../app/keyword-ranking.ts");
+
+  /* Measured on the live site. Her design is a sailboat on stormy waves with the
+     words SALTWATER & SOVEREIGNTY and Matthew 8:27. Goldie tagged it "Manatee
+     Gifts, Manatee Watercolor, Lobster Shirt, Octopus Shirt, Orca" - none of
+     which are in the artwork - because every phrase scored zero, ties fell back
+     to bank order, and the list was padded to thirteen regardless. */
+  const bank = ["Linocut Shirt","Ecology Shirt","Manatee Gifts","Manatee Watercolor","Lobster Shirt",
+                "Octopus Shirt","Orca Shirt","Sailboat Shirt","Nautical Shirt","Ocean Waves Tee"];
+  const design = ["saltwater","sovereignty","matthew","sailboat on stormy ocean waves","nautical engraving"];
+  const picked = bestFitFromBank(bank, design);
+
+  assert.ok(picked.includes("Sailboat Shirt"), "what is actually depicted ranks first");
+  assert.ok(picked.includes("Nautical Shirt"));
+  for (const wrong of ["Manatee Gifts","Manatee Watercolor","Lobster Shirt","Octopus Shirt","Orca Shirt"]) {
+    assert.ok(!picked.includes(wrong), `${wrong} is not in this artwork`);
+  }
+  assert.ok(picked.length < 13, "fewer accurate phrases beat a padded thirteen");
+
+  // Related words count: "sailboat" in the design must reach "sailing"/"boat".
+  assert.ok(bestFitFromBank(["Sailing Tee","Manatee Gifts","Boat Shirt","Orca Shirt","Lobster Shirt"],
+    ["a sailboat"]).includes("Sailing Tee"));
+
+  // But a bank with nothing in common still returns something, because the
+  // seller chose it deliberately and being handed nothing is not an answer.
+  assert.equal(bestFitFromBank(["Alpha Tee","Beta Tee"], ["sailboat"]).length, 2);
+
+  // And the model is told the same rule, so it does not pad either.
+  assert.match(route, /Never pad the list to reach a count/);
+  assert.match(route, /is not actually shown in the artwork, do not select it/);
 });

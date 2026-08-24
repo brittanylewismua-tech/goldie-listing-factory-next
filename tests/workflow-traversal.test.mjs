@@ -126,7 +126,10 @@ test("a requested Finish phase survives a reload — D147", async () => {
      the URL, and in place when a product card is opened — so the requested phase
      arrives as a parameter rather than being read from the URL inside. The rule
      is unchanged: honour what was asked for. */
-  assert.match(source, /setFinishPhase\(restoredFinishPhase\(state\.finishPhase\|\|"details",requestedPhase,Boolean\(state\.complete\)\)\)/,
+  /* D428 · A friendly step name can imply a phase — ?step=publish means the
+     Publish phase — so an explicit ?phase= still wins and the alias only fills
+     the gap. The rule is unchanged: honour what was asked for. */
+  assert.match(source, /setFinishPhase\(restoredFinishPhase\(state\.finishPhase\|\|"details",requestedPhase\?\?requestedFinishPhase\(requestedStep\),Boolean\(state\.complete\)\)\)/,
     "Restoration must honour the requested phase, not overwrite it with the saved one.");
   assert.match(source, /void restoreBatchById\(id,url\.searchParams\.get\("step"\),url\.searchParams\.get\("phase"\)\)/,
     "and on mount the URL is still what gets honoured");
@@ -311,4 +314,20 @@ test("D376: every restored finish phase is one that actually renders", async () 
   /* Restoring must launder the saved value, not trust it. */
   assert.match(app, /const safeSaved=drawableFinishPhase\(saved,complete\)/);
   assert.match(app, /const target=drawableFinishPhase\(requested as FinishPhase,complete\)/);
+});
+
+test("a link written with the names on screen opens the right step — D428", async () => {
+  const source = await (await import("node:fs/promises"))
+    .readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+
+  /* The rail says PRODUCT, IMAGES, LISTING, PUBLISH but the URL wanted setup,
+     designs and finish, so ?step=listing was silently downgraded to the saved
+     step — which reads as the app losing your place. */
+  assert.match(source, /STEP_ALIASES:Record<string,WorkflowStep>=\{product:"setup",images:"designs",listing:"finish",titles:"finish",publish:"finish"\}/);
+  assert.match(source, /function canonicalStep\(requested:string\|null\):WorkflowStep\|null\{/);
+  // Both entry points - first load and browser back/forward - use the same map.
+  assert.match(source, /const canonical=canonicalStep\(value\);if\(canonical\)setWorkflowStep\(normalizeStep\(canonical\)\)/);
+  assert.match(source, /const target=canonicalStep\(requested\);\n  if\(!target\)return saved;/);
+  // Emitted links are unchanged, so saved and shared URLs keep working.
+  assert.match(source, /url\.searchParams\.set\("step",step\)/);
 });

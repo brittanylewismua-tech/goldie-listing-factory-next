@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
+import { bestFitFromBank, clean, normalize } from "../../keyword-ranking.ts";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { excludedProductNouns, namesExcludedProduct } from "@/app/product-type-utils";
 
 type Details={category:string;attributes:Record<string,string>;optional:Record<string,string>;blurb:string;confidence:"high"|"review"};
 const validImage=(value:unknown):value is string=>typeof value==="string"&&/^data:image\/(png|jpeg|webp);base64,/i.test(value)&&value.length<18*1024*1024;
-const clean=(value:unknown)=>String(value||"").replace(/[<>]/g,"").trim().slice(0,300);
-const normalize=(value:string)=>value.toLocaleLowerCase().replace(/[^a-z0-9]+/g," ").trim();
+
 const DESIGN_TEXT_STOPWORDS=new Set(["the","and","for","with","this","that","bride","bridal","party","bachelorette","wedding","shirt","tee"]);
 /* D403 - "fits" and "cannot tell" were both reported as true, so the caller could
    not distinguish a bank that matches from a design with no readable text. A
@@ -14,19 +14,6 @@ const DESIGN_TEXT_STOPWORDS=new Set(["the","and","for","with","this","that","bri
    means something measurable rather than alphabetical order. A phrase scores for
    every distinctive word it shares with the design's own text or the product
    name; ties keep the bank's order so the result is stable. */
-export function bestFitFromBank(candidates:string[],designText:string[],product?:{blueprintTitle?:string;brand?:string;model?:string}):string[]{
-  const haystack=[...designText,product?.blueprintTitle||"",product?.brand||"",product?.model||""]
-    .map(clean).map(normalize).join(" ");
-  const words=new Set(haystack.split(" ").filter(word=>word.length>=4&&!DESIGN_TEXT_STOPWORDS.has(word)));
-  const scored=candidates.map((phrase,index)=>{
-    const parts=normalize(clean(phrase)).split(" ").filter(Boolean);
-    const hits=parts.filter(part=>words.has(part)).length;
-    return {phrase,index,score:hits/Math.max(1,parts.length)};
-  });
-  scored.sort((a,b)=>b.score-a.score||a.index-b.index);
-  return scored.slice(0,13).map(item=>item.phrase);
-}
-
 export function bankFitForDesign(keywords:string[],designText:string[]):"fits"|"mismatch"|"unknown"{
   const phrases=designText.map(clean).map(normalize).filter(text=>text.length>=4);
   if(!phrases.length)return "unknown";
@@ -74,7 +61,7 @@ HOW MANY: order your title selections most relevant first, then keep going. Sele
 
 ETSY TAGS ARE A SEPARATE FIELD: rank these tag-length phrases from most to least relevant to this design: ${JSON.stringify(tagCandidates)}. Return every fitting candidate in ranked order, up to 13. Never split, shorten, combine, rewrite, or invent a tag. Tags do not need to appear in the title.
 
-Avoid duplicate meaning. Do not rewrite, combine, expand, correct, or invent any phrase. Copy each phrase exactly as it appears in the bank. Also describe what the artwork DEPICTS in design_subjects: 3 to 8 short plain words or phrases covering the subject, motifs, setting, occasion, and style. These are your own words, not phrases from the bank, and they are how Goldie ranks a bank against art that carries little or no text. Return only {"design_text":["exact visible line from the design"],"design_subjects":["short description of what the art shows"],"selected_keywords":["exact title phrase copied from the bank"],"tag_keywords":["exact tag phrase copied from the supplied tag candidates"]}.${correction}`})});
+Select only phrases a shopper looking at THIS artwork would call accurate. If a phrase names an animal, object, place, occasion or activity that is not actually shown in the artwork, do not select it, however well it suits the bank's general theme. Returning two or three phrases is a correct answer. Never pad the list to reach a count. Avoid duplicate meaning. Do not rewrite, combine, expand, correct, or invent any phrase. Copy each phrase exactly as it appears in the bank. Also describe what the artwork DEPICTS in design_subjects: 3 to 8 short plain words or phrases covering the subject, motifs, setting, occasion, and style. These are your own words, not phrases from the bank, and they are how Goldie ranks a bank against art that carries little or no text. Return only {"design_text":["exact visible line from the design"],"design_subjects":["short description of what the art shows"],"selected_keywords":["exact title phrase copied from the bank"],"tag_keywords":["exact tag phrase copied from the supplied tag candidates"]}.${correction}`})});
       const titlePayload=await titleResponse.json() as {output?:string;detail?:string};if(!titleResponse.ok)throw new Error(titlePayload.detail||"Goldie could not build this title.");const match=titlePayload.output?.match(/\{[\s\S]*\}/);if(!match)throw new Error("Goldie could not read the prepared title.");const parsed=JSON.parse(match[0]) as {selected_keywords?:string[];tag_keywords?:string[];design_text?:string[];design_subjects?:string[]},allowedByLower=new Map(titleCandidates.map(keyword=>[keyword.toLocaleLowerCase(),keyword])),selected=[...new Set((parsed.selected_keywords||[]).map(value=>allowedByLower.get(clean(value).toLocaleLowerCase())).filter((value):value is string=>Boolean(value)))].slice(0,13),tagAllowedByLower=new Map(tagCandidates.map(keyword=>[keyword.toLocaleLowerCase(),keyword])),tags=[...new Set((parsed.tag_keywords||[]).map(value=>tagAllowedByLower.get(clean(value).toLocaleLowerCase())).filter((value):value is string=>Boolean(value)))].slice(0,13),designText=(parsed.design_text||[]).map(clean).filter(Boolean).slice(0,12),designSubjects=(parsed.design_subjects||[]).map(clean).filter(Boolean).slice(0,8);return {selected,tags,designText,designSubjects};
     }
     let selection;try{selection=await requestSelection(0);if(selection.selected.length<minimumTitlePhrases||selection.tags.length<requiredTagCount)selection=await requestSelection(1)}catch(error){return NextResponse.json({error:error instanceof Error?error.message:"Goldie could not build this title."},{status:502})}
