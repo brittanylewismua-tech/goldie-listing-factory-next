@@ -703,6 +703,9 @@ export default function ListingFactoryApp() {
      is not a card. Remember which batch belongs to which product so any of them
      can be opened, not just the next one. */
   const [bundleBatchIds,setBundleBatchIds]=useState<Record<string,string>>({});
+  /* D379 - Which card is being opened, so the one you clicked can say so and the
+     rest cannot be clicked underneath a load already in flight. */
+  const [switchingProduct,setSwitchingProduct]=useState("");
   /* D378 - A closed card has to say where that product stands, and the honest
      source is the batch list Batch History already reads: status, draft count,
      published count. One fetch, refreshed when the bundle or its batches change. */
@@ -1095,7 +1098,20 @@ export default function ListingFactoryApp() {
 
   useEffect(()=>{if(restoringBatch)return;const url=new URL(window.location.href);if(url.searchParams.get("open")!=="results")return;const hasCreatedDrafts=complete&&drafts.some(draft=>draft.status==="Created");url.searchParams.delete("open");if(!hasCreatedDrafts){window.history.replaceState({},"",url);return}if(!pricingApproved)setPricingApproved(true);url.searchParams.set("step","finish");url.searchParams.set("phase",finishPhase||"details");setWorkflowStep("finish");window.history.replaceState({},"",url);window.scrollTo({top:0,behavior:"auto"})},[restoringBatch,complete,drafts,pricingApproved,finishPhase]);
 
-  useEffect(()=>{void(async()=>{try{const url=new URL(window.location.href);const id=url.searchParams.get("batch")||"";if(!id)return;const response=await fetch(`/api/batches?id=${encodeURIComponent(id)}`);if(!response.ok)return;const payload=await response.json() as {batch?:{id:string;step:WorkflowStep;status:string;setup_name?:string;state?:Record<string,unknown>}};if(!payload.batch?.state)return;const state=payload.batch.state as {template?:string;templateDetails?:TemplateDetails;description?:string;pricing?:Pricing;mockupTheme?:string;activeRecipe?:Recipe;activeBundle?:ProductBundle;bundleRecipes?:Recipe[];bundleIndex?:number;bundleBatchIds?:Record<string,string>;designs?:Array<Omit<DesignFile,"file"|"previewUrl">>;drafts?:DraftResult[];complete?:boolean;finishPhase?:FinishPhase;bulkTitles?:string;printifyImageIndices?:number[];printifyImageSelections?:Record<string,number[]>;selectedColorIds?:number[];selectedSizeIds?:number[];variantPrices?:Record<string,number>;etsyShippingProfileId?:number;pricingApproved?:boolean;sizeGuideName?:string;batchKeywords?:string[];titleJoiner?:string;titleBuilderMode?:"ai"|"manual";autoTitleBankId?:string;manualKeywordBankId?:string;sharedMockups?:{theme:string;ids:string[]};preparedMockupCounts?:Record<string,number>;keptAsDrafts?:boolean};const cached=await loadBatchFiles(id).catch(()=>[]);const designs=(state.designs||[]).map((design,index)=>{const file=cached[index];return file?{...design,file,previewUrl:URL.createObjectURL(file)}:null}).filter(Boolean) as DesignFile[];const savedProductColors=state.templateDetails?.id?JSON.parse(window.localStorage.getItem(`goldie-colors-${state.templateDetails.id}`)||"[]") as number[]:[];const savedProductSizes=state.templateDetails?.id?JSON.parse(window.localStorage.getItem(`goldie-sizes-${state.templateDetails.id}`)||"[]") as number[]:[];batchIdRef.current=id;setBatchDisplayName(payload.batch.setup_name||"");setKeptAsDrafts(Boolean(state.keptAsDrafts));setTemplate(state.template||"");setTemplateDetails(state.templateDetails||null);setDescription(state.description||"");if(state.pricing)setPricing(state.pricing);setVariantPrices(state.variantPrices||{});setSelectedColorIds(state.selectedColorIds?.length?state.selectedColorIds:state.activeRecipe?.defaultColorIds?.length?state.activeRecipe.defaultColorIds:savedProductColors);setSelectedSizeIds(state.selectedSizeIds?.length?state.selectedSizeIds:state.activeRecipe?.defaultSizeIds?.length?state.activeRecipe.defaultSizeIds:savedProductSizes);setEtsyShippingProfileId(Number(state.etsyShippingProfileId)||0);setPricingApproved(Boolean(state.pricingApproved)||Boolean(state.complete&&(state.drafts||[]).some(draft=>draft.status==="Created")));setMockupTheme(state.mockupTheme||"");setActiveRecipe(state.activeRecipe||null);setActiveBundle(state.activeBundle||null);setBundleRecipes(state.bundleRecipes||[]);setBundleIndex(Math.max(0,Number(state.bundleIndex)||0));setBundleBatchIds(state.bundleBatchIds||{});setFiles(designs);setDrafts(state.drafts||[]);setComplete(Boolean(state.complete));setFinishPhase(restoredFinishPhase(state.finishPhase||"details",url.searchParams.get("phase"),Boolean(state.complete)));setBulkTitles(state.bulkTitles||"");setBatchKeywords(state.batchKeywords||[]);setTitleJoiner(state.titleJoiner||", ");setTitleBuilderMode(state.titleBuilderMode||"ai");setAutoTitleBankId(state.autoTitleBankId||"");setManualKeywordBankId(state.manualKeywordBankId||"");setSharedMockups(state.sharedMockups);setPreparedMockupCounts(state.preparedMockupCounts||{});setPrintifyImageIndices(state.printifyImageIndices||[]);setPrintifyImageSelections(state.printifyImageSelections||{});setSizeGuideName(state.sizeGuideName||"");setResumeProcessing(payload.batch.status==="processing"&&designs.length>0);const step=restoredWorkflowStep(payload.batch.step||"connect",url.searchParams.get("step"),Boolean(state.complete));setWorkflowStep(normalizeStep(step));url.searchParams.set("step",step);window.history.replaceState({},"",url);if(payload.batch.status==="processing"&&state.template)void loadTemplateUrl(state.template)}finally{snapshotReady.current=true;setRestoringBatch(false)}})()},[]);
+  /* D379 - Loading a batch happened in exactly one place: a mount effect reading
+     ?batch= from the URL. That was fine while arriving at the page was the only
+     way to open one. Steps 2-4 now show a card per product and each bundle
+     member is its own batch, so opening a card means loading a batch - which
+     through the old path meant window.location.assign and a full page reload:
+     blank screen, everything refetched, scroll thrown back to the top. Step 1
+     opens a card instantly; these have to as well.
+
+     Same body, called two ways: on mount from the URL, and in place when a card
+     is opened. */
+  async function restoreBatchById(id:string,requestedStep:string|null,requestedPhase:string|null,push=false):Promise<boolean>{
+    try{const url=new URL(window.location.href);if(!id)return false;const response=await fetch(`/api/batches?id=${encodeURIComponent(id)}`);if(!response.ok)return false;const payload=await response.json() as {batch?:{id:string;step:WorkflowStep;status:string;setup_name?:string;state?:Record<string,unknown>}};if(!payload.batch?.state)return false;const state=payload.batch.state as {template?:string;templateDetails?:TemplateDetails;description?:string;pricing?:Pricing;mockupTheme?:string;activeRecipe?:Recipe;activeBundle?:ProductBundle;bundleRecipes?:Recipe[];bundleIndex?:number;bundleBatchIds?:Record<string,string>;designs?:Array<Omit<DesignFile,"file"|"previewUrl">>;drafts?:DraftResult[];complete?:boolean;finishPhase?:FinishPhase;bulkTitles?:string;printifyImageIndices?:number[];printifyImageSelections?:Record<string,number[]>;selectedColorIds?:number[];selectedSizeIds?:number[];variantPrices?:Record<string,number>;etsyShippingProfileId?:number;pricingApproved?:boolean;sizeGuideName?:string;batchKeywords?:string[];titleJoiner?:string;titleBuilderMode?:"ai"|"manual";autoTitleBankId?:string;manualKeywordBankId?:string;sharedMockups?:{theme:string;ids:string[]};preparedMockupCounts?:Record<string,number>;keptAsDrafts?:boolean};const cached=await loadBatchFiles(id).catch(()=>[]);const designs=(state.designs||[]).map((design,index)=>{const file=cached[index];return file?{...design,file,previewUrl:URL.createObjectURL(file)}:null}).filter(Boolean) as DesignFile[];const savedProductColors=state.templateDetails?.id?JSON.parse(window.localStorage.getItem(`goldie-colors-${state.templateDetails.id}`)||"[]") as number[]:[];const savedProductSizes=state.templateDetails?.id?JSON.parse(window.localStorage.getItem(`goldie-sizes-${state.templateDetails.id}`)||"[]") as number[]:[];batchIdRef.current=id;setBatchDisplayName(payload.batch.setup_name||"");setKeptAsDrafts(Boolean(state.keptAsDrafts));setTemplate(state.template||"");setTemplateDetails(state.templateDetails||null);setDescription(state.description||"");if(state.pricing)setPricing(state.pricing);setVariantPrices(state.variantPrices||{});setSelectedColorIds(state.selectedColorIds?.length?state.selectedColorIds:state.activeRecipe?.defaultColorIds?.length?state.activeRecipe.defaultColorIds:savedProductColors);setSelectedSizeIds(state.selectedSizeIds?.length?state.selectedSizeIds:state.activeRecipe?.defaultSizeIds?.length?state.activeRecipe.defaultSizeIds:savedProductSizes);setEtsyShippingProfileId(Number(state.etsyShippingProfileId)||0);setPricingApproved(Boolean(state.pricingApproved)||Boolean(state.complete&&(state.drafts||[]).some(draft=>draft.status==="Created")));setMockupTheme(state.mockupTheme||"");setActiveRecipe(state.activeRecipe||null);setActiveBundle(state.activeBundle||null);setBundleRecipes(state.bundleRecipes||[]);setBundleIndex(Math.max(0,Number(state.bundleIndex)||0));setBundleBatchIds(state.bundleBatchIds||{});setFiles(designs);setDrafts(state.drafts||[]);setComplete(Boolean(state.complete));setFinishPhase(restoredFinishPhase(state.finishPhase||"details",requestedPhase,Boolean(state.complete)));setBulkTitles(state.bulkTitles||"");setBatchKeywords(state.batchKeywords||[]);setTitleJoiner(state.titleJoiner||", ");setTitleBuilderMode(state.titleBuilderMode||"ai");setAutoTitleBankId(state.autoTitleBankId||"");setManualKeywordBankId(state.manualKeywordBankId||"");setSharedMockups(state.sharedMockups);setPreparedMockupCounts(state.preparedMockupCounts||{});setPrintifyImageIndices(state.printifyImageIndices||[]);setPrintifyImageSelections(state.printifyImageSelections||{});setSizeGuideName(state.sizeGuideName||"");setResumeProcessing(payload.batch.status==="processing"&&designs.length>0);const step=restoredWorkflowStep(payload.batch.step||"connect",requestedStep,Boolean(state.complete));setWorkflowStep(normalizeStep(step));url.searchParams.set("batch",id);url.searchParams.set("step",step);url.searchParams.delete("phase");if(push)window.history.pushState({},"",url);else window.history.replaceState({},"",url);if(payload.batch.status==="processing"&&state.template)void loadTemplateUrl(state.template);return true}finally{snapshotReady.current=true;setRestoringBatch(false)}
+  }
+  useEffect(()=>{const url=new URL(window.location.href);const id=url.searchParams.get("batch")||"";if(!id){snapshotReady.current=true;setRestoringBatch(false);return}void restoreBatchById(id,url.searchParams.get("step"),url.searchParams.get("phase"))},[]);
   /* D301 · Restore the remembered product on load. The recipe list lives in
      factory-tools, not here, so this asks the API rather than referencing a
      `recipes` variable that does not exist in this component. Guarded so it can
@@ -1141,7 +1157,17 @@ export default function ListingFactoryApp() {
 
   useEffect(()=>{if(!resumeProcessing||resumeAttempted.current||!connected||!templateLoaded||!files.length)return;resumeAttempted.current=true;setResumeProcessing(false);const succeeded=new Set(drafts.filter(draft=>draft.status==="Created").map(draft=>draft.clientId));const remaining=files.filter(file=>!succeeded.has(file.id));if(remaining.length)void runDrafts(remaining,true)},[resumeProcessing,connected,templateLoaded,files,drafts]);
 
-  useEffect(()=>{if(!snapshotReady.current||restoringBatch||(!files.length&&!drafts.length))return;const timer=window.setTimeout(()=>{const id=batchIdRef.current||crypto.randomUUID();batchIdRef.current=id;rememberBundleBatch(activeRecipe?.id,id);window.localStorage.setItem("goldie-active-batch",id);void fetch("/api/batches",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,status:running?"processing":keptAsDrafts?"draft":complete?drafts.some(draft=>draft.status!=="Created")?"needs_attention":"complete":"draft",step:workflowStep,setupName:batchDisplayName||activeBundle?.name||activeRecipe?.name||"",productTitle:templateDetails?.blueprintTitle||"",designCount:files.length,state:batchStateSnapshot()})})},700);return()=>window.clearTimeout(timer);
+  /* D379 - The debounced autosave and an in-place product switch have to write
+     the same snapshot to the same place; the switch just cannot wait 700ms for
+     it. One save, two callers. */
+  async function persistBatchNow(existingId?:string){
+    const id=existingId||batchIdRef.current||crypto.randomUUID();
+    batchIdRef.current=id;
+    rememberBundleBatch(activeRecipe?.id,id);
+    window.localStorage.setItem("goldie-active-batch",id);
+    await fetch("/api/batches",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,status:running?"processing":keptAsDrafts?"draft":complete?drafts.some(draft=>draft.status!=="Created")?"needs_attention":"complete":"draft",step:workflowStep,setupName:batchDisplayName||activeBundle?.name||activeRecipe?.name||"",productTitle:templateDetails?.blueprintTitle||"",designCount:files.length,state:batchStateSnapshot()})}).catch(()=>undefined);
+  }
+  useEffect(()=>{if(!snapshotReady.current||restoringBatch||(!files.length&&!drafts.length))return;const timer=window.setTimeout(()=>{void persistBatchNow();},700);return()=>window.clearTimeout(timer);
   },[restoringBatch,workflowStep,finishPhase,template,templateDetails,description,pricing,selectedColorIds,selectedSizeIds,variantPrices,etsyShippingProfileId,pricingApproved,mockupTheme,activeRecipe,activeBundle,bundleRecipes,bundleIndex,files.map(file=>`${file.id}:${file.title}:${file.tags.join("|")}:${file.blurb||""}:${file.descriptionOverride??""}:${file.sizeGuideName||""}:${JSON.stringify(file.etsy||{})}`).join(";"),drafts,complete,running,bulkTitles,batchKeywords,titleJoiner,titleBuilderMode,autoTitleBankId,manualKeywordBankId,sharedMockups,preparedMockupCounts,printifyImageIndices,printifyImageSelections,sizeGuideName,batchDisplayName,keptAsDrafts,batchReceipt]);
 
   useEffect(() => {
@@ -1385,13 +1411,15 @@ export default function ListingFactoryApp() {
         const toneClass=status.tone==="ready"?"tone-ready":status.tone==="attention"?"tone-attention":"tone-waiting";
         const photo=product?pickProductPhoto(product):"";
         const reachable=many&&!open&&Boolean(bundleBatchIds[recipe.id]||index===bundleIndex+1);
+        const opening=switchingProduct===recipe.id;
         return <article className={`batch-product-card step-product-card ${open?"is-open":"is-closed"} ${status.tone==="ready"?"is-ready":"needs-setup"} ${many?"in-batch":""}`} key={recipe.id}>
           <header
             {...(reachable?{role:"button",tabIndex:0,
               onClick:()=>openBundleProduct(index),
               onKeyDown:(event:React.KeyboardEvent)=>{if(event.key==="Enter"||event.key===" "){event.preventDefault();openBundleProduct(index)}}}:{})}
             className={reachable?"is-openable":undefined}
-            aria-expanded={many?open:undefined}>
+            aria-expanded={many?open:undefined}
+            aria-busy={opening||undefined}>
             {photo?<img className="bundle-product-photo" src={photo} alt="" loading="lazy" decoding="async"/>:<ProductGlyph title={product?.blueprintTitle||recipe.name}/>}
             <span className="bundle-product-id">
               {many&&<em className="batch-product-position">Product {index+1} of {list.length}</em>}
@@ -1401,7 +1429,7 @@ export default function ListingFactoryApp() {
             <span className={`batch-product-state step-product-state ${toneClass}`}>{status.label}</span>
           </header>
           {open&&<div className="step-product-body">{body}</div>}
-          {!open&&reachable&&<button type="button" className="step-product-open" onClick={()=>openBundleProduct(index)}>Open {recipe.name} <span aria-hidden="true">→</span></button>}
+          {!open&&reachable&&<button type="button" className="step-product-open" disabled={Boolean(switchingProduct)} onClick={()=>openBundleProduct(index)}>{opening?<><span className="goldie-spinner" aria-hidden="true"/>Opening {recipe.name}…</>:<>Open {recipe.name} <span aria-hidden="true">→</span></>}</button>}
         </article>;
       })}
     </section>;
@@ -1419,11 +1447,21 @@ export default function ListingFactoryApp() {
     if(!recipe)return;
     const existing=bundleBatchIds[recipe.id];
     if(existing){
-      const url=new URL(window.location.href);
-      url.searchParams.set("batch",existing);
-      url.searchParams.set("step",workflowStep);
-      url.searchParams.delete("phase");
-      window.location.assign(url.toString());
+      if(switchingProduct)return;
+      setSwitchingProduct(recipe.id);
+      void (async()=>{
+        try{
+          /* D379 - The autosave is debounced, so the last few hundred
+             milliseconds of typing may still be pending. Once batchIdRef points
+             at the incoming batch that pending write would land on the wrong
+             product, so flush the outgoing one first and wait for it. */
+          await persistBatchNow(batchIdRef.current);
+          setRestoringBatch(true);
+          snapshotReady.current=false;
+          await restoreBatchById(existing,workflowStep,null,true);
+          window.scrollTo(0,0);
+        }finally{setSwitchingProduct("")}
+      })();
       return;
     }
     if(index===bundleIndex+1)void continueBundle();

@@ -122,8 +122,14 @@ test("a requested Finish phase survives a reload — D147", async () => {
 
   assert.match(source, /function restoredFinishPhase\(saved:FinishPhase,requested:string\|null,complete:boolean\):FinishPhase\{/);
   assert.match(source, /return complete\|\|order\.indexOf\(target\)<=order\.indexOf\(saved\)\?target:saved;/);
-  assert.match(source, /setFinishPhase\(restoredFinishPhase\(state\.finishPhase\|\|"details",url\.searchParams\.get\("phase"\),Boolean\(state\.complete\)\)\)/,
+  /* D379 · The restore body is now a function called two ways — on mount from
+     the URL, and in place when a product card is opened — so the requested phase
+     arrives as a parameter rather than being read from the URL inside. The rule
+     is unchanged: honour what was asked for. */
+  assert.match(source, /setFinishPhase\(restoredFinishPhase\(state\.finishPhase\|\|"details",requestedPhase,Boolean\(state\.complete\)\)\)/,
     "Restoration must honour the requested phase, not overwrite it with the saved one.");
+  assert.match(source, /void restoreBatchById\(id,url\.searchParams\.get\("step"\),url\.searchParams\.get\("phase"\)\)/,
+    "and on mount the URL is still what gets honoured");
 });
 
 test("an open step never claims you must complete the prior one — D154", async () => {

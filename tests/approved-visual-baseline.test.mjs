@@ -523,7 +523,9 @@ test("a saved later step cannot overwrite an explicit safe return to setup — D
   assert.match(page,/function restoredWorkflowStep\(saved:WorkflowStep,requested:string\|null,complete:boolean\)/);
   assert.match(page,/complete\|\|order\.indexOf\(target\)<=order\.indexOf\(saved\)\?target:saved/,
     "Backward navigation must respect the requested URL while unfinished batches still cannot deep-link forward past gates.");
-  assert.match(page,/restoredWorkflowStep\(payload\.batch\.step\|\|"connect",url\.searchParams\.get\("step"\),Boolean\(state\.complete\)\)/);
+  /* D379 · restoreBatchById takes the requested step as a parameter now, because
+     opening a product card loads a batch without a page navigation. Same rule. */
+  assert.match(page,/restoredWorkflowStep\(payload\.batch\.step\|\|"connect",requestedStep,Boolean\(state\.complete\)\)/);
   assert.doesNotMatch(page,/const step=payload\.batch\.step\|\|"connect";setWorkflowStep\(step\)/);
 });
 

@@ -1315,3 +1315,31 @@ test("D378: any product card can be opened, not only the next one", async () => 
   assert.match(app, /if\(index===bundleIndex\+1\)void continueBundle\(\)/,
     "a product with no batch yet is the one case continueBundle still handles");
 });
+
+/* D379 · Opening a product card on steps 2-4 first did window.location.assign:
+   a full page load, blank screen, everything refetched, scroll thrown to the
+   top. Step 1 opens a card instantly, so cards that look the same behaved
+   completely differently. Loading a batch is now a function that can be called
+   in place, and the switch flushes the outgoing product's save first — the
+   autosave is debounced, so without the flush the last keystrokes would either
+   be lost or land on the product being switched to. */
+test("D379: opening a product card does not reload the page", async () => {
+  const app = await read("app/listing-factory-app.tsx");
+
+  assert.doesNotMatch(app, /window\.location\.assign\(/,
+    "a card that reloads the page is not the same card step 1 has");
+
+  assert.match(app, /async function restoreBatchById\(id:string,requestedStep:string\|null,requestedPhase:string\|null,push=false\)/);
+  assert.match(app, /await restoreBatchById\(existing,workflowStep,null,true\)/,
+    "opening a card stays on the step you are on");
+
+  /* The flush, and that it is awaited before the incoming batch takes over. */
+  assert.match(app, /await persistBatchNow\(batchIdRef\.current\);[\s\S]{0,200}await restoreBatchById\(existing/,
+    "the outgoing product must be saved before batchIdRef points somewhere else");
+  assert.match(app, /async function persistBatchNow\(existingId\?:string\)/);
+  assert.match(app, /void persistBatchNow\(\);\},700\);/,
+    "the debounced autosave and the switch share one save");
+
+  /* No second click while a load is in flight. */
+  assert.match(app, /if\(switchingProduct\)return;\s*setSwitchingProduct\(recipe\.id\)/);
+});
