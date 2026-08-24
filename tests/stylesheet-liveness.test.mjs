@@ -374,3 +374,14 @@ test("D405: the sidebar nav column is never shrunk below its content", async () 
   const clarity = await readFile(new URL("app/clarity-pass.css", root), "utf8");
   assert.match(clarity, /@media \(max-height:900px\)\{[\s\S]{0,400}\.app-shell \.topbar\{padding-top:22px/);
 });
+
+/* D401/D408 · Both listing previews were built at ~150px and both were later cut
+   to thumbnail size (56px on Listing, 72px on Images) by rules carrying
+   !important. At that size the artwork is unreadable, so the card cannot tell
+   you which design or which product you are working on. They are the same size
+   as each other, deliberately. */
+test("D408: the design previews are large enough to identify the design", async () => {
+  const css = await readFile(new URL("app/clarity-pass.css", root), "utf8");
+  assert.match(css, /\.app-shell \.listing-editor \.listing-preview-button\{width:152px!important/);
+  assert.match(css, /\.app-shell \.post-draft-workspace \.draft-card-top \.printify-preview-button\{width:152px!important/);
+});

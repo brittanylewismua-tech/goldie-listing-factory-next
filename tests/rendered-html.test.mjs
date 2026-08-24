@@ -2376,19 +2376,21 @@ test("Batch History does not label a bundle with one member's product — D196",
   assert.match(route, /state\.activeBundle&&\(state\.bundleRecipes\|\|\[\]\)\.length>1\)\?`\$\{\(state\.bundleRecipes\|\|\[\]\)\.length\} products`/);
 });
 
-test("D214: Printify product photos are visible, not folded away", async () => {
+/* D214/D407 · D214 forced this picker open because a closed fold meant sellers
+   published with no product photographs and no way to know. She has since asked
+   for the opposite and for a clear reason: arriving on Images dropped you inside
+   the first listing's photos before you had chosen what to work on. Nothing on
+   this step expands itself now. The original risk is handled by the publish
+   checklist, which names a listing with no photo before anything goes live. */
+test("D407: nothing on the Images step expands itself", async () => {
   const page = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+  assert.doesNotMatch(page, /<details className="printify-image-picker" open/,
+    "arriving on a step should not open a fold for you");
+  assert.match(page, /<details className="printify-image-picker"/);
 
-  /* Measured live: all three saved products had printifyImageIndices of length
-   * zero, and the picker rendered as a CLOSED <details> labelled "Choose
-   * Printify flatlays", sitting below the lifestyle mockup grid. A seller who
-   * never opened that fold published listings with lifestyle mockups and no
-   * product photographs at all — and had no way to know, because the section
-   * that would have told them was shut. */
-  assert.match(page, /<details className="printify-image-picker" open>/,
-    "the product photos must be visible without hunting for them");
-  assert.match(page, /Printify product photos — \{selected\.size\} selected/);
-  assert.doesNotMatch(page, /<summary>Choose Printify flatlays/);
+  /* The guard that replaced it: publishing still cannot happen silently without
+     photos. */
+  assert.match(page, /Every selected listing has at least one photo/);
 });
 
 test("D226: a listing waiting for its title is not shown as a failure", async () => {

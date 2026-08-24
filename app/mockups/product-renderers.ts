@@ -16,7 +16,12 @@ export function promptFor(kind: ProductKind, hasReference: boolean) {
     "Preserve every word, letter, color, shape, spacing, and design detail exactly.",
     "Blend only the printed ink into the existing fabric so it follows the garment folds, perspective, lighting, and shadows naturally.",
     "Keep the person, face, hair, hands, body, garment, pose, background, crop, and entire image composition unchanged.",
-    hasReference ? "Use @image3 only to measure the print's relative width, height, center position, and scale. Do not copy the garment, person, or background from @image3." : "Place the design naturally in the centered chest print area.",
+    /* D412 - "the centered chest print area" is not a placement instruction, it is
+       a hope, and without a reference image it was the only thing telling the model
+       where the print goes. Describe the standard adult front print the way a print
+       shop specifies it - proportionally, since the model is looking at pixels -
+       and rule out the places it was actually landing. */
+    hasReference ? "Use @image3 only to measure the print's relative width, height, center position, and scale. Do not copy the garment, person, or background from @image3." : "Place the print on the front chest: centred left-to-right on the garment's centre line, with the top edge of the artwork starting just below the collar - roughly one tenth of the way down the garment's visible height from the shoulder seam - and the artwork spanning about half the garment's visible chest width. Do not place it on a sleeve, shoulder, collar, hem, or side seam, do not let it cross the neckline, and do not rotate, mirror, crop, or extend it.",
     "The only visible change between the original first image and the result should be the design printed on the original garment.",
   ].join(" ");
   if (kind === "soft-goods") return [

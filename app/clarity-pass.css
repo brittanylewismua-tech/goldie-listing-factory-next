@@ -2577,3 +2577,42 @@ body{min-width:1180px!important}
   .app-shell .topbar .approved-powered{margin-top:8px;padding-top:6px}
   .app-shell .topbar .top-nav a{padding-block:9px}
 }
+
+/* D408 · The draft card's preview was 150px when this workspace was built; a
+   later rule cut it to 72px with !important. At that size you cannot tell which
+   design - or which product - a card is for, which is the one thing the card
+   exists to tell you. Matched to the listing editor's 152px so the artwork reads
+   the same on Images and on Listing. */
+.app-shell .post-draft-workspace .draft-card-top{grid-template-columns:152px minmax(0,1fr)!important;gap:18px!important}
+.app-shell .post-draft-workspace .draft-card-top .printify-preview-button{width:152px!important;height:152px!important;min-height:152px!important}
+
+/* D410 · The download panel was a full-width block with 16/18px padding and a
+   15px radius - the visual weight of a primary action, for a convenience. Sized
+   to what it is. */
+.app-shell .listing-photo-download{margin-top:12px!important;padding:10px 14px!important;border-radius:12px!important;gap:6px 14px!important}
+.app-shell .listing-photo-download b{font-size:12.5px!important}
+.app-shell .listing-photo-download small{font-size:10.5px!important}
+.app-shell .listing-photo-download button{padding:8px 13px!important;border-radius:10px!important;font-size:11px!important}
+
+/* D411 · Reordering listing photos. The card being moved now stays solid and
+   obviously lifted, every other card dims back so the moving one is the only
+   thing competing for attention, and the slot it will land in is outlined. The
+   list reorders live, so what you see under the cursor IS the result - there is
+   nothing to guess about whether a move took. */
+.app-shell .photo-order-strip.is-reordering article:not(.dragging){opacity:.45;filter:saturate(.6)}
+.app-shell .photo-order-strip article.dragging{
+  opacity:1!important;
+  border-color:#9e5a91!important;
+  background:#fff!important;
+  box-shadow:0 0 0 3px rgba(158,90,145,.28),0 18px 36px rgba(74,42,62,.22)!important;
+  transform:scale(1.04)!important;
+  cursor:grabbing!important;
+}
+.app-shell .photo-order-strip article.dragging::after{
+  content:"Moving";
+  position:absolute;top:8px;left:8px;z-index:2;
+  padding:3px 8px;border-radius:999px;
+  background:#5b304f;color:#fff;
+  font-size:9px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;
+}
+.app-shell .photo-order-strip article{cursor:grab}
