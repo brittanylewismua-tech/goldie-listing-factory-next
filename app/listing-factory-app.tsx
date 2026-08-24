@@ -812,12 +812,13 @@ export default function ListingFactoryApp() {
   useEffect(()=>{void fetch("/api/keyword-lists").then(r=>r.json()).then((payload:{lists?:Array<{id?:string;name?:string}>})=>setKeywordBanks((payload.lists||[]).map(list=>({id:String(list.id||""),name:String(list.name||"Bank")})).filter(list=>list.id))).catch(()=>undefined);
     void fetch("/api/mockups/library").then(r=>r.json()).then((payload:{templates?:Array<{theme?:string;surfaceKind?:string}>})=>setMockupLibrary((payload.templates||[]).map(item=>({theme:String(item.theme||"").trim(),surfaceKind:String(item.surfaceKind||"rigid-flat")})).filter(item=>item.theme))).catch(()=>undefined)},[]);
   /* Readiness is computed per product, never read from setupComplete. */
-  function readinessFor(product:TemplateDetails,recipe:Recipe|null):Readiness{
+  function readinessFor(product:TemplateDetails,recipe:Recipe|null,approved?:boolean):Readiness{
     const compatible=[...new Set(mockupLibrary.filter(item=>productAcceptsMockup(item.surfaceKind,product.blueprintTitle)).map(item=>item.theme))];
     return productReadiness({colorOptions:product.colorOptions||[],sizeOptions:product.sizeOptions||[],compatibleMockupThemes:compatible,keywordBanks,
       shippingProfiles:etsyShippingProfiles.map(profile=>({id:profile.id,title:friendlyShippingProfileTitle(profile.title)||String(profile.id)})),
       templateShippingProfileId:Number(product.shippingTemplateId)||0,
       etsyFieldsRequired:11,
+      pricingApproved:approved,
       saved:{defaultColorIds:recipe?.defaultColorIds,defaultSizeIds:recipe?.defaultSizeIds,defaultMockupTheme:recipe?.defaultMockupTheme,mockupIds:recipe?.mockupIds,keywordListId:recipe?.keywordListId,
         etsyShippingProfileId:recipe?.etsyShippingProfileId,defaultProfitTarget:recipe?.defaultProfitTarget,etsyDefaults:recipe?.etsyDefaults}});
   }
@@ -1967,7 +1968,7 @@ export default function ListingFactoryApp() {
               <span className="bundle-loading-spinner" aria-hidden="true"/>
               <p>Loading {list.length} {list.length===1?"product":"products"}…</p>
             </article>;
-          })()}{(activeBundle&&bundleRecipes.length>1?bundleRecipes:(activeRecipe?[activeRecipe]:[])).map((recipe,index)=>{const isActive=!activeBundle||bundleRecipes.length<2||index===bundleIndex;const product=isActive?templateDetails:bundleColorProducts[recipe.id];const anyPending=(activeBundle&&bundleRecipes.length>1?bundleRecipes:(activeRecipe?[activeRecipe]:[])).some((item,position)=>!((!activeBundle||bundleRecipes.length<2||position===bundleIndex)?templateDetails:bundleColorProducts[item.id]));if(!product||anyPending)return null;const ready=readinessFor(product,recipe);/* D232 · Colours and sizes are open from the start. They are the two things a
+          })()}{(activeBundle&&bundleRecipes.length>1?bundleRecipes:(activeRecipe?[activeRecipe]:[])).map((recipe,index)=>{const isActive=!activeBundle||bundleRecipes.length<2||index===bundleIndex;const product=isActive?templateDetails:bundleColorProducts[recipe.id];const anyPending=(activeBundle&&bundleRecipes.length>1?bundleRecipes:(activeRecipe?[activeRecipe]:[])).some((item,position)=>!((!activeBundle||bundleRecipes.length<2||position===bundleIndex)?templateDetails:bundleColorProducts[item.id]));if(!product||anyPending)return null;const ready=readinessFor(product,recipe,isActive?pricingApproved:Boolean(bundleApproved[recipe.id]));/* D232 · Colours and sizes are open from the start. They are the two things a
              seller comes to this page to check, and a collapsed row is easy to walk
              past — "the colors and the sizes should probably just be expanded so
              people don't accidentally miss them". Both can be open at once, so this

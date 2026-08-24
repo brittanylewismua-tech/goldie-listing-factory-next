@@ -67,6 +67,12 @@ export type ReadinessInput = {
   templateShippingProfileId?: number;
   /* Etsy attributes this blueprint requires, and how many the recipe has set. */
   etsyFieldsRequired: number;
+  /* D393 - Whether the seller has approved this product's prices and shipping.
+     Without it the card said "Ready" while the forward gate still demanded the
+     approval, which is the same contradiction as "3/3 ready" sitting above
+     "0 of 1 required set": two parts of one screen disagreeing about the
+     same fact. */
+  pricingApproved?: boolean;
   saved: {
     defaultColorIds?: number[];
     defaultSizeIds?: number[];
@@ -189,6 +195,13 @@ export function shippingFacet(input: ReadinessInput): Facet {
 
 export function profitFacet(input: ReadinessInput): Facet {
   const saved = Number(input.saved.defaultProfitTarget);
+  const target = Number.isFinite(saved) && saved > 0 ? saved : 10;
+  /* D393 - A profit goal is not the same as approved prices. The row only reads
+     ready once the seller has actually approved this product's prices and
+     shipping, because that is what the forward gate asks for. */
+  if (input.pricingApproved === false) {
+    return { name: "profit", state: "ask", label: `$${target.toFixed(0)} per item`, note: "Approve prices and shipping" };
+  }
   if (Number.isFinite(saved) && saved > 0) return { name: "profit", state: "ready", label: `$${saved.toFixed(0)} per item` };
   /* A profit goal always has a workable default, so it is never a blocker. */
   return { name: "profit", state: "auto", label: "$10 per item", resolved: { profitTarget: 10 } };

@@ -258,14 +258,17 @@ test("one card renders a single product and every bundle member — D182", async
     "The card has two readiness states plus a batch marker.");
   assert.match(app, /Product \{index\+1\} of \{bundleRecipes\.length\}/,
     "Each card states its position in the batch.");
-  assert.match(app, /const ready=readinessFor\(product,recipe\)/);
+  assert.match(app, /const ready=readinessFor\(product,recipe,isActive\?pricingApproved:Boolean\(bundleApproved\[recipe\.id\]\)\)/);
   assert.doesNotMatch(app, /OTHER PRODUCTS IN THIS BUNDLE/);
   assert.doesNotMatch(app, /className="bundle-color-selectors"/,
     "The afterthought section is gone.");
 
   /* Readiness is computed, never read from the flag that reports true for empty
    * recipes. */
-  assert.match(app, /function readinessFor\(product:TemplateDetails,recipe:Recipe\|null\):Readiness/);
+  /* D393 · Readiness now takes the approval state, because a card that says
+     "Ready" while the forward gate demands approval is two parts of one screen
+     disagreeing about the same fact. */
+  assert.match(app, /function readinessFor\(product:TemplateDetails,recipe:Recipe\|null,approved\?:boolean\):Readiness/);
 });
 
 test("every setting a batch needs is a facet on the card — D182", async () => {
@@ -1356,4 +1359,23 @@ test("D392: the saved-product form never sends colours or sizes it does not edit
   assert.match(route, /if \(body\.defaultColorIds !== undefined\)/,
     "an absent key must leave the stored value alone");
   assert.match(route, /if \(body\.defaultSizeIds !== undefined\)/);
+});
+
+/* D393 · Every row on the card read ✓ and the card read "Ready", and then the
+   forward button refused with "Approve the item prices and shipping". The card
+   was reporting on colours, sizes, a profit goal and a shipping profile; the
+   gate was asking for something else entirely — the explicit approval — and
+   nothing on the card mentioned it.
+
+   A profit goal is not approved prices. The row says so now, and the card stops
+   claiming Ready until the approval it is gated on actually exists. */
+test("D393: a card cannot say Ready while the gate still wants approval", async () => {
+  const readiness = await read("app/product-readiness.ts");
+  assert.match(readiness, /pricingApproved\?: boolean;/);
+  assert.match(readiness, /if \(input\.pricingApproved === false\) \{/,
+    "an unapproved product asks, it does not read ready");
+  assert.match(readiness, /state: "ask", label: `\$\$\{target\.toFixed\(0\)\} per item`, note: "Approve prices and shipping"/);
+
+  const app = await read("app/listing-factory-app.tsx");
+  assert.match(app, /pricingApproved:approved,/, "and the card passes the real per-product value");
 });
