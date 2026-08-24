@@ -1692,9 +1692,10 @@ test("explains and styles every Printify photo selection action",async()=>{
   ]);
   assert.match(page,/Remove every selected Printify photo from this listing only/);
   assert.match(page,/Choose the same Printify photos across the entire batch/);
-  assert.match(page,/Preselect these photos whenever you use this saved product again/);
+  /* D465 · The save-as-default action is gone; the selection saves itself. */
+  assert.doesNotMatch(page,/Preselect these photos whenever you use this saved product again/);
   assert.match(page,/Applied to every listing/);
-  assert.match(page,/Saved for future batches/);
+  assert.doesNotMatch(page,/Saved for future batches/);
   assert.match(page,/printify-photo-lightbox/);
   assert.match(page,/Object\.fromEntries\(drafts\.filter\(item=>item\.id\)/);
   assert.match(styles,/image-pref-actions button\.confirmed/);
