@@ -260,7 +260,7 @@ test("D229: the pricing approval button names every reason it is disabled", asyn
   }
 
   /* And a profile that has disappeared from the shop is called out. */
-  assert.match(source, /The shipping profile saved for this product is no longer on your Etsy shop\./);
+  assert.match(source, /Goldie could not match this product’s Printify shipping to a profile on your Etsy shop\./);
 });
 
 test("D231: a saved shipping profile that is not on the shop is treated as unset", async () => {

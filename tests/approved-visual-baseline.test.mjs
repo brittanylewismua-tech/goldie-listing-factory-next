@@ -757,9 +757,13 @@ test("new products require completed setup and saved products own exact mockup s
     readFile(new URL("../app/integrated-mockups.tsx",import.meta.url),"utf8"),
   ]);
   assert.match(tools,/setupComplete=editingId\?existing\?\.setupComplete!==false:false/);
-  assert.match(page,/Save these as \$\{activeRecipe\.name\}’s defaults/);
-  assert.match(page, /setupComplete===false/,
-    "an unsaved product is still gated - the gate dialog says so, not the button");
+  /* D457 · The button is gone: a product saves its own defaults as they are
+     chosen, because the first setup IS the default and every later change is the
+     new one. Readiness reads the saved recipe, so until it saved, a new product
+     stayed stuck on "Pick a shipping profile" after one had been picked. */
+  assert.doesNotMatch(page,/Save these as \$\{activeRecipe\.name\}’s defaults/);
+  assert.match(page, /setupComplete:true,\s*defaultColorIds:selectedColorIds/,
+    "the defaults are written without being asked for");
   assert.match(api,/mockupIds:Array\.isArray\(saved\.mockupIds\)/);
   assert.match(page,/className="product-mockup-scenes"/);
   assert.match(page,/Click any scene to remove or re-add it/);

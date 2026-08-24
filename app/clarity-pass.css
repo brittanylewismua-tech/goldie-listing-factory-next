@@ -2327,8 +2327,14 @@ body{min-width:1180px!important}
 
 /* D363 · Approved is a state, not an action. Quiet green, no button chrome —
    there is nothing here to press. */
+/* D459 · She has asked more than once for this to sit on the right of the card,
+   and it kept coming back on the left. margin-left:auto only pushes an element
+   when its parent lays it out as flex; this one is inline-flex inside an
+   ordinary block, where an auto margin does nothing at all. A block-level box
+   sized to its own content is pushed right by the same auto margin. */
 .app-shell .pricing-approved-state{
-  display:inline-flex!important;
+  display:flex!important;
+  width:fit-content!important;
   align-items:center!important;
   gap:8px!important;
   margin:14px 0 0 auto!important;

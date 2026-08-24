@@ -3236,3 +3236,35 @@ test("no path sends a design to an image generator — D456", async () => {
   }
   assert.doesNotMatch(sources[0], /async function product\(file:File/, "the generative path is gone, not just unused");
 });
+
+test("a product saves its own defaults, and the shipping notice tells the truth — D457/D458/D459", async () => {
+  const [app, clarity] = await Promise.all([
+    readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8"),
+  ]);
+
+  /* D457 · Setting a product up ended with a "Save these as X's defaults" button,
+     and until it was pressed the recipe held nothing. Readiness reads the saved
+     recipe rather than the live selection, so on a new product she could pick a
+     shipping profile and still be told to pick a shipping profile, with the batch
+     refusing to continue. */
+  assert.doesNotMatch(app, /save-initial-product-setup/, "the button is gone");
+  assert.doesNotMatch(app, /product-setup-framing first-product-setup/, "and its banner");
+  assert.match(app, /const savedDefaultsRef=useRef\(""\)/);
+  assert.match(app, /setupComplete:true,\s*defaultColorIds:selectedColorIds/,
+    "the first setup is the default, and every later change is the new default");
+  assert.match(app, /\.\.\.\(etsyShippingProfileId\?\{etsyShippingProfileId\}:\{\}\)/,
+    "including the shipping profile that was the thing blocking her");
+
+  /* D458 · The notice claimed a saved profile had been deleted from her shop, on
+     a product she had just created that never had one, and told her to choose
+     another "below" while sitting below the picker. */
+  assert.doesNotMatch(app, /no longer on your Etsy shop/);
+  assert.match(app, /Goldie could not match this product’s Printify shipping to a profile on your Etsy shop\. Pick one above/);
+  assert.match(app, /!selectedProfile&&selectedProfileId>0&&!profilesLoading/,
+    "and it stays quiet while the profiles are still loading");
+
+  /* D459 · Asked for more than once: approved belongs on the right of the card.
+     margin-left:auto moves nothing on an inline-flex box inside a block parent. */
+  assert.match(clarity, /\.app-shell \.pricing-approved-state\{[\s\S]{0,200}display:flex!important;\s*width:fit-content!important/);
+});

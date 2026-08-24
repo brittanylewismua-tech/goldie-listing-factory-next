@@ -615,7 +615,7 @@ function PricingReview({section="all",variants,pricing,prices,productName,profil
                      shipping; the app kept insisting on it. */}</div>}</>}
       {selectedProfile&&<details className="custom-shipping-builder"><summary>{customDirty?"⚠ Unsaved shipping changes":"Create a custom shipping profile (optional)"}</summary><div className="custom-shipping-body"><div className="shipping-builder-intro"><b>Create a copy. Your original profile will not change.</b><span>Name it, adjust any rates you want, then save it. Goldie will select the new profile for this batch.</span></div><label><span>1. Name your new shipping profile<small>This name will appear in Etsy and in Goldie next time.</small></span><b className="shipping-profile-name-label">Profile name</b><input aria-label="New shipping profile name" placeholder={`Example: ${selectedProfile.title}, $4 US shipping`} value={customProfileName} maxLength={60} onChange={event=>{setCustomProfileName(event.target.value);markShippingEdit()}}/></label><h5>2. Edit {selectedProfile.originCountry} shipping</h5><div className="shipping-rate-row"><b>Domestic</b><label>First item<span className="money-input">$<input inputMode="decimal" value={customCharge} onChange={event=>{setCustomCharge(event.target.value);markShippingEdit()}}/></span></label><label>Additional<span className="money-input">$<input inputMode="decimal" value={customAdditional} onChange={event=>{setCustomAdditional(event.target.value);markShippingEdit()}}/></span></label></div><details className="international-shipping-editor"><summary>3. Edit international rates (optional) · {customInternational.length} destinations</summary>{customInternational.length?<div className="international-rate-list">{customInternational.map((rate,index)=><div className="shipping-rate-row" key={rate.key}><b>{rate.label}</b><label>First item<span className="money-input">$<input aria-label={`${rate.label} first item`} inputMode="decimal" value={rate.primary} onChange={event=>changeInternational(index,"primary",event.target.value)}/></span></label><label>Additional<span className="money-input">$<input aria-label={`${rate.label} additional item`} inputMode="decimal" value={rate.additional} onChange={event=>changeInternational(index,"additional",event.target.value)}/></span></label></div>)}</div>:<p className="no-international-rates">No international destinations.</p>}<button type="button" className="panel-collapse-foot" onClick={event=>{const box=(event.currentTarget as HTMLElement).closest("details");if(box){(box as HTMLDetailsElement).open=false;box.scrollIntoView({block:"nearest"})}}}>Close international rates</button></details>{customDirty?<div className="custom-shipping-actions"><button aria-busy={savingProfile} disabled={savingProfile} onClick={()=>void createProfile()}>{savingProfile?"Saving shipping profile…":"Save new shipping profile"}</button><button type="button" disabled={savingProfile} onClick={()=>resetProfileEditor()}>Discard changes</button></div>:<div className="shipping-saved-state">No changes made.</div>}{profileMessage&&<small role="status">{profileMessage}</small>}</div><button type="button" className="panel-collapse-foot" onClick={event=>{const box=(event.currentTarget as HTMLElement).closest("details");if(box){(box as HTMLDetailsElement).open=false;box.scrollIntoView({block:"nearest"})}}}>Close custom profile</button></details>}
       {/* D229 · This button gates the entire batch and used to read "Approve prices and shipping" while greyed out, whatever the reason. Measured live: a saved shipping profile that no longer exists on the shop left nothing selected, the button dead, and no message anywhere — the Images page pointed here and this page refused, with the seller stuck between them. */}
-      {!selectedProfile&&selectedProfileId>0&&<p className="shipping-profile-missing" role="status">The shipping profile saved for this product is no longer on your Etsy shop. Choose another below and Goldie will remember it.</p>}
+      {!selectedProfile&&selectedProfileId>0&&!profilesLoading&&<p className="shipping-profile-missing" role="status">{/* D458 - this claimed a saved profile had been deleted from her shop and told her to choose another "below", while sitting below the picker itself. On a product she had just created there was no saved profile to lose: the id came from Printify and simply does not match anything on the Etsy shop. Say that, and point the right way. */}Goldie could not match this product’s Printify shipping to a profile on your Etsy shop. Pick one above and it will be remembered.</p>}
       {/* D363 · Once approved there is nothing left to approve, so the button became
         a control that could not do anything — it sat there disabled-in-spirit,
         asking for an action already taken. Approved is a STATE, so it reads as
@@ -1395,6 +1395,42 @@ export default function ListingFactoryApp() {
     setWholeNumberByRecipe(current=>({...current,[recipe.id]:recipe.wholeNumberPricing===true}));setTemplate(recipe.templateUrl);const savedTheme=recipe.defaultMockupTheme||"",savedMockups=savedTheme?{theme:savedTheme,ids:recipe.mockupIds||[]}:undefined;setMockupTheme(savedTheme);setSharedMockups(savedMockups);window.sessionStorage.setItem("goldie-batch-mockups",JSON.stringify(savedMockups||null));setAutoTitleBankId(recipe.keywordListId||"");const nextPricing={...pricing,targetProfit:Number(recipe.defaultProfitTarget)||DEFAULT_PRICING.targetProfit,shippingCost:0,shippingCharged:0};setPricing(nextPricing);setTemplateDetails(null);const details=await loadTemplateUrl(recipe.templateUrl,nextPricing,Number(recipe.etsyShippingProfileId)||0,recipe.defaultColorIds||[],recipe.defaultSizeIds||[]);if(!details)return null;const savedDescription=recipe.description?.trim(),importedDescription=details.description?.trim();if(savedDescription)setDescription(recipe.description);else if(importedDescription){const updated={...recipe,description:details.description};setDescription(details.description);setActiveRecipe(updated);void fetch("/api/product-recipes",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:recipe.id,name:recipe.name,templateUrl:recipe.templateUrl,description:details.description})}).catch(()=>undefined)}return details}
   async function saveProductDefaults(change:Partial<Recipe>,key:string){if(!activeRecipe)return;setSavingProductDefault(key);try{const updated={...activeRecipe,...change};const response=await fetch("/api/product-recipes",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:activeRecipe.id,name:activeRecipe.name,templateUrl:activeRecipe.templateUrl,...change})});if(!response.ok)throw new Error("Goldie could not save this product default.");setActiveRecipe(updated);}catch(error){stopWith("This default was not saved.",[error instanceof Error?error.message:"Try again in a moment."])}finally{setSavingProductDefault("")}}
   async function rememberBatchDefaultsAfterPublish(){if(!activeRecipe)return;const updated={...activeRecipe,defaultColorIds:selectedColorIds,defaultSizeIds:selectedSizeIds,defaultMockupTheme:mockupTheme,mockupIds:sharedMockups?.theme===mockupTheme?sharedMockups.ids:[]};const response=await fetch("/api/product-recipes",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:activeRecipe.id,name:activeRecipe.name,templateUrl:activeRecipe.templateUrl,defaultColorIds:selectedColorIds,defaultSizeIds:selectedSizeIds,defaultMockupTheme:mockupTheme,mockupIds:sharedMockups?.theme===mockupTheme?sharedMockups.ids:[]})});if(response.ok){setActiveRecipe(updated);setColorsRemembered(true);setSizesRemembered(true)}}
+  /* D457 - a product saves its own defaults.
+   *
+   * Setting a product up used to end with a "Save these as X's defaults" button,
+   * and until it was pressed the recipe held nothing. Readiness reads the saved
+   * recipe, not the live selection, so choosing a shipping profile on a new
+   * product left the card still saying "Pick a shipping profile" and the batch
+   * refused to move on - the exact wall she hit on the mug.
+   *
+   * The button was also asking a question with one sensible answer. The first
+   * time a product is set up, those choices ARE its defaults; every later change
+   * to that product is the new default. So they save themselves, debounced, and
+   * the product is set up as soon as it has the colours it needs. */
+  const defaultsSignature=JSON.stringify({
+    id:activeRecipe?.id||"",
+    colors:selectedColorIds,sizes:selectedSizeIds,theme:mockupTheme,
+    mockups:sharedMockups?.theme===mockupTheme?sharedMockups.ids:[],
+    shipping:etsyShippingProfileId,
+  });
+  const savedDefaultsRef=useRef("");
+  useEffect(()=>{
+    if(!activeRecipe||!templateDetails||!selectedColorIds.length)return;
+    if(savedDefaultsRef.current===defaultsSignature)return;
+    savedDefaultsRef.current=defaultsSignature;
+    const timer=window.setTimeout(()=>{
+      void saveProductDefaults({
+        setupComplete:true,
+        defaultColorIds:selectedColorIds,
+        defaultSizeIds:selectedSizeIds,
+        defaultMockupTheme:mockupTheme,
+        mockupIds:sharedMockups?.theme===mockupTheme?sharedMockups.ids:[],
+        ...(etsyShippingProfileId?{etsyShippingProfileId}:{}),
+      },"auto-defaults");
+    },600);
+    return ()=>window.clearTimeout(timer);
+  },[defaultsSignature,activeRecipe,templateDetails]);
+
   async function completeProductSetup(){if(!activeRecipe)return;await saveProductDefaults({setupComplete:true,defaultColorIds:selectedColorIds,defaultSizeIds:selectedSizeIds,defaultMockupTheme:mockupTheme,mockupIds:sharedMockups?.theme===mockupTheme?sharedMockups.ids:[]},"initial-setup")}
   async function chooseRecipe(recipe: Recipe) { const changingProduct=Boolean((activeRecipe?.id&&activeRecipe.id!==recipe.id)||(template&&template!==recipe.templateUrl));if(changingProduct&&(files.length>0||drafts.length>0||complete)){const count=files.length;if(!await confirmAction({title:`Switch to “${recipe.name}” and start a new batch?`,body:`This removes ${count} ${count===1?"design":"designs"} and all work from the current batch. Saved products, keyword banks and mockup sets are untouched.`,confirmLabel:"Switch product",destructive:true}))return false;clearCurrentBatch(false)}try{window.localStorage.removeItem("goldie-active-bundle")}catch{/* private mode */}setActiveBundle(null);setBundleRecipes([]);setBundleIndex(0);return Boolean(await selectRecipe(recipe)); }
   async function useBundle(bundle:ProductBundle,recipeIds:string[]){
@@ -2086,7 +2122,7 @@ export default function ListingFactoryApp() {
           {localPreview&&!templateDetails&&<button className="preview-demo-button" onClick={()=>void loadPreviewDemo()}>Load a complete poster demo to review every step</button>}
           {templateError && <p className="field-error recipe-error" role="alert">{templateError}</p>}
           <BatchPreferencesPortal>
-          {templateDetails&&productSelected&&activeRecipe?.setupComplete===false&&<div className="product-setup-framing first-product-setup"><p className="mini-label">{`SET UP ${activeRecipe.name}`}</p><span>Choose this product’s starting defaults once. Nothing is copied from another product.</span></div>}
+          {/* D457 - the "set up this product" framing is gone; a product saves its own defaults as they are chosen. */}
           
           {templateDetails&&productSelected&&<div className="saved-product-batch-page"><section className="batch-products" aria-label="Products in this batch">{(()=>{
             /* D385 - One card with one spinner while the bundle loads, then every
@@ -2183,7 +2219,7 @@ export default function ListingFactoryApp() {
           
           
           
-          {templateDetails&&productSelected&&activeRecipe?.setupComplete===false&&<button type="button" className="save-initial-product-setup" disabled={!selectedColorIds.length||savingProductDefault==="initial-setup"} onClick={()=>void completeProductSetup()}>{savingProductDefault==="initial-setup"?"Saving this product’s defaults…":`Save these as ${activeRecipe.name}’s defaults`}</button>}
+          
           {/* D217 · Pricing moves onto the Product page. Colours and sizes decide which
               variants exist, and the price is set per variant, so pricing could never
               be answered before them — it was a whole separate step for a panel that

@@ -352,8 +352,11 @@ test("the setup screen does not announce itself twice — D177", async () => {
   assert.doesNotMatch(app, /className="batch-page-intro"/);
   assert.doesNotMatch(app, /Goldie started with the choices/,
     "Steady-state 'we prefilled this' banners are noise on an already dense page.");
-  assert.match(app, /activeRecipe\?\.setupComplete===false&&<div className="product-setup-framing first-product-setup">/,
-    "First-run guidance is the only case that earns a banner.");
+  /* D457 · Even the first-run banner is gone now. It framed a decision the
+     seller does not have to make - the product keeps its own defaults from the
+     moment they are chosen - so the page carries no banner at all. */
+  assert.doesNotMatch(app, /product-setup-framing first-product-setup/,
+    "nothing on this page announces itself any more.");
 });
 
 
