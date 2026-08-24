@@ -326,3 +326,31 @@ test("D389: nothing inside a product card widens itself with negative margins", 
   assert.deepEqual(offenders, [],
     `a negative margin inside a product card makes the panel wider than the card:\n${offenders.join("\n")}`);
 });
+
+/* D395 · A grid container with no explicit column gets one implicit auto track,
+   and an auto track sizes to its content - so a wide row makes the track wider
+   than the container and everything inside spills past the card edge. That is
+   what cut off every product row, buttons included. Any grid that holds the
+   product rows must declare a constrained track. */
+test("D395: the product rows grid declares a constrained track", async () => {
+  const css = (await readFile(new URL("app/clarity-pass.css", root), "utf8"));
+  assert.match(css, /\.app-shell \.batch-product-rows\{grid-template-columns:minmax\(0,1fr\)\}/,
+    "an implicit auto track sizes to the row, not to the card");
+  assert.match(css, /\.app-shell \.batch-product-row\{min-width:0\}/);
+});
+
+/* D398 · The management pages are a separate layout with no .app-shell, which is
+   why they never inherited the sidebar footer and why every .app-shell-scoped
+   fix has always skipped them. The Etsy API attribution has to appear wherever
+   Etsy data is shown, and these pages show it. */
+test("D398: the management pages carry the Etsy attribution too", async () => {
+  const nav = await readFile(new URL("app/management-nav.tsx", root), "utf8");
+  assert.match(nav, /etsy-api-disclosure/,
+    "Etsy attribution is required on every page that shows Etsy data");
+  assert.match(nav, /management-nav-footer/);
+  assert.match(nav, /approved-powered/);
+
+  const css = await readFile(new URL("app/factory-navigation.css", root), "utf8");
+  assert.match(css, /\.management-nav-footer\{margin-top:auto/,
+    "pinned to the bottom like the workflow rail");
+});

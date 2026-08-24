@@ -67,11 +67,7 @@ export type ReadinessInput = {
   templateShippingProfileId?: number;
   /* Etsy attributes this blueprint requires, and how many the recipe has set. */
   etsyFieldsRequired: number;
-  /* D393 - Whether the seller has approved this product's prices and shipping.
-     Without it the card said "Ready" while the forward gate still demanded the
-     approval, which is the same contradiction as "3/3 ready" sitting above
-     "0 of 1 required set": two parts of one screen disagreeing about the
-     same fact. */
+  /* Whether the seller has approved this product's prices and shipping. */
   pricingApproved?: boolean;
   saved: {
     defaultColorIds?: number[];
@@ -195,13 +191,12 @@ export function shippingFacet(input: ReadinessInput): Facet {
 
 export function profitFacet(input: ReadinessInput): Facet {
   const saved = Number(input.saved.defaultProfitTarget);
-  const target = Number.isFinite(saved) && saved > 0 ? saved : 10;
-  /* D393 - A profit goal is not the same as approved prices. The row only reads
-     ready once the seller has actually approved this product's prices and
-     shipping, because that is what the forward gate asks for. */
-  if (input.pricingApproved === false) {
-    return { name: "profit", state: "ask", label: `$${target.toFixed(0)} per item`, note: "Approve prices and shipping" };
-  }
+  /* D394 - D393 made this row ask whenever the batch approval was missing, so a
+     product that was fully set up in its recipe still showed as unfinished. That
+     is backwards: pricing saved on the recipe IS pricing set. The contradiction
+     between the card and the gate is fixed at the gate instead - a product whose
+     recipe already carries a profit target and a shipping profile counts as
+     approved without asking again. See recipeCarriesApprovedPricing. */
   if (Number.isFinite(saved) && saved > 0) return { name: "profit", state: "ready", label: `$${saved.toFixed(0)} per item` };
   /* A profit goal always has a workable default, so it is never a blocker. */
   return { name: "profit", state: "auto", label: "$10 per item", resolved: { profitTarget: 10 } };
@@ -243,4 +238,15 @@ export function productReadiness(input: ReadinessInput): Readiness {
   for (const facet of facets) if (facet.state === "auto" && facet.resolved) Object.assign(autoResolved, facet.resolved);
   const questions = facets.filter((facet) => facet.state === "ask").map((facet) => facet.name);
   return { facets, established: questions.length === 0, questions, autoResolved };
+}
+
+/* D394 · A saved product carries the seller's own pricing: a profit target they
+   chose and a shipping profile they picked. Making them press "Approve prices
+   and shipping" again on every batch is asking a question already answered, and
+   it is what made a card of ticks sit behind a gate that refused to open.
+   Approval is implied by a recipe that is actually set up. */
+export function recipeCarriesApprovedPricing(saved: { defaultProfitTarget?: number; etsyShippingProfileId?: number }): boolean {
+  const target = Number(saved.defaultProfitTarget);
+  const profile = Number(saved.etsyShippingProfileId);
+  return Number.isFinite(target) && target > 0 && Number.isFinite(profile) && profile > 0;
 }

@@ -1361,21 +1361,18 @@ test("D392: the saved-product form never sends colours or sizes it does not edit
   assert.match(route, /if \(body\.defaultSizeIds !== undefined\)/);
 });
 
-/* D393 · Every row on the card read ✓ and the card read "Ready", and then the
-   forward button refused with "Approve the item prices and shipping". The card
-   was reporting on colours, sizes, a profit goal and a shipping profile; the
-   gate was asking for something else entirely — the explicit approval — and
-   nothing on the card mentioned it.
-
-   A profit goal is not approved prices. The row says so now, and the card stops
-   claiming Ready until the approval it is gated on actually exists. */
-test("D393: a card cannot say Ready while the gate still wants approval", async () => {
+/* D394 · D393 made the Pricing row ask whenever the batch approval was missing,
+   so a product fully set up in its own recipe still showed as unfinished. That
+   is backwards - pricing saved on the recipe IS pricing set. The contradiction
+   between a card of ticks and a gate that refuses is fixed at the gate: a recipe
+   carrying a profit target and a shipping profile counts as approved without
+   asking again. */
+test("D394: a configured recipe does not have to re-approve its pricing", async () => {
   const readiness = await read("app/product-readiness.ts");
-  assert.match(readiness, /pricingApproved\?: boolean;/);
-  assert.match(readiness, /if \(input\.pricingApproved === false\) \{/,
-    "an unapproved product asks, it does not read ready");
-  assert.match(readiness, /state: "ask", label: `\$\$\{target\.toFixed\(0\)\} per item`, note: "Approve prices and shipping"/);
 
-  const app = await read("app/listing-factory-app.tsx");
-  assert.match(app, /pricingApproved:approved,/, "and the card passes the real per-product value");
+  assert.doesNotMatch(readiness, /note: "Approve prices and shipping"/,
+    "a saved profit target reads as set, not as a question");
+  assert.match(readiness, /export function recipeCarriesApprovedPricing/);
+  assert.match(readiness, /Number\.isFinite\(target\) && target > 0 && Number\.isFinite\(profile\) && profile > 0/,
+    "approved means the seller's own profit target and their own shipping profile");
 });

@@ -915,7 +915,7 @@
   font-weight:850;
   white-space:nowrap;
 }
-.app-shell .batch-product-state.attention{background:#c62828!important;color:#fff!important;box-shadow:0 0 0 3px rgba(198,40,40,.16)!important}
+.app-shell .batch-product-state.attention{background:#f6d3da!important;color:#a32c4c!important}
 /* D191 · The chip cloud was seven differently-sized boxes in a ragged two-row
    wrap, labelled in shouty caps with jargon ("Confirm 4") and British spelling
    ("COLOURS" — while the same app says COLORS elsewhere). Replaced with an
@@ -955,18 +955,16 @@
   white-space:nowrap;
   cursor:pointer;
 }
-/* D388 · An unset row was marked in the same soft pink as everything else on
-   the card, so "needs attention" read as decoration. It is red now, and it is
-   the only red on the card. The "Use Printify's N colors" shortcut that used to
-   sit on these rows is gone - Printify's template is not a choice the seller
-   made, and offering it as one-click was how a product ended up in colours
-   nobody picked. */
+/* D394 · D388 made this fire-engine red, which is out of key with a palette that
+   is muted everywhere else. The mark has to read as attention without shouting:
+   the pale rose stays, the glyph and the value carry a deeper rose, and nothing
+   gains a ring. */
 .app-shell .batch-product-row.needed .row-mark{
-  background:#c62828!important;
-  color:#fff!important;
-  box-shadow:0 0 0 3px rgba(198,40,40,.16)!important;
+  background:#f6d3da!important;
+  color:#a32c4c!important;
+  font-weight:900!important;
 }
-.app-shell .batch-product-row.needed .row-value{color:#c62828!important}
+.app-shell .batch-product-row.needed .row-value{color:#a32c4c!important}
 .app-shell .row-label{color:#4c293f;font-size:12px;font-weight:800}
 .app-shell .row-value{display:grid;gap:1px;min-width:0;color:#5b304f;font-size:12px}
 .app-shell .batch-product-row.needed .row-value{color:#8a3f66;font-weight:750}
@@ -2526,3 +2524,35 @@ body{min-width:1180px!important}
    the right. Measured live before and after. */
 .app-shell .batch-product-card .variant-pricing,
 .app-shell .step-product-body .variant-pricing{margin-inline:0}
+
+/* D395 · Measured on the live card, not guessed. Every .batch-product-row was
+   813px wide inside a 720px card and the Change/Choose buttons sat entirely
+   outside the card's right edge - so every row was cut off, not just shipping.
+   .batch-product-rows had one implicit auto column, which sized itself to the
+   row's content instead of to the container. Give it a real 1fr track so the
+   row is constrained, then let the shipping picker fit the space rather than
+   forcing its own width. Verified: overflow count from 12 elements to 0. */
+.app-shell .batch-product-rows{grid-template-columns:minmax(0,1fr)}
+.app-shell .batch-product-row{min-width:0}
+.app-shell .row-value{min-width:0}
+.app-shell .row-value small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.app-shell .shipping-profile-picker,
+.app-shell .shipping-combobox,
+.app-shell .shipping-combobox-trigger,
+.app-shell .shipping-combobox-panel{max-width:100%;min-width:0;box-sizing:border-box}
+.app-shell .shipping-combobox-trigger{white-space:normal;text-align:left}
+.app-shell .step-product-waiting{margin:0 22px 18px;padding:11px 14px;border:1px dashed rgba(91,48,79,.22);border-radius:12px;color:rgba(74,42,62,.6);font-size:12px}
+
+/* D397 · Step 3 had two forward buttons: one mid-card and one at the end, with
+   content between them. The mid-card one never navigated - it prepares the Etsy
+   fields - so it now says so and reads as a secondary action. The step keeps one
+   forward control, at the bottom, called Next step like every other step. */
+.app-shell .prepare-etsy{
+  display:block;width:fit-content;margin:20px auto 4px;
+  min-height:0;padding:9px 16px;
+  border:1px solid rgba(91,48,79,.2);border-radius:999px;
+  background:rgba(255,255,255,.72);color:#5b304f;
+  font:inherit;font-size:12px;font-weight:700;cursor:pointer;
+}
+.app-shell .prepare-etsy:hover:not(:disabled){background:#fff}
+.app-shell .prepare-etsy:disabled{opacity:.5;cursor:not-allowed}
