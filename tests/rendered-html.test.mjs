@@ -2633,10 +2633,17 @@ test("the Images page has one Next step, and a preview large enough to read", as
     "the bottom button says Next step, like every other step");
 
   // Whatever advances from Images must run the photo check, not just navigate.
-  const footer = app.slice(app.indexOf("post-draft-footer"), app.indexOf("post-draft-footer") + 1400);
-  assert.match(footer, /createdListingsMissingImages\(\)/, "the one Next step still gates on photos");
-  assert.match(footer, /setFinishPhase\("details"\)/, "Images goes to Listing, never straight to Publish");
-  assert.match(footer, /Next step </);
+  const forward = app.slice(app.indexOf('disabled={progressGateIssues(8).length>0}'));
+  assert.match(forward.slice(0, 900), /createdListingsMissingImages\(\)/, "the one Next step still gates on photos");
+  assert.match(forward.slice(0, 900), /setFinishPhase\("details"\)/, "Images goes to Listing, never straight to Publish");
+  assert.match(forward.slice(0, 900), /Next step </);
+
+  /* Every step keeps its forward control on the section it completes and leaves
+     Back / Saved automatically / Save as draft in the footer. Images must match
+     that, or it becomes the one page where the bottom button is not Next. */
+  const imagesFooter = app.slice(app.indexOf("post-draft-footer"), app.indexOf("post-draft-footer") + 700);
+  assert.doesNotMatch(imagesFooter, /workflow-next/, "the footer is Back and Save as draft, as everywhere else");
+  assert.match(imagesFooter, /save-draft-link|workflow-back/);
 
   // The preview has to be big enough that the artwork is legible. At 152px the
   // design came out around 28px wide.
