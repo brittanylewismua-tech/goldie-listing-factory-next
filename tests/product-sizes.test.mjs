@@ -1463,3 +1463,32 @@ test("D419: the actions that cost money cannot be fired twice", async () => {
   assert.match(app, /if\(draftRunInFlight\.current\)return;/);
   assert.match(app, /<button className="preflight-confirm" disabled=\{running\}/);
 });
+
+/* D420/D422 · A number input bound straight to its number is a trap: clearing
+   the box makes Number("") = 0, the fallback turns that into 0 or 1, React
+   writes it back, and everything typed afterwards lands behind it — clear it,
+   type 12, get "012". It bit the profit goal, both personalization limits, and
+   all three Etsy fee fields, which is every price in the app.
+
+   PriceField already had the answer: hold what was typed while the box has
+   focus, commit only when it parses, drop the draft on blur. Every numeric input
+   goes through that shape now. */
+test("D422: no numeric input is bound straight to its number", async () => {
+  const files = ["app/listing-factory-app.tsx", "app/usage/page.tsx"];
+  const offenders = [];
+  for (const file of files) {
+    const source = await read(file);
+    for (const match of source.matchAll(/<input[^>]*type="number"[^>]*>/g)) {
+      const tag = match[0];
+      /* A draft-managed field reads `value={draft??...}`; a raw one does not. */
+      if (!/value=\{[a-zA-Z]*[Dd]raft\?\?/.test(tag)) offenders.push(`${file}: ${tag.slice(0, 90)}`);
+    }
+  }
+  assert.deepEqual(offenders, [],
+    `these will force a 0 in front of whatever is typed:\n${offenders.join("\n")}`);
+
+  const app = await read("app/listing-factory-app.tsx");
+  assert.match(app, /function IntegerField/);
+  const usage = await read("app/usage/page.tsx");
+  assert.match(usage, /function DecimalField/);
+});
