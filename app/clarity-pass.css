@@ -2698,3 +2698,19 @@ body{min-width:1180px!important}
    summary, so the group is selected through it. */
 .app-shell .final-design-groups{display:flex;flex-direction:column}
 .app-shell .final-design-groups>details:has(em.needs-attention){order:-1}
+
+/* D437 · A saved bundle's card listed its products on one nowrap line, so
+   "Gildan Hoodie · Gildan Tee · gildan crewneck" - 192px of text in a 122px box -
+   read as "Gildan Hoodie · Gildan Te…". The one thing that distinguishes a bundle
+   from a product is what is in it, and that was the part being cut off. Two lines
+   is enough for the four products a bundle can hold, and the card only grows when
+   it needs to. */
+.app-shell .recipe-tile.bundle-as-product .recipe-copy small{
+  white-space:normal!important;
+  overflow:hidden!important;
+  text-overflow:clip!important;
+  display:-webkit-box!important;
+  -webkit-line-clamp:2!important;
+  -webkit-box-orient:vertical!important;
+  line-height:1.35!important;
+}

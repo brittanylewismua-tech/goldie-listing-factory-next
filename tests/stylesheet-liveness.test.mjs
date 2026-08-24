@@ -442,3 +442,14 @@ test("D434: what needs review sorts to the top of the final check", async () => 
     "order needs a flex container to act on");
   assert.match(clarity, /\.final-design-groups>details:has\(em\.needs-attention\)\{order:-1\}/);
 });
+
+/* D437 · The one thing that tells a bundle apart from a product is what is in
+   it, and that was the part being truncated. */
+test("D437: a saved bundle shows what is in it", async () => {
+  const clarity = await readFile(new URL("app/clarity-pass.css", root), "utf8");
+  const rule = clarity.slice(clarity.indexOf(".app-shell .recipe-tile.bundle-as-product .recipe-copy small{"));
+  assert.match(rule.slice(0, 400), /white-space:normal!important/,
+    "measured live: 192px of product names in a 122px nowrap box");
+  assert.match(rule.slice(0, 400), /-webkit-line-clamp:2!important/,
+    "two lines covers the four products a bundle can hold");
+});
