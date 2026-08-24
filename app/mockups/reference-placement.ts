@@ -137,19 +137,46 @@ export type Adjustment={scale:number;x:number;y:number};
 export function derivedPlacement(fit:ReferenceFit,box:ProductBox,bounds?:{left:number;top:number;right:number;bottom:number}):{adjustment:Adjustment;quad:Quad}|null{
   const artWidth=Math.max(.05,(bounds?.right??1)-(bounds?.left??0));
   const artCentreX=((bounds?.left??0)+(bounds?.right??1))/2,artCentreY=((bounds?.top??0)+(bounds?.bottom??1))/2;
-  const scale=fit.widthRatio/artWidth;
-  const x0=box.centreX-box.width/2,y0=box.centreY-box.height/2,x1=box.centreX+box.width/2,y1=box.centreY+box.height/2;
+
+  // The product as segmentation found it, which may run past the edge of the
+  // photo when the garment is cropped by the frame.
+  const bx0=box.centreX-box.width/2,by0=box.centreY-box.height/2;
+  const bx1=box.centreX+box.width/2,by1=box.centreY+box.height/2;
+
+  /* D445 - the quad has to sit inside the photo: the renderer refuses corners
+     outside it, and half her scenes failed with "does not have a dependable
+     calibrated product area" because the garment reached the frame edge.
+     Clamping the quad alone would silently move the artwork, since the placement
+     is measured against the whole product. So the quad is clamped and the
+     placement is then expressed relative to the clamped quad, which lands the
+     artwork in the same spot on the product either way. */
+  const qx0=Math.max(0,bx0),qy0=Math.max(0,by0),qx1=Math.min(1,bx1),qy1=Math.min(1,by1);
+  const qw=qx1-qx0,qh=qy1-qy0;
+  if(!(qw>.05&&qh>.05))return null;
+  /* A product may run past the frame when the photo crops it, but only so far.
+     A box half again the size of the photo is a bad detection, not a close-up. */
+  if(box.width>1.25||box.height>1.25)return null;
+
+  // Where the artwork belongs, in the photo's own coordinates.
+  const targetWidth=fit.widthRatio*(bx1-bx0);
+  const targetCentreX=bx0+fit.centreX*(bx1-bx0);
+  const targetCentreY=by0+fit.centreY*(by1-by0);
+
+  const scale=targetWidth/(qw*artWidth);
+  const adjustment={
+    scale,
+    x:(targetCentreX-(qx0+qx1)/2)/qw-(artCentreX-.5)*scale,
+    y:(targetCentreY-(qy0+qy1)/2)/qh-(artCentreY-.5)*scale,
+  };
+
   /* A measurement can be wrong in ways the maths cannot see - a Printify preview
      that is a model shot rather than a flat lay, or segmentation returning the
      person instead of the product. Rather than trust a derived number that lands
      somewhere absurd, hand back nothing and let the caller fall back. The bounds
      are deliberately loose: this is a sanity check, not a second guess. */
-  const artOfProduct=scale*artWidth;
+  const artOfProduct=fit.widthRatio;
   if(!Number.isFinite(scale)||artOfProduct<.02||artOfProduct>1.05)return null;
   if(fit.centreX<0||fit.centreX>1||fit.centreY<0||fit.centreY>1)return null;
-  if(x0<-.05||y0<-.05||x1>1.05||y1>1.05||x1-x0<.05||y1-y0<.05)return null;
-  return {
-    adjustment:{scale,x:fit.centreX-.5-(artCentreX-.5)*scale,y:fit.centreY-.5-(artCentreY-.5)*scale},
-    quad:[[x0,y0],[x1,y0],[x1,y1],[x0,y1]] as Quad,
-  };
+  if(!Number.isFinite(adjustment.x)||!Number.isFinite(adjustment.y))return null;
+  return {adjustment,quad:[[qx0,qy0],[qx1,qy0],[qx1,qy1],[qx0,qy1]] as Quad};
 }

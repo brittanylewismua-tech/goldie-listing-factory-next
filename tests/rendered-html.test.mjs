@@ -2792,6 +2792,23 @@ test("mockup placement is derived from the Printify preview, for any product —
     "a box wider than the photo is a bad segmentation");
   assert.ok(derivedPlacement(fit, box, bounds), "and the real measurement still passes");
 
+  /* D445 · Hit live: half her scenes failed with "does not have a dependable
+     calibrated product area" because the garment reaches the photo edge and the
+     renderer refuses corners outside the image. Clamping the quad alone would
+     silently move the artwork, since the placement is measured against the whole
+     product - so the placement is re-expressed against the clamped quad. */
+  const cropped = derivedPlacement(fit, { centreX: 0.5, centreY: 0.75, width: 0.9, height: 0.9 }, bounds);
+  assert.ok(cropped, "a garment cropped by the frame still renders");
+  for (const [cx, cy] of cropped.quad) {
+    assert.ok(cx >= 0 && cx <= 1 && cy >= 0 && cy <= 1, "every corner sits inside the photo");
+  }
+  const quadWidth = cropped.quad[1][0] - cropped.quad[0][0];
+  const artInPhoto = cropped.adjustment.scale * (bounds.right - bounds.left) * quadWidth;
+  assert.equal(Number(artInPhoto.toFixed(4)), Number((fit.widthRatio * 0.9).toFixed(4)),
+    "and the artwork is the same size on the product as it would have been");
+  const centreInPhoto = (cropped.quad[0][0] + cropped.quad[1][0]) / 2 + cropped.adjustment.x * quadWidth;
+  assert.equal(Number(centreInPhoto.toFixed(3)), 0.5, "and in the same place");
+
   /* Nothing in the derivation KNOWS what the product is. Checked against the code
      with comments stripped - the prose names products while explaining the
      history, which is the opposite of hard-coding one. */
