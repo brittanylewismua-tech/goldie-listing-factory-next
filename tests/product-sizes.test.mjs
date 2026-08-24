@@ -1086,6 +1086,59 @@ test("card rows keep a fixed order regardless of state — D338", async () => {
   assert.match(readiness, /\[colorFacet\(input\), sizeFacet\(input\), profitFacet\(input\), shippingFacet\(input\)\]/,
     "and the order comes from the facet list: colours, sizes, pricing, shipping");
 
-  /* An open panel names itself larger, and says which product it belongs to. */
-  assert.match(app, /\{isOpen\(facet\.name\)&&<em className="row-label-product">\{recipe\.name\}<\/em>\}/);
+  /* D344 · An open panel names itself larger. It must NOT also print the product
+     name: .row-label is a fixed grid column, so the name wrapped and collided
+     with the value beside it — and the card header above already shows the
+     product and is sticky, so it is on screen the whole time anyway. */
+  assert.doesNotMatch(app, /row-label-product/,
+    "the sticky card header already names the product");
+  const css = await read("app/clarity-pass.css");
+  assert.match(css, /\.batch-product-row\.open \.row-label\{[\s\S]{0,200}white-space:nowrap!important/,
+    "an enlarged label may not wrap inside its column");
+});
+
+/* D345 · Refresh must change nothing. D301 remembered the selected RECIPE only,
+   so refreshing with a bundle selected restored whichever single product had
+   been chosen last. A bundle is a selection too. */
+test("a refresh restores a selected bundle, not the last product — D345", async () => {
+  const app = await read("app/listing-factory-app.tsx");
+  assert.match(app, /window\.localStorage\.setItem\("goldie-active-bundle"/,
+    "choosing a bundle remembers it");
+  assert.match(app, /window\.localStorage\.setItem\("goldie-active-recipe",recipe\.id\);window\.localStorage\.removeItem\("goldie-active-bundle"\)/,
+    "and choosing a single product clears it, so the two cannot both win");
+  assert.match(app, /if\(bundle&&\(saved\.recipeIds\|\|\[\]\)\.length\)\{await useBundle\(bundle,saved\.recipeIds\|\|\[\]\);return\}/,
+    "the bundle is restored through the same path that selects one normally");
+  assert.match(app, /activeRecipe\|\|activeBundle\|\|signedIn!==true\)return;/,
+    "and a restore never fights a selection already made");
+});
+
+/* D346/D347 · Two labels that explained instead of showed. */
+test("the card header marks attention without a bare count — D347", async () => {
+  const app = await read("app/listing-factory-app.tsx");
+  const tools = await read("app/factory-tools.tsx");
+  assert.doesNotMatch(app, /\$\{ready\.questions\.length\} to set/,
+    "a count with no noun says a number but not what it counts");
+  assert.match(app, /aria-label=\{ready\.established\?"Ready":`\$\{ready\.questions\.length\}/,
+    "the full sentence still reaches screen readers and hover");
+  assert.doesNotMatch(tools, /Named from the Printify product/,
+    "a filled-in text field does not need to say it can be edited");
+});
+
+/* D348 · The shipping dropdown was clipped and could not be scrolled, and its
+   matches came back in shop order. */
+test("the shipping dropdown escapes its card and ranks matches — D348", async () => {
+  const app = await read("app/listing-factory-app.tsx");
+  const css = await read("app/clarity-pass.css");
+
+  /* .step-card sets overflow:hidden for its corners, and the panel is absolutely
+     positioned inside one — so the list was cut at the card edge and the part
+     you needed to scroll to was never rendered. */
+  assert.match(css, /\.step-card:has\(\.shipping-combobox-panel\)/,
+    "the card must let an open dropdown out");
+  assert.match(css, /max-height:min\(320px,42vh\)!important/,
+    "and the list is bounded by the viewport, not the card");
+
+  assert.match(app, /if\(title===normalizedProfileSearch\)return 0;/,
+    "an exact name match comes first");
+  assert.match(app, /if\(title\.startsWith\(normalizedProfileSearch\)\)return 1;/);
 });
