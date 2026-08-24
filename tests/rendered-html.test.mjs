@@ -1499,12 +1499,11 @@ test("supports simple saved product bundles without complicating the single-prod
 /* D336 · The header used to lead with the FIRST PRODUCT's name and put the
      bundle name underneath, so choosing a bundle looked like choosing a hoodie.
      It names the bundle now; the stepper says which product you are on. */
-  assert.match(page, /<b>\{activeBundle\.name\}<\/b>/);
-/* D340 · The numbered stepper is gone. It said "You are here" and "Up next",
-     which stopped being true when D334 put every product on the page as its own
-     card — there is no next, you work them in any order — and it listed the
-     products a second time directly under the line that already lists them. */
-  assert.match(page, /<small>\{bundleRecipes\.length\} products · \{bundleRecipes\.map\(recipe=>recipe\.name\)\.join\(" · "\)\}<\/small>/);
+/* D355 · The whole bundle banner is gone. It announced what had just been
+     selected, above a page you reached BY selecting it, and each product card
+     below already carries its own name. */
+  assert.doesNotMatch(page, /className="bundle-progress"/,
+    "no banner restating the selection that brought you here");
   assert.doesNotMatch(page, /index===bundleIndex\?"You are here"/,
     "no stepper, so no you-are-here");
   assert.doesNotMatch(page, /bundle-progress"[^>]*>[\s\S]{0,400}<ol>/,
@@ -2088,8 +2087,12 @@ test("records real pricing approval and invalidates it after edits (fixes D23 an
   const app=await readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8");
   assert.match(app,/Approve prices and shipping/);
   assert.match(app,/onClick=\{\(\)=>onApprovalChange\(true\)\}/);
-  assert.match(app,/onPricing=\{value=>\{setPricing\(value\);setPricingApproved\(false\);/);
-  assert.match(app,/onPrices=\{value=>\{setVariantPrices\(value\);setPricingApproved\(false\)\}\}/);
+/* D353 · The standalone pricing card is gone — pricing is a panel on the
+     product card now, so this handler runs through the card's branch. What the
+     test is really about is that changing pricing invalidates approval, and it
+     still does. */
+  assert.match(app,/if\(isActive\)\{setPricing\(value\);setPricingApproved\(false\)\}/);
+  assert.match(app,/if\(isActive\)\{setVariantPrices\(value\);setPricingApproved\(false\)\}/);
   assert.match(app,/pricingApproved\?"✓ Prices and buyer-paid shipping were approved":"! Prices and buyer-paid shipping need review"/);
   assert.match(app,/setPricingApproved\(Boolean\(state\.pricingApproved\)\|\|Boolean\(state\.complete&&\(state\.drafts\|\|\[\]\)\.some\(draft=>draft\.status==="Created"\)\)\)/);
   assert.doesNotMatch(app,/if\(complete&&drafts\.some\(draft=>draft\.status==="Created"\)&&!pricingApproved\)setPricingApproved\(true\)/);
@@ -2129,7 +2132,7 @@ test("uses one deterministic Etsy product baseline across a batch (fixes D71)",a
   assert.match(app,/runBounded\(pending,1,/);
   assert.match(app,/prepared=baseline\?\{\.\.\.initial,taxonomyId:baseline\.taxonomyId,category:baseline\.category,attributes:\{\.\.\.initial\.attributes,\.\.\.baseline\.attributes\}\}:initial/);
   assert.match(app,/etsyProductBaseline\.current=\{taxonomyId:details\.taxonomyId,category:details\.category,attributes:physical\}/);
-  assert.match(app,/etsyProductBaseline\.current=null;[\s\S]{0,600}?setActiveRecipe\(recipe\)/);
+  assert.match(app,/etsyProductBaseline\.current=null;[\s\S]{0,1200}?setActiveRecipe\(recipe\)/);
 });
 
 test("rejects over-capacity uploads before creating a batch record (fixes D54)",async()=>{

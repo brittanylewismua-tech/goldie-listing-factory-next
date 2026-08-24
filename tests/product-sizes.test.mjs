@@ -289,8 +289,8 @@ test("every setting a batch needs is a facet on the card — D182", async () => 
   assert.match(app, /establish\(recipe,\{defaultSizeIds:ids\}\)/);
   /* D223 · Shipping and profit moved into the pricing panel, and establish moved
      with them — a value set there still becomes the product's default. */
-  assert.match(app, /establish\(activeRecipe,\{etsyShippingProfileId:value\}\)/);
-  assert.match(app, /establish\(activeRecipe,\{defaultProfitTarget:value\.targetProfit\}\)/);
+  assert.match(app, /establish\(recipe,\{etsyShippingProfileId:value\}\)/);
+  assert.match(app, /establish\(recipe,\{defaultProfitTarget:value\.targetProfit\}\)/);
   /* D221 · The keyword bank is chosen on the Listing page now, and still
      persists to the recipe from there. */
   assert.match(app, /establish\(activeRecipe,\{keywordListId:list\.id\}\)/);
@@ -625,8 +625,8 @@ test("D209: every readiness row that offers to open, opens in the card", async (
     "and closes from the bottom as well as the top");
   /* D223 · Shipping and profit moved into the pricing panel, and establish moved
      with them — a value set there still becomes the product's default. */
-  assert.match(app, /establish\(activeRecipe,\{etsyShippingProfileId:value\}\)/);
-  assert.match(app, /establish\(activeRecipe,\{defaultProfitTarget:value\.targetProfit\}\)/);
+  assert.match(app, /establish\(recipe,\{etsyShippingProfileId:value\}\)/);
+  assert.match(app, /establish\(recipe,\{defaultProfitTarget:value\.targetProfit\}\)/);
 
   /* The legacy block reads activeRecipe, so in a bundle it always showed the
      active product. These panels must read the row's recipe instead. */
@@ -979,7 +979,7 @@ test("the shipping combobox shows its default and its rows are not buttons — D
     "the template id is matched against the seller's real Etsy profiles first");
   assert.match(app, /if\(fromTemplate\)onSelectProfile\(fromTemplate\.id\);/,
     "and only selected when it resolves — an unmatched id is the D231 deadlock");
-  assert.match(app, /templateShippingProfileId=\{Number\(templateDetails\?\.shippingTemplateId\)\|\|0\}/,
+  assert.match(app, /templateShippingProfileId=\{Number\(details\.shippingTemplateId\)\|\|0\}/,
     "and the value has to reach PricingReview at all");
 
   const block = css.slice(css.indexOf("D326 ·"));
@@ -1034,7 +1034,16 @@ test("every bundle product gets its own pricing card — D332", async () => {
   /* D334 · With four panels on the card, only the FIRST panel of the FIRST
      product opens. Everything else is one click away, so selecting a bundle
      never lands you in three open colour grids. */
-  assert.match(app, /openFacet\[recipe\.id\]\?\?\(index===0\?\["colors"\]:\[\]\)/);
+/* D356 · ONE default, used by both the render and the toggle. They each had
+     their own and disagreed, so the first click on a row started from a list
+     that did not match the screen and opened panels the seller had not asked
+     for. */
+  assert.match(app, /const defaultOpenFacets=index===0\?\["colors"\]:\[\];/);
+  assert.match(app, /const openList=openFacet\[recipe\.id\]\?\?defaultOpenFacets;/);
+  assert.match(app, /const list=current\[recipe\.id\]\?\?defaultOpenFacets;/,
+    "the toggle must start from the same list that is on screen");
+  assert.doesNotMatch(app, /current\[recipe\.id\]\?\?\["colors","sizes"\]/,
+    "a second, stale default is what caused the bouncing");
   assert.match(app, /role=\{inCard\?"button":undefined\}/,
     "the row itself opens its panel, not only the Change button");
 });
@@ -1075,8 +1084,14 @@ test("the card has a row for every panel it can open — D337", async () => {
     assert.ok(inCard[1].includes(`"${facet}"`), `${facet} opens in the card`);
 
   /* And the standalone block must not double up underneath a bundle. */
-  assert.match(app, /\{!bundleSelected&&pricedVariants\.length>0&&<PricingReview/,
-    "one pricing card per product, not a second one below them all");
+  /* D353 · There is no standalone pricing card to gate any more. Every
+     selection renders a product card — a single product is a bundle of one —
+     and pricing and shipping are panels on it. D337 narrowed the standalone
+     block to single products, which fixed the duplicate under a bundle and left
+     the identical duplicate under an individual product. */
+  assert.doesNotMatch(app, /pricedVariants\.length>0&&<PricingReview/,
+    "pricing lives on the product card, nowhere else");
+  assert.match(app, /const pricingPanelFor=\(which:"prices"\|"shipping"\)=>\{/);
 });
 
 /* D338 · The card's rows were sorted so anything unset floated to the top, so a
@@ -1110,8 +1125,15 @@ test("a refresh restores a selected bundle, not the last product — D345", asyn
   const app = await read("app/listing-factory-app.tsx");
   assert.match(app, /window\.localStorage\.setItem\("goldie-active-bundle"/,
     "choosing a bundle remembers it");
-  assert.match(app, /window\.localStorage\.setItem\("goldie-active-recipe",recipe\.id\);window\.localStorage\.removeItem\("goldie-active-bundle"\)/,
-    "and choosing a single product clears it, so the two cannot both win");
+/* D354 · The clear lives in chooseRecipe, not selectRecipe. selectRecipe is the
+     shared loader — useBundle calls it for the bundle's first product, so
+     clearing there erased the bundle key a moment after useBundle wrote it and
+     left a breadcrumb pointing at that first member. That is what kept
+     restoring a single product. */
+  assert.match(app, /try\{window\.localStorage\.removeItem\("goldie-active-bundle"\)\}catch\{[^}]*\}setActiveBundle\(null\)/,
+    "choosing a single product is what forgets a bundle");
+  assert.doesNotMatch(app, /setItem\("goldie-active-recipe",recipe\.id\);window\.localStorage\.removeItem\("goldie-active-bundle"\)/,
+    "the shared loader must not decide what was selected");
   assert.match(app, /if\(bundle&&\(saved\.recipeIds\|\|\[\]\)\.length\)\{await useBundle\(bundle,saved\.recipeIds\|\|\[\]\);return\}/,
     "the bundle is restored through the same path that selects one normally");
   assert.match(app, /activeRecipe\|\|activeBundle\|\|signedIn!==true\)return;/,

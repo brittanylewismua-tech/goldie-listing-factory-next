@@ -1189,12 +1189,18 @@ export default function ListingFactoryApp() {
      thing they were choices about, landing you on a blank product step. Only
      a saved ?batch= restored it, and that id does not exist until a batch has
      been saved server-side. */
-    try{window.localStorage.setItem("goldie-active-recipe",recipe.id);window.localStorage.removeItem("goldie-active-bundle")}catch{/* private mode */}
+    /* D354 · selectRecipe loads a product; it does not decide what the seller
+       SELECTED. useBundle calls it for the first product of a bundle, so clearing
+       the bundle key here erased the bundle's own memory a moment after
+       useBundle wrote it — and left a single-product breadcrumb pointing at the
+       first member, which is what the next refresh restored. The two callers own
+       that decision now: chooseRecipe clears the bundle, useBundle writes it. */
+    try{window.localStorage.setItem("goldie-active-recipe",recipe.id)}catch{/* private mode */}
     setActiveRecipe(recipe);setPrintifyImageIndices(recipe.printifyImageIndices||[]);setEtsyShippingProfileId(Number(recipe.etsyShippingProfileId)||0);setTemplate(recipe.templateUrl);const savedTheme=recipe.defaultMockupTheme||"",savedMockups=savedTheme?{theme:savedTheme,ids:recipe.mockupIds||[]}:undefined;setMockupTheme(savedTheme);setSharedMockups(savedMockups);window.sessionStorage.setItem("goldie-batch-mockups",JSON.stringify(savedMockups||null));setAutoTitleBankId(recipe.keywordListId||"");const nextPricing={...pricing,targetProfit:Number(recipe.defaultProfitTarget)||DEFAULT_PRICING.targetProfit,shippingCost:0,shippingCharged:0};setPricing(nextPricing);setTemplateDetails(null);const details=await loadTemplateUrl(recipe.templateUrl,nextPricing,Number(recipe.etsyShippingProfileId)||0,recipe.defaultColorIds||[],recipe.defaultSizeIds||[]);if(!details)return null;const savedDescription=recipe.description?.trim(),importedDescription=details.description?.trim();if(savedDescription)setDescription(recipe.description);else if(importedDescription){const updated={...recipe,description:details.description};setDescription(details.description);setActiveRecipe(updated);void fetch("/api/product-recipes",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(updated)}).catch(()=>undefined)}return details}
   async function saveProductDefaults(change:Partial<Recipe>,key:string){if(!activeRecipe)return;setSavingProductDefault(key);try{const updated={...activeRecipe,...change};const response=await fetch("/api/product-recipes",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(updated)});if(!response.ok)throw new Error("Goldie could not save this product default.");setActiveRecipe(updated);}catch(error){stopWith("This default was not saved.",[error instanceof Error?error.message:"Try again in a moment."])}finally{setSavingProductDefault("")}}
   async function rememberBatchDefaultsAfterPublish(){if(!activeRecipe)return;const updated={...activeRecipe,defaultColorIds:selectedColorIds,defaultSizeIds:selectedSizeIds,defaultMockupTheme:mockupTheme,mockupIds:sharedMockups?.theme===mockupTheme?sharedMockups.ids:[]};const response=await fetch("/api/product-recipes",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(updated)});if(response.ok){setActiveRecipe(updated);setColorsRemembered(true);setSizesRemembered(true)}}
   async function completeProductSetup(){if(!activeRecipe)return;await saveProductDefaults({setupComplete:true,defaultColorIds:selectedColorIds,defaultSizeIds:selectedSizeIds,defaultMockupTheme:mockupTheme,mockupIds:sharedMockups?.theme===mockupTheme?sharedMockups.ids:[]},"initial-setup")}
-  async function chooseRecipe(recipe: Recipe) { const changingProduct=Boolean((activeRecipe?.id&&activeRecipe.id!==recipe.id)||(template&&template!==recipe.templateUrl));if(changingProduct&&(files.length>0||drafts.length>0||complete)){const count=files.length;if(!window.confirm(`Switch to “${recipe.name}” and start a new batch? This removes ${count} ${count===1?"design":"designs"} and all work from the current batch on this page.`))return false;clearCurrentBatch(false)}setActiveBundle(null);setBundleRecipes([]);setBundleIndex(0);return Boolean(await selectRecipe(recipe)); }
+  async function chooseRecipe(recipe: Recipe) { const changingProduct=Boolean((activeRecipe?.id&&activeRecipe.id!==recipe.id)||(template&&template!==recipe.templateUrl));if(changingProduct&&(files.length>0||drafts.length>0||complete)){const count=files.length;if(!window.confirm(`Switch to “${recipe.name}” and start a new batch? This removes ${count} ${count===1?"design":"designs"} and all work from the current batch on this page.`))return false;clearCurrentBatch(false)}try{window.localStorage.removeItem("goldie-active-bundle")}catch{/* private mode */}setActiveBundle(null);setBundleRecipes([]);setBundleIndex(0);return Boolean(await selectRecipe(recipe)); }
   async function useBundle(bundle:ProductBundle,recipeIds:string[]){
     const requestedIds=[...new Set(recipeIds.filter(Boolean))];
     if(requestedIds.length<2){stopWith("This product bundle needs attention.",["Choose at least two available saved products."]);return false}
@@ -1209,12 +1215,11 @@ export default function ListingFactoryApp() {
      * its only unique effect was a failure she could not avoid. See D129. */
     if((files.length>0||drafts.length>0||complete)&&!window.confirm(`Start “${bundle.name}” and clear the current batch? Your current designs and unfinished work will be removed.`))return false;
     clearCurrentBatch(true);
-    /* D345 · D301 remembered the selected RECIPE only, so refreshing with a
-       bundle selected restored whichever single product had been chosen last —
-       landing you on the hoodie. A bundle is a selection too, and refresh must
-       change nothing. */
+    setActiveBundle(bundle);setBundleRecipes(recipes);setBundleIndex(0);const first=await selectRecipe(recipes[0]);if(!first)return false;/* D354 · Written AFTER selectRecipe, because selectRecipe writes the
+       single-product key and used to clear this one. Refresh must land on the
+       bundle, not on its first member. */
     try{window.localStorage.setItem("goldie-active-bundle",JSON.stringify({id:bundle.id,recipeIds:recipes.map(item=>item.id)}))}catch{/* private mode */}
-    setActiveBundle(bundle);setBundleRecipes(recipes);setBundleIndex(0);const first=await selectRecipe(recipes[0]);if(!first)return false;const loaded:Record<string,TemplateDetails>={[recipes[0].id]:first},choices:Record<string,number[]>={};for(const recipe of recipes){const details=recipe.id===recipes[0].id?first:await fetchWithDeadline("/api/printify",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({productUrl:recipe.templateUrl,savedShippingProfileId:Number(recipe.etsyShippingProfileId)||0})},90000).then(async response=>response.ok?(await response.json() as {product?:TemplateDetails}).product:undefined).catch(()=>undefined);if(!details)continue;loaded[recipe.id]=details;const available=new Set((details.colorOptions||[]).filter(color=>color.available).map(color=>color.id));/* D213 · A bundle member with no saved colours has not been set up. Leave it
+    const loaded:Record<string,TemplateDetails>={[recipes[0].id]:first},choices:Record<string,number[]>={};for(const recipe of recipes){const details=recipe.id===recipes[0].id?first:await fetchWithDeadline("/api/printify",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({productUrl:recipe.templateUrl,savedShippingProfileId:Number(recipe.etsyShippingProfileId)||0})},90000).then(async response=>response.ok?(await response.json() as {product?:TemplateDetails}).product:undefined).catch(()=>undefined);if(!details)continue;loaded[recipe.id]=details;const available=new Set((details.colorOptions||[]).filter(color=>color.available).map(color=>color.id));/* D213 · A bundle member with no saved colours has not been set up. Leave it
          empty so its card asks, instead of adopting Printify's template. */
       const ids=(recipe.defaultColorIds||[]).filter(id=>available.has(id));choices[recipe.id]=ids}setBundleColorProducts(loaded);setBundleColorChoices(choices);return true;
   }
@@ -1631,16 +1636,10 @@ export default function ListingFactoryApp() {
           total={RAIL_STAGES.length}
           label={progressIndex===PROGRESS_STEPS.length-1?"Final review":`Next: ${PROGRESS_STEPS[Math.min(progressIndex+1,PROGRESS_STEPS.length-1)]}`}
         />}
-        {activeBundle&&bundleRecipes.length>1&&<section className="bundle-progress" aria-label={`Product bundle ${activeBundle.name}`}>
-          {/* D340 · This was a numbered stepper reading "You are here" and "Up
-              next". That was true when a bundle walked you through one product at
-              a time, but since D334 every product is a card on this page at once —
-              there is no "next", you work them in any order. It also listed the
-              products a second time, right under the line that already lists them.
-              The header names the bundle and says how many products are in it; the
-              cards below ARE the products, each with its own name on it. */}
-          <div><span>PRODUCT BUNDLE</span><b>{activeBundle.name}</b><small>{bundleRecipes.length} products · {bundleRecipes.map(recipe=>recipe.name).join(" · ")}</small></div>
-        </section>}
+        {/* D355 · The bundle banner is gone. It sat above the page announcing what
+          had just been selected — but selecting it is what put you here, and the
+          product cards below each carry their own name. It was a label for
+          something the page was already showing, taking the first screenful. */}
         {progressIndex>0&&<GoldieInsight>{currentInsight()}</GoldieInsight>}
         {progressIndex===3&&files.length>0&&<ActionReceipt items={[{value:`${files.length} designs checked`,label:"Original artwork resolution preserved"},{value:`${pricedVariants.length} variants`,label:pricingApproved?"Pricing approved":"Ready for pricing review"}]}/>}
         {progressIndex===5&&titleCount>0&&<ActionReceipt items={[{value:`${titleCount} titles ready`,label:"Validated keyword phrases only"},{value:`${files.reduce((sum,file)=>sum+file.tags.length,0)} matching tags`,label:"Zero invented keywords"}]}/>}
@@ -1707,8 +1706,15 @@ export default function ListingFactoryApp() {
           /* D329 · Every product used to open colours AND sizes at once, so a three
                  product bundle put three full colour grids on screen together. Only
                  the first product starts open; the others are one click away. */
-              const openList=openFacet[recipe.id]??(index===0?["colors"]:[]);
-          const isOpen=(name:string)=>openList.includes(name);const toggle=(name:string)=>setOpenFacet(current=>{const list=current[recipe.id]??["colors","sizes"];return {...current,[recipe.id]:list.includes(name)?list.filter(item=>item!==name):[...list,name]}});
+              /* D356 · The render and the toggle each carried their OWN default for
+                 which panels are open, and they disagreed: the render opened
+                 ["colors"], the toggle fell back to ["colors","sizes"]. So the first
+                 click on any row started from a list that did not match the screen —
+                 clicking Shipping produced ["colors","sizes","shipping"] and Sizes
+                 sprang open alongside it. One default, used by both. */
+              const defaultOpenFacets=index===0?["colors"]:[];
+              const openList=openFacet[recipe.id]??defaultOpenFacets;
+          const isOpen=(name:string)=>openList.includes(name);const toggle=(name:string)=>setOpenFacet(current=>{const list=current[recipe.id]??defaultOpenFacets;return {...current,[recipe.id]:list.includes(name)?list.filter(item=>item!==name):[...list,name]}});
           /* D218 · Every picker used to render after the whole row list, so clicking
              Change on Colours opened the palette below Etsy details and the seller had
              to scroll past six rows to reach the thing they just asked for. The panel
@@ -1775,33 +1781,11 @@ export default function ListingFactoryApp() {
               PricingReview component moved intact: grouped per-size prices, the
               matching-cost grouping, whole-number pricing and the shipping profile all
               come with it. Nothing here is rebuilt. */}
-          {/* D337 · In a bundle every product now carries its own pricing and
-              shipping panels on its own card, so this standalone block was a
-              second, hoodie-only pricing card sitting below all of them — the
-              exact split D334 set out to remove. It renders for a single
-              product only. */}
-          {!bundleSelected&&pricedVariants.length>0&&<PricingReview
-            variants={pricedVariants}
-            pricing={pricing}
-            prices={variantPrices}
-            productName={activeRecipe?.name||templateDetails?.blueprintTitle||"This product"}
-            profiles={etsyShippingProfiles}
-            selectedProfileId={etsyShippingProfileId}
-            templateShippingProfileId={Number(templateDetails?.shippingTemplateId)||0}
-            profilesLoading={shippingProfilesLoading}
-            profilesError={shippingProfilesError}
-            approved={pricingApproved}
-            onPricing={value=>{setPricing(value);setPricingApproved(false);
-              /* D223 · The card rows that used to persist these are gone, so the
-                 pricing panel establishes them itself. Without this, a profit goal
-                 set here would apply to this batch and be forgotten by the next. */
-              if(activeRecipe&&value.targetProfit!==Number(activeRecipe.defaultProfitTarget))void establish(activeRecipe,{defaultProfitTarget:value.targetProfit})}}
-            onPrices={value=>{setVariantPrices(value);setPricingApproved(false)}}
-            onSelectProfile={value=>{setEtsyShippingProfileId(value);setPricingApproved(false);
-              if(activeRecipe&&value&&value!==Number(activeRecipe.etsyShippingProfileId))void establish(activeRecipe,{etsyShippingProfileId:value})}}
-            onCreateProfile={createCustomShippingProfile}
-            onApprovalChange={setPricingApproved}
-          />}
+          {/* D353 · The standalone pricing card is gone. D334 put pricing and
+              shipping on the product card as panels, and every selection renders a
+              card — a single product is just a bundle of one. D337 narrowed this to
+              single products, which fixed the duplicate under a bundle and left the
+              same duplicate under an individual product. */}
           {/* D334 · The separate bundle pricing cards this replaced lived below
               the product cards, so a product's colours were in one place and its
               prices in another. Pricing and shipping are panels inside the product
