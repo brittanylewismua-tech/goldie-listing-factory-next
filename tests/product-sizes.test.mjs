@@ -160,8 +160,13 @@ test("the size card's promise matches what the gate actually enforces — D164",
      continue"). It says "Next step" on every step now; the gate dialog names
      each unfinished item when you press it. What still has to hold is the
      ENFORCEMENT, which is what these assert. */
-  assert.match(app, /Boolean\(templateDetails\?\.sizeOptions\?\.length\)&&!selectedSizeIds\.length/,
+  /* D462 · The same enforcement, moved into productStepBlocker so the button can
+     also say what it is waiting for - and so a product with no colour axis, like
+     a ceramic mug, is not asked for a colour it does not have. */
+  assert.match(app, /templateDetails\?\.sizeOptions\?\.length&&!selectedSizeIds\.length\)return "Choose at least one size for this product\."/,
     "a product with a size axis still cannot move forward without sizes");
+  assert.match(app, /templateDetails\?\.colorOptions\?\.length&&!selectedColorIds\.length\)return "Choose at least one colour for this product\."/,
+    "and colours are required only when the product offers them");
 });
 
 test("D213: \"Match Printify template\" matches the template, and nothing more", async () => {

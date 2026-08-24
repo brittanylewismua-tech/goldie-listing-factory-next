@@ -2098,7 +2098,7 @@ test("keeps a forward path from setup, designs, and pricing after drafts exist (
    * step selects listing images separately - and requiring one made "No mockups
    * for this batch" unreachable: choosing it disabled the only way forward.
    * See D110. */
-  assert.match(app,/disabled=\{!complete&&\(!selectedColorIds\.length\|\|\(Boolean\(templateDetails\?\.sizeOptions\?\.length\)&&!selectedSizeIds\.length\)\)\}/  /* D164 sizes, D181 per-product keyword banks */);
+  assert.match(app,/disabled=\{!complete&&Boolean\(productStepBlocker\(\)\)\}/  /* D164 sizes, D181 per-product keyword banks */);
   /* D402 · The setup forward no longer branches on `complete`; it always goes to
      Images. The route back to finishing lives in batch-actions. */
   assert.match(app,/className="batch-actions"[\s\S]{0,500}Back to finishing your listings/);
@@ -3274,4 +3274,28 @@ test("a product saves its own defaults, and the shipping notice tells the truth 
   /* D459 · Asked for more than once: approved belongs on the right of the card.
      margin-left:auto moves nothing on an inline-flex box inside a block parent. */
   assert.match(clarity, /\.app-shell \.pricing-approved-state\{[\s\S]{0,200}display:flex!important;\s*width:fit-content!important/);
+});
+
+test("a product with no colour axis can still leave step 1 — D461/D462", async () => {
+  const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+
+  /* Read off her live page rather than guessed at. The mug card showed Ready with
+     Colors, Sizes, Pricing and Shipping all ticked, and Next step was disabled
+     with no reason given. The button required a colour selection - and a ceramic
+     mug has no colours - so it could never enable, whatever she picked. */
+  assert.match(app, /function productStepBlocker\(\)\{/);
+  assert.match(app, /templateDetails\?\.colorOptions\?\.length&&!selectedColorIds\.length/,
+    "colours are required only when the product offers them");
+  assert.doesNotMatch(app, /disabled=\{!complete&&\(!selectedColorIds\.length/,
+    "the unconditional colour requirement is gone");
+
+  // A disabled forward control must always say what it is waiting for.
+  assert.match(app, /disabled=\{!complete&&Boolean\(productStepBlocker\(\)\)\} title=\{productStepBlocker\(\)\|\|undefined\}/);
+
+  /* D461 · Picking a shipping profile un-approved the pricing, and the button to
+     approve it again sits inside the collapsed Shipping section - so choosing a
+     profile disabled Next with no visible reason and no visible way out. */
+  assert.doesNotMatch(app, /setEtsyShippingProfileId\(value\);setPricingApproved\(false\)/);
+  assert.match(app, /const carries=recipeCarriesApprovedPricing\(\{defaultProfitTarget:recipe\.defaultProfitTarget,etsyShippingProfileId:value\}\)/);
+  assert.match(app, /setEtsyShippingProfileId\(value\);setPricingApproved\(carries\)/);
 });

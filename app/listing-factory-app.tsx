@@ -1136,6 +1136,19 @@ export default function ListingFactoryApp() {
       return !chosen;
     }).map(recipe=>recipe.name);
   },[activeBundle,bundleRecipes,bundleIndex,bundleKeywordChoices,autoTitleBankId,activeRecipe]);
+  /* D462 - the wall on the mug. This button required a colour selection, and a
+     ceramic mug has no colours to select - so it could never enable, whatever
+     she picked. It also carried no reason, so a permanently disabled Next
+     step simply sat there while she looked for the thing she had missed.
+
+     Colours are required only when the product offers them, which is the rule
+     readiness and every other gate already use. And a disabled Next step now
+     always says what it is waiting for. */
+  function productStepBlocker(){
+    if(templateDetails?.colorOptions?.length&&!selectedColorIds.length)return "Choose at least one colour for this product.";
+    if(templateDetails?.sizeOptions?.length&&!selectedSizeIds.length)return "Choose at least one size for this product.";
+    return "";
+  }
   function requiredForStep(step:WorkflowStep){if(localPreview)return [];const issues:string[]=[];if(step!=="connect"&&!connected)issues.push("Connect your Printify account.");if(step!=="connect"&&!etsyConnected)issues.push("Connect the Etsy shop that will receive these listings.");if(["designs","review","finish"].includes(step)){if(!productSelected)issues.push("Save or select a product or product bundle.");if(!templateDetails?.shippingTemplateId&&!templateDetails?.shippingProfileNeedsSelection)issues.push("Choose a valid Printify product with an imported shipping profile.");if(!templateDetails?.enabledVariants)issues.push("The product needs at least one enabled size or color.");const missingColors=Boolean(templateDetails?.colorOptions?.length&&!selectedColorIds.length);const missingSizes=Boolean(templateDetails?.sizeOptions?.length&&!selectedSizeIds.length);if(missingColors)issues.push("Choose at least one product color for this batch.");else if(missingSizes)issues.push("Choose at least one product size for this batch.");else if(!pricedVariants.length)issues.push(`No color and size combination you picked is available for ${templateDetails?.blueprintTitle||"this product"}. Open its Colors or Sizes and choose a pairing Printify offers.`);if(!templateDetails?.batchId)issues.push("Reload the Printify product so Goldie can prepare this batch.");}/* D221 · Every bundle member still needs its own keyword bank before titles can
      be generated — the D181 rule is unchanged. It moved off the Product page,
      which was blocking Continue on a choice made two pages later, and onto the
@@ -2199,8 +2212,17 @@ export default function ListingFactoryApp() {
                 setWholeNumberByRecipe(current=>({...current,[recipe.id]:value}));
                 persistProductPricing(recipe,{wholeNumberPricing:value})}}
               onSelectProfile={value=>{
-                if(isActive){setEtsyShippingProfileId(value);setPricingApproved(false)}
-                else{setBundleShipping(current=>({...current,[recipe.id]:value}));setBundleApproved(current=>({...current,[recipe.id]:false}))}
+                /* D461 - picking a shipping profile used to un-approve the pricing,
+                   and the button to approve it again lives inside the collapsed
+                   Shipping section. So choosing a profile disabled Next step with
+                   no visible reason and no visible way out - the wall she hit on
+                   the mug. A product that already carries a profit target and a
+                   profile is approved; prices recalculate on their own, and she is
+                   told what they are. Only a product with nothing saved still has
+                   to approve once. */
+                const carries=recipeCarriesApprovedPricing({defaultProfitTarget:recipe.defaultProfitTarget,etsyShippingProfileId:value});
+                if(isActive){setEtsyShippingProfileId(value);setPricingApproved(carries)}
+                else{setBundleShipping(current=>({...current,[recipe.id]:value}));setBundleApproved(current=>({...current,[recipe.id]:carries}))}
                 if(value&&value!==Number(recipe.etsyShippingProfileId))void establish(recipe,{etsyShippingProfileId:value})}}
               onCreateProfile={createCustomShippingProfile}
               onApprovalChange={value=>{if(isActive)setPricingApproved(value);else setBundleApproved(current=>({...current,[recipe.id]:value}))}}
@@ -2242,7 +2264,7 @@ export default function ListingFactoryApp() {
               the product cards, so a product's colours were in one place and its
               prices in another. Pricing and shipping are panels inside the product
               card now, beside the colours and sizes they belong to. */}
-          {templateDetails&&productSelected&&<button type="button" className="workflow-next setup-forward" disabled={!complete&&(!selectedColorIds.length||(Boolean(templateDetails?.sizeOptions?.length)&&!selectedSizeIds.length))} /* D402 - This used to carry a different label when drafts already existed, and
+          {templateDetails&&productSelected&&<button type="button" className="workflow-next setup-forward" disabled={!complete&&Boolean(productStepBlocker())} title={productStepBlocker()||undefined} /* D402 - This used to carry a different label when drafts already existed, and
                  in that case it jumped straight to step 3. D383 renamed it to "Next step"
                  without changing where it went, so pressing Next on step 1 skipped Images
                  entirely. Next step means the next step; the rail is how you jump. */
