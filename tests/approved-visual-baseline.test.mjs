@@ -189,14 +189,17 @@ test("places item pricing before shipping in the pricing review", async () => {
     readFile(listingFactoryPage, "utf8"),
     readFile(new URL("app/approved-functional.css", root), "utf8"),
   ]);
-  const itemPrices = page.indexOf('<h4>1. Item prices <span>');
+  /* D374 · The "1." and "2." prefixes only render when both sections are shown
+     together; as card panels each is opened on its own, so they are gone from
+     that path. Anchor on the section headings, which are stable. */
+  const itemPrices = page.indexOf('item-pricing-heading');
   /* D303 · The "See how Goldie calculated these prices" expander is gone. The ✓
      line at the top of the card already states the calculation, and saying it
      twice on one card is what this was. The FEE FIGURES it contained are a
      control, not an explanation, so they stayed — and they still have to sit
      with item prices, before shipping. */
   const feeSummary = page.indexOf('className="fee-profile-summary"');
-  const shipping = page.indexOf('<h4>2. Etsy shipping profile');
+  const shipping = page.indexOf('shipping-section-heading');
   assert.ok(itemPrices >= 0 && shipping > itemPrices, "item prices appear before shipping");
   assert.ok(feeSummary > itemPrices && feeSummary < shipping, "the fee figures stay with item prices, before shipping");
   assert.doesNotMatch(page, /See how Goldie calculated these prices/,
@@ -205,7 +208,7 @@ test("places item pricing before shipping in the pricing review", async () => {
   assert.doesNotMatch(page, /<h4>2\. Item prices<\/h4>/);
   assert.match(page, /<small className="profit-fee-note">Shipping not included<\/small>/);
   assert.match(page, /className="pricing-section-heading shipping-section-heading"/);
-  assert.match(page, /<h4>2\. Etsy shipping profile <span>/);
+  assert.match(page, /\{section==="all"\?"2\. ":""\}Etsy shipping profile/);
   assert.match(css, /\.app-shell \.pricing-section-heading h4\{[\s\S]*font-size:26px!important/);
   assert.match(css, /\.app-shell \.item-pricing-section\{[\s\S]*border-radius:18px/);
   assert.match(css, /\.app-shell \.shipping-pricing-section\{[\s\S]*border-radius:18px/);

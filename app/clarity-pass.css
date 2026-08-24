@@ -2426,3 +2426,9 @@ body{min-width:1180px!important}
 @media (prefers-reduced-motion:reduce){
   .app-shell .goldie-spinner{animation-duration:2.4s}
 }
+
+/* D372 · Step 1 listed one line of prose per product while a bundle loaded
+   ("Loading Gildan Tee...", "Loading gildan crewneck..."), stacked and shifting
+   as each arrived. D366 gave the bundle tile a spinner but never reached this
+   path. One spinner for the whole set, as asked. */
+.app-shell .bundle-product-loading{display:flex;align-items:center;gap:10px;margin:0;padding:14px 22px;color:rgba(74,42,62,.72);font-size:13px}

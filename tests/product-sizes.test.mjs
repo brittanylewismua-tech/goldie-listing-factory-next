@@ -84,7 +84,9 @@ test("D213: seeding stops at the recipe — the template is never a choice", asy
   assert.match(app, /const defaults=remembered\.length\?remembered:session;setSelectedColorIds\(defaults\);/);
 
   // A bundle member with no saved colours is left empty so its card asks.
-  assert.match(app, /const ids=\(recipe\.defaultColorIds\|\|\[\]\)\.filter\(id=>available\.has\(id\)\);choices\[recipe\.id\]=ids/);
+  /* Whitespace-tolerant: D373 moved this into a helper, and the rule is what
+     matters, not the line it sits on. */
+  assert.match(app, /const ids=\(recipe\.defaultColorIds\|\|\[\]\)\.filter\(id=>available\.has\(id\)\);\s*choices\[recipe\.id\]=ids/);
 });
 
 test("sizes survive a reload, a batch restore and a bundle hop", async () => {
@@ -1246,13 +1248,28 @@ test("a selected bundle can be swapped for another — D365", async () => {
   assert.ok(block > 0 && link > block, "the link belongs to the card it changes");
 });
 
-/* D366 · A bundle's cards already appear together — setBundleColorProducts is
-   called once, after every template resolves. Only the TEXT was staggered. */
+/* D366/D373 · D366 assumed a bundle's cards appear together and that only the
+   TEXT was staggered. Watching a real three-product bundle resume proved that
+   wrong: the members were fetched one after another with a 90s deadline each
+   and nothing was written to state until the last one landed, so two cards sat
+   on "Loading ..." for minutes. Fetch them together, reveal each as it arrives,
+   and show a single spinner for whatever is still outstanding. */
 test("a loading bundle shows one spinner, not a line per product — D366", async () => {
   const tools = await read("app/factory-tools.tsx");
   const app = await read("app/listing-factory-app.tsx");
   assert.match(tools, /className="goldie-spinner"/);
   assert.doesNotMatch(tools, /Loading every product in this bundle/);
-  assert.match(app, /setBundleColorProducts\(loaded\);/,
-    "the cards must still be revealed in one go");
+
+  /* One spinner on the batch screen, counting what is left rather than naming it. */
+  assert.match(app, /className="bundle-product-loading"><span className="goldie-spinner"/);
+  assert.doesNotMatch(app, /Loading \{recipe\.name\}/,
+    "a line of prose per product is what this replaced");
+});
+
+test("D373: bundle members are fetched together and revealed as they land", async () => {
+  const app = await read("app/listing-factory-app.tsx");
+  assert.match(app, /await Promise\.all\(recipes\.filter\(recipe=>recipe\.id!==recipes\[0\]\.id\)/,
+    "one slow product must not hold up every product behind it");
+  assert.match(app, /setBundleColorProducts\(current=>\(\{\.\.\.current,\[recipe\.id\]:details\}\)\)/,
+    "each card appears the moment its template resolves");
 });

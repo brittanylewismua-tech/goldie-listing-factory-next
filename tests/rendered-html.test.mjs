@@ -1078,12 +1078,12 @@ test("keeps pricing simple while using a real Etsy shipping profile and exact te
   assert.doesNotMatch(page,/className="shipping-quick-summary"/);
   assert.match(page,/is \$\{shippingShortfall\.toFixed\(2\)\} below Printify/);
   assert.match(page,/Save new shipping profile/);
-  assert.match(page,/1\. Item prices/);
+  assert.match(page,/\{section==="all"\?"1\. ":""\}Item prices/);
   assert.match(page,/Printify product cost/);
   assert.match(page,/price-group-list/);
   assert.match(page,/Printify cost/);
   /* D232 · "— what buyers pay" stated the obvious; buyers always pay shipping. */
-  assert.match(page,/2\. Etsy shipping profile /);
+  assert.match(page,/\{section==="all"\?"2\. ":""\}Etsy shipping profile/);
   assert.doesNotMatch(page,/Update prices/);
   assert.match(page,/Prices update automatically/);
   assert.match(page,/changeProfit\(value:number\)[\s\S]*recalculate\(nextPricing\)/);
@@ -1508,8 +1508,8 @@ test("supports simple saved product bundles without complicating the single-prod
     "no stepper, so no you-are-here");
   assert.doesNotMatch(page, /bundle-progress"[^>]*>[\s\S]{0,400}<ol>/,
     "and no ordered list of products beside the line that already lists them");
-  assert.match(page, /1\. Item prices <span>· \{productName\}<\/span>/);
-  assert.match(page, /2\. Etsy shipping profile <span>· \{productName\}<\/span>/);
+  assert.match(page, /\{section==="all"\?"1\. ":""\}Item prices\{section==="all"&&<span> · \{productName\}<\/span>\}/);
+  assert.match(page, /\{section==="all"\?"2\. ":""\}Etsy shipping profile\{section==="all"&&<span> · \{productName\}<\/span>\}/);
   assert.match(page, /data-product-selected=\{templateDetails\?"true":"false"\}/);
   assert.match(page, /--active-product/);
   assert.match(page, /function continueBundle/);
@@ -2125,7 +2125,7 @@ test("counts and caps every listing at Etsy's 20-photo limit (fixes D67)",async(
   assert.match(app,/slotsLeft=Math\.max\(0,20-reservedPhotos-selected\.size\)/);
   assert.match(app,/Etsy allows 20 listing photos/);
   assert.match(app,/disabled=\{!selected\.has\(index\)&&atLimit\}/);
-  assert.match(app,/reservedPhotos=\{\(preparedMockupCounts\[draft\.id\]\|\|0\)\+\(design\?\.sizeGuideName\|\|sizeGuideName\?1:0\)\}/);
+  assert.match(app,/reservedPhotos=\{\(preparedMockupCounts\[draft\.id\|\|""\]\|\|0\)\+\(design\?\.sizeGuideName\|\|sizeGuideName\?1:0\)\}/);
   assert.match(app,/values\.slice\(0,Math\.max\(0,20-reserved\)\)/);
 });
 
