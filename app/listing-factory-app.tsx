@@ -1565,11 +1565,16 @@ export default function ListingFactoryApp() {
           total={RAIL_STAGES.length}
           label={progressIndex===PROGRESS_STEPS.length-1?"Final review":`Next: ${PROGRESS_STEPS[Math.min(progressIndex+1,PROGRESS_STEPS.length-1)]}`}
         />}
-        {activeBundle&&bundleRecipes.length>1&&<section className="bundle-progress" aria-label={`Product bundle ${activeBundle.name}`}>{/* D336 · The big title was the FIRST PRODUCT and the bundle name was the
-              small line underneath, so selecting a bundle appeared to select a
-              hoodie. The header names what you chose — the bundle — and the list
-              beside it says which product you are on. */}
-              <div><span>PRODUCT BUNDLE · PRODUCT {bundleIndex+1} OF {bundleRecipes.length}</span><b>{activeBundle.name}</b><small>{bundleRecipes.map(recipe=>recipe.name).join(" · ")}</small></div><ol>{bundleRecipes.map((recipe,index)=><li className={index<bundleIndex?"complete":index===bundleIndex?"current":""} key={recipe.id}><span>{index<bundleIndex?"✓":index+1}</span><b>{recipe.name}</b><small>{index<bundleIndex?"Complete":index===bundleIndex?"You are here":"Up next"}</small></li>)}</ol></section>}
+        {activeBundle&&bundleRecipes.length>1&&<section className="bundle-progress" aria-label={`Product bundle ${activeBundle.name}`}>
+          {/* D340 · This was a numbered stepper reading "You are here" and "Up
+              next". That was true when a bundle walked you through one product at
+              a time, but since D334 every product is a card on this page at once —
+              there is no "next", you work them in any order. It also listed the
+              products a second time, right under the line that already lists them.
+              The header names the bundle and says how many products are in it; the
+              cards below ARE the products, each with its own name on it. */}
+          <div><span>PRODUCT BUNDLE</span><b>{activeBundle.name}</b><small>{bundleRecipes.length} products · {bundleRecipes.map(recipe=>recipe.name).join(" · ")}</small></div>
+        </section>}
         {progressIndex>0&&<GoldieInsight>{currentInsight()}</GoldieInsight>}
         {progressIndex===3&&files.length>0&&<ActionReceipt items={[{value:`${files.length} designs checked`,label:"Original artwork resolution preserved"},{value:`${pricedVariants.length} variants`,label:pricingApproved?"Pricing approved":"Ready for pricing review"}]}/>}
         {progressIndex===5&&titleCount>0&&<ActionReceipt items={[{value:`${titleCount} titles ready`,label:"Validated keyword phrases only"},{value:`${files.reduce((sum,file)=>sum+file.tags.length,0)} matching tags`,label:"Zero invented keywords"}]}/>}

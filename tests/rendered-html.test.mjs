@@ -1500,7 +1500,15 @@ test("supports simple saved product bundles without complicating the single-prod
      bundle name underneath, so choosing a bundle looked like choosing a hoodie.
      It names the bundle now; the stepper says which product you are on. */
   assert.match(page, /<b>\{activeBundle\.name\}<\/b>/);
-  assert.match(page, /<small>\{bundleRecipes\.map\(recipe=>recipe\.name\)\.join\(" · "\)\}<\/small>/);
+/* D340 · The numbered stepper is gone. It said "You are here" and "Up next",
+     which stopped being true when D334 put every product on the page as its own
+     card — there is no next, you work them in any order — and it listed the
+     products a second time directly under the line that already lists them. */
+  assert.match(page, /<small>\{bundleRecipes\.length\} products · \{bundleRecipes\.map\(recipe=>recipe\.name\)\.join\(" · "\)\}<\/small>/);
+  assert.doesNotMatch(page, /index===bundleIndex\?"You are here"/,
+    "no stepper, so no you-are-here");
+  assert.doesNotMatch(page, /bundle-progress"[^>]*>[\s\S]{0,400}<ol>/,
+    "and no ordered list of products beside the line that already lists them");
   assert.match(page, /1\. Item prices <span>· \{productName\}<\/span>/);
   assert.match(page, /2\. Etsy shipping profile <span>· \{productName\}<\/span>/);
   assert.match(page, /data-product-selected=\{templateDetails\?"true":"false"\}/);
