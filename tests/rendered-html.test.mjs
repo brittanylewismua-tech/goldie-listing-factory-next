@@ -1014,7 +1014,13 @@ test("routes each product surface deliberately and never releases a partial batc
   assert.match(page,/setResults\(\[\]\);setGenerationError/);
   assert.match(page,/isCalibratedSurface\(kind\)\?await makeMockup/);
   assert.match(page,/if\(isCalibratedSurface\(template\.surfaceKind\|\|"rigid-flat"\)\)return makeMockup/);
-  assert.match(integrated,/if\(isCalibratedSurface\(t\.surfaceKind\|\|"rigid-flat"\)\)return/);
+  // The calibrated branch now lives in generate(), because the padded design and
+  // the trimmed design must not be able to reach the wrong renderer.
+  assert.match(integrated,/isCalibratedSurface\(template\.surfaceKind\|\|"rigid-flat"\)\?rigid\(design,template,placementAdjustment\(placement,template\.surfaceKind\|\|"rigid-flat"\)\)/);
+  // The old constants may survive only as the pre-mirroring fallback for drafts
+  // that predate placement being recorded - never as a live placement decision.
+  assert.equal((integrated.match(/\.42/g)||[]).length,1,"the 42% apparel guess is a fallback now, not a rule");
+  assert.match(integrated,/PLACEMENT_BEFORE_MIRRORING/);
   assert.match(integrated,/needsReference=chosen\.some\(t=>!isCalibratedSurface/);
   assert.doesNotMatch(page,/cleanArtworkBackground/);
   assert.doesNotMatch(integrated,/cleanArtworkBackground/);
@@ -2551,4 +2557,51 @@ test("D423: mockup placement mirrors the Printify template, whatever the product
   const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
   assert.match(app, /referenceUrl=\{draft\.previewUrl\}/,
     "the Printify preview is what defines the placement");
+});
+
+test("the lifestyle mockup mirrors the Printify template placement, whatever the product", async () => {
+  const { artworkPlacement } = await import("../app/placement-math.ts");
+  const [integrated, payload, drafts, app] = await Promise.all([
+    readFile(new URL("../app/integrated-mockups.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/printify/product-payload.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/printify/drafts/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
+  ]);
+
+  // One definition of where the artwork goes. Two would drift, and the drift
+  // would be mockups that disagree with the customer's own listing.
+  assert.match(payload, /import \{ artworkPlacement \} from/);
+  assert.match(drafts, /import \{ artworkPlacement \} from/);
+  assert.doesNotMatch(payload, /requestedScale=/, "the math moved to placement-math");
+
+  // A full-bleed design is placed exactly as the template asks.
+  const full = artworkPlacement({ x: .5, y: .42, scale: .8, angle: 0 });
+  assert.equal(full.scale, .8);
+  assert.equal(full.x, .5);
+  assert.equal(full.y, .42);
+
+  // Padding is cancelled out: art covering half the canvas width is scaled up
+  // to cover the same share of the print area a full-bleed design would.
+  const padded = artworkPlacement({ x: .5, y: .5, scale: .4 }, { left: .25, top: .25, right: .75, bottom: .75 });
+  assert.equal(padded.scale, .8);
+  assert.equal(padded.x, .5, "centred art stays centred");
+
+  // Off-centre art is shifted back to where the template centred it.
+  const offset = artworkPlacement({ x: .5, y: .5, scale: .5 }, { left: 0, top: 0, right: .5, bottom: 1 });
+  assert.equal(offset.scale, 1);
+  assert.equal(Number(offset.x.toFixed(4)), .75);
+
+  // maxPlacementScale still caps it, for products that must not be enlarged.
+  assert.equal(artworkPlacement({ scale: .9 }, { left: .1, top: .1, right: .4, bottom: .4 }, 1).scale, 1);
+
+  // The draft records the placement it used, and the mockup consumes it.
+  assert.match(drafts, /const draft = \{ id: created\.id, placement,/);
+  assert.match(app, /placement=\{draft\.placement\}/);
+  assert.match(integrated, /placement\?:ResolvedPlacement/);
+
+  // rigid() gets the padded design on purpose: Printify's scale is measured
+  // against the padded canvas, so trimming there too would enlarge art twice.
+  assert.match(integrated, /rigid\(design,template,placementAdjustment/);
+  assert.match(integrated, /product\(art,template,reference!\)/);
+  assert.match(integrated, /const art=needsReference\?await trimToArtwork\(design\):design/);
 });

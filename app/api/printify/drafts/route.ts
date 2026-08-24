@@ -4,6 +4,7 @@ import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { customerLaunchBlock } from "@/app/customer-launch-gate";
 import { publicSupportReference, recordDiagnostic } from "../diagnostics";
 import { createProductWithImageRetries } from "../product-creation";
+import { artworkPlacement } from "../../../placement-math.ts";
 import { printAreasWithOnlyCurrentArtwork } from "../product-payload";
 import { planFor } from "@/app/plan-limits";
 import { decryptPrintifyToken } from "../token-crypto";
@@ -216,7 +217,14 @@ export async function POST(request: Request) {
     if (!previewUrl) {
       try { const loaded = await api<CreatedProduct>(`/shops/${shop.id}/products/${created.id}.json`, token); productImages = loaded.images ?? []; previewUrl = productImages.find((image) => image.is_default)?.src || productImages[0]?.src; } catch { /* Preview can appear moments later. */ }
     }
-    const draft = { id: created.id, batchId:body.batchId, clientId: body.clientId ?? body.fileName, name: body.fileName, title, tags: body.tags ?? [], description:body.description??template.description??"", previewUrl, printifyImages: productImages.map((image) => image.src).filter(Boolean), shopId: shop.id, editorUrl: `https://printify.com/app/editor/${created.id}`, status: "Created" };
+    // The exact placement this draft used, so the lifestyle mockup can mirror it
+    // rather than guessing at a scale of its own.
+    const dominantTemplatePlacement = (template.print_areas ?? [])
+      .flatMap((area) => area.placeholders ?? [])
+      .map((placeholder) => placeholder.images?.[0])
+      .reduce<{x?:number;y?:number;scale?:number;angle?:number}|undefined>((best, image) => (Number(image?.scale ?? 0) > Number(best?.scale ?? 0) ? image : best), undefined);
+    const placement = artworkPlacement(dominantTemplatePlacement, body.visibleBounds, body.maxPlacementScale);
+    const draft = { id: created.id, placement, batchId:body.batchId, clientId: body.clientId ?? body.fileName, name: body.fileName, title, tags: body.tags ?? [], description:body.description??template.description??"", previewUrl, printifyImages: productImages.map((image) => image.src).filter(Boolean), shopId: shop.id, editorUrl: `https://printify.com/app/editor/${created.id}`, status: "Created" };
     await db.prepare("UPDATE printify_draft_results SET status = 'succeeded', response_json = ?, updated_at = CURRENT_TIMESTAMP WHERE request_key = ?").bind(JSON.stringify(draft), idempotencyKey).run();
     return NextResponse.json({ draft });
   } catch (error) {

@@ -1,3 +1,4 @@
+import { artworkPlacement } from "../../placement-math.ts";
 type TemplateImage = { id?: string; x?: number; y?: number; scale?: number; angle?: number };
 type TemplateArea = {
   variant_ids: number[];
@@ -12,15 +13,15 @@ export function printAreasWithOnlyCurrentArtwork(areas: TemplateArea[], currentI
     placeholders: area.placeholders.flatMap((placeholder) => {
       const placement = placeholder.images?.[0];
       if (!placement) return [];
-      const width=Math.max(.05,(bounds?.right??1)-(bounds?.left??0)),centerX=((bounds?.left??0)+(bounds?.right??1))/2,centerY=((bounds?.top??0)+(bounds?.bottom??1))/2,requestedScale=(placement.scale??1)/width,scale=Math.min(requestedScale,Number.isFinite(maxPlacementScale)&&Number(maxPlacementScale)>0?Number(maxPlacementScale):requestedScale);
+      const resolved = artworkPlacement(placement, bounds, maxPlacementScale);
       return [{
         position: placeholder.position,
         images: [{
           id: currentImageId,
-          x: (placement.x ?? 0.5)-(centerX-.5)*scale,
-          y: (placement.y ?? 0.5)-(centerY-.5)*scale,
-          scale,
-          angle: placement.angle ?? 0,
+          x: resolved.x,
+          y: resolved.y,
+          scale: resolved.scale,
+          angle: resolved.angle,
         }],
       }];
     }),
