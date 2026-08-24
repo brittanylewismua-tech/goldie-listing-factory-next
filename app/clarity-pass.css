@@ -2146,23 +2146,39 @@ body{min-width:1180px!important}
 
 /* D342 · The sidebar goal sits under the usage meter — quiet, glanceable, and
    never in the working view. Progress only: no deficit, no red, and the bar is
-   allowed past 100% because capping it removes the reason to keep going. */
+   allowed past 100% because capping it removes the reason to keep going.
+
+   D351 · Given a light so it reads as its own thing rather than a second usage
+   meter. A thin off-white edge with a soft bloom behind it, over a slightly
+   deeper surface so the edge has something to sit against. No animation and no
+   saturated colour — it should look lit, not gamified. */
 .app-shell .listing-goal-side{
-  display:grid!important;gap:6px!important;
-  margin-top:10px!important;padding:10px 12px!important;
-  border-radius:12px!important;background:rgba(255,255,255,.42)!important;
+  display:grid!important;gap:7px!important;
+  margin-top:12px!important;padding:12px 14px!important;
+  border-radius:14px!important;
+  border:1px solid rgba(255,251,247,.62)!important;
+  background:linear-gradient(150deg,rgba(92,48,79,.10),rgba(255,255,255,.30))!important;
+  box-shadow:0 0 0 1px rgba(255,255,255,.16),0 0 22px -8px rgba(255,238,248,.9),inset 0 1px 0 rgba(255,255,255,.55)!important;
   text-decoration:none!important;
 }
+.app-shell .listing-goal-caption{
+  color:#7d5f74!important;
+  font:800 9px/1.2 "Manrope",system-ui,sans-serif!important;
+  letter-spacing:.14em!important;text-transform:uppercase!important;
+}
 .app-shell .listing-goal-side>b{
-  color:#5b304f!important;font:800 11px/1.3 "Manrope",system-ui,sans-serif!important;
+  color:#4c293f!important;font:800 15px/1.15 "Manrope",system-ui,sans-serif!important;
+  font-variant-numeric:tabular-nums!important;
 }
 .app-shell .listing-goal-track{
-  display:block!important;height:5px!important;border-radius:999px!important;
-  background:rgba(91,48,79,.14)!important;overflow:hidden!important;
+  display:block!important;height:6px!important;border-radius:999px!important;
+  background:rgba(91,48,79,.13)!important;overflow:hidden!important;
+  box-shadow:inset 0 1px 2px rgba(74,42,62,.16)!important;
 }
 .app-shell .listing-goal-track>i{
   display:block!important;height:100%!important;border-radius:999px!important;
-  background:linear-gradient(90deg,#c58fbe,#8e4c78)!important;
+  background:linear-gradient(90deg,#d7a6cf,#8e4c78)!important;
+  box-shadow:0 0 10px -2px rgba(214,150,200,.95)!important;
 }
 .app-shell .receipt-goal{
   margin:6px 0 0!important;color:#4c293f!important;
@@ -2232,4 +2248,34 @@ body{min-width:1180px!important}
   max-height:min(320px,42vh)!important;
   overflow-y:auto!important;
   overscroll-behavior:contain!important;
+}
+
+/* ============================================================================
+ * D352 · THE RAIL NUMBERS
+ *
+ * Measured on the deployed rail: the digits render in HELVETICA NEUE at weight
+ * 400 — no rule ever sets a family on them, so they fall back to the system
+ * font while everything around them is Manrope and DM Serif. A default
+ * Helvetica numeral at regular weight inside a decorative circle is the whole
+ * of why these read as stock.
+ *
+ * Three smaller faults on top: proportional figures, so 1 and 4 occupy
+ * different widths and sit off-centre by different amounts in each circle; the
+ * digit centred on the em box rather than its cap height, which puts it half a
+ * pixel low because numerals have no descenders; and the zero-padding, removed
+ * in the markup above.
+ * ========================================================================== */
+.app-shell .workflow-progress button>span:first-child{
+  font-family:"Manrope",system-ui,sans-serif!important;
+  font-weight:800!important;
+  font-size:13px!important;
+  line-height:1!important;
+  font-variant-numeric:tabular-nums lining-nums!important;
+  font-feature-settings:"tnum" 1,"lnum" 1!important;
+  letter-spacing:.01em!important;
+  display:grid!important;
+  place-items:center!important;
+  /* Optical, not mathematical: a lining figure has no descender, so its visual
+     centre sits above the box centre. */
+  padding-bottom:1px!important;
 }

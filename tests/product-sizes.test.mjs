@@ -1148,3 +1148,29 @@ test("the shipping dropdown escapes its card and ranks matches — D348", async 
     "an exact name match comes first");
   assert.match(app, /if\(title\.startsWith\(normalizedProfileSearch\)\)return 1;/);
 });
+
+/* D352 · The rail digits rendered in Helvetica Neue at weight 400 — nothing set
+   a family on them, so they fell back to the system font while the rest of the
+   app is Manrope and DM Serif. That, plus proportional figures and a digit
+   centred on the em box rather than its cap height, is why they read as stock. */
+test("the rail digits use the app's own type — D352", async () => {
+  const css = await read("app/clarity-pass.css");
+  const app = await read("app/listing-factory-app.tsx");
+  const block = css.slice(css.indexOf("D352 · THE RAIL NUMBERS"));
+
+  assert.match(block, /font-family:"Manrope"/, "not a system fallback");
+  assert.match(block, /font-variant-numeric:tabular-nums lining-nums!important/,
+    "so 1 and 4 occupy the same width and sit identically in their circles");
+
+  assert.doesNotMatch(app, /String\(position\+1\)\.padStart\(2,"0"\)/,
+    "four steps do not need to be written 01 to 04");
+});
+
+/* D351 · The sidebar goal reads as its own thing rather than a second usage
+   meter, and says what the number means before saying the number. */
+test("the sidebar goal names the period — D351", async () => {
+  const app = await read("app/listing-factory-app.tsx");
+  assert.match(app, /className="listing-goal-caption">This \{listingGoal\.period\}&rsquo;s goal<\/span>/);
+  assert.match(app, /<b>\{goalDone\} of \{listingGoal\.target\}<\/b>/,
+    "progress only — still no deficit, and the count is not capped");
+});
