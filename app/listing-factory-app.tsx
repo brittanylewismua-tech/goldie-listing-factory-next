@@ -1695,7 +1695,12 @@ export default function ListingFactoryApp() {
               PricingReview component moved intact: grouped per-size prices, the
               matching-cost grouping, whole-number pricing and the shipping profile all
               come with it. Nothing here is rebuilt. */}
-          {pricedVariants.length>0&&<PricingReview
+          {/* D337 · In a bundle every product now carries its own pricing and
+              shipping panels on its own card, so this standalone block was a
+              second, hoodie-only pricing card sitting below all of them — the
+              exact split D334 set out to remove. It renders for a single
+              product only. */}
+          {!bundleSelected&&pricedVariants.length>0&&<PricingReview
             variants={pricedVariants}
             pricing={pricing}
             prices={variantPrices}

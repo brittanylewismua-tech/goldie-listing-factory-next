@@ -1050,3 +1050,25 @@ test("the Printify link comes before the product name — D335", async () => {
   assert.match(tools, /if\(nameTouched\.current\|\|editingId\|\|!props\.suggestedProductName\)return;/);
   assert.match(tools, /setName\(props\.suggestedProductName\);/);
 });
+
+/* D337 · D334 moved pricing and shipping onto the product card, but the card
+   renders ONE ROW PER FACET and productReadiness had been cut back to colours
+   and sizes only. So the panels had no rows to attach to and never appeared,
+   while the old standalone pricing block kept rendering below every product —
+   which is exactly the split D334 existed to remove. */
+test("the card has a row for every panel it can open — D337", async () => {
+  const readiness = await read("app/product-readiness.ts");
+  const app = await read("app/listing-factory-app.tsx");
+
+  assert.match(readiness, /const facets = \[colorFacet\(input\), sizeFacet\(input\), profitFacet\(input\), shippingFacet\(input\)\];/,
+    "every in-card panel needs a facet, or its row does not exist");
+
+  const inCard = app.match(/const inCard=\[([^\]]*)\]/);
+  assert.ok(inCard, "the in-card list must exist");
+  for (const facet of ["profit", "shipping"])
+    assert.ok(inCard[1].includes(`"${facet}"`), `${facet} opens in the card`);
+
+  /* And the standalone block must not double up underneath a bundle. */
+  assert.match(app, /\{!bundleSelected&&pricedVariants\.length>0&&<PricingReview/,
+    "one pricing card per product, not a second one below them all");
+});

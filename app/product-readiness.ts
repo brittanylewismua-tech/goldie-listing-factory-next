@@ -219,7 +219,13 @@ export function productReadiness(input: ReadinessInput): Readiness {
    * per-variant prices are computed from them — so carrying them on the card too
    * put two controls for one value on the same screen. That is the split
    * Brittany described: pick the colours and sizes, then price them underneath. */
-  const facets = [colorFacet(input), sizeFacet(input)];
+  /* D337 · This was cut back to colours and sizes when pricing lived on its own
+     card below the products. D334 moved pricing and shipping INTO the product
+     card, and the card renders one row per facet — so with these missing there
+     were no rows to open, and the in-card pricing panels could never appear.
+     The facets themselves were never deleted; they were just not being asked
+     for. */
+  const facets = [colorFacet(input), sizeFacet(input), profitFacet(input), shippingFacet(input)];
   const autoResolved: NonNullable<Facet["resolved"]> = {};
   for (const facet of facets) if (facet.state === "auto" && facet.resolved) Object.assign(autoResolved, facet.resolved);
   const questions = facets.filter((facet) => facet.state === "ask").map((facet) => facet.name);

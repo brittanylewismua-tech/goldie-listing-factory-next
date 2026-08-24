@@ -38,7 +38,12 @@ test("colors and sizes are always asked once, never taken from the template", ()
      profit goal and the shipping profile — the per-variant prices are computed
      from them — so keeping them on the card put two controls for one value on
      one screen. */
-  assert.deepEqual(result.facets.map((f) => f.name), ["colors", "sizes"]);
+/* D337 · Pricing and shipping are facets again — the product card renders one
+     row per facet, and D334 moved those panels onto the card, so without them
+     there were no rows to open and the panels could never appear. Colours and
+     sizes are still the only two that ASK; profit and shipping resolve
+     themselves, which is what the questions assertion above checks. */
+  assert.deepEqual(result.facets.map((f) => f.name), ["colors", "sizes", "profit", "shipping"]);
   assert.equal(result.established, false);
   assert.equal(result.autoResolved.colorIds, undefined);
   assert.equal(result.autoResolved.sizeIds, undefined);
@@ -83,7 +88,11 @@ test("an established product asks nothing at all", () => {
   /* colours and sizes are the seller's, saved on the recipe; shipping copies the
      profile Printify attached and profit falls back to $10 — both editable, both
      "auto" rather than a question. */
-  assert.deepEqual(result.facets.map((f) => f.state), ["ready", "ready"]);
+  /* D337 · The facet list carries pricing and shipping again, because the
+     product card renders one row per facet and D334 put those panels on the
+     card. This assertion is about COLOURS AND SIZES, so it names them
+     instead of pinning the length of the whole list. */
+  assert.deepEqual(result.facets.filter((f) => f.name === "colors" || f.name === "sizes").map((f) => f.state), ["ready", "ready"]);
   /* The choices that moved are still settled on their own pages. */
   assert.equal(mockupFacet(established).state, "ready");
   assert.equal(keywordFacet(established).state, "ready");
@@ -96,7 +105,11 @@ test("saved choices win over template defaults", () => {
   /* colours and sizes are the seller's, saved on the recipe; shipping copies the
      profile Printify attached and profit falls back to $10 — both editable, both
      "auto" rather than a question. */
-  assert.deepEqual(result.facets.map((f) => f.state), ["ready", "ready"]);
+  /* D337 · The facet list carries pricing and shipping again, because the
+     product card renders one row per facet and D334 put those panels on the
+     card. This assertion is about COLOURS AND SIZES, so it names them
+     instead of pinning the length of the whole list. */
+  assert.deepEqual(result.facets.filter((f) => f.name === "colors" || f.name === "sizes").map((f) => f.state), ["ready", "ready"]);
   assert.equal(mockupFacet(configured).state, "ready");
   assert.equal(keywordFacet(configured).state, "ready");
   assert.equal(result.facets.find((f) => f.name === "colors").label, "1 color");
