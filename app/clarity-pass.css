@@ -2670,3 +2670,31 @@ body{min-width:1180px!important}
   background:rgba(163,44,76,.06);color:#7c3350;
   font-size:12px;line-height:1.5;
 }
+
+/* D434 · The final check before publishing. Anything needing review was mixed in
+   among the ready items in source order, and told apart only by a slightly
+   different pale colour — so on the last screen before money is spent, the two
+   things that needed her were buried between five that did not.
+ *
+ * Two changes, both restrained. The items needing review come first, and they
+ * carry a muted rose accent bar rather than a louder fill. Same family as the
+ * rest of the interface, just no longer a shade of the same lilac. `order` on
+ * direct children only — .final-checklist is the grid that lays these out, so a
+ * descendant selector here would silently do nothing. */
+.app-shell .final-checklist>span.content-review{
+  order:-1;
+  border-color:rgba(163,44,76,.30)!important;
+  background:#fdeef3!important;
+  color:#7c3350!important;
+  font-weight:700!important;
+  box-shadow:inset 3px 0 0 #a32c4c!important;
+  padding-left:15px!important;
+}
+/* The ready items stay quiet and keep their place below. */
+.app-shell .final-checklist>span:not(.content-review){order:0}
+
+/* The same rule for the listings themselves: a design group still needing a look
+   sorts above the finished ones. The badge that marks it sits inside the group's
+   summary, so the group is selected through it. */
+.app-shell .final-design-groups{display:flex;flex-direction:column}
+.app-shell .final-design-groups>details:has(em.needs-attention){order:-1}

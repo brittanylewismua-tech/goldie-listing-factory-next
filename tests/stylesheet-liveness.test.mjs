@@ -415,3 +415,30 @@ test("D417/D431: a row of bank cards ends on one line", async () => {
   assert.match(nav, /\.bank-grid>article>button:last-child\{margin-top:auto\}/,
     "and each card's action sits on its own bottom edge");
 });
+
+/* D434 · The last screen before publishing. Items needing review sat in source
+   order among the ready ones, told apart only by a slightly different pale
+   colour, so the two things that needed her were buried between five that did
+   not — on the screen where money gets spent. */
+test("D434: what needs review sorts to the top of the final check", async () => {
+  const clarity = await readFile(new URL("app/clarity-pass.css", root), "utf8");
+
+  assert.match(clarity, /\.app-shell \.final-checklist>span\.content-review\{[\s\S]{0,240}order:-1/,
+    "review items come first");
+  /* order applies to a flex or grid container's OWN children. .final-checklist is
+     that container, so this must stay a child selector - a descendant one would
+     silently do nothing, which is how this class of bug has bitten before. */
+  assert.match(clarity, /\.final-checklist>span\.content-review/);
+  assert.doesNotMatch(clarity, /\.final-checklist \.content-review\{[^}]*order:/,
+    "a descendant selector cannot order a grid item");
+
+  // Differentiated by a branded accent, not by shouting.
+  assert.match(clarity, /box-shadow:inset 3px 0 0 #a32c4c!important/,
+    "the muted rose already used elsewhere, not an alarm colour");
+  assert.doesNotMatch(clarity, /\.final-checklist>span\.content-review\{[\s\S]{0,240}(#c62828|red|orange)/);
+
+  // And a listing group still needing a look sorts above the finished ones.
+  assert.match(clarity, /\.app-shell \.final-design-groups\{display:flex;flex-direction:column\}/,
+    "order needs a flex container to act on");
+  assert.match(clarity, /\.final-design-groups>details:has\(em\.needs-attention\)\{order:-1\}/);
+});
