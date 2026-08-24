@@ -53,3 +53,11 @@
   color:#7c3350;
   font-weight:800;
 }
+
+/* D468 · Scenes preparing themselves after an upload. */
+.preparingScenes{
+  margin:0 0 16px;padding:11px 14px;
+  border:1px solid rgba(163,44,76,.22);border-radius:11px;
+  background:rgba(163,44,76,.06);color:#7c3350;
+  font-size:12px;line-height:1.5;
+}

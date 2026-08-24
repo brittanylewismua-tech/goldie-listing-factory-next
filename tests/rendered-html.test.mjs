@@ -3368,6 +3368,37 @@ test("a hand-marked print area beats an automatic guess — D466", async () => {
      calibrated at all - it was only offered for the kinds that used to composite. */
   assert.doesNotMatch(page, /item\.custom&&isCalibratedSurface\(item\.surfaceKind\|\|"rigid-flat"\)&&<button className="resetArea"/,
     "every surface can be calibrated now, because every surface composites");
-  assert.match(page, /"Reset product area":"Set the product area"/,
-    "and an uncalibrated scene says which it is");
+  /* D468 · The seller is never asked to mark anything - a set holds up to fifty
+     photographs. Every scene works out its own print area when it is uploaded;
+     the manual control stays only as an adjustment for the rare bad one. */
+  assert.match(page, /void findPrintAreas\(added,theme\)/);
+  assert.doesNotMatch(page, /Set the product area/, "nothing demands marking");
+});
+
+test("a mockup scene works out its own print area — D468", async () => {
+  const route = await readFile(new URL("../app/api/mockups/print-area/route.ts", import.meta.url), "utf8");
+  const page = await readFile(new URL("../app/mockups/page.tsx", import.meta.url), "utf8");
+
+  /* A set holds up to fifty photographs. Asking the seller to mark four corners
+     on each is eight minutes of clicking per set, so marking cannot be the
+     requirement - the scene has to answer this itself, once, at upload. */
+  assert.match(page, /void findPrintAreas\(added,theme\)/, "every uploaded scene is prepared");
+  assert.match(page, /method:"PATCH"[\s\S]{0,120}JSON\.stringify\(\{corners\}\)/, "and the answer is stored on the template");
+
+  /* Segmentation finds the product; the product is not the print area. On a mug
+     the printable face is offset from the handle and foreshortened, so what is
+     asked for is the quadrilateral in perspective, not a box. */
+  assert.match(route, /IN PERSPECTIVE/);
+  assert.match(route, /never the handle, and never the whole mug/);
+  assert.match(route, /top-left, top-right, bottom-right, bottom-left/);
+
+  /* A wrong quad is worse than none: it would misplace every future design
+     silently. Each way it can be wrong is refused by name. */
+  for (const reason of ["no-area", "outside-image", "too-small", "whole-image"]) {
+    assert.match(route, new RegExp(`reason: "${reason}"`), `${reason} is refused`);
+  }
+  assert.match(route, /corners: null/, "a refusal returns nothing rather than a guess");
+
+  // One scene failing must not stop the rest of an upload preparing.
+  assert.match(page, /catch\{\/\* One scene that cannot be read falls back/);
 });
