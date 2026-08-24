@@ -515,7 +515,14 @@ test("the setup step has exactly one forward control, and it gates every section
   assert.match(page, /\{workflowStep!=="setup"&&<button className="workflow-next" disabled=\{!designsFinished\} onClick=\{continueFromDesigns\}>/,
     "The designs-block forward button renders on the setup step again, above Colours and Mockups.");
   // the real gate must keep naming what is missing
-  assert.match(page, /!selectedColorIds\.length\?"Choose product colors to continue":Boolean\(templateDetails\?\.sizeOptions\?\.length\)&&!selectedSizeIds\.length\?"Choose product sizes to continue"/  /* D164 gates sizes the same way */);
+  /* D383 · The forward button used to relabel itself with whatever was missing
+     ("Pick a keyword bank for Gildan Hoodie", "Choose product colors to
+     continue"). It says "Next step" on every step now; the gate dialog names
+     each unfinished item when you press it. What still has to hold is the
+     ENFORCEMENT, which is what these assert. */
+  assert.match(page, /disabled=\{!complete&&\(!selectedColorIds\.length\|\|\(Boolean\(templateDetails\?\.sizeOptions\?\.length\)&&!selectedSizeIds\.length\)\)\}/,
+    "colours and sizes still gate the forward button");
+  assert.match(page, /Next step <span>→<\/span>/);
 });
 
 test("a saved later step cannot overwrite an explicit safe return to setup — D108",async()=>{
@@ -748,7 +755,8 @@ test("new products require completed setup and saved products own exact mockup s
   ]);
   assert.match(tools,/setupComplete=editingId\?existing\?\.setupComplete!==false:false/);
   assert.match(page,/Save these as \$\{activeRecipe\.name\}’s defaults/);
-  assert.match(page,/activeRecipe\?\.setupComplete===false\?"Save this product’s defaults to continue"/);
+  assert.match(page, /setupComplete===false/,
+    "an unsaved product is still gated - the gate dialog says so, not the button");
   assert.match(api,/mockupIds:Array\.isArray\(saved\.mockupIds\)/);
   assert.match(page,/className="product-mockup-scenes"/);
   assert.match(page,/Click any scene to remove or re-add it/);

@@ -288,3 +288,19 @@ test("D381: nothing that gets hidden also wears a class that forces display", as
   assert.deepEqual(offenders, [],
     `these classes force display with !important, so an element wearing one can never be hidden: ${offenders.join(", ")}`);
 });
+
+/* D382 · A short-window rule bought space by hiding .etsy-api-disclosure. That
+   line is the Etsy API attribution, required by their terms and placed
+   deliberately next to the copyright. Space comes from padding and type size,
+   never from that. */
+test("D382: the Etsy attribution is never hidden to make room", async () => {
+  const files = await collect("app/", [".css"]);
+  for (const file of files) {
+    const css = (await readFile(new URL(file, root), "utf8")).replace(/\/\*[\s\S]*?\*\//g, "");
+    for (const match of css.matchAll(/([^{}@]+)\{([^{}]*)\}/g)) {
+      if (!/\.etsy-api-disclosure/.test(match[1])) continue;
+      assert.doesNotMatch(match[2], /display\s*:\s*none/,
+        `${file} hides the Etsy attribution: ${match[1].trim()}`);
+    }
+  }
+});

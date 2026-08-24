@@ -150,7 +150,13 @@ test("the size card's promise matches what the gate actually enforces — D164",
    * blocked by a rule that cannot apply to it. */
   assert.match(app, /const missingSizes=Boolean\(templateDetails\?\.sizeOptions\?\.length&&!selectedSizeIds\.length\)/);
   assert.match(app, /issues\.push\("Choose at least one product size for this batch\."\)/);
-  assert.match(app, /Boolean\(templateDetails\?\.sizeOptions\?\.length\)&&!selectedSizeIds\.length\?"Choose product sizes to continue"/);
+  /* D383 · The forward button used to relabel itself with whatever was missing
+     ("Pick a keyword bank for Gildan Hoodie", "Choose product colors to
+     continue"). It says "Next step" on every step now; the gate dialog names
+     each unfinished item when you press it. What still has to hold is the
+     ENFORCEMENT, which is what these assert. */
+  assert.match(app, /Boolean\(templateDetails\?\.sizeOptions\?\.length\)&&!selectedSizeIds\.length/,
+    "a product with a size axis still cannot move forward without sizes");
 });
 
 test("D213: \"Match Printify template\" matches the template, and nothing more", async () => {
@@ -1248,30 +1254,31 @@ test("a selected bundle can be swapped for another — D365", async () => {
   assert.ok(block > 0 && link > block, "the link belongs to the card it changes");
 });
 
-/* D366/D373 · D366 assumed a bundle's cards appear together and that only the
-   TEXT was staggered. Watching a real three-product bundle resume proved that
-   wrong: the members were fetched one after another with a 90s deadline each
-   and nothing was written to state until the last one landed, so two cards sat
-   on "Loading ..." for minutes. Fetch them together, reveal each as it arrives,
-   and show a single spinner for whatever is still outstanding. */
-test("a loading bundle shows one spinner, not a line per product — D366", async () => {
+/* D385 · One card with one spinner while a bundle loads, then every product
+   revealed together. D373 revealed each product the moment it landed, which
+   meant cards appearing one at a time and the page reflowing underneath her.
+   Fetching stays parallel - only the reveal is batched. */
+test("D385: a loading bundle is one card with one spinner", async () => {
+  const app = await read("app/listing-factory-app.tsx");
   const tools = await read("app/factory-tools.tsx");
-  const app = await read("app/listing-factory-app.tsx");
   assert.match(tools, /className="goldie-spinner"/);
-  assert.doesNotMatch(tools, /Loading every product in this bundle/);
 
-  /* One spinner on the batch screen, counting what is left rather than naming it. */
-  assert.match(app, /className="bundle-product-loading"><span className="goldie-spinner"/);
+  assert.match(app, /className="batch-product-card bundle-loading-card"/,
+    "one card, not a line of prose and not one skeleton per product");
+  assert.match(app, /Loading \{list\.length\} \{list\.length===1\?"product":"products"\}/);
   assert.doesNotMatch(app, /Loading \{recipe\.name\}/,
-    "a line of prose per product is what this replaced");
-});
+    "a line per product is what this replaced");
+  assert.doesNotMatch(app, /product-card-skeleton/,
+    "and a skeleton card per product is not one card either");
 
-test("D373: bundle members are fetched together and revealed as they land", async () => {
-  const app = await read("app/listing-factory-app.tsx");
-  assert.match(app, /await Promise\.all\(recipes\.filter\(recipe=>recipe\.id!==recipes\[0\]\.id\)/,
-    "one slow product must not hold up every product behind it");
-  assert.match(app, /setBundleColorProducts\(current=>\(\{\.\.\.current,\[recipe\.id\]:details\}\)\)/,
-    "each card appears the moment its template resolves");
+  /* Nothing is revealed until everything has arrived. */
+  assert.match(app, /if\(!product\|\|anyPending\)return null/,
+    "no product card renders while any of them is still loading");
+  assert.doesNotMatch(app, /setBundleColorProducts\(current=>\(\{\.\.\.current,\[recipe\.id\]:details\}\)\)/,
+    "revealing each product as it lands is the bug");
+
+  /* Parallel fetching stays - it is only the reveal that is batched. */
+  assert.match(app, /await Promise\.all\(recipes\.filter\(recipe=>recipe\.id!==recipes\[0\]\.id\)/);
 });
 
 /* D378 · Steps 2-4 carry the same product cards as step 1. Two traps in that

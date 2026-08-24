@@ -1857,7 +1857,9 @@ test("lets a seller name and resume a finished batch without publishing it",asyn
   assert.match(page,/suggestedBatchName/);
   assert.match(page,/Save to Batch History/);
   assert.match(page,/Great—this batch is waiting for you/);
-  assert.match(page,/status:"draft",step:"finish"/);
+  /* D386 · A draft is saved from wherever the seller is, so it records the step
+     they are actually on rather than always claiming "finish". */
+  assert.match(page, /status:"draft",step:workflowStep/);
   assert.match(page,/keptAsDrafts\?"draft"/);
   assert.match(history,/\/listing-factory\?batch=/);
   assert.match(history,/batch\.display_name/);
@@ -2055,7 +2057,13 @@ test("shows underfilled titles and tags as a non-blocking review state (fixes D6
 
 test("keeps a forward path from setup, designs, and pricing after drafts exist (fixes D1)",async()=>{
   const app=await readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8");
-  assert.equal((app.match(/Back to finishing your listings/g)||[]).length,3);
+  /* D383 · Was 3. The setup step's forward button used to relabel itself to
+     "Back to finishing your listings" when drafts already existed; it says
+     "Next step" now and still routes to finish. The two remaining are the
+     batch-actions links, which are not the forward button. */
+  assert.equal((app.match(/Back to finishing your listings/g)||[]).length,2);
+  assert.match(app,/complete\?goToStep\("finish",false,true\):goToStep\("designs"\)/,
+    "the destination is unchanged, only the label");
   /* mockupTheme was removed from this gate. Mockups are optional - the Finish
    * step selects listing images separately - and requiring one made "No mockups
    * for this batch" unreachable: choosing it disabled the only way forward.
@@ -2214,8 +2222,11 @@ test("reports published listings instead of workflow completion (fixes D88)",asy
      draft in its snapshot and all 17 claimed drafts were ready. The label now
      counts them, and says so plainly when there are none. */
   assert.match(api,/draft_count:\(state\.drafts\|\|\[\]\)\.length/);
-  assert.match(page,/\$\{batch\.draft_count\} \$\{batch\.draft_count===1\?"DRAFT":"DRAFTS"\} READY · 0 PUBLISHED/);
-  assert.match(page,/SAVED · NOT YET DRAFTED/);
+  /* D386 · Batch History says what the seller asked for: a batch is a DRAFT
+     until it is published, then it says how many went live to Etsy. */
+  assert.match(page,/batch\.published_count>0\?`\$\{batch\.published_count\} PUBLISHED TO ETSY`:`DRAFT`/);
+  /* D386 · "SAVED · NOT YET DRAFTED" is now just "DRAFT" - see above. */
+  assert.doesNotMatch(page,/SAVED · NOT YET DRAFTED/);
   assert.doesNotMatch(page,/status\.replace\("_"," "\)/);
   assert.match(app,/keptAsDrafts,batchReceipt\}/);
   assert.match(app,/keptAsDrafts,batchReceipt\]\);/);

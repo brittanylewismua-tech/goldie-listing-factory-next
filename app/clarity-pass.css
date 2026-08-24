@@ -813,7 +813,7 @@
 .app-shell .bundle-color-product[open]>summary{border-bottom:1px solid rgba(91,48,79,.12)}
 .app-shell .bundle-color-product>.product-color-selector,
 .app-shell .bundle-color-product>.product-size-selector{padding:14px 16px!important}
-.app-shell .bundle-product-loading{margin:0;padding:12px 16px;color:#75576b;font-size:11px}
+
 
 /* D172 · The setup column stacks eleven ordered sections, and only some carried
  * `width:min(980px,calc(100% - 32px))`. Nested ones applied it a second time
@@ -2303,32 +2303,14 @@ body{min-width:1180px!important}
    why it read as unfinished.
    It is a link, not an action: small, bold, underlined, with room beneath it so
    the panel ends on space rather than on type. */
-.app-shell .panel-collapse-foot{
-  display:inline-flex!important;
-  align-items:center!important;
-  gap:6px!important;
-  width:auto!important;
-  margin:14px 0 22px 22px!important;
-  min-height:0!important;
-  padding:2px 0!important;
-  border:0!important;
-  border-radius:0!important;
-  background:none!important;
-  background-image:none!important;
-  box-shadow:none!important;
-  color:#68405a!important;
-  font:800 11px/1.2 "Manrope",system-ui,sans-serif!important;
-  text-decoration:underline!important;
-  text-underline-offset:3px!important;
-  text-decoration-thickness:1px!important;
-  cursor:pointer!important;
-}
+/* D384 - No arrow glyph, and the link centres under the panel it closes.
+   The arrow read as a control of its own next to a text link, and a link
+   hanging off the left edge of a centred panel looked unfinished. */
+.app-shell .panel-collapse-foot{display:block!important;width:auto!important;margin:14px auto 22px!important;min-height:0!important;padding:2px 0!important;border:0!important;border-radius:0!important;background:none!important;box-shadow:none!important;color:#5b304f!important;font-size:11.5px!important;font-weight:700!important;text-align:center!important;text-decoration:underline!important;text-underline-offset:3px!important;cursor:pointer!important}
 .app-shell .panel-collapse-foot:hover{
   background:none!important;color:#4c293f!important;text-decoration-thickness:2px!important;
 }
-.app-shell .panel-collapse-foot>em{
-  font-style:normal!important;font-size:12px!important;text-decoration:none!important;
-}
+
 
 /* D360 · The sidebar footer stacked tight under the goal card. The legal notice
    drops away from the interface, and the copyright sits just above it as its
@@ -2432,11 +2414,7 @@ body{min-width:1180px!important}
   .app-shell .goldie-spinner{animation-duration:2.4s}
 }
 
-/* D372 · Step 1 listed one line of prose per product while a bundle loaded
-   ("Loading Gildan Tee...", "Loading gildan crewneck..."), stacked and shifting
-   as each arrived. D366 gave the bundle tile a spinner but never reached this
-   path. One spinner for the whole set, as asked. */
-.app-shell .bundle-product-loading{display:flex;align-items:center;gap:10px;margin:0;padding:14px 22px;color:rgba(74,42,62,.72);font-size:13px}
+
 
 /* D378 · Steps 2-4 now carry the same product cards as step 1: every product in
    the bundle is on the page, one is open, and the step's own work is the open
@@ -2481,3 +2459,40 @@ body{min-width:1180px!important}
   font:inherit;font-size:12px;font-weight:700;text-align:left;cursor:pointer;
 }
 .app-shell .step-product-open:hover{background:#fff}
+
+/* D385 · Loading a bundle: one card, one spinner, and every product revealed
+   together once they have all arrived. Not a line of prose per product, and not
+   a skeleton card per product. */
+.app-shell .bundle-loading-card{
+  display:grid;
+  place-items:center;
+  gap:14px;
+  min-height:190px;
+  margin-top:26px;
+  padding:40px 22px;
+  text-align:center;
+}
+.app-shell .bundle-loading-card p{
+  margin:0;
+  color:rgba(74,42,62,.66);
+  font-size:13px;
+}
+.app-shell .bundle-loading-spinner{
+  width:38px;height:38px;border-radius:50%;
+  border:2.5px solid rgba(91,48,79,.16);border-top-color:#8a4f73;
+  animation:goldie-spin 1s linear infinite;
+}
+@media (prefers-reduced-motion:reduce){.app-shell .bundle-loading-spinner{animation-duration:2.4s}}
+
+/* D386 · Save as draft, available from every step rather than only from Publish. */
+.app-shell .save-draft-link{
+  margin-left:auto;
+  padding:8px 15px;
+  border:1px solid rgba(91,48,79,.2);
+  border-radius:999px;
+  background:rgba(255,255,255,.6);
+  color:#5b304f;
+  font:inherit;font-size:12px;font-weight:700;
+  cursor:pointer;
+}
+.app-shell .save-draft-link:hover{background:#fff;border-color:rgba(91,48,79,.34)}
