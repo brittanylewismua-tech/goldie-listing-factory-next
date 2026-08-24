@@ -112,3 +112,21 @@ export function navigationIssues(index:number,state:NavigationGateState){
   if(index>=8&&!state.imagesReady)issues.push("Add at least one photo to every listing.");
   return [...new Set(issues)];
 }
+
+/* D444 · What it takes to leave the Images page.
+ *
+ * The forward button there was checking the PUBLISH gate, index 8. These checks
+ * are cumulative, so that pulled in every index-6 and index-7 requirement -
+ * titles, tags, description, Etsy details - all of which are done on the pages
+ * AFTER Images. Nobody hit it while creating drafts jumped straight past Images;
+ * the moment that stopped (D440), it became a deadlock: you cannot leave Images
+ * until you have titles, and you cannot write titles until you leave Images.
+ *
+ * Her rule, and the right one: you should not get past Images unless every
+ * listing has at least one photo. So this is everything needed to have drafts at
+ * all, plus that. */
+export function leavingImagesIssues(state: NavigationGateState) {
+  const issues = navigationIssues(5, state);
+  if (!state.imagesReady) issues.push("Add at least one photo to every listing.");
+  return [...new Set(issues)];
+}

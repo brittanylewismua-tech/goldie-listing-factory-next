@@ -732,7 +732,7 @@ test("D222: the Images page continues to Listing, not past it to Publish", async
   /* D427 - this now lives on the single footer button. There used to be a
    * second copy in the card list; it looked identical and skipped the photo
    * check, so it was removed rather than kept in sync. */
-  const button = app.slice(app.indexOf("disabled={progressGateIssues(8).length>0}"));
+  const button = app.slice(app.indexOf("disabled={imagesStepIssues().length>0}"));
   const handler = button.slice(0, button.indexOf("</button>"));
   assert.match(handler, /setFinishPhase\("details"\)/, "Images advances to the Listing page");
   assert.doesNotMatch(handler, /setFinishPhase\("final"\)/, "not straight to Publish");

@@ -2639,7 +2639,7 @@ test("the Images page has one Next step, and a preview large enough to read", as
     "the bottom button says Next step, like every other step");
 
   // Whatever advances from Images must run the photo check, not just navigate.
-  const forward = app.slice(app.indexOf('disabled={progressGateIssues(8).length>0}'));
+  const forward = app.slice(app.indexOf('disabled={imagesStepIssues().length>0}'));
   assert.match(forward.slice(0, 900), /createdListingsMissingImages\(\)/, "the one Next step still gates on photos");
   assert.match(forward.slice(0, 900), /setFinishPhase\("details"\)/, "Images goes to Listing, never straight to Publish");
   assert.match(forward.slice(0, 900), /Next step </);
@@ -2912,4 +2912,35 @@ test("every failure is recorded against a person, and Brittany is emailed — D4
   assert.match(admin, /Everything that failed/);
   assert.match(admin, /\{item\.alerted \? "Emailed · " : ""\}/);
   assert.match(admin, /Not signed in/, "an error before sign-in is still worth seeing");
+});
+
+test("leaving Images needs photos, not titles — D444", async () => {
+  const { leavingImagesIssues } = await import("../app/workflow-gates.ts");
+  const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+
+  /* Walked the real flow for the first time - upload, create drafts - and hit
+     this: the Images forward button was checking the PUBLISH gate, index 8.
+     Those checks are cumulative, so it demanded titles, tags, description and
+     Etsy details, all of which happen on the pages AFTER Images. Nobody hit it
+     while creating drafts jumped straight past Images; the moment that stopped,
+     it became a deadlock. */
+  const ready = {
+    connected: true, etsyConnected: true, productSelected: true, templateReady: true,
+    shippingReady: true, variantsReady: true, colorsReady: true, sizesReady: true,
+    pricesReady: true, designCount: 1, designsReady: true, etsyShippingProfileReady: true,
+    pricingApproved: true, draftsComplete: true, createdDraftCount: 1,
+    titlesReady: false, tagsReady: false, descriptionReady: false,
+    etsyDetailsReady: false, personalizationReady: false, imagesReady: true,
+  };
+  assert.deepEqual(leavingImagesIssues(ready), [],
+    "a listing with a photo can leave Images before its title exists");
+  assert.deepEqual(leavingImagesIssues({ ...ready, imagesReady: false }),
+    ["Add at least one photo to every listing."],
+    "and cannot leave without one");
+  assert.deepEqual(leavingImagesIssues({ ...ready, createdDraftCount: 0 }),
+    ["Create at least one Printify draft."]);
+
+  assert.match(app, /function imagesStepIssues\(\)\{return localPreview\?\[\]:leavingImagesIssues\(gateState\(\)\)\}/);
+  assert.doesNotMatch(app, /progressGateIssues\(8\)/,
+    "the Images page must not be gated on the Publish requirements");
 });
