@@ -277,3 +277,28 @@ test("D231: a saved shipping profile that is not on the shop is treated as unset
     /if\(!templateProfileId\|\|!etsyShippingProfiles\.some\(profile=>profile\.id===templateProfileId\)\)return;/,
   );
 });
+
+/* D376 · Resuming a finished batch from Batch History showed a page with a
+   header, a rail, a Back link and nothing at all in between.
+   finishPhase was "mockups" — a phase that has no renderer. Choosing the mockup
+   set moved onto step 2 in D238, but "mockups" stayed in the type, stayed in
+   the progress map, and stayed inside every batch saved before the move.
+   Nothing drew it, so the workspace was empty.
+   Verified against the live batch 9a78b187: status complete, step finish,
+   finishPhase "mockups", three drafts, and a completely blank workspace. */
+test("D376: every restored finish phase is one that actually renders", async () => {
+  const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+
+  /* The renderable set must match what the JSX actually branches on. */
+  assert.match(app, /const RENDERED_FINISH_PHASES:FinishPhase\[\]=\["details","etsy","final"\]/);
+  assert.match(app, /finishPhase==="final"&&<article className="step-card final-review/);
+  assert.match(app, /\(finishPhase==="details"\|\|finishPhase==="etsy"\)&&<article className="step-card etsy-details-step/);
+
+  /* And nothing may branch on the dead phase. */
+  assert.doesNotMatch(app, /finishPhase==="mockups"&&/,
+    "if something renders mockups again, take it out of the dead list");
+
+  /* Restoring must launder the saved value, not trust it. */
+  assert.match(app, /const safeSaved=drawableFinishPhase\(saved,complete\)/);
+  assert.match(app, /const target=drawableFinishPhase\(requested as FinishPhase,complete\)/);
+});

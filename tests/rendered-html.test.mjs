@@ -2420,3 +2420,15 @@ test("Batch History can select and delete several at once — D364", async () =>
   assert.match(page, /if\(response\.ok\)removed\.push\(batch\.id\)/);
   assert.match(page, /setBatches\(current=>current\.filter\(item=>!removed\.includes\(item\.id\)\)\)/);
 });
+
+/* D377 · The publish checklist printed the raw Etsy profile title, so a real
+   profile name rendered as "Standard: SwiftPOD, Kids clothes, Long-sleeve,
+   T-Shirt, Tank Top, V-neck, Bags, Trous... will be applied automatically" —
+   a name truncated mid-word inside a sentence. friendlyShippingProfileTitle
+   already existed to collapse exactly this; the checklist just was not using it. */
+test("D377: the publish checklist names the shipping profile readably", async () => {
+  const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+  assert.match(app, /✓ \{friendlyShippingProfileTitle\(etsyShippingProfiles\.find\(profile=>profile\.id===etsyShippingProfileId\)\?\.title\)/);
+  assert.doesNotMatch(app, /etsyShippingProfileId\)\?\.title\|\|"Etsy shipping profile"\} will be applied/,
+    "the raw title is what produced the truncated sentence");
+});
