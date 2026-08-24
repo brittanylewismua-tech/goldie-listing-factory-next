@@ -204,7 +204,20 @@ export default function IntegratedMockups({design,productId,productName="",defau
    The canvas renderer is the floor: it needs no network and, with the quad
    chain, has no way to refuse. The AI renderer is tried first where it is the
    better result, and falls back rather than losing the scene. */
-        const drawLocally=async()=>{const derived=fit?await derivedFor(template,fit):null;return derived?rigid(design,template,derived.adjustment,derived.quad):rigid(design,template,placementAdjustment(placement,template.surfaceKind||"rigid-flat"))};
+        const drawLocally=async()=>{
+          /* D469 - when the scene's print area is known, Printify's own placement
+             applies to it directly.
+             
+             This is what D424 tried and got wrong: it applied that number to the
+             placeholder box, which is not a print area, so designs came out more
+             than twice too big. Now that each scene works out its real print area,
+             the quad and Printify's print area are the same rectangle - so the
+             scale Printify used IS the fraction of the quad the design covers, and
+             the offsets are its offsets. Measured on her mug: Printify places at
+             .531 of the print area and her artwork fills .744 of its canvas, so
+             the design is 39.5% of the mug's face. */
+          if(placement&&isCalibrated(template))return rigid(design,template,{scale:placement.scale,x:placement.x-.5,y:placement.y-.5});
+          const derived=fit?await derivedFor(template,fit):null;return derived?rigid(design,template,derived.adjustment,derived.quad):rigid(design,template,placementAdjustment(placement,template.surfaceKind||"rigid-flat"))};
         const result=await withRecovery(async()=>{
           /* D448 - every surface composites now. The generative renderer repainted
              the whole frame: her photograph came back looking like a painting, with

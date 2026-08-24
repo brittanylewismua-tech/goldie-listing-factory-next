@@ -3402,3 +3402,26 @@ test("a mockup scene works out its own print area — D468", async () => {
   // One scene failing must not stop the rest of an upload preparing.
   assert.match(page, /catch\{\/\* One scene that cannot be read falls back/);
 });
+
+test("a known print area uses Printify's own placement — D469", async () => {
+  const integrated = await readFile(new URL("../app/integrated-mockups.tsx", import.meta.url), "utf8");
+
+  /* Measured on her mug: Printify places the design at .531 of the print area,
+     and her artwork fills .744 of its canvas, so the design covers 39.5% of the
+     mug's face. It rendered at nearly 100% because the quad it was scaled against
+     was the placeholder box, not a print area.
+     
+     This is what D424 attempted and had to be reverted: the number was right, the
+     rectangle was not. Now each scene works out its real print area, so the quad
+     and Printify's print area are the same rectangle and its scale applies
+     directly. */
+  assert.match(integrated, /if\(placement&&isCalibrated\(template\)\)return rigid\(design,template,\{scale:placement\.scale,x:placement\.x-\.5,y:placement\.y-\.5\}\)/);
+
+  // A scene with no known print area keeps the measured path and the constants.
+  assert.match(integrated, /const derived=fit\?await derivedFor\(template,fit\):null;/);
+
+  // The arithmetic, on her numbers.
+  const printifyScale = 0.5310035394337703, artOfCanvas = 0.8828125 - 0.138671875;
+  assert.equal(Number((printifyScale * artOfCanvas).toFixed(3)), 0.395,
+    "the design covers 39.5% of the mug's printable face");
+});
