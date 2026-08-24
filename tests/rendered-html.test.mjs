@@ -1016,7 +1016,13 @@ test("routes each product surface deliberately and never releases a partial batc
   assert.match(page,/if\(isCalibratedSurface\(template\.surfaceKind\|\|"rigid-flat"\)\)return makeMockup/);
   // The calibrated branch now lives in generate(), because the padded design and
   // the trimmed design must not be able to reach the wrong renderer.
-  assert.match(integrated,/isCalibratedSurface\(template\.surfaceKind\|\|"rigid-flat"\)\?rigid\(design,template,placementAdjustment\(placement,template\.surfaceKind\|\|"rigid-flat"\)\)/);
+  /* D433 · The calibrated path now derives its placement from the Printify
+     preview and the segmented product box, and only falls back to the old
+     constants when either measurement is unavailable. */
+  assert.match(integrated,/if\(!isCalibratedSurface\(template\.surfaceKind\|\|"rigid-flat"\)\)return product\(design,template,reference!\)/);
+  assert.match(integrated,/return derived\?rigid\(design,template,derived\.adjustment,derived\.quad\)/);
+  assert.match(integrated,/:rigid\(design,template,placementAdjustment\(placement,template\.surfaceKind\|\|"rigid-flat"\)\)/,
+    "the constants remain the fallback, never the first answer");
   // The old constants may survive only as the pre-mirroring fallback for drafts
   // that predate placement being recorded - never as a live placement decision.
   assert.doesNotMatch(integrated,/PLACEMENT_BEFORE_MIRRORING/);
@@ -2695,9 +2701,21 @@ test("a bank phrase that is not in the artwork does not reach the listing — D4
   assert.ok(bestFitFromBank(["Sailing Tee","Manatee Gifts","Boat Shirt","Orca Shirt","Lobster Shirt"],
     ["a sailboat"]).includes("Sailing Tee"));
 
-  // But a bank with nothing in common still returns something, because the
-  // seller chose it deliberately and being handed nothing is not an answer.
-  assert.equal(bestFitFromBank(["Alpha Tee","Beta Tee"], ["sailboat"]).length, 2);
+  /* Her real Oceancore bank against her real sailboat design: the bank is
+     manatees, lobsters, octopuses and sharks, so nothing matches and no ranking
+     can rescue it. Three closest phrases, not thirteen alphabetical ones - the
+     seller chose the bank deliberately, so being handed nothing is not an answer,
+     but a confident wall of wrong keywords is worse than a short list. */
+  const realBank = ["cape cod sweatshirt","ecology shirt","hammerhead shark","hawaii sweatshirt",
+    "linocut shirt","lobster shirt","manatee","manatee gifts","manatee sweatshirt","manatee watercolor",
+    "meet me at the beach","nantucket","octopus hoodie","octopus shirt","orca shirt","orcas shirt",
+    "oyster print","oyster wall art","respect the locals","sardine shirt","sardines","shark week","whale shark"];
+  assert.equal(bestFitFromBank(realBank, ["SALTWATER","SOVEREIGNTY","sailboat on stormy ocean waves"]).length, 3);
+
+  // And a design the same bank does describe still gets the right phrases.
+  const octopus = bestFitFromBank(realBank, ["giant octopus linocut print","ocean"]);
+  assert.ok(octopus.includes("octopus shirt") && octopus.includes("linocut shirt"));
+  assert.ok(!octopus.includes("manatee"), "still nothing that is not in the artwork");
 
   // And the model is told the same rule, so it does not pad either.
   assert.match(route, /Never pad the list to reach a count/);
@@ -2726,4 +2744,51 @@ test("every step's footer is the same three things — D430/D432", async () => {
     assert.doesNotMatch(footer, /workflow-next/,
       "the forward control lives on the section it completes, never in the footer");
   }
+});
+
+test("mockup placement is derived from the Printify preview, for any product — D433", async () => {
+  const { derivedPlacement } = await import("../app/mockups/reference-placement.ts");
+  const [integrated, placement] = await Promise.all([
+    readFile(new URL("../app/integrated-mockups.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/mockups/reference-placement.ts", import.meta.url), "utf8"),
+  ]);
+
+  /* Every mockup template is saved with a hardcoded box covering the middle 70%
+     of the PHOTO - not the product, not the print area - and the renderer warped
+     the artwork onto it at a fixed 42%. That constant was tuned until one set of
+     tee photos looked right, which is why it could not hold across products. */
+  assert.match(placement, /\[\[\.15,\.12\]/, "the default box is named as the fault it is");
+
+  /* All measured live on her Gildan Tee: the Printify preview puts the artwork at
+     14.5% of the garment width, centred, 41.6% down. Segmentation returns the
+     garment in the lifestyle photo as centre-x, centre-y, width, height. */
+  const fit = { widthRatio: 0.145, centreX: 0.5, centreY: 0.416 };
+  const box = { centreX: 0.4977, centreY: 0.6127, width: 0.6182, height: 0.6115 };
+  const bounds = { left: 0.16796875, top: 0.013671875, right: 0.83203125, bottom: 0.986328125 };
+  const derived = derivedPlacement(fit, box, bounds);
+
+  // The whole point: the artwork ends up the same fraction of the product it is
+  // in the customer's own Printify listing.
+  const artOfPhoto = derived.adjustment.scale * (bounds.right - bounds.left) * box.width;
+  assert.equal(Number((artOfPhoto / box.width).toFixed(3)), 0.145);
+  assert.equal(Number(derived.adjustment.x.toFixed(3)), 0, "centred artwork stays centred");
+  assert.equal(Number(derived.adjustment.y.toFixed(3)), -0.084, "and sits where the preview puts it");
+  assert.deepEqual(derived.quad[0].map(v => Number(v.toFixed(3))), [0.189, 0.307]);
+
+  // A design whose artwork fills its canvas needs no padding compensation.
+  const full = derivedPlacement(fit, box, { left: 0, top: 0, right: 1, bottom: 1 });
+  assert.equal(Number(full.adjustment.scale.toFixed(3)), 0.145);
+
+  /* Nothing in the derivation KNOWS what the product is. Checked against the code
+     with comments stripped - the prose names products while explaining the
+     history, which is the opposite of hard-coding one. */
+  const code = placement.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*/g, "");
+  assert.doesNotMatch(code, /t-shirt|chest|sleeve|garment|apparel|mug/i,
+    "this runs on mugs and shower curtains too");
+
+  // The old constants survive only as the fallback when a measurement is missing.
+  assert.match(integrated, /const fit=reference\?await measureReference\(reference\):null/);
+  assert.match(integrated, /return derived\?rigid\(design,template,derived\.adjustment,derived\.quad\)/);
+  assert.match(integrated, /productBoxes=useRef\(new Map<string,ProductBox\|null>\(\)\)/,
+    "segmentation runs once per scene, not once per mockup");
 });

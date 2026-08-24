@@ -35,6 +35,12 @@ export function bestFitFromBank(candidates:string[],designText:string[],product?
 
      Bank order is still the fallback when genuinely nothing matches, because the
      seller chose this bank on purpose and being handed nothing is not an answer. */
-  const source=matched.length>=3?matched:scored;
-  return source.slice(0,13).map(item=>item.phrase);
+  /* When the bank genuinely does not describe the design - her Oceancore bank is
+     manatees, lobsters, octopuses and sharks, and the design is a sailboat with
+     a Bible verse - no ranking can rescue it. Handing back thirteen phrases in
+     alphabetical order is the worst answer: it looks confident and it is wrong.
+     Three closest phrases plus the mismatch warning lets her see the bank is not
+     right for this design without being refused outright. */
+  if(matched.length>=3)return matched.slice(0,13).map(item=>item.phrase);
+  return scored.slice(0,Math.max(matched.length,3)).map(item=>item.phrase);
 }
