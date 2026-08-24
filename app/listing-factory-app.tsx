@@ -899,9 +899,10 @@ export default function ListingFactoryApp() {
   /* A choice made in the batch IS the product being established, so it is saved
      to the recipe immediately rather than behind a separate "save as default". */
   async function establish(recipe:Recipe,change:Partial<Recipe>){
-    const updated={...recipe,...change};
-    if(activeRecipe&&activeRecipe.id===recipe.id)setActiveRecipe(updated);
-    setBundleRecipes(current=>current.map(item=>item.id===recipe.id?updated:item));
+    /* D463 - merge into the current recipe rather than the one this closure
+       captured, for the same reason as saveProductDefaults. */
+    setActiveRecipe(current=>current&&current.id===recipe.id?{...current,...change}:current);
+    setBundleRecipes(current=>current.map(item=>item.id===recipe.id?{...item,...change}:item));
     /* D406 - This used to POST the whole merged recipe, so every call resent
        every field from whatever copy the closure had captured. Any write that
        fired after a newer one - a debounced price save, a slow request landing
@@ -1406,7 +1407,13 @@ export default function ListingFactoryApp() {
        product, so the product step survives a refresh. */
     setVariantPrices(recipe.variantPrices&&Object.keys(recipe.variantPrices).length?{...recipe.variantPrices}:{});
     setWholeNumberByRecipe(current=>({...current,[recipe.id]:recipe.wholeNumberPricing===true}));setTemplate(recipe.templateUrl);const savedTheme=recipe.defaultMockupTheme||"",savedMockups=savedTheme?{theme:savedTheme,ids:recipe.mockupIds||[]}:undefined;setMockupTheme(savedTheme);setSharedMockups(savedMockups);window.sessionStorage.setItem("goldie-batch-mockups",JSON.stringify(savedMockups||null));setAutoTitleBankId(recipe.keywordListId||"");const nextPricing={...pricing,targetProfit:Number(recipe.defaultProfitTarget)||DEFAULT_PRICING.targetProfit,shippingCost:0,shippingCharged:0};setPricing(nextPricing);setTemplateDetails(null);const details=await loadTemplateUrl(recipe.templateUrl,nextPricing,Number(recipe.etsyShippingProfileId)||0,recipe.defaultColorIds||[],recipe.defaultSizeIds||[]);if(!details)return null;const savedDescription=recipe.description?.trim(),importedDescription=details.description?.trim();if(savedDescription)setDescription(recipe.description);else if(importedDescription){const updated={...recipe,description:details.description};setDescription(details.description);setActiveRecipe(updated);void fetch("/api/product-recipes",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:recipe.id,name:recipe.name,templateUrl:recipe.templateUrl,description:details.description})}).catch(()=>undefined)}return details}
-  async function saveProductDefaults(change:Partial<Recipe>,key:string){if(!activeRecipe)return;setSavingProductDefault(key);try{const updated={...activeRecipe,...change};const response=await fetch("/api/product-recipes",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:activeRecipe.id,name:activeRecipe.name,templateUrl:activeRecipe.templateUrl,...change})});if(!response.ok)throw new Error("Goldie could not save this product default.");setActiveRecipe(updated);}catch(error){stopWith("This default was not saved.",[error instanceof Error?error.message:"Try again in a moment."])}finally{setSavingProductDefault("")}}
+  async function saveProductDefaults(change:Partial<Recipe>,key:string){if(!activeRecipe)return;const recipeId=activeRecipe.id;setSavingProductDefault(key);try{const response=await fetch("/api/product-recipes",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:activeRecipe.id,name:activeRecipe.name,templateUrl:activeRecipe.templateUrl,...change})});if(!response.ok)throw new Error("Goldie could not save this product default.");/* D463 - this used to merge into a copy of the recipe captured before the
+   request and write that back afterwards, so a write that landed late put its
+   stale base over a newer value. That is why picking a shipping profile left
+   the Shipping row red saying "Pick a shipping profile" while the server had
+   the profile saved, and a reload fixed it. Merging into whatever the recipe
+   is NOW cannot go backwards. */
+setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:current);setBundleRecipes(current=>current.map(item=>item.id===recipeId?{...item,...change}:item));}catch(error){stopWith("This default was not saved.",[error instanceof Error?error.message:"Try again in a moment."])}finally{setSavingProductDefault("")}}
   async function rememberBatchDefaultsAfterPublish(){if(!activeRecipe)return;const updated={...activeRecipe,defaultColorIds:selectedColorIds,defaultSizeIds:selectedSizeIds,defaultMockupTheme:mockupTheme,mockupIds:sharedMockups?.theme===mockupTheme?sharedMockups.ids:[]};const response=await fetch("/api/product-recipes",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:activeRecipe.id,name:activeRecipe.name,templateUrl:activeRecipe.templateUrl,defaultColorIds:selectedColorIds,defaultSizeIds:selectedSizeIds,defaultMockupTheme:mockupTheme,mockupIds:sharedMockups?.theme===mockupTheme?sharedMockups.ids:[]})});if(response.ok){setActiveRecipe(updated);setColorsRemembered(true);setSizesRemembered(true)}}
   /* D457 - a product saves its own defaults.
    *

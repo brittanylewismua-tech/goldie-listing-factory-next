@@ -3299,3 +3299,22 @@ test("a product with no colour axis can still leave step 1 — D461/D462", async
   assert.match(app, /const carries=recipeCarriesApprovedPricing\(\{defaultProfitTarget:recipe\.defaultProfitTarget,etsyShippingProfileId:value\}\)/);
   assert.match(app, /setEtsyShippingProfileId\(value\);setPricingApproved\(carries\)/);
 });
+
+test("a saved product default cannot be overwritten by an older copy — D463", async () => {
+  const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+
+  /* Reproduced on her live page. She picked a shipping profile and approved it;
+     the Shipping row stayed red saying "Pick a shipping profile · 93 profiles on
+     your shop" while the server had the profile saved correctly, and a reload
+     showed "✓ Shipping · Mug 11oz". The row reads the recipe held in the page,
+     and both writers merged their change into a copy captured BEFORE their
+     request, then wrote that whole object back afterwards - so a write landing
+     late replaced a newer value with its own stale base. */
+  assert.doesNotMatch(app, /const updated=\{\.\.\.activeRecipe,\.\.\.change\}/,
+    "saveProductDefaults must not write back a pre-request snapshot");
+  assert.match(app, /setActiveRecipe\(current=>current&&current\.id===recipeId\?\{\.\.\.current,\.\.\.change\}:current\)/);
+  assert.match(app, /setActiveRecipe\(current=>current&&current\.id===recipe\.id\?\{\.\.\.current,\.\.\.change\}:current\)/);
+
+  // Bundle copies of the same recipe move with it, or the card behind it goes stale instead.
+  assert.match(app, /setBundleRecipes\(current=>current\.map\(item=>item\.id===recipeId\?\{\.\.\.item,\.\.\.change\}:item\)\)/);
+});

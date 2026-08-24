@@ -1441,7 +1441,10 @@ test("D406: establish sends only what changed", async () => {
     "every recipe POST sends an explicit minimal payload");
 
   /* The local copy still updates so the card does not go stale on screen. */
-  assert.match(app, /const updated=\{\.\.\.recipe,\.\.\.change\};/);
+  /* D463 · The merge is functional now - into whatever the recipe is at the
+     moment the write lands, not the copy this closure captured - so a slow write
+     cannot put a stale base back over a newer value. */
+  assert.match(app, /setActiveRecipe\(current=>current&&current\.id===recipe\.id\?\{\.\.\.current,\.\.\.change\}:current\);/);
 });
 
 /* D420 · The profit goal was bound straight to the number, so clearing the field
