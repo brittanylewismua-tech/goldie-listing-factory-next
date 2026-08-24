@@ -181,3 +181,31 @@ export function withErrorLog<R extends Request, T extends unknown[]>(
     }
   };
 }
+
+/* Owner-only diagnostic. The alert path deliberately swallows every failure so
+   that a broken mailer cannot turn one error into two - which also means a
+   silent mailer looks exactly like a working one. This reports what actually
+   happened, without ever returning the key itself. */
+export async function testAlertEmail(to?: string) {
+  const config = runtime();
+  const key = config.RESEND_API_KEY;
+  const target = to || config.GOLDIE_ALERT_EMAIL || "brittanylewismua@gmail.com";
+  if (!key) return { configured: false, to: target, sent: false, detail: "RESEND_API_KEY is not set for this Worker." };
+  try {
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        from: "Listing Factory <hello@mail.thegoldiesuite.com>",
+        to: [target],
+        subject: "Listing Factory error alerts are working",
+        html: `<div style="font-family:system-ui,sans-serif"><p>This is the test alert. If you are reading it, Listing Factory can email you when something fails.</p><p style="color:#6b5c67;font-size:12px">Sent ${new Date().toISOString()}</p></div>`,
+      }),
+      signal: AbortSignal.timeout(10000),
+    });
+    const body = await response.text();
+    return { configured: true, to: target, sent: response.ok, status: response.status, detail: body.slice(0, 400) };
+  } catch (error) {
+    return { configured: true, to: target, sent: false, detail: error instanceof Error ? error.message : String(error) };
+  }
+}
