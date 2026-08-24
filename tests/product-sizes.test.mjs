@@ -928,8 +928,14 @@ test("unapproved prices follow the profit goal — D324", async () => {
 
   assert.match(app, /if\(!variants\.length\|\|approved\|\|manualPriceEdit\.current\)return;/,
     "recalculation stops at approval or a hand-edited price, and nowhere else");
-  assert.match(app, /\},\[variants,approved,pricing,prices\]\);/,
-    "it must re-run when the goal changes, not once per variant set");
+  /* D350 · Depends on the VALUES, not the objects. D334 renders PricingReview
+     per bundle product and builds `variants` and `pricing` inline in the map, so
+     object identity changes on every render — which turned this effect into an
+     infinite loop that hung the page before it finished loading. */
+  assert.match(app, /\},\[variantKey,pricingKey,pricesKey,approved\]\);/,
+    "it re-runs when a price should change, not when React re-renders");
+  assert.match(app, /const variantKey=variants\.map\(variant=>`\$\{variant\.id\}:\$\{variant\.cost\}`\)\.join\(","\);/);
+  assert.match(app, /const pricingKey=`\$\{pricing\.targetProfit\}/);
   assert.match(app, /function changeCostGroupPrice\(cost:number,cents:number\)\{manualPriceEdit\.current=true;/,
     "editing a price by hand must stop the goal overwriting it");
 

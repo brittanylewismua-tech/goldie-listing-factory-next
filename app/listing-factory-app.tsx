@@ -367,13 +367,25 @@ function PricingReview({section="all",variants,pricing,prices,productName,profil
      ARE the goal's output, so they follow it. After either, they are the
      seller's and nothing recomputes them. */
   const manualPriceEdit=useRef(false);
+  /* D350 · These deps were the objects themselves. That was fine while
+     PricingReview rendered once with memoised props, but D334 renders it per
+     bundle product and builds `variants` and `pricing` INLINE in the map — a new
+     array and a new object on every render. New identity fired the effect, the
+     effect set state, the state caused a render, and the render made new
+     identities: an infinite loop that hung the page before it finished loading.
+     Depend on the VALUES, so the effect runs when a price actually should
+     change and not when React happens to re-render. */
+  const variantKey=variants.map(variant=>`${variant.id}:${variant.cost}`).join(",");
+  const pricingKey=`${pricing.targetProfit}|${pricing.etsyFeePercent}|${pricing.fixedFee}|${pricing.listingFee}`;
+  const pricesKey=Object.keys(prices).sort().map(id=>`${id}:${prices[id]}`).join(",");
   useEffect(()=>{
     if(!variants.length||approved||manualPriceEdit.current)return;
     const wanted=Object.fromEntries(variants.map(variant=>[String(variant.id),wholePrice(recommendedPrice(variant.cost,pricing))]));
     const settled=normalizePricesByCost(variants,wanted);
     const drifted=variants.some(variant=>settled[String(variant.id)]!==prices[String(variant.id)]);
     if(drifted)onPrices(settled);
-  },[variants,approved,pricing,prices]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[variantKey,pricingKey,pricesKey,approved]);
 
   function changeProfit(value:number){const nextPricing={...pricing,targetProfit:Math.max(0,value)};onPricing(nextPricing);recalculate(nextPricing);}
   function changeCostGroupPrice(cost:number,cents:number){manualPriceEdit.current=true;const matching=variants.filter(item=>item.cost===cost),safeCents=Math.max(wholePrice(cents),cost),next={...prices};for(const item of matching)next[String(item.id)]=safeCents;onPrices(next);setRecommendationMessage(`✓ $${(safeCents/100).toFixed(2)} applied to all ${matching.length} ${matching.length===1?"variant":"variants"} with a $${(cost/100).toFixed(2)} Printify cost.`)}
