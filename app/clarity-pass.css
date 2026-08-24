@@ -2583,8 +2583,7 @@ body{min-width:1180px!important}
    design - or which product - a card is for, which is the one thing the card
    exists to tell you. Matched to the listing editor's 152px so the artwork reads
    the same on Images and on Listing. */
-.app-shell .post-draft-workspace .draft-card-top{grid-template-columns:152px minmax(0,1fr)!important;gap:18px!important}
-.app-shell .post-draft-workspace .draft-card-top .printify-preview-button{width:152px!important;height:152px!important;min-height:152px!important}
+/* D427 replaces these - see the large-preview block at the end of this file. */
 
 /* D410 · The download panel was a full-width block with 16/18px padding and a
    15px radius - the visual weight of a primary action, for a convenience. Sized
@@ -2617,3 +2616,45 @@ body{min-width:1180px!important}
 }
 .app-shell .photo-order-strip article{cursor:grab}
 
+
+/* D427 · The Printify preview on Images was 152px, and inside it the artwork is
+   about 24% of the shirt width - so the design rendered around 28px across and
+   you could not tell which listing you were looking at. Measured on the live
+   page: at 322px the design reads clearly.
+
+   The original workspace sized this preview at 58% of the card with a 500px
+   image (factory-tools.css), which is what the heading "The large preview below"
+   still refers to. Two later passes cut it to 152px and then 72px. This restores
+   a large preview without going back to 500px, which made every card a full
+   screen tall once a batch had several products.
+
+   The card is 884px at a 1440px viewport, and the text column beside it needs
+   about 420px, so the preview takes 38% and caps at 400px. */
+.app-shell .post-draft-workspace .draft-card-top{
+  grid-template-columns:minmax(280px,38%) minmax(0,1fr)!important;
+  gap:22px!important;align-items:start!important;
+}
+.app-shell .post-draft-workspace .draft-card-top .printify-preview-button{
+  width:100%!important;max-width:400px!important;height:auto!important;
+  min-height:0!important;aspect-ratio:1/1!important;padding:6px!important;
+}
+.app-shell .post-draft-workspace .draft-card-top .printify-preview-button img{
+  width:100%!important;height:100%!important;object-fit:contain!important;
+}
+/* The "View larger" affordance was hidden when the preview was a thumbnail. */
+.app-shell .post-draft-workspace .draft-card-top .printify-preview-button span{display:inline-block!important}
+
+@media (max-width:900px){
+  .app-shell .post-draft-workspace .draft-card-top{grid-template-columns:1fr!important}
+  .app-shell .post-draft-workspace .draft-card-top .printify-preview-button{max-width:100%!important}
+}
+
+/* D427 · Opening a batch that no longer exists. Informational, not a failure the
+   customer caused, so it uses the same muted rose as the other soft notices
+   rather than anything alarming. */
+.app-shell .batch-restore-notice{
+  max-width:640px;margin:10px 0 0;padding:11px 14px;
+  border:1px solid rgba(163,44,76,.22);border-radius:11px;
+  background:rgba(163,44,76,.06);color:#7c3350;
+  font-size:12px;line-height:1.5;
+}

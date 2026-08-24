@@ -2615,3 +2615,44 @@ test("the lifestyle mockup mirrors the Printify template placement, whatever the
   assert.match(integrated, /calibrated corners are not/,
     "the reason must stay next to the constants so this is not 'fixed' again");
 });
+
+test("the Images page has one Next step, and a preview large enough to read", async () => {
+  const [app, clarity] = await Promise.all([
+    readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8"),
+  ]);
+
+  // One forward control on this page. The second copy looked identical and
+  // skipped the every-listing-has-a-photo check.
+  assert.doesNotMatch(app, /mockup-next/, "the duplicate forward button is gone");
+  assert.equal((app.match(/Continue to titles/g) || []).length, 0,
+    "the bottom button says Next step, like every other step");
+
+  // Whatever advances from Images must run the photo check, not just navigate.
+  const footer = app.slice(app.indexOf("post-draft-footer"), app.indexOf("post-draft-footer") + 1400);
+  assert.match(footer, /createdListingsMissingImages\(\)/, "the one Next step still gates on photos");
+  assert.match(footer, /setFinishPhase\("details"\)/, "Images goes to Listing, never straight to Publish");
+  assert.match(footer, /Next step </);
+
+  // The preview has to be big enough that the artwork is legible. At 152px the
+  // design came out around 28px wide.
+  assert.match(clarity, /minmax\(280px,38%\)/);
+  assert.match(clarity, /max-width:400px!important/);
+  assert.doesNotMatch(clarity, /\.post-draft-workspace \.draft-card-top\{grid-template-columns:152px/);
+});
+
+test("a batch that no longer exists says so instead of silently resetting", async () => {
+  const [app, css] = await Promise.all([
+    readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8"),
+  ]);
+  // Hit while testing: opening a stale ?batch= landed on step 1 with no message,
+  // which is indistinguishable from losing your work.
+  assert.match(app, /setRestoreNotice\(/);
+  assert.match(app, /could not be opened/);
+  assert.match(app, /clean\.searchParams\.delete\("batch"\)/,
+    "the dead id is cleared so a refresh does not repeat the same dead end");
+  assert.match(app, /batch-restore-notice/);
+  assert.match(css, /\.batch-restore-notice\{/);
+  assert.doesNotMatch(css, /\.batch-restore-notice\{[\s\S]{0,200}#c62828/, "muted, not alarm red");
+});

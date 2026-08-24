@@ -383,7 +383,11 @@ test("D405: the sidebar nav column is never shrunk below its content", async () 
 test("D408: the design previews are large enough to identify the design", async () => {
   const css = await readFile(new URL("app/clarity-pass.css", root), "utf8");
   assert.match(css, /\.app-shell \.listing-editor \.listing-preview-button\{width:152px!important/);
-  assert.match(css, /\.app-shell \.post-draft-workspace \.draft-card-top \.printify-preview-button\{width:152px!important/);
+  /* D427 - 152px was still too small on Images. Inside that preview the artwork
+     is only about a quarter of the shirt width, so the design rendered around
+     28px across. Measured on the live page: it reads clearly at 322px. */
+  assert.match(css, /\.app-shell \.post-draft-workspace \.draft-card-top \.printify-preview-button\{[\s\S]{0,200}max-width:400px!important/);
+  assert.doesNotMatch(css, /\.app-shell \.post-draft-workspace \.draft-card-top \.printify-preview-button\{width:152px!important/);
 });
 
 /* D417/D418 · Two management-page inconsistencies found by looking at them:

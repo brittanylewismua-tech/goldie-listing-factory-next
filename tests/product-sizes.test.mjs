@@ -729,11 +729,14 @@ test("D222: the Images page continues to Listing, not past it to Publish", async
   /* The photo control used to end the mockups PHASE and jump to final review.
    * With photos on the Images PAGE that would skip Listing entirely - titles,
    * tags, descriptions and Etsy details - and land on Publish. */
-  const button = app.slice(app.indexOf('className="workflow-next mockup-next"'));
-  const handler = button.slice(0, button.indexOf("</button>"));
+  /* D427 - this now lives on the single footer button. There used to be a
+   * second copy in the card list; it looked identical and skipped the photo
+   * check, so it was removed rather than kept in sync. */
+  const button = app.slice(app.indexOf("post-draft-footer"));
+  const handler = button.slice(0, button.indexOf("</button>", button.indexOf("workflow-next")));
   assert.match(handler, /setFinishPhase\("details"\)/, "Images advances to the Listing page");
   assert.doesNotMatch(handler, /setFinishPhase\("final"\)/, "not straight to Publish");
-  assert.match(handler, /Continue to titles/);
+  assert.match(handler, /createdListingsMissingImages/, "and still gates on every listing having a photo");
 });
 
 test("D228: an empty colour or size selection is never written to a recipe", async () => {
