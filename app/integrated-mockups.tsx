@@ -152,17 +152,9 @@ async function rigid(file:File,t:Template,adjustment:Adjustment={scale:1,x:0,y:0
 function placementAdjustment(_placement?:ResolvedPlacement,kind:SurfaceKind="rigid-flat"):Adjustment{
   return{scale:kind==="rigid-flat"?1:.42,x:0,y:0};
 }
-async function product(file:File,t:Template,reference:File):Promise<Result>{
-  const scene=await(await fetch(t.src)).blob(),response=await fetch("/api/mockups/render",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({kind:t.surfaceKind,scene:await dataUrl(scene),design:await safeImagePreviewDataUrl(file),reference:await dataUrl(reference)})}),started=await response.json() as {jobId?:string;error?:string};
-  if(!response.ok||!started.jobId)throw new Error(started.error||`Could not start ${t.name}.`);
-  let payload:{status?:string;image?:string;error?:string;warning?:string}={status:"queued"};
-  while(payload.status!=="completed"){
-    await new Promise(resolve=>window.setTimeout(resolve,2000));
-    const poll=await fetch(`/api/mockups/render?jobId=${encodeURIComponent(started.jobId)}`);payload=await poll.json() as typeof payload;
-    if(payload.status==="failed"||(!poll.ok&&poll.status!==202))throw new Error(payload.error||`Could not finish ${t.name}.`);
-  }
-  if(!payload.image)throw new Error(`Goldie finished ${t.name}, but the image is still being saved.`);const blob=await(await fetch(payload.image)).blob();return{name:`${file.name.replace(/\.[^.]+$/,'')}-${t.name}.png`,url:URL.createObjectURL(blob),template:t.name,templateId:t.id,surfaceKind:t.surfaceKind||"apparel",warning:payload.warning}
-}
+/* D456 - the generative renderer is gone from both paths. It repainted the
+   whole frame, which no prompt can fix, because repainting is what an image
+   editor does. Nothing here calls a model to place a design any more. */
 async function withRecovery<T>(task:()=>Promise<T>){let lastError:unknown;for(let attempt=0;attempt<3;attempt++){try{return await task()}catch(error){lastError=error;if(attempt<2)await new Promise(resolve=>window.setTimeout(resolve,1200*(attempt+1)))}}throw lastError instanceof Error?lastError:new Error("This mockup could not be created after automatic recovery.")}
 
 export default function IntegratedMockups({design,productId,productName="",defaultTheme,defaultTemplateIds=[],referenceUrl,placement,artworkBounds,onPrepared}:{design:File;productId:string;productName?:string;defaultTheme:string;defaultTemplateIds?:string[];referenceUrl?:string;placement?:ResolvedPlacement;artworkBounds?:ArtworkBounds;onPrepared?:(count:number)=>void}){

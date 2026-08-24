@@ -173,13 +173,14 @@ async function makeMockup(file: File, template: Template): Promise<Rendered> {
 }
 
 function asDataUrl(source:Blob){return new Promise<string>((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result));reader.onerror=()=>reject(reader.error);reader.readAsDataURL(source);});}
-async function makeProductMockup(file:File,template:Template,reference:File|null):Promise<Rendered>{
-  if(isCalibratedSurface(template.surfaceKind||"rigid-flat"))return makeMockup(file,template);
-  const sceneBlob=await (await fetch(template.src)).blob();
-  const response=await fetch("/api/mockups/render",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({kind:template.surfaceKind,scene:await asDataUrl(sceneBlob),design:await asDataUrl(file),reference:reference?await asDataUrl(reference):undefined})});
-  const started=await response.json() as {jobId?:string;error?:string};if(!response.ok||!started.jobId)throw new Error(started.error||`Goldie could not start ${template.name}.`);let payload:{status?:string;image?:string;error?:string}={status:"queued"};while(payload.status!=="completed"){await new Promise(resolve=>window.setTimeout(resolve,2000));const poll=await fetch(`/api/mockups/render?jobId=${encodeURIComponent(started.jobId)}`);payload=await poll.json() as typeof payload;if(payload.status==="failed"||(!poll.ok&&poll.status!==202))throw new Error(payload.error||`Goldie could not render ${template.name}.`)}if(!payload.image)throw new Error(`Goldie finished ${template.name}, but the image is still being saved.`);
-  const blob=await(await fetch(payload.image)).blob(),safe=file.name.replace(/\.[^.]+$/," ").trim().replace(/[^a-z0-9]+/gi,"-").replace(/^-|-$/g,"");
-  return{name:`${safe}-${template.name.toLowerCase().replace(/[^a-z0-9]+/g,"-")}.png`,url:URL.createObjectURL(blob),template:template.name};
+async function makeProductMockup(file:File,template:Template,_reference:File|null):Promise<Rendered>{
+  /* D456 - the Mockup Library used to send curved and irregular surfaces to the
+     generative renderer, exactly as the Listing Factory did before D448. Removing
+     it from one path and not the other left the same fault reachable from a
+     different screen: the seller's own photograph repainted, a product invented
+     over it, the design somewhere other than where Printify puts it. Every
+     surface composites here too. */
+  return makeMockup(file,template);
 }
 
 export default function Home() {

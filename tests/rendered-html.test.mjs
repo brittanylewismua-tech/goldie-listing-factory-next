@@ -1013,7 +1013,12 @@ test("routes each product surface deliberately and never releases a partial batc
   assert.match(page,/made\.forEach\(item=>URL\.revokeObjectURL/);
   assert.match(page,/setResults\(\[\]\);setGenerationError/);
   assert.match(page,/isCalibratedSurface\(kind\)\?await makeMockup/);
-  assert.match(page,/if\(isCalibratedSurface\(template\.surfaceKind\|\|"rigid-flat"\)\)return makeMockup/);
+  /* D456 · The Mockup Library composites every surface too. Removing the
+     generative renderer from the Listing Factory and not from here left the same
+     fault reachable from a different screen. */
+  assert.match(page,/return makeMockup\(file,template\);/);
+  assert.doesNotMatch(page,/api\/mockups\/render/,
+    "the Mockup Library must not send a design to an image model either");
   // The calibrated branch now lives in generate(), because the padded design and
   // the trimmed design must not be able to reach the wrong renderer.
   /* D433 · The calibrated path now derives its placement from the Printify
@@ -3215,4 +3220,19 @@ test("every product in a bundle must be finished, not the open one — D455", as
   assert.match(app, /if\(!activeBundle\)return true;/);
   // And it is the same readiness the cards display, not a second opinion.
   assert.match(app, /return readinessFor\(product,recipe,isActive\?pricingApproved:Boolean\(bundleApproved\[recipe\.id\]\)\)\.established/);
+});
+
+test("no path sends a design to an image generator — D456", async () => {
+  const files = ["app/integrated-mockups.tsx","app/mockups/page.tsx"];
+  const sources = await Promise.all(files.map(f => readFile(new URL(`../${f}`, import.meta.url), "utf8")));
+
+  /* An image editor repaints the whole frame - that is what it does, and no
+     prompt changes it. So her photograph came back looking like a painting, with
+     a product invented over the model and the design somewhere other than where
+     Printify puts it. D448 removed it from the Listing Factory and missed the
+     Mockup Library, which left the identical fault one screen away. */
+  for (const [index, source] of sources.entries()) {
+    assert.doesNotMatch(source, /api\/mockups\/render/, `${files[index]} still calls the generative renderer`);
+  }
+  assert.doesNotMatch(sources[0], /async function product\(file:File/, "the generative path is gone, not just unused");
 });
