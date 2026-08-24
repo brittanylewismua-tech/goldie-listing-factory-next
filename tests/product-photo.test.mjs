@@ -144,3 +144,56 @@ test("the live tee measurements reproduce the shipped ranking", () => {
   const oldWinner = Object.entries(oldInk).sort((a, b) => b[1] - a[1])[0][0];
   assert.equal(oldWinner, "3", "documents the defect: most-ink chose the macro shot");
 });
+
+/* D349 · Saved-product thumbnails were a mix — tee and crewneck as flat studio
+   shots, the hoodie as a model wearing it. Printify returns both and the old
+   score could not tell them apart: it measured subject isolation on a plain
+   backdrop, and a studio model shot scores well on exactly that. */
+test("a flat lay beats the same garment on a model — D349", () => {
+  const size = PHOTO_SAMPLE_SIZE;
+  const frame = (paint) => {
+    const pixels = new Uint8ClampedArray(size * size * 4);
+    for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
+      const i = (y * size + x) * 4;
+      const [r, g, b] = paint(x, y);
+      pixels[i] = r; pixels[i + 1] = g; pixels[i + 2] = b; pixels[i + 3] = 255;
+    }
+    return pixels;
+  };
+  const inset = (x, y) => x > size * 0.25 && x < size * 0.75 && y > size * 0.2 && y < size * 0.8;
+
+  /* A grey garment centred on a white sweep. */
+  const flatLay = frame((x, y) => (inset(x, y) ? [140, 140, 145] : [250, 250, 250]));
+  /* The same garment, plus a head and hands: warm, red-dominant, not grey. */
+  const onModel = frame((x, y) => {
+    if (y < size * 0.2 && x > size * 0.4 && x < size * 0.6) return [198, 152, 122];
+    if (inset(x, y)) return [140, 140, 145];
+    return [250, 250, 250];
+  });
+
+  assert.ok(photoStats(onModel, size).skin >= 3, "skin has to register at all");
+  assert.equal(photoStats(flatLay, size).skin, 0, "a plain flat lay has none");
+  assert.ok(photoStats(flatLay, size).score > photoStats(onModel, size).score,
+    "the flat lay wins");
+});
+
+test("the skin penalty never rejects a whole set — D349", () => {
+  /* If every candidate is a model shot the seller still needs a thumbnail, so
+     the penalty must leave the frames comparable rather than bottoming out. */
+  const size = PHOTO_SAMPLE_SIZE;
+  const modelFrame = (headWidth) => {
+    const pixels = new Uint8ClampedArray(size * size * 4);
+    for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
+      const i = (y * size + x) * 4;
+      const skin = y < size * 0.2 && x > size * 0.5 - headWidth && x < size * 0.5 + headWidth;
+      const body = x > size * 0.3 && x < size * 0.7 && y > size * 0.2 && y < size * 0.8;
+      const [r, g, b] = skin ? [198, 152, 122] : body ? [140, 140, 145] : [250, 250, 250];
+      pixels[i] = r; pixels[i + 1] = g; pixels[i + 2] = b; pixels[i + 3] = 255;
+    }
+    return pixels;
+  };
+  const less = photoStats(modelFrame(size * 0.06), size).score;
+  const more = photoStats(modelFrame(size * 0.16), size).score;
+  assert.ok(Number.isFinite(less) && Number.isFinite(more));
+  assert.ok(less > more, "between two model shots, the one showing less skin still wins");
+});

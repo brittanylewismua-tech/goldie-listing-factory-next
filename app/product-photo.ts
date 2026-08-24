@@ -54,7 +54,7 @@ export function backdropReference(pixels: ArrayLike<number>, size = PHOTO_SAMPLE
   return [0, 1, 2].map((channel) => corners.map((c) => c[channel]).sort((a, b) => a - b)[1]) as [number, number, number];
 }
 
-export type PhotoStats = { backdrop: number; edge: number; score: number };
+export type PhotoStats = { backdrop: number; edge: number; skin: number; score: number };
 
 /* backdrop: percent of the frame matching the backdrop.
  * edge:     percent of the 1px border that is NOT backdrop, i.e. how much of
@@ -62,6 +62,36 @@ export type PhotoStats = { backdrop: number; edge: number; score: number };
  * score:    backdrop - edge * 3. The weight of 3 is what separates the flat lay
  *           (61) from the model shot with the most backdrop (44); at weight 1
  *           they tie at 61 and 62 and the model wins on noise. */
+
+/* D349 · Saved-product thumbnails were a mix: the tee and crewneck showed flat
+   studio shots, the hoodie showed a model wearing it. Printify returns both for
+   most products and the old score could not tell them apart — it measured how
+   isolated the subject was on a plain backdrop, and a studio model shot scores
+   well on exactly that.
+ *
+ * A model shot has skin in it and a flat lay does not, so skin coverage is the
+ * signal. This is a heuristic, and the classic RGB skin rule is known to be
+ * tuned toward lighter tones, so the range here is deliberately wide and the
+ * threshold is low: it only has to notice that SOME skin is present, not
+ * measure how much or whose. It is also only a penalty — if it misses, the
+ * result is the previous behaviour, not a worse one.
+ */
+export function skinPercent(pixels: ArrayLike<number>, size = PHOTO_SAMPLE_SIZE): number {
+  let skin = 0;
+  for (let index = 0; index < size * size; index++) {
+    const offset = index * 4;
+    const r = pixels[offset], g = pixels[offset + 1], b = pixels[offset + 2];
+    const max = Math.max(r, g, b), min = Math.min(r, g, b);
+    /* Warm, mid-to-high luminance, red-dominant, and not grey — which covers a
+       wide span of skin tones without catching white or grey studio backdrops. */
+    const warm = r > g && g >= b - 12 && r - b > 12;
+    const notGrey = max - min > 14;
+    const plausible = r > 60 && max > 70 && min < 245;
+    if (warm && notGrey && plausible) skin++;
+  }
+  return Math.round((skin / (size * size)) * 100);
+}
+
 export function photoStats(pixels: ArrayLike<number>, size = PHOTO_SAMPLE_SIZE): PhotoStats {
   const ref = backdropReference(pixels, size);
   const isBackdrop = (x: number, y: number) => {
@@ -88,7 +118,13 @@ export function photoStats(pixels: ArrayLike<number>, size = PHOTO_SAMPLE_SIZE):
    * 100% backdrop with nothing touching the border. A blank or solid placeholder
    * would beat every real product shot. Reject both extremes instead. */
   if (backdropPercent >= 99 || backdropPercent <= 1) {
-    return { backdrop: backdropPercent, edge: edgePercent, score: Number.NEGATIVE_INFINITY };
+    return { backdrop: backdropPercent, edge: edgePercent, skin: 0, score: Number.NEGATIVE_INFINITY };
   }
-  return { backdrop: backdropPercent, edge: edgePercent, score: backdropPercent - edgePercent * 3 };
+  /* D349 · A garment worn by a person is a worse thumbnail than the garment on
+     its own, so skin present in the frame outweighs a slightly cleaner backdrop.
+     The penalty is large enough that any real model shot loses to any usable
+     flat lay, and the threshold keeps a stray warm pixel from mattering. */
+  const skin = skinPercent(pixels, size);
+  const modelPenalty = skin >= 3 ? 120 + skin : 0;
+  return { backdrop: backdropPercent, edge: edgePercent, skin, score: backdropPercent - edgePercent * 3 - modelPenalty };
 }
