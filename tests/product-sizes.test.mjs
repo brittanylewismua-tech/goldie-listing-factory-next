@@ -124,8 +124,13 @@ test("a partial recipe save cannot wipe a stored default", async () => {
 test("the saved product carries sizes everywhere it carries colours", async () => {
   const tools = await read("app/factory-tools.tsx");
   assert.match(tools, /defaultColorIds\?:number\[\];defaultSizeIds\?:number\[\]/);
-  assert.equal((tools.match(/defaultSizeIds:existing\?\.defaultSizeIds/g) || []).length, 2,
-    "both the POST body and the local Recipe object must carry it");
+  /* D392 · Was 2. The POST no longer echoes colours and sizes back - the form
+     does not edit them, and a stale echo overwrote fresh choices. The local
+     Recipe object still carries them so the card does not blank out after a
+     save. One site, deliberately. */
+  assert.equal((tools.match(/defaultSizeIds:existing\?\.defaultSizeIds/g) || []).length, 1,
+    "the local Recipe object must still carry it");
+  assert.equal((tools.match(/defaultColorIds:existing\?\.defaultColorIds/g) || []).length, 1);
 });
 
 test("nothing still claims sizes can only be changed in Printify", async () => {
@@ -1328,4 +1333,27 @@ test("D379: opening a product card does not reload the page", async () => {
 
   /* No second click while a load is in flight. */
   assert.match(app, /if\(switchingProduct\)return;\s*setSwitchingProduct\(recipe\.id\)/);
+});
+
+/* D392 · The saved-product form echoed the colours and sizes it was holding back
+   to the server on every save — `defaultColorIds:existing?.defaultColorIds`.
+   The form does not edit colours. If its copy of the recipe was stale, saving
+   the product wrote the stale value over colours chosen since, which is exactly
+   the loss D228 recorded: Gildan Tee with five saved colours in the morning and
+   zero by the afternoon, while the other two products kept theirs.
+
+   The API already preserves any key that is absent (see product-recipes route),
+   so the fix is to stop sending what this form does not own. A form may only
+   send the fields it edits. */
+test("D392: the saved-product form never sends colours or sizes it does not edit", async () => {
+  const tools = await read("app/factory-tools.tsx");
+  const postBody = tools.slice(tools.indexOf('fetch("/api/product-recipes"'), tools.indexOf("const saved:Recipe="));
+  assert.doesNotMatch(postBody, /defaultColorIds:existing\?\.defaultColorIds/,
+    "echoing a held copy back is how a stale value overwrites a fresh one");
+  assert.doesNotMatch(postBody, /defaultSizeIds:existing\?\.defaultSizeIds/);
+
+  const route = await read("app/api/product-recipes/route.ts");
+  assert.match(route, /if \(body\.defaultColorIds !== undefined\)/,
+    "an absent key must leave the stored value alone");
+  assert.match(route, /if \(body\.defaultSizeIds !== undefined\)/);
 });
