@@ -152,7 +152,7 @@ test("uses individual shop-aware Printify editor buttons", async () => {
   assert.match(page, /Wait\. Your files are still uploading/);
   assert.match(page, /Leaving now may stop the unfinished uploads/);
   assert.doesNotMatch(page, /className="upload-guard"/);
-  assert.match(page, /Doing so may halt your current design uploads/);
+  assert.match(page, /Design uploads still in progress may stop before their Printify drafts are finished/);
   assert.match(page, /setUploadNoticeOpen\(true\)/);
   assert.match(page, /beforeunload/);
   assert.match(page, /Review all listings in Printify/); // D151: real DOM label, was a CSS ::after
@@ -1187,7 +1187,7 @@ test("keeps batch history useful instead of accumulating unmanageable empty sess
   ]);
   assert.match(page,/\(!files\.length&&!drafts\.length\)\)return/);
   assert.match(batches,/Permanently remove from history/);
-  assert.match(batches,/does not delete products from Printify or listings from Etsy/);
+  assert.match(batches,/Products already created in Printify and listings already on Etsy are not deleted/);
   assert.match(batches,/method:"DELETE"/);
 });
 
@@ -1897,7 +1897,7 @@ test("makes Batch History visual, identifiable, reversible, and truthful",async(
     readFile(new URL("../app/batch-history.css",import.meta.url),"utf8"),
   ]);
   assert.match(route,/designName/);assert.match(route,/thumbnail_url/);assert.match(route,/state\.keptAsDrafts/);
-  assert.match(history,/batch-history-thumbnail/);assert.match(history,/Permanently remove/);assert.match(history,/window\.confirm/);
+  assert.match(history,/batch-history-thumbnail/);assert.match(history,/Permanently remove/);assert.match(history,/confirmAction\(\{/);
   assert.match(history,/Open published batch/);assert.match(history,/batch\.status==="complete"\?"&open=results":""/);
   assert.match(styles,/\.batch-history-thumbnail/);assert.match(styles,/\.batch-history-controls/);
 });
@@ -2467,7 +2467,8 @@ test("Batch History can select and delete several at once — D364", async () =>
   /* One confirmation for the whole set, carrying the same warning the single
      delete gives. */
   assert.match(page, /Permanently remove \$\{chosen\.length\}/);
-  assert.match(page, /This does not delete products from Printify or listings from Etsy/);
+  /* D452 · Same promise, said once and in the app's own dialog. */
+  assert.match(page, /Products already created in Printify are not deleted/);
 
   /* A partial failure must not pretend the survivors are gone. */
   assert.match(page, /if\(response\.ok\)removed\.push\(batch\.id\)/);
@@ -3073,12 +3074,18 @@ test("a keyword bank rejects what cannot be a keyword — D450", async () => {
     "a phrase that is far too long to be a sensible etsy tag because it just keeps going well past any reasonable limit",
   ].join("\n");
 
-  assert.deepEqual(phrasesFromErank(pasted), ["sailboat shirt", "Nautical Shirt", "coastal christian tee"]);
+  assert.deepEqual(phrasesFromErank(pasted),
+    ["sailboat shirt", "Nautical Shirt", "coastal christian tee", "SAILBOAT SHIRT"],
+    "the exact repeat and the over-long line go; the case variant is hers to keep");
 
-  /* The same phrase in different case is the same Etsy tag. Keeping both spends
-     two of thirteen tag slots on one keyword and lets the ranker count it twice.
-     The first spelling wins, because that is the one she typed. */
-  assert.deepEqual(phrasesFromErank("Sailboat Shirt\nsailboat shirt"), ["Sailboat Shirt"]);
+  /* D453 · Duplicates are exact matches only. A plural is not a duplicate of its
+     singular and a deliberate misspelling is not a duplicate of the correct
+     spelling - those are separate keywords with their own eRank data, and
+     collapsing them throws away research she paid for. */
+  assert.deepEqual(phrasesFromErank("sailboat shirt\nsailboat shirts"), ["sailboat shirt", "sailboat shirts"]);
+  assert.deepEqual(phrasesFromErank("bachelorette tee\nbachlorette tee"), ["bachelorette tee", "bachlorette tee"]);
+  assert.deepEqual(phrasesFromErank("Sailboat Shirt\nsailboat shirt"), ["Sailboat Shirt", "sailboat shirt"],
+    "case is hers to keep; the Etsy collision is handled where tags are sent");
 
   // A phrase longer than a title can hold is not a keyword; a real one is kept.
   assert.deepEqual(phrasesFromErank("bikinis and martinis bachelorette"), ["bikinis and martinis bachelorette"]);
@@ -3108,4 +3115,48 @@ test("a bundle gate checks every product, not the open one — D451", async () =
   assert.match(gate, /:Boolean\(etsyShippingProfileId\)/);
   assert.doesNotMatch(gate, /etsyShippingProfileReady:Boolean\(etsyShippingProfileId\),pricingApproved,/,
     "the old single-value gate is gone");
+});
+
+test("two tags differing only by case never reach Etsy — D453", async () => {
+  const route = await readFile(new URL("../app/api/listing-intelligence/route.ts", import.meta.url), "utf8");
+
+  /* A bank may legitimately hold "sailboat shirt" and "SAILBOAT SHIRT", because
+     exact duplicates are removed and case variants are not. Etsy refuses two tags
+     that differ only by case, so the collision is resolved on the way out rather
+     than by editing what she typed. */
+  assert.match(route, /const withoutCaseCollisions=\(list:string\[\]\)=>/);
+  assert.match(route, /const pickedTags=withoutCaseCollisions\(/);
+});
+
+test("every confirmation uses the app's own dialog — D452", async () => {
+  const files = ["app/listing-factory-app.tsx","app/factory-tools.tsx","app/keywords/page.tsx","app/batches/page.tsx"];
+  const sources = await Promise.all(files.map(f => readFile(new URL(`../${f}`, import.meta.url), "utf8")));
+  const dialog = await readFile(new URL("../app/confirm-dialog.tsx", import.meta.url), "utf8");
+  const clarity = await readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8");
+
+  /* Destructive actions - deleting a bank, removing a batch, clearing a design -
+     used the browser's own confirm(), while everything else used a styled modal.
+     The moments that throw work away were the ones that looked least like Goldie.
+     A native confirm also blocks the page while open; one froze a test session. */
+  for (const [index, source] of sources.entries()) {
+    assert.doesNotMatch(source, /window\.confirm\(/, `${files[index]} still calls window.confirm`);
+  }
+
+  // It is the same modal shell the rest of the app already uses.
+  assert.match(dialog, /className="publish-confirm-backdrop"/);
+  assert.match(dialog, /className="publish-confirm confirm-action-modal"/);
+  assert.match(dialog, /role="alertdialog"/);
+
+  // Escape and the backdrop both mean no, and refusing is the default answer.
+  assert.match(dialog, /event\.key === "Escape"/);
+  assert.match(dialog, /if \(!announce\) return Promise\.resolve\(false\)/,
+    "with no dialog mounted, a destructive action must not proceed");
+  assert.match(dialog, /autoFocus/, "focus lands on Cancel, not the destructive action");
+
+  // Destructive confirmations use the muted rose, never an alarm red.
+  assert.match(clarity, /\.confirm-action-go\.destructive\{\s*background:#a32c4c;/);
+  assert.doesNotMatch(clarity, /\.confirm-action-go\.destructive\{[^}]*#c62828/);
+
+  // And the host is mounted once, so confirmAction always has somewhere to render.
+  assert.match(sources[0], /<ConfirmHost \/>/);
 });

@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { confirmAction } from "../confirm-dialog";
 import ManagementNav from "../management-nav";
 type Batch = { id:string; status:string; step:string; setup_name:string; product_title:string; design_count:number; created_at:string; updated_at:string; display_name:string; thumbnail_url:string; published_count:number;draft_count?:number };
 export default function BatchesPage() {
@@ -19,7 +20,7 @@ export default function BatchesPage() {
     if(!chosen.length||deleting)return;
     /* One confirmation for the whole set, naming the count — the same warning
        the single delete gives, said once. */
-    if(!window.confirm(`Permanently remove ${chosen.length} ${chosen.length===1?"batch":"batches"} from Batch History? This cannot be undone. This does not delete products from Printify or listings from Etsy.`))return;
+    if(!await confirmAction({title:`Permanently remove ${chosen.length} ${chosen.length===1?"batch":"batches"}?`,body:"This cannot be undone. Products already created in Printify are not deleted.",confirmLabel:"Remove from history",destructive:true}))return;//from Printify or listings from Etsy.`))return;
     setDeleting(true);
     const removed:string[]=[];
     for(const batch of chosen){
@@ -34,7 +35,7 @@ export default function BatchesPage() {
   }
 
   async function remove(batch:Batch) {
-    if (!window.confirm(`Permanently remove “${batch.display_name || "Untitled batch"}” from Batch History? This cannot be undone. This does not delete products from Printify or listings from Etsy.`)) return;
+    if (!await confirmAction({title:`Permanently remove “${batch.display_name || "Untitled batch"}”?`,body:"This cannot be undone. Products already created in Printify and listings already on Etsy are not deleted.",confirmLabel:"Remove from history",destructive:true})) return;
     const response=await fetch(`/api/batches?id=${encodeURIComponent(batch.id)}`,{method:"DELETE"});
     if(response.ok)setBatches(current=>current.filter(item=>item.id!==batch.id));
   }

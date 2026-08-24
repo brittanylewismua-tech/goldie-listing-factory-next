@@ -24,10 +24,14 @@ export function phrasesFromErank(raw: string) {
   else values = rows.flat();
   /* D450 · Two things a real paste puts in here, both found by pasting one.
    *
-   * The same phrase in different case is the same Etsy tag. A case-sensitive Set
-   * kept "sailboat shirt" and "SAILBOAT SHIRT" as two phrases, which spends two
-   * of thirteen tag slots on one keyword and lets the ranker count it twice. The
-   * first spelling wins, because that is the one she typed.
+   * Duplicates are exact matches only. A plural is not a duplicate of its
+   * singular, and a deliberate misspelling is not a duplicate of the correct
+   * spelling - those are separate keywords with their own eRank data, and
+   * collapsing them would throw away research she paid for. Case is left alone
+   * here for the same reason: what she typed is what her bank keeps.
+   *
+   * Two tags differing only by case would be refused by Etsy, so that collision
+   * is resolved where tags are chosen for a listing, not by editing her bank.
    *
    * And a phrase longer than a title can hold is not a keyword. An Etsy title is
    * 140 characters; her longest real phrase is 33. A 113-character line pasted by
@@ -40,9 +44,8 @@ export function phrasesFromErank(raw: string) {
     const phrase = value.trim();
     if (!phrase || HEADER.test(phrase) || /^[$%\d,.]+$/.test(phrase)) continue;
     if (phrase.length > MAX_PHRASE) continue;
-    const key = phrase.toLocaleLowerCase();
-    if (seen.has(key)) continue;
-    seen.add(key);
+    if (seen.has(phrase)) continue;
+    seen.add(phrase);
     phrases.push(phrase);
   }
   return phrases;

@@ -2688,3 +2688,31 @@ body{min-width:1180px!important}
   -webkit-box-orient:vertical!important;
   line-height:1.35!important;
 }
+
+/* D452 · The shared confirmation dialog. Destructive actions used the browser's
+   own confirm() while the rest of the app used this modal, so the moments that
+   throw work away were the ones that looked least like Goldie - and a native
+   confirm blocks the whole page while it is open. Same shell as the restart
+   modal; only the actions differ, because this one always offers a way out. */
+.app-shell .confirm-action-modal,
+.confirm-action-modal{max-width:460px}
+.confirm-action-actions{
+  display:grid;gap:9px;margin-top:22px;
+}
+.confirm-action-actions button{
+  width:100%;padding:13px;border-radius:10px;
+  font:inherit;font-size:12px;font-weight:800;cursor:pointer;
+}
+.confirm-action-cancel{
+  border:1px solid rgba(91,48,79,.22);background:#fff;color:#5b304f;
+}
+.confirm-action-cancel:hover{background:#fdf7fd}
+.confirm-action-go{
+  border:0;background:#5b304f;color:#fff;
+}
+/* Destructive actions carry the muted rose used everywhere else for a warning,
+   never an alarm red. */
+.confirm-action-go.destructive{
+  background:#a32c4c;
+}
+.confirm-action-go:hover{filter:brightness(1.08)}

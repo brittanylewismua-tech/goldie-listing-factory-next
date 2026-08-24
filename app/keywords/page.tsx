@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { phrasesFromErank } from "../seo-utils";
 import { excludedProductNouns, namesExcludedProduct } from "../product-type-utils";
 import ManagementNav from "../management-nav";
+import { confirmAction } from "../confirm-dialog";
 
 type List = { id: string; name: string; keywords: string[] };
 type ProductUse = { id:string; name:string; keywordListId?:string };
@@ -58,7 +59,7 @@ export default function KeywordBanks() {
     }
   }
   function startAnother(){setName("");setRaw("");setSavedId("");setNotice(null)}
-  async function remove(list:List){if(!window.confirm(`Delete “${list.name}”?`))return;await fetch("/api/keyword-lists",{method:"DELETE",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:list.id})});if(savedId===list.id)startAnother();void reload()}
+  async function remove(list:List){if(!await confirmAction({title:`Delete “${list.name}”?`,body:"This keyword bank and its phrases are removed. Listings already built from it are not changed.",confirmLabel:"Delete bank",destructive:true}))return;await fetch("/api/keyword-lists",{method:"DELETE",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:list.id})});if(savedId===list.id)startAnother();void reload()}
 
   return <main className="management-page keyword-page">
     <ManagementNav active="keywords" listingFactoryHref={returnHref}/>

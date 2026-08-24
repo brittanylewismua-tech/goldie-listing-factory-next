@@ -7,6 +7,7 @@ import { runBounded } from "./bounded-work";
 import { productReadiness, recipeCarriesApprovedPricing, type Readiness } from "./product-readiness";
 import { KeywordBank, SavedWorkflow, type KeywordList, type Pricing, type ProductBundle, type Recipe } from "./factory-tools";
 import IntegratedMockups from "./integrated-mockups";
+import ConfirmHost, { confirmAction } from "./confirm-dialog";
 import ListingPhotoOrder from "./listing-photo-order";
 import { tagsFromTitle } from "./seo-utils";
 import { printifyDpi } from "./print-quality";
@@ -1112,7 +1113,7 @@ export default function ListingFactoryApp() {
     setTemplate('https://printify.com/app/products/preview');setTemplateDetails(details);setDescription(details.description);setFiles(previewFiles);setDrafts(previewFiles.map((design,index)=>({id:`preview-draft-${index+1}`,clientId:design.id,name:design.name,title:design.title,tags:design.tags,previewUrl:'/mockups/pink-dorm-01-leaning-frame.png',printifyImages:['/mockups/pink-dorm-01-leaning-frame.png','/mockups/pink-dorm-02-hanging-poster.png','/mockups/pink-dorm-03-maximalist-bed.png'],editorUrl:'https://printify.com/app/products',status:'Created'})));setEtsyCategories([previewCategory]);setEtsyShippingProfiles([profile]);setEtsyShippingProfileId(profile.id);setVariantPrices({'101':1600,'104':1600,'102':2400,'105':2400,'103':3800});setPricingApproved(false);setComplete(true);setFinishPhase('details');setWorkflowStep('designs');const url=new URL(window.location.href);url.searchParams.set('step','review');window.history.replaceState({},'',url);window.scrollTo({top:0,behavior:'smooth'});
   }
 
-  function confirmUploadInterruption(){return !running||window.confirm("Are you sure you want to leave this step? Doing so may halt your current design uploads before the Printify drafts are finished.")}
+  async function confirmUploadInterruption(){return !running||await confirmAction({title:"Leave this step while uploads are running?",body:"Design uploads still in progress may stop before their Printify drafts are finished.",confirmLabel:"Leave anyway",cancelLabel:"Stay here",destructive:true})}
   function stopWith(title:string,issues:string[],copy?:string){setBlockingModal({title,issues,copy});return false}
   function requiredForProgress(index:number){return progressGateIssues(index)}
   const bundleKeywordGaps=useMemo(()=>{
@@ -1134,14 +1135,14 @@ export default function ListingFactoryApp() {
      owns the decision. */
   if(["designs","review","finish"].includes(step)){if(!etsyShippingProfileId)issues.push("Choose the Etsy shipping profile for this batch.");if(!pricingApproved)issues.push("Approve the item prices and shipping on the product step.");}
   if(step==="finish"){if(!complete)issues.push("Finish the Printify draft run first.");if(!drafts.some(draft=>draft.status==="Created"))issues.push("At least one listing must be created successfully before publishing.");}return issues}
-  async function openProgressStep(rawIndex:number){if(!confirmUploadInterruption())return;
+  async function openProgressStep(rawIndex:number){if(!await confirmUploadInterruption())return;
     /* D220 · Draft creation (3, 4) and mockups (7) live on the Images page now, so
        any legacy index pointing at them resolves there. Deep links and saved batch
        state still use the 0-8 numbering. */
     const index=rawIndex===3||rawIndex===4||rawIndex===7?2:rawIndex;if(localPreview){if(index===0)return goToStep("connect",false,true);if(index===1)return goToStep("setup",false,true);if(index===2)return goToStep("designs",false,true);if(index>=3&&!templateDetails)await loadPreviewDemo();if(index===3){setPreflightOpen(false);return goToStep("review",false,true)}if(index===4){goToStep("review",false,true);setPreflightOpen(true);return}setPreflightOpen(false);setFinishPhase(index===8?"final":"details");return goToStep("finish",false,true)}const issues=requiredForProgress(index);if(issues.length)return stopWith("Finish all sections first.",issues);if(index===0)return goToStep("connect");if(index===1)return goToStep("setup");if(index===2)return goToStep("designs");if(index===3)return goToStep("review");if(index===4){goToStep("review");return createDrafts()}setFinishPhase(index===8?"final":"details");goToStep("finish",false,true)}
 
-  function goBackOneStep(){
-    if(!confirmUploadInterruption())return;
+  async function goBackOneStep(){
+    if(!await confirmUploadInterruption())return;
     if(progressIndex===0){window.history.back();return}
     if(progressIndex===1)return goToStep("connect",false,true);
     if(progressIndex===2)return goToStep("setup",false,true);
@@ -1339,7 +1340,7 @@ export default function ListingFactoryApp() {
 
   async function analyzePadding(images:DesignFile[]) { for(const design of images){ if(!/\.png$/i.test(design.name)){updateDesign(design.id,{visibleBounds:{left:0,top:0,right:1,bottom:1},hasTransparency:false,paddingStatus:"full"});continue} try{const bitmap=await createImageBitmap(design.file,{resizeWidth:512,resizeHeight:512,resizeQuality:"low"});const canvas=document.createElement("canvas");canvas.width=bitmap.width;canvas.height=bitmap.height;const context=canvas.getContext("2d",{willReadFrequently:true})!;context.drawImage(bitmap,0,0);bitmap.close();const pixels=context.getImageData(0,0,canvas.width,canvas.height).data;let left=canvas.width,top=canvas.height,right=-1,bottom=-1,hasTransparency=false;for(let y=0;y<canvas.height;y++)for(let x=0;x<canvas.width;x++){const alpha=pixels[(y*canvas.width+x)*4+3];if(alpha<250)hasTransparency=true;if(alpha>8){left=Math.min(left,x);right=Math.max(right,x);top=Math.min(top,y);bottom=Math.max(bottom,y)}}const bounds=right<0?{left:0,top:0,right:1,bottom:1}:{left:left/canvas.width,top:top/canvas.height,right:(right+1)/canvas.width,bottom:(bottom+1)/canvas.height};const trimmed=bounds.left>.015||bounds.top>.015||bounds.right<.985||bounds.bottom<.985;updateDesign(design.id,{visibleBounds:bounds,hasTransparency,paddingStatus:trimmed?"trimmed":"full"})}catch{updateDesign(design.id,{visibleBounds:{left:0,top:0,right:1,bottom:1},hasTransparency:true,paddingStatus:"full"})} } }
 
-  function removeDesign(id:string){const removed=files.find(file=>file.id===id);if(!removed)return;if(drafts.length&&!window.confirm(`Remove ${removed.name}? Its existing Printify draft will remain in Printify, but this listing will be removed from this Goldie batch.`))return;const next=files.filter(file=>file.id!==id);URL.revokeObjectURL(removed.previewUrl);setFiles(next);setFileError("");setFileNotice(`${removed.name} was removed.`);setComplete(false);setDrafts([]);setProcessed(0);const batchId=batchIdRef.current;if(batchId){if(next.length)void saveBatchFiles(batchId,next.map(file=>file.file)).catch(()=>undefined);else void clearBatchFiles(batchId)}}
+  async function removeDesign(id:string){const removed=files.find(file=>file.id===id);if(!removed)return;if(drafts.length&&!await confirmAction({title:`Remove ${removed.name}?`,body:"Its existing Printify draft stays in Printify. This listing is removed from this Goldie batch.",confirmLabel:"Remove listing",destructive:true}))return;const next=files.filter(file=>file.id!==id);URL.revokeObjectURL(removed.previewUrl);setFiles(next);setFileError("");setFileNotice(`${removed.name} was removed.`);setComplete(false);setDrafts([]);setProcessed(0);const batchId=batchIdRef.current;if(batchId){if(next.length)void saveBatchFiles(batchId,next.map(file=>file.file)).catch(()=>undefined);else void clearBatchFiles(batchId)}}
 
   function updateDesign(id: string, change: Partial<DesignFile>) { const clearedChange=change.title!==undefined&&change.titleError===undefined?{...change,titleError:"",titleWarning:""}:change;const nextChange=clearedChange.title!==undefined&&titleCaps?{...clearedChange,title:clearedChange.title.replace(/\b[\p{L}\p{N}]/gu,character=>character.toLocaleUpperCase())}:clearedChange;setFiles((current) => current.map((file) => file.id === id ? { ...file, ...nextChange } : file)); if(nextChange.title!==undefined)setDrafts(current=>current.map(draft=>draft.clientId===id?{...draft,title:nextChange.title}:draft)); }
   function pulseTitle(id:string){setTitlePulseIds(current=>new Set(current).add(id));window.setTimeout(()=>setTitlePulseIds(current=>{const next=new Set(current);next.delete(id);return next}),520)}
@@ -1382,7 +1383,7 @@ export default function ListingFactoryApp() {
   async function saveProductDefaults(change:Partial<Recipe>,key:string){if(!activeRecipe)return;setSavingProductDefault(key);try{const updated={...activeRecipe,...change};const response=await fetch("/api/product-recipes",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:activeRecipe.id,name:activeRecipe.name,templateUrl:activeRecipe.templateUrl,...change})});if(!response.ok)throw new Error("Goldie could not save this product default.");setActiveRecipe(updated);}catch(error){stopWith("This default was not saved.",[error instanceof Error?error.message:"Try again in a moment."])}finally{setSavingProductDefault("")}}
   async function rememberBatchDefaultsAfterPublish(){if(!activeRecipe)return;const updated={...activeRecipe,defaultColorIds:selectedColorIds,defaultSizeIds:selectedSizeIds,defaultMockupTheme:mockupTheme,mockupIds:sharedMockups?.theme===mockupTheme?sharedMockups.ids:[]};const response=await fetch("/api/product-recipes",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:activeRecipe.id,name:activeRecipe.name,templateUrl:activeRecipe.templateUrl,defaultColorIds:selectedColorIds,defaultSizeIds:selectedSizeIds,defaultMockupTheme:mockupTheme,mockupIds:sharedMockups?.theme===mockupTheme?sharedMockups.ids:[]})});if(response.ok){setActiveRecipe(updated);setColorsRemembered(true);setSizesRemembered(true)}}
   async function completeProductSetup(){if(!activeRecipe)return;await saveProductDefaults({setupComplete:true,defaultColorIds:selectedColorIds,defaultSizeIds:selectedSizeIds,defaultMockupTheme:mockupTheme,mockupIds:sharedMockups?.theme===mockupTheme?sharedMockups.ids:[]},"initial-setup")}
-  async function chooseRecipe(recipe: Recipe) { const changingProduct=Boolean((activeRecipe?.id&&activeRecipe.id!==recipe.id)||(template&&template!==recipe.templateUrl));if(changingProduct&&(files.length>0||drafts.length>0||complete)){const count=files.length;if(!window.confirm(`Switch to “${recipe.name}” and start a new batch? This removes ${count} ${count===1?"design":"designs"} and all work from the current batch on this page.`))return false;clearCurrentBatch(false)}try{window.localStorage.removeItem("goldie-active-bundle")}catch{/* private mode */}setActiveBundle(null);setBundleRecipes([]);setBundleIndex(0);return Boolean(await selectRecipe(recipe)); }
+  async function chooseRecipe(recipe: Recipe) { const changingProduct=Boolean((activeRecipe?.id&&activeRecipe.id!==recipe.id)||(template&&template!==recipe.templateUrl));if(changingProduct&&(files.length>0||drafts.length>0||complete)){const count=files.length;if(!await confirmAction({title:`Switch to “${recipe.name}” and start a new batch?`,body:`This removes ${count} ${count===1?"design":"designs"} and all work from the current batch. Saved products, keyword banks and mockup sets are untouched.`,confirmLabel:"Switch product",destructive:true}))return false;clearCurrentBatch(false)}try{window.localStorage.removeItem("goldie-active-bundle")}catch{/* private mode */}setActiveBundle(null);setBundleRecipes([]);setBundleIndex(0);return Boolean(await selectRecipe(recipe)); }
   async function useBundle(bundle:ProductBundle,recipeIds:string[]){
     const requestedIds=[...new Set(recipeIds.filter(Boolean))];
     if(requestedIds.length<2){stopWith("This product bundle needs attention.",["Choose at least two available saved products."]);return false}
@@ -1395,7 +1396,7 @@ export default function ListingFactoryApp() {
      * already multiplies designs by products against the remaining allowance
      * and explains the result in the page, so the prediction was redundant and
      * its only unique effect was a failure she could not avoid. See D129. */
-    if((files.length>0||drafts.length>0||complete)&&!window.confirm(`Start “${bundle.name}” and clear the current batch? Your current designs and unfinished work will be removed.`))return false;
+    if((files.length>0||drafts.length>0||complete)&&!await confirmAction({title:`Start “${bundle.name}” and clear this batch?`,body:"Your current designs and unfinished work will be removed. Saved products, keyword banks and mockup sets are untouched.",confirmLabel:"Start this bundle",destructive:true}))return false;
     clearCurrentBatch(true);
     setActiveBundle(bundle);setBundleRecipes(recipes);setBundleIndex(0);const first=await selectRecipe(recipes[0]);if(!first)return false;/* D354 · Written AFTER selectRecipe, because selectRecipe writes the
        single-product key and used to clear this one. Refresh must land on the
@@ -1581,13 +1582,13 @@ export default function ListingFactoryApp() {
     &&!activeRecipe?.defaultColorIds?.length
     &&!activeRecipe?.defaultMockupTheme
     &&!activeRecipe?.keywordListId;
-  function startNewProduct(){
-    if((files.length>0||drafts.length>0||complete)&&!window.confirm("Add a new product and clear the current product setup? Any designs and unfinished work in this batch will be removed."))return false;
+  async function startNewProduct(){
+    if((files.length>0||drafts.length>0||complete)&&!await confirmAction({title:"Add a new product and clear this batch?",body:"Any designs and unfinished work in this batch will be removed. Saved products, keyword banks and mockup sets are untouched.",confirmLabel:"Add a product",destructive:true}))return false;
     clearCurrentBatch(true);
     return true;
   }
-  function changeProduct(){
-    if((files.length>0||drafts.length>0||complete)&&!window.confirm("Change products and start a new batch? Your uploaded designs and unfinished work in this batch will be removed."))return false;
+  async function changeProduct(){
+    if((files.length>0||drafts.length>0||complete)&&!await confirmAction({title:"Change product and start a new batch?",body:"Your uploaded designs and unfinished work in this batch will be removed. Saved products, keyword banks and mockup sets are untouched.",confirmLabel:"Change product",destructive:true}))return false;
     clearCurrentBatch(true);return true;
   }
   async function saveImagePreferences(indices:number[]){if(!activeRecipe)return;const response=await fetch("/api/product-recipes",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:activeRecipe.id,name:activeRecipe.name,templateUrl:activeRecipe.templateUrl,printifyImageIndices:indices})});if(!response.ok)throw new Error("These Printify photo preferences could not be saved. Please try again.");setPrintifyImageIndices(indices);setActiveRecipe({...activeRecipe,printifyImageIndices:indices})}
@@ -1934,6 +1935,7 @@ export default function ListingFactoryApp() {
 
   return (
     <main className="app-shell" data-product-selected={templateDetails?"true":"false"}>
+      <ConfirmHost />
       <section className="mobile-gate" aria-label="Desktop required">
         <div className="mobile-brand"><div className="approved-wm">Gold<span className="approved-i">ı<span>✦</span></span>e</div><div className="approved-sub">Listing Factory</div></div>
         <div className="mobile-card"><div className="mobile-command">⌘</div><h1>Oops, this one needs a bigger screen.</h1><p>Goldie Listing Factory is built for desktop. Hop onto your computer and sign in. Your saved work will be waiting for you.</p><div className="mobile-saved">✓ Your progress is saved automatically.</div></div>

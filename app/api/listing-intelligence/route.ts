@@ -84,7 +84,13 @@ Select only phrases a shopper looking at THIS artwork would call accurate. If a 
     const designSignals=[...designText,...designSubjects];
     const bankFit=bankFitForDesign(titleCandidates,designSignals);
     const picked=selected.length?selected:bestFitFromBank(titleCandidates,designSignals,body.product);
-    const pickedTags=tags.length?tags:bestFitFromBank(tagCandidates,designSignals,body.product).slice(0,13);
+    /* D453 - Etsy refuses two tags that differ only by case, and a bank may hold
+       both on purpose: exact duplicates are removed from a bank, case variants
+       are not, because a plural or a deliberate misspelling is a separate
+       keyword with its own data. The collision is resolved here, on the way
+       out, rather than by editing what she typed. */
+    const withoutCaseCollisions=(list:string[])=>{const seen=new Set<string>();return list.filter(phrase=>{const key=phrase.toLocaleLowerCase();if(seen.has(key))return false;seen.add(key);return true})};
+    const pickedTags=withoutCaseCollisions(tags.length?tags:bestFitFromBank(tagCandidates,designSignals,body.product)).slice(0,13);
     if(!picked.length)return NextResponse.json({error:"This keyword bank is empty, so there is nothing to build a title from. Pick a bank with phrases in it, or write this title yourself."},{status:422});
     /* D157: `selected` is de-duplicated for exact matches only, so a bank holding
      * both "girls gone mild" and "bachelorette girls gone mild" put BOTH in the
