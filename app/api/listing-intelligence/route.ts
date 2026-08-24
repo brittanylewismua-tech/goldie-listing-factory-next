@@ -74,11 +74,11 @@ HOW MANY: order your title selections most relevant first, then keep going. Sele
 
 ETSY TAGS ARE A SEPARATE FIELD: rank these tag-length phrases from most to least relevant to this design: ${JSON.stringify(tagCandidates)}. Return every fitting candidate in ranked order, up to 13. Never split, shorten, combine, rewrite, or invent a tag. Tags do not need to appear in the title.
 
-Avoid duplicate meaning. Do not rewrite, combine, expand, correct, or invent any phrase. Copy each phrase exactly as it appears in the bank. Return only {"design_text":["exact visible line from the design"],"selected_keywords":["exact title phrase copied from the bank"],"tag_keywords":["exact tag phrase copied from the supplied tag candidates"]}.${correction}`})});
-      const titlePayload=await titleResponse.json() as {output?:string;detail?:string};if(!titleResponse.ok)throw new Error(titlePayload.detail||"Goldie could not build this title.");const match=titlePayload.output?.match(/\{[\s\S]*\}/);if(!match)throw new Error("Goldie could not read the prepared title.");const parsed=JSON.parse(match[0]) as {selected_keywords?:string[];tag_keywords?:string[];design_text?:string[]},allowedByLower=new Map(titleCandidates.map(keyword=>[keyword.toLocaleLowerCase(),keyword])),selected=[...new Set((parsed.selected_keywords||[]).map(value=>allowedByLower.get(clean(value).toLocaleLowerCase())).filter((value):value is string=>Boolean(value)))].slice(0,13),tagAllowedByLower=new Map(tagCandidates.map(keyword=>[keyword.toLocaleLowerCase(),keyword])),tags=[...new Set((parsed.tag_keywords||[]).map(value=>tagAllowedByLower.get(clean(value).toLocaleLowerCase())).filter((value):value is string=>Boolean(value)))].slice(0,13),designText=(parsed.design_text||[]).map(clean).filter(Boolean).slice(0,12);return {selected,tags,designText};
+Avoid duplicate meaning. Do not rewrite, combine, expand, correct, or invent any phrase. Copy each phrase exactly as it appears in the bank. Also describe what the artwork DEPICTS in design_subjects: 3 to 8 short plain words or phrases covering the subject, motifs, setting, occasion, and style. These are your own words, not phrases from the bank, and they are how Goldie ranks a bank against art that carries little or no text. Return only {"design_text":["exact visible line from the design"],"design_subjects":["short description of what the art shows"],"selected_keywords":["exact title phrase copied from the bank"],"tag_keywords":["exact tag phrase copied from the supplied tag candidates"]}.${correction}`})});
+      const titlePayload=await titleResponse.json() as {output?:string;detail?:string};if(!titleResponse.ok)throw new Error(titlePayload.detail||"Goldie could not build this title.");const match=titlePayload.output?.match(/\{[\s\S]*\}/);if(!match)throw new Error("Goldie could not read the prepared title.");const parsed=JSON.parse(match[0]) as {selected_keywords?:string[];tag_keywords?:string[];design_text?:string[];design_subjects?:string[]},allowedByLower=new Map(titleCandidates.map(keyword=>[keyword.toLocaleLowerCase(),keyword])),selected=[...new Set((parsed.selected_keywords||[]).map(value=>allowedByLower.get(clean(value).toLocaleLowerCase())).filter((value):value is string=>Boolean(value)))].slice(0,13),tagAllowedByLower=new Map(tagCandidates.map(keyword=>[keyword.toLocaleLowerCase(),keyword])),tags=[...new Set((parsed.tag_keywords||[]).map(value=>tagAllowedByLower.get(clean(value).toLocaleLowerCase())).filter((value):value is string=>Boolean(value)))].slice(0,13),designText=(parsed.design_text||[]).map(clean).filter(Boolean).slice(0,12),designSubjects=(parsed.design_subjects||[]).map(clean).filter(Boolean).slice(0,8);return {selected,tags,designText,designSubjects};
     }
     let selection;try{selection=await requestSelection(0);if(selection.selected.length<minimumTitlePhrases||selection.tags.length<requiredTagCount)selection=await requestSelection(1)}catch(error){return NextResponse.json({error:error instanceof Error?error.message:"Goldie could not build this title."},{status:502})}
-    const {selected,tags,designText}=selection;
+    const {selected,tags,designText,designSubjects}=selection;
     
     /* D414 - This has swung between two bad extremes. It used to fall back to
        keywords.slice(0,13) - the first thirteen phrases in alphabetical order -
@@ -90,9 +90,13 @@ Avoid duplicate meaning. Do not rewrite, combine, expand, correct, or invent any
        Neither. The seller chose the bank; Goldie picks the closest matches in it,
        ranked, and says so when the fit looks weak. Refusing is reserved for the
        one case where there is genuinely nothing to choose from. */
-    const bankFit=bankFitForDesign(titleCandidates,designText);
-    const picked=selected.length?selected:bestFitFromBank(titleCandidates,designText,body.product);
-    const pickedTags=tags.length?tags:bestFitFromBank(tagCandidates,designText,body.product).slice(0,13);
+    /* D415 - Ranking on visible text alone left art-only designs unrankable, and the
+       vision model is already looking at the picture - asking it to name what the
+       art depicts costs nothing extra, it is the same call. Rank on what it saw. */
+    const designSignals=[...designText,...designSubjects];
+    const bankFit=bankFitForDesign(titleCandidates,designSignals);
+    const picked=selected.length?selected:bestFitFromBank(titleCandidates,designSignals,body.product);
+    const pickedTags=tags.length?tags:bestFitFromBank(tagCandidates,designSignals,body.product).slice(0,13);
     if(!picked.length)return NextResponse.json({error:"This keyword bank is empty, so there is nothing to build a title from. Pick a bank with phrases in it, or write this title yourself."},{status:422});
     /* D157: `selected` is de-duplicated for exact matches only, so a bank holding
      * both "girls gone mild" and "bachelorette girls gone mild" put BOTH in the

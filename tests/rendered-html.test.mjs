@@ -2269,7 +2269,7 @@ test("warns on the exact listing when its bank misses the design text (fixes D76
   const route=await readFile(new URL("../app/api/listing-intelligence/route.ts",import.meta.url),"utf8");
   const app=await readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8");
   assert.match(route,/design_text/);
-  assert.match(route,/bankFitForDesign\(titleCandidates,designText\)/);
+  assert.match(route,/bankFitForDesign\(titleCandidates,designSignals\)/);
   /* D230 · Same rule, corrected wording. This warning fires when the bank does
      not match the ARTWORK, but a title has already been built from that bank —
      so the old text printed "No phrase in this bank matches this design"
@@ -2487,4 +2487,23 @@ test("D414: a chosen bank always produces a title, ranked by fit", async () => {
 
   /* And the seller is still told when the bank looks wrong for the design. */
   assert.match(route, /bankFit==="mismatch"\?"These are the closest phrases in this bank/);
+});
+
+/* D415 · Ranking on the design's visible text alone left art-only designs
+   unrankable — Goldie fell back to bank order and said it could not check. The
+   vision model is already looking at the picture, so asking it to also name what
+   the art depicts costs nothing: same call, same image, a few more words back.
+   Rank on what it saw, not only on what it could read. */
+test("D415: ranking uses what the model saw, not only readable text", async () => {
+  const route = await readFile(new URL("../app/api/listing-intelligence/route.ts", import.meta.url), "utf8");
+
+  assert.match(route, /design_subjects/, "the model is asked what the art depicts");
+  assert.match(route, /designSubjects=\(parsed\.design_subjects\|\|\[\]\)/);
+  assert.match(route, /const designSignals=\[\.\.\.designText,\.\.\.designSubjects\]/);
+  assert.match(route, /bestFitFromBank\(titleCandidates,designSignals,body\.product\)/,
+    "and the ranking reads both");
+
+  /* One vision call, as before - this must not become a second request. */
+  assert.equal((route.match(/fal\.run\/openrouter\/router\/vision/g) || []).length, 2,
+    "one call for titles, one for Etsy details - no extra call for subjects");
 });
