@@ -3088,3 +3088,24 @@ test("a keyword bank rejects what cannot be a keyword — D450", async () => {
   // Still strips trailing separators and blank lines, as before.
   assert.deepEqual(phrasesFromErank("one,\n\n  two  \n"), ["one", "two"]);
 });
+
+test("a bundle gate checks every product, not the open one — D451", async () => {
+  const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+
+  /* Found by running the bundle flow. Her ZZ TEST BUNDLE showed "Pick a shipping
+     profile" on two of its three products, each with a warning badge - and Next
+     step was enabled anyway, because the gate read the single active product's
+     values. Continuing would have created Printify drafts for two products with
+     no valid Etsy shipping profile. */
+  const gate = app.slice(app.indexOf("function gateState()"), app.indexOf("function gateState()") + 2600);
+
+  assert.match(gate, /etsyShippingProfileReady:activeBundle\?bundleRecipes\.length>0&&bundleRecipes\.every\(recipe=>Number\(recipe\.etsyShippingProfileId\)>0\)/,
+    "every product in the bundle needs a shipping profile");
+  assert.match(gate, /pricingApproved:activeBundle\?bundleRecipes\.length>0&&bundleRecipes\.every\(/,
+    "and every product's pricing has to be approved");
+
+  // The single-product path is unchanged.
+  assert.match(gate, /:Boolean\(etsyShippingProfileId\)/);
+  assert.doesNotMatch(gate, /etsyShippingProfileReady:Boolean\(etsyShippingProfileId\),pricingApproved,/,
+    "the old single-value gate is gone");
+});
