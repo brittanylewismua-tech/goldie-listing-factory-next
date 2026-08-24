@@ -2355,3 +2355,27 @@ body{min-width:1180px!important}
   color:#276543!important;
   font:800 12px/1 "Manrope",system-ui,sans-serif!important;
 }
+
+/* D364 · Batch History multi-select. The checkbox is always there rather than
+   hidden behind an "edit" mode — selecting is not a state you should have to
+   enter to discover. */
+.batch-history-actions{
+  display:flex;align-items:center;justify-content:space-between;gap:16px;
+  margin:0 0 14px;padding:10px 16px;
+  border:1px solid rgba(91,48,79,.16);border-radius:14px;
+  background:rgba(255,255,255,.5);
+}
+.batch-select-all{display:flex;align-items:center;gap:10px;cursor:pointer;
+  font:800 12px/1 "Manrope",system-ui,sans-serif;color:#4c293f}
+.batch-select-all input,.batch-select input{width:17px;height:17px;accent-color:#71416a;cursor:pointer}
+.batch-delete-selected{
+  min-height:36px;padding:0 15px;border:1px solid rgba(157,80,130,.4);border-radius:999px;
+  background:#fdf2f8;color:#8a3f52;cursor:pointer;
+  font:800 11px/1 "Manrope",system-ui,sans-serif;
+}
+.batch-delete-selected:disabled{opacity:.6;cursor:progress}
+.batch-select{display:flex;align-items:center;padding-right:4px}
+.batch-history article.selected{
+  border-color:rgba(157,80,130,.42)!important;
+  background:rgba(253,242,248,.75)!important;
+}

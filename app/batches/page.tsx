@@ -5,8 +5,34 @@ type Batch = { id:string; status:string; step:string; setup_name:string; product
 export default function BatchesPage() {
   const [batches,setBatches] = useState<Batch[]>([]);
   const [loading,setLoading] = useState(true);
+  /* D364 · Removing batches one at a time meant one confirm dialog each. A
+     checkbox on every card and one Delete above them turns clearing a test run
+     into a single decision. */
+  const [selected,setSelected] = useState<string[]>([]);
+  const [deleting,setDeleting] = useState(false);
   useEffect(() => { fetch("/api/batches").then(response => response.json()).then(data => setBatches(data.batches || [])).finally(() => setLoading(false)); }, []);
   function resume(batch:Batch) { window.location.href = `/listing-factory?batch=${encodeURIComponent(batch.id)}${batch.status==="complete"?"&open=results":""}`; }
+  function toggleSelected(id:string){setSelected(current=>current.includes(id)?current.filter(item=>item!==id):[...current,id])}
+
+  async function removeSelected(){
+    const chosen=batches.filter(batch=>selected.includes(batch.id));
+    if(!chosen.length||deleting)return;
+    /* One confirmation for the whole set, naming the count — the same warning
+       the single delete gives, said once. */
+    if(!window.confirm(`Permanently remove ${chosen.length} ${chosen.length===1?"batch":"batches"} from Batch History? This cannot be undone. This does not delete products from Printify or listings from Etsy.`))return;
+    setDeleting(true);
+    const removed:string[]=[];
+    for(const batch of chosen){
+      const response=await fetch(`/api/batches?id=${encodeURIComponent(batch.id)}`,{method:"DELETE"});
+      if(response.ok)removed.push(batch.id);
+    }
+    /* Only drop what the server actually deleted, so a partial failure leaves
+       the rest on screen rather than pretending they are gone. */
+    setBatches(current=>current.filter(item=>!removed.includes(item.id)));
+    setSelected(current=>current.filter(id=>!removed.includes(id)));
+    setDeleting(false);
+  }
+
   async function remove(batch:Batch) {
     if (!window.confirm(`Permanently remove “${batch.display_name || "Untitled batch"}” from Batch History? This cannot be undone. This does not delete products from Printify or listings from Etsy.`)) return;
     const response=await fetch(`/api/batches?id=${encodeURIComponent(batch.id)}`,{method:"DELETE"});
@@ -16,7 +42,17 @@ export default function BatchesPage() {
     <ManagementNav active="batches"/>
     <header><p className="mini-label">BATCH HISTORY</p><h1>Continue where you left off.</h1><p>Your product, listing work, results, and errors are saved with each batch. Any Printify drafts you already created will still be there when you return.</p></header>
     <section className="batch-history">
-      {loading ? <p>Loading saved batches…</p> : !batches.length ? <div className="empty-history"><h2>No saved batches yet</h2><p>Your first batch appears here as soon as you add designs.</p><a href="/listing-factory">Start a batch</a></div> : batches.map(batch => <article key={batch.id}>{batch.thumbnail_url?<img className="batch-history-thumbnail" src={batch.thumbnail_url} alt=""/>:<span className="batch-history-thumbnail empty" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M21 16l-5-5-6 6"/></svg></span>}<div className="batch-history-summary"><span className={`batch-status ${batch.status}`}>{batch.published_count>0?`${batch.published_count} PUBLISHED`:(batch.draft_count||0)>0?`${batch.draft_count} ${batch.draft_count===1?"DRAFT":"DRAFTS"} READY · 0 PUBLISHED`:`SAVED · NOT YET DRAFTED`}</span><h2>{batch.display_name || "Untitled batch"}</h2><p>{batch.product_title || "Custom product"} · {batch.design_count} {batch.design_count === 1 ? "design" : "designs"}</p></div><div className="batch-history-controls"><small>Last saved {new Date(`${batch.updated_at.replace(" ","T")}Z`).toLocaleString()}</small><span className="batch-history-actions"><button onClick={() => resume(batch)}>{batch.published_count>0 ? "Open published batch" : "Resume batch"} →</button></span><button className="remove-batch" onClick={()=>void remove(batch)}>Permanently remove from history</button></div></article>)}
+      {/* D364 · Always present, so selecting is never a mode you have to enter. */}
+      {!loading&&batches.length>0&&<div className="batch-history-actions">
+        <label className="batch-select-all"><input type="checkbox"
+          checked={selected.length===batches.length&&batches.length>0}
+          ref={node=>{if(node)node.indeterminate=selected.length>0&&selected.length<batches.length}}
+          onChange={()=>setSelected(selected.length===batches.length?[]:batches.map(batch=>batch.id))}/>
+        <span>{selected.length?`${selected.length} selected`:"Select all"}</span></label>
+        {selected.length>0&&<button type="button" className="batch-delete-selected" disabled={deleting} onClick={()=>void removeSelected()}>
+          {deleting?"Deleting…":`Delete ${selected.length} ${selected.length===1?"batch":"batches"}`}</button>}
+      </div>}
+      {loading ? <p>Loading saved batches…</p> : !batches.length ? <div className="empty-history"><h2>No saved batches yet</h2><p>Your first batch appears here as soon as you add designs.</p><a href="/listing-factory">Start a batch</a></div> : batches.map(batch => <article key={batch.id} className={selected.includes(batch.id)?"selected":""}><label className="batch-select"><input type="checkbox" checked={selected.includes(batch.id)} onChange={()=>toggleSelected(batch.id)} aria-label={`Select ${batch.display_name||"Untitled batch"}`}/></label>{batch.thumbnail_url?<img className="batch-history-thumbnail" src={batch.thumbnail_url} alt=""/>:<span className="batch-history-thumbnail empty" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M21 16l-5-5-6 6"/></svg></span>}<div className="batch-history-summary"><span className={`batch-status ${batch.status}`}>{batch.published_count>0?`${batch.published_count} PUBLISHED`:(batch.draft_count||0)>0?`${batch.draft_count} ${batch.draft_count===1?"DRAFT":"DRAFTS"} READY · 0 PUBLISHED`:`SAVED · NOT YET DRAFTED`}</span><h2>{batch.display_name || "Untitled batch"}</h2><p>{batch.product_title || "Custom product"} · {batch.design_count} {batch.design_count === 1 ? "design" : "designs"}</p></div><div className="batch-history-controls"><small>Last saved {new Date(`${batch.updated_at.replace(" ","T")}Z`).toLocaleString()}</small><span className="batch-history-actions"><button onClick={() => resume(batch)}>{batch.published_count>0 ? "Open published batch" : "Resume batch"} →</button></span><button className="remove-batch" onClick={()=>void remove(batch)}>Permanently remove from history</button></div></article>)}
     </section>
   </main>;
 }

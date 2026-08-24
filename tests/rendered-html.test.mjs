@@ -2397,3 +2397,23 @@ test("D230: a warning never contradicts the title sitting above it", async () =>
   assert.match(app, /\$\{files\.length-failed===1\?"title":"titles"\} created/);
   assert.match(app, /\$\{failed===1\?"needs":"need"\} another try/);
 });
+
+/* D364 · Clearing test batches meant one confirm dialog per batch. A checkbox on
+   every card and one Delete above them makes it a single decision. */
+test("Batch History can select and delete several at once — D364", async () => {
+  const page = await readFile(new URL("../app/batches/page.tsx", import.meta.url), "utf8");
+
+  assert.match(page, /className="batch-select"/, "every card carries a checkbox");
+  assert.match(page, /className="batch-select-all"/);
+  assert.match(page, /node\.indeterminate=selected\.length>0&&selected\.length<batches\.length/,
+    "select-all shows a partial state rather than lying");
+
+  /* One confirmation for the whole set, carrying the same warning the single
+     delete gives. */
+  assert.match(page, /Permanently remove \$\{chosen\.length\}/);
+  assert.match(page, /This does not delete products from Printify or listings from Etsy/);
+
+  /* A partial failure must not pretend the survivors are gone. */
+  assert.match(page, /if\(response\.ok\)removed\.push\(batch\.id\)/);
+  assert.match(page, /setBatches\(current=>current\.filter\(item=>!removed\.includes\(item\.id\)\)\)/);
+});
