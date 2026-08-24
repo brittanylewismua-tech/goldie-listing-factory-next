@@ -3044,3 +3044,17 @@ test("the uploaded photo is never redrawn, and the print is shaded onto it — D
   // The flat 12% wash over the whole frame it replaced.
   assert.doesNotMatch(integrated, /globalCompositeOperation="multiply";ctx\.globalAlpha=\.12/);
 });
+
+test("staged listing photos keep their names — D449", async () => {
+  const route = await readFile(new URL("../app/api/etsy/images/route.ts", import.meta.url), "utf8");
+
+  /* Seen live in Rearrange listing photos: eight mockups listed as raw UUIDs
+     while the Printify photo read "Printify photo 1". The name was being stored
+     correctly - R2 simply omits customMetadata from list() unless asked for it,
+     so every mockup fell back to its storage key. */
+  for (const call of route.match(/ARTWORK\.list\(\{[^)]*\}\)/g) || []) {
+    assert.match(call, /include:\["customMetadata"\]/,
+      `${call} must ask for the metadata it then reads`);
+  }
+  assert.match(route, /name:object\.customMetadata\?\.name\|\|object\.key\.split\("\/"\)\.pop\(\)/);
+});

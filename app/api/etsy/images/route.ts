@@ -15,7 +15,7 @@ export async function GET(request:Request){
   if(!await ownsDraft(user.userId,productId))return NextResponse.json({error:"That listing does not belong to this Listing Factory account."},{status:403});
   const prefix=basePrefix(user.userId,productId);
   if(key){if(!key.startsWith(prefix)||key.endsWith("order.json"))return NextResponse.json({error:"That listing image is not available."},{status:403});const object=await runtime().ARTWORK.get(key);if(!object)return NextResponse.json({error:"That listing image was not found."},{status:404});return new Response(object.body,{headers:{"Content-Type":object.httpMetadata?.contentType||"image/jpeg","Cache-Control":"private, max-age=300"}})}
-  const stored=await runtime().ARTWORK.list({prefix}),images=stored.objects.filter(object=>!object.key.endsWith("order.json")).map(object=>({id:`stored:${object.key}`,key:object.key,kind:object.key.includes("/size-guide/")?"size-guide":"mockup",name:object.customMetadata?.name||object.key.split("/").pop()||"Listing image",src:`/api/etsy/images?productId=${encodeURIComponent(productId)}&key=${encodeURIComponent(object.key)}`}));
+  const stored=await runtime().ARTWORK.list({prefix,include:["customMetadata"]}),images=stored.objects.filter(object=>!object.key.endsWith("order.json")).map(object=>({id:`stored:${object.key}`,key:object.key,kind:object.key.includes("/size-guide/")?"size-guide":"mockup",name:object.customMetadata?.name||object.key.split("/").pop()||"Listing image",src:`/api/etsy/images?productId=${encodeURIComponent(productId)}&key=${encodeURIComponent(object.key)}`}));
   const orderObject=await runtime().ARTWORK.get(`${prefix}order.json`);let order:string[]=[];if(orderObject)try{order=JSON.parse(await orderObject.text()) as string[]}catch{order=[]}
   return NextResponse.json({images,order});
 }
@@ -38,7 +38,7 @@ export async function POST(request:Request){
   const owned=await ownsDraft(user.userId,productId);
   if(!owned)return NextResponse.json({error:"That Printify draft does not belong to this Listing Factory account."},{status:403});
   const prefix=`${basePrefix(user.userId,productId)}${kind==="size-guide"?"size-guide":"mockup"}/`;
-  const existing=await runtime().ARTWORK.list({prefix,limit:10});
+  const existing=await runtime().ARTWORK.list({prefix,limit:10,include:["customMetadata"]});
   if(kind!=="size-guide"&&!replace&&existing.objects.length+files.length>8)return NextResponse.json({error:"Each listing can have up to eight Goldie-generated lifestyle mockups."},{status:409});
   const saved:string[]=[];
   try{for(const file of files){const key=`${prefix}${crypto.randomUUID()}-${safeName(file.name)}`;await runtime().ARTWORK.put(key,await file.arrayBuffer(),{httpMetadata:{contentType:file.type},customMetadata:{name:safeName(file.name)}});saved.push(key)}
@@ -51,6 +51,6 @@ export async function DELETE(request:Request){
   const user=await getChatGPTUser();if(!user)return NextResponse.json({error:"Sign in to remove listing images."},{status:401});
   const url=new URL(request.url),productId=url.searchParams.get("productId")||"",kind=url.searchParams.get("kind")||"";if(!productId)return NextResponse.json({error:"Choose a listing."},{status:400});
   const prefix=`etsy-listing-images/${user.userId}/${productId}/${kind==="mockup"?"mockup/":kind==="size-guide"?"size-guide/":""}`;let cursor:string|undefined;
-  do{const page=await runtime().ARTWORK.list({prefix,cursor});await Promise.all(page.objects.map(object=>runtime().ARTWORK.delete(object.key)));cursor=page.truncated?page.cursor:undefined}while(cursor);
+  do{const page=await runtime().ARTWORK.list({prefix,cursor,include:["customMetadata"]});await Promise.all(page.objects.map(object=>runtime().ARTWORK.delete(object.key)));cursor=page.truncated?page.cursor:undefined}while(cursor);
   return NextResponse.json({ok:true});
 }
