@@ -1496,7 +1496,11 @@ test("supports simple saved product bundles without complicating the single-prod
   assert.match(page, /function useBundle/);
   /* D174: the banner names the current product; "You are working on" repeated
    * the eyebrow above it and was set in the wrong face. */
-  assert.match(page, /<b>\{bundleRecipes\[bundleIndex\]\?\.name\}<\/b>/);
+/* D336 · The header used to lead with the FIRST PRODUCT's name and put the
+     bundle name underneath, so choosing a bundle looked like choosing a hoodie.
+     It names the bundle now; the stepper says which product you are on. */
+  assert.match(page, /<b>\{activeBundle\.name\}<\/b>/);
+  assert.match(page, /<small>\{bundleRecipes\.map\(recipe=>recipe\.name\)\.join\(" · "\)\}<\/small>/);
   assert.match(page, /1\. Item prices <span>· \{productName\}<\/span>/);
   assert.match(page, /2\. Etsy shipping profile <span>· \{productName\}<\/span>/);
   assert.match(page, /data-product-selected=\{templateDetails\?"true":"false"\}/);

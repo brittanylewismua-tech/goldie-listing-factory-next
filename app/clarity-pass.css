@@ -2086,3 +2086,23 @@ body{min-width:1180px!important}
   position:sticky!important;top:0!important;z-index:5!important;
   backdrop-filter:blur(6px)!important;
 }
+
+/* D336 · The product list beside the bundle name is how you tell which product
+   you are on, so it has to be readable rather than a caption. */
+.app-shell .bundle-progress>ol>li>b{
+  font:800 14px/1.3 "Manrope",system-ui,sans-serif!important;
+  color:#4c293f!important;
+}
+.app-shell .bundle-progress>ol>li.current>b{color:#3f2338!important}
+.app-shell .bundle-progress>ol>li>small{
+  font:600 12px/1.4 "Manrope",system-ui,sans-serif!important;
+  color:#75576b!important;
+}
+.app-shell .bundle-progress>ol>li>span{
+  width:30px!important;height:30px!important;
+  font:800 13px/1 "Manrope",system-ui,sans-serif!important;
+}
+/* The bundle's own name is the card title; the member list under it is support. */
+.app-shell .bundle-progress>div>small{
+  font:500 12px/1.5 "Manrope",system-ui,sans-serif!important;color:#75576b!important;
+}
