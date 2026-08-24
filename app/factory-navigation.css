@@ -11,3 +11,11 @@
 .management-nav-footer .etsy-api-disclosure{margin:0 0 12px;color:rgba(74,42,62,.5);font-size:8.5px;line-height:1.4}
 .management-nav-footer .approved-powered{display:flex;align-items:center;gap:7px;margin:0;color:rgba(74,42,62,.55);font-size:9px;font-weight:800;letter-spacing:.14em}
 .management-nav-footer .approved-powered span{font-family:"Fraunces",Georgia,serif;font-size:14px;font-weight:500;letter-spacing:0;text-transform:none}
+
+/* D417 · The saved bank cards kept their natural heights (377 / 346 / 425), so
+   the three Edit bank buttons landed at three different heights in one row. A
+   row of cards that do the same thing should end at the same line. Stretch the
+   row and push each card's action to its own bottom edge. */
+.keyword-page .keyword-workspace .bank-library .bank-grid{align-items:stretch}
+.keyword-page .bank-grid>article{display:flex;flex-direction:column}
+.keyword-page .bank-grid>article>button:last-child{margin-top:auto}

@@ -1904,7 +1904,7 @@ export default function ListingFactoryApp() {
         <div>
           <p className="eyebrow">{workflowHero.eyebrow}</p>
           <div className="heading-with-help hero-title-help"><h1>{workflowHero.title}</h1><ContextHelp label={`Open detailed help for ${PROGRESS_STEPS[progressIndex]}`} title={WORKFLOW_HELP[progressIndex].title} intro={WORKFLOW_HELP[progressIndex].intro} sections={WORKFLOW_HELP[progressIndex].sections}/></div>
-          <p className="hero-step-count">{`Step ${railTopNumber} of ${RAIL_STAGES.length} · ${currentStage.label}`}</p>
+          <p className="hero-step-count">{workflowStep==="connect"?"Account setup · before you start":`Step ${railTopNumber} of ${RAIL_STAGES.length} · ${currentStage.label}`}</p>
           <p className="hero-copy">{workflowHero.copy}</p>
           {workflowStep==="connect"&&<div className="value-proof" aria-label="What this batch supports"><span><b>Up to 20 designs</b><small>in one batch</small></span><span><b>Costs and fees</b><small>shown for every variant</small></span><span><b>You approve</b><small>before anything goes live</small></span></div>}
         </div>
@@ -1912,7 +1912,9 @@ export default function ListingFactoryApp() {
 
       {!returningHome&&<section className={`workspace ${complete&&workflowStep==="designs"?"mockup-workspace":""}`}>
         <nav className="workflow-progress" aria-label="Listing Factory progress" style={{"--rail-count":RAIL_STAGES.length} as React.CSSProperties}>
-          <div className="workflow-progress-head"><div><p className="mini-label">YOUR BATCH</p><b>{`Step ${railTopNumber} of ${RAIL_STAGES.length} · ${currentStage.label}`}</b></div>{(template||files.length>0||drafts.length>0)&&<button className="start-new-batch" disabled={running} onClick={startOver}>Clear batch + start over</button>}</div>
+          <div className="workflow-progress-head"><div><p className="mini-label">{workflowStep==="connect"?"ACCOUNT SETUP":"YOUR BATCH"}</p>{/* D416 - On the Connect step this read "Step 1 of 4 · Product" under a heading
+                that says "Connect your accounts", and the rail lit up Product. Connecting
+                is a one-time gate before the four steps, not the first of them. */}<b>{workflowStep==="connect"?"Connect Printify and Etsy":`Step ${railTopNumber} of ${RAIL_STAGES.length} · ${currentStage.label}`}</b></div>{(template||files.length>0||drafts.length>0)&&<button className="start-new-batch" disabled={running} onClick={startOver}>Clear batch + start over</button>}</div>
           {localPreview&&<p className="preview-mode-note">Preview mode · every step is unlocked <a href="/design-lab">Open design lab →</a></p>}
           {RAIL_STAGES.map((stage,position)=>{
             const active=stage.covers.includes(progressIndex);
@@ -2252,7 +2254,7 @@ export default function ListingFactoryApp() {
         </aside>,!(workflowStep==="designs"&&!complete))}
         <div className="workflow-footer-actions">{progressIndex>0&&<button className="workflow-back" type="button" onClick={goBackOneStep}><span aria-hidden="true">←</span> Back</button>}<span className="autosave-note"><i aria-hidden="true">✓</i> Saved automatically</span>{/* D386 - Saving a draft was only reachable from the Publish step, so
                 stopping halfway meant trusting the autosave and remembering the
-                batch later. Name it and park it from wherever you are. */}{(files.length>0||drafts.length>0||Boolean(templateDetails))&&<button className="save-draft-link" type="button" onClick={()=>{setBatchDisplayName(current=>current||suggestedBatchName());setDraftSaveOpen(true)}}>Save as draft</button>}</div>
+                batch later. Name it and park it from wherever you are. */}{workflowStep!=="connect"&&(files.length>0||drafts.length>0||Boolean(templateDetails))&&<button className="save-draft-link" type="button" onClick={()=>{setBatchDisplayName(current=>current||suggestedBatchName());setDraftSaveOpen(true)}}>Save as draft</button>}</div>
         </div>
       </section>}
 

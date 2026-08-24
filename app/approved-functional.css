@@ -1528,7 +1528,11 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .app-shell .draft-card .tag-row span{max-width:100%!important;overflow-wrap:anywhere!important}
 .app-shell .batch-size-guide .mini-label,.app-shell .final-listing-review-heading .mini-label{display:none!important}
 .app-shell .summary-list>div:has(>span:first-child){min-width:0}
-.managementOnly .mockupHero .mockupEyebrow,.managementOnly .managementLibraryHead .mockupEyebrow{display:none!important}
+/* D418 - This hid the page eyebrow on Mockup Library, so it was the only
+   management page with no eyebrow above its title while Batch History, Keyword
+   Banks and Usage all had one. The duplicate inside the library head stays
+   hidden; the page eyebrow comes back. */
+.managementOnly .managementLibraryHead .mockupEyebrow{display:none!important}
 .app-shell .draft-mockups>summary{font-size:16px!important;font-weight:850}
 
 /* PASS 2A layout: D13, D14 and D50. */

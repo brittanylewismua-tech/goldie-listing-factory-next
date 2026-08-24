@@ -1262,6 +1262,8 @@ test("recovers published-template shipping and constrains Etsy categories by pro
   assert.match(page,/product:\{blueprintTitle:templateDetails/);
 });
 
+/* D416 · Connect is a one-time gate before the four steps, not the first of
+   them - it used to read "Step 1 of 4 · Product" under "Connect your accounts". */
 test("places each step count directly below its page title", async () => {
   const [page, styles] = await Promise.all([
     readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
@@ -1269,7 +1271,7 @@ test("places each step count directly below its page title", async () => {
   ]);
   /* D220: four stages, so the counter is "Step 2 of 4 · Images" rather than a
      top-level count with a nested "Finish · phase (n of 4)" variant. */
-  assert.match(page, /<p className="hero-step-count">\{`Step \$\{railTopNumber\} of \$\{RAIL_STAGES\.length\} · \$\{currentStage\.label\}`\}<\/p>/);
+  assert.match(page, /<p className="hero-step-count">\{workflowStep==="connect"\?"Account setup · before you start":`Step \$\{railTopNumber\} of \$\{RAIL_STAGES\.length\} · \$\{currentStage\.label\}`\}<\/p>/);
   assert.doesNotMatch(page, /className="approved-step-count"/);
   assert.match(styles, /\.app-shell \.hero-step-count/);
   assert.match(styles, /\.app-shell \.hero\{padding-bottom:30px!important\}/);
@@ -2506,4 +2508,21 @@ test("D415: ranking uses what the model saw, not only readable text", async () =
   /* One vision call, as before - this must not become a second request. */
   assert.equal((route.match(/fal\.run\/openrouter\/router\/vision/g) || []).length, 2,
     "one call for titles, one for Etsy details - no extra call for subjects");
+});
+
+/* D416 · The Connect screen read "STEP 1 OF 4 · PRODUCT" under a heading saying
+   "Connect your accounts", and the rail lit up Product. Connecting Printify and
+   Etsy is a one-time gate before the four steps, not the first of them — and it
+   offered "Save as draft" with no batch in existence to save. */
+test("D416: Connect does not pretend to be step one", async () => {
+  const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+
+  assert.match(app, /workflowStep==="connect"\?"Account setup · before you start"/,
+    "the step count under the title");
+  assert.match(app, /workflowStep==="connect"\?"Connect Printify and Etsy"/,
+    "and the batch header beside the rail");
+  assert.match(app, /workflowStep==="connect"\?"ACCOUNT SETUP":"YOUR BATCH"/);
+
+  assert.match(app, /\{workflowStep!=="connect"&&\(files\.length>0\|\|drafts\.length>0\|\|Boolean\(templateDetails\)\)&&<button className="save-draft-link"/,
+    "nothing to save before a batch exists");
 });

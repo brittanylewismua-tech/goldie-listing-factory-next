@@ -385,3 +385,20 @@ test("D408: the design previews are large enough to identify the design", async 
   assert.match(css, /\.app-shell \.listing-editor \.listing-preview-button\{width:152px!important/);
   assert.match(css, /\.app-shell \.post-draft-workspace \.draft-card-top \.printify-preview-button\{width:152px!important/);
 });
+
+/* D417/D418 · Two management-page inconsistencies found by looking at them:
+   the saved keyword bank cards kept their natural heights so three Edit buttons
+   landed at three different lines, and Mockup Library was the only page whose
+   eyebrow was hidden, leaving it the only title with nothing above it. */
+test("D418: every management page keeps its eyebrow", async () => {
+  const css = await readFile(new URL("app/approved-functional.css", root), "utf8");
+  assert.doesNotMatch(css, /\.managementOnly \.mockupHero \.mockupEyebrow[^{]*\{display:none/,
+    "the page eyebrow is part of the heading system, not decoration");
+});
+
+test("D417: a row of bank cards ends on one line", async () => {
+  const nav = await readFile(new URL("app/factory-navigation.css", root), "utf8");
+  assert.match(nav, /\.bank-grid\{align-items:stretch\}/);
+  assert.match(nav, /\.bank-grid>article>button:last-child\{margin-top:auto\}/,
+    "and each card's action sits on its own bottom edge");
+});
