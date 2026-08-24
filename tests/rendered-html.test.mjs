@@ -2703,3 +2703,27 @@ test("a bank phrase that is not in the artwork does not reach the listing — D4
   assert.match(route, /Never pad the list to reach a count/);
   assert.match(route, /is not actually shown in the artwork, do not select it/);
 });
+
+test("every step's footer is the same three things — D430/D432", async () => {
+  const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+
+  /* Checked on the live site across all four steps: the forward control belongs
+     to the section it completes, and the footer is always Back / Saved
+     automatically / Save as draft. Images drifted from this twice in one day -
+     first carrying a second forward button, then carrying the only one and
+     losing Save as draft - so the shape is asserted rather than remembered. */
+  const footers = [...app.matchAll(/workflow-footer-actions[^"]*"/g)].map(match => {
+    const segment = app.slice(match.index, match.index + 900);
+    const end = segment.indexOf("</div>}");
+    return end > 0 ? segment.slice(0, end) : segment;
+  });
+
+  assert.ok(footers.length >= 2, "both footer variants are present");
+  for (const footer of footers) {
+    assert.match(footer, /workflow-back/, "every footer can go back");
+    assert.match(footer, /autosave-note/, "and says the work is saved");
+    assert.match(footer, /save-draft-link/, "and can stop and save a draft");
+    assert.doesNotMatch(footer, /workflow-next/,
+      "the forward control lives on the section it completes, never in the footer");
+  }
+});
