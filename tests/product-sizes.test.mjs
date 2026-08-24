@@ -439,7 +439,10 @@ test("the product step does not also collect designs — D184", async () => {
    * uploading" copy rendered at the top of step 2, while "Add designs" is step 3.
    * One job in two places, and it was the first thing on a step called
    * "Choose product". */
-  assert.match(app, /\$\{workflowStep==="designs"\|\|\(workflowStep==="finish"&&finishPhase==="details"\)\?"active-panel":"hidden-panel"\}/,
+  /* D387 · This panel used to stay active through step 3 because it held the
+     titles editor. That editor moved into the product card, so the panel is now
+     only the uploader, and only the designs step shows it. */
+  assert.match(app, /\$\{workflowStep==="designs"\?"active-panel":"hidden-panel"\}/,
     "The designs panel belongs to the designs step, not the product step.");
 });
 

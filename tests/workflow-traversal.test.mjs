@@ -297,8 +297,12 @@ test("D376: every restored finish phase is one that actually renders", async () 
 
   /* The renderable set must match what the JSX actually branches on. */
   assert.match(app, /const RENDERED_FINISH_PHASES:FinishPhase\[\]=\["details","etsy","final"\]/);
-  assert.match(app, /finishPhase==="final"&&stepProductCards\(bundleCardStatus\("publish"\),<article className="step-card final-review/);
-  assert.match(app, /\(finishPhase==="details"\|\|finishPhase==="etsy"\)&&stepProductCards\(bundleCardStatus\("listing"\),<article className="step-card etsy-details-step/);
+  assert.match(app, /finishPhase==="final"&&stepProductCards\(bundleCardStatus\("publish"\),<>/,
+    "step 4's readiness banner sits inside the product card with the listings it describes");
+  assert.match(app, /<article className="step-card final-review active-panel">/);
+  assert.match(app, /\(finishPhase==="details"\|\|finishPhase==="etsy"\)&&stepProductCards\(bundleCardStatus\("listing"\),<>/,
+    "step 3 puts the titles editor and the Etsy details in one product card");
+  assert.match(app, /<div className="finish-mode listing-editor-host">/);
 
   /* And nothing may branch on the dead phase. */
   assert.doesNotMatch(app, /finishPhase==="mockups"&&/,
