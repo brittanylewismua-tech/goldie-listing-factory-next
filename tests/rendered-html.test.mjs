@@ -1022,8 +1022,11 @@ test("routes each product surface deliberately and never releases a partial batc
   /* D447 · Every scene now ends in the canvas renderer, which needs no network
      and cannot refuse a quad. The AI renderer is tried first only where it is the
      better result, and falls back rather than losing the scene. */
-  assert.match(integrated,/if\(isCalibratedSurface\(template\.surfaceKind\|\|"rigid-flat"\)\)return drawLocally\(\)/);
-  assert.match(integrated,/try\{return await product\(design,template,reference\)\}catch\{return drawLocally\(\)\}/);
+  /* D448 · Every surface composites now — nothing that redraws her photograph can
+     be used to place a design on it. */
+  assert.match(integrated,/return drawLocally\(\);/);
+  assert.doesNotMatch(integrated,/await product\(design,template,reference\)/,
+    "the generative renderer no longer places designs");
   assert.match(integrated,/return derived\?rigid\(design,template,derived\.adjustment,derived\.quad\)/);
   assert.match(integrated,/:rigid\(design,template,placementAdjustment\(placement,template\.surfaceKind\|\|"rigid-flat"\)\)/,
     "the constants remain the fallback, never the first answer");
@@ -2999,8 +3002,9 @@ test("a mockup cannot fail to render, for any product — D447", async () => {
   // 2. A highlight layer that will not load is a flatter mockup, not a failed one.
   assert.match(integrated, /catch\{\/\* A highlight layer that will not load is a slightly flatter mockup/);
 
-  // 3. The AI renderer falls back to the canvas rather than losing the scene.
-  assert.match(integrated, /try\{return await product\(design,template,reference\)\}catch\{return drawLocally\(\)\}/);
+  // 3. Every surface ends in the compositor, which needs no network at all.
+  assert.match(integrated, /return drawLocally\(\);/);
+  assert.doesNotMatch(integrated, /await product\(design,template,reference\)/);
 
   // 4. A missing Printify preview no longer refuses the whole run.
   assert.doesNotMatch(integrated, /Wait for the Printify preview before creating/);
@@ -3010,4 +3014,33 @@ test("a mockup cannot fail to render, for any product — D447", async () => {
   const scene = integrated.slice(integrated.indexOf("async function rigid"), integrated.indexOf("async function stageForEtsy"));
   assert.doesNotMatch(scene, /does not have a dependable calibrated product area/,
     "an unusable area falls through the chain instead of refusing");
+});
+
+test("the uploaded photo is never redrawn, and the print is shaded onto it — D448", async () => {
+  const integrated = await readFile(new URL("../app/integrated-mockups.tsx", import.meta.url), "utf8");
+
+  /* Reported: the AI came back with her photo looking like a painting, a garment
+     it had invented over the model, and the design somewhere other than where
+     Printify puts it. A generative editor repaints the whole frame - no prompt
+     fixes that, because repainting is what it does. */
+  assert.doesNotMatch(integrated, /await product\(design,template,reference\)/,
+    "nothing that redraws her scene may place a design on it");
+
+  // The photograph is drawn once and never touched again; ink goes on its own layer.
+  assert.match(integrated, /ctx\.drawImage\(master,0,0\);/);
+  assert.match(integrated, /const inkCanvas=document\.createElement\("canvas"\)/);
+  assert.match(integrated, /tri\(inkCtx,art as unknown as HTMLImageElement/,
+    "the artwork is warped into the ink layer, not onto the photo");
+  assert.match(integrated, /printOntoGarment\(ctx,inkCtx,canvas\.width,canvas\.height\);\s*ctx\.drawImage\(inkCanvas,0,0\)/);
+
+  /* What makes it read as printed rather than pasted: the cloth's own luminance
+     shades the ink, and the ink bends along the folds it sits on. */
+  assert.match(integrated, /function printOntoGarment\(/);
+  assert.match(integrated, /const average=Math\.max\(\.08,total\/counted\)/,
+    "a mid-tone leaves the ink unchanged; folds darken it");
+  assert.match(integrated, /const shade=Math\.min\(SHADE_CEILING,Math\.max\(SHADE_FLOOR,luminance\(i\)\/average\)\)/);
+  assert.match(integrated, /const FOLD_STRENGTH=6/);
+
+  // The flat 12% wash over the whole frame it replaced.
+  assert.doesNotMatch(integrated, /globalCompositeOperation="multiply";ctx\.globalAlpha=\.12/);
 });

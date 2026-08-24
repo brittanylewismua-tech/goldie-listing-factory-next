@@ -44,7 +44,67 @@ function safeCorners(c:Template["corners"],w:number,h:number):Template["corners"
 function bilinear(c:Template["corners"],u:number,v:number):Point{const[tl,tr,br,bl]=c;return[(1-u)*(1-v)*tl[0]+u*(1-v)*tr[0]+u*v*br[0]+(1-u)*v*bl[0],(1-u)*(1-v)*tl[1]+u*(1-v)*tr[1]+u*v*br[1]+(1-u)*v*bl[1]]}
 function affine(ctx:CanvasRenderingContext2D,s:Point[],d:Point[]){const[s0,s1,s2]=s,[d0,d1,d2]=d,den=s0[0]*(s1[1]-s2[1])+s1[0]*(s2[1]-s0[1])+s2[0]*(s0[1]-s1[1]);ctx.setTransform((d0[0]*(s1[1]-s2[1])+d1[0]*(s2[1]-s0[1])+d2[0]*(s0[1]-s1[1]))/den,(d0[1]*(s1[1]-s2[1])+d1[1]*(s2[1]-s0[1])+d2[1]*(s0[1]-s1[1]))/den,(d0[0]*(s2[0]-s1[0])+d1[0]*(s0[0]-s2[0])+d2[0]*(s1[0]-s0[0]))/den,(d0[1]*(s2[0]-s1[0])+d1[1]*(s0[0]-s2[0])+d2[1]*(s1[0]-s0[0]))/den,(d0[0]*(s1[0]*s2[1]-s2[0]*s1[1])+d1[0]*(s2[0]*s0[1]-s0[0]*s2[1])+d2[0]*(s0[0]*s1[1]-s1[0]*s0[1]))/den,(d0[1]*(s1[0]*s2[1]-s2[0]*s1[1])+d1[1]*(s2[0]*s0[1]-s0[0]*s2[1])+d2[1]*(s0[0]*s1[1]-s1[0]*s0[1]))/den)}
 function tri(ctx:CanvasRenderingContext2D,image:CanvasImageSource,s:Point[],d:Point[]){ctx.save();ctx.beginPath();ctx.moveTo(...d[0]);ctx.lineTo(...d[1]);ctx.lineTo(...d[2]);ctx.closePath();ctx.clip();affine(ctx,s,d);ctx.drawImage(image,0,0);ctx.restore()}
-async function rigid(file:File,t:Template,adjustment:Adjustment={scale:1,x:0,y:0},quadOverride?:Template["corners"]):Promise<Result>{const[master,sourceArt,foregrounds]=await Promise.all([load(t.src),load(URL.createObjectURL(file)),foregroundLayers(t)]),artCanvas=document.createElement("canvas");artCanvas.width=sourceArt.width;artCanvas.height=sourceArt.height;const artContext=artCanvas.getContext("2d")!,drawWidth=sourceArt.width*adjustment.scale,drawHeight=sourceArt.height*adjustment.scale;artContext.drawImage(sourceArt,(sourceArt.width-drawWidth)/2+adjustment.x*sourceArt.width,(sourceArt.height-drawHeight)/2+adjustment.y*sourceArt.height,drawWidth,drawHeight);const art=artCanvas,canvas=document.createElement("canvas");canvas.width=master.naturalWidth;canvas.height=master.naturalHeight;/* D447 - the quad chain. Each candidate is checked, the first usable one wins, and the last is valid by construction, so this cannot fail to produce one. */const toPixels=(q:Template["corners"],normalized:boolean)=>(normalized?q.map(([x,y])=>[x*canvas.width,y*canvas.height] as Point):q) as Template["corners"];const candidates=[quadOverride?toPixels(quadOverride,true):null,toPixels(t.corners,Boolean(t.normalized)),defaultQuad(canvas.width,canvas.height)];const raw=candidates.find(q=>usableQuad(q??undefined,canvas.width,canvas.height))??defaultQuad(canvas.width,canvas.height),c=safeCorners(raw,canvas.width,canvas.height),ctx=canvas.getContext("2d",{alpha:false})!;ctx.drawImage(master,0,0);ctx.save();ctx.beginPath();c.forEach((p,i)=>i?ctx.lineTo(...p):ctx.moveTo(...p));ctx.closePath();ctx.clip();for(let y=0;y<16;y++)for(let x=0;x<12;x++){const u=x/12,U=(x+1)/12,v=y/16,V=(y+1)/16,s00:[number,number]=[u*art.width,v*art.height],s10:[number,number]=[U*art.width,v*art.height],s11:[number,number]=[U*art.width,V*art.height],s01:[number,number]=[u*art.width,V*art.height],d00=bilinear(c,u,v),d10=bilinear(c,U,v),d11=bilinear(c,U,V),d01=bilinear(c,u,V);tri(ctx,art as unknown as HTMLImageElement,[s00,s10,s11],[d00,d10,d11]);tri(ctx,art as unknown as HTMLImageElement,[s00,s11,s01],[d00,d11,d01])}ctx.globalCompositeOperation="multiply";ctx.globalAlpha=.12;ctx.drawImage(master,0,0);ctx.restore();for(const layer of foregrounds)ctx.drawImage(await load(layer),0,0,canvas.width,canvas.height);const blob=await new Promise<Blob>((resolve)=>canvas.toBlob((b)=>resolve(b!),"image/jpeg",.93));return{name:`${file.name.replace(/\.[^.]+$/,'')}-${t.name}.jpg`,url:URL.createObjectURL(blob),template:t.name,templateId:t.id,surfaceKind:"rigid-flat"}}
+/* D448 - making a print look printed, without touching the photograph.
+ *
+ * Her three requirements, and they are all the same requirement: the mockup photo
+ * she uploaded must survive untouched, the artwork must sit where the Printify
+ * template puts it, and it must read as ink on cloth rather than a sticker on top
+ * of it. A generative editor cannot do the first of those - it repaints the whole
+ * frame, which is where the painted look, the invented garment and the wandering
+ * design all came from.
+ *
+ * This composites instead. Every pixel of her photograph is left exactly as it
+ * was except where the ink lands, and there two things happen that a flat paste
+ * does not do:
+ *
+ *   Shading. The cloth's own luminance is divided by the average luminance under
+ *   the print, so a mid-tone reads as unchanged ink while folds darken it and
+ *   highlights lift it. That is why a real print looks attached to the garment.
+ *
+ *   Displacement. Ink is sampled along the luminance gradient, so it bends into
+ *   the folds it is sitting on rather than lying flat across them.
+ *
+ * Both are deliberately restrained. Overdone, they look like an effect. */
+function printOntoGarment(base:CanvasRenderingContext2D,ink:CanvasRenderingContext2D,width:number,height:number){
+  const cloth=base.getImageData(0,0,width,height),paint=ink.getImageData(0,0,width,height);
+  const clothData=cloth.data,paintData=paint.data;
+  const luminance=(i:number)=>(clothData[i]*.299+clothData[i+1]*.587+clothData[i+2]*.114)/255;
+
+  let total=0,counted=0;
+  for(let i=0;i<paintData.length;i+=4){ if(paintData[i+3]>16){ total+=luminance(i); counted++ } }
+  if(!counted)return;
+  const average=Math.max(.08,total/counted);
+
+  const source=new Uint8ClampedArray(paintData);
+  const FOLD_STRENGTH=6;          // pixels of bend at a hard fold
+  const SHADE_FLOOR=.55,SHADE_CEILING=1.25;
+
+  for(let y=0;y<height;y++){
+    for(let x=0;x<width;x++){
+      const i=(y*width+x)*4;
+      if(!source[i+3])continue;
+      // Bend the ink along the cloth, sampling from where the fold came from.
+      let sx=x,sy=y;
+      if(x>0&&x<width-1&&y>0&&y<height-1){
+        const gx=luminance(i+4)-luminance(i-4),gy=luminance(i+width*4)-luminance(i-width*4);
+        sx=Math.round(x-gx*FOLD_STRENGTH);sy=Math.round(y-gy*FOLD_STRENGTH);
+        if(sx<0||sx>=width||sy<0||sy>=height){sx=x;sy=y}
+      }
+      const s=(sy*width+sx)*4;
+      const alpha=source[s+3];
+      if(!alpha){paintData[i+3]=0;continue}
+      // Shade by the cloth beneath, relative to the average under the print.
+      const shade=Math.min(SHADE_CEILING,Math.max(SHADE_FLOOR,luminance(i)/average));
+      paintData[i]=source[s]*shade;
+      paintData[i+1]=source[s+1]*shade;
+      paintData[i+2]=source[s+2]*shade;
+      paintData[i+3]=alpha;
+    }
+  }
+  ink.putImageData(paint,0,0);
+}
+
+async function rigid(file:File,t:Template,adjustment:Adjustment={scale:1,x:0,y:0},quadOverride?:Template["corners"]):Promise<Result>{const[master,sourceArt,foregrounds]=await Promise.all([load(t.src),load(URL.createObjectURL(file)),foregroundLayers(t)]),artCanvas=document.createElement("canvas");artCanvas.width=sourceArt.width;artCanvas.height=sourceArt.height;const artContext=artCanvas.getContext("2d")!,drawWidth=sourceArt.width*adjustment.scale,drawHeight=sourceArt.height*adjustment.scale;artContext.drawImage(sourceArt,(sourceArt.width-drawWidth)/2+adjustment.x*sourceArt.width,(sourceArt.height-drawHeight)/2+adjustment.y*sourceArt.height,drawWidth,drawHeight);const art=artCanvas,canvas=document.createElement("canvas");canvas.width=master.naturalWidth;canvas.height=master.naturalHeight;/* D447 - the quad chain. Each candidate is checked, the first usable one wins, and the last is valid by construction, so this cannot fail to produce one. */const toPixels=(q:Template["corners"],normalized:boolean)=>(normalized?q.map(([x,y])=>[x*canvas.width,y*canvas.height] as Point):q) as Template["corners"];const candidates=[quadOverride?toPixels(quadOverride,true):null,toPixels(t.corners,Boolean(t.normalized)),defaultQuad(canvas.width,canvas.height)];const raw=candidates.find(q=>usableQuad(q??undefined,canvas.width,canvas.height))??defaultQuad(canvas.width,canvas.height),c=safeCorners(raw,canvas.width,canvas.height),ctx=canvas.getContext("2d",{alpha:false})!;ctx.drawImage(master,0,0);/* D448 - the ink goes on its own transparent layer so it can be shaded against the cloth before it touches the photograph. The photograph itself is never redrawn: it is drawn once, above, and the ink is laid over it. */const inkCanvas=document.createElement("canvas");inkCanvas.width=canvas.width;inkCanvas.height=canvas.height;const inkCtx=inkCanvas.getContext("2d",{willReadFrequently:true})!;inkCtx.save();inkCtx.beginPath();c.forEach((p,i)=>i?inkCtx.lineTo(...p):inkCtx.moveTo(...p));inkCtx.closePath();inkCtx.clip();for(let y=0;y<16;y++)for(let x=0;x<12;x++){const u=x/12,U=(x+1)/12,v=y/16,V=(y+1)/16,s00:[number,number]=[u*art.width,v*art.height],s10:[number,number]=[U*art.width,v*art.height],s11:[number,number]=[U*art.width,V*art.height],s01:[number,number]=[u*art.width,V*art.height],d00=bilinear(c,u,v),d10=bilinear(c,U,v),d11=bilinear(c,U,V),d01=bilinear(c,u,V);tri(inkCtx,art as unknown as HTMLImageElement,[s00,s10,s11],[d00,d10,d11]);tri(inkCtx,art as unknown as HTMLImageElement,[s00,s11,s01],[d00,d11,d01])}inkCtx.restore();printOntoGarment(ctx,inkCtx,canvas.width,canvas.height);ctx.drawImage(inkCanvas,0,0);for(const layer of foregrounds)ctx.drawImage(await load(layer),0,0,canvas.width,canvas.height);const blob=await new Promise<Blob>((resolve)=>canvas.toBlob((b)=>resolve(b!),"image/jpeg",.93));return{name:`${file.name.replace(/\.[^.]+$/,'')}-${t.name}.jpg`,url:URL.createObjectURL(blob),template:t.name,templateId:t.id,surfaceKind:"rigid-flat"}}
 // Printify's placement, expressed the way rigid() wants it. rigid() maps the
 // whole design canvas onto the scene's calibrated printable area, so its scale
 // means the same thing Printify's does - the fraction of the print area the
@@ -113,9 +173,12 @@ export default function IntegratedMockups({design,productId,productName="",defau
    better result, and falls back rather than losing the scene. */
         const drawLocally=async()=>{const derived=fit?await derivedFor(template,fit):null;return derived?rigid(design,template,derived.adjustment,derived.quad):rigid(design,template,placementAdjustment(placement,template.surfaceKind||"rigid-flat"))};
         const result=await withRecovery(async()=>{
-          if(isCalibratedSurface(template.surfaceKind||"rigid-flat"))return drawLocally();
-          if(!reference)return drawLocally();
-          try{return await product(design,template,reference)}catch{return drawLocally()}
+          /* D448 - every surface composites now. The generative renderer repainted
+             the whole frame: her photograph came back looking like a painting, with
+             a garment it had invented and the design somewhere other than where
+             Printify puts it. Nothing that redraws her scene can be used to place a
+             design on it, however good the prompt. */
+          return drawLocally();
         });return{index,result}},({index,result})=>{completed.set(index,result);const ready=[...completed.entries()].sort((a,b)=>a[0]-b[0]).map(([,item])=>item);setResults(ready);setRenderStatus(`${ready.length} of ${chosen.length} finished. ${ready.length<chosen.length?"Goldie is creating the remaining scenes.":"Saving all finished mockups to this listing…"}`)});const made=[...completed.entries()].sort((a,b)=>a[0]-b[0]).map(([,item])=>item);if(made.length!==chosen.length){/* D446 - this said only that some scene failed, so the way out was to guess which one and deselect it. Name them. */const lost=chosen.filter((_,index)=>!completed.has(index)).map(template=>template.name);throw new Error(`Goldie could not finish ${lost.length===1?"this scene":"these scenes"}: ${lost.join(", ")}. Nothing was saved to this listing. Try again, or clear ${lost.length===1?"that scene":"those scenes"} and create the rest.`);}await stageForEtsy(made);const warning=made.find(item=>item.warning)?.warning;if(warning)setEtsyStatus(`✓ Mockups saved. ${warning}`)}catch(e){setError(e instanceof Error?e.message:"Mockups could not be created.")}finally{setBusy(false);setRenderStatus("")}}
  async function adjustResult(result:Result,next:Adjustment){const template=library.find(item=>item.id===result.templateId);if(!template)return;setAdjustments(current=>({...current,[result.templateId]:next}));setBusy(true);try{const revised=await rigid(design,template,next),nextResults=results.map(item=>item===result?revised:item);URL.revokeObjectURL(result.url);setResults(nextResults);setExpanded(revised);await stageForEtsy(nextResults)}catch(e){setError(e instanceof Error?e.message:"This mockup could not be adjusted.")}finally{setBusy(false)}}
  function toggleTemplate(id:string){setSelected(current=>{const next=new Set(current);if(next.has(id)){next.delete(id);setError("");return next}if(next.size>=MAX_MOCKUPS_PER_LISTING){setError("You can create up to eight lifestyle mockups for one listing.");return next}next.add(id);setError("");return next})}
