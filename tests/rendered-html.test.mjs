@@ -1019,8 +1019,7 @@ test("routes each product surface deliberately and never releases a partial batc
   assert.match(integrated,/isCalibratedSurface\(template\.surfaceKind\|\|"rigid-flat"\)\?rigid\(design,template,placementAdjustment\(placement,template\.surfaceKind\|\|"rigid-flat"\)\)/);
   // The old constants may survive only as the pre-mirroring fallback for drafts
   // that predate placement being recorded - never as a live placement decision.
-  assert.equal((integrated.match(/\.42/g)||[]).length,1,"the 42% apparel guess is a fallback now, not a rule");
-  assert.match(integrated,/PLACEMENT_BEFORE_MIRRORING/);
+  assert.doesNotMatch(integrated,/PLACEMENT_BEFORE_MIRRORING/);
   assert.match(integrated,/needsReference=chosen\.some\(t=>!isCalibratedSurface/);
   assert.doesNotMatch(page,/cleanArtworkBackground/);
   assert.doesNotMatch(integrated,/cleanArtworkBackground/);
@@ -2602,20 +2601,17 @@ test("the lifestyle mockup mirrors the Printify template placement, whatever the
   // rigid() gets the padded design on purpose: Printify's scale is measured
   // against the padded canvas, so trimming there too would enlarge art twice.
   assert.match(integrated, /rigid\(design,template,placementAdjustment/);
-  assert.match(integrated, /product\(art,template,reference!\)/);
-  assert.match(integrated, /const art=needsReference\?await trimToArtwork\(design\):design/);
+  assert.match(integrated, /product\(design,template,reference!\)/);
 
-  // Brittany's live Gildan Tee batch, measured from the app: the template places
-  // at scale 1 and her artwork covers 66.4% of the design canvas, so Printify
-  // renders the padded canvas at 1.506 and the art itself fills the print area.
+  // Measured on the live site: in the Printify preview the artwork is ~27% of
+  // the shirt width; rendering at the template's own scale of 1 gave ~60%.
+  // A template's calibrated corners are NOT the print area, so a Printify scale
+  // cannot be applied here directly. Until each template records that ratio, the
+  // empirical constants stand - they are what actually matches the preview.
   const real = artworkPlacement({ x: .5, y: .5, scale: 1 }, { left: .16796875, top: .013671875, right: .83203125, bottom: .986328125 });
-  assert.equal(Number(real.scale.toFixed(3)), 1.506);
-  // The mockup has to use that number as-is. Clamping it to 1 would leave the
-  // art at 66% of the size the customer's own listing shows, and rendering it
-  // at the old .42 constant left it at 28%.
-  assert.doesNotMatch(integrated, /Math\.min\(placement\.scale,1\)/,
-    "a scale above 1 is the padding compensation, not an error to clamp away");
-  assert.match(integrated, /return\{scale:placement\.scale,x:placement\.x-\.5,y:placement\.y-\.5\}/);
-  // The adjust slider must be able to represent a mirrored placement.
-  assert.match(integrated, /min="\.2" max="4"/);
+  assert.equal(Number(real.scale.toFixed(3)), 1.506, "Printify's own math is unchanged and still drives the draft");
+  assert.match(integrated, /return\{scale:kind==="rigid-flat"\?1:\.42,x:0,y:0\}/,
+    "mockup scale stays empirical until the quad-to-print-area ratio is recorded");
+  assert.match(integrated, /calibrated corners are not/,
+    "the reason must stay next to the constants so this is not 'fixed' again");
 });
