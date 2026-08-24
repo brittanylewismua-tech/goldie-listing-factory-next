@@ -529,8 +529,6 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .app-shell .approved .approve-pricing{background:linear-gradient(145deg,#5b304f,#45263c)!important}
 .app-shell .final-checklist span{border-color:rgba(139,89,137,.22)!important;background:linear-gradient(145deg,rgba(252,244,254,.68),rgba(246,229,248,.54))!important;color:#63435e!important}
 .app-shell .final-checklist>span:nth-child(6),.app-shell .final-checklist>span:nth-child(7){display:none}
-.app-shell .final-safety-readiness{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:10px 0 18px}
-.app-shell .final-safety-readiness span{padding:13px 15px;border:1px solid rgba(139,89,137,.22);border-radius:14px;background:linear-gradient(145deg,rgba(252,244,254,.72),rgba(246,229,248,.58));color:#63435e;font-size:12px;font-weight:750;line-height:1.45;text-align:center}
 .app-shell .batch-progress{border-color:rgba(139,89,137,.28)!important;background:linear-gradient(145deg,rgba(252,244,254,.74),rgba(246,229,248,.58))!important}
 .app-shell .progress-ring{background:conic-gradient(#b777b0 0 25%,rgba(224,195,241,.62) 25% 100%)!important}
 .app-shell .progress-ring:before{background:#faf1f9!important}

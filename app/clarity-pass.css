@@ -492,37 +492,11 @@
  * same colour as every "✓" item (rgb(99,67,94), transparent) — the only
  * difference was the character. On the last screen before listings go live, a
  * warning must not look like a tick. */
-.app-shell .final-safety-readiness{
-  grid-template-columns:1fr!important;
-  gap:8px!important;
-}
-.app-shell .final-safety-readiness>span{
-  padding:11px 14px!important;
-  border:1px solid rgba(91,48,79,.14)!important;
-  border-radius:12px!important;
-}
-/* D155 · The two readiness ticks sat directly under the five .final-checklist
- * ticks in the same 642px column, but in a different type system: centred,
- * 12px/750, vs. left-aligned 11px/400. Nine "everything is fine" lines in one
- * column in two styles. Match the checklist so they read as one list; the
- * .needs-review state below keeps its own louder treatment on purpose. */
-.app-shell .final-safety-readiness>span{
-  text-align:left!important;
-  font-size:11px!important;
-  line-height:1.45!important;
-}
-.app-shell .final-safety-readiness>span.ready{
-  background:linear-gradient(145deg,rgba(252,244,254,.68),rgba(246,229,248,.54))!important;
-  border-color:rgba(139,89,137,.22)!important;
-  color:#63435e!important;
-  font-weight:400!important;
-}
-.app-shell .final-safety-readiness>span.needs-review{
-  border-color:rgba(157,80,130,.34)!important;
-  background:#fdf2f8!important;
-  color:#8a3f66!important;
-  font-weight:750!important;
-}
+/* D439 · Removed. Every rule here existed to make .final-safety-readiness look
+ * like .final-checklist - same column, same type, same colours - because the
+ * last two readiness items lived in a separate grid. They are now items in
+ * the checklist itself, which is what the styling was imitating, so they
+ * inherit all of it and can sort with the rest. The container is gone. */
 
 /* D148 · Listing thumbnails showed the Printify preview — a white garment on
  * white, cropped to 54px — so all three listings in a batch were identical

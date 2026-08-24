@@ -149,8 +149,10 @@ test("a thin title fails on its own length, not on phrase count — D77", async 
    *
    * The gate must judge the assembled title. */
   assert.match(route, /const TITLE_FILL_FLOOR=90;/);
-  assert.match(route, /if\(couldHaveDoneBetter&&title\.length<TITLE_FILL_FLOOR\)/,
-    "The failure gate must test the finished title's length.");
+  /* D438 · Still judged on the finished title's length rather than phrase count —
+     it just warns now instead of refusing and discarding the title. */
+  assert.match(route, /const titleIsShort=couldHaveDoneBetter&&title\.length<TITLE_FILL_FLOOR;/,
+    "The gate must test the finished title's length.");
   assert.doesNotMatch(route, /selected\.length<minimumTitlePhrases\|\|tags\.length<requiredTagCount\)return NextResponse/,
     "Hard-failing a row on phrase count rejects good listings. Judge the assembled title instead.");
   // The retry itself may still use phrase count — it is cheap and harmless.

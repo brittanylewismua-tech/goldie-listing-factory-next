@@ -2014,7 +2014,7 @@ test("keeps bundle titles, placement decisions, review, and failures product-spe
   assert.match(app,/below 215 DPI/);
   assert.match(app,/selectedPublishDrafts\(\)/);
   assert.match(app,/allCreatedListingsHaveImages\(selectedPublishDrafts\(\)\)/);
-  assert.match(app,/Listings that need another try stay here while successful listings can publish now/);
+  assert.match(app,/Anything still needing a look is listed above/);
   assert.match(app,/status: "NeedsRetry"/);
   assert.match(review,/final-design-group/);
   assert.match(review,/Choose exactly which listings to publish/);
@@ -2058,7 +2058,7 @@ test("shows underfilled titles and tags as a non-blocking review state (fixes D6
      rows immediately below it, which name every listing individually. The
      checklist now counts them, so the summary is at least as specific as the
      detail it summarises. */
-  assert.match(app,/titles need review/);
+  assert.match(app,/titles are under 100 characters/);
   assert.match(app,/\$\{files\.filter\(file=>file\.title\.trim\(\)\.length<100\)\.length\} of \$\{files\.length\}/,
     "the checklist must count the listings that need review");
   assert.match(app,/listings have fewer than 13 tags/);
@@ -2262,8 +2262,8 @@ test("retries thin AI title output once and then rejects the row (fixes D77)",as
    * only REJECTED on the assembled title's length. Gating rejection on phrase
    * count failed 2 of 3 real listings, one at "7 of 8 required title phrases
    * and 13 of 13 available Etsy tags". See D77 in DEFECTS.md. */
-  assert.match(route,/if\(couldHaveDoneBetter&&title\.length<TITLE_FILL_FLOOR\)/);
-  assert.match(route,/of 140 title characters for this design/);
+  assert.match(route,/const titleIsShort=couldHaveDoneBetter&&title\.length<TITLE_FILL_FLOOR;/);
+  assert.match(route,/Short title \\u2014 few phrases in this bank match this design\./);
   assert.doesNotMatch(route,/tagCandidates\.filter\(candidate=>!rankedTags\.includes\(candidate\)\)/);
   assert.match(app,/titleError:item\.error/);
   assert.match(app,/each affected listing explains why below/);
@@ -2287,7 +2287,7 @@ test("warns on the exact listing when its bank misses the design text (fixes D76
      not match the ARTWORK, but a title has already been built from that bank —
      so the old text printed "No phrase in this bank matches this design"
      directly beneath a finished title made from nine of its phrases. */
-  assert.match(route,/Goldie could not read any text in this design, so it could not check the bank against it\./);
+  assert.match(route,/Goldie could not read any text in this design, so it could not check the bank\./);
   assert.match(app,/className="title-match-warning" role="status"/);
   assert.match(app,/titleWarning:item\.result\.titleWarning/);
 });
@@ -2440,7 +2440,7 @@ test("D230: a warning never contradicts the title sitting above it", async () =>
    * 120-character title built from nine phrases of that bank. The warning is
    * about the ARTWORK, not the phrases, and it read as a flat contradiction. */
   assert.doesNotMatch(api, /No phrase in this bank matches this design/);
-  assert.match(api, /Goldie could not read any text in this design, so it could not check the bank against it\./);
+  assert.match(api, /Goldie could not read any text in this design, so it could not check the bank\./);
 
   /* And the count message must agree with itself: "1 titles created" was live. */
   assert.match(app, /\$\{files\.length-failed===1\?"title":"titles"\} created/);
@@ -2503,7 +2503,7 @@ test("D414: a chosen bank always produces a title, ranked by fit", async () => {
     "a weak fit is a warning, not a refusal");
 
   /* And the seller is still told when the bank looks wrong for the design. */
-  assert.match(route, /bankFit==="mismatch"\?"These are the closest phrases in this bank/);
+  assert.match(route, /bankFit==="mismatch"\?"This bank may not match this design/);
 });
 
 /* D415 · Ranking on the design's visible text alone left art-only designs
@@ -2832,4 +2832,35 @@ test("the design cache is bounded, never throws, and says when files are missing
   assert.match(app, /const designsLost=/);
   assert.match(app, /design files are not on this computer/);
   assert.match(app, /Printify drafts are untouched/);
+});
+
+test("creating drafts stays on Images, and the final check says what is wrong — D438/D439/D440", async () => {
+  const [app, route] = await Promise.all([
+    readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/listing-intelligence/route.ts", import.meta.url), "utf8"),
+  ]);
+
+  /* D440 · Creating the drafts jumped straight to Listing details, which is why
+     she kept arriving at step 3 having never seen step 2 — the photos and mockups
+     appear on the Images page the moment the drafts exist. */
+  const afterCreate = app.slice(app.indexOf("const createdNow="), app.indexOf("const createdNow=") + 900);
+  assert.doesNotMatch(afterCreate, /goToStep\("finish"/,
+    "creating drafts must not leave the Images page");
+  assert.match(afterCreate, /document\.querySelector\("\.draft-card"\)\?\.scrollIntoView/,
+    "it scrolls to the listings whose photos are now available");
+
+  /* D438 · A short title is a warning, not a failure. It used to build the title,
+     throw it away and return a paragraph explaining why the field was empty. */
+  assert.doesNotMatch(route, /of 140 title characters for this design/);
+  assert.match(route, /const titleIsShort=/);
+  assert.match(route, /Short title \\u2014 few phrases in this bank match this design\./);
+  assert.match(route, /return NextResponse\.json\(\{title,keywords:included/,
+    "the title is returned even when it is short");
+
+  /* D439 · One list, one class, so every alert can sort to the top together. */
+  assert.doesNotMatch(app, /"ready":"needs-review"/, "one state vocabulary, not two");
+  assert.doesNotMatch(app, /final-safety-readiness/, "the separate readiness grid is gone");
+  assert.match(app, /titles are under 100 characters/, "say what is wrong, not that it needs review");
+  assert.doesNotMatch(app, /need another try stay here/,
+    "nothing reaches Publish that cannot publish");
 });

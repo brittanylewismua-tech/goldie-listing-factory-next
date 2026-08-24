@@ -106,7 +106,11 @@ Select only phrases a shopper looking at THIS artwork would call accurate. If a 
      * whether the finished title uses the space Etsy gives it. */
     const TITLE_FILL_FLOOR=90;
     const couldHaveDoneBetter=titleCandidates.length>=8;
-    if(couldHaveDoneBetter&&title.length<TITLE_FILL_FLOOR)return NextResponse.json({error:`Goldie built only ${title.length} of 140 title characters for this design from ${included.length} phrase${included.length===1?"":"s"}. This bank has ${titleCandidates.length} phrases that fit this product, so the design likely does not match them. Choose a better-matched keyword bank, or write this title yourself.`},{status:422});/* D230 · This fires when the bank does not match the ARTWORK, but a title has
+    /* D438 - this used to refuse. It built an 81 character title from five of her
+       phrases, threw it away, and returned a paragraph explaining why. A short
+       title is a warning, not a failure: she can read it, edit it, or change the
+       bank, and none of that is possible if the field is left empty. */
+    const titleIsShort=couldHaveDoneBetter&&title.length<TITLE_FILL_FLOOR;/* D230 · This fires when the bank does not match the ARTWORK, but a title has
        already been built from that bank — so "No phrase in this bank matches this
        design" was printed directly beneath a finished title made of nine of its
        phrases. Measured live on a nautical design titled from a Jane Austen bank.
@@ -115,8 +119,11 @@ Select only phrases a shopper looking at THIS artwork would call accurate. If a 
        case Goldie cannot check: a design with no readable text. */
     /* D414 - Goldie always builds from the bank the seller chose. It says when the
        fit looks weak, and when it could not check - it does not refuse. */
-    const titleWarning=bankFit==="mismatch"?"These are the closest phrases in this bank, but it may not describe this design. Read the title before publishing, or pick a different bank."
-      :bankFit==="unknown"?"Goldie could not read any text in this design, so it could not check the bank against it. Read the title before publishing.":"";
+    /* D438 - these explained themselves three times over. What she needs is what
+       is wrong and what to do about it, in one line. */
+    const titleWarning=bankFit==="mismatch"?"This bank may not match this design. Check the title, or pick a different bank."
+      :titleIsShort?"Short title \u2014 few phrases in this bank match this design."
+      :bankFit==="unknown"?"Goldie could not read any text in this design, so it could not check the bank. Check the title.":"";
     return NextResponse.json({title,keywords:included,tags:pickedTags.length?pickedTags:tags,titleWarning,designText});
   }
   const response=await fetch("https://fal.run/openrouter/router/vision",{method:"POST",headers:{Authorization:`Key ${key}`,"Content-Type":"application/json"},body:JSON.stringify({image_urls:[body.image],model:"google/gemini-2.5-flash",temperature:0,system_prompt:"Return only compact valid JSON. Never use markdown.",prompt:`Pre-fill Etsy listing details for this specific print-on-demand product. Product facts: ${JSON.stringify(body.product||{})}. Final title: ${clean(body.title)}. Selected tags: ${JSON.stringify((body.tags||[]).slice(0,13))}. Choose the closest Etsy category from the physical Printify product facts only. The artwork, design wording, title, and tags must never change the product category, age group, garment type, or department. Two designs placed on the same Printify template must receive the same product category. Include every physical or product attribute you can confidently support from the product name, brand, model, and description. Do not stop at required fields. Use product facts, not the artwork, for material, garment, size, shape, room, orientation, neckline, sleeve, and other physical attributes. Inspect the artwork only for contextual fields. Fill holiday, occasion, recipient, or style only when the design, title, or tags clearly support that exact choice; otherwise leave those optional fields out. Never guess simply to make a field non-empty. Write a natural 1-2 sentence design-specific introduction using at most 2 exact keyword phrases from the title or tags, without keyword stuffing or unsupported claims. Return {"category":"...","attributes":{"Sleeve length":"..."},"optional":{"Holiday":"..."},"blurb":"...","confidence":"high"|"review"}. Use concise Etsy-style field names and values. Attribute names must suit this product type; tote, mug, poster, shirt, and sweatshirt fields differ.`})});

@@ -838,11 +838,14 @@ test("the publish checklist is one column and warns in warning colours — D141"
    * And "! Etsy details and personalization still need review" rendered in the
    * same colour as every tick (rgb(99,67,94), transparent). On the last screen
    * before listings go live, a warning must not look like a tick. */
-  assert.match(clarity, /\.app-shell \.final-safety-readiness\{[\s\S]*grid-template-columns:1fr!important/,
+  /* D439 · The separate readiness grid is gone; those two items are now rows in
+     .final-checklist, so they inherit its column and colours. */
+  assert.doesNotMatch(clarity.replace(/\/\*[\s\S]*?\*\//g, ""), /\.final-safety-readiness/,
     "The readiness row must match the checklist's single column.");
-  assert.match(page, /className=\{allCreatedListingsHaveImages\(selectedPublishDrafts\(\)\)\?"ready":"needs-review"\}/,
+  assert.match(page, /className=\{allCreatedListingsHaveImages\(selectedPublishDrafts\(\)\)\?"":"content-review"\}/,
     "Readiness items must carry a state class so a warning can be coloured.");
-  assert.match(clarity, /\.final-safety-readiness>span\.needs-review\{[\s\S]*color:#8a3f66!important/);
+  assert.match(clarity, /\.final-checklist>span\.content-review\{[\s\S]{0,240}color:#7c3350!important/,
+    "Readiness items must carry a state class so a warning can be coloured.");
 });
 
 test("tile CTAs size to their label, not the column — D143", async () => {
@@ -1014,7 +1017,7 @@ test("the Publish screen uses one success language, not three — D155/D156", as
     "The banner tick must use the app's completion gradient.");
   assert.match(clarity, /\.app-shell \.ready\{color:#63435e!important\}/,
     "Ready chips must use the plum, not green.");
-  assert.match(clarity, /\.app-shell \.final-safety-readiness>span\{[^}]*text-align:left!important/,
+  assert.doesNotMatch(clarity.replace(/\/\*[\s\S]*?\*\//g, ""), /\.final-safety-readiness/,
     "Readiness rows must match the checklist rows they sit under.");
 });
 
