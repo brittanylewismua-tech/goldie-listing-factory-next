@@ -2379,3 +2379,47 @@ body{min-width:1180px!important}
   border-color:rgba(157,80,130,.42)!important;
   background:rgba(253,242,248,.75)!important;
 }
+
+/* D365 · The link back to the bundle list. Sits under the card that shows the
+   current selection and is aligned to that card's content, not the page — it
+   belongs to the card. Link styling, matching the panel close links, because it
+   is a change of mind rather than an action on the batch. */
+.app-shell .selected-summary-block{display:grid}
+.app-shell .change-bundle-link{
+  justify-self:start!important;
+  margin:10px 0 0 16px!important;
+  padding:2px 0!important;
+  border:0!important;
+  border-radius:0!important;
+  background:none!important;
+  background-image:none!important;
+  box-shadow:none!important;
+  min-height:0!important;
+  color:#68405a!important;
+  font:800 11px/1.2 "Manrope",system-ui,sans-serif!important;
+  text-decoration:underline!important;
+  text-underline-offset:3px!important;
+  text-decoration-thickness:1px!important;
+  cursor:pointer!important;
+}
+.app-shell .change-bundle-link:hover{
+  background:none!important;color:#4c293f!important;text-decoration-thickness:2px!important;
+}
+.app-shell .change-bundle-link:disabled{opacity:.55!important;cursor:not-allowed!important}
+
+/* D366 · One spinner while a bundle loads, instead of a line of text per
+   product. The cards already appear together — setBundleColorProducts is set
+   once, after every template resolves — so the staggered TEXT was the only
+   thing suggesting otherwise. */
+.app-shell .bundle-loading{display:inline-flex;align-items:center;gap:9px}
+.app-shell .goldie-spinner{
+  display:inline-block;width:14px;height:14px;flex:0 0 14px;
+  border-radius:50%;
+  border:2px solid rgba(139,89,137,.25);
+  border-top-color:#8e4c78;
+  animation:goldie-spin .7s linear infinite;
+}
+@keyframes goldie-spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){
+  .app-shell .goldie-spinner{animation-duration:2.4s}
+}

@@ -1230,3 +1230,29 @@ test("the approve button leaves once there is nothing to approve — D363", asyn
     assert.match(app, handler);
   assert.match(app, /setPricingApproved\(false\)/);
 });
+
+/* D365 · Once a bundle is selected the bundle grid hides, so choosing the wrong
+   one meant starting the batch over. The link sits under the card that shows the
+   current selection, and goes through changeProduct() so it asks before
+   discarding work exactly as Change product does. */
+test("a selected bundle can be swapped for another — D365", async () => {
+  const tools = await read("app/factory-tools.tsx");
+  assert.match(tools, /activeId\.startsWith\("bundle:"\)&&<button type="button" className="change-bundle-link"/);
+  assert.match(tools, /onClick=\{\(\)=>\{if\(!props\.onChangeProduct\(\)\)return;setActiveId\(""\)/,
+    "it reuses the confirm-and-clear path rather than inventing a second one");
+
+  const block = tools.indexOf('className="selected-summary-block"');
+  const link = tools.indexOf('className="change-bundle-link"');
+  assert.ok(block > 0 && link > block, "the link belongs to the card it changes");
+});
+
+/* D366 · A bundle's cards already appear together — setBundleColorProducts is
+   called once, after every template resolves. Only the TEXT was staggered. */
+test("a loading bundle shows one spinner, not a line per product — D366", async () => {
+  const tools = await read("app/factory-tools.tsx");
+  const app = await read("app/listing-factory-app.tsx");
+  assert.match(tools, /className="goldie-spinner"/);
+  assert.doesNotMatch(tools, /Loading every product in this bundle/);
+  assert.match(app, /setBundleColorProducts\(loaded\);/,
+    "the cards must still be revealed in one go");
+});

@@ -41,7 +41,7 @@ test("places the selected-product proof before bundle setup and exposes Finish p
     readFile(new URL("../app/factory-tools.tsx", import.meta.url), "utf8"),
   ]);
   assert.match(app, /selectedSummary=\{templateDetails\?</);
-  assert.match(tools, /\{activeId&&props\.selectedSummary\}[\s\S]*<details className="bundle-library"/);
+  assert.match(tools, /\{activeId&&<div className="selected-summary-block">[\s\S]*<details className="bundle-library"/);
   /* D220 retired the Finish node and its four-phase subrail. The workflow is now
      four stages - Product, Images, Listing, Publish - and the phases that used to
      nest under Finish were merged onto those pages: draft creation and mockups
@@ -192,7 +192,7 @@ test("unifies saved products, editing, pricing, and mockups without the old fact
   assert.match(recipes, /Printify product link/);
   assert.match(recipes, /Goldie imports the variations, placement, shipping, costs, and description/);
   assert.match(recipes, /saved product/);
-  assert.match(recipes, /Add another product/);
+  assert.match(recipes, /Add a new product/);
   /* D169: saving a product no longer selects it — creating and choosing are
    * different intentions. The seller returns to the list and picks deliberately. */
   assert.match(recipes, /Product saved\. Choose it below when you want to build with it\./);
@@ -1614,7 +1614,7 @@ test("acknowledges slow workflow actions immediately and blocks repeat clicks",a
   ]);
   assert.match(workflow,/setPendingAction\(`recipe:\$\{recipe\.id\}`\)/);
   assert.match(workflow,/Loading product details…/);
-  assert.match(workflow,/Loading every product in this bundle…/);
+  assert.match(workflow,/className="goldie-spinner"[\s\S]{0,120}Preparing \{included\.length\} products/);
   assert.match(workflow,/actionLock\.current/);
   assert.match(page,/aria-busy=\{preparingEtsy\}/);
   assert.match(page,/aria-busy=\{running\|\|preparingEtsy\}/);
@@ -2073,7 +2073,7 @@ test("orders designs before colours, mockups, and saved settings on the batch sc
 
 test("keeps product creation visible and lets a selected product be changed (fixes D4 and D5)",async()=>{
   const [app,workflow,css]=await Promise.all([readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8"),readFile(new URL("../app/factory-tools.tsx",import.meta.url),"utf8"),readFile(new URL("../app/approved-functional.css",import.meta.url),"utf8")]);
-  assert.match(workflow,/＋ Add another product/);
+  assert.match(workflow,/＋ Add a new product/);
   assert.match(workflow,/className="change-product"[\s\S]{0,300}Change product/);
   assert.match(workflow,/onChangeProduct: \(\) => boolean/);
   assert.match(workflow,/useEffect\(\(\)=>setActiveId\(props\.selectedProductId\),\[props\.selectedProductId\]\)/);

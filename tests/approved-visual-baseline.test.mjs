@@ -853,7 +853,10 @@ test("the chosen-product confirmation sits with the products, not inside the bun
    * so the confirmation of the product you just chose was wedged between the
    * two halves of the bundle section. Bundle content either side of an
    * unrelated confirmation is the D12 "sandwiched mid-flow" complaint again. */
-  const summary = tools.indexOf("{activeId&&props.selectedSummary}");
+/* D365 · The summary is wrapped so the "choose a different bundle" link can sit
+     under it, attached to the card it changes. Its POSITION is what this test is
+     about and that is unchanged. */
+  const summary = tools.indexOf('{activeId&&<div className="selected-summary-block">');
   /* D169 also gates both bundle blocks on a bundle not already being the
    * selection, so match on the stable part of each. Ordering is what matters. */
   const bundles = tools.indexOf('<div className="recipe-library-head bundle-card-heading"');
