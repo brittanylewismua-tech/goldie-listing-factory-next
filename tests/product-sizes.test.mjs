@@ -1408,3 +1408,27 @@ test("D404: pricing set on the product step survives a refresh", async () => {
   assert.match(app, /function changeIndividualPrice\(variant:ProductVariant,cents:number\)\{manualPriceEdit\.current=true;/,
     "a typed variant price must count as a hand edit or it gets recalculated away");
 });
+
+/* D406 · establish() POSTed the whole merged recipe, so every call resent every
+   field from whatever copy its closure had captured — and any write that landed
+   after a newer one put its stale copy back over the newer value. Measured on
+   the live account: setting the profit goal to 12 left the product reading $1,
+   because the debounced price write carried an older targetProfit and landed
+   last. The API preserves any key that is absent, so send only what changed.
+   Same rule as D392; establish is the more dangerous of the two because it fires
+   on nearly every edit a seller makes. */
+test("D406: establish sends only what changed", async () => {
+  const app = await read("app/listing-factory-app.tsx");
+  assert.match(app, /body:JSON\.stringify\(\{id:recipe\.id,name:recipe\.name,templateUrl:recipe\.templateUrl,\.\.\.change\}\)/,
+    "a whole-recipe POST lets a stale closure overwrite newer values");
+  /* Every recipe save had this shape, not just establish: seven call sites all
+     POSTed a merged copy. None of them do now. */
+  assert.doesNotMatch(app, /body:JSON\.stringify\(updated\)/,
+    "posting the merged recipe is the bug, wherever it happens");
+  assert.equal((app.match(/"\/api\/product-recipes",\{method:"POST"/g) || []).length,
+    (app.match(/templateUrl:(recipe|activeRecipe)\.templateUrl,/g) || []).length,
+    "every recipe POST sends an explicit minimal payload");
+
+  /* The local copy still updates so the card does not go stale on screen. */
+  assert.match(app, /const updated=\{\.\.\.recipe,\.\.\.change\};/);
+});
