@@ -1072,3 +1072,20 @@ test("the card has a row for every panel it can open — D337", async () => {
   assert.match(app, /\{!bundleSelected&&pricedVariants\.length>0&&<PricingReview/,
     "one pricing card per product, not a second one below them all");
 });
+
+/* D338 · The card's rows were sorted so anything unset floated to the top, so a
+   product missing a shipping profile showed Shipping first and Colors third.
+   The categories moved depending on what happened to be missing, which makes
+   position useless for finding anything. Fixed order, always. */
+test("card rows keep a fixed order regardless of state — D338", async () => {
+  const app = await read("app/listing-factory-app.tsx");
+  const readiness = await read("app/product-readiness.ts");
+
+  assert.doesNotMatch(app, /\[\.\.\.ready\.facets\]\.sort\(/,
+    "rows may not be reordered by whether they are set");
+  assert.match(readiness, /\[colorFacet\(input\), sizeFacet\(input\), profitFacet\(input\), shippingFacet\(input\)\]/,
+    "and the order comes from the facet list: colours, sizes, pricing, shipping");
+
+  /* An open panel names itself larger, and says which product it belongs to. */
+  assert.match(app, /\{isOpen\(facet\.name\)&&<em className="row-label-product">\{recipe\.name\}<\/em>\}/);
+});

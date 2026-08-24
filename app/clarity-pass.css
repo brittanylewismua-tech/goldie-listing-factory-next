@@ -2106,3 +2106,20 @@ body{min-width:1180px!important}
 .app-shell .bundle-progress>div>small{
   font:500 12px/1.5 "Manrope",system-ui,sans-serif!important;color:#75576b!important;
 }
+
+/* D338 · An open panel's category name grows, so when four panels sit on one
+   card the one you are inside is obvious at a glance, and it carries the
+   product it belongs to — in a bundle that is the thing worth never having to
+   work out. */
+.app-shell .batch-product-row.open .row-label{
+  font:400 22px/1.2 "DM Serif Display",Georgia,serif!important;
+  color:#4c293f!important;
+  display:flex!important;
+  align-items:baseline!important;
+  gap:10px!important;
+}
+.app-shell .row-label-product{
+  font:800 12px/1.3 "Manrope",system-ui,sans-serif!important;
+  font-style:normal!important;
+  color:#8a6b80!important;
+}
