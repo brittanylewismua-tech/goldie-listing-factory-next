@@ -251,3 +251,40 @@ test("D375: the forward button is not restyled by the container it sits in", asy
   assert.deepEqual(offenders, [],
     `.workflow-next is restyled based on where it sits, which is what made one button look like two:\n${offenders.join("\n")}`);
 });
+
+/* D381 · The rail on steps 2-4 carried `batch-products` so it would inherit
+   step 1's card layout. That class is declared
+   `.app-shell .batch-products{...display:grid!important}`, so nothing could hide
+   the rail - not .hidden-panel, not an inline display:none. It stayed open on
+   every step, and step 2's drafts panel rendered on step 1.
+
+   Borrowing a class for its layout also borrows its !important. Anything the app
+   needs to hide must not be wearing a class that forces display. */
+test("D381: nothing that gets hidden also wears a class that forces display", async () => {
+  const files = await collect("app/", [".css"]);
+  const forced = new Set();
+  for (const file of files) {
+    const css = (await readFile(new URL(file, root), "utf8")).replace(/\/\*[\s\S]*?\*\//g, "");
+    for (const match of css.matchAll(/([^{}@]+)\{([^{}]*)\}/g)) {
+      if (!/display\s*:[^;}]*!important/.test(match[2])) continue;
+      for (const selector of match[1].split(",")) {
+        /* Only single-class subjects matter: those are the ones that get reused
+           on another element for their layout. */
+        const solo = selector.trim().match(/\.([\w-]+)$/);
+        if (solo) forced.add(solo[1]);
+      }
+    }
+  }
+
+  const app = await readFile(new URL("app/listing-factory-app.tsx", root), "utf8");
+  const offenders = [];
+  /* Every className that is paired with a hidden/style-driven visibility switch. */
+  for (const match of app.matchAll(/className="([^"]*)"\s+style=\{hidden\?/g)) {
+    for (const name of match[1].split(/\s+/)) if (forced.has(name)) offenders.push(name);
+  }
+  for (const match of app.matchAll(/className=\{`([^`]*)\$\{hidden\?/g)) {
+    for (const name of match[1].split(/\s+/)) if (forced.has(name)) offenders.push(name);
+  }
+  assert.deepEqual(offenders, [],
+    `these classes force display with !important, so an element wearing one can never be hidden: ${offenders.join(", ")}`);
+});

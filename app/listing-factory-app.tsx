@@ -1394,13 +1394,19 @@ export default function ListingFactoryApp() {
      that product stands, and clicking one opens it. */
   function stepProductCards(statusFor:(recipe:Recipe,index:number)=>{label:string;tone:"ready"|"attention"|"waiting"},body:ReactNode,hidden=false){
     const list=activeBundle&&bundleRecipes.length>1?bundleRecipes:(activeRecipe?[activeRecipe]:[]);
-    /* No product chosen yet, so there is no card to draw - but the caller has
-       handed its hidden state to this wrapper, and returning the body bare would
-       show a panel that is supposed to be closed. Keep the wrapper, keep the
-       tree shape, honour the flag. */
-    if(!list.length)return <div className={hidden?"hidden-panel":undefined}>{body}</div>;
+    if(!list.length)return body;
     const many=list.length>1;
-    return <section className={`batch-products step-product-cards ${hidden?"hidden-panel":""}`} aria-label="Products in this batch">
+    /* D381 - This rail carried `batch-products` so it would inherit step 1's
+       card layout. That class is `.app-shell .batch-products{display:grid
+       !important}`, so NOTHING could hide this section - not .hidden-panel, not
+       an inline display:none. The rail stayed open on every step, and because I
+       had also stripped the drafts panel's own hidden state, step 2's "Create
+       your Printify drafts" landed on step 1.
+
+       Borrowing a class for its layout also borrows its !important. The rail owns
+       its own layout now, hides with an inline style, and the panel inside keeps
+       hiding itself too - two independent guards, because one was not enough. */
+    return <section className="step-product-cards" style={hidden?{display:"none"}:undefined} aria-label="Products in this batch">
       {list.map((recipe,index)=>{
         const open=many?index===bundleIndex:true;
         const product=index===bundleIndex?templateDetails:bundleColorProducts[recipe.id];
@@ -2123,7 +2129,7 @@ export default function ListingFactoryApp() {
             designs are shared across the bundle, the Printify drafts are not. It
             stays mounted across steps, so the rail takes the hidden state rather
             than the tree changing shape and remounting a panel mid-run. */}
-        {stepProductCards(bundleCardStatus("images"),<aside className="launch-panel workflow-panel active-panel">
+        {stepProductCards(bundleCardStatus("images"),<aside className={`launch-panel workflow-panel ${workflowStep==="designs"&&!complete?"active-panel":"hidden-panel"}`}>
           <div className={`step-number launch-step-icon create-drafts-icon`} aria-hidden="true"/>
           <div className="launch-top">
             <Image src="/goldie-g.png" width={2000} height={2000} alt="" className="goldie-g" />

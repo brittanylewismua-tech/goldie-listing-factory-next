@@ -2443,7 +2443,10 @@ body{min-width:1180px!important}
    card's body. Before this, Images/Listing/Publish showed a single product with
    a "CURRENT PRODUCT" chip and no sign the others existed - so a three-product
    bundle looked like three unrelated visits to the same screen. */
-.app-shell .step-product-cards{display:grid;gap:14px;width:min(1180px,100%);margin-inline:auto}
+/* Own layout, not borrowed from .batch-products - see D381 in
+   listing-factory-app.tsx. Nothing here is !important, so this section can
+   always be hidden. */
+.app-shell .step-product-cards{display:grid;gap:22px;width:min(1180px,100%);margin-top:26px;margin-inline:auto}
 .app-shell .step-product-cards.hidden-panel{display:none}
 
 /* The step content already arrives as a finished card. Inside a product card it

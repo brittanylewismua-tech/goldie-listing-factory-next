@@ -1294,15 +1294,19 @@ test("D378: steps 2-4 wrap their work in the same product card as step 1", async
   /* Same card element as step 1, so the two screens cannot drift apart. */
   assert.match(app, /className=\{`batch-product-card step-product-card /);
 
-  /* The drafts panel must not carry its own active/hidden ternary any more. */
-  assert.doesNotMatch(app, /launch-panel workflow-panel \$\{workflowStep==="designs"/,
-    "the rail owns this panel's hidden state now");
-  assert.match(app, /<aside className="launch-panel workflow-panel active-panel">/);
+  /* D381 · The first version stripped the drafts panel's own hidden state and
+     handed it to the rail, which hid itself with a class - and .hidden-panel
+     lost to .app-shell .step-product-cards{display:grid} in the built
+     stylesheet. Result: step 2's "Create your Printify drafts" panel rendered
+     on step 1. Two independent guards now, because one was clearly not enough. */
+  assert.match(app, /launch-panel workflow-panel \$\{workflowStep==="designs"&&!complete\?"active-panel":"hidden-panel"\}/,
+    "the panel must keep hiding itself, whatever the rail does");
+  assert.match(app, /style=\{hidden\?\{display:"none"\}:undefined\}/,
+    "and the rail must hide with an inline style, which cannot lose to a cascade");
+  assert.doesNotMatch(app, /step-product-cards \$\{hidden\?"hidden-panel":""\}/,
+    "hiding this with a class is the bug");
   assert.match(app, /,!\(workflowStep==="designs"&&!complete\)\)/,
-    "and it is handed the same condition the panel used to apply to itself");
-
-  /* Trap 2: no product chosen still has to honour the flag. */
-  assert.match(app, /if\(!list\.length\)return <div className=\{hidden\?"hidden-panel":undefined\}>\{body\}<\/div>/);
+    "and the rail is handed the same condition the panel applies to itself");
 });
 
 test("D378: any product card can be opened, not only the next one", async () => {

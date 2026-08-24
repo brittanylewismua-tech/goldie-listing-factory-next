@@ -13,9 +13,33 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 
    Pin the footer, let the nav be the part that flexes, and give the nav its own
    scroll as the last resort so the bottom of the rail is always reachable. */
-.topbar{overflow:hidden}
-.topbar>.top-actions{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}
+/* D381 - The first version of this made .top-actions a scroll container with
+   overflow-y:auto and put overflow:hidden on the rail. .top-nav sits 25px above
+   its own parent, which was harmless while overflow was visible; a scroll
+   container clipped it, so "Listing Factory" lost its top edge on every screen.
+   No overflow containers here.
+
+   Pin the footer and let the nav give up its spare room. Nothing clips, and at
+   the heights where that is still not enough the block below tightens the
+   paddings instead. */
+.topbar>.top-actions{flex:0 1 auto;min-height:0}
 .topbar>.approved-sidebar-footer{flex:0 0 auto;margin-top:auto}
+
+/* Measured: the rail needs about 840px for everything at full size, and the
+   footer was the only thing that could give - it ended at 803px in an 812px
+   window and vanished on anything shorter. Buy the space back from padding and
+   the two cards rather than from the wordmark. */
+@media (max-height:900px){
+  .topbar{padding-top:26px;padding-bottom:20px}
+  .topbar .approved-usage{padding-block:12px}
+  .topbar .listing-goal-side{padding-block:10px}
+  .topbar .etsy-api-disclosure{display:none}
+}
+@media (max-height:780px){
+  .topbar{padding-top:18px;padding-bottom:14px}
+  .topbar .brand-lockup{transform:scale(.88);transform-origin:left top}
+  .topbar .approved-usage{padding-block:9px}
+}
 
 .brand-lockup{display:block;text-align:center;margin-bottom:34px}.approved-brand{color:#4b283e}.goldie-wordmark-lockup{display:grid;justify-items:center;gap:7px;color:#4b283e}.goldie-wordmark-name{font:400 64px/.88 'DM Serif Display',Georgia,serif;letter-spacing:-.04em;white-space:nowrap}.goldie-wordmark-lockup>b{font-size:11px;line-height:1;letter-spacing:.27em}.goldie-wordmark-i{position:relative;display:inline-block}.goldie-wordmark-i>i{position:absolute;left:50%;top:-.28em;transform:translateX(-50%);font:normal 18px/1 Georgia,serif;animation:approved-star 3.2s ease-in-out infinite}.approved-wm{font:400 64px/.88 'DM Serif Display',Georgia,serif;letter-spacing:-.04em;white-space:nowrap}.approved-i{position:relative;display:inline-block}.approved-i>span{position:absolute;top:-.28em;left:50%;font:normal 18px/1 Georgia,serif;transform:translateX(-50%);animation:approved-star 3.2s ease-in-out infinite}.approved-sub{margin-top:7px;color:#4b283e;font-size:11px;font-weight:700;line-height:1;letter-spacing:.27em;text-transform:uppercase}.powered-wordmark,.powered-label,.gpt-label,.wordmark{display:none}@keyframes approved-star{50%{transform:translateX(-50%) scale(1.14);filter:drop-shadow(0 0 8px rgba(115,63,106,.45))}}
 .top-actions{display:flex;min-height:0;flex:1;flex-direction:column;align-items:stretch;gap:8px}.top-nav{display:grid;gap:4px}.nav-group{display:grid;gap:4px}.top-nav a,.usage-link,.account-link{display:flex;align-items:center;min-height:46px;padding:0 15px;border-radius:14px;color:rgba(74,42,62,.58);font-size:13px;font-weight:650;text-decoration:none}.top-nav a:hover,.top-nav a.active,.usage-link:hover{color:var(--ink);background:rgba(255,255,255,.53)}.top-nav a.active{box-shadow:inset 0 0 0 1px rgba(255,255,255,.54)}.top-nav a[target="_blank"]{font-size:13px}.usage-link{display:flex}.account-link{justify-content:center;min-height:38px;border:1px solid rgba(74,42,62,.13)}.command-trigger,.command-bar,.diagnostics-link{display:none!important}.approved-sidebar-footer{display:grid;gap:9px;margin-top:16px}.approved-usage{display:grid;gap:4px;padding:16px;border:1px solid rgba(255,255,255,.62);border-radius:16px;background:rgba(255,255,255,.32);color:var(--ink);text-decoration:none}.approved-usage b{font-family:'DM Serif Display',Georgia,serif;font-size:19px;font-weight:400}.approved-usage span{color:rgba(74,42,62,.58);font-size:9px}.approved-powered{display:flex;align-items:baseline;gap:7px;color:rgba(74,42,62,.58)}.approved-powered>span{font-size:9px;font-weight:650;letter-spacing:.18em;text-transform:uppercase}.approved-powered>b{font:400 18px/1 'DM Serif Display',Georgia,serif}.approved-footer-i{position:relative;display:inline-block}.approved-footer-i i{position:absolute;top:-.18em;left:50%;font-size:.46em;font-style:normal;line-height:1;transform:translateX(-50%);animation:approved-star 5s ease-in-out infinite}.approved-sidebar-footer>small{color:rgba(74,42,62,.5);font-size:8px;letter-spacing:.08em;text-transform:uppercase}
