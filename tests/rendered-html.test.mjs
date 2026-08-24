@@ -446,7 +446,7 @@ test("calculates every Printify variant price from its own cost and Etsy fee pro
   const page = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
   const drafts = await readFile(new URL("../app/api/printify/drafts/route.ts", import.meta.url), "utf8");
   assert.match(page, /stillUsingTemplatePrices/);
-  assert.match(page, /Goldie calculated every price from your profit goal, product costs, and Etsy fees\. Buyer-paid shipping stays separate/);
+  assert.match(page, /Goldie calculated every price from your profit goal, product costs, and Etsy fees\./);
   assert.match(page, /if\(profile\)recalculate\(pricing\)/);
   assert.doesNotMatch(page, /estimatedProfit\([^\n]+shippingCost/);
   assert.doesNotMatch(drafts, /shipping==null\?body\.pricing/);
@@ -1760,7 +1760,7 @@ test("makes Printify publishing, editor links, and shipping differences explicit
   assert.match(tools, /Publish the product to Etsy first/);
   assert.match(tools, /Copy the URL only from the Printify design editor/);
   assert.match(page, /Your Etsy buyer charge is/);
-  assert.match(page, /Shipping still remains separate from the item-profit calculation/);
+  assert.doesNotMatch(page, /<span>Shipping remains separate from the item-profit/);
   assert.match(css, /\.workflow-back[\s\S]*text-decoration: none !important/);
 });
 
@@ -2287,7 +2287,7 @@ test("restart is visible everywhere and preserves a batch only after saving — 
     readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8"),
   ]);
-  assert.match(app, /workflow-restart-button[\s\S]{0,180}Start a new batch/);
+  assert.match(app, /workflow-restart-button[\s\S]{0,700}Start a new batch/);
   assert.match(app, /Save to Batch History \+ start new/);
   assert.match(app, /Discard this batch \+ start new/);
   assert.match(app, /clearCurrentBatch\(true,preserveSavedBatch\)/);

@@ -2287,3 +2287,71 @@ body{min-width:1180px!important}
   padding-top:12px!important;
   border-top:1px solid rgba(91,48,79,.12)!important;
 }
+
+/* D359 · The closing control at the foot of an open panel.
+   Its styling was collateral damage when the dead bundle-pricing rules were
+   stripped — the two shared one selector list, so removing that took this with
+   it and left an unstyled button sitting on the panel's bottom edge. That is
+   why it read as unfinished.
+   It is a link, not an action: small, bold, underlined, with room beneath it so
+   the panel ends on space rather than on type. */
+.app-shell .panel-collapse-foot{
+  display:inline-flex!important;
+  align-items:center!important;
+  gap:6px!important;
+  width:auto!important;
+  margin:14px 0 22px 22px!important;
+  min-height:0!important;
+  padding:2px 0!important;
+  border:0!important;
+  border-radius:0!important;
+  background:none!important;
+  background-image:none!important;
+  box-shadow:none!important;
+  color:#68405a!important;
+  font:800 11px/1.2 "Manrope",system-ui,sans-serif!important;
+  text-decoration:underline!important;
+  text-underline-offset:3px!important;
+  text-decoration-thickness:1px!important;
+  cursor:pointer!important;
+}
+.app-shell .panel-collapse-foot:hover{
+  background:none!important;color:#4c293f!important;text-decoration-thickness:2px!important;
+}
+.app-shell .panel-collapse-foot>em{
+  font-style:normal!important;font-size:12px!important;text-decoration:none!important;
+}
+
+/* D360 · The sidebar footer stacked tight under the goal card. The legal notice
+   drops away from the interface, and the copyright sits just above it as its
+   caption rather than floating against the goal. */
+.app-shell .approved-sidebar-footer>small{
+  margin-top:26px!important;
+  display:block!important;
+}
+.app-shell .etsy-api-disclosure{
+  margin-top:6px!important;
+}
+
+/* D362 · The refresh icon on Start a new batch. Sized and aligned to the label
+   rather than sitting on the text baseline like a character. */
+.app-shell .new-batch-icon{
+  flex:0 0 15px!important;
+  vertical-align:-2px!important;
+  opacity:.85!important;
+}
+
+/* D363 · Approved is a state, not an action. Quiet green, no button chrome —
+   there is nothing here to press. */
+.app-shell .pricing-approved-state{
+  display:inline-flex!important;
+  align-items:center!important;
+  gap:8px!important;
+  margin:14px 0 0!important;
+  padding:9px 14px!important;
+  border-radius:999px!important;
+  border:1px solid rgba(120,169,138,.5)!important;
+  background:#e8f5ec!important;
+  color:#276543!important;
+  font:800 12px/1 "Manrope",system-ui,sans-serif!important;
+}

@@ -234,7 +234,11 @@ test("D229: the pricing approval button names every reason it is disabled", asyn
    * appeared anywhere. The Images page said to approve prices on the Product
    * page; the Product page silently refused. The seller is stuck between two
    * screens, each pointing at the other. */
-  const button = source.slice(source.indexOf('className={`pricing-approval-button'));
+  /* D363 · The button no longer carries an `approved` branch — once approved
+     there is nothing to approve, so that state renders as a state and the button
+     is not there at all. Every reason it can be DISABLED still has to be named,
+     which is what D229 is about. */
+  const button = source.slice(source.indexOf('className="pricing-approval-button"'));
   const label = button.slice(0, button.indexOf("</button>"));
 
   assert.match(label, /customDirty\?"Save or discard your custom profile to continue"/);

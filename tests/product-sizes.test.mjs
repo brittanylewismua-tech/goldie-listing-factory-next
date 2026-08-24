@@ -1038,7 +1038,10 @@ test("every bundle product gets its own pricing card — D332", async () => {
      their own and disagreed, so the first click on a row started from a list
      that did not match the screen and opened panels the seller had not asked
      for. */
-  assert.match(app, /const defaultOpenFacets=index===0\?\["colors"\]:\[\];/);
+/* D361 · Nothing opens by default — opening Colours for the first product chose
+     the seller's starting point for them and hid the other three categories
+     behind a swatch grid. */
+  assert.match(app, /const defaultOpenFacets:string\[\]=\[\];/);
   assert.match(app, /const openList=openFacet\[recipe\.id\]\?\?defaultOpenFacets;/);
   assert.match(app, /const list=current\[recipe\.id\]\?\?defaultOpenFacets;/,
     "the toggle must start from the same list that is on screen");
@@ -1209,4 +1212,21 @@ test("the sidebar closes with Powered by Goldie AI — D357", async () => {
   assert.ok(powered > 0 && etsy > 0 && copyright > 0);
   assert.ok(powered > copyright, "it sits below the copyright");
   assert.ok(powered > etsy, "and below the Etsy notice, so it is genuinely last");
+});
+
+/* D363 · Approved is a state, not an action. The button used to stay on screen
+   after approval wearing an "✓ approved" label — a control asking for something
+   already done. Any change to prices, the profit goal or the shipping profile
+   clears approval, so the button returns on its own when there is something to
+   approve again. */
+test("the approve button leaves once there is nothing to approve — D363", async () => {
+  const app = await read("app/listing-factory-app.tsx");
+  assert.match(app, /\{approved\s*\?<p className="pricing-approved-state"/,
+    "approved renders as a state");
+  assert.doesNotMatch(app, /approved\?"✓ Prices and shipping approved"/,
+    "not as a button label");
+  /* The three things that must invalidate it, so it can come back. */
+  for (const handler of [/onPricing=/, /onPrices=/, /onSelectProfile=/])
+    assert.match(app, handler);
+  assert.match(app, /setPricingApproved\(false\)/);
 });
