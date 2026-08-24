@@ -1318,6 +1318,8 @@ test("shows accurate completion feedback above each next step card", async () =>
   assert.match(styles, /border:1px solid rgba\(139,89,137,\.28\)/);
 });
 
+/* D413 · Capitalization moved into the Title format group beside the comma
+   choice - it is the same decision, how the title is formatted. */
 test("supports whole-number pricing, unclipped profit columns, and optional title caps", async () => {
   const [page, styles] = await Promise.all([
     readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
@@ -1325,7 +1327,7 @@ test("supports whole-number pricing, unclipped profit columns, and optional titl
   ]);
   assert.match(page, /Create whole-number pricing/);
   assert.match(page, /Math\.ceil\(current\/100\)\*100/);
-  assert.match(page, /Capitalization: \{titleCaps\?"On":"Off"\}/);
+  assert.match(page, /\{titleCaps\?"Capitalized":"Not capitalized"\}/);
   assert.match(page, /Titles, tags, and descriptions complete/);
   assert.match(styles, /\.price-group-row,.price-group-row>div\{min-width:0\}/);
   assert.match(styles, /\.workflow-panel\.active-panel/);
