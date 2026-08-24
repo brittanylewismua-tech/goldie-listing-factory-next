@@ -1210,15 +1210,21 @@ test("a selected product tile does not clip its own actions — D186", async () 
     "Flex made each action take its own row.");
 });
 
-test("keyword bank cards size to their own content — D195", async () => {
+test("keyword bank cards keep Delete quiet and end their row on one line — D195/D431", async () => {
   const clarity = await readFile(new URL("app/clarity-pass.css", root), "utf8");
 
-  /* Measured on /keywords with two banks of 17 and 50 phrases: both cards 406px,
-   * with 77px of dead space above "Edit bank" in the shorter one against 14px in
-   * the taller. Delete also rendered at 16px — larger than the phrase chips — so
-   * the destructive action was the loudest element on the card.
-   * After: 334px and 397px, 14px gap in both, Delete at 11px. */
-  assert.match(clarity, /\.keyword-page \.bank-grid\{align-items:start!important\}/);
+  /* D195 measured two banks of 17 and 50 phrases: both cards 406px, with 77px of
+   * dead space above "Edit bank" in the shorter one. Delete also rendered at
+   * 16px — larger than the phrase chips — so the destructive action was the
+   * loudest element on the card.
+   *
+   * D431 · align-items:start fixed the dead space by letting each card size to
+   * its own content, but that put the row's Edit buttons on three different
+   * lines (measured live: 640, 609, 688), which she reported. Both goals hold at
+   * once by stretching the cards and pushing the button to the bottom, so the
+   * slack lands below the content instead of above the action. */
+  assert.match(clarity, /\.keyword-page \.bank-grid\{align-items:stretch!important\}/);
+  assert.match(clarity, /\.keyword-page \.bank-grid>article>button:last-child\{margin-top:auto!important\}/);
   assert.match(clarity, /\.keyword-page \.bank-grid article button:not\(\.bank-keyword-toggle\)\{font-size:11px!important\}/);
 });
 

@@ -400,8 +400,17 @@ test("D418: every management page keeps its eyebrow", async () => {
     "the page eyebrow is part of the heading system, not decoration");
 });
 
-test("D417: a row of bank cards ends on one line", async () => {
+test("D417/D431: a row of bank cards ends on one line", async () => {
   const nav = await readFile(new URL("app/factory-navigation.css", root), "utf8");
+  const clarity = await readFile(new URL("app/clarity-pass.css", root), "utf8");
+  /* D431 - the D417 rule below is correct but was silently outranked: clarity-pass
+     loads last and carried align-items:start!important from D195. Measured live,
+     three cards at 377/346/425px put their buttons on three different lines. */
+  assert.doesNotMatch(clarity, /\.keyword-page \.bank-grid\{align-items:start!important\}/,
+    "the last stylesheet must not undo the alignment");
+  assert.match(clarity, /\.keyword-page \.bank-grid\{align-items:stretch!important\}/);
+  assert.match(clarity, /\.keyword-page \.bank-grid>article>button:last-child\{margin-top:auto!important\}/,
+    "and the slack falls below the content, not above the action");
   assert.match(nav, /\.bank-grid\{align-items:stretch\}/);
   assert.match(nav, /\.bank-grid>article>button:last-child\{margin-top:auto\}/,
     "and each card's action sits on its own bottom edge");

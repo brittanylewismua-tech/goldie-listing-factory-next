@@ -1023,7 +1023,19 @@
  * one had 14px. Same fault as the product tiles. And "Delete" rendered at 16px —
  * larger than the card's own phrase chips — making the destructive action the
  * loudest thing on it. */
-.keyword-page .bank-grid{align-items:start!important}
+/* D431 · Superseded. D195 set align-items:start to stop a short card carrying
+ * dead space above its button. D417 then wanted the row of Edit buttons to end
+ * on one line and set stretch in factory-navigation.css - and lost silently,
+ * because this file loads last and this rule carried !important. Measured on the
+ * live page: three cards at 377px, 346px and 425px put their Edit buttons at
+ * 640, 609 and 688 - three different lines, which is what she reported.
+ *
+ * Both goals are satisfiable: stretch the cards so the row is even, and push the
+ * button to the bottom so the slack falls in one place and reads as card padding
+ * rather than a gap wedged above the action. */
+.keyword-page .bank-grid{align-items:stretch!important}
+.keyword-page .bank-grid>article{display:flex!important;flex-direction:column!important}
+.keyword-page .bank-grid>article>button:last-child{margin-top:auto!important}
 .keyword-page .bank-grid article button:not(.bank-keyword-toggle){font-size:11px!important}
 
 /* D197 · The product tile. Two faults, both measured on the live page:
