@@ -2961,3 +2961,20 @@ test("leaving Images needs photos, not titles — D444", async () => {
   assert.doesNotMatch(app, /progressGateIssues\(8\)/,
     "the Images page must not be gated on the Publish requirements");
 });
+
+test("a failed scene names itself, and the rest are not silently lost — D446", async () => {
+  const integrated = await readFile(new URL("../app/integrated-mockups.tsx", import.meta.url), "utf8");
+
+  /* Walked the real flow: four of eight scenes failed, and because staging is
+     all-or-nothing the four that worked were discarded too - which is why the
+     Rearrange listing photos list had no mockups in it. The all-or-nothing rule
+     stands, so a listing never ends up half replaced, but the message said only
+     that "every selected scene" had not finished. The way out was to guess which
+     scene and deselect it. */
+  assert.match(integrated, /const lost=chosen\.filter\(\(_,index\)=>!completed\.has\(index\)\)\.map\(template=>template\.name\)/);
+  assert.match(integrated, /Goldie could not finish \$\{lost\.length===1\?"this scene":"these scenes"\}/);
+  assert.doesNotMatch(integrated, /could not finish every selected scene/);
+
+  // Staging still only happens when the whole set succeeded.
+  assert.match(integrated, /await stageForEtsy\(made\)/);
+});
