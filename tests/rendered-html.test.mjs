@@ -2604,4 +2604,18 @@ test("the lifestyle mockup mirrors the Printify template placement, whatever the
   assert.match(integrated, /rigid\(design,template,placementAdjustment/);
   assert.match(integrated, /product\(art,template,reference!\)/);
   assert.match(integrated, /const art=needsReference\?await trimToArtwork\(design\):design/);
+
+  // Brittany's live Gildan Tee batch, measured from the app: the template places
+  // at scale 1 and her artwork covers 66.4% of the design canvas, so Printify
+  // renders the padded canvas at 1.506 and the art itself fills the print area.
+  const real = artworkPlacement({ x: .5, y: .5, scale: 1 }, { left: .16796875, top: .013671875, right: .83203125, bottom: .986328125 });
+  assert.equal(Number(real.scale.toFixed(3)), 1.506);
+  // The mockup has to use that number as-is. Clamping it to 1 would leave the
+  // art at 66% of the size the customer's own listing shows, and rendering it
+  // at the old .42 constant left it at 28%.
+  assert.doesNotMatch(integrated, /Math\.min\(placement\.scale,1\)/,
+    "a scale above 1 is the padding compensation, not an error to clamp away");
+  assert.match(integrated, /return\{scale:placement\.scale,x:placement\.x-\.5,y:placement\.y-\.5\}/);
+  // The adjust slider must be able to represent a mirrored placement.
+  assert.match(integrated, /min="\.2" max="4"/);
 });
