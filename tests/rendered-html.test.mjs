@@ -3339,3 +3339,35 @@ test("saving a product cannot overwrite the seller's Etsy shipping choice — D4
   // The guard itself is unchanged: a template default only fills an empty choice.
   assert.match(tools, /if\(!savedChoice\)shippingProfileId=Number\(verified\.shippingTemplateId\)\|\|shippingProfileId/);
 });
+
+test("a hand-marked print area beats an automatic guess — D466", async () => {
+  const { isCalibratedQuad, PLACEHOLDER_QUAD } = await import("../app/mockups/calibration.ts");
+  const [integrated, page] = await Promise.all([
+    readFile(new URL("../app/integrated-mockups.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/mockups/page.tsx", import.meta.url), "utf8"),
+  ]);
+
+  /* The mug is what proved this. A bounding box cannot say where a mug's print
+     goes: the printable face is offset from the handle and foreshortened by the
+     camera. Every professional mockup tool stores a placement marked once per
+     photo rather than detecting one per render, and Goldie has always had the
+     calibrator to do it - four clicks, saved to the template. */
+  assert.equal(isCalibratedQuad(PLACEHOLDER_QUAD, true), false, "the placeholder is not a calibration");
+  assert.equal(isCalibratedQuad([[.2, .3], [.7, .3], [.7, .8], [.2, .8]], true), true);
+  assert.equal(isCalibratedQuad(undefined, true), false);
+  assert.equal(isCalibratedQuad([[120, 200], [400, 200], [400, 500], [120, 500]], false), true,
+    "pixel corners were set deliberately");
+
+  /* D433 had the priority backwards: the derived box came first, so an automatic
+     guess overrode a human's answer. */
+  assert.match(integrated, /const marked=isCalibrated\(t\)\?toPixels\(t\.corners,Boolean\(t\.normalized\)\):null;/);
+  assert.match(integrated, /const candidates=\[marked,quadOverride/,
+    "marked first, derived second, placeholder last");
+
+  /* And the calibrator was hidden on curved surfaces, so a mug could never be
+     calibrated at all - it was only offered for the kinds that used to composite. */
+  assert.doesNotMatch(page, /item\.custom&&isCalibratedSurface\(item\.surfaceKind\|\|"rigid-flat"\)&&<button className="resetArea"/,
+    "every surface can be calibrated now, because every surface composites");
+  assert.match(page, /"Reset product area":"Set the product area"/,
+    "and an uncalibrated scene says which it is");
+});
