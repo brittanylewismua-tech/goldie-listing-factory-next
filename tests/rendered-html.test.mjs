@@ -3160,3 +3160,31 @@ test("every confirmation uses the app's own dialog — D452", async () => {
   // And the host is mounted once, so confirmAction always has somewhere to render.
   assert.match(sources[0], /<ConfirmHost \/>/);
 });
+
+test("a curved product wraps the print instead of pasting it flat — D454", async () => {
+  const integrated = await readFile(new URL("../app/integrated-mockups.tsx", import.meta.url), "utf8");
+
+  /* A mug is a cylinder. A flat paste on a cylinder reads as a sticker however
+     well it is shaded, because print wrapped round a curve compresses towards
+     the edges as the surface turns away from the camera. */
+  assert.match(integrated, /const CURVE_HALF_ANGLE:Partial<Record<SurfaceKind,number>>=\{curved:\.62,"rigid-flat":0\}/);
+  assert.match(integrated, /Math\.asin\(projected\)\/\(2\*angle\)\+\.5/,
+    "the inverse of a cylinder's projection, not an eyeballed curve");
+
+  // The destination stays evenly spaced; the artwork is sampled unevenly.
+  assert.match(integrated, /su=across\(u\),sU=across\(U\)/);
+  assert.match(integrated, /const COLUMNS=\(t\.surfaceKind==="curved"\)\?28:12/,
+    "a curve needs more columns than a flat panel to stay smooth");
+
+  // Verified against the maths itself rather than trusting the source text.
+  const angle = 0.62, span = Math.sin(angle);
+  const across = (u) => Math.asin(Math.max(-1, Math.min(1, (u * 2 - 1) * span))) / (2 * angle) + 0.5;
+  assert.equal(Number(across(0).toFixed(6)), 0);
+  assert.equal(Number(across(0.5).toFixed(6)), 0.5);
+  assert.equal(Number(across(1).toFixed(6)), 1, "symmetric, and the print still fills the surface");
+  const edge = across(1 / 12) - across(0), centre = across(7 / 12) - across(6 / 12);
+  assert.ok(edge > centre, "an edge column must consume more artwork than a centre one");
+
+  // A flat surface is untouched, so a tee renders exactly as before.
+  assert.match(integrated, /if\(!angle\)return \(u:number\)=>u;/);
+});
