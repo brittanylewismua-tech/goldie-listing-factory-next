@@ -2907,7 +2907,9 @@ test("every failure is recorded against a person, and Brittany is emailed — D4
     assert.match(source, /withErrorLog\("/, `${route} reports its failures`);
   }
 
-  // She can read it without asking anyone.
+  // She can read it without asking anyone, including whether the alert sent -
+  // otherwise the only way to know alerting works is to watch an inbox.
   assert.match(admin, /Everything that failed/);
+  assert.match(admin, /\{item\.alerted \? "Emailed · " : ""\}/);
   assert.match(admin, /Not signed in/, "an error before sign-in is still worth seeing");
 });

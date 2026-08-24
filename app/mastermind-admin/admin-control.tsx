@@ -12,7 +12,7 @@ function standardTime(value: string) {
   return new Intl.DateTimeFormat(undefined, { year:"numeric", month:"short", day:"numeric", hour:"numeric", minute:"2-digit", second:"2-digit" }).format(date);
 }
 
-export type LoggedFailure = { id: string; createdAt: string; area: string; severity: string; userEmail: string | null; userName: string | null; message: string; errorCode: string | null; httpStatus: number | null; url: string | null; context: string | null };
+export type LoggedFailure = { id: string; createdAt: string; area: string; severity: string; userEmail: string | null; userName: string | null; message: string; errorCode: string | null; httpStatus: number | null; url: string | null; context: string | null; alerted?: number };
 
 export default function AdminControl({ initialActive, memberCount, initialDiagnostics, initialErrors = [] }: { initialActive: boolean; memberCount: number; initialDiagnostics: Diagnostic[]; initialErrors?: LoggedFailure[] }) {
   const [errorSearch, setErrorSearch] = useState("");
@@ -56,7 +56,7 @@ export default function AdminControl({ initialActive, memberCount, initialDiagno
         .filter((item) => `${item.area} ${item.userEmail ?? ""} ${item.userName ?? ""} ${item.message} ${item.errorCode ?? ""}`.toLowerCase().includes(errorSearch.trim().toLowerCase()))
         .map((item) => (
         <article key={item.id} className={`diagnostic-item${item.severity === "warning" ? "" : " diagnostic-row-error"}`}>
-          <div><b>{item.area}</b><span>{standardTime(item.createdAt)}</span></div>
+          <div><b>{item.area}</b><span>{item.alerted ? "Emailed · " : ""}{standardTime(item.createdAt)}</span></div>
           <dl>
             <div><dt>MEMBER</dt><dd>{item.userEmail || "Not signed in"}{item.userName ? ` · ${item.userName}` : ""}</dd></div>
             <div><dt>WHERE</dt><dd>{item.url || "—"}</dd></div>
