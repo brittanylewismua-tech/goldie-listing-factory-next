@@ -2279,3 +2279,11 @@ body{min-width:1180px!important}
      centre sits above the box centre. */
   padding-bottom:1px!important;
 }
+
+/* D357 · Powered-by now closes the sidebar, so it needs the separation a closing
+   line has rather than the tight spacing it had as a middle element. */
+.app-shell .approved-sidebar-footer .approved-powered{
+  margin-top:14px!important;
+  padding-top:12px!important;
+  border-top:1px solid rgba(91,48,79,.12)!important;
+}

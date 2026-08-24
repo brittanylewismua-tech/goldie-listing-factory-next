@@ -1196,3 +1196,17 @@ test("the sidebar goal names the period — D351", async () => {
   assert.match(app, /<b>\{goalDone\} of \{listingGoal\.target\}<\/b>/,
     "progress only — still no deficit, and the count is not capped");
 });
+
+/* D357 · "Powered by Goldie AI" is the widest line in the sidebar, so it sets
+   the column's visual edge. Above the copyright and the Etsy notice it made
+   those two look indented. At the bottom the block reads as one left-aligned
+   stack that widens as it descends. */
+test("the sidebar closes with Powered by Goldie AI — D357", async () => {
+  const app = await read("app/listing-factory-app.tsx");
+  const powered = app.indexOf('className="approved-powered"');
+  const etsy = app.indexOf('className="etsy-api-disclosure"');
+  const copyright = app.indexOf("© 2026 Be A Wolf Biz");
+  assert.ok(powered > 0 && etsy > 0 && copyright > 0);
+  assert.ok(powered > copyright, "it sits below the copyright");
+  assert.ok(powered > etsy, "and below the Etsy notice, so it is genuinely last");
+});
