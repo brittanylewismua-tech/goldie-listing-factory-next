@@ -712,11 +712,11 @@ test("creates unique validated AI titles in bulk with per-listing overrides", as
   assert.match(page,/Customize this listing’s description/);assert.match(page,/The complete description is shown below/);
   assert.match(page,/descriptionOverride/);assert.match(page,/scrollIntoView/);
   assert.match(tools,/keywordListsCache/);assert.match(tools,/selectionOnly/);assert.match(tools,/onSelect/);
-  assert.match(intelligence,/selected_keywords/);assert.match(intelligence,/allowedByLower/);assert.match(intelligence,/PRODUCT TYPE RULE/);assert.match(intelligence,/if\(!selected\.length\|\|bankFit==="mismatch"\).*status:422/);
+  assert.match(intelligence,/selected_keywords/);assert.match(intelligence,/allowedByLower/);assert.match(intelligence,/PRODUCT TYPE RULE/);assert.match(intelligence,/if\(!picked\.length\)return NextResponse\.json\(\{error:"This keyword bank is empty/);
   assert.match(intelligence,/tagCandidates=keywords\.filter/);
   assert.match(intelligence,/tag_keywords/);
   assert.match(intelligence,/requiredTagCount=Math\.min\(13,tagCandidates\.length\)/);
-  assert.match(intelligence,/return NextResponse\.json\(\{title,keywords:included,tags,titleWarning,designText\}\)/);
+  assert.match(intelligence,/return NextResponse\.json\(\{title,keywords:included,tags:pickedTags\.length\?pickedTags:tags,titleWarning,designText\}\)/);
 });
 
 test("records permanent sanitized Printify diagnostics without blocking listings", async () => {
@@ -2344,7 +2344,7 @@ test("a title never repeats a phrase it already contains — D157", async () => 
    * next to each other. "off the market" appeared inside three separate phrases.
    * On a 140-character Etsy title that is wasted space and reads as stuffing. */
   assert.match(route, /const normalisePhrase=\(value:string\)=>value\.toLocaleLowerCase\(\)/);
-  assert.match(route, /const chosen=selected\.filter\(phrase=>\{const inner=normalisePhrase\(phrase\);/);
+  assert.match(route, /const chosen=picked\.filter\(phrase=>\{const inner=normalisePhrase\(phrase\);/);
   assert.match(route, /outer\.length>inner\.length&&outer\.includes\(inner\)/);
 
   /* Re-run of the three real cases through the same predicate:
@@ -2464,4 +2464,27 @@ test("D377: the publish checklist names the shipping profile readably", async ()
   assert.match(app, /✓ \{friendlyShippingProfileTitle\(etsyShippingProfiles\.find\(profile=>profile\.id===etsyShippingProfileId\)\?\.title\)/);
   assert.doesNotMatch(app, /etsyShippingProfileId\)\?\.title\|\|"Etsy shipping profile"\} will be applied/,
     "the raw title is what produced the truncated sentence");
+});
+
+/* D414 · The keyword bank is the seller's choice, so Goldie builds from it. It
+   used to fall back to the first thirteen phrases alphabetically (a confident
+   title from arbitrary phrases), then D403 refused outright on any verified
+   mismatch (a feature that mostly says no). Neither: rank the bank by how well
+   each phrase matches what is actually on the design, take the closest, and warn
+   when the fit looks weak. */
+test("D414: a chosen bank always produces a title, ranked by fit", async () => {
+  const route = await readFile(new URL("../app/api/listing-intelligence/route.ts", import.meta.url), "utf8");
+
+  assert.match(route, /export function bestFitFromBank/);
+  assert.match(route, /scored\.sort\(\(a,b\)=>b\.score-a\.score\|\|a\.index-b\.index\)/,
+    "ranked by fit, ties keeping bank order so the result is stable");
+  assert.match(route, /const picked=selected\.length\?selected:bestFitFromBank/);
+
+  /* Refusal is reserved for an empty bank. */
+  assert.match(route, /if\(!picked\.length\)return NextResponse\.json\(\{error:"This keyword bank is empty/);
+  assert.doesNotMatch(route, /bankFit==="mismatch"\)return NextResponse/,
+    "a weak fit is a warning, not a refusal");
+
+  /* And the seller is still told when the bank looks wrong for the design. */
+  assert.match(route, /bankFit==="mismatch"\?"These are the closest phrases in this bank/);
 });

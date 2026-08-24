@@ -10,6 +10,23 @@ const DESIGN_TEXT_STOPWORDS=new Set(["the","and","for","with","this","that","bri
 /* D403 - "fits" and "cannot tell" were both reported as true, so the caller could
    not distinguish a bank that matches from a design with no readable text. A
    mismatch is now refused outright; only the unverifiable case gets a warning. */
+/* D414 - Rank a bank against what is actually on the design, so "closest match"
+   means something measurable rather than alphabetical order. A phrase scores for
+   every distinctive word it shares with the design's own text or the product
+   name; ties keep the bank's order so the result is stable. */
+export function bestFitFromBank(candidates:string[],designText:string[],product?:{blueprintTitle?:string;brand?:string;model?:string}):string[]{
+  const haystack=[...designText,product?.blueprintTitle||"",product?.brand||"",product?.model||""]
+    .map(clean).map(normalize).join(" ");
+  const words=new Set(haystack.split(" ").filter(word=>word.length>=4&&!DESIGN_TEXT_STOPWORDS.has(word)));
+  const scored=candidates.map((phrase,index)=>{
+    const parts=normalize(clean(phrase)).split(" ").filter(Boolean);
+    const hits=parts.filter(part=>words.has(part)).length;
+    return {phrase,index,score:hits/Math.max(1,parts.length)};
+  });
+  scored.sort((a,b)=>b.score-a.score||a.index-b.index);
+  return scored.slice(0,13).map(item=>item.phrase);
+}
+
 export function bankFitForDesign(keywords:string[],designText:string[]):"fits"|"mismatch"|"unknown"{
   const phrases=designText.map(clean).map(normalize).filter(text=>text.length>=4);
   if(!phrases.length)return "unknown";
@@ -53,7 +70,7 @@ export async function POST(request:Request){
 
 PRODUCT TYPE RULE (most important): this listing is for the physical product named above. Reject every phrase that names any different product type. For this exact Printify blueprint, the excluded product nouns are: ${JSON.stringify(excludedNouns)}. A phrase containing any excluded noun is always wrong, no matter how strong its search data.
 
-HOW MANY: order your title selections most relevant first, then keep going. Select between 8 and 13 title phrases when the bank contains that many that genuinely fit the design and the product type. The seller's phrases will be joined into one Etsy title with a 140 character limit, so aim to give enough phrases to use most of that limit. Quality still wins: never pad the title with a phrase that does not fit the design or names the wrong product.
+HOW MANY: order your title selections most relevant first, then keep going. Select between 8 and 13 title phrases: the CLOSEST MATCHING phrases in the bank, ranked best first. The seller chose this bank on purpose, so always return the best available matches even when the fit is loose - rank by how well each phrase fits and let the weaker ones fall to the end. Only return fewer than 8 if the bank genuinely holds fewer usable phrases than that. The seller's phrases will be joined into one Etsy title with a 140 character limit, so aim to give enough phrases to use most of that limit. Quality still wins: never pad the title with a phrase that does not fit the design or names the wrong product.
 
 ETSY TAGS ARE A SEPARATE FIELD: rank these tag-length phrases from most to least relevant to this design: ${JSON.stringify(tagCandidates)}. Return every fitting candidate in ranked order, up to 13. Never split, shorten, combine, rewrite, or invent a tag. Tags do not need to appear in the title.
 
@@ -63,22 +80,20 @@ Avoid duplicate meaning. Do not rewrite, combine, expand, correct, or invent any
     let selection;try{selection=await requestSelection(0);if(selection.selected.length<minimumTitlePhrases||selection.tags.length<requiredTagCount)selection=await requestSelection(1)}catch(error){return NextResponse.json({error:error instanceof Error?error.message:"Goldie could not build this title."},{status:502})}
     const {selected,tags,designText}=selection;
     
-    // Previously: chosen = selected.length ? selected : keywords.slice(0,13)
-    // That fallback silently took the first 13 phrases in bank order (banks are
-    // stored alphabetically), so a design the model could not match produced a
-    // confident-looking title built from arbitrary phrases. Fail loudly instead.
-    /* D403 - Two faith designs against a bachelorette bank: one returned nothing
-       and was refused, the other returned everything and was titled from it. The
-       outcome depended entirely on whether the vision model happened to select
-       phrases, because the bank-relevance check ran afterwards and only added a
-       soft warning. Same bank, same kind of design, opposite results.
+    /* D414 - This has swung between two bad extremes. It used to fall back to
+       keywords.slice(0,13) - the first thirteen phrases in alphabetical order -
+       which produced a confident title built from arbitrary phrases. D403 then
+       refused outright whenever the bank did not verifiably describe the design,
+       which made the feature useless: the seller picks a bank deliberately, and
+       being told "no" is not an answer.
 
-       The relevance check decides, and it decides before anything is accepted, so
-       a bank that does not describe the design is refused every time rather than
-       once in two. bankMatchesDesignText still returns true when the design has
-       no readable text, which keeps text-free art working. */
+       Neither. The seller chose the bank; Goldie picks the closest matches in it,
+       ranked, and says so when the fit looks weak. Refusing is reserved for the
+       one case where there is genuinely nothing to choose from. */
     const bankFit=bankFitForDesign(titleCandidates,designText);
-    if(!selected.length||bankFit==="mismatch")return NextResponse.json({error:"Goldie could not find phrases in this bank that match this design. Pick a different keyword bank, or build this title yourself."},{status:422});
+    const picked=selected.length?selected:bestFitFromBank(titleCandidates,designText,body.product);
+    const pickedTags=tags.length?tags:bestFitFromBank(tagCandidates,designText,body.product).slice(0,13);
+    if(!picked.length)return NextResponse.json({error:"This keyword bank is empty, so there is nothing to build a title from. Pick a bank with phrases in it, or write this title yourself."},{status:422});
     /* D157: `selected` is de-duplicated for exact matches only, so a bank holding
      * both "girls gone mild" and "bachelorette girls gone mild" put BOTH in the
      * title — one row literally read "Bachelorette Girls Gone Mild, Girls Gone
@@ -87,8 +102,8 @@ Avoid duplicate meaning. Do not rewrite, combine, expand, correct, or invent any
      * still carries the shorter as a substring, so no keyword coverage is lost,
      * and the freed characters let a genuinely new phrase in. */
     const normalisePhrase=(value:string)=>value.toLocaleLowerCase().replace(/[^a-z0-9]+/g," ").trim();
-    const chosen=selected.filter(phrase=>{const inner=normalisePhrase(phrase);
-      return !selected.some(other=>{if(other===phrase)return false;const outer=normalisePhrase(other);
+    const chosen=picked.filter(phrase=>{const inner=normalisePhrase(phrase);
+      return !picked.some(other=>{if(other===phrase)return false;const outer=normalisePhrase(other);
         return outer.length>inner.length&&outer.includes(inner)})}),
       joiner=body.useCommas?", ":" ";let title="";const included:string[]=[];for(const phrase of chosen){const candidate=title?`${title}${joiner}${phrase}`:phrase;if(candidate.length>140)continue;title=candidate;included.push(phrase)}if(!title)return NextResponse.json({error:"Goldie could not build a usable title."},{status:502});
     /* D77 is about listings that come out thin — one row got 45 of 140
@@ -107,7 +122,11 @@ Avoid duplicate meaning. Do not rewrite, combine, expand, correct, or invent any
        Say what is actually true: the title exists, and it may not describe the art. */
     /* D403 - A verified mismatch is refused above. This warning is now only for the
        case Goldie cannot check: a design with no readable text. */
-    const titleWarning=bankFit==="unknown"?"Goldie could not read any text in this design, so it could not check the bank against it. Read the title before publishing.":"";return NextResponse.json({title,keywords:included,tags,titleWarning,designText});
+    /* D414 - Goldie always builds from the bank the seller chose. It says when the
+       fit looks weak, and when it could not check - it does not refuse. */
+    const titleWarning=bankFit==="mismatch"?"These are the closest phrases in this bank, but it may not describe this design. Read the title before publishing, or pick a different bank."
+      :bankFit==="unknown"?"Goldie could not read any text in this design, so it could not check the bank against it. Read the title before publishing.":"";
+    return NextResponse.json({title,keywords:included,tags:pickedTags.length?pickedTags:tags,titleWarning,designText});
   }
   const response=await fetch("https://fal.run/openrouter/router/vision",{method:"POST",headers:{Authorization:`Key ${key}`,"Content-Type":"application/json"},body:JSON.stringify({image_urls:[body.image],model:"google/gemini-2.5-flash",temperature:0,system_prompt:"Return only compact valid JSON. Never use markdown.",prompt:`Pre-fill Etsy listing details for this specific print-on-demand product. Product facts: ${JSON.stringify(body.product||{})}. Final title: ${clean(body.title)}. Selected tags: ${JSON.stringify((body.tags||[]).slice(0,13))}. Choose the closest Etsy category from the physical Printify product facts only. The artwork, design wording, title, and tags must never change the product category, age group, garment type, or department. Two designs placed on the same Printify template must receive the same product category. Include every physical or product attribute you can confidently support from the product name, brand, model, and description. Do not stop at required fields. Use product facts, not the artwork, for material, garment, size, shape, room, orientation, neckline, sleeve, and other physical attributes. Inspect the artwork only for contextual fields. Fill holiday, occasion, recipient, or style only when the design, title, or tags clearly support that exact choice; otherwise leave those optional fields out. Never guess simply to make a field non-empty. Write a natural 1-2 sentence design-specific introduction using at most 2 exact keyword phrases from the title or tags, without keyword stuffing or unsupported claims. Return {"category":"...","attributes":{"Sleeve length":"..."},"optional":{"Holiday":"..."},"blurb":"...","confidence":"high"|"review"}. Use concise Etsy-style field names and values. Attribute names must suit this product type; tote, mug, poster, shirt, and sweatshirt fields differ.`})});
   const payload=await response.json() as {output?:string;detail?:string};if(!response.ok)return NextResponse.json({error:payload.detail||"Goldie could not prepare Etsy details."},{status:502});
