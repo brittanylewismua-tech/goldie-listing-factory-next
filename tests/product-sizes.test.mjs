@@ -1432,3 +1432,34 @@ test("D406: establish sends only what changed", async () => {
   /* The local copy still updates so the card does not go stale on screen. */
   assert.match(app, /const updated=\{\.\.\.recipe,\.\.\.change\};/);
 });
+
+/* D420 · The profit goal was bound straight to the number, so clearing the field
+   made Number("") = 0, Math.max(0,0) = 0, and React wrote "0" back into the box.
+   Everything typed after that landed behind the zero — clear it, type 12, get
+   "012". This is also why "12" sometimes came out as a different number. */
+test("D420: the profit goal does not force a zero in front of what you type", async () => {
+  const app = await read("app/listing-factory-app.tsx");
+  assert.match(app, /const \[profitDraft,setProfitDraft\]=useState<string\|null>\(null\)/);
+  assert.match(app, /value=\{profitDraft\?\?String\(pricing\.targetProfit\)\}/,
+    "while focused the box holds exactly what was typed");
+  assert.match(app, /if\(raw!==""&&Number\.isFinite\(parsed\)\)changeProfit\(parsed\)/,
+    "an empty box must not commit 0");
+  assert.match(app, /onBlur=\{\(\)=>setProfitDraft\(null\)\}/,
+    "and the draft is dropped on blur so the real value shows again");
+});
+
+/* D419 · Publishing and draft creation are the two actions that spend real money
+   and real quota, and neither confirm button had a disabled state — a double
+   click fired both handlers before React could close the dialog, queueing two
+   jobs. Duplicate live listings and two lots of Etsy's per-listing fee. */
+test("D419: the actions that cost money cannot be fired twice", async () => {
+  const app = await read("app/listing-factory-app.tsx");
+
+  assert.match(app, /const publishInFlight=useRef\(false\);/);
+  assert.match(app, /async function publishAll\(\)\{\s*if\(publishInFlight\.current\)return;/);
+  assert.match(app, /<button className="danger" disabled=\{publishing\}/);
+
+  assert.match(app, /const draftRunInFlight=useRef\(false\);/);
+  assert.match(app, /if\(draftRunInFlight\.current\)return;/);
+  assert.match(app, /<button className="preflight-confirm" disabled=\{running\}/);
+});
