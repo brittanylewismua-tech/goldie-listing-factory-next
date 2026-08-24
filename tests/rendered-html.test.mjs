@@ -1019,7 +1019,11 @@ test("routes each product surface deliberately and never releases a partial batc
   /* D433 · The calibrated path now derives its placement from the Printify
      preview and the segmented product box, and only falls back to the old
      constants when either measurement is unavailable. */
-  assert.match(integrated,/if\(!isCalibratedSurface\(template\.surfaceKind\|\|"rigid-flat"\)\)return product\(design,template,reference!\)/);
+  /* D447 · Every scene now ends in the canvas renderer, which needs no network
+     and cannot refuse a quad. The AI renderer is tried first only where it is the
+     better result, and falls back rather than losing the scene. */
+  assert.match(integrated,/if\(isCalibratedSurface\(template\.surfaceKind\|\|"rigid-flat"\)\)return drawLocally\(\)/);
+  assert.match(integrated,/try\{return await product\(design,template,reference\)\}catch\{return drawLocally\(\)\}/);
   assert.match(integrated,/return derived\?rigid\(design,template,derived\.adjustment,derived\.quad\)/);
   assert.match(integrated,/:rigid\(design,template,placementAdjustment\(placement,template\.surfaceKind\|\|"rigid-flat"\)\)/,
     "the constants remain the fallback, never the first answer");
@@ -2611,7 +2615,6 @@ test("the lifestyle mockup mirrors the Printify template placement, whatever the
   // rigid() gets the padded design on purpose: Printify's scale is measured
   // against the padded canvas, so trimming there too would enlarge art twice.
   assert.match(integrated, /rigid\(design,template,placementAdjustment/);
-  assert.match(integrated, /product\(design,template,reference!\)/);
 
   // Measured on the live site: in the Printify preview the artwork is ~27% of
   // the shirt width; rendering at the template's own scale of 1 gave ~60%.
@@ -2977,4 +2980,34 @@ test("a failed scene names itself, and the rest are not silently lost — D446",
 
   // Staging still only happens when the whole set succeeded.
   assert.match(integrated, /await stageForEtsy\(made\)/);
+});
+
+test("a mockup cannot fail to render, for any product — D447", async () => {
+  const integrated = await readFile(new URL("../app/integrated-mockups.tsx", import.meta.url), "utf8");
+
+  /* Her requirement, and the right one: mockups must never fail. I had been
+     improving the measurement, which only moves the failure - a Printify preview
+     that is a model shot, segmentation returning the person, a garment cropped by
+     the frame, an API that is down. What makes failure impossible is a render
+     path with no way to throw. */
+
+  // 1. The quad chain. The last candidate is valid by construction.
+  assert.match(integrated, /function usableQuad\(/);
+  assert.match(integrated, /function defaultQuad\(w:number,h:number\)/);
+  assert.match(integrated, /const raw=candidates\.find\(q=>usableQuad\([\s\S]{0,80}\)\)\?\?defaultQuad\(canvas\.width,canvas\.height\)/);
+
+  // 2. A highlight layer that will not load is a flatter mockup, not a failed one.
+  assert.match(integrated, /catch\{\/\* A highlight layer that will not load is a slightly flatter mockup/);
+
+  // 3. The AI renderer falls back to the canvas rather than losing the scene.
+  assert.match(integrated, /try\{return await product\(design,template,reference\)\}catch\{return drawLocally\(\)\}/);
+
+  // 4. A missing Printify preview no longer refuses the whole run.
+  assert.doesNotMatch(integrated, /Wait for the Printify preview before creating/);
+
+  /* The only throw left in a scene is the one that protects the listing: the
+     save. Everything upstream of it degrades. */
+  const scene = integrated.slice(integrated.indexOf("async function rigid"), integrated.indexOf("async function stageForEtsy"));
+  assert.doesNotMatch(scene, /does not have a dependable calibrated product area/,
+    "an unusable area falls through the chain instead of refusing");
 });
