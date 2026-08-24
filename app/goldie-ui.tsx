@@ -28,11 +28,16 @@ export function ActionReceipt({items}:{items:Array<{value:string;label:string}>}
 
 export type BatchReceipt={publishedCount:number;etsyUrls:string[];completedAt:string};
 
-export function OutcomeReceipt({receipt,productName,shippingProfile,imageCount,sizeGuideName,tagCount,mockupCount,variantCount,minutesSaved,nextBundleProduct,bundleComplete,onNextBundleProduct,onNewBatch,onDuplicate}:{receipt:BatchReceipt;productName:string;shippingProfile:string;imageCount:number;sizeGuideName?:string;tagCount:number;mockupCount:number;variantCount:number;minutesSaved:number;nextBundleProduct?:string;bundleComplete?:boolean;onNextBundleProduct?:()=>void;onNewBatch:()=>void;onDuplicate:()=>void}){
+export function OutcomeReceipt({goalLine,receipt,productName,shippingProfile,imageCount,sizeGuideName,tagCount,mockupCount,variantCount,minutesSaved,nextBundleProduct,bundleComplete,onNextBundleProduct,onNewBatch,onDuplicate}:{goalLine?:string;receipt:BatchReceipt;productName:string;shippingProfile:string;imageCount:number;sizeGuideName?:string;tagCount:number;mockupCount:number;variantCount:number;minutesSaved:number;nextBundleProduct?:string;bundleComplete?:boolean;onNextBundleProduct?:()=>void;onNewBatch:()=>void;onDuplicate:()=>void}){
   return <section className="outcome-receipt" aria-live="polite">
     <div className="receipt-celebration" aria-hidden="true"><span>✓</span></div>
     <p className="mini-label">BATCH COMPLETE</p>
     <h2>{receipt.publishedCount} {receipt.publishedCount===1?"listing is":"listings are"} live on Etsy.</h2>
+    {/* D342 · Peak-end: this is the moment the work becomes real, so the goal
+        belongs here as recognition of what was just finished rather than as a
+        reminder of what is outstanding. Same number as the sidebar, different
+        register. Shown only when the seller turned the goal on. */}
+    {goalLine&&<p className="receipt-goal">{goalLine}</p>}
     <p>Your batch is finished. Here is a quick summary of what Goldie completed.</p>
     <div className="receipt-value-strip"><div><b>{tagCount}</b><span>tags generated</span></div><div><b>{mockupCount}</b><span>mockups prepared</span></div><div><b>{variantCount}</b><span>variant prices approved</span></div><div><b>{Math.floor(minutesSaved/60)}h {minutesSaved%60}m</b><span>estimated setup time saved</span></div></div>
     <div className="receipt-grid">

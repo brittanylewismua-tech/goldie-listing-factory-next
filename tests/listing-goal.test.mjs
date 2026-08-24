@@ -53,3 +53,41 @@ test("history stops at the last period with work — D339", () => {
   assert.equal(rows.length, 1);
   assert.equal(rows[0].published, 12);
 });
+
+test("the goal is one switch, off by default — D341", async () => {
+  const api = await readFile(new URL("app/api/seller-preferences/route.ts", root), "utf8");
+  const app = await readFile(new URL("app/listing-factory-app.tsx", root), "utf8");
+  const ui = await readFile(new URL("app/goldie-ui.tsx", root), "utf8");
+
+  assert.match(api, /enabled: raw\.enabled === true/, "off unless explicitly turned on");
+  assert.match(api, /target: Math\.max\(1,/, "a goal of zero is a bar that is always full");
+
+  /* The sidebar and the receipt are the same feature seen twice — they cannot
+     be enabled separately, so both read the one value. */
+  assert.match(app, /if\(result\.listingGoal\?\.enabled\)setListingGoal\(result\.listingGoal\)/);
+  assert.match(app, /\{listingGoal&&<a className="listing-goal-side"/);
+  assert.match(app, /goalLine=\{listingGoal\?/);
+  assert.match(ui, /\{goalLine&&<p className="receipt-goal">/);
+});
+
+test("a fee save cannot wipe the goal, or the goal the fees — D339", async () => {
+  const api = await readFile(new URL("app/api/seller-preferences/route.ts", root), "utf8");
+  assert.match(api, /if \(body\.pricing !== undefined\)/);
+  assert.match(api, /if \(body\.listingGoal !== undefined\) merged\.listingGoal/);
+  assert.match(api, /const merged: Record<string, unknown> = \{ \.\.\.existing \};/,
+    "both halves live in one blob, so the write has to merge");
+});
+
+test("nothing shows a deficit, and the bar may exceed the goal — D342", async () => {
+  const app = await readFile(new URL("app/listing-factory-app.tsx", root), "utf8");
+  const goals = await readFile(new URL("app/goals/page.tsx", root), "utf8");
+  /* Scoped to the goal markup — "behind" appears elsewhere in unrelated copy
+     ("printed behind your art"), and a whole-file grep would fail on that. */
+  const sidebar = app.slice(app.indexOf('className="listing-goal-side"'), app.indexOf('className="listing-goal-side"') + 400);
+  for (const [name, source] of [["sidebar", sidebar], ["goals page", goals]]) {
+    assert.doesNotMatch(source, /behind|to go|short of|missed/i, `${name} must not frame progress as a deficit`);
+  }
+  /* Progress is capped for the BAR's width only — the count itself keeps going. */
+  assert.match(app, /Math\.min\(100,Math\.round\(\(goalDone\/Math\.max\(1,listingGoal\.target\)\)\*100\)\)/);
+  assert.match(app, /\{goalDone\} of \{listingGoal\.target\}/, "the number is not capped");
+});
