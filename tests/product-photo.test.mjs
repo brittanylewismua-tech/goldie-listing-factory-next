@@ -17,9 +17,11 @@ const src = (await readFile(new URL("app/product-photo.ts", root), "utf8"))
   .replace(/ as \[number, number, number\]/g, "")
   .replace(/: number(?=[,)= ])/g, "")
   .replace(/\): boolean \{/g, ") {")
+  .replace(/\): number \{/g, ") {")
+  .replace(/: Array<PhotoStats \| null>/g, "")
   .replace(/size = PHOTO_SAMPLE_SIZE/g, "size = PHOTO_SAMPLE_SIZE");
-const { photoStats, backdropReference, photoReadsAsGarment, PHOTO_SAMPLE_SIZE } = await import(
-  `data:text/javascript,${encodeURIComponent(`${src}\nexport { photoStats, backdropReference, photoReadsAsGarment, PHOTO_SAMPLE_SIZE };`)}`
+const { photoStats, backdropReference, photoReadsAsGarment, preferredPhotoIndex, photoIsUsable, PHOTO_SAMPLE_SIZE } = await import(
+  `data:text/javascript,${encodeURIComponent(`${src}\nexport { photoStats, backdropReference, photoReadsAsGarment, preferredPhotoIndex, photoIsUsable, PHOTO_SAMPLE_SIZE };`)}`
 );
 
 const SIZE = PHOTO_SAMPLE_SIZE;
@@ -225,4 +227,64 @@ test("D370: a frame the scorer rejected outright never reaches the tile", () => 
 test("D370: the module under test actually parsed", () => {
   assert.equal(typeof photoReadsAsGarment, "function");
   assert.equal(typeof photoStats, "function");
+});
+
+/* D380 · D370 made "does not read as the garment" a veto, so the hoodie fell
+   through to the glyph. Every one of its six catalog images is a model shot, and
+   a hoodie on a person still shows the hoodie — that is better than a drawing.
+   Prefer a flat lay, fall back to the best photo available, glyph only when
+   there is nothing usable.
+
+   The numbers below are the real measurements taken from her live Gildan Hoodie:
+   six candidates, skin 4-9%, no flat lay among them. */
+const HOODIE_ALL_MODEL_SHOTS = [
+  { backdrop: 71, edge: 7, skin: 6, score: -76 },
+  { backdrop: 69, edge: 8, skin: 5, score: -80 },
+  { backdrop: 72, edge: 7, skin: 6, score: -75 },
+  { backdrop: 70, edge: 8, skin: 5, score: -79 },
+  { backdrop: 77, edge: 7, skin: 4, score: -68 },
+  { backdrop: 57, edge: 16, skin: 9, score: -120 },
+];
+
+test("D380: a product with no flat lay shows its best model shot, not a glyph", () => {
+  assert.equal(preferredPhotoIndex(HOODIE_ALL_MODEL_SHOTS), 4, "the highest scoring of the six");
+});
+
+test("D380: a flat lay still wins whenever one exists", () => {
+  const withFlatLay = [...HOODIE_ALL_MODEL_SHOTS, { backdrop: 61, edge: 0, skin: 0, score: 61 }];
+  assert.equal(preferredPhotoIndex(withFlatLay), 6);
+});
+
+test("D380: a flat lay that reads as an empty tile loses to a usable photo", () => {
+  /* The white tee: its flat lay is white on a white sweep. */
+  const stats = [
+    { backdrop: 94, edge: 0, skin: 0, score: 94 },
+    { backdrop: 70, edge: 9, skin: 5, score: -78 },
+  ];
+  assert.equal(preferredPhotoIndex(stats), 1, "a blank square is worse than a legible model shot");
+});
+
+test("D380: a frame the scorer rejected is never chosen", () => {
+  const stats = [
+    { backdrop: 100, edge: 0, skin: 0, score: -Infinity },
+    { backdrop: 61, edge: 0, skin: 0, score: 61 },
+  ];
+  assert.equal(preferredPhotoIndex(stats), 1);
+});
+
+test("D380: no usable photo at all still falls through to the glyph", () => {
+  assert.equal(preferredPhotoIndex([null, null]), -1);
+  assert.equal(preferredPhotoIndex([]), -1);
+});
+
+test("D380: a model shot is a fallback, a featureless frame is not", () => {
+  assert.equal(photoIsUsable({ backdrop: 77, edge: 7, skin: 4, score: -68 }), true, "model shot");
+  assert.equal(photoIsUsable({ backdrop: 94, edge: 0, skin: 0, score: 94 }), false, "white on white");
+  assert.equal(photoIsUsable({ backdrop: 61, edge: 0, skin: 0, score: 61 }), true, "flat lay");
+  assert.equal(photoIsUsable({ backdrop: 100, edge: 0, skin: 0, score: -Infinity }), false, "rejected outright");
+});
+
+test("D380: every product falls back to the glyph only when nothing is usable", () => {
+  assert.equal(preferredPhotoIndex([{ backdrop: 94, edge: 0, skin: 0, score: 94 }]), -1,
+    "one blank tile and nothing else means the glyph, not the blank tile");
 });

@@ -148,3 +148,37 @@ export function photoReadsAsGarment(stats: PhotoStats): boolean {
   if (stats.backdrop >= 90) return false;   /* garment is the same colour as the sweep */
   return true;
 }
+
+/* D380 · D370 treated "does not read as the garment" as a veto, so the hoodie -
+   whose six catalog images are all model shots - fell through to the glyph. That
+   is worse than the photo: a real hoodie on a person still shows the hoodie.
+   Prefer a flat lay, fall back to the best photo there is, and keep the glyph
+   for the case where there is genuinely nothing usable.
+
+   This also fixes the white tee from the other direction. Its flat lay is white
+   on a white sweep and reads as an empty square, so it loses the first pass -
+   and the best remaining shot, even on a model, is more legible than a blank
+   tile.
+
+   Returns the index of the photo to use, or -1 for "draw the glyph". */
+export function photoIsUsable(stats: PhotoStats): boolean {
+  if (!Number.isFinite(stats.score)) return false;
+  /* Garment the same colour as the sweep: nothing is visible at 52px whatever
+     the score says, and the score is generous to it because backdrop is most of
+     the formula. A model shot is a fallback; this is not. */
+  return stats.backdrop < 90;
+}
+
+export function preferredPhotoIndex(stats: Array<PhotoStats | null>): number {
+  let bestGarment = -1, bestGarmentScore = Number.NEGATIVE_INFINITY;
+  let bestAny = -1, bestAnyScore = Number.NEGATIVE_INFINITY;
+  stats.forEach((measured, index) => {
+    if (!measured || !photoIsUsable(measured)) return;
+    if (measured.score > bestAnyScore) { bestAnyScore = measured.score; bestAny = index; }
+    if (photoReadsAsGarment(measured) && measured.score > bestGarmentScore) {
+      bestGarmentScore = measured.score;
+      bestGarment = index;
+    }
+  });
+  return bestGarment >= 0 ? bestGarment : bestAny;
+}

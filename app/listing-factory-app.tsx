@@ -22,7 +22,7 @@ import FinalListingReview from "./final-listing-review";
 import ContextHelp from "./context-help";
 import GoldieWordmark from "./goldie-wordmark";
 import { productFamily } from "./product-type-utils";
-import { photoStats, photoReadsAsGarment, PHOTO_SAMPLE_SIZE } from "./product-photo";
+import { photoStats, preferredPhotoIndex, PHOTO_SAMPLE_SIZE } from "./product-photo";
 
 /* D370 · The garment glyph a card falls back to when no catalog photo reads as
    the product. Shape follows the blueprint title so a hoodie does not draw as a
@@ -778,8 +778,9 @@ export default function ListingFactoryApp() {
            and ranked the only usable flat lay last. All six are sampled now,
            not four: the winning tee shot was candidate #2 but the hoodie's was
            #4, so a slice(0,4) would have missed it. */
-        let winner=candidates[0],bestScore=-Infinity,bestStats:ReturnType<typeof photoStats>|null=null;
-        for(const src of candidates.slice(0,6)){
+        const shortlist=candidates.slice(0,6);
+        const measurements:Array<ReturnType<typeof photoStats>|null>=[];
+        for(const src of shortlist){
           const measured=await new Promise<ReturnType<typeof photoStats>|null>(resolve=>{
             const image=document.createElement("img"); image.crossOrigin="anonymous";
             image.onload=()=>{try{
@@ -793,14 +794,13 @@ export default function ListingFactoryApp() {
             image.onerror=()=>resolve(null);
             image.src=src;
           });
-          const score=measured?measured.score:-Infinity;
-          if(score>bestScore){bestScore=score;winner=src;bestStats=measured}
+          measurements.push(measured);
         }
-        /* D370 · A photo only earns the tile if it actually shows the garment.
-           Her hoodie has no flat lay in the catalog at all and her white tee's
-           flat lay is white-on-white, so both were rendering as junk — a
-           stranger's face and an empty square. "" means draw the glyph. */
-        setBestPhoto(current=>({...current,[key]:bestStats&&photoReadsAsGarment(bestStats)?winner:""}));
+        /* D380 · Prefer a flat lay; fall back to the best photo there is, even a
+           model shot, because a hoodie on a person still shows the hoodie. The
+           glyph is only for products with no usable photo at all. */
+        const choice=preferredPhotoIndex(measurements);
+        setBestPhoto(current=>({...current,[key]:choice>=0?shortlist[choice]:""}));
       })();
     }
     /* Nothing until the score lands: a glyph that becomes a photo is calmer
