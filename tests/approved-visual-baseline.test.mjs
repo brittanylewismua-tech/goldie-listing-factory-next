@@ -267,7 +267,9 @@ test("gives Step 6 a cohesive titles, tags, and descriptions layout", async () =
   assert.match(css, /\.app-shell \.batch-description>summary b\{[^}]*font-size:18px!important/);
   assert.match(css, /\.app-shell \.design-line\{grid-template-columns:152px minmax\(0,1fr\) 138px/);
   assert.match(css, /\.app-shell \.quality-pill\.pass,\.app-shell \.quality-pill\.check\{[^}]*background:linear-gradient/);
-  assert.match(css, /\.app-shell \.finish-mode \.listing-editor>\.workflow-next\{display:flex;width:min\(250px,100%\);margin:28px auto 2px/);
+  /* D375 · was width:min(250px,100%) — a small centred pill on this step while
+     the same button was a full-width bar on steps 1 and 2. */
+  assert.match(css, /\.app-shell \.finish-mode \.listing-editor>\.workflow-next\{display:flex;width:100%;margin:28px auto 2px/);
 });
 
 test("keeps required dialogs and selected controls inside the approved palette", async () => {

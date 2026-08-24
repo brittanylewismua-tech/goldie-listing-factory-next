@@ -381,7 +381,10 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .app-shell .individual-description{border-color:rgba(139,89,137,.18);border-radius:11px;background:rgba(255,255,255,.52)}
 .app-shell .quality-pill.pass,.app-shell .quality-pill.check{min-height:76px;justify-content:center;border:1px solid rgba(139,89,137,.2);background:linear-gradient(145deg,rgba(239,223,247,.65),rgba(248,218,236,.58));color:#5b304f}
 .app-shell .quality-pill small{color:rgba(74,42,62,.62)}
-.app-shell .finish-mode .listing-editor>.workflow-next{display:flex;width:min(250px,100%);margin:28px auto 2px;justify-content:center;gap:10px}
+/* D375 - was width:min(250px,100%), which made the forward button a small
+   centred pill on the listing step while the same button was a full-width
+   bar on steps 1 and 2. Layout may vary; the button may not. */
+.app-shell .finish-mode .listing-editor>.workflow-next{display:flex;width:100%;margin:28px auto 2px;justify-content:center;gap:10px}
 @media(max-width:900px){.app-shell .design-line{grid-template-columns:110px minmax(0,1fr)}.app-shell .listing-preview-button{width:110px}.app-shell .listing-preview-button img{height:110px}.app-shell .quality-pill{grid-column:2}}
 
 /* Keep the titles workspace clear, reviewable, and deliberately separated. */
@@ -699,8 +702,7 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .app-shell .post-draft-workspace{padding-bottom:42px}
 .app-shell .batch-size-guide button,
 .app-shell .integrated-mockups .generate-inline,
-.app-shell .integrated-mockups .batch-mockup-button,
-.app-shell .post-draft-workspace .workflow-next{
+.app-shell .integrated-mockups .batch-mockup-button{
   border:0!important;
   border-radius:14px!important;
   background:linear-gradient(145deg,#6a3456,#4b283e)!important;

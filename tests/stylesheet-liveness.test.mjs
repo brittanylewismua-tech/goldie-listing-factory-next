@@ -217,3 +217,37 @@ test("D369: order is only ever set on a direct child", async () => {
   assert.deepEqual(offenders, [],
     `order: is set through a descendant selector, so it reaches elements it does not lay out:\n${offenders.join("\n")}`);
 });
+
+/* D375 · The rail-forward button rendered two ways: a 720px lilac gradient bar
+   on step 1, a 210px plum pill on step 2. Same class, same job — the only
+   difference was that step 2's copy happens to sit inside a .step-card, and a
+   rule in clarity-pass.css restyled anything named .workflow-next that landed
+   in one. A container deciding what a semantic action looks like is how you end
+   up with two formats for one button.
+
+   .workflow-next means "the way forward". Where it sits is not allowed to
+   change that. */
+test("D375: the forward button is not restyled by the container it sits in", async () => {
+  const files = await collect("app/", [".css"]);
+  const offenders = [];
+  for (const file of files) {
+    const css = (await readFile(new URL(file, root), "utf8")).replace(/\/\*[\s\S]*?\*\//g, "");
+    for (const match of css.matchAll(/([^{}@]+)\{([^{}]*)\}/g)) {
+      /* A container may POSITION the button. It may not restyle it. */
+      const appearance = /(^|;)\s*(background|border(?!-)|border-radius|border-color|color|box-shadow|font-size|font-weight|min-height|padding)\s*:/;
+      if (!appearance.test(match[2])) continue;
+      for (const selector of match[1].split(",")) {
+        const trimmed = selector.trim();
+        if (!/\.workflow-next(?![-\w])/.test(trimmed)) continue;
+        /* Everything before the compound that carries .workflow-next. */
+        const head = trimmed.slice(0, trimmed.search(/\.workflow-next(?![-\w])/));
+        /* .app-shell and .finish-mode are page/mode namespaces, not the kind of
+           container this is guarding against. */
+        const containers = head.replace(/\.app-shell|\.finish-mode|[>+~\s]/g, "");
+        if (containers) offenders.push(`${file}: ${trimmed}`);
+      }
+    }
+  }
+  assert.deepEqual(offenders, [],
+    `.workflow-next is restyled based on where it sits, which is what made one button look like two:\n${offenders.join("\n")}`);
+});

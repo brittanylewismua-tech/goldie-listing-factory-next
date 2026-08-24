@@ -363,8 +363,13 @@
   background:#fff!important;
 }
 
-/* Save / confirm actions match the primary */
-.app-shell :is(.step-card,.recipe-card) :is(.save-recipe,.workflow-next){
+/* Save / confirm actions match the primary.
+   D375 - .workflow-next used to be in this list, so the SAME forward button
+   rendered as a 720px lilac gradient bar on step 1 (where it sits outside a
+   card) and a 210px plum pill on step 2 (where it sits inside one). A
+   positional rule was deciding a semantic treatment. The rail-forward button
+   now looks the same everywhere; this rule keeps the utility save button. */
+.app-shell :is(.step-card,.recipe-card) .save-recipe{
   min-height:38px!important;
   padding:0 20px!important;
   border:0!important;
@@ -373,7 +378,7 @@
   color:#fff!important;
   box-shadow:0 5px 14px rgba(85,45,70,.2)!important;
 }
-.app-shell :is(.step-card,.recipe-card) :is(.save-recipe,.workflow-next):disabled{
+.app-shell :is(.step-card,.recipe-card) .save-recipe:disabled{
   background:rgba(107,58,88,.14)!important;
   color:rgba(74,42,62,.5)!important;
   box-shadow:none!important;
