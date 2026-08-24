@@ -21,21 +21,21 @@ export function promptFor(kind: ProductKind, hasReference: boolean) {
        where the print goes. Describe the standard adult front print the way a print
        shop specifies it - proportionally, since the model is looking at pixels -
        and rule out the places it was actually landing. */
-    hasReference ? "Use @image3 only to measure the print's relative width, height, center position, and scale. Do not copy the garment, person, or background from @image3." : "Place the print on the front chest: centred left-to-right on the garment's centre line, with the top edge of the artwork starting just below the collar - roughly one tenth of the way down the garment's visible height from the shoulder seam - and the artwork spanning about half the garment's visible chest width. Do not place it on a sleeve, shoulder, collar, hem, or side seam, do not let it cross the neckline, and do not rotate, mirror, crop, or extend it.",
+    hasReference ? "@image3 is this exact product with this exact artwork already placed on it by Printify. That placement is the specification and it is not yours to improve. Reproduce it: the artwork must sit at the same position on the product's printable area, cover the same proportion of that area, and carry the same orientation and cropping as it does in @image3. Measure both position and size against the product itself - its own edges, width and height - never against the photo frame. Take nothing else from @image3: not its product colour, not its background, not its lighting, not its angle." : "Place the artwork on the product's main printable area, centred on it, at the size a print shop would use for that product - about half the visible width of the printable area. Do not place it on a sleeve, edge, seam, handle, or fold, and do not rotate, mirror, crop, or extend it.",
     "The only visible change between the original first image and the result should be the design printed on the original garment.",
   ].join(" ");
   if (kind === "soft-goods") return [
     "Put the exact design from the second image onto the soft product in the first image.",
     "Preserve every word, letter, color, shape, spacing, and design detail exactly.",
     "Make the print follow the product fabric, seams, folds, perspective, lighting, and shadows naturally.",
-    hasReference ? "Use the third image only as the placement reference. Match the design's relative scale, position, and orientation." : "Use a centered, commercially realistic printable placement.",
+    hasReference ? "the third image is this exact product with this exact artwork already placed on it by Printify. That placement is the specification and it is not yours to improve. Reproduce it: the artwork must sit at the same position on the product's printable area, cover the same proportion of that area, and carry the same orientation and cropping as it does in the third image. Measure both position and size against the product itself - its own edges, width and height - never against the photo frame. Take nothing else from the third image: not its product colour, not its background, not its lighting, not its angle." : "Use a centered, commercially realistic printable placement.",
     "Keep the product, scene, and composition unchanged. Do not add, remove, rewrite, restyle, crop, or regenerate any part of the design.",
   ].join(" ");
   return [
     "Apply the exact design from the second image to the product in the first image.",
     "Preserve every word, letter, color, shape, spacing, and design detail exactly.",
     kind === "curved" ? "Wrap it naturally around the visible curved printable surface with correct perspective, lighting, highlights, and shadows." : "Conform it naturally to the visible product shape and printable surface with correct perspective, lighting, and shadows.",
-    hasReference ? "Use the third image only as the placement reference. Match relative size, position, orientation, and visible coverage." : "Use a centered, commercially realistic placement.",
+    hasReference ? "the third image is this exact product with this exact artwork already placed on it by Printify. That placement is the specification and it is not yours to improve. Reproduce it: the artwork must sit at the same position on the product's printable area, cover the same proportion of that area, and carry the same orientation and cropping as it does in the third image. Measure both position and size against the product itself - its own edges, width and height - never against the photo frame. Take nothing else from the third image: not its product colour, not its background, not its lighting, not its angle." : "Use a centered, commercially realistic placement.",
     "Keep the scene and product unchanged. Do not add, remove, rewrite, restyle, crop, or regenerate any part of the design.",
   ].join(" ");
 }

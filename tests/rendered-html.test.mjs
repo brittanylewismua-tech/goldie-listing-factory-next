@@ -2526,3 +2526,29 @@ test("D416: Connect does not pretend to be step one", async () => {
   assert.match(app, /\{workflowStep!=="connect"&&\(files\.length>0\|\|drafts\.length>0\|\|Boolean\(templateDetails\)\)&&<button className="save-draft-link"/,
     "nothing to save before a batch exists");
 });
+
+/* D423 · The rule for lifestyle mockups is not "put it on the chest" — it is
+   "put it exactly where Printify put it". The app already sends the Printify
+   draft preview as the placement reference (referenceUrl={draft.previewUrl}),
+   so the reference branch is the one that actually runs, and it only asked the
+   model to "measure the print's relative width, height, center position". D412
+   made this worse by writing a chest-print instruction into the fallback, which
+   bakes in a t-shirt — and this has to hold for mugs, shower curtains, totes and
+   anything else Printify prints. */
+test("D423: mockup placement mirrors the Printify template, whatever the product", async () => {
+  const renderers = await readFile(new URL("../app/mockups/product-renderers.ts", import.meta.url), "utf8");
+
+  /* Every product kind gets the same rule, not just apparel. */
+  assert.equal((renderers.match(/That placement is the specification and it is not yours to improve/g) || []).length, 3,
+    "apparel, soft-goods and the curved/irregular branch");
+  assert.match(renderers, /Measure both position and size against the product itself/,
+    "relative to the product, not the photo frame");
+
+  assert.doesNotMatch(renderers, /front chest/,
+    "a chest print is a t-shirt assumption; this runs on mugs too");
+
+  /* And the reference actually reaches the renderer. */
+  const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+  assert.match(app, /referenceUrl=\{draft\.previewUrl\}/,
+    "the Printify preview is what defines the placement");
+});
