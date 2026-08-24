@@ -2792,3 +2792,31 @@ test("mockup placement is derived from the Printify preview, for any product —
   assert.match(integrated, /productBoxes=useRef\(new Map<string,ProductBox\|null>\(\)\)/,
     "segmentation runs once per scene, not once per mockup");
 });
+
+test("the design cache is bounded, never throws, and says when files are missing — D435", async () => {
+  const [cache, app] = await Promise.all([
+    readFile(new URL("../app/batch-cache.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
+  ]);
+
+  /* Measured on her machine: eighteen cached batches, 68MB, and nothing ever
+     prunes. A customer running twenty-design batches adds about 40MB each time. */
+  assert.match(cache, /const KEEP_RECENT=12/);
+  assert.match(cache, /async function pruneOldest/);
+  assert.match(cache, /savedAt:Date\.now\(\)/, "pruning needs to know which are recent");
+  assert.match(cache, /if\(Array\.isArray\(value\)\)return \{files:value as File\[\],savedAt:0\}/,
+    "entries written before this carried a bare array");
+
+  /* saveBatchFiles was awaited at three call sites with no catch, so a full disk
+     would have surfaced as autosave, save-as-draft and batch creation all
+     breaking at once. A batch that cannot be cached still works. */
+  assert.match(cache, /export async function saveBatchFiles\(batchId:string,files:File\[\]\):Promise<boolean>/);
+  assert.match(cache, /\}catch\{\s*return false;/);
+  assert.match(cache, /await pruneOldest\(database,Math\.floor\(KEEP_RECENT\/3\)\);\s*await put/,
+    "a quota failure makes room and retries rather than losing the save she is watching");
+
+  // And reopening a batch whose files are elsewhere explains itself.
+  assert.match(app, /const designsLost=/);
+  assert.match(app, /design files are not on this computer/);
+  assert.match(app, /Printify drafts are untouched/);
+});
