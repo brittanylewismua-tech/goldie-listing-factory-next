@@ -1511,7 +1511,15 @@ test("supports simple saved product bundles without complicating the single-prod
   assert.match(page, /\{section==="all"\?"1\. ":""\}Item prices\{section==="all"&&<span> · \{productName\}<\/span>\}/);
   assert.match(page, /\{section==="all"\?"2\. ":""\}Etsy shipping profile\{section==="all"&&<span> · \{productName\}<\/span>\}/);
   assert.match(page, /data-product-selected=\{templateDetails\?"true":"false"\}/);
-  assert.match(page, /--active-product/);
+  /* D378 · The --active-product custom property fed a "CURRENT PRODUCT ·" chip
+     that existed only because Images, Listing and Publish showed one product at
+     a time. Those steps carry the same product cards as step 1 now, and each
+     card header names its own product, so the chip and the variable are gone. */
+  assert.doesNotMatch(page, /--active-product/,
+    "the card header names the product; a chip above it said the same thing twice");
+  assert.match(page, /stepProductCards\(bundleCardStatus\("images"\)/);
+  assert.match(page, /stepProductCards\(bundleCardStatus\("listing"\)/);
+  assert.match(page, /stepProductCards\(bundleCardStatus\("publish"\)/);
   assert.match(page, /function continueBundle/);
   assert.match(page, /activeBundle,bundleRecipes,bundleIndex/);
   assert.match(page, /previewUrl:URL\.createObjectURL\(file\.file\)/);
@@ -1522,10 +1530,9 @@ test("supports simple saved product bundles without complicating the single-prod
   assert.match(styles, /\.bundle-progress/);
   assert.match(styles, /CURRENT PRODUCT ·/);
   assert.doesNotMatch(styles, /\.designs-step\.active-panel \.step-content:before/);
-  assert.match(styles, /\.etsy-details-step\.active-panel \.step-content:before/);
-  assert.match(styles, /\.final-review\.active-panel \.step-content:before/);
-  assert.match(styles, /\.launch-panel\.active-panel \.launch-top:before/);
-  assert.match(styles, /\.post-draft-heading>div:before/);
+  /* D378 · Same removal as above, from the stylesheet side. */
+  assert.doesNotMatch(styles, /content:"CURRENT PRODUCT/,
+    "the product cards on steps 2-4 carry this now");
   assert.match(approvedStyles, /\.app-shell \.recipe-card \.edit-recipe\{position:static!important/);
   assert.match(approvedStyles, /\.app-shell \.recipe-card \.delete-recipe\{position:static!important/);
   assert.match(approvedStyles, /\.app-shell \.recipe-card \.recipe-use,[\s\S]*?grid-column:1\/-1!important/);

@@ -2437,3 +2437,44 @@ body{min-width:1180px!important}
    as each arrived. D366 gave the bundle tile a spinner but never reached this
    path. One spinner for the whole set, as asked. */
 .app-shell .bundle-product-loading{display:flex;align-items:center;gap:10px;margin:0;padding:14px 22px;color:rgba(74,42,62,.72);font-size:13px}
+
+/* D378 · Steps 2-4 now carry the same product cards as step 1: every product in
+   the bundle is on the page, one is open, and the step's own work is the open
+   card's body. Before this, Images/Listing/Publish showed a single product with
+   a "CURRENT PRODUCT" chip and no sign the others existed - so a three-product
+   bundle looked like three unrelated visits to the same screen. */
+.app-shell .step-product-cards{display:grid;gap:14px;width:min(1180px,100%);margin-inline:auto}
+.app-shell .step-product-cards.hidden-panel{display:none}
+
+/* The step content already arrives as a finished card. Inside a product card it
+   is the body, not a second card, so its own chrome is dropped. */
+.app-shell .step-product-body>.step-card,
+.app-shell .step-product-body>.launch-panel{
+  margin:0!important;
+  border:0!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+  backdrop-filter:none!important;
+  width:auto!important;
+  min-width:0!important;
+}
+.app-shell .step-product-body>.launch-panel{position:static!important;padding:0!important}
+.app-shell .step-product-body>.step-card{display:block!important}
+
+.app-shell .step-product-card>header.is-openable{cursor:pointer}
+.app-shell .step-product-card>header.is-openable:hover{background:rgba(255,255,255,.5)}
+.app-shell .step-product-card.is-closed>header{border-bottom:0}
+
+.app-shell .step-product-state{display:inline-flex;align-items:center;white-space:nowrap;border-radius:999px;padding:5px 11px;font-size:10px;font-weight:800;letter-spacing:.04em}
+.app-shell .step-product-state.tone-ready{background:rgba(214,232,214,.72);color:#2f6a45}
+.app-shell .step-product-state.tone-attention{background:rgba(250,226,238,.85);color:#8a3f66}
+.app-shell .step-product-state.tone-waiting{background:rgba(233,226,238,.8);color:#6b5f70}
+
+.app-shell .step-product-open{
+  display:block;width:calc(100% - 44px);margin:0 22px 18px;padding:11px 14px;
+  border:1px solid rgba(91,48,79,.18);border-radius:12px;
+  background:rgba(255,255,255,.55);color:#5b304f;
+  font:inherit;font-size:12px;font-weight:700;text-align:left;cursor:pointer;
+}
+.app-shell .step-product-open:hover{background:#fff}
