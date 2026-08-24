@@ -915,7 +915,7 @@
   font-weight:850;
   white-space:nowrap;
 }
-.app-shell .batch-product-state.attention{background:#f6d3da;color:#8a3650}
+.app-shell .batch-product-state.attention{background:#c62828!important;color:#fff!important;box-shadow:0 0 0 3px rgba(198,40,40,.16)!important}
 /* D191 · The chip cloud was seven differently-sized boxes in a ragged two-row
    wrap, labelled in shouty caps with jargon ("Confirm 4") and British spelling
    ("COLOURS" — while the same app says COLORS elsewhere). Replaced with an
@@ -943,12 +943,7 @@
   font-size:10px;
   font-weight:900;
 }
-.app-shell .batch-product-row.needed .row-mark{background:#f6d3da;color:#8a3650}
-.app-shell .row-label{color:#4c293f;font-size:12px;font-weight:800}
-.app-shell .row-value{display:grid;gap:1px;min-width:0;color:#5b304f;font-size:12px}
-.app-shell .batch-product-row.needed .row-value{color:#8a3f66;font-weight:750}
-.app-shell .row-value small{color:#80677a;font-size:10px;font-weight:400}
-.app-shell .row-shortcut,.app-shell .row-open{
+.app-shell .row-open{
   min-height:30px;
   padding:6px 12px;
   border:1px solid rgba(91,48,79,.2);
@@ -960,10 +955,25 @@
   white-space:nowrap;
   cursor:pointer;
 }
-.app-shell .row-shortcut{background:#5c304f;border-color:#5c304f;color:#fff}
+/* D388 · An unset row was marked in the same soft pink as everything else on
+   the card, so "needs attention" read as decoration. It is red now, and it is
+   the only red on the card. The "Use Printify's N colors" shortcut that used to
+   sit on these rows is gone - Printify's template is not a choice the seller
+   made, and offering it as one-click was how a product ended up in colours
+   nobody picked. */
+.app-shell .batch-product-row.needed .row-mark{
+  background:#c62828!important;
+  color:#fff!important;
+  box-shadow:0 0 0 3px rgba(198,40,40,.16)!important;
+}
+.app-shell .batch-product-row.needed .row-value{color:#c62828!important}
+.app-shell .row-label{color:#4c293f;font-size:12px;font-weight:800}
+.app-shell .row-value{display:grid;gap:1px;min-width:0;color:#5b304f;font-size:12px}
+.app-shell .batch-product-row.needed .row-value{color:#8a3f66;font-weight:750}
+.app-shell .row-value small{color:#80677a;font-size:10px;font-weight:400}
 @media(max-width:820px){
+  .app-shell .row-value,.app-shell .row-open{grid-column:2}
   .app-shell .batch-product-row{grid-template-columns:22px minmax(0,1fr);row-gap:6px}
-  .app-shell .row-value,.app-shell .row-shortcut,.app-shell .row-open{grid-column:2}
 }
 /* D236 · This selector list was orphaned by D234 — its declaration block was
    removed and the trailing comma swallowed the D186 rule below, so these three
@@ -2337,7 +2347,7 @@ body{min-width:1180px!important}
   display:inline-flex!important;
   align-items:center!important;
   gap:8px!important;
-  margin:14px 0 0!important;
+  margin:14px 0 0 auto!important;
   padding:9px 14px!important;
   border-radius:999px!important;
   border:1px solid rgba(120,169,138,.5)!important;
@@ -2424,7 +2434,18 @@ body{min-width:1180px!important}
 /* Own layout, not borrowed from .batch-products - see D381 in
    listing-factory-app.tsx. Nothing here is !important, so this section can
    always be hidden. */
-.app-shell .step-product-cards{display:grid;gap:22px;width:min(1180px,100%);margin-top:26px;margin-inline:auto}
+/* D391 · Three things measured on the deployed build of step 2:
+   - The rail is a child of .workflow-stage with no order, while the steps column
+     carries order:1, so the product cards sorted ABOVE the uploader. Step 2 read
+     as "create drafts" first and "add designs" second.
+   - The rail spanned the whole stage (1044px) while every card above it is the
+     column width (680px), so the product cards were visibly wider than the
+     uploader they follow.
+   - .step-product-body had no padding of its own and stripped the panel's, so
+     everything inside ran flush to the card edge and looked cut off. */
+.app-shell .step-product-cards{display:grid;gap:22px;margin-top:26px}
+.app-shell .workflow-stage>.step-product-cards{order:2;width:min(680px,calc(100% - 32px));margin-inline:auto}
+.app-shell .step-product-body{padding:0 22px 22px}
 .app-shell .step-product-cards.hidden-panel{display:none}
 
 /* The step content already arrives as a finished card. Inside a product card it
@@ -2441,6 +2462,7 @@ body{min-width:1180px!important}
   min-width:0!important;
 }
 .app-shell .step-product-body>.launch-panel{position:static!important;padding:0!important}
+.app-shell .step-product-body>.step-card{padding:0!important}
 .app-shell .step-product-body>.step-card{display:block!important}
 
 .app-shell .step-product-card>header.is-openable{cursor:pointer}
@@ -2496,3 +2518,11 @@ body{min-width:1180px!important}
   cursor:pointer;
 }
 .app-shell .save-draft-link:hover{background:#fff;border-color:rgba(91,48,79,.34)}
+
+/* D389 · .variant-pricing carries negative inline margins (margin:20px -8px and
+   margin-inline:-5px) from when it sat in a wider container - they made it
+   deliberately wider than its parent. Inside a 720px product card that put it at
+   734px, hanging 7px past both edges, which is what cut the shipping card off on
+   the right. Measured live before and after. */
+.app-shell .batch-product-card .variant-pricing,
+.app-shell .step-product-body .variant-pricing{margin-inline:0}

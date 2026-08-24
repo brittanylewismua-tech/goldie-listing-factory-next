@@ -1434,17 +1434,11 @@ test("D204: the product line never reports template defaults as the seller's cho
 });
 
 test("D204: the suggestion button names what it will set", async () => {
-  const app = await readFile(new URL("app/listing-factory-app.tsx", root), "utf8");
-  const code = app.replace(/\/\*[\s\S]*?\*\//g, "");
+  /* D388 · The suggestion button is gone at her direction - Printify's template
+     is not a choice the seller made. Tombstoned so it is not reintroduced. */
+  const page = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+  assert.doesNotMatch(page, /Use Printify&rsquo;s \{suggestion\}/);
 
-  /* "Use Printify's 4" gave a number with no noun, next to a row reading
-     "25 available" — 4 of what, and why 4? It also credited the choice to
-     Printify on a screen whose whole point is that the seller chooses. */
-  /* D191 deliberately named Printify as the source so the number is explained,
-     and that stays. What was missing is the noun: "Use Printify's 4" beside a
-     row reading "25 available" never said 4 of what. */
-  assert.doesNotMatch(code, /Use Printify&rsquo;s \{suggestion\}<\/button>/, "the bare number is gone");
-  assert.match(app, /Use Printify&rsquo;s \{suggestion\} \{facet\.name==="colors"\?\(suggestion===1\?"color":"colors"\):\(suggestion===1\?"size":"sizes"\)\}/);
 });
 
 test("D205: establishing a facet refreshes the saved-product tiles", async () => {

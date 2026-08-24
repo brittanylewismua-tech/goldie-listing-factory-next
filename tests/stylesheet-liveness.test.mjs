@@ -304,3 +304,25 @@ test("D382: the Etsy attribution is never hidden to make room", async () => {
     }
   }
 });
+
+/* D389 · A panel that is wider than the card holding it gets cut off. The cause
+   is always the same shape: a negative inline margin written when the element
+   lived somewhere wider. D310 was this. D389 was this again, on .variant-pricing
+   inside the product card. Anything that sits inside a product card must not
+   pull itself outward. */
+test("D389: nothing inside a product card widens itself with negative margins", async () => {
+  const files = await collect("app/", [".css"]);
+  const offenders = [];
+  for (const file of files) {
+    const css = (await readFile(new URL(file, root), "utf8")).replace(/\/\*[\s\S]*?\*\//g, "");
+    for (const match of css.matchAll(/([^{}@]+)\{([^{}]*)\}/g)) {
+      const selector = match[1];
+      if (!/batch-product-card|step-product-body/.test(selector)) continue;
+      const body = match[2];
+      const negative = body.match(/margin(-inline|-left|-right)?\s*:\s*[^;}]*-\d/);
+      if (negative) offenders.push(`${file}: ${selector.trim().slice(0, 90)} → ${negative[0]}`);
+    }
+  }
+  assert.deepEqual(offenders, [],
+    `a negative margin inside a product card makes the panel wider than the card:\n${offenders.join("\n")}`);
+});

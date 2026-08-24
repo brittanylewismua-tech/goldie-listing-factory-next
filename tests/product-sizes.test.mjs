@@ -474,21 +474,13 @@ test("opening a facet shows the choices, not a summary — D187", async () => {
 });
 
 test("a suggestion is never displayed as a decision — D189/D191", async () => {
+  /* D388 · The row shortcut this guarded is gone at her direction: Printify's
+     template is not a choice the seller made, and one-click adopting it is how a
+     product ends up in colours nobody picked. Kept as a tombstone so the button
+     is not quietly reintroduced. */
   const app = await read("app/listing-factory-app.tsx");
-  const clarity = await read("app/clarity-pass.css");
+  assert.doesNotMatch(app, /className="row-shortcut"/);
 
-  /* Seen on the deployed build: the Colours chip read "Choose" while the picker
-   * beneath read "6 selected" — those six being the template's colors, a
-   * suggestion and not a decision.
-   *
-   * The first fix labelled it "Confirm 6", which was jargon: it never said what
-   * was being confirmed or where the number came from. D191 states the action
-   * plainly and puts the shortcut next to it, naming its source. */
-  assert.doesNotMatch(app, /Confirm \$\{suggestedCount\}/);
-  assert.match(app, /Use Printify&rsquo;s \{suggestion\} \{facet\.name==="colors"\?/,
-    "D204: the label names the noun as well as the source.");
-  assert.match(app, /className="batch-product-rows"/);
-  assert.match(clarity, /\.app-shell \.batch-product-rows\{/);
 });
 
 test("the product photo is visible against the card — D188/D192", async () => {
@@ -501,17 +493,13 @@ test("the product photo is visible against the card — D188/D192", async () => 
 });
 
 test("a suggestion has exactly one control — D193", async () => {
+  /* D388 · The row shortcut this guarded is gone at her direction: Printify's
+     template is not a choice the seller made, and one-click adopting it is how a
+     product ends up in colours nobody picked. Kept as a tombstone so the button
+     is not quietly reintroduced. */
   const app = await read("app/listing-factory-app.tsx");
+  assert.doesNotMatch(app, /className="row-shortcut"/);
 
-  /* D191 moved the suggestion shortcut into its row ("Use Printify's 4"), but the
-   * standalone confirm bar underneath the list survived the edit — so the card
-   * showed two controls for the same action: the row button, and
-   * "Goldie suggests 4 colors from your Printify product. [Use these]". */
-  assert.doesNotMatch(app, /className="facet-confirm"/,
-    "The standalone confirm bar is replaced by the row shortcut.");
-  assert.doesNotMatch(app, /Goldie suggests \{/);
-  assert.match(app, /Use Printify&rsquo;s \{suggestion\} \{facet\.name==="colors"\?/,
-    "D204: the label names the noun as well as the source.");
 });
 
 test("the product photo picks the catalog shot that actually shows the garment — D194", async () => {
@@ -543,31 +531,13 @@ test("the product photo picks the catalog shot that actually shows the garment �
 });
 
 test("D207: a bundle facet shortcut never writes another product's choice into the active one", async () => {
+  /* D388 · The row shortcut this guarded is gone at her direction: Printify's
+     template is not a choice the seller made, and one-click adopting it is how a
+     product ends up in colours nobody picked. Kept as a tombstone so the button
+     is not quietly reintroduced. */
   const app = await read("app/listing-factory-app.tsx");
+  assert.doesNotMatch(app, /className="row-shortcut"/);
 
-  /* Live, on a three-product bundle: clicking "Use Printify's 3 colors" on the
-   * crewneck card wrote those ids into the global selectedColorIds, which price
-   * and validate the ACTIVE product — the hoodie. The hoodie has no variants in
-   * crewneck colours, so pricedVariants emptied and Continue threw
-   * "The selected colors do not contain any available variants" over cards that
-   * all showed Colors ✓.
-   *
-   * The pickers already guarded this with isActive and wrote to
-   * bundleColorChoices / bundleSizeChoices for inactive members. The row
-   * shortcut was the one path that skipped the guard. */
-  const shortcut = app.slice(app.indexOf('className="row-shortcut"'));
-  const handler = shortcut.slice(0, shortcut.indexOf("</button>"));
-
-  assert.match(handler, /if\(isActive\)\{setSelectedColorIds\(ids\);setPricingApproved\(false\)\}else setBundleColorChoices/);
-  assert.match(handler, /if\(isActive\)\{setSelectedSizeIds\(ids\);setPricingApproved\(false\)\}else setBundleSizeChoices/);
-  assert.doesNotMatch(
-    handler,
-    /const ids=facet\.suggested\?\.colorIds\|\|\[\];setSelectedColorIds\(ids\)/,
-    "the unguarded write is gone",
-  );
-  // The choice must still persist to the recipe either way.
-  assert.match(handler, /void establish\(recipe,\{defaultColorIds:ids\}\)/);
-  assert.match(handler, /void establish\(recipe,\{defaultSizeIds:ids\}\)/);
 });
 
 test("D207: the dead-end variant message names the product and says what to do", async () => {
@@ -772,8 +742,10 @@ test("D228: an empty colour or size selection is never written to a recipe", asy
   const unguarded = app.match(/(?<!if\(ids\.length\))void establish\(recipe,\{default(Color|Size)Ids:ids\}\)/g) || [];
   assert.deepEqual(unguarded, [], "every write of colours or sizes must require at least one id");
 
-  assert.equal((app.match(/if\(ids\.length\)void establish\(recipe,\{defaultColorIds:ids\}\)/g) || []).length, 2);
-  assert.equal((app.match(/if\(ids\.length\)void establish\(recipe,\{defaultSizeIds:ids\}\)/g) || []).length, 2);
+  /* D388 · Was 2 each. The "Use Printify's N colors" shortcut was the second
+     call site and it is gone. The guard itself is unchanged. */
+  assert.equal((app.match(/if\(ids\.length\)void establish\(recipe,\{defaultColorIds:ids\}\)/g) || []).length, 1);
+  assert.equal((app.match(/if\(ids\.length\)void establish\(recipe,\{defaultSizeIds:ids\}\)/g) || []).length, 1);
 
   const readiness = await read("app/product-readiness.ts");
   assert.match(readiness, /NEVER persist an empty colour or size selection to a recipe/);
