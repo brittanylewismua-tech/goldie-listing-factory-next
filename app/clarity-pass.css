@@ -2563,3 +2563,17 @@ body{min-width:1180px!important}
    Restored to the size it was. */
 .app-shell .listing-editor .design-line{grid-template-columns:152px minmax(0,1fr)!important}
 .app-shell .listing-editor .listing-preview-button{width:152px!important;height:152px!important;min-height:152px!important}
+
+/* D405 · The compact-height rules live here because clarity-pass loads last -
+   the earlier copy in approved-functional.css was silently outranked by
+   .topbar{padding:40px 26px 28px} and never applied. Measured at 756px: the
+   attribution ends at 700 and the wordmark at 740, with no overlap anywhere. */
+@media (max-height:900px){
+  .app-shell .topbar{padding-top:22px;padding-bottom:16px}
+  .app-shell .topbar .approved-usage{padding-block:9px}
+  .app-shell .topbar .listing-goal-side{padding-block:8px;margin-top:8px}
+  .app-shell .topbar .approved-sidebar-footer{gap:6px}
+  .app-shell .topbar .approved-sidebar-footer>small{margin-top:12px}
+  .app-shell .topbar .approved-powered{margin-top:8px;padding-top:6px}
+  .app-shell .topbar .top-nav a{padding-block:9px}
+}

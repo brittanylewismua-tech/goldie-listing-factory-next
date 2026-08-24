@@ -354,3 +354,23 @@ test("D398: the management pages carry the Etsy attribution too", async () => {
   assert.match(css, /\.management-nav-footer\{margin-top:auto/,
     "pinned to the bottom like the workflow rail");
 });
+
+/* D405 · .top-actions is a column with justify-content:flex-end. Make it
+   shrinkable and, the moment its content is taller than the space it was shrunk
+   to, the overflow leaves through the TOP - the nav rendered straight over the
+   Goldie wordmark. Measured at a 756px viewport: .top-nav sat at y=59 while its
+   own parent started at y=155.
+
+   A column that packs its content to one end must never be shrunk below that
+   content. */
+test("D405: the sidebar nav column is never shrunk below its content", async () => {
+  const css = await readFile(new URL("app/approved-functional.css", root), "utf8");
+  assert.match(css, /\.topbar>\.top-actions\{flex:0 0 auto;justify-content:flex-start\}/,
+    "flex:0 1 auto here pushes the nav up over the wordmark");
+  assert.doesNotMatch(css, /\.topbar>\.top-actions\{flex:0 1 auto/);
+
+  /* The space has to come from somewhere, and it has to be in the stylesheet
+     that loads last or it is silently outranked. */
+  const clarity = await readFile(new URL("app/clarity-pass.css", root), "utf8");
+  assert.match(clarity, /@media \(max-height:900px\)\{[\s\S]{0,400}\.app-shell \.topbar\{padding-top:22px/);
+});
