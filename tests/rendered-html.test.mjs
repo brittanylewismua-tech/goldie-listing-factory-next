@@ -2643,7 +2643,9 @@ test("the Images page has one Next step, and a preview large enough to read", as
      that, or it becomes the one page where the bottom button is not Next. */
   const imagesFooter = app.slice(app.indexOf("post-draft-footer"), app.indexOf("post-draft-footer") + 700);
   assert.doesNotMatch(imagesFooter, /workflow-next/, "the footer is Back and Save as draft, as everywhere else");
-  assert.match(imagesFooter, /save-draft-link|workflow-back/);
+  assert.match(imagesFooter, /workflow-back/);
+  assert.match(imagesFooter, /save-draft-link/,
+    "Images was the only step you could not stop and save from");
 
   // The preview has to be big enough that the artwork is legible. At 152px the
   // design came out around 28px wide.
