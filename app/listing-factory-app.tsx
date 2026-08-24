@@ -363,7 +363,7 @@ function IndividualSizeGuide({productId,name,onSaved}:{productId:string;name?:st
 
 function DownloadListingPhotos({productId,name,indices}:{productId:string;name:string;indices:number[]}){const [downloading,setDownloading]=useState(false),[message,setMessage]=useState("");async function download(){if(downloading)return;setDownloading(true);setMessage("");try{const response=await fetch("/api/listing-photos/download",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({productId,printifyImageIndices:indices})});if(!response.ok){const payload=await response.json() as {error?:string};throw new Error(payload.error||"These listing photos could not be downloaded.")}const blob=await response.blob(),url=URL.createObjectURL(blob),link=document.createElement("a");link.href=url;link.download=`${name.replace(/[^a-z0-9._-]+/gi,"-").slice(0,90)||"listing"}-listing-photos.zip`;document.body.appendChild(link);link.click();link.remove();URL.revokeObjectURL(url);setMessage("✓ Download ready.")}catch(error){setMessage(error instanceof Error?error.message:"These listing photos could not be downloaded.")}finally{setDownloading(false)}}return <div className="listing-photo-download"><div><b>Keep a local copy</b><small>Selected Printify photos and created lifestyle mockups in one ZIP.</small></div><button type="button" aria-busy={downloading} disabled={downloading} onClick={()=>void download()}>{downloading?"Preparing photos…":"Download this listing’s photos"}</button>{message&&<p role="status">{message}</p>}</div>}
 
-function PricingReview({section="all",variants,pricing,prices,productName,profiles,selectedProfileId,templateShippingProfileId,profilesLoading,profilesError,approved,onPricing,onPrices,onSelectProfile,onCreateProfile,onApprovalChange}:{variants:ProductVariant[];pricing:Pricing;prices:Record<string,number>;productName:string;section?:"all"|"prices"|"shipping";profiles:EtsyShippingProfile[];selectedProfileId:number;templateShippingProfileId:number;profilesLoading:boolean;profilesError:string;approved:boolean;onPricing:(value:Pricing)=>void;onPrices:(value:Record<string,number>)=>void;onSelectProfile:(id:number)=>void;onCreateProfile:(baseId:number,charge:number,additional:number,title:string,international:InternationalShippingRate[])=>Promise<void>;onApprovalChange:(ready:boolean)=>void}){
+function PricingReview({section="all",variants,pricing,prices,productName,profiles,selectedProfileId,templateShippingProfileId,profilesLoading,profilesError,approved,wholeNumber=false,onWholeNumber,onPricing,onPrices,onSelectProfile,onCreateProfile,onApprovalChange}:{variants:ProductVariant[];pricing:Pricing;prices:Record<string,number>;productName:string;section?:"all"|"prices"|"shipping";profiles:EtsyShippingProfile[];selectedProfileId:number;templateShippingProfileId:number;profilesLoading:boolean;profilesError:string;approved:boolean;wholeNumber?:boolean;onWholeNumber?:(value:boolean)=>void;onPricing:(value:Pricing)=>void;onPrices:(value:Record<string,number>)=>void;onSelectProfile:(id:number)=>void;onCreateProfile:(baseId:number,charge:number,additional:number,title:string,international:InternationalShippingRate[])=>Promise<void>;onApprovalChange:(ready:boolean)=>void}){
   const selectedProfile=profiles.find(profile=>profile.id===selectedProfileId);
   const printifyShipping=Math.max(0,...variants.map(variant=>Number(variant.shipping)||0));
   const shippingShortfall=selectedProfile?printifyShipping-selectedProfile.domesticPrimary:0;
@@ -404,6 +404,9 @@ function PricingReview({section="all",variants,pricing,prices,productName,profil
      Until pricing is approved or the seller edits a price by hand, the prices
      ARE the goal's output, so they follow it. After either, they are the
      seller's and nothing recomputes them. */
+  /* D404 - Seed from the saved product so the toggle survives a refresh and a
+     remount. Value-compared, so this cannot fight the seller's own click. */
+  useEffect(()=>{setWholeNumberPricing(wholeNumber)},[wholeNumber]);
   const manualPriceEdit=useRef(false);
   /* D350 · These deps were the objects themselves. That was fine while
      PricingReview rendered once with memoised props, but D334 renders it per
@@ -427,8 +430,8 @@ function PricingReview({section="all",variants,pricing,prices,productName,profil
 
   function changeProfit(value:number){const nextPricing={...pricing,targetProfit:Math.max(0,value)};onPricing(nextPricing);recalculate(nextPricing);}
   function changeCostGroupPrice(cost:number,cents:number){manualPriceEdit.current=true;const matching=variants.filter(item=>item.cost===cost),safeCents=Math.max(wholePrice(cents),cost),next={...prices};for(const item of matching)next[String(item.id)]=safeCents;onPrices(next);setRecommendationMessage(`✓ $${(safeCents/100).toFixed(2)} applied to all ${matching.length} ${matching.length===1?"variant":"variants"} with a $${(cost/100).toFixed(2)} Printify cost.`)}
-  function changeIndividualPrice(variant:ProductVariant,cents:number){onPrices({...prices,[String(variant.id)]:Math.max(wholePrice(cents),variant.cost)});setRecommendationMessage(`✓ ${variant.title} now has its own price. The rest of its cost group was not changed.`)}
-  function toggleWholeNumberPricing(checked:boolean){setWholeNumberPricing(checked);if(!checked)return;const rounded=Object.fromEntries(variants.map(variant=>{const current=prices[String(variant.id)]??variant.templatePrice;return[String(variant.id),Math.max(Math.ceil(current/100)*100,variant.cost)]}));onPrices(normalizePricesByCost(variants,rounded));setRecommendationMessage("✓ Every item price is now a whole number without dropping below the displayed profit goal.")}
+  function changeIndividualPrice(variant:ProductVariant,cents:number){manualPriceEdit.current=true;/* D404 - This never set the flag, so the recalculate effect could snap a hand-typed variant price back to the goal. */onPrices({...prices,[String(variant.id)]:Math.max(wholePrice(cents),variant.cost)});setRecommendationMessage(`✓ ${variant.title} now has its own price. The rest of its cost group was not changed.`)}
+  function toggleWholeNumberPricing(checked:boolean){setWholeNumberPricing(checked);onWholeNumber?.(checked);if(!checked)return;const rounded=Object.fromEntries(variants.map(variant=>{const current=prices[String(variant.id)]??variant.templatePrice;return[String(variant.id),Math.max(Math.ceil(current/100)*100,variant.cost)]}));onPrices(normalizePricesByCost(variants,rounded));setRecommendationMessage("✓ Every item price is now a whole number without dropping below the displayed profit goal.")}
   function chooseProfile(id:number){const profile=profiles.find(item=>item.id===id);onSelectProfile(id);resetProfileEditor(profile);if(profile)recalculate(pricing)}
   function changeInternational(index:number,field:"primary"|"additional",value:string){setCustomInternational(current=>current.map((rate,i)=>i===index?{...rate,[field]:value}:rate));markShippingEdit()}
   async function createProfile(){if(!selectedProfile)return;const charge=Number(customCharge),additional=Number(customAdditional),title=customProfileName.trim(),international=customInternational.map(rate=>({...rate,primary:Number(rate.primary),additional:Number(rate.additional)})),ratesValid=international.every(rate=>rate.primary>=0&&Number.isFinite(rate.primary)&&rate.additional>=0&&Number.isFinite(rate.additional));if(customCharge===""||customAdditional===""||!Number.isFinite(charge)||charge<0||!Number.isFinite(additional)||additional<0||!ratesValid||!title)return setProfileMessage("Name the profile and enter valid first-item and additional-item charges for every destination.");setSavingProfile(true);setProfileMessage("");try{await onCreateProfile(selectedProfile.id,charge,additional,title,international);setProfileMessage("✓ New Etsy shipping profile saved and selected.")}catch(error){setProfileMessage(error instanceof Error?error.message:"The shipping profile could not be saved.")}finally{setSavingProfile(false)}}
@@ -706,6 +709,7 @@ export default function ListingFactoryApp() {
   /* D379 - Which card is being opened, so the one you clicked can say so and the
      rest cannot be clicked underneath a load already in flight. */
   const [switchingProduct,setSwitchingProduct]=useState("");
+  const [wholeNumberByRecipe,setWholeNumberByRecipe]=useState<Record<string,boolean>>({});
   /* D378 - A closed card has to say where that product stands, and the honest
      source is the batch list Batch History already reads: status, draft count,
      published count. One fetch, refreshed when the bundle or its batches change. */
@@ -1009,6 +1013,17 @@ export default function ListingFactoryApp() {
     if(!recipeId||!batchId)return;
     setBundleBatchIds(current=>current[recipeId]===batchId?current:{...current,[recipeId]:batchId});
   }
+  /* D404 - Per-variant prices and the whole-number toggle lived only in React
+     state and the batch snapshot, and that snapshot is not written until a batch
+     has designs or drafts - so on the product step they were saved nowhere. Set
+     a price, tick whole-number pricing, refresh, and both were gone. They belong
+     to the saved product. Debounced: a price field fires on every keystroke. */
+  const pricePersist=useRef<number|undefined>(undefined);
+  function persistProductPricing(recipe:Recipe|null,change:Partial<Recipe>){
+    if(!recipe)return;
+    window.clearTimeout(pricePersist.current);
+    pricePersist.current=window.setTimeout(()=>{void establish(recipe,change)},700);
+  }
   function batchStateSnapshot(){const designs=files.map(({file:ignoredFile,previewUrl:ignoredPreview,...design})=>design);return {template,templateDetails,description,pricing,selectedColorIds,selectedSizeIds,variantPrices,etsyShippingProfileId,pricingApproved,mockupTheme,activeRecipe,activeBundle,bundleRecipes,bundleIndex,bundleBatchIds,designs,drafts,complete,finishPhase,bulkTitles,batchKeywords,titleJoiner,titleBuilderMode,autoTitleBankId,manualKeywordBankId,sharedMockups,preparedMockupCounts,printifyImageIndices,printifyImageSelections,sizeGuideName,keptAsDrafts,batchReceipt}}
   async function saveDraftBatch(){const name=batchDisplayName.trim();if(!name)return;setSavingDraftBatch(true);try{const id=batchIdRef.current||crypto.randomUUID();batchIdRef.current=id;window.localStorage.setItem("goldie-active-batch",id);await saveBatchFiles(id,files.map(file=>file.file));if(!localPreview){const response=await fetch("/api/batches",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,status:"draft",step:workflowStep,setupName:name,productTitle:templateDetails?.blueprintTitle||"",designCount:files.length,state:{...batchStateSnapshot(),keptAsDrafts:complete}})});if(!response.ok)throw new Error("Goldie could not save this batch.")}setKeptAsDrafts(true);setDraftSaveOpen(false);setDraftSavedOpen(true)}catch(error){stopWith("This batch was not saved.",[error instanceof Error?error.message:"Try again in a moment."])}finally{setSavingDraftBatch(false)}}
   function jumpToMissingPhotoListing(clientId:string){setMissingPhotoDraftIds([]);window.setTimeout(()=>document.getElementById(`listing-images-${clientId}`)?.scrollIntoView({block:"start"}),0)}
@@ -1300,7 +1315,10 @@ export default function ListingFactoryApp() {
        chosen shipping profile. Asking them to approve it again on every batch is a
        question already answered, and it is what left a card of ticks sitting behind
        a gate that would not open. */
-    setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:recipe.defaultProfitTarget,etsyShippingProfileId:recipe.etsyShippingProfileId}));setTemplate(recipe.templateUrl);const savedTheme=recipe.defaultMockupTheme||"",savedMockups=savedTheme?{theme:savedTheme,ids:recipe.mockupIds||[]}:undefined;setMockupTheme(savedTheme);setSharedMockups(savedMockups);window.sessionStorage.setItem("goldie-batch-mockups",JSON.stringify(savedMockups||null));setAutoTitleBankId(recipe.keywordListId||"");const nextPricing={...pricing,targetProfit:Number(recipe.defaultProfitTarget)||DEFAULT_PRICING.targetProfit,shippingCost:0,shippingCharged:0};setPricing(nextPricing);setTemplateDetails(null);const details=await loadTemplateUrl(recipe.templateUrl,nextPricing,Number(recipe.etsyShippingProfileId)||0,recipe.defaultColorIds||[],recipe.defaultSizeIds||[]);if(!details)return null;const savedDescription=recipe.description?.trim(),importedDescription=details.description?.trim();if(savedDescription)setDescription(recipe.description);else if(importedDescription){const updated={...recipe,description:details.description};setDescription(details.description);setActiveRecipe(updated);void fetch("/api/product-recipes",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(updated)}).catch(()=>undefined)}return details}
+    setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:recipe.defaultProfitTarget,etsyShippingProfileId:recipe.etsyShippingProfileId}));/* D404 - Restore the prices and the whole-number toggle the seller saved on this
+       product, so the product step survives a refresh. */
+    setVariantPrices(recipe.variantPrices&&Object.keys(recipe.variantPrices).length?{...recipe.variantPrices}:{});
+    setWholeNumberByRecipe(current=>({...current,[recipe.id]:recipe.wholeNumberPricing===true}));setTemplate(recipe.templateUrl);const savedTheme=recipe.defaultMockupTheme||"",savedMockups=savedTheme?{theme:savedTheme,ids:recipe.mockupIds||[]}:undefined;setMockupTheme(savedTheme);setSharedMockups(savedMockups);window.sessionStorage.setItem("goldie-batch-mockups",JSON.stringify(savedMockups||null));setAutoTitleBankId(recipe.keywordListId||"");const nextPricing={...pricing,targetProfit:Number(recipe.defaultProfitTarget)||DEFAULT_PRICING.targetProfit,shippingCost:0,shippingCharged:0};setPricing(nextPricing);setTemplateDetails(null);const details=await loadTemplateUrl(recipe.templateUrl,nextPricing,Number(recipe.etsyShippingProfileId)||0,recipe.defaultColorIds||[],recipe.defaultSizeIds||[]);if(!details)return null;const savedDescription=recipe.description?.trim(),importedDescription=details.description?.trim();if(savedDescription)setDescription(recipe.description);else if(importedDescription){const updated={...recipe,description:details.description};setDescription(details.description);setActiveRecipe(updated);void fetch("/api/product-recipes",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(updated)}).catch(()=>undefined)}return details}
   async function saveProductDefaults(change:Partial<Recipe>,key:string){if(!activeRecipe)return;setSavingProductDefault(key);try{const updated={...activeRecipe,...change};const response=await fetch("/api/product-recipes",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(updated)});if(!response.ok)throw new Error("Goldie could not save this product default.");setActiveRecipe(updated);}catch(error){stopWith("This default was not saved.",[error instanceof Error?error.message:"Try again in a moment."])}finally{setSavingProductDefault("")}}
   async function rememberBatchDefaultsAfterPublish(){if(!activeRecipe)return;const updated={...activeRecipe,defaultColorIds:selectedColorIds,defaultSizeIds:selectedSizeIds,defaultMockupTheme:mockupTheme,mockupIds:sharedMockups?.theme===mockupTheme?sharedMockups.ids:[]};const response=await fetch("/api/product-recipes",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(updated)});if(response.ok){setActiveRecipe(updated);setColorsRemembered(true);setSizesRemembered(true)}}
   async function completeProductSetup(){if(!activeRecipe)return;await saveProductDefaults({setupComplete:true,defaultColorIds:selectedColorIds,defaultSizeIds:selectedSizeIds,defaultMockupTheme:mockupTheme,mockupIds:sharedMockups?.theme===mockupTheme?sharedMockups.ids:[]},"initial-setup")}
@@ -2017,7 +2035,7 @@ export default function ListingFactoryApp() {
               section={which}
               variants={variantsFor(details,colorIds,sizeIds)}
               pricing={recipePricing}
-              prices={isActive?variantPrices:(bundlePrices[recipe.id]||{})}
+              prices={isActive?variantPrices:(bundlePrices[recipe.id]||recipe.variantPrices||{})}
               productName={recipe.name}
               profiles={etsyShippingProfiles}
               selectedProfileId={isActive?etsyShippingProfileId:(bundleShipping[recipe.id]||Number(recipe.etsyShippingProfileId)||0)}
@@ -2031,7 +2049,12 @@ export default function ListingFactoryApp() {
                 if(value.targetProfit!==Number(recipe.defaultProfitTarget))void establish(recipe,{defaultProfitTarget:value.targetProfit})}}
               onPrices={value=>{
                 if(isActive){setVariantPrices(value);setPricingApproved(false)}
-                else{setBundlePrices(current=>({...current,[recipe.id]:value}));setBundleApproved(current=>({...current,[recipe.id]:false}))}}}
+                else{setBundlePrices(current=>({...current,[recipe.id]:value}));setBundleApproved(current=>({...current,[recipe.id]:false}))}
+                persistProductPricing(recipe,{variantPrices:value})}}
+              wholeNumber={Boolean(wholeNumberByRecipe[recipe.id]??recipe.wholeNumberPricing)}
+              onWholeNumber={value=>{
+                setWholeNumberByRecipe(current=>({...current,[recipe.id]:value}));
+                persistProductPricing(recipe,{wholeNumberPricing:value})}}
               onSelectProfile={value=>{
                 if(isActive){setEtsyShippingProfileId(value);setPricingApproved(false)}
                 else{setBundleShipping(current=>({...current,[recipe.id]:value}));setBundleApproved(current=>({...current,[recipe.id]:false}))}

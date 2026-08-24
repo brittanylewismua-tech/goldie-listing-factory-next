@@ -1376,3 +1376,35 @@ test("D394: a configured recipe does not have to re-approve its pricing", async 
   assert.match(readiness, /Number\.isFinite\(target\) && target > 0 && Number\.isFinite\(profile\) && profile > 0/,
     "approved means the seller's own profit target and their own shipping profile");
 });
+
+/* D404 · "Set whole-number pricing, change the profit to twelve, refresh, it
+   resets." The per-variant prices and the whole-number toggle lived only in
+   React state and the batch snapshot — and that snapshot is not written until a
+   batch has designs or drafts, so on the product step they were saved nowhere at
+   all. They belong to the saved product, beside the profit target.
+
+   The toggle was also component state, so it reset on every remount, and
+   changeIndividualPrice never marked a hand edit, which let the recalculate
+   effect snap a typed variant price back to the goal. */
+test("D404: pricing set on the product step survives a refresh", async () => {
+  const app = await read("app/listing-factory-app.tsx");
+  const route = await read("app/api/product-recipes/route.ts");
+  const tools = await read("app/factory-tools.tsx");
+
+  assert.match(tools, /wholeNumberPricing\?:boolean;variantPrices\?:Record<string,number>;/,
+    "the saved product carries them");
+  assert.match(route, /if \(body\.wholeNumberPricing !== undefined\)/);
+  assert.match(route, /if \(body\.variantPrices !== undefined\)/);
+  assert.match(route, /wholeNumberPricing:saved\.wholeNumberPricing===true/, "and reads them back");
+
+  assert.match(app, /function persistProductPricing\(recipe:Recipe\|null,change:Partial<Recipe>\)/);
+  assert.match(app, /pricePersist\.current=window\.setTimeout\(\(\)=>\{void establish\(recipe,change\)\},700\)/,
+    "debounced - a price field fires on every keystroke");
+  assert.match(app, /persistProductPricing\(recipe,\{variantPrices:value\}\)/);
+  assert.match(app, /persistProductPricing\(recipe,\{wholeNumberPricing:value\}\)/);
+  assert.match(app, /setVariantPrices\(recipe\.variantPrices&&Object\.keys\(recipe\.variantPrices\)\.length/,
+    "and they come back when the product is chosen");
+
+  assert.match(app, /function changeIndividualPrice\(variant:ProductVariant,cents:number\)\{manualPriceEdit\.current=true;/,
+    "a typed variant price must count as a hand edit or it gets recalculated away");
+});

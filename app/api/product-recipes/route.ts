@@ -8,13 +8,13 @@ export async function GET() {
   const user = await getChatGPTUser();
   if (!user) return NextResponse.json({ error: "Sign in to load product recipes." }, { status: 401 });
   const recipes = await getDb().select().from(productRecipes).where(eq(productRecipes.userId, user.userId)).orderBy(desc(productRecipes.updatedAt));
-  return NextResponse.json({ recipes: recipes.map((r) => {const saved=JSON.parse(r.pricingJson||"{}");return {...r,etsyShippingProfileId:Number(saved.etsyShippingProfileId)||0,defaultColorIds:Array.isArray(saved.defaultColorIds)?saved.defaultColorIds.filter(Number.isInteger):[],defaultSizeIds:Array.isArray(saved.defaultSizeIds)?saved.defaultSizeIds.filter(Number.isInteger):[],defaultProfitTarget:Number(saved.defaultProfitTarget)||10,etsyDefaults:saved.etsyDefaults&&typeof saved.etsyDefaults==="object"?saved.etsyDefaults:{},mockupIds:Array.isArray(saved.mockupIds)?saved.mockupIds.filter((id:unknown)=>typeof id==="string").slice(0,8):undefined,setupComplete:saved.setupComplete!==false,printifyImageIndices:JSON.parse(r.printifyImageIndicesJson||"[]")}}) });
+  return NextResponse.json({ recipes: recipes.map((r) => {const saved=JSON.parse(r.pricingJson||"{}");return {...r,etsyShippingProfileId:Number(saved.etsyShippingProfileId)||0,defaultColorIds:Array.isArray(saved.defaultColorIds)?saved.defaultColorIds.filter(Number.isInteger):[],defaultSizeIds:Array.isArray(saved.defaultSizeIds)?saved.defaultSizeIds.filter(Number.isInteger):[],defaultProfitTarget:Number(saved.defaultProfitTarget)||10,wholeNumberPricing:saved.wholeNumberPricing===true,variantPrices:saved.variantPrices&&typeof saved.variantPrices==="object"?saved.variantPrices as Record<string,number>:{},etsyDefaults:saved.etsyDefaults&&typeof saved.etsyDefaults==="object"?saved.etsyDefaults:{},mockupIds:Array.isArray(saved.mockupIds)?saved.mockupIds.filter((id:unknown)=>typeof id==="string").slice(0,8):undefined,setupComplete:saved.setupComplete!==false,printifyImageIndices:JSON.parse(r.printifyImageIndicesJson||"[]")}}) });
 }
 
 export async function POST(request: Request) {
   const user = await getChatGPTUser();
   if (!user) return NextResponse.json({ error: "Sign in to save product recipes." }, { status: 401 });
-  const body = await request.json() as { id?: string; name?: string; templateUrl?: string; description?:string; keywordListId?:string; printifyImageIndices?:number[]; normalizePadding?:boolean;etsyShippingProfileId?:number;defaultColorIds?:number[];defaultSizeIds?:number[];etsyDefaults?:Record<string,unknown>;defaultMockupTheme?:string;mockupIds?:string[];setupComplete?:boolean;defaultProfitTarget?:number };
+  const body = await request.json() as { id?: string; name?: string; templateUrl?: string; description?:string; keywordListId?:string; printifyImageIndices?:number[]; normalizePadding?:boolean;etsyShippingProfileId?:number;defaultColorIds?:number[];defaultSizeIds?:number[];etsyDefaults?:Record<string,unknown>;defaultMockupTheme?:string;mockupIds?:string[];setupComplete?:boolean;defaultProfitTarget?:number;wholeNumberPricing?:boolean;variantPrices?:Record<string,number> };
   const name = String(body.name || "").trim().slice(0, 80), templateUrl = String(body.templateUrl || "").trim();
   if (!name || !templateUrl) return NextResponse.json({ error: "Name the recipe and add its Printify template." }, { status: 400 });
   const id = body.id || crypto.randomUUID();
@@ -49,7 +49,22 @@ export async function POST(request: Request) {
   if (body.etsyDefaults !== undefined) patch.etsyDefaults = etsyDefaults;
   if (body.mockupIds !== undefined) patch.mockupIds = Array.isArray(body.mockupIds) ? body.mockupIds.map(id=>String(id).trim()).filter(Boolean).slice(0,8) : undefined;
   if (body.setupComplete !== undefined) patch.setupComplete = body.setupComplete !== false;
-  const merged = { etsyShippingProfileId: 0, defaultColorIds: [], defaultSizeIds: [], defaultProfitTarget: 10, etsyDefaults: {}, setupComplete: true, ...existingSaved, ...patch };
+  /* D404 - Whole-number pricing and the per-variant prices lived only in React
+     state and the batch snapshot, and the batch snapshot is not written until a
+     batch has designs or drafts. So on the product step they were never saved
+     anywhere: set the profit goal, tick whole-number pricing, refresh, and both
+     were gone. They belong to the saved product, like the profit target beside
+     them. */
+  if (body.wholeNumberPricing !== undefined) patch.wholeNumberPricing = body.wholeNumberPricing === true;
+  if (body.variantPrices !== undefined) {
+    const prices: Record<string, number> = {};
+    for (const [variantId, cents] of Object.entries(body.variantPrices || {})) {
+      const amount = Number(cents);
+      if (Number.isFinite(amount) && amount > 0) prices[String(variantId)] = Math.round(amount);
+    }
+    patch.variantPrices = prices;
+  }
+  const merged = { etsyShippingProfileId: 0, defaultColorIds: [], defaultSizeIds: [], defaultProfitTarget: 10, etsyDefaults: {}, setupComplete: true, wholeNumberPricing: false, variantPrices: {}, ...existingSaved, ...patch };
   const extras={keywordListId:body.keywordListId!==undefined?String(body.keywordListId||""):String(existingRow?.keywordListId||""),printifyImageIndicesJson:body.printifyImageIndices!==undefined?JSON.stringify((body.printifyImageIndices||[]).filter(Number.isInteger).slice(0,20)):String(existingRow?.printifyImageIndicesJson||"[]"),normalizePadding:body.normalizePadding!==false,pricingJson:JSON.stringify(merged)};
   await getDb().insert(productRecipes).values({ id, userId: user.userId, name, templateUrl, description,defaultTitle:"",defaultMockupTheme,...extras }).onConflictDoUpdate({ target: productRecipes.id, set: { name, templateUrl,description,defaultTitle:"",defaultMockupTheme,...extras,updatedAt:new Date().toISOString() } });
   return NextResponse.json({ id });

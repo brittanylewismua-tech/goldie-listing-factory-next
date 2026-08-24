@@ -9,7 +9,7 @@ export type Pricing = { targetProfit: number; etsyFeePercent: number; fixedFee: 
    batch — which currently fills only 2–3 of 11 fields and is not stable
    across listings in the same batch. */
 export type RecipeEtsyDefaults = Record<string, string | number | null>;
-export type Recipe = { id: string; name: string; templateUrl: string; description: string; defaultTitle: string; defaultMockupTheme?:string; mockupIds?:string[]; setupComplete?:boolean; defaultProfitTarget?:number; keywordListId?:string; printifyImageIndices?:number[]; normalizePadding?:boolean;etsyShippingProfileId?:number;defaultColorIds?:number[];defaultSizeIds?:number[];etsyDefaults?:RecipeEtsyDefaults };
+export type Recipe = { id: string; name: string; templateUrl: string; description: string; defaultTitle: string; defaultMockupTheme?:string; mockupIds?:string[]; setupComplete?:boolean; defaultProfitTarget?:number;wholeNumberPricing?:boolean;variantPrices?:Record<string,number>; keywordListId?:string; printifyImageIndices?:number[]; normalizePadding?:boolean;etsyShippingProfileId?:number;defaultColorIds?:number[];defaultSizeIds?:number[];etsyDefaults?:RecipeEtsyDefaults };
 export type ProductBundle = { id:string;name:string;recipeIds:string[] };
 
 /* D222 · A product cannot join a bundle until it has been set up. Creating a
