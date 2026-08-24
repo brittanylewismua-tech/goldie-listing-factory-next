@@ -3318,3 +3318,23 @@ test("a saved product default cannot be overwritten by an older copy — D463", 
   // Bundle copies of the same recipe move with it, or the card behind it goes stale instead.
   assert.match(app, /setBundleRecipes\(current=>current\.map\(item=>item\.id===recipeId\?\{\.\.\.item,\.\.\.change\}:item\)\)/);
 });
+
+test("saving a product cannot overwrite the seller's Etsy shipping choice — D464", async () => {
+  const tools = await readFile(new URL("../app/factory-tools.tsx", import.meta.url), "utf8");
+
+  /* Measured on her mug, twice. The recipe held 86599059553 - "Mug 11oz", a real
+     profile among her 93 - and later held 313830627087, which is a Printify
+     shipping TEMPLATE id and matches none of them. So the Shipping row read
+     "Pick a shipping profile · 93 profiles on your shop" and would not clear,
+     because the saved value could never match anything.
+
+     The overwrite comes from the product save: it reads the existing choice from
+     this component's own copy of the recipe, which is whatever its list held when
+     it last loaded. A profile chosen anywhere else since is not in that copy, so
+     the guard sees no saved choice and writes the template default over it. */
+  assert.match(tools, /const current=editingId\?await fetch\("\/api\/product-recipes"\)/,
+    "the recipe is re-read so the guard sees the current choice");
+  assert.match(tools, /const savedChoice=Number\(current\?\.etsyShippingProfileId\|\|existing\?\.etsyShippingProfileId\)\|\|0/);
+  // The guard itself is unchanged: a template default only fills an empty choice.
+  assert.match(tools, /if\(!savedChoice\)shippingProfileId=Number\(verified\.shippingTemplateId\)\|\|shippingProfileId/);
+});

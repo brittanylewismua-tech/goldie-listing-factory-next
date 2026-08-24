@@ -113,7 +113,18 @@ export function SavedWorkflow(props: WorkflowProps) {
          This line used to overwrite the saved choice with the template value
          every time the template was re-verified, which happens whenever a saved
          product is edited. */
-      const savedChoice=Number(existing?.etsyShippingProfileId)||0;
+      /* D464 - `existing` is this component's own copy of the recipe, taken when
+         its list was last loaded. A shipping profile chosen anywhere else since
+         then is not in it, so savedChoice reads 0 and the Printify template's id
+         gets written over the seller's actual Etsy choice. Measured on her mug:
+         a valid Etsy profile, 86599059553 "Mug 11oz", was replaced by 313830627087,
+         which is a Printify shipping template and matches none of her 93 Etsy
+         profiles - so the Shipping row went red and stayed red.
+
+         The recipe is re-read here so the guard below sees the current choice
+         rather than a remembered one. */
+      const current=editingId?await fetch("/api/product-recipes").then(r=>r.ok?r.json():{recipes:[]}).then((payload:{recipes?:Recipe[]})=>(payload.recipes||[]).find(item=>item.id===editingId)).catch(()=>undefined):undefined;
+      const savedChoice=Number(current?.etsyShippingProfileId||existing?.etsyShippingProfileId)||0;
       let shippingProfileId=savedChoice||props.verifiedShippingProfileId||0;
       if (!props.templateVerified) {
         const verified=await props.onVerifyTemplate(props.templateUrl);
