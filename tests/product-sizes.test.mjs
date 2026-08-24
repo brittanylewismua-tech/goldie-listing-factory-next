@@ -1273,3 +1273,45 @@ test("D373: bundle members are fetched together and revealed as they land", asyn
   assert.match(app, /setBundleColorProducts\(current=>\(\{\.\.\.current,\[recipe\.id\]:details\}\)\)/,
     "each card appears the moment its template resolves");
 });
+
+/* D378 · Steps 2-4 carry the same product cards as step 1. Two traps in that
+   change, both caught here rather than in a screenshot:
+
+   1. The Images drafts panel stays mounted across steps so a run in progress is
+      never torn down. Its visibility therefore has to move to the card rail as a
+      CLASS, not by conditionally rendering the wrapper - otherwise switching
+      steps remounts a panel mid-run.
+   2. Once the panel's own class is hardcoded to active-panel, the rail owns the
+      hidden state. If no product is chosen there is no card to draw, and
+      returning the body bare would show a panel that is meant to be closed. */
+test("D378: steps 2-4 wrap their work in the same product card as step 1", async () => {
+  const app = await read("app/listing-factory-app.tsx");
+
+  assert.match(app, /stepProductCards\(bundleCardStatus\("images"\)/);
+  assert.match(app, /stepProductCards\(bundleCardStatus\("listing"\)/);
+  assert.match(app, /stepProductCards\(bundleCardStatus\("publish"\)/);
+
+  /* Same card element as step 1, so the two screens cannot drift apart. */
+  assert.match(app, /className=\{`batch-product-card step-product-card /);
+
+  /* The drafts panel must not carry its own active/hidden ternary any more. */
+  assert.doesNotMatch(app, /launch-panel workflow-panel \$\{workflowStep==="designs"/,
+    "the rail owns this panel's hidden state now");
+  assert.match(app, /<aside className="launch-panel workflow-panel active-panel">/);
+  assert.match(app, /,!\(workflowStep==="designs"&&!complete\)\)/,
+    "and it is handed the same condition the panel used to apply to itself");
+
+  /* Trap 2: no product chosen still has to honour the flag. */
+  assert.match(app, /if\(!list\.length\)return <div className=\{hidden\?"hidden-panel":undefined\}>\{body\}<\/div>/);
+});
+
+test("D378: any product card can be opened, not only the next one", async () => {
+  const app = await read("app/listing-factory-app.tsx");
+  assert.match(app, /const \[bundleBatchIds,setBundleBatchIds\]/,
+    "each bundle member is its own batch; without the map only forward works");
+  assert.match(app, /bundleRecipes,bundleIndex,bundleBatchIds,/,
+    "and it has to survive a refresh like everything else on these steps");
+  assert.match(app, /function openBundleProduct\(index:number\)/);
+  assert.match(app, /if\(index===bundleIndex\+1\)void continueBundle\(\)/,
+    "a product with no batch yet is the one case continueBundle still handles");
+});

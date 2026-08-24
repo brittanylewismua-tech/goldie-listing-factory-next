@@ -1368,7 +1368,11 @@ export default function ListingFactoryApp() {
      that product stands, and clicking one opens it. */
   function stepProductCards(statusFor:(recipe:Recipe,index:number)=>{label:string;tone:"ready"|"attention"|"waiting"},body:ReactNode,hidden=false){
     const list=activeBundle&&bundleRecipes.length>1?bundleRecipes:(activeRecipe?[activeRecipe]:[]);
-    if(!list.length)return body;
+    /* No product chosen yet, so there is no card to draw - but the caller has
+       handed its hidden state to this wrapper, and returning the body bare would
+       show a panel that is supposed to be closed. Keep the wrapper, keep the
+       tree shape, honour the flag. */
+    if(!list.length)return <div className={hidden?"hidden-panel":undefined}>{body}</div>;
     const many=list.length>1;
     return <section className={`batch-products step-product-cards ${hidden?"hidden-panel":""}`} aria-label="Products in this batch">
       {list.map((recipe,index)=>{
