@@ -12,7 +12,10 @@ function standardTime(value: string) {
   return new Intl.DateTimeFormat(undefined, { year:"numeric", month:"short", day:"numeric", hour:"numeric", minute:"2-digit", second:"2-digit" }).format(date);
 }
 
-export default function AdminControl({ initialActive, memberCount, initialDiagnostics }: { initialActive: boolean; memberCount: number; initialDiagnostics: Diagnostic[] }) {
+export type LoggedFailure = { id: string; createdAt: string; area: string; severity: string; userEmail: string | null; userName: string | null; message: string; errorCode: string | null; httpStatus: number | null; url: string | null; context: string | null };
+
+export default function AdminControl({ initialActive, memberCount, initialDiagnostics, initialErrors = [] }: { initialActive: boolean; memberCount: number; initialDiagnostics: Diagnostic[]; initialErrors?: LoggedFailure[] }) {
+  const [errorSearch, setErrorSearch] = useState("");
   const [active, setActive] = useState(initialActive);
   const [diagnosticSearch, setDiagnosticSearch] = useState("");
   const [working, setWorking] = useState(false);
@@ -43,6 +46,28 @@ export default function AdminControl({ initialActive, memberCount, initialDiagno
       {error && <p className="access-error" role="alert">{error}</p>}
       <p className="admin-note">Turning access off also removes saved Printify tokens for mastermind testers. Your owner test page remains available.</p>
     </div>
+    <section className="diagnostics-card">
+      <p className="mini-label">ERROR LOG</p>
+      <h2>Everything that failed</h2>
+      <p className="diagnostics-intro">Every browser crash and failed request across Listing Factory, newest first, with who it happened to. Brittany is emailed the first error in each area, then once every 15 minutes while it keeps happening.</p>
+      {initialErrors.length > 0 && <input className="diagnostics-search" value={errorSearch} onChange={(event) => setErrorSearch(event.target.value)} placeholder="Search member, area, message or code" aria-label="Search errors" />}
+      {initialErrors.length === 0 && <p className="diagnostics-empty">Nothing has failed yet.</p>}
+      <div className="diagnostics-list">{initialErrors
+        .filter((item) => `${item.area} ${item.userEmail ?? ""} ${item.userName ?? ""} ${item.message} ${item.errorCode ?? ""}`.toLowerCase().includes(errorSearch.trim().toLowerCase()))
+        .map((item) => (
+        <article key={item.id} className={`diagnostic-item${item.severity === "warning" ? "" : " diagnostic-row-error"}`}>
+          <div><b>{item.area}</b><span>{standardTime(item.createdAt)}</span></div>
+          <dl>
+            <div><dt>MEMBER</dt><dd>{item.userEmail || "Not signed in"}{item.userName ? ` · ${item.userName}` : ""}</dd></div>
+            <div><dt>WHERE</dt><dd>{item.url || "—"}</dd></div>
+            {item.errorCode ? <div><dt>CODE</dt><dd>{item.errorCode}</dd></div> : null}
+            {item.httpStatus ? <div><dt>HTTP</dt><dd>{item.httpStatus}</dd></div> : null}
+          </dl>
+          <p className="diagnostic-message">{item.message}</p>
+          {item.context ? <details className="diagnostic-context"><summary>Full context</summary><pre>{item.context}</pre></details> : null}
+        </article>
+      ))}</div>
+    </section>
     <section className="diagnostics-card">
       <p className="mini-label">AUTOMATIC DIAGNOSTICS</p>
       <h2>Recent failed operations</h2>

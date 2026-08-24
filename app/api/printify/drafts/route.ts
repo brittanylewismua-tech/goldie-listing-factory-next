@@ -1,3 +1,4 @@
+import { withErrorLog } from "@/app/error-log";
 import { env } from "cloudflare:workers";
 import { NextResponse } from "next/server";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
@@ -97,7 +98,7 @@ async function artworkContents(stream?: ReadableStream) {
   return btoa(binary);
 }
 
-export async function GET(request: Request) {
+async function handleGET(request: Request) {
   const user = await getChatGPTUser();
   if (!user) return NextResponse.json({ error: "Sign in to continue." }, { status: 401 });
   const url = new URL(request.url);
@@ -113,7 +114,7 @@ export async function GET(request: Request) {
   return NextResponse.json({ status: row.status, draft: row.status === "succeeded" && row.response_json ? JSON.parse(row.response_json) : undefined, updatedAt: row.updated_at });
 }
 
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   const user = await getChatGPTUser();
   if (!user) return NextResponse.json({ error: "Sign in to continue." }, { status: 401 });
   const launchBlock = await customerLaunchBlock(user);
@@ -236,3 +237,7 @@ export async function POST(request: Request) {
     if (stagedIdForCleanup) await runtimeEnv().ARTWORK?.delete(stagedIdForCleanup).catch(() => undefined);
   }
 }
+
+export const GET = withErrorLog("printify-drafts", handleGET);
+
+export const POST = withErrorLog("printify-drafts", handlePOST);

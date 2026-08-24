@@ -1,3 +1,4 @@
+import { withErrorLog } from "@/app/error-log";
 import { NextRequest, NextResponse } from "next/server";
 import { eq, sql } from "drizzle-orm";
 import { env } from "cloudflare:workers";
@@ -20,7 +21,7 @@ const rendererKind=(kind:RequestedProductKind):ProductKind=>["apparel","t-shirt"
 async function imageData(bytes:ArrayBuffer,contentType:string){const data=new Uint8Array(bytes);let binary="";for(let offset=0;offset<data.length;offset+=32768)binary+=String.fromCharCode(...data.subarray(offset,offset+32768));return`data:${contentType};base64,${btoa(binary)}`}
 async function releaseUsage(job:Job,message:string){if(job.status==="failed"||job.status==="completed")return;await env.DB.batch([env.DB.prepare("UPDATE mockup_render_jobs SET status='failed',last_error=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND status NOT IN ('failed','completed')").bind(message,job.id),env.DB.prepare("UPDATE mockup_render_usage SET count=MAX(0,count-1),updated_at=CURRENT_TIMESTAMP WHERE user_day=?").bind(job.usage_key)])}
 
-export async function POST(request:NextRequest){
+async function handlePOST(request:NextRequest){
   let reservedKey="";
   try{
     const user=await getChatGPTUser();if(!user)return NextResponse.json({error:"Sign in to create product mockups."},{status:401});
@@ -60,3 +61,5 @@ export async function GET(request:NextRequest){
     return NextResponse.json({status:"completed",image:await imageData(bytes,contentType)});
   }catch(error){return NextResponse.json({status:"processing",warning:error instanceof Error?error.message:undefined},{status:202})}
 }
+
+export const POST = withErrorLog("mockup-render", handlePOST);

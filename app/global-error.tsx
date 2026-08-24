@@ -13,6 +13,8 @@ export default function GlobalError({ error }: { error: Error & { digest?: strin
         message: error.message || "Goldie failed during startup",
         source: error.stack || "",
         digest: error.digest || "",
+        url: typeof location === "undefined" ? "" : location.pathname + location.search,
+        stack: error.stack || "",
       }),
     }).catch(() => undefined);
   }, [error]);

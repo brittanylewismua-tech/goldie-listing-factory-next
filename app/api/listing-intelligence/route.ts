@@ -1,3 +1,4 @@
+import { withErrorLog } from "@/app/error-log";
 import { NextResponse } from "next/server";
 import { bestFitFromBank, clean, normalize } from "../../keyword-ranking.ts";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
@@ -40,7 +41,7 @@ function supportedOptional(input:unknown,context:string){
     return normalizedContext.includes(` ${phrase} `);
   }));
 }
-export async function POST(request:Request){
+async function handlePOST(request:Request){
   const user=await getChatGPTUser();if(!user)return NextResponse.json({error:"Sign in to prepare Etsy details."},{status:401});
   const body=await request.json() as {mode?:"details"|"title";image?:string;product?:{blueprintTitle?:string;brand?:string;model?:string;description?:string};title?:string;tags?:string[];keywords?:string[];useCommas?:boolean};
   if(!validImage(body.image))return NextResponse.json({error:"Goldie could not read this design safely."},{status:400});
@@ -134,3 +135,5 @@ Select only phrases a shopper looking at THIS artwork would call accurate. If a 
   const attributes=supportedOptional(raw.attributes,contextualText),optional=supportedOptional(raw.optional,contextualText);
   return NextResponse.json({details:{category:clean(raw.category)||"Needs review",attributes,optional,blurb:clean(raw.blurb),confidence:raw.confidence==="high"?"high":"review"} satisfies Details});
 }
+
+export const POST = withErrorLog("listing-intelligence", handlePOST);

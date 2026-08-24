@@ -19,6 +19,8 @@ export default function ListingFactoryError({
         message: error.message || "Listing Factory failed during startup",
         source: error.stack || "",
         digest: error.digest || "",
+        url: typeof location === "undefined" ? "" : location.pathname + location.search,
+        stack: error.stack || "",
       }),
     }).catch(() => undefined);
   }, [error]);

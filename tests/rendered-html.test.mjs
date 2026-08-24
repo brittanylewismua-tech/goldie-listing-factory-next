@@ -507,7 +507,7 @@ test("makes draft retries idempotent so a lost response cannot duplicate a listi
   assert.match(drafts, /prior\?\.status === "succeeded"/);
   assert.match(drafts, /status = 'succeeded'/);
   assert.match(drafts, /still completing this exact draft/);
-  assert.match(drafts, /export async function GET\(request: Request\)/);
+  assert.match(drafts, /async function handleGET\(request: Request\)/);
   const page = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
   assert.match(page, /async function recoverDraft/);
   assert.match(page, /status === "succeeded"/);
@@ -2863,4 +2863,51 @@ test("creating drafts stays on Images, and the final check says what is wrong â€
   assert.match(app, /titles are under 100 characters/, "say what is wrong, not that it needs review");
   assert.doesNotMatch(app, /need another try stay here/,
     "nothing reaches Publish that cannot publish");
+});
+
+test("every failure is recorded against a person, and Brittany is emailed â€” D441", async () => {
+  const [log, client, admin, layout] = await Promise.all([
+    readFile(new URL("../app/error-log.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/client-errors/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/mastermind-admin/admin-control.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
+  ]);
+
+  /* Before this there were three unrelated things: printify_diagnostics, which
+     recorded draft creation properly; /api/client-errors, which console.error'd
+     into logs nobody can query with nobody identified; and everywhere else, which
+     recorded nothing. A customer could fail to publish and leave no trace. */
+  assert.match(log, /CREATE TABLE IF NOT EXISTS error_log/,
+    "created on first write, so it does not depend on a migration being run");
+  for (const column of ["user_email", "user_name", "created_at", "area", "message", "error_code", "http_status", "url", "user_agent", "context"]) {
+    assert.match(log, new RegExp(`\\b${column}\\b`), `the log records ${column}`);
+  }
+
+  // Logging must never become its own outage.
+  assert.match(log, /export async function logError[\s\S]{0,1400}\}\s*catch\s*\{\s*return null;/);
+  assert.match(log, /catch \{ \/\* An alert that cannot send must not turn one failure into two\. \*\/ \}/);
+
+  // Tokens must not be written into a log that gets emailed around.
+  assert.match(log, /export function scrubSecrets/);
+  assert.match(log, /Bearer\\s\+\[\\w\.\\-\]\+/);
+
+  // One email per area per 15 minutes: an inbox nobody can face is no alerting.
+  assert.match(log, /const ALERT_WINDOW_MINUTES = 15/);
+  assert.match(log, /alerted = 1 AND created_at > datetime\('now', \?\)/);
+
+  // Browser crashes now carry identity, read server-side rather than trusted.
+  assert.match(client, /const user = await getChatGPTUser\(\)\.catch\(\(\) => null\)/);
+  assert.match(client, /area: `browser\/\$\{safe\.kind\}`/);
+  assert.match(layout, /url:String\(location\.pathname\+location\.search\)/, "and the page it happened on");
+
+  // And the unpredicted throw is caught by wrapping, not by remembering.
+  assert.match(log, /export function withErrorLog/);
+  for (const route of ["listing-intelligence", "mockups/render", "printify/drafts"]) {
+    const source = await readFile(new URL(`../app/api/${route}/route.ts`, import.meta.url), "utf8");
+    assert.match(source, /withErrorLog\("/, `${route} reports its failures`);
+  }
+
+  // She can read it without asking anyone.
+  assert.match(admin, /Everything that failed/);
+  assert.match(admin, /Not signed in/, "an error before sign-in is still worth seeing");
 });
