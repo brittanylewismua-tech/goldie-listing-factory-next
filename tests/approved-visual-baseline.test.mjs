@@ -512,7 +512,10 @@ test("the setup step has exactly one forward control, and it gates every section
    *
    * RULE: a step may present one forward control, positioned after every
    * section it depends on. */
-  assert.match(page, /\{workflowStep!=="setup"&&<button className="workflow-next" disabled=\{!designsFinished\} onClick=\{continueFromDesigns\}>/,
+  /* D399 · Also requires `complete`: while the drafts do not exist the step's one
+     action is "Continue to create drafts" in the product card, and this button
+     only scrolled down to it. */
+  assert.match(page, /\{workflowStep!=="setup"&&complete&&<button className="workflow-next" disabled=\{!designsFinished\} onClick=\{continueFromDesigns\}>/,
     "The designs-block forward button renders on the setup step again, above Colours and Mockups.");
   // the real gate must keep naming what is missing
   /* D383 · The forward button used to relabel itself with whatever was missing

@@ -7,6 +7,15 @@ const validImage=(value:unknown):value is string=>typeof value==="string"&&/^dat
 const clean=(value:unknown)=>String(value||"").replace(/[<>]/g,"").trim().slice(0,300);
 const normalize=(value:string)=>value.toLocaleLowerCase().replace(/[^a-z0-9]+/g," ").trim();
 const DESIGN_TEXT_STOPWORDS=new Set(["the","and","for","with","this","that","bride","bridal","party","bachelorette","wedding","shirt","tee"]);
+/* D403 - "fits" and "cannot tell" were both reported as true, so the caller could
+   not distinguish a bank that matches from a design with no readable text. A
+   mismatch is now refused outright; only the unverifiable case gets a warning. */
+export function bankFitForDesign(keywords:string[],designText:string[]):"fits"|"mismatch"|"unknown"{
+  const phrases=designText.map(clean).map(normalize).filter(text=>text.length>=4);
+  if(!phrases.length)return "unknown";
+  return bankMatchesDesignText(keywords,designText)?"fits":"mismatch";
+}
+
 function bankMatchesDesignText(keywords:string[],designText:string[]){
   const bank=keywords.map(normalize).filter(Boolean);
   const phrases=designText.map(clean).map(normalize).filter(text=>text.length>=4);
@@ -58,7 +67,18 @@ Avoid duplicate meaning. Do not rewrite, combine, expand, correct, or invent any
     // That fallback silently took the first 13 phrases in bank order (banks are
     // stored alphabetically), so a design the model could not match produced a
     // confident-looking title built from arbitrary phrases. Fail loudly instead.
-    if(!selected.length)return NextResponse.json({error:"Goldie could not find phrases in this bank that match this design. Pick a different keyword bank, or build this title yourself."},{status:422});
+    /* D403 - Two faith designs against a bachelorette bank: one returned nothing
+       and was refused, the other returned everything and was titled from it. The
+       outcome depended entirely on whether the vision model happened to select
+       phrases, because the bank-relevance check ran afterwards and only added a
+       soft warning. Same bank, same kind of design, opposite results.
+
+       The relevance check decides, and it decides before anything is accepted, so
+       a bank that does not describe the design is refused every time rather than
+       once in two. bankMatchesDesignText still returns true when the design has
+       no readable text, which keeps text-free art working. */
+    const bankFit=bankFitForDesign(titleCandidates,designText);
+    if(!selected.length||bankFit==="mismatch")return NextResponse.json({error:"Goldie could not find phrases in this bank that match this design. Pick a different keyword bank, or build this title yourself."},{status:422});
     /* D157: `selected` is de-duplicated for exact matches only, so a bank holding
      * both "girls gone mild" and "bachelorette girls gone mild" put BOTH in the
      * title — one row literally read "Bachelorette Girls Gone Mild, Girls Gone
@@ -85,7 +105,9 @@ Avoid duplicate meaning. Do not rewrite, combine, expand, correct, or invent any
        design" was printed directly beneath a finished title made of nine of its
        phrases. Measured live on a nautical design titled from a Jane Austen bank.
        Say what is actually true: the title exists, and it may not describe the art. */
-    const titleWarning=bankMatchesDesignText(titleCandidates,designText)?"":"This title was built from a bank that may not describe this design. Read it before publishing, or write your own.";return NextResponse.json({title,keywords:included,tags,titleWarning,designText});
+    /* D403 - A verified mismatch is refused above. This warning is now only for the
+       case Goldie cannot check: a design with no readable text. */
+    const titleWarning=bankFit==="unknown"?"Goldie could not read any text in this design, so it could not check the bank against it. Read the title before publishing.":"";return NextResponse.json({title,keywords:included,tags,titleWarning,designText});
   }
   const response=await fetch("https://fal.run/openrouter/router/vision",{method:"POST",headers:{Authorization:`Key ${key}`,"Content-Type":"application/json"},body:JSON.stringify({image_urls:[body.image],model:"google/gemini-2.5-flash",temperature:0,system_prompt:"Return only compact valid JSON. Never use markdown.",prompt:`Pre-fill Etsy listing details for this specific print-on-demand product. Product facts: ${JSON.stringify(body.product||{})}. Final title: ${clean(body.title)}. Selected tags: ${JSON.stringify((body.tags||[]).slice(0,13))}. Choose the closest Etsy category from the physical Printify product facts only. The artwork, design wording, title, and tags must never change the product category, age group, garment type, or department. Two designs placed on the same Printify template must receive the same product category. Include every physical or product attribute you can confidently support from the product name, brand, model, and description. Do not stop at required fields. Use product facts, not the artwork, for material, garment, size, shape, room, orientation, neckline, sleeve, and other physical attributes. Inspect the artwork only for contextual fields. Fill holiday, occasion, recipient, or style only when the design, title, or tags clearly support that exact choice; otherwise leave those optional fields out. Never guess simply to make a field non-empty. Write a natural 1-2 sentence design-specific introduction using at most 2 exact keyword phrases from the title or tags, without keyword stuffing or unsupported claims. Return {"category":"...","attributes":{"Sleeve length":"..."},"optional":{"Holiday":"..."},"blurb":"...","confidence":"high"|"review"}. Use concise Etsy-style field names and values. Attribute names must suit this product type; tote, mug, poster, shirt, and sweatshirt fields differ.`})});
   const payload=await response.json() as {output?:string;detail?:string};if(!response.ok)return NextResponse.json({error:payload.detail||"Goldie could not prepare Etsy details."},{status:502});

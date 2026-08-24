@@ -712,7 +712,7 @@ test("creates unique validated AI titles in bulk with per-listing overrides", as
   assert.match(page,/Customize this listing’s description/);assert.match(page,/The complete description is shown below/);
   assert.match(page,/descriptionOverride/);assert.match(page,/scrollIntoView/);
   assert.match(tools,/keywordListsCache/);assert.match(tools,/selectionOnly/);assert.match(tools,/onSelect/);
-  assert.match(intelligence,/selected_keywords/);assert.match(intelligence,/allowedByLower/);assert.match(intelligence,/PRODUCT TYPE RULE/);assert.match(intelligence,/if\(!selected\.length\).*status:422/);
+  assert.match(intelligence,/selected_keywords/);assert.match(intelligence,/allowedByLower/);assert.match(intelligence,/PRODUCT TYPE RULE/);assert.match(intelligence,/if\(!selected\.length\|\|bankFit==="mismatch"\).*status:422/);
   assert.match(intelligence,/tagCandidates=keywords\.filter/);
   assert.match(intelligence,/tag_keywords/);
   assert.match(intelligence,/requiredTagCount=Math\.min\(13,tagCandidates\.length\)/);
@@ -2061,15 +2061,20 @@ test("keeps a forward path from setup, designs, and pricing after drafts exist (
      "Back to finishing your listings" when drafts already existed; it says
      "Next step" now and still routes to finish. The two remaining are the
      batch-actions links, which are not the forward button. */
+  /* D402 · Was 2, and the setup button used to branch on `complete` to jump
+     straight to finishing. Renaming it "Next step" made that jump wrong - it
+     skipped Images. Next step goes to the next step; the rail is how you jump. */
   assert.equal((app.match(/Back to finishing your listings/g)||[]).length,2);
-  assert.match(app,/complete\?goToStep\("finish",false,true\):goToStep\("designs"\)/,
-    "the destination is unchanged, only the label");
+  assert.match(app,/onClick=\{\(\)=>goToStep\("designs"\)\}/,
+    "the setup step's forward goes to Images, always");
   /* mockupTheme was removed from this gate. Mockups are optional - the Finish
    * step selects listing images separately - and requiring one made "No mockups
    * for this batch" unreachable: choosing it disabled the only way forward.
    * See D110. */
   assert.match(app,/disabled=\{!complete&&\(!selectedColorIds\.length\|\|\(Boolean\(templateDetails\?\.sizeOptions\?\.length\)&&!selectedSizeIds\.length\)\)\}/  /* D164 sizes, D181 per-product keyword banks */);
-  assert.match(app,/complete\?goToStep\("finish",false,true\):goToStep\("designs"\)/);
+  /* D402 · The setup forward no longer branches on `complete`; it always goes to
+     Images. The route back to finishing lives in batch-actions. */
+  assert.match(app,/className="batch-actions"[\s\S]{0,500}Back to finishing your listings/);
   assert.match(app,/files\.length>0&&complete&&workflowStep==="designs"/);
   assert.match(app,/className="batch-actions"[\s\S]{0,500}Back to finishing your listings/);
 });
@@ -2252,16 +2257,22 @@ test("retries thin AI title output once and then rejects the row (fixes D77)",as
   assert.match(app,/change\.title!==undefined&&change\.titleError===undefined/);
 });
 
+  /* D403 · Two faith designs against a bachelorette bank: one was refused, the
+     other was titled from every phrase in it. The outcome depended only on
+     whether the vision model happened to select anything, because the relevance
+     check ran afterwards and merely warned. It decides first now, and a verified
+     mismatch is refused every time. The warning survives for the one case Goldie
+     cannot check: a design with no readable text. */
 test("warns on the exact listing when its bank misses the design text (fixes D76)",async()=>{
   const route=await readFile(new URL("../app/api/listing-intelligence/route.ts",import.meta.url),"utf8");
   const app=await readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8");
   assert.match(route,/design_text/);
-  assert.match(route,/bankMatchesDesignText\(titleCandidates,designText\)/);
+  assert.match(route,/bankFitForDesign\(titleCandidates,designText\)/);
   /* D230 · Same rule, corrected wording. This warning fires when the bank does
      not match the ARTWORK, but a title has already been built from that bank —
      so the old text printed "No phrase in this bank matches this design"
      directly beneath a finished title made from nine of its phrases. */
-  assert.match(route,/This title was built from a bank that may not describe this design\./);
+  assert.match(route,/Goldie could not read any text in this design, so it could not check the bank against it\./);
   assert.match(app,/className="title-match-warning" role="status"/);
   assert.match(app,/titleWarning:item\.result\.titleWarning/);
 });
@@ -2412,7 +2423,7 @@ test("D230: a warning never contradicts the title sitting above it", async () =>
    * 120-character title built from nine phrases of that bank. The warning is
    * about the ARTWORK, not the phrases, and it read as a flat contradiction. */
   assert.doesNotMatch(api, /No phrase in this bank matches this design/);
-  assert.match(api, /This title was built from a bank that may not describe this design\./);
+  assert.match(api, /Goldie could not read any text in this design, so it could not check the bank against it\./);
 
   /* And the count message must agree with itself: "1 titles created" was live. */
   assert.match(app, /\$\{files\.length-failed===1\?"title":"titles"\} created/);

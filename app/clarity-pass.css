@@ -2556,3 +2556,10 @@ body{min-width:1180px!important}
 }
 .app-shell .prepare-etsy:hover:not(:disabled){background:#fff}
 .app-shell .prepare-etsy:disabled{opacity:.5;cursor:not-allowed}
+
+/* D401 · The listing preview was 152px when this workspace was built (2ac5d64).
+   Two later commits overrode it to 56px with !important - at that size the
+   design is unreadable, so you cannot tell which listing you are editing.
+   Restored to the size it was. */
+.app-shell .listing-editor .design-line{grid-template-columns:152px minmax(0,1fr)!important}
+.app-shell .listing-editor .listing-preview-button{width:152px!important;height:152px!important;min-height:152px!important}
