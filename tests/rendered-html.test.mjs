@@ -3058,3 +3058,33 @@ test("staged listing photos keep their names — D449", async () => {
   }
   assert.match(route, /name:object\.customMetadata\?\.name\|\|object\.key\.split\("\/"\)\.pop\(\)/);
 });
+
+test("a keyword bank rejects what cannot be a keyword — D450", async () => {
+  const { phrasesFromErank } = await import("../app/seo-utils.ts");
+
+  /* Both found by pasting one realistic, messy list into the real form. */
+  const pasted = [
+    "sailboat shirt",
+    "  Nautical Shirt  ",
+    "sailboat shirt",
+    "",
+    "coastal christian tee,",
+    "SAILBOAT SHIRT",
+    "a phrase that is far too long to be a sensible etsy tag because it just keeps going well past any reasonable limit",
+  ].join("\n");
+
+  assert.deepEqual(phrasesFromErank(pasted), ["sailboat shirt", "Nautical Shirt", "coastal christian tee"]);
+
+  /* The same phrase in different case is the same Etsy tag. Keeping both spends
+     two of thirteen tag slots on one keyword and lets the ranker count it twice.
+     The first spelling wins, because that is the one she typed. */
+  assert.deepEqual(phrasesFromErank("Sailboat Shirt\nsailboat shirt"), ["Sailboat Shirt"]);
+
+  // A phrase longer than a title can hold is not a keyword; a real one is kept.
+  assert.deepEqual(phrasesFromErank("bikinis and martinis bachelorette"), ["bikinis and martinis bachelorette"]);
+  assert.deepEqual(phrasesFromErank("x".repeat(61)), []);
+  assert.deepEqual(phrasesFromErank("x".repeat(60)), ["x".repeat(60)]);
+
+  // Still strips trailing separators and blank lines, as before.
+  assert.deepEqual(phrasesFromErank("one,\n\n  two  \n"), ["one", "two"]);
+});

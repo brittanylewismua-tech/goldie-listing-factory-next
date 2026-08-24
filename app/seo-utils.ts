@@ -22,7 +22,30 @@ export function phrasesFromErank(raw: string) {
   if (headerIndex >= 0) values = rows.slice(1).map((row) => row[headerIndex] || "");
   else if (rows.length > 1 && rows.filter((row) => row.length > 1 && row.slice(1).some((cell) => /^[$%\d,.]+$/.test(cell))).length >= Math.ceil(rows.length / 2)) values = rows.map((row) => row[0]);
   else values = rows.flat();
-  return [...new Set(values.map((value) => value.trim()).filter((value) => value && !HEADER.test(value) && !/^[$%\d,.]+$/.test(value)))];
+  /* D450 · Two things a real paste puts in here, both found by pasting one.
+   *
+   * The same phrase in different case is the same Etsy tag. A case-sensitive Set
+   * kept "sailboat shirt" and "SAILBOAT SHIRT" as two phrases, which spends two
+   * of thirteen tag slots on one keyword and lets the ranker count it twice. The
+   * first spelling wins, because that is the one she typed.
+   *
+   * And a phrase longer than a title can hold is not a keyword. An Etsy title is
+   * 140 characters; her longest real phrase is 33. A 113-character line pasted by
+   * accident used to be stored and could be selected, taking most of the title on
+   * its own. */
+  const MAX_PHRASE = 60;
+  const seen = new Set<string>();
+  const phrases: string[] = [];
+  for (const value of values) {
+    const phrase = value.trim();
+    if (!phrase || HEADER.test(phrase) || /^[$%\d,.]+$/.test(phrase)) continue;
+    if (phrase.length > MAX_PHRASE) continue;
+    const key = phrase.toLocaleLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    phrases.push(phrase);
+  }
+  return phrases;
 }
 
 export function tagsFromTitle(title: string) {
