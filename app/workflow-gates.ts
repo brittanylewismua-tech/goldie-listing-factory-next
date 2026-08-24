@@ -85,7 +85,7 @@ export function resumeStep(s: GateState): WorkflowStep {
 
 /** Detailed readiness used by every numbered rail control and forward action. */
 export type NavigationGateState={
-  connected:boolean;etsyConnected:boolean;productSelected:boolean;templateReady:boolean;shippingReady:boolean;variantsReady:boolean;colorsReady:boolean;pricesReady:boolean;designCount:number;designsReady:boolean;etsyShippingProfileReady:boolean;pricingApproved:boolean;draftsComplete:boolean;createdDraftCount:number;titlesReady:boolean;tagsReady:boolean;descriptionReady:boolean;etsyDetailsReady:boolean;personalizationReady:boolean;imagesReady:boolean;
+  connected:boolean;etsyConnected:boolean;productSelected:boolean;templateReady:boolean;shippingReady:boolean;variantsReady:boolean;bundleProductsReady:boolean;colorsReady:boolean;pricesReady:boolean;designCount:number;designsReady:boolean;etsyShippingProfileReady:boolean;pricingApproved:boolean;draftsComplete:boolean;createdDraftCount:number;titlesReady:boolean;tagsReady:boolean;descriptionReady:boolean;etsyDetailsReady:boolean;personalizationReady:boolean;imagesReady:boolean;
 };
 
 export function navigationIssues(index:number,state:NavigationGateState){
@@ -96,6 +96,11 @@ export function navigationIssues(index:number,state:NavigationGateState){
   if(index>=2&&!state.templateReady)issues.push("Reconnect the saved Printify product.");
   if(index>=2&&!state.shippingReady)issues.push("Import a valid Printify shipping profile.");
   if(index>=2&&!state.variantsReady)issues.push("Enable at least one product variant.");
+  /* D455 - a bundle is several products, and every one of them has to be
+     finished before the batch can move on. The individual checks around this
+     one all read the product currently open, which for a bundle is whichever
+     card happens to be selected. */
+  if(index>=2&&!state.bundleProductsReady)issues.push("Finish every product in this bundle.");
   if(index>=2&&!state.colorsReady)issues.push("Choose at least one available product color.");
   if(index>=3&&!state.pricesReady)issues.push("The selected colors need available prices.");
   if(index>=3&&!state.designCount)issues.push("Add at least one finished design.");

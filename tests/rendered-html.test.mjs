@@ -2192,8 +2192,8 @@ test("rejects over-capacity uploads before creating a batch record (fixes D54)",
 
 test("traverses every workflow phase with one shared gate and never enables an inert control (fixes D73)",async()=>{
   const blank={connected:false,etsyConnected:false,productSelected:false,templateReady:false,shippingReady:false,variantsReady:false,colorsReady:false,pricesReady:false,designCount:0,designsReady:false,etsyShippingProfileReady:false,pricingApproved:false,draftsComplete:false,createdDraftCount:0,titlesReady:false,tagsReady:false,descriptionReady:false,etsyDetailsReady:false,personalizationReady:false,imagesReady:false};
-  const designs={...blank,connected:true,etsyConnected:true,productSelected:true,templateReady:true,shippingReady:true,variantsReady:true,colorsReady:true,pricesReady:true,designCount:3,designsReady:true};
-  const drafts={...designs,etsyShippingProfileReady:true,pricingApproved:true,draftsComplete:true,createdDraftCount:3,titlesReady:true,tagsReady:true,descriptionReady:true};
+  const designs={...blank,connected:true,etsyConnected:true,productSelected:true,templateReady:true,shippingReady:true,variantsReady:true,bundleProductsReady:true,colorsReady:true,pricesReady:true,designCount:3,designsReady:true};
+  const drafts={...designs,etsyShippingProfileReady:true,bundleProductsReady:true,pricingApproved:true,draftsComplete:true,createdDraftCount:3,titlesReady:true,tagsReady:true,descriptionReady:true};
   const complete={...drafts,etsyDetailsReady:true,personalizationReady:true,imagesReady:true};
   assert.deepEqual(navigationIssues(0,blank),[]);
   for(const index of [0,1,2,3])assert.deepEqual(navigationIssues(index,designs),[]);
@@ -2950,8 +2950,8 @@ test("leaving Images needs photos, not titles — D444", async () => {
      it became a deadlock. */
   const ready = {
     connected: true, etsyConnected: true, productSelected: true, templateReady: true,
-    shippingReady: true, variantsReady: true, colorsReady: true, sizesReady: true,
-    pricesReady: true, designCount: 1, designsReady: true, etsyShippingProfileReady: true,
+    shippingReady: true, variantsReady: true, bundleProductsReady: true, colorsReady: true, sizesReady: true,
+    pricesReady: true, designCount: 1, designsReady: true, etsyShippingProfileReady: true, bundleProductsReady: true,
     pricingApproved: true, draftsComplete: true, createdDraftCount: 1,
     titlesReady: false, tagsReady: false, descriptionReady: false,
     etsyDetailsReady: false, personalizationReady: false, imagesReady: true,
@@ -3187,4 +3187,32 @@ test("a curved product wraps the print instead of pasting it flat — D454", asy
 
   // A flat surface is untouched, so a tee renders exactly as before.
   assert.match(integrated, /if\(!angle\)return \(u:number\)=>u;/);
+});
+
+test("every product in a bundle must be finished, not the open one — D455", async () => {
+  const { navigationIssues } = await import("../app/workflow-gates.ts");
+  const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+
+  /* D451 fixed the shipping profile and the pricing approval by hand. The checks
+     sitting either side of them - colours, sizes, variants, prices - had exactly
+     the same blind spot: they read whichever product is currently open, which in
+     a bundle is whichever card is selected. Rather than patch each one, the gate
+     asks the bundle cards' own readiness, so what the interface shows and what
+     the gate enforces cannot disagree. */
+  const ready = {
+    connected: true, etsyConnected: true, productSelected: true, templateReady: true,
+    shippingReady: true, variantsReady: true, bundleProductsReady: true, colorsReady: true,
+    sizesReady: true, pricesReady: true, designCount: 1, designsReady: true,
+    etsyShippingProfileReady: true, pricingApproved: true, draftsComplete: true,
+    createdDraftCount: 1, titlesReady: true, tagsReady: true, descriptionReady: true,
+    etsyDetailsReady: true, personalizationReady: true, imagesReady: true,
+  };
+  assert.deepEqual(navigationIssues(2, ready), []);
+  assert.deepEqual(navigationIssues(2, { ...ready, bundleProductsReady: false }),
+    ["Finish every product in this bundle."]);
+
+  // A single product is unaffected: with no bundle active this is always true.
+  assert.match(app, /if\(!activeBundle\)return true;/);
+  // And it is the same readiness the cards display, not a second opinion.
+  assert.match(app, /return readinessFor\(product,recipe,isActive\?pricingApproved:Boolean\(bundleApproved\[recipe\.id\]\)\)\.established/);
 });
