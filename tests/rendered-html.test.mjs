@@ -3256,6 +3256,13 @@ test("a product saves its own defaults, and the shipping notice tells the truth 
   assert.match(app, /\.\.\.\(etsyShippingProfileId\?\{etsyShippingProfileId\}:\{\}\)/,
     "including the shipping profile that was the thing blocking her");
 
+  /* D460 · A mug has no colours to choose. Requiring a colour selection before
+     saving meant a product with no colour options could never finish setting
+     itself up - the same wall, one product type along. Readiness already treats
+     "no colour choices" as settled; this now matches it. */
+  assert.match(app, /const coloursSettled=!templateDetails\.colorOptions\?\.length\|\|selectedColorIds\.length>0/);
+  assert.match(app, /if\(!coloursSettled\)return;/);
+
   /* D458 · The notice claimed a saved profile had been deleted from her shop, on
      a product she had just created that never had one, and told her to choose
      another "below" while sitting below the picker. */

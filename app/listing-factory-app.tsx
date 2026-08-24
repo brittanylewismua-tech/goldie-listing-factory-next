@@ -1415,7 +1415,13 @@ export default function ListingFactoryApp() {
   });
   const savedDefaultsRef=useRef("");
   useEffect(()=>{
-    if(!activeRecipe||!templateDetails||!selectedColorIds.length)return;
+    /* D460 - a mug has no colours to choose. Gating this on a colour selection
+       meant a product with no colour options could never finish setting itself
+       up, which is the same wall in a new place. The rule matches the gate:
+       colours are only required when the product actually offers them. */
+    if(!activeRecipe||!templateDetails)return;
+    const coloursSettled=!templateDetails.colorOptions?.length||selectedColorIds.length>0;
+    if(!coloursSettled)return;
     if(savedDefaultsRef.current===defaultsSignature)return;
     savedDefaultsRef.current=defaultsSignature;
     const timer=window.setTimeout(()=>{
