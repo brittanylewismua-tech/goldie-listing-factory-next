@@ -16,9 +16,10 @@ const src = (await readFile(new URL("app/product-photo.ts", root), "utf8"))
   .replace(/: \[number, number, number\]/g, "")
   .replace(/ as \[number, number, number\]/g, "")
   .replace(/: number(?=[,)= ])/g, "")
+  .replace(/\): boolean \{/g, ") {")
   .replace(/size = PHOTO_SAMPLE_SIZE/g, "size = PHOTO_SAMPLE_SIZE");
-const { photoStats, backdropReference, PHOTO_SAMPLE_SIZE } = await import(
-  `data:text/javascript,${encodeURIComponent(`${src}\nexport { photoStats, backdropReference, PHOTO_SAMPLE_SIZE };`)}`
+const { photoStats, backdropReference, photoReadsAsGarment, PHOTO_SAMPLE_SIZE } = await import(
+  `data:text/javascript,${encodeURIComponent(`${src}\nexport { photoStats, backdropReference, photoReadsAsGarment, PHOTO_SAMPLE_SIZE };`)}`
 );
 
 const SIZE = PHOTO_SAMPLE_SIZE;
@@ -196,4 +197,32 @@ test("the skin penalty never rejects a whole set — D349", () => {
   const more = photoStats(modelFrame(size * 0.16), size).score;
   assert.ok(Number.isFinite(less) && Number.isFinite(more));
   assert.ok(less > more, "between two model shots, the one showing less skin still wins");
+});
+
+/* D370 · A photo only earns the product tile when it actually shows the
+   garment. Both rejections below are measured from her live products, not
+   invented: the hoodie has no flat lay in the Printify catalog at all, and the
+   white tee's flat lay is white-on-white. */
+test("D370: a model shot is not a usable product thumbnail", () => {
+  assert.equal(photoReadsAsGarment({ backdrop: 77, edge: 7, skin: 4, score: -68 }), false);
+  assert.equal(photoReadsAsGarment({ backdrop: 57, edge: 16, skin: 9, score: -120 }), false);
+});
+
+test("D370: a white garment lost in a white sweep is not a usable thumbnail", () => {
+  assert.equal(photoReadsAsGarment({ backdrop: 94, edge: 0, skin: 0, score: 94 }), false);
+});
+
+test("D370: a real flat lay still wins the tile", () => {
+  assert.equal(photoReadsAsGarment({ backdrop: 61, edge: 0, skin: 0, score: 61 }), true);
+});
+
+test("D370: a frame the scorer rejected outright never reaches the tile", () => {
+  assert.equal(photoReadsAsGarment({ backdrop: 100, edge: 0, skin: 0, score: -Infinity }), false);
+});
+
+/* The stripper above is a hand-maintained list, so a new annotation form in the
+   source silently breaks this whole file. Prove the real function loaded. */
+test("D370: the module under test actually parsed", () => {
+  assert.equal(typeof photoReadsAsGarment, "function");
+  assert.equal(typeof photoStats, "function");
 });

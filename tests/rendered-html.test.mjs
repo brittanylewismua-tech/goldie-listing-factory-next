@@ -2059,6 +2059,9 @@ test("keeps a forward path from setup, designs, and pricing after drafts exist (
   assert.match(app,/className="batch-actions"[\s\S]{0,500}Back to finishing your listings/);
 });
 
+/* D369 · These moved from descendant to child selectors. `order` only applies
+   to direct children, so the descendant form ordered nothing and leaked onto
+   nested elements instead — see stylesheet-liveness.test.mjs. */
 test("orders designs before colours, mockups, and saved settings on the batch screen (fixes D2)",async()=>{
   const [app,css]=await Promise.all([readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8"),readFile(new URL("../app/approved-functional.css",import.meta.url),"utf8")]);
   assert.match(app,/BatchPreferencesPortal/);
@@ -2066,9 +2069,9 @@ test("orders designs before colours, mockups, and saved settings on the batch sc
   assert.match(app,/useEffect\(\(\)=>setTarget\(document\.getElementById\("batch-preferences-after-designs"\)\)\);/);
   assert.match(css,/\.steps-column\.setup-column>\.designs-step\{order:20\}/);
   assert.match(css,/\.steps-column\.setup-column>\.batch-preferences-after-designs\{order:30/);
-  assert.match(css,/\.steps-column\.setup-column \.color-default-block\{order:30/);
-  assert.match(css,/\.steps-column\.setup-column \.mockup-default-block\{order:40/);
-  assert.match(css,/\.steps-column\.setup-column \.everything-else\{order:50/);
+  assert.match(css,/\.steps-column\.setup-column>\.color-default-block\{order:30/);
+  assert.match(css,/\.steps-column\.setup-column>\.mockup-default-block\{order:40/);
+  assert.match(css,/\.steps-column\.setup-column>\.everything-else\{order:50/);
 });
 
 test("keeps product creation visible and lets a selected product be changed (fixes D4 and D5)",async()=>{

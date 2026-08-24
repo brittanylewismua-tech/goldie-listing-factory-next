@@ -22,7 +22,28 @@ import FinalListingReview from "./final-listing-review";
 import ContextHelp from "./context-help";
 import GoldieWordmark from "./goldie-wordmark";
 import { productFamily } from "./product-type-utils";
-import { photoStats, PHOTO_SAMPLE_SIZE } from "./product-photo";
+import { photoStats, photoReadsAsGarment, PHOTO_SAMPLE_SIZE } from "./product-photo";
+
+/* D370 · The garment glyph a card falls back to when no catalog photo reads as
+   the product. Shape follows the blueprint title so a hoodie does not draw as a
+   tee — the point of the tile is to say which garment this row is. */
+function ProductGlyph({title}:{title?:string}){
+  const name=String(title||"").toLowerCase();
+  const hooded=/hood/.test(name);
+  const longSleeve=hooded||/sweat|crew|fleece|long sleeve|longsleeve/.test(name);
+  const body=longSleeve
+    ?"M8.6 3 L3.6 5.9 5.7 15.6 8.4 14.5 V21 H15.6 V14.5 L18.3 15.6 20.4 5.9 15.4 3 C14.6 4.8 9.4 4.8 8.6 3 Z"
+    :"M8.6 3 L4 5.9 6.1 11 8.4 9.7 V21 H15.6 V9.7 L17.9 11 20 5.9 15.4 3 C14.6 4.8 9.4 4.8 8.6 3 Z";
+  return (
+    <span className="bundle-product-photo placeholder" aria-hidden="true">
+      <svg viewBox="0 0 24 24" focusable="false">
+        <path d={body} />
+        {hooded && <path className="glyph-line" d="M9.2 3.4 C10.2 6.8 13.8 6.8 14.8 3.4" />}
+        {hooded && <path className="glyph-line" d="M9.7 16.2 H14.3" />}
+      </svg>
+    </span>
+  );
+}
 import { NavIcon } from "./nav-icons";
 import { publishedThisPeriod, type ListingGoal, type PublishedBatch } from "./listing-goal";
 
@@ -715,7 +736,9 @@ export default function ListingFactoryApp() {
     const candidates=(product.previewImages||[]).filter(Boolean);
     if(candidates.length<2)return product.previewImage||candidates[0]||"";
     const key=String(product.id);
-    if(bestPhoto[key])return bestPhoto[key];
+    /* Once scored the answer is final, including the deliberate "" that means
+       "no usable photo, draw the glyph". Check presence, not truthiness. */
+    if(key in bestPhoto)return bestPhoto[key];
     if(!photoProbe.current.has(key)){
       photoProbe.current.add(key);
       void (async()=>{
@@ -725,27 +748,34 @@ export default function ListingFactoryApp() {
            and ranked the only usable flat lay last. All six are sampled now,
            not four: the winning tee shot was candidate #2 but the hoodie's was
            #4, so a slice(0,4) would have missed it. */
-        let winner=candidates[0],bestScore=-Infinity;
+        let winner=candidates[0],bestScore=-Infinity,bestStats:ReturnType<typeof photoStats>|null=null;
         for(const src of candidates.slice(0,6)){
-          const score=await new Promise<number>(resolve=>{
+          const measured=await new Promise<ReturnType<typeof photoStats>|null>(resolve=>{
             const image=document.createElement("img"); image.crossOrigin="anonymous";
             image.onload=()=>{try{
               const size=PHOTO_SAMPLE_SIZE;
               const canvas=document.createElement("canvas"); canvas.width=size; canvas.height=size;
               const ctx=canvas.getContext("2d",{willReadFrequently:true});
-              if(!ctx)return resolve(-Infinity);
+              if(!ctx)return resolve(null);
               ctx.drawImage(image,0,0,size,size);
-              resolve(photoStats(ctx.getImageData(0,0,size,size).data,size).score);
-            }catch{resolve(-Infinity)}};
-            image.onerror=()=>resolve(-Infinity);
+              resolve(photoStats(ctx.getImageData(0,0,size,size).data,size));
+            }catch{resolve(null)}};
+            image.onerror=()=>resolve(null);
             image.src=src;
           });
-          if(score>bestScore){bestScore=score;winner=src}
+          const score=measured?measured.score:-Infinity;
+          if(score>bestScore){bestScore=score;winner=src;bestStats=measured}
         }
-        setBestPhoto(current=>({...current,[key]:winner}));
+        /* D370 · A photo only earns the tile if it actually shows the garment.
+           Her hoodie has no flat lay in the catalog at all and her white tee's
+           flat lay is white-on-white, so both were rendering as junk — a
+           stranger's face and an empty square. "" means draw the glyph. */
+        setBestPhoto(current=>({...current,[key]:bestStats&&photoReadsAsGarment(bestStats)?winner:""}));
       })();
     }
-    return product.previewImage||candidates[0]||"";
+    /* Nothing until the score lands: a glyph that becomes a photo is calmer
+       than a model shot that vanishes. */
+    return "";
   }
   const [keywordBanks,setKeywordBanks]=useState<Array<{id:string;name:string}>>([]);
   const [mockupLibrary,setMockupLibrary]=useState<Array<{theme:string;surfaceKind:string}>>([]);
@@ -1775,7 +1805,7 @@ export default function ListingFactoryApp() {
               onApprovalChange={value=>{if(isActive)setPricingApproved(value);else setBundleApproved(current=>({...current,[recipe.id]:value}))}}
             />;
           };
-          const panelFor=(open:string)=><>{open==="profit"&&pricingPanelFor("prices")}{open==="shipping"&&pricingPanelFor("shipping")}{open==="colors"&&<ProductColorSelector product={product} selected={shownColors} onChange={ids=>{if(isActive){setSelectedColorIds(ids);setPricingApproved(false)}else setBundleColorChoices(current=>({...current,[recipe.id]:ids}));if(ids.length)void establish(recipe,{defaultColorIds:ids})}} onRemember={()=>void saveProductDefaults({defaultColorIds:shownColors},`colors:${recipe.id}`)} remembering={savingProductDefault===`colors:${recipe.id}`} remembered={sameIdSet(shownColors,recipe.defaultColorIds)} inCard/>}{open==="sizes"&&<ProductSizeSelector product={product} selected={shownSizes} onChange={ids=>{if(isActive){setSelectedSizeIds(ids);setPricingApproved(false)}else setBundleSizeChoices(current=>({...current,[recipe.id]:ids}));if(ids.length)void establish(recipe,{defaultSizeIds:ids})}} onRemember={()=>void saveProductDefaults({defaultSizeIds:shownSizes},`sizes:${recipe.id}`)} remembering={savingProductDefault===`sizes:${recipe.id}`} remembered={sameIdSet(shownSizes,recipe.defaultSizeIds)} inCard/>}</>;const colorFacet=ready.facets.find(facet=>facet.name==="colors");const sizeFacet=ready.facets.find(facet=>facet.name==="sizes");const shownColors=(isActive?selectedColorIds:bundleColorChoices[recipe.id])||recipe.defaultColorIds||colorFacet?.suggested?.colorIds||[];const shownSizes=(isActive?selectedSizeIds:bundleSizeChoices[recipe.id])||recipe.defaultSizeIds||sizeFacet?.suggested?.sizeIds||[];return <article className={`batch-product-card ${ready.established?"is-ready":"needs-setup"} ${bundleSelected?"in-batch":""}`} key={recipe.id}><header>{pickProductPhoto(product)?<img className="bundle-product-photo" src={pickProductPhoto(product)} alt="" loading="lazy" decoding="async"/>:<span className="bundle-product-photo placeholder" aria-hidden="true"/>}<span className="bundle-product-id">{bundleSelected&&<em className="batch-product-position">Product {index+1} of {bundleRecipes.length}</em>}<b>{recipe.name}</b><small>{product.blueprintTitle}</small></span>{/* D347 · This read "1 to set", which names a count without naming what it
+          const panelFor=(open:string)=><>{open==="profit"&&pricingPanelFor("prices")}{open==="shipping"&&pricingPanelFor("shipping")}{open==="colors"&&<ProductColorSelector product={product} selected={shownColors} onChange={ids=>{if(isActive){setSelectedColorIds(ids);setPricingApproved(false)}else setBundleColorChoices(current=>({...current,[recipe.id]:ids}));if(ids.length)void establish(recipe,{defaultColorIds:ids})}} onRemember={()=>void saveProductDefaults({defaultColorIds:shownColors},`colors:${recipe.id}`)} remembering={savingProductDefault===`colors:${recipe.id}`} remembered={sameIdSet(shownColors,recipe.defaultColorIds)} inCard/>}{open==="sizes"&&<ProductSizeSelector product={product} selected={shownSizes} onChange={ids=>{if(isActive){setSelectedSizeIds(ids);setPricingApproved(false)}else setBundleSizeChoices(current=>({...current,[recipe.id]:ids}));if(ids.length)void establish(recipe,{defaultSizeIds:ids})}} onRemember={()=>void saveProductDefaults({defaultSizeIds:shownSizes},`sizes:${recipe.id}`)} remembering={savingProductDefault===`sizes:${recipe.id}`} remembered={sameIdSet(shownSizes,recipe.defaultSizeIds)} inCard/>}</>;const colorFacet=ready.facets.find(facet=>facet.name==="colors");const sizeFacet=ready.facets.find(facet=>facet.name==="sizes");const shownColors=(isActive?selectedColorIds:bundleColorChoices[recipe.id])||recipe.defaultColorIds||colorFacet?.suggested?.colorIds||[];const shownSizes=(isActive?selectedSizeIds:bundleSizeChoices[recipe.id])||recipe.defaultSizeIds||sizeFacet?.suggested?.sizeIds||[];return <article className={`batch-product-card ${ready.established?"is-ready":"needs-setup"} ${bundleSelected?"in-batch":""}`} key={recipe.id}><header>{pickProductPhoto(product)?<img className="bundle-product-photo" src={pickProductPhoto(product)} alt="" loading="lazy" decoding="async"/>:<ProductGlyph title={product.blueprintTitle}/>}<span className="bundle-product-id">{bundleSelected&&<em className="batch-product-position">Product {index+1} of {bundleRecipes.length}</em>}<b>{recipe.name}</b><small>{product.blueprintTitle}</small></span>{/* D347 · This read "1 to set", which names a count without naming what it
             counts. The card already marks the exact rows that need attention; the
             header only has to say that something in here does. */}
             <span className={`batch-product-state ${ready.established?"":"attention"}`} title={ready.established?"Ready":`${ready.questions.length} ${ready.questions.length===1?"setting needs":"settings need"} your attention`} aria-label={ready.established?"Ready":`${ready.questions.length} ${ready.questions.length===1?"setting needs":"settings need"} your attention`}>{ready.established?"Ready":<em aria-hidden="true">!</em>}</span></header><div className="batch-product-rows">{/* D338 · These rows used to be sorted so anything unset floated to the top,

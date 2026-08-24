@@ -101,7 +101,7 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
     align-items:center!important;
     gap:20px!important;
   }
-  .app-shell .workflow-footer-actions .workflow-back{
+  .app-shell .workflow-footer-actions>.workflow-back{
     grid-column:1!important;
     justify-self:start!important;
     min-width:150px!important;
@@ -629,7 +629,7 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
   @keyframes approved-ring-counter{to{transform:rotate(-360deg)}}
   .connect-step .token-help summary{min-height:52px;padding:15px 17px;color:var(--ink);font-size:14.5px;font-weight:650}
   .connect-step .token-help summary span{font-size:10px;color:rgba(74,42,62,.62)}
-  .workflow-footer-actions{position:relative;order:9;display:flex;align-items:center;justify-content:flex-start;gap:18px;width:100%;min-height:50px;margin-top:18px}.workflow-footer-actions .workflow-back{order:initial;margin:0;min-width:150px;justify-content:center;border:0!important;background:linear-gradient(145deg,#5b304f,#45263c)!important;color:#fff!important;box-shadow:0 14px 28px -20px rgba(74,42,62,.75)!important}.autosave-note{position:absolute;left:50%;display:inline-flex;align-items:center;gap:6px;margin:0;color:rgba(74,42,62,.64);font-size:10.5px;font-weight:420;letter-spacing:.01em;transform:translateX(-50%)}.autosave-note i{display:grid;place-items:center;width:17px;height:17px;border-radius:50%;background:rgba(255,255,255,.42);color:#8a5f81;font-size:9px;font-style:normal;font-weight:800}
+  .workflow-footer-actions{position:relative;order:9;display:flex;align-items:center;justify-content:flex-start;gap:18px;width:100%;min-height:50px;margin-top:18px}.workflow-footer-actions>.workflow-back{order:initial;margin:0;min-width:150px;justify-content:center;border:0!important;background:linear-gradient(145deg,#5b304f,#45263c)!important;color:#fff!important;box-shadow:0 14px 28px -20px rgba(74,42,62,.75)!important}.autosave-note{position:absolute;left:50%;display:inline-flex;align-items:center;gap:6px;margin:0;color:rgba(74,42,62,.64);font-size:10.5px;font-weight:420;letter-spacing:.01em;transform:translateX(-50%)}.autosave-note i{display:grid;place-items:center;width:17px;height:17px;border-radius:50%;background:rgba(255,255,255,.42);color:#8a5f81;font-size:9px;font-style:normal;font-weight:800}
   .account-link{position:static;align-self:flex-start;margin-top:4px;padding-inline:15px;color:rgba(74,42,62,.58);font-size:10px}
 }
 
@@ -1070,7 +1070,7 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .app-shell .launch-panel .launch-note{position:static!important;display:block!important;margin:18px auto 0!important;padding:0 18px!important;max-width:720px!important;text-align:center!important}
 @media(min-width:821px){
   .app-shell .workflow-stage>.workflow-footer-actions{position:relative!important;width:min(720px,100%)!important;min-height:64px!important;margin:28px auto 0!important;display:grid!important;grid-template-columns:1fr auto 1fr!important;align-items:center!important;gap:24px!important}
-  .app-shell .workflow-footer-actions .workflow-back{position:static!important;grid-column:1!important;justify-self:start!important;min-width:150px!important;margin:0!important;transform:none!important}
+  .app-shell .workflow-footer-actions>.workflow-back{position:static!important;grid-column:1!important;justify-self:start!important;min-width:150px!important;margin:0!important;transform:none!important}
   .app-shell .workflow-footer-actions .autosave-note{position:static!important;grid-column:2!important;justify-self:center!important;margin:0!important;transform:none!important;white-space:nowrap!important}
 }
 
@@ -1169,20 +1169,34 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .app-shell .steps-column.setup-column{display:flex!important;flex-direction:column!important}
 .app-shell .steps-column.setup-column>.product-step,
 .app-shell .steps-column.setup-column .saved-product-batch-page{display:contents!important}
-.app-shell .steps-column.setup-column .recipe-card{order:10}
-.app-shell .steps-column.setup-column .template-proof,
-.app-shell .steps-column.setup-column .recipe-error{order:11;width:min(980px,calc(100% - 32px));margin-inline:auto}
+.app-shell .steps-column.setup-column>.recipe-card{order:10}
+.app-shell .steps-column.setup-column>.template-proof,
+.app-shell .steps-column.setup-column>.selected-summary-block,
+.app-shell .steps-column.setup-column>.recipe-error{order:11;width:min(980px,calc(100% - 32px));margin-inline:auto}
+/* D369 · The order values above only mean anything for direct children of the
+   column. .template-proof now lives three levels deep inside the recipe card,
+   so the old descendant selector was still stamping order:11 on it and pushing
+   the swap link (order:0) above the card it belongs to. Order the wrapper's own
+   children here and clear the inherited sizing. */
+.app-shell .selected-summary-block{display:grid;width:min(980px,calc(100% - 32px));margin-inline:auto}
+.app-shell .selected-summary-block>.template-proof{order:0;width:auto;margin-inline:0}
+.app-shell .selected-summary-block>.change-bundle-link{order:1}
 .app-shell .steps-column.setup-column>.designs-step{order:20}
 .app-shell .steps-column.setup-column>.batch-preferences-after-designs{order:30;display:grid;gap:14px;width:100%}
-.app-shell .steps-column.setup-column .batch-page-intro{order:25;width:min(980px,calc(100% - 32px));margin:8px auto 0}
-.app-shell .steps-column.setup-column .color-default-block{order:30;width:min(980px,calc(100% - 32px));margin-inline:auto}
-.app-shell .steps-column.setup-column .bundle-color-selectors{order:31}
-.app-shell .steps-column.setup-column .mockup-default-block{order:40;width:min(980px,calc(100% - 32px));margin-inline:auto}
-.app-shell .steps-column.setup-column .fee-profile-product-summary{order:45;width:min(980px,calc(100% - 32px));margin-inline:auto}
-.app-shell .steps-column.setup-column .everything-else{order:50;width:min(980px,calc(100% - 32px));margin-inline:auto}
-.app-shell .steps-column.setup-column .saved-settings-summary{order:51}
-.app-shell .steps-column.setup-column .keyword-bank-required{order:52}
-.app-shell .steps-column.setup-column .setup-forward{order:53}
+.app-shell .steps-column.setup-column .batch-page-intro{width:min(980px,calc(100% - 32px));margin:8px auto 0}
+.app-shell .steps-column.setup-column>.batch-page-intro{order:25}
+.app-shell .steps-column.setup-column .color-default-block{width:min(980px,calc(100% - 32px));margin-inline:auto}
+.app-shell .steps-column.setup-column>.color-default-block{order:30}
+.app-shell .steps-column.setup-column>.bundle-color-selectors{order:31}
+.app-shell .steps-column.setup-column .mockup-default-block{width:min(980px,calc(100% - 32px));margin-inline:auto}
+.app-shell .steps-column.setup-column>.mockup-default-block{order:40}
+.app-shell .steps-column.setup-column .fee-profile-product-summary{width:min(980px,calc(100% - 32px));margin-inline:auto}
+.app-shell .steps-column.setup-column>.fee-profile-product-summary{order:45}
+.app-shell .steps-column.setup-column .everything-else{width:min(980px,calc(100% - 32px));margin-inline:auto}
+.app-shell .steps-column.setup-column>.everything-else{order:50}
+.app-shell .steps-column.setup-column>.saved-settings-summary{order:51}
+.app-shell .steps-column.setup-column>.keyword-bank-required{order:52}
+.app-shell .steps-column.setup-column>.setup-forward{order:53}
 .app-shell .saved-settings-summary{display:flex!important;flex-wrap:wrap!important;gap:7px!important;margin:12px 0!important}
 .app-shell .saved-settings-summary span{padding:7px 10px!important;border:1px solid rgba(91,48,79,.14)!important;border-radius:999px!important;background:rgba(255,255,255,.5)!important;color:#5b304f!important;font-size:10px!important;font-weight:750!important}
 .app-shell .keyword-bank-required{display:grid!important;gap:3px!important;width:100%!important;margin:12px 0!important;padding:14px 16px!important;border:1px solid rgba(157,80,130,.32)!important;border-radius:12px!important;background:#fff1f8!important;color:#4f2944!important;text-align:left!important;box-shadow:none!important}

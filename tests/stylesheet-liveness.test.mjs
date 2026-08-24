@@ -180,3 +180,40 @@ test("no grid or flex is imposed on text-only containers", async () => {
   }
   assert.deepEqual(offenders, [], offenders.join("\n"));
 });
+
+/* D369 · `order` only means anything for the DIRECT children of a flex or grid
+   container, but the ordering block for the setup column was written with
+   descendant selectors — `.setup-column .template-proof`. That kept matching
+   after the element was wrapped one level deeper, so the wrapper became a grid
+   whose card carried order:11 while its sibling link carried the default 0, and
+   the "Choose a different product bundle" link rendered ABOVE the bundle card
+   it belonged to.
+
+   Checked against the live page: of the fifteen selectors in that block only
+   two were ever direct children of the column. The rest ordered nothing — they
+   just sat there waiting to leak into whatever got nested under them next.
+
+   `.app-shell` and `.keyword-page` are page namespaces rather than layout
+   parents, so they are stripped before the check. */
+test("D369: order is only ever set on a direct child", async () => {
+  const files = await collect("app/", [".css"]);
+  const offenders = [];
+  for (const file of files) {
+    const css = (await readFile(new URL(file, root), "utf8")).replace(/\/\*[\s\S]*?\*\//g, "");
+    for (const match of css.matchAll(/([^{}@]+)\{([^{}]*)\}/g)) {
+      if (!/(^|;)\s*order\s*:/.test(match[2])) continue;
+      for (const selector of match[1].split(",")) {
+        const trimmed = selector.trim();
+        if (!trimmed) continue;
+        const scoped = trimmed.replace(/^\.(app-shell|keyword-page)\s+/, "");
+        /* Collapse whitespace around child and sibling combinators; any space
+           still standing is a descendant combinator. */
+        const tail = scoped.replace(/\s*([>+~])\s*/g, "$1");
+        if (!/\s/.test(tail)) continue;
+        offenders.push(`${file}: ${trimmed}`);
+      }
+    }
+  }
+  assert.deepEqual(offenders, [],
+    `order: is set through a descendant selector, so it reaches elements it does not lay out:\n${offenders.join("\n")}`);
+});

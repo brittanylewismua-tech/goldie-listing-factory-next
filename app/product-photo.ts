@@ -128,3 +128,23 @@ export function photoStats(pixels: ArrayLike<number>, size = PHOTO_SAMPLE_SIZE):
   const modelPenalty = skin >= 3 ? 120 + skin : 0;
   return { backdrop: backdropPercent, edge: edgePercent, skin, score: backdropPercent - edgePercent * 3 - modelPenalty };
 }
+
+/* D370 · Measured on her three live products, the photo path fails on its own
+   terms for two of them:
+     Gildan Hoodie  — all six blueprint candidates are model shots
+                      (skin 4-9%). There is no flat lay to pick. The scorer was
+                      working; the source has nothing better.
+     Gildan Tee     — the flat lay wins, but it is a white tee on a white sweep,
+                      so at 52px it reads as an empty square (backdrop 90%+).
+   Cropping does not help: the frame is close to square, so every object-position
+   from 38% to 75% still shows the model's head.
+
+   So a photo earns its place only when it actually shows the garment. When it
+   does not, the card draws a garment glyph instead — uniform, legible at 52px,
+   never a stranger's face, never a blank tile. */
+export function photoReadsAsGarment(stats: PhotoStats): boolean {
+  if (!Number.isFinite(stats.score)) return false;
+  if (stats.skin >= 3) return false;        /* somebody is wearing it */
+  if (stats.backdrop >= 90) return false;   /* garment is the same colour as the sweep */
+  return true;
+}

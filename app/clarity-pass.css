@@ -280,13 +280,13 @@
 /* 4. Group what belongs together: money, then listing content, then plumbing.
  *    Source order is Profit · Keyword bank · Shipping · Description · Etsy
  *    details · Connection, which alternates between the two subjects. */
-.app-shell .everything-else .everything-else-body{display:flex!important;flex-direction:column!important}
-.app-shell .everything-else .everything-else-body>*:nth-child(1){order:1}  /* Profit goal   */
-.app-shell .everything-else .everything-else-body>*:nth-child(3){order:2}  /* Shipping      */
-.app-shell .everything-else .everything-else-body>*:nth-child(2){order:3}  /* Keyword bank  */
-.app-shell .everything-else .everything-else-body>*:nth-child(4){order:4}  /* Description   */
-.app-shell .everything-else .everything-else-body>.saved-setting-list{order:5}
-.app-shell .everything-else .everything-else-body>.product-connection-details{order:6}
+.app-shell .everything-else-body{display:flex!important;flex-direction:column!important}
+.app-shell .everything-else-body>*:nth-child(1){order:1}  /* Profit goal   */
+.app-shell .everything-else-body>*:nth-child(3){order:2}  /* Shipping      */
+.app-shell .everything-else-body>*:nth-child(2){order:3}  /* Keyword bank  */
+.app-shell .everything-else-body>*:nth-child(4){order:4}  /* Description   */
+.app-shell .everything-else-body>.saved-setting-list{order:5}
+.app-shell .everything-else-body>.product-connection-details{order:6}
 
 /* 5. The status line in the summary is information, not controls. */
 .app-shell .everything-else>summary small{
@@ -791,7 +791,10 @@
   background:linear-gradient(145deg,rgba(246,229,248,.9),rgba(226,208,246,.75));
   border:1px solid rgba(91,48,79,.14);
 }
-.app-shell .bundle-product-photo.placeholder{display:block}
+.app-shell .bundle-product-photo.placeholder{display:grid;place-items:center;padding:0;box-shadow:inset 0 0 0 1px rgba(91,48,79,.14)}
+.app-shell .bundle-product-photo.placeholder svg{width:30px;height:30px;display:block}
+.app-shell .bundle-product-photo.placeholder svg path{fill:rgba(91,48,79,.42)}
+.app-shell .bundle-product-photo.placeholder svg path.glyph-line{fill:none;stroke:rgba(255,250,253,.92);stroke-width:1.1;stroke-linecap:round}
 .app-shell .bundle-product-id{display:grid;gap:2px;min-width:0}
 .app-shell .bundle-product-id>b{
   color:#4c293f;
