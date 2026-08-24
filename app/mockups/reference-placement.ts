@@ -134,11 +134,20 @@ export type Adjustment={scale:number;x:number;y:number};
    is fit.widthRatio x productWidth, so scale = widthRatio / artWidthOfCanvas.
    The offsets close the gap between where the artwork sits inside its own canvas
    and where the reference puts it on the product. */
-export function derivedPlacement(fit:ReferenceFit,box:ProductBox,bounds?:{left:number;top:number;right:number;bottom:number}):{adjustment:Adjustment;quad:Quad}{
+export function derivedPlacement(fit:ReferenceFit,box:ProductBox,bounds?:{left:number;top:number;right:number;bottom:number}):{adjustment:Adjustment;quad:Quad}|null{
   const artWidth=Math.max(.05,(bounds?.right??1)-(bounds?.left??0));
   const artCentreX=((bounds?.left??0)+(bounds?.right??1))/2,artCentreY=((bounds?.top??0)+(bounds?.bottom??1))/2;
   const scale=fit.widthRatio/artWidth;
   const x0=box.centreX-box.width/2,y0=box.centreY-box.height/2,x1=box.centreX+box.width/2,y1=box.centreY+box.height/2;
+  /* A measurement can be wrong in ways the maths cannot see - a Printify preview
+     that is a model shot rather than a flat lay, or segmentation returning the
+     person instead of the product. Rather than trust a derived number that lands
+     somewhere absurd, hand back nothing and let the caller fall back. The bounds
+     are deliberately loose: this is a sanity check, not a second guess. */
+  const artOfProduct=scale*artWidth;
+  if(!Number.isFinite(scale)||artOfProduct<.02||artOfProduct>1.05)return null;
+  if(fit.centreX<0||fit.centreX>1||fit.centreY<0||fit.centreY>1)return null;
+  if(x0<-.05||y0<-.05||x1>1.05||y1>1.05||x1-x0<.05||y1-y0<.05)return null;
   return {
     adjustment:{scale,x:fit.centreX-.5-(artCentreX-.5)*scale,y:fit.centreY-.5-(artCentreY-.5)*scale},
     quad:[[x0,y0],[x1,y0],[x1,y1],[x0,y1]] as Quad,

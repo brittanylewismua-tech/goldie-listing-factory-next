@@ -2766,6 +2766,7 @@ test("mockup placement is derived from the Printify preview, for any product —
   const box = { centreX: 0.4977, centreY: 0.6127, width: 0.6182, height: 0.6115 };
   const bounds = { left: 0.16796875, top: 0.013671875, right: 0.83203125, bottom: 0.986328125 };
   const derived = derivedPlacement(fit, box, bounds);
+  assert.ok(derived, "her measured numbers must produce a placement");
 
   // The whole point: the artwork ends up the same fraction of the product it is
   // in the customer's own Printify listing.
@@ -2778,6 +2779,18 @@ test("mockup placement is derived from the Printify preview, for any product —
   // A design whose artwork fills its canvas needs no padding compensation.
   const full = derivedPlacement(fit, box, { left: 0, top: 0, right: 1, bottom: 1 });
   assert.equal(Number(full.adjustment.scale.toFixed(3)), 0.145);
+
+  /* A measurement can be wrong in ways the arithmetic cannot see: a Printify
+     preview that is a model shot rather than a flat lay, or segmentation
+     returning the person instead of the product. Those hand back nothing so the
+     caller falls back, rather than confidently rendering something absurd. */
+  assert.equal(derivedPlacement({ widthRatio: 0.001, centreX: .5, centreY: .5 }, box, bounds), null,
+    "artwork that would be invisible is not a measurement worth trusting");
+  assert.equal(derivedPlacement({ widthRatio: 1.1, centreX: .5, centreY: .5 }, { ...box, width: 0.02, height: 0.5 }, bounds), null,
+    "a product box that thin is not the product");
+  assert.equal(derivedPlacement(fit, { centreX: 0.5, centreY: 0.5, width: 1.4, height: 0.6 }, bounds), null,
+    "a box wider than the photo is a bad segmentation");
+  assert.ok(derivedPlacement(fit, box, bounds), "and the real measurement still passes");
 
   /* Nothing in the derivation KNOWS what the product is. Checked against the code
      with comments stripped - the prose names products while explaining the
