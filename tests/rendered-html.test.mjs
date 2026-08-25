@@ -3476,3 +3476,29 @@ test("choosing a saved product keeps its pricing approval — D472", async () =>
   assert.match(app, /setPricingApproved\(recipeCarriesApprovedPricing\(\{defaultProfitTarget:activeRecipe\?\.defaultProfitTarget,etsyShippingProfileId:activeRecipe\?\.etsyShippingProfileId\}\)\)/,
     "a product with saved pricing stays approved; one without still has to approve once");
 });
+
+test("publishing says what is happening, and Etsy gets what it requires — D473/D474", async () => {
+  const [finish, app] = await Promise.all([
+    readFile(new URL("../app/api/etsy/finish.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
+  ]);
+
+  /* D473 · Caught on a real publish of two listings: both refused with Etsy's
+     "Missing input parameter: [values]". Etsy requires `values` on a property
+     update even when `value_ids` is supplied, and we sent one or the other - so
+     any listing with a matched attribute could not publish. */
+  assert.match(finish, /body\.append\("value_ids",String\(property\.valueId\)\);body\.append\("values",property\.value\.trim\(\)\|\|String\(property\.valueId\)\)/);
+  assert.match(finish, /body\.append\("value_ids",String\(choice\.item\.value_id\)\);body\.append\("values",choice\.item\.name\)/);
+  assert.doesNotMatch(finish, /if\(property\.valueId\)body\.append\("value_ids",String\(property\.valueId\)\);else/,
+    "value_ids alone is refused by Etsy");
+
+  /* D474 · The page said it was publishing and, directly underneath, that nothing
+     would publish. That caption belongs to the Keep as drafts button, which is no
+     longer a choice once publishing has started. */
+  assert.match(app, /\{!publishing&&<small className="keep-drafts-note">/);
+
+  // And a publish she just started no longer claims to be resuming one.
+  assert.match(app, /monitorPublishJob\(jobId:string,resuming=false\)/);
+  assert.match(app, /resuming\?"Goldie is safely resuming your queued batch…":"Goldie is publishing your listings…"/);
+  assert.match(app, /if\(jobId\)void monitorPublishJob\(jobId,true\)/, "only the reopened case says resuming");
+});
