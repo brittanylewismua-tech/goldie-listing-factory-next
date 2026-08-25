@@ -2071,7 +2071,7 @@ test("shows underfilled titles and tags as a non-blocking review state (fixes D6
      rows immediately below it, which name every listing individually. The
      checklist now counts them, so the summary is at least as specific as the
      detail it summarises. */
-  assert.match(app,/titles are under 100 characters/);
+  assert.match(app,/under 100 characters/); // D490 singularises this line
   assert.match(app,/\$\{files\.filter\(file=>file\.title\.trim\(\)\.length<100\)\.length\} of \$\{files\.length\}/,
     "the checklist must count the listings that need review");
   assert.match(app,/listings have fewer than 13 tags/);
@@ -2890,7 +2890,7 @@ test("creating drafts stays on Images, and the final check says what is wrong �
   /* D439 · One list, one class, so every alert can sort to the top together. */
   assert.doesNotMatch(app, /"ready":"needs-review"/, "one state vocabulary, not two");
   assert.doesNotMatch(app, /final-safety-readiness/, "the separate readiness grid is gone");
-  assert.match(app, /titles are under 100 characters/, "say what is wrong, not that it needs review");
+  assert.match(app, /under 100 characters/, "say what is wrong, not that it needs review");
   assert.doesNotMatch(app, /need another try stay here/,
     "nothing reaches Publish that cannot publish");
 });
@@ -3766,4 +3766,25 @@ test("nothing destructive happens on a single click — D489", async () => {
 
   // Staged Etsy images can belong to listings that are already live.
   assert.match(app, /if\(!preserveSavedBatch&&!publishedThisBatch\)drafts\.forEach/);
+});
+
+test("the publish checklist names what is wrong and counts in English — D490", async () => {
+  const [app, review] = await Promise.all([
+    readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/final-listing-review.tsx", import.meta.url), "utf8"),
+  ]);
+
+  /* Read off her live step 4. Every other line on that checklist counts exactly
+     - "1 of 2 titles", "13/13 tags" - and then the photo line said "One or more
+     selected listings still need a photo", sending her to find which. The
+     function that knows precisely which drafts they are was already there. */
+  assert.doesNotMatch(app, /One or more selected listings still need a photo/,
+    "the checklist has to name them");
+  assert.match(app, /const missing=createdListingsMissingImages\(selectedPublishDrafts\(\)\)/);
+  assert.match(app, /still needs a photo/);
+
+  // "1 photos", and "1 of 2 titles are under 100 characters".
+  assert.doesNotMatch(review, /\{selectedCount\+mockupCount\} photos/);
+  assert.match(review, /===1\?"photo":"photos"/);
+  assert.match(app, /===1\?"titles is":"titles are"\} under 100 characters/);
 });
