@@ -757,7 +757,7 @@ export default function ListingFactoryApp() {
   /* D378 - A closed card has to say where that product stands, and the honest
      source is the batch list Batch History already reads: status, draft count,
      published count. One fetch, refreshed when the bundle or its batches change. */
-  const [bundleBatchSummaries,setBundleBatchSummaries]=useState<Record<string,{status:string;drafts:number;published:number}>>({});
+  /* D504 - bundleBatchSummaries is gone; one map answers for each product. */
   const [bundleColorChoices,setBundleColorChoices]=useState<Record<string,number[]>>({}),[bundleSizeChoices,setBundleSizeChoices]=useState<Record<string,number[]>>({}),[bundleMockupChoices,setBundleMockupChoices]=useState<Record<string,{theme:string;ids:string[]}>>({}),[bundleKeywordChoices,setBundleKeywordChoices]=useState<Record<string,string>>({});
   /* D328 · Pricing state was a single set of globals, so a bundle could only ever
      price the active product. These hold the other products' pricing. The active
@@ -1632,21 +1632,7 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
     }));
     setBundleColorProducts(current=>({...current,...loaded}));setBundleColorChoices(current=>({...current,...choices}));return true;
   }
-  useEffect(()=>{
-    if(!activeBundle||bundleRecipes.length<2)return;
-    const ids=new Set(Object.values(bundleBatchIds));
-    if(!ids.size)return;
-    void fetch("/api/batches").then(response=>response.ok?response.json():null).then((payload:{batches?:Array<{id?:string;status?:string;draft_count?:number;published_count?:number}>}|null)=>{
-      if(!payload?.batches)return;
-      const next:Record<string,{status:string;drafts:number;published:number}>={};
-      for(const batch of payload.batches){
-        const id=String(batch.id||"");
-        if(!ids.has(id))continue;
-        next[id]={status:String(batch.status||""),drafts:Number(batch.draft_count)||0,published:Number(batch.published_count)||0};
-      }
-      setBundleBatchSummaries(next);
-    }).catch(()=>undefined);
-  },[activeBundle,bundleRecipes.length,bundleBatchIds]);
+  /* D504 - its only reader now shares the per-product loader below. */
 
   /* D378 - What a card says about a product on each of the three steps. Every
      label is read from something real: the designs in hand, the batch's own
@@ -1664,7 +1650,9 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
         const ready=drafts.filter(draft=>draft.status==="Created").length;
         return {label:`${ready} ready`,tone:"attention"};
       }
-      const summary=bundleBatchSummaries[bundleBatchIds[recipe.id]||""];
+      /* D504 - this read a second map, loaded by a second effect, so the chip and
+         the rows on the same card could disagree with each other. Same map now. */
+      const summary=bundleBatchSummary[recipe.id];
       if(!summary)return {label:bundleBatchIds[recipe.id]?"Saved":"Not started yet",tone:"waiting"};
       if(summary.published)return {label:`${summary.published} published`,tone:"ready"};
       if(summary.drafts)return {label:`${summary.drafts} drafts`,tone:summary.status==="complete"?"ready":"attention"};
@@ -1719,29 +1707,39 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
      The other products' work lives in their own batches, so it has to be read
      from them; the product being worked is read from state, which is always
      fresher than anything saved. */
-  const [bundleBatchSummary,setBundleBatchSummary]=useState<Record<string,{designs:number;titled:number;tagged:number;drafts:number;described:boolean;complete:boolean}>>({});
+  const [bundleBatchSummary,setBundleBatchSummary]=useState<Record<string,{designs:number;titled:number;tagged:number;drafts:number;described:boolean;complete:boolean;published:number;status:string}>>({});
   useEffect(()=>{
     if(!activeBundle||bundleRecipes.length<2)return;
     const wanted=bundleRecipes.filter(recipe=>recipe.id!==activeRecipe?.id&&bundleBatchIds[recipe.id]);
     if(!wanted.length)return;
     let alive=true;
-    void Promise.all(wanted.map(async recipe=>{
+    void (async()=>{
+    const listing=await fetch("/api/batches").then(response=>response.ok?response.json():null).then((payload:{batches?:Array<{id?:string;status?:string;published_count?:number}>}|null)=>payload?.batches||[]).catch(()=>[] as Array<{id?:string;status?:string;published_count?:number}>);
+    await Promise.all(wanted.map(async recipe=>{
       const id=bundleBatchIds[recipe.id];
       const payload=await fetch(`/api/batches?id=${encodeURIComponent(id)}`).then(response=>response.ok?response.json():null).catch(()=>null) as {batch?:{state?:Record<string,unknown>}}|null;
       const state=payload?.batch?.state as {designs?:Array<{title?:string;tags?:string[]}>;drafts?:unknown[];description?:string;complete?:boolean}|undefined;
       if(!state)return null;
       const designs=state.designs||[];
+      /* D504 - the chip and the rows on the same card were fed by two different
+         maps, loaded by two different effects at two different moments, so one
+         could read "2 drafts" while the other read "Not started yet" on the same
+         card. One loader, one map, one answer per product. */
+      const listed=listing.find(batch=>String(batch.id||"")===id);
       return [recipe.id,{designs:designs.length,
         titled:designs.filter(design=>String(design.title||"").trim()).length,
         tagged:designs.filter(design=>(design.tags||[]).length>=13).length,
         drafts:(state.drafts||[]).length,
         described:Boolean(String(state.description||"").trim()),
-        complete:Boolean(state.complete)}] as const;
+        complete:Boolean(state.complete),
+        published:Number(listed?.published_count)||0,
+        status:String(listed?.status||"")}] as const;
     })).then(entries=>{
       if(!alive)return;
-      const loaded=Object.fromEntries(entries.filter(Boolean) as Array<readonly [string,{designs:number;titled:number;tagged:number;drafts:number;described:boolean;complete:boolean}]>);
+      const loaded=Object.fromEntries(entries.filter(Boolean) as Array<readonly [string,{designs:number;titled:number;tagged:number;drafts:number;described:boolean;complete:boolean;published:number;status:string}]>);
       if(Object.keys(loaded).length)setBundleBatchSummary(current=>({...current,...loaded}));
     });
+    })();
     return()=>{alive=false};
     /* D501 - savedRevision was in here, so every autosave - one per 700ms while
        she types a title - refetched every other product's batch. The other

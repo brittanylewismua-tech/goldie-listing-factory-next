@@ -4071,3 +4071,22 @@ test("the row itself opens, exactly as step 1's does — D503", async () => {
   // A row that cannot be used is not announced as a button.
   assert.match(app, /\?undefined:"button"\}/);
 });
+
+test("a card's chip and its rows cannot disagree — D504", async () => {
+  const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+
+  /* The chip at the top of a product card and the rows underneath it were fed by
+     two different maps, filled by two different effects at two different moments
+     and keyed differently - one by batch id, one by recipe id. The same card
+     could read "2 drafts" in its chip and "Not started yet" in every row. */
+  assert.doesNotMatch(app, /const \[bundleBatchSummaries,setBundleBatchSummaries\]/,
+    "the second map is gone");
+  assert.match(app, /const summary=bundleBatchSummary\[recipe\.id\];/,
+    "the chip reads the same map the rows read");
+  assert.equal((app.match(/setBundleBatchSummary\(/g) || []).length, 1,
+    "one loader fills it");
+
+  // That loader carries what the chip needs as well as what the rows need.
+  assert.match(app, /published:Number\(listed\?\.published_count\)\|\|0/);
+  assert.match(app, /status:String\(listed\?\.status\|\|""\)/);
+});
