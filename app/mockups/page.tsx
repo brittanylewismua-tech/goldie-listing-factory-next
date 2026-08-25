@@ -193,7 +193,16 @@ export default function Home() {
   const [libraryBusy,setLibraryBusy]=useState(false); const [libraryProgress,setLibraryProgress]=useState(0); const [libraryTotal,setLibraryTotal]=useState(0);
   const fileInput=useRef<HTMLInputElement>(null); const referenceInput=useRef<HTMLInputElement>(null);
   const mockupInput=useRef<HTMLInputElement>(null); const addSetRef=useRef<HTMLDivElement>(null); const chosen=library.filter(t=>selected.has(t.id)); const total=design?chosen.length:0;
-  useEffect(()=>{let alive=true;fetch("/api/mockups/library").then(async response=>response.ok?response.json():{templates:[],preferences:[]}).then((payload:{templates?:Template[];preferences?:{sourceTheme:string;displayName:string;hidden:boolean}[]})=>{if(!alive)return;const preferences=new Map((payload.preferences||[]).map(item=>[item.sourceTheme,item]));const builtIns=templates.filter(item=>!preferences.get(item.sourceTheme||item.theme)?.hidden).map(item=>({...item,theme:preferences.get(item.sourceTheme||item.theme)?.displayName||item.theme}));setLibrary([...builtIns,...(payload.templates||[])]);}).catch(()=>undefined);return()=>{alive=false};},[]);
+  useEffect(()=>{let alive=true;fetch("/api/mockups/library").then(async response=>response.ok?response.json():{templates:[],preferences:[]}).then((payload:{templates?:Template[];preferences?:{sourceTheme:string;displayName:string;hidden:boolean}[]})=>{if(!alive)return;const preferences=new Map((payload.preferences||[]).map(item=>[item.sourceTheme,item]));const builtIns=templates.filter(item=>!preferences.get(item.sourceTheme||item.theme)?.hidden).map(item=>({...item,theme:preferences.get(item.sourceTheme||item.theme)?.displayName||item.theme}));const saved=payload.templates||[];setLibrary([...builtIns,...saved]);
+    /* D483 - print-area detection runs on upload, so sets added before it existed
+       are still carrying the placeholder rectangle: her ten tee scenes were, and
+       were quietly rendering against a generic box instead of a measured one.
+       Nobody should have to know that, let alone re-upload a set to fix it, so a
+       stale set repairs itself the next time the library is opened. Custom
+       scenes only - the built-ins ship with their own measurements. */
+    const stale=saved.filter(item=>!isCalibratedQuad(item.corners,item.normalized));
+    if(stale.length)void findPrintAreas(stale,stale[0].theme||"my mockups");
+  }).catch(()=>undefined);return()=>{alive=false};},[]);
   const validImage=(file:File|undefined)=>file&&/^image\/(png|jpeg|webp)$/.test(file.type)?file:null;
   const changed=(e:ChangeEvent<HTMLInputElement>)=>{setDesign(validImage(e.target.files?.[0]));setResults([]);e.target.value="";};
   const referenceChanged=(e:ChangeEvent<HTMLInputElement>)=>{setPlacementReference(validImage(e.target.files?.[0]));e.target.value="";};

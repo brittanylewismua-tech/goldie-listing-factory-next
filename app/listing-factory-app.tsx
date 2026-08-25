@@ -1591,7 +1591,7 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
            to the finish receipt, at the point the current product is actually
            done. A product already underway can still be reopened at any time;
            what cannot happen is starting the next one early. */
-        const reachable=many&&!open&&Boolean(bundleBatchIds[recipe.id]||(index===bundleIndex+1&&batchReceipt));
+        const reachable=many&&!open&&Boolean(bundleBatchIds[recipe.id]||index===bundleIndex+1);
         const opening=switchingProduct===recipe.id;
         return <article className={`batch-product-card step-product-card ${open?"is-open":"is-closed"} ${status.tone==="ready"?"is-ready":"needs-setup"} ${many?"in-batch":""}`} key={recipe.id}>
           <header
@@ -1658,7 +1658,13 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
   async function continueBundle(){
     const next=bundleRecipes[bundleIndex+1];if(!activeBundle||!next)return;
     const carriedFiles=files.map(file=>({...file,id:crypto.randomUUID(),previewUrl:URL.createObjectURL(file.file),title:"",tags:[],blurb:undefined,descriptionOverride:undefined,sizeGuideName:undefined,etsy:undefined,etsyError:""}));
-    const nextBatchId=crypto.randomUUID();batchIdRef.current=nextBatchId;window.localStorage.setItem("goldie-active-batch",nextBatchId);const url=new URL(window.location.href);url.searchParams.set("batch",nextBatchId);url.searchParams.set("step","review");url.searchParams.delete("phase");window.history.pushState({},"",url);
+    const nextBatchId=crypto.randomUUID();batchIdRef.current=nextBatchId;window.localStorage.setItem("goldie-active-batch",nextBatchId);const url=new URL(window.location.href);url.searchParams.set("batch",nextBatchId);/* D484 - this forced "review" no matter which step she opened the product
+       from. Opening the tee from step 2 threw her into step 3 with no designs
+       processed and no drafts, and the step guard walked her back to the start -
+       what she saw as being dumped on step one. A bundle's products are worked
+       on the same page as each other, exactly as they are on step 1, so opening
+       one keeps the step she is on. */
+    url.searchParams.set("step",workflowStep);url.searchParams.delete("phase");window.history.pushState({},"",url);
     setBundleIndex(current=>current+1);setDrafts([]);setComplete(false);setProcessed(0);setRunTotal(0);setOpenedDrafts([]);setOpenAllMessage("");setPreflightOpen(false);setPrintifyImageSelections({});setSharedMockups(undefined);setPreparedMockupCounts({});setFinishPhase("details");setVariantPrices({});setPricingApproved(false);setSizeGuideName("");setSizeGuideStatus("");setBatchReceipt(null);setPublishMessage("");setFiles(carriedFiles);setDescription("");setActiveDesign("");syncedListingSignatures.current.clear();
     await saveBatchFiles(nextBatchId,carriedFiles.map(file=>file.file)).catch(()=>undefined);setActiveRecipe(next);setPrintifyImageIndices(next.printifyImageIndices||[]);setEtsyShippingProfileId(Number(next.etsyShippingProfileId)||0);setTemplate(next.templateUrl);setMockupTheme(next.defaultMockupTheme||"");setAutoTitleBankId(next.keywordListId||"");const nextPricing={...pricing,targetProfit:Number(next.defaultProfitTarget)||DEFAULT_PRICING.targetProfit,shippingCost:0,shippingCharged:0};setPricing(nextPricing);setTemplateDetails(null);const nextDetails=await loadTemplateUrl(next.templateUrl,nextPricing,Number(next.etsyShippingProfileId)||0,next.defaultColorIds||[],next.defaultSizeIds||[]);if(next.keywordListId&&nextDetails){const payload=await fetch("/api/keyword-lists").then(response=>response.json()).catch(()=>({lists:[]})) as {lists?:KeywordList[]},bank=payload.lists?.find(list=>list.id===next.keywordListId);if(bank){const titled=await Promise.all(carriedFiles.map(async file=>{try{const result=await autoTitleForDesign(file,bank.keywords,titleJoiner===", ",nextDetails);return {...file,title:styledTitle(result.title),tags:result.tags,titleWarning:result.titleWarning,titleError:""}}catch(error){return {...file,titleError:error instanceof Error?error.message:"Goldie could not create a complete title for this design."}}}));setFiles(titled)}}setWorkflowStep("designs");window.scrollTo({top:0});
   }

@@ -3646,19 +3646,22 @@ test("the finish receipt reflects what actually happened — D481", async () => 
   assert.match(app, /allCreatedListingsHaveImages\(\)&&!batchReceipt&&/);
 });
 
-test("a bundle cannot start its next product early — D482", async () => {
+test("every product in a bundle is reachable from the step she is on — D482/D484", async () => {
   const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
 
-  /* On step two, before a single draft existed, the bundle showed "Open Gildan
-     Tee" for the next product. Pressing it ran continueBundle: designs carried
-     forward, a fresh batch minted, jump to review - abandoning the half-built
-     hoodie and opening the tee at a step with nothing in it, which fell back to
-     the start. That handoff belongs to the finish receipt. */
-  assert.match(app, /index===bundleIndex\+1&&batchReceipt/);
-  assert.doesNotMatch(app, /bundleBatchIds\[recipe\.id\]\|\|index===bundleIndex\+1\)/,
-    "being next in line is not on its own a reason to open a product");
+  /* Step 1 shows every product in the bundle at once and always has. Steps 2, 3
+     and 4 did not: the other products sat behind an "Open Gildan Tee" button
+     that forced the review step regardless of where she was, so opening the tee
+     from step 2 landed on step 3 with no designs and no drafts, and the step
+     guard walked her back to the start. She read that as being dumped on step
+     one, and she was right. Opening a product now keeps the step she is on. */
+  assert.match(app, /url\.searchParams\.set\("step",workflowStep\)/);
+  assert.doesNotMatch(app, /url\.searchParams\.set\("step","review"\)/,
+    "opening a bundle product must not decide which step she is on");
 
-  // A product already underway stays reopenable, and a card is never left inert.
-  assert.match(app, /Boolean\(bundleBatchIds\[recipe\.id\]\|\|/);
+  // D482 gated the card only because opening it was broken; it works now.
+  assert.match(app, /Boolean\(bundleBatchIds\[recipe\.id\]\|\|index===bundleIndex\+1\)/);
+
+  // A card is never left inert with no control and no explanation.
   assert.match(app, /Finish \{list\[index-1\]\?\.name\|\|"the product above"\} first/);
 });
