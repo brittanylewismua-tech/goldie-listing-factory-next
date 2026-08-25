@@ -3788,3 +3788,25 @@ test("the publish checklist names what is wrong and counts in English — D490",
   assert.match(review, /===1\?"photo":"photos"/);
   assert.match(app, /===1\?"titles is":"titles are"\} under 100 characters/);
 });
+
+test("a reopened batch finishes preparing and the button says why it cannot run — D491", async () => {
+  const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+
+  /* Reproduced on her live bundle: reopening the batch sat on "preparing 0 of 2
+     · Checking dimensions" indefinitely, with no way forward. Design
+     measurements are written into the batch snapshot, and a snapshot taken while
+     they were still running persists paddingStatus:"checking" - which is what
+     autosave does moments after a restore. Measuring only ever happened on
+     upload, so nothing re-ran it and the batch could never become usable. */
+  assert.match(app, /const remeasured=useRef\(new Set<string>\(\)\)/);
+  assert.match(app, /!design\.width\|\|!design\.height\|\|design\.paddingStatus==="checking"/);
+  assert.match(app, /void analyzePadding\(unmeasured\)/);
+  assert.match(app, /unmeasured\.forEach\(design=>remeasured\.current\.add\(design\.id\)\)/,
+    "each design is measured once, or the effect re-runs on its own writes");
+
+  /* And the create button stayed enabled throughout, so clicking it threw a
+     blocking modal saying to wait, instead of the button naming the reason. */
+  assert.match(app, /: !designsFinished \? `Checking \$\{designsPreparing\}/);
+  const ready = app.indexOf("const designsReady="), missing = app.indexOf("const missingRequirement");
+  assert.ok(ready > 0 && ready < missing, "designsFinished must be declared before it is read");
+});

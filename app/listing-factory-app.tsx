@@ -983,11 +983,15 @@ export default function ListingFactoryApp() {
   const templateLoaded = templateDetails !== null;
   const productSelected = Boolean(activeRecipe);
   const ready = connected && productSelected && templateLoaded && files.length > 0;
-  const missingRequirement = !connected ? "Connect Printify first" : !productSelected ? "Choose or add a saved product" : !templateLoaded ? "Connect its Printify template" : files.length === 0 ? "Add at least one design" : "";
-  const totalSize = useMemo(() => files.reduce((sum, file) => sum + file.size, 0), [files]);
   const designsReady=useMemo(()=>files.filter(file=>Boolean(file.width&&file.height&&file.paddingStatus!=="checking")).length,[files]);
   const designsPreparing=Math.max(0,files.length-designsReady);
   const designsFinished=files.length>0&&designsPreparing===0;
+  /* D491 - designs still being measured were not one of the reasons this button
+     could name, so it stayed enabled and a click threw a blocking modal reading
+     "Wait until every design finishes loading and checking". The button is the
+     thing she is looking at; it should say so itself. */
+  const missingRequirement = !connected ? "Connect Printify first" : !productSelected ? "Choose or add a saved product" : !templateLoaded ? "Connect its Printify template" : files.length === 0 ? "Add at least one design" : !designsFinished ? `Checking ${designsPreparing} ${designsPreparing===1?"design":"designs"}\u2026` : "";
+  const totalSize = useMemo(() => files.reduce((sum, file) => sum + file.size, 0), [files]);
   const progressIndex = workflowStep==="finish" ? finishPhase==="details"?5:finishPhase==="etsy"?6:finishPhase==="mockups"?7:8 : workflowStep==="connect"?0:workflowStep==="setup"?1:workflowStep==="designs"?2:(preflightOpen||running)?4:3;
   // The guided factory always opens on the real connection step. The returning
   // dashboard remains available as a component, but must never replace step 1
@@ -1393,6 +1397,32 @@ export default function ListingFactoryApp() {
     if(folderPicker.current)folderPicker.current.value="";
     if(imagePicker.current)imagePicker.current.value="";
   }
+
+  /* D491 - a batch could be reopened and never become usable again. The design
+     measurements are written into the batch snapshot, and a snapshot taken while
+     they were still running persists paddingStatus:"checking" - which is exactly
+     what autosave does moments after a restore. designsReady counts only designs
+     that are measured and not still checking, so the page sat on "preparing 0 of
+     2 · Checking dimensions" forever, with no way forward. Verified on her live
+     bundle: stuck indefinitely, and it had already been saved that way.
+
+     Measuring happens on upload and nowhere else, so a restored design that
+     arrives unmeasured is measured now. The files are in this browser already;
+     it costs nothing but a decode. */
+  const remeasured=useRef(new Set<string>());
+  useEffect(()=>{
+    const unmeasured=files.filter(design=>design.file&&!remeasured.current.has(design.id)&&(!design.width||!design.height||design.paddingStatus==="checking"));
+    if(!unmeasured.length)return;
+    unmeasured.forEach(design=>remeasured.current.add(design.id));
+    unmeasured.forEach(design=>{
+      const probe=document.createElement("img");
+      const url=URL.createObjectURL(design.file);
+      probe.onload=()=>{setFiles(current=>current.map(item=>item.id===design.id?{...item,width:probe.naturalWidth,height:probe.naturalHeight}:item));URL.revokeObjectURL(url)};
+      probe.onerror=()=>URL.revokeObjectURL(url);
+      probe.src=url;
+    });
+    void analyzePadding(unmeasured);
+  },[files]);
 
   async function analyzePadding(images:DesignFile[]) { for(const design of images){ if(!/\.png$/i.test(design.name)){updateDesign(design.id,{visibleBounds:{left:0,top:0,right:1,bottom:1},hasTransparency:false,paddingStatus:"full"});continue} try{const bitmap=await createImageBitmap(design.file,{resizeWidth:512,resizeHeight:512,resizeQuality:"low"});const canvas=document.createElement("canvas");canvas.width=bitmap.width;canvas.height=bitmap.height;const context=canvas.getContext("2d",{willReadFrequently:true})!;context.drawImage(bitmap,0,0);bitmap.close();const pixels=context.getImageData(0,0,canvas.width,canvas.height).data;let left=canvas.width,top=canvas.height,right=-1,bottom=-1,hasTransparency=false;for(let y=0;y<canvas.height;y++)for(let x=0;x<canvas.width;x++){const alpha=pixels[(y*canvas.width+x)*4+3];if(alpha<250)hasTransparency=true;if(alpha>8){left=Math.min(left,x);right=Math.max(right,x);top=Math.min(top,y);bottom=Math.max(bottom,y)}}const bounds=right<0?{left:0,top:0,right:1,bottom:1}:{left:left/canvas.width,top:top/canvas.height,right:(right+1)/canvas.width,bottom:(bottom+1)/canvas.height};const trimmed=bounds.left>.015||bounds.top>.015||bounds.right<.985||bounds.bottom<.985;updateDesign(design.id,{visibleBounds:bounds,hasTransparency,paddingStatus:trimmed?"trimmed":"full"})}catch{updateDesign(design.id,{visibleBounds:{left:0,top:0,right:1,bottom:1},hasTransparency:true,paddingStatus:"full"})} } }
 
