@@ -7,7 +7,7 @@ import { runBounded } from "./bounded-work";
 import { productReadiness, recipeCarriesApprovedPricing, type Readiness } from "./product-readiness";
 import { KeywordBank, SavedWorkflow, type KeywordList, type Pricing, type ProductBundle, type Recipe } from "./factory-tools";
 import IntegratedMockups from "./integrated-mockups";
-import ConfirmHost, { confirmAction } from "./confirm-dialog";
+import { confirmAction } from "./confirm-dialog";
 import ListingPhotoOrder from "./listing-photo-order";
 import { tagsFromTitle } from "./seo-utils";
 import { printifyDpi } from "./print-quality";
@@ -2483,7 +2483,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
 
   return (
     <main className="app-shell" data-product-selected={templateDetails?"true":"false"}>
-      <ConfirmHost />
+      {/* D528 - the host lives at the root layout now, so every page has one. */}
       <section className="mobile-gate" aria-label="Desktop required">
         <div className="mobile-brand"><div className="approved-wm">Gold<span className="approved-i">ı<span>✦</span></span>e</div><div className="approved-sub">Listing Factory</div></div>
         <div className="mobile-card"><div className="mobile-command">⌘</div><h1>Oops, this one needs a bigger screen.</h1><p>Goldie Listing Factory is built for desktop. Hop onto your computer and sign in. Your saved work will be waiting for you.</p><div className="mobile-saved">✓ Your progress is saved automatically.</div></div>

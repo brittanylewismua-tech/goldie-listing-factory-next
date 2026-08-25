@@ -3165,8 +3165,13 @@ test("every confirmation uses the app's own dialog — D452", async () => {
   assert.match(clarity, /\.confirm-action-go\.destructive\{\s*background:#a32c4c;/);
   assert.doesNotMatch(clarity, /\.confirm-action-go\.destructive\{[^}]*#c62828/);
 
-  // And the host is mounted once, so confirmAction always has somewhere to render.
-  assert.match(sources[0], /<ConfirmHost \/>/);
+  /* D528 - the host moved to the root layout. It was mounted inside the Listing
+     Factory only, so on Batch History, Keyword Banks and the Mockup Library
+     confirmAction returned a promise that never settled and the button did
+     nothing at all. Verified live: "Delete 20 batches" registered, no dialog
+     appeared, all 20 batches survived. */
+  const layout = await readFile(new URL("../app/layout.tsx", import.meta.url), "utf8");
+  assert.match(layout, /<ConfirmHost\/><\/body>/);
 });
 
 test("a curved product wraps the print instead of pasting it flat — D454", async () => {

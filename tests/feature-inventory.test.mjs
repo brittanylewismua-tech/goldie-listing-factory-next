@@ -160,3 +160,24 @@ test("step-level controls sit below the cards, product-level inside them", async
   // Step 4 has no per-product body at all: reviewing and publishing cover the batch.
   assert.match(app, /stepProductCards\(bundleCardStatus\("publish"\),null,false,</);
 });
+
+/* D528 · A confirm that never appears is worse than no confirm: the button does
+ * nothing, says nothing, and the seller has no idea whether it worked. */
+test("every page that asks for confirmation has something to draw it", async () => {
+  const layout = await read("app/layout.tsx");
+  assert.match(layout, /import ConfirmHost from "\.\/confirm-dialog"/);
+  assert.match(layout, /<ConfirmHost\/><\/body>/, "one host, at the root, so every page is covered");
+
+  /* It used to be mounted inside the Listing Factory only. Verified live on Batch
+     History: "Delete 20 batches" registered the click, no dialog appeared, and
+     all 20 batches were still there afterwards - confirmAction was returning a
+     promise nobody would ever settle. */
+  const app = await read("app/listing-factory-app.tsx");
+  assert.doesNotMatch(app, /<ConfirmHost \/>/, "and not a second one inside the factory");
+
+  for (const page of ["app/batches/page.tsx", "app/keywords/page.tsx", "app/mockups/page.tsx"]) {
+    const source = await read(page);
+    if (!source.includes("confirmAction(")) continue;
+    assert.ok(!source.includes("<ConfirmHost"), `${page} relies on the root host`);
+  }
+});
