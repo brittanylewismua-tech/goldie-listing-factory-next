@@ -4178,3 +4178,26 @@ test("low resolution shows the table and never blocks — D509/D510/D511", async
      showed a grey placeholder on the screen meant for recognising batches. */
   assert.match(batches, /state\.templateDetails\?\.previewImage\|\|\(state\.templateDetails\?\.previewImages\|\|\[\]\)\.find\(Boolean\)/);
 });
+
+test("alerts use the app's alert colour, and JSX text is not escape sequences — D514", async () => {
+  const [app, clarity] = await Promise.all([
+    readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8"),
+  ]);
+
+  /* Seen on her screen: "so that tab’s work is not overwritten". A \u escape
+     is processed inside a string or template literal and printed literally in JSX
+     text, and this one was JSX text. */
+  assert.doesNotMatch(app, /\\u[0-9a-fA-F]{4}[^`'"]*<\/(span|b|p|small)>/,
+    "no \\u escape in JSX text");
+  assert.match(app, /so that tab’s work is not overwritten/);
+
+  /* Both panels I added invented a tan instead of using the faded red already in
+     .critical-dpi and .publish-live-warning. It is a token now. */
+  assert.match(clarity, /--alert-line:#b83c4a;--alert-tint:#fff0f1;--alert-ink:#9e2736/);
+  assert.doesNotMatch(clarity.replace(/\/\*[\s\S]*?\*\//g, ""), /#c97a4a|#fdf7f2|#a35f34|#e6c9b4|#eedfd3/,
+    "the invented tan is gone from every rule");
+  for (const rule of [/\.publish-failure-panel\{[^}]*var\(--alert-tint\)/, /\.batch-tab-conflict\{[^}]*var\(--alert-tint\)/]) {
+    assert.match(clarity, rule);
+  }
+});

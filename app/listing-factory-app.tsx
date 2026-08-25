@@ -2869,7 +2869,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
         </aside>,false)}
 {/* D496 - a held tab has to say so where she is working, not silently stop
     saving. */}
-        {batchHeldByAnotherTab&&<div className="batch-tab-conflict" role="status"><b>This batch is open in another Goldie tab.</b><span>Goldie has paused saving here so that tab\u2019s work is not overwritten. Continue in the other tab, or take over here and it will pause there instead.</span><button type="button" onClick={takeOverBatchHere}>Take over editing here</button></div>}
+        {batchHeldByAnotherTab&&<div className="batch-tab-conflict" role="status"><b>This batch is open in another Goldie tab.</b><span>Goldie has paused saving here so that tab’s work is not overwritten. Continue in the other tab, or take over here and it will pause there instead.</span><button type="button" onClick={takeOverBatchHere}>Take over editing here</button></div>}
         <div className="workflow-footer-actions">{progressIndex>0&&<button className="workflow-back" type="button" onClick={goBackOneStep}><span aria-hidden="true">←</span> Back</button>}<span className="autosave-note"><i aria-hidden="true">✓</i> Saved automatically</span>{/* D386 - Saving a draft was only reachable from the Publish step, so
                 stopping halfway meant trusting the autosave and remembering the
                 batch later. Name it and park it from wherever you are. */}{workflowStep!=="connect"&&(files.length>0||drafts.length>0||Boolean(templateDetails))&&<button className="save-draft-link" type="button" onClick={()=>{setBatchDisplayName(current=>current||suggestedBatchName());setDraftSaveOpen(true)}}>Save as draft</button>}</div>

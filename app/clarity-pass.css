@@ -2724,12 +2724,12 @@ body{min-width:1180px!important}
 
 /* D475 - a failed publish now says so at the top of the page, in Goldie's palette
    but clearly distinct from the success receipt. */
-.app-shell .publish-failure-panel{margin:0 0 22px;padding:20px 22px;border:1px solid #e6c9b4;border-left:4px solid #c97a4a;border-radius:14px;background:#fdf7f2}
-.app-shell .publish-failure-panel .mini-label{color:#a35f34;margin:0 0 6px}
+.app-shell .publish-failure-panel{margin:0 0 22px;padding:20px 22px;border:1px solid rgba(184,60,74,.28);border-left:4px solid var(--alert-line);border-radius:14px;background:var(--alert-tint)}
+.app-shell .publish-failure-panel .mini-label{color:var(--alert-ink);margin:0 0 6px}
 .app-shell .publish-failure-panel h3{margin:0 0 8px;font-size:1.05rem;color:#4a3b31}
 .app-shell .publish-failure-lede{margin:0 0 12px;font-size:.9rem;line-height:1.5;color:#6b5748}
 .app-shell .publish-failure-list{list-style:none;margin:0 0 12px;padding:0;display:grid;gap:8px}
-.app-shell .publish-failure-list li{display:grid;gap:3px;padding:10px 12px;border-radius:10px;background:#fff;border:1px solid #eedfd3}
+.app-shell .publish-failure-list li{display:grid;gap:3px;padding:10px 12px;border-radius:10px;background:#fff;border:1px solid rgba(184,60,74,.18)}
 .app-shell .publish-failure-list strong{font-size:.88rem;color:#4a3b31}
 .app-shell .publish-failure-list span{font-size:.84rem;line-height:1.45;color:#8a6a55}
 
@@ -2752,12 +2752,18 @@ body{min-width:1180px!important}
 .app-shell .publish-confirm-bundle{margin:0 0 10px;font-size:.86rem;line-height:1.5;color:#6b5748}
 
 /* D496 - the same batch open in two tabs. */
-.app-shell .batch-tab-conflict{display:grid;gap:6px;justify-items:start;margin:0 0 14px;padding:14px 16px;border:1px solid #e6c9b4;border-left:4px solid #c97a4a;border-radius:12px;background:#fdf7f2}
+.app-shell .batch-tab-conflict{display:grid;gap:6px;justify-items:start;margin:0 0 14px;padding:14px 16px;border:1px solid rgba(184,60,74,.28);border-left:4px solid var(--alert-line);border-radius:12px;background:var(--alert-tint)}
 .app-shell .batch-tab-conflict b{font-size:.92rem;color:#4a3b31}
 .app-shell .batch-tab-conflict span{font-size:.85rem;line-height:1.5;color:#6b5748}
-.app-shell .batch-tab-conflict button{margin-top:4px;padding:7px 14px;border:1px solid #c97a4a;border-radius:999px;background:#fff;font-size:.84rem;font-weight:650;color:#a35f34;cursor:pointer}
+.app-shell .batch-tab-conflict button{margin-top:4px;padding:7px 14px;border:1px solid var(--alert-line);border-radius:999px;background:#fff;font-size:.84rem;font-weight:650;color:var(--alert-ink);cursor:pointer}
 
 /* D499 - each product's rows carry their own Change, as step 1 does, so the
    expand strip D498 added under the card is gone. The rows themselves are
    styled by the step 1 rules these cards now share. */
 .app-shell .step-product-card .batch-product-rows{margin:0}
+
+/* D514 - two panels I added invented their own tan (#c97a4a on #fdf7f2) instead
+   of using the alert colour this app already had. The faded red in .critical-dpi
+   and .publish-live-warning is the one that was chosen; it is a token now, so a
+   future alert takes the palette rather than a colour someone picked. */
+.app-shell{--alert-line:#b83c4a;--alert-tint:#fff0f1;--alert-ink:#9e2736}
