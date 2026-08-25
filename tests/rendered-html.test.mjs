@@ -4305,3 +4305,20 @@ test("a row never offers Change for a section that is not on the page — D525",
     "if the section is not here, go to the phase that has it");
   assert.match(app, /setFinishPhase\("details"\);window\.setTimeout\(/);
 });
+
+test("the publish button refuses in advance, not after the click — D526/D527", async () => {
+  const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+
+  /* D527 - driven live: "Publish all 3 products live on Etsy" was enabled, and
+     pressing it threw a blocking dialog listing four unfinished things. That is
+     the pattern D229 already fixed on the create-drafts button - a control that
+     looks available and then refuses. It carries its own reason now. */
+  assert.match(app, /\|\|missingPublishFields\(\)\.length>0\}/);
+  assert.match(app, /missingPublishFields\(\)\[0\]\?`\$\{missingPublishFields\(\)\[0\]\} must be completed before publishing\.`/);
+
+  /* D526 - clicking Mockups did nothing at all: its section sits inside a
+     collapsed "Create lifestyle mockups" disclosure, and the browser ignores
+     scrollIntoView on anything inside a closed <details>. Confirmed on the page -
+     the element was at 1506px and nothing moved. */
+  assert.match(app, /while\(parent\)\{if\(parent instanceof HTMLDetailsElement\)parent\.open=true;parent=parent\.parentElement\}/);
+});
