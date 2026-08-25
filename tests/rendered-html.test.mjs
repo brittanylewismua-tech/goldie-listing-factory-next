@@ -1681,7 +1681,12 @@ test("keeps each Printify editing action with its listing details",async()=>{
     readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8"),
     readFile(new URL("../app/approved-functional.css",import.meta.url),"utf8"),
   ]);
-  assert.match(page,/tag-row[\s\S]*?draft\.editorUrl[\s\S]*?Open in Printify to resize or reposition[\s\S]*?<\/div><\/div>/);
+  /* D539 - step 2 is about photographs now, so the listing's title and tags no
+     longer ride along beside the Printify button there; tag-row lives on step 3,
+     where titles and tags are edited. What must stay true is that the Printify
+     editor button is still attached to its own listing's preview. */
+  assert.match(page,/draft\.editorUrl[\s\S]{0,400}?Open in Printify to resize or reposition[\s\S]*?<\/div><\/div>/);
+  assert.match(page,/className="tag-row"/, "and tag-row still exists on step 3");
   assert.match(styles,/div:not\(\.pending-preview\)>\.edit-draft-button\{margin:16px 0 0;align-self:flex-start\}/);
 });
 
@@ -4009,13 +4014,13 @@ test("no product on any step falls back to a bare header — D500", async () => 
 
   // All three steps are covered, and each returns rows.
   const returns = fn.match(/return \[/g) || [];
-  assert.equal(returns.length, 3, "D517 - step 2 lists products again once the drafts exist");
-  for (const label of ["Printify mockups", "Lifestyle mockups", "Photo order", "Listings", "Titles and tags", "Description"]) {
+  assert.equal(returns.length, 3, "D539 - one row set per step");
+  for (const label of ["Review Printify placement", "Choose Printify photos", "Create lifestyle mockups", "Arrange final photo order", "Listings", "Titles and tags", "Description"]) {
     assert.ok(fn.includes(`label:"${label}"`), `${label} row is built`);
   }
 
   // An unstarted product says so rather than claiming zero of zero.
-  assert.equal((fn.match(/"Not started yet"/g) || []).length, 8, "D537 - step 2 has three task rows");
+  assert.equal((fn.match(/"Not started yet"/g) || []).length, 9, "D539 - step 2 has four task rows");
 });
 
 test("the bundle cards do not churn the network or the tab claim — D501", async () => {
@@ -4056,12 +4061,12 @@ test("step 3's rows match step 1's, captured from both live pages — D502", asy
   /* D515 - every row scrolled to the same element, so Titles landed on the
      description and Description did nothing visible. Each row goes to its own
      section, and a section that is a <details> opens and closes. */
-  assert.match(app, /const openRow=\(target\?:string\)=>\{/);
+  assert.match(app, /const openRow=\(target\?:string,task\?:string\)=>\{/);
   /* D538 - it used to toggle, so the one section that starts open closed itself
      and scrolled nowhere. A row means "take me to this task". */
   assert.match(app, /if\(node instanceof HTMLDetailsElement\)node\.open=true;/);
   assert.doesNotMatch(app, /node\.open=!node\.open/);
-  assert.match(app, /onClick=\{event=>\{event\.stopPropagation\(\);openRow\(row\.target\)\}\}/,
+  assert.match(app, /onClick=\{event=>\{event\.stopPropagation\(\);openRow\(row\.target,row\.task\)\}\}/,
     "the button must not fire the row handler twice");
 
   // The separate waiting paragraph and its styling are gone.
@@ -4231,9 +4236,11 @@ test("every step is the same shape: a collapsible card per product — D517", as
      the row toggled a tip and went nowhere near a photo. The two real sections
      are the Printify picker and the lifestyle mockup builder, and the page
      already names them that way. */
-  assert.match(app, /\{label:"Printify mockups"[^}]*target:"details\.printify-mockups"\}/);
-  assert.match(app, /\{label:"Lifestyle mockups"[^}]*target:"details\.lifestyle-mockups"\}/);
-  assert.match(app, /\{label:"Photo order"[^}]*target:"details\.photo-order"\}/);
+  /* D539 - step 2's rows own panels rather than pointing at sections. */
+  assert.match(app, /\{label:"Choose Printify photos"[^}]*task:"printify"\}/);
+  assert.match(app, /\{label:"Create lifestyle mockups"[^}]*task:"lifestyle"\}/);
+  assert.match(app, /\{label:"Arrange final photo order"[^}]*task:"order"\}/);
+  assert.match(app, /\{label:"Review Printify placement"[^}]*task:"placement"\}/);
   assert.doesNotMatch(app, /target:"details\.recommended-listing-photos"/,
     "a row never points at an advice panel");
 
@@ -4241,8 +4248,7 @@ test("every step is the same shape: a collapsible card per product — D517", as
   const targets = [...app.matchAll(/target:"([^"]+)"/g)].map((m) => m[1]);
   /* D535 - the two step 2 targets now point at the sections they are named for. */
   assert.deepEqual([...new Set(targets)].sort(), [
-    ".batch-title-builder", ".final-review", "details.lifestyle-mockups",
-    "details.permanent-description", "details.photo-order", "details.printify-mockups",
+    ".batch-title-builder", ".final-review", "details.permanent-description",
   ]);
   for (const target of targets) {
     const bare = target.replace(/^details/, "").replace(/^\./, "");
@@ -4400,31 +4406,35 @@ test("a collapsed product reads as a list item — D531", async () => {
     "one header, every state - a closed card may still drop its divider, but not resize");
 });
 
-test("step 2 groups work by task, not by listing — D532/D537", async () => {
+test("a task row owns its panel inside the product card — D539", async () => {
   const [app, css] = await Promise.all([
     readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8"),
   ]);
 
-  /* These sections exist once per LISTING - two designs meant two Printify
-     pickers and two lifestyle panels - while the rows above them are per PRODUCT
-     and count across all of them. So "Printify mockups" jumped into the first
-     listing's copy, "Lifestyle mockups" jumped into the first listing's other
-     copy, and both looked like the same block of stuff underneath. */
-  for (const cls of ["printify-mockups", "lifestyle-mockups", "photo-order"]) {
-    assert.match(app, new RegExp(`<details className="task-section ${cls}"`), `${cls} is its own section`);
-  }
-  assert.match(app, /const listings=drafts\.map\(draft=>\(\{draft,design:files\.find/);
-  assert.match(app, /<p className="task-listing-name">\{listingName\(draft,design\)\}<\/p>/,
-    "every listing is named inside the task it belongs to");
-  assert.match(css, /\.task-section\{/);
+  /* Until now the rows were bookmarks: each scrolled into one enormous
+     post-draft-workspace that looped every listing and inserted the old
+     single-product page components, several of which carried their own
+     accordions. Three rows, one pile, three scroll positions - which is why
+     every row appeared to lead to the same block. */
+  assert.match(app, /const \[activeImageTask,setActiveImageTask\]=useState<string>\(""\)/);
+  assert.match(app, /function imageTaskPanel\(task:string\)/);
+  assert.match(app, /\{open&&row\.task&&activeImageTask===row\.task&&<div className="task-panel">\{imageTaskPanel\(row\.task\)\}<\/div>\}/,
+    "the panel renders under the row that asked for it, and only that one");
+  assert.match(app, /setActiveImageTask\(current=>current===task\?"":task\)/);
 
-  // A listing that failed is its own section, so it cannot be buried under a task.
-  assert.match(app, /task-section listings-need-attention/);
-  assert.match(app, /listing needs":"listings need"\} another try/);
+  // Switching product keeps the task, so the tee opens where the hoodie was.
+  assert.match(app, /if\(!open\)\{if\(reachable\)\{setActiveImageTask\(task\);openBundleProduct\(index\)\}return\}/);
 
-  // The Printify preview and its editor button belong with the Printify photos.
-  assert.match(app, /Open in Printify to resize or reposition/);
+  // Inside a task, a listing is a compact row that expands its own work.
+  assert.match(app, /<button type="button" className="task-listing-row" aria-expanded=\{shown\}/);
+  assert.match(app, /className="task-listing-thumb"/);
+  assert.match(app, /\{count\} \{count===1\?"photo":"photos"\}/);
+  assert.match(css, /\.task-listing-row\{/);
+
+  // The legacy shells come off rather than nesting inside the new ones.
+  assert.match(app, /\{bare\?<div className="printify-image-picker bare">/);
+  assert.doesNotMatch(app, /<details className="draft-mockups">/, "no second accordion around the generator");
 });
 
 test("step 2's rows go to their own section, and the card aligns — D538", async () => {

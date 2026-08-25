@@ -2834,18 +2834,11 @@ body{min-width:1180px!important}
    page, all three cards. */
 .app-shell .step-product-cards{width:100%;max-width:none;margin-left:0;margin-right:0;padding-left:54px;padding-right:54px;box-sizing:border-box}
 
-/* D537 - step 2's work is grouped by task now, so each section needs to look like
-   a section rather than another slab of the same grey. */
-.app-shell .task-section{margin:0 0 12px;border:1px solid rgba(91,48,79,.14);border-radius:14px;background:rgba(255,255,255,.42)}
-.app-shell .task-section>summary{display:flex;align-items:center;gap:10px;padding:13px 16px;cursor:pointer;list-style:none}
-.app-shell .task-section>summary::-webkit-details-marker{display:none}
-.app-shell .task-section>summary::after{content:"⌄";margin-left:auto;font-size:1.05rem;color:#75576b;transition:transform .18s}
-.app-shell .task-section[open]>summary::after{transform:rotate(180deg)}
-.app-shell .task-section>summary b{font-size:.95rem;color:#4c293f}
-.app-shell .task-section>summary small{display:block;margin-top:2px;font-size:.8rem;font-weight:500;color:#75576b}
-.app-shell .task-listing{padding:12px 16px;border-top:1px solid rgba(91,48,79,.1)}
+/* D539 - the task-section wrappers are gone; a task row owns its panel. What
+   survives from D537 is the per-listing naming inside a task. */
+.app-shell .task-listing{padding:0}
 .app-shell .task-listing-name{margin:0 0 8px;font:700 .84rem/1.3 "Manrope",system-ui,sans-serif;color:#5b304f}
-.app-shell .task-section.listings-need-attention{border-color:rgba(184,60,74,.3);background:var(--alert-tint)}
+.app-shell .task-listing.failed{padding:12px;border:1px solid rgba(184,60,74,.28);border-radius:12px;background:var(--alert-tint)}
 
 /* D538 - inside a product card the workspace was still wearing the page-level
    chrome it needs when it is the whole page: a 48px left margin, 72px gutters
@@ -2857,3 +2850,16 @@ body{min-width:1180px!important}
 .app-shell .step-product-card .post-draft-workspace{max-width:none;margin-left:0;margin-right:0;padding-left:0;padding-right:0;padding-top:14px}
 .app-shell .step-product-card .step-product-body{padding-left:0;padding-right:0}
 .app-shell .step-product-card .batch-product-row{grid-template-columns:22px 150px 1fr auto}
+
+/* D539 - a task row owns its panel. The panel opens inside the product card,
+   directly under the row that asked for it, and nothing else opens with it. */
+.app-shell .task-panel{padding:4px 0 14px;border-top:1px solid rgba(91,48,79,.1)}
+.app-shell .task-panel-body{display:grid;gap:8px;padding:10px 14px}
+.app-shell .task-listing-row{display:flex;align-items:center;gap:10px;width:100%;padding:8px 12px;border:1px solid rgba(91,48,79,.14);border-radius:12px;background:rgba(255,255,255,.55);cursor:pointer;text-align:left}
+.app-shell .task-listing-row:hover{background:#fff}
+.app-shell .task-listing-thumb{width:36px;height:36px;flex:none;border-radius:8px;object-fit:contain;background:#fff;border:1px solid rgba(91,48,79,.1)}
+.app-shell .task-listing-row .task-listing-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin:0;font:700 .86rem/1.3 "Manrope",system-ui,sans-serif;color:#4c293f}
+.app-shell .task-listing-count{font-size:.8rem;color:#75576b;white-space:nowrap}
+.app-shell .task-listing-change{font-size:.78rem;font-weight:700;color:#8e4c78;white-space:nowrap}
+.app-shell .task-listing-panel{margin:8px 0 4px;padding:12px;border:1px solid rgba(91,48,79,.12);border-radius:12px;background:rgba(255,255,255,.5)}
+.app-shell .printify-image-picker.bare{display:block}
