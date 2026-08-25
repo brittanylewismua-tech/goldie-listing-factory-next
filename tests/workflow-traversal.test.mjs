@@ -339,3 +339,35 @@ test("a link written with the names on screen opens the right step — D428", as
   // Emitted links are unchanged, so saved and shared URLs keep working.
   assert.match(source, /url\.searchParams\.set\("step",step\)/);
 });
+
+/* D544 · Walked her real batch end to end and hit a wall: step 3 prepared the
+ * Etsy details, the rows read "Needs review", and there was no Next step button
+ * anywhere on the page. Nothing to press, nothing explaining why.
+ *
+ * Cause: D221 decided Etsy details live on the Listing page with no phase of
+ * their own, so continueToEtsyDetails() calls setFinishPhase("details") - and
+ * then wrote phase=etsy into the URL anyway. Three things claimed to know which
+ * phase step 3 was in and they disagreed: React state said details forever, the
+ * URL said etsy, and a reload would restore etsy and behave differently again.
+ * D541 then keyed the footer button on finishPhase==="details" and turned that
+ * old inconsistency into a dead end. */
+test("step 3 always has a way forward — D544", async () => {
+  const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+
+  // One derived fact, asked once, from the data rather than from a phase name.
+  assert.match(app, /const etsyDetailsPrepared=files\.length>0&&files\.every\(file=>Boolean\(file\.etsy\)\)/);
+
+  /* The footer offers exactly one of the two, and which one depends on whether
+     the work is done - so there is never a step 3 with neither. */
+  const footer = app.slice(app.indexOf('{!etsyDetailsPrepared?<><button className="secondary-action prepare-etsy"'));
+  assert.ok(footer.indexOf('className="workflow-next"') > 0, "the other branch is Next step");
+  assert.ok(footer.indexOf('className="workflow-next"') < footer.indexOf("</>)}"), "in the same footer");
+
+  // The URL is not allowed to claim a phase the app never enters.
+  assert.doesNotMatch(app, /url\.searchParams\.set\("phase","etsy"\)/);
+  assert.match(app, /url\.searchParams\.set\("phase","details"\)/);
+
+  /* And nothing may go back to gating step 3's forward button on the phase,
+     which is what made it unreachable. */
+  assert.doesNotMatch(app, /\{finishPhase==="details"\?<>/);
+});

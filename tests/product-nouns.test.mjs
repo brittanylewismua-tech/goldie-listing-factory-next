@@ -156,7 +156,8 @@ test("a thin title fails on its own length, not on phrase count — D77", async 
   assert.doesNotMatch(route, /selected\.length<minimumTitlePhrases\|\|tags\.length<requiredTagCount\)return NextResponse/,
     "Hard-failing a row on phrase count rejects good listings. Judge the assembled title instead.");
   // The retry itself may still use phrase count — it is cheap and harmless.
-  assert.match(route, /selection=await requestSelection\(1\)/);
+    /* D544 - kept only when the retry comes back richer than the first attempt. */
+  assert.match(route, /selection=richer\(selection,await requestSelection\(1\)\)/);
 });
 
 test("both Printify product links work, and a bare id too — D116", async () => {
@@ -191,4 +192,39 @@ test("machine-default filenames do not become batch names — D142", async () =>
   assert.match(route, /if\(GENERIC_DESIGN_NAME\.test\(cleaned\)\)return "";/);
   assert.match(route, /const letters=cleaned\.replace\(\/\[\^a-z\]\/gi,""\)\.length;/,
     "A name that is mostly digits is a machine default too.");
+});
+
+/* D544 · Measured on her own batch, two listings, one bank, one run:
+ *   "Bride Hoodie, Camp Bach, Lake Bachelorette"  — 42 chars,  3 of 13 tags
+ *   "Bride Hoodie"                                — 12 chars, 13 of 13 tags
+ * Etsy allows 140 title characters and 13 tag slots. The first listing shipped
+ * with ten empty tag slots; the second used under a tenth of its title. Both
+ * came from the same bank, which had plenty of fitting phrases for both.
+ * Three separate causes, all pinned here. */
+test("Etsy's title and tag space is filled when the bank can fill it — D544", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const route = await readFile(new URL("../app/api/listing-intelligence/route.ts", import.meta.url), "utf8");
+
+  // 1. The retry is kept only when it is actually better than the first attempt.
+  assert.match(route, /\(b\.selected\.length\+b\.tags\.length\)>\(a\.selected\.length\+a\.tags\.length\)\?b:a/);
+  assert.match(route, /selection=richer\(selection,await requestSelection\(1\)\)/);
+
+  /* 2. Tags: the fallback used to fire only on an empty list, so three tags out
+        of thirteen was accepted in silence. The model's ranking leads and the
+        bank fills the rest. */
+  assert.match(route, /const rankedTagFallback=bestFitFromBank\(tagCandidates,designSignals,body\.product\)/);
+  assert.match(route, /const pickedTags=withoutCaseCollisions\(\[\.\.\.tags,\.\.\.rankedTagFallback\]\)\.slice\(0,requiredTagCount\|\|13\)/);
+  assert.doesNotMatch(route, /withoutCaseCollisions\(tags\.length\?tags:/,
+    "a short tag list must be topped up, not accepted");
+
+  /* 3. Title: TITLE_FILL_FLOOR already noticed a thin title and only warned about
+        it. It fills it now, from the same ranked bank, without repeating a
+        phrase already in the title or one contained in it. */
+  assert.match(route, /if\(title\.length<90\)\{/);
+  assert.match(route, /for\(const phrase of bestFitFromBank\(titleCandidates,designSignals,body\.product\)\)/);
+  assert.match(route, /if\(already\.has\(phrase\.toLocaleLowerCase\(\)\)\|\|contained\(phrase\)\)continue/);
+  assert.match(route, /if\(title\.length>=90\)break/);
+
+  // And the 140 character ceiling still governs every phrase that goes in.
+  assert.match(route, /const addPhrase=\(phrase:string\)=>\{const candidate=title\?`\$\{title\}\$\{joiner\}\$\{phrase\}`:phrase;if\(candidate\.length>140\)return/);
 });

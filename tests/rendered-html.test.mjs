@@ -386,7 +386,10 @@ test("imports Printify product facts and automatically prepares product-specific
   /* D541 - "Etsy details completed" was a disclosure nested inside step 3's
      table of every listing. The Etsy fields are their own task now, and each
      listing's row reports its own standing on that task instead. */
-  assert.match(page,/etsyRequiredComplete\(design\.etsy\)\?"Ready":design\.etsy\?"Needs review"/);
+  /* D544 - "Needs review" told her nothing. When one required field is all that
+     stands between her and step 4, the row names it. */
+  assert.match(page,/export function etsyMissingRequired\(/);
+  assert.match(page,/missing\.length===1\?`\$\{missing\[0\]\} still needed`/);
   assert.match(page,/finalDescription/);assert.match(page,/descriptionOverride/);
   assert.match(intelligence,/fields differ/);assert.match(intelligence,/include every physical or product attribute you can confidently support/i);assert.match(intelligence,/Do not stop at required fields/);assert.match(intelligence,/Fill holiday, occasion, recipient, or style only when/);assert.match(intelligence,/Never guess simply to make a field non-empty/);
   assert.match(drafts,/template\.description/);
@@ -2289,7 +2292,7 @@ test("retries thin AI title output once and then rejects the row (fixes D77)",as
   const app=await readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8");
   assert.match(route,/minimumTitlePhrases=titleCandidates\.length>=8\?8:1/);
   assert.match(route,/requiredTagCount=Math\.min\(13,tagCandidates\.length\)/);
-  assert.match(route,/selection=await requestSelection\(0\);if\(selection\.selected\.length<minimumTitlePhrases\|\|selection\.tags\.length<requiredTagCount\)selection=await requestSelection\(1\)/);
+  assert.match(route,/selection=await requestSelection\(0\);if\(selection\.selected\.length<minimumTitlePhrases\|\|selection\.tags\.length<requiredTagCount\)selection=richer\(selection,await requestSelection\(1\)\)/);
   /* The retry still fires on phrase count — cheap and harmless. But the row is
    * only REJECTED on the assembled title's length. Gating rejection on phrase
    * count failed 2 of 3 real listings, one at "7 of 8 required title phrases
@@ -2347,8 +2350,14 @@ test("changing Etsy category preserves compatible values and warns before cleari
   assert.match(page,/setPendingCategoryChange\(\{designId:design\.id,details,clearedCount:merged\.clearedCount\}\)/);
   assert.match(page,/Change category and clear \{pendingCategoryChange\.clearedCount\}/);
   assert.match(page,/Keep current category/);
-  assert.match(page,/finishPhase!=="etsy"\|\|etsyCategories\.length/,
+  /* D544 - this gated on finishPhase==="etsy", and that phase is never entered:
+     continueToEtsyDetails() sets "details" and only the URL claimed otherwise. So
+     a reopened batch showed a category control with nothing in it to pick. It
+     waits on the data it needs now, not on a phase name. */
+  assert.match(page,/useEffect\(\(\)=>\{if\(etsyCategories\.length\)return;const restored=files\.find\(file=>file\.etsy\)\?\.etsy;if\(!restored\)return;void resolveEtsyOptions\(restored,restored\.taxonomyId\)/,
     "Restored batches must load the full category list so the visible category control can actually change.");
+  assert.doesNotMatch(page,/finishPhase!=="etsy"/,
+    "nothing may gate on a phase the app never enters");
 });
 
 test("photo recommendations and defaults follow the saved product — D105",async()=>{
@@ -4270,7 +4279,9 @@ test("every step is the same shape: a collapsible card per product — D517", as
   const row = (label) => {
     const at = app.indexOf(`{label:"${label}"`);
     assert.ok(at > 0, `${label} row is built`);
-    return app.slice(at, app.indexOf("\n", at));
+    // D544 - a row's value may be a short function now, so read to the next row.
+    const next = app.indexOf('{label:"', at + 8);
+    return app.slice(at, next > at ? next : app.indexOf("\n];", at));
   };
   for (const [label, task] of [["Write titles and tags", "titles"], ["Edit description", "description"], ["Review Etsy category and fields", "etsy"]]) {
     assert.ok(row(label).includes(`task:"${task}"`), `${label} owns the ${task} panel`);
@@ -4575,6 +4586,13 @@ test("steps 2, 3 and 4 are the same shape and no row is a bookmark — D541", as
   assert.ok(!titles.includes("quality-pill"), "and it is not under Titles any more");
 
   // Step-level actions stay step-level.
-  assert.match(app, /\{finishPhase==="details"\?<><button className="secondary-action prepare-etsy"/,
+  /* D544 - and it asks whether the details exist, not what phase the app claims
+     to be in. Keying it on finishPhase==="details" meant the button never swapped
+     for Next step, because D221 had already made that phase permanent - so step 3
+     had no way forward at all. */
+  assert.match(app, /\{!etsyDetailsPrepared\?<><button className="secondary-action prepare-etsy"/,
     "preparing Etsy details covers the batch, so it sits under the cards");
+  assert.match(app, /const etsyDetailsPrepared=files\.length>0&&files\.every\(file=>Boolean\(file\.etsy\)\)/);
+  assert.doesNotMatch(app, /url\.searchParams\.set\("phase","etsy"\)/,
+    "and the URL never claims a phase the app is not in");
 });

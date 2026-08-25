@@ -694,6 +694,15 @@ export function sameIdSet(a:number[]|undefined,b:number[]|undefined):boolean{
   return left.length>0&&left.length===right.length&&left.every((value,index)=>value===right[index]);
 }
 
+/* D544 - "Needs review" was all a listing said, and the one thing standing
+   between her and step 4 was a single required Etsy field with no value. She had
+   to open the row, then the details editor, then read down a list of properties
+   to find which one. A row should say what is actually left. */
+export function etsyMissingRequired(etsy:{properties?:Array<{required?:boolean;value?:string;label?:string}>}|null|undefined):string[]{
+  if(!etsy)return[];
+  return (etsy.properties||[]).filter(property=>property.required&&!(property.value||"").trim()).map(property=>property.label||"a required field");
+}
+
 export function etsyRequiredComplete(etsy:{properties?:Array<{required?:boolean;value?:string}>}|null|undefined):boolean{
   if(!etsy)return false;
   const required=(etsy.properties||[]).filter(property=>property.required);
@@ -993,7 +1002,12 @@ export default function ListingFactoryApp() {
   const [titlePulseIds,setTitlePulseIds]=useState<Set<string>>(new Set());
 
   useEffect(()=>{if(imageStepError&&allCreatedListingsHaveImages())setImageStepError("")},[imageStepError,printifyImageIndices,printifyImageSelections,preparedMockupCounts,drafts]);
-  useEffect(()=>{if(finishPhase!=="etsy"||etsyCategories.length)return;const restored=files.find(file=>file.etsy)?.etsy;if(!restored)return;void resolveEtsyOptions(restored,restored.taxonomyId).catch(()=>undefined)},[finishPhase,etsyCategories.length,files]);
+  /* D544 - this waited for finishPhase==="etsy", a phase the app never enters:
+     continueToEtsyDetails() sets it to "details" and only the URL said otherwise.
+     So reopening a saved batch left the Etsy category dropdown with no options to
+     choose from, because the effect that loads them never ran. It waits for the
+     thing it actually needs instead - a listing with Etsy details on it. */
+  useEffect(()=>{if(etsyCategories.length)return;const restored=files.find(file=>file.etsy)?.etsy;if(!restored)return;void resolveEtsyOptions(restored,restored.taxonomyId).catch(()=>undefined)},[etsyCategories.length,files]);
   useEffect(()=>{if(finishPhase!=="mockups"||printifyImageIndices.length||Object.keys(printifyImageSelections).length)return;const guide=productPhotoGuide(templateDetails?.blueprintTitle||"",drafts.find(draft=>draft.printifyImages?.length)?.printifyImages?.length||0),defaults=Object.fromEntries(drafts.filter(draft=>draft.id&&draft.status==="Created"&&draft.printifyImages?.length).map(draft=>[draft.id!,Array.from({length:Math.min(guide.count,draft.printifyImages!.length)},(_,index)=>index)]));if(Object.keys(defaults).length)setPrintifyImageSelections(defaults)},[finishPhase,printifyImageIndices.length,printifyImageSelections,drafts,templateDetails?.blueprintTitle]);
   useEffect(()=>{const created=drafts.filter(draft=>draft.status==="Created"&&draft.id).map(draft=>draft.id!);setSelectedPublishIds(current=>[...new Set([...current.filter(id=>created.includes(id)),...created])])},[drafts]);
   useEffect(()=>{const select=(event:Event)=>setSelectedPublishIds((event as CustomEvent<string[]>).detail||[]),retry=(event:Event)=>{const clientId=(event as CustomEvent<string>).detail;const design=files.find(file=>file.id===clientId);if(design)void runDrafts([design],true)};window.addEventListener("goldie-publish-selection",select);window.addEventListener("goldie-retry-listing",retry);return()=>{window.removeEventListener("goldie-publish-selection",select);window.removeEventListener("goldie-retry-listing",retry)}},[files,drafts]);
@@ -1865,7 +1879,15 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
          rendered, so pressing one threw the whole step back a phase. */
       {label:"Write titles and tags",value:started?`${counts.titled} of ${counts.designs} written · ${counts.tagged} at 13 tags`:"Not started yet",done:started&&counts.designs>0&&counts.titled===counts.designs&&counts.tagged===counts.designs,task:"titles"},
       {label:"Edit description",value:counts.described?"Attached":started?"Not attached":"Not started yet",done:counts.described,task:"description"},
-      {label:"Review Etsy category and fields",value:started?(files.some(file=>file.etsy)?`${files.filter(file=>etsyRequiredComplete(file.etsy)).length} of ${files.length} ready`:"Not created yet"):"Not started yet",done:files.length>0&&files.every(file=>etsyRequiredComplete(file.etsy)),task:"etsy"},
+      {label:"Review Etsy category and fields",value:started?(()=>{
+        if(!files.some(file=>file.etsy))return"Not created yet";
+        const ready=files.filter(file=>etsyRequiredComplete(file.etsy)).length;
+        if(ready===files.length)return`${ready} of ${files.length} ready`;
+        /* D544 - "0 of 2 ready" is a score, not an instruction. When one field is
+           blocking the whole batch, name it here. */
+        const names=[...new Set(files.flatMap(file=>etsyMissingRequired(file.etsy)))];
+        return names.length===1?`${ready} of ${files.length} ready · ${names[0]} still needed`:`${ready} of ${files.length} ready`;
+      })():"Not started yet",done:files.length>0&&files.every(file=>etsyRequiredComplete(file.etsy)),task:"etsy"},
     ];
   }
 
@@ -1884,6 +1906,11 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
      renders inside this product's card, and only that panel renders. The task
      survives switching product, so opening Printify photos on the hoodie and
      then choosing the tee opens the tee's Printify photos. */
+  /* D544 - one honest question, asked in one place: has Goldie built the Etsy
+     details for every listing yet? Before this, three different things claimed to
+     know - a phase the state never enters, a URL parameter written by hand, and a
+     progress index - and they disagreed. */
+  const etsyDetailsPrepared=files.length>0&&files.every(file=>Boolean(file.etsy));
   const [activeTask,setActiveTask]=useState<string>("");
   const [openListing,setOpenListing]=useState<string>("");
   /* D541 - every task panel that works listing by listing shows the same row:
@@ -1926,7 +1953,12 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
     </>;
     if(task==="etsy")return <>
       <div className="task-panel-lead"><div className="task-panel-heading"><h3>Review your Etsy listing details</h3><span className="done-mark">{files.filter(file=>etsyRequiredComplete(file.etsy)).length}/{files.length} ready</span></div><p className="step-copy">Goldie has pre-filled the Etsy category and every product field it could confidently match for each listing. Look everything over and change any selection that does not fit.</p>{files.every(file=>etsyRequiredComplete(file.etsy))&&<div className="variant-transfer-note"><span>✓</span><div><b>Core listing information is ready for your review.</b><small>This step contains additional Etsy category and product fields. Optional fields stay blank when there is not a clear match.</small></div></div>}</div>
-      {designTaskRows("etsy",design=>etsyRequiredComplete(design.etsy)?"Ready":design.etsy?"Needs review":design.title.trim()?"Not created yet":"Waiting for a title",design=><div className="etsy-detail-body">{design.etsy?<EtsyDetailsEditor design={design} categories={etsyCategories} onChange={etsy=>updateDesign(design.id,{etsy,etsyError:""})} onCategory={taxonomyId=>changeEtsyCategory(design,taxonomyId)}/>:<div className={design.title.trim()?"etsy-detail-error":"etsy-detail-pending"}><b>{design.title.trim()?"Etsy details still need to be created.":"Waiting for this listing’s title."}</b><span>{design.title.trim()?design.etsyError:"Goldie fills in the Etsy category and product fields automatically once a title exists. Create titles above and this completes itself."}</span>{design.title.trim()&&<button aria-busy={preparingListingId===design.id} disabled={Boolean(preparingListingId)} onClick={()=>void retryOneEtsyListing(design)}>{preparingListingId===design.id?"Preparing this listing…":"Try this listing again"}</button>}</div>}{design.etsyError&&<small className="field-error">{design.etsyError}</small>}</div>)}
+      {designTaskRows("etsy",design=>{
+        if(etsyRequiredComplete(design.etsy))return"Ready";
+        if(!design.etsy)return design.title.trim()?"Not created yet":"Waiting for a title";
+        const missing=etsyMissingRequired(design.etsy);
+        return missing.length===1?`${missing[0]} still needed`:missing.length?`${missing.length} required fields left`:"Needs review";
+      },design=><div className="etsy-detail-body">{design.etsy?<EtsyDetailsEditor design={design} categories={etsyCategories} onChange={etsy=>updateDesign(design.id,{etsy,etsyError:""})} onCategory={taxonomyId=>changeEtsyCategory(design,taxonomyId)}/>:<div className={design.title.trim()?"etsy-detail-error":"etsy-detail-pending"}><b>{design.title.trim()?"Etsy details still need to be created.":"Waiting for this listing’s title."}</b><span>{design.title.trim()?design.etsyError:"Goldie fills in the Etsy category and product fields automatically once a title exists. Create titles above and this completes itself."}</span>{design.title.trim()&&<button aria-busy={preparingListingId===design.id} disabled={Boolean(preparingListingId)} onClick={()=>void retryOneEtsyListing(design)}>{preparingListingId===design.id?"Preparing this listing…":"Try this listing again"}</button>}</div>}{design.etsyError&&<small className="field-error">{design.etsyError}</small>}</div>)}
     </>;
     const listings=drafts.map(draft=>({draft,design:files.find(file=>file.id===draft.clientId),selectedImages:draft.id?(printifyImageSelections[draft.id]??printifyImageIndices):printifyImageIndices}));
     if(!listings.length)return null;
@@ -2540,7 +2572,11 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
       setUsageRevision(current=>current+1);
       /* D221 · Etsy details live on the Listing page; there is no separate phase to move to. */
       setFinishPhase("details");
-      const url=new URL(window.location.href);url.searchParams.set("step","finish");url.searchParams.set("phase","etsy");window.history.replaceState({},"",url);
+      /* D544 - this wrote phase=etsy while the line above sets the state to
+         "details", so the URL disagreed with the app. Reloading then restored a
+         phase the app never actually uses and step 3 behaved differently before
+         and after a refresh. The URL says what is true. */
+      const url=new URL(window.location.href);url.searchParams.set("step","finish");url.searchParams.set("phase","details");window.history.replaceState({},"",url);
       window.scrollTo(0,0);
     }finally{
       if(version===etsyPreparationVersion.current)setPreparingEtsy(false);
@@ -2978,7 +3014,15 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
                 product happens to be open. On a three-product bundle it was
                 inside the hoodie card, so leaving the step meant finding the
                 open product first. */}
-            {finishPhase==="details"?<><button className="secondary-action prepare-etsy" aria-busy={preparingEtsy} disabled={preparingEtsy||progressGateIssues(6).length>0} title={progressGateIssues(6)[0]} onClick={()=>void continueToEtsyDetails()}>{preparingEtsy?"Preparing Etsy details…":"Prepare Etsy details"}</button>{preparingEtsy?<p className="etsy-preparing-note" role="status">This can take a moment when your batch has several listings. Keep this page open while Goldie prepares each one.</p>:progressGateIssues(6)[0]&&<p className="etsy-preparing-note gate-reason" role="status">{progressGateIssues(6)[0]}</p>}</>:<><button className="workflow-next" aria-busy={savingEtsyDetails} disabled={savingEtsyDetails||progressGateIssues(7).length>0} title={progressGateIssues(7)[0]} onClick={()=>void saveAllEtsyDetails()}>{savingEtsyDetails?"Saving Etsy details…":"Next step"} <span>→</span></button>{!savingEtsyDetails&&progressGateIssues(7)[0]&&<p className="etsy-preparing-note gate-reason" role="status">{progressGateIssues(7)[0]}</p>}</>}
+            {/* D544 - this asked finishPhase==="details", and D221 had already decided the
+                 Etsy details render on the Listing page with no phase of their own:
+                 continueToEtsyDetails() calls setFinishPhase("details") and then writes
+                 phase=etsy into the URL anyway. So the state never left "details", the
+                 footer never swapped, and step 3 offered "Prepare Etsy details" forever
+                 with no way to reach step 4. Measured on her batch: details prepared,
+                 rows reading "Needs review", and no Next step button on the page.
+                 Ask the real question instead - have the Etsy details been built yet. */}
+              {!etsyDetailsPrepared?<><button className="secondary-action prepare-etsy" aria-busy={preparingEtsy} disabled={preparingEtsy||progressGateIssues(6).length>0} title={progressGateIssues(6)[0]} onClick={()=>void continueToEtsyDetails()}>{preparingEtsy?"Preparing Etsy details…":"Prepare Etsy details"}</button>{preparingEtsy?<p className="etsy-preparing-note" role="status">This can take a moment when your batch has several listings. Keep this page open while Goldie prepares each one.</p>:progressGateIssues(6)[0]&&<p className="etsy-preparing-note gate-reason" role="status">{progressGateIssues(6)[0]}</p>}</>:<><button className="workflow-next" aria-busy={savingEtsyDetails} disabled={savingEtsyDetails||progressGateIssues(7).length>0} title={progressGateIssues(7)[0]} onClick={()=>void saveAllEtsyDetails()}>{savingEtsyDetails?"Saving Etsy details…":"Next step"} <span>→</span></button>{!savingEtsyDetails&&progressGateIssues(7)[0]&&<p className="etsy-preparing-note gate-reason" role="status">{progressGateIssues(7)[0]}</p>}</>}
             </>)}
           {workflowStep==="finish"&&finishPhase==="final"&&stepProductCards(bundleCardStatus("publish"),null,false,<>{/* D497 - publish covered one product until D495, so these cards kept their
     own open controls. Now one press publishes the whole bundle, and a card

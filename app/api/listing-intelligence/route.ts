@@ -65,7 +65,16 @@ ETSY TAGS ARE A SEPARATE FIELD: rank these tag-length phrases from most to least
 Select only phrases a shopper looking at THIS artwork would call accurate. If a phrase names an animal, object, place, occasion or activity that is not actually shown in the artwork, do not select it, however well it suits the bank's general theme. Returning two or three phrases is a correct answer. Never pad the list to reach a count. Avoid duplicate meaning. Do not rewrite, combine, expand, correct, or invent any phrase. Copy each phrase exactly as it appears in the bank. Also describe what the artwork DEPICTS in design_subjects: 3 to 8 short plain words or phrases covering the subject, motifs, setting, occasion, and style. These are your own words, not phrases from the bank, and they are how Goldie ranks a bank against art that carries little or no text. Return only {"design_text":["exact visible line from the design"],"design_subjects":["short description of what the art shows"],"selected_keywords":["exact title phrase copied from the bank"],"tag_keywords":["exact tag phrase copied from the supplied tag candidates"]}.${correction}`})});
       const titlePayload=await titleResponse.json() as {output?:string;detail?:string};if(!titleResponse.ok)throw new Error(titlePayload.detail||"Goldie could not build this title.");const match=titlePayload.output?.match(/\{[\s\S]*\}/);if(!match)throw new Error("Goldie could not read the prepared title.");const parsed=JSON.parse(match[0]) as {selected_keywords?:string[];tag_keywords?:string[];design_text?:string[];design_subjects?:string[]},allowedByLower=new Map(titleCandidates.map(keyword=>[keyword.toLocaleLowerCase(),keyword])),selected=[...new Set((parsed.selected_keywords||[]).map(value=>allowedByLower.get(clean(value).toLocaleLowerCase())).filter((value):value is string=>Boolean(value)))].slice(0,13),tagAllowedByLower=new Map(tagCandidates.map(keyword=>[keyword.toLocaleLowerCase(),keyword])),tags=[...new Set((parsed.tag_keywords||[]).map(value=>tagAllowedByLower.get(clean(value).toLocaleLowerCase())).filter((value):value is string=>Boolean(value)))].slice(0,13),designText=(parsed.design_text||[]).map(clean).filter(Boolean).slice(0,12),designSubjects=(parsed.design_subjects||[]).map(clean).filter(Boolean).slice(0,8);return {selected,tags,designText,designSubjects};
     }
-    let selection;try{selection=await requestSelection(0);if(selection.selected.length<minimumTitlePhrases||selection.tags.length<requiredTagCount)selection=await requestSelection(1)}catch(error){return NextResponse.json({error:error instanceof Error?error.message:"Goldie could not build this title."},{status:502})}
+    /* D544 - measured on her own batch, two listings from the same bank and the
+       same run: one came back with three title phrases and three tags, the other
+       with thirteen tags. The retry existed already, but its result was used
+       unconditionally - so a second attempt that came back worse replaced a
+       better first one, and nothing checked. Keep whichever attempt actually
+       returned more. */
+    type Selection={selected:string[];tags:string[];designText:string[];designSubjects:string[]};
+    const richer=(a:Selection,b:Selection):Selection=>
+      (b.selected.length+b.tags.length)>(a.selected.length+a.tags.length)?b:a;
+    let selection;try{selection=await requestSelection(0);if(selection.selected.length<minimumTitlePhrases||selection.tags.length<requiredTagCount)selection=richer(selection,await requestSelection(1))}catch(error){return NextResponse.json({error:error instanceof Error?error.message:"Goldie could not build this title."},{status:502})}
     const {selected,tags,designText,designSubjects}=selection;
     
     /* D414 - This has swung between two bad extremes. It used to fall back to
@@ -90,7 +99,14 @@ Select only phrases a shopper looking at THIS artwork would call accurate. If a 
        keyword with its own data. The collision is resolved here, on the way
        out, rather than by editing what she typed. */
     const withoutCaseCollisions=(list:string[])=>{const seen=new Set<string>();return list.filter(phrase=>{const key=phrase.toLocaleLowerCase();if(seen.has(key))return false;seen.add(key);return true})};
-    const pickedTags=withoutCaseCollisions(tags.length?tags:bestFitFromBank(tagCandidates,designSignals,body.product)).slice(0,13);
+    /* D544 - this only fell back when the model returned NO tags. Three tags out
+       of thirteen was accepted in silence, and Etsy gives thirteen slots: on her
+       run one listing shipped with three, so ten slots of search coverage were
+       left empty for no reason. The model's ranking still leads; the bank fills
+       what it left behind, in bank-fit order, so the slots are used whenever the
+       bank can fill them. */
+    const rankedTagFallback=bestFitFromBank(tagCandidates,designSignals,body.product);
+    const pickedTags=withoutCaseCollisions([...tags,...rankedTagFallback]).slice(0,requiredTagCount||13);
     if(!picked.length)return NextResponse.json({error:"This keyword bank is empty, so there is nothing to build a title from. Pick a bank with phrases in it, or write this title yourself."},{status:422});
     /* D157: `selected` is de-duplicated for exact matches only, so a bank holding
      * both "girls gone mild" and "bachelorette girls gone mild" put BOTH in the
@@ -103,7 +119,25 @@ Select only phrases a shopper looking at THIS artwork would call accurate. If a 
     const chosen=picked.filter(phrase=>{const inner=normalisePhrase(phrase);
       return !picked.some(other=>{if(other===phrase)return false;const outer=normalisePhrase(other);
         return outer.length>inner.length&&outer.includes(inner)})}),
-      joiner=body.useCommas?", ":" ";let title="";const included:string[]=[];for(const phrase of chosen){const candidate=title?`${title}${joiner}${phrase}`:phrase;if(candidate.length>140)continue;title=candidate;included.push(phrase)}if(!title)return NextResponse.json({error:"Goldie could not build a usable title."},{status:502});
+      joiner=body.useCommas?", ":" ";let title="";const included:string[]=[];
+    const addPhrase=(phrase:string)=>{const candidate=title?`${title}${joiner}${phrase}`:phrase;if(candidate.length>140)return;title=candidate;included.push(phrase)};
+    for(const phrase of chosen)addPhrase(phrase);
+    /* D544 - one of her two listings came back with a twelve character title,
+       "Bride Hoodie", out of the 140 Etsy allows and a bank with dozens of
+       fitting phrases. TITLE_FILL_FLOOR below already noticed and printed a
+       warning; it never did anything about it. The model's ranking still leads,
+       and the bank's own fit ranking fills the rest of the space rather than
+       leaving nine tenths of the title empty and telling her about it. */
+    if(title.length<90){
+      const already=new Set(included.map(phrase=>phrase.toLocaleLowerCase()));
+      const contained=(phrase:string)=>{const inner=normalisePhrase(phrase);return included.some(other=>{const outer=normalisePhrase(other);return outer.includes(inner)||inner.includes(outer)})};
+      for(const phrase of bestFitFromBank(titleCandidates,designSignals,body.product)){
+        if(title.length>=90)break;
+        if(already.has(phrase.toLocaleLowerCase())||contained(phrase))continue;
+        addPhrase(phrase);already.add(phrase.toLocaleLowerCase());
+      }
+    }
+    if(!title)return NextResponse.json({error:"Goldie could not build a usable title."},{status:502});
     /* D77 is about listings that come out thin — one row got 45 of 140
      * characters while its siblings got 130. Judge that directly.
      *
