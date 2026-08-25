@@ -1862,12 +1862,36 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
        is per product: choosing what to publish and publishing it are one press
        in the footer, over the whole bundle. So the card reports what is about to
        go out for this product and does not offer to open anything. */
-    if(finishPhase==="final")return [
-      {label:"Listings ready",value:started?plural(counts.drafts,"listing"):"Not started yet",done:counts.drafts>0,report:true},
-      {label:"Titles and tags",value:started?`${counts.titled} of ${counts.designs} written · ${counts.tagged} at 13 tags`:"Not started yet",done:started&&counts.designs>0&&counts.titled===counts.designs&&counts.tagged===counts.designs,report:true},
-      {label:"Listing photos",value:started?plural(counts.photos+counts.mockups,"photo"):"Not started yet",done:counts.photos+counts.mockups>0,report:true},
-      {label:"Published",value:counts.published?plural(counts.published,"listing"):"Not published yet",done:counts.published>0,report:true},
-    ];
+    if(finishPhase==="final"){
+      /* D546 - the checklist under these cards repeated them line for line, so it
+         went. Two of its lines were not repeated anywhere - how many titles are
+         under 100 characters, and whether pricing and shipping were approved -
+         and they belong on the rows that own that work. */
+      const shortTitles=isActive?files.filter(file=>file.title.trim().length<100).length:0;
+      return [
+        {label:"Listings ready",value:started?plural(counts.drafts,"listing"):"Not started yet",done:counts.drafts>0,report:true},
+        {label:"Titles and tags",value:started?`${counts.titled} of ${counts.designs} written · ${counts.tagged} at 13 tags`:"Not started yet",detail:isActive&&shortTitles?`${shortTitles} ${shortTitles===1?"title is":"titles are"} under 100 characters`:undefined,done:started&&counts.designs>0&&counts.titled===counts.designs&&counts.tagged===counts.designs,report:true},
+        /* D490 - the checklist said only that one or more selected listings needed
+           a photo, making her go and find which, on a page where everything else
+           counted precisely. createdListingsMissingImages already knows exactly
+           which drafts they are, so the row names them. D546 - it moved here with
+           the checklist it used to live in. */
+        {label:"Listing photos",value:started?plural(counts.photos+counts.mockups,"photo"):"Not started yet",detail:isActive?(()=>{
+          const missing=createdListingsMissingImages(selectedPublishDrafts());
+          if(!missing.length)return undefined;
+          /* D494 - two designs exported minutes apart truncated to the same string,
+             which is worse than not naming them. Filenames differ at the end, so
+             keep both ends. */
+          const shorten=(name:string,limit:number)=>name.length<=limit?name:`${name.slice(0,Math.ceil(limit/2)-1)}…${name.slice(-Math.floor(limit/2))}`;
+          const named=missing.map(draft=>files.find(file=>file.id===draft.clientId)?.title?.trim()||files.find(file=>file.id===draft.clientId)?.file.name||"").filter(Boolean);
+          if(missing.length===1&&named[0])return `${shorten(named[0],60)} still needs a photo`;
+          if(named.length&&named.length===missing.length)return `${missing.length} listings still need a photo: ${named.map(name=>shorten(name,40)).join(", ")}`;
+          return `${missing.length} of ${selectedPublishDrafts().length} selected listings still need a photo`;
+        })():undefined,done:counts.photos+counts.mockups>0,report:true},
+        {label:"Pricing and shipping",value:isActive?(pricingApproved?`Approved · ${friendlyShippingProfileTitle(etsyShippingProfiles.find(profile=>profile.id===etsyShippingProfileId)?.title)||"Etsy shipping profile"}`:"Needs review"):started?"Approved":"Not started yet",done:isActive?pricingApproved:started,report:true},
+        {label:"Published",value:counts.published?plural(counts.published,"listing"):"Not published yet",done:counts.published>0,report:true},
+      ];
+    }
     return [
       /* D516 - Titles and Tags were two rows pointing at two different sections,
          which split one job in half on the page. Etsy tags come out of the same
@@ -2112,7 +2136,7 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
               setOpenListing("");
             };
             return <div className="batch-product-rows">{rows.map(row=><Fragment key={row.label}><div
-              className={`batch-product-row ${row.done?"settled":""} ${row.report?"reporting":switchingProduct||(!open&&!reachable)?"":"clickable"}`}
+              className={`batch-product-row ${row.done?"settled":"needed"} ${row.report?"reporting":switchingProduct||(!open&&!reachable)?"":"clickable"}`}
               role={row.report||switchingProduct||(!open&&!reachable)?undefined:"button"}
               tabIndex={row.report||switchingProduct||(!open&&!reachable)?undefined:0}
               aria-expanded={open}
@@ -2259,7 +2283,26 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
        results are the rows directly under this button now, in the same open
        panel, so there is nowhere to travel to. */}
 
-  function missingPublishFields(){const chosen=selectedPublishDrafts(),clientIds=new Set(chosen.map(draft=>draft.clientId)),chosenFiles=files.filter(file=>clientIds.has(file.id)),missing:string[]=[];if(!chosen.length)missing.push("Select at least one successful listing");if(chosenFiles.some(file=>!file.title.trim()))missing.push("Titles");if(chosenFiles.some(file=>!file.tags.length))missing.push("Tags");if(!description.trim())missing.push("Permanent product description");if(chosenFiles.some(file=>!etsyRequiredComplete(file.etsy)))missing.push("Etsy details");if(chosenFiles.some(file=>personalizationProblem(file.etsy)))missing.push("Personalization settings");if(chosen.length&&!allCreatedListingsHaveImages(chosen))missing.push("At least one image on every selected listing");return missing}
+  /* D546 - she reached step 4 with two of three products never started, was told
+     "Your batch is ready for its final check", and offered "Publish all 3
+     products live on Etsy". Verified against the saved batch: the bundle held
+     three recipes and exactly one had a batch at all - Gildan Tee and gildan
+     crewneck had no drafts, no titles, nothing. Pressing publish would have put
+     the hoodie's two listings live and then stalled on a product with nothing in
+     it. Every number on that page counted the open product; the button counted
+     products. Neither said what would actually be created. */
+  function bundleProductsNotStarted(){
+    if(!activeBundle||bundleRecipes.length<2)return[] as Recipe[];
+    return bundleRecipes.filter(recipe=>recipe.id!==activeRecipe?.id&&!(Number(bundleBatchSummary[recipe.id]?.drafts)||0));
+  }
+  function bundleListingsToPublish(){
+    if(!activeBundle||bundleRecipes.length<2)return selectedPublishDrafts().length;
+    return bundleRecipes.reduce((total,recipe)=>total+(recipe.id===activeRecipe?.id
+      ?selectedPublishDrafts().length
+      :Number(bundleBatchSummary[recipe.id]?.drafts)||0),0);
+  }
+
+  function missingPublishFields(){const chosen=selectedPublishDrafts(),clientIds=new Set(chosen.map(draft=>draft.clientId)),chosenFiles=files.filter(file=>clientIds.has(file.id)),missing:string[]=[];if(!chosen.length)missing.push("Select at least one successful listing");for(const recipe of bundleProductsNotStarted())missing.push(`${recipe.name} has no listings yet`);if(chosenFiles.some(file=>!file.title.trim()))missing.push("Titles");if(chosenFiles.some(file=>!file.tags.length))missing.push("Tags");if(!description.trim())missing.push("Permanent product description");if(chosenFiles.some(file=>!etsyRequiredComplete(file.etsy)))missing.push("Etsy details");if(chosenFiles.some(file=>personalizationProblem(file.etsy)))missing.push("Personalization settings");if(chosen.length&&!allCreatedListingsHaveImages(chosen))missing.push("At least one image on every selected listing");return missing}
   function openPublishConfirmation(){const chosen=selectedPublishDrafts(),missing=missingPublishFields();if(missing.length)return void stopWith("Complete every required selected listing field.",missing.map(field=>`${field} must be completed before publishing.`));const missingPhotos=createdListingsMissingImages(chosen);if(missingPhotos.length)return void stopWith("Add a photo to every selected listing before publishing.",missingPhotos.map(draft=>draft.name));setPublishConfirmOpen(true)}
   async function monitorPublishJob(jobId:string,resuming=false){
     /* D474 - this always said "resuming", including on a publish she had just
@@ -3031,25 +3074,26 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
     footer here too, so the cards report their products and the controls go. */}{/* D387 - This banner floated above the product card. It reports on this
               product's listings, so it belongs inside the card with them. */}
               {allCreatedListingsHaveImages()&&!batchReceipt&&<div className="step-success-banner" role="status"><span aria-hidden="true">✓</span><div><b>Listing photos complete</b><small>Every listing has at least one photo and is ready for final review.</small></div></div>}
-              <article className="step-card final-review active-panel"><div className="step-content">{batchReceipt?<OutcomeReceipt goalLine={listingGoal?`That is ${goalDone} of your ${listingGoal.target} listings this ${listingGoal.period}.`:undefined} receipt={batchReceipt} productName={templateDetails?.blueprintTitle||""} shippingProfile={etsyShippingProfiles.find(profile=>profile.id===etsyShippingProfileId)?.title||""} imageCount={printifyImageIndices.length} sizeGuideName={sizeGuideName} tagCount={files.reduce((sum,file)=>sum+file.tags.length,0)} mockupCount={Object.values(preparedMockupCounts).reduce((sum,count)=>sum+count,0)} variantCount={pricedVariants.length*files.length} minutesSaved={Math.max(12,Math.round(files.length*11.1))} nextBundleProduct={bundleRecipes[bundleIndex+1]?.name} bundleComplete={Boolean(activeBundle&&bundleIndex===bundleRecipes.length-1)} onNextBundleProduct={()=>void continueBundle()} onNewBatch={()=>{clearCurrentBatch(true);goToStep("setup")}}/>:<><div className="step-heading"><div><p className="mini-label">FINAL REVIEW</p><h2>Your batch is ready for its final check</h2></div><span className="done-mark">✓ {drafts.filter(draft=>draft.status==="Created").length} drafts</span></div><p className="step-copy">Confirm the checklist below. Nothing is published until you use the final button.</p><div className="final-checklist"><span className={pricingApproved?"":"content-review"}>{pricingApproved?"✓ Prices and buyer-paid shipping were approved":"! Prices and buyer-paid shipping need review"}</span><span>✓ {friendlyShippingProfileTitle(etsyShippingProfiles.find(profile=>profile.id===etsyShippingProfileId)?.title)||"Etsy shipping profile"} will be applied automatically</span><span className={files.every(file=>file.title.trim().length>=100)?"":"content-review"}>{files.every(file=>file.title.trim().length>=100)?"✓ Titles are complete":`! ${files.filter(file=>file.title.trim().length<100).length} of ${files.length} ${files.filter(file=>file.title.trim().length<100).length===1?"titles is":"titles are"} under 100 characters`}</span><span className={files.every(file=>file.tags.length>=13)?"":"content-review"}>{files.every(file=>file.tags.length>=13)?"✓ Tags are complete":`! ${files.filter(file=>file.tags.length<13).length} of ${files.length} listings have fewer than 13 tags`}</span><span>{description.trim()?"✓":"!"} Description {description.trim()?"is attached":"is blank"}</span><span>{files.every(file=>etsyRequiredComplete(file.etsy))?"✓":"!"} Etsy categories and product details {files.every(file=>etsyRequiredComplete(file.etsy))?"are ready":"still need review"}</span><span>✓ Printify placement and listing images were reviewed</span>{sizeGuideName&&<span>✓ {sizeGuideName} will be applied to every Etsy listing</span>}<span className={files.every(file=>etsyRequiredComplete(file.etsy))&&files.every(file=>!personalizationProblem(file.etsy))?"":"content-review"}>{files.every(file=>etsyRequiredComplete(file.etsy))&&files.every(file=>!personalizationProblem(file.etsy))?"✓":"!"} Etsy details and personalization {files.every(file=>etsyRequiredComplete(file.etsy))&&files.every(file=>!personalizationProblem(file.etsy))?"are ready":"still need review"}</span><span className={allCreatedListingsHaveImages(selectedPublishDrafts())?"":"content-review"}>{allCreatedListingsHaveImages(selectedPublishDrafts())?"✓":"!"} {allCreatedListingsHaveImages(selectedPublishDrafts())?"Every selected listing has at least one photo":(()=>{/* D490 - this said only that one or more selected listings needed a
-                  photo, making her go and find which, on a checklist where every
-                  other line counts precisely. createdListingsMissingImages
-                  already knows exactly which drafts they are. */
-                  const missing=createdListingsMissingImages(selectedPublishDrafts());
-                  const named=missing.map(draft=>files.find(file=>file.id===draft.clientId)?.title?.trim()||files.find(file=>file.id===draft.clientId)?.file.name||"").filter(Boolean);
-                  /* D494 - cutting a name at 32 characters from the front made
-                     "ChatGPT Image Aug 21, 2026, 05_32_41 PM (2)" and "... (4)"
-                     into the same string twice, which is worse than not naming
-                     them. Design filenames differ at the end, so keep both ends. */
-                  const shorten=(name:string,limit:number)=>name.length<=limit?name:`${name.slice(0,Math.ceil(limit/2)-1)}…${name.slice(-Math.floor(limit/2))}`;
-                  if(missing.length===1&&named[0])return `${shorten(named[0],60)} still needs a photo`;
-                  if(named.length&&named.length===missing.length)return `${missing.length} listings still need a photo: ${named.map(name=>shorten(name,40)).join(", ")}`;
-                  return `${missing.length} of ${selectedPublishDrafts().length} selected listings still need a photo`;
-                })()}</span></div>
+              <article className="step-card final-review active-panel"><div className="step-content">{batchReceipt?<OutcomeReceipt goalLine={listingGoal?`That is ${goalDone} of your ${listingGoal.target} listings this ${listingGoal.period}.`:undefined} receipt={batchReceipt} productName={templateDetails?.blueprintTitle||""} shippingProfile={etsyShippingProfiles.find(profile=>profile.id===etsyShippingProfileId)?.title||""} imageCount={printifyImageIndices.length} sizeGuideName={sizeGuideName} tagCount={files.reduce((sum,file)=>sum+file.tags.length,0)} mockupCount={Object.values(preparedMockupCounts).reduce((sum,count)=>sum+count,0)} variantCount={pricedVariants.length*files.length} minutesSaved={Math.max(12,Math.round(files.length*11.1))} nextBundleProduct={bundleRecipes[bundleIndex+1]?.name} bundleComplete={Boolean(activeBundle&&bundleIndex===bundleRecipes.length-1)} onNextBundleProduct={()=>void continueBundle()} onNewBatch={()=>{clearCurrentBatch(true);goToStep("setup")}}/>:<><div className="step-heading"><div><p className="mini-label">FINAL REVIEW</p><h2>Your batch is ready for its final check</h2></div><span className="done-mark">✓ {drafts.filter(draft=>draft.status==="Created").length} drafts{activeBundle&&bundleRecipes.length>1?` on ${activeRecipe?.name||"this product"}`:""}</span></div>{/* D546 - the old lead-in pointed at a checklist that repeated
+              what the product cards above already report, line for line. The cards
+              own it. What this step still has to say is what publishing will do. */}<p className="step-copy">{activeBundle&&bundleRecipes.length>1?`Every product in this batch publishes in turn. Nothing goes live until you use the final button.`:"Nothing is published until you use the final button."}</p>{/* D546 - her words, looking at it: "this whole section doesn't need to be on
+              the final step because above it, you list every product and everything
+              that's in every product." It repeated the cards line for line - prices,
+              description, Etsy details, photos - and the two things it alone
+              reported moved into the rows that own them. */}
 <FinalListingReview drafts={drafts} files={files} selections={printifyImageSelections} defaultIndices={printifyImageIndices} preparedMockupCounts={preparedMockupCounts} batchSizeGuide={sizeGuideName} onRetry={clientId=>{const design=files.find(file=>file.id===clientId);if(design)void runDrafts([design],true)}} onEdit={setFinishPhase}/><div className="publish-live-warning"><b>Only the listings selected above will be published live on Etsy.</b><span>Anything still needing a look is listed above.</span><small>Etsy charges its standard $0.20 USD listing fee for each listing created. This fee is charged by Etsy and is separate from your Goldie subscription.</small></div><button className="publish-all-button" aria-busy={publishing} disabled={publishing||!allCreatedListingsHaveImages(selectedPublishDrafts())||!selectedPublishDrafts().length||missingPublishFields().length>0||batchHeldByAnotherTab} title={batchHeldByAnotherTab?"This batch is open in another Goldie tab. Take over there or here before publishing, so the receipt is saved.":!selectedPublishDrafts().length?"Select at least one listing to publish.":!allCreatedListingsHaveImages(selectedPublishDrafts())?"Every selected listing needs at least one photo before it can publish.":missingPublishFields()[0]?`${missingPublishFields()[0]} must be completed before publishing.`:undefined} onClick={openPublishConfirmation}>{/* D495 - one press publishes the whole bundle, so the button says so and
     reports which product it is on rather than naming a listing count that
     only covers the product currently open. */}
-{publishRun&&!publishing?`Moving to ${bundleRecipes[bundleIndex+1]?.name||"the next product"}…`:publishing?(activeBundle&&bundleRecipes.length>1?`Publishing ${activeRecipe?.name||"this product"} (${bundleIndex+1} of ${bundleRecipes.length})…`:"Publishing…"):activeBundle&&bundleRecipes.length>1?`Publish all ${bundleRecipes.length} products live on Etsy`:`Publish ${selectedPublishDrafts().length} selected ${selectedPublishDrafts().length===1?"listing":"listings"} live on Etsy`}</button><button className="keep-drafts-button" type="button" disabled={publishing} onClick={()=>{setBatchDisplayName(current=>current||suggestedBatchName());setDraftSaveOpen(true)}}>Keep as Printify drafts for now</button>{!publishing&&<small className="keep-drafts-note">Nothing will publish to Etsy. Return to this exact batch from Batch History.</small>}{/* D474 - this describes the Keep as drafts button, but sat there while the
+{publishRun&&!publishing?`Moving to ${bundleRecipes[bundleIndex+1]?.name||"the next product"}…`:publishing?(activeBundle&&bundleRecipes.length>1?`Publishing ${activeRecipe?.name||"this product"} (${bundleIndex+1} of ${bundleRecipes.length})…`:"Publishing…"):activeBundle&&bundleRecipes.length>1?(()=>{
+              /* D546 - "Publish all 3 products" counted products while every
+                 number above it counted the open product's listings, so nothing
+                 on the page said how many Etsy listings would be created, or
+                 what they would cost. It says the number now. */
+              const waiting=bundleProductsNotStarted();
+              if(waiting.length)return `${waiting.length===1?waiting[0].name:`${waiting.length} products`} still ${waiting.length===1?"has":"have"} no listings`;
+              const total=bundleListingsToPublish();
+              return `Publish ${total} ${total===1?"listing":"listings"} live on Etsy · ${bundleRecipes.length} products`;
+            })():`Publish ${selectedPublishDrafts().length} selected ${selectedPublishDrafts().length===1?"listing":"listings"} live on Etsy`}</button><button className="keep-drafts-button" type="button" disabled={publishing} onClick={()=>{setBatchDisplayName(current=>current||suggestedBatchName());setDraftSaveOpen(true)}}>Keep as Printify drafts for now</button>{!publishing&&<small className="keep-drafts-note">Nothing will publish to Etsy. Return to this exact batch from Batch History.</small>}{/* D474 - this describes the Keep as drafts button, but sat there while the
      button above it said Publishing, so the page said both that it was
      publishing and that nothing would publish. It belongs to a choice that is
      no longer available once publishing has started. */}{publishMessage&&<p className="publish-message" role="status">{publishMessage}</p>}{publishFailures.length>0&&<section className="publish-failure-panel" role="alert"><p className="mini-label">NOTHING WAS PUBLISHED</p><h3>{publishFailures.length===1?"1 listing could not be published":`${publishFailures.length} listings could not be published`}</h3><p className="publish-failure-lede">Etsy did not create {publishFailures.length===1?"this listing":"these listings"}, so you have not been charged a listing fee for {publishFailures.length===1?"it":"them"}. Here is exactly what Etsy said:</p><ul className="publish-failure-list">{publishFailures.map(failure=>{const draft=drafts.find(item=>item.id===failure.productId);return <li key={failure.productId}><strong>{draft?.title?.slice(0,60)||draft?.designName||"Listing"}</strong><span>{failure.error}</span></li>})}</ul><p className="publish-failure-lede">Goldie has emailed this to you and recorded it. You can press publish again once it is fixed.</p></section>}</>}</div></article></>)}

@@ -2093,11 +2093,14 @@ test("shows underfilled titles and tags as a non-blocking review state (fixes D6
      rows immediately below it, which name every listing individually. The
      checklist now counts them, so the summary is at least as specific as the
      detail it summarises. */
-  assert.match(app,/under 100 characters/); // D490 singularises this line
-  assert.match(app,/\$\{files\.filter\(file=>file\.title\.trim\(\)\.length<100\)\.length\} of \$\{files\.length\}/,
-    "the checklist must count the listings that need review");
-  assert.match(app,/listings have fewer than 13 tags/);
-  assert.match(app,/\$\{files\.filter\(file=>file\.tags\.length<13\)\.length\} of \$\{files\.length\}/,
+  /* D546 - the checklist that carried these was deleted: it repeated the product
+     cards above it line for line. Both counts moved onto the rows that own them,
+     which is where she is already reading everything else. */
+  assert.match(app,/under 100 characters/);
+  assert.match(app,/const shortTitles=isActive\?files\.filter\(file=>file\.title\.trim\(\)\.length<100\)\.length:0/,
+    "the Titles and tags row counts the listings that need review");
+  assert.match(app,/\$\{counts\.tagged\} at 13 tags/);
+  assert.match(app,/\$\{counts\.titled\} of \$\{counts\.designs\} written · \$\{counts\.tagged\} at 13 tags/,
     "and must count them, the same as the titles line");
   /* D153 recoloured this from the gold-era #8a5a12 to the app's plum. The point
    * of D64 is that it is a distinct non-blocking review state, not that it is amber. */
@@ -2166,7 +2169,8 @@ test("records real pricing approval and invalidates it after edits (fixes D23 an
      still does. */
   assert.match(app,/if\(isActive\)\{setPricing\(value\);setPricingApproved\(false\)\}/);
   assert.match(app,/if\(isActive\)\{setVariantPrices\(value\);setPricingApproved\(false\)\}/);
-  assert.match(app,/pricingApproved\?"✓ Prices and buyer-paid shipping were approved":"! Prices and buyer-paid shipping need review"/);
+  /* D546 - the publish checklist repeated the product cards above it line for line, so it was deleted; each fact it carried moved to the row that owns it. */
+  assert.match(app,/\{label:"Pricing and shipping",value:isActive\?\(pricingApproved\?/);
   assert.match(app,/setPricingApproved\(Boolean\(state\.pricingApproved\)\|\|Boolean\(state\.complete&&\(state\.drafts\|\|\[\]\)\.some\(draft=>draft\.status==="Created"\)\)\)/);
   assert.doesNotMatch(app,/if\(complete&&drafts\.some\(draft=>draft\.status==="Created"\)&&!pricingApproved\)setPricingApproved\(true\)/);
   assert.doesNotMatch(app,/✓ Every enabled variation and price was reviewed/);
@@ -2450,7 +2454,9 @@ test("D407: nothing on the Images step expands itself", async () => {
 
   /* The guard that replaced it: publishing still cannot happen silently without
      photos. */
-  assert.match(page, /Every selected listing has at least one photo/);
+  /* D546 - the publish checklist repeated the product cards above it line for line, so it was deleted; each fact it carried moved to the row that owns it. */
+  assert.match(page, /\{label:"Listing photos"/);
+  assert.match(page, /still needs a photo/);
 });
 
 test("D226: a listing waiting for its title is not shown as a failure", async () => {
@@ -2520,7 +2526,8 @@ test("Batch History can select and delete several at once — D364", async () =>
    already existed to collapse exactly this; the checklist just was not using it. */
 test("D377: the publish checklist names the shipping profile readably", async () => {
   const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
-  assert.match(app, /✓ \{friendlyShippingProfileTitle\(etsyShippingProfiles\.find\(profile=>profile\.id===etsyShippingProfileId\)\?\.title\)/);
+  /* D546 - the publish checklist repeated the product cards above it line for line, so it was deleted; each fact it carried moved to the row that owns it. */
+  assert.match(app, /friendlyShippingProfileTitle\(etsyShippingProfiles\.find\(profile=>profile\.id===etsyShippingProfileId\)\?\.title\)/);
   assert.doesNotMatch(app, /etsyShippingProfileId\)\?\.title\|\|"Etsy shipping profile"\} will be applied/,
     "the raw title is what produced the truncated sentence");
 });
@@ -3834,7 +3841,8 @@ test("the publish checklist names what is wrong and counts in English — D490",
   // "1 photos", and "1 of 2 titles are under 100 characters".
   assert.doesNotMatch(review, /\{selectedCount\+mockupCount\} photos/);
   assert.match(review, /===1\?"photo":"photos"/);
-  assert.match(app, /===1\?"titles is":"titles are"\} under 100 characters/);
+  /* D546 - the publish checklist repeated the cards above it, so it went; each fact moved to the row that owns it. */
+  assert.match(app, /===1\?"title is":"titles are"\} under 100 characters/);
 });
 
 test("a reopened batch finishes preparing and the button says why it cannot run — D491", async () => {
@@ -3932,7 +3940,13 @@ test("one press publishes every product in a bundle — D495", async () => {
      product's drafts from one press; this is the same run at the other end. */
   assert.match(app, /const \[publishRun,setPublishRun\]=useState<\{total:number\}\|null>\(null\)/);
   assert.match(app, /if\(activeBundle&&bundleRecipes\.length>1\)setPublishRun\(\{total:bundleRecipes\.length\}\)/);
-  assert.match(app, /Publish all \$\{bundleRecipes\.length\} products live on Etsy/);
+  /* D546 - "Publish all 3 products" counted products while every number above it
+     counted the open product's two listings, so the page never said how many Etsy
+     listings would be created. And it offered the press while two of the three
+     products had no batch at all. */
+  assert.match(app, /Publish \$\{total\} \$\{total===1\?"listing":"listings"\} live on Etsy · \$\{bundleRecipes\.length\} products/);
+  assert.match(app, /function bundleProductsNotStarted\(\)/);
+  assert.match(app, /for\(const recipe of bundleProductsNotStarted\(\)\)missing\.push\(`\$\{recipe\.name\} has no listings yet`\)/);
 
   /* Publishing spends real money, so the run is stricter than the drafts run: a
      product whose listings are not ready stops it, and nothing after publishes. */
@@ -4045,7 +4059,7 @@ test("no product on any step falls back to a bare header — D500", async () => 
   }
 
   // An unstarted product says so rather than claiming zero of zero.
-  assert.equal((fn.match(/"Not started yet"/g) || []).length, 11, "D541 - four rows on step 2, three on step 3, three reporting rows on step 4");
+  assert.equal((fn.match(/"Not started yet"/g) || []).length, 12, "D546 - four rows on step 2, three on step 3, five reporting rows on step 4");
 });
 
 test("the bundle cards do not churn the network or the tab claim — D501", async () => {
@@ -4108,7 +4122,7 @@ test("the row itself opens, exactly as step 1's does — D503", async () => {
             tabindex="0" aria-expanded="false"> … <button class="row-open">
      Mine were plain divs whose only control was the button, so clicking the row
      did nothing and none of it was reachable by keyboard. */
-  assert.match(app, /className=\{`batch-product-row \$\{row\.done\?"settled":""\} \$\{row\.report\?"reporting":switchingProduct\|\|\(!open&&!reachable\)\?"":"clickable"\}`\}/);
+  assert.match(app, /className=\{`batch-product-row \$\{row\.done\?"settled":"needed"\} \$\{row\.report\?"reporting":switchingProduct\|\|\(!open&&!reachable\)\?"":"clickable"\}`\}/);
   assert.match(app, /role=\{row\.report\|\|switchingProduct\|\|\(!open&&!reachable\)\?undefined:"button"\}/);
   assert.match(app, /tabIndex=\{row\.report\|\|switchingProduct\|\|\(!open&&!reachable\)\?undefined:0\}/);
   assert.match(app, /aria-expanded=\{open\}/);
@@ -4599,4 +4613,41 @@ test("steps 2, 3 and 4 are the same shape and no row is a bookmark — D541", as
   assert.match(app, /const etsyDetailsPrepared=files\.length>0&&files\.every\(file=>Boolean\(file\.etsy\)\)/);
   assert.doesNotMatch(app, /url\.searchParams\.set\("phase","etsy"\)/,
     "and the URL never claims a phase the app is not in");
+});
+
+test("step 4 tells the truth about a bundle it is not ready to publish — D546", async () => {
+  const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+
+  /* Her questions, looking at step 4 on a three-product bundle:
+   *   "why am I looking at two of two products and the button says publish all
+   *    three products on Etsy?"
+   *   "why are the Gildan Tee and the crewneck saying not started yet for all of
+   *    the categories - how the hell would you get to step four if all three
+   *    products weren't finished?"
+   * Checked against the saved batch and she was right on both counts: the bundle
+   * held three recipes and exactly one had a batch. Two products had no drafts,
+   * no titles, nothing - and the page said "Your batch is ready for its final
+   * check" and offered to publish all three. Pressing it would have put two
+   * listings live and then stalled on a product with nothing in it. */
+  assert.match(app, /function bundleProductsNotStarted\(\)/);
+  assert.match(app, /return bundleRecipes\.filter\(recipe=>recipe\.id!==activeRecipe\?\.id&&!\(Number\(bundleBatchSummary\[recipe\.id\]\?\.drafts\)\|\|0\)\)/);
+
+  // Publishing is refused while any product in the bundle has nothing to publish.
+  assert.match(app, /for\(const recipe of bundleProductsNotStarted\(\)\)missing\.push\(`\$\{recipe\.name\} has no listings yet`\)/);
+
+  /* And the button counts what it will actually create. Every other number on
+     that page counted the open product's listings while the button counted
+     products, so nothing said how many Etsy listings - or how much - a press
+     would cost. */
+  assert.match(app, /function bundleListingsToPublish\(\)/);
+  assert.match(app, /Publish \$\{total\} \$\{total===1\?"listing":"listings"\} live on Etsy · \$\{bundleRecipes\.length\} products/);
+  assert.doesNotMatch(app, /Publish all \$\{bundleRecipes\.length\} products live on Etsy/);
+
+  // The counts that do only cover the open product say which product that is.
+  assert.match(app, /\$\{activeRecipe\?\.name\|\|"this product"\}`:""\}<\/span>/);
+
+  /* The checklist is gone - it repeated the cards line for line - and nothing may
+     rebuild it. */
+  assert.doesNotMatch(app, /className="final-checklist"/);
+  assert.doesNotMatch(app, /Confirm the checklist below/);
 });
