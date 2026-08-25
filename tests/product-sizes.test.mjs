@@ -602,7 +602,10 @@ test("D209: every readiness row that offers to open, opens in the card", async (
      emitted inside the row map now, immediately after the row that opened them,
      through panelFor. */
   const panelForAt = app.indexOf("const panelFor=(open:string)=>");
-  const rowsAt = app.indexOf('className="batch-product-rows"');
+  /* D499 gave the bundle cards on steps 2-4 the same row markup, and those
+     render earlier in the file, so this has to look at step 1's own row list
+     rather than the first one anywhere. */
+  const rowsAt = app.indexOf('className="batch-product-rows"', panelForAt);
   assert.ok(panelForAt > 0, "panels are built by panelFor in the card scope");
   assert.ok(panelForAt < rowsAt, "panelFor is defined before the row list renders");
 

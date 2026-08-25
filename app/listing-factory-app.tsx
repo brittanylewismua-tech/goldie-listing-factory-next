@@ -1703,6 +1703,62 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
     return()=>{alive=false};
   },[activeBundle,bundleRecipes,activeRecipe,bundleColorProducts]);
 
+  /* D499 - step 1 shows every product in the bundle as the same card, expanded,
+     each with its own rows - Colors, Sizes, Pricing, Shipping - and a Change
+     button on each. Steps 2, 3 and 4 showed one product's work and left the
+     others as bare headers, so the page stopped telling her anything about two
+     of the three products she is building. Same card, same rows, every step.
+
+     The other products' work lives in their own batches, so it has to be read
+     from them; the product being worked is read from state, which is always
+     fresher than anything saved. */
+  const [bundleBatchSummary,setBundleBatchSummary]=useState<Record<string,{designs:number;titled:number;tagged:number;drafts:number;described:boolean;complete:boolean}>>({});
+  useEffect(()=>{
+    if(!activeBundle||bundleRecipes.length<2)return;
+    const wanted=bundleRecipes.filter(recipe=>recipe.id!==activeRecipe?.id&&bundleBatchIds[recipe.id]);
+    if(!wanted.length)return;
+    let alive=true;
+    void Promise.all(wanted.map(async recipe=>{
+      const id=bundleBatchIds[recipe.id];
+      const payload=await fetch(`/api/batches?id=${encodeURIComponent(id)}`).then(response=>response.ok?response.json():null).catch(()=>null) as {batch?:{state?:Record<string,unknown>}}|null;
+      const state=payload?.batch?.state as {designs?:Array<{title?:string;tags?:string[]}>;drafts?:unknown[];description?:string;complete?:boolean}|undefined;
+      if(!state)return null;
+      const designs=state.designs||[];
+      return [recipe.id,{designs:designs.length,
+        titled:designs.filter(design=>String(design.title||"").trim()).length,
+        tagged:designs.filter(design=>(design.tags||[]).length>=13).length,
+        drafts:(state.drafts||[]).length,
+        described:Boolean(String(state.description||"").trim()),
+        complete:Boolean(state.complete)}] as const;
+    })).then(entries=>{
+      if(!alive)return;
+      const loaded=Object.fromEntries(entries.filter(Boolean) as Array<readonly [string,{designs:number;titled:number;tagged:number;drafts:number;described:boolean;complete:boolean}]>);
+      if(Object.keys(loaded).length)setBundleBatchSummary(current=>({...current,...loaded}));
+    });
+    return()=>{alive=false};
+  },[activeBundle,bundleRecipes,activeRecipe,bundleBatchIds,savedRevision]);
+
+  function productRows(recipe:Recipe,isActive:boolean):Array<{label:string;value:string;detail?:string;done:boolean}>{
+    const mine=isActive
+      ?{designs:files.length,titled:files.filter(file=>file.title.trim()).length,tagged:files.filter(file=>file.tags.length>=13).length,drafts:drafts.filter(draft=>draft.status==="Created").length,described:Boolean(description.trim()),complete}
+      :bundleBatchSummary[recipe.id];
+    if(!mine)return [];
+    const plural=(count:number,word:string)=>`${count} ${count===1?word:`${word}s`}`;
+    if(workflowStep==="designs")return [
+      {label:"Designs",value:plural(mine.designs,"design"),done:mine.designs>0},
+      {label:"Drafts",value:mine.drafts?plural(mine.drafts,"draft"):"Not created yet",done:mine.drafts>0},
+    ];
+    if(finishPhase==="final")return [
+      {label:"Listings",value:plural(mine.drafts,"listing"),done:mine.drafts>0},
+      {label:"Titles",value:`${mine.titled} of ${mine.designs} written`,done:mine.designs>0&&mine.titled===mine.designs},
+    ];
+    return [
+      {label:"Titles",value:`${mine.titled} of ${mine.designs} written`,done:mine.designs>0&&mine.titled===mine.designs},
+      {label:"Tags",value:`${mine.tagged} of ${mine.designs} at 13 tags`,done:mine.designs>0&&mine.tagged===mine.designs},
+      {label:"Description",value:mine.described?"Attached":"Not attached",done:mine.described},
+    ];
+  }
+
   function stepProductCards(statusFor:(recipe:Recipe,index:number)=>{label:string;tone:"ready"|"attention"|"waiting"},body:ReactNode,hidden=false,footer:ReactNode=null){
     const sharedAction=Boolean(footer);
     const list=activeBundle&&bundleRecipes.length>1?bundleRecipes:(activeRecipe?[activeRecipe]:[]);
@@ -1758,6 +1814,17 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
             </span>
             <span className={`batch-product-state step-product-state ${toneClass}`}>{status.label}</span>
           </header>
+          {/* D499 - the same rows step 1 gives every product, on every step. The
+              product being worked also shows its editor underneath them; the rest
+              show their rows and a Change that opens them here. */}
+          {many&&(()=>{const rows=productRows(recipe,index===bundleIndex);if(!rows.length)return null;
+            return <div className="batch-product-rows">{rows.map(row=><div key={row.label} className={`batch-product-row ${row.done?"settled":""}`}>
+              <span className="row-mark" aria-hidden="true">{row.done?"✓":"!"}</span>
+              <span className="row-label">{row.label}</span>
+              <span className="row-value">{row.value}{row.detail?<small>{row.detail}</small>:null}</span>
+              {!open&&reachable&&<button type="button" disabled={Boolean(switchingProduct)} onClick={()=>openBundleProduct(index)}>{opening?"Opening…":"Change"}</button>}
+            </div>)}</div>;
+          })()}
           {open&&<div className="step-product-body">{body}</div>}
           {/* D498 - a closed product was a header with a foreign-looking "Open
               Gildan Tee →" button stuck under it, which read as leaving this page
@@ -1765,7 +1832,7 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
               is expanded, the rest are the same card collapsed. Clicking the
               header opens it in place, and the chevron says that is what will
               happen. */}
-          {!open&&reachable&&<button type="button" className="step-product-expand" aria-expanded={false} disabled={Boolean(switchingProduct)} onClick={()=>openBundleProduct(index)}>{opening?<><span className="goldie-spinner" aria-hidden="true"/>Opening {recipe.name}…</>:<><span>Show {recipe.name}</span><span className="step-product-chevron" aria-hidden="true">⌄</span></>}</button>}
+          {/* D499 - each row carries its own Change, exactly as step 1 does, so the separate expand strip that sat under the card is gone. */}
           {/* D396 - A card with no control and no explanation reads as broken. Each
               product is its own batch and they are worked in order, so say which one
               has to come first rather than showing an inert card. */}

@@ -2752,10 +2752,7 @@ body{min-width:1180px!important}
 .app-shell .batch-tab-conflict span{font-size:.85rem;line-height:1.5;color:#6b5748}
 .app-shell .batch-tab-conflict button{margin-top:4px;padding:7px 14px;border:1px solid #c97a4a;border-radius:999px;background:#fff;font-size:.84rem;font-weight:650;color:#a35f34;cursor:pointer}
 
-/* D498 - a closed product in a bundle is the same card, collapsed. The control
-   reads as expanding this card in place, not as leaving for another page. */
-.app-shell .step-product-expand{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;margin:0;padding:12px 16px;border:0;border-top:1px solid rgba(139,89,137,.14);border-radius:0 0 14px 14px;background:transparent;font-size:.88rem;font-weight:650;color:#6f5f7d;cursor:pointer;text-align:left}
-.app-shell .step-product-expand:hover{background:rgba(225,194,231,.22);color:#4a3b31}
-.app-shell .step-product-expand:disabled{opacity:.55;cursor:default}
-.app-shell .step-product-chevron{font-size:1.05rem;line-height:1;transform:translateY(-1px)}
-.app-shell .step-product-card.is-closed .bundle-product-id b{font-weight:650}
+/* D499 - each product's rows carry their own Change, as step 1 does, so the
+   expand strip D498 added under the card is gone. The rows themselves are
+   styled by the step 1 rules these cards now share. */
+.app-shell .step-product-card .batch-product-rows{margin:0}
