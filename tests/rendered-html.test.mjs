@@ -3535,3 +3535,26 @@ test("a failed publish says why, is logged, and can be retried — D475", async 
   assert.ok(reset > 0 && reset < existing, "failed items are re-queued before the resumed-job early return");
   assert.match(route, /ELSE 'queued' END,attempts=0/);
 });
+
+test("a re-queued listing is never stranded behind a stale job status — D476", async () => {
+  const [route, app, ops] = await Promise.all([
+    readFile(new URL("../app/api/printify/drafts/publish/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/operations/route.ts", import.meta.url), "utf8"),
+  ]);
+
+  /* D475 re-queued failed items but left the job row saying needs_attention.
+     needs_attention is terminal, so the queue refused to run and the browser
+     stopped polling immediately - publish spun for a second and did nothing,
+     with an empty failure panel because the items were no longer failed.
+     Three independent places now refuse to let a stale status strand work. */
+  assert.match(route, /UPDATE etsy_publish_jobs SET status='processing',failed=0,last_error=NULL[^`]*status IN \('queued','running'\)/);
+  assert.match(route, /if\(current\.queued\+current\.processing>0\)await processNextGlobalPublishItem\(\)/);
+  assert.doesNotMatch(route, /if\(!\["completed","needs_attention"\]\.includes\(current\.status\)\)await processNextGlobalPublishItem/);
+  assert.match(app, /while\(!job\|\|!\["completed","needs_attention"\]\.includes\(job\.status\)\|\|job\.queued\+job\.processing>0\)/);
+
+  // And a way to read the real reason without shipping code to find out.
+  assert.match(ops, /export async function GET\(\)/);
+  assert.match(ops, /FROM etsy_publish_jobs ORDER BY updated_at DESC/);
+  assert.match(ops, /SELECT job_id,product_id,status,attempts,last_error/);
+});
