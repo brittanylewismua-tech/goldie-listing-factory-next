@@ -4005,12 +4005,12 @@ test("no product on any step falls back to a bare header — D500", async () => 
   // All three steps are covered, and each returns rows.
   const returns = fn.match(/return \[/g) || [];
   assert.equal(returns.length, 2, "D507 - step 2 lists no products, so it has no row set");
-  for (const label of ["Listings", "Titles", "Tags", "Description"]) {
+  for (const label of ["Listings", "Titles and tags", "Description"]) {
     assert.ok(fn.includes(`label:"${label}"`), `${label} row is built`);
   }
 
   // An unstarted product says so rather than claiming zero of zero.
-  assert.equal((fn.match(/"Not started yet"/g) || []).length, 6, "Titles is built in both the step 3 and step 4 row sets");
+  assert.equal((fn.match(/"Not started yet"/g) || []).length, 5, "D516 - titles and tags are one row, on both step 3 and step 4");
 });
 
 test("the bundle cards do not churn the network or the tab claim — D501", async () => {
@@ -4048,9 +4048,12 @@ test("step 3's rows match step 1's, captured from both live pages — D502", asy
     "and the waiting reason rides on it");
   /* D503 - the whole row opens, as step 1's does, so the behaviour lives in one
      handler that the row and its button both call. */
-  assert.match(app, /const openRow=\(\)=>\{if\(open\)\{.*step-product-body.*scrollIntoView/,
-    "on the open product it goes to that product's editor");
-  assert.match(app, /onClick=\{event=>\{event\.stopPropagation\(\);openRow\(\)\}\}/,
+  /* D515 - every row scrolled to the same element, so Titles landed on the
+     description and Description did nothing visible. Each row goes to its own
+     section, and a section that is a <details> opens and closes. */
+  assert.match(app, /const openRow=\(target\?:string\)=>\{/);
+  assert.match(app, /if\(node instanceof HTMLDetailsElement\)\{node\.open=!node\.open;if\(!node\.open\)return\}/);
+  assert.match(app, /onClick=\{event=>\{event\.stopPropagation\(\);openRow\(row\.target\)\}\}/,
     "the button must not fire the row handler twice");
 
   // The separate waiting paragraph and its styling are gone.
@@ -4069,7 +4072,7 @@ test("the row itself opens, exactly as step 1's does — D503", async () => {
   assert.match(app, /role=\{switchingProduct\|\|\(!open&&!reachable\)\?undefined:"button"\}/);
   assert.match(app, /tabIndex=\{switchingProduct\|\|\(!open&&!reachable\)\?undefined:0\}/);
   assert.match(app, /aria-expanded=\{open\}/);
-  assert.match(app, /if\(event\.key==="Enter"\|\|event\.key===" "\)\{event\.preventDefault\(\);openRow\(\)\}/,
+  assert.match(app, /if\(event\.key==="Enter"\|\|event\.key===" "\)\{event\.preventDefault\(\);openRow\(row\.target\)\}/,
     "keyboard reaches it too, as step 1 does");
   assert.match(app, /<button type="button" className="row-open"/);
 

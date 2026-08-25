@@ -2767,3 +2767,14 @@ body{min-width:1180px!important}
    and .publish-live-warning is the one that was chosen; it is a token now, so a
    future alert takes the palette rather than a colour someone picked. */
 .app-shell{--alert-line:#b83c4a;--alert-tint:#fff0f1;--alert-ink:#9e2736}
+
+/* D516 - step 3 was one slab: an always-open title builder, a collapsible
+   description, and an always-open per-listing table. Only the middle one
+   collapsed, so the page read as though everything lived under Description.
+   Three sections, one control, same shape. */
+.app-shell .listing-section>summary{display:flex;align-items:center;gap:10px;padding:14px 16px;border-radius:12px;cursor:pointer;list-style:none;font-weight:700;color:#4c293f}
+.app-shell .listing-section>summary::-webkit-details-marker{display:none}
+.app-shell .listing-section>summary::after{content:"⌄";margin-left:auto;font-size:1.1rem;transition:transform .18s}
+.app-shell .listing-section[open]>summary::after{transform:rotate(180deg)}
+.app-shell .listing-section>summary:hover{background:rgba(225,194,231,.24)}
+.app-shell .listing-section>summary small{display:block;margin-top:3px;font-size:.82rem;font-weight:500;color:#75576b}
