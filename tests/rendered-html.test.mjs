@@ -3585,3 +3585,16 @@ test("an unmatched attribute is skipped, never fatal — D477", async () => {
   // D478 - the live status was a full-width slab; it is one line about the button above it.
   assert.match(css, /\.publish-message\{background:none!important/);
 });
+
+test("the live build announces itself — D479", async () => {
+  const [marker, route] = await Promise.all([
+    readFile(new URL("../app/build-marker.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/version/route.ts", import.meta.url), "utf8"),
+  ]);
+  /* Three separate times a fix was described as live while it was still only on
+     GitHub, and the only way to tell was to hunt for a CSS class in the built
+     stylesheet. One request now answers it. */
+  assert.match(marker, /export const BUILD_MARKER = "D\d+"/);
+  assert.match(route, /build:BUILD_MARKER/);
+  assert.match(route, /"cache-control":"no-store"/, "a cached answer would defeat the point");
+});
