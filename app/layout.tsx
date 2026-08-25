@@ -6,6 +6,7 @@ import { headers } from "next/headers";
    nothing at all. Verified on the live page - the click registered, no dialog
    appeared, and all 20 batches were still there. One host, at the root. */
 import ConfirmHost from "./confirm-dialog";
+import NewBuildNotice from "./new-build-notice";
 import "./globals.css";
 import "./factory-navigation.css";
 import "./theme.css";
@@ -33,5 +34,5 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const diagnostics = `(function(){function send(kind,message,source,line,column,stack){try{navigator.sendBeacon('/api/client-errors',new Blob([JSON.stringify({kind:kind,message:String(message||'Unknown browser startup error'),source:String(source||''),line:Number(line||0),column:Number(column||0),url:String(location.pathname+location.search),stack:String(stack||'')})],{type:'application/json'}))}catch(_){}}window.addEventListener('error',function(event){send('error',event.message,event.filename,event.lineno,event.colno,event.error&&event.error.stack)});window.addEventListener('unhandledrejection',function(event){var reason=event.reason;send('unhandledrejection',reason&&reason.message?reason.message:String(reason||'Unhandled promise rejection'),'','','',reason&&reason.stack)})})();`;
-  return <html lang="en"><head><script dangerouslySetInnerHTML={{__html:diagnostics}}/></head><body><ReliableNavigation/>{children}<ConfirmHost/></body></html>;
+  return <html lang="en"><head><script dangerouslySetInnerHTML={{__html:diagnostics}}/></head><body><ReliableNavigation/>{children}<ConfirmHost/><NewBuildNotice/></body></html>;
 }

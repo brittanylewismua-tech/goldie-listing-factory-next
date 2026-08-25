@@ -186,7 +186,7 @@ test("step-level controls sit below the cards, product-level inside them", async
 test("every page that asks for confirmation has something to draw it", async () => {
   const layout = await read("app/layout.tsx");
   assert.match(layout, /import ConfirmHost from "\.\/confirm-dialog"/);
-  assert.match(layout, /<ConfirmHost\/><\/body>/, "one host, at the root, so every page is covered");
+  assert.match(layout, /<ConfirmHost\/><NewBuildNotice\/><\/body>/, "one host, at the root, so every page is covered");
 
   /* It used to be mounted inside the Listing Factory only. Verified live on Batch
      History: "Delete 20 batches" registered the click, no dialog appeared, and
@@ -200,4 +200,35 @@ test("every page that asks for confirmation has something to draw it", async () 
     if (!source.includes("confirmAction(")) continue;
     assert.ok(!source.includes("<ConfirmHost"), `${page} relies on the root host`);
   }
+});
+
+/* D542 · Measured on her own tab: it was running D539 while /api/version
+ * answered D540. The deploy had happened, the page had not changed, and nothing
+ * said why. Every "it's deployed and it's the exact same" has to be checkable
+ * against this before it is treated as a code problem. */
+test("a tab that is behind the deployed build says so", async () => {
+  const [notice, layout, css] = await Promise.all([
+    read("app/new-build-notice.tsx"),
+    read("app/layout.tsx"),
+    read("app/clarity-pass.css"),
+  ]);
+
+  // It compares the build it is running against the build being served.
+  assert.match(notice, /import \{ BUILD_MARKER \} from "\.\/build-marker"/);
+  assert.match(notice, /fetch\("\/api\/version",\{cache:"no-store"\}\)/);
+  assert.match(notice, /live!==BUILD_MARKER/);
+
+  // And it checks again when she comes back to the tab, not only on a timer.
+  assert.match(notice, /document\.addEventListener\("visibilitychange",check\)/);
+  assert.match(notice, /document\.removeEventListener\("visibilitychange",check\)/);
+  assert.match(notice, /window\.clearInterval\(timer\)/);
+
+  // Silent unless the tab is genuinely behind.
+  assert.match(notice, /if\(!waiting\)return null/);
+  assert.match(notice, /window\.location\.reload\(\)/);
+
+  /* D528 taught this one: mounted inside the listing factory it would be missing
+     from every other page. It goes in the layout, like the confirm host. */
+  assert.match(layout, /<ConfirmHost\/><NewBuildNotice\/>/);
+  assert.match(css, /\.new-build-notice\{[^}]*position:fixed/);
 });

@@ -2898,3 +2898,13 @@ body{min-width:1180px!important}
 .app-shell .task-listing-preview img{display:block;width:100%;height:152px;object-fit:contain;background:rgba(255,255,255,.6)}
 .app-shell .task-listing-preview span{display:block;padding:6px;color:#704d75;font-size:.6rem;font-weight:800;letter-spacing:.06em;text-align:center;text-transform:uppercase}
 @media(max-width:900px){.app-shell .task-listing-edit{grid-template-columns:minmax(0,1fr)}.app-shell .task-listing-preview{width:110px}.app-shell .task-listing-preview img{height:110px}}
+
+/* D542 - a deploy she cannot see is the same to her as a deploy that did not
+   happen. This sits out of the way until the tab is genuinely behind. */
+.app-shell .new-build-notice,.new-build-notice{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:9999;display:flex;align-items:center;gap:14px;max-width:min(560px,calc(100vw - 32px));padding:12px 14px;border:1px solid rgba(91,48,79,.2);border-radius:14px;background:#fffdfa;box-shadow:0 14px 40px rgba(74,42,62,.18)}
+.new-build-notice>div{display:grid;gap:2px;min-width:0}
+.new-build-notice b{font:800 .88rem/1.25 "Manrope",system-ui,sans-serif;color:#4b283e}
+.new-build-notice small{color:rgba(74,42,62,.72);font-size:.76rem;line-height:1.45}
+.new-build-notice button{flex:none;padding:9px 16px;border:0;border-radius:999px;background:linear-gradient(145deg,#d591c3,#a86ba2);color:#fff;font:800 .8rem/1 "Manrope",system-ui,sans-serif;cursor:pointer}
+.new-build-notice button:hover{filter:brightness(1.05)}
+@media(prefers-reduced-motion:no-preference){.new-build-notice{animation:notice-arrive .3s ease both}@keyframes notice-arrive{from{opacity:0;transform:translate(-50%,8px)}to{opacity:1;transform:translate(-50%,0)}}}

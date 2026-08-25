@@ -3190,7 +3190,7 @@ test("every confirmation uses the app's own dialog — D452", async () => {
      nothing at all. Verified live: "Delete 20 batches" registered, no dialog
      appeared, all 20 batches survived. */
   const layout = await readFile(new URL("../app/layout.tsx", import.meta.url), "utf8");
-  assert.match(layout, /<ConfirmHost\/><\/body>/);
+  assert.match(layout, /<ConfirmHost\/><NewBuildNotice\/><\/body>/);
 });
 
 test("a curved product wraps the print instead of pasting it flat — D454", async () => {
