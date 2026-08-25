@@ -4376,12 +4376,15 @@ test("a collapsed product reads as a list item — D531", async () => {
      photo and a 22px name stacked over an eyebrow and a subtitle, then two 52px
      rows - for a product she is not working on. Three filled the screen before
      the one she had open. Retested after: 139px, header 51px. */
-  assert.match(css, /\.step-product-card\.is-closed>header\{padding:8px 14px!important/);
-  assert.match(css, /\.step-product-card\.is-closed \.bundle-product-id b\{font-size:15px!important/);
-  assert.match(css, /\.step-product-card\.is-closed \.batch-product-row\{padding:6px 14px!important/);
-
-  // The open card keeps its full header, which is what marks it as the one in hand.
-  assert.doesNotMatch(css, /\.step-product-card\.is-open>header\{padding:8px/);
+  /* D533 - and the open one takes the same header. Leaving it on the old large
+     format put three cards in two styles on her screen, which is the thing she
+     has been asking me to stop doing. The open body and the chevron already say
+     which product is in hand. */
+  assert.match(css, /\.step-product-card>header\{padding:8px 14px!important/);
+  assert.match(css, /\.step-product-card \.bundle-product-id b\{font-size:15px!important/);
+  assert.match(css, /\.step-product-card \.batch-product-row\{padding:6px 14px!important/);
+  assert.doesNotMatch(css, /\.step-product-card\.is-closed>header\{padding/,
+    "one header, every state - a closed card may still drop its divider, but not resize");
 });
 
 test("a listing inside an open product collapses too — D532", async () => {

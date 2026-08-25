@@ -2801,25 +2801,21 @@ body{min-width:1180px!important}
 .app-shell .recipe-library-change>summary::-webkit-details-marker{display:none}
 .app-shell .recipe-library-change>summary::after{content:"⌄";margin-left:auto;font-size:1rem}
 
-/* D531 - measured on her page: a collapsed product was 199px. A 91px header
-   carrying a 52px photo, a 22px product name, an eyebrow and a subtitle stacked
-   in three lines - for a product she is not working on - over two 52px rows.
-   Three of those filled the screen before the one she had open. Collapsed is a
-   list item and reads on one line; open keeps the full header, which is now the
-   signal for which product she is working on. Retested live: 199px -> 139px,
-   header 91px -> 51px, and all three products visible at once.
-
-   The overrides are weighted because the name and the photo are sized by rules
-   that already carry weight; the first attempt lost to them silently. */
-.app-shell .step-product-card.is-closed>header{padding:8px 14px!important;gap:10px}
-.app-shell .step-product-card.is-closed .bundle-product-photo{width:34px!important;height:34px!important}
-.app-shell .step-product-card.is-closed .bundle-product-id{display:flex!important;align-items:baseline;gap:8px;flex-wrap:wrap}
-.app-shell .step-product-card.is-closed .bundle-product-id b{font-size:15px!important;line-height:1.15!important}
-.app-shell .step-product-card.is-closed .bundle-product-id small{font-size:.74rem!important}
-.app-shell .step-product-card.is-closed .batch-product-position{font-size:.62rem!important}
-.app-shell .step-product-card.is-closed .batch-product-row{padding:6px 14px!important;min-height:0!important}
-.app-shell .step-product-card.is-closed .row-value{font-size:.82rem!important}
-.app-shell .step-product-card.is-closed .row-open{padding:4px 11px!important;font-size:.76rem!important}
+/* D533 - she has said, repeatedly, that every product card must look the same.
+   D531 made the collapsed ones compact and deliberately left the open one on the
+   old large header, reasoning that it marked which product was in hand. On her
+   screen that is three cards in two different styles, which is the thing she has
+   been asking me to stop doing. The body being open, and the chevron, already
+   say which one is in hand. One header, every state. */
+.app-shell .step-product-card>header{padding:8px 14px!important;gap:10px}
+.app-shell .step-product-card .bundle-product-photo{width:34px!important;height:34px!important}
+.app-shell .step-product-card .bundle-product-id{display:flex!important;align-items:baseline;gap:8px;flex-wrap:wrap}
+.app-shell .step-product-card .bundle-product-id b{font-size:15px!important;line-height:1.15!important}
+.app-shell .step-product-card .bundle-product-id small{font-size:.74rem!important}
+.app-shell .step-product-card .batch-product-position{font-size:.62rem!important}
+.app-shell .step-product-card .batch-product-row{padding:6px 14px!important;min-height:0!important}
+.app-shell .step-product-card .row-value{font-size:.82rem!important}
+.app-shell .step-product-card .row-open{padding:4px 11px!important;font-size:.76rem!important}
 
 /* D532 - a listing inside an open product card was 813px, so two designs made
    the card 2444px and twenty would have made it sixteen thousand. It reads as
@@ -2832,3 +2828,12 @@ body{min-width:1180px!important}
 .app-shell .listing-card-name{font-weight:700;font-size:.9rem;color:#4c293f;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:62%}
 .app-shell .listing-card-meta{font-size:.8rem;color:#75576b}
 .app-shell .listing-card.failed>summary .listing-card-meta{color:var(--alert-ink);font-weight:700}
+
+/* D534 - measured, not guessed: the page's column is 342px from the left and
+   1044px wide - the heading, the step rail, everything. The product cards sat at
+   288 / 1152, because .step-product-cards is a direct child of .app-shell and
+   never got the .workspace container's max-width and 54px gutters that hold the
+   rest of the page in. So they ran 54px past every other element on both sides,
+   edge to edge, which is what she has been calling stretched across the screen.
+   Same column now: measured live at 345 / 1038 against the page's 342 / 1044. */
+.app-shell .step-product-cards{max-width:1320px;margin-left:auto;margin-right:auto;padding-left:54px;padding-right:54px;box-sizing:border-box}
