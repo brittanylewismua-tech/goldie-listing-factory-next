@@ -866,11 +866,14 @@ test("the publish checklist is one column and warns in warning colours — D141"
      line. Its job - a warning must not look like a tick on the last screen before
      listings go live - is now the rows' job, and they already had it: an unmet row
      carries "!" and the alert colour, a met one carries "✓" and settles. */
-  assert.match(page, /<span className="row-mark" aria-hidden="true">\{row\.done\?"✓":"!"\}<\/span>/);
+  assert.match(page, /<span className="row-mark" aria-hidden="true">\{row\.done\?"✓":row\.optional\?"–":"!"\}<\/span>/);
   /* D546 - .batch-product-row.needed carried these colours since D394 and nothing
      ever set the class, so "!" rows rendered in the same colour as ticks - the
      exact defect D141 fixed on the checklist that has just been deleted. */
-  assert.match(page, /batch-product-row \$\{row\.done\?"settled":"needed"\}/);
+  /* D550 - and an optional row that is empty reads neutrally: lifestyle mockups
+     are not required to publish, so "! None made yet" in alert red was a finished
+     step reporting a problem that does not exist. */
+  assert.match(page, /batch-product-row \$\{row\.done\?"settled":row\.optional\?"optional":"needed"\}/);
   assert.match(clarity, /\.app-shell \.batch-product-row\.needed \.row-mark\{[\s\S]{0,120}color:#a32c4c!important/,
     "an unmet row is coloured as a warning, not as a tick");
 });

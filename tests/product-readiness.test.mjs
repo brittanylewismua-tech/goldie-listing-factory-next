@@ -159,7 +159,7 @@ test("shipping copies the profile Printify already attached — D183", () => {
      The rule is unchanged. */
   const shipping = shippingFacet(tee);
   assert.equal(shipping.state, "auto");
-  assert.equal(shipping.label, "Standard");
+  assert.equal(shipping.label, "Standard profile");
   assert.equal(shipping.resolved.shippingProfileId, 7);
 });
 
@@ -176,7 +176,7 @@ test("profit and Etsy attributes never block a batch", () => {
   const result = productReadiness(tee);
   const profit = profitFacet(tee);
   assert.equal(profit.state, "auto");
-  assert.equal(profit.label, "$10 per item");
+  assert.equal(profit.label, "$10 profit per item · Goldie's default");
   assert.ok(!result.questions.includes("profit"));
   /* Etsy attributes moved to the Listing page; they still never block. */
   const etsy = etsyFacet(tee);
@@ -188,7 +188,7 @@ test("profit and Etsy attributes never block a batch", () => {
 test("a saved profit goal and Etsy attributes read as settled", () => {
   const configured = { ...tee, saved: { defaultProfitTarget: 25, etsyDefaults: Object.fromEntries(Array.from({ length: 11 }, (_, i) => [`f${i}`, "x"])) } };
   const result = productReadiness(configured);
-  assert.equal(profitFacet(configured).label, "$25 per item");
+  assert.equal(profitFacet(configured).label, "$25 profit per item");
   assert.equal(etsyFacet(configured).state, "ready");
 });
 

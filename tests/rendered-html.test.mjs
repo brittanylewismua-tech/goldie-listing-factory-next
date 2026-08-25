@@ -4030,7 +4030,7 @@ test("every product shows the same rows on every step — D498/D499", async () =
   assert.match(app, /\{\(\(\)=>\{const rows=productRows\(recipe,index===bundleIndex\)/,
     "D501 - a single-product batch gets its rows too, as step 1 gives them");
   assert.match(app, /<div className="batch-product-rows">\{rows\.map/);
-  assert.match(app, /<span className="row-mark" aria-hidden="true">\{row\.done\?"✓":"!"\}<\/span>/,
+  assert.match(app, /<span className="row-mark" aria-hidden="true">\{row\.done\?"✓":row\.optional\?"–":"!"\}<\/span>/,
     "the same row markup step 1 uses");
 
   // The active product is read from state, which is fresher than anything saved.
@@ -4131,7 +4131,7 @@ test("the row itself opens, exactly as step 1's does — D503", async () => {
             tabindex="0" aria-expanded="false"> … <button class="row-open">
      Mine were plain divs whose only control was the button, so clicking the row
      did nothing and none of it was reachable by keyboard. */
-  assert.match(app, /className=\{`batch-product-row \$\{row\.done\?"settled":"needed"\} \$\{row\.report\?"reporting":switchingProduct\|\|\(!open&&!reachable\)\?"":"clickable"\}`\}/);
+  assert.match(app, /className=\{`batch-product-row \$\{row\.done\?"settled":row\.optional\?"optional":"needed"\} \$\{row\.report\?"reporting":switchingProduct\|\|\(!open&&!reachable\)\?"":"clickable"\}`\}/);
   assert.match(app, /role=\{row\.report\|\|switchingProduct\|\|\(!open&&!reachable\)\?undefined:"button"\}/);
   assert.match(app, /tabIndex=\{row\.report\|\|switchingProduct\|\|\(!open&&!reachable\)\?undefined:0\}/);
   assert.match(app, /aria-expanded=\{open\}/);
@@ -4693,4 +4693,37 @@ test("the publish screen states its true scope and its true cost — D548", asyn
   /* And the shipping profile is named as a shipping profile: the checklist read
      "✓ Hoodies will be applied automatically", which sounds like the garment. */
   assert.match(app, /\|\|"Etsy shipping profile"\} shipping profile`:"Needs review"/);
+});
+
+test("steps 1 to 3 say what their numbers mean — D550", async () => {
+  const [app, readiness, css] = await Promise.all([
+    readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/product-readiness.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8"),
+  ]);
+
+  /* Read the way she reads it, which is as someone spending money.
+     Step 1's Pricing row said "$10 per item". That is the profit target, not the
+     price - and on a hoodie a $10 price would be below cost. The one row that is
+     entirely about money was the most misreadable thing on the page. */
+  assert.match(readiness, /\$\$\{saved\.toFixed\(0\)\} profit per item/);
+  assert.match(readiness, /\$10 profit per item · Goldie's default/);
+  assert.doesNotMatch(readiness, /\$\{saved\.toFixed\(0\)\} per item`/);
+
+  // And a shipping profile's name is labelled as a profile, not left as a value.
+  assert.match(readiness, /label: `\$\{match\.title\} profile`/);
+
+  /* Lifestyle mockups are optional - nothing about publishing requires them - and
+     the row rendered "! None made yet" in alert red on every product card, so a
+     finished step reported a problem that does not exist. */
+  assert.match(app, /\{label:"Create lifestyle mockups"[\s\S]{0,200}optional:true/);
+  assert.match(app, /row\.done\?"✓":row\.optional\?"–":"!"/);
+  assert.match(css, /\.app-shell \.batch-product-row\.optional \.row-mark\{/);
+
+  /* Opening a saved batch showed the heading, then an empty page for several
+     seconds, then everything. Captured on step 3: a title, blank space, and
+     "Back / Saved automatically" floating in the middle of it. */
+  assert.match(app, /\{restoringBatch&&<div className="batch-opening" role="status">/);
+  assert.match(app, /Opening your batch…/);
+  assert.match(css, /\.app-shell \.batch-opening\{/);
 });

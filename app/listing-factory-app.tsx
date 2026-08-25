@@ -1881,7 +1881,7 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
        which means when the active product changes. That is what this watches. */
   },[activeBundle,bundleRecipes,activeRecipe,bundleBatchIds]);
 
-  function productRows(recipe:Recipe,isActive:boolean):Array<{label:string;value:string;detail?:string;done:boolean;target?:string;task?:string;report?:boolean}>{
+  function productRows(recipe:Recipe,isActive:boolean):Array<{label:string;value:string;detail?:string;done:boolean;target?:string;task?:string;report?:boolean;optional?:boolean}>{
     const mine=isActive
       ?{designs:files.length,titled:files.filter(file=>file.title.trim()).length,tagged:files.filter(file=>file.tags.length>=13).length,drafts:drafts.filter(draft=>draft.status==="Created").length,described:Boolean(description.trim()),complete,published:Number(batchReceipt?.publishedCount)||0,status:"",photos:Object.values(printifyImageSelections).reduce((total,ids)=>total+ids.length,0)||printifyImageIndices.length,mockups:Object.values(preparedMockupCounts).reduce((total,count)=>total+(Number(count)||0),0)}
       :bundleBatchSummary[recipe.id];
@@ -1905,7 +1905,12 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
     if(workflowStep==="designs")return [
       {label:"Review Printify placement",value:started?plural(counts.drafts,"listing"):blank,done:counts.drafts>0,task:"placement"},
       {label:"Choose Printify photos",value:started?plural(counts.photos,"photo"):blank,done:counts.photos>0,task:"printify"},
-      {label:"Create lifestyle mockups",value:started?(counts.mockups?plural(counts.mockups,"mockup"):"None made yet"):blank,done:counts.mockups>0,task:"lifestyle"},
+      /* D550 - lifestyle mockups are optional: nothing about publishing requires
+         them, and her hoodie published-ready with four Printify photos and none.
+         The row still rendered "! None made yet" in alert red on every product
+         card, so a finished step reported a problem that does not exist. An
+         optional row that is empty is not a warning. */
+      {label:"Create lifestyle mockups",value:started?(counts.mockups?plural(counts.mockups,"mockup"):"None yet — optional"):blank,done:counts.mockups>0,optional:true,task:"lifestyle"},
       {label:"Arrange final photo order",value:started?plural(counts.photos+counts.mockups,"photo"):blank,done:counts.photos+counts.mockups>0,task:"order"},
     ];
     /* D541 - both of these rows pointed at .final-review, so Listings and Titles
@@ -2206,13 +2211,13 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
               setOpenListing("");
             };
             return <div className="batch-product-rows">{rows.map(row=><Fragment key={row.label}><div
-              className={`batch-product-row ${row.done?"settled":"needed"} ${row.report?"reporting":switchingProduct||(!open&&!reachable)?"":"clickable"}`}
+              className={`batch-product-row ${row.done?"settled":row.optional?"optional":"needed"} ${row.report?"reporting":switchingProduct||(!open&&!reachable)?"":"clickable"}`}
               role={row.report||switchingProduct||(!open&&!reachable)?undefined:"button"}
               tabIndex={row.report||switchingProduct||(!open&&!reachable)?undefined:0}
               aria-expanded={open}
               onClick={()=>{if(!row.report)openRow(row.target,row.task)}}
               onKeyDown={(event:React.KeyboardEvent)=>{if(event.key==="Enter"||event.key===" "){event.preventDefault();if(!row.report)openRow(row.target,row.task)}}}>
-              <span className="row-mark" aria-hidden="true">{row.done?"✓":"!"}</span>
+              <span className="row-mark" aria-hidden="true">{row.done?"✓":row.optional?"–":"!"}</span>
               <span className="row-label">{row.label}</span>
               <span className="row-value">{row.value}{row.detail?<small>{row.detail}</small>:null}</span>
               {/* D502 - captured from both pages side by side: step 1 puts a Change
@@ -2873,6 +2878,12 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
           <p className="workflow-help">Goldie saves completed work. You can return to an earlier step without starting over.</p>
         </nav>
         <div className="workflow-stage">
+        {/* D550 - opening a saved batch renders the heading, then nothing at all
+            for several seconds, then the whole step. Captured on step 3: title,
+            an empty page, and "Back / Saved automatically" floating in the middle
+            of it. Every other slow thing in Goldie says it is working; this one
+            looked broken. */}
+        {restoringBatch&&<div className="batch-opening" role="status"><span className="batch-opening-spinner" aria-hidden="true"/><div><b>Opening your batch…</b><small>Goldie is reading your designs, drafts and listing details.</small></div></div>}
         {progressIndex>0&&<WorkflowMomentum
           current={railTopNumber}
           total={RAIL_STAGES.length}

@@ -179,12 +179,14 @@ export function keywordFacet(input: ReadinessInput): Facet {
 export function shippingFacet(input: ReadinessInput): Facet {
   const saved = Number(input.saved.etsyShippingProfileId) || 0;
   const match = input.shippingProfiles.find((profile) => profile.id === saved);
-  if (match) return { name: "shipping", state: "ready", label: match.title };
+  /* D550 - "Shipping: Hoodies" is the profile's name in a slot that reads as a
+     value, the same misreading D548 fixed on the publish screen. */
+  if (match) return { name: "shipping", state: "ready", label: `${match.title} profile` };
   /* Printify already published this product to Etsy with a profile attached.
    * Copying it is not a decision the seller needs to make again. */
   const fromTemplate = input.shippingProfiles.find((profile) => profile.id === Number(input.templateShippingProfileId || 0));
-  if (fromTemplate) return { name: "shipping", state: "auto", label: fromTemplate.title, resolved: { shippingProfileId: fromTemplate.id } };
-  if (input.shippingProfiles.length === 1) return { name: "shipping", state: "auto", label: input.shippingProfiles[0].title, resolved: { shippingProfileId: input.shippingProfiles[0].id } };
+  if (fromTemplate) return { name: "shipping", state: "auto", label: `${fromTemplate.title} profile`, resolved: { shippingProfileId: fromTemplate.id } };
+  if (input.shippingProfiles.length === 1) return { name: "shipping", state: "auto", label: `${input.shippingProfiles[0].title} profile`, resolved: { shippingProfileId: input.shippingProfiles[0].id } };
   if (!input.shippingProfiles.length) return { name: "shipping", state: "ask", label: "", note: "No Etsy shipping profiles found" };
   return { name: "shipping", state: "ask", label: "", note: `${input.shippingProfiles.length} profiles on your shop` };
 }
@@ -197,9 +199,14 @@ export function profitFacet(input: ReadinessInput): Facet {
      between the card and the gate is fixed at the gate instead - a product whose
      recipe already carries a profit target and a shipping profile counts as
      approved without asking again. See recipeCarriesApprovedPricing. */
-  if (Number.isFinite(saved) && saved > 0) return { name: "profit", state: "ready", label: `$${saved.toFixed(0)} per item` };
+  /* D550 - the row is labelled "Pricing" and this read "$10 per item", which is
+     the profit target, not the price. On a hoodie a $10 price would be below
+     cost, so the one row on the page that is entirely about money was the most
+     misreadable thing on it. Say which number it is. */
+  if (Number.isFinite(saved) && saved > 0) return { name: "profit", state: "ready", label: `$${saved.toFixed(0)} profit per item` };
   /* A profit goal always has a workable default, so it is never a blocker. */
-  return { name: "profit", state: "auto", label: "$10 per item", resolved: { profitTarget: 10 } };
+  /* And a default she never chose is not the same as a decision she made. */
+  return { name: "profit", state: "auto", label: "$10 profit per item · Goldie's default", resolved: { profitTarget: 10 } };
 }
 
 export function etsyFacet(input: ReadinessInput): Facet {
