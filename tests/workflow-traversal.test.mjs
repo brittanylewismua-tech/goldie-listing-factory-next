@@ -300,8 +300,12 @@ test("D376: every restored finish phase is one that actually renders", async () 
 
   /* The renderable set must match what the JSX actually branches on. */
   assert.match(app, /const RENDERED_FINISH_PHASES:FinishPhase\[\]=\["details","etsy","final"\]/);
-  assert.match(app, /finishPhase==="final"&&stepProductCards\(bundleCardStatus\("publish"\),<>/,
-    "step 4's readiness banner sits inside the product card with the listings it describes");
+  /* D497 - publish now covers the whole bundle, so step 4 passes its action as a
+     footer under the cards rather than as the open card's body. The banner still
+     travels with that action; what changed is that it sits under every product
+     card instead of inside one of them. */
+  assert.match(app, /finishPhase==="final"&&stepProductCards\(bundleCardStatus\("publish"\),null,false,<>/,
+    "step 4's action sits below every product card, not inside one");
   assert.match(app, /<article className="step-card final-review active-panel">/);
   assert.match(app, /\(finishPhase==="details"\|\|finishPhase==="etsy"\)&&stepProductCards\(bundleCardStatus\("listing"\),<>/,
     "step 3 puts the titles editor and the Etsy details in one product card");

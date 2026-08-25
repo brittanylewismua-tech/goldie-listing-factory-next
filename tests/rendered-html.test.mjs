@@ -3931,3 +3931,18 @@ test("two tabs cannot silently overwrite the same batch — D496", async () => {
   // Never crash where BroadcastChannel is unavailable.
   assert.match(app, /if\(typeof BroadcastChannel==="undefined"\)return/);
 });
+
+test("step 4's cards drop their open controls now publish covers the bundle — D497", async () => {
+  const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+
+  /* Publish covered a single product until D495, so these cards kept their own
+     "Open Gildan Tee" controls. One press now publishes the whole bundle, and a
+     card offering to go open the tee separately contradicts the button beneath
+     it - exactly what was wrong on step 2 before D486. */
+  assert.match(app, /stepProductCards\(bundleCardStatus\("publish"\),null,false,</);
+  assert.doesNotMatch(app, /stepProductCards\(bundleCardStatus\("publish"\),</,
+    "the publish step must pass its action as a footer, not as the open card's body");
+
+  // The shared-action switch is what removes those controls.
+  assert.match(app, /\{!open&&reachable&&!sharedAction&&<button type="button" className="step-product-open"/);
+});
