@@ -145,15 +145,17 @@ test("step-level controls sit below the cards, product-level inside them", async
   const images = parts(span('stepProductCards(bundleCardStatus("images"),\n', 'stepProductCards(bundleCardStatus("listing")'));
   /* D539 - the per-product work lives in task panels the rows own, which are
      built in imageTaskPanel rather than passed in as the card body. */
-  for (const perProduct of ["recommended-listing-photos", "MockupSetSelector"]) {
-    assert.ok(images.body.includes(perProduct), `${perProduct} is about one product`);
-    assert.ok(!images.footer.includes(perProduct), `${perProduct} must not sit below the cards`);
-  }
-  /* D536 - the size guide moved back inside the card, above the listings. It
-     applies to every listing in the batch, and she needs it in hand while she is
-     reordering each listing's images, not parked below all of them. */
-  assert.ok(images.body.includes("batch-size-guide"));
-  assert.ok(images.body.includes("batch-size-guide"), "the batch-wide size guide stays with the shared work");
+  /* D540 - the per-product work no longer travels through the card body at all:
+     the rows own it and imageTaskPanel builds it, scoped to the open product. */
+  assert.ok(app.includes("function imageTaskPanel(task:string)"), "the panels are built per product");
+  assert.match(app, /\{complete && workflowStep==="designs" && stepProductCards\(bundleCardStatus\("images"\),[\s\S]{0,1400}?\bnull\b/,
+    "the designs card passes no body block - the rows own the work");
+
+  /* D540 - the size guide applies to every listing in the batch, so it sits above
+     the cards with the shared work rather than inside one product's card. */
+  assert.ok(!images.body.includes("batch-size-guide") && !images.footer.includes("batch-size-guide"),
+    "the size guide is not inside a product card");
+  assert.ok(app.includes("batch-size-guide"), "and it still exists on the step");
   for (const perStep of ["workflow-next", "image-step-blocker"]) {
     assert.ok(images.footer.includes(perStep), `${perStep} is about the step`);
     assert.ok(!images.body.includes(perStep), `${perStep} must not sit inside one product's card`);

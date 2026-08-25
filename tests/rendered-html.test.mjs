@@ -4264,13 +4264,15 @@ test("everything on step 2 that describes one product sits in that product's car
   /* D518 - the mockup set chooser sat at the very top of step 2, above the upload
      box: one set, asked before a single design existed, for a batch of three
      different products. A hoodie scene is not a tee scene. */
-  assert.ok(app.indexOf("<MockupSetSelector") > cardsAt,
-    "the mockup set belongs to a product, so it lives in that product's card");
+  /* D540 - and specifically inside the task that uses it, rather than floating
+     above every task in the card. */
+  assert.match(app, /if\(task==="lifestyle"\)return <>[\s\S]{0,900}?<MockupSetSelector/);
 
   /* D520 - "Recommended photos for Unisex Midweight Softstyle Fleece Hoodie"
      rendered above all three cards, describing the open product only, with
      nothing for the other two. */
-  assert.ok(app.indexOf('className="recommended-listing-photos"') > cardsAt);
+  assert.match(app, /if\(task==="printify"\)return <>[\s\S]{0,900}?recommended-listing-photos/,
+    "the photo advice lives inside the choosing-photos task");
 
   /* D519 - a run in progress is not a broken state to recover from: mid-switch
      the next product's template has not loaded, and the guard sent her to step 1
@@ -4460,4 +4462,28 @@ test("step 2's rows go to their own section, and the card aligns — D538", asyn
      the rows above sat at 364. */
   assert.match(css, /\.step-product-card \.post-draft-workspace\{max-width:none;margin-left:0;margin-right:0;padding-left:0/);
   assert.match(css, /\.step-product-card \.batch-product-row\{grid-template-columns:22px 150px 1fr auto\}/);
+});
+
+test("a product card holds only its rows and the one open task — D540", async () => {
+  const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+  const i = app.indexOf('{complete && workflowStep==="designs" && stepProductCards(');
+  const card = app.slice(i, app.indexOf("\n      )}", i));
+
+  /* Her words, on the deployed build: "Review placement - why is there a mockup
+     set in that? Why is choose size guide in review product placement? Why does
+     it bring you down to a block on the bottom?" All three were the same thing:
+     a leftover block still sitting in the card under the rows, holding work that
+     belongs elsewhere. */
+  for (const stray of ["batch-size-guide", "MockupSetSelector", "recommended-listing-photos", "post-draft-workspace"]) {
+    assert.ok(!card.includes(stray), `${stray} must not sit in the product card`);
+  }
+
+  // The batch-wide work sits above the cards, where it applies to every product.
+  const shared = app.slice(0, i);
+  assert.ok(shared.includes("batch-size-guide"), "the size guide is shared batch work");
+  assert.ok(shared.includes("Review all listings in Printify"));
+
+  // And the heading that described the removed block is gone with it.
+  assert.doesNotMatch(app, /Review placement and choose listing images/);
+  assert.doesNotMatch(app, /The large preview below is the real Printify placement/);
 });

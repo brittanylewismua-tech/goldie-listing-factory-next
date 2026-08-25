@@ -1888,6 +1888,8 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
                    field that is owned elsewhere. */}{draft.editorUrl&&draft.id?<button className={`edit-draft-button ${openedDrafts.includes(draft.id)?"opened":""}`} onClick={()=>openDraft(draft)}><i/><span>{openedDrafts.includes(draft.id)?"Printify opened":"Open in Printify to resize or reposition"}<small>(Choose the correct shop in your Printify account first.)</small></span></button>:null}</div></div></div>)}</div>
     </>;
     if(task==="printify")return <>
+          {/* D540 - advice about choosing photos, inside the choosing-photos task. */}
+          <div className="task-panel-lead">{(()=>{const sample=drafts.find(draft=>draft.id&&draft.printifyImages?.length),available=sample?.printifyImages?.length||0,selected=sample?.id?(printifyImageSelections[sample.id]??printifyImageIndices).length:0,guide=productPhotoGuide(templateDetails?.blueprintTitle||"",available);return <details className="recommended-listing-photos"><summary>Recommended photos for {templateDetails?.blueprintTitle||"this product"}</summary><p>{selected?`This batch currently uses ${selected} of ${available} available Printify views.`:`Goldie found ${available} Printify ${available===1?"view":"views"} and will start with the best available ${Math.min(guide.count,available)}.`} Change any selection below.</p><ul>{guide.items.map(item=><li key={item}>{item}</li>)}</ul><button type="button" className="panel-collapse-foot" onClick={event=>{const box=(event.currentTarget as HTMLElement).closest("details");if(box){(box as HTMLDetailsElement).open=false;box.scrollIntoView({block:"nearest"})}}}>Close recommended photos</button></details>})()}</div>
           <div className="task-panel-body">{listings.map(({draft,design,selectedImages})=>draft.status!=="Created"||!design||!draft.id?null:(()=>{
               const key=`${draft.clientId}`;const shown=openListing===key;
               const count=selectedImages.length+(preparedMockupCounts[draft.id||""]||0);
@@ -1902,6 +1904,9 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
               </div>})()) }</div>
     </>;
     if(task==="lifestyle")return <>
+          {/* D540 - the mockup set belongs to the task that uses it, not floating
+              above every task in the card. */}
+          <div className="task-panel-lead"><MockupSetSelector firstRun={productFirstRun} productName={activeRecipe?.name||templateDetails?.blueprintTitle||""} value={mockupTheme} selectedIds={sharedMockups?.theme===mockupTheme?sharedMockups.ids:[]} savedValue={activeRecipe?.defaultMockupTheme||""} savedIds={activeRecipe?.mockupIds} onChange={(theme,ids)=>{setMockupTheme(theme);if(ids)setSharedMockups({theme,ids})}} saving={savingProductDefault==="mockups"} onSaveDefault={()=>void saveProductDefaults({defaultMockupTheme:mockupTheme,mockupIds:sharedMockups?.theme===mockupTheme?sharedMockups.ids:[]},"mockups")}/></div>
           <div className="task-panel-body">{listings.map(({draft,design,selectedImages})=>draft.status!=="Created"||!design||!draft.id?null:(()=>{
               const key=`${draft.clientId}`;const shown=openListing===key;
               const count=selectedImages.length+(preparedMockupCounts[draft.id||""]||0);
@@ -3040,16 +3045,18 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
       </section>}
 
 
-      {complete && workflowStep==="designs" && stepProductCards(bundleCardStatus("images"),
-        /* D517 - the mockups are per product: a hoodie scene is not a tee scene.
-           D507 took the product cards off this step because the design upload is
-           shared, and took the mockups with them - so she opened step 2 on a
-           three-product bundle and saw only hoodies, with no way to reach the
-           other two. The upload and its one button stay shared, above; once the
-           drafts exist, each product gets the same collapsible card it gets on
-           every other step, with its own mockups inside it. */
-      <section className="post-draft-workspace">
-        <div className="post-draft-heading"><div><h2>Review placement and choose listing images</h2><p>The large preview below is the real Printify placement Goldie uses as the required reference for lifestyle mockups.</p></div>{drafts.filter(draft=>draft.status==="Created").length>1&&<button className="open-all-button" onClick={openAllDrafts}>Review all listings in Printify ↗</button>}</div>
+            {/* D540 - the size guide applies to every listing in the batch and the
+          "review all listings in Printify" link opens all of them, so neither
+          belongs inside one product's card. They sit above the cards with the
+          rest of the shared batch work, where she can reach the size guide while
+          she is arranging any product's photos. A product card now holds only
+          its rows and the one task panel she opened. */}
+      {complete && workflowStep==="designs" && <section className="post-draft-workspace">
+        {/* D540 - this heading described the block D539 removed: "the large preview
+    below" pointed at a preview that is now inside the Review Printify placement
+    task, and "choose listing images" is the row beneath it. What is left here is
+    the batch-wide work: open every listing in Printify, and the size guide. */}
+        <div className="post-draft-heading">{drafts.filter(draft=>draft.status==="Created").length>1&&<button className="open-all-button" onClick={openAllDrafts}>Review all listings in Printify ↗</button>}</div>
         {/* D536 - the size guide applies to every listing in the batch, and she
             needs it in hand while she is reordering each listing's images, not
             parked underneath all of them. D521 moved it out of one product's
@@ -3061,17 +3068,21 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
             Fleece Hoodie" floating over all three, and nothing at all for the
             other two. It describes one product's photos; it belongs in that
             product's card. */}
-        {(()=>{const sample=drafts.find(draft=>draft.id&&draft.printifyImages?.length),available=sample?.printifyImages?.length||0,selected=sample?.id?(printifyImageSelections[sample.id]??printifyImageIndices).length:0,guide=productPhotoGuide(templateDetails?.blueprintTitle||"",available);return <details className="recommended-listing-photos"><summary>Recommended photos for {templateDetails?.blueprintTitle||"this product"}</summary><p>{selected?`This batch currently uses ${selected} of ${available} available Printify views.`:`Goldie found ${available} Printify ${available===1?"view":"views"} and will start with the best available ${Math.min(guide.count,available)}.`} Change any selection below.</p><ul>{guide.items.map(item=><li key={item}>{item}</li>)}</ul><button type="button" className="panel-collapse-foot" onClick={event=>{const box=(event.currentTarget as HTMLElement).closest("details");if(box){(box as HTMLDetailsElement).open=false;box.scrollIntoView({block:"nearest"})}}}>Close recommended photos</button></details>})()}
-        {/* D518 - this sat at the very top of step 2, above the upload box: one
-            mockup set, asked before a single design existed, for a batch of three
-            different products - and a hoodie scene is not a tee scene. A mockup
-            set belongs to a product, so it lives inside that product's card,
-            beside the mockups it makes. */}
-        <MockupSetSelector firstRun={productFirstRun} productName={activeRecipe?.name||templateDetails?.blueprintTitle||""} value={mockupTheme} selectedIds={sharedMockups?.theme===mockupTheme?sharedMockups.ids:[]} savedValue={activeRecipe?.defaultMockupTheme||""} savedIds={activeRecipe?.mockupIds} onChange={(theme,ids)=>{setMockupTheme(theme);if(ids)setSharedMockups({theme,ids})}} saving={savingProductDefault==="mockups"} onSaveDefault={()=>void saveProductDefaults({defaultMockupTheme:mockupTheme,mockupIds:sharedMockups?.theme===mockupTheme?sharedMockups.ids:[]},"mockups")}/>
+        
+        
         
         {openAllMessage&&<p className="open-all-message" role="status">{openAllMessage}</p>}
         {/* D539 - the giant workspace is gone. Each task row owns its own panel. */}
-        </section>
+        </section>}
+{complete && workflowStep==="designs" && stepProductCards(bundleCardStatus("images"),
+        /* D517 - the mockups are per product: a hoodie scene is not a tee scene.
+           D507 took the product cards off this step because the design upload is
+           shared, and took the mockups with them - so she opened step 2 on a
+           three-product bundle and saw only hoodies, with no way to reach the
+           other two. The upload and its one button stay shared, above; once the
+           drafts exist, each product gets the same collapsible card it gets on
+           every other step, with its own mockups inside it. */
+      null
         ,false,
         <>
         {/* D521 - the single-product flow is the specification and a bundle just
