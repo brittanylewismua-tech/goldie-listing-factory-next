@@ -1746,7 +1746,7 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
      The other products' work lives in their own batches, so it has to be read
      from them; the product being worked is read from state, which is always
      fresher than anything saved. */
-  const [bundleBatchSummary,setBundleBatchSummary]=useState<Record<string,{designs:number;titled:number;tagged:number;drafts:number;described:boolean;complete:boolean;published:number;status:string}>>({});
+  const [bundleBatchSummary,setBundleBatchSummary]=useState<Record<string,{designs:number;titled:number;tagged:number;drafts:number;described:boolean;complete:boolean;published:number;status:string;photos:number;mockups:number}>>({});
   useEffect(()=>{
     if(!activeBundle||bundleRecipes.length<2)return;
     const wanted=bundleRecipes.filter(recipe=>recipe.id!==activeRecipe?.id&&bundleBatchIds[recipe.id]);
@@ -1757,7 +1757,7 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
     await Promise.all(wanted.map(async recipe=>{
       const id=bundleBatchIds[recipe.id];
       const payload=await fetch(`/api/batches?id=${encodeURIComponent(id)}`).then(response=>response.ok?response.json():null).catch(()=>null) as {batch?:{state?:Record<string,unknown>}}|null;
-      const state=payload?.batch?.state as {designs?:Array<{title?:string;tags?:string[]}>;drafts?:unknown[];description?:string;complete?:boolean}|undefined;
+      const state=payload?.batch?.state as {designs?:Array<{title?:string;tags?:string[]}>;drafts?:unknown[];description?:string;complete?:boolean;printifyImageSelections?:Record<string,number[]>;printifyImageIndices?:number[];preparedMockupCounts?:Record<string,number>}|undefined;
       if(!state)return null;
       const designs=state.designs||[];
       /* D504 - the chip and the rows on the same card were fed by two different
@@ -1772,10 +1772,12 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
         described:Boolean(String(state.description||"").trim()),
         complete:Boolean(state.complete),
         published:Number(listed?.published_count)||0,
-        status:String(listed?.status||"")}] as const;
+        status:String(listed?.status||""),
+        photos:Object.values(state.printifyImageSelections||{}).reduce((total,ids)=>total+(Array.isArray(ids)?ids.length:0),0)||(state.printifyImageIndices||[]).length,
+        mockups:Object.values(state.preparedMockupCounts||{}).reduce((total,count)=>total+(Number(count)||0),0)}] as const;
     })).then(entries=>{
       if(!alive)return;
-      const loaded=Object.fromEntries(entries.filter(Boolean) as Array<readonly [string,{designs:number;titled:number;tagged:number;drafts:number;described:boolean;complete:boolean;published:number;status:string}]>);
+      const loaded=Object.fromEntries(entries.filter(Boolean) as Array<readonly [string,{designs:number;titled:number;tagged:number;drafts:number;described:boolean;complete:boolean;published:number;status:string;photos:number;mockups:number}]>);
       if(Object.keys(loaded).length)setBundleBatchSummary(current=>({...current,...loaded}));
     });
     })();
@@ -1788,16 +1790,23 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
 
   function productRows(recipe:Recipe,isActive:boolean):Array<{label:string;value:string;detail?:string;done:boolean;target?:string}>{
     const mine=isActive
-      ?{designs:files.length,titled:files.filter(file=>file.title.trim()).length,tagged:files.filter(file=>file.tags.length>=13).length,drafts:drafts.filter(draft=>draft.status==="Created").length,described:Boolean(description.trim()),complete}
+      ?{designs:files.length,titled:files.filter(file=>file.title.trim()).length,tagged:files.filter(file=>file.tags.length>=13).length,drafts:drafts.filter(draft=>draft.status==="Created").length,described:Boolean(description.trim()),complete,published:Number(batchReceipt?.publishedCount)||0,status:"",photos:Object.values(printifyImageSelections).reduce((total,ids)=>total+ids.length,0)||printifyImageIndices.length,mockups:Object.values(preparedMockupCounts).reduce((total,count)=>total+(Number(count)||0),0)}
       :bundleBatchSummary[recipe.id];
     /* D500 - a product with no batch yet had no summary to read, so it returned
        no rows and its card collapsed back to a bare header - the exact thing
        these rows exist to stop. Step 1 never does that: a product that is not
        set up still shows every row, saying it is not set. */
-    const counts=mine||{designs:0,titled:0,tagged:0,drafts:0,described:false,complete:false};
+    const counts=mine||{designs:0,titled:0,tagged:0,drafts:0,described:false,complete:false,published:0,status:"",photos:0,mockups:0};
     const plural=(count:number,word:string)=>`${count} ${count===1?word:`${word}s`}`;
     const started=Boolean(mine);
-    /* D507 - step 2 no longer lists products, so it has no row set. */
+    /* D517 - step 2 lists products again once the drafts exist, because the
+       mockups behind each card are that product's own. Before the drafts there
+       is nothing per-product to say, and the upload is shared - that is why the
+       upload itself has no cards above it. */
+    if(workflowStep==="designs")return [
+      {label:"Listing photos",value:started?plural(counts.photos,"photo"):"Not started yet",done:counts.photos>0,target:"details.recommended-listing-photos"},
+      {label:"Mockups",value:started?(counts.mockups?plural(counts.mockups,"mockup"):"None made yet"):"Not started yet",done:counts.mockups>0,target:".integrated-mockups"},
+    ];
     if(finishPhase==="final")return [
       {label:"Listings",value:started?plural(counts.drafts,"listing"):"Not started yet",done:counts.drafts>0,target:".final-review"},
       {label:"Titles and tags",value:started?`${counts.titled} of ${counts.designs} written · ${counts.tagged} at 13 tags`:"Not started yet",done:started&&counts.designs>0&&counts.titled===counts.designs&&counts.tagged===counts.designs,target:".final-review"},
@@ -2896,7 +2905,15 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
       </section>}
 
       {complete && workflowStep==="designs" && (()=>{const sample=drafts.find(draft=>draft.id&&draft.printifyImages?.length),available=sample?.printifyImages?.length||0,selected=sample?.id?(printifyImageSelections[sample.id]??printifyImageIndices).length:0,guide=productPhotoGuide(templateDetails?.blueprintTitle||"",available);return <details className="recommended-listing-photos"><summary>Recommended photos for {templateDetails?.blueprintTitle||"this product"}</summary><p>{selected?`This batch currently uses ${selected} of ${available} available Printify views.`:`Goldie found ${available} Printify ${available===1?"view":"views"} and will start with the best available ${Math.min(guide.count,available)}.`} Change any selection below.</p><ul>{guide.items.map(item=><li key={item}>{item}</li>)}</ul><button type="button" className="panel-collapse-foot" onClick={event=>{const box=(event.currentTarget as HTMLElement).closest("details");if(box){(box as HTMLDetailsElement).open=false;box.scrollIntoView({block:"nearest"})}}}>Close recommended photos</button></details>})()}
-      {complete && workflowStep==="designs" && <section className="post-draft-workspace">
+      {complete && workflowStep==="designs" && stepProductCards(bundleCardStatus("images"),
+        /* D517 - the mockups are per product: a hoodie scene is not a tee scene.
+           D507 took the product cards off this step because the design upload is
+           shared, and took the mockups with them - so she opened step 2 on a
+           three-product bundle and saw only hoodies, with no way to reach the
+           other two. The upload and its one button stay shared, above; once the
+           drafts exist, each product gets the same collapsible card it gets on
+           every other step, with its own mockups inside it. */
+      <section className="post-draft-workspace">
         <div className="post-draft-heading"><div><h2>Review placement and choose listing images</h2><p>The large preview below is the real Printify placement Goldie uses as the required reference for lifestyle mockups.</p></div>{drafts.filter(draft=>draft.status==="Created").length>1&&<button className="open-all-button" onClick={openAllDrafts}>Review all listings in Printify ↗</button>}</div>
         <section className="batch-size-guide"><div><p className="mini-label">OPTIONAL · APPLY TO THE WHOLE BATCH</p><h3>Add one size guide to every Etsy listing</h3><span>Choose it once. Goldie attaches it to every listing in this batch automatically when you publish.</span></div><input ref={sizeGuidePicker} type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={event=>{const file=event.target.files?.[0];if(file)void applySizeGuide(file)}}/><button onClick={()=>sizeGuidePicker.current?.click()}>{sizeGuideName?"Replace size guide":"Choose size guide"}</button>{sizeGuideStatus&&<p role="status">{sizeGuideStatus}</p>}</section>
         {openAllMessage&&<p className="open-all-message" role="status">{openAllMessage}</p>}
@@ -2914,7 +2931,8 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
         {imageStepError&&<p className="image-step-blocker" role="alert">{imageStepError}</p>}
         <button className="workflow-next" type="button" disabled={imagesStepIssues().length>0} title={imagesStepIssues()[0]} onClick={()=>{const missing=createdListingsMissingImages();if(missing.length){setImageStepError(`${missing.length} ${missing.length===1?"listing needs":"listings need"} at least one photo.`);setMissingPhotoDraftIds(missing.map(draft=>draft.clientId));return}setImageStepError("");setMissingPhotoDraftIds([]);/* D427 - one Next step on this page, and it is the one that checks every listing has a photo. The second copy in the card list bypassed that check entirely. Goes to Listing, not Publish. */setFinishPhase("details");void goToStep("finish",false,true);window.scrollTo(0,0)}}>Next step <span aria-hidden="true">→</span></button>
         {imagesStepIssues()[0]&&<p className="etsy-preparing-note gate-reason" role="status">{imagesStepIssues()[0]}</p>}
-      </section>}
+      </section>
+      )}
 
       {complete && workflowStep==="designs" && <div className="workflow-footer-actions post-draft-footer"><button className="workflow-back" type="button" onClick={goBackOneStep}><span aria-hidden="true">←</span> Back</button><span className="autosave-note"><i aria-hidden="true">✓</i> Saved automatically</span><button className="save-draft-link" type="button" onClick={()=>{setBatchDisplayName(current=>current||suggestedBatchName());setDraftSaveOpen(true)}}>Save as draft</button></div>}
 

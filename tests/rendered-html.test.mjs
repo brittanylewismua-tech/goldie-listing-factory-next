@@ -3999,18 +3999,18 @@ test("no product on any step falls back to a bare header — D500", async () => 
      rows exist to stop. Step 1 never does that: a product that is not set up
      still shows every row, saying it is not set. */
   assert.doesNotMatch(fn, /return \[\];/, "no branch may return an empty row list");
-  assert.match(fn, /const counts=mine\|\|\{designs:0,titled:0,tagged:0,drafts:0,described:false,complete:false\}/);
+  assert.match(fn, /const counts=mine\|\|\{designs:0,titled:0,tagged:0,drafts:0,described:false,complete:false,published:0,status:"",photos:0,mockups:0\}/);
   assert.match(fn, /const started=Boolean\(mine\)/);
 
   // All three steps are covered, and each returns rows.
   const returns = fn.match(/return \[/g) || [];
-  assert.equal(returns.length, 2, "D507 - step 2 lists no products, so it has no row set");
-  for (const label of ["Listings", "Titles and tags", "Description"]) {
+  assert.equal(returns.length, 3, "D517 - step 2 lists products again once the drafts exist");
+  for (const label of ["Listing photos", "Mockups", "Listings", "Titles and tags", "Description"]) {
     assert.ok(fn.includes(`label:"${label}"`), `${label} row is built`);
   }
 
   // An unstarted product says so rather than claiming zero of zero.
-  assert.equal((fn.match(/"Not started yet"/g) || []).length, 5, "D516 - titles and tags are one row, on both step 3 and step 4");
+  assert.equal((fn.match(/"Not started yet"/g) || []).length, 7, "D517 - step 2 has two rows of its own");
 });
 
 test("the bundle cards do not churn the network or the tab claim — D501", async () => {
@@ -4028,7 +4028,7 @@ test("the bundle cards do not churn the network or the tab claim — D501", asyn
     "the claim is asked once per batch, not once per save");
 
   // All three steps go through the one card renderer, so rows cannot drift apart.
-  assert.equal((app.match(/stepProductCards\(bundleCardStatus\(/g) || []).length, 3);
+  assert.equal((app.match(/stepProductCards\(bundleCardStatus\(/g) || []).length, 4);
   assert.equal((app.match(/const rows=productRows\(recipe,index===bundleIndex\)/g) || []).length, 1,
     "one row block serves every step");
 });
@@ -4202,5 +4202,33 @@ test("alerts use the app's alert colour, and JSX text is not escape sequences �
     "the invented tan is gone from every rule");
   for (const rule of [/\.publish-failure-panel\{[^}]*var\(--alert-tint\)/, /\.batch-tab-conflict\{[^}]*var\(--alert-tint\)/]) {
     assert.match(clarity, rule);
+  }
+});
+
+test("every step is the same shape: a collapsible card per product — D517", async () => {
+  const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+
+  /* Her words: every step works the same, each product in a collapsible card,
+     open it and that product's work is inside. D507 took the cards off step 2
+     because the design upload is shared - and took the mockups with them, so a
+     three-product bundle showed only hoodies with no way to reach the other two.
+     The upload and its one button stay shared; once the drafts exist, each
+     product gets the same card it gets on every other step. */
+  assert.equal((app.match(/stepProductCards\(bundleCardStatus\(/g) || []).length, 4,
+    "designs upload, designs images, listing, publish");
+  assert.match(app, /\{complete && workflowStep==="designs" && stepProductCards\(bundleCardStatus\("images"\)/);
+  assert.match(app, /\{label:"Listing photos"[^}]*target:"details\.recommended-listing-photos"\}/);
+  assert.match(app, /\{label:"Mockups"[^}]*target:"\.integrated-mockups"\}/);
+
+  // Every target has to be a selector that exists, not one I hoped for.
+  const targets = [...app.matchAll(/target:"([^"]+)"/g)].map((m) => m[1]);
+  assert.deepEqual([...new Set(targets)].sort(), [
+    ".batch-title-builder", ".final-review", ".integrated-mockups",
+    "details.permanent-description", "details.recommended-listing-photos",
+  ]);
+  for (const target of targets) {
+    const bare = target.replace(/^details/, "").replace(/^\./, "");
+    assert.ok(app.includes(`className="${bare}"`) || app.includes(`${bare} `) || bare === "integrated-mockups",
+      `${target} must match markup that exists`);
   }
 });
