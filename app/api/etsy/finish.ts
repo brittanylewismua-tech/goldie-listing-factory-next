@@ -12,20 +12,31 @@ const runtime=()=>env as unknown as Runtime;
 const words=(value:string)=>new Set(value.toLowerCase().replace(/[^a-z0-9 ]/g," ").split(/\s+/).filter(word=>word.length>2));
 const flatten=(nodes:TaxonomyNode[]):TaxonomyNode[]=>nodes.flatMap(node=>[node,...flatten(node.children||[])]);
 function chooseTaxonomy(nodes:TaxonomyNode[],details:EtsyDetails){const target=words(details.category||"");return flatten(nodes).map(node=>({node,score:[...words(node.name)].filter(word=>target.has(word)).length*10+(node.name.toLowerCase()===String(details.category||"").toLowerCase()?100:0)})).sort((a,b)=>b.score-a.score)[0]}
+/* D477 - Etsy's property update requires BOTH value_ids and values. Sending only
+   value_ids returns "Missing input parameter: [values]", which is what D473
+   fixed; sending only values returns "Missing input parameter: [value_ids]",
+   which is what D473 turned every failure into. Her next two publishes died on
+   it. A property Goldie cannot match to a real Etsy value id cannot be sent at
+   all, so it is skipped rather than sent broken. And no optional attribute is
+   worth losing a whole listing over: a property that will not apply is recorded
+   and stepped over instead of thrown, so the listing still goes live. */
+async function applyProperty(token:string,shopId:number,listingId:number,propertyId:number,valueId:number|null|undefined,text:string,meter:{calls:number},skipped:string[]){
+  const label=text.trim()||`property ${propertyId}`;
+  if(!valueId){skipped.push(label);return}
+  const body=new URLSearchParams();body.append("value_ids",String(valueId));body.append("values",text.trim()||String(valueId));
+  try{await etsyFetch(`/shops/${shopId}/listings/${listingId}/properties/${propertyId}`,token,{method:"PUT",body},meter)}catch{skipped.push(label)}
+}
 async function applyEtsyDetails(token:string,shopId:number,listingId:number,details:EtsyDetails,shippingProfileId:number,description:string,meter:{calls:number}){
   const tree=await etsyFetch<{results?:TaxonomyNode[]}>("/seller-taxonomy/nodes",token,undefined,meter),match=chooseTaxonomy(tree.results||[],details);
   const taxonomyId=Number(details.taxonomyId)||match?.node.id;if(!taxonomyId||!match&& !details.taxonomyId)throw new Error(`Goldie could not safely match the Etsy category “${details.category||"unknown"}”. Review this listing before publishing.`);
   const listingBody=new URLSearchParams({taxonomy_id:String(taxonomyId),shipping_profile_id:String(shippingProfileId),description});
   await etsyFetch(`/shops/${shopId}/listings/${listingId}`,token,{method:"PATCH",body:listingBody},meter);
-  if(details.properties?.length){for(const property of details.properties){if(!property.value.trim()&&!property.valueId)continue;const body=new URLSearchParams();/* D473 - Etsy requires values on a property update even when value_ids is
-     supplied; sending only value_ids returns "Missing input parameter:
-     [values]" and the listing fails to publish. Caught on a real publish of
-     two listings, both refused. */
-    if(property.valueId){body.append("value_ids",String(property.valueId));body.append("values",property.value.trim()||String(property.valueId))}
-    else body.append("values",property.value);await etsyFetch(`/shops/${shopId}/listings/${listingId}/properties/${property.propertyId}`,token,{method:"PUT",body},meter)}return}
+  const skipped:string[]=[];
+  if(details.properties?.length){for(const property of details.properties){if(!property.value.trim()&&!property.valueId)continue;await applyProperty(token,shopId,listingId,property.propertyId,property.valueId,property.value,meter,skipped)}return skipped}
   const propertyPayload=await etsyFetch<{results?:EtsyProperty[]}>(`/seller-taxonomy/nodes/${taxonomyId}/properties`,token,undefined,meter),properties=propertyPayload.results||[],requested={...(details.attributes||{}),...(details.optional||{})};
-  for(const [label,value] of Object.entries(requested)){if(!value.trim())continue;const labelWords=words(label),property=properties.map(item=>({item,score:[...words(item.display_name||item.name||"")].filter(word=>labelWords.has(word)).length})).sort((a,b)=>b.score-a.score)[0];if(!property||property.score<=0)continue;const body=new URLSearchParams(),valueWords=words(value),choice=(property.item.possible_values||[]).map(item=>({item,score:[...words(item.name)].filter(word=>valueWords.has(word)).length+(item.name.toLowerCase()===value.toLowerCase()?10:0)})).sort((a,b)=>b.score-a.score)[0];if(choice&&choice.score>0){body.append("value_ids",String(choice.item.value_id));body.append("values",choice.item.name)}
-    else body.append("values",value);await etsyFetch(`/shops/${shopId}/listings/${listingId}/properties/${property.item.property_id}`,token,{method:"PUT",body},meter)}
+  for(const [label,value] of Object.entries(requested)){if(!value.trim())continue;const labelWords=words(label),property=properties.map(item=>({item,score:[...words(item.display_name||item.name||"")].filter(word=>labelWords.has(word)).length})).sort((a,b)=>b.score-a.score)[0];if(!property||property.score<=0)continue;const valueWords=words(value),choice=(property.item.possible_values||[]).map(item=>({item,score:[...words(item.name)].filter(word=>valueWords.has(word)).length+(item.name.toLowerCase()===value.toLowerCase()?10:0)})).sort((a,b)=>b.score-a.score)[0];
+    await applyProperty(token,shopId,listingId,property.item.property_id,choice&&choice.score>0?choice.item.value_id:null,choice&&choice.score>0?choice.item.name:value,meter,skipped)}
+  return skipped;
 }
 async function applyPersonalization(token:string,shopId:number,listingId:number,details:EtsyDetails,meter:{calls:number}){
   if(details.personalization===undefined)return;

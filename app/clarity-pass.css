@@ -2733,3 +2733,11 @@ body{min-width:1180px!important}
 .app-shell .publish-failure-list li{display:grid;gap:3px;padding:10px 12px;border-radius:10px;background:#fff;border:1px solid #eedfd3}
 .app-shell .publish-failure-list strong{font-size:.88rem;color:#4a3b31}
 .app-shell .publish-failure-list span{font-size:.84rem;line-height:1.45;color:#8a6a55}
+
+/* D478 - the live status was a wide lilac slab that read like a system banner.
+   It is one line about the button directly above it, so it now sits under that
+   button as small bold text. And the failure panel moved out from above the
+   checklist to below the buttons, where she is actually looking when she
+   presses publish. */
+.app-shell .publish-message{background:none!important;border:0!important;border-color:transparent!important;padding:6px 0 0;margin:0;text-align:center;font-size:.82rem;font-weight:700;line-height:1.4;color:#6f5f7d}
+.app-shell .publish-failure-panel{margin:16px 0 0;text-align:left}

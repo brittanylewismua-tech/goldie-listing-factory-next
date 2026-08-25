@@ -3487,10 +3487,11 @@ test("publishing says what is happening, and Etsy gets what it requires — D473
      "Missing input parameter: [values]". Etsy requires `values` on a property
      update even when `value_ids` is supplied, and we sent one or the other - so
      any listing with a matched attribute could not publish. */
-  assert.match(finish, /body\.append\("value_ids",String\(property\.valueId\)\);body\.append\("values",property\.value\.trim\(\)\|\|String\(property\.valueId\)\)/);
-  assert.match(finish, /body\.append\("value_ids",String\(choice\.item\.value_id\)\);body\.append\("values",choice\.item\.name\)/);
-  assert.doesNotMatch(finish, /if\(property\.valueId\)body\.append\("value_ids",String\(property\.valueId\)\);else/,
-    "value_ids alone is refused by Etsy");
+  /* D477 supersedes the original shape: both parameters always travel together,
+     through one helper, because Etsy refuses a request missing either one. */
+  assert.match(finish, /body\.append\("value_ids",String\(valueId\)\);body\.append\("values",text\.trim\(\)\|\|String\(valueId\)\)/);
+  assert.doesNotMatch(finish, /else body\.append\("values",value\)/, "values alone is refused by Etsy");
+  assert.doesNotMatch(finish, /else body\.append\("values",property\.value\)/, "values alone is refused by Etsy");
 
   /* D474 · The page said it was publishing and, directly underneath, that nothing
      would publish. That caption belongs to the Keep as drafts button, which is no
@@ -3524,9 +3525,11 @@ test("a failed publish says why, is logged, and can be retried — D475", async 
   assert.match(app, /publishFailures\.length>0&&<section className="publish-failure-panel"/);
   assert.match(css, /\.publish-failure-panel\{/);
 
-  // It sits above the checklist, not at the bottom of a long page where she missed it.
-  const panel = app.indexOf('publish-failure-panel'), receipt = app.indexOf('{batchReceipt?');
-  assert.ok(panel > 0 && panel < receipt, "the failure panel renders at the top of the step card");
+  /* D478 - it first went above the checklist, which shoved the whole page down.
+     It belongs directly under the buttons, where she is looking when she presses
+     publish. */
+  const panel = app.indexOf('publish-failure-panel'), buttons = app.indexOf('Keep as Printify drafts for now');
+  assert.ok(buttons > 0 && panel > buttons, "the failure panel renders below the publish buttons");
 
   /* Pressing Publish again could not retry a failed listing: the resumed-job early
      return skipped the re-queue entirely, and attempts was never reset. */
@@ -3557,4 +3560,28 @@ test("a re-queued listing is never stranded behind a stale job status — D476",
   assert.match(ops, /export async function GET\(\)/);
   assert.match(ops, /FROM etsy_publish_jobs ORDER BY updated_at DESC/);
   assert.match(ops, /SELECT job_id,product_id,status,attempts,last_error/);
+});
+
+test("an unmatched attribute is skipped, never fatal — D477", async () => {
+  const [finish, css] = await Promise.all([
+    readFile(new URL("../app/api/etsy/finish.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8"),
+  ]);
+
+  /* Read off her live error log: "Missing input parameter: [value_ids]".
+     Etsy's property update requires BOTH value_ids and values. D473 fixed the
+     missing `values` and in doing so turned every unmatched attribute into a
+     missing `value_ids`, which killed the next two publishes. */
+  assert.match(finish, /async function applyProperty\(/);
+  assert.match(finish, /if\(!valueId\)\{skipped\.push\(label\);return\}/,
+    "a property with no Etsy value id cannot satisfy Etsy and must not be sent");
+
+  // An optional attribute must never cost her a listing.
+  assert.match(finish, /try\{await etsyFetch\(`\/shops\/.+\}catch\{skipped\.push\(label\)\}/,
+    "a refused property is recorded and stepped over, not thrown");
+  assert.equal((finish.match(/properties\/\$\{propertyId\}/g) || []).length, 1,
+    "one place builds a property request, so the two parameters cannot drift apart again");
+
+  // D478 - the live status was a full-width slab; it is one line about the button above it.
+  assert.match(css, /\.publish-message\{background:none!important/);
 });
