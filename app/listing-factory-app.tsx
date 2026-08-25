@@ -1191,13 +1191,37 @@ export default function ListingFactoryApp() {
    rail and an empty screen. Every entry point normalises through here: saved
    batch state, the URL, and any call left in the code. */
   function normalizeStep(step:WorkflowStep):WorkflowStep{return step==="review"?"designs":step}
+  /* D487 - opening a saved batch at ?step=setup landed on "Connect your
+     accounts", with both accounts shown as connected and verified, and stayed
+     there. The guard below falls back to "connect" while the connection check
+     and the batch restore are still in flight, and that fallback rewrites the
+     URL to step=connect. The auto-skip then refuses to move, because it reads
+     the URL to decide whether she asked for the connect screen - and by then the
+     URL says she did. Falling back is not the same as asking, so the step she
+     actually arrived on is remembered and restored the moment it opens. */
+  const requestedStep=useRef<WorkflowStep|null>(null);
+  const requestedStepRead=useRef(false);
+  if(typeof window!=="undefined"&&!requestedStepRead.current){
+    requestedStepRead.current=true;
+    const asked=new URL(window.location.href).searchParams.get("step") as WorkflowStep|null;
+    requestedStep.current=asked;
+  }
+  useEffect(()=>{
+    const wanted=requestedStep.current;
+    if(!wanted||localPreview||checkingConnection||restoringBatch)return;
+    if(workflowStep===wanted){requestedStep.current=null;return}
+    if(!canOpenStep(wanted))return;
+    requestedStep.current=null;
+    goToStep(wanted,true,true);
+  },[localPreview,checkingConnection,restoringBatch,connected,etsyConnected,templateLoaded,files.length,complete,workflowStep]);
+
   function goToStep(rawStep:WorkflowStep,replace=false,force=false){
     const step=normalizeStep(rawStep);if(!force){const issues=requiredForStep(step);if(issues.length)return stopWith("Finish all sections first.",issues);if(!canOpenStep(step))return;}setWorkflowStep(normalizeStep(step));const url=new URL(window.location.href);url.searchParams.set("step",step);window.history[replace?"replaceState":"pushState"]({},"",url);window.scrollTo(0,0)}
 
   useEffect(()=>{const read=()=>{const url=new URL(window.location.href),value=url.searchParams.get("step") as WorkflowStep|null,phase=url.searchParams.get("phase") as FinishPhase|null;const canonical=canonicalStep(value);if(canonical)setWorkflowStep(normalizeStep(canonical));if(phase&&["details","etsy","mockups","final"].includes(phase))setFinishPhase(phase)};read();window.addEventListener("popstate",read);return()=>window.removeEventListener("popstate",read)},[]);
   useEffect(()=>{if(workflowStep!=="finish")return;const url=new URL(window.location.href);url.searchParams.set("phase",finishPhase);window.history.replaceState({},"",url)},[workflowStep,finishPhase]);
   useEffect(()=>{window.scrollTo({top:0,behavior:"auto"})},[workflowStep,finishPhase]);
-  useEffect(()=>{if(connectionAutoSkip.current||localPreview||checkingConnection||restoringBatch||workflowStep!=="connect"||!connected||!etsyConnected)return;if(new URL(window.location.href).searchParams.get("step")==="connect")return;connectionAutoSkip.current=true;goToStep("setup",true,true)},[localPreview,checkingConnection,restoringBatch,workflowStep,connected,etsyConnected]);
+  useEffect(()=>{if(connectionAutoSkip.current||localPreview||checkingConnection||restoringBatch||workflowStep!=="connect"||!connected||!etsyConnected)return;if(requestedStep.current==="connect")return;connectionAutoSkip.current=true;goToStep("setup",true,true)},[localPreview,checkingConnection,restoringBatch,workflowStep,connected,etsyConnected]);
   useEffect(()=>{if(localPreview||checkingConnection||restoringBatch||canOpenStep(workflowStep))return;const fallback=!connected||!etsyConnected?"connect":!templateLoaded?"setup":!files.length?"designs":!complete?"review":"finish";goToStep(fallback,true,true);
   },[localPreview,checkingConnection,restoringBatch,connected,etsyConnected,templateLoaded,files.length,complete,workflowStep]);
 
@@ -1376,13 +1400,31 @@ export default function ListingFactoryApp() {
 
   function updateDesign(id: string, change: Partial<DesignFile>) { const clearedChange=change.title!==undefined&&change.titleError===undefined?{...change,titleError:"",titleWarning:""}:change;const nextChange=clearedChange.title!==undefined&&titleCaps?{...clearedChange,title:clearedChange.title.replace(/\b[\p{L}\p{N}]/gu,character=>character.toLocaleUpperCase())}:clearedChange;setFiles((current) => current.map((file) => file.id === id ? { ...file, ...nextChange } : file)); if(nextChange.title!==undefined)setDrafts(current=>current.map(draft=>draft.clientId===id?{...draft,title:nextChange.title}:draft)); }
   function pulseTitle(id:string){setTitlePulseIds(current=>new Set(current).add(id));window.setTimeout(()=>setTitlePulseIds(current=>{const next=new Set(current);next.delete(id);return next}),520)}
-  function clearCurrentBatch(clearProduct=true,preserveSavedBatch=false){
+  /* D488 - DATA LOSS. Opening a saved batch by URL deleted it. Verified live:
+     her published batch 93db4b27, the one holding her two live Etsy listings,
+     was at the top of Batch History and was gone from the database seconds after
+     I opened it at step 3.
+
+     This function deletes the prior batch server-side, and defaulted to doing
+     so. Its three callers - starting a bundle, adding a product, changing
+     product - only ask permission when files, drafts or a completed run are
+     already in memory. During a restore none of those are populated yet, so the
+     confirmation is skipped and the DELETE fires against the very batch being
+     opened.
+
+     Deleting now has to be asked for. Leaving a stale batch in history is a
+     tidiness problem; deleting a published one cannot be undone. */
+  function clearCurrentBatch(clearProduct=true,preserveSavedBatch=true){
     etsyProductBaseline.current=null;
     /* D301 · Starting over must also forget the remembered product, or the next
        refresh would restore the one that was just cleared. */
     if(clearProduct){try{window.localStorage.removeItem("goldie-active-recipe");window.localStorage.removeItem("goldie-active-bundle")}catch{/* private mode */}}
     const priorBatch=batchIdRef.current;
-    if(priorBatch&&!preserveSavedBatch){void clearBatchFiles(priorBatch);void fetch(`/api/batches?id=${encodeURIComponent(priorBatch)}`,{method:"DELETE"})}
+    /* D488 - and a second, independent guard: a batch that published listings is
+       the only record she has that they exist. Even the discard path she chose
+       by name does not get to delete that. */
+    const publishedThisBatch=Number(batchReceipt?.publishedCount)||0;
+    if(priorBatch&&!preserveSavedBatch&&!publishedThisBatch){void clearBatchFiles(priorBatch);void fetch(`/api/batches?id=${encodeURIComponent(priorBatch)}`,{method:"DELETE"})}
     if(!preserveSavedBatch)drafts.forEach(draft=>{if(draft.id)void fetch(`/api/etsy/images?productId=${encodeURIComponent(draft.id)}`,{method:"DELETE"})});
     batchIdRef.current="";window.localStorage.removeItem("goldie-active-batch");
     const freshUrl=new URL(window.location.href);freshUrl.searchParams.delete("batch");window.history.replaceState({},"",freshUrl);
@@ -2057,7 +2099,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
     setRestartBatchOpen(true);
   }
 
-  function finishRestart(preserveSavedBatch=false){clearCurrentBatch(true,preserveSavedBatch);setRestartBatchOpen(false);setRestartBatchName("");goToStep(connected?"setup":"connect",true,true)}
+  function finishRestart(preserveSavedBatch=false){clearCurrentBatch(true,preserveSavedBatch);/* D488 - the one path that is allowed to discard, because she chose it by name. */setRestartBatchOpen(false);setRestartBatchName("");goToStep(connected?"setup":"connect",true,true)}
   async function saveAndRestart(){const name=restartBatchName.trim();if(!name)return;setRestartingBatch(true);try{const id=batchIdRef.current||crypto.randomUUID();batchIdRef.current=id;await saveBatchFiles(id,files.map(file=>file.file));if(!localPreview){const response=await fetch("/api/batches",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,status:"draft",step:workflowStep,setupName:name,productTitle:templateDetails?.blueprintTitle||"",designCount:files.length,state:{...batchStateSnapshot(),keptAsDrafts:true}})});if(!response.ok)throw new Error("Goldie could not save this batch.")}finishRestart(true)}catch(error){stopWith("This batch was not saved.",[error instanceof Error?error.message:"Try again in a moment."])}finally{setRestartingBatch(false)}}
 
   function openDraft(draft: DraftResult) {

@@ -2351,7 +2351,7 @@ test("restart is visible everywhere and preserves a batch only after saving — 
   assert.match(app, /Save to Batch History \+ start new/);
   assert.match(app, /Discard this batch \+ start new/);
   assert.match(app, /clearCurrentBatch\(true,preserveSavedBatch\)/);
-  assert.match(app, /if\(priorBatch&&!preserveSavedBatch\)/);
+  assert.match(app, /if\(priorBatch&&!preserveSavedBatch&&!publishedThisBatch\)/);
   assert.match(app, /step:workflowStep/);
   assert.match(clarity, /\.app-shell \.workflow-restart-button\{/);
 });
@@ -3716,4 +3716,35 @@ test("a bundle's shared action sits below its products, not inside one — D486"
 
   // Reopening a saved bundle left the other cards showing a placeholder glyph.
   assert.match(app, /const missing=bundleRecipes\.filter\(recipe=>recipe\.id!==activeRecipe\?\.id&&!bundleColorProducts\[recipe\.id\]/);
+});
+
+test("opening a saved batch never deletes it — D487/D488", async () => {
+  const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+
+  /* D488 · DATA LOSS, reproduced live. Her published batch 93db4b27 - the one
+     holding her two live Etsy listings - was at the top of Batch History and was
+     gone from the database seconds after opening it at step 3.
+
+     clearCurrentBatch deletes the prior batch server-side and defaulted to doing
+     so. Its callers only ask permission when files, drafts or a completed run
+     are in memory; during a restore none of those are populated yet, so the
+     confirmation was skipped and the DELETE fired on the batch being opened. */
+  assert.match(app, /function clearCurrentBatch\(clearProduct=true,preserveSavedBatch=true\)/,
+    "deleting a saved batch has to be asked for, not defaulted to");
+  assert.doesNotMatch(app, /function clearCurrentBatch\(clearProduct=true,preserveSavedBatch=false\)/);
+
+  // A published batch is the only record those listings exist. Nothing deletes it.
+  assert.match(app, /const publishedThisBatch=Number\(batchReceipt\?\.publishedCount\)\|\|0/);
+  assert.match(app, /if\(priorBatch&&!preserveSavedBatch&&!publishedThisBatch\)\{void clearBatchFiles/);
+
+  /* D487 · Opening a saved batch at ?step=setup landed on "Connect your
+     accounts" with both accounts shown as connected, and stayed there: the
+     guard falls back to connect while the connection check is still in flight,
+     that fallback rewrites the URL to step=connect, and the auto-skip then reads
+     the URL to decide whether she asked for the connect screen. */
+  assert.match(app, /const requestedStep=useRef<WorkflowStep\|null>\(null\)/);
+  assert.match(app, /if\(requestedStep\.current==="connect"\)return/,
+    "the auto-skip asks what she requested, not what the fallback wrote");
+  assert.doesNotMatch(app, /if\(new URL\(window\.location\.href\)\.searchParams\.get\("step"\)==="connect"\)return/);
+  assert.match(app, /if\(!canOpenStep\(wanted\)\)return;\n\s*requestedStep\.current=null;\n\s*goToStep\(wanted,true,true\)/);
 });
