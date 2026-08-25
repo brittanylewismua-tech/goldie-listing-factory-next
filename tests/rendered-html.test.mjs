@@ -3502,3 +3502,36 @@ test("publishing says what is happening, and Etsy gets what it requires — D473
   assert.match(app, /resuming\?"Goldie is safely resuming your queued batch…":"Goldie is publishing your listings…"/);
   assert.match(app, /if\(jobId\)void monitorPublishJob\(jobId,true\)/, "only the reopened case says resuming");
 });
+
+test("a failed publish says why, is logged, and can be retried — D475", async () => {
+  const [queue, route, app, css] = await Promise.all([
+    readFile(new URL("../app/api/printify/drafts/publish/queue.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/printify/drafts/publish/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8"),
+  ]);
+
+  /* Publishing is the only step that costs money, and it was the only step with no
+     logging at all. A real batch failed twice and there was nothing anywhere -
+     not the error log, not the page - to say why. */
+  assert.match(queue, /import \{ logError \} from "@\/app\/error-log"/);
+  assert.match(queue, /logError\(\{area:"etsy-publish"/);
+  assert.match(queue, /printifyProductId:item\.product_id,attempt,willRetry:retryable/);
+
+  // The reason has to reach the page, not just the database.
+  assert.match(queue, /failures=rows\.results\.filter\(row=>row\.status==="failed"\)/);
+  assert.match(app, /setPublishFailures\(job\.failures\|\|\[\]\)/);
+  assert.match(app, /publishFailures\.length>0&&<section className="publish-failure-panel"/);
+  assert.match(css, /\.publish-failure-panel\{/);
+
+  // It sits above the checklist, not at the bottom of a long page where she missed it.
+  const panel = app.indexOf('publish-failure-panel'), receipt = app.indexOf('{batchReceipt?');
+  assert.ok(panel > 0 && panel < receipt, "the failure panel renders at the top of the step card");
+
+  /* Pressing Publish again could not retry a failed listing: the resumed-job early
+     return skipped the re-queue entirely, and attempts was never reset. */
+  assert.match(route, /UPDATE etsy_publish_items SET status='queued',attempts=0[^`]*status='failed'/);
+  const reset = route.indexOf("AND status='failed'"), existing = route.indexOf("const existing=");
+  assert.ok(reset > 0 && reset < existing, "failed items are re-queued before the resumed-job early return");
+  assert.match(route, /ELSE 'queued' END,attempts=0/);
+});
