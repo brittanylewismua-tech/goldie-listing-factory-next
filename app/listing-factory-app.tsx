@@ -1985,8 +1985,35 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
   async function saveAllEtsyDetails(){if(etsySaveActive.current)return;const unfinished=files.filter(file=>!etsyRequiredComplete(file.etsy));if(unfinished.length)return void stopWith("Finish every Etsy listing first.",unfinished.map(file=>`${file.name} still needs Etsy details.`));const invalid=files.map(file=>({file,problem:personalizationProblem(file.etsy)})).filter(item=>item.problem);if(invalid.length)return void stopWith("Finish the personalization options first.",invalid.map(item=>`${item.file.name}: ${item.problem}`));etsySaveActive.current=true;++etsyPreparationVersion.current;setPreparingEtsy(false);setSavingEtsyDetails(true);try{let failed=0;if(!localPreview)await runBounded(files,2,async design=>{try{await syncListingFields(design,design.etsy!);return true}catch(error){updateDesign(design.id,{etsyError:error instanceof Error?error.message:"Etsy details could not be saved."});return false}},saved=>{if(!saved)failed+=1});if(failed)return void stopWith("Some Etsy details were not saved.",[`${failed} ${failed===1?"listing needs":"listings need"} another attempt.`]);if(activeRecipe){const physical=Object.fromEntries((files[0]?.etsy?.properties||[]).filter(property=>PHYSICAL_ETSY_FIELDS.test(property.label)&&property.value.trim()).map(property=>[property.label,property.value]));if(Object.keys(physical).length){const updated={...activeRecipe,etsyDefaults:{...activeRecipe.etsyDefaults,...physical}};const response=await fetch("/api/product-recipes",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:activeRecipe.id,name:activeRecipe.name,templateUrl:activeRecipe.templateUrl,etsyDefaults:{...activeRecipe.etsyDefaults,...physical}})});if(response.ok)setActiveRecipe(updated)}}/* D221 · Photos moved to the Images page, so completing Etsy details moves on to
        the Publish page rather than to a phase that no longer renders. */
       setFinishPhase("final");const url=new URL(window.location.href);url.searchParams.set("step","finish");url.searchParams.set("phase","final");window.history.replaceState({},"",url);window.scrollTo(0,0)}finally{etsySaveActive.current=false;setSavingEtsyDetails(false)}}
+  /* D485 - a bundle made her press "Create Printify drafts" once per product,
+     walking each one through the step by hand, when step 1 had already collected
+     colours, sizes, prices and shipping for all of them at once. One press now
+     works the whole bundle: Goldie creates the current product's drafts, moves
+     itself to the next product carrying the same designs, and repeats. The
+     confirmation is asked once, not once per product. */
+  const [bundleRun,setBundleRun]=useState<{total:number}|null>(null);
+  const bundleAdvancing=useRef(false);
+  useEffect(()=>{
+    if(!bundleRun)return;
+    if(running||preparingEtsy||preflightOpen||switchingProduct)return;
+    if(complete){
+      if(bundleIndex+1>=bundleRecipes.length){setBundleRun(null);return}
+      if(bundleAdvancing.current)return;
+      bundleAdvancing.current=true;
+      void continueBundle().finally(()=>{bundleAdvancing.current=false});
+      return;
+    }
+    /* Waiting on the incoming product's own saved defaults to land. If one is
+       genuinely not set up, stop rather than loop - stopWith names what is
+       missing, and pressing the button again resumes from here. */
+    if(!ready||!pricingApproved)return;
+    const targets=files.filter(file=>bundleQualityDecisions[`${activeRecipe?.id}:${file.id}`]!=="exclude");
+    if(!targets.length){setBundleRun(null);return}
+    void runDrafts(targets);
+  },[bundleRun,complete,running,preparingEtsy,preflightOpen,switchingProduct,ready,pricingApproved,bundleIndex,files,activeRecipe]);
+
   function createDrafts() {const issues=requiredForStep("review");if(issues.length)return void stopWith("This batch isn’t ready to create.",issues);const undecided=bundleQualityGroups.filter(group=>group.keys.some(key=>!bundleQualityDecisions[key]));if(undecided.length)return void stopWith("Choose what to do with every design flagged below.",undecided.map(group=>`${group.fileName} is below the recommended size for ${[...new Set(group.products)].join(", ")}. Choose Proceed anyway or Exclude.`));if(planDraftsRemaining!==null&&requestedListingCount>planDraftsRemaining)return void stopWith("This batch is larger than your remaining plan allowance.",[activeBundle?`${files.length} designs × ${bundleProductCount} products = ${requestedListingCount} listings after exclusions. You have ${planDraftsRemaining} listings remaining this month.`:`${planDraftsRemaining} ${planDraftsRemaining===1?"listing remains":"listings remain"} this month, but this batch contains ${files.length} designs.`]);if(!etsyShippingProfileId)return void stopWith("Choose shipping before creating drafts.",["Choose the Etsy shipping profile Goldie should apply to every listing."]);if(!pricingApproved)return void stopWith("Finish shipping first.",["Choose a shipping profile, then save or discard any custom shipping profile changes."]);setPreflightOpen(true);}
-  function confirmDrafts() { const recipeId=activeRecipe?.id;const targets=files.filter(file=>bundleQualityDecisions[`${recipeId}:${file.id}`]!=="exclude");setPreflightOpen(false);void runDrafts(targets); }
+  function confirmDrafts() { const recipeId=activeRecipe?.id;const targets=files.filter(file=>bundleQualityDecisions[`${recipeId}:${file.id}`]!=="exclude");setPreflightOpen(false);if(activeBundle&&bundleRecipes.length>1)setBundleRun({total:bundleRecipes.length});void runDrafts(targets); }
 
   function retryFailed() {
     const failedIds = new Set(drafts.filter((draft) => draft.status !== "Created").map((draft) => draft.clientId));
@@ -2431,8 +2458,11 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
           )}
 
           {!complete ? (
-            <button className="launch-button" aria-busy={running||preparingEtsy} disabled={!ready || !pricingApproved || running||preparingEtsy} onClick={createDrafts}>
-              <span className="button-glint" />{preparingEtsy?"Completing Etsy details…":running ? `${processed} of ${runTotal} complete…` : !ready ? missingRequirement /* D229 · The button is also disabled when prices are not approved, and that branch had no label — it read "Continue to create drafts", greyed out, with nothing anywhere on the page saying why. Every condition that disables this button now names itself. */ : !pricingApproved ? "Approve prices on the Product page to continue" : "Continue to create drafts"}<span>→</span>
+            <button className="launch-button" aria-busy={running||preparingEtsy||Boolean(bundleRun)} disabled={!ready || !pricingApproved || running||preparingEtsy||Boolean(bundleRun)} onClick={createDrafts}>
+              {/* D485 - one press covers the whole bundle, so the button says so
+                  rather than naming a single product, and reports which product
+                  Goldie is on while it works its way through them. */}
+              <span className="button-glint" />{bundleRun&&!running?`Moving to ${bundleRecipes[bundleIndex+1]?.name||"the next product"}…`:preparingEtsy?"Completing Etsy details…":running ? (activeBundle&&bundleRecipes.length>1?`${activeRecipe?.name||"Product"} ${bundleIndex+1} of ${bundleRecipes.length}: ${processed} of ${runTotal} complete…`:`${processed} of ${runTotal} complete…`) : !ready ? missingRequirement /* D229 · The button is also disabled when prices are not approved, and that branch had no label — it read "Continue to create drafts", greyed out, with nothing anywhere on the page saying why. Every condition that disables this button now names itself. */ : !pricingApproved ? "Approve prices on the Product page to continue" : activeBundle&&bundleRecipes.length>1?`Create Printify drafts for all ${bundleRecipes.length} products`:"Continue to create drafts"}<span>→</span>
             </button>
           ) : (
             <div className="batch-actions">

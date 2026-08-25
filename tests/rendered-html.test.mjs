@@ -1651,7 +1651,7 @@ test("acknowledges slow workflow actions immediately and blocks repeat clicks",a
   assert.match(workflow,/className="goldie-spinner"[\s\S]{0,120}Preparing \{included\.length\} products/);
   assert.match(workflow,/actionLock\.current/);
   assert.match(page,/aria-busy=\{preparingEtsy\}/);
-  assert.match(page,/aria-busy=\{running\|\|preparingEtsy\}/);
+  assert.match(page,/aria-busy=\{running\|\|preparingEtsy\|\|Boolean\(bundleRun\)\}/);
   assert.match(page,/aria-busy=\{publishing\}/);
   assert.match(mockups,/aria-busy=\{busy\}/);
   assert.match(styles,/button\[aria-busy="true"\]/);
@@ -3664,4 +3664,28 @@ test("every product in a bundle is reachable from the step she is on — D482/D4
 
   // A card is never left inert with no control and no explanation.
   assert.match(app, /Finish \{list\[index-1\]\?\.name\|\|"the product above"\} first/);
+});
+
+test("one press creates drafts for every product in a bundle — D485", async () => {
+  const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+
+  /* Step 1 already collects colours, sizes, prices and shipping for every
+     product at once, and then step 2 made her press "Create Printify drafts"
+     once per product, walking each one through by hand. */
+  assert.match(app, /const \[bundleRun,setBundleRun\]=useState<\{total:number\}\|null>\(null\)/);
+  assert.match(app, /if\(activeBundle&&bundleRecipes\.length>1\)setBundleRun\(\{total:bundleRecipes\.length\}\)/,
+    "the single confirmation starts the whole run");
+  assert.match(app, /Create Printify drafts for all \$\{bundleRecipes\.length\} products/);
+
+  // It advances itself, and stops at the end rather than looping.
+  assert.match(app, /if\(bundleIndex\+1>=bundleRecipes\.length\)\{setBundleRun\(null\);return\}/);
+  assert.match(app, /void continueBundle\(\)\.finally\(\(\)=>\{bundleAdvancing\.current=false\}\)/);
+  assert.match(app, /if\(running\|\|preparingEtsy\|\|preflightOpen\|\|switchingProduct\)return/,
+    "it must not start a product while one is mid-flight or awaiting confirmation");
+
+  // A product that is genuinely not set up stops the run instead of spinning.
+  assert.match(app, /if\(!ready\|\|!pricingApproved\)return/);
+
+  // She can see which product it is on.
+  assert.match(app, /\$\{bundleIndex\+1\} of \$\{bundleRecipes\.length\}/);
 });
