@@ -4353,3 +4353,18 @@ test("a mug is never offered t-shirt scenes — D529", async () => {
   assert.equal(compat("apparel", "Matte Poster"), false);
   assert.equal(compat("curved", "Something Unknown"), true, "an unrecognised product still sees its own library");
 });
+
+test("the product's saved shipping profile fills an empty batch — D530", async () => {
+  const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+
+  /* Her question: why does opening the batch make her set the shipping profile
+     again? Because the saved product remembers it and the batch does not, and the
+     open product reads the batch. Checked against her live data: all four saved
+     products hold a valid Etsy profile id and every one of them is present among
+     the 93 profiles on her shop - so nothing was wrong with what was saved. A
+     batch saved before she picked carries zero, and restoring it put that zero
+     back over a product that knew the answer. */
+  assert.match(app, /if\(restoringBatch\|\|!activeRecipe\|\|etsyShippingProfileId\|\|!etsyShippingProfiles\.length\)return;/);
+  assert.match(app, /if\(saved&&etsyShippingProfiles\.some\(profile=>profile\.id===saved\)\)setEtsyShippingProfileId\(saved\)/,
+    "and only a profile that still exists on the shop");
+});

@@ -1147,6 +1147,20 @@ export default function ListingFactoryApp() {
 
      Verified against her live batch: recipe carries target and profile, batch
      shipping id equals the recipe's, pricingApproved was false. */
+  /* D530 - "why does it make me reset the shipping profile every time I open the
+     batch?" Because the product remembers it and the batch does not, and the open
+     product reads the batch. Her four saved products all hold a valid Etsy
+     profile id - crewneck 78465722585, hoodie 79732596586, both present among the
+     93 profiles on her shop - but a batch saved before she picked one carries
+     zero, and restoring that batch put zero back over a product that knew the
+     answer. The product's saved profile fills an empty batch, once the real list
+     has loaded so an id that no longer exists is still caught. */
+  useEffect(()=>{
+    if(restoringBatch||!activeRecipe||etsyShippingProfileId||!etsyShippingProfiles.length)return;
+    const saved=Number(activeRecipe.etsyShippingProfileId)||0;
+    if(saved&&etsyShippingProfiles.some(profile=>profile.id===saved))setEtsyShippingProfileId(saved);
+  },[restoringBatch,activeRecipe,etsyShippingProfileId,etsyShippingProfiles]);
+
   useEffect(()=>{
     if(restoringBatch||!activeRecipe)return;
     const carries=recipeCarriesApprovedPricing({defaultProfitTarget:activeRecipe.defaultProfitTarget,etsyShippingProfileId:activeRecipe.etsyShippingProfileId});
