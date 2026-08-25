@@ -1759,11 +1759,17 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
             <span className={`batch-product-state step-product-state ${toneClass}`}>{status.label}</span>
           </header>
           {open&&<div className="step-product-body">{body}</div>}
-          {!open&&reachable&&!sharedAction&&<button type="button" className="step-product-open" disabled={Boolean(switchingProduct)} onClick={()=>openBundleProduct(index)}>{opening?<><span className="goldie-spinner" aria-hidden="true"/>Opening {recipe.name}…</>:<>Open {recipe.name} <span aria-hidden="true">→</span></>}</button>}
+          {/* D498 - a closed product was a header with a foreign-looking "Open
+              Gildan Tee →" button stuck under it, which read as leaving this page
+              for another one. Every product is the same card: the one being worked
+              is expanded, the rest are the same card collapsed. Clicking the
+              header opens it in place, and the chevron says that is what will
+              happen. */}
+          {!open&&reachable&&<button type="button" className="step-product-expand" aria-expanded={false} disabled={Boolean(switchingProduct)} onClick={()=>openBundleProduct(index)}>{opening?<><span className="goldie-spinner" aria-hidden="true"/>Opening {recipe.name}…</>:<><span>Show {recipe.name}</span><span className="step-product-chevron" aria-hidden="true">⌄</span></>}</button>}
           {/* D396 - A card with no control and no explanation reads as broken. Each
               product is its own batch and they are worked in order, so say which one
               has to come first rather than showing an inert card. */}
-          {!open&&!reachable&&!sharedAction&&<p className="step-product-waiting">Finish {list[index-1]?.name||"the product above"} first</p>}
+          {!open&&!reachable&&<p className="step-product-waiting">Finish {list[index-1]?.name||"the product above"} first</p>}
         </article>;
       })}
       {footer}

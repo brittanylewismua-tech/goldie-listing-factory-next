@@ -2464,13 +2464,7 @@ body{min-width:1180px!important}
 .app-shell .step-product-state.tone-attention{background:rgba(250,226,238,.85);color:#8a3f66}
 .app-shell .step-product-state.tone-waiting{background:rgba(233,226,238,.8);color:#6b5f70}
 
-.app-shell .step-product-open{
-  display:block;width:calc(100% - 44px);margin:0 22px 18px;padding:11px 14px;
-  border:1px solid rgba(91,48,79,.18);border-radius:12px;
-  background:rgba(255,255,255,.55);color:#5b304f;
-  font:inherit;font-size:12px;font-weight:700;text-align:left;cursor:pointer;
-}
-.app-shell .step-product-open:hover{background:#fff}
+/* D498 - step-product-open was replaced by step-product-expand. */
 
 /* D385 · Loading a bundle: one card, one spinner, and every product revealed
    together once they have all arrived. Not a line of prose per product, and not
@@ -2757,3 +2751,11 @@ body{min-width:1180px!important}
 .app-shell .batch-tab-conflict b{font-size:.92rem;color:#4a3b31}
 .app-shell .batch-tab-conflict span{font-size:.85rem;line-height:1.5;color:#6b5748}
 .app-shell .batch-tab-conflict button{margin-top:4px;padding:7px 14px;border:1px solid #c97a4a;border-radius:999px;background:#fff;font-size:.84rem;font-weight:650;color:#a35f34;cursor:pointer}
+
+/* D498 - a closed product in a bundle is the same card, collapsed. The control
+   reads as expanding this card in place, not as leaving for another page. */
+.app-shell .step-product-expand{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;margin:0;padding:12px 16px;border:0;border-top:1px solid rgba(139,89,137,.14);border-radius:0 0 14px 14px;background:transparent;font-size:.88rem;font-weight:650;color:#6f5f7d;cursor:pointer;text-align:left}
+.app-shell .step-product-expand:hover{background:rgba(225,194,231,.22);color:#4a3b31}
+.app-shell .step-product-expand:disabled{opacity:.55;cursor:default}
+.app-shell .step-product-chevron{font-size:1.05rem;line-height:1;transform:translateY(-1px)}
+.app-shell .step-product-card.is-closed .bundle-product-id b{font-weight:650}

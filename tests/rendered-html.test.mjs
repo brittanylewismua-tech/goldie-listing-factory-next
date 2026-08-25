@@ -3707,8 +3707,12 @@ test("a bundle's shared action sits below its products, not inside one — D486"
   assert.ok(map > 0 && close > map, "the footer is the last thing in the cards section");
 
   // With one shared action there is nothing to open a product for.
-  assert.match(app, /\{!open&&reachable&&!sharedAction&&<button type="button" className="step-product-open"/);
-  assert.match(app, /\{!open&&!reachable&&!sharedAction&&<p className="step-product-waiting">/);
+  /* D498 - the open control became an expand control on every step, so the card
+     is the same card whether it is expanded or collapsed. The shared action still
+     decides where the step's action lives; it no longer decides whether a closed
+     product can be opened at all. */
+  assert.match(app, /\{!open&&reachable&&<button type="button" className="step-product-expand"/);
+  assert.match(app, /\{!open&&!reachable&&<p className="step-product-waiting">/);
 
   // Rows naming one product read as the whole batch when they sit under three cards.
   assert.match(app, /\{!\(activeBundle&&bundleRecipes\.length>1\)&&<div><span>Saved product<\/span>/);
@@ -3944,5 +3948,26 @@ test("step 4's cards drop their open controls now publish covers the bundle — 
     "the publish step must pass its action as a footer, not as the open card's body");
 
   // The shared-action switch is what removes those controls.
-  assert.match(app, /\{!open&&reachable&&!sharedAction&&<button type="button" className="step-product-open"/);
+  assert.match(app, /\{!open&&reachable&&<button type="button" className="step-product-expand"/);
+});
+
+test("a closed product is the same card, collapsed — D498", async () => {
+  const [app, css] = await Promise.all([
+    readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8"),
+  ]);
+
+  /* Every step shows a card per product. The product being worked is expanded;
+     the others were a bare header with an "Open Gildan Tee →" button bolted
+     underneath, which reads as leaving this page for a different one rather than
+     as the same card collapsed. It behaves identically on every step now. */
+  assert.doesNotMatch(app, /className="step-product-open"/);
+  assert.doesNotMatch(css, /\.step-product-open\{/, "and its styling goes with it");
+  assert.match(app, /<button type="button" className="step-product-expand" aria-expanded=\{false\}/);
+  assert.match(app, /<span>Show \{recipe\.name\}<\/span><span className="step-product-chevron"/);
+  assert.match(css, /\.step-product-expand\{/);
+
+  // Expanding must not depend on whether the step happens to have a shared action.
+  assert.doesNotMatch(app, /!open&&reachable&&!sharedAction/);
+  assert.doesNotMatch(app, /!open&&!reachable&&!sharedAction/);
 });
