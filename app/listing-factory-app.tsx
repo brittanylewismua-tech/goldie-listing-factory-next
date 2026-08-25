@@ -1951,8 +1951,14 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
                  nothing. If the section this row is about is not here, go to the
                  phase that has it. */
               if(target&&card&&!card.querySelector(target)&&finishPhase==="etsy"&&target!==".final-review"){setFinishPhase("details");window.setTimeout(()=>{(document.querySelector(`.step-product-card.is-open ${target}`) as HTMLElement|null)?.scrollIntoView({block:"start"})},220);return}
+              /* D538 - the row toggled its section, so clicking "Printify mockups"
+                 - the one section that starts open - closed it and scrolled
+                 nowhere, while the other two rows worked. Measured on the page:
+                 scrollY stayed 0 and the section went from open to closed. A row
+                 means "take me to this task"; it opens and goes there, every
+                 time, whatever state the section was in. */
               const node=(target?card?.querySelector(target):null)||card?.querySelector(".step-product-body");
-              if(node instanceof HTMLDetailsElement){node.open=!node.open;if(!node.open)return}
+              if(node instanceof HTMLDetailsElement)node.open=true;
               /* D526 - clicking Mockups did nothing at all. Its section lives inside
                  a collapsed "Create lifestyle mockups" disclosure, and you cannot
                  scroll to something inside a closed <details> - the browser simply

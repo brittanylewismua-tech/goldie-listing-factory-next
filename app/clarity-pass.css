@@ -2826,7 +2826,13 @@ body{min-width:1180px!important}
    rest of the page in. So they ran 54px past every other element on both sides,
    edge to edge, which is what she has been calling stretched across the screen.
    Same column now: measured live at 345 / 1038 against the page's 342 / 1044. */
-.app-shell .step-product-cards{max-width:1320px;margin-left:auto;margin-right:auto;padding-left:54px;padding-right:54px;box-sizing:border-box}
+/* D538 - D534 got the gutters right and the width wrong: the rail resolved to
+   965px inside a 1152px content area, so margin:auto centred it and the padding
+   inset it again, landing the cards at 435 / 857 against a page column of
+   342 / 1044. Too narrow, and still not aligned. Filling the content area and
+   taking the same 54px gutters puts them at exactly 342 / 1044 - measured on the
+   page, all three cards. */
+.app-shell .step-product-cards{width:100%;max-width:none;margin-left:0;margin-right:0;padding-left:54px;padding-right:54px;box-sizing:border-box}
 
 /* D537 - step 2's work is grouped by task now, so each section needs to look like
    a section rather than another slab of the same grey. */
@@ -2840,3 +2846,14 @@ body{min-width:1180px!important}
 .app-shell .task-listing{padding:12px 16px;border-top:1px solid rgba(91,48,79,.1)}
 .app-shell .task-listing-name{margin:0 0 8px;font:700 .84rem/1.3 "Manrope",system-ui,sans-serif;color:#5b304f}
 .app-shell .task-section.listings-need-attention{border-color:rgba(184,60,74,.3);background:var(--alert-tint)}
+
+/* D538 - inside a product card the workspace was still wearing the page-level
+   chrome it needs when it is the whole page: a 48px left margin, 72px gutters
+   and an 1180px cap. Measured on the page, that put the task sections at 486px
+   while the rows directly above them sat at 364 - the body read as a separate
+   floating panel inside the card. Aligned: card 342, rows 343, sections 344.
+   And the row label column was a fixed 104px, so "Lifestyle mockups" wrapped to
+   two lines while its neighbours were one. */
+.app-shell .step-product-card .post-draft-workspace{max-width:none;margin-left:0;margin-right:0;padding-left:0;padding-right:0;padding-top:14px}
+.app-shell .step-product-card .step-product-body{padding-left:0;padding-right:0}
+.app-shell .step-product-card .batch-product-row{grid-template-columns:22px 150px 1fr auto}

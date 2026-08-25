@@ -4057,7 +4057,10 @@ test("step 3's rows match step 1's, captured from both live pages — D502", asy
      description and Description did nothing visible. Each row goes to its own
      section, and a section that is a <details> opens and closes. */
   assert.match(app, /const openRow=\(target\?:string\)=>\{/);
-  assert.match(app, /if\(node instanceof HTMLDetailsElement\)\{node\.open=!node\.open;if\(!node\.open\)return\}/);
+  /* D538 - it used to toggle, so the one section that starts open closed itself
+     and scrolled nowhere. A row means "take me to this task". */
+  assert.match(app, /if\(node instanceof HTMLDetailsElement\)node\.open=true;/);
+  assert.doesNotMatch(app, /node\.open=!node\.open/);
   assert.match(app, /onClick=\{event=>\{event\.stopPropagation\(\);openRow\(row\.target\)\}\}/,
     "the button must not fire the row handler twice");
 
@@ -4422,4 +4425,29 @@ test("step 2 groups work by task, not by listing — D532/D537", async () => {
 
   // The Printify preview and its editor button belong with the Printify photos.
   assert.match(app, /Open in Printify to resize or reposition/);
+});
+
+test("step 2's rows go to their own section, and the card aligns — D538", async () => {
+  const [app, css] = await Promise.all([
+    readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8"),
+  ]);
+
+  /* Measured on the deployed page, one row at a time. "Printify mockups" - the one
+     section that starts open - closed it and scrolled nowhere, because the row
+     toggled. The other two worked only because theirs were shut. A row means
+     "take me to this task": it opens and goes there whatever state it was in. */
+  assert.match(app, /if\(node instanceof HTMLDetailsElement\)node\.open=true;/);
+  assert.doesNotMatch(app, /node\.open=!node\.open/);
+
+  /* The rail resolved to 965px inside a 1152px content area, so margin:auto
+     centred it and the gutters inset it again: cards at 435 / 857 against a page
+     column of 342 / 1044. */
+  assert.match(css, /\.step-product-cards\{width:100%;max-width:none;margin-left:0;margin-right:0;padding-left:54px/);
+
+  /* And inside the card the workspace still wore page-level chrome - a 48px
+     margin, 72px gutters, an 1180px cap - putting the task sections at 486 while
+     the rows above sat at 364. */
+  assert.match(css, /\.step-product-card \.post-draft-workspace\{max-width:none;margin-left:0;margin-right:0;padding-left:0/);
+  assert.match(css, /\.step-product-card \.batch-product-row\{grid-template-columns:22px 150px 1fr auto\}/);
 });
