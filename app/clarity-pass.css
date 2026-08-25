@@ -2349,12 +2349,17 @@ body{min-width:1180px!important}
 /* D364 · Batch History multi-select. The checkbox is always there rather than
    hidden behind an "edit" mode — selecting is not a state you should have to
    enter to discover. */
-.batch-history-actions{
+/* D505 - this rule was written for the selection toolbar, but batch-history-
+   actions was also the class on the span wrapping every Resume button, so each
+   row got the toolbar's border, padding and white fill: the pale boxes sitting
+   behind every Resume batch button. The row control has its own class now, and
+   the toolbar reads as part of the list rather than a bar floating above it. */
+.batch-history-select{
   display:flex;align-items:center;justify-content:space-between;gap:16px;
-  margin:0 0 14px;padding:10px 16px;
-  border:1px solid rgba(91,48,79,.16);border-radius:14px;
-  background:rgba(255,255,255,.5);
+  margin:0 0 2px;padding:2px 4px 10px;
+  border:0;border-bottom:1px solid rgba(91,48,79,.12);background:none;
 }
+.batch-row-actions{display:flex;align-items:center;gap:8px;padding:0;border:0;background:none}
 .batch-select-all{display:flex;align-items:center;gap:10px;cursor:pointer;
   font:800 12px/1 "Manrope",system-ui,sans-serif;color:#4c293f}
 .batch-select-all input,.batch-select input{width:17px;height:17px;accent-color:#71416a;cursor:pointer}

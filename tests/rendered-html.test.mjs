@@ -4090,3 +4090,33 @@ test("a card's chip and its rows cannot disagree — D504", async () => {
   assert.match(app, /published:Number\(listed\?\.published_count\)\|\|0/);
   assert.match(app, /status:String\(listed\?\.status\|\|""\)/);
 });
+
+test("a card that says Ready is not also asking to approve — D505/D506", async () => {
+  const [app, batches, clarity, history] = await Promise.all([
+    readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/batches/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8"),
+    readFile(new URL("../app/batch-history.css", import.meta.url), "utf8"),
+  ]);
+
+  /* D506 · Her words: the first product had the Ready symbol, and there was still
+     an approve pricing and shipping button to press on pricing she had never
+     touched - and Next stayed blocked. The card's readiness and the approval that
+     gates Next were two different things. A saved product carries an approved
+     target and profile; reopening a batch restored pricingApproved as false and
+     nothing put it back. */
+  assert.match(app, /if\(carries&&!pricingApproved&&Number\(etsyShippingProfileId\)===Number\(activeRecipe\.etsyShippingProfileId\)\)setPricingApproved\(true\)/,
+    "an untouched saved product is already approved");
+  assert.match(app, /if\(recipeCarriesApprovedPricing\(\{defaultProfitTarget:recipe\.defaultProfitTarget,etsyShippingProfileId:recipe\.etsyShippingProfileId\}\)\)seed\[recipe\.id\]=true/,
+    "and so is every other product in a restored bundle");
+
+  /* D505 · batch-history-actions styled the selection toolbar, and was also the
+     class on the span around every Resume button - so each row wore the
+     toolbar's border, padding and white fill. Those were the pale boxes. */
+  assert.doesNotMatch(batches, /batch-history-actions/);
+  assert.doesNotMatch(clarity, /\.batch-history-actions\{/);
+  assert.doesNotMatch(history, /\.batch-history-actions\{/);
+  assert.match(batches, /<span className="batch-row-actions">/);
+  assert.match(batches, /<div className="batch-history-select">/);
+  assert.match(clarity, /\.batch-row-actions\{[^}]*background:none/);
+});

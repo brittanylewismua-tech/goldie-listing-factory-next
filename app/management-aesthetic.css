@@ -31,7 +31,7 @@
 }
 :is(.management-page,.usage-page,.keyword-page,.mockupFactory) :is(input,textarea,select){border:1px solid rgba(74,42,62,.16)!important;border-radius:12px!important;background:rgba(255,255,255,.68)!important;color:var(--ink)!important;font:inherit}
 :is(.management-page,.usage-page,.keyword-page,.mockupFactory) :is(input,textarea,select):focus{border-color:rgba(151,88,139,.55)!important;box-shadow:0 0 0 3px rgba(218,169,219,.2)!important;outline:none}
-:is(.management-page,.usage-page,.keyword-page,.mockupFactory) :is(.management-create-foot button,.edit-bank,.empty-history a,.batch-history-actions button:first-child,.pricing-profile>button,.newSetButton,.setControls>button,.confirmRename,.generate,.downloadAll){border:0!important;border-radius:14px!important;background:linear-gradient(145deg,#5b304f,#45263c)!important;color:#fff!important;box-shadow:0 14px 28px -20px rgba(74,42,62,.75)!important;font-weight:750!important}
+:is(.management-page,.usage-page,.keyword-page,.mockupFactory) :is(.management-create-foot button,.edit-bank,.empty-history a,.batch-row-actions button:first-child,.pricing-profile>button,.newSetButton,.setControls>button,.confirmRename,.generate,.downloadAll){border:0!important;border-radius:14px!important;background:linear-gradient(145deg,#5b304f,#45263c)!important;color:#fff!important;box-shadow:0 14px 28px -20px rgba(74,42,62,.75)!important;font-weight:750!important}
 :is(.management-page,.usage-page,.keyword-page,.mockupFactory) :is(button,a){transition:transform .16s ease,box-shadow .16s ease,background-color .16s ease}
 :is(.management-page,.usage-page,.keyword-page,.mockupFactory) button:active{transform:translateY(1px)}
 

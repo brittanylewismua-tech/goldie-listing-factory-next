@@ -1120,6 +1120,35 @@ export default function ListingFactoryApp() {
       return readinessFor(product,recipe,isActive?pricingApproved:Boolean(bundleApproved[recipe.id])).established;
     });
   }
+  /* D506 - the product card said Ready and the page still refused to continue,
+     because the card's readiness and the approval that gates Next were two
+     different things. A saved product carries an approved profit target and an
+     Etsy shipping profile; reopening a batch restored pricingApproved as false
+     and nothing ever put it back, so she was asked to approve pricing she had
+     not touched, on a card already telling her it was ready.
+
+     Approval is only meaningful once something has changed. If the product still
+     carries its saved approval and the batch is still using that exact shipping
+     profile, it is approved. This runs for the open product and seeds every other
+     product in the bundle the same way, so a restored bundle does not ask again.
+
+     Verified against her live batch: recipe carries target and profile, batch
+     shipping id equals the recipe's, pricingApproved was false. */
+  useEffect(()=>{
+    if(restoringBatch||!activeRecipe)return;
+    const carries=recipeCarriesApprovedPricing({defaultProfitTarget:activeRecipe.defaultProfitTarget,etsyShippingProfileId:activeRecipe.etsyShippingProfileId});
+    if(carries&&!pricingApproved&&Number(etsyShippingProfileId)===Number(activeRecipe.etsyShippingProfileId))setPricingApproved(true);
+  },[restoringBatch,activeRecipe,pricingApproved,etsyShippingProfileId]);
+  useEffect(()=>{
+    if(restoringBatch||!activeBundle||bundleRecipes.length<2)return;
+    const seed:Record<string,boolean>={};
+    for(const recipe of bundleRecipes){
+      if(recipe.id===activeRecipe?.id||bundleApproved[recipe.id])continue;
+      if(recipeCarriesApprovedPricing({defaultProfitTarget:recipe.defaultProfitTarget,etsyShippingProfileId:recipe.etsyShippingProfileId}))seed[recipe.id]=true;
+    }
+    if(Object.keys(seed).length)setBundleApproved(current=>({...current,...seed}));
+  },[restoringBatch,activeBundle,bundleRecipes,activeRecipe,bundleApproved]);
+
   function gateState():NavigationGateState{return {bundleProductsReady:bundleProductsReady(),connected,etsyConnected,productSelected,templateReady:templateLoaded,shippingReady:Boolean(templateDetails?.shippingTemplateId||templateDetails?.shippingProfileNeedsSelection),variantsReady:Boolean(templateDetails?.enabledVariants),colorsReady:!templateDetails?.colorOptions?.length||selectedColorIds.length>0,pricesReady:pricedVariants.length>0,designCount:files.length,designsReady:files.every(file=>Boolean(file.width&&file.height&&file.paddingStatus!=="checking")),/* D451 - a bundle has one shipping profile and one pricing approval PER product, and this gate read only the active one. Two of three products in her ZZ TEST BUNDLE showed "Pick a shipping profile" while Next step stayed enabled, which would have created Printify drafts for products with no valid Etsy shipping profile. Every product in the bundle has to be ready, not whichever one happens to be open. */etsyShippingProfileReady:activeBundle?bundleRecipes.length>0&&bundleRecipes.every(recipe=>Number(recipe.etsyShippingProfileId)>0):Boolean(etsyShippingProfileId),pricingApproved:activeBundle?bundleRecipes.length>0&&bundleRecipes.every(recipe=>bundleApproved[recipe.id]??recipeCarriesApprovedPricing({defaultProfitTarget:recipe.defaultProfitTarget,etsyShippingProfileId:recipe.etsyShippingProfileId})):pricingApproved,draftsComplete:complete,createdDraftCount,titlesReady:files.length>0&&files.every(file=>Boolean(file.title.trim())&&!file.titleError),tagsReady:files.length>0&&files.every(file=>file.tags.length>0&&!file.titleError),descriptionReady:Boolean(description.trim()),etsyDetailsReady:files.length>0&&files.every(file=>etsyRequiredComplete(file.etsy)),personalizationReady:files.every(file=>!personalizationProblem(file.etsy)),imagesReady:allCreatedListingsHaveImages()}}
   function progressGateIssues(index:number){return localPreview?[]:navigationIssues(index,gateState())}
   /* D444 - leaving Images needs photos, not titles. See leavingImagesIssues. */
