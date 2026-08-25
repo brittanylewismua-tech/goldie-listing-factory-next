@@ -3748,3 +3748,22 @@ test("opening a saved batch never deletes it — D487/D488", async () => {
   assert.doesNotMatch(app, /if\(new URL\(window\.location\.href\)\.searchParams\.get\("step"\)==="connect"\)return/);
   assert.match(app, /if\(!canOpenStep\(wanted\)\)return;\n\s*requestedStep\.current=null;\n\s*goToStep\(wanted,true,true\)/);
 });
+
+test("nothing destructive happens on a single click — D489", async () => {
+  const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+
+  /* Both Disconnect buttons fired immediately, no confirmation - one stray click
+     drops the Etsy authorisation or the Printify token and publishing stops
+     until she re-authorises. They sit on the connect screen, which D487 proved
+     the app parks people on by accident. */
+  assert.doesNotMatch(app, /onClick=\{async\(\)=>\{await fetch\("\/api\/etsy",\{method:"DELETE"\}\)/,
+    "disconnecting Etsy must be confirmed");
+  assert.doesNotMatch(app, /onClick=\{async \(\) => \{ await fetch\("\/api\/printify", \{ method: "DELETE" \} \)/,
+    "disconnecting Printify must be confirmed");
+  assert.equal((app.match(/title:"Disconnect your Etsy shop\?"/g) || []).length, 2,
+    "both Etsy rows confirm");
+  assert.match(app, /title:"Disconnect Printify\?"/);
+
+  // Staged Etsy images can belong to listings that are already live.
+  assert.match(app, /if\(!preserveSavedBatch&&!publishedThisBatch\)drafts\.forEach/);
+});
