@@ -4256,3 +4256,15 @@ test("everything on step 2 that describes one product sits in that product's car
   assert.equal((app.match(/runInProgress\.current=Boolean\(/g) || []).length, 2,
     "both the drafts run and the publish run set it");
 });
+
+test("an open product card does not run to four screens — D522", async () => {
+  const css = await readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8");
+
+  /* Measured on her live three-product bundle: the open card was 2992px against a
+     756px viewport - four screens - and each listing inside it was 1003px, from a
+     318px Printify preview and a 345px photo strip of 130px thumbnails. Twenty
+     designs would have been twenty screens per product. */
+  assert.match(css, /\.draft-card-top>\.printify-preview-button,\n\.app-shell \.step-product-card \.draft-card-top>\.pending-preview\{max-width:168px\}/);
+  assert.match(css, /\.photo-order-strip img\{max-height:74px/);
+  assert.match(css, /\.draft-card-grid\{gap:14px\}/);
+});

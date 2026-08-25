@@ -2778,3 +2778,15 @@ body{min-width:1180px!important}
 .app-shell .listing-section[open]>summary::after{transform:rotate(180deg)}
 .app-shell .listing-section>summary:hover{background:rgba(225,194,231,.24)}
 .app-shell .listing-section>summary small{display:block;margin-top:3px;font-size:.82rem;font-weight:500;color:#75576b}
+
+/* D522 - measured on her three-product bundle: the open card was 2992px, four
+   screens, and each listing inside it was 1003px - a 318px Printify preview and
+   a 345px photo strip with 130px thumbnails, per listing. At twenty designs that
+   is twenty screens of scrolling per product. Nothing is hidden; the preview and
+   the thumbnails are simply the size they need to be to be recognised. */
+.app-shell .step-product-card .draft-card-top>.printify-preview-button,
+.app-shell .step-product-card .draft-card-top>.pending-preview{max-width:168px}
+.app-shell .step-product-card .draft-card-top>.printify-preview-button img{max-height:168px;object-fit:contain}
+.app-shell .step-product-card .photo-order-strip img{max-height:74px;object-fit:contain}
+.app-shell .step-product-card .photo-order-heading{padding-bottom:4px}
+.app-shell .step-product-card .draft-card-grid{gap:14px}
