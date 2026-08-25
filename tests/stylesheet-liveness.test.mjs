@@ -382,7 +382,11 @@ test("D405: the sidebar nav column is never shrunk below its content", async () 
    as each other, deliberately. */
 test("D408: the design previews are large enough to identify the design", async () => {
   const css = await readFile(new URL("app/clarity-pass.css", root), "utf8");
-  assert.match(css, /\.app-shell \.listing-editor \.listing-preview-button\{width:152px!important/);
+  /* D541 - the 152px preview came with step 3's table, which is gone. It is back
+     at the same size inside the open task row, where it does the same job: tell
+     her which design she is writing a title for. */
+  assert.match(css, /\.app-shell \.task-listing-preview\{width:152px/);
+  assert.match(css, /\.app-shell \.task-listing-preview img\{[^}]*height:152px/);
   /* D427 - 152px was still too small on Images. Inside that preview the artwork
      is only about a quarter of the shirt width, so the design rendered around
      28px across. Measured on the live page: it reads clearly at 322px. */

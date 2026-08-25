@@ -711,7 +711,6 @@ export default function ListingFactoryApp() {
   const folderPicker = useRef<HTMLInputElement>(null);
   const imagePicker = useRef<HTMLInputElement>(null);
   const sizeGuidePicker = useRef<HTMLInputElement>(null);
-  const listingResultsRef = useRef<HTMLDivElement>(null);
   const syncedListingSignatures = useRef<Map<string,string>>(new Map());
   const batchIdRef=useRef("");
   const snapshotReady=useRef(false);
@@ -1823,7 +1822,7 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
        which means when the active product changes. That is what this watches. */
   },[activeBundle,bundleRecipes,activeRecipe,bundleBatchIds]);
 
-  function productRows(recipe:Recipe,isActive:boolean):Array<{label:string;value:string;detail?:string;done:boolean;target?:string;task?:string}>{
+  function productRows(recipe:Recipe,isActive:boolean):Array<{label:string;value:string;detail?:string;done:boolean;target?:string;task?:string;report?:boolean}>{
     const mine=isActive
       ?{designs:files.length,titled:files.filter(file=>file.title.trim()).length,tagged:files.filter(file=>file.tags.length>=13).length,drafts:drafts.filter(draft=>draft.status==="Created").length,described:Boolean(description.trim()),complete,published:Number(batchReceipt?.publishedCount)||0,status:"",photos:Object.values(printifyImageSelections).reduce((total,ids)=>total+ids.length,0)||printifyImageIndices.length,mockups:Object.values(preparedMockupCounts).reduce((total,count)=>total+(Number(count)||0),0)}
       :bundleBatchSummary[recipe.id];
@@ -1843,17 +1842,29 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
       {label:"Create lifestyle mockups",value:started?(counts.mockups?plural(counts.mockups,"mockup"):"None made yet"):"Not started yet",done:counts.mockups>0,task:"lifestyle"},
       {label:"Arrange final photo order",value:started?plural(counts.photos+counts.mockups,"photo"):"Not started yet",done:counts.photos+counts.mockups>0,task:"order"},
     ];
+    /* D541 - both of these rows pointed at .final-review, so Listings and Titles
+       and tags took you to the same block below the cards. Nothing on this step
+       is per product: choosing what to publish and publishing it are one press
+       in the footer, over the whole bundle. So the card reports what is about to
+       go out for this product and does not offer to open anything. */
     if(finishPhase==="final")return [
-      {label:"Listings",value:started?plural(counts.drafts,"listing"):"Not started yet",done:counts.drafts>0,target:".final-review"},
-      {label:"Titles and tags",value:started?`${counts.titled} of ${counts.designs} written · ${counts.tagged} at 13 tags`:"Not started yet",done:started&&counts.designs>0&&counts.titled===counts.designs&&counts.tagged===counts.designs,target:".final-review"},
+      {label:"Listings ready",value:started?plural(counts.drafts,"listing"):"Not started yet",done:counts.drafts>0,report:true},
+      {label:"Titles and tags",value:started?`${counts.titled} of ${counts.designs} written · ${counts.tagged} at 13 tags`:"Not started yet",done:started&&counts.designs>0&&counts.titled===counts.designs&&counts.tagged===counts.designs,report:true},
+      {label:"Listing photos",value:started?plural(counts.photos+counts.mockups,"photo"):"Not started yet",done:counts.photos+counts.mockups>0,report:true},
+      {label:"Published",value:counts.published?plural(counts.published,"listing"):"Not published yet",done:counts.published>0,report:true},
     ];
     return [
       /* D516 - Titles and Tags were two rows pointing at two different sections,
          which split one job in half on the page. Etsy tags come out of the same
          keyword bank as the title, in the same pass, by the same button - so it
-         is one row, reporting both, opening the one place both are made. */
-      {label:"Titles and tags",value:started?`${counts.titled} of ${counts.designs} written · ${counts.tagged} at 13 tags`:"Not started yet",done:started&&counts.designs>0&&counts.titled===counts.designs&&counts.tagged===counts.designs,target:".batch-title-builder"},
-            {label:"Description",value:counts.described?"Attached":started?"Not attached":"Not started yet",done:counts.described,target:"details.permanent-description"},
+         is one row, reporting both.
+         D541 - and it opens its own panel now instead of scrolling into a block
+         it shared with the description. The Etsy fields get a row too: during
+         that phase both of the old rows pointed at content that was not even
+         rendered, so pressing one threw the whole step back a phase. */
+      {label:"Write titles and tags",value:started?`${counts.titled} of ${counts.designs} written · ${counts.tagged} at 13 tags`:"Not started yet",done:started&&counts.designs>0&&counts.titled===counts.designs&&counts.tagged===counts.designs,task:"titles"},
+      {label:"Edit description",value:counts.described?"Attached":started?"Not attached":"Not started yet",done:counts.described,task:"description"},
+      {label:"Review Etsy category and fields",value:started?(files.some(file=>file.etsy)?`${files.filter(file=>etsyRequiredComplete(file.etsy)).length} of ${files.length} ready`:"Not created yet"):"Not started yet",done:files.length>0&&files.every(file=>etsyRequiredComplete(file.etsy)),task:"etsy"},
     ];
   }
 
@@ -1872,9 +1883,50 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
      renders inside this product's card, and only that panel renders. The task
      survives switching product, so opening Printify photos on the hoodie and
      then choosing the tee opens the tee's Printify photos. */
-  const [activeImageTask,setActiveImageTask]=useState<string>("");
+  const [activeTask,setActiveTask]=useState<string>("");
   const [openListing,setOpenListing]=useState<string>("");
-  function imageTaskPanel(task:string){
+  /* D541 - every task panel that works listing by listing shows the same row:
+     the artwork, the listing name, where that listing stands on this one job,
+     and Change. The job decides what opens underneath, so a listing's title is
+     edited under Titles and its wording under Description, and neither one can
+     drag the other along with it. */
+  function designTaskRows(task:string,standing:(design:DesignFile)=>string,inner:(design:DesignFile)=>ReactNode){
+    return <div className="task-panel-body">{files.map(design=>{
+      const key=`${task}:${design.id}`;const shown=openListing===key;
+      const thumb=design.previewUrl||drafts.find(draft=>draft.clientId===design.id)?.previewUrl||"";
+      return <div className="task-listing" key={key}>
+        <button type="button" className="task-listing-row" aria-expanded={shown} onClick={()=>{setActiveDesign(design.id);setOpenListing(shown?"":key)}}>
+          {thumb?<img className="task-listing-thumb" src={thumb} alt="" loading="lazy" decoding="async"/>:<span className="task-listing-thumb"/>}
+          <span className="task-listing-name">{design.title.trim()||design.name}</span>
+          <span className="task-listing-count">{standing(design)}</span>
+          <span className="task-listing-change">{shown?"Close":"Change"}</span>
+        </button>
+        {shown&&<div className="task-listing-panel">{inner(design)}</div>}
+      </div>})}</div>;
+  }
+
+  function taskPanel(task:string){
+    /* D541 - titles-resolving drives the pulse on each title field as the batch
+       run fills them in. It rode on the listing-editor wrapper, so it went out
+       with the block; it belongs on whatever holds the title fields. */
+    if(task==="titles")return <div className={titlePulseIds.size?"titles-resolving":""}>
+      <div className="task-panel-lead"><div><p className="mini-label">BATCH TITLE BUILDER</p><h3>Create titles for the whole batch</h3><p>Let Goldie select from your validated bank for each design, or choose the exact phrases yourself. No new keywords are ever added.</p></div><div className="title-builder-choice" role="group" aria-label="How do you want to create batch titles?"><button className={titleBuilderMode==="ai"?"active":""} onClick={()=>setTitleBuilderMode("ai")}><b>Goldie selects from my bank</b><span>Creates a different title for each design</span></button><button className={titleBuilderMode==="manual"?"active":""} onClick={()=>setTitleBuilderMode("manual")}><b>I choose from my bank</b><span>Uses your selections across the batch</span></button></div><div className="title-style-toggle"><span>Title format</span><button className={titleJoiner===", "?"active":""} onClick={()=>changeTitleJoiner(", ")}>With commas</button><button className={titleJoiner===" "?"active":""} onClick={()=>changeTitleJoiner(" ")}>Without commas</button>{/* D413 - Capitalization sat in its own card above the builder, but it is the
+                    same decision as the comma style: how the title is formatted. One group. */}<button type="button" className={titleCaps?"active":""} aria-pressed={titleCaps} onClick={()=>changeTitleCaps(!titleCaps)}>{titleCaps?"Capitalized":"Not capitalized"}</button></div>{titleBuilderMode==="ai"?<div className="title-builder-pane"><KeywordBank selectionOnly initialId={autoTitleBankId||activeRecipe?.keywordListId||""} onSelect={list=>{setAutoTitleBank(list);setAutoTitleBankId(list?.id||"");/* D221 · Choosing the bank here IS establishing it for this product, the same as it was on the product card before the picker moved. Without this the choice would apply to this batch only and the next one would ask again. */if(activeRecipe&&list?.id&&list.id!==activeRecipe.keywordListId)void establish(activeRecipe,{keywordListId:list.id})}} title="Choose a keyword bank" copy="Goldie selects only exact phrases from this bank. It will not add keywords."/><div className="ai-title-disclaimer"><b>Review every title Goldie creates.</b><span>Goldie chooses the phrases it believes fit each design best from the bank you select. It does not verify that the keyword bank itself matches the design, and it will not reject mismatched phrases. Use your judgment before continuing.</span></div><button className="ai-title-button" disabled={titleBuilding||!autoTitleBank||!files.length} onClick={()=>void buildBatchTitle()}>{titleBuilding?`Creating ${files.length} titles…`:"Auto-create all titles"}</button>{titleBuildMessage&&<p className="title-build-message" role="status">{titleBuildMessage}</p>}</div>:<div className="title-builder-pane manual-title-builder"><KeywordBank initialId={manualKeywordBankId||activeRecipe?.keywordListId||""} onSelect={list=>setManualKeywordBankId(list?.id||"")} onAdd={addBatchKeyword} title="Choose a keyword bank" copy="Click keywords in the order you want them. Every click updates all listings below."/><div className="selected-batch-keywords"><div><b>Selected keywords</b>{batchKeywords.length>0&&<button onClick={clearBatchKeywords}>Clear all</button>}</div>{batchKeywords.length?<div className="selected-keyword-chips">{batchKeywords.map(keyword=><button key={keyword} onClick={()=>removeBatchKeyword(keyword)}>{keyword}<span>×</span></button>)}</div>:<p>No keywords selected yet.</p>}</div>{batchKeywords.length>0&&<div className="batch-title-preview"><b>Batch title preview</b><span>{batchKeywords.join(titleJoiner)}</span><small>Applied to every listing below. You can still edit any listing individually.</small></div>}</div>}</div>
+      {designTaskRows("titles",design=>!design.title.trim()?"No title yet":`${design.tags.length} of 13 tags`,design=><div className="task-listing-edit">{/* D541 - D408 found this the hard way: at thumbnail size the artwork
+        is unreadable, so the card cannot tell you which design you are writing a
+        title for. The row stays compact; the preview comes back at a size you can
+        read once the row is open. */}{(()=>{const shot=design.previewUrl||drafts.find(draft=>draft.clientId===design.id)?.previewUrl;return shot?<button type="button" className="task-listing-preview" onClick={()=>window.open(shot,"_blank","noopener,noreferrer")} aria-label={`Open a larger preview of ${design.title.trim()||design.name}`}><img src={shot} alt={design.name||"Design artwork"} loading="lazy" decoding="async"/><span>Enlarge</span></button>:null})()}<div className="design-fields"><label>Title <span>{design.title.length}/140</span><textarea className="listing-title-field" rows={3} value={design.title} maxLength={140} onChange={event=>{const title=event.target.value;updateDesign(design.id,{title,tags:tagsFromTitle(title),etsy:undefined})}}/></label><label>Tags <span>{design.tags.length}/13</span><textarea className="listing-tags-field" rows={3} value={design.tags.join(", ")} onChange={event=>updateDesign(design.id,{tags:[...new Set(event.target.value.split(",").map(tag=>tag.trim().toLowerCase()).filter(tag=>tag&&tag.length<=20))].slice(0,13),etsy:undefined})} placeholder="Exact title phrases, separated by commas"/></label><div className="tag-row">{design.tags.map(tag=><span key={tag}>{tag}</span>)}{!design.tags.length&&<small>Goldie will create matching tags with the title.</small>}</div><IndividualAutoTitle design={design} template={templateDetails} useCommas={titleJoiner===", "} onApply={(title,tags)=>{setActiveDesign(design.id);updateDesign(design.id,{title,tags,etsy:undefined,etsyError:""})}}/>{design.etsyError&&<small className="field-error">{design.etsyError}</small>}</div></div>)}
+    </div>;
+    if(task==="description")return <>
+      <div className="task-panel-lead"><div className="batch-description-body"><p>This came from your saved product. Edit it once here to change the shared description on every listing in this batch.</p><label>Description for every listing<textarea rows={9} value={description} onChange={event=>setDescription(event.target.value)} placeholder="Add sizing, materials, production, care, and shipping information"/></label><small>Open any listing below only when that listing needs different wording.</small>{/* D232 · "Save this description as the default" went with the settings block. The
+                     shared editor survived the move but the way to keep the wording for future
+                     batches did not, so it comes back where the description is now edited. */}{description.trim()!==String(activeRecipe?.description||"").trim()&&<button type="button" className="save-product-default" disabled={!description.trim()||savingProductDefault==="description"} onClick={()=>void saveProductDefaults({description},"description")}>{savingProductDefault==="description"?"Saving…":"Save this description as the default"}</button>}</div></div>
+      {designTaskRows("description",design=>design.descriptionOverride!==undefined?"Customized":"Same as batch",design=><div className="individual-description-body"><p>The complete description is shown below. Edit it only if this listing needs different wording or an additional blurb.</p><label>Description for this listing<textarea rows={10} value={finalDescription(design,design.etsy)} onChange={event=>updateDesign(design.id,{descriptionOverride:event.target.value,etsyError:""})}/></label>{design.descriptionOverride!==undefined&&<button type="button" onClick={()=>updateDesign(design.id,{descriptionOverride:undefined,etsyError:""})}>Use the batch description again</button>}<small>Spacing and line breaks are preserved when this description is sent to Printify and Etsy.</small></div>)}
+    </>;
+    if(task==="etsy")return <>
+      <div className="task-panel-lead"><div className="task-panel-heading"><h3>Review your Etsy listing details</h3><span className="done-mark">{files.filter(file=>etsyRequiredComplete(file.etsy)).length}/{files.length} ready</span></div><p className="step-copy">Goldie has pre-filled the Etsy category and every product field it could confidently match for each listing. Look everything over and change any selection that does not fit.</p>{files.every(file=>etsyRequiredComplete(file.etsy))&&<div className="variant-transfer-note"><span>✓</span><div><b>Core listing information is ready for your review.</b><small>This step contains additional Etsy category and product fields. Optional fields stay blank when there is not a clear match.</small></div></div>}</div>
+      {designTaskRows("etsy",design=>etsyRequiredComplete(design.etsy)?"Ready":design.etsy?"Needs review":design.title.trim()?"Not created yet":"Waiting for a title",design=><div className="etsy-detail-body">{design.etsy?<EtsyDetailsEditor design={design} categories={etsyCategories} onChange={etsy=>updateDesign(design.id,{etsy,etsyError:""})} onCategory={taxonomyId=>changeEtsyCategory(design,taxonomyId)}/>:<div className={design.title.trim()?"etsy-detail-error":"etsy-detail-pending"}><b>{design.title.trim()?"Etsy details still need to be created.":"Waiting for this listing’s title."}</b><span>{design.title.trim()?design.etsyError:"Goldie fills in the Etsy category and product fields automatically once a title exists. Create titles above and this completes itself."}</span>{design.title.trim()&&<button aria-busy={preparingListingId===design.id} disabled={Boolean(preparingListingId)} onClick={()=>void retryOneEtsyListing(design)}>{preparingListingId===design.id?"Preparing this listing…":"Try this listing again"}</button>}</div>}{design.etsyError&&<small className="field-error">{design.etsyError}</small>}</div>)}
+    </>;
     const listings=drafts.map(draft=>({draft,design:files.find(file=>file.id===draft.clientId),selectedImages:draft.id?(printifyImageSelections[draft.id]??printifyImageIndices):printifyImageIndices}));
     if(!listings.length)return null;
     if(task==="placement")return <>
@@ -1885,7 +1937,10 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
             {<><button className="error-help-link" onClick={()=>window.dispatchEvent(new CustomEvent("goldie-retry-listing",{detail:draft.clientId}))}>Retry this listing</button><button className="error-help-link" onClick={()=>window.dispatchEvent(new CustomEvent("goldie-support",{detail:draft.error??"A design failed"}))}>Get help with this error</button></>}
           </div>:<div className="task-listing" key={draft.clientId}><div className="draft-card-top">{draft.previewUrl?<button className="printify-preview-button" onClick={()=>window.open(draft.previewUrl,"_blank","noopener,noreferrer")} aria-label="Open larger Printify preview"><img src={draft.previewUrl} alt={`Printify preview for ${draft.title||draft.name}`}/><span>Click to enlarge</span></button>:design?<div className="pending-preview"><img src={design.previewUrl} alt="Design preview" loading="lazy" decoding="async"/><span>Printify preview processing</span></div>:<span className="draft-check">!</span>}<div>{draft.status!=="Created"&&<span className="draft-state">DRAFT FAILED</span>}<h3>{draft.title||draft.name}</h3><small>{draft.status==="Created"?"Unpublished Printify draft":draft.error}</small>{/* D409 - The tags belong to step 3. Showing them on Images invited editing
                    listing text on the step that is about photographs, and duplicated a
-                   field that is owned elsewhere. */}{draft.editorUrl&&draft.id?<button className={`edit-draft-button ${openedDrafts.includes(draft.id)?"opened":""}`} onClick={()=>openDraft(draft)}><i/><span>{openedDrafts.includes(draft.id)?"Printify opened":"Open in Printify to resize or reposition"}<small>(Choose the correct shop in your Printify account first.)</small></span></button>:null}</div></div></div>)}</div>
+                   field that is owned elsewhere. */}{draft.editorUrl&&draft.id?<button className={`edit-draft-button ${openedDrafts.includes(draft.id)?"opened":""}`} onClick={()=>openDraft(draft)}><i/><span>{openedDrafts.includes(draft.id)?"Printify opened":"Open in Printify to resize or reposition"}<small>(Choose the correct shop in your Printify account first.)</small></span></button>:null}</div></div>{/* D541 - the print-quality check used to sit in step 3's table of every
+              listing, under Titles. It reports whether this artwork will print
+              at 300 DPI on this product, which is this row's job, not the
+              title's. */}{design?(()=>{const displayScale=printTargetFor(templateDetails).scale;const quality=design.width&&templateDetails?.maxPrintWidth&&displayScale?printifyDpi(design.width,templateDetails.maxPrintWidth,displayScale):null;const qualityReady=Boolean(quality&&quality.dpi>=300);return <div className={`quality-pill ${qualityReady?"pass":"check"}`}><b>{!quality?"Checking print quality…":qualityReady?`✓ ${quality.dpi} DPI · good to print`:`${quality.dpi} DPI · review before printing`}</b><small>{quality?`${quality.level} resolution · 300 DPI recommended`:design.width?`${design.width} × ${design.height}px`:"Reading dimensions…"}</small></div>})():null}</div>)}</div>
     </>;
     if(task==="printify")return <>
           {/* D540 - advice about choosing photos, inside the choosing-photos task. */}
@@ -2009,47 +2064,27 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
                did nothing you could see. A row goes to its own section, and a
                section that is a <details> opens - and closes again on a second
                click, because a row that only ever opens is not a control. */
-            const openRow=(target?:string,task?:string)=>{
-              /* D539 - a task row opens its own panel inside this card. It does
-                 not scroll anywhere, because there is nowhere else to go. */
-              if(task){
-                if(!open){if(reachable){setActiveImageTask(task);openBundleProduct(index)}return}
-                setActiveImageTask(current=>current===task?"":task);
-                setOpenListing("");
-                return;
-              }
-              if(!open){if(reachable)openBundleProduct(index);return}
-              const card=document.querySelector(".step-product-card.is-open");
-              /* D525 - step 3 has two phases and they render different things.
-                 On the Etsy phase the title builder and the description are not
-                 on the page at all, so both rows offered a Change that did
-                 nothing. If the section this row is about is not here, go to the
-                 phase that has it. */
-              if(target&&card&&!card.querySelector(target)&&finishPhase==="etsy"&&target!==".final-review"){setFinishPhase("details");window.setTimeout(()=>{(document.querySelector(`.step-product-card.is-open ${target}`) as HTMLElement|null)?.scrollIntoView({block:"start"})},220);return}
-              /* D538 - the row toggled its section, so clicking "Printify mockups"
-                 - the one section that starts open - closed it and scrolled
-                 nowhere, while the other two rows worked. Measured on the page:
-                 scrollY stayed 0 and the section went from open to closed. A row
-                 means "take me to this task"; it opens and goes there, every
-                 time, whatever state the section was in. */
-              const node=(target?card?.querySelector(target):null)||card?.querySelector(".step-product-body");
-              if(node instanceof HTMLDetailsElement)node.open=true;
-              /* D526 - clicking Mockups did nothing at all. Its section lives inside
-                 a collapsed "Create lifestyle mockups" disclosure, and you cannot
-                 scroll to something inside a closed <details> - the browser simply
-                 ignores it. Verified on the page: the element was there, at 1506px,
-                 and scrollIntoView moved nothing. Open what is holding it first. */
-              let parent=(node as HTMLElement|null)?.parentElement;
-              while(parent){if(parent instanceof HTMLDetailsElement)parent.open=true;parent=parent.parentElement}
-              (node as HTMLElement|null)?.scrollIntoView({block:"start"});
+            /* D539 - a task row opens its own panel inside this card. It does
+               not scroll anywhere, because there is nowhere else to go.
+               D541 - and now no row has anywhere else to go. The selector
+               machinery underneath this - open the section, walk up opening every
+               <details> above it, scroll to it, and if it is not on this phase
+               throw the step back a phase to find it - existed to serve rows that
+               were bookmarks into a shared block. Steps 3 and 4 were the last two
+               using it, and neither does now. */
+            const openRow=(_target?:string,task?:string)=>{
+              if(!task){if(!open&&reachable)openBundleProduct(index);return}
+              if(!open){if(reachable){setActiveTask(task);openBundleProduct(index)}return}
+              setActiveTask(current=>current===task?"":task);
+              setOpenListing("");
             };
             return <div className="batch-product-rows">{rows.map(row=><Fragment key={row.label}><div
-              className={`batch-product-row ${row.done?"settled":""} ${switchingProduct||(!open&&!reachable)?"":"clickable"}`}
-              role={switchingProduct||(!open&&!reachable)?undefined:"button"}
-              tabIndex={switchingProduct||(!open&&!reachable)?undefined:0}
+              className={`batch-product-row ${row.done?"settled":""} ${row.report?"reporting":switchingProduct||(!open&&!reachable)?"":"clickable"}`}
+              role={row.report||switchingProduct||(!open&&!reachable)?undefined:"button"}
+              tabIndex={row.report||switchingProduct||(!open&&!reachable)?undefined:0}
               aria-expanded={open}
-              onClick={()=>openRow(row.target)}
-              onKeyDown={(event:React.KeyboardEvent)=>{if(event.key==="Enter"||event.key===" "){event.preventDefault();openRow(row.target)}}}>
+              onClick={()=>{if(!row.report)openRow(row.target,row.task)}}
+              onKeyDown={(event:React.KeyboardEvent)=>{if(event.key==="Enter"||event.key===" "){event.preventDefault();if(!row.report)openRow(row.target,row.task)}}}>
               <span className="row-mark" aria-hidden="true">{row.done?"✓":"!"}</span>
               <span className="row-label">{row.label}</span>
               <span className="row-value">{row.value}{row.detail?<small>{row.detail}</small>:null}</span>
@@ -2059,14 +2094,19 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
                   card's rows had no control at all and a product waiting its turn
                   had a "Finish Gildan Tee first" line step 1 never shows. Every
                   row carries Change; it says why when it cannot be used. */}
-              <button type="button" className="row-open"
+              {/* D541 - step 4 has no per-product work: the review and the one
+                  publish button are step-level, in the footer. Both of its rows
+                  carried a Change that scrolled to the same block underneath, so
+                  two different rows went to one place. A row with nothing of its
+                  own to open reports and says so. */}
+              {row.report?null:<button type="button" className="row-open"
                 disabled={Boolean(switchingProduct)||(!open&&!reachable)}
                 title={!open&&!reachable?`Finish ${list[index-1]?.name||"the product above"} first`:undefined}
                 onClick={event=>{event.stopPropagation();openRow(row.target,row.task)}}>
                 {opening?"Opening…":"Change"}
-              </button>
+              </button>}
             </div>
-            {open&&row.task&&activeImageTask===row.task&&<div className="task-panel">{imageTaskPanel(row.task)}</div>}
+            {open&&row.task&&activeTask===row.task&&<div className="task-panel">{taskPanel(row.task)}</div>}
             </Fragment>)}</div>;
           })()}
           {open&&<div className="step-product-body">{body}</div>}
@@ -2181,7 +2221,10 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
   function changeTitleJoiner(joiner:string){setTitleJoiner(joiner);if(batchKeywords.length)applyBatchTitle(batchKeywords.join(joiner),tagsFromTitle(batchKeywords.join(", ")))}
   function changeTitleCaps(enabled:boolean){setTitleCaps(enabled);setFiles(current=>current.map(file=>({...file,title:(enabled?file.title.replace(/\b[\p{L}\p{N}]/gu,character=>character.toLocaleUpperCase()):file.title).slice(0,140),etsy:undefined,etsyError:""})))}
   async function buildBatchTitle(){if(!autoTitleBank)return setTitleBuildMessage("Choose a keyword bank first.");setTitleBuilding(true);setTitleBuildMessage(`Creating 0 of ${files.length} titles…`);let completed=0,failed=0;await runBounded(files,2,async design=>{try{const result=await autoTitleForDesign(design,autoTitleBank.keywords,titleJoiner===", ",templateDetails);return {design,result}}catch(error){return {design,error:error instanceof Error?error.message:"Goldie could not create this title."}}},item=>{completed+=1;if("result" in item&&item.result){updateDesign(item.design.id,{title:styledTitle(item.result.title),tags:item.result.tags,titleWarning:item.result.titleWarning,titleError:"",etsy:undefined,etsyError:""});pulseTitle(item.design.id)}else{failed+=1;updateDesign(item.design.id,{titleError:item.error,titleWarning:""})}setTitleBuildMessage(`Creating ${completed} of ${files.length} titles…`)});/* D230 · Read "1 titles created. 2 need another try" on a real run. */
-      setTitleBuildMessage(failed?`${files.length-failed} ${files.length-failed===1?"title":"titles"} created. ${failed} ${failed===1?"needs":"need"} another try; each affected listing explains why below.`:`✓ ${files.length} unique ${files.length===1?"title":"titles"} and separately ranked Etsy tags created. Review them below.`);setTitleBuilding(false);window.setTimeout(()=>{const target=listingResultsRef.current;if(target)window.scrollTo({top:window.scrollY+target.getBoundingClientRect().top-24})},100)}
+      setTitleBuildMessage(failed?`${files.length-failed} ${files.length-failed===1?"title":"titles"} created. ${failed} ${failed===1?"needs":"need"} another try; each affected listing explains why below.`:`✓ ${files.length} unique ${files.length===1?"title":"titles"} and separately ranked Etsy tags created. Review them below.`);setTitleBuilding(false)/* D541 - this used to hunt down the results table and scroll to it,
+       because the table sat far below the button inside one long block. The
+       results are the rows directly under this button now, in the same open
+       panel, so there is nowhere to travel to. */}
 
   function missingPublishFields(){const chosen=selectedPublishDrafts(),clientIds=new Set(chosen.map(draft=>draft.clientId)),chosenFiles=files.filter(file=>clientIds.has(file.id)),missing:string[]=[];if(!chosen.length)missing.push("Select at least one successful listing");if(chosenFiles.some(file=>!file.title.trim()))missing.push("Titles");if(chosenFiles.some(file=>!file.tags.length))missing.push("Tags");if(!description.trim())missing.push("Permanent product description");if(chosenFiles.some(file=>!etsyRequiredComplete(file.etsy)))missing.push("Etsy details");if(chosenFiles.some(file=>personalizationProblem(file.etsy)))missing.push("Personalization settings");if(chosen.length&&!allCreatedListingsHaveImages(chosen))missing.push("At least one image on every selected listing");return missing}
   function openPublishConfirmation(){const chosen=selectedPublishDrafts(),missing=missingPublishFields();if(missing.length)return void stopWith("Complete every required selected listing field.",missing.map(field=>`${field} must be completed before publishing.`));const missingPhotos=createdListingsMissingImages(chosen);if(missingPhotos.length)return void stopWith("Add a photo to every selected listing before publishing.",missingPhotos.map(draft=>draft.name));setPublishConfirmOpen(true)}
@@ -2923,34 +2966,18 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
           {/* D221 · Etsy details joins titles, tags and descriptions on one Listing page. They
            are the same job — the words and metadata of the listing — and they were two
            screens apart. */}
-          {workflowStep==="finish"&&(finishPhase==="details"||finishPhase==="etsy")&&stepProductCards(bundleCardStatus("listing"),<>{/* D387 - The titles and tags editor rendered inside the designs-step
-              article, which put half of step 3 above the product card and half
-              inside it. Both halves are this product's work, so both belong in
-              its card. finish-mode comes along because 26 rules hang off it as
-              an ancestor. */}
-              {files.length>0&&complete&&finishPhase==="details"&&<div className="finish-mode listing-editor-host"><div className={`listing-editor ${titlePulseIds.size?"titles-resolving":""}`}>
-                <div className="editor-heading"><div><b>1. Create titles and tags</b><span>Goldie analyzes every design separately and selects only exact phrases from your validated keyword bank. Goldie never adds keywords. Review or edit any listing afterward.</span></div></div>{/* D269 · the card header already shows "✓ N listings" a few
-              pixels above this; the same count twice in one header block. */}
-                {/* D516 - step 3 was one slab: an always-open title builder, a collapsible
-    description, and an always-open per-listing table. Only the middle one
-    collapsed, so Titles and Tags had no section of their own to open or
-    close and reading the page felt like everything lived under Description.
-    Three sections, all collapsible, all the same control. */}
-<details className="batch-title-builder listing-section"><summary><span><b>1. Titles and tags for the whole batch</b><small>Goldie selects exact phrases from your validated bank. No new keywords are ever added.</small></span></summary><div><p className="mini-label">BATCH TITLE BUILDER</p><h3>Create titles for the whole batch</h3><p>Let Goldie select from your validated bank for each design, or choose the exact phrases yourself. No new keywords are ever added.</p></div><div className="title-builder-choice" role="group" aria-label="How do you want to create batch titles?"><button className={titleBuilderMode==="ai"?"active":""} onClick={()=>setTitleBuilderMode("ai")}><b>Goldie selects from my bank</b><span>Creates a different title for each design</span></button><button className={titleBuilderMode==="manual"?"active":""} onClick={()=>setTitleBuilderMode("manual")}><b>I choose from my bank</b><span>Uses your selections across the batch</span></button></div><div className="title-style-toggle"><span>Title format</span><button className={titleJoiner===", "?"active":""} onClick={()=>changeTitleJoiner(", ")}>With commas</button><button className={titleJoiner===" "?"active":""} onClick={()=>changeTitleJoiner(" ")}>Without commas</button>{/* D413 - Capitalization sat in its own card above the builder, but it is the
-                    same decision as the comma style: how the title is formatted. One group. */}<button type="button" className={titleCaps?"active":""} aria-pressed={titleCaps} onClick={()=>changeTitleCaps(!titleCaps)}>{titleCaps?"Capitalized":"Not capitalized"}</button></div>{titleBuilderMode==="ai"?<div className="title-builder-pane"><KeywordBank selectionOnly initialId={autoTitleBankId||activeRecipe?.keywordListId||""} onSelect={list=>{setAutoTitleBank(list);setAutoTitleBankId(list?.id||"");/* D221 · Choosing the bank here IS establishing it for this product, the same as it was on the product card before the picker moved. Without this the choice would apply to this batch only and the next one would ask again. */if(activeRecipe&&list?.id&&list.id!==activeRecipe.keywordListId)void establish(activeRecipe,{keywordListId:list.id})}} title="Choose a keyword bank" copy="Goldie selects only exact phrases from this bank. It will not add keywords."/><div className="ai-title-disclaimer"><b>Review every title Goldie creates.</b><span>Goldie chooses the phrases it believes fit each design best from the bank you select. It does not verify that the keyword bank itself matches the design, and it will not reject mismatched phrases. Use your judgment before continuing.</span></div><button className="ai-title-button" disabled={titleBuilding||!autoTitleBank||!files.length} onClick={()=>void buildBatchTitle()}>{titleBuilding?`Creating ${files.length} titles…`:"Auto-create all titles"}</button>{titleBuildMessage&&<p className="title-build-message" role="status">{titleBuildMessage}</p>}</div>:<div className="title-builder-pane manual-title-builder"><KeywordBank initialId={manualKeywordBankId||activeRecipe?.keywordListId||""} onSelect={list=>setManualKeywordBankId(list?.id||"")} onAdd={addBatchKeyword} title="Choose a keyword bank" copy="Click keywords in the order you want them. Every click updates all listings below."/><div className="selected-batch-keywords"><div><b>Selected keywords</b>{batchKeywords.length>0&&<button onClick={clearBatchKeywords}>Clear all</button>}</div>{batchKeywords.length?<div className="selected-keyword-chips">{batchKeywords.map(keyword=><button key={keyword} onClick={()=>removeBatchKeyword(keyword)}>{keyword}<span>×</span></button>)}</div>:<p>No keywords selected yet.</p>}</div>{batchKeywords.length>0&&<div className="batch-title-preview"><b>Batch title preview</b><span>{batchKeywords.join(titleJoiner)}</span><small>Applied to every listing below. You can still edit any listing individually.</small></div>}</div>}</details>
-                <details className="permanent-description batch-description"><summary><span><b>2. Edit description</b><small>Review or change the description used for every listing</small></span><em>{description.trim()?"✓ Added":"Review"}</em></summary><div className="batch-description-body"><p>This came from your saved product. Edit it once here to change the shared description on every listing in this batch.</p><label>Description for every listing<textarea rows={9} value={description} onChange={event=>setDescription(event.target.value)} placeholder="Add sizing, materials, production, care, and shipping information"/></label><small>Open any listing below only when that listing needs different wording.</small>{/* D232 · "Save this description as the default" went with the settings block. The
-                     shared editor survived the move but the way to keep the wording for future
-                     batches did not, so it comes back where the description is now edited. */}{description.trim()!==String(activeRecipe?.description||"").trim()&&<button type="button" className="save-product-default" disabled={!description.trim()||savingProductDefault==="description"} onClick={()=>void saveProductDefaults({description},"description")}>{savingProductDefault==="description"?"Saving…":"Save this description as the default"}</button>}</div></details>
-                <details className="listing-section design-table-section"><summary><span><b>3. Each listing</b><small>Review or edit any individual title, tags and description.</small></span></summary><div className="design-table" ref={listingResultsRef}>{files.map((design) => { const displayScale=printTargetFor(templateDetails).scale;/* D512 - and a fifth, the one that sized the preview she looks at. */const quality = design.width && templateDetails?.maxPrintWidth && displayScale ? printifyDpi(design.width, templateDetails.maxPrintWidth, displayScale) : null; const qualityReady = Boolean(quality && quality.dpi >= 300),completeDescription=finalDescription(design,design.etsy),draftPreview=design.previewUrl||drafts.find(draft=>draft.clientId===design.id)?.previewUrl; return <article className={`design-line ${activeDesign === design.id ? "active" : ""}`} key={design.id} onClick={() => setActiveDesign(design.id)}><button type="button" className="listing-preview-button" onClick={event=>{event.stopPropagation();window.open(draftPreview,"_blank","noopener,noreferrer")}} aria-label={`Open larger Printify preview for ${design.title||design.name}`}><img src={draftPreview} alt={design.name||"Design artwork"} loading="lazy" decoding="async"/><span>Enlarge</span></button><div className="design-fields"><label>Title <span>{design.title.length}/140</span><textarea className="listing-title-field" rows={3} value={design.title} maxLength={140} onChange={(e) => { const title = e.target.value; updateDesign(design.id, { title, tags: tagsFromTitle(title),etsy:undefined }); }}/></label><label>Tags <span>{design.tags.length}/13</span><textarea className="listing-tags-field" rows={3} value={design.tags.join(", ")} onChange={(e) => updateDesign(design.id, { tags: [...new Set(e.target.value.split(",").map((tag) => tag.trim().toLowerCase()).filter((tag) => tag && tag.length <= 20))].slice(0, 13),etsy:undefined })} placeholder="Exact title phrases, separated by commas"/></label><div className="tag-row">{design.tags.map((tag) => <span key={tag}>{tag}</span>)}{!design.tags.length && <small>Goldie will create matching tags with the title.</small>}</div><IndividualAutoTitle design={design} template={templateDetails} useCommas={titleJoiner===", "} onApply={(title,tags)=>{setActiveDesign(design.id);updateDesign(design.id,{title,tags,etsy:undefined,etsyError:""})}}/><details className="individual-description" onClick={event=>event.stopPropagation()}><summary><span>Customize this listing’s description</span><small>{design.descriptionOverride!==undefined?"✓ Customized":"Same as batch"}</small></summary><div><p>The complete description is shown below. Edit it only if this listing needs different wording or an additional blurb.</p><label>Description for this listing<textarea rows={10} value={completeDescription} onChange={event=>updateDesign(design.id,{descriptionOverride:event.target.value,etsyError:""})}/></label>{design.descriptionOverride!==undefined&&<button type="button" onClick={()=>updateDesign(design.id,{descriptionOverride:undefined,etsyError:""})}>Use the batch description again</button>}<small>Spacing and line breaks are preserved when this description is sent to Printify and Etsy.</small></div><button type="button" className="panel-collapse-foot" onClick={event=>{const box=(event.currentTarget as HTMLElement).closest("details");if(box){(box as HTMLDetailsElement).open=false;box.scrollIntoView({block:"nearest"})}}}>Close description</button></details>{design.etsy&&<details className="etsy-auto"><summary>✓ Etsy details completed · {design.etsy.category}</summary><small>Category and Etsy-specific fields are reviewed on the next step.</small><button type="button" className="panel-collapse-foot" onClick={event=>{const box=(event.currentTarget as HTMLElement).closest("details");if(box){(box as HTMLDetailsElement).open=false;box.scrollIntoView({block:"nearest"})}}}>Close auto details</button></details>}{design.etsyError&&<small className="field-error">{design.etsyError}</small>}{/* D400 - "Your design has clear space around it" reported a non-event: nothing went wrong and nothing needs doing. Removed. */}</div><div className={`quality-pill ${qualityReady ? "pass" : "check"}`}><b>{!quality ? "Checking print quality…" : qualityReady ? `✓ ${quality.dpi} DPI · good to print` : `${quality.dpi} DPI · review before printing`}</b><small>{quality ? `${quality.level} resolution · 300 DPI recommended` : design.width ? `${design.width} × ${design.height}px` : "Reading dimensions…"}</small></div></article>; })}</div></details>
-                <button className="secondary-action prepare-etsy" aria-busy={preparingEtsy} disabled={preparingEtsy||progressGateIssues(6).length>0} title={progressGateIssues(6)[0]} onClick={()=>void continueToEtsyDetails()}>{preparingEtsy?"Preparing Etsy details…":"Prepare Etsy details"}</button>{preparingEtsy?<p className="etsy-preparing-note" role="status">This can take a moment when your batch has several listings. Keep this page open while Goldie prepares each one.</p>:progressGateIssues(6)[0]&&<p className="etsy-preparing-note gate-reason" role="status">{progressGateIssues(6)[0]}</p>}
-              </div></div>}
-              <article className="step-card etsy-details-step active-panel"><div className="step-content"><div className="step-heading"><div><h2>Review your Etsy listing details</h2></div><span className="done-mark">{files.filter(file=>etsyRequiredComplete(file.etsy)).length}/{files.length} ready</span></div><p className="step-copy">Goldie has pre-filled the Etsy category and every product field it could confidently match for each listing. Look everything over and change any selection that does not fit.</p>{files.every(file=>etsyRequiredComplete(file.etsy))&&<div className="variant-transfer-note"><span>✓</span><div><b>Core listing information is ready for your review.</b><small>This step contains additional Etsy category and product fields. Optional fields stay blank when there is not a clear match.</small></div></div>}<div className="etsy-detail-list">{files.map(design=><article className="etsy-detail-card" key={design.id}><img src={design.previewUrl} alt="" loading="lazy" decoding="async"/><div><span className="etsy-listing-name">{design.title||design.name}</span>{design.etsy?<EtsyDetailsEditor design={design} categories={etsyCategories} onChange={etsy=>updateDesign(design.id,{etsy,etsyError:""})} onCategory={taxonomyId=>changeEtsyCategory(design,taxonomyId)}/>:<div className={design.title.trim()?"etsy-detail-error":"etsy-detail-pending"}><b>{design.title.trim()?"Etsy details still need to be created.":"Waiting for this listing’s title."}</b><span>{design.title.trim()?design.etsyError:"Goldie fills in the Etsy category and product fields automatically once a title exists. Create titles above and this completes itself."}</span>{design.title.trim()&&<button aria-busy={preparingListingId===design.id} disabled={Boolean(preparingListingId)} onClick={()=>void retryOneEtsyListing(design)}>{preparingListingId===design.id?"Preparing this listing…":"Try this listing again"}</button>}</div>}{design.etsyError&&<small className="field-error">{design.etsyError}</small>}</div></article>)}</div></div></article></>,false,
+          {workflowStep==="finish"&&(finishPhase==="details"||finishPhase==="etsy")&&stepProductCards(bundleCardStatus("listing"),/* D541 - step 3 held one block: a title builder, a description editor and a
+              table of every listing, with two rows that were bookmarks into spots
+              inside it. Clicking Description showed titles and tags too, because
+              they were never in a section of their own. The rows own panels now,
+              exactly as step 2 does, and the card passes no body. */
+            null,false,
             <>
             {/* D521 - the forward button belongs to the step, not to whichever
                 product happens to be open. On a three-product bundle it was
                 inside the hoodie card, so leaving the step meant finding the
                 open product first. */}
-            <button className="workflow-next" aria-busy={savingEtsyDetails} disabled={savingEtsyDetails||progressGateIssues(7).length>0} title={progressGateIssues(7)[0]} onClick={()=>void saveAllEtsyDetails()}>{savingEtsyDetails?"Saving Etsy details…":"Next step"} <span>→</span></button>{!savingEtsyDetails&&progressGateIssues(7)[0]&&<p className="etsy-preparing-note gate-reason" role="status">{progressGateIssues(7)[0]}</p>}
+            {finishPhase==="details"?<><button className="secondary-action prepare-etsy" aria-busy={preparingEtsy} disabled={preparingEtsy||progressGateIssues(6).length>0} title={progressGateIssues(6)[0]} onClick={()=>void continueToEtsyDetails()}>{preparingEtsy?"Preparing Etsy details…":"Prepare Etsy details"}</button>{preparingEtsy?<p className="etsy-preparing-note" role="status">This can take a moment when your batch has several listings. Keep this page open while Goldie prepares each one.</p>:progressGateIssues(6)[0]&&<p className="etsy-preparing-note gate-reason" role="status">{progressGateIssues(6)[0]}</p>}</>:<><button className="workflow-next" aria-busy={savingEtsyDetails} disabled={savingEtsyDetails||progressGateIssues(7).length>0} title={progressGateIssues(7)[0]} onClick={()=>void saveAllEtsyDetails()}>{savingEtsyDetails?"Saving Etsy details…":"Next step"} <span>→</span></button>{!savingEtsyDetails&&progressGateIssues(7)[0]&&<p className="etsy-preparing-note gate-reason" role="status">{progressGateIssues(7)[0]}</p>}</>}
             </>)}
           {workflowStep==="finish"&&finishPhase==="final"&&stepProductCards(bundleCardStatus("publish"),null,false,<>{/* D497 - publish covered one product until D495, so these cards kept their
     own open controls. Now one press publishes the whole bundle, and a card

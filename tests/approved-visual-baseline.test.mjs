@@ -261,15 +261,19 @@ test("gives Step 6 a cohesive titles, tags, and descriptions layout", async () =
   assert.doesNotMatch(page, /Complete the listing words/);
   /* Order reversed in D148: the Printify preview is a white garment on white,
    * cropped to 54px, so every listing in a batch rendered as the same blank
-   * square. The artwork identifies the listing; the garment does not. */
-  assert.match(page, /draftPreview=design\.previewUrl\|\|drafts\.find\(draft=>draft\.clientId===design\.id\)\?\.previewUrl/);
-  assert.match(page, /className="listing-preview-button"/);
-  assert.match(page, /<b>2\. Edit description<\/b>/);
+   * square. The artwork identifies the listing; the garment does not.
+   * D541 - the per-listing table this belonged to is gone; the same preference
+   * now picks the thumbnail on every task row. */
+  assert.match(page, /const thumb=design\.previewUrl\|\|drafts\.find\(draft=>draft\.clientId===design\.id\)\?\.previewUrl/);
+  /* D541 - step 3 was one block: an always-open title builder, a collapsible
+   * description and an always-open table of every listing, numbered 1, 2, 3.
+   * Her rows were bookmarks into it, so opening Description showed titles and
+   * tags too. Three tasks, three panels, and the numbering goes with the block. */
+  assert.doesNotMatch(page, /<b>2\. Edit description<\/b>/);
+  assert.doesNotMatch(page, /className="design-table"/);
   assert.match(page, /Build this title yourself from a keyword bank/);
   assert.match(page, /It does not verify that the keyword bank itself matches the design, and it will not reject mismatched phrases\./);
   assert.match(css, /\.app-shell \.finish-mode \.batch-limits,[\s\S]*display:none!important/);
-  assert.match(css, /\.app-shell \.batch-description>summary b\{[^}]*font-size:18px!important/);
-  assert.match(css, /\.app-shell \.design-line\{grid-template-columns:152px minmax\(0,1fr\) 138px/);
   assert.match(css, /\.app-shell \.quality-pill\.pass,\.app-shell \.quality-pill\.check\{[^}]*background:linear-gradient/);
   /* D375 · was width:min(250px,100%) — a small centred pill on this step while
      the same button was a full-width bar on steps 1 and 2. */

@@ -382,7 +382,11 @@ test("imports Printify product facts and automatically prepares product-specific
     readFile(new URL("../app/api/printify/drafts/route.ts",import.meta.url),"utf8"),
   ]);
   assert.match(printify,/blueprintTitle/);assert.match(printify,/description:found\.product\.description/);
-  assert.match(page,/Completing Etsy details/);assert.match(page,/Etsy details completed/);
+  assert.match(page,/Completing Etsy details/);
+  /* D541 - "Etsy details completed" was a disclosure nested inside step 3's
+     table of every listing. The Etsy fields are their own task now, and each
+     listing's row reports its own standing on that task instead. */
+  assert.match(page,/etsyRequiredComplete\(design\.etsy\)\?"Ready":design\.etsy\?"Needs review"/);
   assert.match(page,/finalDescription/);assert.match(page,/descriptionOverride/);
   assert.match(intelligence,/fields differ/);assert.match(intelligence,/include every physical or product attribute you can confidently support/i);assert.match(intelligence,/Do not stop at required fields/);assert.match(intelligence,/Fill holiday, occasion, recipient, or style only when/);assert.match(intelligence,/Never guess simply to make a field non-empty/);
   assert.match(drafts,/template\.description/);
@@ -707,9 +711,12 @@ test("creates unique validated AI titles in bulk with per-listing overrides", as
   assert.match(page,/removeBatchKeyword/);assert.match(page,/clearBatchKeywords/);assert.match(page,/Applied to every listing below/);
   assert.match(page,/Create a different title with AI/);assert.match(page,/Create title for this design/);
   assert.match(page,/autoTitleForDesign/);assert.match(page,/tags:item\.result\.tags/);
-  assert.match(page,/separately ranked Etsy tags created/);assert.match(page,/Goldie selects only exact phrases from this bank/);assert.match(page,/Goldie never adds keywords/);
-  assert.ok(page.indexOf('className="permanent-description batch-description"')<page.indexOf('className="design-table"'),"The collapsible batch description belongs directly above the individual listings.");
-  assert.match(page,/Customize this listing’s description/);assert.match(page,/The complete description is shown below/);
+  assert.match(page,/separately ranked Etsy tags created/);assert.match(page,/Goldie selects only exact phrases from this bank/);
+  /* D541 - the promise moved with the block that held it; this is the copy that
+     carries it now, in the title builder itself. */
+  assert.match(page,/No new keywords are ever added/);
+  assert.ok(page.indexOf('if(task==="description")')<page.indexOf('individual-description-body'),"The batch description leads the panel, and each listings.");
+  assert.match(page,/The complete description is shown below/);
   assert.match(page,/descriptionOverride/);assert.match(page,/scrollIntoView/);
   assert.match(tools,/keywordListsCache/);assert.match(tools,/selectionOnly/);assert.match(tools,/onSelect/);
   assert.match(intelligence,/selected_keywords/);assert.match(intelligence,/allowedByLower/);assert.match(intelligence,/PRODUCT TYPE RULE/);assert.match(intelligence,/if\(!picked\.length\)return NextResponse\.json\(\{error:"This keyword bank is empty/);
@@ -1359,10 +1366,13 @@ test("supports whole-number pricing, unclipped profit columns, and optional titl
 });
 
 test("keeps the Step 6 listing count on one line", async () => {
-  const styles = await readFile(new URL("../app/approved-functional.css", import.meta.url), "utf8");
-  assert.match(styles, /\.app-shell \.finish-mode \.editor-heading>span\{/);
-  assert.match(styles, /white-space:nowrap!important/);
-  assert.match(styles, /min-width:max-content!important/);
+  const clarity = await readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8");
+  /* D541 - the count lived in an editor-heading above one big block. It reports
+     per row now - "9 of 13 tags", "Same as batch", "Ready" - and per panel, and
+     wrapping any of those onto a second line is what this has always been about. */
+  assert.match(clarity, /\.app-shell \.task-listing-count\{[^}]*white-space:nowrap/);
+  assert.match(clarity, /\.app-shell \.task-listing-change\{[^}]*white-space:nowrap/);
+  assert.match(clarity, /\.app-shell \.task-panel-heading\{/);
 });
 
 test("renders personalization as an On-left Off-right toggle", async () => {
@@ -2043,9 +2053,13 @@ test("keeps bundle titles, placement decisions, review, and failures product-spe
 
 test("renders every Finish phase as compact expandable rows",async()=>{
   const [css,review]=await Promise.all([readFile(new URL("../app/approved-functional.css",import.meta.url),"utf8"),readFile(new URL("../app/final-listing-review.tsx",import.meta.url),"utf8")]);
-  assert.match(css,/Finish workspace: dense rows with one in-place editor/);
-  assert.match(css,/\.listing-editor \.design-line/);
-  assert.match(css,/\.design-line:not\(\.active\) \.individual-title-builder/);
+  /* D541 - "dense rows with one in-place editor" is what step 3 is now, but built
+     out of the same task rows every other step uses rather than a bespoke table
+     wedged inside a shared block. */
+  const clarity=await readFile(new URL("../app/clarity-pass.css",import.meta.url),"utf8");
+  assert.match(clarity,/\.app-shell \.task-listing-row\{/);
+  assert.match(clarity,/\.app-shell \.task-listing-panel\{/);
+  assert.match(clarity,/\.app-shell \.task-panel-body\{/);
   assert.match(css,/\.etsy-detail-card/);
   assert.match(css,/\.post-draft-workspace \.draft-card-top/);
   assert.match(css,/\.final-listing-card/);
@@ -4015,12 +4029,12 @@ test("no product on any step falls back to a bare header — D500", async () => 
   // All three steps are covered, and each returns rows.
   const returns = fn.match(/return \[/g) || [];
   assert.equal(returns.length, 3, "D539 - one row set per step");
-  for (const label of ["Review Printify placement", "Choose Printify photos", "Create lifestyle mockups", "Arrange final photo order", "Listings", "Titles and tags", "Description"]) {
+  for (const label of ["Review Printify placement", "Choose Printify photos", "Create lifestyle mockups", "Arrange final photo order", "Write titles and tags", "Edit description", "Review Etsy category and fields", "Listings ready", "Published"]) {
     assert.ok(fn.includes(`label:"${label}"`), `${label} row is built`);
   }
 
   // An unstarted product says so rather than claiming zero of zero.
-  assert.equal((fn.match(/"Not started yet"/g) || []).length, 9, "D539 - step 2 has four task rows");
+  assert.equal((fn.match(/"Not started yet"/g) || []).length, 11, "D541 - four rows on step 2, three on step 3, three reporting rows on step 4");
 });
 
 test("the bundle cards do not churn the network or the tab claim — D501", async () => {
@@ -4059,13 +4073,15 @@ test("step 3's rows match step 1's, captured from both live pages — D502", asy
   /* D503 - the whole row opens, as step 1's does, so the behaviour lives in one
      handler that the row and its button both call. */
   /* D515 - every row scrolled to the same element, so Titles landed on the
-     description and Description did nothing visible. Each row goes to its own
-     section, and a section that is a <details> opens and closes. */
-  assert.match(app, /const openRow=\(target\?:string,task\?:string\)=>\{/);
-  /* D538 - it used to toggle, so the one section that starts open closed itself
-     and scrolled nowhere. A row means "take me to this task". */
-  assert.match(app, /if\(node instanceof HTMLDetailsElement\)node\.open=true;/);
+     description and Description did nothing visible.
+     D541 - and the whole idea of a row scrolling anywhere is gone with it. A row
+     opens its own panel in its own card; there is no shared block left to land
+     in the wrong part of. */
+  assert.match(app, /const openRow=\(_target\?:string,task\?:string\)=>\{/);
   assert.doesNotMatch(app, /node\.open=!node\.open/);
+  const handler = app.slice(app.indexOf("const openRow=("), app.indexOf("return <div className=\"batch-product-rows\">"));
+  assert.ok(!handler.includes("scrollIntoView") && !handler.includes("querySelector"),
+    "no row scrolls the page or hunts for a selector to find its content");
   assert.match(app, /onClick=\{event=>\{event\.stopPropagation\(\);openRow\(row\.target,row\.task\)\}\}/,
     "the button must not fire the row handler twice");
 
@@ -4081,11 +4097,11 @@ test("the row itself opens, exactly as step 1's does — D503", async () => {
             tabindex="0" aria-expanded="false"> … <button class="row-open">
      Mine were plain divs whose only control was the button, so clicking the row
      did nothing and none of it was reachable by keyboard. */
-  assert.match(app, /className=\{`batch-product-row \$\{row\.done\?"settled":""\} \$\{switchingProduct\|\|\(!open&&!reachable\)\?"":"clickable"\}`\}/);
-  assert.match(app, /role=\{switchingProduct\|\|\(!open&&!reachable\)\?undefined:"button"\}/);
-  assert.match(app, /tabIndex=\{switchingProduct\|\|\(!open&&!reachable\)\?undefined:0\}/);
+  assert.match(app, /className=\{`batch-product-row \$\{row\.done\?"settled":""\} \$\{row\.report\?"reporting":switchingProduct\|\|\(!open&&!reachable\)\?"":"clickable"\}`\}/);
+  assert.match(app, /role=\{row\.report\|\|switchingProduct\|\|\(!open&&!reachable\)\?undefined:"button"\}/);
+  assert.match(app, /tabIndex=\{row\.report\|\|switchingProduct\|\|\(!open&&!reachable\)\?undefined:0\}/);
   assert.match(app, /aria-expanded=\{open\}/);
-  assert.match(app, /if\(event\.key==="Enter"\|\|event\.key===" "\)\{event\.preventDefault\(\);openRow\(row\.target\)\}/,
+  assert.match(app, /if\(event\.key==="Enter"\|\|event\.key===" "\)\{event\.preventDefault\(\);if\(!row\.report\)openRow\(row\.target,row\.task\)\}/,
     "keyboard reaches it too, as step 1 does");
   assert.match(app, /<button type="button" className="row-open"/);
 
@@ -4244,16 +4260,24 @@ test("every step is the same shape: a collapsible card per product — D517", as
   assert.doesNotMatch(app, /target:"details\.recommended-listing-photos"/,
     "a row never points at an advice panel");
 
-  // Every target has to be a selector that exists, not one I hoped for.
-  const targets = [...app.matchAll(/target:"([^"]+)"/g)].map((m) => m[1]);
-  /* D535 - the two step 2 targets now point at the sections they are named for. */
-  assert.deepEqual([...new Set(targets)].sort(), [
-    ".batch-title-builder", ".final-review", "details.permanent-description",
-  ]);
-  for (const target of targets) {
-    const bare = target.replace(/^details/, "").replace(/^\./, "");
-    assert.ok(app.includes(`className="${bare}"`) || app.includes(`task-section ${bare}"`) || app.includes(`${bare} `),
-      `${target} must match markup that exists`);
+  /* D541 - her rule, and the last place it was still broken: "stop pointing the
+     columns at certain places in the block." A row that scrolls somewhere is a
+     bookmark into a pile, and two rows can bookmark the same spot - which is
+     exactly what step 4 did with .final-review. No row points anywhere now.
+     Every row either owns a panel or reports and offers nothing. */
+  assert.deepEqual([...app.matchAll(/target:"([^"]+)"/g)].map((m) => m[1]), [],
+    "no row navigates to a selector any more");
+  const row = (label) => {
+    const at = app.indexOf(`{label:"${label}"`);
+    assert.ok(at > 0, `${label} row is built`);
+    return app.slice(at, app.indexOf("\n", at));
+  };
+  for (const [label, task] of [["Write titles and tags", "titles"], ["Edit description", "description"], ["Review Etsy category and fields", "etsy"]]) {
+    assert.ok(row(label).includes(`task:"${task}"`), `${label} owns the ${task} panel`);
+  }
+  for (const reporting of ["Listings ready", "Listing photos", "Published"]) {
+    assert.ok(row(reporting).includes("report:true"),
+      `step 4 reports ${reporting} rather than pretending to open it`);
   }
 });
 
@@ -4315,9 +4339,13 @@ test("a decided batch does not lead with the picker, and step 3 opens compact �
 
   /* D524 - step 3's sections opened themselves, so one product's card measured
      2237px and the other two sat below it. They open when she opens them. */
-  assert.doesNotMatch(app, /<details className="batch-title-builder listing-section" open>/);
-  assert.doesNotMatch(app, /<details className="listing-section design-table-section" open>/);
-  assert.match(app, /<details className="batch-title-builder listing-section">/);
+  /* D541 - the disclosures are gone with the block. A step 3 card opens showing
+     three rows and nothing else, which is as compact as D524 was reaching for. */
+  for (const shell of ["batch-title-builder", "design-table-section", "permanent-description"]) {
+    assert.ok(!app.includes(`<details className="${shell}`) && !app.includes(`listing-section">`),
+      `${shell} is no longer an accordion inside a shared block`);
+  }
+  assert.match(app, /if\(task==="titles"\)return <div/);
 });
 
 test("a row never offers Change for a section that is not on the page — D525", async () => {
@@ -4327,9 +4355,16 @@ test("a row never offers Change for a section that is not on the page — D525",
      "Description" rows, each with a Change button, while neither the title
      builder nor the description was rendered on that phase at all. Both buttons
      did nothing. Step 3 has two phases and they draw different things. */
-  assert.match(app, /if\(target&&card&&!card\.querySelector\(target\)&&finishPhase==="etsy"/,
-    "if the section is not here, go to the phase that has it");
-  assert.match(app, /setFinishPhase\("details"\);window\.setTimeout\(/);
+  /* D541 - the rescue is gone because the thing it rescued is gone. Titles,
+     description and the Etsy fields are three task panels the rows own, and the
+     rows render them in either phase, so no row can point at something the page
+     is not drawing. */
+  assert.doesNotMatch(app, /setFinishPhase\("details"\);window\.setTimeout\(/,
+    "no row throws the step back a phase to find its content");
+  assert.doesNotMatch(app, /card\?\.querySelector\(target\)/,
+    "no row resolves a selector at all");
+  assert.doesNotMatch(app, /while\(parent\)\{if\(parent instanceof HTMLDetailsElement\)parent\.open=true/,
+    "and nothing has to prise open a stack of disclosures to reach a row's content");
 });
 
 test("the publish button refuses in advance, not after the click — D526/D527", async () => {
@@ -4342,11 +4377,13 @@ test("the publish button refuses in advance, not after the click — D526/D527",
   assert.match(app, /\|\|missingPublishFields\(\)\.length>0\}/);
   assert.match(app, /missingPublishFields\(\)\[0\]\?`\$\{missingPublishFields\(\)\[0\]\} must be completed before publishing\.`/);
 
-  /* D526 - clicking Mockups did nothing at all: its section sits inside a
+  /* D526 - clicking Mockups did nothing at all: its section sat inside a
      collapsed "Create lifestyle mockups" disclosure, and the browser ignores
      scrollIntoView on anything inside a closed <details>. Confirmed on the page -
-     the element was at 1506px and nothing moved. */
-  assert.match(app, /while\(parent\)\{if\(parent instanceof HTMLDetailsElement\)parent\.open=true;parent=parent\.parentElement\}/);
+     the element was at 1506px and nothing moved.
+     D541 - the fix outlived the problem. Nothing a row opens is nested inside a
+     disclosure any more, so there is no stack to prise open. */
+  assert.doesNotMatch(app, /parent instanceof HTMLDetailsElement/);
 });
 
 test("a mug is never offered t-shirt scenes — D529", async () => {
@@ -4419,14 +4456,14 @@ test("a task row owns its panel inside the product card — D539", async () => {
      single-product page components, several of which carried their own
      accordions. Three rows, one pile, three scroll positions - which is why
      every row appeared to lead to the same block. */
-  assert.match(app, /const \[activeImageTask,setActiveImageTask\]=useState<string>\(""\)/);
-  assert.match(app, /function imageTaskPanel\(task:string\)/);
-  assert.match(app, /\{open&&row\.task&&activeImageTask===row\.task&&<div className="task-panel">\{imageTaskPanel\(row\.task\)\}<\/div>\}/,
+  assert.match(app, /const \[activeTask,setActiveTask\]=useState<string>\(""\)/);
+  assert.match(app, /function taskPanel\(task:string\)/);
+  assert.match(app, /\{open&&row\.task&&activeTask===row\.task&&<div className="task-panel">\{taskPanel\(row\.task\)\}<\/div>\}/,
     "the panel renders under the row that asked for it, and only that one");
-  assert.match(app, /setActiveImageTask\(current=>current===task\?"":task\)/);
+  assert.match(app, /setActiveTask\(current=>current===task\?"":task\)/);
 
   // Switching product keeps the task, so the tee opens where the hoodie was.
-  assert.match(app, /if\(!open\)\{if\(reachable\)\{setActiveImageTask\(task\);openBundleProduct\(index\)\}return\}/);
+  assert.match(app, /if\(!open\)\{if\(reachable\)\{setActiveTask\(task\);openBundleProduct\(index\)\}return\}/);
 
   // Inside a task, a listing is a compact row that expands its own work.
   assert.match(app, /<button type="button" className="task-listing-row" aria-expanded=\{shown\}/);
@@ -4486,4 +4523,53 @@ test("a product card holds only its rows and the one open task — D540", async 
   // And the heading that described the removed block is gone with it.
   assert.doesNotMatch(app, /Review placement and choose listing images/);
   assert.doesNotMatch(app, /The large preview below is the real Printify placement/);
+});
+
+test("steps 2, 3 and 4 are the same shape and no row is a bookmark — D541", async () => {
+  const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+
+  /* Her question after step 2 was fixed: "are we gonna have to go through the
+     same whole thing on the other steps as well?" Step 3 was one block holding a
+     title builder, a description editor and a table of every listing, with two
+     rows scrolling to spots inside it - which is why tags read as part of the
+     description. Step 4 was worse: two rows pointing at the same .final-review.
+     All three steps pass a null body and let the rows own the work. */
+  for (const status of ['"images"', '"listing"', '"publish"']) {
+    const at = app.indexOf(`stepProductCards(bundleCardStatus(${status}),`);
+    assert.ok(at > 0, `step card for ${status} exists`);
+    const head = app.slice(at, at + 1500);
+    assert.match(head, /\bnull\b/, `${status} passes no body block`);
+  }
+
+  // Nothing anywhere is a bookmark into a shared block.
+  assert.equal((app.match(/target:"/g) || []).length, 0);
+
+  /* Everything the dissolved step 3 table did still happens, in the task that
+     owns it - checked one by one because a rewrite is where things go missing. */
+  const panel = (task) => {
+    const at = app.indexOf(`if(task==="${task}")return <`);
+    assert.ok(at > 0, `${task} panel exists`);
+    return app.slice(at, app.indexOf('if(task==="', at + 20));
+  };
+  const titles = panel("titles"), description = panel("description"), etsy = panel("etsy");
+
+  assert.ok(titles.includes("listing-title-field") && titles.includes("listing-tags-field"),
+    "titles and tags are edited together, in one panel");
+  assert.ok(titles.includes("<IndividualAutoTitle"), "and one listing can be redone on its own");
+  assert.ok(titles.includes("task-listing-preview"), "with the artwork big enough to identify");
+  assert.ok(!description.includes("listing-title-field") && !description.includes("listing-tags-field"),
+    "and none of that leaks into the description, which is what she was looking at");
+  assert.ok(description.includes("descriptionOverride"), "the per-listing override survived the move");
+  assert.ok(etsy.includes("<EtsyDetailsEditor"), "the Etsy fields are their own task");
+  assert.ok(etsy.includes("retryOneEtsyListing"), "including retrying one that failed");
+
+  /* The print-quality check went to Review Printify placement, which is the task
+     it describes - it was sitting under Titles. */
+  const placement = app.slice(app.indexOf('if(task==="placement")return <>'), app.indexOf('if(task==="printify")'));
+  assert.ok(placement.includes("quality-pill") && placement.includes("printifyDpi"));
+  assert.ok(!titles.includes("quality-pill"), "and it is not under Titles any more");
+
+  // Step-level actions stay step-level.
+  assert.match(app, /\{finishPhase==="details"\?<><button className="secondary-action prepare-etsy"/,
+    "preparing Etsy details covers the batch, so it sits under the cards");
 });

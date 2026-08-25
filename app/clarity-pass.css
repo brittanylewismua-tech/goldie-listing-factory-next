@@ -2553,7 +2553,6 @@ body{min-width:1180px!important}
    design is unreadable, so you cannot tell which listing you are editing.
    Restored to the size it was. */
 .app-shell .listing-editor .design-line{grid-template-columns:152px minmax(0,1fr)!important}
-.app-shell .listing-editor .listing-preview-button{width:152px!important;height:152px!important;min-height:152px!important}
 
 /* D405 · The compact-height rules live here because clarity-pass loads last -
    the earlier copy in approved-functional.css was silently outranked by
@@ -2772,12 +2771,6 @@ body{min-width:1180px!important}
    description, and an always-open per-listing table. Only the middle one
    collapsed, so the page read as though everything lived under Description.
    Three sections, one control, same shape. */
-.app-shell .listing-section>summary{display:flex;align-items:center;gap:10px;padding:14px 16px;border-radius:12px;cursor:pointer;list-style:none;font-weight:700;color:#4c293f}
-.app-shell .listing-section>summary::-webkit-details-marker{display:none}
-.app-shell .listing-section>summary::after{content:"⌄";margin-left:auto;font-size:1.1rem;transition:transform .18s}
-.app-shell .listing-section[open]>summary::after{transform:rotate(180deg)}
-.app-shell .listing-section>summary:hover{background:rgba(225,194,231,.24)}
-.app-shell .listing-section>summary small{display:block;margin-top:3px;font-size:.82rem;font-weight:500;color:#75576b}
 
 /* D522 - measured on her three-product bundle: the open card was 2992px, four
    screens, and each listing inside it was 1003px - a 318px Printify preview and
@@ -2863,3 +2856,45 @@ body{min-width:1180px!important}
 .app-shell .task-listing-change{font-size:.78rem;font-weight:700;color:#8e4c78;white-space:nowrap}
 .app-shell .task-listing-panel{margin:8px 0 4px;padding:12px;border:1px solid rgba(91,48,79,.12);border-radius:12px;background:rgba(255,255,255,.5)}
 .app-shell .printify-image-picker.bare{display:block}
+
+
+/* D541 - step 3's three jobs moved out of one block and into task panels the
+   rows own. Everything below styled itself through `.listing-editor .design-line`
+   as an ancestor, which no longer exists, so the fields are dressed here against
+   the markup that is actually on the page. */
+.app-shell .task-panel-lead{display:grid;gap:10px;padding:12px 14px 4px}
+.app-shell .task-panel-lead>div:first-child h3,.app-shell .task-panel-lead h3{margin:0;font:800 1rem/1.25 "Manrope",system-ui,sans-serif;color:#4b283e}
+.app-shell .task-panel-lead p{margin:0;color:rgba(74,42,62,.72);font-size:.82rem;line-height:1.55}
+.app-shell .task-panel-heading{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.app-shell .task-panel-lead .mini-label{margin:0;font-size:.64rem;letter-spacing:.09em;color:#8e4c78}
+.app-shell .task-panel-lead>div>h3{margin:2px 0 0}
+
+/* The title fields: one column, full width, because the panel is already narrow
+   and the two-column grid it inherited was built for a 152px thumbnail beside it. */
+.app-shell .task-listing-panel .design-fields{display:grid;gap:10px}
+.app-shell .task-listing-panel .design-fields>label{display:grid;gap:4px;min-width:0;font:700 .74rem/1.2 "Manrope",system-ui,sans-serif;color:#6b4560;letter-spacing:.02em}
+.app-shell .task-listing-panel .design-fields>label>span{font-weight:600;color:#8b6f83}
+.app-shell .task-listing-panel .design-fields textarea{width:100%;padding:9px 11px;border:1px solid rgba(91,48,79,.18);border-radius:10px;background:#fff;font:500 .84rem/1.45 "Manrope",system-ui,sans-serif;color:#3f2438;resize:vertical}
+.app-shell .task-listing-panel .design-fields textarea:focus{outline:0;border-color:#b777b0;box-shadow:0 0 0 3px rgba(183,119,176,.14)}
+.app-shell .task-listing-panel .tag-row{display:flex;flex-wrap:wrap;gap:6px}
+.app-shell .task-listing-panel .tag-row span{padding:3px 8px;border-radius:999px;background:rgba(220,177,218,.26);color:#67465f;font-size:.72rem;font-weight:700}
+.app-shell .task-listing-panel .individual-description-body{display:grid;gap:8px}
+.app-shell .task-listing-panel .individual-description-body label{display:grid;gap:4px;font:700 .74rem/1.2 "Manrope",system-ui,sans-serif;color:#6b4560}
+.app-shell .task-listing-panel .individual-description-body textarea{width:100%;padding:10px 12px;border:1px solid rgba(91,48,79,.18);border-radius:10px;background:#fff;font:500 .84rem/1.5 "Manrope",system-ui,sans-serif;color:#3f2438}
+.app-shell .task-listing-panel .individual-description-body small{color:rgba(74,42,62,.62);font-size:.72rem}
+
+/* D541 - the print-quality check came with the placement row it belongs to. */
+.app-shell .task-listing .quality-pill{margin-top:8px;width:auto}
+
+/* D541 - a step 4 row reports and offers nothing, so it must not look pressable. */
+.app-shell .batch-product-row.reporting{cursor:default}
+.app-shell .batch-product-row.reporting:hover{background:transparent}
+
+/* D541 - the artwork beside the title fields, at a size that identifies it. D408
+   measured why: below about 150px the design is unreadable and the panel cannot
+   tell you which listing you are writing for. */
+.app-shell .task-listing-edit{display:grid;grid-template-columns:152px minmax(0,1fr);gap:16px;align-items:start}
+.app-shell .task-listing-preview{width:152px;padding:0;border:1px solid rgba(91,48,79,.16);border-radius:12px;background:#fff;cursor:zoom-in;overflow:hidden}
+.app-shell .task-listing-preview img{display:block;width:100%;height:152px;object-fit:contain;background:rgba(255,255,255,.6)}
+.app-shell .task-listing-preview span{display:block;padding:6px;color:#704d75;font-size:.6rem;font-weight:800;letter-spacing:.06em;text-align:center;text-transform:uppercase}
+@media(max-width:900px){.app-shell .task-listing-edit{grid-template-columns:minmax(0,1fr)}.app-shell .task-listing-preview{width:110px}.app-shell .task-listing-preview img{height:110px}}

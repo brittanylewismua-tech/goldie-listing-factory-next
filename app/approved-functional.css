@@ -368,11 +368,6 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .app-shell .finish-mode .finish-guide:before{content:"";position:absolute;left:16.66%;right:16.66%;top:15px;height:1px;background:rgba(91,48,79,.28)}
 .app-shell .finish-mode .finish-guide span{position:relative;z-index:1;justify-content:center;padding:0 14px;border:0;border-radius:0;background:transparent;color:#5f3d59}
 .app-shell .finish-mode .finish-guide b{background:linear-gradient(145deg,#d591c3,#a86ba2);box-shadow:0 4px 14px rgba(130,76,123,.2)}
-.app-shell .finish-mode .listing-editor{margin-top:0;padding:0;border:0;background:transparent!important;box-shadow:none!important}
-.app-shell .finish-mode .editor-heading{align-items:flex-start;margin:0 0 14px;padding:17px 18px;border:1px solid rgba(139,89,137,.2);border-radius:14px;background:rgba(255,255,255,.46)}
-.app-shell .finish-mode .editor-heading b{color:#4b283e;font-size:15px}
-.app-shell .finish-mode .editor-heading div>span{max-width:700px;margin-top:5px;color:rgba(74,42,62,.68);font-size:11px;line-height:1.55}
-.app-shell .finish-mode .editor-heading>span{padding:6px 9px;border-radius:999px;background:rgba(220,177,218,.24);color:#67465f;font-weight:750}
 .app-shell .batch-title-builder{margin:0 0 18px;padding:22px;border-color:rgba(139,89,137,.25);border-radius:16px;background:linear-gradient(145deg,rgba(252,244,254,.74),rgba(246,229,248,.58));box-shadow:0 14px 35px rgba(74,42,62,.07)}
 .app-shell .batch-title-builder>div>h3{color:#4b283e;font-family:'DM Serif Display',Georgia,serif;font-weight:400}
 .app-shell .title-builder-choice button{border-color:rgba(139,89,137,.2);border-radius:12px;background:rgba(255,255,255,.58);color:#4b283e}
@@ -385,12 +380,6 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .app-shell .batch-title-preview b{color:#efc9e8}.app-shell .batch-title-preview small{color:rgba(255,255,255,.68)}
 .app-shell .batch-description{border-color:rgba(139,89,137,.22)!important;background:rgba(255,255,255,.5)!important}
 .app-shell .batch-description>summary{padding:17px 18px}.app-shell .batch-description[open]>summary{border-color:rgba(139,89,137,.18)}
-.app-shell .design-table{gap:16px;margin-top:18px}
-.app-shell .design-line{grid-template-columns:152px minmax(0,1fr) 138px;gap:18px;align-items:start;padding:18px;border-color:rgba(139,89,137,.2);border-radius:16px;background:rgba(255,255,255,.56);box-shadow:0 12px 28px rgba(74,42,62,.06)}
-.app-shell .design-line.active{outline:0;border-color:#b777b0;box-shadow:0 0 0 3px rgba(183,119,176,.12),0 15px 34px rgba(74,42,62,.09)}
-.app-shell .listing-preview-button{position:relative;width:152px;padding:0;border:1px solid rgba(139,89,137,.18);border-radius:13px;background:rgba(255,255,255,.66);overflow:hidden;cursor:zoom-in}
-.app-shell .listing-preview-button img{display:block;width:100%;height:152px;object-fit:contain;background:rgba(255,255,255,.52)}
-.app-shell .listing-preview-button span{display:block;padding:7px;color:#704d75;font-size:9px;font-weight:800;text-align:center}
 .app-shell .design-fields{gap:10px}.app-shell .design-fields label{color:#5f4359}.app-shell .design-fields label>span{color:rgba(74,42,62,.55)}
 .app-shell .design-fields input{border-color:rgba(139,89,137,.2);background:rgba(255,255,255,.7)}
 .app-shell .individual-title-builder{border-color:rgba(139,89,137,.2);border-radius:11px;background:rgba(249,237,248,.55)}
@@ -1147,19 +1136,6 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 
 /* Finish workspace: dense rows with one in-place editor instead of stacked cards. */
 .app-shell .listing-editor .design-table,.app-shell .etsy-detail-list,.app-shell .draft-card-grid{display:grid!important;gap:8px!important;margin-top:18px!important}
-.app-shell .listing-editor .design-line{display:grid!important;grid-template-columns:56px minmax(0,1fr) 116px!important;gap:14px!important;align-items:start!important;min-height:78px!important;padding:10px 12px!important;border:1px solid rgba(91,48,79,.14)!important;border-radius:12px!important;background:rgba(255,255,255,.45)!important;box-shadow:none!important}
-.app-shell .listing-editor .listing-preview-button{width:56px!important;height:56px!important;min-height:56px!important;padding:0!important;border-radius:9px!important;overflow:hidden!important}
-.app-shell .listing-editor .listing-preview-button img{width:100%!important;height:100%!important;object-fit:cover!important}
-.app-shell .listing-editor .listing-preview-button span{display:none!important}
-.app-shell .listing-editor .design-fields{display:grid!important;grid-template-columns:minmax(0,1.45fr) minmax(210px,1fr)!important;gap:10px!important;align-items:start!important;min-width:0!important}
-.app-shell .listing-editor .design-fields>label{min-width:0!important}
-.app-shell .listing-editor .design-fields>.tag-row{display:none!important;max-height:58px!important;overflow-y:scroll!important;scrollbar-gutter:stable!important}
-.app-shell .listing-editor .design-line:not(.active) .individual-title-builder,.app-shell .listing-editor .design-line:not(.active) .individual-description,.app-shell .listing-editor .design-line:not(.active) .etsy-auto,.app-shell .listing-editor .design-line:not(.active) .padding-note{display:none!important}
-.app-shell .listing-editor .design-line.active{padding-bottom:16px!important;background:rgba(255,255,255,.72)!important;border-color:rgba(137,78,123,.34)!important}
-.app-shell .listing-editor .design-line.active .design-fields{grid-template-columns:minmax(0,1.45fr) minmax(210px,1fr)!important}
-.app-shell .listing-editor .design-line.active .design-fields>.tag-row{display:flex!important;grid-column:1/-1!important}
-.app-shell .listing-editor .design-line.active .individual-title-builder,.app-shell .listing-editor .design-line.active .individual-description,.app-shell .listing-editor .design-line.active .etsy-auto,.app-shell .listing-editor .design-line.active .padding-note{grid-column:1/-1!important}
-.app-shell .listing-editor .quality-pill{width:116px!important;min-width:0!important;padding:9px!important;border-radius:9px!important}
 .app-shell .etsy-detail-card{display:grid!important;grid-template-columns:56px minmax(0,1fr)!important;gap:14px!important;align-items:start!important;min-height:78px!important;padding:10px 12px!important;border:1px solid rgba(91,48,79,.14)!important;border-radius:12px!important;background:rgba(255,255,255,.45)!important;box-shadow:none!important}
 .app-shell .etsy-detail-card>img{width:56px!important;height:56px!important;border-radius:9px!important;object-fit:cover!important}
 .app-shell .etsy-details-editor>summary{min-height:42px!important;padding:8px 10px!important}
@@ -1254,7 +1230,6 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .app-shell .recipe-card .recipe-library-head .add-product-button{border:0!important;background:transparent!important;color:#704d75!important;box-shadow:none!important;text-decoration:underline!important}
 .app-shell .recipe-card .recipe-library-head .add-product-button:hover{background:transparent!important;color:#4a2a3e!important;transform:none!important}
 .mockupFactory.managementOnly .newSetButton{border:0!important;background:transparent!important;color:#704d75!important;box-shadow:none!important;text-decoration:underline!important}
-.app-shell .listing-editor .individual-title-builder{border-color:transparent!important;background:rgba(255,255,255,.34)!important}
 .app-shell .recipe-card .recipe-use em{display:inline-block!important;justify-self:start!important;width:auto!important;max-width:max-content!important;margin-top:4px!important;padding:5px 9px!important;border-radius:999px!important;background:#673452!important;color:#fff!important;font-weight:850!important}
 .app-shell .recipe-card .delete-recipe{width:auto!important;min-width:48px!important;padding:4px 7px!important;font-size:9px!important;font-weight:800}
 .app-shell .everything-else-body .saved-setting-list>span:first-child{display:none!important}
@@ -1409,17 +1384,6 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .app-shell .step-success-banner b{font-size:12px;line-height:1.25}
 .app-shell .step-success-banner small{color:#80677a;font-size:10px;line-height:1.4}
 
-/* Keep the Step 6 batch count readable as one compact badge. */
-.app-shell .finish-mode .editor-heading>span{
-  display:inline-flex!important;
-  flex:0 0 auto!important;
-  align-items:center;
-  justify-content:center;
-  min-width:max-content!important;
-  margin-left:16px;
-  white-space:nowrap!important;
-}
-
 /* Personalization uses a true two-position control: On left, Off right. */
 .app-shell .personalization-switch{
   position:relative;
@@ -1541,15 +1505,6 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .app-shell .description-default-editor textarea{min-height:190px!important;max-height:420px!important;overflow-y:scroll!important;resize:vertical!important;scrollbar-gutter:stable!important;line-height:1.55!important}
 .app-shell .saved-settings-summary{width:min(980px,calc(100% - 32px))!important;margin:-15px auto 12px!important;padding:0 21px 17px!important;border:1px solid rgba(91,48,79,.18)!important;border-top:0!important;border-radius:0 0 18px 18px!important;background:rgba(255,255,255,.62)!important;box-shadow:0 12px 35px rgba(91,48,79,.07)!important}
 .app-shell .saved-settings-summary span{background:#fff!important}
-
-/* PASS 2B title-row geometry: D59 and D60. */
-.app-shell .listing-editor .design-line{grid-template-columns:56px minmax(0,1fr)!important;grid-template-rows:auto auto!important;align-items:start!important}
-.app-shell .listing-editor .design-fields,.app-shell .listing-editor .design-line.active .design-fields{grid-template-columns:minmax(0,1fr)!important;width:100%!important}
-.app-shell .listing-editor .design-fields>label{grid-column:1!important;width:100%!important}
-.app-shell .listing-editor .design-fields input{width:100%!important}
-.app-shell .listing-editor .quality-pill{grid-column:2!important;grid-row:2!important;justify-self:end!important;width:auto!important;min-height:0!important;padding:5px 9px!important;border-radius:999px!important}
-.app-shell .listing-editor .quality-pill b{white-space:nowrap!important;font-size:9px!important;line-height:1.2!important}
-.app-shell .listing-editor .quality-pill small{display:none!important}
 
 /* PASS 2C remaining layout defects: D31 and D70. */
 .app-shell .design-upload-review article{grid-template-columns:76px minmax(0,1fr) auto!important;min-height:94px!important}

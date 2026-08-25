@@ -54,7 +54,9 @@ const FEATURES = [
   ["a size guide can be added to every listing", /Add one size guide to every Etsy listing/],
   ["AI titles for the whole batch", /Create titles for the whole batch/],
   ["manual title building from a bank", /Build this title yourself from a keyword bank/],
-  ["per-listing description override", /Customize this listing’s description/],
+  /* D541 - the override moved out of a nested disclosure inside step 3's table
+     and into the Description task panel, where each listing is one row. */
+  ["per-listing description override", /descriptionOverride:event\.target\.value/],
   /* D232 · Deleting the settings block took this with it and no pin caught it —
      the shared editor survived, the way to keep the wording for future batches
      did not. A capability can be lost while its neighbour still renders. */
@@ -147,7 +149,9 @@ test("step-level controls sit below the cards, product-level inside them", async
      built in imageTaskPanel rather than passed in as the card body. */
   /* D540 - the per-product work no longer travels through the card body at all:
      the rows own it and imageTaskPanel builds it, scoped to the open product. */
-  assert.ok(app.includes("function imageTaskPanel(task:string)"), "the panels are built per product");
+  /* D541 - and step 3's work moved into the same panels, so the function is no
+     longer only about images. */
+  assert.ok(app.includes("function taskPanel(task:string)"), "the panels are built per product");
   assert.match(app, /\{complete && workflowStep==="designs" && stepProductCards\(bundleCardStatus\("images"\),[\s\S]{0,1400}?\bnull\b/,
     "the designs card passes no body block - the rows own the work");
 
@@ -164,7 +168,14 @@ test("step-level controls sit below the cards, product-level inside them", async
   const listing = parts(span('stepProductCards(bundleCardStatus("listing")', 'stepProductCards(bundleCardStatus("publish")'));
   assert.ok(listing.footer.includes("workflow-next"), "step 3's forward button belongs to the step");
   assert.ok(!listing.body.includes('className="workflow-next"'));
-  assert.ok(listing.body.includes("listing-editor"), "the titles editor is that product's own");
+  /* D541 - step 3 passed one block holding a title builder, a description editor
+     and a table of every listing, and its two rows were bookmarks into spots
+     inside it. Same rewrite as step 2: the rows own panels, the card passes none. */
+  assert.match(listing.body, /\bnull\b/, "step 3's card passes no body block either");
+  for (const gone of ["listing-editor", "design-table-section", "batch-title-builder"]) {
+    assert.ok(!listing.body.includes(gone), `${gone} must not be a body block any more`);
+  }
+  assert.ok(listing.footer.includes("prepare-etsy"), "preparing Etsy details covers the whole batch");
 
   // Step 4 has no per-product body at all: reviewing and publishing cover the batch.
   assert.match(app, /stepProductCards\(bundleCardStatus\("publish"\),null,false,</);

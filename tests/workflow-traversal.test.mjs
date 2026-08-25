@@ -307,9 +307,13 @@ test("D376: every restored finish phase is one that actually renders", async () 
   assert.match(app, /finishPhase==="final"&&stepProductCards\(bundleCardStatus\("publish"\),null,false,<>/,
     "step 4's action sits below every product card, not inside one");
   assert.match(app, /<article className="step-card final-review active-panel">/);
-  assert.match(app, /\(finishPhase==="details"\|\|finishPhase==="etsy"\)&&stepProductCards\(bundleCardStatus\("listing"\),<>/,
-    "step 3 puts the titles editor and the Etsy details in one product card");
-  assert.match(app, /<div className="finish-mode listing-editor-host">/);
+  /* D541 - step 3 used to pass one block holding everything; now its rows own
+     panels the same way step 2's do, so the card body is null on all three. */
+  assert.match(app, /\(finishPhase==="details"\|\|finishPhase==="etsy"\)&&stepProductCards\(bundleCardStatus\("listing"\),[\s\S]{0,600}?\bnull\b/,
+    "step 3's card passes no body block");
+  for (const task of ["titles", "description", "etsy"]) {
+    assert.match(app, new RegExp(`if\\(task==="${task}"\\)return <`), `step 3 builds the ${task} panel`);
+  }
 
   /* And nothing may branch on the dead phase. */
   assert.doesNotMatch(app, /finishPhase==="mockups"&&/,
