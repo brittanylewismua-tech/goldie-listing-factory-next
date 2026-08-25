@@ -2830,7 +2830,7 @@ test("mockup placement is derived from the Printify preview, for any product —
     "this runs on mugs and shower curtains too");
 
   // The old constants survive only as the fallback when a measurement is missing.
-  assert.match(integrated, /const fit=reference\?await measureReference\(reference\):null/);
+  assert.match(integrated, /const fit=reference\?await measureReference\(reference,previewFace\):null/);
   assert.match(integrated, /return derived\?rigid\(design,template,derived\.adjustment,derived\.quad\)/);
   assert.match(integrated, /productBoxes=useRef\(new Map<string,ProductBox\|null>\(\)\)/,
     "segmentation runs once per scene, not once per mockup");
@@ -3403,25 +3403,31 @@ test("a mockup scene works out its own print area — D468", async () => {
   assert.match(page, /catch\{\/\* One scene that cannot be read falls back/);
 });
 
-test("a known print area uses Printify's own placement — D469", async () => {
+test("the design matches the Printify placement, measured in the same frame — D469/D470", async () => {
   const integrated = await readFile(new URL("../app/integrated-mockups.tsx", import.meta.url), "utf8");
+  const placement = await readFile(new URL("../app/mockups/reference-placement.ts", import.meta.url), "utf8");
 
-  /* Measured on her mug: Printify places the design at .531 of the print area,
-     and her artwork fills .744 of its canvas, so the design covers 39.5% of the
-     mug's face. It rendered at nearly 100% because the quad it was scaled against
-     was the placeholder box, not a print area.
+  /* The whole point of a mockup: it has to show the design where and at what size
+     the Printify template puts it. Not merely on the product.
      
-     This is what D424 attempted and had to be reverted: the number was right, the
-     rectangle was not. Now each scene works out its real print area, so the quad
-     and Printify's print area are the same rectangle and its scale applies
-     directly. */
-  assert.match(integrated, /if\(placement&&isCalibrated\(template\)\)return rigid\(design,template,\{scale:placement\.scale,x:placement\.x-\.5,y:placement\.y-\.5\}\)/);
+     D469 tried to do that with Printify's placement number applied to the scene's
+     printable face, and on her mug that came out three times too small. Printify's
+     print area for a mug is the entire wrap around the cylinder, not the face you
+     can see, so 53% of the wrap is most of the visible face. A flat product hides
+     the difference, because a t-shirt's print area IS its front panel. */
+  assert.doesNotMatch(integrated, /return rigid\(design,template,\{scale:placement\.scale,x:placement\.x-\.5/,
+    "a wrap-relative number cannot be applied to a face-sized area");
 
-  // A scene with no known print area keeps the measured path and the constants.
-  assert.match(integrated, /const derived=fit\?await derivedFor\(template,fit\):null;/);
+  /* Instead both sides are measured in the same frame: the design as a fraction of
+     the printable FACE in the Printify preview, reproduced as the same fraction of
+     the printable face in the lifestyle photo. Position comes across the same way,
+     so the design sits where Printify puts it. */
+  assert.match(integrated, /const fit=reference\?await measureReference\(reference,previewFace\):null/);
+  assert.match(integrated, /api\/mockups\/print-area[\s\S]{0,400}previewFace=\{left:Math\.min/);
+  assert.match(placement, /export async function measureReference\(reference: Blob, face\?:/);
+  assert.match(placement, /\/\/ The printable face, as found on the preview\. This is the frame\./);
 
-  // The arithmetic, on her numbers.
-  const printifyScale = 0.5310035394337703, artOfCanvas = 0.8828125 - 0.138671875;
-  assert.equal(Number((printifyScale * artOfCanvas).toFixed(3)), 0.395,
-    "the design covers 39.5% of the mug's printable face");
+  // And a preview with no detectable face still measures against the product.
+  assert.match(placement, /\} else \{/);
+  assert.match(integrated, /catch\{\/\* No face on the preview just means the whole product is the frame\. \*\/\}/);
 });

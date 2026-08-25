@@ -34,7 +34,20 @@ const near = (a: number[], b: number[]) => Math.abs(a[0] - b[0]) + Math.abs(a[1]
    plain bounding box also swallows the neck label and the shadow under a
    sleeve, which stretched the measurement to a 0.44 aspect ratio on artwork
    that is actually square. */
-export async function measureReference(reference: Blob): Promise<ReferenceFit | null> {
+/* D470 - measure the design against the same thing on both sides.
+ *
+ * The Printify preview of a mug shows the design filling most of the mug's face.
+ * Goldie rendered it at 40%, because Printify's print area for a mug is the whole
+ * wrap around the cylinder, not the face you can see - so its placement scale,
+ * 53% of that wrap, means something quite different once applied to a face-sized
+ * area. A flat product hides this: a t-shirt's print area IS its front panel.
+ *
+ * So the design is measured as a fraction of the visible printable FACE in the
+ * Printify preview, and reproduced as the same fraction of the visible printable
+ * face in the lifestyle photo. Both sides are then the same frame of reference,
+ * whatever the product, and nothing has to know what a mug is.
+ */
+export async function measureReference(reference: Blob, face?: { left: number; top: number; right: number; bottom: number }): Promise<ReferenceFit | null> {
   try {
     const bitmap = await createImageBitmap(reference);
     const width = 700, height = Math.max(1, Math.round(width * bitmap.height / bitmap.width));
@@ -48,8 +61,14 @@ export async function measureReference(reference: Blob): Promise<ReferenceFit | 
 
     const background = at(2, 2);
     let px0 = width, px1 = -1, py0 = height, py1 = -1;
-    for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
-      if (near(at(x, y), background) > 30) { if (x < px0) px0 = x; if (x > px1) px1 = x; if (y < py0) py0 = y; if (y > py1) py1 = y; }
+    if (face) {
+      // The printable face, as found on the preview. This is the frame.
+      px0 = Math.round(face.left * width); px1 = Math.round(face.right * width);
+      py0 = Math.round(face.top * height); py1 = Math.round(face.bottom * height);
+    } else {
+      for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
+        if (near(at(x, y), background) > 30) { if (x < px0) px0 = x; if (x > px1) px1 = x; if (y < py0) py0 = y; if (y > py1) py1 = y; }
+      }
     }
     const productWidth = px1 - px0, productHeight = py1 - py0;
     if (productWidth < 40 || productHeight < 40) return null;

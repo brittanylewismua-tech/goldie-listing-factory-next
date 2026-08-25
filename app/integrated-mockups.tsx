@@ -200,7 +200,18 @@ export default function IntegratedMockups({design,productId,productName="",defau
    const box=productBoxes.current.get(template.id);
    return box?derivedPlacement(fit,box,artworkBounds):null;
  }
- async function generate(){if(!chosen.length)return;setBusy(true);setError("");setEtsyStatus("");setResults([]);setRenderStatus(`Preparing ${chosen.length} selected ${chosen.length===1?"scene":"scenes"}…`);try{let reference:File|null=null;if(referenceUrl){const blob=await(await fetch(referenceUrl,{signal:AbortSignal.timeout(30_000)})).blob();reference=new File([blob],"printify-placement-reference.jpg",{type:blob.type||"image/jpeg"})}/* D433 - measure the specification once per run: how big the artwork is on the product, and where, according to the Printify preview. */const fit=reference?await measureReference(reference):null;const completed=new Map<number,Result>(),jobs=chosen.map((template,index)=>({template,index}));setRenderStatus(`Creating ${chosen.length} ${chosen.length===1?"mockup":"mockups"} in a reliable queue. Goldie will retry an interrupted scene automatically.`);await runBounded(jobs,2,async({template,index})=>{/* D447 - one scene, and it always produces a mockup.
+ async function generate(){if(!chosen.length)return;setBusy(true);setError("");setEtsyStatus("");setResults([]);setRenderStatus(`Preparing ${chosen.length} selected ${chosen.length===1?"scene":"scenes"}…`);try{let reference:File|null=null;if(referenceUrl){const blob=await(await fetch(referenceUrl,{signal:AbortSignal.timeout(30_000)})).blob();reference=new File([blob],"printify-placement-reference.jpg",{type:blob.type||"image/jpeg"})}/* D433 - measure the specification once per run: how big the artwork is on the product, and where, according to the Printify preview. *//* D470 - the design is measured inside the preview's printable FACE, so both
+   sides use the same frame. Without this a mug is measured against the whole
+   mug on one side and its face on the other, and comes out three times too
+   small. */
+let previewFace:{left:number;top:number;right:number;bottom:number}|undefined;
+        if(reference){try{
+          const asData=await new Promise<string>((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result));reader.onerror=reject;reader.readAsDataURL(reference)});
+          const found=await fetch("/api/mockups/print-area",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({imageUrl:asData,product:productName||"product"})}).then(r=>r.json()) as {corners?:[number,number][]|null};
+          if(found.corners){const xs=found.corners.map(c=>c[0]),ys=found.corners.map(c=>c[1]);
+            previewFace={left:Math.min(...xs),top:Math.min(...ys),right:Math.max(...xs),bottom:Math.max(...ys)}}
+        }catch{/* No face on the preview just means the whole product is the frame. */}}
+        const fit=reference?await measureReference(reference,previewFace):null;const completed=new Map<number,Result>(),jobs=chosen.map((template,index)=>({template,index}));setRenderStatus(`Creating ${chosen.length} ${chosen.length===1?"mockup":"mockups"} in a reliable queue. Goldie will retry an interrupted scene automatically.`);await runBounded(jobs,2,async({template,index})=>{/* D447 - one scene, and it always produces a mockup.
    The canvas renderer is the floor: it needs no network and, with the quad
    chain, has no way to refuse. The AI renderer is tried first where it is the
    better result, and falls back rather than losing the scene. */
@@ -216,7 +227,6 @@ export default function IntegratedMockups({design,productId,productName="",defau
              the offsets are its offsets. Measured on her mug: Printify places at
              .531 of the print area and her artwork fills .744 of its canvas, so
              the design is 39.5% of the mug's face. */
-          if(placement&&isCalibrated(template))return rigid(design,template,{scale:placement.scale,x:placement.x-.5,y:placement.y-.5});
           const derived=fit?await derivedFor(template,fit):null;return derived?rigid(design,template,derived.adjustment,derived.quad):rigid(design,template,placementAdjustment(placement,template.surfaceKind||"rigid-flat"))};
         const result=await withRecovery(async()=>{
           /* D448 - every surface composites now. The generative renderer repainted
