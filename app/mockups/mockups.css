@@ -61,3 +61,9 @@
   background:rgba(163,44,76,.06);color:#7c3350;
   font-size:12px;line-height:1.5;
 }
+
+/* D508 - an opened set showed every scene at full size, so a set of fifty was a
+   very long scroll before the next set began. Smaller tiles, ten at a time. */
+.mockupFactory .thumbs{grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:8px}
+.mockupFactory .expandSet{width:100%;margin-top:12px;padding:10px 14px;border:1px solid rgba(220,174,67,.35);border-radius:12px;background:transparent;color:#dcae43;font:800 12px/1 "Manrope",system-ui,sans-serif;letter-spacing:.04em;cursor:pointer}
+.mockupFactory .expandSet:hover{background:rgba(220,174,67,.1)}

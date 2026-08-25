@@ -1787,10 +1787,7 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
     const counts=mine||{designs:0,titled:0,tagged:0,drafts:0,described:false,complete:false};
     const plural=(count:number,word:string)=>`${count} ${count===1?word:`${word}s`}`;
     const started=Boolean(mine);
-    if(workflowStep==="designs")return [
-      {label:"Designs",value:started?plural(counts.designs,"design"):"Not started yet",done:started&&counts.designs>0},
-      {label:"Drafts",value:counts.drafts?plural(counts.drafts,"draft"):"Not created yet",done:counts.drafts>0},
-    ];
+    /* D507 - step 2 no longer lists products, so it has no row set. */
     if(finishPhase==="final")return [
       {label:"Listings",value:started?plural(counts.drafts,"listing"):"Not started yet",done:counts.drafts>0},
       {label:"Titles",value:started?`${counts.titled} of ${counts.designs} written`:"Not started yet",done:started&&counts.designs>0&&counts.titled===counts.designs},
@@ -1802,7 +1799,15 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
     ];
   }
 
-  function stepProductCards(statusFor:(recipe:Recipe,index:number)=>{label:string;tone:"ready"|"attention"|"waiting"},body:ReactNode,hidden=false,footer:ReactNode=null){
+  /* D507 - step 2 listed every product in the bundle, and each one that had not
+     been reached yet reported "Not started yet" designs. That is not true and
+     never was: the designs are uploaded once and carried to every product by the
+     bundle run. The cards were describing per-product state on the one step that
+     has none, and pressing Change on one of them switched products - which meant
+     going back to step 1 and forward again to get to the same upload box she was
+     already looking at. Step 2 shows the designs and the button that applies them
+     to every product. */
+  function stepProductCards(statusFor:(recipe:Recipe,index:number)=>{label:string;tone:"ready"|"attention"|"waiting"},body:ReactNode,hidden=false,footer:ReactNode=null,showCards=true){
     const sharedAction=Boolean(footer);
     const list=activeBundle&&bundleRecipes.length>1?bundleRecipes:(activeRecipe?[activeRecipe]:[]);
     if(!list.length)return body;
@@ -1818,7 +1823,7 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
        its own layout now, hides with an inline style, and the panel inside keeps
        hiding itself too - two independent guards, because one was not enough. */
     return <section className="step-product-cards" style={hidden?{display:"none"}:undefined} aria-label="Products in this batch">
-      {list.map((recipe,index)=>{
+      {showCards&&list.map((recipe,index)=>{
         const open=many?index===bundleIndex:true;
         const product=index===bundleIndex?templateDetails:bundleColorProducts[recipe.id];
         const status=statusFor(recipe,index);
@@ -2828,7 +2833,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
             </div>
           )}
           <p className="launch-note">This step creates unpublished Printify drafts. The final Goldie step publishes them live to Etsy only after a second confirmation.</p>
-        </aside>)}
+        </aside>,false)}
 {/* D496 - a held tab has to say so where she is working, not silently stop
     saving. */}
         {batchHeldByAnotherTab&&<div className="batch-tab-conflict" role="status"><b>This batch is open in another Goldie tab.</b><span>Goldie has paused saving here so that tab\u2019s work is not overwritten. Continue in the other tab, or take over here and it will pause there instead.</span><button type="button" onClick={takeOverBatchHere}>Take over editing here</button></div>}

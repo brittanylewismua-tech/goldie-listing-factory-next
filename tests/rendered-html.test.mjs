@@ -3700,9 +3700,12 @@ test("a bundle's shared action sits below its products, not inside one — D486"
      and crewneck cards below it - a button acting on the whole bundle, nested
      inside one third of what it acts on, above two cards offering to open the
      others one at a time. */
-  assert.match(app, /footer:ReactNode=null\)\{\n\s*const sharedAction=Boolean\(footer\)/);
+  assert.match(app, /footer:ReactNode=null,showCards=true\)\{\n\s*const sharedAction=Boolean\(footer\)/);
+  /* D507 - step 2 lists no products at all now: the designs are uploaded once and
+     carried to every product, so there is no per-product state to report there. */
   assert.match(app, /stepProductCards\(bundleCardStatus\("images"\),null,!\(workflowStep==="designs"\),<aside/,
-    "the designs step passes no per-card body and the action as a footer");
+    "the designs step passes its action as a footer");
+  assert.match(app, /<\/aside>,false\)\}/, "and asks for no cards");
 
   // The footer renders after every card, inside the cards section.
   const map = app.indexOf("{footer}"), close = app.indexOf("</section>;", map);
@@ -3999,8 +4002,8 @@ test("no product on any step falls back to a bare header — D500", async () => 
 
   // All three steps are covered, and each returns rows.
   const returns = fn.match(/return \[/g) || [];
-  assert.equal(returns.length, 3, "one row set for step 2, one for step 4, one for step 3");
-  for (const label of ["Designs", "Drafts", "Listings", "Titles", "Tags", "Description"]) {
+  assert.equal(returns.length, 2, "D507 - step 2 lists no products, so it has no row set");
+  for (const label of ["Listings", "Titles", "Tags", "Description"]) {
     assert.ok(fn.includes(`label:"${label}"`), `${label} row is built`);
   }
 
@@ -4119,4 +4122,30 @@ test("a card that says Ready is not also asking to approve — D505/D506", async
   assert.match(batches, /<span className="batch-row-actions">/);
   assert.match(batches, /<div className="batch-history-select">/);
   assert.match(clarity, /\.batch-row-actions\{[^}]*background:none/);
+});
+
+test("step 2 lists no products, and a mockup set previews ten — D507/D508", async () => {
+  const [app, mockups, mockupCss] = await Promise.all([
+    readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/mockups/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/mockups/mockups.css", import.meta.url), "utf8"),
+  ]);
+
+  /* D507 · Step 2 listed every product and reported "Not started yet" designs for
+     the two she had not reached. That was never true: designs are uploaded once
+     and carried to every product by the bundle run. Worse, Change on one of those
+     cards switched products - back to step 1 and forward again, to reach the same
+     upload box already on screen. Step 2 shows the designs and the one button. */
+  assert.match(app, /footer:ReactNode=null,showCards=true\)/);
+  assert.match(app, /\{showCards&&list\.map\(\(recipe,index\)=>\{/);
+  assert.match(app, /<\/aside>,false\)\}/, "the designs step asks for no cards");
+  assert.doesNotMatch(app, /\{label:"Designs",value:started\?plural/, "and has no row set left");
+
+  /* D508 · An opened mockup set rendered every scene at full size, so a set of
+     fifty was a very long scroll before the next set began. */
+  assert.match(mockups, /const SET_PREVIEW=10;/);
+  assert.match(mockups, /\(expandedSets\.has\(theme\)\?items:items\.slice\(0,SET_PREVIEW\)\)\.map/);
+  assert.match(mockups, /Show \$\{items\.length-SET_PREVIEW\} more in this set/);
+  assert.match(mockups, /Show fewer/);
+  assert.match(mockupCss, /\.thumbs\{grid-template-columns:repeat\(auto-fill,minmax\(112px,1fr\)\)/);
 });
