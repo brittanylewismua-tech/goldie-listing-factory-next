@@ -3872,3 +3872,62 @@ test("named listings stay distinguishable — D494", async () => {
   assert.notEqual(a, b, "two designs from the same export must not shorten to the same label");
   assert.ok(a.endsWith("(2).png") && b.endsWith("(4).png"));
 });
+
+test("one press publishes every product in a bundle — D495", async () => {
+  const [app, css] = await Promise.all([
+    readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8"),
+  ]);
+
+  /* A bundle published one product at a time: publish the hoodie, go back, open
+     the tee, publish again, then the crewneck. Step 2 already creates every
+     product's drafts from one press; this is the same run at the other end. */
+  assert.match(app, /const \[publishRun,setPublishRun\]=useState<\{total:number\}\|null>\(null\)/);
+  assert.match(app, /if\(activeBundle&&bundleRecipes\.length>1\)setPublishRun\(\{total:bundleRecipes\.length\}\)/);
+  assert.match(app, /Publish all \$\{bundleRecipes\.length\} products live on Etsy/);
+
+  /* Publishing spends real money, so the run is stricter than the drafts run: a
+     product whose listings are not ready stops it, and nothing after publishes. */
+  assert.match(app, /const blockers=\[\.\.\.missingPublishFields\(\),\.\.\.createdListingsMissingImages\(chosen\)\.map/);
+  assert.match(app, /setPublishRun\(null\);\n\s*stopWith\(`\$\{activeRecipe\?\.name\|\|"This product"\} is not ready to publish\.`/);
+  assert.match(app, /if\(publishing\|\|switchingProduct\|\|publishConfirmOpen\|\|restoringBatch\)return/);
+  assert.match(app, /if\(bundleIndex\+1>=bundleRecipes\.length\)\{setPublishRun\(null\);return\}/);
+
+  // The last screen before money is spent has to state the real total and fee.
+  assert.match(app, /\$\{requestedListingCount\} listings across \$\{bundleRecipes\.length\} products will go live on Etsy\./);
+  assert.match(app, /about \$\$\{\(requestedListingCount\*0\.2\)\.toFixed\(2\)\}/);
+  assert.match(app, /Goldie publishes \{bundleRecipes\.map\(recipe=>recipe\.name\)\.join\(", "\)\} one after another/);
+  assert.match(css, /\.publish-confirm-bundle\{/);
+
+  // And she can see which product it is on.
+  assert.match(app, /Publishing \$\{activeRecipe\?\.name\|\|"this product"\} \(\$\{bundleIndex\+1\} of \$\{bundleRecipes\.length\}\)…/);
+});
+
+test("two tabs cannot silently overwrite the same batch — D496", async () => {
+  const [app, css] = await Promise.all([
+    readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8"),
+  ]);
+
+  /* Both tabs autosave the entire batch snapshot every 700ms, so whichever wrote
+     last replaced the other tab's work wholesale, with nothing said either way.
+     Reproduced live: a batch failed to restore with a second tab open. */
+  assert.match(app, /new BroadcastChannel\("goldie-batch-claim"\)/);
+  assert.match(app, /const \[batchHeldByAnotherTab,setBatchHeldByAnotherTab\]=useState\(false\)/);
+
+  // The held tab stops writing rather than racing.
+  assert.match(app, /if\(!snapshotReady\.current\|\|restoringBatch\|\|batchHeldByAnotherTab\|\|/,
+    "autosave is held in the tab that does not hold the batch");
+
+  // A tab only answers a ping while it still holds the batch, so the claim moves.
+  assert.match(app, /if\(!batchHeldByAnotherTab\)channel\.postMessage\(\{type:"claim"/);
+  assert.match(app, /function takeOverBatchHere\(\)/);
+
+  // And it says so where she is working, instead of silently going quiet.
+  assert.match(app, /This batch is open in another Goldie tab\./);
+  assert.match(app, /Take over editing here/);
+  assert.match(css, /\.batch-tab-conflict\{/);
+
+  // Never crash where BroadcastChannel is unavailable.
+  assert.match(app, /if\(typeof BroadcastChannel==="undefined"\)return/);
+});

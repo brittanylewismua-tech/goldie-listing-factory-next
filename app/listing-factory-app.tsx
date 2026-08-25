@@ -1297,6 +1297,49 @@ export default function ListingFactoryApp() {
   /* D379 - The debounced autosave and an in-place product switch have to write
      the same snapshot to the same place; the switch just cannot wait 700ms for
      it. One save, two callers. */
+  /* D496 - two Goldie tabs fought over the same batch. Both autosave the whole
+     batch snapshot every 700ms, so whichever tab wrote last replaced the other
+     tab's work wholesale - and neither said anything. I reproduced a batch
+     failing to restore with a second tab open on the app.
+
+     A batch is claimed by one tab. A second tab opening the same batch is told,
+     and holds its autosave rather than silently overwriting - the first tab has
+     the work. She can take over here, which hands the claim across and puts the
+     other tab into the same held state. */
+  const tabId=useRef<string>("");
+  if(typeof window!=="undefined"&&!tabId.current)tabId.current=crypto.randomUUID();
+  const [batchHeldByAnotherTab,setBatchHeldByAnotherTab]=useState(false);
+  const batchChannel=useRef<BroadcastChannel|null>(null);
+  useEffect(()=>{
+    if(typeof BroadcastChannel==="undefined")return;
+    const channel=new BroadcastChannel("goldie-batch-claim");
+    batchChannel.current=channel;
+    channel.onmessage=(event:MessageEvent)=>{
+      const message=event.data as {type:string;batchId?:string;tabId?:string};
+      if(!message?.batchId||message.tabId===tabId.current)return;
+      if(message.batchId!==batchIdRef.current)return;
+      if(message.type==="claim"){
+        /* Another tab has just taken this batch. Stop writing over it. */
+        setBatchHeldByAnotherTab(true);
+      }
+      if(message.type==="ping"){
+        /* A tab is asking who holds this batch. Only answer if we still do. */
+        if(!batchHeldByAnotherTab)channel.postMessage({type:"claim",batchId:batchIdRef.current,tabId:tabId.current});
+      }
+    };
+    return()=>{channel.close();batchChannel.current=null};
+  },[batchHeldByAnotherTab]);
+  useEffect(()=>{
+    const id=batchIdRef.current;
+    if(!id||!batchChannel.current)return;
+    setBatchHeldByAnotherTab(false);
+    batchChannel.current.postMessage({type:"ping",batchId:id,tabId:tabId.current});
+  },[savedRevision,restoringBatch]);
+  function takeOverBatchHere(){
+    setBatchHeldByAnotherTab(false);
+    batchChannel.current?.postMessage({type:"claim",batchId:batchIdRef.current,tabId:tabId.current});
+  }
+
   async function persistBatchNow(existingId?:string){
     const id=existingId||batchIdRef.current||crypto.randomUUID();
     batchIdRef.current=id;
@@ -1304,7 +1347,7 @@ export default function ListingFactoryApp() {
     window.localStorage.setItem("goldie-active-batch",id);
     await fetch("/api/batches",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,status:running?"processing":keptAsDrafts?"draft":complete?drafts.some(draft=>draft.status!=="Created")?"needs_attention":"complete":"draft",step:workflowStep,setupName:batchDisplayName||activeBundle?.name||activeRecipe?.name||"",productTitle:templateDetails?.blueprintTitle||"",designCount:files.length,state:batchStateSnapshot()})}).catch(()=>undefined);
   }
-  useEffect(()=>{if(!snapshotReady.current||restoringBatch||(!files.length&&!drafts.length))return;const timer=window.setTimeout(()=>{void persistBatchNow();},700);return()=>window.clearTimeout(timer);
+  useEffect(()=>{if(!snapshotReady.current||restoringBatch||batchHeldByAnotherTab||(!files.length&&!drafts.length))return;const timer=window.setTimeout(()=>{void persistBatchNow();},700);return()=>window.clearTimeout(timer);
   },[restoringBatch,workflowStep,finishPhase,template,templateDetails,description,pricing,selectedColorIds,selectedSizeIds,variantPrices,etsyShippingProfileId,pricingApproved,mockupTheme,activeRecipe,activeBundle,bundleRecipes,bundleIndex,files.map(file=>`${file.id}:${file.title}:${file.tags.join("|")}:${file.blurb||""}:${file.descriptionOverride??""}:${file.sizeGuideName||""}:${JSON.stringify(file.etsy||{})}`).join(";"),drafts,complete,running,bulkTitles,batchKeywords,titleJoiner,titleBuilderMode,autoTitleBankId,manualKeywordBankId,sharedMockups,preparedMockupCounts,printifyImageIndices,printifyImageSelections,sizeGuideName,batchDisplayName,keptAsDrafts,batchReceipt]);
 
   useEffect(() => {
@@ -1832,6 +1875,40 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
      this ref makes it impossible to enter twice regardless of what the UI does -
      the one place in this app where a stray click costs real money. */
   const publishInFlight=useRef(false);
+  /* D495 - a bundle published one product at a time: publish the hoodie's
+     listings, then go back, open the tee, publish again, then the crewneck.
+     Step 2 already creates every product's drafts from one press; this is the
+     same run at the other end. Goldie publishes the open product, moves itself
+     to the next one and publishes that, until the bundle is done.
+
+     Publishing spends real money, so this is deliberately more cautious than the
+     drafts run: it will not start a product whose listings are not ready. It
+     stops and says which product and what is missing, and nothing is published
+     for that product or the ones after it. */
+  const [publishRun,setPublishRun]=useState<{total:number}|null>(null);
+  const publishAdvancing=useRef(false);
+  useEffect(()=>{
+    if(!publishRun)return;
+    if(publishing||switchingProduct||publishConfirmOpen||restoringBatch)return;
+    if(batchReceipt){
+      if(bundleIndex+1>=bundleRecipes.length){setPublishRun(null);return}
+      if(publishAdvancing.current)return;
+      publishAdvancing.current=true;
+      openBundleProduct(bundleIndex+1);
+      window.setTimeout(()=>{publishAdvancing.current=false},1500);
+      return;
+    }
+    const chosen=selectedPublishDrafts();
+    if(!chosen.length)return;
+    const blockers=[...missingPublishFields(),...createdListingsMissingImages(chosen).map(draft=>`${draft.name} has no photo`)];
+    if(blockers.length){
+      setPublishRun(null);
+      stopWith(`${activeRecipe?.name||"This product"} is not ready to publish.`,blockers);
+      return;
+    }
+    void publishAll();
+  },[publishRun,publishing,switchingProduct,publishConfirmOpen,restoringBatch,batchReceipt,bundleIndex,drafts,activeRecipe]);
+
   async function publishAll(){
     if(publishInFlight.current)return;
     const ids=selectedPublishDrafts().map(draft=>draft.id!);if(!ids.length)return;
@@ -2545,7 +2622,10 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
                   if(named.length&&named.length===missing.length)return `${missing.length} listings still need a photo: ${named.map(name=>shorten(name,40)).join(", ")}`;
                   return `${missing.length} of ${selectedPublishDrafts().length} selected listings still need a photo`;
                 })()}</span></div>
-<FinalListingReview drafts={drafts} files={files} selections={printifyImageSelections} defaultIndices={printifyImageIndices} preparedMockupCounts={preparedMockupCounts} batchSizeGuide={sizeGuideName} onRetry={clientId=>{const design=files.find(file=>file.id===clientId);if(design)void runDrafts([design],true)}} onEdit={setFinishPhase}/><div className="publish-live-warning"><b>Only the listings selected above will be published live on Etsy.</b><span>Anything still needing a look is listed above.</span><small>Etsy charges its standard $0.20 USD listing fee for each listing created. This fee is charged by Etsy and is separate from your Goldie subscription.</small></div><button className="publish-all-button" aria-busy={publishing} disabled={publishing||!allCreatedListingsHaveImages(selectedPublishDrafts())||!selectedPublishDrafts().length} title={!selectedPublishDrafts().length?"Select at least one listing to publish.":!allCreatedListingsHaveImages(selectedPublishDrafts())?"Every selected listing needs at least one photo before it can publish.":undefined} onClick={openPublishConfirmation}>{publishing?"Publishing…":`Publish ${selectedPublishDrafts().length} selected ${selectedPublishDrafts().length===1?"listing":"listings"} live on Etsy`}</button><button className="keep-drafts-button" type="button" disabled={publishing} onClick={()=>{setBatchDisplayName(current=>current||suggestedBatchName());setDraftSaveOpen(true)}}>Keep as Printify drafts for now</button>{!publishing&&<small className="keep-drafts-note">Nothing will publish to Etsy. Return to this exact batch from Batch History.</small>}{/* D474 - this describes the Keep as drafts button, but sat there while the
+<FinalListingReview drafts={drafts} files={files} selections={printifyImageSelections} defaultIndices={printifyImageIndices} preparedMockupCounts={preparedMockupCounts} batchSizeGuide={sizeGuideName} onRetry={clientId=>{const design=files.find(file=>file.id===clientId);if(design)void runDrafts([design],true)}} onEdit={setFinishPhase}/><div className="publish-live-warning"><b>Only the listings selected above will be published live on Etsy.</b><span>Anything still needing a look is listed above.</span><small>Etsy charges its standard $0.20 USD listing fee for each listing created. This fee is charged by Etsy and is separate from your Goldie subscription.</small></div><button className="publish-all-button" aria-busy={publishing} disabled={publishing||!allCreatedListingsHaveImages(selectedPublishDrafts())||!selectedPublishDrafts().length} title={!selectedPublishDrafts().length?"Select at least one listing to publish.":!allCreatedListingsHaveImages(selectedPublishDrafts())?"Every selected listing needs at least one photo before it can publish.":undefined} onClick={openPublishConfirmation}>{/* D495 - one press publishes the whole bundle, so the button says so and
+    reports which product it is on rather than naming a listing count that
+    only covers the product currently open. */}
+{publishRun&&!publishing?`Moving to ${bundleRecipes[bundleIndex+1]?.name||"the next product"}…`:publishing?(activeBundle&&bundleRecipes.length>1?`Publishing ${activeRecipe?.name||"this product"} (${bundleIndex+1} of ${bundleRecipes.length})…`:"Publishing…"):activeBundle&&bundleRecipes.length>1?`Publish all ${bundleRecipes.length} products live on Etsy`:`Publish ${selectedPublishDrafts().length} selected ${selectedPublishDrafts().length===1?"listing":"listings"} live on Etsy`}</button><button className="keep-drafts-button" type="button" disabled={publishing} onClick={()=>{setBatchDisplayName(current=>current||suggestedBatchName());setDraftSaveOpen(true)}}>Keep as Printify drafts for now</button>{!publishing&&<small className="keep-drafts-note">Nothing will publish to Etsy. Return to this exact batch from Batch History.</small>}{/* D474 - this describes the Keep as drafts button, but sat there while the
      button above it said Publishing, so the page said both that it was
      publishing and that nothing would publish. It belongs to a choice that is
      no longer available once publishing has started. */}{publishMessage&&<p className="publish-message" role="status">{publishMessage}</p>}{publishFailures.length>0&&<section className="publish-failure-panel" role="alert"><p className="mini-label">NOTHING WAS PUBLISHED</p><h3>{publishFailures.length===1?"1 listing could not be published":`${publishFailures.length} listings could not be published`}</h3><p className="publish-failure-lede">Etsy did not create {publishFailures.length===1?"this listing":"these listings"}, so you have not been charged a listing fee for {publishFailures.length===1?"it":"them"}. Here is exactly what Etsy said:</p><ul className="publish-failure-list">{publishFailures.map(failure=>{const draft=drafts.find(item=>item.id===failure.productId);return <li key={failure.productId}><strong>{draft?.title?.slice(0,60)||draft?.designName||"Listing"}</strong><span>{failure.error}</span></li>})}</ul><p className="publish-failure-lede">Goldie has emailed this to you and recorded it. You can press publish again once it is fixed.</p></section>}</>}</div></article></>)}
@@ -2603,6 +2683,9 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
           )}
           <p className="launch-note">This step creates unpublished Printify drafts. The final Goldie step publishes them live to Etsy only after a second confirmation.</p>
         </aside>)}
+{/* D496 - a held tab has to say so where she is working, not silently stop
+    saving. */}
+        {batchHeldByAnotherTab&&<div className="batch-tab-conflict" role="status"><b>This batch is open in another Goldie tab.</b><span>Goldie has paused saving here so that tab\u2019s work is not overwritten. Continue in the other tab, or take over here and it will pause there instead.</span><button type="button" onClick={takeOverBatchHere}>Take over editing here</button></div>}
         <div className="workflow-footer-actions">{progressIndex>0&&<button className="workflow-back" type="button" onClick={goBackOneStep}><span aria-hidden="true">←</span> Back</button>}<span className="autosave-note"><i aria-hidden="true">✓</i> Saved automatically</span>{/* D386 - Saving a draft was only reachable from the Publish step, so
                 stopping halfway meant trusting the autosave and remembering the
                 batch later. Name it and park it from wherever you are. */}{workflowStep!=="connect"&&(files.length>0||drafts.length>0||Boolean(templateDetails))&&<button className="save-draft-link" type="button" onClick={()=>{setBatchDisplayName(current=>current||suggestedBatchName());setDraftSaveOpen(true)}}>Save as draft</button>}</div>
@@ -2638,7 +2721,10 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
     about to be made. The confirmation has to describe the run it confirms. */}
 <h2 id="preflight-title">{activeBundle&&bundleRecipes.length>1?`Create ${files.length*bundleRecipes.length} product drafts across ${bundleRecipes.length} products?`:`Create ${files.length} product ${files.length===1?"draft":"drafts"}?`}</h2><div className="preflight-list"><div><span>{activeBundle&&bundleRecipes.length>1?"Printify products":"Printify product"}</span><b>{activeBundle&&bundleRecipes.length>1?`✓ ${bundleRecipes.map(recipe=>recipe.name).join(", ")}`:`✓ ${templateDetails?.blueprintTitle||"Selected product"}`}</b></div><div><span>Design files</span><b>✓ {files.length} ready</b></div><div><span>Plan allowance</span><b>{planDraftsRemaining===null?"Checking current usage…":`✓ ${requestedListingCount} of ${planDraftsRemaining} remaining listings`}</b></div><div><span>Permanent description</span><b>{description.trim()?"✓ Imported from Printify":"None found. You can add one later"}</b></div><div><span>Variant pricing</span><b>✓ All {pricedVariants.length} enabled variants reviewed and approved</b></div><div><span>Publishing</span><b>Unpublished Printify drafts only</b></div></div><p className="preflight-explainer">After these drafts exist, Goldie will show their real previews and help finish each title, tags, description, Etsy details, and mockups.</p><div className="preflight-actions"><button className="preflight-cancel" onClick={()=>setPreflightOpen(false)}>Go back</button><button className="preflight-confirm" disabled={running} aria-busy={running} onClick={confirmDrafts}>Create Printify drafts →</button></div></section></div>}
 
-      {publishConfirmOpen&&<div className="publish-confirm-backdrop" role="presentation"><section className="publish-confirm" role="alertdialog" aria-modal="true" aria-labelledby="publish-confirm-title"><span className="publish-confirm-icon">!</span><p className="mini-label">FINAL PUBLISH CONFIRMATION</p><h2 id="publish-confirm-title">These listings will go live on Etsy.</h2><p>They will not be saved as Etsy drafts. Publishing starts as soon as you confirm below. Goldie will immediately apply the selected Etsy shipping profile.</p><p className="etsy-listing-fee-note">Etsy will charge its standard $0.20 USD listing fee for each listing created. This Etsy fee is separate from your Goldie subscription.</p>{missingPublishFields().length>0&&<div className="publish-missing"><b>Goldie found blank or unfinished fields:</b><ul>{missingPublishFields().map(field=><li key={field}>{field}</li>)}</ul><span>You can still publish, but review these first if they matter to this batch.</span></div>}<div className="publish-confirm-actions"><button onClick={()=>setPublishConfirmOpen(false)}>Go back and review</button><button className="danger" disabled={publishing} aria-busy={publishing} onClick={()=>void publishAll()}>Yes, publish live on Etsy</button></div></section></div>}
+      {publishConfirmOpen&&<div className="publish-confirm-backdrop" role="presentation"><section className="publish-confirm" role="alertdialog" aria-modal="true" aria-labelledby="publish-confirm-title"><span className="publish-confirm-icon">!</span><p className="mini-label">FINAL PUBLISH CONFIRMATION</p>{/* D495 - one press now publishes every product in the bundle, so the last
+    screen before real money is spent has to say how many listings that is
+    across how many products, not describe only the one that is open. */}
+<h2 id="publish-confirm-title">{activeBundle&&bundleRecipes.length>1?`${requestedListingCount} listings across ${bundleRecipes.length} products will go live on Etsy.`:"These listings will go live on Etsy."}</h2>{activeBundle&&bundleRecipes.length>1&&<p className="publish-confirm-bundle">Goldie publishes {bundleRecipes.map(recipe=>recipe.name).join(", ")} one after another. If a product is not ready it stops there and tells you what is missing — nothing after it is published.</p>}<p>They will not be saved as Etsy drafts. Publishing starts as soon as you confirm below. Goldie will immediately apply the selected Etsy shipping profile.</p><p className="etsy-listing-fee-note">Etsy will charge its standard $0.20 USD listing fee for each listing created{activeBundle&&bundleRecipes.length>1?` \u2014 about $${(requestedListingCount*0.2).toFixed(2)} for ${requestedListingCount} listings`:""}. This Etsy fee is separate from your Goldie subscription.</p>{missingPublishFields().length>0&&<div className="publish-missing"><b>Goldie found blank or unfinished fields:</b><ul>{missingPublishFields().map(field=><li key={field}>{field}</li>)}</ul><span>You can still publish, but review these first if they matter to this batch.</span></div>}<div className="publish-confirm-actions"><button onClick={()=>setPublishConfirmOpen(false)}>Go back and review</button><button className="danger" disabled={publishing} aria-busy={publishing} onClick={()=>{if(activeBundle&&bundleRecipes.length>1)setPublishRun({total:bundleRecipes.length});void publishAll()}}>Yes, publish live on Etsy</button></div></section></div>}
 
       {draftSaveOpen&&<div className="publish-confirm-backdrop" role="presentation" onMouseDown={event=>{if(event.target===event.currentTarget&&!savingDraftBatch)setDraftSaveOpen(false)}}><section className="publish-confirm save-draft-modal" role="dialog" aria-modal="true" aria-labelledby="save-draft-title"><button type="button" className="missing-photo-close" aria-label="Close" disabled={savingDraftBatch} onClick={()=>setDraftSaveOpen(false)}>×</button><span className="publish-confirm-icon">✓</span><p className="mini-label">SAVE FOR LATER</p><h2 id="save-draft-title">Keep these listings as Printify drafts?</h2><p>Great—this batch will be waiting for you in Batch History. Nothing will publish to Etsy until you return and choose to publish it.</p><label><span>Name this batch</span><input autoFocus maxLength={160} value={batchDisplayName} onChange={event=>setBatchDisplayName(event.target.value)} placeholder="Example: Gildan Tee · Bachelorette designs"/><small>Goldie suggested a name from the saved product and first listing topic. Change it to anything you will recognize.</small></label><div className="publish-confirm-actions"><button disabled={savingDraftBatch} onClick={()=>setDraftSaveOpen(false)}>Cancel</button><button className="save-draft-confirm" aria-busy={savingDraftBatch} disabled={savingDraftBatch||!batchDisplayName.trim()} onClick={()=>void saveDraftBatch()}>{savingDraftBatch?"Saving batch…":"Save to Batch History"}</button></div></section></div>}
 

@@ -2748,3 +2748,12 @@ body{min-width:1180px!important}
 .app-shell .receipt-value-strip>div{background:linear-gradient(160deg,#7b5aa6,#8b5989)!important;color:#fff;box-shadow:0 6px 16px rgba(88,58,110,.22)}
 .app-shell .receipt-value-strip b{color:#fff}
 .app-shell .receipt-value-strip span{color:rgba(255,255,255,.82)!important}
+
+/* D495 - the bundle publish dialog names every product it is about to publish. */
+.app-shell .publish-confirm-bundle{margin:0 0 10px;font-size:.86rem;line-height:1.5;color:#6b5748}
+
+/* D496 - the same batch open in two tabs. */
+.app-shell .batch-tab-conflict{display:grid;gap:6px;justify-items:start;margin:0 0 14px;padding:14px 16px;border:1px solid #e6c9b4;border-left:4px solid #c97a4a;border-radius:12px;background:#fdf7f2}
+.app-shell .batch-tab-conflict b{font-size:.92rem;color:#4a3b31}
+.app-shell .batch-tab-conflict span{font-size:.85rem;line-height:1.5;color:#6b5748}
+.app-shell .batch-tab-conflict button{margin-top:4px;padding:7px 14px;border:1px solid #c97a4a;border-radius:999px;background:#fff;font-size:.84rem;font-weight:650;color:#a35f34;cursor:pointer}
