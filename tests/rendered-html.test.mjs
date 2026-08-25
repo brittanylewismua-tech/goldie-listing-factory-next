@@ -3699,7 +3699,7 @@ test("a bundle's shared action sits below its products, not inside one — D486"
      inside one third of what it acts on, above two cards offering to open the
      others one at a time. */
   assert.match(app, /footer:ReactNode=null\)\{\n\s*const sharedAction=Boolean\(footer\)/);
-  assert.match(app, /stepProductCards\(bundleCardStatus\("images"\),null,!\(workflowStep==="designs"&&!complete\),<aside/,
+  assert.match(app, /stepProductCards\(bundleCardStatus\("images"\),null,!\(workflowStep==="designs"\),<aside/,
     "the designs step passes no per-card body and the action as a footer");
 
   // The footer renders after every card, inside the cards section.
@@ -3809,4 +3809,48 @@ test("a reopened batch finishes preparing and the button says why it cannot run 
   assert.match(app, /: !designsFinished \? `Checking \$\{designsPreparing\}/);
   const ready = app.indexOf("const designsReady="), missing = app.indexOf("const missingRequirement");
   assert.ok(ready > 0 && ready < missing, "designsFinished must be declared before it is read");
+});
+
+test("the drafts confirmation describes the run it is confirming — D492", async () => {
+  const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+
+  /* Caught with the dialog open on her live bundle. The button read "Create
+     Printify drafts for all 3 products"; this dialog - the last thing before six
+     drafts are made - read "Create 2 product drafts?", listed only "Unisex
+     Midweight Softstyle Fleece Hoodie" under a singular "Printify product", and
+     charged the plan allowance for 2. */
+  assert.match(app, /Create \$\{files\.length\*bundleRecipes\.length\} product drafts across \$\{bundleRecipes\.length\} products\?/);
+  assert.match(app, /\{activeBundle&&bundleRecipes\.length>1\?"Printify products":"Printify product"\}/);
+  assert.match(app, /`✓ \$\{bundleRecipes\.map\(recipe=>recipe\.name\)\.join\(", "\)\}`/);
+
+  // requestedListingCount already accounts for products and exclusions.
+  assert.match(app, /`✓ \$\{requestedListingCount\} of \$\{planDraftsRemaining\} remaining listings`/);
+  assert.doesNotMatch(app, /`✓ \$\{files\.length\} of \$\{planDraftsRemaining\} remaining listings`/);
+});
+
+test("a bundle run saves each product's work before moving on — D493", async () => {
+  const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+
+  /* Caught by running a real three-product bundle end to end. Printify held six
+     drafts; Goldie's own Batch History showed 2, 0 and 0. The first two
+     products' drafts existed only in Printify, with nothing in Goldie pointing
+     at them - she would have had to build them again.
+
+     continueBundle reset drafts and minted a new batch id without first writing
+     the outgoing batch. Autosave is debounced, so the drafts it had just created
+     were cleared from state before they were ever saved. openBundleProduct has
+     always flushed before switching; this path never did. */
+  const fn = app.slice(app.indexOf("async function continueBundle"));
+  const body = fn.slice(0, fn.indexOf("async function createCustomShippingProfile"));
+  assert.match(body, /await persistBatchNow\(batchIdRef\.current\);/);
+  assert.ok(body.indexOf("persistBatchNow") < body.indexOf("setDrafts([])"),
+    "the outgoing batch is written before its drafts are cleared");
+
+  // Mid-run the incoming product has no template yet, so the guard downgraded to
+  // setup and rewrote the URL: the page read "Designs + images" at ?step=setup.
+  assert.match(body, /requestedStep\.current=workflowStep;/);
+
+  // And the three product cards vanished the moment drafts existed.
+  assert.match(app, /,null,!\(workflowStep==="designs"\),<aside/);
+  assert.doesNotMatch(app, /,null,!\(workflowStep==="designs"&&!complete\),<aside/);
 });
