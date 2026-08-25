@@ -4394,9 +4394,14 @@ test("a mug is never offered t-shirt scenes — D529", async () => {
      t-shirt photos. compatibleTemplate only ever restricted apparel templates -
      anything else returned true for any product - and a product with no garment
      kind, like a mug, was told apparel scenes were fine. */
-  assert.match(src, /function productSurfaceFamily\(productName:string\)/);
-  assert.match(src, /function templateSurfaceFamily\(kind:SurfaceKind\)/);
-  assert.match(src, /if\(productFamily&&templateFamily!==productFamily\)return false/);
+  /* D543 - and this was only half the fix. The same question was answered a
+     second time in listing-factory-app.tsx, by the copy that fills the Mockup
+     set dropdown, and that copy was never corrected: measured live on D542, her
+     Gildan Hoodie was offered "white mugs" and none of her ten garment scenes.
+     One module answers it now, with its behaviour pinned in
+     tests/mockup-compatibility.test.mjs. */
+  assert.match(src, /import \{ productAcceptsMockup \} from "\.\/mockup-compatibility"/);
+  assert.ok(!/function compatibleTemplate\(/.test(src), "no second copy of the rule");
 
   // Reproduce the rule here so a future edit cannot quietly widen it again.
   const garmentKind = (n) => { n = n.toLowerCase(); if (/hoodie|hooded/.test(n)) return "hoodie"; if (/sweatshirt|crewneck|sweater/.test(n)) return "sweatshirt"; if (/t[ -]?shirt|\btee\b/.test(n)) return "t-shirt"; return ""; };

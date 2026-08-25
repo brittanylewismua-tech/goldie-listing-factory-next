@@ -792,7 +792,10 @@ test("the colour selector never reads parent-only first-run state — D131", asy
 
 test("saved mockup scenes must match the selected garment — D132", async () => {
   const page=await readFile(listingFactoryPage,"utf8");
-  assert.match(page,/function productAcceptsMockup\(surfaceKind:string,productName:string\)/);
+  /* D543 - the rule moved to app/mockup-compatibility.ts, because this copy and
+     the one in integrated-mockups.tsx had drifted apart and only one was fixed.
+     tests/mockup-compatibility.test.mjs holds the behaviour. */
+  assert.match(page,/import \{ productAcceptsMockup \} from "\.\/mockup-compatibility"/);
   assert.match(page,/compatibleTemplates=templates\.filter\(item=>productAcceptsMockup\(item\.surfaceKind,productName\)\)/);
   assert.match(page,/if\(value&&!themes\.includes\(value\)\)\{onChange\("",\[\]\);return\}/,
     "A tee-only saved set must be cleared from a crewneck batch instead of displayed as valid.");

@@ -1,4 +1,5 @@
 "use client";
+import { productAcceptsMockup } from "./mockup-compatibility";
 import { Fragment, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import Image from "next/image";
@@ -356,7 +357,7 @@ function ProductSizeSelector({product,selected,onChange,onRemember,remembering,r
   </section>
 }
 
-function productAcceptsMockup(surfaceKind:string,productName:string){const product=productName.toLowerCase();if(!/t-shirt|sweatshirt|hoodie|other-apparel|apparel/.test(surfaceKind))return true;if(/hoodie|hooded/.test(product))return surfaceKind==="hoodie";if(/crewneck|sweatshirt|sweater/.test(product))return surfaceKind==="sweatshirt";if(/t[ -]?shirt|\btee\b/.test(product))return surfaceKind==="t-shirt"||surfaceKind==="apparel";return surfaceKind==="other-apparel"||surfaceKind==="apparel"}
+/* D543 - moved to app/mockup-compatibility.ts, where it is the only copy. */
 function MockupSetSelector({value,onChange,selectedIds=[],savedValue,savedIds,onSaveDefault,saving,firstRun=false,productName=""}:{value:string;onChange:(value:string,ids?:string[])=>void;selectedIds?:string[];savedValue:string;savedIds?:string[];onSaveDefault:()=>void;saving:boolean;firstRun?:boolean;productName?:string}){
   const [templates,setTemplates]=useState<Array<{id:string;theme:string;name:string;src:string;surfaceKind:string}>>([]),[loaded,setLoaded]=useState(false),seededDefault=useRef(false);
   useEffect(()=>{fetch("/api/mockups/library").then(response=>response.json()).then((payload:{templates?:Array<{id?:string;theme?:string;name?:string;src?:string;surfaceKind?:string}>})=>setTemplates((payload.templates||[]).map(item=>({id:String(item.id||""),theme:String(item.theme||"").trim(),name:String(item.name||"Mockup"),src:String(item.src||""),surfaceKind:String(item.surfaceKind||"rigid-flat")})).filter(item=>item.id&&item.theme&&item.src))).catch(()=>undefined).finally(()=>setLoaded(true))},[]);

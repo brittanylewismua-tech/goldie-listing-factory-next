@@ -1,5 +1,6 @@
 "use client";
 
+import { productAcceptsMockup } from "./mockup-compatibility";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { safeImagePreviewDataUrl } from "./client-image-preview";
@@ -17,7 +18,7 @@ const MAX_MOCKUPS_PER_LISTING=8;
 const load=(src:string)=>new Promise<HTMLImageElement>((resolve,reject)=>{const image=new Image();image.crossOrigin="anonymous";image.onload=()=>resolve(image);image.onerror=reject;image.src=src});
 const dataUrl=(blob:Blob)=>new Promise<string>((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result));reader.onerror=()=>reject(reader.error);reader.readAsDataURL(blob)});
 const foregroundCache=new Map<string,string[]>();
-function garmentKind(productName:string){const name=productName.toLowerCase();if(/hoodie|hooded/.test(name))return"hoodie";if(/sweatshirt|crewneck|sweater/.test(name))return"sweatshirt";if(/t[ -]?shirt|\btee\b/.test(name))return"t-shirt";return""}
+
 function isCalibratedSurface(kind:SurfaceKind){return["rigid-flat","t-shirt","sweatshirt","hoodie","other-apparel","apparel"].includes(kind)}
 /* D529 - a mug offered every t-shirt scene she owns, with no warning, and would
    have put mug artwork on ten tee photos. This filter only ever restricted
@@ -25,28 +26,9 @@ function isCalibratedSurface(kind:SurfaceKind){return["rigid-flat","t-shirt","sw
    product with no garment kind - a mug, a poster - was told apparel scenes were
    fine. Verified live on her Ceramic Mug batch: ten BACH TEES scenes offered.
    Families have to match on both sides, not just one. */
-function productSurfaceFamily(productName:string){
-  const name=productName.toLowerCase();
-  if(garmentKind(name)||/shirt|tee|hoodie|sweatshirt|crewneck|tank|apparel/.test(name))return"apparel";
-  if(/mug|tumbler|bottle|can |cup|stein/.test(name))return"curved";
-  if(/poster|print|canvas|paper|card|sticker|towel|mat|puzzle/.test(name))return"flat";
-  return"";
-}
-function templateSurfaceFamily(kind:SurfaceKind){
-  if(["t-shirt","sweatshirt","hoodie","other-apparel","apparel"].includes(kind))return"apparel";
-  if(kind==="curved")return"curved";
-  return"flat";
-}
-function compatibleTemplate(template:Template,productName:string){
-  const productKind=garmentKind(productName),templateKind=template.surfaceKind||"rigid-flat";
-  const productFamily=productSurfaceFamily(productName),templateFamily=templateSurfaceFamily(templateKind);
-  /* An unrecognised product still sees everything - guessing wrong should not
-     hide her own scenes. A recognised one only sees its own surface. */
-  if(productFamily&&templateFamily!==productFamily)return false;
-  if(templateFamily!=="apparel")return true;
-  if(!productKind)return templateKind==="other-apparel"||templateKind==="apparel";
-  return templateKind===productKind||(templateKind==="apparel"&&["t-shirt","sweatshirt","hoodie"].includes(productKind))||templateKind==="other-apparel";
-}
+
+
+
 async function foregroundLayers(t:Template){if(!t.foregroundPrompt)return[];const cached=foregroundCache.get(t.id);if(cached)return cached;try{const response=await fetch("/api/mockups/analyze",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({imageUrl:new URL(t.src,window.location.origin).toString(),prompt:t.foregroundPrompt})}),payload=await response.json() as {masks?:Array<{url:string}>;error?:string};if(!response.ok)throw new Error(payload.error||`Could not safely layer ${t.name}.`);const urls=(payload.masks||[]).map(x=>x.url);foregroundCache.set(t.id,urls);return urls}catch{/* A highlight layer that will not load is a slightly flatter mockup, not a failed one. Cached so one outage does not retry on every scene. */foregroundCache.set(t.id,[]);return[]}}
 function area(c:Point[]){return Math.abs(c.reduce((n,[x,y],i)=>{const q=c[(i+1)%c.length];return n+x*q[1]-q[0]*y},0)/2)}
 /* D447 - a mockup must never fail to render.
@@ -208,7 +190,7 @@ export default function IntegratedMockups({design,productId,productName="",defau
  useEffect(()=>{fetch("/api/mockups/library").then(r=>r.json()).then(p=>setLibrary(p.templates||[]));},[]);
  useEffect(()=>{if(seededDefaults.current||!library.length)return;seededDefaults.current=true;let session:{theme?:string;ids?:string[]}|null=null;try{session=JSON.parse(window.sessionStorage.getItem("goldie-batch-mockups")||"null")}catch{}const ids=defaultTemplateIds.length?defaultTemplateIds:Array.isArray(session?.ids)?session.ids:[],expectedTheme=defaultTheme||session?.theme||"";const valid=ids.filter(id=>library.some(item=>item.id===id&&(!expectedTheme||item.theme===expectedTheme))).slice(0,MAX_MOCKUPS_PER_LISTING);setSelected(new Set(valid))},[library,defaultTheme,defaultTemplateIds.join("|")]);
  useEffect(()=>{if(selected.size<=MAX_MOCKUPS_PER_LISTING)return;setSelected(new Set([...selected].slice(0,MAX_MOCKUPS_PER_LISTING)));setError("You can create up to eight lifestyle mockups for one listing.")},[selected]);
- const compatibleLibrary=library.filter(template=>compatibleTemplate(template,productName)),themes=[...new Set(compatibleLibrary.map(t=>t.theme))],items=theme==="__all"?compatibleLibrary:compatibleLibrary.filter(t=>t.theme===theme),chosen=compatibleLibrary.filter(t=>selected.has(t.id)).slice(0,MAX_MOCKUPS_PER_LISTING),needsReference=chosen.some(t=>!isCalibratedSurface(t.surfaceKind||"rigid-flat"));
+ const compatibleLibrary=library.filter(template=>productAcceptsMockup(template.surfaceKind||"rigid-flat",productName)),themes=[...new Set(compatibleLibrary.map(t=>t.theme))],items=theme==="__all"?compatibleLibrary:compatibleLibrary.filter(t=>t.theme===theme),chosen=compatibleLibrary.filter(t=>selected.has(t.id)).slice(0,MAX_MOCKUPS_PER_LISTING),needsReference=chosen.some(t=>!isCalibratedSurface(t.surfaceKind||"rigid-flat"));
  async function stageForEtsy(made:Result[]){setEtsyStatus(`Saving ${made.length} mockups for Etsy…`);const form=new FormData();form.set("productId",productId);form.set("kind","mockup");form.set("replace","true");for(const result of made){const blob=await(await fetch(result.url)).blob();form.append("file",new File([blob],result.name,{type:blob.type||"image/jpeg"}))}const response=await fetch("/api/etsy/images",{method:"POST",body:form}),payload=await response.json() as {error?:string};if(!response.ok)throw new Error(payload.error||"Goldie could not safely replace this listing’s mockups. Your previous mockups were kept.");onPrepared?.(made.length);setEtsyStatus(`✓ ${made.length} mockups will be added automatically when this listing publishes.`)}
 
  /* Segmentation runs once per scene and is remembered for the session: the same
