@@ -4232,3 +4232,27 @@ test("every step is the same shape: a collapsible card per product — D517", as
       `${target} must match markup that exists`);
   }
 });
+
+test("everything on step 2 that describes one product sits in that product's card — D518/D520", async () => {
+  const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+  const cardsAt = app.indexOf('{complete && workflowStep==="designs" && stepProductCards(');
+
+  /* D518 - the mockup set chooser sat at the very top of step 2, above the upload
+     box: one set, asked before a single design existed, for a batch of three
+     different products. A hoodie scene is not a tee scene. */
+  assert.ok(app.indexOf("<MockupSetSelector") > cardsAt,
+    "the mockup set belongs to a product, so it lives in that product's card");
+
+  /* D520 - "Recommended photos for Unisex Midweight Softstyle Fleece Hoodie"
+     rendered above all three cards, describing the open product only, with
+     nothing for the other two. */
+  assert.ok(app.indexOf('className="recommended-listing-photos"') > cardsAt);
+
+  /* D519 - a run in progress is not a broken state to recover from: mid-switch
+     the next product's template has not loaded, and the guard sent her to step 1
+     from a run she started on step 2. */
+  assert.match(app, /const runInProgress=useRef\(false\)/);
+  assert.match(app, /\|\|restoringBatch\|\|runInProgress\.current\|\|canOpenStep\(workflowStep\)\)return/);
+  assert.equal((app.match(/runInProgress\.current=Boolean\(/g) || []).length, 2,
+    "both the drafts run and the publish run set it");
+});

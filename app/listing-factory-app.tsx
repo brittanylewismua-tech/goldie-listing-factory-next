@@ -954,6 +954,9 @@ export default function ListingFactoryApp() {
   const [autoTitleBankId,setAutoTitleBankId]=useState("");
   const [manualKeywordBankId,setManualKeywordBankId]=useState("");
   const [blockingModal,setBlockingModal]=useState<{title:string;issues:string[];copy?:string}|null>(null);
+  /* D519 - the guard below runs before either run state is declared, so the fact
+     that a run is in progress lives in a ref both of them set. */
+  const runInProgress=useRef(false);
   const [pixelWarningOpen,setPixelWarningOpen]=useState(false);
   const [etsyConnected,setEtsyConnected]=useState(false);
   const [etsyShop,setEtsyShop]=useState("");
@@ -1265,7 +1268,13 @@ export default function ListingFactoryApp() {
   useEffect(()=>{if(workflowStep!=="finish")return;const url=new URL(window.location.href);url.searchParams.set("phase",finishPhase);window.history.replaceState({},"",url)},[workflowStep,finishPhase]);
   useEffect(()=>{window.scrollTo({top:0,behavior:"auto"})},[workflowStep,finishPhase]);
   useEffect(()=>{if(connectionAutoSkip.current||localPreview||checkingConnection||restoringBatch||workflowStep!=="connect"||!connected||!etsyConnected)return;if(requestedStep.current==="connect")return;connectionAutoSkip.current=true;goToStep("setup",true,true)},[localPreview,checkingConnection,restoringBatch,workflowStep,connected,etsyConnected]);
-  useEffect(()=>{if(localPreview||checkingConnection||restoringBatch||canOpenStep(workflowStep))return;const fallback=!connected||!etsyConnected?"connect":!templateLoaded?"setup":!files.length?"designs":!complete?"review":"finish";goToStep(fallback,true,true);
+  /* D519 - while a bundle run is advancing, the app is mid-switch: the next
+     product's template has not loaded yet, so this fell back to step 1 and she
+     watched a run she started on step 2 dump her on Choose product. Verified on
+     her account that the drafts themselves were fine - three batches, two drafts
+     each - so this was navigation, not loss. A run in progress is not a broken
+     state to recover from. */
+  useEffect(()=>{if(localPreview||checkingConnection||restoringBatch||runInProgress.current||canOpenStep(workflowStep))return;const fallback=!connected||!etsyConnected?"connect":!templateLoaded?"setup":!files.length?"designs":!complete?"review":"finish";goToStep(fallback,true,true);
   },[localPreview,checkingConnection,restoringBatch,connected,etsyConnected,templateLoaded,files.length,complete,workflowStep]);
 
   useEffect(()=>{if(restoringBatch)return;const url=new URL(window.location.href);if(url.searchParams.get("open")!=="results")return;const hasCreatedDrafts=complete&&drafts.some(draft=>draft.status==="Created");url.searchParams.delete("open");if(!hasCreatedDrafts){window.history.replaceState({},"",url);return}if(!pricingApproved)setPricingApproved(true);url.searchParams.set("step","finish");url.searchParams.set("phase",finishPhase||"details");setWorkflowStep("finish");window.history.replaceState({},"",url);window.scrollTo({top:0,behavior:"auto"})},[restoringBatch,complete,drafts,pricingApproved,finishPhase]);
@@ -2075,6 +2084,7 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
      stops and says which product and what is missing, and nothing is published
      for that product or the ones after it. */
   const [publishRun,setPublishRun]=useState<{total:number}|null>(null);
+  useEffect(()=>{runInProgress.current=Boolean(publishRun)},[publishRun]);
   const publishAdvancing=useRef(false);
   useEffect(()=>{
     if(!publishRun)return;
@@ -2375,6 +2385,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
      itself to the next product carrying the same designs, and repeats. The
      confirmation is asked once, not once per product. */
   const [bundleRun,setBundleRun]=useState<{total:number}|null>(null);
+  useEffect(()=>{runInProgress.current=Boolean(bundleRun)},[bundleRun]);
   const bundleAdvancing=useRef(false);
   useEffect(()=>{
     if(!bundleRun)return;
@@ -2733,13 +2744,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
           </BatchPreferencesPortal>
           </div>
 
-          <article className={`step-card designs-step workflow-panel ${workflowStep==="setup"?"batch-design-drop":""} ${files.length ? "done" : ""} ${workflowStep==="finish"?"finish-mode":""} ${workflowStep==="designs"?"active-panel":"hidden-panel"}`}>{/* D238 · Choosing the mockup SET lived on Product while the mockups it controls are generated here on Images. Same setting, two pages — the exact split that caused the keyword-bank and shipping duplication. */}{/* D513 - onChange was setMockupTheme, so the scene ids the selector reports
-    were dropped on the floor, selectedIds defaulted to empty, and Goldie
-    could not tell her scene picks had changed - which is what decides
-    whether "save these for this product" is offered at all, and what fills
-    the "N selected" count. The ids already live in sharedMockups and
-    recipe.mockupIds is already saved and returned by the API. */}
-<MockupSetSelector firstRun={productFirstRun} productName={activeRecipe?.name||templateDetails?.blueprintTitle||""} value={mockupTheme} selectedIds={sharedMockups?.theme===mockupTheme?sharedMockups.ids:[]} savedValue={activeRecipe?.defaultMockupTheme||""} savedIds={activeRecipe?.mockupIds} onChange={(theme,ids)=>{setMockupTheme(theme);if(ids)setSharedMockups({theme,ids})}} saving={savingProductDefault==="mockups"} onSaveDefault={()=>void saveProductDefaults({defaultMockupTheme:mockupTheme,mockupIds:sharedMockups?.theme===mockupTheme?sharedMockups.ids:[]},"mockups")}/>
+          <article className={`step-card designs-step workflow-panel ${workflowStep==="setup"?"batch-design-drop":""} ${files.length ? "done" : ""} ${workflowStep==="finish"?"finish-mode":""} ${workflowStep==="designs"?"active-panel":"hidden-panel"}`}>{/* D238 · Choosing the mockup SET lived on Product while the mockups it controls are generated here on Images. Same setting, two pages — the exact split that caused the keyword-bank and shipping duplication. */}
             <div className="step-number" aria-hidden="true"/>
             <div className="step-content">
               <div className="step-heading"><div>{workflowStep!=="finish"&&<p className="mini-label">DESIGNS FOR THIS BATCH</p>}{/* D278 · On
@@ -2904,7 +2909,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
         </div>
       </section>}
 
-      {complete && workflowStep==="designs" && (()=>{const sample=drafts.find(draft=>draft.id&&draft.printifyImages?.length),available=sample?.printifyImages?.length||0,selected=sample?.id?(printifyImageSelections[sample.id]??printifyImageIndices).length:0,guide=productPhotoGuide(templateDetails?.blueprintTitle||"",available);return <details className="recommended-listing-photos"><summary>Recommended photos for {templateDetails?.blueprintTitle||"this product"}</summary><p>{selected?`This batch currently uses ${selected} of ${available} available Printify views.`:`Goldie found ${available} Printify ${available===1?"view":"views"} and will start with the best available ${Math.min(guide.count,available)}.`} Change any selection below.</p><ul>{guide.items.map(item=><li key={item}>{item}</li>)}</ul><button type="button" className="panel-collapse-foot" onClick={event=>{const box=(event.currentTarget as HTMLElement).closest("details");if(box){(box as HTMLDetailsElement).open=false;box.scrollIntoView({block:"nearest"})}}}>Close recommended photos</button></details>})()}
+
       {complete && workflowStep==="designs" && stepProductCards(bundleCardStatus("images"),
         /* D517 - the mockups are per product: a hoodie scene is not a tee scene.
            D507 took the product cards off this step because the design upload is
@@ -2915,6 +2920,18 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
            every other step, with its own mockups inside it. */
       <section className="post-draft-workspace">
         <div className="post-draft-heading"><div><h2>Review placement and choose listing images</h2><p>The large preview below is the real Printify placement Goldie uses as the required reference for lifestyle mockups.</p></div>{drafts.filter(draft=>draft.status==="Created").length>1&&<button className="open-all-button" onClick={openAllDrafts}>Review all listings in Printify ↗</button>}</div>
+        {/* D520 - this rendered above the product cards, so a three-product
+            bundle got one "Recommended photos for Unisex Midweight Softstyle
+            Fleece Hoodie" floating over all three, and nothing at all for the
+            other two. It describes one product's photos; it belongs in that
+            product's card. */}
+        {(()=>{const sample=drafts.find(draft=>draft.id&&draft.printifyImages?.length),available=sample?.printifyImages?.length||0,selected=sample?.id?(printifyImageSelections[sample.id]??printifyImageIndices).length:0,guide=productPhotoGuide(templateDetails?.blueprintTitle||"",available);return <details className="recommended-listing-photos"><summary>Recommended photos for {templateDetails?.blueprintTitle||"this product"}</summary><p>{selected?`This batch currently uses ${selected} of ${available} available Printify views.`:`Goldie found ${available} Printify ${available===1?"view":"views"} and will start with the best available ${Math.min(guide.count,available)}.`} Change any selection below.</p><ul>{guide.items.map(item=><li key={item}>{item}</li>)}</ul><button type="button" className="panel-collapse-foot" onClick={event=>{const box=(event.currentTarget as HTMLElement).closest("details");if(box){(box as HTMLDetailsElement).open=false;box.scrollIntoView({block:"nearest"})}}}>Close recommended photos</button></details>})()}
+        {/* D518 - this sat at the very top of step 2, above the upload box: one
+            mockup set, asked before a single design existed, for a batch of three
+            different products - and a hoodie scene is not a tee scene. A mockup
+            set belongs to a product, so it lives inside that product's card,
+            beside the mockups it makes. */}
+        <MockupSetSelector firstRun={productFirstRun} productName={activeRecipe?.name||templateDetails?.blueprintTitle||""} value={mockupTheme} selectedIds={sharedMockups?.theme===mockupTheme?sharedMockups.ids:[]} savedValue={activeRecipe?.defaultMockupTheme||""} savedIds={activeRecipe?.mockupIds} onChange={(theme,ids)=>{setMockupTheme(theme);if(ids)setSharedMockups({theme,ids})}} saving={savingProductDefault==="mockups"} onSaveDefault={()=>void saveProductDefaults({defaultMockupTheme:mockupTheme,mockupIds:sharedMockups?.theme===mockupTheme?sharedMockups.ids:[]},"mockups")}/>
         <section className="batch-size-guide"><div><p className="mini-label">OPTIONAL · APPLY TO THE WHOLE BATCH</p><h3>Add one size guide to every Etsy listing</h3><span>Choose it once. Goldie attaches it to every listing in this batch automatically when you publish.</span></div><input ref={sizeGuidePicker} type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={event=>{const file=event.target.files?.[0];if(file)void applySizeGuide(file)}}/><button onClick={()=>sizeGuidePicker.current?.click()}>{sizeGuideName?"Replace size guide":"Choose size guide"}</button>{sizeGuideStatus&&<p role="status">{sizeGuideStatus}</p>}</section>
         {openAllMessage&&<p className="open-all-message" role="status">{openAllMessage}</p>}
         <div className="draft-card-grid">{drafts.map(draft=>{const design=files.find(file=>file.id===draft.clientId),selectedImages=draft.id?(printifyImageSelections[draft.id]??printifyImageIndices):printifyImageIndices;return <article id={`listing-images-${draft.clientId}`} className={`draft-card ${draft.status!=="Created"?"failed":""}`} key={draft.clientId}>
