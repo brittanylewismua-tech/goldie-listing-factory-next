@@ -1921,7 +1921,15 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
       const shortTitles=isActive?files.filter(file=>file.title.trim().length<100).length:0;
       return [
         {label:"Listings ready",value:started?plural(counts.drafts,"listing"):blank,done:counts.drafts>0,report:true},
-        {label:"Titles and tags",value:started?`${counts.titled} of ${counts.designs} written · ${counts.tagged} at 13 tags`:blank,detail:isActive&&shortTitles?`${shortTitles} ${shortTitles===1?"title is":"titles are"} under 100 characters`:undefined,done:started&&counts.designs>0&&counts.titled===counts.designs&&counts.tagged===counts.designs,report:true},
+        {label:"Titles and tags",value:started?(()=>{
+        /* D549 - her question, and she was right to ask it: "2 of 2 written · 1 at
+           13 tags. Is that supposed to say one of thirteen tags? How could there be
+           two titles written but only one tag?" It counted listings on the left and
+           listings on the right, but only the left side said so, so the right side
+           read as a tag count. Both sides count listings, out loud. */
+        if(counts.tagged===counts.designs&&counts.designs>0)return `${counts.titled} of ${counts.designs} titles · all 13 tags`;
+        return `${counts.titled} of ${counts.designs} titles · ${counts.tagged} of ${counts.designs} with all 13 tags`;
+      })():blank,detail:isActive&&shortTitles?`${shortTitles} ${shortTitles===1?"title is":"titles are"} under 100 characters`:undefined,done:started&&counts.designs>0&&counts.titled===counts.designs&&counts.tagged===counts.designs,report:true},
         /* D490 - the checklist said only that one or more selected listings needed
            a photo, making her go and find which, on a page where everything else
            counted precisely. createdListingsMissingImages already knows exactly
@@ -1955,7 +1963,15 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
          it shared with the description. The Etsy fields get a row too: during
          that phase both of the old rows pointed at content that was not even
          rendered, so pressing one threw the whole step back a phase. */
-      {label:"Write titles and tags",value:started?`${counts.titled} of ${counts.designs} written · ${counts.tagged} at 13 tags`:blank,done:started&&counts.designs>0&&counts.titled===counts.designs&&counts.tagged===counts.designs,task:"titles"},
+      {label:"Write titles and tags",value:started?(()=>{
+        /* D549 - her question, and she was right to ask it: "2 of 2 written · 1 at
+           13 tags. Is that supposed to say one of thirteen tags? How could there be
+           two titles written but only one tag?" It counted listings on the left and
+           listings on the right, but only the left side said so, so the right side
+           read as a tag count. Both sides count listings, out loud. */
+        if(counts.tagged===counts.designs&&counts.designs>0)return `${counts.titled} of ${counts.designs} titles · all 13 tags`;
+        return `${counts.titled} of ${counts.designs} titles · ${counts.tagged} of ${counts.designs} with all 13 tags`;
+      })():blank,done:started&&counts.designs>0&&counts.titled===counts.designs&&counts.tagged===counts.designs,task:"titles"},
       {label:"Edit description",value:counts.described?"Attached":started?"Not attached":blank,done:counts.described,task:"description"},
       {label:"Review Etsy category and fields",value:started?(()=>{
         if(!files.some(file=>file.etsy))return"Not created yet";

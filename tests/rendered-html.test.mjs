@@ -2099,8 +2099,12 @@ test("shows underfilled titles and tags as a non-blocking review state (fixes D6
   assert.match(app,/under 100 characters/);
   assert.match(app,/const shortTitles=isActive\?files\.filter\(file=>file\.title\.trim\(\)\.length<100\)\.length:0/,
     "the Titles and tags row counts the listings that need review");
-  assert.match(app,/\$\{counts\.tagged\} at 13 tags/);
-  assert.match(app,/\$\{counts\.titled\} of \$\{counts\.designs\} written · \$\{counts\.tagged\} at 13 tags/,
+  /* D549 - "2 of 2 written · 1 at 13 tags" counted listings on both sides but
+     only said so on one, so the right-hand number read as a tag count. Her
+     question: "is that supposed to say one of thirteen tags?" */
+  assert.match(app,/\$\{counts\.tagged\} of \$\{counts\.designs\} with all 13 tags/);
+  assert.doesNotMatch(app,/at 13 tags`/);
+  assert.match(app,/\$\{counts\.titled\} of \$\{counts\.designs\} titles · \$\{counts\.tagged\} of \$\{counts\.designs\} with all 13 tags/,
     "and must count them, the same as the titles line");
   /* D153 recoloured this from the gold-era #8a5a12 to the app's plum. The point
    * of D64 is that it is a distinct non-blocking review state, not that it is amber. */
