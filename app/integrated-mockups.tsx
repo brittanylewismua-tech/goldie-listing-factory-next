@@ -19,7 +19,34 @@ const dataUrl=(blob:Blob)=>new Promise<string>((resolve,reject)=>{const reader=n
 const foregroundCache=new Map<string,string[]>();
 function garmentKind(productName:string){const name=productName.toLowerCase();if(/hoodie|hooded/.test(name))return"hoodie";if(/sweatshirt|crewneck|sweater/.test(name))return"sweatshirt";if(/t[ -]?shirt|\btee\b/.test(name))return"t-shirt";return""}
 function isCalibratedSurface(kind:SurfaceKind){return["rigid-flat","t-shirt","sweatshirt","hoodie","other-apparel","apparel"].includes(kind)}
-function compatibleTemplate(template:Template,productName:string){const productKind=garmentKind(productName),templateKind=template.surfaceKind||"rigid-flat";if(!["t-shirt","sweatshirt","hoodie","other-apparel","apparel"].includes(templateKind))return true;if(!productKind)return templateKind==="other-apparel"||templateKind==="apparel";return templateKind===productKind||(templateKind==="apparel"&&productKind==="t-shirt")}
+/* D529 - a mug offered every t-shirt scene she owns, with no warning, and would
+   have put mug artwork on ten tee photos. This filter only ever restricted
+   apparel templates: a non-apparel template returned true for anything, and a
+   product with no garment kind - a mug, a poster - was told apparel scenes were
+   fine. Verified live on her Ceramic Mug batch: ten BACH TEES scenes offered.
+   Families have to match on both sides, not just one. */
+function productSurfaceFamily(productName:string){
+  const name=productName.toLowerCase();
+  if(garmentKind(name)||/shirt|tee|hoodie|sweatshirt|crewneck|tank|apparel/.test(name))return"apparel";
+  if(/mug|tumbler|bottle|can |cup|stein/.test(name))return"curved";
+  if(/poster|print|canvas|paper|card|sticker|towel|mat|puzzle/.test(name))return"flat";
+  return"";
+}
+function templateSurfaceFamily(kind:SurfaceKind){
+  if(["t-shirt","sweatshirt","hoodie","other-apparel","apparel"].includes(kind))return"apparel";
+  if(kind==="curved")return"curved";
+  return"flat";
+}
+function compatibleTemplate(template:Template,productName:string){
+  const productKind=garmentKind(productName),templateKind=template.surfaceKind||"rigid-flat";
+  const productFamily=productSurfaceFamily(productName),templateFamily=templateSurfaceFamily(templateKind);
+  /* An unrecognised product still sees everything - guessing wrong should not
+     hide her own scenes. A recognised one only sees its own surface. */
+  if(productFamily&&templateFamily!==productFamily)return false;
+  if(templateFamily!=="apparel")return true;
+  if(!productKind)return templateKind==="other-apparel"||templateKind==="apparel";
+  return templateKind===productKind||(templateKind==="apparel"&&["t-shirt","sweatshirt","hoodie"].includes(productKind))||templateKind==="other-apparel";
+}
 async function foregroundLayers(t:Template){if(!t.foregroundPrompt)return[];const cached=foregroundCache.get(t.id);if(cached)return cached;try{const response=await fetch("/api/mockups/analyze",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({imageUrl:new URL(t.src,window.location.origin).toString(),prompt:t.foregroundPrompt})}),payload=await response.json() as {masks?:Array<{url:string}>;error?:string};if(!response.ok)throw new Error(payload.error||`Could not safely layer ${t.name}.`);const urls=(payload.masks||[]).map(x=>x.url);foregroundCache.set(t.id,urls);return urls}catch{/* A highlight layer that will not load is a slightly flatter mockup, not a failed one. Cached so one outage does not retry on every scene. */foregroundCache.set(t.id,[]);return[]}}
 function area(c:Point[]){return Math.abs(c.reduce((n,[x,y],i)=>{const q=c[(i+1)%c.length];return n+x*q[1]-q[0]*y},0)/2)}
 /* D447 - a mockup must never fail to render.

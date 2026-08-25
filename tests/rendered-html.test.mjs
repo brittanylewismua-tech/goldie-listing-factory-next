@@ -4327,3 +4327,29 @@ test("the publish button refuses in advance, not after the click — D526/D527",
      the element was at 1506px and nothing moved. */
   assert.match(app, /while\(parent\)\{if\(parent instanceof HTMLDetailsElement\)parent\.open=true;parent=parent\.parentElement\}/);
 });
+
+test("a mug is never offered t-shirt scenes — D529", async () => {
+  const src = await readFile(new URL("../app/integrated-mockups.tsx", import.meta.url), "utf8");
+
+  /* Verified live on her Ceramic Mug batch: the mockup set list offered all ten
+     BACH TEES scenes, with no warning, which would have put mug artwork onto ten
+     t-shirt photos. compatibleTemplate only ever restricted apparel templates -
+     anything else returned true for any product - and a product with no garment
+     kind, like a mug, was told apparel scenes were fine. */
+  assert.match(src, /function productSurfaceFamily\(productName:string\)/);
+  assert.match(src, /function templateSurfaceFamily\(kind:SurfaceKind\)/);
+  assert.match(src, /if\(productFamily&&templateFamily!==productFamily\)return false/);
+
+  // Reproduce the rule here so a future edit cannot quietly widen it again.
+  const garmentKind = (n) => { n = n.toLowerCase(); if (/hoodie|hooded/.test(n)) return "hoodie"; if (/sweatshirt|crewneck|sweater/.test(n)) return "sweatshirt"; if (/t[ -]?shirt|\btee\b/.test(n)) return "t-shirt"; return ""; };
+  const pf = (n) => { n = n.toLowerCase(); if (garmentKind(n) || /shirt|tee|hoodie|sweatshirt|crewneck|tank|apparel/.test(n)) return "apparel"; if (/mug|tumbler|bottle|can |cup|stein/.test(n)) return "curved"; if (/poster|print|canvas|paper|card|sticker|towel|mat|puzzle/.test(n)) return "flat"; return ""; };
+  const tf = (k) => ["t-shirt", "sweatshirt", "hoodie", "other-apparel", "apparel"].includes(k) ? "apparel" : (k === "curved" ? "curved" : "flat");
+  const compat = (k, name) => { const pk = garmentKind(name), P = pf(name), T = tf(k); if (P && T !== P) return false; if (T !== "apparel") return true; if (!pk) return k === "other-apparel" || k === "apparel"; return k === pk || (k === "apparel" && ["t-shirt", "sweatshirt", "hoodie"].includes(pk)) || k === "other-apparel"; };
+
+  assert.equal(compat("apparel", "Ceramic Mug, (11oz, 15oz)"), false, "the bug she would have hit");
+  assert.equal(compat("curved", "Ceramic Mug, (11oz, 15oz)"), true);
+  assert.equal(compat("curved", "Unisex Heavy Cotton Tee"), false);
+  assert.equal(compat("apparel", "Unisex Heavy Cotton Tee"), true);
+  assert.equal(compat("apparel", "Matte Poster"), false);
+  assert.equal(compat("curved", "Something Unknown"), true, "an unrecognised product still sees its own library");
+});
