@@ -199,3 +199,27 @@ export function derivedPlacement(fit:ReferenceFit,box:ProductBox,bounds?:{left:n
   if(!Number.isFinite(adjustment.x)||!Number.isFinite(adjustment.y))return null;
   return {adjustment,quad:[[qx0,qy0],[qx1,qy0],[qx1,qy1],[qx0,qy1]] as Quad};
 }
+
+
+/* D471 - when the scene's printable face is already known, the placement is a
+ * direct copy: the design covers the same fraction of that face, at the same
+ * centre, as it does of the face in the Printify preview.
+ *
+ * This is what went wrong a moment ago. The size was worked out against the whole
+ * product as segmentation found it, and then drawn into the calibrated face -
+ * two different rectangles - so the design came out roughly a third of the size
+ * it should have been. Whichever rectangle the artwork is drawn into has to be
+ * the rectangle its size was measured against.
+ */
+export function placementInFace(fit: ReferenceFit, bounds?: { left: number; top: number; right: number; bottom: number }): Adjustment | null {
+  const artWidth = Math.max(.05, (bounds?.right ?? 1) - (bounds?.left ?? 0));
+  const artCentreX = ((bounds?.left ?? 0) + (bounds?.right ?? 1)) / 2;
+  const artCentreY = ((bounds?.top ?? 0) + (bounds?.bottom ?? 1)) / 2;
+  const scale = fit.widthRatio / artWidth;
+  if (!Number.isFinite(scale) || scale <= 0 || scale > 8) return null;
+  return {
+    scale,
+    x: fit.centreX - .5 - (artCentreX - .5) * scale,
+    y: fit.centreY - .5 - (artCentreY - .5) * scale,
+  };
+}

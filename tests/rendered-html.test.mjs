@@ -3431,3 +3431,30 @@ test("the design matches the Printify placement, measured in the same frame — 
   assert.match(placement, /\} else \{/);
   assert.match(integrated, /catch\{\/\* No face on the preview just means the whole product is the frame\. \*\/\}/);
 });
+
+test("the design covers the same share of the face as Printify shows — D471", async () => {
+  const { placementInFace } = await import("../app/mockups/reference-placement.ts");
+  const integrated = await readFile(new URL("../app/integrated-mockups.tsx", import.meta.url), "utf8");
+
+  /* Measured off her real mug draft: in the Printify preview the design covers
+     99.7% of the mug's printable face, dead centre. The mockup rendered it at
+     roughly a third of that.
+     
+     The measurement was right; the pairing was not. The size was worked out
+     against the whole mug as segmentation found it, then drawn into the much
+     smaller calibrated face. Whichever rectangle the artwork is drawn into has to
+     be the one its size was measured against. */
+  const fit = { widthRatio: 0.997, centreX: 0.499, centreY: 0.499 };
+  const bounds = { left: 0.138671875, top: 0.01171875, right: 0.8828125, bottom: 1 };
+  const placed = placementInFace(fit, bounds);
+  const artOfCanvas = bounds.right - bounds.left;
+  assert.equal(Number((placed.scale * artOfCanvas).toFixed(3)), 0.997,
+    "the design covers the same share of the face Printify shows");
+  assert.ok(Math.abs(placed.x) < 0.02 && Math.abs(placed.y) < 0.02, "and sits centred, as Printify has it");
+
+  // A calibrated scene takes this path instead of deriving against the product box.
+  assert.match(integrated, /if\(fit&&isCalibrated\(template\)\)\{[\s\S]{0,160}placementInFace\(fit,artworkBounds\)/);
+
+  // An absurd result is refused rather than rendered.
+  assert.equal(placementInFace({ widthRatio: 9, centreX: .5, centreY: .5 }, bounds), null);
+});

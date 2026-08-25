@@ -7,7 +7,7 @@ import { runBounded } from "./bounded-work";
 import { isCalibratedQuad } from "./mockups/calibration";
 import type { ResolvedPlacement } from "./placement-math";
 import type { ArtworkBounds } from "./design-artwork";
-import { measureReference, productBoxInScene, derivedPlacement, type ProductBox, type ReferenceFit } from "./mockups/reference-placement";
+import { measureReference, productBoxInScene, derivedPlacement, placementInFace, type ProductBox, type ReferenceFit } from "./mockups/reference-placement";
 
 type Point=[number,number]; type SurfaceKind="rigid-flat"|"t-shirt"|"sweatshirt"|"hoodie"|"other-apparel"|"apparel"|"soft-goods"|"curved"|"irregular";
 type Template={id:string;name:string;theme:string;src:string;corners:[Point,Point,Point,Point];normalized?:boolean;surfaceKind?:SurfaceKind;foregroundPrompt?:string};
@@ -227,6 +227,14 @@ let previewFace:{left:number;top:number;right:number;bottom:number}|undefined;
              the offsets are its offsets. Measured on her mug: Printify places at
              .531 of the print area and her artwork fills .744 of its canvas, so
              the design is 39.5% of the mug's face. */
+          /* D471 - a scene that knows its own printable face needs no derivation:
+             the design covers the same fraction of that face as it does of the face
+             in the Printify preview. Deriving against the whole product and then
+             drawing into the face is what made the mug a third of its proper size. */
+          if(fit&&isCalibrated(template)){
+            const direct=placementInFace(fit,artworkBounds);
+            if(direct)return rigid(design,template,direct);
+          }
           const derived=fit?await derivedFor(template,fit):null;return derived?rigid(design,template,derived.adjustment,derived.quad):rigid(design,template,placementAdjustment(placement,template.surfaceKind||"rigid-flat"))};
         const result=await withRecovery(async()=>{
           /* D448 - every surface composites now. The generative renderer repainted
