@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
 
 type RuntimeEnv={DB?:D1Database};
-type BatchListState={activeBundle?:{name?:string};bundleRecipes?:unknown[];keptAsDrafts?:boolean;designs?:Array<{name?:string}>;drafts?:Array<{previewUrl?:string}>;batchReceipt?:{publishedCount?:number}};
+type BatchListState={templateDetails?:{previewImage?:string;previewImages?:string[]};activeBundle?:{name?:string};bundleRecipes?:unknown[];keptAsDrafts?:boolean;designs?:Array<{name?:string}>;drafts?:Array<{previewUrl?:string}>;batchReceipt?:{publishedCount?:number}};
 function db(){return (env as unknown as RuntimeEnv).DB}
 async function ensure(database:D1Database){await database.prepare("CREATE TABLE IF NOT EXISTS listing_batches (id TEXT PRIMARY KEY, user_id TEXT NOT NULL, status TEXT NOT NULL, step TEXT NOT NULL, setup_name TEXT NOT NULL DEFAULT '', product_title TEXT NOT NULL DEFAULT '', design_count INTEGER NOT NULL DEFAULT 0, state_json TEXT NOT NULL DEFAULT '{}', created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)").run();await database.prepare("CREATE INDEX IF NOT EXISTS idx_listing_batches_user_updated ON listing_batches(user_id, updated_at)").run()}
 
@@ -25,11 +25,20 @@ function designLabel(name:string){
 function batchListItem(row:Record<string,unknown>,publishedByBatch:Record<string,number>={}){let state:BatchListState={};try{state=JSON.parse(String(row.state_json||"{}")) as BatchListState}catch{/* A damaged snapshot should not hide the rest of Batch History. */}const designs=(state.designs||[]).map(design=>designLabel(String(design.name||""))).filter(Boolean);const designName=designs.length>1?`${designs[0]} + ${designs.length-1} more`:designs[0];const sellerNamed=state.keptAsDrafts&&String(row.setup_name||"").trim();return {id:row.id,status:row.status,step:row.step,setup_name:row.setup_name,/* A bundle batch stored the ACTIVE product's blueprint here, so Batch History
    labelled a three-product bundle "Unisex Midweight Softstyle Fleece Hoodie" —
    naming one member as though it were the whole batch. */
-  product_title:(state.activeBundle&&(state.bundleRecipes||[]).length>1)?`${(state.bundleRecipes||[]).length} products`:row.product_title,design_count:row.design_count,created_at:row.created_at,updated_at:row.updated_at,display_name:sellerNamed||designName||row.setup_name||row.product_title||"Untitled batch",/* D225 · Batch History labelled every unpublished batch "DRAFTS READY", whether
+  product_title:(state.activeBundle&&(state.bundleRecipes||[]).length>1)?`${(state.bundleRecipes||[]).length} products`:row.product_title,design_count:row.design_count,created_at:row.created_at,updated_at:row.updated_at,/* D510 - three batches of the same bundle showed three different names: one
+     read "Gildan Tee" over a hoodie thumbnail while the others read "ZZ TEST
+     BUNDLE". setup_name holds the saved product a batch happened to start from,
+     which for a bundle is one member of three and not what the batch is. A
+     bundle is named by its bundle. */
+  display_name:sellerNamed||(state.activeBundle&&(state.bundleRecipes||[]).length>1?String(state.activeBundle.name||"").trim():"")||designName||row.setup_name||row.product_title||"Untitled batch",/* D225 · Batch History labelled every unpublished batch "DRAFTS READY", whether
      or not a single draft existed. Measured across all 17 saved batches: not one
      had a draft in its snapshot, and all 17 claimed drafts were ready. The count
      is right here in the state, so report it. */
-  draft_count:(state.drafts||[]).length,thumbnail_url:(state.drafts||[]).find(draft=>draft.previewUrl)?.previewUrl||"",/* D481 - this counted only what the browser had managed to autosave into the
+  draft_count:(state.drafts||[]).length,/* D511 - a batch minted by the bundle run has no drafts yet, so this found no
+     preview and the row showed a grey placeholder icon - on the very screen whose
+     job is to let her recognise a batch at a glance. The product's own photo is
+     in the snapshot; use it until a draft preview exists. */
+  thumbnail_url:(state.drafts||[]).find(draft=>draft.previewUrl)?.previewUrl||state.templateDetails?.previewImage||(state.templateDetails?.previewImages||[]).find(Boolean)||"",/* D481 - this counted only what the browser had managed to autosave into the
      batch snapshot, so straight after a publish it read zero: the goal line said
      "0 of your 20 listings this week" on a page headed "2 listings are live on
      Etsy". How many listings are live is a fact about Etsy, not about whether a

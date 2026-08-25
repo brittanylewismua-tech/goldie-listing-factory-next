@@ -2400,7 +2400,9 @@ test("Batch History does not label a bundle with one member's product — D196",
    * list showed "Unisex Midweight Softstyle Fleece Hoodie · 3 designs" for a
    * three-product bundle — naming one member as though it were the whole batch.
    * The row already parses state_json, so the bundle was knowable all along. */
-  assert.match(route, /type BatchListState=\{activeBundle\?:\{name\?:string\};bundleRecipes\?:unknown\[\]/);
+  /* D511 added templateDetails to this shape so a batch with no drafts yet can
+     still show its product's photo instead of a grey placeholder. */
+  assert.match(route, /type BatchListState=\{templateDetails\?:\{previewImage\?:string;previewImages\?:string\[\]\};activeBundle\?:\{name\?:string\};bundleRecipes\?:unknown\[\]/);
   assert.match(route, /state\.activeBundle&&\(state\.bundleRecipes\|\|\[\]\)\.length>1\)\?`\$\{\(state\.bundleRecipes\|\|\[\]\)\.length\} products`/);
 });
 
@@ -4148,4 +4150,31 @@ test("step 2 lists no products, and a mockup set previews ten — D507/D508", as
   assert.match(mockups, /Show \$\{items\.length-SET_PREVIEW\} more in this set/);
   assert.match(mockups, /Show fewer/);
   assert.match(mockupCss, /\.thumbs\{grid-template-columns:repeat\(auto-fill,minmax\(112px,1fr\)\)/);
+});
+
+test("low resolution shows the table and never blocks — D509/D510/D511", async () => {
+  const [app, batches] = await Promise.all([
+    readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/batches/route.ts", import.meta.url), "utf8"),
+  ]);
+
+  /* D509 · A flagged design in a bundle got a blocking dialog of sentences - one
+     run-on line per design per product, no sizes, no way past it. The resolution
+     table already existed for the single-product flow: design, uploaded size,
+     what Printify recommends, and Proceed anyway. Bundles never reached it. */
+  assert.doesNotMatch(app, /stopWith\("Choose what to do with every design flagged below\."/,
+    "low resolution is a judgement for her, not a wall");
+  assert.match(app, /if\(undecided\.length\)\{setPixelWarningOpen\(true\);return\}/);
+  assert.match(app, /activeBundle&&bundleQualityIssues\.length\n?\s*\?bundleQualityIssues\.map\(issue=>\(\{id:issue\.key/,
+    "and the table carries every product a design is undersized for");
+  assert.match(app, /if\(undecided\.length\)\{decideAllQuality\("include"\);setPreflightOpen\(true\);return\}/,
+    "Proceed anyway is the decision, not a trip back to make it again");
+
+  /* D510 · Three batches of one bundle showed three different names, because
+     setup_name is the saved product a batch started from - one member of three. */
+  assert.match(batches, /state\.activeBundle&&\(state\.bundleRecipes\|\|\[\]\)\.length>1\?String\(state\.activeBundle\.name\|\|""\)\.trim\(\):""/);
+
+  /* D511 · A batch minted by the bundle run has no drafts yet, so Batch History
+     showed a grey placeholder on the screen meant for recognising batches. */
+  assert.match(batches, /state\.templateDetails\?\.previewImage\|\|\(state\.templateDetails\?\.previewImages\|\|\[\]\)\.find\(Boolean\)/);
 });

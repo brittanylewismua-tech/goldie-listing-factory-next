@@ -241,8 +241,12 @@ test("warns before continuing with designs below Printify's recommended pixels",
   assert.match(page, /One or more of these designs fall below Printify’s pixel size recommendations for this product\./);
   assert.match(page, /Proceed anyway/);
   assert.match(page, /className="pixel-comparison-head"[\s\S]*Uploaded size[\s\S]*Printify recommends/);
-  assert.match(page, /belowRecommendedPixels\.map\(file=>/);
-  assert.match(page, /recommendedPixelSize\.width\.toLocaleString\(\)/);
+  /* D509 - the same table now serves a bundle, where a design can be undersized
+     for some products and not others, so the rows are built once from whichever
+     source applies and both still carry the recommended size. */
+  assert.match(page, /belowRecommendedPixels\.map\(file=>\(\{id:file\.id/);
+  assert.match(page, /needWidth:recommendedPixelSize\.width,needHeight:recommendedPixelSize\.height/);
+  assert.match(page, /bundleQualityIssues\.map\(issue=>\(\{id:issue\.key/);
   assert.match(css, /\.app-shell \.pixel-warning-inline\{/);
   assert.match(css, /\.app-shell \.pixel-warning-modal \.pixel-proceed\{/);
   assert.match(css, /\.app-shell \.pixel-comparison-row\{display:grid;grid-template-columns:/);
