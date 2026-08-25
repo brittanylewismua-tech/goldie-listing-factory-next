@@ -118,3 +118,45 @@ test("no capability is wired up only halfway", async () => {
   // And first run is a fact about the product, not about how it was opened.
   assert.doesNotMatch(app, /const productFirstRun=Boolean\(activeRecipe\)&&!activeBundle/);
 });
+
+/* D521 · The single-product flow is the specification. A bundle applies it - it
+ * does not get its own rules. So every block on a step belongs in exactly one of
+ * two places, and which one is decided by what the block is about, not by where
+ * it happened to be written:
+ *
+ *   about one product  -> inside that product's card
+ *   about the step     -> below the cards, once
+ *
+ * Getting this wrong is what put a size guide labelled "apply to the whole batch"
+ * inside the hoodie's card, one product's photo advice above all three cards, and
+ * the step's forward button inside whichever product was open. */
+test("step-level controls sit below the cards, product-level inside them", async () => {
+  const app = await read("app/listing-factory-app.tsx");
+  const span = (marker, end) => {
+    const i = app.indexOf(marker);
+    const j = end ? app.indexOf(end, i + 10) : app.length;
+    return app.slice(i, j > i ? j : app.length);
+  };
+  const parts = (seg) => {
+    const at = seg.indexOf(",false,");
+    return at < 0 ? { body: seg, footer: "" } : { body: seg.slice(0, at), footer: seg.slice(at) };
+  };
+
+  const images = parts(span('stepProductCards(bundleCardStatus("images"),\n', 'stepProductCards(bundleCardStatus("listing")'));
+  for (const perProduct of ["recommended-listing-photos", "MockupSetSelector", "draft-card-grid"]) {
+    assert.ok(images.body.includes(perProduct), `${perProduct} is about one product`);
+    assert.ok(!images.footer.includes(perProduct), `${perProduct} must not sit below the cards`);
+  }
+  for (const perStep of ["batch-size-guide", "workflow-next", "image-step-blocker"]) {
+    assert.ok(images.footer.includes(perStep), `${perStep} is about the step`);
+    assert.ok(!images.body.includes(perStep), `${perStep} must not sit inside one product's card`);
+  }
+
+  const listing = parts(span('stepProductCards(bundleCardStatus("listing")', 'stepProductCards(bundleCardStatus("publish")'));
+  assert.ok(listing.footer.includes("workflow-next"), "step 3's forward button belongs to the step");
+  assert.ok(!listing.body.includes('className="workflow-next"'));
+  assert.ok(listing.body.includes("listing-editor"), "the titles editor is that product's own");
+
+  // Step 4 has no per-product body at all: reviewing and publishing cover the batch.
+  assert.match(app, /stepProductCards\(bundleCardStatus\("publish"\),null,false,</);
+});
