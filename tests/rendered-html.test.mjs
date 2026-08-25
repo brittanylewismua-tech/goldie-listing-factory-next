@@ -4041,9 +4041,33 @@ test("step 3's rows match step 1's, captured from both live pages — D502", asy
     "the Change exists on every row and disables rather than disappearing");
   assert.match(app, /title=\{!open&&!reachable\?`Finish \$\{list\[index-1\]\?\.name\|\|"the product above"\} first`:undefined\}/,
     "and the waiting reason rides on it");
-  assert.match(app, /onClick=\{\(\)=>\{if\(open\)\{.*step-product-body.*scrollIntoView/,
-    "on the open product Change goes to that product's editor");
+  /* D503 - the whole row opens, as step 1's does, so the behaviour lives in one
+     handler that the row and its button both call. */
+  assert.match(app, /const openRow=\(\)=>\{if\(open\)\{.*step-product-body.*scrollIntoView/,
+    "on the open product it goes to that product's editor");
+  assert.match(app, /onClick=\{event=>\{event\.stopPropagation\(\);openRow\(\)\}\}/,
+    "the button must not fire the row handler twice");
 
   // The separate waiting paragraph and its styling are gone.
   assert.doesNotMatch(app, /className="step-product-waiting"/);
+});
+
+test("the row itself opens, exactly as step 1's does — D503", async () => {
+  const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+
+  /* Captured from step 1's live DOM:
+       <div class="batch-product-row settled  clickable" role="button"
+            tabindex="0" aria-expanded="false"> … <button class="row-open">
+     Mine were plain divs whose only control was the button, so clicking the row
+     did nothing and none of it was reachable by keyboard. */
+  assert.match(app, /className=\{`batch-product-row \$\{row\.done\?"settled":""\} \$\{switchingProduct\|\|\(!open&&!reachable\)\?"":"clickable"\}`\}/);
+  assert.match(app, /role=\{switchingProduct\|\|\(!open&&!reachable\)\?undefined:"button"\}/);
+  assert.match(app, /tabIndex=\{switchingProduct\|\|\(!open&&!reachable\)\?undefined:0\}/);
+  assert.match(app, /aria-expanded=\{open\}/);
+  assert.match(app, /if\(event\.key==="Enter"\|\|event\.key===" "\)\{event\.preventDefault\(\);openRow\(\)\}/,
+    "keyboard reaches it too, as step 1 does");
+  assert.match(app, /<button type="button" className="row-open"/);
+
+  // A row that cannot be used is not announced as a button.
+  assert.match(app, /\?undefined:"button"\}/);
 });

@@ -1837,7 +1837,19 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
               single-product batch showed none on steps 2-4 while step 1 shows them
               for one product just the same. A card gets its rows either way. */}
           {(()=>{const rows=productRows(recipe,index===bundleIndex);if(!rows.length)return null;
-            return <div className="batch-product-rows">{rows.map(row=><div key={row.label} className={`batch-product-row ${row.done?"settled":""}`}>
+            /* D503 - step 1's row is `batch-product-row settled clickable` with
+               role=button, tabindex 0 and aria-expanded, so the whole row opens,
+               by mouse or keyboard, and its Change carries class row-open. Mine
+               were plain divs whose only control was the button, so clicking the
+               row did nothing and nothing was reachable by keyboard. Same row. */
+            const openRow=()=>{if(open){(document.querySelector(".step-product-card.is-open .step-product-body") as HTMLElement|null)?.scrollIntoView({block:"start"});return}if(reachable)openBundleProduct(index)};
+            return <div className="batch-product-rows">{rows.map(row=><div key={row.label}
+              className={`batch-product-row ${row.done?"settled":""} ${switchingProduct||(!open&&!reachable)?"":"clickable"}`}
+              role={switchingProduct||(!open&&!reachable)?undefined:"button"}
+              tabIndex={switchingProduct||(!open&&!reachable)?undefined:0}
+              aria-expanded={open}
+              onClick={openRow}
+              onKeyDown={(event:React.KeyboardEvent)=>{if(event.key==="Enter"||event.key===" "){event.preventDefault();openRow()}}}>
               <span className="row-mark" aria-hidden="true">{row.done?"✓":"!"}</span>
               <span className="row-label">{row.label}</span>
               <span className="row-value">{row.value}{row.detail?<small>{row.detail}</small>:null}</span>
@@ -1847,10 +1859,10 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
                   card's rows had no control at all and a product waiting its turn
                   had a "Finish Gildan Tee first" line step 1 never shows. Every
                   row carries Change; it says why when it cannot be used. */}
-              <button type="button"
+              <button type="button" className="row-open"
                 disabled={Boolean(switchingProduct)||(!open&&!reachable)}
                 title={!open&&!reachable?`Finish ${list[index-1]?.name||"the product above"} first`:undefined}
-                onClick={()=>{if(open){(document.querySelector(".step-product-card.is-open .step-product-body") as HTMLElement|null)?.scrollIntoView({block:"start"});return}openBundleProduct(index)}}>
+                onClick={event=>{event.stopPropagation();openRow()}}>
                 {opening?"Opening…":"Change"}
               </button>
             </div>)}</div>;
