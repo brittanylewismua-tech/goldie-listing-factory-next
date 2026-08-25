@@ -1582,7 +1582,16 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
            to catch, and a template literal hides it from that check. */
         const toneClass=status.tone==="ready"?"tone-ready":status.tone==="attention"?"tone-attention":"tone-waiting";
         const photo=product?pickProductPhoto(product):"";
-        const reachable=many&&!open&&Boolean(bundleBatchIds[recipe.id]||index===bundleIndex+1);
+        /* D482 - the next product in a bundle offered "Open Gildan Tee" from the
+           very first step, before the product she was actually working on had
+           produced a single draft. Pressing it ran continueBundle, which carries
+           the designs forward, mints a fresh batch and jumps to review - so a
+           half-finished hoodie was abandoned and the tee opened at a step with
+           nothing in it, which then fell back to the start. That handoff belongs
+           to the finish receipt, at the point the current product is actually
+           done. A product already underway can still be reopened at any time;
+           what cannot happen is starting the next one early. */
+        const reachable=many&&!open&&Boolean(bundleBatchIds[recipe.id]||(index===bundleIndex+1&&batchReceipt));
         const opening=switchingProduct===recipe.id;
         return <article className={`batch-product-card step-product-card ${open?"is-open":"is-closed"} ${status.tone==="ready"?"is-ready":"needs-setup"} ${many?"in-batch":""}`} key={recipe.id}>
           <header

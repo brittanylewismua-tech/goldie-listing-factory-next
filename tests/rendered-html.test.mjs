@@ -3645,3 +3645,20 @@ test("the finish receipt reflects what actually happened — D481", async () => 
   // "Ready for final review" has no business sitting above a finished batch.
   assert.match(app, /allCreatedListingsHaveImages\(\)&&!batchReceipt&&/);
 });
+
+test("a bundle cannot start its next product early — D482", async () => {
+  const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+
+  /* On step two, before a single draft existed, the bundle showed "Open Gildan
+     Tee" for the next product. Pressing it ran continueBundle: designs carried
+     forward, a fresh batch minted, jump to review - abandoning the half-built
+     hoodie and opening the tee at a step with nothing in it, which fell back to
+     the start. That handoff belongs to the finish receipt. */
+  assert.match(app, /index===bundleIndex\+1&&batchReceipt/);
+  assert.doesNotMatch(app, /bundleBatchIds\[recipe\.id\]\|\|index===bundleIndex\+1\)/,
+    "being next in line is not on its own a reason to open a product");
+
+  // A product already underway stays reopenable, and a card is never left inert.
+  assert.match(app, /Boolean\(bundleBatchIds\[recipe\.id\]\|\|/);
+  assert.match(app, /Finish \{list\[index-1\]\?\.name\|\|"the product above"\} first/);
+});
