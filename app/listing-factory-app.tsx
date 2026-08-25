@@ -1760,7 +1760,16 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
          empty picker after the server recovered the profile from Etsy, still
          works, because in that case there is nothing to keep. */
       if(verifiedProfileId)setEtsyShippingProfileId(current=>current||verifiedProfileId);
-      setTemplateDetails(result.product);setDescription(result.product.description||"");if(result.product.standardShipping!=null)setPricing(current=>({...current,shippingCost:result.product!.standardShipping!,shippingCharged:0}));setVariantPrices(Object.fromEntries((result.product.variants||[]).map(variant=>[String(variant.id),variant.templatePrice])));setPricingApproved(false); return result.product;
+      setTemplateDetails(result.product);setDescription(result.product.description||"");if(result.product.standardShipping!=null)setPricing(current=>({...current,shippingCost:result.product!.standardShipping!,shippingCharged:0}));setVariantPrices(Object.fromEntries((result.product.variants||[]).map(variant=>[String(variant.id),variant.templatePrice])));/* D472 - loading the Printify template used to clear the pricing approval
+   unconditionally. Choosing a saved product loads its template, so every batch
+   began un-approved no matter what the product had saved - and the control to
+   approve again sits inside the collapsed Shipping section, so Next step
+   refused with nothing on screen to press. Reproduced on a clean batch with a
+   product carrying a $12 profit target and a valid Etsy profile.
+
+   A product that already carries approved pricing keeps it. Approval is only
+   cleared for a product that has none saved, which is the case it was for. */
+setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecipe?.defaultProfitTarget,etsyShippingProfileId:activeRecipe?.etsyShippingProfileId})); return result.product;
     } catch (error) { if(requestVersion===templateLoadVersion.current)setTemplateError(error instanceof Error ? error.message : "The template could not be loaded."); return null; }
     finally { if(requestVersion===templateLoadVersion.current)setLoadingTemplate(false); }
   }

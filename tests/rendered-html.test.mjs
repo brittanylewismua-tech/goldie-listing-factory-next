@@ -3458,3 +3458,21 @@ test("the design covers the same share of the face as Printify shows — D471", 
   // An absurd result is refused rather than rendered.
   assert.equal(placementInFace({ widthRatio: 9, centreX: .5, centreY: .5 }, bounds), null);
 });
+
+test("choosing a saved product keeps its pricing approval — D472", async () => {
+  const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+
+  /* Reproduced on a clean batch, first attempt, with a product carrying a $12
+     profit target and a valid Etsy shipping profile: all four rows showed green,
+     Next step was enabled, and pressing it refused with "Approve the item prices
+     and shipping on the product step."
+     
+     Choosing a saved product loads its Printify template, and that load cleared
+     the approval unconditionally - so every batch began un-approved regardless of
+     what the product had saved. The control to approve again lives inside the
+     collapsed Shipping section, so there was nothing on screen to press. */
+  assert.doesNotMatch(app, /variant\.templatePrice\]\)\)\);setPricingApproved\(false\)/,
+    "loading a template must not throw away a saved approval");
+  assert.match(app, /setPricingApproved\(recipeCarriesApprovedPricing\(\{defaultProfitTarget:activeRecipe\?\.defaultProfitTarget,etsyShippingProfileId:activeRecipe\?\.etsyShippingProfileId\}\)\)/,
+    "a product with saved pricing stays approved; one without still has to approve once");
+});
