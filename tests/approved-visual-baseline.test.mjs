@@ -1477,7 +1477,9 @@ test("D205: establishing a facet refreshes the saved-product tiles", async () =>
      list once on mount and establish() never told it anything had changed. */
   assert.match(app, /const \[savedRevision,setSavedRevision\]=useState\(0\);/);
   assert.match(app, /setSavedRevision\(current=>current\+1\);/, "establish bumps the revision");
-  assert.match(app, /<SavedWorkflow savedRevision=\{savedRevision\}/, "and passes it down");
+  /* D523 added bundleChosen ahead of it; what matters is that the revision is
+     still handed to the same component. */
+  assert.match(app, /<SavedWorkflow [\s\S]{0,160}?savedRevision=\{savedRevision\}/, "and passes it down");
 
   // The bump must land inside establish(), after the write.
   const establish = app.slice(app.indexOf("async function establish("));

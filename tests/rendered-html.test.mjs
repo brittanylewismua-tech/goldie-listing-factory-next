@@ -4268,3 +4268,25 @@ test("an open product card does not run to four screens — D522", async () => {
   assert.match(css, /\.photo-order-strip img\{max-height:74px/);
   assert.match(css, /\.draft-card-grid\{gap:14px\}/);
 });
+
+test("a decided batch does not lead with the picker, and step 3 opens compact — D523/D524", async () => {
+  const [app, tools] = await Promise.all([
+    readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/factory-tools.tsx", import.meta.url), "utf8"),
+  ]);
+
+  /* Measured live: on a batch whose bundle is already chosen, step 1 led with the
+     saved-products picker and her three product cards started at 1099px, below
+     the fold. The choice is made; the picker is how you change it. */
+  assert.match(tools, /bundleChosen\?:boolean;/);
+  assert.match(tools, /function LibraryShell\(\{collapsed,children\}/);
+  assert.match(tools, /<LibraryShell collapsed=\{props\.bundleChosen\}>/);
+  assert.match(tools, /Change the products in this batch/);
+  assert.match(app, /<SavedWorkflow bundleChosen=\{Boolean\(activeBundle&&bundleRecipes\.length>1\)\}/);
+
+  /* D524 - step 3's sections opened themselves, so one product's card measured
+     2237px and the other two sat below it. They open when she opens them. */
+  assert.doesNotMatch(app, /<details className="batch-title-builder listing-section" open>/);
+  assert.doesNotMatch(app, /<details className="listing-section design-table-section" open>/);
+  assert.match(app, /<details className="batch-title-builder listing-section">/);
+});

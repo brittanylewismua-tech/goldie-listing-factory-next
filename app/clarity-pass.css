@@ -2790,3 +2790,9 @@ body{min-width:1180px!important}
 .app-shell .step-product-card .photo-order-strip img{max-height:74px;object-fit:contain}
 .app-shell .step-product-card .photo-order-heading{padding-bottom:4px}
 .app-shell .step-product-card .draft-card-grid{gap:14px}
+
+/* D523 - the saved-products picker becomes a way to change the batch, not the
+   first thing on a step whose products are already decided. */
+.app-shell .recipe-library-change>summary{display:flex;align-items:center;gap:8px;margin:0 0 6px;padding:10px 14px;border:1px solid rgba(91,48,79,.16);border-radius:12px;background:rgba(255,255,255,.5);cursor:pointer;list-style:none;font:800 12px/1 "Manrope",system-ui,sans-serif;letter-spacing:.04em;color:#4c293f}
+.app-shell .recipe-library-change>summary::-webkit-details-marker{display:none}
+.app-shell .recipe-library-change>summary::after{content:"⌄";margin-left:auto;font-size:1rem}
