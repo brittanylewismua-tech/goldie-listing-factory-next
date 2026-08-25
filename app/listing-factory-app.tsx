@@ -1329,9 +1329,16 @@ export default function ListingFactoryApp() {
     };
     return()=>{channel.close();batchChannel.current=null};
   },[batchHeldByAnotherTab]);
+  /* D501 - this ran on every autosave, so it asked the other tabs who owns this
+     batch once per 700ms while she typed, and cleared the held flag each time -
+     a held tab could have un-held itself off the back of a save it did not make.
+     Whether another tab owns this batch can only change when the batch does. */
+  const pingedBatch=useRef("");
   useEffect(()=>{
     const id=batchIdRef.current;
     if(!id||!batchChannel.current)return;
+    if(pingedBatch.current===id)return;
+    pingedBatch.current=id;
     setBatchHeldByAnotherTab(false);
     batchChannel.current.postMessage({type:"ping",batchId:id,tabId:tabId.current});
   },[savedRevision,restoringBatch]);
@@ -1736,7 +1743,11 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
       if(Object.keys(loaded).length)setBundleBatchSummary(current=>({...current,...loaded}));
     });
     return()=>{alive=false};
-  },[activeBundle,bundleRecipes,activeRecipe,bundleBatchIds,savedRevision]);
+    /* D501 - savedRevision was in here, so every autosave - one per 700ms while
+       she types a title - refetched every other product's batch. The other
+       products' saved work can only change when she is working on one of them,
+       which means when the active product changes. That is what this watches. */
+  },[activeBundle,bundleRecipes,activeRecipe,bundleBatchIds]);
 
   function productRows(recipe:Recipe,isActive:boolean):Array<{label:string;value:string;detail?:string;done:boolean}>{
     const mine=isActive
@@ -1822,7 +1833,10 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
           {/* D499 - the same rows step 1 gives every product, on every step. The
               product being worked also shows its editor underneath them; the rest
               show their rows and a Change that opens them here. */}
-          {many&&(()=>{const rows=productRows(recipe,index===bundleIndex);if(!rows.length)return null;
+          {/* D501 - the rows were gated on there being more than one product, so a
+              single-product batch showed none on steps 2-4 while step 1 shows them
+              for one product just the same. A card gets its rows either way. */}
+          {(()=>{const rows=productRows(recipe,index===bundleIndex);if(!rows.length)return null;
             return <div className="batch-product-rows">{rows.map(row=><div key={row.label} className={`batch-product-row ${row.done?"settled":""}`}>
               <span className="row-mark" aria-hidden="true">{row.done?"✓":"!"}</span>
               <span className="row-label">{row.label}</span>

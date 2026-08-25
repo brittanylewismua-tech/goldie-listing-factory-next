@@ -3966,7 +3966,8 @@ test("every product shows the same rows on every step — D498/D499", async () =
   assert.match(app, /function productRows\(recipe:Recipe,isActive:boolean\)/);
   assert.match(app, /const \[bundleBatchSummary,setBundleBatchSummary\]=useState/,
     "the other products' work lives in their own batches and has to be read from them");
-  assert.match(app, /\{many&&\(\(\)=>\{const rows=productRows\(recipe,index===bundleIndex\)/);
+  assert.match(app, /\{\(\(\)=>\{const rows=productRows\(recipe,index===bundleIndex\)/,
+    "D501 - a single-product batch gets its rows too, as step 1 gives them");
   assert.match(app, /<div className="batch-product-rows">\{rows\.map/);
   assert.match(app, /<span className="row-mark" aria-hidden="true">\{row\.done\?"✓":"!"\}<\/span>/,
     "the same row markup step 1 uses");
@@ -4002,4 +4003,24 @@ test("no product on any step falls back to a bare header — D500", async () => 
 
   // An unstarted product says so rather than claiming zero of zero.
   assert.equal((fn.match(/"Not started yet"/g) || []).length, 6, "Titles is built in both the step 3 and step 4 row sets");
+});
+
+test("the bundle cards do not churn the network or the tab claim — D501", async () => {
+  const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+
+  /* Both of these ran off savedRevision, which ticks on every autosave - once per
+     700ms while she types a title. The summary refetched every other product's
+     batch on each tick, and the tab claim re-broadcast and cleared its held flag
+     on each tick, so a held tab could un-hold itself off a save it never made. */
+  assert.match(app, /\},\[activeBundle,bundleRecipes,activeRecipe,bundleBatchIds\]\);/,
+    "the summary reloads when the active product changes, not on every save");
+  assert.doesNotMatch(app, /\},\[activeBundle,bundleRecipes,activeRecipe,bundleBatchIds,savedRevision\]\);/);
+  assert.match(app, /const pingedBatch=useRef\(""\)/);
+  assert.match(app, /if\(pingedBatch\.current===id\)return;/,
+    "the claim is asked once per batch, not once per save");
+
+  // All three steps go through the one card renderer, so rows cannot drift apart.
+  assert.equal((app.match(/stepProductCards\(bundleCardStatus\(/g) || []).length, 3);
+  assert.equal((app.match(/const rows=productRows\(recipe,index===bundleIndex\)/g) || []).length, 1,
+    "one row block serves every step");
 });
