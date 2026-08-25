@@ -3689,3 +3689,31 @@ test("one press creates drafts for every product in a bundle — D485", async ()
   // She can see which product it is on.
   assert.match(app, /\$\{bundleIndex\+1\} of \$\{bundleRecipes\.length\}/);
 });
+
+test("a bundle's shared action sits below its products, not inside one — D486", async () => {
+  const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+
+  /* Read off her live DOM: the Gildan Hoodie card contained the launch panel and
+     the button "Create Printify drafts for all 3 products", with the Gildan Tee
+     and crewneck cards below it - a button acting on the whole bundle, nested
+     inside one third of what it acts on, above two cards offering to open the
+     others one at a time. */
+  assert.match(app, /footer:ReactNode=null\)\{\n\s*const sharedAction=Boolean\(footer\)/);
+  assert.match(app, /stepProductCards\(bundleCardStatus\("images"\),null,!\(workflowStep==="designs"&&!complete\),<aside/,
+    "the designs step passes no per-card body and the action as a footer");
+
+  // The footer renders after every card, inside the cards section.
+  const map = app.indexOf("{footer}"), close = app.indexOf("</section>;", map);
+  assert.ok(map > 0 && close > map, "the footer is the last thing in the cards section");
+
+  // With one shared action there is nothing to open a product for.
+  assert.match(app, /\{!open&&reachable&&!sharedAction&&<button type="button" className="step-product-open"/);
+  assert.match(app, /\{!open&&!reachable&&!sharedAction&&<p className="step-product-waiting">/);
+
+  // Rows naming one product read as the whole batch when they sit under three cards.
+  assert.match(app, /\{!\(activeBundle&&bundleRecipes\.length>1\)&&<div><span>Saved product<\/span>/);
+  assert.match(app, /\{!\(activeBundle&&bundleRecipes\.length>1\)&&<div><span>Product<\/span>/);
+
+  // Reopening a saved bundle left the other cards showing a placeholder glyph.
+  assert.match(app, /const missing=bundleRecipes\.filter\(recipe=>recipe\.id!==activeRecipe\?\.id&&!bundleColorProducts\[recipe\.id\]/);
+});

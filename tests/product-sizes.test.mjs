@@ -1306,7 +1306,11 @@ test("D378: steps 2-4 wrap their work in the same product card as step 1", async
     "and the rail must hide with an inline style, which cannot lose to a cascade");
   assert.doesNotMatch(app, /step-product-cards \$\{hidden\?"hidden-panel":""\}/,
     "hiding this with a class is the bug");
-  assert.match(app, /,!\(workflowStep==="designs"&&!complete\)\)/,
+  /* D486 moved the panel from the open card's body to a footer under all the
+     cards, so the condition now sits in the third argument rather than at the
+     end of the call. The guarantee is unchanged: the rail is handed exactly the
+     condition the panel applies to itself. */
+  assert.match(app, /,null,!\(workflowStep==="designs"&&!complete\),<aside/,
     "and the rail is handed the same condition the panel applies to itself");
 });
 

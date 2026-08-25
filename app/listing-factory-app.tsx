@@ -1558,7 +1558,38 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
 
      The step's own content is the open card's body. Closed cards state where
      that product stands, and clicking one opens it. */
-  function stepProductCards(statusFor:(recipe:Recipe,index:number)=>{label:string;tone:"ready"|"attention"|"waiting"},body:ReactNode,hidden=false){
+  /* D486 - a bundle's shared action does not belong inside one product's card.
+     "Create Printify drafts for all 3 products" sat inside the Gildan Hoodie
+     card, above two cards offering to open the other products - so the page
+     showed a button that acts on everything, nested inside one third of what it
+     acts on. A step whose action covers the whole bundle passes that action as a
+     footer: the cards report their products, the action sits below all of them,
+     and the per-card open controls disappear because there is nothing left to
+     open one at a time for. */
+  /* D486 - the other products' details are fetched when a bundle is first
+     chosen, and never again. Reopening a saved bundle batch left their cards
+     with a grey placeholder glyph instead of the product, on a page whose whole
+     job is to show her the three products she is about to build. */
+  useEffect(()=>{
+    if(!activeBundle||bundleRecipes.length<2)return;
+    const missing=bundleRecipes.filter(recipe=>recipe.id!==activeRecipe?.id&&!bundleColorProducts[recipe.id]&&recipe.templateUrl);
+    if(!missing.length)return;
+    let alive=true;
+    void Promise.all(missing.map(async recipe=>{
+      const details=await fetchWithDeadline("/api/printify",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({productUrl:recipe.templateUrl,savedShippingProfileId:Number(recipe.etsyShippingProfileId)||0})},9000)
+        .then(async response=>response.ok?(await response.json() as {product?:TemplateDetails}).product:undefined)
+        .catch(()=>undefined);
+      return details?[recipe.id,details] as const:null;
+    })).then(entries=>{
+      if(!alive)return;
+      const loaded=Object.fromEntries(entries.filter(Boolean) as Array<readonly [string,TemplateDetails]>);
+      if(Object.keys(loaded).length)setBundleColorProducts(current=>({...current,...loaded}));
+    });
+    return()=>{alive=false};
+  },[activeBundle,bundleRecipes,activeRecipe,bundleColorProducts]);
+
+  function stepProductCards(statusFor:(recipe:Recipe,index:number)=>{label:string;tone:"ready"|"attention"|"waiting"},body:ReactNode,hidden=false,footer:ReactNode=null){
+    const sharedAction=Boolean(footer);
     const list=activeBundle&&bundleRecipes.length>1?bundleRecipes:(activeRecipe?[activeRecipe]:[]);
     if(!list.length)return body;
     const many=list.length>1;
@@ -1613,13 +1644,14 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
             <span className={`batch-product-state step-product-state ${toneClass}`}>{status.label}</span>
           </header>
           {open&&<div className="step-product-body">{body}</div>}
-          {!open&&reachable&&<button type="button" className="step-product-open" disabled={Boolean(switchingProduct)} onClick={()=>openBundleProduct(index)}>{opening?<><span className="goldie-spinner" aria-hidden="true"/>Opening {recipe.name}…</>:<>Open {recipe.name} <span aria-hidden="true">→</span></>}</button>}
+          {!open&&reachable&&!sharedAction&&<button type="button" className="step-product-open" disabled={Boolean(switchingProduct)} onClick={()=>openBundleProduct(index)}>{opening?<><span className="goldie-spinner" aria-hidden="true"/>Opening {recipe.name}…</>:<>Open {recipe.name} <span aria-hidden="true">→</span></>}</button>}
           {/* D396 - A card with no control and no explanation reads as broken. Each
               product is its own batch and they are worked in order, so say which one
               has to come first rather than showing an inert card. */}
-          {!open&&!reachable&&<p className="step-product-waiting">Finish {list[index-1]?.name||"the product above"} first</p>}
+          {!open&&!reachable&&!sharedAction&&<p className="step-product-waiting">Finish {list[index-1]?.name||"the product above"} first</p>}
         </article>;
       })}
+      {footer}
     </section>;
   }
 
@@ -2431,7 +2463,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
             designs are shared across the bundle, the Printify drafts are not. It
             stays mounted across steps, so the rail takes the hidden state rather
             than the tree changing shape and remounting a panel mid-run. */}
-        {stepProductCards(bundleCardStatus("images"),<aside className={`launch-panel workflow-panel ${workflowStep==="designs"&&!complete?"active-panel":"hidden-panel"}`}>
+        {stepProductCards(bundleCardStatus("images"),null,!(workflowStep==="designs"&&!complete),<aside className={`launch-panel workflow-panel ${workflowStep==="designs"&&!complete?"active-panel":"hidden-panel"}`}>
           <div className={`step-number launch-step-icon create-drafts-icon`} aria-hidden="true"/>
           <div className="launch-top">
             <Image src="/goldie-g.png" width={2000} height={2000} alt="" className="goldie-g" />
@@ -2443,8 +2475,8 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
 
           <div className="summary-list">
             <div><span>Printify</span><b className={connected ? "ready-text" : "waiting-text"}>{connected ? "Connected" : "Waiting"}</b></div>
-            <div><span>Saved product</span><b>{activeRecipe?.name||templateDetails?.blueprintTitle||"Not selected"}</b><button onClick={()=>goToStep("setup")}>Edit</button></div>
-            <div><span>Product</span><b>{templateDetails?.blueprintTitle||"Not selected"}</b></div>
+            {!(activeBundle&&bundleRecipes.length>1)&&<div><span>Saved product</span><b>{activeRecipe?.name||templateDetails?.blueprintTitle||"Not selected"}</b><button onClick={()=>goToStep("setup")}>Edit</button></div>}
+            {!(activeBundle&&bundleRecipes.length>1)&&<div><span>Product</span><b>{templateDetails?.blueprintTitle||"Not selected"}</b></div>}
             <div><span>Designs</span><b>{files.length ? `${files.length} / 20` : "Not added"}</b></div>
             
           </div>
@@ -2471,7 +2503,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
             </div>
           )}
           <p className="launch-note">This step creates unpublished Printify drafts. The final Goldie step publishes them live to Etsy only after a second confirmation.</p>
-        </aside>,!(workflowStep==="designs"&&!complete))}
+        </aside>)}
         <div className="workflow-footer-actions">{progressIndex>0&&<button className="workflow-back" type="button" onClick={goBackOneStep}><span aria-hidden="true">←</span> Back</button>}<span className="autosave-note"><i aria-hidden="true">✓</i> Saved automatically</span>{/* D386 - Saving a draft was only reachable from the Publish step, so
                 stopping halfway meant trusting the autosave and remembering the
                 batch later. Name it and park it from wherever you are. */}{workflowStep!=="connect"&&(files.length>0||drafts.length>0||Boolean(templateDetails))&&<button className="save-draft-link" type="button" onClick={()=>{setBatchDisplayName(current=>current||suggestedBatchName());setDraftSaveOpen(true)}}>Save as draft</button>}</div>
