@@ -3854,3 +3854,21 @@ test("a bundle run saves each product's work before moving on — D493", async (
   assert.match(app, /,null,!\(workflowStep==="designs"\),<aside/);
   assert.doesNotMatch(app, /,null,!\(workflowStep==="designs"&&!complete\),<aside/);
 });
+
+test("named listings stay distinguishable — D494", async () => {
+  const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+
+  /* D490 started naming the listings missing photos, and then cut each name at
+     32 characters from the front. Seen live: "2 listings still need a photo:
+     ChatGPT Image Aug 21, 2026, 05_3, ChatGPT Image Aug 21, 2026, 05_3" - the
+     same string twice, which is worse than not naming them at all. Design
+     filenames from a camera or an export differ at the end. */
+  assert.match(app, /const shorten=\(name:string,limit:number\)=>name\.length<=limit\?name:`\$\{name\.slice\(0,Math\.ceil\(limit\/2\)-1\)\}…\$\{name\.slice\(-Math\.floor\(limit\/2\)\)\}`/);
+  assert.doesNotMatch(app, /named\.map\(name=>name\.slice\(0,32\)\)/);
+
+  const shorten = (name, limit) => name.length <= limit ? name : `${name.slice(0, Math.ceil(limit / 2) - 1)}…${name.slice(-Math.floor(limit / 2))}`;
+  const a = shorten("ChatGPT Image Aug 21, 2026, 05_32_41 PM (2).png", 40);
+  const b = shorten("ChatGPT Image Aug 21, 2026, 05_32_42 PM (4).png", 40);
+  assert.notEqual(a, b, "two designs from the same export must not shorten to the same label");
+  assert.ok(a.endsWith("(2).png") && b.endsWith("(4).png"));
+});
