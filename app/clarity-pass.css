@@ -2921,3 +2921,8 @@ body{min-width:1180px!important}
 .app-shell .batch-opening-spinner{flex:none;width:20px;height:20px;border-radius:50%;border:2px solid rgba(139,89,137,.25);border-top-color:#a86ba2;animation:batch-opening-spin .8s linear infinite}
 @keyframes batch-opening-spin{to{transform:rotate(360deg)}}
 @media(prefers-reduced-motion:reduce){.app-shell .batch-opening-spinner{animation:none}}
+
+/* D551 - a phrase Etsy will not accept as a tag. It still works in a title, so it
+   is marked, not struck out. */
+.app-shell .bank-tag-usable{color:rgba(74,42,62,.62);font-weight:600}
+.app-shell .bank-grid span.over-tag-limit{border:1px dashed rgba(139,89,137,.45);background:rgba(255,255,255,.5);color:#75576b}

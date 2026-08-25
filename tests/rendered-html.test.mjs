@@ -2440,8 +2440,12 @@ test("Batch History does not label a bundle with one member's product — D196",
    * The row already parses state_json, so the bundle was knowable all along. */
   /* D511 added templateDetails to this shape so a batch with no drafts yet can
      still show its product's photo instead of a grey placeholder. */
-  assert.match(route, /type BatchListState=\{templateDetails\?:\{previewImage\?:string;previewImages\?:string\[\]\};activeBundle\?:\{name\?:string\};bundleRecipes\?:unknown\[\]/);
-  assert.match(route, /state\.activeBundle&&\(state\.bundleRecipes\|\|\[\]\)\.length>1\)\?`\$\{\(state\.bundleRecipes\|\|\[\]\)\.length\} products`/);
+  assert.match(route, /activeBundle\?:\{name\?:string\};activeRecipe\?:\{name\?:string\};bundleIndex\?:number;bundleRecipes\?:unknown\[\]/);
+  /* D551 - and it names which member, because D510's fix made every member of a
+     run identical: "ZZ TEST BUNDLE / 3 products · 2 designs" three times over,
+     one row per product, distinguishable only by timestamp. */
+  assert.match(route, /return name\?`\$\{name\} · product \$\{position\}`:`\$\{total\} products`/);
+  assert.match(route, /const position=Number\.isFinite\(index\)&&index>=0&&index<total\?`\$\{index\+1\} of \$\{total\}`/);
 });
 
 /* D214/D407 · D214 forced this picker open because a closed fold meant sellers

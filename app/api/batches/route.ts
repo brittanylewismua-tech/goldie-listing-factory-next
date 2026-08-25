@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
 
 type RuntimeEnv={DB?:D1Database};
-type BatchListState={templateDetails?:{previewImage?:string;previewImages?:string[]};activeBundle?:{name?:string};bundleRecipes?:unknown[];keptAsDrafts?:boolean;designs?:Array<{name?:string}>;drafts?:Array<{previewUrl?:string}>;batchReceipt?:{publishedCount?:number}};
+type BatchListState={templateDetails?:{previewImage?:string;previewImages?:string[]};activeBundle?:{name?:string};activeRecipe?:{name?:string};bundleIndex?:number;bundleRecipes?:unknown[];keptAsDrafts?:boolean;designs?:Array<{name?:string}>;drafts?:Array<{previewUrl?:string}>;batchReceipt?:{publishedCount?:number}};
 function db(){return (env as unknown as RuntimeEnv).DB}
 async function ensure(database:D1Database){await database.prepare("CREATE TABLE IF NOT EXISTS listing_batches (id TEXT PRIMARY KEY, user_id TEXT NOT NULL, status TEXT NOT NULL, step TEXT NOT NULL, setup_name TEXT NOT NULL DEFAULT '', product_title TEXT NOT NULL DEFAULT '', design_count INTEGER NOT NULL DEFAULT 0, state_json TEXT NOT NULL DEFAULT '{}', created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)").run();await database.prepare("CREATE INDEX IF NOT EXISTS idx_listing_batches_user_updated ON listing_batches(user_id, updated_at)").run()}
 
@@ -25,7 +25,18 @@ function designLabel(name:string){
 function batchListItem(row:Record<string,unknown>,publishedByBatch:Record<string,number>={}){let state:BatchListState={};try{state=JSON.parse(String(row.state_json||"{}")) as BatchListState}catch{/* A damaged snapshot should not hide the rest of Batch History. */}const designs=(state.designs||[]).map(design=>designLabel(String(design.name||""))).filter(Boolean);const designName=designs.length>1?`${designs[0]} + ${designs.length-1} more`:designs[0];const sellerNamed=state.keptAsDrafts&&String(row.setup_name||"").trim();return {id:row.id,status:row.status,step:row.step,setup_name:row.setup_name,/* A bundle batch stored the ACTIVE product's blueprint here, so Batch History
    labelled a three-product bundle "Unisex Midweight Softstyle Fleece Hoodie" —
    naming one member as though it were the whole batch. */
-  product_title:(state.activeBundle&&(state.bundleRecipes||[]).length>1)?`${(state.bundleRecipes||[]).length} products`:row.product_title,design_count:row.design_count,created_at:row.created_at,updated_at:row.updated_at,/* D510 - three batches of the same bundle showed three different names: one
+  /* D551 - D510 stopped one member of a bundle being named as though it were the
+     whole batch, and overcorrected: every member then read "ZZ TEST BUNDLE / 3
+     products · 2 designs", so one run of three products produced three rows that
+     were identical apart from a timestamp. Verified on her history: six rows,
+     nothing to tell them apart. The bundle names the batch; this says which of
+     its products the batch actually holds. */
+  product_title:(state.activeBundle&&(state.bundleRecipes||[]).length>1)?(()=>{
+    const total=(state.bundleRecipes||[]).length,name=String(state.activeRecipe?.name||"").trim();
+    const index=Number(state.bundleIndex);
+    const position=Number.isFinite(index)&&index>=0&&index<total?`${index+1} of ${total}`:`1 of ${total}`;
+    return name?`${name} · product ${position}`:`${total} products`;
+  })():row.product_title,design_count:row.design_count,created_at:row.created_at,updated_at:row.updated_at,/* D510 - three batches of the same bundle showed three different names: one
      read "Gildan Tee" over a hoodie thumbnail while the others read "ZZ TEST
      BUNDLE". setup_name holds the saved product a batch happened to start from,
      which for a bundle is one member of three and not what the batch is. A

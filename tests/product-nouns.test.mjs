@@ -228,3 +228,32 @@ test("Etsy's title and tag space is filled when the bank can fill it — D544", 
   // And the 140 character ceiling still governs every phrase that goes in.
   assert.match(route, /const addPhrase=\(phrase:string\)=>\{const candidate=title\?`\$\{title\}\$\{joiner\}\$\{phrase\}`:phrase;if\(candidate\.length>140\)return/);
 });
+
+/* D551 · The answer to "why did this listing only get 3 of 13 tags", which she
+ * had to ask because nothing on the page said it.
+ *
+ * Measured on her real banks: BACHELORETTE TEES holds 50 phrases and 30 of them
+ * are longer than 20 characters, so they can never be Etsy tags - Etsy caps a tag
+ * at 20. Twenty phrases were eligible before the product-noun filter had even
+ * run. The bank page said "50 phrases" and nothing else. */
+test("a keyword bank says how much of it can actually be a tag — D551", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const [page, css, route] = await Promise.all([
+    readFile(new URL("../app/keywords/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/listing-intelligence/route.ts", import.meta.url), "utf8"),
+  ]);
+
+  // The count the page reports, and the count that matters, are both shown.
+  assert.match(page, /const tagUsable=list\.keywords\.filter\(word=>word\.length<=20\)\.length/);
+  assert.match(page, /short enough for Etsy tags/);
+
+  // And the phrases that cannot be tags are marked where she can see which.
+  assert.match(page, /className=\{word\.length>20\?"over-tag-limit":undefined\}/);
+  assert.match(page, /too long for an Etsy tag, but usable in a title/);
+  assert.match(css, /\.app-shell \.bank-grid span\.over-tag-limit\{/);
+
+  /* The 20-character rule this reports is the same one the title builder applies
+     when it decides what may become a tag. If that ever changes, this has to. */
+  assert.match(route, /const tagCandidates=keywords\.filter\(keyword=>keyword\.length<=20/);
+});
