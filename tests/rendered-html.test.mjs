@@ -2235,7 +2235,9 @@ test("traverses every workflow phase with one shared gate and never enables an i
      issues[0] || `${progressStatus(...)}${draftLine}`. The rule is unchanged -
      a gate issue always wins over a computed status. */
   assert.match(app,/issues\[0\]\|\|`\$\{progressStatus/);
-  assert.match(app,/disabled=\{preparingEtsy\|\|progressGateIssues\(6\)\.length>0\}/);
+  /* D545 - and a batch whose saving is paused because another tab holds it must
+     not run work that costs credits and is then thrown away. */
+  assert.match(app,/disabled=\{preparingEtsy\|\|progressGateIssues\(6\)\.length>0\|\|batchHeldByAnotherTab\}/);
   assert.match(app,/function markShippingEdit\(\)\{onApprovalChange\(false\)/);
   assert.doesNotMatch(app,/if\(!selectedProfile\|\|customDirty\)onApprovalChange/);
 });
@@ -4385,7 +4387,9 @@ test("the publish button refuses in advance, not after the click — D526/D527",
      pressing it threw a blocking dialog listing four unfinished things. That is
      the pattern D229 already fixed on the create-drafts button - a control that
      looks available and then refuses. It carries its own reason now. */
-  assert.match(app, /\|\|missingPublishFields\(\)\.length>0\}/);
+  /* D545 - and a batch held by another tab cannot publish either: the receipt
+     would be written by a tab that has saving paused. */
+  assert.match(app, /\|\|missingPublishFields\(\)\.length>0\|\|batchHeldByAnotherTab\}/);
   assert.match(app, /missingPublishFields\(\)\[0\]\?`\$\{missingPublishFields\(\)\[0\]\} must be completed before publishing\.`/);
 
   /* D526 - clicking Mockups did nothing at all: its section sat inside a

@@ -232,3 +232,32 @@ test("a tab that is behind the deployed build says so", async () => {
   assert.match(layout, /<ConfirmHost\/><NewBuildNotice\/>/);
   assert.match(css, /\.new-build-notice\{[^}]*position:fixed/);
 });
+
+/* D545 · Caught by working in a paused tab for an hour. Two Goldie tabs were
+ * open on the same batch; the second one showed "Goldie has paused saving here",
+ * and then happily let me run the batch title builder and prepare Etsy details -
+ * both of which cost credits - and threw every result away. The banner told the
+ * truth and the buttons contradicted it. */
+test("a batch held by another tab cannot spend credits on work it will discard", async () => {
+  const app = await read("app/listing-factory-app.tsx");
+
+  for (const control of [
+    'className="ai-title-button"',
+    'className="secondary-action prepare-etsy"',
+    'className="publish-all-button"',
+  ]) {
+    const at = app.indexOf(control);
+    assert.ok(at > 0, `${control} exists`);
+    const tag = app.slice(at, app.indexOf(">", app.indexOf("onClick", at)));
+    assert.ok(/batchHeldByAnotherTab|paused/.test(tag),
+      `${control} must refuse while saving is paused`);
+  }
+
+  /* And it says why, rather than sitting there greyed out - the D229/D527 rule.
+     The batch title builder was the last control still breaking it: with no
+     keyword bank chosen it was disabled and silent. */
+  assert.match(app, /title=\{batchHeldByAnotherTab\?"This batch is open in another Goldie tab, so nothing saved here would be kept\.":!autoTitleBank\?"Choose a keyword bank first\.":!files\.length\?"Upload a design first\.":undefined\}/);
+  assert.match(app, /title=\{paused\?"This batch is open in another Goldie tab, so nothing built here would be kept\.":!bank\?"Choose a keyword bank first\.":undefined\}/);
+  // and the per-listing builder is told about it by the page that knows.
+  assert.match(app, /<IndividualAutoTitle design=\{design\}[^>]*paused=\{batchHeldByAnotherTab\}/);
+});
