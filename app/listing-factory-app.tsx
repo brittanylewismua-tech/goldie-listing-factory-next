@@ -1110,6 +1110,50 @@ export default function ListingFactoryApp() {
     if(!recipeId||!batchId)return;
     setBundleBatchIds(current=>current[recipeId]===batchId?current:{...current,[recipeId]:batchId});
   }
+  /* D547 - her three-product bundle ran perfectly: batches minted 15 and 10
+     seconds apart, two drafts each, all three complete. Then step 4 told her two
+     of the three products were "Not started yet", because this map is per batch
+     and is written at the moment that batch is saved. Product 1's batch was
+     written before products 2 and 3 existed, so it holds one entry and never
+     learns about the rest - the batch she opens from is the one that can see the
+     least. Verified on her data: hoodie's batch mapped 1 of 3, the tee's mapped
+     2, the crewneck's mapped all 3.
+
+     Rather than trust a map written at the wrong moment, find the siblings. Each
+     batch's own state records the bundle and the product it belongs to, so a gap
+     can be filled by looking, and batches saved before this heal themselves when
+     she opens them. */
+  const bundleSiblingsScanned=useRef("");
+  useEffect(()=>{
+    if(restoringBatch||!activeBundle||bundleRecipes.length<2)return;
+    const missing=bundleRecipes.filter(recipe=>recipe.id!==activeRecipe?.id&&!bundleBatchIds[recipe.id]);
+    if(!missing.length)return;
+    const key=`${activeBundle.id}:${bundleRecipes.map(recipe=>recipe.id).join(",")}`;
+    if(bundleSiblingsScanned.current===key)return;
+    bundleSiblingsScanned.current=key;
+    void (async()=>{
+      try{
+        const list=await fetch("/api/batches").then(response=>response.ok?response.json():null) as {batches?:Array<{id:string}>}|null;
+        /* Newest first, so a product run more than once resolves to its latest
+           batch - the same one the run itself would have carried forward. */
+        const candidates=(list?.batches||[]).map(batch=>batch.id).filter(id=>id&&id!==batchIdRef.current).slice(0,24);
+        const found:Record<string,string>={};
+        for(const id of candidates){
+          if(Object.keys(found).length>=missing.length)break;
+          const payload=await fetch(`/api/batches?id=${encodeURIComponent(id)}`).then(response=>response.ok?response.json():null) as {batch?:{state?:{activeBundle?:{id?:string};activeRecipe?:{id?:string};drafts?:unknown[]}}}|null;
+          const state=payload?.batch?.state;
+          if(state?.activeBundle?.id!==activeBundle.id)continue;
+          const recipeId=state?.activeRecipe?.id;
+          if(!recipeId||found[recipeId]||bundleBatchIds[recipeId])continue;
+          if(!missing.some(recipe=>recipe.id===recipeId))continue;
+          if(!(state?.drafts||[]).length)continue;
+          found[recipeId]=id;
+        }
+        if(Object.keys(found).length)setBundleBatchIds(current=>({...found,...current}));
+      }catch{/* the cards already say "Not started yet"; a failed look changes nothing */}
+    })();
+  },[restoringBatch,activeBundle,bundleRecipes,activeRecipe,bundleBatchIds]);
+
   /* D404 - Per-variant prices and the whole-number toggle lived only in React
      state and the batch snapshot, and that snapshot is not written until a batch
      has designs or drafts - so on the product step they were saved nowhere. Set

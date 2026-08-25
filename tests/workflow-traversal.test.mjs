@@ -371,3 +371,38 @@ test("step 3 always has a way forward — D544", async () => {
      which is what made it unreachable. */
   assert.doesNotMatch(app, /\{finishPhase==="details"\?<>/);
 });
+
+/* D547 · Her three-product bundle ran correctly and step 4 said it hadn't.
+ *
+ * Read off her saved batches: 18:46:20 Gildan Hoodie, 18:46:35 Gildan Tee,
+ * 18:46:45 gildan crewneck - two drafts each, all three complete. The run did
+ * exactly what D485 promises. But bundleBatchIds is per batch and is written
+ * when that batch is saved, so the hoodie's batch mapped 1 of 3, the tee's
+ * mapped 2, and the crewneck's mapped 3. The batch she opens from is the first
+ * one, which is the one that can see the least - so two finished products
+ * reported "Not started yet" and step 4 offered to publish all three anyway. */
+test("a bundle batch finds the products created after it — D547", async () => {
+  const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+
+  const at = app.indexOf("const bundleSiblingsScanned=useRef");
+  assert.ok(at > 0, "the gap is filled by looking, not by trusting the map");
+  const scan = app.slice(at, at + 2600);
+
+  // It only looks when the map is genuinely short, and only once per bundle.
+  assert.match(scan, /const missing=bundleRecipes\.filter\(recipe=>recipe\.id!==activeRecipe\?\.id&&!bundleBatchIds\[recipe\.id\]\)/);
+  assert.match(scan, /if\(!missing\.length\)return/);
+  assert.match(scan, /if\(bundleSiblingsScanned\.current===key\)return/);
+  assert.match(scan, /bundleSiblingsScanned\.current=key/);
+
+  /* A sibling is a batch that says it belongs to this bundle and this product,
+     and that actually has drafts - an empty batch is not a finished product. */
+  assert.match(scan, /if\(state\?\.activeBundle\?\.id!==activeBundle\.id\)continue/);
+  assert.match(scan, /if\(!missing\.some\(recipe=>recipe\.id===recipeId\)\)continue/);
+  assert.match(scan, /if\(!\(state\?\.drafts\|\|\[\]\)\.length\)continue/);
+
+  // Anything already mapped wins: a look must never overwrite what the run knew.
+  assert.match(scan, /setBundleBatchIds\(current=>\(\{\.\.\.found,\.\.\.current\}\)\)/);
+
+  // And a failed look is not an error she has to see.
+  assert.match(scan, /catch\{\/\* the cards already say/);
+});
