@@ -2527,7 +2527,7 @@ body{min-width:1180px!important}
 .app-shell .shipping-combobox-trigger,
 .app-shell .shipping-combobox-panel{max-width:100%;min-width:0;box-sizing:border-box}
 .app-shell .shipping-combobox-trigger{white-space:normal;text-align:left}
-.app-shell .step-product-waiting{margin:0 22px 18px;padding:11px 14px;border:1px dashed rgba(91,48,79,.22);border-radius:12px;color:rgba(74,42,62,.6);font-size:12px}
+/* D502 - step-product-waiting is gone; the disabled Change button carries it. */
 
 /* D397 · Step 3 had two forward buttons: one mid-card and one at the end, with
    content between them. The mid-card one never navigated - it prepares the Etsy

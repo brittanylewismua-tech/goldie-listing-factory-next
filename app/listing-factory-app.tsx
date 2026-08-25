@@ -1841,7 +1841,18 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
               <span className="row-mark" aria-hidden="true">{row.done?"✓":"!"}</span>
               <span className="row-label">{row.label}</span>
               <span className="row-value">{row.value}{row.detail?<small>{row.detail}</small>:null}</span>
-              {!open&&reachable&&<button type="button" disabled={Boolean(switchingProduct)} onClick={()=>openBundleProduct(index)}>{opening?"Opening…":"Change"}</button>}
+              {/* D502 - captured from both pages side by side: step 1 puts a Change
+                  on every row of every card, including the product already open.
+                  Step 3 put one only on a closed, reachable product - so the open
+                  card's rows had no control at all and a product waiting its turn
+                  had a "Finish Gildan Tee first" line step 1 never shows. Every
+                  row carries Change; it says why when it cannot be used. */}
+              <button type="button"
+                disabled={Boolean(switchingProduct)||(!open&&!reachable)}
+                title={!open&&!reachable?`Finish ${list[index-1]?.name||"the product above"} first`:undefined}
+                onClick={()=>{if(open){(document.querySelector(".step-product-card.is-open .step-product-body") as HTMLElement|null)?.scrollIntoView({block:"start"});return}openBundleProduct(index)}}>
+                {opening?"Opening…":"Change"}
+              </button>
             </div>)}</div>;
           })()}
           {open&&<div className="step-product-body">{body}</div>}
@@ -1855,7 +1866,7 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
           {/* D396 - A card with no control and no explanation reads as broken. Each
               product is its own batch and they are worked in order, so say which one
               has to come first rather than showing an inert card. */}
-          {!open&&!reachable&&<p className="step-product-waiting">Finish {list[index-1]?.name||"the product above"} first</p>}
+          {/* D502 - the waiting line is on the disabled Change now, so a card is never a header with a sentence under it. */}
         </article>;
       })}
       {footer}

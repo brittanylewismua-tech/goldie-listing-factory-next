@@ -3663,7 +3663,9 @@ test("every product in a bundle is reachable from the step she is on — D482/D4
   assert.match(app, /Boolean\(bundleBatchIds\[recipe\.id\]\|\|index===bundleIndex\+1\)/);
 
   // A card is never left inert with no control and no explanation.
-  assert.match(app, /Finish \{list\[index-1\]\?\.name\|\|"the product above"\} first/);
+  /* D502 - the waiting message moved onto the disabled Change button, so a card
+     is never a bare header with a sentence underneath it. */
+  assert.match(app, /title=\{!open&&!reachable\?`Finish \$\{list\[index-1\]\?\.name\|\|"the product above"\} first`:undefined\}/);
 });
 
 test("one press creates drafts for every product in a bundle — D485", async () => {
@@ -3711,9 +3713,10 @@ test("a bundle's shared action sits below its products, not inside one — D486"
      is the same card whether it is expanded or collapsed. The shared action still
      decides where the step's action lives; it no longer decides whether a closed
      product can be opened at all. */
-  assert.match(app, /\{!open&&reachable&&<button type="button" disabled=\{Boolean\(switchingProduct\)\} onClick=\{\(\)=>openBundleProduct\(index\)\}>\{opening\?"Opening…":"Change"\}/,
-    "D499 - every row carries its own Change, as step 1 does");
-  assert.match(app, /\{!open&&!reachable&&<p className="step-product-waiting">/);
+  assert.match(app, /disabled=\{Boolean\(switchingProduct\)\|\|\(!open&&!reachable\)\}/,
+    "D502 - every row carries its own Change, as step 1 does, and says why when it cannot be used");
+  /* D502 - that sentence lives on the disabled Change button now. */
+  assert.match(app, /title=\{!open&&!reachable\?`Finish /);
 
   // Rows naming one product read as the whole batch when they sit under three cards.
   assert.match(app, /\{!\(activeBundle&&bundleRecipes\.length>1\)&&<div><span>Saved product<\/span>/);
@@ -3949,8 +3952,8 @@ test("step 4's cards drop their open controls now publish covers the bundle — 
     "the publish step must pass its action as a footer, not as the open card's body");
 
   // The shared-action switch is what removes those controls.
-  assert.match(app, /\{!open&&reachable&&<button type="button" disabled=\{Boolean\(switchingProduct\)\} onClick=\{\(\)=>openBundleProduct\(index\)\}>\{opening\?"Opening…":"Change"\}/,
-    "D499 - every row carries its own Change, as step 1 does");
+  assert.match(app, /disabled=\{Boolean\(switchingProduct\)\|\|\(!open&&!reachable\)\}/,
+    "D502 - every row carries its own Change, as step 1 does, and says why when it cannot be used");
 });
 
 test("every product shows the same rows on every step — D498/D499", async () => {
@@ -4023,4 +4026,24 @@ test("the bundle cards do not churn the network or the tab claim — D501", asyn
   assert.equal((app.match(/stepProductCards\(bundleCardStatus\(/g) || []).length, 3);
   assert.equal((app.match(/const rows=productRows\(recipe,index===bundleIndex\)/g) || []).length, 1,
     "one row block serves every step");
+});
+
+test("step 3's rows match step 1's, captured from both live pages — D502", async () => {
+  const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+
+  /* Read off the two rendered pages side by side rather than the source.
+     Step 1: three cards, four rows each, a Change on every row of every card -
+     including the product already open.
+     Step 3 before this: the open card's rows had no control at all, and the
+     product waiting its turn had a "Finish Gildan Tee first" sentence under a
+     bare card, which step 1 never shows. */
+  assert.match(app, /disabled=\{Boolean\(switchingProduct\)\|\|\(!open&&!reachable\)\}/,
+    "the Change exists on every row and disables rather than disappearing");
+  assert.match(app, /title=\{!open&&!reachable\?`Finish \$\{list\[index-1\]\?\.name\|\|"the product above"\} first`:undefined\}/,
+    "and the waiting reason rides on it");
+  assert.match(app, /onClick=\{\(\)=>\{if\(open\)\{.*step-product-body.*scrollIntoView/,
+    "on the open product Change goes to that product's editor");
+
+  // The separate waiting paragraph and its styling are gone.
+  assert.doesNotMatch(app, /className="step-product-waiting"/);
 });
