@@ -2784,9 +2784,13 @@ body{min-width:1180px!important}
    a 345px photo strip with 130px thumbnails, per listing. At twenty designs that
    is twenty screens of scrolling per product. Nothing is hidden; the preview and
    the thumbnails are simply the size they need to be to be recognised. */
-.app-shell .step-product-card .draft-card-top>.printify-preview-button,
-.app-shell .step-product-card .draft-card-top>.pending-preview{max-width:168px}
-.app-shell .step-product-card .draft-card-top>.printify-preview-button img{max-height:168px;object-fit:contain}
+/* D525 - the image obeyed at 168px and the button did not: a later rule pins
+   aspect-ratio 1/1 and max-width 400px with !important, so the button stayed a
+   318px square around a 168px picture - 150px of empty box per listing, which is
+   worse than the size I was trying to fix. Same weight, or it loses again. */
+.app-shell .post-draft-workspace .draft-card-top .printify-preview-button,
+.app-shell .step-product-card .draft-card-top>.pending-preview{max-width:180px!important;aspect-ratio:auto!important;height:auto!important}
+.app-shell .post-draft-workspace .draft-card-top .printify-preview-button img{max-height:168px;object-fit:contain}
 .app-shell .step-product-card .photo-order-strip img{max-height:74px;object-fit:contain}
 .app-shell .step-product-card .photo-order-heading{padding-bottom:4px}
 .app-shell .step-product-card .draft-card-grid{gap:14px}

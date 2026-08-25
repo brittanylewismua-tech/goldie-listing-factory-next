@@ -1913,6 +1913,12 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
             const openRow=(target?:string)=>{
               if(!open){if(reachable)openBundleProduct(index);return}
               const card=document.querySelector(".step-product-card.is-open");
+              /* D525 - step 3 has two phases and they render different things.
+                 On the Etsy phase the title builder and the description are not
+                 on the page at all, so both rows offered a Change that did
+                 nothing. If the section this row is about is not here, go to the
+                 phase that has it. */
+              if(target&&card&&!card.querySelector(target)&&finishPhase==="etsy"&&target!==".final-review"){setFinishPhase("details");window.setTimeout(()=>{(document.querySelector(`.step-product-card.is-open ${target}`) as HTMLElement|null)?.scrollIntoView({block:"start"})},220);return}
               const node=(target?card?.querySelector(target):null)||card?.querySelector(".step-product-body");
               if(node instanceof HTMLDetailsElement){node.open=!node.open;if(!node.open)return}
               (node as HTMLElement|null)?.scrollIntoView({block:"start"});

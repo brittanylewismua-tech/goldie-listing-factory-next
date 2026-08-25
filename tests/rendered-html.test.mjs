@@ -4264,7 +4264,10 @@ test("an open product card does not run to four screens — D522", async () => {
      756px viewport - four screens - and each listing inside it was 1003px, from a
      318px Printify preview and a 345px photo strip of 130px thumbnails. Twenty
      designs would have been twenty screens per product. */
-  assert.match(css, /\.draft-card-top>\.printify-preview-button,\n\.app-shell \.step-product-card \.draft-card-top>\.pending-preview\{max-width:168px\}/);
+  /* D525 - the image obeyed and the button did not: a later rule pins aspect-ratio
+     1/1 and max-width 400px with !important, leaving a 318px square around a 168px
+     picture. The cap has to carry the same weight or it loses again. */
+  assert.match(css, /\.post-draft-workspace \.draft-card-top \.printify-preview-button,[\s\S]{0,120}max-width:180px!important;aspect-ratio:auto!important/);
   assert.match(css, /\.photo-order-strip img\{max-height:74px/);
   assert.match(css, /\.draft-card-grid\{gap:14px\}/);
 });
@@ -4289,4 +4292,16 @@ test("a decided batch does not lead with the picker, and step 3 opens compact �
   assert.doesNotMatch(app, /<details className="batch-title-builder listing-section" open>/);
   assert.doesNotMatch(app, /<details className="listing-section design-table-section" open>/);
   assert.match(app, /<details className="batch-title-builder listing-section">/);
+});
+
+test("a row never offers Change for a section that is not on the page — D525", async () => {
+  const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+
+  /* Driven live on step 3's Etsy phase: the card showed "Titles and tags" and
+     "Description" rows, each with a Change button, while neither the title
+     builder nor the description was rendered on that phase at all. Both buttons
+     did nothing. Step 3 has two phases and they draw different things. */
+  assert.match(app, /if\(target&&card&&!card\.querySelector\(target\)&&finishPhase==="etsy"/,
+    "if the section is not here, go to the phase that has it");
+  assert.match(app, /setFinishPhase\("details"\);window\.setTimeout\(/);
 });
