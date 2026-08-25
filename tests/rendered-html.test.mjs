@@ -4383,3 +4383,26 @@ test("a collapsed product reads as a list item — D531", async () => {
   // The open card keeps its full header, which is what marks it as the one in hand.
   assert.doesNotMatch(css, /\.step-product-card\.is-open>header\{padding:8px/);
 });
+
+test("a listing inside an open product collapses too — D532", async () => {
+  const [app, css] = await Promise.all([
+    readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8"),
+  ]);
+
+  /* Measured live after the preview cap landed: one listing 813px, so two designs
+     made the open card 2444px and twenty would have made it about sixteen
+     thousand. Everything else on this page collapses; these did not. */
+  assert.match(app, /<details id=\{`listing-images-\$\{draft\.clientId\}`\} className=\{`draft-card listing-card /);
+  assert.match(app, /open=\{draft\.status!=="Created"\}/,
+    "a listing that failed opens itself, because that one needs her");
+  assert.match(app, /<summary className="listing-card-summary">/);
+  assert.match(app, /listing-card-meta">\{draft\.status!=="Created"\?"Needs attention"/);
+  assert.match(css, /\.listing-card>summary\{/);
+
+  /* Something scrolls to these: the jump that answers "which listing has no
+     photo". You cannot scroll to anything inside a closed <details>, so it opens
+     the one it is sending her to. */
+  assert.match(app, /id=\{`listing-images-\$\{draft\.clientId\}`\}/);
+  assert.match(app, /if\(node instanceof HTMLDetailsElement\)node\.open=true;\n\s*node\?\.scrollIntoView/);
+});

@@ -1104,7 +1104,14 @@ export default function ListingFactoryApp() {
   }
   function batchStateSnapshot(){const designs=files.map(({file:ignoredFile,previewUrl:ignoredPreview,...design})=>design);return {template,templateDetails,description,pricing,selectedColorIds,selectedSizeIds,variantPrices,etsyShippingProfileId,pricingApproved,mockupTheme,activeRecipe,activeBundle,bundleRecipes,bundleIndex,bundleBatchIds,designs,drafts,complete,finishPhase,bulkTitles,batchKeywords,titleJoiner,titleBuilderMode,autoTitleBankId,manualKeywordBankId,sharedMockups,preparedMockupCounts,printifyImageIndices,printifyImageSelections,sizeGuideName,keptAsDrafts,batchReceipt}}
   async function saveDraftBatch(){const name=batchDisplayName.trim();if(!name)return;setSavingDraftBatch(true);try{const id=batchIdRef.current||crypto.randomUUID();batchIdRef.current=id;window.localStorage.setItem("goldie-active-batch",id);await saveBatchFiles(id,files.map(file=>file.file));if(!localPreview){const response=await fetch("/api/batches",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,status:"draft",step:workflowStep,setupName:name,productTitle:templateDetails?.blueprintTitle||"",designCount:files.length,state:{...batchStateSnapshot(),keptAsDrafts:complete}})});if(!response.ok)throw new Error("Goldie could not save this batch.")}setKeptAsDrafts(true);setDraftSaveOpen(false);setDraftSavedOpen(true)}catch(error){stopWith("This batch was not saved.",[error instanceof Error?error.message:"Try again in a moment."])}finally{setSavingDraftBatch(false)}}
-  function jumpToMissingPhotoListing(clientId:string){setMissingPhotoDraftIds([]);window.setTimeout(()=>document.getElementById(`listing-images-${clientId}`)?.scrollIntoView({block:"start"}),0)}
+  function jumpToMissingPhotoListing(clientId:string){setMissingPhotoDraftIds([]);window.setTimeout(()=>{
+    /* D532 - a listing collapses now, and you cannot scroll to something inside a
+       closed <details>. This is the jump that answers "which listing has no
+       photo", so it has to open the one it is sending her to. */
+    const node=document.getElementById(`listing-images-${clientId}`);
+    if(node instanceof HTMLDetailsElement)node.open=true;
+    node?.scrollIntoView({block:"start"});
+  },0)}
   function continueFromDesigns(){
     if(belowRecommendedPixels.length){setPixelWarningOpen(true);return}
     /* D220 · Draft creation is on this page now. If the drafts already exist the
@@ -2968,7 +2975,16 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
         <MockupSetSelector firstRun={productFirstRun} productName={activeRecipe?.name||templateDetails?.blueprintTitle||""} value={mockupTheme} selectedIds={sharedMockups?.theme===mockupTheme?sharedMockups.ids:[]} savedValue={activeRecipe?.defaultMockupTheme||""} savedIds={activeRecipe?.mockupIds} onChange={(theme,ids)=>{setMockupTheme(theme);if(ids)setSharedMockups({theme,ids})}} saving={savingProductDefault==="mockups"} onSaveDefault={()=>void saveProductDefaults({defaultMockupTheme:mockupTheme,mockupIds:sharedMockups?.theme===mockupTheme?sharedMockups.ids:[]},"mockups")}/>
         
         {openAllMessage&&<p className="open-all-message" role="status">{openAllMessage}</p>}
-        <div className="draft-card-grid">{drafts.map(draft=>{const design=files.find(file=>file.id===draft.clientId),selectedImages=draft.id?(printifyImageSelections[draft.id]??printifyImageIndices):printifyImageIndices;return <article id={`listing-images-${draft.clientId}`} className={`draft-card ${draft.status!=="Created"?"failed":""}`} key={draft.clientId}>
+        <div className="draft-card-grid">{drafts.map(draft=>{const design=files.find(file=>file.id===draft.clientId),selectedImages=draft.id?(printifyImageSelections[draft.id]??printifyImageIndices):printifyImageIndices;/* D532 - each listing inside an open product card was 813px, so two designs made
+     the card 2444px and twenty would have made it sixteen thousand. Every other
+     thing on this page collapses; these did not. A listing now reads as one line
+     - its design, its title, how many photos it has - and opens when she wants to
+     work on it. The one that failed opens itself, because that one needs her. */
+    return <details id={`listing-images-${draft.clientId}`} className={`draft-card listing-card ${draft.status!=="Created"?"failed":""}`} key={draft.clientId} open={draft.status!=="Created"}>
+      <summary className="listing-card-summary">
+        <span className="listing-card-name">{design?.title?.trim()||design?.name||draft.name||"Listing"}</span>
+        <span className="listing-card-meta">{draft.status!=="Created"?"Needs attention":`${selectedImages.length+(preparedMockupCounts[draft.id||""]||0)} ${selectedImages.length+(preparedMockupCounts[draft.id||""]||0)===1?"photo":"photos"}`}</span>
+      </summary>
           <div className="draft-card-top">{draft.previewUrl?<button className="printify-preview-button" onClick={()=>window.open(draft.previewUrl,"_blank","noopener,noreferrer")} aria-label="Open larger Printify preview"><img src={draft.previewUrl} alt={`Printify preview for ${draft.title||draft.name}`}/><span>Click to enlarge</span></button>:design?<div className="pending-preview"><img src={design.previewUrl} alt="Design preview" loading="lazy" decoding="async"/><span>Printify preview processing</span></div>:<span className="draft-check">!</span>}<div>{draft.status!=="Created"&&<span className="draft-state">DRAFT FAILED</span>}<h3>{draft.title||draft.name}</h3><small>{draft.status==="Created"?"Unpublished Printify draft":draft.error}</small>{/* D409 - The tags belong to step 3. Showing them on Images invited editing
                    listing text on the step that is about photographs, and duplicated a
                    field that is owned elsewhere. */}{draft.editorUrl&&draft.id?<button className={`edit-draft-button ${openedDrafts.includes(draft.id)?"opened":""}`} onClick={()=>openDraft(draft)}><i/><span>{openedDrafts.includes(draft.id)?"Printify opened":"Open in Printify to resize or reposition"}<small>(Choose the correct shop in your Printify account first.)</small></span></button>:null}</div></div>
@@ -2978,7 +2994,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
           {draft.status==="Created"&&draft.id&&<DownloadListingPhotos productId={draft.id} name={draft.title||draft.name} indices={selectedImages}/>}
           {draft.status==="Created"&&draft.id&&<ListingPhotoOrder productId={draft.id} printifyImages={(draft.printifyImages||[]).filter(Boolean)} indices={selectedImages} refreshKey={`${preparedMockupCounts[draft.id]||0}:${design?.sizeGuideName||sizeGuideName}`}/>}
           {draft.status!=="Created"&&<><button className="error-help-link" onClick={()=>window.dispatchEvent(new CustomEvent("goldie-retry-listing",{detail:draft.clientId}))}>Retry this listing</button><button className="error-help-link" onClick={()=>window.dispatchEvent(new CustomEvent("goldie-support",{detail:draft.error??"A design failed"}))}>Get help with this error</button></>}
-        </article>})}</div>
+        </details>})}</div>
         </section>
         ,false,
         <>

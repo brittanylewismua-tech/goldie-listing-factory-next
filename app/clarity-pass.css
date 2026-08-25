@@ -2820,3 +2820,15 @@ body{min-width:1180px!important}
 .app-shell .step-product-card.is-closed .batch-product-row{padding:6px 14px!important;min-height:0!important}
 .app-shell .step-product-card.is-closed .row-value{font-size:.82rem!important}
 .app-shell .step-product-card.is-closed .row-open{padding:4px 11px!important;font-size:.76rem!important}
+
+/* D532 - a listing inside an open product card was 813px, so two designs made
+   the card 2444px and twenty would have made it sixteen thousand. It reads as
+   one line now and opens when she wants it. */
+.app-shell .listing-card>summary{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:12px;cursor:pointer;list-style:none}
+.app-shell .listing-card>summary::-webkit-details-marker{display:none}
+.app-shell .listing-card>summary::after{content:"⌄";margin-left:auto;font-size:1.05rem;color:#75576b;transition:transform .18s}
+.app-shell .listing-card[open]>summary::after{transform:rotate(180deg)}
+.app-shell .listing-card>summary:hover{background:rgba(225,194,231,.22)}
+.app-shell .listing-card-name{font-weight:700;font-size:.9rem;color:#4c293f;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:62%}
+.app-shell .listing-card-meta{font-size:.8rem;color:#75576b}
+.app-shell .listing-card.failed>summary .listing-card-meta{color:var(--alert-ink);font-weight:700}
