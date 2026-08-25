@@ -3980,3 +3980,26 @@ test("every product shows the same rows on every step — D498/D499", async () =
   assert.doesNotMatch(css, /\.step-product-open\{/);
   assert.doesNotMatch(css, /\.step-product-expand\{/);
 });
+
+test("no product on any step falls back to a bare header — D500", async () => {
+  const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+  const fn = app.slice(app.indexOf("function productRows("), app.indexOf("function stepProductCards("));
+
+  /* A product with no batch yet had no summary to read, so productRows returned
+     nothing and its card collapsed back to a bare header - the exact thing these
+     rows exist to stop. Step 1 never does that: a product that is not set up
+     still shows every row, saying it is not set. */
+  assert.doesNotMatch(fn, /return \[\];/, "no branch may return an empty row list");
+  assert.match(fn, /const counts=mine\|\|\{designs:0,titled:0,tagged:0,drafts:0,described:false,complete:false\}/);
+  assert.match(fn, /const started=Boolean\(mine\)/);
+
+  // All three steps are covered, and each returns rows.
+  const returns = fn.match(/return \[/g) || [];
+  assert.equal(returns.length, 3, "one row set for step 2, one for step 4, one for step 3");
+  for (const label of ["Designs", "Drafts", "Listings", "Titles", "Tags", "Description"]) {
+    assert.ok(fn.includes(`label:"${label}"`), `${label} row is built`);
+  }
+
+  // An unstarted product says so rather than claiming zero of zero.
+  assert.equal((fn.match(/"Not started yet"/g) || []).length, 6, "Titles is built in both the step 3 and step 4 row sets");
+});

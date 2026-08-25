@@ -1742,20 +1742,25 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
     const mine=isActive
       ?{designs:files.length,titled:files.filter(file=>file.title.trim()).length,tagged:files.filter(file=>file.tags.length>=13).length,drafts:drafts.filter(draft=>draft.status==="Created").length,described:Boolean(description.trim()),complete}
       :bundleBatchSummary[recipe.id];
-    if(!mine)return [];
+    /* D500 - a product with no batch yet had no summary to read, so it returned
+       no rows and its card collapsed back to a bare header - the exact thing
+       these rows exist to stop. Step 1 never does that: a product that is not
+       set up still shows every row, saying it is not set. */
+    const counts=mine||{designs:0,titled:0,tagged:0,drafts:0,described:false,complete:false};
     const plural=(count:number,word:string)=>`${count} ${count===1?word:`${word}s`}`;
+    const started=Boolean(mine);
     if(workflowStep==="designs")return [
-      {label:"Designs",value:plural(mine.designs,"design"),done:mine.designs>0},
-      {label:"Drafts",value:mine.drafts?plural(mine.drafts,"draft"):"Not created yet",done:mine.drafts>0},
+      {label:"Designs",value:started?plural(counts.designs,"design"):"Not started yet",done:started&&counts.designs>0},
+      {label:"Drafts",value:counts.drafts?plural(counts.drafts,"draft"):"Not created yet",done:counts.drafts>0},
     ];
     if(finishPhase==="final")return [
-      {label:"Listings",value:plural(mine.drafts,"listing"),done:mine.drafts>0},
-      {label:"Titles",value:`${mine.titled} of ${mine.designs} written`,done:mine.designs>0&&mine.titled===mine.designs},
+      {label:"Listings",value:started?plural(counts.drafts,"listing"):"Not started yet",done:counts.drafts>0},
+      {label:"Titles",value:started?`${counts.titled} of ${counts.designs} written`:"Not started yet",done:started&&counts.designs>0&&counts.titled===counts.designs},
     ];
     return [
-      {label:"Titles",value:`${mine.titled} of ${mine.designs} written`,done:mine.designs>0&&mine.titled===mine.designs},
-      {label:"Tags",value:`${mine.tagged} of ${mine.designs} at 13 tags`,done:mine.designs>0&&mine.tagged===mine.designs},
-      {label:"Description",value:mine.described?"Attached":"Not attached",done:mine.described},
+      {label:"Titles",value:started?`${counts.titled} of ${counts.designs} written`:"Not started yet",done:started&&counts.designs>0&&counts.titled===counts.designs},
+      {label:"Tags",value:started?`${counts.tagged} of ${counts.designs} at 13 tags`:"Not started yet",done:started&&counts.designs>0&&counts.tagged===counts.designs},
+      {label:"Description",value:counts.described?"Attached":started?"Not attached":"Not started yet",done:counts.described},
     ];
   }
 
