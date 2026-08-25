@@ -89,3 +89,32 @@ test("features that live outside the main file are still wired", async () => {
   assert.match(tools, /export function SavedWorkflow/);
   assert.match(tools, /product bundle/i, "bundles");
 });
+
+/* D512/D513 · The tripwire above catches a component that stopped rendering. It
+ * cannot catch a component that renders with half its inputs missing, or one
+ * fact worked out three times in three slightly different ways. Both happened. */
+test("no capability is wired up only halfway", async () => {
+  const app = await read("app/listing-factory-app.tsx");
+
+  /* The recommended print size was computed in three places. Two fell back to
+     `placementScale || 0`, the bundle check to `|| 1`, so a product with no
+     placement scale was exempt from the resolution warning on its own and
+     flagged inside a bundle. One function decides it. */
+  assert.match(app, /export function printTargetFor\(template:TemplateDetails\|null\)/);
+  assert.equal((app.match(/isRigidPaperProduct\([a-zA-Z]*\)\?Math\.min/g) || []).length, 1,
+    "the scale rule is written once");
+  assert.equal((app.match(/printTargetFor\(/g) || []).length, 6,
+    "five call sites plus the definition - it was written out five times");
+
+  /* MockupSetSelector takes selectedIds and firstRun. Neither was ever passed, so
+     the first-run wording was dead for every seller and Goldie could not tell her
+     scene picks had changed - which is what offers to save them. */
+  assert.match(app, /<MockupSetSelector firstRun=\{productFirstRun\}/);
+  assert.match(app, /selectedIds=\{sharedMockups\?\.theme===mockupTheme\?sharedMockups\.ids:\[\]\}/);
+  assert.match(app, /savedIds=\{activeRecipe\?\.mockupIds\}/);
+  assert.match(app, /onChange=\{\(theme,ids\)=>\{setMockupTheme\(theme\);if\(ids\)setSharedMockups\(\{theme,ids\}\)\}\}/,
+    "the ids the selector reports are kept, not dropped");
+
+  // And first run is a fact about the product, not about how it was opened.
+  assert.doesNotMatch(app, /const productFirstRun=Boolean\(activeRecipe\)&&!activeBundle/);
+});

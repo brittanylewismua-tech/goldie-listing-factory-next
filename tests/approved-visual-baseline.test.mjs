@@ -748,7 +748,12 @@ test("a product with no saved defaults is framed as first-time setup — D125", 
    * view: "Saved for this product", "From your last batch", for a product that had
    * never had a batch. Readiness replaced that copy switch, and D232 removed the
    * settings block this test tracked through three renamings. */
-  assert.match(page, /const productFirstRun=Boolean\(activeRecipe\)&&!activeBundle/);
+  /* D513 - first run is a fact about the product, not about how it was opened, so
+     a bundle member being set up for the first time is framed that way too. And
+     it is finally passed to the component that asks for it; before, this value
+     was computed and read by nobody. */
+  assert.match(page, /const productFirstRun=Boolean\(activeRecipe\)\n\s*&&!activeRecipe\?\.defaultColorIds/);
+  assert.match(page, /<MockupSetSelector firstRun=\{productFirstRun\}/);
   assert.doesNotMatch(page, /className="everything-else"/);
   assert.match(page, /Choose the colors you want to offer/); /* D191: US spelling */
 });
