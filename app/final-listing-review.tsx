@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 
 type Draft = { clientId:string; id?:string; name:string; title?:string; status:string; previewUrl?:string; editorUrl?:string; error?:string; productName?:string };
 type Design = { id:string; name:string; title:string; tags:string[]; previewUrl:string; sizeGuideName?:string };
-type Props = { drafts:Draft[]; files:Design[]; selections:Record<string,number[]>; defaultIndices:number[]; preparedMockupCounts:Record<string,number>; batchSizeGuide:string; onRetry?:(clientId:string)=>void; onEdit:(phase:"details"|"mockups")=>void };
+type Props = { drafts:Draft[]; files:Design[]; selections:Record<string,number[]>; defaultIndices:number[]; preparedMockupCounts:Record<string,number>; batchSizeGuide:string; productName?:string; onRetry?:(clientId:string)=>void; onEdit:(phase:"details"|"mockups")=>void };
 
 /* D253 · The Publish page grouped listings under the raw upload filename, so a
    seller reviewing a batch read "ChatGPT Image Aug 21, 2026, 05_32_41 PM (2).png"
@@ -24,7 +24,7 @@ function readableDesignName(name: string): string {
   return tidy || name || "Untitled design";
 }
 
-export default function FinalListingReview({drafts,files,selections,defaultIndices,preparedMockupCounts,batchSizeGuide,onRetry,onEdit}:Props){
+export default function FinalListingReview({drafts,files,selections,defaultIndices,preparedMockupCounts,batchSizeGuide,productName,onRetry,onEdit}:Props){
   const selectable=drafts.filter(draft=>draft.status==="Created"&&draft.id);
   const [selectedIds,setSelectedIds]=useState<string[]>(()=>selectable.map(draft=>draft.id!));
   const selected=new Set(selectedIds),allSelected=selectable.length>0&&selectable.every(draft=>selected.has(draft.id!));
@@ -40,7 +40,10 @@ export default function FinalListingReview({drafts,files,selections,defaultIndic
     return {shortTitle,missingTags,needed:shortTitle||missingTags};
   }
   return <section className="final-listing-review">
-    <div className="final-listing-review-heading"><div><p className="mini-label">EVERY LISTING IN THIS BATCH</p><h3>Choose exactly which listings to publish</h3></div><span>{selectedIds.length} of {selectable.length} selected</span></div>
+    <div className="final-listing-review-heading"><div>{/* D548 - "EVERY LISTING IN THIS BATCH" over a list holding one product's
+        listings, on a page whose button publishes three products. It lists the
+        listings of the product that is open; it says so. */}
+      <p className="mini-label">{productName?`LISTINGS ON ${productName.toUpperCase()}`:"EVERY LISTING IN THIS BATCH"}</p><h3>Choose exactly which listings to publish</h3></div><span>{selectedIds.length} of {selectable.length} selected</span></div>
     <label className="final-select-all"><input type="checkbox" checked={allSelected} onChange={()=>changeSelection(allSelected?[]:selectable.map(draft=>draft.id!))}/><span>Select every successful listing</span></label>
     <div className="final-design-groups">{groups.map(([designName,group])=>{const attention=group.filter(draft=>{const design=files.find(file=>file.id===draft.clientId)||files.find(file=>file.name===draft.name);return draft.status!=="Created"||!draft.id||(selections[draft.id]??defaultIndices).length+(preparedMockupCounts[draft.id]||0)===0||contentReview(design).needed}).length;return <details className="final-design-group" key={designName} open={groups.length<=3||attention>0}><summary><span>{readableDesignName(designName)}</span><b>{group.length} {group.length===1?"listing":"listings"}</b><em className={attention?"needs-attention":"ready"}>{attention?`${attention} ${attention===1?"needs":"need"} a look`:"✓ Ready"}</em></summary><div className="final-listing-grid">{group.map(draft=>{const design=files.find(file=>file.id===draft.clientId)||files.find(file=>file.name===draft.name),selectedCount=draft.id?(selections[draft.id]??defaultIndices).length:defaultIndices.length,mockupCount=draft.id?preparedMockupCounts[draft.id]||0:0,hasPhoto=selectedCount+mockupCount>0,publishable=draft.status==="Created"&&hasPhoto,review=contentReview(design),reviewMessage=review.shortTitle&&review.missingTags?"Title and tags need review":review.shortTitle?"Title needs review":"Tags need review";return <article className={`final-listing-card ${publishable?(review.needed?"review-needed":""):"failed"}`} key={`${draft.productName||"product"}:${draft.clientId}`}>
       {draft.id&&draft.status==="Created"?<label className="final-listing-select" aria-label={`Select ${design?.title||draft.title||draft.name} for publishing`}><input type="checkbox" checked={selected.has(draft.id)} onChange={()=>toggle(draft.id!)}/></label>:<span className="final-listing-select-placeholder"/>}{draft.previewUrl?<img loading="lazy" src={draft.previewUrl} alt={`Preview for ${design?.title||draft.title||draft.name}`}/>:design?<img loading="lazy" src={design.previewUrl} alt={`Preview for ${design.title||design.name}`}/>:<span className="final-listing-no-image">No preview</span>}

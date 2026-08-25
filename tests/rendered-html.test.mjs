@@ -4059,7 +4059,12 @@ test("no product on any step falls back to a bare header — D500", async () => 
   }
 
   // An unstarted product says so rather than claiming zero of zero.
-  assert.equal((fn.match(/"Not started yet"/g) || []).length, 12, "D546 - four rows on step 2, three on step 3, five reporting rows on step 4");
+  /* D548 - the literal moved into one variable: a product whose batch has not
+     been read yet says "Checking…", because calling it unstarted was the same
+     lie that had step 4 refusing to publish a ready bundle. */
+  assert.match(fn, /const unread=!isActive&&!mine&&Boolean\(bundleBatchIds\[recipe\.id\]\)/);
+  assert.match(fn, /const blank=unread\?"Checking…":"Not started yet"/);
+  assert.ok((fn.match(/\bblank\b/g) || []).length >= 12, "every row uses it");
 });
 
 test("the bundle cards do not churn the network or the tab claim — D501", async () => {
@@ -4630,7 +4635,12 @@ test("step 4 tells the truth about a bundle it is not ready to publish — D546"
    * check" and offered to publish all three. Pressing it would have put two
    * listings live and then stalled on a product with nothing in it. */
   assert.match(app, /function bundleProductsNotStarted\(\)/);
-  assert.match(app, /return bundleRecipes\.filter\(recipe=>recipe\.id!==activeRecipe\?\.id&&!\(Number\(bundleBatchSummary\[recipe\.id\]\?\.drafts\)\|\|0\)\)/);
+  /* D548 - and "not read yet" is not "not started": the sibling batches load
+     after mount, so this briefly saw every other product as empty and would have
+     refused a bundle that was ready, naming products that were merely unread. */
+  assert.match(app, /return bundleRecipes\.filter\(recipe=>recipe\.id!==activeRecipe\?\.id&&!bundleBatchIds\[recipe\.id\]&&!\(Number\(bundleBatchSummary\[recipe\.id\]\?\.drafts\)\|\|0\)\)/);
+  assert.match(app, /function bundleProductsStillReading\(\)/);
+  assert.match(app, /if\(bundleProductsStillReading\(\)\.length\)return "Checking the other products…"/);
 
   // Publishing is refused while any product in the bundle has nothing to publish.
   assert.match(app, /for\(const recipe of bundleProductsNotStarted\(\)\)missing\.push\(`\$\{recipe\.name\} has no listings yet`\)/);
@@ -4650,4 +4660,33 @@ test("step 4 tells the truth about a bundle it is not ready to publish — D546"
      rebuild it. */
   assert.doesNotMatch(app, /className="final-checklist"/);
   assert.doesNotMatch(app, /Confirm the checklist below/);
+});
+
+test("the publish screen states its true scope and its true cost — D548", async () => {
+  const [app, review] = await Promise.all([
+    readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/final-listing-review.tsx", import.meta.url), "utf8"),
+  ]);
+
+  /* Read as someone about to spend money rather than as markup, which is how she
+     read it and how I had not. Four claims on one screen were false or unusable. */
+
+  // 1. "Only the listings selected above" - the selection is one product's; the
+  //    button publishes every product in the bundle.
+  assert.doesNotMatch(app, /<b>Only the listings selected above will be published live on Etsy\.<\/b>/);
+  assert.match(app, /Publishing sends all \$\{bundleRecipes\.length\} products in this batch — \$\{total\} \$\{total===1\?"listing":"listings"\} — live on Etsy\./);
+
+  // 2. It named the per-listing fee and never multiplied it, on the one screen
+  //    where the total is the number worth knowing.
+  assert.match(app, /so this press costs about \$\$\{\(total\*0\.2\)\.toFixed\(2\)\} USD/);
+
+  // 3. "Every listing has at least one photo" was measured from the open product.
+  assert.match(app, /Every listing on \$\{activeRecipe\?\.name\|\|"this product"\} has at least one photo\./);
+
+  // 4. "EVERY LISTING IN THIS BATCH" sat over one product's listings.
+  assert.match(review, /productName\?`LISTINGS ON \$\{productName\.toUpperCase\(\)\}`:"EVERY LISTING IN THIS BATCH"/);
+
+  /* And the shipping profile is named as a shipping profile: the checklist read
+     "✓ Hoodies will be applied automatically", which sounds like the garment. */
+  assert.match(app, /\|\|"Etsy shipping profile"\} shipping profile`:"Needs review"/);
 });
