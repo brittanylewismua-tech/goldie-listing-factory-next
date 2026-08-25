@@ -2,7 +2,7 @@ import { env } from "cloudflare:workers";
 import { NextResponse } from "next/server";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { monthKey, planFor } from "@/app/plan-limits";
-import { processNextGlobalPublishItem, publishJobPayload } from "./queue";
+import { drainGlobalPublishQueue, publishJobPayload } from "./queue";
 import { isOwner } from "@/app/mastermind/access";
 
 export async function POST(request:Request){
@@ -37,4 +37,4 @@ export async function POST(request:Request){
   return NextResponse.json({ok:true,job:await publishJobPayload(user.userId,jobId)},{status:202});
 }
 
-export async function GET(request:Request){const user=await getChatGPTUser();if(!user)return NextResponse.json({error:"Sign in to view this publish job."},{status:401});const jobId=new URL(request.url).searchParams.get("jobId")||"";if(!jobId)return NextResponse.json({error:"A publish job is required."},{status:400});const current=await publishJobPayload(user.userId,jobId);if(!current)return NextResponse.json({error:"This publish job was not found."},{status:404});if(current.queued+current.processing>0)await processNextGlobalPublishItem();/* D476 - was gated on the job's status string, which could say needs_attention while items sat queued underneath it, stalling the queue permanently. */return NextResponse.json({ok:true,job:await publishJobPayload(user.userId,jobId)})}
+export async function GET(request:Request){const user=await getChatGPTUser();if(!user)return NextResponse.json({error:"Sign in to view this publish job."},{status:401});const jobId=new URL(request.url).searchParams.get("jobId")||"";if(!jobId)return NextResponse.json({error:"A publish job is required."},{status:400});const current=await publishJobPayload(user.userId,jobId);if(!current)return NextResponse.json({error:"This publish job was not found."},{status:404});if(current.queued+current.processing>0)await drainGlobalPublishQueue();/* D480 - each poll advanced exactly one listing, and the browser waits for the reply before polling again, so the whole batch ran strictly one at a time. *//* D476 - was gated on the job's status string, which could say needs_attention while items sat queued underneath it, stalling the queue permanently. */return NextResponse.json({ok:true,job:await publishJobPayload(user.userId,jobId)})}

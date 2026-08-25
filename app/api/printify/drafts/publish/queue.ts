@@ -58,13 +58,16 @@ export async function processNextGlobalPublishItem(){
 export async function drainGlobalPublishQueue(maxItems=MAX_CONCURRENT_LISTINGS){
   const runId=crypto.randomUUID();await runtime().DB.prepare("INSERT INTO etsy_worker_runs (id,status) VALUES (?,'running')").bind(runId).run();
   try{
-    let processed=0;
+    /* D480 - this drained the queue one listing at a time, waiting for each to
+       finish before starting the next. Almost all of that wait is idle: up to
+       45 seconds per listing spent polling Printify for the Etsy listing id it
+       has not created yet. So four listings took four minutes of mostly
+       sleeping, and twenty took twenty. The work is entirely I/O, so the slots
+       run together now - the cap and the Etsy budget check are unchanged, they
+       are just used properly. */
     const limit=Math.max(1,Math.min(MAX_CONCURRENT_LISTINGS,maxItems));
-    for(let index=0;index<limit;index+=1){
-      const result=await processNextGlobalPublishItem();
-      if(result.processed) processed+=1;
-      else break;
-    }
+    const results=await Promise.all(Array.from({length:limit},()=>processNextGlobalPublishItem().catch(()=>({processed:false}))));
+    const processed=results.filter(result=>result.processed).length;
     await runtime().DB.batch([runtime().DB.prepare("UPDATE etsy_worker_runs SET status='completed',processed=?,finished_at=CURRENT_TIMESTAMP WHERE id=?").bind(processed,runId),runtime().DB.prepare("INSERT INTO etsy_queue_state (id,last_worker_at,last_worker_status,last_worker_processed,last_error,updated_at) VALUES (1,CURRENT_TIMESTAMP,'healthy',?,NULL,CURRENT_TIMESTAMP) ON CONFLICT(id) DO UPDATE SET last_worker_at=CURRENT_TIMESTAMP,last_worker_status='healthy',last_worker_processed=excluded.last_worker_processed,last_error=NULL,updated_at=CURRENT_TIMESTAMP").bind(processed),runtime().DB.prepare("DELETE FROM etsy_api_usage_buckets WHERE bucket<strftime('%Y-%m-%dT%H','now','-45 days')"),runtime().DB.prepare("DELETE FROM etsy_worker_runs WHERE started_at<datetime('now','-30 days')")]);
     return {processed};
   }catch(error){const message=error instanceof Error?error.message:"The Etsy worker stopped unexpectedly.";await runtime().DB.batch([runtime().DB.prepare("UPDATE etsy_worker_runs SET status='failed',error=?,finished_at=CURRENT_TIMESTAMP WHERE id=?").bind(message,runId),runtime().DB.prepare("INSERT INTO etsy_queue_state (id,last_worker_at,last_worker_status,last_error,updated_at) VALUES (1,CURRENT_TIMESTAMP,'failed',?,CURRENT_TIMESTAMP) ON CONFLICT(id) DO UPDATE SET last_worker_at=CURRENT_TIMESTAMP,last_worker_status='failed',last_error=excluded.last_error,updated_at=CURRENT_TIMESTAMP").bind(message)]);throw error}

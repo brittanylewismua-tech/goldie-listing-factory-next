@@ -11,6 +11,20 @@ type Runtime={DB:D1Database;ARTWORK:R2Bucket};
 const runtime=()=>env as unknown as Runtime;
 const words=(value:string)=>new Set(value.toLowerCase().replace(/[^a-z0-9 ]/g," ").split(/\s+/).filter(word=>word.length>2));
 const flatten=(nodes:TaxonomyNode[]):TaxonomyNode[]=>nodes.flatMap(node=>[node,...flatten(node.children||[])]);
+/* D480 - every listing downloaded and parsed Etsy's entire seller taxonomy, a
+   tree of thousands of nodes that is identical for every seller and changes
+   perhaps twice a year. On a batch of twenty that is twenty full downloads
+   against a rate-limited API, for one answer that never differs. Held for an
+   hour per worker instance; a cold instance simply fetches it again. */
+let taxonomyCache:{at:number;nodes:TaxonomyNode[]}|null=null;
+const TAXONOMY_TTL_MS=60*60*1000;
+async function taxonomyNodes(token:string,meter:{calls:number}){
+  if(taxonomyCache&&Date.now()-taxonomyCache.at<TAXONOMY_TTL_MS)return taxonomyCache.nodes;
+  const payload=await etsyFetch<{results?:TaxonomyNode[]}>("/seller-taxonomy/nodes",token,undefined,meter);
+  const nodes=payload.results||[];
+  if(nodes.length)taxonomyCache={at:Date.now(),nodes};
+  return nodes;
+}
 function chooseTaxonomy(nodes:TaxonomyNode[],details:EtsyDetails){const target=words(details.category||"");return flatten(nodes).map(node=>({node,score:[...words(node.name)].filter(word=>target.has(word)).length*10+(node.name.toLowerCase()===String(details.category||"").toLowerCase()?100:0)})).sort((a,b)=>b.score-a.score)[0]}
 /* D477 - Etsy's property update requires BOTH value_ids and values. Sending only
    value_ids returns "Missing input parameter: [values]", which is what D473
@@ -27,7 +41,7 @@ async function applyProperty(token:string,shopId:number,listingId:number,propert
   try{await etsyFetch(`/shops/${shopId}/listings/${listingId}/properties/${propertyId}`,token,{method:"PUT",body},meter)}catch{skipped.push(label)}
 }
 async function applyEtsyDetails(token:string,shopId:number,listingId:number,details:EtsyDetails,shippingProfileId:number,description:string,meter:{calls:number}){
-  const tree=await etsyFetch<{results?:TaxonomyNode[]}>("/seller-taxonomy/nodes",token,undefined,meter),match=chooseTaxonomy(tree.results||[],details);
+  const tree=await taxonomyNodes(token,meter),match=chooseTaxonomy(tree,details);
   const taxonomyId=Number(details.taxonomyId)||match?.node.id;if(!taxonomyId||!match&& !details.taxonomyId)throw new Error(`Goldie could not safely match the Etsy category “${details.category||"unknown"}”. Review this listing before publishing.`);
   const listingBody=new URLSearchParams({taxonomy_id:String(taxonomyId),shipping_profile_id:String(shippingProfileId),description});
   await etsyFetch(`/shops/${shopId}/listings/${listingId}`,token,{method:"PATCH",body:listingBody},meter);

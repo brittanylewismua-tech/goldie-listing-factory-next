@@ -2741,3 +2741,10 @@ body{min-width:1180px!important}
    presses publish. */
 .app-shell .publish-message{background:none!important;border:0!important;border-color:transparent!important;padding:6px 0 0;margin:0;text-align:center;font-size:.82rem;font-weight:700;line-height:1.4;color:#6f5f7d}
 .app-shell .publish-failure-panel{margin:16px 0 0;text-align:left}
+
+/* D481 - the four summary tiles were near-black slabs (#2e2038) dropped into a
+   lilac celebration screen, the only pure-dark surface anywhere in the flow.
+   They now sit in the brand's own purple. */
+.app-shell .receipt-value-strip>div{background:linear-gradient(160deg,#7b5aa6,#8b5989)!important;color:#fff;box-shadow:0 6px 16px rgba(88,58,110,.22)}
+.app-shell .receipt-value-strip b{color:#fff}
+.app-shell .receipt-value-strip span{color:rgba(255,255,255,.82)!important}

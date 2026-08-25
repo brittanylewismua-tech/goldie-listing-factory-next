@@ -2249,7 +2249,7 @@ test("reports published listings instead of workflow completion (fixes D88)",asy
   const api=await readFile(new URL("../app/api/batches/route.ts",import.meta.url),"utf8");
   const page=await readFile(new URL("../app/batches/page.tsx",import.meta.url),"utf8");
   const app=await readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8");
-  assert.match(api,/published_count:Math\.max\(0,Number\(state\.batchReceipt\?\.publishedCount\)\|\|0\)/);
+  assert.match(api,/published_count:Math\.max\(Number\(publishedByBatch\[String\(row\.id\)\]\)\|\|0,Number\(state\.batchReceipt\?\.publishedCount\)\|\|0\)/);
   /* D225 · "DRAFTS READY" was the fallback for every unpublished batch, whether
      or not a draft existed. Measured across all 17 saved batches: none had a
      draft in its snapshot and all 17 claimed drafts were ready. The label now
@@ -3552,7 +3552,8 @@ test("a re-queued listing is never stranded behind a stale job status — D476",
      with an empty failure panel because the items were no longer failed.
      Three independent places now refuse to let a stale status strand work. */
   assert.match(route, /UPDATE etsy_publish_jobs SET status='processing',failed=0,last_error=NULL[^`]*status IN \('queued','running'\)/);
-  assert.match(route, /if\(current\.queued\+current\.processing>0\)await processNextGlobalPublishItem\(\)/);
+  assert.match(route, /if\(current\.queued\+current\.processing>0\)await drainGlobalPublishQueue\(\)/,
+    "D480 replaced the single-item call here with the parallel drain");
   assert.doesNotMatch(route, /if\(!\["completed","needs_attention"\]\.includes\(current\.status\)\)await processNextGlobalPublishItem/);
   assert.match(app, /while\(!job\|\|!\["completed","needs_attention"\]\.includes\(job\.status\)\|\|job\.queued\+job\.processing>0\)/);
 
@@ -3597,4 +3598,50 @@ test("the live build announces itself — D479", async () => {
   assert.match(marker, /export const BUILD_MARKER = "D\d+"/);
   assert.match(route, /build:BUILD_MARKER/);
   assert.match(route, /"cache-control":"no-store"/, "a cached answer would defeat the point");
+});
+
+test("publishing runs in parallel and stops re-downloading the taxonomy — D480", async () => {
+  const [queue, finish] = await Promise.all([
+    readFile(new URL("../app/api/printify/drafts/publish/queue.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/etsy/finish.ts", import.meta.url), "utf8"),
+  ]);
+
+  /* One listing took about a minute, and the queue drained strictly one at a
+     time, so twenty listings meant twenty minutes of holding a tab open. Almost
+     all of that minute is idle - waiting on Printify to mint the Etsy listing
+     id - so the four slots that already existed now actually run together. */
+  assert.match(queue, /await Promise\.all\(Array\.from\(\{length:limit\}/);
+  assert.doesNotMatch(queue, /for\(let index=0;index<limit;index\+=1\)/, "the drain was serial");
+  assert.match(queue, /processNextGlobalPublishItem\(\)\.catch\(\(\)=>\(\{processed:false\}\)\)/,
+    "one listing failing must not abandon the other three");
+
+  // Etsy's entire seller taxonomy was downloaded once per listing.
+  assert.match(finish, /let taxonomyCache/);
+  assert.match(finish, /if\(taxonomyCache&&Date\.now\(\)-taxonomyCache\.at<TAXONOMY_TTL_MS\)return taxonomyCache\.nodes/);
+  assert.equal((finish.match(/"\/seller-taxonomy\/nodes"/g) || []).length, 1,
+    "one place fetches the taxonomy, so the cache cannot be bypassed");
+});
+
+test("the finish receipt reflects what actually happened — D481", async () => {
+  const [ui, app, css] = await Promise.all([
+    readFile(new URL("../app/goldie-ui.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8"),
+  ]);
+
+  // Fifty designs meant fifty links called "Open Etsy listing 37".
+  assert.doesNotMatch(ui, /Open Etsy listing \{index\+1\}/);
+  assert.match(ui, /Open your Etsy listings ↗/);
+  assert.match(ui, /Open your new Etsy listing ↗/, "a single listing still opens directly");
+
+  // Duplicate this workflow was a third route to what Batch History already does.
+  assert.doesNotMatch(ui, /<GoldieButton onClick=\{onDuplicate\}>/);
+  assert.doesNotMatch(ui, /onDuplicate/);
+  assert.doesNotMatch(app, /onDuplicate=/);
+
+  // The only pure-dark surface in the whole flow, on the celebration screen.
+  assert.match(css, /\.receipt-value-strip>div\{background:linear-gradient/);
+
+  // "Ready for final review" has no business sitting above a finished batch.
+  assert.match(app, /allCreatedListingsHaveImages\(\)&&!batchReceipt&&/);
 });

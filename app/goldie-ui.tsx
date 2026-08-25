@@ -28,7 +28,7 @@ export function ActionReceipt({items}:{items:Array<{value:string;label:string}>}
 
 export type BatchReceipt={publishedCount:number;etsyUrls:string[];completedAt:string};
 
-export function OutcomeReceipt({goalLine,receipt,productName,shippingProfile,imageCount,sizeGuideName,tagCount,mockupCount,variantCount,minutesSaved,nextBundleProduct,bundleComplete,onNextBundleProduct,onNewBatch,onDuplicate}:{goalLine?:string;receipt:BatchReceipt;productName:string;shippingProfile:string;imageCount:number;sizeGuideName?:string;tagCount:number;mockupCount:number;variantCount:number;minutesSaved:number;nextBundleProduct?:string;bundleComplete?:boolean;onNextBundleProduct?:()=>void;onNewBatch:()=>void;onDuplicate:()=>void}){
+export function OutcomeReceipt({goalLine,receipt,productName,shippingProfile,imageCount,sizeGuideName,tagCount,mockupCount,variantCount,minutesSaved,nextBundleProduct,bundleComplete,onNextBundleProduct,onNewBatch}:{goalLine?:string;receipt:BatchReceipt;productName:string;shippingProfile:string;imageCount:number;sizeGuideName?:string;tagCount:number;mockupCount:number;variantCount:number;minutesSaved:number;nextBundleProduct?:string;bundleComplete?:boolean;onNextBundleProduct?:()=>void;onNewBatch:()=>void}){
   return <section className="outcome-receipt" aria-live="polite">
     <div className="receipt-celebration" aria-hidden="true"><span>✓</span></div>
     <p className="mini-label">BATCH COMPLETE</p>
@@ -46,10 +46,15 @@ export function OutcomeReceipt({goalLine,receipt,productName,shippingProfile,ima
       <article><span>Shipping</span><b>{shippingProfile||"Selected Etsy profile"}</b></article>
       <article><span>Images</span><b>{imageCount} Printify {imageCount===1?"image":"images"}{sizeGuideName?" + size guide":""}</b></article>
     </div>
-    {receipt.etsyUrls.length>0&&<div className="receipt-links">{receipt.etsyUrls.map((url,index)=><a key={url} href={url} target="_blank" rel="noopener noreferrer">Open Etsy listing {index+1} ↗</a>)}</div>}
+    {receipt.etsyUrls.length>0&&<div className="receipt-links">{/* D481 - one numbered link per listing does not survive contact with a real
+     batch: fifty designs meant fifty identical links called "Open Etsy listing
+     37". A single listing still gets its own link because that is the useful
+     thing to open; more than one goes to her listings. */}{receipt.etsyUrls.length===1?<a href={receipt.etsyUrls[0]} target="_blank" rel="noopener noreferrer">Open your new Etsy listing ↗</a>:<a href="https://www.etsy.com/your/shops/me/tools/listings" target="_blank" rel="noopener noreferrer">Open your Etsy listings ↗</a>}</div>}
     {nextBundleProduct&&onNextBundleProduct&&<div className="bundle-next-note"><b>Next in your bundle: {nextBundleProduct}</b><span>Your designs and titles will carry forward. You will review this product’s pricing, shipping, description, Etsy details, and images separately.</span></div>}
     {bundleComplete&&<div className="bundle-complete-note">✓ Every product in this bundle is complete.</div>}
-    <div className="receipt-actions">{nextBundleProduct&&onNextBundleProduct?<GoldieButton onClick={onNextBundleProduct}>Continue bundle with {nextBundleProduct}</GoldieButton>:<GoldieButton onClick={onDuplicate}>Duplicate this workflow</GoldieButton>}<GoldieButton tone="secondary" onClick={onNewBatch}>{nextBundleProduct?"Stop here":"Choose another product"}</GoldieButton><a href="/batches">View batch history</a></div>
+    {/* D481 - "Duplicate this workflow" offered a third way to do what Batch
+     History and saved products already do, on the one screen where the next
+     step should be obvious. */}<div className="receipt-actions">{nextBundleProduct&&onNextBundleProduct&&<GoldieButton onClick={onNextBundleProduct}>Continue bundle with {nextBundleProduct}</GoldieButton>}<GoldieButton tone={nextBundleProduct?"secondary":"primary"} onClick={onNewBatch}>{nextBundleProduct?"Stop here":"Choose another product"}</GoldieButton><a href="/batches">View batch history</a></div>
     <small>Completed {new Date(receipt.completedAt).toLocaleString()}</small>
   </section>;
 }
