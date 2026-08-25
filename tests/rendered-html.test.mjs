@@ -4010,7 +4010,7 @@ test("no product on any step falls back to a bare header — D500", async () => 
   // All three steps are covered, and each returns rows.
   const returns = fn.match(/return \[/g) || [];
   assert.equal(returns.length, 3, "D517 - step 2 lists products again once the drafts exist");
-  for (const label of ["Listing photos", "Mockups", "Listings", "Titles and tags", "Description"]) {
+  for (const label of ["Printify mockups", "Lifestyle mockups", "Listings", "Titles and tags", "Description"]) {
     assert.ok(fn.includes(`label:"${label}"`), `${label} row is built`);
   }
 
@@ -4222,14 +4222,23 @@ test("every step is the same shape: a collapsible card per product — D517", as
   assert.equal((app.match(/stepProductCards\(bundleCardStatus\(/g) || []).length, 4,
     "designs upload, designs images, listing, publish");
   assert.match(app, /\{complete && workflowStep==="designs" && stepProductCards\(bundleCardStatus\("images"\)/);
-  assert.match(app, /\{label:"Listing photos"[^}]*target:"details\.recommended-listing-photos"\}/);
-  assert.match(app, /\{label:"Mockups"[^}]*target:"\.integrated-mockups"\}/);
+  /* D535 - both of these pointed at whatever selector happened to exist rather
+     than at the thing the row is about. "Listing photos" opened an advice panel
+     headed "Recommended photos for Unisex Midweight Softstyle Fleece Hoodie", so
+     the row toggled a tip and went nowhere near a photo. The two real sections
+     are the Printify picker and the lifestyle mockup builder, and the page
+     already names them that way. */
+  assert.match(app, /\{label:"Printify mockups"[^}]*target:"details\.printify-image-picker"\}/);
+  assert.match(app, /\{label:"Lifestyle mockups"[^}]*target:"details\.draft-mockups"\}/);
+  assert.doesNotMatch(app, /target:"details\.recommended-listing-photos"/,
+    "a row never points at an advice panel");
 
   // Every target has to be a selector that exists, not one I hoped for.
   const targets = [...app.matchAll(/target:"([^"]+)"/g)].map((m) => m[1]);
+  /* D535 - the two step 2 targets now point at the sections they are named for. */
   assert.deepEqual([...new Set(targets)].sort(), [
-    ".batch-title-builder", ".final-review", ".integrated-mockups",
-    "details.permanent-description", "details.recommended-listing-photos",
+    ".batch-title-builder", ".final-review",
+    "details.draft-mockups", "details.permanent-description", "details.printify-image-picker",
   ]);
   for (const target of targets) {
     const bare = target.replace(/^details/, "").replace(/^\./, "");

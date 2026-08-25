@@ -1834,8 +1834,18 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
        is nothing per-product to say, and the upload is shared - that is why the
        upload itself has no cards above it. */
     if(workflowStep==="designs")return [
-      {label:"Listing photos",value:started?plural(counts.photos,"photo"):"Not started yet",done:counts.photos>0,target:"details.recommended-listing-photos"},
-      {label:"Mockups",value:started?(counts.mockups?plural(counts.mockups,"mockup"):"None made yet"):"Not started yet",done:counts.mockups>0,target:".integrated-mockups"},
+      /* D535 - both of these were wrong, and wrong in the way she keeps calling
+         out: I pointed each row at whatever selector happened to exist rather
+         than at the thing the row is about. "Listing photos" opened
+         details.recommended-listing-photos, which is an advice panel - a
+         paragraph headed "Recommended photos for Unisex Midweight Softstyle
+         Fleece Hoodie" - so the row toggled a tip and went nowhere near a photo.
+         The two real sections are the Printify picker and the lifestyle mockup
+         builder, and the page already names them that way: "Printify product
+         photos" and "Create lifestyle mockups from your Mockup Library". The
+         rows use those names now and open those sections. */
+      {label:"Printify mockups",value:started?plural(counts.photos,"photo"):"Not started yet",done:counts.photos>0,target:"details.printify-image-picker"},
+      {label:"Lifestyle mockups",value:started?(counts.mockups?plural(counts.mockups,"mockup"):"None made yet"):"Not started yet",done:counts.mockups>0,target:"details.draft-mockups"},
     ];
     if(finishPhase==="final")return [
       {label:"Listings",value:started?plural(counts.drafts,"listing"):"Not started yet",done:counts.drafts>0,target:".final-review"},
@@ -2961,6 +2971,12 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
            every other step, with its own mockups inside it. */
       <section className="post-draft-workspace">
         <div className="post-draft-heading"><div><h2>Review placement and choose listing images</h2><p>The large preview below is the real Printify placement Goldie uses as the required reference for lifestyle mockups.</p></div>{drafts.filter(draft=>draft.status==="Created").length>1&&<button className="open-all-button" onClick={openAllDrafts}>Review all listings in Printify ↗</button>}</div>
+        {/* D536 - the size guide applies to every listing in the batch, and she
+            needs it in hand while she is reordering each listing's images, not
+            parked underneath all of them. D521 moved it out of one product's
+            card, which was right, and left it at the very bottom of the step,
+            which was not. It sits above the panels it applies to. */}
+        <section className="batch-size-guide"><div><p className="mini-label">OPTIONAL · APPLY TO THE WHOLE BATCH</p><h3>Add one size guide to every Etsy listing</h3><span>Choose it once. Goldie attaches it to every listing in this batch automatically when you publish.</span></div><input ref={sizeGuidePicker} type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={event=>{const file=event.target.files?.[0];if(file)void applySizeGuide(file)}}/><button onClick={()=>sizeGuidePicker.current?.click()}>{sizeGuideName?"Replace size guide":"Choose size guide"}</button>{sizeGuideStatus&&<p role="status">{sizeGuideStatus}</p>}</section>
         {/* D520 - this rendered above the product cards, so a three-product
             bundle got one "Recommended photos for Unisex Midweight Softstyle
             Fleece Hoodie" floating over all three, and nothing at all for the
@@ -3004,7 +3020,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
             one product's card. The forward button belongs to the step, not to
             whichever product happens to be open, and so does the note saying why
             it is disabled. */}
-        <section className="batch-size-guide"><div><p className="mini-label">OPTIONAL · APPLY TO THE WHOLE BATCH</p><h3>Add one size guide to every Etsy listing</h3><span>Choose it once. Goldie attaches it to every listing in this batch automatically when you publish.</span></div><input ref={sizeGuidePicker} type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={event=>{const file=event.target.files?.[0];if(file)void applySizeGuide(file)}}/><button onClick={()=>sizeGuidePicker.current?.click()}>{sizeGuideName?"Replace size guide":"Choose size guide"}</button>{sizeGuideStatus&&<p role="status">{sizeGuideStatus}</p>}</section>
+        
         {imageStepError&&<p className="image-step-blocker" role="alert">{imageStepError}</p>}
         <button className="workflow-next" type="button" disabled={imagesStepIssues().length>0} title={imagesStepIssues()[0]} onClick={()=>{const missing=createdListingsMissingImages();if(missing.length){setImageStepError(`${missing.length} ${missing.length===1?"listing needs":"listings need"} at least one photo.`);setMissingPhotoDraftIds(missing.map(draft=>draft.clientId));return}setImageStepError("");setMissingPhotoDraftIds([]);/* D427 - one Next step on this page, and it is the one that checks every listing has a photo. The second copy in the card list bypassed that check entirely. Goes to Listing, not Publish. */setFinishPhase("details");void goToStep("finish",false,true);window.scrollTo(0,0)}}>Next step <span aria-hidden="true">→</span></button>
         {imagesStepIssues()[0]&&<p className="etsy-preparing-note gate-reason" role="status">{imagesStepIssues()[0]}</p>}
