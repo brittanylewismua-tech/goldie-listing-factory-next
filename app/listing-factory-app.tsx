@@ -1844,8 +1844,9 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
          builder, and the page already names them that way: "Printify product
          photos" and "Create lifestyle mockups from your Mockup Library". The
          rows use those names now and open those sections. */
-      {label:"Printify mockups",value:started?plural(counts.photos,"photo"):"Not started yet",done:counts.photos>0,target:"details.printify-image-picker"},
-      {label:"Lifestyle mockups",value:started?(counts.mockups?plural(counts.mockups,"mockup"):"None made yet"):"Not started yet",done:counts.mockups>0,target:"details.draft-mockups"},
+      {label:"Printify mockups",value:started?plural(counts.photos,"photo"):"Not started yet",done:counts.photos>0,target:"details.printify-mockups"},
+      {label:"Lifestyle mockups",value:started?(counts.mockups?plural(counts.mockups,"mockup"):"None made yet"):"Not started yet",done:counts.mockups>0,target:"details.lifestyle-mockups"},
+      {label:"Photo order",value:started?plural(counts.photos+counts.mockups,"photo"):"Not started yet",done:counts.photos+counts.mockups>0,target:"details.photo-order"},
     ];
     if(finishPhase==="final")return [
       {label:"Listings",value:started?plural(counts.drafts,"listing"):"Not started yet",done:counts.drafts>0,target:".final-review"},
@@ -2991,26 +2992,57 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
         <MockupSetSelector firstRun={productFirstRun} productName={activeRecipe?.name||templateDetails?.blueprintTitle||""} value={mockupTheme} selectedIds={sharedMockups?.theme===mockupTheme?sharedMockups.ids:[]} savedValue={activeRecipe?.defaultMockupTheme||""} savedIds={activeRecipe?.mockupIds} onChange={(theme,ids)=>{setMockupTheme(theme);if(ids)setSharedMockups({theme,ids})}} saving={savingProductDefault==="mockups"} onSaveDefault={()=>void saveProductDefaults({defaultMockupTheme:mockupTheme,mockupIds:sharedMockups?.theme===mockupTheme?sharedMockups.ids:[]},"mockups")}/>
         
         {openAllMessage&&<p className="open-all-message" role="status">{openAllMessage}</p>}
-        <div className="draft-card-grid">{drafts.map(draft=>{const design=files.find(file=>file.id===draft.clientId),selectedImages=draft.id?(printifyImageSelections[draft.id]??printifyImageIndices):printifyImageIndices;/* D532 - each listing inside an open product card was 813px, so two designs made
-     the card 2444px and twenty would have made it sixteen thousand. Every other
-     thing on this page collapses; these did not. A listing now reads as one line
-     - its design, its title, how many photos it has - and opens when she wants to
-     work on it. The one that failed opens itself, because that one needs her. */
-    return <details id={`listing-images-${draft.clientId}`} className={`draft-card listing-card ${draft.status!=="Created"?"failed":""}`} key={draft.clientId} open={draft.status!=="Created"}>
-      <summary className="listing-card-summary">
-        <span className="listing-card-name">{design?.title?.trim()||design?.name||draft.name||"Listing"}</span>
-        <span className="listing-card-meta">{draft.status!=="Created"?"Needs attention":`${selectedImages.length+(preparedMockupCounts[draft.id||""]||0)} ${selectedImages.length+(preparedMockupCounts[draft.id||""]||0)===1?"photo":"photos"}`}</span>
-      </summary>
-          <div className="draft-card-top">{draft.previewUrl?<button className="printify-preview-button" onClick={()=>window.open(draft.previewUrl,"_blank","noopener,noreferrer")} aria-label="Open larger Printify preview"><img src={draft.previewUrl} alt={`Printify preview for ${draft.title||draft.name}`}/><span>Click to enlarge</span></button>:design?<div className="pending-preview"><img src={design.previewUrl} alt="Design preview" loading="lazy" decoding="async"/><span>Printify preview processing</span></div>:<span className="draft-check">!</span>}<div>{draft.status!=="Created"&&<span className="draft-state">DRAFT FAILED</span>}<h3>{draft.title||draft.name}</h3><small>{draft.status==="Created"?"Unpublished Printify draft":draft.error}</small>{/* D409 - The tags belong to step 3. Showing them on Images invited editing
+        {(()=>{
+          /* D537 - a rewrite, not another selector. These sections exist once per
+             LISTING - two designs meant two Printify pickers and two lifestyle
+             panels - while the rows above them are per PRODUCT and count across
+             all of them. So a row named "Printify mockups" jumped into the first
+             listing's copy, the next row jumped into the first listing's other
+             copy, and both looked like the same block of stuff underneath.
+             Grouped by the task it belongs to now: every listing's Printify
+             photos in one section, every listing's lifestyle mockups in the
+             next, every listing's photo order in the third. The rows name those
+             three sections and open them. */
+          const listings=drafts.map(draft=>({draft,design:files.find(file=>file.id===draft.clientId),selectedImages:draft.id?(printifyImageSelections[draft.id]??printifyImageIndices):printifyImageIndices}));
+          const listingName=(draft:DraftResult,design?:DesignFile)=>design?.title?.trim()||design?.name||draft.name||"Listing";
+          const failed=listings.filter(item=>item.draft.status!=="Created");
+          return <>
+          {failed.length>0&&<details className="task-section listings-need-attention" open>
+            <summary><span><b>{failed.length} {failed.length===1?"listing needs":"listings need"} another try</b><small>These did not create in Printify.</small></span></summary>
+            {failed.map(({draft,design})=><div className="task-listing" key={draft.clientId}>
+              <p className="task-listing-name">{listingName(draft,design)}</p>
+              {draft.status!=="Created"&&<><button className="error-help-link" onClick={()=>window.dispatchEvent(new CustomEvent("goldie-retry-listing",{detail:draft.clientId}))}>Retry this listing</button><button className="error-help-link" onClick={()=>window.dispatchEvent(new CustomEvent("goldie-support",{detail:draft.error??"A design failed"}))}>Get help with this error</button></>}
+            </div>)}
+          </details>}
+          <details className="task-section printify-mockups" open>
+            <summary><span><b>Printify mockups</b><small>Choose which of Printify’s own product photos each listing uses.</small></span></summary>
+            {listings.map(({draft,design,selectedImages})=>draft.status!=="Created"?null:<div className="task-listing" key={draft.clientId} id={`listing-images-${draft.clientId}`}>
+              <p className="task-listing-name">{listingName(draft,design)}</p>
+              {/* D537 - the Printify placement preview and its "Open in Printify"
+                  button belong with the Printify photos, which is what they are
+                  about. Dropping them was a real loss and the tests caught it. */}
+              <div className="draft-card-top">{draft.previewUrl?<button className="printify-preview-button" onClick={()=>window.open(draft.previewUrl,"_blank","noopener,noreferrer")} aria-label="Open larger Printify preview"><img src={draft.previewUrl} alt={`Printify preview for ${draft.title||draft.name}`}/><span>Click to enlarge</span></button>:design?<div className="pending-preview"><img src={design.previewUrl} alt="Design preview" loading="lazy" decoding="async"/><span>Printify preview processing</span></div>:<span className="draft-check">!</span>}<div>{draft.status!=="Created"&&<span className="draft-state">DRAFT FAILED</span>}<h3>{draft.title||draft.name}</h3><small>{draft.status==="Created"?"Unpublished Printify draft":draft.error}</small>{/* D409 - The tags belong to step 3. Showing them on Images invited editing
                    listing text on the step that is about photographs, and duplicated a
                    field that is owned elsewhere. */}{draft.editorUrl&&draft.id?<button className={`edit-draft-button ${openedDrafts.includes(draft.id)?"opened":""}`} onClick={()=>openDraft(draft)}><i/><span>{openedDrafts.includes(draft.id)?"Printify opened":"Open in Printify to resize or reposition"}<small>(Choose the correct shop in your Printify account first.)</small></span></button>:null}</div></div>
-          {draft.status==="Created"&&<PrintifyImagePicker images={(draft.printifyImages||[]).filter(Boolean)} indices={selectedImages} reservedPhotos={(preparedMockupCounts[draft.id||""]||0)+(design?.sizeGuideName||sizeGuideName?1:0)} onApplyOne={values=>{/* D465 - the photos she picks ARE this product's default, the same way its colours and sizes are. There was a "Use these as this product's default" button asking a question with one sensible answer; the selection saves itself now and the button is gone. */if(activeRecipe)void saveImagePreferences(values);if(draft.id)setPrintifyImageSelections(current=>({...current,[draft.id!]:values}))}} onApplyAll={values=>{setPrintifyImageIndices(values);setPrintifyImageSelections(Object.fromEntries(drafts.filter(item=>item.id).map(item=>{const itemDesign=files.find(file=>file.id===item.clientId),reserved=(preparedMockupCounts[item.id!]||0)+(itemDesign?.sizeGuideName||sizeGuideName?1:0);return[item.id!,values.slice(0,Math.max(0,20-reserved))]})))}} onSaveRecipe={activeRecipe?saveImagePreferences:undefined}/>}
-          {draft.status==="Created"&&design&&draft.id&&<details className="draft-mockups"><summary>Create lifestyle mockups from your Mockup Library (optional)</summary><IntegratedMockups design={design.file} productId={draft.id} productName={activeRecipe?.name||templateDetails?.blueprintTitle} defaultTheme={mockupTheme} referenceUrl={draft.previewUrl} placement={draft.placement} artworkBounds={design.visibleBounds} onPrepared={count=>setPreparedMockupCounts(current=>({...current,[draft.id!]:count}))}/><button type="button" className="panel-collapse-foot" onClick={event=>{const box=(event.currentTarget as HTMLElement).closest("details");if(box){(box as HTMLDetailsElement).open=false;box.scrollIntoView({block:"nearest"})}}}>Close lifestyle mockups</button></details>}
-          {draft.status==="Created"&&design&&draft.id&&<IndividualSizeGuide productId={draft.id} name={design.sizeGuideName} onSaved={name=>updateDesign(design.id,{sizeGuideName:name})}/>}
-          {draft.status==="Created"&&draft.id&&<DownloadListingPhotos productId={draft.id} name={draft.title||draft.name} indices={selectedImages}/>}
-          {draft.status==="Created"&&draft.id&&<ListingPhotoOrder productId={draft.id} printifyImages={(draft.printifyImages||[]).filter(Boolean)} indices={selectedImages} refreshKey={`${preparedMockupCounts[draft.id]||0}:${design?.sizeGuideName||sizeGuideName}`}/>}
-          {draft.status!=="Created"&&<><button className="error-help-link" onClick={()=>window.dispatchEvent(new CustomEvent("goldie-retry-listing",{detail:draft.clientId}))}>Retry this listing</button><button className="error-help-link" onClick={()=>window.dispatchEvent(new CustomEvent("goldie-support",{detail:draft.error??"A design failed"}))}>Get help with this error</button></>}
-        </details>})}</div>
+              {draft.status==="Created"&&<PrintifyImagePicker images={(draft.printifyImages||[]).filter(Boolean)} indices={selectedImages} reservedPhotos={(preparedMockupCounts[draft.id||""]||0)+(design?.sizeGuideName||sizeGuideName?1:0)} onApplyOne={values=>{/* D465 - the photos she picks ARE this product's default, the same way its colours and sizes are. There was a "Use these as this product's default" button asking a question with one sensible answer; the selection saves itself now and the button is gone. */if(activeRecipe)void saveImagePreferences(values);if(draft.id)setPrintifyImageSelections(current=>({...current,[draft.id!]:values}))}} onApplyAll={values=>{setPrintifyImageIndices(values);setPrintifyImageSelections(Object.fromEntries(drafts.filter(item=>item.id).map(item=>{const itemDesign=files.find(file=>file.id===item.clientId),reserved=(preparedMockupCounts[item.id!]||0)+(itemDesign?.sizeGuideName||sizeGuideName?1:0);return[item.id!,values.slice(0,Math.max(0,20-reserved))]})))}} onSaveRecipe={activeRecipe?saveImagePreferences:undefined}/>}
+            </div>)}
+          </details>
+          <details className="task-section lifestyle-mockups">
+            <summary><span><b>Lifestyle mockups</b><small>Build scene photos for each listing from your Mockup Library.</small></span></summary>
+            {listings.map(({draft,design,selectedImages})=>draft.status!=="Created"?null:<div className="task-listing" key={draft.clientId} id={`listing-images-${draft.clientId}`}>
+              <p className="task-listing-name">{listingName(draft,design)}</p>
+              {draft.status==="Created"&&design&&draft.id&&<details className="draft-mockups"><summary>Create lifestyle mockups from your Mockup Library (optional)</summary><IntegratedMockups design={design.file} productId={draft.id} productName={activeRecipe?.name||templateDetails?.blueprintTitle} defaultTheme={mockupTheme} referenceUrl={draft.previewUrl} placement={draft.placement} artworkBounds={design.visibleBounds} onPrepared={count=>setPreparedMockupCounts(current=>({...current,[draft.id!]:count}))}/><button type="button" className="panel-collapse-foot" onClick={event=>{const box=(event.currentTarget as HTMLElement).closest("details");if(box){(box as HTMLDetailsElement).open=false;box.scrollIntoView({block:"nearest"})}}}>Close lifestyle mockups</button></details>}
+            </div>)}
+          </details>
+          <details className="task-section photo-order">
+            <summary><span><b>Photo order and downloads</b><small>Arrange each listing’s photos, add its size guide, or download them.</small></span></summary>
+            {listings.map(({draft,design,selectedImages})=>draft.status!=="Created"?null:<div className="task-listing" key={draft.clientId} id={`listing-images-${draft.clientId}`}>
+              <p className="task-listing-name">{listingName(draft,design)}</p>
+              {draft.status==="Created"&&draft.id&&<ListingPhotoOrder productId={draft.id} printifyImages={(draft.printifyImages||[]).filter(Boolean)} indices={selectedImages} refreshKey={`${preparedMockupCounts[draft.id]||0}:${design?.sizeGuideName||sizeGuideName}`}/>}{draft.status==="Created"&&design&&draft.id&&<IndividualSizeGuide productId={draft.id} name={design.sizeGuideName} onSaved={name=>updateDesign(design.id,{sizeGuideName:name})}/>}{draft.status==="Created"&&draft.id&&<DownloadListingPhotos productId={draft.id} name={draft.title||draft.name} indices={selectedImages}/>}
+            </div>)}
+          </details>
+          </>;
+        })()}
         </section>
         ,false,
         <>

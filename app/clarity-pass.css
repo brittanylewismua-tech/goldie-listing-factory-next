@@ -2817,17 +2817,7 @@ body{min-width:1180px!important}
 .app-shell .step-product-card .row-value{font-size:.82rem!important}
 .app-shell .step-product-card .row-open{padding:4px 11px!important;font-size:.76rem!important}
 
-/* D532 - a listing inside an open product card was 813px, so two designs made
-   the card 2444px and twenty would have made it sixteen thousand. It reads as
-   one line now and opens when she wants it. */
-.app-shell .listing-card>summary{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:12px;cursor:pointer;list-style:none}
-.app-shell .listing-card>summary::-webkit-details-marker{display:none}
-.app-shell .listing-card>summary::after{content:"⌄";margin-left:auto;font-size:1.05rem;color:#75576b;transition:transform .18s}
-.app-shell .listing-card[open]>summary::after{transform:rotate(180deg)}
-.app-shell .listing-card>summary:hover{background:rgba(225,194,231,.22)}
-.app-shell .listing-card-name{font-weight:700;font-size:.9rem;color:#4c293f;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:62%}
-.app-shell .listing-card-meta{font-size:.8rem;color:#75576b}
-.app-shell .listing-card.failed>summary .listing-card-meta{color:var(--alert-ink);font-weight:700}
+/* D537 - the per-listing collapse this replaced is gone; step 2 groups by task. */
 
 /* D534 - measured, not guessed: the page's column is 342px from the left and
    1044px wide - the heading, the step rail, everything. The product cards sat at
@@ -2837,3 +2827,16 @@ body{min-width:1180px!important}
    edge to edge, which is what she has been calling stretched across the screen.
    Same column now: measured live at 345 / 1038 against the page's 342 / 1044. */
 .app-shell .step-product-cards{max-width:1320px;margin-left:auto;margin-right:auto;padding-left:54px;padding-right:54px;box-sizing:border-box}
+
+/* D537 - step 2's work is grouped by task now, so each section needs to look like
+   a section rather than another slab of the same grey. */
+.app-shell .task-section{margin:0 0 12px;border:1px solid rgba(91,48,79,.14);border-radius:14px;background:rgba(255,255,255,.42)}
+.app-shell .task-section>summary{display:flex;align-items:center;gap:10px;padding:13px 16px;cursor:pointer;list-style:none}
+.app-shell .task-section>summary::-webkit-details-marker{display:none}
+.app-shell .task-section>summary::after{content:"⌄";margin-left:auto;font-size:1.05rem;color:#75576b;transition:transform .18s}
+.app-shell .task-section[open]>summary::after{transform:rotate(180deg)}
+.app-shell .task-section>summary b{font-size:.95rem;color:#4c293f}
+.app-shell .task-section>summary small{display:block;margin-top:2px;font-size:.8rem;font-weight:500;color:#75576b}
+.app-shell .task-listing{padding:12px 16px;border-top:1px solid rgba(91,48,79,.1)}
+.app-shell .task-listing-name{margin:0 0 8px;font:700 .84rem/1.3 "Manrope",system-ui,sans-serif;color:#5b304f}
+.app-shell .task-section.listings-need-attention{border-color:rgba(184,60,74,.3);background:var(--alert-tint)}

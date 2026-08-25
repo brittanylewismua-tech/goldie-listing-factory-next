@@ -4010,12 +4010,12 @@ test("no product on any step falls back to a bare header — D500", async () => 
   // All three steps are covered, and each returns rows.
   const returns = fn.match(/return \[/g) || [];
   assert.equal(returns.length, 3, "D517 - step 2 lists products again once the drafts exist");
-  for (const label of ["Printify mockups", "Lifestyle mockups", "Listings", "Titles and tags", "Description"]) {
+  for (const label of ["Printify mockups", "Lifestyle mockups", "Photo order", "Listings", "Titles and tags", "Description"]) {
     assert.ok(fn.includes(`label:"${label}"`), `${label} row is built`);
   }
 
   // An unstarted product says so rather than claiming zero of zero.
-  assert.equal((fn.match(/"Not started yet"/g) || []).length, 7, "D517 - step 2 has two rows of its own");
+  assert.equal((fn.match(/"Not started yet"/g) || []).length, 8, "D537 - step 2 has three task rows");
 });
 
 test("the bundle cards do not churn the network or the tab claim — D501", async () => {
@@ -4228,8 +4228,9 @@ test("every step is the same shape: a collapsible card per product — D517", as
      the row toggled a tip and went nowhere near a photo. The two real sections
      are the Printify picker and the lifestyle mockup builder, and the page
      already names them that way. */
-  assert.match(app, /\{label:"Printify mockups"[^}]*target:"details\.printify-image-picker"\}/);
-  assert.match(app, /\{label:"Lifestyle mockups"[^}]*target:"details\.draft-mockups"\}/);
+  assert.match(app, /\{label:"Printify mockups"[^}]*target:"details\.printify-mockups"\}/);
+  assert.match(app, /\{label:"Lifestyle mockups"[^}]*target:"details\.lifestyle-mockups"\}/);
+  assert.match(app, /\{label:"Photo order"[^}]*target:"details\.photo-order"\}/);
   assert.doesNotMatch(app, /target:"details\.recommended-listing-photos"/,
     "a row never points at an advice panel");
 
@@ -4237,12 +4238,12 @@ test("every step is the same shape: a collapsible card per product — D517", as
   const targets = [...app.matchAll(/target:"([^"]+)"/g)].map((m) => m[1]);
   /* D535 - the two step 2 targets now point at the sections they are named for. */
   assert.deepEqual([...new Set(targets)].sort(), [
-    ".batch-title-builder", ".final-review",
-    "details.draft-mockups", "details.permanent-description", "details.printify-image-picker",
+    ".batch-title-builder", ".final-review", "details.lifestyle-mockups",
+    "details.permanent-description", "details.photo-order", "details.printify-mockups",
   ]);
   for (const target of targets) {
     const bare = target.replace(/^details/, "").replace(/^\./, "");
-    assert.ok(app.includes(`className="${bare}"`) || app.includes(`${bare} `) || bare === "integrated-mockups",
+    assert.ok(app.includes(`className="${bare}"`) || app.includes(`task-section ${bare}"`) || app.includes(`${bare} `),
       `${target} must match markup that exists`);
   }
 });
@@ -4396,25 +4397,29 @@ test("a collapsed product reads as a list item — D531", async () => {
     "one header, every state - a closed card may still drop its divider, but not resize");
 });
 
-test("a listing inside an open product collapses too — D532", async () => {
+test("step 2 groups work by task, not by listing — D532/D537", async () => {
   const [app, css] = await Promise.all([
     readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8"),
   ]);
 
-  /* Measured live after the preview cap landed: one listing 813px, so two designs
-     made the open card 2444px and twenty would have made it about sixteen
-     thousand. Everything else on this page collapses; these did not. */
-  assert.match(app, /<details id=\{`listing-images-\$\{draft\.clientId\}`\} className=\{`draft-card listing-card /);
-  assert.match(app, /open=\{draft\.status!=="Created"\}/,
-    "a listing that failed opens itself, because that one needs her");
-  assert.match(app, /<summary className="listing-card-summary">/);
-  assert.match(app, /listing-card-meta">\{draft\.status!=="Created"\?"Needs attention"/);
-  assert.match(css, /\.listing-card>summary\{/);
+  /* These sections exist once per LISTING - two designs meant two Printify
+     pickers and two lifestyle panels - while the rows above them are per PRODUCT
+     and count across all of them. So "Printify mockups" jumped into the first
+     listing's copy, "Lifestyle mockups" jumped into the first listing's other
+     copy, and both looked like the same block of stuff underneath. */
+  for (const cls of ["printify-mockups", "lifestyle-mockups", "photo-order"]) {
+    assert.match(app, new RegExp(`<details className="task-section ${cls}"`), `${cls} is its own section`);
+  }
+  assert.match(app, /const listings=drafts\.map\(draft=>\(\{draft,design:files\.find/);
+  assert.match(app, /<p className="task-listing-name">\{listingName\(draft,design\)\}<\/p>/,
+    "every listing is named inside the task it belongs to");
+  assert.match(css, /\.task-section\{/);
 
-  /* Something scrolls to these: the jump that answers "which listing has no
-     photo". You cannot scroll to anything inside a closed <details>, so it opens
-     the one it is sending her to. */
-  assert.match(app, /id=\{`listing-images-\$\{draft\.clientId\}`\}/);
-  assert.match(app, /if\(node instanceof HTMLDetailsElement\)node\.open=true;\n\s*node\?\.scrollIntoView/);
+  // A listing that failed is its own section, so it cannot be buried under a task.
+  assert.match(app, /task-section listings-need-attention/);
+  assert.match(app, /listing needs":"listings need"\} another try/);
+
+  // The Printify preview and its editor button belong with the Printify photos.
+  assert.match(app, /Open in Printify to resize or reposition/);
 });

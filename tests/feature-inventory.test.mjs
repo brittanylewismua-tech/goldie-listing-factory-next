@@ -143,7 +143,7 @@ test("step-level controls sit below the cards, product-level inside them", async
   };
 
   const images = parts(span('stepProductCards(bundleCardStatus("images"),\n', 'stepProductCards(bundleCardStatus("listing")'));
-  for (const perProduct of ["recommended-listing-photos", "MockupSetSelector", "draft-card-grid"]) {
+  for (const perProduct of ["recommended-listing-photos", "MockupSetSelector", "task-section"]) {
     assert.ok(images.body.includes(perProduct), `${perProduct} is about one product`);
     assert.ok(!images.footer.includes(perProduct), `${perProduct} must not sit below the cards`);
   }
@@ -151,8 +151,8 @@ test("step-level controls sit below the cards, product-level inside them", async
      applies to every listing in the batch, and she needs it in hand while she is
      reordering each listing's images, not parked below all of them. */
   assert.ok(images.body.includes("batch-size-guide"));
-  assert.ok(images.body.indexOf("batch-size-guide") < images.body.indexOf("draft-card-grid"),
-    "above the listings it applies to");
+  assert.ok(images.body.indexOf("batch-size-guide") < images.body.indexOf('task-section printify-mockups'),
+    "above the listing work it applies to");
   for (const perStep of ["workflow-next", "image-step-blocker"]) {
     assert.ok(images.footer.includes(perStep), `${perStep} is about the step`);
     assert.ok(!images.body.includes(perStep), `${perStep} must not sit inside one product's card`);
