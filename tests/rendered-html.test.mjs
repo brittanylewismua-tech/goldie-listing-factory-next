@@ -4368,3 +4368,18 @@ test("the product's saved shipping profile fills an empty batch — D530", async
   assert.match(app, /if\(saved&&etsyShippingProfiles\.some\(profile=>profile\.id===saved\)\)setEtsyShippingProfileId\(saved\)/,
     "and only a profile that still exists on the shop");
 });
+
+test("a collapsed product reads as a list item — D531", async () => {
+  const css = await readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8");
+
+  /* Measured on her page: 199px per collapsed product - a 91px header with a 52px
+     photo and a 22px name stacked over an eyebrow and a subtitle, then two 52px
+     rows - for a product she is not working on. Three filled the screen before
+     the one she had open. Retested after: 139px, header 51px. */
+  assert.match(css, /\.step-product-card\.is-closed>header\{padding:8px 14px!important/);
+  assert.match(css, /\.step-product-card\.is-closed \.bundle-product-id b\{font-size:15px!important/);
+  assert.match(css, /\.step-product-card\.is-closed \.batch-product-row\{padding:6px 14px!important/);
+
+  // The open card keeps its full header, which is what marks it as the one in hand.
+  assert.doesNotMatch(css, /\.step-product-card\.is-open>header\{padding:8px/);
+});

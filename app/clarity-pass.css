@@ -2800,3 +2800,23 @@ body{min-width:1180px!important}
 .app-shell .recipe-library-change>summary{display:flex;align-items:center;gap:8px;margin:0 0 6px;padding:10px 14px;border:1px solid rgba(91,48,79,.16);border-radius:12px;background:rgba(255,255,255,.5);cursor:pointer;list-style:none;font:800 12px/1 "Manrope",system-ui,sans-serif;letter-spacing:.04em;color:#4c293f}
 .app-shell .recipe-library-change>summary::-webkit-details-marker{display:none}
 .app-shell .recipe-library-change>summary::after{content:"⌄";margin-left:auto;font-size:1rem}
+
+/* D531 - measured on her page: a collapsed product was 199px. A 91px header
+   carrying a 52px photo, a 22px product name, an eyebrow and a subtitle stacked
+   in three lines - for a product she is not working on - over two 52px rows.
+   Three of those filled the screen before the one she had open. Collapsed is a
+   list item and reads on one line; open keeps the full header, which is now the
+   signal for which product she is working on. Retested live: 199px -> 139px,
+   header 91px -> 51px, and all three products visible at once.
+
+   The overrides are weighted because the name and the photo are sized by rules
+   that already carry weight; the first attempt lost to them silently. */
+.app-shell .step-product-card.is-closed>header{padding:8px 14px!important;gap:10px}
+.app-shell .step-product-card.is-closed .bundle-product-photo{width:34px!important;height:34px!important}
+.app-shell .step-product-card.is-closed .bundle-product-id{display:flex!important;align-items:baseline;gap:8px;flex-wrap:wrap}
+.app-shell .step-product-card.is-closed .bundle-product-id b{font-size:15px!important;line-height:1.15!important}
+.app-shell .step-product-card.is-closed .bundle-product-id small{font-size:.74rem!important}
+.app-shell .step-product-card.is-closed .batch-product-position{font-size:.62rem!important}
+.app-shell .step-product-card.is-closed .batch-product-row{padding:6px 14px!important;min-height:0!important}
+.app-shell .step-product-card.is-closed .row-value{font-size:.82rem!important}
+.app-shell .step-product-card.is-closed .row-open{padding:4px 11px!important;font-size:.76rem!important}
