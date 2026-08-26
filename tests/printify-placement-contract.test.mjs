@@ -100,8 +100,17 @@ console.log("scene classification ok");
     "placement must start from the created product, not the template");
   assert.match(route, /const loaded = await api<CreatedProduct>\(`\/shops\/\$\{shop\.id\}\/products\/\$\{created\.id\}\.json`/,
     "and re-fetch the product when the create response omitted the print areas");
-  assert.match(route, /\.filter\(\(placeholder\) => placeholder\.images\?\.length\)/,
-    "a placeholder with no image cannot win the dominant-placeholder reduce");
+  /* D593 - and it is chosen by PRINT SIDE, not by scale. A real draft returned
+     positions ["front","back","neck"] with imageCounts [1,0,2]; scale is
+     relative to each placeholder's own area, so the neck label at scale 1.0 beat
+     the chest print every time and its values were carried through as the
+     listing's placement. */
+  assert.match(route, /placeholder\.images\?\.length && !isLabelPosition\(placeholder\.position\)/,
+    "a placeholder with no image, or a label, cannot be chosen");
+  assert.match(route, /neck\|label\|collar\|inner\|tag/,
+    "label positions must be excluded outright");
+  assert.match(route, /if \(\/front\|chest\/\.test\(value\)\) return 0/,
+    "the front print must outrank everything else");
   // The template may only ever be the last resort.
   const chooser = route.slice(route.indexOf("const areas = placedAreas"), route.indexOf("const dominantPlaceholder"));
   assert.match(chooser, /placedAreas[\s\S]*template\.print_areas/,

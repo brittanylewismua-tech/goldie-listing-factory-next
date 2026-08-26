@@ -32,7 +32,7 @@ type TemplateProduct = {
     background?: string;
   }>;
 };
-type PrintAreaImage = { x?: number; y?: number; scale?: number; angle?: number };
+type PrintAreaImage = { x?: number; y?: number; scale?: number; angle?: number; width?: number; height?: number };
 type PrintAreaPlaceholder = { position?: string; images?: PrintAreaImage[] };
 type CreatedProduct = {
   id: string; title?: string;
@@ -255,11 +255,40 @@ async function handlePOST(request: Request) {
     const areas = placedAreas.some((area) => area.placeholders?.some((p) => p.images?.length))
       ? placedAreas
       : (template.print_areas ?? []) as Array<{ placeholders?: PrintAreaPlaceholder[] }>;
+    /* D593 - choosing the placeholder by "largest scale" was wrong, and the
+       diagnostic proved it. A real draft came back with:
+
+         positions:   ["front", "back", "neck"]
+         imageCounts: [1, 0, 2]
+
+       scale is relative to each placeholder's OWN print area, so a neck label
+       filling its little strip at scale 1.0 beats a chest print occupying 0.6 of
+       a 12x16 area. The neck won every time, which is why placement arrived as
+       side "other" at {x:.5, y:.5, scale:1} - not a default at all, but the neck
+       label's real values faithfully carried through.
+
+       The main design is chosen by PRINT SIDE instead. Labels and inner prints
+       can never be the listing's artwork, so they are excluded outright, and the
+       remaining sides are ranked. Physical artwork size breaks a tie. */
+    const isLabelPosition = (position?: string) =>
+      /neck|label|collar|inner|tag|sleeve[_ -]?label/i.test(String(position || ""));
+    const sideRank = (position?: string) => {
+      const value = String(position || "").toLowerCase();
+      if (/front|chest/.test(value)) return 0;
+      if (/back/.test(value)) return 1;
+      if (/sleeve|arm|cuff/.test(value)) return 2;
+      return 3;
+    };
     const dominantPlaceholder = areas
       .flatMap((area) => area.placeholders ?? [])
-      .filter((placeholder) => placeholder.images?.length)
-      .reduce<PrintAreaPlaceholder|undefined>(
-        (best, placeholder) => (Number(placeholder.images?.[0]?.scale ?? 0) > Number(best?.images?.[0]?.scale ?? 0) ? placeholder : best), undefined);
+      .filter((placeholder) => placeholder.images?.length && !isLabelPosition(placeholder.position))
+      .sort((a, b) => {
+        const rank = sideRank(a.position) - sideRank(b.position);
+        if (rank !== 0) return rank;
+        const areaOf = (p: PrintAreaPlaceholder) =>
+          Number(p.images?.[0]?.width ?? 0) * Number(p.images?.[0]?.height ?? 0);
+        return areaOf(b) - areaOf(a);
+      })[0];
     const dominantTemplatePlacement = dominantPlaceholder?.images?.[0];
     /* D592 - D591 is running (the side field now appears) but the placement is
        still the default, so dominantPlaceholder is still coming back undefined.
@@ -270,6 +299,7 @@ async function handlePOST(request: Request) {
       usedAreas: areas.length,
       placeholders: areas.flatMap((area) => area.placeholders ?? []).length,
       positions: areas.flatMap((area) => (area.placeholders ?? []).map((p) => p.position ?? "?")).slice(0, 6),
+      chosen: dominantPlaceholder?.position ?? "none",
       imageCounts: areas.flatMap((area) => (area.placeholders ?? []).map((p) => p.images?.length ?? 0)).slice(0, 6),
       firstImageKeys: Object.keys(areas.flatMap((area) => area.placeholders ?? [])[0]?.images?.[0] ?? {}).slice(0, 12),
       createdTopKeys: Object.keys(created as Record<string, unknown>).slice(0, 14),
