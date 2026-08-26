@@ -2933,3 +2933,12 @@ body{min-width:1180px!important}
 .app-shell .task-listing-work .individual-description-body label{display:grid;gap:4px;font:700 .74rem/1.2 "Manrope",system-ui,sans-serif;color:#6b4560}
 .app-shell .task-listing-work .individual-description-body textarea{width:100%;padding:10px 12px;border:1px solid rgba(91,48,79,.18);border-radius:10px;background:#fff;font:500 .84rem/1.5 "Manrope",system-ui,sans-serif;color:#3f2438}
 .app-shell .task-listing-work .individual-description-body small{color:rgba(74,42,62,.62);font-size:.72rem}
+
+/* D554 - the tile: artwork fills it, one label, the badge carries the number. */
+.app-shell .photo-order-strip>article>img{width:100%;height:112px;object-fit:contain;background:#fff;border-radius:9px}
+.app-shell .photo-order-strip>article>b{display:block;font:800 .68rem/1.3 "Manrope",system-ui,sans-serif;color:#6b4560;letter-spacing:.02em}
+
+/* D554 - every tile says which view it is, and a white garment on white gets an
+   edge so it is not an empty square. */
+.app-shell .printify-photo-view{display:block;margin-top:4px;font:700 .58rem/1.25 "Manrope",system-ui,sans-serif;color:#75576b;letter-spacing:.03em;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.app-shell .printify-photo-expand img{background:#fff;border:1px solid rgba(91,48,79,.14);border-radius:8px}

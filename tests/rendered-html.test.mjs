@@ -207,7 +207,7 @@ test("unifies saved products, editing, pricing, and mockups without the old fact
   assert.doesNotMatch(page, />Not chosen</);
   assert.doesNotMatch(recipes, /Shipping cost|Shipping charged|Payment fixed fee/);
   assert.doesNotMatch(page, /Apply titles in order|Import title CSV/);
-  assert.match(recipes, /validated phrases available to Goldie/);
+  assert.match(recipes, /validated \{chosen\.keywords\.length===1\?"phrase":"phrases"\} available to Goldie/);
   assert.match(page, /Exact title phrases/);
   assert.match(page, /300 DPI recommended/);
   /* D214: renamed and opened by default. It was a closed <details> reading
@@ -4799,4 +4799,46 @@ test("opening a task shows the work, not a list of listings to pick from — D55
      the same everywhere - which is the thing she has asked for from the start. */
   assert.equal((app.match(/className="task-listing-work"/g) || []).length, 4,
     "three step 2 panels plus the shared designTaskRows");
+});
+
+test("what the click-through found on step 2 and step 3 — D554", async () => {
+  const [app, order, tools, css] = await Promise.all([
+    readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/listing-photo-order.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/factory-tools.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8"),
+  ]);
+
+  /* 1. Every tile in Rearrange listing photos printed its label twice - <b>
+        "Printify photo 1" </b> truncated to "Printify ph…" by its own width, then
+        <small>"Printify photo"</small> in full beside it. The badge carries the
+        number, so the tile names the kind once. */
+  assert.doesNotMatch(order, /<b>\{photo\.name\}<\/b>/);
+  assert.match(order, /<b>\{photo\.kind==="mockup"\?"Lifestyle mockup"/);
+
+  /* 2. And it printed "Rearrange listing photos" at display size once per
+        listing, under a task row already called Arrange final photo order. */
+  assert.doesNotMatch(order, /photo-order-heading/);
+  assert.match(app, /Drag each photo where you want it, or use the arrow buttons/);
+
+  /* 3. The Printify picker showed her hoodie's 72 mockups as 72 unlabelled 81px
+        tiles, and the white ones read as blank squares. D449 already wrote the
+        rule on this build: "Ordering photos you cannot tell apart is not ordering
+        them." Printify names every view in the URL it already sent us. */
+  assert.match(app, /function printifyViewName\(src:string\)/);
+  assert.match(app, /searchParams\.get\("camera_label"\)/);
+  assert.match(app, /<span className="printify-photo-view">/);
+  assert.match(css, /\.app-shell \.printify-photo-view\{/);
+
+  /* 4. The mockup block said "Saved for this product" with nothing selected, and
+        counted "0 of 8 selected" under ten scenes - a cap presented as a total,
+        which is the same misreading she caught on "1 at 13 tags". */
+  assert.match(app, /savedSetIsCompatible&&selectedIds\.length\?"Saved for this product/);
+  assert.match(app, /\{selected\.size\} of \{matchingTemplates\.length\} scenes chosen/);
+  assert.doesNotMatch(app, /of 8 selected/);
+
+  /* 5. D551 corrected "50 phrases" on the Keyword Banks page and missed the copy
+        she actually reads, next to Auto-create all titles. */
+  assert.match(tools, /const tagUsable=chosen\.keywords\.filter\(word=>word\.length<=20\)\.length/);
+  assert.match(tools, /short enough for Etsy tags/);
 });

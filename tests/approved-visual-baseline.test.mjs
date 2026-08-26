@@ -783,7 +783,7 @@ test("new products require completed setup and saved products own exact mockup s
     "the defaults are written without being asked for");
   assert.match(api,/mockupIds:Array\.isArray\(saved\.mockupIds\)/);
   assert.match(page,/className="product-mockup-scenes"/);
-  assert.match(page,/Click any scene to remove or re-add it/);
+  assert.match(page,/Click any scene to add or remove it/);
   assert.match(finish,/goldie-batch-mockups/);
 });
 

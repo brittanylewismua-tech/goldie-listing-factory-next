@@ -248,5 +248,13 @@ export function KeywordBank({ onAdd=()=>undefined,onSelect,title="Choose a keywo
   useEffect(() => { void loadKeywordLists().then(setLists); }, []);
   useEffect(()=>{if(!initialId||!lists.some(list=>list.id===initialId)||active)return;setActive(initialId);onSelect?.(lists.find(list=>list.id===initialId)||null)},[lists,initialId,active,onSelect]);
   const chosen = lists.find((list) => list.id === active);
-  return <section className={`keyword-bank keyword-workspace ${compact?"compact-keywords":""}`}><div className="keyword-workspace-heading"><div><b>{title}</b><span>{copy}</span></div>{!compact&&<a href="/keywords" target="_blank" rel="noopener noreferrer">Upload or manage keyword banks ↗</a>}</div><div className="keyword-list-picker"><select value={active} onChange={(e) => {const id=e.target.value;setActive(id);onSelect?.(lists.find(list=>list.id===id)||null)}}><option value="">Choose a keyword bank</option>{lists.map((list) => <option value={list.id} key={list.id}>{list.name}</option>)}</select></div>{chosen ? selectionOnly?<p>✓ {chosen.keywords.length} validated phrases available to Goldie.</p>:<><p>Click any phrase to add it.</p><div className="keyword-chips">{chosen.keywords.map((word) => <button type="button" key={word} onClick={() => onAdd(word)}>+ {word}</button>)}</div></> : <p>Choose a bank to continue.</p>}</section>;
+  return <section className={`keyword-bank keyword-workspace ${compact?"compact-keywords":""}`}><div className="keyword-workspace-heading"><div><b>{title}</b><span>{copy}</span></div>{!compact&&<a href="/keywords" target="_blank" rel="noopener noreferrer">Upload or manage keyword banks ↗</a>}</div><div className="keyword-list-picker"><select value={active} onChange={(e) => {const id=e.target.value;setActive(id);onSelect?.(lists.find(list=>list.id===id)||null)}}><option value="">Choose a keyword bank</option>{lists.map((list) => <option value={list.id} key={list.id}>{list.name}</option>)}</select></div>{chosen ? selectionOnly?(()=>{
+      /* D554 - D551 fixed this claim on the Keyword Banks page and missed it here,
+         where she reads it before pressing Auto-create all titles. "50 validated
+         phrases" is true of the bank and untrue of the tags: Etsy caps a tag at 20
+         characters and 30 of her 50 are longer, so the tag pool is 20 before the
+         product filter has even run. Both numbers, plainly. */
+      const tagUsable=chosen.keywords.filter(word=>word.length<=20).length;
+      return <p>✓ {chosen.keywords.length} validated {chosen.keywords.length===1?"phrase":"phrases"} available to Goldie{tagUsable<chosen.keywords.length?` · ${tagUsable} short enough for Etsy tags`:""}.</p>;
+    })():<><p>Click any phrase to add it.</p><div className="keyword-chips">{chosen.keywords.map((word) => <button type="button" key={word} onClick={() => onAdd(word)}>+ {word}</button>)}</div></> : <p>Choose a bank to continue.</p>}</section>;
 }
