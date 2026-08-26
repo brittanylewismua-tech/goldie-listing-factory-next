@@ -94,6 +94,11 @@ test("why a scene fell back is recorded and readable", async () => {
   const library = await read("app/api/mockups/library/route.ts");
   assert.match(route, /preparationError: reason/);
   assert.match(route, /"no-analyser-configured"/);
+  assert.match(route, /model-geometry-invalid/);
+  assert.match(route, /product-mask-unavailable/);
+  assert.match(route, /model-surface-mask-coverage:/);
+  assert.match(route, /store\(preparation, attempt, result\.fallbackReason\)/,
+    "a successful preparation that used a fallback must say why");
   assert.match(library, /preparationError: row\.preparationError/,
     "the reason must be readable without shipping a new build to find it");
 });

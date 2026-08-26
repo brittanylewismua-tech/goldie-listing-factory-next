@@ -18,7 +18,7 @@ import {
   type ProductBox,
 } from "@/app/mockups/prepared-scene";
 import { withErrorLog } from "@/app/error-log";
-import { decodeCocoRle, fitQuadToMask, maskBoundingBox, quadStaysOnMask, type ProductMask } from "@/app/mockups/product-mask";
+import { decodeCocoRle, fitQuadToMask, maskBoundingBox, quadMaskCoverage, quadStaysOnMask, type ProductMask } from "@/app/mockups/product-mask";
 
 const MAX_ATTEMPTS = 3;
 
@@ -128,10 +128,17 @@ async function prepareOnce(imageUrl: string, productName: string, key: string, o
   const productBox = segmentation?.productBox || reading.productBox;
   if (!productBox) throw new Error("The product boundary could not be verified.");
   const computed = computedPreparation(productName, productBox);
+  const measuredCoverage = reading.geometry && segmentation?.mask
+    ? quadMaskCoverage(segmentation.mask, reading.geometry.corners) : null;
   const measured = reading.geometry && segmentation?.mask && quadStaysOnMask(segmentation.mask, reading.geometry.corners)
     ? { ...reading.geometry, productSilhouetteVerified: true }
     : null;
   const fittedCorners = segmentation?.mask ? fitQuadToMask(segmentation.mask, computed.corners) : null;
+  const fallbackReason = measured ? "" : !reading.geometry
+    ? "model-geometry-invalid"
+    : !segmentation?.mask
+      ? "product-mask-unavailable"
+      : `model-surface-mask-coverage:${(measuredCoverage || 0).toFixed(3)};fallback:${fittedCorners ? "silhouette-fitted" : "product-box"}`;
   const geometry = measured || {
     corners: fittedCorners || computed.corners, productBox, productBoundsVerified: true,
     productSilhouetteVerified: Boolean(fittedCorners),
@@ -173,7 +180,7 @@ async function prepareOnce(imageUrl: string, productName: string, key: string, o
     optional(() => storeRemoteAsset(depthUrl, `${objectPrefix}/depth.png`)),
     optional(() => storeRemoteAsset(occlusionUrl, `${objectPrefix}/occlusion.png`)),
   ]);
-  return { ...geometry, productBox, surfaceMaskKey, depthKey, occlusionKey };
+  return { ...geometry, productBox, surfaceMaskKey, depthKey, occlusionKey, fallbackReason };
 }
 
 async function handlePOST(request: NextRequest, context: { params: Promise<{ id: string }> }) {
@@ -246,7 +253,7 @@ async function handlePOST(request: NextRequest, context: { params: Promise<{ id:
         surfaceMaskKey: result.surfaceMaskKey, depthKey: result.depthKey, occlusionKey: result.occlusionKey,
         preparedAt: new Date().toISOString(),
       };
-      return store(preparation, attempt);
+      return store(preparation, attempt, result.fallbackReason);
     } catch (error) {
       lastError = error instanceof Error ? error.message : lastError;
     }
