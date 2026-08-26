@@ -1,5 +1,9 @@
 "use client";
+/* D588 - Stage 1 of the embedded placement editor. Konva cannot be server
+   rendered, so the editor is loaded only when a seller opens it. */
 
+import { lazy, Suspense } from "react";
+import { defaultTransform, renderingModeFor, placeArtworkOnSurface, type PlacementTransform, type Quad } from "./mockups/placement-profile";
 import { productAcceptsMockup } from "./mockup-compatibility";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -15,7 +19,9 @@ import { preparationMatchesProduct, type ScenePreparation } from "./mockups/prep
 
 type Point=[number,number]; type SurfaceKind="rigid-flat"|"t-shirt"|"sweatshirt"|"hoodie"|"other-apparel"|"apparel"|"soft-goods"|"curved"|"irregular";
 type Template={id:string;name:string;theme:string;src:string;corners:[Point,Point,Point,Point];normalized?:boolean;surfaceKind?:SurfaceKind;foregroundPrompt?:string;printSide?:PrintSide;quadMeans?:QuadMeaning;occlusionUrl?:string;occlusionConfirmed?:boolean;preparationStatus?:string;preparation?:ScenePreparation};
-type Result={name:string;url:string;template:string;templateId:string;surfaceKind:SurfaceKind;warning?:string};
+const SceneEditor=lazy(()=>import("./mockups/scene-editor"));
+
+type Result={name:string;url:string;template:string;templateId:string;surfaceKind:SurfaceKind;warning?:string;adjusted?:boolean};
 type Adjustment={scale:number;x:number;y:number;angle?:number};
 const MAX_MOCKUPS_PER_LISTING=8;
 const load=(src:string)=>new Promise<HTMLImageElement>((resolve,reject)=>{const image=new Image();image.crossOrigin="anonymous";image.onload=()=>resolve(image);image.onerror=reject;image.src=src});
@@ -209,6 +215,15 @@ async function withRecovery<T>(task:()=>Promise<T>){let lastError:unknown;for(le
 
 export default function IntegratedMockups({design,productId,productName="",defaultTheme,defaultTemplateIds=[],referenceUrl,placement,artworkBounds,onPrepared}:{design:File;productId:string;productName?:string;defaultTheme:string;defaultTemplateIds?:string[];referenceUrl?:string;placement?:ResolvedPlacement;artworkBounds?:ArtworkBounds;onPrepared?:(count:number)=>void}){
  const[library,setLibrary]=useState<Template[]>([]),[theme,setTheme]=useState(defaultTheme),[selected,setSelected]=useState<Set<string>>(new Set()),[results,setResults]=useState<Result[]>([]),[busy,setBusy]=useState(false),[error,setError]=useState(""),[expanded,setExpanded]=useState<Result|null>(null),[etsyStatus,setEtsyStatus]=useState(""),[adjustments,setAdjustments]=useState<Record<string,Adjustment>>({}),[renderStatus,setRenderStatus]=useState("");
+ /* D588 - the editor's state. `profiles` remembers what a seller corrected for a
+    scene so it is not lost when they move on, and `editing` is the scene whose
+    placement is open. Nothing here navigates: the batch stays mounted. */
+ const [editing,setEditing]=useState<{result:Result;index:number}|null>(null);
+ const [profiles,setProfiles]=useState<Record<string,PlacementTransform>>({});
+ /* Scene-level, and the only thing that may improve a future design. */
+ const [sceneGeometry,setSceneGeometry]=useState<Record<string,{surface:Quad;curvature:number;fabricStrength:number;blendMode:PlacementTransform["blendMode"]}>>({});
+ const [designUrl,setDesignUrl]=useState("");
+ useEffect(()=>{if(!design)return;const url=URL.createObjectURL(design);setDesignUrl(url);return ()=>URL.revokeObjectURL(url)},[design]);
  const seededDefaults=useRef(false);
  useEffect(()=>{fetch("/api/mockups/library").then(r=>r.json()).then(p=>setLibrary(p.templates||[]));},[]);
  /* D566 - `theme` was seeded from defaultTheme at mount and never looked at it
@@ -384,5 +399,51 @@ let previewFace:{left:number;top:number;right:number;bottom:number}|undefined;
       <span>{t.name.replace(/\.[a-z0-9]+$/i,"").replace(/[_-]+/g," ")}</span>
       {/* D571 - a scene nobody has marked looks exactly like one that has been.
           It says so now, and says what will happen. */}
-      {!preparationMatchesProduct(t.preparation,productName)?<em className="scene-unmeasured">Goldie prepares this scene automatically before creating it</em>:null}</label>)}</div>}{needsReference&&<p className="automatic-reference">✓ Goldie will use the real Printify preview above as the placement reference.</p>}<div className="mockup-action-sequence"><div className="mockup-primary-action"><span>1</span><div><b>Create mockups for this listing</b><small>Goldie creates the mockups you selected above and saves them to this listing.</small></div><button className="generate-inline" aria-busy={busy} disabled={!chosen.length||busy||needsReference&&!referenceUrl} onClick={()=>void generate()}>{busy?"Goldie is creating them…":`Create ${chosen.length ? `these ${chosen.length} ${chosen.length===1?"mockup":"mockups"}` : "selected mockups"}`}</button></div>{busy&&renderStatus&&<div className="mockup-live-progress" role="status" aria-live="polite"><i/><span>{renderStatus}</span></div>}</div>{error&&<p className="field-error" role="alert">{error}</p>}{etsyStatus&&<p className="etsy-ready-status" role="status">{etsyStatus}</p>}{results.length>0&&<div className="inline-generated">{results.map(r=><figure key={r.name}><button className="mockup-enlarge" onClick={()=>setExpanded(r)}><img src={r.url} alt={r.template}/><span>View larger</span></button><figcaption><span>{r.template}</span><a href={r.url} download={r.name}>Download</a></figcaption></figure>)}</div>}<p className="etsy-note">Goldie saves these mockups for this exact listing and adds them automatically through Etsy when you publish. Individual downloads stay available as a backup.</p></div>{lightbox}</>
+      {!preparationMatchesProduct(t.preparation,productName)?<em className="scene-unmeasured">Goldie prepares this scene automatically before creating it</em>:null}</label>)}</div>}{needsReference&&<p className="automatic-reference">✓ Goldie will use the real Printify preview above as the placement reference.</p>}<div className="mockup-action-sequence"><div className="mockup-primary-action"><span>1</span><div><b>Create mockups for this listing</b><small>Goldie creates the mockups you selected above and saves them to this listing.</small></div><button className="generate-inline" aria-busy={busy} disabled={!chosen.length||busy||needsReference&&!referenceUrl} onClick={()=>void generate()}>{busy?"Goldie is creating them…":`Create ${chosen.length ? `these ${chosen.length} ${chosen.length===1?"mockup":"mockups"}` : "selected mockups"}`}</button></div>{busy&&renderStatus&&<div className="mockup-live-progress" role="status" aria-live="polite"><i/><span>{renderStatus}</span></div>}</div>{error&&<p className="field-error" role="alert">{error}</p>}{etsyStatus&&<p className="etsy-ready-status" role="status">{etsyStatus}</p>}{results.length>0&&<div className="inline-generated">{results.map((r,resultIndex)=><figure key={r.name}><button className="mockup-enlarge" onClick={()=>setExpanded(r)}><img src={r.url} alt={r.template}/><span>View larger</span></button><figcaption><span>{r.template}</span><span className={r.adjusted?"sceneState adjusted":"sceneState"}>{r.adjusted?"Adjusted":"Ready"}</span></figcaption>
+      <div className="sceneActions">
+        <button type="button" className="adjustPlacement" onClick={()=>setEditing({result:r,index:resultIndex})}>Adjust placement</button>
+        <a href={r.url} download={r.name}>Use this mockup</a>
+        <button type="button" className="removeScene" onClick={()=>{setResults(list=>list.filter(item=>item.name!==r.name));setSelected(current=>{const next=new Set(current);next.delete(r.templateId);return next})}}>Remove from batch</button>
+      </div></figure>)}</div>}<p className="etsy-note">Goldie saves these mockups for this exact listing and adds them automatically through Etsy when you publish. Individual downloads stay available as a backup.</p></div>{lightbox}
+    {/* D588 - Adjust placement opens here, over the batch. The seller does not
+        leave Listing Factory and the page is never reloaded. */}
+    {editing&&designUrl&&(()=>{
+      const template=library.find(item=>item.id===editing.result.templateId);
+      if(!template)return null;
+      const surface=(template.preparation?.corners||template.corners) as Quad;
+      const mode=renderingModeFor(productName,template.preparation?.geometry);
+      /* Goldie's automatic answer: the scene's surface, with THIS design placed
+         inside it exactly where Printify put it. That is also what Reset
+         placement returns to. */
+      const automatic=defaultTransform(placeArtworkOnSurface(surface,placement),mode);
+      const saved=profiles[template.id];
+      const finish=async(next:PlacementTransform,exported:Blob,improveScene:boolean,advance:boolean)=>{
+        const url=URL.createObjectURL(exported);
+        /* D588 - this listing's finished artwork transform. It belongs to this
+           design and is never applied to another one. Only when the seller ticks
+           "Improve this scene for future designs" does anything about the
+           PHOTOGRAPH - its surface, curvature and material - get remembered. */
+        setProfiles(current=>({...current,[template.id]:next}));
+        if(improveScene)setSceneGeometry(current=>({...current,[template.id]:{
+          surface,curvature:next.curvature,fabricStrength:next.fabricStrength,blendMode:next.blendMode}}));
+        setResults(list=>list.map((item,index)=>index===editing.index?{...item,url,adjusted:true}:item));
+        if(advance&&editing.index+1<results.length)setEditing({result:results[editing.index+1],index:editing.index+1});
+        else setEditing(null);
+      };
+      return <Suspense fallback={null}><SceneEditor
+        sceneName={template.name}
+        photoUrl={template.src}
+        artworkUrl={designUrl}
+        surface={surface}
+        mode={mode}
+        transform={saved||automatic}
+        automatic={automatic}
+        foregroundUrl={template.occlusionUrl||null}
+        hasNext={editing.index+1<results.length}
+        onSave={(next,blob,improve)=>finish(next,blob,improve,false)}
+        onSaveNext={(next,blob,improve)=>finish(next,blob,improve,true)}
+        onCancel={()=>setEditing(null)}
+      /></Suspense>;
+    })()}
+    </>
 }
