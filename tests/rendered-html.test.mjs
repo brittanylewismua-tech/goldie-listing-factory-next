@@ -3471,7 +3471,7 @@ test("a hand-marked print area beats an automatic guess — D466", async () => {
   /* D468 · The seller is never asked to mark anything - a set holds up to fifty
      photographs. Every scene works out its own print area when it is uploaded;
      the manual control stays only as an adjustment for the rare bad one. */
-  assert.match(page, /await findPrintAreas\(added,theme\)/);
+  assert.match(page, /void findPrintAreas\(added,theme\)/);
   assert.doesNotMatch(page, /Set the product area/, "nothing demands marking");
 });
 
@@ -3483,7 +3483,13 @@ test("a mockup scene works out its own print area — D468", async () => {
   /* A set holds up to fifty photographs. Asking the seller to mark four corners
      on each is eight minutes of clicking per set, so marking cannot be the
      requirement - the scene has to answer this itself, once, at upload. */
-  assert.match(page, /await findPrintAreas\(added,theme\)/, "every uploaded scene is prepared");
+  /* D579 - started on upload, not awaited. Awaiting it blocked the page for as
+     long as the analyser took, one scene at a time. Nothing is stranded by
+     letting go: a scene that is not prepared when a batch selects it is prepared
+     then, and preparation cannot fail. */
+  assert.match(page, /void findPrintAreas\(added,theme\)/, "every uploaded scene is prepared");
+  assert.match(page, /Array\.from\(\{length:Math\.min\(6,scenes\.length\)\},worker\)/,
+    "and prepared several at a time rather than one after another");
   /* D575 - stored, and stored as usable. Detection that only wrote corners left
      the scene as "garment", which refuses to render, so a seller who uploaded
      twenty scenes got twenty dead ones. The route already refuses anything that

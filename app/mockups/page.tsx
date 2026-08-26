@@ -232,7 +232,16 @@ export default function Home() {
 /* D573 - this was fire-and-forget, so closing the tab or moving on part way
      through left scenes carrying the placeholder for good, and nothing said so.
      The upload is not finished until every scene it added has been measured. */
-    await findPrintAreas(added,theme);}
+    /* D579 - upload does not wait for preparation any more.
+       It was awaited so closing the tab could not strand a half-prepared set,
+       but the cost was the seller staring at a blocked upload: the loop ran one
+       scene at a time, each allowing three attempts at a 45s timeout, so ten
+       photographs could hold the page for twenty minutes.
+       Nothing is stranded by letting go of it, because a scene that is not
+       prepared when a batch selects it is prepared then - calibrateIfNeeded
+       already does exactly that, and preparation cannot fail. So the worst case
+       is a scene prepared slightly later, never a scene that is lost. */
+    void findPrintAreas(added,theme);}
   const [preparing,setPreparing]=useState(0);
   /* D573 - "Test this scene". A scene should be provable before it is trusted on
      a real listing, so this renders it against a sample placement that is
@@ -261,7 +270,11 @@ export default function Home() {
   async function findPrintAreas(scenes:Template[],_theme:string){
     setPreparing(scenes.length);
     let done=0;
-    for(const scene of scenes){
+    /* D579 - six at a time instead of one after another. Preparation is almost
+       entirely spent waiting on the analyser, so this is latency, not load. */
+    const queue=[...scenes];
+    const worker=async()=>{ for(;;){ const scene=queue.shift(); if(!scene)return; await prepareScene(scene); } };
+    const prepareScene=async(scene:Template)=>{
       try{
         const productName=SURFACE_LABELS[scene.surfaceKind||"rigid-flat"];
         const response=await fetch(`/api/mockups/library/${encodeURIComponent(scene.id)}/prepare`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({productName})});
@@ -271,7 +284,8 @@ export default function Home() {
         setLibrary(x=>x.map(t=>t.id===scene.id?{...t,corners:preparation.corners,printSide:preparation.printSide,quadMeans:"print-area" as const,preparationStatus:"ready",preparation,occlusionConfirmed:true,occlusionUrl:preparation.occlusionKey?`/api/mockups/library/${encodeURIComponent(scene.id)}/occlusion`:undefined}:t));
       }catch{/* The stored queued state is retried automatically when used. */}
       done+=1;setPreparing(scenes.length-done);
-    }
+    };
+    await Promise.all(Array.from({length:Math.min(6,scenes.length)},worker));
     setPreparing(0);
     /* A provider interruption stays server-owned. The next library load and the
        next use both retry it; the seller never calibrates a photograph. */
