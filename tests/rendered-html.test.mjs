@@ -4052,7 +4052,7 @@ test("every product shows the same rows on every step — D498/D499", async () =
   assert.match(app, /\{\(\(\)=>\{const rows=productRows\(recipe,index===bundleIndex\)/,
     "D501 - a single-product batch gets its rows too, as step 1 gives them");
   assert.match(app, /<div className="batch-product-rows">\{rows\.map/);
-  assert.match(app, /<span className="row-mark" aria-hidden="true">\{row\.done\?"✓":row\.optional\?"–":"!"\}<\/span>/,
+  assert.match(app, /<span className="row-mark" aria-hidden="true">\{row\.done\?"✓":row\.pending\?"…":row\.optional\?"–":"!"\}<\/span>/,
     "the same row markup step 1 uses");
 
   // The active product is read from state, which is fresher than anything saved.
@@ -4153,7 +4153,7 @@ test("the row itself opens, exactly as step 1's does — D503", async () => {
             tabindex="0" aria-expanded="false"> … <button class="row-open">
      Mine were plain divs whose only control was the button, so clicking the row
      did nothing and none of it was reachable by keyboard. */
-  assert.match(app, /className=\{`batch-product-row \$\{row\.done\?"settled":row\.optional\?"optional":"needed"\} \$\{row\.report\?"reporting":switchingProduct\|\|\(!open&&!reachable\)\?"":"clickable"\}`\}/);
+  assert.match(app, /className=\{`batch-product-row \$\{row\.done\?"settled":row\.pending\?"pending":row\.optional\?"optional":"needed"\} \$\{row\.report\?"reporting":switchingProduct\|\|\(!open&&!reachable\)\?"":"clickable"\}`\}/);
   assert.match(app, /role=\{row\.report\|\|switchingProduct\|\|\(!open&&!reachable\)\?undefined:"button"\}/);
   assert.match(app, /tabIndex=\{row\.report\|\|switchingProduct\|\|\(!open&&!reachable\)\?undefined:0\}/);
   assert.match(app, /aria-expanded=\{open\}/);
@@ -4747,7 +4747,7 @@ test("steps 1 to 3 say what their numbers mean — D550", async () => {
      the row rendered "! None made yet" in alert red on every product card, so a
      finished step reported a problem that does not exist. */
   assert.match(app, /\{label:"Create lifestyle mockups"[\s\S]{0,200}optional:true/);
-  assert.match(app, /row\.done\?"✓":row\.optional\?"–":"!"/);
+  assert.match(app, /row\.done\?"✓":row\.pending\?"…":row\.optional\?"–":"!"/);
   assert.match(css, /\.app-shell \.batch-product-row\.optional \.row-mark\{/);
 
   /* Opening a saved batch showed the heading, then an empty page for several
@@ -4847,4 +4847,38 @@ test("what the click-through found on step 2 and step 3 — D554", async () => {
         she actually reads, next to Auto-create all titles. */
   assert.match(tools, /const tagUsable=chosen\.keywords\.filter\(word=>word\.length<=20\)\.length/);
   assert.match(tools, /short enough for Etsy tags/);
+});
+
+test("what clicking through step 3 and step 4 found — D556", async () => {
+  const [app, css] = await Promise.all([
+    readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8"),
+  ]);
+
+  /* 1. Measured on step 3's Etsy panel: the "2/2 ready" badge rendered at
+        (1352, 28) - the top right corner of the page, level with the progress
+        rail, hundreds of pixels from the panel it belongs to. D544 moved it into
+        the panel heading, where a global .done-mark rule positions it absolutely
+        for the step-card header it was written for, and .task-panel-heading was
+        not a positioning context, so it escaped. */
+  assert.match(css, /\.app-shell \.task-panel-heading\{position:relative\}/);
+  assert.match(css, /\.app-shell \.task-panel-heading \.done-mark\{position:static/);
+
+  /* 2. On step 4 the two products still being read showed five rows each of
+        "Checking…" wearing the alert mark and the alert colour - three cards
+        that looked like three cards of problems. Waiting is not a fault. */
+  assert.match(app, /const pending=unread;/);
+  assert.match(app, /row\.done\?"settled":row\.pending\?"pending":row\.optional\?"optional":"needed"/);
+  assert.match(app, /row\.done\?"✓":row\.pending\?"…":row\.optional\?"–":"!"/);
+  assert.match(css, /\.app-shell \.batch-product-row\.pending \.row-mark\{/);
+
+  // Every row set marks itself, so no step can forget.
+  /* Every row in every step's set carries it, checked by walking productRows
+     rather than by counting a string - a row that forgets is a row that goes red
+     while it is merely waiting. */
+  const fn = app.slice(app.indexOf("function productRows("), app.indexOf("\n  function ", app.indexOf("function productRows(") + 10));
+  for (const m of fn.matchAll(/\{label:"([^"]+)"/g)) {
+    const from = m.index, to = fn.indexOf("done:", from);
+    assert.ok(fn.slice(from, to).includes("pending,"), `${m[1]} must mark itself pending while unread`);
+  }
 });

@@ -2942,3 +2942,16 @@ body{min-width:1180px!important}
    edge so it is not an empty square. */
 .app-shell .printify-photo-view{display:block;margin-top:4px;font:700 .58rem/1.25 "Manrope",system-ui,sans-serif;color:#75576b;letter-spacing:.03em;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .app-shell .printify-photo-expand img{background:#fff;border:1px solid rgba(91,48,79,.14);border-radius:8px}
+
+/* D556 - D544 moved the "N/N ready" badge into the task panel's heading, where a
+   global .done-mark rule positions it absolutely for the step-card header it was
+   written for. .task-panel-heading is not a positioning context, so the badge
+   escaped to the nearest one and rendered in the top right corner of the page,
+   level with the progress rail, hundreds of pixels from the panel it belongs to.
+   Seen on step 3's Etsy panel: "2/2 ready" floating over the header. */
+.app-shell .task-panel-heading{position:relative}
+.app-shell .task-panel-heading .done-mark{position:static;flex:none}
+
+/* D556 - a row waiting on a read is not a row with a problem. */
+.app-shell .batch-product-row.pending .row-mark{background:rgba(232,183,225,.4);color:#6b4560}
+.app-shell .batch-product-row.pending .row-value{color:#75576b;font-weight:600}

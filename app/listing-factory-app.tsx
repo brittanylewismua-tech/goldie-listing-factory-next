@@ -1898,7 +1898,7 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
        which means when the active product changes. That is what this watches. */
   },[activeBundle,bundleRecipes,activeRecipe,bundleBatchIds]);
 
-  function productRows(recipe:Recipe,isActive:boolean):Array<{label:string;value:string;detail?:string;done:boolean;target?:string;task?:string;report?:boolean;optional?:boolean}>{
+  function productRows(recipe:Recipe,isActive:boolean):Array<{label:string;value:string;detail?:string;done:boolean;target?:string;task?:string;report?:boolean;optional?:boolean;pending?:boolean}>{
     const mine=isActive
       ?{designs:files.length,titled:files.filter(file=>file.title.trim()).length,tagged:files.filter(file=>file.tags.length>=13).length,drafts:drafts.filter(draft=>draft.status==="Created").length,described:Boolean(description.trim()),complete,published:Number(batchReceipt?.publishedCount)||0,status:"",photos:Object.values(printifyImageSelections).reduce((total,ids)=>total+ids.length,0)||printifyImageIndices.length,mockups:Object.values(preparedMockupCounts).reduce((total,count)=>total+(Number(count)||0),0)}
       :bundleBatchSummary[recipe.id];
@@ -1914,21 +1914,25 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
        product with a batch is not unstarted - it is unread. */
     const unread=!isActive&&!mine&&Boolean(bundleBatchIds[recipe.id]);
     const blank=unread?"Checking…":"Not started yet";
+    /* D556 - a product whose batch has not been read yet rendered every row with
+       the alert mark and the alert colour, so three cards of "Checking…" read as
+       three cards of problems. Waiting is not a fault. */
+    const pending=unread;
     const plural=(count:number,word:string)=>`${count} ${count===1?word:`${word}s`}`;
     const started=Boolean(mine);
     /* D539 - step 2's rows are the four things she does to a product's photos,
        in the order she does them. Each one owns its panel; none of them points
        anywhere. */
     if(workflowStep==="designs")return [
-      {label:"Review Printify placement",value:started?plural(counts.drafts,"listing"):blank,done:counts.drafts>0,task:"placement"},
-      {label:"Choose Printify photos",value:started?plural(counts.photos,"photo"):blank,done:counts.photos>0,task:"printify"},
+      {label:"Review Printify placement",value:started?plural(counts.drafts,"listing"):blank,pending,done:counts.drafts>0,task:"placement"},
+      {label:"Choose Printify photos",value:started?plural(counts.photos,"photo"):blank,pending,done:counts.photos>0,task:"printify"},
       /* D550 - lifestyle mockups are optional: nothing about publishing requires
          them, and her hoodie published-ready with four Printify photos and none.
          The row still rendered "! None made yet" in alert red on every product
          card, so a finished step reported a problem that does not exist. An
          optional row that is empty is not a warning. */
-      {label:"Create lifestyle mockups",value:started?(counts.mockups?plural(counts.mockups,"mockup"):"None yet — optional"):blank,done:counts.mockups>0,optional:true,task:"lifestyle"},
-      {label:"Arrange final photo order",value:started?plural(counts.photos+counts.mockups,"photo"):blank,done:counts.photos+counts.mockups>0,task:"order"},
+      {label:"Create lifestyle mockups",value:started?(counts.mockups?plural(counts.mockups,"mockup"):"None yet — optional"):blank,pending,done:counts.mockups>0,optional:true,task:"lifestyle"},
+      {label:"Arrange final photo order",value:started?plural(counts.photos+counts.mockups,"photo"):blank,pending,done:counts.photos+counts.mockups>0,task:"order"},
     ];
     /* D541 - both of these rows pointed at .final-review, so Listings and Titles
        and tags took you to the same block below the cards. Nothing on this step
@@ -1942,7 +1946,7 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
          and they belong on the rows that own that work. */
       const shortTitles=isActive?files.filter(file=>file.title.trim().length<100).length:0;
       return [
-        {label:"Listings ready",value:started?plural(counts.drafts,"listing"):blank,done:counts.drafts>0,report:true},
+        {label:"Listings ready",value:started?plural(counts.drafts,"listing"):blank,pending,done:counts.drafts>0,report:true},
         {label:"Titles and tags",value:started?(()=>{
         /* D549 - her question, and she was right to ask it: "2 of 2 written · 1 at
            13 tags. Is that supposed to say one of thirteen tags? How could there be
@@ -1951,7 +1955,7 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
            read as a tag count. Both sides count listings, out loud. */
         if(counts.tagged===counts.designs&&counts.designs>0)return `${counts.titled} of ${counts.designs} titles · all 13 tags`;
         return `${counts.titled} of ${counts.designs} titles · ${counts.tagged} of ${counts.designs} with all 13 tags`;
-      })():blank,detail:isActive&&shortTitles?`${shortTitles} ${shortTitles===1?"title is":"titles are"} under 100 characters`:undefined,done:started&&counts.designs>0&&counts.titled===counts.designs&&counts.tagged===counts.designs,report:true},
+      })():blank,detail:isActive&&shortTitles?`${shortTitles} ${shortTitles===1?"title is":"titles are"} under 100 characters`:undefined,pending,done:started&&counts.designs>0&&counts.titled===counts.designs&&counts.tagged===counts.designs,report:true},
         /* D490 - the checklist said only that one or more selected listings needed
            a photo, making her go and find which, on a page where everything else
            counted precisely. createdListingsMissingImages already knows exactly
@@ -1968,12 +1972,12 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
           if(missing.length===1&&named[0])return `${shorten(named[0],60)} still needs a photo`;
           if(named.length&&named.length===missing.length)return `${missing.length} listings still need a photo: ${named.map(name=>shorten(name,40)).join(", ")}`;
           return `${missing.length} of ${selectedPublishDrafts().length} selected listings still need a photo`;
-        })():undefined,done:counts.photos+counts.mockups>0,report:true},
+        })():undefined,pending,done:counts.photos+counts.mockups>0,report:true},
         /* D548 - the checklist read "✓ Hoodies will be applied automatically", which is
            the name of her shipping profile in a sentence that sounds like it is about
            the garment. Say what the name refers to. */
-        {label:"Pricing and shipping",value:isActive?(pricingApproved?`Approved · ${friendlyShippingProfileTitle(etsyShippingProfiles.find(profile=>profile.id===etsyShippingProfileId)?.title)||"Etsy shipping profile"} shipping profile`:"Needs review"):started?"Approved":blank,done:isActive?pricingApproved:started,report:true},
-        {label:"Published",value:counts.published?plural(counts.published,"listing"):"Not published yet",done:counts.published>0,report:true},
+        {label:"Pricing and shipping",value:isActive?(pricingApproved?`Approved · ${friendlyShippingProfileTitle(etsyShippingProfiles.find(profile=>profile.id===etsyShippingProfileId)?.title)||"Etsy shipping profile"} shipping profile`:"Needs review"):started?"Approved":blank,pending,done:isActive?pricingApproved:started,report:true},
+        {label:"Published",value:counts.published?plural(counts.published,"listing"):"Not published yet",pending,done:counts.published>0,report:true},
       ];
     }
     return [
@@ -1993,8 +1997,8 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
            read as a tag count. Both sides count listings, out loud. */
         if(counts.tagged===counts.designs&&counts.designs>0)return `${counts.titled} of ${counts.designs} titles · all 13 tags`;
         return `${counts.titled} of ${counts.designs} titles · ${counts.tagged} of ${counts.designs} with all 13 tags`;
-      })():blank,done:started&&counts.designs>0&&counts.titled===counts.designs&&counts.tagged===counts.designs,task:"titles"},
-      {label:"Edit description",value:counts.described?"Attached":started?"Not attached":blank,done:counts.described,task:"description"},
+      })():blank,pending,done:started&&counts.designs>0&&counts.titled===counts.designs&&counts.tagged===counts.designs,task:"titles"},
+      {label:"Edit description",value:counts.described?"Attached":started?"Not attached":blank,pending,done:counts.described,task:"description"},
       {label:"Review Etsy category and fields",value:started?(()=>{
         if(!files.some(file=>file.etsy))return"Not created yet";
         const ready=files.filter(file=>etsyRequiredComplete(file.etsy)).length;
@@ -2003,7 +2007,7 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
            blocking the whole batch, name it here. */
         const names=[...new Set(files.flatMap(file=>etsyMissingRequired(file.etsy)))];
         return names.length===1?`${ready} of ${files.length} ready · ${names[0]} still needed`:`${ready} of ${files.length} ready`;
-      })():blank,done:files.length>0&&files.every(file=>etsyRequiredComplete(file.etsy)),task:"etsy"},
+      })():blank,pending,done:files.length>0&&files.every(file=>etsyRequiredComplete(file.etsy)),task:"etsy"},
     ];
   }
 
@@ -2255,13 +2259,13 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
               setActiveTask(current=>current===task?"":task);
             };
             return <div className="batch-product-rows">{rows.map(row=><Fragment key={row.label}><div
-              className={`batch-product-row ${row.done?"settled":row.optional?"optional":"needed"} ${row.report?"reporting":switchingProduct||(!open&&!reachable)?"":"clickable"}`}
+              className={`batch-product-row ${row.done?"settled":row.pending?"pending":row.optional?"optional":"needed"} ${row.report?"reporting":switchingProduct||(!open&&!reachable)?"":"clickable"}`}
               role={row.report||switchingProduct||(!open&&!reachable)?undefined:"button"}
               tabIndex={row.report||switchingProduct||(!open&&!reachable)?undefined:0}
               aria-expanded={open}
               onClick={event=>{if(row.report)return;holdRowInPlace((event.currentTarget as HTMLElement));openRow(row.target,row.task)}}
               onKeyDown={(event:React.KeyboardEvent)=>{if(event.key==="Enter"||event.key===" "){event.preventDefault();if(row.report)return;holdRowInPlace(event.currentTarget as HTMLElement);openRow(row.target,row.task)}}}>
-              <span className="row-mark" aria-hidden="true">{row.done?"✓":row.optional?"–":"!"}</span>
+              <span className="row-mark" aria-hidden="true">{row.done?"✓":row.pending?"…":row.optional?"–":"!"}</span>
               <span className="row-label">{row.label}</span>
               <span className="row-value">{row.value}{row.detail?<small>{row.detail}</small>:null}</span>
               {/* D502 - captured from both pages side by side: step 1 puts a Change
