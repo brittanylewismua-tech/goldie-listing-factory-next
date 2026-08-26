@@ -3,6 +3,7 @@
    rendered, so the editor is loaded only when a seller opens it. */
 
 import { lazy, Suspense } from "react";
+import "./mockups/scene-editor.css";
 import { defaultTransform, renderingModeFor, placeArtworkOnSurface, type PlacementTransform, type Quad } from "./mockups/placement-profile";
 import { productAcceptsMockup } from "./mockup-compatibility";
 import { useEffect, useRef, useState } from "react";

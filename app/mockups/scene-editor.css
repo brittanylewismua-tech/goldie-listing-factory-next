@@ -1,0 +1,38 @@
+/* D590 - the editor's own styles, in their own file.
+
+   These lived in mockups.css, which is imported by the Mockup Library page and
+   by nothing else. The editor renders inside Listing Factory, so in production
+   not one of its rules was ever loaded: .modal fell back to position static and
+   the overlay rendered inline in the page, and .sceneActions fell back to
+   display block so the three buttons ran together as plain text. Verified on
+   the live page - zero stylesheets contained "sceneEditor" or "sceneActions".
+
+   A component that needs styling has to import it itself. */
+.modal{position:fixed;inset:0;z-index:1000;background:rgba(30,26,22,.55);display:flex;align-items:center;justify-content:center;padding:20px}
+/* The embedded placement editor. Lives over Listing Factory - it is an overlay,
+   never a page, so the batch underneath is never navigated away from. */
+.sceneEditorModal{align-items:stretch}
+.sceneEditor{background:#fff;border-radius:16px;width:min(1180px,96vw);max-height:94vh;display:flex;flex-direction:column;overflow:hidden}
+.sceneEditorHead{display:flex;justify-content:space-between;align-items:flex-start;padding:18px 22px 10px;border-bottom:1px solid #eee7db}
+.sceneEditorHead h2{margin:2px 0 0;font-size:1.15rem}
+.sceneEditorBody{display:flex;gap:18px;padding:16px 22px;overflow:auto;flex:1;min-height:0}
+.sceneEditorCanvas{flex:1;min-width:0;display:flex;align-items:center;justify-content:center;background:#f6f3ed;border-radius:12px;overflow:hidden;padding:10px}
+.sceneEditorLoading{color:#6b6257;font-size:.9rem}
+.sceneEditorControls{width:270px;flex:0 0 270px;display:flex;flex-direction:column;gap:12px}
+.editorRow{display:flex;flex-wrap:wrap;gap:6px}
+.editorRow button{border:1px solid #d9d2c6;background:#fff;border-radius:999px;padding:6px 12px;font-size:.82rem;cursor:pointer;color:#4a443c}
+.editorRow button:hover:not(:disabled){border-color:#c8b48a}
+.editorRow button:disabled{opacity:.45;cursor:default}
+.editorField{display:flex;flex-direction:column;gap:5px;font-size:.84rem;color:#4a443c}
+.editorField input[type=range]{width:100%}
+.editorField select{border:1px solid #d9d2c6;border-radius:8px;padding:6px 8px;font-size:.85rem}
+.editorHint{font-size:.75rem;color:#8a8177;line-height:1.35}
+.sceneEditorActions{display:flex;justify-content:flex-end;gap:8px;padding:12px 22px 18px;border-top:1px solid #eee7db}
+@media(max-width:900px){.sceneEditorBody{flex-direction:column}.sceneEditorControls{width:auto;flex:1}}
+.sceneState{font-size:.75rem;padding:2px 8px;border-radius:999px;background:#f0f7f1;color:#3f6b45;border:1px solid #cfe4d3}
+.sceneState.adjusted{background:#fdf5e2;color:#8a6a1f;border-color:#eeddb4}
+.sceneActions{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.sceneActions button,.sceneActions a{border:1px solid #d9d2c6;background:#fff;border-radius:999px;padding:5px 11px;font-size:.78rem;cursor:pointer;color:#4a443c;text-decoration:none}
+.sceneActions .adjustPlacement{background:#3d3730;border-color:#3d3730;color:#fff}
+.sceneActions .removeScene{color:#8a3d3d;border-color:#e6cccc}
+.improveScene{margin-right:auto;display:flex;align-items:center;gap:7px;font-size:.82rem;color:#4a443c}

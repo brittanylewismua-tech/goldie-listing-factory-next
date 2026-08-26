@@ -13,6 +13,7 @@ import {
   fitWithinSurface, toViewport,
 } from "./placement-profile.ts";
 import { composite, exportComposite } from "./scene-composite.ts";
+import "./scene-editor.css";
 
 const BLENDS: Array<{ value: BlendMode; label: string }> = [
   { value: "normal", label: "Normal" }, { value: "multiply", label: "Multiply" },

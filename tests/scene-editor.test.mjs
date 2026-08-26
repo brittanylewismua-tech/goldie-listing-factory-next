@@ -148,3 +148,22 @@ test("the fixture exercises the real editor, not a copy of it", async () => {
   assert.match(fixture, /scale: \.18/);
   assert.match(fixture, /scale: \.92/);
 });
+
+test("the editor imports its own styles rather than relying on another page", async () => {
+  /* D590 - found by operating it on production: the editor's rules lived in
+     mockups.css, which only the Mockup Library page imports. Inside Listing
+     Factory not one of them loaded, so .modal fell back to position static and
+     the overlay rendered inline in the page instead of over it. Zero
+     stylesheets on the live page contained "sceneEditor". */
+  const editor = await read("app/mockups/scene-editor.tsx");
+  assert.match(editor, /import "\.\/scene-editor\.css"/);
+  const mockupsGrid = await read("app/integrated-mockups.tsx");
+  assert.match(mockupsGrid, /import "\.\/mockups\/scene-editor\.css"/,
+    "the scene action buttons need the styles too, and they render without the editor open");
+  const css = await read("app/mockups/scene-editor.css");
+  assert.match(css, /\.modal\{position:fixed/, "the overlay must be fixed, not static");
+  assert.match(css, /\.sceneActions\{display:flex/, "the actions must lay out, not run together");
+  // And the rules must not be duplicated back in the page stylesheet.
+  const pageCss = await read("app/mockups/mockups.css");
+  assert.ok(!pageCss.includes("sceneEditor"), "one source for the editor's styles, not two");
+});
