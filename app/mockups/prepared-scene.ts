@@ -1,7 +1,14 @@
 import { printAreaBounds, productSurfaceFamily } from "../mockup-compatibility.ts";
 import type { PrintSide } from "../placement-math.ts";
 
-export const SCENE_PREPARATION_VERSION = 1;
+/* D580 changed what preparation produces: a validated reading is no longer
+   discarded when an optional, unread asset fails to arrive. Every stored version
+   1 record was produced by the code that discarded them, so all 19 of her scenes
+   carry a derived fallback that the current code would not have produced.
+   Bumping this invalidates them and re-reads each scene the next time it is
+   used - which is exactly the migration path that already exists and cannot
+   fail. */
+export const SCENE_PREPARATION_VERSION = 2;
 
 export type SceneGeometry = "flat" | "perspective" | "cylindrical" | "flexible" | "irregular";
 export type NormalizedPoint = [number, number];
