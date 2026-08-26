@@ -5055,3 +5055,27 @@ test("the publish review is one collapsed row per design — D562", async () => 
   assert.ok(review.indexOf('className="final-design-art"') < review.indexOf('className="final-listing-grid"'),
     "the design sits above the products that carry it");
 });
+
+test("a collapsed design row looks like it opens — D563", async () => {
+  const [css, globals] = await Promise.all([
+    readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8"),
+    readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
+  ]);
+
+  /* Her words: "there needs to be a little down arrow or something to make it look
+     like you touch that column to make it open, because it doesn't look like it
+     would open at this point. There's nothing to indicate that it would."
+
+     globals.css hides the native disclosure marker and nothing ever replaced it,
+     so D562's collapsed rows were collapsible and said so nowhere. */
+  assert.match(globals, /\.final-design-group>summary::-webkit-details-marker\{display:none\}/,
+    "the native marker is still hidden");
+  assert.match(css, /\.app-shell \.final-design-group>summary::after\{/, "so one is drawn");
+  assert.match(css, /\.app-shell \.final-design-group\[open\]>summary::after\{transform:rotate\(225deg\)/,
+    "and it turns when the row opens");
+
+  // The whole row reads as pressable, and keyboard focus is visible.
+  assert.match(css, /\.app-shell \.final-design-group>summary:hover\{background/);
+  assert.match(css, /\.app-shell \.final-design-group>summary:focus-visible\{outline/);
+  assert.match(css, /prefers-reduced-motion:reduce\)\{\.app-shell \.final-design-group>summary::after\{transition:none\}/);
+});
