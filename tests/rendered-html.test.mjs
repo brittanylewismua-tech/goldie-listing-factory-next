@@ -4803,8 +4803,12 @@ test("opening a task shows the work, not a list of listings to pick from — D55
 
   /* All four step 2 panels and all three step 3 panels use it, so the shape is
      the same everywhere - which is the thing she has asked for from the start. */
-  assert.equal((app.match(/className="task-listing-work"/g) || []).length, 4,
-    "three step 2 panels plus the shared designTaskRows");
+  /* D557 - and placement joined them, so all four step 2 panels and the shared
+     designTaskRows use the same head-then-work shape. */
+  assert.equal((app.match(/className="task-listing-work"/g) || []).length, 5,
+    "four step 2 panels plus the shared designTaskRows");
+  assert.equal((app.match(/className="task-listing-head"/g) || []).length, 5,
+    "and every one of them carries the same head");
 });
 
 test("what the click-through found on step 2 and step 3 — D554", async () => {
@@ -4881,4 +4885,23 @@ test("what clicking through step 3 and step 4 found — D556", async () => {
     const from = m.index, to = fn.indexOf("done:", from);
     assert.ok(fn.slice(from, to).includes("pending,"), `${m[1]} must mark itself pending while unread`);
   }
+});
+
+test("the rail keeps its ticks when she goes back — D557", async () => {
+  const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+
+  /* Measured on her bundle, the same batch, two screens: on step 3 the rail read
+     PRODUCT✓ IMAGES✓ LISTING; on step 1 it read PRODUCT IMAGES LISTING with no
+     ticks at all. "done" meant "you have walked past it", so navigating back
+     stripped the ticks off work that was finished. A stage is done when its own
+     work is done. */
+  assert.match(app, /const stageStarted=stage\.index===1\?Boolean\(activeRecipe\|\|activeBundle\)/);
+  assert.match(app, /:stage\.index===2\?files\.length>0/);
+  assert.match(app, /:stage\.index===5\?complete/);
+  assert.match(app, /:Number\(batchReceipt\?\.publishedCount\|\|0\)>0;/);
+
+  /* Publish is the one stage where "no outstanding issues" is not the same as
+     done - it is done when listings are actually live. */
+  assert.match(app, /const done=stage\.index===8\?stageStarted:\(stageStarted&&progressGateIssues\(stage\.index\)\.length===0\)/);
+  assert.doesNotMatch(app, /const done=stagePosition>=0&&position<stagePosition;/);
 });

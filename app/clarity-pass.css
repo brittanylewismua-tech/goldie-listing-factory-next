@@ -2955,3 +2955,13 @@ body{min-width:1180px!important}
 /* D556 - a row waiting on a read is not a row with a problem. */
 .app-shell .batch-product-row.pending .row-mark{background:rgba(232,183,225,.4);color:#6b4560}
 .app-shell .batch-product-row.pending .row-value{color:#75576b;font-weight:600}
+
+/* D557 - the batch-wide card was 254px holding 168px of content, with a single
+   line of link centred in a 74px block of its own. Two items, said plainly. */
+.app-shell .post-draft-workspace{padding:14px 18px}
+.app-shell .post-draft-heading{display:flex;justify-content:flex-end;margin:0 0 8px;padding:0}
+.app-shell .post-draft-heading .open-all-button{margin:0}
+.app-shell .post-draft-workspace .batch-size-guide{margin:0}
+
+/* D557 - placement carries the same head as every other panel now. */
+.app-shell .task-listing-work .draft-card-top{padding-top:4px}

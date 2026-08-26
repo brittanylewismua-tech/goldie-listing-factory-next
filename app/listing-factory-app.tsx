@@ -2116,9 +2116,15 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
             {/* D539 - a listing that failed to create still has to be reachable and
                 still has to offer its retry and its help. */}
             {<><button className="error-help-link" onClick={()=>window.dispatchEvent(new CustomEvent("goldie-retry-listing",{detail:draft.clientId}))}>Retry this listing</button><button className="error-help-link" onClick={()=>window.dispatchEvent(new CustomEvent("goldie-support",{detail:draft.error??"A design failed"}))}>Get help with this error</button></>}
-          </div>:<div className="task-listing" key={draft.clientId}><div className="draft-card-top">{draft.previewUrl?<button className="printify-preview-button" onClick={()=>window.open(draft.previewUrl,"_blank","noopener,noreferrer")} aria-label="Open larger Printify preview"><img src={draft.previewUrl} alt={`Printify preview for ${draft.title||draft.name}`}/><span>Click to enlarge</span></button>:design?<div className="pending-preview"><img src={design.previewUrl} alt="Design preview" loading="lazy" decoding="async"/><span>Printify preview processing</span></div>:<span className="draft-check">!</span>}<div>{draft.status!=="Created"&&<span className="draft-state">DRAFT FAILED</span>}<h3>{draft.title||draft.name}</h3><small>{draft.status==="Created"?"Unpublished Printify draft":draft.error}</small>{/* D409 - The tags belong to step 3. Showing them on Images invited editing
+          </div>:<div className="task-listing" key={draft.clientId}>
+            {/* D557 - placement was the one panel without the head every other
+                panel carries, so six panels listed each listing the same way and
+                this one did it differently. Same head; the name it used to repeat
+                inside the card comes out with it. */}
+            <div className="task-listing-head">{draft.previewUrl?<img className="task-listing-thumb" src={draft.previewUrl} alt="" loading="lazy"/>:<span className="task-listing-thumb"/>}<p className="task-listing-name">{design?.title?.trim()||design?.name||draft.name||"Listing"}</p><span className="task-listing-count">{(draft.printifyImages||[]).length} Printify views</span></div>
+            <div className="task-listing-work"><div className="draft-card-top">{draft.previewUrl?<button className="printify-preview-button" onClick={()=>window.open(draft.previewUrl,"_blank","noopener,noreferrer")} aria-label="Open larger Printify preview"><img src={draft.previewUrl} alt={`Printify preview for ${draft.title||draft.name}`}/><span>Click to enlarge</span></button>:design?<div className="pending-preview"><img src={design.previewUrl} alt="Design preview" loading="lazy" decoding="async"/><span>Printify preview processing</span></div>:<span className="draft-check">!</span>}<div>{draft.status!=="Created"&&<span className="draft-state">DRAFT FAILED</span>}{/* D557 - the head above carries the name now. */}<small>{draft.status==="Created"?"Unpublished Printify draft":draft.error}</small>{/* D409 - The tags belong to step 3. Showing them on Images invited editing
                    listing text on the step that is about photographs, and duplicated a
-                   field that is owned elsewhere. */}{draft.editorUrl&&draft.id?<button className={`edit-draft-button ${openedDrafts.includes(draft.id)?"opened":""}`} onClick={()=>openDraft(draft)}><i/><span>{openedDrafts.includes(draft.id)?"Printify opened":"Open in Printify to resize or reposition"}<small>(Choose the correct shop in your Printify account first.)</small></span></button>:null}</div></div>{/* D541 - the print-quality check used to sit in step 3's table of every
+                   field that is owned elsewhere. */}{draft.editorUrl&&draft.id?<button className={`edit-draft-button ${openedDrafts.includes(draft.id)?"opened":""}`} onClick={()=>openDraft(draft)}><i/><span>{openedDrafts.includes(draft.id)?"Printify opened":"Open in Printify to resize or reposition"}<small>(Choose the correct shop in your Printify account first.)</small></span></button>:null}</div></div></div>{/* D541 - the print-quality check used to sit in step 3's table of every
               listing, under Titles. It reports whether this artwork will print
               at 300 DPI on this product, which is this row's job, not the
               title's. */}{design?(()=>{const displayScale=printTargetFor(templateDetails).scale;const quality=design.width&&templateDetails?.maxPrintWidth&&displayScale?printifyDpi(design.width,templateDetails.maxPrintWidth,displayScale):null;const qualityReady=Boolean(quality&&quality.dpi>=300);return <div className={`quality-pill ${qualityReady?"pass":"check"}`}><b>{!quality?"Checking print quality…":qualityReady?`✓ ${quality.dpi} DPI · good to print`:`${quality.dpi} DPI · review before printing`}</b><small>{quality?`${quality.level} resolution · 300 DPI recommended`:design.width?`${design.width} × ${design.height}px`:"Reading dimensions…"}</small></div>})():null}</div>)}</div>
@@ -2913,7 +2919,17 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
                comparing indices meant Images could never read as done while the
                seller stood on Listing. It showed "02" with a tick beside it on
                Product and nothing on the stage they had just finished. */
-            const done=stagePosition>=0&&position<stagePosition;
+            /* D557 - "done" meant "you have walked past it", so going back to
+               step 1 stripped the ticks off Images and Listing on a batch whose
+               images and listing details were finished. Measured on her bundle:
+               the same batch read PRODUCT✓ IMAGES✓ LISTING on step 3 and PRODUCT
+               IMAGES LISTING on step 1. A stage is done when its own work is
+               done. */
+            const stageStarted=stage.index===1?Boolean(activeRecipe||activeBundle)
+              :stage.index===2?files.length>0
+              :stage.index===5?complete
+              :Number(batchReceipt?.publishedCount||0)>0;
+            const done=stage.index===8?stageStarted:(stageStarted&&progressGateIssues(stage.index).length===0)||(stagePosition>=0&&position<stagePosition);
             const issues=progressGateIssues(stage.index);
             const draftLine=stage.label==="Images"&&complete?` · ${createdDraftCount} drafts created`:"";
             /* D227 · Never disable the stage the seller is currently on. When drafts failed,
