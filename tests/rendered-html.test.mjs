@@ -971,7 +971,11 @@ test("handles up to eight lifestyle mockups in a reliable queue and shows the re
   assert.match(mockups, /next\.size>=MAX_MOCKUPS_PER_LISTING/);
   assert.match(mockups, /runBounded\(jobs,2/);
   assert.match(mockups, /withRecovery/);
-  assert.match(page, /Recommended photos for \{templateDetails\?\.blueprintTitle/);
+  /* D552 - deleted. She asked for it gone once ("there doesn't need to be a link
+     that says recommended photos for the soft..."), D540 moved it into the photos
+     panel instead, and she had to ask again. The row is named "Choose Printify
+     photos" and every photo is listed under it with counts; a collapsed essay
+     about which views to pick was advice nobody opened. */
   assert.match(page, /Lifestyle scenes that match this exact garment type/);
   assert.match(page, /Room scenes that show realistic scale/);
   assert.match(page, /An in-use scene that matches this exact drinkware/);
@@ -2374,7 +2378,11 @@ test("photo recommendations and defaults follow the saved product — D105",asyn
   const page=await readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8");
   assert.match(page,/function productPhotoGuide\(blueprintTitle:string,availableCount:number\)/);
   assert.match(page,/productFamily\(blueprintTitle\)/);
-  assert.match(page,/Recommended photos for \{templateDetails\?\.blueprintTitle/);
+  /* D552 - deleted. She asked for it gone once ("there doesn't need to be a link
+     that says recommended photos for the soft..."), D540 moved it into the photos
+     panel instead, and she had to ask again. The row is named "Choose Printify
+     photos" and every photo is listed under it with counts; a collapsed essay
+     about which views to pick was advice nobody opened. */
   assert.match(page,/setPrintifyImageSelections\(defaults\)/);
   assert.doesNotMatch(page,/3 lifestyle model mockups/);
   assert.doesNotMatch(page,/Printify flatlays of each color offered/);
@@ -4120,7 +4128,7 @@ test("step 3's rows match step 1's, captured from both live pages — D502", asy
   const handler = app.slice(app.indexOf("const openRow=("), app.indexOf("return <div className=\"batch-product-rows\">"));
   assert.ok(!handler.includes("scrollIntoView") && !handler.includes("querySelector"),
     "no row scrolls the page or hunts for a selector to find its content");
-  assert.match(app, /onClick=\{event=>\{event\.stopPropagation\(\);openRow\(row\.target,row\.task\)\}\}/,
+  assert.match(app, /event\.stopPropagation\(\);holdRowInPlace\(event\.currentTarget\.closest\("\.batch-product-row"\) as HTMLElement\|null\);openRow\(row\.target,row\.task\)/,
     "the button must not fire the row handler twice");
 
   // The separate waiting paragraph and its styling are gone.
@@ -4139,7 +4147,7 @@ test("the row itself opens, exactly as step 1's does — D503", async () => {
   assert.match(app, /role=\{row\.report\|\|switchingProduct\|\|\(!open&&!reachable\)\?undefined:"button"\}/);
   assert.match(app, /tabIndex=\{row\.report\|\|switchingProduct\|\|\(!open&&!reachable\)\?undefined:0\}/);
   assert.match(app, /aria-expanded=\{open\}/);
-  assert.match(app, /if\(event\.key==="Enter"\|\|event\.key===" "\)\{event\.preventDefault\(\);if\(!row\.report\)openRow\(row\.target,row\.task\)\}/,
+  assert.match(app, /event\.preventDefault\(\);if\(row\.report\)return;holdRowInPlace\(event\.currentTarget as HTMLElement\);openRow\(row\.target,row\.task\)/,
     "keyboard reaches it too, as step 1 does");
   assert.match(app, /<button type="button" className="row-open"/);
 
@@ -4334,9 +4342,11 @@ test("everything on step 2 that describes one product sits in that product's car
 
   /* D520 - "Recommended photos for Unisex Midweight Softstyle Fleece Hoodie"
      rendered above all three cards, describing the open product only, with
-     nothing for the other two. */
-  assert.match(app, /if\(task==="printify"\)return <>[\s\S]{0,900}?recommended-listing-photos/,
-    "the photo advice lives inside the choosing-photos task");
+     nothing for the other two.
+     D552 - and then it was deleted, which is what she asked for the first time.
+     Nothing may bring it back. */
+  assert.doesNotMatch(app, /recommended-listing-photos/);
+  assert.doesNotMatch(app, /Recommended photos for/);
 
   /* D519 - a run in progress is not a broken state to recover from: mid-switch
      the next product's template has not loaded, and the guard sent her to step 1
@@ -4730,4 +4740,27 @@ test("steps 1 to 3 say what their numbers mean — D550", async () => {
   assert.match(app, /\{restoringBatch&&<div className="batch-opening" role="status">/);
   assert.match(app, /Opening your batch…/);
   assert.match(css, /\.app-shell \.batch-opening\{/);
+});
+
+test("clicking a row does not throw her up the page — D552", async () => {
+  const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+
+  /* Her words: "when I click on choose printify photos, it pops me to the top of
+     the design and images page, and then I have to scroll down to where I was."
+     Instrumented the live page and nothing called scrollTo or scrollIntoView.
+     The open panel made the document 2817px tall and she was at 1917; closing it
+     to open a shorter one left a document of 1811, whose maximum scroll is 1055,
+     so the browser clamped her to 661. Not a jump - a collapse under her. */
+  assert.match(app, /const rowAnchor=useRef<\{element:HTMLElement;top:number\}\|null>\(null\)/);
+  assert.match(app, /function holdRowInPlace\(element:HTMLElement\|null\)/);
+  assert.match(app, /rowAnchor\.current=\{element,top:element\.getBoundingClientRect\(\)\.top\}/);
+
+  // Restored after layout, before paint, so there is no visible movement.
+  assert.match(app, /useLayoutEffect\(\(\)=>\{\s*const held=rowAnchor\.current/);
+  assert.match(app, /const drift=held\.element\.getBoundingClientRect\(\)\.top-held\.top/);
+  assert.match(app, /window\.scrollBy\(\{top:drift,behavior:"auto"\}\)/);
+  assert.match(app, /\},\[activeTask,openListing\]\)/);
+
+  // Every way into a row holds it: the row, its Change button, and the keyboard.
+  assert.equal((app.match(/holdRowInPlace\(/g) || []).length, 4, "declared once, called from all three");
 });

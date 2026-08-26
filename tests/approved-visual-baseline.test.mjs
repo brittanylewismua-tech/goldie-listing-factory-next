@@ -315,7 +315,11 @@ test("keeps Step 8 controls ordered, separated, and inside the warm Goldie palet
   assert.match(css, /\.app-shell \.inline-mockup-grid label\.selected\{[\s\S]*border-color:#b777b0!important/);
   assert.match(css, /\.app-shell \.post-draft-workspace>\.mockup-next\{[\s\S]*margin:34px auto 16px!important/);
   assert.match(css, /\.app-shell \.publish-live-warning\{[\s\S]*rgba\(239,211,237,\.66\)/);
-  assert.match(page, /Recommended photos for \{templateDetails\?\.blueprintTitle/);
+  /* D552 - deleted. She asked for it gone once ("there doesn't need to be a link
+     that says recommended photos for the soft..."), D540 moved it into the photos
+     panel instead, and she had to ask again. The row is named "Choose Printify
+     photos" and every photo is listed under it with counts; a collapsed essay
+     about which views to pick was advice nobody opened. */
   /* D151: this label used to be a CSS ::after over font-size:0 DOM text.
    * It now lives in the TSX, so assert it there and assert the hack is gone. */
   assert.doesNotMatch(css, /\.open-all-button:after/,

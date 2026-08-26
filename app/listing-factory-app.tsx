@@ -1,6 +1,6 @@
 "use client";
 import { productAcceptsMockup } from "./mockup-compatibility";
-import { Fragment, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import Image from "next/image";
 import SupportChat from "./support-chat";
@@ -2012,6 +2012,23 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
   const etsyDetailsPrepared=files.length>0&&files.every(file=>Boolean(file.etsy));
   const [activeTask,setActiveTask]=useState<string>("");
   const [openListing,setOpenListing]=useState<string>("");
+  /* D552 - her words: "when I click on choose printify photos, it pops me to the
+     top of the design and images page, and then I have to scroll down to where I
+     was." Measured on the live page, and nothing was scrolling: the open panel
+     was 2817px of document, she was at 1917, and closing it to open another left
+     a document of 1811 - so the browser clamped her scroll position down to 661.
+     Not a jump, a collapse. The row she clicked stays exactly where it was on
+     screen while the panels swap underneath it. */
+  const rowAnchor=useRef<{element:HTMLElement;top:number}|null>(null);
+  function holdRowInPlace(element:HTMLElement|null){
+    if(element)rowAnchor.current={element,top:element.getBoundingClientRect().top};
+  }
+  useLayoutEffect(()=>{
+    const held=rowAnchor.current;rowAnchor.current=null;
+    if(!held||!held.element.isConnected)return;
+    const drift=held.element.getBoundingClientRect().top-held.top;
+    if(Math.abs(drift)>1)window.scrollBy({top:drift,behavior:"auto"});
+  },[activeTask,openListing]);
   /* D541 - every task panel that works listing by listing shows the same row:
      the artwork, the listing name, where that listing stands on this one job,
      and Change. The job decides what opens underneath, so a listing's title is
@@ -2075,8 +2092,12 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
               title's. */}{design?(()=>{const displayScale=printTargetFor(templateDetails).scale;const quality=design.width&&templateDetails?.maxPrintWidth&&displayScale?printifyDpi(design.width,templateDetails.maxPrintWidth,displayScale):null;const qualityReady=Boolean(quality&&quality.dpi>=300);return <div className={`quality-pill ${qualityReady?"pass":"check"}`}><b>{!quality?"Checking print quality…":qualityReady?`✓ ${quality.dpi} DPI · good to print`:`${quality.dpi} DPI · review before printing`}</b><small>{quality?`${quality.level} resolution · 300 DPI recommended`:design.width?`${design.width} × ${design.height}px`:"Reading dimensions…"}</small></div>})():null}</div>)}</div>
     </>;
     if(task==="printify")return <>
-          {/* D540 - advice about choosing photos, inside the choosing-photos task. */}
-          <div className="task-panel-lead">{(()=>{const sample=drafts.find(draft=>draft.id&&draft.printifyImages?.length),available=sample?.printifyImages?.length||0,selected=sample?.id?(printifyImageSelections[sample.id]??printifyImageIndices).length:0,guide=productPhotoGuide(templateDetails?.blueprintTitle||"",available);return <details className="recommended-listing-photos"><summary>Recommended photos for {templateDetails?.blueprintTitle||"this product"}</summary><p>{selected?`This batch currently uses ${selected} of ${available} available Printify views.`:`Goldie found ${available} Printify ${available===1?"view":"views"} and will start with the best available ${Math.min(guide.count,available)}.`} Change any selection below.</p><ul>{guide.items.map(item=><li key={item}>{item}</li>)}</ul><button type="button" className="panel-collapse-foot" onClick={event=>{const box=(event.currentTarget as HTMLElement).closest("details");if(box){(box as HTMLDetailsElement).open=false;box.scrollIntoView({block:"nearest"})}}}>Close recommended photos</button></details>})()}</div>
+          {/* D552 - she asked for this gone once already: "there doesn't need to be
+              a link that says recommended photos for the soft...". D540 moved it
+              into this panel instead of deleting it, which is not what she asked
+              for. The row is called "Choose Printify photos" and the photos are
+              listed underneath it with counts; a collapsed essay about which views
+              to pick was advice nobody opened. Gone. */}
           <div className="task-panel-body">{listings.map(({draft,design,selectedImages})=>draft.status!=="Created"||!design||!draft.id?null:(()=>{
               const key=`${draft.clientId}`;const shown=openListing===key;
               const count=selectedImages.length+(preparedMockupCounts[draft.id||""]||0);
@@ -2215,8 +2236,8 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
               role={row.report||switchingProduct||(!open&&!reachable)?undefined:"button"}
               tabIndex={row.report||switchingProduct||(!open&&!reachable)?undefined:0}
               aria-expanded={open}
-              onClick={()=>{if(!row.report)openRow(row.target,row.task)}}
-              onKeyDown={(event:React.KeyboardEvent)=>{if(event.key==="Enter"||event.key===" "){event.preventDefault();if(!row.report)openRow(row.target,row.task)}}}>
+              onClick={event=>{if(row.report)return;holdRowInPlace((event.currentTarget as HTMLElement));openRow(row.target,row.task)}}
+              onKeyDown={(event:React.KeyboardEvent)=>{if(event.key==="Enter"||event.key===" "){event.preventDefault();if(row.report)return;holdRowInPlace(event.currentTarget as HTMLElement);openRow(row.target,row.task)}}}>
               <span className="row-mark" aria-hidden="true">{row.done?"✓":row.optional?"–":"!"}</span>
               <span className="row-label">{row.label}</span>
               <span className="row-value">{row.value}{row.detail?<small>{row.detail}</small>:null}</span>
@@ -2234,7 +2255,7 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
               {row.report?null:<button type="button" className="row-open"
                 disabled={Boolean(switchingProduct)||(!open&&!reachable)}
                 title={!open&&!reachable?`Finish ${list[index-1]?.name||"the product above"} first`:undefined}
-                onClick={event=>{event.stopPropagation();openRow(row.target,row.task)}}>
+                onClick={event=>{event.stopPropagation();holdRowInPlace(event.currentTarget.closest(".batch-product-row") as HTMLElement|null);openRow(row.target,row.task)}}>
                 {opening?"Opening…":"Change"}
               </button>}
             </div>
@@ -3288,11 +3309,6 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
             card, which was right, and left it at the very bottom of the step,
             which was not. It sits above the panels it applies to. */}
         <section className="batch-size-guide"><div><p className="mini-label">OPTIONAL · APPLY TO THE WHOLE BATCH</p><h3>Add one size guide to every Etsy listing</h3><span>Choose it once. Goldie attaches it to every listing in this batch automatically when you publish.</span></div><input ref={sizeGuidePicker} type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={event=>{const file=event.target.files?.[0];if(file)void applySizeGuide(file)}}/><button onClick={()=>sizeGuidePicker.current?.click()}>{sizeGuideName?"Replace size guide":"Choose size guide"}</button>{sizeGuideStatus&&<p role="status">{sizeGuideStatus}</p>}</section>
-        {/* D520 - this rendered above the product cards, so a three-product
-            bundle got one "Recommended photos for Unisex Midweight Softstyle
-            Fleece Hoodie" floating over all three, and nothing at all for the
-            other two. It describes one product's photos; it belongs in that
-            product's card. */}
         
         
         
