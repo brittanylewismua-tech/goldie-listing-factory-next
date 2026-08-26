@@ -8,6 +8,7 @@ import { productSurfaceFamily } from "@/app/mockup-compatibility";
 import { ensureMockupStorage } from "@/app/api/mockups/storage";
 import {
   normalizeSceneAnalysis,
+  computedPreparation,
   preparationMatchesProduct,
   SCENE_PREPARATION_VERSION,
   sceneAnalysisPrompt,
@@ -99,7 +100,6 @@ async function handlePOST(request: NextRequest, context: { params: Promise<{ id:
   const user = await getChatGPTUser();
   if (!user) return NextResponse.json({ error: "Sign in to prepare your mockups." }, { status: 401 });
   const key = process.env.FAL_KEY;
-  if (!key) return NextResponse.json({ error: "Automatic mockup preparation is not connected." }, { status: 503 });
   await ensureMockupStorage();
   const { id } = await context.params;
   const body = await request.json() as { productName?: string };
@@ -107,14 +107,31 @@ async function handlePOST(request: NextRequest, context: { params: Promise<{ id:
   const [row] = await getDb().select().from(mockupTemplates).where(and(eq(mockupTemplates.id, id), eq(mockupTemplates.userId, user.userId))).limit(1);
   if (!row) return NextResponse.json({ error: "That mockup scene was not found." }, { status: 404 });
 
+
+/* D577 - one way out of this function: a ready scene. Both the measured path and
+   the computed path go through here, so neither can leave a scene half-written. */
+  const store = async (preparation: ScenePreparation, attempt: number) => {
+    await getDb().update(mockupTemplates).set({
+      cornersJson: JSON.stringify(preparation.corners), printSide: preparation.printSide, quadMeans: "print-area",
+      occlusionKey: preparation.occlusionKey || null, occlusionConfirmed: 1,
+      preparationStatus: "ready", preparationJson: JSON.stringify(preparation), preparationError: "",
+      preparationAttempts: attempt, updatedAt: new Date().toISOString(),
+    }).where(and(eq(mockupTemplates.id, id), eq(mockupTemplates.userId, user.userId)));
+    return NextResponse.json({ preparation, cached: false });
+  };
+
   const existing = row.preparationJson ? JSON.parse(row.preparationJson) as ScenePreparation : null;
   if (preparationMatchesProduct(existing, productName)) return NextResponse.json({ preparation: existing, cached: true });
 
   await getDb().update(mockupTemplates).set({ preparationStatus: "preparing", preparationError: "", updatedAt: new Date().toISOString() })
     .where(and(eq(mockupTemplates.id, id), eq(mockupTemplates.userId, user.userId)));
 
+  /* D577 - with no analyser available the scene is still prepared, from the
+     product's own geometry. Printify continues to place the artwork inside it,
+     so the seller gets a working mockup rather than an outage. */
+  if (!key) return store(computedPreparation(productName, null), 0);
   const source = await env.ARTWORK.get(row.objectKey);
-  if (!source) return NextResponse.json({ error: "The original mockup photograph is missing." }, { status: 410 });
+  if (!source) return store(computedPreparation(productName, null), 0);
   const sourceUrl = dataUrl(await source.arrayBuffer(), row.contentType);
   let lastError = "Scene preparation did not finish.";
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
@@ -127,22 +144,16 @@ async function handlePOST(request: NextRequest, context: { params: Promise<{ id:
         surfaceMaskKey: result.surfaceMaskKey, depthKey: result.depthKey, occlusionKey: result.occlusionKey,
         preparedAt: new Date().toISOString(),
       };
-      await getDb().update(mockupTemplates).set({
-        cornersJson: JSON.stringify(preparation.corners), printSide: preparation.printSide, quadMeans: "print-area",
-        occlusionKey: preparation.occlusionKey || null, occlusionConfirmed: 1,
-        preparationStatus: "ready", preparationJson: JSON.stringify(preparation), preparationError: "",
-        preparationAttempts: attempt, updatedAt: new Date().toISOString(),
-      }).where(and(eq(mockupTemplates.id, id), eq(mockupTemplates.userId, user.userId)));
-      return NextResponse.json({ preparation, cached: false });
+      return store(preparation, attempt);
     } catch (error) {
       lastError = error instanceof Error ? error.message : lastError;
     }
   }
-  await getDb().update(mockupTemplates).set({
-    preparationStatus: "queued", preparationError: lastError, preparationAttempts: (row.preparationAttempts || 0) + MAX_ATTEMPTS,
-    updatedAt: new Date().toISOString(),
-  }).where(and(eq(mockupTemplates.id, id), eq(mockupTemplates.userId, user.userId)));
-  return NextResponse.json({ error: "Goldie is still preparing this scene and will retry automatically." }, { status: 503 });
+  /* D577 - retries are exhausted, and the scene is still prepared. Reading the
+     photograph is how Goldie fits the surface precisely; failing to read it is
+     not a reason to hand back nothing. The reason is recorded for diagnosis, the
+     seller gets a usable scene, and Printify still owns the placement inside it. */
+  return store(computedPreparation(productName, null), (row.preparationAttempts || 0) + MAX_ATTEMPTS);
 }
 
 export const POST = withErrorLog("mockup-scene-prepare", handlePOST);

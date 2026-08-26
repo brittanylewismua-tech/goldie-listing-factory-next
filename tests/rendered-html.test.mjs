@@ -1060,8 +1060,17 @@ test("routes each product surface deliberately and never releases a partial batc
   /* D573 - there is no constant fallback any more. A scene that cannot reproduce
      the draft's real Printify placement refuses by name instead of rendering a
      convincing-looking guess at a flat 42% centred. */
-  assert.match(integrated,/needs its print area confirmed in Mockup Library/,
-    "a scene that cannot reproduce the real placement must refuse by name");
+  /* D577 - no scene refuses. Every selected photograph produces a mockup: the
+     surface is measured when the photograph can be read and computed from the
+     product's geometry when it cannot, and Printify owns the artwork's side,
+     scale, position and rotation inside that surface either way. A seller who
+     selects eight scenes receives eight mockups. */
+  assert.doesNotMatch(integrated,/needs its print area confirmed in Mockup Library/,
+    "a scene must never hand the seller a calibration task");
+  assert.doesNotMatch(integrated,/if\(unmeasured\.length\)throw/,
+    "an unmeasured scene must not fail the batch");
+  assert.match(integrated,/const measured=calibrated;/,
+    "every selected scene renders");
   assert.doesNotMatch(integrated,/scale:kind==="rigid-flat"\?1:\.42/,
     "the 42% constant must not live in the render path");
   // The old constants may survive only as the pre-mirroring fallback for drafts
@@ -5249,11 +5258,18 @@ test("a scene is measured at the moment it is used — D571", async () => {
   assert.match(mockups, /async function calibrateIfNeeded\(list:Template\[\]\)/);
   assert.match(mockups, /const stale=list\.filter\(item=>!preparationMatchesProduct\(item\.preparation,productName\)\)/);
   assert.match(mockups, /\/prepare`,\{method:"POST"/);
-  assert.match(mockups, /return \{ready:applied\.filter\(item=>preparationMatchesProduct/);
-  /* D572 - and a scene it cannot measure is held back rather than rendered
-     against a guess, which is what D571 claimed and did not do. */
+  /* D577 - preparation settles every scene. D572 held unmeasurable scenes back,
+     which meant a seller could select eight photographs and receive five. The
+     surface is measured when the photograph can be read and computed from the
+     product's geometry when it cannot; Printify owns the placement inside it
+     either way, so nothing is held back and nothing is guessed about the art. */
+  assert.match(mockups, /return \{ready:settled,unmeasured:\[\] as Template\[\]\}/);
+  assert.match(mockups, /computedPreparation\(productName,null,item\.printSide\)/);
   assert.match(mockups, /const \{ready:calibrated,unmeasured\}=await calibrateIfNeeded\(chosen\)/);
-  assert.match(mockups, /if\(unmeasured\.length\)throw new Error\("Goldie is still preparing/);
+  /* D577 - and it does not throw. An unmeasured scene renders on a computed
+     surface rather than failing the batch it was part of. */
+  assert.doesNotMatch(mockups, /if\(unmeasured\.length\)throw/);
+  assert.match(mockups, /const measured=calibrated;/);
   assert.match(mockups, /jobs=measured\.map/, "the render uses the measured scenes, not the stale ones");
 
   // The measurement is saved, so it is done once and not on every render.

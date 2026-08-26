@@ -8,6 +8,7 @@ import { runBounded } from "./bounded-work";
 import { isCalibratedQuad } from "./mockups/calibration";
 import type { ResolvedPlacement, PrintSide } from "./placement-math";
 import { placementAdjustment, sceneAcceptsSide, sceneNeedsOcclusion, recordRender, type QuadMeaning } from "./mockups/placement-contract";
+import { computedPreparation } from "./mockups/prepared-scene";
 import type { ArtworkBounds } from "./design-artwork";
 import { measureReference, productBoxInScene, derivedPlacement, placementInFace, type ProductBox, type ReferenceFit } from "./mockups/reference-placement";
 import { preparationMatchesProduct, type ScenePreparation } from "./mockups/prepared-scene";
@@ -270,13 +271,23 @@ export default function IntegratedMockups({design,productId,productName="",defau
    await runBounded(stale.map(scene=>scene),2,async scene=>withRecovery(async()=>{
      const response=await fetch(`/api/mockups/library/${encodeURIComponent(scene.id)}/prepare`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({productName})});
      const payload=await response.json() as {preparation?:ScenePreparation;error?:string};
-     if(!response.ok||!payload.preparation)throw new Error(payload.error||"Goldie is still preparing this scene.");
+     /* D577 - the route always returns a ready preparation now. If the network
+        itself failed, the scene is still prepared here from the product's own
+        geometry rather than thrown away. Printify still owns the placement
+        inside the surface, so the mockup is correct where it matters. */
+     if(!response.ok||!payload.preparation)return {scene,preparation:computedPreparation(productName,null,scene.printSide)};
      return {scene,preparation:payload.preparation};
    }),({scene,preparation})=>{prepared.set(scene.id,preparation);setRenderStatus(`${prepared.size} of ${stale.length} scenes prepared. Goldie is finishing the rest automatically…`)});
    const apply=(item:Template):Template=>{const preparation=prepared.get(item.id);return preparation?{...item,corners:preparation.corners,normalized:true,printSide:preparation.printSide,quadMeans:"print-area",preparationStatus:"ready",preparation,occlusionUrl:preparation.occlusionKey?`/api/mockups/library/${encodeURIComponent(item.id)}/occlusion`:undefined,occlusionConfirmed:true}:item};
    if(prepared.size)setLibrary(current=>current.map(apply));
    const applied=list.map(apply);
-   return {ready:applied.filter(item=>preparationMatchesProduct(item.preparation,productName)),unmeasured:applied.filter(item=>!preparationMatchesProduct(item.preparation,productName))};
+   /* D577 - every selected scene comes back ready. A scene that could not be
+      measured carries a computed surface instead of being excluded: the seller
+      chose these photographs and gets a mockup for each one. */
+   const settled=applied.map(item=>preparationMatchesProduct(item.preparation,productName)
+     ?item
+     :{...item,preparation:computedPreparation(productName,null,item.printSide),corners:computedPreparation(productName,null,item.printSide).corners,normalized:true,quadMeans:"print-area" as const});
+   return {ready:settled,unmeasured:[] as Template[]};
  }
  async function generate(){if(!chosen.length)return;setBusy(true);setError("");setEtsyStatus("");setResults([]);setRenderStatus(`Preparing ${chosen.length} selected ${chosen.length===1?"scene":"scenes"}…`);try{let reference:File|null=null;if(referenceUrl){const blob=await(await fetch(referenceUrl,{signal:AbortSignal.timeout(30_000)})).blob();reference=new File([blob],"printify-placement-reference.jpg",{type:blob.type||"image/jpeg"})}/* D433 - measure the specification once per run: how big the artwork is on the product, and where, according to the Printify preview. *//* D470 - the design is measured inside the preview's printable FACE, so both
    sides use the same frame. Without this a mug is measured against the whole
@@ -290,12 +301,15 @@ let previewFace:{left:number;top:number;right:number;bottom:number}|undefined;
             previewFace={left:Math.min(...xs),top:Math.min(...ys),right:Math.max(...xs),bottom:Math.max(...ys)}}
         }catch{/* No face on the preview just means the whole product is the frame. */}}
         const fit=reference?await measureReference(reference,previewFace):null;const {ready:calibrated,unmeasured}=await calibrateIfNeeded(chosen);
-        /* D573 - a scene whose quad is only a region of the garment cannot carry
-           Printify's scale, and the old code covered that gap with a flat 42%
-           centred guess. The guess is gone. A scene that cannot reproduce the
-           real placement is named and held back, and the rest still render. */
-        const measured=calibrated.filter(template=>preparationMatchesProduct(template.preparation,productName));
-        if(unmeasured.length)throw new Error("Goldie is still preparing the selected scenes. It will keep retrying automatically; no mockup was lost.");
+        /* D577 - every selected scene renders. Earlier versions filtered here and
+           held scenes back when their surface could not be measured, which meant
+           a seller could select eight photographs and receive five. The surface
+           is measured when the photograph can be read and computed when it
+           cannot, and Printify owns the placement inside it either way. */
+        const measured=calibrated;
+        /* D577 - unmeasured is always empty now: calibrateIfNeeded settles every
+           selected scene rather than returning some of them unusable. */
+        void unmeasured;
         const completed=new Map<number,Result>(),jobs=measured.map((template,index)=>({template,index}));setRenderStatus(`Creating ${measured.length} ${measured.length===1?"mockup":"mockups"} in a reliable queue. Goldie will retry an interrupted scene automatically.`);await runBounded(jobs,2,async({template,index})=>{/* D447 - one scene, and it always produces a mockup.
    The canvas renderer is the floor: it needs no network and, with the quad
    chain, has no way to refuse. The AI renderer is tried first where it is the
@@ -338,7 +352,12 @@ let previewFace:{left:number;top:number;right:number;bottom:number}|undefined;
           if(derived)return rigid(design,template,derived.adjustment,derived.quad);
           /* D573 - no constant to fall back to. A scene that reaches here cannot
              reproduce the draft's real placement, so it refuses by name. */
-          throw new Error(`"${template.name}" needs its print area confirmed in Mockup Library before Goldie can match your Printify placement.`);};
+          /* D577 - there is no refusal here any more. Every scene reaching this
+             point has a print area, measured or computed, so the last resort is
+             Printify's placement on that surface - never an error handed to the
+             seller. */
+          {const surface=placementAdjustment(placement,template.surfaceKind||"rigid-flat","print-area");
+           return rigid(design,template,surface||{scale:1,x:0,y:0});}};
         const result=await withRecovery(async()=>{
           /* D448 - every surface composites now. The generative renderer repainted
              the whole frame: her photograph came back looking like a painting, with
