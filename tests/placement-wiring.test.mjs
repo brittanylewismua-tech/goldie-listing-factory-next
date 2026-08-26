@@ -68,12 +68,20 @@ test("scene geometry is written only on explicit opt-in, and carries no listing"
 
 test("the load order reads geometry and override separately", async () => {
   const grid = await read("app/integrated-mockups.tsx");
-  assert.match(grid, /const loadPersisted=async\(\)=>/);
+  /* D597 - the load happens when the seller opens the editor, not during
+     render. Running it in the render body re-fired it on every setState it
+     caused - seven identical GETs for one open - and the editor takes
+     `transform` into its own useState on mount, so a record arriving after mount
+     never reached it and the restore silently fell back to automatic. */
+  assert.match(grid, /const composeSaved=useCallback\(async\(template:Template\)/);
+  assert.match(grid, /const openEditor=useCallback\(async\(result:Result,index:number\)/);
+  assert.match(grid, /const loaded=await composeSaved\(template\);[\s\S]{0,200}setEditing\(\{result,index\}\)/,
+    "the record must be loaded before the editor is opened");
   assert.match(grid, /answer\.geometry/);
   assert.match(grid, /answer\.override/);
   // The override is applied after the geometry mapping, never before.
-  const load = grid.slice(grid.indexOf("const loadPersisted=async"), grid.indexOf("void loadPersisted()"));
-  assert.ok(load.indexOf("if(geometry)") < load.indexOf("if(override)"),
+  const load = grid.slice(grid.indexOf("const composeSaved=useCallback"), grid.indexOf("const openEditor=useCallback"));
+  assert.ok(load.indexOf("if(geometry)") < load.indexOf("override.scaleMultiplier"),
     "Printify placement maps into geometry first, then the override adjusts it");
 });
 
@@ -96,4 +104,28 @@ test("the tables carry seller ownership", async () => {
   for (const [name, table] of [["geometry", geometry], ["override", override]])
     assert.match(table, /userId: text\("user_id"\)\.notNull\(\)/, `${name} must record its owner`);
   assert.match(override, /batchId: text\("batch_id"\)/, "an override is scoped to its batch");
+});
+
+test("the persisted record is loaded before the editor opens, and only once", async () => {
+  const grid = await read("app/integrated-mockups.tsx");
+  /* D597 - found on a real restore: the editor came back with the automatic
+     placement even though the database held the correction. Two causes.
+
+     The fetch lived in the render body, so every setState it caused re-ran it -
+     seven identical GETs for one open. And SceneEditor takes `transform` into
+     its own useState on mount, so a record that arrived after mount could never
+     reach it. */
+  assert.doesNotMatch(grid, /void loadPersisted\(\)/, "no fetching from the render body");
+  assert.match(grid, /setOpeningScene\(result\.templateId\)/, "the control shows it is loading");
+  const open = grid.slice(grid.indexOf("const openEditor=useCallback"), grid.indexOf("const openEditor=useCallback") + 600);
+  assert.ok(open.indexOf("await composeSaved") < open.indexOf("setEditing({result,index})"),
+    "load first, open second");
+});
+
+test("a returning seller sees Adjusted before opening anything", async () => {
+  const grid = await read("app/integrated-mockups.tsx");
+  // The grid asks the database once per result set, deduplicated by a ref.
+  assert.match(grid, /const scanned = ?useRef<string>\(""\)|const scanned=useRef<string>\(""\)/);
+  assert.match(grid, /if\(scanned\.current===key\)return/, "one scan per result set, not per render");
+  assert.match(grid, /adjustedScenes\[r\.templateId\]/, "and the badge reflects the database");
 });

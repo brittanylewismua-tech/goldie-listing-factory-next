@@ -6,7 +6,7 @@ import { lazy, Suspense } from "react";
 import "./mockups/scene-editor.css";
 import { defaultTransform, renderingModeFor, placeArtworkOnSurface, type PlacementTransform, type Quad } from "./mockups/placement-profile";
 import { productAcceptsMockup, productSurfaceFamily } from "./mockup-compatibility";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { safeImagePreviewDataUrl } from "./client-image-preview";
 import { runBounded } from "./bounded-work";
@@ -228,6 +228,83 @@ export default function IntegratedMockups({design,productId,productName="",defau
  /* Scene-level, and the only thing that may improve a future design. */
  const [sceneGeometry,setSceneGeometry]=useState<Record<string,{surface:Quad;curvature:number;fabricStrength:number;blendMode:PlacementTransform["blendMode"]}>>({});
  const [designUrl,setDesignUrl]=useState("");
+ const [openingScene,setOpeningScene]=useState("");
+ /* Which scenes the database already holds a correction for, so the grid can say
+    "Adjusted" on a fresh load rather than only after an edit in this session. */
+ const [adjustedScenes,setAdjustedScenes]=useState<Record<string,boolean>>({});
+
+ /* D597 - one place that turns a scene plus this design's Printify placement
+    into the transform the editor should open with. Order: Printify placement,
+    then compatible scene geometry, then this design's override, applied last. */
+ const composeSaved=useCallback(async(template:Template):Promise<{transform:PlacementTransform;at:string|null}|null>=>{
+   const surface=(template.preparation?.corners||template.corners) as Quad;
+   const mode=renderingModeFor(productName,template.preparation?.geometry);
+   const query=new URLSearchParams({sceneId:template.id,
+     productFamily:productSurfaceFamily(productName),printSide:template.printSide||"front",
+     listingId:productId,designKey,batchId});
+   const answer=await fetch(`/api/mockups/placement?${query}`).then(r=>r.ok?r.json():null).catch(()=>null) as
+     {geometry?:{surface?:Quad;curvature?:number;fabricStrength?:number;blendMode?:PlacementTransform["blendMode"]}|null;
+      override?:Record<string,number|string|boolean|undefined>|null}|null;
+   if(!answer)return null;
+   const geometry=answer.geometry, override=answer.override;
+   let next=defaultTransform(placeArtworkOnSurface((geometry?.surface as Quad)||surface,placement),mode);
+   if(geometry)next={...next,curvature:geometry.curvature??next.curvature,
+     fabricStrength:geometry.fabricStrength??next.fabricStrength,
+     blendMode:geometry.blendMode??next.blendMode};
+   if(!override)return {transform:next,at:null};
+   const centre=(q:Quad)=>[q.reduce((a,p)=>a+p[0],0)/4,q.reduce((a,p)=>a+p[1],0)/4];
+   const [cx,cy]=centre(next.corners);
+   const m=Number(override.scaleMultiplier??1)||1;
+   const du=Number(override.offsetU??0), dv=Number(override.offsetV??0);
+   next={...next,
+     corners:next.corners.map(([x,y])=>[cx+(x-cx)*m+du,cy+(y-cy)*m+dv] as [number,number]) as Quad,
+     rotation:next.rotation+Number(override.rotation??0),
+     skewX:Number(override.skewX??0), skewY:Number(override.skewY??0),
+     flipX:Boolean(override.flipX), flipY:Boolean(override.flipY),
+     opacity:Number(override.opacity??1),
+     blendMode:(override.blendMode as PlacementTransform["blendMode"])??next.blendMode,
+     fabricStrength:override.fabricStrength===undefined?next.fabricStrength:Number(override.fabricStrength),
+     curvature:override.curvature===undefined?next.curvature:Number(override.curvature)};
+   return {transform:next,at:(override.updatedAt as string)||null};
+ },[productName,productId,designKey,batchId,placement]);
+
+ /* D597 - a returning seller must see which scenes already carry a correction
+    before opening anything, so the grid asks the database once per result set.
+    Bounded and deduplicated: one request per scene, never during render. */
+ const scanned=useRef<string>("");
+ useEffect(()=>{
+   if(!results.length||!productId||!designKey)return;
+   const key=results.map(r=>r.templateId).join(",");
+   if(scanned.current===key)return;
+   scanned.current=key;
+   let cancelled=false;
+   void (async()=>{
+     const found:Record<string,boolean>={};
+     for(const result of results){
+       const template=library.find(item=>item.id===result.templateId);
+       if(!template)continue;
+       const query=new URLSearchParams({sceneId:template.id,
+         productFamily:productSurfaceFamily(productName),printSide:template.printSide||"front",
+         listingId:productId,designKey,batchId});
+       const answer=await fetch(`/api/mockups/placement?${query}`).then(r=>r.ok?r.json():null).catch(()=>null) as {override?:unknown}|null;
+       if(answer?.override)found[template.id]=true;
+     }
+     if(!cancelled&&Object.keys(found).length)setAdjustedScenes(current=>({...current,...found}));
+   })();
+   return ()=>{cancelled=true};
+ },[results,library,productId,designKey,batchId,productName]);
+
+ const openEditor=useCallback(async(result:Result,index:number)=>{
+   const template=library.find(item=>item.id===result.templateId);
+   if(!template)return;
+   setOpeningScene(result.templateId);
+   try{
+     const loaded=await composeSaved(template);
+     if(loaded){setPersisted({transform:loaded.transform,at:loaded.at});
+       setProfiles(current=>({...current,[template.id]:loaded.transform}));}
+   }finally{setOpeningScene("")}
+   setEditing({result,index});
+ },[library,composeSaved]);
  /* D589 - the placement editor is not released. It appears only when BOTH are
     true: the signed-in account is an owner account (decided by the server, from
     the session - not from anything in the URL), and the URL asks for it. The
@@ -420,9 +497,9 @@ let previewFace:{left:number;top:number;right:number;bottom:number}|undefined;
       <span>{t.name.replace(/\.[a-z0-9]+$/i,"").replace(/[_-]+/g," ")}</span>
       {/* D571 - a scene nobody has marked looks exactly like one that has been.
           It says so now, and says what will happen. */}
-      {!preparationMatchesProduct(t.preparation,productName)?<em className="scene-unmeasured">Goldie prepares this scene automatically before creating it</em>:null}</label>)}</div>}{needsReference&&<p className="automatic-reference">✓ Goldie will use the real Printify preview above as the placement reference.</p>}<div className="mockup-action-sequence"><div className="mockup-primary-action"><span>1</span><div><b>Create mockups for this listing</b><small>Goldie creates the mockups you selected above and saves them to this listing.</small></div><button className="generate-inline" aria-busy={busy} disabled={!chosen.length||busy||needsReference&&!referenceUrl} onClick={()=>void generate()}>{busy?"Goldie is creating them…":`Create ${chosen.length ? `these ${chosen.length} ${chosen.length===1?"mockup":"mockups"}` : "selected mockups"}`}</button></div>{busy&&renderStatus&&<div className="mockup-live-progress" role="status" aria-live="polite"><i/><span>{renderStatus}</span></div>}</div>{error&&<p className="field-error" role="alert">{error}</p>}{etsyStatus&&<p className="etsy-ready-status" role="status">{etsyStatus}</p>}{results.length>0&&<div className="inline-generated">{results.map((r,resultIndex)=><figure key={r.name}><button className="mockup-enlarge" onClick={()=>setExpanded(r)}><img src={r.url} alt={r.template}/><span>View larger</span></button><figcaption><span>{r.template}</span><span className={r.adjusted?"sceneState adjusted":"sceneState"}>{r.adjusted?"Adjusted":"Ready"}</span></figcaption>
+      {!preparationMatchesProduct(t.preparation,productName)?<em className="scene-unmeasured">Goldie prepares this scene automatically before creating it</em>:null}</label>)}</div>}{needsReference&&<p className="automatic-reference">✓ Goldie will use the real Printify preview above as the placement reference.</p>}<div className="mockup-action-sequence"><div className="mockup-primary-action"><span>1</span><div><b>Create mockups for this listing</b><small>Goldie creates the mockups you selected above and saves them to this listing.</small></div><button className="generate-inline" aria-busy={busy} disabled={!chosen.length||busy||needsReference&&!referenceUrl} onClick={()=>void generate()}>{busy?"Goldie is creating them…":`Create ${chosen.length ? `these ${chosen.length} ${chosen.length===1?"mockup":"mockups"}` : "selected mockups"}`}</button></div>{busy&&renderStatus&&<div className="mockup-live-progress" role="status" aria-live="polite"><i/><span>{renderStatus}</span></div>}</div>{error&&<p className="field-error" role="alert">{error}</p>}{etsyStatus&&<p className="etsy-ready-status" role="status">{etsyStatus}</p>}{results.length>0&&<div className="inline-generated">{results.map((r,resultIndex)=><figure key={r.name}><button className="mockup-enlarge" onClick={()=>setExpanded(r)}><img src={r.url} alt={r.template}/><span>View larger</span></button><figcaption><span>{r.template}</span><span className={(r.adjusted||adjustedScenes[r.templateId])?"sceneState adjusted":"sceneState"}>{(r.adjusted||adjustedScenes[r.templateId])?"Adjusted":"Ready"}</span></figcaption>
       <div className="sceneActions">
-        {editorAllowed&&<button type="button" className="adjustPlacement" onClick={()=>setEditing({result:r,index:resultIndex})}>Adjust placement</button>}
+        {editorAllowed&&<button type="button" className="adjustPlacement" disabled={openingScene===r.templateId} onClick={()=>void openEditor(r,resultIndex)}>{openingScene===r.templateId?"Opening…":"Adjust placement"}</button>}
         <a href={r.url} download={r.name}>Use this mockup</a>
         <button type="button" className="removeScene" onClick={()=>{setResults(list=>list.filter(item=>item.name!==r.name));setSelected(current=>{const next=new Set(current);next.delete(r.templateId);return next})}}>Remove from batch</button>
       </div></figure>)}</div>}<p className="etsy-note">Goldie saves these mockups for this exact listing and adds them automatically through Etsy when you publish. Individual downloads stay available as a backup.</p></div>{lightbox}
@@ -450,39 +527,14 @@ let previewFace:{left:number;top:number;right:number;bottom:number}|undefined;
 
          Steps 2 and 4 are separate reads on purpose: geometry may be reused
          across designs, an override never may. */
-      const loadPersisted=async()=>{
-        const query=new URLSearchParams({sceneId:template.id,
-          productFamily:productSurfaceFamily(productName),printSide:template.printSide||"front",
-          listingId:productId,designKey,batchId});
-        const answer=await fetch(`/api/mockups/placement?${query}`).then(r=>r.ok?r.json():null).catch(()=>null) as
-          {geometry?:{surface?:Quad;curvature?:number;fabricStrength?:number;blendMode?:PlacementTransform["blendMode"]}|null;
-           override?:Record<string,number|string|boolean|undefined>|null}|null;
-        if(!answer)return;
-        const geometry=answer.geometry, override=answer.override;
-        const groundSurface=(geometry?.surface as Quad)||surface;
-        let next=defaultTransform(placeArtworkOnSurface(groundSurface,placement),mode);
-        if(geometry){next={...next,curvature:geometry.curvature??next.curvature,
-          fabricStrength:geometry.fabricStrength??next.fabricStrength,
-          blendMode:geometry.blendMode??next.blendMode};}
-        if(override){
-          const centre=(q:Quad)=>[q.reduce((a,p)=>a+p[0],0)/4,q.reduce((a,p)=>a+p[1],0)/4];
-          const [cx,cy]=centre(next.corners);
-          const m=Number(override.scaleMultiplier??1)||1;
-          const du=Number(override.offsetU??0), dv=Number(override.offsetV??0);
-          next={...next,
-            corners:next.corners.map(([x,y])=>[cx+(x-cx)*m+du,cy+(y-cy)*m+dv] as [number,number]) as Quad,
-            rotation:next.rotation+Number(override.rotation??0),
-            skewX:Number(override.skewX??0), skewY:Number(override.skewY??0),
-            flipX:Boolean(override.flipX), flipY:Boolean(override.flipY),
-            opacity:Number(override.opacity??1),
-            blendMode:(override.blendMode as PlacementTransform["blendMode"])??next.blendMode,
-            fabricStrength:override.fabricStrength===undefined?next.fabricStrength:Number(override.fabricStrength),
-            curvature:override.curvature===undefined?next.curvature:Number(override.curvature)};
-        }
-        setPersisted({transform:next,at:(override?.updatedAt as string)||null});
-        if(!profiles[template.id])setProfiles(current=>({...current,[template.id]:next}));
-      };
-      void loadPersisted();
+      /* D597 - the persisted record is fetched when the seller opens the editor,
+         not while rendering it. Two things were wrong before, both found by a
+         restore that silently fell back to the automatic placement:
+
+         it ran in the render body, so every setState it caused re-ran it - seven
+         identical GETs for one open - and the editor takes `transform` into its
+         own useState on mount, so a record arriving after mount never reached
+         it. Loading first and opening second fixes both. */
       const finish=async(next:PlacementTransform,exported:Blob,improveScene:boolean,advance:boolean)=>{
         const url=URL.createObjectURL(exported);
         /* D596 - the durable write, and it must succeed before anything says
@@ -519,6 +571,7 @@ let previewFace:{left:number;top:number;right:number;bottom:number}|undefined;
 
         setProfiles(current=>({...current,[template.id]:next}));
         setPersisted({transform:next,at:new Date().toISOString()});
+        setAdjustedScenes(current=>({...current,[template.id]:true}));
         if(improveScene)setSceneGeometry(current=>({...current,[template.id]:{
           surface,curvature:next.curvature,fabricStrength:next.fabricStrength,blendMode:next.blendMode}}));
         setResults(list=>list.map((item,index)=>index===editing.index?{...item,url,adjusted:true}:item));
