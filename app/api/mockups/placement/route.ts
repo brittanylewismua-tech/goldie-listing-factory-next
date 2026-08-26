@@ -5,6 +5,7 @@ import { getDb } from "@/db";
 import { mockupSceneGeometry, mockupArtworkOverrides } from "@/db/schema";
 import { ensureMockupStorage } from "@/app/api/mockups/storage";
 import { withErrorLog } from "@/app/error-log";
+import { isOwner } from "@/app/mastermind/access";
 
 /* Stage 1 persistence. Two records, two lifetimes, and they are never merged.
 
@@ -32,6 +33,10 @@ const num = (value: unknown, fallback = 0) => {
 async function handleGET(request: NextRequest) {
   const user = await getChatGPTUser();
   if (!user) return NextResponse.json({ error: "Sign in to load your mockups." }, { status: 401 });
+  /* D589 - the placement editor is unreleased, so these endpoints are owner-only
+     regardless of what the browser sends. The hidden button is a convenience;
+     THIS is the access control. */
+  if (!isOwner(user)) return NextResponse.json({ error: "Not available." }, { status: 404 });
   await ensureMockupStorage();
   const url = new URL(request.url);
   const sceneId = url.searchParams.get("sceneId") || "";
@@ -82,6 +87,10 @@ async function handleGET(request: NextRequest) {
 async function handlePUT(request: NextRequest) {
   const user = await getChatGPTUser();
   if (!user) return NextResponse.json({ error: "Sign in to save your mockups." }, { status: 401 });
+  /* D589 - the placement editor is unreleased, so these endpoints are owner-only
+     regardless of what the browser sends. The hidden button is a convenience;
+     THIS is the access control. */
+  if (!isOwner(user)) return NextResponse.json({ error: "Not available." }, { status: 404 });
   await ensureMockupStorage();
   const body = await request.json() as {
     geometry?: Record<string, unknown> & { sceneId?: string; origin?: string };

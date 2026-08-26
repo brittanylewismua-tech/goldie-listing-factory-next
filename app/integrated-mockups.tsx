@@ -223,6 +223,22 @@ export default function IntegratedMockups({design,productId,productName="",defau
  /* Scene-level, and the only thing that may improve a future design. */
  const [sceneGeometry,setSceneGeometry]=useState<Record<string,{surface:Quad;curvature:number;fabricStrength:number;blendMode:PlacementTransform["blendMode"]}>>({});
  const [designUrl,setDesignUrl]=useState("");
+ /* D589 - the placement editor is not released. It appears only when BOTH are
+    true: the signed-in account is an owner account (decided by the server, from
+    the session - not from anything in the URL), and the URL asks for it. The
+    query flag alone is not security; it exists so the control does not appear
+    during ordinary owner use. Every endpoint the editor calls re-checks the
+    account for itself. */
+ const [editorAllowed,setEditorAllowed]=useState(false);
+ useEffect(()=>{
+   let cancelled=false;
+   const asked=typeof window!=="undefined"&&new URLSearchParams(window.location.search).get("editorPreview")==="1";
+   if(!asked)return;
+   fetch("/api/account").then(r=>r.json()).then((payload:{owner?:boolean})=>{
+     if(!cancelled)setEditorAllowed(Boolean(payload?.owner));
+   }).catch(()=>undefined);
+   return ()=>{cancelled=true};
+ },[]);
  useEffect(()=>{if(!design)return;const url=URL.createObjectURL(design);setDesignUrl(url);return ()=>URL.revokeObjectURL(url)},[design]);
  const seededDefaults=useRef(false);
  useEffect(()=>{fetch("/api/mockups/library").then(r=>r.json()).then(p=>setLibrary(p.templates||[]));},[]);
@@ -401,13 +417,13 @@ let previewFace:{left:number;top:number;right:number;bottom:number}|undefined;
           It says so now, and says what will happen. */}
       {!preparationMatchesProduct(t.preparation,productName)?<em className="scene-unmeasured">Goldie prepares this scene automatically before creating it</em>:null}</label>)}</div>}{needsReference&&<p className="automatic-reference">✓ Goldie will use the real Printify preview above as the placement reference.</p>}<div className="mockup-action-sequence"><div className="mockup-primary-action"><span>1</span><div><b>Create mockups for this listing</b><small>Goldie creates the mockups you selected above and saves them to this listing.</small></div><button className="generate-inline" aria-busy={busy} disabled={!chosen.length||busy||needsReference&&!referenceUrl} onClick={()=>void generate()}>{busy?"Goldie is creating them…":`Create ${chosen.length ? `these ${chosen.length} ${chosen.length===1?"mockup":"mockups"}` : "selected mockups"}`}</button></div>{busy&&renderStatus&&<div className="mockup-live-progress" role="status" aria-live="polite"><i/><span>{renderStatus}</span></div>}</div>{error&&<p className="field-error" role="alert">{error}</p>}{etsyStatus&&<p className="etsy-ready-status" role="status">{etsyStatus}</p>}{results.length>0&&<div className="inline-generated">{results.map((r,resultIndex)=><figure key={r.name}><button className="mockup-enlarge" onClick={()=>setExpanded(r)}><img src={r.url} alt={r.template}/><span>View larger</span></button><figcaption><span>{r.template}</span><span className={r.adjusted?"sceneState adjusted":"sceneState"}>{r.adjusted?"Adjusted":"Ready"}</span></figcaption>
       <div className="sceneActions">
-        <button type="button" className="adjustPlacement" onClick={()=>setEditing({result:r,index:resultIndex})}>Adjust placement</button>
+        {editorAllowed&&<button type="button" className="adjustPlacement" onClick={()=>setEditing({result:r,index:resultIndex})}>Adjust placement</button>}
         <a href={r.url} download={r.name}>Use this mockup</a>
         <button type="button" className="removeScene" onClick={()=>{setResults(list=>list.filter(item=>item.name!==r.name));setSelected(current=>{const next=new Set(current);next.delete(r.templateId);return next})}}>Remove from batch</button>
       </div></figure>)}</div>}<p className="etsy-note">Goldie saves these mockups for this exact listing and adds them automatically through Etsy when you publish. Individual downloads stay available as a backup.</p></div>{lightbox}
     {/* D588 - Adjust placement opens here, over the batch. The seller does not
         leave Listing Factory and the page is never reloaded. */}
-    {editing&&designUrl&&(()=>{
+    {editorAllowed&&editing&&designUrl&&(()=>{
       const template=library.find(item=>item.id===editing.result.templateId);
       if(!template)return null;
       const surface=(template.preparation?.corners||template.corners) as Quad;
