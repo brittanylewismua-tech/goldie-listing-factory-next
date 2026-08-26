@@ -8,7 +8,7 @@ import type { PrintSide } from "../placement-math.ts";
    Bumping this invalidates them and re-reads each scene the next time it is
    used - which is exactly the migration path that already exists and cannot
    fail. */
-export const SCENE_PREPARATION_VERSION = 3;
+export const SCENE_PREPARATION_VERSION = 4;
 
 export type SceneGeometry = "flat" | "perspective" | "cylindrical" | "flexible" | "irregular";
 export type NormalizedPoint = [number, number];
@@ -21,6 +21,7 @@ export type ScenePreparation = {
   corners: [NormalizedPoint, NormalizedPoint, NormalizedPoint, NormalizedPoint];
   productBox?: ProductBox;
   productBoundsVerified?: boolean;
+  productSilhouetteVerified?: boolean;
   occluded: boolean;
   surfaceMaskKey?: string;
   occlusionKey?: string;
@@ -87,6 +88,9 @@ export function normalizeSceneAnalysis(value: unknown, productName: string, dete
 export function preparationMatchesProduct(preparation: ScenePreparation | null | undefined, productName: string) {
   if (!preparation || preparation.version !== SCENE_PREPARATION_VERSION || preparation.status !== "ready") return false;
   if (!preparation.productBoundsVerified) return false;
+  // A rectangle is not a product boundary. Keep re-preparing any emergency
+  // fallback until SAM has supplied a real pixel mask for this photograph.
+  if (!preparation.productSilhouetteVerified) return false;
   const family = productSurfaceFamily(productName);
   return !preparation.productFamily || !family || preparation.productFamily === family;
 }

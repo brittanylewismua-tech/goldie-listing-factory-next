@@ -18,6 +18,7 @@ import {
   type ProductBox,
 } from "@/app/mockups/prepared-scene";
 import { withErrorLog } from "@/app/error-log";
+import { decodeCocoRle, fitQuadToMask, maskBoundingBox, quadStaysOnMask, type ProductMask } from "@/app/mockups/product-mask";
 
 const MAX_ATTEMPTS = 3;
 
@@ -90,26 +91,25 @@ function segmentationPrompts(productName: string) {
   return productSurfaceFamily(productName) === "apparel" ? ["garment"] : ["product"];
 }
 
-type SegmentationResult = { productBox: ProductBox | null; maskUrl?: string };
+type SegmentationResult = { productBox: ProductBox | null; mask?: ProductMask };
 
 function segmentationResult(payload: Record<string, unknown>): SegmentationResult {
   const metadata = payload.metadata as Array<{ box?: unknown; score?: number }> | undefined;
   const boxes = payload.boxes as unknown[] | undefined;
-  const masks = payload.masks as Array<{ url?: string }> | undefined;
-  const image = payload.image as { url?: string } | undefined;
+  const rles = Array.isArray(payload.rle) ? payload.rle : [payload.rle];
   const ranked = (metadata || []).map((item, index) => ({
     box: boxFromCxCyWh(item.box), score: Number.isFinite(item.score) ? Number(item.score) : 0, index,
   })).filter(item => item.box).sort((a, b) => b.score - a.score);
   const selected = ranked[0];
-  const productBox = selected?.box || boxFromCxCyWh(boxes?.[0]) || null;
-  const maskUrl = masks?.[selected?.index ?? 0]?.url || masks?.[0]?.url || image?.url;
-  return { productBox, maskUrl };
+  const mask = decodeCocoRle(rles[selected?.index ?? 0]) || decodeCocoRle(rles[0]);
+  const productBox = (mask ? maskBoundingBox(mask) : null) || selected?.box || boxFromCxCyWh(boxes?.[0]) || null;
+  return { productBox, mask: mask || undefined };
 }
 
 async function detectProduct(imageUrl: string, productName: string, key: string): Promise<SegmentationResult> {
   let last: SegmentationResult = { productBox: null };
   for (const prompt of segmentationPrompts(productName)) {
-    const payload = await falJson("fal-ai/sam-3/image", key, {
+    const payload = await falJson("fal-ai/sam-3/image-rle", key, {
       image_url: imageUrl, prompt, apply_mask: true, sync_mode: false,
       return_multiple_masks: false, max_masks: 1, include_scores: true, include_boxes: true, output_format: "png",
     });
@@ -128,8 +128,13 @@ async function prepareOnce(imageUrl: string, productName: string, key: string, o
   const productBox = segmentation?.productBox || reading.productBox;
   if (!productBox) throw new Error("The product boundary could not be verified.");
   const computed = computedPreparation(productName, productBox);
-  const geometry = reading.geometry || {
-    corners: computed.corners, productBox, productBoundsVerified: true,
+  const measured = reading.geometry && segmentation?.mask && quadStaysOnMask(segmentation.mask, reading.geometry.corners)
+    ? { ...reading.geometry, productSilhouetteVerified: true }
+    : null;
+  const fittedCorners = segmentation?.mask ? fitQuadToMask(segmentation.mask, computed.corners) : null;
+  const geometry = measured || {
+    corners: fittedCorners || computed.corners, productBox, productBoundsVerified: true,
+    productSilhouetteVerified: Boolean(fittedCorners),
     side: computed.printSide, geometry: computed.geometry, occluded: false, derived: true,
   };
 
@@ -144,8 +149,6 @@ async function prepareOnce(imageUrl: string, productName: string, key: string, o
      then never read by the renderer at all - rigid() uses the corners and, if
      present, the occlusion layer. Discarding a validated print area because an
      unread asset did not arrive is indefensible. */
-  const surfaceMaskUrl = segmentation?.maskUrl;
-
   const depth = await optional(() => falJson("fal-ai/image-preprocessors/depth-anything/v2", key, { image_url: imageUrl }));
   const depthUrl = (depth?.image as { url?: string } | undefined)?.url;
 
@@ -166,7 +169,7 @@ async function prepareOnce(imageUrl: string, productName: string, key: string, o
      when a layer will not download, and that throw used to unwind the whole
      preparation and discard the validated geometry with it. */
   const [surfaceMaskKey, depthKey, occlusionKey] = await Promise.all([
-    optional(() => storeRemoteAsset(surfaceMaskUrl, `${objectPrefix}/surface.png`)),
+    Promise.resolve(undefined),
     optional(() => storeRemoteAsset(depthUrl, `${objectPrefix}/depth.png`)),
     optional(() => storeRemoteAsset(occlusionUrl, `${objectPrefix}/occlusion.png`)),
   ]);
@@ -196,7 +199,14 @@ async function handlePOST(request: NextRequest, context: { params: Promise<{ id:
        default. A failed reading is not new information about the photograph and
        must not be treated as if it were. */
     const measuredAlready = !isPlaceholderCorners(row.cornersJson);
-    const keepCorners = Boolean(preparation.derived) && measuredAlready;
+    let previous: ScenePreparation | null = null;
+    try { previous = row.preparationJson ? JSON.parse(row.preparationJson) as ScenePreparation : null; } catch { previous = null; }
+    /* D583 - D578 protected genuinely measured corners from a failed re-read.
+       It must not grandfather D581's bad version-2 rectangles into the new
+       silhouette contract. Only a surface already approved by this exact mask
+       generation may survive an analyser fallback. */
+    const keepCorners = Boolean(preparation.derived) && measuredAlready
+      && previous?.version === SCENE_PREPARATION_VERSION && previous.productSilhouetteVerified === true;
     const kept = keepCorners
       ? { ...preparation, corners: JSON.parse(row.cornersJson) as ScenePreparation["corners"], productBoundsVerified: true, keptExisting: true }
       : preparation;
@@ -231,7 +241,8 @@ async function handlePOST(request: NextRequest, context: { params: Promise<{ id:
       const preparation: ScenePreparation = {
         version: SCENE_PREPARATION_VERSION, status: "ready", productFamily: productSurfaceFamily(productName),
         geometry: result.geometry, printSide: result.side, corners: result.corners, occluded: result.occluded,
-        productBox: result.productBox, productBoundsVerified: true, derived: result.derived,
+        productBox: result.productBox, productBoundsVerified: true,
+        productSilhouetteVerified: result.productSilhouetteVerified, derived: result.derived,
         surfaceMaskKey: result.surfaceMaskKey, depthKey: result.depthKey, occlusionKey: result.occlusionKey,
         preparedAt: new Date().toISOString(),
       };

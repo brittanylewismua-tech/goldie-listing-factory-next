@@ -82,6 +82,13 @@ test("a failed reading never overwrites corners that were measured", async () =>
   assert.match(route, /\.\.\.\(keepCorners \? \{\} : \{ cornersJson: JSON\.stringify\(preparation\.corners\) \}\)/);
 });
 
+test("D583: old measured rectangles are not grandfathered into silhouette trust", async () => {
+  const route = await read("app/api/mockups/library/[id]/prepare/route.ts");
+  assert.match(route, /previous\?\.version === SCENE_PREPARATION_VERSION/);
+  assert.match(route, /previous\.productSilhouetteVerified === true/);
+  assert.doesNotMatch(route, /const keepCorners = Boolean\(preparation\.derived\) && measuredAlready;/);
+});
+
 test("why a scene fell back is recorded and readable", async () => {
   const route = await read("app/api/mockups/library/[id]/prepare/route.ts");
   const library = await read("app/api/mockups/library/route.ts");
@@ -91,7 +98,7 @@ test("why a scene fell back is recorded and readable", async () => {
     "the reason must be readable without shipping a new build to find it");
 });
 
-test("a validated print area survives every optional enrichment failing", async () => {
+test("silhouette validation is required, while optional enrichment cannot discard it", async () => {
   const route = await read("app/api/mockups/library/[id]/prepare/route.ts");
   /* D580 - measured live on her freshly uploaded sets: 16 of 19 scenes analysed
      successfully, passed validation, and were then discarded because the SAM
@@ -99,12 +106,14 @@ test("a validated print area survives every optional enrichment failing", async 
      failed". Those masks and the depth map are stored and never read by the
      renderer at all. Geometry is the only required output. */
   assert.match(route, /const optional = async <T>\(task: \(\) => Promise<T>\)/);
-  assert.match(route, /optional\(\(\) => detectProduct\(imageUrl, productName, key\)\)/,
-    "the surface mask must not be able to discard a validated reading");
+  assert.match(route, /fal-ai\/sam-3\/image-rle/,
+    "the product boundary must be a pixel mask, not a bounding rectangle");
+  assert.match(route, /quadStaysOnMask\(segmentation\.mask, reading\.geometry\.corners\)/,
+    "a plausible quadrilateral is not trusted until the silhouette approves it");
   assert.match(route, /optional\(\(\) => falJson\("fal-ai\/image-preprocessors\/depth-anything\/v2"/,
     "nor the depth map");
-  assert.match(route, /optional\(\(\) => storeRemoteAsset\(surfaceMaskUrl/,
-    "nor saving a layer that the renderer never reads");
+  assert.doesNotMatch(route, /storeRemoteAsset\(surfaceMaskUrl/,
+    "the renderer must not download and save a surface image it never reads");
   assert.doesNotMatch(route, /throw new Error\("The printable product surface was not isolated\."\)/);
   assert.doesNotMatch(route, /throw new Error\("The product surface depth was not measured\."\)/);
   assert.doesNotMatch(route, /throw new Error\("The foreground crossing the print surface was not isolated\."\)/);

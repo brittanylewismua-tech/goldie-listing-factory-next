@@ -66,7 +66,7 @@ test("D582: mug fallback stays below the rim and inside the detected mug body", 
 test("D576: a prepared scene is reused only for a compatible product family", () => {
   const preparation = {
     version:SCENE_PREPARATION_VERSION, status:"ready", productFamily:"apparel", geometry:"flexible",
-    printSide:"front", corners:[[.2,.2],[.8,.2],[.8,.8],[.2,.8]], productBoundsVerified:true,
+    printSide:"front", corners:[[.2,.2],[.8,.2],[.8,.8],[.2,.8]], productBoundsVerified:true, productSilhouetteVerified:true,
     occluded:false, preparedAt:new Date(0).toISOString(),
   };
   assert.equal(preparationMatchesProduct(preparation, "Gildan Hoodie"), true);
