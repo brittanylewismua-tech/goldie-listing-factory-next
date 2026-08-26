@@ -78,7 +78,21 @@ function inkLayer(artwork: CanvasImageSource & Pixels, transform: PlacementTrans
     ctx.save();
     ctx.beginPath();
     const d11 = bilinear(quad, U, V);
-    ctx.moveTo(d00[0], d00[1]); ctx.lineTo(d10[0], d10[1]); ctx.lineTo(d11[0], d11[1]); ctx.lineTo(d01[0], d01[1]);
+    /* Each cell is clipped, and antialiased clip edges of neighbouring cells do
+       not quite meet - which drew a visible grid of the garment straight through
+       the artwork. Seen on her Palm Springs tee: a clean 14x16 lattice across the
+       whole design. Each cell is grown a fraction of a pixel outward from its own
+       centre so neighbours overlap instead of leaving a seam. */
+    const seam = .6;
+    const cellCx = (d00[0] + d10[0] + d11[0] + d01[0]) / 4;
+    const cellCy = (d00[1] + d10[1] + d11[1] + d01[1]) / 4;
+    const grow = (point: [number, number]): [number, number] => {
+      const dx = point[0] - cellCx, dy = point[1] - cellCy;
+      const distance = Math.hypot(dx, dy) || 1;
+      return [point[0] + (dx / distance) * seam, point[1] + (dy / distance) * seam];
+    };
+    const g00 = grow(d00), g10 = grow(d10), g11 = grow(d11), g01 = grow(d01);
+    ctx.moveTo(g00[0], g00[1]); ctx.lineTo(g10[0], g10[1]); ctx.lineTo(g11[0], g11[1]); ctx.lineTo(g01[0], g01[1]);
     ctx.closePath(); ctx.clip();
     ctx.transform((d10[0] - d00[0]) / sw, (d10[1] - d00[1]) / sw, (d01[0] - d00[0]) / sh, (d01[1] - d00[1]) / sh,
       d00[0] - ((d10[0] - d00[0]) / sw) * s00[0] - ((d01[0] - d00[0]) / sh) * s00[1],

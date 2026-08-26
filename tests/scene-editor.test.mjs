@@ -104,3 +104,18 @@ test("zoom and pan do not reach the stored placement", async () => {
   assert.doesNotMatch(editor, /corners:[^\n]*zoom/, "zoom must never appear in a stored corner");
   assert.doesNotMatch(editor, /\/ view\.width \* zoom/);
 });
+
+test("mesh cells overlap so the surface cannot show through the artwork", async () => {
+  const compositor = await read("app/mockups/scene-composite.ts");
+  /* Found by rendering the real Palm Springs tee: a clean 14x16 lattice of the
+     garment was visible straight through the design, because antialiased clip
+     edges of neighbouring cells do not meet. Each cell is now grown outward from
+     its own centre so neighbours overlap. */
+  assert.match(compositor, /const seam = \.6;/);
+  assert.match(compositor, /const grow = \(point: \[number, number\]\)/);
+  assert.match(compositor, /ctx\.moveTo\(g00\[0\], g00\[1\]\)/, "the grown cell is what gets clipped");
+  assert.doesNotMatch(compositor, /ctx\.moveTo\(d00\[0\], d00\[1\]\); ctx\.lineTo\(d10/,
+    "the ungrown cell must not be used as the clip");
+  // The DRAW transform must still use the true corners, or the artwork would stretch.
+  assert.match(compositor, /\(d10\[0\] - d00\[0\]\) \/ sw/);
+});
