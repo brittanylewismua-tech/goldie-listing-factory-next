@@ -5100,3 +5100,28 @@ test("step 1 shows one panel at a time, like every other step — D564", async (
      steps 2-4 swap the active task, step 1 swaps the open facet. */
   assert.match(app, /setActiveTask\(current=>current===task\?"":task\)/);
 });
+
+test("a narrow window scales instead of scrolling sideways — D565", async () => {
+  const css = await readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8");
+
+  /* The min-width stays: D308 tried to reflow this app for narrow windows and
+     shipped broken because I could not reach a narrow viewport to look at it.
+     Scaling is not reflowing - every element keeps its position and proportion,
+     so there is no second layout to get wrong. */
+  assert.match(css, /\.app-shell\{min-width:1180px!important\}/);
+  assert.match(css, /body\{min-width:1180px!important\}/);
+
+  /* Every step has to leave the layout at least its 1180px once scaled, or the
+     sideways scroll comes back inside that band. */
+  const steps = [...css.matchAll(/@media\(max-width:(\d+)px\)\{html\{zoom:([\d.]+)\}\}/g)]
+    .map((m) => ({ width: Number(m[1]), zoom: Number(m[2]) }));
+  assert.ok(steps.length >= 6, "the band from the mobile gate up to 1180 is covered");
+  steps.forEach((step, index) => {
+    const floor = index + 1 < steps.length ? steps[index + 1].width + 1 : 821;
+    assert.ok(floor / step.zoom >= 1180,
+      `at ${floor}px, zoom ${step.zoom} leaves ${Math.round(floor / step.zoom)}px - under the 1180 the layout needs`);
+  });
+
+  // It stops where the mobile gate takes over rather than shrinking forever.
+  assert.equal(Math.min(...steps.map((step) => step.width)), 880);
+});

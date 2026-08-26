@@ -2991,3 +2991,32 @@ body{min-width:1180px!important}
 .app-shell .final-design-group>summary:hover{background:rgba(232,183,225,.22)}
 .app-shell .final-design-group>summary:focus-visible{outline:2px solid #b777b0;outline-offset:-2px}
 @media(prefers-reduced-motion:reduce){.app-shell .final-design-group>summary::after{transition:none}}
+
+/* ============================================================================
+ * D565 · A NARROW WINDOW SCALES INSTEAD OF SCROLLING SIDEWAYS
+ *
+ * The min-width above is deliberate and stays. D308 tried to reflow this app for
+ * narrow windows, shipped broken because I could not reach a narrow viewport to
+ * look at it, and the fix was to stop reflowing at all: fixed width, let the
+ * window scroll. That reasoning still holds - I am not inventing a second layout
+ * I cannot see.
+ *
+ * But sideways scrolling is a bad way to meet a smaller window, and she asked why
+ * it was still there. Scaling is not reflowing: every element keeps its exact
+ * position and proportion, nothing rearranges, and there is no second layout to
+ * get wrong. The page just gets smaller, the way a printed page does.
+ *
+ * Verified on the live page before shipping, because the obvious hazard is a
+ * feedback loop - if root zoom changed the viewport the query reads, the rule
+ * would switch itself on and off forever. It does not: with html{zoom:0.75}
+ * applied by a media query, clientWidth stayed 1456 and the query stayed true
+ * across six samples. Media queries read the real viewport.
+ *
+ * The steps stop at 821px because the mobile gate takes over below that.
+ * ========================================================================== */
+@media(max-width:1179px){html{zoom:0.94}}
+@media(max-width:1120px){html{zoom:0.89}}
+@media(max-width:1060px){html{zoom:0.84}}
+@media(max-width:1000px){html{zoom:0.79}}
+@media(max-width:940px){html{zoom:0.74}}
+@media(max-width:880px){html{zoom:0.69}}
