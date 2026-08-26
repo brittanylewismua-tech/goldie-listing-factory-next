@@ -58,10 +58,17 @@ test("the editor cannot publish, delete or modify anything external", async () =
 
 test("saving a placement writes only mockup-editor records", async () => {
   const route = await read("app/api/mockups/placement/route.ts");
-  // The only tables it may touch are the two new ones.
-  const tables = [...route.matchAll(/from\((\w+)\)|insert\((\w+)\)/g)].map(m => m[1] || m[2]);
-  for (const table of tables)
+  /* D598 - the only tables it may WRITE are the two editor records. It now also
+     READS mockup_templates, listing_batches and printify_draft_results, because
+     ownership has to be proved against the database rather than taken from the
+     request - but nothing outside the editor's own tables is ever modified. */
+  const written = [...route.matchAll(/insert\((\w+)\)|update\((\w+)\)/g)].map(m => m[1] || m[2]);
+  assert.ok(written.length > 0, "the endpoint does write something");
+  for (const table of written)
     assert.ok(["mockupSceneGeometry", "mockupArtworkOverrides"].includes(table),
-      `unexpected table in the placement endpoint: ${table}`);
+      `the placement endpoint must not write to ${table}`);
   assert.ok(!/delete\(/.test(route), "it must not delete anything");
+  // And the extra reads are exactly the ownership checks.
+  for (const readOnly of ["mockupTemplates", "listing_batches", "printify_draft_results"])
+    assert.ok(route.includes(readOnly), `${readOnly} is consulted for ownership`);
 });

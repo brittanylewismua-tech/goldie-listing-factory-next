@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { and, eq } from "drizzle-orm";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { getDb } from "@/db";
-import { mockupSceneGeometry, mockupArtworkOverrides } from "@/db/schema";
+import { mockupSceneGeometry, mockupArtworkOverrides, mockupTemplates } from "@/db/schema";
 import { ensureMockupStorage } from "@/app/api/mockups/storage";
 import { withErrorLog } from "@/app/error-log";
 import { isOwner } from "@/app/mastermind/access";
+import { env } from "cloudflare:workers";
 
 /* Stage 1 persistence. Two records, two lifetimes, and they are never merged.
 
@@ -30,6 +31,61 @@ const num = (value: unknown, fallback = 0) => {
   return Number.isFinite(parsed) ? parsed : fallback;
 };
 
+
+/* D598 - identifiers are not trusted merely because the row would end up under
+   the signed-in seller.
+
+   The gap this closes, found by a live probe: a PUT naming listingId "forged",
+   designKey "forged" and batchId "forged" returned 200 and created a real row.
+   Nothing cross-seller - the body's userId was correctly ignored - but nothing
+   checked that the named batch, listing, design and scene were real, owned, or
+   related to one another. Stale or malformed identifiers silently created junk.
+
+   Every relationship is now proved server-side against the database before a
+   record is read or written, and anything that does not check out is a 404
+   rather than a 403: an unreleased feature should not confirm what exists. */
+type Relationship = { sceneId: string; batchId?: string; listingId?: string; designKey?: string; printSide?: string };
+
+async function relationshipsHold(userId: string, want: Relationship) {
+  const database = (env as unknown as { DB?: { prepare(q: string): { bind(...a: unknown[]): { first<T>(): Promise<T | null> } } } }).DB;
+  if (!database) return false;
+
+  /* The scene must be a mockup template this seller owns. */
+  const [scene] = await getDb().select().from(mockupTemplates)
+    .where(and(eq(mockupTemplates.id, want.sceneId), eq(mockupTemplates.userId, userId))).limit(1);
+  if (!scene) return false;
+
+  /* Print side, when one is named, must be the side this scene actually shows.
+     A back-print record cannot be attached to a front-facing photograph. */
+  if (want.printSide && (scene.printSide || "front") !== want.printSide) return false;
+
+  /* Geometry-only reads stop here: they name no listing. */
+  if (!want.batchId && !want.listingId && !want.designKey) return true;
+
+  /* An override names all three, and all three must be present and consistent. */
+  if (!want.batchId || !want.listingId || !want.designKey) return false;
+
+  const batch = await database
+    .prepare("SELECT id FROM listing_batches WHERE id = ? AND user_id = ? LIMIT 1")
+    .bind(want.batchId, userId).first<{ id: string }>();
+  if (!batch) return false;
+
+  /* The design must be a draft that belongs to THIS batch and THIS seller, and
+     the listing id must be the draft that design actually produced. */
+  const draft = await database
+    .prepare("SELECT response_json FROM printify_draft_results WHERE user_id = ? AND batch_id = ? AND client_id = ? LIMIT 1")
+    .bind(userId, want.batchId, want.designKey).first<{ response_json: string | null }>();
+  if (!draft?.response_json) return false;
+  try {
+    const parsed = JSON.parse(draft.response_json) as { id?: string };
+    if (!parsed.id || parsed.id !== want.listingId) return false;
+  } catch { return false; }
+
+  return true;
+}
+
+const notFound = () => NextResponse.json({ error: "Not available." }, { status: 404 });
+
 async function handleGET(request: NextRequest) {
   const user = await getChatGPTUser();
   if (!user) return NextResponse.json({ error: "Sign in to load your mockups." }, { status: 401 });
@@ -48,6 +104,10 @@ async function handleGET(request: NextRequest) {
   const blueprintId = url.searchParams.get("blueprintId");
   const printProviderId = url.searchParams.get("printProviderId");
   if (!sceneId) return NextResponse.json({ error: "Which scene?" }, { status: 400 });
+
+  /* D598 - prove the relationships before returning anything. */
+  if (!await relationshipsHold(user.userId, { sceneId, printSide,
+    ...(designKey ? { batchId, listingId, designKey } : {}) })) return notFound();
 
   const db = getDb();
   const [geometry] = await db.select().from(mockupSceneGeometry)
@@ -103,6 +163,19 @@ async function handlePUT(request: NextRequest) {
     override?: Record<string, unknown> & { sceneId?: string; listingId?: string; designKey?: string; batchId?: string };
   };
   const db = getDb(), now = new Date().toISOString();
+
+  /* D598 - nothing is written unless every relationship checks out. Both records
+     are validated before either is touched, so a bad override cannot leave a
+     half-written geometry row behind. */
+  if (body.geometry?.sceneId && !await relationshipsHold(user.userId, {
+    sceneId: String(body.geometry.sceneId), printSide: body.geometry.printSide ? String(body.geometry.printSide) : undefined,
+  })) return notFound();
+  if (body.override?.sceneId && !await relationshipsHold(user.userId, {
+    sceneId: String(body.override.sceneId),
+    batchId: String(body.override.batchId || ""),
+    listingId: String(body.override.listingId || ""),
+    designKey: String(body.override.designKey || ""),
+  })) return notFound();
 
   if (body.geometry?.sceneId) {
     const g = body.geometry as Record<string, unknown> & { sceneId: string };
