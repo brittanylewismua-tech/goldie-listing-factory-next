@@ -4929,7 +4929,11 @@ test("the publish review names the listing, not the upload — D558", async () =
      05_32_41 PM (2).png' as the heading over their own listing." Seen again on
      her publish screen, with "Bride Hoodie, Seashells And Wedding Bells
      Bachelorette, Camp Bach" sitting directly underneath it. */
-  assert.match(review, /design\?\.title\?\.trim\(\)\|\|first\?\.title\?\.trim\(\)\|\|readableDesignName\(designName\)/);
+  /* D561 - it walks the group for any title and only falls back to the upload
+     name when no listing in it has one. */
+  assert.match(review, /const named=design\?\.title\?\.trim\(\)\|\|draft\.title\?\.trim\(\);/);
+  assert.match(review, /if\(named\)return named;/);
+  assert.match(review, /return readableDesignName\(designName\)/);
   assert.doesNotMatch(review, /<span>\{readableDesignName\(designName\)\}<\/span>/);
 });
 
@@ -4993,5 +4997,33 @@ test("the publish ticks can actually be cleared — D560", async () => {
 
   /* One design becomes one listing per product, so a group holds three different
      titles. Naming it after the first labelled a tee "Bride Hoodie". */
-  assert.match(review, /if\(group\.length>1\)return readableDesignName\(designName\)/);
+  /* D561 - D560 sent a mixed group straight to the filename, and in a bundle every
+     group is mixed, so the publish screen went back to raw upload names. */
+  assert.doesNotMatch(review, /if\(group\.length>1\)return readableDesignName\(designName\)/);
+});
+
+test("the number on the button is the number that publishes — D561", async () => {
+  const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+
+  /* Measured on the live D560: five listings ticked, counter reading "5 of 6
+     selected", and the button reading "Publish 6 listings live on Etsy". Stable
+     at six seconds, so not lag. The count on screen and the list that actually
+     gets sent were built two different ways and could disagree - on the one
+     screen where the number is what it costs. */
+  const label = app.slice(app.indexOf("activeBundle&&bundleRecipes.length>1?(()=>{"));
+  assert.match(label.slice(0, 900), /const total=publishTargets\(\)\.length\|\|bundleListingsToPublish\(\)/,
+    "the button counts what is ticked");
+  assert.equal((app.match(/const total=publishTargets\(\)\.length/g) || []).length, 2,
+    "the button and the warning count the same way");
+
+  /* One source: everything the review shows, filtered by what is ticked, each
+     listing carrying the settings of whichever product owns it. */
+  assert.match(app, /return bundlePublishDrafts\(\)\.filter\(draft=>draft\.status==="Created"&&draft\.id&&chosen\.has\(draft\.id\)\)/);
+  assert.match(app, /const memberOf=\(id:string\)=>Object\.values\(bundleMembers\)\.find/);
+  assert.match(app, /shippingProfileId:\(mine\?etsyShippingProfileId:member\?\.shippingProfileId\)\|\|etsyShippingProfileId/);
+
+  // The review and the send draw on the same list, so they cannot drift apart.
+  assert.ok(app.indexOf("function bundlePublishDrafts()") > 0);
+  assert.equal((app.match(/bundlePublishDrafts\(\)/g) || []).length, 3,
+    "declared once, used by the review and by publishTargets");
 });

@@ -2513,18 +2513,21 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
      bundle, each carrying the settings saved with its own batch. The open
      product is read from state because that is fresher than anything saved; the
      rest come from their own batches. */
+  /* D561 - the count on screen and the list that gets sent were built two
+     different ways, so they could disagree - and did: five ticked, "Publish 6
+     listings" on the button. One source now. Everything the review shows, filtered
+     by what is ticked, carrying the settings of whichever product owns it. */
   function publishTargets(){
-    const mine=selectedPublishDrafts().map(draft=>({id:draft.id!,productName:activeRecipe?.name||"",clientId:draft.clientId,
-      selections:printifyImageSelections[draft.id!]||[],indices:printifyImageIndices,shippingProfileId:etsyShippingProfileId}));
-    if(!activeBundle||bundleRecipes.length<2)return mine;
-    const others=bundleRecipes.filter(recipe=>recipe.id!==activeRecipe?.id).flatMap(recipe=>{
-      const member=bundleMembers[recipe.id];if(!member)return [];
-      const chosen=new Set(selectedPublishIds);
-      return member.drafts.filter(draft=>draft.status==="Created"&&draft.id&&chosen.has(draft.id))
-        .map(draft=>({id:draft.id!,productName:member.productName,clientId:draft.clientId,
-          selections:member.selections[draft.id!]||[],indices:member.indices,shippingProfileId:member.shippingProfileId||etsyShippingProfileId}));
+    const chosen=new Set(selectedPublishIds);
+    const memberOf=(id:string)=>Object.values(bundleMembers).find(member=>member.drafts.some(draft=>draft.id===id));
+    return bundlePublishDrafts().filter(draft=>draft.status==="Created"&&draft.id&&chosen.has(draft.id)).map(draft=>{
+      const mine=drafts.some(own=>own.id===draft.id);
+      const member=mine?null:memberOf(draft.id!);
+      return {id:draft.id!,productName:draft.productName||activeRecipe?.name||"",clientId:draft.clientId,
+        selections:(mine?printifyImageSelections:member?.selections||{})[draft.id!]||[],
+        indices:mine?printifyImageIndices:(member?.indices||printifyImageIndices),
+        shippingProfileId:(mine?etsyShippingProfileId:member?.shippingProfileId)||etsyShippingProfileId};
     });
-    return [...mine,...others];
   }
   /* D559 - the publish review's inputs, gathered across the bundle rather than
      taken from whichever product happens to be open. */
@@ -3334,7 +3337,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
               if(bundleProductsStillReading().length)return "Checking the other products…";
               const waiting=bundleProductsNotStarted();
               if(waiting.length)return `${waiting.length===1?waiting[0].name:`${waiting.length} products`} still ${waiting.length===1?"has":"have"} no listings`;
-              const total=bundleListingsToPublish();
+              const total=publishTargets().length||bundleListingsToPublish();
               return `Publish ${total} ${total===1?"listing":"listings"} live on Etsy · ${bundleRecipes.length} products`;
             })():`Publish ${selectedPublishDrafts().length} selected ${selectedPublishDrafts().length===1?"listing":"listings"} live on Etsy`}</button><button className="keep-drafts-button" type="button" disabled={publishing} onClick={()=>{setBatchDisplayName(current=>current||suggestedBatchName());setDraftSaveOpen(true)}}>Keep as Printify drafts for now</button>{!publishing&&<small className="keep-drafts-note">Nothing will publish to Etsy. Return to this exact batch from Batch History.</small>}{/* D474 - this describes the Keep as drafts button, but sat there while the
      button above it said Publishing, so the page said both that it was
