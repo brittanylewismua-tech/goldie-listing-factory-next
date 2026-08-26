@@ -88,3 +88,22 @@ test("why a scene fell back is recorded and readable", async () => {
   assert.match(library, /preparationError: row\.preparationError/,
     "the reason must be readable without shipping a new build to find it");
 });
+
+test("a validated print area survives every optional enrichment failing", async () => {
+  const route = await read("app/api/mockups/library/[id]/prepare/route.ts");
+  /* D580 - measured live on her freshly uploaded sets: 16 of 19 scenes analysed
+     successfully, passed validation, and were then discarded because the SAM
+     surface-mask call threw and the caller treated any throw as "preparation
+     failed". Those masks and the depth map are stored and never read by the
+     renderer at all. Geometry is the only required output. */
+  assert.match(route, /const optional = async <T>\(task: \(\) => Promise<T>\)/);
+  assert.match(route, /optional\(\(\) => falJson\("fal-ai\/sam-3\/image"/,
+    "the surface mask must not be able to discard a validated reading");
+  assert.match(route, /optional\(\(\) => falJson\("fal-ai\/image-preprocessors\/depth-anything\/v2"/,
+    "nor the depth map");
+  assert.match(route, /optional\(\(\) => storeRemoteAsset\(surfaceMaskUrl/,
+    "nor saving a layer that the renderer never reads");
+  assert.doesNotMatch(route, /throw new Error\("The printable product surface was not isolated\."\)/);
+  assert.doesNotMatch(route, /throw new Error\("The product surface depth was not measured\."\)/);
+  assert.doesNotMatch(route, /throw new Error\("The foreground crossing the print surface was not isolated\."\)/);
+});

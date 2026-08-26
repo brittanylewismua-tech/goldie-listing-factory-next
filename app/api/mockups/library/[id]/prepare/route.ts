@@ -76,32 +76,50 @@ async function prepareOnce(imageUrl: string, productName: string, key: string, o
   const surfacePrompt = productSurfaceFamily(productName) === "apparel"
     ? "the visible garment fabric panel where printing can occur"
     : "the visible printable product surface, excluding handles, frames and background";
-  const surface = await falJson("fal-ai/sam-3/image", key, {
+  /* D580 - the geometry above is the only thing this function must produce. It
+     is what becomes the print area, and it is validated before it is accepted.
+     Everything below is enrichment, and none of it may cost us a good reading.
+
+     Measured live on her freshly uploaded sets: 16 of 19 scenes analysed
+     successfully and were then thrown away here, because these calls threw and
+     the caller treated any throw as "preparation failed". That is what drove
+     the 100% fallback rate. The surface mask and the depth map are stored and
+     then never read by the renderer at all - rigid() uses the corners and, if
+     present, the occlusion layer. Discarding a validated print area because an
+     unread asset did not arrive is indefensible. */
+  const optional = async <T>(task: () => Promise<T>): Promise<T | undefined> => {
+    try { return await task(); } catch { return undefined; }
+  };
+
+  const surface = await optional(() => falJson("fal-ai/sam-3/image", key, {
     image_url: imageUrl, prompt: surfacePrompt, apply_mask: true,
     return_multiple_masks: false, max_masks: 1, include_scores: true, include_boxes: true, output_format: "png",
-  });
-  const surfaceMaskUrl = (surface.masks as Array<{ url?: string }> | undefined)?.[0]?.url;
-  if (!surfaceMaskUrl) throw new Error("The printable product surface was not isolated.");
+  }));
+  const surfaceMaskUrl = (surface?.masks as Array<{ url?: string }> | undefined)?.[0]?.url;
 
-  const depth = await falJson("fal-ai/image-preprocessors/depth-anything/v2", key, { image_url: imageUrl });
-  const depthUrl = (depth.image as { url?: string } | undefined)?.url;
-  if (!depthUrl) throw new Error("The product surface depth was not measured.");
+  const depth = await optional(() => falJson("fal-ai/image-preprocessors/depth-anything/v2", key, { image_url: imageUrl }));
+  const depthUrl = (depth?.image as { url?: string } | undefined)?.url;
 
   let occlusionUrl: string | undefined;
   if (geometry.occluded) {
-    const occlusion = await falJson("fal-ai/sam-3/image", key, {
+    /* Also optional. A scene where the foreground could not be isolated is a
+       scene whose print is not tucked behind a hood - not a scene that has to
+       lose its measured print area as well. */
+    const occlusion = await optional(() => falJson("fal-ai/sam-3/image", key, {
       image_url: imageUrl,
       prompt: "hood, hair, hand, arm, strap, flap or foreground object crossing in front of the printable product surface",
       apply_mask: true, return_multiple_masks: true, max_masks: 3, include_scores: true, output_format: "png",
-    });
-    occlusionUrl = (occlusion.masks as Array<{ url?: string }> | undefined)?.[0]?.url;
-    if (!occlusionUrl) throw new Error("The foreground crossing the print surface was not isolated.");
+    }));
+    occlusionUrl = (occlusion?.masks as Array<{ url?: string }> | undefined)?.[0]?.url;
   }
 
+  /* D580 - saving these cannot cost the reading either. storeRemoteAsset throws
+     when a layer will not download, and that throw used to unwind the whole
+     preparation and discard the validated geometry with it. */
   const [surfaceMaskKey, depthKey, occlusionKey] = await Promise.all([
-    storeRemoteAsset(surfaceMaskUrl, `${objectPrefix}/surface.png`),
-    storeRemoteAsset(depthUrl, `${objectPrefix}/depth.png`),
-    storeRemoteAsset(occlusionUrl, `${objectPrefix}/occlusion.png`),
+    optional(() => storeRemoteAsset(surfaceMaskUrl, `${objectPrefix}/surface.png`)),
+    optional(() => storeRemoteAsset(depthUrl, `${objectPrefix}/depth.png`)),
+    optional(() => storeRemoteAsset(occlusionUrl, `${objectPrefix}/occlusion.png`)),
   ]);
   return { ...geometry, surfaceMaskKey, depthKey, occlusionKey };
 }
