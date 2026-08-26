@@ -119,3 +119,27 @@ test("mesh cells overlap so the surface cannot show through the artwork", async 
   // The DRAW transform must still use the true corners, or the artwork would stretch.
   assert.match(compositor, /\(d10\[0\] - d00\[0\]\) \/ sw/);
 });
+
+test("the development fixture cannot exist in a production build", async () => {
+  const fixture = await read("app/dev/editor-fixture/page.tsx");
+  /* NODE_ENV is inlined at build time, so in a production build this guard is a
+     constant and the page collapses to a refusal. */
+  assert.match(fixture, /const development = process\.env\.NODE_ENV !== "production"/);
+  assert.match(fixture, /if \(!development\) return/);
+  /* And it must not be able to touch anything real. The words "Printify" and
+     "Etsy" appear in its prose, which is fine; what matters is that it makes no
+     request and references no endpoint. */
+  assert.ok(!/fetch\s*\(/.test(fixture), "the fixture must make no network request");
+  for (const endpoint of ["/api/", "printify.com", "etsy.com"])
+    assert.ok(!fixture.includes(endpoint), `the fixture must not reference ${endpoint}`);
+});
+
+test("the fixture exercises the real editor, not a copy of it", async () => {
+  const fixture = await read("app/dev/editor-fixture/page.tsx");
+  assert.match(fixture, /import\("\.\.\/\.\.\/mockups\/scene-editor"\)/, "the same component Step 2 mounts");
+  assert.match(fixture, /from "\.\.\/\.\.\/mockups\/placement-profile"/, "and the same placement model");
+  // Each fixture case carries its own Printify contract, so the property under
+  // test is that a design brings its own size rather than inheriting one.
+  assert.match(fixture, /scale: \.18/);
+  assert.match(fixture, /scale: \.92/);
+});

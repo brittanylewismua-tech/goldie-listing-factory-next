@@ -252,3 +252,54 @@ export const etsyWorkerRuns = sqliteTable("etsy_worker_runs", {
   startedAt: text("started_at").notNull().default(sql`CURRENT_TIMESTAMP`),
   finishedAt: text("finished_at"),
 }, (table) => [index("idx_etsy_worker_runs_started").on(table.startedAt)]);
+
+/* Stage 1 of the editor: the two records, kept apart on purpose.
+
+   Scene geometry is a fact about the PHOTOGRAPH - where the printable surface
+   is, how it curves, what material it is. It is keyed by the surface it was
+   measured for, so a mug's geometry can never be served to a hoodie and a front
+   geometry can never be served to a back print. It improves future designs. */
+export const mockupSceneGeometry = sqliteTable("mockup_scene_geometry", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull(),
+  sceneId: text("scene_id").notNull(),
+  productFamily: text("product_family").notNull(),
+  printSide: text("print_side").notNull(),
+  blueprintId: integer("blueprint_id"),
+  printProviderId: integer("print_provider_id"),
+  renderingMode: text("rendering_mode").notNull(),
+  surfaceJson: text("surface_json").notNull(),
+  curvature: text("curvature").notNull().default("0"),
+  fabricStrength: text("fabric_strength").notNull().default("0"),
+  blendMode: text("blend_mode").notNull().default("normal"),
+  foregroundKey: text("foreground_key"),
+  preparationVersion: integer("preparation_version"),
+  sourceWidth: integer("source_width").notNull().default(0),
+  sourceHeight: integer("source_height").notNull().default(0),
+  /* "seller-adjusted" outranks "automatic" and background preparation must
+     never overwrite it. */
+  origin: text("origin").notNull().default("automatic"),
+  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+}, (table) => [index("idx_scene_geometry_user_scene").on(table.userId, table.sceneId)]);
+
+/* An artwork override is a fact about ONE DESIGN on one listing. It is stored
+   RELATIVE to where Printify put that design - offsets and a multiplier, never
+   absolute coordinates - so it cannot be meaningfully applied to a different
+   design even by accident. It is deliberately keyed by listing AND design. */
+export const mockupArtworkOverrides = sqliteTable("mockup_artwork_overrides", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull(),
+  listingId: text("listing_id").notNull(),
+  designKey: text("design_key").notNull(),
+  sceneId: text("scene_id").notNull(),
+  offsetU: text("offset_u").notNull().default("0"),
+  offsetV: text("offset_v").notNull().default("0"),
+  scaleMultiplier: text("scale_multiplier").notNull().default("1"),
+  rotation: text("rotation").notNull().default("0"),
+  skewX: text("skew_x").notNull().default("0"),
+  skewY: text("skew_y").notNull().default("0"),
+  flipX: integer("flip_x").notNull().default(0),
+  flipY: integer("flip_y").notNull().default(0),
+  opacity: text("opacity").notNull().default("1"),
+  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+}, (table) => [index("idx_artwork_override_listing").on(table.userId, table.listingId, table.designKey)]);

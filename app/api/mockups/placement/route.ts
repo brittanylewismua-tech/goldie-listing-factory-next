@@ -1,0 +1,141 @@
+import { NextRequest, NextResponse } from "next/server";
+import { and, eq } from "drizzle-orm";
+import { getChatGPTUser } from "@/app/chatgpt-auth";
+import { getDb } from "@/db";
+import { mockupSceneGeometry, mockupArtworkOverrides } from "@/db/schema";
+import { ensureMockupStorage } from "@/app/api/mockups/storage";
+import { withErrorLog } from "@/app/error-log";
+
+/* Stage 1 persistence. Two records, two lifetimes, and they are never merged.
+
+   Scene geometry is keyed by the SURFACE it was measured for, so a mug's
+   geometry cannot be handed to a hoodie and a front geometry cannot be handed to
+   a back print.
+
+   An artwork override is keyed by listing AND design. Two designs on the same
+   scene, same product and same print side still get different keys, because a
+   correction made for one design means nothing for another. */
+const geometryKey = (userId: string, body: {
+  sceneId: string; productFamily: string; printSide: string;
+  blueprintId?: number; printProviderId?: number;
+}) => [userId, body.sceneId, body.productFamily, body.printSide,
+  body.blueprintId ?? "any", body.printProviderId ?? "any"].join("|");
+
+const overrideKey = (userId: string, listingId: string, designKey: string, sceneId: string) =>
+  [userId, listingId, designKey, sceneId].join("|");
+
+const num = (value: unknown, fallback = 0) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+};
+
+async function handleGET(request: NextRequest) {
+  const user = await getChatGPTUser();
+  if (!user) return NextResponse.json({ error: "Sign in to load your mockups." }, { status: 401 });
+  await ensureMockupStorage();
+  const url = new URL(request.url);
+  const sceneId = url.searchParams.get("sceneId") || "";
+  const listingId = url.searchParams.get("listingId") || "";
+  const designKey = url.searchParams.get("designKey") || "";
+  const productFamily = url.searchParams.get("productFamily") || "";
+  const printSide = url.searchParams.get("printSide") || "front";
+  const blueprintId = url.searchParams.get("blueprintId");
+  const printProviderId = url.searchParams.get("printProviderId");
+  if (!sceneId) return NextResponse.json({ error: "Which scene?" }, { status: 400 });
+
+  const db = getDb();
+  const [geometry] = await db.select().from(mockupSceneGeometry)
+    .where(and(eq(mockupSceneGeometry.id, geometryKey(user.userId, {
+      sceneId, productFamily, printSide,
+      blueprintId: blueprintId ? Number(blueprintId) : undefined,
+      printProviderId: printProviderId ? Number(printProviderId) : undefined,
+    })), eq(mockupSceneGeometry.userId, user.userId))).limit(1);
+
+  /* An override is only ever returned for the exact design it was made for.
+     Same scene, same product, different design: nothing comes back. */
+  const [override] = listingId && designKey ? await db.select().from(mockupArtworkOverrides)
+    .where(and(eq(mockupArtworkOverrides.id, overrideKey(user.userId, listingId, designKey, sceneId)),
+      eq(mockupArtworkOverrides.userId, user.userId))).limit(1) : [undefined];
+
+  return NextResponse.json({
+    geometry: geometry ? {
+      sceneId: geometry.sceneId, productFamily: geometry.productFamily, printSide: geometry.printSide,
+      blueprintId: geometry.blueprintId ?? undefined, printProviderId: geometry.printProviderId ?? undefined,
+      renderingMode: geometry.renderingMode, surface: JSON.parse(geometry.surfaceJson),
+      curvature: num(geometry.curvature), fabricStrength: num(geometry.fabricStrength),
+      blendMode: geometry.blendMode, foregroundMaskKey: geometry.foregroundKey ?? undefined,
+      preparationVersion: geometry.preparationVersion ?? undefined,
+      sourceWidth: geometry.sourceWidth, sourceHeight: geometry.sourceHeight,
+      origin: geometry.origin, updatedAt: geometry.updatedAt,
+    } : null,
+    override: override ? {
+      sceneId: override.sceneId, listingId: override.listingId,
+      offsetU: num(override.offsetU), offsetV: num(override.offsetV),
+      scaleMultiplier: num(override.scaleMultiplier, 1), rotation: num(override.rotation),
+      skewX: num(override.skewX), skewY: num(override.skewY),
+      flipX: Boolean(override.flipX), flipY: Boolean(override.flipY),
+      opacity: num(override.opacity, 1), updatedAt: override.updatedAt,
+    } : null,
+  });
+}
+
+async function handlePUT(request: NextRequest) {
+  const user = await getChatGPTUser();
+  if (!user) return NextResponse.json({ error: "Sign in to save your mockups." }, { status: 401 });
+  await ensureMockupStorage();
+  const body = await request.json() as {
+    geometry?: Record<string, unknown> & { sceneId?: string; origin?: string };
+    override?: Record<string, unknown> & { sceneId?: string; listingId?: string; designKey?: string };
+  };
+  const db = getDb(), now = new Date().toISOString();
+
+  if (body.geometry?.sceneId) {
+    const g = body.geometry as Record<string, unknown> & { sceneId: string };
+    const id = geometryKey(user.userId, {
+      sceneId: g.sceneId, productFamily: String(g.productFamily || ""), printSide: String(g.printSide || "front"),
+      blueprintId: g.blueprintId === undefined ? undefined : Number(g.blueprintId),
+      printProviderId: g.printProviderId === undefined ? undefined : Number(g.printProviderId),
+    });
+    /* Automatic preparation may fill an empty slot. It may not replace what a
+       seller improved by hand. */
+    const [existing] = await db.select().from(mockupSceneGeometry)
+      .where(and(eq(mockupSceneGeometry.id, id), eq(mockupSceneGeometry.userId, user.userId))).limit(1);
+    const incomingOrigin = g.origin === "seller-adjusted" ? "seller-adjusted" : "automatic";
+    if (!(existing?.origin === "seller-adjusted" && incomingOrigin === "automatic")) {
+      const row = {
+        id, userId: user.userId, sceneId: g.sceneId,
+        productFamily: String(g.productFamily || ""), printSide: String(g.printSide || "front"),
+        blueprintId: g.blueprintId === undefined ? null : Number(g.blueprintId),
+        printProviderId: g.printProviderId === undefined ? null : Number(g.printProviderId),
+        renderingMode: String(g.renderingMode || "perspective"),
+        surfaceJson: JSON.stringify(g.surface ?? []),
+        curvature: String(num(g.curvature)), fabricStrength: String(num(g.fabricStrength)),
+        blendMode: String(g.blendMode || "normal"),
+        foregroundKey: g.foregroundMaskKey ? String(g.foregroundMaskKey) : null,
+        preparationVersion: g.preparationVersion === undefined ? null : Number(g.preparationVersion),
+        sourceWidth: Math.round(num(g.sourceWidth)), sourceHeight: Math.round(num(g.sourceHeight)),
+        origin: incomingOrigin, updatedAt: now,
+      };
+      await db.insert(mockupSceneGeometry).values(row).onConflictDoUpdate({ target: mockupSceneGeometry.id, set: row });
+    }
+  }
+
+  if (body.override?.sceneId && body.override.listingId && body.override.designKey) {
+    const o = body.override as Record<string, unknown> & { sceneId: string; listingId: string; designKey: string };
+    const row = {
+      id: overrideKey(user.userId, o.listingId, o.designKey, o.sceneId),
+      userId: user.userId, listingId: o.listingId, designKey: o.designKey, sceneId: o.sceneId,
+      offsetU: String(num(o.offsetU)), offsetV: String(num(o.offsetV)),
+      scaleMultiplier: String(num(o.scaleMultiplier, 1)), rotation: String(num(o.rotation)),
+      skewX: String(num(o.skewX)), skewY: String(num(o.skewY)),
+      flipX: o.flipX ? 1 : 0, flipY: o.flipY ? 1 : 0,
+      opacity: String(num(o.opacity, 1)), updatedAt: now,
+    };
+    await db.insert(mockupArtworkOverrides).values(row).onConflictDoUpdate({ target: mockupArtworkOverrides.id, set: row });
+  }
+
+  return NextResponse.json({ ok: true });
+}
+
+export const GET = withErrorLog("mockup-placement-load", handleGET);
+export const PUT = withErrorLog("mockup-placement-save", handlePUT);
