@@ -62,9 +62,10 @@ test("undo and redo move the whole record, not just position", async () => {
 
 test("cancel does not save", async () => {
   const editor = await read("app/mockups/scene-editor.tsx");
-  // onCancel is wired straight to the close and Cancel controls and never
-  // touches onSave, so the previously saved result stands.
-  assert.match(editor, /onClick=\{props\.onCancel\}/);
+  /* D595 - both cancel controls now go through `cancel`, which clears the
+     autosaved draft first so a cancelled edit cannot come back on reopen, and
+     then calls onCancel. Neither path touches runSave. */
+  assert.match(editor, /onClick=\{cancel\}/);
   assert.doesNotMatch(editor, /onCancel[\s\S]{0,80}runSave/);
 });
 
@@ -166,4 +167,50 @@ test("the editor imports its own styles rather than relying on another page", as
   // And the rules must not be duplicated back in the page stylesheet.
   const pageCss = await read("app/mockups/mockups.css");
   assert.ok(!pageCss.includes("sceneEditor"), "one source for the editor's styles, not two");
+});
+
+test("a drag gesture is one undo step, not one per mouse move", async () => {
+  const editor = await read("app/mockups/scene-editor.tsx");
+  /* D595 - found by dragging a corner on production: onDragMove fires on every
+     mouse move, so one gesture pushed dozens of history entries and a single
+     Undo reverted a few pixels of it. */
+  assert.match(editor, /const change = useCallback\(\(next: Partial<PlacementTransform>, coalesce = false\)/);
+  assert.match(editor, /if \(!coalesce \|\| !gesture\.current\)/);
+  assert.match(editor, /change\(\{ corners: next \}, true\)/, "corner drags coalesce");
+  assert.match(editor, /endGesture\(\)/, "and the gesture is closed on drag end");
+});
+
+test("dragging the design does not pan the photograph", async () => {
+  const editor = await read("app/mockups/scene-editor.tsx");
+  // Konva bubbles child drags to the stage, so dragging a corner also slid the
+  // whole photo. Verified live: the canvas element stayed put while its contents
+  // moved, which is a stage pan.
+  const cancels = editor.match(/event\.cancelBubble = true/g) || [];
+  assert.ok(cancels.length >= 5, "every handle drag phase must stop the bubble");
+  assert.match(editor, /if \(event\.target === event\.currentTarget\) setPan/,
+    "only a drag of the stage itself may pan it");
+});
+
+test("in-progress work actually survives a refresh", async () => {
+  const editor = await read("app/mockups/scene-editor.tsx");
+  /* D595 - it did not. Both effects ran on mount in declaration order, so the
+     autosave wrote the incoming transform over the stored draft before the
+     restore could read it. The draft was clobbered every time. */
+  assert.match(editor, /const restored = useRef\(false\)/);
+  assert.match(editor, /if \(restored\.current\) return;\s*\n\s*restored\.current = true;/);
+  assert.match(editor, /if \(!restored\.current\) return;/, "the autosave waits for the restore");
+});
+
+test("cancel discards the draft rather than leaving it to be restored", async () => {
+  const editor = await read("app/mockups/scene-editor.tsx");
+  assert.match(editor, /const cancel = useCallback\(\(\) => \{[\s\S]*?removeItem\(draftKey\)[\s\S]*?props\.onCancel\(\)/);
+  assert.doesNotMatch(editor, /onClick=\{props\.onCancel\}/, "both cancel controls must clear the draft");
+});
+
+test("the editor's footer buttons are styled by its own stylesheet", async () => {
+  const css = await read("app/mockups/scene-editor.css");
+  // .confirmArea and .resetPoints live in mockups.css, which Listing Factory
+  // never loads - the same gap D590 fixed for the overlay.
+  assert.match(css, /\.sceneEditorActions \.confirmArea\{/);
+  assert.match(css, /\.sceneEditorActions \.resetPoints\{/);
 });

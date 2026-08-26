@@ -70,9 +70,19 @@ export default function SceneEditor(props: SceneEditorProps) {
 
   /* Every change goes through here so undo and redo restore the transform AND
      the rendering settings together - they are one record, not two. */
-  const change = useCallback((next: Partial<PlacementTransform>) => {
-    setTransform(current => { setPast(p => [...p.slice(-40), current]); setFuture([]); return { ...current, ...next }; });
+  /* D595 - operating it found that onDragMove calls this on every mouse move, so
+     dragging one corner pushed dozens of history entries and a single Undo
+     reverted a few pixels of the gesture rather than the gesture. `coalesce`
+     marks the moves inside one drag so only the first records history. */
+  const gesture = useRef(false);
+  const change = useCallback((next: Partial<PlacementTransform>, coalesce = false) => {
+    setTransform(current => {
+      if (!coalesce || !gesture.current) { setPast(p => [...p.slice(-40), current]); setFuture([]); }
+      if (coalesce) gesture.current = true;
+      return { ...current, ...next };
+    });
   }, []);
+  const endGesture = useCallback(() => { gesture.current = false; }, []);
   const undo = useCallback(() => setPast(p => {
     if (!p.length) return p;
     setFuture(f => [transform, ...f].slice(0, 40));
@@ -108,18 +118,36 @@ export default function SceneEditor(props: SceneEditorProps) {
     } catch { return null; }
   }, [photo, artwork, foreground, transform, props.mode, view.width, view.height, showBefore]);
 
-  // Autosave in progress work so a refresh does not discard it.
+  /* Autosave in progress work so a refresh does not discard it.
+
+     D595 - this did not work. Both effects ran on mount in declaration order, so
+     the autosave wrote the incoming transform over the stored draft before the
+     restore could read it: the draft was clobbered every single time and a
+     refresh always lost the work. Cancel appeared to behave correctly only
+     because of that same accident.
+
+     The restore now happens once, before any autosave, guarded by a ref. */
   const draftKey = `goldie-editor-${props.sceneName}`;
+  const restored = useRef(false);
   useEffect(() => {
-    try { window.sessionStorage.setItem(draftKey, JSON.stringify(transform)); } catch { /* private mode */ }
-  }, [draftKey, transform]);
-  useEffect(() => {
+    if (restored.current) return;
+    restored.current = true;
     try {
       const saved = window.sessionStorage.getItem(draftKey);
       if (saved) setTransform(JSON.parse(saved) as PlacementTransform);
     } catch { /* nothing recoverable */ }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draftKey]);
+  useEffect(() => {
+    if (!restored.current) return;
+    try { window.sessionStorage.setItem(draftKey, JSON.stringify(transform)); } catch { /* private mode */ }
+  }, [draftKey, transform]);
+
+  /* And Cancel must genuinely discard, rather than leaving a draft behind that
+     the next open would restore. */
+  const cancel = useCallback(() => {
+    try { window.sessionStorage.removeItem(draftKey); } catch { /* ignore */ }
+    props.onCancel();
+  }, [draftKey, props]);
 
   useEffect(() => {
     const keys = (event: KeyboardEvent) => {
@@ -136,13 +164,13 @@ export default function SceneEditor(props: SceneEditorProps) {
   const moveCorner = (index: number, x: number, y: number) => {
     const next = transform.corners.map((point, i) =>
       i === index ? [x / view.width, y / view.height] as NormalizedPoint : point) as Quad;
-    change({ corners: next });
+    change({ corners: next }, true);
   };
 
   /* Dragging the whole design: every corner moves together, so perspective is
      preserved rather than flattened. */
   const dragAll = (dx: number, dy: number, from: Quad) => {
-    change({ corners: from.map(([x, y]) => [x + dx / view.width, y + dy / view.height] as NormalizedPoint) as Quad });
+    change({ corners: from.map(([x, y]) => [x + dx / view.width, y + dy / view.height] as NormalizedPoint) as Quad }, true);
   };
 
   const scaleAll = (factor: number) => {
@@ -176,7 +204,7 @@ export default function SceneEditor(props: SceneEditorProps) {
             <p className="mockupEyebrow">ADJUST PLACEMENT</p>
             <h2>{props.sceneName}</h2>
           </div>
-          <button className="close" onClick={props.onCancel} aria-label="Cancel">×</button>
+          <button className="close" onClick={cancel} aria-label="Cancel">×</button>
         </header>
 
         <div className="sceneEditorBody">
@@ -187,7 +215,11 @@ export default function SceneEditor(props: SceneEditorProps) {
           }}>
             {busy ? <p className="sceneEditorLoading">Opening your photo…</p> : (
               <Stage width={view.width} height={view.height} scaleX={zoom} scaleY={zoom} x={pan.x} y={pan.y}
-                draggable onDragEnd={event => setPan({ x: event.target.x(), y: event.target.y() })}>
+                /* D595 - the stage pans, but a drag that starts on the design or
+                   one of its handles must not pan it too. Konva bubbles child
+                   drags to the stage, so dragging a corner also slid the whole
+                   photograph; the children cancel the bubble below. */
+                draggable onDragEnd={event => { if (event.target === event.currentTarget) setPan({ x: event.target.x(), y: event.target.y() }); }}>
                 <Layer>
                   {showBefore
                     ? <KonvaImage image={photo!} width={view.width} height={view.height} />
@@ -199,17 +231,21 @@ export default function SceneEditor(props: SceneEditorProps) {
                     points={transform.corners.flatMap(p => [p[0] * view.width, p[1] * view.height])}
                     closed stroke="#d6a83f" strokeWidth={1.5} dash={[6, 4]}
                     draggable
-                    onDragStart={() => { dragOrigin.current = { pointer: { x: 0, y: 0 }, corners: transform.corners }; }}
+                    onDragStart={event => { event.cancelBubble = true; dragOrigin.current = { pointer: { x: 0, y: 0 }, corners: transform.corners }; }}
                     onDragMove={event => {
+                      event.cancelBubble = true;
                       const from = dragOrigin.current?.corners; if (!from) return;
                       dragAll(event.target.x(), event.target.y(), from);
                     }}
-                    onDragEnd={event => { event.target.position({ x: 0, y: 0 }); dragOrigin.current = null; }}
+                    onDragEnd={event => { event.cancelBubble = true; event.target.position({ x: 0, y: 0 }); dragOrigin.current = null; endGesture(); }}
                   />
                   {transform.corners.map((_, index) => {
                     const at = cornerAt(index);
                     return <Circle key={index} x={at.x} y={at.y} radius={7 / zoom} fill="#fff" stroke="#d6a83f" strokeWidth={2 / zoom}
-                      draggable onDragMove={event => moveCorner(index, event.target.x(), event.target.y())} />;
+                      draggable
+                      onDragStart={event => { event.cancelBubble = true; }}
+                      onDragMove={event => { event.cancelBubble = true; moveCorner(index, event.target.x(), event.target.y()); }}
+                      onDragEnd={event => { event.cancelBubble = true; endGesture(); }} />;
                   })}
                 </Layer>
               </Stage>
@@ -280,7 +316,7 @@ export default function SceneEditor(props: SceneEditorProps) {
             <input type="checkbox" checked={improveScene} onChange={e => setImproveScene(e.target.checked)} />
             Improve this scene for future designs
           </label>
-          <button className="resetPoints" onClick={props.onCancel}>Cancel</button>
+          <button className="resetPoints" onClick={cancel}>Cancel</button>
           <button className="confirmArea" disabled={busy || Boolean(saving)} onClick={() => void runSave(false)}>
             {saving || "Save"}</button>
           {props.hasNext && props.onSaveNext && (
