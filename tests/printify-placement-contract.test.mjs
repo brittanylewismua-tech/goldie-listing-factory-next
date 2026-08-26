@@ -87,3 +87,24 @@ console.log("printify placement contract ok");
   assert.equal(sceneStatus({ corners: marked, quadMeans: "print-area", printSide: "front" }), "ready");
 }
 console.log("scene classification ok");
+
+// D591 - placement must be read from the product that HAS the design on it.
+{
+  const { readFile } = await import("node:fs/promises");
+  const route = await readFile(new URL("../app/api/printify/drafts/route.ts", import.meta.url), "utf8");
+  /* The blank saved template has no images in its placeholders, so reading
+     placement from it always yielded artworkPlacement(undefined, ...) - the
+     no-information default of dead centre at full scale. Confirmed live: every
+     render logged {x:.5,y:.5,scale:1} with no side. */
+  assert.match(route, /let placedAreas = created\.print_areas \?\? \[\]/,
+    "placement must start from the created product, not the template");
+  assert.match(route, /const loaded = await api<CreatedProduct>\(`\/shops\/\$\{shop\.id\}\/products\/\$\{created\.id\}\.json`/,
+    "and re-fetch the product when the create response omitted the print areas");
+  assert.match(route, /\.filter\(\(placeholder\) => placeholder\.images\?\.length\)/,
+    "a placeholder with no image cannot win the dominant-placeholder reduce");
+  // The template may only ever be the last resort.
+  const chooser = route.slice(route.indexOf("const areas = placedAreas"), route.indexOf("const dominantPlaceholder"));
+  assert.match(chooser, /placedAreas[\s\S]*template\.print_areas/,
+    "the created product must be preferred over the blank template");
+}
+console.log("draft placement source ok");

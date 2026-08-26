@@ -32,7 +32,14 @@ type TemplateProduct = {
     background?: string;
   }>;
 };
-type CreatedProduct = { id: string; title?: string; images?: Array<{ src?: string; is_default?: boolean }> };
+type PrintAreaImage = { x?: number; y?: number; scale?: number; angle?: number };
+type PrintAreaPlaceholder = { position?: string; images?: PrintAreaImage[] };
+type CreatedProduct = {
+  id: string; title?: string;
+  images?: Array<{ src?: string; is_default?: boolean }>;
+  /* D591 - the created product carries where the design ACTUALLY went. */
+  print_areas?: Array<{ placeholders?: PrintAreaPlaceholder[] }>;
+};
 
 type ArtworkObject = { body?: ReadableStream; customMetadata?: Record<string, string> };
 type ArtworkBucket = { get(key: string): Promise<ArtworkObject | null>; delete(key: string): Promise<void> };
@@ -224,9 +231,34 @@ async function handlePOST(request: Request) {
        placeholder and drop `position` entirely, so a back print and a chest
        print produced the same placement and the lifestyle mockup put both on
        the chest. The side is now carried through with the placement. */
-    const dominantPlaceholder = (template.print_areas ?? [])
+    /* D591 - and it was reading them off the WRONG PRODUCT.
+
+       `template` is the blank saved product, before any design exists on it, so
+       its placeholders carry no images at all. dominantTemplatePlacement was
+       therefore always undefined, and artworkPlacement(undefined, ...) returns
+       its no-information default: dead centre at full scale. Confirmed on the
+       live site - every render logged placement {x:.5,y:.5,scale:1} with no
+       side, which is why designs came out enormous, centred and nothing like the
+       Printify preview.
+
+       `created` is the product Printify just made WITH the artwork on it, and it
+       carries the real x, y, scale, angle and position. That is the source of
+       truth, and this reads it. The blank template is kept only as a last
+       resort so an older draft still produces something. */
+    let placedAreas = created.print_areas ?? [];
+    if (!placedAreas.some((area) => area.placeholders?.some((p) => p.images?.length))) {
+      try {
+        const loaded = await api<CreatedProduct>(`/shops/${shop.id}/products/${created.id}.json`, token);
+        if (loaded.print_areas?.length) placedAreas = loaded.print_areas;
+      } catch { /* fall through to the template below */ }
+    }
+    const areas = placedAreas.some((area) => area.placeholders?.some((p) => p.images?.length))
+      ? placedAreas
+      : (template.print_areas ?? []) as Array<{ placeholders?: PrintAreaPlaceholder[] }>;
+    const dominantPlaceholder = areas
       .flatMap((area) => area.placeholders ?? [])
-      .reduce<{position?:string;images?:Array<{x?:number;y?:number;scale?:number;angle?:number}>}|undefined>(
+      .filter((placeholder) => placeholder.images?.length)
+      .reduce<PrintAreaPlaceholder|undefined>(
         (best, placeholder) => (Number(placeholder.images?.[0]?.scale ?? 0) > Number(best?.images?.[0]?.scale ?? 0) ? placeholder : best), undefined);
     const dominantTemplatePlacement = dominantPlaceholder?.images?.[0];
     const placement = { ...artworkPlacement(dominantTemplatePlacement, body.visibleBounds, body.maxPlacementScale), side: readPrintSide(dominantPlaceholder?.position) };
