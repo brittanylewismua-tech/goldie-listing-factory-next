@@ -18,5 +18,9 @@ export async function ensureMockupStorage(){
     `ALTER TABLE mockup_templates ADD COLUMN quad_means text NOT NULL DEFAULT 'garment'`,
     `ALTER TABLE mockup_templates ADD COLUMN occlusion_key text`,
     `ALTER TABLE mockup_templates ADD COLUMN occlusion_confirmed integer NOT NULL DEFAULT 0`,
+    `ALTER TABLE mockup_templates ADD COLUMN preparation_status text NOT NULL DEFAULT 'queued'`,
+    `ALTER TABLE mockup_templates ADD COLUMN preparation_json text`,
+    `ALTER TABLE mockup_templates ADD COLUMN preparation_error text NOT NULL DEFAULT ''`,
+    `ALTER TABLE mockup_templates ADD COLUMN preparation_attempts integer NOT NULL DEFAULT 0`,
   ]) await env.DB.prepare(column).run().catch(() => undefined);
 }

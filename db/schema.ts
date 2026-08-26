@@ -90,6 +90,13 @@ export const mockupTemplates = sqliteTable("mockup_templates", {
      hood, hair, straps, arms. Stored once, not re-segmented per render. */
   occlusionKey: text("occlusion_key"),
   occlusionConfirmed: integer("occlusion_confirmed").notNull().default(0),
+  /* D576 - JPG/PNG scenes are compiled once into a reusable rendering profile.
+     The original photograph remains the source; these fields only describe its
+     printable surface, depth and foreground layers. */
+  preparationStatus: text("preparation_status").notNull().default("queued"),
+  preparationJson: text("preparation_json"),
+  preparationError: text("preparation_error").notNull().default(""),
+  preparationAttempts: integer("preparation_attempts").notNull().default(0),
   objectKey: text("object_key").notNull(),
   contentType: text("content_type").notNull(),
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),

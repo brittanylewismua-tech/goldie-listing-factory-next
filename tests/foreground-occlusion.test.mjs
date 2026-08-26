@@ -27,14 +27,16 @@ test("a saved mask is preferred over anything worked out at render time", async 
     "a confirmed mask must win, so the same scene renders identically every time");
 });
 
-test("a scene can actually be given a foreground, which it could not before", async () => {
-  const page = await read("app/mockups/page.tsx");
-  assert.match(page, /setMasking\(item\)/, "every custom scene needs a way into the foreground editor");
-  const editor = await read("app/mockups/occlusion-editor.tsx");
-  // Painting samples the real photograph, so what covers the design is the real
-  // hood rather than a flat shape.
-  assert.match(editor, /context\.drawImage\(photo, 0, 0, canvas\.width, canvas\.height\)/);
-  for (const tool of ["Paint", "Erase", "Clear"]) assert.ok(editor.includes(`>${tool}<`), `the editor needs ${tool}`);
+test("a scene gets its foreground automatically, with no seller calibration — D576", async () => {
+  const [page, prepare] = await Promise.all([
+    read("app/mockups/page.tsx"),
+    read("app/api/mockups/library/[id]/prepare/route.ts"),
+  ]);
+  assert.doesNotMatch(page, /setMasking\(item\)|MARK WHERE THE DESIGN CAN PRINT|Reset product area/,
+    "the seller must never paint a mask or mark corners");
+  assert.match(prepare, /hood, hair, hand, arm, strap, flap or foreground object/);
+  assert.match(prepare, /occlusionKey: preparation\.occlusionKey/,
+    "the automatic foreground is stored once with the scene");
 });
 
 test("the mask is stored with the scene rather than recomputed", async () => {

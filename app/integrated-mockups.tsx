@@ -10,9 +10,10 @@ import type { ResolvedPlacement, PrintSide } from "./placement-math";
 import { placementAdjustment, sceneAcceptsSide, sceneNeedsOcclusion, recordRender, type QuadMeaning } from "./mockups/placement-contract";
 import type { ArtworkBounds } from "./design-artwork";
 import { measureReference, productBoxInScene, derivedPlacement, placementInFace, type ProductBox, type ReferenceFit } from "./mockups/reference-placement";
+import { preparationMatchesProduct, type ScenePreparation } from "./mockups/prepared-scene";
 
 type Point=[number,number]; type SurfaceKind="rigid-flat"|"t-shirt"|"sweatshirt"|"hoodie"|"other-apparel"|"apparel"|"soft-goods"|"curved"|"irregular";
-type Template={id:string;name:string;theme:string;src:string;corners:[Point,Point,Point,Point];normalized?:boolean;surfaceKind?:SurfaceKind;foregroundPrompt?:string;printSide?:PrintSide;quadMeans?:QuadMeaning;occlusionUrl?:string;occlusionConfirmed?:boolean};
+type Template={id:string;name:string;theme:string;src:string;corners:[Point,Point,Point,Point];normalized?:boolean;surfaceKind?:SurfaceKind;foregroundPrompt?:string;printSide?:PrintSide;quadMeans?:QuadMeaning;occlusionUrl?:string;occlusionConfirmed?:boolean;preparationStatus?:string;preparation?:ScenePreparation};
 type Result={name:string;url:string;template:string;templateId:string;surfaceKind:SurfaceKind;warning?:string};
 type Adjustment={scale:number;x:number;y:number;angle?:number};
 const MAX_MOCKUPS_PER_LISTING=8;
@@ -258,26 +259,24 @@ export default function IntegratedMockups({design,productId,productName="",defau
     exact silent-wrong-mockup this was supposed to end. A scene that cannot be
     measured is now held back and named, and the rest of the batch still runs. */
  async function calibrateIfNeeded(list:Template[]):Promise<{ready:Template[];unmeasured:Template[]}>{
-   const stale=list.filter(item=>!isCalibrated(item));
+   /* D576 - preparation is a server-owned, reusable scene compilation. It uses
+      the actual Printify product instead of the mockup-set name and produces the
+      print surface, geometry, depth and foreground layers together. There is no
+      customer calibration path and no placeholder quad may reach rendering. */
+   const stale=list.filter(item=>!preparationMatchesProduct(item.preparation,productName));
    if(!stale.length)return {ready:list,unmeasured:[]};
-   setRenderStatus(`Measuring the print area on ${stale.length} ${stale.length===1?"scene":"scenes"}…`);
-   const fixed=new Map<string,Template["corners"]>();
-   for(const scene of stale){
-     try{
-       const blob=await (await fetch(scene.src)).blob();
-       const dataUrl=await new Promise<string>((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result));reader.onerror=reject;reader.readAsDataURL(blob)});
-       const response=await fetch("/api/mockups/print-area",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({imageUrl:dataUrl,product:scene.theme||scene.name})});
-       const payload=await response.json() as {corners?:Array<[number,number]>|null};
-       if(payload.corners&&payload.corners.length===4){
-         fixed.set(scene.id,payload.corners as Template["corners"]);
-         await fetch(`/api/mockups/library/${encodeURIComponent(scene.id)}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({corners:payload.corners})}).catch(()=>null);
-       }
-     }catch{/* one scene that cannot be measured still renders, against the
-               measured product box rather than against nothing */}
-   }
-   if(fixed.size)setLibrary(current=>current.map(item=>fixed.has(item.id)?{...item,corners:fixed.get(item.id)!,normalized:true}:item));
-   const applied=list.map(item=>fixed.has(item.id)?{...item,corners:fixed.get(item.id)!,normalized:true}:item);
-   return {ready:applied.filter(isCalibrated),unmeasured:applied.filter(item=>!isCalibrated(item))};
+   setRenderStatus(`Preparing ${stale.length} ${stale.length===1?"scene":"scenes"} for this product…`);
+   const prepared=new Map<string,ScenePreparation>();
+   await runBounded(stale.map(scene=>scene),2,async scene=>withRecovery(async()=>{
+     const response=await fetch(`/api/mockups/library/${encodeURIComponent(scene.id)}/prepare`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({productName})});
+     const payload=await response.json() as {preparation?:ScenePreparation;error?:string};
+     if(!response.ok||!payload.preparation)throw new Error(payload.error||"Goldie is still preparing this scene.");
+     return {scene,preparation:payload.preparation};
+   }),({scene,preparation})=>{prepared.set(scene.id,preparation);setRenderStatus(`${prepared.size} of ${stale.length} scenes prepared. Goldie is finishing the rest automatically…`)});
+   const apply=(item:Template):Template=>{const preparation=prepared.get(item.id);return preparation?{...item,corners:preparation.corners,normalized:true,printSide:preparation.printSide,quadMeans:"print-area",preparationStatus:"ready",preparation,occlusionUrl:preparation.occlusionKey?`/api/mockups/library/${encodeURIComponent(item.id)}/occlusion`:undefined,occlusionConfirmed:true}:item};
+   if(prepared.size)setLibrary(current=>current.map(apply));
+   const applied=list.map(apply);
+   return {ready:applied.filter(item=>preparationMatchesProduct(item.preparation,productName)),unmeasured:applied.filter(item=>!preparationMatchesProduct(item.preparation,productName))};
  }
  async function generate(){if(!chosen.length)return;setBusy(true);setError("");setEtsyStatus("");setResults([]);setRenderStatus(`Preparing ${chosen.length} selected ${chosen.length===1?"scene":"scenes"}…`);try{let reference:File|null=null;if(referenceUrl){const blob=await(await fetch(referenceUrl,{signal:AbortSignal.timeout(30_000)})).blob();reference=new File([blob],"printify-placement-reference.jpg",{type:blob.type||"image/jpeg"})}/* D433 - measure the specification once per run: how big the artwork is on the product, and where, according to the Printify preview. *//* D470 - the design is measured inside the preview's printable FACE, so both
    sides use the same frame. Without this a mug is measured against the whole
@@ -295,11 +294,8 @@ let previewFace:{left:number;top:number;right:number;bottom:number}|undefined;
            Printify's scale, and the old code covered that gap with a flat 42%
            centred guess. The guess is gone. A scene that cannot reproduce the
            real placement is named and held back, and the rest still render. */
-        const needsConfirming=calibrated.filter(template=>(template.quadMeans||"garment")!=="print-area");
-        const measured=calibrated.filter(template=>(template.quadMeans||"print-area")==="print-area");
-        if(needsConfirming.length)setError(`${needsConfirming.length===1?`"${needsConfirming[0].name}" needs`:`${needsConfirming.length} scenes need`} a quick check before Goldie can match your Printify placement exactly. Open Mockup Library, choose "Mark where the design can print", and confirm the area. Anything already confirmed is being created now.`);
-        else if(unmeasured.length)setError(`Goldie could not work out where the print goes on ${unmeasured.length===1?`"${unmeasured[0].name}"`:`${unmeasured.length} scenes`}. Open Mockup Library and use "Mark where the design can print" to mark ${unmeasured.length===1?"it":"them"}. The other scenes are being created.`);
-        if(!measured.length){setBusy(false);setRenderStatus("");return}
+        const measured=calibrated.filter(template=>preparationMatchesProduct(template.preparation,productName));
+        if(unmeasured.length)throw new Error("Goldie is still preparing the selected scenes. It will keep retrying automatically; no mockup was lost.");
         const completed=new Map<number,Result>(),jobs=measured.map((template,index)=>({template,index}));setRenderStatus(`Creating ${measured.length} ${measured.length===1?"mockup":"mockups"} in a reliable queue. Goldie will retry an interrupted scene automatically.`);await runBounded(jobs,2,async({template,index})=>{/* D447 - one scene, and it always produces a mockup.
    The canvas renderer is the floor: it needs no network and, with the quad
    chain, has no way to refuse. The AI renderer is tried first where it is the
@@ -369,5 +365,5 @@ let previewFace:{left:number;top:number;right:number;bottom:number}|undefined;
       <span>{t.name.replace(/\.[a-z0-9]+$/i,"").replace(/[_-]+/g," ")}</span>
       {/* D571 - a scene nobody has marked looks exactly like one that has been.
           It says so now, and says what will happen. */}
-      {!isCalibrated(t)?<em className="scene-unmeasured">Print area not marked · Goldie measures it first, and skips this scene if it cannot</em>:null}</label>)}</div>}{needsReference&&<p className="automatic-reference">✓ Goldie will use the real Printify preview above as the placement reference.</p>}<div className="mockup-action-sequence"><div className="mockup-primary-action"><span>1</span><div><b>Create mockups for this listing</b><small>Goldie creates the mockups you selected above and saves them to this listing.</small></div><button className="generate-inline" aria-busy={busy} disabled={!chosen.length||busy||needsReference&&!referenceUrl} onClick={()=>void generate()}>{busy?"Goldie is creating them…":`Create ${chosen.length ? `these ${chosen.length} ${chosen.length===1?"mockup":"mockups"}` : "selected mockups"}`}</button></div>{busy&&renderStatus&&<div className="mockup-live-progress" role="status" aria-live="polite"><i/><span>{renderStatus}</span></div>}</div>{error&&<p className="field-error" role="alert">{error}</p>}{etsyStatus&&<p className="etsy-ready-status" role="status">{etsyStatus}</p>}{results.length>0&&<div className="inline-generated">{results.map(r=><figure key={r.name}><button className="mockup-enlarge" onClick={()=>setExpanded(r)}><img src={r.url} alt={r.template}/><span>View larger</span></button><figcaption><span>{r.template}</span><a href={r.url} download={r.name}>Download</a></figcaption></figure>)}</div>}<p className="etsy-note">Goldie saves these mockups for this exact listing and adds them automatically through Etsy when you publish. Individual downloads stay available as a backup.</p></div>{lightbox}</>
+      {!preparationMatchesProduct(t.preparation,productName)?<em className="scene-unmeasured">Goldie prepares this scene automatically before creating it</em>:null}</label>)}</div>}{needsReference&&<p className="automatic-reference">✓ Goldie will use the real Printify preview above as the placement reference.</p>}<div className="mockup-action-sequence"><div className="mockup-primary-action"><span>1</span><div><b>Create mockups for this listing</b><small>Goldie creates the mockups you selected above and saves them to this listing.</small></div><button className="generate-inline" aria-busy={busy} disabled={!chosen.length||busy||needsReference&&!referenceUrl} onClick={()=>void generate()}>{busy?"Goldie is creating them…":`Create ${chosen.length ? `these ${chosen.length} ${chosen.length===1?"mockup":"mockups"}` : "selected mockups"}`}</button></div>{busy&&renderStatus&&<div className="mockup-live-progress" role="status" aria-live="polite"><i/><span>{renderStatus}</span></div>}</div>{error&&<p className="field-error" role="alert">{error}</p>}{etsyStatus&&<p className="etsy-ready-status" role="status">{etsyStatus}</p>}{results.length>0&&<div className="inline-generated">{results.map(r=><figure key={r.name}><button className="mockup-enlarge" onClick={()=>setExpanded(r)}><img src={r.url} alt={r.template}/><span>View larger</span></button><figcaption><span>{r.template}</span><a href={r.url} download={r.name}>Download</a></figcaption></figure>)}</div>}<p className="etsy-note">Goldie saves these mockups for this exact listing and adds them automatically through Etsy when you publish. Individual downloads stay available as a backup.</p></div>{lightbox}</>
 }

@@ -1017,7 +1017,8 @@ test("saved mockup sets can be renamed and deleted with confirmation", async () 
   assert.match(page,/permanently removes the set and every saved mockup inside it/);
   assert.match(libraryRoute,/export async function PATCH/);
   assert.match(libraryRoute,/export async function DELETE/);
-  assert.match(libraryRoute,/ARTWORK\.delete\(row\.objectKey\)/);
+  assert.match(libraryRoute,/\[row\.objectKey,row\.occlusionKey,preparation\?\.surfaceMaskKey,preparation\?\.depthKey/,
+    "deleting a set removes the original and every prepared scene layer");
   assert.match(page,/sourceTheme/);
   assert.match(libraryRoute,/mockup_set_preferences/);
   assert.doesNotMatch(page,/items\.some\(item=>item\.custom\).*Rename/);
@@ -3466,7 +3467,8 @@ test("a hand-marked print area beats an automatic guess — D466", async () => {
 });
 
 test("a mockup scene works out its own print area — D468", async () => {
-  const route = await readFile(new URL("../app/api/mockups/print-area/route.ts", import.meta.url), "utf8");
+  const route = await readFile(new URL("../app/api/mockups/library/[id]/prepare/route.ts", import.meta.url), "utf8");
+  const contract = await readFile(new URL("../app/mockups/prepared-scene.ts", import.meta.url), "utf8");
   const page = await readFile(new URL("../app/mockups/page.tsx", import.meta.url), "utf8");
 
   /* A set holds up to fifty photographs. Asking the seller to mark four corners
@@ -3477,24 +3479,24 @@ test("a mockup scene works out its own print area — D468", async () => {
      the scene as "garment", which refuses to render, so a seller who uploaded
      twenty scenes got twenty dead ones. The route already refuses anything that
      fails validation or is low confidence, so what arrives here is trustworthy. */
-  assert.match(page, /method:"PATCH"[\s\S]{0,160}JSON\.stringify\(\{corners,confirmed:true,printSide\}\)/, "and the answer is stored as usable, not as needing a human");
+  assert.match(page, /\/prepare`,\{method:"POST"/, "the whole reusable scene is prepared, not only a rectangle");
+  assert.doesNotMatch(page, /MARK WHERE THE DESIGN CAN PRINT|Reset product area/);
 
   /* Segmentation finds the product; the product is not the print area. On a mug
      the printable face is offset from the handle and foreshortened, so what is
      asked for is the quadrilateral in perspective, not a box. */
-  assert.match(route, /IN PERSPECTIVE/);
-  assert.match(route, /never the handle, and never the whole mug/);
-  assert.match(route, /top-left, top-right, bottom-right, bottom-left/);
+  assert.match(contract, /complete Printify print area as it appears in this photograph/);
+  assert.match(contract, /A mug or tumbler is cylindrical and excludes its handle/);
+  assert.match(contract, /top-left, top-right, bottom-right, bottom-left/);
 
   /* A wrong quad is worse than none: it would misplace every future design
      silently. Each way it can be wrong is refused by name. */
-  for (const reason of ["no-area", "outside-image", "too-small", "whole-image"]) {
-    assert.match(route, new RegExp(`reason: "${reason}"`), `${reason} is refused`);
-  }
-  assert.match(route, /corners: null/, "a refusal returns nothing rather than a guess");
+  assert.match(contract, /normalizeSceneAnalysis/);
+  assert.match(contract, /width < bounds\.minWidth/);
+  assert.match(route, /MAX_ATTEMPTS = 3/);
 
   // One scene failing must not stop the rest of an upload preparing.
-  assert.match(page, /catch\{unmarked\.push/);
+  assert.match(page, /catch\{\/\* The stored queued state is retried automatically when used/);
 });
 
 test("the design matches the Printify placement, measured in the same frame — D469/D470", async () => {
@@ -5245,17 +5247,17 @@ test("a scene is measured at the moment it is used — D571", async () => {
      The detection works - called directly on one of her stale scenes it returned
      a chest box at high confidence. It was running in the wrong place. */
   assert.match(mockups, /async function calibrateIfNeeded\(list:Template\[\]\)/);
-  assert.match(mockups, /const stale=list\.filter\(item=>!isCalibrated\(item\)\)/);
-  assert.match(mockups, /return \{ready:applied\.filter\(isCalibrated\),unmeasured:applied\.filter\(item=>!isCalibrated\(item\)\)\}/);
+  assert.match(mockups, /const stale=list\.filter\(item=>!preparationMatchesProduct\(item\.preparation,productName\)\)/);
+  assert.match(mockups, /\/prepare`,\{method:"POST"/);
+  assert.match(mockups, /return \{ready:applied\.filter\(item=>preparationMatchesProduct/);
   /* D572 - and a scene it cannot measure is held back rather than rendered
      against a guess, which is what D571 claimed and did not do. */
   assert.match(mockups, /const \{ready:calibrated,unmeasured\}=await calibrateIfNeeded\(chosen\)/);
-  assert.match(mockups, /if\(!measured\.length\)\{setBusy\(false\);setRenderStatus\(""\);return\}/);
-  assert.match(mockups, /Goldie could not work out where the print goes on/);
+  assert.match(mockups, /if\(unmeasured\.length\)throw new Error\("Goldie is still preparing/);
   assert.match(mockups, /jobs=measured\.map/, "the render uses the measured scenes, not the stale ones");
 
   // The measurement is saved, so it is done once and not on every render.
-  assert.match(mockups, /method:"PATCH"[\s\S]{0,120}JSON\.stringify\(\{corners:payload\.corners\}\)/);
+  assert.match(mockups, /preparationMatchesProduct\(item\.preparation,productName\)/);
 
   // And an unmarked scene says so before she picks it.
   assert.match(mockups, /className="scene-unmeasured"/);

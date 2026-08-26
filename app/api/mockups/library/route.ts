@@ -25,6 +25,8 @@ export async function GET() {
     /* D573 - the scene's placement contract travels with it. */
     printSide: row.printSide || "front", quadMeans: row.quadMeans || "garment",
     occlusionConfirmed: Boolean(row.occlusionConfirmed),
+    preparationStatus: row.preparationStatus || "queued",
+    preparation: row.preparationJson ? JSON.parse(row.preparationJson) : undefined,
     occlusionUrl: row.occlusionKey ? `/api/mockups/library/${encodeURIComponent(row.id)}/occlusion` : undefined,
     src: `/api/mockups/library/${encodeURIComponent(row.id)}/image`,
   })),preferences:preferences.results.map(row=>({sourceTheme:row.source_theme,displayName:row.display_name,hidden:Boolean(row.hidden)})) });
@@ -49,7 +51,7 @@ export async function POST(request: NextRequest) {
   const id = crypto.randomUUID(), objectKey = `mockup-library/${user.userId}/${id}`;
   await env.ARTWORK.put(objectKey, await image.arrayBuffer(), { httpMetadata: { contentType: image.type } });
   await getDb().insert(mockupTemplates).values({ id, userId:user.userId, theme, name, surfaceKind, cornersJson:JSON.stringify([[.15,.12],[.85,.12],[.85,.88],[.15,.88]]), objectKey, contentType:image.type });
-  return NextResponse.json({ template:{ id,theme,name,surfaceKind,corners:[[.15,.12],[.85,.12],[.85,.88],[.15,.88]],custom:true,normalized:true,src:`/api/mockups/library/${encodeURIComponent(id)}/image` } });
+  return NextResponse.json({ template:{ id,theme,name,surfaceKind,corners:[[.15,.12],[.85,.12],[.85,.88],[.15,.88]],custom:true,normalized:true,preparationStatus:"queued",src:`/api/mockups/library/${encodeURIComponent(id)}/image` } });
 }
 
 export async function PATCH(request:NextRequest){
@@ -71,7 +73,10 @@ export async function DELETE(request:NextRequest){
   if(!theme)return NextResponse.json({error:"Choose a mockup set to delete."},{status:400});
   if(sourceTheme){await env.DB.prepare(`INSERT INTO mockup_set_preferences (user_id,source_theme,display_name,hidden,updated_at) VALUES (?,?,?,?,CURRENT_TIMESTAMP) ON CONFLICT(user_id,source_theme) DO UPDATE SET hidden=1,updated_at=CURRENT_TIMESTAMP`).bind(user.userId,sourceTheme,theme,1).run();return NextResponse.json({ok:true,deleted:0});}
   const rows=await getDb().select().from(mockupTemplates).where(and(eq(mockupTemplates.userId,user.userId),eq(mockupTemplates.theme,theme)));
-  await Promise.all(rows.map(row=>env.ARTWORK.delete(row.objectKey)));
+  await Promise.all(rows.flatMap(row=>{
+    const preparation=row.preparationJson?JSON.parse(row.preparationJson) as {surfaceMaskKey?:string;depthKey?:string;occlusionKey?:string}:null;
+    return [row.objectKey,row.occlusionKey,preparation?.surfaceMaskKey,preparation?.depthKey,preparation?.occlusionKey].filter((key):key is string=>Boolean(key)).map(key=>env.ARTWORK.delete(key));
+  }));
   await getDb().delete(mockupTemplates).where(and(eq(mockupTemplates.userId,user.userId),eq(mockupTemplates.theme,theme)));
   return NextResponse.json({ok:true,deleted:rows.length});
 }
