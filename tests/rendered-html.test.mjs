@@ -3473,7 +3473,11 @@ test("a mockup scene works out its own print area — D468", async () => {
      on each is eight minutes of clicking per set, so marking cannot be the
      requirement - the scene has to answer this itself, once, at upload. */
   assert.match(page, /await findPrintAreas\(added,theme\)/, "every uploaded scene is prepared");
-  assert.match(page, /method:"PATCH"[\s\S]{0,120}JSON\.stringify\(\{corners\}\)/, "and the answer is stored on the template");
+  /* D575 - stored, and stored as usable. Detection that only wrote corners left
+     the scene as "garment", which refuses to render, so a seller who uploaded
+     twenty scenes got twenty dead ones. The route already refuses anything that
+     fails validation or is low confidence, so what arrives here is trustworthy. */
+  assert.match(page, /method:"PATCH"[\s\S]{0,160}JSON\.stringify\(\{corners,confirmed:true,printSide\}\)/, "and the answer is stored as usable, not as needing a human");
 
   /* Segmentation finds the product; the product is not the print area. On a mug
      the printable face is offset from the handle and foreshortened, so what is
@@ -5268,9 +5272,16 @@ test("an uncertain print area is refused, not saved as truth — D572", async ()
         over 4%, not the whole image. It cannot tell a chest from a hood, a
         pocket, a sleeve or the model's hair, and the box it accepts is saved once
         and reused for every future design. */
-  assert.match(route, /const apparel = \/hoodie\|sweatshirt\|shirt\|tee\|apparel\|garment\|crewneck\|tank\/i\.test/);
-  assert.match(route, /apparel && \(width < \.08 \|\| width > \.7\) \? "not-a-chest-print"/);
-  assert.match(route, /apparel && \(centreY < \.12 \|\| centreY > \.8\) \? "outside-the-torso"/);
+  /* D575 - the apparel-only regex is gone. Judging a shower curtain or a poster
+     by a garment's ceiling refused the correct answer on exactly the products
+     Goldie has to support, so the bounds now come per family from the one
+     classifier in mockup-compatibility. */
+  assert.match(route, /const bounds = printAreaBounds\(String\(product \|\| ""\)\)/);
+  assert.doesNotMatch(route, /const apparel = \/hoodie\|sweatshirt/,
+    "product rules must not be re-implemented inside the route");
+  assert.match(route, /wrong-width-for-this-product/);
+  assert.match(route, /not-on-the-product/);
+
   assert.match(route, /if \(rejection\) return NextResponse\.json\(\{ corners: null, reason: rejection \}\)/);
 
   /* 2. The route reported confidence and both callers ignored it, so a low

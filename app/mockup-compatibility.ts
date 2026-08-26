@@ -29,8 +29,11 @@ export function productSurfaceFamily(productName:string):SurfaceFamily{
      apparel because "sTEEl" contains "tee". Any product with Steel in its name
      was offered garment scenes. Bounded now, and pinned by test. */
   if(garmentKind(name)||/\bshirts?\b|\btees?\b|hoodie|sweatshirt|crewneck|\btanks?\b|apparel/.test(name))return"apparel";
-  if(/mug|tumbler|bottle|can |cup|stein/.test(name))return"curved";
-  if(/poster|print|canvas|paper|card|sticker|towel|mat|puzzle/.test(name))return"flat";
+  if(/mug|tumbler|bottle|can |cup|stein|flask|thermos/.test(name))return"curved";
+  /* D575 - Goldie is not a garment tool. Shower curtains, notebooks, blankets,
+     pillows, phone cases and the rest were matching nothing here, so they fell
+     through as unrecognised. They are flat printed surfaces and they belong. */
+  if(/poster|print|canvas|paper|card|sticker|towel|mat|puzzle|shower curtain|curtain|notebook|journal|spiral|blanket|throw|tapestry|pillow|cushion|flag|banner|rug|apron|phone case|case\b|mouse ?pad|coaster|magnet|ornament|tote|bag|backpack|pouch|placemat|napkin|duvet|comforter|sheet|beach|garden/.test(name))return"flat";
   return"";
 }
 
@@ -53,4 +56,37 @@ export function productAcceptsMockup(surfaceKind:string,productName:string){
      scene that names a different garment is refused. */
   if(!productKind)return templateKind==="other-apparel"||templateKind==="apparel";
   return templateKind===productKind||templateKind==="apparel"||templateKind==="other-apparel";
+}
+
+/* D575 - what a print area may plausibly look like on each family, as fractions
+   of the photograph. These live here, beside the family classifier, because a
+   rule that exists in two places is the bug that offered her hoodie nothing but
+   mugs (D529/D543). One family answer, one geometry answer, one module.
+
+   The ceilings matter as much as the floors. A poster, a shower curtain or a
+   notebook cover is printed almost edge to edge, so a print area covering most
+   of the photograph is correct for them and wrong for a t-shirt. Judging every
+   product by the garment rule would have rejected exactly the products she
+   named. */
+export type PrintAreaBounds = {
+  minWidth: number; maxWidth: number; minHeight: number; maxHeight: number;
+  minCentreY: number; maxCentreY: number; maxRatio: number;
+};
+
+export function printAreaBounds(productName: string): PrintAreaBounds {
+  switch (productSurfaceFamily(productName)) {
+    case "apparel":
+      // A chest or back panel: a fraction of the garment, on the torso.
+      return { minWidth: .08, maxWidth: .7, minHeight: .06, maxHeight: .8, minCentreY: .12, maxCentreY: .8, maxRatio: 6 };
+    case "curved":
+      // The face turned toward the camera, never the whole mug and never the handle.
+      return { minWidth: .06, maxWidth: .6, minHeight: .06, maxHeight: .8, minCentreY: .1, maxCentreY: .9, maxRatio: 5 };
+    case "flat":
+      // Printed nearly edge to edge. The only real limits are "not the entire
+      // photograph" and "not a sliver".
+      return { minWidth: .05, maxWidth: .96, minHeight: .05, maxHeight: .96, minCentreY: .04, maxCentreY: .96, maxRatio: 8 };
+    default:
+      // Unrecognised: stay permissive rather than refuse a seller's real product.
+      return { minWidth: .04, maxWidth: .96, minHeight: .04, maxHeight: .96, minCentreY: .03, maxCentreY: .97, maxRatio: 8 };
+  }
 }

@@ -1,3 +1,4 @@
+import { printAreaBounds } from "@/app/mockup-compatibility";
 import { NextResponse } from "next/server";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { withErrorLog } from "@/app/error-log";
@@ -36,11 +37,25 @@ async function handlePOST(request: Request) {
 
   const prompt = `This photograph shows a blank ${product} carrying no design. Identify the flat printable area on it: the surface a printed design would actually be applied to, and only the part visible in this photograph.
 
-On a garment that is the front chest panel, not the whole garment. On a mug it is the curved face turned toward the camera, opposite the handle - never the handle, and never the whole mug. On a framed print it is the paper inside the frame. On a tote it is the front panel.
+On a garment, if the person or garment is facing away from the camera this is the BACK panel; otherwise it is the front chest panel. Either way it is the print panel, not the whole garment. On a mug, tumbler or bottle it is the curved face turned toward the camera, opposite the handle - never the handle, and never the whole mug.
+
+On a poster, framed print or canvas it is the printed sheet itself, inside any frame or mount.
+
+On a shower curtain, blanket, throw, tapestry, flag or beach towel the design covers nearly the whole face of the item, so the printable area is the full visible panel, edge to edge - not a small patch in the middle.
+
+On a notebook, journal, phone case, mouse pad, coaster, magnet or puzzle it is the whole printed face of the object.
+
+On a tote, bag or apron it is the front panel. On a pillow or cushion it is the visible printed face.
+
+If the item is folded, draped, hanging or lying at an angle, follow it: give the corners of the printable face as it actually appears, in perspective.
 
 Return the four corners of that area IN PERSPECTIVE, following the surface as it appears here, so a design pasted into those corners sits on the product correctly. Order them top-left, top-right, bottom-right, bottom-left as seen in the image. Use fractions of image width and height, 0,0 at the top left and 1,1 at the bottom right.
 
-Return only {"corners":[[x,y],[x,y],[x,y],[x,y]],"confidence":"high"|"low"}.`;
+Also say which side of the product this photograph shows, so a back print is never placed on a front view: "front", "back", "left-sleeve", "right-sleeve", "wrap" for a mug seen side-on, or "other". Say "front" for a flat item like a framed print or a tote seen from the front.
+
+Also say whether anything in the photograph crosses in front of that printable area - a hood, hair, an arm, a strap, a hand.
+
+Return only {"corners":[[x,y],[x,y],[x,y],[x,y]],"confidence":"high"|"low","side":"front","occluded":true|false}.`;
 
   const response = await fetch("https://fal.run/openrouter/router/vision", {
     method: "POST",
@@ -54,7 +69,7 @@ Return only {"corners":[[x,y],[x,y],[x,y],[x,y]],"confidence":"high"|"low"}.`;
 
   const match = payload.output?.match(/\{[\s\S]*\}/);
   if (!match) return NextResponse.json({ corners: null, reason: "unreadable" });
-  const parsed = JSON.parse(match[0]) as { corners?: number[][]; confidence?: string };
+  const parsed = JSON.parse(match[0]) as { corners?: number[][]; confidence?: string; side?: string; occluded?: boolean };
   const corners = parsed.corners;
 
   /* A wrong quad is worse than no quad: it would place every future design in the
@@ -81,20 +96,30 @@ Return only {"corners":[[x,y],[x,y],[x,y],[x,y]],"confidence":"high"|"low"}.`;
      which are known good, every one falls inside these bounds. */
   const left = Math.min(...clamped.map(p => p[0])), top = Math.min(...clamped.map(p => p[1]));
   const centreY = top + height / 2;
-  const apparel = /hoodie|sweatshirt|shirt|tee|apparel|garment|crewneck|tank/i.test(String(product || ""));
+  /* D575 - Goldie has to work for posters, mugs, shower curtains and notebooks,
+     not only garments. The flat 0.9 ceiling above was a garment rule applied to
+     everything, and it would have refused exactly those products: a poster or a
+     shower curtain IS printed almost edge to edge, so a print area covering most
+     of the photograph is the correct answer there. The bounds come from
+     printAreaBounds, beside the family classifier, so there is one rule. */
+  const bounds = printAreaBounds(String(product || ""));
   const rejection =
-    width > .9 ? "too-wide" :
-    height > .9 ? "too-tall" :
-    apparel && (width < .08 || width > .7) ? "not-a-chest-print" :
-    apparel && (centreY < .12 || centreY > .8) ? "outside-the-torso" :
-    (width / Math.max(.001, height)) > 6 || (height / Math.max(.001, width)) > 6 ? "degenerate" : "";
+    width < bounds.minWidth || width > bounds.maxWidth ? "wrong-width-for-this-product" :
+    height < bounds.minHeight || height > bounds.maxHeight ? "wrong-height-for-this-product" :
+    centreY < bounds.minCentreY || centreY > bounds.maxCentreY ? "not-on-the-product" :
+    (width / Math.max(.001, height)) > bounds.maxRatio || (height / Math.max(.001, width)) > bounds.maxRatio ? "degenerate" : "";
   if (rejection) return NextResponse.json({ corners: null, reason: rejection });
 
   /* The model grading its own answer is not proof, so "low" is not accepted as a
      measurement. It is reported, and the scene stays unmeasured until a person
      marks it. */
   if (parsed.confidence !== "high") return NextResponse.json({ corners: null, reason: "low-confidence" });
-  return NextResponse.json({ corners: clamped, confidence: "high" });
+  /* D575 - the side travels with the box. Without it every uploaded scene
+     defaulted to "front", so a seller's back-view photographs were silently never
+     offered for a back print: no wrong mockup, but no mockup either. */
+  const sides = new Set(["front", "back", "left-sleeve", "right-sleeve", "wrap", "other"]);
+  const side = sides.has(String(parsed.side)) ? String(parsed.side) : "front";
+  return NextResponse.json({ corners: clamped, confidence: "high", side, occluded: Boolean(parsed.occluded) });
 }
 
 export const POST = withErrorLog("mockup-print-area", handlePOST);

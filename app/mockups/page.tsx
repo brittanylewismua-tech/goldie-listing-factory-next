@@ -265,19 +265,33 @@ export default function Home() {
     setMasking(null);
   };
   const [unmeasured,setUnmeasured]=useState<string[]>([]);
+  const [needsForeground,setNeedsForeground]=useState<string[]>([]);
+  /* D573/D575 - automatic detection is trusted, deliberately. Sellers upload
+     their own scenes constantly and will not hand-mark fifty photographs; if
+     detection did not produce a usable print area the feature would not exist.
+     What makes trusting it safe is that /api/mockups/print-area refuses on our
+     behalf: since D572 it returns corners ONLY when the box passes the geometric
+     and product-shaped checks AND the model reported high confidence. Anything
+     doubtful comes back as null and the scene is named for a human instead. So
+     corners arriving here have already cleared the bar, and marking by hand is
+     the correction path for the ones that did not - never the default. */
   async function findPrintAreas(scenes:Template[],theme:string){
     setPreparing(scenes.length);
-    let done=0;const unmarked:string[]=[];
+    let done=0;const unmarked:string[]=[],needsForeground:string[]=[];
     for(const scene of scenes){
       try{
         const blob=await (await fetch(scene.src)).blob();
         const dataUrl=await new Promise<string>((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result));reader.onerror=reject;reader.readAsDataURL(blob)});
         const response=await fetch("/api/mockups/print-area",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({imageUrl:dataUrl,product:theme||scene.name})});
-        const payload=await response.json() as {corners?:Point[]|null};
+        const payload=await response.json() as {corners?:Point[]|null;side?:PrintSide;occluded?:boolean};
         if(payload.corners&&payload.corners.length===4){
-          const corners=payload.corners as Template["corners"];
-          setLibrary(x=>x.map(t=>t.id===scene.id?{...t,corners}:t));
-          await fetch(`/api/mockups/library/${encodeURIComponent(scene.id)}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({corners})});
+          const corners=payload.corners as Template["corners"],printSide=payload.side||"front";
+          setLibrary(x=>x.map(t=>t.id===scene.id?{...t,corners,printSide,quadMeans:"print-area" as const}:t));
+          await fetch(`/api/mockups/library/${encodeURIComponent(scene.id)}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({corners,confirmed:true,printSide})});
+          /* D575 - a back view with something crossing the print needs its mask
+             before it can be trusted, so it is named rather than left looking
+             finished. The seller marks the hood once and the scene is done. */
+          if(printSide==="back"&&payload.occluded)needsForeground.push(scene.name||"a scene");
         }
         else unmarked.push(scene.name||"a scene");
       }catch{unmarked.push(scene.name||"a scene");}
@@ -288,6 +302,7 @@ export default function Home() {
        the set looking finished. She marks it by hand with
        "Mark where the design can print". */
     setUnmeasured(unmarked);
+    setNeedsForeground(needsForeground);
   };
   const toggleUnrestricted=(id:string)=>setSelected(s=>{const n=new Set(s),template=library.find(item=>item.id===id);if(!template)return n;if(n.has(id)){n.delete(id);return n;}const kind=template.surfaceKind||"rigid-flat";for(const selectedId of n){const selectedTemplate=library.find(item=>item.id===selectedId);if((selectedTemplate?.surfaceKind||"rigid-flat")!==kind)n.delete(selectedId);}n.add(id);return n});
   const toggle=(id:string)=>{if(!selected.has(id)&&selected.size>=MAX_SELECTED_MOCKUPS){setSelectionNotice("You can create up to 10 mockups at a time. Finish this group, then choose another group.");return;}setSelectionNotice("");toggleUnrestricted(id)};
