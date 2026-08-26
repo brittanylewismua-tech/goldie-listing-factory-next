@@ -11,6 +11,8 @@ import { readFile } from "node:fs/promises";
 
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 const route = await read("app/api/mockups/placement/route.ts");
+const app = await read("app/listing-factory-app.tsx");
+const drafts = await read("app/api/printify/drafts/route.ts");
 
 test("a seller cannot use another seller's scene", () => {
   // The scene lookup is filtered by the session user, so a scene belonging to
@@ -20,8 +22,40 @@ test("a seller cannot use another seller's scene", () => {
 });
 
 test("a seller cannot write against another seller's batch", () => {
-  assert.match(route, /SELECT id FROM listing_batches WHERE id = \? AND user_id = \? LIMIT 1/);
-  assert.match(route, /if \(!batch\) return false/);
+  /* D599 - the draft row IS the proof of batch ownership: it is written with the
+     creating seller's id under this exact batch. Filtering it by the session
+     user is what stops one seller naming another seller's batch. */
+  assert.match(route, /FROM printify_draft_results WHERE user_id = \? AND batch_id = \?/);
+  assert.match(route, /\.bind\(userId, want\.batchId, want\.designKey\)/);
+  assert.match(route, /if \(!draft\?\.response_json\) return false/);
+});
+
+test("D599 - the batch id is checked in the namespace it actually comes from", () => {
+  /* The outage D599 fixes: two unrelated ids are both called "batchId".
+
+     The editor's batchId travels draft.batchId -> templateDetails.batchId ->
+     printify_draft_results.batch_id. It is NOT a listing_batches id, so looking
+     it up there rejected every real request while still answering 404 to forged
+     ones, which made a total outage look like a passing security fix. */
+  assert.match(app, /<IntegratedMockups[^>]*batchId=\{draft\.batchId\|\|""\}/,
+    "the editor is handed draft.batchId");
+  assert.match(app, /body: JSON\.stringify\(\{ batchId: templateDetails\?\.batchId,/,
+    "draft.batchId originates as templateDetails.batchId");
+  assert.match(drafts, /INSERT INTO printify_draft_results \(request_key, user_id, batch_id, client_id/,
+    "and that same id is stored as printify_draft_results.batch_id");
+
+  const code = route.slice(route.indexOf("async function relationshipsHold"), route.indexOf("const notFound"))
+    .replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
+  assert.ok(!code.includes("listing_batches"),
+    "the Printify batch id must never be looked up in listing_batches");
+});
+
+test("D599 - the design key is checked against the column it was written to", () => {
+  // designKey is design.id on the client; the draft stores it as client_id.
+  assert.match(app, /designKey=\{design\.id\|\|design\.name\|\|""\}/);
+  assert.match(app, /clientId: design\.id \}\)/);
+  assert.match(drafts, /\.bind\(idempotencyKey, user\.userId, body\.batchId, body\.clientId \?\? body\.fileName\)/);
+  assert.match(route, /AND client_id = \?/);
 });
 
 test("a listing from one batch cannot be used with another", () => {
@@ -76,8 +110,9 @@ test("ownership is never taken from the request body", () => {
 
 test("validation runs server-side against the database, not on claims", () => {
   // Every branch of the validator hits a table.
-  const validator = route.slice(route.indexOf("async function relationshipsHold"), route.indexOf("const notFound"));
-  for (const table of ["mockupTemplates", "listing_batches", "printify_draft_results"])
+  const validator = route.slice(route.indexOf("async function relationshipsHold"), route.indexOf("const notFound"))
+    .replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
+  for (const table of ["mockupTemplates", "printify_draft_results"])
     assert.ok(validator.includes(table), `${table} must be consulted`);
   assert.ok(!/req\.|request\.body/.test(validator), "the validator reads no request claims");
 });

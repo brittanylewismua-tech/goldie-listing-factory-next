@@ -65,13 +65,22 @@ async function relationshipsHold(userId: string, want: Relationship) {
   /* An override names all three, and all three must be present and consistent. */
   if (!want.batchId || !want.listingId || !want.designKey) return false;
 
-  const batch = await database
-    .prepare("SELECT id FROM listing_batches WHERE id = ? AND user_id = ? LIMIT 1")
-    .bind(want.batchId, userId).first<{ id: string }>();
-  if (!batch) return false;
+  /* D599 - the batch id the editor sends is a PRINTIFY batch id, not a
+     listing_batches id. Two different namespaces that happen to share a name:
+     listing_batches holds the saved Goldie session behind ?batch= in the address
+     bar, while this one comes from templateDetails.batchId and is the key
+     printify_draft_results is written under.
 
-  /* The design must be a draft that belongs to THIS batch and THIS seller, and
-     the listing id must be the draft that design actually produced. */
+     D598 looked the Printify id up in listing_batches, where it can never match,
+     so every legitimate read and write returned 404 - and the forged probes that
+     appeared to prove the fix only passed because the endpoint had started
+     refusing everything. A check that rejects the real seller is not a security
+     control; it is an outage that reports success.
+
+     printify_draft_results is the correct anchor and a durable one: the row is
+     keyed by this exact batch and design, carries the owning user, and holds the
+     draft that design actually produced. It does not expire, so a correction
+     saved today still loads months from now. */
   const draft = await database
     .prepare("SELECT response_json FROM printify_draft_results WHERE user_id = ? AND batch_id = ? AND client_id = ? LIMIT 1")
     .bind(userId, want.batchId, want.designKey).first<{ response_json: string | null }>();
