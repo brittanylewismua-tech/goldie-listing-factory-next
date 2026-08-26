@@ -2940,7 +2940,6 @@ body{min-width:1180px!important}
 
 /* D554 - every tile says which view it is, and a white garment on white gets an
    edge so it is not an empty square. */
-.app-shell .printify-photo-view{display:block;margin-top:4px;font:700 .58rem/1.25 "Manrope",system-ui,sans-serif;color:#75576b;letter-spacing:.03em;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .app-shell .printify-photo-expand img{background:#fff;border:1px solid rgba(91,48,79,.14);border-radius:8px}
 
 /* D556 - D544 moved the "N/N ready" badge into the task panel's heading, where a
@@ -3040,3 +3039,9 @@ body{min-width:1180px!important}
    blank squares that WERE bugs are fixed in D567. This one is a small photograph
    of something white, sitting next to the product's name, and the name is what
    identifies it. */
+
+/* D569 - 96 tiles in one picker, grouped by the view they show, so choosing 20
+   photos is choosing from 12 named groups rather than scrolling a wall. */
+.app-shell .printify-view-group{margin:0 0 14px}
+.app-shell .printify-view-heading{display:flex;align-items:baseline;gap:8px;margin:0 0 6px;font:800 .7rem/1.2 "Manrope",system-ui,sans-serif;color:#5b304f;letter-spacing:.05em;text-transform:uppercase}
+.app-shell .printify-view-heading span{font-size:.62rem;font-weight:600;letter-spacing:.02em;text-transform:none;color:#8b6f83}

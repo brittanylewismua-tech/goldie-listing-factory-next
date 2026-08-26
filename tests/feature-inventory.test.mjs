@@ -277,7 +277,8 @@ test("the Printify picker exists once, not twice", async () => {
 
   // The labels D554 added are on the copy that is actually used.
   const picker = app.slice(app.indexOf('<div className="printify-image-picker bare">'));
-  assert.ok(picker.indexOf('className="printify-photo-view"') > 0
-    && picker.indexOf('className="printify-photo-view"') < picker.indexOf("</section>"),
-    "every tile names its Printify view");
+  /* D569 - the tiles are grouped by view now, so the per-tile caption became the
+     group heading. */
+  assert.ok(picker.indexOf('className="printify-view-heading"') > 0,
+    "every group names its Printify view");
 });

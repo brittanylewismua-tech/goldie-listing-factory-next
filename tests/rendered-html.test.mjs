@@ -4859,8 +4859,10 @@ test("what the click-through found on step 2 and step 3 — D554", async () => {
         them." Printify names every view in the URL it already sent us. */
   assert.match(app, /function printifyViewName\(src:string\)/);
   assert.match(app, /searchParams\.get\("camera_label"\)/);
-  assert.match(app, /<span className="printify-photo-view">/);
-  assert.match(css, /\.app-shell \.printify-photo-view\{/);
+  /* D569 - the tiles are grouped by view now, so the per-tile caption became the
+     group heading. */
+  assert.match(app, /<p className="printify-view-heading">/);
+  assert.match(css, /\.app-shell \.printify-view-heading\{/);
 
   /* 4. The mockup block said "Saved for this product" with nothing selected, and
         counted "0 of 8 selected" under ten scenes - a cap presented as a total,
@@ -5163,4 +5165,32 @@ test("one mockup set chooser, and the listings follow it — D566", async () => 
   const lifestyle = app.slice(app.indexOf('if(task==="lifestyle")return <>'), app.indexOf('if(task==="order")'));
   assert.match(lifestyle, /className="task-listing-figure"/);
   assert.match(css, /\.app-shell \.task-listing-figure img\{width:min\(260px,60%\)/);
+});
+
+test("the Printify picker is grouped by view, not a wall of 96 — D569", async () => {
+  const [app, css] = await Promise.all([
+    readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8"),
+  ]);
+
+  /* Measured on her hoodie batch: 96 tiles in one listing's picker, 192 across
+     the panel, and 12 distinct labels - "Front" sixteen times, "Back" sixteen
+     times. Every tile is a genuinely different image, 12 camera views across the
+     8 colours she enabled. I checked that before calling it duplication: all 192
+     srcs are distinct. But a flat wall of 96 with a repeated one-word caption is
+     not something anyone picks 20 photos out of. */
+  assert.match(app, /const groups:Array<\[string,Array<\[string,number\]>\]>=\[\]/);
+  assert.match(app, /const view=printifyViewName\(src\)\|\|"Other photos"/);
+  assert.match(app, /<p className="printify-view-heading">\{view\}<span>\{items\.length\}/);
+  assert.match(css, /\.app-shell \.printify-view-heading\{/);
+
+  /* The original index has to survive the grouping - the selection and the
+     publish payload are both by index into printifyImages. */
+  assert.match(app, /found\[1\]\.push\(\[src,index\]\)/);
+  assert.match(app, /items\.map\(\(\[src,index\]\)=>/);
+
+  /* Colour is deliberately not labelled: Printify's image order need not follow
+     her colour order, and a Cocoa hoodie labelled "White" is worse than one
+     labelled only "Front". */
+  assert.doesNotMatch(app, /selectedColorIds\[Math\.floor/);
 });
