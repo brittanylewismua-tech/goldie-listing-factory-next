@@ -90,7 +90,7 @@ type InternationalShippingRate={key:string;label:string;primary:number;additiona
 type EditableInternationalShippingRate={key:string;label:string;primary:string;additional:string};
 type EtsyShippingProfile={id:number;title:string;originCountry:string;currency:string;domesticPrimary:number;domesticAdditional:number;international:InternationalShippingRate[]};
 type TemplateDetails = { id: string; batchId: string; title: string; description:string; blueprintId:number;blueprintTitle:string;brand:string;model:string;provider: string; enabledVariants: number;previewImage?:string;previewImages?:string[];colorOptions?:ProductColor[];sizeOptions?:ProductSize[]; variants:ProductVariant[]; shop: string; standardShipping?:number|null;shippingCurrency?:string;shippingTemplateId:string;shippingProfileNeedsSelection?:boolean;freeShipping:boolean;maxPrintWidth?: number | null; maxPrintHeight?: number | null; placementScale?: number | null };
-type DraftResult = { id?: string; clientId: string; name: string; title?: string; tags?: string[]; previewUrl?: string; printifyImages?: string[]; shopId?: number; editorUrl?: string; status: "Created" | "Failed" | "NeedsRetry"; error?: string; productName?:string; placement?:{x:number;y:number;scale:number;angle:number};placementScale?:number };
+type DraftResult = { id?: string; batchId?: string; clientId: string; name: string; title?: string; tags?: string[]; previewUrl?: string; printifyImages?: string[]; shopId?: number; editorUrl?: string; status: "Created" | "Failed" | "NeedsRetry"; error?: string; productName?:string; placement?:{x:number;y:number;scale:number;angle:number};placementScale?:number };
 type WorkflowStep = "connect" | "setup" | "designs" | "review" | "finish";
 type FinishPhase = "details" | "etsy" | "mockups" | "final";
 type PendingCategoryChange={designId:string;details:EtsyDetails;clearedCount:number};
@@ -2210,7 +2210,7 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
                       too small, so you don't know actually what mockups you're
                       choosing for." D408 measured this once already on another
                       step. The artwork, at a size that identifies it. */}
-                  {design?.previewUrl?<div className="task-listing-figure"><img src={design.previewUrl} alt={design.name||"Design"} decoding="async"/></div>:null}<IntegratedMockups design={design.file} productId={draft.id} productName={activeRecipe?.name||templateDetails?.blueprintTitle} defaultTheme={mockupTheme} referenceUrl={draft.previewUrl} placement={draft.placement} artworkBounds={design.visibleBounds} onPrepared={count=>setPreparedMockupCounts(current=>({...current,[draft.id!]:count}))}/></div>
+                  {design?.previewUrl?<div className="task-listing-figure"><img src={design.previewUrl} alt={design.name||"Design"} decoding="async"/></div>:null}<IntegratedMockups design={design.file} productId={draft.id} productName={activeRecipe?.name||templateDetails?.blueprintTitle} defaultTheme={mockupTheme} referenceUrl={draft.previewUrl} placement={draft.placement} batchId={draft.batchId||""} designKey={design.id||design.name||""} artworkBounds={design.visibleBounds} onPrepared={count=>setPreparedMockupCounts(current=>({...current,[draft.id!]:count}))}/></div>
               </div>})()) }</div>
     </>;
     if(task==="order")return <>

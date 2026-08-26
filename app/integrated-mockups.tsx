@@ -5,7 +5,7 @@
 import { lazy, Suspense } from "react";
 import "./mockups/scene-editor.css";
 import { defaultTransform, renderingModeFor, placeArtworkOnSurface, type PlacementTransform, type Quad } from "./mockups/placement-profile";
-import { productAcceptsMockup } from "./mockup-compatibility";
+import { productAcceptsMockup, productSurfaceFamily } from "./mockup-compatibility";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { safeImagePreviewDataUrl } from "./client-image-preview";
@@ -214,13 +214,17 @@ const candidates=[marked,quadOverride?toPixels(quadOverride,true):null,toPixels(
    editor does. Nothing here calls a model to place a design any more. */
 async function withRecovery<T>(task:()=>Promise<T>){let lastError:unknown;for(let attempt=0;attempt<3;attempt++){try{return await task()}catch(error){lastError=error;if(attempt<2)await new Promise(resolve=>window.setTimeout(resolve,1200*(attempt+1)))}}throw lastError instanceof Error?lastError:new Error("This mockup could not be created after automatic recovery.")}
 
-export default function IntegratedMockups({design,productId,productName="",defaultTheme,defaultTemplateIds=[],referenceUrl,placement,artworkBounds,onPrepared}:{design:File;productId:string;productName?:string;defaultTheme:string;defaultTemplateIds?:string[];referenceUrl?:string;placement?:ResolvedPlacement;artworkBounds?:ArtworkBounds;onPrepared?:(count:number)=>void}){
+export default function IntegratedMockups({design,productId,productName="",defaultTheme,defaultTemplateIds=[],referenceUrl,placement,artworkBounds,onPrepared,batchId="",designKey=""}:{batchId?:string;designKey?:string;design:File;productId:string;productName?:string;defaultTheme:string;defaultTemplateIds?:string[];referenceUrl?:string;placement?:ResolvedPlacement;artworkBounds?:ArtworkBounds;onPrepared?:(count:number)=>void}){
  const[library,setLibrary]=useState<Template[]>([]),[theme,setTheme]=useState(defaultTheme),[selected,setSelected]=useState<Set<string>>(new Set()),[results,setResults]=useState<Result[]>([]),[busy,setBusy]=useState(false),[error,setError]=useState(""),[expanded,setExpanded]=useState<Result|null>(null),[etsyStatus,setEtsyStatus]=useState(""),[adjustments,setAdjustments]=useState<Record<string,Adjustment>>({}),[renderStatus,setRenderStatus]=useState("");
  /* D588 - the editor's state. `profiles` remembers what a seller corrected for a
     scene so it is not lost when they move on, and `editing` is the scene whose
     placement is open. Nothing here navigates: the batch stays mounted. */
  const [editing,setEditing]=useState<{result:Result;index:number}|null>(null);
  const [profiles,setProfiles]=useState<Record<string,PlacementTransform>>({});
+ /* D596 - what the database holds for the scene currently open, and when it was
+    written. The editor compares that timestamp against any session draft so an
+    old tab cannot undo newer data. */
+ const [persisted,setPersisted]=useState<{transform?:PlacementTransform;at?:string|null}>({});
  /* Scene-level, and the only thing that may improve a future design. */
  const [sceneGeometry,setSceneGeometry]=useState<Record<string,{surface:Quad;curvature:number;fabricStrength:number;blendMode:PlacementTransform["blendMode"]}>>({});
  const [designUrl,setDesignUrl]=useState("");
@@ -434,13 +438,87 @@ let previewFace:{left:number;top:number;right:number;bottom:number}|undefined;
          placement returns to. */
       const automatic=defaultTransform(placeArtworkOnSurface(surface,placement),mode);
       const saved=profiles[template.id];
+
+      /* D596 - the load order, in the order the placement contract requires:
+
+         1. the design's real Printify placement (already in `placement`)
+         2. compatible reusable scene geometry, if the seller has improved this
+            scene before
+         3. this design's Printify placement mapped into that geometry
+         4. the artwork override for THIS seller + listing + design + scene
+         5. that relative override applied last
+
+         Steps 2 and 4 are separate reads on purpose: geometry may be reused
+         across designs, an override never may. */
+      const loadPersisted=async()=>{
+        const query=new URLSearchParams({sceneId:template.id,
+          productFamily:productSurfaceFamily(productName),printSide:template.printSide||"front",
+          listingId:productId,designKey,batchId});
+        const answer=await fetch(`/api/mockups/placement?${query}`).then(r=>r.ok?r.json():null).catch(()=>null) as
+          {geometry?:{surface?:Quad;curvature?:number;fabricStrength?:number;blendMode?:PlacementTransform["blendMode"]}|null;
+           override?:Record<string,number|string|boolean|undefined>|null}|null;
+        if(!answer)return;
+        const geometry=answer.geometry, override=answer.override;
+        const groundSurface=(geometry?.surface as Quad)||surface;
+        let next=defaultTransform(placeArtworkOnSurface(groundSurface,placement),mode);
+        if(geometry){next={...next,curvature:geometry.curvature??next.curvature,
+          fabricStrength:geometry.fabricStrength??next.fabricStrength,
+          blendMode:geometry.blendMode??next.blendMode};}
+        if(override){
+          const centre=(q:Quad)=>[q.reduce((a,p)=>a+p[0],0)/4,q.reduce((a,p)=>a+p[1],0)/4];
+          const [cx,cy]=centre(next.corners);
+          const m=Number(override.scaleMultiplier??1)||1;
+          const du=Number(override.offsetU??0), dv=Number(override.offsetV??0);
+          next={...next,
+            corners:next.corners.map(([x,y])=>[cx+(x-cx)*m+du,cy+(y-cy)*m+dv] as [number,number]) as Quad,
+            rotation:next.rotation+Number(override.rotation??0),
+            skewX:Number(override.skewX??0), skewY:Number(override.skewY??0),
+            flipX:Boolean(override.flipX), flipY:Boolean(override.flipY),
+            opacity:Number(override.opacity??1),
+            blendMode:(override.blendMode as PlacementTransform["blendMode"])??next.blendMode,
+            fabricStrength:override.fabricStrength===undefined?next.fabricStrength:Number(override.fabricStrength),
+            curvature:override.curvature===undefined?next.curvature:Number(override.curvature)};
+        }
+        setPersisted({transform:next,at:(override?.updatedAt as string)||null});
+        if(!profiles[template.id])setProfiles(current=>({...current,[template.id]:next}));
+      };
+      void loadPersisted();
       const finish=async(next:PlacementTransform,exported:Blob,improveScene:boolean,advance:boolean)=>{
         const url=URL.createObjectURL(exported);
-        /* D588 - this listing's finished artwork transform. It belongs to this
-           design and is never applied to another one. Only when the seller ticks
-           "Improve this scene for future designs" does anything about the
-           PHOTOGRAPH - its surface, curvature and material - get remembered. */
+        /* D596 - the durable write, and it must succeed before anything says
+           "Adjusted". A throw here propagates to the editor, which keeps itself
+           open, keeps the local draft and tells the seller to try again.
+
+           The override is stored RELATIVE to where Printify put this design, so
+           it means nothing for any other design. Scene geometry is written only
+           when the seller explicitly ticked "Improve this scene for future
+           designs" - automatic work never promotes itself to a scene fact. */
+        const base=defaultTransform(placeArtworkOnSurface(surface,placement),mode);
+        const centre=(q:Quad)=>[q.reduce((a,p)=>a+p[0],0)/4,q.reduce((a,p)=>a+p[1],0)/4];
+        const [bx,by]=centre(base.corners), [nx,ny]=centre(next.corners);
+        const spanOf=(q:Quad)=>Math.max(...q.map(p=>p[0]))-Math.min(...q.map(p=>p[0]));
+        const baseSpan=spanOf(base.corners)||1;
+        const body:Record<string,unknown>={override:{
+          sceneId:template.id, listingId:productId, designKey, batchId,
+          offsetU:nx-bx, offsetV:ny-by,
+          scaleMultiplier:(spanOf(next.corners)||baseSpan)/baseSpan,
+          rotation:next.rotation-base.rotation, skewX:next.skewX, skewY:next.skewY,
+          flipX:next.flipX, flipY:next.flipY, opacity:next.opacity,
+          ...(next.blendMode!==base.blendMode?{blendMode:next.blendMode}:{}),
+          ...(next.fabricStrength!==base.fabricStrength?{fabricStrength:next.fabricStrength}:{}),
+          ...(next.curvature!==base.curvature?{curvature:next.curvature}:{})}};
+        if(improveScene)body.geometry={sceneId:template.id,
+          productFamily:productSurfaceFamily(productName), printSide:template.printSide||"front",
+          renderingMode:mode, surface, curvature:next.curvature,
+          fabricStrength:next.fabricStrength, blendMode:next.blendMode,
+          preparationVersion:template.preparation?.version,
+          origin:"seller-adjusted"};
+        const written=await fetch("/api/mockups/placement",{method:"PUT",
+          headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+        if(!written.ok)throw new Error("Goldie could not save this placement.");
+
         setProfiles(current=>({...current,[template.id]:next}));
+        setPersisted({transform:next,at:new Date().toISOString()});
         if(improveScene)setSceneGeometry(current=>({...current,[template.id]:{
           surface,curvature:next.curvature,fabricStrength:next.fabricStrength,blendMode:next.blendMode}}));
         setResults(list=>list.map((item,index)=>index===editing.index?{...item,url,adjusted:true}:item));
@@ -453,7 +531,8 @@ let previewFace:{left:number;top:number;right:number;bottom:number}|undefined;
         artworkUrl={designUrl}
         surface={surface}
         mode={mode}
-        transform={saved||automatic}
+        transform={saved||persisted.transform||automatic}
+        persistedAt={persisted.at}
         automatic={automatic}
         foregroundUrl={template.occlusionUrl||null}
         hasNext={editing.index+1<results.length}

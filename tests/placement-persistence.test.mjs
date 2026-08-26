@@ -37,8 +37,13 @@ test("an override is stored relative to Printify, never as absolute corners", as
     assert.ok(route.includes(relative), `${relative} must be part of the override`);
   // The one thing that must never be persisted as an override: final corners.
   const overrides = schema.slice(schema.indexOf("mockupArtworkOverrides"));
-  assert.ok(!/corners/i.test(overrides.slice(0, 1200)),
-    "a design's absolute corners must never be stored as reusable placement");
+  /* D596 - cornerAdjustJson holds a seller's perspective correction as DELTAS
+     from where Printify's placement put the artwork. Absolute corners are what
+     must never appear, because those are meaningless for another design. */
+  assert.ok(!/cornersJson|corners_json/.test(overrides.slice(0, 1600)),
+    "a design's absolute corners must never be stored as an override");
+  assert.match(overrides.slice(0, 1600), /cornerAdjustJson/,
+    "a perspective correction is stored, but only as a relative adjustment");
 });
 
 test("background preparation cannot overwrite an improved scene", async () => {

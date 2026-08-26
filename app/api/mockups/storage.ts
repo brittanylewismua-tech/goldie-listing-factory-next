@@ -15,6 +15,14 @@ export async function ensureMockupStorage(){
     env.DB.prepare(`CREATE TABLE IF NOT EXISTS mockup_artwork_overrides (id text PRIMARY KEY NOT NULL,user_id text NOT NULL,listing_id text NOT NULL,design_key text NOT NULL,scene_id text NOT NULL,offset_u text DEFAULT '0' NOT NULL,offset_v text DEFAULT '0' NOT NULL,scale_multiplier text DEFAULT '1' NOT NULL,rotation text DEFAULT '0' NOT NULL,skew_x text DEFAULT '0' NOT NULL,skew_y text DEFAULT '0' NOT NULL,flip_x integer DEFAULT 0 NOT NULL,flip_y integer DEFAULT 0 NOT NULL,opacity text DEFAULT '1' NOT NULL,updated_at text DEFAULT CURRENT_TIMESTAMP NOT NULL)`),
     env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_artwork_override_listing ON mockup_artwork_overrides (user_id,listing_id,design_key)`),
   ]);
+  /* D596 - added to the override after the table shipped. */
+  for (const column of [
+    `ALTER TABLE mockup_artwork_overrides ADD COLUMN batch_id text NOT NULL DEFAULT ''`,
+    `ALTER TABLE mockup_artwork_overrides ADD COLUMN corner_adjust_json text`,
+    `ALTER TABLE mockup_artwork_overrides ADD COLUMN blend_mode text`,
+    `ALTER TABLE mockup_artwork_overrides ADD COLUMN fabric_strength text`,
+    `ALTER TABLE mockup_artwork_overrides ADD COLUMN curvature text`,
+  ]) await env.DB.prepare(column).run().catch(() => undefined);
   /* D573 - the scene placement contract. CREATE TABLE IF NOT EXISTS above will
      not add columns to a table that already exists, so these run separately and
      each one is allowed to fail: on a database that already has the column, D1

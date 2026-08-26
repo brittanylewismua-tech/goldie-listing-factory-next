@@ -4518,7 +4518,7 @@ test("a mug is never offered t-shirt scenes — D529", async () => {
      Gildan Hoodie was offered "white mugs" and none of her ten garment scenes.
      One module answers it now, with its behaviour pinned in
      tests/mockup-compatibility.test.mjs. */
-  assert.match(src, /import \{ productAcceptsMockup \} from "\.\/mockup-compatibility"/);
+  assert.match(src, /import \{ productAcceptsMockup, productSurfaceFamily \} from "\.\/mockup-compatibility"/);
   assert.ok(!/function compatibleTemplate\(/.test(src), "no second copy of the rule");
 
   // Reproduce the rule here so a future edit cannot quietly widen it again.

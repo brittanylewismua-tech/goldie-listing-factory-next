@@ -49,3 +49,4 @@
 .sceneEditor .close{border:0;background:transparent;font-size:1.5rem;line-height:1;cursor:pointer;color:#6b6257;padding:0 4px}
 /* the control column scrolls on its own so the footer is always reachable */
 .sceneEditorControls{overflow-y:auto;max-height:100%}
+.sceneEditorError{margin:0 22px 6px;padding:9px 12px;border-radius:10px;background:#fdecec;border:1px solid #f0c9c9;color:#8a3d3d;font-size:.84rem}

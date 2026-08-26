@@ -289,6 +289,9 @@ export const mockupSceneGeometry = sqliteTable("mockup_scene_geometry", {
 export const mockupArtworkOverrides = sqliteTable("mockup_artwork_overrides", {
   id: text("id").primaryKey(),
   userId: text("user_id").notNull(),
+  /* D596 - the batch this listing belongs to, so an override can be scoped and
+     cleaned up with its batch. */
+  batchId: text("batch_id").notNull().default(""),
   listingId: text("listing_id").notNull(),
   designKey: text("design_key").notNull(),
   sceneId: text("scene_id").notNull(),
@@ -301,5 +304,14 @@ export const mockupArtworkOverrides = sqliteTable("mockup_artwork_overrides", {
   flipX: integer("flip_x").notNull().default(0),
   flipY: integer("flip_y").notNull().default(0),
   opacity: text("opacity").notNull().default("1"),
+  /* D596 - a seller's perspective correction for THIS design, stored as deltas
+     from where Printify's placement put the artwork, never as absolute corners. */
+  cornerAdjustJson: text("corner_adjust_json"),
+  /* Rendering settings a seller changed for this listing only. Null means "use
+     the scene's own setting", which is what makes these listing-specific rather
+     than quietly becoming scene facts. */
+  blendMode: text("blend_mode"),
+  fabricStrength: text("fabric_strength"),
+  curvature: text("curvature"),
   updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 }, (table) => [index("idx_artwork_override_listing").on(table.userId, table.listingId, table.designKey)]);

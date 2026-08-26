@@ -42,6 +42,7 @@ async function handleGET(request: NextRequest) {
   const sceneId = url.searchParams.get("sceneId") || "";
   const listingId = url.searchParams.get("listingId") || "";
   const designKey = url.searchParams.get("designKey") || "";
+  const batchId = url.searchParams.get("batchId") || "";
   const productFamily = url.searchParams.get("productFamily") || "";
   const printSide = url.searchParams.get("printSide") || "front";
   const blueprintId = url.searchParams.get("blueprintId");
@@ -74,12 +75,17 @@ async function handleGET(request: NextRequest) {
       origin: geometry.origin, updatedAt: geometry.updatedAt,
     } : null,
     override: override ? {
-      sceneId: override.sceneId, listingId: override.listingId,
+      sceneId: override.sceneId, listingId: override.listingId, batchId: override.batchId,
       offsetU: num(override.offsetU), offsetV: num(override.offsetV),
       scaleMultiplier: num(override.scaleMultiplier, 1), rotation: num(override.rotation),
       skewX: num(override.skewX), skewY: num(override.skewY),
       flipX: Boolean(override.flipX), flipY: Boolean(override.flipY),
-      opacity: num(override.opacity, 1), updatedAt: override.updatedAt,
+      opacity: num(override.opacity, 1),
+      cornerAdjust: override.cornerAdjustJson ? JSON.parse(override.cornerAdjustJson) : undefined,
+      blendMode: override.blendMode ?? undefined,
+      fabricStrength: override.fabricStrength === null ? undefined : num(override.fabricStrength),
+      curvature: override.curvature === null ? undefined : num(override.curvature),
+      updatedAt: override.updatedAt,
     } : null,
   });
 }
@@ -94,7 +100,7 @@ async function handlePUT(request: NextRequest) {
   await ensureMockupStorage();
   const body = await request.json() as {
     geometry?: Record<string, unknown> & { sceneId?: string; origin?: string };
-    override?: Record<string, unknown> & { sceneId?: string; listingId?: string; designKey?: string };
+    override?: Record<string, unknown> & { sceneId?: string; listingId?: string; designKey?: string; batchId?: string };
   };
   const db = getDb(), now = new Date().toISOString();
 
@@ -133,12 +139,21 @@ async function handlePUT(request: NextRequest) {
     const o = body.override as Record<string, unknown> & { sceneId: string; listingId: string; designKey: string };
     const row = {
       id: overrideKey(user.userId, o.listingId, o.designKey, o.sceneId),
-      userId: user.userId, listingId: o.listingId, designKey: o.designKey, sceneId: o.sceneId,
+      userId: user.userId, batchId: String(o.batchId || ""),
+      listingId: o.listingId, designKey: o.designKey, sceneId: o.sceneId,
       offsetU: String(num(o.offsetU)), offsetV: String(num(o.offsetV)),
       scaleMultiplier: String(num(o.scaleMultiplier, 1)), rotation: String(num(o.rotation)),
       skewX: String(num(o.skewX)), skewY: String(num(o.skewY)),
       flipX: o.flipX ? 1 : 0, flipY: o.flipY ? 1 : 0,
-      opacity: String(num(o.opacity, 1)), updatedAt: now,
+      opacity: String(num(o.opacity, 1)),
+      cornerAdjustJson: o.cornerAdjust ? JSON.stringify(o.cornerAdjust) : null,
+      /* Null means "use the scene's setting". Only a value the seller actually
+         changed for this listing is stored, so these cannot drift into becoming
+         facts about the photograph. */
+      blendMode: o.blendMode === undefined ? null : String(o.blendMode),
+      fabricStrength: o.fabricStrength === undefined ? null : String(num(o.fabricStrength)),
+      curvature: o.curvature === undefined ? null : String(num(o.curvature)),
+      updatedAt: now,
     };
     await db.insert(mockupArtworkOverrides).values(row).onConflictDoUpdate({ target: mockupArtworkOverrides.id, set: row });
   }

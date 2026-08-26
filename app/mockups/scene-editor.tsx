@@ -45,6 +45,10 @@ export type SceneEditorProps = {
   automatic: PlacementTransform;
   foregroundUrl?: string | null;
   hasNext?: boolean;
+  /* D596 - what a persisted record is keyed by. The editor never invents these;
+     they come from the listing it was opened on. */
+  persistedAt?: string | null;
+  hasNext2?: never;
   /* `improveScene` is the seller explicitly saying this correction is about the
      PHOTOGRAPH rather than about this one design. Without it, the correction
      stays attached to this listing and no other design inherits it. */
@@ -134,12 +138,23 @@ export default function SceneEditor(props: SceneEditorProps) {
     restored.current = true;
     try {
       const saved = window.sessionStorage.getItem(draftKey);
-      if (saved) setTransform(JSON.parse(saved) as PlacementTransform);
+      if (!saved) return;
+      const draft = JSON.parse(saved) as PlacementTransform & { savedAt?: string };
+      /* D596 - an old tab must not undo newer database data. The draft carries
+         when it was written; if the persisted record is newer, the database
+         wins and the stale draft is discarded. */
+      const persisted = props.persistedAt ? Date.parse(props.persistedAt) : 0;
+      const drafted = draft.savedAt ? Date.parse(draft.savedAt) : 0;
+      if (persisted && drafted && persisted > drafted) {
+        window.sessionStorage.removeItem(draftKey);
+        return;
+      }
+      setTransform(draft);
     } catch { /* nothing recoverable */ }
-  }, [draftKey]);
+  }, [draftKey, props.persistedAt]);
   useEffect(() => {
     if (!restored.current) return;
-    try { window.sessionStorage.setItem(draftKey, JSON.stringify(transform)); } catch { /* private mode */ }
+    try { window.sessionStorage.setItem(draftKey, JSON.stringify({ ...transform, savedAt: new Date().toISOString() })); } catch { /* private mode */ }
   }, [draftKey, transform]);
 
   /* And Cancel must genuinely discard, rather than leaving a draft behind that
@@ -179,18 +194,30 @@ export default function SceneEditor(props: SceneEditorProps) {
     change({ corners: transform.corners.map(([x, y]) => [cx + (x - cx) * factor, cy + (y - cy) * factor] as NormalizedPoint) as Quad });
   };
 
+  /* D596 - Save waits for the durable write. Before this it exported, cleared the
+     local draft and closed, so a failed database write looked exactly like a
+     success and the seller's correction was gone. Now: export, hand to the
+     caller, and only clear the draft once the caller's promise resolves. If it
+     rejects the editor stays open, the draft is intact, and the seller is told. */
+  const [saveError, setSaveError] = useState("");
   async function runSave(next?: boolean) {
     if (!photo || !artwork) return;
     setSaving(next ? "Saving…" : "Saving…");
+    setSaveError("");
     try {
       const blob = await exportComposite({
         photo: Object.assign(photo, { width: photo.naturalWidth, height: photo.naturalHeight }),
         artwork: Object.assign(artwork, { width: artwork.naturalWidth, height: artwork.naturalHeight }),
         transform, mode: props.mode, foreground,
       });
-      try { window.sessionStorage.removeItem(draftKey); } catch { /* ignore */ }
       if (next && props.onSaveNext) await props.onSaveNext(transform, blob, improveScene);
       else await props.onSave(transform, blob, improveScene);
+      // Only now is the work durable, so only now may the local copy go.
+      try { window.sessionStorage.removeItem(draftKey); } catch { /* ignore */ }
+    } catch (error) {
+      setSaveError(error instanceof Error
+        ? `${error.message} Your changes are still here - try saving again.`
+        : "That did not save. Your changes are still here - try saving again.");
     } finally { setSaving(""); }
   }
 
@@ -311,6 +338,7 @@ export default function SceneEditor(props: SceneEditorProps) {
           </aside>
         </div>
 
+        {saveError && <p className="sceneEditorError" role="alert">{saveError}</p>}
         <footer className="sceneEditorActions">
           <label className="improveScene" title="Only the way this photo works is remembered - never this design's size or position.">
             <input type="checkbox" checked={improveScene} onChange={e => setImproveScene(e.target.checked)} />
