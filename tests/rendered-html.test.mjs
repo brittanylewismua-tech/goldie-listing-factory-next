@@ -5194,3 +5194,17 @@ test("the Printify picker is grouped by view, not a wall of 96 — D569", async 
      labelled only "Front". */
   assert.doesNotMatch(app, /selectedColorIds\[Math\.floor/);
 });
+
+test("the grouped picker lays out as a grid, not a column — D570", async () => {
+  const css = await readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8");
+
+  /* D569 shipped broken and I found it on the page: eight tiles stacked in a
+     single 91px column running down the whole screen. The flat grid never carried
+     its own layout - it borrowed one from a parent selector - so wrapping it in a
+     group left the tiles in one cell, and the group itself inherited a
+     display:grid from elsewhere. Both are stated outright now rather than
+     depending on what a parent happens to say. */
+  assert.match(css, /\.app-shell \.printify-view-group\{display:block!important\}/);
+  assert.match(css, /\.app-shell \.printify-view-group>\.printify-image-grid\{[\s\S]{0,200}display:grid!important/);
+  assert.match(css, /grid-template-columns:repeat\(auto-fill,minmax\(84px,1fr\)\)!important/);
+});

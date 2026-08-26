@@ -3045,3 +3045,16 @@ body{min-width:1180px!important}
 .app-shell .printify-view-group{margin:0 0 14px}
 .app-shell .printify-view-heading{display:flex;align-items:baseline;gap:8px;margin:0 0 6px;font:800 .7rem/1.2 "Manrope",system-ui,sans-serif;color:#5b304f;letter-spacing:.05em;text-transform:uppercase}
 .app-shell .printify-view-heading span{font-size:.62rem;font-weight:600;letter-spacing:.02em;text-transform:none;color:#8b6f83}
+
+/* D570 - D569's grouping shipped broken and I caught it on the page: the group
+   picked up a display:grid from an inherited rule and the tile grid landed in a
+   91px cell, so eight tiles stacked in one narrow column down the whole screen.
+   The old flat grid never carried its own layout - it borrowed one from a parent
+   selector, which is exactly why wrapping it broke it. Both are explicit now. */
+.app-shell .printify-view-group{display:block!important}
+.app-shell .printify-view-group>.printify-image-grid{
+  display:grid!important;
+  grid-template-columns:repeat(auto-fill,minmax(84px,1fr))!important;
+  gap:8px!important;
+  width:100%!important;
+}
