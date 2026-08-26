@@ -77,6 +77,8 @@ test("a failed reading never overwrites corners that were measured", async () =>
      43.5% x 48.5% region to 35.3% x 33.6%. A failure to read the photograph is
      not new information about it. */
   assert.match(route, /const keepCorners = Boolean\(preparation\.derived\) && measuredAlready/);
+  assert.match(route, /preparationJson: JSON\.stringify\(kept\)/,
+    "the protected corners must be the preparation that is cached, not only the response");
   assert.match(route, /\.\.\.\(keepCorners \? \{\} : \{ cornersJson: JSON\.stringify\(preparation\.corners\) \}\)/);
 });
 
@@ -97,7 +99,7 @@ test("a validated print area survives every optional enrichment failing", async 
      failed". Those masks and the depth map are stored and never read by the
      renderer at all. Geometry is the only required output. */
   assert.match(route, /const optional = async <T>\(task: \(\) => Promise<T>\)/);
-  assert.match(route, /optional\(\(\) => falJson\("fal-ai\/sam-3\/image"/,
+  assert.match(route, /optional\(\(\) => detectProduct\(imageUrl, productName, key\)\)/,
     "the surface mask must not be able to discard a validated reading");
   assert.match(route, /optional\(\(\) => falJson\("fal-ai\/image-preprocessors\/depth-anything\/v2"/,
     "nor the depth map");

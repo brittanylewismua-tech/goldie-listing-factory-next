@@ -8,7 +8,7 @@ import type { PrintSide } from "../placement-math.ts";
    Bumping this invalidates them and re-reads each scene the next time it is
    used - which is exactly the migration path that already exists and cannot
    fail. */
-export const SCENE_PREPARATION_VERSION = 2;
+export const SCENE_PREPARATION_VERSION = 3;
 
 export type SceneGeometry = "flat" | "perspective" | "cylindrical" | "flexible" | "irregular";
 export type NormalizedPoint = [number, number];
@@ -19,6 +19,8 @@ export type ScenePreparation = {
   geometry: SceneGeometry;
   printSide: PrintSide;
   corners: [NormalizedPoint, NormalizedPoint, NormalizedPoint, NormalizedPoint];
+  productBox?: ProductBox;
+  productBoundsVerified?: boolean;
   occluded: boolean;
   surfaceMaskKey?: string;
   occlusionKey?: string;
@@ -36,8 +38,34 @@ function finiteFraction(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value) && value >= -.05 && value <= 1.05;
 }
 
-export function normalizeSceneAnalysis(value: unknown, productName: string) {
-  const candidate = value as { corners?: unknown; side?: unknown; geometry?: unknown; occluded?: unknown };
+export function normalizedProductBox(value: unknown): ProductBox | null {
+  const candidate = value as Partial<ProductBox> | null | undefined;
+  if (!candidate || !finiteFraction(candidate.left) || !finiteFraction(candidate.top)
+    || !finiteFraction(candidate.right) || !finiteFraction(candidate.bottom)) return null;
+  const box = {
+    left: Math.max(0, candidate.left), top: Math.max(0, candidate.top),
+    right: Math.min(1, candidate.right), bottom: Math.min(1, candidate.bottom),
+  };
+  if (box.right - box.left < .08 || box.bottom - box.top < .08) return null;
+  return box;
+}
+
+export function boxFromCxCyWh(value: unknown): ProductBox | null {
+  if (!Array.isArray(value) || value.length < 4 || !value.slice(0, 4).every(finiteFraction)) return null;
+  const [cx, cy, width, height] = value as number[];
+  return normalizedProductBox({ left: cx - width / 2, top: cy - height / 2, right: cx + width / 2, bottom: cy + height / 2 });
+}
+
+export function cornersStayOnProduct(corners: ScenePreparation["corners"], box: ProductBox, tolerance = .015) {
+  const inside = ([x, y]: NormalizedPoint) => x >= box.left - tolerance && x <= box.right + tolerance
+    && y >= box.top - tolerance && y <= box.bottom + tolerance;
+  if (!corners.every(inside)) return false;
+  const centre: NormalizedPoint = [corners.reduce((sum, point) => sum + point[0], 0) / 4, corners.reduce((sum, point) => sum + point[1], 0) / 4];
+  return inside(centre);
+}
+
+export function normalizeSceneAnalysis(value: unknown, productName: string, detectedProductBox?: ProductBox | null) {
+  const candidate = value as { corners?: unknown; productBox?: unknown; side?: unknown; geometry?: unknown; occluded?: unknown };
   if (!Array.isArray(candidate?.corners) || candidate.corners.length !== 4) return null;
   if (!candidate.corners.every(point => Array.isArray(point) && point.length === 2 && finiteFraction(point[0]) && finiteFraction(point[1]))) return null;
   const corners = candidate.corners.map(point => [Math.min(1, Math.max(0, point[0])), Math.min(1, Math.max(0, point[1]))] as NormalizedPoint) as ScenePreparation["corners"];
@@ -47,15 +75,18 @@ export function normalizeSceneAnalysis(value: unknown, productName: string) {
   if (width < bounds.minWidth || width > bounds.maxWidth || height < bounds.minHeight || height > bounds.maxHeight) return null;
   if (centreY < bounds.minCentreY || centreY > bounds.maxCentreY) return null;
   if ((width / Math.max(.001, height)) > bounds.maxRatio || (height / Math.max(.001, width)) > bounds.maxRatio) return null;
+  const productBox = detectedProductBox || normalizedProductBox(candidate.productBox);
+  if (!productBox || !cornersStayOnProduct(corners, productBox)) return null;
   const side = sides.has(candidate.side as PrintSide) ? candidate.side as PrintSide : "front";
   const family = productSurfaceFamily(productName);
   const fallbackGeometry: SceneGeometry = family === "curved" ? "cylindrical" : family === "apparel" ? "flexible" : "perspective";
   const geometry = geometries.has(candidate.geometry as SceneGeometry) ? candidate.geometry as SceneGeometry : fallbackGeometry;
-  return { corners, side, geometry, occluded: Boolean(candidate.occluded) };
+  return { corners, productBox, productBoundsVerified: true, side, geometry, occluded: Boolean(candidate.occluded), derived: false };
 }
 
 export function preparationMatchesProduct(preparation: ScenePreparation | null | undefined, productName: string) {
   if (!preparation || preparation.version !== SCENE_PREPARATION_VERSION || preparation.status !== "ready") return false;
+  if (!preparation.productBoundsVerified) return false;
   const family = productSurfaceFamily(productName);
   return !preparation.productFamily || !family || preparation.productFamily === family;
 }
@@ -65,11 +96,11 @@ export function sceneAnalysisPrompt(productName: string) {
 
 Identify the visible PRINTABLE SURFACE, not the whole object. Preserve the product and camera perspective. A garment may be front, back, sleeve, pocket-scale, oversized, folded or partly covered. A mug or tumbler is cylindrical and excludes its handle. A poster, card, case, tote, pillow, blanket or other product uses the visible printable face.
 
-Return four corners of the complete Printify print area as it appears in this photograph, ordered top-left, top-right, bottom-right, bottom-left. Use fractions from 0 to 1. Do not choose a default centre box.
+First identify the complete visible product boundary as productBox: left, top, right and bottom. Then return four corners of the complete Printify print area as it appears in this photograph, inside that product, ordered top-left, top-right, bottom-right, bottom-left. Use fractions from 0 to 1. Every print-area corner and its centre must stay inside productBox. Do not choose a default centre box. A hoodie print area stays above the pouch pocket. A mug print area stays below the rim and excludes the handle.
 
 Classify geometry as flat, perspective, cylindrical, flexible or irregular. Classify the visible print side as front, back, left-sleeve, right-sleeve, wrap or other. Set occluded true when a hood, hair, hand, arm, strap, seam flap or another foreground object crosses the printable surface.
 
-Return only compact JSON: {"corners":[[x,y],[x,y],[x,y],[x,y]],"side":"front","geometry":"flexible","occluded":true}`;
+Return only compact JSON: {"productBox":{"left":0.1,"top":0.1,"right":0.9,"bottom":0.9},"corners":[[x,y],[x,y],[x,y],[x,y]],"side":"front","geometry":"flexible","occluded":true}`;
 }
 
 /* D577 - preparation always terminates in a ready scene.
@@ -131,6 +162,8 @@ export function computedPreparation(productName: string, productBox?: ProductBox
     geometry: family === "curved" ? "cylindrical" : family === "apparel" ? "flexible" : "perspective",
     printSide: side && sides.has(side) ? side : "front",
     corners: computedSceneCorners(productName, productBox),
+    productBox: normalizedProductBox(productBox) || undefined,
+    productBoundsVerified: Boolean(normalizedProductBox(productBox)),
     occluded: false,
     derived: true,
     preparedAt: new Date().toISOString(),

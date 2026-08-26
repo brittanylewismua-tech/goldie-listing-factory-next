@@ -8,11 +8,14 @@ import { productSurfaceFamily } from "@/app/mockup-compatibility";
 import { ensureMockupStorage } from "@/app/api/mockups/storage";
 import {
   normalizeSceneAnalysis,
+  normalizedProductBox,
+  boxFromCxCyWh,
   computedPreparation,
   preparationMatchesProduct,
   SCENE_PREPARATION_VERSION,
   sceneAnalysisPrompt,
   type ScenePreparation,
+  type ProductBox,
 } from "@/app/mockups/prepared-scene";
 import { withErrorLog } from "@/app/error-log";
 
@@ -56,7 +59,7 @@ async function storeRemoteAsset(url: string | undefined, key: string) {
   return key;
 }
 
-async function analyzeGeometry(imageUrl: string, productName: string, key: string) {
+async function analyzeGeometry(imageUrl: string, productName: string, key: string, detectedProductBox?: ProductBox | null) {
   const payload = await falJson("openrouter/router/vision", key, {
     image_urls: [imageUrl],
     model: "google/gemini-2.5-flash",
@@ -65,17 +68,71 @@ async function analyzeGeometry(imageUrl: string, productName: string, key: strin
     prompt: sceneAnalysisPrompt(productName),
   });
   const match = String(payload.output || "").match(/\{[\s\S]*\}/);
-  if (!match) return null;
-  try { return normalizeSceneAnalysis(JSON.parse(match[0]), productName); } catch { return null; }
+  if (!match) return { geometry: null, productBox: detectedProductBox || null };
+  try {
+    const value = JSON.parse(match[0]) as { productBox?: unknown };
+    const productBox = detectedProductBox || normalizedProductBox(value.productBox);
+    return { geometry: normalizeSceneAnalysis(value, productName, productBox), productBox };
+  } catch { return { geometry: null, productBox: detectedProductBox || null }; }
+}
+
+function segmentationPrompts(productName: string) {
+  const name = productName.toLowerCase();
+  if (/hood/.test(name)) return ["hoodie", "garment"];
+  if (/sweatshirt|crewneck|sweater/.test(name)) return ["sweatshirt", "garment"];
+  if (/tee|t-shirt|shirt/.test(name)) return ["t-shirt", "garment"];
+  if (/tank/.test(name)) return ["tank top", "garment"];
+  if (/mug/.test(name)) return ["mug body", "mug"];
+  if (/tumbler/.test(name)) return ["tumbler body", "tumbler"];
+  if (/bottle/.test(name)) return ["bottle body", "bottle"];
+  if (/phone.*case|case.*phone/.test(name)) return ["phone case"];
+  if (/poster|canvas|print|card/.test(name)) return ["printed product"];
+  return productSurfaceFamily(productName) === "apparel" ? ["garment"] : ["product"];
+}
+
+type SegmentationResult = { productBox: ProductBox | null; maskUrl?: string };
+
+function segmentationResult(payload: Record<string, unknown>): SegmentationResult {
+  const metadata = payload.metadata as Array<{ box?: unknown; score?: number }> | undefined;
+  const boxes = payload.boxes as unknown[] | undefined;
+  const masks = payload.masks as Array<{ url?: string }> | undefined;
+  const image = payload.image as { url?: string } | undefined;
+  const ranked = (metadata || []).map((item, index) => ({
+    box: boxFromCxCyWh(item.box), score: Number.isFinite(item.score) ? Number(item.score) : 0, index,
+  })).filter(item => item.box).sort((a, b) => b.score - a.score);
+  const selected = ranked[0];
+  const productBox = selected?.box || boxFromCxCyWh(boxes?.[0]) || null;
+  const maskUrl = masks?.[selected?.index ?? 0]?.url || masks?.[0]?.url || image?.url;
+  return { productBox, maskUrl };
+}
+
+async function detectProduct(imageUrl: string, productName: string, key: string): Promise<SegmentationResult> {
+  let last: SegmentationResult = { productBox: null };
+  for (const prompt of segmentationPrompts(productName)) {
+    const payload = await falJson("fal-ai/sam-3/image", key, {
+      image_url: imageUrl, prompt, apply_mask: true, sync_mode: false,
+      return_multiple_masks: false, max_masks: 1, include_scores: true, include_boxes: true, output_format: "png",
+    });
+    last = segmentationResult(payload);
+    if (last.productBox) return last;
+  }
+  return last;
 }
 
 async function prepareOnce(imageUrl: string, productName: string, key: string, objectPrefix: string) {
-  const geometry = await analyzeGeometry(imageUrl, productName, key);
-  if (!geometry) throw new Error("Scene geometry did not pass automatic validation.");
+  const optional = async <T>(task: () => Promise<T>): Promise<T | undefined> => {
+    try { return await task(); } catch { return undefined; }
+  };
+  const segmentation = await optional(() => detectProduct(imageUrl, productName, key));
+  const reading = await analyzeGeometry(imageUrl, productName, key, segmentation?.productBox);
+  const productBox = segmentation?.productBox || reading.productBox;
+  if (!productBox) throw new Error("The product boundary could not be verified.");
+  const computed = computedPreparation(productName, productBox);
+  const geometry = reading.geometry || {
+    corners: computed.corners, productBox, productBoundsVerified: true,
+    side: computed.printSide, geometry: computed.geometry, occluded: false, derived: true,
+  };
 
-  const surfacePrompt = productSurfaceFamily(productName) === "apparel"
-    ? "the visible garment fabric panel where printing can occur"
-    : "the visible printable product surface, excluding handles, frames and background";
   /* D580 - the geometry above is the only thing this function must produce. It
      is what becomes the print area, and it is validated before it is accepted.
      Everything below is enrichment, and none of it may cost us a good reading.
@@ -87,15 +144,7 @@ async function prepareOnce(imageUrl: string, productName: string, key: string, o
      then never read by the renderer at all - rigid() uses the corners and, if
      present, the occlusion layer. Discarding a validated print area because an
      unread asset did not arrive is indefensible. */
-  const optional = async <T>(task: () => Promise<T>): Promise<T | undefined> => {
-    try { return await task(); } catch { return undefined; }
-  };
-
-  const surface = await optional(() => falJson("fal-ai/sam-3/image", key, {
-    image_url: imageUrl, prompt: surfacePrompt, apply_mask: true,
-    return_multiple_masks: false, max_masks: 1, include_scores: true, include_boxes: true, output_format: "png",
-  }));
-  const surfaceMaskUrl = (surface?.masks as Array<{ url?: string }> | undefined)?.[0]?.url;
+  const surfaceMaskUrl = segmentation?.maskUrl;
 
   const depth = await optional(() => falJson("fal-ai/image-preprocessors/depth-anything/v2", key, { image_url: imageUrl }));
   const depthUrl = (depth?.image as { url?: string } | undefined)?.url;
@@ -121,7 +170,7 @@ async function prepareOnce(imageUrl: string, productName: string, key: string, o
     optional(() => storeRemoteAsset(depthUrl, `${objectPrefix}/depth.png`)),
     optional(() => storeRemoteAsset(occlusionUrl, `${objectPrefix}/occlusion.png`)),
   ]);
-  return { ...geometry, surfaceMaskKey, depthKey, occlusionKey };
+  return { ...geometry, productBox, surfaceMaskKey, depthKey, occlusionKey };
 }
 
 async function handlePOST(request: NextRequest, context: { params: Promise<{ id: string }> }) {
@@ -148,16 +197,16 @@ async function handlePOST(request: NextRequest, context: { params: Promise<{ id:
        must not be treated as if it were. */
     const measuredAlready = !isPlaceholderCorners(row.cornersJson);
     const keepCorners = Boolean(preparation.derived) && measuredAlready;
+    const kept = keepCorners
+      ? { ...preparation, corners: JSON.parse(row.cornersJson) as ScenePreparation["corners"], productBoundsVerified: true, keptExisting: true }
+      : preparation;
     await getDb().update(mockupTemplates).set({
       ...(keepCorners ? {} : { cornersJson: JSON.stringify(preparation.corners) }),
       printSide: preparation.printSide, quadMeans: "print-area",
       occlusionKey: preparation.occlusionKey || null, occlusionConfirmed: 1,
-      preparationStatus: "ready", preparationJson: JSON.stringify(preparation), preparationError: reason,
+      preparationStatus: "ready", preparationJson: JSON.stringify(kept), preparationError: reason,
       preparationAttempts: attempt, updatedAt: new Date().toISOString(),
     }).where(and(eq(mockupTemplates.id, id), eq(mockupTemplates.userId, user.userId)));
-    const kept = keepCorners
-      ? { ...preparation, corners: JSON.parse(row.cornersJson) as ScenePreparation["corners"], keptExisting: true }
-      : preparation;
     return NextResponse.json({ preparation: kept, cached: false });
   };
 
@@ -182,6 +231,7 @@ async function handlePOST(request: NextRequest, context: { params: Promise<{ id:
       const preparation: ScenePreparation = {
         version: SCENE_PREPARATION_VERSION, status: "ready", productFamily: productSurfaceFamily(productName),
         geometry: result.geometry, printSide: result.side, corners: result.corners, occluded: result.occluded,
+        productBox: result.productBox, productBoundsVerified: true, derived: result.derived,
         surfaceMaskKey: result.surfaceMaskKey, depthKey: result.depthKey, occlusionKey: result.occlusionKey,
         preparedAt: new Date().toISOString(),
       };
