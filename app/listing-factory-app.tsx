@@ -3113,7 +3113,14 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
                  four rows visible, they pick where to begin. */
               const defaultOpenFacets:string[]=[];
               const openList=openFacet[recipe.id]??defaultOpenFacets;
-          const isOpen=(name:string)=>openList.includes(name);const toggle=(name:string)=>setOpenFacet(current=>{const list=current[recipe.id]??defaultOpenFacets;return {...current,[recipe.id]:list.includes(name)?list.filter(item=>item!==name):[...list,name]}});
+          const isOpen=(name:string)=>openList.includes(name);
+          /* D564 - step 1 was the only step that stacked. Measured on her bundle:
+             the card is 313px shut, and opening Colors, Sizes, Pricing and
+             Shipping in turn took it to 934, 1263, 2289 and 2791px, because every
+             row toggled independently and nothing ever closed. Steps 2, 3 and 4
+             have shown one panel at a time since D539, and this is the first
+             screen she touches. One at a time here too. */
+          const toggle=(name:string)=>setOpenFacet(current=>{const list=current[recipe.id]??defaultOpenFacets;return {...current,[recipe.id]:list.includes(name)?[]:[name]}});
           /* D218 · Every picker used to render after the whole row list, so clicking
              Change on Colours opened the palette below Etsy details and the seller had
              to scroll past six rows to reach the thing they just asked for. The panel

@@ -5079,3 +5079,24 @@ test("a collapsed design row looks like it opens — D563", async () => {
   assert.match(css, /\.app-shell \.final-design-group>summary:focus-visible\{outline/);
   assert.match(css, /prefers-reduced-motion:reduce\)\{\.app-shell \.final-design-group>summary::after\{transition:none\}/);
 });
+
+test("step 1 shows one panel at a time, like every other step — D564", async () => {
+  const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+
+  /* Measured on her bundle, on the first screen she touches: the product card is
+     313px shut, and opening Colors, Sizes, Pricing and Shipping in turn took it
+     to 934, 1263, 2289 and 2791px. Every row toggled independently and nothing
+     ever closed - the same "four screens tall" card D522 fixed for step 2, still
+     sitting on step 1. Steps 2, 3 and 4 have shown one panel at a time since
+     D539. */
+  assert.match(app, /const toggle=\(name:string\)=>setOpenFacet\(current=>\{const list=current\[recipe\.id\]\?\?defaultOpenFacets;return \{\.\.\.current,\[recipe\.id\]:list\.includes\(name\)\?\[\]:\[name\]\}\}\)/);
+  assert.doesNotMatch(app, /list\.filter\(item=>item!==name\):\[\.\.\.list,name\]/,
+    "no row may leave another one open");
+
+  // And it still lands with nothing open.
+  assert.match(app, /const defaultOpenFacets:string\[\]=\[\];/);
+
+  /* The same rule on every step, so "every step works the exact same" holds:
+     steps 2-4 swap the active task, step 1 swaps the open facet. */
+  assert.match(app, /setActiveTask\(current=>current===task\?"":task\)/);
+});
