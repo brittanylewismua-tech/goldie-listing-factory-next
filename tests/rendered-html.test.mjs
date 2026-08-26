@@ -5027,3 +5027,31 @@ test("the number on the button is the number that publishes — D561", async () 
   assert.equal((app.match(/bundlePublishDrafts\(\)/g) || []).length, 3,
     "declared once, used by the review and by publishTargets");
 });
+
+test("the publish review is one collapsed row per design — D562", async () => {
+  const [review, css] = await Promise.all([
+    readFile(new URL("../app/final-listing-review.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8"),
+  ]);
+
+  /* Her words: "the checkbox panel on that last final step should be something
+     that's collapsed. And when you open it, it shows the actual design large at
+     the top ... and then underneath that is every product with that design on it
+     and the checkboxes ... if they're doing a huge batch, that's gonna be a lot of
+     things to scroll through. It's too big."
+
+     Twenty designs across three products was sixty rows open on arrival. */
+  assert.match(review, /<details className="final-design-group" key=\{designName\}><summary>/);
+  assert.doesNotMatch(review, /open=\{groups\.length<=3\|\|attention>0\}/,
+    "nothing opens itself");
+
+  // The artwork, once, at a size worth judging - not a 54px thumbnail.
+  assert.match(review, /const artwork=\(\(\)=>\{/);
+  assert.match(review, /if\(design\?\.previewUrl\)return design\.previewUrl/);
+  assert.match(review, /<div className="final-design-art"><img src=\{artwork\}/);
+  assert.match(css, /\.app-shell \.final-design-art img\{width:min\(320px,70%\)/);
+
+  // Then every product carrying it, each with its checkbox.
+  assert.ok(review.indexOf('className="final-design-art"') < review.indexOf('className="final-listing-grid"'),
+    "the design sits above the products that carry it");
+});

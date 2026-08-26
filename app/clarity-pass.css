@@ -2965,3 +2965,8 @@ body{min-width:1180px!important}
 
 /* D557 - placement carries the same head as every other panel now. */
 .app-shell .task-listing-work .draft-card-top{padding-top:4px}
+
+/* D562 - the design, at a size that is worth looking at, above the products that
+   carry it. A collapsed batch of twenty designs is twenty rows, not sixty. */
+.app-shell .final-design-art{display:flex;justify-content:center;padding:16px 0 12px;border-bottom:1px solid rgba(91,48,79,.1);margin-bottom:12px}
+.app-shell .final-design-art img{width:min(320px,70%);height:auto;max-height:320px;object-fit:contain;border-radius:14px;background:#fff;border:1px solid rgba(91,48,79,.12);padding:10px}
