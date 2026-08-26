@@ -5229,7 +5229,12 @@ test("a scene is measured at the moment it is used — D571", async () => {
      a chest box at high confidence. It was running in the wrong place. */
   assert.match(mockups, /async function calibrateIfNeeded\(list:Template\[\]\)/);
   assert.match(mockups, /const stale=list\.filter\(item=>!isCalibrated\(item\)\)/);
-  assert.match(mockups, /const measured=await calibrateIfNeeded\(chosen\)/);
+  assert.match(mockups, /return \{ready:applied\.filter\(isCalibrated\),unmeasured:applied\.filter\(item=>!isCalibrated\(item\)\)\}/);
+  /* D572 - and a scene it cannot measure is held back rather than rendered
+     against a guess, which is what D571 claimed and did not do. */
+  assert.match(mockups, /const \{ready:measured,unmeasured\}=await calibrateIfNeeded\(chosen\)/);
+  assert.match(mockups, /if\(!measured\.length\)\{setBusy\(false\);setRenderStatus\(""\);return\}/);
+  assert.match(mockups, /Goldie could not work out where the print goes on/);
   assert.match(mockups, /jobs=measured\.map/, "the render uses the measured scenes, not the stale ones");
 
   // The measurement is saved, so it is done once and not on every render.
@@ -5238,4 +5243,26 @@ test("a scene is measured at the moment it is used — D571", async () => {
   // And an unmarked scene says so before she picks it.
   assert.match(mockups, /className="scene-unmeasured"/);
   assert.match(css, /\.app-shell \.scene-unmeasured\{/);
+});
+
+test("an uncertain print area is refused, not saved as truth — D572", async () => {
+  const route = await readFile(new URL("../app/api/mockups/print-area/route.ts", import.meta.url), "utf8");
+
+  /* The review was right on all three counts and one of them was a claim I made
+     that the code did not support.
+
+     1. Validation was purely geometric - four corners, in range, each dimension
+        over 4%, not the whole image. It cannot tell a chest from a hood, a
+        pocket, a sleeve or the model's hair, and the box it accepts is saved once
+        and reused for every future design. */
+  assert.match(route, /const apparel = \/hoodie\|sweatshirt\|shirt\|tee\|apparel\|garment\|crewneck\|tank\/i\.test/);
+  assert.match(route, /apparel && \(width < \.08 \|\| width > \.7\) \? "not-a-chest-print"/);
+  assert.match(route, /apparel && \(centreY < \.12 \|\| centreY > \.8\) \? "outside-the-torso"/);
+  assert.match(route, /if \(rejection\) return NextResponse\.json\(\{ corners: null, reason: rejection \}\)/);
+
+  /* 2. The route reported confidence and both callers ignored it, so a low
+        confidence guess became permanent truth. A model grading its own answer
+        is not proof. */
+  assert.match(route, /if \(parsed\.confidence !== "high"\) return NextResponse\.json\(\{ corners: null, reason: "low-confidence" \}\)/);
+  assert.doesNotMatch(route, /confidence: parsed\.confidence === "high" \? "high" : "low"/);
 });

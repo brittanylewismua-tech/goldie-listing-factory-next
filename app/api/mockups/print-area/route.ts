@@ -70,7 +70,31 @@ Return only {"corners":[[x,y],[x,y],[x,y],[x,y]],"confidence":"high"|"low"}.`;
   if (width < .04 || height < .04) return NextResponse.json({ corners: null, reason: "too-small" });
   if (width > .98 && height > .98) return NextResponse.json({ corners: null, reason: "whole-image" });
 
-  return NextResponse.json({ corners: clamped, confidence: parsed.confidence === "high" ? "high" : "low" });
+  /* D572 - the geometry checks above only prove the box is not absurd. They
+     cannot tell a chest from a hood, a pocket, a sleeve or the model's hair, and
+     a wrong box is saved once and reused for every future design. So the shape
+     of the box is checked against what a print area on this kind of product can
+     actually be, and anything outside that is refused rather than trusted.
+
+     Apparel: a chest print is never the whole torso and never sits at the very
+     top or the very bottom of the frame. Measured across her calibrated scenes,
+     which are known good, every one falls inside these bounds. */
+  const left = Math.min(...clamped.map(p => p[0])), top = Math.min(...clamped.map(p => p[1]));
+  const centreY = top + height / 2;
+  const apparel = /hoodie|sweatshirt|shirt|tee|apparel|garment|crewneck|tank/i.test(String(product || ""));
+  const rejection =
+    width > .9 ? "too-wide" :
+    height > .9 ? "too-tall" :
+    apparel && (width < .08 || width > .7) ? "not-a-chest-print" :
+    apparel && (centreY < .12 || centreY > .8) ? "outside-the-torso" :
+    (width / Math.max(.001, height)) > 6 || (height / Math.max(.001, width)) > 6 ? "degenerate" : "";
+  if (rejection) return NextResponse.json({ corners: null, reason: rejection });
+
+  /* The model grading its own answer is not proof, so "low" is not accepted as a
+     measurement. It is reported, and the scene stays unmeasured until a person
+     marks it. */
+  if (parsed.confidence !== "high") return NextResponse.json({ corners: null, reason: "low-confidence" });
+  return NextResponse.json({ corners: clamped, confidence: "high" });
 }
 
 export const POST = withErrorLog("mockup-print-area", handlePOST);
