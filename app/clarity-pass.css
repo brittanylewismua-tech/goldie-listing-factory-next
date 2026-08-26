@@ -3026,3 +3026,17 @@ body{min-width:1180px!important}
 .app-shell .task-listing-figure img{width:min(260px,60%);height:auto;max-height:260px;object-fit:contain;border-radius:12px;background:#fff;border:1px solid rgba(91,48,79,.12);padding:8px}
 /* D566 - one set chooser; the per-listing blocks name the set they follow. */
 .app-shell .mockup-set-name{font:800 .74rem/1.2 "Manrope",system-ui,sans-serif;color:#6b4560;letter-spacing:.02em}
+
+/* D568 - the product card's own thumbnail does load: measured 2048px, complete,
+   rendered at 34px. It is a white garment photographed on a white studio
+   background, so it reads as an empty box. I tried contain and a tinted plate;
+   both are recorded as already tried and rejected - D192 found contain
+   letterboxed the catalogue frame until the garment was a few pixels tall, and
+   D188 found the plate colour was never the fix. They were right, so this stays
+   as it is.
+
+   Worth stating plainly rather than fixing badly: a blank white garment at 34px
+   will read as an empty box whatever is done to the fit or the backdrop. The two
+   blank squares that WERE bugs are fixed in D567. This one is a small photograph
+   of something white, sitting next to the product's name, and the name is what
+   identifies it. */
