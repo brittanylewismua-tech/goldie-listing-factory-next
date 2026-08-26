@@ -81,3 +81,16 @@
 .calSides .sideChoice.on{background:#3d3730;border-color:#3d3730;color:#fff}
 .calibratorActions .confirmArea{background:#3d3730;color:#fff;border:1px solid #3d3730;border-radius:999px;padding:10px 22px;font-weight:600;cursor:pointer}
 .calibratorActions .confirmArea:hover{background:#2c2721}
+
+/* D573 - the foreground mask editor, and the readiness a scene now declares. */
+.occlusionStage{position:relative;touch-action:none}
+.occlusionStage img{display:block;width:100%}
+.occlusionMask{position:absolute;inset:0;width:100%;height:100%;cursor:crosshair;opacity:.72}
+.occlusionMask.hidden{opacity:0}
+.occlusionTools{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:12px 0}
+.occlusionTools .occTool{border:1px solid #d9d2c6;background:#fff;border-radius:999px;padding:6px 14px;font-size:.86rem;cursor:pointer;color:#4a443c}
+.occlusionTools .occTool.on{background:#3d3730;border-color:#3d3730;color:#fff}
+.occlusionTools .occBrush{display:flex;align-items:center;gap:8px;font-size:.86rem;color:#6b6257}
+.mockChoice .maskArea{margin-top:4px}
+.mockChoice .sceneWarning{display:block;margin-top:6px;font-size:.78rem;color:#8a6a1f;background:#fdf5e2;border:1px solid #eeddb4;border-radius:8px;padding:4px 8px}
+.mockChoice .sceneReady{display:block;margin-top:6px;font-size:.78rem;color:#3f6b45;background:#f0f7f1;border:1px solid #cfe4d3;border-radius:8px;padding:4px 8px}

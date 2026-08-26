@@ -9,4 +9,14 @@ export async function ensureMockupStorage(){
     env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_mockup_render_jobs_user ON mockup_render_jobs (user_id,created_at)`),
     env.DB.prepare(`CREATE TABLE IF NOT EXISTS mockup_set_preferences (user_id text NOT NULL,source_theme text NOT NULL,display_name text NOT NULL,hidden integer DEFAULT 0 NOT NULL,updated_at text DEFAULT CURRENT_TIMESTAMP NOT NULL,PRIMARY KEY (user_id,source_theme))`),
   ]);
+  /* D573 - the scene placement contract. CREATE TABLE IF NOT EXISTS above will
+     not add columns to a table that already exists, so these run separately and
+     each one is allowed to fail: on a database that already has the column, D1
+     raises "duplicate column name" and that is the success case. */
+  for (const column of [
+    `ALTER TABLE mockup_templates ADD COLUMN print_side text NOT NULL DEFAULT 'front'`,
+    `ALTER TABLE mockup_templates ADD COLUMN quad_means text NOT NULL DEFAULT 'garment'`,
+    `ALTER TABLE mockup_templates ADD COLUMN occlusion_key text`,
+    `ALTER TABLE mockup_templates ADD COLUMN occlusion_confirmed integer NOT NULL DEFAULT 0`,
+  ]) await env.DB.prepare(column).run().catch(() => undefined);
 }

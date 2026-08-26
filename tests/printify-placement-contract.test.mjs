@@ -68,3 +68,22 @@ const scene = (printSide, extra = {}) => ({ printSide, ...extra });
     "an unconfirmed garment quad cannot carry Printify's scale and must refuse");
 }
 console.log("printify placement contract ok");
+
+// D573 - legacy scenes are classified, not assumed. "Different from the
+// placeholder" was never evidence that a quad could be trusted.
+{
+  const { sceneStatus, isPlaceholderQuad } = await import("../app/mockups/placement-contract.ts");
+  const placeholder = [[.15,.12],[.85,.12],[.85,.88],[.15,.88]];
+  const marked = [[.3,.2],[.7,.2],[.7,.6],[.3,.6]];
+  assert.equal(isPlaceholderQuad(placeholder), true);
+  assert.equal(isPlaceholderQuad(marked), false);
+  assert.equal(sceneStatus({ corners: placeholder }), "needs-marking",
+    "the placeholder box must never count as calibrated");
+  assert.equal(sceneStatus({ corners: marked, quadMeans: "garment" }), "needs-review",
+    "a quad from before the contract has no recorded meaning and must be checked");
+  assert.equal(sceneStatus({ corners: marked, quadMeans: "print-area", printSide: "back" }), "needs-foreground",
+    "a back view without a confirmed hood mask is not ready");
+  assert.equal(sceneStatus({ corners: marked, quadMeans: "print-area", printSide: "back", occlusionConfirmed: true }), "ready");
+  assert.equal(sceneStatus({ corners: marked, quadMeans: "print-area", printSide: "front" }), "ready");
+}
+console.log("scene classification ok");

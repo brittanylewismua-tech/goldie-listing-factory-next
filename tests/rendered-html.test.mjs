@@ -2703,7 +2703,10 @@ test("the lifestyle mockup mirrors the Printify template placement, whatever the
   // against the padded canvas, so trimming there too would enlarge art twice.
   // D573 - the adjustment is resolved first now, because it can refuse.
   assert.match(integrated, /const exact=placementAdjustment\(placement,template\.surfaceKind\|\|"rigid-flat","print-area"\)/);
-  assert.match(integrated, /if\(exact\)return rigid\(design,template,exact\)/);
+  assert.match(integrated, /if\(exact\)\{const began=Date\.now\(\)/);
+  assert.match(integrated, /const made=await rigid\(design,template,exact\)/);
+  // D573 - and it records what it did, so a wrong mockup can be explained.
+  assert.match(integrated, /source:"printify"/);
 
   // Measured on the live site: in the Printify preview the artwork is ~27% of
   // the shirt width; rendering at the template's own scale of 1 gave ~60%.

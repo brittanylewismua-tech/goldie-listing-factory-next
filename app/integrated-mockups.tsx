@@ -7,14 +7,14 @@ import { safeImagePreviewDataUrl } from "./client-image-preview";
 import { runBounded } from "./bounded-work";
 import { isCalibratedQuad } from "./mockups/calibration";
 import type { ResolvedPlacement, PrintSide } from "./placement-math";
-import { placementAdjustment, sceneAcceptsSide, sceneNeedsOcclusion, type QuadMeaning } from "./mockups/placement-contract";
+import { placementAdjustment, sceneAcceptsSide, sceneNeedsOcclusion, recordRender, type QuadMeaning } from "./mockups/placement-contract";
 import type { ArtworkBounds } from "./design-artwork";
 import { measureReference, productBoxInScene, derivedPlacement, placementInFace, type ProductBox, type ReferenceFit } from "./mockups/reference-placement";
 
 type Point=[number,number]; type SurfaceKind="rigid-flat"|"t-shirt"|"sweatshirt"|"hoodie"|"other-apparel"|"apparel"|"soft-goods"|"curved"|"irregular";
 type Template={id:string;name:string;theme:string;src:string;corners:[Point,Point,Point,Point];normalized?:boolean;surfaceKind?:SurfaceKind;foregroundPrompt?:string;printSide?:PrintSide;quadMeans?:QuadMeaning;occlusionUrl?:string;occlusionConfirmed?:boolean};
 type Result={name:string;url:string;template:string;templateId:string;surfaceKind:SurfaceKind;warning?:string};
-type Adjustment={scale:number;x:number;y:number};
+type Adjustment={scale:number;x:number;y:number;angle?:number};
 const MAX_MOCKUPS_PER_LISTING=8;
 const load=(src:string)=>new Promise<HTMLImageElement>((resolve,reject)=>{const image=new Image();image.crossOrigin="anonymous";image.onload=()=>resolve(image);image.onerror=reject;image.src=src});
 const dataUrl=(blob:Blob)=>new Promise<string>((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result));reader.onerror=()=>reject(reader.error);reader.readAsDataURL(blob)});
@@ -30,7 +30,11 @@ function isCalibratedSurface(kind:SurfaceKind){return["rigid-flat","t-shirt","sw
 
 
 
-async function foregroundLayers(t:Template){if(!t.foregroundPrompt)return[];const cached=foregroundCache.get(t.id);if(cached)return cached;try{const response=await fetch("/api/mockups/analyze",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({imageUrl:new URL(t.src,window.location.origin).toString(),prompt:t.foregroundPrompt})}),payload=await response.json() as {masks?:Array<{url:string}>;error?:string};if(!response.ok)throw new Error(payload.error||`Could not safely layer ${t.name}.`);const urls=(payload.masks||[]).map(x=>x.url);foregroundCache.set(t.id,urls);return urls}catch{/* A highlight layer that will not load is a slightly flatter mockup, not a failed one. Cached so one outage does not retry on every scene. */foregroundCache.set(t.id,[]);return[]}}
+/* D573 - a saved mask wins over anything worked out at render time. It was
+   confirmed once against this photograph, so it is the same on every render and
+   costs no model call. The segmenter below stays only for scenes that have never
+   been through the editor. */
+async function foregroundLayers(t:Template){if(t.occlusionUrl)return[t.occlusionUrl];if(!t.foregroundPrompt)return[];const cached=foregroundCache.get(t.id);if(cached)return cached;try{const response=await fetch("/api/mockups/analyze",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({imageUrl:new URL(t.src,window.location.origin).toString(),prompt:t.foregroundPrompt})}),payload=await response.json() as {masks?:Array<{url:string}>;error?:string};if(!response.ok)throw new Error(payload.error||`Could not safely layer ${t.name}.`);const urls=(payload.masks||[]).map(x=>x.url);foregroundCache.set(t.id,urls);return urls}catch{/* A highlight layer that will not load is a slightly flatter mockup, not a failed one. Cached so one outage does not retry on every scene. */foregroundCache.set(t.id,[]);return[]}}
 function area(c:Point[]){return Math.abs(c.reduce((n,[x,y],i)=>{const q=c[(i+1)%c.length];return n+x*q[1]-q[0]*y},0)/2)}
 /* D447 - a mockup must never fail to render.
  *
@@ -152,7 +156,12 @@ function printOntoGarment(base:CanvasRenderingContext2D,ink:CanvasRenderingConte
   ink.putImageData(paint,0,0);
 }
 
-async function rigid(file:File,t:Template,adjustment:Adjustment={scale:1,x:0,y:0},quadOverride?:Template["corners"]):Promise<Result>{const[master,sourceArt,foregrounds]=await Promise.all([load(t.src),load(URL.createObjectURL(file)),foregroundLayers(t)]),artCanvas=document.createElement("canvas");artCanvas.width=sourceArt.width;artCanvas.height=sourceArt.height;const artContext=artCanvas.getContext("2d")!,drawWidth=sourceArt.width*adjustment.scale,drawHeight=sourceArt.height*adjustment.scale;artContext.drawImage(sourceArt,(sourceArt.width-drawWidth)/2+adjustment.x*sourceArt.width,(sourceArt.height-drawHeight)/2+adjustment.y*sourceArt.height,drawWidth,drawHeight);const art=artCanvas,canvas=document.createElement("canvas");canvas.width=master.naturalWidth;canvas.height=master.naturalHeight;/* D447 - the quad chain. Each candidate is checked, the first usable one wins, and the last is valid by construction, so this cannot fail to produce one. */const toPixels=(q:Template["corners"],normalized:boolean)=>(normalized?q.map(([x,y])=>[x*canvas.width,y*canvas.height] as Point):q) as Template["corners"];/* A hand-marked print area beats a derived one, always. The derived box is for
+async function rigid(file:File,t:Template,adjustment:Adjustment={scale:1,x:0,y:0},quadOverride?:Template["corners"]):Promise<Result>{const[master,sourceArt,foregrounds]=await Promise.all([load(t.src),load(URL.createObjectURL(file)),foregroundLayers(t)]),artCanvas=document.createElement("canvas");artCanvas.width=sourceArt.width;artCanvas.height=sourceArt.height;const artContext=artCanvas.getContext("2d")!,drawWidth=sourceArt.width*adjustment.scale,drawHeight=sourceArt.height*adjustment.scale;
+/* D573 - rotation is applied about the artwork's placed centre, on the artwork
+   layer alone, so the photograph underneath is untouched. */
+const spin=Number(adjustment.angle||0);
+if(spin){const cx=(sourceArt.width-drawWidth)/2+adjustment.x*sourceArt.width+drawWidth/2,cy=(sourceArt.height-drawHeight)/2+adjustment.y*sourceArt.height+drawHeight/2;artContext.save();artContext.translate(cx,cy);artContext.rotate(spin*Math.PI/180);artContext.drawImage(sourceArt,-drawWidth/2,-drawHeight/2,drawWidth,drawHeight);artContext.restore()}
+else artContext.drawImage(sourceArt,(sourceArt.width-drawWidth)/2+adjustment.x*sourceArt.width,(sourceArt.height-drawHeight)/2+adjustment.y*sourceArt.height,drawWidth,drawHeight);const art=artCanvas,canvas=document.createElement("canvas");canvas.width=master.naturalWidth;canvas.height=master.naturalHeight;/* D447 - the quad chain. Each candidate is checked, the first usable one wins, and the last is valid by construction, so this cannot fail to produce one. */const toPixels=(q:Template["corners"],normalized:boolean)=>(normalized?q.map(([x,y])=>[x*canvas.width,y*canvas.height] as Point):q) as Template["corners"];/* A hand-marked print area beats a derived one, always. The derived box is for
    scenes nobody has calibrated yet. */
 const marked=isCalibrated(t)?toPixels(t.corners,Boolean(t.normalized)):null;
 const candidates=[marked,quadOverride?toPixels(quadOverride,true):null,toPixels(t.corners,Boolean(t.normalized)),defaultQuad(canvas.width,canvas.height)];const raw=candidates.find(q=>usableQuad(q??undefined,canvas.width,canvas.height))??defaultQuad(canvas.width,canvas.height),c=safeCorners(raw,canvas.width,canvas.height),ctx=canvas.getContext("2d",{alpha:false})!;ctx.drawImage(master,0,0);/* D448 - the ink goes on its own transparent layer so it can be shaded against the cloth before it touches the photograph. The photograph itself is never redrawn: it is drawn once, above, and the ink is laid over it. */const inkCanvas=document.createElement("canvas");inkCanvas.width=canvas.width;inkCanvas.height=canvas.height;const inkCtx=inkCanvas.getContext("2d",{willReadFrequently:true})!;inkCtx.save();inkCtx.beginPath();c.forEach((p,i)=>i?inkCtx.lineTo(...p):inkCtx.moveTo(...p));inkCtx.closePath();inkCtx.clip();const across=wrapAcross(t.surfaceKind||"rigid-flat");const COLUMNS=(t.surfaceKind==="curved")?28:12;for(let y=0;y<16;y++)for(let x=0;x<COLUMNS;x++){const u=x/COLUMNS,U=(x+1)/COLUMNS,v=y/16,V=(y+1)/16,su=across(u),sU=across(U),s00:[number,number]=[su*art.width,v*art.height],s10:[number,number]=[sU*art.width,v*art.height],s11:[number,number]=[sU*art.width,V*art.height],s01:[number,number]=[su*art.width,V*art.height],d00=bilinear(c,u,v),d10=bilinear(c,U,v),d11=bilinear(c,U,V),d01=bilinear(c,u,V);tri(inkCtx,art as unknown as HTMLImageElement,[s00,s10,s11],[d00,d10,d11]);tri(inkCtx,art as unknown as HTMLImageElement,[s00,s11,s01],[d00,d11,d01])}inkCtx.restore();printOntoGarment(ctx,inkCtx,canvas.width,canvas.height);ctx.drawImage(inkCanvas,0,0);for(const layer of foregrounds)ctx.drawImage(await load(layer),0,0,canvas.width,canvas.height);const blob=await new Promise<Blob>((resolve)=>canvas.toBlob((b)=>resolve(b!),"image/jpeg",.93));return{name:`${file.name.replace(/\.[^.]+$/,'')}-${t.name}.jpg`,url:URL.createObjectURL(blob),template:t.name,templateId:t.id,surfaceKind:"rigid-flat"}}
@@ -321,7 +330,10 @@ let previewFace:{left:number;top:number;right:number;bottom:number}|undefined;
              when the exact answer was handed to us. */
           if(template.quadMeans==="print-area"&&placement&&isCalibrated(template))
             {const exact=placementAdjustment(placement,template.surfaceKind||"rigid-flat","print-area");
-             if(exact)return rigid(design,template,exact);}
+             if(exact){const began=Date.now();
+               const made=await rigid(design,template,exact);
+               recordRender({scene:template.name,sceneId:template.id,printSide:template.printSide,quadMeans:"print-area",placement,applied:exact,usedForeground:Boolean(template.occlusionUrl),source:"printify",ms:Date.now()-began});
+               return made;}}
           if(fit&&isCalibrated(template)){
             const direct=placementInFace(fit,artworkBounds);
             if(direct)return rigid(design,template,direct);

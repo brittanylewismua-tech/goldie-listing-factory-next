@@ -1,6 +1,8 @@
 "use client";
 
 import type { PrintSide } from "../placement-math";
+import OcclusionEditor from "./occlusion-editor";
+import { sceneStatus } from "./placement-contract";
 import { isCalibratedQuad } from "./calibration";
 import { ChangeEvent, DragEvent, useEffect, useMemo, useRef, useState } from "react";
 import { zipSync } from "fflate";
@@ -233,6 +235,35 @@ export default function Home() {
     await findPrintAreas(added,theme);}
   const [preparing,setPreparing]=useState(0);
   const [calibratingSide,setCalibratingSide]=useState<PrintSide>("front");
+  /* D573 - the foreground editor. This is the switch the poster-and-arm work has
+     been missing since the bundled templates came out: those carried
+     foregroundPrompt:"woman", nothing uploaded since could carry anything, and
+     the compositing step sat there with no layers to draw. A saved mask feeds
+     the same step, and does not change between renders. */
+  const [masking,setMasking]=useState<Template|null>(null);
+  /* D573 - "Test this scene". A scene should be provable before it is trusted on
+     a real listing, so this renders it against a sample placement that is
+     deliberately awkward: small, and well off to one side. If the result comes
+     out centred or full width, the scene is not carrying Printify's placement. */
+  const [testing,setTesting]=useState<{name:string;url:string}|null>(null);
+  const [testingBusy,setTestingBusy]=useState("");
+  const testScene=async(item:Template)=>{
+    setTestingBusy(item.id);
+    try{
+      const {renderSceneTest}=await import("./scene-test");
+      const url=await renderSceneTest(item);
+      setTesting({name:item.name,url});
+    }catch(error){setGenerationError(error instanceof Error?error.message:"That scene could not be tested.")}
+    finally{setTestingBusy("")}
+  };
+  const saveMask=async(mask:Blob|null)=>{
+    if(!masking)return;
+    const id=masking.id,form=new FormData();
+    if(mask)form.set("mask",new File([mask],"mask.png",{type:"image/png"}));
+    await fetch(`/api/mockups/library/${encodeURIComponent(id)}/occlusion`,{method:"PUT",body:form}).catch(()=>undefined);
+    setLibrary(x=>x.map(t=>t.id===id?{...t,occlusionConfirmed:true,occlusionUrl:mask?`/api/mockups/library/${encodeURIComponent(id)}/occlusion?v=${Date.now()}`:undefined}:t));
+    setMasking(null);
+  };
   const [unmeasured,setUnmeasured]=useState<string[]>([]);
   async function findPrintAreas(scenes:Template[],theme:string){
     setPreparing(scenes.length);
@@ -316,7 +347,16 @@ export default function Home() {
       {generationError&&<p className="smartError" role="alert"><b>Goldie couldn’t complete that change.</b><span>{generationError}</span></p>}
       {libraryBusy&&<div className="librarySaving" role="status"><span className="librarySpinner"/><div><b>Saving {libraryProgress} of {libraryTotal} mockups…</b><small>Please keep this page open until every file is saved.</small></div></div>}
       {preparing>0&&<p className="preparingScenes" role="status">Goldie is working out where the design goes on {preparing} {preparing===1?"photo":"photos"}. You can leave this page; it finishes on its own.</p>}
-      <div className="setList managementSetList">{[...new Set(library.map(item=>item.theme))].map(theme=>{const items=library.filter(item=>item.theme===theme),open=activeTheme===theme;return <article className={`collection ${open?"open":"collapsed"}`} key={theme}><button className="collectionToggle" aria-expanded={open} onClick={()=>setActiveTheme(open?"":theme)}><div><span className="selected">MOCKUP SET</span><span className="setTitleRow"><h3>{theme}</h3></span><p>{items.length} {items.length===1?"mockup":"mockups"}</p>{!open&&<span className="setPreview">{items.slice(0,10).map(item=><img key={item.id} src={item.src} alt=""/>)}</span>}</div><span className="collectionChevron">⌄</span></button>{open&&<><div className="collectionActions"><button className="selectSet" onClick={()=>{setRenamingTheme(theme);setRenameValue(theme)}}>Rename set</button><button className="deleteSet" onClick={()=>setDeletingTheme(theme)}>Delete set</button></div><div className="thumbs">{items.map(item=><div className="mockChoice" key={item.id}><button type="button" className="savedMockupPreview" onClick={()=>setLibraryPreview(item)} aria-label={`Enlarge ${item.name}`}><img src={item.src} alt={item.name}/><span>Enlarge</span></button><span className="choiceName">{item.name}</span>{item.custom&&<button className="resetArea" onClick={()=>{setPoints([]);setCalibrating(item)}}>{isCalibratedQuad(item.corners as [number,number][],item.normalized)?"Adjust product area":"Adjust product area"}</button>}</div>)}</div></>}</article>})}</div>
+      <div className="setList managementSetList">{[...new Set(library.map(item=>item.theme))].map(theme=>{const items=library.filter(item=>item.theme===theme),open=activeTheme===theme;return <article className={`collection ${open?"open":"collapsed"}`} key={theme}><button className="collectionToggle" aria-expanded={open} onClick={()=>setActiveTheme(open?"":theme)}><div><span className="selected">MOCKUP SET</span><span className="setTitleRow"><h3>{theme}</h3></span><p>{items.length} {items.length===1?"mockup":"mockups"}</p>{!open&&<span className="setPreview">{items.slice(0,10).map(item=><img key={item.id} src={item.src} alt=""/>)}</span>}</div><span className="collectionChevron">⌄</span></button>{open&&<><div className="collectionActions"><button className="selectSet" onClick={()=>{setRenamingTheme(theme);setRenameValue(theme)}}>Rename set</button><button className="deleteSet" onClick={()=>setDeletingTheme(theme)}>Delete set</button></div><div className="thumbs">{items.map(item=><div className="mockChoice" key={item.id}><button type="button" className="savedMockupPreview" onClick={()=>setLibraryPreview(item)} aria-label={`Enlarge ${item.name}`}><img src={item.src} alt={item.name}/><span>Enlarge</span></button><span className="choiceName">{item.name}</span>{item.custom&&<button className="resetArea" onClick={()=>{setPoints([]);setCalibratingSide(item.printSide||"front");setCalibrating(item)}}>{item.quadMeans==="print-area"?"Adjust print area":"Mark where the design can print"}</button>}
+      {item.custom&&<button className="resetArea testArea" disabled={testingBusy===item.id} onClick={()=>void testScene(item)}>{testingBusy===item.id?"Testing…":"Test this scene"}</button>}
+      {item.custom&&<button className="resetArea maskArea" onClick={()=>setMasking(item)}>{item.occlusionConfirmed?"Edit what covers the design":"Keep parts in front of the design"}</button>}
+      {/* D573 - a back view without a confirmed foreground will print over the hood,
+          so the scene says so here rather than at render time. */}
+      {/* D573 - one classifier decides this, the same one the renderer uses, so
+          the library cannot call a scene ready while the renderer refuses it. */}
+      {item.custom&&(()=>{const status=sceneStatus({corners:item.corners as [number,number][],quadMeans:item.quadMeans,printSide:item.printSide,occlusionConfirmed:item.occlusionConfirmed});
+        if(status==="ready")return <span className="sceneReady">Ready</span>;
+        return <span className="sceneWarning">{status==="needs-marking"?"Needs its print area marked":status==="needs-foreground"?"Needs the hood marked":"Needs a quick check"}</span>})()}</div>)}</div></>}</article>})}</div>
     </div></section>
     {showAddSet&&<div className="confirmOverlay" role="dialog" aria-modal="true" aria-labelledby="add-set-title"><div className="confirmDialog addSetDialog"><button className="closeAddSet" disabled={libraryBusy} onClick={()=>setShowAddSet(false)} aria-label="Close">×</button><p className="mockupEyebrow">ADD MOCKUP SET</p><h2 id="add-set-title">Build a reusable set</h2>{libraryBusy&&<div className="librarySaving modalSaving" role="status"><span className="librarySpinner"/><div><b>{libraryProgress} of {libraryTotal} files saved</b><small>Do not close this window until the set is complete.</small></div></div>}<div className="setControls"><label><span>Name this set</span><input value={themeName} disabled={libraryBusy} onChange={e=>setThemeName(e.target.value)} placeholder="Example: Palm Springs Models"/></label><label><span>Product surface</span><select value={surfaceKind} disabled={libraryBusy} onChange={e=>setSurfaceKind(e.target.value as SurfaceKind)}>{Object.entries(SURFACE_LABELS).filter(([value])=>value!=="apparel").map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label><button disabled={libraryBusy||!themeName.trim()} onClick={()=>mockupInput.current?.click()}><span>↑</span>{libraryBusy?`Saving ${libraryProgress} of ${libraryTotal}…`:"Choose blank mockups"}</button><small>PNG, JPG, or WEBP · maximum 50 mockups per set</small><input ref={mockupInput} hidden type="file" accept="image/png,image/jpeg,image/webp" multiple onChange={event=>void addMockupsManaged(event)}/></div></div></div>}
     {renamingTheme&&<div className="confirmOverlay" role="dialog" aria-modal="true" aria-labelledby="rename-set-title"><div className="confirmDialog"><p className="mockupEyebrow">RENAME MOCKUP SET</p><h2 id="rename-set-title">Choose a new name</h2><input value={renameValue} onChange={event=>setRenameValue(event.target.value)} maxLength={80} autoFocus/><div className="confirmActions"><button className="cancelConfirm" onClick={()=>{setRenamingTheme("");setRenameValue("")}}>Cancel</button><button className="confirmRename" disabled={!renameValue.trim()} onClick={renameSet}>Save new name</button></div></div></div>}
@@ -331,6 +371,8 @@ export default function Home() {
         ?<><button className="confirmArea" onClick={()=>void confirmArea()}>Yes, use this area</button><button className="resetPoints" onClick={()=>setPoints([])}>Start over</button></>
         :<><button className="suggestArea" disabled={suggesting} onClick={()=>void suggestArea()}>{suggesting?"Finding the product…":"Suggest the product area"}</button><button className="resetPoints" onClick={()=>setPoints([])}>Start over</button></>}</div>
       {suggestNote&&<p className="calibratorNote">{suggestNote}</p>}</div></div>}
+    {testing&&<div className="modal"><div className="calibrator"><button className="close" onClick={()=>setTesting(null)}>×</button><p className="mockupEyebrow">TEST PRINT</p><h2>{testing.name}</h2><p>This sample is deliberately small and off to the left. If it lands small and left, the scene is following Printify. If it comes out centred or filling the shirt, it is not.</p><div className="calImage"><img src={testing.url} alt={`${testing.name} test print`}/></div></div></div>}
+    {masking&&<OcclusionEditor src={masking.src} maskUrl={masking.occlusionUrl} onSave={saveMask} onClose={()=>setMasking(null)}/>}
   </main>;
 
   return <main className="mockupFactory">
