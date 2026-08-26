@@ -25,6 +25,16 @@ function dataUrl(bytes: ArrayBuffer, contentType: string) {
   return `data:${contentType};base64,${btoa(value)}`;
 }
 
+/* The middle-70% box every scene is created with. Anything else was measured. */
+function isPlaceholderCorners(cornersJson: string) {
+  try {
+    const corners = JSON.parse(cornersJson) as number[][];
+    const placeholder = [[.15, .12], [.85, .12], [.85, .88], [.15, .88]];
+    return corners.length === 4 && corners.every((point, index) =>
+      Math.abs(point[0] - placeholder[index][0]) < .001 && Math.abs(point[1] - placeholder[index][1]) < .001);
+  } catch { return true; }
+}
+
 async function falJson(path: string, key: string, body: unknown, timeout = 45_000) {
   const response = await fetch(`https://fal.run/${path}`, {
     method: "POST",
@@ -110,14 +120,27 @@ async function handlePOST(request: NextRequest, context: { params: Promise<{ id:
 
 /* D577 - one way out of this function: a ready scene. Both the measured path and
    the computed path go through here, so neither can leave a scene half-written. */
-  const store = async (preparation: ScenePreparation, attempt: number) => {
+  const store = async (preparation: ScenePreparation, attempt: number, reason = "") => {
+    /* D578 - a derived preparation must never overwrite corners that were
+       actually measured from this photograph. Verified live: all three of her
+       sets fell back to derived, and because this wrote cornersJson
+       unconditionally it replaced real marked areas - BACH TEES went from a
+       measured 43.5% x 48.5% region of the garment to a blind 35.3% x 33.6%
+       default. A failed reading is not new information about the photograph and
+       must not be treated as if it were. */
+    const measuredAlready = !isPlaceholderCorners(row.cornersJson);
+    const keepCorners = Boolean(preparation.derived) && measuredAlready;
     await getDb().update(mockupTemplates).set({
-      cornersJson: JSON.stringify(preparation.corners), printSide: preparation.printSide, quadMeans: "print-area",
+      ...(keepCorners ? {} : { cornersJson: JSON.stringify(preparation.corners) }),
+      printSide: preparation.printSide, quadMeans: "print-area",
       occlusionKey: preparation.occlusionKey || null, occlusionConfirmed: 1,
-      preparationStatus: "ready", preparationJson: JSON.stringify(preparation), preparationError: "",
+      preparationStatus: "ready", preparationJson: JSON.stringify(preparation), preparationError: reason,
       preparationAttempts: attempt, updatedAt: new Date().toISOString(),
     }).where(and(eq(mockupTemplates.id, id), eq(mockupTemplates.userId, user.userId)));
-    return NextResponse.json({ preparation, cached: false });
+    const kept = keepCorners
+      ? { ...preparation, corners: JSON.parse(row.cornersJson) as ScenePreparation["corners"], keptExisting: true }
+      : preparation;
+    return NextResponse.json({ preparation: kept, cached: false });
   };
 
   const existing = row.preparationJson ? JSON.parse(row.preparationJson) as ScenePreparation : null;
@@ -129,9 +152,9 @@ async function handlePOST(request: NextRequest, context: { params: Promise<{ id:
   /* D577 - with no analyser available the scene is still prepared, from the
      product's own geometry. Printify continues to place the artwork inside it,
      so the seller gets a working mockup rather than an outage. */
-  if (!key) return store(computedPreparation(productName, null), 0);
+  if (!key) return store(computedPreparation(productName, null), 0, "no-analyser-configured");
   const source = await env.ARTWORK.get(row.objectKey);
-  if (!source) return store(computedPreparation(productName, null), 0);
+  if (!source) return store(computedPreparation(productName, null), 0, "source-photograph-missing");
   const sourceUrl = dataUrl(await source.arrayBuffer(), row.contentType);
   let lastError = "Scene preparation did not finish.";
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
@@ -153,7 +176,7 @@ async function handlePOST(request: NextRequest, context: { params: Promise<{ id:
      photograph is how Goldie fits the surface precisely; failing to read it is
      not a reason to hand back nothing. The reason is recorded for diagnosis, the
      seller gets a usable scene, and Printify still owns the placement inside it. */
-  return store(computedPreparation(productName, null), (row.preparationAttempts || 0) + MAX_ATTEMPTS);
+  return store(computedPreparation(productName, null), (row.preparationAttempts || 0) + MAX_ATTEMPTS, lastError);
 }
 
 export const POST = withErrorLog("mockup-scene-prepare", handlePOST);

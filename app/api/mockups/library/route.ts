@@ -26,6 +26,8 @@ export async function GET() {
     printSide: row.printSide || "front", quadMeans: row.quadMeans || "garment",
     occlusionConfirmed: Boolean(row.occlusionConfirmed),
     preparationStatus: row.preparationStatus || "queued",
+    /* D578 - why a scene fell back to derived geometry, readable without a deploy. */
+    preparationError: row.preparationError || undefined,
     preparation: row.preparationJson ? JSON.parse(row.preparationJson) : undefined,
     occlusionUrl: row.occlusionKey ? `/api/mockups/library/${encodeURIComponent(row.id)}/occlusion` : undefined,
     src: `/api/mockups/library/${encodeURIComponent(row.id)}/image`,

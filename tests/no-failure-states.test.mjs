@@ -68,3 +68,23 @@ test("no calibration tool is reachable by a seller", async () => {
   for (const gone of ["calibrateClick", "Mark where the design can print", "confirmArea"])
     assert.ok(!page.includes(gone), `${gone} must not exist in the seller flow`);
 });
+
+test("a failed reading never overwrites corners that were measured", async () => {
+  const route = await read("app/api/mockups/library/[id]/prepare/route.ts");
+  /* D578 - found live: all three of her sets fell back to derived, and because
+     store() wrote cornersJson unconditionally, a failed reading replaced real
+     measured areas with a blind default. BACH TEES went from a measured
+     43.5% x 48.5% region to 35.3% x 33.6%. A failure to read the photograph is
+     not new information about it. */
+  assert.match(route, /const keepCorners = Boolean\(preparation\.derived\) && measuredAlready/);
+  assert.match(route, /\.\.\.\(keepCorners \? \{\} : \{ cornersJson: JSON\.stringify\(preparation\.corners\) \}\)/);
+});
+
+test("why a scene fell back is recorded and readable", async () => {
+  const route = await read("app/api/mockups/library/[id]/prepare/route.ts");
+  const library = await read("app/api/mockups/library/route.ts");
+  assert.match(route, /preparationError: reason/);
+  assert.match(route, /"no-analyser-configured"/);
+  assert.match(library, /preparationError: row\.preparationError/,
+    "the reason must be readable without shipping a new build to find it");
+});
