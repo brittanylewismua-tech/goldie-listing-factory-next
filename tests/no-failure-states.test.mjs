@@ -103,6 +103,11 @@ test("why a scene fell back is recorded and readable", async () => {
     "the reason must be readable without shipping a new build to find it");
 });
 
+test("D585: cached pre-diagnostic preparations are retired", async () => {
+  const prepared = await read("app/mockups/prepared-scene.ts");
+  assert.match(prepared, /SCENE_PREPARATION_VERSION = 5/);
+});
+
 test("silhouette validation is required, while optional enrichment cannot discard it", async () => {
   const route = await read("app/api/mockups/library/[id]/prepare/route.ts");
   /* D580 - measured live on her freshly uploaded sets: 16 of 19 scenes analysed
