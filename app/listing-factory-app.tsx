@@ -3315,12 +3315,13 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
               it named the fee per listing without ever multiplying it, on the one
               screen where the total is the thing worth knowing. */}
             <div className="publish-live-warning">{(()=>{
-              const total=bundleListingsToPublish();
+              /* D560 - the count follows her ticks now that they govern every listing. */
+              const total=publishTargets().length||bundleListingsToPublish();
               const many=Boolean(activeBundle&&bundleRecipes.length>1);
               return <><b>{many
                 ?`Publishing sends all ${bundleRecipes.length} products in this batch — ${total} ${total===1?"listing":"listings"} — live on Etsy.`
                 :`Only the listings selected above will be published live on Etsy.`}</b>
-              <span>{many?"The selection above covers the product open right now. Each product publishes in turn.":"Anything still needing a look is listed above."}</span>
+              <span>{many?"Untick any listing above to leave it out. Everything ticked publishes in one press.":"Anything still needing a look is listed above."}</span>
               <small>Etsy charges its standard $0.20 USD listing fee for each listing created{total?`, so this press costs about $${(total*0.2).toFixed(2)} USD`:""}. This fee is charged by Etsy and is separate from your Goldie subscription.</small></>;
             })()}</div><button className="publish-all-button" aria-busy={publishing} disabled={publishing||!allCreatedListingsHaveImages(selectedPublishDrafts())||!selectedPublishDrafts().length||missingPublishFields().length>0||batchHeldByAnotherTab} title={batchHeldByAnotherTab?"This batch is open in another Goldie tab. Take over there or here before publishing, so the receipt is saved.":!selectedPublishDrafts().length?"Select at least one listing to publish.":!allCreatedListingsHaveImages(selectedPublishDrafts())?"Every selected listing needs at least one photo before it can publish.":missingPublishFields()[0]?`${missingPublishFields()[0]} must be completed before publishing.`:undefined} onClick={openPublishConfirmation}>{/* D495 - one press publishes the whole bundle, so the button says so and
     reports which product it is on rather than naming a listing count that

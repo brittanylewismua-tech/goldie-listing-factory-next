@@ -4966,3 +4966,32 @@ test("the publish screen shows every listing the press will create — D559", as
   // And the selection governs every listing, not the open product's.
   assert.match(app, /const chosen=new Set\(selectedPublishIds\);/);
 });
+
+test("the publish ticks can actually be cleared — D560", async () => {
+  const [review, app] = await Promise.all([
+    readFile(new URL("../app/final-listing-review.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
+  ]);
+
+  /* Measured live on D559: 6 of 6 selected, untick one, still 6 of 6. The effect
+     that seeds the selection re-added every available id whenever `drafts`
+     changed identity. That was harmless while drafts was one batch's stored
+     array; D559 started building the list across the bundle on every render, so
+     the effect ran constantly and put back anything she unticked. */
+  assert.match(review, /const availableKey=selectable\.map\(draft=>draft\.id!\)\.sort\(\)\.join\(","\)/);
+  assert.match(review, /\},\[availableKey\]\)/, "keyed on the ids, not the array identity");
+  assert.doesNotMatch(review, /\},\[drafts\]\)/);
+
+  // A listing seen for the first time starts ticked; after that her choice stands.
+  assert.match(review, /const fresh=available\.filter\(id=>!knownIds\.current\.has\(id\)\)/);
+  assert.match(review, /return fresh\.length\?\[\.\.\.new Set\(\[\.\.\.kept,\.\.\.fresh\]\)\]:kept/);
+
+  // And the button counts what is ticked.
+  assert.match(app, /const total=publishTargets\(\)\.length\|\|bundleListingsToPublish\(\)/);
+  assert.match(app, /Untick any listing above to leave it out/);
+  assert.doesNotMatch(app, /The selection above covers the product open right now/);
+
+  /* One design becomes one listing per product, so a group holds three different
+     titles. Naming it after the first labelled a tee "Bride Hoodie". */
+  assert.match(review, /if\(group\.length>1\)return readableDesignName\(designName\)/);
+});
