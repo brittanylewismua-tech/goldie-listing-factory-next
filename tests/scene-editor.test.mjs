@@ -121,11 +121,16 @@ test("mesh cells overlap so the surface cannot show through the artwork", async 
 });
 
 test("the development fixture cannot exist in a production build", async () => {
-  const fixture = await read("app/dev/editor-fixture/page.tsx");
-  /* NODE_ENV is inlined at build time, so in a production build this guard is a
-     constant and the page collapses to a refusal. */
-  assert.match(fixture, /const development = process\.env\.NODE_ENV !== "production"/);
-  assert.match(fixture, /if \(!development\) return/);
+  const fixture = await read("app/dev/editor-fixture/page.dev.tsx");
+  /* Guarding on NODE_ENV inside the page was not enough: the route still
+     existed and its code still shipped in the client bundle, verified by
+     grepping a production build. The file is named page.dev.tsx and that
+     extension is only a route outside production, so the directory contains no
+     page at all in a production build. */
+  const config = await read("next.config.ts");
+  assert.match(config, /pageExtensions: devOnlyRoutes/);
+  assert.match(config, /\["tsx", "ts", "jsx", "js"\]/, "production must not treat dev.tsx as a route");
+  assert.match(config, /process\.env\.NODE_ENV !== "production"/);
   /* And it must not be able to touch anything real. The words "Printify" and
      "Etsy" appear in its prose, which is fine; what matters is that it makes no
      request and references no endpoint. */
@@ -135,7 +140,7 @@ test("the development fixture cannot exist in a production build", async () => {
 });
 
 test("the fixture exercises the real editor, not a copy of it", async () => {
-  const fixture = await read("app/dev/editor-fixture/page.tsx");
+  const fixture = await read("app/dev/editor-fixture/page.dev.tsx");
   assert.match(fixture, /import\("\.\.\/\.\.\/mockups\/scene-editor"\)/, "the same component Step 2 mounts");
   assert.match(fixture, /from "\.\.\/\.\.\/mockups\/placement-profile"/, "and the same placement model");
   // Each fixture case carries its own Printify contract, so the property under
