@@ -1857,17 +1857,25 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
      from them; the product being worked is read from state, which is always
      fresher than anything saved. */
   const [bundleBatchSummary,setBundleBatchSummary]=useState<Record<string,{designs:number;titled:number;tagged:number;drafts:number;described:boolean;complete:boolean;published:number;status:string;photos:number;mockups:number}>>({});
+  /* D559 - the sibling batches were read for their counts and then thrown away,
+     so the publish screen could only ever show the open product's listings while
+     the button published all three. Her question, looking at it: "why if this is
+     a hoodie t shirt and crew neck batch would it be showing me two hoodies
+     only?" The same read keeps the listings and the settings each product needs
+     to publish, so every listing in the bundle is on the page and selectable. */
+  const [bundleMembers,setBundleMembers]=useState<Record<string,{recipeId:string;productName:string;drafts:DraftResult[];designs:Array<Omit<DesignFile,"file"|"previewUrl">>;selections:Record<string,number[]>;indices:number[];shippingProfileId:number;sizeGuideName:string;preparedMockupCounts:Record<string,number>}>>({});
   useEffect(()=>{
     if(!activeBundle||bundleRecipes.length<2)return;
     const wanted=bundleRecipes.filter(recipe=>recipe.id!==activeRecipe?.id&&bundleBatchIds[recipe.id]);
     if(!wanted.length)return;
     let alive=true;
+    const memberScratch:Record<string,{recipeId:string;productName:string;drafts:DraftResult[];designs:Array<Omit<DesignFile,"file"|"previewUrl">>;selections:Record<string,number[]>;indices:number[];shippingProfileId:number;sizeGuideName:string;preparedMockupCounts:Record<string,number>}>={};
     void (async()=>{
     const listing=await fetch("/api/batches").then(response=>response.ok?response.json():null).then((payload:{batches?:Array<{id?:string;status?:string;published_count?:number}>}|null)=>payload?.batches||[]).catch(()=>[] as Array<{id?:string;status?:string;published_count?:number}>);
     await Promise.all(wanted.map(async recipe=>{
       const id=bundleBatchIds[recipe.id];
       const payload=await fetch(`/api/batches?id=${encodeURIComponent(id)}`).then(response=>response.ok?response.json():null).catch(()=>null) as {batch?:{state?:Record<string,unknown>}}|null;
-      const state=payload?.batch?.state as {designs?:Array<{title?:string;tags?:string[]}>;drafts?:unknown[];description?:string;complete?:boolean;printifyImageSelections?:Record<string,number[]>;printifyImageIndices?:number[];preparedMockupCounts?:Record<string,number>}|undefined;
+      const state=payload?.batch?.state as {designs?:Array<{id?:string;title?:string;tags?:string[];sizeGuideName?:string}>;drafts?:unknown[];description?:string;complete?:boolean;printifyImageSelections?:Record<string,number[]>;printifyImageIndices?:number[];preparedMockupCounts?:Record<string,number>;etsyShippingProfileId?:number;sizeGuideName?:string}|undefined;
       if(!state)return null;
       const designs=state.designs||[];
       /* D504 - the chip and the rows on the same card were fed by two different
@@ -1875,6 +1883,15 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
          could read "2 drafts" while the other read blank on the same
          card. One loader, one map, one answer per product. */
       const listed=listing.find(batch=>String(batch.id||"")===id);
+      /* D559 - keep what publishing needs, not just what the card counts. */
+      memberScratch[recipe.id]={recipeId:recipe.id,productName:recipe.name,
+        drafts:(state.drafts||[]) as DraftResult[],
+        designs:designs as Array<Omit<DesignFile,"file"|"previewUrl">>,
+        selections:state.printifyImageSelections||{},
+        indices:state.printifyImageIndices||[],
+        shippingProfileId:Number(state.etsyShippingProfileId)||0,
+        sizeGuideName:String(state.sizeGuideName||""),
+        preparedMockupCounts:state.preparedMockupCounts||{}};
       return [recipe.id,{designs:designs.length,
         titled:designs.filter(design=>String(design.title||"").trim()).length,
         tagged:designs.filter(design=>(design.tags||[]).length>=13).length,
@@ -1889,6 +1906,7 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
       if(!alive)return;
       const loaded=Object.fromEntries(entries.filter(Boolean) as Array<readonly [string,{designs:number;titled:number;tagged:number;drafts:number;described:boolean;complete:boolean;published:number;status:string;photos:number;mockups:number}]>);
       if(Object.keys(loaded).length)setBundleBatchSummary(current=>({...current,...loaded}));
+      if(Object.keys(memberScratch).length)setBundleMembers(current=>({...current,...memberScratch}));
     });
     })();
     return()=>{alive=false};
@@ -2470,35 +2488,81 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
      for that product or the ones after it. */
   const [publishRun,setPublishRun]=useState<{total:number}|null>(null);
   useEffect(()=>{runInProgress.current=Boolean(publishRun)},[publishRun]);
-  const publishAdvancing=useRef(false);
+  /* D559 - nothing advances any more; one call publishes the bundle. */
   useEffect(()=>{
     if(!publishRun)return;
     if(publishing||switchingProduct||publishConfirmOpen||restoringBatch)return;
-    if(batchReceipt){
-      if(bundleIndex+1>=bundleRecipes.length){setPublishRun(null);return}
-      if(publishAdvancing.current)return;
-      publishAdvancing.current=true;
-      openBundleProduct(bundleIndex+1);
-      window.setTimeout(()=>{publishAdvancing.current=false},1500);
-      return;
-    }
-    const chosen=selectedPublishDrafts();
+    /* D559 - this used to publish the open product, wait for its receipt, switch
+       the whole app to the next product's batch, publish that, and repeat. The
+       run depended on the tab staying open through two batch restores, and a
+       stall between products left her half published. One call carries the whole
+       bundle now, so there is nothing to advance to. */
+    if(batchReceipt){setPublishRun(null);return}
+    const chosen=publishTargets();
     if(!chosen.length)return;
-    const blockers=[...missingPublishFields(),...createdListingsMissingImages(chosen).map(draft=>`${draft.name} has no photo`)];
+    const blockers=[...missingPublishFields(),...createdListingsMissingImages(selectedPublishDrafts()).map(draft=>`${draft.name} has no photo`)];
     if(blockers.length){
       setPublishRun(null);
-      stopWith(`${activeRecipe?.name||"This product"} is not ready to publish.`,blockers);
+      stopWith("This batch is not ready to publish.",blockers);
       return;
     }
     void publishAll();
   },[publishRun,publishing,switchingProduct,publishConfirmOpen,restoringBatch,batchReceipt,bundleIndex,drafts,activeRecipe]);
 
+  /* D559 - every listing the press will create, across every product in the
+     bundle, each carrying the settings saved with its own batch. The open
+     product is read from state because that is fresher than anything saved; the
+     rest come from their own batches. */
+  function publishTargets(){
+    const mine=selectedPublishDrafts().map(draft=>({id:draft.id!,productName:activeRecipe?.name||"",clientId:draft.clientId,
+      selections:printifyImageSelections[draft.id!]||[],indices:printifyImageIndices,shippingProfileId:etsyShippingProfileId}));
+    if(!activeBundle||bundleRecipes.length<2)return mine;
+    const others=bundleRecipes.filter(recipe=>recipe.id!==activeRecipe?.id).flatMap(recipe=>{
+      const member=bundleMembers[recipe.id];if(!member)return [];
+      const chosen=new Set(selectedPublishIds);
+      return member.drafts.filter(draft=>draft.status==="Created"&&draft.id&&chosen.has(draft.id))
+        .map(draft=>({id:draft.id!,productName:member.productName,clientId:draft.clientId,
+          selections:member.selections[draft.id!]||[],indices:member.indices,shippingProfileId:member.shippingProfileId||etsyShippingProfileId}));
+    });
+    return [...mine,...others];
+  }
+  /* D559 - the publish review's inputs, gathered across the bundle rather than
+     taken from whichever product happens to be open. */
+  function bundlePublishDrafts(){
+    if(!activeBundle||bundleRecipes.length<2)return drafts;
+    const others=bundleRecipes.filter(recipe=>recipe.id!==activeRecipe?.id).flatMap(recipe=>{
+      const member=bundleMembers[recipe.id];if(!member)return [] as DraftResult[];
+      return member.drafts.map(draft=>({...draft,productName:member.productName}));
+    });
+    return [...drafts.map(draft=>({...draft,productName:activeRecipe?.name||draft.productName})),...others];
+  }
+  function bundlePublishFiles(){
+    if(!activeBundle||bundleRecipes.length<2)return files;
+    const others=bundleRecipes.filter(recipe=>recipe.id!==activeRecipe?.id).flatMap(recipe=>(bundleMembers[recipe.id]?.designs||[]) as Array<Omit<DesignFile,"file"|"previewUrl">>);
+    return [...files,...others.map(design=>({...design,file:undefined as unknown as File,previewUrl:""} as DesignFile))];
+  }
+  function bundlePublishSelections(){
+    if(!activeBundle||bundleRecipes.length<2)return printifyImageSelections;
+    return bundleRecipes.filter(recipe=>recipe.id!==activeRecipe?.id)
+      .reduce((all,recipe)=>({...all,...(bundleMembers[recipe.id]?.selections||{})}),{...printifyImageSelections});
+  }
+  function bundlePublishMockupCounts(){
+    if(!activeBundle||bundleRecipes.length<2)return preparedMockupCounts;
+    return bundleRecipes.filter(recipe=>recipe.id!==activeRecipe?.id)
+      .reduce((all,recipe)=>({...all,...(bundleMembers[recipe.id]?.preparedMockupCounts||{})}),{...preparedMockupCounts});
+  }
   async function publishAll(){
     if(publishInFlight.current)return;
-    const ids=selectedPublishDrafts().map(draft=>draft.id!);if(!ids.length)return;
+    /* D559 - this sent the open product's listings only, and an effect then
+       switched the app to the next product and sent that one, and so on. One
+       call now carries every listing in the bundle with the settings its own
+       product needs, so nothing switches and nothing is left behind. */
+    const everything=publishTargets();
+    const ids=everything.map(item=>item.id);if(!ids.length)return;
+    const byProduct=Object.fromEntries(everything.map(item=>[item.id,{selections:item.selections,indices:item.indices,shippingProfileId:item.shippingProfileId}]));
     publishInFlight.current=true;setPublishConfirmOpen(false);setPublishing(true);setPublishFailures([]);setPublishMessage(`Goldie is safely queuing ${ids.length} selected ${ids.length===1?"listing":"listings"}…`);setBatchReceipt(null);
     try{
-      const response=await fetch("/api/printify/drafts/publish",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({productIds:ids,printifyImageIndices,printifyImageSelections,etsyShippingProfileId})}),payload=await response.json() as {job?:{id:string;status:string;total:number;completed:number;failed:number;queued:number;processing:number;finished:Array<{etsyListingId:number;url:string}>;failures?:Array<{productId:string;error:string}>;budget?:{remaining:number}};error?:string};if(!response.ok||!payload.job)throw new Error(payload.error||"The batch could not be queued.");
+      const response=await fetch("/api/printify/drafts/publish",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({productIds:ids,printifyImageIndices,printifyImageSelections,etsyShippingProfileId,byProduct})}),payload=await response.json() as {job?:{id:string;status:string;total:number;completed:number;failed:number;queued:number;processing:number;finished:Array<{etsyListingId:number;url:string}>;failures?:Array<{productId:string;error:string}>;budget?:{remaining:number}};error?:string};if(!response.ok||!payload.job)throw new Error(payload.error||"The batch could not be queued.");
       const jobId=payload.job.id;localStorage.setItem("goldie-active-publish-job",jobId);await monitorPublishJob(jobId);
     }catch(error){setPublishMessage(error instanceof Error?error.message:"The batch could not be published.")}finally{publishInFlight.current=false;setPublishing(false)}
   }
@@ -3239,7 +3303,12 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
               that's in every product." It repeated the cards line for line - prices,
               description, Etsy details, photos - and the two things it alone
               reported moved into the rows that own them. */}
-<FinalListingReview drafts={drafts} files={files} selections={printifyImageSelections} defaultIndices={printifyImageIndices} preparedMockupCounts={preparedMockupCounts} batchSizeGuide={sizeGuideName} productName={activeBundle&&bundleRecipes.length>1?activeRecipe?.name:undefined} onRetry={clientId=>{const design=files.find(file=>file.id===clientId);if(design)void runDrafts([design],true)}} onEdit={setFinishPhase}/>{/* D548 - read as someone about to spend money, this said two untrue things.
+{/* D559 - her question: "why if this is a hoodie t shirt and crew neck batch
+                would it be showing me two hoodies only?" Because it was handed the
+                open batch's drafts, while the button published all three products.
+                It gets every product's listings now, so the checkboxes govern the
+                six listings the press will actually create. */}
+            <FinalListingReview drafts={bundlePublishDrafts()} files={bundlePublishFiles()} selections={bundlePublishSelections()} defaultIndices={printifyImageIndices} preparedMockupCounts={bundlePublishMockupCounts()} batchSizeGuide={sizeGuideName} onRetry={clientId=>{const design=files.find(file=>file.id===clientId);if(design)void runDrafts([design],true)}} onEdit={setFinishPhase}/>{/* D548 - read as someone about to spend money, this said two untrue things.
               "Only the listings selected above" - the selection covers the product
               that is open, and on a bundle the button publishes every product, so
               the sentence promised a smaller press than the one it sat under. And
@@ -3256,7 +3325,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
             })()}</div><button className="publish-all-button" aria-busy={publishing} disabled={publishing||!allCreatedListingsHaveImages(selectedPublishDrafts())||!selectedPublishDrafts().length||missingPublishFields().length>0||batchHeldByAnotherTab} title={batchHeldByAnotherTab?"This batch is open in another Goldie tab. Take over there or here before publishing, so the receipt is saved.":!selectedPublishDrafts().length?"Select at least one listing to publish.":!allCreatedListingsHaveImages(selectedPublishDrafts())?"Every selected listing needs at least one photo before it can publish.":missingPublishFields()[0]?`${missingPublishFields()[0]} must be completed before publishing.`:undefined} onClick={openPublishConfirmation}>{/* D495 - one press publishes the whole bundle, so the button says so and
     reports which product it is on rather than naming a listing count that
     only covers the product currently open. */}
-{publishRun&&!publishing?`Moving to ${bundleRecipes[bundleIndex+1]?.name||"the next product"}…`:publishing?(activeBundle&&bundleRecipes.length>1?`Publishing ${activeRecipe?.name||"this product"} (${bundleIndex+1} of ${bundleRecipes.length})…`:"Publishing…"):activeBundle&&bundleRecipes.length>1?(()=>{
+{publishRun&&!publishing?"Queuing every listing in this batch…":publishing?(activeBundle&&bundleRecipes.length>1?`Publishing ${bundleListingsToPublish()} listings across ${bundleRecipes.length} products…`:"Publishing…"):activeBundle&&bundleRecipes.length>1?(()=>{
               /* D546 - "Publish all 3 products" counted products while every
                  number above it counted the open product's listings, so nothing
                  on the page said how many Etsy listings would be created, or

@@ -4,7 +4,16 @@ import { etsyBudget } from "../../../etsy/client";
 import { finishEtsyListing } from "../../../etsy/finish";
 import { logError } from "@/app/error-log";
 
-type Settings={printifyImageIndices:number[];printifyImageSelections:Record<string,number[]>;etsyShippingProfileId:number};
+/* D559 - a job carried ONE settings blob: one shipping profile, one set of image
+   selections. A bundle's products each have their own - her hoodie ships on the
+   "Hoodies" profile and her tee on "Standard" - so the client could never send
+   more than one product's listings in a single call. That is the whole reason
+   publishing walked product by product, reopening each batch to read its
+   settings, and the whole reason the publish review could only ever show and
+   select the open product's listings. Settings are per product now; the flat
+   fields stay as the fallback so jobs queued before this still drain. */
+type ProductSettings={indices?:number[];selections?:number[];shippingProfileId?:number};
+type Settings={printifyImageIndices:number[];printifyImageSelections:Record<string,number[]>;etsyShippingProfileId:number;byProduct?:Record<string,ProductSettings>};
 type Draft={id:string;batchId?:string;shopId:number;title?:string;tags?:string[];description?:string;etsyDetails?:unknown};
 type Runtime={DB:D1Database;PRINTIFY_TOKEN_KEY?:string};
 const runtime=()=>env as unknown as Runtime;
@@ -38,7 +47,11 @@ export async function processNextPublishItem(userId:string,jobId:string){
     const linked=await runtime().DB.prepare("SELECT etsy_listing_id FROM etsy_listing_links WHERE printify_product_id=? AND user_id=? AND etsy_listing_id>0").bind(draft.id,userId).first<{etsy_listing_id:number}>();let listingId=Number(linked?.etsy_listing_id)||await printifyListingId(token,draft.shopId,draft.id);
     if(!listingId){const response=await fetch(`https://api.printify.com/v1/shops/${draft.shopId}/products/${draft.id}/publish.json`,{method:"POST",headers:{...printifyHeaders(token),"Content-Type":"application/json"},body:JSON.stringify({title:true,description:true,images:true,variants:true,tags:true,keyFeatures:true,shipping_template:true})});if(!response.ok)throw new Error(`Printify could not publish this listing (${response.status}).`);listingId=await waitForEtsyListing(token,draft.shopId,draft.id)}
     await runtime().DB.prepare("INSERT INTO etsy_listing_links (printify_product_id,user_id,batch_id,etsy_listing_id,status,last_error,updated_at) VALUES (?,?,?,?, 'finishing',NULL,CURRENT_TIMESTAMP) ON CONFLICT(printify_product_id) DO UPDATE SET etsy_listing_id=excluded.etsy_listing_id,status='finishing',last_error=NULL,updated_at=CURRENT_TIMESTAMP").bind(draft.id,userId,draft.batchId||"",listingId).run();
-    const selection=Array.isArray(settings.printifyImageSelections[draft.id])?[...new Set(settings.printifyImageSelections[draft.id].map(Number).filter(value=>Number.isInteger(value)&&value>=0))]:settings.printifyImageIndices,result=await finishEtsyListing(userId,{...draft,etsyShippingProfileId:settings.etsyShippingProfileId,etsyDetails:draft.etsyDetails as {category?:string;attributes?:Record<string,string>;optional?:Record<string,string>}},listingId,selection),apiCalls=result.apiCalls,resultJson=JSON.stringify({printifyProductId:draft.id,etsyListingId:listingId,url:result.url});
+    const forProduct=settings.byProduct?.[draft.id]||{};
+    const clean=(list?:number[])=>Array.isArray(list)?[...new Set(list.map(Number).filter(value=>Number.isInteger(value)&&value>=0))]:null;
+    const selection=clean(forProduct.selections)||clean(settings.printifyImageSelections[draft.id])||settings.printifyImageIndices;
+    const shippingProfileId=Number(forProduct.shippingProfileId)||settings.etsyShippingProfileId;
+    const result=await finishEtsyListing(userId,{...draft,etsyShippingProfileId:shippingProfileId,etsyDetails:draft.etsyDetails as {category?:string;attributes?:Record<string,string>;optional?:Record<string,string>}},listingId,selection),apiCalls=result.apiCalls,resultJson=JSON.stringify({printifyProductId:draft.id,etsyListingId:listingId,url:result.url});
     await runtime().DB.batch([runtime().DB.prepare("UPDATE etsy_publish_items SET status='completed',result_json=?,last_error=NULL,locked_at=NULL,updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(resultJson,item.id),runtime().DB.prepare("INSERT INTO etsy_listing_usage (user_product,user_id,product_id,job_id,etsy_listing_id,api_calls,published_at) VALUES (?,?,?,?,?,?,CURRENT_TIMESTAMP) ON CONFLICT(user_product) DO UPDATE SET job_id=excluded.job_id,etsy_listing_id=excluded.etsy_listing_id,api_calls=excluded.api_calls").bind(`${userId}:${draft.id}`,userId,draft.id,jobId,listingId,apiCalls)]);
   }catch(error){const message=error instanceof Error?error.message:"Goldie could not finish this listing.",attempt=item.attempts+1,retryable=attempt<5&&!/different shop|missing|required listing field|Choose an Etsy shipping profile/i.test(message),delay=Math.min(900,30*2**Math.max(0,attempt-1));await runtime().DB.prepare("UPDATE etsy_publish_items SET status=?,available_at=?,last_error=?,locked_at=NULL,updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(retryable?"queued":"failed",retryable?now+delay:0,message,item.id).run();if(!retryable)await runtime().DB.prepare("UPDATE etsy_publish_jobs SET last_error=?,updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(message,jobId).run();
     /* D475 - publishing is the one step that costs money and the one step that

@@ -3976,10 +3976,23 @@ test("one press publishes every product in a bundle — D495", async () => {
 
   /* Publishing spends real money, so the run is stricter than the drafts run: a
      product whose listings are not ready stops it, and nothing after publishes. */
-  assert.match(app, /const blockers=\[\.\.\.missingPublishFields\(\),\.\.\.createdListingsMissingImages\(chosen\)\.map/);
-  assert.match(app, /setPublishRun\(null\);\n\s*stopWith\(`\$\{activeRecipe\?\.name\|\|"This product"\} is not ready to publish\.`/);
+  /* D559 - one press now means one call. It used to publish the open product,
+     wait for its receipt, switch the whole app to the next product's batch,
+     publish that, and repeat - so the run depended on the tab staying open
+     through two batch restores, and a stall between products left her half
+     published. There is nothing to advance to now. */
+  assert.match(app, /const blockers=\[\.\.\.missingPublishFields\(\),\.\.\.createdListingsMissingImages\(selectedPublishDrafts\(\)\)\.map/);
+  assert.match(app, /stopWith\("This batch is not ready to publish\."/);
   assert.match(app, /if\(publishing\|\|switchingProduct\|\|publishConfirmOpen\|\|restoringBatch\)return/);
-  assert.match(app, /if\(bundleIndex\+1>=bundleRecipes\.length\)\{setPublishRun\(null\);return\}/);
+  assert.match(app, /if\(batchReceipt\)\{setPublishRun\(null\);return\}/);
+  assert.doesNotMatch(app, /openBundleProduct\(bundleIndex\+1\)/,
+    "publishing never switches product");
+  assert.doesNotMatch(app, /publishAdvancing/);
+
+  // Every listing in the bundle goes in one request, each with its own settings.
+  assert.match(app, /function publishTargets\(\)/);
+  assert.match(app, /const byProduct=Object\.fromEntries\(everything\.map\(item=>\[item\.id,\{selections:item\.selections,indices:item\.indices,shippingProfileId:item\.shippingProfileId\}\]\)\)/);
+  assert.match(app, /productIds:ids,printifyImageIndices,printifyImageSelections,etsyShippingProfileId,byProduct/);
 
   // The last screen before money is spent has to state the real total and fee.
   assert.match(app, /\$\{requestedListingCount\} listings across \$\{bundleRecipes\.length\} products will go live on Etsy\./);
@@ -3988,7 +4001,9 @@ test("one press publishes every product in a bundle — D495", async () => {
   assert.match(css, /\.publish-confirm-bundle\{/);
 
   // And she can see which product it is on.
-  assert.match(app, /Publishing \$\{activeRecipe\?\.name\|\|"this product"\} \(\$\{bundleIndex\+1\} of \$\{bundleRecipes\.length\}\)…/);
+  /* D559 - it no longer publishes one product at a time, so it no longer reports
+     which one it is on. */
+  assert.match(app, /Publishing \$\{bundleListingsToPublish\(\)\} listings across \$\{bundleRecipes\.length\} products…/);
 });
 
 test("two tabs cannot silently overwrite the same batch — D496", async () => {
@@ -4904,4 +4919,50 @@ test("the rail keeps its ticks when she goes back — D557", async () => {
      done - it is done when listings are actually live. */
   assert.match(app, /const done=stage\.index===8\?stageStarted:\(stageStarted&&progressGateIssues\(stage\.index\)\.length===0\)/);
   assert.doesNotMatch(app, /const done=stagePosition>=0&&position<stagePosition;/);
+});
+
+test("the publish review names the listing, not the upload — D558", async () => {
+  const review = await readFile(new URL("../app/final-listing-review.tsx", import.meta.url), "utf8");
+
+  /* D253 set this rule and it was applied to the rows but not to the heading over
+     them: "a seller reviewing a batch read 'ChatGPT Image Aug 21, 2026,
+     05_32_41 PM (2).png' as the heading over their own listing." Seen again on
+     her publish screen, with "Bride Hoodie, Seashells And Wedding Bells
+     Bachelorette, Camp Bach" sitting directly underneath it. */
+  assert.match(review, /design\?\.title\?\.trim\(\)\|\|first\?\.title\?\.trim\(\)\|\|readableDesignName\(designName\)/);
+  assert.doesNotMatch(review, /<span>\{readableDesignName\(designName\)\}<\/span>/);
+});
+
+test("the publish screen shows every listing the press will create — D559", async () => {
+  const [app, queue, route] = await Promise.all([
+    readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/printify/drafts/publish/queue.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/printify/drafts/publish/route.ts", import.meta.url), "utf8"),
+  ]);
+
+  /* Her question, looking at step 4 on a hoodie + tee + crewneck batch: "why
+     would it be showing me two hoodies only?" Because the review was handed the
+     open batch's drafts while the button published all three products - so the
+     checkboxes governed 2 of the 6 listings she was about to pay for, and the
+     other 4 published regardless.
+
+     The cause was one line of the data model: a publish job carried ONE settings
+     blob - one shipping profile, one set of image selections - and a bundle's
+     products each have their own. */
+  assert.match(queue, /type ProductSettings=\{indices\?:number\[\];selections\?:number\[\];shippingProfileId\?:number\}/);
+  assert.match(queue, /const forProduct=settings\.byProduct\?\.\[draft\.id\]\|\|\{\}/);
+  // The flat fields stay, so jobs queued before this still drain.
+  assert.match(queue, /clean\(settings\.printifyImageSelections\[draft\.id\]\)\|\|settings\.printifyImageIndices/);
+  assert.match(queue, /Number\(forProduct\.shippingProfileId\)\|\|settings\.etsyShippingProfileId/);
+  assert.match(route, /byProduct:Object\.fromEntries/);
+
+  /* The sibling batches were already being read for their counts and thrown
+     away. The same read keeps what publishing and the review need. */
+  assert.match(app, /const \[bundleMembers,setBundleMembers\]/);
+  assert.match(app, /memberScratch\[recipe\.id\]=\{recipeId:recipe\.id,productName:recipe\.name,/);
+  assert.match(app, /function bundlePublishDrafts\(\)/);
+  assert.match(app, /<FinalListingReview drafts=\{bundlePublishDrafts\(\)\}/);
+
+  // And the selection governs every listing, not the open product's.
+  assert.match(app, /const chosen=new Set\(selectedPublishIds\);/);
 });
