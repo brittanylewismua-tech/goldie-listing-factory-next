@@ -213,7 +213,9 @@ test("unifies saved products, editing, pricing, and mockups without the old fact
   /* D214: renamed and opened by default. It was a closed <details> reading
      "Choose Printify flatlays", so a seller who never found it published with
      no product photographs at all. */
-  assert.match(page, /Printify product photos — \{selected\.size\} selected/);
+  /* D555 - the picker renders once, always bare, so the <details> copy could
+     never appear. Deleted; this asserts the one that renders. */
+  assert.match(page, /className="printify-image-picker bare"/);
   assert.match(page, /IntegratedMockups/);
   assert.match(mockups, /Choose a mockup set/);
   assert.match(mockups, /Create .*mockups/);
@@ -2470,9 +2472,11 @@ test("Batch History does not label a bundle with one member's product — D196",
    checklist, which names a listing with no photo before anything goes live. */
 test("D407: nothing on the Images step expands itself", async () => {
   const page = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
-  assert.doesNotMatch(page, /<details className="printify-image-picker" open/,
+  assert.doesNotMatch(page, /<details className="printify-image-picker"/,
     "arriving on a step should not open a fold for you");
-  assert.match(page, /<details className="printify-image-picker"/);
+  /* D555 - the picker renders once, always bare, so the <details> copy could
+     never appear. Deleted; this asserts the one that renders. */
+  assert.match(page, /<div className="printify-image-picker bare">/);
 
   /* The guard that replaced it: publishing still cannot happen silently without
      photos. */
@@ -4539,7 +4543,9 @@ test("a task row owns its panel inside the product card — D539", async () => {
   assert.match(css, /\.app-shell \.task-listing-head\{/);
 
   // The legacy shells come off rather than nesting inside the new ones.
-  assert.match(app, /\{bare\?<div className="printify-image-picker bare">/);
+  /* D555 - the picker is rendered once, always bare, so the <details> copy could
+     never appear. It is gone; this asserts the one that renders. */
+  assert.match(app, /<div className="printify-image-picker bare">/);
   assert.doesNotMatch(app, /<details className="draft-mockups">/, "no second accordion around the generator");
 });
 
