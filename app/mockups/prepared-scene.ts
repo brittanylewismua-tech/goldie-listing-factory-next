@@ -8,7 +8,7 @@ import type { PrintSide } from "../placement-math.ts";
    Bumping this invalidates them and re-reads each scene the next time it is
    used - which is exactly the migration path that already exists and cannot
    fail. */
-export const SCENE_PREPARATION_VERSION = 5;
+export const SCENE_PREPARATION_VERSION = 6;
 
 export type SceneGeometry = "flat" | "perspective" | "cylindrical" | "flexible" | "irregular";
 export type NormalizedPoint = [number, number];

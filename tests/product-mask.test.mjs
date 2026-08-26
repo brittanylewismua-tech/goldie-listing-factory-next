@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { decodeCocoRle, fitQuadToMask, maskBoundingBox, quadMaskCoverage, quadStaysOnMask } from "../app/mockups/product-mask.ts";
+import { decodeCocoRle, fitQuadToMask, imageDimensions, maskBoundingBox, quadMaskCoverage, quadStaysOnMask } from "../app/mockups/product-mask.ts";
 
 // COCO counts are column-major. These fixtures use the uncompressed form after
 // applying the same compact encoder the service uses.
@@ -38,6 +38,23 @@ test("decodes SAM COCO RLE and derives its pixel silhouette bounds", () => {
   const mask = rectangleMask(20, 10, 4, 2, 16, 9);
   assert.ok(mask);
   assert.deepEqual(maskBoundingBox(mask), { left: .2, top: .2, right: .8, bottom: .9 });
+});
+
+test("decodes Fal's bare RLE counts using the source image dimensions", () => {
+  const encoded = JSON.parse(compressedRle(20, 10, new Uint8Array(200)));
+  const mask = decodeCocoRle(encoded.counts, { width:20, height:10 });
+  assert.ok(mask);
+  assert.equal(mask.width, 20);
+  assert.equal(mask.height, 10);
+});
+
+test("reads PNG, JPEG and WebP source dimensions without a native image library", () => {
+  const png = new Uint8Array(24); png.set([0x89,0x50,0x4e,0x47],0); png.set([0,0,2,0],16); png.set([0,0,1,0],20);
+  assert.deepEqual(imageDimensions(png,"image/png"),{width:512,height:256});
+  const jpeg = new Uint8Array([0xff,0xd8,0xff,0xc0,0,16,8,1,44,2,88,3,1,0,2,17,1,3,17,1]);
+  assert.deepEqual(imageDimensions(jpeg,"image/jpeg"),{width:600,height:300});
+  const webp = new Uint8Array(30); webp.set([..."RIFF"].map(x=>x.charCodeAt(0)),0); webp.set([..."WEBPVP8X"].map(x=>x.charCodeAt(0)),8); webp.set([0xff,1,0,0xff,0,0],24);
+  assert.deepEqual(imageDimensions(webp,"image/webp"),{width:512,height:256});
 });
 
 test("rejects the D581-style quad that leaves the segmented product", () => {

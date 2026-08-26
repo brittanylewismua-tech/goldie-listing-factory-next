@@ -96,6 +96,9 @@ test("why a scene fell back is recorded and readable", async () => {
   assert.match(route, /"no-analyser-configured"/);
   assert.match(route, /model-geometry-invalid/);
   assert.match(route, /product-mask-unavailable/);
+  assert.match(route, /rleDiagnostic/);
+  assert.doesNotMatch(route, /rleDiagnostic[^\n]+String\(value\)/,
+    "diagnostics record only shape and length, never the mask payload");
   assert.match(route, /model-surface-mask-coverage:/);
   assert.match(route, /store\(preparation, attempt, result\.fallbackReason\)/,
     "a successful preparation that used a fallback must say why");
@@ -105,7 +108,7 @@ test("why a scene fell back is recorded and readable", async () => {
 
 test("D585: cached pre-diagnostic preparations are retired", async () => {
   const prepared = await read("app/mockups/prepared-scene.ts");
-  assert.match(prepared, /SCENE_PREPARATION_VERSION = 5/);
+  assert.match(prepared, /SCENE_PREPARATION_VERSION = 6/);
 });
 
 test("silhouette validation is required, while optional enrichment cannot discard it", async () => {

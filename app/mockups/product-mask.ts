@@ -5,10 +5,18 @@ export type ProductMask = { width: number; height: number; pixels: Uint8Array };
 /* SAM returns COCO's compressed, column-major run-length encoding. Keeping the
    decoder here means preparation can verify the actual product silhouette in a
    Worker; no native image library and no browser canvas are involved. */
-export function decodeCocoRle(value: unknown): ProductMask | null {
+export type ImageDimensions = { width: number; height: number };
+
+export function decodeCocoRle(value: unknown, dimensions?: ImageDimensions | null): ProductMask | null {
   let candidate: unknown = value;
   if (typeof candidate === "string") {
-    try { candidate = JSON.parse(candidate); } catch { return null; }
+    try { candidate = JSON.parse(candidate); }
+    catch {
+      // Fal's image-rle endpoint returns the compressed COCO counts string by
+      // itself. SAM knows the size from the input image; pair it back here.
+      if (!dimensions) return null;
+      candidate = { size: [dimensions.height, dimensions.width], counts: value };
+    }
   }
   const record = candidate as { size?: unknown; counts?: unknown } | null;
   if (!record || !Array.isArray(record.size) || record.size.length < 2 || typeof record.counts !== "string") return null;
@@ -44,6 +52,42 @@ export function decodeCocoRle(value: unknown): ProductMask | null {
     foreground = !foreground;
   }
   return offset === pixels.length ? { width, height, pixels } : null;
+}
+
+export function imageDimensions(bytes: Uint8Array, contentType = ""): ImageDimensions | null {
+  const u32be = (offset: number) => ((bytes[offset] << 24) | (bytes[offset + 1] << 16) | (bytes[offset + 2] << 8) | bytes[offset + 3]) >>> 0;
+  if ((contentType.includes("png") || bytes[0] === 0x89) && bytes.length >= 24
+    && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47) {
+    const width = u32be(16), height = u32be(20);
+    return width > 0 && height > 0 ? { width, height } : null;
+  }
+  if ((contentType.includes("jpeg") || (bytes[0] === 0xff && bytes[1] === 0xd8)) && bytes.length >= 12) {
+    let offset = 2;
+    const sof = new Set([0xc0,0xc1,0xc2,0xc3,0xc5,0xc6,0xc7,0xc9,0xca,0xcb,0xcd,0xce,0xcf]);
+    while (offset + 8 < bytes.length) {
+      if (bytes[offset] !== 0xff) { offset++; continue; }
+      while (bytes[offset] === 0xff) offset++;
+      const marker = bytes[offset++];
+      if (marker === 0xd9 || marker === 0xda) break;
+      if (marker >= 0xd0 && marker <= 0xd7) continue;
+      const length = (bytes[offset] << 8) | bytes[offset + 1];
+      if (length < 2 || offset + length > bytes.length) break;
+      if (sof.has(marker) && length >= 7) {
+        const height = (bytes[offset + 3] << 8) | bytes[offset + 4];
+        const width = (bytes[offset + 5] << 8) | bytes[offset + 6];
+        return width > 0 && height > 0 ? { width, height } : null;
+      }
+      offset += length;
+    }
+  }
+  // WebP extended header: canvas dimensions are stored as 24-bit values - 1.
+  if ((contentType.includes("webp") || String.fromCharCode(...bytes.slice(8, 12)) === "WEBP")
+    && bytes.length >= 30 && String.fromCharCode(...bytes.slice(12, 16)) === "VP8X") {
+    const width = 1 + bytes[24] + (bytes[25] << 8) + (bytes[26] << 16);
+    const height = 1 + bytes[27] + (bytes[28] << 8) + (bytes[29] << 16);
+    return width > 0 && height > 0 ? { width, height } : null;
+  }
+  return null;
 }
 
 function onMask(mask: ProductMask, x: number, y: number) {

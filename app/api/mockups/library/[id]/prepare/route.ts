@@ -18,7 +18,7 @@ import {
   type ProductBox,
 } from "@/app/mockups/prepared-scene";
 import { withErrorLog } from "@/app/error-log";
-import { decodeCocoRle, fitQuadToMask, maskBoundingBox, quadMaskCoverage, quadStaysOnMask, type ProductMask } from "@/app/mockups/product-mask";
+import { decodeCocoRle, fitQuadToMask, imageDimensions, maskBoundingBox, quadMaskCoverage, quadStaysOnMask, type ImageDimensions, type ProductMask } from "@/app/mockups/product-mask";
 
 const MAX_ATTEMPTS = 3;
 
@@ -91,39 +91,40 @@ function segmentationPrompts(productName: string) {
   return productSurfaceFamily(productName) === "apparel" ? ["garment"] : ["product"];
 }
 
-type SegmentationResult = { productBox: ProductBox | null; mask?: ProductMask };
+type SegmentationResult = { productBox: ProductBox | null; mask?: ProductMask; rleDiagnostic?: string };
 
-function segmentationResult(payload: Record<string, unknown>): SegmentationResult {
+function segmentationResult(payload: Record<string, unknown>, dimensions: ImageDimensions | null): SegmentationResult {
   const metadata = payload.metadata as Array<{ box?: unknown; score?: number }> | undefined;
   const boxes = payload.boxes as unknown[] | undefined;
   const rles = Array.isArray(payload.rle) ? payload.rle : [payload.rle];
+  const rleDiagnostic = `count=${rles.length};types=${rles.map(value=>typeof value).join(",")};lengths=${rles.map(value=>typeof value === "string" ? value.length : 0).join(",")}`;
   const ranked = (metadata || []).map((item, index) => ({
     box: boxFromCxCyWh(item.box), score: Number.isFinite(item.score) ? Number(item.score) : 0, index,
   })).filter(item => item.box).sort((a, b) => b.score - a.score);
   const selected = ranked[0];
-  const mask = decodeCocoRle(rles[selected?.index ?? 0]) || decodeCocoRle(rles[0]);
+  const mask = decodeCocoRle(rles[selected?.index ?? 0], dimensions) || decodeCocoRle(rles[0], dimensions);
   const productBox = (mask ? maskBoundingBox(mask) : null) || selected?.box || boxFromCxCyWh(boxes?.[0]) || null;
-  return { productBox, mask: mask || undefined };
+  return { productBox, mask: mask || undefined, rleDiagnostic };
 }
 
-async function detectProduct(imageUrl: string, productName: string, key: string): Promise<SegmentationResult> {
+async function detectProduct(imageUrl: string, productName: string, key: string, dimensions: ImageDimensions | null): Promise<SegmentationResult> {
   let last: SegmentationResult = { productBox: null };
   for (const prompt of segmentationPrompts(productName)) {
     const payload = await falJson("fal-ai/sam-3/image-rle", key, {
       image_url: imageUrl, prompt, apply_mask: true, sync_mode: false,
       return_multiple_masks: false, max_masks: 1, include_scores: true, include_boxes: true, output_format: "png",
     });
-    last = segmentationResult(payload);
+    last = segmentationResult(payload, dimensions);
     if (last.productBox) return last;
   }
   return last;
 }
 
-async function prepareOnce(imageUrl: string, productName: string, key: string, objectPrefix: string) {
+async function prepareOnce(imageUrl: string, productName: string, key: string, objectPrefix: string, dimensions: ImageDimensions | null) {
   const optional = async <T>(task: () => Promise<T>): Promise<T | undefined> => {
     try { return await task(); } catch { return undefined; }
   };
-  const segmentation = await optional(() => detectProduct(imageUrl, productName, key));
+  const segmentation = await optional(() => detectProduct(imageUrl, productName, key, dimensions));
   const reading = await analyzeGeometry(imageUrl, productName, key, segmentation?.productBox);
   const productBox = segmentation?.productBox || reading.productBox;
   if (!productBox) throw new Error("The product boundary could not be verified.");
@@ -137,7 +138,7 @@ async function prepareOnce(imageUrl: string, productName: string, key: string, o
   const fallbackReason = measured ? "" : !reading.geometry
     ? "model-geometry-invalid"
     : !segmentation?.mask
-      ? "product-mask-unavailable"
+      ? `product-mask-unavailable:${segmentation?.rleDiagnostic || "no-response"}`
       : `model-surface-mask-coverage:${(measuredCoverage || 0).toFixed(3)};fallback:${fittedCorners ? "silhouette-fitted" : "product-box"}`;
   const geometry = measured || {
     corners: fittedCorners || computed.corners, productBox, productBoundsVerified: true,
@@ -239,12 +240,14 @@ async function handlePOST(request: NextRequest, context: { params: Promise<{ id:
   if (!key) return store(computedPreparation(productName, null), 0, "no-analyser-configured");
   const source = await env.ARTWORK.get(row.objectKey);
   if (!source) return store(computedPreparation(productName, null), 0, "source-photograph-missing");
-  const sourceUrl = dataUrl(await source.arrayBuffer(), row.contentType);
+  const sourceBytes = new Uint8Array(await source.arrayBuffer());
+  const dimensions = imageDimensions(sourceBytes, row.contentType);
+  const sourceUrl = dataUrl(sourceBytes.buffer as ArrayBuffer, row.contentType);
   let lastError = "Scene preparation did not finish.";
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     try {
       const objectPrefix = `mockup-library/${user.userId}/${id}/prepared-v${SCENE_PREPARATION_VERSION}`;
-      const result = await prepareOnce(sourceUrl, productName, key, objectPrefix);
+      const result = await prepareOnce(sourceUrl, productName, key, objectPrefix, dimensions);
       const preparation: ScenePreparation = {
         version: SCENE_PREPARATION_VERSION, status: "ready", productFamily: productSurfaceFamily(productName),
         geometry: result.geometry, printSide: result.side, corners: result.corners, occluded: result.occluded,
