@@ -437,9 +437,20 @@ test("listing and mockup images are lazy-loaded — D97", async () => {
    * off-screen). It is WRONG for the product-step mockup grid: only ~10 images,
    * all in view, and lazy-loading made them paint blank and fill in late while
    * the seller scrolled. Scope it to the big grids. See D138. */
-  const eagerImg = /<img src=\{(src|design\.previewUrl|file\.previewUrl|draftPreview)\}(?![^>]*loading="lazy")/;
-  assert.doesNotMatch(page, eagerImg,
-    "A repeated listing image is loading eagerly. On a 20-design batch that is thousands of simultaneous requests.");
+  /* D567 - the rule holds for the big repeated grid and had spread to images it
+     was never about. loading="lazy" on an image with no intrinsic size is a
+     deadlock: it collapses to nothing, so the browser never decides it is near
+     the viewport, so it never loads, so it never gets a size. Measured on her
+     page - the scene tiles carry no lazy attribute and 8 of 8 loaded; the panel
+     thumbnails carry it and 0 of 4 loaded, while a direct probe of the same URL
+     returned ok at 1536px. Those blank squares where a design thumbnail belongs
+     were images that never fetched. The picker's 72 tiles stay lazy; a task panel
+     holds a handful of images and is opened deliberately. */
+  const eagerPickerImg = /<img src=\{src\}(?![^>]*loading="lazy")/;
+  assert.doesNotMatch(page, eagerPickerImg,
+    "The Printify picker grid is the one that projects to thousands of requests. It stays lazy.");
+  assert.doesNotMatch(page, /className="task-listing-thumb"[^>]*loading="lazy"/,
+    "a panel thumbnail must not wait for a size it can only get by loading");
   assert.ok((page.match(/loading="lazy" decoding="async"/g) || []).length >= 4,
     "The large repeated grids must stay lazy-loaded.");
   assert.match(page, /<img src=\{item\.src\} alt=\{`Scene \$\{index \+ 1\}`\}\/>|<img src=\{item\.src\} alt=\{`Scene \$\{index\+1\}`\}\/>/,

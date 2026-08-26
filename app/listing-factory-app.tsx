@@ -2086,12 +2086,20 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
 
      One collapse, at the task. Open the task and the work is there, for every
      listing, already open. */
+/* D567 - loading="lazy" on an image with no intrinsic size is a deadlock: the
+   element collapses to nothing, so the browser never decides it is near the
+   viewport, so it never loads, so it never gets a size. Measured on her page -
+   the scene tiles carry no lazy attribute and 8 of 8 loaded; every panel
+   thumbnail carries it and 0 of 4 loaded, while a direct probe of the very same
+   URL returned ok at 1536px. Those blank squares where a design thumbnail should
+   be were never white-on-white artwork; they were images that never fetched. A
+   panel is opened deliberately and holds a handful of images. */
   function designTaskRows(task:string,standing:(design:DesignFile)=>string,inner:(design:DesignFile)=>ReactNode){
     return <div className="task-panel-body">{files.map(design=>{
       const thumb=design.previewUrl||drafts.find(draft=>draft.clientId===design.id)?.previewUrl||"";
       return <div className="task-listing" key={`${task}:${design.id}`} onFocus={()=>setActiveDesign(design.id)}>
         <div className="task-listing-head">
-          {thumb?<img className="task-listing-thumb" src={thumb} alt="" loading="lazy" decoding="async"/>:<span className="task-listing-thumb"/>}
+          {thumb?<img className="task-listing-thumb" src={thumb} alt="" decoding="async"/>:<span className="task-listing-thumb"/>}
           <p className="task-listing-name">{design.title.trim()||design.name}</p>
           <span className="task-listing-count">{standing(design)}</span>
         </div>
@@ -2109,7 +2117,7 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
       {designTaskRows("titles",design=>!design.title.trim()?"No title yet":`${design.tags.length} of 13 tags`,design=><div className="task-listing-edit">{/* D541 - D408 found this the hard way: at thumbnail size the artwork
         is unreadable, so the card cannot tell you which design you are writing a
         title for. The row stays compact; the preview comes back at a size you can
-        read once the row is open. */}{(()=>{const shot=design.previewUrl||drafts.find(draft=>draft.clientId===design.id)?.previewUrl;return shot?<button type="button" className="task-listing-preview" onClick={()=>window.open(shot,"_blank","noopener,noreferrer")} aria-label={`Open a larger preview of ${design.title.trim()||design.name}`}><img src={shot} alt={design.name||"Design artwork"} loading="lazy" decoding="async"/><span>Enlarge</span></button>:null})()}<div className="design-fields"><label>Title <span>{design.title.length}/140</span><textarea className="listing-title-field" rows={3} value={design.title} maxLength={140} onChange={event=>{const title=event.target.value;updateDesign(design.id,{title,tags:tagsFromTitle(title),etsy:undefined})}}/></label><label>Tags <span>{design.tags.length}/13</span><textarea className="listing-tags-field" rows={3} value={design.tags.join(", ")} onChange={event=>updateDesign(design.id,{tags:[...new Set(event.target.value.split(",").map(tag=>tag.trim().toLowerCase()).filter(tag=>tag&&tag.length<=20))].slice(0,13),etsy:undefined})} placeholder="Exact title phrases, separated by commas"/></label><div className="tag-row">{design.tags.map(tag=><span key={tag}>{tag}</span>)}{!design.tags.length&&<small>Goldie will create matching tags with the title.</small>}</div><IndividualAutoTitle design={design} template={templateDetails} useCommas={titleJoiner===", "} paused={batchHeldByAnotherTab} onApply={(title,tags)=>{setActiveDesign(design.id);updateDesign(design.id,{title,tags,etsy:undefined,etsyError:""})}}/>{design.etsyError&&<small className="field-error">{design.etsyError}</small>}</div></div>)}
+        read once the row is open. */}{(()=>{const shot=design.previewUrl||drafts.find(draft=>draft.clientId===design.id)?.previewUrl;return shot?<button type="button" className="task-listing-preview" onClick={()=>window.open(shot,"_blank","noopener,noreferrer")} aria-label={`Open a larger preview of ${design.title.trim()||design.name}`}><img src={shot} alt={design.name||"Design artwork"} decoding="async"/><span>Enlarge</span></button>:null})()}<div className="design-fields"><label>Title <span>{design.title.length}/140</span><textarea className="listing-title-field" rows={3} value={design.title} maxLength={140} onChange={event=>{const title=event.target.value;updateDesign(design.id,{title,tags:tagsFromTitle(title),etsy:undefined})}}/></label><label>Tags <span>{design.tags.length}/13</span><textarea className="listing-tags-field" rows={3} value={design.tags.join(", ")} onChange={event=>updateDesign(design.id,{tags:[...new Set(event.target.value.split(",").map(tag=>tag.trim().toLowerCase()).filter(tag=>tag&&tag.length<=20))].slice(0,13),etsy:undefined})} placeholder="Exact title phrases, separated by commas"/></label><div className="tag-row">{design.tags.map(tag=><span key={tag}>{tag}</span>)}{!design.tags.length&&<small>Goldie will create matching tags with the title.</small>}</div><IndividualAutoTitle design={design} template={templateDetails} useCommas={titleJoiner===", "} paused={batchHeldByAnotherTab} onApply={(title,tags)=>{setActiveDesign(design.id);updateDesign(design.id,{title,tags,etsy:undefined,etsyError:""})}}/>{design.etsyError&&<small className="field-error">{design.etsyError}</small>}</div></div>)}
     </div>;
     if(task==="description")return <>
       <div className="task-panel-lead"><div className="batch-description-body"><p>This came from your saved product. Edit it once here to change the shared description on every listing in this batch.</p><label>Description for every listing<textarea rows={9} value={description} onChange={event=>setDescription(event.target.value)} placeholder="Add sizing, materials, production, care, and shipping information"/></label><small>Open any listing below only when that listing needs different wording.</small>{/* D232 · "Save this description as the default" went with the settings block. The
@@ -2139,8 +2147,8 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
                 panel carries, so six panels listed each listing the same way and
                 this one did it differently. Same head; the name it used to repeat
                 inside the card comes out with it. */}
-            <div className="task-listing-head">{draft.previewUrl?<img className="task-listing-thumb" src={draft.previewUrl} alt="" loading="lazy"/>:<span className="task-listing-thumb"/>}<p className="task-listing-name">{design?.title?.trim()||design?.name||draft.name||"Listing"}</p><span className="task-listing-count">{(draft.printifyImages||[]).length} Printify views</span></div>
-            <div className="task-listing-work"><div className="draft-card-top">{draft.previewUrl?<button className="printify-preview-button" onClick={()=>window.open(draft.previewUrl,"_blank","noopener,noreferrer")} aria-label="Open larger Printify preview"><img src={draft.previewUrl} alt={`Printify preview for ${draft.title||draft.name}`}/><span>Click to enlarge</span></button>:design?<div className="pending-preview"><img src={design.previewUrl} alt="Design preview" loading="lazy" decoding="async"/><span>Printify preview processing</span></div>:<span className="draft-check">!</span>}<div>{draft.status!=="Created"&&<span className="draft-state">DRAFT FAILED</span>}{/* D557 - the head above carries the name now. */}<small>{draft.status==="Created"?"Unpublished Printify draft":draft.error}</small>{/* D409 - The tags belong to step 3. Showing them on Images invited editing
+            <div className="task-listing-head">{draft.previewUrl?<img className="task-listing-thumb" src={draft.previewUrl} alt=""/>:<span className="task-listing-thumb"/>}<p className="task-listing-name">{design?.title?.trim()||design?.name||draft.name||"Listing"}</p><span className="task-listing-count">{(draft.printifyImages||[]).length} Printify views</span></div>
+            <div className="task-listing-work"><div className="draft-card-top">{draft.previewUrl?<button className="printify-preview-button" onClick={()=>window.open(draft.previewUrl,"_blank","noopener,noreferrer")} aria-label="Open larger Printify preview"><img src={draft.previewUrl} alt={`Printify preview for ${draft.title||draft.name}`}/><span>Click to enlarge</span></button>:design?<div className="pending-preview"><img src={design.previewUrl} alt="Design preview" decoding="async"/><span>Printify preview processing</span></div>:<span className="draft-check">!</span>}<div>{draft.status!=="Created"&&<span className="draft-state">DRAFT FAILED</span>}{/* D557 - the head above carries the name now. */}<small>{draft.status==="Created"?"Unpublished Printify draft":draft.error}</small>{/* D409 - The tags belong to step 3. Showing them on Images invited editing
                    listing text on the step that is about photographs, and duplicated a
                    field that is owned elsewhere. */}{draft.editorUrl&&draft.id?<button className={`edit-draft-button ${openedDrafts.includes(draft.id)?"opened":""}`} onClick={()=>openDraft(draft)}><i/><span>{openedDrafts.includes(draft.id)?"Printify opened":"Open in Printify to resize or reposition"}<small>(Choose the correct shop in your Printify account first.)</small></span></button>:null}</div></div></div>{/* D541 - the print-quality check used to sit in step 3's table of every
               listing, under Titles. It reports whether this artwork will print
@@ -2158,7 +2166,7 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
               const count=selectedImages.length+(preparedMockupCounts[draft.id||""]||0);
               return <div className="task-listing" key={draft.clientId}>
                 <div className="task-listing-head">
-                  {draft.previewUrl?<img className="task-listing-thumb" src={draft.previewUrl} alt="" loading="lazy"/>:<span className="task-listing-thumb"/>}
+                  {draft.previewUrl?<img className="task-listing-thumb" src={draft.previewUrl} alt=""/>:<span className="task-listing-thumb"/>}
                   <p className="task-listing-name">{design?.title?.trim()||design?.name||draft.name||"Listing"}</p>
                   <span className="task-listing-count">{count} {count===1?"photo":"photos"}</span>
                 </div>
@@ -2173,7 +2181,7 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
               const count=selectedImages.length+(preparedMockupCounts[draft.id||""]||0);
               return <div className="task-listing" key={draft.clientId}>
                 <div className="task-listing-head">
-                  {draft.previewUrl?<img className="task-listing-thumb" src={draft.previewUrl} alt="" loading="lazy"/>:<span className="task-listing-thumb"/>}
+                  {draft.previewUrl?<img className="task-listing-thumb" src={draft.previewUrl} alt=""/>:<span className="task-listing-thumb"/>}
                   <p className="task-listing-name">{design?.title?.trim()||design?.name||draft.name||"Listing"}</p>
                   <span className="task-listing-count">{count} {count===1?"photo":"photos"}</span>
                 </div>
@@ -2185,7 +2193,7 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
                       too small, so you don't know actually what mockups you're
                       choosing for." D408 measured this once already on another
                       step. The artwork, at a size that identifies it. */}
-                  {design?.previewUrl?<div className="task-listing-figure"><img src={design.previewUrl} alt={design.name||"Design"} loading="lazy" decoding="async"/></div>:null}<IntegratedMockups design={design.file} productId={draft.id} productName={activeRecipe?.name||templateDetails?.blueprintTitle} defaultTheme={mockupTheme} referenceUrl={draft.previewUrl} placement={draft.placement} artworkBounds={design.visibleBounds} onPrepared={count=>setPreparedMockupCounts(current=>({...current,[draft.id!]:count}))}/></div>
+                  {design?.previewUrl?<div className="task-listing-figure"><img src={design.previewUrl} alt={design.name||"Design"} decoding="async"/></div>:null}<IntegratedMockups design={design.file} productId={draft.id} productName={activeRecipe?.name||templateDetails?.blueprintTitle} defaultTheme={mockupTheme} referenceUrl={draft.previewUrl} placement={draft.placement} artworkBounds={design.visibleBounds} onPrepared={count=>setPreparedMockupCounts(current=>({...current,[draft.id!]:count}))}/></div>
               </div>})()) }</div>
     </>;
     if(task==="order")return <>
@@ -2195,7 +2203,7 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
               const count=selectedImages.length+(preparedMockupCounts[draft.id||""]||0);
               return <div className="task-listing" key={draft.clientId}>
                 <div className="task-listing-head">
-                  {draft.previewUrl?<img className="task-listing-thumb" src={draft.previewUrl} alt="" loading="lazy"/>:<span className="task-listing-thumb"/>}
+                  {draft.previewUrl?<img className="task-listing-thumb" src={draft.previewUrl} alt=""/>:<span className="task-listing-thumb"/>}
                   <p className="task-listing-name">{design?.title?.trim()||design?.name||draft.name||"Listing"}</p>
                   <span className="task-listing-count">{count} {count===1?"photo":"photos"}</span>
                 </div>
