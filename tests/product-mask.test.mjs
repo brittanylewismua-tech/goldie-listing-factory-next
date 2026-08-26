@@ -48,6 +48,16 @@ test("decodes Fal's bare RLE counts using the source image dimensions", () => {
   assert.equal(mask.height, 10);
 });
 
+test("recovers Fal's internally resized mask from its run total and source aspect ratio", () => {
+  const pixels = new Uint8Array(12*8);
+  for(let y=1;y<7;y++)for(let x=2;x<10;x++)pixels[y*12+x]=1;
+  const encoded = JSON.parse(compressedRle(12,8,pixels));
+  const mask = decodeCocoRle(encoded.counts,{width:24,height:16});
+  assert.ok(mask);
+  assert.deepEqual({width:mask.width,height:mask.height},{width:12,height:8});
+  assert.deepEqual(maskBoundingBox(mask),{left:2/12,top:1/8,right:10/12,bottom:7/8});
+});
+
 test("reads PNG, JPEG and WebP source dimensions without a native image library", () => {
   const png = new Uint8Array(24); png.set([0x89,0x50,0x4e,0x47],0); png.set([0,0,2,0],16); png.set([0,0,1,0],20);
   assert.deepEqual(imageDimensions(png,"image/png"),{width:512,height:256});

@@ -7,6 +7,22 @@ export type ProductMask = { width: number; height: number; pixels: Uint8Array };
    Worker; no native image library and no browser canvas are involved. */
 export type ImageDimensions = { width: number; height: number };
 
+function dimensionsForTotal(total: number, expected: ImageDimensions): ImageDimensions | null {
+  if (expected.width * expected.height === total) return expected;
+  const targetRatio = expected.width / expected.height;
+  let best: { width:number; height:number; error:number } | null = null;
+  for (let divisor = 1; divisor * divisor <= total; divisor++) {
+    if (total % divisor) continue;
+    const pair = total / divisor;
+    for (const [width,height] of [[pair,divisor],[divisor,pair]]) {
+      const error = Math.abs(Math.log((width / height) / targetRatio));
+      if (!best || error < best.error) best = { width, height, error };
+    }
+  }
+  // A different raster size is expected; a different aspect ratio is not.
+  return best && best.error <= .08 ? { width:best.width, height:best.height } : null;
+}
+
 export function decodeCocoRle(value: unknown, dimensions?: ImageDimensions | null): ProductMask | null {
   let candidate: unknown = value;
   if (typeof candidate === "string") {
@@ -20,7 +36,7 @@ export function decodeCocoRle(value: unknown, dimensions?: ImageDimensions | nul
   }
   const record = candidate as { size?: unknown; counts?: unknown } | null;
   if (!record || !Array.isArray(record.size) || record.size.length < 2 || typeof record.counts !== "string") return null;
-  const height = Number(record.size[0]), width = Number(record.size[1]);
+  let height = Number(record.size[0]), width = Number(record.size[1]);
   if (!Number.isInteger(width) || !Number.isInteger(height) || width < 2 || height < 2 || width * height > 40_000_000) return null;
 
   const runs: number[] = [];
@@ -37,6 +53,12 @@ export function decodeCocoRle(value: unknown, dimensions?: ImageDimensions | nul
     runs.push(value);
   }
 
+  const total = runs.reduce((sum,count)=>sum+count,0);
+  if (total !== width * height) {
+    const recovered = dimensionsForTotal(total,{width,height});
+    if (!recovered) return null;
+    width = recovered.width; height = recovered.height;
+  }
   const pixels = new Uint8Array(width * height);
   let offset = 0, foreground = false;
   for (const count of runs) {

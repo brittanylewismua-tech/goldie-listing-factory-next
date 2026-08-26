@@ -97,7 +97,7 @@ function segmentationResult(payload: Record<string, unknown>, dimensions: ImageD
   const metadata = payload.metadata as Array<{ box?: unknown; score?: number }> | undefined;
   const boxes = payload.boxes as unknown[] | undefined;
   const rles = Array.isArray(payload.rle) ? payload.rle : [payload.rle];
-  const rleDiagnostic = `count=${rles.length};types=${rles.map(value=>typeof value).join(",")};lengths=${rles.map(value=>typeof value === "string" ? value.length : 0).join(",")}`;
+  const rleDiagnostic = `count=${rles.length};types=${rles.map(value=>typeof value).join(",")};lengths=${rles.map(value=>typeof value === "string" ? value.length : 0).join(",")};source=${dimensions ? `${dimensions.width}x${dimensions.height}` : "unknown"}`;
   const ranked = (metadata || []).map((item, index) => ({
     box: boxFromCxCyWh(item.box), score: Number.isFinite(item.score) ? Number(item.score) : 0, index,
   })).filter(item => item.box).sort((a, b) => b.score - a.score);
