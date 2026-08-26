@@ -1378,7 +1378,9 @@ test("keeps the Step 6 listing count on one line", async () => {
      per row now - "9 of 13 tags", "Same as batch", "Ready" - and per panel, and
      wrapping any of those onto a second line is what this has always been about. */
   assert.match(clarity, /\.app-shell \.task-listing-count\{[^}]*white-space:nowrap/);
-  assert.match(clarity, /\.app-shell \.task-listing-change\{[^}]*white-space:nowrap/);
+  /* D553 - the chooser is gone: opening a task shows every listing's work, each
+     under its name, which is what step 2 did before D541. */
+  assert.match(clarity, /\.app-shell \.task-listing-count\{[^}]*white-space:nowrap/);
   assert.match(clarity, /\.app-shell \.task-panel-heading\{/);
 });
 
@@ -2064,8 +2066,12 @@ test("renders every Finish phase as compact expandable rows",async()=>{
      out of the same task rows every other step uses rather than a bespoke table
      wedged inside a shared block. */
   const clarity=await readFile(new URL("../app/clarity-pass.css",import.meta.url),"utf8");
-  assert.match(clarity,/\.app-shell \.task-listing-row\{/);
-  assert.match(clarity,/\.app-shell \.task-listing-panel\{/);
+  /* D553 - the chooser is gone: opening a task shows every listing's work, each
+     under its name, which is what step 2 did before D541. */
+  assert.match(clarity,/\.app-shell \.task-listing-head\{/);
+  assert.match(clarity,/\.app-shell \.task-listing-work\{/);
+  /* D553 - one collapse, at the task; every listing's work is open under it. */
+  assert.match(clarity,/\.app-shell \.task-listing-work\{/);
   assert.match(clarity,/\.app-shell \.task-panel-body\{/);
   assert.match(css,/\.etsy-detail-card/);
   assert.match(css,/\.post-draft-workspace \.draft-card-top/);
@@ -4523,10 +4529,14 @@ test("a task row owns its panel inside the product card — D539", async () => {
   assert.match(app, /if\(!open\)\{if\(reachable\)\{setActiveTask\(task\);openBundleProduct\(index\)\}return\}/);
 
   // Inside a task, a listing is a compact row that expands its own work.
-  assert.match(app, /<button type="button" className="task-listing-row" aria-expanded=\{shown\}/);
+  /* D553 - the chooser is gone: opening a task shows every listing's work, each
+     under its name, which is what step 2 did before D541. */
+  assert.doesNotMatch(app, /task-listing-row/);
+  assert.match(app, /<div className="task-listing-work">/);
   assert.match(app, /className="task-listing-thumb"/);
   assert.match(app, /\{count\} \{count===1\?"photo":"photos"\}/);
-  assert.match(css, /\.task-listing-row\{/);
+  /* D553 - one collapse, at the task; every listing's work is open under it. */
+  assert.match(css, /\.app-shell \.task-listing-head\{/);
 
   // The legacy shells come off rather than nesting inside the new ones.
   assert.match(app, /\{bare\?<div className="printify-image-picker bare">/);
@@ -4759,8 +4769,34 @@ test("clicking a row does not throw her up the page — D552", async () => {
   assert.match(app, /useLayoutEffect\(\(\)=>\{\s*const held=rowAnchor\.current/);
   assert.match(app, /const drift=held\.element\.getBoundingClientRect\(\)\.top-held\.top/);
   assert.match(app, /window\.scrollBy\(\{top:drift,behavior:"auto"\}\)/);
-  assert.match(app, /\},\[activeTask,openListing\]\)/);
+  assert.match(app, /\},\[activeTask\]\)/);
 
   // Every way into a row holds it: the row, its Change button, and the keyboard.
   assert.equal((app.match(/holdRowInPlace\(/g) || []).length, 4, "declared once, called from all three");
+});
+
+test("opening a task shows the work, not a list of listings to pick from — D553", async () => {
+  const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+
+  /* Her words: "when I click to expand arrange final photo order, it is giving me
+     columns of the listings with their titles, which is so fucking stupid."
+     She was right, and the specification already existed. Read off 4cf8c0f, the
+     build before D541: every listing's working surface rendered open, one after
+     another, each under its own name. D541 wrapped each one in a collapsible row
+     with a Change button and turned a working surface into a chooser - three
+     clicks to drag one photo. This is the earlier shape restored. */
+  assert.doesNotMatch(app, /task-listing-row/, "no chooser");
+  assert.doesNotMatch(app, /aria-expanded=\{shown\}/);
+  assert.doesNotMatch(app, /openListing===/, "nothing selects which listing is visible");
+  assert.doesNotMatch(app, /setOpenListing/);
+
+  // Every listing: its name, where it stands, and its work - already open.
+  assert.match(app, /<div className="task-listing-head">/);
+  assert.match(app, /<p className="task-listing-name">/);
+  assert.match(app, /<div className="task-listing-work">/);
+
+  /* All four step 2 panels and all three step 3 panels use it, so the shape is
+     the same everywhere - which is the thing she has asked for from the start. */
+  assert.equal((app.match(/className="task-listing-work"/g) || []).length, 4,
+    "three step 2 panels plus the shared designTaskRows");
 });

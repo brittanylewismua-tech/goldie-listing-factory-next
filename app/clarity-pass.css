@@ -2848,13 +2848,8 @@ body{min-width:1180px!important}
    directly under the row that asked for it, and nothing else opens with it. */
 .app-shell .task-panel{padding:4px 0 14px;border-top:1px solid rgba(91,48,79,.1)}
 .app-shell .task-panel-body{display:grid;gap:8px;padding:10px 14px}
-.app-shell .task-listing-row{display:flex;align-items:center;gap:10px;width:100%;padding:8px 12px;border:1px solid rgba(91,48,79,.14);border-radius:12px;background:rgba(255,255,255,.55);cursor:pointer;text-align:left}
-.app-shell .task-listing-row:hover{background:#fff}
 .app-shell .task-listing-thumb{width:36px;height:36px;flex:none;border-radius:8px;object-fit:contain;background:#fff;border:1px solid rgba(91,48,79,.1)}
-.app-shell .task-listing-row .task-listing-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin:0;font:700 .86rem/1.3 "Manrope",system-ui,sans-serif;color:#4c293f}
 .app-shell .task-listing-count{font-size:.8rem;color:#75576b;white-space:nowrap}
-.app-shell .task-listing-change{font-size:.78rem;font-weight:700;color:#8e4c78;white-space:nowrap}
-.app-shell .task-listing-panel{margin:8px 0 4px;padding:12px;border:1px solid rgba(91,48,79,.12);border-radius:12px;background:rgba(255,255,255,.5)}
 .app-shell .printify-image-picker.bare{display:block}
 
 
@@ -2871,17 +2866,6 @@ body{min-width:1180px!important}
 
 /* The title fields: one column, full width, because the panel is already narrow
    and the two-column grid it inherited was built for a 152px thumbnail beside it. */
-.app-shell .task-listing-panel .design-fields{display:grid;gap:10px}
-.app-shell .task-listing-panel .design-fields>label{display:grid;gap:4px;min-width:0;font:700 .74rem/1.2 "Manrope",system-ui,sans-serif;color:#6b4560;letter-spacing:.02em}
-.app-shell .task-listing-panel .design-fields>label>span{font-weight:600;color:#8b6f83}
-.app-shell .task-listing-panel .design-fields textarea{width:100%;padding:9px 11px;border:1px solid rgba(91,48,79,.18);border-radius:10px;background:#fff;font:500 .84rem/1.45 "Manrope",system-ui,sans-serif;color:#3f2438;resize:vertical}
-.app-shell .task-listing-panel .design-fields textarea:focus{outline:0;border-color:#b777b0;box-shadow:0 0 0 3px rgba(183,119,176,.14)}
-.app-shell .task-listing-panel .tag-row{display:flex;flex-wrap:wrap;gap:6px}
-.app-shell .task-listing-panel .tag-row span{padding:3px 8px;border-radius:999px;background:rgba(220,177,218,.26);color:#67465f;font-size:.72rem;font-weight:700}
-.app-shell .task-listing-panel .individual-description-body{display:grid;gap:8px}
-.app-shell .task-listing-panel .individual-description-body label{display:grid;gap:4px;font:700 .74rem/1.2 "Manrope",system-ui,sans-serif;color:#6b4560}
-.app-shell .task-listing-panel .individual-description-body textarea{width:100%;padding:10px 12px;border:1px solid rgba(91,48,79,.18);border-radius:10px;background:#fff;font:500 .84rem/1.5 "Manrope",system-ui,sans-serif;color:#3f2438}
-.app-shell .task-listing-panel .individual-description-body small{color:rgba(74,42,62,.62);font-size:.72rem}
 
 /* D541 - the print-quality check came with the placement row it belongs to. */
 .app-shell .task-listing .quality-pill{margin-top:8px;width:auto}
@@ -2926,3 +2910,26 @@ body{min-width:1180px!important}
    is marked, not struck out. */
 .app-shell .bank-tag-usable{color:rgba(74,42,62,.62);font-weight:600}
 .app-shell .bank-grid span.over-tag-limit{border:1px dashed rgba(139,89,137,.45);background:rgba(255,255,255,.5);color:#75576b}
+
+/* D553 - one collapse, at the task. Every listing's work is open underneath it,
+   each under its own name, which is what step 2 did before D541 wrapped them in
+   choosers. */
+.app-shell .task-listing{padding:0;margin:0 0 18px}
+.app-shell .task-listing-head{display:flex;align-items:center;gap:10px;padding:8px 0 10px;border-bottom:1px solid rgba(91,48,79,.1)}
+.app-shell .task-listing-head .task-listing-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin:0;font:800 .86rem/1.3 "Manrope",system-ui,sans-serif;color:#4b283e}
+.app-shell .task-listing-work{padding:12px 0 0}
+.app-shell .task-listing-work>*{max-width:100%}
+
+/* D553 - the step 3 editors, re-pointed from the collapsible panel that used to
+   wrap them to the open surface that replaced it. */
+.app-shell .task-listing-work .design-fields{display:grid;gap:10px}
+.app-shell .task-listing-work .design-fields>label{display:grid;gap:4px;min-width:0;font:700 .74rem/1.2 "Manrope",system-ui,sans-serif;color:#6b4560;letter-spacing:.02em}
+.app-shell .task-listing-work .design-fields>label>span{font-weight:600;color:#8b6f83}
+.app-shell .task-listing-work .design-fields textarea{width:100%;padding:9px 11px;border:1px solid rgba(91,48,79,.18);border-radius:10px;background:#fff;font:500 .84rem/1.45 "Manrope",system-ui,sans-serif;color:#3f2438;resize:vertical}
+.app-shell .task-listing-work .design-fields textarea:focus{outline:0;border-color:#b777b0;box-shadow:0 0 0 3px rgba(183,119,176,.14)}
+.app-shell .task-listing-work .tag-row{display:flex;flex-wrap:wrap;gap:6px}
+.app-shell .task-listing-work .tag-row span{padding:3px 8px;border-radius:999px;background:rgba(220,177,218,.26);color:#67465f;font-size:.72rem;font-weight:700}
+.app-shell .task-listing-work .individual-description-body{display:grid;gap:8px}
+.app-shell .task-listing-work .individual-description-body label{display:grid;gap:4px;font:700 .74rem/1.2 "Manrope",system-ui,sans-serif;color:#6b4560}
+.app-shell .task-listing-work .individual-description-body textarea{width:100%;padding:10px 12px;border:1px solid rgba(91,48,79,.18);border-radius:10px;background:#fff;font:500 .84rem/1.5 "Manrope",system-ui,sans-serif;color:#3f2438}
+.app-shell .task-listing-work .individual-description-body small{color:rgba(74,42,62,.62);font-size:.72rem}

@@ -2011,7 +2011,9 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
      progress index - and they disagreed. */
   const etsyDetailsPrepared=files.length>0&&files.every(file=>Boolean(file.etsy));
   const [activeTask,setActiveTask]=useState<string>("");
-  const [openListing,setOpenListing]=useState<string>("");
+  /* D553 - openListing chose which listing's work was visible. Nothing chooses
+     now: opening a task shows every listing's work, which is what step 2 did
+     before D541. */
   /* D552 - her words: "when I click on choose printify photos, it pops me to the
      top of the design and images page, and then I have to scroll down to where I
      was." Measured on the live page, and nothing was scrolling: the open panel
@@ -2028,24 +2030,33 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
     if(!held||!held.element.isConnected)return;
     const drift=held.element.getBoundingClientRect().top-held.top;
     if(Math.abs(drift)>1)window.scrollBy({top:drift,behavior:"auto"});
-  },[activeTask,openListing]);
+  },[activeTask]);
   /* D541 - every task panel that works listing by listing shows the same row:
      the artwork, the listing name, where that listing stands on this one job,
      and Change. The job decides what opens underneath, so a listing's title is
      edited under Titles and its wording under Description, and neither one can
      drag the other along with it. */
+  /* D553 - restored to what step 2 did before D541. Read off the build from
+     4cf8c0f: every listing's working surface rendered open, one after another,
+     each under its own name - "<p className=task-listing-name>{listingName}" then
+     the editor. D541 wrapped each one in a collapsible row with a Change button,
+     which turned a working surface into a chooser: to drag a photo she had to
+     open the task, then pick a listing, then drag. Her words: "when I click to
+     expand arrange final photo order, it is giving me columns of the listings
+     with their titles, which is so fucking stupid."
+
+     One collapse, at the task. Open the task and the work is there, for every
+     listing, already open. */
   function designTaskRows(task:string,standing:(design:DesignFile)=>string,inner:(design:DesignFile)=>ReactNode){
     return <div className="task-panel-body">{files.map(design=>{
-      const key=`${task}:${design.id}`;const shown=openListing===key;
       const thumb=design.previewUrl||drafts.find(draft=>draft.clientId===design.id)?.previewUrl||"";
-      return <div className="task-listing" key={key}>
-        <button type="button" className="task-listing-row" aria-expanded={shown} onClick={()=>{setActiveDesign(design.id);setOpenListing(shown?"":key)}}>
+      return <div className="task-listing" key={`${task}:${design.id}`} onFocus={()=>setActiveDesign(design.id)}>
+        <div className="task-listing-head">
           {thumb?<img className="task-listing-thumb" src={thumb} alt="" loading="lazy" decoding="async"/>:<span className="task-listing-thumb"/>}
-          <span className="task-listing-name">{design.title.trim()||design.name}</span>
+          <p className="task-listing-name">{design.title.trim()||design.name}</p>
           <span className="task-listing-count">{standing(design)}</span>
-          <span className="task-listing-change">{shown?"Close":"Change"}</span>
-        </button>
-        {shown&&<div className="task-listing-panel">{inner(design)}</div>}
+        </div>
+        <div className="task-listing-work">{inner(design)}</div>
       </div>})}</div>;
   }
 
@@ -2099,16 +2110,14 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
               listed underneath it with counts; a collapsed essay about which views
               to pick was advice nobody opened. Gone. */}
           <div className="task-panel-body">{listings.map(({draft,design,selectedImages})=>draft.status!=="Created"||!design||!draft.id?null:(()=>{
-              const key=`${draft.clientId}`;const shown=openListing===key;
               const count=selectedImages.length+(preparedMockupCounts[draft.id||""]||0);
-              return <div className="task-listing" key={key}>
-                <button type="button" className="task-listing-row" aria-expanded={shown} onClick={()=>setOpenListing(shown?"":key)}>
+              return <div className="task-listing" key={draft.clientId}>
+                <div className="task-listing-head">
                   {draft.previewUrl?<img className="task-listing-thumb" src={draft.previewUrl} alt="" loading="lazy"/>:<span className="task-listing-thumb"/>}
-                  <span className="task-listing-name">{design?.title?.trim()||design?.name||draft.name||"Listing"}</span>
+                  <p className="task-listing-name">{design?.title?.trim()||design?.name||draft.name||"Listing"}</p>
                   <span className="task-listing-count">{count} {count===1?"photo":"photos"}</span>
-                  <span className="task-listing-change">{shown?"Close":"Change"}</span>
-                </button>
-                {shown&&<div className="task-listing-panel">{draft.status==="Created"&&<PrintifyImagePicker bare images={(draft.printifyImages||[]).filter(Boolean)} indices={selectedImages} reservedPhotos={(preparedMockupCounts[draft.id||""]||0)+(design?.sizeGuideName||sizeGuideName?1:0)} onApplyOne={values=>{/* D465 - the photos she picks ARE this product's default, the same way its colours and sizes are. There was a "Use these as this product's default" button asking a question with one sensible answer; the selection saves itself now and the button is gone. */if(activeRecipe)void saveImagePreferences(values);if(draft.id)setPrintifyImageSelections(current=>({...current,[draft.id!]:values}))}} onApplyAll={values=>{setPrintifyImageIndices(values);setPrintifyImageSelections(Object.fromEntries(drafts.filter(item=>item.id).map(item=>{const itemDesign=files.find(file=>file.id===item.clientId),reserved=(preparedMockupCounts[item.id!]||0)+(itemDesign?.sizeGuideName||sizeGuideName?1:0);return[item.id!,values.slice(0,Math.max(0,20-reserved))]})))}} onSaveRecipe={activeRecipe?saveImagePreferences:undefined}/>}</div>}
+                </div>
+                <div className="task-listing-work">{draft.status==="Created"&&<PrintifyImagePicker bare images={(draft.printifyImages||[]).filter(Boolean)} indices={selectedImages} reservedPhotos={(preparedMockupCounts[draft.id||""]||0)+(design?.sizeGuideName||sizeGuideName?1:0)} onApplyOne={values=>{/* D465 - the photos she picks ARE this product's default, the same way its colours and sizes are. There was a "Use these as this product's default" button asking a question with one sensible answer; the selection saves itself now and the button is gone. */if(activeRecipe)void saveImagePreferences(values);if(draft.id)setPrintifyImageSelections(current=>({...current,[draft.id!]:values}))}} onApplyAll={values=>{setPrintifyImageIndices(values);setPrintifyImageSelections(Object.fromEntries(drafts.filter(item=>item.id).map(item=>{const itemDesign=files.find(file=>file.id===item.clientId),reserved=(preparedMockupCounts[item.id!]||0)+(itemDesign?.sizeGuideName||sizeGuideName?1:0);return[item.id!,values.slice(0,Math.max(0,20-reserved))]})))}} onSaveRecipe={activeRecipe?saveImagePreferences:undefined}/>}</div>
               </div>})()) }</div>
     </>;
     if(task==="lifestyle")return <>
@@ -2116,30 +2125,26 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
               above every task in the card. */}
           <div className="task-panel-lead"><MockupSetSelector firstRun={productFirstRun} productName={activeRecipe?.name||templateDetails?.blueprintTitle||""} value={mockupTheme} selectedIds={sharedMockups?.theme===mockupTheme?sharedMockups.ids:[]} savedValue={activeRecipe?.defaultMockupTheme||""} savedIds={activeRecipe?.mockupIds} onChange={(theme,ids)=>{setMockupTheme(theme);if(ids)setSharedMockups({theme,ids})}} saving={savingProductDefault==="mockups"} onSaveDefault={()=>void saveProductDefaults({defaultMockupTheme:mockupTheme,mockupIds:sharedMockups?.theme===mockupTheme?sharedMockups.ids:[]},"mockups")}/></div>
           <div className="task-panel-body">{listings.map(({draft,design,selectedImages})=>draft.status!=="Created"||!design||!draft.id?null:(()=>{
-              const key=`${draft.clientId}`;const shown=openListing===key;
               const count=selectedImages.length+(preparedMockupCounts[draft.id||""]||0);
-              return <div className="task-listing" key={key}>
-                <button type="button" className="task-listing-row" aria-expanded={shown} onClick={()=>setOpenListing(shown?"":key)}>
+              return <div className="task-listing" key={draft.clientId}>
+                <div className="task-listing-head">
                   {draft.previewUrl?<img className="task-listing-thumb" src={draft.previewUrl} alt="" loading="lazy"/>:<span className="task-listing-thumb"/>}
-                  <span className="task-listing-name">{design?.title?.trim()||design?.name||draft.name||"Listing"}</span>
+                  <p className="task-listing-name">{design?.title?.trim()||design?.name||draft.name||"Listing"}</p>
                   <span className="task-listing-count">{count} {count===1?"photo":"photos"}</span>
-                  <span className="task-listing-change">{shown?"Close":"Change"}</span>
-                </button>
-                {shown&&<div className="task-listing-panel"><IntegratedMockups design={design.file} productId={draft.id} productName={activeRecipe?.name||templateDetails?.blueprintTitle} defaultTheme={mockupTheme} referenceUrl={draft.previewUrl} placement={draft.placement} artworkBounds={design.visibleBounds} onPrepared={count=>setPreparedMockupCounts(current=>({...current,[draft.id!]:count}))}/></div>}
+                </div>
+                <div className="task-listing-work"><IntegratedMockups design={design.file} productId={draft.id} productName={activeRecipe?.name||templateDetails?.blueprintTitle} defaultTheme={mockupTheme} referenceUrl={draft.previewUrl} placement={draft.placement} artworkBounds={design.visibleBounds} onPrepared={count=>setPreparedMockupCounts(current=>({...current,[draft.id!]:count}))}/></div>
               </div>})()) }</div>
     </>;
     if(task==="order")return <>
           <div className="task-panel-body">{listings.map(({draft,design,selectedImages})=>draft.status!=="Created"||!design||!draft.id?null:(()=>{
-              const key=`${draft.clientId}`;const shown=openListing===key;
               const count=selectedImages.length+(preparedMockupCounts[draft.id||""]||0);
-              return <div className="task-listing" key={key}>
-                <button type="button" className="task-listing-row" aria-expanded={shown} onClick={()=>setOpenListing(shown?"":key)}>
+              return <div className="task-listing" key={draft.clientId}>
+                <div className="task-listing-head">
                   {draft.previewUrl?<img className="task-listing-thumb" src={draft.previewUrl} alt="" loading="lazy"/>:<span className="task-listing-thumb"/>}
-                  <span className="task-listing-name">{design?.title?.trim()||design?.name||draft.name||"Listing"}</span>
+                  <p className="task-listing-name">{design?.title?.trim()||design?.name||draft.name||"Listing"}</p>
                   <span className="task-listing-count">{count} {count===1?"photo":"photos"}</span>
-                  <span className="task-listing-change">{shown?"Close":"Change"}</span>
-                </button>
-                {shown&&<div className="task-listing-panel">{draft.status==="Created"&&draft.id&&<ListingPhotoOrder productId={draft.id} printifyImages={(draft.printifyImages||[]).filter(Boolean)} indices={selectedImages} refreshKey={`${preparedMockupCounts[draft.id]||0}:${design?.sizeGuideName||sizeGuideName}`}/>}{draft.status==="Created"&&design&&draft.id&&<IndividualSizeGuide productId={draft.id} name={design.sizeGuideName} onSaved={name=>updateDesign(design.id,{sizeGuideName:name})}/>}{draft.status==="Created"&&draft.id&&<DownloadListingPhotos productId={draft.id} name={draft.title||draft.name} indices={selectedImages}/>}</div>}
+                </div>
+                <div className="task-listing-work">{draft.status==="Created"&&draft.id&&<ListingPhotoOrder productId={draft.id} printifyImages={(draft.printifyImages||[]).filter(Boolean)} indices={selectedImages} refreshKey={`${preparedMockupCounts[draft.id]||0}:${design?.sizeGuideName||sizeGuideName}`}/>}{draft.status==="Created"&&design&&draft.id&&<IndividualSizeGuide productId={draft.id} name={design.sizeGuideName} onSaved={name=>updateDesign(design.id,{sizeGuideName:name})}/>}{draft.status==="Created"&&draft.id&&<DownloadListingPhotos productId={draft.id} name={draft.title||draft.name} indices={selectedImages}/>}</div>
               </div>})()) }</div>
     </>;
     return null;
@@ -2229,7 +2234,6 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
               if(!task){if(!open&&reachable)openBundleProduct(index);return}
               if(!open){if(reachable){setActiveTask(task);openBundleProduct(index)}return}
               setActiveTask(current=>current===task?"":task);
-              setOpenListing("");
             };
             return <div className="batch-product-rows">{rows.map(row=><Fragment key={row.label}><div
               className={`batch-product-row ${row.done?"settled":row.optional?"optional":"needed"} ${row.report?"reporting":switchingProduct||(!open&&!reachable)?"":"clickable"}`}
