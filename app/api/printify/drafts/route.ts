@@ -261,8 +261,21 @@ async function handlePOST(request: Request) {
       .reduce<PrintAreaPlaceholder|undefined>(
         (best, placeholder) => (Number(placeholder.images?.[0]?.scale ?? 0) > Number(best?.images?.[0]?.scale ?? 0) ? placeholder : best), undefined);
     const dominantTemplatePlacement = dominantPlaceholder?.images?.[0];
+    /* D592 - D591 is running (the side field now appears) but the placement is
+       still the default, so dominantPlaceholder is still coming back undefined.
+       Rather than guess at Printify's response shape a second time, record what
+       was actually received so it can be read off a real draft. */
+    const placementDebug = {
+      createdAreas: (created.print_areas ?? []).length,
+      usedAreas: areas.length,
+      placeholders: areas.flatMap((area) => area.placeholders ?? []).length,
+      positions: areas.flatMap((area) => (area.placeholders ?? []).map((p) => p.position ?? "?")).slice(0, 6),
+      imageCounts: areas.flatMap((area) => (area.placeholders ?? []).map((p) => p.images?.length ?? 0)).slice(0, 6),
+      firstImageKeys: Object.keys(areas.flatMap((area) => area.placeholders ?? [])[0]?.images?.[0] ?? {}).slice(0, 12),
+      createdTopKeys: Object.keys(created as Record<string, unknown>).slice(0, 14),
+    };
     const placement = { ...artworkPlacement(dominantTemplatePlacement, body.visibleBounds, body.maxPlacementScale), side: readPrintSide(dominantPlaceholder?.position) };
-    const draft = { id: created.id, placement, batchId:body.batchId, clientId: body.clientId ?? body.fileName, name: body.fileName, title, tags: body.tags ?? [], description:body.description??template.description??"", previewUrl, printifyImages: productImages.map((image) => image.src).filter(Boolean), shopId: shop.id, editorUrl: `https://printify.com/app/editor/${created.id}`, status: "Created" };
+    const draft = { id: created.id, placement, placementDebug, batchId:body.batchId, clientId: body.clientId ?? body.fileName, name: body.fileName, title, tags: body.tags ?? [], description:body.description??template.description??"", previewUrl, printifyImages: productImages.map((image) => image.src).filter(Boolean), shopId: shop.id, editorUrl: `https://printify.com/app/editor/${created.id}`, status: "Created" };
     await db.prepare("UPDATE printify_draft_results SET status = 'succeeded', response_json = ?, updated_at = CURRENT_TIMESTAMP WHERE request_key = ?").bind(JSON.stringify(draft), idempotencyKey).run();
     return NextResponse.json({ draft });
   } catch (error) {
