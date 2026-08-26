@@ -2177,7 +2177,15 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
                   <p className="task-listing-name">{design?.title?.trim()||design?.name||draft.name||"Listing"}</p>
                   <span className="task-listing-count">{count} {count===1?"photo":"photos"}</span>
                 </div>
-                <div className="task-listing-work"><IntegratedMockups design={design.file} productId={draft.id} productName={activeRecipe?.name||templateDetails?.blueprintTitle} defaultTheme={mockupTheme} referenceUrl={draft.previewUrl} placement={draft.placement} artworkBounds={design.visibleBounds} onPrepared={count=>setPreparedMockupCounts(current=>({...current,[draft.id!]:count}))}/></div>
+                <div className="task-listing-work">
+                  {/* D566 - at this step nothing has a title yet, so both listings
+                      are labelled "ChatGPT Image Aug 21, 2026, 05_32_41 PM (1).png"
+                      and a 36px thumbnail is all that tells them apart. Her words:
+                      "the photo previews of what design you're working on are also
+                      too small, so you don't know actually what mockups you're
+                      choosing for." D408 measured this once already on another
+                      step. The artwork, at a size that identifies it. */}
+                  {design?.previewUrl?<div className="task-listing-figure"><img src={design.previewUrl} alt={design.name||"Design"} loading="lazy" decoding="async"/></div>:null}<IntegratedMockups design={design.file} productId={draft.id} productName={activeRecipe?.name||templateDetails?.blueprintTitle} defaultTheme={mockupTheme} referenceUrl={draft.previewUrl} placement={draft.placement} artworkBounds={design.visibleBounds} onPrepared={count=>setPreparedMockupCounts(current=>({...current,[draft.id!]:count}))}/></div>
               </div>})()) }</div>
     </>;
     if(task==="order")return <>

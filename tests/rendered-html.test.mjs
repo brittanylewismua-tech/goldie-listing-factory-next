@@ -217,7 +217,14 @@ test("unifies saved products, editing, pricing, and mockups without the old fact
      never appear. Deleted; this asserts the one that renders. */
   assert.match(page, /className="printify-image-picker bare"/);
   assert.match(page, /IntegratedMockups/);
-  assert.match(mockups, /Choose a mockup set/);
+  /* D566 - the per-listing set picker is gone. Three set choosers were on screen
+     at once inside one panel - the batch chooser and one per listing - and they
+     disagreed: the panel read "Gildan Hoodies" while both listings offered BACH
+     TEES, tee photographs, for a hoodie. The set is chosen once, above; each
+     listing names the set it follows. */
+  assert.match(mockups, /className="mockup-set-name"/);
+  assert.doesNotMatch(mockups, /Choose a mockup set/);
+  assert.match(mockups, /useEffect\(\(\)=>\{setTheme\(defaultTheme\);setResults\(\[\]\);setEtsyStatus\(""\)\},\[defaultTheme\]\)/);
   assert.match(mockups, /Create .*mockups/);
   assert.match(drafts, /approved>=Number\(cost\?\?price\)/);
   assert.match(drafts, /finalPrice/);
@@ -5124,4 +5131,36 @@ test("a narrow window scales instead of scrolling sideways — D565", async () =
 
   // It stops where the mobile gate takes over rather than shrinking forever.
   assert.equal(Math.min(...steps.map((step) => step.width)), 880);
+});
+
+test("one mockup set chooser, and the listings follow it — D566", async () => {
+  const [app, mockups, css] = await Promise.all([
+    readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/integrated-mockups.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8"),
+  ]);
+
+  /* Measured on her single-product batch - one hoodie, two designs. The lifestyle
+     panel carried three set choosers: the batch one at the top in a white card,
+     and one bare one inside each listing. They disagreed, because the per-listing
+     theme was seeded once at mount and never looked at defaultTheme again: the
+     panel read "Gildan Hoodies" while both listings offered BACH TEES. She was
+     choosing a hoodie set and being shown tee photographs.
+
+     D238 named this fault when the same setting lived on two pages: "the exact
+     split that caused the keyword-bank and shipping duplication." */
+  assert.match(mockups, /useEffect\(\(\)=>\{setTheme\(defaultTheme\)/);
+  assert.doesNotMatch(mockups, /<label>Browse mockups<select/);
+
+  /* Every tile repeated the set name she had just chosen, then a raw upload
+     filename - the thing D253 forbids. */
+  assert.doesNotMatch(mockups, /<span>\{t\.theme\} · \{t\.name\}<\/span>/);
+  assert.match(mockups, /t\.name\.replace\(\/\\\.\[a-z0-9\]\+\$\/i,""\)/);
+
+  /* At this step nothing has a title, so both listings read "ChatGPT Image Aug 21,
+     2026, 05_32_41 PM (1).png" and a 36px thumbnail was all that told them apart.
+     D408 measured that once already on another step. */
+  const lifestyle = app.slice(app.indexOf('if(task==="lifestyle")return <>'), app.indexOf('if(task==="order")'));
+  assert.match(lifestyle, /className="task-listing-figure"/);
+  assert.match(css, /\.app-shell \.task-listing-figure img\{width:min\(260px,60%\)/);
 });
