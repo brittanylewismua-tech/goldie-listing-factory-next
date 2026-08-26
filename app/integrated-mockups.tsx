@@ -215,6 +215,40 @@ export default function IntegratedMockups({design,productId,productName="",defau
    const box=productBoxes.current.get(template.id);
    return box?derivedPlacement(fit,box,artworkBounds):null;
  }
+ /* D571 - the reason her hoodie mockups came out at the hem, tiny. A scene is
+    created with a placeholder box - the middle 70% of the photograph - and print
+    area detection only ever ran on the Mockup Library page, one AI call per
+    scene. Upload scenes and leave that page before it finishes, or use them
+    straight from the factory, and they keep the placeholder for good. Nothing
+    said so, so the render fell back to a fixed guess: centre it, 42% scale.
+    Measured on her library: BACH TEES 10 of 10 marked, white mugs 4 of 4, Gildan
+    Hoodies 2 of 4 - and the two she rendered were the unmarked pair. The
+    detection itself works; I called it on one of them and it returned a proper
+    chest box at high confidence.
+    A scene is measured at the moment it is used, so it cannot render against a
+    placeholder no matter which page she has visited. */
+ async function calibrateIfNeeded(list:Template[]){
+   const stale=list.filter(item=>!isCalibrated(item));
+   if(!stale.length)return list;
+   setRenderStatus(`Measuring the print area on ${stale.length} ${stale.length===1?"scene":"scenes"}…`);
+   const fixed=new Map<string,Template["corners"]>();
+   for(const scene of stale){
+     try{
+       const blob=await (await fetch(scene.src)).blob();
+       const dataUrl=await new Promise<string>((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result));reader.onerror=reject;reader.readAsDataURL(blob)});
+       const response=await fetch("/api/mockups/print-area",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({imageUrl:dataUrl,product:scene.theme||scene.name})});
+       const payload=await response.json() as {corners?:Array<[number,number]>|null};
+       if(payload.corners&&payload.corners.length===4){
+         fixed.set(scene.id,payload.corners as Template["corners"]);
+         await fetch(`/api/mockups/library/${encodeURIComponent(scene.id)}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({corners:payload.corners})}).catch(()=>null);
+       }
+     }catch{/* one scene that cannot be measured still renders, against the
+               measured product box rather than against nothing */}
+   }
+   if(!fixed.size)return list;
+   setLibrary(current=>current.map(item=>fixed.has(item.id)?{...item,corners:fixed.get(item.id)!,normalized:true}:item));
+   return list.map(item=>fixed.has(item.id)?{...item,corners:fixed.get(item.id)!,normalized:true}:item);
+ }
  async function generate(){if(!chosen.length)return;setBusy(true);setError("");setEtsyStatus("");setResults([]);setRenderStatus(`Preparing ${chosen.length} selected ${chosen.length===1?"scene":"scenes"}…`);try{let reference:File|null=null;if(referenceUrl){const blob=await(await fetch(referenceUrl,{signal:AbortSignal.timeout(30_000)})).blob();reference=new File([blob],"printify-placement-reference.jpg",{type:blob.type||"image/jpeg"})}/* D433 - measure the specification once per run: how big the artwork is on the product, and where, according to the Printify preview. *//* D470 - the design is measured inside the preview's printable FACE, so both
    sides use the same frame. Without this a mug is measured against the whole
    mug on one side and its face on the other, and comes out three times too
@@ -226,7 +260,7 @@ let previewFace:{left:number;top:number;right:number;bottom:number}|undefined;
           if(found.corners){const xs=found.corners.map(c=>c[0]),ys=found.corners.map(c=>c[1]);
             previewFace={left:Math.min(...xs),top:Math.min(...ys),right:Math.max(...xs),bottom:Math.max(...ys)}}
         }catch{/* No face on the preview just means the whole product is the frame. */}}
-        const fit=reference?await measureReference(reference,previewFace):null;const completed=new Map<number,Result>(),jobs=chosen.map((template,index)=>({template,index}));setRenderStatus(`Creating ${chosen.length} ${chosen.length===1?"mockup":"mockups"} in a reliable queue. Goldie will retry an interrupted scene automatically.`);await runBounded(jobs,2,async({template,index})=>{/* D447 - one scene, and it always produces a mockup.
+        const fit=reference?await measureReference(reference,previewFace):null;const measured=await calibrateIfNeeded(chosen);const completed=new Map<number,Result>(),jobs=measured.map((template,index)=>({template,index}));setRenderStatus(`Creating ${chosen.length} ${chosen.length===1?"mockup":"mockups"} in a reliable queue. Goldie will retry an interrupted scene automatically.`);await runBounded(jobs,2,async({template,index})=>{/* D447 - one scene, and it always produces a mockup.
    The canvas renderer is the floor: it needs no network and, with the quad
    chain, has no way to refuse. The AI renderer is tried first where it is the
    better result, and falls back rather than losing the scene. */
@@ -274,5 +308,8 @@ let previewFace:{left:number;top:number;right:number;bottom:number}|undefined;
       <div className="mockup-control-row"><span className="mockup-set-name">{theme==="__all"?"All mockups":theme||"No mockup set chosen"}</span><a href="/mockups" target="_blank" rel="noopener noreferrer">Manage saved mockup sets ↗</a></div>{theme&&<div className="inline-mockup-grid">{items.map(t=><label className={selected.has(t.id)?"selected":""} key={t.id}><input type="checkbox" checked={selected.has(t.id)} onChange={()=>toggleTemplate(t.id)}/><img src={t.src} alt={t.name}/>{/* D566 - every tile repeated the set name she had just chosen, followed by
         the raw upload filename. The set is named once above; the tile says which
         scene it is. */}
-      <span>{t.name.replace(/\.[a-z0-9]+$/i,"").replace(/[_-]+/g," ")}</span></label>)}</div>}{needsReference&&<p className="automatic-reference">✓ Goldie will use the real Printify preview above as the placement reference.</p>}<div className="mockup-action-sequence"><div className="mockup-primary-action"><span>1</span><div><b>Create mockups for this listing</b><small>Goldie creates the mockups you selected above and saves them to this listing.</small></div><button className="generate-inline" aria-busy={busy} disabled={!chosen.length||busy||needsReference&&!referenceUrl} onClick={()=>void generate()}>{busy?"Goldie is creating them…":`Create ${chosen.length ? `these ${chosen.length} ${chosen.length===1?"mockup":"mockups"}` : "selected mockups"}`}</button></div>{busy&&renderStatus&&<div className="mockup-live-progress" role="status" aria-live="polite"><i/><span>{renderStatus}</span></div>}</div>{error&&<p className="field-error" role="alert">{error}</p>}{etsyStatus&&<p className="etsy-ready-status" role="status">{etsyStatus}</p>}{results.length>0&&<div className="inline-generated">{results.map(r=><figure key={r.name}><button className="mockup-enlarge" onClick={()=>setExpanded(r)}><img src={r.url} alt={r.template}/><span>View larger</span></button><figcaption><span>{r.template}</span><a href={r.url} download={r.name}>Download</a></figcaption></figure>)}</div>}<p className="etsy-note">Goldie saves these mockups for this exact listing and adds them automatically through Etsy when you publish. Individual downloads stay available as a backup.</p></div>{lightbox}</>
+      <span>{t.name.replace(/\.[a-z0-9]+$/i,"").replace(/[_-]+/g," ")}</span>
+      {/* D571 - a scene nobody has marked looks exactly like one that has been.
+          It says so now, and says what will happen. */}
+      {!isCalibrated(t)?<em className="scene-unmeasured">Print area not marked yet · Goldie will measure it</em>:null}</label>)}</div>}{needsReference&&<p className="automatic-reference">✓ Goldie will use the real Printify preview above as the placement reference.</p>}<div className="mockup-action-sequence"><div className="mockup-primary-action"><span>1</span><div><b>Create mockups for this listing</b><small>Goldie creates the mockups you selected above and saves them to this listing.</small></div><button className="generate-inline" aria-busy={busy} disabled={!chosen.length||busy||needsReference&&!referenceUrl} onClick={()=>void generate()}>{busy?"Goldie is creating them…":`Create ${chosen.length ? `these ${chosen.length} ${chosen.length===1?"mockup":"mockups"}` : "selected mockups"}`}</button></div>{busy&&renderStatus&&<div className="mockup-live-progress" role="status" aria-live="polite"><i/><span>{renderStatus}</span></div>}</div>{error&&<p className="field-error" role="alert">{error}</p>}{etsyStatus&&<p className="etsy-ready-status" role="status">{etsyStatus}</p>}{results.length>0&&<div className="inline-generated">{results.map(r=><figure key={r.name}><button className="mockup-enlarge" onClick={()=>setExpanded(r)}><img src={r.url} alt={r.template}/><span>View larger</span></button><figcaption><span>{r.template}</span><a href={r.url} download={r.name}>Download</a></figcaption></figure>)}</div>}<p className="etsy-note">Goldie saves these mockups for this exact listing and adds them automatically through Etsy when you publish. Individual downloads stay available as a backup.</p></div>{lightbox}</>
 }

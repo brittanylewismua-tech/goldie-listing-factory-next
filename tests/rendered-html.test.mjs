@@ -5208,3 +5208,34 @@ test("the grouped picker lays out as a grid, not a column — D570", async () =>
   assert.match(css, /\.app-shell \.printify-view-group>\.printify-image-grid\{[\s\S]{0,200}display:grid!important/);
   assert.match(css, /grid-template-columns:repeat\(auto-fill,minmax\(84px,1fr\)\)!important/);
 });
+
+test("a scene is measured at the moment it is used — D571", async () => {
+  const [mockups, css] = await Promise.all([
+    readFile(new URL("../app/integrated-mockups.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8"),
+  ]);
+
+  /* Her hoodie mockups put the design at the hem, tiny, and she was right that
+     the mapping was failing. Measured on her library: BACH TEES 10 of 10 marked,
+     white mugs 4 of 4, Gildan Hoodies 2 of 4 - and the two she rendered were the
+     unmarked pair. A scene is created with a placeholder box, the middle 70% of
+     the photograph, and print-area detection only ever ran while the Mockup
+     Library page was open, one AI call per scene. Upload and leave before it
+     finishes, or use the scenes straight from the factory, and they keep the
+     placeholder for good. The render then fell back to a fixed guess: centre it,
+     42% scale. Which is exactly where her design landed.
+
+     The detection works - called directly on one of her stale scenes it returned
+     a chest box at high confidence. It was running in the wrong place. */
+  assert.match(mockups, /async function calibrateIfNeeded\(list:Template\[\]\)/);
+  assert.match(mockups, /const stale=list\.filter\(item=>!isCalibrated\(item\)\)/);
+  assert.match(mockups, /const measured=await calibrateIfNeeded\(chosen\)/);
+  assert.match(mockups, /jobs=measured\.map/, "the render uses the measured scenes, not the stale ones");
+
+  // The measurement is saved, so it is done once and not on every render.
+  assert.match(mockups, /method:"PATCH"[\s\S]{0,120}JSON\.stringify\(\{corners:payload\.corners\}\)/);
+
+  // And an unmarked scene says so before she picks it.
+  assert.match(mockups, /className="scene-unmeasured"/);
+  assert.match(css, /\.app-shell \.scene-unmeasured\{/);
+});
