@@ -1,56 +1,81 @@
-/* D573 - the foreground layer. This is the arm-in-front-of-the-poster work: the
-   design sits behind whatever the photograph has in front of it. The mechanism
-   was never removed, but the only scenes that ever switched it on were the
-   bundled Pink Dorm templates carrying foregroundPrompt:"woman", and those came
-   out in 2d787ea. From then until now foregroundPrompt was read in three places
-   and set in none, so nothing uploaded could reach it. These tests keep the
-   compositing step, and keep a route to switching it on. */
+/* D600 - foreground obstruction.
+
+   Measured live before this change: all nineteen scenes in the seller's library
+   reported occluded:false with zero occlusion masks stored, on hoodies whose
+   hoods and hair plainly cross the chest. The cause was a single literal - the
+   derived-geometry branch hard-coded occluded:false - so no mask was ever
+   requested and every design rendered on top of the hood. */
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
+const strip = (source) => source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
 
-test("the design is drawn behind the photograph's foreground, not over it", async () => {
-  const integrated = await read("app/integrated-mockups.tsx");
-  // The order is what makes it work: photograph, then artwork, then foreground.
-  assert.match(integrated, /for\(const layer of foregrounds\)ctx\.drawImage/,
-    "the foreground must still be drawn back over the composited artwork");
-  const draw = integrated.indexOf("for(const layer of foregrounds)");
-  const ink = integrated.indexOf("const inkCanvas=document.createElement");
-  assert.ok(ink > 0 && draw > ink, "the foreground must be drawn after the artwork layer, not before");
+const prepare = strip(await read("app/api/mockups/library/[id]/prepare/route.ts"));
+const occlusion = strip(await read("app/api/mockups/library/[id]/occlusion/route.ts"));
+const library = strip(await read("app/api/mockups/library/route.ts"));
+const scene = await read("app/mockups/prepared-scene.ts");
+
+test("a rejected corner quad does not erase the foreground reading", () => {
+  // Whether something crosses the print is a fact about the photograph. The
+  // derived branch must carry the analyser's answer, never a literal false.
+  const derived = prepare.slice(prepare.indexOf("const geometry = measured || {"));
+  const branch = derived.slice(0, derived.indexOf("};") + 2);
+  assert.ok(!/occluded:\s*false/.test(branch),
+    "the derived branch must not hard-code occluded:false");
+  assert.match(branch, /occluded:\s*Boolean\(reading\.geometry\?\.occluded\)/);
 });
 
-test("a saved mask is preferred over anything worked out at render time", async () => {
-  const integrated = await read("app/integrated-mockups.tsx");
-  assert.match(integrated, /async function foregroundLayers\(t:Template\)\{if\(t\.occlusionUrl\)return\[t\.occlusionUrl\]/,
-    "a confirmed mask must win, so the same scene renders identically every time");
+test("no branch anywhere hard-codes the scene as unobstructed", () => {
+  assert.ok(!/occluded:\s*false/.test(prepare),
+    "a scene is only unobstructed because the analyser said so");
 });
 
-test("a scene gets its foreground automatically, with no seller calibration — D576", async () => {
-  const [page, prepare] = await Promise.all([
-    read("app/mockups/page.tsx"),
-    read("app/api/mockups/library/[id]/prepare/route.ts"),
-  ]);
-  assert.doesNotMatch(page, /setMasking\(item\)|MARK WHERE THE DESIGN CAN PRINT|Reset product area/,
-    "the seller must never paint a mask or mark corners");
-  assert.match(prepare, /hood, hair, hand, arm, strap, flap or foreground object/);
-  assert.match(prepare, /occlusionKey: preparation\.occlusionKey/,
-    "the automatic foreground is stored once with the scene");
+test("each class of obstruction is asked for on its own", () => {
+  // One compound prompt returns one concept, so a hood cost us the drawstring.
+  for (const name of ["hood", "hair", "drawstrings", "hands"])
+    assert.match(prepare, new RegExp(`name:\\s*"${name}"`), `${name} must be its own class`);
+  assert.ok(!/prompt:\s*"hood, hair, hand, arm, strap, flap/.test(prepare),
+    "the single compound prompt must be gone");
+  assert.match(prepare, /return_multiple_masks:\s*false/,
+    "one prompt asks for one object, so one mask per class");
 });
 
-test("the mask is stored with the scene rather than recomputed", async () => {
-  const route = await read("app/api/mockups/library/[id]/occlusion/route.ts");
-  assert.match(route, /export async function PUT/);
-  assert.match(route, /occlusionConfirmed: 1/);
-  // An empty mask is a real answer - nothing crosses the print - and must be
-  // saved as confirmed rather than left looking unanswered.
-  assert.match(route, /cleared: true/);
+test("every isolated layer is kept, not only the first", () => {
+  assert.match(prepare, /occlusionUrls\.push\(url\)/);
+  assert.match(prepare, /occlusion-\$\{index\}\.png/, "each layer is stored under its own key");
+  assert.match(prepare, /occlusionKeys\[0\]/, "the first layer stays readable as occlusionKey");
+  assert.match(prepare, /occlusionKeys,\s*occlusionClasses/);
 });
 
-test("a back print without a confirmed foreground is not treated as ready", async () => {
-  const { sceneNeedsOcclusion } = await import("../app/mockups/placement-contract.ts");
-  const back = { x: .5, y: .5, scale: .5, angle: 0, side: "back" };
-  assert.equal(sceneNeedsOcclusion({ printSide: "back", occlusionConfirmed: false }, back), true);
-  assert.equal(sceneNeedsOcclusion({ printSide: "back", occlusionConfirmed: true }, back), false);
+test("which classes were found is recorded on the scene", () => {
+  // So a scene can be answered for later without re-running the analyser.
+  assert.match(prepare, /occlusionClasses\[name\]\s*=\s*Boolean\(url\)/);
+  assert.match(scene, /occlusionClasses\?:\s*Record<string,\s*boolean>/);
+  assert.match(scene, /occlusionKeys\?:\s*string\[\]/);
+});
+
+test("a missing class costs a layer, never the preparation", () => {
+  // Every segmentation call goes through optional(), which swallows the throw.
+  const block = prepare.slice(prepare.indexOf("if (geometry.occluded)"), prepare.indexOf("const [surfaceMaskKey"));
+  assert.match(block, /await optional\(\(\) => falJson\("fal-ai\/sam-3\/image"/);
+  assert.ok(!/throw/.test(block), "isolating a foreground must not throw the preparation away");
+});
+
+test("layers are individually addressable", () => {
+  assert.match(occlusion, /searchParams\.get\("layer"\)/);
+  assert.match(occlusion, /const key = keys\[/);
+  assert.match(library, /occlusion\?layer=\$\{index\}/);
+});
+
+test("deleting a set removes every foreground layer", () => {
+  // Otherwise each re-preparation orphans more objects in storage.
+  assert.match(library, /\.\.\.\(preparation\?\.occlusionKeys\|\|\[\]\)/);
+});
+
+test("a new preparation generation is required for this to take effect", () => {
+  // D581: cached preparations short-circuit the analyser, so a fix that changes
+  // what preparation MEANS has to invalidate what is already stored.
+  assert.match(scene, /SCENE_PREPARATION_VERSION = 8/);
 });

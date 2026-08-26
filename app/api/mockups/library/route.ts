@@ -30,8 +30,21 @@ export async function GET() {
     preparationError: row.preparationError || undefined,
     preparation: row.preparationJson ? JSON.parse(row.preparationJson) : undefined,
     occlusionUrl: row.occlusionKey ? `/api/mockups/library/${encodeURIComponent(row.id)}/occlusion` : undefined,
+    /* D600 - every isolated foreground layer, in draw order. */
+    occlusionUrls: occlusionLayerUrls(row),
     src: `/api/mockups/library/${encodeURIComponent(row.id)}/image`,
   })),preferences:preferences.results.map(row=>({sourceTheme:row.source_theme,displayName:row.display_name,hidden:Boolean(row.hidden)})) });
+}
+
+/* D600 - one scene, one layer per class of object that crosses the print. */
+function occlusionLayerUrls(row: { id: string; occlusionKey: string | null; preparationJson: string | null }) {
+  const keys: string[] = [];
+  try {
+    const preparation = row.preparationJson ? JSON.parse(row.preparationJson) as { occlusionKeys?: string[] } : null;
+    for (const key of preparation?.occlusionKeys || []) if (key) keys.push(key);
+  } catch { /* an unreadable preparation still leaves the scene's own key */ }
+  if (row.occlusionKey && !keys.includes(row.occlusionKey)) keys.unshift(row.occlusionKey);
+  return keys.map((_, index) => `/api/mockups/library/${encodeURIComponent(row.id)}/occlusion?layer=${index}`);
 }
 
 export async function POST(request: NextRequest) {
@@ -76,8 +89,10 @@ export async function DELETE(request:NextRequest){
   if(sourceTheme){await env.DB.prepare(`INSERT INTO mockup_set_preferences (user_id,source_theme,display_name,hidden,updated_at) VALUES (?,?,?,?,CURRENT_TIMESTAMP) ON CONFLICT(user_id,source_theme) DO UPDATE SET hidden=1,updated_at=CURRENT_TIMESTAMP`).bind(user.userId,sourceTheme,theme,1).run();return NextResponse.json({ok:true,deleted:0});}
   const rows=await getDb().select().from(mockupTemplates).where(and(eq(mockupTemplates.userId,user.userId),eq(mockupTemplates.theme,theme)));
   await Promise.all(rows.flatMap(row=>{
-    const preparation=row.preparationJson?JSON.parse(row.preparationJson) as {surfaceMaskKey?:string;depthKey?:string;occlusionKey?:string}:null;
-    return [row.objectKey,row.occlusionKey,preparation?.surfaceMaskKey,preparation?.depthKey,preparation?.occlusionKey].filter((key):key is string=>Boolean(key)).map(key=>env.ARTWORK.delete(key));
+    /* D600 - a scene can now hold several foreground layers. Deleting the set
+       must take all of them, or the objects are orphaned in storage. */
+    const preparation=row.preparationJson?JSON.parse(row.preparationJson) as {surfaceMaskKey?:string;depthKey?:string;occlusionKey?:string;occlusionKeys?:string[]}:null;
+    return [row.objectKey,row.occlusionKey,preparation?.surfaceMaskKey,preparation?.depthKey,preparation?.occlusionKey,...(preparation?.occlusionKeys||[])].filter((key):key is string=>Boolean(key)).map(key=>env.ARTWORK.delete(key));
   }));
   await getDb().delete(mockupTemplates).where(and(eq(mockupTemplates.userId,user.userId),eq(mockupTemplates.theme,theme)));
   return NextResponse.json({ok:true,deleted:rows.length});

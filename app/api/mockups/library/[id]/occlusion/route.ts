@@ -19,14 +19,33 @@ async function scene(id: string, userId: string) {
   return row;
 }
 
-export async function GET(_request: NextRequest, context: { params: Promise<{ id: string }> }) {
+/* D600 - a scene may hold several foreground layers, one per class of object
+   that crosses the print. ?layer=N selects one; no parameter keeps the previous
+   behaviour of serving the first. A layer that was never isolated is a 404,
+   which the renderer treats as "nothing of that kind is in front" rather than
+   as a failure. */
+function layerKeys(row: { occlusionKey: string | null; preparationJson: string | null }) {
+  const keys: string[] = [];
+  try {
+    const preparation = row.preparationJson ? JSON.parse(row.preparationJson) as { occlusionKeys?: string[] } : null;
+    for (const key of preparation?.occlusionKeys || []) if (key) keys.push(key);
+  } catch { /* a scene with unreadable preparation still has its own key below */ }
+  if (row.occlusionKey && !keys.includes(row.occlusionKey)) keys.unshift(row.occlusionKey);
+  return keys;
+}
+
+export async function GET(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   const user = await getChatGPTUser();
   if (!user) return new NextResponse(null, { status: 404 });
   await ensureMockupStorage();
   const { id } = await context.params;
   const row = await scene(id, user.userId);
-  if (!row?.occlusionKey) return new NextResponse(null, { status: 404 });
-  const object = await env.ARTWORK.get(row.occlusionKey);
+  if (!row) return new NextResponse(null, { status: 404 });
+  const keys = layerKeys(row);
+  const requested = Number(new URL(request.url).searchParams.get("layer") || 0);
+  const key = keys[Number.isFinite(requested) && requested >= 0 ? requested : 0];
+  if (!key) return new NextResponse(null, { status: 404 });
+  const object = await env.ARTWORK.get(key);
   if (!object) return new NextResponse(null, { status: 404 });
   return new NextResponse(object.body, { headers: { "Content-Type": "image/png", "Cache-Control": "private, max-age=3600" } });
 }

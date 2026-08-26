@@ -107,8 +107,13 @@ test("why a scene fell back is recorded and readable", async () => {
 });
 
 test("D585: cached pre-diagnostic preparations are retired", async () => {
+  /* Pinning the exact number made every later generation a test failure, which
+     is backwards: the point is that the generation only ever moves FORWARD, so
+     preparations produced by superseded code cannot be served from cache. */
   const prepared = await read("app/mockups/prepared-scene.ts");
-  assert.match(prepared, /SCENE_PREPARATION_VERSION = 7/);
+  const version = Number(/SCENE_PREPARATION_VERSION = (\d+)/.exec(prepared)?.[1]);
+  assert.ok(Number.isInteger(version) && version >= 7,
+    `the preparation generation must be at least 7, found ${version}`);
 });
 
 test("silhouette validation is required, while optional enrichment cannot discard it", async () => {

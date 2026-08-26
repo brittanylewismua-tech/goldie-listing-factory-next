@@ -8,7 +8,7 @@ import type { PrintSide } from "../placement-math.ts";
    Bumping this invalidates them and re-reads each scene the next time it is
    used - which is exactly the migration path that already exists and cannot
    fail. */
-export const SCENE_PREPARATION_VERSION = 7;
+export const SCENE_PREPARATION_VERSION = 8;
 
 export type SceneGeometry = "flat" | "perspective" | "cylindrical" | "flexible" | "irregular";
 export type NormalizedPoint = [number, number];
@@ -25,6 +25,14 @@ export type ScenePreparation = {
   occluded: boolean;
   surfaceMaskKey?: string;
   occlusionKey?: string;
+  /* D600 - a hoodie can have a hood AND hair AND a drawstring across the chest
+     at once. One mask cannot hold three unrelated objects, so every isolated
+     foreground layer is kept. occlusionKey stays as the first of these so
+     anything reading a single layer keeps working. */
+  occlusionKeys?: string[];
+  /* Which foreground classes were looked for and which were actually isolated.
+     Recorded so a scene can be answered for without re-running the analyser. */
+  occlusionClasses?: Record<string, boolean>;
   depthKey?: string;
   /* D577 - true when the surface was computed from product geometry rather than
      read from this photograph. The scene is ready either way. */

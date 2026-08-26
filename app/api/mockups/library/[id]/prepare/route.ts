@@ -140,10 +140,20 @@ async function prepareOnce(imageUrl: string, productName: string, key: string, o
     : !segmentation?.mask
       ? `product-mask-unavailable:${segmentation?.rleDiagnostic || "no-response"}`
       : `model-surface-mask-coverage:${(measuredCoverage || 0).toFixed(3)};fallback:${fittedCorners ? "silhouette-fitted" : "product-box"}`;
+  /* D600 - whether something crosses the print area is a fact about the
+     PHOTOGRAPH, not about whether the corner quad passed validation. This branch
+     used to hard-code occluded:false, so every scene that fell back here - which,
+     measured live, is all nineteen scenes in her library - asked for no occlusion
+     mask at all and rendered the design straight over the hood.
+
+     The analyser's reading of the foreground is kept even when its corners are
+     rejected. A hood does not stop being in front of the chest because the quad
+     was a few pixels wide. */
   const geometry = measured || {
     corners: fittedCorners || computed.corners, productBox, productBoundsVerified: true,
     productSilhouetteVerified: Boolean(fittedCorners),
-    side: computed.printSide, geometry: computed.geometry, occluded: false, derived: true,
+    side: computed.printSide, geometry: computed.geometry,
+    occluded: Boolean(reading.geometry?.occluded), derived: true,
   };
 
   /* D580 - the geometry above is the only thing this function must produce. It
@@ -160,28 +170,49 @@ async function prepareOnce(imageUrl: string, productName: string, key: string, o
   const depth = await optional(() => falJson("fal-ai/image-preprocessors/depth-anything/v2", key, { image_url: imageUrl }));
   const depthUrl = (depth?.image as { url?: string } | undefined)?.url;
 
-  let occlusionUrl: string | undefined;
+  /* D600 - one compound prompt asking for "hood, hair, hand, arm, strap, flap or
+     foreground object" returns ONE concept. A hoodie photographed on a person
+     routinely has several at once, and whichever scored highest was the only one
+     kept. Each class is asked for on its own, and every layer that comes back is
+     kept, so a hood does not cost us the drawstring lying across it. */
+  const OCCLUSION_CLASSES: Array<{ name: string; prompt: string }> = [
+    { name: "hood", prompt: "the hood of the hoodie where it lies in front of the chest" },
+    { name: "hair", prompt: "hair falling in front of the garment" },
+    { name: "drawstrings", prompt: "hoodie drawstrings or cords lying across the garment" },
+    { name: "hands", prompt: "hands, fingers or a forearm crossing in front of the garment" },
+    { name: "other", prompt: "a strap, bag, seam flap, mug handle or other object crossing in front of the printable surface" },
+  ];
+  const occlusionUrls: string[] = [];
+  const occlusionClasses: Record<string, boolean> = {};
   if (geometry.occluded) {
-    /* Also optional. A scene where the foreground could not be isolated is a
-       scene whose print is not tucked behind a hood - not a scene that has to
-       lose its measured print area as well. */
-    const occlusion = await optional(() => falJson("fal-ai/sam-3/image", key, {
-      image_url: imageUrl,
-      prompt: "hood, hair, hand, arm, strap, flap or foreground object crossing in front of the printable product surface",
-      apply_mask: true, return_multiple_masks: true, max_masks: 3, include_scores: true, output_format: "png",
+    /* Also optional, and per class. A class that cannot be isolated is one
+       missing layer, never a failed preparation and never a lost print area. */
+    const found = await Promise.all(OCCLUSION_CLASSES.map(async ({ name, prompt }) => {
+      const answer = await optional(() => falJson("fal-ai/sam-3/image", key, {
+        image_url: imageUrl, prompt,
+        apply_mask: true, return_multiple_masks: false, include_scores: true, output_format: "png",
+      }));
+      const url = (answer?.masks as Array<{ url?: string }> | undefined)?.[0]?.url
+        || (answer?.image as { url?: string } | undefined)?.url;
+      return { name, url };
     }));
-    occlusionUrl = (occlusion?.masks as Array<{ url?: string }> | undefined)?.[0]?.url;
+    for (const { name, url } of found) {
+      occlusionClasses[name] = Boolean(url);
+      if (url) occlusionUrls.push(url);
+    }
   }
 
   /* D580 - saving these cannot cost the reading either. storeRemoteAsset throws
      when a layer will not download, and that throw used to unwind the whole
      preparation and discard the validated geometry with it. */
-  const [surfaceMaskKey, depthKey, occlusionKey] = await Promise.all([
+  const [surfaceMaskKey, depthKey, ...storedOcclusions] = await Promise.all([
     Promise.resolve(undefined),
     optional(() => storeRemoteAsset(depthUrl, `${objectPrefix}/depth.png`)),
-    optional(() => storeRemoteAsset(occlusionUrl, `${objectPrefix}/occlusion.png`)),
+    ...occlusionUrls.map((url, index) => optional(() => storeRemoteAsset(url, `${objectPrefix}/occlusion-${index}.png`))),
   ]);
-  return { ...geometry, productBox, surfaceMaskKey, depthKey, occlusionKey, fallbackReason };
+  const occlusionKeys = storedOcclusions.filter((entry): entry is string => Boolean(entry));
+  return { ...geometry, productBox, surfaceMaskKey, depthKey,
+    occlusionKey: occlusionKeys[0], occlusionKeys, occlusionClasses, fallbackReason };
 }
 
 async function handlePOST(request: NextRequest, context: { params: Promise<{ id: string }> }) {
@@ -254,6 +285,7 @@ async function handlePOST(request: NextRequest, context: { params: Promise<{ id:
         productBox: result.productBox, productBoundsVerified: true,
         productSilhouetteVerified: result.productSilhouetteVerified, derived: result.derived,
         surfaceMaskKey: result.surfaceMaskKey, depthKey: result.depthKey, occlusionKey: result.occlusionKey,
+        occlusionKeys: result.occlusionKeys, occlusionClasses: result.occlusionClasses,
         preparedAt: new Date().toISOString(),
       };
       return store(preparation, attempt, result.fallbackReason);
