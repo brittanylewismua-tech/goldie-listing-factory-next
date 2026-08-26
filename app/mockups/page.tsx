@@ -1,5 +1,6 @@
 "use client";
 
+import type { PrintSide } from "../placement-math";
 import { isCalibratedQuad } from "./calibration";
 import { ChangeEvent, DragEvent, useEffect, useMemo, useRef, useState } from "react";
 import { zipSync } from "fflate";
@@ -9,7 +10,7 @@ import ManagementNav from "../management-nav";
 
 type Point = [number, number];
 type SurfaceKind = "rigid-flat" | "t-shirt" | "sweatshirt" | "hoodie" | "other-apparel" | "apparel" | "soft-goods" | "curved" | "irregular";
-type Template = { id: string; name: string; theme: string; sourceTheme?: string; src: string; corners: [Point, Point, Point, Point]; normalized?: boolean; custom?: boolean; foregroundPrompt?: string; surfaceKind?: SurfaceKind };
+type Template = { id: string; name: string; theme: string; sourceTheme?: string; src: string; corners: [Point, Point, Point, Point]; normalized?: boolean; custom?: boolean; foregroundPrompt?: string; surfaceKind?: SurfaceKind; printSide?: PrintSide; quadMeans?: 'garment'|'print-area'; occlusionUrl?: string; occlusionConfirmed?: boolean };
 type Rendered = { name: string; url: string; template: string };
 
 const templates: Template[] = [];
@@ -226,11 +227,16 @@ export default function Home() {
   const downloadAll=async()=>{const entries:Record<string,Uint8Array>={};for(const result of results){entries[result.name]=new Uint8Array(await (await fetch(result.url)).arrayBuffer());}const zip=zipSync(entries,{level:0});const url=URL.createObjectURL(new Blob([zip],{type:"application/zip"}));const a=document.createElement("a");a.href=url;a.download=`goldie-mockups-${new Date().toISOString().slice(0,10)}.zip`;a.style.display="none";document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);};
   const addMockups=async(e:ChangeEvent<HTMLInputElement>)=>{const incoming=Array.from(e.target.files||[]).filter(f=>/^image\/(png|jpeg|webp)$/.test(f.type));const theme=themeName.trim()||"My mockup set";e.target.value="";const added:Template[]=[];for(const original of incoming){const file=await libraryImage(original),form=new FormData();form.set("image",file);form.set("theme",theme);form.set("name",original.name.replace(/\.[^.]+$/,"").trim()||"Mockup");form.set("surfaceKind",surfaceKind);const response=await fetch("/api/mockups/library",{method:"POST",body:form});const payload=await response.json() as {template?:Template;error?:string};if(!response.ok||!payload.template){setGenerationError(payload.error||"This mockup could not be saved.");continue;}added.push(payload.template);setLibraryProgress(added.length);}if(!added.length)return;setLibrary(x=>[...x,...added]);setSelected(new Set());setActiveTheme(theme);/* D468 - the print area is worked out for every photograph as it arrives. A set
    can hold fifty, and the seller is never asked to mark any of them. */
-void findPrintAreas(added,theme);}
+/* D573 - this was fire-and-forget, so closing the tab or moving on part way
+     through left scenes carrying the placeholder for good, and nothing said so.
+     The upload is not finished until every scene it added has been measured. */
+    await findPrintAreas(added,theme);}
   const [preparing,setPreparing]=useState(0);
+  const [calibratingSide,setCalibratingSide]=useState<PrintSide>("front");
+  const [unmeasured,setUnmeasured]=useState<string[]>([]);
   async function findPrintAreas(scenes:Template[],theme:string){
     setPreparing(scenes.length);
-    let done=0;
+    let done=0;const unmarked:string[]=[];
     for(const scene of scenes){
       try{
         const blob=await (await fetch(scene.src)).blob();
@@ -242,11 +248,15 @@ void findPrintAreas(added,theme);}
           setLibrary(x=>x.map(t=>t.id===scene.id?{...t,corners}:t));
           await fetch(`/api/mockups/library/${encodeURIComponent(scene.id)}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({corners})});
         }
-      }catch{/* One scene that cannot be read falls back to the measured product
-                box at render time; it must not stop the rest being prepared. */}
+        else unmarked.push(scene.name||"a scene");
+      }catch{unmarked.push(scene.name||"a scene");}
       done+=1;setPreparing(scenes.length-done);
     }
     setPreparing(0);
+    /* D573 - a scene Goldie could not measure is named here rather than sitting in
+       the set looking finished. She marks it by hand with
+       "Mark where the design can print". */
+    setUnmeasured(unmarked);
   };
   const toggleUnrestricted=(id:string)=>setSelected(s=>{const n=new Set(s),template=library.find(item=>item.id===id);if(!template)return n;if(n.has(id)){n.delete(id);return n;}const kind=template.surfaceKind||"rigid-flat";for(const selectedId of n){const selectedTemplate=library.find(item=>item.id===selectedId);if((selectedTemplate?.surfaceKind||"rigid-flat")!==kind)n.delete(selectedId);}n.add(id);return n});
   const toggle=(id:string)=>{if(!selected.has(id)&&selected.size>=MAX_SELECTED_MOCKUPS){setSelectionNotice("You can create up to 10 mockups at a time. Finish this group, then choose another group.");return;}setSelectionNotice("");toggleUnrestricted(id)};
@@ -279,7 +289,23 @@ void findPrintAreas(added,theme);}
     }catch{ setSuggestNote("Goldie could not check this photo. Click the four corners yourself.") }
     finally{ setSuggesting(false) }
   };
-  const calibrateClick=(e:React.MouseEvent<HTMLImageElement>)=>{if(!calibrating)return;const r=e.currentTarget.getBoundingClientRect();const next=[...points,[(e.clientX-r.left)/r.width,(e.clientY-r.top)/r.height] as Point];setPoints(next);if(next.length===4){const corners=next as Template["corners"];setLibrary(x=>x.map(t=>t.id===calibrating.id?{...t,corners}:t));void fetch(`/api/mockups/library/${encodeURIComponent(calibrating.id)}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({corners})});const remaining=library.filter(t=>t.custom&&t.theme===calibrating.theme&&t.id!==calibrating.id&&isCalibratedSurface(t.surfaceKind||"rigid-flat")&&t.corners[0][0]===.15);setTimeout(()=>{setPoints([]);setCalibrating(remaining[0]||null)},250);}};
+  /* D573 - the fourth click used to write the corners straight to the library and
+     jump to the next photograph 250ms later, so a box nobody had ever seen became
+     the truth Goldie rendered against. Now the four points draw the box on the
+     photograph and stop. Nothing is saved until she looks at it and confirms. */
+  const calibrateClick=(e:React.MouseEvent<HTMLImageElement>)=>{if(!calibrating||points.length>=4)return;const r=e.currentTarget.getBoundingClientRect();setPoints([...points,[(e.clientX-r.left)/r.width,(e.clientY-r.top)/r.height] as Point]);};
+
+  /* D573 - confirming is what promotes a scene to "print-area": the one state in
+     which Goldie maps Printify's exact scale and position into the quad instead
+     of falling back to an empirical constant. It is deliberately a human act. */
+  const confirmArea=async()=>{
+    if(!calibrating||points.length!==4)return;
+    const corners=points as Template["corners"],id=calibrating.id,side=calibratingSide;
+    setLibrary(x=>x.map(t=>t.id===id?{...t,corners,printSide:side,quadMeans:"print-area" as const}:t));
+    await fetch(`/api/mockups/library/${encodeURIComponent(id)}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({corners,confirmed:true,printSide:side})}).catch(()=>undefined);
+    const remaining=library.filter(t=>t.custom&&t.theme===calibrating.theme&&t.id!==id&&isCalibratedSurface(t.surfaceKind||"rigid-flat")&&t.corners[0][0]===.15);
+    setPoints([]);setCalibrating(remaining[0]||null);
+  };
 
   const addMockupsManaged=async(e:ChangeEvent<HTMLInputElement>)=>{const count=e.target.files?.length||0;if(!count)return;setLibraryBusy(true);setLibraryProgress(0);setLibraryTotal(count);try{const theme=themeName.trim()||"My mockup set",existing=library.filter(item=>item.custom&&item.theme===theme).length;if(existing>=MAX_MOCKUPS_PER_SET){e.target.value="";setGenerationError("This mockup set already contains 50 mockups. Create another themed set to add more.");return}if(count>MAX_MOCKUPS_PER_SET-existing){e.target.value="";setGenerationError(`Choose no more than ${MAX_MOCKUPS_PER_SET-existing} additional mockups for this set.`);return}await addMockups(e);setShowAddSet(false)}finally{setLibraryBusy(false);setLibraryProgress(0);setLibraryTotal(0)}};
 
@@ -296,7 +322,15 @@ void findPrintAreas(added,theme);}
     {renamingTheme&&<div className="confirmOverlay" role="dialog" aria-modal="true" aria-labelledby="rename-set-title"><div className="confirmDialog"><p className="mockupEyebrow">RENAME MOCKUP SET</p><h2 id="rename-set-title">Choose a new name</h2><input value={renameValue} onChange={event=>setRenameValue(event.target.value)} maxLength={80} autoFocus/><div className="confirmActions"><button className="cancelConfirm" onClick={()=>{setRenamingTheme("");setRenameValue("")}}>Cancel</button><button className="confirmRename" disabled={!renameValue.trim()} onClick={renameSet}>Save new name</button></div></div></div>}
     {deletingTheme&&<div className="confirmOverlay" role="dialog" aria-modal="true" aria-labelledby="delete-set-title"><div className="confirmDialog"><p className="mockupEyebrow">DELETE MOCKUP SET</p><h2 id="delete-set-title">Delete “{deletingTheme}”?</h2><p>This permanently removes the set and every saved mockup inside it.</p><div className="confirmActions"><button className="cancelConfirm" onClick={()=>setDeletingTheme("")}>Keep this set</button><button className="confirmDelete" onClick={deleteSet}>Yes, delete set</button></div></div></div>}
     {libraryPreview&&<div className="mockupLightbox" role="dialog" aria-modal="true" aria-label={`${libraryPreview.name} enlarged preview`} onMouseDown={event=>{if(event.target===event.currentTarget)setLibraryPreview(null)}}><button className="lightboxClose" onClick={()=>setLibraryPreview(null)} aria-label="Close enlarged mockup">×</button><div className="lightboxContent"><img src={libraryPreview.src} alt={`${libraryPreview.name} enlarged`}/><div><strong>{libraryPreview.name}</strong></div></div></div>}
-    {calibrating&&<div className="modal"><div className="calibrator"><button className="close" onClick={()=>setCalibrating(null)}>×</button><p className="mockupEyebrow">SET THE PRODUCT AREA</p><h2>Click the {['top-left','top-right','bottom-right','bottom-left'][points.length]} inside corner.</h2><p>Four clicks and this mockup is ready to reuse.</p><div className="calImage"><img src={calibrating.src} alt="Blank mockup" onClick={calibrateClick}/>{points.map((point,index)=><i key={index} style={{left:`${point[0]*100}%`,top:`${point[1]*100}%`}}>{index+1}</i>)}</div><div className="calibratorActions"><button className="suggestArea" disabled={suggesting} onClick={()=>void suggestArea()}>{suggesting?"Finding the product…":"Suggest the product area"}</button><button className="resetPoints" onClick={()=>setPoints([])}>Start these four points over</button></div>{suggestNote&&<p className="calibratorNote">{suggestNote}</p>}</div></div>}
+    {calibrating&&<div className="modal"><div className="calibrator"><button className="close" onClick={()=>{setPoints([]);setCalibrating(null)}}>×</button><p className="mockupEyebrow">MARK WHERE THE DESIGN CAN PRINT</p>
+      <h2>{points.length<4?`Click the ${['top-left','top-right','bottom-right','bottom-left'][points.length]} inside corner.`:"Does this look right?"}</h2>
+      <p>{points.length<4?"Four clicks marks the printable area on this photograph.":"Goldie will put the design inside this shape, at the exact size and position Printify uses."}</p>
+      <div className="calSides"><span>This photograph shows the</span><button type="button" className={calibratingSide==="front"?"sideChoice on":"sideChoice"} onClick={()=>setCalibratingSide("front")}>Front view</button><button type="button" className={calibratingSide==="back"?"sideChoice on":"sideChoice"} onClick={()=>setCalibratingSide("back")}>Back view</button><button type="button" className={calibratingSide==="left-sleeve"?"sideChoice on":"sideChoice"} onClick={()=>setCalibratingSide("left-sleeve")}>Left sleeve</button><button type="button" className={calibratingSide==="right-sleeve"?"sideChoice on":"sideChoice"} onClick={()=>setCalibratingSide("right-sleeve")}>Right sleeve</button></div>
+      <div className="calImage"><img src={calibrating.src} alt="Blank mockup" onClick={calibrateClick}/><svg className="calQuad" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><polygon points={points.map(p=>`${p[0]*100},${p[1]*100}`).join(" ")}/></svg>{points.map((point,index)=><i key={index} style={{left:`${point[0]*100}%`,top:`${point[1]*100}%`}}>{index+1}</i>)}</div>
+      <div className="calibratorActions">{points.length===4
+        ?<><button className="confirmArea" onClick={()=>void confirmArea()}>Yes, use this area</button><button className="resetPoints" onClick={()=>setPoints([])}>Start over</button></>
+        :<><button className="suggestArea" disabled={suggesting} onClick={()=>void suggestArea()}>{suggesting?"Finding the product…":"Suggest the product area"}</button><button className="resetPoints" onClick={()=>setPoints([])}>Start over</button></>}</div>
+      {suggestNote&&<p className="calibratorNote">{suggestNote}</p>}</div></div>}
   </main>;
 
   return <main className="mockupFactory">
@@ -335,7 +369,15 @@ void findPrintAreas(added,theme);}
     {expandedIndex!==null&&results[expandedIndex]&&<div className="mockupLightbox" role="dialog" aria-modal="true" aria-label={`${results[expandedIndex].template} mockup preview`} onMouseDown={event=>{if(event.target===event.currentTarget)setExpandedIndex(null)}}><button className="lightboxClose" onClick={()=>setExpandedIndex(null)} aria-label="Close enlarged mockup">×</button>{results.length>1&&<button className="lightboxPrevious" onClick={()=>moveExpanded(-1)} aria-label="Previous mockup">‹</button>}<div className="lightboxContent"><img src={results[expandedIndex].url} alt={`${results[expandedIndex].template} mockup enlarged`}/><div><strong>{results[expandedIndex].template}</strong><a href={results[expandedIndex].url} download={results[expandedIndex].name}>Download this mockup</a></div></div>{results.length>1&&<button className="lightboxNext" onClick={()=>moveExpanded(1)} aria-label="Next mockup">›</button>}</div>}
     {renamingTheme&&<div className="confirmOverlay" role="dialog" aria-modal="true" aria-labelledby="rename-set-title"><div className="confirmDialog"><p className="mockupEyebrow">RENAME MOCKUP SET</p><h2 id="rename-set-title">Choose a new name</h2><input value={renameValue} onChange={event=>setRenameValue(event.target.value)} maxLength={80} autoFocus/><div className="confirmActions"><button className="cancelConfirm" onClick={()=>{setRenamingTheme("");setRenameValue("")}}>Cancel</button><button className="confirmRename" disabled={!renameValue.trim()} onClick={renameSet}>Save new name</button></div></div></div>}
     {deletingTheme&&<div className="confirmOverlay" role="dialog" aria-modal="true" aria-labelledby="delete-set-title"><div className="confirmDialog"><p className="mockupEyebrow">DELETE MOCKUP SET</p><h2 id="delete-set-title">Delete “{deletingTheme}”?</h2><p>This permanently removes the set and every saved mockup inside it.</p><div className="confirmActions"><button className="cancelConfirm" onClick={()=>setDeletingTheme("")}>Keep this set</button><button className="confirmDelete" onClick={deleteSet}>Yes, delete set</button></div></div></div>}
-    {calibrating&&<div className="modal"><div className="calibrator"><button className="close" onClick={()=>setCalibrating(null)}>×</button><p className="mockupEyebrow">SET THE PRODUCT AREA</p><h2>Click the {['top-left','top-right','bottom-right','bottom-left'][points.length]} inside corner.</h2><p>Four clicks and this mockup is ready to reuse.</p><div className="calImage"><img src={calibrating.src} alt="Blank mockup" onClick={calibrateClick}/>{points.map((p,i)=><i key={i} style={{left:`${p[0]*100}%`,top:`${p[1]*100}%`}}>{i+1}</i>)}</div><button className="resetPoints" onClick={()=>setPoints([])}>Start these four points over</button></div></div>}
+    {calibrating&&<div className="modal"><div className="calibrator"><button className="close" onClick={()=>{setPoints([]);setCalibrating(null)}}>×</button><p className="mockupEyebrow">MARK WHERE THE DESIGN CAN PRINT</p>
+      <h2>{points.length<4?`Click the ${['top-left','top-right','bottom-right','bottom-left'][points.length]} inside corner.`:"Does this look right?"}</h2>
+      <p>{points.length<4?"Four clicks marks the printable area on this photograph.":"Goldie will put the design inside this shape, at the exact size and position Printify uses."}</p>
+      <div className="calSides"><span>This photograph shows the</span><button type="button" className={calibratingSide==="front"?"sideChoice on":"sideChoice"} onClick={()=>setCalibratingSide("front")}>Front view</button><button type="button" className={calibratingSide==="back"?"sideChoice on":"sideChoice"} onClick={()=>setCalibratingSide("back")}>Back view</button><button type="button" className={calibratingSide==="left-sleeve"?"sideChoice on":"sideChoice"} onClick={()=>setCalibratingSide("left-sleeve")}>Left sleeve</button><button type="button" className={calibratingSide==="right-sleeve"?"sideChoice on":"sideChoice"} onClick={()=>setCalibratingSide("right-sleeve")}>Right sleeve</button></div>
+      <div className="calImage"><img src={calibrating.src} alt="Blank mockup" onClick={calibrateClick}/><svg className="calQuad" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><polygon points={points.map(p=>`${p[0]*100},${p[1]*100}`).join(" ")}/></svg>{points.map((point,index)=><i key={index} style={{left:`${point[0]*100}%`,top:`${point[1]*100}%`}}>{index+1}</i>)}</div>
+      <div className="calibratorActions">{points.length===4
+        ?<><button className="confirmArea" onClick={()=>void confirmArea()}>Yes, use this area</button><button className="resetPoints" onClick={()=>setPoints([])}>Start over</button></>
+        :<><button className="suggestArea" disabled={suggesting} onClick={()=>void suggestArea()}>{suggesting?"Finding the product…":"Suggest the product area"}</button><button className="resetPoints" onClick={()=>setPoints([])}>Start over</button></>}</div>
+      {suggestNote&&<p className="calibratorNote">{suggestNote}</p>}</div></div>}
     <footer className="mockupFooter"><span>GOLDIE MOCKUP FACTORY</span><p>Product-aware placement for reusable mockup sets.</p></footer>
   </main>;
 }

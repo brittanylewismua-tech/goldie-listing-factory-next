@@ -1055,9 +1055,14 @@ test("routes each product surface deliberately and never releases a partial batc
   assert.match(integrated,/return drawLocally\(\);/);
   assert.doesNotMatch(integrated,/await product\(design,template,reference\)/,
     "the generative renderer no longer places designs");
-  assert.match(integrated,/return derived\?rigid\(design,template,derived\.adjustment,derived\.quad\)/);
-  assert.match(integrated,/:rigid\(design,template,placementAdjustment\(placement,template\.surfaceKind\|\|"rigid-flat"\)\)/,
-    "the constants remain the fallback, never the first answer");
+  assert.match(integrated,/if\(derived\)return rigid\(design,template,derived\.adjustment,derived\.quad\)/);
+  /* D573 - there is no constant fallback any more. A scene that cannot reproduce
+     the draft's real Printify placement refuses by name instead of rendering a
+     convincing-looking guess at a flat 42% centred. */
+  assert.match(integrated,/needs its print area confirmed in Mockup Library/,
+    "a scene that cannot reproduce the real placement must refuse by name");
+  assert.doesNotMatch(integrated,/scale:kind==="rigid-flat"\?1:\.42/,
+    "the 42% constant must not live in the render path");
   // The old constants may survive only as the pre-mirroring fallback for drafts
   // that predate placement being recorded - never as a live placement decision.
   assert.doesNotMatch(integrated,/PLACEMENT_BEFORE_MIRRORING/);
@@ -2666,7 +2671,7 @@ test("the lifestyle mockup mirrors the Printify template placement, whatever the
   // One definition of where the artwork goes. Two would drift, and the drift
   // would be mockups that disagree with the customer's own listing.
   assert.match(payload, /import \{ artworkPlacement \} from/);
-  assert.match(drafts, /import \{ artworkPlacement \} from/);
+  assert.match(drafts, /import \{ readPrintSide, artworkPlacement \} from/);
   assert.doesNotMatch(payload, /requestedScale=/, "the math moved to placement-math");
 
   // A full-bleed design is placed exactly as the template asks.
@@ -2696,7 +2701,9 @@ test("the lifestyle mockup mirrors the Printify template placement, whatever the
 
   // rigid() gets the padded design on purpose: Printify's scale is measured
   // against the padded canvas, so trimming there too would enlarge art twice.
-  assert.match(integrated, /rigid\(design,template,placementAdjustment/);
+  // D573 - the adjustment is resolved first now, because it can refuse.
+  assert.match(integrated, /const exact=placementAdjustment\(placement,template\.surfaceKind\|\|"rigid-flat","print-area"\)/);
+  assert.match(integrated, /if\(exact\)return rigid\(design,template,exact\)/);
 
   // Measured on the live site: in the Printify preview the artwork is ~27% of
   // the shirt width; rendering at the template's own scale of 1 gave ~60%.
@@ -2705,8 +2712,11 @@ test("the lifestyle mockup mirrors the Printify template placement, whatever the
   // empirical constants stand - they are what actually matches the preview.
   const real = artworkPlacement({ x: .5, y: .5, scale: 1 }, { left: .16796875, top: .013671875, right: .83203125, bottom: .986328125 });
   assert.equal(Number(real.scale.toFixed(3)), 1.506, "Printify's own math is unchanged and still drives the draft");
-  assert.match(integrated, /return\{scale:kind==="rigid-flat"\?1:\.42,x:0,y:0\}/,
-    "mockup scale stays empirical until the quad-to-print-area ratio is recorded");
+  /* D573 - the ratio this was waiting for is recorded now: quadMeans. A scene
+     whose quad is a confirmed Printify print area takes Printify's scale and
+     position directly, so the empirical constant has no job left and is gone. */
+  assert.doesNotMatch(integrated, /return\{scale:kind==="rigid-flat"\?1:\.42,x:0,y:0\}/,
+    "the empirical constant must not survive in the render path");
   assert.match(integrated, /calibrated corners are not/,
     "the reason must stay next to the constants so this is not 'fixed' again");
 });
@@ -2903,7 +2913,7 @@ test("mockup placement is derived from the Printify preview, for any product —
 
   // The old constants survive only as the fallback when a measurement is missing.
   assert.match(integrated, /const fit=reference\?await measureReference\(reference,previewFace\):null/);
-  assert.match(integrated, /return derived\?rigid\(design,template,derived\.adjustment,derived\.quad\)/);
+  assert.match(integrated, /if\(derived\)return rigid\(design,template,derived\.adjustment,derived\.quad\)/);
   assert.match(integrated, /productBoxes=useRef\(new Map<string,ProductBox\|null>\(\)\)/,
     "segmentation runs once per scene, not once per mockup");
 });
@@ -3448,7 +3458,7 @@ test("a hand-marked print area beats an automatic guess — D466", async () => {
   /* D468 · The seller is never asked to mark anything - a set holds up to fifty
      photographs. Every scene works out its own print area when it is uploaded;
      the manual control stays only as an adjustment for the rare bad one. */
-  assert.match(page, /void findPrintAreas\(added,theme\)/);
+  assert.match(page, /await findPrintAreas\(added,theme\)/);
   assert.doesNotMatch(page, /Set the product area/, "nothing demands marking");
 });
 
@@ -3459,7 +3469,7 @@ test("a mockup scene works out its own print area — D468", async () => {
   /* A set holds up to fifty photographs. Asking the seller to mark four corners
      on each is eight minutes of clicking per set, so marking cannot be the
      requirement - the scene has to answer this itself, once, at upload. */
-  assert.match(page, /void findPrintAreas\(added,theme\)/, "every uploaded scene is prepared");
+  assert.match(page, /await findPrintAreas\(added,theme\)/, "every uploaded scene is prepared");
   assert.match(page, /method:"PATCH"[\s\S]{0,120}JSON\.stringify\(\{corners\}\)/, "and the answer is stored on the template");
 
   /* Segmentation finds the product; the product is not the print area. On a mug
@@ -3477,7 +3487,7 @@ test("a mockup scene works out its own print area — D468", async () => {
   assert.match(route, /corners: null/, "a refusal returns nothing rather than a guess");
 
   // One scene failing must not stop the rest of an upload preparing.
-  assert.match(page, /catch\{\/\* One scene that cannot be read falls back/);
+  assert.match(page, /catch\{unmarked\.push/);
 });
 
 test("the design matches the Printify placement, measured in the same frame — D469/D470", async () => {
@@ -5232,7 +5242,7 @@ test("a scene is measured at the moment it is used — D571", async () => {
   assert.match(mockups, /return \{ready:applied\.filter\(isCalibrated\),unmeasured:applied\.filter\(item=>!isCalibrated\(item\)\)\}/);
   /* D572 - and a scene it cannot measure is held back rather than rendered
      against a guess, which is what D571 claimed and did not do. */
-  assert.match(mockups, /const \{ready:measured,unmeasured\}=await calibrateIfNeeded\(chosen\)/);
+  assert.match(mockups, /const \{ready:calibrated,unmeasured\}=await calibrateIfNeeded\(chosen\)/);
   assert.match(mockups, /if\(!measured\.length\)\{setBusy\(false\);setRenderStatus\(""\);return\}/);
   assert.match(mockups, /Goldie could not work out where the print goes on/);
   assert.match(mockups, /jobs=measured\.map/, "the render uses the measured scenes, not the stale ones");

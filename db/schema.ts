@@ -75,6 +75,21 @@ export const mockupTemplates = sqliteTable("mockup_templates", {
   name: text("name").notNull(),
   surfaceKind: text("surface_kind").notNull(),
   cornersJson: text("corners_json").notNull(),
+  /* D573 - which print side this photograph shows. A back-print draft must not
+     be rendered onto a front-facing scene, and Goldie cannot infer the side of a
+     photograph at generation time, so the scene carries it. */
+  printSide: text("print_side").notNull().default("front"),
+  /* D573 - what cornersJson means. "garment" is a region of the garment that is
+     larger than the Printify print area by an unknown ratio, which is why those
+     scenes still need an empirical scale constant. "print-area" is a confirmed
+     Printify print area, and Printify's own scale and x/y map straight into it.
+     Everything already in the library predates the distinction and is "garment",
+     so existing sets keep rendering exactly as they do today. */
+  quadMeans: text("quad_means").notNull().default("garment"),
+  /* D573 - the confirmed foreground that must stay in front of the artwork: a
+     hood, hair, straps, arms. Stored once, not re-segmented per render. */
+  occlusionKey: text("occlusion_key"),
+  occlusionConfirmed: integer("occlusion_confirmed").notNull().default(0),
   objectKey: text("object_key").notNull(),
   contentType: text("content_type").notNull(),
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),

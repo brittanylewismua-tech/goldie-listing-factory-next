@@ -15,7 +15,22 @@
 
 export type ArtworkBox = { left: number; top: number; right: number; bottom: number };
 export type TemplatePlacement = { x?: number; y?: number; scale?: number; angle?: number };
-export type ResolvedPlacement = { x: number; y: number; scale: number; angle: number };
+/* D573 - `side` is which Printify print area this placement belongs to: front,
+   back, sleeve. It is carried so a back print is rendered onto a back-facing
+   photograph instead of being collapsed onto a generic chest position. */
+export type PrintSide = "front" | "back" | "left-sleeve" | "right-sleeve" | "wrap" | "other";
+export type ResolvedPlacement = { x: number; y: number; scale: number; angle: number; side?: PrintSide };
+
+export function readPrintSide(position?: string): PrintSide {
+  const value = String(position || "").toLowerCase();
+  if (/back/.test(value)) return "back";
+  if (/left[ _-]?sleeve/.test(value)) return "left-sleeve";
+  if (/right[ _-]?sleeve/.test(value)) return "right-sleeve";
+  if (/sleeve|arm|cuff/.test(value)) return "left-sleeve";
+  if (/wrap|around/.test(value)) return "wrap";
+  if (/front|chest|pocket/.test(value)) return "front";
+  return "other";
+}
 
 export function artworkPlacement(
   template: TemplatePlacement | undefined,

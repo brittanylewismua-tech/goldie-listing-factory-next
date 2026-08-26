@@ -6,12 +6,13 @@ import { createPortal } from "react-dom";
 import { safeImagePreviewDataUrl } from "./client-image-preview";
 import { runBounded } from "./bounded-work";
 import { isCalibratedQuad } from "./mockups/calibration";
-import type { ResolvedPlacement } from "./placement-math";
+import type { ResolvedPlacement, PrintSide } from "./placement-math";
+import { placementAdjustment, sceneAcceptsSide, sceneNeedsOcclusion, type QuadMeaning } from "./mockups/placement-contract";
 import type { ArtworkBounds } from "./design-artwork";
 import { measureReference, productBoxInScene, derivedPlacement, placementInFace, type ProductBox, type ReferenceFit } from "./mockups/reference-placement";
 
 type Point=[number,number]; type SurfaceKind="rigid-flat"|"t-shirt"|"sweatshirt"|"hoodie"|"other-apparel"|"apparel"|"soft-goods"|"curved"|"irregular";
-type Template={id:string;name:string;theme:string;src:string;corners:[Point,Point,Point,Point];normalized?:boolean;surfaceKind?:SurfaceKind;foregroundPrompt?:string};
+type Template={id:string;name:string;theme:string;src:string;corners:[Point,Point,Point,Point];normalized?:boolean;surfaceKind?:SurfaceKind;foregroundPrompt?:string;printSide?:PrintSide;quadMeans?:QuadMeaning;occlusionUrl?:string;occlusionConfirmed?:boolean};
 type Result={name:string;url:string;template:string;templateId:string;surfaceKind:SurfaceKind;warning?:string};
 type Adjustment={scale:number;x:number;y:number};
 const MAX_MOCKUPS_PER_LISTING=8;
@@ -176,9 +177,20 @@ const candidates=[marked,quadOverride?toPixels(quadOverride,true):null,toPixels(
 // Restored until each mockup template records how its calibrated quad relates to
 // the print area, which is the missing number that would make real mirroring
 // possible. The placement is still recorded on every draft, ready for that work.
-function placementAdjustment(_placement?:ResolvedPlacement,kind:SurfaceKind="rigid-flat"):Adjustment{
-  return{scale:kind==="rigid-flat"?1:.42,x:0,y:0};
-}
+//
+// D573 - that missing number is now recorded on the scene itself, as quadMeans.
+//
+// "print-area": the quad is a confirmed Printify print area, so Printify's own
+// numbers mean the same thing rigid() means. rigid() maps the design canvas onto
+// the quad, so a Printify scale of .27 is .27 of the print area either way, and
+// Printify's x/y - the centre of the artwork within the print area, 0 to 1 - are
+// offsets from the centre of the quad. No constant, no pixel analysis, no guess.
+// A left-pocket design stays small and left. An oversized print stays oversized.
+//
+// "garment": the quad is a larger region of the garment, related to the print
+// area by a ratio nobody has measured. Printify's scale cannot be used against
+// it, so the empirical constants stay. Every scene in the library before D573 is
+// this, which is why her calibrated tees and mugs render exactly as they did.
 /* D456 - the generative renderer is gone from both paths. It repainted the
    whole frame, which no prompt can fix, because repainting is what an image
    editor does. Nothing here calls a model to place a design any more. */
@@ -196,7 +208,11 @@ export default function IntegratedMockups({design,productId,productName="",defau
  useEffect(()=>{setTheme(defaultTheme);setResults([]);setEtsyStatus("")},[defaultTheme]);
  useEffect(()=>{if(seededDefaults.current||!library.length)return;seededDefaults.current=true;let session:{theme?:string;ids?:string[]}|null=null;try{session=JSON.parse(window.sessionStorage.getItem("goldie-batch-mockups")||"null")}catch{}const ids=defaultTemplateIds.length?defaultTemplateIds:Array.isArray(session?.ids)?session.ids:[],expectedTheme=defaultTheme||session?.theme||"";const valid=ids.filter(id=>library.some(item=>item.id===id&&(!expectedTheme||item.theme===expectedTheme))).slice(0,MAX_MOCKUPS_PER_LISTING);setSelected(new Set(valid))},[library,defaultTheme,defaultTemplateIds.join("|")]);
  useEffect(()=>{if(selected.size<=MAX_MOCKUPS_PER_LISTING)return;setSelected(new Set([...selected].slice(0,MAX_MOCKUPS_PER_LISTING)));setError("You can create up to eight lifestyle mockups for one listing.")},[selected]);
- const compatibleLibrary=library.filter(template=>productAcceptsMockup(template.surfaceKind||"rigid-flat",productName)),themes=[...new Set(compatibleLibrary.map(t=>t.theme))],items=theme==="__all"?compatibleLibrary:compatibleLibrary.filter(t=>t.theme===theme),chosen=compatibleLibrary.filter(t=>selected.has(t.id)).slice(0,MAX_MOCKUPS_PER_LISTING),needsReference=chosen.some(t=>!isCalibratedSurface(t.surfaceKind||"rigid-flat"));
+ /* D573 - compatibility is product family AND print side AND calibration status.
+   A back-print draft offered a front-facing photograph produces a confident lie,
+   so the scene is excluded rather than substituted. */
+ const compatibleLibrary=library.filter(template=>productAcceptsMockup(template.surfaceKind||"rigid-flat",productName)&&sceneAcceptsSide(template,placement))
+ const wrongSideCount=library.filter(template=>productAcceptsMockup(template.surfaceKind||"rigid-flat",productName)&&!sceneAcceptsSide(template,placement)).length,themes=[...new Set(compatibleLibrary.map(t=>t.theme))],items=theme==="__all"?compatibleLibrary:compatibleLibrary.filter(t=>t.theme===theme),chosen=compatibleLibrary.filter(t=>selected.has(t.id)).slice(0,MAX_MOCKUPS_PER_LISTING),needsReference=chosen.some(t=>!isCalibratedSurface(t.surfaceKind||"rigid-flat"));
  async function stageForEtsy(made:Result[]){setEtsyStatus(`Saving ${made.length} mockups for Etsy…`);const form=new FormData();form.set("productId",productId);form.set("kind","mockup");form.set("replace","true");for(const result of made){const blob=await(await fetch(result.url)).blob();form.append("file",new File([blob],result.name,{type:blob.type||"image/jpeg"}))}const response=await fetch("/api/etsy/images",{method:"POST",body:form}),payload=await response.json() as {error?:string};if(!response.ok)throw new Error(payload.error||"Goldie could not safely replace this listing’s mockups. Your previous mockups were kept.");onPrepared?.(made.length);setEtsyStatus(`✓ ${made.length} mockups will be added automatically when this listing publishes.`)}
 
  /* Segmentation runs once per scene and is remembered for the session: the same
@@ -265,8 +281,15 @@ let previewFace:{left:number;top:number;right:number;bottom:number}|undefined;
           if(found.corners){const xs=found.corners.map(c=>c[0]),ys=found.corners.map(c=>c[1]);
             previewFace={left:Math.min(...xs),top:Math.min(...ys),right:Math.max(...xs),bottom:Math.max(...ys)}}
         }catch{/* No face on the preview just means the whole product is the frame. */}}
-        const fit=reference?await measureReference(reference,previewFace):null;const {ready:measured,unmeasured}=await calibrateIfNeeded(chosen);
-        if(unmeasured.length)setError(`Goldie could not work out where the print goes on ${unmeasured.length===1?`"${unmeasured[0].name}"`:`${unmeasured.length} scenes`}. Open Mockup Library and use "Set the product area" to mark ${unmeasured.length===1?"it":"them"}. The other scenes are being created.`);
+        const fit=reference?await measureReference(reference,previewFace):null;const {ready:calibrated,unmeasured}=await calibrateIfNeeded(chosen);
+        /* D573 - a scene whose quad is only a region of the garment cannot carry
+           Printify's scale, and the old code covered that gap with a flat 42%
+           centred guess. The guess is gone. A scene that cannot reproduce the
+           real placement is named and held back, and the rest still render. */
+        const needsConfirming=calibrated.filter(template=>(template.quadMeans||"garment")!=="print-area");
+        const measured=calibrated.filter(template=>(template.quadMeans||"print-area")==="print-area");
+        if(needsConfirming.length)setError(`${needsConfirming.length===1?`"${needsConfirming[0].name}" needs`:`${needsConfirming.length} scenes need`} a quick check before Goldie can match your Printify placement exactly. Open Mockup Library, choose "Mark where the design can print", and confirm the area. Anything already confirmed is being created now.`);
+        else if(unmeasured.length)setError(`Goldie could not work out where the print goes on ${unmeasured.length===1?`"${unmeasured[0].name}"`:`${unmeasured.length} scenes`}. Open Mockup Library and use "Mark where the design can print" to mark ${unmeasured.length===1?"it":"them"}. The other scenes are being created.`);
         if(!measured.length){setBusy(false);setRenderStatus("");return}
         const completed=new Map<number,Result>(),jobs=measured.map((template,index)=>({template,index}));setRenderStatus(`Creating ${measured.length} ${measured.length===1?"mockup":"mockups"} in a reliable queue. Goldie will retry an interrupted scene automatically.`);await runBounded(jobs,2,async({template,index})=>{/* D447 - one scene, and it always produces a mockup.
    The canvas renderer is the floor: it needs no network and, with the quad
@@ -288,11 +311,26 @@ let previewFace:{left:number;top:number;right:number;bottom:number}|undefined;
              the design covers the same fraction of that face as it does of the face
              in the Printify preview. Deriving against the whole product and then
              drawing into the face is what made the mug a third of its proper size. */
+          /* D573 - Printify's own placement comes first now. It arrives with the
+             draft as exact numbers - scale, x, y, side - so on a scene whose quad
+             is a confirmed print area there is nothing to work out. Everything
+             below this line is pixel analysis of the Printify preview: reading a
+             photograph back to guess which pixels are the artwork. That guess is
+             beaten by white ink, thin lettering, a small pocket print, a garment
+             shadow, a neck label or a busy model shot, and it should never run
+             when the exact answer was handed to us. */
+          if(template.quadMeans==="print-area"&&placement&&isCalibrated(template))
+            {const exact=placementAdjustment(placement,template.surfaceKind||"rigid-flat","print-area");
+             if(exact)return rigid(design,template,exact);}
           if(fit&&isCalibrated(template)){
             const direct=placementInFace(fit,artworkBounds);
             if(direct)return rigid(design,template,direct);
           }
-          const derived=fit?await derivedFor(template,fit):null;return derived?rigid(design,template,derived.adjustment,derived.quad):rigid(design,template,placementAdjustment(placement,template.surfaceKind||"rigid-flat"))};
+          const derived=fit?await derivedFor(template,fit):null;
+          if(derived)return rigid(design,template,derived.adjustment,derived.quad);
+          /* D573 - no constant to fall back to. A scene that reaches here cannot
+             reproduce the draft's real placement, so it refuses by name. */
+          throw new Error(`"${template.name}" needs its print area confirmed in Mockup Library before Goldie can match your Printify placement.`);};
         const result=await withRecovery(async()=>{
           /* D448 - every surface composites now. The generative renderer repainted
              the whole frame: her photograph came back looking like a painting, with

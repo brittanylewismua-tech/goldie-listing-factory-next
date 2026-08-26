@@ -22,6 +22,10 @@ export async function GET() {
   return NextResponse.json({ templates: rows.map(row => ({
     id: row.id, theme: row.theme, name: row.name, surfaceKind: row.surfaceKind,
     corners: JSON.parse(row.cornersJson), custom: true, normalized: true,
+    /* D573 - the scene's placement contract travels with it. */
+    printSide: row.printSide || "front", quadMeans: row.quadMeans || "garment",
+    occlusionConfirmed: Boolean(row.occlusionConfirmed),
+    occlusionUrl: row.occlusionKey ? `/api/mockups/library/${encodeURIComponent(row.id)}/occlusion` : undefined,
     src: `/api/mockups/library/${encodeURIComponent(row.id)}/image`,
   })),preferences:preferences.results.map(row=>({sourceTheme:row.source_theme,displayName:row.display_name,hidden:Boolean(row.hidden)})) });
 }
