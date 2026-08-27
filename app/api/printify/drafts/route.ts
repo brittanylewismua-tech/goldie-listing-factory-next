@@ -6,7 +6,7 @@ import { customerLaunchBlock } from "@/app/customer-launch-gate";
 import { publicSupportReference, recordDiagnostic } from "../diagnostics";
 import { createProductWithImageRetries } from "../product-creation";
 import { readPrintSide, artworkPlacement } from "../../../placement-math.ts";
-import { printAreasWithOnlyCurrentArtwork } from "../product-payload";
+import { printAreasWithOnlyCurrentArtwork, isLabelPlaceholder } from "../product-payload";
 import { planFor } from "@/app/plan-limits";
 import { decryptPrintifyToken } from "../token-crypto";
 import { recommendedPrice } from "@/app/pricing";
@@ -27,7 +27,9 @@ type TemplateProduct = {
     variant_ids: number[];
     placeholders: Array<{
       position: string;
-      images?: Array<{ id?: string; x?: number; y?: number; scale?: number; angle?: number }>;
+      /* D613 - src is Printify's own URL for the placeholder image, which is how
+         a label's artwork is re-uploaded to obtain an ID valid for this request. */
+      images?: Array<{ id?: string; src?: string; x?: number; y?: number; scale?: number; angle?: number }>;
     }>;
     background?: string;
   }>;
@@ -189,6 +191,36 @@ async function handlePOST(request: Request) {
     // that lookup even though the uploaded image ID is valid. Draft creation
     // below is the authoritative registration check and retries only when
     // Printify itself returns image-not-ready error 8253.
+    /* D613 - the label artwork needs an ID that belongs to THIS request. The
+       template's own image IDs cannot be reused, which is what broke every draft
+       from D594 onward. Each distinct label image is fetched from Printify's
+       preview URL and re-uploaded once, and the mapping is handed to the payload
+       builder. There is no silent fallback: if a label cannot be carried across,
+       the draft is not created. */
+    const labelImageIds = new Map<string, string>();
+    const labelSources = new Map<string, string>();
+    for (const area of template.print_areas) {
+      for (const placeholder of area.placeholders) {
+        if (!isLabelPlaceholder(placeholder.position)) continue;
+        for (const image of placeholder.images ?? []) {
+          if (image?.id && image.src && !labelSources.has(image.id)) labelSources.set(image.id, image.src);
+        }
+      }
+    }
+    if (labelSources.size) {
+      diagnosticStage = "label_reupload";
+      await recordDiagnostic(runtimeEnv().DB, supportReference, { stage: diagnosticStage, event: "started", shopId: shop.id });
+      for (const [originalId, src] of labelSources) {
+        const fresh = await api<UploadedImage>("/uploads/images.json", token, {
+          method: "POST",
+          body: JSON.stringify({ file_name: `label-${originalId}.png`, url: src }),
+        });
+        if (!fresh.id) throw new Error("Printify did not return an ID for the re-uploaded neck label artwork.");
+        labelImageIds.set(originalId, fresh.id);
+      }
+      await recordDiagnostic(runtimeEnv().DB, supportReference, { stage: diagnosticStage, event: "succeeded", shopId: shop.id });
+    }
+
     const title = body.title?.trim().slice(0, 255) || body.fileName.replace(/\.[^.]+$/, "").replace(/[_-]+/g, " ").trim();
     const selectedShippingTemplateId=Number(body.shippingTemplateId)>0?String(Math.trunc(Number(body.shippingTemplateId))):template.shippingTemplateId;
     if(!selectedShippingTemplateId)throw new Error("Choose the shipping profile for this batch before creating drafts.");
@@ -203,17 +235,17 @@ async function handlePOST(request: Request) {
         sales_channel_properties:{free_shipping:Boolean(template.freeShipping)},
         // Never carry media-library IDs from the template into a different
         // product request. Only the image uploaded in this request is valid.
-        print_areas: printAreasWithOnlyCurrentArtwork(template.print_areas, upload.id, body.visibleBounds, body.maxPlacementScale),
+        print_areas: printAreasWithOnlyCurrentArtwork(template.print_areas, upload.id, body.visibleBounds, body.maxPlacementScale, labelImageIds),
     });
     diagnosticStage = "draft_creation";
     await recordDiagnostic(runtimeEnv().DB, supportReference, { stage: diagnosticStage, event: "started", shopId: shop.id });
     const created = await createProductWithImageRetries<CreatedProduct>({
       path: `/shops/${shop.id}/products.json`, token, body: productBody,
       onRetry: (attempt, status, detail) => recordDiagnostic(runtimeEnv().DB, supportReference, { stage: diagnosticStage, event: "retry", attempt, httpStatus: status, message: detail, shopId: shop.id }),
-      onImageNotReady: async (attempt) => {
-        // Printify can briefly return 8253 while a valid upload is propagating.
-        // Give the same ID three product attempts; only then replace it once.
-        if (attempt === 3) {
+      onImageNotReady: async (imageErrors) => {
+        /* D613 - one controlled re-upload, on the FIRST image error rather than
+           the third. If the replacement is rejected too, the ladder stops. */
+        if (imageErrors === 1) {
           upload = await uploadArtwork();
           if (!upload.id) throw new Error("Printify did not return a replacement image ID.");
         }

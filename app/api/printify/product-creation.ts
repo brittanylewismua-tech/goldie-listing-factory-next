@@ -13,7 +13,23 @@ export async function createProductWithImageRetries<T>(options: {
   onRetry?: (attempt: number, status: number, detail: string) => Promise<void>;
   onImageNotReady?: (attempt: number, detail: string) => Promise<void>;
 }): Promise<T> {
+  /* D613 - the ladder existed for a genuine propagation race: Printify can
+     briefly report 8253 while a valid upload settles. It is the wrong shape for a
+     deterministic payload error.
+
+     Measured: a stale inherited label image ID produced 8253 on all seven
+     attempts, four runs in a row, 125 seconds each. Nothing about the seventh
+     attempt was more likely to succeed than the first. Meanwhile Printify asks
+     that failed requests stay under 5% of an integration's traffic, and we spent
+     dozens of failures learning nothing.
+
+     So: one controlled re-upload, then one more attempt. If the SAME image error
+     comes back after the artwork has been replaced, the payload is wrong and no
+     amount of waiting fixes it - stop and say so. Transport faults (429, 5xx,
+     dropped connections) keep the full ladder; those really do pass. */
   const waits = [3000, 7000, 15000, 20000, 30000, 45000];
+  const IMAGE_ERROR_LIMIT = 2;
+  let imageErrors = 0;
   const fetcher = options.fetcher ?? fetch;
   const sleeper = options.sleeper ?? ((milliseconds: number) => new Promise((resolve) => setTimeout(resolve, milliseconds)));
   for (let attempt = 0; attempt <= waits.length; attempt += 1) {
@@ -30,10 +46,15 @@ export async function createProductWithImageRetries<T>(options: {
     }
     if (response.ok) return response.json() as Promise<T>;
     const detail = await response.text().catch(() => "");
+    if (isImageNotReady(response.status, detail)) imageErrors += 1;
+    /* A repeated image error after the re-upload is a payload fault, not a race. */
+    if (imageErrors > IMAGE_ERROR_LIMIT) {
+      throw new Error("Printify rejected the images in this draft twice, including after Goldie re-uploaded the artwork. The request itself is wrong, so Goldie stopped instead of retrying. Nothing was created.");
+    }
     const retryable = isImageNotReady(response.status, detail) || response.status === 429 || response.status >= 500;
     if (retryable && attempt < waits.length) {
       await options.onRetry?.(attempt + 1, response.status, detail);
-      if (isImageNotReady(response.status, detail)) await options.onImageNotReady?.(attempt + 1, detail);
+      if (isImageNotReady(response.status, detail)) await options.onImageNotReady?.(imageErrors, detail);
       const requestedWait = Number(response.headers.get("retry-after"));
       await sleeper(Number.isFinite(requestedWait) && requestedWait > 0 ? Math.min(requestedWait * 1000, 20000) : waits[attempt]);
       continue;

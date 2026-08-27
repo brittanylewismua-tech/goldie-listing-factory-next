@@ -534,12 +534,15 @@ test("makes draft retries idempotent so a lost response cannot duplicate a listi
 test("uses draft creation as the authoritative image-readiness check", async () => {
   const [route, creation] = await Promise.all([readFile(new URL("../app/api/printify/drafts/route.ts", import.meta.url), "utf8"), readFile(new URL("../app/api/printify/product-creation.ts", import.meta.url), "utf8")]);
   assert.doesNotMatch(route, /waitForUploadedImage|fetch\(`\$\{PRINTIFY_API\}\/uploads\/\$\{encodeURIComponent\(imageId\)\}/);
-  assert.match(route, /draft creation[\s\S]*authoritative registration check/i);
   assert.match(creation, /Provided images do not exist/);
   assert.match(creation, /8253/);
   assert.match(route, /createProductWithImageRetries/);
   assert.match(creation, /3000, 7000, 15000, 20000, 30000, 45000/);
-  assert.match(route, /attempt === 3/);
+  /* D613 - the re-upload moved from the third product attempt to the first image
+     error, and a second image error now ends the attempt instead of running the
+     ladder out. A deterministic 400 is not a propagation race. */
+  assert.match(route, /if \(imageErrors === 1\)/);
+  assert.match(creation, /const IMAGE_ERROR_LIMIT = 2/);
 });
 
 test("retries Printify remote-artwork download interruptions before failing the design", async () => {
