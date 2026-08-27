@@ -1694,3 +1694,13 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
   padding:0 0 14px!important;
   border-top:0!important;
 }
+
+/* D620 · That 70px bottom margin existed to hold a card away from what followed.
+   The wrapper is no longer a card - it holds only the Printify link and the size
+   guide - so the space now reads as a hole between the size guide and the product
+   it applies to. */
+.app-shell .post-draft-workspace{
+  margin-bottom:20px!important;
+  padding-top:16px!important;
+  padding-bottom:0!important;
+}

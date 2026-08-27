@@ -404,7 +404,11 @@ function MockupSetSelector({value,onChange,selectedIds=[],savedValue,savedIds,on
    * "" reverted to "BACH TEES" while an identical change on the keyword-bank
    * select stuck. Seeding once keeps the convenience; a deliberate clear now
    * survives. */
-  useEffect(()=>{if(!productName||seededDefault.current||!templates.length)return;seededDefault.current=true;if(value&&!themes.includes(value)){onChange("",[]);return}if(value===savedValue&&savedIds===undefined){onChange(value,matchingTemplates.slice(0,8).map(item=>item.id));return}if(!value&&savedValue&&themes.includes(savedValue)){const ids=savedIds===undefined?compatibleTemplates.filter(item=>item.theme===savedValue).slice(0,8).map(item=>item.id):savedIds;onChange(savedValue,ids)}},[value,savedValue,savedIds,themes.join("|"),templates.length,productName]);
+  /* D620 - the listings no longer carry their own scene grid, so this picker is
+     the only thing that can tell them which scenes to use. If a set is chosen but
+     no scenes have been lifted to the batch, seed them here - otherwise every
+     listing reads "0 scenes chosen" and its Create button stays dead. */
+  useEffect(()=>{if(!productName||seededDefault.current||!templates.length)return;seededDefault.current=true;if(value&&!themes.includes(value)){onChange("",[]);return}if(value&&themes.includes(value)&&!selectedIds.length){onChange(value,matchingTemplates.slice(0,8).map(item=>item.id));return}if(value===savedValue&&savedIds===undefined){onChange(value,matchingTemplates.slice(0,8).map(item=>item.id));return}if(!value&&savedValue&&themes.includes(savedValue)){const ids=savedIds===undefined?compatibleTemplates.filter(item=>item.theme===savedValue).slice(0,8).map(item=>item.id):savedIds;onChange(savedValue,ids)}},[value,savedValue,savedIds,themes.join("|"),templates.length,productName]);
   if(!productName)return null;
   const selected=new Set(selectedIds),changed=value!==savedValue||JSON.stringify([...selectedIds].sort())!==JSON.stringify([...(savedIds||[])].sort());
   function chooseTheme(theme:string){const ids=theme===savedValue?(savedIds===undefined?compatibleTemplates.filter(item=>item.theme===theme).slice(0,8).map(item=>item.id):savedIds):[];onChange(theme,ids)}
@@ -3058,7 +3062,20 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
               :stage.index===2?files.length>0
               :stage.index===5?files.length>0&&files.every(file=>Boolean(file.title?.trim()))
               :Number(batchReceipt?.publishedCount||0)>0;
-            const done=stage.index===8?stageStarted:(stageStarted&&progressGateIssues(stage.index).length===0)||(stagePosition>=0&&position<stagePosition);
+            /* D620 - a stage AHEAD of the one she is standing on never shows a
+               tick, whatever its own work says.
+
+               D557 made "done" mean "its own work is finished", so that walking
+               back did not strip ticks off finished work. That was right about
+               going back and wrong about going forward: on Images, with titles
+               already written, Listing sat there ticked as though step 3 were
+               behind her. A progress rail that says a step you have not reached
+               is complete is not reporting progress.
+
+               Behind her: ticked when its work is done. Where she is: its number.
+               Ahead of her: never ticked. */
+            const reached=stagePosition<0||position<=stagePosition;
+            const done=reached&&(stage.index===8?stageStarted:(stageStarted&&progressGateIssues(stage.index).length===0)||(stagePosition>=0&&position<stagePosition));
             const issues=progressGateIssues(stage.index);
             const draftLine=stage.label==="Images"&&complete?` · ${createdDraftCount} drafts created`:"";
             /* D227 · Never disable the stage the seller is currently on. When drafts failed,

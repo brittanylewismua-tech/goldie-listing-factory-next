@@ -4948,14 +4948,27 @@ test("what clicking through step 3 and step 4 found — D556", async () => {
   }
 });
 
-test("the rail keeps its ticks when she goes back — D557", async () => {
+test("a stage ahead of her is never ticked — D620 supersedes D557", async () => {
   const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
 
-  /* Measured on her bundle, the same batch, two screens: on step 3 the rail read
-     PRODUCT✓ IMAGES✓ LISTING; on step 1 it read PRODUCT IMAGES LISTING with no
-     ticks at all. "done" meant "you have walked past it", so navigating back
-     stripped the ticks off work that was finished. A stage is done when its own
-     work is done. */
+  /* D557 measured this on her bundle: on step 3 the rail read PRODUCT✓ IMAGES✓
+     LISTING; on step 1 it read PRODUCT IMAGES LISTING with no ticks at all.
+     "done" meant "you have walked past it", so going back stripped ticks off
+     finished work. D557 redefined done as "its own work is finished".
+
+     D620 - that was right about going back and wrong about going forward.
+     Standing on Images with titles already written, Listing sat ticked as though
+     step 3 were behind her. She raised it three times. A rail that calls a step
+     she has not reached complete is not reporting progress.
+
+     The rule now: behind her, ticked when its work is done; where she is, its
+     number; ahead of her, never ticked.
+
+     The tradeoff is deliberate and worth naming - reopening a FINISHED batch at
+     step 1 shows no ticks on the later stages, which is the case D557 was fixing.
+     Forward movement is the common path and the one she reads constantly, so it
+     wins. If reviewing completed batches ever starts mattering more, this is the
+     line to revisit. */
   assert.match(app, /const stageStarted=stage\.index===1\?Boolean\(activeRecipe\|\|activeBundle\)/);
   assert.match(app, /:stage\.index===2\?files\.length>0/);
   /* D617 - `complete` means the Printify drafts exist, and drafts are created ON
@@ -4964,10 +4977,15 @@ test("the rail keeps its ticks when she goes back — D557", async () => {
      work is done, and Listing's work is titles. */
   assert.match(app, /:stage\.index===5\?files\.length>0&&files\.every\(file=>Boolean\(file\.title\?\.trim\(\)\)\)/);
   assert.match(app, /:Number\(batchReceipt\?\.publishedCount\|\|0\)>0;/);
+  assert.match(app, /const reached=stagePosition<0\|\|position<=stagePosition;/,
+    "a stage ahead of the current one cannot be done");
+  assert.match(app, /const done=reached&&\(/);
+  assert.match(app, /<span>\{!active&&done\?"✓":String\(position\+1\)\}<\/span>/,
+    "and the stage she is standing on shows its number, never a tick");
 
   /* Publish is the one stage where "no outstanding issues" is not the same as
      done - it is done when listings are actually live. */
-  assert.match(app, /const done=stage\.index===8\?stageStarted:\(stageStarted&&progressGateIssues\(stage\.index\)\.length===0\)/);
+  assert.match(app, /stage\.index===8\?stageStarted:\(stageStarted&&progressGateIssues\(stage\.index\)\.length===0\)/);
   assert.doesNotMatch(app, /const done=stagePosition>=0&&position<stagePosition;/);
 });
 
