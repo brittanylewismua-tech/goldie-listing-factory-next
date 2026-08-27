@@ -3566,9 +3566,14 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
             <div className="publish-live-warning">{(()=>{
               /* D560 - the count follows her ticks now that they govern every listing. */
               const total=publishTargets().length||bundleListingsToPublish();
+              /* D636 - "all 3 products in this batch" counted the bundle, not the
+                 ticks, so it sat directly above "2 listings" and contradicted it.
+                 D634 fixed the confirmation; these two labels were still counting
+                 the bundle. Labels only - the payload is unchanged. */
+              const chosenProducts=new Set(publishTargets().map(item=>item.productName).filter(Boolean)).size||bundleRecipes.length;
               const many=Boolean(activeBundle&&bundleRecipes.length>1);
               return <><b>{many
-                ?`Publishing sends all ${bundleRecipes.length} products in this batch — ${total} ${total===1?"listing":"listings"} — live on Etsy.`
+                ?`Publishing sends ${chosenProducts} selected ${chosenProducts===1?"product":"products"} — ${total} ${total===1?"listing":"listings"} — live on Etsy.`
                 :`Only the listings selected above will be published live on Etsy.`}</b>
               <span>{many?"Untick any listing above to leave it out. Everything ticked publishes in one press.":"Anything still needing a look is listed above."}</span>
               <small>Etsy charges its standard $0.20 USD listing fee for each listing created{total?`, so this press costs about $${(total*0.2).toFixed(2)} USD`:""}. This fee is charged by Etsy and is separate from your Goldie subscription.</small></>;
@@ -3590,7 +3595,11 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
               if(missingBatch.length)return missingBatch.length===1?`${missingBatch[0].name}'s batch was not found`:`${missingBatch.length} products' batches were not found`;
               if(waiting.length)return `${waiting.length===1?waiting[0].name:`${waiting.length} products`} still ${waiting.length===1?"has":"have"} no listings`;
               const total=publishTargets().length||bundleListingsToPublish();
-              return `Publish ${total} ${total===1?"listing":"listings"} live on Etsy · ${bundleRecipes.length} products`;
+              /* D636 - the number of listings followed her ticks; the number of
+                 products beside it did not, so the button read "2 listings ... 3
+                 products". Both come from the same array now. */
+              const products=new Set(publishTargets().map(item=>item.productName).filter(Boolean)).size||bundleRecipes.length;
+              return `Publish ${total} ${total===1?"listing":"listings"} live on Etsy · ${products} ${products===1?"product":"products"}`;
             })():`Publish ${selectedPublishDrafts().length} selected ${selectedPublishDrafts().length===1?"listing":"listings"} live on Etsy`}</button><button className="keep-drafts-button" type="button" disabled={publishing} onClick={()=>{setBatchDisplayName(current=>current||suggestedBatchName());setDraftSaveOpen(true)}}>Keep as Printify drafts for now</button>{!publishing&&<small className="keep-drafts-note">Nothing will publish to Etsy. Return to this exact batch from Batch History.</small>}{/* D474 - this describes the Keep as drafts button, but sat there while the
      button above it said Publishing, so the page said both that it was
      publishing and that nothing would publish. It belongs to a choice that is

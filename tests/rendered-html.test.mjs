@@ -4038,7 +4038,7 @@ test("one press publishes every product in a bundle — D495", async () => {
      counted the open product's two listings, so the page never said how many Etsy
      listings would be created. And it offered the press while two of the three
      products had no batch at all. */
-  assert.match(app, /Publish \$\{total\} \$\{total===1\?"listing":"listings"\} live on Etsy · \$\{bundleRecipes\.length\} products/);
+  assert.match(app, /* D636 - product count from the selected targets. */ /Publish \$\{total\} \$\{total===1\?"listing":"listings"\} live on Etsy · \$\{products\} \$\{products===1\?"product":"products"\}/);
   assert.match(app, /function bundleProductsNotStarted\(\)/);
   /* D627 widened this: a member whose batch cannot be opened also blocks the
      press, and says so in its own words rather than claiming it has no
@@ -4820,7 +4820,7 @@ test("step 4 tells the truth about a bundle it is not ready to publish — D546"
      products, so nothing said how many Etsy listings - or how much - a press
      would cost. */
   assert.match(app, /function bundleListingsToPublish\(\)/);
-  assert.match(app, /Publish \$\{total\} \$\{total===1\?"listing":"listings"\} live on Etsy · \$\{bundleRecipes\.length\} products/);
+  assert.match(app, /* D636 - product count from the selected targets. */ /Publish \$\{total\} \$\{total===1\?"listing":"listings"\} live on Etsy · \$\{products\} \$\{products===1\?"product":"products"\}/);
   assert.doesNotMatch(app, /Publish all \$\{bundleRecipes\.length\} products live on Etsy/);
 
   // The counts that do only cover the open product say which product that is.
@@ -4844,7 +4844,7 @@ test("the publish screen states its true scope and its true cost — D548", asyn
   // 1. "Only the listings selected above" - the selection is one product's; the
   //    button publishes every product in the bundle.
   assert.doesNotMatch(app, /<b>Only the listings selected above will be published live on Etsy\.<\/b>/);
-  assert.match(app, /Publishing sends all \$\{bundleRecipes\.length\} products in this batch — \$\{total\} \$\{total===1\?"listing":"listings"\} — live on Etsy\./);
+  assert.match(app, /* D636 - was 'all N products in this batch', which contradicted the listing count beside it. */ /Publishing sends \$\{chosenProducts\} selected \$\{chosenProducts===1\?"product":"products"\} — \$\{total\} \$\{total===1\?"listing":"listings"\} — live on Etsy\./);
 
   // 2. It named the per-listing fee and never multiplied it, on the one screen
   //    where the total is the number worth knowing.
@@ -5780,4 +5780,37 @@ test("one list decides whether the press can happen, scoped to the selection —
   assert.match(app, /issues=publishBlockers\(\);/);
   assert.equal((app.match(/publishBlockers\(\)/g) || []).length, 5,
     "declared once; read by the button's disabled, its title twice, and the click guard");
+});
+
+/* D636 · After D634 fixed the confirmation, two labels on the page behind it
+ * were still counting the bundle instead of the ticks.
+ *
+ * Measured live with two of six listings selected:
+ *   button: "Publish 2 listings live on Etsy · 3 products"
+ *   inline: "Publishing sends all 3 products in this batch — 2 listings —
+ *            live on Etsy."
+ *
+ * Both put a correct listing count next to a wrong product count, in the same
+ * sentence, so each label contradicted itself. The confirmation already said
+ * "2 listings across 1 product". Labels only - the payload is untouched. */
+test("every number on the publish screen comes from the selected targets — D636", async () => {
+  const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+
+  // Both labels derive the product count from the same array as the listings.
+  assert.equal((app.match(/new Set\(publishTargets\(\)\.map\(item=>item\.productName\)\.filter\(Boolean\)\)\.size\|\|bundleRecipes\.length/g) || []).length, 2,
+    "the button and the inline explanation each count the products being published");
+
+  assert.match(app, /`Publish \$\{total\} \$\{total===1\?"listing":"listings"\} live on Etsy · \$\{products\} \$\{products===1\?"product":"products"\}`/);
+  assert.match(app, /`Publishing sends \$\{chosenProducts\} selected \$\{chosenProducts===1\?"product":"products"\} — \$\{total\} \$\{total===1\?"listing":"listings"\} — live on Etsy\.`/);
+
+  // The old bundle-counted phrasings must not come back.
+  assert.doesNotMatch(app, /live on Etsy · \$\{bundleRecipes\.length\} products/);
+  assert.doesNotMatch(app, /Publishing sends all \$\{bundleRecipes\.length\} products in this batch/);
+
+  /* Guard the instruction that came with this change: labels only. The sent
+     payload and the confirmation must be exactly as D626/D634 left them. */
+  assert.match(app, /body:JSON\.stringify\(\{productIds:ids,printifyImageIndices,printifyImageSelections,etsyShippingProfileId,byProduct\}\)/,
+    "the publish payload is unchanged");
+  assert.match(app, /const everything=publishTargets\(\);\n    const ids=everything\.map\(item=>item\.id\);if\(!ids\.length\)return;/,
+    "publishAll still sends exactly the selected targets");
 });
