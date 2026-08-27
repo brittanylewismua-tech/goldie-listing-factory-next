@@ -381,7 +381,10 @@ export default function IntegratedMockups({design,productId,productName="",defau
    if(!stale.length)return {ready:list,unmeasured:[]};
    setRenderStatus(`Preparing ${stale.length} ${stale.length===1?"scene":"scenes"} for this product…`);
    const prepared=new Map<string,ScenePreparation>();
-   await runBounded(stale.map(scene=>scene),2,async scene=>withRecovery(async()=>{
+   /* D604 - D602 added five segmentation calls per scene, so preparing a full
+      selection at two at a time got noticeably slower. Four keeps the wall time
+      down without putting twenty concurrent calls into the analyser. */
+   await runBounded(stale.map(scene=>scene),4,async scene=>withRecovery(async()=>{
      const response=await fetch(`/api/mockups/library/${encodeURIComponent(scene.id)}/prepare`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({productName})});
      const payload=await response.json() as {preparation?:ScenePreparation;error?:string};
      /* D577 - the route always returns a ready preparation now. If the network
@@ -491,7 +494,7 @@ let previewFace:{left:number;top:number;right:number;bottom:number}|undefined;
       this exact fault when the set lived on two pages: "same setting, two pages -
       the exact split that caused the keyword-bank and shipping duplication."
       The set is chosen once, above. Here she chooses scenes from it. */}
-      <div className="mockup-control-row"><span className="mockup-set-name">{theme==="__all"?"All mockups":theme||"No mockup set chosen"}</span><a href="/mockups" target="_blank" rel="noopener noreferrer">Manage saved mockup sets ↗</a></div>{theme&&<div className="inline-mockup-grid">{items.map(t=><label className={selected.has(t.id)?"selected":""} key={t.id}><input type="checkbox" checked={selected.has(t.id)} onChange={()=>toggleTemplate(t.id)}/><img src={t.src} alt={t.name}/>{/* D566 - every tile repeated the set name she had just chosen, followed by
+      <div className="mockup-control-row"><span className="mockup-set-name">{theme==="__all"?"All mockups":theme||"No mockup set chosen"}</span><a href="/mockups" target="_blank" rel="noopener noreferrer">Manage saved mockup sets ↗</a></div>{theme&&<div className="inline-mockup-grid">{items.map(t=><label className={selected.has(t.id)?"selected":""} key={t.id}><input type="checkbox" checked={selected.has(t.id)} onChange={()=>toggleTemplate(t.id)}/><img src={t.src} alt={t.name} loading="lazy" decoding="async"/>{/* D566 - every tile repeated the set name she had just chosen, followed by
         the raw upload filename. The set is named once above; the tile says which
         scene it is. */}
       <span>{t.name.replace(/\.[a-z0-9]+$/i,"").replace(/[_-]+/g," ")}</span>

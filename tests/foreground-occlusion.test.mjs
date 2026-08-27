@@ -185,3 +185,39 @@ test("D603 - export and preview still share one code path", () => {
   assert.match(composite, /export function composite\(/);
   assert.match(composite, /composite\(\{ \.\.\.input, width: input\.photo\.width, height: input\.photo\.height \}\)/);
 });
+
+/* D604 - three faults found by auditing the remaining areas together instead of
+   one deploy at a time. */
+const profile = strip(await read("app/mockups/placement-profile.ts"));
+const libraryPage = strip(await read("app/mockups/page.tsx"));
+
+test("D604 - soft goods are rendered as cloth, not as stickers", () => {
+  /* productSurfaceFamily sorts by how a surface is PRINTED, so every soft good
+     that is not a garment - totes, pillows, blankets, aprons, towels - landed in
+     "flat" beside posters and rendered flat, with no shading from the folds. */
+  assert.match(profile, /const FABRIC_GOODS = \/tote\|bag/);
+  assert.match(profile, /case "flat": return FABRIC_GOODS\.test\(.*\) \? "fabric" : "planar"/);
+});
+
+test("D604 - the analyser's geometry reading is used, not only its cylinders", () => {
+  // One of five possible values was read. Same discarded-reading shape as D601.
+  assert.match(profile, /if \(geometry === "flexible" && family !== "curved"\) return "fabric"/);
+});
+
+test("D604 - a rigid surface stays rigid however it drapes", () => {
+  // A misread on glass or card must not start shading it.
+  assert.match(profile, /family !== "curved"/);
+  const fn = profile.slice(profile.indexOf("export function renderingModeFor"));
+  assert.match(fn.slice(0, fn.indexOf("\n}") + 2), /case "curved": return "cylindrical"/);
+});
+
+test("D604 - scene grids do not fetch every photograph at once", () => {
+  // Fifty scenes at 1086x1448 is tens of megabytes before she has chosen one.
+  for (const [name, source] of [["listing factory", grid], ["mockup library", libraryPage]])
+    assert.match(source, /<img src=\{t\.src\} alt=\{t\.name\} loading="lazy" decoding="async"\/>/,
+      `the ${name} grid must load scene photographs lazily`);
+});
+
+test("D604 - preparing a selection is not serialised two at a time", () => {
+  assert.match(grid, /runBounded\(stale\.map\(scene=>scene\),4,/);
+});

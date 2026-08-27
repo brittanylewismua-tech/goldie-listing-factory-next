@@ -132,12 +132,30 @@ export function defaultTransform(corners: Quad, mode: RenderingMode): PlacementT
   };
 }
 
+/* D604 - a tote is not a poster.
+
+   productSurfaceFamily sorts by what a surface is PRINTED like, so every soft
+   good that is not a garment - totes, pillows, blankets, aprons, towels - lands
+   in "flat" beside posters and phone cases, and rendered as a flat sticker with
+   no shading. Their prints sit on cloth that folds and shadows exactly like a
+   hoodie's does.
+
+   The analyser's own reading is also honoured now. It classifies geometry as
+   flat, perspective, cylindrical, flexible or irregular, and only one of those
+   five values was ever read - the same discarded-reading pattern as D601. A
+   surface it saw draping is rendered as cloth. */
+const FABRIC_GOODS = /tote|bag|backpack|pouch|pillow|cushion|blanket|throw|tapestry|apron|towel|napkin|placemat|duvet|comforter|sheet|curtain|flag|banner/;
+
 export function renderingModeFor(productName: string, geometry?: string): RenderingMode {
   if (geometry === "cylindrical") return "cylindrical";
-  switch (productSurfaceFamily(productName)) {
+  const family = productSurfaceFamily(productName);
+  /* A rigid surface stays rigid however it drapes in the photograph: glass and
+     card do not fold, so a misread there must not start shading them. */
+  if (geometry === "flexible" && family !== "curved") return "fabric";
+  switch (family) {
     case "apparel": return "fabric";
     case "curved": return "cylindrical";
-    case "flat": return "planar";
+    case "flat": return FABRIC_GOODS.test((productName || "").toLowerCase()) ? "fabric" : "planar";
     default: return "perspective";
   }
 }
