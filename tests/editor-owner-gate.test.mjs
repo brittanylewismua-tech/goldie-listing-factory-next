@@ -1,10 +1,14 @@
-/* D589 - the placement editor is unreleased and must be reachable only by an
-   owner account, and only when explicitly asked for.
+/* D616 - the placement editor is RELEASED.
 
-   Two conditions, and they are not the same kind of thing: the account check is
-   the access control, the query flag is only so the control does not appear
-   during ordinary owner use. A hidden button is not security, so the endpoints
-   check the account for themselves. */
+   D589 held it behind two conditions: an owner account decided server-side, and
+   ?editorPreview=1 in the URL. The acceptance gate passed, so both are gone and
+   every seller gets the editor with no query flag.
+
+   What these tests now protect is the distinction that made releasing it safe.
+   Removing a release gate is not the same as loosening who owns what: the
+   placement endpoints still prove, per request, that the scene, batch, listing
+   and design are real, belong to the signed-in seller, and belong to each other.
+   That proof must never be removed along with the gate. */
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
@@ -19,22 +23,28 @@ test("owner status is decided on the server, never from the URL", async () => {
   assert.doesNotMatch(account, /searchParams|request\.url|editorPreview/);
 });
 
-test("the editor needs BOTH the owner account and the explicit flag", async () => {
-  const mockups = await read("app/integrated-mockups.tsx");
-  assert.match(mockups, /editorPreview"\)==="1"/, "the flag must be required");
-  assert.match(mockups, /setEditorAllowed\(Boolean\(payload\?\.owner\)\)/, "and the server's answer must decide");
-  // The flag alone must never be sufficient.
-  assert.doesNotMatch(mockups, /setEditorAllowed\(true\)/, "nothing may enable the editor without the account check");
-  assert.match(mockups, /\{editorAllowed&&<button type="button" className="adjustPlacement"/);
-  assert.match(mockups, /\{editorAllowed&&editing&&designUrl/, "and the overlay itself is gated too");
+test("every seller gets the editor, with no flag and no allowlist", async () => {
+  const raw = await read("app/integrated-mockups.tsx");
+  /* Comments discuss the flag that was removed - that history is worth keeping.
+     Only the CODE is checked. */
+  const mockups = raw.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  assert.doesNotMatch(mockups, /editorPreview/, "no query flag may be required any more");
+  assert.doesNotMatch(mockups, /editorAllowed/, "and no owner gate remains in the component");
+  assert.match(mockups, /<button type="button" className="adjustPlacement"/, "the control renders for everyone");
 });
 
-test("the persistence endpoints refuse anyone who is not an owner", async () => {
+test("the release removed the allowlist and kept the ownership proof", async () => {
   const route = await read("app/api/mockups/placement/route.ts");
-  const guards = route.match(/if \(!isOwner\(user\)\) return NextResponse\.json/g) || [];
-  assert.equal(guards.length, 2, "both GET and PUT must check the account themselves");
-  // 404 rather than 403: an unreleased feature should not advertise itself.
-  assert.match(route, /\{ error: "Not available\." \}, \{ status: 404 \}/);
+  assert.doesNotMatch(route, /isOwner/, "the owner-only allowlist is gone");
+  // But every entry point still proves the records belong together, and to this
+  // seller, before reading or writing. This is the part that must never go.
+  assert.match(route, /if \(!await relationshipsHold\(user\.userId,/, "GET proves ownership");
+  const put = route.slice(route.indexOf("async function handlePUT"));
+  assert.match(put, /body\.geometry\?\.sceneId && !await relationshipsHold\(user\.userId,/);
+  assert.match(put, /body\.override\?\.sceneId && !await relationshipsHold\(user\.userId,/);
+  assert.match(route, /\{ error: "Not available\." \}, \{ status: 404 \}/, "and a stranger still gets 404");
+  // Signing in is still required.
+  assert.match(route, /if \(!user\) return NextResponse\.json\(\{ error: "Sign in/);
 });
 
 test("the editor cannot publish, delete or modify anything external", async () => {
