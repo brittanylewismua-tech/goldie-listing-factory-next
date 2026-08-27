@@ -95,3 +95,11 @@
 .mockChoice .sceneWarning{display:block;margin-top:6px;font-size:.78rem;color:#8a6a1f;background:#fdf5e2;border:1px solid #eeddb4;border-radius:8px;padding:4px 8px}
 .mockChoice .sceneReady{display:block;margin-top:6px;font-size:.78rem;color:#3f6b45;background:#f0f7f1;border:1px solid #cfe4d3;border-radius:8px;padding:4px 8px}
 
+
+
+/* D605 · Adding photographs to a set that already exists. Three actions now sit
+   on this row, so it wraps rather than pushing Delete off a narrow screen. */
+.collectionActions{flex-wrap:wrap}
+.addToSet{border-color:var(--gold);color:var(--gold)}
+.addToSet:hover:not(:disabled){background:var(--gold);color:#080808}
+.addToSet:disabled{opacity:.45;cursor:not-allowed}
