@@ -1462,7 +1462,8 @@ test("supports Etsy's current multi-question personalization workflow", async ()
 test("appends later design selections and skips only exact file duplicates", async () => {
   const page = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
   assert.match(page, /crypto\.subtle\.digest\("SHA-256",bytes\)/);
-  assert.match(page, /const combined=\[\.\.\.files,\.\.\.images\]/);
+  assert.match(page, /const combined=\[\.\.\.files\.map\([\s\S]{0,400}\.\.\.images\]/,
+    "new artwork is appended after any missing original is reattached in place");
   assert.match(page, /setFiles\(combined\)/);
   assert.match(page, /exact \$\{duplicateCount===1\?"duplicate was":"duplicates were"\} skipped/);
   assert.match(page, /saveBatchFiles\(durableBatchId,combined\.map/);
@@ -2934,7 +2935,7 @@ test("mockup placement is derived from the Printify preview, for any product —
     "segmentation runs once per scene, not once per mockup");
 });
 
-test("the design cache is bounded, never throws, and says when files are missing — D435", async () => {
+test("the design cache is bounded and a missing browser cache never erases listing records — D435/D632", async () => {
   const [cache, app] = await Promise.all([
     readFile(new URL("../app/batch-cache.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
@@ -2956,10 +2957,25 @@ test("the design cache is bounded, never throws, and says when files are missing
   assert.match(cache, /await pruneOldest\(database,Math\.floor\(KEEP_RECENT\/3\)\);\s*await put/,
     "a quota failure makes room and retries rather than losing the save she is watching");
 
-  // And reopening a batch whose files are elsewhere explains itself.
-  assert.match(app, /const designsLost=/);
-  assert.match(app, /design files are not on this computer/);
-  assert.match(app, /Printify drafts are untouched/);
+  // IndexedDB is browser-profile storage. Its absence must not turn a saved
+  // two-listing batch into 0 of 0 or claim the seller changed computers.
+  const restore=app.slice(app.indexOf("const cached=await loadBatchFiles"),app.indexOf("const savedProductColors="));
+  assert.match(restore, /state\.designs\|\|\[\]\)\.map/);
+  assert.doesNotMatch(restore, /filter\(Boolean\)/,
+    "server-saved design metadata survives when the local File is unavailable");
+  assert.match(restore, /draft\?\.previewUrl\|\|draft\?\.printifyImages\?\.\[0\]/,
+    "the existing Printify draft supplies a useful preview");
+  assert.match(restore, /originalUnavailable:!file/);
+  assert.match(app, /listings are.*restored and can still be completed and published/);
+  assert.doesNotMatch(app, /design files are not on this computer|continue on the computer you started on/);
+  assert.match(app, /design\.originalUnavailable\?<p[^>]*>Existing photos stay with this listing/,
+    "only source-file work is withheld; the listing itself remains present");
+  const upload=app.slice(app.indexOf("async function chooseFiles"),app.indexOf("const remeasured="));
+  assert.match(upload, /design\.originalUnavailable.*design\.contentHash===contentHash/,
+    "choosing the original file reconnects it to the saved design");
+  assert.match(upload, /originalUnavailable:false/);
+  assert.match(upload, /if\(images\.length\)\{setComplete\(false\);setDrafts\(\[\]\)/,
+    "reattaching source bytes does not erase existing Printify drafts");
 });
 
 test("creating drafts stays on Images, and the final check says what is wrong — D438/D439/D440", async () => {
