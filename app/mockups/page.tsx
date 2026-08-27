@@ -304,6 +304,10 @@ export default function Home() {
      only thing missing was a way to ask for it. */
   const addToSetInput=useRef<HTMLInputElement>(null);
   const addToSetTarget=useRef<{theme:string;surfaceKind:string}|null>(null);
+  /* D607 - which set is currently receiving photographs. A ref cannot drive
+     this: it does not re-render, so the row went quiet and the button simply
+     greyed out with nothing to say it was working. */
+  const [addingTheme,setAddingTheme]=useState("");
   const chooseMoreForSet=(theme:string)=>{
     const items=library.filter(item=>item.theme===theme);
     addToSetTarget.current={theme,surfaceKind:items[0]?.surfaceKind||surfaceKind};
@@ -317,8 +321,8 @@ export default function Home() {
     const existing=library.filter(item=>item.theme===target.theme).length;
     if(existing>=MAX_MOCKUPS_PER_SET){e.target.value="";setGenerationError("This mockup set already contains 50 mockups. Create another themed set to add more.");return}
     if(count>MAX_MOCKUPS_PER_SET-existing){e.target.value="";setGenerationError(`Choose no more than ${MAX_MOCKUPS_PER_SET-existing} more ${MAX_MOCKUPS_PER_SET-existing===1?"mockup":"mockups"} for this set.`);return}
-    setLibraryBusy(true);setLibraryProgress(0);setLibraryTotal(count);
-    try{await addMockups(e,target)}finally{setLibraryBusy(false);setLibraryProgress(0);setLibraryTotal(0);addToSetTarget.current=null}
+    setLibraryBusy(true);setAddingTheme(target.theme);setLibraryProgress(0);setLibraryTotal(count);
+    try{await addMockups(e,target)}finally{setLibraryBusy(false);setAddingTheme("");setLibraryProgress(0);setLibraryTotal(0);addToSetTarget.current=null}
   };
 
   const addMockupsManaged=async(e:ChangeEvent<HTMLInputElement>)=>{const count=e.target.files?.length||0;if(!count)return;setLibraryBusy(true);setLibraryProgress(0);setLibraryTotal(count);try{const theme=themeName.trim()||"My mockup set",existing=library.filter(item=>item.custom&&item.theme===theme).length;if(existing>=MAX_MOCKUPS_PER_SET){e.target.value="";setGenerationError("This mockup set already contains 50 mockups. Create another themed set to add more.");return}if(count>MAX_MOCKUPS_PER_SET-existing){e.target.value="";setGenerationError(`Choose no more than ${MAX_MOCKUPS_PER_SET-existing} additional mockups for this set.`);return}await addMockups(e);setShowAddSet(false)}finally{setLibraryBusy(false);setLibraryProgress(0);setLibraryTotal(0)}};
@@ -330,7 +334,9 @@ export default function Home() {
       {generationError&&<p className="smartError" role="alert"><b>Goldie couldn’t complete that change.</b><span>{generationError}</span></p>}
       {libraryBusy&&<div className="librarySaving" role="status"><span className="librarySpinner"/><div><b>Saving {libraryProgress} of {libraryTotal} mockups…</b><small>Please keep this page open until every file is saved.</small></div></div>}
       {preparing>0&&<p className="preparingScenes" role="status">Goldie is working out where the design goes on {preparing} {preparing===1?"photo":"photos"}. You can leave this page; it finishes on its own.</p>}
-      <div className="setList managementSetList">{[...new Set(library.map(item=>item.theme))].map(theme=>{const items=library.filter(item=>item.theme===theme),open=activeTheme===theme;return <article className={`collection ${open?"open":"collapsed"}`} key={theme}><button className="collectionToggle" aria-expanded={open} onClick={()=>setActiveTheme(open?"":theme)}><div><span className="selected">MOCKUP SET</span><span className="setTitleRow"><h3>{theme}</h3></span><p>{items.length} {items.length===1?"mockup":"mockups"}</p>{!open&&<span className="setPreview">{items.slice(0,10).map(item=><img key={item.id} src={item.src} alt=""/>)}</span>}</div><span className="collectionChevron">⌄</span></button>{open&&<><div className="collectionActions"><button className="selectSet addToSet" disabled={libraryBusy} onClick={()=>chooseMoreForSet(theme)}>＋ Add mockups</button><button className="selectSet" onClick={()=>{setRenamingTheme(theme);setRenameValue(theme)}}>Rename set</button><button className="deleteSet" onClick={()=>setDeletingTheme(theme)}>Delete set</button></div><div className="thumbs">{items.map(item=><div className="mockChoice" key={item.id}><button type="button" className="savedMockupPreview" onClick={()=>setLibraryPreview(item)} aria-label={`Enlarge ${item.name}`}><img src={item.src} alt={item.name}/><span>Enlarge</span></button><span className="choiceName">{item.name}</span>
+      <div className="setList managementSetList">{[...new Set(library.map(item=>item.theme))].map(theme=>{const items=library.filter(item=>item.theme===theme),open=activeTheme===theme;return <article className={`collection ${open?"open":"collapsed"}`} key={theme}><button className="collectionToggle" aria-expanded={open} onClick={()=>setActiveTheme(open?"":theme)}><div><span className="selected">MOCKUP SET</span><span className="setTitleRow"><h3>{theme}</h3></span><p>{items.length} {items.length===1?"mockup":"mockups"}</p>{!open&&<span className="setPreview">{items.slice(0,10).map(item=><img key={item.id} src={item.src} alt="" loading="lazy" decoding="async"/>)}</span>}</div><span className="collectionChevron">⌄</span></button>{open&&<><div className="collectionActions">{addingTheme===theme
+  ?<span className="addingToSet" role="status" aria-live="polite"><span className="librarySpinner"/>{libraryTotal?`Adding ${Math.min(libraryProgress+1,libraryTotal)} of ${libraryTotal}…`:"Adding mockups…"}</span>
+  :<button className="selectSet addToSet" disabled={libraryBusy} onClick={()=>chooseMoreForSet(theme)}>＋ Add mockups</button>}<button className="selectSet" onClick={()=>{setRenamingTheme(theme);setRenameValue(theme)}}>Rename set</button><button className="deleteSet" onClick={()=>setDeletingTheme(theme)}>Delete set</button></div><div className="thumbs">{items.map(item=><div className="mockChoice" key={item.id}><button type="button" className="savedMockupPreview" onClick={()=>setLibraryPreview(item)} aria-label={`Enlarge ${item.name}`}><img src={item.src} alt={item.name} loading="lazy" decoding="async"/><span>Enlarge</span></button><span className="choiceName">{item.name}</span>
       {/* D573 - a back view without a confirmed foreground will print over the hood,
           so the scene says so here rather than at render time. */}
       {/* D573 - one classifier decides this, the same one the renderer uses, so

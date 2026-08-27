@@ -92,7 +92,16 @@ function segmentationPrompts(productName: string) {
   if (/tumbler/.test(name)) return ["tumbler body", "tumbler"];
   if (/bottle/.test(name)) return ["bottle body", "bottle"];
   if (/phone.*case|case.*phone/.test(name)) return ["phone case"];
-  if (/poster|canvas|print|card/.test(name)) return ["printed product"];
+  /* D606 - "printed product" found nothing on a poster hanging on a wall, so
+     every poster fell back to a blind rectangle. Named objects work; abstractions
+     do not. */
+  if (/poster|art print|wall art/.test(name)) return ["poster", "framed poster on the wall", "wall art print"];
+  if (/canvas/.test(name)) return ["canvas print on the wall", "canvas"];
+  if (/card|invitation|postcard/.test(name)) return ["greeting card", "card"];
+  if (/tote|bag/.test(name)) return ["tote bag", "bag"];
+  if (/pillow|cushion/.test(name)) return ["pillow", "cushion"];
+  if (/blanket|throw|tapestry/.test(name)) return ["blanket", "throw"];
+  if (/print/.test(name)) return ["printed product"];
   return productSurfaceFamily(productName) === "apparel" ? ["garment"] : ["product"];
 }
 
@@ -136,9 +145,24 @@ async function prepareOnce(imageUrl: string, productName: string, key: string, o
   const computed = computedPreparation(productName, productBox);
   const measuredCoverage = reading.geometry && segmentation?.mask
     ? quadMaskCoverage(segmentation.mask, reading.geometry.corners) : null;
+  /* D606 - the silhouette mask is enrichment. The analyser's corners are the
+     reading, and losing the mask must not cost us the reading.
+
+     Found on her first poster scene: the analyser read it as "perspective" and
+     returned corners that passed every geometric check, then SAM answered
+     nothing for the product silhouette - and because measured required BOTH, a
+     hanging poster was filed with a perfectly axis-aligned rectangle for a print
+     area. The one thing a poster on a wall needs is a trapezoid.
+
+     Same shape as D580, D600 and D601: a validated reading discarded because an
+     optional asset did not arrive. Corners now come from the analyser when the
+     mask is missing, recorded honestly as a weaker source than a silhouette
+     match rather than pretending it was verified. */
   const measured = reading.geometry && segmentation?.mask && quadStaysOnMask(segmentation.mask, reading.geometry.corners)
-    ? { ...reading.geometry, productSilhouetteVerified: true }
-    : null;
+    ? { ...reading.geometry, productSilhouetteVerified: true, cornersSource: "silhouette" as const }
+    : reading.geometry && !segmentation?.mask
+      ? { ...reading.geometry, productSilhouetteVerified: false, cornersSource: "analyser" as const }
+      : null;
   const fittedCorners = segmentation?.mask ? fitQuadToMask(segmentation.mask, computed.corners) : null;
   const fallbackReason = measured ? "" : !reading.geometry
     ? "model-geometry-invalid"
@@ -157,6 +181,7 @@ async function prepareOnce(imageUrl: string, productName: string, key: string, o
   const geometry = measured || {
     corners: fittedCorners || computed.corners, productBox, productBoundsVerified: true,
     productSilhouetteVerified: Boolean(fittedCorners),
+    cornersSource: (fittedCorners ? "silhouette" : "computed") as "silhouette" | "computed",
     side: computed.printSide, geometry: computed.geometry,
     /* D601 - the analyser's own reading, which survives a rejected quad. D600
        took this from reading.geometry, which IS the object nulled by that
@@ -314,7 +339,7 @@ async function handlePOST(request: NextRequest, context: { params: Promise<{ id:
         version: SCENE_PREPARATION_VERSION, status: "ready", productFamily: productSurfaceFamily(productName),
         geometry: result.geometry, printSide: result.side, corners: result.corners, occluded: result.occluded,
         productBox: result.productBox, productBoundsVerified: true,
-        productSilhouetteVerified: result.productSilhouetteVerified, derived: result.derived,
+        productSilhouetteVerified: result.productSilhouetteVerified, cornersSource: result.cornersSource, derived: result.derived,
         surfaceMaskKey: result.surfaceMaskKey, depthKey: result.depthKey, occlusionKey: result.occlusionKey,
         occlusionKeys: result.occlusionKeys, occlusionClasses: result.occlusionClasses,
         analyserSide: result.analyserSide, analyserOccluded: result.analyserOccluded,

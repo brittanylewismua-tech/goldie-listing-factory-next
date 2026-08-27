@@ -56,3 +56,34 @@ test("the upload cannot be started twice at once", () => {
 test("three actions fit on the row", () => {
   assert.match(css, /\.collectionActions\{flex-wrap:wrap\}/);
 });
+
+/* D607 - the button greyed out and nothing else happened. The page-level saving
+   banner sits at the top of the section, off-screen once she has scrolled down
+   to the set she is adding to, so the flow looked frozen. */
+test("the set being added to says so, where the button was", () => {
+  assert.match(page, /addingTheme===theme/, "the row reacts to the set it belongs to");
+  assert.match(page, /className="addingToSet" role="status" aria-live="polite"/);
+  assert.match(page, /Adding \$\{Math\.min\(libraryProgress\+1,libraryTotal\)\} of \$\{libraryTotal\}/);
+  assert.match(css, /\.addingToSet\{/);
+});
+
+test("progress is state, not a ref", () => {
+  // A ref does not re-render, which is exactly how the row went silent.
+  assert.match(page, /const \[addingTheme,setAddingTheme\]=useState\(""\)/);
+  assert.match(page, /setAddingTheme\(target\.theme\)/);
+});
+
+test("the indicator always clears, including on failure", () => {
+  const handler = page.slice(page.indexOf("const addMockupsToSet"), page.indexOf("const addMockupsManaged"));
+  assert.match(handler, /finally\{setLibraryBusy\(false\);setAddingTheme\(""\)/);
+});
+
+test("D604 revisited - the grids that actually hold fifty scenes load lazily", () => {
+  /* The first attempt matched a pattern that existed on this page but belonged
+     to a different grid, so the test passed while the set thumbnails and the
+     collapsed previews still fetched every photograph at full size. */
+  assert.match(page, /<img src=\{item\.src\} alt=\{item\.name\} loading="lazy" decoding="async"\/>/,
+    "the open set's thumbnails");
+  assert.match(page, /<img key=\{item\.id\} src=\{item\.src\} alt="" loading="lazy" decoding="async"\/>/,
+    "the collapsed set previews");
+});

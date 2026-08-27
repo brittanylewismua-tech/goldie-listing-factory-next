@@ -8,7 +8,7 @@ import type { PrintSide } from "../placement-math.ts";
    Bumping this invalidates them and re-reads each scene the next time it is
    used - which is exactly the migration path that already exists and cannot
    fail. */
-export const SCENE_PREPARATION_VERSION = 10;
+export const SCENE_PREPARATION_VERSION = 11;
 
 export type SceneGeometry = "flat" | "perspective" | "cylindrical" | "flexible" | "irregular";
 export type NormalizedPoint = [number, number];
@@ -22,6 +22,10 @@ export type ScenePreparation = {
   productBox?: ProductBox;
   productBoundsVerified?: boolean;
   productSilhouetteVerified?: boolean;
+  /* D606 - where the print-area corners came from: matched against the product
+     silhouette, read by the analyser alone, or computed blind from the product
+     box. Only the last is an emergency. */
+  cornersSource?: "silhouette" | "analyser" | "computed";
   occluded: boolean;
   surfaceMaskKey?: string;
   occlusionKey?: string;
@@ -126,9 +130,14 @@ export function normalizeSceneAnalysis(value: unknown, productName: string, dete
 export function preparationMatchesProduct(preparation: ScenePreparation | null | undefined, productName: string) {
   if (!preparation || preparation.version !== SCENE_PREPARATION_VERSION || preparation.status !== "ready") return false;
   if (!preparation.productBoundsVerified) return false;
-  // A rectangle is not a product boundary. Keep re-preparing any emergency
-  // fallback until SAM has supplied a real pixel mask for this photograph.
-  if (!preparation.productSilhouetteVerified) return false;
+  /* A rectangle is not a product boundary. Keep re-preparing any emergency
+     fallback until the surface has actually been read for this photograph.
+
+     D606 - corners the analyser measured and that passed every geometric check
+     ARE a reading, even without a silhouette to confirm them against. Treating
+     them as an emergency fallback re-ran the whole analysis on every single use
+     and never kept the answer. */
+  if (!preparation.productSilhouetteVerified && preparation.cornersSource !== "analyser") return false;
   const family = productSurfaceFamily(productName);
   return !preparation.productFamily || !family || preparation.productFamily === family;
 }

@@ -103,3 +103,10 @@
 .addToSet{border-color:var(--gold);color:var(--gold)}
 .addToSet:hover:not(:disabled){background:var(--gold);color:#080808}
 .addToSet:disabled{opacity:.45;cursor:not-allowed}
+
+
+/* D607 · What is happening, next to the button that started it. The page-level
+   saving banner sits at the top of the section and is off-screen the moment she
+   has scrolled down to the set she is adding to. */
+.addingToSet{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid var(--gold);border-radius:999px;background:#242019;color:var(--gold);font-size:11px;font-weight:800}
+.addingToSet .librarySpinner{width:13px;height:13px;flex:none;margin:0;border-width:2px;border-color:#6d5a38;border-top-color:var(--gold)}
