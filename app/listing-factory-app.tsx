@@ -1609,7 +1609,7 @@ export default function ListingFactoryApp() {
       if(!element)return;
       let issues:string[]=[];
       if(element.classList.contains("publish-all-button")){
-        issues=[...(!localPreview&&!etsyConnected?["Connect the Etsy shop that will receive these listings."]:[]),...missingPublishFields().map(field=>`${field} must be completed before publishing.`),...createdListingsMissingImages().map(draft=>`${draft.name} needs at least one listing photo.`),...requiredForStep("finish")];
+        issues=[...(!localPreview&&!etsyConnected?["Connect the Etsy shop that will receive these listings."]:[]),...missingPublishFields().map(field=>`Before publishing: ${field}`),...createdListingsMissingImages().map(draft=>`${draft.name} needs at least one listing photo.`),...requiredForStep("finish")];
       }
       if(!issues.length)return;
       event.preventDefault();event.stopImmediatePropagation();stopWith("Finish all sections first.",[...new Set(issues)]);
@@ -2564,7 +2564,7 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
   }
 
   function missingPublishFields(){/* D626 - `files` is the open product's designs, so titles, tags and Etsy details on every other product in the bundle went unchecked and could publish incomplete. */const chosen=selectedPublishDrafts(),clientIds=new Set(chosen.map(draft=>draft.clientId)),chosenFiles=bundlePublishFiles().filter(file=>clientIds.has(file.id)),missing:string[]=[];if(!chosen.length)missing.push("Select at least one successful listing");for(const recipe of bundleProductsNotStarted())missing.push(bundleBatchSummary[recipe.id]?.unreadable?`${recipe.name}'s batch could not be opened - it may have been deleted`:`${recipe.name} has no listings yet`);if(bundleProductsStillReading().length)missing.push("Goldie is still reading the other products in this batch");if(chosenFiles.some(file=>!file.title.trim()))missing.push("Titles");if(chosenFiles.some(file=>!file.tags.length))missing.push("Tags");if(!description.trim())missing.push("Permanent product description");if(chosenFiles.some(file=>!etsyRequiredComplete(file.etsy)))missing.push("Etsy details");if(chosenFiles.some(file=>personalizationProblem(file.etsy)))missing.push("Personalization settings");if(chosen.length&&!allCreatedListingsHaveImages(chosen))missing.push("At least one image on every selected listing");return missing}
-  function openPublishConfirmation(){const chosen=selectedPublishDrafts(),missing=missingPublishFields();if(missing.length)return void stopWith("Complete every required selected listing field.",missing.map(field=>`${field} must be completed before publishing.`));const missingPhotos=createdListingsMissingImages(chosen);if(missingPhotos.length)return void stopWith("Add a photo to every selected listing before publishing.",missingPhotos.map(draft=>draft.name));setPublishConfirmOpen(true)}
+  function openPublishConfirmation(){const chosen=selectedPublishDrafts(),missing=missingPublishFields();if(missing.length)return void stopWith("Complete every required selected listing field.",missing.map(field=>`Before publishing: ${field}`));const missingPhotos=createdListingsMissingImages(chosen);if(missingPhotos.length)return void stopWith("Add a photo to every selected listing before publishing.",missingPhotos.map(draft=>draft.name));setPublishConfirmOpen(true)}
   async function monitorPublishJob(jobId:string,resuming=false){
     /* D474 - this always said "resuming", including on a publish she had just
        started, which reads as though something went wrong. */
@@ -3506,7 +3506,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
                 :`Only the listings selected above will be published live on Etsy.`}</b>
               <span>{many?"Untick any listing above to leave it out. Everything ticked publishes in one press.":"Anything still needing a look is listed above."}</span>
               <small>Etsy charges its standard $0.20 USD listing fee for each listing created{total?`, so this press costs about $${(total*0.2).toFixed(2)} USD`:""}. This fee is charged by Etsy and is separate from your Goldie subscription.</small></>;
-            })()}</div><button className="publish-all-button" aria-busy={publishing} disabled={publishing||!allCreatedListingsHaveImages(selectedPublishDrafts())||!selectedPublishDrafts().length||missingPublishFields().length>0||batchHeldByAnotherTab} title={batchHeldByAnotherTab?"This batch is open in another Goldie tab. Take over there or here before publishing, so the receipt is saved.":!selectedPublishDrafts().length?"Select at least one listing to publish.":!allCreatedListingsHaveImages(selectedPublishDrafts())?"Every selected listing needs at least one photo before it can publish.":missingPublishFields()[0]?`${missingPublishFields()[0]} must be completed before publishing.`:undefined} onClick={openPublishConfirmation}>{/* D495 - one press publishes the whole bundle, so the button says so and
+            })()}</div><button className="publish-all-button" aria-busy={publishing} disabled={publishing||!allCreatedListingsHaveImages(selectedPublishDrafts())||!selectedPublishDrafts().length||missingPublishFields().length>0||batchHeldByAnotherTab} title={batchHeldByAnotherTab?"This batch is open in another Goldie tab. Take over there or here before publishing, so the receipt is saved.":!selectedPublishDrafts().length?"Select at least one listing to publish.":!allCreatedListingsHaveImages(selectedPublishDrafts())?"Every selected listing needs at least one photo before it can publish.":missingPublishFields()[0]?`Before publishing: ${missingPublishFields()[0]}`:undefined} onClick={openPublishConfirmation}>{/* D495 - one press publishes the whole bundle, so the button says so and
     reports which product it is on rather than naming a listing count that
     only covers the product currently open. */}
 {publishRun&&!publishing?"Queuing every listing in this batch…":publishing?(activeBundle&&bundleRecipes.length>1?`Publishing ${bundleListingsToPublish()} listings across ${bundleRecipes.length} products…`:"Publishing…"):activeBundle&&bundleRecipes.length>1?(()=>{
@@ -3516,6 +3516,12 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
                  what they would cost. It says the number now. */
               if(bundleProductsStillReading().length)return "Checking the other products…";
               const waiting=bundleProductsNotStarted();
+              /* D628 - "Gildan Hoodie still has no listings" was what this said
+                 about a product whose batch had been deleted. It may well have
+                 had listings; the batch is gone. Two different problems, and
+                 only one of them is fixed by going back and adding designs. */
+              const missingBatch=waiting.filter(recipe=>bundleBatchSummary[recipe.id]?.unreadable);
+              if(missingBatch.length)return missingBatch.length===1?`${missingBatch[0].name}'s batch was not found`:`${missingBatch.length} products' batches were not found`;
               if(waiting.length)return `${waiting.length===1?waiting[0].name:`${waiting.length} products`} still ${waiting.length===1?"has":"have"} no listings`;
               const total=publishTargets().length||bundleListingsToPublish();
               return `Publish ${total} ${total===1?"listing":"listings"} live on Etsy · ${bundleRecipes.length} products`;

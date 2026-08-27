@@ -4504,7 +4504,14 @@ test("the publish button refuses in advance, not after the click — D526/D527",
   /* D545 - and a batch held by another tab cannot publish either: the receipt
      would be written by a tab that has saving paused. */
   assert.match(app, /\|\|missingPublishFields\(\)\.length>0\|\|batchHeldByAnotherTab\}/);
-  assert.match(app, /missingPublishFields\(\)\[0\]\?`\$\{missingPublishFields\(\)\[0\]\} must be completed before publishing\.`/);
+  /* D628 - the suffix " must be completed before publishing." was stapled onto
+     whatever missingPublishFields returned, which is a mix of noun phrases
+     ("Titles") and whole sentences ("Gildan Hoodie's batch could not be opened
+     - it may have been deleted"). The second shape came out ungrammatical on
+     screen. A prefix reads correctly for both. */
+  assert.match(app, /missingPublishFields\(\)\[0\]\?`Before publishing: \$\{missingPublishFields\(\)\[0\]\}`/,
+    "the disabled button must name its blocker in a sentence that parses");
+  assert.doesNotMatch(app, / must be completed before publishing\./);
 
   /* D526 - clicking Mockups did nothing at all: its section sat inside a
      collapsed "Create lifestyle mockups" disclosure, and the browser ignores
@@ -5104,7 +5111,10 @@ test("the number on the button is the number that publishes — D561", async () 
      gets sent were built two different ways and could disagree - on the one
      screen where the number is what it costs. */
   const label = app.slice(app.indexOf("activeBundle&&bundleRecipes.length>1?(()=>{"));
-  assert.match(label.slice(0, 900), /const total=publishTargets\(\)\.length\|\|bundleListingsToPublish\(\)/,
+  /* Windowed on the label builder itself rather than a byte count - D628 added
+     a branch above this line and the old 900-character slice stopped reaching
+     it, which fails for a reason that has nothing to do with the rule. */
+  assert.match(label.slice(0, label.indexOf("})():") + 1 || 2000), /const total=publishTargets\(\)\.length\|\|bundleListingsToPublish\(\)/,
     "the button counts what is ticked");
   assert.equal((app.match(/const total=publishTargets\(\)\.length/g) || []).length, 2,
     "the button and the warning count the same way");
@@ -5478,4 +5488,33 @@ test("a bundle member whose batch cannot be opened is answered, not awaited — 
   assert.ok(status, "the member card status branch must be findable");
   assert.ok(status.indexOf("summary.unreadable") < status.indexOf("if(summary.published)"),
     "unreadable must be answered before the counting branches");
+});
+
+/* D628 · Measured live on ZZ TEST BUNDLE the moment D627 landed. The gate was
+ * correct, the wording was not:
+ *
+ *   button:  "Gildan Hoodie still has no listings"
+ *   tooltip: "Gildan Hoodie's batch could not be opened - it may have been
+ *             deleted must be completed before publishing."
+ *
+ * The label named the wrong problem - that product may well have had listings;
+ * its batch is gone - and pointed the seller at a fix that cannot work. The
+ * tooltip stapled a noun-phrase suffix onto a whole sentence. */
+test("the publish gate names the real blocker, in a sentence that parses — D628", async () => {
+  const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+
+  // A missing batch and an empty product are different problems.
+  assert.match(app, /const missingBatch=waiting\.filter\(recipe=>bundleBatchSummary\[recipe\.id\]\?\.unreadable\)/);
+  assert.match(app, /\$\{missingBatch\[0\]\.name\}'s batch was not found/);
+  assert.match(app, /\$\{missingBatch\.length\} products' batches were not found/);
+
+  /* And it has to be asked first: an unreadable member is also in `waiting`, so
+     checking "no listings" ahead of it puts back the wrong message. */
+  const label = app.slice(app.indexOf("const waiting=bundleProductsNotStarted();"));
+  assert.ok(label.indexOf("missingBatch.length") < label.indexOf("still ${waiting.length===1?\"has\":\"have\"} no listings"),
+    "the missing-batch case must be answered before the empty-product case");
+
+  // One phrasing that works for both a noun phrase and a full sentence.
+  assert.match(app, /`Before publishing: \$\{field\}`/);
+  assert.doesNotMatch(app, /must be completed before publishing/);
 });
