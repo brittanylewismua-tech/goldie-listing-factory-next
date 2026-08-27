@@ -655,8 +655,8 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .shipping-presets button,.download-inline-all{border-color:rgba(139,89,137,.2)!important;background:rgba(255,255,255,.66)!important;color:var(--ink)!important}
 .pricing-controls button,.placement-editor>button,.generate-inline,.batch-size-guide button{border-color:transparent!important;background:linear-gradient(145deg,#6a3456,#4b283e)!important;color:#fff!important;box-shadow:0 10px 22px rgba(74,42,62,.14)!important}
 .pricing-cost-snapshot>div,.custom-shipping,.fee-profile-summary span,.placement-editor,.inline-generated figure,.mockup-enlarge{border-color:rgba(139,89,137,.16)!important;background:rgba(255,255,255,.58)!important;color:var(--ink)!important}
-.inline-mockup-grid label{border-color:transparent!important;background:rgba(246,229,248,.56)!important}
-.inline-mockup-grid label.selected{border-color:#b777b0!important;background:rgba(239,211,237,.7)!important;box-shadow:0 0 0 2px rgba(183,119,176,.1)!important}
+.product-mockup-scenes label{border-color:transparent!important;background:rgba(246,229,248,.56)!important}
+.product-mockup-scenes label.selected{border-color:#b777b0!important;background:rgba(239,211,237,.7)!important;box-shadow:0 0 0 2px rgba(183,119,176,.1)!important}
 .etsy-api-disclosure{max-width:210px;margin:10px 0 0;color:rgba(74,42,62,.58);font-size:8px;font-weight:400;letter-spacing:.01em;line-height:1.4;text-align:left}
 
 /* D307 · This gate fired on WIDTH ALONE, so narrowing a desktop Chrome window
@@ -689,9 +689,58 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
   color:#fff!important;
   box-shadow:0 12px 24px -18px rgba(74,42,62,.8)!important;
 }
+/* D617 · The size guide panel spoke a different visual language from every card
+   around it: a 2px gold-era border, a 12px radius, no shadow, no backdrop blur
+   and tighter padding, sitting directly above panels with 1px borders, 24px
+   radii and glass. It read as something pasted in from another screen.
+
+   It is a batch-wide, optional setting - so it should look like a calm sibling of
+   the listing cards it applies to, not an alert box competing with them. */
 .app-shell .batch-size-guide{
-  border-color:rgba(139,89,137,.22)!important;
-  background:linear-gradient(145deg,rgba(252,244,254,.72),rgba(246,229,248,.56))!important;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:18px;
+  align-items:center;
+  margin:0 0 20px!important;
+  padding:22px 24px!important;
+  border:1px solid rgba(139,89,137,.18)!important;
+  border-radius:20px!important;
+  background:linear-gradient(145deg,rgba(255,250,253,.72),rgba(246,229,248,.54))!important;
+  box-shadow:var(--shadow);
+  backdrop-filter:blur(24px) saturate(1.06);
+}
+.app-shell .batch-size-guide>div{display:grid;gap:5px}
+.app-shell .batch-size-guide .mini-label{color:rgba(101,67,98,.72)}
+.app-shell .batch-size-guide h3{
+  margin:0;
+  font:400 21px/1.2 'DM Serif Display',Georgia,serif;
+  color:var(--ink);
+}
+.app-shell .batch-size-guide span{
+  color:rgba(74,42,62,.66);
+  font-size:12.5px;
+  line-height:1.5;
+}
+.app-shell .batch-size-guide button{
+  border:0!important;
+  border-radius:14px!important;
+  padding:12px 18px!important;
+  font:750 12.5px/1.2 inherit!important;
+  box-shadow:0 14px 28px -20px rgba(74,42,62,.75)!important;
+}
+/* The "attached" confirmation reads as a quiet note, not a second banner. */
+.app-shell .batch-size-guide>p{
+  grid-column:1/-1;
+  margin:2px 0 0!important;
+  padding:10px 12px!important;
+  border-radius:11px!important;
+  background:rgba(233,246,237,.72)!important;
+  color:#2f6146!important;
+  font-size:11.5px!important;
+  font-weight:650!important;
+}
+@media(max-width:700px){
+  .app-shell .batch-size-guide{grid-template-columns:1fr}
+  .app-shell .batch-size-guide button{width:100%}
 }
 .app-shell .draft-card{display:flex;flex-direction:column}
 .app-shell .draft-card>.draft-card-top{order:1}
@@ -711,16 +760,16 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
   background:rgba(255,255,255,.58)!important;
   color:#654362!important;
 }
-.app-shell .inline-mockup-grid label{
+.app-shell .product-mockup-scenes label{
   border:2px solid rgba(139,89,137,.14)!important;
   background:rgba(246,229,248,.56)!important;
 }
-.app-shell .inline-mockup-grid label.selected{
+.app-shell .product-mockup-scenes label.selected{
   border-color:#b777b0!important;
   background:rgba(239,211,237,.72)!important;
   box-shadow:0 0 0 3px rgba(183,119,176,.13)!important;
 }
-.app-shell .inline-mockup-grid input{accent-color:#8f5689}
+.app-shell .product-mockup-scenes input{accent-color:#8f5689}
 .app-shell .integrated-mockups .batch-mockup-button,
 .app-shell .integrated-mockups .generate-inline{
   position:static!important;
@@ -1592,4 +1641,28 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
   grid-column:1/-1!important;
   width:100%!important;
   min-width:0!important;
+}
+
+/* D617 · The active stage must be unmistakable. Product, Images and Listing can
+   all legitimately carry a tick at once - a stage is done when its own work is
+   done, wherever the seller is standing - so "which step am I on" has to be
+   carried by more than a checkmark. */
+.app-shell .workflow-progress button.active{
+  background:linear-gradient(145deg,rgba(255,250,253,.92),rgba(246,229,248,.78))!important;
+  box-shadow:inset 0 0 0 1.5px rgba(139,89,137,.35);
+}
+.app-shell .workflow-progress button.active b{color:var(--ink);font-weight:800}
+.app-shell .workflow-progress button.active .progress-bubble-label{color:#5b304f;font-weight:800}
+.app-shell .workflow-progress button:not(.active) b{color:rgba(74,42,62,.62)}
+
+/* D618 · The listing panel no longer asks which scenes to use, so its header row
+   states what the batch already chose. */
+.app-shell .mockup-chosen-count{
+  margin-left:auto;
+  padding:5px 11px;
+  border-radius:999px;
+  background:rgba(139,89,137,.1);
+  color:#654362;
+  font-size:11px;
+  font-weight:700;
 }

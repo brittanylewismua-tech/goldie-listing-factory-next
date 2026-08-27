@@ -4958,7 +4958,11 @@ test("the rail keeps its ticks when she goes back — D557", async () => {
      work is done. */
   assert.match(app, /const stageStarted=stage\.index===1\?Boolean\(activeRecipe\|\|activeBundle\)/);
   assert.match(app, /:stage\.index===2\?files\.length>0/);
-  assert.match(app, /:stage\.index===5\?complete/);
+  /* D617 - `complete` means the Printify drafts exist, and drafts are created ON
+     the Images step, so Listing ticked itself the moment step 2 finished. D557's
+     rule is unchanged and now actually honoured: a stage is done when ITS OWN
+     work is done, and Listing's work is titles. */
+  assert.match(app, /:stage\.index===5\?files\.length>0&&files\.every\(file=>Boolean\(file\.title\?\.trim\(\)\)\)/);
   assert.match(app, /:Number\(batchReceipt\?\.publishedCount\|\|0\)>0;/);
 
   /* Publish is the one stage where "no outstanding issues" is not the same as
@@ -5193,8 +5197,13 @@ test("one mockup set chooser, and the listings follow it — D566", async () => 
 
   /* Every tile repeated the set name she had just chosen, then a raw upload
      filename - the thing D253 forbids. */
-  assert.doesNotMatch(mockups, /<span>\{t\.theme\} · \{t\.name\}<\/span>/);
-  assert.match(mockups, /t\.name\.replace\(\/\\\.\[a-z0-9\]\+\$\/i,""\)/);
+  /* D618 - the per-listing tiles are gone entirely, which settles this more
+     firmly than renaming them ever did. The scenes are chosen once for the batch;
+     each listing states the count it inherited and keeps only its own Create
+     button and results. A two-listing batch asked this question three times. */
+  assert.doesNotMatch(mockups, /inline-mockup-grid/, "no listing repeats the scene picker");
+  assert.match(mockups, /mockup-chosen-count/, "each listing states what the batch chose");
+  assert.match(mockups, /Lifestyle mockups for this listing/, "and no longer promises a choice it does not offer");
 
   /* At this step nothing has a title, so both listings read "ChatGPT Image Aug 21,
      2026, 05_32_41 PM (1).png" and a 36px thumbnail was all that told them apart.
@@ -5247,10 +5256,18 @@ test("the grouped picker lays out as a grid, not a column — D570", async () =>
 });
 
 test("a scene is measured at the moment it is used — D571", async () => {
-  const [mockups, css] = await Promise.all([
+  /* D618 - the warning moved with the picker. When the per-listing grid was
+     removed, this badge had to travel to the one remaining scene chooser rather
+     than disappear with it: a scene nobody has measured still looks exactly like
+     one that has been. */
+  const [picker, panel, css] = await Promise.all([
+    readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/integrated-mockups.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8"),
   ]);
+  /* The badge lives with the chooser; the preparation still runs where the
+     mockups are actually made. */
+  const mockups = `${picker}\n${panel}`;
 
   /* Her hoodie mockups put the design at the hem, tiny, and she was right that
      the mapping was failing. Measured on her library: BACH TEES 10 of 10 marked,

@@ -82,7 +82,9 @@ test("every named feature is still reachable", async () => {
 
 test("features that live outside the main file are still wired", async () => {
   const mockups = await read("app/integrated-mockups.tsx");
-  assert.match(mockups, /Choose up to 8 lifestyle mockups/);
+  /* D618 - the listing panel no longer offers a scene choice, so its heading no
+     longer promises one. The choice is made once, for the batch, above. */
+  assert.match(mockups, /Lifestyle mockups for this listing/);
   assert.match(mockups, /download=\{r\.name\}/, "individual mockup downloads");
   assert.match(mockups, /Adjust this mockup only/, "per-mockup scale and position");
 

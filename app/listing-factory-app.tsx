@@ -1,5 +1,6 @@
 "use client";
 import { productAcceptsMockup, printifyProductLabel, familyFromVariants } from "./mockup-compatibility";
+import { preparationMatchesProduct, type ScenePreparation } from "./mockups/prepared-scene";
 import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import Image from "next/image";
@@ -393,8 +394,8 @@ function ProductSizeSelector({product,selected,onChange,onRemember,remembering,r
 
 /* D543 - moved to app/mockup-compatibility.ts, where it is the only copy. */
 function MockupSetSelector({value,onChange,selectedIds=[],savedValue,savedIds,onSaveDefault,saving,firstRun=false,productName=""}:{value:string;onChange:(value:string,ids?:string[])=>void;selectedIds?:string[];savedValue:string;savedIds?:string[];onSaveDefault:()=>void;saving:boolean;firstRun?:boolean;productName?:string}){
-  const [templates,setTemplates]=useState<Array<{id:string;theme:string;name:string;src:string;surfaceKind:string}>>([]),[loaded,setLoaded]=useState(false),seededDefault=useRef(false);
-  useEffect(()=>{fetch("/api/mockups/library").then(response=>response.json()).then((payload:{templates?:Array<{id?:string;theme?:string;name?:string;src?:string;surfaceKind?:string}>})=>setTemplates((payload.templates||[]).map(item=>({id:String(item.id||""),theme:String(item.theme||"").trim(),name:String(item.name||"Mockup"),src:String(item.src||""),surfaceKind:String(item.surfaceKind||"rigid-flat")})).filter(item=>item.id&&item.theme&&item.src))).catch(()=>undefined).finally(()=>setLoaded(true))},[]);
+  const [templates,setTemplates]=useState<Array<{id:string;theme:string;name:string;src:string;surfaceKind:string;preparation?:ScenePreparation}>>([]),[loaded,setLoaded]=useState(false),seededDefault=useRef(false);
+  useEffect(()=>{fetch("/api/mockups/library").then(response=>response.json()).then((payload:{templates?:Array<{id?:string;theme?:string;name?:string;src?:string;surfaceKind?:string;preparation?:ScenePreparation}>})=>setTemplates((payload.templates||[]).map(item=>({id:String(item.id||""),theme:String(item.theme||"").trim(),name:String(item.name||"Mockup"),src:String(item.src||""),surfaceKind:String(item.surfaceKind||"rigid-flat"),preparation:item.preparation})).filter(item=>item.id&&item.theme&&item.src))).catch(()=>undefined).finally(()=>setLoaded(true))},[]);
   const compatibleTemplates=templates.filter(item=>productAcceptsMockup(item.surfaceKind,productName)),themes=[...new Set(compatibleTemplates.map(item=>item.theme))],matchingTemplates=compatibleTemplates.filter(item=>item.theme===value);
   /* Seed a starting set ONCE. This used to run on every render where `value`
    * was empty, so choosing "No mockups for this batch" was undone instantly by
@@ -413,7 +414,9 @@ function MockupSetSelector({value,onChange,selectedIds=[],savedValue,savedIds,on
     <div className="batch-default-heading"><div><h3>Mockups</h3><span>{firstRun?"Choose the exact scenes this product should start with.":savedSetIsCompatible&&selectedIds.length?"Saved for this product — remove or add any scene.":savedSetIsCompatible?"This set is saved for this product. Choose the scenes you want from it.":value?"Choose the individual scenes you want. Nothing is inherited from another product.":loaded&&!themes.length?"No compatible mockup set is saved for this product yet.":themes.length?"No mockup set chosen for this product yet.":"Loading your saved mockup choices…"}</span></div><b>{value?`${selectedIds.length} selected`:loaded?"None chosen":"Loading…"}</b></div>
     <label><span>Mockup set</span><select value={value} onChange={event=>chooseTheme(event.target.value)} disabled={!themes.length}>{themes.length?<option value="">No mockups for this batch</option>:<option value="">{loaded?"No compatible mockup sets for this product":"Loading mockup sets…"}</option>}{themes.map(theme=><option key={theme} value={theme}>{theme}</option>)}</select></label>
     <a className="manage-mockup-sets" href="/mockups" target="_blank" rel="noopener noreferrer">Create or edit mockup sets ↗</a>
-    {value&&<><div className="product-mockup-scenes" aria-label={`Choose scenes from ${value}`}>{matchingTemplates.map((item,index)=><label key={item.id} className={selected.has(item.id)?"selected":""}><input type="checkbox" checked={selected.has(item.id)} disabled={!selected.has(item.id)&&selected.size>=8} onChange={()=>toggle(item.id)}/><img src={item.src} alt={`Scene ${index+1}`}/><span>{`Scene ${index+1}`}</span></label>)}</div><small>{selected.size} of {matchingTemplates.length} scenes chosen{selected.size>=8?" · that is the maximum of 8":" · up to 8"}. Click any scene to add or remove it.</small></>}
+    {value&&<><div className="product-mockup-scenes" aria-label={`Choose scenes from ${value}`}>{matchingTemplates.map(item=><label key={item.id} className={selected.has(item.id)?"selected":""}><input type="checkbox" checked={selected.has(item.id)} disabled={!selected.has(item.id)&&selected.size>=8} onChange={()=>toggle(item.id)}/>{/* D618 - this is now the only scene picker, so it carries what the per-listing grid used to: the scene's real name and the warning that it has not been measured for this product yet.
+
+              NOT lazy. D97 scoped lazy-loading to the big repeated grids, and D567 measured why: a lazy image with no intrinsic size collapses to nothing, so the browser never decides it is near the viewport, so it never loads. Her scene tiles loaded 8 of 8 eager; the lazy thumbnails loaded 0 of 4. About ten tiles, all on screen. */}<img src={item.src} alt={item.name} decoding="async"/><span>{item.name.replace(/\.[a-z0-9]+$/i,"").replace(/[_-]+/g," ")}</span>{!preparationMatchesProduct(item.preparation,productName)?<em className="scene-unmeasured">Goldie prepares this scene automatically before creating it</em>:null}</label>)}</div><small>{selected.size} of {matchingTemplates.length} scenes chosen{selected.size>=8?" · that is the maximum of 8":" · up to 8"}. Click any scene to add or remove it.</small></>}
     {!firstRun&&changed&&<button type="button" className="save-product-default" disabled={saving} onClick={onSaveDefault}>{saving?"Saving…":value?`Save these ${selectedIds.length} mockups as this product’s default`:"Save no mockups as this product’s default"}</button>}
   </section>
 }
@@ -3042,9 +3045,18 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
                the same batch read PRODUCT✓ IMAGES✓ LISTING on step 3 and PRODUCT
                IMAGES LISTING on step 1. A stage is done when its own work is
                done. */
+            /* D617 - Listing read as done while the seller was still on Images.
+               Its "started" test was `complete`, which means the Printify drafts
+               exist - and drafts are created ON the Images step. So the moment a
+               batch finished creating drafts, the rail ticked a stage whose own
+               work had not been touched.
+
+               D557 already settled the rule: a stage is done when its OWN work is
+               done. Listing's work is titles and Etsy details, not draft
+               creation. */
             const stageStarted=stage.index===1?Boolean(activeRecipe||activeBundle)
               :stage.index===2?files.length>0
-              :stage.index===5?complete
+              :stage.index===5?files.length>0&&files.every(file=>Boolean(file.title?.trim()))
               :Number(batchReceipt?.publishedCount||0)>0;
             const done=stage.index===8?stageStarted:(stageStarted&&progressGateIssues(stage.index).length===0)||(stagePosition>=0&&position<stagePosition);
             const issues=progressGateIssues(stage.index);

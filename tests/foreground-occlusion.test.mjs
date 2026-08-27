@@ -211,11 +211,17 @@ test("D604 - a rigid surface stays rigid however it drapes", () => {
   assert.match(fn.slice(0, fn.indexOf("\n}") + 2), /case "curved": return "cylindrical"/);
 });
 
-test("D604 - scene grids do not fetch every photograph at once", () => {
-  // Fifty scenes at 1086x1448 is tens of megabytes before she has chosen one.
-  for (const [name, source] of [["listing factory", grid], ["mockup library", libraryPage]])
-    assert.match(source, /<img src=\{t\.src\} alt=\{t\.name\} loading="lazy" decoding="async"\/>/,
-      `the ${name} grid must load scene photographs lazily`);
+test("D604 - the big scene grid does not fetch every photograph at once", () => {
+  /* Fifty scenes at 1086x1448 is tens of megabytes before she has chosen one.
+
+     D618 removed the listing-factory copy of this grid entirely - the scenes are
+     chosen once for the batch now - so only the library page carries a grid large
+     enough for this to matter. The remaining batch picker is deliberately EAGER:
+     about ten tiles, all on screen, and D567 measured that a lazy image with no
+     intrinsic size never loads at all. */
+  assert.match(libraryPage, /loading="lazy" decoding="async"/,
+    "the mockup library grid must load scene photographs lazily");
+  assert.doesNotMatch(grid, /inline-mockup-grid/, "and the listing-factory copy is gone");
 });
 
 test("D604 - preparing a selection is not serialised two at a time", () => {

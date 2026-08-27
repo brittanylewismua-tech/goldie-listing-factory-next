@@ -312,7 +312,7 @@ test("keeps Step 8 controls ordered, separated, and inside the warm Goldie palet
   assert.match(css, /\.app-shell \.draft-card>\.draft-mockups\{order:3\}/);
   assert.match(css, /\.app-shell \.draft-card>\.individual-size-guide\{order:4\}/);
   assert.match(css, /\.app-shell \.integrated-mockups \.generate-inline,[\s\S]*linear-gradient\(145deg,#6a3456,#4b283e\)!important/);
-  assert.match(css, /\.app-shell \.inline-mockup-grid label\.selected\{[\s\S]*border-color:#b777b0!important/);
+  assert.match(css, /\.app-shell \.product-mockup-scenes label\.selected\{[\s\S]*border-color:#b777b0!important/);
   assert.match(css, /\.app-shell \.post-draft-workspace>\.mockup-next\{[\s\S]*margin:34px auto 16px!important/);
   assert.match(css, /\.app-shell \.publish-live-warning\{[\s\S]*rgba\(239,211,237,\.66\)/);
   /* D552 - deleted. She asked for it gone once ("there doesn't need to be a link
@@ -453,7 +453,9 @@ test("listing and mockup images are lazy-loaded — D97", async () => {
     "a panel thumbnail must not wait for a size it can only get by loading");
   assert.ok((page.match(/loading="lazy" decoding="async"/g) || []).length >= 4,
     "The large repeated grids must stay lazy-loaded.");
-  assert.match(page, /<img src=\{item\.src\} alt=\{`Scene \$\{index \+ 1\}`\}\/>|<img src=\{item\.src\} alt=\{`Scene \$\{index\+1\}`\}\/>/,
+  /* D618 - the tiles now carry the scene's real name instead of "Scene 3", since
+     this is the only place scenes are chosen. Still eager, for the reason above. */
+  assert.match(page, /<img src=\{item\.src\} alt=\{item\.name\} decoding="async"\/>/,
     "The ~10 product-step mockups must load eagerly - they are all on screen.");
 });
 
