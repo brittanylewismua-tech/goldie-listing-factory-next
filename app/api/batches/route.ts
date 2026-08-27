@@ -62,4 +62,24 @@ export async function GET(request:Request){const user=await getChatGPTUser();if(
 
 export async function POST(request:Request){const user=await getChatGPTUser();if(!user)return NextResponse.json({error:"Sign in to continue."},{status:401});const database=db();if(!database)return NextResponse.json({error:"Batch history is unavailable."},{status:503});await ensure(database);const body=await request.json() as {id?:string;status?:string;step?:string;setupName?:string;productTitle?:string;designCount?:number;state?:unknown};const id=String(body.id||crypto.randomUUID()).replace(/[^a-zA-Z0-9-]/g,"").slice(0,80);const allowedStatus=new Set(["draft","processing","needs_attention","complete"]),allowedStep=new Set(["connect","setup","designs","review","finish"]);const status=allowedStatus.has(String(body.status))?String(body.status):"draft",step=allowedStep.has(String(body.step))?String(body.step):"connect";const stateJson=JSON.stringify(body.state??{});if(stateJson.length>750000)return NextResponse.json({error:"This batch snapshot is too large."},{status:413});await database.prepare("INSERT INTO listing_batches (id,user_id,status,step,setup_name,product_title,design_count,state_json,updated_at) VALUES (?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP) ON CONFLICT(id) DO UPDATE SET status=excluded.status,step=excluded.step,setup_name=excluded.setup_name,product_title=excluded.product_title,design_count=excluded.design_count,state_json=excluded.state_json,updated_at=CURRENT_TIMESTAMP WHERE user_id=excluded.user_id").bind(id,user.userId,status,step,String(body.setupName||"").slice(0,160),String(body.productTitle||"").slice(0,200),Math.max(0,Math.min(20,Number(body.designCount||0))),stateJson).run();return NextResponse.json({id,saved:true})}
 
-export async function DELETE(request:Request){const user=await getChatGPTUser();if(!user)return NextResponse.json({error:"Sign in to continue."},{status:401});const database=db();if(!database)return NextResponse.json({error:"Batch history is unavailable."},{status:503});await ensure(database);const id=String(new URL(request.url).searchParams.get("id")||"").replace(/[^a-zA-Z0-9-]/g,"").slice(0,80);if(!id)return NextResponse.json({error:"Choose a batch to clear."},{status:400});await database.prepare("DELETE FROM listing_batches WHERE id=? AND user_id=?").bind(id,user.userId).run();return NextResponse.json({deleted:true})}
+export async function DELETE(request:Request){const user=await getChatGPTUser();if(!user)return NextResponse.json({error:"Sign in to continue."},{status:401});const database=db();if(!database)return NextResponse.json({error:"Batch history is unavailable."},{status:503});await ensure(database);const id=String(new URL(request.url).searchParams.get("id")||"").replace(/[^a-zA-Z0-9-]/g,"").slice(0,80);if(!id)return NextResponse.json({error:"Choose a batch to clear."},{status:400});await database.prepare("DELETE FROM listing_batches WHERE id=? AND user_id=?").bind(id,user.userId).run();
+  /* D631 - deleting a batch left every bundle that referenced it pointing at
+     something gone. Measured on ZZ TEST BUNDLE: its Gildan Hoodie member pointed
+     at batch 2d2650a1, deleted at some point, and step 4 sat on "Checking…"
+     forever with Publish disabled. D627 made that state honest and recoverable;
+     this stops it being created. Ordinary use makes these - deleting a batch
+     from Batch History is a normal thing to do - so the reference has to be
+     cleaned up by whoever breaks it.
+     Scoped to this user's own rows, and only rewrites a batch that genuinely
+     mapped a product to the deleted id. */
+  const referencing=await database.prepare("SELECT id,state_json FROM listing_batches WHERE user_id=? AND state_json LIKE ?").bind(user.userId,`%${id}%`).all<{id:string;state_json:string}>();
+  for(const row of referencing.results||[]){
+    let state:Record<string,unknown>;
+    try{state=JSON.parse(row.state_json||"{}") as Record<string,unknown>}catch{continue}
+    const map=state.bundleBatchIds as Record<string,string>|undefined;
+    if(!map||typeof map!=="object")continue;
+    const kept=Object.fromEntries(Object.entries(map).filter(([,value])=>String(value)!==id));
+    if(Object.keys(kept).length===Object.keys(map).length)continue;
+    await database.prepare("UPDATE listing_batches SET state_json=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND user_id=?").bind(JSON.stringify({...state,bundleBatchIds:kept}),row.id,user.userId).run();
+  }
+  return NextResponse.json({deleted:true})}

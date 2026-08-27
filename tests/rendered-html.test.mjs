@@ -5604,3 +5604,43 @@ test("the built version route carries the commit it was built from — D630", as
   const marker = await readFile(new URL("../app/build-marker.ts", import.meta.url), "utf8");
   assert.match(marker, /typeof __BUILD_COMMIT__ === "string" \? __BUILD_COMMIT__/);
 });
+
+/* D631 · Deleting a batch left every bundle that referenced it pointing at
+ * something gone. Measured on ZZ TEST BUNDLE: its Gildan Hoodie member pointed
+ * at batch 2d2650a1, which 404s, and step 4 sat on "Checking…" forever with
+ * Publish disabled. D627 made that state honest and recoverable; this stops it
+ * being created at all. Deleting a batch from Batch History is an ordinary
+ * thing to do, so whoever breaks the reference has to clean it up. */
+test("deleting a batch clears the bundles that pointed at it — D631", async () => {
+  const route = await readFile(new URL("../app/api/batches/route.ts", import.meta.url), "utf8");
+
+  // Only this user's rows, and only rows that actually mention the deleted id.
+  assert.match(route, /SELECT id,state_json FROM listing_batches WHERE user_id=\? AND state_json LIKE \?/);
+  assert.match(route, /\.bind\(user\.userId,`%\$\{id\}%`\)/);
+
+  // A row is only rewritten when a mapping really pointed at the deleted batch.
+  assert.match(route, /const kept=Object\.fromEntries\(Object\.entries\(map\)\.filter\(\(\[,value\]\)=>String\(value\)!==id\)\)/);
+  assert.match(route, /if\(Object\.keys\(kept\)\.length===Object\.keys\(map\)\.length\)continue;/,
+    "an unrelated batch that merely mentions the id must not be rewritten");
+
+  // Unparseable or bundle-less state is skipped rather than clobbered.
+  assert.match(route, /catch\{continue\}/);
+  assert.match(route, /if\(!map\|\|typeof map!=="object"\)continue;/);
+
+  // The write stays scoped to the owner.
+  assert.match(route, /UPDATE listing_batches SET state_json=\?,updated_at=CURRENT_TIMESTAMP WHERE id=\? AND user_id=\?/);
+});
+
+/* D631 · The D612 probe was a one-off diagnostic built during the outage that
+ * turned out to be Goldie's own bug, not Printify's - D594 sent a stale image
+ * ID, D614 removed label handling entirely. It named a subsystem that was never
+ * at fault, and it has had no reason to exist since. Owner-gated or not, a
+ * route that uploads to Printify on request is not something to launch with. */
+test("the D612 Printify probe is gone — D631", async () => {
+  const { access } = await import("node:fs/promises");
+  const gone = async (path) => {
+    try { await access(new URL(path, import.meta.url)); return false; } catch { return true; }
+  };
+  assert.ok(await gone("../app/api/printify/probe/route.ts"), "the probe route must be removed");
+  assert.ok(await gone("../tests/printify-probe.test.mjs"), "and its test with it");
+});
