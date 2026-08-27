@@ -5518,3 +5518,29 @@ test("the publish gate names the real blocker, in a sentence that parses — D62
   assert.match(app, /`Before publishing: \$\{field\}`/);
   assert.doesNotMatch(app, /must be completed before publishing/);
 });
+
+/* D629 · D479 added BUILD_MARKER so "is my fix live" was one request with a
+ * yes-or-no answer, and D542 wired it to a notice telling a seller her open tab
+ * is behind the deployed build. Both depend on a human remembering to bump a
+ * string, and D627 and D628 both shipped while it still read D626.
+ *
+ * Measured this session: /api/version answered D626 for code that was not D626,
+ * so verifying the deploy meant fetching the minified chunk and grepping it for
+ * a string literal. The seller-facing half is worse - every forgotten bump is a
+ * deploy where nobody working in an open tab is ever told to reload. */
+test("the deployed build identifies itself without anyone remembering to — D629", async () => {
+  const [marker, route] = await Promise.all([
+    readFile(new URL("../app/build-marker.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/version/route.ts", import.meta.url), "utf8"),
+  ]);
+
+  // The readable label stays.
+  assert.match(marker, /export const BUILD_MARKER = "D\d+"/);
+  // And something nobody types travels with it.
+  assert.match(marker, /export const BUILD_COMMIT = process\.env\.VERCEL_GIT_COMMIT_SHA \?\? ""/);
+  assert.match(route, /build:BUILD_MARKER,commit:BUILD_COMMIT/);
+
+  /* Absent variable must degrade to exactly the old behaviour rather than
+     claiming every tab is behind on every check. */
+  assert.match(marker, /\?\? ""/, "an absent commit is empty, not undefined");
+});

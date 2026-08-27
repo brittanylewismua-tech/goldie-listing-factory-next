@@ -216,9 +216,14 @@ test("a tab that is behind the deployed build says so", async () => {
   ]);
 
   // It compares the build it is running against the build being served.
-  assert.match(notice, /import \{ BUILD_MARKER \} from "\.\/build-marker"/);
+  assert.match(notice, /import \{ BUILD_MARKER, BUILD_COMMIT \} from "\.\/build-marker"/);
   assert.match(notice, /fetch\("\/api\/version",\{cache:"no-store"\}\)/);
-  assert.match(notice, /live!==BUILD_MARKER/);
+  /* D629 - the marker alone was the comparison, so a deploy where the manual
+     bump was forgotten was a deploy this notice stayed silent for. It went
+     stale for D627 and D628 back to back. The commit changes on its own. */
+  assert.match(notice, /const behind=liveCommit&&BUILD_COMMIT\?liveCommit!==BUILD_COMMIT:Boolean\(live&&live!==BUILD_MARKER\)/,
+    "the commit decides when both sides have one; the marker stays the fallback");
+  assert.match(notice, /if\(!stopped&&behind&&live\)setWaiting\(live\)/);
 
   // And it checks again when she comes back to the tab, not only on a timer.
   assert.match(notice, /document\.addEventListener\("visibilitychange",check\)/);

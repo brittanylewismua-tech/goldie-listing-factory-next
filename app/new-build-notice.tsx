@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { BUILD_MARKER } from "./build-marker";
+import { BUILD_MARKER, BUILD_COMMIT } from "./build-marker";
 
 /* D542 - measured on her own page, and it explains a week of arguments. Her tab
    was still running D539 while /api/version answered D540: the server had the
@@ -20,7 +20,13 @@ export default function NewBuildNotice(){
       try{
         const answer=await fetch("/api/version",{cache:"no-store"}).then(response=>response.ok?response.json():null);
         const live=answer&&typeof answer.build==="string"?answer.build:"";
-        if(!stopped&&live&&live!==BUILD_MARKER)setWaiting(live);
+        /* D629 - this compared the hand-bumped marker only, so a deploy where
+           the bump was forgotten was a deploy this notice stayed silent for.
+           The commit changes on its own every time. Compared first when both
+           sides have one; the marker remains the fallback and the label. */
+        const liveCommit=answer&&typeof answer.commit==="string"?answer.commit:"";
+        const behind=liveCommit&&BUILD_COMMIT?liveCommit!==BUILD_COMMIT:Boolean(live&&live!==BUILD_MARKER);
+        if(!stopped&&behind&&live)setWaiting(live);
       }catch{/* offline, or the deploy is mid-flight - ask again next time */}
     };
     void check();
