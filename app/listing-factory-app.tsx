@@ -3122,7 +3122,15 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
               )}
               {connected&&connectionError&&<p className="field-warning" role="status">{connectionError}</p>}
               {etsyError&&<p className="field-error" role="alert">{etsyError}</p>}
-              {(localPreview||(connected&&etsyConnected))&&<button className="workflow-next" onClick={()=>goToStep("setup",false,localPreview)}>Next step <span>→</span></button>}
+              {/* D615 - a forward control belongs to the step that is open, and to
+                  no other. This one rendered whenever Printify and Etsy were
+                  connected, so it sat inside the collapsed Connect panel for the
+                  whole rest of the batch, still enabled, still pointing back at
+                  Product. The panel is display:none so a seller could not reach
+                  it - but an enabled control that navigates backward has no
+                  business existing at all, and one CSS regression is the
+                  difference between hidden and live. */}
+              {workflowStep==="connect"&&(localPreview||(connected&&etsyConnected))&&<button className="workflow-next" onClick={()=>goToStep("setup",false,localPreview)}>Next step <span>→</span></button>}
             </div>
           </article>
 
@@ -3260,7 +3268,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
               the product cards, so a product's colours were in one place and its
               prices in another. Pricing and shipping are panels inside the product
               card now, beside the colours and sizes they belong to. */}
-          {templateDetails&&productSelected&&<button type="button" className="workflow-next setup-forward" disabled={!complete&&Boolean(productStepBlocker())} title={productStepBlocker()||undefined} /* D402 - This used to carry a different label when drafts already existed, and
+          {workflowStep==="setup"&&templateDetails&&productSelected&&<button type="button" className="workflow-next setup-forward" disabled={!complete&&Boolean(productStepBlocker())} title={productStepBlocker()||undefined} /* D402 - This used to carry a different label when drafts already existed, and
                  in that case it jumped straight to step 3. D383 renamed it to "Next step"
                  without changing where it went, so pressing Next on step 1 skipped Images
                  entirely. Next step means the next step; the rail is how you jump. */
