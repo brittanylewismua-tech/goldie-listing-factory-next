@@ -49,7 +49,13 @@ export async function processNextPublishItem(userId:string,jobId:string){
     await runtime().DB.prepare("INSERT INTO etsy_listing_links (printify_product_id,user_id,batch_id,etsy_listing_id,status,last_error,updated_at) VALUES (?,?,?,?, 'finishing',NULL,CURRENT_TIMESTAMP) ON CONFLICT(printify_product_id) DO UPDATE SET etsy_listing_id=excluded.etsy_listing_id,status='finishing',last_error=NULL,updated_at=CURRENT_TIMESTAMP").bind(draft.id,userId,draft.batchId||"",listingId).run();
     const forProduct=settings.byProduct?.[draft.id]||{};
     const clean=(list?:number[])=>Array.isArray(list)?[...new Set(list.map(Number).filter(value=>Number.isInteger(value)&&value>=0))]:null;
-    const selection=clean(forProduct.selections)||clean(settings.printifyImageSelections[draft.id])||settings.printifyImageIndices;
+    /* D626 - forProduct.indices was sent by the client and stored by the route
+       but never read here, so the fallback landed on settings.printifyImageIndices:
+       the photo choice of whichever product happened to be open when Publish was
+       pressed. A bundle member relying on its own batch default got another
+       product's photos. Its own default now sits ahead of the shared one, which
+       stays last so jobs queued before D559 still drain. */
+    const selection=clean(forProduct.selections)||clean(settings.printifyImageSelections[draft.id])||clean(forProduct.indices)||settings.printifyImageIndices;
     const shippingProfileId=Number(forProduct.shippingProfileId)||settings.etsyShippingProfileId;
     const result=await finishEtsyListing(userId,{...draft,etsyShippingProfileId:shippingProfileId,etsyDetails:draft.etsyDetails as {category?:string;attributes?:Record<string,string>;optional?:Record<string,string>}},listingId,selection),apiCalls=result.apiCalls,resultJson=JSON.stringify({printifyProductId:draft.id,etsyListingId:listingId,url:result.url});
     await runtime().DB.batch([runtime().DB.prepare("UPDATE etsy_publish_items SET status='completed',result_json=?,last_error=NULL,locked_at=NULL,updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(resultJson,item.id),runtime().DB.prepare("INSERT INTO etsy_listing_usage (user_product,user_id,product_id,job_id,etsy_listing_id,api_calls,published_at) VALUES (?,?,?,?,?,?,CURRENT_TIMESTAMP) ON CONFLICT(user_product) DO UPDATE SET job_id=excluded.job_id,etsy_listing_id=excluded.etsy_listing_id,api_calls=excluded.api_calls").bind(`${userId}:${draft.id}`,userId,draft.id,jobId,listingId,apiCalls)]);

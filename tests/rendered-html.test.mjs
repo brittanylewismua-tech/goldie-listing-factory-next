@@ -5031,8 +5031,12 @@ test("the publish screen shows every listing the press will create — D559", as
      products each have their own. */
   assert.match(queue, /type ProductSettings=\{indices\?:number\[\];selections\?:number\[\];shippingProfileId\?:number\}/);
   assert.match(queue, /const forProduct=settings\.byProduct\?\.\[draft\.id\]\|\|\{\}/);
-  // The flat fields stay, so jobs queued before this still drain.
-  assert.match(queue, /clean\(settings\.printifyImageSelections\[draft\.id\]\)\|\|settings\.printifyImageIndices/);
+  /* The flat fields stay LAST, so jobs queued before this still drain - but
+     D626 found forProduct.indices was sent, stored and never read, so a bundle
+     member with no per-listing selection fell through to whichever product was
+     open. Its own default has to be tried before the shared one. */
+  assert.match(queue, /clean\(forProduct\.selections\)\|\|clean\(settings\.printifyImageSelections\[draft\.id\]\)\|\|clean\(forProduct\.indices\)\|\|settings\.printifyImageIndices/,
+    "each product's own photo choice must outrank the shared fallback");
   assert.match(queue, /Number\(forProduct\.shippingProfileId\)\|\|settings\.etsyShippingProfileId/);
   assert.match(route, /byProduct:Object\.fromEntries/);
 
@@ -5098,10 +5102,15 @@ test("the number on the button is the number that publishes — D561", async () 
   assert.match(app, /const memberOf=\(id:string\)=>Object\.values\(bundleMembers\)\.find/);
   assert.match(app, /shippingProfileId:\(mine\?etsyShippingProfileId:member\?\.shippingProfileId\)\|\|etsyShippingProfileId/);
 
-  // The review and the send draw on the same list, so they cannot drift apart.
+  /* The review and the send draw on the same list, so they cannot drift apart.
+     D626 put the two remaining one-product readers onto it as well - the
+     selection seeding effect and selectedPublishDrafts - because both were
+     quietly shrinking the publish back down to the open product. */
   assert.ok(app.indexOf("function bundlePublishDrafts()") > 0);
-  assert.equal((app.match(/bundlePublishDrafts\(\)/g) || []).length, 3,
-    "declared once, used by the review and by publishTargets");
+  assert.equal((app.match(/bundlePublishDrafts\(\)/g) || []).length, 5,
+    "declared once; the review, publishTargets, the gates and the seeding all read it");
+  assert.doesNotMatch(app, /function selectedPublishDrafts\(\)\{const selected=new Set\(selectedPublishIds\);return drafts\.filter/,
+    "the button's count must not be taken from the open product alone");
 });
 
 test("the publish review is one collapsed row per design — D562", async () => {
@@ -5359,4 +5368,55 @@ test("an uncertain print area is refused, not saved as truth — D572", async ()
         is not proof. */
   assert.match(route, /if \(parsed\.confidence !== "high"\) return NextResponse\.json\(\{ corners: null, reason: "low-confidence" \}\)/);
   assert.doesNotMatch(route, /confidence: parsed\.confidence === "high" \? "high" : "low"/);
+});
+
+/* D626 · D559 built the one-call bundle publish correctly at the transport
+ * layer - per-product settings on the wire, per-product settings in the queue -
+ * and then four readers upstream of it quietly shrank the batch back down to
+ * whichever product happened to be open:
+ *
+ *   1. the selection seeding effect pruned every bundle member's id out of
+ *      selectedPublishIds on any change to `drafts`
+ *   2. selectedPublishDrafts counted one product, so the button, the gate and
+ *      the confirmation described a smaller press than the one being sent
+ *   3. createdListingsMissingImages asked the open product's photo maps about
+ *      every draft, so a member with no photos looked ready
+ *   4. missingPublishFields checked the open product's designs, so titles, tags
+ *      and Etsy details on the other products were never checked at all
+ *
+ * The feature is only real if all four read the bundle. */
+test("nothing upstream of the send shrinks a bundle publish back to one product — D626", async () => {
+  const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+
+  // 1 - seeding is bundle-wide, and cannot re-tick a box she cleared.
+  const seeding = app.match(/const seededPublishIds=useRef<Set<string>>\(new Set\(\)\);[\s\S]*?\},\[drafts,bundleMembers,activeBundle,bundleRecipes,activeRecipe\]\);/)?.[0];
+  assert.ok(seeding, "the publish selection must be seeded from the bundle");
+  assert.match(seeding, /bundlePublishDrafts\(\)\.filter/);
+  assert.match(seeding, /const fresh=created\.filter\(id=>!seededPublishIds\.current\.has\(id\)\)/,
+    "only genuinely new listings may be added, or an untick comes back");
+  assert.match(seeding, /return fresh\.length\?\[\.\.\.new Set\(\[\.\.\.kept,\.\.\.fresh\]\)\]:kept/);
+
+  /* The dependency array is evaluated during render, so this effect has to sit
+     below the bundle state it names. It did not, and every render threw. */
+  assert.ok(app.indexOf("const [bundleMembers,setBundleMembers]") < app.indexOf("const seededPublishIds=useRef"),
+    "the seeding effect must be declared after the state its deps reference");
+
+  // 2, 3, 4 - the gates cover everything the press will create.
+  assert.match(app, /function selectedPublishDrafts\(\)\{const selected=new Set\(selectedPublishIds\);return bundlePublishDrafts\(\)\.filter/);
+  assert.match(app, /function createdListingsMissingImages\(source=drafts\)\{const selections=bundlePublishSelections\(\),mockups=bundlePublishMockupCounts\(\)/);
+  assert.match(app, /\(selections\[draft\.id\]\?\?productDefaultIndices\(draft\.id\)\)\.length/,
+    "a draft's photo readiness must be judged against its own product's default");
+  assert.match(app, /chosenFiles=bundlePublishFiles\(\)\.filter\(file=>clientIds\.has\(file\.id\)\)/,
+    "titles, tags and Etsy details must be checked on every product in the bundle");
+
+  // productDefaultIndices must ask the member, not the open product.
+  const defaults = app.match(/function productDefaultIndices\(draftId:string\)\{[\s\S]*?\n  \}/)?.[0];
+  assert.ok(defaults, "productDefaultIndices must exist");
+  assert.match(defaults, /Object\.values\(bundleMembers\)\.find\(entry=>entry\.drafts\.some\(draft=>draft\.id===draftId\)\)/);
+  assert.match(defaults, /return member\?member\.indices:printifyImageIndices/);
+
+  // And none of the old one-product forms may come back.
+  assert.doesNotMatch(app, /const created=drafts\.filter\(draft=>draft\.status==="Created"&&draft\.id\)\.map\(draft=>draft\.id!\);setSelectedPublishIds/);
+  assert.doesNotMatch(app, /!\(printifyImageSelections\[draft\.id\]\?\?printifyImageIndices\)\.length/);
+  assert.doesNotMatch(app, /chosenFiles=files\.filter\(file=>clientIds\.has\(file\.id\)\)/);
 });

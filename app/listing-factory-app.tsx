@@ -1067,7 +1067,6 @@ export default function ListingFactoryApp() {
      thing it actually needs instead - a listing with Etsy details on it. */
   useEffect(()=>{if(etsyCategories.length)return;const restored=files.find(file=>file.etsy)?.etsy;if(!restored)return;void resolveEtsyOptions(restored,restored.taxonomyId).catch(()=>undefined)},[etsyCategories.length,files]);
   useEffect(()=>{if(finishPhase!=="mockups"||printifyImageIndices.length||Object.keys(printifyImageSelections).length)return;const guide=productPhotoGuide(templateDetails?.blueprintTitle||"",drafts.find(draft=>draft.printifyImages?.length)?.printifyImages?.length||0),defaults=Object.fromEntries(drafts.filter(draft=>draft.id&&draft.status==="Created"&&draft.printifyImages?.length).map(draft=>[draft.id!,Array.from({length:Math.min(guide.count,draft.printifyImages!.length)},(_,index)=>index)]));if(Object.keys(defaults).length)setPrintifyImageSelections(defaults)},[finishPhase,printifyImageIndices.length,printifyImageSelections,drafts,templateDetails?.blueprintTitle]);
-  useEffect(()=>{const created=drafts.filter(draft=>draft.status==="Created"&&draft.id).map(draft=>draft.id!);setSelectedPublishIds(current=>[...new Set([...current.filter(id=>created.includes(id)),...created])])},[drafts]);
   useEffect(()=>{const select=(event:Event)=>setSelectedPublishIds((event as CustomEvent<string[]>).detail||[]),retry=(event:Event)=>{const clientId=(event as CustomEvent<string>).detail;const design=files.find(file=>file.id===clientId);if(design)void runDrafts([design],true)};window.addEventListener("goldie-publish-selection",select);window.addEventListener("goldie-retry-listing",retry);return()=>{window.removeEventListener("goldie-publish-selection",select);window.removeEventListener("goldie-retry-listing",retry)}},[files,drafts]);
 
   const templateLoaded = templateDetails !== null;
@@ -1157,9 +1156,22 @@ export default function ListingFactoryApp() {
   function decideQualityGroup(keys:string[],value:"include"|"exclude"){setBundleQualityDecisions(current=>{const next={...current};for(const key of keys)next[key]=value;return next})}
   function decideAllQuality(value:"include"|"exclude"){decideQualityGroup(bundleQualityIssues.map(issue=>issue.key),value)}
   const qualityGroupDecision=(keys:string[])=>{const values=keys.map(key=>bundleQualityDecisions[key]);return values.every(v=>v==="include")?"include":values.every(v=>v==="exclude")?"exclude":""};
-  function createdListingsMissingImages(source=drafts){return source.filter(draft=>draft.status==="Created"&&draft.id&&!(printifyImageSelections[draft.id]??printifyImageIndices).length&&!(preparedMockupCounts[draft.id]||0))}
+  /* D626 · These maps belong to the open product. Asked about a bundle member's
+     draft, printifyImageSelections[id] was undefined and the check fell through
+     to the OPEN product's printifyImageIndices - so a member with no photos of
+     its own looked ready because a different product had some. Each draft is
+     asked about its own product now. */
+  function productDefaultIndices(draftId:string){
+    if(drafts.some(draft=>draft.id===draftId))return printifyImageIndices;
+    const member=Object.values(bundleMembers).find(entry=>entry.drafts.some(draft=>draft.id===draftId));
+    return member?member.indices:printifyImageIndices;
+  }
+  function createdListingsMissingImages(source=drafts){const selections=bundlePublishSelections(),mockups=bundlePublishMockupCounts();return source.filter(draft=>draft.status==="Created"&&draft.id&&!(selections[draft.id]??productDefaultIndices(draft.id)).length&&!(mockups[draft.id]||0))}
   function allCreatedListingsHaveImages(source=drafts){const created=source.filter(draft=>draft.status==="Created"&&draft.id);return created.length>0&&createdListingsMissingImages(source).length===0}
-  function selectedPublishDrafts(){const selected=new Set(selectedPublishIds);return drafts.filter(draft=>draft.status==="Created"&&draft.id&&selected.has(draft.id))}
+  /* D626 · publishTargets() sends the bundle; this read one product. So the
+     count on the button, the readiness gate and the confirmation all described
+     a smaller batch than the one being published. Same list on both sides. */
+  function selectedPublishDrafts(){const selected=new Set(selectedPublishIds);return bundlePublishDrafts().filter(draft=>draft.status==="Created"&&draft.id&&selected.has(draft.id))}
   function suggestedBatchName(){const product=activeRecipe?.name||templateDetails?.blueprintTitle||"Listing batch",niche=files[0]?.tags?.[0]||files[0]?.title?.split(",")[0]?.trim()||"New designs",date=new Intl.DateTimeFormat("en-US",{month:"short",day:"numeric"}).format(new Date());return `${product} · ${niche} · ${date}`.slice(0,160)}
   /* D378 - Keep the product -> batch map current. continueBundle mints a new
      batch per member, and a batch can also be created lazily on the first save,
@@ -2538,7 +2550,7 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
       :Number(bundleBatchSummary[recipe.id]?.drafts)||0),0);
   }
 
-  function missingPublishFields(){const chosen=selectedPublishDrafts(),clientIds=new Set(chosen.map(draft=>draft.clientId)),chosenFiles=files.filter(file=>clientIds.has(file.id)),missing:string[]=[];if(!chosen.length)missing.push("Select at least one successful listing");for(const recipe of bundleProductsNotStarted())missing.push(`${recipe.name} has no listings yet`);if(bundleProductsStillReading().length)missing.push("Goldie is still reading the other products in this batch");if(chosenFiles.some(file=>!file.title.trim()))missing.push("Titles");if(chosenFiles.some(file=>!file.tags.length))missing.push("Tags");if(!description.trim())missing.push("Permanent product description");if(chosenFiles.some(file=>!etsyRequiredComplete(file.etsy)))missing.push("Etsy details");if(chosenFiles.some(file=>personalizationProblem(file.etsy)))missing.push("Personalization settings");if(chosen.length&&!allCreatedListingsHaveImages(chosen))missing.push("At least one image on every selected listing");return missing}
+  function missingPublishFields(){/* D626 - `files` is the open product's designs, so titles, tags and Etsy details on every other product in the bundle went unchecked and could publish incomplete. */const chosen=selectedPublishDrafts(),clientIds=new Set(chosen.map(draft=>draft.clientId)),chosenFiles=bundlePublishFiles().filter(file=>clientIds.has(file.id)),missing:string[]=[];if(!chosen.length)missing.push("Select at least one successful listing");for(const recipe of bundleProductsNotStarted())missing.push(`${recipe.name} has no listings yet`);if(bundleProductsStillReading().length)missing.push("Goldie is still reading the other products in this batch");if(chosenFiles.some(file=>!file.title.trim()))missing.push("Titles");if(chosenFiles.some(file=>!file.tags.length))missing.push("Tags");if(!description.trim())missing.push("Permanent product description");if(chosenFiles.some(file=>!etsyRequiredComplete(file.etsy)))missing.push("Etsy details");if(chosenFiles.some(file=>personalizationProblem(file.etsy)))missing.push("Personalization settings");if(chosen.length&&!allCreatedListingsHaveImages(chosen))missing.push("At least one image on every selected listing");return missing}
   function openPublishConfirmation(){const chosen=selectedPublishDrafts(),missing=missingPublishFields();if(missing.length)return void stopWith("Complete every required selected listing field.",missing.map(field=>`${field} must be completed before publishing.`));const missingPhotos=createdListingsMissingImages(chosen);if(missingPhotos.length)return void stopWith("Add a photo to every selected listing before publishing.",missingPhotos.map(draft=>draft.name));setPublishConfirmOpen(true)}
   async function monitorPublishJob(jobId:string,resuming=false){
     /* D474 - this always said "resuming", including on a publish she had just
@@ -2634,6 +2646,32 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
     return bundleRecipes.filter(recipe=>recipe.id!==activeRecipe?.id)
       .reduce((all,recipe)=>({...all,...(bundleMembers[recipe.id]?.preparedMockupCounts||{})}),{...preparedMockupCounts});
   }
+  /* D626 · Lives here, below the bundle state it reads. Its dependency array is
+     evaluated during render, so at its old position near the other selection
+     effects it referenced bundleMembers hundreds of lines before that state was
+     declared - a temporal dead zone throw on every render, caught only because
+     tsc flagged it. */
+  /* D626 · This pruned the publish selection down to the OPEN product's drafts:
+     current.filter(id=>created.includes(id)) dropped every bundle member's id,
+     and only the open product's were added back. D559 built the whole one-call
+     bundle publish on top of this list, so whenever `drafts` changed identity -
+     a retry, a mockup finishing, a restore - the other products silently fell
+     out of the publish and the seller was back to publishing one product at a
+     time without being told. The list is the bundle's now.
+     D560's rule applies here too: a listing seen for the first time starts
+     ticked, but after that her choice stands, so this can never re-tick a box
+     she cleared. */
+  const seededPublishIds=useRef<Set<string>>(new Set());
+  useEffect(()=>{
+    const created=bundlePublishDrafts().filter(draft=>draft.status==="Created"&&draft.id).map(draft=>draft.id!);
+    const fresh=created.filter(id=>!seededPublishIds.current.has(id));
+    created.forEach(id=>seededPublishIds.current.add(id));
+    setSelectedPublishIds(current=>{
+      const kept=current.filter(id=>created.includes(id));
+      return fresh.length?[...new Set([...kept,...fresh])]:kept;
+    });
+  },[drafts,bundleMembers,activeBundle,bundleRecipes,activeRecipe]);
+
   async function publishAll(){
     if(publishInFlight.current)return;
     /* D559 - this sent the open product's listings only, and an effect then
