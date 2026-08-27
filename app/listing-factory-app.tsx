@@ -1879,6 +1879,8 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
          the rows on the same card could disagree with each other. Same map now. */
       const summary=bundleBatchSummary[recipe.id];
       if(!summary)return {label:bundleBatchIds[recipe.id]?"Checking…":"Not started yet",tone:"waiting"};
+      /* D627 - "Checking…" forever was the old answer here. Say what is true. */
+      if(summary.unreadable)return {label:"Batch not found",tone:"attention"};
       if(summary.published)return {label:`${summary.published} published`,tone:"ready"};
       if(summary.drafts)return {label:`${summary.drafts} drafts`,tone:summary.status==="complete"?"ready":"attention"};
       return {label:"Not started yet",tone:"waiting"};
@@ -1932,7 +1934,7 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
      The other products' work lives in their own batches, so it has to be read
      from them; the product being worked is read from state, which is always
      fresher than anything saved. */
-  const [bundleBatchSummary,setBundleBatchSummary]=useState<Record<string,{designs:number;titled:number;tagged:number;drafts:number;described:boolean;complete:boolean;published:number;status:string;photos:number;mockups:number}>>({});
+  const [bundleBatchSummary,setBundleBatchSummary]=useState<Record<string,{designs:number;titled:number;tagged:number;drafts:number;described:boolean;complete:boolean;published:number;status:string;photos:number;mockups:number;unreadable?:boolean}>>({});
   /* D559 - the sibling batches were read for their counts and then thrown away,
      so the publish screen could only ever show the open product's listings while
      the button published all three. Her question, looking at it: "why if this is
@@ -1952,7 +1954,15 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
       const id=bundleBatchIds[recipe.id];
       const payload=await fetch(`/api/batches?id=${encodeURIComponent(id)}`).then(response=>response.ok?response.json():null).catch(()=>null) as {batch?:{state?:Record<string,unknown>}}|null;
       const state=payload?.batch?.state as {designs?:Array<{id?:string;title?:string;tags?:string[];sizeGuideName?:string}>;drafts?:unknown[];description?:string;complete?:boolean;printifyImageSelections?:Record<string,number[]>;printifyImageIndices?:number[];preparedMockupCounts?:Record<string,number>;etsyShippingProfileId?:number;sizeGuideName?:string}|undefined;
-      if(!state)return null;
+      /* D627 · This returned null, so no summary was ever written for a member
+         whose batch could not be read - and bundleProductsStillReading() reports
+         exactly "has a batch id, has no summary". Measured live on ZZ TEST
+         BUNDLE: the Gildan Hoodie member pointed at batch 2d2650a1, which 404s,
+         so its card read "Checking…" forever and Publish stayed disabled saying
+         "Goldie is still reading the other products in this batch". It was not
+         still reading. The bundle could never be published by anyone, and the
+         message promised it was about to finish. Unreadable is an answer. */
+      if(!state)return [recipe.id,{designs:0,titled:0,tagged:0,drafts:0,described:false,complete:false,published:0,status:"",photos:0,mockups:0,unreadable:true}] as const;
       const designs=state.designs||[];
       /* D504 - the chip and the rows on the same card were fed by two different
          maps, loaded by two different effects at two different moments, so one
@@ -1980,7 +1990,7 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
         mockups:Object.values(state.preparedMockupCounts||{}).reduce((total,count)=>total+(Number(count)||0),0)}] as const;
     })).then(entries=>{
       if(!alive)return;
-      const loaded=Object.fromEntries(entries.filter(Boolean) as Array<readonly [string,{designs:number;titled:number;tagged:number;drafts:number;described:boolean;complete:boolean;published:number;status:string;photos:number;mockups:number}]>);
+      const loaded=Object.fromEntries(entries.filter(Boolean) as Array<readonly [string,{designs:number;titled:number;tagged:number;drafts:number;described:boolean;complete:boolean;published:number;status:string;photos:number;mockups:number;unreadable?:boolean}]>);
       if(Object.keys(loaded).length)setBundleBatchSummary(current=>({...current,...loaded}));
       if(Object.keys(memberScratch).length)setBundleMembers(current=>({...current,...memberScratch}));
     });
@@ -2537,7 +2547,10 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
        looks empty - and D546 would have refused to publish a ready bundle,
        naming products that were merely unread. A product with a batch is not
        unstarted; only a product with no batch at all is. */
-    return bundleRecipes.filter(recipe=>recipe.id!==activeRecipe?.id&&!bundleBatchIds[recipe.id]&&!(Number(bundleBatchSummary[recipe.id]?.drafts)||0));
+    /* D627 - a member whose batch is gone has a batch id and zero drafts, so it
+       slipped past both halves of this and would have been dropped from the
+       press in silence. It counts as not started. */
+    return bundleRecipes.filter(recipe=>recipe.id!==activeRecipe?.id&&(bundleBatchSummary[recipe.id]?.unreadable||(!bundleBatchIds[recipe.id]&&!(Number(bundleBatchSummary[recipe.id]?.drafts)||0))));
   }
   function bundleProductsStillReading(){
     if(!activeBundle||bundleRecipes.length<2)return[] as Recipe[];
@@ -2550,7 +2563,7 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
       :Number(bundleBatchSummary[recipe.id]?.drafts)||0),0);
   }
 
-  function missingPublishFields(){/* D626 - `files` is the open product's designs, so titles, tags and Etsy details on every other product in the bundle went unchecked and could publish incomplete. */const chosen=selectedPublishDrafts(),clientIds=new Set(chosen.map(draft=>draft.clientId)),chosenFiles=bundlePublishFiles().filter(file=>clientIds.has(file.id)),missing:string[]=[];if(!chosen.length)missing.push("Select at least one successful listing");for(const recipe of bundleProductsNotStarted())missing.push(`${recipe.name} has no listings yet`);if(bundleProductsStillReading().length)missing.push("Goldie is still reading the other products in this batch");if(chosenFiles.some(file=>!file.title.trim()))missing.push("Titles");if(chosenFiles.some(file=>!file.tags.length))missing.push("Tags");if(!description.trim())missing.push("Permanent product description");if(chosenFiles.some(file=>!etsyRequiredComplete(file.etsy)))missing.push("Etsy details");if(chosenFiles.some(file=>personalizationProblem(file.etsy)))missing.push("Personalization settings");if(chosen.length&&!allCreatedListingsHaveImages(chosen))missing.push("At least one image on every selected listing");return missing}
+  function missingPublishFields(){/* D626 - `files` is the open product's designs, so titles, tags and Etsy details on every other product in the bundle went unchecked and could publish incomplete. */const chosen=selectedPublishDrafts(),clientIds=new Set(chosen.map(draft=>draft.clientId)),chosenFiles=bundlePublishFiles().filter(file=>clientIds.has(file.id)),missing:string[]=[];if(!chosen.length)missing.push("Select at least one successful listing");for(const recipe of bundleProductsNotStarted())missing.push(bundleBatchSummary[recipe.id]?.unreadable?`${recipe.name}'s batch could not be opened - it may have been deleted`:`${recipe.name} has no listings yet`);if(bundleProductsStillReading().length)missing.push("Goldie is still reading the other products in this batch");if(chosenFiles.some(file=>!file.title.trim()))missing.push("Titles");if(chosenFiles.some(file=>!file.tags.length))missing.push("Tags");if(!description.trim())missing.push("Permanent product description");if(chosenFiles.some(file=>!etsyRequiredComplete(file.etsy)))missing.push("Etsy details");if(chosenFiles.some(file=>personalizationProblem(file.etsy)))missing.push("Personalization settings");if(chosen.length&&!allCreatedListingsHaveImages(chosen))missing.push("At least one image on every selected listing");return missing}
   function openPublishConfirmation(){const chosen=selectedPublishDrafts(),missing=missingPublishFields();if(missing.length)return void stopWith("Complete every required selected listing field.",missing.map(field=>`${field} must be completed before publishing.`));const missingPhotos=createdListingsMissingImages(chosen);if(missingPhotos.length)return void stopWith("Add a photo to every selected listing before publishing.",missingPhotos.map(draft=>draft.name));setPublishConfirmOpen(true)}
   async function monitorPublishJob(jobId:string,resuming=false){
     /* D474 - this always said "resuming", including on a publish she had just

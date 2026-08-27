@@ -4020,7 +4020,11 @@ test("one press publishes every product in a bundle — D495", async () => {
      products had no batch at all. */
   assert.match(app, /Publish \$\{total\} \$\{total===1\?"listing":"listings"\} live on Etsy · \$\{bundleRecipes\.length\} products/);
   assert.match(app, /function bundleProductsNotStarted\(\)/);
-  assert.match(app, /for\(const recipe of bundleProductsNotStarted\(\)\)missing\.push\(`\$\{recipe\.name\} has no listings yet`\)/);
+  /* D627 widened this: a member whose batch cannot be opened also blocks the
+     press, and says so in its own words rather than claiming it has no
+     listings yet. Both messages must name the product. */
+  assert.match(app, /for\(const recipe of bundleProductsNotStarted\(\)\)missing\.push\(bundleBatchSummary\[recipe\.id\]\?\.unreadable\?`\$\{recipe\.name\}'s batch could not be opened[^`]*`:`\$\{recipe\.name\} has no listings yet`\)/,
+    "an unstarted or unreadable product must block publishing by name");
 
   /* Publishing spends real money, so the run is stricter than the drafts run: a
      product whose listings are not ready stops it, and nothing after publishes. */
@@ -4735,12 +4739,21 @@ test("step 4 tells the truth about a bundle it is not ready to publish — D546"
   /* D548 - and "not read yet" is not "not started": the sibling batches load
      after mount, so this briefly saw every other product as empty and would have
      refused a bundle that was ready, naming products that were merely unread. */
-  assert.match(app, /return bundleRecipes\.filter\(recipe=>recipe\.id!==activeRecipe\?\.id&&!bundleBatchIds\[recipe\.id\]&&!\(Number\(bundleBatchSummary\[recipe\.id\]\?\.drafts\)\|\|0\)\)/);
+  /* D548's rule stands - a product that merely has not been read yet is not
+     unstarted - and D627 adds the case it missed: a member whose batch is gone
+     has a batch id AND zero drafts, so it satisfied neither half of the old
+     condition and would have been dropped from the press in silence. */
+  assert.match(app, /return bundleRecipes\.filter\(recipe=>recipe\.id!==activeRecipe\?\.id&&\(bundleBatchSummary\[recipe\.id\]\?\.unreadable\|\|\(!bundleBatchIds\[recipe\.id\]&&!\(Number\(bundleBatchSummary\[recipe\.id\]\?\.drafts\)\|\|0\)\)\)\)/,
+    "unstarted means no batch at all, or a batch that cannot be opened");
   assert.match(app, /function bundleProductsStillReading\(\)/);
   assert.match(app, /if\(bundleProductsStillReading\(\)\.length\)return "Checking the other products…"/);
 
   // Publishing is refused while any product in the bundle has nothing to publish.
-  assert.match(app, /for\(const recipe of bundleProductsNotStarted\(\)\)missing\.push\(`\$\{recipe\.name\} has no listings yet`\)/);
+  /* D627 widened this: a member whose batch cannot be opened also blocks the
+     press, and says so in its own words rather than claiming it has no
+     listings yet. Both messages must name the product. */
+  assert.match(app, /for\(const recipe of bundleProductsNotStarted\(\)\)missing\.push\(bundleBatchSummary\[recipe\.id\]\?\.unreadable\?`\$\{recipe\.name\}'s batch could not be opened[^`]*`:`\$\{recipe\.name\} has no listings yet`\)/,
+    "an unstarted or unreadable product must block publishing by name");
 
   /* And the button counts what it will actually create. Every other number on
      that page counted the open product's listings while the button counted
@@ -5419,4 +5432,50 @@ test("nothing upstream of the send shrinks a bundle publish back to one product 
   assert.doesNotMatch(app, /const created=drafts\.filter\(draft=>draft\.status==="Created"&&draft\.id\)\.map\(draft=>draft\.id!\);setSelectedPublishIds/);
   assert.doesNotMatch(app, /!\(printifyImageSelections\[draft\.id\]\?\?printifyImageIndices\)\.length/);
   assert.doesNotMatch(app, /chosenFiles=files\.filter\(file=>clientIds\.has\(file\.id\)\)/);
+});
+
+/* D627 · Measured live on her ZZ TEST BUNDLE, three products, at step 4:
+ *
+ *   PRODUCT 1 OF 3  Gildan Hoodie      Checking…
+ *   PRODUCT 2 OF 3  Gildan Tee         2 ready
+ *   PRODUCT 3 OF 3  gildan crewneck    2 drafts
+ *   Publish button: disabled, "Goldie is still reading the other products in
+ *   this batch must be completed before publishing."
+ *
+ * It was not still reading. The hoodie member pointed at batch 2d2650a1, which
+ * returns 404 - the batch had been deleted. The loader's failure path returned
+ * null, writing no summary, and bundleProductsStillReading() reports precisely
+ * "has a batch id, has no summary". So the card said Checking… forever, the
+ * gate never cleared, and that bundle could never be published by anyone. The
+ * message promised it was about to finish.
+ *
+ * Worse than the dead end: had the gate cleared, a member with zero drafts and
+ * a batch id satisfied neither half of bundleProductsNotStarted(), so the press
+ * would have gone ahead and quietly left that product out. */
+test("a bundle member whose batch cannot be opened is answered, not awaited — D627", async () => {
+  const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+
+  // The failure path writes a real summary, so "still reading" becomes false.
+  assert.match(app, /if\(!state\)return \[recipe\.id,\{designs:0,titled:0,tagged:0,drafts:0,described:false,complete:false,published:0,status:"",photos:0,mockups:0,unreadable:true\}\] as const/,
+    "an unreadable member must record that it is unreadable");
+  assert.doesNotMatch(app, /if\(!state\)return null;/,
+    "returning nothing is what left the card checking forever");
+
+  // Still-reading keeps its meaning: batch id present, summary absent.
+  assert.match(app, /return bundleRecipes\.filter\(recipe=>recipe\.id!==activeRecipe\?\.id&&Boolean\(bundleBatchIds\[recipe\.id\]\)&&!bundleBatchSummary\[recipe\.id\]\)/);
+
+  // The card stops claiming to be busy.
+  assert.match(app, /if\(summary\.unreadable\)return \{label:"Batch not found",tone:"attention"\}/);
+
+  // And the press is blocked by name rather than silently dropping the product.
+  assert.match(app, /bundleBatchSummary\[recipe\.id\]\?\.unreadable\|\|\(!bundleBatchIds\[recipe\.id\]/);
+  assert.match(app, /batch could not be opened - it may have been deleted/);
+
+  /* The unreadable branch has to be checked before the drafts/published
+     branches, or a zero-draft unreadable member reads as "Not started yet"
+     and loses the only accurate thing anyone can say about it. */
+  const status = app.match(/const summary=bundleBatchSummary\[recipe\.id\];[\s\S]*?return \{label:"Not started yet",tone:"waiting"\};/)?.[0];
+  assert.ok(status, "the member card status branch must be findable");
+  assert.ok(status.indexOf("summary.unreadable") < status.indexOf("if(summary.published)"),
+    "unreadable must be answered before the counting branches");
 });
