@@ -3062,3 +3062,26 @@ body{min-width:1180px!important}
 /* D571 - a scene whose print area has never been marked says so, in the picker,
    before it is used. */
 .app-shell .scene-unmeasured{display:block;margin-top:3px;font:700 .58rem/1.3 "Manrope",system-ui,sans-serif;color:#9e2736;font-style:normal;letter-spacing:.02em}
+
+/* ==========================================================================
+ * D621 · ONE AXIS FOR THE PAGE HEADER AND THE STEP RAIL
+ *
+ * Measured at 1800px: the hero heading block ran 384→1704 and the step rail ran
+ * 342→1746. Both are centred grid items of .app-shell; the hero is capped at
+ * 1320px and the rail was capped at 1404. That 84px difference put "Choose
+ * product" and the PRODUCT bubble on two different left edges, 42px apart - the
+ * kind of near-miss that reads as careless rather than as a deliberate offset.
+ *
+ * The content column is deliberately NOT pulled into this: it changes width by
+ * step (524px on Connect, 680-930px elsewhere) because each step has its own
+ * comfortable measure, and a rail that resized with it would jump between steps.
+ * Header and rail share the page measure; the column centres inside it.
+ * ========================================================================== */
+.app-shell .workflow-progress{max-width:1320px;margin-inline:auto}
+
+/* D621 · The over-long phrase in a keyword bank renders as a full-width block
+   rather than a pill. I read that as a rhythm bug and was about to truncate it to
+   one line - the dead-CSS test caught the invented class names, and looking at
+   the real markup showed the class is .over-tag-limit. It is a deliberate
+   warning that the phrase is too long to be an Etsy tag. Truncating it would
+   have hidden exactly what it exists to show. Left alone on purpose. */

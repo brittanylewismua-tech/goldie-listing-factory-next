@@ -3,6 +3,22 @@ import { useEffect, useState } from "react";
 import { confirmAction } from "../confirm-dialog";
 import ManagementNav from "../management-nav";
 type Batch = { id:string; status:string; step:string; setup_name:string; product_title:string; design_count:number; created_at:string; updated_at:string; display_name:string; thumbnail_url:string; published_count:number;draft_count?:number };
+/* D621 - "8/27/2026, 8:31:41 AM" is a raw machine timestamp: seconds nobody
+   needs, and a date she has to decode even when the batch was saved an hour ago.
+   Today and yesterday are named; anything older gets a short date. Seconds are
+   dropped entirely. */
+function savedLabel(updatedAt: string) {
+  const when = new Date(`${updatedAt.replace(" ", "T")}Z`);
+  if (Number.isNaN(when.getTime())) return "recently";
+  const time = when.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+  const midnight = new Date(); midnight.setHours(0, 0, 0, 0);
+  const dayMs = 86_400_000;
+  if (when.getTime() >= midnight.getTime()) return `today at ${time}`;
+  if (when.getTime() >= midnight.getTime() - dayMs) return `yesterday at ${time}`;
+  const sameYear = when.getFullYear() === new Date().getFullYear();
+  return `${when.toLocaleDateString(undefined, { day: "numeric", month: "short", ...(sameYear ? {} : { year: "numeric" }) })} at ${time}`;
+}
+
 export default function BatchesPage() {
   const [batches,setBatches] = useState<Batch[]>([]);
   const [loading,setLoading] = useState(true);
@@ -53,7 +69,7 @@ export default function BatchesPage() {
         {selected.length>0&&<button type="button" className="batch-delete-selected" disabled={deleting} onClick={()=>void removeSelected()}>
           {deleting?"Deleting…":`Delete ${selected.length} ${selected.length===1?"batch":"batches"}`}</button>}
       </div>}
-      {loading ? <p>Loading saved batches…</p> : !batches.length ? <div className="empty-history"><h2>No saved batches yet</h2><p>Your first batch appears here as soon as you add designs.</p><a href="/listing-factory">Start a batch</a></div> : batches.map(batch => <article key={batch.id} className={selected.includes(batch.id)?"selected":""}><label className="batch-select"><input type="checkbox" checked={selected.includes(batch.id)} onChange={()=>toggleSelected(batch.id)} aria-label={`Select ${batch.display_name||"Untitled batch"}`}/></label>{batch.thumbnail_url?<img className="batch-history-thumbnail" src={batch.thumbnail_url} alt=""/>:<span className="batch-history-thumbnail empty" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M21 16l-5-5-6 6"/></svg></span>}<div className="batch-history-summary"><span className={`batch-status ${batch.status}`}>{batch.published_count>0?`${batch.published_count} PUBLISHED TO ETSY`:`DRAFT`}</span><h2>{batch.display_name || "Untitled batch"}</h2><p>{batch.product_title || "Custom product"} · {batch.design_count} {batch.design_count === 1 ? "design" : "designs"}</p></div><div className="batch-history-controls"><small>Last saved {new Date(`${batch.updated_at.replace(" ","T")}Z`).toLocaleString()}</small><span className="batch-row-actions"><button onClick={() => resume(batch)}>{batch.published_count>0 ? "Open published batch" : "Resume batch"} →</button></span><button className="remove-batch" onClick={()=>void remove(batch)}>Permanently remove from history</button></div></article>)}
+      {loading ? <p>Loading saved batches…</p> : !batches.length ? <div className="empty-history"><h2>No saved batches yet</h2><p>Your first batch appears here as soon as you add designs.</p><a href="/listing-factory">Start a batch</a></div> : batches.map(batch => <article key={batch.id} className={selected.includes(batch.id)?"selected":""}><label className="batch-select"><input type="checkbox" checked={selected.includes(batch.id)} onChange={()=>toggleSelected(batch.id)} aria-label={`Select ${batch.display_name||"Untitled batch"}`}/></label>{batch.thumbnail_url?<img className="batch-history-thumbnail" src={batch.thumbnail_url} alt=""/>:<span className="batch-history-thumbnail empty" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M21 16l-5-5-6 6"/></svg></span>}<div className="batch-history-summary"><span className={`batch-status ${batch.status}`}>{batch.published_count>0?`${batch.published_count} PUBLISHED TO ETSY`:`DRAFT`}</span><h2>{batch.display_name || "Untitled batch"}</h2><p>{batch.product_title || "Custom product"} · {batch.design_count} {batch.design_count === 1 ? "design" : "designs"}</p></div><div className="batch-history-controls"><small>Last saved {savedLabel(batch.updated_at)}</small><span className="batch-row-actions"><button onClick={() => resume(batch)}>{batch.published_count>0 ? "Open published batch" : "Resume batch"} →</button></span><button className="remove-batch" onClick={()=>void remove(batch)}>Permanently remove from history</button></div></article>)}
     </section>
   </main>;
 }
