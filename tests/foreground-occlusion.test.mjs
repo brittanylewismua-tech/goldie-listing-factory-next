@@ -94,7 +94,7 @@ test("which classes were found is recorded on the scene", () => {
 
 test("a missing class costs a layer, never the preparation", () => {
   // Every segmentation call goes through optional(), which swallows the throw.
-  const block = prepare.slice(prepare.indexOf("if (geometry.occluded)"), prepare.indexOf("const [surfaceMaskKey"));
+  const block = prepare.slice(prepare.indexOf("const occlusionUrls: string[] = []"), prepare.indexOf("const [surfaceMaskKey"));
   assert.match(block, /await optional\(\(\) => falJson\("fal-ai\/sam-3\/image"/);
   assert.ok(!/throw/.test(block), "isolating a foreground must not throw the preparation away");
 });
@@ -118,4 +118,30 @@ test("a new preparation generation is required for this to take effect", () => {
   const version = Number(/SCENE_PREPARATION_VERSION = (\d+)/.exec(scene)?.[1]);
   assert.ok(Number.isInteger(version) && version >= 9,
     `D600 and D601 each changed what preparation means, found generation ${version}`);
+});
+
+test("D602 - the foreground is looked for on every scene, not when a gate allows it", () => {
+  /* Measured on generation 9: the analyser answers occluded:false on hoodies
+     whose hood edge crosses the top of the chest. A wrong gate meant no
+     segmentation at all and a design printed over a hood, with no recovery. */
+  const block = prepare.slice(prepare.indexOf("const occlusionUrls: string[] = []"),
+    prepare.indexOf("const [surfaceMaskKey"));
+  assert.ok(!/if \(geometry\.occluded\)/.test(block),
+    "segmentation must not be gated on the analyser's prediction");
+  assert.ok(!/if \(.*occluded.*\)\s*\{/.test(block), "no gate of any shape remains");
+  assert.match(block, /OCCLUSION_CLASSES\.map/, "every class is still asked for");
+});
+
+test("D602 - occluded records what was isolated, not what was predicted", () => {
+  assert.match(prepare, /occluded: occlusionKeys\.length > 0/);
+  assert.match(prepare, /analyserOccluded: reading\.observation\.occluded/,
+    "the prediction is kept so the gate's accuracy stays measurable");
+  assert.match(sceneCode, /analyserOccluded\?:\s*boolean/);
+});
+
+test("D602 - looking costs one round trip, not five", () => {
+  // Preparation already runs 5-21 seconds; five sequential calls would be felt.
+  const block = prepare.slice(prepare.indexOf("const occlusionUrls: string[] = []"),
+    prepare.indexOf("const [surfaceMaskKey"));
+  assert.match(block, /await Promise\.all\(OCCLUSION_CLASSES\.map/);
 });

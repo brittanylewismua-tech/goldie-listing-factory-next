@@ -190,11 +190,30 @@ async function prepareOnce(imageUrl: string, productName: string, key: string, o
     { name: "hands", prompt: "hands, fingers or a forearm crossing in front of the garment" },
     { name: "other", prompt: "a strap, bag, seam flap, mug handle or other object crossing in front of the printable surface" },
   ];
+  /* D602 - the foreground is no longer looked for only when a yes/no gate says
+     to look.
+
+     Measured on generation 9, with the reading finally reaching this code: the
+     analyser answers occluded:false on hoodies whose hood edge plainly crosses
+     the top of the chest. It is one opinion from a model that was asked mainly
+     for corner coordinates, and there was no recovery from it being wrong - a
+     false gate meant no segmentation, no layers, and a design printed over a
+     hood, silently.
+
+     Asking is also the wrong question. Whether something is in the way depends
+     on where the seller drags the artwork, which happens long after preparation.
+     A scene whose default quad clears the hood does not clear it once the design
+     is enlarged.
+
+     So the classes are always looked for. A class that is not in the photograph
+     returns nothing and costs one parallel call; it is not an error, and there
+     is no gate left to answer wrongly. occluded stops being an instruction and
+     becomes what it should always have been: a record of what was found. */
   const occlusionUrls: string[] = [];
   const occlusionClasses: Record<string, boolean> = {};
-  if (geometry.occluded) {
-    /* Also optional, and per class. A class that cannot be isolated is one
-       missing layer, never a failed preparation and never a lost print area. */
+  {
+    /* Optional, and per class. A class that cannot be isolated is one missing
+       layer, never a failed preparation and never a lost print area. */
     const found = await Promise.all(OCCLUSION_CLASSES.map(async ({ name, prompt }) => {
       const answer = await optional(() => falJson("fal-ai/sam-3/image", key, {
         image_url: imageUrl, prompt,
@@ -220,6 +239,9 @@ async function prepareOnce(imageUrl: string, productName: string, key: string, o
   ]);
   const occlusionKeys = storedOcclusions.filter((entry): entry is string => Boolean(entry));
   return { ...geometry, productBox, surfaceMaskKey, depthKey,
+    /* D602 - what was actually isolated, not what a gate predicted. The
+       analyser's own opinion is kept beside it so the two can be compared. */
+    occluded: occlusionKeys.length > 0, analyserOccluded: reading.observation.occluded,
     occlusionKey: occlusionKeys[0], occlusionKeys, occlusionClasses,
     analyserSide: reading.observation.side, fallbackReason };
 }
@@ -295,7 +317,7 @@ async function handlePOST(request: NextRequest, context: { params: Promise<{ id:
         productSilhouetteVerified: result.productSilhouetteVerified, derived: result.derived,
         surfaceMaskKey: result.surfaceMaskKey, depthKey: result.depthKey, occlusionKey: result.occlusionKey,
         occlusionKeys: result.occlusionKeys, occlusionClasses: result.occlusionClasses,
-        analyserSide: result.analyserSide,
+        analyserSide: result.analyserSide, analyserOccluded: result.analyserOccluded,
         preparedAt: new Date().toISOString(),
       };
       return store(preparation, attempt, result.fallbackReason);

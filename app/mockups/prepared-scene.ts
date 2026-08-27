@@ -8,7 +8,7 @@ import type { PrintSide } from "../placement-math.ts";
    Bumping this invalidates them and re-reads each scene the next time it is
    used - which is exactly the migration path that already exists and cannot
    fail. */
-export const SCENE_PREPARATION_VERSION = 9;
+export const SCENE_PREPARATION_VERSION = 10;
 
 export type SceneGeometry = "flat" | "perspective" | "cylindrical" | "flexible" | "irregular";
 export type NormalizedPoint = [number, number];
@@ -38,6 +38,9 @@ export type ScenePreparation = {
      scene's side rekeys its saved placements, so the disagreement is measured
      before it is acted on. */
   analyserSide?: PrintSide | null;
+  /* D602 - occluded above is now what was ISOLATED. This is what the analyser
+     predicted, kept beside it so the gate's accuracy stays measurable. */
+  analyserOccluded?: boolean;
   depthKey?: string;
   /* D577 - true when the surface was computed from product geometry rather than
      read from this photograph. The scene is ready either way. */
