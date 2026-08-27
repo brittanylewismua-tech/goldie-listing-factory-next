@@ -145,3 +145,43 @@ test("D602 - looking costs one round trip, not five", () => {
     prepare.indexOf("const [surfaceMaskKey"));
   assert.match(block, /await Promise\.all\(OCCLUSION_CLASSES\.map/);
 });
+
+/* D603 - the layers reach the render. Enabled only after inspecting the real
+   masks live: transparent cutouts, accurate on 8 scenes across 3 product types,
+   and no false positive anywhere - the hood prompt correctly found nothing on
+   tees, and the mug produced no layers at all. */
+const composite = strip(await read("app/mockups/scene-composite.ts"));
+const editor = strip(await read("app/mockups/scene-editor.tsx"));
+const grid = strip(await read("app/integrated-mockups.tsx"));
+
+test("D603 - the composite draws every foreground layer", () => {
+  assert.match(composite, /foreground\?:\s*CanvasImageSource \| CanvasImageSource\[\] \| null/);
+  assert.match(composite, /const layers = Array\.isArray\(foreground\)/);
+  assert.match(composite, /for \(const layer of layers\)/);
+});
+
+test("D603 - foreground still goes on last, over the ink", () => {
+  // A layer drawn before the artwork is not an occluder, it is wallpaper.
+  const inkAt = composite.indexOf("ctx.drawImage(ink, 0, 0)");
+  const layersAt = composite.indexOf("for (const layer of layers)");
+  assert.ok(inkAt > 0 && layersAt > inkAt, "layers must be drawn after the ink");
+});
+
+test("D603 - one slow or missing layer cannot fail a render", () => {
+  const loader = editor.slice(editor.indexOf("function useImages"));
+  const body = loader.slice(0, loader.indexOf("\n}") + 2);
+  assert.match(body, /image\.onerror = \(\) => resolve\(null\)/, "a layer that will not load resolves, never rejects");
+  assert.match(body, /\.filter\(\(image\): image is HTMLImageElement => Boolean\(image\)\)/);
+});
+
+test("D603 - the grid and the editor both use the full list", () => {
+  assert.match(grid, /if\(t\.occlusionUrls\?\.length\)return t\.occlusionUrls/);
+  assert.match(grid, /foregroundUrls=\{template\.occlusionUrls\|\|\[\]\}/);
+  assert.match(grid, /occlusionUrls:\(preparation\.occlusionKeys\|\|\[\]\)\.map/);
+});
+
+test("D603 - export and preview still share one code path", () => {
+  // Whatever she approves in the editor is what gets uploaded.
+  assert.match(composite, /export function composite\(/);
+  assert.match(composite, /composite\(\{ \.\.\.input, width: input\.photo\.width, height: input\.photo\.height \}\)/);
+});

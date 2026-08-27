@@ -21,6 +21,31 @@ const BLENDS: Array<{ value: BlendMode; label: string }> = [
   { value: "soft-light", label: "Soft light" },
 ];
 
+/* D603 - a scene can carry several foreground layers. They are loaded together
+   and a layer that will not load is simply absent from the composite, never a
+   failed render. The joined key is the dependency, so the same list does not
+   reload on every draw. */
+function useImages(sources: string[]) {
+  const [images, setImages] = useState<HTMLImageElement[]>([]);
+  const key = sources.join("|");
+  useEffect(() => {
+    let cancelled = false;
+    if (!sources.length) { setImages([]); return; }
+    void Promise.all(sources.map(src => new Promise<HTMLImageElement | null>(resolve => {
+      const image = new Image();
+      image.crossOrigin = "anonymous";
+      image.onload = () => resolve(image);
+      image.onerror = () => resolve(null);
+      image.src = src;
+    }))).then(loaded => {
+      if (!cancelled) setImages(loaded.filter((image): image is HTMLImageElement => Boolean(image)));
+    });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
+  return images;
+}
+
 function useImage(src: string | null) {
   const [image, setImage] = useState<HTMLImageElement | null>(null);
   useEffect(() => {
@@ -44,6 +69,8 @@ export type SceneEditorProps = {
   /* Goldie's automatic placement, so "Reset placement" always has a home. */
   automatic: PlacementTransform;
   foregroundUrl?: string | null;
+  /* D603 - every isolated foreground layer for this scene, in draw order. */
+  foregroundUrls?: string[];
   hasNext?: boolean;
   /* D596 - what a persisted record is keyed by. The editor never invents these;
      they come from the listing it was opened on. */
@@ -60,7 +87,9 @@ export type SceneEditorProps = {
 export default function SceneEditor(props: SceneEditorProps) {
   const photo = useImage(props.photoUrl);
   const artwork = useImage(props.artworkUrl);
-  const foreground = useImage(props.foregroundUrl || null);
+  const foregroundList = props.foregroundUrls?.length ? props.foregroundUrls
+    : props.foregroundUrl ? [props.foregroundUrl] : [];
+  const foreground = useImages(foregroundList);
 
   const [transform, setTransform] = useState<PlacementTransform>(props.transform);
   const [past, setPast] = useState<PlacementTransform[]>([]);

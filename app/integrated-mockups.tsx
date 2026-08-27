@@ -19,7 +19,7 @@ import { measureReference, productBoxInScene, derivedPlacement, placementInFace,
 import { preparationMatchesProduct, type ScenePreparation } from "./mockups/prepared-scene";
 
 type Point=[number,number]; type SurfaceKind="rigid-flat"|"t-shirt"|"sweatshirt"|"hoodie"|"other-apparel"|"apparel"|"soft-goods"|"curved"|"irregular";
-type Template={id:string;name:string;theme:string;src:string;corners:[Point,Point,Point,Point];normalized?:boolean;surfaceKind?:SurfaceKind;foregroundPrompt?:string;printSide?:PrintSide;quadMeans?:QuadMeaning;occlusionUrl?:string;occlusionConfirmed?:boolean;preparationStatus?:string;preparation?:ScenePreparation};
+type Template={id:string;name:string;theme:string;src:string;corners:[Point,Point,Point,Point];normalized?:boolean;surfaceKind?:SurfaceKind;foregroundPrompt?:string;printSide?:PrintSide;quadMeans?:QuadMeaning;occlusionUrl?:string;occlusionUrls?:string[];occlusionConfirmed?:boolean;preparationStatus?:string;preparation?:ScenePreparation};
 const SceneEditor=lazy(()=>import("./mockups/scene-editor"));
 
 type Result={name:string;url:string;template:string;templateId:string;surfaceKind:SurfaceKind;warning?:string;adjusted?:boolean};
@@ -43,7 +43,7 @@ function isCalibratedSurface(kind:SurfaceKind){return["rigid-flat","t-shirt","sw
    confirmed once against this photograph, so it is the same on every render and
    costs no model call. The segmenter below stays only for scenes that have never
    been through the editor. */
-async function foregroundLayers(t:Template){if(t.occlusionUrl)return[t.occlusionUrl];if(!t.foregroundPrompt)return[];const cached=foregroundCache.get(t.id);if(cached)return cached;try{const response=await fetch("/api/mockups/analyze",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({imageUrl:new URL(t.src,window.location.origin).toString(),prompt:t.foregroundPrompt})}),payload=await response.json() as {masks?:Array<{url:string}>;error?:string};if(!response.ok)throw new Error(payload.error||`Could not safely layer ${t.name}.`);const urls=(payload.masks||[]).map(x=>x.url);foregroundCache.set(t.id,urls);return urls}catch{/* A highlight layer that will not load is a slightly flatter mockup, not a failed one. Cached so one outage does not retry on every scene. */foregroundCache.set(t.id,[]);return[]}}
+async function foregroundLayers(t:Template){/* D603 - every isolated layer, not just the first. */if(t.occlusionUrls?.length)return t.occlusionUrls;if(t.occlusionUrl)return[t.occlusionUrl];if(!t.foregroundPrompt)return[];const cached=foregroundCache.get(t.id);if(cached)return cached;try{const response=await fetch("/api/mockups/analyze",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({imageUrl:new URL(t.src,window.location.origin).toString(),prompt:t.foregroundPrompt})}),payload=await response.json() as {masks?:Array<{url:string}>;error?:string};if(!response.ok)throw new Error(payload.error||`Could not safely layer ${t.name}.`);const urls=(payload.masks||[]).map(x=>x.url);foregroundCache.set(t.id,urls);return urls}catch{/* A highlight layer that will not load is a slightly flatter mockup, not a failed one. Cached so one outage does not retry on every scene. */foregroundCache.set(t.id,[]);return[]}}
 function area(c:Point[]){return Math.abs(c.reduce((n,[x,y],i)=>{const q=c[(i+1)%c.length];return n+x*q[1]-q[0]*y},0)/2)}
 /* D447 - a mockup must never fail to render.
  *
@@ -391,7 +391,7 @@ export default function IntegratedMockups({design,productId,productName="",defau
      if(!response.ok||!payload.preparation)return {scene,preparation:computedPreparation(productName,null,scene.printSide)};
      return {scene,preparation:payload.preparation};
    }),({scene,preparation})=>{prepared.set(scene.id,preparation);setRenderStatus(`${prepared.size} of ${stale.length} scenes prepared. Goldie is finishing the rest automatically…`)});
-   const apply=(item:Template):Template=>{const preparation=prepared.get(item.id);return preparation?{...item,corners:preparation.corners,normalized:true,printSide:preparation.printSide,quadMeans:"print-area",preparationStatus:"ready",preparation,occlusionUrl:preparation.occlusionKey?`/api/mockups/library/${encodeURIComponent(item.id)}/occlusion`:undefined,occlusionConfirmed:true}:item};
+   const apply=(item:Template):Template=>{const preparation=prepared.get(item.id);return preparation?{...item,corners:preparation.corners,normalized:true,printSide:preparation.printSide,quadMeans:"print-area",preparationStatus:"ready",preparation,occlusionUrl:preparation.occlusionKey?`/api/mockups/library/${encodeURIComponent(item.id)}/occlusion`:undefined,occlusionUrls:(preparation.occlusionKeys||[]).map((_,index)=>`/api/mockups/library/${encodeURIComponent(item.id)}/occlusion?layer=${index}`),occlusionConfirmed:true}:item};
    if(prepared.size)setLibrary(current=>current.map(apply));
    const applied=list.map(apply);
    /* D577 - every selected scene comes back ready. A scene that could not be
@@ -455,7 +455,7 @@ let previewFace:{left:number;top:number;right:number;bottom:number}|undefined;
             {const exact=placementAdjustment(placement,template.surfaceKind||"rigid-flat","print-area");
              if(exact){const began=Date.now();
                const made=await rigid(design,template,exact);
-               recordRender({scene:template.name,sceneId:template.id,printSide:template.printSide,quadMeans:"print-area",placement,applied:exact,usedForeground:Boolean(template.occlusionUrl),source:"printify",ms:Date.now()-began});
+               recordRender({scene:template.name,sceneId:template.id,printSide:template.printSide,quadMeans:"print-area",placement,applied:exact,usedForeground:Boolean(template.occlusionUrls?.length||template.occlusionUrl),source:"printify",ms:Date.now()-began});
                return made;}}
           if(fit&&isCalibrated(template)){
             const direct=placementInFace(fit,artworkBounds);
@@ -588,6 +588,7 @@ let previewFace:{left:number;top:number;right:number;bottom:number}|undefined;
         persistedAt={persisted.at}
         automatic={automatic}
         foregroundUrl={template.occlusionUrl||null}
+        foregroundUrls={template.occlusionUrls||[]}
         hasNext={editing.index+1<results.length}
         onSave={(next,blob,improve)=>finish(next,blob,improve,false)}
         onSaveNext={(next,blob,improve)=>finish(next,blob,improve,true)}

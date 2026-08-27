@@ -141,7 +141,7 @@ export type CompositeInput = {
   /* Parts of the photograph that belong in FRONT of the artwork - a hood, hair,
      a mug handle. Drawn last, from the original photo, so the design passes
      underneath them. */
-  foreground?: CanvasImageSource | null;
+  foreground?: CanvasImageSource | CanvasImageSource[] | null;
   /* Export passes the photo's true size; the editor passes its preview size. */
   width?: number;
   height?: number;
@@ -171,11 +171,14 @@ export function composite({ photo, artwork, transform, mode, foreground, width, 
   ctx.drawImage(ink, 0, 0);
   ctx.restore();
 
-  // 5. anything that belongs in front
-  if (foreground) {
+  /* 5. anything that belongs in front, one layer per class of object that
+        crosses the print - D602 isolates a hood, hair, drawstrings, hands and
+        other separately, because one mask cannot hold three unrelated objects. */
+  const layers = Array.isArray(foreground) ? foreground : foreground ? [foreground] : [];
+  for (const layer of layers) {
     ctx.save();
     ctx.globalCompositeOperation = "source-over";
-    ctx.drawImage(foreground, 0, 0, size.width, size.height);
+    ctx.drawImage(layer, 0, 0, size.width, size.height);
     ctx.restore();
   }
   return canvas;
