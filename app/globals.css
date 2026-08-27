@@ -118,3 +118,15 @@
 .diagnostic-context summary{font-size:11px;font-weight:700;cursor:pointer;color:#7c3350}
 .diagnostic-context pre{white-space:pre-wrap;word-break:break-word;background:#faf6fb;border-radius:8px;padding:10px;font-size:11px;margin:8px 0 0;max-height:260px;overflow:auto}
 .diagnostics-empty{font-size:12px;color:#7a6a76;margin:10px 0 0}
+
+/* D614 · Inside-label artwork is not carried into new products. Stated once,
+   plainly, where the seller is about to create drafts - not as another dialog to
+   dismiss, and not discovered later from a Printify preview. */
+.preflight-note{
+  margin:14px 0 0;
+  padding:11px 13px;
+  border-radius:9px;
+  background:#fff4d8;
+  color:#6d4d12;
+  font-size:12.5px;
+}

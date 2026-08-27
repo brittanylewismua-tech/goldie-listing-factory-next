@@ -1,25 +1,28 @@
-/* D594 - a neck label is not the listing's artwork.
+/* D614 - internal label placeholders are excluded from new products.
 
-   Confirmed on a real draft before this fix: the Printify preview showed the
-   seller's design a second time, small, at the collar, and the created product
-   came back with positions ["front","back","neck"] and imageCounts [1,0,2].
+   The history matters, because two fixes were built on a misreading.
 
-   D613 - these tests originally asserted that the template's own label ID
-   survived into the payload "untouched". That WAS the defect: a template image ID
-   is not valid in a different product request, and sending it made Printify
-   reject every draft with 400 / 8253 for six hours. The label's artwork is still
-   preserved; its identifier is now a fresh upload made for this request. */
-const label = new Map([["brand-label", "fresh-label"]]);
+   D594 saw a small copy of the design at the collar and concluded the seller had
+   deliberate neck-label branding worth preserving. That was backwards: the design
+   was at the collar because the code wrote it into every populated placeholder.
+   The collar copy was the bug's symptom, not the seller's artwork.
+
+   To "preserve" it, D594 carried the template product's own image IDs into new
+   product requests. Printify rejected those with 400 / 8253, "Provided images do
+   not exist", and every draft failed for six hours. D613 then tried to re-upload
+   that artwork, inventing a further requirement and breaking the flow again.
+
+   Goldie prints on the print side the seller chose. Nothing else. */
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { printAreasWithOnlyCurrentArtwork, isLabelPlaceholder } from "../app/api/printify/product-payload.ts";
+import { printAreasWithOnlyCurrentArtwork, isLabelPlaceholder, templateHasLabelArtwork } from "../app/api/printify/product-payload.ts";
 
 const areas = () => ([{
   variant_ids: [1, 2],
   placeholders: [
     { position: "front", images: [{ id: "old-front", x: .5, y: .45, scale: .9, angle: 0 }] },
     { position: "back", images: [{ id: "old-back", x: .5, y: .5, scale: .8, angle: 0 }] },
-    { position: "neck", images: [{ id: "brand-label", x: .5, y: .1, scale: 1, angle: 0 }] },
+    { position: "neck", images: [{ id: "internal-label", x: .5, y: .1, scale: 1, angle: 0 }] },
   ],
 }]);
 
@@ -30,55 +33,70 @@ test("label positions are recognised", () => {
     assert.equal(isLabelPlaceholder(side), false, `${side} is a print side`);
 });
 
-test("the design goes on the print sides and never on the label", () => {
-  const result = printAreasWithOnlyCurrentArtwork(areas(), "new-design", undefined, undefined, label);
-  const byPosition = Object.fromEntries(
-    result[0].placeholders.map((p) => [p.position, p.images.map((i) => i.id)]));
-  assert.deepEqual(byPosition.front, ["new-design"]);
-  assert.deepEqual(byPosition.back, ["new-design"]);
-  assert.deepEqual(byPosition.neck, ["fresh-label"],
-    "the label's artwork survives, carried by an ID uploaded for THIS request");
+test("no label placeholder reaches product creation", () => {
+  const result = printAreasWithOnlyCurrentArtwork(areas(), "new-design");
+  const positions = result.flatMap((area) => area.placeholders.map((p) => p.position));
+  assert.deepEqual(positions.sort(), ["back", "front"]);
+  assert.ok(!positions.some(isLabelPlaceholder), "no neck, collar, inner or tag placeholder goes out");
 });
 
-test("the label keeps its original placement, not the design's", () => {
-  const result = printAreasWithOnlyCurrentArtwork(areas(), "new-design", undefined, undefined, label);
-  const neck = result[0].placeholders.find((p) => p.position === "neck");
-  assert.equal(neck.images[0].y, .1, "the label's own position is preserved");
-  assert.equal(neck.images[0].scale, 1);
+test("no inherited image ID reaches Printify", () => {
+  // This is the exact failure: a template ID is not valid in another product.
+  const result = printAreasWithOnlyCurrentArtwork(areas(), "new-design");
+  const ids = result.flatMap((area) => area.placeholders.flatMap((p) => p.images.map((i) => i.id)));
+  assert.deepEqual([...new Set(ids)], ["new-design"]);
+  for (const stale of ["old-front", "old-back", "internal-label"])
+    assert.ok(!ids.includes(stale), `${stale} must never leave`);
 });
 
-test("an inherited image id on a print side is still blocked", () => {
-  // The original guard's job: a previous design's id must never ship as the
-  // artwork. Narrowing it to print sides must not weaken that.
-  const leaky = areas();
-  leaky[0].placeholders.push({ position: "front", images: [{ id: "stale-id", x: .5, y: .5, scale: 1, angle: 0 }] });
-  const patched = printAreasWithOnlyCurrentArtwork(leaky, "new-design", undefined, undefined, label);
-  const ids = new Set(patched[0].placeholders.filter((p) => !isLabelPlaceholder(p.position))
-    .flatMap((p) => p.images.map((i) => i.id)));
-  assert.deepEqual([...ids], ["new-design"], "every print side carries only the current design");
+test("the main artwork stays on the intended print sides", () => {
+  const result = printAreasWithOnlyCurrentArtwork(areas(), "new-design");
+  const front = result[0].placeholders.find((p) => p.position === "front");
+  assert.equal(front.images[0].id, "new-design");
+  assert.equal(front.images.length, 1);
 });
 
-test("printing the design onto a label is refused outright", () => {
-  const sneaky = [{
-    variant_ids: [1],
-    placeholders: [
-      { position: "front", images: [{ id: "new-design", x: .5, y: .5, scale: 1, angle: 0 }] },
-      { position: "neck", images: [{ id: "new-design", x: .5, y: .1, scale: 1, angle: 0 }] },
-    ],
-  }];
-  /* D613 - with the label now carrying a re-uploaded ID, the way the design can
-     still reach a label is a mapping that points at it. That is the case to
-     refuse. A label with no mapping at all is refused separately, and just as
-     hard, by the re-upload requirement. */
-  assert.throws(() => printAreasWithOnlyCurrentArtwork(sneaky, "new-design", undefined, undefined,
-    new Map([["new-design", "new-design"]])),
-    /print the design on a label|inherited template image ID/);
-  assert.throws(() => printAreasWithOnlyCurrentArtwork(sneaky, "new-design"),
-    /could not re-upload the neck label artwork/);
+test("a product with a label still creates normally", () => {
+  // Excluding the label must not empty the payload or drop the area.
+  const result = printAreasWithOnlyCurrentArtwork(areas(), "new-design");
+  assert.equal(result.length, 1, "the print area survives");
+  assert.equal(result[0].variant_ids.length, 2, "its variants are intact");
+  assert.equal(result[0].placeholders.length, 2);
+});
+
+test("a product whose only placeholder is a label produces no empty area", () => {
+  const labelOnly = [{ variant_ids: [1], placeholders: [{ position: "neck", images: [{ id: "internal-label" }] }] }];
+  assert.deepEqual(printAreasWithOnlyCurrentArtwork(labelOnly, "new-design"), []);
+});
+
+test("the notice fires only when the saved product has label artwork", () => {
+  assert.equal(templateHasLabelArtwork(areas()), true);
+  const plain = [{ variant_ids: [1], placeholders: [{ position: "front", images: [{ id: "old" }] }] }];
+  assert.equal(templateHasLabelArtwork(plain), false, "no notice when there is nothing to leave behind");
+  const emptyLabel = [{ variant_ids: [1], placeholders: [{ position: "neck", images: [] }] }];
+  assert.equal(templateHasLabelArtwork(emptyLabel), false, "an empty label placeholder is not artwork");
+  assert.equal(templateHasLabelArtwork(undefined), false);
 });
 
 test("a product with no label is unaffected", () => {
   const plain = [{ variant_ids: [1], placeholders: [{ position: "front", images: [{ id: "old", x: .5, y: .5, scale: 1, angle: 0 }] }] }];
   const result = printAreasWithOnlyCurrentArtwork(plain, "new-design");
   assert.deepEqual(result[0].placeholders[0].images.map((i) => i.id), ["new-design"]);
+});
+
+test("D613's label re-upload is gone, and no new retry system replaced it", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const route = await readFile(new URL("../app/api/printify/drafts/route.ts", import.meta.url), "utf8");
+  assert.ok(!/labelImageIds|label_reupload|labelSources/.test(route), "the re-upload machinery is removed");
+  assert.ok(!/file_name: `label-/.test(route), "no label upload call remains");
+});
+
+test("the seller is told, once, in the panel where drafts are created", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+  assert.match(app, /Inside-label artwork is not copied to new products\./);
+  assert.match(app, /templateDetails\?\.hasLabelArtwork\?/, "shown only when there is label artwork");
+  // Informational: it must not become another thing to click.
+  const notice = app.slice(app.indexOf("preflight-note"), app.indexOf("preflight-note") + 260);
+  assert.ok(!/<button/.test(notice), "the notice carries no button");
 });
