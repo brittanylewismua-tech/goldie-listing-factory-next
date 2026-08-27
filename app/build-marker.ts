@@ -3,7 +3,7 @@
    go hunting for a CSS class in the built stylesheet. This string is bumped
    with every deployable commit and served from /api/version, so "is my fix
    actually live" is one request with a yes or no answer. */
-export const BUILD_MARKER = "D629";
+export const BUILD_MARKER = "D630";
 
 /* D629 - and then it went stale for two deploys running, which is the exact
    failure D479 built it to prevent: D627 and D628 both shipped while this file
@@ -18,4 +18,12 @@ export const BUILD_MARKER = "D629";
    it. The hand-written marker stays as the readable label; the commit is the
    part that has to be right. Empty when the variable is absent, in which case
    the comparison falls back to the marker and behaves exactly as it did. */
-export const BUILD_COMMIT = process.env.VERCEL_GIT_COMMIT_SHA ?? "";
+/* D630 - D629 read VERCEL_GIT_COMMIT_SHA. This project builds with Vinext on
+   Vite and deploys to Cloudflare; nothing sets that variable, so production
+   answered {"build":"D629","commit":""} and the half of D629 meant to remove the
+   human step did nothing at all. The build resolves the commit now - git first,
+   CI variables after - and Vite inlines it here. Read through `typeof` so a
+   context without the define gets "" instead of a ReferenceError, which is the
+   same empty string D629 already degrades safely from. */
+export const BUILD_COMMIT: string =
+  typeof __BUILD_COMMIT__ === "string" ? __BUILD_COMMIT__ : (process.env.VERCEL_GIT_COMMIT_SHA ?? "");

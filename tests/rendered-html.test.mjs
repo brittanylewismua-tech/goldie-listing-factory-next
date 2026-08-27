@@ -5536,11 +5536,71 @@ test("the deployed build identifies itself without anyone remembering to — D62
 
   // The readable label stays.
   assert.match(marker, /export const BUILD_MARKER = "D\d+"/);
-  // And something nobody types travels with it.
-  assert.match(marker, /export const BUILD_COMMIT = process\.env\.VERCEL_GIT_COMMIT_SHA \?\? ""/);
+  /* And something nobody types travels with it. D630 changed where that value
+     comes from - the Vite build inlines it, rather than a Vercel environment
+     variable this project never sets - but the contract here is unchanged: the
+     route must serve a commit alongside the marker. */
+  assert.match(marker, /export const BUILD_COMMIT: string =/);
   assert.match(route, /build:BUILD_MARKER,commit:BUILD_COMMIT/);
 
-  /* Absent variable must degrade to exactly the old behaviour rather than
-     claiming every tab is behind on every check. */
-  assert.match(marker, /\?\? ""/, "an absent commit is empty, not undefined");
+  /* An unresolvable commit must degrade to exactly the old behaviour rather
+     than claiming every tab is behind on every check. */
+  assert.match(marker, /: \(process\.env\.VERCEL_GIT_COMMIT_SHA \?\? ""\)/,
+    "an absent commit is empty, not undefined");
+});
+
+/* D630 · D629 claimed to remove the human step and did not. It read
+ * VERCEL_GIT_COMMIT_SHA; this project builds with Vinext on Vite and deploys to
+ * Cloudflare, so nothing ever set it. Production answered:
+ *
+ *   {"ok":true,"build":"D629","commit":""}
+ *
+ * Every assertion D629 shipped passed, because they all checked the source that
+ * reads the variable and none checked that a value came out the other end. This
+ * one reads the built artifact, so it fails if the commit is not actually there. */
+test("the built version route carries the commit it was built from — D630", async () => {
+  const { execSync } = await import("node:child_process");
+  const { readdir } = await import("node:fs/promises");
+
+  let head = "";
+  try {
+    head = execSync("git rev-parse HEAD", { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim();
+  } catch { /* no checkout - nothing to compare against, see below */ }
+
+  const dist = new URL("../dist/", import.meta.url);
+  const walk = async (dir) => {
+    const entries = await readdir(dir, { withFileTypes: true }).catch(() => []);
+    const found = [];
+    for (const entry of entries) {
+      const child = new URL(entry.name + (entry.isDirectory() ? "/" : ""), dir);
+      if (entry.isDirectory()) found.push(...await walk(child));
+      else if (entry.name.endsWith(".js")) found.push(child);
+    }
+    return found;
+  };
+  const files = await walk(dist);
+  assert.ok(files.length, "npm test builds before it tests, so dist must exist");
+
+  const sources = await Promise.all(files.map((file) => readFile(file, "utf8").catch(() => "")));
+  const versionRoute = sources.find((text) => /ok:!0,build:/.test(text));
+  assert.ok(versionRoute, "the built /api/version route must be findable in dist");
+
+  if (head) {
+    assert.ok(versionRoute.includes(head),
+      `the built version route must carry ${head.slice(0, 7)}; D629 shipped one carrying nothing`);
+  } else {
+    assert.match(versionRoute, /[0-9a-f]{40}/, "some resolved commit must be inlined");
+  }
+
+  // The resolver prefers a real checkout, then whatever CI variable exists.
+  const resolver = await readFile(new URL("../build/build-commit.ts", import.meta.url), "utf8");
+  assert.match(resolver, /"WORKERS_CI_COMMIT_SHA"/);
+  assert.match(resolver, /git rev-parse HEAD/);
+  assert.match(resolver, /return "";/, "an unresolvable commit degrades to the readable marker");
+
+  // Vite is what inlines it - not an environment variable read at runtime.
+  const vite = await readFile(new URL("../vite.config.ts", import.meta.url), "utf8");
+  assert.match(vite, /__BUILD_COMMIT__: JSON\.stringify\(buildCommit\)/);
+  const marker = await readFile(new URL("../app/build-marker.ts", import.meta.url), "utf8");
+  assert.match(marker, /typeof __BUILD_COMMIT__ === "string" \? __BUILD_COMMIT__/);
 });

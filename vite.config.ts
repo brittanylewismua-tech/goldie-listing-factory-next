@@ -2,6 +2,7 @@ import vinext from "vinext";
 import { defineConfig } from "vite";
 import hostingConfig from "./.openai/hosting.json";
 import { sites } from "./build/sites-vite-plugin";
+import { resolveBuildCommit } from "./build/build-commit";
 
 const SITE_CREATOR_PLACEHOLDER_DATABASE_ID =
   "00000000-0000-4000-8000-000000000000";
@@ -44,7 +45,14 @@ export default defineConfig(async () => {
   // Wrangler snapshots its log path while the Cloudflare plugin is imported.
   const { cloudflare } = await import("@cloudflare/vite-plugin");
 
+  /* D630 - resolved once per build and inlined into every bundle, worker
+     included, so /api/version can answer with the commit it was built from. */
+  const buildCommit = resolveBuildCommit();
+
   return {
+    define: {
+      __BUILD_COMMIT__: JSON.stringify(buildCommit),
+    },
     server: isCodexSeatbeltSandbox
       ? { watch: { useFsEvents: false, usePolling: true } }
       : undefined,
