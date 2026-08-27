@@ -256,7 +256,10 @@ test("a batch held by another tab cannot spend credits on work it will discard",
     const at = app.indexOf(control);
     assert.ok(at > 0, `${control} exists`);
     const tag = app.slice(at, app.indexOf(">", app.indexOf("onClick", at)));
-    assert.ok(/batchHeldByAnotherTab|paused/.test(tag),
+    /* D635 - the publish button's conditions moved into publishBlockers(), which
+       is where batchHeldByAnotherTab is now checked, so the tag names that
+       instead. The rule is unchanged: the control must refuse while paused. */
+    assert.ok(/batchHeldByAnotherTab|paused|publishBlockers\(\)/.test(tag),
       `${control} must refuse while saving is paused`);
   }
 

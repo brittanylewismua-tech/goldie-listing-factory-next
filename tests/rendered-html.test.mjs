@@ -2078,7 +2078,11 @@ test("keeps bundle titles, placement decisions, review, and failures product-spe
   assert.match(app,/VERY LOW RESOLUTION/);
   assert.match(app,/below 215 DPI/);
   assert.match(app,/selectedPublishDrafts\(\)/);
-  assert.match(app,/allCreatedListingsHaveImages\(selectedPublishDrafts\(\)\)/);
+  /* D635 - the photo check moved into publishBlockers(), which passes the same
+     selection to createdListingsMissingImages. The guarantee is unchanged: the
+     press is judged on the listings selected, never on the open product. */
+  assert.match(app,/createdListingsMissingImages\(chosen\)\.map\(draft=>`\$\{draft\.name\} needs at least one listing photo\.`\)/);
+  assert.match(app,/const chosen=selectedPublishDrafts\(\);\n    issues\.push\(\.\.\.missingPublishFields\(\)\)/);
   assert.match(app,/Anything still needing a look is listed above/);
   assert.match(app,/status: "NeedsRetry"/);
   assert.match(review,/final-design-group/);
@@ -4039,8 +4043,16 @@ test("one press publishes every product in a bundle — D495", async () => {
   /* D627 widened this: a member whose batch cannot be opened also blocks the
      press, and says so in its own words rather than claiming it has no
      listings yet. Both messages must name the product. */
-  assert.match(app, /for\(const recipe of bundleProductsNotStarted\(\)\)missing\.push\(bundleBatchSummary\[recipe\.id\]\?\.unreadable\?`\$\{recipe\.name\}'s batch could not be opened[^`]*`:`\$\{recipe\.name\} has no listings yet`\)/,
-    "an unstarted or unreadable product must block publishing by name");
+  /* D635 - a product with no listings has no selected listings, so it cannot
+     make a bad publish; it can only stop a good one, which is exactly what
+     happened when a deleted batch held the ready product hostage. D546 added
+     this because the confirmation claimed 3 products while 2 had nothing, and
+     D634 fixed that claim at its source - the confirmation now names only what
+     will actually publish, so this no longer has to guess. */
+  assert.doesNotMatch(app, /for\(const recipe of bundleProductsNotStarted\(\)\)missing\.push/,
+    "an empty product must not block a press it is not part of");
+  assert.match(app, /if\(bundleProductsStillReading\(\)\.length\)missing\.push\("Goldie is still reading the other products in this batch"\)/,
+    "but an unread member still blocks, because the selection may be incomplete");
 
   /* Publishing spends real money, so the run is stricter than the drafts run: a
      product whose listings are not ready stops it, and nothing after publishes. */
@@ -4527,13 +4539,22 @@ test("the publish button refuses in advance, not after the click — D526/D527",
      looks available and then refuses. It carries its own reason now. */
   /* D545 - and a batch held by another tab cannot publish either: the receipt
      would be written by a tab that has saving paused. */
-  assert.match(app, /\|\|missingPublishFields\(\)\.length>0\|\|batchHeldByAnotherTab\}/);
+  /* D635 - the button and the click guard read one list now, so they cannot
+     say different things. That is the D526/D527 rule stated more strongly than
+     the old expression stated it. */
+  assert.match(app, /disabled=\{publishing\|\|publishBlockers\(\)\.length>0\}/);
+  assert.match(app, /issues=publishBlockers\(\);/,
+    "the click guard must ask exactly what disabled the button");
+  assert.doesNotMatch(app, /\.\.\.requiredForStep\("finish"\)\]/,
+    "building a batch is not the same question as publishing finished listings");
   /* D628 - the suffix " must be completed before publishing." was stapled onto
      whatever missingPublishFields returned, which is a mix of noun phrases
      ("Titles") and whole sentences ("Gildan Hoodie's batch could not be opened
      - it may have been deleted"). The second shape came out ungrammatical on
      screen. A prefix reads correctly for both. */
-  assert.match(app, /missingPublishFields\(\)\[0\]\?`Before publishing: \$\{missingPublishFields\(\)\[0\]\}`/,
+  /* D635 moved the blocker list into publishBlockers(); the phrasing rule is
+     unchanged, and now the tooltip names the same first item the click would. */
+  assert.match(app, /publishBlockers\(\)\[0\]\?`Before publishing: \$\{publishBlockers\(\)\[0\]\}`/,
     "the disabled button must name its blocker in a sentence that parses");
   assert.doesNotMatch(app, / must be completed before publishing\./);
 
@@ -4783,8 +4804,16 @@ test("step 4 tells the truth about a bundle it is not ready to publish — D546"
   /* D627 widened this: a member whose batch cannot be opened also blocks the
      press, and says so in its own words rather than claiming it has no
      listings yet. Both messages must name the product. */
-  assert.match(app, /for\(const recipe of bundleProductsNotStarted\(\)\)missing\.push\(bundleBatchSummary\[recipe\.id\]\?\.unreadable\?`\$\{recipe\.name\}'s batch could not be opened[^`]*`:`\$\{recipe\.name\} has no listings yet`\)/,
-    "an unstarted or unreadable product must block publishing by name");
+  /* D635 - a product with no listings has no selected listings, so it cannot
+     make a bad publish; it can only stop a good one, which is exactly what
+     happened when a deleted batch held the ready product hostage. D546 added
+     this because the confirmation claimed 3 products while 2 had nothing, and
+     D634 fixed that claim at its source - the confirmation now names only what
+     will actually publish, so this no longer has to guess. */
+  assert.doesNotMatch(app, /for\(const recipe of bundleProductsNotStarted\(\)\)missing\.push/,
+    "an empty product must not block a press it is not part of");
+  assert.match(app, /if\(bundleProductsStillReading\(\)\.length\)missing\.push\("Goldie is still reading the other products in this batch"\)/,
+    "but an unread member still blocks, because the selection may be incomplete");
 
   /* And the button counts what it will actually create. Every other number on
      that page counted the open product's listings while the button counted
@@ -5705,4 +5734,50 @@ test("the publish confirmation counts what will actually publish — D634", asyn
      drafts, and the plan-allowance check. */
   assert.match(app, /const requestedListingCount=Math\.max\(0,files\.length\*bundleProductCount/);
   assert.match(app, /planDraftsRemaining!==null&&requestedListingCount>planDraftsRemaining/);
+});
+
+/* D635 · Two defects with one cause: the button and the click that follows it
+ * asked different questions.
+ *
+ * Measured live on the 3-product bundle, two Hoodie listings selected:
+ *   button:  "Publish 2 listings live on Etsy · 3 products", enabled
+ *   click:   "Finish all sections first. Choose a keyword bank for Gildan
+ *             Hoodie. Add at least one finished design."
+ *
+ * The button was disabled by missingPublishFields and the selection's photos.
+ * The guard additionally ran requiredForStep("finish") and called
+ * createdListingsMissingImages with NO argument - the open product, not the
+ * selection. requiredForStep asks whether this product could BUILD a batch: a
+ * keyword bank, at least one design in hand. That has nothing to do with
+ * whether already-created listings can publish, and asking it of whichever
+ * product happened to be open is what stopped a bundle whose other members were
+ * complete. */
+test("one list decides whether the press can happen, scoped to the selection — D635", async () => {
+  const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+
+  const blockers = app.match(/function publishBlockers\(\)\{[\s\S]*?\n  \}/)?.[0];
+  assert.ok(blockers, "publishBlockers must exist");
+
+  // Everything the old guard checked, now in one place.
+  assert.match(blockers, /!localPreview&&!etsyConnected/);
+  assert.match(blockers, /batchHeldByAnotherTab/);
+  assert.match(blockers, /issues\.push\(\.\.\.missingPublishFields\(\)\)/);
+
+  // Judged on the selection, never on whichever product is open.
+  assert.match(blockers, /const chosen=selectedPublishDrafts\(\)/);
+  assert.match(blockers, /createdListingsMissingImages\(chosen\)/);
+  assert.doesNotMatch(blockers, /createdListingsMissingImages\(\)/,
+    "the no-argument form reads the open product's drafts");
+  assert.doesNotMatch(blockers, /requiredForStep/,
+    "building a batch is a different question from publishing finished listings");
+
+  // A listing whose product never resolved a shipping profile fails at the
+  // route with a 400, so it is caught before the press rather than after.
+  assert.match(blockers, /for\(const item of publishTargets\(\)\)if\(!Number\(item\.shippingProfileId\)\)/);
+
+  // Both the button and the guard read it, so they cannot diverge again.
+  assert.match(app, /disabled=\{publishing\|\|publishBlockers\(\)\.length>0\}/);
+  assert.match(app, /issues=publishBlockers\(\);/);
+  assert.equal((app.match(/publishBlockers\(\)/g) || []).length, 5,
+    "declared once; read by the button's disabled, its title twice, and the click guard");
 });

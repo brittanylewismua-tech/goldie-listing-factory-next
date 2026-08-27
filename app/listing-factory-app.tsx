@@ -1177,6 +1177,33 @@ export default function ListingFactoryApp() {
      count on the button, the readiness gate and the confirmation all described
      a smaller batch than the one being published. Same list on both sides. */
   function selectedPublishDrafts(){const selected=new Set(selectedPublishIds);return bundlePublishDrafts().filter(draft=>draft.status==="Created"&&draft.id&&selected.has(draft.id))}
+  /* D635 · The button and the click that follows it disagreed. The button was
+     disabled by publishing / photos on the selection / an empty selection /
+     missingPublishFields; the click guard additionally checked the Etsy
+     connection, requiredForStep("finish") and - with no argument, so the OPEN
+     product rather than the selection - createdListingsMissingImages. So the
+     button could read "Publish 2 listings live on Etsy" and the click answer
+     "Finish all sections first: choose a keyword bank, add at least one
+     finished design". Measured live on the 3-product bundle.
+     requiredForStep("finish") is the wrong question here: it asks whether this
+     product could BUILD a batch - a keyword bank, at least one design in hand -
+     which has nothing to do with whether already-created listings can publish.
+     Requiring it of whichever product happened to be open is what stopped a
+     bundle whose other members were complete.
+     One list now, scoped to the listings actually selected, read by both. */
+  function publishBlockers(){
+    const issues:string[]=[];
+    if(!localPreview&&!etsyConnected)issues.push("Connect the Etsy shop that will receive these listings.");
+    if(batchHeldByAnotherTab)issues.push("This batch is open in another Goldie tab. Take over there or here before publishing, so the receipt is saved.");
+    const chosen=selectedPublishDrafts();
+    issues.push(...missingPublishFields());
+    issues.push(...createdListingsMissingImages(chosen).map(draft=>`${draft.name} needs at least one listing photo.`));
+    /* The publish route rejects a job with no Etsy shipping profile, so a
+       listing whose product never resolved one fails after the press rather
+       than before it. */
+    for(const item of publishTargets())if(!Number(item.shippingProfileId))issues.push(`${item.productName||"This product"} has no Etsy shipping profile selected.`);
+    return [...new Set(issues)];
+  }
   function suggestedBatchName(){const product=activeRecipe?.name||templateDetails?.blueprintTitle||"Listing batch",niche=files[0]?.tags?.[0]||files[0]?.title?.split(",")[0]?.trim()||"New designs",date=new Intl.DateTimeFormat("en-US",{month:"short",day:"numeric"}).format(new Date());return `${product} · ${niche} · ${date}`.slice(0,160)}
   /* D378 - Keep the product -> batch map current. continueBundle mints a new
      batch per member, and a batch can also be created lazily on the first save,
@@ -1627,7 +1654,7 @@ export default function ListingFactoryApp() {
       if(!element)return;
       let issues:string[]=[];
       if(element.classList.contains("publish-all-button")){
-        issues=[...(!localPreview&&!etsyConnected?["Connect the Etsy shop that will receive these listings."]:[]),...missingPublishFields().map(field=>`Before publishing: ${field}`),...createdListingsMissingImages().map(draft=>`${draft.name} needs at least one listing photo.`),...requiredForStep("finish")];
+        issues=publishBlockers();
       }
       if(!issues.length)return;
       event.preventDefault();event.stopImmediatePropagation();stopWith("Finish all sections first.",[...new Set(issues)]);
@@ -2588,7 +2615,17 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
       :Number(bundleBatchSummary[recipe.id]?.drafts)||0),0);
   }
 
-  function missingPublishFields(){/* D626 - `files` is the open product's designs, so titles, tags and Etsy details on every other product in the bundle went unchecked and could publish incomplete. */const chosen=selectedPublishDrafts(),clientIds=new Set(chosen.map(draft=>draft.clientId)),chosenFiles=bundlePublishFiles().filter(file=>clientIds.has(file.id)),missing:string[]=[];if(!chosen.length)missing.push("Select at least one successful listing");for(const recipe of bundleProductsNotStarted())missing.push(bundleBatchSummary[recipe.id]?.unreadable?`${recipe.name}'s batch could not be opened - it may have been deleted`:`${recipe.name} has no listings yet`);if(bundleProductsStillReading().length)missing.push("Goldie is still reading the other products in this batch");if(chosenFiles.some(file=>!file.title.trim()))missing.push("Titles");if(chosenFiles.some(file=>!file.tags.length))missing.push("Tags");if(!description.trim())missing.push("Permanent product description");if(chosenFiles.some(file=>!etsyRequiredComplete(file.etsy)))missing.push("Etsy details");if(chosenFiles.some(file=>personalizationProblem(file.etsy)))missing.push("Personalization settings");if(chosen.length&&!allCreatedListingsHaveImages(chosen))missing.push("At least one image on every selected listing");return missing}
+  function missingPublishFields(){/* D626 - `files` is the open product's designs, so titles, tags and Etsy details on every other product in the bundle went unchecked and could publish incomplete. */const chosen=selectedPublishDrafts(),clientIds=new Set(chosen.map(draft=>draft.clientId)),chosenFiles=bundlePublishFiles().filter(file=>clientIds.has(file.id)),missing:string[]=[];if(!chosen.length)missing.push("Select at least one successful listing");
+    /* D635 - these blocked the press because a product SOMEWHERE in the bundle
+       was empty or unreadable, whether or not it was being published. That is
+       how the ready product got held hostage by a deleted batch. D546 added it
+       because the confirmation claimed to publish 3 products while 2 had
+       nothing; D634 fixed that claim at its source, so the confirmation now
+       names only what will actually publish and this no longer has to guess.
+       A product with no listings has no selected listings, so it cannot make a
+       bad publish - it can only stop a good one. Still reading is different:
+       until a member answers, the selection genuinely may be incomplete. */
+    if(bundleProductsStillReading().length)missing.push("Goldie is still reading the other products in this batch");if(chosenFiles.some(file=>!file.title.trim()))missing.push("Titles");if(chosenFiles.some(file=>!file.tags.length))missing.push("Tags");if(!description.trim())missing.push("Permanent product description");if(chosenFiles.some(file=>!etsyRequiredComplete(file.etsy)))missing.push("Etsy details");if(chosenFiles.some(file=>personalizationProblem(file.etsy)))missing.push("Personalization settings");if(chosen.length&&!allCreatedListingsHaveImages(chosen))missing.push("At least one image on every selected listing");return missing}
   function openPublishConfirmation(){const chosen=selectedPublishDrafts(),missing=missingPublishFields();if(missing.length)return void stopWith("Complete every required selected listing field.",missing.map(field=>`Before publishing: ${field}`));const missingPhotos=createdListingsMissingImages(chosen);if(missingPhotos.length)return void stopWith("Add a photo to every selected listing before publishing.",missingPhotos.map(draft=>draft.name));setPublishConfirmOpen(true)}
   async function monitorPublishJob(jobId:string,resuming=false){
     /* D474 - this always said "resuming", including on a publish she had just
@@ -3535,7 +3572,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
                 :`Only the listings selected above will be published live on Etsy.`}</b>
               <span>{many?"Untick any listing above to leave it out. Everything ticked publishes in one press.":"Anything still needing a look is listed above."}</span>
               <small>Etsy charges its standard $0.20 USD listing fee for each listing created{total?`, so this press costs about $${(total*0.2).toFixed(2)} USD`:""}. This fee is charged by Etsy and is separate from your Goldie subscription.</small></>;
-            })()}</div><button className="publish-all-button" aria-busy={publishing} disabled={publishing||!allCreatedListingsHaveImages(selectedPublishDrafts())||!selectedPublishDrafts().length||missingPublishFields().length>0||batchHeldByAnotherTab} title={batchHeldByAnotherTab?"This batch is open in another Goldie tab. Take over there or here before publishing, so the receipt is saved.":!selectedPublishDrafts().length?"Select at least one listing to publish.":!allCreatedListingsHaveImages(selectedPublishDrafts())?"Every selected listing needs at least one photo before it can publish.":missingPublishFields()[0]?`Before publishing: ${missingPublishFields()[0]}`:undefined} onClick={openPublishConfirmation}>{/* D495 - one press publishes the whole bundle, so the button says so and
+            })()}</div><button className="publish-all-button" aria-busy={publishing} disabled={publishing||publishBlockers().length>0} title={publishBlockers()[0]?`Before publishing: ${publishBlockers()[0]}`:undefined} onClick={openPublishConfirmation}>{/* D495 - one press publishes the whole bundle, so the button says so and
     reports which product it is on rather than naming a listing count that
     only covers the product currently open. */}
 {publishRun&&!publishing?"Queuing every listing in this batch…":publishing?(activeBundle&&bundleRecipes.length>1?`Publishing ${bundleListingsToPublish()} listings across ${bundleRecipes.length} products…`:"Publishing…"):activeBundle&&bundleRecipes.length>1?(()=>{
