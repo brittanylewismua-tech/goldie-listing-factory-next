@@ -110,3 +110,10 @@
    has scrolled down to the set she is adding to. */
 .addingToSet{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid var(--gold);border-radius:999px;background:#242019;color:var(--gold);font-size:11px;font-weight:800}
 .addingToSet .librarySpinner{width:13px;height:13px;flex:none;margin:0;border-width:2px;border-color:#6d5a38;border-top-color:var(--gold)}
+
+
+/* D610 · Correcting the product surface of a set that already exists. */
+.renameSurface{display:block;margin-top:16px}
+.renameSurface span{display:block;font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:7px}
+.renameSurface select{width:100%;border:1px solid #cdbb9d;border-radius:10px;padding:13px;background:white;color:#1d1913;font-size:15px}
+.renameSurfaceNote{display:block;margin-top:8px;color:var(--muted);font-size:12px}

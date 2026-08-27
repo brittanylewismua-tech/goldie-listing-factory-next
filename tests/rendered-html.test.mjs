@@ -1033,7 +1033,7 @@ test("routes each product surface deliberately and never releases a partial batc
     readFile(new URL("../app/mockups/product-renderers.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/mockups/render/route.ts", import.meta.url), "utf8"),
   ]);
-  assert.match(page,/"rigid-flat" \| "t-shirt" \| "sweatshirt" \| "hoodie" \| "other-apparel" \| "apparel" \| "soft-goods" \| "curved" \| "irregular"/);
+  assert.match(page,/"rigid-flat" \| "phone-case" \| "t-shirt" \| "sweatshirt" \| "hoodie" \| "other-apparel" \| "apparel" \| "soft-goods" \| "curved" \| "irregular"/);
   assert.match(page,/made\.forEach\(item=>URL\.revokeObjectURL/);
   assert.match(page,/setResults\(\[\]\);setGenerationError/);
   assert.match(page,/isCalibratedSurface\(kind\)\?await makeMockup/);

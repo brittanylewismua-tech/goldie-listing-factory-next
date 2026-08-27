@@ -39,6 +39,9 @@ export function productSurfaceFamily(productName:string):SurfaceFamily{
 
 export function templateSurfaceFamily(kind:string):SurfaceFamily{
   if(["t-shirt","sweatshirt","hoodie","other-apparel","apparel"].includes(kind))return"apparel";
+  /* D610 - "phone-case" is deliberately NOT curved. A case has a slight curve at
+     its edges and a flat printed back; barrel-wrapping the artwork across it
+     distorts a design that should sit square. */
   if(kind==="curved")return"curved";
   return"flat";
 }

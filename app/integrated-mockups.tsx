@@ -29,7 +29,8 @@ const load=(src:string)=>new Promise<HTMLImageElement>((resolve,reject)=>{const 
 const dataUrl=(blob:Blob)=>new Promise<string>((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result));reader.onerror=()=>reject(reader.error);reader.readAsDataURL(blob)});
 const foregroundCache=new Map<string,string[]>();
 
-function isCalibratedSurface(kind:SurfaceKind){return["rigid-flat","t-shirt","sweatshirt","hoodie","other-apparel","apparel"].includes(kind)}
+/* D610 - phone-case renders like any other flat printed face. */
+function isCalibratedSurface(kind:SurfaceKind){return["rigid-flat","phone-case","t-shirt","sweatshirt","hoodie","other-apparel","apparel"].includes(kind)}
 /* D529 - a mug offered every t-shirt scene she owns, with no warning, and would
    have put mug artwork on ten tee photos. This filter only ever restricted
    apparel templates: a non-apparel template returned true for anything, and a

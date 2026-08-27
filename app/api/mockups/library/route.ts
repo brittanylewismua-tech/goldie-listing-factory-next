@@ -9,7 +9,9 @@ import { planFor } from "@/app/plan-limits";
 import { customerLaunchBlock } from "@/app/customer-launch-gate";
 import { isOwner } from "@/app/mastermind/access";
 
-const kinds = new Set(["rigid-flat", "t-shirt", "sweatshirt", "hoodie", "other-apparel", "apparel", "soft-goods", "curved", "irregular"]);
+/* D610 - a phone case is a flat printed face, not a mug. Without its own kind
+   the only close option was "curved", which files it beside tumblers. */
+const kinds = new Set(["rigid-flat", "phone-case", "t-shirt", "sweatshirt", "hoodie", "other-apparel", "apparel", "soft-goods", "curved", "irregular"]);
 const MAX_FILE = 25 * 1024 * 1024;
 const MAX_MOCKUPS_PER_SET = 50;
 
@@ -72,12 +74,22 @@ export async function POST(request: NextRequest) {
 export async function PATCH(request:NextRequest){
   const user=await getChatGPTUser(); if(!user)return NextResponse.json({error:"Sign in to update your mockup library."},{status:401});
   await ensureMockupStorage();
-  const body=await request.json() as {oldTheme?:string;newTheme?:string;sourceTheme?:string},oldTheme=String(body.oldTheme||"").trim(),newTheme=String(body.newTheme||"").trim().slice(0,80),sourceTheme=String(body.sourceTheme||"").trim();
+  const body=await request.json() as {oldTheme?:string;newTheme?:string;sourceTheme?:string;surfaceKind?:string},oldTheme=String(body.oldTheme||"").trim(),newTheme=String(body.newTheme||"").trim().slice(0,80),sourceTheme=String(body.sourceTheme||"").trim();
+  /* D610 - a set saved under the wrong surface had no way back. Her iPhone case
+     set was filed as "curved" because no phone-case option existed, which both
+     hides it from phone-case products and barrel-wraps the artwork. Deleting and
+     re-uploading fifty photographs to correct a dropdown is not a fix. */
+  const surfaceKind=String(body.surfaceKind||"").trim();
+  if(surfaceKind&&!kinds.has(surfaceKind))return NextResponse.json({error:"That product surface is not one Goldie recognises."},{status:400});
   if(!oldTheme||!newTheme)return NextResponse.json({error:"Enter a name for this mockup set."},{status:400});
   if(sourceTheme){await env.DB.prepare(`INSERT INTO mockup_set_preferences (user_id,source_theme,display_name,hidden,updated_at) VALUES (?,?,?,?,CURRENT_TIMESTAMP) ON CONFLICT(user_id,source_theme) DO UPDATE SET display_name=excluded.display_name,hidden=0,updated_at=CURRENT_TIMESTAMP`).bind(user.userId,sourceTheme,newTheme,0).run();return NextResponse.json({ok:true});}
   const conflict=await getDb().select({id:mockupTemplates.id}).from(mockupTemplates).where(and(eq(mockupTemplates.userId,user.userId),eq(mockupTemplates.theme,newTheme)));
   if(oldTheme!==newTheme&&conflict.length)return NextResponse.json({error:"You already have a mockup set with that name."},{status:409});
-  await getDb().update(mockupTemplates).set({theme:newTheme,updatedAt:new Date().toISOString()}).where(and(eq(mockupTemplates.userId,user.userId),eq(mockupTemplates.theme,oldTheme)));
+  /* Changing the surface changes what the print area MEANS, so the stored
+     preparation no longer describes this scene and has to be read again. */
+  await getDb().update(mockupTemplates).set({theme:newTheme,
+    ...(surfaceKind?{surfaceKind,preparationJson:null,preparationStatus:"queued",preparationError:""}:{}),
+    updatedAt:new Date().toISOString()}).where(and(eq(mockupTemplates.userId,user.userId),eq(mockupTemplates.theme,oldTheme)));
   return NextResponse.json({ok:true});
 }
 
