@@ -8,7 +8,7 @@ import type { PrintSide } from "../placement-math.ts";
    Bumping this invalidates them and re-reads each scene the next time it is
    used - which is exactly the migration path that already exists and cannot
    fail. */
-export const SCENE_PREPARATION_VERSION = 12;
+export const SCENE_PREPARATION_VERSION = 13;
 
 export type SceneGeometry = "flat" | "perspective" | "cylindrical" | "flexible" | "irregular";
 export type NormalizedPoint = [number, number];
@@ -119,6 +119,19 @@ export function readSceneObservation(value: unknown): SceneObservation {
    A believable printable surface in a mockup photograph is not a scrap in a
    corner. This does not guess where the product is - it refuses a box that
    cannot be one, so the fallback centres instead of committing to nonsense. */
+/* D609 - a photographed surface almost never gives perfectly equal coordinates.
+
+   Measured across her five poster scenes: four came back with all four corners
+   sharing an x or y with a neighbour, including a frame leaning visibly against
+   a wall. A perfectly upright rectangle is what a model returns when it has
+   given a bounding box instead of reading the corners, so it is treated as a
+   suspicion worth one more question - not as an answer, and not as an error. */
+export function isUprightRectangle(corners: ScenePreparation["corners"] | undefined | null) {
+  if (!corners || corners.length !== 4) return false;
+  const [tl, tr, br, bl] = corners;
+  return tl[1] === tr[1] && bl[1] === br[1] && tl[0] === bl[0] && tr[0] === br[0];
+}
+
 export function believableProductBox(box: ProductBox | null | undefined) {
   if (!box) return false;
   const width = box.right - box.left, height = box.bottom - box.top;

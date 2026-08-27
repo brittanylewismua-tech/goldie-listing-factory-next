@@ -52,3 +52,45 @@ test("the blind fallback centres rather than committing to nonsense", () => {
   assert.match(prepare, /const usableBox = believableProductBox\(productBox\) \? productBox : null/);
   assert.match(prepare, /computedPreparation\(productName, usableBox\)/);
 });
+
+/* D609 - measured after D608 deployed. The prompt fix worked on the hanging
+   poster, which came back as a real quadrilateral:
+   [0.405,0.05] [0.85,0.03] [0.83,0.73] [0.38,0.75].
+
+   It did not work on the leaning frame, the most obviously angled scene of the
+   five, which came back [0.205,0.205] [0.795,0.205] [0.795,0.895] [0.205,0.895]
+   and still classified "flat". Prompt wording alone is not a mechanism you can
+   depend on, so the upright answer is now detected and questioned. */
+test("a perfectly upright quad is recognised as a bounding box, not an answer", () => {
+  const fn = scene.slice(scene.indexOf("export function isUprightRectangle"));
+  const body = fn.slice(0, fn.indexOf("\n}") + 2);
+  assert.match(body, /tl\[1\] === tr\[1\] && bl\[1\] === br\[1\] && tl\[0\] === bl\[0\] && tr\[0\] === br\[0\]/);
+});
+
+test("the corrective is asked once, and cannot fail", () => {
+  assert.match(prepare, /if \(isUprightRectangle\(reading\.geometry\?\.corners\)\)/);
+  assert.match(prepare, /const second = await optional\(\(\) => analyzeGeometry\(imageUrl, productName, key, segmentation\?\.productBox, true\)\)/,
+    "optional, so a failed second question costs nothing");
+  assert.match(prepare, /if \(second\?\.geometry && !isUprightRectangle\(second\.geometry\.corners\)\) reading = second/,
+    "a second upright answer means the face really is square on, and the first answer stands");
+});
+
+test("the corrective names the exact failure", () => {
+  assert.match(prepare, /That is the rectangle AROUND the surface, not the surface/);
+  assert.match(prepare, /If the face genuinely faces the camera squarely, return the same answer/);
+});
+
+test("the corrective runs at most once", () => {
+  // A loop here would be an unbounded spend on a model that may never comply.
+  const block = prepare.slice(prepare.indexOf("let cornersRetried = false"), prepare.indexOf("const productBox ="));
+  assert.ok(!/while|for \(/.test(block), "no loop around the corrective");
+});
+
+test("D606 revisited - the silhouette diagnostic did not go quiet", () => {
+  /* Making the analyser path "measured" switched off the one line that recorded
+     WHY the silhouette was missing, which is how a live investigation lost its
+     only instrument. */
+  assert.match(prepare, /const silhouetteNote = segmentation\?\.mask \? "" :/);
+  assert.match(prepare, /box-without-mask/, "a box with no decodable mask is a different fault from no response");
+  assert.match(prepare, /upright-quad/, "and an upright quad is recorded whether or not it was corrected");
+});

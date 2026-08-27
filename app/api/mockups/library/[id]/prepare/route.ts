@@ -10,6 +10,7 @@ import {
   normalizeSceneAnalysis,
   readSceneObservation,
   believableProductBox,
+  isUprightRectangle,
   normalizedProductBox,
   boxFromCxCyWh,
   computedPreparation,
@@ -62,13 +63,17 @@ async function storeRemoteAsset(url: string | undefined, key: string) {
   return key;
 }
 
-async function analyzeGeometry(imageUrl: string, productName: string, key: string, detectedProductBox?: ProductBox | null) {
+async function analyzeGeometry(imageUrl: string, productName: string, key: string, detectedProductBox?: ProductBox | null, correctUpright = false) {
   const payload = await falJson("openrouter/router/vision", key, {
     image_urls: [imageUrl],
     model: "google/gemini-2.5-flash",
     temperature: 0,
     system_prompt: "Return only compact valid JSON. Never use markdown.",
-    prompt: sceneAnalysisPrompt(productName),
+    prompt: correctUpright
+      ? `${sceneAnalysisPrompt(productName)}
+
+Your previous answer returned an upright bounding box: the two top corners had the same y, the two bottom corners had the same y, and each side had the same x. That is the rectangle AROUND the surface, not the surface. Look again at where the four corners of the printable face actually fall in this photograph and report those four points. If the face genuinely faces the camera squarely, return the same answer.`
+      : sceneAnalysisPrompt(productName),
   });
   const match = String(payload.output || "").match(/\{[\s\S]*\}/);
   const nothingSeen = { occluded: false, side: null, geometry: null };
@@ -140,7 +145,18 @@ async function prepareOnce(imageUrl: string, productName: string, key: string, o
     try { return await task(); } catch { return undefined; }
   };
   const segmentation = await optional(() => detectProduct(imageUrl, productName, key, dimensions));
-  const reading = await analyzeGeometry(imageUrl, productName, key, segmentation?.productBox);
+  let reading = await analyzeGeometry(imageUrl, productName, key, segmentation?.productBox);
+  /* D609 - a perfectly upright rectangle is what comes back when the model has
+     handed over a bounding box instead of reading the corners. Asking once more,
+     naming that exact failure, costs one call and cannot fail: if the second
+     answer is also upright the face is simply square to the camera, and the
+     first answer stands. */
+  let cornersRetried = false;
+  if (isUprightRectangle(reading.geometry?.corners)) {
+    cornersRetried = true;
+    const second = await optional(() => analyzeGeometry(imageUrl, productName, key, segmentation?.productBox, true));
+    if (second?.geometry && !isUprightRectangle(second.geometry.corners)) reading = second;
+  }
   const productBox = segmentation?.productBox || reading.productBox;
   if (!productBox) throw new Error("The product boundary could not be verified.");
   /* D608 - a box that cannot be a photographed product must not become a print
@@ -168,7 +184,12 @@ async function prepareOnce(imageUrl: string, productName: string, key: string, o
       ? { ...reading.geometry, productSilhouetteVerified: false, cornersSource: "analyser" as const }
       : null;
   const fittedCorners = segmentation?.mask ? fitQuadToMask(segmentation.mask, computed.corners) : null;
-  const fallbackReason = measured ? "" : !reading.geometry
+  /* D609 - D606 made the analyser path "measured", which silently switched off
+     the one line that said WHY the silhouette was missing. The reason is now
+     recorded whenever there is no silhouette, whatever the corners came from. */
+  const silhouetteNote = segmentation?.mask ? "" : `no-silhouette:${segmentation?.rleDiagnostic || (segmentation?.productBox ? "box-without-mask" : "no-response")}`;
+  const uprightNote = isUprightRectangle(reading.geometry?.corners) ? `;upright-quad${cornersRetried ? ":retried" : ""}` : cornersRetried ? ";upright-quad:corrected" : "";
+  const fallbackReason = measured ? `${silhouetteNote}${uprightNote}`.replace(/^;/, "") : !reading.geometry
     ? "model-geometry-invalid"
     : !segmentation?.mask
       ? `product-mask-unavailable:${segmentation?.rleDiagnostic || "no-response"}`
