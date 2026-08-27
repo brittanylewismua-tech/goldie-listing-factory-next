@@ -1,5 +1,5 @@
 "use client";
-import { productAcceptsMockup } from "./mockup-compatibility";
+import { productAcceptsMockup, printifyProductLabel, familyFromVariants } from "./mockup-compatibility";
 import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import Image from "next/image";
@@ -774,6 +774,23 @@ export default function ListingFactoryApp() {
   const [checkingConnection, setCheckingConnection] = useState(true);
   const [template, setTemplate] = useState("");
   const [templateDetails, setTemplateDetails] = useState<TemplateDetails | null>(null);
+  /* D611 - what Goldie classifies the product by. Printify's own blueprint
+     title, brand and model, never activeRecipe.name: that is the seller's
+     nickname for her saved product and naming it "Bestie Drop" used to make the
+     product unrecognisable, silently loosening the print-area bounds, the
+     rendering mode and which scenes are offered.
+
+     When the variant options identify the product outright - S/M/L, ounces,
+     inches, phone models - that wins over any string at all. */
+  const classifyingProductName = useMemo(() => {
+    const label = printifyProductLabel(templateDetails);
+    const family = familyFromVariants(templateDetails || {});
+    /* The label still travels, for prompts and messages that read better with a
+       real product name in them. The family is appended so every downstream
+       reader agrees with the structured evidence rather than re-guessing. */
+    const hint = family === "apparel" ? "apparel" : family === "curved" ? "mug" : family === "flat" ? "print" : "";
+    return [label, hint].filter(Boolean).join(" ") || label;
+  }, [templateDetails]);
   const [templateError, setTemplateError] = useState("");
   const [loadingTemplate, setLoadingTemplate] = useState(false);
   const [description, setDescription] = useState("");
@@ -2193,7 +2210,7 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
     if(task==="lifestyle")return <>
           {/* D540 - the mockup set belongs to the task that uses it, not floating
               above every task in the card. */}
-          <div className="task-panel-lead"><MockupSetSelector firstRun={productFirstRun} productName={activeRecipe?.name||templateDetails?.blueprintTitle||""} value={mockupTheme} selectedIds={sharedMockups?.theme===mockupTheme?sharedMockups.ids:[]} savedValue={activeRecipe?.defaultMockupTheme||""} savedIds={activeRecipe?.mockupIds} onChange={(theme,ids)=>{setMockupTheme(theme);if(ids)setSharedMockups({theme,ids})}} saving={savingProductDefault==="mockups"} onSaveDefault={()=>void saveProductDefaults({defaultMockupTheme:mockupTheme,mockupIds:sharedMockups?.theme===mockupTheme?sharedMockups.ids:[]},"mockups")}/></div>
+          <div className="task-panel-lead"><MockupSetSelector firstRun={productFirstRun} productName={classifyingProductName} value={mockupTheme} selectedIds={sharedMockups?.theme===mockupTheme?sharedMockups.ids:[]} savedValue={activeRecipe?.defaultMockupTheme||""} savedIds={activeRecipe?.mockupIds} onChange={(theme,ids)=>{setMockupTheme(theme);if(ids)setSharedMockups({theme,ids})}} saving={savingProductDefault==="mockups"} onSaveDefault={()=>void saveProductDefaults({defaultMockupTheme:mockupTheme,mockupIds:sharedMockups?.theme===mockupTheme?sharedMockups.ids:[]},"mockups")}/></div>
           <div className="task-panel-body">{listings.map(({draft,design,selectedImages})=>draft.status!=="Created"||!design||!draft.id?null:(()=>{
               const count=selectedImages.length+(preparedMockupCounts[draft.id||""]||0);
               return <div className="task-listing" key={draft.clientId}>
@@ -2210,7 +2227,7 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
                       too small, so you don't know actually what mockups you're
                       choosing for." D408 measured this once already on another
                       step. The artwork, at a size that identifies it. */}
-                  {design?.previewUrl?<div className="task-listing-figure"><img src={design.previewUrl} alt={design.name||"Design"} decoding="async"/></div>:null}<IntegratedMockups design={design.file} productId={draft.id} productName={activeRecipe?.name||templateDetails?.blueprintTitle} defaultTheme={mockupTheme} referenceUrl={draft.previewUrl} placement={draft.placement} batchId={draft.batchId||""} designKey={design.id||design.name||""} artworkBounds={design.visibleBounds} onPrepared={count=>setPreparedMockupCounts(current=>({...current,[draft.id!]:count}))}/></div>
+                  {design?.previewUrl?<div className="task-listing-figure"><img src={design.previewUrl} alt={design.name||"Design"} decoding="async"/></div>:null}<IntegratedMockups design={design.file} productId={draft.id} productName={classifyingProductName} defaultTheme={mockupTheme} referenceUrl={draft.previewUrl} placement={draft.placement} batchId={draft.batchId||""} designKey={design.id||design.name||""} artworkBounds={design.visibleBounds} onPrepared={count=>setPreparedMockupCounts(current=>({...current,[draft.id!]:count}))}/></div>
               </div>})()) }</div>
     </>;
     if(task==="order")return <>

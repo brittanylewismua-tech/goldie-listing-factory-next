@@ -37,6 +37,63 @@ export function productSurfaceFamily(productName:string):SurfaceFamily{
   return"";
 }
 
+/* D611 - classification must not depend on what anyone called the product.
+
+   Until now the family was read out of productName, and productName was the
+   SELLER'S nickname for her saved product - "Bestie Drop", "Summer 2026" - with
+   Printify's own blueprint title only as a fallback. A seller who names her
+   product anything human gets family "", and everything downstream quietly
+   loosens: the print-area bounds go permissive, the rendering mode falls to
+   perspective, and every scene in the library is offered for every product.
+
+   Printify already sends what the product IS. Variant options are the strongest
+   signal it sends, because they describe the thing rather than name it: garments
+   come in S/M/L, drinkware in ounces, prints in inches, cases in phone models.
+   These are read first, and no seller can spell them wrong. */
+const APPAREL_SIZE = /^(one size|xxs|xs|s|m|l|xl|2xl|3xl|4xl|5xl|6xl|xxl|xxxl|small|medium|large|x-?large|\d?x-?large)$/i;
+const VOLUME_SIZE = /\b\d{1,2}\s?(oz|ounce|ml|l)\b/i;
+const DIMENSION_SIZE = /\b\d{1,3}\s*(?:''|"|″|in|inch|cm)?\s*[x×]\s*\d{1,3}\b/i;
+const PHONE_MODEL = /\b(iphone|galaxy|pixel|oneplus|xiaomi|huawei|samsung)\b/i;
+
+export function familyFromVariants(input: {
+  sizeOptions?: Array<{ title?: string }>; colorOptions?: Array<{ title?: string }>;
+  variants?: Array<{ title?: string }>;
+}): SurfaceFamily {
+  const titles = [
+    ...(input.sizeOptions || []).map(option => String(option?.title || "")),
+    ...(input.variants || []).flatMap(variant => String(variant?.title || "").split("/")),
+  ].map(title => title.trim()).filter(Boolean);
+  if (!titles.length) return "";
+  const any = (test: RegExp) => titles.some(title => test.test(title));
+  /* Phone models are checked before dimensions: "iPhone 16 Pro Max" contains no
+     dimension, but a case listing can also carry inch measurements. */
+  if (any(PHONE_MODEL)) return "flat";
+  if (any(VOLUME_SIZE)) return "curved";
+  if (titles.some(title => APPAREL_SIZE.test(title))) return "apparel";
+  if (any(DIMENSION_SIZE)) return "flat";
+  return "";
+}
+
+/* The strings Printify controls, never the one the seller typed. */
+export function printifyProductLabel(details: {
+  blueprintTitle?: string; brand?: string; model?: string;
+} | null | undefined) {
+  return [details?.blueprintTitle, details?.brand, details?.model]
+    .map(part => String(part || "").trim()).filter(Boolean).join(" ");
+}
+
+/* One answer for "what kind of surface is this product". Structured data first,
+   then the strings Printify controls, and the seller's own words are never
+   consulted at all. */
+export function productFamilyFromDetails(details: {
+  blueprintTitle?: string; brand?: string; model?: string;
+  sizeOptions?: Array<{ title?: string }>; colorOptions?: Array<{ title?: string }>;
+  variants?: Array<{ title?: string }>;
+} | null | undefined): SurfaceFamily {
+  if (!details) return "";
+  return familyFromVariants(details) || productSurfaceFamily(printifyProductLabel(details));
+}
+
 export function templateSurfaceFamily(kind:string):SurfaceFamily{
   if(["t-shirt","sweatshirt","hoodie","other-apparel","apparel"].includes(kind))return"apparel";
   /* D610 - "phone-case" is deliberately NOT curved. A case has a slight curve at
