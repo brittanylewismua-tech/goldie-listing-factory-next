@@ -3067,7 +3067,14 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
             return <button key={stage.label} className={`${active?"active":""} ${done?"done":""}`} disabled={!active&&Boolean(issues.length)} aria-current={active?"step":undefined} title={issues[0]||undefined} onClick={()=>openProgressStep(stage.index)}><em className="progress-bubble-label">{stage.label}</em>{/* D352 · Zero-padding four steps ("01 of 04") is a template tic — it implies
                 a longer sequence than exists and adds a character that carries no
                 information. */}
-                <span>{done?"✓":String(position+1)}</span><span><b>{stage.title}</b><small>{issues[0]||`${progressStatus(stage.index,active,done,Boolean(issues.length))}${draftLine}`}</small></span></button>})}
+                {/* D619 - the step you are STANDING on shows its number, never a
+                    tick. It rendered a tick identical to the finished stages, so
+                    Product, Images and Listing all read "done" at once and the
+                    only thing marking your position was a pale box behind the
+                    label. Remove the box and nothing said where you were.
+
+                    You cannot have finished the step you are still on. */}
+                <span>{!active&&done?"✓":String(position+1)}</span><span><b>{stage.title}</b><small>{issues[0]||`${progressStatus(stage.index,active,done,Boolean(issues.length))}${draftLine}`}</small></span></button>})}
           <p className="workflow-help">Goldie saves completed work. You can return to an earlier step without starting over.</p>
         </nav>
         <div className="workflow-stage">

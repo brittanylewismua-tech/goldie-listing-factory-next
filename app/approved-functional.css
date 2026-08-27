@@ -1647,9 +1647,20 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
    all legitimately carry a tick at once - a stage is done when its own work is
    done, wherever the seller is standing - so "which step am I on" has to be
    carried by more than a checkmark. */
+/* D619 · No panel, no card, no box behind the current step. The filled dark
+   numbered circle already says where she is; a pale rectangle behind the label
+   just looked like a stray container. */
 .app-shell .workflow-progress button.active{
-  background:linear-gradient(145deg,rgba(255,250,253,.92),rgba(246,229,248,.78))!important;
-  box-shadow:inset 0 0 0 1.5px rgba(139,89,137,.35);
+  background:transparent!important;
+  box-shadow:none!important;
+  border-radius:0!important;
+}
+/* The circle carries it instead: filled, dark, numbered, with a soft halo. */
+.app-shell .workflow-progress button.active>span:first-of-type{
+  border-color:transparent!important;
+  background:linear-gradient(145deg,#5b304f,#45263c)!important;
+  color:#fff!important;
+  box-shadow:0 0 0 4px rgba(183,119,176,.22)!important;
 }
 .app-shell .workflow-progress button.active b{color:var(--ink);font-weight:800}
 .app-shell .workflow-progress button.active .progress-bubble-label{color:#5b304f;font-weight:800}
@@ -1665,4 +1676,21 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
   color:#654362;
   font-size:11px;
   font-weight:700;
+}
+
+/* D619 · The size guide sat inside a large empty glass card that held nothing
+   else but a centred link - a box inside a box, with the panel it applies to
+   floating in the middle of it. The wrapper is a layout container, not a card.
+   Dropping its card treatment lets the size guide read as its own panel and puts
+   the Printify link where a link belongs. */
+.app-shell .post-draft-workspace{
+  border:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+  backdrop-filter:none!important;
+}
+.app-shell .post-draft-workspace .post-draft-heading{
+  justify-content:flex-end;
+  padding:0 0 14px!important;
+  border-top:0!important;
 }
