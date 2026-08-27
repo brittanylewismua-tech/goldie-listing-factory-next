@@ -9,6 +9,7 @@ import { ensureMockupStorage } from "@/app/api/mockups/storage";
 import {
   normalizeSceneAnalysis,
   readSceneObservation,
+  believableProductBox,
   normalizedProductBox,
   boxFromCxCyWh,
   computedPreparation,
@@ -142,7 +143,10 @@ async function prepareOnce(imageUrl: string, productName: string, key: string, o
   const reading = await analyzeGeometry(imageUrl, productName, key, segmentation?.productBox);
   const productBox = segmentation?.productBox || reading.productBox;
   if (!productBox) throw new Error("The product boundary could not be verified.");
-  const computed = computedPreparation(productName, productBox);
+  /* D608 - a box that cannot be a photographed product must not become a print
+     area. Committing to a corner scrap is worse than centring. */
+  const usableBox = believableProductBox(productBox) ? productBox : null;
+  const computed = computedPreparation(productName, usableBox);
   const measuredCoverage = reading.geometry && segmentation?.mask
     ? quadMaskCoverage(segmentation.mask, reading.geometry.corners) : null;
   /* D606 - the silhouette mask is enrichment. The analyser's corners are the

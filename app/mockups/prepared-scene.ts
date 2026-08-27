@@ -8,7 +8,7 @@ import type { PrintSide } from "../placement-math.ts";
    Bumping this invalidates them and re-reads each scene the next time it is
    used - which is exactly the migration path that already exists and cannot
    fail. */
-export const SCENE_PREPARATION_VERSION = 11;
+export const SCENE_PREPARATION_VERSION = 12;
 
 export type SceneGeometry = "flat" | "perspective" | "cylindrical" | "flexible" | "irregular";
 export type NormalizedPoint = [number, number];
@@ -107,6 +107,29 @@ export function readSceneObservation(value: unknown): SceneObservation {
   };
 }
 
+/* D608 - a product box that cannot be a product.
+
+   Scene 04 of her poster set contains a large blank frame on the wall and a
+   small already-printed "ciao bella" frame in the bottom corner. The analyser
+   picked the decoy, its corners failed validation, and the blind fallback then
+   computed a print area from that box: 14% wide, 15% tall, jammed against the
+   bottom-right edge of the photograph. The design would have printed onto the
+   decor.
+
+   A believable printable surface in a mockup photograph is not a scrap in a
+   corner. This does not guess where the product is - it refuses a box that
+   cannot be one, so the fallback centres instead of committing to nonsense. */
+export function believableProductBox(box: ProductBox | null | undefined) {
+  if (!box) return false;
+  const width = box.right - box.left, height = box.bottom - box.top;
+  if (width <= 0 || height <= 0) return false;
+  if (width * height < .06) return false;
+  const touching = [box.left <= .01, box.top <= .01, box.right >= .99, box.bottom >= .99].filter(Boolean).length;
+  /* Hugging two or more edges at once is a corner scrap, not a photographed
+     product. One edge is ordinary: garments and posters are often cropped. */
+  return touching < 2;
+}
+
 export function normalizeSceneAnalysis(value: unknown, productName: string, detectedProductBox?: ProductBox | null) {
   const candidate = value as { corners?: unknown; productBox?: unknown; side?: unknown; geometry?: unknown; occluded?: unknown };
   if (!Array.isArray(candidate?.corners) || candidate.corners.length !== 4) return null;
@@ -147,9 +170,13 @@ export function sceneAnalysisPrompt(productName: string) {
 
 Identify the visible PRINTABLE SURFACE, not the whole object. Preserve the product and camera perspective. A garment may be front, back, sleeve, pocket-scale, oversized, folded or partly covered. A mug or tumbler is cylindrical and excludes its handle. A poster, card, case, tote, pillow, blanket or other product uses the visible printable face.
 
+This is a BLANK mockup scene. The printable surface is the empty one waiting for artwork: a plain frame, an unprinted garment, a bare mug. Any object in the photograph that ALREADY carries artwork, a picture, lettering or a pattern is decoration and is never the printable surface, however prominent it is. If several candidates are visible, choose the largest blank one.
+
+The four corners must sit on the actual visible corners of that printable face. If the face is tilted, leaning, angled or seen from the side, its corners DO NOT form an upright rectangle: the top two corners have different heights, the sides have different lengths, and no two corners share an x or y value. Return the true quadrilateral you can see, not the upright box that surrounds it. Only return an upright rectangle when the face really is square to the camera.
+
 First identify the complete visible product boundary as productBox: left, top, right and bottom. Then return four corners of the complete Printify print area as it appears in this photograph, inside that product, ordered top-left, top-right, bottom-right, bottom-left. Use fractions from 0 to 1. Every print-area corner and its centre must stay inside productBox. Do not choose a default centre box. A hoodie print area stays above the pouch pocket. A mug print area stays below the rim and excludes the handle.
 
-Classify geometry as flat, perspective, cylindrical, flexible or irregular. Classify the visible print side as front, back, left-sleeve, right-sleeve, wrap or other. Set occluded true when a hood, hair, hand, arm, strap, seam flap or another foreground object crosses the printable surface.
+Classify geometry as flat, perspective, cylindrical, flexible or irregular. Use perspective whenever the printable face is tilted or angled away from the camera, and flat only when it squarely faces the camera. Classify the visible print side as front, back, left-sleeve, right-sleeve, wrap or other. Set occluded true when a hood, hair, hand, arm, strap, seam flap or another foreground object crosses the printable surface.
 
 Return only compact JSON: {"productBox":{"left":0.1,"top":0.1,"right":0.9,"bottom":0.9},"corners":[[x,y],[x,y],[x,y],[x,y]],"side":"front","geometry":"flexible","occluded":true}`;
 }
