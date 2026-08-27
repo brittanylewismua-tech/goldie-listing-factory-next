@@ -4063,9 +4063,17 @@ test("one press publishes every product in a bundle — D495", async () => {
   assert.match(app, /productIds:ids,printifyImageIndices,printifyImageSelections,etsyShippingProfileId,byProduct/);
 
   // The last screen before money is spent has to state the real total and fee.
-  assert.match(app, /\$\{requestedListingCount\} listings across \$\{bundleRecipes\.length\} products will go live on Etsy\./);
-  assert.match(app, /about \$\$\{\(requestedListingCount\*0\.2\)\.toFixed\(2\)\}/);
-  assert.match(app, /Goldie publishes \{bundleRecipes\.map\(recipe=>recipe\.name\)\.join\(", "\)\} one after another/);
+  /* D634 - this asserted the confirmation counted designs x products. It does
+     not any more: that is the size of the batch when the drafts were created,
+     and it overstated a partial publish by three times on the screen where the
+     number is the cost. The confirmation counts what is actually being sent. */
+  assert.match(app, /\$\{publishTargets\(\)\.length\} \$\{publishTargets\(\)\.length===1\?"listing":"listings"\} across/,
+    "the confirmation headline counts the listings that will publish");
+  assert.match(app, /about \$\$\{\(publishTargets\(\)\.length\*0\.2\)\.toFixed\(2\)\}/,
+    "and quotes the fee for that same number - D634");
+  /* D634 - names the products actually being published, falling back to the
+     whole bundle when nothing is resolved yet. */
+  assert.match(app, /Goldie publishes \{\[\.\.\.new Set\(publishTargets\(\)\.map\(item=>item\.productName\)\.filter\(Boolean\)\)\]\.join\(", "\)\|\|bundleRecipes\.map\(recipe=>recipe\.name\)\.join\(", "\)\} one after another/);
   assert.match(css, /\.publish-confirm-bundle\{/);
 
   // And she can see which product it is on.
@@ -5659,4 +5667,42 @@ test("the D612 Printify probe is gone — D631", async () => {
   };
   assert.ok(await gone("../app/api/printify/probe/route.ts"), "the probe route must be removed");
   assert.ok(await gone("../tests/printify-probe.test.mjs"), "and its test with it");
+});
+
+/* D634 · Caught with the confirmation open and a finger over the button.
+ *
+ * Measured live on her 3-product bundle: four of the six listings unticked, the
+ * publish button correctly reading "Publish 2 listings live on Etsy · 3
+ * products" - and the final confirmation saying:
+ *
+ *   "6 listings across 3 products will go live on Etsy."
+ *   "about $1.20 for 6 listings"
+ *
+ * It read requestedListingCount, which is designs x products - the size of the
+ * batch when the DRAFTS were created. It has nothing to do with what is ticked
+ * to publish. So the last screen before money is spent overstated the press by
+ * three times and misquoted the cost, on the one screen where the number IS the
+ * cost. D561 fixed exactly this for the button; the dialog behind it was still
+ * counting something else entirely. */
+test("the publish confirmation counts what will actually publish — D634", async () => {
+  const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+
+  const dialog = app.slice(app.indexOf('<h2 id="publish-confirm-title">'), app.indexOf('id="publish-confirm-title"') + 2600);
+  assert.ok(dialog, "the publish confirmation must be findable");
+
+  // The headline, the product count and the fee all come from the sent array.
+  assert.match(dialog, /\$\{publishTargets\(\)\.length\} \$\{publishTargets\(\)\.length===1\?"listing":"listings"\} across/);
+  assert.match(dialog, /new Set\(publishTargets\(\)\.map\(item=>item\.productName\)\)\.size/,
+    "the product count must be the products actually being published");
+  assert.match(dialog, /about \$\$\{\(publishTargets\(\)\.length\*0\.2\)\.toFixed\(2\)\}/,
+    "the quoted Etsy fee must match the number of listings being created");
+
+  // requestedListingCount is the draft-creation size and must not appear here.
+  assert.doesNotMatch(dialog, /requestedListingCount/,
+    "designs x products is the batch size, not the publish size");
+
+  /* It still exists for the place it belongs - the pre-flight that creates the
+     drafts, and the plan-allowance check. */
+  assert.match(app, /const requestedListingCount=Math\.max\(0,files\.length\*bundleProductCount/);
+  assert.match(app, /planDraftsRemaining!==null&&requestedListingCount>planDraftsRemaining/);
 });
