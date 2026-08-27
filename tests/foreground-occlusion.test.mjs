@@ -16,6 +16,7 @@ const prepare = strip(await read("app/api/mockups/library/[id]/prepare/route.ts"
 const occlusion = strip(await read("app/api/mockups/library/[id]/occlusion/route.ts"));
 const library = strip(await read("app/api/mockups/library/route.ts"));
 const scene = await read("app/mockups/prepared-scene.ts");
+const sceneCode = strip(scene);
 
 test("a rejected corner quad does not erase the foreground reading", () => {
   // Whether something crosses the print is a fact about the photograph. The
@@ -24,12 +25,47 @@ test("a rejected corner quad does not erase the foreground reading", () => {
   const branch = derived.slice(0, derived.indexOf("};") + 2);
   assert.ok(!/occluded:\s*false/.test(branch),
     "the derived branch must not hard-code occluded:false");
-  assert.match(branch, /occluded:\s*Boolean\(reading\.geometry\?\.occluded\)/);
+  /* D601 - and it must not read the answer off the object that the rejection
+     nulls, which is what made D600 still report false on every scene. */
+  assert.ok(!/reading\.geometry\?\.occluded/.test(branch),
+    "reading.geometry is null exactly when the quad was rejected");
+  assert.match(branch, /occluded:\s*reading\.observation\.occluded/);
 });
 
-test("no branch anywhere hard-codes the scene as unobstructed", () => {
-  assert.ok(!/occluded:\s*false/.test(prepare),
-    "a scene is only unobstructed because the analyser said so");
+test("D601 - the observation is read before any corner is validated", () => {
+  // normalizeSceneAnalysis has eight return-null exits. None of them may take
+  // the analyser's reading of the photograph down with the quad.
+  const reader = sceneCode.slice(sceneCode.indexOf("export function readSceneObservation"));
+  const body = reader.slice(0, reader.indexOf("\n}") + 2);
+  assert.ok(!/return null/.test(body), "an observation always comes back");
+  assert.ok(!/corners/.test(body), "it must not depend on the corner quad at all");
+  assert.match(body, /occluded:\s*Boolean\(candidate\?\.occluded\)/);
+
+  const analyse = prepare.slice(prepare.indexOf("async function analyzeGeometry"));
+  const fn = analyse.slice(0, analyse.indexOf("\n}") + 2);
+  assert.match(fn, /observation: readSceneObservation\(value\)/);
+  assert.ok((fn.match(/observation/g) || []).length >= 3,
+    "every exit from the analyser carries an observation, including the failures");
+});
+
+test("D601 - the analyser's print side is recorded but not yet authoritative", () => {
+  // Changing a scene's side rekeys every placement saved against it, so the
+  // disagreement is measured before it is acted on.
+  assert.match(prepare, /analyserSide: reading\.observation\.side/);
+  assert.match(sceneCode, /analyserSide\?:\s*PrintSide \| null/);
+  const derived = prepare.slice(prepare.indexOf("const geometry = measured || {"));
+  assert.match(derived.slice(0, derived.indexOf("};") + 2), /side: computed\.printSide/,
+    "the side in use is unchanged this round");
+});
+
+test("no branch hard-codes the scene as unobstructed", () => {
+  /* Exactly one literal false is legitimate: the analyser returned nothing
+     parseable at all, so there is no reading to carry. Every other path must
+     take the answer from the photograph. */
+  const literals = prepare.match(/occluded:\s*false/g) || [];
+  assert.equal(literals.length, 1, "only the no-response sentinel may assume nothing is in front");
+  assert.match(prepare, /const nothingSeen = \{ occluded: false/,
+    "and that one literal is the sentinel, named as such");
 });
 
 test("each class of obstruction is asked for on its own", () => {
@@ -75,7 +111,11 @@ test("deleting a set removes every foreground layer", () => {
 });
 
 test("a new preparation generation is required for this to take effect", () => {
-  // D581: cached preparations short-circuit the analyser, so a fix that changes
-  // what preparation MEANS has to invalidate what is already stored.
-  assert.match(scene, /SCENE_PREPARATION_VERSION = 8/);
+  /* D581: cached preparations short-circuit the analyser, so a fix that changes
+     what preparation MEANS has to invalidate what is already stored. Asserted as
+     a floor, not an exact number - pinning it makes the next honest bump a
+     failure, which is how a real fix gets reverted to keep a test green. */
+  const version = Number(/SCENE_PREPARATION_VERSION = (\d+)/.exec(scene)?.[1]);
+  assert.ok(Number.isInteger(version) && version >= 9,
+    `D600 and D601 each changed what preparation means, found generation ${version}`);
 });

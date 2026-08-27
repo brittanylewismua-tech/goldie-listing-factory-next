@@ -8,6 +8,7 @@ import { productSurfaceFamily } from "@/app/mockup-compatibility";
 import { ensureMockupStorage } from "@/app/api/mockups/storage";
 import {
   normalizeSceneAnalysis,
+  readSceneObservation,
   normalizedProductBox,
   boxFromCxCyWh,
   computedPreparation,
@@ -69,12 +70,16 @@ async function analyzeGeometry(imageUrl: string, productName: string, key: strin
     prompt: sceneAnalysisPrompt(productName),
   });
   const match = String(payload.output || "").match(/\{[\s\S]*\}/);
-  if (!match) return { geometry: null, productBox: detectedProductBox || null };
+  const nothingSeen = { occluded: false, side: null, geometry: null };
+  if (!match) return { geometry: null, productBox: detectedProductBox || null, observation: nothingSeen };
   try {
     const value = JSON.parse(match[0]) as { productBox?: unknown };
     const productBox = detectedProductBox || normalizedProductBox(value.productBox);
-    return { geometry: normalizeSceneAnalysis(value, productName, productBox), productBox };
-  } catch { return { geometry: null, productBox: detectedProductBox || null }; }
+    /* D601 - read before validating. The observation is what the analyser saw in
+       the photograph and does not depend on the print-area quad passing. */
+    return { geometry: normalizeSceneAnalysis(value, productName, productBox), productBox,
+      observation: readSceneObservation(value) };
+  } catch { return { geometry: null, productBox: detectedProductBox || null, observation: nothingSeen }; }
 }
 
 function segmentationPrompts(productName: string) {
@@ -153,7 +158,10 @@ async function prepareOnce(imageUrl: string, productName: string, key: string, o
     corners: fittedCorners || computed.corners, productBox, productBoundsVerified: true,
     productSilhouetteVerified: Boolean(fittedCorners),
     side: computed.printSide, geometry: computed.geometry,
-    occluded: Boolean(reading.geometry?.occluded), derived: true,
+    /* D601 - the analyser's own reading, which survives a rejected quad. D600
+       took this from reading.geometry, which IS the object nulled by that
+       rejection, so it still read false on every scene. */
+    occluded: reading.observation.occluded, derived: true,
   };
 
   /* D580 - the geometry above is the only thing this function must produce. It
@@ -212,7 +220,8 @@ async function prepareOnce(imageUrl: string, productName: string, key: string, o
   ]);
   const occlusionKeys = storedOcclusions.filter((entry): entry is string => Boolean(entry));
   return { ...geometry, productBox, surfaceMaskKey, depthKey,
-    occlusionKey: occlusionKeys[0], occlusionKeys, occlusionClasses, fallbackReason };
+    occlusionKey: occlusionKeys[0], occlusionKeys, occlusionClasses,
+    analyserSide: reading.observation.side, fallbackReason };
 }
 
 async function handlePOST(request: NextRequest, context: { params: Promise<{ id: string }> }) {
@@ -286,6 +295,7 @@ async function handlePOST(request: NextRequest, context: { params: Promise<{ id:
         productSilhouetteVerified: result.productSilhouetteVerified, derived: result.derived,
         surfaceMaskKey: result.surfaceMaskKey, depthKey: result.depthKey, occlusionKey: result.occlusionKey,
         occlusionKeys: result.occlusionKeys, occlusionClasses: result.occlusionClasses,
+        analyserSide: result.analyserSide,
         preparedAt: new Date().toISOString(),
       };
       return store(preparation, attempt, result.fallbackReason);

@@ -8,7 +8,7 @@ import type { PrintSide } from "../placement-math.ts";
    Bumping this invalidates them and re-reads each scene the next time it is
    used - which is exactly the migration path that already exists and cannot
    fail. */
-export const SCENE_PREPARATION_VERSION = 8;
+export const SCENE_PREPARATION_VERSION = 9;
 
 export type SceneGeometry = "flat" | "perspective" | "cylindrical" | "flexible" | "irregular";
 export type NormalizedPoint = [number, number];
@@ -33,6 +33,11 @@ export type ScenePreparation = {
   /* Which foreground classes were looked for and which were actually isolated.
      Recorded so a scene can be answered for without re-running the analyser. */
   occlusionClasses?: Record<string, boolean>;
+  /* D601 - the print side the analyser read from the photograph, recorded
+     alongside the side actually in use. Not yet authoritative: changing a
+     scene's side rekeys its saved placements, so the disagreement is measured
+     before it is acted on. */
+  analyserSide?: PrintSide | null;
   depthKey?: string;
   /* D577 - true when the surface was computed from product geometry rather than
      read from this photograph. The scene is ready either way. */
@@ -71,6 +76,28 @@ export function cornersStayOnProduct(corners: ScenePreparation["corners"], box: 
   if (!corners.every(inside)) return false;
   const centre: NormalizedPoint = [corners.reduce((sum, point) => sum + point[0], 0) / 4, corners.reduce((sum, point) => sum + point[1], 0) / 4];
   return inside(centre);
+}
+
+/* D601 - what the analyser SAW is not the same thing as whether its print-area
+   quad survived validation, and the two must not share a fate.
+
+   normalizeSceneAnalysis returns null on eight separate geometric checks. Each
+   of those returns was also discarding the model's reading of the photograph -
+   whether a hood crosses the chest, which side is facing the camera - because
+   those facts happened to travel in the same object as the corners. A quad one
+   percent too wide erased the knowledge that the design must pass under a hood.
+
+   D600 fixed the caller that read this. This fixes the source: the observation
+   is extracted before any corner is validated, so it survives regardless. */
+export type SceneObservation = { occluded: boolean; side: PrintSide | null; geometry: SceneGeometry | null };
+
+export function readSceneObservation(value: unknown): SceneObservation {
+  const candidate = value as { side?: unknown; geometry?: unknown; occluded?: unknown };
+  return {
+    occluded: Boolean(candidate?.occluded),
+    side: sides.has(candidate?.side as PrintSide) ? candidate.side as PrintSide : null,
+    geometry: geometries.has(candidate?.geometry as SceneGeometry) ? candidate.geometry as SceneGeometry : null,
+  };
 }
 
 export function normalizeSceneAnalysis(value: unknown, productName: string, detectedProductBox?: ProductBox | null) {
