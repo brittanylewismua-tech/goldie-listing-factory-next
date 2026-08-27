@@ -3085,3 +3085,32 @@ body{min-width:1180px!important}
    the real markup showed the class is .over-tag-limit. It is a deliberate
    warning that the phrase is too long to be an Etsy tag. Truncating it would
    have hidden exactly what it exists to show. Left alone on purpose. */
+
+/* ==========================================================================
+ * D622 · THE SCENE PICKER STOPS LOOKING LIKE AN ERROR SCREEN
+ *
+ * "Goldie prepares this scene automatically before creating it" is routine,
+ * benign information - it is true of every scene that has not been measured for
+ * this product yet, which on a fresh set is nearly all of them. It rendered in
+ * crimson (#9e2736), bold, on four of five tiles. A panel where most items shout
+ * in red reads as broken, and the seller has no idea it is fine.
+ *
+ * D571 was right that an unmeasured scene must say so. It says so quietly.
+ * ========================================================================== */
+.app-shell .scene-unmeasured{
+  color:rgba(74,42,62,.6);
+  font-weight:600;
+  letter-spacing:0;
+}
+
+/* D622 · Scene names are whatever the seller's files are called, and hers are
+   "ChatGPT Image Aug 25, 2026, 05 51 32 PM (3)". Wrapped to two and three lines
+   they made every tile a different shape and buried the thumbnail. One line,
+   with the full name on hover for anyone whose filenames actually mean
+   something. */
+.app-shell .product-mockup-scenes label>span{
+  display:block;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}

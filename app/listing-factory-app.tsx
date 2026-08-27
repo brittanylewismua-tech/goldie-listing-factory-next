@@ -420,7 +420,7 @@ function MockupSetSelector({value,onChange,selectedIds=[],savedValue,savedIds,on
     <a className="manage-mockup-sets" href="/mockups" target="_blank" rel="noopener noreferrer">Create or edit mockup sets ↗</a>
     {value&&<><div className="product-mockup-scenes" aria-label={`Choose scenes from ${value}`}>{matchingTemplates.map(item=><label key={item.id} className={selected.has(item.id)?"selected":""}><input type="checkbox" checked={selected.has(item.id)} disabled={!selected.has(item.id)&&selected.size>=8} onChange={()=>toggle(item.id)}/>{/* D618 - this is now the only scene picker, so it carries what the per-listing grid used to: the scene's real name and the warning that it has not been measured for this product yet.
 
-              NOT lazy. D97 scoped lazy-loading to the big repeated grids, and D567 measured why: a lazy image with no intrinsic size collapses to nothing, so the browser never decides it is near the viewport, so it never loads. Her scene tiles loaded 8 of 8 eager; the lazy thumbnails loaded 0 of 4. About ten tiles, all on screen. */}<img src={item.src} alt={item.name} decoding="async"/><span>{item.name.replace(/\.[a-z0-9]+$/i,"").replace(/[_-]+/g," ")}</span>{!preparationMatchesProduct(item.preparation,productName)?<em className="scene-unmeasured">Goldie prepares this scene automatically before creating it</em>:null}</label>)}</div><small>{selected.size} of {matchingTemplates.length} scenes chosen{selected.size>=8?" · that is the maximum of 8":" · up to 8"}. Click any scene to add or remove it.</small></>}
+              NOT lazy. D97 scoped lazy-loading to the big repeated grids, and D567 measured why: a lazy image with no intrinsic size collapses to nothing, so the browser never decides it is near the viewport, so it never loads. Her scene tiles loaded 8 of 8 eager; the lazy thumbnails loaded 0 of 4. About ten tiles, all on screen. */}<img src={item.src} alt={item.name} decoding="async"/><span title={item.name}>{item.name.replace(/\.[a-z0-9]+$/i,"").replace(/[_-]+/g," ")}</span>{!preparationMatchesProduct(item.preparation,productName)?<em className="scene-unmeasured">Goldie prepares this scene automatically before creating it</em>:null}</label>)}</div><small>{selected.size} of {matchingTemplates.length} scenes chosen{selected.size>=8?" · that is the maximum of 8":" · up to 8"}. Click any scene to add or remove it.</small></>}
     {!firstRun&&changed&&<button type="button" className="save-product-default" disabled={saving} onClick={onSaveDefault}>{saving?"Saving…":value?`Save these ${selectedIds.length} mockups as this product’s default`:"Save no mockups as this product’s default"}</button>}
   </section>
 }
@@ -1378,7 +1378,13 @@ export default function ListingFactoryApp() {
    change stores step:"review", which meant resuming it produced a heading, a
    rail and an empty screen. Every entry point normalises through here: saved
    batch state, the URL, and any call left in the code. */
-  function normalizeStep(step:WorkflowStep):WorkflowStep{return step==="review"?"designs":step}
+  function normalizeStep(step:WorkflowStep):WorkflowStep{
+    /* D623 · Also the last gate before setWorkflowStep. Anything that is not one
+       of the five would render a hero of undefined, so an unknown value settles
+       on the first step rather than taking the page down. */
+    const known=canonicalStep(step)??"connect";
+    return known==="review"?"designs":known;
+  }
   /* D487 - opening a saved batch at ?step=setup landed on "Connect your
      accounts", with both accounts shown as connected and verified, and stayed
      there. The guard below falls back to "connect" while the connection check
@@ -1391,8 +1397,15 @@ export default function ListingFactoryApp() {
   const requestedStepRead=useRef(false);
   if(typeof window!=="undefined"&&!requestedStepRead.current){
     requestedStepRead.current=true;
-    const asked=new URL(window.location.href).searchParams.get("step") as WorkflowStep|null;
-    requestedStep.current=asked;
+    /* D623 · This read took the raw ?step= value. D428 introduced aliases -
+       product, images, listing, titles, publish - and canonicalised them in the
+       popstate reader and in batch restore, but not here. So the alias survived
+       into this ref, the effect below called goToStep("listing", replace, force)
+       with force skipping every guard, and setWorkflowStep stored a value that
+       is not one of the five. workflowHero[workflowStep] was then undefined and
+       reading .eyebrow crashed the whole app into the error boundary. Every URL
+       D428 was written to support was the one that broke it. */
+    requestedStep.current=canonicalStep(new URL(window.location.href).searchParams.get("step"));
   }
   useEffect(()=>{
     const wanted=requestedStep.current;
@@ -1832,8 +1845,18 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
       if(index===bundleIndex){
         if(step==="images")return complete?{label:`${drafts.length} drafts`,tone:"ready"}:{label:`${files.length} ${files.length===1?"design":"designs"}`,tone:"attention"};
         if(step==="listing"){
-          const done=files.filter(file=>file.title.trim()).length;
-          return done===files.length&&files.length>0?{label:"Titles ready",tone:"ready"}:{label:`${done} of ${files.length} titled`,tone:"attention"};
+          /* D624 · This card said "Titles ready" in green while the row directly
+             beneath it said "2 of 2 titles · 0 of 2 with all 13 tags" in crimson
+             with a warning mark. Both were true - the titles were written, the
+             tags were not - but the badge summarises the rows, so a card that
+             reads ready and not-ready at the same time is just confusing. The
+             badge now agrees with the row it sits above: it counts tags too. */
+          const titled=files.filter(file=>file.title.trim()).length;
+          const tagged=files.filter(file=>file.tags.length>=13).length;
+          if(!files.length)return {label:"0 titled",tone:"attention"};
+          if(titled<files.length)return {label:`${titled} of ${files.length} titled`,tone:"attention"};
+          if(tagged<files.length)return {label:`${tagged} of ${files.length} fully tagged`,tone:"attention"};
+          return {label:"Titles and tags ready",tone:"ready"};
         }
         const published=Number(batchReceipt?.publishedCount)||0;
         if(published)return {label:`${published} published`,tone:"ready"};

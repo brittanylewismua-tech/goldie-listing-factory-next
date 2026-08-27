@@ -179,7 +179,11 @@ test("D224: no saved batch can land on a step that has no page", async () => {
    *
    * Every entry point normalises: goToStep, the URL reader, and restored batch
    * state. */
-  assert.match(source, /function normalizeStep\(step:WorkflowStep\):WorkflowStep\{return step==="review"\?"designs":step\}/);
+  /* D623 widened this function - it now also refuses any value that is not a
+     step at all - so the assertion is on what it must still do, not on the one
+     line it used to be. */
+  assert.match(source, /function normalizeStep\(step:WorkflowStep\):WorkflowStep\{[\s\S]*?==="review"\?"designs":/,
+    "normalizeStep must still send review to designs");
   assert.match(source, /function goToStep\(rawStep:WorkflowStep,replace=false,force=false\)\{\s*const step=normalizeStep\(rawStep\);/);
 
   const setters = source.match(/setWorkflowStep\([^)]*\)/g) || [];
@@ -405,4 +409,83 @@ test("a bundle batch finds the products created after it — D547", async () => 
 
   // And a failed look is not an error she has to see.
   assert.match(scan, /catch\{\/\* the cards already say/);
+});
+
+/* D623 · Every friendly URL D428 added crashed the entire app.
+ *
+ * Measured live on thegoldiesuite.com, batch 42a1ffb2, ?step=listing:
+ *   TypeError: Cannot read properties of undefined (reading 'eyebrow')
+ *   -> the error boundary, "Listing Factory hit a startup problem."
+ *
+ * D428 canonicalised the alias in the popstate reader and in batch restore, but
+ * the D487 ref that remembers "the step she actually arrived on" read the raw
+ * query value. Its effect then calls goToStep(wanted, true, true) - force skips
+ * every guard - so "listing" was stored as the workflow step, and the hero
+ * lookup workflowHero["listing"] came back undefined.
+ *
+ * This test runs the real functions rather than matching the fix, so it fails
+ * for any alias that cannot survive the whole chain into a hero. */
+test("every friendly step alias survives into a real hero — D623", async () => {
+  const source = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+
+  const aliases = source.match(/const STEP_ALIASES:Record<string,WorkflowStep>=\{[^}]+\}/)?.[0];
+  const canonical = source.match(/function canonicalStep\(requested:string\|null\):WorkflowStep\|null\{[\s\S]*?\n\}/)?.[0];
+  const normalize = source.match(/function normalizeStep\(step:WorkflowStep\):WorkflowStep\{[\s\S]*?\n  \}/)?.[0];
+  assert.ok(aliases && canonical && normalize, "the step machinery must still be findable in source");
+
+  const strip = (text) => text
+    .replace(/:Record<string,WorkflowStep>/g, "")
+    .replace(/\(requested:string\|null\):WorkflowStep\|null/g, "(requested)")
+    .replace(/\(step:WorkflowStep\):WorkflowStep/g, "(step)")
+    .replace(/:WorkflowStep\[\]/g, "")
+    .replace(/ as WorkflowStep(\[\])?/g, "");
+  const run = new Function(`${strip(aliases)};${strip(canonical)};${strip(normalize)};return {canonicalStep,normalizeStep}`)();
+
+  // The hero object is the thing that was undefined. Take its real keys.
+  const heroKeys = [...source.matchAll(/^\s{4}(connect|setup|designs|review|finish):/gm)].map((match) => match[1]);
+  assert.ok(heroKeys.includes("connect") && heroKeys.includes("finish"), "workflowHero keys must be readable");
+
+  for (const asked of ["product", "images", "listing", "titles", "publish", "connect", "setup", "designs", "review", "finish", "LISTING", " publish "]) {
+    const stored = run.normalizeStep(run.canonicalStep(asked));
+    assert.ok(heroKeys.includes(stored), `?step=${asked} stored "${stored}", which has no hero and takes the app down`);
+  }
+
+  // Junk must land somewhere real too - force:true means no guard catches it.
+  assert.ok(heroKeys.includes(run.normalizeStep(run.canonicalStep("nonsense") ?? "connect")));
+
+  // And the ref that D487 reads must go through the map, not the raw URL.
+  assert.match(source, /requestedStep\.current=canonicalStep\(new URL\(window\.location\.href\)\.searchParams\.get\("step"\)\)/,
+    "the arrived-on step must be canonicalised at the point it is read");
+  assert.doesNotMatch(source, /const asked=new URL\(window\.location\.href\)\.searchParams\.get\("step"\) as WorkflowStep\|null/,
+    "the raw read is what broke it");
+});
+
+/* D624 · Measured on step 3 of her real batch: the product card's badge read
+ * "Titles ready" in green, and the very first row inside that same card read
+ * "2 of 2 titles · 0 of 2 with all 13 tags" in crimson behind a warning mark.
+ * The badge counted titles only; the row counted titles and tags. A card that
+ * says ready and not-ready about itself at once is the kind of thing a seller
+ * reads as broken. */
+test("the Listing card badge agrees with the row it summarises — D624", async () => {
+  const source = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+
+  const badge = source.match(/if\(step==="listing"\)\{[\s\S]*?\n        \}/)?.[0] || "";
+  assert.ok(badge, "the Listing badge branch must still be findable");
+
+  // The row's own definition of done - both halves of it.
+  assert.match(source, /done:started&&counts\.designs>0&&counts\.titled===counts\.designs&&counts\.tagged===counts\.designs/,
+    "the Titles and tags row is only done when titles AND tags are complete");
+
+  // So the badge may only say ready under the same two conditions.
+  assert.match(badge, /file\.title\.trim\(\)/, "the badge must still count titles");
+  assert.match(badge, /file\.tags\.length>=13/, "and it must count tags, which is what it was missing");
+  assert.doesNotMatch(badge, /\{label:"Titles ready",tone:"ready"\}/,
+    "the old badge claimed readiness from titles alone");
+
+  const readyLabels = [...badge.matchAll(/\{label:([^,]+),tone:"ready"\}/g)].map((match) => match[1]);
+  assert.equal(readyLabels.length, 1, "exactly one branch may be the ready branch");
+  // and it must be the branch that both counts have already passed
+  const readyIndex = badge.indexOf('tone:"ready"');
+  assert.ok(badge.indexOf("tagged<files.length") < readyIndex,
+    "the tag shortfall must be returned before the ready branch can be reached");
 });
