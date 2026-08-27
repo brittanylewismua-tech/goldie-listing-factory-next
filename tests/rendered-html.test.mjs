@@ -5859,14 +5859,18 @@ test("an interrupted publish resumes instead of stalling forever — D637", asyn
     "the path the browser polls must sweep, or nothing can ever recover");
   assert.match(queue, /const RECLAIM_SECONDS=120;/);
 
-  // 4 - no duplicate publication: both idempotency checks precede any publish.
-  const body = queue.slice(queue.indexOf("const linked=await"), queue.indexOf("void published;"));
+  /* 4 - no duplicate publication. D638 corrected this: the three checks that
+     precede a publish are Goldie's link record, Printify's external id, and
+     Goldie's own record that it already published once. */
+  const body = queue.slice(queue.indexOf("const linked=await"), queue.indexOf("if(!listingId)listingId=await pollForEtsyListing"));
   assert.ok(body.indexOf("etsy_listing_links") < body.indexOf("publish.json"),
     "Goldie's own link record is checked before publishing again");
   assert.ok(body.indexOf("printifyListingId(token,draft.shopId,draft.id)") < body.indexOf("publish.json"),
     "and Printify's external Etsy id is checked before publishing again");
-  assert.match(body, /if\(!listingId\)\{\n\s+const response=await fetch\(`https:\/\/api\.printify\.com[^`]*publish\.json`/,
-    "publish only runs when neither check found a listing");
+  assert.match(body, /const alreadyPublished=Boolean\(priorAttempt&&priorAttempt\.status==="publishing"\)/,
+    "and Goldie's own record that it published, which does not depend on Printify answering");
+  assert.match(body, /if\(!listingId&&!alreadyPublished\)\{/,
+    "publish only runs when none of the three found a listing");
 
   // 5 - both items progress independently.
   assert.match(queue, /ORDER BY created_at,id LIMIT \?"\)\.bind\(jobId,userId,now,MAX_CONCURRENT_LISTINGS\)/);
@@ -5884,4 +5888,37 @@ test("the busy label counts the listings being published — D637", async () => 
   assert.match(app, /const sending=publishTargets\(\)\.length\|\|bundleListingsToPublish\(\)/);
   assert.match(app, /const across=new Set\(publishTargets\(\)\.map\(target=>target\.productName\)\.filter\(Boolean\)\)\.size\|\|bundleRecipes\.length/);
   assert.doesNotMatch(app, /Publishing \$\{bundleListingsToPublish\(\)\} listings across \$\{bundleRecipes\.length\} products/);
+});
+
+/* D638 · Watching job 050552ce recover under D637 exposed a hole in D637's own
+ * guarantee. Its idempotency rested entirely on Printify eventually setting
+ * external.id. It never did: every pass found no id, called publish.json AGAIN,
+ * polled, requeued. Measured as the job cycling queued(2) -> processing(2) ->
+ * queued(2) with 0 completed and 0 failed. So "no duplicate publication" held
+ * only in the case where the id came back - the case that was already fine.
+ *
+ * Goldie has to remember that IT published, without depending on Printify
+ * having told it anything yet. */
+test("Goldie remembers publishing even when Printify has not answered — D638", async () => {
+  const queue = await readFile(new URL("../app/api/printify/drafts/publish/queue.ts", import.meta.url), "utf8");
+
+  // The publish is recorded the moment it is accepted, before any id exists.
+  assert.match(queue, /INSERT INTO etsy_listing_links \(printify_product_id,user_id,batch_id,etsy_listing_id,status,last_error,updated_at\) VALUES \(\?,\?,\?,0,'publishing'/,
+    "id 0 with status publishing means: published, awaiting the id");
+  const publishAt = queue.indexOf("publish.json`,{method:\"POST\"");
+  const recordAt = queue.indexOf("VALUES (?,?,?,0,'publishing'");
+  assert.ok(publishAt > 0 && recordAt > publishAt, "recorded immediately after the publish is accepted");
+
+  // A later pass sees that record and does not publish again.
+  assert.match(queue, /const priorAttempt=listingId\?null:await runtime\(\)\.DB\.prepare\("SELECT status FROM etsy_listing_links WHERE printify_product_id=\? AND user_id=\?"\)/);
+  assert.match(queue, /if\(!listingId&&!alreadyPublished\)\{/);
+
+  // The bounded failure says plainly that nothing was published twice.
+  assert.match(queue, /Goldie published once and did not repeat it/);
+
+  /* And the payload now shows why an item is waiting. Counts alone made a
+     patient wait look identical to a dead stall - which is what cost eleven
+     minutes of hand diagnosis. */
+  assert.match(queue, /const items=rows\.results\.map\(\(row:\{product_id:string;status:string;last_error\?:string;available_at:number\}\)=>\(\{productId:row\.product_id,status:row\.status,note:row\.last_error\|\|null/);
+  assert.match(queue, /return \{\.\.\.job,items,finished,failures/);
 });

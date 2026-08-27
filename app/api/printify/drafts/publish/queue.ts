@@ -87,13 +87,21 @@ export async function processNextPublishItem(userId:string,jobId:string){
        time - which is what makes retrying an interrupted item safe. */
     const linked=await runtime().DB.prepare("SELECT etsy_listing_id FROM etsy_listing_links WHERE printify_product_id=? AND user_id=? AND etsy_listing_id>0").bind(draft.id,userId).first<{etsy_listing_id:number}>();
     let listingId=Number(linked?.etsy_listing_id)||await printifyListingId(token,draft.shopId,draft.id);
-    let published=listingId>0;
-    if(!listingId){
+    /* D638 - D637's idempotency rested entirely on Printify eventually setting
+       external.id. Watching job 050552ce recover, it never did: each pass found
+       no id, called publish.json AGAIN, polled, and requeued - so the "no
+       duplicate publication" guarantee held only in the case where the id came
+       back. Goldie has to remember that IT published, independently of whether
+       Printify has told it anything yet. The link row is written the moment the
+       publish is accepted, with id 0 meaning "published, awaiting the id". */
+    const priorAttempt=listingId?null:await runtime().DB.prepare("SELECT status FROM etsy_listing_links WHERE printify_product_id=? AND user_id=?").bind(draft.id,userId).first<{status:string}>();
+    const alreadyPublished=Boolean(priorAttempt&&priorAttempt.status==="publishing");
+    if(!listingId&&!alreadyPublished){
       const response=await fetch(`https://api.printify.com/v1/shops/${draft.shopId}/products/${draft.id}/publish.json`,{method:"POST",headers:{...printifyHeaders(token),"Content-Type":"application/json"},body:JSON.stringify({title:true,description:true,images:true,variants:true,tags:true,keyFeatures:true,shipping_template:true})});
       if(!response.ok)throw new Error(`Printify could not publish this listing (${response.status}).`);
-      published=true;
-      listingId=await pollForEtsyListing(token,draft.shopId,draft.id);
+      await runtime().DB.prepare("INSERT INTO etsy_listing_links (printify_product_id,user_id,batch_id,etsy_listing_id,status,last_error,updated_at) VALUES (?,?,?,0,'publishing',NULL,CURRENT_TIMESTAMP) ON CONFLICT(printify_product_id) DO UPDATE SET status='publishing',last_error=NULL,updated_at=CURRENT_TIMESTAMP").bind(draft.id,userId,draft.batchId||"").run();
     }
+    if(!listingId)listingId=await pollForEtsyListing(token,draft.shopId,draft.id);
     if(!listingId){
       /* Printify has the publish; the Etsy id is not back yet. Hand the item to
          the queue rather than hold an execution open waiting for it. Every pass
@@ -101,13 +109,12 @@ export async function processNextPublishItem(userId:string,jobId:string){
          publishes twice. Bounded: after MAX_LISTING_WAITS it fails and says so
          rather than waiting forever. */
       const waits=item.attempts+1;
-      if(waits>=MAX_LISTING_WAITS)throw new Error("Printify accepted the publish but never returned an Etsy listing ID. Nothing was published twice - open this product in Printify to check its Etsy connection.");
+      if(waits>=MAX_LISTING_WAITS)throw new Error("Printify accepted the publish but never returned an Etsy listing ID. Goldie published once and did not repeat it - open this product in Printify and check that it is connected to your Etsy shop.");
       await runtime().DB.prepare("UPDATE etsy_publish_items SET status='queued',locked_at=NULL,available_at=?,last_error=?,updated_at=CURRENT_TIMESTAMP WHERE id=?")
         .bind(Math.floor(Date.now()/1000)+15,`Waiting for Printify to return the Etsy listing ID (check ${waits} of ${MAX_LISTING_WAITS}).`,item.id).run();
       await refreshJob(jobId);
       return {waiting:true,processed:true,budget:await etsyBudget()};
     }
-    void published;
     await runtime().DB.prepare("INSERT INTO etsy_listing_links (printify_product_id,user_id,batch_id,etsy_listing_id,status,last_error,updated_at) VALUES (?,?,?,?, 'finishing',NULL,CURRENT_TIMESTAMP) ON CONFLICT(printify_product_id) DO UPDATE SET etsy_listing_id=excluded.etsy_listing_id,status='finishing',last_error=NULL,updated_at=CURRENT_TIMESTAMP").bind(draft.id,userId,draft.batchId||"",listingId).run();
     /* D637 - refresh the claim before the finishing stage, so a long finish is
        not mistaken for an abandoned one and swept out from under itself. */
@@ -168,4 +175,9 @@ export async function kickGlobalPublishQueueIfDue(){
   return {started:true};
 }
 
-export async function publishJobPayload(userId:string,jobId:string){const job=await runtime().DB.prepare("SELECT id,status,total,completed,failed,last_error,created_at,updated_at FROM etsy_publish_jobs WHERE id=? AND user_id=?").bind(jobId,userId).first<{id:string;status:string;total:number;completed:number;failed:number;last_error?:string;created_at:string;updated_at:string}>();if(!job)return null;const rows=await runtime().DB.prepare("SELECT product_id,status,result_json,last_error,available_at FROM etsy_publish_items WHERE job_id=? AND user_id=? ORDER BY created_at,id").bind(jobId,userId).all<{product_id:string;status:string;result_json?:string;last_error?:string;available_at:number}>(),finished=rows.results.flatMap(row=>row.result_json?[JSON.parse(row.result_json)]:[]),nextRetry=Math.min(...rows.results.filter(row=>row.status==="queued"&&row.available_at>0).map(row=>row.available_at),Infinity);const failures=rows.results.filter(row=>row.status==="failed").map(row=>({productId:row.product_id,error:row.last_error||"Goldie could not finish this listing."}));return {...job,finished,failures,queued:rows.results.filter(row=>row.status==="queued").length,processing:rows.results.filter(row=>row.status==="running").length,nextRetry:Number.isFinite(nextRetry)?nextRetry:null,budget:await etsyBudget()}}
+export async function publishJobPayload(userId:string,jobId:string){const job=await runtime().DB.prepare("SELECT id,status,total,completed,failed,last_error,created_at,updated_at FROM etsy_publish_jobs WHERE id=? AND user_id=?").bind(jobId,userId).first<{id:string;status:string;total:number;completed:number;failed:number;last_error?:string;created_at:string;updated_at:string}>();if(!job)return null;const rows=await runtime().DB.prepare("SELECT product_id,status,result_json,last_error,available_at FROM etsy_publish_items WHERE job_id=? AND user_id=? ORDER BY created_at,id").bind(jobId,userId).all<{product_id:string;status:string;result_json?:string;last_error?:string;available_at:number}>(),finished=rows.results.flatMap(row=>row.result_json?[JSON.parse(row.result_json)]:[]),nextRetry=Math.min(...rows.results.filter(row=>row.status==="queued"&&row.available_at>0).map(row=>row.available_at),Infinity);const failures=rows.results.filter(row=>row.status==="failed").map(row=>({productId:row.product_id,error:row.last_error||"Goldie could not finish this listing."}));/* D638 - the payload reported only counts, so an item patiently waiting for
+     Printify looked exactly like an item doing nothing: 0 completed, 0 failed,
+     no error, forever. The per-item note is the difference between "stuck" and
+     "waiting", and it is what took eleven minutes to work out by hand. */
+  const items=rows.results.map((row:{product_id:string;status:string;last_error?:string;available_at:number})=>({productId:row.product_id,status:row.status,note:row.last_error||null,availableAt:row.available_at||null}));
+  return {...job,items,finished,failures,queued:rows.results.filter(row=>row.status==="queued").length,processing:rows.results.filter(row=>row.status==="running").length,nextRetry:Number.isFinite(nextRetry)?nextRetry:null,budget:await etsyBudget()}}
