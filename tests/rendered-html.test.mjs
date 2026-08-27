@@ -3756,8 +3756,12 @@ test("the finish receipt reflects what actually happened — D481", async () => 
   // The only pure-dark surface in the whole flow, on the celebration screen.
   assert.match(css, /\.receipt-value-strip>div\{background:linear-gradient/);
 
-  // "Ready for final review" has no business sitting above a finished batch.
-  assert.match(app, /allCreatedListingsHaveImages\(\)&&!batchReceipt&&/);
+  /* "Ready for final review" has no business sitting above a finished batch.
+     D625 removed that banner outright - it restated the product card's own
+     "Listing photos ✓" row one line below it - so the stronger guarantee now is
+     that it cannot appear after publishing because it cannot appear at all. */
+  assert.doesNotMatch(app, /<b>Listing photos complete<\/b>/,
+    "the publish page must not restate a tick the card above it already shows");
 });
 
 test("every product in a bundle is reachable from the step she is on — D482/D484", async () => {
@@ -4774,7 +4778,11 @@ test("the publish screen states its true scope and its true cost — D548", asyn
   assert.match(app, /so this press costs about \$\$\{\(total\*0\.2\)\.toFixed\(2\)\} USD/);
 
   // 3. "Every listing has at least one photo" was measured from the open product.
-  assert.match(app, /Every listing on \$\{activeRecipe\?\.name\|\|"this product"\} has at least one photo\./);
+  /* D548 asked this banner to name which product it was talking about in a
+     bundle. D625 removed the banner instead, so there is no unattributed claim
+     left to name. */
+  assert.doesNotMatch(app, /has at least one photo\./,
+    "no banner should be making per-product photo claims on the publish page");
 
   // 4. "EVERY LISTING IN THIS BATCH" sat over one product's listings.
   assert.match(review, /productName\?`LISTINGS ON \$\{productName\.toUpperCase\(\)\}`:"EVERY LISTING IN THIS BATCH"/);
