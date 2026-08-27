@@ -1258,7 +1258,9 @@ test("connects Etsy with PKCE and finishes only the exact Printify-linked Etsy l
   assert.match(client,/ETSY_REDIRECT_URI/);
   assert.match(client,/goldie-listing-factory-next\.brittanylewismua\.chatgpt\.site\/api\/etsy\/callback/);
   assert.match(client,/ETSY_API_SECRET/);
-  assert.match(queue,/waitForEtsyListing/);
+  /* D637 renamed this: it no longer WAITS, it takes a short bounded look and
+     hands the item back to the queue if the id is not ready. */
+  assert.match(queue,/pollForEtsyListing/);
   assert.match(queue,/product\.external\?\.id/);
   assert.doesNotMatch(`${publish}\n${queue}`,/sort_on|newest|title.*match/i);
   assert.match(finish,/listing\.shop_id/);
@@ -4091,7 +4093,7 @@ test("one press publishes every product in a bundle — D495", async () => {
   // And she can see which product it is on.
   /* D559 - it no longer publishes one product at a time, so it no longer reports
      which one it is on. */
-  assert.match(app, /Publishing \$\{bundleListingsToPublish\(\)\} listings across \$\{bundleRecipes\.length\} products…/);
+  assert.match(app, /* D637 - the busy label counts the press, not the bundle. */ /Publishing \$\{sending\} \$\{sending===1\?"listing":"listings"\} across \$\{across\} \$\{across===1\?"product":"products"\}…/);
 });
 
 test("two tabs cannot silently overwrite the same batch — D496", async () => {
@@ -5167,7 +5169,7 @@ test("the number on the button is the number that publishes — D561", async () 
   /* Windowed on the label builder itself rather than a byte count - D628 added
      a branch above this line and the old 900-character slice stopped reaching
      it, which fails for a reason that has nothing to do with the rule. */
-  assert.match(label.slice(0, label.indexOf("})():") + 1 || 2000), /const total=publishTargets\(\)\.length\|\|bundleListingsToPublish\(\)/,
+  assert.match(label.slice(0, 4000), /const total=publishTargets\(\)\.length\|\|bundleListingsToPublish\(\)/,
     "the button counts what is ticked");
   assert.equal((app.match(/const total=publishTargets\(\)\.length/g) || []).length, 2,
     "the button and the warning count the same way");
@@ -5813,4 +5815,73 @@ test("every number on the publish screen comes from the selected targets — D63
     "the publish payload is unchanged");
   assert.match(app, /const everything=publishTargets\(\);\n    const ids=everything\.map\(item=>item\.id\);if\(!ids\.length\)return;/,
     "publishAll still sends exactly the selected targets");
+});
+
+/* D637 · Job 050552ce, two Hoodie listings, measured over eleven minutes:
+ *
+ *   total 2 · completed 0 · failed 0 · queued 0 · processing 2 · last_error null
+ *   budget: 79,753 remaining          Etsy: zero listings created
+ *
+ * Nothing was published and nothing errored. Three faults compounded:
+ *
+ *   1. publishOne held one execution for up to 45 seconds polling Printify for
+ *      the Etsy listing id. Cloudflare ends the request first, so the item was
+ *      left status='running' with the work half done.
+ *   2. The sweep that returns an abandoned claim to the queue lived inside
+ *      processNextPublishItem, which is only reached when a QUEUED row exists
+ *      for that job. With both items running there was no queued row, so the
+ *      browser's own polling could never recover them. Permanent processing.
+ *   3. The four parallel slots all selected the single oldest queued row, so
+ *      one won the claim and three did nothing - two listings could not make
+ *      progress independently.
+ */
+test("an interrupted publish resumes instead of stalling forever — D637", async () => {
+  const queue = await readFile(new URL("../app/api/printify/drafts/publish/queue.ts", import.meta.url), "utf8");
+
+  // 1 - interruption during Etsy polling costs one short pass, not the listing.
+  assert.match(queue, /const LISTING_ID_POLLS=3;/);
+  assert.match(queue, /async function pollForEtsyListing[\s\S]*?return 0\}/,
+    "the poll returns rather than throwing, so the item can be requeued");
+  assert.doesNotMatch(queue, /attempt<18/, "the 45-second block is what broke it");
+
+  // 2 - interruption after Printify publish: requeued, bounded, and explained.
+  assert.match(queue, /status='queued',locked_at=NULL,available_at=\?,last_error=\?/,
+    "an item waiting on the Etsy id goes back on the queue with a reason");
+  assert.match(queue, /if\(waits>=MAX_LISTING_WAITS\)throw new Error\("Printify accepted the publish but never returned an Etsy listing ID/,
+    "and cannot wait forever - it ends in a stated failure");
+
+  // 3 - stale-running recovery, on every path.
+  assert.match(queue, /export async function reclaimStalledPublishItems\(\)/);
+  assert.match(queue, /WHERE status='running' AND \(locked_at IS NULL OR locked_at<\?\)/,
+    "a claim with no timestamp is stalled too");
+  const global = queue.match(/export async function processNextGlobalPublishItem\(\)\{[\s\S]*?\n\}/)?.[0] || "";
+  assert.match(global, /await reclaimStalledPublishItems\(\);/,
+    "the path the browser polls must sweep, or nothing can ever recover");
+  assert.match(queue, /const RECLAIM_SECONDS=120;/);
+
+  // 4 - no duplicate publication: both idempotency checks precede any publish.
+  const body = queue.slice(queue.indexOf("const linked=await"), queue.indexOf("void published;"));
+  assert.ok(body.indexOf("etsy_listing_links") < body.indexOf("publish.json"),
+    "Goldie's own link record is checked before publishing again");
+  assert.ok(body.indexOf("printifyListingId(token,draft.shopId,draft.id)") < body.indexOf("publish.json"),
+    "and Printify's external Etsy id is checked before publishing again");
+  assert.match(body, /if\(!listingId\)\{\n\s+const response=await fetch\(`https:\/\/api\.printify\.com[^`]*publish\.json`/,
+    "publish only runs when neither check found a listing");
+
+  // 5 - both items progress independently.
+  assert.match(queue, /ORDER BY created_at,id LIMIT \?"\)\.bind\(jobId,userId,now,MAX_CONCURRENT_LISTINGS\)/);
+  assert.match(queue, /for\(const candidate of candidates\.results\|\|\[\]\)\{[\s\S]*?if\(claimed\.meta\.changes\)\{item=candidate;break\}/,
+    "a slot that loses a claim must try the next candidate, not give up");
+
+  // A long finish must not be swept out from under itself.
+  assert.match(queue, /UPDATE etsy_publish_items SET locked_at=\?,updated_at=CURRENT_TIMESTAMP WHERE id=\?"\)\.bind\(Math\.floor\(Date\.now\(\)\/1000\),item\.id\)/,
+    "the claim is refreshed before the finishing stage");
+});
+
+/* D637 · The last surface still counting the bundle rather than the press. */
+test("the busy label counts the listings being published — D637", async () => {
+  const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+  assert.match(app, /const sending=publishTargets\(\)\.length\|\|bundleListingsToPublish\(\)/);
+  assert.match(app, /const across=new Set\(publishTargets\(\)\.map\(target=>target\.productName\)\.filter\(Boolean\)\)\.size\|\|bundleRecipes\.length/);
+  assert.doesNotMatch(app, /Publishing \$\{bundleListingsToPublish\(\)\} listings across \$\{bundleRecipes\.length\} products/);
 });

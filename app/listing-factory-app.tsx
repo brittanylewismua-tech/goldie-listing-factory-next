@@ -3580,7 +3580,15 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
             })()}</div><button className="publish-all-button" aria-busy={publishing} disabled={publishing||publishBlockers().length>0} title={publishBlockers()[0]?`Before publishing: ${publishBlockers()[0]}`:undefined} onClick={openPublishConfirmation}>{/* D495 - one press publishes the whole bundle, so the button says so and
     reports which product it is on rather than naming a listing count that
     only covers the product currently open. */}
-{publishRun&&!publishing?"Queuing every listing in this batch…":publishing?(activeBundle&&bundleRecipes.length>1?`Publishing ${bundleListingsToPublish()} listings across ${bundleRecipes.length} products…`:"Publishing…"):activeBundle&&bundleRecipes.length>1?(()=>{
+{publishRun&&!publishing?"Queuing every listing in this batch…":publishing?(activeBundle&&bundleRecipes.length>1?(()=>{
+                /* D637 - the busy label was the last surface still counting the
+                   bundle rather than the press. It read "Publishing 6 listings
+                   across 3 products…" over a progress line that correctly said
+                   "0 of 2 listings are live". */
+                const sending=publishTargets().length||bundleListingsToPublish();
+                const across=new Set(publishTargets().map(target=>target.productName).filter(Boolean)).size||bundleRecipes.length;
+                return `Publishing ${sending} ${sending===1?"listing":"listings"} across ${across} ${across===1?"product":"products"}…`;
+              })():"Publishing…"):activeBundle&&bundleRecipes.length>1?(()=>{
               /* D546 - "Publish all 3 products" counted products while every
                  number above it counted the open product's listings, so nothing
                  on the page said how many Etsy listings would be created, or

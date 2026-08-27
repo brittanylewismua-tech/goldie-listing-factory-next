@@ -18,6 +18,16 @@ type Draft={id:string;batchId?:string;shopId:number;title?:string;tags?:string[]
 type Runtime={DB:D1Database;PRINTIFY_TOKEN_KEY?:string};
 const runtime=()=>env as unknown as Runtime;
 const MAX_CONCURRENT_LISTINGS=4;
+/* D637 - a claim is a heartbeat: an execution that dies leaves locked_at behind,
+   and after this it is safe to assume nobody is working on it. Short, because
+   every pass is now short. */
+const RECLAIM_SECONDS=120;
+/* Printify creates the Etsy listing asynchronously. Rather than block a whole
+   execution waiting for it, each pass polls briefly and hands the item back to
+   the queue - so an interruption costs one short pass, not the listing. */
+const LISTING_ID_POLLS=3;
+const LISTING_ID_GAP_MS=2000;
+const MAX_LISTING_WAITS=20;
 const printifyHeaders=(token:string)=>({Authorization:`Bearer ${token}`,"User-Agent":"Goldie-Listing-Factory"});
 
 async function queueCapacity(now:number){
@@ -32,21 +42,76 @@ async function queueCapacity(now:number){
 }
 
 async function printifyListingId(token:string,shopId:number,productId:string){const response=await fetch(`https://api.printify.com/v1/shops/${shopId}/products/${productId}.json`,{headers:printifyHeaders(token)});if(!response.ok)return 0;const product=await response.json() as {external?:{id?:string}};return Number(product.external?.id)||0}
-async function waitForEtsyListing(token:string,shopId:number,productId:string){for(let attempt=0;attempt<18;attempt++){if(attempt)await new Promise(resolve=>setTimeout(resolve,2500));const id=await printifyListingId(token,shopId,productId);if(id>0)return id}throw new Error("Printify published the product, but has not returned its Etsy listing ID yet. Goldie will retry this listing safely.")}
+/* D637 - this polled 18 times at 2.5s, so a single item could hold an execution
+   for 45 seconds plus the publish call. Cloudflare ends the request long before
+   that, and because the item was already marked running with no sweep on the
+   path the browser polls, it stayed running forever: 0 completed, 0 failed, no
+   error, for as long as anyone cared to watch. Measured on job 050552ce.
+   A short look now; if the id is not there yet the item goes back on the queue
+   and the next pass - browser poll or the one-minute cron - looks again. */
+async function pollForEtsyListing(token:string,shopId:number,productId:string){for(let attempt=0;attempt<LISTING_ID_POLLS;attempt++){if(attempt)await new Promise(resolve=>setTimeout(resolve,LISTING_ID_GAP_MS));const id=await printifyListingId(token,shopId,productId);if(id>0)return id}return 0}
+
+/* D637 - the sweep that returns an abandoned claim to the queue. It used to run
+   only inside processNextPublishItem, which is reached only when a QUEUED row
+   exists for that job. Both items running meant no queued row, so the sweep was
+   never reached and nothing could ever recover it. It runs on every path now. */
+export async function reclaimStalledPublishItems(){
+  const now=Math.floor(Date.now()/1000);
+  const swept=await runtime().DB.prepare("UPDATE etsy_publish_items SET status='queued',locked_at=NULL,available_at=?,updated_at=CURRENT_TIMESTAMP WHERE status='running' AND (locked_at IS NULL OR locked_at<?)").bind(now,now-RECLAIM_SECONDS).run();
+  return Number(swept.meta.changes||0);
+}
 async function refreshJob(jobId:string){const totals=await runtime().DB.prepare("SELECT SUM(CASE WHEN status='completed' THEN 1 ELSE 0 END) completed,SUM(CASE WHEN status='failed' THEN 1 ELSE 0 END) failed,SUM(CASE WHEN status IN ('queued','running') THEN 1 ELSE 0 END) pending FROM etsy_publish_items WHERE job_id=?").bind(jobId).first<{completed:number;failed:number;pending:number}>();const completed=Number(totals?.completed||0),failed=Number(totals?.failed||0),pending=Number(totals?.pending||0),status=pending?"processing":failed?"needs_attention":"completed";await runtime().DB.prepare("UPDATE etsy_publish_jobs SET status=?,completed=?,failed=?,updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(status,completed,failed,jobId).run()}
 
 export async function processNextPublishItem(userId:string,jobId:string){
-  const now=Math.floor(Date.now()/1000);await runtime().DB.prepare("UPDATE etsy_publish_items SET status='queued',locked_at=NULL,available_at=?,updated_at=CURRENT_TIMESTAMP WHERE status='running' AND locked_at<?").bind(now,now-300).run();
+  const now=Math.floor(Date.now()/1000);await reclaimStalledPublishItems();
   const capacity=await queueCapacity(now),budget=capacity.budget;
   if(!capacity.canStart)return {waitingForQuota:true,processed:false,budget,paused:capacity.paused};
-  const item=await runtime().DB.prepare("SELECT id,product_id,attempts FROM etsy_publish_items WHERE job_id=? AND user_id=? AND status='queued' AND available_at<=? ORDER BY created_at,id LIMIT 1").bind(jobId,userId,now).first<{id:string;product_id:string;attempts:number}>();
-  if(!item){await refreshJob(jobId);return {waiting:false,processed:false,budget}}const claimed=await runtime().DB.prepare("UPDATE etsy_publish_items SET status='running',locked_at=?,attempts=attempts+1,updated_at=CURRENT_TIMESTAMP WHERE id=? AND status='queued'").bind(now,item.id).run();if(!claimed.meta.changes)return {waiting:false,processed:false,budget};
+  /* D637 - this took the single oldest queued row, so the four parallel slots in
+     drainGlobalPublishQueue all picked the SAME row; one won the claim and the
+     other three returned without trying anything else. Two listings could not
+     progress independently. Each slot walks the candidates until it claims one
+     nobody else has. */
+  const candidates=await runtime().DB.prepare("SELECT id,product_id,attempts FROM etsy_publish_items WHERE job_id=? AND user_id=? AND status='queued' AND available_at<=? ORDER BY created_at,id LIMIT ?").bind(jobId,userId,now,MAX_CONCURRENT_LISTINGS).all<{id:string;product_id:string;attempts:number}>();
+  let item:{id:string;product_id:string;attempts:number}|null=null;
+  for(const candidate of candidates.results||[]){
+    const claimed=await runtime().DB.prepare("UPDATE etsy_publish_items SET status='running',locked_at=?,attempts=attempts+1,updated_at=CURRENT_TIMESTAMP WHERE id=? AND status='queued'").bind(now,candidate.id).run();
+    if(claimed.meta.changes){item=candidate;break}
+  }
+  if(!item){await refreshJob(jobId);return {waiting:false,processed:false,budget}}
   try{
     const job=await runtime().DB.prepare("SELECT settings_json FROM etsy_publish_jobs WHERE id=? AND user_id=?").bind(jobId,userId).first<{settings_json:string}>(),row=await runtime().DB.prepare("SELECT response_json FROM printify_draft_results WHERE user_id=? AND status='succeeded' AND json_extract(response_json,'$.id')=? LIMIT 1").bind(userId,item.product_id).first<{response_json:string}>();if(!job||!row)throw new Error("Goldie could not reload this listing safely.");
     const settings=JSON.parse(job.settings_json) as Settings,draft=JSON.parse(row.response_json) as Draft,connection=await runtime().DB.prepare("SELECT encrypted_token FROM printify_connections WHERE user_id=?").bind(userId).first<{encrypted_token:string}>(),secret=runtime().PRINTIFY_TOKEN_KEY;if(!connection||!secret)throw new Error("Reconnect Printify so Goldie can continue this queued batch.");const token=await decryptPrintifyToken(connection.encrypted_token,secret);
-    const linked=await runtime().DB.prepare("SELECT etsy_listing_id FROM etsy_listing_links WHERE printify_product_id=? AND user_id=? AND etsy_listing_id>0").bind(draft.id,userId).first<{etsy_listing_id:number}>();let listingId=Number(linked?.etsy_listing_id)||await printifyListingId(token,draft.shopId,draft.id);
-    if(!listingId){const response=await fetch(`https://api.printify.com/v1/shops/${draft.shopId}/products/${draft.id}/publish.json`,{method:"POST",headers:{...printifyHeaders(token),"Content-Type":"application/json"},body:JSON.stringify({title:true,description:true,images:true,variants:true,tags:true,keyFeatures:true,shipping_template:true})});if(!response.ok)throw new Error(`Printify could not publish this listing (${response.status}).`);listingId=await waitForEtsyListing(token,draft.shopId,draft.id)}
+    /* D637 · Idempotency, checked in this order before publish is ever called
+       again: Goldie's own link record first, then Printify's external Etsy id.
+       Either one means the listing exists and must not be created a second
+       time - which is what makes retrying an interrupted item safe. */
+    const linked=await runtime().DB.prepare("SELECT etsy_listing_id FROM etsy_listing_links WHERE printify_product_id=? AND user_id=? AND etsy_listing_id>0").bind(draft.id,userId).first<{etsy_listing_id:number}>();
+    let listingId=Number(linked?.etsy_listing_id)||await printifyListingId(token,draft.shopId,draft.id);
+    let published=listingId>0;
+    if(!listingId){
+      const response=await fetch(`https://api.printify.com/v1/shops/${draft.shopId}/products/${draft.id}/publish.json`,{method:"POST",headers:{...printifyHeaders(token),"Content-Type":"application/json"},body:JSON.stringify({title:true,description:true,images:true,variants:true,tags:true,keyFeatures:true,shipping_template:true})});
+      if(!response.ok)throw new Error(`Printify could not publish this listing (${response.status}).`);
+      published=true;
+      listingId=await pollForEtsyListing(token,draft.shopId,draft.id);
+    }
+    if(!listingId){
+      /* Printify has the publish; the Etsy id is not back yet. Hand the item to
+         the queue rather than hold an execution open waiting for it. Every pass
+         re-enters above, sees `published` via Printify's external id, and never
+         publishes twice. Bounded: after MAX_LISTING_WAITS it fails and says so
+         rather than waiting forever. */
+      const waits=item.attempts+1;
+      if(waits>=MAX_LISTING_WAITS)throw new Error("Printify accepted the publish but never returned an Etsy listing ID. Nothing was published twice - open this product in Printify to check its Etsy connection.");
+      await runtime().DB.prepare("UPDATE etsy_publish_items SET status='queued',locked_at=NULL,available_at=?,last_error=?,updated_at=CURRENT_TIMESTAMP WHERE id=?")
+        .bind(Math.floor(Date.now()/1000)+15,`Waiting for Printify to return the Etsy listing ID (check ${waits} of ${MAX_LISTING_WAITS}).`,item.id).run();
+      await refreshJob(jobId);
+      return {waiting:true,processed:true,budget:await etsyBudget()};
+    }
+    void published;
     await runtime().DB.prepare("INSERT INTO etsy_listing_links (printify_product_id,user_id,batch_id,etsy_listing_id,status,last_error,updated_at) VALUES (?,?,?,?, 'finishing',NULL,CURRENT_TIMESTAMP) ON CONFLICT(printify_product_id) DO UPDATE SET etsy_listing_id=excluded.etsy_listing_id,status='finishing',last_error=NULL,updated_at=CURRENT_TIMESTAMP").bind(draft.id,userId,draft.batchId||"",listingId).run();
+    /* D637 - refresh the claim before the finishing stage, so a long finish is
+       not mistaken for an abandoned one and swept out from under itself. */
+    await runtime().DB.prepare("UPDATE etsy_publish_items SET locked_at=?,updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(Math.floor(Date.now()/1000),item.id).run();
     const forProduct=settings.byProduct?.[draft.id]||{};
     const clean=(list?:number[])=>Array.isArray(list)?[...new Set(list.map(Number).filter(value=>Number.isInteger(value)&&value>=0))]:null;
     /* D626 - forProduct.indices was sent by the client and stored by the route
@@ -70,6 +135,10 @@ export async function processNextPublishItem(userId:string,jobId:string){
 }
 
 export async function processNextGlobalPublishItem(){
+  /* D637 - the browser polls the job GET, which drains the GLOBAL queue. That
+     path never swept, and it only looks for queued rows, so once both items
+     were running nothing on earth could recover them. */
+  await reclaimStalledPublishItems();
   const now=Math.floor(Date.now()/1000),next=await runtime().DB.prepare("SELECT user_id,job_id FROM etsy_publish_items WHERE status='queued' AND available_at<=? ORDER BY created_at,id LIMIT 1").bind(now).first<{user_id:string;job_id:string}>();
   return next?processNextPublishItem(next.user_id,next.job_id):{waiting:false,processed:false,budget:await etsyBudget()};
 }
