@@ -22,7 +22,6 @@ const module = await import("../app/mockup-compatibility.ts").catch(() => null);
 test("the seller's own name never reaches classification", () => {
   assert.ok(!/productName=\{activeRecipe\?\.name/.test(app),
     "activeRecipe.name is a nickname, not a product description");
-  assert.match(app, /productName=\{classifyingProductName\}/);
   assert.match(app, /const classifyingProductName = useMemo/);
   assert.match(app, /printifyProductLabel\(templateDetails\)/);
 });

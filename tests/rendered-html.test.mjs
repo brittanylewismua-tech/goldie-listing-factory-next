@@ -873,7 +873,8 @@ test("keeps the owner test page separate from mastermind access", async () => {
   assert.doesNotMatch(access, /GOLDIE-WOLF/);
   assert.match(page, /getChatGPTUser\(\)/);
   assert.match(page, /accountSignInPath\("\/mastermind\?stage=code"\)/);
-  assert.match(page, /20 listings and 20 AI lifestyle mockups/);
+  assert.match(page, /20 listings while you test/);
+  assert.match(page, /photos per listing/);
   assert.match(page, /BetaCountdown/);
   assert.match(page, /params\?\.stage !== "code"/);
   assert.match(page, /<ListingFactory \/>/);
@@ -1304,7 +1305,7 @@ test("turns Goldie into a returning-user command center with contextual intellig
     readFile(new URL("../DESIGN_SYSTEM.md",import.meta.url),"utf8"),
   ]);
   assert.match(dashboard,/Resume your last batch/);assert.match(dashboard,/Start another batch/);assert.match(dashboard,/Recent products/);
-  assert.match(dashboard,/Keyword banks/);assert.match(dashboard,/Mockup sets/);assert.match(dashboard,/listings created this month/);
+  assert.match(dashboard,/Keyword banks/);assert.doesNotMatch(dashboard,/Mockup sets/);assert.match(dashboard,/listings created this month/);
   assert.match(dashboard,/GoldieCommandBar/);assert.match(dashboard,/metaKey/);assert.match(page,/GoldieInsight/);assert.match(page,/currentInsight/);
   assert.match(page,/progressIndex>0&&<WorkflowMomentum/);assert.match(page,/lowDpiCount/);assert.match(page,/variants approved/);
   assert.match(theme,/--g-plum-700/);assert.match(theme,/step-resolve/);assert.match(theme,/item-arrive/);
@@ -1620,7 +1621,7 @@ test("supports simple saved product bundles without complicating the single-prod
   assert.match(approvedStyles, /Collision safeguards shared by every workflow step/);
 });
 
-test("downloads each listing's selected Printify photos and created mockups as one local ZIP",async()=>{
+test("downloads each listing's selected Printify photos and uploaded photos as one local ZIP",async()=>{
   const [page,route,styles]=await Promise.all([
     readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8"),
     readFile(new URL("../app/api/listing-photos/download/route.ts",import.meta.url),"utf8"),
@@ -1631,7 +1632,7 @@ test("downloads each listing's selected Printify photos and created mockups as o
   assert.match(page,/printifyImageIndices:indices/);
   assert.match(route,/SELECT response_json FROM printify_draft_results/);
   assert.match(route,/01-printify/);
-  assert.match(route,/02-lifestyle-mockups/);
+  assert.match(route,/02-additional-photos/);
   assert.match(route,/zipSync/);
   assert.match(styles,/\.listing-photo-download/);
 });
@@ -2310,9 +2311,9 @@ test("traverses every workflow phase with one shared gate and never enables an i
 
 test("uses one management navigation vocabulary everywhere (fixes D84)",async()=>{
   const nav=await readFile(new URL("../app/management-nav.tsx",import.meta.url),"utf8");
-  assert.match(nav,/label:"Mockup Library"/);
+  assert.doesNotMatch(nav,/label:"Mockup Library"/);
   assert.match(nav,/label:"Usage \+ Plan"/);
-  for(const page of ["batches","keywords","mockups","usage"]){
+  for(const page of ["batches","keywords","usage"]){
     const source=await readFile(new URL(`../app/${page}/page.tsx`,import.meta.url),"utf8");
     assert.match(source,/ManagementNav/);
   }
@@ -2676,6 +2677,9 @@ test("D416: Connect does not pretend to be step one", async () => {
    bakes in a t-shirt — and this has to hold for mugs, shower curtains, totes and
    anything else Printify prints. */
 test("D423: mockup placement mirrors the Printify template, whatever the product", async () => {
+  const removedApp = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+  assert.doesNotMatch(removedApp, /<IntegratedMockups|Adjust placement|Create lifestyle mockups/);
+  return;
   const renderers = await readFile(new URL("../app/mockups/product-renderers.ts", import.meta.url), "utf8");
 
   /* Every product kind gets the same rule, not just apparel. */
@@ -2694,6 +2698,10 @@ test("D423: mockup placement mirrors the Printify template, whatever the product
 });
 
 test("the lifestyle mockup mirrors the Printify template placement, whatever the product", async () => {
+  const removed = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+  assert.match(removed, /<UploadedListingPhotos/);
+  assert.doesNotMatch(removed, /<IntegratedMockups/);
+  return;
   const { artworkPlacement } = await import("../app/placement-math.ts");
   const [integrated, payload, drafts, app] = await Promise.all([
     readFile(new URL("../app/integrated-mockups.tsx", import.meta.url), "utf8"),
@@ -2990,8 +2998,8 @@ test("the design cache is bounded and a missing browser cache never erases listi
   assert.match(restore, /originalUnavailable:!file/);
   assert.match(app, /listings are.*restored and can still be completed and published/);
   assert.doesNotMatch(app, /design files are not on this computer|continue on the computer you started on/);
-  assert.match(app, /design\.originalUnavailable\?<p[^>]*>Existing photos stay with this listing/,
-    "only source-file work is withheld; the listing itself remains present");
+  assert.match(app, /<UploadedListingPhotos productId=\{draft\.id\}/,
+    "listing-photo uploads remain available without the original design file");
   const upload=app.slice(app.indexOf("async function chooseFiles"),app.indexOf("const remeasured="));
   assert.match(upload, /design\.originalUnavailable.*design\.contentHash===contentHash/,
     "choosing the original file reconnects it to the saved design");
@@ -4206,7 +4214,7 @@ test("no product on any step falls back to a bare header — D500", async () => 
   // All three steps are covered, and each returns rows.
   const returns = fn.match(/return \[/g) || [];
   assert.equal(returns.length, 3, "D539 - one row set per step");
-  for (const label of ["Review Printify placement", "Choose Printify photos", "Create lifestyle mockups", "Arrange final photo order", "Write titles and tags", "Edit description", "Review Etsy category and fields", "Listings ready", "Published"]) {
+  for (const label of ["Review Printify placement", "Choose Printify photos", "Upload your own listing photos", "Arrange final photo order", "Write titles and tags", "Edit description", "Review Etsy category and fields", "Listings ready", "Published"]) {
     assert.ok(fn.includes(`label:"${label}"`), `${label} row is built`);
   }
 
@@ -4436,7 +4444,7 @@ test("every step is the same shape: a collapsible card per product — D517", as
      already names them that way. */
   /* D539 - step 2's rows own panels rather than pointing at sections. */
   assert.match(app, /\{label:"Choose Printify photos"[^}]*task:"printify"\}/);
-  assert.match(app, /\{label:"Create lifestyle mockups"[^}]*task:"lifestyle"\}/);
+  assert.match(app, /\{label:"Upload your own listing photos"[^}]*task:"lifestyle"\}/);
   assert.match(app, /\{label:"Arrange final photo order"[^}]*task:"order"\}/);
   assert.match(app, /\{label:"Review Printify placement"[^}]*task:"placement"\}/);
   assert.doesNotMatch(app, /target:"details\.recommended-listing-photos"/,
@@ -4474,7 +4482,7 @@ test("everything on step 2 that describes one product sits in that product's car
      different products. A hoodie scene is not a tee scene. */
   /* D540 - and specifically inside the task that uses it, rather than floating
      above every task in the card. */
-  assert.match(app, /if\(task==="lifestyle"\)return <>[\s\S]{0,900}?<MockupSetSelector/);
+  assert.match(app, /if\(task==="lifestyle"\)return <>[\s\S]{0,1200}?<UploadedListingPhotos/);
 
   /* D520 - "Recommended photos for Unisex Midweight Softstyle Fleece Hoodie"
      rendered above all three cards, describing the open product only, with
@@ -4913,7 +4921,7 @@ test("steps 1 to 3 say what their numbers mean — D550", async () => {
   /* Lifestyle mockups are optional - nothing about publishing requires them - and
      the row rendered "! None made yet" in alert red on every product card, so a
      finished step reported a problem that does not exist. */
-  assert.match(app, /\{label:"Create lifestyle mockups"[\s\S]{0,200}optional:true/);
+  assert.match(app, /\{label:"Upload your own listing photos"[\s\S]{0,200}optional:true/);
   assert.match(app, /row\.done\?"✓":row\.pending\?"…":row\.optional\?"–":"!"/);
   assert.match(css, /\.app-shell \.batch-product-row\.optional \.row-mark\{/);
 
@@ -4991,7 +4999,7 @@ test("what the click-through found on step 2 and step 3 — D554", async () => {
         <small>"Printify photo"</small> in full beside it. The badge carries the
         number, so the tile names the kind once. */
   assert.doesNotMatch(order, /<b>\{photo\.name\}<\/b>/);
-  assert.match(order, /<b>\{photo\.kind==="mockup"\?"Lifestyle mockup"/);
+  assert.match(order, /photo\.kind==="uploaded"\?"Uploaded photo"/);
 
   /* 2. And it printed "Rearrange listing photos" at display size once per
         listing, under a task row already called Arrange final photo order. */
@@ -5323,6 +5331,9 @@ test("one mockup set chooser, and the listings follow it — D566", async () => 
     readFile(new URL("../app/integrated-mockups.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8"),
   ]);
+  assert.match(app, /<UploadedListingPhotos/);
+  assert.doesNotMatch(app, /<MockupSetSelector|<IntegratedMockups/);
+  return;
 
   /* Measured on her single-product batch - one hoodie, two designs. The lifestyle
      panel carried three set choosers: the batch one at the top in a white card,
@@ -6288,6 +6299,9 @@ test("the Create button follows the scenes the batch actually chose — D647", a
     readFile(new URL("../app/integrated-mockups.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
   ]);
+  assert.match(app, /Upload your own listing photos/);
+  assert.doesNotMatch(app, /Create selected mockups|<IntegratedMockups/);
+  return;
 
   // The batch's choice is handed down.
   assert.match(app, /<IntegratedMockups[^>]*defaultTemplateIds=\{sharedMockups\?\.theme===mockupTheme\?sharedMockups\.ids:\[\]\}/,
@@ -6829,6 +6843,9 @@ test("bundle DPI and variant totals cover every product — D659", async () => {
 
 test("the mockup row cannot say none while scenes are saved — D659", async () => {
   const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+  assert.match(app, /Upload your own listing photos/);
+  assert.doesNotMatch(app, /Create lifestyle mockups/);
+  return;
 
   assert.match(app, /function scenesChosenFor\(recipe:Recipe,isActive:boolean\)\{/);
   assert.match(app, /function mockupRowValue\(created:number,scenes:number\)\{/);

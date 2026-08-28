@@ -28,15 +28,16 @@ export async function POST(request:Request){
     if(total>90*1024*1024)return NextResponse.json({error:"These photos are too large to package together. Download fewer Printify photos, then try again."},{status:413});
     files[`01-printify/${String(position+1).padStart(2,"0")}-printify.${extension(response.headers.get("content-type")||"",url)}`]=bytes;
   }
-  const prefix=`etsy-listing-images/${user.userId}/${productId}/mockup/`,objects=await runtime().ARTWORK.list({prefix,limit:4});
-  for(const [position,object] of objects.objects.entries()){
+  const prefix=`etsy-listing-images/${user.userId}/${productId}/`,objects=await runtime().ARTWORK.list({prefix,limit:30});
+  const additional=objects.objects.filter(object=>object.key.includes("/mockup/")||object.key.includes("/upload/"));
+  for(const [position,object] of additional.entries()){
     const stored=await runtime().ARTWORK.get(object.key);if(!stored)continue;
     const bytes=new Uint8Array(await stored.arrayBuffer());total+=bytes.byteLength;
     if(total>90*1024*1024)return NextResponse.json({error:"These photos are too large to package together. Download fewer Printify photos, then try again."},{status:413});
-    const name=stored.customMetadata?.name||object.key.split("/").at(-1)||`mockup-${position+1}.jpg`;
-    files[`02-lifestyle-mockups/${String(position+1).padStart(2,"0")}-${safeName(name)}`]=bytes;
+    const name=stored.customMetadata?.name||object.key.split("/").at(-1)||`photo-${position+1}.jpg`;
+    files[`02-additional-photos/${String(position+1).padStart(2,"0")}-${safeName(name)}`]=bytes;
   }
-  if(!Object.keys(files).length)return NextResponse.json({error:"Choose at least one Printify photo or create a lifestyle mockup first."},{status:400});
+  if(!Object.keys(files).length)return NextResponse.json({error:"Choose at least one Printify photo or upload a listing photo first."},{status:400});
   const zip=zipSync(files,{level:0});
   return new Response(zip,{headers:{"Content-Type":"application/zip","Content-Disposition":`attachment; filename="${base}-listing-photos.zip"`,"Cache-Control":"private, no-store"}});
 }

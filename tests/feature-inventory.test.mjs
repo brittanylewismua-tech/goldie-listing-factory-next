@@ -26,7 +26,7 @@ const RENDERED_COMPONENTS = [
   "ActionReceipt", "BatchPreferencesPortal", "ContextHelp", "DownloadListingPhotos",
   "EtsyDetailsEditor", "FinalListingReview", "GoldieCommandBar", "GoldieInsight",
   "GoldieWordmark", "IndividualAutoTitle", "IndividualManualTitle", "IndividualSizeGuide",
-  "IntegratedMockups", "KeywordBank", "ListingPhotoOrder", "MockupSetSelector", "NavIcon",
+  "UploadedListingPhotos", "KeywordBank", "ListingPhotoOrder", "NavIcon",
   "OutcomeReceipt", "PersonalizationEditor", "PriceField", "PricingReview",
   "PrintifyImagePicker", "ProductColorSelector", "ProductSizeSelector", "SavedWorkflow",
   "SupportChat", "WorkflowMomentum",
@@ -49,8 +49,8 @@ const FEATURES = [
   ["download every listing photo as a zip", /function DownloadListingPhotos/],
   ["download-all is actually rendered", /<DownloadListingPhotos/],
   ["Printify product photos are selectable", /printify-image-picker bare/],
-  ["lifestyle mockups", /<IntegratedMockups/],
-  ["mockups can be reordered", /<ListingPhotoOrder/],
+  ["seller photos can be uploaded", /<UploadedListingPhotos/],
+  ["all listing photos can be reordered", /<ListingPhotoOrder/],
   ["a size guide can be added to every listing", /Add one size guide to every Etsy listing/],
   ["AI titles for the whole batch", /Create titles for the whole batch/],
   ["manual title building from a bank", /Build this title yourself from a keyword bank/],
@@ -81,12 +81,10 @@ test("every named feature is still reachable", async () => {
 });
 
 test("features that live outside the main file are still wired", async () => {
-  const mockups = await read("app/integrated-mockups.tsx");
-  /* D618 - the listing panel no longer offers a scene choice, so its heading no
-     longer promises one. The choice is made once, for the batch, above. */
-  assert.match(mockups, /Lifestyle mockups for this listing/);
-  assert.match(mockups, /download=\{r\.name\}/, "individual mockup downloads");
-  assert.match(mockups, /Adjust this mockup only/, "per-mockup scale and position");
+  const uploads = await read("app/uploaded-listing-photos.tsx");
+  assert.match(uploads, /form\.set\("kind","upload"\)/);
+  assert.match(uploads, /multiple type="file"/);
+  assert.match(uploads, /Remove/);
 
   const tools = await read("app/factory-tools.tsx");
   assert.match(tools, /export function KeywordBank/);
@@ -110,14 +108,8 @@ test("no capability is wired up only halfway", async () => {
   assert.equal((app.match(/printTargetFor\(/g) || []).length, 6,
     "five call sites plus the definition - it was written out five times");
 
-  /* MockupSetSelector takes selectedIds and firstRun. Neither was ever passed, so
-     the first-run wording was dead for every seller and Goldie could not tell her
-     scene picks had changed - which is what offers to save them. */
-  assert.match(app, /<MockupSetSelector firstRun=\{productFirstRun\}/);
-  assert.match(app, /selectedIds=\{sharedMockups\?\.theme===mockupTheme\?sharedMockups\.ids:\[\]\}/);
-  assert.match(app, /savedIds=\{activeRecipe\?\.mockupIds\}/);
-  assert.match(app, /onChange=\{\(theme,ids\)=>\{setMockupTheme\(theme\);if\(ids\)setSharedMockups\(\{theme,ids\}\)\}\}/,
-    "the ids the selector reports are kept, not dropped");
+  assert.match(app, /<UploadedListingPhotos productId=\{draft\.id\}/);
+  assert.doesNotMatch(app, /<IntegratedMockups|<MockupSetSelector/);
 
   // And first run is a fact about the product, not about how it was opened.
   assert.doesNotMatch(app, /const productFirstRun=Boolean\(activeRecipe\)&&!activeBundle/);
