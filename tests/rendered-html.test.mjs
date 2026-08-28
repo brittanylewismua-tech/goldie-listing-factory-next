@@ -6521,7 +6521,10 @@ test("Add a new product takes you to the form it just opened — D654", async ()
    there: four sequential catalogue reads, two unbounded Etsy lookups, and a
    pairing check re-proving on every load something that had not changed. */
 test("loading a product does not wait on anything it does not have to — D655", async () => {
-  const api = await readFile(new URL("../app/api/printify/route.ts", import.meta.url), "utf8");
+  const [api, shared] = await Promise.all([
+    readFile(new URL("../app/api/printify/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/static-cache.ts", import.meta.url), "utf8"),
+  ]);
 
   /* The catalogue reads are keyed on blueprint_id and print_provider_id, both
      known before any of them run. They were sequential only because they were
@@ -6554,14 +6557,22 @@ test("loading a product does not wait on anything it does not have to — D655",
   assert.doesNotMatch(api, /const profile=await etsyFetch</, "and the shipping-profile lookup");
 
   /* A proven pairing does not change between two loads. */
-  assert.match(api, /const memo=await provenMatch\(user\.userId,found\.shop\.id,etsyLink\.shopId\);/);
+  /* D661 · provenMatch/rememberMatch wrote to caches.default, which stored
+     nothing this deployment could read back. Same rule, durable store. */
+  assert.match(api, /const memo=await provenPairing\(user\.userId,found\.shop\.id,etsyLink\.shopId\);/);
   assert.match(api, /if\(!memo\)\{/, "a proven pairing skips the check entirely");
-  assert.match(api, /if\(pairing\.result==="matched"\)await rememberMatch\(user\.userId,found\.shop\.id,etsyLink\.shopId\);/);
+  assert.match(api, /if\(pairing\.result==="matched"\)await rememberPairing\(user\.userId,found\.shop\.id,etsyLink\.shopId,pairing\.listingId\|\|0\);/);
   // Keyed on BOTH shops, so reconnecting Etsy elsewhere cannot hit a stale yes.
-  assert.match(api, /goldie-pairing\.internal\/\$\{encodeURIComponent\(userId\)\}\/\$\{printifyShopId\}\/\$\{etsyShopId\}/);
+  // Keyed on both STABLE shop ids, never on a name - D641 was a rename.
+  assert.match(shared, /WHERE user_id=\? AND printify_shop_id=\? AND etsy_shop_id=\? AND proved_at>\?/);
+  assert.doesNotMatch(shared, /shop_name|shopTitle|printifyShopTitle/,
+    "a pairing proof keyed on a name would reintroduce the D641 rename fault");
   /* A mismatch is never remembered: the seller is mid-fix and has to be
      re-checked the moment they try again. */
-  assert.doesNotMatch(api, /pairing\.result==="mismatched"\)await rememberMatch/);
+  assert.doesNotMatch(api, /pairing\.result==="mismatched"\)await rememberPairing/);
+  // And a changed connection on either side voids every proof.
+  assert.equal((api.match(/forgetPairings\(/g) || []).length, 2,
+    "voided on a Printify disconnect and on a new token, which can be a different account");
 });
 
 /* D656 · The worst repeat was not on the product load at all. Preparing Etsy
@@ -6581,16 +6592,23 @@ test("platform data is fetched once, not once per design — D656", async () => 
   assert.match(shared, /export async function cachedJson<T>\(namespace: string, path: string, ttlSeconds: number, load: \(\) => Promise<T>\)/);
   /* The key is the path and the namespace, nothing else. Anything scoped to a
      caller must not be reachable through here. */
-  assert.match(shared, /const url = `https:\/\/goldie-\$\{namespace\}\.internal\$\{path\.startsWith\("\/"\) \? path : `\/\$\{path\}`\}`;/);
-  assert.match(shared, /const key = new Request\(url, \{ method: "GET" \}\);/);
+  assert.match(shared, /const key = `\$\{namespace\}:\$\{path\.startsWith\("\/"\) \? path : `\/\$\{path\}`\}`;/);
   /* Checked against the code, not the prose: the comment above it has to be
      free to explain why a token is required to fetch what it caches. */
   const sharedCode = shared.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
-  assert.doesNotMatch(sharedCode, /userId|user\.|token|shopId/,
+  /* Scoped to cachedJson itself. D661 put the pairing proof in the same file,
+     and that one is DELIBERATELY per seller - it just must never travel through
+     the shared key. */
+  const sharedFn = sharedCode.slice(sharedCode.indexOf("export async function cachedJson"), sharedCode.indexOf("export const TAXONOMY_TTL_SECONDS"));
+  assert.ok(sharedFn, "cachedJson must still be findable");
+  assert.doesNotMatch(sharedFn, /userId|user\.|token|shopId/,
     "a shared cache key may not contain anything seller-specific");
-  // A cache that cannot be reached must not break the request.
-  assert.match(shared, /await cache\.match\(key\)\.catch\(\(\) => undefined\)/);
-  assert.match(shared, /await cache\.put\([\s\S]{0,200}?\.catch\(\(\) => undefined\)/);
+  /* D661 · A cache that cannot be reached is a miss, never an error - on the
+     read AND on the write, so a storage failure cannot fail a request whose
+     data already loaded. */
+  assert.match(shared, /catch \{ \/\* A cache that cannot be read is a cache miss, never an error\. \*\/ \}/);
+  assert.match(shared, /catch \{ \/\* Failing to store must not fail the request that loaded it\. \*\/ \}/);
+  assert.doesNotMatch(shared, /caches\?\.default/, "the inert implementation is gone");
 
   // The taxonomy download AND the flatten are both behind the cache.
   assert.match(taxonomy, /categories=await cachedJson\("etsy-taxonomy","\/nodes",TAXONOMY_TTL_SECONDS,async\(\)=>\{/);
@@ -6603,6 +6621,9 @@ test("platform data is fetched once, not once per design — D656", async () => 
 
   // Printify's catalogue shares it rather than keeping a second copy.
   assert.match(api, /return cachedJson<T>\("printify-catalog", path, CATALOG_TTL_SECONDS, \(\) => \{ if\(seen\)seen\.fetched\+=1; return printify<T>\(path, token\); \}\);/);
+  /* D661 · and the inert implementation is gone, so no diagnostic can report a
+     cache that was never there. */
+  assert.doesNotMatch(api, /caches\?\.default|goldie-pairing\.internal|goldie-catalog\.internal/);
 });
 
 /* D657 · Every timing taken of the product load was measured inside a browser
@@ -6636,18 +6657,18 @@ test("the product load reports its own timings and cache outcome — D657", asyn
 
 /* D657 · Two properties of the shared cache that had to be established rather
    than assumed, because getting either wrong is worse than not caching. */
-test("the shared cache coalesces misses and never stores a failure — D657", async () => {
+test("the shared cache coalesces misses and never stores a failure — D661", async () => {
   const shared = await readFile(new URL("../app/api/static-cache.ts", import.meta.url), "utf8");
 
   /* Several designs prepare at once inside one isolate. Before this they all
      missed together and each started its own download of the same taxonomy, so
      the cache only ever helped the NEXT batch. */
   assert.match(shared, /const inFlight = new Map<string, Promise<unknown>>\(\);/);
-  assert.match(shared, /const pending = inFlight\.get\(url\);\n\s*if \(pending\) return pending as Promise<T>;/);
-  assert.match(shared, /inFlight\.set\(url, work\);/);
+  assert.match(shared, /const pending = inFlight\.get\(key\);\n\s*if \(pending\) return pending as Promise<T>;/);
+  assert.match(shared, /inFlight\.set\(key, work\);/);
   /* Removed as soon as it settles: a failure must not be remembered, or the
      next caller inherits a rejected promise instead of retrying. */
-  assert.match(shared, /try \{ return await work; \} finally \{ inFlight\.delete\(url\); \}/);
+  assert.match(shared, /try \{ return await work \} finally \{ inFlight\.delete\(key\) \}/);
 
   /* cache.put is reached only after load() resolves. printify() and etsyFetch()
      both throw on any non-2xx, so a 401, 403, 429 or 5xx rejects before it -
@@ -6655,14 +6676,14 @@ test("the shared cache coalesces misses and never stores a failure — D657", as
   /* Ordering is checked against the code: the comment above it names cache.put
      while explaining why a failure never reaches it. */
   const code = shared.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
-  const body = code.slice(code.indexOf("const work = (async () => {"), code.indexOf("inFlight.set(url, work);"));
-  assert.ok(body.includes("cache.put"), "the body under test has to contain the write");
-  assert.ok(body.indexOf("const value = await load();") < body.indexOf("cache.put"),
+  const body = code.slice(code.indexOf("const work = (async () => {"), code.indexOf("inFlight.set(key, work);"));
+  assert.ok(body.includes("INSERT INTO platform_cache"), "the body under test has to contain the write");
+  assert.ok(body.indexOf("const value = await load();") < body.indexOf("INSERT INTO platform_cache"),
     "nothing is stored until the load has actually succeeded");
-  assert.doesNotMatch(code, /catch[\s\S]{0,120}?cache\.put/, "a failed load must never reach the cache");
 
   // Expiry is carried on the stored entry, not assumed.
-  assert.match(shared, /"cache-control": `public, max-age=\$\{ttlSeconds\}`/);
+  assert.match(shared, /expires_at>\?/, "an expired row is a miss");
+  assert.match(shared, /now \+ ttlSeconds/, "and the expiry is written with the value");
 });
 
 /* D658 · Measured on the live build, from a synchronous request so no frozen

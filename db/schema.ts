@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { index, integer, primaryKey, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 export const printifyConnections = sqliteTable("printify_connections", {
   userId: text("user_id").primaryKey(),
@@ -315,3 +315,21 @@ export const mockupArtworkOverrides = sqliteTable("mockup_artwork_overrides", {
   curvature: text("curvature"),
   updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 }, (table) => [index("idx_artwork_override_listing").on(table.userId, table.listingId, table.designKey)]);
+
+/* D661 · Durable replacements for the inert caches.default. Keyed by stable
+   ids only - D641 was caused by a shop rename, so a pairing verdict keyed on a
+   name would reintroduce that fault the first time a seller renamed a shop. */
+export const shopPairingProofs = sqliteTable("shop_pairing_proofs", {
+  userId: text("user_id").notNull(),
+  printifyShopId: integer("printify_shop_id").notNull(),
+  etsyShopId: integer("etsy_shop_id").notNull(),
+  listingId: integer("listing_id").notNull().default(0),
+  provedAt: integer("proved_at").notNull(),
+}, (table) => [primaryKey({ columns: [table.userId, table.printifyShopId, table.etsyShopId] })]);
+
+export const platformCache = sqliteTable("platform_cache", {
+  cacheKey: text("cache_key").primaryKey(),
+  payload: text("payload").notNull(),
+  expiresAt: integer("expires_at").notNull(),
+  storedAt: integer("stored_at").notNull(),
+}, (table) => [index("platform_cache_expires").on(table.expiresAt)]);

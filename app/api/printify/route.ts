@@ -1,7 +1,7 @@
 import { env } from "cloudflare:workers";
 import { NextResponse } from "next/server";
 import { verifyShopPairing, shopMismatch } from "./shop-match";
-import { cachedJson } from "../static-cache";
+import { cachedJson, provenPairing, rememberPairing, forgetPairings } from "../static-cache";
 import { templateHasLabelArtwork } from "./product-payload";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { customerLaunchBlock } from "@/app/customer-launch-gate";
@@ -102,30 +102,10 @@ function printifyCatalog<T>(path: string, token: string, seen?: { fetched: numbe
    Goldie cannot get quickly is an answer it does not have. */
 const ETSY_LOOKUP_MS=4000;
 
-/* D655 · The pairing check ran on every single product load, and even bounded
-   it costs seconds. What it establishes does not change between two loads: this
-   Printify store either publishes into this Etsy shop or it does not. Remember
-   only a PROVEN match, and only against both shop ids - reconnecting Etsy
-   elsewhere changes the key, so a stale yes cannot outlive the pairing it was
-   about. A mismatch is deliberately never cached: the seller is in the middle
-   of fixing it and must be re-checked the moment they try again. */
-const PAIRING_MEMO_SECONDS=21600;
-
-function pairingKey(userId:string,printifyShopId:number,etsyShopId:number){
-  return new Request(`https://goldie-pairing.internal/${encodeURIComponent(userId)}/${printifyShopId}/${etsyShopId}`,{method:"GET"});
-}
-
-async function provenMatch(userId:string,printifyShopId:number,etsyShopId:number){
-  const cache=(globalThis as { caches?: { default?: Cache } }).caches?.default;
-  if(!cache)return false;
-  return Boolean(await cache.match(pairingKey(userId,printifyShopId,etsyShopId)).catch(()=>undefined));
-}
-
-async function rememberMatch(userId:string,printifyShopId:number,etsyShopId:number){
-  const cache=(globalThis as { caches?: { default?: Cache } }).caches?.default;
-  if(!cache)return;
-  await cache.put(pairingKey(userId,printifyShopId,etsyShopId),new Response("matched",{headers:{"cache-control":`public, max-age=${PAIRING_MEMO_SECONDS}`}})).catch(()=>undefined);
-}
+/* D661 · The caches.default memo that used to live here never stored anything
+   this deployment could read back - D657's counter reported "miss" on six
+   consecutive identical loads. Replaced by a D1 row keyed on the two stable
+   shop ids; see app/api/static-cache.ts. */
 
 function boundedEtsy<T>(work: Promise<T>): Promise<T> {
   return Promise.race([work, new Promise<T>((_, reject) => setTimeout(() => reject(new Error("Etsy lookup timed out")), ETSY_LOOKUP_MS))]);
@@ -174,6 +154,8 @@ export async function DELETE() {
   const db = runtimeEnv().DB;
   if (!db) return NextResponse.json({ error: "Secure token storage is unavailable." }, { status: 500 });
   await db.prepare("DELETE FROM printify_connections WHERE user_id = ?").bind(user.userId).run();
+  /* D661 · A proof is about one pair of shops. Disconnecting invalidates it. */
+  await forgetPairings(user.userId);
   return NextResponse.json({ connected: false });
 }
 
@@ -196,7 +178,7 @@ export async function POST(request: Request) {
     const token = body.token?.trim() || await storedToken(user.userId);
     if (!token) return NextResponse.json({ error: "Connect your Printify account first." }, { status: 400 });
     const shops = await phase("shops",()=>printify<Shop[]>("/shops.json", token));
-    if (!body.productUrl) { await saveToken(user.userId, token); return NextResponse.json({ connected: true }); }
+    if (!body.productUrl) { await saveToken(user.userId, token); /* D661 · A new token can be a different Printify account, so every proof it backed is void. */ await forgetPairings(user.userId); return NextResponse.json({ connected: true }); }
 
     const productId = productIdFromUrl(body.productUrl.trim());
     if (!productId) return NextResponse.json({ error: "Goldie could not find a product in that link.", issues:["Open the product in Printify and copy the address bar. Either the design-editor page or the product page works.","The My Products list, the catalogue and the orders page do not identify a single product, so their links cannot be used."] }, { status: 400 });
@@ -228,11 +210,11 @@ export async function POST(request: Request) {
     /* D641 - proven, not guessed. Only a denial from Etsy blocks. */
     try{
       const etsyLink=await etsyConnection(user.userId);
-      const memo=await provenMatch(user.userId,found.shop.id,etsyLink.shopId);
+      const memo=await provenPairing(user.userId,found.shop.id,etsyLink.shopId);
       cacheReport.shopPairing=memo?"hit":"miss";
       if(!memo){
       const pairing=await phase("shopPairing",()=>verifyShopPairing({printifyToken:token,printifyShopId:found.shop.id,etsyShopId:etsyLink.shopId,etsyToken:etsyLink.token,etsyFetch}));
-      if(pairing.result==="matched")await rememberMatch(user.userId,found.shop.id,etsyLink.shopId);
+      if(pairing.result==="matched")await rememberPairing(user.userId,found.shop.id,etsyLink.shopId,pairing.listingId||0);
       if(pairing.result==="mismatched")return NextResponse.json({...shopMismatch(found.shop.title,etsyLink.shopName||"your connected Etsy shop"),shop:{id:found.shop.id,title:found.shop.title,count:shops.length}},{status:409});
       }
     }catch{/* Etsy not connected, or the check could not run. Not evidence. */}

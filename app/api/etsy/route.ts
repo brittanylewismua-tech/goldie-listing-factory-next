@@ -1,3 +1,4 @@
+import { forgetPairings } from "../static-cache";
 import { env } from "cloudflare:workers";
 import { NextResponse } from "next/server";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
@@ -21,4 +22,4 @@ export async function POST(){
   }catch(error){return NextResponse.json({error:error instanceof Error?error.message:"Etsy connection could not start."},{status:500})}
 }
 
-export async function DELETE(){const user=await getChatGPTUser();if(!user)return NextResponse.json({error:"Sign in to continue."},{status:401});await env.DB.prepare("DELETE FROM etsy_connections WHERE user_id=?").bind(user.userId).run();return NextResponse.json({connected:false})}
+export async function DELETE(){const user=await getChatGPTUser();if(!user)return NextResponse.json({error:"Sign in to continue."},{status:401});await env.DB.prepare("DELETE FROM etsy_connections WHERE user_id=?").bind(user.userId).run();/* D661 · A pairing proof is about one Etsy shop. Disconnecting voids it. */await forgetPairings(user.userId);return NextResponse.json({connected:false})}
