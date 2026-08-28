@@ -4,8 +4,9 @@ import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { monthKey, planFor } from "@/app/plan-limits";
 import { drainGlobalPublishQueue, publishJobPayload } from "./queue";
 import { isOwner } from "@/app/mastermind/access";
-import { shopsMatch, shopMismatch } from "../../shop-match";
+import { verifyShopPairing, shopMismatch } from "../../shop-match";
 import { decryptPrintifyToken } from "../../token-crypto";
+import { etsyConnection, etsyFetch } from "@/app/api/etsy/client";
 
 export async function POST(request:Request){
   const user=await getChatGPTUser();if(!user)return NextResponse.json({error:"Sign in to publish these listings."},{status:401});
@@ -40,15 +41,18 @@ export async function POST(request:Request){
   const printifyToken=await env.DB.prepare("SELECT encrypted_token FROM printify_connections WHERE user_id=?").bind(user.userId).first<{encrypted_token:string}>();
   const tokenKey=(env as unknown as {PRINTIFY_TOKEN_KEY?:string}).PRINTIFY_TOKEN_KEY;
   if(etsyName?.shop_name&&printifyToken?.encrypted_token&&tokenKey){
-    const shopIds=[...new Set(rows.results.map((row:{response_json:string})=>{try{return Number((JSON.parse(row.response_json) as {shopId?:number}).shopId)}catch{return 0}}).filter(Boolean))];
+    const shopIdList:number[]=rows.results.map((row:{response_json:string})=>{try{return Number((JSON.parse(row.response_json) as {shopId?:number}).shopId)||0}catch{return 0}});
+    const shopIds:number[]=[...new Set(shopIdList)].filter(value=>Number.isInteger(value)&&value>0);
     if(shopIds.length){
       const token=await decryptPrintifyToken(printifyToken.encrypted_token,tokenKey).catch(()=>"");
       if(token){
         const response=await fetch("https://api.printify.com/v1/shops.json",{headers:{Authorization:`Bearer ${token}`,"User-Agent":"Goldie-Listing-Factory"},cache:"no-store"}).catch(()=>null);
         const shops=response&&response.ok?(await response.json().catch(()=>[]) as Array<{id:number;title:string}>):[];
-        for(const shopId of shopIds){
+        const etsyLink=await etsyConnection(user.userId).catch(()=>null);
+        if(etsyLink)for(const shopId of shopIds){
           const shop=shops.find(entry=>Number(entry.id)===shopId);
-          if(shop&&!shopsMatch(shop.title,etsyName.shop_name))return NextResponse.json(shopMismatch(shop.title,etsyName.shop_name),{status:409});
+          const pairing=await verifyShopPairing({printifyToken:token,printifyShopId:shopId,etsyShopId:etsyLink.shopId,etsyToken:etsyLink.token,etsyFetch});
+          if(pairing.result==="mismatched")return NextResponse.json(shopMismatch(shop?.title||"This Printify store",etsyLink.shopName||etsyName.shop_name),{status:409});
         }
       }
     }

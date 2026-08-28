@@ -5933,41 +5933,52 @@ test("Goldie remembers publishing even when Printify has not answered — D638",
   assert.match(queue, /return \{\.\.\.job,items,finished,failures/);
 });
 
-/* D639 · The root cause of the whole publish failure, found by opening the same
- * product URL under two Printify stores.
+/* D641 · D639 compared the Printify store's title with the connected Etsy shop
+ * name, and Brittany's own account broke it within the hour: her Printify store
+ * is still HOWDYANGEL, the Etsy shop it publishes to was renamed to
+ * godisagirlapparel, and they are the SAME shop. Goldie refused a setup that was
+ * entirely correct.
  *
- * Goldie created every draft in Printify shop 20191756 (HOWDYANGEL) while its
- * Etsy connection was shesawolfclothing - the "She's A Wolf Clothing" store, a
- * different storefront. Nothing compared them. So a batch could be built,
- * drafted, titled, priced and sent, and the listings were created in a shop
- * Goldie had no Etsy authorisation over. Etsy showed zero listings because we
- * were watching the wrong shop.
+ *   409 · Printify store: HOWDYANGEL
+ *         Goldie's Etsy shop: godisagirlapparel
  *
- * Printify names an Etsy store after the Etsy shop it publishes to, so the two
- * are comparable once case and punctuation go. */
-test("a Printify shop that publishes elsewhere is refused by name — D639", async () => {
+ * A check that blocks good sellers is worse than no check, and renaming a shop
+ * is an ordinary thing to do. Names are not identity: the authoritative question
+ * is whether the listings this Printify store creates land in the Etsy shop
+ * Goldie holds a token for, and that can be asked directly. */
+test("shop pairing is proven against Etsy, never guessed from names — D641", async () => {
   const [match, product, publish] = await Promise.all([
     readFile(new URL("../app/api/printify/shop-match.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/printify/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/printify/drafts/publish/route.ts", import.meta.url), "utf8"),
   ]);
 
-  // The comparison itself.
-  assert.match(match, /return String\(value\|\|""\)\.toLowerCase\(\)\.replace\(\/\[\^a-z0-9\]\+\/g,""\)/);
-  /* An unknown name is not evidence of a mismatch - Goldie must not block a
-     seller over something it cannot actually see. */
-  assert.match(match, /if\(!printify\|\|!etsy\)return true;/);
+  // No name comparison survives anywhere in the rule.
+  assert.doesNotMatch(match, /toLowerCase\(\)\.replace/, "a renamed shop is still the same shop");
+  assert.doesNotMatch(match, /shopsMatch/);
+  assert.doesNotMatch(`${product}\n${publish}`, /shopsMatch/);
 
-  // Refused at step 1, where the whole batch would otherwise be built.
-  assert.match(product, /SELECT shop_name FROM etsy_connections WHERE user_id=\?/);
-  assert.match(product, /!shopsMatch\(found\.shop\.title, etsyShop\.shop_name\)\) return NextResponse\.json\(shopMismatch\(found\.shop\.title, etsyShop\.shop_name\), \{ status: 409 \}\)/);
+  // The evidence is a listing this Printify store published, asked for inside
+  // the connected Etsy shop. Etsy answers 200 only if it belongs there.
+  assert.match(match, /const id=Number\(product\.external\?\.id\)/);
+  assert.match(match, /await etsyFetch<unknown>\(`\/shops\/\$\{etsyShopId\}\/listings\/\$\{listingId\}`,etsyToken\)/);
+  assert.match(match, /return \{result:"matched",listingId\}/);
 
-  // And again at publish, for batches built before the check existed.
-  assert.match(publish, /if\(shop&&!shopsMatch\(shop\.title,etsyName\.shop_name\)\)return NextResponse\.json\(shopMismatch\(shop\.title,etsyName\.shop_name\),\{status:409\}\)/);
+  /* Three outcomes, not two - and only a denial blocks. An absent answer is not
+     an answer, which is the whole lesson of D639. */
+  assert.match(match, /export type ShopPairing="matched"\|"mismatched"\|"unknown"/);
+  assert.match(match, /if\(\/\\b404\\b\|not found\/i\.test\(message\)\)return \{result:"mismatched",listingId\}/);
+  assert.match(match, /return \{result:"unknown",listingId\}/, "a rate limit or outage is not a mismatch");
+  assert.match(match, /if\(!listingId\)return \{result:"unknown"\}/, "nothing published yet proves nothing");
 
-  // The refusal names both shops, or it is not actionable.
-  assert.match(match, /Printify store: \$\{printifyShopTitle\}/);
-  assert.match(match, /Goldie's Etsy shop: \$\{etsyShopName\}/);
+  // Both callers block on "mismatched" and nothing else.
+  assert.match(product, /if\(pairing\.result==="mismatched"\)return NextResponse\.json\(shopMismatch/);
+  assert.match(publish, /if\(pairing\.result==="mismatched"\)return NextResponse\.json\(shopMismatch/);
+  assert.equal((`${product}\n${publish}`.match(/pairing\.result===/g) || []).length, 2,
+    "no caller may block on unknown");
+
+  // And the refusal explains that this was checked, not assumed.
+  assert.match(match, /Goldie checked a listing this Printify store already published/);
 });
 
 /* D639 · Brittany, reading the refusal: "there's no navigation to go back to the

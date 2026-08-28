@@ -1,6 +1,6 @@
 import { env } from "cloudflare:workers";
 import { NextResponse } from "next/server";
-import { shopsMatch, shopMismatch } from "./shop-match";
+import { verifyShopPairing, shopMismatch } from "./shop-match";
 import { templateHasLabelArtwork } from "./product-payload";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { customerLaunchBlock } from "@/app/customer-launch-gate";
@@ -143,8 +143,12 @@ export async function POST(request: Request) {
     /* D639 - the earliest point at which Goldie knows both shops. Refusing here
        stops a whole batch being built against a storefront its Etsy connection
        cannot publish to. */
-    const etsyShop = await env.DB.prepare("SELECT shop_name FROM etsy_connections WHERE user_id=?").bind(user.userId).first<{shop_name:string}>();
-    if (etsyShop?.shop_name && !shopsMatch(found.shop.title, etsyShop.shop_name)) return NextResponse.json(shopMismatch(found.shop.title, etsyShop.shop_name), { status: 409 });
+    /* D641 - proven, not guessed. Only a denial from Etsy blocks. */
+    try{
+      const etsyLink=await etsyConnection(user.userId);
+      const pairing=await verifyShopPairing({printifyToken:token,printifyShopId:found.shop.id,etsyShopId:etsyLink.shopId,etsyToken:etsyLink.token,etsyFetch});
+      if(pairing.result==="mismatched")return NextResponse.json(shopMismatch(found.shop.title,etsyLink.shopName||"your connected Etsy shop"),{status:409});
+    }catch{/* Etsy not connected, or the check could not run. Not evidence. */}
     /* D330 · This variable must contain an ETSY shipping_profile_id only.
        Printify's external.shipping_template_id is a different id system. If it
        seeds this value, an inactive Etsy listing lookup can fail while the
