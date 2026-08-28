@@ -6468,7 +6468,8 @@ test("choosing a saved product cannot outlive the request waiting on it — D654
 
   /* The store walk asks all stores at once. Four stores must cost one round
      trip, not four. */
-  assert.match(api, /await Promise\.all\(shops\.map\(async shop => \{/);
+  assert.match(api, /Promise\.all\(shops\.map\(async shop => \{/,
+    "the store walk is one round trip, however it is wrapped for timing");
   assert.doesNotMatch(api, /for \(const shop of shops\) \{[\s\S]{0,400}?products\/\$\{productId\}/,
     "the store walk must not go back to one request at a time");
 
@@ -6510,7 +6511,7 @@ test("loading a product does not wait on anything it does not have to — D655",
   /* The catalogue reads are keyed on blueprint_id and print_provider_id, both
      known before any of them run. They were sequential only because they were
      written in a row. */
-  assert.match(api, /const \[blueprintResult,providersResult,variantsResult,shippingResult\]=await Promise\.allSettled\(\[/);
+  assert.match(api, /const \[blueprintResult,providersResult,variantsResult,shippingResult\]=await phase\("catalog",\(\)=>Promise\.allSettled\(\[/);
   assert.equal((api.match(/ {6}printifyCatalog</g) || []).length, 4, "all four catalogue reads go through the cache");
   assert.doesNotMatch(api, /await printify<Blueprint>\(`\/catalog/, "the blueprint read must not go back to a bare sequential fetch");
   assert.doesNotMatch(api, /await printify<Shipping>\(`\/catalog/, "nor the shipping read");
@@ -6525,7 +6526,7 @@ test("loading a product does not wait on anything it does not have to — D655",
 
   // Catalogue data is Printify's, not the seller's, so it is cacheable at all.
   assert.match(api, /const CATALOG_TTL_SECONDS=86400;/);
-  assert.match(api, /function printifyCatalog<T>\(path: string, token: string\)/);
+  assert.match(api, /function printifyCatalog<T>\(path: string, token: string, seen\?: \{ fetched: number \}\)/);
 
   /* Both Etsy reads here already fall through to a message that stays accurate
      without them, so retrying for forty seconds bought the same fallback the
@@ -6538,7 +6539,8 @@ test("loading a product does not wait on anything it does not have to — D655",
   assert.doesNotMatch(api, /const profile=await etsyFetch</, "and the shipping-profile lookup");
 
   /* A proven pairing does not change between two loads. */
-  assert.match(api, /if\(!await provenMatch\(user\.userId,found\.shop\.id,etsyLink\.shopId\)\)\{/);
+  assert.match(api, /const memo=await provenMatch\(user\.userId,found\.shop\.id,etsyLink\.shopId\);/);
+  assert.match(api, /if\(!memo\)\{/, "a proven pairing skips the check entirely");
   assert.match(api, /if\(pairing\.result==="matched"\)await rememberMatch\(user\.userId,found\.shop\.id,etsyLink\.shopId\);/);
   // Keyed on BOTH shops, so reconnecting Etsy elsewhere cannot hit a stale yes.
   assert.match(api, /goldie-pairing\.internal\/\$\{encodeURIComponent\(userId\)\}\/\$\{printifyShopId\}\/\$\{etsyShopId\}/);
@@ -6564,7 +6566,8 @@ test("platform data is fetched once, not once per design — D656", async () => 
   assert.match(shared, /export async function cachedJson<T>\(namespace: string, path: string, ttlSeconds: number, load: \(\) => Promise<T>\)/);
   /* The key is the path and the namespace, nothing else. Anything scoped to a
      caller must not be reachable through here. */
-  assert.match(shared, /const key = new Request\(`https:\/\/goldie-\$\{namespace\}\.internal\$\{path\.startsWith\("\/"\) \? path : `\/\$\{path\}`\}`/);
+  assert.match(shared, /const url = `https:\/\/goldie-\$\{namespace\}\.internal\$\{path\.startsWith\("\/"\) \? path : `\/\$\{path\}`\}`;/);
+  assert.match(shared, /const key = new Request\(url, \{ method: "GET" \}\);/);
   /* Checked against the code, not the prose: the comment above it has to be
      free to explain why a token is required to fetch what it caches. */
   const sharedCode = shared.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
@@ -6584,5 +6587,65 @@ test("platform data is fetched once, not once per design — D656", async () => 
   assert.match(taxonomy, /const payload=await cachedJson\("etsy-taxonomy",`\/nodes\/\$\{selected\.id\}\/properties`,TAXONOMY_TTL_SECONDS/);
 
   // Printify's catalogue shares it rather than keeping a second copy.
-  assert.match(api, /return cachedJson<T>\("printify-catalog", path, CATALOG_TTL_SECONDS, \(\) => printify<T>\(path, token\)\);/);
+  assert.match(api, /return cachedJson<T>\("printify-catalog", path, CATALOG_TTL_SECONDS, \(\) => \{ if\(seen\)seen\.fetched\+=1; return printify<T>\(path, token\); \}\);/);
+});
+
+/* D657 · Every timing taken of the product load was measured inside a browser
+   tab Chrome had backgrounded. Hidden tabs have their timers and promise
+   continuations frozen: a plain setInterval(500ms) produced zero ticks in 28
+   seconds. So the numbers described the tab, not the server, and "over 120
+   seconds" was never a measurement of Goldie at all.
+
+   The code findings behind D655 and D656 stand on inspection - four sequential
+   catalogue reads that depend on nothing, retries whose failure is already
+   handled by falling through, a multi-megabyte taxonomy fetched per design -
+   but no speed claim can rest on a frozen tab. So the route measures itself. */
+test("the product load reports its own timings and cache outcome — D657", async () => {
+  const api = await readFile(new URL("../app/api/printify/route.ts", import.meta.url), "utf8");
+
+  assert.match(api, /const phase=async <T,>\(name:string,work:\(\)=>Promise<T>\):Promise<T>=>/);
+  for (const name of ["shops", "findProduct", "shopPairing", "catalog"]) {
+    assert.match(api, new RegExp(`phase\\("${name}"`), `${name} is timed`);
+  }
+  assert.match(api, /timings\.total=Date\.now\(\)-started;/);
+  assert.match(api, /return NextResponse\.json\(\{ timings, cache: cacheReport,/,
+    "the numbers have to reach the caller or they cannot be read");
+
+  /* Cold and warm are told apart by counting the reads that actually left the
+     worker, not by how long the request felt. */
+  assert.match(api, /const catalogFetches=\{fetched:0\};/);
+  assert.match(api, /if\(seen\)seen\.fetched\+=1;/);
+  assert.match(api, /cacheReport\.catalog=catalogFetches\.fetched===0\?"hit":catalogFetches\.fetched===4\?"miss":"skipped";/);
+  assert.match(api, /cacheReport\.shopPairing=memo\?"hit":"miss";/);
+});
+
+/* D657 · Two properties of the shared cache that had to be established rather
+   than assumed, because getting either wrong is worse than not caching. */
+test("the shared cache coalesces misses and never stores a failure — D657", async () => {
+  const shared = await readFile(new URL("../app/api/static-cache.ts", import.meta.url), "utf8");
+
+  /* Several designs prepare at once inside one isolate. Before this they all
+     missed together and each started its own download of the same taxonomy, so
+     the cache only ever helped the NEXT batch. */
+  assert.match(shared, /const inFlight = new Map<string, Promise<unknown>>\(\);/);
+  assert.match(shared, /const pending = inFlight\.get\(url\);\n\s*if \(pending\) return pending as Promise<T>;/);
+  assert.match(shared, /inFlight\.set\(url, work\);/);
+  /* Removed as soon as it settles: a failure must not be remembered, or the
+     next caller inherits a rejected promise instead of retrying. */
+  assert.match(shared, /try \{ return await work; \} finally \{ inFlight\.delete\(url\); \}/);
+
+  /* cache.put is reached only after load() resolves. printify() and etsyFetch()
+     both throw on any non-2xx, so a 401, 403, 429 or 5xx rejects before it -
+     caching a rate limit for a day would be far worse than the repeat fetch. */
+  /* Ordering is checked against the code: the comment above it names cache.put
+     while explaining why a failure never reaches it. */
+  const code = shared.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
+  const body = code.slice(code.indexOf("const work = (async () => {"), code.indexOf("inFlight.set(url, work);"));
+  assert.ok(body.includes("cache.put"), "the body under test has to contain the write");
+  assert.ok(body.indexOf("const value = await load();") < body.indexOf("cache.put"),
+    "nothing is stored until the load has actually succeeded");
+  assert.doesNotMatch(code, /catch[\s\S]{0,120}?cache\.put/, "a failed load must never reach the cache");
+
+  // Expiry is carried on the stored entry, not assumed.
+  assert.match(shared, /"cache-control": `public, max-age=\$\{ttlSeconds\}`/);
 });

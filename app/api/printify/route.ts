@@ -90,8 +90,8 @@ const CATALOG_TTL_SECONDS=86400;
 /* D656 · Shares one cache with Etsy's taxonomy - the two are the same problem:
    data that belongs to the platform, not to the seller, fetched again on every
    request that needed it. */
-function printifyCatalog<T>(path: string, token: string): Promise<T> {
-  return cachedJson<T>("printify-catalog", path, CATALOG_TTL_SECONDS, () => printify<T>(path, token));
+function printifyCatalog<T>(path: string, token: string, seen?: { fetched: number }): Promise<T> {
+  return cachedJson<T>("printify-catalog", path, CATALOG_TTL_SECONDS, () => { if(seen)seen.fetched+=1; return printify<T>(path, token); });
 }
 
 /* D655 · Every Etsy read on this path is already written so that a failure
@@ -183,10 +183,19 @@ export async function POST(request: Request) {
   const launchBlock = await customerLaunchBlock(user);
   if (launchBlock) return NextResponse.json({ error: launchBlock }, { status: 503 });
   try {
+    /* D657 · Every timing I took of this route was measured in a browser tab
+       Chrome had backgrounded, where timers and promise continuations are
+       frozen - so the numbers described the tab, not the server. The route
+       reports its own phases now: it cannot be fooled by tab state, and it says
+       plainly which reads were served from cache. */
+    const started=Date.now();
+    const timings:Record<string,number>={};
+    const cacheReport:Record<string,"hit"|"miss"|"skipped">={};
+    const phase=async <T,>(name:string,work:()=>Promise<T>):Promise<T>=>{const at=Date.now();try{return await work()}finally{timings[name]=Date.now()-at}};
     const body = (await request.json()) as { token?: string; productUrl?: string;savedShippingProfileId?:number };
     const token = body.token?.trim() || await storedToken(user.userId);
     if (!token) return NextResponse.json({ error: "Connect your Printify account first." }, { status: 400 });
-    const shops = await printify<Shop[]>("/shops.json", token);
+    const shops = await phase("shops",()=>printify<Shop[]>("/shops.json", token));
     if (!body.productUrl) { await saveToken(user.userId, token); return NextResponse.json({ connected: true }); }
 
     const productId = productIdFromUrl(body.productUrl.trim());
@@ -194,7 +203,7 @@ export async function POST(request: Request) {
     /* D654 - this asked each shop in turn. With four stores that is four round
        trips before the product is even identified, on the one request a seller
        waits on. They do not depend on each other, so ask them together. */
-    const attempts = await Promise.all(shops.map(async shop => {
+    const attempts = await phase("findProduct",()=>Promise.all(shops.map(async shop => {
       try{
         const response = await fetch(`${PRINTIFY_API}/shops/${shop.id}/products/${productId}.json`, { headers: { Authorization: `Bearer ${token}`, "User-Agent": "Goldie-Listing-Factory" }, cache: "no-store" });
         if (response.ok) return { shop, product: (await response.json()) as Product };
@@ -202,7 +211,7 @@ export async function POST(request: Request) {
            moment, and must not be reported to the seller as a wrong shop. */
         return response.status===404?undefined:{ shop, unavailable:true as const };
       }catch{ return { shop, unavailable:true as const } }
-    }));
+    })));
     const found = attempts.find((attempt): attempt is { shop: Shop; product: Product } => Boolean(attempt && "product" in attempt));
     if (!found) {
       /* D654 - every failure here said "use a product from the Printify shop
@@ -219,8 +228,10 @@ export async function POST(request: Request) {
     /* D641 - proven, not guessed. Only a denial from Etsy blocks. */
     try{
       const etsyLink=await etsyConnection(user.userId);
-      if(!await provenMatch(user.userId,found.shop.id,etsyLink.shopId)){
-      const pairing=await verifyShopPairing({printifyToken:token,printifyShopId:found.shop.id,etsyShopId:etsyLink.shopId,etsyToken:etsyLink.token,etsyFetch});
+      const memo=await provenMatch(user.userId,found.shop.id,etsyLink.shopId);
+      cacheReport.shopPairing=memo?"hit":"miss";
+      if(!memo){
+      const pairing=await phase("shopPairing",()=>verifyShopPairing({printifyToken:token,printifyShopId:found.shop.id,etsyShopId:etsyLink.shopId,etsyToken:etsyLink.token,etsyFetch}));
       if(pairing.result==="matched")await rememberMatch(user.userId,found.shop.id,etsyLink.shopId);
       if(pairing.result==="mismatched")return NextResponse.json({...shopMismatch(found.shop.title,etsyLink.shopName||"your connected Etsy shop"),shop:{id:found.shop.id,title:found.shop.title,count:shops.length}},{status:409});
       }
@@ -292,12 +303,16 @@ export async function POST(request: Request) {
        they were sequential only because they were written in a row. Four round
        trips became one. */
     const blueprintId=found.product.blueprint_id, providerId=found.product.print_provider_id;
-    const [blueprintResult,providersResult,variantsResult,shippingResult]=await Promise.allSettled([
-      printifyCatalog<Blueprint>(`/catalog/blueprints/${blueprintId}.json`,token),
-      printifyCatalog<Array<{ id: number; title: string }>>(`/catalog/blueprints/${blueprintId}/print_providers.json`, token),
-      printifyCatalog<CatalogVariant[] | { variants?: CatalogVariant[] }>(`/catalog/blueprints/${blueprintId}/print_providers/${providerId}/variants.json?show-out-of-stock=1`, token),
-      printifyCatalog<Shipping>(`/catalog/blueprints/${blueprintId}/print_providers/${providerId}/shipping.json`,token),
-    ]);
+    /* D657 · Counts the catalogue reads that actually left the worker, so a
+       cold load and a warm one are told apart by evidence rather than by how
+       long they felt. */
+    const catalogFetches={fetched:0};
+    const [blueprintResult,providersResult,variantsResult,shippingResult]=await phase("catalog",()=>Promise.allSettled([
+      printifyCatalog<Blueprint>(`/catalog/blueprints/${blueprintId}.json`,token,catalogFetches),
+      printifyCatalog<Array<{ id: number; title: string }>>(`/catalog/blueprints/${blueprintId}/print_providers.json`, token, catalogFetches),
+      printifyCatalog<CatalogVariant[] | { variants?: CatalogVariant[] }>(`/catalog/blueprints/${blueprintId}/print_providers/${providerId}/variants.json?show-out-of-stock=1`, token, catalogFetches),
+      printifyCatalog<Shipping>(`/catalog/blueprints/${blueprintId}/print_providers/${providerId}/shipping.json`,token, catalogFetches),
+    ]));
     /* Each one stays independently optional, exactly as it was when each had its
        own try/catch: a catalogue read that fails degrades one detail, never the
        product load. */
@@ -367,7 +382,10 @@ export async function POST(request: Request) {
        to confuse. Almost nobody has two, and a label naming the only shop you own
        is noise on every card. The count travels with the shop so the client can
        decide, rather than guessing from a single name. */
-    return NextResponse.json({ shop: { id: found.shop.id, title: found.shop.title, count: shops.length }, product: { id: found.product.id, batchId, title: found.product.title, description:found.product.description??"", blueprintId:found.product.blueprint_id, blueprintTitle:blueprint.title||found.product.title, brand:blueprint.brand||"", model:blueprint.model||"", provider, previewImage:(blueprint.images||[])[0]||"", previewImages:(blueprint.images||[]).slice(0,6), enabledVariants: enabledVariants.length, colorOptions:(colorOption?.values||[]).map(value=>({id:value.id,title:value.title||`Color ${value.id}`,swatch:value.colors?.[0]||"",available:availableColorIds.has(value.id),templateEnabled:templateColorIds.has(value.id)})), sizeOptions:(sizeOption?.values||[]).map(value=>({id:value.id,title:value.title||`Size ${value.id}`,available:availableSizeIds.has(value.id),templateEnabled:templateSizeIds.has(value.id)})), variants:selectableVariants.map(variant=>({id:variant.id,title:variant.title||`Variant ${variant.id}`,cost:Number(variant.cost??variant.price),templatePrice:Number(variant.price),shipping:shippingByVariant[variant.id]??standardShipping,options:variant.options||[],colorId:(variant.options||[]).find(id=>colorIds.has(id))||null,sizeId:(variant.options||[]).find(id=>sizeIds.has(id))||null,templateEnabled:Boolean(variant.is_enabled)})), shop: found.shop.title, standardShipping,shippingCurrency,shippingTemplateId,shippingProfileNeedsSelection,freeShipping:Boolean(found.product.sales_channel_properties?.free_shipping),maxPrintWidth, maxPrintHeight, placementScale, placement,
+    cacheReport.catalog=catalogFetches.fetched===0?"hit":catalogFetches.fetched===4?"miss":"skipped";
+    timings.catalogFetches=catalogFetches.fetched;
+    timings.total=Date.now()-started;
+    return NextResponse.json({ timings, cache: cacheReport, shop: { id: found.shop.id, title: found.shop.title, count: shops.length }, product: { id: found.product.id, batchId, title: found.product.title, description:found.product.description??"", blueprintId:found.product.blueprint_id, blueprintTitle:blueprint.title||found.product.title, brand:blueprint.brand||"", model:blueprint.model||"", provider, previewImage:(blueprint.images||[])[0]||"", previewImages:(blueprint.images||[]).slice(0,6), enabledVariants: enabledVariants.length, colorOptions:(colorOption?.values||[]).map(value=>({id:value.id,title:value.title||`Color ${value.id}`,swatch:value.colors?.[0]||"",available:availableColorIds.has(value.id),templateEnabled:templateColorIds.has(value.id)})), sizeOptions:(sizeOption?.values||[]).map(value=>({id:value.id,title:value.title||`Size ${value.id}`,available:availableSizeIds.has(value.id),templateEnabled:templateSizeIds.has(value.id)})), variants:selectableVariants.map(variant=>({id:variant.id,title:variant.title||`Variant ${variant.id}`,cost:Number(variant.cost??variant.price),templatePrice:Number(variant.price),shipping:shippingByVariant[variant.id]??standardShipping,options:variant.options||[],colorId:(variant.options||[]).find(id=>colorIds.has(id))||null,sizeId:(variant.options||[]).find(id=>sizeIds.has(id))||null,templateEnabled:Boolean(variant.is_enabled)})), shop: found.shop.title, standardShipping,shippingCurrency,shippingTemplateId,shippingProfileNeedsSelection,freeShipping:Boolean(found.product.sales_channel_properties?.free_shipping),maxPrintWidth, maxPrintHeight, placementScale, placement,
       /* D614 - the saved product carries artwork in an internal label placeholder.
          Those are left out of new products, and the seller is told so plainly
          rather than finding out from a Printify preview. */
