@@ -4287,10 +4287,10 @@ test("the row itself opens, exactly as step 1's does — D503", async () => {
             tabindex="0" aria-expanded="false"> … <button class="row-open">
      Mine were plain divs whose only control was the button, so clicking the row
      did nothing and none of it was reachable by keyboard. */
-  assert.match(app, /className=\{`batch-product-row \$\{row\.done\?"settled":row\.pending\?"pending":row\.optional\?"optional":"needed"\} \$\{row\.report\?"reporting":switchingProduct\|\|\(!open&&!reachable\)\?"":"clickable"\}`\}/);
+  assert.match(app, /className=\{`batch-product-row \$\{row\.done\?"settled":row\.pending\?"pending":row\.optional\?"optional":"needed"\} \$\{rowOpen\?"open":""\} \$\{row\.report\?"reporting":switchingProduct\|\|\(!open&&!reachable\)\?"":"clickable"\}`\}/);
   assert.match(app, /role=\{row\.report\|\|switchingProduct\|\|\(!open&&!reachable\)\?undefined:"button"\}/);
   assert.match(app, /tabIndex=\{row\.report\|\|switchingProduct\|\|\(!open&&!reachable\)\?undefined:0\}/);
-  assert.match(app, /aria-expanded=\{open\}/);
+  assert.match(app, /aria-expanded=\{row\.report\?undefined:rowOpen\}/);
   assert.match(app, /event\.preventDefault\(\);if\(row\.report\)return;holdRowInPlace\(event\.currentTarget as HTMLElement\);openRow\(row\.target,row\.task\)/,
     "keyboard reaches it too, as step 1 does");
   assert.match(app, /<button type="button" className="row-open"/);
@@ -4676,7 +4676,7 @@ test("a task row owns its panel inside the product card — D539", async () => {
      every row appeared to lead to the same block. */
   assert.match(app, /const \[activeTask,setActiveTask\]=useState<string>\(""\)/);
   assert.match(app, /function taskPanel\(task:string\)/);
-  assert.match(app, /\{open&&row\.task&&activeTask===row\.task&&<div className="task-panel">\{taskPanel\(row\.task\)\}<\/div>\}/,
+  assert.match(app, /\{rowOpen&&<div className="task-panel">\{taskPanel\(row\.task!\)\}<\/div>\}/,
     "the panel renders under the row that asked for it, and only that one");
   assert.match(app, /setActiveTask\(current=>current===task\?"":task\)/);
 

@@ -2667,11 +2667,11 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
               if(!open){if(reachable){setActiveTask(task);openBundleProduct(index)}return}
               setActiveTask(current=>current===task?"":task);
             };
-            return <div className="batch-product-rows">{rows.map(row=><Fragment key={row.label}><div
-              className={`batch-product-row ${row.done?"settled":row.pending?"pending":row.optional?"optional":"needed"} ${row.report?"reporting":switchingProduct||(!open&&!reachable)?"":"clickable"}`}
+            return <div className="batch-product-rows">{rows.map(row=>{const rowOpen=Boolean(open&&row.task&&activeTask===row.task);return <Fragment key={row.label}><div
+              className={`batch-product-row ${row.done?"settled":row.pending?"pending":row.optional?"optional":"needed"} ${rowOpen?"open":""} ${row.report?"reporting":switchingProduct||(!open&&!reachable)?"":"clickable"}`}
               role={row.report||switchingProduct||(!open&&!reachable)?undefined:"button"}
               tabIndex={row.report||switchingProduct||(!open&&!reachable)?undefined:0}
-              aria-expanded={open}
+              aria-expanded={row.report?undefined:rowOpen}
               onClick={event=>{if(row.report)return;holdRowInPlace((event.currentTarget as HTMLElement));openRow(row.target,row.task)}}
               onKeyDown={(event:React.KeyboardEvent)=>{if(event.key==="Enter"||event.key===" "){event.preventDefault();if(row.report)return;holdRowInPlace(event.currentTarget as HTMLElement);openRow(row.target,row.task)}}}>
               <span className="row-mark" aria-hidden="true">{row.done?"✓":row.pending?"…":row.optional?"–":"!"}</span>
@@ -2692,11 +2692,11 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
                 disabled={Boolean(switchingProduct)||(!open&&!reachable)}
                 title={!open&&!reachable?`Finish ${list[index-1]?.name||"the product above"} first`:undefined}
                 onClick={event=>{event.stopPropagation();holdRowInPlace(event.currentTarget.closest(".batch-product-row") as HTMLElement|null);openRow(row.target,row.task)}}>
-                {opening?"Opening…":"Change"}
+                {opening?"Opening…":rowOpen?"Close":"Change"}
               </button>}
             </div>
-            {open&&row.task&&activeTask===row.task&&<div className="task-panel">{taskPanel(row.task)}</div>}
-            </Fragment>)}</div>;
+            {rowOpen&&<div className="task-panel">{taskPanel(row.task!)}</div>}
+            </Fragment>})}</div>;
           })()}
           {open&&<div className="step-product-body">{body}</div>}
           {/* D498 - a closed product was a header with a foreign-looking "Open
