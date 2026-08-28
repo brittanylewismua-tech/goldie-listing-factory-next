@@ -6525,8 +6525,7 @@ test("loading a product does not wait on anything it does not have to — D655",
 
   // Catalogue data is Printify's, not the seller's, so it is cacheable at all.
   assert.match(api, /const CATALOG_TTL_SECONDS=86400;/);
-  assert.match(api, /async function printifyCatalog<T>\(path: string, token: string\)/);
-  assert.doesNotMatch(api, /printifyCatalog[\s\S]{0,600}?userId/, "nothing seller-specific may be cached under a shared key");
+  assert.match(api, /function printifyCatalog<T>\(path: string, token: string\)/);
 
   /* Both Etsy reads here already fall through to a message that stays accurate
      without them, so retrying for forty seconds bought the same fallback the
@@ -6546,4 +6545,44 @@ test("loading a product does not wait on anything it does not have to — D655",
   /* A mismatch is never remembered: the seller is mid-fix and has to be
      re-checked the moment they try again. */
   assert.doesNotMatch(api, /pairing\.result==="mismatched"\)await rememberMatch/);
+});
+
+/* D656 · The worst repeat was not on the product load at all. Preparing Etsy
+   details fetched /seller-taxonomy/nodes - Etsy's ENTIRE global category tree,
+   several megabytes, identical for every Etsy seller alive - and then flattened
+   it in the worker, once per design. A ten-design batch downloaded and walked
+   that tree ten times before a single listing was ready, at concurrency 1. */
+test("platform data is fetched once, not once per design — D656", async () => {
+  const [shared, taxonomy, api] = await Promise.all([
+    readFile(new URL("../app/api/static-cache.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/etsy/taxonomy/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/printify/route.ts", import.meta.url), "utf8"),
+  ]);
+
+  /* One cache, because Etsy's taxonomy and Printify's catalogue are the same
+     problem: platform data, not seller data. */
+  assert.match(shared, /export async function cachedJson<T>\(namespace: string, path: string, ttlSeconds: number, load: \(\) => Promise<T>\)/);
+  /* The key is the path and the namespace, nothing else. Anything scoped to a
+     caller must not be reachable through here. */
+  assert.match(shared, /const key = new Request\(`https:\/\/goldie-\$\{namespace\}\.internal\$\{path\.startsWith\("\/"\) \? path : `\/\$\{path\}`\}`/);
+  /* Checked against the code, not the prose: the comment above it has to be
+     free to explain why a token is required to fetch what it caches. */
+  const sharedCode = shared.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
+  assert.doesNotMatch(sharedCode, /userId|user\.|token|shopId/,
+    "a shared cache key may not contain anything seller-specific");
+  // A cache that cannot be reached must not break the request.
+  assert.match(shared, /await cache\.match\(key\)\.catch\(\(\) => undefined\)/);
+  assert.match(shared, /await cache\.put\([\s\S]{0,200}?\.catch\(\(\) => undefined\)/);
+
+  // The taxonomy download AND the flatten are both behind the cache.
+  assert.match(taxonomy, /categories=await cachedJson\("etsy-taxonomy","\/nodes",TAXONOMY_TTL_SECONDS,async\(\)=>\{/);
+  assert.match(taxonomy, /return flatten\(tree\.results\|\|\[\]\)\.filter\(node=>node\.leaf\);/,
+    "the flattened form is what gets cached, so the walk stops repeating too");
+  assert.doesNotMatch(taxonomy, /tree=await etsyFetch<\{results\?:TaxonomyNode\[\]\}>\("\/seller-taxonomy\/nodes",connection\.token\),categories=flatten/,
+    "the tree must not go back to being fetched and flattened per request");
+  // Per-node properties are global too.
+  assert.match(taxonomy, /const payload=await cachedJson\("etsy-taxonomy",`\/nodes\/\$\{selected\.id\}\/properties`,TAXONOMY_TTL_SECONDS/);
+
+  // Printify's catalogue shares it rather than keeping a second copy.
+  assert.match(api, /return cachedJson<T>\("printify-catalog", path, CATALOG_TTL_SECONDS, \(\) => printify<T>\(path, token\)\);/);
 });

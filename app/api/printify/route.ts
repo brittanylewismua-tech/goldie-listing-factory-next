@@ -1,6 +1,7 @@
 import { env } from "cloudflare:workers";
 import { NextResponse } from "next/server";
 import { verifyShopPairing, shopMismatch } from "./shop-match";
+import { cachedJson } from "../static-cache";
 import { templateHasLabelArtwork } from "./product-payload";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { customerLaunchBlock } from "@/app/customer-launch-gate";
@@ -86,19 +87,11 @@ async function printify<T>(path: string, token: string): Promise<T> {
    here - which is exactly why it is safe to share. */
 const CATALOG_TTL_SECONDS=86400;
 
-async function printifyCatalog<T>(path: string, token: string): Promise<T> {
-  const key = new Request(`https://goldie-catalog.internal${path}`, { method: "GET" });
-  const cache = (globalThis as { caches?: { default?: Cache } }).caches?.default;
-  if (cache) {
-    const hit = await cache.match(key).catch(() => undefined);
-    if (hit) return hit.json() as Promise<T>;
-  }
-  const value = await printify<T>(path, token);
-  if (cache) {
-    const stored = new Response(JSON.stringify(value), { headers: { "content-type": "application/json", "cache-control": `public, max-age=${CATALOG_TTL_SECONDS}` } });
-    await cache.put(key, stored).catch(() => undefined);
-  }
-  return value;
+/* D656 · Shares one cache with Etsy's taxonomy - the two are the same problem:
+   data that belongs to the platform, not to the seller, fetched again on every
+   request that needed it. */
+function printifyCatalog<T>(path: string, token: string): Promise<T> {
+  return cachedJson<T>("printify-catalog", path, CATALOG_TTL_SECONDS, () => printify<T>(path, token));
 }
 
 /* D655 · Every Etsy read on this path is already written so that a failure
