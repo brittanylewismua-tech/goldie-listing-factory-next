@@ -4875,7 +4875,10 @@ test("the publish screen states its true scope and its true cost — D548", asyn
 
   /* And the shipping profile is named as a shipping profile: the checklist read
      "✓ Hoodies will be applied automatically", which sounds like the garment. */
-  assert.match(app, /\|\|"Etsy shipping profile"\} shipping profile`:"Needs review"/);
+  /* D660 · was `...} shipping profile` - the helper strips the trailing words
+     and this added them straight back, so the live review read "Approved ·
+     Standard shipping shipping profile". The row label already says shipping. */
+  assert.match(app, /\|\|"Etsy shipping profile"\}`:"Needs review"/);
 });
 
 test("steps 1 to 3 say what their numbers mean — D550", async () => {
@@ -5799,8 +5802,13 @@ test("one list decides whether the press can happen, scoped to the selection —
   // Both the button and the guard read it, so they cannot diverge again.
   assert.match(app, /disabled=\{publishing\|\|publishBlockers\(\)\.length>0\}/);
   assert.match(app, /issues=publishBlockersRef\.current\(\);/);
-  assert.equal((app.match(/publishBlockers\(\)/g) || []).length, 4,
-    "declared once; read by the button's disabled and its title twice");
+  /* D660 · a fifth reader: the final-review heading, which used to say "ready
+     for its final check" above this very button while it was disabled. Still
+     the one list - that is what this count protects. */
+  assert.equal((app.match(/publishBlockers\(\)/g) || []).length, 5,
+    "declared once; read by the button's disabled, its title twice, and the heading");
+  assert.match(app, /<h2>\{publishBlockers\(\)\.length\?"Finish these items before publishing"/,
+    "the heading reads the same list as the button");
   assert.match(app, /publishBlockersRef\.current=publishBlockers;/,
     "and by the guard through a ref refreshed every render - D644");
 });
@@ -6307,10 +6315,17 @@ test("the walkthrough's smaller faults are fixed — D648", async () => {
 
   /* "Economy-Standard: Printify Choice, Garm… shipping profile" - cut at a
      fixed 39 characters wherever that landed, with a noun stapled after it. */
-  assert.match(app, /const clean=title\.replace\(\/\\s\*shipping\\s\*profile\\s\*\$\/i,""\)\.trim\(\)/,
-    "never repeat the words the caller is about to append");
-  assert.match(app, /const boundary=Math\.max\(cut\.lastIndexOf\(" "\),cut\.lastIndexOf\(","\)\)/,
-    "cut on a word boundary");
+  /* D660 supersedes the second half of this. D648 made the cut land on a word
+     boundary; the live review then showed why that was the wrong fix at all -
+     "Economy-Standard: Printify Choice… shipping profile" is unreadable however
+     tidily it is cut, and the seller cannot tell which profile will be used.
+     Nothing is truncated now; the shortening is CSS, so the whole name stays in
+     the DOM and reaches a screen reader. The stripping stays: the row label
+     already says "shipping". */
+  assert.match(app, /return title\.replace\(\/\\s\*shipping\\s\*profile\\s\*\$\/i,""\)\.trim\(\)\|\|title\.trim\(\);/,
+    "never repeat the words the row label already says");
+  assert.doesNotMatch(app, /const boundary=Math\.max\(cut\.lastIndexOf\(" "\),cut\.lastIndexOf\(","\)\)/,
+    "there is no cut to place on a boundary any more");
   assert.doesNotMatch(app, /title\.slice\(0,39\)\.trim\(\)/);
 
   /* The low-resolution banner promised a confirmation step that never came;
@@ -6812,4 +6827,63 @@ test("a recorded store name reaches the card without a reload — D659", async (
   assert.match(tools, /window\.addEventListener\("goldie-recipe-shop",onShop\);/);
   assert.match(tools, /setRecipes\(current=>current\.map\(recipe=>recipe\.id===detail\.recipeId\?\{\.\.\.recipe,printifyShopTitle:detail\.title,printifyShopId:detail\.shopId\}:recipe\)\);/);
   assert.match(tools, /return \(\)=>window\.removeEventListener\("goldie-recipe-shop",onShop\);/);
+});
+
+/* D660 · The cosmetic pass from the completed bundle review. Every item was
+   read off the live step-4 screen, not guessed. */
+test("the final review reads honestly — D660", async () => {
+  const [app, css] = await Promise.all([
+    readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/approved-functional.css", import.meta.url), "utf8"),
+  ]);
+
+  /* "Approved · Standard shipping shipping profile" - the helper strips the
+     trailing words and the caller then added them back. */
+  assert.doesNotMatch(app, /\|\|"Etsy shipping profile"\} shipping profile/,
+    "the row already says shipping; the value must not repeat it");
+
+  /* "Economy-Standard: Printify Choice… shipping profile" - a label whose job
+     is naming the profile must name it. Bounded by CSS, so the whole string
+     stays in the DOM and reaches a screen reader. */
+  assert.doesNotMatch(app, /const cut=clean\.slice\(0,42\);/, "no silent truncation of the profile name");
+  assert.match(app, /return title\.replace\(\/\\s\*shipping\\s\*profile\\s\*\$\/i,""\)\.trim\(\)\|\|title\.trim\(\);/);
+  assert.match(css, /\.app-shell \.row-value\{min-width:0!important;overflow-wrap:anywhere!important\}/);
+
+  // The heading must agree with the button underneath it.
+  assert.match(app, /<h2>\{publishBlockers\(\)\.length\?"Finish these items before publishing":"Your batch is ready for its final check"\}<\/h2>/);
+
+  /* The heading and the draft chip overlapped once the chip carried a product
+     name: "✓ 2 drafts on Gildan Hoodie" printed through the heading. */
+  assert.match(css, /\.app-shell \.step-heading\{display:flex!important;[^}]*justify-content:space-between!important;gap:20px!important/);
+  assert.match(css, /\.app-shell \.step-heading>\.done-mark\{flex:0 0 auto!important;white-space:nowrap!important/);
+
+  /* Tags under thirteen are an optimisation - publishBlockers never mentions
+     them - so they must not wear the same mark as a listing with no title. */
+  assert.match(app, /done:started&&counts\.designs>0&&counts\.titled===counts\.designs,advice:/);
+  assert.doesNotMatch(app, /done:started&&counts\.designs>0&&counts\.titled===counts\.designs&&counts\.tagged===counts\.designs/,
+    "a short tag count must not mark the row as incomplete");
+  assert.match(app, /could use all 13 tags — optional, but Etsy ranks on them/);
+  assert.match(app, /\{row\.advice\?<small className="row-advice">\{row\.advice\}<\/small>:null\}/);
+  assert.match(css, /\.app-shell \.row-value>small\.row-advice\{[^}]*color:var\(--muted\)!important/);
+});
+
+test("a bundle member with no keyword bank says so on step 1 — D660", async () => {
+  const [tools, app] = await Promise.all([
+    readFile(new URL("../app/factory-tools.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
+  ]);
+
+  /* Found live: the 1566 crewneck joined the bundle with no bank and only said
+     so at step 3, with Auto-create disabled and the designs already done. */
+  assert.match(tools, /recipeIsSetUp\(recipe\)&&!recipe\.keywordListId&&<em className="needs-bank-note">No keyword bank yet — titles cannot be auto-written for it<\/em>/);
+
+  /* Offered, never applied silently: two products in one bundle can legitimately
+     want different banks, so copying it across would be a guess about her
+     keywords rather than a convenience. */
+  assert.match(app, /Use this keyword bank for every product in this bundle \(\$\{bundleRecipes\.length\}\)/);
+  assert.match(app, /async function applyBankToBundle\(\)\{/);
+  // Only offered when it would actually change something.
+  assert.match(app, /bundleRecipes\.some\(recipe=>recipe\.id!==activeRecipe\?\.id&&recipe\.keywordListId!==autoTitleBankId\)/);
+  // And it is a button, not an effect.
+  assert.doesNotMatch(app, /useEffect\([^)]{0,200}applyBankToBundle/);
 });

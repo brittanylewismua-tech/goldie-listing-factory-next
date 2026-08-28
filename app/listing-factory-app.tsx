@@ -206,15 +206,23 @@ function decodeProfileTitle(title:string){
    Printify Choice, Garm… shipping profile" - a word sliced in half with a noun
    stapled after it. Cut on a word boundary, and never repeat the words the
    caller is about to add. */
+/* D660 · Two faults in one line on the live review. The caller appended the
+   words "shipping profile" to whatever came back, so "Standard shipping"
+   rendered as "Standard shipping shipping profile"; and any name over 42
+   characters was cut with an ellipsis, so the seller could not read which
+   profile was about to be used - "Economy-Standard: Printify Choice… shipping
+   profile". A label naming a thing has to name it.
+
+   The full value is always returned now. Shortening, where the layout needs
+   it, is CSS - which keeps the whole string in the DOM, in the title
+   attribute, and available to a screen reader. */
 function friendlyShippingProfileTitle(raw?:string){
   const title=raw?decodeProfileTitle(raw):raw;
   if(!title)return"Shipping profile needed";
   if(/^standard:/i.test(title))return"Standard shipping";
-  const clean=title.replace(/\s*shipping\s*profile\s*$/i,"").trim();
-  if(clean.length<=42)return clean;
-  const cut=clean.slice(0,42);
-  const boundary=Math.max(cut.lastIndexOf(" "),cut.lastIndexOf(","));
-  return `${(boundary>18?cut.slice(0,boundary):cut).replace(/[,\s]+$/,"")}…`;
+  /* Trailing "shipping profile" is stripped because the row it sits in already
+     says so - not to shorten it. */
+  return title.replace(/\s*shipping\s*profile\s*$/i,"").trim()||title.trim();
 }
 
 /* D649 · Every hoodie listing stopped on "Closure still needed". Goldie
@@ -1222,6 +1230,18 @@ export default function ListingFactoryApp() {
     if(scenes)return `${scenes} ${scenes===1?"scene":"scenes"} chosen — not created yet`;
     return "None yet — optional";
   }
+  const [applyingBankToBundle,setApplyingBankToBundle]=useState(false);
+  async function applyBankToBundle(){
+    if(!autoTitleBankId||!bundleRecipes.length)return;
+    setApplyingBankToBundle(true);
+    try{
+      const targets=bundleRecipes.filter(recipe=>recipe.keywordListId!==autoTitleBankId);
+      await Promise.all(targets.map(recipe=>fetch("/api/product-recipes",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:recipe.id,name:recipe.name,templateUrl:recipe.templateUrl,keywordListId:autoTitleBankId})}).catch(()=>undefined)));
+      setBundleRecipes(current=>current.map(recipe=>({...recipe,keywordListId:autoTitleBankId})));
+      setActiveRecipe(current=>current?{...current,keywordListId:autoTitleBankId}:current);
+      setTitleBuildMessage(`This keyword bank now applies to all ${bundleRecipes.length} products in this bundle.`);
+    }finally{setApplyingBankToBundle(false)}
+  }
   const bundleVariantCounts=useMemo(()=>{
     const perProduct=(activeBundle&&bundleRecipes.length>1?bundleRecipes:activeRecipe?[activeRecipe]:[]).map(recipe=>{
       const details=bundleProductDetails[recipe.id];
@@ -2073,7 +2093,7 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
      label is read from something real: the designs in hand, the batch's own
      draft and published counts, or the absence of a batch at all. */
   function bundleCardStatus(step:"images"|"listing"|"publish"){
-    return (recipe:Recipe,index:number):{label:string;tone:"ready"|"attention"|"waiting"}=>{
+    return (recipe:Recipe,index:number):{label:string;tone:"ready"|"attention"|"advice"|"waiting"}=>{
       if(index===bundleIndex){
         if(step==="images")return complete?{label:`${drafts.length} ${drafts.length===1?"draft":"drafts"}`,tone:"ready"}:{label:`${files.length} ${files.length===1?"design":"designs"}`,tone:"attention"};
         if(step==="listing"){
@@ -2087,7 +2107,12 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
           const tagged=files.filter(file=>file.tags.length>=13).length;
           if(!files.length)return {label:"0 titled",tone:"attention"};
           if(titled<files.length)return {label:`${titled} of ${files.length} titled`,tone:"attention"};
-          if(tagged<files.length)return {label:`${tagged} of ${files.length} fully tagged`,tone:"attention"};
+          /* D660 · D624 made this badge count tags so it would stop disagreeing
+             with the row beneath it. The row has now been corrected in the other
+             direction - a short tag count is an optimisation Etsy never demands,
+             not a fault - so the badge follows it there rather than falling back
+             into disagreeing again. Reported, in the softer tone, never as
+             "attention". */
           /* D648 - the badge said "Titles and tags ready" in green directly above
              a crimson "0 of 1 ready - Closure still needed". D624 taught it to
              count tags; it still ignored the Etsy details on the same card, so
@@ -2096,6 +2121,10 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
              nothing. */
           const etsyReady=files.filter(file=>etsyRequiredComplete(file.etsy)).length;
           if(etsyReady<files.length)return {label:`${etsyReady} of ${files.length} Etsy details ready`,tone:"attention"};
+          /* D660 · Reported after every real blocker, and in the softer tone.
+             A blocker still outranks it, so the badge never leads with advice
+             while something underneath genuinely cannot publish. */
+          if(tagged<files.length)return {label:`${tagged} of ${files.length} fully tagged`,tone:"advice"};
           return {label:"Titles and tags ready",tone:"ready"};
         }
         const published=Number(batchReceipt?.publishedCount)||0;
@@ -2230,7 +2259,7 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
        which means when the active product changes. That is what this watches. */
   },[activeBundle,bundleRecipes,activeRecipe,bundleBatchIds]);
 
-  function productRows(recipe:Recipe,isActive:boolean):Array<{label:string;value:string;detail?:string;done:boolean;target?:string;task?:string;report?:boolean;optional?:boolean;pending?:boolean}>{
+  function productRows(recipe:Recipe,isActive:boolean):Array<{label:string;value:string;detail?:string;advice?:string;done:boolean;target?:string;task?:string;report?:boolean;optional?:boolean;pending?:boolean}>{
     const mine=isActive
       ?{designs:files.length,titled:files.filter(file=>file.title.trim()).length,tagged:files.filter(file=>file.tags.length>=13).length,drafts:drafts.filter(draft=>draft.status==="Created").length,described:Boolean(description.trim()),complete,published:Number(batchReceipt?.publishedCount)||0,status:"",photos:Object.values(printifyImageSelections).reduce((total,ids)=>total+ids.length,0)||printifyImageIndices.length,mockups:Object.values(preparedMockupCounts).reduce((total,count)=>total+(Number(count)||0),0)}
       :bundleBatchSummary[recipe.id];
@@ -2287,7 +2316,13 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
            read as a tag count. Both sides count listings, out loud. */
         if(counts.tagged===counts.designs&&counts.designs>0)return `${counts.titled} of ${counts.designs} titles · all 13 tags`;
         return `${counts.titled} of ${counts.designs} titles · ${counts.tagged} of ${counts.designs} with all 13 tags`;
-      })():blank,detail:isActive&&shortTitles?`${shortTitles} ${shortTitles===1?"title is":"titles are"} under 100 characters`:undefined,pending,done:started&&counts.designs>0&&counts.titled===counts.designs&&counts.tagged===counts.designs,report:true},
+      })():blank,detail:isActive&&shortTitles?`${shortTitles} ${shortTitles===1?"title is":"titles are"} under 100 characters`:undefined,pending,/* D660 · Tags were folded into the same done-test as titles, so a listing with
+   fewer than 13 tags carried the alert mark and the alert colour beside a
+   product that genuinely could not publish. A missing title blocks; tags below
+   thirteen are an optimisation, and Etsy accepts the listing either way -
+   publishBlockers never mentions them. Done means titled; short tag counts are
+   advice, in the detail line, not an error. */
+done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&counts.designs>0&&counts.titled===counts.designs&&counts.tagged<counts.designs?`${counts.designs-counts.tagged} of ${counts.designs} could use all 13 tags — optional, but Etsy ranks on them`:undefined,report:true},
         /* D490 - the checklist said only that one or more selected listings needed
            a photo, making her go and find which, on a page where everything else
            counted precisely. createdListingsMissingImages already knows exactly
@@ -2308,7 +2343,7 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
         /* D548 - the checklist read "✓ Hoodies will be applied automatically", which is
            the name of her shipping profile in a sentence that sounds like it is about
            the garment. Say what the name refers to. */
-        {label:"Pricing and shipping",value:isActive?(pricingApproved?`Approved · ${friendlyShippingProfileTitle(etsyShippingProfiles.find(profile=>profile.id===etsyShippingProfileId)?.title)||"Etsy shipping profile"} shipping profile`:"Needs review"):started?"Approved":blank,pending,done:isActive?pricingApproved:started,report:true},
+        {label:"Pricing and shipping",value:isActive?(pricingApproved?`Approved · ${friendlyShippingProfileTitle(etsyShippingProfiles.find(profile=>profile.id===etsyShippingProfileId)?.title)||"Etsy shipping profile"}`:"Needs review"):started?"Approved":blank,pending,done:isActive?pricingApproved:started,report:true},
         {label:"Published",value:counts.published?plural(counts.published,"listing"):"Not published yet",pending,done:counts.published>0,report:true},
       ];
     }
@@ -2329,7 +2364,9 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
            read as a tag count. Both sides count listings, out loud. */
         if(counts.tagged===counts.designs&&counts.designs>0)return `${counts.titled} of ${counts.designs} titles · all 13 tags`;
         return `${counts.titled} of ${counts.designs} titles · ${counts.tagged} of ${counts.designs} with all 13 tags`;
-      })():blank,pending,done:started&&counts.designs>0&&counts.titled===counts.designs&&counts.tagged===counts.designs,task:"titles"},
+      })():blank,pending,/* D660 · the same rule as the review row: a title is required,
+        thirteen tags are an optimisation Etsy never demands. */
+        done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&counts.designs>0&&counts.titled===counts.designs&&counts.tagged<counts.designs?`${counts.designs-counts.tagged} of ${counts.designs} could use all 13 tags — optional, but Etsy ranks on them`:undefined,task:"titles"},
       {label:"Edit description",value:counts.described?"Attached":started?"Not attached":blank,pending,done:counts.described,task:"description"},
       {label:"Review Etsy category and fields",value:started?(()=>{
         if(!files.some(file=>file.etsy))return"Not created yet";
@@ -2427,7 +2464,12 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
        with the block; it belongs on whatever holds the title fields. */
     if(task==="titles")return <div className={titlePulseIds.size?"titles-resolving":""}>
       <div className="task-panel-lead"><div><p className="mini-label">BATCH TITLE BUILDER</p><h3>Create titles for the whole batch</h3><p>Let Goldie select from your validated bank for each design, or choose the exact phrases yourself. No new keywords are ever added.</p></div><div className="title-builder-choice" role="group" aria-label="How do you want to create batch titles?"><button className={titleBuilderMode==="ai"?"active":""} onClick={()=>setTitleBuilderMode("ai")}><b>Goldie selects from my bank</b><span>Creates a different title for each design</span></button><button className={titleBuilderMode==="manual"?"active":""} onClick={()=>setTitleBuilderMode("manual")}><b>I choose from my bank</b><span>Uses your selections across the batch</span></button></div><div className="title-style-toggle"><span>Title format</span><button className={titleJoiner===", "?"active":""} onClick={()=>changeTitleJoiner(", ")}>With commas</button><button className={titleJoiner===" "?"active":""} onClick={()=>changeTitleJoiner(" ")}>Without commas</button>{/* D413 - Capitalization sat in its own card above the builder, but it is the
-                    same decision as the comma style: how the title is formatted. One group. */}<button type="button" className={titleCaps?"active":""} aria-pressed={titleCaps} onClick={()=>changeTitleCaps(!titleCaps)}>{titleCaps?"Capitalized":"Not capitalized"}</button></div>{titleBuilderMode==="ai"?<div className="title-builder-pane"><KeywordBank selectionOnly initialId={autoTitleBankId||activeRecipe?.keywordListId||""} onSelect={list=>{setAutoTitleBank(list);setAutoTitleBankId(list?.id||"");/* D221 · Choosing the bank here IS establishing it for this product, the same as it was on the product card before the picker moved. Without this the choice would apply to this batch only and the next one would ask again. */if(activeRecipe&&list?.id&&list.id!==activeRecipe.keywordListId)void establish(activeRecipe,{keywordListId:list.id})}} title="Choose a keyword bank" copy="Goldie selects only exact phrases from this bank. It will not add keywords."/><div className="ai-title-disclaimer"><b>Review every title Goldie creates.</b><span>Goldie chooses the phrases it believes fit each design best from the bank you select. It does not verify that the keyword bank itself matches the design, and it will not reject mismatched phrases. Use your judgment before continuing.</span></div><button className="ai-title-button" title={batchHeldByAnotherTab?"This batch is open in another Goldie tab, so nothing saved here would be kept.":!autoTitleBank?"Choose a keyword bank first.":!files.length?"Upload a design first.":undefined} disabled={titleBuilding||!autoTitleBank||!files.length||batchHeldByAnotherTab} onClick={()=>void buildBatchTitle()}>{titleBuilding?`Creating ${files.length} titles…`:"Auto-create all titles"}</button>{titleBuildMessage&&<p className="title-build-message" role="status">{titleBuildMessage}</p>}</div>:<div className="title-builder-pane manual-title-builder"><KeywordBank initialId={manualKeywordBankId||activeRecipe?.keywordListId||""} onSelect={list=>setManualKeywordBankId(list?.id||"")} onAdd={addBatchKeyword} title="Choose a keyword bank" copy="Click keywords in the order you want them. Every click updates all listings below."/><div className="selected-batch-keywords"><div><b>Selected keywords</b>{batchKeywords.length>0&&<button onClick={clearBatchKeywords}>Clear all</button>}</div>{batchKeywords.length?<div className="selected-keyword-chips">{batchKeywords.map(keyword=><button key={keyword} onClick={()=>removeBatchKeyword(keyword)}>{keyword}<span>×</span></button>)}</div>:<p>No keywords selected yet.</p>}</div>{batchKeywords.length>0&&<div className="batch-title-preview"><b>Batch title preview</b><span>{batchKeywords.join(titleJoiner)}</span><small>Applied to every listing below. You can still edit any listing individually.</small></div>}</div>}</div>
+                    same decision as the comma style: how the title is formatted. One group. */}<button type="button" className={titleCaps?"active":""} aria-pressed={titleCaps} onClick={()=>changeTitleCaps(!titleCaps)}>{titleCaps?"Capitalized":"Not capitalized"}</button></div>{titleBuilderMode==="ai"?<div className="title-builder-pane"><KeywordBank selectionOnly initialId={autoTitleBankId||activeRecipe?.keywordListId||""} onSelect={list=>{setAutoTitleBank(list);setAutoTitleBankId(list?.id||"");/* D221 · Choosing the bank here IS establishing it for this product, the same as it was on the product card before the picker moved. Without this the choice would apply to this batch only and the next one would ask again. */if(activeRecipe&&list?.id&&list.id!==activeRecipe.keywordListId)void establish(activeRecipe,{keywordListId:list.id})}} title="Choose a keyword bank" copy="Goldie selects only exact phrases from this bank. It will not add keywords."/><div className="ai-title-disclaimer"><b>Review every title Goldie creates.</b><span>Goldie chooses the phrases it believes fit each design best from the bank you select. It does not verify that the keyword bank itself matches the design, and it will not reject mismatched phrases. Use your judgment before continuing.</span></div><button className="ai-title-button" title={batchHeldByAnotherTab?"This batch is open in another Goldie tab, so nothing saved here would be kept.":!autoTitleBank?"Choose a keyword bank first.":!files.length?"Upload a design first.":undefined} disabled={titleBuilding||!autoTitleBank||!files.length||batchHeldByAnotherTab} onClick={()=>void buildBatchTitle()}>{titleBuilding?`Creating ${files.length} titles…`:"Auto-create all titles"}</button>{/* D660 · The 1566 crewneck joined a bundle with no
+             keyword bank, and only said so at step 3 with Auto-create disabled.
+             Offered explicitly and never applied silently: two products in one
+             bundle can legitimately want different banks, so copying it around
+             on her behalf would be a guess about her keywords. */}
+             {activeBundle&&bundleRecipes.length>1&&autoTitleBankId&&bundleRecipes.some(recipe=>recipe.id!==activeRecipe?.id&&recipe.keywordListId!==autoTitleBankId)?<button type="button" className="secondary-action" disabled={applyingBankToBundle} onClick={()=>void applyBankToBundle()}>{applyingBankToBundle?"Applying to every product…":`Use this keyword bank for every product in this bundle (${bundleRecipes.length})`}</button>:null}{titleBuildMessage&&<p className="title-build-message" role="status">{titleBuildMessage}</p>}</div>:<div className="title-builder-pane manual-title-builder"><KeywordBank initialId={manualKeywordBankId||activeRecipe?.keywordListId||""} onSelect={list=>setManualKeywordBankId(list?.id||"")} onAdd={addBatchKeyword} title="Choose a keyword bank" copy="Click keywords in the order you want them. Every click updates all listings below."/><div className="selected-batch-keywords"><div><b>Selected keywords</b>{batchKeywords.length>0&&<button onClick={clearBatchKeywords}>Clear all</button>}</div>{batchKeywords.length?<div className="selected-keyword-chips">{batchKeywords.map(keyword=><button key={keyword} onClick={()=>removeBatchKeyword(keyword)}>{keyword}<span>×</span></button>)}</div>:<p>No keywords selected yet.</p>}</div>{batchKeywords.length>0&&<div className="batch-title-preview"><b>Batch title preview</b><span>{batchKeywords.join(titleJoiner)}</span><small>Applied to every listing below. You can still edit any listing individually.</small></div>}</div>}</div>
       {designTaskRows("titles",design=>!design.title.trim()?"No title yet":`${design.tags.length} of 13 tags`,design=><div className="task-listing-edit">{/* D541 - D408 found this the hard way: at thumbnail size the artwork
         is unreadable, so the card cannot tell you which design you are writing a
         title for. The row stays compact; the preview comes back at a size you can
@@ -2528,7 +2570,7 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
     return null;
   }
 
-  function stepProductCards(statusFor:(recipe:Recipe,index:number)=>{label:string;tone:"ready"|"attention"|"waiting"},body:ReactNode,hidden=false,footer:ReactNode=null,showCards=true){
+  function stepProductCards(statusFor:(recipe:Recipe,index:number)=>{label:string;tone:"ready"|"attention"|"advice"|"waiting"},body:ReactNode,hidden=false,footer:ReactNode=null,showCards=true){
     const sharedAction=Boolean(footer);
     const list=activeBundle&&bundleRecipes.length>1?bundleRecipes:(activeRecipe?[activeRecipe]:[]);
     if(!list.length)return body;
@@ -2551,7 +2593,7 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
         /* Spelled out rather than built with tone-${...}: a class the stylesheet
            targets but no file contains is exactly what the liveness test exists
            to catch, and a template literal hides it from that check. */
-        const toneClass=status.tone==="ready"?"tone-ready":status.tone==="attention"?"tone-attention":"tone-waiting";
+        const toneClass=status.tone==="ready"?"tone-ready":status.tone==="attention"?"tone-attention":status.tone==="advice"?"tone-advice":"tone-waiting";
         const photo=product?pickProductPhoto(product):"";
         /* D482 - the next product in a bundle offered "Open Gildan Tee" from the
            very first step, before the product she was actually working on had
@@ -2564,7 +2606,7 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
            what cannot happen is starting the next one early. */
         const reachable=many&&!open&&Boolean(bundleBatchIds[recipe.id]||index===bundleIndex+1);
         const opening=switchingProduct===recipe.id;
-        return <article className={`batch-product-card step-product-card ${open?"is-open":"is-closed"} ${status.tone==="ready"?"is-ready":"needs-setup"} ${many?"in-batch":""}`} key={recipe.id}>
+        return <article className={`batch-product-card step-product-card ${open?"is-open":"is-closed"} ${status.tone==="ready"||status.tone==="advice"?"is-ready":"needs-setup"} ${many?"in-batch":""}`} key={recipe.id}>
           <header
             {...(reachable?{role:"button",tabIndex:0,
               onClick:()=>openBundleProduct(index),
@@ -2622,7 +2664,7 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
               onKeyDown={(event:React.KeyboardEvent)=>{if(event.key==="Enter"||event.key===" "){event.preventDefault();if(row.report)return;holdRowInPlace(event.currentTarget as HTMLElement);openRow(row.target,row.task)}}}>
               <span className="row-mark" aria-hidden="true">{row.done?"✓":row.pending?"…":row.optional?"–":"!"}</span>
               <span className="row-label">{row.label}</span>
-              <span className="row-value">{row.value}{row.detail?<small>{row.detail}</small>:null}</span>
+              <span className="row-value">{row.value}{row.detail?<small>{row.detail}</small>:null}{row.advice?<small className="row-advice">{row.advice}</small>:null}</span>
               {/* D502 - captured from both pages side by side: step 1 puts a Change
                   on every row of every card, including the product already open.
                   Step 3 put one only on a closed, reachable product - so the open
@@ -3784,7 +3826,10 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
                 screen, and pushed the Publish panel further down for it. The card
                 reports photo readiness; nothing else needs to. The banner style
                 is still used by step 2, so only this instance goes. */}
-              <article className="step-card final-review active-panel"><div className="step-content">{batchReceipt?<OutcomeReceipt goalLine={listingGoal?`That is ${goalDone} of your ${listingGoal.target} listings this ${listingGoal.period}.`:undefined} receipt={batchReceipt} productName={templateDetails?.blueprintTitle||""} shippingProfile={etsyShippingProfiles.find(profile=>profile.id===etsyShippingProfileId)?.title||""} imageCount={printifyImageIndices.length} sizeGuideName={sizeGuideName} tagCount={files.reduce((sum,file)=>sum+file.tags.length,0)} mockupCount={Object.values(preparedMockupCounts).reduce((sum,count)=>sum+count,0)} variantCount={pricedVariants.length*files.length} minutesSaved={Math.max(12,Math.round(files.length*11.1))} nextBundleProduct={bundleRecipes[bundleIndex+1]?.name} bundleComplete={Boolean(activeBundle&&bundleIndex===bundleRecipes.length-1)} onNextBundleProduct={()=>void continueBundle()} onNewBatch={()=>{clearCurrentBatch(true);goToStep("setup")}}/>:<><div className="step-heading"><div><p className="mini-label">FINAL REVIEW</p><h2>Your batch is ready for its final check</h2></div><span className="done-mark">✓ {drafts.filter(draft=>draft.status==="Created").length} {drafts.filter(draft=>draft.status==="Created").length===1?"draft":"drafts"}{activeBundle&&bundleRecipes.length>1?` on ${activeRecipe?.name||"this product"}`:""}</span></div>{/* D546 - the old lead-in pointed at a checklist that repeated
+              <article className="step-card final-review active-panel"><div className="step-content">{batchReceipt?<OutcomeReceipt goalLine={listingGoal?`That is ${goalDone} of your ${listingGoal.target} listings this ${listingGoal.period}.`:undefined} receipt={batchReceipt} productName={templateDetails?.blueprintTitle||""} shippingProfile={etsyShippingProfiles.find(profile=>profile.id===etsyShippingProfileId)?.title||""} imageCount={printifyImageIndices.length} sizeGuideName={sizeGuideName} tagCount={files.reduce((sum,file)=>sum+file.tags.length,0)} mockupCount={Object.values(preparedMockupCounts).reduce((sum,count)=>sum+count,0)} variantCount={pricedVariants.length*files.length} minutesSaved={Math.max(12,Math.round(files.length*11.1))} nextBundleProduct={bundleRecipes[bundleIndex+1]?.name} bundleComplete={Boolean(activeBundle&&bundleIndex===bundleRecipes.length-1)} onNextBundleProduct={()=>void continueBundle()} onNewBatch={()=>{clearCurrentBatch(true);goToStep("setup")}}/>:<><div className="step-heading"><div><p className="mini-label">FINAL REVIEW</p>{/* D660 · This said "ready for its final check" over a
+                   disabled Publish button and a product with no titles at all.
+                   The heading has to agree with the gate directly beneath it. */}
+                   <h2>{publishBlockers().length?"Finish these items before publishing":"Your batch is ready for its final check"}</h2></div><span className="done-mark">✓ {drafts.filter(draft=>draft.status==="Created").length} {drafts.filter(draft=>draft.status==="Created").length===1?"draft":"drafts"}{activeBundle&&bundleRecipes.length>1?` on ${activeRecipe?.name||"this product"}`:""}</span></div>{/* D546 - the old lead-in pointed at a checklist that repeated
               what the product cards above already report, line for line. The cards
               own it. What this step still has to say is what publishing will do. */}<p className="step-copy">{activeBundle&&bundleRecipes.length>1?`Every product in this batch publishes in turn. Nothing goes live until you use the final button.`:"Nothing is published until you use the final button."}</p>{/* D546 - her words, looking at it: "this whole section doesn't need to be on
               the final step because above it, you list every product and everything

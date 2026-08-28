@@ -1747,3 +1747,29 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .app-shell .batch-resume-choice li>button{width:100%;display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:11px 14px;border-radius:12px;border:1px solid rgba(91,53,79,.16);background:#fff;text-align:left;cursor:pointer}
 .app-shell .batch-resume-choice li>button small{color:var(--muted)}
 .app-shell .batch-resume-choice>.secondary-action{margin-top:10px}
+
+/* D660 · Advice is not an error. Tag counts below thirteen sat in the alert
+   colour beside products that genuinely could not publish, so the two read the
+   same. This is the neutral voice: a note, not a fault. */
+.app-shell .row-value>small.row-advice{display:block;margin-top:2px;color:var(--muted)!important;font-weight:600!important}
+/* D660 · The final-review heading and the draft-count chip were laid out with
+   no gap and overlapped once the chip carried a product name
+   ("✓ 2 drafts on Gildan Hoodie" printed straight through the heading). */
+.app-shell .step-heading{display:flex!important;align-items:flex-start!important;justify-content:space-between!important;gap:20px!important;flex-wrap:wrap!important}
+.app-shell .step-heading>div{min-width:0!important;flex:1 1 320px!important}
+.app-shell .step-heading>.done-mark{flex:0 0 auto!important;white-space:nowrap!important;align-self:center!important}
+/* D660 · The full shipping-profile name stays in the DOM and in the title
+   attribute; only the drawing of it is bounded. */
+.app-shell .row-value{min-width:0!important;overflow-wrap:anywhere!important}
+
+/* D660 · A bundle member with no keyword bank only revealed itself at step 3,
+   where "Auto-create all titles" is disabled and the seller has already done
+   the designs. Said on step 1, where the bundle is chosen. Advice, not a
+   blocker: a product without a bank still publishes, its titles are just typed
+   by hand. */
+.app-shell .recipe-card .bundle-form label .needs-bank-note{display:block;margin-top:2px;color:var(--muted);font-size:11px;font-weight:650}
+
+/* D660 · The advice tone: everything that can publish does publish, and this is
+   only a suggestion for reach. Deliberately not the attention colour, and the
+   card it sits on still counts as ready. */
+.app-shell .batch-product-card .tone-advice{background:rgba(103,52,82,.09)!important;color:#6b3f5e!important;border-color:rgba(91,53,79,.16)!important}

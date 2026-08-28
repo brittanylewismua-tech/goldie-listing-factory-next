@@ -473,12 +473,22 @@ test("the Listing card badge agrees with the row it summarises — D624", async 
   assert.ok(badge, "the Listing badge branch must still be findable");
 
   // The row's own definition of done - both halves of it.
-  assert.match(source, /done:started&&counts\.designs>0&&counts\.titled===counts\.designs&&counts\.tagged===counts\.designs/,
-    "the Titles and tags row is only done when titles AND tags are complete");
+  /* D660 · The row was corrected in the other direction: thirteen tags is an
+     optimisation Etsy never demands, and publishBlockers has never mentioned
+     it, so the row no longer withholds "done" for it. What D624 protects is
+     that the badge and the row AGREE - so the badge follows the row there
+     rather than disagreeing again in reverse. */
+  assert.match(source, /done:started&&counts\.designs>0&&counts\.titled===counts\.designs,advice:/,
+    "titles decide done; the tag shortfall is advice on both the row and the badge");
 
   // So the badge may only say ready under the same two conditions.
   assert.match(badge, /file\.title\.trim\(\)/, "the badge must still count titles");
   assert.match(badge, /file\.tags\.length>=13/, "and it must count tags, which is what it was missing");
+  assert.match(badge, /if\(tagged<files\.length\)return \{label:`\$\{tagged\} of \$\{files\.length\} fully tagged`,tone:"advice"\};/,
+    "reported, but in the advice tone the row now uses");
+  // A real blocker still outranks advice, so the badge never leads with it.
+  assert.ok(badge.indexOf("Etsy details ready") < badge.indexOf('tone:"advice"'),
+    "Etsy details are a blocker and must be reported before the tag shortfall");
   assert.doesNotMatch(badge, /\{label:"Titles ready",tone:"ready"\}/,
     "the old badge claimed readiness from titles alone");
 
@@ -487,5 +497,5 @@ test("the Listing card badge agrees with the row it summarises — D624", async 
   // and it must be the branch that both counts have already passed
   const readyIndex = badge.indexOf('tone:"ready"');
   assert.ok(badge.indexOf("tagged<files.length") < readyIndex,
-    "the tag shortfall must be returned before the ready branch can be reached");
+    "the tag shortfall must be reported before the ready branch can be reached");
 });
