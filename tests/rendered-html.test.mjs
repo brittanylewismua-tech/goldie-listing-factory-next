@@ -6330,7 +6330,11 @@ test("a saved product says which Printify store it lives in — D649", async () 
   ]);
 
   // The shop is known where the product is resolved, so it is returned.
-  assert.match(api, /shop: \{ id: found\.shop\.id, title: found\.shop\.title \}/);
+  assert.match(api, /shop: \{ id: found\.shop\.id, title: found\.shop\.title, count: shops\.length \}/);
+  /* D650 - almost nobody has two Printify stores, and a label naming the only
+     shop you own is noise on every card. Recorded only when there is more than
+     one store to confuse. */
+  assert.match(app, /Number\(result\.shop\.count\|\|0\)>1/);
   // Recorded on the recipe when it changes, without clobbering anything else.
   assert.match(app, /printifyShopTitle:result\.shop\.title,printifyShopId:result\.shop\.id/);
   assert.match(app, /activeRecipe\.printifyShopTitle!==result\.shop\.title/,
