@@ -24,6 +24,10 @@ export function shopsMatch(printifyShopTitle?:string|null,etsyShopName?:string|n
 
 export function shopMismatch(printifyShopTitle:string,etsyShopName:string){
   return {
+    /* D640 - the blocking modal used one fixed heading, "This Printify product
+       isn't ready yet", which blamed the product for something that is not the
+       product's fault and sent the seller to Printify to fix it. */
+    title:"These two shops are not the same.",
     error:`This Printify store publishes to a different Etsy shop than the one Goldie is connected to.`,
     issues:[
       `Printify store: ${printifyShopTitle}`,

@@ -3899,8 +3899,13 @@ test("opening a saved batch never deletes it — D487/D488", async () => {
      that fallback rewrites the URL to step=connect, and the auto-skip then reads
      the URL to decide whether she asked for the connect screen. */
   assert.match(app, /const requestedStep=useRef<WorkflowStep\|null>\(null\)/);
-  assert.match(app, /if\(requestedStep\.current==="connect"\)return/,
+  /* D640 - same rule, sturdier memory. requestedStep is cleared as soon as the
+     step it names is current, which on a fresh ?step=connect is immediately, so
+     the auto-skip was reading a ref that had already been emptied and skipped
+     anyway. The arrival is recorded once and never cleared. */
+  assert.match(app, /if\(askedForConnect\.current\)return/,
     "the auto-skip asks what she requested, not what the fallback wrote");
+  assert.match(app, /askedForConnect\.current=requestedStep\.current==="connect";/);
   assert.doesNotMatch(app, /if\(new URL\(window\.location\.href\)\.searchParams\.get\("step"\)==="connect"\)return/);
   assert.match(app, /if\(!canOpenStep\(wanted\)\)return;\n\s*requestedStep\.current=null;\n\s*goToStep\(wanted,true,true\)/);
 });
@@ -5984,6 +5989,50 @@ test("the connection screen stays reachable after connecting — D639", async ()
   assert.match(icons, /\| "connections";/);
 
   /* The destination only works because an explicitly requested connect step is
-     left alone by the auto-skip. If that guard goes, this link bounces. */
-  assert.match(app, /if\(requestedStep\.current==="connect"\)return;/);
+     left alone by the auto-skip. D639 shipped this link asserting that guard
+     existed; it did, and the link still bounced, because the ref it reads was
+     already cleared. D640 gave the fact its own home - assert THAT. */
+  assert.match(app, /if\(askedForConnect\.current\)return;/);
+});
+
+/* D640 · I shipped the D639 Connections link having checked the markup and not
+ * clicked it. Brittany clicked it: "it just brings me back to the batch and
+ * gives me the error number."
+ *
+ * Reproduced exactly - /listing-factory?step=connect lands on ?step=setup. The
+ * connection auto-skip asks requestedStep.current==="connect" to decide whether
+ * the seller ASKED for the connect screen, but the D487 effect clears that ref
+ * the moment the step it names is already current - which on a fresh load of
+ * ?step=connect is immediately, before the auto-skip ever runs. The fact was
+ * destroyed before its only reader consulted it. */
+test("asking for the connect screen keeps you on it — D640", async () => {
+  const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+
+  // Arriving is a fact about this page load: recorded once, never cleared.
+  assert.match(app, /const askedForConnect=useRef\(false\);/);
+  assert.match(app, /askedForConnect\.current=requestedStep\.current==="connect";/);
+  assert.match(app, /if\(askedForConnect\.current\)return;connectionAutoSkip\.current=true;goToStep\("setup",true,true\)/);
+
+  /* The old reader is exactly what broke: requestedStep is cleared by the effect
+     above, so the auto-skip must not depend on it. */
+  assert.doesNotMatch(app, /if\(requestedStep\.current==="connect"\)return;/,
+    "a ref that gets cleared cannot be the memory of what was asked for");
+  assert.match(app, /if\(workflowStep===wanted\)\{requestedStep\.current=null;return\}/,
+    "the clearing is still there - which is why the fact needed its own home");
+});
+
+/* D640 · The same click showed the mismatch modal headed "This Printify product
+ * isn't ready yet", telling her to fix the product in Printify and resubmit.
+ * Nothing is wrong with the product. */
+test("a shop mismatch does not blame the product — D640", async () => {
+  const [match, app] = await Promise.all([
+    readFile(new URL("../app/api/printify/shop-match.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(match, /title:"These two shops are not the same\.",/);
+  assert.match(app, /title:result\.title\|\|"This Printify product isn’t ready yet\."/,
+    "the response may name its own failure; the product wording stays the fallback");
+  assert.match(app, /response\.status===409\?"Connect Printify and Etsy to the same shop, then load this product again\. Connections is in the sidebar\."/,
+    "and points at the fix that exists rather than at Printify");
 });

@@ -1438,6 +1438,15 @@ export default function ListingFactoryApp() {
      URL says she did. Falling back is not the same as asking, so the step she
      actually arrived on is remembered and restored the moment it opens. */
   const requestedStep=useRef<WorkflowStep|null>(null);
+  /* D640 · Shipped a Connections link without clicking it, and it did not work:
+     ?step=connect landed on step 1. The auto-skip below asks
+     requestedStep.current==="connect" to decide whether the seller ASKED for the
+     connect screen - but the effect underneath clears that ref the moment the
+     step it names is already the current one, which on a fresh load of
+     ?step=connect is immediately. So the fact was destroyed before the only
+     reader consulted it. Arriving is a fact about this page load, so it is
+     recorded once and never cleared. */
+  const askedForConnect=useRef(false);
   const requestedStepRead=useRef(false);
   if(typeof window!=="undefined"&&!requestedStepRead.current){
     requestedStepRead.current=true;
@@ -1450,6 +1459,7 @@ export default function ListingFactoryApp() {
        reading .eyebrow crashed the whole app into the error boundary. Every URL
        D428 was written to support was the one that broke it. */
     requestedStep.current=canonicalStep(new URL(window.location.href).searchParams.get("step"));
+    askedForConnect.current=requestedStep.current==="connect";
   }
   useEffect(()=>{
     const wanted=requestedStep.current;
@@ -1466,7 +1476,7 @@ export default function ListingFactoryApp() {
   useEffect(()=>{const read=()=>{const url=new URL(window.location.href),value=url.searchParams.get("step") as WorkflowStep|null,phase=url.searchParams.get("phase") as FinishPhase|null;const canonical=canonicalStep(value);if(canonical)setWorkflowStep(normalizeStep(canonical));if(phase&&["details","etsy","mockups","final"].includes(phase))setFinishPhase(phase)};read();window.addEventListener("popstate",read);return()=>window.removeEventListener("popstate",read)},[]);
   useEffect(()=>{if(workflowStep!=="finish")return;const url=new URL(window.location.href);url.searchParams.set("phase",finishPhase);window.history.replaceState({},"",url)},[workflowStep,finishPhase]);
   useEffect(()=>{window.scrollTo({top:0,behavior:"auto"})},[workflowStep,finishPhase]);
-  useEffect(()=>{if(connectionAutoSkip.current||localPreview||checkingConnection||restoringBatch||workflowStep!=="connect"||!connected||!etsyConnected)return;if(requestedStep.current==="connect")return;connectionAutoSkip.current=true;goToStep("setup",true,true)},[localPreview,checkingConnection,restoringBatch,workflowStep,connected,etsyConnected]);
+  useEffect(()=>{if(connectionAutoSkip.current||localPreview||checkingConnection||restoringBatch||workflowStep!=="connect"||!connected||!etsyConnected)return;if(askedForConnect.current)return;connectionAutoSkip.current=true;goToStep("setup",true,true)},[localPreview,checkingConnection,restoringBatch,workflowStep,connected,etsyConnected]);
   /* D519 - while a bundle run is advancing, the app is mid-switch: the next
      product's template has not loaded yet, so this fell back to step 1 and she
      watched a run she started on step 2 dump her on Choose product. Verified on
@@ -2782,9 +2792,9 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
     setLoadingTemplate(true); setTemplateError(""); setTemplateDetails(null);
     try {
       const response = await fetchWithDeadline("/api/printify", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ productUrl,savedShippingProfileId }) }, 90000);
-      const result = await response.json() as { product?: TemplateDetails; error?: string;issues?:string[] };
+      const result = await response.json() as { product?: TemplateDetails; error?: string;issues?:string[];title?:string };
       if(requestVersion!==templateLoadVersion.current)return null;
-      if (!response.ok || !result.product){setBlockingModal({title:"This Printify product isn’t ready yet.",issues:result.issues?.length?result.issues:[result.error||"The product could not be loaded."],copy:"Fix these items in Printify, save the product, then submit the same link again."});throw new Error(result.error || "The product could not be loaded.")}
+      if (!response.ok || !result.product){setBlockingModal({title:result.title||"This Printify product isn’t ready yet.",issues:result.issues?.length?result.issues:[result.error||"The product could not be loaded."],copy:response.status===409?"Connect Printify and Etsy to the same shop, then load this product again. Connections is in the sidebar.":"Fix these items in Printify, save the product, then submit the same link again."});throw new Error(result.error || "The product could not be loaded.")}
       const available=new Set((result.product.colorOptions||[]).filter(color=>color.available).map(color=>color.id));let sessionColors:number[]=[];try{sessionColors=JSON.parse(window.localStorage.getItem(`goldie-colors-${result.product.id}`)||"[]") as number[]}catch{/* Ignore an invalid browser preference. */}const remembered=rememberedColorIds.filter(id=>available.has(id));const session=sessionColors.filter(id=>available.has(id));/* D213 · Printify's template settings are not the seller's choices.
    The seller sets colors and sizes ONCE, in the saved-product setup, and that
    becomes the recipe. A product with no recipe defaults has not been set up, so
