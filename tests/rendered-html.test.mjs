@@ -4676,7 +4676,7 @@ test("a task row owns its panel inside the product card — D539", async () => {
      every row appeared to lead to the same block. */
   assert.match(app, /const \[activeTask,setActiveTask\]=useState<string>\(""\)/);
   assert.match(app, /function taskPanel\(task:string\)/);
-  assert.match(app, /\{rowOpen&&<div className="task-panel">\{taskPanel\(row\.task!\)\}<\/div>\}/,
+  assert.match(app, /\{rowOpen&&<div className="task-panel open-task-column" onClick=/,
     "the panel renders under the row that asked for it, and only that one");
   assert.match(app, /setActiveTask\(current=>current===task\?"":task\)/);
 
@@ -4952,8 +4952,9 @@ test("clicking a row does not throw her up the page — D552", async () => {
   assert.match(app, /window\.scrollBy\(\{top:drift,behavior:"auto"\}\)/);
   assert.match(app, /\},\[activeTask\]\)/);
 
-  // Every way into a row holds it: the row, its Change button, and the keyboard.
-  assert.equal((app.match(/holdRowInPlace\(/g) || []).length, 4, "declared once, called from all three");
+  // Every way into a row holds it: the row, its Change button, the keyboard,
+  // and the open column surface that D674 made collapsible.
+  assert.equal((app.match(/holdRowInPlace\(/g) || []).length, 5, "declared once, called from all four");
 });
 
 test("opening a task shows the work, not a list of listings to pick from — D553", async () => {

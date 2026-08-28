@@ -2906,6 +2906,7 @@ body{min-width:1180px!important}
 .app-shell .task-listing-head .task-listing-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin:0;font:800 .86rem/1.3 "Manrope",system-ui,sans-serif;color:#4b283e}
 .app-shell .task-listing-work{padding:12px 0 0}
 .app-shell .task-listing-work>*{max-width:100%}
+.app-shell .open-task-column{cursor:pointer}.app-shell .open-task-column :is(button,a,input,textarea,select,label,summary,[role="button"],[contenteditable="true"],[draggable="true"]){cursor:auto}
 
 /* D553 - the step 3 editors, re-pointed from the collapsible panel that used to
    wrap them to the open surface that replaced it. */

@@ -2695,7 +2695,7 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
                 {opening?"Opening…":rowOpen?"Close":"Change"}
               </button>}
             </div>
-            {rowOpen&&<div className="task-panel">{taskPanel(row.task!)}</div>}
+            {rowOpen&&<div className="task-panel open-task-column" onClick={event=>{const target=event.target as HTMLElement;if(target.closest("button,a,input,textarea,select,label,summary,[role='button'],[contenteditable='true'],[draggable='true']"))return;const rowElement=event.currentTarget.previousElementSibling as HTMLElement|null;holdRowInPlace(rowElement);openRow(row.target,row.task)}}>{taskPanel(row.task!)}</div>}
             </Fragment>})}</div>;
           })()}
           {open&&<div className="step-product-body">{body}</div>}
