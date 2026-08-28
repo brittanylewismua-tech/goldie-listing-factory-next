@@ -51,7 +51,7 @@ const FEATURES = [
   ["Printify product photos are selectable", /printify-image-picker bare/],
   ["seller photos can be uploaded", /<UploadedListingPhotos/],
   ["all listing photos can be reordered", /<ListingPhotoOrder/],
-  ["a size guide can be added to every listing", /Add one size guide to every Etsy listing/],
+  ["a size guide can be added to every listing", /Add a size guide to this batch/],
   ["AI titles for the whole batch", /Create titles for the whole batch/],
   ["manual title building from a bank", /Build this title yourself from a keyword bank/],
   /* D541 - the override moved out of a nested disclosure inside step 3's table

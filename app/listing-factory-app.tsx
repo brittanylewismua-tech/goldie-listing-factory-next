@@ -2308,6 +2308,7 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
     if(workflowStep==="designs")return [
       {label:"Review Printify placement",value:started?plural(counts.drafts,"listing"):blank,pending,done:counts.drafts>0,task:"placement"},
       {label:"Choose Printify photos",value:started?plural(counts.photos,"photo"):blank,pending,done:counts.photos>0,task:"printify"},
+      {label:"Size guide",value:sizeGuideName?sizeGuideName:"Optional",pending,done:Boolean(sizeGuideName),optional:true,task:"sizeguide"},
       /* D550 - lifestyle mockups are optional: nothing about publishing requires
          them, and her hoodie published-ready with four Printify photos and none.
          The row still rendered "! None made yet" in alert red on every product
@@ -2480,6 +2481,7 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
   }
 
   function taskPanel(task:string){
+    if(task==="sizeguide")return <section className="batch-size-guide in-product-row"><div><h3>{sizeGuideName?"Size guide added to this batch":"Add a size guide to this batch"}</h3><span>Optional. Choose one image and Goldie adds it to every listing in this batch.</span></div><input ref={sizeGuidePicker} type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={event=>{const file=event.target.files?.[0];if(file)void applySizeGuide(file)}}/><div className="size-guide-actions"><button onClick={()=>sizeGuidePicker.current?.click()}>{sizeGuideName?"Replace size guide":"Choose size guide"}</button>{sizeGuideName&&<button type="button" className="size-guide-remove" onClick={()=>void removeSizeGuide()}>Remove</button>}</div>{sizeGuideStatus&&<p role="status">{sizeGuideStatus}</p>}</section>;
     /* D541 - titles-resolving drives the pulse on each title field as the batch
        run fills them in. It rode on the listing-editor wrapper, so it went out
        with the block; it belongs on whatever holds the title fields. */
@@ -4007,15 +4009,6 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
     task, and "choose listing images" is the row beneath it. What is left here is
     the batch-wide work: open every listing in Printify, and the size guide. */}
         <div className="post-draft-heading">{drafts.filter(draft=>draft.status==="Created").length>1&&<button className="open-all-button" onClick={openAllDrafts}>Review all listings in Printify ↗</button>}</div>
-        {/* D536 - the size guide applies to every listing in the batch, and she
-            needs it in hand while she is reordering each listing's images, not
-            parked underneath all of them. D521 moved it out of one product's
-            card, which was right, and left it at the very bottom of the step,
-            which was not. It sits above the panels it applies to. */}
-        <section className="batch-size-guide"><div><p className="mini-label">OPTIONAL · APPLY TO THE WHOLE BATCH</p><h3>Add one size guide to every Etsy listing</h3><span>Choose it once. Goldie attaches it to every listing in this batch automatically when you publish.</span></div><input ref={sizeGuidePicker} type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={event=>{const file=event.target.files?.[0];if(file)void applySizeGuide(file)}}/><div className="size-guide-actions"><button onClick={()=>sizeGuidePicker.current?.click()}>{sizeGuideName?"Replace size guide":"Choose size guide"}</button>{sizeGuideName&&<button type="button" className="size-guide-remove" onClick={()=>void removeSizeGuide()}>Remove</button>}</div>{sizeGuideStatus&&<p role="status">{sizeGuideStatus}</p>}</section>
-        
-        
-        
         {openAllMessage&&<p className="open-all-message" role="status">{openAllMessage}</p>}
         {/* D539 - the giant workspace is gone. Each task row owns its own panel. */}
         </section>}

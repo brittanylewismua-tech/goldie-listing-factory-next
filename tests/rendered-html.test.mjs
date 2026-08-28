@@ -342,7 +342,7 @@ test("stages each finished mockup group for its exact Etsy listing", async () =>
   assert.match(images, /kind==="size-guide"/);
   assert.match(images, /existing\.objects\.map\(object=>runtime\(\)\.ARTWORK\.delete\(object\.key\)\)/);
   assert.match(images, /catch\(error\)\{await Promise\.all\(saved\.map/);
-  assert.match(page, /Add one size guide to every Etsy listing/);
+  assert.match(page, /Add a size guide to this batch/);
   assert.match(page, /printifyImageIndices/);
 });
 
@@ -4713,16 +4713,17 @@ test("step 2's rows go to their own section, and the card aligns — D538", asyn
   assert.match(app, /if\(node instanceof HTMLDetailsElement\)node\.open=true;/);
   assert.doesNotMatch(app, /node\.open=!node\.open/);
 
-  /* The rail resolved to 965px inside a 1152px content area, so margin:auto
-     centred it and the gutters inset it again: cards at 435 / 857 against a page
-     column of 342 / 1044. */
-  assert.match(css, /\.step-product-cards\{width:100%;max-width:none;margin-left:0;margin-right:0;padding-left:54px/);
+  /* D675 - every step uses the same 720px container. Step 2 used to escape the
+     column and render a 1044px card beside step 3's 612px card. */
+  assert.match(css, /\.step-product-cards\{width:min\(720px,100%\);max-width:720px;margin-left:auto;margin-right:auto;padding-left:54px/);
 
   /* And inside the card the workspace still wore page-level chrome - a 48px
      margin, 72px gutters, an 1180px cap - putting the task sections at 486 while
      the rows above sat at 364. */
   assert.match(css, /\.step-product-card \.post-draft-workspace\{max-width:none;margin-left:0;margin-right:0;padding-left:0/);
   assert.match(css, /\.step-product-card \.batch-product-row\{grid-template-columns:22px 150px 1fr auto\}/);
+  assert.match(css, /\.step-product-card \.batch-product-row\.open\{grid-template-columns:22px auto minmax\(0,1fr\) auto\}/,
+    "an open 22px label cannot spill out of a fixed 150px column");
 });
 
 test("a product card holds only its rows and the one open task — D540", async () => {
@@ -4739,10 +4740,14 @@ test("a product card holds only its rows and the one open task — D540", async 
     assert.ok(!card.includes(stray), `${stray} must not sit in the product card`);
   }
 
-  // The batch-wide work sits above the cards, where it applies to every product.
+  // Shared actions remain shared, but the size-guide action is reached through
+  // a photo row instead of a full-width banner above every product.
   const shared = app.slice(0, i);
   assert.ok(shared.includes("batch-size-guide"), "the size guide is shared batch work");
   assert.ok(shared.includes("Review all listings in Printify"));
+  assert.match(app, /\{label:"Size guide",value:sizeGuideName\?sizeGuideName:"Optional"[^}]*task:"sizeguide"\}/);
+  assert.match(app, /if\(task==="sizeguide"\)return <section className="batch-size-guide in-product-row">/);
+  assert.equal((app.match(/className="batch-size-guide/g)||[]).length,1,"no separate size-guide banner survives above the cards");
 
   // And the heading that described the removed block is gone with it.
   assert.doesNotMatch(app, /Review placement and choose listing images/);

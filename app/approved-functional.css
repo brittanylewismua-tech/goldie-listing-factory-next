@@ -1733,6 +1733,7 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
   border-color:rgba(158,39,54,.45)!important;
   color:#9e2736!important;
 }
+.app-shell .batch-size-guide.in-product-row{margin:10px 14px 4px;grid-template-columns:minmax(0,1fr) auto;padding:18px}.app-shell .batch-size-guide.in-product-row h3{font-size:20px}.app-shell .batch-size-guide.in-product-row .size-guide-actions{justify-content:flex-end}
 
 /* D654 · The Printify store name was appended to the one-line, clamped product
    summary, so a real card rendered "… · keyword bank · GO…". A label that names

@@ -2812,7 +2812,7 @@ body{min-width:1180px!important}
    342 / 1044. Too narrow, and still not aligned. Filling the content area and
    taking the same 54px gutters puts them at exactly 342 / 1044 - measured on the
    page, all three cards. */
-.app-shell .step-product-cards{width:100%;max-width:none;margin-left:0;margin-right:0;padding-left:54px;padding-right:54px;box-sizing:border-box}
+.app-shell .step-product-cards{width:min(720px,100%);max-width:720px;margin-left:auto;margin-right:auto;padding-left:54px;padding-right:54px;box-sizing:border-box}
 
 /* D539 - the task-section wrappers are gone; a task row owns its panel. What
    survives from D537 is the per-listing naming inside a task. */
@@ -2830,6 +2830,7 @@ body{min-width:1180px!important}
 .app-shell .step-product-card .post-draft-workspace{max-width:none;margin-left:0;margin-right:0;padding-left:0;padding-right:0;padding-top:14px}
 .app-shell .step-product-card .step-product-body{padding-left:0;padding-right:0}
 .app-shell .step-product-card .batch-product-row{grid-template-columns:22px 150px 1fr auto}
+.app-shell .step-product-card .batch-product-row.open{grid-template-columns:22px auto minmax(0,1fr) auto}
 
 /* D539 - a task row owns its panel. The panel opens inside the product card,
    directly under the row that asked for it, and nothing else opens with it. */
