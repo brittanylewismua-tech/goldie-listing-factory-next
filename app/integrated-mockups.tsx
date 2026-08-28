@@ -326,7 +326,25 @@ export default function IntegratedMockups({design,productId,productName="",defau
     "Gildan Hoodies" while both listings offered BACH TEES - tee photographs, for
     a hoodie. The set is chosen once, above, and this follows it. */
  useEffect(()=>{setTheme(defaultTheme);setResults([]);setEtsyStatus("")},[defaultTheme]);
- useEffect(()=>{if(seededDefaults.current||!library.length)return;seededDefaults.current=true;let session:{theme?:string;ids?:string[]}|null=null;try{session=JSON.parse(window.sessionStorage.getItem("goldie-batch-mockups")||"null")}catch{}const ids=defaultTemplateIds.length?defaultTemplateIds:Array.isArray(session?.ids)?session.ids:[],expectedTheme=defaultTheme||session?.theme||"";const valid=ids.filter(id=>library.some(item=>item.id===id&&(!expectedTheme||item.theme===expectedTheme))).slice(0,MAX_MOCKUPS_PER_LISTING);setSelected(new Set(valid))},[library,defaultTheme,defaultTemplateIds.join("|")]);
+ /* D647 · The scenes are chosen ONCE for the batch, in the panel above (D618),
+    and that panel writes to the batch. This component kept its own `selected`
+    set, seeded a single time at mount and never told about later changes - so
+    picking a mockup set and ticking scenes moved the batch counter while this
+    one stayed empty, and "Create selected mockups" was disabled forever. Walked
+    it as a seller: set chosen, "2 of 5 scenes chosen" in the grid, "0 scenes
+    chosen for this batch" beside the button, button dead. Lifestyle mockups
+    could not be created at all from a fresh batch.
+    When the batch says which scenes it wants, that is the answer and this
+    follows it every time it changes. The one-time session seeding below is only
+    for the case where the batch has said nothing yet. */
+ useEffect(()=>{if(!library.length)return;
+   if(defaultTemplateIds.length){
+     const wanted=defaultTemplateIds.filter(id=>library.some(item=>item.id===id)).slice(0,MAX_MOCKUPS_PER_LISTING);
+     seededDefaults.current=true;
+     setSelected(current=>{const next=new Set(wanted);if(next.size===current.size&&[...next].every(id=>current.has(id)))return current;return next});
+     return;
+   }
+   if(seededDefaults.current)return;seededDefaults.current=true;let session:{theme?:string;ids?:string[]}|null=null;try{session=JSON.parse(window.sessionStorage.getItem("goldie-batch-mockups")||"null")}catch{}const ids=defaultTemplateIds.length?defaultTemplateIds:Array.isArray(session?.ids)?session.ids:[],expectedTheme=defaultTheme||session?.theme||"";const valid=ids.filter(id=>library.some(item=>item.id===id&&(!expectedTheme||item.theme===expectedTheme))).slice(0,MAX_MOCKUPS_PER_LISTING);setSelected(new Set(valid))},[library,defaultTheme,defaultTemplateIds.join("|")]);
  useEffect(()=>{if(selected.size<=MAX_MOCKUPS_PER_LISTING)return;setSelected(new Set([...selected].slice(0,MAX_MOCKUPS_PER_LISTING)));setError("You can create up to eight lifestyle mockups for one listing.")},[selected]);
  /* D573 - compatibility is product family AND print side AND calibration status.
    A back-print draft offered a front-facing photograph produces a confident lie,

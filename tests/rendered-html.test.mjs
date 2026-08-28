@@ -6240,3 +6240,51 @@ test("seller-fixable failures are recorded and never emailed — D645", async ()
   // The old copy promised an email for every area; it must not still say that.
   assert.doesNotMatch(control, /Brittany is emailed the first error in each area/);
 });
+
+/* D647 · Walked the whole flow as a seller and lifestyle mockups could not be
+ * created at all from a fresh batch.
+ *
+ * D618 removed the per-listing scene grid so the scenes are chosen ONCE for the
+ * batch, in the panel above. That panel writes to the batch. IntegratedMockups
+ * kept its own `selected` set, seeded a single time at mount from sessionStorage
+ * and never told about later changes - and the call site never passed the
+ * batch's chosen scenes at all. Measured live:
+ *
+ *   grid:   "2 of 5 scenes chosen · up to 8"
+ *   button: "0 scenes chosen for this batch", Create selected mockups DISABLED
+ *
+ * Two counters, one dead button, and no way to make a mockup. */
+test("the Create button follows the scenes the batch actually chose — D647", async () => {
+  const [mockups, app] = await Promise.all([
+    readFile(new URL("../app/integrated-mockups.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
+  ]);
+
+  // The batch's choice is handed down.
+  assert.match(app, /<IntegratedMockups[^>]*defaultTemplateIds=\{sharedMockups\?\.theme===mockupTheme\?sharedMockups\.ids:\[\]\}/,
+    "the batch's chosen scenes must reach the component that renders the button");
+
+  // And followed on every change, not seeded once.
+  assert.match(mockups, /if\(defaultTemplateIds\.length\)\{[\s\S]*?setSelected\(current=>\{const next=new Set\(wanted\)/);
+  assert.match(mockups, /\},\[library,defaultTheme,defaultTemplateIds\.join\("\|"\)\]\)/,
+    "the effect must re-run when the batch's scenes change");
+
+  /* The one-time session seeding stays, but only for a batch that has not said
+     anything yet - it must not be able to block the batch's own answer. */
+  const effect = mockups.slice(mockups.indexOf("useEffect(()=>{if(!library.length)return;"), mockups.indexOf("MAX_MOCKUPS_PER_LISTING)\n"));
+  assert.ok(effect.indexOf("if(defaultTemplateIds.length)") < effect.indexOf("if(seededDefaults.current)return"),
+    "the batch's choice is read before the one-time seed can bail out");
+
+  // The button's own condition is unchanged; it just has the right input now.
+  assert.match(mockups, /disabled=\{!chosen\.length\|\|busy\|\|needsReference&&!referenceUrl\}/);
+});
+
+/* D647 · Counting bugs found by reading the screen during the walkthrough: a
+ * one-design batch reported "1 drafts" on its product card and "Processing up
+ * to 1 designs at a time" while it worked. */
+test("counts read correctly at one — D647", async () => {
+  const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+  assert.match(app, /\$\{drafts\.length\} \$\{drafts\.length===1\?"draft":"drafts"\}/);
+  assert.doesNotMatch(app, /\$\{drafts\.length\} drafts`/);
+  assert.match(app, /===1\?"design":"designs"\} at a time without lowering their print resolution/);
+});

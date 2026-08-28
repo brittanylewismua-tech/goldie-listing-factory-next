@@ -1941,7 +1941,7 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
   function bundleCardStatus(step:"images"|"listing"|"publish"){
     return (recipe:Recipe,index:number):{label:string;tone:"ready"|"attention"|"waiting"}=>{
       if(index===bundleIndex){
-        if(step==="images")return complete?{label:`${drafts.length} drafts`,tone:"ready"}:{label:`${files.length} ${files.length===1?"design":"designs"}`,tone:"attention"};
+        if(step==="images")return complete?{label:`${drafts.length} ${drafts.length===1?"draft":"drafts"}`,tone:"ready"}:{label:`${files.length} ${files.length===1?"design":"designs"}`,tone:"attention"};
         if(step==="listing"){
           /* D624 · This card said "Titles ready" in green while the row directly
              beneath it said "2 of 2 titles · 0 of 2 with all 13 tags" in crimson
@@ -2366,7 +2366,7 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
                       choosing for." D408 measured this once already on another
                       step. The artwork, at a size that identifies it. */}
 
-                  {design?.previewUrl?<div className="task-listing-figure"><img src={design.previewUrl} alt={design.name||"Design"} decoding="async"/></div>:null}{design.originalUnavailable?<p className="inline-note" role="status">Existing photos stay with this listing. To create new lifestyle mockups, upload the original design again in this browser.</p>:<IntegratedMockups design={design.file} productId={draft.id} productName={classifyingProductName} defaultTheme={mockupTheme} referenceUrl={draft.previewUrl} placement={draft.placement} batchId={draft.batchId||""} designKey={design.id||design.name||""} artworkBounds={design.visibleBounds} onPrepared={count=>setPreparedMockupCounts(current=>({...current,[draft.id!]:count}))}/>}</div>
+                  {design?.previewUrl?<div className="task-listing-figure"><img src={design.previewUrl} alt={design.name||"Design"} decoding="async"/></div>:null}{design.originalUnavailable?<p className="inline-note" role="status">Existing photos stay with this listing. To create new lifestyle mockups, upload the original design again in this browser.</p>:<IntegratedMockups design={design.file} productId={draft.id} productName={classifyingProductName} defaultTheme={mockupTheme} defaultTemplateIds={sharedMockups?.theme===mockupTheme?sharedMockups.ids:[]} referenceUrl={draft.previewUrl} placement={draft.placement} batchId={draft.batchId||""} designKey={design.id||design.name||""} artworkBounds={design.visibleBounds} onPrepared={count=>setPreparedMockupCounts(current=>({...current,[draft.id!]:count}))}/>}</div>
               </div>})()) }</div>
     </>;
     if(task==="order")return <>
@@ -2972,7 +2972,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
     setComplete(false);
     const batchBytes=targetFiles.reduce((sum,file)=>sum+file.size,0);
     const batchConcurrency=batchBytes>LARGE_BATCH_THRESHOLD?1:MAX_CONCURRENT_DESIGNS;
-    setPreparationMessage(batchConcurrency===1?"This is a large high-resolution batch, so Goldie is processing one design at a time safely":`Processing up to ${Math.min(batchConcurrency, targetFiles.length)} designs at a time without lowering their print resolution`);
+    setPreparationMessage(batchConcurrency===1?"This is a large high-resolution batch, so Goldie is processing one design at a time safely":`Processing up to ${Math.min(batchConcurrency, targetFiles.length)} ${Math.min(batchConcurrency, targetFiles.length)===1?"design":"designs"} at a time without lowering their print resolution`);
     if (!keepSuccessful) setDrafts([]);
     else setDrafts((current) => current.filter((draft) => draft.status === "Created"));
     setProcessed(0);
