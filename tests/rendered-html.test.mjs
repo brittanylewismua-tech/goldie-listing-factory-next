@@ -4555,7 +4555,8 @@ test("the publish button refuses in advance, not after the click — D526/D527",
      say different things. That is the D526/D527 rule stated more strongly than
      the old expression stated it. */
   assert.match(app, /disabled=\{publishing\|\|publishBlockers\(\)\.length>0\}/);
-  assert.match(app, /issues=publishBlockers\(\);/,
+  /* D644 - via a ref, because the listener's closure went stale. Same rule. */
+  assert.match(app, /issues=publishBlockersRef\.current\(\);/,
     "the click guard must ask exactly what disabled the button");
   assert.doesNotMatch(app, /\.\.\.requiredForStep\("finish"\)\]/,
     "building a batch is not the same question as publishing finished listings");
@@ -5794,9 +5795,11 @@ test("one list decides whether the press can happen, scoped to the selection —
 
   // Both the button and the guard read it, so they cannot diverge again.
   assert.match(app, /disabled=\{publishing\|\|publishBlockers\(\)\.length>0\}/);
-  assert.match(app, /issues=publishBlockers\(\);/);
-  assert.equal((app.match(/publishBlockers\(\)/g) || []).length, 5,
-    "declared once; read by the button's disabled, its title twice, and the click guard");
+  assert.match(app, /issues=publishBlockersRef\.current\(\);/);
+  assert.equal((app.match(/publishBlockers\(\)/g) || []).length, 4,
+    "declared once; read by the button's disabled and its title twice");
+  assert.match(app, /publishBlockersRef\.current=publishBlockers;/,
+    "and by the guard through a ref refreshed every render - D644");
 });
 
 /* D636 · After D634 fixed the confirmation, two labels on the page behind it
@@ -6133,4 +6136,29 @@ test("a corrected shipping profile reaches the job, and a stale one blocks first
   /* Only when Goldie can actually see the shop's profiles - an empty list is a
      load that has not finished, not evidence the profile is wrong. */
   assert.match(app, /if\(shopProfiles\.size&&!shopProfiles\.has\(profile\)\)/);
+});
+
+/* D644 · The click guard is a document listener registered by an effect, so it
+ * closes over the state present when that effect last ran - and
+ * selectedPublishIds was never among its dependencies. Harmless while the
+ * blockers did not depend on the selection. D643 made them per-target and it
+ * broke immediately:
+ *
+ *   button: "Publish 2 listings live on Etsy · 1 product"
+ *   click:  "Choose a shipping profile for this Etsy shop — Gildan Tee still
+ *            uses one from a different shop."
+ *
+ * Gildan Tee had been unticked. The guard was reading a selection from before.
+ * This is the D635 fault again by a different route: not different logic, a
+ * stale copy of the same logic. */
+test("the click guard reads the current blockers, not a stale closure — D644", async () => {
+  const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+
+  assert.match(app, /const publishBlockersRef=useRef<\(\)=>string\[\]>\(\(\)=>\[\]\);/);
+  /* Refreshed during render, so it is current before any click can be handled. */
+  assert.match(app, /publishBlockersRef\.current=publishBlockers;\n  useEffect\(\(\)=>\{/,
+    "the ref must be updated on every render, not inside an effect");
+  assert.match(app, /issues=publishBlockersRef\.current\(\);/);
+  assert.doesNotMatch(app, /issues=publishBlockers\(\);/,
+    "calling it directly is what read the stale selection");
 });

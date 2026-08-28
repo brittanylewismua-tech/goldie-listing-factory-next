@@ -1671,13 +1671,24 @@ export default function ListingFactoryApp() {
     return () => window.removeEventListener("beforeunload", protectBatch);
   }, [running]);
 
+  /* D644 · The click guard is a document listener registered by an effect, so it
+     closes over whatever state existed when that effect last ran - and
+     selectedPublishIds was never in its dependency list. Harmless while the
+     blockers did not depend on the selection; D643 made them per-target, and the
+     guard began refusing the press by naming products that had been unticked:
+     "Gildan Tee still uses one from a different shop" while the button correctly
+     read "Publish 2 listings live on Etsy · 1 product".
+     A ref refreshed on every render always holds the current answer, so the
+     listener cannot read a stale one no matter what its deps say. */
+  const publishBlockersRef=useRef<()=>string[]>(()=>[]);
+  publishBlockersRef.current=publishBlockers;
   useEffect(()=>{
     const guardFinalActions=(event:MouseEvent)=>{
       const element=event.target instanceof Element?event.target.closest("button"):null;
       if(!element)return;
       let issues:string[]=[];
       if(element.classList.contains("publish-all-button")){
-        issues=publishBlockers();
+        issues=publishBlockersRef.current();
       }
       if(!issues.length)return;
       event.preventDefault();event.stopImmediatePropagation();stopWith("Finish all sections first.",[...new Set(issues)]);
