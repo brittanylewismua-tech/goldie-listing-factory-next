@@ -130,7 +130,7 @@ test("uses individual shop-aware Printify editor buttons", async () => {
   assert.doesNotMatch(page, /new Worker|OffscreenCanvas|UPNG/);
   assert.match(page, /analyzePadding/);
   assert.match(page, /MAX_CONCURRENT_DESIGNS = 2/);
-  assert.match(page, /\$\{processed\} of \$\{runTotal\} complete/);
+  assert.match(page, /Creating drafts · \$\{processed\} of \$\{runTotal\} finished/);
   assert.match(page, /\{processed\}\/\{runTotal\}/);
   assert.doesNotMatch(page, /Creating \$\{processed \+ 1\} of/);
   assert.match(page, /\/api\/printify\/stage/);
@@ -342,7 +342,7 @@ test("stages each finished mockup group for its exact Etsy listing", async () =>
   assert.match(images, /kind==="size-guide"/);
   assert.match(images, /existing\.objects\.map\(object=>runtime\(\)\.ARTWORK\.delete\(object\.key\)\)/);
   assert.match(images, /catch\(error\)\{await Promise\.all\(saved\.map/);
-  assert.match(page, /Add a size guide to this batch/);
+  assert.match(page, /Goldie adds it to every listing in this batch/);
   assert.match(page, /printifyImageIndices/);
 });
 
@@ -4740,14 +4740,15 @@ test("a product card holds only its rows and the one open task — D540", async 
     assert.ok(!card.includes(stray), `${stray} must not sit in the product card`);
   }
 
-  // Shared actions remain shared, but the size-guide action is reached through
-  // a photo row instead of a full-width banner above every product.
+  // Shared actions remain shared. The batch-wide size-guide state is reached
+  // through the photo row's native task panel, not a second banner component.
   const shared = app.slice(0, i);
-  assert.ok(shared.includes("batch-size-guide"), "the size guide is shared batch work");
+  assert.ok(shared.includes("sizeGuideName"), "the size guide remains batch-wide state");
   assert.ok(shared.includes("Review all listings in Printify"));
-  assert.match(app, /\{label:"Size guide",value:sizeGuideName\?sizeGuideName:"Optional"[^}]*task:"sizeguide"\}/);
-  assert.match(app, /if\(task==="sizeguide"\)return <section className="batch-size-guide in-product-row">/);
-  assert.equal((app.match(/className="batch-size-guide/g)||[]).length,1,"no separate size-guide banner survives above the cards");
+  assert.match(app, /\{label:"Size guide",value:sizeGuideName\|\|"None chosen"[^}]*optional:true,task:"sizeguide"\}/);
+  assert.match(app, /if\(task==="sizeguide"\)return <div className="size-guide-row-panel">/);
+  assert.doesNotMatch(app, /className="batch-size-guide/,"the banner component is gone rather than relocated");
+  assert.match(app, /className="secondary-action"[\s\S]{0,180}?\{sizeGuideName\?"Replace size guide":"Choose size guide"\}/);
 
   // And the heading that described the removed block is gone with it.
   assert.doesNotMatch(app, /Review placement and choose listing images/);
@@ -6468,7 +6469,7 @@ test("a size guide can be removed, not only replaced — D651", async () => {
   assert.match(app, /Listings this batch has already published keep the one they were given/);
 
   // Offered only when there is one to remove.
-  assert.match(app, /\{sizeGuideName&&<button type="button" className="size-guide-remove"/);
+  assert.match(app, /\{sizeGuideName&&<button type="button" className="secondary-action size-guide-remove"/);
   /* D652 - it inherited `.batch-size-guide button`, a filled primary set with
      !important, so the destructive action rendered as heavy as the safe one. */
   const functional = await readFile(new URL("../app/approved-functional.css", import.meta.url), "utf8");

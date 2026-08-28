@@ -51,7 +51,7 @@ const FEATURES = [
   ["Printify product photos are selectable", /printify-image-picker bare/],
   ["seller photos can be uploaded", /<UploadedListingPhotos/],
   ["all listing photos can be reordered", /<ListingPhotoOrder/],
-  ["a size guide can be added to every listing", /Add a size guide to this batch/],
+  ["a size guide can be added to every listing", /Goldie adds it to every listing in this batch/],
   ["AI titles for the whole batch", /Create titles for the whole batch/],
   ["manual title building from a bank", /Build this title yourself from a keyword bank/],
   /* D541 - the override moved out of a nested disclosure inside step 3's table
@@ -149,11 +149,13 @@ test("step-level controls sit below the cards, product-level inside them", async
   assert.match(app, /\{complete && workflowStep==="designs" && stepProductCards\(bundleCardStatus\("images"\),[\s\S]{0,1400}?\bnull\b/,
     "the designs card passes no body block - the rows own the work");
 
-  /* D540 - the size guide applies to every listing in the batch, so it sits above
-     the cards with the shared work rather than inside one product's card. */
+  /* D676 - the size guide applies batch-wide, but its work now opens from the
+     Size guide task row like every sibling photo decision. The old banner/card
+     component must not return. */
   assert.ok(!images.body.includes("batch-size-guide") && !images.footer.includes("batch-size-guide"),
-    "the size guide is not inside a product card");
-  assert.ok(app.includes("batch-size-guide"), "and it still exists on the step");
+    "the old size-guide banner is gone");
+  assert.ok(app.includes('task==="sizeguide"') && app.includes('className="size-guide-row-panel"'),
+    "the Size guide row owns its native task panel");
   for (const perStep of ["workflow-next", "image-step-blocker"]) {
     assert.ok(images.footer.includes(perStep), `${perStep} is about the step`);
     assert.ok(!images.body.includes(perStep), `${perStep} must not sit inside one product's card`);
