@@ -6337,7 +6337,12 @@ test("a saved product says which Printify store it lives in — D649", async () 
   assert.match(app, /Number\(result\.shop\.count\|\|0\)>1/);
   // Recorded on the recipe when it changes, without clobbering anything else.
   assert.match(app, /printifyShopTitle:result\.shop\.title,printifyShopId:result\.shop\.id/);
-  assert.match(app, /activeRecipe\.printifyShopTitle!==result\.shop\.title/,
+  /* D653 - it read activeRecipe from its closure, and chooseRecipe calls
+     loadTemplateUrl in the same tick as setActiveRecipe, so it saw the PREVIOUS
+     recipe or null and never wrote anything. */
+  assert.match(app, /const activeRecipeRef=useRef<Recipe\|null>\(null\);\n\s*activeRecipeRef\.current=activeRecipe;/);
+  assert.match(app, /const recipeForShop=activeRecipeRef\.current;/);
+  assert.match(app, /recipeForShop&&recipeForShop\.printifyShopTitle!==result\.shop\.title/,
     "only write when it actually changed");
   assert.match(route, /if \(body\.printifyShopTitle !== undefined\) patch\.printifyShopTitle/);
 

@@ -859,6 +859,14 @@ export default function ListingFactoryApp() {
   const [bulkTitles, setBulkTitles] = useState("");
   const [activeDesign, setActiveDesign] = useState<string>("");
   const [activeRecipe,setActiveRecipe]=useState<Recipe|null>(null);
+  /* D653 · loadTemplateUrl records which Printify store a product came from, but
+     it read `activeRecipe` from its closure - and chooseRecipe calls it in the
+     same tick as setActiveRecipe, so the value it saw was the PREVIOUS recipe or
+     null. Nothing was ever written: four saved products, four Printify stores,
+     and every card still blank. A ref set during render always holds the current
+     one, whatever a closure captured. */
+  const activeRecipeRef=useRef<Recipe|null>(null);
+  activeRecipeRef.current=activeRecipe;
   const [activeBundle,setActiveBundle]=useState<ProductBundle|null>(null);
   const [bundleRecipes,setBundleRecipes]=useState<Recipe[]>([]);
   const [bundleIndex,setBundleIndex]=useState(0);
@@ -2910,8 +2918,10 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
       if(verifiedProfileId)setEtsyShippingProfileId(current=>current||verifiedProfileId);
       /* D649 - record which Printify store this product came from, so its saved
          card can say so instead of the seller finding out by being refused. */
-      if(result.shop?.title&&Number(result.shop.count||0)>1&&activeRecipe&&activeRecipe.printifyShopTitle!==result.shop.title){
-        void fetch("/api/product-recipes",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:activeRecipe.id,name:activeRecipe.name,templateUrl:activeRecipe.templateUrl,printifyShopTitle:result.shop.title,printifyShopId:result.shop.id})}).catch(()=>undefined);
+      const recipeForShop=activeRecipeRef.current;
+      if(result.shop?.title&&Number(result.shop.count||0)>1&&recipeForShop&&recipeForShop.printifyShopTitle!==result.shop.title){
+        void fetch("/api/product-recipes",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:recipeForShop.id,name:recipeForShop.name,templateUrl:recipeForShop.templateUrl,printifyShopTitle:result.shop.title,printifyShopId:result.shop.id})}).catch(()=>undefined);
+        setActiveRecipe(current=>current&&current.id===recipeForShop.id?{...current,printifyShopTitle:result.shop!.title,printifyShopId:result.shop!.id}:current);
       }
       setTemplateDetails(result.product);setDescription(result.product.description||"");if(result.product.standardShipping!=null)setPricing(current=>({...current,shippingCost:result.product!.standardShipping!,shippingCharged:0}));setVariantPrices(Object.fromEntries((result.product.variants||[]).map(variant=>[String(variant.id),variant.templatePrice])));/* D472 - loading the Printify template used to clear the pricing approval
    unconditionally. Choosing a saved product loads its template, so every batch
