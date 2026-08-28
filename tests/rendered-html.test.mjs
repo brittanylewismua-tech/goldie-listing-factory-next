@@ -6327,7 +6327,9 @@ test("the walkthrough's smaller faults are fixed — D648", async () => {
      Nothing is truncated now; the shortening is CSS, so the whole name stays in
      the DOM and reaches a screen reader. The stripping stays: the row label
      already says "shipping". */
-  assert.match(app, /return title\.replace\(\/\\s\*shipping\\s\*profile\\s\*\$\/i,""\)\.trim\(\)\|\|title\.trim\(\);/,
+  /* D663 · now applied to the title with the "Standard:" prefix already
+     removed, so seven profiles that shared that prefix stop printing as one. */
+  assert.match(app, /return withoutStandard\.replace\(\/\\s\*shipping\\s\*profile\\s\*\$\/i,""\)\.trim\(\)\|\|title\.trim\(\);/,
     "never repeat the words the row label already says");
   assert.doesNotMatch(app, /const boundary=Math\.max\(cut\.lastIndexOf\(" "\),cut\.lastIndexOf\(","\)\)/,
     "there is no cut to place on a boundary any more");
@@ -6872,7 +6874,7 @@ test("the final review reads honestly — D660", async () => {
      is naming the profile must name it. Bounded by CSS, so the whole string
      stays in the DOM and reaches a screen reader. */
   assert.doesNotMatch(app, /const cut=clean\.slice\(0,42\);/, "no silent truncation of the profile name");
-  assert.match(app, /return title\.replace\(\/\\s\*shipping\\s\*profile\\s\*\$\/i,""\)\.trim\(\)\|\|title\.trim\(\);/);
+  assert.match(app, /return withoutStandard\.replace\(\/\\s\*shipping\\s\*profile\\s\*\$\/i,""\)\.trim\(\)\|\|title\.trim\(\);/);
   assert.match(css, /\.app-shell \.row-value\{min-width:0!important;overflow-wrap:anywhere!important\}/);
 
   // The heading must agree with the button underneath it.
@@ -6943,4 +6945,45 @@ test("background Etsy preparation runs two at a time, and only two — D662", as
      artwork, so it is bounded by memory rather than provider latency. */
   assert.match(app, /const MAX_CONCURRENT_DESIGNS = 2;/);
   assert.match(app, /runBounded\(targetFiles, batchConcurrency, processDesign/);
+});
+
+/* D663 · Found by acceptance Run 1, at the step that verifies the shipping
+   profile. Brittany's shop has SEVEN Etsy profiles beginning "Standard:", and
+   friendlyShippingProfileTitle returned the literal string "Standard shipping"
+   for every one of them - so the product card and the final review, the two
+   screens whose job is confirming which profile a listing publishes with,
+   printed seven different profiles identically.
+
+   D660 removed the truncation from this same function for exactly this reason
+   and left the collapse behind, which was worse: a truncation is visibly lossy,
+   this silently rendered distinct values as one. Publishing under the wrong
+   profile is what D52 already cost her. */
+test("every shipping profile renders distinguishably — D663", async () => {
+  const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+
+  assert.doesNotMatch(app, /if\(\/\^standard:\/i\.test\(title\)\)return"Standard shipping";/,
+    "seven distinct profiles must not print as one");
+  assert.match(app, /const withoutStandard=title\.replace\(\/\^standard:\\s\*\/i,""\)\.trim\(\);/);
+  assert.match(app, /return withoutStandard\.replace\(\/\\s\*shipping\\s\*profile\\s\*\$\/i,""\)\.trim\(\)\|\|title\.trim\(\);/);
+  // A bare "Standard:" still needs to say something.
+  assert.match(app, /if\(!withoutStandard\)return"Standard shipping";/);
+
+  /* Behavioural: her seven real titles, from the live shop, must produce seven
+     different strings. */
+  const body = app.slice(app.indexOf("function friendlyShippingProfileTitle"), app.indexOf("/* D649"));
+  const friendly = new Function("raw", `${body.replace(/^function friendlyShippingProfileTitle\(raw\?:string\)\{/, "").replace(/\}\s*$/, "")}`.replace(/const title=raw\?decodeProfileTitle\(raw\):raw;/, "const title=raw;"));
+  const real = [
+    "Standard: SwiftPOD, Hoodie, Sweatshirt",
+    "Standard: SwiftPOD, Garments (shirts)",
+    "Standard: SwiftPOD, Garments (shirts + shorts)",
+    "Standard: SwiftPOD, Kids clothes, Long-sleeve, T-Shirt, Tank",
+    "Standard: Printify Choice, 479, 635, 478,  10669, 10725 Mug, 11oz, 13oz",
+    "Economy-Standard: Printify Choice, Garments (shirts)",
+    "Flexi Cases",
+  ];
+  const rendered = real.map((title) => friendly(title));
+  assert.equal(new Set(rendered).size, real.length,
+    `seven real profiles must render as seven distinct labels, got ${JSON.stringify(rendered)}`);
+  // And nothing is cut short on the way.
+  assert.ok(rendered.every((label) => !label.includes("…")), "no ellipsis");
 });

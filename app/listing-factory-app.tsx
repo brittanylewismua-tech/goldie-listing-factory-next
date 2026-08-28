@@ -219,10 +219,30 @@ function decodeProfileTitle(title:string){
 function friendlyShippingProfileTitle(raw?:string){
   const title=raw?decodeProfileTitle(raw):raw;
   if(!title)return"Shipping profile needed";
-  if(/^standard:/i.test(title))return"Standard shipping";
+  /* D663 · Found by the acceptance run. This collapsed EVERY profile beginning
+     with "Standard:" to the same three words. Brittany has seven of them:
+
+       Standard: SwiftPOD, Garments (shirts)
+       Standard: SwiftPOD, Garments (shirts + shorts)
+       Standard: SwiftPOD, Hoodie, Sweatshirt
+       Standard: SwiftPOD, Kids clothes, Long-sleeve, T-Shirt, Tank
+       Standard: Printify Choice, ... Mug, 11oz, 13oz
+       ...
+
+     All seven rendered as "Standard shipping profile" on the product card and
+     on the final review, so the one screen that exists to confirm which profile
+     a listing publishes with could not tell them apart - and publishing under
+     the wrong profile is exactly what D52 cost her.
+
+     D660 removed the truncation for this reason and left this behind, which was
+     worse: a truncation is at least lossy in a visible way, this was seven
+     different values printing as one. The prefix is dropped, because the row
+     already says Shipping, and everything that distinguishes them is kept. */
+  const withoutStandard=title.replace(/^standard:\s*/i,"").trim();
+  if(!withoutStandard)return"Standard shipping";
   /* Trailing "shipping profile" is stripped because the row it sits in already
      says so - not to shorten it. */
-  return title.replace(/\s*shipping\s*profile\s*$/i,"").trim()||title.trim();
+  return withoutStandard.replace(/\s*shipping\s*profile\s*$/i,"").trim()||title.trim();
 }
 
 /* D649 · Every hoodie listing stopped on "Closure still needed". Goldie
