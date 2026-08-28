@@ -1,7 +1,7 @@
 import GoldieWordmark from "./goldie-wordmark";
 import { NavIcon } from "./nav-icons";
 
-type Destination="batches"|"keywords"|"mockups"|"usage"|"operations"|"connections";
+type Destination="batches"|"keywords"|"usage"|"operations"|"connections";
 
 export default function ManagementNav({active,listingFactoryHref="/listing-factory",showOperations=false}:{active?:Destination;listingFactoryHref?:string;showOperations?:boolean}){
   const links:Array<{key:Destination;href:string;label:string}>=[

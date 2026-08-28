@@ -208,18 +208,6 @@
  * it is the one that makes title generation fail two steps later. */
 /* (superseded by the D126 chip treatment below) */
 
-/* D109 · "change it anytime" with nothing to change it with. */
-.app-shell .manage-mockup-sets{
-  display:inline-block;
-  margin-top:8px;
-  color:#7a4f70;
-  font-size:11.5px;
-  font-weight:750;
-  text-decoration:underline;
-  text-underline-offset:3px;
-}
-.app-shell .manage-mockup-sets:hover{color:#4f2944}
-
 /* D111 · One quiet, persistent escape in the fixed workflow sidebar. */
 .app-shell .workflow-restart-button{display:inline-flex;align-items:center;justify-content:center;gap:6px;width:100%;min-height:34px;margin:3px 0 8px;padding:7px 11px;border:1px solid rgba(74,42,62,.16);border-radius:999px;background:rgba(255,255,255,.38);color:#66465d;font-size:10px;font-weight:650;cursor:pointer}
 .app-shell .workflow-restart-button:hover:not(:disabled){border-color:rgba(91,48,79,.34);background:rgba(255,255,255,.7);color:#4b2b42}
@@ -427,7 +415,6 @@
    "Create or edit mockup sets" link, leaving ~290px of dead space through the
    middle of the card. One column; nothing gets stranded. */
 .app-shell .mockup-default-block{grid-template-columns:minmax(0,1fr)!important}
-.app-shell .mockup-default-block>.manage-mockup-sets{justify-self:start}
 .app-shell .mockup-default-block>small{grid-column:1/-1!important}
 .app-shell .product-mockup-scenes{
   display:grid!important;
@@ -3059,8 +3046,6 @@ body{min-width:1180px!important}
 
 /* D571 - a scene whose print area has never been marked says so, in the picker,
    before it is used. */
-.app-shell .scene-unmeasured{display:block;margin-top:3px;font:700 .58rem/1.3 "Manrope",system-ui,sans-serif;color:#9e2736;font-style:normal;letter-spacing:.02em}
-
 /* ==========================================================================
  * D621 · ONE AXIS FOR THE PAGE HEADER AND THE STEP RAIL
  *
@@ -3095,12 +3080,6 @@ body{min-width:1180px!important}
  *
  * D571 was right that an unmeasured scene must say so. It says so quietly.
  * ========================================================================== */
-.app-shell .scene-unmeasured{
-  color:rgba(74,42,62,.6);
-  font-weight:600;
-  letter-spacing:0;
-}
-
 /* D622 · Scene names are whatever the seller's files are called, and hers are
    "ChatGPT Image Aug 25, 2026, 05 51 32 PM (3)". Wrapped to two and three lines
    they made every tile a different shape and buried the thumbnail. One line,
