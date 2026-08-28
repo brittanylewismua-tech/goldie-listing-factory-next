@@ -5973,16 +5973,25 @@ test("shop pairing is proven against Etsy, never guessed from names — D641", a
 
   // The evidence is a listing this Printify store published, asked for inside
   // the connected Etsy shop. Etsy answers 200 only if it belongs there.
-  assert.match(match, /const id=Number\(product\.external\?\.id\)/);
-  assert.match(match, /await etsyFetch<unknown>\(`\/shops\/\$\{etsyShopId\}\/listings\/\$\{listingId\}`,etsyToken\)/);
-  assert.match(match, /return \{result:"matched",listingId\}/);
+  assert.match(match, /candidates=\(payload\.data\|\|\[\]\)\.map\(product=>Number\(product\.external\?\.id\)\)/,
+    "the evidence is still a listing this Printify store published - D646 gathers several");
+  /* D646 - reading the listing's own shop_id, not asking for it inside a shop.
+     A 404 from the shop-scoped form meant "deleted" as often as "wrong shop". */
+  assert.match(match, /await etsyFetch<\{shop_id\?:number\}>\(`\/listings\/\$\{listingId\}`,etsyToken\)/);
+  assert.match(match, /if\(owner===etsyShopId\)return \{result:"matched",listingId\}/);
 
   /* Three outcomes, not two - and only a denial blocks. An absent answer is not
      an answer, which is the whole lesson of D639. */
   assert.match(match, /export type ShopPairing="matched"\|"mismatched"\|"unknown"/);
-  assert.match(match, /if\(\/\\b404\\b\|not found\/i\.test\(message\)\)return \{result:"mismatched",listingId\}/);
-  assert.match(match, /return \{result:"unknown",listingId\}/, "a rate limit or outage is not a mismatch");
-  assert.match(match, /if\(!listingId\)return \{result:"unknown"\}/, "nothing published yet proves nothing");
+  /* D646 - mismatched requires positive evidence: the listing exists and names
+     another shop. Anything unreadable moves to the next candidate. */
+  assert.match(match, /if\(owner!==undefined\)|return \{result:"mismatched",listingId\}/);
+  assert.match(match, /catch\{continue\}/, "an unfetchable listing proves nothing");
+  assert.match(match, /if\(!owner\)continue;/);
+  assert.match(match, /for\(const listingId of candidates\.slice\(0,5\)\)/,
+    "one sample is not enough when listings get deleted");
+  assert.match(match, /if\(!candidates\.length\)return \{result:"unknown"\}/, "nothing published yet proves nothing");
+  assert.match(match, /\n  return \{result:"unknown"\};\n\}/, "and neither does a run where no candidate could be read");
 
   // Both callers block on "mismatched" and nothing else.
   assert.match(product, /if\(pairing\.result==="mismatched"\)return NextResponse\.json\(shopMismatch/);
@@ -5991,7 +6000,7 @@ test("shop pairing is proven against Etsy, never guessed from names — D641", a
     "no caller may block on unknown");
 
   // And the refusal explains that this was checked, not assumed.
-  assert.match(match, /Goldie checked a listing this Printify store already published/);
+  assert.match(match, /Goldie read a listing this Printify store published and Etsy says it belongs to a different shop/);
 });
 
 /* D639 · Brittany, reading the refusal: "there's no navigation to go back to the

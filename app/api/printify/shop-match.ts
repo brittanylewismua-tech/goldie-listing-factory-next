@@ -32,30 +32,40 @@ export async function verifyShopPairing(options:{
 }):Promise<{result:ShopPairing;listingId?:number}>{
   const {printifyToken,printifyShopId,etsyShopId,etsyToken,etsyFetch}=options;
   if(!printifyShopId||!etsyShopId)return {result:"unknown"};
-  let listingId=0;
+  /* D646 · D641 asked Etsy for the listing INSIDE the connected shop and read a
+     404 as "different shop". A 404 means far more than that - most often the
+     listing has since been deleted or hidden, which is exactly what happens to
+     test listings and to anything a seller tidies up. So a perfectly correct
+     setup started refusing itself:
+
+       Printify store: GODISAGIRLAPPAREL
+       Goldie's Etsy shop: godisagirlapparel
+
+     the same shop, refused, because the one listing it happened to sample was
+     gone. Twice now this check has blocked a seller who had done nothing wrong,
+     which is worse than not checking at all.
+
+     Only positive evidence counts now: fetch the listing itself and read whose
+     shop it says it is in. A listing that exists and belongs to another shop is
+     a real mismatch. A listing that cannot be fetched proves nothing, so try the
+     next candidate and, failing that, say so. */
+  let candidates:number[]=[];
   try{
     const response=await fetch(`https://api.printify.com/v1/shops/${printifyShopId}/products.json?limit=20`,{headers:{Authorization:`Bearer ${printifyToken}`,"User-Agent":"Goldie-Listing-Factory"},cache:"no-store"});
     if(!response.ok)return {result:"unknown"};
     const payload=await response.json() as {data?:PrintifyProduct[]};
-    for(const product of payload.data||[]){
-      const id=Number(product.external?.id);
-      if(Number.isInteger(id)&&id>0){listingId=id;break}
-    }
+    candidates=(payload.data||[]).map(product=>Number(product.external?.id)).filter(id=>Number.isInteger(id)&&id>0);
   }catch{return {result:"unknown"}}
-  /* Nothing published from this store yet, so there is no evidence either way.
-     Publishing itself will settle it, and D637's bounded failure explains it. */
-  if(!listingId)return {result:"unknown"};
-  try{
-    await etsyFetch<unknown>(`/shops/${etsyShopId}/listings/${listingId}`,etsyToken);
-    return {result:"matched",listingId};
-  }catch(error){
-    const message=error instanceof Error?error.message:"";
-    /* Etsy says this listing is not in the connected shop. That is the real
-       mismatch, and the only thing worth blocking on. Any other failure - rate
-       limit, outage, expired token - is not an answer about shop identity. */
-    if(/\b404\b|not found/i.test(message))return {result:"mismatched",listingId};
-    return {result:"unknown",listingId};
+  if(!candidates.length)return {result:"unknown"};
+  for(const listingId of candidates.slice(0,5)){
+    let listing:{shop_id?:number}|null=null;
+    try{listing=await etsyFetch<{shop_id?:number}>(`/listings/${listingId}`,etsyToken)}catch{continue}
+    const owner=Number(listing?.shop_id);
+    if(!owner)continue;
+    if(owner===etsyShopId)return {result:"matched",listingId};
+    return {result:"mismatched",listingId};
   }
+  return {result:"unknown"};
 }
 
 export function shopMismatch(printifyShopTitle:string,etsyShopName:string){
@@ -65,7 +75,7 @@ export function shopMismatch(printifyShopTitle:string,etsyShopName:string){
     issues:[
       `Printify store: ${printifyShopTitle}`,
       `Goldie's Etsy shop: ${etsyShopName}`,
-      `Goldie checked a listing this Printify store already published and Etsy does not have it in ${etsyShopName}, so these are different shops - not just different names. Connect both to the same shop: reconnect Etsy from Connections in the sidebar, or choose a product from the Printify store that publishes to ${etsyShopName}.`,
+      `Goldie read a listing this Printify store published and Etsy says it belongs to a different shop, so these are two storefronts - not one storefront with two names. Connect both to the same shop: reconnect Etsy from Connections in the sidebar, or choose a product from the Printify store that publishes to ${etsyShopName}.`,
     ],
   };
 }
