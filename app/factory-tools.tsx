@@ -100,6 +100,17 @@ export function SavedWorkflow(props: WorkflowProps) {
      an 812px viewport, so nothing visibly happened. Clicking it also clears the
      selected product, so the part of the page the seller CAN see changes in a
      way that reads as a bug. Take them to the field they now have to fill in. */
+  /* D659 · Applied the moment the server records it, so the card stops waiting
+     for a reload to admit which store a product came from. */
+  useEffect(()=>{
+    function onShop(event:Event){
+      const detail=(event as CustomEvent<{recipeId?:string;title?:string;shopId?:number}>).detail;
+      if(!detail?.recipeId||!detail.title)return;
+      setRecipes(current=>current.map(recipe=>recipe.id===detail.recipeId?{...recipe,printifyShopTitle:detail.title,printifyShopId:detail.shopId}:recipe));
+    }
+    window.addEventListener("goldie-recipe-shop",onShop);
+    return ()=>window.removeEventListener("goldie-recipe-shop",onShop);
+  },[]);
   const formRef=useRef<HTMLDivElement|null>(null);
   function revealForm(){
     requestAnimationFrame(()=>{

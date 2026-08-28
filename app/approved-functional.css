@@ -1737,3 +1737,13 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
   font-size:11px!important;font-weight:800!important;letter-spacing:.02em!important;
   overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important;
 }
+
+/* D659 · The resume choice. Shown only when Goldie genuinely cannot tell which
+   batch a step URL meant, so it must read as a question, not as an error. */
+.app-shell .batch-resume-choice{display:block;margin:0 0 18px;padding:18px 20px;border-radius:18px;background:rgba(255,250,253,.72);border:1px solid rgba(91,53,79,.14)}
+.app-shell .batch-resume-choice>b{display:block;font-size:16px}
+.app-shell .batch-resume-choice>span{display:block;margin-top:2px;color:var(--muted);font-size:13px}
+.app-shell .batch-resume-choice ul{list-style:none;margin:12px 0 0;padding:0;display:grid;gap:8px}
+.app-shell .batch-resume-choice li>button{width:100%;display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:11px 14px;border-radius:12px;border:1px solid rgba(91,53,79,.16);background:#fff;text-align:left;cursor:pointer}
+.app-shell .batch-resume-choice li>button small{color:var(--muted)}
+.app-shell .batch-resume-choice>.secondary-action{margin-top:10px}

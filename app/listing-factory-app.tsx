@@ -1186,7 +1186,53 @@ export default function ListingFactoryApp() {
   const recommendedPixelSize=useMemo(()=>printTargetFor(templateDetails),[templateDetails]);
   const belowRecommendedPixels=useMemo(()=>{if(!recommendedPixelSize.width||!recommendedPixelSize.height)return [];return files.filter(file=>Boolean(file.width&&file.height&&(file.width<recommendedPixelSize.width||file.height<recommendedPixelSize.height)))},[files,recommendedPixelSize]);
   const criticalDpiFiles=useMemo(()=>{const {scale,printWidth}=printTargetFor(templateDetails);if(!scale||!printWidth)return [];return files.map(file=>({file,dpi:file.width?printifyDpi(file.width,printWidth,scale)?.dpi||0:0})).filter(item=>item.dpi>0&&item.dpi<215)},[files,templateDetails]);
-  const bundleQualityIssues=useMemo(()=>activeBundle?files.flatMap(file=>bundleRecipes.flatMap(recipe=>{const details=bundleColorProducts[recipe.id];if(!details||!file.width||!file.height)return [];const {scale,width:requiredWidth,height:requiredHeight,printWidth}=printTargetFor(details),dpi=printifyDpi(file.width,printWidth,scale)?.dpi||0;if(!requiredWidth||!requiredHeight||file.width>=requiredWidth&&file.height>=requiredHeight)return [];return [{key:`${recipe.id}:${file.id}`,fileId:file.id,fileName:file.name,recipeId:recipe.id,productName:recipe.name,requiredWidth,requiredHeight,actualWidth:file.width,actualHeight:file.height,dpi,critical:dpi>0&&dpi<215}] })):[],[activeBundle,files,bundleRecipes,bundleColorProducts]);
+  /* D659 · bundleColorProducts deliberately holds only the OTHER products, so
+     reading it alone skipped whichever product was open - and the sibling fetch
+     that fills it gave up silently after nine seconds, which a product load
+     measured at 2.5-3.5s can exceed. Either way a product vanished from the DPI
+     check with nothing said: the walkthrough flagged a design as "below the
+     recommended size for Gildan Hoodie" in a two-product bundle and never
+     mentioned the crewneck at all. One map, every product in the bundle. */
+  const bundleProductDetails=useMemo(()=>{
+    const map:Record<string,TemplateDetails>={...bundleColorProducts};
+    if(activeRecipe?.id&&templateDetails)map[activeRecipe.id]=templateDetails;
+    return map;
+  },[bundleColorProducts,activeRecipe,templateDetails]);
+  /* Named so the seller learns a product could not be checked, instead of it
+     quietly not appearing. */
+  const bundleProductsUnchecked=useMemo(()=>activeBundle?bundleRecipes.filter(recipe=>!bundleProductDetails[recipe.id]).map(recipe=>recipe.name):[],[activeBundle,bundleRecipes,bundleProductDetails]);
+  /* D659 · "All 44 enabled variants reviewed" was the OPEN product's count, on a
+     modal that had just offered to create drafts across two products. The
+     crewneck's 18 were never counted and never shown. Totalled across the
+     bundle, with the per-product split named beside it so the number can be
+     checked rather than trusted. */
+  /* D659 · The row read "None yet — optional" with the panel directly beneath it
+     saying "Saved for this product" over two chosen scenes. Both were true of
+     different things - the row counted mockups RENDERED, the panel showed scenes
+     CHOSEN - and nothing on screen said so, so the summary simply looked wrong.
+     One helper answers with both facts, and it can no longer say "none" while
+     scenes are saved. */
+  function scenesChosenFor(recipe:Recipe,isActive:boolean){
+    if(isActive)return (sharedMockups?.theme===mockupTheme?sharedMockups.ids:[])?.length||(activeRecipe?.mockupIds||[]).length||0;
+    return (bundleMockupChoices[recipe.id]?.ids||recipe.mockupIds||[]).length;
+  }
+  function mockupRowValue(created:number,scenes:number){
+    if(created&&scenes)return `${created} ${created===1?"mockup":"mockups"} from ${scenes} ${scenes===1?"scene":"scenes"}`;
+    if(created)return `${created} ${created===1?"mockup":"mockups"}`;
+    if(scenes)return `${scenes} ${scenes===1?"scene":"scenes"} chosen — not created yet`;
+    return "None yet — optional";
+  }
+  const bundleVariantCounts=useMemo(()=>{
+    const perProduct=(activeBundle&&bundleRecipes.length>1?bundleRecipes:activeRecipe?[activeRecipe]:[]).map(recipe=>{
+      const details=bundleProductDetails[recipe.id];
+      const count=details?(details.variants||[]).filter(variant=>variant.templateEnabled!==false).length:0;
+      return {name:recipe.name,count,known:Boolean(details)};
+    });
+    const known=perProduct.filter(entry=>entry.known);
+    const total=known.length?known.reduce((sum,entry)=>sum+entry.count,0):pricedVariants.length;
+    return {total,perProduct,detail:known.map(entry=>`${entry.name}: ${entry.count}`).join(" · ")};
+  },[activeBundle,bundleRecipes,activeRecipe,bundleProductDetails,pricedVariants]);
+  const bundleQualityIssues=useMemo(()=>activeBundle?files.flatMap(file=>bundleRecipes.flatMap(recipe=>{const details=bundleProductDetails[recipe.id];if(!details||!file.width||!file.height)return [];const {scale,width:requiredWidth,height:requiredHeight,printWidth}=printTargetFor(details),dpi=printifyDpi(file.width,printWidth,scale)?.dpi||0;if(!requiredWidth||!requiredHeight||file.width>=requiredWidth&&file.height>=requiredHeight)return [];return [{key:`${recipe.id}:${file.id}`,fileId:file.id,fileName:file.name,recipeId:recipe.id,productName:recipe.name,requiredWidth,requiredHeight,actualWidth:file.width,actualHeight:file.height,dpi,critical:dpi>0&&dpi<215}] })):[],[activeBundle,files,bundleRecipes,bundleProductDetails]);
 
   /* One flagged pair per design AND per product meant a 3-design bundle across 3
      products asked for up to 9 separate acknowledgements — Brittany hit 6 and
@@ -1579,13 +1625,47 @@ export default function ListingFactoryApp() {
     if(unavailable)setRestoreNotice(`${unavailable===designs.length?"The original uploads are":"Some original uploads are"} not available in this browser. Your ${unavailable===1?"listing is":"listings are"} restored and can still be completed and published. Upload the original ${unavailable===1?"file":"files"} again only if you need to recreate a Printify draft or generate new lifestyle mockups.`);
     const savedProductColors=state.templateDetails?.id?JSON.parse(window.localStorage.getItem(`goldie-colors-${state.templateDetails.id}`)||"[]") as number[]:[];const savedProductSizes=state.templateDetails?.id?JSON.parse(window.localStorage.getItem(`goldie-sizes-${state.templateDetails.id}`)||"[]") as number[]:[];batchIdRef.current=id;setBatchDisplayName(payload.batch.setup_name||"");setKeptAsDrafts(Boolean(state.keptAsDrafts));setTemplate(state.template||"");setTemplateDetails(state.templateDetails||null);setDescription(state.description||"");if(state.pricing)setPricing(state.pricing);setVariantPrices(state.variantPrices||{});setSelectedColorIds(state.selectedColorIds?.length?state.selectedColorIds:state.activeRecipe?.defaultColorIds?.length?state.activeRecipe.defaultColorIds:savedProductColors);setSelectedSizeIds(state.selectedSizeIds?.length?state.selectedSizeIds:state.activeRecipe?.defaultSizeIds?.length?state.activeRecipe.defaultSizeIds:savedProductSizes);setEtsyShippingProfileId(Number(state.etsyShippingProfileId)||0);setPricingApproved(Boolean(state.pricingApproved)||Boolean(state.complete&&(state.drafts||[]).some(draft=>draft.status==="Created")));setMockupTheme(state.mockupTheme||"");setActiveRecipe(state.activeRecipe||null);setActiveBundle(state.activeBundle||null);setBundleRecipes(state.bundleRecipes||[]);setBundleIndex(Math.max(0,Number(state.bundleIndex)||0));setBundleBatchIds(state.bundleBatchIds||{});setFiles(designs);setDrafts(state.drafts||[]);setComplete(Boolean(state.complete));setFinishPhase(restoredFinishPhase(state.finishPhase||"details",requestedPhase??requestedFinishPhase(requestedStep),Boolean(state.complete)));setBulkTitles(state.bulkTitles||"");setBatchKeywords(state.batchKeywords||[]);setTitleJoiner(state.titleJoiner||", ");setTitleBuilderMode(state.titleBuilderMode||"ai");setAutoTitleBankId(state.autoTitleBankId||"");setManualKeywordBankId(state.manualKeywordBankId||"");setSharedMockups(state.sharedMockups);setPreparedMockupCounts(state.preparedMockupCounts||{});setPrintifyImageIndices(state.printifyImageIndices||[]);setPrintifyImageSelections(state.printifyImageSelections||{});setSizeGuideName(state.sizeGuideName||"");setResumeProcessing(payload.batch.status==="processing"&&designs.length>0);const step=restoredWorkflowStep(payload.batch.step||"connect",requestedStep,Boolean(state.complete));setWorkflowStep(normalizeStep(step));url.searchParams.set("batch",id);url.searchParams.set("step",step);url.searchParams.delete("phase");if(push)window.history.pushState({},"",url);else window.history.replaceState({},"",url);if(payload.batch.status==="processing"&&state.template)void loadTemplateUrl(state.template);return true}finally{snapshotReady.current=true;setRestoringBatch(false)}
   }
-  useEffect(()=>{const url=new URL(window.location.href);const id=url.searchParams.get("batch")||"";if(!id){snapshotReady.current=true;setRestoringBatch(false);return}void restoreBatchById(id,url.searchParams.get("step"),url.searchParams.get("phase")).then(restored=>{if(restored)return;setRestoreNotice("That batch could not be opened - it may have been deleted. Nothing else was lost; you can pick up from Batch History or start a new batch.");const clean=new URL(window.location.href);clean.searchParams.delete("batch");clean.searchParams.delete("step");clean.searchParams.delete("phase");window.history.replaceState({},"",clean.toString());})},[]);
+  /* D659 · A workflow URL with no ?batch= dropped straight to step 1. Measured
+     live: opening ?step=designs after four Printify drafts existed silently
+     landed on "Choose product", looking exactly like the batch had been thrown
+     away - the same fault D427 fixed for a DEAD id, still present for a missing
+     one. A step URL is a request to resume, so resume it: when exactly one
+     resumable batch is open, take it; when several are, ask which rather than
+     choosing for her; when none is, step 1 is the honest answer. */
+  const [resumeChoices,setResumeChoices]=useState<Array<{id:string;name:string;step:string;drafts:number}>>([]);
+  useEffect(()=>{const url=new URL(window.location.href);const id=url.searchParams.get("batch")||"";
+    if(!id){
+      const wanted=canonicalStep(url.searchParams.get("step"));
+      if(!wanted||wanted==="connect"||wanted==="setup"||signedIn!==true){snapshotReady.current=true;setRestoringBatch(false);return}
+      void (async()=>{
+        try{
+          const payload=await fetch("/api/batches").then(response=>response.ok?response.json():null) as {batches?:Array<{id:string;name?:string;step?:string;status?:string;draftCount?:number}>}|null;
+          const open=(payload?.batches||[]).filter(batch=>batch.status!=="published"&&batch.status!=="archived");
+          if(open.length===1){await restoreBatchById(open[0].id,url.searchParams.get("step"),url.searchParams.get("phase"));return}
+          if(open.length>1)setResumeChoices(open.slice(0,6).map(batch=>({id:batch.id,name:batch.name||"Untitled batch",step:String(batch.step||""),drafts:Number(batch.draftCount||0)})));
+        }catch{/* fall through to step 1, which is what happened before */}
+        finally{snapshotReady.current=true;setRestoringBatch(false)}
+      })();
+      return;
+    }void restoreBatchById(id,url.searchParams.get("step"),url.searchParams.get("phase")).then(restored=>{if(restored)return;setRestoreNotice("That batch could not be opened - it may have been deleted. Nothing else was lost; you can pick up from Batch History or start a new batch.");const clean=new URL(window.location.href);clean.searchParams.delete("batch");clean.searchParams.delete("step");clean.searchParams.delete("phase");window.history.replaceState({},"",clean.toString());})},[]);
   /* D301 · Restore the remembered product on load. The recipe list lives in
      factory-tools, not here, so this asks the API rather than referencing a
      `recipes` variable that does not exist in this component. Guarded so it can
      never fight the two things that legitimately own the selection: a ?batch=
      resume, and a product already chosen in this session. */
   const productRestoreAttempted=useRef(false);
+  /* D659 · Set only while a REMEMBERED product is being restored, so the very
+     same failure still opens a modal when she chose the product herself. */
+  const restoringRememberedProduct=useRef(false);
+  /* D659 · The store was recorded on the server the moment a product loaded,
+     but the card that shows it lives in factory-tools and only re-reads the
+     recipe list on its own schedule - so the label appeared on the NEXT page
+     load, which is exactly when a seller has stopped wondering which store a
+     product belongs to. Tell the list directly. */
+  function announceShop(recipeId:string,title:string,shopId:number){
+    window.dispatchEvent(new CustomEvent("goldie-recipe-shop",{detail:{recipeId,title,shopId}}));
+  }
+  const [restoredProductNotice,setRestoredProductNotice]=useState("");
   useEffect(()=>{
     if(productRestoreAttempted.current||restoringBatch||activeRecipe||activeBundle||signedIn!==true)return;
     if(new URL(window.location.href).searchParams.get("batch"))return;
@@ -1613,7 +1693,14 @@ export default function ListingFactoryApp() {
         if(!response.ok)return;
         const payload=await response.json() as {recipes?:Recipe[]};
         const match=(payload.recipes||[]).find(recipe=>recipe.id===remembered);
-        if(match)await selectRecipe(match);
+        /* D659 · A remembered product that Goldie can no longer use greeted her
+           with "REQUIRED BEFORE CONTINUING" on EVERY page load - measured live
+           with "Generic brand", a product never published to Etsy. She had not
+           asked for it; the page simply restored it and then refused it. A
+           modal is for something the seller just did. Restoring is something
+           Goldie did, so a failure there deselects quietly and explains itself
+           on the page. */
+        if(match){restoringRememberedProduct.current=true;try{await selectRecipe(match)}finally{restoringRememberedProduct.current=false}}
         else window.localStorage.removeItem("goldie-active-recipe");
       }catch{/* a failed restore must never block the page */}
     })();
@@ -2054,7 +2141,7 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
     if(!missing.length)return;
     let alive=true;
     void Promise.all(missing.map(async recipe=>{
-      const details=await fetchWithDeadline("/api/printify",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({productUrl:recipe.templateUrl,savedShippingProfileId:Number(recipe.etsyShippingProfileId)||0})},9000)
+      const details=await fetchWithDeadline("/api/printify",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({productUrl:recipe.templateUrl,savedShippingProfileId:Number(recipe.etsyShippingProfileId)||0})},30000)
         .then(async response=>response.ok?(await response.json() as {product?:TemplateDetails}).product:undefined)
         .catch(()=>undefined);
       return details?[recipe.id,details] as const:null;
@@ -2176,7 +2263,7 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
          The row still rendered "! None made yet" in alert red on every product
          card, so a finished step reported a problem that does not exist. An
          optional row that is empty is not a warning. */
-      {label:"Create lifestyle mockups",value:started?(counts.mockups?plural(counts.mockups,"mockup"):"None yet — optional"):blank,pending,done:counts.mockups>0,optional:true,task:"lifestyle"},
+      {label:"Create lifestyle mockups",value:started?mockupRowValue(counts.mockups,scenesChosenFor(recipe,isActive)):blank,pending,done:counts.mockups>0,optional:true,task:"lifestyle"},
       {label:"Arrange final photo order",value:started?plural(counts.photos+counts.mockups,"photo"):blank,pending,done:counts.photos+counts.mockups>0,task:"order"},
     ];
     /* D541 - both of these rows pointed at .final-review, so Listings and Titles
@@ -2896,10 +2983,19 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
         if(refusedRecipe&&refusedRecipe.printifyShopTitle!==result.shop.title){
           void fetch("/api/product-recipes",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:refusedRecipe.id,name:refusedRecipe.name,templateUrl:refusedRecipe.templateUrl,printifyShopTitle:result.shop.title,printifyShopId:result.shop.id})}).catch(()=>undefined);
           setActiveRecipe(current=>current&&current.id===refusedRecipe.id?{...current,printifyShopTitle:result.shop!.title,printifyShopId:result.shop!.id}:current);
+          announceShop(refusedRecipe.id,result.shop.title,result.shop.id);
           setBundleRecipes(current=>current.map(item=>item.id===refusedRecipe.id?{...item,printifyShopTitle:result.shop!.title,printifyShopId:result.shop!.id}:item));
         }
       }
-      if (!response.ok || !result.product){setBlockingModal({title:result.title||"This Printify product isn’t ready yet.",issues:result.issues?.length?result.issues:[result.error||"The product could not be loaded."],copy:response.status===409?"Connect Printify and Etsy to the same shop, then load this product again. Connections is in the sidebar.":"Fix these items in Printify, save the product, then submit the same link again."});throw new Error(result.error || "The product could not be loaded.")}
+      if (!response.ok || !result.product){
+        if(restoringRememberedProduct.current){
+          const why=(result.issues&&result.issues[0])||result.error||"Goldie could not open it.";
+          setRestoredProductNotice(`${activeRecipeRef.current?.name||"The product you used last"} could not be reopened. ${why} Choose a product below to start.`);
+          try{window.localStorage.removeItem("goldie-active-recipe")}catch{/* private mode */}
+          setActiveRecipe(null);setTemplateDetails(null);setTemplate("");
+          throw new Error(result.error||"The product could not be loaded.");
+        }
+        setBlockingModal({title:result.title||"This Printify product isn’t ready yet.",issues:result.issues?.length?result.issues:[result.error||"The product could not be loaded."],copy:response.status===409?"Connect Printify and Etsy to the same shop, then load this product again. Connections is in the sidebar.":"Fix these items in Printify, save the product, then submit the same link again."});throw new Error(result.error || "The product could not be loaded.")}
       const available=new Set((result.product.colorOptions||[]).filter(color=>color.available).map(color=>color.id));let sessionColors:number[]=[];try{sessionColors=JSON.parse(window.localStorage.getItem(`goldie-colors-${result.product.id}`)||"[]") as number[]}catch{/* Ignore an invalid browser preference. */}const remembered=rememberedColorIds.filter(id=>available.has(id));const session=sessionColors.filter(id=>available.has(id));/* D213 · Printify's template settings are not the seller's choices.
    The seller sets colors and sizes ONCE, in the saved-product setup, and that
    becomes the recipe. A product with no recipe defaults has not been set up, so
@@ -2941,6 +3037,7 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
       if(result.shop?.title&&Number(result.shop.count||0)>1&&recipeForShop&&recipeForShop.printifyShopTitle!==result.shop.title){
         void fetch("/api/product-recipes",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:recipeForShop.id,name:recipeForShop.name,templateUrl:recipeForShop.templateUrl,printifyShopTitle:result.shop.title,printifyShopId:result.shop.id})}).catch(()=>undefined);
         setActiveRecipe(current=>current&&current.id===recipeForShop.id?{...current,printifyShopTitle:result.shop!.title,printifyShopId:result.shop!.id}:current);
+        announceShop(recipeForShop.id,result.shop.title,result.shop.id);
       }
       setTemplateDetails(result.product);setDescription(result.product.description||"");if(result.product.standardShipping!=null)setPricing(current=>({...current,shippingCost:result.product!.standardShipping!,shippingCharged:0}));setVariantPrices(Object.fromEntries((result.product.variants||[]).map(variant=>[String(variant.id),variant.templatePrice])));/* D472 - loading the Printify template used to clear the pricing approval
    unconditionally. Choosing a saved product loads its template, so every batch
@@ -3299,6 +3396,12 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
         <div>
           <p className="eyebrow">{workflowHero.eyebrow}</p>
           {restoreNotice&&<p className="batch-restore-notice" role="status">{restoreNotice}</p>}
+          {/* D659 · Where the blocking modal used to be. Same information, on
+              the page, next to the products she can actually choose. */}
+          {restoredProductNotice&&<p className="batch-restore-notice" role="status">{restoredProductNotice}</p>}
+          {/* D659 · More than one batch is open, so Goldie asks instead of
+              picking one and instead of pretending there is nothing to resume. */}
+          {resumeChoices.length>1&&<section className="batch-resume-choice" aria-label="Choose which batch to resume"><b>Which batch do you want to continue?</b><span>You have {resumeChoices.length} batches open. Goldie will not guess.</span><ul>{resumeChoices.map(choice=><li key={choice.id}><button type="button" onClick={()=>{setResumeChoices([]);setRestoringBatch(true);const target=new URL(window.location.href);target.searchParams.set("batch",choice.id);window.history.replaceState({},"",target);void restoreBatchById(choice.id,target.searchParams.get("step"),target.searchParams.get("phase"))}}><b>{choice.name}</b><small>{choice.drafts?`${choice.drafts} ${choice.drafts===1?"draft":"drafts"}`:"No drafts yet"}</small></button></li>)}</ul><button type="button" className="secondary-action" onClick={()=>setResumeChoices([])}>Start something new instead</button></section>}
           <div className="heading-with-help hero-title-help"><h1>{workflowHero.title}</h1><ContextHelp label={`Open detailed help for ${PROGRESS_STEPS[progressIndex]}`} title={WORKFLOW_HELP[progressIndex].title} intro={WORKFLOW_HELP[progressIndex].intro} sections={WORKFLOW_HELP[progressIndex].sections}/></div>
           <p className="hero-step-count">{workflowStep==="connect"?"Account setup · before you start":`Step ${railTopNumber} of ${RAIL_STAGES.length} · ${currentStage.label}`}</p>
           <p className="hero-copy">{workflowHero.copy}</p>
@@ -3630,7 +3733,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
               {fileNotice&&(workflowStep==="setup"||workflowStep==="designs")&&<p className="file-add-notice" role="status"><b>Upload updated</b><span>{fileNotice}</span></p>}
               {files.length>0&&!designsFinished&&<section className="design-preparation-status working" role="status" aria-live="polite"><span className="design-status-icon" aria-hidden="true"/><div><b>{`Goldie is preparing your designs: ${designsReady} of ${files.length} ready`}</b><small>Keep this page open. Goldie is reading every file and checking its dimensions before you can continue.</small><div className="design-status-track"><i style={{width:`${files.length?designsReady/files.length*100:0}%`}}/></div></div><strong>{designsReady}/{files.length}</strong></section>}
               {files.length > 0 && designsFinished && <div className="batch-capacity"><b>{planDraftsRemaining===null?"Checking plan allowance…":activeBundle?`${files.length} designs × ${bundleProductCount} products = ${requestedListingCount} listings · ${additionalDesignsAvailable} more designs available`:`${files.length} of ${batchDesignLimit} designs ready · ${additionalDesignsAvailable} more available · ${planDraftsRemaining} listings left on your plan`}</b></div>}
-              {activeBundle&&bundleQualityGroups.length>0&&<section className="bundle-quality-review" aria-label="Product-specific print quality warnings"><div><b>{bundleQualityGroups.length} of {files.length} {files.length===1?"design needs":"designs need"} a print decision</b><span>The same artwork can be sharp on one product and too small for another. Anything below 215 DPI is flagged as very low resolution. Nothing is skipped silently.</span><div className="bundle-quality-bulk"><button type="button" onClick={()=>decideAllQuality("include")}>Proceed with all {bundleQualityGroups.length}</button><button type="button" onClick={()=>decideAllQuality("exclude")}>Exclude all {bundleQualityGroups.length}</button></div></div>{bundleQualityGroups.map(group=>{const decision=qualityGroupDecision(group.keys);const productList=[...new Set(group.products)];return <article className={group.critical?"critical-dpi":""} key={group.fileId}><div><b>{group.fileName}</b><span>{group.critical?<strong>VERY LOW RESOLUTION · {group.worstDpi} DPI · </strong>:null}{group.actualWidth} × {group.actualHeight}px is below the recommended size for <strong>{productList.join(", ")}</strong>{productList.length>1?` — ${productList.length} products in this bundle`:""}.</span></div><div><button className={decision==="include"?"selected":""} onClick={()=>decideQualityGroup(group.keys,"include")}>{group.critical?"I understand — proceed":"Proceed anyway"}</button><button className={decision==="exclude"?"selected exclude":""} onClick={()=>decideQualityGroup(group.keys,"exclude")}>{productList.length>1?"Exclude these listings":"Exclude this listing"}</button></div></article>})}</section>}
+              {activeBundle&&bundleQualityGroups.length>0&&<section className="bundle-quality-review" aria-label="Product-specific print quality warnings"><div><b>{bundleQualityGroups.length} of {files.length} {files.length===1?"design needs":"designs need"} a print decision</b><span>The same artwork can be sharp on one product and too small for another. Anything below 215 DPI is flagged as very low resolution. Nothing is skipped silently.</span>{bundleProductsUnchecked.length?<span className="inline-note" role="status">Goldie could not read {bundleProductsUnchecked.join(", ")} yet, so {bundleProductsUnchecked.length===1?"it is":"they are"} not included in this check. Reopen {bundleProductsUnchecked.length===1?"that product":"those products"} to check {bundleProductsUnchecked.length===1?"it":"them"}.</span>:null}<div className="bundle-quality-bulk"><button type="button" onClick={()=>decideAllQuality("include")}>Proceed with all {bundleQualityGroups.length}</button><button type="button" onClick={()=>decideAllQuality("exclude")}>Exclude all {bundleQualityGroups.length}</button></div></div>{bundleQualityGroups.map(group=>{const decision=qualityGroupDecision(group.keys);const productList=[...new Set(group.products)];return <article className={group.critical?"critical-dpi":""} key={group.fileId}><div><b>{group.fileName}</b><span>{group.critical?<strong>VERY LOW RESOLUTION · {group.worstDpi} DPI · </strong>:null}{group.actualWidth} × {group.actualHeight}px is below the recommended size for <strong>{productList.join(", ")}</strong>{productList.length>1?` — ${productList.length} products in this bundle`:""}.</span></div><div><button className={decision==="include"?"selected":""} onClick={()=>decideQualityGroup(group.keys,"include")}>{group.critical?"I understand — proceed":"Proceed anyway"}</button><button className={decision==="exclude"?"selected exclude":""} onClick={()=>decideQualityGroup(group.keys,"exclude")}>{productList.length>1?"Exclude these listings":"Exclude this listing"}</button></div></article>})}</section>}
               {files.length>0&&(workflowStep==="setup"||workflowStep==="designs")&&<div className="design-upload-review" aria-label="Review uploaded designs">{files.map(file=><article key={file.id}><img src={file.previewUrl} alt="" loading="lazy" decoding="async"/><div><b title={file.name}>{file.name}</b><small>{file.width&&file.height?`${file.width} × ${file.height}px`:"Checking dimensions…"}</small></div><button type="button" onClick={()=>removeDesign(file.id)} aria-label={`Remove ${file.name}`}>Remove</button></article>)}</div>}
               {files.length>0&&!complete&&(workflowStep==="setup"||workflowStep==="designs")&&<>{designsFinished&&belowRecommendedPixels.length>0&&<div className={`pixel-warning-inline ${criticalDpiFiles.length?"critical-dpi":""}`} role="status"><span>!</span><div><b>{criticalDpiFiles.length?`${criticalDpiFiles.length} ${criticalDpiFiles.length===1?"design is":"designs are"} below 215 DPI — very low resolution.`:belowRecommendedPixels.length===1?"One design is below Printify’s recommended pixel size.":"Some designs are below Printify’s recommended pixel size."}</b><small>{criticalDpiFiles.length?"Goldie will identify every affected design so you can replace it or continue anyway.":"You can still continue, but Goldie will ask you to confirm first."}</small></div></div>}{/* D399 - Step 2 showed "Next step" here AND "Continue to create drafts" in the
                 product card below. Creating the drafts is the step; this button only
@@ -3866,7 +3969,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
     dialog, the last thing before it runs, said "Create 2 product drafts?" and
     named only the hoodie. It was describing one product while six drafts were
     about to be made. The confirmation has to describe the run it confirms. */}
-<h2 id="preflight-title">{activeBundle&&bundleRecipes.length>1?`Create ${files.length*bundleRecipes.length} product drafts across ${bundleRecipes.length} products?`:`Create ${files.length} product ${files.length===1?"draft":"drafts"}?`}</h2><div className="preflight-list"><div><span>{activeBundle&&bundleRecipes.length>1?"Printify products":"Printify product"}</span><b>{activeBundle&&bundleRecipes.length>1?`✓ ${bundleRecipes.map(recipe=>recipe.name).join(", ")}`:`✓ ${templateDetails?.blueprintTitle||"Selected product"}`}</b></div><div><span>Design files</span><b>✓ {files.length} ready</b></div><div><span>Plan allowance</span><b>{planDraftsRemaining===null?"Checking current usage…":`✓ ${requestedListingCount} of ${planDraftsRemaining} remaining listings`}</b></div><div><span>Permanent description</span><b>{description.trim()?"✓ Imported from Printify":"None found. You can add one later"}</b></div><div><span>Variant pricing</span><b>✓ All {pricedVariants.length} enabled variants reviewed and approved</b></div><div><span>Publishing</span><b>Unpublished Printify drafts only</b></div></div>{templateDetails?.hasLabelArtwork?<p className="preflight-note">Inside-label artwork is not copied to new products.</p>:null}<p className="preflight-explainer">After these drafts exist, Goldie will show their real previews and help finish each title, tags, description, Etsy details, and mockups.</p><div className="preflight-actions"><button className="preflight-cancel" onClick={()=>setPreflightOpen(false)}>Go back</button><button className="preflight-confirm" disabled={running} aria-busy={running} onClick={confirmDrafts}>Create Printify drafts →</button></div></section></div>}
+<h2 id="preflight-title">{activeBundle&&bundleRecipes.length>1?`Create ${files.length*bundleRecipes.length} product drafts across ${bundleRecipes.length} products?`:`Create ${files.length} product ${files.length===1?"draft":"drafts"}?`}</h2><div className="preflight-list"><div><span>{activeBundle&&bundleRecipes.length>1?"Printify products":"Printify product"}</span><b>{activeBundle&&bundleRecipes.length>1?`✓ ${bundleRecipes.map(recipe=>recipe.name).join(", ")}`:`✓ ${templateDetails?.blueprintTitle||"Selected product"}`}</b></div><div><span>Design files</span><b>✓ {files.length} ready</b></div><div><span>Plan allowance</span><b>{planDraftsRemaining===null?"Checking current usage…":`✓ ${requestedListingCount} of ${planDraftsRemaining} remaining listings`}</b></div><div><span>Permanent description</span><b>{description.trim()?"✓ Imported from Printify":"None found. You can add one later"}</b></div><div><span>Variant pricing</span><b title={bundleVariantCounts.detail}>✓ All {bundleVariantCounts.total} enabled variants reviewed and approved{bundleVariantCounts.perProduct.length>1?` · ${bundleVariantCounts.detail}`:""}</b></div><div><span>Publishing</span><b>Unpublished Printify drafts only</b></div></div>{templateDetails?.hasLabelArtwork?<p className="preflight-note">Inside-label artwork is not copied to new products.</p>:null}<p className="preflight-explainer">After these drafts exist, Goldie will show their real previews and help finish each title, tags, description, Etsy details, and mockups.</p><div className="preflight-actions"><button className="preflight-cancel" onClick={()=>setPreflightOpen(false)}>Go back</button><button className="preflight-confirm" disabled={running} aria-busy={running} onClick={confirmDrafts}>Create Printify drafts →</button></div></section></div>}
 
       {publishConfirmOpen&&<div className="publish-confirm-backdrop" role="presentation"><section className="publish-confirm" role="alertdialog" aria-modal="true" aria-labelledby="publish-confirm-title"><span className="publish-confirm-icon">!</span><p className="mini-label">FINAL PUBLISH CONFIRMATION</p>{/* D495 - one press now publishes every product in the bundle, so the last
     screen before real money is spent has to say how many listings that is

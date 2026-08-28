@@ -6679,3 +6679,137 @@ test("the category list is sent to the browser once, not per design — D658", a
   // Only a response that actually carried the list may set it.
   assert.match(app, /if\(payload\.categories\?\.length\)\{haveEtsyCategories\.current=true;setEtsyCategories\(payload\.categories\)\}/);
 });
+
+/* D659 · Each bundle product owns its own batch. This is the ARCHITECTURE, not
+   a fault, and it was nearly refactored away on the strength of my own bad
+   report: I saw the URL's batch id change while clicking around a bundle and
+   called it a batch-identity bug. It was not. Checked against the server, the
+   two ids held:
+
+     0b79a9b6 -> Gildan Hoodie,               bundle "Hoodie + 1566 crewneck", 2 designs, 2 drafts
+     b2104312 -> Comfort Colors 1566 crewneck, bundle "Hoodie + 1566 crewneck", 2 designs, 2 drafts
+
+   Nothing was stale and nothing was lost - the two batches account for exactly
+   the four drafts. These assertions exist so the next person to see that URL
+   change does not "fix" it either. */
+test("each bundle product owns its own batch, and switching says so — D659", async () => {
+  const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+
+  // One batch per product, remembered per recipe id.
+  assert.match(app, /const \[bundleBatchIds,setBundleBatchIds\]=useState<Record<string,string>>\(\{\}\);/);
+  // Opening another product intentionally restores THAT product's batch.
+  assert.match(app, /const existing=bundleBatchIds\[recipe\.id\];/);
+  assert.match(app, /await restoreBatchById\(existing,workflowStep,null,true\);/);
+  /* The outgoing product's pending autosave is flushed first, or the last
+     keystrokes land on the incoming product's batch. */
+  const openBody = app.slice(app.indexOf("function openBundleProduct(index:number){"), app.indexOf("function openBundleProduct(index:number){") + 1400);
+  assert.ok(openBody.indexOf("await persistBatchNow(batchIdRef.current)") < openBody.indexOf("restoreBatchById(existing"),
+    "the outgoing batch must be flushed before the incoming one is restored");
+
+  // The bundle itself, and the product's position in it, are not what changes.
+  assert.match(app, /Product \{index\+1\} of \{bundleRecipes\.length\}/);
+  assert.match(app, /Product \{index\+1\} of \{list\.length\}/);
+  assert.equal((app.match(/className="batch-product-position"/g) || []).length, 2,
+    "the position cue rides with the product name on both product lists");
+
+  /* No product may be rendered from another product's numbers: the active
+     product reads live state, every other product reads its own summary. */
+  assert.match(app, /const mine=isActive\n?\s*\?\{designs:files\.length/);
+  assert.match(app, /:bundleBatchSummary\[recipe\.id\];/);
+  assert.doesNotMatch(app, /bundleBatchSummary\[activeRecipe/,
+    "the open product must never be described by another product's summary row");
+});
+
+/* D659 · Everything below was found by walking the live bundle, not by reading. */
+test("a step URL with no batch resumes or asks — never silently starts over — D659", async () => {
+  const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+
+  assert.match(app, /const \[resumeChoices,setResumeChoices\]=useState</);
+  // One open batch is unambiguous, so it is simply resumed.
+  assert.match(app, /if\(open\.length===1\)\{await restoreBatchById\(open\[0\]\.id,url\.searchParams\.get\("step"\),url\.searchParams\.get\("phase"\)\);return\}/);
+  // More than one is a question, not a guess.
+  assert.match(app, /if\(open\.length>1\)setResumeChoices\(/);
+  assert.match(app, /className="batch-resume-choice"/);
+  // Step 1 and the connect screen are not requests to resume anything.
+  assert.match(app, /if\(!wanted\|\|wanted==="connect"\|\|wanted==="setup"\|\|signedIn!==true\)/);
+  // Published and archived batches are not "open work".
+  assert.match(app, /batch\.status!=="published"&&batch\.status!=="archived"/);
+});
+
+test("a remembered product Goldie cannot open never blocks the page — D659", async () => {
+  const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+
+  assert.match(app, /const restoringRememberedProduct=useRef\(false\);/);
+  assert.match(app, /if\(match\)\{restoringRememberedProduct\.current=true;try\{await selectRecipe\(match\)\}finally\{restoringRememberedProduct\.current=false\}\}/);
+  // The modal is skipped only on that path, so a product she chose still gets one.
+  const guard = app.slice(app.indexOf("if (!response.ok || !result.product){"), app.indexOf("if (!response.ok || !result.product){") + 700);
+  assert.ok(guard.indexOf("restoringRememberedProduct.current") < guard.indexOf("setBlockingModal"),
+    "the restore path must return before the modal is raised");
+  assert.match(app, /setRestoredProductNotice\(/);
+  assert.match(app, /\{restoredProductNotice&&<p className="batch-restore-notice" role="status">/);
+  // And the dead selection is cleared, so it cannot repeat on the next load.
+  assert.match(app, /window\.localStorage\.removeItem\("goldie-active-recipe"\)\}catch\{\/\* private mode \*\/\}\n?\s*setActiveRecipe\(null\)/);
+});
+
+test("bundle DPI and variant totals cover every product — D659", async () => {
+  const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+
+  /* bundleColorProducts holds only the OTHER products, so reading it alone
+     skipped whichever product was open. */
+  assert.match(app, /const bundleProductDetails=useMemo\(\(\)=>\{/);
+  assert.match(app, /if\(activeRecipe\?\.id&&templateDetails\)map\[activeRecipe\.id\]=templateDetails;/);
+  assert.match(app, /const details=bundleProductDetails\[recipe\.id\];/);
+  assert.doesNotMatch(app, /const details=bundleColorProducts\[recipe\.id\];if\(!details\|\|!file\.width/,
+    "the DPI check must not go back to the map that excludes the open product");
+
+  /* The sibling fetch gave up after 9s and dropped the product silently; a
+     product load measured 2.5-3.5s and can exceed that. */
+  assert.doesNotMatch(app, /savedShippingProfileId:Number\(recipe\.etsyShippingProfileId\)\|\|0\}\)\},9000\)/,
+    "a product must not be dropped from the bundle because one fetch was slow");
+  // And a product that still could not be read is named, not omitted.
+  assert.match(app, /const bundleProductsUnchecked=useMemo\(/);
+  assert.match(app, /Goldie could not read \{bundleProductsUnchecked\.join\(", "\)\} yet/);
+
+  // Variants total the bundle, with the split inspectable.
+  assert.match(app, /const bundleVariantCounts=useMemo\(/);
+  assert.match(app, /\{bundleVariantCounts\.total\} enabled variants reviewed and approved/);
+  assert.match(app, /detail:known\.map\(entry=>`\$\{entry\.name\}: \$\{entry\.count\}`\)\.join\(" · "\)/);
+  assert.doesNotMatch(app, /All \{pricedVariants\.length\} enabled variants/,
+    "the open product's count is not the bundle's count");
+});
+
+test("the mockup row cannot say none while scenes are saved — D659", async () => {
+  const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+
+  assert.match(app, /function scenesChosenFor\(recipe:Recipe,isActive:boolean\)\{/);
+  assert.match(app, /function mockupRowValue\(created:number,scenes:number\)\{/);
+  assert.match(app, /if\(scenes\)return `\$\{scenes\} \$\{scenes===1\?"scene":"scenes"\} chosen — not created yet`;/);
+  assert.match(app, /Create lifestyle mockups",value:started\?mockupRowValue\(counts\.mockups,scenesChosenFor\(recipe,isActive\)\):blank/);
+  assert.doesNotMatch(app, /counts\.mockups\?plural\(counts\.mockups,"mockup"\):"None yet — optional"/,
+    "the row counted rendered mockups only, and read 'None yet' over two saved scenes");
+});
+
+test("setupComplete cannot be true without both colours and sizes — D659", async () => {
+  const route = await readFile(new URL("../app/api/product-recipes/route.ts", import.meta.url), "utf8");
+
+  assert.match(route, /if \(merged\.setupComplete && \(!\(merged\.defaultColorIds \|\| \[\]\)\.length \|\| !\(merged\.defaultSizeIds \|\| \[\]\)\.length\)\) merged\.setupComplete = false;/);
+  /* Settled against the MERGED record, so a patch that touches one axis - or
+     neither - still cannot leave the flag disagreeing with the values stored
+     beside it. */
+  const body = route.replace(/\/\*[\s\S]*?\*\//g, "");
+  assert.ok(body.indexOf("const merged =") < body.indexOf("merged.setupComplete = false"),
+    "the guard has to see the merged record, not just this patch");
+});
+
+test("a recorded store name reaches the card without a reload — D659", async () => {
+  const [app, tools] = await Promise.all([
+    readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/factory-tools.tsx", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(app, /function announceShop\(recipeId:string,title:string,shopId:number\)\{/);
+  assert.equal((app.match(/announceShop\(/g) || []).length, 3, "announced on both the refusal and the success path");
+  assert.match(tools, /window\.addEventListener\("goldie-recipe-shop",onShop\);/);
+  assert.match(tools, /setRecipes\(current=>current\.map\(recipe=>recipe\.id===detail\.recipeId\?\{\.\.\.recipe,printifyShopTitle:detail\.title,printifyShopId:detail\.shopId\}:recipe\)\);/);
+  assert.match(tools, /return \(\)=>window\.removeEventListener\("goldie-recipe-shop",onShop\);/);
+});

@@ -53,6 +53,17 @@ export async function POST(request: Request) {
   if (body.etsyDefaults !== undefined) patch.etsyDefaults = etsyDefaults;
   if (body.mockupIds !== undefined) patch.mockupIds = Array.isArray(body.mockupIds) ? body.mockupIds.map(id=>String(id).trim()).filter(Boolean).slice(0,8) : undefined;
   if (body.setupComplete !== undefined) patch.setupComplete = body.setupComplete !== false;
+  /* D659 · Measured live: the 1566 crewneck saved as setupComplete with three
+     colours and ZERO sizes, because the client's auto-save fires as soon as
+     colours settle. The step-2 gate still refused to continue, so the flag and
+     the truth disagreed - and the flag is what the bundle picker trusts when it
+     decides whether a product may be added.
+
+     A product is not set up until it has at least one colour AND at least one
+     size, and the server is where that is settled: the client writes the flag
+     from several places and only this one sees the values being stored beside
+     it. Applied against the merged record, so a patch that touches only one
+     axis still cannot leave the pair inconsistent. */
   /* D404 - Whole-number pricing and the per-variant prices lived only in React
      state and the batch snapshot, and the batch snapshot is not written until a
      batch has designs or drafts. So on the product step they were never saved
@@ -69,6 +80,17 @@ export async function POST(request: Request) {
     patch.variantPrices = prices;
   }
   const merged = { etsyShippingProfileId: 0, defaultColorIds: [], defaultSizeIds: [], defaultProfitTarget: 10, etsyDefaults: {}, setupComplete: true, wholeNumberPricing: false, variantPrices: {}, ...existingSaved, ...patch };
+  /* D659 · Measured live: the 1566 crewneck saved as setupComplete with three
+     colours and ZERO sizes, because the client's auto-save fires as soon as
+     colours settle. The step gate still refused to continue, so the flag and
+     the truth disagreed - and the flag is what the bundle picker trusts when it
+     decides whether a product may be added at all.
+
+     Settled here rather than at the call site: the client writes this flag from
+     several places, and only the merged record sees the flag together with the
+     values stored beside it. So a patch that touches one axis, or none, still
+     cannot leave the pair inconsistent. */
+  if (merged.setupComplete && (!(merged.defaultColorIds || []).length || !(merged.defaultSizeIds || []).length)) merged.setupComplete = false;
   const extras={keywordListId:body.keywordListId!==undefined?String(body.keywordListId||""):String(existingRow?.keywordListId||""),printifyImageIndicesJson:body.printifyImageIndices!==undefined?JSON.stringify((body.printifyImageIndices||[]).filter(Number.isInteger).slice(0,20)):String(existingRow?.printifyImageIndicesJson||"[]"),normalizePadding:body.normalizePadding!==false,pricingJson:JSON.stringify(merged)};
   await getDb().insert(productRecipes).values({ id, userId: user.userId, name, templateUrl, description,defaultTitle:"",defaultMockupTheme,...extras }).onConflictDoUpdate({ target: productRecipes.id, set: { name, templateUrl,description,defaultTitle:"",defaultMockupTheme,...extras,updatedAt:new Date().toISOString() } });
   return NextResponse.json({ id });
