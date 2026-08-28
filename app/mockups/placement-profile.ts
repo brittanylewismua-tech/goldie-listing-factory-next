@@ -126,7 +126,10 @@ export type PlacementProfile = {
 export function defaultTransform(corners: Quad, mode: RenderingMode): PlacementTransform {
   return {
     corners, rotation: 0, skewX: 0, skewY: 0, flipX: false, flipY: false,
-    opacity: 1, blendMode: mode === "fabric" ? "multiply" : "normal",
+    /* Normal preserves the uploaded ink colour. Fabric luminance is applied by
+       the compositor itself; multiplying the finished ink a second time made
+       Reset visibly change its colour. */
+    opacity: 1, blendMode: "normal",
     fabricStrength: mode === "fabric" ? .65 : 0,
     curvature: mode === "cylindrical" ? .35 : 0,
   };

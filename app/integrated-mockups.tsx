@@ -22,12 +22,22 @@ type Point=[number,number]; type SurfaceKind="rigid-flat"|"t-shirt"|"sweatshirt"
 type Template={id:string;name:string;theme:string;src:string;corners:[Point,Point,Point,Point];normalized?:boolean;surfaceKind?:SurfaceKind;foregroundPrompt?:string;printSide?:PrintSide;quadMeans?:QuadMeaning;occlusionUrl?:string;occlusionUrls?:string[];occlusionConfirmed?:boolean;preparationStatus?:string;preparation?:ScenePreparation};
 const SceneEditor=lazy(()=>import("./mockups/scene-editor"));
 
-type Result={name:string;url:string;template:string;templateId:string;surfaceKind:SurfaceKind;warning?:string;adjusted?:boolean};
+type Result={name:string;url:string;template:string;templateId:string;surfaceKind:SurfaceKind;warning?:string;adjusted?:boolean;automatic?:PlacementTransform};
 type Adjustment={scale:number;x:number;y:number;angle?:number};
 const MAX_MOCKUPS_PER_LISTING=8;
 const load=(src:string)=>new Promise<HTMLImageElement>((resolve,reject)=>{const image=new Image();image.crossOrigin="anonymous";image.onload=()=>resolve(image);image.onerror=reject;image.src=src});
 const dataUrl=(blob:Blob)=>new Promise<string>((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result));reader.onerror=()=>reject(reader.error);reader.readAsDataURL(blob)});
 const foregroundCache=new Map<string,string[]>();
+
+/* The card and Reset must share the placement that was actually rendered.
+   Recomputing it when the editor opens lets a fallback surface take a different
+   branch and makes Reset jump to a different size or position. */
+function automaticFor(template:Template,adjustment:Adjustment,quadOverride?:Template["corners"]):PlacementTransform{
+  const surface=(quadOverride||template.preparation?.corners||template.corners) as Quad;
+  const mode=renderingModeFor("",template.preparation?.geometry);
+  const placed=placeArtworkOnSurface(surface,{x:.5+adjustment.x,y:.5+adjustment.y,scale:adjustment.scale,angle:adjustment.angle||0});
+  return{...defaultTransform(placed,mode),rotation:adjustment.angle||0};
+}
 
 /* D610 - phone-case renders like any other flat printed face. */
 function isCalibratedSurface(kind:SurfaceKind){return["rigid-flat","phone-case","t-shirt","sweatshirt","hoodie","other-apparel","apparel"].includes(kind)}
@@ -468,26 +478,31 @@ let previewFace:{left:number;top:number;right:number;bottom:number}|undefined;
              beaten by white ink, thin lettering, a small pocket print, a garment
              shadow, a neck label or a busy model shot, and it should never run
              when the exact answer was handed to us. */
-          if(template.quadMeans==="print-area"&&placement&&isCalibrated(template))
+          /* A computed surface is a useful fallback, but it is not a measured
+             Printify print area. Applying Printify's near-full scale directly
+             to that guess is what put large hoodie artwork into the collar.
+             Computed scenes must use the preview measurement below. */
+          if(template.quadMeans==="print-area"&&placement&&isCalibrated(template)&&template.preparation?.derived!==true)
             {const exact=placementAdjustment(placement,template.surfaceKind||"rigid-flat","print-area");
              if(exact){const began=Date.now();
-               const made=await rigid(design,template,exact);
+               const rendered=await rigid(design,template,exact);
+               const made={...rendered,automatic:automaticFor(template,exact)};
                recordRender({scene:template.name,sceneId:template.id,printSide:template.printSide,quadMeans:"print-area",placement,applied:exact,usedForeground:Boolean(template.occlusionUrls?.length||template.occlusionUrl),source:"printify",ms:Date.now()-began});
                return made;}}
           if(fit&&isCalibrated(template)){
             const direct=placementInFace(fit,artworkBounds);
-            if(direct)return rigid(design,template,direct);
+            if(direct){const rendered=await rigid(design,template,direct);return{...rendered,automatic:automaticFor(template,direct)}}
           }
           const derived=fit?await derivedFor(template,fit):null;
-          if(derived)return rigid(design,template,derived.adjustment,derived.quad);
+          if(derived){const rendered=await rigid(design,template,derived.adjustment,derived.quad);return{...rendered,automatic:automaticFor(template,derived.adjustment,derived.quad)}}
           /* D573 - no constant to fall back to. A scene that reaches here cannot
              reproduce the draft's real placement, so it refuses by name. */
           /* D577 - there is no refusal here any more. Every scene reaching this
              point has a print area, measured or computed, so the last resort is
              Printify's placement on that surface - never an error handed to the
              seller. */
-          {const surface=placementAdjustment(placement,template.surfaceKind||"rigid-flat","print-area");
-           return rigid(design,template,surface||{scale:1,x:0,y:0});}};
+          {const surface=placementAdjustment(placement,template.surfaceKind||"rigid-flat","print-area")||{scale:1,x:0,y:0};
+           const rendered=await rigid(design,template,surface);return{...rendered,automatic:automaticFor(template,surface)}}};
         const result=await withRecovery(async()=>{
           /* D448 - every surface composites now. The generative renderer repainted
              the whole frame: her photograph came back looking like a painting, with
@@ -532,7 +547,7 @@ let previewFace:{left:number;top:number;right:number;bottom:number}|undefined;
       /* Goldie's automatic answer: the scene's surface, with THIS design placed
          inside it exactly where Printify put it. That is also what Reset
          placement returns to. */
-      const automatic=defaultTransform(placeArtworkOnSurface(surface,placement),mode);
+      const automatic=editing.result.automatic||defaultTransform(placeArtworkOnSurface(surface,placement),mode);
       const saved=profiles[template.id];
 
       /* D596 - the load order, in the order the placement contract requires:

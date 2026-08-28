@@ -1059,7 +1059,7 @@ test("routes each product surface deliberately and never releases a partial batc
   assert.match(integrated,/return drawLocally\(\);/);
   assert.doesNotMatch(integrated,/await product\(design,template,reference\)/,
     "the generative renderer no longer places designs");
-  assert.match(integrated,/if\(derived\)return rigid\(design,template,derived\.adjustment,derived\.quad\)/);
+  assert.match(integrated,/if\(derived\)\{const rendered=await rigid\(design,template,derived\.adjustment,derived\.quad\)/);
   /* D573 - there is no constant fallback any more. A scene that cannot reproduce
      the draft's real Printify placement refuses by name instead of rendering a
      convincing-looking guess at a flat 42% centred. */
@@ -2738,7 +2738,9 @@ test("the lifestyle mockup mirrors the Printify template placement, whatever the
   // D573 - the adjustment is resolved first now, because it can refuse.
   assert.match(integrated, /const exact=placementAdjustment\(placement,template\.surfaceKind\|\|"rigid-flat","print-area"\)/);
   assert.match(integrated, /if\(exact\)\{const began=Date\.now\(\)/);
-  assert.match(integrated, /const made=await rigid\(design,template,exact\)/);
+  assert.match(integrated, /const rendered=await rigid\(design,template,exact\)/);
+  assert.match(integrated, /const made=\{\.\.\.rendered,automatic:automaticFor\(template,exact\)\}/,
+    "the generated card carries the exact transform into Reset");
   // D573 - and it records what it did, so a wrong mockup can be explained.
   assert.match(integrated, /source:"printify"/);
 
@@ -2950,7 +2952,7 @@ test("mockup placement is derived from the Printify preview, for any product —
 
   // The old constants survive only as the fallback when a measurement is missing.
   assert.match(integrated, /const fit=reference\?await measureReference\(reference,previewFace\):null/);
-  assert.match(integrated, /if\(derived\)return rigid\(design,template,derived\.adjustment,derived\.quad\)/);
+  assert.match(integrated, /if\(derived\)\{const rendered=await rigid\(design,template,derived\.adjustment,derived\.quad\)/);
   assert.match(integrated, /productBoxes=useRef\(new Map<string,ProductBox\|null>\(\)\)/,
     "segmentation runs once per scene, not once per mockup");
 });

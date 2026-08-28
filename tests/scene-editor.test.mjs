@@ -69,7 +69,7 @@ test("cancel does not save", async () => {
   assert.doesNotMatch(editor, /onCancel[\s\S]{0,80}runSave/);
 });
 
-test("fabric shading borrows luminance instead of fading the ink", async () => {
+test("fabric shading is automatic and does not expose overlapping seller controls", async () => {
   const compositor = await read("app/mockups/scene-composite.ts");
   assert.match(compositor, /globalCompositeOperation = "saturation"/, "the garment's colour is removed, its light kept");
   assert.match(compositor, /globalCompositeOperation = "multiply"/);
@@ -77,7 +77,34 @@ test("fabric shading borrows luminance instead of fading the ink", async () => {
   assert.match(compositor, /globalCompositeOperation = "destination-in"/,
     "shading must not bleed outside the artwork");
   const editor = await read("app/mockups/scene-editor.tsx");
-  assert.match(editor, /Let the fabric show through/, "and it is a control of its own, separate from opacity");
+  for (const removed of ["How strong the design looks", "How it sits on the surface", "Let the fabric show through", "Lean sideways", "Lean up and down", "Improve this scene for future designs"])
+    assert.doesNotMatch(editor, new RegExp(removed), `${removed} is pipeline vocabulary, not a seller decision`);
+  assert.doesNotMatch(editor, /<Circle/, "sellers move and size artwork; they do not redraw a scene's perspective corners");
+  assert.match(editor, /Bigger/);
+  assert.match(editor, /Smaller/);
+  assert.match(editor, /Rotate/);
+});
+
+test("Reset preserves uploaded ink colour", async () => {
+  const profile = await read("app/mockups/placement-profile.ts");
+  assert.match(profile, /opacity: 1, blendMode: "normal"/);
+  assert.doesNotMatch(profile, /blendMode: mode === "fabric" \? "multiply"/);
+});
+
+test("computed scene geometry cannot take the exact-placement shortcut", async () => {
+  const integrated = await read("app/integrated-mockups.tsx");
+  assert.match(integrated, /template\.preparation\?\.derived!==true/);
+  const exact = integrated.indexOf('template.quadMeans==="print-area"&&placement');
+  const preview = integrated.indexOf("if(fit&&isCalibrated(template))", exact);
+  assert.ok(exact >= 0 && preview > exact, "a derived scene falls through to the Printify preview measurement");
+});
+
+test("the card and Reset use the same automatic transform", async () => {
+  const integrated = await read("app/integrated-mockups.tsx");
+  assert.match(integrated, /automatic\?:PlacementTransform/);
+  assert.match(integrated, /automatic:automaticFor\(template,direct\)/);
+  assert.match(integrated, /const automatic=editing\.result\.automatic\|\|/,
+    "the editor must consume the transform used for the card, not recalculate it");
 });
 
 test("in-progress work survives a refresh", async () => {
@@ -169,24 +196,22 @@ test("the editor imports its own styles rather than relying on another page", as
   assert.ok(!pageCss.includes("sceneEditor"), "one source for the editor's styles, not two");
 });
 
-test("a drag gesture is one undo step, not one per mouse move", async () => {
+test("moving the design is one undo step, not one per mouse move", async () => {
   const editor = await read("app/mockups/scene-editor.tsx");
-  /* D595 - found by dragging a corner on production: onDragMove fires on every
-     mouse move, so one gesture pushed dozens of history entries and a single
-     Undo reverted a few pixels of it. */
+  /* onDragMove fires on every mouse move. Perspective corners are no longer a
+     seller control, but moving the design still has to be one undo step. */
   assert.match(editor, /const change = useCallback\(\(next: Partial<PlacementTransform>, coalesce = false\)/);
   assert.match(editor, /if \(!coalesce \|\| !gesture\.current\)/);
-  assert.match(editor, /change\(\{ corners: next \}, true\)/, "corner drags coalesce");
+  assert.match(editor, /change\(\{ corners: from\.map[\s\S]{0,180}, true\)/, "design drags coalesce");
   assert.match(editor, /endGesture\(\)/, "and the gesture is closed on drag end");
 });
 
 test("dragging the design does not pan the photograph", async () => {
   const editor = await read("app/mockups/scene-editor.tsx");
-  // Konva bubbles child drags to the stage, so dragging a corner also slid the
-  // whole photo. Verified live: the canvas element stayed put while its contents
-  // moved, which is a stage pan.
+  // Konva bubbles child drags to the stage, so moving the design used to slide
+  // the whole photograph too.
   const cancels = editor.match(/event\.cancelBubble = true/g) || [];
-  assert.ok(cancels.length >= 5, "every handle drag phase must stop the bubble");
+  assert.ok(cancels.length >= 3, "every design drag phase must stop the bubble");
   assert.match(editor, /if \(event\.target === event\.currentTarget\) setPan/,
     "only a drag of the stage itself may pan it");
 });

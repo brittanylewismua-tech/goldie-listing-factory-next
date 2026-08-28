@@ -7,19 +7,12 @@
    impossible in it. The picture on screen comes from composite(), the same
    function the export calls, so what a seller approves is exactly what ships. */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Stage, Layer, Image as KonvaImage, Circle, Line } from "react-konva";
+import { Stage, Layer, Image as KonvaImage, Line } from "react-konva";
 import {
-  type PlacementTransform, type Quad, type RenderingMode, type BlendMode, type NormalizedPoint,
-  fitWithinSurface, toViewport,
+  type PlacementTransform, type Quad, type RenderingMode, type NormalizedPoint,
 } from "./placement-profile.ts";
 import { composite, exportComposite } from "./scene-composite.ts";
 import "./scene-editor.css";
-
-const BLENDS: Array<{ value: BlendMode; label: string }> = [
-  { value: "normal", label: "Normal" }, { value: "multiply", label: "Multiply" },
-  { value: "screen", label: "Screen" }, { value: "overlay", label: "Overlay" },
-  { value: "soft-light", label: "Soft light" },
-];
 
 /* D603 - a scene can carry several foreground layers. They are loaded together
    and a layer that will not load is simply absent from the composite, never a
@@ -98,7 +91,6 @@ export default function SceneEditor(props: SceneEditorProps) {
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [showBefore, setShowBefore] = useState(false);
   const [saving, setSaving] = useState("");
-  const [improveScene, setImproveScene] = useState(false);
   const dragOrigin = useRef<{ pointer: { x: number; y: number }; corners: Quad } | null>(null);
 
   /* Every change goes through here so undo and redo restore the transform AND
@@ -203,14 +195,6 @@ export default function SceneEditor(props: SceneEditorProps) {
     return () => window.removeEventListener("keydown", keys);
   }, [undo, redo]);
 
-  const cornerAt = (index: number) => toViewport(transform.corners[index], view);
-
-  const moveCorner = (index: number, x: number, y: number) => {
-    const next = transform.corners.map((point, i) =>
-      i === index ? [x / view.width, y / view.height] as NormalizedPoint : point) as Quad;
-    change({ corners: next }, true);
-  };
-
   /* Dragging the whole design: every corner moves together, so perspective is
      preserved rather than flattened. */
   const dragAll = (dx: number, dy: number, from: Quad) => {
@@ -239,8 +223,8 @@ export default function SceneEditor(props: SceneEditorProps) {
         artwork: Object.assign(artwork, { width: artwork.naturalWidth, height: artwork.naturalHeight }),
         transform, mode: props.mode, foreground,
       });
-      if (next && props.onSaveNext) await props.onSaveNext(transform, blob, improveScene);
-      else await props.onSave(transform, blob, improveScene);
+      if (next && props.onSaveNext) await props.onSaveNext(transform, blob, false);
+      else await props.onSave(transform, blob, false);
       // Only now is the work durable, so only now may the local copy go.
       try { window.sessionStorage.removeItem(draftKey); } catch { /* ignore */ }
     } catch (error) {
@@ -295,14 +279,6 @@ export default function SceneEditor(props: SceneEditorProps) {
                     }}
                     onDragEnd={event => { event.cancelBubble = true; event.target.position({ x: 0, y: 0 }); dragOrigin.current = null; endGesture(); }}
                   />
-                  {transform.corners.map((_, index) => {
-                    const at = cornerAt(index);
-                    return <Circle key={index} x={at.x} y={at.y} radius={7 / zoom} fill="#fff" stroke="#d6a83f" strokeWidth={2 / zoom}
-                      draggable
-                      onDragStart={event => { event.cancelBubble = true; }}
-                      onDragMove={event => { event.cancelBubble = true; moveCorner(index, event.target.x(), event.target.y()); }}
-                      onDragEnd={event => { event.cancelBubble = true; endGesture(); }} />;
-                  })}
                 </Layer>
               </Stage>
             )}
@@ -316,41 +292,6 @@ export default function SceneEditor(props: SceneEditorProps) {
               <button onClick={() => change({ rotation: transform.rotation + 2 })}>Rotate ↻</button>
             </div>
             <div className="editorRow">
-              <button onClick={() => change({ flipX: !transform.flipX })}>Flip across</button>
-              <button onClick={() => change({ flipY: !transform.flipY })}>Flip down</button>
-            </div>
-
-            <label className="editorField">Lean sideways
-              <input type="range" min={-.6} max={.6} step={.02} value={transform.skewX}
-                onChange={e => change({ skewX: Number(e.target.value) })} /></label>
-            <label className="editorField">Lean up and down
-              <input type="range" min={-.6} max={.6} step={.02} value={transform.skewY}
-                onChange={e => change({ skewY: Number(e.target.value) })} /></label>
-
-            <label className="editorField">How strong the design looks
-              <input type="range" min={.2} max={1} step={.02} value={transform.opacity}
-                onChange={e => change({ opacity: Number(e.target.value) })} /></label>
-
-            <label className="editorField">How it sits on the surface
-              <select value={transform.blendMode} onChange={e => change({ blendMode: e.target.value as BlendMode })}>
-                {BLENDS.map(b => <option key={b.value} value={b.value}>{b.label}</option>)}
-              </select></label>
-
-            {props.mode === "fabric" && (
-              <label className="editorField">Let the fabric show through
-                <input type="range" min={0} max={1} step={.02} value={transform.fabricStrength}
-                  onChange={e => change({ fabricStrength: Number(e.target.value) })} />
-                <span className="editorHint">Keeps the design&rsquo;s colour and borrows the garment&rsquo;s folds and shadows.</span>
-              </label>
-            )}
-            {props.mode === "cylindrical" && (
-              <label className="editorField">Curve around the product
-                <input type="range" min={0} max={1} step={.02} value={transform.curvature}
-                  onChange={e => change({ curvature: Number(e.target.value) })} /></label>
-            )}
-
-            <div className="editorRow">
-              <button onClick={() => change({ corners: fitWithinSurface(transform.corners, props.surface) })}>Fit to the product</button>
               <button onClick={() => change({ ...props.automatic })}>Reset placement</button>
             </div>
             <div className="editorRow">
@@ -369,10 +310,6 @@ export default function SceneEditor(props: SceneEditorProps) {
 
         {saveError && <p className="sceneEditorError" role="alert">{saveError}</p>}
         <footer className="sceneEditorActions">
-          <label className="improveScene" title="Only the way this photo works is remembered - never this design's size or position.">
-            <input type="checkbox" checked={improveScene} onChange={e => setImproveScene(e.target.checked)} />
-            Improve this scene for future designs
-          </label>
           <button className="resetPoints" onClick={cancel}>Cancel</button>
           <button className="confirmArea" disabled={busy || Boolean(saving)} onClick={() => void runSave(false)}>
             {saving || "Save"}</button>
