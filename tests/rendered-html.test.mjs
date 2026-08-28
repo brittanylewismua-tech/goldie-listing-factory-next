@@ -2259,7 +2259,12 @@ test("counts and caps every listing at Etsy's 20-photo limit (fixes D67)",async(
 test("uses one deterministic Etsy product baseline across a batch (fixes D71)",async()=>{
   const app=await readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8");
   assert.match(app,/etsyProductBaseline=useRef/);
-  assert.match(app,/runBounded\(pending,1,/);
+  /* D662 · Concurrency 1 was what held this ordering, quietly. Raising it to 2
+     reintroduced D71 and this assertion caught it. The baseline is now
+     established explicitly - the first design alone, the rest in pairs - so the
+     rule no longer depends on a concurrency number nobody connected to it. */
+  assert.match(app,/const \[first,\.\.\.rest\]=pending;\n\s*await prepareOne\(first\);/);
+  assert.match(app,/await runBounded\(rest,BACKGROUND_ETSY_CONCURRENCY,/);
   assert.match(app,/prepared=baseline\?\{\.\.\.initial,taxonomyId:baseline\.taxonomyId,category:baseline\.category,attributes:\{\.\.\.initial\.attributes,\.\.\.baseline\.attributes\}\}:initial/);
   assert.match(app,/etsyProductBaseline\.current=\{taxonomyId:details\.taxonomyId,category:details\.category,attributes:physical\}/);
   assert.match(app,/etsyProductBaseline\.current=null;[\s\S]{0,1200}?setActiveRecipe\(recipe\)/);
@@ -6907,4 +6912,35 @@ test("a bundle member with no keyword bank says so on step 1 — D660", async ()
   assert.match(app, /bundleRecipes\.some\(recipe=>recipe\.id!==activeRecipe\?\.id&&recipe\.keywordListId!==autoTitleBankId\)/);
   // And it is a button, not an effect.
   assert.doesNotMatch(app, /useEffect\([^)]{0,200}applyBankToBundle/);
+});
+
+/* D662 · The one concurrency change in this audit, and the measurement behind
+   it. Everything else was left alone. */
+test("background Etsy preparation runs two at a time, and only two — D662", async () => {
+  const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+
+  assert.match(app, /const BACKGROUND_ETSY_CONCURRENCY = 2;/);
+  assert.match(app, /await runBounded\(rest,BACKGROUND_ETSY_CONCURRENCY,async file=>\{await prepareOne\(file\);return file\}/);
+  assert.doesNotMatch(app, /runBounded\(pending,1,/, "one at a time was never justified by a measurement");
+  /* D71 · The first design still runs alone, because it establishes the Etsy
+     baseline every later design inherits. Speed must not cost determinism. */
+  assert.match(app, /const \[first,\.\.\.rest\]=pending;\n\s*await prepareOne\(first\);/);
+
+  /* The cap is the point. Four simultaneous also came back clean, but nothing
+     measured a ten-design burst against the provider's real ceiling. */
+  const declared = Number(app.match(/const BACKGROUND_ETSY_CONCURRENCY = (\d+);/)[1]);
+  assert.ok(declared === 2, `the agreed limit is 2, found ${declared}`);
+
+  /* The reason has to travel with the number, or the next person raises it
+     because four looked fine once. */
+  const why = app.slice(app.indexOf("/* D662"), app.indexOf("const BACKGROUND_ETSY_CONCURRENCY"));
+  assert.match(why, /1 request\s+3031ms/);
+  assert.match(why, /2 requests\s+batch 2977ms/);
+  assert.match(why, /4 requests\s+batch 2954ms/);
+  assert.match(why, /No 429, no 5xx/);
+
+  /* Draft creation was deliberately not touched: it uploads full-resolution
+     artwork, so it is bounded by memory rather than provider latency. */
+  assert.match(app, /const MAX_CONCURRENT_DESIGNS = 2;/);
+  assert.match(app, /runBounded\(targetFiles, batchConcurrency, processDesign/);
 });

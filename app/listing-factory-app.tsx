@@ -303,6 +303,31 @@ const WORKFLOW_HELP = [
 ];
 
 const MAX_BATCH_FILES = 20;
+/* D662 · Measured against the live endpoint before changing, because the last
+   time I reasoned about timing without measuring I was reading a frozen tab.
+   One call, then two at once, then four at once, timed through the Resource
+   Timing API so a throttled background tab could not distort it:
+
+     1 request   3031ms
+     2 requests  batch 2977ms  (2974, 2445)
+     4 requests  batch 2954ms  (2026, 2339, 2339, 2952)
+
+   Every response 200. No 429, no 5xx, no retry taken, and the endpoint exposes
+   no rate-limit headers. Wall time stays flat from one request to four, which
+   only happens if the worker is idle waiting on the provider rather than doing
+   work of its own - so this is not CPU or memory bound inside Goldie.
+
+   At 1, two designs cost about 6.1s and ten cost about 30s, entirely in
+   sequence, for no reason the measurements support. Raised to 2, which is the
+   agreed cap. NOT raised further: four showed no throttling either, but nothing
+   here measures a ten-design burst against the provider's real ceiling, and a
+   number chosen because it happened to work once is the kind of thing this
+   comment exists to prevent.
+
+   Draft creation stays at MAX_CONCURRENT_DESIGNS - it uploads full-resolution
+   artwork, so it is bounded by memory rather than by provider latency, and it
+   has not been measured. */
+const BACKGROUND_ETSY_CONCURRENCY = 2;
 const MAX_CONCURRENT_DESIGNS = 2;
 const LARGE_BATCH_THRESHOLD = 400 * 1024 * 1024;
 const DEFAULT_PRICING: Pricing = { targetProfit: 10, etsyFeePercent: 9.5, fixedFee: 0.25, listingFee: 0.20, shippingCost: 0, shippingCharged: 0 };
@@ -1852,7 +1877,7 @@ export default function ListingFactoryApp() {
     return()=>document.removeEventListener("click",guardFinalActions,true);
   },[files,description,printifyImageIndices,printifyImageSelections,preparedMockupCounts,pricingApproved,complete,drafts,connected,templateDetails,etsyConnected,localPreview]);
 
-  useEffect(()=>{if(localPreview||!complete)return;const pending=files.filter(file=>!file.etsy&&file.title.trim());if(!pending.length)return;const timer=window.setTimeout(()=>{setPreparingEtsy(true);void runBounded(pending,1,async file=>{await prepareOne(file);return file},()=>undefined).finally(()=>setPreparingEtsy(false))},900);return()=>window.clearTimeout(timer);
+  useEffect(()=>{if(localPreview||!complete)return;const pending=files.filter(file=>!file.etsy&&file.title.trim());if(!pending.length)return;const timer=window.setTimeout(()=>{setPreparingEtsy(true);void prepareEtsyBatch(pending).finally(()=>setPreparingEtsy(false))},900);return()=>window.clearTimeout(timer);
   },[localPreview,complete,files.map(file=>`${file.id}:${file.title}:${file.tags.join("|")}`).join(";")]);
   useEffect(()=>{if(localPreview||!complete)return;const pending=files.filter(file=>{const draft=drafts.find(item=>item.clientId===file.id);const signature=`${file.title}\n${file.tags.join("|")}`;return Boolean(draft?.id&&file.title.trim()&&syncedListingSignatures.current.get(file.id)!==signature)});if(!pending.length)return;setDrafts(current=>current.map(draft=>{const file=files.find(item=>item.id===draft.clientId);return file?{...draft,title:file.title,tags:file.tags}:draft}));const timer=window.setTimeout(()=>{void Promise.all(pending.map(async file=>{try{await syncListingFields(file);syncedListingSignatures.current.set(file.id,`${file.title}\n${file.tags.join("|")}`)}catch(error){updateDesign(file.id,{etsyError:error instanceof Error?error.message:"Printify could not save this listing."})}}))},600);return()=>window.clearTimeout(timer);
   },[localPreview,complete,drafts.map(draft=>draft.id||draft.clientId).join(";"),files.map(file=>`${file.id}:${file.title}:${file.tags.join("|")}`).join(";")]);
@@ -3263,6 +3288,30 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
     return {...details,category:payload.selected.path,taxonomyId:payload.selected.id,properties:payload.properties||[]} }
   async function rememberEtsyDefaults(details:EtsyDetails){if(!activeRecipe)return;const physical=Object.fromEntries((details.properties||[]).filter(property=>PHYSICAL_ETSY_FIELDS.test(property.label)&&property.value.trim()).map(property=>[property.label,property.value]));if(!Object.keys(physical).length)return;const updated={...activeRecipe,etsyDefaults:{...activeRecipe.etsyDefaults,...physical}};const response=await fetch("/api/product-recipes",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:activeRecipe.id,name:activeRecipe.name,templateUrl:activeRecipe.templateUrl,etsyDefaults:{...activeRecipe.etsyDefaults,...physical}})});if(!response.ok)throw new Error("Goldie prepared the Etsy details but could not remember the product defaults.");setActiveRecipe(updated)}
 
+  /* D662 · Two at a time, but not from the first design.
+     
+     D71 made one batch share one Etsy product baseline: the first design
+     prepared establishes the taxonomy, category and physical attributes, and
+     every design after it inherits them, so a batch cannot publish ten listings
+     under subtly different Etsy categories. Concurrency 1 was what made that
+     ordering hold, quietly - and the D71 test caught this change reintroducing
+     the fault, which is exactly what it is there for.
+
+     prepareOne reads etsyProductBaseline.current, then awaits, then writes it.
+     Start two designs together and both read null, both resolve independently,
+     and the later write wins - the batch is inconsistent again and nothing on
+     screen would say so.
+
+     So the first design runs alone to establish the baseline, and the rest run
+     two at a time inheriting it. A ten-design batch goes from about ten calls
+     in sequence to one plus nine in pairs, and stays deterministic. */
+  async function prepareEtsyBatch(pending:DesignFile[]){
+    if(!pending.length)return;
+    const [first,...rest]=pending;
+    await prepareOne(first);
+    if(!rest.length)return;
+    await runBounded(rest,BACKGROUND_ETSY_CONCURRENCY,async file=>{await prepareOne(file);return file},()=>undefined);
+  }
   async function prepareOne(design:DesignFile){try{const response=await fetch("/api/listing-intelligence",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({
     image:await designPreviewDataUrl(design),
     product:{blueprintTitle:templateDetails?.blueprintTitle,brand:templateDetails?.brand,model:templateDetails?.model,description},title:design.title,tags:design.tags})}),payload=await response.json() as {details?:EtsyDetails;error?:string};if(!response.ok||!payload.details)throw new Error(payload.error||"Etsy details could not be prepared.");const defaults=productEtsyDefaults(templateDetails,activeRecipe?.etsyDefaults),initial={...payload.details,attributes:{...payload.details.attributes,...defaults},blurb:design.blurb?.trim()||payload.details.blurb},baseline=etsyProductBaseline.current,prepared=baseline?{...initial,taxonomyId:baseline.taxonomyId,category:baseline.category,attributes:{...initial.attributes,...baseline.attributes}}:initial,details=await resolveEtsyOptions(prepared);if(!baseline){const physical=Object.fromEntries((details.properties||[]).filter(property=>PHYSICAL_ETSY_FIELDS.test(property.label)&&property.value.trim()).map(property=>[property.label,property.value]));etsyProductBaseline.current={taxonomyId:details.taxonomyId,category:details.category,attributes:physical}}const updatedDesign={...design,blurb:details.blurb};await syncListingFields(updatedDesign,details);updateDesign(design.id,{blurb:details.blurb,etsy:details,etsyError:""});return details}catch(error){updateDesign(design.id,{etsyError:error instanceof Error?error.message:"Etsy details could not be prepared."});return null}}
