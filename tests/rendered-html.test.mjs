@@ -3862,7 +3862,7 @@ test("a bundle's shared action sits below its products, not inside one — D486"
      and crewneck cards below it - a button acting on the whole bundle, nested
      inside one third of what it acts on, above two cards offering to open the
      others one at a time. */
-  assert.match(app, /footer:ReactNode=null,showCards=true\)\{\n\s*const sharedAction=Boolean\(footer\)/);
+  assert.match(app, /footer:ReactNode=null,showCards=true,header:ReactNode=null\)\{\n\s*const sharedAction=Boolean\(footer\)/);
   /* D507 - step 2 lists no products at all now: the designs are uploaded once and
      carried to every product, so there is no per-product state to report there. */
   assert.match(app, /stepProductCards\(bundleCardStatus\("images"\),null,!\(workflowStep==="designs"\),<aside/,
@@ -4358,7 +4358,7 @@ test("step 2 lists no products, and a mockup set previews ten — D507/D508", as
      and carried to every product by the bundle run. Worse, Change on one of those
      cards switched products - back to step 1 and forward again, to reach the same
      upload box already on screen. Step 2 shows the designs and the one button. */
-  assert.match(app, /footer:ReactNode=null,showCards=true\)/);
+  assert.match(app, /footer:ReactNode=null,showCards=true,header:ReactNode=null\)/);
   assert.match(app, /\{showCards&&list\.map\(\(recipe,index\)=>\{/);
   assert.match(app, /<\/aside>,false\)\}/, "the designs step asks for no cards");
   assert.doesNotMatch(app, /\{label:"Designs",value:started\?plural/, "and has no row set left");
@@ -7149,7 +7149,10 @@ test("the photo panel keeps what was approved in the preview — D682", async ()
   /* 36px was the only thing on the panel saying WHICH design you are picking
      photos for, and both filenames are "ChatGPT Image Aug 28, 2026, 10_4x_xx
      AM34-gigapixel-standard v2-4x.png". */
-  assert.match(clarity, /\.app-shell \.task-listing-thumb\{width:96px;height:96px;/);
+  /* D684 - raised again, to 132px. D682's 96px was pushed and never deployed, so
+     the live page served the original 36px the whole time she was asking. */
+  assert.match(clarity, /\.app-shell \.task-listing-thumb\{width:132px!important;height:132px!important;/);
+  assert.doesNotMatch(clarity, /\.app-shell \.task-listing-thumb\{width:36px/);
   assert.doesNotMatch(clarity, /\.app-shell \.task-listing-thumb\{width:36px/);
   // Room for two lines of name beside a 96px thumb, instead of one clipped line.
   assert.match(clarity, /\.task-listing-name\{flex:1;min-width:0;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2/);
@@ -7166,4 +7169,51 @@ test("the photo panel keeps what was approved in the preview — D682", async ()
   // Chevron leads the label and turns over when open.
   assert.match(app, /className=\{`printify-more-toggle\$\{showAll\?" is-open":""\}`\}[^]{0,160}<svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 7\.5 5 5 5-5"\/><\/svg><span>/);
   assert.match(clarity, /\.printify-more-toggle\.is-open svg\{transform:rotate\(180deg\)\}/);
+});
+
+/* D684 · The photo picker showed 104px tiles on a white background for garments
+   photographed on white. Every image loaded - naturalWidth 1200 on all 36 - so
+   nothing was broken; the ivory colourways were simply invisible at that size on
+   that colour, and she could not tell which photo she was selecting. */
+test("the Printify photo tiles are big enough, on a tile that is not white — D684", async () => {
+  const clarity = await readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8");
+  // One camera group per row is what gives the tiles the panel's full width.
+  assert.match(clarity, /\.app-shell \.printify-view-groups\{grid-template-columns:minmax\(0,1fr\)!important/);
+  assert.match(clarity, /\.app-shell \.printify-image-grid\{grid-template-columns:repeat\(3,minmax\(0,1fr\)\)!important/);
+  // A white garment on a white tile is the defect. The tile has to be tinted.
+  assert.match(clarity, /\.printify-image-option\{[^}]*background:#efe7ee!important/);
+  assert.match(clarity, /\.printify-image-option img\{aspect-ratio:1\/1!important/);
+});
+
+/* D683 · The gap above the placement card survived D679, D680 and D681 because
+   all three treated it as a margin problem. It was not. The link lived in its own
+   <section class="post-draft-workspace">, a direct child of .app-shell, and
+   .app-shell is a grid while .workspace is display:contents - which promotes the
+   sticky .workflow-progress rail to a grid item sharing that row. The rail sized
+   the row to 81px; the link filled 46px; the leftover 35px was grid row, and no
+   margin on a grid item can shrink a row that a sibling in the other column is
+   sizing. This pins the structural fix so it cannot regress into a margin tweak. */
+test("the open-all link shares the cards' row instead of owning one — D683", async () => {
+  const [clarity, app] = await Promise.all([
+    readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8"),
+    readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
+  ]);
+
+  // The section that owned the row is gone from the render, not merely restyled.
+  assert.doesNotMatch(app, /<section className="post-draft-workspace">/);
+  // The link is passed as stepProductCards' header, so it renders inside the grid
+  // that also holds the cards.
+  assert.match(app, /function stepProductCards\(statusFor:[^]{0,220}showCards=true,header:ReactNode=null\)\{/);
+  assert.match(app, /className="step-product-cards"[^]{0,220}\{header\}/);
+  assert.match(app, /<div className="post-draft-heading">\{drafts\.filter\(draft=>draft\.status==="Created"\)\.length>1&&<button className="open-all-button"/);
+  // Nothing but the section's own gap between the link and the first card.
+  assert.match(clarity, /\.app-shell \.step-product-cards>\.post-draft-heading\{[^}]*margin:0!important/);
+
+  /* D683 · the collapsed rows. A fixed 150px label column wrapped three of the
+     five labels onto a second line, so the rows were 48/42/42/48/48px. */
+  assert.match(clarity, /\.batch-product-rows \.batch-product-row\{grid-template-columns:22px 214px minmax\(0,1fr\) auto!important;[^}]*min-height:56px!important/);
+  // The empty task-panel container left a band of dead colour under the last row.
+  assert.match(clarity, /\.step-product-body:empty\{display:none!important\}/);
+  // One colour means "done" in this card: the marks match the "N drafts" badge.
+  assert.match(clarity, /\.batch-product-row\.settled \.row-mark\{background:rgba\(47,134,87,\.13\)!important/);
 });

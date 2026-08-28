@@ -3213,3 +3213,92 @@ body{min-width:1180px!important}
   cursor:pointer;
 }
 .app-shell .size-guide-remove:hover{border-color:rgba(91,48,79,.4);color:#4a2a3e}
+
+/* D683 - the "Review all listings in Printify" link now renders as the first
+   child of .step-product-cards instead of its own <section class=
+   "post-draft-workspace">. It had to move: .app-shell is a grid and .workspace
+   is display:contents, so the sticky .workflow-progress rail became a grid item
+   sharing the link's row and sized that row to 81px while the link filled 46px.
+   The 35px of leftover row is what D679, D680 and D681 all failed to close with
+   margins - a grid item cannot shrink a row a sibling in the other column is
+   sizing. Inside the cards section the only thing between the link and the first
+   card is that section's own 22px gap, so the margin here goes to zero. */
+.app-shell .step-product-cards>.post-draft-heading{display:flex!important;justify-content:center!important;margin:0!important;padding:0!important;border:0!important}
+
+/* D683 - step 2's collapsed product card. Brittany: "there needs to be space
+   around them as well... it looks like a high schooler built this."
+
+   What was actually wrong, measured on the live page rather than guessed:
+   - the label column was a fixed 150px, so "Review Printify placement",
+     "Upload your own listing photos" and "Arrange final photo order" each wrapped
+     to two lines while "Size guide" did not. Rows came out 48/42/42/48/48px - a
+     ragged edge down the whole card. 214px fits every label on one line, so the
+     rows are uniform without hard-coding a height.
+   - rows were padded 6px vertically. That is why it read as cramped.
+   - .row-label was 12px/800 and .row-value 13.12px/400 in near-identical purples:
+     the quieter piece of information was the larger one, and nothing separated
+     them. Label goes to 13px/600 ink, value to 13px/400 at 62% - a real hierarchy.
+   - .step-product-body renders empty when no task panel is open and left a 23px
+     band of dead colour under the last row.
+   - the completed marks were lavender while the card's own "N drafts" badge was
+     green, so two different colours meant "done" in one card.
+
+   Selectors are deliberately deep (.app-shell .step-product-cards
+   .batch-product-card ...): shallower rules in this file lost to !important
+   declarations elsewhere, which is what made the first attempt at this only
+   half-apply. */
+.app-shell .step-product-cards .batch-product-card{background:#fff!important;border:1px solid rgba(91,48,79,.13)!important;border-radius:18px!important;box-shadow:0 1px 2px rgba(74,42,62,.05),0 10px 30px rgba(74,42,62,.07)!important;overflow:hidden!important}
+.app-shell .step-product-cards .batch-product-card>header{grid-template-columns:46px minmax(0,1fr) auto!important;gap:14px!important;padding:16px 18px!important;align-items:center!important;border-bottom:1px solid rgba(91,48,79,.10)!important;background:rgba(250,246,250,.7)!important}
+/* object-fit:cover, not contain: D188/D192 has a test pinning this. A garment
+   photo is mostly white, so letterboxing it inside a white 46px frame leaves
+   almost nothing visible - the "why is it so small, I can see nothing" thumbnail.
+   cover fills the frame with the product. */
+.app-shell .step-product-cards .batch-product-card .bundle-product-photo{width:46px!important;height:46px!important;object-fit:cover!important;border-radius:11px!important;background:#f7f2f6!important;border:1px solid rgba(91,48,79,.12)!important;padding:0!important;box-sizing:border-box!important}
+.app-shell .step-product-cards .batch-product-card .batch-product-rows{display:block!important;padding:8px!important;gap:0!important;background:transparent!important}
+.app-shell .step-product-cards .batch-product-card .batch-product-rows .batch-product-row{grid-template-columns:22px 214px minmax(0,1fr) auto!important;column-gap:16px!important;padding:9px 12px!important;min-height:56px!important;box-sizing:border-box!important;align-items:center!important;background:transparent!important;border:0!important;border-radius:10px!important}
+.app-shell .step-product-cards .batch-product-card .batch-product-rows .batch-product-row+.batch-product-row{box-shadow:inset 0 1px 0 rgba(91,48,79,.09)!important}
+.app-shell .step-product-cards .batch-product-card .batch-product-rows .batch-product-row:hover{background:rgba(91,48,79,.04)!important;box-shadow:none!important}
+.app-shell .step-product-cards .batch-product-card .batch-product-rows .batch-product-row:hover+.batch-product-row{box-shadow:none!important}
+.app-shell .step-product-cards .batch-product-card .batch-product-rows .row-label{font-size:13px!important;font-weight:600!important;color:#4a2a3e!important;letter-spacing:0!important;line-height:1.35!important}
+.app-shell .step-product-cards .batch-product-card .batch-product-rows .row-value{font-size:13px!important;font-weight:400!important;color:rgba(74,42,62,.62)!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important}
+.app-shell .step-product-cards .batch-product-card .batch-product-rows .row-mark{width:22px!important;height:22px!important;font-size:11px!important;box-sizing:border-box!important}
+.app-shell .step-product-cards .batch-product-card .batch-product-rows .batch-product-row.settled .row-mark{background:rgba(47,134,87,.13)!important;color:#2f8657!important;border:1px solid rgba(47,134,87,.24)!important}
+.app-shell .step-product-cards .batch-product-card .batch-product-rows .row-open{border:1px solid rgba(91,48,79,.18)!important;border-radius:999px!important;background:#fff!important;padding:7px 15px!important;font-size:12px!important;font-weight:650!important;color:#6b3f5e!important}
+.app-shell .step-product-cards .batch-product-card .batch-product-rows .row-open:hover{background:#6b3f5e!important;border-color:#6b3f5e!important;color:#fff!important}
+.app-shell .step-product-cards .batch-product-card .step-product-body:empty{display:none!important}
+.app-shell .step-product-cards{margin-top:10px!important}
+
+/* D684 - the listing thumbnail in every task panel header. Brittany, for the
+   fourth time: "I need to see the fucking product that I'm picking the photos
+   for." She was right that nothing had changed. D682 raised this from 36px to
+   96px, pushed the commit, and it was never deployed - so the live page was
+   still serving 36px every time she looked. Measured on the live page today:
+   36x36.
+
+   96px was also still too small to judge a print on a garment. 132px, filled
+   rather than letterboxed, so the product reads at a glance. object-fit:cover
+   with no padding: a garment photo is mostly white and `contain` on a white tile
+   left almost nothing visible. */
+.app-shell .task-listing-thumb{width:132px!important;height:132px!important;flex:none!important;border-radius:14px!important;object-fit:cover!important;background:#f7f2f6!important;padding:0!important;box-sizing:border-box!important;box-shadow:0 1px 6px rgba(74,42,62,.16)!important;border:1px solid rgba(91,48,79,.12)!important}
+.app-shell .task-listing-head{align-items:center!important;gap:18px!important;padding:14px 0!important}
+.app-shell .task-listing-head .task-listing-name{font-size:1rem!important;line-height:1.35!important;-webkit-line-clamp:3!important}
+
+/* D684 - the Printify photo picker. "I need to see the fucking product that I'm
+   picking the photos for."
+
+   The tiles were not broken and they were not failing to load - I checked, all 36
+   images had naturalWidth 1200. They were 104px squares on a pure white tile, and
+   these are garment photos shot on white. The ivory and natural colourways were
+   genuinely invisible; on screen, two of the three FRONT tiles looked like empty
+   boxes. Size and background were the whole problem.
+
+   .printify-view-groups was a two-column grid, which is what held each group to
+   323px and each tile to 104px. One column per camera angle gives the group the
+   panel's full 660px and the tiles 216px - large enough to read the print. Only
+   FRONT and BACK show by default (the rest are behind the expander), so this
+   costs one extra row of scrolling, not twelve. */
+.app-shell .printify-view-groups{grid-template-columns:minmax(0,1fr)!important;gap:22px!important}
+.app-shell .printify-image-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:14px!important}
+/* A white garment needs a tile that is not white. */
+.app-shell .printify-image-grid .printify-image-option{padding:0!important;background:#efe7ee!important;border-radius:14px!important}
+.app-shell .printify-image-grid .printify-image-option img{aspect-ratio:1/1!important;height:auto!important;object-fit:cover!important;border-radius:12px!important;background:#efe7ee!important}

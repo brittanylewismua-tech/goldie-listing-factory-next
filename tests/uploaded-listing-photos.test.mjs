@@ -8,8 +8,11 @@ test("seller uploads are exact-listing photos that publish, reorder, download an
     read("app/listing-factory-app.tsx"),read("app/uploaded-listing-photos.tsx"),read("app/api/etsy/images/route.ts"),read("app/listing-photo-order.tsx"),read("app/api/etsy/finish.ts"),read("app/api/listing-photos/download/route.ts"),read("app/management-nav.tsx")]);
   assert.match(app,/<UploadedListingPhotos productId=\{draft\.id\}/);
   assert.match(app,/listing-photo-design-identity/);
-  assert.match(app,/design\.previewUrl/);
-  assert.match(app,/PHOTOS FOR THIS DESIGN/);
+  /* D684 - the uploads panel showed the design artwork and the design's filename.
+     It has to show the listing she is uploading photos to. */
+  assert.match(app,/YOU ARE ADDING PHOTOS TO/);
+  assert.doesNotMatch(app,/PHOTOS FOR THIS DESIGN/);
+  assert.match(app,/draft\.previewUrl\|\|design\.previewUrl/);
   assert.match(uploader,/form\.set\("productId",productId\)/);
   assert.match(uploader,/form\.set\("kind","upload"\)/);
   assert.match(uploader,/multiple type="file"/);

@@ -2517,10 +2517,23 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
       },design=><div className="etsy-detail-body">{design.etsy?<EtsyDetailsEditor design={design} categories={etsyCategories} onChange={etsy=>updateDesign(design.id,{etsy,etsyError:""})} onCategory={taxonomyId=>changeEtsyCategory(design,taxonomyId)}/>:<div className={design.title.trim()?"etsy-detail-error":"etsy-detail-pending"}><b>{design.title.trim()?"Etsy details still need to be created.":"Waiting for this listing’s title."}</b><span>{design.title.trim()?design.etsyError:"Goldie fills in the Etsy category and product fields automatically once a title exists. Create titles above and this completes itself."}</span>{design.title.trim()&&<button aria-busy={preparingListingId===design.id} disabled={Boolean(preparingListingId)} onClick={()=>void retryOneEtsyListing(design)}>{preparingListingId===design.id?"Preparing this listing…":"Try this listing again"}</button>}</div>}{design.etsyError&&<small className="field-error">{design.etsyError}</small>}</div>)}
     </>;
     const listings=drafts.map(draft=>({draft,design:files.find(file=>file.id===draft.clientId),selectedImages:draft.id?(printifyImageSelections[draft.id]??printifyImageIndices):printifyImageIndices}));
+    /* D684 - "I don't need to see the title of the design... just show the listing
+       photo and create some title that says what the listing is." Step 2 runs
+       before titles are written in step 3, so design.title is empty here and every
+       one of these headings fell through to design.name - the upload's filename,
+       "ChatGPT Image Aug 28, 2026, 10_44_01 AM.png". That names a file on her disk.
+       It never named the listing. Until a real title exists, say which product this
+       is and which of the batch's listings she is looking at. */
+    const listingLabel=(design:DesignFile|undefined,index:number)=>{
+      const chosen=design?.title?.trim();
+      if(chosen)return chosen;
+      const product=templateDetails?.blueprintTitle?.trim()||"Listing";
+      return listings.length>1?`${product} · listing ${index+1} of ${listings.length}`:product;
+    };
     if(!listings.length)return null;
     if(task==="placement")return <>
-          <div className="task-panel-body placement-review-grid">{listings.map(({draft,design})=>draft.status!=="Created"?<div className="task-listing failed" key={draft.clientId}>
-            <p className="task-listing-name">{design?.title?.trim()||design?.name||draft.name||"Listing"}</p>
+          <div className="task-panel-body placement-review-grid">{listings.map(({draft,design},listingIndex)=>draft.status!=="Created"?<div className="task-listing failed" key={draft.clientId}>
+            <p className="task-listing-name">{listingLabel(design,listingIndex)}</p>
             {/* D539 - a listing that failed to create still has to be reachable and
                 still has to offer its retry and its help. */}
             {<><button className="error-help-link" onClick={()=>window.dispatchEvent(new CustomEvent("goldie-retry-listing",{detail:draft.clientId}))}>Retry this listing</button><button className="error-help-link" onClick={()=>window.dispatchEvent(new CustomEvent("goldie-support",{detail:draft.error??"A design failed"}))}>Get help with this error</button></>}
@@ -2538,12 +2551,12 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
               for. The row is called "Choose Printify photos" and the photos are
               listed underneath it with counts; a collapsed essay about which views
               to pick was advice nobody opened. Gone. */}
-          <div className="task-panel-body printify-photo-listings">{listings.map(({draft,design,selectedImages})=>draft.status!=="Created"||!design||!draft.id?null:(()=>{
+          <div className="task-panel-body printify-photo-listings">{listings.map(({draft,design,selectedImages},listingIndex)=>draft.status!=="Created"||!design||!draft.id?null:(()=>{
               const count=selectedImages.length+(preparedMockupCounts[draft.id||""]||0);
               return <div className="task-listing" key={draft.clientId}>
                 <div className="task-listing-head">
                   {draft.previewUrl?<img className="task-listing-thumb" src={draft.previewUrl} alt=""/>:<span className="task-listing-thumb"/>}
-                  <p className="task-listing-name">{design?.title?.trim()||design?.name||draft.name||"Listing"}</p>
+                  <p className="task-listing-name">{listingLabel(design,listingIndex)}</p>
                   <span className="task-listing-count">{count} {count===1?"photo":"photos"}</span>
                 </div>
                 <div className="task-listing-work">{draft.status==="Created"&&<PrintifyImagePicker bare images={(draft.printifyImages||[]).filter(Boolean)} indices={selectedImages} reservedPhotos={(preparedMockupCounts[draft.id||""]||0)+(design?.sizeGuideName||sizeGuideName?1:0)} onApplyOne={values=>{/* D465 - the photos she picks ARE this product's default, the same way its colours and sizes are. There was a "Use these as this product's default" button asking a question with one sensible answer; the selection saves itself now and the button is gone. */if(activeRecipe)void saveImagePreferences(values);if(draft.id)setPrintifyImageSelections(current=>({...current,[draft.id!]:values}))}} onApplyAll={values=>{setPrintifyImageIndices(values);setPrintifyImageSelections(Object.fromEntries(drafts.filter(item=>item.id).map(item=>{const itemDesign=files.find(file=>file.id===item.clientId),reserved=(preparedMockupCounts[item.id!]||0)+(itemDesign?.sizeGuideName||sizeGuideName?1:0);return[item.id!,values.slice(0,Math.max(0,20-reserved))]})))}} onSaveRecipe={activeRecipe?saveImagePreferences:undefined}/>}</div>
@@ -2551,37 +2564,48 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
     </>;
     if(task==="lifestyle")return <>
           <div className="task-panel-lead"><p>Add finished photos to each design below. You can arrange them with the Printify photos in the next section.</p></div>
-          <div className="task-panel-body">{listings.map(({draft,design,selectedImages})=>draft.status!=="Created"||!design||!draft.id?null:(()=>{
+          <div className="task-panel-body">{listings.map(({draft,design,selectedImages},listingIndex)=>draft.status!=="Created"||!design||!draft.id?null:(()=>{
               const count=selectedImages.length+(preparedMockupCounts[draft.id||""]||0);
               return <div className="task-listing" key={draft.clientId}>
                 <div className="task-listing-head">
                   {draft.previewUrl?<img className="task-listing-thumb" src={draft.previewUrl} alt=""/>:<span className="task-listing-thumb"/>}
-                  <p className="task-listing-name">{design?.title?.trim()||design?.name||draft.name||"Listing"}</p>
+                  <p className="task-listing-name">{listingLabel(design,listingIndex)}</p>
                   <span className="task-listing-count">{count} {count===1?"photo":"photos"}</span>
                 </div>
                 <div className="task-listing-work">
-                  <div className="listing-photo-design-identity">{design.previewUrl?<img src={design.previewUrl} alt={design.name||"Design artwork"}/>:null}<div><span>PHOTOS FOR THIS DESIGN</span><b>{design.name||"Untitled design"}</b></div></div>
+                  <div className="listing-photo-design-identity">{(draft.previewUrl||design.previewUrl)?<img src={draft.previewUrl||design.previewUrl} alt={`${listingLabel(design,listingIndex)} listing photo`}/>:null}<div><span>YOU ARE ADDING PHOTOS TO</span><b>{listingLabel(design,listingIndex)}</b></div></div>
                   <UploadedListingPhotos productId={draft.id} onCountChange={count=>setPreparedMockupCounts(current=>({...current,[draft.id!]:count}))}/></div>
               </div>})()) }</div>
     </>;
     if(task==="order")return <>
       {/* D554 - said once, here, instead of once per listing inside the grid. */}
       <div className="task-panel-lead"><p>Drag each photo where you want it, or use the arrow buttons for precise placement. The first photo is the one buyers see in search.</p></div>
-          <div className="task-panel-body">{listings.map(({draft,design,selectedImages})=>draft.status!=="Created"||!design||!draft.id?null:(()=>{
+          <div className="task-panel-body">{listings.map(({draft,design,selectedImages},listingIndex)=>draft.status!=="Created"||!design||!draft.id?null:(()=>{
               const count=selectedImages.length+(preparedMockupCounts[draft.id||""]||0);
               return <div className="task-listing" key={draft.clientId}>
                 <div className="task-listing-head">
                   {draft.previewUrl?<img className="task-listing-thumb" src={draft.previewUrl} alt=""/>:<span className="task-listing-thumb"/>}
-                  <p className="task-listing-name">{design?.title?.trim()||design?.name||draft.name||"Listing"}</p>
+                  <p className="task-listing-name">{listingLabel(design,listingIndex)}</p>
                   <span className="task-listing-count">{count} {count===1?"photo":"photos"}</span>
                 </div>
-                <div className="task-listing-work"><div className="listing-photo-design-identity photo-order-design-identity">{design.previewUrl?<img src={design.previewUrl} alt={design.name||"Design artwork"}/>:null}<div><span>ARRANGING PHOTOS FOR THIS DESIGN</span><b>{design.name||"Untitled design"}</b><small>{count} {count===1?"photo":"photos"} in this listing</small></div></div>{draft.status==="Created"&&draft.id&&<ListingPhotoOrder productId={draft.id} printifyImages={(draft.printifyImages||[]).filter(Boolean)} indices={selectedImages} refreshKey={`${preparedMockupCounts[draft.id]||0}:${design?.sizeGuideName||sizeGuideName}`}/>}{draft.status==="Created"&&design&&draft.id&&<IndividualSizeGuide productId={draft.id} name={design.sizeGuideName} onSaved={name=>updateDesign(design.id,{sizeGuideName:name})}/>}{draft.status==="Created"&&draft.id&&<DownloadListingPhotos productId={draft.id} name={draft.title||draft.name} indices={selectedImages}/>}</div>
+                <div className="task-listing-work"><div className="listing-photo-design-identity photo-order-design-identity">{(draft.previewUrl||design.previewUrl)?<img src={draft.previewUrl||design.previewUrl} alt={`${listingLabel(design,listingIndex)} listing photo`}/>:null}<div><span>ARRANGING PHOTOS FOR</span><b>{listingLabel(design,listingIndex)}</b><small>{count} {count===1?"photo":"photos"} in this listing</small></div></div>{draft.status==="Created"&&draft.id&&<ListingPhotoOrder productId={draft.id} printifyImages={(draft.printifyImages||[]).filter(Boolean)} indices={selectedImages} refreshKey={`${preparedMockupCounts[draft.id]||0}:${design?.sizeGuideName||sizeGuideName}`}/>}{draft.status==="Created"&&design&&draft.id&&<IndividualSizeGuide productId={draft.id} name={design.sizeGuideName} onSaved={name=>updateDesign(design.id,{sizeGuideName:name})}/>}{draft.status==="Created"&&draft.id&&<DownloadListingPhotos productId={draft.id} name={draft.title||draft.name} indices={selectedImages}/>}</div>
               </div>})()) }</div>
     </>;
     return null;
   }
 
-  function stepProductCards(statusFor:(recipe:Recipe,index:number)=>{label:string;tone:"ready"|"attention"|"advice"|"waiting"},body:ReactNode,hidden=false,footer:ReactNode=null,showCards=true){
+  /* D683 - `header` exists because the "Review all listings in Printify" link
+     could not be spaced correctly from outside this section. It used to sit in
+     its own <section class="post-draft-workspace">, a direct child of
+     .app-shell. .app-shell is a grid and .workspace is display:contents, so the
+     sticky .workflow-progress rail becomes a grid item too and shared that row -
+     sizing it to 81px while the link only filled 46px. The leftover 35px of grid
+     row is what D679, D680 and D681 each failed to close with margins and
+     padding, because no margin on a grid item can shrink a row that a sibling in
+     the other column is sizing. Rendering the link inside this section puts it in
+     the same row as the cards, where the section's own 22px grid gap is the only
+     thing between them. */
+  function stepProductCards(statusFor:(recipe:Recipe,index:number)=>{label:string;tone:"ready"|"attention"|"advice"|"waiting"},body:ReactNode,hidden=false,footer:ReactNode=null,showCards=true,header:ReactNode=null){
     const sharedAction=Boolean(footer);
     const list=activeBundle&&bundleRecipes.length>1?bundleRecipes:(activeRecipe?[activeRecipe]:[]);
     if(!list.length)return body;
@@ -2597,6 +2621,7 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
        its own layout now, hides with an inline style, and the panel inside keeps
        hiding itself too - two independent guards, because one was not enough. */
     return <section className="step-product-cards" style={hidden?{display:"none"}:undefined} aria-label="Products in this batch">
+      {header}
       {showCards&&list.map((recipe,index)=>{
         const open=many?index===bundleIndex:true;
         const product=index===bundleIndex?templateDetails:bundleColorProducts[recipe.id];
@@ -4000,15 +4025,6 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
           rest of the shared batch work, where she can reach the size guide while
           she is arranging any product's photos. A product card now holds only
           its rows and the one task panel she opened. */}
-      {complete && workflowStep==="designs" && <section className="post-draft-workspace">
-        {/* D540 - this heading described the block D539 removed: "the large preview
-    below" pointed at a preview that is now inside the Review Printify placement
-    task, and "choose listing images" is the row beneath it. What is left here is
-    the batch-wide work: open every listing in Printify, and the size guide. */}
-        <div className="post-draft-heading">{drafts.filter(draft=>draft.status==="Created").length>1&&<button className="open-all-button" onClick={openAllDrafts}>Review all listings in Printify ↗</button>}</div>
-        {openAllMessage&&<p className="open-all-message" role="status">{openAllMessage}</p>}
-        {/* D539 - the giant workspace is gone. Each task row owns its own panel. */}
-        </section>}
 {complete && workflowStep==="designs" && stepProductCards(bundleCardStatus("images"),
         /* D517 - the mockups are per product: a hoodie scene is not a tee scene.
            D507 took the product cards off this step because the design upload is
@@ -4030,6 +4046,14 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
         {imageStepError&&<p className="image-step-blocker" role="alert">{imageStepError}</p>}
         <button className="workflow-next" type="button" disabled={imagesStepIssues().length>0} title={imagesStepIssues()[0]} onClick={()=>{const missing=createdListingsMissingImages();if(missing.length){setImageStepError(`${missing.length} ${missing.length===1?"listing needs":"listings need"} at least one photo.`);setMissingPhotoDraftIds(missing.map(draft=>draft.clientId));return}setImageStepError("");setMissingPhotoDraftIds([]);/* D427 - one Next step on this page, and it is the one that checks every listing has a photo. The second copy in the card list bypassed that check entirely. Goes to Listing, not Publish. */setFinishPhase("details");void goToStep("finish",false,true);window.scrollTo(0,0)}}>Next step <span aria-hidden="true">→</span></button>
         {imagesStepIssues()[0]&&<p className="etsy-preparing-note gate-reason" role="status">{imagesStepIssues()[0]}</p>}
+        </>
+        ,true,
+        /* D683 - the batch-wide "open every listing in Printify" link. It renders
+           as the first child of the cards section so it shares the cards' grid
+           row instead of owning a row the sticky rail sizes. */
+        <>
+        <div className="post-draft-heading">{drafts.filter(draft=>draft.status==="Created").length>1&&<button className="open-all-button" onClick={openAllDrafts}>Review all listings in Printify ↗</button>}</div>
+        {openAllMessage&&<p className="open-all-message" role="status">{openAllMessage}</p>}
         </>
       )}
 
