@@ -74,6 +74,70 @@ async function printify<T>(path: string, token: string): Promise<T> {
   return response.json() as Promise<T>;
 }
 
+/* D655 · Four of the calls on this path read Printify's CATALOGUE: blueprint
+   metadata, print providers, variants and shipping rates. None of it is the
+   seller's data - the Comfort Colors 1566 catalogue is the same bytes for every
+   Goldie user and changes on Printify's release schedule, not theirs. Fetching
+   it fresh on every product load spent four sequential round trips re-reading
+   values that had not moved.
+
+   Cached at the edge for a day, keyed on the path alone. The token still has to
+   be valid to reach this code, and no seller-specific data passes through
+   here - which is exactly why it is safe to share. */
+const CATALOG_TTL_SECONDS=86400;
+
+async function printifyCatalog<T>(path: string, token: string): Promise<T> {
+  const key = new Request(`https://goldie-catalog.internal${path}`, { method: "GET" });
+  const cache = (globalThis as { caches?: { default?: Cache } }).caches?.default;
+  if (cache) {
+    const hit = await cache.match(key).catch(() => undefined);
+    if (hit) return hit.json() as Promise<T>;
+  }
+  const value = await printify<T>(path, token);
+  if (cache) {
+    const stored = new Response(JSON.stringify(value), { headers: { "content-type": "application/json", "cache-control": `public, max-age=${CATALOG_TTL_SECONDS}` } });
+    await cache.put(key, stored).catch(() => undefined);
+  }
+  return value;
+}
+
+/* D655 · Every Etsy read on this path is already written so that a failure
+   falls through to a message that stays accurate without it. etsyFetch retries
+   a 429 or a 5xx five times, backing off as far as eight seconds each, so each
+   of those "optional" lookups could cost forty seconds of a seller's wait to
+   arrive at the fallback it was going to take anyway. Bound them: an answer
+   Goldie cannot get quickly is an answer it does not have. */
+const ETSY_LOOKUP_MS=4000;
+
+/* D655 · The pairing check ran on every single product load, and even bounded
+   it costs seconds. What it establishes does not change between two loads: this
+   Printify store either publishes into this Etsy shop or it does not. Remember
+   only a PROVEN match, and only against both shop ids - reconnecting Etsy
+   elsewhere changes the key, so a stale yes cannot outlive the pairing it was
+   about. A mismatch is deliberately never cached: the seller is in the middle
+   of fixing it and must be re-checked the moment they try again. */
+const PAIRING_MEMO_SECONDS=21600;
+
+function pairingKey(userId:string,printifyShopId:number,etsyShopId:number){
+  return new Request(`https://goldie-pairing.internal/${encodeURIComponent(userId)}/${printifyShopId}/${etsyShopId}`,{method:"GET"});
+}
+
+async function provenMatch(userId:string,printifyShopId:number,etsyShopId:number){
+  const cache=(globalThis as { caches?: { default?: Cache } }).caches?.default;
+  if(!cache)return false;
+  return Boolean(await cache.match(pairingKey(userId,printifyShopId,etsyShopId)).catch(()=>undefined));
+}
+
+async function rememberMatch(userId:string,printifyShopId:number,etsyShopId:number){
+  const cache=(globalThis as { caches?: { default?: Cache } }).caches?.default;
+  if(!cache)return;
+  await cache.put(pairingKey(userId,printifyShopId,etsyShopId),new Response("matched",{headers:{"cache-control":`public, max-age=${PAIRING_MEMO_SECONDS}`}})).catch(()=>undefined);
+}
+
+function boundedEtsy<T>(work: Promise<T>): Promise<T> {
+  return Promise.race([work, new Promise<T>((_, reject) => setTimeout(() => reject(new Error("Etsy lookup timed out")), ETSY_LOOKUP_MS))]);
+}
+
 /* Which Printify links work.
  *
  * Both the design-editor page and the product page carry the product id, so
@@ -162,8 +226,11 @@ export async function POST(request: Request) {
     /* D641 - proven, not guessed. Only a denial from Etsy blocks. */
     try{
       const etsyLink=await etsyConnection(user.userId);
+      if(!await provenMatch(user.userId,found.shop.id,etsyLink.shopId)){
       const pairing=await verifyShopPairing({printifyToken:token,printifyShopId:found.shop.id,etsyShopId:etsyLink.shopId,etsyToken:etsyLink.token,etsyFetch});
+      if(pairing.result==="matched")await rememberMatch(user.userId,found.shop.id,etsyLink.shopId);
       if(pairing.result==="mismatched")return NextResponse.json({...shopMismatch(found.shop.title,etsyLink.shopName||"your connected Etsy shop"),shop:{id:found.shop.id,title:found.shop.title,count:shops.length}},{status:409});
+      }
     }catch{/* Etsy not connected, or the check could not run. Not evidence. */}
     /* D330 · This variable must contain an ETSY shipping_profile_id only.
        Printify's external.shipping_template_id is a different id system. If it
@@ -178,7 +245,7 @@ export async function POST(request: Request) {
     if(externalListingId>0){
       try{
         const connection=await etsyConnection(user.userId);
-        const listing=await etsyFetch<{shipping_profile_id?:number}>(`/listings/${externalListingId}`,connection.token);
+        const listing=await boundedEtsy(etsyFetch<{shipping_profile_id?:number}>(`/listings/${externalListingId}`,connection.token));
         if(Number(listing.shipping_profile_id)>0)shippingTemplateId=String(listing.shipping_profile_id);
       }catch{/* The normal validation message below remains accurate if Etsy is disconnected. */}
     }
@@ -190,7 +257,7 @@ export async function POST(request: Request) {
     if(!shippingTemplateId&&Number.isInteger(rememberedProfileId)&&rememberedProfileId>0){
       try{
         const connection=await etsyConnection(user.userId);
-        const profile=await etsyFetch<EtsyShippingProfile>(`/shops/${connection.shopId}/shipping-profiles/${rememberedProfileId}`,connection.token);
+        const profile=await boundedEtsy(etsyFetch<EtsyShippingProfile>(`/shops/${connection.shopId}/shipping-profiles/${rememberedProfileId}`,connection.token));
         if(Number(profile.shipping_profile_id)===rememberedProfileId&&!profile.is_deleted)shippingTemplateId=String(rememberedProfileId);
       }catch{/* A missing, deleted, or foreign profile must not bypass template validation. */}
     }
@@ -226,16 +293,28 @@ export async function POST(request: Request) {
     if(issues.length)return NextResponse.json({error:"This Printify product cannot be used yet.",issues},{status:400});
     let provider = `Provider ${found.product.print_provider_id}`;
     let blueprint:Blueprint={id:found.product.blueprint_id};
-    try { blueprint=await printify<Blueprint>(`/catalog/blueprints/${found.product.blueprint_id}.json`,token); } catch { /* Product data remains sufficient if catalog metadata is unavailable. */ }
-    try {
-      const providers = await printify<Array<{ id: number; title: string }>>(`/catalog/blueprints/${found.product.blueprint_id}/print_providers.json`, token);
-      provider = providers.find((item) => item.id === found!.product.print_provider_id)?.title ?? provider;
-    } catch { /* Provider names are optional; the numeric provider remains usable. */ }
+    /* D655 · These four catalogue reads ran one after another. Every one of them
+       is keyed on blueprint_id and print_provider_id, both already known from
+       the product above, so not one of them was waiting on any of the others -
+       they were sequential only because they were written in a row. Four round
+       trips became one. */
+    const blueprintId=found.product.blueprint_id, providerId=found.product.print_provider_id;
+    const [blueprintResult,providersResult,variantsResult,shippingResult]=await Promise.allSettled([
+      printifyCatalog<Blueprint>(`/catalog/blueprints/${blueprintId}.json`,token),
+      printifyCatalog<Array<{ id: number; title: string }>>(`/catalog/blueprints/${blueprintId}/print_providers.json`, token),
+      printifyCatalog<CatalogVariant[] | { variants?: CatalogVariant[] }>(`/catalog/blueprints/${blueprintId}/print_providers/${providerId}/variants.json?show-out-of-stock=1`, token),
+      printifyCatalog<Shipping>(`/catalog/blueprints/${blueprintId}/print_providers/${providerId}/shipping.json`,token),
+    ]);
+    /* Each one stays independently optional, exactly as it was when each had its
+       own try/catch: a catalogue read that fails degrades one detail, never the
+       product load. */
+    if(blueprintResult.status==="fulfilled")blueprint=blueprintResult.value;
+    if(providersResult.status==="fulfilled")provider=providersResult.value.find((item) => item.id === providerId)?.title ?? provider;
     let maxPrintWidth: number | null = null;
     let maxPrintHeight: number | null = null;
     let standardShipping:number|null=null,shippingCurrency="USD";const shippingByVariant:Record<number,number>={};
-    try {
-      const catalogResponse = await printify<CatalogVariant[] | { variants?: CatalogVariant[] }>(`/catalog/blueprints/${found.product.blueprint_id}/print_providers/${found.product.print_provider_id}/variants.json?show-out-of-stock=1`, token);
+    if(variantsResult.status==="fulfilled") {
+      const catalogResponse = variantsResult.value;
       const catalogVariants = Array.isArray(catalogResponse) ? catalogResponse : catalogResponse.variants ?? [];
       const enabledIds = new Set(found.product.variants?.filter((variant) => variant.is_enabled).map((variant) => variant.id) ?? []);
       const usedPositions = new Set(found.product.print_areas?.flatMap((area) => area.placeholders?.map((placeholder) => placeholder.position).filter(Boolean) ?? []) ?? []);
@@ -246,8 +325,8 @@ export async function POST(request: Request) {
         .filter((placeholder) => Number(placeholder.width) > 0 && Number(placeholder.height) > 0)
         .sort((left, right) => Number(right.width) * Number(right.height) - Number(left.width) * Number(left.height));
       if (candidates[0]) { maxPrintWidth = Number(candidates[0].width); maxPrintHeight = Number(candidates[0].height); }
-    } catch { /* Print dimensions are an optimization; draft creation can continue without them. */ }
-    try { const shipping=await printify<Shipping>(`/catalog/blueprints/${found.product.blueprint_id}/print_providers/${found.product.print_provider_id}/shipping.json`,token),enabledIds=new Set(enabledVariants.map(variant=>variant.id)),domestic=(shipping.profiles||[]).filter(profile=>profile.countries?.includes("US")&&(profile.variant_ids||[]).some(id=>enabledIds.has(id))),rates=domestic.map(profile=>Number(profile.first_item?.cost||0)).filter(cost=>cost>0);for(const profile of domestic){const amount=Number(profile.first_item?.cost||0)/100;for(const id of profile.variant_ids||[])if(enabledIds.has(id)&&amount>0)shippingByVariant[id]=amount}if(rates.length){standardShipping=Math.max(...rates)/100;shippingCurrency=domestic.find(profile=>profile.first_item?.currency)?.first_item?.currency||"USD"} } catch { /* Pricing can continue without shipping metadata. */ }
+    }
+    if(shippingResult.status==="fulfilled") { const shipping=shippingResult.value,enabledIds=new Set(enabledVariants.map(variant=>variant.id)),domestic=(shipping.profiles||[]).filter(profile=>profile.countries?.includes("US")&&(profile.variant_ids||[]).some(id=>enabledIds.has(id))),rates=domestic.map(profile=>Number(profile.first_item?.cost||0)).filter(cost=>cost>0);for(const profile of domestic){const amount=Number(profile.first_item?.cost||0)/100;for(const id of profile.variant_ids||[])if(enabledIds.has(id)&&amount>0)shippingByVariant[id]=amount}if(rates.length){standardShipping=Math.max(...rates)/100;shippingCurrency=domestic.find(profile=>profile.first_item?.currency)?.first_item?.currency||"USD"} }
     const db = runtimeEnv().DB;
     if (!db) return NextResponse.json({ error: "Secure batch storage is unavailable." }, { status: 503 });
     const batchId = crypto.randomUUID();

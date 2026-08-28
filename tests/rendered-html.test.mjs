@@ -5996,8 +5996,18 @@ test("shop pairing is proven against Etsy, never guessed from names — D641", a
   // Both callers block on "mismatched" and nothing else.
   assert.match(product, /if\(pairing\.result==="mismatched"\)return NextResponse\.json\(\{\.\.\.shopMismatch/);
   assert.match(publish, /if\(pairing\.result==="mismatched"\)return NextResponse\.json\(shopMismatch/);
-  assert.equal((`${product}\n${publish}`.match(/pairing\.result===/g) || []).length, 2,
-    "no caller may block on unknown");
+  /* D655 · counting every `pairing.result===` proved this only while there was
+     exactly one branch per caller; remembering a proven match added a second in
+     one of them and the count failed while the rule it guards still held. Assert
+     the rule instead: the only verdict that stops a seller is "mismatched". */
+  for(const [name,source] of [["product",product],["publish",publish]]){
+    assert.match(source, /if\(pairing\.result==="mismatched"\)return NextResponse\.json\(/,
+      `${name} must block on mismatched`);
+    assert.doesNotMatch(source, /pairing\.result==="unknown"/,
+      `${name} may not branch on unknown at all`);
+    assert.equal((source.match(/pairing\.result==="mismatched"/g) || []).length, 1,
+      `${name} has exactly one refusal`);
+  }
 
   // And the refusal explains that this was checked, not assumed.
   assert.match(match, /Goldie read a listing this Printify store published and Etsy says it belongs to a different shop/);
@@ -6487,4 +6497,53 @@ test("Add a new product takes you to the form it just opened — D654", async ()
   /* D146 · smooth scrolling never fires in this app, so asking for it here
      would have left the form off screen exactly as before. */
   assert.doesNotMatch(tools, /behavior:"smooth"/);
+});
+
+/* D655 · "It's really important that whatever doesn't need to take time during
+   this process doesn't take time." D654 bounded ONE slow call on the product
+   load; it did not make the load fast. Everything else on that path was still
+   there: four sequential catalogue reads, two unbounded Etsy lookups, and a
+   pairing check re-proving on every load something that had not changed. */
+test("loading a product does not wait on anything it does not have to — D655", async () => {
+  const api = await readFile(new URL("../app/api/printify/route.ts", import.meta.url), "utf8");
+
+  /* The catalogue reads are keyed on blueprint_id and print_provider_id, both
+     known before any of them run. They were sequential only because they were
+     written in a row. */
+  assert.match(api, /const \[blueprintResult,providersResult,variantsResult,shippingResult\]=await Promise\.allSettled\(\[/);
+  assert.equal((api.match(/ {6}printifyCatalog</g) || []).length, 4, "all four catalogue reads go through the cache");
+  assert.doesNotMatch(api, /await printify<Blueprint>\(`\/catalog/, "the blueprint read must not go back to a bare sequential fetch");
+  assert.doesNotMatch(api, /await printify<Shipping>\(`\/catalog/, "nor the shipping read");
+
+  /* allSettled, not all: each catalogue read was independently optional before
+     and has to stay that way. One failing read degrades one detail; it must
+     never fail the product load. */
+  assert.match(api, /if\(blueprintResult\.status==="fulfilled"\)/);
+  assert.match(api, /if\(providersResult\.status==="fulfilled"\)/);
+  assert.match(api, /if\(variantsResult\.status==="fulfilled"\)/);
+  assert.match(api, /if\(shippingResult\.status==="fulfilled"\)/);
+
+  // Catalogue data is Printify's, not the seller's, so it is cacheable at all.
+  assert.match(api, /const CATALOG_TTL_SECONDS=86400;/);
+  assert.match(api, /async function printifyCatalog<T>\(path: string, token: string\)/);
+  assert.doesNotMatch(api, /printifyCatalog[\s\S]{0,600}?userId/, "nothing seller-specific may be cached under a shared key");
+
+  /* Both Etsy reads here already fall through to a message that stays accurate
+     without them, so retrying for forty seconds bought the same fallback the
+     slow way. */
+  assert.match(api, /const ETSY_LOOKUP_MS=(\d+);/);
+  assert.ok(Number(api.match(/ETSY_LOOKUP_MS=(\d+)/)[1]) <= 5000);
+  assert.equal((api.match(/await boundedEtsy\(etsyFetch</g) || []).length, 2,
+    "every Etsy lookup on this path is bounded");
+  assert.doesNotMatch(api, /const listing=await etsyFetch</, "the listing lookup must stay bounded");
+  assert.doesNotMatch(api, /const profile=await etsyFetch</, "and the shipping-profile lookup");
+
+  /* A proven pairing does not change between two loads. */
+  assert.match(api, /if\(!await provenMatch\(user\.userId,found\.shop\.id,etsyLink\.shopId\)\)\{/);
+  assert.match(api, /if\(pairing\.result==="matched"\)await rememberMatch\(user\.userId,found\.shop\.id,etsyLink\.shopId\);/);
+  // Keyed on BOTH shops, so reconnecting Etsy elsewhere cannot hit a stale yes.
+  assert.match(api, /goldie-pairing\.internal\/\$\{encodeURIComponent\(userId\)\}\/\$\{printifyShopId\}\/\$\{etsyShopId\}/);
+  /* A mismatch is never remembered: the seller is mid-fix and has to be
+     re-checked the moment they try again. */
+  assert.doesNotMatch(api, /pairing\.result==="mismatched"\)await rememberMatch/);
 });
