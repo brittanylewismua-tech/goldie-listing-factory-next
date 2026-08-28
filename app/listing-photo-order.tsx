@@ -2,15 +2,15 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 
-type StoredImage={id:string;key:string;kind:"mockup"|"size-guide";name:string;src:string};
-type Photo={id:string;kind:"mockup"|"printify"|"size-guide";name:string;src:string};
+type StoredImage={id:string;key:string;kind:"mockup"|"uploaded"|"size-guide";name:string;src:string};
+type Photo={id:string;kind:"mockup"|"uploaded"|"printify"|"size-guide";name:string;src:string};
 
 export default function ListingPhotoOrder({productId,printifyImages,indices,refreshKey,preview=false}:{productId:string;printifyImages:string[];indices:number[];refreshKey:string;preview?:boolean}){
   const[stored,setStored]=useState<StoredImage[]>([]),[savedOrder,setSavedOrder]=useState<string[]>([]),[order,setOrder]=useState<string[]>([]),[dragged,setDragged]=useState<string>(""),[status,setStatus]=useState(""),[loading,setLoading]=useState(true);
   const orderRef=useRef<string[]>([]),draggedRef=useRef(""),savedOnDropRef=useRef(false);
   const isPreview=preview||(typeof window!=="undefined"&&["localhost","127.0.0.1"].includes(window.location.hostname));
   useEffect(()=>{let active=true;if(isPreview){setStored([]);setSavedOrder([]);setStatus("");setLoading(false);return()=>{active=false}}setLoading(true);fetch(`/api/etsy/images?productId=${encodeURIComponent(productId)}`).then(async response=>{const payload=await response.json() as {images?:StoredImage[];order?:string[];error?:string};if(!response.ok)throw new Error(payload.error||"Photo order could not be loaded.");if(active){setStored(payload.images||[]);setSavedOrder(payload.order||[])}}).catch(error=>active&&setStatus(error instanceof Error?error.message:"Photo order could not be loaded.")).finally(()=>active&&setLoading(false));return()=>{active=false}},[productId,refreshKey,isPreview]);
-  const photos=useMemo<Photo[]>(()=>[...stored.filter(image=>image.kind==="mockup"),...indices.map(index=>({id:`printify:${index}`,kind:"printify" as const,name:`Printify photo ${index+1}`,src:printifyImages[index]})).filter(image=>Boolean(image.src)),...stored.filter(image=>image.kind==="size-guide")],[stored,indices,printifyImages]);
+  const photos=useMemo<Photo[]>(()=>[...stored.filter(image=>image.kind==="mockup"||image.kind==="uploaded"),...indices.map(index=>({id:`printify:${index}`,kind:"printify" as const,name:`Printify photo ${index+1}`,src:printifyImages[index]})).filter(image=>Boolean(image.src)),...stored.filter(image=>image.kind==="size-guide")],[stored,indices,printifyImages]);
   useEffect(()=>{const available=new Set(photos.map(photo=>photo.id)),next=[...savedOrder.filter(id=>available.has(id)),...photos.map(photo=>photo.id).filter(id=>!savedOrder.includes(id))];orderRef.current=next;setOrder(next)},[photos.map(photo=>photo.id).join("|"),savedOrder.join("|")]);
   const byId=new Map(photos.map(photo=>[photo.id,photo]));
   async function save(next:string[]){orderRef.current=next;setOrder(next);if(isPreview){setSavedOrder(next);setStatus("✓ Photo order saved in preview");return}setStatus("Saving photo order…");try{const response=await fetch("/api/etsy/images",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({productId,order:next})}),payload=await response.json() as {error?:string};if(!response.ok)throw new Error(payload.error||"Photo order could not be saved.");setSavedOrder(next);setStatus("✓ Photo order saved") }catch(error){setStatus(error instanceof Error?error.message:"Photo order could not be saved.")}}
@@ -25,5 +25,5 @@ export default function ListingPhotoOrder({productId,printifyImages,indices,refr
       then <small>"Printify photo"</small> beside it, with the first truncated to
       "Printify ph…" by its own width. The badge already carries the number, so
       the tile names the kind, once. */}
-      <b>{photo.kind==="mockup"?"Lifestyle mockup":photo.kind==="size-guide"?"Size guide":"Printify photo"}</b><div className="photo-order-buttons"><button type="button" disabled={index===0} onClick={()=>nudge(id,-1)} aria-label={`Move ${photo.name} earlier`}>←</button><button type="button" disabled={index===order.length-1} onClick={()=>nudge(id,1)} aria-label={`Move ${photo.name} later`}>→</button></div><span className="drag-handle" aria-hidden="true">⋮⋮</span></article>})}</div>{status&&<p role="status">{status}</p>}</section>;
+      <b>{photo.kind==="uploaded"?"Uploaded photo":photo.kind==="mockup"?"Saved mockup":photo.kind==="size-guide"?"Size guide":"Printify photo"}</b><div className="photo-order-buttons"><button type="button" disabled={index===0} onClick={()=>nudge(id,-1)} aria-label={`Move ${photo.name} earlier`}>←</button><button type="button" disabled={index===order.length-1} onClick={()=>nudge(id,1)} aria-label={`Move ${photo.name} later`}>→</button></div><span className="drag-handle" aria-hidden="true">⋮⋮</span></article>})}</div>{status&&<p role="status">{status}</p>}</section>;
 }

@@ -776,7 +776,7 @@ test("a product with no saved defaults is framed as first-time setup — D125", 
      it is finally passed to the component that asks for it; before, this value
      was computed and read by nobody. */
   assert.match(page, /const productFirstRun=Boolean\(activeRecipe\)\n\s*&&!activeRecipe\?\.defaultColorIds/);
-  assert.match(page, /<MockupSetSelector firstRun=\{productFirstRun\}/);
+  assert.doesNotMatch(page, /<MockupSetSelector/);
   assert.doesNotMatch(page, /className="everything-else"/);
   assert.match(page, /Choose the colors you want to offer/); /* D191: US spelling */
 });
@@ -1405,7 +1405,7 @@ test("D203: one nav renders both sidebars, so icons cannot go missing on half th
   /* Batch History, Keyword Banks, Mockup Library and Usage render
      ManagementNav, which had bare text links, while the workflow rendered its
      own .top-nav with icons. Same five destinations, two components. */
-  for (const key of ["listingFactory", "batches", "keywords", "mockups", "usage", "operations"]) {
+  for (const key of ["listingFactory", "batches", "keywords", "usage", "operations"]) {
     assert.match(icons, new RegExp(`case "${key}":`), `${key} has a shared icon`);
   }
   assert.match(management, /import \{ NavIcon \} from "\.\/nav-icons"/);
@@ -1417,7 +1417,7 @@ test("D203: one nav renders both sidebars, so icons cannot go missing on half th
   assert.doesNotMatch(navBlock, /<svg/, "no inline icon markup left to drift");
   /* D639 added Connections - the way back to the connect screen, which was
      unreachable once both accounts were connected. */
-  assert.equal((navBlock.match(/<NavIcon /g) || []).length, 6);
+  assert.equal((navBlock.match(/<NavIcon /g) || []).length, 5);
 });
 
 test("D203: cross-screen alignment and destructive-action faults are fixed", async () => {

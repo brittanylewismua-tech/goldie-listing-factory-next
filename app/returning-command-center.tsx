@@ -14,7 +14,7 @@ export function ReturningCommandCenter({printifyConnected,etsyConnected,onUsePro
   const [data,setData]=useState<CommandCenterData|null>(null),[loading,setLoading]=useState(true);
   useEffect(()=>{void Promise.all([
     fetch("/api/batches").then(r=>r.ok?r.json():{batches:[]}),fetch("/api/product-recipes").then(r=>r.ok?r.json():{recipes:[]}),
-    fetch("/api/keyword-lists").then(r=>r.ok?r.json():{lists:[]}),fetch("/api/mockups/library").then(r=>r.ok?r.json():{templates:[]}),fetch("/api/usage").then(r=>r.ok?r.json():{}),
+    fetch("/api/keyword-lists").then(r=>r.ok?r.json():{lists:[]}),Promise.resolve({templates:[]}),fetch("/api/usage").then(r=>r.ok?r.json():{}),
   ]).then(([batches,recipes,keywords,mockups,usage])=>{const next={batches:batches.batches||[],recipes:recipes.recipes||[],keywords:keywords.lists||[],mockups:mockups.templates||[],draftsThisMonth:(usage as Usage).usage?.drafts||0};setData(next);onData?.(next)}).finally(()=>setLoading(false))},[]);
   const sets=useMemo(()=>data?[...new Set(data.mockups.map(item=>item.theme))]:[],[data]);
   if(loading)return <section className="command-center-loading"><span/><div><b>Opening your Goldie workspace</b><small>Loading recent products and batches…</small></div></section>;
@@ -30,7 +30,6 @@ export function ReturningCommandCenter({printifyConnected,etsyConnected,onUsePro
     <div className="command-center-grid">
       <article><div><span>Recent products</span><a href="#saved-products" onClick={onStartBlank}>Manage</a></div>{data.recipes.slice(0,3).map(recipe=><button key={recipe.id} onClick={()=>onUseProduct(recipe)}>{recipe.name}<span>Use →</span></button>)}</article>
       <article><div><span>Keyword banks</span><a href="/keywords" target="_blank">Open all ↗</a></div>{data.keywords.slice(0,3).map(bank=><a key={bank.id} href="/keywords" target="_blank">{bank.name}<span>{bank.keywords.length} phrases</span></a>)}</article>
-      <article><div><span>Mockup sets</span><a href="/mockups" target="_blank">Open all ↗</a></div>{sets.slice(0,3).map(set=><a key={set} href="/mockups" target="_blank">{set}<span>{data.mockups.filter(item=>item.theme===set).length} mockups</span></a>)}</article>
     </div>
     <div className="account-alerts"><b>Account check</b><span className={printifyConnected?"ready":"attention"}>{printifyConnected?"✓ Printify connected":"! Reconnect Printify before the next batch"}</span><span className={etsyConnected?"ready":"attention"}>{etsyConnected?"✓ Etsy ready to publish":"! Connect Etsy before publishing"}</span></div>
   </section>;

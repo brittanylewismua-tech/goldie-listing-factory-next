@@ -7,7 +7,6 @@ export default function ManagementNav({active,listingFactoryHref="/listing-facto
   const links:Array<{key:Destination;href:string;label:string}>=[
     {key:"batches",href:"/batches",label:"Batch History"},
     {key:"keywords",href:"/keywords",label:"Keyword Banks"},
-    {key:"mockups",href:"/mockups",label:"Mockup Library"},
     {key:"usage",href:"/usage",label:"Usage + Plan"},
     /* D639 - the same way back, on every management page. */
     {key:"connections",href:"/listing-factory?step=connect",label:"Connections"},

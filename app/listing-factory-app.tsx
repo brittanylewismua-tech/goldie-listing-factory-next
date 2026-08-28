@@ -1,4129 +1,1511 @@
-"use client";
-import { productAcceptsMockup, printifyProductLabel, familyFromVariants } from "./mockup-compatibility";
-import { preparationMatchesProduct, type ScenePreparation } from "./mockups/prepared-scene";
-import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
-import { createPortal } from "react-dom";
-import Image from "next/image";
-import SupportChat from "./support-chat";
-import { runBounded } from "./bounded-work";
-import { productReadiness, recipeCarriesApprovedPricing, type Readiness } from "./product-readiness";
-import { KeywordBank, SavedWorkflow, type KeywordList, type Pricing, type ProductBundle, type Recipe } from "./factory-tools";
-import IntegratedMockups from "./integrated-mockups";
-import { confirmAction } from "./confirm-dialog";
-import ListingPhotoOrder from "./listing-photo-order";
-import { tagsFromTitle } from "./seo-utils";
-import { printifyDpi } from "./print-quality";
-import { isPermanentUploadError, MAX_FILE_BYTES, oversizedFileMessage } from "./upload-policy";
-import { safeImagePreviewDataUrl } from "./client-image-preview";
-import { prepareArtworkFile } from "./client-artwork-upload";
-import { clearBatchFiles, loadBatchFiles, saveBatchFiles } from "./batch-cache";
-import { estimatedProfit, recommendedPrice } from "./pricing";
-import { ActionReceipt, GoldieInsight, OutcomeReceipt, WorkflowMomentum, type BatchReceipt } from "./goldie-ui";
-import { leavingImagesIssues, navigationIssues, type NavigationGateState } from "./workflow-gates";
-import { GoldieCommandBar } from "./returning-command-center";
-import FinalListingReview from "./final-listing-review";
-import ContextHelp from "./context-help";
-import GoldieWordmark from "./goldie-wordmark";
-import { productFamily } from "./product-type-utils";
-import { photoStats, preferredPhotoIndex, PHOTO_SAMPLE_SIZE } from "./product-photo";
-
-/* D370 Â· The garment glyph a card falls back to when no catalog photo reads as
-   the product. Shape follows the blueprint title so a hoodie does not draw as a
-   tee â€” the point of the tile is to say which garment this row is. */
-function ProductGlyph({title}:{title?:string}){
-  const name=String(title||"").toLowerCase();
-  const hooded=/hood/.test(name);
-  const longSleeve=hooded||/sweat|crew|fleece|long sleeve|longsleeve/.test(name);
-  const body=longSleeve
-    ?"M8.6 3 L3.6 5.9 5.7 15.6 8.4 14.5 V21 H15.6 V14.5 L18.3 15.6 20.4 5.9 15.4 3 C14.6 4.8 9.4 4.8 8.6 3 Z"
-    :"M8.6 3 L4 5.9 6.1 11 8.4 9.7 V21 H15.6 V9.7 L17.9 11 20 5.9 15.4 3 C14.6 4.8 9.4 4.8 8.6 3 Z";
-  return (
-    <span className="bundle-product-photo placeholder" aria-hidden="true">
-      <svg viewBox="0 0 24 24" focusable="false">
-        <path d={body} />
-        {hooded && <path className="glyph-line" d="M9.2 3.4 C10.2 6.8 13.8 6.8 14.8 3.4" />}
-        {hooded && <path className="glyph-line" d="M9.7 16.2 H14.3" />}
-      </svg>
-    </span>
-  );
-}
-import { NavIcon } from "./nav-icons";
-import { publishedThisPeriod, type ListingGoal, type PublishedBatch } from "./listing-goal";
-
-/* D202 Â· "25 selected variants" is Printify's word, not a seller's. A seller
- * picked five colours and five sizes; "variants" is the internal name for the
- * product of those two choices, and the number on its own does not say which
- * choices produced it. Say the choices instead â€” they multiply to the same
- * figure and need no glossary. Falls back to the count when an axis is missing,
- * which is the one-size and no-colour products. */
-function variantSummary(axes:{colorsChosen:boolean;sizesChosen:boolean;colors:number;sizes:number;availableColors:number;availableSizes:number;total:number}){
-  const {colorsChosen,sizesChosen,colors,sizes,availableColors,availableSizes,total}=axes;
-  const plural=(n:number,word:string)=>`${n} ${word}${n===1?"":"s"}`;
-  const hasColors=colorsChosen?colors>0:availableColors>0;
-  const hasSizes=sizesChosen?sizes>0:availableSizes>0;
-  if(!hasColors&&!hasSizes)return plural(total,"option");
-  if(colorsChosen&&sizesChosen&&hasColors&&hasSizes)return `${plural(colors,"color")} Ã— ${plural(sizes,"size")}`;
-  const parts:string[]=[];
-  if(hasColors)parts.push(colorsChosen?plural(colors,"color"):`${plural(availableColors,"color")} available`);
-  if(hasSizes)parts.push(sizesChosen?plural(sizes,"size"):`${plural(availableSizes,"size")} available`);
-  return parts.join(" Â· ");
-}
-
-
-
-type VisibleBounds={left:number;top:number;right:number;bottom:number};
-
-function BatchPreferencesPortal({children}:{children:ReactNode}){
-  const [target,setTarget]=useState<HTMLElement|null>(null);
-  useEffect(()=>setTarget(document.getElementById("batch-preferences-after-designs")));
-  return target?createPortal(children,target):null;
-}
-type EtsyCategoryOption={id:number;path:string};
-type EtsyPropertySelection={propertyId:number;label:string;required:boolean;multiple:boolean;maxValues:number;possibleValues:Array<{value_id:number;name:string}>;valueId:number|null;value:string};
-type PersonalizationQuestion={id:string;type:"text_input"|"dropdown"|"unlabeled_upload";question:string;instructions:string;required:boolean;maxCharacters:number;maxFiles:number;options:string[]};
-type EtsyPersonalization={enabled:boolean;questions:PersonalizationQuestion[]};
-type EtsyDetails={category:string;taxonomyId?:number;properties?:EtsyPropertySelection[];attributes:Record<string,string>;optional:Record<string,string>;blurb:string;confidence:"high"|"review";personalization?:EtsyPersonalization};
-type DesignFile = { name: string; size: number; id: string; file: File; previewUrl: string; originalUnavailable?:boolean; title: string; tags: string[]; titleWarning?:string;titleError?:string;contentHash?:string; blurb?:string; descriptionOverride?:string; sizeGuideName?:string; width?: number; height?: number; visibleBounds?:VisibleBounds; hasTransparency?:boolean; paddingStatus?:"checking"|"trimmed"|"full";etsy?:EtsyDetails;etsyError?:string };
-type ProductVariant={id:number;title:string;cost:number;templatePrice:number;shipping?:number|null;options?:number[];colorId?:number|null;sizeId?:number|null;templateEnabled?:boolean};
-type ProductColor={id:number;title:string;swatch:string;available:boolean;templateEnabled:boolean};
-type ProductSize={id:number;title:string;available:boolean;templateEnabled:boolean};
-type InternationalShippingRate={key:string;label:string;primary:number;additional:number};
-type EditableInternationalShippingRate={key:string;label:string;primary:string;additional:string};
-type EtsyShippingProfile={id:number;title:string;originCountry:string;currency:string;domesticPrimary:number;domesticAdditional:number;international:InternationalShippingRate[]};
-type TemplateDetails = { id: string; batchId: string; title: string; description:string; blueprintId:number;blueprintTitle:string;brand:string;model:string;provider: string; enabledVariants: number;previewImage?:string;previewImages?:string[];colorOptions?:ProductColor[];sizeOptions?:ProductSize[]; variants:ProductVariant[]; shop: string; standardShipping?:number|null;shippingCurrency?:string;shippingTemplateId:string;shippingProfileNeedsSelection?:boolean;freeShipping:boolean;maxPrintWidth?: number | null; maxPrintHeight?: number | null; placementScale?: number | null; hasLabelArtwork?: boolean };
-type DraftResult = { id?: string; batchId?: string; clientId: string; name: string; title?: string; tags?: string[]; previewUrl?: string; printifyImages?: string[]; shopId?: number; editorUrl?: string; status: "Created" | "Failed" | "NeedsRetry"; error?: string; productName?:string; placement?:{x:number;y:number;scale:number;angle:number};placementScale?:number };
-type WorkflowStep = "connect" | "setup" | "designs" | "review" | "finish";
-type FinishPhase = "details" | "etsy" | "mockups" | "final";
-type PendingCategoryChange={designId:string;details:EtsyDetails;clearedCount:number};
-
-/* D428 - the URL vocabulary did not match what the interface calls the steps.
-   The rail says PRODUCT, IMAGES, LISTING, PUBLISH; the URL wants setup, designs
-   and finish. A link written with the names on screen - ?step=listing - was
-   silently downgraded to whatever the batch had saved, which reads as the app
-   losing your place. Accepted as aliases on the way in; emitted links are
-   unchanged, so nothing already saved or shared breaks. */
-const STEP_ALIASES:Record<string,WorkflowStep>={product:"setup",images:"designs",listing:"finish",titles:"finish",publish:"finish"};
-function canonicalStep(requested:string|null):WorkflowStep|null{
-  if(!requested)return null;
-  const value=requested.trim().toLowerCase();
-  const order:WorkflowStep[]=["connect","setup","designs","review","finish"];
-  if(order.includes(value as WorkflowStep))return value as WorkflowStep;
-  return STEP_ALIASES[value]??null;
-}
-export function requestedFinishPhase(requested:string|null):FinishPhase|null{
-  const value=(requested||"").trim().toLowerCase();
-  if(value==="publish")return "final";
-  if(value==="listing"||value==="titles")return "details";
-  return null;
-}
-function restoredWorkflowStep(saved:WorkflowStep,requested:string|null,complete:boolean):WorkflowStep{
-  const order:WorkflowStep[]=["connect","setup","designs","review","finish"];
-  const target=canonicalStep(requested);
-  if(!target)return saved;
-  return complete||order.indexOf(target)<=order.indexOf(saved)?target:saved;
-}
-
-/* D147 Â· The same problem D108 solved for steps, but for Finish phases.
- * Restoration replaced the requested phase with the batch's saved one, so
- * reloading or bookmarking any Finish phase bounced the seller elsewhere â€”
- * asking for phase=etsy landed on phase=details. Phases are views over drafts
- * that already exist, so on a completed batch any phase is legitimate; on an
- * unfinished one, honour the request up to the phase actually reached. */
-/* D376 - "mockups" is a phase with no renderer. Choosing the mockup set moved
-   onto step 2 in D238 and nothing was ever built to draw this phase, but it
-   stayed in the type, in the progress map, and - fatally - in batches saved
-   before the move. Resuming one of those landed on a completely blank page:
-   header, rail, Back link, and nothing in between.
-
-   Every phase this returns has to be one that actually draws something. */
-const RENDERED_FINISH_PHASES:FinishPhase[]=["details","etsy","final"];
-
-export function drawableFinishPhase(phase:FinishPhase,complete:boolean):FinishPhase{
-  if(RENDERED_FINISH_PHASES.includes(phase))return phase;
-  /* A finished batch has a receipt to show; an unfinished one goes back to the
-     listing details it was interrupted in. */
-  return complete?"final":"details";
-}
-
-function restoredFinishPhase(saved:FinishPhase,requested:string|null,complete:boolean):FinishPhase{
-  const order:FinishPhase[]=["details","etsy","mockups","final"];
-  const safeSaved=drawableFinishPhase(saved,complete);
-  if(!requested||!order.includes(requested as FinishPhase))return safeSaved;
-  const target=drawableFinishPhase(requested as FinishPhase,complete);
-  return complete||order.indexOf(target)<=order.indexOf(safeSaved)?target:safeSaved;
-}
-
-function preserveCompatibleEtsyProperties(current:EtsyPropertySelection[],next:EtsyPropertySelection[]){
-  const currentById=new Map(current.map(property=>[property.propertyId,property]));
-  const preservedIds=new Set<number>();
-  const properties=next.map(property=>{
-    const previous=currentById.get(property.propertyId);
-    if(!previous?.value.trim())return property;
-    if(!property.possibleValues.length){preservedIds.add(property.propertyId);return {...property,value:previous.value,valueId:previous.valueId}}
-    const compatible=property.possibleValues.find(option=>option.value_id===previous.valueId||option.name.toLowerCase()===previous.value.trim().toLowerCase());
-    if(!compatible)return property;
-    preservedIds.add(property.propertyId);
-    return {...property,value:compatible.name,valueId:compatible.value_id};
-  });
-  const clearedCount=current.filter(property=>property.value.trim()&&!preservedIds.has(property.propertyId)).length;
-  return {properties,clearedCount};
-}
-
-/* D554 - D449 wrote the rule on this build already: "Ordering photos you cannot
-   tell apart is not ordering them." The picker breaks it worse than the ordering
-   grid did. Her hoodie returns 72 mockups - six colours by twelve views - shown
-   as 72 unlabelled 81px tiles, and the white and ash ones read as blank squares
-   because a white garment on a white background has nothing to see at that size.
-   Printify names every view in the URL it already sent us. Use it. */
-function printifyViewName(src:string){
-  try{
-    const label=new URL(src).searchParams.get("camera_label")||"";
-    if(!label)return "";
-    return label.replace(/[-_]+/g," ").replace(/\bperson (\d+)\b/i,"model $1").replace(/^\w/,c=>c.toUpperCase());
-  }catch{return ""}
-}
-function productPhotoGuide(blueprintTitle:string,availableCount:number){
-  const count=Math.max(1,Math.min(5,availableCount||1)),family=productFamily(blueprintTitle);
-  if(["tee","hoodie","crewneck","tank","longSleeve"].includes(family))return {count,items:["A clear front product view","Available angles or color views that show the real garment","Lifestyle scenes that match this exact garment type","A size guide when buyers need sizing help"]};
-  if(family==="poster")return {count,items:["A clear straight-on artwork view","Available framed or unframed Printify views","Room scenes that show realistic scale","A size reference when sizes vary"]};
-  if(family==="mug"||family==="tumbler")return {count,items:["A clear view of the full design","Available opposite-side and handle or lid angles","An in-use scene that matches this exact drinkware","A size or capacity reference when useful"]};
-  if(family==="tote")return {count,items:["A clear front view of the full design","Available side or detail views","An in-use scene that shows the bagâ€™s scale","A size reference when useful"]};
-  if(family==="sticker")return {count,items:["A clear close-up of the full design","Available Printify product views","An application scene that shows realistic scale"]};
-  return {count,items:["The clearest available Printify product view","Available alternate angles that add new information","A product-appropriate lifestyle scene","A size or scale reference when useful"]};
-}
-
-/* Etsy returns shipping-profile titles HTML-escaped. Rendering them straight
- * into an <option> shows the raw entity: sellers saw "Kid&#39;s Hero Tee"
- * instead of "Kid's Hero Tee". Decode once, here, so every place that prints a
- * profile name gets the real characters. */
-function decodeProfileTitle(title:string){
-  return title.replace(/&#(\d+);/g,(_,code)=>String.fromCharCode(Number(code)))
-    .replace(/&#x([0-9a-f]+);/gi,(_,code)=>String.fromCharCode(parseInt(code,16)))
-    .replace(/&quot;/g,'"').replace(/&apos;/g,"'").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&amp;/g,"&");
-}
-/* D648 Â· This cut at 39 characters wherever that landed and the caller then
-   appended " shipping profile", so a real profile read "Economy-Standard:
-   Printify Choice, Garmâ€¦ shipping profile" - a word sliced in half with a noun
-   stapled after it. Cut on a word boundary, and never repeat the words the
-   caller is about to add. */
-/* D660 Â· Two faults in one line on the live review. The caller appended the
-   words "shipping profile" to whatever came back, so "Standard shipping"
-   rendered as "Standard shipping shipping profile"; and any name over 42
-   characters was cut with an ellipsis, so the seller could not read which
-   profile was about to be used - "Economy-Standard: Printify Choiceâ€¦ shipping
-   profile". A label naming a thing has to name it.
-
-   The full value is always returned now. Shortening, where the layout needs
-   it, is CSS - which keeps the whole string in the DOM, in the title
-   attribute, and available to a screen reader. */
-function friendlyShippingProfileTitle(raw?:string){
-  const title=raw?decodeProfileTitle(raw):raw;
-  if(!title)return"Shipping profile needed";
-  /* D663 Â· Found by the acceptance run. This collapsed EVERY profile beginning
-     with "Standard:" to the same three words. Brittany has seven of them:
-
-       Standard: SwiftPOD, Garments (shirts)
-       Standard: SwiftPOD, Garments (shirts + shorts)
-       Standard: SwiftPOD, Hoodie, Sweatshirt
-       Standard: SwiftPOD, Kids clothes, Long-sleeve, T-Shirt, Tank
-       Standard: Printify Choice, ... Mug, 11oz, 13oz
-       ...
-
-     All seven rendered as "Standard shipping profile" on the product card and
-     on the final review, so the one screen that exists to confirm which profile
-     a listing publishes with could not tell them apart - and publishing under
-     the wrong profile is exactly what D52 cost her.
-
-     D660 removed the truncation for this reason and left this behind, which was
-     worse: a truncation is at least lossy in a visible way, this was seven
-     different values printing as one. The prefix is dropped, because the row
-     already says Shipping, and everything that distinguishes them is kept. */
-  const withoutStandard=title.replace(/^standard:\s*/i,"").trim();
-  if(!withoutStandard)return"Standard shipping";
-  /* Trailing "shipping profile" is stripped because the row it sits in already
-     says so - not to shorten it. */
-  return withoutStandard.replace(/\s*shipping\s*profile\s*$/i,"").trim()||title.trim();
-}
-
-/* D649 Â· Every hoodie listing stopped on "Closure still needed". Goldie
-   pre-fills every other Etsy field from the Printify product, and left the one
-   that blocks publishing to a manual click on a tool whose whole point is bulk.
-   Etsy's Closure values are Full zip, Half zip, Quarter zip and Pullover, and
-   Printify names the garment plainly enough to settle it: a product called a
-   full-zip is a full zip, and a hoodie or crewneck with no zip in its name is a
-   pullover. Anything that says "zip" without saying WHICH is left unresolved
-   rather than guessed - a wrong attribute goes onto a live listing. */
-export function verifiedClosure(blueprintTitle?:string,model?:string,brand?:string){
-  const text=`${blueprintTitle||""} ${model||""} ${brand||""}`.toLowerCase();
-  if(/\bfull[-\s]?zip\b/.test(text))return "Full zip";
-  if(/\b(quarter|1\/4)[-\s]?zip\b/.test(text))return "Quarter zip";
-  if(/\b(half|1\/2)[-\s]?zip\b/.test(text))return "Half zip";
-  if(/\bzip\b/.test(text))return "";
-  if(/\b(pullover|hoodie|hooded|sweatshirt|crewneck|crew neck)\b/.test(text))return "Pullover";
-  return "";
-}
-
-const APPAREL_PRODUCT_FAMILIES=new Set(["tee","hoodie","crewneck","tank","longSleeve"]);
-function shippingProfileGroup(profileTitle:string,blueprintTitle:string){
-  const product=productFamily(blueprintTitle),profile=productFamily(decodeProfileTitle(profileTitle));
-  if(product&&profile===product)return"recommended";
-  if(APPAREL_PRODUCT_FAMILIES.has(product)&&APPAREL_PRODUCT_FAMILIES.has(profile))return"related";
-  return"other";
-}
-function shippingProfileOptionLabel(profile:EtsyShippingProfile){return`${decodeProfileTitle(profile.title)} Â· $${profile.domesticPrimary.toFixed(2)} first Â· $${profile.domesticAdditional.toFixed(2)} additional`}
-
-function personalizationProblem(details?:EtsyDetails){const personalization=details?.personalization;if(!personalization?.enabled)return"";if(!personalization.questions.length)return"Add at least one personalization question.";if(personalization.questions.length>5)return"Etsy allows up to five personalization questions.";for(const [index,question] of personalization.questions.entries()){if(!question.question.trim())return`Personalization question ${index+1} needs a question.`;if(question.type==="dropdown"){const options=question.options.map(option=>option.trim()).filter(Boolean);if(options.length<2)return`Personalization question ${index+1} needs at least two dropdown choices.`;if(options.length>30)return`Personalization question ${index+1} has more than 30 dropdown choices.`;if(options.some(option=>option.length>20))return`Every dropdown choice in personalization question ${index+1} must be 20 characters or fewer.`}}return""}
-
-const WORKFLOW_STEPS: Array<{id:WorkflowStep;number:string;label:string}> = [
-  {id:"connect",number:"01",label:"Connect Printify"},
-  {id:"setup",number:"02",label:"Choose product"},
-  {id:"designs",number:"03",label:"Add designs"},
-  {id:"review",number:"04",label:"Review batch"},
-  {id:"finish",number:"05",label:"Finish listings"},
-];
-/* D217 Â· Index 3 was "Review pricing". Pricing now lives on the Product page,
-   directly under the colours and sizes that decide which variants exist, so this
-   step is only draft creation and is named for that. */
-const PROGRESS_STEPS = ["Connect Printify","Choose product","Add designs","Create Printify drafts","Create drafts","Listing details","Etsy listing details","Images + mockups","Publish"];
-/* The rail used to show all 9 PROGRESS_STEPS as equal peers. That did not match
-   the real state machine (WorkflowStep has 5 values) and it invented a "Drafts"
-   step that is really the outcome of Pricing. The indices below are unchanged â€”
-   only the rendering groups them: 4 top-level steps, then a Finish node whose 4
-   phases nest underneath it. openProgressStep/progressStatus still take the
-   original 0-8 index, so none of the gating math changes. */
-/* D216 Â· Connect leaves the rail. It is account setup you clear once, not a
-   stage of every batch, and carrying it as bubble 01 made a four-part job look
-   like five. It remains a reachable page and still gates everything after it â€”
-   only its bubble is gone. Numbering below comes from rail POSITION, not from
-   the PROGRESS_STEPS index, which still runs 0-8 so no gating math changes. */
-/* D220 Â· Four stages, each covering the legacy PROGRESS_STEPS indices that now
-   live on the same page. Draft creation (3, 4) and mockups (7) moved onto the
-   Images page, and Etsy details (6) sits with titles on Listing, so those
-   indices no longer get bubbles of their own. The 0-8 indices are untouched, so
-   every gate, status and deep link still resolves. */
-const RAIL_STAGES: Array<{label:string;title:string;index:number;covers:number[]}> = [
-  {label:"Product",index:1,title:"Choose product",covers:[1]},
-  {label:"Images",index:2,title:"Designs + images",covers:[2,3,4,7]},
-  {label:"Listing",index:5,title:"Titles + Etsy details",covers:[5,6]},
-  {label:"Publish",index:8,title:"Review + publish",covers:[8]},
-];
-/* D222 Â· RAIL_TOP, RAIL_PRICING, RAIL_DRAFTS, RAIL_FINISH, RAIL_FINISH_FIRST and
-   FINISH_RAIL_LABELS described the old five-bubble rail with its nested Finish
-   node. RAIL_STAGES replaced all of them. */
-const WORKFLOW_HELP = [
-  {title:"Connect Printify and Etsy",intro:"Both accounts must be connected before Goldie can build a complete listing.",sections:[{heading:"Printify connection",copy:"Connect the Printify account that contains your saved product. Goldie uses it to read product costs and variants, upload artwork, and create unpublished product drafts."},{heading:"Etsy connection",copy:"Connect the Etsy shop linked to that saved product. Goldie uses Etsyâ€™s real categories, attributes, shipping profiles, and publishing connection."},{heading:"Nothing publishes here",copy:"This step only verifies access. Goldie cannot publish a listing until you reach the final review and confirm publishing a second time."},{heading:"Use matching accounts",copy:"Connect the Printify account that contains the saved product and the Etsy shop where that product was published. If the product belongs to a different shop, Goldie will stop and explain the mismatch."},{heading:"Your publishing safeguard",copy:"Connecting does not publish anything. Goldie first creates unpublished Printify drafts. Listings go live on Etsy only after the final review and a second explicit confirmation."}]},
-  {title:"Prepare your product in Printify",intro:"Before Goldie can save a product, it must be published from Printify to the same Etsy shop you connected to Goldie. A product that is still only a Printify draft will not work.",sections:[{heading:"Choose an existing or dedicated product",copy:"Either option works.",bullets:["Use an existing product that is already published in your Etsy shop.","Create a separate product specifically for Listing Factory."]},{heading:"Set up the product in Printify",copy:"The temporary artwork is only used to save the placement. It will not be used for your Listing Factory batches.",steps:["Choose the product you want to sell.","Choose its print provider.","Add temporary artwork.","Size and position the artwork exactly where you want future designs placed.","Publish the product from Printify to your connected Etsy shop."]},{heading:"Copy the correct Printify URL",copy:"After the product has been published:",steps:["Open My Products in Printify.","Select the product.","Open its design editorâ€”the screen where you can see and adjust the artwork placement.","Copy the complete URL from your browserâ€™s address bar.","Paste that URL into Goldie."]},{heading:"Do not use",copy:"Only copy and paste the complete URL specifically from the Printify design editor. Do not use:",bullets:["The Etsy listing URL","Your Etsy storefront URL","The Printify My Products page URL","A public product URL","Only the Printify product ID"]},{heading:"Goldie handles the rest",copy:"You do not need to finish every listing choice in Printify. Inside Listing Factory, you will choose the colors, sizes, prices, shipping profile, listing photos, mockups, titles, tags, description, Etsy details, and personalization."},{heading:"After you save the product",copy:"Your saved product will keep working if the original Etsy listing sells out, becomes inactive, or is deleted. Just keep the product in Printify."},{heading:"Creating a product bundle?",copy:"Choose a bundle when you want to place every uploaded design on two to four saved productsâ€”for example, a T-shirt, sweatshirt, and hoodie. You will upload each design once. Goldie will create a separate listing for each product and guide you through its settings separately."}]},
-  {title:"Add finished artwork",intro:"This batch becomes one listing per uploaded design for the selected product.",sections:[{heading:"Use production-ready files",copy:"Upload PNG or JPG artwork, not mockup photos. Use transparent PNGs when the background should not print."},{heading:"Upload in more than one round",copy:"Choosing another folder or more individual files adds them to the existing batch. It does not replace earlier uploads. Exact duplicate files are skipped."},{heading:"Check resolution",copy:"Goldie reads the original pixel dimensions without reducing DPI. If artwork falls below Printifyâ€™s recommendation for the selected product, review the warning before continuing."},{heading:"Batch limits",copy:"Each batch can contain up to 20 designs, with a maximum of 100 MB per individual design."}]},
-  {title:"Review prices and shipping",intro:"Set the buyer-facing item prices and confirm the Etsy shipping profile before any Printify drafts are created.",sections:[{heading:"Use the profit goal",copy:"Goldie calculates a recommended price for every exact Printify product cost using the Etsy fee settings shown in the calculation details. Buyer-paid shipping stays separate from item profit."},{heading:"Edit matching-cost groups",copy:"Variants with the exact same Printify cost share one price field. More expensive colors, sizes, materials, finishes, or other options remain separate automatically."},{heading:"Choose shipping",copy:"Keep the shipping profile imported from the saved product, or create a named copy with different domestic, additional-item, or international charges."},{heading:"Approve the result",copy:"Review the lowest estimated profit in every group. Buyer-paid shipping, Offsite Ads, and sales tax are excluded from item profit because they are separate or vary by order."}]},
-  {title:"Create the Printify drafts",intro:"This creates one unpublished Printify product draft for every uploaded design.",sections:[{heading:"What Goldie copies",copy:"Goldie copies the selected product, enabled variants, artwork placement, approved prices, and uploaded design into each new draft."},{heading:"What this does not do",copy:"The products are not published to Etsy at this point. They remain unpublished Printify drafts while you finish titles, Etsy details, and images."},{heading:"Keep the page open",copy:"Large artwork and large batches can take time. Goldie processes the batch safely and shows progress as each draft is completed."},{heading:"If one draft fails",copy:"Goldie keeps successful drafts and identifies the failed design so it can be retried without duplicating the completed products."}]},
-  {title:"Create titles, tags, and descriptions",intro:"Finish the searchable words and buyer-facing description for every listing.",sections:[{heading:"Start with a validated keyword bank",copy:"Goldie only uses exact phrases from the bank you choose. It does not invent or add keywords."},{heading:"Review AI judgment",copy:"Goldie chooses the phrases it believes fit each design, but it cannot rescue a mismatched keyword bank. Review every title and change anything that does not fit."},{heading:"Edit listings independently",copy:"You can rebuild or manually edit one title and its tags without changing any other listing in the batch."},{heading:"Use the shared description",copy:"The batch description comes from the saved product. Edit it once for every listing, then add an individual override only where a specific design needs different wording."}]},
-  {title:"Review Etsy details",intro:"Goldie pre-fills the fields it can confidently match. You remain responsible for confirming that every choice is accurate.",sections:[{heading:"Verify the category first",copy:"Changing the Etsy category changes the product fields that Etsy requires and offers. Correct the category before editing the fields beneath it."},{heading:"Check every selected attribute",copy:"Review materials, style, occasion, recipient, room, and other product-specific choices. Optional fields should stay blank when there is no clear match."},{heading:"Add personalization only when needed",copy:"Personalization can collect buyer text, a dropdown choice, or files. Make each question specific, set whether it is required, and stay within the limits shown."},{heading:"Save all listings",copy:"Goldie will not continue until the required Etsy details are complete for every listing in the batch."}]},
-  {title:"Choose and arrange listing images",intro:"Every listing needs at least one image. This step combines real Printify product images, optional lifestyle mockups, and an optional size guide.",sections:[{heading:"Review the real Printify placement",copy:"Open a draft in Printify when the artwork needs resizing or repositioning. The Printify preview is the reference Goldie uses for generated lifestyle mockups."},{heading:"Choose Printify photos",copy:"Select the flatlays and product views that belong on the listing. Apply the same selection to every listing only when those photos make sense for the entire batch."},{heading:"Generate matching mockups",copy:"Choose up to eight lifestyle scenes and review every result before publishing."},{heading:"Set the Etsy order",copy:"Drag images into the order buyers should see: lifestyle images first, Printify product photos next, and the size guide last. You can rearrange this for each listing."}]},
-  {title:"Complete the final review",intro:"This is the last checkpoint before the listings are published live on Etsy.",sections:[{heading:"Open every listing summary",copy:"Review the title, tags, description, Etsy details, prices, shipping, and selected images. Use the edit buttons to return to any unfinished section."},{heading:"Understand the publish action",copy:"The final action publishes live Etsy listings. It does not create Etsy drafts. Goldie shows a second confirmation before publishing begins."},{heading:"Do not close the page",copy:"Publishing may be queued briefly to protect Etsyâ€™s shared API limits. Keep the page open until Goldie confirms the result or tells you the batch is safely queued."},{heading:"Review the receipt",copy:"After publishing, Goldie shows how many listings went live and what was completed. Use the Etsy links to inspect the live listings."}]},
-];
-
-const MAX_BATCH_FILES = 20;
-/* D662 Â· Measured against the live endpoint before changing, because the last
-   time I reasoned about timing without measuring I was reading a frozen tab.
-   One call, then two at once, then four at once, timed through the Resource
-   Timing API so a throttled background tab could not distort it:
-
-     1 request   3031ms
-     2 requests  batch 2977ms  (2974, 2445)
-     4 requests  batch 2954ms  (2026, 2339, 2339, 2952)
-
-   Every response 200. No 429, no 5xx, no retry taken, and the endpoint exposes
-   no rate-limit headers. Wall time stays flat from one request to four, which
-   only happens if the worker is idle waiting on the provider rather than doing
-   work of its own - so this is not CPU or memory bound inside Goldie.
-
-   At 1, two designs cost about 6.1s and ten cost about 30s, entirely in
-   sequence, for no reason the measurements support. Raised to 2, which is the
-   agreed cap. NOT raised further: four showed no throttling either, but nothing
-   here measures a ten-design burst against the provider's real ceiling, and a
-   number chosen because it happened to work once is the kind of thing this
-   comment exists to prevent.
-
-   Draft creation stays at MAX_CONCURRENT_DESIGNS - it uploads full-resolution
-   artwork, so it is bounded by memory rather than by provider latency, and it
-   has not been measured. */
-const BACKGROUND_ETSY_CONCURRENCY = 2;
-const MAX_CONCURRENT_DESIGNS = 2;
-const LARGE_BATCH_THRESHOLD = 400 * 1024 * 1024;
-const DEFAULT_PRICING: Pricing = { targetProfit: 10, etsyFeePercent: 9.5, fixedFee: 0.25, listingFee: 0.20, shippingCost: 0, shippingCharged: 0 };
-const PHYSICAL_ETSY_FIELDS=/^(materials?|sleeve length|neckline|clothing style|size|shape|orientation|capacity)$/i;
-function productEtsyDefaults(template:TemplateDetails|null,saved?:Record<string,string|number|null>){
-  const facts=`${template?.blueprintTitle||""} ${template?.brand||""} ${template?.model||""}`.toLowerCase(),derived:Record<string,string>={};
-  if(/cotton/.test(facts))derived.Materials="Cotton";else if(/polyester/.test(facts))derived.Materials="Polyester";else if(/ceramic/.test(facts))derived.Materials="Ceramic";else if(/canvas/.test(facts))derived.Materials="Canvas";else if(/paper|poster|print/.test(facts))derived.Materials="Paper";
-  if(/short.?sleeve|t-?shirt|\btee\b/.test(facts))derived["Sleeve length"]="Short sleeve";else if(/long.?sleeve|sweatshirt|crewneck|hoodie/.test(facts))derived["Sleeve length"]="Long sleeve";
-  if(/v.?neck/.test(facts))derived.Neckline="V-neck";else if(/crewneck|crew neck|t-?shirt|\btee\b|sweatshirt/.test(facts))derived.Neckline="Crew";
-  if(/hoodie/.test(facts))derived["Clothing style"]="Hoodie";else if(/sweatshirt|crewneck/.test(facts))derived["Clothing style"]="Sweatshirt";else if(/t-?shirt|\btee\b/.test(facts))derived["Clothing style"]="T-shirt";
-  if(/\bunisex\b/.test(facts))derived.Size="Unisex";else if(/\byouth\b|\bkids?\b|\bchildren\b/.test(facts))derived.Size="Youth";else if(/\binfant\b|\bbaby\b/.test(facts))derived.Size="Baby";
-  return {...derived,...Object.fromEntries(Object.entries(saved||{}).filter(([key,value])=>PHYSICAL_ETSY_FIELDS.test(key)&&String(value??"").trim()).map(([key,value])=>[key,String(value)]))};
-}
-function isRigidPaperProduct(template:TemplateDetails|null){return /poster|print|canvas|paper/i.test(`${template?.blueprintTitle||""} ${template?.brand||""} ${template?.model||""}`)}
-/* D512 - the recommended print size was worked out in three separate places and
-   the three did not agree. Two used `placementScale || 0`, the bundle check used
-   `placementScale || 1`, so a product with no placement scale was silently
-   exempt from the resolution warning on its own and flagged inside a bundle -
-   the same design, the same product, two answers depending on the route in.
-   One function decides it. */
-export function printTargetFor(template:TemplateDetails|null){
-  const scale=isRigidPaperProduct(template)?Math.min(template?.placementScale||1,1):template?.placementScale||0;
-  return {scale,width:Math.round((template?.maxPrintWidth||0)*scale),height:Math.round((template?.maxPrintHeight||0)*scale),printWidth:template?.maxPrintWidth||0};
-}
-function PrintifyImagePicker({ images,indices,reservedPhotos=0,onApplyOne,onApplyAll,onSaveRecipe,bare }: { images: string[];indices:number[];reservedPhotos?:number;onApplyOne:(indices:number[])=>void;onApplyAll:(indices:number[])=>void;bare?:boolean;onSaveRecipe?:(indices:number[])=>void|Promise<void> }) {
-  const [selected,setSelected]=useState<Set<number>>(new Set(indices.slice(0,Math.max(0,20-reservedPhotos)))),[expanded,setExpanded]=useState<string>(""),[action,setAction]=useState<"clear"|"all"|"future"|"">(""),[feedback,setFeedback]=useState(""),[savingFuture,setSavingFuture]=useState(false);
-  useEffect(()=>setSelected(new Set(indices.slice(0,Math.max(0,20-reservedPhotos)))),[indices,images.length,reservedPhotos]);
-  if(!images.length)return <p className="preview-processing">Printify is still processing its product mockups. Open the editor to view them once they appear.</p>;
-  const chosen=[...selected].sort((a,b)=>a-b),selectionHint=chosen.length?"":"Select a Printify photo below first.",slotsLeft=Math.max(0,20-reservedPhotos-selected.size),atLimit=slotsLeft===0;
-  function toggle(index:number){const next=new Set(selected);if(next.has(index))next.delete(index);else{if(atLimit){setFeedback("Etsy allows 20 listing photos. Remove a selected photo before adding another.");return}next.add(index)}setSelected(next);setAction("");setFeedback("");onApplyOne([...next].sort((a,b)=>a-b))}
-  function deselect(){setSelected(new Set());setAction("clear");setFeedback("");onApplyOne([])}
-  function applyAll(){if(!chosen.length)return;onApplyAll(chosen);setAction("all");setFeedback("âœ“ These Printify photos are now selected on every listing in this batch.")}
-  async function saveFuture(){if(!onSaveRecipe||savingFuture||!chosen.length)return;setSavingFuture(true);setFeedback("Saving your preferenceâ€¦");try{await onSaveRecipe(chosen);setAction("future");setFeedback("âœ“ These Printify photos will be preselected for future batches using this product.")}catch(error){setAction("");setFeedback(error instanceof Error?error.message:"These preferences could not be saved.")}finally{setSavingFuture(false)}}
-  const lightbox=expanded&&typeof document!=="undefined"?createPortal(<div className="printify-photo-lightbox" role="dialog" aria-modal="true" aria-label="Expanded Printify photo" onMouseDown={event=>{if(event.target===event.currentTarget)setExpanded("")}}><button type="button" onClick={()=>setExpanded("")} aria-label="Close expanded photo">Ã—</button><img src={expanded} alt="Expanded Printify product mockup"/></div>,document.body):null;
-  return <>{/* D407 - Was open by default, so arriving on Images dropped you into the
-              first listing's Printify photos before you had chosen what to do. Nothing
-              on this step expands itself. */}
-            {/* D539 - the shell comes off. This picker used to be its own disclosure with
-    its own summary and its own close button, because it lived on a page that
-    needed it to. Inside a product card the row above it is already the
-    disclosure, so the shell made a second accordion inside the first. */}
-            {/* D555 - PrintifyImagePicker is called once, always bare, so this component
-        carried a second copy of the entire picker that could never render. D554
-        labelled the tiles in the copy that is used; the dead one still held the
-        old unlabelled grid. That is exactly how the mug bug happened - two copies
-        of one rule, one of them fixed. One copy. */}
-        <div className="printify-image-picker bare"><p>Etsy allows 20 listing photos total. Lifestyle mockups and a size guide already chosen for this listing count toward that limit. Use the visible checkbox to select a photo.</p><div className="image-pref-actions"><button type="button" className={`clear ${action==="clear"?"confirmed":""}`} disabled={!chosen.length} onClick={deselect}>{action==="clear"&&<span className="action-check">âœ“</span>}<b>{action==="clear"?"Selections cleared":"Clear this listingâ€™s selections"}</b><small>{selectionHint||"Remove every selected Printify photo from this listing only."}</small></button><button type="button" className={action==="all"?"confirmed":""} disabled={!chosen.length} onClick={applyAll}>{action==="all"&&<span className="action-check">âœ“</span>}<b>{action==="all"?"Applied to every listing":"Apply these photos to every listing"}</b><small>{selectionHint||"Choose the same Printify photos across the entire batch."}</small></button></div>{feedback&&<p className="image-pref-feedback" role="status">{feedback}</p>}{/* D569 - measured on her hoodie: 96 tiles in one listing's picker, 192 in the
-        panel, and only 12 distinct labels - "Front" sixteen times, "Back" sixteen
-        times. Every tile is a real, different image (12 camera views across the 8
-        colours she enabled), but a flat wall of 96 with a repeated one-word label
-        is not something anyone can choose 20 photos from. Grouped by the view,
-        which is the one thing the URL tells us for certain. Colour is NOT
-        labelled: Printify's image order need not follow her colour order, and a
-        Cocoa hoodie labelled "White" is worse than one labelled only "Front". */}
-      {(()=>{
-        const groups:Array<[string,Array<[string,number]>]>=[];
-        images.forEach((src,index)=>{
-          const view=printifyViewName(src)||"Other photos";
-          const found=groups.find(entry=>entry[0]===view);
-          if(found)found[1].push([src,index]);else groups.push([view,[[src,index]]]);
-        });
-        return groups.map(([view,items])=><div className="printify-view-group" key={view}>
-          <p className="printify-view-heading">{view}<span>{items.length} {items.length===1?"colour":"colours"}</span></p>
-          <div className="printify-image-grid">{items.map(([src,index])=><div className={`printify-image-option ${selected.has(index)?"selected":""}`} key={src}><label className="printify-photo-selector"><input type="checkbox" checked={selected.has(index)} disabled={!selected.has(index)&&atLimit} onChange={()=>toggle(index)}/><span aria-hidden="true">{selected.has(index)?"âœ“":""}</span><span className="sr-only">Select Printify photo {index+1}</span></label><button type="button" className="printify-photo-expand" onClick={()=>setExpanded(src)} aria-label={`View ${printifyViewName(src)||`Printify photo ${index+1}`} larger`}><img src={src} alt={printifyViewName(src)||`Printify product mockup ${index+1}`} loading="lazy" decoding="async"/></button></div>)}</div></div>)})()}</div>{lightbox}</>;
-}
-
-/* D422 - Same defect the profit goal had, in the personalization fields: bound
-   straight to a number, so clearing the box made Number("")||1 into 1, React
-   wrote the 1 back, and everything typed after it landed behind - clear it, type
-   25, get "125". PriceField already solved this for money; this is the whole-
-   number version of the same idea. */
-function IntegerField({value,min,max,label,onCommit}:{value:number;min:number;max:number;label:string;onCommit:(next:number)=>void}){
-  const [draft,setDraft]=useState<string|null>(null);
-  return <input type="number" min={min} max={max} aria-label={label} value={draft??String(value)}
-    onChange={event=>{const raw=event.target.value;setDraft(raw);const parsed=Number(raw);
-      if(raw!==""&&Number.isFinite(parsed))onCommit(Math.max(min,Math.min(max,Math.round(parsed))))}}
-    onBlur={()=>setDraft(null)}/>;
-}
-
-function PriceField({value,minimum,label,onCommit}:{value:number;minimum:number;label:string;onCommit:(cents:number)=>void}){const [draft,setDraft]=useState((value/100).toFixed(2)),[confirmed,setConfirmed]=useState(false);useEffect(()=>setDraft((value/100).toFixed(2)),[value]);function commit(){const amount=Number(draft);if(!Number.isFinite(amount)){setDraft((value/100).toFixed(2));return}const cents=Math.round(Math.max(minimum,amount)*100);onCommit(cents);setDraft((cents/100).toFixed(2));setConfirmed(true);window.setTimeout(()=>setConfirmed(false),520)}return <label className={confirmed?"price-confirmed":""} aria-label={label}>$<input type="text" inputMode="decimal" value={draft} onChange={event=>setDraft(event.target.value)} onBlur={commit} onKeyDown={event=>{if(event.key==="Enter"){event.currentTarget.blur()}if(event.key==="Escape"){setDraft((value/100).toFixed(2));event.currentTarget.blur()}}}/></label>}
-
-/* D236 Â· A panel opened from a product-card row must not re-announce itself. The
-   row above it already reads "Colors Â· Pick colors Â· 39 available"; the panel was
-   then repeating "Colors" as a 22px card title plus a second count badge. inCard
-   drops the panel's own head and keeps one line of helper text. */
-function ProductColorSelector({product,selected,onChange,onRemember,remembering,remembered,inCard}:{product:TemplateDetails;selected:number[];onChange:(ids:number[])=>void;onRemember:()=>void;remembering:boolean;remembered:boolean;inCard?:boolean}){
-  const colors=product.colorOptions||[],available=colors.filter(color=>color.available),selectedSet=new Set(selected),[expanded,setExpanded]=useState(inCard?true:!remembered);
-  if(!colors.length)return <section className="product-color-selector no-colors"><div><p className="mini-label">COLORS FOR THIS BATCH</p><h3>This product has no separate color choices.</h3><span>Goldie will keep the valid variants from the saved Printify product.</span></div></section>;
-  function toggle(id:number){const next=new Set(selectedSet);if(next.has(id))next.delete(id);else next.add(id);onChange([...next])}
-  const selectedColors=colors.filter(color=>selectedSet.has(color.id));
-  /* First-run framing now lives above the product controls and is persisted by
-     setupComplete. Keep this reusable selector free of parent-only state. */
-  const productFirstRun=false;
-  return <section className="product-color-selector" aria-label={`Choose colors for ${product.blueprintTitle}`}>{inCard?<p className="panel-help">Every change saves to this product automatically.</p>:<div className="color-selector-head"><div><p className="mini-label">COLORS FOR THIS BATCH</p><h3>Colors</h3><span>{productFirstRun?"Choose the colors you want to offer, then save them as this product's default.":remembered?"From your last batch â€” change any.":"These changes apply to this batch unless you save them as the product default."}</span></div><b>{selected.length} selected</b></div>}{!expanded&&selectedColors.length>0&&<div className="remembered-color-row">{selectedColors.map(color=><span key={color.id}><i style={{background:color.swatch||"linear-gradient(135deg,#f8e7ef,#caa4d8)"}}/>{color.title}</span>)}<button type="button" onClick={()=>setExpanded(true)}>Change colors</button></div>}{expanded&&<><div className="color-choice-grid">{colors.map(color=><button type="button" key={color.id} disabled={!color.available} aria-pressed={selectedSet.has(color.id)} onClick={()=>toggle(color.id)} className={selectedSet.has(color.id)?"selected":""}><i style={{background:color.swatch||"linear-gradient(135deg,#f8e7ef,#caa4d8)"}}/><span>{color.title}</span>{selectedSet.has(color.id)&&<em>âœ“</em>}{!color.available&&<small>Unavailable</small>}</button>)}</div><div className="color-selector-actions"><button type="button" onClick={()=>onChange(available.map(color=>color.id))}>Select all available</button><button type="button" onClick={()=>{const templateColors=(product.colorOptions||[]).filter(color=>color.available&&color.templateEnabled).map(color=>color.id);/* D315 Â· Sizes had "Match Printify template" and colours did not, though both
-                   carry templateEnabled and the row shortcut offers it for both. Same
-                   capability, one panel had the control and the other did not. Follows
-                   D213: if the template enables nothing, match nothing rather than
-                   quietly selecting the whole blueprint. */onChange(templateColors)}}>Match Printify template</button><button type="button" onClick={()=>onChange([])}>Clear all</button>{/* D318 Â· "Done choosing colors" existed on colours and not on sizes, and it
-                  collapsed the panel back to a summary â€” which the row's own Close
-                  button already does, for both. One job, two controls, and only on
-                  one of the two pickers. */}{inCard?<span className={`default-saved-state${remembered?" saved":""}`}>{/* D311 Â· In the card these choices are already written to the product the
-                  moment they change â€” that is what establish() does, and it is the
-                  behaviour Brittany prefers. Leaving a "Save these as this product's
-                  default colors" button next to it asked for a click that was never
-                  required, and then read "âœ“ Saved for this product" without one,
-                  which is why it looked like it was lying. A status, not a button. */}{remembered?"âœ“ Saved as this productâ€™s default":"Savingâ€¦"}</span>:<button type="button" className={remembered?"remembered":""} disabled={!selected.length||remembering||remembered} onClick={onRemember}>{remembering?"Savingâ€¦":remembered?"âœ“ Saved for this product":"Save these as this productâ€™s default colors"}</button>}</div></>}{!selected.length&&<p className="color-required" role="alert">Choose at least one available color before continuing.</p>}</section>
-}
-
-function ProductSizeSelector({product,selected,onChange,onRemember,remembering,remembered,inCard}:{product:TemplateDetails;selected:number[];onChange:(ids:number[])=>void;onRemember:()=>void;remembering:boolean;remembered:boolean;inCard?:boolean}){
-  const sizes=product.sizeOptions||[],available=sizes.filter(size=>size.available),selectedSet=new Set(selected);
-  /* A blueprint with no size axis (a mug, a sticker) renders nothing at all
-     rather than an empty card. */
-  if(!sizes.length)return null;
-  function toggle(id:number){const next=new Set(selectedSet);if(next.has(id))next.delete(id);else next.add(id);onChange([...next])}
-  return <section className="product-size-selector" aria-label={`Choose sizes for ${product.blueprintTitle}`}>
-    {inCard?<p className="panel-help">Every change saves to this product automatically.</p>:<div className="size-selector-head"><div><p className="mini-label">SIZES FOR THIS BATCH</p><h3>Sizes</h3><span>{remembered?"From your last batch â€” change any.":"These changes apply to this batch unless you save them as the product default."}</span></div><b>{selected.length} selected</b></div>}
-    <div className="size-choice-grid">{sizes.map(size=><button type="button" key={size.id} disabled={!size.available} aria-pressed={selectedSet.has(size.id)} onClick={()=>toggle(size.id)} className={selectedSet.has(size.id)?"selected":""}><span>{size.title}</span>{selectedSet.has(size.id)&&<em>âœ“</em>}{!size.available&&<small>Unavailable</small>}</button>)}</div>
-    <div className="size-selector-actions"><button type="button" onClick={()=>onChange(available.map(size=>size.id))}>Select all available</button><button type="button" onClick={()=>{const templateSizes=(product.sizeOptions||[]).filter(size=>size.available&&size.templateEnabled).map(size=>size.id);
-                /* D213 Â· This used to fall back to every available size when the
-                   template had none enabled, so a button reading "Match Printify
-                   template" quietly selected the whole blueprint. If there is
-                   nothing to match, match nothing and let the seller choose. */
-                onChange(templateSizes)}}>Match Printify template</button><button type="button" onClick={()=>onChange([])}>Clear all</button>{/* D318 Â· Colours had Clear all and sizes did not. Both pickers now offer the
-                  same three actions in the same order: Select all available,
-                  Match Printify template, Clear all. */}{inCard?<span className={`default-saved-state${remembered?" saved":""}`}>{remembered?"âœ“ Saved as this productâ€™s default":"Savingâ€¦"}</span>:<button type="button" className={remembered?"remembered":""} disabled={!selected.length||remembering||remembered} onClick={onRemember}>{remembering?"Savingâ€¦":remembered?"âœ“ Saved for this product":"Save these as this productâ€™s default sizes"}</button>}</div>
-    {!selected.length&&<p className="size-required" role="alert">Choose at least one size before continuing.</p>}
-  </section>
-}
-
-/* D543 - moved to app/mockup-compatibility.ts, where it is the only copy. */
-function MockupSetSelector({value,onChange,selectedIds=[],savedValue,savedIds,onSaveDefault,saving,firstRun=false,productName=""}:{value:string;onChange:(value:string,ids?:string[])=>void;selectedIds?:string[];savedValue:string;savedIds?:string[];onSaveDefault:()=>void;saving:boolean;firstRun?:boolean;productName?:string}){
-  const [templates,setTemplates]=useState<Array<{id:string;theme:string;name:string;src:string;surfaceKind:string;preparation?:ScenePreparation}>>([]),[loaded,setLoaded]=useState(false),seededDefault=useRef(false);
-  useEffect(()=>{fetch("/api/mockups/library").then(response=>response.json()).then((payload:{templates?:Array<{id?:string;theme?:string;name?:string;src?:string;surfaceKind?:string;preparation?:ScenePreparation}>})=>setTemplates((payload.templates||[]).map(item=>({id:String(item.id||""),theme:String(item.theme||"").trim(),name:String(item.name||"Mockup"),src:String(item.src||""),surfaceKind:String(item.surfaceKind||"rigid-flat"),preparation:item.preparation})).filter(item=>item.id&&item.theme&&item.src))).catch(()=>undefined).finally(()=>setLoaded(true))},[]);
-  const compatibleTemplates=templates.filter(item=>productAcceptsMockup(item.surfaceKind,productName)),themes=[...new Set(compatibleTemplates.map(item=>item.theme))],matchingTemplates=compatibleTemplates.filter(item=>item.theme===value);
-  /* Seed a starting set ONCE. This used to run on every render where `value`
-   * was empty, so choosing "No mockups for this batch" was undone instantly by
-   * the effect â€” the select snapped back to the saved set within a frame and
-   * the seller could never remove mockups. Verified live: setting the value to
-   * "" reverted to "BACH TEES" while an identical change on the keyword-bank
-   * select stuck. Seeding once keeps the convenience; a deliberate clear now
-   * survives. */
-  /* D620 - the listings no longer carry their own scene grid, so this picker is
-     the only thing that can tell them which scenes to use. If a set is chosen but
-     no scenes have been lifted to the batch, seed them here - otherwise every
-     listing reads "0 scenes chosen" and its Create button stays dead. */
-  useEffect(()=>{if(!productName||seededDefault.current||!templates.length)return;seededDefault.current=true;if(value&&!themes.includes(value)){onChange("",[]);return}if(value&&themes.includes(value)&&!selectedIds.length){onChange(value,matchingTemplates.slice(0,8).map(item=>item.id));return}if(value===savedValue&&savedIds===undefined){onChange(value,matchingTemplates.slice(0,8).map(item=>item.id));return}if(!value&&savedValue&&themes.includes(savedValue)){const ids=savedIds===undefined?compatibleTemplates.filter(item=>item.theme===savedValue).slice(0,8).map(item=>item.id):savedIds;onChange(savedValue,ids)}},[value,savedValue,savedIds,themes.join("|"),templates.length,productName]);
-  if(!productName)return null;
-  const selected=new Set(selectedIds),changed=value!==savedValue||JSON.stringify([...selectedIds].sort())!==JSON.stringify([...(savedIds||[])].sort());
-  function chooseTheme(theme:string){const ids=theme===savedValue?(savedIds===undefined?compatibleTemplates.filter(item=>item.theme===theme).slice(0,8).map(item=>item.id):savedIds):[];onChange(theme,ids)}
-  function toggle(id:string){const next=new Set(selected);if(next.has(id))next.delete(id);else if(next.size<8)next.add(id);onChange(value,[...next])}
-  const savedSetIsCompatible=Boolean(savedValue&&themes.includes(savedValue));
-  return <section className="batch-default-block mockup-default-block">
-    <div className="batch-default-heading"><div><h3>Mockups</h3><span>{firstRun?"Choose the exact scenes this product should start with.":savedSetIsCompatible&&selectedIds.length?"Saved for this product â€” remove or add any scene.":savedSetIsCompatible?"This set is saved for this product. Choose the scenes you want from it.":value?"Choose the individual scenes you want. Nothing is inherited from another product.":loaded&&!themes.length?"No compatible mockup set is saved for this product yet.":themes.length?"No mockup set chosen for this product yet.":"Loading your saved mockup choicesâ€¦"}</span></div><b>{value?`${selectedIds.length} selected`:loaded?"None chosen":"Loadingâ€¦"}</b></div>
-    <label><span>Mockup set</span><select value={value} onChange={event=>chooseTheme(event.target.value)} disabled={!themes.length}>{themes.length?<option value="">No mockups for this batch</option>:<option value="">{loaded?"No compatible mockup sets for this product":"Loading mockup setsâ€¦"}</option>}{themes.map(theme=><option key={theme} value={theme}>{theme}</option>)}</select></label>
-    <a className="manage-mockup-sets" href="/mockups" target="_blank" rel="noopener noreferrer">Create or edit mockup sets â†—</a>
-    {value&&<><div className="product-mockup-scenes" aria-label={`Choose scenes from ${value}`}>{matchingTemplates.map(item=><label key={item.id} className={selected.has(item.id)?"selected":""}><input type="checkbox" checked={selected.has(item.id)} disabled={!selected.has(item.id)&&selected.size>=8} onChange={()=>toggle(item.id)}/>{/* D618 - this is now the only scene picker, so it carries what the per-listing grid used to: the scene's real name and the warning that it has not been measured for this product yet.
-
-              NOT lazy. D97 scoped lazy-loading to the big repeated grids, and D567 measured why: a lazy image with no intrinsic size collapses to nothing, so the browser never decides it is near the viewport, so it never loads. Her scene tiles loaded 8 of 8 eager; the lazy thumbnails loaded 0 of 4. About ten tiles, all on screen. */}<img src={item.src} alt={item.name} decoding="async"/><span title={item.name}>{item.name.replace(/\.[a-z0-9]+$/i,"").replace(/[_-]+/g," ")}</span>{!preparationMatchesProduct(item.preparation,productName)?<em className="scene-unmeasured">Goldie prepares this scene automatically before creating it</em>:null}</label>)}</div><small>{selected.size} of {matchingTemplates.length} scenes chosen{selected.size>=8?" Â· that is the maximum of 8":" Â· up to 8"}. Click any scene to add or remove it.</small></>}
-    {!firstRun&&changed&&<button type="button" className="save-product-default" disabled={saving} onClick={onSaveDefault}>{saving?"Savingâ€¦":value?`Save these ${selectedIds.length} mockups as this productâ€™s default`:"Save no mockups as this productâ€™s default"}</button>}
-  </section>
-}
-
-function normalizePricesByCost(variants:ProductVariant[],next:Record<string,number>){
-  const safestByCost=new Map<number,number>();
-  for(const variant of variants)safestByCost.set(variant.cost,Math.max(safestByCost.get(variant.cost)||0,next[String(variant.id)]??variant.templatePrice));
-  return Object.fromEntries(variants.map(variant=>[String(variant.id),safestByCost.get(variant.cost)??next[String(variant.id)]??variant.templatePrice]));
-}
-
-async function designPreviewDataUrl(design:DesignFile){
-  if(!design.originalUnavailable)return safeImagePreviewDataUrl(design.file,1200,false);
-  if(!design.previewUrl)throw new Error("The original upload is not available in this browser. You can still write this listing manually.");
-  try{const response=await fetch(design.previewUrl);if(!response.ok)throw new Error();return safeImagePreviewDataUrl(await response.blob(),1200,false)}catch{throw new Error("Goldie could not read the saved Printify preview. You can still write this listing manually.")}
-}
-async function autoTitleForDesign(design:DesignFile,keywords:string[],useCommas:boolean,template:TemplateDetails|null){const response=await fetch("/api/listing-intelligence",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({mode:"title",image:await designPreviewDataUrl(design),product:{blueprintTitle:template?.blueprintTitle,brand:template?.brand,model:template?.model},keywords,useCommas})}),payload=await response.json() as {title?:string;keywords?:string[];tags?:string[];titleWarning?:string;error?:string};if(!response.ok||!payload.title)throw new Error(payload.error||"Goldie could not create this title.");return {title:payload.title,keywords:payload.keywords||[],tags:payload.tags||[],titleWarning:payload.titleWarning||""}}
-
-function IndividualAutoTitle({design,template,useCommas,initialBankId,paused,onApply}:{design:DesignFile;template:TemplateDetails|null;useCommas:boolean;initialBankId?:string;paused?:boolean;onApply:(title:string,tags:string[],titleWarning?:string)=>void}){const [bank,setBank]=useState<KeywordList|null>(null),[building,setBuilding]=useState(false),[message,setMessage]=useState("");async function build(){if(!bank)return;setBuilding(true);setMessage("");try{const result=await autoTitleForDesign(design,bank.keywords,useCommas,template);onApply(result.title,result.tags,result.titleWarning);setMessage(result.titleWarning||"âœ“ New title and separately ranked Etsy tags applied to this listing only.")}catch(error){setMessage(error instanceof Error?error.message:"Goldie could not create this title.")}finally{setBuilding(false)}}return <>{design.titleWarning&&<p className="title-match-warning" role="status">{design.titleWarning}</p>}{design.titleError&&<p className="field-error" role="alert">{design.titleError}</p>}<details className="individual-title-builder" onClick={event=>event.stopPropagation()}><summary>Create a different title with AI</summary><KeywordBank compact selectionOnly initialId={initialBankId||""} title="Keyword bank" copy="Goldie selects exact validated phrases from this bank. It never adds keywords." onSelect={setBank}/><button className="ai-title-button" title={paused?"This batch is open in another Goldie tab, so nothing built here would be kept.":!bank?"Choose a keyword bank first.":undefined} disabled={!bank||building||Boolean(paused)} onClick={()=>void build()}>{building?"Creating this titleâ€¦":"Create title for this design"}</button>{message&&<p className="title-build-message" role="status">{message}</p>}<button type="button" className="panel-collapse-foot" onClick={event=>{const box=(event.currentTarget as HTMLElement).closest("details");if(box){(box as HTMLDetailsElement).open=false;box.scrollIntoView({block:"nearest"})}}}>Close title builder</button></details><IndividualManualTitle useCommas={useCommas} initialBankId={initialBankId} onApply={(title,tags)=>onApply(title,tags,"")}/></>}
-
-function IndividualManualTitle({useCommas,initialBankId,onApply}:{useCommas:boolean;initialBankId?:string;onApply:(title:string,tags:string[])=>void}){const [bankId,setBankId]=useState(initialBankId||""),[keywords,setKeywords]=useState<string[]>([]),[message,setMessage]=useState("");const title=keywords.join(useCommas?", ":" ");function add(keyword:string){setKeywords(current=>current.includes(keyword)?current:[...current,keyword]);setMessage("")}function apply(){if(!title)return;onApply(title,tagsFromTitle(keywords.join(", ")));setMessage("âœ“ Your title and matching tags were applied to this listing only.")}return <details className="individual-title-builder individual-manual-title" onClick={event=>event.stopPropagation()}><summary>Build this title yourself from a keyword bank</summary><KeywordBank compact initialId={bankId} title="Choose a keyword bank" copy="Click keywords in the order you want them for this listing." onSelect={list=>{setBankId(list?.id||"");setKeywords([]);setMessage("")}} onAdd={add}/><div className="individual-keyword-selection"><div><b>Selected keywords</b>{keywords.length>0&&<button type="button" onClick={()=>setKeywords([])}>Clear all</button>}</div>{keywords.length?<><div className="selected-keyword-chips">{keywords.map(keyword=><button type="button" key={keyword} onClick={()=>setKeywords(current=>current.filter(item=>item!==keyword))}>{keyword}<span>Ã—</span></button>)}</div><div className="individual-title-preview"><small>Title preview</small><span>{title}</span></div><button type="button" className="apply-manual-title" onClick={apply}>Apply to this listing</button></>:<p>Choose a bank, then click the keywords you want to use.</p>}{message&&<p className="title-build-message" role="status">{message}</p>}</div></details>}
-
-function PersonalizationEditor({value,onChange}:{value?:EtsyPersonalization;onChange:(value:EtsyPersonalization)=>void}){
-  const enabled=Boolean(value?.enabled),questions=value?.questions||[];
-  function blank(type:PersonalizationQuestion["type"]="text_input"):PersonalizationQuestion{return{id:crypto.randomUUID(),type,question:type==="text_input"?"Personalization":"",instructions:"",required:false,maxCharacters:256,maxFiles:1,options:type==="dropdown"?["Option 1","Option 2"]:[]}}
-  function update(id:string,patch:Partial<PersonalizationQuestion>){onChange({enabled:true,questions:questions.map(question=>question.id===id?{...question,...patch}:question)})}
-  function toggle(next:boolean){onChange({enabled:next,questions:next?(questions.length?questions:[blank()]):questions})}
-  return <section className="personalization-editor"><div className="personalization-heading"><div><b>Personalization</b><small>Let buyers answer questions or upload files for this listing.</small></div><label className="personalization-switch"><input type="checkbox" role="switch" aria-label="Personalization" aria-checked={enabled} checked={enabled} onChange={event=>toggle(event.target.checked)}/><span>{enabled?"On":"Off"}</span></label></div>{enabled&&<><div className="personalization-questions">{questions.map((question,index)=><article key={question.id}><div className="personalization-question-head"><b>Question {index+1}</b><button type="button" onClick={()=>onChange({enabled:true,questions:questions.filter(item=>item.id!==question.id)})}>Remove</button></div><label>Answer type<select value={question.type} onChange={event=>{const type=event.target.value as PersonalizationQuestion["type"];update(question.id,{type,options:type==="dropdown"&&question.options.length<2?["Option 1","Option 2"]:question.options})}}><option value="text_input">Text answer</option><option value="dropdown">Dropdown choices</option><option value="unlabeled_upload">File upload</option></select></label><label>Question<input maxLength={120} value={question.question} placeholder="Example: What name should appear on the shirt?" onChange={event=>update(question.id,{question:event.target.value})}/></label>{question.type!=="dropdown"&&<label>Instructions <span>{question.instructions.length}/120</span><textarea rows={2} maxLength={120} value={question.instructions} placeholder="Tell the buyer exactly what to provide." onChange={event=>update(question.id,{instructions:event.target.value})}/></label>}{question.type==="text_input"&&<label>Maximum characters<IntegerField value={question.maxCharacters} min={1} max={1024} label="Maximum characters" onCommit={next=>update(question.id,{maxCharacters:next})}/></label>}{question.type==="unlabeled_upload"&&<label>Maximum files<IntegerField value={question.maxFiles} min={1} max={10} label="Maximum files" onCommit={next=>update(question.id,{maxFiles:next})}/></label>}{question.type==="dropdown"&&<label>Dropdown choices<textarea rows={3} value={question.options.join("\n")} placeholder={"Small\nMedium\nLarge"} onChange={event=>update(question.id,{options:event.target.value.split(/\r?\n/).slice(0,30)})}/><small>Enter one choice per line. Etsy allows up to 30 choices, with 20 characters per choice.</small></label>}<label className="personalization-required"><input type="checkbox" checked={question.required} onChange={event=>update(question.id,{required:event.target.checked})}/>Buyer must answer this question</label></article>)}</div>{questions.length<5&&<button type="button" className="add-personalization-question" onClick={()=>onChange({enabled:true,questions:[...questions,blank()]})}>Add another question</button>}<small className="personalization-note">Etsy allows up to five questions. Review every question before publishing.</small></>}</section>
-}
-
-function EtsyDetailsEditor({design,categories,onChange,onCategory}:{design:DesignFile;categories:EtsyCategoryOption[];onChange:(details:EtsyDetails)=>void;onCategory:(taxonomyId:number)=>Promise<void>}){
-  const details=design.etsy!,[loading,setLoading]=useState(false);
-  const properties=details.properties||[],completed=properties.filter(property=>property.value.trim()),physical=completed.filter(property=>PHYSICAL_ETSY_FIELDS.test(property.label)),preview=physical.slice(0,3).map(property=>property.value).join(", ");
-  async function choose(id:number){setLoading(true);try{await onCategory(id)}finally{setLoading(false)}}
-  function setProperty(property:EtsyPropertySelection,value:string){const option=property.possibleValues.find(item=>String(item.value_id)===value),next={...property,valueId:option?.value_id||null,value:option?.name||value};onChange({...details,properties:(details.properties||[]).map(item=>item.propertyId===property.propertyId?next:item)})}
-  return <details className="etsy-details-editor"><summary><span><b>Etsy details</b><small>{(()=>{const required=properties.filter(property=>property.required),requiredDone=required.filter(property=>property.value.trim());return required.length?`${requiredDone.length} of ${required.length} required set`:`${completed.length} added Â· all optional`})()}{preview?` Â· ${preview}`:""}</small></span><em>Edit</em></summary><div className="etsy-details-editor-fields"><label>Etsy category<select value={details.taxonomyId||""} disabled={loading} onChange={event=>void choose(Number(event.target.value))}>{!details.taxonomyId&&<option value="">Choose an Etsy category</option>}{Boolean(details.taxonomyId)&&!categories.some(category=>category.id===details.taxonomyId)&&<option value={details.taxonomyId}>{details.category||"Category already chosen for this listing"}</option>}{categories.map(category=><option key={category.id} value={category.id}>{category.path}</option>)}</select></label>{loading&&<small>Loading the exact Etsy options for this categoryâ€¦</small>}<div className="etsy-attribute-grid">{properties.map(property=><label key={property.propertyId}>{property.label}{property.required&&<em>Required</em>}{property.possibleValues.length?<select value={property.valueId||""} onChange={event=>setProperty(property,event.target.value)}><option value="">{property.required?"Choose one":"Not applicable"}</option>{property.possibleValues.map(option=><option key={option.value_id} value={option.value_id}>{option.name}</option>)}</select>:<input value={property.value} onChange={event=>setProperty(property,event.target.value)}/>}</label>)}</div><small className="optional-note">These are Etsyâ€™s actual fields for the selected category. Optional fields can stay blank.</small><PersonalizationEditor value={details.personalization} onChange={personalization=>onChange({...details,personalization})}/></div><button type="button" className="panel-collapse-foot" onClick={event=>{const box=(event.currentTarget as HTMLElement).closest("details");if(box){(box as HTMLDetailsElement).open=false;box.scrollIntoView({block:"nearest"})}}}>Close Etsy details</button></details>
-}
-
-function IndividualSizeGuide({productId,name,onSaved}:{productId:string;name?:string;onSaved:(name:string)=>void}){const picker=useRef<HTMLInputElement>(null),[status,setStatus]=useState(""),[saving,setSaving]=useState(false);async function save(file:File){if(saving)return;setSaving(true);setStatus(`Saving ${file.name}â€¦`);try{const form=new FormData();form.set("productId",productId);form.set("kind","size-guide");form.set("file",file);const response=await fetch("/api/etsy/images",{method:"POST",body:form}),payload=await response.json() as {error?:string};if(!response.ok)throw new Error(payload.error||"This size guide could not be saved.");onSaved(file.name);setStatus(`âœ“ ${file.name} will be used for this listing.`)}catch(error){setStatus(error instanceof Error?error.message:"This size guide could not be saved.")}finally{setSaving(false)}}return <div className="individual-size-guide"><div><b>Size guide for this listing</b><small>{name||"Using the batch size guide"}</small></div><input ref={picker} type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={event=>{const file=event.target.files?.[0];if(file)void save(file)}}/><button type="button" aria-busy={saving} disabled={saving} onClick={()=>picker.current?.click()}>{saving?"Saving size guideâ€¦":name?"Replace custom size guide":"Use a different size guide"}</button>{status&&<p role="status">{status}</p>}</div>}
-
-function DownloadListingPhotos({productId,name,indices}:{productId:string;name:string;indices:number[]}){const [downloading,setDownloading]=useState(false),[message,setMessage]=useState("");async function download(){if(downloading)return;setDownloading(true);setMessage("");try{const response=await fetch("/api/listing-photos/download",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({productId,printifyImageIndices:indices})});if(!response.ok){const payload=await response.json() as {error?:string};throw new Error(payload.error||"These listing photos could not be downloaded.")}const blob=await response.blob(),url=URL.createObjectURL(blob),link=document.createElement("a");link.href=url;link.download=`${name.replace(/[^a-z0-9._-]+/gi,"-").slice(0,90)||"listing"}-listing-photos.zip`;document.body.appendChild(link);link.click();link.remove();URL.revokeObjectURL(url);setMessage("âœ“ Download ready.")}catch(error){setMessage(error instanceof Error?error.message:"These listing photos could not be downloaded.")}finally{setDownloading(false)}}return <div className="listing-photo-download"><div><b>Keep a local copy</b><small>Selected Printify photos and created lifestyle mockups in one ZIP.</small></div><button type="button" aria-busy={downloading} disabled={downloading} onClick={()=>void download()}>{downloading?"Preparing photosâ€¦":"Download this listingâ€™s photos"}</button>{message&&<p role="status">{message}</p>}</div>}
-
-function PricingReview({section="all",variants,pricing,prices,productName,profiles,selectedProfileId,templateShippingProfileId,profilesLoading,profilesError,approved,wholeNumber=false,onWholeNumber,onPricing,onPrices,onSelectProfile,onCreateProfile,onApprovalChange}:{variants:ProductVariant[];pricing:Pricing;prices:Record<string,number>;productName:string;section?:"all"|"prices"|"shipping";profiles:EtsyShippingProfile[];selectedProfileId:number;templateShippingProfileId:number;profilesLoading:boolean;profilesError:string;approved:boolean;wholeNumber?:boolean;onWholeNumber?:(value:boolean)=>void;onPricing:(value:Pricing)=>void;onPrices:(value:Record<string,number>)=>void;onSelectProfile:(id:number)=>void;onCreateProfile:(baseId:number,charge:number,additional:number,title:string,international:InternationalShippingRate[])=>Promise<void>;onApprovalChange:(ready:boolean)=>void}){
-  const selectedProfile=profiles.find(profile=>profile.id===selectedProfileId);
-  const printifyShipping=Math.max(0,...variants.map(variant=>Number(variant.shipping)||0));
-  const shippingShortfall=selectedProfile?printifyShipping-selectedProfile.domesticPrimary:0;
-  const [customCharge,setCustomCharge]=useState(""),[customAdditional,setCustomAdditional]=useState(""),[customInternational,setCustomInternational]=useState<EditableInternationalShippingRate[]>([]),[customProfileName,setCustomProfileName]=useState(""),[savingProfile,setSavingProfile]=useState(false),[profileMessage,setProfileMessage]=useState(""),[recommendationMessage,setRecommendationMessage]=useState(""),[wholeNumberPricing,setWholeNumberPricing]=useState(false),[profileSearch,setProfileSearch]=useState("");
-  const [attachedProfileId,setAttachedProfileId]=useState(0),attachedProductName=useRef(productName);
-  useEffect(()=>{if(attachedProductName.current!==productName){attachedProductName.current=productName;setAttachedProfileId(selectedProfileId||0);return}if(!attachedProfileId&&selectedProfileId)setAttachedProfileId(selectedProfileId)},[productName,selectedProfileId,attachedProfileId]);
-  function resetProfileEditor(profile=selectedProfile){setCustomCharge(profile?profile.domesticPrimary.toFixed(2):"");setCustomAdditional(profile?profile.domesticAdditional.toFixed(2):"");setCustomInternational(profile?profile.international.map(rate=>({...rate,primary:rate.primary.toFixed(2),additional:rate.additional.toFixed(2)})):[]);setCustomProfileName("");setProfileMessage("")}
-  useEffect(()=>{resetProfileEditor()},[selectedProfileId,selectedProfile?.title]);
-  const enteredCharge=Number(customCharge),enteredAdditional=Number(customAdditional),buyerShipping=Number.isFinite(enteredCharge)&&enteredCharge>=0?enteredCharge:selectedProfile?.domesticPrimary||0,internationalDirty=Boolean(selectedProfile&&customInternational.some((rate,index)=>Math.abs(Number(rate.primary)-selectedProfile.international[index]?.primary)>.004||Math.abs(Number(rate.additional)-selectedProfile.international[index]?.additional)>.004)),customDirty=Boolean(selectedProfile&&(Math.abs(buyerShipping-selectedProfile.domesticPrimary)>.004||Math.abs(enteredAdditional-selectedProfile.domesticAdditional)>.004||internationalDirty||Boolean(customProfileName.trim())));
-  function markShippingEdit(){onApprovalChange(false);setProfileMessage("")}
-  const priceGroups=useMemo(()=>{const grouped=new Map<number,ProductVariant[]>();for(const variant of variants)grouped.set(variant.cost,[...(grouped.get(variant.cost)||[]),variant]);return [...grouped.entries()].sort(([a],[b])=>a-b).map(([cost,items])=>({cost,items}))},[variants]);
-  const wholePrice=(cents:number)=>wholeNumberPricing?Math.ceil(cents/100)*100:cents;
-  function recalculate(nextPricing=pricing){const calculated=Object.fromEntries(variants.map(variant=>[String(variant.id),wholePrice(recommendedPrice(variant.cost,nextPricing))])),next=normalizePricesByCost(variants,calculated),changed=variants.filter(variant=>next[String(variant.id)]!==(prices[String(variant.id)]??variant.templatePrice)).length;onPrices(next);setRecommendationMessage(changed?`âœ“ Updated ${changed} ${changed===1?"price":"prices"}. Review each cost group below before continuing.`:"âœ“ Your current prices already meet this profit goal. Nothing needed to change.")}
-  const initialPriceSignature=variants.map(variant=>`${variant.id}:${variant.cost}:${variant.shipping||0}:${variant.templatePrice}`).join("|");
-  useEffect(()=>{if(!selectedProfile||!variants.length)return;const stillUsingTemplatePrices=variants.every(variant=>(prices[String(variant.id)]??variant.templatePrice)===variant.templatePrice);if(!stillUsingTemplatePrices)return;const calculated=Object.fromEntries(variants.map(variant=>[String(variant.id),recommendedPrice(variant.cost,pricing)]));onPrices(normalizePricesByCost(variants,calculated));setRecommendationMessage("âœ“ Goldie calculated every price from your profit goal, product costs, and Etsy fees.")},[selectedProfile?.id,initialPriceSignature]);
-  /* D320 Â· Prices shown on arrival were never calculated. The price map starts
-     empty and every read falls through to `variant.templatePrice` â€” the retail
-     price already on the Printify template â€” while the banner claimed Goldie had
-     calculated them from the profit goal.
-
-     D324 Â· The first fix never ran AT ALL. It was guarded on "only calculate if
-     no price is set yet", but loading a product does this:
-
-         setVariantPrices(... variant.templatePrice ...)
-
-     so the map is full of Printify's own prices before the effect ever looks at
-     it. That is where $55.84 against a $31.59 cost came from â€” it is not a
-     calculation, it is what Printify has on the variant. Never assume an empty
-     map means "nothing has decided this yet".
-
-     The seed also ran once per variant set, which was wrong for a second
-     reason: selectRecipe sets the target from the recipe, the seed ran at
-     THAT number, and a later reset to the default 10 changed the goal without
-     recalculating. The result was prices computed at $18.50 sitting under a goal
-     reading $10 â€” two different costs both showing exactly $18.50 profit, which
-     is the giveaway that they were calculated, just from the wrong number.
-
-     Until pricing is approved or the seller edits a price by hand, the prices
-     ARE the goal's output, so they follow it. After either, they are the
-     seller's and nothing recomputes them. */
-  /* D404 - Seed from the saved product so the toggle survives a refresh and a
-     remount. Value-compared, so this cannot fight the seller's own click. */
-  useEffect(()=>{setWholeNumberPricing(wholeNumber)},[wholeNumber]);
-  /* D420 - The field was bound straight to the number, so clearing it made
-     Number("") = 0, Math.max(0,0) = 0, and React wrote "0" back into the box.
-     Everything typed after that landed behind the zero: clear the field, type 12,
-     get "012". While the field has focus it holds exactly what was typed; the
-     number is committed only when it parses, and the draft is dropped on blur so
-     the box goes back to showing the real value. */
-  const [profitDraft,setProfitDraft]=useState<string|null>(null);
-  const manualPriceEdit=useRef(false);
-  /* D350 Â· These deps were the objects themselves. That was fine while
-     PricingReview rendered once with memoised props, but D334 renders it per
-     bundle product and builds `variants` and `pricing` INLINE in the map â€” a new
-     array and a new object on every render. New identity fired the effect, the
-     effect set state, the state caused a render, and the render made new
-     identities: an infinite loop that hung the page before it finished loading.
-     Depend on the VALUES, so the effect runs when a price actually should
-     change and not when React happens to re-render. */
-  const variantKey=variants.map(variant=>`${variant.id}:${variant.cost}`).join(",");
-  const pricingKey=`${pricing.targetProfit}|${pricing.etsyFeePercent}|${pricing.fixedFee}|${pricing.listingFee}`;
-  const pricesKey=Object.keys(prices).sort().map(id=>`${id}:${prices[id]}`).join(",");
-  useEffect(()=>{
-    if(!variants.length||approved||manualPriceEdit.current)return;
-    const wanted=Object.fromEntries(variants.map(variant=>[String(variant.id),wholePrice(recommendedPrice(variant.cost,pricing))]));
-    const settled=normalizePricesByCost(variants,wanted);
-    const drifted=variants.some(variant=>settled[String(variant.id)]!==prices[String(variant.id)]);
-    if(drifted)onPrices(settled);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  },[variantKey,pricingKey,pricesKey,approved]);
-
-  function changeProfit(value:number){const nextPricing={...pricing,targetProfit:Math.max(0,value)};onPricing(nextPricing);recalculate(nextPricing);}
-  function changeCostGroupPrice(cost:number,cents:number){manualPriceEdit.current=true;const matching=variants.filter(item=>item.cost===cost),safeCents=Math.max(wholePrice(cents),cost),next={...prices};for(const item of matching)next[String(item.id)]=safeCents;onPrices(next);setRecommendationMessage(`âœ“ $${(safeCents/100).toFixed(2)} applied to all ${matching.length} ${matching.length===1?"variant":"variants"} with a $${(cost/100).toFixed(2)} Printify cost.`)}
-  function changeIndividualPrice(variant:ProductVariant,cents:number){manualPriceEdit.current=true;/* D404 - This never set the flag, so the recalculate effect could snap a hand-typed variant price back to the goal. */onPrices({...prices,[String(variant.id)]:Math.max(wholePrice(cents),variant.cost)});setRecommendationMessage(`âœ“ ${variant.title} now has its own price. The rest of its cost group was not changed.`)}
-  function toggleWholeNumberPricing(checked:boolean){setWholeNumberPricing(checked);onWholeNumber?.(checked);if(!checked)return;const rounded=Object.fromEntries(variants.map(variant=>{const current=prices[String(variant.id)]??variant.templatePrice;return[String(variant.id),Math.max(Math.ceil(current/100)*100,variant.cost)]}));onPrices(normalizePricesByCost(variants,rounded));setRecommendationMessage("âœ“ Every item price is now a whole number without dropping below the displayed profit goal.")}
-  function chooseProfile(id:number){const profile=profiles.find(item=>item.id===id);onSelectProfile(id);resetProfileEditor(profile);if(profile)recalculate(pricing)}
-  function changeInternational(index:number,field:"primary"|"additional",value:string){setCustomInternational(current=>current.map((rate,i)=>i===index?{...rate,[field]:value}:rate));markShippingEdit()}
-  async function createProfile(){if(!selectedProfile)return;const charge=Number(customCharge),additional=Number(customAdditional),title=customProfileName.trim(),international=customInternational.map(rate=>({...rate,primary:Number(rate.primary),additional:Number(rate.additional)})),ratesValid=international.every(rate=>rate.primary>=0&&Number.isFinite(rate.primary)&&rate.additional>=0&&Number.isFinite(rate.additional));if(customCharge===""||customAdditional===""||!Number.isFinite(charge)||charge<0||!Number.isFinite(additional)||additional<0||!ratesValid||!title)return setProfileMessage("Name the profile and enter valid first-item and additional-item charges for every destination.");setSavingProfile(true);setProfileMessage("");try{await onCreateProfile(selectedProfile.id,charge,additional,title,international);setProfileMessage("âœ“ New Etsy shipping profile saved and selected.")}catch(error){setProfileMessage(error instanceof Error?error.message:"The shipping profile could not be saved.")}finally{setSavingProfile(false)}}
-  const normalizedProfileSearch=profileSearch.trim().toLocaleLowerCase();
-  /* D348 Â· Matches were left in shop order, so searching "hoodie" put the
-     profile literally named "Hoodies" third behind two longer names that also
-     contain the word. When someone types a word, the closest match to that word
-     goes first: exact name, then names that start with it, then the rest. */
-  const searchedProfiles=(()=>{
-    const matches=profiles.filter(profile=>!normalizedProfileSearch||decodeProfileTitle(profile.title).toLocaleLowerCase().includes(normalizedProfileSearch));
-    if(!normalizedProfileSearch)return matches;
-    const rank=(profile:EtsyShippingProfile)=>{
-      const title=decodeProfileTitle(profile.title).toLocaleLowerCase();
-      if(title===normalizedProfileSearch)return 0;
-      if(title.startsWith(normalizedProfileSearch))return 1;
-      /* a whole-word hit beats the same letters buried inside another word */
-      if(new RegExp(`\\b${normalizedProfileSearch.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")}\\b`).test(title))return 2;
-      return 3;
-    };
-    return [...matches].sort((a,b)=>rank(a)-rank(b)||decodeProfileTitle(a.title).length-decodeProfileTitle(b.title).length);
-  })();
-  const attachedProfile=profiles.find(profile=>profile.id===attachedProfileId);
-  const withoutAttached=searchedProfiles.filter(profile=>profile.id!==attachedProfile?.id);
-  const recommendedProfiles=withoutAttached.filter(profile=>shippingProfileGroup(profile.title,productName)==="recommended");
-  const relatedProfiles=withoutAttached.filter(profile=>shippingProfileGroup(profile.title,productName)==="related");
-  const otherProfiles=withoutAttached.filter(profile=>shippingProfileGroup(profile.title,productName)==="other");
-  const selectedProfileGroup=selectedProfile?shippingProfileGroup(selectedProfile.title,productName):"other";
-  const selectedProfileNeedsReview=Boolean(selectedProfile&&selectedProfile.id!==attachedProfile?.id&&selectedProfileGroup!=="recommended");
-  const selectedOutsideSearch=selectedProfile&&!searchedProfiles.some(profile=>profile.id===selectedProfile.id)?selectedProfile:null;
-  /* D327 Â· The default is the shipping profile the PRINTIFY TEMPLATE uses for
-     this product. Until the seller saves a choice of their own, that is what
-     should already be selected â€” they change it only if they want to.
-
-     D325 tried to do this from `attachedProfile`, which was a no-op: that value
-     is derived from selectedProfileId, so when nothing was selected there was
-     nothing to fall back to. The template's id is the real source, and it is
-     validated against the seller's actual Etsy profiles first â€” an id that
-     matches none of them must not be selected, which is the D231 deadlock. */
-  useEffect(()=>{
-    if(profilesLoading||selectedProfileId||!profiles.length)return;
-    const fromTemplate=profiles.find(profile=>profile.id===Number(templateShippingProfileId||0));
-    if(fromTemplate)onSelectProfile(fromTemplate.id);
-  },[profilesLoading,selectedProfileId,profiles,templateShippingProfileId]);
-  const templateProfile=profiles.find(profile=>profile.id===Number(templateShippingProfileId||0));
-  const [comboOpen,setComboOpen]=useState(false);
-  const comboRef=useRef<HTMLDivElement|null>(null);
-  /* D319 Â· Clicking away closes the list, the way every other picker behaves. */
-  useEffect(()=>{
-    if(!comboOpen)return;
-    const away=(event:MouseEvent)=>{if(comboRef.current&&!comboRef.current.contains(event.target as Node)){setComboOpen(false);setProfileSearch("")}};
-    document.addEventListener("mousedown",away);
-    return()=>document.removeEventListener("mousedown",away);
-  },[comboOpen]);
-  /* The same grouping the <optgroup>s used, so the ordering sellers already know
-     survives the change of control. */
-  const comboGroups=[
-    {label:"Current selection",items:selectedOutsideSearch?[selectedOutsideSearch]:[]},
-    {label:"Currently attached to this product",items:attachedProfile&&(!normalizedProfileSearch||searchedProfiles.some(profile=>profile.id===attachedProfile.id))?[attachedProfile]:[]},
-    {label:`Recommended for ${productName}`,items:recommendedProfiles},
-    {label:"Other apparel profiles",items:relatedProfiles},
-    {label:"All other shipping profiles",items:otherProfiles},
-  ];
-  const renderProfileOptions=(items:EtsyShippingProfile[])=>items.map(profile=><option key={profile.id} value={profile.id}>{shippingProfileOptionLabel(profile)}</option>);
-  return (
-    <section className={"variant-pricing "+(approved?"approved":"")}>
-      <div className="variant-pricing-head">
-        <div>{/* D233 Â· Card titles name the thing, in the same voice as "Colors" and
-            "Sizes". "Item prices + buyer-paid shipping" was a summary of its own
-            two subsections, which are already titled below it. */}
-        {section==="all"&&<h3>Pricing</h3>}</div>
-        {section==="all"&&approved&&<span>âœ“ Approved</span>}
-      </div>
-      {(section==="all"||section==="prices")&&<section className="item-pricing-section"><div className="item-pricing-heading pricing-section-heading"><div><div className="heading-with-help"><h4>{section==="all"?"1. ":""}Item prices{section==="all"&&<span> Â· {productName}</span>}</h4><ContextHelp label="Explain item pricing" title="How grouped pricing works" intro="Goldie groups variants only when Printify charges the exact same product cost. This saves repetitive typing without taking away your control." sections={[{heading:"Set your profit goal",copy:"Enter the item profit you want left after the Printify product cost and Etsy fees. Buyer-paid shipping is configured and shown separately below."},{heading:"Change one matching-cost group",copy:"Editing the price on a group updates every variant with that exact Printify cost. A higher-cost color, size, material, finish, capacity, or model stays in a separate group automatically."},{heading:"Override one variant only",copy:"Open â€œView included variantsâ€ when one specific option needs a different retail price. That individual edit does not change the rest of its group."},{heading:"Review before continuing",copy:"The item profit shown includes product cost and the saved Etsy fee profile. It does not include buyer-paid shipping, Offsite Ads, or sales tax."}]}/></div><p>Variants with the exact same Printify product cost share one price. Item profit includes the Printify product cost and Etsy fees.</p></div><div className="pricing-heading-actions"><label className="whole-pricing-toggle"><input type="checkbox" checked={wholeNumberPricing} onChange={event=>toggleWholeNumberPricing(event.target.checked)}/><span aria-hidden="true"/><b>Create whole-number pricing</b></label><div className="profit-goal-control"><label>Profit goal<span className="money-input">$<input aria-label="Profit goal" type="number" min="0" step="0.01" value={profitDraft??String(pricing.targetProfit)} onChange={event=>{const raw=event.target.value;setProfitDraft(raw);const parsed=Number(raw);if(raw!==""&&Number.isFinite(parsed))changeProfit(parsed)}} onBlur={()=>setProfitDraft(null)}/></span><small>Prices update automatically.</small></label></div></div></div>{recommendationMessage&&<p className="recommendation-result" role="status">{recommendationMessage}</p>}
-      <div className="price-group-list">{priceGroups.map(group=>{const groupPrices=group.items.map(variant=>prices[String(variant.id)]??variant.templatePrice),groupPrice=Math.max(...groupPrices),profits=group.items.map(variant=>estimatedProfit(groupPrice,variant.cost,pricing)),lowestProfit=Math.min(...profits),examples=group.items.map(item=>item.title).filter(Boolean);return <article className="price-group" key={group.cost}>
-        <div className="price-group-row"><div className="price-group-variants"><b>{group.items.length} {group.items.length===1?"variant":"variants"}</b><small>{examples.slice(0,2).join(" Â· ")}{examples.length>2?` Â· +${examples.length-2} more`:""}</small></div><div><small>Printify product cost</small><b>${(group.cost/100).toFixed(2)}</b></div><div><small>Your item price</small><PriceField value={groupPrice} minimum={group.cost/100} label={`Price for all variants costing $${(group.cost/100).toFixed(2)}`} onCommit={cents=>changeCostGroupPrice(group.cost,cents)}/></div><div className={lowestProfit+0.005>=pricing.targetProfit?"profit-pass":"profit-low"}><small>Lowest estimated item profit</small><b>${lowestProfit.toFixed(2)}</b><small className="profit-fee-note">Shipping not included</small></div></div>
-        <details className="price-group-details"><summary>View included variants or edit one separately</summary><div className="individual-variant-list">{group.items.map(variant=>{const itemCents=prices[String(variant.id)]??variant.templatePrice,profit=estimatedProfit(itemCents,variant.cost,pricing);return <div key={variant.id}><span><b>{variant.title}</b><small>Printify cost ${(variant.cost/100).toFixed(2)}</small></span><PriceField value={itemCents} minimum={variant.cost/100} label={`Individual price for ${variant.title}`} onCommit={cents=>changeIndividualPrice(variant,cents)}/><span className={profit+0.005>=pricing.targetProfit?"profit-pass":"profit-low"}><b>${profit.toFixed(2)} item profit</b><small>Shipping not included</small></span></div>})}</div><button type="button" className="panel-collapse-foot" onClick={event=>{const box=(event.currentTarget as HTMLElement).closest("details");if(box){(box as HTMLDetailsElement).open=false;box.scrollIntoView({block:"nearest"})}}}>Close variants</button></details>
-      </article>})}</div>
-      {/* D303 Â· The âœ“ line at the top of this card already says Goldie calculated
-            every price from the profit goal, product costs and Etsy fees. This
-            expander then explained the same thing again at length. The prose is
-            gone; the fee figures and the link to change them stay, because those
-            are a control, not an explanation. */}
-            <div className="fee-profile-summary"><span>{pricing.etsyFeePercent.toFixed(1)}% Etsy percentage fees</span><span>${pricing.fixedFee.toFixed(2)} payment fee</span><span>${pricing.listingFee.toFixed(2)} listing fee</span><a href="/usage" target="_blank" rel="noopener noreferrer">Change fee settings â†—</a></div>
-      </section>}
-      {(section==="all"||section==="shipping")&&<section className="shipping-pricing-section">
-      <div className="pricing-section-heading shipping-section-heading"><div><div className="heading-with-help"><h4>{section==="all"?"2. ":""}Etsy shipping profile{section==="all"&&<span> Â· {productName}</span>}</h4><ContextHelp label="Explain shipping profiles" title="Choose the shipping buyers will see on Etsy" intro="Goldie starts with the Etsy shipping profile attached to your saved product. You can keep it or create a new reusable copy for this batch." sections={[{heading:"Keep the saved profile",copy:"If the first-item, additional-item, and international rates are already correct, leave the selected profile unchanged."},{heading:"Create a custom profile",copy:"Open the optional custom-profile section, name the new profile, and edit any domestic or international charge. Goldie creates a copy. Your original Etsy profile is not changed."},{heading:"Understand first and additional item",copy:"First item is what a buyer pays for one product. Additional item is the extra shipping charge when the same order contains another eligible product."},{heading:"Separate from item profit",copy:"Shipping is configured here and charged to the buyer separately. It does not change the item-profit figures in the pricing section above."}]}/></div><p>{selectedProfileId?"Goldie starts with the shipping profile already used for this product. Change it only if needed.":"This product has no Etsy shipping profile yet. Pick the one buyers should see."}</p></div></div>
-      <div className="pricing-controls">
-        <div className="shipping-profile-picker">
-          {/* D319 Â· This was a native <select> with a separate search box above it.
-              Typing filtered the <option> list â€” which you cannot see, because the
-              dropdown is closed while you type. The only feedback was a line
-              counting the matches, so the search appeared to do nothing and
-              connect to nothing. A native select cannot be filtered while open;
-              the control has to own its own list. */}
-          <div className="shipping-combobox" ref={comboRef}>
-            <span className="shipping-combobox-label" id="shipping-combobox-label">Etsy shipping profile</span>
-            <button type="button" className="shipping-combobox-trigger" disabled={profilesLoading}
-              aria-haspopup="listbox" aria-expanded={comboOpen} aria-labelledby="shipping-combobox-label"
-              onClick={()=>setComboOpen(open=>!open)}>
-              <span>{profilesLoading?"Loading your shipping profilesâ€¦":selectedProfile?shippingProfileOptionLabel(selectedProfile):templateProfile?shippingProfileOptionLabel(templateProfile):"Choose your Etsy shipping profile"}</span>
-              <em aria-hidden="true">âŒ„</em>
-            </button>
-            {comboOpen&&<div className="shipping-combobox-panel">
-              <input className="shipping-combobox-search" type="search" autoFocus value={profileSearch}
-                placeholder={`Search ${profiles.length} shipping profiles`} aria-label="Search shipping profiles"
-                onChange={event=>setProfileSearch(event.target.value)}
-                onKeyDown={event=>{if(event.key==="Escape"){setComboOpen(false);setProfileSearch("")}}}/>
-              <div className="shipping-combobox-list" role="listbox" aria-labelledby="shipping-combobox-label">
-                {comboGroups.map(group=>group.items.length>0&&<Fragment key={group.label}>
-                  <p className="shipping-combobox-group">{group.label}</p>
-                  {group.items.map(profile=><button type="button" role="option" key={profile.id}
-                    aria-selected={profile.id===selectedProfileId}
-                    className={`shipping-combobox-option${profile.id===selectedProfileId?" selected":""}`}
-                    onClick={()=>{chooseProfile(profile.id);setComboOpen(false);setProfileSearch("")}}>
-                    {shippingProfileOptionLabel(profile)}
-                  </button>)}
-                </Fragment>)}
-                {!searchedProfiles.length&&<p className="shipping-combobox-empty" role="status">
-                  No shipping profiles match â€œ{profileSearch.trim()}â€.
-                </p>}
-              </div>
-              {normalizedProfileSearch&&searchedProfiles.length>0&&<p className="shipping-combobox-count">
-                {searchedProfiles.length} of {profiles.length} profiles
-              </p>}
-            </div>}
-          </div>
-        </div>
-      </div>
-      {profilesError&&<div className="shipping-api-note error"><b>Shipping profiles could not be loaded.</b><span>{profilesError}</span></div>}
-      {selectedProfile&&<>{selectedProfileNeedsReview&&<div className="shipping-profile-family-warning" role="status"><b>Double-check this profile for {productName}.</b><span>Its name does not clearly match this product type. Goldie has not changed it; confirm the buyer charges below before approving.</span></div>}{/* D232 Â· Three chips â€” "Etsy buyer charge", "Printify shipping cost â€” what you
-           pay", "International buyer charges" â€” restated numbers the dropdown option
-           already shows ("Â· $4.75 first Â· $2.40 additional"). The one figure that is
-           NOT visible elsewhere is the shortfall against Printify's cost, and that
-           has its own warning below and stays. */}{shippingShortfall>.004?<div className="shipping-rate-warning" role="alert"><b>Your Etsy buyer charge is ${shippingShortfall.toFixed(2)} below Printifyâ€™s current shipping cost.</b><span>Printify may charge up to ${printifyShipping.toFixed(2)} while the buyer pays ${selectedProfile.domesticPrimary.toFixed(2)}. You would cover the difference.</span></div>:<div className="shipping-rate-confirmation"><b>âœ“ The Etsy buyer charge covers Printifyâ€™s current shipping cost.</b>{/* D358 Â· "Shipping remains separate from the item-profit calculation above"
-                     appeared on both branches of this notice, and the pricing card says
-                     the same thing twice more. Nobody assumes item profit includes
-                     shipping; the app kept insisting on it. */}</div>}</>}
-      {selectedProfile&&<details className="custom-shipping-builder"><summary>{customDirty?"âš  Unsaved shipping changes":"Create a custom shipping profile (optional)"}</summary><div className="custom-shipping-body"><div className="shipping-builder-intro"><b>Create a copy. Your original profile will not change.</b><span>Name it, adjust any rates you want, then save it. Goldie will select the new profile for this batch.</span></div><label><span>1. Name your new shipping profile<small>This name will appear in Etsy and in Goldie next time.</small></span><b className="shipping-profile-name-label">Profile name</b><input aria-label="New shipping profile name" placeholder={`Example: ${selectedProfile.title}, $4 US shipping`} value={customProfileName} maxLength={60} onChange={event=>{setCustomProfileName(event.target.value);markShippingEdit()}}/></label><h5>2. Edit {selectedProfile.originCountry} shipping</h5><div className="shipping-rate-row"><b>Domestic</b><label>First item<span className="money-input">$<input inputMode="decimal" value={customCharge} onChange={event=>{setCustomCharge(event.target.value);markShippingEdit()}}/></span></label><label>Additional<span className="money-input">$<input inputMode="decimal" value={customAdditional} onChange={event=>{setCustomAdditional(event.target.value);markShippingEdit()}}/></span></label></div><details className="international-shipping-editor"><summary>3. Edit international rates (optional) Â· {customInternational.length} destinations</summary>{customInternational.length?<div className="international-rate-list">{customInternational.map((rate,index)=><div className="shipping-rate-row" key={rate.key}><b>{rate.label}</b><label>First item<span className="money-input">$<input aria-label={`${rate.label} first item`} inputMode="decimal" value={rate.primary} onChange={event=>changeInternational(index,"primary",event.target.value)}/></span></label><label>Additional<span className="money-input">$<input aria-label={`${rate.label} additional item`} inputMode="decimal" value={rate.additional} onChange={event=>changeInternational(index,"additional",event.target.value)}/></span></label></div>)}</div>:<p className="no-international-rates">No international destinations.</p>}<button type="button" className="panel-collapse-foot" onClick={event=>{const box=(event.currentTarget as HTMLElement).closest("details");if(box){(box as HTMLDetailsElement).open=false;box.scrollIntoView({block:"nearest"})}}}>Close international rates</button></details>{customDirty?<div className="custom-shipping-actions"><button aria-busy={savingProfile} disabled={savingProfile} onClick={()=>void createProfile()}>{savingProfile?"Saving shipping profileâ€¦":"Save new shipping profile"}</button><button type="button" disabled={savingProfile} onClick={()=>resetProfileEditor()}>Discard changes</button></div>:<div className="shipping-saved-state">No changes made.</div>}{profileMessage&&<small role="status">{profileMessage}</small>}</div><button type="button" className="panel-collapse-foot" onClick={event=>{const box=(event.currentTarget as HTMLElement).closest("details");if(box){(box as HTMLDetailsElement).open=false;box.scrollIntoView({block:"nearest"})}}}>Close custom profile</button></details>}
-      {/* D229 Â· This button gates the entire batch and used to read "Approve prices and shipping" while greyed out, whatever the reason. Measured live: a saved shipping profile that no longer exists on the shop left nothing selected, the button dead, and no message anywhere â€” the Images page pointed here and this page refused, with the seller stuck between them. */}
-      {!selectedProfile&&selectedProfileId>0&&!profilesLoading&&<p className="shipping-profile-missing" role="status">{/* D458 - this claimed a saved profile had been deleted from her shop and told her to choose another "below", while sitting below the picker itself. On a product she had just created there was no saved profile to lose: the id came from Printify and simply does not match anything on the Etsy shop. Say that, and point the right way. */}Goldie could not match this productâ€™s Printify shipping to a profile on your Etsy shop. Pick one above and it will be remembered.</p>}
-      {/* D363 Â· Once approved there is nothing left to approve, so the button became
-        a control that could not do anything â€” it sat there disabled-in-spirit,
-        asking for an action already taken. Approved is a STATE, so it reads as
-        one. Any change to prices, the goal or the profile clears approval, which
-        brings the button back on its own. */}
-      {approved
-        ?<p className="pricing-approved-state" role="status"><span aria-hidden="true">âœ“</span> Prices and shipping approved</p>
-        :<button type="button" className="pricing-approval-button" disabled={!selectedProfile||customDirty} onClick={()=>onApprovalChange(true)}>{customDirty?"Save or discard your custom profile to continue":!selectedProfile?"Choose a shipping profile to continue":"Approve prices and shipping"}</button>}
-      </section>}
-    </section>
-  );
-}
-
-async function fetchWithDeadline(input: RequestInfo | URL, init: RequestInit, milliseconds: number) {
-  const controller = new AbortController();
-  const timeout = window.setTimeout(() => controller.abort(), milliseconds);
-  try { return await fetch(input, { ...init, signal: controller.signal }); }
-  catch (error) {
-    if (controller.signal.aborted) throw new Error("The request took too long and was stopped safely.");
-    throw error;
-  } finally { window.clearTimeout(timeout); }
-}
-
-function friendlyUploadError(error: unknown) {
-  const message = error instanceof Error ? error.message : String(error ?? "");
-  const supportReference = message.match(/Support reference:\s*([A-Z0-9-]+)/i)?.[1];
-  const withReference = (text: string) => `${text}${supportReference ? ` Support reference: ${supportReference}.` : ""}`;
-  if (/8253|Provided images do not exist|did not finish (?:processing|registering)/i.test(message)) return withReference("Printify has not finished registering this design after one minute. Keep the successful drafts and use Retry failed designs when the batch finishes.");
-  if (/image could not be decoded|could not be read|invalidstateerror|source image could not be decoded/i.test(message)) return withReference("Goldie can see this filename, but cannot read the actual image. Download it fully to your computer, then upload it again as a PNG or JPG.");
-  if (/failed to fetch|networkerror|load failed|secure artwork delivery|temporarily unavailable/i.test(message)) return withReference("The upload connection was interrupted. Goldie retried automatically, but Printify still could not receive this design. Retry it when the batch finishes.");
-  if (/request took too long|still completing this exact draft/i.test(message)) return withReference("This draft took longer than the safe waiting period. Goldie recorded it so a retry will recover the same draft instead of creating a duplicate.");
-  if (/batch session expired/i.test(message)) return withReference("The protected batch session expired. Load the same Printify template again; your selected files will stay on this page.");
-  if (/401|token|unauthorized|not accept/i.test(message)) return withReference("Printify rejected the saved connection. Disconnect Printify, create a new token with all scopes, and reconnect.");
-  if (/template product was not found|not found in the connected Printify/i.test(message)) return withReference("This template belongs to a different Printify account or shop than the connected token.");
-  if (/8150|validation failed|print_areas|placeholder/i.test(message)) return withReference("Printify rejected this templateâ€™s print-area setup. Reload the template; if it continues, use a freshly saved copy of the Printify product.");
-  if (/429|longer than expected|rate limit/i.test(message)) return withReference("Printify is temporarily limiting requests. Goldie already waited and retried; retry this design when the batch finishes.");
-  if (/413|post data is too large|file is too large/i.test(message)) return withReference("This design is still too large for Printify after safe preparation. Export an optimized PNG or JPG under 40 MB; keep the pixel dimensions needed for 300 DPI.");
-  return message || "Goldie could not create this draft. Retry it when the batch finishes.";
-}
-
-/* D237 Â· Every product-card row except Colours and Sizes was a dead button. The
-   handler opened `.everything-else`, the block D232 deleted; querySelector
-   returned null, the `if (block)` guard swallowed it, and the click did nothing
-   â€” five dead controls on every card, on every build since D232. Nothing caught
-   it because the tests assert markup strings, not that a click target exists.
-   These destinations are data so the suite can check each one is rendered. */
-/* D294 Â· "3/3 ready" sat above three rows each reading "0 of 1 required set".
-   Both were correct about different things: the pill counted listings that HAVE
-   an Etsy object, the rows counted required properties actually filled. One
-   word, two meanings, on the screen that gates publishing. Ready now means what
-   the rows already meant. */
-/* D306 Â· "âœ“ Saved for this product" used to be a 2.6-second timer, so the
-   confirmation vanished while the seller was still looking at it and the button
-   went back to offering a save that had already happened. The honest signal is
-   not "did a save just finish" but "does what is on screen match what is
-   stored" â€” which stays true until a colour or size is actually changed, and
-   flips back by itself the moment one is. */
-export function sameIdSet(a:number[]|undefined,b:number[]|undefined):boolean{
-  const left=[...new Set(a||[])].sort((x,y)=>x-y),right=[...new Set(b||[])].sort((x,y)=>x-y);
-  return left.length>0&&left.length===right.length&&left.every((value,index)=>value===right[index]);
-}
-
-/* D544 - "Needs review" was all a listing said, and the one thing standing
-   between her and step 4 was a single required Etsy field with no value. She had
-   to open the row, then the details editor, then read down a list of properties
-   to find which one. A row should say what is actually left. */
-export function etsyMissingRequired(etsy:{properties?:Array<{required?:boolean;value?:string;label?:string}>}|null|undefined):string[]{
-  if(!etsy)return[];
-  return (etsy.properties||[]).filter(property=>property.required&&!(property.value||"").trim()).map(property=>property.label||"a required field");
-}
-
-export function etsyRequiredComplete(etsy:{properties?:Array<{required?:boolean;value?:string}>}|null|undefined):boolean{
-  if(!etsy)return false;
-  const required=(etsy.properties||[]).filter(property=>property.required);
-  return required.every(property=>Boolean((property.value||"").trim()));
-}
-
-export const FACET_DESTINATION:Record<string,{step:WorkflowStep;selector:string}>={
-  mockups:{step:"designs",selector:".mockup-default-block"},
-  keywords:{step:"finish",selector:".keyword-bank"},
-  etsy:{step:"finish",selector:".etsy-details-step"},
-  shipping:{step:"setup",selector:".shipping-section-heading"},
-  profit:{step:"setup",selector:".item-pricing-heading"},
-};
-
-export default function ListingFactoryApp() {
-  const folderPicker = useRef<HTMLInputElement>(null);
-  const imagePicker = useRef<HTMLInputElement>(null);
-  const sizeGuidePicker = useRef<HTMLInputElement>(null);
-  const syncedListingSignatures = useRef<Map<string,string>>(new Map());
-  const batchIdRef=useRef("");
-  const snapshotReady=useRef(false);
-  const resumeAttempted=useRef(false);
-  const draftRunActive=useRef(false);
-  const templateLoadVersion=useRef(0);
-  const etsyPreparationVersion=useRef(0);
-  const etsyPreparationActive=useRef(false);
-  const etsySaveActive=useRef(false);
-  const etsyProductBaseline=useRef<{taxonomyId?:number;category:string;attributes:Record<string,string>}|null>(null);
-  const connectionAutoSkip=useRef(false);
-  const [connected, setConnected] = useState(false);
-  const [token, setToken] = useState("");
-  const [showTokenForm, setShowTokenForm] = useState(false);
-  const [connectionError, setConnectionError] = useState("");
-  const [connecting, setConnecting] = useState(false);
-  const [checkingConnection, setCheckingConnection] = useState(true);
-  const [template, setTemplate] = useState("");
-  const [templateDetails, setTemplateDetails] = useState<TemplateDetails | null>(null);
-  /* D611 - what Goldie classifies the product by. Printify's own blueprint
-     title, brand and model, never activeRecipe.name: that is the seller's
-     nickname for her saved product and naming it "Bestie Drop" used to make the
-     product unrecognisable, silently loosening the print-area bounds, the
-     rendering mode and which scenes are offered.
-
-     When the variant options identify the product outright - S/M/L, ounces,
-     inches, phone models - that wins over any string at all. */
-  const classifyingProductName = useMemo(() => {
-    const label = printifyProductLabel(templateDetails);
-    const family = familyFromVariants(templateDetails || {});
-    /* The label still travels, for prompts and messages that read better with a
-       real product name in them. The family is appended so every downstream
-       reader agrees with the structured evidence rather than re-guessing. */
-    const hint = family === "apparel" ? "apparel" : family === "curved" ? "mug" : family === "flat" ? "print" : "";
-    return [label, hint].filter(Boolean).join(" ") || label;
-  }, [templateDetails]);
-  const [templateError, setTemplateError] = useState("");
-  const [loadingTemplate, setLoadingTemplate] = useState(false);
-  const [description, setDescription] = useState("");
-  const [files, setFiles] = useState<DesignFile[]>([]);
-  const [fileNotice,setFileNotice]=useState("");
-  const [fileError, setFileError] = useState("");
-  const [running, setRunning] = useState(false);
-  const [complete, setComplete] = useState(false);
-  const [processed, setProcessed] = useState(0);
-  const [drafts, setDrafts] = useState<DraftResult[]>([]);
-  const [openedDrafts, setOpenedDrafts] = useState<string[]>([]);
-  const [openAllMessage, setOpenAllMessage] = useState("");
-  const [owner, setOwner] = useState(false);
-  const [signedIn, setSignedIn] = useState<boolean | null>(null);
-  const [localPreview,setLocalPreview]=useState(false);
-  const [preparationMessage, setPreparationMessage] = useState("");
-  const [runTotal, setRunTotal] = useState(0);
-  const [pricing, setPricing] = useState<Pricing>(DEFAULT_PRICING);
-  const [mockupTheme, setMockupTheme] = useState("");
-  const [savingProductDefault,setSavingProductDefault]=useState("");
-
-  const [bulkTitles, setBulkTitles] = useState("");
-  const [activeDesign, setActiveDesign] = useState<string>("");
-  const [activeRecipe,setActiveRecipe]=useState<Recipe|null>(null);
-  /* D653 Â· loadTemplateUrl records which Printify store a product came from, but
-     it read `activeRecipe` from its closure - and chooseRecipe calls it in the
-     same tick as setActiveRecipe, so the value it saw was the PREVIOUS recipe or
-     null. Nothing was ever written: four saved products, four Printify stores,
-     and every card still blank. A ref set during render always holds the current
-     one, whatever a closure captured. */
-  const activeRecipeRef=useRef<Recipe|null>(null);
-  activeRecipeRef.current=activeRecipe;
-  const [activeBundle,setActiveBundle]=useState<ProductBundle|null>(null);
-  const [bundleRecipes,setBundleRecipes]=useState<Recipe[]>([]);
-  const [bundleIndex,setBundleIndex]=useState(0);
-  const [bundleColorProducts,setBundleColorProducts]=useState<Record<string,TemplateDetails>>({});
-  /* D378 - Each bundle member is its own batch, created one after another by
-     continueBundle. That was invisible while only one product showed at a time,
-     but steps 2-4 now list every product as a card, and a card you cannot open
-     is not a card. Remember which batch belongs to which product so any of them
-     can be opened, not just the next one. */
-  const [bundleBatchIds,setBundleBatchIds]=useState<Record<string,string>>({});
-  /* D379 - Which card is being opened, so the one you clicked can say so and the
-     rest cannot be clicked underneath a load already in flight. */
-  const [switchingProduct,setSwitchingProduct]=useState("");
-  const [wholeNumberByRecipe,setWholeNumberByRecipe]=useState<Record<string,boolean>>({});
-  /* D378 - A closed card has to say where that product stands, and the honest
-     source is the batch list Batch History already reads: status, draft count,
-     published count. One fetch, refreshed when the bundle or its batches change. */
-  /* D504 - bundleBatchSummaries is gone; one map answers for each product. */
-  const [bundleColorChoices,setBundleColorChoices]=useState<Record<string,number[]>>({}),[bundleSizeChoices,setBundleSizeChoices]=useState<Record<string,number[]>>({}),[bundleMockupChoices,setBundleMockupChoices]=useState<Record<string,{theme:string;ids:string[]}>>({}),[bundleKeywordChoices,setBundleKeywordChoices]=useState<Record<string,string>>({});
-  /* D328 Â· Pricing state was a single set of globals, so a bundle could only ever
-     price the active product. These hold the other products' pricing. The active
-     product keeps using the original state, so the single-product path â€” the one
-     that is finally working â€” is untouched. */
-  const [openPricing,setOpenPricing]=useState<string[]>([]);
-  const [bundlePrices,setBundlePrices]=useState<Record<string,Record<string,number>>>({});
-  const [bundlePricing,setBundlePricing]=useState<Record<string,Pricing>>({});
-  const [bundleShipping,setBundleShipping]=useState<Record<string,number>>({});
-  const [bundleApproved,setBundleApproved]=useState<Record<string,boolean>>({});
-  const [bundleQualityDecisions,setBundleQualityDecisions]=useState<Record<string,"include"|"exclude">>({});
-  const [preflightOpen, setPreflightOpen] = useState(false);
-  const [printifyImageIndices,setPrintifyImageIndices]=useState<number[]>([]);
-  const [printifyImageSelections,setPrintifyImageSelections]=useState<Record<string,number[]>>({});
-  const [sharedMockups,setSharedMockups]=useState<{theme:string;ids:string[]}|undefined>();
-  const [preparingEtsy,setPreparingEtsy]=useState(false);
-  const [preparingListingId,setPreparingListingId]=useState("");
-  const [savingEtsyDetails,setSavingEtsyDetails]=useState(false);
-  const [workflowStep,setWorkflowStep]=useState<WorkflowStep>("connect");
-  const [restoringBatch,setRestoringBatch]=useState(true);
-  const [resumeProcessing,setResumeProcessing]=useState(false);
-  const [finishPhase,setFinishPhase]=useState<FinishPhase>("details");
-  const [uploadNoticeOpen,setUploadNoticeOpen]=useState(false);
-  const [leaveTarget,setLeaveTarget]=useState("");
-  const [publishConfirmOpen,setPublishConfirmOpen]=useState(false);
-  const [draftSaveOpen,setDraftSaveOpen]=useState(false);
-  const [draftSavedOpen,setDraftSavedOpen]=useState(false);
-  const [restartBatchOpen,setRestartBatchOpen]=useState(false);
-  const [restartBatchName,setRestartBatchName]=useState("");
-  const [restartingBatch,setRestartingBatch]=useState(false);
-  const [batchDisplayName,setBatchDisplayName]=useState("");
-  const [savingDraftBatch,setSavingDraftBatch]=useState(false);
-  const [keptAsDrafts,setKeptAsDrafts]=useState(false);
-  const [titleJoiner,setTitleJoiner]=useState(", ");
-  const [titleCaps,setTitleCaps]=useState(true);
-  const [variantPrices,setVariantPrices]=useState<Record<string,number>>({});
-  const [selectedColorIds,setSelectedColorIds]=useState<number[]>([]);
-  const [rememberingColors,setRememberingColors]=useState(false);
-  const [colorsRemembered,setColorsRemembered]=useState(false);
-  const [selectedSizeIds,setSelectedSizeIds]=useState<number[]>([]);
-  const [openFacet,setOpenFacet]=useState<Record<string,string[]>>({});
-  const [bestPhoto,setBestPhoto]=useState<Record<string,string>>({});
-  /* D206 Â· With a three-product bundle selected, the connected-product row
-   * described a single member: "Unisex Midweight Softstyle Fleece Hoodie Â·
-   * 4 colors Ã— 8 sizes". templateDetails holds whichever product is active, and
-   * for a bundle that is just the first one, so the row silently spoke for the
-   * whole bundle while naming one garment and one garment's colour count.
-   * A bundle is not its first member â€” say what was actually selected. */
-  const bundleSelected=Boolean(activeBundle&&bundleRecipes.length>1);
-  /* D205 Â· Bumped after every establish() so the saved-product tiles refetch. */
-  const [savedRevision,setSavedRevision]=useState(0);
-  const photoProbe=useRef<Set<string>>(new Set());
-  function pickProductPhoto(product:TemplateDetails){
-    const candidates=(product.previewImages||[]).filter(Boolean);
-    if(candidates.length<2)return product.previewImage||candidates[0]||"";
-    const key=String(product.id);
-    /* Once scored the answer is final, including the deliberate "" that means
-       "no usable photo, draw the glyph". Check presence, not truthiness. */
-    if(key in bestPhoto)return bestPhoto[key];
-    if(!photoProbe.current.has(key)){
-      photoProbe.current.add(key);
-      void (async()=>{
-        /* D200 Â· Score every candidate on subject isolation, not on how much of
-           the frame it fills. See app/product-photo.ts for the measurements â€”
-           the old "most ink wins" rule selected a macro shot of a folded corner
-           and ranked the only usable flat lay last. All six are sampled now,
-           not four: the winning tee shot was candidate #2 but the hoodie's was
-           #4, so a slice(0,4) would have missed it. */
-        const shortlist=candidates.slice(0,6);
-        const measurements:Array<ReturnType<typeof photoStats>|null>=[];
-        for(const src of shortlist){
-          const measured=await new Promise<ReturnType<typeof photoStats>|null>(resolve=>{
-            const image=document.createElement("img"); image.crossOrigin="anonymous";
-            image.onload=()=>{try{
-              const size=PHOTO_SAMPLE_SIZE;
-              const canvas=document.createElement("canvas"); canvas.width=size; canvas.height=size;
-              const ctx=canvas.getContext("2d",{willReadFrequently:true});
-              if(!ctx)return resolve(null);
-              ctx.drawImage(image,0,0,size,size);
-              resolve(photoStats(ctx.getImageData(0,0,size,size).data,size));
-            }catch{resolve(null)}};
-            image.onerror=()=>resolve(null);
-            image.src=src;
-          });
-          measurements.push(measured);
-        }
-        /* D380 Â· Prefer a flat lay; fall back to the best photo there is, even a
-           model shot, because a hoodie on a person still shows the hoodie. The
-           glyph is only for products with no usable photo at all. */
-        const choice=preferredPhotoIndex(measurements);
-        setBestPhoto(current=>({...current,[key]:choice>=0?shortlist[choice]:""}));
-      })();
-    }
-    /* Nothing until the score lands: a glyph that becomes a photo is calmer
-       than a model shot that vanishes. */
-    return "";
-  }
-  const [keywordBanks,setKeywordBanks]=useState<Array<{id:string;name:string}>>([]);
-  const [mockupLibrary,setMockupLibrary]=useState<Array<{theme:string;surfaceKind:string}>>([]);
-  useEffect(()=>{void fetch("/api/keyword-lists").then(r=>r.json()).then((payload:{lists?:Array<{id?:string;name?:string}>})=>setKeywordBanks((payload.lists||[]).map(list=>({id:String(list.id||""),name:String(list.name||"Bank")})).filter(list=>list.id))).catch(()=>undefined);
-    void fetch("/api/mockups/library").then(r=>r.json()).then((payload:{templates?:Array<{theme?:string;surfaceKind?:string}>})=>setMockupLibrary((payload.templates||[]).map(item=>({theme:String(item.theme||"").trim(),surfaceKind:String(item.surfaceKind||"rigid-flat")})).filter(item=>item.theme))).catch(()=>undefined)},[]);
-  /* Readiness is computed per product, never read from setupComplete. */
-  function readinessFor(product:TemplateDetails,recipe:Recipe|null,approved?:boolean):Readiness{
-    const compatible=[...new Set(mockupLibrary.filter(item=>productAcceptsMockup(item.surfaceKind,product.blueprintTitle)).map(item=>item.theme))];
-    return productReadiness({colorOptions:product.colorOptions||[],sizeOptions:product.sizeOptions||[],compatibleMockupThemes:compatible,keywordBanks,
-      shippingProfiles:etsyShippingProfiles.map(profile=>({id:profile.id,title:friendlyShippingProfileTitle(profile.title)||String(profile.id)})),
-      templateShippingProfileId:Number(product.shippingTemplateId)||0,
-      etsyFieldsRequired:11,
-      pricingApproved:approved,
-      saved:{defaultColorIds:recipe?.defaultColorIds,defaultSizeIds:recipe?.defaultSizeIds,defaultMockupTheme:recipe?.defaultMockupTheme,mockupIds:recipe?.mockupIds,keywordListId:recipe?.keywordListId,
-        etsyShippingProfileId:recipe?.etsyShippingProfileId,defaultProfitTarget:recipe?.defaultProfitTarget,etsyDefaults:recipe?.etsyDefaults}});
-  }
-
-  /* D204 Â· The connected-product line reported selectedColorIds/selectedSizeIds,
-   * which are seeded from the Printify template's enabled variants long before
-   * the seller answers anything. On an unestablished hoodie that produced three
-   * different numbers for the same facts on one screen: the line claimed
-   * "4 colors Ã— 6 sizes", the Colors row said "Pick colors Â· 25 available", and
-   * the Sizes row offered 8. Template defaults are Printify's doing, not a
-   * choice â€” presenting them as chosen is the exact failure that would publish
-   * listings in colours the seller never picked.
-   *
-   * The line now asks the same readiness the rows do, so the two cannot
-   * disagree: chosen facets report the choice, unanswered ones report what is
-   * available. */
-  function summaryAxes(product:TemplateDetails,recipe:Recipe|null){
-    const readiness=readinessFor(product,recipe);
-    const asked=new Set(readiness.questions);
-    return {
-      colorsChosen:!asked.has("colors"),
-      sizesChosen:!asked.has("sizes"),
-      colors:selectedColorIds.length,
-      sizes:selectedSizeIds.length,
-      availableColors:(product.colorOptions||[]).filter(color=>color.available).length,
-      availableSizes:(product.sizeOptions||[]).filter(size=>size.available).length,
-      total:pricedVariants.length,
-    };
-  }
-  /* A choice made in the batch IS the product being established, so it is saved
-     to the recipe immediately rather than behind a separate "save as default". */
-  async function establish(recipe:Recipe,change:Partial<Recipe>){
-    /* D463 - merge into the current recipe rather than the one this closure
-       captured, for the same reason as saveProductDefaults. */
-    setActiveRecipe(current=>current&&current.id===recipe.id?{...current,...change}:current);
-    setBundleRecipes(current=>current.map(item=>item.id===recipe.id?{...item,...change}:item));
-    /* D406 - This used to POST the whole merged recipe, so every call resent
-       every field from whatever copy the closure had captured. Any write that
-       fired after a newer one - a debounced price save, a slow request landing
-       late - put its stale copy back over the newer value. Measured: setting the
-       profit goal to 12 left the product reading $1, because the debounced price
-       write carried an older targetProfit and landed last.
-
-       The API preserves any key that is absent, so send only what changed. Same
-       rule as D392, which fixed this from the saved-product form; establish had
-       it too and it was the more dangerous of the two because it fires on nearly
-       every edit. */
-    await fetch("/api/product-recipes",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:recipe.id,name:recipe.name,templateUrl:recipe.templateUrl,...change})}).catch(()=>undefined);
-    /* The saved-product tiles read a list fetched once on mount, so without this
-       the card kept saying "No details saved yet" about a product we had just
-       written colors and sizes to. */
-    setSavedRevision(current=>current+1);
-  }
-  const [rememberingSizes,setRememberingSizes]=useState(false);
-  const [sizesRemembered,setSizesRemembered]=useState(false);
-  const [etsyShippingProfiles,setEtsyShippingProfiles]=useState<EtsyShippingProfile[]>([]);
-  const [etsyShippingProfileId,setEtsyShippingProfileId]=useState(0);
-  const [shippingProfilesLoading,setShippingProfilesLoading]=useState(false);
-  const [shippingProfilesError,setShippingProfilesError]=useState("");
-  const [pricingApproved,setPricingApproved]=useState(false);
-  const [publishing,setPublishing]=useState(false);
-  const [publishMessage,setPublishMessage]=useState("");
-  const [selectedPublishIds,setSelectedPublishIds]=useState<string[]>([]);
-  const [batchReceipt,setBatchReceipt]=useState<BatchReceipt|null>(null);
-  /* D475 - when a publish failed, the only sign was a sentence at the very bottom
-     of a long page saying how many listings "need your attention", with no reason
-     and nothing to click. From the top of the page a failed publish and a
-     successful one looked identical. */
-  const [publishFailures,setPublishFailures]=useState<Array<{productId:string;error:string}>>([]);
-  const [titleBuilding,setTitleBuilding]=useState(false);
-  const [titleBuildMessage,setTitleBuildMessage]=useState("");
-  const [batchKeywords,setBatchKeywords]=useState<string[]>([]);
-  const [titleBuilderMode,setTitleBuilderMode]=useState<"ai"|"manual">("ai");
-  const [autoTitleBank,setAutoTitleBank]=useState<KeywordList|null>(null);
-  const [autoTitleBankId,setAutoTitleBankId]=useState("");
-  const [manualKeywordBankId,setManualKeywordBankId]=useState("");
-  const [blockingModal,setBlockingModal]=useState<{title:string;issues:string[];copy?:string}|null>(null);
-  /* D519 - the guard below runs before either run state is declared, so the fact
-     that a run is in progress lives in a ref both of them set. */
-  const runInProgress=useRef(false);
-  const [pixelWarningOpen,setPixelWarningOpen]=useState(false);
-  const [etsyConnected,setEtsyConnected]=useState(false);
-  const [etsyShop,setEtsyShop]=useState("");
-  const [etsyConnecting,setEtsyConnecting]=useState(false);
-  const [etsyError,setEtsyError]=useState("");
-  const [etsyCategories,setEtsyCategories]=useState<EtsyCategoryOption[]>([]);
-  /* D658 Â· A ref, not the state, and set only once a response has actually
-     carried the list. Reading etsyCategories.length here would be the same
-     stale closure that broke D640, D644 and D653: several designs resolve
-     inside one tick, all of them see the empty array they were created with,
-     and every one asks for 262KB again. A failed request never sets it, so the
-     picker cannot end up permanently empty. */
-  const haveEtsyCategories=useRef(false);
-  const [pendingCategoryChange,setPendingCategoryChange]=useState<PendingCategoryChange|null>(null);
-  const [sizeGuideName,setSizeGuideName]=useState("");
-  const [sizeGuideStatus,setSizeGuideStatus]=useState("");
-  const commandCenterData=null;
-  const [sidebarUsage,setSidebarUsage]=useState<{used:number;limit:number}|null>(null);
-  /* D342 Â· The goal is off unless the seller turned it on. Both places it can
-     appear â€” here and the publish receipt â€” read this one value, so it is never
-     half-shown. */
-  const [listingGoal,setListingGoal]=useState<ListingGoal|null>(null);
-  const [goalBatches,setGoalBatches]=useState<PublishedBatch[]>([]);
-  useEffect(()=>{if(signedIn!==true)return;
-    void fetch("/api/seller-preferences").then(response=>response.json()).then((result:{listingGoal?:ListingGoal})=>{
-      if(result.listingGoal?.enabled)setListingGoal(result.listingGoal)}).catch(()=>undefined);
-  },[signedIn]);
-  useEffect(()=>{if(!listingGoal)return;
-    void fetch("/api/batches").then(response=>response.json()).then((result:{batches?:PublishedBatch[]})=>{
-      setGoalBatches(result.batches||[])}).catch(()=>undefined);
-  },[listingGoal,batchReceipt]);
-  const goalDone=listingGoal?publishedThisPeriod(goalBatches,listingGoal):0;
-  const [preparedMockupCounts,setPreparedMockupCounts]=useState<Record<string,number>>({});
-  const [imageStepError,setImageStepError]=useState("");
-  const [missingPhotoDraftIds,setMissingPhotoDraftIds]=useState<string[]>([]);
-  const [titlePulseIds,setTitlePulseIds]=useState<Set<string>>(new Set());
-
-  useEffect(()=>{if(imageStepError&&allCreatedListingsHaveImages())setImageStepError("")},[imageStepError,printifyImageIndices,printifyImageSelections,preparedMockupCounts,drafts]);
-  /* D544 - this waited for finishPhase==="etsy", a phase the app never enters:
-     continueToEtsyDetails() sets it to "details" and only the URL said otherwise.
-     So reopening a saved batch left the Etsy category dropdown with no options to
-     choose from, because the effect that loads them never ran. It waits for the
-     thing it actually needs instead - a listing with Etsy details on it. */
-  useEffect(()=>{if(etsyCategories.length)return;const restored=files.find(file=>file.etsy)?.etsy;if(!restored)return;void resolveEtsyOptions(restored,restored.taxonomyId).catch(()=>undefined)},[etsyCategories.length,files]);
-  useEffect(()=>{if(finishPhase!=="mockups"||printifyImageIndices.length||Object.keys(printifyImageSelections).length)return;const guide=productPhotoGuide(templateDetails?.blueprintTitle||"",drafts.find(draft=>draft.printifyImages?.length)?.printifyImages?.length||0),defaults=Object.fromEntries(drafts.filter(draft=>draft.id&&draft.status==="Created"&&draft.printifyImages?.length).map(draft=>[draft.id!,Array.from({length:Math.min(guide.count,draft.printifyImages!.length)},(_,index)=>index)]));if(Object.keys(defaults).length)setPrintifyImageSelections(defaults)},[finishPhase,printifyImageIndices.length,printifyImageSelections,drafts,templateDetails?.blueprintTitle]);
-  useEffect(()=>{const touched=()=>{sellerChosePublish.current=true};window.addEventListener("goldie-publish-selection-touched",touched);return()=>window.removeEventListener("goldie-publish-selection-touched",touched)},[]);
-  useEffect(()=>{const select=(event:Event)=>setSelectedPublishIds((event as CustomEvent<string[]>).detail||[]),retry=(event:Event)=>{const clientId=(event as CustomEvent<string>).detail;const design=files.find(file=>file.id===clientId);if(design)void runDrafts([design],true)};window.addEventListener("goldie-publish-selection",select);window.addEventListener("goldie-retry-listing",retry);return()=>{window.removeEventListener("goldie-publish-selection",select);window.removeEventListener("goldie-retry-listing",retry)}},[files,drafts]);
-
-  const templateLoaded = templateDetails !== null;
-  const productSelected = Boolean(activeRecipe);
-  const ready = connected && productSelected && templateLoaded && files.length > 0;
-  const designsReady=useMemo(()=>files.filter(file=>Boolean(file.width&&file.height&&file.paddingStatus!=="checking")).length,[files]);
-  const designsPreparing=Math.max(0,files.length-designsReady);
-  const designsFinished=files.length>0&&designsPreparing===0;
-  /* D491 - designs still being measured were not one of the reasons this button
-     could name, so it stayed enabled and a click threw a blocking modal reading
-     "Wait until every design finishes loading and checking". The button is the
-     thing she is looking at; it should say so itself. */
-  const missingRequirement = !connected ? "Connect Printify first" : !productSelected ? "Choose or add a saved product" : !templateLoaded ? "Connect its Printify template" : files.length === 0 ? "Add at least one design" : !designsFinished ? `Checking ${designsPreparing} ${designsPreparing===1?"design":"designs"}\u2026` : "";
-  const totalSize = useMemo(() => files.reduce((sum, file) => sum + file.size, 0), [files]);
-  const progressIndex = workflowStep==="finish" ? finishPhase==="details"?5:finishPhase==="etsy"?6:finishPhase==="mockups"?7:8 : workflowStep==="connect"?0:workflowStep==="setup"?1:workflowStep==="designs"?2:(preflightOpen||running)?4:3;
-  // The guided factory always opens on the real connection step. The returning
-  // dashboard remains available as a component, but must never replace step 1
-  // or appear when a seller uses Back from the product step.
-  const returningHome=false;
-  /* D226 Â· The sidebar quota was fetched once on mount and never again, so after
-     creating drafts it kept showing the old number for the rest of the session â€”
-     it read "16 / 10000" immediately after spending two listings. Bumped when
-     drafts are created so the figure matches what was just spent. */
-  const [usageRevision,setUsageRevision]=useState(0);
-  useEffect(()=>{fetch("/api/usage").then(async response=>{if(!response.ok)return null;return response.json() as Promise<{usage?:{drafts?:number};plan?:{drafts?:number}}>}).then(result=>{if(result?.usage&&result.plan)setSidebarUsage({used:Number(result.usage.drafts||0),limit:Number(result.plan.drafts||100)})}).catch(()=>undefined)},[usageRevision]);
-  const bundleProductCount=activeBundle?Math.max(1,bundleRecipes.length):1;
-  const planDraftsRemaining=sidebarUsage?Math.max(0,sidebarUsage.limit-sidebarUsage.used):null;
-  const batchDesignLimit=Math.min(MAX_BATCH_FILES,planDraftsRemaining===null?MAX_BATCH_FILES:Math.floor(planDraftsRemaining/bundleProductCount));
-  const requestedListingCount=Math.max(0,files.length*bundleProductCount-Object.values(bundleQualityDecisions).filter(value=>value==="exclude").length);
-  const additionalDesignsAvailable=Math.max(0,batchDesignLimit-files.length);
-  /* D328 Â· This filter used to be inlined for the active product only, which is
-     why a bundle priced one product and ignored the rest. Every product in a
-     bundle has its own template, colours and sizes, so the rule has to be
-     callable per product rather than closed over the active one. Behaviour is
-     unchanged â€” the guards below are the originals. */
-  function variantsFor(details:TemplateDetails|null|undefined,colorIds:number[],sizeIds:number[]){
-    const variants=details?.variants||[];
-    const byColor=!details?.colorOptions?.length?variants:(()=>{const selected=new Set(colorIds);return variants.filter(variant=>variant.colorId==null||selected.has(variant.colorId))})();
-    /* Batches saved before sizes were selectable restore a templateDetails with no
-       sizeOptions, and their variants carry no sizeId â€” so they fall straight
-       through here and behave exactly as they did before. */
-    if(!details?.sizeOptions?.length)return byColor;
-    const chosen=new Set(sizeIds);
-    /* Never let the size axis empty the variant set. An empty selection would
-       price nothing and enable nothing on the Printify draft, which is the one
-       failure here that costs money rather than looks wrong. */
-    if(!chosen.size)return byColor;
-    const bySize=byColor.filter(variant=>variant.sizeId==null||chosen.has(variant.sizeId));
-    return bySize.length?bySize:byColor;
-  }
-  const pricedVariants=useMemo(()=>variantsFor(templateDetails,selectedColorIds,selectedSizeIds),[templateDetails,selectedColorIds,selectedSizeIds]);
-  useEffect(()=>{if(!templateDetails?.id||!selectedColorIds.length)return;window.localStorage.setItem(`goldie-colors-${templateDetails.id}`,JSON.stringify(selectedColorIds))},[templateDetails?.id,selectedColorIds]);
-  useEffect(()=>{if(!templateDetails?.id||!selectedSizeIds.length)return;window.localStorage.setItem(`goldie-sizes-${templateDetails.id}`,JSON.stringify(selectedSizeIds))},[templateDetails?.id,selectedSizeIds]);
-  const createdDraftCount=drafts.filter(draft=>draft.status==="Created").length,titleCount=files.filter(file=>file.title.trim()).length,etsyReadyCount=files.filter(file=>etsyRequiredComplete(file.etsy)).length;
-  const lowDpiCount=files.filter(file=>{
-    const details=templateDetails,fileWidth=Number(file.width||0);
-    if(!details||!fileWidth)return false;
-    /* D512 - a fourth copy of the scale rule. */
-    const {scale,printWidth}=printTargetFor(details);
-    if(!printWidth||!scale)return false;
-    const quality=printifyDpi(fileWidth,printWidth,scale);
-    return Boolean(quality&&quality.dpi<300);
-  }).length;
-  const recommendedPixelSize=useMemo(()=>printTargetFor(templateDetails),[templateDetails]);
-  const belowRecommendedPixels=useMemo(()=>{if(!recommendedPixelSize.width||!recommendedPixelSize.height)return [];return files.filter(file=>Boolean(file.width&&file.height&&(file.width<recommendedPixelSize.width||file.height<recommendedPixelSize.height)))},[files,recommendedPixelSize]);
-  const criticalDpiFiles=useMemo(()=>{const {scale,printWidth}=printTargetFor(templateDetails);if(!scale||!printWidth)return [];return files.map(file=>({file,dpi:file.width?printifyDpi(file.width,printWidth,scale)?.dpi||0:0})).filter(item=>item.dpi>0&&item.dpi<215)},[files,templateDetails]);
-  /* D659 Â· bundleColorProducts deliberately holds only the OTHER products, so
-     reading it alone skipped whichever product was open - and the sibling fetch
-     that fills it gave up silently after nine seconds, which a product load
-     measured at 2.5-3.5s can exceed. Either way a product vanished from the DPI
-     check with nothing said: the walkthrough flagged a design as "below the
-     recommended size for Gildan Hoodie" in a two-product bundle and never
-     mentioned the crewneck at all. One map, every product in the bundle. */
-  /* D664 Â· Found by acceptance Run 1. The low-resolution banner told her
-     "Goldie will identify every affected design so you can replace it or
-     continue anyway" - and then identified nothing, because the whole DPI
-     review was gated on activeBundle. Two dachshund designs at 1254x1254 on a
-     hoodie raised the banner and offered no panel, no per-design naming and no
-     Proceed or Exclude control.
-
-     That is the D648 fault exactly - a banner promising a confirmation step
-     that never comes - still present on the single-product path after being
-     fixed for bundles. A batch has products whether or not it is a bundle, so
-     the check follows the batch rather than the bundle. */
-  const productsInBatch=useMemo(()=>(activeBundle&&bundleRecipes.length?bundleRecipes:activeRecipe?[activeRecipe]:[]),[activeBundle,bundleRecipes,activeRecipe]);
-  const bundleProductDetails=useMemo(()=>{
-    const map:Record<string,TemplateDetails>={...bundleColorProducts};
-    if(activeRecipe?.id&&templateDetails)map[activeRecipe.id]=templateDetails;
-    return map;
-  },[bundleColorProducts,activeRecipe,templateDetails]);
-  /* Named so the seller learns a product could not be checked, instead of it
-     quietly not appearing. */
-  const bundleProductsUnchecked=useMemo(()=>productsInBatch.filter(recipe=>!bundleProductDetails[recipe.id]).map(recipe=>recipe.name),[productsInBatch,bundleProductDetails]);
-  /* D659 Â· "All 44 enabled variants reviewed" was the OPEN product's count, on a
-     modal that had just offered to create drafts across two products. The
-     crewneck's 18 were never counted and never shown. Totalled across the
-     bundle, with the per-product split named beside it so the number can be
-     checked rather than trusted. */
-  /* D659 Â· The row read "None yet â€” optional" with the panel directly beneath it
-     saying "Saved for this product" over two chosen scenes. Both were true of
-     different things - the row counted mockups RENDERED, the panel showed scenes
-     CHOSEN - and nothing on screen said so, so the summary simply looked wrong.
-     One helper answers with both facts, and it can no longer say "none" while
-     scenes are saved. */
-  function scenesChosenFor(recipe:Recipe,isActive:boolean){
-    if(isActive)return (sharedMockups?.theme===mockupTheme?sharedMockups.ids:[])?.length||(activeRecipe?.mockupIds||[]).length||0;
-    return (bundleMockupChoices[recipe.id]?.ids||recipe.mockupIds||[]).length;
-  }
-  function mockupRowValue(created:number,scenes:number){
-    if(created&&scenes)return `${created} ${created===1?"mockup":"mockups"} from ${scenes} ${scenes===1?"scene":"scenes"}`;
-    if(created)return `${created} ${created===1?"mockup":"mockups"}`;
-    if(scenes)return `${scenes} ${scenes===1?"scene":"scenes"} chosen â€” not created yet`;
-    return "None yet â€” optional";
-  }
-  const [applyingBankToBundle,setApplyingBankToBundle]=useState(false);
-  async function applyBankToBundle(){
-    if(!autoTitleBankId||!bundleRecipes.length)return;
-    setApplyingBankToBundle(true);
-    try{
-      const targets=bundleRecipes.filter(recipe=>recipe.keywordListId!==autoTitleBankId);
-      await Promise.all(targets.map(recipe=>fetch("/api/product-recipes",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:recipe.id,name:recipe.name,templateUrl:recipe.templateUrl,keywordListId:autoTitleBankId})}).catch(()=>undefined)));
-      setBundleRecipes(current=>current.map(recipe=>({...recipe,keywordListId:autoTitleBankId})));
-      setActiveRecipe(current=>current?{...current,keywordListId:autoTitleBankId}:current);
-      setTitleBuildMessage(`This keyword bank now applies to all ${bundleRecipes.length} products in this bundle.`);
-    }finally{setApplyingBankToBundle(false)}
-  }
-  const bundleVariantCounts=useMemo(()=>{
-    const perProduct=(activeBundle&&bundleRecipes.length>1?bundleRecipes:activeRecipe?[activeRecipe]:[]).map(recipe=>{
-      const details=bundleProductDetails[recipe.id];
-      const count=details?(details.variants||[]).filter(variant=>variant.templateEnabled!==false).length:0;
-      return {name:recipe.name,count,known:Boolean(details)};
-    });
-    const known=perProduct.filter(entry=>entry.known);
-    const total=known.length?known.reduce((sum,entry)=>sum+entry.count,0):pricedVariants.length;
-    return {total,perProduct,detail:known.map(entry=>`${entry.name}: ${entry.count}`).join(" Â· ")};
-  },[activeBundle,bundleRecipes,activeRecipe,bundleProductDetails,pricedVariants]);
-  const bundleQualityIssues=useMemo(()=>productsInBatch.length?files.flatMap(file=>productsInBatch.flatMap(recipe=>{const details=bundleProductDetails[recipe.id];if(!details||!file.width||!file.height)return [];const {scale,width:requiredWidth,height:requiredHeight,printWidth}=printTargetFor(details),dpi=printifyDpi(file.width,printWidth,scale)?.dpi||0;if(!requiredWidth||!requiredHeight||file.width>=requiredWidth&&file.height>=requiredHeight)return [];return [{key:`${recipe.id}:${file.id}`,fileId:file.id,fileName:file.name,recipeId:recipe.id,productName:recipe.name,requiredWidth,requiredHeight,actualWidth:file.width,actualHeight:file.height,dpi,critical:dpi>0&&dpi<215}] })):[],[productsInBatch,files,bundleProductDetails]);
-
-  /* One flagged pair per design AND per product meant a 3-design bundle across 3
-     products asked for up to 9 separate acknowledgements â€” Brittany hit 6 and
-     could not continue until every one was clicked. The per-product detail is
-     real (the same art can be sharp on a tee and too small on a tote), but the
-     DECISION belongs to the design. Group the pairs by design so one choice
-     settles every product it affects, and offer a bulk control for the common
-     case where the answer is the same for all of them. Excluding still only
-     removes the flagged pairs, so a design that is fine on one product still
-     publishes there. */
-  const bundleQualityGroups=useMemo(()=>{
-    const byFile=new Map<string,{fileId:string;fileName:string;keys:string[];products:string[];critical:boolean;worstDpi:number;actualWidth:number;actualHeight:number}>();
-    for(const issue of bundleQualityIssues){
-      const existing=byFile.get(issue.fileId);
-      if(existing){existing.keys.push(issue.key);existing.products.push(issue.productName);existing.critical=existing.critical||issue.critical;if(issue.dpi&&(!existing.worstDpi||issue.dpi<existing.worstDpi))existing.worstDpi=issue.dpi;}
-      else byFile.set(issue.fileId,{fileId:issue.fileId,fileName:issue.fileName,keys:[issue.key],products:[issue.productName],critical:issue.critical,worstDpi:issue.dpi||0,actualWidth:issue.actualWidth,actualHeight:issue.actualHeight});
-    }
-    return [...byFile.values()];
-  },[bundleQualityIssues]);
-  function decideQualityGroup(keys:string[],value:"include"|"exclude"){setBundleQualityDecisions(current=>{const next={...current};for(const key of keys)next[key]=value;return next})}
-  function decideAllQuality(value:"include"|"exclude"){decideQualityGroup(bundleQualityIssues.map(issue=>issue.key),value)}
-  const qualityGroupDecision=(keys:string[])=>{const values=keys.map(key=>bundleQualityDecisions[key]);return values.every(v=>v==="include")?"include":values.every(v=>v==="exclude")?"exclude":""};
-  /* D626 Â· These maps belong to the open product. Asked about a bundle member's
-     draft, printifyImageSelections[id] was undefined and the check fell through
-     to the OPEN product's printifyImageIndices - so a member with no photos of
-     its own looked ready because a different product had some. Each draft is
-     asked about its own product now. */
-  function productDefaultIndices(draftId:string){
-    if(drafts.some(draft=>draft.id===draftId))return printifyImageIndices;
-    const member=Object.values(bundleMembers).find(entry=>entry.drafts.some(draft=>draft.id===draftId));
-    return member?member.indices:printifyImageIndices;
-  }
-  function createdListingsMissingImages(source=drafts){const selections=bundlePublishSelections(),mockups=bundlePublishMockupCounts();return source.filter(draft=>draft.status==="Created"&&draft.id&&!(selections[draft.id]??productDefaultIndices(draft.id)).length&&!(mockups[draft.id]||0))}
-  function allCreatedListingsHaveImages(source=drafts){const created=source.filter(draft=>draft.status==="Created"&&draft.id);return created.length>0&&createdListingsMissingImages(source).length===0}
-  /* D626 Â· publishTargets() sends the bundle; this read one product. So the
-     count on the button, the readiness gate and the confirmation all described
-     a smaller batch than the one being published. Same list on both sides. */
-  function selectedPublishDrafts(){const selected=new Set(selectedPublishIds);return bundlePublishDrafts().filter(draft=>draft.status==="Created"&&draft.id&&selected.has(draft.id))}
-  /* D635 Â· The button and the click that follows it disagreed. The button was
-     disabled by publishing / photos on the selection / an empty selection /
-     missingPublishFields; the click guard additionally checked the Etsy
-     connection, requiredForStep("finish") and - with no argument, so the OPEN
-     product rather than the selection - createdListingsMissingImages. So the
-     button could read "Publish 2 listings live on Etsy" and the click answer
-     "Finish all sections first: choose a keyword bank, add at least one
-     finished design". Measured live on the 3-product bundle.
-     requiredForStep("finish") is the wrong question here: it asks whether this
-     product could BUILD a batch - a keyword bank, at least one design in hand -
-     which has nothing to do with whether already-created listings can publish.
-     Requiring it of whichever product happened to be open is what stopped a
-     bundle whose other members were complete.
-     One list now, scoped to the listings actually selected, read by both. */
-  function publishBlockers(){
-    const issues:string[]=[];
-    if(!localPreview&&!etsyConnected)issues.push("Connect the Etsy shop that will receive these listings.");
-    if(batchHeldByAnotherTab)issues.push("This batch is open in another Goldie tab. Take over there or here before publishing, so the receipt is saved.");
-    const chosen=selectedPublishDrafts();
-    issues.push(...missingPublishFields());
-    issues.push(...createdListingsMissingImages(chosen).map(draft=>`${draft.name} needs at least one listing photo.`));
-    /* The publish route rejects a job with no Etsy shipping profile, so a
-       listing whose product never resolved one fails after the press rather
-       than before it. */
-    /* D643 Â· A saved batch keeps the Etsy shipping profile it was built with. Change
-       the connected Etsy shop and that id belongs to a shop Goldie can no longer
-       see, but nothing revalidated it - so the batch published happily and Etsy
-       rejected every listing mid-flight: "Could not find shipping_profile_id=
-       '59955810985' associated with shop '21777478'". D231 already treats an
-       unusable id as unset in the step-1 picker; it never looked at what a batch
-       had stored, and never at a bundle member's own profile. Checked against
-       the profiles this Etsy shop actually has, before the press. */
-    const shopProfiles=new Set(etsyShippingProfiles.map(profile=>Number(profile.id)));
-    for(const item of publishTargets()){
-      const profile=Number(item.shippingProfileId);
-      if(!profile){issues.push(`${item.productName||"This product"} has no Etsy shipping profile selected.`);continue}
-      if(shopProfiles.size&&!shopProfiles.has(profile))issues.push(`Choose a shipping profile for this Etsy shop â€” ${item.productName||"this product"} still uses one from a different shop.`);
-    }
-    return [...new Set(issues)];
-  }
-  function suggestedBatchName(){const product=activeRecipe?.name||templateDetails?.blueprintTitle||"Listing batch",niche=files[0]?.tags?.[0]||files[0]?.title?.split(",")[0]?.trim()||"New designs",date=new Intl.DateTimeFormat("en-US",{month:"short",day:"numeric"}).format(new Date());return `${product} Â· ${niche} Â· ${date}`.slice(0,160)}
-  /* D378 - Keep the product -> batch map current. continueBundle mints a new
-     batch per member, and a batch can also be created lazily on the first save,
-     so bind the id at snapshot time rather than trusting one code path. */
-  function rememberBundleBatch(recipeId:string|undefined,batchId:string){
-    if(!recipeId||!batchId)return;
-    setBundleBatchIds(current=>current[recipeId]===batchId?current:{...current,[recipeId]:batchId});
-  }
-  /* D547 - her three-product bundle ran perfectly: batches minted 15 and 10
-     seconds apart, two drafts each, all three complete. Then step 4 told her two
-     of the three products were blank, because this map is per batch
-     and is written at the moment that batch is saved. Product 1's batch was
-     written before products 2 and 3 existed, so it holds one entry and never
-     learns about the rest - the batch she opens from is the one that can see the
-     least. Verified on her data: hoodie's batch mapped 1 of 3, the tee's mapped
-     2, the crewneck's mapped all 3.
-
-     Rather than trust a map written at the wrong moment, find the siblings. Each
-     batch's own state records the bundle and the product it belongs to, so a gap
-     can be filled by looking, and batches saved before this heal themselves when
-     she opens them. */
-  const bundleSiblingsScanned=useRef("");
-  useEffect(()=>{
-    if(restoringBatch||!activeBundle||bundleRecipes.length<2)return;
-    const missing=bundleRecipes.filter(recipe=>recipe.id!==activeRecipe?.id&&!bundleBatchIds[recipe.id]);
-    if(!missing.length)return;
-    const key=`${activeBundle.id}:${bundleRecipes.map(recipe=>recipe.id).join(",")}`;
-    if(bundleSiblingsScanned.current===key)return;
-    bundleSiblingsScanned.current=key;
-    void (async()=>{
-      try{
-        const list=await fetch("/api/batches").then(response=>response.ok?response.json():null) as {batches?:Array<{id:string}>}|null;
-        /* Newest first, so a product run more than once resolves to its latest
-           batch - the same one the run itself would have carried forward. */
-        const candidates=(list?.batches||[]).map(batch=>batch.id).filter(id=>id&&id!==batchIdRef.current).slice(0,24);
-        const found:Record<string,string>={};
-        for(const id of candidates){
-          if(Object.keys(found).length>=missing.length)break;
-          const payload=await fetch(`/api/batches?id=${encodeURIComponent(id)}`).then(response=>response.ok?response.json():null) as {batch?:{state?:{activeBundle?:{id?:string};activeRecipe?:{id?:string};drafts?:unknown[]}}}|null;
-          const state=payload?.batch?.state;
-          if(state?.activeBundle?.id!==activeBundle.id)continue;
-          const recipeId=state?.activeRecipe?.id;
-          if(!recipeId||found[recipeId]||bundleBatchIds[recipeId])continue;
-          if(!missing.some(recipe=>recipe.id===recipeId))continue;
-          if(!(state?.drafts||[]).length)continue;
-          found[recipeId]=id;
-        }
-        if(Object.keys(found).length)setBundleBatchIds(current=>({...found,...current}));
-      }catch{/* the cards already say blank; a failed look changes nothing */}
-    })();
-  },[restoringBatch,activeBundle,bundleRecipes,activeRecipe,bundleBatchIds]);
-
-  /* D404 - Per-variant prices and the whole-number toggle lived only in React
-     state and the batch snapshot, and that snapshot is not written until a batch
-     has designs or drafts - so on the product step they were saved nowhere. Set
-     a price, tick whole-number pricing, refresh, and both were gone. They belong
-     to the saved product. Debounced: a price field fires on every keystroke. */
-  const pricePersist=useRef<number|undefined>(undefined);
-  function persistProductPricing(recipe:Recipe|null,change:Partial<Recipe>){
-    if(!recipe)return;
-    window.clearTimeout(pricePersist.current);
-    pricePersist.current=window.setTimeout(()=>{void establish(recipe,change)},700);
-  }
-  function batchStateSnapshot(){const designs=files.map(({file:ignoredFile,previewUrl:ignoredPreview,...design})=>design);return {template,templateDetails,description,pricing,selectedColorIds,selectedSizeIds,variantPrices,etsyShippingProfileId,pricingApproved,mockupTheme,activeRecipe,activeBundle,bundleRecipes,bundleIndex,bundleBatchIds,designs,drafts,complete,finishPhase,bulkTitles,batchKeywords,titleJoiner,titleBuilderMode,autoTitleBankId,manualKeywordBankId,sharedMockups,preparedMockupCounts,printifyImageIndices,printifyImageSelections,sizeGuideName,keptAsDrafts,batchReceipt}}
-  async function saveDraftBatch(){const name=batchDisplayName.trim();if(!name)return;setSavingDraftBatch(true);try{const id=batchIdRef.current||crypto.randomUUID();batchIdRef.current=id;window.localStorage.setItem("goldie-active-batch",id);await saveBatchFiles(id,files.map(file=>file.file));if(!localPreview){const response=await fetch("/api/batches",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,status:"draft",step:workflowStep,setupName:name,productTitle:templateDetails?.blueprintTitle||"",designCount:files.length,state:{...batchStateSnapshot(),keptAsDrafts:complete}})});if(!response.ok)throw new Error("Goldie could not save this batch.")}setKeptAsDrafts(true);setDraftSaveOpen(false);setDraftSavedOpen(true)}catch(error){stopWith("This batch was not saved.",[error instanceof Error?error.message:"Try again in a moment."])}finally{setSavingDraftBatch(false)}}
-  function jumpToMissingPhotoListing(clientId:string){setMissingPhotoDraftIds([]);window.setTimeout(()=>{
-    /* D532 - a listing collapses now, and you cannot scroll to something inside a
-       closed <details>. This is the jump that answers "which listing has no
-       photo", so it has to open the one it is sending her to. */
-    const node=document.getElementById(`listing-images-${clientId}`);
-    if(node instanceof HTMLDetailsElement)node.open=true;
-    node?.scrollIntoView({block:"start"});
-  },0)}
-  function continueFromDesigns(){
-    if(belowRecommendedPixels.length){setPixelWarningOpen(true);return}
-    /* D220 Â· Draft creation is on this page now. If the drafts already exist the
-       photos are below, so this moves on to the listing text; if they do not, the
-       Create-drafts panel is what comes next and it is right here. */
-    if(complete)return goToStep("finish",false,true);
-    document.querySelector(".launch-panel")?.scrollIntoView({block:"start"});
-  }
-  /* D220 Â· Which of the four stages the current legacy index belongs to. The
-     "Finish Â· Images + mockups (3 of 4)" phrasing went with the subrail; there
-     are only stages now. */
-  const stagePosition=RAIL_STAGES.findIndex(stage=>stage.covers.includes(progressIndex));
-  const currentStage=RAIL_STAGES[stagePosition]||RAIL_STAGES[0];
-  const railTopNumber=Math.max(1,stagePosition+1);
-  const railInFinish=currentStage.label==="Publish";
-  function bundleProductsReady(){
-    /* D455 - the same readiness the bundle cards display, asked of every product
-       rather than the one that happens to be open. If a card shows a warning
-       badge, the batch does not move on. */
-    if(!activeBundle)return true;
-    if(!bundleRecipes.length)return false;
-    return bundleRecipes.every((recipe,index)=>{
-      const isActive=bundleRecipes.length<2||index===bundleIndex;
-      const product=isActive?templateDetails:bundleColorProducts[recipe.id];
-      if(!product)return false;
-      return readinessFor(product,recipe,isActive?pricingApproved:Boolean(bundleApproved[recipe.id])).established;
-    });
-  }
-  /* D506 - the product card said Ready and the page still refused to continue,
-     because the card's readiness and the approval that gates Next were two
-     different things. A saved product carries an approved profit target and an
-     Etsy shipping profile; reopening a batch restored pricingApproved as false
-     and nothing ever put it back, so she was asked to approve pricing she had
-     not touched, on a card already telling her it was ready.
-
-     Approval is only meaningful once something has changed. If the product still
-     carries its saved approval and the batch is still using that exact shipping
-     profile, it is approved. This runs for the open product and seeds every other
-     product in the bundle the same way, so a restored bundle does not ask again.
-
-     Verified against her live batch: recipe carries target and profile, batch
-     shipping id equals the recipe's, pricingApproved was false. */
-  /* D530 - "why does it make me reset the shipping profile every time I open the
-     batch?" Because the product remembers it and the batch does not, and the open
-     product reads the batch. Her four saved products all hold a valid Etsy
-     profile id - crewneck 78465722585, hoodie 79732596586, both present among the
-     93 profiles on her shop - but a batch saved before she picked one carries
-     zero, and restoring that batch put zero back over a product that knew the
-     answer. The product's saved profile fills an empty batch, once the real list
-     has loaded so an id that no longer exists is still caught. */
-  useEffect(()=>{
-    if(restoringBatch||!activeRecipe||etsyShippingProfileId||!etsyShippingProfiles.length)return;
-    const saved=Number(activeRecipe.etsyShippingProfileId)||0;
-    if(saved&&etsyShippingProfiles.some(profile=>profile.id===saved))setEtsyShippingProfileId(saved);
-  },[restoringBatch,activeRecipe,etsyShippingProfileId,etsyShippingProfiles]);
-
-  useEffect(()=>{
-    if(restoringBatch||!activeRecipe)return;
-    const carries=recipeCarriesApprovedPricing({defaultProfitTarget:activeRecipe.defaultProfitTarget,etsyShippingProfileId:activeRecipe.etsyShippingProfileId});
-    if(carries&&!pricingApproved&&Number(etsyShippingProfileId)===Number(activeRecipe.etsyShippingProfileId))setPricingApproved(true);
-  },[restoringBatch,activeRecipe,pricingApproved,etsyShippingProfileId]);
-  useEffect(()=>{
-    if(restoringBatch||!activeBundle||bundleRecipes.length<2)return;
-    const seed:Record<string,boolean>={};
-    for(const recipe of bundleRecipes){
-      if(recipe.id===activeRecipe?.id||bundleApproved[recipe.id])continue;
-      if(recipeCarriesApprovedPricing({defaultProfitTarget:recipe.defaultProfitTarget,etsyShippingProfileId:recipe.etsyShippingProfileId}))seed[recipe.id]=true;
-    }
-    if(Object.keys(seed).length)setBundleApproved(current=>({...current,...seed}));
-  },[restoringBatch,activeBundle,bundleRecipes,activeRecipe,bundleApproved]);
-
-  function gateState():NavigationGateState{return {bundleProductsReady:bundleProductsReady(),connected,etsyConnected,productSelected,templateReady:templateLoaded,shippingReady:Boolean(templateDetails?.shippingTemplateId||templateDetails?.shippingProfileNeedsSelection),variantsReady:Boolean(templateDetails?.enabledVariants),colorsReady:!templateDetails?.colorOptions?.length||selectedColorIds.length>0,pricesReady:pricedVariants.length>0,designCount:files.length,designsReady:files.every(file=>Boolean(file.width&&file.height&&file.paddingStatus!=="checking")),/* D451 - a bundle has one shipping profile and one pricing approval PER product, and this gate read only the active one. Two of three products in her ZZ TEST BUNDLE showed "Pick a shipping profile" while Next step stayed enabled, which would have created Printify drafts for products with no valid Etsy shipping profile. Every product in the bundle has to be ready, not whichever one happens to be open. */etsyShippingProfileReady:activeBundle?bundleRecipes.length>0&&bundleRecipes.every(recipe=>Number(recipe.etsyShippingProfileId)>0):Boolean(etsyShippingProfileId),pricingApproved:activeBundle?bundleRecipes.length>0&&bundleRecipes.every(recipe=>bundleApproved[recipe.id]??recipeCarriesApprovedPricing({defaultProfitTarget:recipe.defaultProfitTarget,etsyShippingProfileId:recipe.etsyShippingProfileId})):pricingApproved,draftsComplete:complete,createdDraftCount,titlesReady:files.length>0&&files.every(file=>Boolean(file.title.trim())&&!file.titleError),tagsReady:files.length>0&&files.every(file=>file.tags.length>0&&!file.titleError),descriptionReady:Boolean(description.trim()),etsyDetailsReady:files.length>0&&files.every(file=>etsyRequiredComplete(file.etsy)),personalizationReady:files.every(file=>!personalizationProblem(file.etsy)),imagesReady:allCreatedListingsHaveImages()}}
-  function progressGateIssues(index:number){return localPreview?[]:navigationIssues(index,gateState())}
-  /* D444 - leaving Images needs photos, not titles. See leavingImagesIssues. */
-  function imagesStepIssues(){return localPreview?[]:leavingImagesIssues(gateState())}
-  function progressStatus(index:number,active:boolean,done:boolean,blocked:boolean){const live=active||!blocked;if(index===0)return connected?"Printify connected":live?"Connect your account":"Not connected";if(index===1)return templateDetails?templateDetails.blueprintTitle:live?"Choose a saved product":"Complete the prior step";if(index===2)return files.length?`${files.length} designs ready`:live?"Add finished designs":"Complete the prior step";if(index===3)return pricingApproved?(pricedVariants.length?`${pricedVariants.length} variants approved`:"Pricing approved"):live?"Review every variant":"Complete the prior step";if(index===4)return complete?`${createdDraftCount} drafts created`:live&&running?`${processed} of ${runTotal} created`:ready?"Ready to create":"Complete the prior step";if(index===5)return titleCount===files.length&&files.length?`${titleCount} titles complete`:live?`${titleCount} of ${files.length} titles complete`:done?"Titles complete":"Complete the prior step";if(index===6)return etsyReadyCount===files.length&&files.length?`${etsyReadyCount} listings ready`:live?`${etsyReadyCount} of ${files.length} ready`:done?"Etsy details complete":"Complete the prior step";if(index===7)return done?"Listing images reviewed":live?`${createdDraftCount} previews ready`:"Complete the prior step";return batchReceipt?`${batchReceipt.publishedCount} listings published`:live?"Ready to publish":"Complete the prior step"}
-  function currentInsight(){if(progressIndex===1)return activeRecipe?`You used ${activeRecipe.name} recently. Its product facts and saved Etsy shipping profile will carry into this batch.`:"Choose a saved product once and Goldie will reuse its placement, variants, costs, and description.";if(progressIndex===2)return files.length?lowDpiCount?`${lowDpiCount} ${lowDpiCount===1?"design is":"designs are"} below 300 DPI at the largest enabled size. Review the DPI label before creating drafts.`:`All ${files.length} designs are loaded. Goldie will preserve their original artwork resolution.`:"Add finished artwork and Goldie will check each design against the real Printify print size.";if(progressIndex===3)return pricingApproved?`All ${pricedVariants.length} enabled variants are approved. Goldie will keep those cost-grouped prices across every listing.`:"Goldie is calculating each enabled variant from its own product cost, Etsy fees, and your target profit. Buyer-paid shipping is handled separately.";if(progressIndex===4)return running?`${processed} of ${runTotal} Printify drafts are complete. Successful drafts will not be duplicated if a retry is needed.`:"Goldie is ready to create one unpublished Printify draft for every design.";if(progressIndex===5)return `Goldie selects only exact phrases from your validated eRank keyword bank and creates matching Etsy tags. It never invents keywords.`;if(progressIndex===6)return `${etsyReadyCount} of ${files.length} listings have product-specific Etsy categories and attributes ready for review.`;if(progressIndex===7)return `The Printify preview is the placement reference. Apply one flatlay selection to the batch when the listings use the same product setup.`;return batchReceipt?`The batch is complete and every Etsy link is recorded below.`:"Every required section is ready. Publishing will send these listings live, not to Etsy drafts."}
-  async function loadPreviewDemo(){
-    const imageResponse=await fetch('/mockups/pink-dorm-01-leaning-frame.png'),blob=await imageResponse.blob(),file=new File([blob],'western-poster.png',{type:blob.type||'image/png'}),secondFile=new File([blob],'cowgirl-poster.png',{type:blob.type||'image/png'});
-    const details:TemplateDetails={id:'preview-poster',batchId:'preview-batch',title:'Matte vertical poster',description:'Museum-quality poster printed on premium matte paper.\n\nMade to order and carefully packaged for shipping.',blueprintId:1,blueprintTitle:'Matte Vertical Poster',brand:'Generic brand',model:'Matte Vertical Poster',provider:'Sensaria',enabledVariants:6,variants:[{id:101,title:'Black / 8Ã—10',cost:650,templatePrice:1600,shipping:6.22},{id:104,title:'White / 8Ã—10',cost:650,templatePrice:1600,shipping:6.22},{id:106,title:'Natural / 8Ã—10',cost:675,templatePrice:1650,shipping:6.22},{id:102,title:'Black / 12Ã—18',cost:1025,templatePrice:2400,shipping:6.22},{id:105,title:'White / 12Ã—18',cost:1025,templatePrice:2400,shipping:6.22},{id:103,title:'24Ã—36',cost:1850,templatePrice:3800,shipping:6.22}],shop:'Preview shop',standardShipping:6.22,shippingCurrency:'USD',shippingTemplateId:'9001',freeShipping:false,maxPrintWidth:7200,maxPrintHeight:10800,placementScale:1};
-    const previewCategory:EtsyCategoryOption={id:1,path:'Home & Living Â· Wall Decor Â· Prints'};
-    const etsy:EtsyDetails={category:previewCategory.path,taxonomyId:previewCategory.id,properties:[],attributes:{},optional:{},blurb:'',confidence:'high'};
-    const previewFiles:DesignFile[]=[{name:file.name,size:file.size,id:'preview-design-1',file,previewUrl:URL.createObjectURL(file),title:'western wall art, cowgirl poster, pink western decor',tags:['western wall art','cowgirl poster','pink western decor'],width:6000,height:9000,paddingStatus:'full',etsy},{name:secondFile.name,size:secondFile.size,id:'preview-design-2',file:secondFile,previewUrl:URL.createObjectURL(secondFile),title:'retro cowgirl print, western poster, dorm wall art',tags:['retro cowgirl print','western poster','dorm wall art'],width:6000,height:9000,paddingStatus:'full',etsy}];
-    const profile:EtsyShippingProfile={id:9001,title:'Poster shipping Â· $4 US',originCountry:'United States',currency:'USD',domesticPrimary:4,domesticAdditional:2.5,international:[{key:'CA',label:'Canada',primary:13.92,additional:8.5},{key:'EU',label:'European Union',primary:17.42,additional:10.25}]};
-    setTemplate('https://printify.com/app/products/preview');setTemplateDetails(details);setDescription(details.description);setFiles(previewFiles);setDrafts(previewFiles.map((design,index)=>({id:`preview-draft-${index+1}`,clientId:design.id,name:design.name,title:design.title,tags:design.tags,previewUrl:'/mockups/pink-dorm-01-leaning-frame.png',printifyImages:['/mockups/pink-dorm-01-leaning-frame.png','/mockups/pink-dorm-02-hanging-poster.png','/mockups/pink-dorm-03-maximalist-bed.png'],editorUrl:'https://printify.com/app/products',status:'Created'})));setEtsyCategories([previewCategory]);setEtsyShippingProfiles([profile]);setEtsyShippingProfileId(profile.id);setVariantPrices({'101':1600,'104':1600,'102':2400,'105':2400,'103':3800});setPricingApproved(false);setComplete(true);setFinishPhase('details');setWorkflowStep('designs');const url=new URL(window.location.href);url.searchParams.set('step','review');window.history.replaceState({},'',url);window.scrollTo({top:0,behavior:'smooth'});
-  }
-
-  async function confirmUploadInterruption(){return !running||await confirmAction({title:"Leave this step while uploads are running?",body:"Design uploads still in progress may stop before their Printify drafts are finished.",confirmLabel:"Leave anyway",cancelLabel:"Stay here",destructive:true})}
-  function stopWith(title:string,issues:string[],copy?:string){setBlockingModal({title,issues,copy});return false}
-  function requiredForProgress(index:number){return progressGateIssues(index)}
-  const bundleKeywordGaps=useMemo(()=>{
-    if(!activeBundle||bundleRecipes.length<2)return [] as string[];
-    return bundleRecipes.filter((recipe,index)=>{
-      const chosen=index===bundleIndex?(autoTitleBankId||activeRecipe?.keywordListId||""):(bundleKeywordChoices[recipe.id]??recipe.keywordListId??"");
-      return !chosen;
-    }).map(recipe=>recipe.name);
-  },[activeBundle,bundleRecipes,bundleIndex,bundleKeywordChoices,autoTitleBankId,activeRecipe]);
-  /* D462 - the wall on the mug. This button required a colour selection, and a
-     ceramic mug has no colours to select - so it could never enable, whatever
-     she picked. It also carried no reason, so a permanently disabled Next
-     step simply sat there while she looked for the thing she had missed.
-
-     Colours are required only when the product offers them, which is the rule
-     readiness and every other gate already use. And a disabled Next step now
-     always says what it is waiting for. */
-  function productStepBlocker(){
-    if(templateDetails?.colorOptions?.length&&!selectedColorIds.length)return "Choose at least one colour for this product.";
-    if(templateDetails?.sizeOptions?.length&&!selectedSizeIds.length)return "Choose at least one size for this product.";
-    return "";
-  }
-  function requiredForStep(step:WorkflowStep){if(localPreview)return [];const issues:string[]=[];if(step!=="connect"&&!connected)issues.push("Connect your Printify account.");if(step!=="connect"&&!etsyConnected)issues.push("Connect the Etsy shop that will receive these listings.");if(["designs","review","finish"].includes(step)){if(!productSelected)issues.push("Save or select a product or product bundle.");if(!templateDetails?.shippingTemplateId&&!templateDetails?.shippingProfileNeedsSelection)issues.push("Choose a valid Printify product with an imported shipping profile.");if(!templateDetails?.enabledVariants)issues.push("The product needs at least one enabled size or color.");const missingColors=Boolean(templateDetails?.colorOptions?.length&&!selectedColorIds.length);const missingSizes=Boolean(templateDetails?.sizeOptions?.length&&!selectedSizeIds.length);if(missingColors)issues.push("Choose at least one product color for this batch.");else if(missingSizes)issues.push("Choose at least one product size for this batch.");else if(!pricedVariants.length)issues.push(`No color and size combination you picked is available for ${templateDetails?.blueprintTitle||"this product"}. Open its Colors or Sizes and choose a pairing Printify offers.`);if(!templateDetails?.batchId)issues.push("Reload the Printify product so Goldie can prepare this batch.");}/* D221 Â· Every bundle member still needs its own keyword bank before titles can
-     be generated â€” the D181 rule is unchanged. It moved off the Product page,
-     which was blocking Continue on a choice made two pages later, and onto the
-     Listing page where the bank is chosen and used. */
-  if(step==="finish"&&bundleKeywordGaps.length)issues.push(`Choose a keyword bank for ${bundleKeywordGaps.join(", ")}.`);
-  if(["review","finish"].includes(step)){if(!files.length)issues.push("Add at least one finished design.");if(files.some(file=>!file.width||!file.height||file.paddingStatus==="checking"))issues.push("Wait until every design finishes loading and checking.");}/* D298 Â· Prices and the shipping profile are both set on the PRODUCT page, but
-     these two gates only fired on Listing â€” two steps later. So "Approve prices
-     and shipping" could be ignored entirely and Continue to images still worked,
-     which makes the button look decorative. A gate belongs on the step that
-     owns the decision. */
-  if(["designs","review","finish"].includes(step)){if(!etsyShippingProfileId)issues.push("Choose the Etsy shipping profile for this batch.");if(!pricingApproved)issues.push("Approve the item prices and shipping on the product step.");}
-  if(step==="finish"){if(!complete)issues.push("Finish the Printify draft run first.");if(!drafts.some(draft=>draft.status==="Created"))issues.push("At least one listing must be created successfully before publishing.");}return issues}
-  async function openProgressStep(rawIndex:number){if(!await confirmUploadInterruption())return;
-    /* D220 Â· Draft creation (3, 4) and mockups (7) live on the Images page now, so
-       any legacy index pointing at them resolves there. Deep links and saved batch
-       state still use the 0-8 numbering. */
-    const index=rawIndex===3||rawIndex===4||rawIndex===7?2:rawIndex;if(localPreview){if(index===0)return goToStep("connect",false,true);if(index===1)return goToStep("setup",false,true);if(index===2)return goToStep("designs",false,true);if(index>=3&&!templateDetails)await loadPreviewDemo();if(index===3){setPreflightOpen(false);return goToStep("review",false,true)}if(index===4){goToStep("review",false,true);setPreflightOpen(true);return}setPreflightOpen(false);setFinishPhase(index===8?"final":"details");return goToStep("finish",false,true)}const issues=requiredForProgress(index);if(issues.length)return stopWith("Finish all sections first.",issues);if(index===0)return goToStep("connect");if(index===1)return goToStep("setup");if(index===2)return goToStep("designs");if(index===3)return goToStep("review");if(index===4){goToStep("review");return createDrafts()}setFinishPhase(index===8?"final":"details");goToStep("finish",false,true)}
-
-  async function goBackOneStep(){
-    if(!await confirmUploadInterruption())return;
-    if(progressIndex===0){window.history.back();return}
-    if(progressIndex===1)return goToStep("connect",false,true);
-    if(progressIndex===2)return goToStep("setup",false,true);
-    if(progressIndex===3||progressIndex===4)return goToStep(progressIndex===3?"designs":"review",false,true);
-    if(progressIndex===5)return goToStep("review",false,true);
-    setFinishPhase(progressIndex===6?"details":progressIndex===7?"etsy":"mockups");
-    goToStep("finish",false,true);
-  }
-
-  function canOpenStep(step:WorkflowStep){if(localPreview)return true;if(step==="connect")return true;if(step==="setup")return connected&&etsyConnected;if(step==="designs")return connected&&etsyConnected&&productSelected&&templateLoaded;if(step==="review")return etsyConnected&&ready;return etsyConnected&&productSelected&&complete}
-  /* D224 Â· "review" no longer has a page. Draft creation moved onto the Images
-   page, so the review step renders nothing â€” and a batch saved before this
-   change stores step:"review", which meant resuming it produced a heading, a
-   rail and an empty screen. Every entry point normalises through here: saved
-   batch state, the URL, and any call left in the code. */
-  function normalizeStep(step:WorkflowStep):WorkflowStep{
-    /* D623 Â· Also the last gate before setWorkflowStep. Anything that is not one
-       of the five would render a hero of undefined, so an unknown value settles
-       on the first step rather than taking the page down. */
-    const known=canonicalStep(step)??"connect";
-    return known==="review"?"designs":known;
-  }
-  /* D487 - opening a saved batch at ?step=setup landed on "Connect your
-     accounts", with both accounts shown as connected and verified, and stayed
-     there. The guard below falls back to "connect" while the connection check
-     and the batch restore are still in flight, and that fallback rewrites the
-     URL to step=connect. The auto-skip then refuses to move, because it reads
-     the URL to decide whether she asked for the connect screen - and by then the
-     URL says she did. Falling back is not the same as asking, so the step she
-     actually arrived on is remembered and restored the moment it opens. */
-  const requestedStep=useRef<WorkflowStep|null>(null);
-  /* D640 Â· Shipped a Connections link without clicking it, and it did not work:
-     ?step=connect landed on step 1. The auto-skip below asks
-     requestedStep.current==="connect" to decide whether the seller ASKED for the
-     connect screen - but the effect underneath clears that ref the moment the
-     step it names is already the current one, which on a fresh load of
-     ?step=connect is immediately. So the fact was destroyed before the only
-     reader consulted it. Arriving is a fact about this page load, so it is
-     recorded once and never cleared. */
-  const askedForConnect=useRef(false);
-  const requestedStepRead=useRef(false);
-  if(typeof window!=="undefined"&&!requestedStepRead.current){
-    requestedStepRead.current=true;
-    /* D623 Â· This read took the raw ?step= value. D428 introduced aliases -
-       product, images, listing, titles, publish - and canonicalised them in the
-       popstate reader and in batch restore, but not here. So the alias survived
-       into this ref, the effect below called goToStep("listing", replace, force)
-       with force skipping every guard, and setWorkflowStep stored a value that
-       is not one of the five. workflowHero[workflowStep] was then undefined and
-       reading .eyebrow crashed the whole app into the error boundary. Every URL
-       D428 was written to support was the one that broke it. */
-    requestedStep.current=canonicalStep(new URL(window.location.href).searchParams.get("step"));
-    askedForConnect.current=requestedStep.current==="connect";
-  }
-  useEffect(()=>{
-    const wanted=requestedStep.current;
-    if(!wanted||localPreview||checkingConnection||restoringBatch)return;
-    if(workflowStep===wanted){requestedStep.current=null;return}
-    if(!canOpenStep(wanted))return;
-    requestedStep.current=null;
-    goToStep(wanted,true,true);
-  },[localPreview,checkingConnection,restoringBatch,connected,etsyConnected,templateLoaded,files.length,complete,workflowStep]);
-
-  function goToStep(rawStep:WorkflowStep,replace=false,force=false){
-    const step=normalizeStep(rawStep);if(!force){const issues=requiredForStep(step);if(issues.length)return stopWith("Finish all sections first.",issues);if(!canOpenStep(step))return;}setWorkflowStep(normalizeStep(step));const url=new URL(window.location.href);url.searchParams.set("step",step);window.history[replace?"replaceState":"pushState"]({},"",url);window.scrollTo(0,0)}
-
-  useEffect(()=>{const read=()=>{const url=new URL(window.location.href),value=url.searchParams.get("step") as WorkflowStep|null,phase=url.searchParams.get("phase") as FinishPhase|null;const canonical=canonicalStep(value);if(canonical)setWorkflowStep(normalizeStep(canonical));if(phase&&["details","etsy","mockups","final"].includes(phase))setFinishPhase(phase)};read();window.addEventListener("popstate",read);return()=>window.removeEventListener("popstate",read)},[]);
-  useEffect(()=>{if(workflowStep!=="finish")return;const url=new URL(window.location.href);url.searchParams.set("phase",finishPhase);window.history.replaceState({},"",url)},[workflowStep,finishPhase]);
-  useEffect(()=>{window.scrollTo({top:0,behavior:"auto"})},[workflowStep,finishPhase]);
-  useEffect(()=>{if(connectionAutoSkip.current||localPreview||checkingConnection||restoringBatch||workflowStep!=="connect"||!connected||!etsyConnected)return;if(askedForConnect.current)return;connectionAutoSkip.current=true;goToStep("setup",true,true)},[localPreview,checkingConnection,restoringBatch,workflowStep,connected,etsyConnected]);
-  /* D519 - while a bundle run is advancing, the app is mid-switch: the next
-     product's template has not loaded yet, so this fell back to step 1 and she
-     watched a run she started on step 2 dump her on Choose product. Verified on
-     her account that the drafts themselves were fine - three batches, two drafts
-     each - so this was navigation, not loss. A run in progress is not a broken
-     state to recover from. */
-  useEffect(()=>{if(localPreview||checkingConnection||restoringBatch||runInProgress.current||canOpenStep(workflowStep))return;const fallback=!connected||!etsyConnected?"connect":!templateLoaded?"setup":!files.length?"designs":!complete?"review":"finish";goToStep(fallback,true,true);
-  },[localPreview,checkingConnection,restoringBatch,connected,etsyConnected,templateLoaded,files.length,complete,workflowStep]);
-
-  useEffect(()=>{if(restoringBatch)return;const url=new URL(window.location.href);if(url.searchParams.get("open")!=="results")return;const hasCreatedDrafts=complete&&drafts.some(draft=>draft.status==="Created");url.searchParams.delete("open");if(!hasCreatedDrafts){window.history.replaceState({},"",url);return}if(!pricingApproved)setPricingApproved(true);url.searchParams.set("step","finish");url.searchParams.set("phase",finishPhase||"details");setWorkflowStep("finish");window.history.replaceState({},"",url);window.scrollTo({top:0,behavior:"auto"})},[restoringBatch,complete,drafts,pricingApproved,finishPhase]);
-
-  /* D379 - Loading a batch happened in exactly one place: a mount effect reading
-     ?batch= from the URL. That was fine while arriving at the page was the only
-     way to open one. Steps 2-4 now show a card per product and each bundle
-     member is its own batch, so opening a card means loading a batch - which
-     through the old path meant window.location.assign and a full page reload:
-     blank screen, everything refetched, scroll thrown back to the top. Step 1
-     opens a card instantly; these have to as well.
-
-     Same body, called two ways: on mount from the URL, and in place when a card
-     is opened. */
-  /* D427 - a ?batch= that no longer exists used to drop you on step 1 with no
-     explanation, looking exactly like your work had been lost. Say so, and clear
-     the dead id so a refresh does not repeat it. */
-  const [restoreNotice,setRestoreNotice]=useState("");
-  async function restoreBatchById(id:string,requestedStep:string|null,requestedPhase:string|null,push=false):Promise<boolean>{
-    try{const url=new URL(window.location.href);if(!id)return false;const response=await fetch(`/api/batches?id=${encodeURIComponent(id)}`);if(!response.ok)return false;const payload=await response.json() as {batch?:{id:string;step:WorkflowStep;status:string;setup_name?:string;state?:Record<string,unknown>}};if(!payload.batch?.state)return false;const state=payload.batch.state as {template?:string;templateDetails?:TemplateDetails;description?:string;pricing?:Pricing;mockupTheme?:string;activeRecipe?:Recipe;activeBundle?:ProductBundle;bundleRecipes?:Recipe[];bundleIndex?:number;bundleBatchIds?:Record<string,string>;designs?:Array<Omit<DesignFile,"file"|"previewUrl">>;drafts?:DraftResult[];complete?:boolean;finishPhase?:FinishPhase;bulkTitles?:string;printifyImageIndices?:number[];printifyImageSelections?:Record<string,number[]>;selectedColorIds?:number[];selectedSizeIds?:number[];variantPrices?:Record<string,number>;etsyShippingProfileId?:number;pricingApproved?:boolean;sizeGuideName?:string;batchKeywords?:string[];titleJoiner?:string;titleBuilderMode?:"ai"|"manual";autoTitleBankId?:string;manualKeywordBankId?:string;sharedMockups?:{theme:string;ids:string[]};preparedMockupCounts?:Record<string,number>;keptAsDrafts?:boolean};
-    const cached=await loadBatchFiles(id).catch(()=>[]);
-    const savedDrafts=state.drafts||[];
-    const designs=(state.designs||[]).map((design,index)=>{
-      const cachedFile=cached[index],file=cachedFile?.size?cachedFile:undefined,draft=savedDrafts.find(item=>item.clientId===design.id);
-      const previewUrl=file?URL.createObjectURL(file):draft?.previewUrl||draft?.printifyImages?.[0]||"";
-      return {...design,file:file||new File([],design.name,{type:"application/octet-stream"}),previewUrl,originalUnavailable:!file};
-    }) as DesignFile[];
-    /* D632 - IndexedDB belongs to one browser profile, not one computer. Losing
-       that cache must never delete the server-saved design records: existing
-       Printify drafts can still be titled, completed and published. */
-    const unavailable=designs.filter(design=>design.originalUnavailable).length;
-    if(unavailable)setRestoreNotice(`${unavailable===designs.length?"The original uploads are":"Some original uploads are"} not available in this browser. Your ${unavailable===1?"listing is":"listings are"} restored and can still be completed and published. Upload the original ${unavailable===1?"file":"files"} again only if you need to recreate a Printify draft or generate new lifestyle mockups.`);
-    const savedProductColors=state.templateDetails?.id?JSON.parse(window.localStorage.getItem(`goldie-colors-${state.templateDetails.id}`)||"[]") as number[]:[];const savedProductSizes=state.templateDetails?.id?JSON.parse(window.localStorage.getItem(`goldie-sizes-${state.templateDetails.id}`)||"[]") as number[]:[];batchIdRef.current=id;setBatchDisplayName(payload.batch.setup_name||"");setKeptAsDrafts(Boolean(state.keptAsDrafts));setTemplate(state.template||"");setTemplateDetails(state.templateDetails||null);setDescription(state.description||"");if(state.pricing)setPricing(state.pricing);setVariantPrices(state.variantPrices||{});setSelectedColorIds(state.selectedColorIds?.length?state.selectedColorIds:state.activeRecipe?.defaultColorIds?.length?state.activeRecipe.defaultColorIds:savedProductColors);setSelectedSizeIds(state.selectedSizeIds?.length?state.selectedSizeIds:state.activeRecipe?.defaultSizeIds?.length?state.activeRecipe.defaultSizeIds:savedProductSizes);setEtsyShippingProfileId(Number(state.etsyShippingProfileId)||0);setPricingApproved(Boolean(state.pricingApproved)||Boolean(state.complete&&(state.drafts||[]).some(draft=>draft.status==="Created")));setMockupTheme(state.mockupTheme||"");setActiveRecipe(state.activeRecipe||null);setActiveBundle(state.activeBundle||null);setBundleRecipes(state.bundleRecipes||[]);setBundleIndex(Math.max(0,Number(state.bundleIndex)||0));setBundleBatchIds(state.bundleBatchIds||{});setFiles(designs);setDrafts(state.drafts||[]);setComplete(Boolean(state.complete));setFinishPhase(restoredFinishPhase(state.finishPhase||"details",requestedPhase??requestedFinishPhase(requestedStep),Boolean(state.complete)));setBulkTitles(state.bulkTitles||"");setBatchKeywords(state.batchKeywords||[]);setTitleJoiner(state.titleJoiner||", ");setTitleBuilderMode(state.titleBuilderMode||"ai");setAutoTitleBankId(state.autoTitleBankId||"");setManualKeywordBankId(state.manualKeywordBankId||"");setSharedMockups(state.sharedMockups);setPreparedMockupCounts(state.preparedMockupCounts||{});setPrintifyImageIndices(state.printifyImageIndices||[]);setPrintifyImageSelections(state.printifyImageSelections||{});setSizeGuideName(state.sizeGuideName||"");setResumeProcessing(payload.batch.status==="processing"&&designs.length>0);const step=restoredWorkflowStep(payload.batch.step||"connect",requestedStep,Boolean(state.complete));setWorkflowStep(normalizeStep(step));url.searchParams.set("batch",id);url.searchParams.set("step",step);url.searchParams.delete("phase");if(push)window.history.pushState({},"",url);else window.history.replaceState({},"",url);if(payload.batch.status==="processing"&&state.template)void loadTemplateUrl(state.template);return true}finally{snapshotReady.current=true;setRestoringBatch(false)}
-  }
-  /* D659 Â· A workflow URL with no ?batch= dropped straight to step 1. Measured
-     live: opening ?step=designs after four Printify drafts existed silently
-     landed on "Choose product", looking exactly like the batch had been thrown
-     away - the same fault D427 fixed for a DEAD id, still present for a missing
-     one. A step URL is a request to resume, so resume it: when exactly one
-     resumable batch is open, take it; when several are, ask which rather than
-     choosing for her; when none is, step 1 is the honest answer. */
-  const [resumeChoices,setResumeChoices]=useState<Array<{id:string;name:string;step:string;drafts:number}>>([]);
-  useEffect(()=>{const url=new URL(window.location.href);const id=url.searchParams.get("batch")||"";
-    if(!id){
-      const wanted=canonicalStep(url.searchParams.get("step"));
-      if(!wanted||wanted==="connect"||wanted==="setup"||signedIn!==true){snapshotReady.current=true;setRestoringBatch(false);return}
-      void (async()=>{
-        try{
-          const payload=await fetch("/api/batches").then(response=>response.ok?response.json():null) as {batches?:Array<{id:string;name?:string;step?:string;status?:string;draftCount?:number}>}|null;
-          const open=(payload?.batches||[]).filter(batch=>batch.status!=="published"&&batch.status!=="archived");
-          if(open.length===1){await restoreBatchById(open[0].id,url.searchParams.get("step"),url.searchParams.get("phase"));return}
-          if(open.length>1)setResumeChoices(open.slice(0,6).map(batch=>({id:batch.id,name:batch.name||"Untitled batch",step:String(batch.step||""),drafts:Number(batch.draftCount||0)})));
-        }catch{/* fall through to step 1, which is what happened before */}
-        finally{snapshotReady.current=true;setRestoringBatch(false)}
-      })();
-      return;
-    }void restoreBatchById(id,url.searchParams.get("step"),url.searchParams.get("phase")).then(restored=>{if(restored)return;setRestoreNotice("That batch could not be opened - it may have been deleted. Nothing else was lost; you can pick up from Batch History or start a new batch.");const clean=new URL(window.location.href);clean.searchParams.delete("batch");clean.searchParams.delete("step");clean.searchParams.delete("phase");window.history.replaceState({},"",clean.toString());})},[]);
-  /* D301 Â· Restore the remembered product on load. The recipe list lives in
-     factory-tools, not here, so this asks the API rather than referencing a
-     `recipes` variable that does not exist in this component. Guarded so it can
-     never fight the two things that legitimately own the selection: a ?batch=
-     resume, and a product already chosen in this session. */
-  const productRestoreAttempted=useRef(false);
-  /* D659 Â· Set only while a REMEMBERED product is being restored, so the very
-     same failure still opens a modal when she chose the product herself. */
-  const restoringRememberedProduct=useRef(false);
-  /* D659 Â· The store was recorded on the server the moment a product loaded,
-     but the card that shows it lives in factory-tools and only re-reads the
-     recipe list on its own schedule - so the label appeared on the NEXT page
-     load, which is exactly when a seller has stopped wondering which store a
-     product belongs to. Tell the list directly. */
-  function announceShop(recipeId:string,title:string,shopId:number){
-    window.dispatchEvent(new CustomEvent("goldie-recipe-shop",{detail:{recipeId,title,shopId}}));
-  }
-  const [restoredProductNotice,setRestoredProductNotice]=useState("");
-  useEffect(()=>{
-    if(productRestoreAttempted.current||restoringBatch||activeRecipe||activeBundle||signedIn!==true)return;
-    if(new URL(window.location.href).searchParams.get("batch"))return;
-    let remembered="";let rememberedBundle="";
-    try{
-      remembered=window.localStorage.getItem("goldie-active-recipe")||"";
-      rememberedBundle=window.localStorage.getItem("goldie-active-bundle")||"";
-    }catch{/* private mode */}
-    if(!remembered&&!rememberedBundle)return;
-    productRestoreAttempted.current=true;
-    void(async()=>{
-      try{
-        /* D345 Â· A remembered bundle wins: it is the larger selection, and
-           choosing one clears the single-product key, so both being present
-           means the bundle was chosen more recently. */
-        if(rememberedBundle){
-          const saved=JSON.parse(rememberedBundle) as {id?:string;recipeIds?:string[]};
-          const bundles=await fetch("/api/product-bundles").then(r=>r.ok?r.json():null).catch(()=>null) as {bundles?:ProductBundle[]}|null;
-          const bundle=(bundles?.bundles||[]).find(item=>item.id===saved.id);
-          if(bundle&&(saved.recipeIds||[]).length){await useBundle(bundle,saved.recipeIds||[]);return}
-          window.localStorage.removeItem("goldie-active-bundle");
-        }
-        if(!remembered)return;
-        const response=await fetch("/api/product-recipes");
-        if(!response.ok)return;
-        const payload=await response.json() as {recipes?:Recipe[]};
-        const match=(payload.recipes||[]).find(recipe=>recipe.id===remembered);
-        /* D659 Â· A remembered product that Goldie can no longer use greeted her
-           with "REQUIRED BEFORE CONTINUING" on EVERY page load - measured live
-           with "Generic brand", a product never published to Etsy. She had not
-           asked for it; the page simply restored it and then refused it. A
-           modal is for something the seller just did. Restoring is something
-           Goldie did, so a failure there deselects quietly and explains itself
-           on the page. */
-        if(match){restoringRememberedProduct.current=true;try{await selectRecipe(match)}finally{restoringRememberedProduct.current=false}}
-        else window.localStorage.removeItem("goldie-active-recipe");
-      }catch{/* a failed restore must never block the page */}
-    })();
-  },[restoringBatch,activeRecipe,activeBundle,signedIn]);
-
-  useEffect(()=>{setLocalPreview(["localhost","127.0.0.1"].includes(window.location.hostname));fetch("/api/account").then(response=>response.json()).then((result:{signedIn?:boolean})=>setSignedIn(Boolean(result.signedIn))).catch(()=>setSignedIn(null))},[]);
-  useEffect(()=>{if(signedIn!==true||publishing)return;const jobId=window.localStorage.getItem("goldie-active-publish-job");if(jobId)void monitorPublishJob(jobId,true);
-  },[signedIn]);
-
-  useEffect(()=>{if(!resumeProcessing||resumeAttempted.current||!connected||!templateLoaded||!files.length)return;resumeAttempted.current=true;setResumeProcessing(false);const succeeded=new Set(drafts.filter(draft=>draft.status==="Created").map(draft=>draft.clientId));const remaining=files.filter(file=>!succeeded.has(file.id));if(remaining.length)void runDrafts(remaining,true)},[resumeProcessing,connected,templateLoaded,files,drafts]);
-
-  /* D379 - The debounced autosave and an in-place product switch have to write
-     the same snapshot to the same place; the switch just cannot wait 700ms for
-     it. One save, two callers. */
-  /* D496 - two Goldie tabs fought over the same batch. Both autosave the whole
-     batch snapshot every 700ms, so whichever tab wrote last replaced the other
-     tab's work wholesale - and neither said anything. I reproduced a batch
-     failing to restore with a second tab open on the app.
-
-     A batch is claimed by one tab. A second tab opening the same batch is told,
-     and holds its autosave rather than silently overwriting - the first tab has
-     the work. She can take over here, which hands the claim across and puts the
-     other tab into the same held state. */
-  const tabId=useRef<string>("");
-  if(typeof window!=="undefined"&&!tabId.current)tabId.current=crypto.randomUUID();
-  const [batchHeldByAnotherTab,setBatchHeldByAnotherTab]=useState(false);
-  const batchChannel=useRef<BroadcastChannel|null>(null);
-  useEffect(()=>{
-    if(typeof BroadcastChannel==="undefined")return;
-    const channel=new BroadcastChannel("goldie-batch-claim");
-    batchChannel.current=channel;
-    channel.onmessage=(event:MessageEvent)=>{
-      const message=event.data as {type:string;batchId?:string;tabId?:string};
-      if(!message?.batchId||message.tabId===tabId.current)return;
-      if(message.batchId!==batchIdRef.current)return;
-      if(message.type==="claim"){
-        /* Another tab has just taken this batch. Stop writing over it. */
-        setBatchHeldByAnotherTab(true);
-      }
-      if(message.type==="ping"){
-        /* A tab is asking who holds this batch. Only answer if we still do. */
-        if(!batchHeldByAnotherTab)channel.postMessage({type:"claim",batchId:batchIdRef.current,tabId:tabId.current});
-      }
-    };
-    return()=>{channel.close();batchChannel.current=null};
-  },[batchHeldByAnotherTab]);
-  /* D501 - this ran on every autosave, so it asked the other tabs who owns this
-     batch once per 700ms while she typed, and cleared the held flag each time -
-     a held tab could have un-held itself off the back of a save it did not make.
-     Whether another tab owns this batch can only change when the batch does. */
-  const pingedBatch=useRef("");
-  useEffect(()=>{
-    const id=batchIdRef.current;
-    if(!id||!batchChannel.current)return;
-    if(pingedBatch.current===id)return;
-    pingedBatch.current=id;
-    setBatchHeldByAnotherTab(false);
-    batchChannel.current.postMessage({type:"ping",batchId:id,tabId:tabId.current});
-  },[savedRevision,restoringBatch]);
-  function takeOverBatchHere(){
-    setBatchHeldByAnotherTab(false);
-    batchChannel.current?.postMessage({type:"claim",batchId:batchIdRef.current,tabId:tabId.current});
-  }
-
-  async function persistBatchNow(existingId?:string){
-    const id=existingId||batchIdRef.current||crypto.randomUUID();
-    batchIdRef.current=id;
-    rememberBundleBatch(activeRecipe?.id,id);
-    window.localStorage.setItem("goldie-active-batch",id);
-    await fetch("/api/batches",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,status:running?"processing":keptAsDrafts?"draft":complete?drafts.some(draft=>draft.status!=="Created")?"needs_attention":"complete":"draft",step:workflowStep,setupName:batchDisplayName||activeBundle?.name||activeRecipe?.name||"",productTitle:templateDetails?.blueprintTitle||"",designCount:files.length,state:batchStateSnapshot()})}).catch(()=>undefined);
-  }
-  useEffect(()=>{if(!snapshotReady.current||restoringBatch||batchHeldByAnotherTab||(!files.length&&!drafts.length))return;const timer=window.setTimeout(()=>{void persistBatchNow();},700);return()=>window.clearTimeout(timer);
-  },[restoringBatch,workflowStep,finishPhase,template,templateDetails,description,pricing,selectedColorIds,selectedSizeIds,variantPrices,etsyShippingProfileId,pricingApproved,mockupTheme,activeRecipe,activeBundle,bundleRecipes,bundleIndex,files.map(file=>`${file.id}:${file.title}:${file.tags.join("|")}:${file.blurb||""}:${file.descriptionOverride??""}:${file.sizeGuideName||""}:${JSON.stringify(file.etsy||{})}`).join(";"),drafts,complete,running,bulkTitles,batchKeywords,titleJoiner,titleBuilderMode,autoTitleBankId,manualKeywordBankId,sharedMockups,preparedMockupCounts,printifyImageIndices,printifyImageSelections,sizeGuideName,batchDisplayName,keptAsDrafts,batchReceipt]);
-
-  useEffect(() => {
-    fetch("/api/printify")
-      .then((response) => response.json())
-      .then((result: { connected?: boolean; owner?: boolean; reason?: string; warning?: string }) => { setConnected(Boolean(result.connected)); setOwner(Boolean(result.owner)); if (result.reason || result.warning) setConnectionError(result.reason || result.warning || ""); })
-      .catch(() => setConnected(false))
-      .finally(() => setCheckingConnection(false));
-  }, []);
-
-  useEffect(()=>{fetch("/api/seller-preferences").then(response=>response.json()).then((result:{pricing?:Partial<Pricing>|null})=>{if(!result.pricing)return;setPricing(current=>({...current,etsyFeePercent:Number(result.pricing?.etsyFeePercent??current.etsyFeePercent),fixedFee:Number(result.pricing?.fixedFee??current.fixedFee),listingFee:Number(result.pricing?.listingFee??current.listingFee)}))}).catch(()=>undefined)},[]);
-
-  useEffect(()=>{fetch("/api/etsy").then(response=>response.json()).then((result:{connected?:boolean;shopName?:string})=>{setEtsyConnected(Boolean(result.connected));setEtsyShop(result.shopName||"")}).catch(()=>setEtsyConnected(false));const message=new URL(window.location.href).searchParams.get("etsy");if(message){if(message==="connected"){setEtsyConnected(true);setEtsyError("")}else setEtsyError(message);const url=new URL(window.location.href);url.searchParams.delete("etsy");window.history.replaceState({},"",url)}},[]);
-  async function loadEtsyShippingProfiles(preselect=0){setShippingProfilesLoading(true);setShippingProfilesError("");try{const response=await fetch("/api/etsy/shipping-profiles"),result=await response.json() as {profiles?:EtsyShippingProfile[];error?:string};if(!response.ok)throw new Error(result.error||"Your Etsy shipping profiles could not be loaded.");const profiles=(result.profiles||[]).map(profile=>({...profile,title:profile.title.replace(/\.{2,}$/,"â€¦")}));setEtsyShippingProfiles(profiles);setEtsyShippingProfileId(current=>{const wanted=preselect||current;return wanted&&profiles.some(profile=>profile.id===wanted)?wanted:0})}catch(error){setShippingProfilesError(error instanceof Error?error.message:"Your Etsy shipping profiles could not be loaded.")}finally{setShippingProfilesLoading(false)}}
-  useEffect(()=>{if(etsyConnected)void loadEtsyShippingProfiles()},[etsyConnected]);
-  useEffect(()=>{const templateProfileId=Number(templateDetails?.shippingTemplateId);if(!templateProfileId||!etsyShippingProfiles.some(profile=>profile.id===templateProfileId))return;setEtsyShippingProfileId(current=>current||templateProfileId)},[templateDetails?.shippingTemplateId,etsyShippingProfiles]);
-  /* D231 Â· A saved shipping profile that is not on the shop is worse than none.
-     Measured live: Gildan Hoodie and gildan crewneck both held 259760087290 as
-     their etsyShippingProfileId, which is the PRINTIFY shippingTemplateId for
-     that product - a Printify id sitting in a field meant for an Etsy profile
-     id. It matches none of the 94 profiles on the shop, so the picker showed
-     nothing selected, "Approve prices and shipping" was disabled, and the batch
-     could not move. Treat an unusable id as unset so the picker asks for a real
-     one and the D229 notice explains why. */
-  useEffect(()=>{if(!etsyShippingProfiles.length)return;setEtsyShippingProfileId(current=>current&&!etsyShippingProfiles.some(profile=>profile.id===current)?0:current)},[etsyShippingProfiles]);
-
-  useEffect(() => {
-    if (!running) return;
-    const protectBatch = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ""; };
-    window.addEventListener("beforeunload", protectBatch);
-    return () => window.removeEventListener("beforeunload", protectBatch);
-  }, [running]);
-
-  /* D644 Â· The click guard is a document listener registered by an effect, so it
-     closes over whatever state existed when that effect last ran - and
-     selectedPublishIds was never in its dependency list. Harmless while the
-     blockers did not depend on the selection; D643 made them per-target, and the
-     guard began refusing the press by naming products that had been unticked:
-     "Gildan Tee still uses one from a different shop" while the button correctly
-     read "Publish 2 listings live on Etsy Â· 1 product".
-     A ref refreshed on every render always holds the current answer, so the
-     listener cannot read a stale one no matter what its deps say. */
-  const publishBlockersRef=useRef<()=>string[]>(()=>[]);
-  publishBlockersRef.current=publishBlockers;
-  useEffect(()=>{
-    const guardFinalActions=(event:MouseEvent)=>{
-      const element=event.target instanceof Element?event.target.closest("button"):null;
-      if(!element)return;
-      let issues:string[]=[];
-      if(element.classList.contains("publish-all-button")){
-        issues=publishBlockersRef.current();
-      }
-      if(!issues.length)return;
-      event.preventDefault();event.stopImmediatePropagation();stopWith("Finish all sections first.",[...new Set(issues)]);
-    };
-    document.addEventListener("click",guardFinalActions,true);
-    return()=>document.removeEventListener("click",guardFinalActions,true);
-  },[files,description,printifyImageIndices,printifyImageSelections,preparedMockupCounts,pricingApproved,complete,drafts,connected,templateDetails,etsyConnected,localPreview]);
-
-  useEffect(()=>{if(localPreview||!complete)return;const pending=files.filter(file=>!file.etsy&&file.title.trim());if(!pending.length)return;const timer=window.setTimeout(()=>{setPreparingEtsy(true);void prepareEtsyBatch(pending).finally(()=>setPreparingEtsy(false))},900);return()=>window.clearTimeout(timer);
-  },[localPreview,complete,files.map(file=>`${file.id}:${file.title}:${file.tags.join("|")}`).join(";")]);
-  useEffect(()=>{if(localPreview||!complete)return;const pending=files.filter(file=>{const draft=drafts.find(item=>item.clientId===file.id);const signature=`${file.title}\n${file.tags.join("|")}`;return Boolean(draft?.id&&file.title.trim()&&syncedListingSignatures.current.get(file.id)!==signature)});if(!pending.length)return;setDrafts(current=>current.map(draft=>{const file=files.find(item=>item.id===draft.clientId);return file?{...draft,title:file.title,tags:file.tags}:draft}));const timer=window.setTimeout(()=>{void Promise.all(pending.map(async file=>{try{await syncListingFields(file);syncedListingSignatures.current.set(file.id,`${file.title}\n${file.tags.join("|")}`)}catch(error){updateDesign(file.id,{etsyError:error instanceof Error?error.message:"Printify could not save this listing."})}}))},600);return()=>window.clearTimeout(timer);
-  },[localPreview,complete,drafts.map(draft=>draft.id||draft.clientId).join(";"),files.map(file=>`${file.id}:${file.title}:${file.tags.join("|")}`).join(";")]);
-
-  useEffect(()=>{if(localPreview||!complete||preparingEtsy)return;const prepared=files.filter(file=>file.etsy);if(!prepared.length)return;const timer=window.setTimeout(()=>{void runBounded(prepared,2,async file=>{try{await syncPreparedListing(file,file.etsy!);updateDesign(file.id,{etsyError:""})}catch(error){updateDesign(file.id,{etsyError:error instanceof Error?error.message:"The listing changes could not be saved."})}return file},()=>undefined)},1200);return()=>window.clearTimeout(timer);
-  },[localPreview,complete,preparingEtsy,files.map(file=>file.etsy?`${file.id}:${file.title}:${file.tags.join("|")}:${JSON.stringify(file.etsy)}`:"").join(";")]);
-
-  async function fileContentHash(file:File){const bytes=await file.arrayBuffer(),digest=await crypto.subtle.digest("SHA-256",bytes);return Array.from(new Uint8Array(digest),byte=>byte.toString(16).padStart(2,"0")).join("")}
-
-  async function chooseFiles(list: FileList | null) {
-    if (!list) return;
-    const selected = Array.from(list).filter((file) => /\.(png|jpe?g)$/i.test(file.name));
-    if (selected.length === 0) {
-      setFileNotice("");
-      setFileError("No supported designs were found. Choose PNG or JPG images.");
-      return;
-    }
-    const oversized = selected.find((image) => image.size > MAX_FILE_BYTES);
-    if (oversized) {
-      setFileNotice("");
-      setFileError(oversizedFileMessage(oversized.name,oversized.size));
-      return;
-    }
-    const existingHashes=new Set<string>();
-    for(const design of files){const hash=design.contentHash||(!design.originalUnavailable?await fileContentHash(design.file):"");if(hash)existingHashes.add(hash)}
-    const replacements=new Map<string,{file:File;previewUrl:string;contentHash:string}>();
-    const unique:DesignFile[]=[];let duplicateCount=0;
-    for(const file of selected){
-      const contentHash=await fileContentHash(file);
-      const missing=files.find(design=>design.originalUnavailable&&!replacements.has(design.id)&&((design.contentHash&&design.contentHash===contentHash)||(!design.contentHash&&design.name===file.name&&design.size===file.size)));
-      if(missing){replacements.set(missing.id,{file,previewUrl:URL.createObjectURL(file),contentHash});existingHashes.add(contentHash);continue}
-      if(existingHashes.has(contentHash)){duplicateCount+=1;continue}
-      existingHashes.add(contentHash);unique.push({name:file.name,size:file.size,id:crypto.randomUUID(),file,previewUrl:URL.createObjectURL(file),title:"",tags:[],contentHash,paddingStatus:"checking"})
-    }
-    const available=Math.max(0,Math.min(MAX_BATCH_FILES-files.length,batchDesignLimit-files.length));
-    if(unique.length>available){unique.forEach(image=>URL.revokeObjectURL(image.previewUrl));setFileNotice(duplicateCount?`${duplicateCount} exact ${duplicateCount===1?"duplicate was":"duplicates were"} skipped.`:"");setFileError(available?`This selection contains ${unique.length} new designs, but this batch has room for ${available}. Choose ${available} or fewer so nothing is partially added.`:"This batch has no listing allowance left. No designs were added and no batch was created.");if(folderPicker.current)folderPicker.current.value="";if(imagePicker.current)imagePicker.current.value="";return}
-    const images=unique;
-    if(!images.length&&!replacements.size){if(duplicateCount){setFileError("");setFileNotice(`${duplicateCount===1?"That design is":"Those designs are"} already in this batch. No duplicate was added.`)}else{setFileNotice("");setFileError(`This batch already has ${MAX_BATCH_FILES} designs.`)}if(folderPicker.current)folderPicker.current.value="";if(imagePicker.current)imagePicker.current.value="";return}
-    const combined=[...files.map(design=>{const restored=replacements.get(design.id);return restored?{...design,...restored,originalUnavailable:false}:design}),...images];
-    setFileError("");setFileNotice(replacements.size?`${replacements.size} original ${replacements.size===1?"file is":"files are"} available in this browser again.`:duplicateCount?`${duplicateCount} exact ${duplicateCount===1?"duplicate was":"duplicates were"} skipped.`:"");
-    setFiles(combined);
-    const durableBatchId=batchIdRef.current||crypto.randomUUID();batchIdRef.current=durableBatchId;window.localStorage.setItem("goldie-active-batch",durableBatchId);const batchUrl=new URL(window.location.href);batchUrl.searchParams.set("batch",durableBatchId);window.history.replaceState({},"",batchUrl);void saveBatchFiles(durableBatchId,combined.map(image=>image.file)).catch(()=>undefined);
-    if(images.length){setComplete(false);setDrafts([]);setProcessed(0)}
-    const restoredAndNew=[...combined.filter(design=>replacements.has(design.id)),...images];
-    restoredAndNew.forEach((design) => { const probe = document.createElement("img"); probe.onload = () => { setFiles((current) => current.map((item) => item.id === design.id ? { ...item, width: probe.naturalWidth, height: probe.naturalHeight } : item)); URL.revokeObjectURL(probe.src); }; probe.src = URL.createObjectURL(design.file); });
-    void analyzePadding(restoredAndNew);
-    if(folderPicker.current)folderPicker.current.value="";
-    if(imagePicker.current)imagePicker.current.value="";
-  }
-
-  /* D491 - a batch could be reopened and never become usable again. The design
-     measurements are written into the batch snapshot, and a snapshot taken while
-     they were still running persists paddingStatus:"checking" - which is exactly
-     what autosave does moments after a restore. designsReady counts only designs
-     that are measured and not still checking, so the page sat on "preparing 0 of
-     2 Â· Checking dimensions" forever, with no way forward. Verified on her live
-     bundle: stuck indefinitely, and it had already been saved that way.
-
-     Measuring happens on upload and nowhere else, so a restored design that
-     arrives unmeasured is measured now. The files are in this browser already;
-     it costs nothing but a decode. */
-  const remeasured=useRef(new Set<string>());
-  useEffect(()=>{
-    const unmeasured=files.filter(design=>design.file&&!remeasured.current.has(design.id)&&(!design.width||!design.height||design.paddingStatus==="checking"));
-    if(!unmeasured.length)return;
-    unmeasured.forEach(design=>remeasured.current.add(design.id));
-    unmeasured.forEach(design=>{
-      const probe=document.createElement("img");
-      const url=URL.createObjectURL(design.file);
-      probe.onload=()=>{setFiles(current=>current.map(item=>item.id===design.id?{...item,width:probe.naturalWidth,height:probe.naturalHeight}:item));URL.revokeObjectURL(url)};
-      probe.onerror=()=>URL.revokeObjectURL(url);
-      probe.src=url;
-    });
-    void analyzePadding(unmeasured);
-  },[files]);
-
-  async function analyzePadding(images:DesignFile[]) { for(const design of images){ if(!/\.png$/i.test(design.name)){updateDesign(design.id,{visibleBounds:{left:0,top:0,right:1,bottom:1},hasTransparency:false,paddingStatus:"full"});continue} try{const bitmap=await createImageBitmap(design.file,{resizeWidth:512,resizeHeight:512,resizeQuality:"low"});const canvas=document.createElement("canvas");canvas.width=bitmap.width;canvas.height=bitmap.height;const context=canvas.getContext("2d",{willReadFrequently:true})!;context.drawImage(bitmap,0,0);bitmap.close();const pixels=context.getImageData(0,0,canvas.width,canvas.height).data;let left=canvas.width,top=canvas.height,right=-1,bottom=-1,hasTransparency=false;for(let y=0;y<canvas.height;y++)for(let x=0;x<canvas.width;x++){const alpha=pixels[(y*canvas.width+x)*4+3];if(alpha<250)hasTransparency=true;if(alpha>8){left=Math.min(left,x);right=Math.max(right,x);top=Math.min(top,y);bottom=Math.max(bottom,y)}}const bounds=right<0?{left:0,top:0,right:1,bottom:1}:{left:left/canvas.width,top:top/canvas.height,right:(right+1)/canvas.width,bottom:(bottom+1)/canvas.height};const trimmed=bounds.left>.015||bounds.top>.015||bounds.right<.985||bounds.bottom<.985;updateDesign(design.id,{visibleBounds:bounds,hasTransparency,paddingStatus:trimmed?"trimmed":"full"})}catch{updateDesign(design.id,{visibleBounds:{left:0,top:0,right:1,bottom:1},hasTransparency:true,paddingStatus:"full"})} } }
-
-  async function removeDesign(id:string){const removed=files.find(file=>file.id===id);if(!removed)return;if(drafts.length&&!await confirmAction({title:`Remove ${removed.name}?`,body:"Its existing Printify draft stays in Printify. This listing is removed from this Goldie batch.",confirmLabel:"Remove listing",destructive:true}))return;const next=files.filter(file=>file.id!==id);URL.revokeObjectURL(removed.previewUrl);setFiles(next);setFileError("");setFileNotice(`${removed.name} was removed.`);setComplete(false);setDrafts([]);setProcessed(0);const batchId=batchIdRef.current;if(batchId){if(next.length)void saveBatchFiles(batchId,next.map(file=>file.file)).catch(()=>undefined);else void clearBatchFiles(batchId)}}
-
-  function updateDesign(id: string, change: Partial<DesignFile>) { const clearedChange=change.title!==undefined&&change.titleError===undefined?{...change,titleError:"",titleWarning:""}:change;const nextChange=clearedChange.title!==undefined&&titleCaps?{...clearedChange,title:clearedChange.title.replace(/\b[\p{L}\p{N}]/gu,character=>character.toLocaleUpperCase())}:clearedChange;setFiles((current) => current.map((file) => file.id === id ? { ...file, ...nextChange } : file)); if(nextChange.title!==undefined)setDrafts(current=>current.map(draft=>draft.clientId===id?{...draft,title:nextChange.title}:draft)); }
-  function pulseTitle(id:string){setTitlePulseIds(current=>new Set(current).add(id));window.setTimeout(()=>setTitlePulseIds(current=>{const next=new Set(current);next.delete(id);return next}),520)}
-  /* D488 - DATA LOSS. Opening a saved batch by URL deleted it. Verified live:
-     her published batch 93db4b27, the one holding her two live Etsy listings,
-     was at the top of Batch History and was gone from the database seconds after
-     I opened it at step 3.
-
-     This function deletes the prior batch server-side, and defaulted to doing
-     so. Its three callers - starting a bundle, adding a product, changing
-     product - only ask permission when files, drafts or a completed run are
-     already in memory. During a restore none of those are populated yet, so the
-     confirmation is skipped and the DELETE fires against the very batch being
-     opened.
-
-     Deleting now has to be asked for. Leaving a stale batch in history is a
-     tidiness problem; deleting a published one cannot be undone. */
-  function clearCurrentBatch(clearProduct=true,preserveSavedBatch=true){
-    etsyProductBaseline.current=null;
-    /* D301 Â· Starting over must also forget the remembered product, or the next
-       refresh would restore the one that was just cleared. */
-    if(clearProduct){try{window.localStorage.removeItem("goldie-active-recipe");window.localStorage.removeItem("goldie-active-bundle")}catch{/* private mode */}}
-    const priorBatch=batchIdRef.current;
-    /* D488 - and a second, independent guard: a batch that published listings is
-       the only record she has that they exist. Even the discard path she chose
-       by name does not get to delete that. */
-    const publishedThisBatch=Number(batchReceipt?.publishedCount)||0;
-    if(priorBatch&&!preserveSavedBatch&&!publishedThisBatch){void clearBatchFiles(priorBatch);void fetch(`/api/batches?id=${encodeURIComponent(priorBatch)}`,{method:"DELETE"})}
-    if(!preserveSavedBatch&&!publishedThisBatch)drafts.forEach(draft=>{if(draft.id)void fetch(`/api/etsy/images?productId=${encodeURIComponent(draft.id)}`,{method:"DELETE"})});
-    batchIdRef.current="";window.localStorage.removeItem("goldie-active-batch");
-    const freshUrl=new URL(window.location.href);freshUrl.searchParams.delete("batch");window.history.replaceState({},"",freshUrl);
-    files.forEach(file=>URL.revokeObjectURL(file.previewUrl));
-    templateLoadVersion.current+=1;setLoadingTemplate(false);setFiles([]);setFileError("");setDrafts([]);setProcessed(0);setRunTotal(0);setComplete(false);setOpenedDrafts([]);setOpenAllMessage("");setBulkTitles("");setBatchKeywords([]);setTitleJoiner(", ");setTitleBuilderMode("ai");setAutoTitleBank(null);setAutoTitleBankId("");setManualKeywordBankId("");setActiveDesign("");setPreflightOpen(false);setUploadNoticeOpen(false);setPrintifyImageIndices([]);setPrintifyImageSelections({});setSharedMockups(undefined);setPreparedMockupCounts({});setFinishPhase("details");setVariantPrices({});setSelectedColorIds([]);setColorsRemembered(false);setPricingApproved(false);setSizeGuideName("");setSizeGuideStatus("");setBatchReceipt(null);setPublishMessage("");syncedListingSignatures.current.clear();
-    if(clearProduct){setTemplate("");setTemplateDetails(null);setTemplateError("");setDescription("");setMockupTheme("");setActiveRecipe(null);setActiveBundle(null);setBundleRecipes([]);setBundleIndex(0);setBundleColorProducts({});setBundleBatchIds({});setBundleColorChoices({});setBundleQualityDecisions({});setPricing(current=>({...current,targetProfit:DEFAULT_PRICING.targetProfit,shippingCost:0,shippingCharged:0}))}
-    if (folderPicker.current) folderPicker.current.value = "";
-    if (imagePicker.current) imagePicker.current.value = "";
-  }
-  async function selectRecipe(recipe:Recipe):Promise<TemplateDetails|null>{etsyProductBaseline.current=null;/* D301 Â· Colours and sizes were persisted per template, but the product
-     SELECTION itself was not â€” so a refresh kept every choice and lost the
-     thing they were choices about, landing you on a blank product step. Only
-     a saved ?batch= restored it, and that id does not exist until a batch has
-     been saved server-side. */
-    /* D354 Â· selectRecipe loads a product; it does not decide what the seller
-       SELECTED. useBundle calls it for the first product of a bundle, so clearing
-       the bundle key here erased the bundle's own memory a moment after
-       useBundle wrote it â€” and left a single-product breadcrumb pointing at the
-       first member, which is what the next refresh restored. The two callers own
-       that decision now: chooseRecipe clears the bundle, useBundle writes it. */
-    try{window.localStorage.setItem("goldie-active-recipe",recipe.id)}catch{/* private mode */}
-    setActiveRecipe(recipe);setPrintifyImageIndices(recipe.printifyImageIndices||[]);setEtsyShippingProfileId(Number(recipe.etsyShippingProfileId)||0);/* D394 - A saved product already carries the seller's profit target and their
-       chosen shipping profile. Asking them to approve it again on every batch is a
-       question already answered, and it is what left a card of ticks sitting behind
-       a gate that would not open. */
-    setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:recipe.defaultProfitTarget,etsyShippingProfileId:recipe.etsyShippingProfileId}));/* D404 - Restore the prices and the whole-number toggle the seller saved on this
-       product, so the product step survives a refresh. */
-    setVariantPrices(recipe.variantPrices&&Object.keys(recipe.variantPrices).length?{...recipe.variantPrices}:{});
-    setWholeNumberByRecipe(current=>({...current,[recipe.id]:recipe.wholeNumberPricing===true}));setTemplate(recipe.templateUrl);const savedTheme=recipe.defaultMockupTheme||"",savedMockups=savedTheme?{theme:savedTheme,ids:recipe.mockupIds||[]}:undefined;setMockupTheme(savedTheme);setSharedMockups(savedMockups);window.sessionStorage.setItem("goldie-batch-mockups",JSON.stringify(savedMockups||null));setAutoTitleBankId(recipe.keywordListId||"");const nextPricing={...pricing,targetProfit:Number(recipe.defaultProfitTarget)||DEFAULT_PRICING.targetProfit,shippingCost:0,shippingCharged:0};setPricing(nextPricing);setTemplateDetails(null);const details=await loadTemplateUrl(recipe.templateUrl,nextPricing,Number(recipe.etsyShippingProfileId)||0,recipe.defaultColorIds||[],recipe.defaultSizeIds||[]);if(!details)return null;const savedDescription=recipe.description?.trim(),importedDescription=details.description?.trim();if(savedDescription)setDescription(recipe.description);else if(importedDescription){const updated={...recipe,description:details.description};setDescription(details.description);setActiveRecipe(updated);void fetch("/api/product-recipes",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:recipe.id,name:recipe.name,templateUrl:recipe.templateUrl,description:details.description})}).catch(()=>undefined)}return details}
-  async function saveProductDefaults(change:Partial<Recipe>,key:string){if(!activeRecipe)return;const recipeId=activeRecipe.id;setSavingProductDefault(key);try{const response=await fetch("/api/product-recipes",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:activeRecipe.id,name:activeRecipe.name,templateUrl:activeRecipe.templateUrl,...change})});if(!response.ok)throw new Error("Goldie could not save this product default.");/* D463 - this used to merge into a copy of the recipe captured before the
-   request and write that back afterwards, so a write that landed late put its
-   stale base over a newer value. That is why picking a shipping profile left
-   the Shipping row red saying "Pick a shipping profile" while the server had
-   the profile saved, and a reload fixed it. Merging into whatever the recipe
-   is NOW cannot go backwards. */
-setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:current);setBundleRecipes(current=>current.map(item=>item.id===recipeId?{...item,...change}:item));}catch(error){stopWith("This default was not saved.",[error instanceof Error?error.message:"Try again in a moment."])}finally{setSavingProductDefault("")}}
-  async function rememberBatchDefaultsAfterPublish(){if(!activeRecipe)return;const updated={...activeRecipe,defaultColorIds:selectedColorIds,defaultSizeIds:selectedSizeIds,defaultMockupTheme:mockupTheme,mockupIds:sharedMockups?.theme===mockupTheme?sharedMockups.ids:[]};const response=await fetch("/api/product-recipes",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:activeRecipe.id,name:activeRecipe.name,templateUrl:activeRecipe.templateUrl,defaultColorIds:selectedColorIds,defaultSizeIds:selectedSizeIds,defaultMockupTheme:mockupTheme,mockupIds:sharedMockups?.theme===mockupTheme?sharedMockups.ids:[]})});if(response.ok){setActiveRecipe(updated);setColorsRemembered(true);setSizesRemembered(true)}}
-  /* D457 - a product saves its own defaults.
-   *
-   * Setting a product up used to end with a "Save these as X's defaults" button,
-   * and until it was pressed the recipe held nothing. Readiness reads the saved
-   * recipe, not the live selection, so choosing a shipping profile on a new
-   * product left the card still saying "Pick a shipping profile" and the batch
-   * refused to move on - the exact wall she hit on the mug.
-   *
-   * The button was also asking a question with one sensible answer. The first
-   * time a product is set up, those choices ARE its defaults; every later change
-   * to that product is the new default. So they save themselves, debounced, and
-   * the product is set up as soon as it has the colours it needs. */
-  const defaultsSignature=JSON.stringify({
-    id:activeRecipe?.id||"",
-    colors:selectedColorIds,sizes:selectedSizeIds,theme:mockupTheme,
-    mockups:sharedMockups?.theme===mockupTheme?sharedMockups.ids:[],
-    shipping:etsyShippingProfileId,
-  });
-  const savedDefaultsRef=useRef("");
-  useEffect(()=>{
-    /* D460 - a mug has no colours to choose. Gating this on a colour selection
-       meant a product with no colour options could never finish setting itself
-       up, which is the same wall in a new place. The rule matches the gate:
-       colours are only required when the product actually offers them. */
-    if(!activeRecipe||!templateDetails)return;
-    const coloursSettled=!templateDetails.colorOptions?.length||selectedColorIds.length>0;
-    if(!coloursSettled)return;
-    if(savedDefaultsRef.current===defaultsSignature)return;
-    savedDefaultsRef.current=defaultsSignature;
-    const timer=window.setTimeout(()=>{
-      void saveProductDefaults({
-        setupComplete:true,
-        defaultColorIds:selectedColorIds,
-        defaultSizeIds:selectedSizeIds,
-        defaultMockupTheme:mockupTheme,
-        mockupIds:sharedMockups?.theme===mockupTheme?sharedMockups.ids:[],
-        ...(etsyShippingProfileId?{etsyShippingProfileId}:{}),
-      },"auto-defaults");
-    },600);
-    return ()=>window.clearTimeout(timer);
-  },[defaultsSignature,activeRecipe,templateDetails]);
-
-  async function completeProductSetup(){if(!activeRecipe)return;await saveProductDefaults({setupComplete:true,defaultColorIds:selectedColorIds,defaultSizeIds:selectedSizeIds,defaultMockupTheme:mockupTheme,mockupIds:sharedMockups?.theme===mockupTheme?sharedMockups.ids:[]},"initial-setup")}
-  async function chooseRecipe(recipe: Recipe) { const changingProduct=Boolean((activeRecipe?.id&&activeRecipe.id!==recipe.id)||(template&&template!==recipe.templateUrl));if(changingProduct&&(files.length>0||drafts.length>0||complete)){const count=files.length;if(!await confirmAction({title:`Switch to â€œ${recipe.name}â€ and start a new batch?`,body:`This removes ${count} ${count===1?"design":"designs"} and all work from the current batch. Saved products, keyword banks and mockup sets are untouched.`,confirmLabel:"Switch product",destructive:true}))return false;clearCurrentBatch(false)}try{window.localStorage.removeItem("goldie-active-bundle")}catch{/* private mode */}setActiveBundle(null);setBundleRecipes([]);setBundleIndex(0);return Boolean(await selectRecipe(recipe)); }
-  async function useBundle(bundle:ProductBundle,recipeIds:string[]){
-    const requestedIds=[...new Set(recipeIds.filter(Boolean))];
-    if(requestedIds.length<2){stopWith("This product bundle needs attention.",["Choose at least two available saved products."]);return false}
-    const payload=await fetch("/api/product-recipes").then(response=>response.ok?response.json():Promise.reject(new Error("Saved products could not be loaded."))).catch(()=>({recipes:[]})) as {recipes?:Recipe[]};
-    const available=payload.recipes||[],recipes=requestedIds.map(id=>available.find(recipe=>recipe.id===id)).filter(Boolean) as Recipe[];
-    if(recipes.length!==requestedIds.length){stopWith("This product bundle needs attention.",["One or more saved products in this bundle are missing. Edit the bundle and choose the products again."]);return false}
-    /* Selecting a bundle used to open a chain of native browser dialogs asking
-     * the seller to predict her design count, then stored that number only to
-     * block her later if the upload did not match it. The upload-time guard
-     * already multiplies designs by products against the remaining allowance
-     * and explains the result in the page, so the prediction was redundant and
-     * its only unique effect was a failure she could not avoid. See D129. */
-    if((files.length>0||drafts.length>0||complete)&&!await confirmAction({title:`Start â€œ${bundle.name}â€ and clear this batch?`,body:"Your current designs and unfinished work will be removed. Saved products, keyword banks and mockup sets are untouched.",confirmLabel:"Start this bundle",destructive:true}))return false;
-    clearCurrentBatch(true);
-    setActiveBundle(bundle);setBundleRecipes(recipes);setBundleIndex(0);const first=await selectRecipe(recipes[0]);if(!first)return false;/* D354 Â· Written AFTER selectRecipe, because selectRecipe writes the
-       single-product key and used to clear this one. Refresh must land on the
-       bundle, not on its first member. */
-    try{window.localStorage.setItem("goldie-active-bundle",JSON.stringify({id:bundle.id,recipeIds:recipes.map(item=>item.id)}))}catch{/* private mode */}
-    /* D373 - The other bundle members were fetched one after another, each with a
-       90 second deadline, and nothing was written to state until the whole loop
-       finished. On a three-product bundle that left "Loading Gildan Tee..." and
-       "Loading gildan crewneck..." on screen for minutes, and one slow product
-       held up every product behind it. Fetch them together and show each the
-       moment it lands. */
-    const loaded:Record<string,TemplateDetails>={[recipes[0].id]:first},choices:Record<string,number[]>={};
-    const adopt=(recipe:Recipe,details:TemplateDetails)=>{
-      loaded[recipe.id]=details;
-      const available=new Set((details.colorOptions||[]).filter(color=>color.available).map(color=>color.id));
-      /* D213 - A bundle member with no saved colours has not been set up. Leave it
-         empty so its card asks, instead of adopting Printify's template. */
-      const ids=(recipe.defaultColorIds||[]).filter(id=>available.has(id));
-      choices[recipe.id]=ids;
-      if(recipeCarriesApprovedPricing({defaultProfitTarget:recipe.defaultProfitTarget,etsyShippingProfileId:recipe.etsyShippingProfileId}))setBundleApproved(current=>({...current,[recipe.id]:true}));
-      /* D385 - Nothing is written to state here. D373 revealed each product the
-         moment it landed, which meant cards appearing one at a time and the page
-         reflowing under her. Fetch them all at once, show them all at once. */
-    };
-    adopt(recipes[0],first);
-    await Promise.all(recipes.filter(recipe=>recipe.id!==recipes[0].id).map(async recipe=>{
-      const details=await fetchWithDeadline("/api/printify",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({productUrl:recipe.templateUrl,savedShippingProfileId:Number(recipe.etsyShippingProfileId)||0})},90000)
-        .then(async response=>response.ok?(await response.json() as {product?:TemplateDetails}).product:undefined)
-        .catch(()=>undefined);
-      if(details)adopt(recipe,details);
-    }));
-    setBundleColorProducts(current=>({...current,...loaded}));setBundleColorChoices(current=>({...current,...choices}));return true;
-  }
-  /* D504 - its only reader now shares the per-product loader below. */
-
-  /* D378 - What a card says about a product on each of the three steps. Every
-     label is read from something real: the designs in hand, the batch's own
-     draft and published counts, or the absence of a batch at all. */
-  function bundleCardStatus(step:"images"|"listing"|"publish"){
-    return (recipe:Recipe,index:number):{label:string;tone:"ready"|"attention"|"advice"|"waiting"}=>{
-      if(index===bundleIndex){
-        if(step==="images")return complete?{label:`${drafts.length} ${drafts.length===1?"draft":"drafts"}`,tone:"ready"}:{label:`${files.length} ${files.length===1?"design":"designs"}`,tone:"attention"};
-        if(step==="listing"){
-          /* D624 Â· This card said "Titles ready" in green while the row directly
-             beneath it said "2 of 2 titles Â· 0 of 2 with all 13 tags" in crimson
-             with a warning mark. Both were true - the titles were written, the
-             tags were not - but the badge summarises the rows, so a card that
-             reads ready and not-ready at the same time is just confusing. The
-             badge now agrees with the row it sits above: it counts tags too. */
-          const titled=files.filter(file=>file.title.trim()).length;
-          const tagged=files.filter(file=>file.tags.length>=13).length;
-          if(!files.length)return {label:"0 titled",tone:"attention"};
-          if(titled<files.length)return {label:`${titled} of ${files.length} titled`,tone:"attention"};
-          /* D660 Â· D624 made this badge count tags so it would stop disagreeing
-             with the row beneath it. The row has now been corrected in the other
-             direction - a short tag count is an optimisation Etsy never demands,
-             not a fault - so the badge follows it there rather than falling back
-             into disagreeing again. Reported, in the softer tone, never as
-             "attention". */
-          /* D648 - the badge said "Titles and tags ready" in green directly above
-             a crimson "0 of 1 ready - Closure still needed". D624 taught it to
-             count tags; it still ignored the Etsy details on the same card, so
-             the card could call itself ready while a row under it could not
-             publish. It summarises every row it sits above or it summarises
-             nothing. */
-          const etsyReady=files.filter(file=>etsyRequiredComplete(file.etsy)).length;
-          if(etsyReady<files.length)return {label:`${etsyReady} of ${files.length} Etsy details ready`,tone:"attention"};
-          /* D660 Â· Reported after every real blocker, and in the softer tone.
-             A blocker still outranks it, so the badge never leads with advice
-             while something underneath genuinely cannot publish. */
-          if(tagged<files.length)return {label:`${tagged} of ${files.length} fully tagged`,tone:"advice"};
-          return {label:"Titles and tags ready",tone:"ready"};
-        }
-        const published=Number(batchReceipt?.publishedCount)||0;
-        if(published)return {label:`${published} published`,tone:"ready"};
-        const ready=drafts.filter(draft=>draft.status==="Created").length;
-        return {label:`${ready} ready`,tone:"attention"};
-      }
-      /* D504 - this read a second map, loaded by a second effect, so the chip and
-         the rows on the same card could disagree with each other. Same map now. */
-      const summary=bundleBatchSummary[recipe.id];
-      if(!summary)return {label:bundleBatchIds[recipe.id]?"Checkingâ€¦":"Not started yet",tone:"waiting"};
-      /* D627 - "Checkingâ€¦" forever was the old answer here. Say what is true. */
-      if(summary.unreadable)return {label:"Batch not found",tone:"attention"};
-      if(summary.published)return {label:`${summary.published} published`,tone:"ready"};
-      if(summary.drafts)return {label:`${summary.drafts} ${summary.drafts===1?"draft":"drafts"}`,tone:summary.status==="complete"?"ready":"attention"};
-      return {label:"Not started yet",tone:"waiting"};
-    };
-  }
-
-  /* D378 - The product card rail shared by Images, Listing and Publish.
-     Step 1 shows one card per product and you open one at a time; these steps
-     showed a single product with a "CURRENT PRODUCT" chip and no sign the others
-     existed. Same card, same header, same one-open-at-a-time behaviour, so all
-     four steps read as one tool.
-
-     The step's own content is the open card's body. Closed cards state where
-     that product stands, and clicking one opens it. */
-  /* D486 - a bundle's shared action does not belong inside one product's card.
-     "Create Printify drafts for all 3 products" sat inside the Gildan Hoodie
-     card, above two cards offering to open the other products - so the page
-     showed a button that acts on everything, nested inside one third of what it
-     acts on. A step whose action covers the whole bundle passes that action as a
-     footer: the cards report their products, the action sits below all of them,
-     and the per-card open controls disappear because there is nothing left to
-     open one at a time for. */
-  /* D486 - the other products' details are fetched when a bundle is first
-     chosen, and never again. Reopening a saved bundle batch left their cards
-     with a grey placeholder glyph instead of the product, on a page whose whole
-     job is to show her the three products she is about to build. */
-  useEffect(()=>{
-    if(!activeBundle||bundleRecipes.length<2)return;
-    const missing=bundleRecipes.filter(recipe=>recipe.id!==activeRecipe?.id&&!bundleColorProducts[recipe.id]&&recipe.templateUrl);
-    if(!missing.length)return;
-    let alive=true;
-    void Promise.all(missing.map(async recipe=>{
-      const details=await fetchWithDeadline("/api/printify",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({productUrl:recipe.templateUrl,savedShippingProfileId:Number(recipe.etsyShippingProfileId)||0})},30000)
-        .then(async response=>response.ok?(await response.json() as {product?:TemplateDetails}).product:undefined)
-        .catch(()=>undefined);
-      return details?[recipe.id,details] as const:null;
-    })).then(entries=>{
-      if(!alive)return;
-      const loaded=Object.fromEntries(entries.filter(Boolean) as Array<readonly [string,TemplateDetails]>);
-      if(Object.keys(loaded).length)setBundleColorProducts(current=>({...current,...loaded}));
-    });
-    return()=>{alive=false};
-  },[activeBundle,bundleRecipes,activeRecipe,bundleColorProducts]);
-
-  /* D499 - step 1 shows every product in the bundle as the same card, expanded,
-     each with its own rows - Colors, Sizes, Pricing, Shipping - and a Change
-     button on each. Steps 2, 3 and 4 showed one product's work and left the
-     others as bare headers, so the page stopped telling her anything about two
-     of the three products she is building. Same card, same rows, every step.
-
-     The other products' work lives in their own batches, so it has to be read
-     from them; the product being worked is read from state, which is always
-     fresher than anything saved. */
-  const [bundleBatchSummary,setBundleBatchSummary]=useState<Record<string,{designs:number;titled:number;tagged:number;drafts:number;described:boolean;complete:boolean;published:number;status:string;photos:number;mockups:number;unreadable?:boolean}>>({});
-  /* D559 - the sibling batches were read for their counts and then thrown away,
-     so the publish screen could only ever show the open product's listings while
-     the button published all three. Her question, looking at it: "why if this is
-     a hoodie t shirt and crew neck batch would it be showing me two hoodies
-     only?" The same read keeps the listings and the settings each product needs
-     to publish, so every listing in the bundle is on the page and selectable. */
-  const [bundleMembers,setBundleMembers]=useState<Record<string,{recipeId:string;productName:string;drafts:DraftResult[];designs:Array<Omit<DesignFile,"file"|"previewUrl">>;selections:Record<string,number[]>;indices:number[];shippingProfileId:number;sizeGuideName:string;preparedMockupCounts:Record<string,number>}>>({});
-  useEffect(()=>{
-    if(!activeBundle||bundleRecipes.length<2)return;
-    const wanted=bundleRecipes.filter(recipe=>recipe.id!==activeRecipe?.id&&bundleBatchIds[recipe.id]);
-    if(!wanted.length)return;
-    let alive=true;
-    const memberScratch:Record<string,{recipeId:string;productName:string;drafts:DraftResult[];designs:Array<Omit<DesignFile,"file"|"previewUrl">>;selections:Record<string,number[]>;indices:number[];shippingProfileId:number;sizeGuideName:string;preparedMockupCounts:Record<string,number>}>={};
-    void (async()=>{
-    const listing=await fetch("/api/batches").then(response=>response.ok?response.json():null).then((payload:{batches?:Array<{id?:string;status?:string;published_count?:number}>}|null)=>payload?.batches||[]).catch(()=>[] as Array<{id?:string;status?:string;published_count?:number}>);
-    await Promise.all(wanted.map(async recipe=>{
-      const id=bundleBatchIds[recipe.id];
-      const payload=await fetch(`/api/batches?id=${encodeURIComponent(id)}`).then(response=>response.ok?response.json():null).catch(()=>null) as {batch?:{state?:Record<string,unknown>}}|null;
-      const state=payload?.batch?.state as {designs?:Array<{id?:string;title?:string;tags?:string[];sizeGuideName?:string}>;drafts?:unknown[];description?:string;complete?:boolean;printifyImageSelections?:Record<string,number[]>;printifyImageIndices?:number[];preparedMockupCounts?:Record<string,number>;etsyShippingProfileId?:number;sizeGuideName?:string}|undefined;
-      /* D627 Â· This returned null, so no summary was ever written for a member
-         whose batch could not be read - and bundleProductsStillReading() reports
-         exactly "has a batch id, has no summary". Measured live on ZZ TEST
-         BUNDLE: the Gildan Hoodie member pointed at batch 2d2650a1, which 404s,
-         so its card read "Checkingâ€¦" forever and Publish stayed disabled saying
-         "Goldie is still reading the other products in this batch". It was not
-         still reading. The bundle could never be published by anyone, and the
-         message promised it was about to finish. Unreadable is an answer. */
-      if(!state)return [recipe.id,{designs:0,titled:0,tagged:0,drafts:0,described:false,complete:false,published:0,status:"",photos:0,mockups:0,unreadable:true}] as const;
-      const designs=state.designs||[];
-      /* D504 - the chip and the rows on the same card were fed by two different
-         maps, loaded by two different effects at two different moments, so one
-         could read "2 drafts" while the other read blank on the same
-         card. One loader, one map, one answer per product. */
-      const listed=listing.find(batch=>String(batch.id||"")===id);
-      /* D559 - keep what publishing needs, not just what the card counts. */
-      memberScratch[recipe.id]={recipeId:recipe.id,productName:recipe.name,
-        drafts:(state.drafts||[]) as DraftResult[],
-        designs:designs as Array<Omit<DesignFile,"file"|"previewUrl">>,
-        selections:state.printifyImageSelections||{},
-        indices:state.printifyImageIndices||[],
-        shippingProfileId:Number(state.etsyShippingProfileId)||0,
-        sizeGuideName:String(state.sizeGuideName||""),
-        preparedMockupCounts:state.preparedMockupCounts||{}};
-      return [recipe.id,{designs:designs.length,
-        titled:designs.filter(design=>String(design.title||"").trim()).length,
-        tagged:designs.filter(design=>(design.tags||[]).length>=13).length,
-        drafts:(state.drafts||[]).length,
-        described:Boolean(String(state.description||"").trim()),
-        complete:Boolean(state.complete),
-        published:Number(listed?.published_count)||0,
-        status:String(listed?.status||""),
-        photos:Object.values(state.printifyImageSelections||{}).reduce((total,ids)=>total+(Array.isArray(ids)?ids.length:0),0)||(state.printifyImageIndices||[]).length,
-        mockups:Object.values(state.preparedMockupCounts||{}).reduce((total,count)=>total+(Number(count)||0),0)}] as const;
-    })).then(entries=>{
-      if(!alive)return;
-      const loaded=Object.fromEntries(entries.filter(Boolean) as Array<readonly [string,{designs:number;titled:number;tagged:number;drafts:number;described:boolean;complete:boolean;published:number;status:string;photos:number;mockups:number;unreadable?:boolean}]>);
-      if(Object.keys(loaded).length)setBundleBatchSummary(current=>({...current,...loaded}));
-      if(Object.keys(memberScratch).length)setBundleMembers(current=>({...current,...memberScratch}));
-    });
-    })();
-    return()=>{alive=false};
-    /* D501 - savedRevision was in here, so every autosave - one per 700ms while
-       she types a title - refetched every other product's batch. The other
-       products' saved work can only change when she is working on one of them,
-       which means when the active product changes. That is what this watches. */
-  },[activeBundle,bundleRecipes,activeRecipe,bundleBatchIds]);
-
-  function productRows(recipe:Recipe,isActive:boolean):Array<{label:string;value:string;detail?:string;advice?:string;done:boolean;target?:string;task?:string;report?:boolean;optional?:boolean;pending?:boolean}>{
-    const mine=isActive
-      ?{designs:files.length,titled:files.filter(file=>file.title.trim()).length,tagged:files.filter(file=>file.tags.length>=13).length,drafts:drafts.filter(draft=>draft.status==="Created").length,described:Boolean(description.trim()),complete,published:Number(batchReceipt?.publishedCount)||0,status:"",photos:Object.values(printifyImageSelections).reduce((total,ids)=>total+ids.length,0)||printifyImageIndices.length,mockups:Object.values(preparedMockupCounts).reduce((total,count)=>total+(Number(count)||0),0)}
-      :bundleBatchSummary[recipe.id];
-    /* D500 - a product with no batch yet had no summary to read, so it returned
-       no rows and its card collapsed back to a bare header - the exact thing
-       these rows exist to stop. Step 1 never does that: a product that is not
-       set up still shows every row, saying it is not set. */
-    const counts=mine||{designs:0,titled:0,tagged:0,drafts:0,described:false,complete:false,published:0,status:"",photos:0,mockups:0};
-    /* D548 - the other products' batches are read after mount, so for a second or
-       two every one of them has no summary and every row said blank.
-       Measured on her bundle: step 2 showed all three products with two drafts
-       each while step 4, a moment earlier, called two of them unstarted. A
-       product with a batch is not unstarted - it is unread. */
-    const unread=!isActive&&!mine&&Boolean(bundleBatchIds[recipe.id]);
-    const blank=unread?"Checkingâ€¦":"Not started yet";
-    /* D556 - a product whose batch has not been read yet rendered every row with
-       the alert mark and the alert colour, so three cards of "Checkingâ€¦" read as
-       three cards of problems. Waiting is not a fault. */
-    const pending=unread;
-    const plural=(count:number,word:string)=>`${count} ${count===1?word:`${word}s`}`;
-    const started=Boolean(mine);
-    /* D539 - step 2's rows are the four things she does to a product's photos,
-       in the order she does them. Each one owns its panel; none of them points
-       anywhere. */
-    if(workflowStep==="designs")return [
-      {label:"Review Printify placement",value:started?plural(counts.drafts,"listing"):blank,pending,done:counts.drafts>0,task:"placement"},
-      {label:"Choose Printify photos",value:started?plural(counts.photos,"photo"):blank,pending,done:counts.photos>0,task:"printify"},
-      /* D550 - lifestyle mockups are optional: nothing about publishing requires
-         them, and her hoodie published-ready with four Printify photos and none.
-         The row still rendered "! None made yet" in alert red on every product
-         card, so a finished step reported a problem that does not exist. An
-         optional row that is empty is not a warning. */
-      {label:"Create lifestyle mockups",value:started?mockupRowValue(counts.mockups,scenesChosenFor(recipe,isActive)):blank,pending,done:counts.mockups>0,optional:true,task:"lifestyle"},
-      {label:"Arrange final photo order",value:started?plural(counts.photos+counts.mockups,"photo"):blank,pending,done:counts.photos+counts.mockups>0,task:"order"},
-    ];
-    /* D541 - both of these rows pointed at .final-review, so Listings and Titles
-       and tags took you to the same block below the cards. Nothing on this step
-       is per product: choosing what to publish and publishing it are one press
-       in the footer, over the whole bundle. So the card reports what is about to
-       go out for this product and does not offer to open anything. */
-    if(finishPhase==="final"){
-      /* D546 - the checklist under these cards repeated them line for line, so it
-         went. Two of its lines were not repeated anywhere - how many titles are
-         under 100 characters, and whether pricing and shipping were approved -
-         and they belong on the rows that own that work. */
-      const shortTitles=isActive?files.filter(file=>file.title.trim().length<100).length:0;
-      return [
-        {label:"Listings ready",value:started?plural(counts.drafts,"listing"):blank,pending,done:counts.drafts>0,report:true},
-        {label:"Titles and tags",value:started?(()=>{
-        /* D549 - her question, and she was right to ask it: "2 of 2 written Â· 1 at
-           13 tags. Is that supposed to say one of thirteen tags? How could there be
-           two titles written but only one tag?" It counted listings on the left and
-           listings on the right, but only the left side said so, so the right side
-           read as a tag count. Both sides count listings, out loud. */
-        if(counts.tagged===counts.designs&&counts.designs>0)return `${counts.titled} of ${counts.designs} titles Â· all 13 tags`;
-        return `${counts.titled} of ${counts.designs} titles Â· ${counts.tagged} of ${counts.designs} with all 13 tags`;
-      })():blank,detail:isActive&&shortTitles?`${shortTitles} ${shortTitles===1?"title is":"titles are"} under 100 characters`:undefined,pending,/* D660 Â· Tags were folded into the same done-test as titles, so a listing with
-   fewer than 13 tags carried the alert mark and the alert colour beside a
-   product that genuinely could not publish. A missing title blocks; tags below
-   thirteen are an optimisation, and Etsy accepts the listing either way -
-   publishBlockers never mentions them. Done means titled; short tag counts are
-   advice, in the detail line, not an error. */
-done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&counts.designs>0&&counts.titled===counts.designs&&counts.tagged<counts.designs?`${counts.designs-counts.tagged} of ${counts.designs} could use all 13 tags â€” optional, but Etsy ranks on them`:undefined,report:true},
-        /* D490 - the checklist said only that one or more selected listings needed
-           a photo, making her go and find which, on a page where everything else
-           counted precisely. createdListingsMissingImages already knows exactly
-           which drafts they are, so the row names them. D546 - it moved here with
-           the checklist it used to live in. */
-        {label:"Listing photos",value:started?plural(counts.photos+counts.mockups,"photo"):blank,detail:isActive?(()=>{
-          const missing=createdListingsMissingImages(selectedPublishDrafts());
-          if(!missing.length)return undefined;
-          /* D494 - two designs exported minutes apart truncated to the same string,
-             which is worse than not naming them. Filenames differ at the end, so
-             keep both ends. */
-          const shorten=(name:string,limit:number)=>name.length<=limit?name:`${name.slice(0,Math.ceil(limit/2)-1)}â€¦${name.slice(-Math.floor(limit/2))}`;
-          const named=missing.map(draft=>files.find(file=>file.id===draft.clientId)?.title?.trim()||files.find(file=>file.id===draft.clientId)?.file.name||"").filter(Boolean);
-          if(missing.length===1&&named[0])return `${shorten(named[0],60)} still needs a photo`;
-          if(named.length&&named.length===missing.length)return `${missing.length} listings still need a photo: ${named.map(name=>shorten(name,40)).join(", ")}`;
-          return `${missing.length} of ${selectedPublishDrafts().length} selected listings still need a photo`;
-        })():undefined,pending,done:counts.photos+counts.mockups>0,report:true},
-        /* D548 - the checklist read "âœ“ Hoodies will be applied automatically", which is
-           the name of her shipping profile in a sentence that sounds like it is about
-           the garment. Say what the name refers to. */
-        {label:"Pricing and shipping",value:isActive?(pricingApproved?`Approved Â· ${friendlyShippingProfileTitle(etsyShippingProfiles.find(profile=>profile.id===etsyShippingProfileId)?.title)||"Etsy shipping profile"}`:"Needs review"):started?"Approved":blank,pending,done:isActive?pricingApproved:started,report:true},
-        {label:"Published",value:counts.published?plural(counts.published,"listing"):"Not published yet",pending,done:counts.published>0,report:true},
-      ];
-    }
-    return [
-      /* D516 - Titles and Tags were two rows pointing at two different sections,
-         which split one job in half on the page. Etsy tags come out of the same
-         keyword bank as the title, in the same pass, by the same button - so it
-         is one row, reporting both.
-         D541 - and it opens its own panel now instead of scrolling into a block
-         it shared with the description. The Etsy fields get a row too: during
-         that phase both of the old rows pointed at content that was not even
-         rendered, so pressing one threw the whole step back a phase. */
-      {label:"Write titles and tags",value:started?(()=>{
-        /* D549 - her question, and she was right to ask it: "2 of 2 written Â· 1 at
-           13 tags. Is that supposed to say one of thirteen tags? How could there be
-           two titles written but only one tag?" It counted listings on the left and
-           listings on the right, but only the left side said so, so the right side
-           read as a tag count. Both sides count listings, out loud. */
-        if(counts.tagged===counts.designs&&counts.designs>0)return `${counts.titled} of ${counts.designs} titles Â· all 13 tags`;
-        return `${counts.titled} of ${counts.designs} titles Â· ${counts.tagged} of ${counts.designs} with all 13 tags`;
-      })():blank,pending,/* D660 Â· the same rule as the review row: a title is required,
-        thirteen tags are an optimisation Etsy never demands. */
-        done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&counts.designs>0&&counts.titled===counts.designs&&counts.tagged<counts.designs?`${counts.designs-counts.tagged} of ${counts.designs} could use all 13 tags â€” optional, but Etsy ranks on them`:undefined,task:"titles"},
-      {label:"Edit description",value:counts.described?"Attached":started?"Not attached":blank,pending,done:counts.described,task:"description"},
-      {label:"Review Etsy category and fields",value:started?(()=>{
-        if(!files.some(file=>file.etsy))return"Not created yet";
-        const ready=files.filter(file=>etsyRequiredComplete(file.etsy)).length;
-        if(ready===files.length)return`${ready} of ${files.length} ready`;
-        /* D544 - "0 of 2 ready" is a score, not an instruction. When one field is
-           blocking the whole batch, name it here. */
-        const names=[...new Set(files.flatMap(file=>etsyMissingRequired(file.etsy)))];
-        return names.length===1?`${ready} of ${files.length} ready Â· ${names[0]} still needed`:`${ready} of ${files.length} ready`;
-      })():blank,pending,done:files.length>0&&files.every(file=>etsyRequiredComplete(file.etsy)),task:"etsy"},
-    ];
-  }
-
-  /* D507 - step 2 listed every product in the bundle, and each one that had not
-     been reached yet reported blank designs. That is not true and
-     never was: the designs are uploaded once and carried to every product by the
-     bundle run. The cards were describing per-product state on the one step that
-     has none, and pressing Change on one of them switched products - which meant
-     going back to step 1 and forward again to get to the same upload box she was
-     already looking at. Step 2 shows the designs and the button that applies them
-     to every product. */
-  /* D539 - the rewrite she has been asking for. Until now the rows were bookmarks
-     that scrolled into one enormous post-draft-workspace holding every listing's
-     old page components, each with its own accordion inside it. Three rows, one
-     pile, three scroll positions. A row is a control now: it decides which panel
-     renders inside this product's card, and only that panel renders. The task
-     survives switching product, so opening Printify photos on the hoodie and
-     then choosing the tee opens the tee's Printify photos. */
-  /* D544 - one honest question, asked in one place: has Goldie built the Etsy
-     details for every listing yet? Before this, three different things claimed to
-     know - a phase the state never enters, a URL parameter written by hand, and a
-     progress index - and they disagreed. */
-  const etsyDetailsPrepared=files.length>0&&files.every(file=>Boolean(file.etsy));
-  const [activeTask,setActiveTask]=useState<string>("");
-  /* D553 - openListing chose which listing's work was visible. Nothing chooses
-     now: opening a task shows every listing's work, which is what step 2 did
-     before D541. */
-  /* D552 - her words: "when I click on choose printify photos, it pops me to the
-     top of the design and images page, and then I have to scroll down to where I
-     was." Measured on the live page, and nothing was scrolling: the open panel
-     was 2817px of document, she was at 1917, and closing it to open another left
-     a document of 1811 - so the browser clamped her scroll position down to 661.
-     Not a jump, a collapse. The row she clicked stays exactly where it was on
-     screen while the panels swap underneath it. */
-  const rowAnchor=useRef<{element:HTMLElement;top:number}|null>(null);
-  function holdRowInPlace(element:HTMLElement|null){
-    if(element)rowAnchor.current={element,top:element.getBoundingClientRect().top};
-  }
-  useLayoutEffect(()=>{
-    const held=rowAnchor.current;rowAnchor.current=null;
-    if(!held||!held.element.isConnected)return;
-    const drift=held.element.getBoundingClientRect().top-held.top;
-    if(Math.abs(drift)>1)window.scrollBy({top:drift,behavior:"auto"});
-  },[activeTask]);
-  /* D541 - every task panel that works listing by listing shows the same row:
-     the artwork, the listing name, where that listing stands on this one job,
-     and Change. The job decides what opens underneath, so a listing's title is
-     edited under Titles and its wording under Description, and neither one can
-     drag the other along with it. */
-  /* D553 - restored to what step 2 did before D541. Read off the build from
-     4cf8c0f: every listing's working surface rendered open, one after another,
-     each under its own name - "<p className=task-listing-name>{listingName}" then
-     the editor. D541 wrapped each one in a collapsible row with a Change button,
-     which turned a working surface into a chooser: to drag a photo she had to
-     open the task, then pick a listing, then drag. Her words: "when I click to
-     expand arrange final photo order, it is giving me columns of the listings
-     with their titles, which is so fucking stupid."
-
-     One collapse, at the task. Open the task and the work is there, for every
-     listing, already open. */
-/* D567 - loading="lazy" on an image with no intrinsic size is a deadlock: the
-   element collapses to nothing, so the browser never decides it is near the
-   viewport, so it never loads, so it never gets a size. Measured on her page -
-   the scene tiles carry no lazy attribute and 8 of 8 loaded; every panel
-   thumbnail carries it and 0 of 4 loaded, while a direct probe of the very same
-   URL returned ok at 1536px. Those blank squares where a design thumbnail should
-   be were never white-on-white artwork; they were images that never fetched. A
-   panel is opened deliberately and holds a handful of images. */
-  function designTaskRows(task:string,standing:(design:DesignFile)=>string,inner:(design:DesignFile)=>ReactNode){
-    return <div className="task-panel-body">{files.map(design=>{
-      const thumb=design.previewUrl||drafts.find(draft=>draft.clientId===design.id)?.previewUrl||"";
-      return <div className="task-listing" key={`${task}:${design.id}`} onFocus={()=>setActiveDesign(design.id)}>
-        <div className="task-listing-head">
-          {thumb?<img className="task-listing-thumb" src={thumb} alt="" decoding="async"/>:<span className="task-listing-thumb"/>}
-          <p className="task-listing-name">{design.title.trim()||design.name}</p>
-          <span className="task-listing-count">{standing(design)}</span>
-        </div>
-        <div className="task-listing-work">{inner(design)}</div>
-      </div>})}</div>;
-  }
-
-  function taskPanel(task:string){
-    /* D541 - titles-resolving drives the pulse on each title field as the batch
-       run fills them in. It rode on the listing-editor wrapper, so it went out
-       with the block; it belongs on whatever holds the title fields. */
-    if(task==="titles")return <div className={titlePulseIds.size?"titles-resolving":""}>
-      <div className="task-panel-lead"><div><p className="mini-label">BATCH TITLE BUILDER</p><h3>Create titles for the whole batch</h3><p>Let Goldie select from your validated bank for each design, or choose the exact phrases yourself. No new keywords are ever added.</p></div><div className="title-builder-choice" role="group" aria-label="How do you want to create batch titles?"><button className={titleBuilderMode==="ai"?"active":""} onClick={()=>setTitleBuilderMode("ai")}><b>Goldie selects from my bank</b><span>Creates a different title for each design</span></button><button className={titleBuilderMode==="manual"?"active":""} onClick={()=>setTitleBuilderMode("manual")}><b>I choose from my bank</b><span>Uses your selections across the batch</span></button></div><div className="title-style-toggle"><span>Title format</span><button className={titleJoiner===", "?"active":""} onClick={()=>changeTitleJoiner(", ")}>With commas</button><button className={titleJoiner===" "?"active":""} onClick={()=>changeTitleJoiner(" ")}>Without commas</button>{/* D413 - Capitalization sat in its own card above the builder, but it is the
-                    same decision as the comma style: how the title is formatted. One group. */}<button type="button" className={titleCaps?"active":""} aria-pressed={titleCaps} onClick={()=>changeTitleCaps(!titleCaps)}>{titleCaps?"Capitalized":"Not capitalized"}</button></div>{titleBuilderMode==="ai"?<div className="title-builder-pane"><KeywordBank selectionOnly initialId={autoTitleBankId||activeRecipe?.keywordListId||""} onSelect={list=>{setAutoTitleBank(list);setAutoTitleBankId(list?.id||"");/* D221 Â· Choosing the bank here IS establishing it for this product, the same as it was on the product card before the picker moved. Without this the choice would apply to this batch only and the next one would ask again. */if(activeRecipe&&list?.id&&list.id!==activeRecipe.keywordListId)void establish(activeRecipe,{keywordListId:list.id})}} title="Choose a keyword bank" copy="Goldie selects only exact phrases from this bank. It will not add keywords."/><div className="ai-title-disclaimer"><b>Review every title Goldie creates.</b><span>Goldie chooses the phrases it believes fit each design best from the bank you select. It does not verify that the keyword bank itself matches the design, and it will not reject mismatched phrases. Use your judgment before continuing.</span></div><button className="ai-title-button" title={batchHeldByAnotherTab?"This batch is open in another Goldie tab, so nothing saved here would be kept.":!autoTitleBank?"Choose a keyword bank first.":!files.length?"Upload a design first.":undefined} disabled={titleBuilding||!autoTitleBank||!files.length||batchHeldByAnotherTab} onClick={()=>void buildBatchTitle()}>{titleBuilding?`Creating ${files.length} titlesâ€¦`:"Auto-create all titles"}</button>{/* D660 Â· The 1566 crewneck joined a bundle with no
-             keyword bank, and only said so at step 3 with Auto-create disabled.
-             Offered explicitly and never applied silently: two products in one
-             bundle can legitimately want different banks, so copying it around
-             on her behalf would be a guess about her keywords. */}
-             {activeBundle&&bundleRecipes.length>1&&autoTitleBankId&&bundleRecipes.some(recipe=>recipe.id!==activeRecipe?.id&&recipe.keywordListId!==autoTitleBankId)?<button type="button" className="secondary-action" disabled={applyingBankToBundle} onClick={()=>void applyBankToBundle()}>{applyingBankToBundle?"Applying to every productâ€¦":`Use this keyword bank for every product in this bundle (${bundleRecipes.length})`}</button>:null}{titleBuildMessage&&<p className="title-build-message" role="status">{titleBuildMessage}</p>}</div>:<div className="title-builder-pane manual-title-builder"><KeywordBank initialId={manualKeywordBankId||activeRecipe?.keywordListId||""} onSelect={list=>setManualKeywordBankId(list?.id||"")} onAdd={addBatchKeyword} title="Choose a keyword bank" copy="Click keywords in the order you want them. Every click updates all listings below."/><div className="selected-batch-keywords"><div><b>Selected keywords</b>{batchKeywords.length>0&&<button onClick={clearBatchKeywords}>Clear all</button>}</div>{batchKeywords.length?<div className="selected-keyword-chips">{batchKeywords.map(keyword=><button key={keyword} onClick={()=>removeBatchKeyword(keyword)}>{keyword}<span>Ã—</span></button>)}</div>:<p>No keywords selected yet.</p>}</div>{batchKeywords.length>0&&<div className="batch-title-preview"><b>Batch title preview</b><span>{batchKeywords.join(titleJoiner)}</span><small>Applied to every listing below. You can still edit any listing individually.</small></div>}</div>}</div>
-      {designTaskRows("titles",design=>!design.title.trim()?"No title yet":`${design.tags.length} of 13 tags`,design=><div className="task-listing-edit">{/* D541 - D408 found this the hard way: at thumbnail size the artwork
-        is unreadable, so the card cannot tell you which design you are writing a
-        title for. The row stays compact; the preview comes back at a size you can
-        read once the row is open. */}{(()=>{const shot=design.previewUrl||drafts.find(draft=>draft.clientId===design.id)?.previewUrl;return shot?<button type="button" className="task-listing-preview" onClick={()=>window.open(shot,"_blank","noopener,noreferrer")} aria-label={`Open a larger preview of ${design.title.trim()||design.name}`}><img src={shot} alt={design.name||"Design artwork"} decoding="async"/><span>Enlarge</span></button>:null})()}<div className="design-fields"><label>Title <span>{design.title.length}/140</span><textarea className="listing-title-field" rows={3} value={design.title} maxLength={140} onChange={event=>{const title=event.target.value;updateDesign(design.id,{title,tags:tagsFromTitle(title),etsy:undefined})}}/></label><label>Tags <span>{design.tags.length}/13</span><textarea className="listing-tags-field" rows={3} value={design.tags.join(", ")} onChange={event=>updateDesign(design.id,{tags:[...new Set(event.target.value.split(",").map(tag=>tag.trim().toLowerCase()).filter(tag=>tag&&tag.length<=20))].slice(0,13),etsy:undefined})} placeholder="Exact title phrases, separated by commas"/></label><div className="tag-row">{design.tags.map(tag=><span key={tag}>{tag}</span>)}{!design.tags.length&&<small>Goldie will create matching tags with the title.</small>}</div><IndividualAutoTitle design={design} template={templateDetails} useCommas={titleJoiner===", "} paused={batchHeldByAnotherTab} onApply={(title,tags)=>{setActiveDesign(design.id);updateDesign(design.id,{title,tags,etsy:undefined,etsyError:""})}}/>{design.etsyError&&<small className="field-error">{design.etsyError}</small>}</div></div>)}
-    </div>;
-    if(task==="description")return <>
-      <div className="task-panel-lead"><div className="batch-description-body"><p>This came from your saved product. Edit it once here to change the shared description on every listing in this batch.</p><label>Description for every listing<textarea rows={9} value={description} onChange={event=>setDescription(event.target.value)} placeholder="Add sizing, materials, production, care, and shipping information"/></label><small>Open any listing below only when that listing needs different wording.</small>{/* D232 Â· "Save this description as the default" went with the settings block. The
-                     shared editor survived the move but the way to keep the wording for future
-                     batches did not, so it comes back where the description is now edited. */}{description.trim()!==String(activeRecipe?.description||"").trim()&&<button type="button" className="save-product-default" disabled={!description.trim()||savingProductDefault==="description"} onClick={()=>void saveProductDefaults({description},"description")}>{savingProductDefault==="description"?"Savingâ€¦":"Save this description as the default"}</button>}</div></div>
-      {designTaskRows("description",design=>design.descriptionOverride!==undefined?"Customized":"Same as batch",design=><div className="individual-description-body"><p>The complete description is shown below. Edit it only if this listing needs different wording or an additional blurb.</p><label>Description for this listing<textarea rows={10} value={finalDescription(design,design.etsy)} onChange={event=>updateDesign(design.id,{descriptionOverride:event.target.value,etsyError:""})}/></label>{design.descriptionOverride!==undefined&&<button type="button" onClick={()=>updateDesign(design.id,{descriptionOverride:undefined,etsyError:""})}>Use the batch description again</button>}<small>Spacing and line breaks are preserved when this description is sent to Printify and Etsy.</small></div>)}
-    </>;
-    if(task==="etsy")return <>
-      <div className="task-panel-lead"><div className="task-panel-heading"><h3>Review your Etsy listing details</h3><span className="done-mark">{files.filter(file=>etsyRequiredComplete(file.etsy)).length}/{files.length} ready</span></div><p className="step-copy">Goldie has pre-filled the Etsy category and every product field it could confidently match for each listing. Look everything over and change any selection that does not fit.</p>{files.every(file=>etsyRequiredComplete(file.etsy))&&<div className="variant-transfer-note"><span>âœ“</span><div><b>Core listing information is ready for your review.</b><small>This step contains additional Etsy category and product fields. Optional fields stay blank when there is not a clear match.</small></div></div>}</div>
-      {designTaskRows("etsy",design=>{
-        if(etsyRequiredComplete(design.etsy))return"Ready";
-        if(!design.etsy)return design.title.trim()?"Not created yet":"Waiting for a title";
-        const missing=etsyMissingRequired(design.etsy);
-        return missing.length===1?`${missing[0]} still needed`:missing.length?`${missing.length} required fields left`:"Needs review";
-      },design=><div className="etsy-detail-body">{design.etsy?<EtsyDetailsEditor design={design} categories={etsyCategories} onChange={etsy=>updateDesign(design.id,{etsy,etsyError:""})} onCategory={taxonomyId=>changeEtsyCategory(design,taxonomyId)}/>:<div className={design.title.trim()?"etsy-detail-error":"etsy-detail-pending"}><b>{design.title.trim()?"Etsy details still need to be created.":"Waiting for this listingâ€™s title."}</b><span>{design.title.trim()?design.etsyError:"Goldie fills in the Etsy category and product fields automatically once a title exists. Create titles above and this completes itself."}</span>{design.title.trim()&&<button aria-busy={preparingListingId===design.id} disabled={Boolean(preparingListingId)} onClick={()=>void retryOneEtsyListing(design)}>{preparingListingId===design.id?"Preparing this listingâ€¦":"Try this listing again"}</button>}</div>}{design.etsyError&&<small className="field-error">{design.etsyError}</small>}</div>)}
-    </>;
-    const listings=drafts.map(draft=>({draft,design:files.find(file=>file.id===draft.clientId),selectedImages:draft.id?(printifyImageSelections[draft.id]??printifyImageIndices):printifyImageIndices}));
-    if(!listings.length)return null;
-    if(task==="placement")return <>
-          <div className="task-panel-body">{listings.map(({draft,design})=>draft.status!=="Created"?<div className="task-listing failed" key={draft.clientId}>
-            <p className="task-listing-name">{design?.title?.trim()||design?.name||draft.name||"Listing"}</p>
-            {/* D539 - a listing that failed to create still has to be reachable and
-                still has to offer its retry and its help. */}
-            {<><button className="error-help-link" onClick={()=>window.dispatchEvent(new CustomEvent("goldie-retry-listing",{detail:draft.clientId}))}>Retry this listing</button><button className="error-help-link" onClick={()=>window.dispatchEvent(new CustomEvent("goldie-support",{detail:draft.error??"A design failed"}))}>Get help with this error</button></>}
-          </div>:<div className="task-listing" key={draft.clientId}>
-            {/* D557 - placement was the one panel without the head every other
-                panel carries, so six panels listed each listing the same way and
-                this one did it differently. Same head; the name it used to repeat
-                inside the card comes out with it. */}
-            <div className="task-listing-head">{draft.previewUrl?<img className="task-listing-thumb" src={draft.previewUrl} alt=""/>:<span className="task-listing-thumb"/>}<p className="task-listing-name">{design?.title?.trim()||design?.name||draft.name||"Listing"}</p><span className="task-listing-count">{(draft.printifyImages||[]).length} Printify views</span></div>
-            <div className="task-listing-work"><div className="draft-card-top">{draft.previewUrl?<button className="printify-preview-button" onClick={()=>window.open(draft.previewUrl,"_blank","noopener,noreferrer")} aria-label="Open larger Printify preview"><img src={draft.previewUrl} alt={`Printify preview for ${draft.title||draft.name}`}/><span>Click to enlarge</span></button>:design?<div className="pending-preview"><img src={design.previewUrl} alt="Design preview" decoding="async"/><span>Printify preview processing</span></div>:<span className="draft-check">!</span>}<div>{draft.status!=="Created"&&<span className="draft-state">DRAFT FAILED</span>}{/* D557 - the head above carries the name now. */}<small>{draft.status==="Created"?"Unpublished Printify draft":draft.error}</small>{/* D409 - The tags belong to step 3. Showing them on Images invited editing
-                   listing text on the step that is about photographs, and duplicated a
-                   field that is owned elsewhere. */}{draft.editorUrl&&draft.id?<button className={`edit-draft-button ${openedDrafts.includes(draft.id)?"opened":""}`} onClick={()=>openDraft(draft)}><i/><span>{openedDrafts.includes(draft.id)?"Printify opened":"Open in Printify to resize or reposition"}<small>(Choose the correct shop in your Printify account first.)</small></span></button>:null}</div></div></div>{/* D541 - the print-quality check used to sit in step 3's table of every
-              listing, under Titles. It reports whether this artwork will print
-              at 300 DPI on this product, which is this row's job, not the
-              title's. */}{design?(()=>{const displayScale=printTargetFor(templateDetails).scale;const quality=design.width&&templateDetails?.maxPrintWidth&&displayScale?printifyDpi(design.width,templateDetails.maxPrintWidth,displayScale):null;const qualityReady=Boolean(quality&&quality.dpi>=300);return <div className={`quality-pill ${qualityReady?"pass":"check"}`}><b>{!quality?"Checking print qualityâ€¦":qualityReady?`âœ“ ${quality.dpi} DPI Â· good to print`:`${quality.dpi} DPI Â· review before printing`}</b><small>{quality?`${quality.level} resolution Â· 300 DPI recommended`:design.width?`${design.width} Ã— ${design.height}px`:"Reading dimensionsâ€¦"}</small></div>})():null}</div>)}</div>
-    </>;
-    if(task==="printify")return <>
-          {/* D552 - she asked for this gone once already: "there doesn't need to be
-              a link that says recommended photos for the soft...". D540 moved it
-              into this panel instead of deleting it, which is not what she asked
-              for. The row is called "Choose Printify photos" and the photos are
-              listed underneath it with counts; a collapsed essay about which views
-              to pick was advice nobody opened. Gone. */}
-          <div className="task-panel-body">{listings.map(({draft,design,selectedImages})=>draft.status!=="Created"||!design||!draft.id?null:(()=>{
-              const count=selectedImages.length+(preparedMockupCounts[draft.id||""]||0);
-              return <div className="task-listing" key={draft.clientId}>
-                <div className="task-listing-head">
-                  {draft.previewUrl?<img className="task-listing-thumb" src={draft.previewUrl} alt=""/>:<span className="task-listing-thumb"/>}
-                  <p className="task-listing-name">{design?.title?.trim()||design?.name||draft.name||"Listing"}</p>
-                  <span className="task-listing-count">{count} {count===1?"photo":"photos"}</span>
-                </div>
-                <div className="task-listing-work">{draft.status==="Created"&&<PrintifyImagePicker bare images={(draft.printifyImages||[]).filter(Boolean)} indices={selectedImages} reservedPhotos={(preparedMockupCounts[draft.id||""]||0)+(design?.sizeGuideName||sizeGuideName?1:0)} onApplyOne={values=>{/* D465 - the photos she picks ARE this product's default, the same way its colours and sizes are. There was a "Use these as this product's default" button asking a question with one sensible answer; the selection saves itself now and the button is gone. */if(activeRecipe)void saveImagePreferences(values);if(draft.id)setPrintifyImageSelections(current=>({...current,[draft.id!]:values}))}} onApplyAll={values=>{setPrintifyImageIndices(values);setPrintifyImageSelections(Object.fromEntries(drafts.filter(item=>item.id).map(item=>{const itemDesign=files.find(file=>file.id===item.clientId),reserved=(preparedMockupCounts[item.id!]||0)+(itemDesign?.sizeGuideName||sizeGuideName?1:0);return[item.id!,values.slice(0,Math.max(0,20-reserved))]})))}} onSaveRecipe={activeRecipe?saveImagePreferences:undefined}/>}</div>
-              </div>})()) }</div>
-    </>;
-    if(task==="lifestyle")return <>
-          {/* D540 - the mockup set belongs to the task that uses it, not floating
-              above every task in the card. */}
-          <div className="task-panel-lead"><MockupSetSelector firstRun={productFirstRun} productName={classifyingProductName} value={mockupTheme} selectedIds={sharedMockups?.theme===mockupTheme?sharedMockups.ids:[]} savedValue={activeRecipe?.defaultMockupTheme||""} savedIds={activeRecipe?.mockupIds} onChange={(theme,ids)=>{setMockupTheme(theme);if(ids)setSharedMockups({theme,ids})}} saving={savingProductDefault==="mockups"} onSaveDefault={()=>void saveProductDefaults({defaultMockupTheme:mockupTheme,mockupIds:sharedMockups?.theme===mockupTheme?sharedMockups.ids:[]},"mockups")}/></div>
-          <div className="task-panel-body">{listings.map(({draft,design,selectedImages})=>draft.status!=="Created"||!design||!draft.id?null:(()=>{
-              const count=selectedImages.length+(preparedMockupCounts[draft.id||""]||0);
-              return <div className="task-listing" key={draft.clientId}>
-                <div className="task-listing-head">
-                  {draft.previewUrl?<img className="task-listing-thumb" src={draft.previewUrl} alt=""/>:<span className="task-listing-thumb"/>}
-                  <p className="task-listing-name">{design?.title?.trim()||design?.name||draft.name||"Listing"}</p>
-                  <span className="task-listing-count">{count} {count===1?"photo":"photos"}</span>
-                </div>
-                <div className="task-listing-work">
-                  {/* D566 - at this step nothing has a title yet, so both listings
-                      are labelled "ChatGPT Image Aug 21, 2026, 05_32_41 PM (1).png"
-                      and a 36px thumbnail is all that tells them apart. Her words:
-                      "the photo previews of what design you're working on are also
-                      too small, so you don't know actually what mockups you're
-                      choosing for." D408 measured this once already on another
-                      step. The artwork, at a size that identifies it. */}
-
-                  {design?.previewUrl?<div className="task-listing-figure"><img src={design.previewUrl} alt={design.name||"Design"} decoding="async"/></div>:null}{design.originalUnavailable?<p className="inline-note" role="status">Existing photos stay with this listing. To create new lifestyle mockups, upload the original design again in this browser.</p>:<IntegratedMockups design={design.file} productId={draft.id} productName={classifyingProductName} defaultTheme={mockupTheme} defaultTemplateIds={sharedMockups?.theme===mockupTheme?sharedMockups.ids:[]} referenceUrl={draft.previewUrl} placement={draft.placement} batchId={draft.batchId||""} designKey={design.id||design.name||""} artworkBounds={design.visibleBounds} onPrepared={count=>setPreparedMockupCounts(current=>({...current,[draft.id!]:count}))}/>}</div>
-              </div>})()) }</div>
-    </>;
-    if(task==="order")return <>
-      {/* D554 - said once, here, instead of once per listing inside the grid. */}
-      <div className="task-panel-lead"><p>Drag each photo where you want it, or use the arrow buttons for precise placement. The first photo is the one buyers see in search.</p></div>
-          <div className="task-panel-body">{listings.map(({draft,design,selectedImages})=>draft.status!=="Created"||!design||!draft.id?null:(()=>{
-              const count=selectedImages.length+(preparedMockupCounts[draft.id||""]||0);
-              return <div className="task-listing" key={draft.clientId}>
-                <div className="task-listing-head">
-                  {draft.previewUrl?<img className="task-listing-thumb" src={draft.previewUrl} alt=""/>:<span className="task-listing-thumb"/>}
-                  <p className="task-listing-name">{design?.title?.trim()||design?.name||draft.name||"Listing"}</p>
-                  <span className="task-listing-count">{count} {count===1?"photo":"photos"}</span>
-                </div>
-                <div className="task-listing-work">{draft.status==="Created"&&draft.id&&<ListingPhotoOrder productId={draft.id} printifyImages={(draft.printifyImages||[]).filter(Boolean)} indices={selectedImages} refreshKey={`${preparedMockupCounts[draft.id]||0}:${design?.sizeGuideName||sizeGuideName}`}/>}{draft.status==="Created"&&design&&draft.id&&<IndividualSizeGuide productId={draft.id} name={design.sizeGuideName} onSaved={name=>updateDesign(design.id,{sizeGuideName:name})}/>}{draft.status==="Created"&&draft.id&&<DownloadListingPhotos productId={draft.id} name={draft.title||draft.name} indices={selectedImages}/>}</div>
-              </div>})()) }</div>
-    </>;
-    return null;
-  }
-
-  function stepProductCards(statusFor:(recipe:Recipe,index:number)=>{label:string;tone:"ready"|"attention"|"advice"|"waiting"},body:ReactNode,hidden=false,footer:ReactNode=null,showCards=true){
-    const sharedAction=Boolean(footer);
-    const list=activeBundle&&bundleRecipes.length>1?bundleRecipes:(activeRecipe?[activeRecipe]:[]);
-    if(!list.length)return body;
-    const many=list.length>1;
-    /* D381 - This rail carried `batch-products` so it would inherit step 1's
-       card layout. That class is `.app-shell .batch-products{display:grid
-       !important}`, so NOTHING could hide this section - not .hidden-panel, not
-       an inline display:none. The rail stayed open on every step, and because I
-       had also stripped the drafts panel's own hidden state, step 2's "Create
-       your Printify drafts" landed on step 1.
-
-       Borrowing a class for its layout also borrows its !important. The rail owns
-       its own layout now, hides with an inline style, and the panel inside keeps
-       hiding itself too - two independent guards, because one was not enough. */
-    return <section className="step-product-cards" style={hidden?{display:"none"}:undefined} aria-label="Products in this batch">
-      {showCards&&list.map((recipe,index)=>{
-        const open=many?index===bundleIndex:true;
-        const product=index===bundleIndex?templateDetails:bundleColorProducts[recipe.id];
-        const status=statusFor(recipe,index);
-        /* Spelled out rather than built with tone-${...}: a class the stylesheet
-           targets but no file contains is exactly what the liveness test exists
-           to catch, and a template literal hides it from that check. */
-        const toneClass=status.tone==="ready"?"tone-ready":status.tone==="attention"?"tone-attention":status.tone==="advice"?"tone-advice":"tone-waiting";
-        const photo=product?pickProductPhoto(product):"";
-        /* D482 - the next product in a bundle offered "Open Gildan Tee" from the
-           very first step, before the product she was actually working on had
-           produced a single draft. Pressing it ran continueBundle, which carries
-           the designs forward, mints a fresh batch and jumps to review - so a
-           half-finished hoodie was abandoned and the tee opened at a step with
-           nothing in it, which then fell back to the start. That handoff belongs
-           to the finish receipt, at the point the current product is actually
-           done. A product already underway can still be reopened at any time;
-           what cannot happen is starting the next one early. */
-        const reachable=many&&!open&&Boolean(bundleBatchIds[recipe.id]||index===bundleIndex+1);
-        const opening=switchingProduct===recipe.id;
-        return <article className={`batch-product-card step-product-card ${open?"is-open":"is-closed"} ${status.tone==="ready"||status.tone==="advice"?"is-ready":"needs-setup"} ${many?"in-batch":""}`} key={recipe.id}>
-          <header
-            {...(reachable?{role:"button",tabIndex:0,
-              onClick:()=>openBundleProduct(index),
-              onKeyDown:(event:React.KeyboardEvent)=>{if(event.key==="Enter"||event.key===" "){event.preventDefault();openBundleProduct(index)}}}:{})}
-            className={reachable?"is-openable":undefined}
-            aria-expanded={many?open:undefined}
-            aria-busy={opening||undefined}>
-            {photo?<img className="bundle-product-photo" src={photo} alt="" loading="lazy" decoding="async"/>:<ProductGlyph title={product?.blueprintTitle||recipe.name}/>}
-            <span className="bundle-product-id">
-              {many&&<em className="batch-product-position">Product {index+1} of {list.length}</em>}
-              <b>{recipe.name}</b>
-              {/* D396 - Fell back to the status when the product was not loaded, so a
-                  closed card printed blank twice: once here and once in
-                  the chip beside it. The chip owns the status. */}
-              <small>{product?.blueprintTitle||""}</small>
-            </span>
-            <span className={`batch-product-state step-product-state ${toneClass}`}>{status.label}</span>
-          </header>
-          {/* D499 - the same rows step 1 gives every product, on every step. The
-              product being worked also shows its editor underneath them; the rest
-              show their rows and a Change that opens them here. */}
-          {/* D501 - the rows were gated on there being more than one product, so a
-              single-product batch showed none on steps 2-4 while step 1 shows them
-              for one product just the same. A card gets its rows either way. */}
-          {(()=>{const rows=productRows(recipe,index===bundleIndex);if(!rows.length)return null;
-            /* D503 - step 1's row is `batch-product-row settled clickable` with
-               role=button, tabindex 0 and aria-expanded, so the whole row opens,
-               by mouse or keyboard, and its Change carries class row-open. Mine
-               were plain divs whose only control was the button, so clicking the
-               row did nothing and nothing was reachable by keyboard. Same row. */
-            /* D515 - every row scrolled to the same element, the card body, so
-               clicking Titles landed on the description and clicking Description
-               did nothing you could see. A row goes to its own section, and a
-               section that is a <details> opens - and closes again on a second
-               click, because a row that only ever opens is not a control. */
-            /* D539 - a task row opens its own panel inside this card. It does
-               not scroll anywhere, because there is nowhere else to go.
-               D541 - and now no row has anywhere else to go. The selector
-               machinery underneath this - open the section, walk up opening every
-               <details> above it, scroll to it, and if it is not on this phase
-               throw the step back a phase to find it - existed to serve rows that
-               were bookmarks into a shared block. Steps 3 and 4 were the last two
-               using it, and neither does now. */
-            const openRow=(_target?:string,task?:string)=>{
-              if(!task){if(!open&&reachable)openBundleProduct(index);return}
-              if(!open){if(reachable){setActiveTask(task);openBundleProduct(index)}return}
-              setActiveTask(current=>current===task?"":task);
-            };
-            return <div className="batch-product-rows">{rows.map(row=><Fragment key={row.label}><div
-              className={`batch-product-row ${row.done?"settled":row.pending?"pending":row.optional?"optional":"needed"} ${row.report?"reporting":switchingProduct||(!open&&!reachable)?"":"clickable"}`}
-              role={row.report||switchingProduct||(!open&&!reachable)?undefined:"button"}
-              tabIndex={row.report||switchingProduct||(!open&&!reachable)?undefined:0}
-              aria-expanded={open}
-              onClick={event=>{if(row.report)return;holdRowInPlace((event.currentTarget as HTMLElement));openRow(row.target,row.task)}}
-              onKeyDown={(event:React.KeyboardEvent)=>{if(event.key==="Enter"||event.key===" "){event.preventDefault();if(row.report)return;holdRowInPlace(event.currentTarget as HTMLElement);openRow(row.target,row.task)}}}>
-              <span className="row-mark" aria-hidden="true">{row.done?"âœ“":row.pending?"â€¦":row.optional?"â€“":"!"}</span>
-              <span className="row-label">{row.label}</span>
-              <span className="row-value">{row.value}{row.detail?<small>{row.detail}</small>:null}{row.advice?<small className="row-advice">{row.advice}</small>:null}</span>
-              {/* D502 - captured from both pages side by side: step 1 puts a Change
-                  on every row of every card, including the product already open.
-                  Step 3 put one only on a closed, reachable product - so the open
-                  card's rows had no control at all and a product waiting its turn
-                  had a "Finish Gildan Tee first" line step 1 never shows. Every
-                  row carries Change; it says why when it cannot be used. */}
-              {/* D541 - step 4 has no per-product work: the review and the one
-                  publish button are step-level, in the footer. Both of its rows
-                  carried a Change that scrolled to the same block underneath, so
-                  two different rows went to one place. A row with nothing of its
-                  own to open reports and says so. */}
-              {row.report?null:<button type="button" className="row-open"
-                disabled={Boolean(switchingProduct)||(!open&&!reachable)}
-                title={!open&&!reachable?`Finish ${list[index-1]?.name||"the product above"} first`:undefined}
-                onClick={event=>{event.stopPropagation();holdRowInPlace(event.currentTarget.closest(".batch-product-row") as HTMLElement|null);openRow(row.target,row.task)}}>
-                {opening?"Openingâ€¦":"Change"}
-              </button>}
-            </div>
-            {open&&row.task&&activeTask===row.task&&<div className="task-panel">{taskPanel(row.task)}</div>}
-            </Fragment>)}</div>;
-          })()}
-          {open&&<div className="step-product-body">{body}</div>}
-          {/* D498 - a closed product was a header with a foreign-looking "Open
-              Gildan Tee â†’" button stuck under it, which read as leaving this page
-              for another one. Every product is the same card: the one being worked
-              is expanded, the rest are the same card collapsed. Clicking the
-              header opens it in place, and the chevron says that is what will
-              happen. */}
-          {/* D499 - each row carries its own Change, exactly as step 1 does, so the separate expand strip that sat under the card is gone. */}
-          {/* D396 - A card with no control and no explanation reads as broken. Each
-              product is its own batch and they are worked in order, so say which one
-              has to come first rather than showing an inert card. */}
-          {/* D502 - the waiting line is on the disabled Change now, so a card is never a header with a sentence under it. */}
-        </article>;
-      })}
-      {footer}
-    </section>;
-  }
-
-  /* D378 - Steps 2-4 list every product in the bundle as a card, so a seller can
-     point at any of them, not only the next one. Each member is a separate batch,
-     so opening one means loading its batch - the same path Resume batch uses and
-     the only one that restores drafts, titles and Etsy details correctly.
-     A product that has not been started yet has no batch to load; that is what
-     continueBundle is for, and it only ever moves to the next one. */
-  function openBundleProduct(index:number){
-    if(index===bundleIndex)return;
-    const recipe=bundleRecipes[index];
-    if(!recipe)return;
-    const existing=bundleBatchIds[recipe.id];
-    if(existing){
-      if(switchingProduct)return;
-      setSwitchingProduct(recipe.id);
-      void (async()=>{
-        try{
-          /* D379 - The autosave is debounced, so the last few hundred
-             milliseconds of typing may still be pending. Once batchIdRef points
-             at the incoming batch that pending write would land on the wrong
-             product, so flush the outgoing one first and wait for it. */
-          await persistBatchNow(batchIdRef.current);
-          setRestoringBatch(true);
-          snapshotReady.current=false;
-          await restoreBatchById(existing,workflowStep,null,true);
-          window.scrollTo(0,0);
-        }finally{setSwitchingProduct("")}
-      })();
-      return;
-    }
-    if(index===bundleIndex+1)void continueBundle();
-  }
-
-  async function continueBundle(){
-    const next=bundleRecipes[bundleIndex+1];if(!activeBundle||!next)return;
-    /* D493 - moving to the next product reset drafts and minted a new batch id
-       without first writing the outgoing product's batch. Autosave is debounced,
-       so the drafts it had just created were cleared from state before they were
-       ever saved. Verified on a real three-product run: Printify held six drafts,
-       and Goldie's own history showed 2, 0 and 0 - the first two products' work
-       existed only in Printify, with nothing in Goldie pointing at it.
-       openBundleProduct already flushes before switching; this path never did. */
-    await persistBatchNow(batchIdRef.current);
-    const carriedFiles=files.map(file=>({...file,id:crypto.randomUUID(),previewUrl:URL.createObjectURL(file.file),title:"",tags:[],blurb:undefined,descriptionOverride:undefined,sizeGuideName:undefined,etsy:undefined,etsyError:""}));
-    const nextBatchId=crypto.randomUUID();batchIdRef.current=nextBatchId;window.localStorage.setItem("goldie-active-batch",nextBatchId);const url=new URL(window.location.href);url.searchParams.set("batch",nextBatchId);/* D484 - this forced "review" no matter which step she opened the product
-       from. Opening the tee from step 2 threw her into step 3 with no designs
-       processed and no drafts, and the step guard walked her back to the start -
-       what she saw as being dumped on step one. A bundle's products are worked
-       on the same page as each other, exactly as they are on step 1, so opening
-       one keeps the step she is on. */
-    /* D493 - the incoming product has no template loaded yet, so the step guard
-       downgrades to setup and rewrites the URL, mid-run. The page then showed
-       "Designs + images" while the URL said step=setup. D487 already built the
-       machinery for exactly this: remember the step, restore it once it opens. */
-    requestedStep.current=workflowStep;
-    url.searchParams.set("step",workflowStep);url.searchParams.delete("phase");window.history.pushState({},"",url);
-    setBundleIndex(current=>current+1);setDrafts([]);setComplete(false);setProcessed(0);setRunTotal(0);setOpenedDrafts([]);setOpenAllMessage("");setPreflightOpen(false);setPrintifyImageSelections({});setSharedMockups(undefined);setPreparedMockupCounts({});setFinishPhase("details");setVariantPrices({});setPricingApproved(false);setSizeGuideName("");setSizeGuideStatus("");setBatchReceipt(null);setPublishMessage("");setFiles(carriedFiles);setDescription("");setActiveDesign("");syncedListingSignatures.current.clear();
-    await saveBatchFiles(nextBatchId,carriedFiles.map(file=>file.file)).catch(()=>undefined);setActiveRecipe(next);setPrintifyImageIndices(next.printifyImageIndices||[]);setEtsyShippingProfileId(Number(next.etsyShippingProfileId)||0);setTemplate(next.templateUrl);setMockupTheme(next.defaultMockupTheme||"");setAutoTitleBankId(next.keywordListId||"");const nextPricing={...pricing,targetProfit:Number(next.defaultProfitTarget)||DEFAULT_PRICING.targetProfit,shippingCost:0,shippingCharged:0};setPricing(nextPricing);setTemplateDetails(null);const nextDetails=await loadTemplateUrl(next.templateUrl,nextPricing,Number(next.etsyShippingProfileId)||0,next.defaultColorIds||[],next.defaultSizeIds||[]);if(next.keywordListId&&nextDetails){const payload=await fetch("/api/keyword-lists").then(response=>response.json()).catch(()=>({lists:[]})) as {lists?:KeywordList[]},bank=payload.lists?.find(list=>list.id===next.keywordListId);if(bank){const titled=await Promise.all(carriedFiles.map(async file=>{try{const result=await autoTitleForDesign(file,bank.keywords,titleJoiner===", ",nextDetails);return {...file,title:styledTitle(result.title),tags:result.tags,titleWarning:result.titleWarning,titleError:""}}catch(error){return {...file,titleError:error instanceof Error?error.message:"Goldie could not create a complete title for this design."}}}));setFiles(titled)}}setWorkflowStep("designs");window.scrollTo({top:0});
-  }
-  async function createCustomShippingProfile(baseProfileId:number,domesticPrimary:number,domesticAdditional:number,title:string,international:InternationalShippingRate[]){const response=await fetch("/api/etsy/shipping-profiles",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({baseProfileId,domesticPrimary,domesticAdditional,title,international})}),result=await response.json() as {id?:number;error?:string};if(!response.ok||!result.id)throw new Error(result.error||"The Etsy shipping profile could not be saved.");await loadEtsyShippingProfiles(result.id);if(activeRecipe){const updated={...activeRecipe,etsyShippingProfileId:result.id};await fetch("/api/product-recipes",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:activeRecipe.id,name:activeRecipe.name,templateUrl:activeRecipe.templateUrl,etsyShippingProfileId:result.id})});setActiveRecipe(updated)}setPricingApproved(false)}
-  /* D125 Â· A product that has saved none of its own defaults is being set up for
-   * the first time. The returning-product framing ("from your last batch",
-   * "Saved for this product") is false for it and hides that these are choices
-   * still to be made. */
-  /* D513 - this was computed and then read by nobody, while MockupSetSelector
-     took a firstRun prop that nobody passed. D125's whole point was that a
-     product being set up for the first time should not be told its choices came
-     "from your last batch" - and that framing has been dead for every seller
-     since, because the two halves were never joined. Joined now.
-
-     It also excluded bundles outright, so a bundle member being set up for the
-     first time got the returning-product wording even once it was wired up.
-     First run is a fact about the product, not about how it was opened. */
-  const productFirstRun=Boolean(activeRecipe)
-    &&!activeRecipe?.defaultColorIds?.length
-    &&!activeRecipe?.defaultMockupTheme
-    &&!activeRecipe?.keywordListId;
-  async function startNewProduct(){
-    if((files.length>0||drafts.length>0||complete)&&!await confirmAction({title:"Add a new product and clear this batch?",body:"Any designs and unfinished work in this batch will be removed. Saved products, keyword banks and mockup sets are untouched.",confirmLabel:"Add a product",destructive:true}))return false;
-    clearCurrentBatch(true);
-    return true;
-  }
-  async function changeProduct(){
-    if((files.length>0||drafts.length>0||complete)&&!await confirmAction({title:"Change product and start a new batch?",body:"Your uploaded designs and unfinished work in this batch will be removed. Saved products, keyword banks and mockup sets are untouched.",confirmLabel:"Change product",destructive:true}))return false;
-    clearCurrentBatch(true);return true;
-  }
-  async function saveImagePreferences(indices:number[]){if(!activeRecipe)return;const response=await fetch("/api/product-recipes",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:activeRecipe.id,name:activeRecipe.name,templateUrl:activeRecipe.templateUrl,printifyImageIndices:indices})});if(!response.ok)throw new Error("These Printify photo preferences could not be saved. Please try again.");setPrintifyImageIndices(indices);setActiveRecipe({...activeRecipe,printifyImageIndices:indices})}
-  function styledTitle(title:string){return (titleCaps?title.replace(/\b[\p{L}\p{N}]/gu,character=>character.toLocaleUpperCase()):title).slice(0,140)}
-  function applyBatchTitle(title:string,explicitTags?:string[]){const next=styledTitle(title);setFiles(current=>current.map(file=>({...file,title:next,tags:explicitTags||tagsFromTitle(next),etsy:undefined,etsyError:""})))}
-  function addBatchKeyword(keyword:string){if(batchKeywords.some(value=>value.toLocaleLowerCase()===keyword.trim().toLocaleLowerCase()))return;const next=[...batchKeywords,keyword.trim()];setBatchKeywords(next);applyBatchTitle(next.join(titleJoiner),tagsFromTitle(next.join(", ")))}
-  function removeBatchKeyword(keyword:string){const next=batchKeywords.filter(value=>value!==keyword);setBatchKeywords(next);applyBatchTitle(next.join(titleJoiner),tagsFromTitle(next.join(", ")))}
-  function clearBatchKeywords(){setBatchKeywords([]);applyBatchTitle("",[])}
-  function changeTitleJoiner(joiner:string){setTitleJoiner(joiner);if(batchKeywords.length)applyBatchTitle(batchKeywords.join(joiner),tagsFromTitle(batchKeywords.join(", ")))}
-  function changeTitleCaps(enabled:boolean){setTitleCaps(enabled);setFiles(current=>current.map(file=>({...file,title:(enabled?file.title.replace(/\b[\p{L}\p{N}]/gu,character=>character.toLocaleUpperCase()):file.title).slice(0,140),etsy:undefined,etsyError:""})))}
-  async function buildBatchTitle(){if(!autoTitleBank)return setTitleBuildMessage("Choose a keyword bank first.");setTitleBuilding(true);setTitleBuildMessage(`Creating 0 of ${files.length} titlesâ€¦`);let completed=0,failed=0;await runBounded(files,2,async design=>{try{const result=await autoTitleForDesign(design,autoTitleBank.keywords,titleJoiner===", ",templateDetails);return {design,result}}catch(error){return {design,error:error instanceof Error?error.message:"Goldie could not create this title."}}},item=>{completed+=1;if("result" in item&&item.result){updateDesign(item.design.id,{title:styledTitle(item.result.title),tags:item.result.tags,titleWarning:item.result.titleWarning,titleError:"",etsy:undefined,etsyError:""});pulseTitle(item.design.id)}else{failed+=1;updateDesign(item.design.id,{titleError:item.error,titleWarning:""})}setTitleBuildMessage(`Creating ${completed} of ${files.length} titlesâ€¦`)});/* D230 Â· Read "1 titles created. 2 need another try" on a real run. */
-      setTitleBuildMessage(failed?`${files.length-failed} ${files.length-failed===1?"title":"titles"} created. ${failed} ${failed===1?"needs":"need"} another try; each affected listing explains why below.`:`âœ“ ${files.length} unique ${files.length===1?"title":"titles"} and separately ranked Etsy tags created. Review them below.`);setTitleBuilding(false)/* D541 - this used to hunt down the results table and scroll to it,
-       because the table sat far below the button inside one long block. The
-       results are the rows directly under this button now, in the same open
-       panel, so there is nowhere to travel to. */}
-
-  /* D546 - she reached step 4 with two of three products never started, was told
-     "Your batch is ready for its final check", and offered "Publish all 3
-     products live on Etsy". Verified against the saved batch: the bundle held
-     three recipes and exactly one had a batch at all - Gildan Tee and gildan
-     crewneck had no drafts, no titles, nothing. Pressing publish would have put
-     the hoodie's two listings live and then stalled on a product with nothing in
-     it. Every number on that page counted the open product; the button counted
-     products. Neither said what would actually be created. */
-  function bundleProductsNotStarted(){
-    if(!activeBundle||bundleRecipes.length<2)return[] as Recipe[];
-    /* D548 - "no summary yet" is not the same as "no listings". The other
-       products' batches are read after mount, so for a moment every one of them
-       looks empty - and D546 would have refused to publish a ready bundle,
-       naming products that were merely unread. A product with a batch is not
-       unstarted; only a product with no batch at all is. */
-    /* D627 - a member whose batch is gone has a batch id and zero drafts, so it
-       slipped past both halves of this and would have been dropped from the
-       press in silence. It counts as not started. */
-    return bundleRecipes.filter(recipe=>recipe.id!==activeRecipe?.id&&(bundleBatchSummary[recipe.id]?.unreadable||(!bundleBatchIds[recipe.id]&&!(Number(bundleBatchSummary[recipe.id]?.drafts)||0))));
-  }
-  function bundleProductsStillReading(){
-    if(!activeBundle||bundleRecipes.length<2)return[] as Recipe[];
-    return bundleRecipes.filter(recipe=>recipe.id!==activeRecipe?.id&&Boolean(bundleBatchIds[recipe.id])&&!bundleBatchSummary[recipe.id]);
-  }
-  function bundleListingsToPublish(){
-    if(!activeBundle||bundleRecipes.length<2)return selectedPublishDrafts().length;
-    return bundleRecipes.reduce((total,recipe)=>total+(recipe.id===activeRecipe?.id
-      ?selectedPublishDrafts().length
-      :Number(bundleBatchSummary[recipe.id]?.drafts)||0),0);
-  }
-
-  function missingPublishFields(){/* D626 - `files` is the open product's designs, so titles, tags and Etsy details on every other product in the bundle went unchecked and could publish incomplete. */const chosen=selectedPublishDrafts(),clientIds=new Set(chosen.map(draft=>draft.clientId)),chosenFiles=bundlePublishFiles().filter(file=>clientIds.has(file.id)),missing:string[]=[];if(!chosen.length)missing.push("Select at least one successful listing");
-    /* D635 - these blocked the press because a product SOMEWHERE in the bundle
-       was empty or unreadable, whether or not it was being published. That is
-       how the ready product got held hostage by a deleted batch. D546 added it
-       because the confirmation claimed to publish 3 products while 2 had
-       nothing; D634 fixed that claim at its source, so the confirmation now
-       names only what will actually publish and this no longer has to guess.
-       A product with no listings has no selected listings, so it cannot make a
-       bad publish - it can only stop a good one. Still reading is different:
-       until a member answers, the selection genuinely may be incomplete. */
-    if(bundleProductsStillReading().length)missing.push("Goldie is still reading the other products in this batch");if(chosenFiles.some(file=>!file.title.trim()))missing.push("Titles");if(chosenFiles.some(file=>!file.tags.length))missing.push("Tags");if(!description.trim())missing.push("Permanent product description");if(chosenFiles.some(file=>!etsyRequiredComplete(file.etsy)))missing.push("Etsy details");if(chosenFiles.some(file=>personalizationProblem(file.etsy)))missing.push("Personalization settings");if(chosen.length&&!allCreatedListingsHaveImages(chosen))missing.push("At least one image on every selected listing");return missing}
-  function openPublishConfirmation(){const chosen=selectedPublishDrafts(),missing=missingPublishFields();if(missing.length)return void stopWith("Complete every required selected listing field.",missing.map(field=>`Before publishing: ${field}`));const missingPhotos=createdListingsMissingImages(chosen);if(missingPhotos.length)return void stopWith("Add a photo to every selected listing before publishing.",missingPhotos.map(draft=>draft.name));setPublishConfirmOpen(true)}
-  async function monitorPublishJob(jobId:string,resuming=false){
-    /* D474 - this always said "resuming", including on a publish she had just
-       started, which reads as though something went wrong. */
-    setPublishing(true);setPublishMessage(resuming?"Goldie is safely resuming your queued batchâ€¦":"Goldie is publishing your listingsâ€¦");
-    try{let job:{id:string;status:string;total:number;completed:number;failed:number;queued:number;processing:number;finished:Array<{etsyListingId:number;url:string}>;failures?:Array<{productId:string;error:string}>;budget?:{remaining:number}}|undefined;
-      while(!job||!["completed","needs_attention"].includes(job.status)||job.queued+job.processing>0){if(job){const currentJob=job,lowBudget=currentJob.budget?.remaining!==undefined&&currentJob.budget.remaining<25;setPublishMessage(lowBudget?"Your batch is safe in Goldieâ€™s queue. Etsyâ€™s shared allowance is resting before the next listing starts.":`Publishing safely: ${currentJob.completed} of ${currentJob.total} listings are live. You may leave this page and return later.`);await new Promise(resolve=>setTimeout(resolve,lowBudget?30000:1500))}const response=await fetch(`/api/printify/drafts/publish?jobId=${encodeURIComponent(jobId)}`,{cache:"no-store"}),payload=await response.json() as {job?:typeof job;error?:string};if(!response.ok||!payload.job)throw new Error(payload.error||"Goldie could not check this queued batch.");job=payload.job}
-      if(!job)throw new Error("Goldie could not load this queued batch.");localStorage.removeItem("goldie-active-publish-job");if(job.status==="needs_attention"){setPublishFailures(job.failures||[]);throw new Error(`${job.completed} of ${job.total} listings published. ${job.failed} ${job.failed===1?"listing needs":"listings need"} your attention before Goldie can finish the batch.`)}await rememberBatchDefaultsAfterPublish();setBatchReceipt({publishedCount:job.completed,etsyUrls:(job.finished||[]).map(item=>item.url).filter(Boolean),completedAt:new Date().toISOString()});setPublishMessage("");
-    }catch(error){setPublishMessage(error instanceof Error?error.message:"Goldie could not resume this queued batch.")}finally{setPublishing(false)}
-  }
-  /* D419 - The confirm dialog's publish button had no disabled state, so a double
-     click fired this twice before React could re-render and close the dialog:
-     two POSTs, two queued jobs, duplicate live listings and two lots of Etsy's
-     $0.20 listing fee per design. The button is disabled while publishing and
-     this ref makes it impossible to enter twice regardless of what the UI does -
-     the one place in this app where a stray click costs real money. */
-  const publishInFlight=useRef(false);
-  /* D495 - a bundle published one product at a time: publish the hoodie's
-     listings, then go back, open the tee, publish again, then the crewneck.
-     Step 2 already creates every product's drafts from one press; this is the
-     same run at the other end. Goldie publishes the open product, moves itself
-     to the next one and publishes that, until the bundle is done.
-
-     Publishing spends real money, so this is deliberately more cautious than the
-     drafts run: it will not start a product whose listings are not ready. It
-     stops and says which product and what is missing, and nothing is published
-     for that product or the ones after it. */
-  const [publishRun,setPublishRun]=useState<{total:number}|null>(null);
-  useEffect(()=>{runInProgress.current=Boolean(publishRun)},[publishRun]);
-  /* D559 - nothing advances any more; one call publishes the bundle. */
-  useEffect(()=>{
-    if(!publishRun)return;
-    if(publishing||switchingProduct||publishConfirmOpen||restoringBatch)return;
-    /* D559 - this used to publish the open product, wait for its receipt, switch
-       the whole app to the next product's batch, publish that, and repeat. The
-       run depended on the tab staying open through two batch restores, and a
-       stall between products left her half published. One call carries the whole
-       bundle now, so there is nothing to advance to. */
-    if(batchReceipt){setPublishRun(null);return}
-    const chosen=publishTargets();
-    if(!chosen.length)return;
-    const blockers=[...missingPublishFields(),...createdListingsMissingImages(selectedPublishDrafts()).map(draft=>`${draft.name} has no photo`)];
-    if(blockers.length){
-      setPublishRun(null);
-      stopWith("This batch is not ready to publish.",blockers);
-      return;
-    }
-    void publishAll();
-  },[publishRun,publishing,switchingProduct,publishConfirmOpen,restoringBatch,batchReceipt,bundleIndex,drafts,activeRecipe]);
-
-  /* D559 - every listing the press will create, across every product in the
-     bundle, each carrying the settings saved with its own batch. The open
-     product is read from state because that is fresher than anything saved; the
-     rest come from their own batches. */
-  /* D561 - the count on screen and the list that gets sent were built two
-     different ways, so they could disagree - and did: five ticked, "Publish 6
-     listings" on the button. One source now. Everything the review shows, filtered
-     by what is ticked, carrying the settings of whichever product owns it. */
-  function publishTargets(){
-    const chosen=new Set(selectedPublishIds);
-    const memberOf=(id:string)=>Object.values(bundleMembers).find(member=>member.drafts.some(draft=>draft.id===id));
-    return bundlePublishDrafts().filter(draft=>draft.status==="Created"&&draft.id&&chosen.has(draft.id)).map(draft=>{
-      const mine=drafts.some(own=>own.id===draft.id);
-      const member=mine?null:memberOf(draft.id!);
-      return {id:draft.id!,productName:draft.productName||activeRecipe?.name||"",clientId:draft.clientId,
-        selections:(mine?printifyImageSelections:member?.selections||{})[draft.id!]||[],
-        indices:mine?printifyImageIndices:(member?.indices||printifyImageIndices),
-        shippingProfileId:(mine?etsyShippingProfileId:member?.shippingProfileId)||etsyShippingProfileId};
-    });
-  }
-  /* D559 - the publish review's inputs, gathered across the bundle rather than
-     taken from whichever product happens to be open. */
-  function bundlePublishDrafts(){
-    if(!activeBundle||bundleRecipes.length<2)return drafts;
-    const others=bundleRecipes.filter(recipe=>recipe.id!==activeRecipe?.id).flatMap(recipe=>{
-      const member=bundleMembers[recipe.id];if(!member)return [] as DraftResult[];
-      return member.drafts.map(draft=>({...draft,productName:member.productName}));
-    });
-    return [...drafts.map(draft=>({...draft,productName:activeRecipe?.name||draft.productName})),...others];
-  }
-  function bundlePublishFiles(){
-    if(!activeBundle||bundleRecipes.length<2)return files;
-    const others=bundleRecipes.filter(recipe=>recipe.id!==activeRecipe?.id).flatMap(recipe=>(bundleMembers[recipe.id]?.designs||[]) as Array<Omit<DesignFile,"file"|"previewUrl">>);
-    return [...files,...others.map(design=>({...design,file:undefined as unknown as File,previewUrl:""} as DesignFile))];
-  }
-  function bundlePublishSelections(){
-    if(!activeBundle||bundleRecipes.length<2)return printifyImageSelections;
-    return bundleRecipes.filter(recipe=>recipe.id!==activeRecipe?.id)
-      .reduce((all,recipe)=>({...all,...(bundleMembers[recipe.id]?.selections||{})}),{...printifyImageSelections});
-  }
-  function bundlePublishMockupCounts(){
-    if(!activeBundle||bundleRecipes.length<2)return preparedMockupCounts;
-    return bundleRecipes.filter(recipe=>recipe.id!==activeRecipe?.id)
-      .reduce((all,recipe)=>({...all,...(bundleMembers[recipe.id]?.preparedMockupCounts||{})}),{...preparedMockupCounts});
-  }
-  /* D626 Â· Lives here, below the bundle state it reads. Its dependency array is
-     evaluated during render, so at its old position near the other selection
-     effects it referenced bundleMembers hundreds of lines before that state was
-     declared - a temporal dead zone throw on every render, caught only because
-     tsc flagged it. */
-  /* D626 Â· This pruned the publish selection down to the OPEN product's drafts:
-     current.filter(id=>created.includes(id)) dropped every bundle member's id,
-     and only the open product's were added back. D559 built the whole one-call
-     bundle publish on top of this list, so whenever `drafts` changed identity -
-     a retry, a mockup finishing, a restore - the other products silently fell
-     out of the publish and the seller was back to publishing one product at a
-     time without being told. The list is the bundle's now.
-     D560's rule applies here too: a listing seen for the first time starts
-     ticked, but after that her choice stands, so this can never re-tick a box
-     she cleared. */
-  const seededPublishIds=useRef<Set<string>>(new Set());
-  /* D645 - the same rule on this side of the event. */
-  const sellerChosePublish=useRef(false);
-  useEffect(()=>{
-    const created=bundlePublishDrafts().filter(draft=>draft.status==="Created"&&draft.id).map(draft=>draft.id!);
-    const fresh=sellerChosePublish.current?[]:created.filter(id=>!seededPublishIds.current.has(id));
-    created.forEach(id=>seededPublishIds.current.add(id));
-    setSelectedPublishIds(current=>{
-      const kept=current.filter(id=>created.includes(id));
-      return fresh.length?[...new Set([...kept,...fresh])]:kept;
-    });
-  },[drafts,bundleMembers,activeBundle,bundleRecipes,activeRecipe]);
-
-  async function publishAll(){
-    if(publishInFlight.current)return;
-    /* D559 - this sent the open product's listings only, and an effect then
-       switched the app to the next product and sent that one, and so on. One
-       call now carries every listing in the bundle with the settings its own
-       product needs, so nothing switches and nothing is left behind. */
-    const everything=publishTargets();
-    const ids=everything.map(item=>item.id);if(!ids.length)return;
-    const byProduct=Object.fromEntries(everything.map(item=>[item.id,{selections:item.selections,indices:item.indices,shippingProfileId:item.shippingProfileId}]));
-    publishInFlight.current=true;setPublishConfirmOpen(false);setPublishing(true);setPublishFailures([]);setPublishMessage(`Goldie is safely queuing ${ids.length} selected ${ids.length===1?"listing":"listings"}â€¦`);setBatchReceipt(null);
-    try{
-      const response=await fetch("/api/printify/drafts/publish",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({productIds:ids,printifyImageIndices,printifyImageSelections,etsyShippingProfileId,byProduct})}),payload=await response.json() as {job?:{id:string;status:string;total:number;completed:number;failed:number;queued:number;processing:number;finished:Array<{etsyListingId:number;url:string}>;failures?:Array<{productId:string;error:string}>;budget?:{remaining:number}};error?:string};if(!response.ok||!payload.job)throw new Error(payload.error||"The batch could not be queued.");
-      const jobId=payload.job.id;localStorage.setItem("goldie-active-publish-job",jobId);await monitorPublishJob(jobId);
-    }catch(error){setPublishMessage(error instanceof Error?error.message:"The batch could not be published.")}finally{publishInFlight.current=false;setPublishing(false)}
-  }
-  /* D651 Â· A size guide could be replaced but never removed. Attach the wrong
-     file - which is easy, it is one picker among several on this step - and the
-     only way out was to attach a different wrong file; there was no way back to
-     none. It goes onto every listing in the batch, so that is not a small
-     mistake to be stuck with. Removing clears it for everything this batch has
-     not published yet, and says plainly what it cannot undo. */
-  async function removeSizeGuide(){
-    setSizeGuideName("");
-    setFiles(current=>current.map(design=>({...design,sizeGuideName:undefined})));
-    setSizeGuideStatus("Size guide removed. Listings this batch has already published keep the one they were given.");
-  }
-  async function applySizeGuide(file:File){const ids=drafts.filter(draft=>draft.status==="Created"&&draft.id).map(draft=>draft.id!);if(!ids.length)return;setSizeGuideStatus(`Applying ${file.name} to 0 of ${ids.length} listingsâ€¦`);try{let completeCount=0;for(const productId of ids){const form=new FormData();form.set("productId",productId);form.set("kind","size-guide");form.set("file",file);const response=await fetch("/api/etsy/images",{method:"POST",body:form}),payload=await response.json() as {error?:string};if(!response.ok)throw new Error(payload.error||"The size guide could not be saved.");completeCount+=1;setSizeGuideStatus(`Applying ${file.name} to ${completeCount} of ${ids.length} listingsâ€¦`)}setFiles(current=>current.map(design=>({...design,sizeGuideName:undefined})));setSizeGuideName(file.name);setSizeGuideStatus(`âœ“ ${file.name} will be added to all ${ids.length} Etsy listings when you publish.`)}catch(error){setSizeGuideStatus(error instanceof Error?error.message:"The size guide could not be saved.")}}
-
-  async function connectPrintify() {
-    setConnecting(true); setConnectionError("");
-    try {
-      const response = await fetchWithDeadline("/api/printify", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ token }) }, 60000);
-      const result = await response.json() as { connected?: boolean; error?: string };
-      if (!response.ok || !result.connected) throw new Error(result.error || "Printify could not be connected.");
-      setConnected(true); setToken("");
-    } catch (error) { setConnected(false); setConnectionError(error instanceof Error ? error.message : "Printify could not be connected."); }
-    finally { setConnecting(false); }
-  }
-
-  async function connectEtsy(){setEtsyConnecting(true);setEtsyError("");try{const response=await fetch("/api/etsy",{method:"POST"}),result=await response.json() as {authorizeUrl?:string;error?:string};if(!response.ok||!result.authorizeUrl)throw new Error(result.error||"Etsy connection could not start.");window.location.href=result.authorizeUrl}catch(error){setEtsyError(error instanceof Error?error.message:"Etsy connection could not start.");setEtsyConnecting(false)}}
-
-  async function loadTemplateUrl(productUrl = template, pricingOverride?:Pricing, savedShippingProfileId=0,rememberedColorIds:number[]=[],rememberedSizeIds:number[]=[]):Promise<TemplateDetails|null> {
-    const requestVersion=++templateLoadVersion.current;
-    setLoadingTemplate(true); setTemplateError(""); setTemplateDetails(null);
-    try {
-      const response = await fetchWithDeadline("/api/printify", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ productUrl,savedShippingProfileId }) }, 90000);
-      const result = await response.json() as { product?: TemplateDetails; error?: string;issues?:string[];title?:string;shop?:{id:number;title:string;count?:number} };
-      if(requestVersion!==templateLoadVersion.current)return null;
-      /* D654 - the store label was only recorded on a product that PASSED the
-         shop check, so the products that most need labelling - the ones from a
-         different store, which is the whole reason the label exists - stayed
-         blank forever. The refusal knows the store too. */
-      if(result.shop?.title&&Number(result.shop.count||0)>1){
-        const refusedRecipe=activeRecipeRef.current;
-        if(refusedRecipe&&refusedRecipe.printifyShopTitle!==result.shop.title){
-          void fetch("/api/product-recipes",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:refusedRecipe.id,name:refusedRecipe.name,templateUrl:refusedRecipe.templateUrl,printifyShopTitle:result.shop.title,printifyShopId:result.shop.id})}).catch(()=>undefined);
-          setActiveRecipe(current=>current&&current.id===refusedRecipe.id?{...current,printifyShopTitle:result.shop!.title,printifyShopId:result.shop!.id}:current);
-          announceShop(refusedRecipe.id,result.shop.title,result.shop.id);
-          setBundleRecipes(current=>current.map(item=>item.id===refusedRecipe.id?{...item,printifyShopTitle:result.shop!.title,printifyShopId:result.shop!.id}:item));
-        }
-      }
-      if (!response.ok || !result.product){
-        if(restoringRememberedProduct.current){
-          const why=(result.issues&&result.issues[0])||result.error||"Goldie could not open it.";
-          setRestoredProductNotice(`${activeRecipeRef.current?.name||"The product you used last"} could not be reopened. ${why} Choose a product below to start.`);
-          try{window.localStorage.removeItem("goldie-active-recipe")}catch{/* private mode */}
-          setActiveRecipe(null);setTemplateDetails(null);setTemplate("");
-          throw new Error(result.error||"The product could not be loaded.");
-        }
-        setBlockingModal({title:result.title||"This Printify product isnâ€™t ready yet.",issues:result.issues?.length?result.issues:[result.error||"The product could not be loaded."],copy:response.status===409?"Connect Printify and Etsy to the same shop, then load this product again. Connections is in the sidebar.":"Fix these items in Printify, save the product, then submit the same link again."});throw new Error(result.error || "The product could not be loaded.")}
-      const available=new Set((result.product.colorOptions||[]).filter(color=>color.available).map(color=>color.id));let sessionColors:number[]=[];try{sessionColors=JSON.parse(window.localStorage.getItem(`goldie-colors-${result.product.id}`)||"[]") as number[]}catch{/* Ignore an invalid browser preference. */}const remembered=rememberedColorIds.filter(id=>available.has(id));const session=sessionColors.filter(id=>available.has(id));/* D213 Â· Printify's template settings are not the seller's choices.
-   The seller sets colors and sizes ONCE, in the saved-product setup, and that
-   becomes the recipe. A product with no recipe defaults has not been set up, so
-   it must be set up â€” in the batch if that is where it first appears. Seeding
-   the selection from templateEnabled made an unestablished product look decided
-   and would publish listings in colors the seller never picked. The `available`
-   fallback was worse: every colour the blueprint offers.
-   Empty is the honest state. productReadiness already marks these "ask", gates
-   Continue, and opens the picker pre-selected with the template as a SUGGESTION
-   the seller has to accept. */
-            const defaults=remembered.length?remembered:session;setSelectedColorIds(defaults);setColorsRemembered(Boolean(remembered.length));
-      /* Same four-step precedence as colours: saved product default, then this
-         browser's last choice, then whatever the Printify template had enabled,
-         and finally every available size. The third step is what makes an
-         existing product behave exactly as it did before sizes were selectable. */
-      const sizeAvailable=new Set((result.product.sizeOptions||[]).filter(size=>size.available).map(size=>size.id));let sessionSizes:number[]=[];try{sessionSizes=JSON.parse(window.localStorage.getItem(`goldie-sizes-${result.product.id}`)||"[]") as number[]}catch{/* Ignore an invalid browser preference. */}
-      const rememberedSizes=rememberedSizeIds.filter(id=>sizeAvailable.has(id)),sessionSizeIds=sessionSizes.filter(id=>sizeAvailable.has(id));
-      /* D213 Â· Same rule as colours: no template seeding. */
-            const sizeDefaults=rememberedSizes.length?rememberedSizes:sessionSizeIds;
-      setSelectedSizeIds(sizeDefaults);setSizesRemembered(Boolean(rememberedSizes.length));
-      /* D329 Â· Apply the verified Etsy profile from this exact template response.
-         Waiting for the independent profile-list and invalid-saved-id effects to
-         race left the picker on its placeholder even after the server recovered
-         the right profile from Etsy. The later profile-list validation still
-         clears an id that genuinely is not on the connected shop. */
-      const verifiedProfileId=Number(result.product.shippingTemplateId)||0;
-      /* D333 Â· Applied only when nothing is already chosen. selectRecipe sets the
-         seller's saved profile just before this runs, so an unconditional set
-         replaced their saved choice with the Printify template's every time the
-         product was selected â€” the D296 rule in reverse. The functional form
-         reads the value that is actually current rather than a stale closure:
-         keep what is there, otherwise take the template's. D329's own case, an
-         empty picker after the server recovered the profile from Etsy, still
-         works, because in that case there is nothing to keep. */
-      if(verifiedProfileId)setEtsyShippingProfileId(current=>current||verifiedProfileId);
-      /* D649 - record which Printify store this product came from, so its saved
-         card can say so instead of the seller finding out by being refused. */
-      const recipeForShop=activeRecipeRef.current;
-      if(result.shop?.title&&Number(result.shop.count||0)>1&&recipeForShop&&recipeForShop.printifyShopTitle!==result.shop.title){
-        void fetch("/api/product-recipes",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:recipeForShop.id,name:recipeForShop.name,templateUrl:recipeForShop.templateUrl,printifyShopTitle:result.shop.title,printifyShopId:result.shop.id})}).catch(()=>undefined);
-        setActiveRecipe(current=>current&&current.id===recipeForShop.id?{...current,printifyShopTitle:result.shop!.title,printifyShopId:result.shop!.id}:current);
-        announceShop(recipeForShop.id,result.shop.title,result.shop.id);
-      }
-      setTemplateDetails(result.product);setDescription(result.product.description||"");if(result.product.standardShipping!=null)setPricing(current=>({...current,shippingCost:result.product!.standardShipping!,shippingCharged:0}));setVariantPrices(Object.fromEntries((result.product.variants||[]).map(variant=>[String(variant.id),variant.templatePrice])));/* D472 - loading the Printify template used to clear the pricing approval
-   unconditionally. Choosing a saved product loads its template, so every batch
-   began un-approved no matter what the product had saved - and the control to
-   approve again sits inside the collapsed Shipping section, so Next step
-   refused with nothing on screen to press. Reproduced on a clean batch with a
-   product carrying a $12 profit target and a valid Etsy profile.
-
-   A product that already carries approved pricing keeps it. Approval is only
-   cleared for a product that has none saved, which is the case it was for. */
-setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecipe?.defaultProfitTarget,etsyShippingProfileId:activeRecipe?.etsyShippingProfileId})); return result.product;
-    } catch (error) { if(requestVersion===templateLoadVersion.current)setTemplateError(error instanceof Error ? error.message : "The template could not be loaded."); return null; }
-    finally { if(requestVersion===templateLoadVersion.current)setLoadingTemplate(false); }
-  }
-
-  async function rememberProductColors(){if(!activeRecipe||!selectedColorIds.length)return;setRememberingColors(true);try{const updated={...activeRecipe,defaultColorIds:selectedColorIds};const response=await fetch("/api/product-recipes",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:activeRecipe.id,name:activeRecipe.name,templateUrl:activeRecipe.templateUrl,defaultColorIds:selectedColorIds})});if(!response.ok)throw new Error("Goldie could not save these color defaults.");setActiveRecipe(updated);setColorsRemembered(true)}catch(error){stopWith("These color defaults were not saved.",[error instanceof Error?error.message:"Try again in a moment."])}finally{setRememberingColors(false)}}
-
-  async function rememberProductSizes(){if(!activeRecipe||!selectedSizeIds.length)return;setRememberingSizes(true);try{const updated={...activeRecipe,defaultSizeIds:selectedSizeIds};const response=await fetch("/api/product-recipes",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:activeRecipe.id,name:activeRecipe.name,templateUrl:activeRecipe.templateUrl,defaultSizeIds:selectedSizeIds})});if(!response.ok)throw new Error("Goldie could not save these size defaults.");setActiveRecipe(updated);setSizesRemembered(true)}catch(error){stopWith("These size defaults were not saved.",[error instanceof Error?error.message:"Try again in a moment."])}finally{setRememberingSizes(false)}}
-
-  async function preparedUpload(design: DesignFile) {
-    if(design.originalUnavailable)throw new Error("Upload the original design again in this browser before recreating its Printify draft.");
-    // Preserve original bytes whenever Printify can accept them directly.
-    // Oversized opaque artwork is recompressed without changing dimensions;
-    // transparent artwork is never flattened or silently degraded.
-    const file=design.file;
-    if (!/\.(png|jpe?g)$/i.test(file.name) || !/^image\/(png|jpeg)$/i.test(file.type || "image/png")) {
-      throw new Error("Choose a PNG or JPG file. WebP artwork must be exported as PNG before uploading.");
-    }
-    const rigidPaperProduct=isRigidPaperProduct(templateDetails);
-    return prepareArtworkFile(file, design.hasTransparency !== false, rigidPaperProduct);
-  }
-
-  async function stageUpload(blob: Blob, fileName: string, reference: string) {
-    const waits = [0, 1500, 4000];
-    let lastError = "The design could not be prepared for Printify.";
-    for (const wait of waits) {
-      if (wait) await new Promise((resolve) => window.setTimeout(resolve, wait));
-      try {
-        const response = await fetchWithDeadline(`/api/printify/stage?fileName=${encodeURIComponent(fileName)}&reference=${encodeURIComponent(reference)}`, {
-          method: "POST",
-          headers: { "Content-Type": blob.type || (/\.png$/i.test(fileName) ? "image/png" : "image/jpeg") },
-          body: blob,
-        }, 90000);
-        const result = await response.json() as { stagedId?: string; error?: string };
-        if (response.ok && result.stagedId) return { stagedId: result.stagedId, reference };
-        lastError = result.error || lastError;
-        if (response.status >= 400 && response.status < 500 && response.status !== 429) break;
-      } catch (error) { lastError = error instanceof Error ? error.message : lastError; }
-    }
-    throw new Error(`${lastError}${/Support reference:/i.test(lastError) ? "" : ` Support reference: ${reference}.`}`);
-  }
-
-  async function recoverDraft(batchId: string, clientId: string) {
-    const delays = [1000, 2000, 4000, 8000, 12000, 15000];
-    for (const delay of delays) {
-      await new Promise((resolve) => window.setTimeout(resolve, delay));
-      const response = await fetchWithDeadline(`/api/printify/drafts?batchId=${encodeURIComponent(batchId)}&clientId=${encodeURIComponent(clientId)}`, {}, 30000);
-      const result = await response.json() as { status?: string; draft?: DraftResult };
-      if (result.status === "succeeded" && result.draft) return result.draft;
-      if (result.status === "failed" || result.status === "not_found") return null;
-    }
-    return null;
-  }
-
-  async function processDesign(design: DesignFile): Promise<DraftResult> {
-      const referenceRoot = `GLF-${crypto.randomUUID().replace(/-/g, "").slice(0, 10).toUpperCase()}`;
-      let finalError: Error | null = null;
-      try {
-        const upload = await preparedUpload(design);
-        for (let pipelineAttempt = 1; pipelineAttempt <= 3; pipelineAttempt += 1) {
-          const supportReference = `${referenceRoot}-A${pipelineAttempt}`;
-          try {
-            const staged = await stageUpload(upload.blob, upload.fileName, supportReference);
-            const fullDescription=[design.blurb||design.etsy?.blurb,description].filter(Boolean).join("\n\n");
-            const response = await fetchWithDeadline("/api/printify/drafts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ batchId: templateDetails?.batchId, title: design.title || undefined, tags: design.tags, pricing, etsyBuyerShipping:etsyShippingProfiles.find(profile=>profile.id===etsyShippingProfileId)?.domesticPrimary||0, shippingTemplateId:etsyShippingProfileId, variantPrices, selectedVariantIds:pricedVariants.map(variant=>variant.id), description:fullDescription, maxPlacementScale:isRigidPaperProduct(templateDetails)?1:undefined, fileName: upload.fileName, stagedId: staged.stagedId, supportReference: staged.reference, clientId: design.id }) }, 4 * 60 * 1000);
-            const result = await response.json() as { draft?: DraftResult; error?: string };
-            if ((!response.ok || !result.draft) && (response.status === 409 || /still completing this exact draft/i.test(result.error ?? ""))) {
-              const recovered = await recoverDraft(templateDetails!.batchId, design.id);
-              if (recovered) result.draft = recovered;
-            }
-            if (!result.draft) throw new Error(result.error || "Printify did not create this draft.");
-            return result.draft;
-          } catch (attemptError) {
-            finalError = attemptError instanceof Error ? attemptError : new Error("The design failed.");
-            const permanent = isPermanentUploadError(finalError.message);
-            if (permanent || pipelineAttempt === 3) break;
-            await new Promise((resolve) => window.setTimeout(resolve, pipelineAttempt * 5000));
-          }
-        }
-        throw finalError ?? new Error("Printify did not create this draft.");
-      } catch (error) {
-        const rawMessage = error instanceof Error ? error.message : "The design failed.";
-        const supportReference = `${referenceRoot}-A3`;
-        if (!/Support reference:/i.test(rawMessage)) {
-          void fetch("/api/printify/diagnostics", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ reference: supportReference, fileName: design.name, stage: "browser_image_preparation", message: rawMessage }) });
-        }
-        return { clientId: design.id, name: design.name, status: "NeedsRetry", error: friendlyUploadError(new Error(`${rawMessage}${/Support reference:/i.test(rawMessage) ? "" : ` Support reference: ${supportReference}.`}`)) };
-      }
-  }
-
-  /* D419 - Same exposure as publishing: the preflight confirm had no disabled
-     state, so a double click ran the whole draft creation twice - Printify quota
-     spent twice and duplicate drafts that then publish as duplicate listings. */
-  const draftRunInFlight=useRef(false);
-  async function runDrafts(targetFiles: DesignFile[], keepSuccessful = false) {
-    if(draftRunInFlight.current)return;
-    draftRunInFlight.current=true;
-    try{
-    if (!ready || !targetFiles.length || draftRunActive.current) return;
-    draftRunActive.current=true;
-    const completedDesignIds=new Set<string>();
-    setRunning(true);
-    setRunTotal(targetFiles.length);
-    setComplete(false);
-    const batchBytes=targetFiles.reduce((sum,file)=>sum+file.size,0);
-    const batchConcurrency=batchBytes>LARGE_BATCH_THRESHOLD?1:MAX_CONCURRENT_DESIGNS;
-    setPreparationMessage(batchConcurrency===1?"This is a large high-resolution batch, so Goldie is processing one design at a time safely":`Processing up to ${Math.min(batchConcurrency, targetFiles.length)} ${Math.min(batchConcurrency, targetFiles.length)===1?"design":"designs"} at a time without lowering their print resolution`);
-    if (!keepSuccessful) setDrafts([]);
-    else setDrafts((current) => current.filter((draft) => draft.status === "Created"));
-    setProcessed(0);
-    const createdDesignResults:Array<{status?:string;id?:string|null;error?:string}>=[];
-    try {
-      await runBounded(targetFiles, batchConcurrency, processDesign, (result) => {
-        if(completedDesignIds.has(result.clientId))return;
-        completedDesignIds.add(result.clientId);
-        const productResult={...result,productName:activeRecipe?.name||templateDetails?.blueprintTitle||"Saved product"};
-        createdDesignResults.push(productResult);
-        setDrafts((current) => [...current, productResult]);
-        if(result.id)setPrintifyImageSelections(current=>current[result.id!]?current:{...current,[result.id!]:printifyImageIndices});
-        if(result.previewUrl)updateDesign(result.clientId,{previewUrl:result.previewUrl});
-        setProcessed(Math.min(completedDesignIds.size,targetFiles.length));
-      });
-      /* D227 Â· Only move on if a draft actually exists. runDrafts used to set
-         complete and jump to the Listing page whatever came back, so a run in
-         which every draft failed looked exactly like a run in which every draft
-         succeeded: the seller was carried forward, generated titles, and only
-         then met "The matching Printify draft could not be found" beside each
-         listing, with the rail refusing the page they were standing on and no
-         route back. Measured on a real batch: both drafts came back
-         status:"NeedsRetry" with a null id, and the app advanced anyway. */
-      const createdNow=createdDesignResults.filter(result=>result.status==="Created"&&result.id).length;
-      if(createdNow>0){
-        setComplete(true);
-        /* D440 - creating the drafts used to jump straight to Listing details,
-           which is why she kept arriving at step 3 having never seen step 2. The
-           photos and mockups appear on THIS page the moment the drafts exist, so
-           this stays put and scrolls to them. Leaving Images is the Next step
-           button's job, and that button refuses until every listing has a photo. */
-        setFinishPhase("details");
-        window.setTimeout(()=>document.querySelector(".draft-card")?.scrollIntoView({block:"start"}),0);
-      }else{
-        setComplete(false);
-        stopWith(
-          targetFiles.length===1?"That draft could not be created.":"None of these drafts could be created.",
-          [...new Set(createdDesignResults.map(result=>result.error).filter(Boolean) as string[])].slice(0,3),
-          "Nothing was charged against your plan. Fix the reason below and use Create Printify drafts again.",
-        );
-      }
-    } finally {
-      draftRunActive.current=false;
-      setRunning(false);
-      setPreparationMessage("");
-      setRunTotal(0);
-    }
-    }finally{draftRunInFlight.current=false}
-  }
-
-  function finalDescription(design:DesignFile,details?:EtsyDetails){return design.descriptionOverride??[design.blurb??details?.blurb??"",description].filter(value=>value.trim()).join("\n\n")}
-  async function syncListingFields(design:DesignFile,details?:EtsyDetails){const draft=drafts.find(item=>item.clientId===design.id);if(!draft?.id)throw new Error("The matching Printify draft could not be found.");const response=await fetch("/api/printify/drafts/update",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({productId:draft.id,title:design.title,tags:design.tags,description:finalDescription(design,details),etsyDetails:details})});const payload=await response.json() as {error?:string};if(!response.ok)throw new Error(payload.error||"Printify could not save the completed listing.")}
-  async function syncPreparedListing(design:DesignFile,details:EtsyDetails){await syncListingFields(design,details)}
-  async function resolveEtsyOptions(details:EtsyDetails,taxonomyId?:number){const response=await fetch("/api/etsy/taxonomy",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({...details,taxonomyId,includeCategories:!haveEtsyCategories.current,product:{blueprintTitle:templateDetails?.blueprintTitle,brand:templateDetails?.brand,model:templateDetails?.model}})}),payload=await response.json() as {categories?:EtsyCategoryOption[];selected?:{id:number;path:string};properties?:EtsyPropertySelection[];error?:string};if(!response.ok||!payload.selected)throw new Error(payload.error||"Etsy listing options could not be loaded.");if(payload.categories?.length){haveEtsyCategories.current=true;setEtsyCategories(payload.categories)}
-    /* D649 - fill Closure only when the product name settles it, and only when
-       Etsy left it blank. An unresolved one stays blank and keeps blocking, which
-       is the honest outcome. */
-    const closure=verifiedClosure(templateDetails?.blueprintTitle,templateDetails?.model,templateDetails?.brand);
-    if(closure&&payload.properties)payload.properties=payload.properties.map(property=>{
-      if(!/closure/i.test(property.label)||property.value.trim())return property;
-      const match=(property.possibleValues||[]).find(option=>option.name.toLowerCase()===closure.toLowerCase());
-      return match?{...property,value:match.name,valueId:match.value_id}:property;
-    });
-    return {...details,category:payload.selected.path,taxonomyId:payload.selected.id,properties:payload.properties||[]} }
-  async function rememberEtsyDefaults(details:EtsyDetails){if(!activeRecipe)return;const physical=Object.fromEntries((details.properties||[]).filter(property=>PHYSICAL_ETSY_FIELDS.test(property.label)&&property.value.trim()).map(property=>[property.label,property.value]));if(!Object.keys(physical).length)return;const updated={...activeRecipe,etsyDefaults:{...activeRecipe.etsyDefaults,...physical}};const response=await fetch("/api/product-recipes",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:activeRecipe.id,name:activeRecipe.name,templateUrl:activeRecipe.templateUrl,etsyDefaults:{...activeRecipe.etsyDefaults,...physical}})});if(!response.ok)throw new Error("Goldie prepared the Etsy details but could not remember the product defaults.");setActiveRecipe(updated)}
-
-  /* D662 Â· Two at a time, but not from the first design.
-     
-     D71 made one batch share one Etsy product baseline: the first design
-     prepared establishes the taxonomy, category and physical attributes, and
-     every design after it inherits them, so a batch cannot publish ten listings
-     under subtly different Etsy categories. Concurrency 1 was what made that
-     ordering hold, quietly - and the D71 test caught this change reintroducing
-     the fault, which is exactly what it is there for.
-
-     prepareOne reads etsyProductBaseline.current, then awaits, then writes it.
-     Start two designs together and both read null, both resolve independently,
-     and the later write wins - the batch is inconsistent again and nothing on
-     screen would say so.
-
-     So the first design runs alone to establish the baseline, and the rest run
-     two at a time inheriting it. A ten-design batch goes from about ten calls
-     in sequence to one plus nine in pairs, and stays deterministic. */
-  async function prepareEtsyBatch(pending:DesignFile[]){
-    if(!pending.length)return;
-    const [first,...rest]=pending;
-    await prepareOne(first);
-    if(!rest.length)return;
-    await runBounded(rest,BACKGROUND_ETSY_CONCURRENCY,async file=>{await prepareOne(file);return file},()=>undefined);
-  }
-  async function prepareOne(design:DesignFile){try{const response=await fetch("/api/listing-intelligence",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({
-    image:await designPreviewDataUrl(design),
-    product:{blueprintTitle:templateDetails?.blueprintTitle,brand:templateDetails?.brand,model:templateDetails?.model,description},title:design.title,tags:design.tags})}),payload=await response.json() as {details?:EtsyDetails;error?:string};if(!response.ok||!payload.details)throw new Error(payload.error||"Etsy details could not be prepared.");const defaults=productEtsyDefaults(templateDetails,activeRecipe?.etsyDefaults),initial={...payload.details,attributes:{...payload.details.attributes,...defaults},blurb:design.blurb?.trim()||payload.details.blurb},baseline=etsyProductBaseline.current,prepared=baseline?{...initial,taxonomyId:baseline.taxonomyId,category:baseline.category,attributes:{...initial.attributes,...baseline.attributes}}:initial,details=await resolveEtsyOptions(prepared);if(!baseline){const physical=Object.fromEntries((details.properties||[]).filter(property=>PHYSICAL_ETSY_FIELDS.test(property.label)&&property.value.trim()).map(property=>[property.label,property.value]));etsyProductBaseline.current={taxonomyId:details.taxonomyId,category:details.category,attributes:physical}}const updatedDesign={...design,blurb:details.blurb};await syncListingFields(updatedDesign,details);updateDesign(design.id,{blurb:details.blurb,etsy:details,etsyError:""});return details}catch(error){updateDesign(design.id,{etsyError:error instanceof Error?error.message:"Etsy details could not be prepared."});return null}}
-  async function retryOneEtsyListing(design:DesignFile){if(preparingListingId)return;setPreparingListingId(design.id);try{await prepareOne(design)}finally{setPreparingListingId("")}}
-  async function changeEtsyCategory(design:DesignFile,taxonomyId:number){if(!design.etsy||taxonomyId===design.etsy.taxonomyId)return;try{const resolved=await resolveEtsyOptions(design.etsy,taxonomyId),merged=preserveCompatibleEtsyProperties(design.etsy.properties||[],resolved.properties||[]),details={...resolved,properties:merged.properties};if(merged.clearedCount){setPendingCategoryChange({designId:design.id,details,clearedCount:merged.clearedCount});return}updateDesign(design.id,{etsy:details,etsyError:""})}catch(error){updateDesign(design.id,{etsyError:error instanceof Error?error.message:"Etsy options could not be loaded."})}}
-  async function continueToEtsyDetails(){
-    if(etsyPreparationActive.current)return;
-    const missing:string[]=[];
-    if(files.some(file=>!file.title.trim()))missing.push("Every listing needs a title.");
-    if(files.some(file=>!file.tags.length))missing.push("Every listing needs at least one tag.");
-    if(!description.trim())missing.push("Add the reusable product description.");
-    if(missing.length)return void stopWith("Finish all sections first.",missing);
-    etsyPreparationActive.current=true;
-    const version=++etsyPreparationVersion.current;
-    setPreparingEtsy(true);
-    try{
-      let failed=0,firstPrepared:EtsyDetails|null=null;
-      await runBounded(files,2,prepareOne,result=>{if(!result)failed+=1;else firstPrepared??=result});
-      if(version!==etsyPreparationVersion.current)return;
-      if(failed)return void stopWith("Goldie could not complete every Etsy listing.",[`${failed} ${failed===1?"listing needs":"listings need"} another attempt. Use the retry button beside each listing.`]);
-      if(firstPrepared)await rememberEtsyDefaults(firstPrepared);
-      /* D226 Â· Drafts have just been created, so the sidebar quota is now stale. */
-      setUsageRevision(current=>current+1);
-      /* D221 Â· Etsy details live on the Listing page; there is no separate phase to move to. */
-      setFinishPhase("details");
-      /* D544 - this wrote phase=etsy while the line above sets the state to
-         "details", so the URL disagreed with the app. Reloading then restored a
-         phase the app never actually uses and step 3 behaved differently before
-         and after a refresh. The URL says what is true. */
-      const url=new URL(window.location.href);url.searchParams.set("step","finish");url.searchParams.set("phase","details");window.history.replaceState({},"",url);
-      window.scrollTo(0,0);
-    }finally{
-      if(version===etsyPreparationVersion.current)setPreparingEtsy(false);
-      etsyPreparationActive.current=false;
-    }
-  }
-  async function saveAllEtsyDetails(){if(etsySaveActive.current)return;const unfinished=files.filter(file=>!etsyRequiredComplete(file.etsy));if(unfinished.length)return void stopWith("Finish every Etsy listing first.",unfinished.map(file=>`${file.name} still needs Etsy details.`));const invalid=files.map(file=>({file,problem:personalizationProblem(file.etsy)})).filter(item=>item.problem);if(invalid.length)return void stopWith("Finish the personalization options first.",invalid.map(item=>`${item.file.name}: ${item.problem}`));etsySaveActive.current=true;++etsyPreparationVersion.current;setPreparingEtsy(false);setSavingEtsyDetails(true);try{let failed=0;if(!localPreview)await runBounded(files,2,async design=>{try{await syncListingFields(design,design.etsy!);return true}catch(error){updateDesign(design.id,{etsyError:error instanceof Error?error.message:"Etsy details could not be saved."});return false}},saved=>{if(!saved)failed+=1});if(failed)return void stopWith("Some Etsy details were not saved.",[`${failed} ${failed===1?"listing needs":"listings need"} another attempt.`]);if(activeRecipe){const physical=Object.fromEntries((files[0]?.etsy?.properties||[]).filter(property=>PHYSICAL_ETSY_FIELDS.test(property.label)&&property.value.trim()).map(property=>[property.label,property.value]));if(Object.keys(physical).length){const updated={...activeRecipe,etsyDefaults:{...activeRecipe.etsyDefaults,...physical}};const response=await fetch("/api/product-recipes",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:activeRecipe.id,name:activeRecipe.name,templateUrl:activeRecipe.templateUrl,etsyDefaults:{...activeRecipe.etsyDefaults,...physical}})});if(response.ok)setActiveRecipe(updated)}}/* D221 Â· Photos moved to the Images page, so completing Etsy details moves on to
-       the Publish page rather than to a phase that no longer renders. */
-      setFinishPhase("final");const url=new URL(window.location.href);url.searchParams.set("step","finish");url.searchParams.set("phase","final");window.history.replaceState({},"",url);window.scrollTo(0,0)}finally{etsySaveActive.current=false;setSavingEtsyDetails(false)}}
-  /* D485 - a bundle made her press "Create Printify drafts" once per product,
-     walking each one through the step by hand, when step 1 had already collected
-     colours, sizes, prices and shipping for all of them at once. One press now
-     works the whole bundle: Goldie creates the current product's drafts, moves
-     itself to the next product carrying the same designs, and repeats. The
-     confirmation is asked once, not once per product. */
-  const [bundleRun,setBundleRun]=useState<{total:number}|null>(null);
-  useEffect(()=>{runInProgress.current=Boolean(bundleRun)},[bundleRun]);
-  const bundleAdvancing=useRef(false);
-  useEffect(()=>{
-    if(!bundleRun)return;
-    if(running||preparingEtsy||preflightOpen||switchingProduct)return;
-    if(complete){
-      if(bundleIndex+1>=bundleRecipes.length){setBundleRun(null);return}
-      if(bundleAdvancing.current)return;
-      bundleAdvancing.current=true;
-      void continueBundle().finally(()=>{bundleAdvancing.current=false});
-      return;
-    }
-    /* Waiting on the incoming product's own saved defaults to land. If one is
-       genuinely not set up, stop rather than loop - stopWith names what is
-       missing, and pressing the button again resumes from here. */
-    if(!ready||!pricingApproved)return;
-    const targets=files.filter(file=>bundleQualityDecisions[`${activeRecipe?.id}:${file.id}`]!=="exclude");
-    if(!targets.length){setBundleRun(null);return}
-    void runDrafts(targets);
-  },[bundleRun,complete,running,preparingEtsy,preflightOpen,switchingProduct,ready,pricingApproved,bundleIndex,files,activeRecipe]);
-
-  function createDrafts() {const issues=requiredForStep("review");if(issues.length)return void stopWith("This batch isnâ€™t ready to create.",issues);const undecided=bundleQualityGroups.filter(group=>group.keys.some(key=>!bundleQualityDecisions[key]));
-    /* D509 - a flagged design in a bundle got a blocking dialog of sentences -
-       one run-on line per design per product, no sizes, and no way past it. The
-       resolution table already existed and had done since the single-product
-       flow: design, uploaded size, what Printify recommends, and a Proceed
-       anyway. A bundle went down a different path and never reached it. Same
-       table for both now, and it does not block: low resolution is a judgement
-       for her to make, not a wall. */
-    if(undecided.length){setPixelWarningOpen(true);return}if(planDraftsRemaining!==null&&requestedListingCount>planDraftsRemaining)return void stopWith("This batch is larger than your remaining plan allowance.",[activeBundle?`${files.length} designs Ã— ${bundleProductCount} products = ${requestedListingCount} listings after exclusions. You have ${planDraftsRemaining} listings remaining this month.`:`${planDraftsRemaining} ${planDraftsRemaining===1?"listing remains":"listings remain"} this month, but this batch contains ${files.length} designs.`]);if(!etsyShippingProfileId)return void stopWith("Choose shipping before creating drafts.",["Choose the Etsy shipping profile Goldie should apply to every listing."]);if(!pricingApproved)return void stopWith("Finish shipping first.",["Choose a shipping profile, then save or discard any custom shipping profile changes."]);setPreflightOpen(true);}
-  function confirmDrafts() { const recipeId=activeRecipe?.id;const targets=files.filter(file=>bundleQualityDecisions[`${recipeId}:${file.id}`]!=="exclude");setPreflightOpen(false);if(activeBundle&&bundleRecipes.length>1)setBundleRun({total:bundleRecipes.length});void runDrafts(targets); }
-
-  function retryFailed() {
-    const failedIds = new Set(drafts.filter((draft) => draft.status !== "Created").map((draft) => draft.clientId));
-    void runDrafts(files.filter((file) => failedIds.has(file.id)), true);
-  }
-
-  function startOver() {
-    setRestartBatchName(batchDisplayName||suggestedBatchName());
-    setRestartBatchOpen(true);
-  }
-
-  function finishRestart(preserveSavedBatch=false){clearCurrentBatch(true,preserveSavedBatch);/* D488 - the one path that is allowed to discard, because she chose it by name. */setRestartBatchOpen(false);setRestartBatchName("");goToStep(connected?"setup":"connect",true,true)}
-  async function saveAndRestart(){const name=restartBatchName.trim();if(!name)return;setRestartingBatch(true);try{const id=batchIdRef.current||crypto.randomUUID();batchIdRef.current=id;await saveBatchFiles(id,files.map(file=>file.file));if(!localPreview){const response=await fetch("/api/batches",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,status:"draft",step:workflowStep,setupName:name,productTitle:templateDetails?.blueprintTitle||"",designCount:files.length,state:{...batchStateSnapshot(),keptAsDrafts:true}})});if(!response.ok)throw new Error("Goldie could not save this batch.")}finishRestart(true)}catch(error){stopWith("This batch was not saved.",[error instanceof Error?error.message:"Try again in a moment."])}finally{setRestartingBatch(false)}}
-
-  function openDraft(draft: DraftResult) {
-    if (!draft.id || !draft.editorUrl) return;
-    window.open(draft.editorUrl, "_blank", "noopener,noreferrer");
-    setOpenedDrafts((current) => current.includes(draft.id!) ? current : [...current, draft.id!]);
-  }
-
-  function guardNavigation(event:{preventDefault:()=>void},href:string){if(!running)return;event.preventDefault();setLeaveTarget(href);setUploadNoticeOpen(true)}
-
-  function openAllDrafts() {
-    const editableDrafts = drafts.filter((draft) => draft.id && draft.editorUrl);
-    let opened = 0;
-    const openedIds: string[] = [];
-    editableDrafts.forEach((draft) => {
-      const printifyTab = window.open(draft.editorUrl!, "_blank", "noopener,noreferrer");
-      if (!printifyTab) return;
-      opened += 1;
-      openedIds.push(draft.id!);
-    });
-    setOpenedDrafts((current) => [...new Set([...current, ...openedIds])]);
-    setOpenAllMessage(opened === editableDrafts.length ? `${opened} Printify editor tabs opened.` : `Your browser opened ${opened} of ${editableDrafts.length}. Allow pop-ups for this site to open the rest.`);
-  }
-
-  const workflowHero = {
-    connect: { eyebrow: "ACCOUNT SETUP", title: "Connect your accounts", copy: connected&&etsyConnected?"Both accounts are connected and ready.":"Connect Printify and Etsy so Goldie can build and publish your listings." },
-    setup: templateDetails&&productSelected
-      /* D322 Â· This title changed once a product was selected â€” "Choose product"
-         became "Build this batch" â€” so step 1 renamed itself mid-step and started
-         describing the whole flow rather than the step you are on, while the rail
-         and eyebrow both still read PRODUCT. The rail's own stage title is
-         "Choose product", so that is the name three places already agree on. The
-         title stays put; the copy carries the state. */
-      ? { eyebrow: "STEP 1 OF 4", title: "Choose product", copy: "Check this productâ€™s colours, sizes and pricing, then continue to your designs." }
-      : { eyebrow: "STEP 1 OF 4", title: "Choose product", copy: "Choose a saved product or connect a completed Printify product." },
-    designs: { eyebrow: "STEP 2 OF 4", title: "Designs + images", copy: "Add up to 20 finished designs, then choose the photos and mockups for each listing." },
-    review: { eyebrow: "STEP 3 OF 4", title: "Create Printify drafts", copy: "Goldie creates an unpublished draft in Printify for every design in this batch." },
-    finish: finishPhase==="details" ? { eyebrow: "STEP 3 OF 4 Â· LISTING", title: "Listing details", copy: "Create the titles and tags, then review the description for every listing." } : finishPhase==="etsy" ? { eyebrow: "STEP 3 OF 4 Â· LISTING", title: "Listing details", copy: "Review the Etsy category and product-specific details." } : { eyebrow: "STEP 4 OF 4 Â· PUBLISH", title: "Publish", copy: "Review every listing before publishing it live on Etsy." },
-  }[workflowStep];
-
-  return (
-    <main className="app-shell" data-product-selected={templateDetails?"true":"false"}>
-      {/* D528 - the host lives at the root layout now, so every page has one. */}
-      <section className="mobile-gate" aria-label="Desktop required">
-        <div className="mobile-brand"><div className="approved-wm">Gold<span className="approved-i">Ä±<span>âœ¦</span></span>e</div><div className="approved-sub">Listing Factory</div></div>
-        <div className="mobile-card"><div className="mobile-command">âŒ˜</div><h1>Oops, this one needs a bigger screen.</h1><p>Goldie Listing Factory is built for desktop. Hop onto your computer and sign in. Your saved work will be waiting for you.</p><div className="mobile-saved">âœ“ Your progress is saved automatically.</div></div>
-        <div className="mobile-footer">Powered by Goldie AI Â· Â© 2026 Be A Wolf Biz</div>
-      </section>
-      <header className="topbar">
-        <div className="brand-lockup">
-          <GoldieWordmark className="approved-brand" />
-        </div>
-        <div className="top-actions">
-          <nav className="top-nav" aria-label="Goldie navigation">
-            <a className="active" href="/listing-factory" onClick={event=>guardNavigation(event,"/listing-factory")}><NavIcon name="listingFactory"/>Listing Factory</a>
-            <a href="/batches" onClick={event=>guardNavigation(event,"/batches")}><NavIcon name="batches"/>Batch History</a>
-            <a href="/keywords" target="_blank" rel="noopener noreferrer"><NavIcon name="keywords"/>Keyword Banks</a>
-            <a href="/mockups" target="_blank" rel="noopener noreferrer"><NavIcon name="mockups"/>Mockup Library</a>
-            <a href="/usage" onClick={event=>guardNavigation(event,"/usage")}><NavIcon name="usage"/>Usage + Plan</a>
-            {/* D639 - ?step=connect is honoured as an explicit request and the
-                auto-skip leaves it alone, so this is the way back to the
-                connection screen rather than a new page. */}
-            <a href="/listing-factory?step=connect" onClick={event=>guardNavigation(event,"/listing-factory?step=connect")}><NavIcon name="connections"/>Connections</a>
-          </nav>
-          <button className="workflow-restart-button" type="button" disabled={running} onClick={startOver}>{/* D362 Â· The glyph â†» renders at text weight in most UI faces, so at 11px it
-              read as a stray mark rather than an arrow. A drawn icon keeps its
-              stroke and its arrowhead at any size. */}
-              <svg className="new-batch-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 15.3-6.4L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15.3 6.4L3 16"/><path d="M3 21v-5h5"/></svg> Start a new batch</button>
-          <GoldieCommandBar data={commandCenterData} onUseProduct={recipe=>{void chooseRecipe(recipe).then(selected=>{if(selected)goToStep("setup")})}} onStartBlank={()=>{clearCurrentBatch(true);goToStep("setup")}}/>
-          {owner && <a className="diagnostics-link" href="/mastermind-admin" aria-label="Open Goldie Diagnostics" title="Goldie Diagnostics">â˜…</a>}
-          <a className="usage-link" href="/usage" onClick={event=>guardNavigation(event,"/usage")}>Usage + Plan</a>
-          {signedIn!==null&&(localPreview&&!signedIn?<span className="account-link" title="Account sign-in is available on the published Listing Factory site.">Preview mode</span>:<a className="account-link" href={signedIn?"/account/sign-out?return_to=%2Flisting-factory":"/account/sign-in?return_to=%2Flisting-factory"}>{signedIn?"Sign out":"Sign in"}</a>)}
-        </div>
-        <div className="approved-sidebar-footer"><a className="approved-usage" href="/usage"><b>Usage + Plan</b><span>{sidebarUsage?`${sidebarUsage.used} / ${sidebarUsage.limit} listings`:"Loading usageâ€¦"}</span><div className="approved-usage-track" aria-hidden="true"><i style={{width:sidebarUsage?`${Math.min(100,sidebarUsage.used/sidebarUsage.limit*100)}%`:"0%"}} /></div></a>{listingGoal&&<a className="listing-goal-side" href="/goals"><span className="listing-goal-caption">This {listingGoal.period}&rsquo;s goal</span><b>{goalDone} of {listingGoal.target}</b><span className="listing-goal-track" aria-hidden="true"><i style={{width:`${Math.min(100,Math.round((goalDone/Math.max(1,listingGoal.target))*100))}%`}}/></span></a>}{/* D357 Â· "Powered by Goldie AI" is the widest line in the sidebar, so it sets
-            the column's visual edge. Sitting above the copyright and the Etsy notice
-            it made those look indented; at the bottom the block reads as one
-            left-aligned stack that widens as it descends. */}
-            <small>Â© 2026 Be A Wolf Biz</small><p className="etsy-api-disclosure">The term &apos;Etsy&apos; is a trademark of Etsy, Inc. This application uses the Etsy API but is not endorsed or certified by Etsy, Inc.</p><div className="approved-powered"><span>Powered by</span><b>Gold<span className="approved-footer-i">Ä±<i>âœ¦</i></span>e AI</b></div></div>
-      </header>
-
-      {running&&uploadNoticeOpen&&<div className="upload-notice-backdrop" role="presentation"><section className="upload-notice" role="alertdialog" aria-modal="true" aria-labelledby="upload-notice-title" aria-describedby="upload-notice-copy"><span className="upload-notice-icon">!</span><p className="mini-label">UPLOADS IN PROGRESS</p><h2 id="upload-notice-title">Wait. Your files are still uploading.</h2><p id="upload-notice-copy">Are you sure you want to leave? Leaving now may stop the unfinished uploads.</p><div className="upload-notice-progress"><span className="upload-guard-pulse"/><b>{processed} of {runTotal} finished</b></div><div className="upload-notice-actions"><button autoFocus onClick={()=>{setUploadNoticeOpen(false);setLeaveTarget("")}}>Stay on this page</button><button className="danger" onClick={()=>{if(leaveTarget)window.location.href=leaveTarget}}>Leave and stop uploads</button></div></section></div>}
-
-      {!returningHome&&<section className="hero workflow-hero">
-        <div>
-          <p className="eyebrow">{workflowHero.eyebrow}</p>
-          {restoreNotice&&<p className="batch-restore-notice" role="status">{restoreNotice}</p>}
-          {/* D659 Â· Where the blocking modal used to be. Same information, on
-              the page, next to the products she can actually choose. */}
-          {restoredProductNotice&&<p className="batch-restore-notice" role="status">{restoredProductNotice}</p>}
-          {/* D659 Â· More than one batch is open, so Goldie asks instead of
-              picking one and instead of pretending there is nothing to resume. */}
-          {resumeChoices.length>1&&<section className="batch-resume-choice" aria-label="Choose which batch to resume"><b>Which batch do you want to continue?</b><span>You have {resumeChoices.length} batches open. Goldie will not guess.</span><ul>{resumeChoices.map(choice=><li key={choice.id}><button type="button" onClick={()=>{setResumeChoices([]);setRestoringBatch(true);const target=new URL(window.location.href);target.searchParams.set("batch",choice.id);window.history.replaceState({},"",target);void restoreBatchById(choice.id,target.searchParams.get("step"),target.searchParams.get("phase"))}}><b>{choice.name}</b><small>{choice.drafts?`${choice.drafts} ${choice.drafts===1?"draft":"drafts"}`:"No drafts yet"}</small></button></li>)}</ul><button type="button" className="secondary-action" onClick={()=>setResumeChoices([])}>Start something new instead</button></section>}
-          <div className="heading-with-help hero-title-help"><h1>{workflowHero.title}</h1><ContextHelp label={`Open detailed help for ${PROGRESS_STEPS[progressIndex]}`} title={WORKFLOW_HELP[progressIndex].title} intro={WORKFLOW_HELP[progressIndex].intro} sections={WORKFLOW_HELP[progressIndex].sections}/></div>
-          <p className="hero-step-count">{workflowStep==="connect"?"Account setup Â· before you start":`Step ${railTopNumber} of ${RAIL_STAGES.length} Â· ${currentStage.label}`}</p>
-          <p className="hero-copy">{workflowHero.copy}</p>
-          {workflowStep==="connect"&&<div className="value-proof" aria-label="What this batch supports"><span><b>Up to 20 designs</b><small>in one batch</small></span><span><b>Costs and fees</b><small>shown for every variant</small></span><span><b>You approve</b><small>before anything goes live</small></span></div>}
-        </div>
-      </section>}
-
-      {!returningHome&&<section className={`workspace ${complete&&workflowStep==="designs"?"mockup-workspace":""}`}>
-        <nav className="workflow-progress" aria-label="Listing Factory progress" style={{"--rail-count":RAIL_STAGES.length} as React.CSSProperties}>
-          <div className="workflow-progress-head"><div><p className="mini-label">{workflowStep==="connect"?"ACCOUNT SETUP":"YOUR BATCH"}</p>{/* D416 - On the Connect step this read "Step 1 of 4 Â· Product" under a heading
-                that says "Connect your accounts", and the rail lit up Product. Connecting
-                is a one-time gate before the four steps, not the first of them. */}<b>{workflowStep==="connect"?"Connect Printify and Etsy":`Step ${railTopNumber} of ${RAIL_STAGES.length} Â· ${currentStage.label}`}</b></div>{(template||files.length>0||drafts.length>0)&&<button className="start-new-batch" disabled={running} onClick={startOver}>Clear batch + start over</button>}</div>
-          {localPreview&&<p className="preview-mode-note">Preview mode Â· every step is unlocked <a href="/design-lab">Open design lab â†’</a></p>}
-          {RAIL_STAGES.map((stage,position)=>{
-            const active=stage.covers.includes(progressIndex);
-            /* D226 Â· Completion is stage ORDER, not raw index. Images covers the
-               legacy indices 2, 3, 4 and 7, and 7 is higher than Listing's 5 â€” so
-               comparing indices meant Images could never read as done while the
-               seller stood on Listing. It showed "02" with a tick beside it on
-               Product and nothing on the stage they had just finished. */
-            /* D557 - "done" meant "you have walked past it", so going back to
-               step 1 stripped the ticks off Images and Listing on a batch whose
-               images and listing details were finished. Measured on her bundle:
-               the same batch read PRODUCTâœ“ IMAGESâœ“ LISTING on step 3 and PRODUCT
-               IMAGES LISTING on step 1. A stage is done when its own work is
-               done. */
-            /* D617 - Listing read as done while the seller was still on Images.
-               Its "started" test was `complete`, which means the Printify drafts
-               exist - and drafts are created ON the Images step. So the moment a
-               batch finished creating drafts, the rail ticked a stage whose own
-               work had not been touched.
-
-               D557 already settled the rule: a stage is done when its OWN work is
-               done. Listing's work is titles and Etsy details, not draft
-               creation. */
-            const stageStarted=stage.index===1?Boolean(activeRecipe||activeBundle)
-              :stage.index===2?files.length>0
-              :stage.index===5?files.length>0&&files.every(file=>Boolean(file.title?.trim()))
-              :Number(batchReceipt?.publishedCount||0)>0;
-            /* D620 - a stage AHEAD of the one she is standing on never shows a
-               tick, whatever its own work says.
-
-               D557 made "done" mean "its own work is finished", so that walking
-               back did not strip ticks off finished work. That was right about
-               going back and wrong about going forward: on Images, with titles
-               already written, Listing sat there ticked as though step 3 were
-               behind her. A progress rail that says a step you have not reached
-               is complete is not reporting progress.
-
-               Behind her: ticked when its work is done. Where she is: its number.
-               Ahead of her: never ticked. */
-            const reached=stagePosition<0||position<=stagePosition;
-            const done=reached&&(stage.index===8?stageStarted:(stageStarted&&progressGateIssues(stage.index).length===0)||(stagePosition>=0&&position<stagePosition));
-            const issues=progressGateIssues(stage.index);
-            const draftLine=stage.label==="Images"&&complete?` Â· ${createdDraftCount} ${createdDraftCount===1?"draft":"drafts"} created`:"";
-            /* D227 Â· Never disable the stage the seller is currently on. When drafts failed,
-               the rail greyed out Listing while the seller was standing on Listing â€”
-               a control refusing the page it was already showing. */
-            return <button key={stage.label} className={`${active?"active":""} ${done?"done":""}`} disabled={!active&&Boolean(issues.length)} aria-current={active?"step":undefined} title={issues[0]||undefined} onClick={()=>openProgressStep(stage.index)}><em className="progress-bubble-label">{stage.label}</em>{/* D352 Â· Zero-padding four steps ("01 of 04") is a template tic â€” it implies
-                a longer sequence than exists and adds a character that carries no
-                information. */}
-                {/* D619 - the step you are STANDING on shows its number, never a
-                    tick. It rendered a tick identical to the finished stages, so
-                    Product, Images and Listing all read "done" at once and the
-                    only thing marking your position was a pale box behind the
-                    label. Remove the box and nothing said where you were.
-
-                    You cannot have finished the step you are still on. */}
-                <span>{!active&&done?"âœ“":String(position+1)}</span><span><b>{stage.title}</b><small>{issues[0]||`${progressStatus(stage.index,active,done,Boolean(issues.length))}${draftLine}`}</small></span></button>})}
-          <p className="workflow-help">Goldie saves completed work. You can return to an earlier step without starting over.</p>
-        </nav>
-        <div className="workflow-stage">
-        {/* D550 - opening a saved batch renders the heading, then nothing at all
-            for several seconds, then the whole step. Captured on step 3: title,
-            an empty page, and "Back / Saved automatically" floating in the middle
-            of it. Every other slow thing in Goldie says it is working; this one
-            looked broken. */}
-        {restoringBatch&&<div className="batch-opening" role="status"><span className="batch-opening-spinner" aria-hidden="true"/><div><b>Opening your batchâ€¦</b><small>Goldie is reading your designs, drafts and listing details.</small></div></div>}
-        {progressIndex>0&&<WorkflowMomentum
-          current={railTopNumber}
-          total={RAIL_STAGES.length}
-          label={progressIndex===PROGRESS_STEPS.length-1?"Final review":`Next: ${PROGRESS_STEPS[Math.min(progressIndex+1,PROGRESS_STEPS.length-1)]}`}
-        />}
-        {/* D355 Â· The bundle banner is gone. It sat above the page announcing what
-          had just been selected â€” but selecting it is what put you here, and the
-          product cards below each carry their own name. It was a label for
-          something the page was already showing, taking the first screenful. */}
-        {progressIndex>0&&<GoldieInsight>{currentInsight()}</GoldieInsight>}
-        {progressIndex===3&&files.length>0&&<ActionReceipt items={[{value:`${files.length} designs checked`,label:"Original artwork resolution preserved"},{value:`${pricedVariants.length} variants`,label:pricingApproved?"Pricing approved":"Ready for pricing review"}]}/>}
-        {progressIndex===5&&titleCount>0&&<ActionReceipt items={[{value:`${titleCount} titles ready`,label:"Validated keyword phrases only"},{value:`${files.reduce((sum,file)=>sum+file.tags.length,0)} matching tags`,label:"Zero invented keywords"}]}/>}
-        <div className={`steps-column ${workflowStep}-column`}>
-          {workflowStep==="finish"&&finishPhase==="etsy"&&false&&<div className="step-success-banner" role="status"><span aria-hidden="true">âœ“</span><div><b>Titles, tags, and descriptions complete</b><small>{files.length} {files.length===1?"listing is":"listings are"} ready for Etsy details.</small></div></div>}
-          {workflowStep==="designs"&&complete&&<div className="step-success-banner" role="status"><span aria-hidden="true">âœ“</span><div><b>Etsy details complete</b><small>{files.length} {files.length===1?"listing is":"listings are"} ready for photos and mockups.</small></div></div>}
-          
-          <article className={`step-card connect-step workflow-panel ${connected ? "done" : ""} ${workflowStep==="connect"?"active-panel":"hidden-panel"}`}>
-            
-            <div className="step-content">
-              {/* D284 Â· The page title already reads "Connect your accounts"; this card repeated it word for word directly beneath. */}
-              <p className="step-copy">{connected&&etsyConnected?"Both connections are verified. Goldie will remember them for future batches.":"Connect the Printify account that creates your products and the Etsy shop that receives them."}</p>
-              {(!connected||!etsyConnected)&&<p className="connect-timing">â—· First-time connection usually takes about 2 minutes.</p>}
-              {checkingConnection ? (
-                <div className="connection-row"><span className="connection-icon">P</span><div><b>Secure connection checkâ€¦</b><small>This takes just a moment</small></div></div>
-              ) : !connected ? (
-                <div className="connection-stack connection-setup">
-                  <section className="printify-service-group">
-                  <div className="connection-row service-row"><span className="connection-icon"><img src="/printify-logo.svg" alt="" /></span><div><b>Printify</b><small>Create and update your product drafts.</small></div><button onClick={()=>setShowTokenForm(value=>!value)}>{showTokenForm?"Close":"Connect Printify"}</button></div>
-                  {showTokenForm&&<div className="inline-field approved-token-form"><label>Paste the token you copied from Printify</label><input type="password" value={token} onChange={(event) => setToken(event.target.value)} placeholder="Paste token here" aria-label="Printify token" /><button aria-busy={connecting} onClick={connectPrintify} disabled={!token.trim() || connecting}>{connecting ? "Connectingâ€¦" : "Connect securely"}</button></div>}
-                  {connectionError && <p className="field-error" role="alert">{connectionError}</p>}
-                  <details className="token-help approved-token-help">
-                    <summary>How to get your Printify token <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></summary>
-                    <div className="approved-token-instructions"><b>Get your Printify token step by step</b><div className="token-shop-warning"><b>First, make sure you are in the right Printify account</b><span>Sign in to the account that contains the Etsy shop and saved products you want Goldie to use. A token connects the whole Printify account. In Step 2, your saved product tells Goldie which exact shop to use.</span></div>
-                    <ol>
-                      <li>Open Printify and click your profile icon.</li>
-                      <li>Choose <b>My Profile</b>, then open <b>Connections</b>.</li>
-                      <li>If Printify asks for a developer contact email, enter an email address you check and save it.</li>
-                      <li>Find <b>Personal Access Tokens</b> and click <b>Generate</b>.</li>
-                      <li>Name the token <b>Goldie Listing Factory</b>.</li>
-                      <li>Turn on these permissions: <b>shops.read, catalog.read, products.read, products.write, uploads.read, uploads.write, and print_providers.read</b>. Goldie does not need order permissions.</li>
-                      <li>Click <b>Generate token</b>, then copy it immediately. Printify only shows the full token once.</li>
-                      <li>Come back to this page, paste the token below, and click <b>Connect Printify</b>. Goldie will verify the account before letting you continue.</li>
-                    </ol>
-                    <a href="https://help.printify.com/hc/en-us/articles/4483626447249-How-can-I-generate-an-API-token" target="_blank" rel="noreferrer">Open Printifyâ€™s official token instructions â†—</a></div>
-                  </details>
-                  </section>
-                  <div className={`connection-row etsy-connection service-row ${etsyConnected?"connected":""}`}><span className="connection-icon"><img src="/etsy-logo.svg" alt="" /></span><div><b>{etsyConnected?"Etsy connected":"Etsy"}</b>{etsyConnected&&<em className="etsy-shop-name">{etsyShop||"your shop"}</em>}<span className="sr-only">Connect Etsy before publishing</span><small>{etsyConnected?"Connected and verified.":"Required before Goldie publishes and finishes your listings."}</small></div>{etsyConnected?<button className="disconnect-link" onClick={async()=>{if(!await confirmAction({title:"Disconnect your Etsy shop?",body:"Goldie will not be able to publish listings until you reconnect and authorise it again. Your existing Etsy listings are not affected.",confirmLabel:"Disconnect Etsy",cancelLabel:"Keep connected"}))return;await fetch("/api/etsy",{method:"DELETE"});setEtsyConnected(false);setEtsyShop("")}}>Disconnect</button>:<button className="secondary-action" aria-busy={etsyConnecting} onClick={()=>void connectEtsy()} disabled={etsyConnecting}>{etsyConnecting?"Opening Etsyâ€¦":"Connect Etsy"}</button>}</div>
-                  <small className="secure-copy">â™¢ Encrypted and saved securely.</small>
-                </div>
-              ) : (
-                <div className="connection-stack connection-setup connected-connection-stack">
-                  <div className="connection-row"><span className="connection-icon"><img src="/printify-logo.svg" alt="" /></span><div><b>Printify connected</b><small>Your connection will be remembered</small></div><button className="disconnect-link" onClick={async () => { if(!await confirmAction({title:"Disconnect Printify?",body:"Goldie will not be able to create or publish drafts until you reconnect with a new API token. Your Printify products are not affected.",confirmLabel:"Disconnect Printify",cancelLabel:"Keep connected"}))return; await fetch("/api/printify", { method: "DELETE" }); setConnected(false); setToken(""); setTemplateDetails(null); setConnectionError(""); }}>Disconnect</button></div>
-                  <div className={`connection-row etsy-connection service-row ${etsyConnected?"connected":""}`}><span className="connection-icon"><img src="/etsy-logo.svg" alt="" /></span><div><b>{etsyConnected?"Etsy connected":"Etsy"}</b>{etsyConnected&&<em className="etsy-shop-name">{etsyShop||"your shop"}</em>}<small>{etsyConnected?"Connected and verified.":"Required before Goldie publishes and finishes your listings."}</small></div>{etsyConnected?<button className="disconnect-link" onClick={async()=>{if(!await confirmAction({title:"Disconnect your Etsy shop?",body:"Goldie will not be able to publish listings until you reconnect and authorise it again. Your existing Etsy listings are not affected.",confirmLabel:"Disconnect Etsy",cancelLabel:"Keep connected"}))return;await fetch("/api/etsy",{method:"DELETE"});setEtsyConnected(false);setEtsyShop("")}}>Disconnect</button>:<button className="secondary-action" onClick={()=>void connectEtsy()} disabled={etsyConnecting}>{etsyConnecting?"Opening Etsyâ€¦":"Connect Etsy"}</button>}</div>
-                </div>
-              )}
-              {connected&&connectionError&&<p className="field-warning" role="status">{connectionError}</p>}
-              {etsyError&&<p className="field-error" role="alert">{etsyError}</p>}
-              {/* D615 - a forward control belongs to the step that is open, and to
-                  no other. This one rendered whenever Printify and Etsy were
-                  connected, so it sat inside the collapsed Connect panel for the
-                  whole rest of the batch, still enabled, still pointing back at
-                  Product. The panel is display:none so a seller could not reach
-                  it - but an enabled control that navigates backward has no
-                  business existing at all, and one CSS regression is the
-                  difference between hidden and live. */}
-              {workflowStep==="connect"&&(localPreview||(connected&&etsyConnected))&&<button className="workflow-next" onClick={()=>goToStep("setup",false,localPreview)}>Next step <span>â†’</span></button>}
-            </div>
-          </article>
-
-          <div className={`product-step workflow-panel ${workflowStep==="setup"?"active-panel":"hidden-panel"}`}><SavedWorkflow bundleChosen={Boolean(activeBundle&&bundleRecipes.length>1)} savedRevision={savedRevision} connected={connected||localPreview} templateUrl={template} templateVerified={templateLoaded} loadingTemplate={loadingTemplate} suggestedProductName={templateDetails?[templateDetails.brand,templateDetails.model].filter(Boolean).join(" ").trim()||templateDetails.blueprintTitle||"":""} selectedProductId={activeBundle?`bundle:${activeBundle.id}`:activeRecipe?.id||""} selectedSummary={templateDetails?<div className="template-proof recipe-proof"><div className="product-thumb"><span>YOUR<br/>ART</span></div><div className="template-info">{bundleSelected?<><b>{activeBundle?.name}</b><span>{bundleRecipes.length} products Â· {bundleRecipes.map(item=>item.name).join(" Â· ")}</span><span>âœ“ Each product keeps its own colors, sizes, mockups, and keywords</span></>:<><b>{templateDetails.blueprintTitle}</b><span>{templateDetails.provider} Â· {variantSummary(summaryAxes(templateDetails,activeRecipe))}</span><span>âœ“ Product, placement, sizes, and shipping profile imported</span></>}</div><span className="template-badge">{bundleSelected?"Bundle selected":productSelected?"Product selected":"Save this product"}</span></div>:null} verifiedShippingProfileId={Number(templateDetails?.shippingTemplateId)||0} onTemplateUrl={(value) => { templateLoadVersion.current+=1;setLoadingTemplate(false);setTemplate(value);setTemplateDetails(null);setTemplateError(""); }} onUseRecipe={chooseRecipe} onUseBundle={useBundle} onStartNewProduct={startNewProduct} onChangeProduct={changeProduct} onVerifyTemplate={loadTemplateUrl} />
-          {localPreview&&!templateDetails&&<button className="preview-demo-button" onClick={()=>void loadPreviewDemo()}>Load a complete poster demo to review every step</button>}
-          {templateError && <p className="field-error recipe-error" role="alert">{templateError}</p>}
-          <BatchPreferencesPortal>
-          {/* D457 - the "set up this product" framing is gone; a product saves its own defaults as they are chosen. */}
-          
-          {templateDetails&&productSelected&&<div className="saved-product-batch-page"><section className="batch-products" aria-label="Products in this batch">{(()=>{
-            /* D385 - One card with one spinner while the bundle loads, then every
-               product revealed together. Not a line of prose per product, and not
-               a skeleton per product either - one card. */
-            const list=activeBundle&&bundleRecipes.length>1?bundleRecipes:(activeRecipe?[activeRecipe]:[]);
-            const waiting=list.some((recipe,index)=>!((!activeBundle||bundleRecipes.length<2||index===bundleIndex)?templateDetails:bundleColorProducts[recipe.id]));
-            if(!waiting)return null;
-            return <article className="batch-product-card bundle-loading-card" role="status" aria-label={`Loading ${list.length} ${list.length===1?"product":"products"}`}>
-              <span className="bundle-loading-spinner" aria-hidden="true"/>
-              <p>Loading {list.length} {list.length===1?"product":"products"}â€¦</p>
-            </article>;
-          })()}{(activeBundle&&bundleRecipes.length>1?bundleRecipes:(activeRecipe?[activeRecipe]:[])).map((recipe,index)=>{const isActive=!activeBundle||bundleRecipes.length<2||index===bundleIndex;const product=isActive?templateDetails:bundleColorProducts[recipe.id];const anyPending=(activeBundle&&bundleRecipes.length>1?bundleRecipes:(activeRecipe?[activeRecipe]:[])).some((item,position)=>!((!activeBundle||bundleRecipes.length<2||position===bundleIndex)?templateDetails:bundleColorProducts[item.id]));if(!product||anyPending)return null;const ready=readinessFor(product,recipe,isActive?pricingApproved:Boolean(bundleApproved[recipe.id]));/* D232 Â· Colours and sizes are open from the start. They are the two things a
-             seller comes to this page to check, and a collapsed row is easy to walk
-             past â€” "the colors and the sizes should probably just be expanded so
-             people don't accidentally miss them". Both can be open at once, so this
-             holds a list rather than a single name. */
-          /* D329 Â· Every product used to open colours AND sizes at once, so a three
-                 product bundle put three full colour grids on screen together. Only
-                 the first product starts open; the others are one click away. */
-              /* D356 Â· The render and the toggle each carried their OWN default for
-                 which panels are open, and they disagreed: the render opened
-                 ["colors"], the toggle fell back to ["colors","sizes"]. So the first
-                 click on any row started from a list that did not match the screen â€”
-                 clicking Shipping produced ["colors","sizes","shipping"] and Sizes
-                 sprang open alongside it. One default, used by both. */
-              /* D361 Â· Nothing opens by default. Opening Colours for the first product
-                 chose the seller's starting point for them, and buried the other three
-                 categories under a 39-swatch grid before they had seen the card. All
-                 four rows visible, they pick where to begin. */
-              const defaultOpenFacets:string[]=[];
-              const openList=openFacet[recipe.id]??defaultOpenFacets;
-          const isOpen=(name:string)=>openList.includes(name);
-          /* D564 - step 1 was the only step that stacked. Measured on her bundle:
-             the card is 313px shut, and opening Colors, Sizes, Pricing and
-             Shipping in turn took it to 934, 1263, 2289 and 2791px, because every
-             row toggled independently and nothing ever closed. Steps 2, 3 and 4
-             have shown one panel at a time since D539, and this is the first
-             screen she touches. One at a time here too. */
-          const toggle=(name:string)=>setOpenFacet(current=>{const list=current[recipe.id]??defaultOpenFacets;return {...current,[recipe.id]:list.includes(name)?[]:[name]}});
-          /* D218 Â· Every picker used to render after the whole row list, so clicking
-             Change on Colours opened the palette below Etsy details and the seller had
-             to scroll past six rows to reach the thing they just asked for. The panel
-             JSX is unchanged; it is emitted inside the row map now, directly beneath
-             the row that opened it. The parameter shadows `open` so the existing
-             guards read correctly without rewriting them. */
-          const pricingPanelFor=(which:"prices"|"shipping")=>{
-            const details=isActive?templateDetails:bundleColorProducts[recipe.id];
-            if(!details)return null;
-            const colorIds=(isActive?selectedColorIds:bundleColorChoices[recipe.id])||recipe.defaultColorIds||[];
-            const sizeIds=(isActive?selectedSizeIds:bundleSizeChoices[recipe.id])||recipe.defaultSizeIds||[];
-            const recipePricing=isActive?pricing:(bundlePricing[recipe.id]||{...pricing,targetProfit:Number(recipe.defaultProfitTarget)||DEFAULT_PRICING.targetProfit});
-            return <PricingReview
-              section={which}
-              variants={variantsFor(details,colorIds,sizeIds)}
-              pricing={recipePricing}
-              prices={isActive?variantPrices:(bundlePrices[recipe.id]||recipe.variantPrices||{})}
-              productName={recipe.name}
-              profiles={etsyShippingProfiles}
-              selectedProfileId={isActive?etsyShippingProfileId:(bundleShipping[recipe.id]||Number(recipe.etsyShippingProfileId)||0)}
-              templateShippingProfileId={Number(details.shippingTemplateId)||0}
-              profilesLoading={shippingProfilesLoading}
-              profilesError={shippingProfilesError}
-              approved={isActive?pricingApproved:Boolean(bundleApproved[recipe.id])}
-              onPricing={value=>{
-                if(isActive){setPricing(value);setPricingApproved(false)}
-                else{setBundlePricing(current=>({...current,[recipe.id]:value}));setBundleApproved(current=>({...current,[recipe.id]:false}))}
-                if(value.targetProfit!==Number(recipe.defaultProfitTarget))void establish(recipe,{defaultProfitTarget:value.targetProfit})}}
-              onPrices={value=>{
-                if(isActive){setVariantPrices(value);setPricingApproved(false)}
-                else{setBundlePrices(current=>({...current,[recipe.id]:value}));setBundleApproved(current=>({...current,[recipe.id]:false}))}
-                persistProductPricing(recipe,{variantPrices:value})}}
-              wholeNumber={Boolean(wholeNumberByRecipe[recipe.id]??recipe.wholeNumberPricing)}
-              onWholeNumber={value=>{
-                setWholeNumberByRecipe(current=>({...current,[recipe.id]:value}));
-                persistProductPricing(recipe,{wholeNumberPricing:value})}}
-              onSelectProfile={value=>{
-                /* D461 - picking a shipping profile used to un-approve the pricing,
-                   and the button to approve it again lives inside the collapsed
-                   Shipping section. So choosing a profile disabled Next step with
-                   no visible reason and no visible way out - the wall she hit on
-                   the mug. A product that already carries a profit target and a
-                   profile is approved; prices recalculate on their own, and she is
-                   told what they are. Only a product with nothing saved still has
-                   to approve once. */
-                const carries=recipeCarriesApprovedPricing({defaultProfitTarget:recipe.defaultProfitTarget,etsyShippingProfileId:value});
-                if(isActive){setEtsyShippingProfileId(value);setPricingApproved(carries)}
-                else{setBundleShipping(current=>({...current,[recipe.id]:value}));setBundleApproved(current=>({...current,[recipe.id]:carries}))}
-                if(value&&value!==Number(recipe.etsyShippingProfileId))void establish(recipe,{etsyShippingProfileId:value})}}
-              onCreateProfile={createCustomShippingProfile}
-              onApprovalChange={value=>{if(isActive)setPricingApproved(value);else setBundleApproved(current=>({...current,[recipe.id]:value}))}}
-            />;
-          };
-          const panelFor=(open:string)=><>{open==="profit"&&pricingPanelFor("prices")}{open==="shipping"&&pricingPanelFor("shipping")}{open==="colors"&&<ProductColorSelector product={product} selected={shownColors} onChange={ids=>{if(isActive){setSelectedColorIds(ids);setPricingApproved(false)}else setBundleColorChoices(current=>({...current,[recipe.id]:ids}));if(ids.length)void establish(recipe,{defaultColorIds:ids})}} onRemember={()=>void saveProductDefaults({defaultColorIds:shownColors},`colors:${recipe.id}`)} remembering={savingProductDefault===`colors:${recipe.id}`} remembered={sameIdSet(shownColors,recipe.defaultColorIds)} inCard/>}{open==="sizes"&&<ProductSizeSelector product={product} selected={shownSizes} onChange={ids=>{if(isActive){setSelectedSizeIds(ids);setPricingApproved(false)}else setBundleSizeChoices(current=>({...current,[recipe.id]:ids}));if(ids.length)void establish(recipe,{defaultSizeIds:ids})}} onRemember={()=>void saveProductDefaults({defaultSizeIds:shownSizes},`sizes:${recipe.id}`)} remembering={savingProductDefault===`sizes:${recipe.id}`} remembered={sameIdSet(shownSizes,recipe.defaultSizeIds)} inCard/>}</>;const colorFacet=ready.facets.find(facet=>facet.name==="colors");const sizeFacet=ready.facets.find(facet=>facet.name==="sizes");const shownColors=(isActive?selectedColorIds:bundleColorChoices[recipe.id])||recipe.defaultColorIds||colorFacet?.suggested?.colorIds||[];const shownSizes=(isActive?selectedSizeIds:bundleSizeChoices[recipe.id])||recipe.defaultSizeIds||sizeFacet?.suggested?.sizeIds||[];return <article className={`batch-product-card ${ready.established?"is-ready":"needs-setup"} ${bundleSelected?"in-batch":""}`} key={recipe.id}><header>{pickProductPhoto(product)?<img className="bundle-product-photo" src={pickProductPhoto(product)} alt="" loading="lazy" decoding="async"/>:<ProductGlyph title={product.blueprintTitle}/>}<span className="bundle-product-id">{bundleSelected&&<em className="batch-product-position">Product {index+1} of {bundleRecipes.length}</em>}<b>{recipe.name}</b><small>{product.blueprintTitle}</small></span>{/* D347 Â· This read "1 to set", which names a count without naming what it
-            counts. The card already marks the exact rows that need attention; the
-            header only has to say that something in here does. */}
-            <span className={`batch-product-state ${ready.established?"":"attention"}`} title={ready.established?"Ready":`${ready.questions.length} ${ready.questions.length===1?"setting needs":"settings need"} your attention`} aria-label={ready.established?"Ready":`${ready.questions.length} ${ready.questions.length===1?"setting needs":"settings need"} your attention`}>{ready.established?"Ready":<em aria-hidden="true">!</em>}</span></header><div className="batch-product-rows">{/* D338 Â· These rows used to be sorted so anything unset floated to the top,
-                 so a product with no shipping profile showed Shipping first and Colors
-                 third â€” the categories moved depending on what happened to be
-                 missing. Position is how you find things; it cannot depend on state.
-                 Fixed order, always: Colors, Sizes, Pricing, Shipping. An unset row
-                 still marks itself, which is what "needed" already does. */
-                ready.facets.map(facet=>{const label=({colors:"Colors",sizes:"Sizes",mockups:"Mockups",keywords:"Keywords",shipping:"Shipping",profit:"Pricing",etsy:"Etsy details"} as Record<string,string>)[facet.name];const action=({colors:"Pick colors",sizes:"Pick sizes",mockups:"Pick a mockup set",keywords:"Pick a keyword bank",shipping:"Pick a shipping profile",profit:"Set a profit goal",etsy:"Add Etsy details"} as Record<string,string>)[facet.name];const needed=facet.state==="ask";const inCard=["colors","sizes","profit","shipping"].includes(facet.name);const suggestion=(facet.suggested?.colorIds||facet.suggested?.sizeIds||[]).length;const openThis=()=>{if(inCard){toggle(facet.name);return}const dest=FACET_DESTINATION[facet.name];if(!dest)return;if(dest.step!==workflowStep)goToStep(dest.step);window.setTimeout(()=>{const block=document.querySelector<HTMLElement>(dest.selector);if(!block)return;block.scrollIntoView({block:"start"});block.classList.add("just-opened");window.setTimeout(()=>block.classList.remove("just-opened"),1600)},dest.step!==workflowStep?260:0)};return <Fragment key={facet.name}><div className={`batch-product-row ${needed?"needed":"settled"} ${isOpen(facet.name)?"open":""} ${inCard?"clickable":""}`} role={inCard?"button":undefined} tabIndex={inCard?0:undefined} aria-expanded={inCard?isOpen(facet.name):undefined} onClick={inCard?event=>{if((event.target as HTMLElement).closest("button"))return;openThis()}:undefined} onKeyDown={inCard?event=>{if(event.key==="Enter"||event.key===" "){event.preventDefault();openThis()}}:undefined}><span className="row-mark" aria-hidden="true">{needed?"!":"\u2713"}</span><span className="row-label">{label}</span><span className="row-value">{needed?action:facet.label}{facet.note?<small>{facet.note}</small>:null}</span><button type="button" className="row-open" onClick={openThis}>{isOpen(facet.name)?"Close":needed?"Choose":"Change"}</button></div>{isOpen(facet.name)?<>{panelFor(facet.name)}<button type="button" className="panel-collapse-foot" onClick={()=>toggle(facet.name)}>Close {label.toLowerCase()}</button></>:null}</Fragment>;})}</div></article>})}</section>{/* D232 Â· The "<product> â€” description and Etsy details" block is gone. It held
-              Keyword bank, Product description, Etsy details and Listing photos â€” every
-              one of which now lives on the Listing or Images page. It was a fifth,
-              uncarded copy of four settings, sitting on the PRODUCT page where none of
-              them belong, and it survived three rounds of "find everything". */}</div>}
-          
-          {templateDetails&&!productSelected&&<p className="field-warning recipe-error" role="status">Name and save this product before continuing, or select one of your saved products above.</p>}
-          
-          
-          
-          
-          {/* D217 Â· Pricing moves onto the Product page. Colours and sizes decide which
-              variants exist, and the price is set per variant, so pricing could never
-              be answered before them â€” it was a whole separate step for a panel that
-              belongs directly underneath the thing it prices. This is the existing
-              PricingReview component moved intact: grouped per-size prices, the
-              matching-cost grouping, whole-number pricing and the shipping profile all
-              come with it. Nothing here is rebuilt. */}
-          {/* D353 Â· The standalone pricing card is gone. D334 put pricing and
-              shipping on the product card as panels, and every selection renders a
-              card â€” a single product is just a bundle of one. D337 narrowed this to
-              single products, which fixed the duplicate under a bundle and left the
-              same duplicate under an individual product. */}
-          {/* D334 Â· The separate bundle pricing cards this replaced lived below
-              the product cards, so a product's colours were in one place and its
-              prices in another. Pricing and shipping are panels inside the product
-              card now, beside the colours and sizes they belong to. */}
-          {workflowStep==="setup"&&templateDetails&&productSelected&&<button type="button" className="workflow-next setup-forward" disabled={!complete&&Boolean(productStepBlocker())} title={productStepBlocker()||undefined} /* D402 - This used to carry a different label when drafts already existed, and
-                 in that case it jumped straight to step 3. D383 renamed it to "Next step"
-                 without changing where it went, so pressing Next on step 1 skipped Images
-                 entirely. Next step means the next step; the rail is how you jump. */
-                 onClick={()=>goToStep("designs")}>{/* D383 - This button relabelled itself with whatever was missing: "Pick a
-                 keyword bank for Gildan Hoodie", "Choose product colors to continue".
-                 The forward button is the forward button on every step; the gate
-                 dialog already lists what is unfinished, by name, when you press it.
-                 A control that renames itself is not a control you can learn. */}
-              Next step <span>â†’</span></button>}
-          </BatchPreferencesPortal>
-          </div>
-
-          <article className={`step-card designs-step workflow-panel ${workflowStep==="setup"?"batch-design-drop":""} ${files.length ? "done" : ""} ${workflowStep==="finish"?"finish-mode":""} ${workflowStep==="designs"?"active-panel":"hidden-panel"}`}>{/* D238 Â· Choosing the mockup SET lived on Product while the mockups it controls are generated here on Images. Same setting, two pages â€” the exact split that caused the keyword-bank and shipping duplication. */}
-            <div className="step-number" aria-hidden="true"/>
-            <div className="step-content">
-              <div className="step-heading"><div>{workflowStep!=="finish"&&<p className="mini-label">DESIGNS FOR THIS BATCH</p>}{/* D278 Â· On
-                Listing this eyebrow read "TITLES, TAGS + DESCRIPTIONS" â€” the page
-                title D256 retired â€” directly under the page eyebrow "STEP 3 OF 4 Â·
-                LISTING". Removing the card title in D248 left it as the only text
-                in the header, still naming the step a third way. */}<div className="heading-with-help">{workflowStep!=="finish"&&<h2>Drop your designs here</h2>}{/* D248 Â· on Listing this
-                read "Finish titles, tags, and descriptions" directly under the page
-                title "Titles, tags + descriptions" â€” the same words, two serial-comma
-                styles, 200px apart. The page title already names the step. */}</div></div>{files.length > 0 && workflowStep==="finish" && <span className="done-mark">âœ“ {files.length} listings</span>}</div>
-              <p className="step-copy">{workflowStep==="finish"?"Create titles and matching tags, review each listing, and confirm the description shared across the batch.":`Build one focused batch of up to ${batchDesignLimit} finished designs. Upload a folder or select individual images.`}</p>
-              {/* D247 Â· A three-step sub-rail inside step 3 of a four-step rail, numbering
-              the work differently from the numbered sections directly beneath it:
-              the rail called 2 "Review each listing" while the card called 2
-              "Edit description". Two numbering systems, same page, disagreeing.
-              The card's sections are the real structure and are on screen. */}
-              {!files.length&&<p className="batch-limits" aria-label="Batch limits"><span className="batch-limits-quota"><b>{planDraftsRemaining===null?"Checking your plan limitâ€¦":`${batchDesignLimit} designs available for this batch`}</b><i /><b>{activeBundle?`${bundleProductCount} listings per design`:`${planDraftsRemaining??"â€”"} listings remain on your plan`}</b></span><span className="batch-limits-note">100 MB per design Â· original print quality preserved</span></p>}
-              <div className="file-reminder"><b>Before uploading</b><span>Designs should already be full size. Save as a PNG with a see-through background if you donâ€™t want a colored box printed behind your art.</span></div>
-              <input ref={folderPicker} className="hidden-picker" type="file" multiple accept=".png,.jpg,.jpeg" {...({ webkitdirectory: "", directory: "" } as React.InputHTMLAttributes<HTMLInputElement>)} onChange={(event) => void chooseFiles(event.target.files)} />
-              <input ref={imagePicker} className="hidden-picker" type="file" multiple accept=".png,.jpg,.jpeg" onChange={(event) => void chooseFiles(event.target.files)} />
-              <div className="upload-actions">
-              <button className="folder-drop" onClick={() => folderPicker.current?.click()}>
-                <span className="upload-icon" aria-hidden="true">â†‘</span>
-                <span><b>{files.length ? designsFinished?"Choose a folder to add more":`Choose a folder Â· preparing ${designsReady} of ${files.length}` : "Choose a folder"}</b><small>{files.length ? `${files.length} design${files.length===1?"":"s"} ready Â· ${(totalSize / 1024 / 1024).toFixed(1)} MB selected${totalSize>LARGE_BATCH_THRESHOLD?" Â· will process one at a time":""} Â· Choose again to add more` : `Add up to ${batchDesignLimit} designs in this batch`}</small></span>
-                <span className="browse-chip">Browse</span>
-              </button>
-              <button className="folder-drop" onClick={() => imagePicker.current?.click()}>
-                <span className="upload-icon" aria-hidden="true">ï¼‹</span>
-                <span><b>Choose individual images</b><small>Select one image or several at once</small></span>
-                <span className="browse-chip">Browse</span>
-              </button>
-              </div>
-              {fileError && <p className="file-limit-error" role="alert"><b>That batch canâ€™t be added.</b><span>{fileError}</span></p>}
-              {fileNotice&&(workflowStep==="setup"||workflowStep==="designs")&&<p className="file-add-notice" role="status"><b>Upload updated</b><span>{fileNotice}</span></p>}
-              {files.length>0&&!designsFinished&&<section className="design-preparation-status working" role="status" aria-live="polite"><span className="design-status-icon" aria-hidden="true"/><div><b>{`Goldie is preparing your designs: ${designsReady} of ${files.length} ready`}</b><small>Keep this page open. Goldie is reading every file and checking its dimensions before you can continue.</small><div className="design-status-track"><i style={{width:`${files.length?designsReady/files.length*100:0}%`}}/></div></div><strong>{designsReady}/{files.length}</strong></section>}
-              {files.length > 0 && designsFinished && <div className="batch-capacity"><b>{planDraftsRemaining===null?"Checking plan allowanceâ€¦":activeBundle?`${files.length} designs Ã— ${bundleProductCount} products = ${requestedListingCount} listings Â· ${additionalDesignsAvailable} more designs available`:`${files.length} of ${batchDesignLimit} designs ready Â· ${additionalDesignsAvailable} more available Â· ${planDraftsRemaining} listings left on your plan`}</b></div>}
-              {bundleQualityGroups.length>0&&<section className="bundle-quality-review" aria-label="Product-specific print quality warnings"><div><b>{bundleQualityGroups.length} of {files.length} {files.length===1?"design needs":"designs need"} a print decision</b><span>{productsInBatch.length>1?"The same artwork can be sharp on one product and too small for another. ":""}Anything below 215 DPI is flagged as very low resolution. Nothing is skipped silently.</span>{bundleProductsUnchecked.length?<span className="inline-note" role="status">Goldie could not read {bundleProductsUnchecked.join(", ")} yet, so {bundleProductsUnchecked.length===1?"it is":"they are"} not included in this check. Reopen {bundleProductsUnchecked.length===1?"that product":"those products"} to check {bundleProductsUnchecked.length===1?"it":"them"}.</span>:null}<div className="bundle-quality-bulk"><button type="button" onClick={()=>decideAllQuality("include")}>Proceed with all {bundleQualityGroups.length}</button><button type="button" onClick={()=>decideAllQuality("exclude")}>Exclude all {bundleQualityGroups.length}</button></div></div>{bundleQualityGroups.map(group=>{const decision=qualityGroupDecision(group.keys);const productList=[...new Set(group.products)];return <article className={group.critical?"critical-dpi":""} key={group.fileId}><div><b>{group.fileName}</b><span>{group.critical?<strong>VERY LOW RESOLUTION Â· {group.worstDpi} DPI Â· </strong>:null}{group.actualWidth} Ã— {group.actualHeight}px is below the recommended size{productsInBatch.length>1?<> for <strong>{productList.join(", ")}</strong>{productList.length>1?` â€” ${productList.length} products in this bundle`:""}</>:<> for <strong>{productList[0]||"this product"}</strong></>}.</span></div><div><button className={decision==="include"?"selected":""} onClick={()=>decideQualityGroup(group.keys,"include")}>{group.critical?"I understand â€” proceed":"Proceed anyway"}</button><button className={decision==="exclude"?"selected exclude":""} onClick={()=>decideQualityGroup(group.keys,"exclude")}>{productList.length>1?"Exclude these listings":"Exclude this listing"}</button></div></article>})}</section>}
-              {files.length>0&&(workflowStep==="setup"||workflowStep==="designs")&&<div className="design-upload-review" aria-label="Review uploaded designs">{files.map(file=><article key={file.id}><img src={file.previewUrl} alt="" loading="lazy" decoding="async"/><div><b title={file.name}>{file.name}</b><small>{file.width&&file.height?`${file.width} Ã— ${file.height}px`:"Checking dimensionsâ€¦"}</small></div><button type="button" onClick={()=>removeDesign(file.id)} aria-label={`Remove ${file.name}`}>Remove</button></article>)}</div>}
-              {files.length>0&&!complete&&(workflowStep==="setup"||workflowStep==="designs")&&<>{designsFinished&&belowRecommendedPixels.length>0&&<div className={`pixel-warning-inline ${criticalDpiFiles.length?"critical-dpi":""}`} role="status"><span>!</span><div><b>{criticalDpiFiles.length?`${criticalDpiFiles.length} ${criticalDpiFiles.length===1?"design is":"designs are"} below 215 DPI â€” very low resolution.`:belowRecommendedPixels.length===1?"One design is below Printifyâ€™s recommended pixel size.":"Some designs are below Printifyâ€™s recommended pixel size."}</b><small>{criticalDpiFiles.length?"Goldie will identify every affected design so you can replace it or continue anyway.":"You can still continue, but Goldie will ask you to confirm first."}</small></div></div>}{/* D399 - Step 2 showed "Next step" here AND "Continue to create drafts" in the
-                product card below. Creating the drafts is the step; this button only
-                scrolled down to it. One forward control per step: the action while the
-                drafts do not exist, the forward once they do. */}
-              {workflowStep!=="setup"&&complete&&<button className="workflow-next" disabled={!designsFinished} onClick={continueFromDesigns}>{designsFinished?"Next step":`Preparing ${designsPreparing} ${designsPreparing===1?"design":"designs"}â€¦`} {designsFinished&&<span>â†’</span>}</button>}</>}
-              {files.length>0&&complete&&workflowStep==="designs"&&<button className="workflow-next" onClick={()=>goToStep("finish",false,true)}>Back to finishing your listings <span>â†’</span></button>}
-            </div>
-          </article>
-          {workflowStep==="setup"&&<div id="batch-preferences-after-designs" className="batch-preferences-after-designs"/>}
-          {/* D221 Â· Etsy details joins titles, tags and descriptions on one Listing page. They
-           are the same job â€” the words and metadata of the listing â€” and they were two
-           screens apart. */}
-          {workflowStep==="finish"&&(finishPhase==="details"||finishPhase==="etsy")&&stepProductCards(bundleCardStatus("listing"),/* D541 - step 3 held one block: a title builder, a description editor and a
-              table of every listing, with two rows that were bookmarks into spots
-              inside it. Clicking Description showed titles and tags too, because
-              they were never in a section of their own. The rows own panels now,
-              exactly as step 2 does, and the card passes no body. */
-            null,false,
-            <>
-            {/* D521 - the forward button belongs to the step, not to whichever
-                product happens to be open. On a three-product bundle it was
-                inside the hoodie card, so leaving the step meant finding the
-                open product first. */}
-            {/* D544 - this asked finishPhase==="details", and D221 had already decided the
-                 Etsy details render on the Listing page with no phase of their own:
-                 continueToEtsyDetails() calls setFinishPhase("details") and then writes
-                 phase=etsy into the URL anyway. So the state never left "details", the
-                 footer never swapped, and step 3 offered "Prepare Etsy details" forever
-                 with no way to reach step 4. Measured on her batch: details prepared,
-                 rows reading "Needs review", and no Next step button on the page.
-                 Ask the real question instead - have the Etsy details been built yet. */}
-              {!etsyDetailsPrepared?<><button className="secondary-action prepare-etsy" aria-busy={preparingEtsy} disabled={preparingEtsy||progressGateIssues(6).length>0||batchHeldByAnotherTab} title={batchHeldByAnotherTab?"This batch is open in another Goldie tab, so nothing prepared here would be kept.":progressGateIssues(6)[0]} onClick={()=>void continueToEtsyDetails()}>{preparingEtsy?"Preparing Etsy detailsâ€¦":"Prepare Etsy details"}</button>{preparingEtsy?<p className="etsy-preparing-note" role="status">This can take a moment when your batch has several listings. Keep this page open while Goldie prepares each one.</p>:progressGateIssues(6)[0]&&<p className="etsy-preparing-note gate-reason" role="status">{progressGateIssues(6)[0]}</p>}</>:<><button className="workflow-next" aria-busy={savingEtsyDetails} disabled={savingEtsyDetails||progressGateIssues(7).length>0} title={progressGateIssues(7)[0]} onClick={()=>void saveAllEtsyDetails()}>{savingEtsyDetails?"Saving Etsy detailsâ€¦":"Next step"} <span>â†’</span></button>{!savingEtsyDetails&&progressGateIssues(7)[0]&&<p className="etsy-preparing-note gate-reason" role="status">{progressGateIssues(7)[0]}</p>}</>}
-            </>)}
-          {workflowStep==="finish"&&finishPhase==="final"&&stepProductCards(bundleCardStatus("publish"),null,false,<>{/* D497 - publish covered one product until D495, so these cards kept their
-    own open controls. Now one press publishes the whole bundle, and a card
-    offering to go and open Gildan Tee separately contradicts the button
-    underneath it - the same thing that was wrong on step 2. The action is a
-    footer here too, so the cards report their products and the controls go. */}{/* D387 - This banner floated above the product card. It reports on this
-              product's listings, so it belongs inside the card with them. */}
-              {/* D548 - "Every listing has at least one photo" was measured from the drafts
-              of the product that happens to be open, and said "every". On a bundle
-              that is a claim about products it never looked at. It says whose
-              listings it checked. */}
-            {/* D625 Â· A green "Listing photos complete" banner sat directly under
-                the product card, one row below that same card's own "Listing
-                photos Â· 6 photos âœ“". It restated a tick that was already on
-                screen, and pushed the Publish panel further down for it. The card
-                reports photo readiness; nothing else needs to. The banner style
-                is still used by step 2, so only this instance goes. */}
-              <article className="step-card final-review active-panel"><div className="step-content">{batchReceipt?<OutcomeReceipt goalLine={listingGoal?`That is ${goalDone} of your ${listingGoal.target} listings this ${listingGoal.period}.`:undefined} receipt={batchReceipt} productName={templateDetails?.blueprintTitle||""} shippingProfile={etsyShippingProfiles.find(profile=>profile.id===etsyShippingProfileId)?.title||""} imageCount={printifyImageIndices.length} sizeGuideName={sizeGuideName} tagCount={files.reduce((sum,file)=>sum+file.tags.length,0)} mockupCount={Object.values(preparedMockupCounts).reduce((sum,count)=>sum+count,0)} variantCount={pricedVariants.length*files.length} minutesSaved={Math.max(12,Math.round(files.length*11.1))} nextBundleProduct={bundleRecipes[bundleIndex+1]?.name} bundleComplete={Boolean(activeBundle&&bundleIndex===bundleRecipes.length-1)} onNextBundleProduct={()=>void continueBundle()} onNewBatch={()=>{clearCurrentBatch(true);goToStep("setup")}}/>:<><div className="step-heading"><div><p className="mini-label">FINAL REVIEW</p>{/* D660 Â· This said "ready for its final check" over a
-                   disabled Publish button and a product with no titles at all.
-                   The heading has to agree with the gate directly beneath it. */}
-                   <h2>{publishBlockers().length?"Finish these items before publishing":"Your batch is ready for its final check"}</h2></div><span className="done-mark">âœ“ {drafts.filter(draft=>draft.status==="Created").length} {drafts.filter(draft=>draft.status==="Created").length===1?"draft":"drafts"}{activeBundle&&bundleRecipes.length>1?` on ${activeRecipe?.name||"this product"}`:""}</span></div>{/* D546 - the old lead-in pointed at a checklist that repeated
-              what the product cards above already report, line for line. The cards
-              own it. What this step still has to say is what publishing will do. */}<p className="step-copy">{activeBundle&&bundleRecipes.length>1?`Every product in this batch publishes in turn. Nothing goes live until you use the final button.`:"Nothing is published until you use the final button."}</p>{/* D546 - her words, looking at it: "this whole section doesn't need to be on
-              the final step because above it, you list every product and everything
-              that's in every product." It repeated the cards line for line - prices,
-              description, Etsy details, photos - and the two things it alone
-              reported moved into the rows that own them. */}
-{/* D559 - her question: "why if this is a hoodie t shirt and crew neck batch
-                would it be showing me two hoodies only?" Because it was handed the
-                open batch's drafts, while the button published all three products.
-                It gets every product's listings now, so the checkboxes govern the
-                six listings the press will actually create. */}
-            <FinalListingReview drafts={bundlePublishDrafts()} files={bundlePublishFiles()} selections={bundlePublishSelections()} defaultIndices={printifyImageIndices} preparedMockupCounts={bundlePublishMockupCounts()} batchSizeGuide={sizeGuideName} onRetry={clientId=>{const design=files.find(file=>file.id===clientId);if(design)void runDrafts([design],true)}} onEdit={setFinishPhase}/>{/* D548 - read as someone about to spend money, this said two untrue things.
-              "Only the listings selected above" - the selection covers the product
-              that is open, and on a bundle the button publishes every product, so
-              the sentence promised a smaller press than the one it sat under. And
-              it named the fee per listing without ever multiplying it, on the one
-              screen where the total is the thing worth knowing. */}
-            <div className="publish-live-warning">{(()=>{
-              /* D560 - the count follows her ticks now that they govern every listing. */
-              const total=publishTargets().length||bundleListingsToPublish();
-              /* D636 - "all 3 products in this batch" counted the bundle, not the
-                 ticks, so it sat directly above "2 listings" and contradicted it.
-                 D634 fixed the confirmation; these two labels were still counting
-                 the bundle. Labels only - the payload is unchanged. */
-              const chosenProducts=new Set(publishTargets().map(item=>item.productName).filter(Boolean)).size||bundleRecipes.length;
-              const many=Boolean(activeBundle&&bundleRecipes.length>1);
-              return <><b>{many
-                ?`Publishing sends ${chosenProducts} selected ${chosenProducts===1?"product":"products"} â€” ${total} ${total===1?"listing":"listings"} â€” live on Etsy.`
-                :`Only the listings selected above will be published live on Etsy.`}</b>
-              <span>{many?"Untick any listing above to leave it out. Everything ticked publishes in one press.":"Anything still needing a look is listed above."}</span>
-              <small>Etsy charges its standard $0.20 USD listing fee for each listing created{total?`, so this press costs about $${(total*0.2).toFixed(2)} USD`:""}. This fee is charged by Etsy and is separate from your Goldie subscription.</small></>;
-            })()}</div><button className="publish-all-button" aria-busy={publishing} disabled={publishing||publishBlockers().length>0} title={publishBlockers()[0]?`Before publishing: ${publishBlockers()[0]}`:undefined} onClick={openPublishConfirmation}>{/* D495 - one press publishes the whole bundle, so the button says so and
-    reports which product it is on rather than naming a listing count that
-    only covers the product currently open. */}
-{publishRun&&!publishing?"Queuing every listing in this batchâ€¦":publishing?(activeBundle&&bundleRecipes.length>1?(()=>{
-                /* D637 - the busy label was the last surface still counting the
-                   bundle rather than the press. It read "Publishing 6 listings
-                   across 3 productsâ€¦" over a progress line that correctly said
-                   "0 of 2 listings are live". */
-                const sending=publishTargets().length||bundleListingsToPublish();
-                const across=new Set(publishTargets().map(target=>target.productName).filter(Boolean)).size||bundleRecipes.length;
-                return `Publishing ${sending} ${sending===1?"listing":"listings"} across ${across} ${across===1?"product":"products"}â€¦`;
-              })():"Publishingâ€¦"):activeBundle&&bundleRecipes.length>1?(()=>{
-              /* D546 - "Publish all 3 products" counted products while every
-                 number above it counted the open product's listings, so nothing
-                 on the page said how many Etsy listings would be created, or
-                 what they would cost. It says the number now. */
-              if(bundleProductsStillReading().length)return "Checking the other productsâ€¦";
-              const waiting=bundleProductsNotStarted();
-              /* D628 - "Gildan Hoodie still has no listings" was what this said
-                 about a product whose batch had been deleted. It may well have
-                 had listings; the batch is gone. Two different problems, and
-                 only one of them is fixed by going back and adding designs. */
-              const missingBatch=waiting.filter(recipe=>bundleBatchSummary[recipe.id]?.unreadable);
-              if(missingBatch.length)return missingBatch.length===1?`${missingBatch[0].name}'s batch was not found`:`${missingBatch.length} products' batches were not found`;
-              if(waiting.length)return `${waiting.length===1?waiting[0].name:`${waiting.length} products`} still ${waiting.length===1?"has":"have"} no listings`;
-              const total=publishTargets().length||bundleListingsToPublish();
-              /* D636 - the number of listings followed her ticks; the number of
-                 products beside it did not, so the button read "2 listings ... 3
-                 products". Both come from the same array now. */
-              const products=new Set(publishTargets().map(item=>item.productName).filter(Boolean)).size||bundleRecipes.length;
-              return `Publish ${total} ${total===1?"listing":"listings"} live on Etsy Â· ${products} ${products===1?"product":"products"}`;
-            })():`Publish ${selectedPublishDrafts().length} selected ${selectedPublishDrafts().length===1?"listing":"listings"} live on Etsy`}</button><button className="keep-drafts-button" type="button" disabled={publishing} onClick={()=>{setBatchDisplayName(current=>current||suggestedBatchName());setDraftSaveOpen(true)}}>Keep as Printify drafts for now</button>{!publishing&&<small className="keep-drafts-note">Nothing will publish to Etsy. Return to this exact batch from Batch History.</small>}{/* D474 - this describes the Keep as drafts button, but sat there while the
-     button above it said Publishing, so the page said both that it was
-     publishing and that nothing would publish. It belongs to a choice that is
-     no longer available once publishing has started. */}{publishMessage&&<p className="publish-message" role="status">{publishMessage}</p>}{publishFailures.length>0&&<section className="publish-failure-panel" role="alert"><p className="mini-label">NOTHING WAS PUBLISHED</p><h3>{publishFailures.length===1?"1 listing could not be published":`${publishFailures.length} listings could not be published`}</h3><p className="publish-failure-lede">Etsy did not create {publishFailures.length===1?"this listing":"these listings"}, so you have not been charged a listing fee for {publishFailures.length===1?"it":"them"}. Here is exactly what Etsy said:</p><ul className="publish-failure-list">{publishFailures.map(failure=>{const draft=drafts.find(item=>item.id===failure.productId);return <li key={failure.productId}><strong>{draft?.title?.slice(0,60)||draft?.designName||"Listing"}</strong><span>{failure.error}</span></li>})}</ul><p className="publish-failure-lede">Goldie has emailed this to you and recorded it. You can press publish again once it is fixed.</p></section>}</>}</div></article></>)}
-        </div>
-
-        {/* D220 Â· Draft creation moves onto the Images page. Every photo in this app is
-            attached to a Printify draft â€” IntegratedMockups takes productId={draft.id} and
-            PrintifyImagePicker reads the draft's own images â€” so photos cannot be chosen before
-            drafts exist. It was its own screen for a button. It is now the action on the
-            Images page that unlocks the photo section below it, which keeps upload and mockups
-            on one screen as intended. It stays an explicit button rather than something
-            Continue does silently, because creating drafts spends listing quota. */}
-        {/* D378 - The drafts panel is the per-product half of the Images step: the
-            designs are shared across the bundle, the Printify drafts are not. It
-            stays mounted across steps, so the rail takes the hidden state rather
-            than the tree changing shape and remounting a panel mid-run. */}
-        {stepProductCards(bundleCardStatus("images"),null,!(workflowStep==="designs"),<aside className={`launch-panel workflow-panel ${workflowStep==="designs"?"active-panel":"hidden-panel"}`}>
-          <div className={`step-number launch-step-icon create-drafts-icon`} aria-hidden="true"/>
-          <div className="launch-top">
-            <Image src="/goldie-g.png" width={2000} height={2000} alt="" className="goldie-g" />
-            {(running||workflowStep!=="review")&&<h2>{running ? `${processed} of ${runTotal} complete` : complete ? "Drafts created" : "Create your Printify drafts"}</h2>}
-            <p>{running ? "Goldie is uploading each design and creating its Printify draft." : workflowStep==="review" ? "Goldie creates an unpublished Printify draft for every design in this batch." : complete ? `${drafts.filter((draft) => draft.status === "Created").length} of ${files.length} drafts were created in Printify.` : ""}</p>
-          </div>
-
-          
-
-          <div className="summary-list">
-            <div><span>Printify</span><b className={connected ? "ready-text" : "waiting-text"}>{connected ? "Connected" : "Waiting"}</b></div>
-            {!(activeBundle&&bundleRecipes.length>1)&&<div><span>Saved product</span><b>{activeRecipe?.name||templateDetails?.blueprintTitle||"Not selected"}</b><button onClick={()=>goToStep("setup")}>Edit</button></div>}
-            {!(activeBundle&&bundleRecipes.length>1)&&<div><span>Product</span><b>{templateDetails?.blueprintTitle||"Not selected"}</b></div>}
-            <div><span>Designs</span><b>{files.length ? `${files.length} / 20` : "Not added"}</b></div>
-            
-          </div>
-
-          {running && (
-            <div className="batch-progress" role="status" aria-live="polite">
-              <div className="progress-ring" aria-hidden="true"><span>{processed}/{runTotal}</span></div>
-              <div className="progress-copy"><b>Creating your Printify drafts</b><span>{preparationMessage || "Keep this page open while Goldie finishes the batch."}</span></div>
-              <div className="progress-track"><span style={{ width: `${runTotal ? (processed / runTotal) * 100 : 0}%` }} /></div>
-            </div>
-          )}
-
-          {!complete ? (
-            <button className="launch-button" aria-busy={running||preparingEtsy||Boolean(bundleRun)} disabled={!ready || !pricingApproved || running||preparingEtsy||Boolean(bundleRun)} onClick={createDrafts}>
-              {/* D485 - one press covers the whole bundle, so the button says so
-                  rather than naming a single product, and reports which product
-                  Goldie is on while it works its way through them. */}
-              <span className="button-glint" />{bundleRun&&!running?`Moving to ${bundleRecipes[bundleIndex+1]?.name||"the next product"}â€¦`:preparingEtsy?"Completing Etsy detailsâ€¦":running ? (activeBundle&&bundleRecipes.length>1?`${activeRecipe?.name||"Product"} ${bundleIndex+1} of ${bundleRecipes.length}: ${processed} of ${runTotal} completeâ€¦`:`${processed} of ${runTotal} completeâ€¦`) : !ready ? missingRequirement /* D229 Â· The button is also disabled when prices are not approved, and that branch had no label â€” it read "Continue to create drafts", greyed out, with nothing anywhere on the page saying why. Every condition that disables this button now names itself. */ : !pricingApproved ? "Approve prices on the Product page to continue" : activeBundle&&bundleRecipes.length>1?`Create Printify drafts for all ${bundleRecipes.length} products`:"Continue to create drafts"}<span>â†’</span>
-            </button>
-          ) : (
-            <div className="batch-actions">
-              {drafts.some((draft) => draft.status !== "Created") && <button className="retry-button" onClick={retryFailed}>Retry {drafts.filter((draft) => draft.status !== "Created").length} listings that need another try</button>}
-              <button className="workflow-next" onClick={()=>goToStep("finish",false,true)}>Back to finishing your listings <span>â†’</span></button>
-            </div>
-          )}
-          <p className="launch-note">This step creates unpublished Printify drafts. The final Goldie step publishes them live to Etsy only after a second confirmation.</p>
-        </aside>,false)}
-{/* D496 - a held tab has to say so where she is working, not silently stop
-    saving. */}
-        {batchHeldByAnotherTab&&<div className="batch-tab-conflict" role="status"><b>This batch is open in another Goldie tab.</b><span>Goldie has paused saving here so that tabâ€™s work is not overwritten. Continue in the other tab, or take over here and it will pause there instead.</span><button type="button" onClick={takeOverBatchHere}>Take over editing here</button></div>}
-        <div className="workflow-footer-actions">{progressIndex>0&&<button className="workflow-back" type="button" onClick={goBackOneStep}><span aria-hidden="true">â†</span> Back</button>}<span className="autosave-note"><i aria-hidden="true">âœ“</i> Saved automatically</span>{/* D386 - Saving a draft was only reachable from the Publish step, so
-                stopping halfway meant trusting the autosave and remembering the
-                batch later. Name it and park it from wherever you are. */}{workflowStep!=="connect"&&(files.length>0||drafts.length>0||Boolean(templateDetails))&&<button className="save-draft-link" type="button" onClick={()=>{setBatchDisplayName(current=>current||suggestedBatchName());setDraftSaveOpen(true)}}>Save as draft</button>}</div>
-        </div>
-      </section>}
-
-
-            {/* D540 - the size guide applies to every listing in the batch and the
-          "review all listings in Printify" link opens all of them, so neither
-          belongs inside one product's card. They sit above the cards with the
-          rest of the shared batch work, where she can reach the size guide while
-          she is arranging any product's photos. A product card now holds only
-          its rows and the one task panel she opened. */}
-      {complete && workflowStep==="designs" && <section className="post-draft-workspace">
-        {/* D540 - this heading described the block D539 removed: "the large preview
-    below" pointed at a preview that is now inside the Review Printify placement
-    task, and "choose listing images" is the row beneath it. What is left here is
-    the batch-wide work: open every listing in Printify, and the size guide. */}
-        <div className="post-draft-heading">{drafts.filter(draft=>draft.status==="Created").length>1&&<button className="open-all-button" onClick={openAllDrafts}>Review all listings in Printify â†—</button>}</div>
-        {/* D536 - the size guide applies to every listing in the batch, and she
-            needs it in hand while she is reordering each listing's images, not
-            parked underneath all of them. D521 moved it out of one product's
-            card, which was right, and left it at the very bottom of the step,
-            which was not. It sits above the panels it applies to. */}
-        <section className="batch-size-guide"><div><p className="mini-label">OPTIONAL Â· APPLY TO THE WHOLE BATCH</p><h3>Add one size guide to every Etsy listing</h3><span>Choose it once. Goldie attaches it to every listing in this batch automatically when you publish.</span></div><input ref={sizeGuidePicker} type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={event=>{const file=event.target.files?.[0];if(file)void applySizeGuide(file)}}/><div className="size-guide-actions"><button onClick={()=>sizeGuidePicker.current?.click()}>{sizeGuideName?"Replace size guide":"Choose size guide"}</button>{sizeGuideName&&<button type="button" className="size-guide-remove" onClick={()=>void removeSizeGuide()}>Remove</button>}</div>{sizeGuideStatus&&<p role="status">{sizeGuideStatus}</p>}</section>
-        
-        
-        
-        {openAllMessage&&<p className="open-all-message" role="status">{openAllMessage}</p>}
-        {/* D539 - the giant workspace is gone. Each task row owns its own panel. */}
-        </section>}
-{complete && workflowStep==="designs" && stepProductCards(bundleCardStatus("images"),
-        /* D517 - the mockups are per product: a hoodie scene is not a tee scene.
-           D507 took the product cards off this step because the design upload is
-           shared, and took the mockups with them - so she opened step 2 on a
-           three-product bundle and saw only hoodies, with no way to reach the
-           other two. The upload and its one button stay shared, above; once the
-           drafts exist, each product gets the same collapsible card it gets on
-           every other step, with its own mockups inside it. */
-      null
-        ,false,
-        <>
-        {/* D521 - the single-product flow is the specification and a bundle just
-            applies it, so each block sits where its own words say it belongs.
-            This size guide is labelled "apply to the whole batch" and was inside
-            one product's card. The forward button belongs to the step, not to
-            whichever product happens to be open, and so does the note saying why
-            it is disabled. */}
-        
-        {imageStepError&&<p className="image-step-blocker" role="alert">{imageStepError}</p>}
-        <button className="workflow-next" type="button" disabled={imagesStepIssues().length>0} title={imagesStepIssues()[0]} onClick={()=>{const missing=createdListingsMissingImages();if(missing.length){setImageStepError(`${missing.length} ${missing.length===1?"listing needs":"listings need"} at least one photo.`);setMissingPhotoDraftIds(missing.map(draft=>draft.clientId));return}setImageStepError("");setMissingPhotoDraftIds([]);/* D427 - one Next step on this page, and it is the one that checks every listing has a photo. The second copy in the card list bypassed that check entirely. Goes to Listing, not Publish. */setFinishPhase("details");void goToStep("finish",false,true);window.scrollTo(0,0)}}>Next step <span aria-hidden="true">â†’</span></button>
-        {imagesStepIssues()[0]&&<p className="etsy-preparing-note gate-reason" role="status">{imagesStepIssues()[0]}</p>}
-        </>
-      )}
-
-      {complete && workflowStep==="designs" && <div className="workflow-footer-actions post-draft-footer"><button className="workflow-back" type="button" onClick={goBackOneStep}><span aria-hidden="true">â†</span> Back</button><span className="autosave-note"><i aria-hidden="true">âœ“</i> Saved automatically</span><button className="save-draft-link" type="button" onClick={()=>{setBatchDisplayName(current=>current||suggestedBatchName());setDraftSaveOpen(true)}}>Save as draft</button></div>}
-
-      {preflightOpen && <div className="preflight-backdrop" role="presentation" onMouseDown={(e)=>{if(e.target===e.currentTarget)setPreflightOpen(false)}}><section className="preflight" role="dialog" aria-modal="true" aria-labelledby="preflight-title"><p className="mini-label">CREATE PRINTIFY DRAFTS</p>{/* D492 - the button says "Create Printify drafts for all 3 products" and this
-    dialog, the last thing before it runs, said "Create 2 product drafts?" and
-    named only the hoodie. It was describing one product while six drafts were
-    about to be made. The confirmation has to describe the run it confirms. */}
-<h2 id="preflight-title">{activeBundle&&bundleRecipes.length>1?`Create ${files.length*bundleRecipes.length} product drafts across ${bundleRecipes.length} products?`:`Create ${files.length} product ${files.length===1?"draft":"drafts"}?`}</h2><div className="preflight-list"><div><span>{activeBundle&&bundleRecipes.length>1?"Printify products":"Printify product"}</span><b>{activeBundle&&bundleRecipes.length>1?`âœ“ ${bundleRecipes.map(recipe=>recipe.name).join(", ")}`:`âœ“ ${templateDetails?.blueprintTitle||"Selected product"}`}</b></div><div><span>Design files</span><b>âœ“ {files.length} ready</b></div><div><span>Plan allowance</span><b>{planDraftsRemaining===null?"Checking current usageâ€¦":`âœ“ ${requestedListingCount} of ${planDraftsRemaining} remaining listings`}</b></div><div><span>Permanent description</span><b>{description.trim()?"âœ“ Imported from Printify":"None found. You can add one later"}</b></div><div><span>Variant pricing</span><b title={bundleVariantCounts.detail}>âœ“ All {bundleVariantCounts.total} enabled variants reviewed and approved{bundleVariantCounts.perProduct.length>1?` Â· ${bundleVariantCounts.detail}`:""}</b></div><div><span>Publishing</span><b>Unpublished Printify drafts only</b></div></div>{templateDetails?.hasLabelArtwork?<p className="preflight-note">Inside-label artwork is not copied to new products.</p>:null}<p className="preflight-explainer">After these drafts exist, Goldie will show their real previews and help finish each title, tags, description, Etsy details, and mockups.</p><div className="preflight-actions"><button className="preflight-cancel" onClick={()=>setPreflightOpen(false)}>Go back</button><button className="preflight-confirm" disabled={running} aria-busy={running} onClick={confirmDrafts}>Create Printify drafts â†’</button></div></section></div>}
-
-      {publishConfirmOpen&&<div className="publish-confirm-backdrop" role="presentation"><section className="publish-confirm" role="alertdialog" aria-modal="true" aria-labelledby="publish-confirm-title"><span className="publish-confirm-icon">!</span><p className="mini-label">FINAL PUBLISH CONFIRMATION</p>{/* D495 - one press now publishes every product in the bundle, so the last
-    screen before real money is spent has to say how many listings that is
-    across how many products, not describe only the one that is open. */}
-<h2 id="publish-confirm-title">{activeBundle&&bundleRecipes.length>1?`${publishTargets().length} ${publishTargets().length===1?"listing":"listings"} across ${new Set(publishTargets().map(item=>item.productName)).size} ${new Set(publishTargets().map(item=>item.productName)).size===1?"product":"products"} will go live on Etsy.`:"These listings will go live on Etsy."}</h2>{activeBundle&&bundleRecipes.length>1&&<p className="publish-confirm-bundle">Goldie publishes {[...new Set(publishTargets().map(item=>item.productName).filter(Boolean))].join(", ")||bundleRecipes.map(recipe=>recipe.name).join(", ")} one after another. If a product is not ready it stops there and tells you what is missing â€” nothing after it is published.</p>}<p>They will not be saved as Etsy drafts. Publishing starts as soon as you confirm below. Goldie will immediately apply the selected Etsy shipping profile.</p><p className="etsy-listing-fee-note">Etsy will charge its standard $0.20 USD listing fee for each listing created{activeBundle&&bundleRecipes.length>1?` \u2014 about $${(publishTargets().length*0.2).toFixed(2)} for ${publishTargets().length} ${publishTargets().length===1?"listing":"listings"}`:""}. This Etsy fee is separate from your Goldie subscription.</p>{missingPublishFields().length>0&&<div className="publish-missing"><b>Goldie found blank or unfinished fields:</b><ul>{missingPublishFields().map(field=><li key={field}>{field}</li>)}</ul><span>You can still publish, but review these first if they matter to this batch.</span></div>}<div className="publish-confirm-actions"><button onClick={()=>setPublishConfirmOpen(false)}>Go back and review</button><button className="danger" disabled={publishing} aria-busy={publishing} onClick={()=>{if(activeBundle&&bundleRecipes.length>1)setPublishRun({total:bundleRecipes.length});void publishAll()}}>Yes, publish live on Etsy</button></div></section></div>}
-
-      {draftSaveOpen&&<div className="publish-confirm-backdrop" role="presentation" onMouseDown={event=>{if(event.target===event.currentTarget&&!savingDraftBatch)setDraftSaveOpen(false)}}><section className="publish-confirm save-draft-modal" role="dialog" aria-modal="true" aria-labelledby="save-draft-title"><button type="button" className="missing-photo-close" aria-label="Close" disabled={savingDraftBatch} onClick={()=>setDraftSaveOpen(false)}>Ã—</button><span className="publish-confirm-icon">âœ“</span><p className="mini-label">SAVE FOR LATER</p><h2 id="save-draft-title">Keep these listings as Printify drafts?</h2><p>Greatâ€”this batch will be waiting for you in Batch History. Nothing will publish to Etsy until you return and choose to publish it.</p><label><span>Name this batch</span><input autoFocus maxLength={160} value={batchDisplayName} onChange={event=>setBatchDisplayName(event.target.value)} placeholder="Example: Gildan Tee Â· Bachelorette designs"/><small>Goldie suggested a name from the saved product and first listing topic. Change it to anything you will recognize.</small></label><div className="publish-confirm-actions"><button disabled={savingDraftBatch} onClick={()=>setDraftSaveOpen(false)}>Cancel</button><button className="save-draft-confirm" aria-busy={savingDraftBatch} disabled={savingDraftBatch||!batchDisplayName.trim()} onClick={()=>void saveDraftBatch()}>{savingDraftBatch?"Saving batchâ€¦":"Save to Batch History"}</button></div></section></div>}
-
-      {draftSavedOpen&&<div className="publish-confirm-backdrop" role="presentation"><section className="publish-confirm save-draft-success" role="dialog" aria-modal="true" aria-labelledby="draft-saved-title"><span className="publish-confirm-icon">âœ“</span><p className="mini-label">BATCH SAVED</p><h2 id="draft-saved-title">Greatâ€”this batch is waiting for you.</h2><p><b>{batchDisplayName}</b> is saved in Batch History. The products remain unpublished Printify drafts, and every title, Etsy detail, and photo choice will be here when you return.</p><div className="publish-confirm-actions"><button onClick={()=>setDraftSavedOpen(false)}>Keep working here</button><button className="save-draft-confirm" onClick={()=>{window.location.href="/batches"}}>View Batch History</button></div></section></div>}
-
-      {restartBatchOpen&&<div className="publish-confirm-backdrop" role="presentation" onMouseDown={event=>{if(event.target===event.currentTarget&&!restartingBatch)setRestartBatchOpen(false)}}><section className="publish-confirm restart-batch-modal" role="alertdialog" aria-modal="true" aria-labelledby="restart-batch-title"><button type="button" className="missing-photo-close" aria-label="Close" disabled={restartingBatch} onClick={()=>setRestartBatchOpen(false)}>Ã—</button><span className="publish-confirm-icon" aria-hidden="true">â†»</span><p className="mini-label">START A NEW BATCH</p><h2 id="restart-batch-title">What should Goldie do with this batch?</h2><p>Your saved products, product defaults, keyword banks, and mockup sets will stay exactly as they are.</p>{(files.length>0||drafts.length>0)&&<label><span>Name this batch before saving</span><input maxLength={160} value={restartBatchName} onChange={event=>setRestartBatchName(event.target.value)} placeholder="Example: Gildan Tee Â· Bachelorette designs"/></label>}<div className="restart-batch-actions"><button type="button" disabled={restartingBatch} onClick={()=>setRestartBatchOpen(false)}>Cancel</button>{(files.length>0||drafts.length>0)&&<button type="button" className="save-restart" aria-busy={restartingBatch} disabled={restartingBatch||!restartBatchName.trim()} onClick={()=>void saveAndRestart()}>{restartingBatch?"Savingâ€¦":"Save to Batch History + start new"}</button>}<button type="button" className="discard-restart" disabled={restartingBatch} onClick={()=>finishRestart(false)}>{files.length||drafts.length?"Discard this batch + start new":"Start new batch"}</button></div><small className="restart-printify-note">Existing Printify drafts are not deleted from Printify.</small></section></div>}
-
-      {blockingModal&&<div className="publish-confirm-backdrop" role="presentation"><section className="publish-confirm blocking-modal" role="alertdialog" aria-modal="true" aria-labelledby="blocking-modal-title"><span className="publish-confirm-icon">!</span><p className="mini-label">REQUIRED BEFORE CONTINUING</p><h2 id="blocking-modal-title">{blockingModal.title}</h2>{blockingModal.copy&&<p>{blockingModal.copy}</p>}<div className="publish-missing"><b>Fix these items:</b><ul>{blockingModal.issues.map(issue=><li key={issue}>{issue}</li>)}</ul></div><div className="publish-confirm-actions"><button autoFocus onClick={()=>setBlockingModal(null)}>Got it. Iâ€™ll fix this</button></div></section></div>}
-      {pendingCategoryChange&&<div className="publish-confirm-backdrop" role="presentation"><section className="publish-confirm" role="alertdialog" aria-modal="true" aria-labelledby="category-change-title"><span className="publish-confirm-icon">!</span><p className="mini-label">ETSY CATEGORY CHANGE</p><h2 id="category-change-title">Change this listingâ€™s Etsy category?</h2><p>{pendingCategoryChange.clearedCount} completed {pendingCategoryChange.clearedCount===1?"field does":"fields do"} not exist in the new category and will be cleared. Any compatible values will stay filled.</p><div className="publish-confirm-actions"><button autoFocus onClick={()=>setPendingCategoryChange(null)}>Keep current category</button><button className="danger" onClick={()=>{const pending=pendingCategoryChange;setPendingCategoryChange(null);updateDesign(pending.designId,{etsy:pending.details,etsyError:""})}}>Change category and clear {pendingCategoryChange.clearedCount}</button></div></section></div>}
-      {missingPhotoDraftIds.length>0&&typeof document!=="undefined"&&createPortal(<div className="publish-confirm-backdrop missing-photo-backdrop" role="presentation"><section className="publish-confirm missing-photo-modal" role="alertdialog" aria-modal="true" aria-labelledby="missing-photo-title"><button className="missing-photo-close" type="button" aria-label="Close" onClick={()=>setMissingPhotoDraftIds([])}>Ã—</button><span className="publish-confirm-icon">!</span><p className="mini-label">PHOTOS REQUIRED</p><h2 id="missing-photo-title">{missingPhotoDraftIds.length} {missingPhotoDraftIds.length===1?"listing needs":"listings need"} a photo</h2><p>Add at least one Printify photo or lifestyle mockup to every listing shown below.</p><div className="missing-photo-list">{missingPhotoDraftIds.map(clientId=>{const draft=drafts.find(item=>item.clientId===clientId),design=files.find(item=>item.id===clientId),preview=draft?.previewUrl||design?.previewUrl;return <article key={clientId}>{preview?<img src={preview} alt="Product and design preview"/>:<div className="missing-photo-placeholder" aria-hidden="true"/>}<b>{design?.name||draft?.name||"Listing"}</b><button type="button" onClick={()=>jumpToMissingPhotoListing(clientId)}>Go to this listing</button></article>})}</div></section></div>,document.body)}
-      {pixelWarningOpen&&<div className="publish-confirm-backdrop" role="presentation"><section className="publish-confirm pixel-warning-modal" role="alertdialog" aria-modal="true" aria-labelledby="pixel-warning-title"><span className="publish-confirm-icon">!</span><p className="mini-label">PRINT RESOLUTION CHECK</p><h2 id="pixel-warning-title">One or more of these designs fall below Printifyâ€™s pixel size recommendations for this product.</h2><p>These designs may still print, but they may show a lower resolution inside the Printify editor at the largest enabled size. Review the comparison below before deciding whether to continue.</p><div className="pixel-comparison" role="region" aria-label="Uploaded design pixel comparison"><div className="pixel-comparison-head" aria-hidden="true"><b>Design</b><b>Uploaded size</b><b>Printify recommends</b></div><div className="pixel-comparison-rows">{(activeBundle&&bundleQualityIssues.length
-              ?bundleQualityIssues.map(issue=>({id:issue.key,name:`${issue.fileName} Â· ${issue.productName}`,width:issue.actualWidth,height:issue.actualHeight,needWidth:issue.requiredWidth,needHeight:issue.requiredHeight}))
-              :belowRecommendedPixels.map(file=>({id:file.id,name:file.name,width:file.width||0,height:file.height||0,needWidth:recommendedPixelSize.width,needHeight:recommendedPixelSize.height})))
-              .map(row=><div className="pixel-comparison-row" key={row.id}><b title={row.name}>{row.name}</b><span><small>Uploaded size</small>{row.width.toLocaleString()} Ã— {row.height.toLocaleString()} px</span><span><small>Printify recommends</small>{row.needWidth.toLocaleString()} Ã— {row.needHeight.toLocaleString()} px</span></div>)}</div></div><div className="publish-confirm-actions"><button autoFocus onClick={()=>setPixelWarningOpen(false)}>Go back and review</button><button className="pixel-proceed" onClick={()=>{setPixelWarningOpen(false);
-              /* D509 - pressing this on a bundle is the decision the old dialog
-                 demanded, so record it and carry on rather than sending her back
-                 to make it again on the page behind. */
-              const undecided=bundleQualityGroups.filter(group=>group.keys.some(key=>!bundleQualityDecisions[key]));
-              if(undecided.length){decideAllQuality("include");setPreflightOpen(true);return}
-              if(complete){void goToStep("finish",false,true)}else{document.querySelector(".launch-panel")?.scrollIntoView({block:"start"})}}}>Proceed anyway</button></div></section></div>}
-
-      <footer><span>GOLDIE LISTING FACTORY</span><span>BE A WOLF BIZ Â· 2026</span></footer>
-      <SupportChat />
-    </main>
-  );
-}
+YªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éí×ž;÷¤èµ©hºÚn¶X§zÍH\ÙHÛY[ŽÂš[\ÜÈ›ÙXÝXØÙ\Ó[ØÚÝ\š[YžT›ÙXÝX™[˜[Z[Qœ›ÛU˜\šX[ÈHœ›ÛH‹‹Û[ØÚÝ\XÛÛ\]Xš[]HŽÂš[\ÜÈ™\\˜][Û“X]Ú\Ô›ÙXÝ\HØÙ[™T™\\˜][ÛˆHœ›ÛH‹‹Û[ØÚÝ\ËÜ™\\™Y\ØÙ[™HŽÂš[\ÜÈœ˜YÛY[\ÙQY™™XÝ\ÙS^[Ý]Y™™XÝ\ÙSY[[Ë\ÙT™Y‹\ÙTÝ]K\HÔÔÔ›Ü\Y\Ë\H™XXÝ›ÙHHœ›ÛHœ™XXÝŽÂš[\ÜÈÜ™X]TÜ[Hœ›ÛHœ™XXÝYÛHŽÂš[\Ü[XYÙHœ›ÛH›™^Ú[XYÙHŽÂš[\ÜÝ\ÜÚ]œ›ÛH‹‹ÜÝ\ÜXÚ]ŽÂš[\ÜÈ[›Ý[™YHœ›ÛH‹‹Ø›Ý[™Y]ÛÜšÈŽÂš[\ÜÈ›ÙXÝ™XY[™\ÜË™XÚ\PØ\œšY\Ð\›Ý™YšXÚ[™Ë\H™XY[™\ÜÈHœ›ÛH‹‹Ü›ÙXÝ\™XY[™\ÜÈŽÂš[\ÜÈÙ^]ÛÜ™˜[šËØ]™YÛÜšÙ›ÝË\HÙ^]ÛÜ™\Ý\HšXÚ[™Ë\H›ÙXÝ[™K\H™XÚ\HHœ›ÛH‹‹Ù˜XÝÜžK]ÛÛÈŽÂš[\Ü\ØYY\Ý[™ÔÝÜÈœ›ÛH‹‹Ý\ØYY[\Ý[™Ë\ÝÜÈŽÂš[\ÜÈÛÛ™š\›PXÝ[ÛˆHœ›ÛH‹‹ØÛÛ™š\›KYX[ÙÈŽÂš[\Ü\Ý[™ÔÝÓÜ™\ˆœ›ÛH‹‹Û\Ý[™Ë\ÝË[Ü™\ˆŽÂš[\ÜÈYÜÑœ›ÛU]HHœ›ÛH‹‹ÜÙ[Ë]][ÈŽÂš[\ÜÈš[YžQHHœ›ÛH‹‹Üš[\]X[]HŽÂš[\ÜÈ\Ô\›X[™[\ØY\œ›Ü‹PVÑ’SWÐ–UTËÝ™\œÚ^™Yš[SY\ÜØYÙHHœ›ÛH‹‹Ý\ØY\ÛXÞHŽÂš[\ÜÈØY™R[XYÙT™]šY]Ñ]U\›Hœ›ÛH‹‹ØÛY[Z[XYÙK\™]šY]ÈŽÂš[\ÜÈ™\\™P\ÛÜšÑš[HHœ›ÛH‹‹ØÛY[X\ÛÜšË]\ØYŽÂš[\ÜÈÛX\˜]Úš[\ËØY˜]Úš[\ËØ]™P˜]Úš[\ÈHœ›ÛH‹‹Ø˜]ÚXØXÚHŽÂš[\ÜÈ\Ý[X]Y›Ùš]™XÛÛ[Y[™YšXÙHHœ›ÛH‹‹ÜšXÚ[™ÈŽÂš[\ÜÈXÝ[Û”™XÙZ\ÛÛYR[œÚYÚÝ]ÛÛYT™XÙZ\ÛÜšÙ›ÝÓ[ÛY[[K\H˜]Ú™XÙZ\Hœ›ÛH‹‹ÙÛÛYK]ZHŽÂš[\ÜÈX]š[™Ò[XYÙ\Ò\ÜÝY\Ë˜]šYØ][Û’\ÜÝY\Ë\H˜]šYØ][Û‘Ø]TÝ]HHœ›ÛH‹‹ÝÛÜšÙ›ÝËYØ]\ÈŽÂš[\ÜÈÛÛYPÛÛ[X[™˜\ˆHœ›ÛH‹‹Ü™]\›š[™ËXÛÛ[X[™XÙ[\ˆŽÂš[\Üš[˜[\Ý[™Ô™]šY]Èœ›ÛH‹‹Ùš[˜[[\Ý[™Ë\™]šY]ÈŽÂš[\ÜÛÛ^[œ›ÛH‹‹ØÛÛ^Z[ŽÂš[\ÜÛÛYUÛÜ™X\šÈœ›ÛH‹‹ÙÛÛYK]ÛÜ™X\šÈŽÂš[\ÜÈ›ÙXÝ˜[Z[HHœ›ÛH‹‹Ü›ÙXÝ]\K]][ÈŽÂš[\ÜÈÝÔÝ]Ë™Y™\œ™YÝÒ[™^Õ×ÔÐSTWÔÒV‘HHœ›ÛH‹‹Ü›ÙXÝ\ÝÈŽÂ‚‹ÊˆÍÌ0­ÈHØ\›Y[Û\HØ\™˜[È˜XÚÈÈÚ[ˆ›ÈØ][ÙÈÝÈ™XYÈ\ÂˆH›ÙXÝˆÚ\H›ÛÝÜÈH›Y\š[]HÛÈHÛÙYHÙ\È›Ý˜]È\ÈBˆYH8 %HÚ[ÙˆH[H\ÈÈØ^HÚXÚØ\›Y[\È›ÝÈ\Ëˆ
+‹Â™[˜Ý[Ûˆ›ÙXÝÛ\
+Ý]_NžÝ]OÎœÝš[™ßJ^ÂˆÛÛœÝ˜[YOTÝš[™Ê]_ˆŠKÓÝÙ\Ø\ÙJ
+NÂˆÛÛœÝÛÙYKÚÛÙË\Ý
+˜[YJNÂˆÛÛœÝÛ™ÔÛY]™OZÛÙYÜÝÙX]Ü™]ß›YXÙ_Û™ÈÛY]™_Û™ÜÛY]™KË\Ý
+˜[YJNÂˆÛÛœÝ›ÙO[Û™ÔÛY]™BˆÈ“NˆÈËˆKŽHKÈMKˆMHŒŒHMKˆŒMHNŒÈMKˆŒKŽHMKÈÌMˆŽKŽˆÈˆ‚ˆˆ“NˆÈKŽH‹ŒHLHKÈŒŒHMKˆŽKÈMËŽHLHŒKŽHMKÈÌMˆŽKŽˆÈˆŽÂˆ™]\›ˆ
+ˆÜ[ˆÛ\ÜÓ˜[YOH˜[™K\›ÙXÝ\ÝÈXÙZÛ\ˆˆ\šXKZY[HYH‚ˆÝ™ÈšY]Ð›ÞHŒˆ›ØÝ\ØX›OH™˜[ÙH‚ˆ]^Ø›Ù_HÏ‚ˆÚÛÙY	‰ˆ]Û\ÜÓ˜[YOH™Û\[[™HˆH“NKŒˆËÌLŒˆ‹ŽLËŽ‹ŽMŽËˆÏŸBˆÚÛÙY	‰ˆ]Û\ÜÓ˜[YOH™Û\[[™HˆH“NKÈM‹ŒˆMŒÈˆÏŸBˆÜÝ™Ï‚ˆÜÜ[‚ˆ
+NÂŸBš[\ÜÈ˜]’XÛÛˆHœ›ÛH‹‹Û˜]‹ZXÛÛœÈŽÂš[\ÜÈX›\ÚY\Ô\š[Ù\H\Ý[™ÑÛØ[\HX›\ÚY˜]ÚHœ›ÛH‹‹Û\Ý[™ËYÛØ[ŽÂ‚‹ÊˆŒˆ0­ÈŒHÙ[XÝY˜\šX[Èˆ\Èš[YžIÜÈÛÜ™›ÝHÙ[\‰ÜËˆHÙ[\‚ˆ
+ˆXÚÙYš]™HÛÛÝ\œÈ[™š]™HÚ^™\ÎÈ˜\šX[Èˆ\ÈH[\›˜[˜[YH›ÜˆBˆ
+ˆ›ÙXÝÙˆÜÙHÛÈÚÚXÙ\Ë[™H[X™\ˆÛˆ]ÈÝÛˆÙ\È›ÝØ^HÚXÚˆ
+ˆÚÚXÙ\È›ÙXÙY]ˆØ^HHÚÚXÙ\È[œÝXY8 %^H][\HÈHØ[YBˆ
+ˆšYÝ\™H[™™YY›ÈÛÜÜØ\žKˆ˜[È˜XÚÈÈHÛÝ[Ú[ˆ[ˆ^\È\ÈZ\ÜÚ[™Ëˆ
+ˆÚXÚ\ÈHÛ™K\Ú^™H[™›ËXÛÛÝ\ˆ›ÙXÝËˆ
+‹Â™[˜Ý[Ûˆ˜\šX[Ý[[X\žJ^\ÎžØÛÛÜœÐÚÜÙ[Ž˜›ÛÛX[ŽÜÚ^™\ÐÚÜÙ[Ž˜›ÛÛX[ŽØÛÛÜœÎ›[X™\ŽÜÚ^™\Î›[X™\ŽØ]˜Z[X›PÛÛÜœÎ›[X™\ŽØ]˜Z[X›TÚ^™\Î›[X™\ŽÝÝ[›[X™\ŸJ^ÂˆÛÛœÝØÛÛÜœÐÚÜÙ[‹Ú^™\ÐÚÜÙ[‹ÛÛÜœËÚ^™\Ë]˜Z[X›PÛÛÜœË]˜Z[X›TÚ^™\ËÝ[OX^\ÎÂˆÛÛœÝ\˜[JŽ›[X™\‹ÛÜ™œÝš[™ÊOO˜	ÛŸH	ÝÛÜ™IÛOOLOÈˆŽˆœÈŸXÂˆÛÛœÝ\ÐÛÛÜœÏXÛÛÜœÐÚÜÙ[ØÛÛÜœÏŒ˜]˜Z[X›PÛÛÜœÏŒÂˆÛÛœÝ\ÔÚ^™\Ï\Ú^™\ÐÚÜÙ[ÜÚ^™\ÏŒ˜]˜Z[X›TÚ^™\ÏŒÂˆYŠZ\ÐÛÛÜœÉ‰ˆZ\ÔÚ^™\Ê\™]\›ˆ\˜[
+Ý[›Ü[ÛˆŠNÂˆYŠÛÛÜœÐÚÜÙ[‰‰œÚ^™\ÐÚÜÙ[‰‰š\ÐÛÛÜœÉ‰š\ÔÚ^™\Ê\™]\›ˆ	Ü\˜[
+ÛÛÜœË˜ÛÛÜˆŠ_H0åÈ	Ü\˜[
+Ú^™\ËœÚ^™HŠ_XÂˆÛÛœÝ\ÎœÝš[™Ö×OV×NÂˆYŠ\ÐÛÛÜœÊ\\Ëœ\Ú
+ÛÛÜœÐÚÜÙ[Ü\˜[
+ÛÛÜœË˜ÛÛÜˆŠN˜	Ü\˜[
+]˜Z[X›PÛÛÜœË˜ÛÛÜˆŠ_H]˜Z[X›X
+NÂˆYŠ\ÔÚ^™\Ê\\Ëœ\Ú
+Ú^™\ÐÚÜÙ[Ü\˜[
+Ú^™\ËœÚ^™HŠN˜	Ü\˜[
+]˜Z[X›TÚ^™\ËœÚ^™HŠ_H]˜Z[X›X
+NÂˆ™]\›ˆ\Ëš›Ú[Šˆ0­ÈŠNÂŸB‚‚‚\Hš\ÚX›P›Ý[™Ï^ÛY›[X™\ŽÝÜ›[X™\ŽÜšYÚ›[X™\ŽØ›ÝÛN›[X™\ŸNÂ‚™[˜Ý[Ûˆ˜]Ú™Y™\™[˜Ù\ÔÜ[
+ØÚ[™[ŸNžØÚ[™[Ž”™XXÝ›Ù_J^ÂˆÛÛœÝÝ\™Ù]Ù]\™Ù]O]\ÙTÝ]OS[[Y[[Š[
+NÂˆ\ÙQY™™XÝ
+
+
+OOœÙ]\™Ù]
+ØÝ[Y[™Ù][[Y[žRY
+˜˜]Ú\™Y™\™[˜Ù\ËXY\‹Y\ÚYÛœÈŠJJNÂˆ™]\›ˆ\™Ù]ØÜ™X]TÜ[
+Ú[™[‹\™Ù]
+N›[ÂŸB\H]ÞPØ]YÛÜžSÜ[Û^ÚY›[X™\ŽÜ]œÝš[™ßNÂ\H]ÞT›Ü\TÙ[XÝ[Û^Ü›Ü\RY›[X™\ŽÛX™[œÝš[™ÎÜ™\]Z\™Y˜›ÛÛX[ŽÛ][\N˜›ÛÛX[ŽÛX^˜[Y\Î›[X™\ŽÜÜÜÚX›U˜[Y\Î\œ˜^OÝ˜[YWÚY›[X™\ŽÛ˜[YNœÝš[™ßOŽÝ˜[YRY›[X™\Ÿ[Ý˜[YNœÝš[™ßNÂ\H\œÛÛ˜[^˜][Û”]Y\Ý[Û^ÚYœÝš[™ÎÝ\Nˆ^Ú[œ]Ÿ™›ÜÝÛˆŸ[›X™[YÝ\ØYŽÜ]Y\Ý[ÛŽœÝš[™ÎÚ[œÝXÝ[ÛœÎœÝš[™ÎÜ™\]Z\™Y˜›ÛÛX[ŽÛX^Ú\˜XÝ\œÎ›[X™\ŽÛX^š[\Î›[X™\ŽÛÜ[ÛœÎœÝš[™Ö×_NÂ\H]ÞT\œÛÛ˜[^˜][Û^Ù[˜X›Y˜›ÛÛX[ŽÜ]Y\Ý[ÛœÎ”\œÛÛ˜[^˜][Û”]Y\Ý[Û–×_NÂ\H]ÞQ]Z[Ï^ØØ]YÛÜžNœÝš[™ÎÝ^Û›Û^RYÎ›[X™\ŽÜ›Ü\Y\ÏÎ‘]ÞT›Ü\TÙ[XÝ[Û–×NØ]šX]\Î”™XÛÜ™Ýš[™ËÝš[™ÏŽÛÜ[Û˜[”™XÛÜ™Ýš[™ËÝš[™ÏŽØ›\˜ŽœÝš[™ÎØÛÛ™šY[˜ÙNˆšYÚŸœ™]šY]ÈŽÜ\œÛÛ˜[^˜][ÛÎ‘]ÞT\œÛÛ˜[^˜][ÛŸNÂ\H\ÚYÛ‘š[HHÈ˜[YNˆÝš[™ÎÈÚ^™Nˆ[X™\ŽÈYˆÝš[™ÎÈš[Nˆš[NÈ™]šY]Õ\›ˆÝš[™ÎÈÜšYÚ[˜[[˜]˜Z[X›OÎ˜›ÛÛX[ŽÈ]NˆÝš[™ÎÈYÜÎˆÝš[™Ö×NÈ]UØ\›š[™ÏÎœÝš[™ÎÝ]Q\œ›ÜÎœÝš[™ÎØÛÛ[\ÚÎœÝš[™ÎÈ›\˜ÎœÝš[™ÎÈ\ØÜš\[Û“Ý™\œšYOÎœÝš[™ÎÈÚ^™QÝZYS˜[YOÎœÝš[™ÎÈÚYÎˆ[X™\ŽÈZYÚÎˆ[X™\ŽÈš\ÚX›P›Ý[™ÏÎ•š\ÚX›P›Ý[™ÎÈ\Õ˜[œÜ\™[˜ÞOÎ˜›ÛÛX[ŽÈY[™ÔÝ]\ÏÎˆ˜ÚXÚÚ[™ÈŸš[[YYŸ™[ŽÙ]ÞOÎ‘]ÞQ]Z[ÎÙ]ÞQ\œ›ÜÎœÝš[™ÈNÂ\H›ÙXÝ˜\šX[^ÚY›[X™\ŽÝ]NœÝš[™ÎØÛÜÝ›[X™\ŽÝ[\]TšXÙN›[X™\ŽÜÚ\[™ÏÎ›[X™\Ÿ[ÛÜ[ÛœÏÎ›[X™\–×NØÛÛÜ’YÎ›[X™\Ÿ[ÜÚ^™RYÎ›[X™\Ÿ[Ý[\]Q[˜X›YÎ˜›ÛÛX[ŸNÂ\H›ÙXÝÛÛÜ^ÚY›[X™\ŽÝ]NœÝš[™ÎÜÝØ]ÚœÝš[™ÎØ]˜Z[X›N˜›ÛÛX[ŽÝ[\]Q[˜X›Y˜›ÛÛX[ŸNÂ\H›ÙXÝÚ^™O^ÚY›[X™\ŽÝ]NœÝš[™ÎØ]˜Z[X›N˜›ÛÛX[ŽÝ[\]Q[˜X›Y˜›ÛÛX[ŸNÂ\H[\›˜][Û˜[Ú\[™Ô˜]O^ÚÙ^NœÝš[™ÎÛX™[œÝš[™ÎÜš[X\žN›[X™\ŽØY][Û˜[›[X™\ŸNÂ\HY]X›R[\›˜][Û˜[Ú\[™Ô˜]O^ÚÙ^NœÝš[™ÎÛX™[œÝš[™ÎÜš[X\žNœÝš[™ÎØY][Û˜[œÝš[™ßNÂ\H]ÞTÚ\[™Ô›Ùš[O^ÚY›[X™\ŽÝ]NœÝš[™ÎÛÜšYÚ[ÛÝ[žNœÝš[™ÎØÝ\œ™[˜ÞNœÝš[™ÎÙÛY\ÝXÔš[X\žN›[X™\ŽÙÛY\ÝXÐY][Û˜[›[X™\ŽÚ[\›˜][Û˜[’[\›˜][Û˜[Ú\[™Ô˜]V×_NÂ\H[\]Q]Z[ÈHÈYˆÝš[™ÎÈ˜]ÚYˆÝš[™ÎÈ]NˆÝš[™ÎÈ\ØÜš\[ÛŽœÝš[™ÎÈ›Y\š[Y›[X™\ŽØ›Y\š[]NœÝš[™ÎØœ˜[™œÝš[™ÎÛ[Ù[œÝš[™ÎÜ›ÝšY\ŽˆÝš[™ÎÈ[˜X›Y˜\šX[Îˆ[X™\ŽÜ™]šY]Ò[XYÙOÎœÝš[™ÎÜ™]šY]Ò[XYÙ\ÏÎœÝš[™Ö×NØÛÛÜ“Ü[ÛœÏÎ”›ÙXÝÛÛÜ–×NÜÚ^™SÜ[ÛœÏÎ”›ÙXÝÚ^™V×NÈ˜\šX[Î”›ÙXÝ˜\šX[×NÈÚÜˆÝš[™ÎÈÝ[™\™Ú\[™ÏÎ›[X™\Ÿ[ÜÚ\[™ÐÝ\œ™[˜ÞOÎœÝš[™ÎÜÚ\[™Õ[\]RYœÝš[™ÎÜÚ\[™Ô›Ùš[S™YYÔÙ[XÝ[ÛÎ˜›ÛÛX[ŽÙœ™YTÚ\[™Î˜›ÛÛX[ŽÛX^š[ÚYÎˆ[X™\ˆ[ÈX^š[ZYÚÎˆ[X™\ˆ[ÈXÙ[Y[ØØ[OÎˆ[X™\ˆ[È\ÓX™[\ÛÜšÏÎˆ›ÛÛX[ˆNÂ\H˜Y™\Ý[HÈYÎˆÝš[™ÎÈ˜]ÚYÎˆÝš[™ÎÈÛY[YˆÝš[™ÎÈ˜[YNˆÝš[™ÎÈ]OÎˆÝš[™ÎÈYÜÏÎˆÝš[™Ö×NÈ™]šY]Õ\›ÎˆÝš[™ÎÈš[YžR[XYÙ\ÏÎˆÝš[™Ö×NÈÚÜYÎˆ[X™\ŽÈY]Ü•\›ÎˆÝš[™ÎÈÝ]\ÎˆÜ™X]Yˆ‘˜Z[Yˆ“™YYÔ™]žHŽÈ\œ›ÜÎˆÝš[™ÎÈ›ÙXÝ˜[YOÎœÝš[™ÎÈXÙ[Y[ÎžÞ›[X™\ŽÞN›[X™\ŽÜØØ[N›[X™\ŽØ[™ÛN›[X™\ŸNÜXÙ[Y[ØØ[OÎ›[X™\ˆNÂ\HÛÜšÙ›ÝÔÝ\H˜ÛÛ›™XÝˆœÙ]\ˆ™\ÚYÛœÈˆœ™]šY]Èˆ™š[š\ÚŽÂ\Hš[š\Ú\ÙHH™]Z[Èˆ™]ÞHˆ›[ØÚÝ\Èˆ™š[˜[ŽÂ\H[™[™ÐØ]YÛÜžPÚ[™ÙO^Ù\ÚYÛ’YœÝš[™ÎÙ]Z[Î‘]ÞQ]Z[ÎØÛX\™YÛÝ[›[X™\ŸNÂ‚‹ÊˆŽHHT“›ØØX[\žHY›ÝX]ÚÚ]H[\™˜XÙHØ[ÈHÝ\Ë‚ˆH˜Z[Ø^\È“ÑPÕSPQÑTËTÕS‘ËP“TÒÈHT“Ø[ÈÙ]\\ÚYÛœÂˆ[™š[š\ÚˆH[šÈÜš][ˆÚ]H˜[Y\ÈÛˆØÜ™Y[ˆHÜÝ\[\Ý[™ÈHØ\ÂˆÚ[[HÝÛ™Ü˜YYÈÚ]]™\ˆH˜]ÚYØ]™YÚXÚ™XYÈ\ÈH\ˆÜÚ[™È[Ý\ˆXÙKˆXØÙ\Y\È[X\Ù\ÈÛˆHØ^H[ŽÈ[Z]Y[šÜÈ\™Bˆ[˜Ú[™ÙYÛÈ›Ý[™È[™XYHØ]™YÜˆÚ\™Yœ™XZÜËˆ
+‹Â˜ÛÛœÝÕTÐSPTÑTÎ”™XÛÜ™Ýš[™ËÛÜšÙ›ÝÔÝ\^Ü›ÙXÝˆœÙ]\‹[XYÙ\Îˆ™\ÚYÛœÈ‹\Ý[™Îˆ™š[š\Ú‹]\Îˆ™š[š\Ú‹X›\Úˆ™š[š\ÚŸNÂ™[˜Ý[ÛˆØ[›ÛšXØ[Ý\
+™\]Y\ÝYœÝš[™ß[
+N•ÛÜšÙ›ÝÔÝ\[ÂˆYŠ\™\]Y\ÝY
+\™]\›ˆ[ÂˆÛÛœÝ˜[YO\™\]Y\ÝYš[J
+KÓÝÙ\Ø\ÙJ
+NÂˆÛÛœÝÜ™\Ž•ÛÜšÙ›ÝÔÝ\×OVÈ˜ÛÛ›™XÝ‹œÙ]\‹™\ÚYÛœÈ‹œ™]šY]È‹™š[š\Ú—NÂˆYŠÜ™\‹š[˜ÛY\Ê˜[YH\ÈÛÜšÙ›ÝÔÝ\
+J\™]\›ˆ˜[YH\ÈÛÜšÙ›ÝÔÝ\Âˆ™]\›ˆÕTÐSPTÑTÖÝ˜[YWOÏÛ[ÂŸB™^Ü[˜Ý[Ûˆ™\]Y\ÝYš[š\Ú\ÙJ™\]Y\ÝYœÝš[™ß[
+N‘š[š\Ú\Ù_[ÂˆÛÛœÝ˜[YOJ™\]Y\ÝYˆŠKš[J
+KÓÝÙ\Ø\ÙJ
+NÂˆYŠ˜[YOOOHœX›\ÚŠ\™]\›ˆ™š[˜[ŽÂˆYŠ˜[YOOOH›\Ý[™ÈŸ˜[YOOOH]\ÈŠ\™]\›ˆ™]Z[ÈŽÂˆ™]\›ˆ[ÂŸB™[˜Ý[Ûˆ™\ÝÜ™YÛÜšÙ›ÝÔÝ\
+Ø]™Y•ÛÜšÙ›ÝÔÝ\™\]Y\ÝYœÝš[™ß[ÛÛ\]N˜›ÛÛX[ŠN•ÛÜšÙ›ÝÔÝ\ÂˆÛÛœÝÜ™\Ž•ÛÜšÙ›ÝÔÝ\×OVÈ˜ÛÛ›™XÝ‹œÙ]\‹™\ÚYÛœÈ‹œ™]šY]È‹™š[š\Ú—NÂˆÛÛœÝ\™Ù]XØ[›ÛšXØ[Ý\
+™\]Y\ÝY
+NÂˆYŠ]\™Ù]
+\™]\›ˆØ]™YÂˆ™]\›ˆÛÛ\]_Ü™\‹š[™^ÙŠ\™Ù]
+O[Ü™\‹š[™^ÙŠØ]™Y
+OÝ\™Ù]œØ]™YÂŸB‚‹ÊˆMÈ0­ÈHØ[YH›Ø›[HLÛÛ™Y›ÜˆÝ\Ë]›Üˆš[š\Ú\Ù\Ë‚ˆ
+ˆ™\ÝÜ˜][Ûˆ™\XÙYH™\]Y\ÝY\ÙHÚ]H˜]Ú	ÜÈØ]™YÛ™KÛÂˆ
+ˆ™[ØY[™ÈÜˆ›ÛÚÛX\šÚ[™È[žHš[š\Ú\ÙH›Ý[˜ÙYHÙ[\ˆ[Ù]Ú\™H8 %ˆ
+ˆ\ÚÚ[™È›Üˆ\ÙOY]ÞH[™YÛˆ\ÙOY]Z[Ëˆ\Ù\È\™HšY]ÜÈÝ™\ˆ˜YÂˆ
+ˆ][™XYH^\ÝÛÈÛˆHÛÛ\]Y˜]Ú[žH\ÙH\ÈYÚ][X]NÈÛˆ[‚ˆ
+ˆ[™š[š\ÚYÛ™KÛ›Ý\ˆH™\]Y\Ý\ÈH\ÙHXÝX[H™XXÚYˆ
+‹Â‹ÊˆÍÍˆH›[ØÚÝ\Èˆ\ÈH\ÙHÚ]›È™[™\™\‹ˆÚÛÜÚ[™ÈH[ØÚÝ\Ù][Ý™YˆÛÈÝ\ˆ[ˆŒÎ[™›Ý[™ÈØ\È]™\ˆZ[È˜]È\È\ÙK]]ˆÝ^YY[ˆH\K[ˆH›ÙÜ™\ÜÈX\[™H˜][HH[ˆ˜]Ú\ÈØ]™Yˆ™Y›Ü™HH[Ý™Kˆ™\Ý[Z[™ÈÛ™HÙˆÜÙH[™YÛˆHÛÛ\][H›[šÈYÙN‚ˆXY\‹˜Z[˜XÚÈ[šË[™›Ý[™È[ˆ™]ÙY[‹‚‚ˆ]™\žH\ÙH\È™]\›œÈ\ÈÈ™HÛ™H]XÝX[H˜]ÜÈÛÛY][™Ëˆ
+‹Â˜ÛÛœÝ‘S‘T‘QÑ’S’TÒÔTÑTÎ‘š[š\Ú\ÙV×OVÈ™]Z[È‹™]ÞH‹™š[˜[—NÂ‚™^Ü[˜Ý[Ûˆ˜]ØX›Qš[š\Ú\ÙJ\ÙN‘š[š\Ú\ÙKÛÛ\]N˜›ÛÛX[ŠN‘š[š\Ú\Ù^ÂˆYŠ‘S‘T‘QÑ’S’TÒÔTÑTËš[˜ÛY\Ê\ÙJJ\™]\›ˆ\ÙNÂˆÊˆHš[š\ÚY˜]Ú\ÈH™XÙZ\ÈÚÝÎÈ[ˆ[™š[š\ÚYÛ™HÛÙ\È˜XÚÈÈBˆ\Ý[™È]Z[È]Ø\È[\œ\Y[‹ˆ
+‹Âˆ™]\›ˆÛÛ\]OÈ™š[˜[Žˆ™]Z[ÈŽÂŸB‚™[˜Ý[Ûˆ™\ÝÜ™Yš[š\Ú\ÙJØ]™Y‘š[š\Ú\ÙK™\]Y\ÝYœÝš[™ß[ÛÛ\]N˜›ÛÛX[ŠN‘š[š\Ú\Ù^ÂˆÛÛœÝÜ™\Ž‘š[š\Ú\ÙV×OVÈ™]Z[È‹™]ÞH‹›[ØÚÝ\È‹™š[˜[—NÂˆÛÛœÝØY™TØ]™YY˜]ØX›Qš[š\Ú\ÙJØ]™YÛÛ\]JNÂˆYŠ\™\]Y\ÝY[Ü™\‹š[˜ÛY\Ê™\]Y\ÝY\Èš[š\Ú\ÙJJ\™]\›ˆØY™TØ]™YÂˆÛÛœÝ\™Ù]Y˜]ØX›Qš[š\Ú\ÙJ™\]Y\ÝY\Èš[š\Ú\ÙKÛÛ\]JNÂˆ™]\›ˆÛÛ\]_Ü™\‹š[™^ÙŠ\™Ù]
+O[Ü™\‹š[™^ÙŠØY™TØ]™Y
+OÝ\™Ù]œØY™TØ]™YÂŸB‚™[˜Ý[Ûˆ™\Ù\™PÛÛ\]X›Q]ÞT›Ü\Y\ÊÝ\œ™[‘]ÞT›Ü\TÙ[XÝ[Û–×K™^‘]ÞT›Ü\TÙ[XÝ[Û–×J^ÂˆÛÛœÝÝ\œ™[žRY[™]ÈX\
+Ý\œ™[›X\
+›Ü\OO–Ü›Ü\Kœ›Ü\RY›Ü\WJJNÂˆÛÛœÝ™\Ù\™YYÏ[™]ÈÙ][X™\Š
+NÂˆÛÛœÝ›Ü\Y\Ï[™^›X\
+›Ü\OOžÂˆÛÛœÝ™]š[Ý\ÏXÝ\œ™[žRY™Ù]
+›Ü\Kœ›Ü\RY
+NÂˆYŠ\™]š[Ý\ÏË˜[YKš[J
+J\™]\›ˆ›Ü\NÂˆYŠ\›Ü\KœÜÜÚX›U˜[Y\Ë›[™Ý
+^Ü™\Ù\™YYË˜Y
+›Ü\Kœ›Ü\RY
+NÜ™]\›ˆË‹‹œ›Ü\K˜[YNœ™]š[Ý\Ë˜[YK˜[YRYœ™]š[Ý\Ë˜[YRY_BˆÛÛœÝÛÛ\]X›O\›Ü\KœÜÜÚX›U˜[Y\Ë™š[™
+Ü[ÛO›Ü[Û‹˜[YWÚYOO\™]š[Ý\Ë˜[YRYÜ[Û‹›˜[YKÓÝÙ\Ø\ÙJ
+OOO\™]š[Ý\Ë˜[YKš[J
+KÓÝÙ\Ø\ÙJ
+JNÂˆYŠXÛÛ\]X›J\™]\›ˆ›Ü\NÂˆ™\Ù\™YYË˜Y
+›Ü\Kœ›Ü\RY
+NÂˆ™]\›ˆË‹‹œ›Ü\K˜[YN˜ÛÛ\]X›K›˜[YK˜[YRY˜ÛÛ\]X›K˜[YWÚYNÂˆJNÂˆÛÛœÝÛX\™YÛÝ[XÝ\œ™[™š[\Š›Ü\OOœ›Ü\K˜[YKš[J
+I‰ˆ\™\Ù\™YYËš\Ê›Ü\Kœ›Ü\RY
+JK›[™ÝÂˆ™]\›ˆÜ›Ü\Y\ËÛX\™YÛÝ[NÂŸB‚‹ÊˆMMHHÜ›ÝHH[HÛˆ\ÈZ[[™XYNˆ“Ü™\š[™ÈÝÜÈ[ÝHØ[››Ýˆ[\\\È›ÝÜ™\š[™È[KˆˆHXÚÙ\ˆœ™XZÜÈ]ÛÜœÙH[ˆHÜ™\š[™ÂˆÜšYYˆ\ˆÛÙYH™]\›œÈÌˆ[ØÚÝ\ÈHÚ^ÛÛÝ\œÈžHÙ[™HšY]ÜÈHÚÝÛ‚ˆ\ÈÌˆ[›X™[Y\[\Ë[™HÚ]H[™\ÚÛ™\È™XY\È›[šÈÜ]X\™\Âˆ™XØ]\ÙHHÚ]HØ\›Y[ÛˆHÚ]H˜XÚÙÜ›Ý[™\È›Ý[™ÈÈÙYH]]Ú^™K‚ˆš[YžH˜[Y\È]™\žHšY]È[ˆHT“][™XYHÙ[\Ëˆ\ÙH]ˆ
+‹Â™[˜Ý[Ûˆš[YžUšY]Ó˜[YJÜ˜ÎœÝš[™Ê^Âˆž^ÂˆÛÛœÝX™[[™]ÈT“
+Ü˜ÊKœÙX\˜Ú\˜[\Ë™Ù]
+˜Ø[Y\˜WÛX™[Š_ˆŽÂˆYŠ[X™[
+\™]\›ˆˆŽÂˆ™]\›ˆX™[œ™\XÙJÖËW×JËÙËˆŠKœ™\XÙJ×œ\œÛÛˆ
+
+ÊW‹ÚK›[Ù[	HŠKœ™\XÙJ×—ËËÏO˜ËÕ\\Ø\ÙJ
+JNÂˆXØ]ÚÜ™]\›ˆˆŸBŸB™[˜Ý[Ûˆ›ÙXÝÝÑÝZYJ›Y\š[]NœÝš[™Ë]˜Z[X›PÛÝ[›[X™\Š^ÂˆÛÛœÝÛÝ[SX]›X^
+KX]›Z[ŠK]˜Z[X›PÛÝ[JJK˜[Z[O\›ÙXÝ˜[Z[J›Y\š[]JNÂˆYŠÈYH‹šÛÙYH‹˜Ü™]Û™XÚÈ‹[šÈ‹›Û™ÔÛY]™H—Kš[˜ÛY\Ê˜[Z[JJ\™]\›ˆØÛÝ[][\Î–ÈHÛX\ˆœ›Û›ÙXÝšY]È‹]˜Z[X›H[™Û\ÈÜˆÛÛÜˆšY]ÜÈ]ÚÝÈH™X[Ø\›Y[‹“Y™\Ý[HØÙ[™\È]X]Ú\È^XÝØ\›Y[\H‹HÚ^™HÝZYHÚ[ˆ^Y\œÈ™YYÚ^š[™È[—_NÂˆYŠ˜[Z[OOOHœÜÝ\ˆŠ\™]\›ˆØÛÝ[][\Î–ÈHÛX\ˆÝ˜ZYÚ[Ûˆ\ÛÜšÈšY]È‹]˜Z[X›Hœ˜[YYÜˆ[™œ˜[YYš[YžHšY]ÜÈ‹”›ÛÛHØÙ[™\È]ÚÝÈ™X[\ÝXÈØØ[H‹HÚ^™H™Y™\™[˜ÙHÚ[ˆÚ^™\È˜\žH—_NÂˆYŠ˜[Z[OOOH›]YÈŸ˜[Z[OOOH[X›\ˆŠ\™]\›ˆØÛÝ[][\Î–ÈHÛX\ˆšY]ÈÙˆH[\ÚYÛˆ‹]˜Z[X›HÜÜÚ]K\ÚYH[™[™HÜˆY[™Û\È‹[ˆ[‹]\ÙHØÙ[™H]X]Ú\È\È^XÝš[šÝØ\™H‹HÚ^™HÜˆØ\XÚ]H™Y™\™[˜ÙHÚ[ˆ\ÙY[—_NÂˆYŠ˜[Z[OOOHÝHŠ\™]\›ˆØÛÝ[][\Î–ÈHÛX\ˆœ›ÛšY]ÈÙˆH[\ÚYÛˆ‹]˜Z[X›HÚYHÜˆ]Z[šY]ÜÈ‹[ˆ[‹]\ÙHØÙ[™H]ÚÝÜÈH˜Yø &\ÈØØ[H‹HÚ^™H™Y™\™[˜ÙHÚ[ˆ\ÙY[—_NÂˆYŠ˜[Z[OOOHœÝXÚÙ\ˆŠ\™]\›ˆØÛÝ[][\Î–ÈHÛX\ˆÛÜÙK]\ÙˆH[\ÚYÛˆ‹]˜Z[X›Hš[YžH›ÙXÝšY]ÜÈ‹[ˆ\XØ][ÛˆØÙ[™H]ÚÝÜÈ™X[\ÝXÈØØ[H—_NÂˆ™]\›ˆØÛÝ[][\Î–È•HÛX\™\Ý]˜Z[X›Hš[YžH›ÙXÝšY]È‹]˜Z[X›H[\›˜]H[™Û\È]Y™]È[™›Ü›X][Ûˆ‹H›ÙXÝX\›ÜšX]HY™\Ý[HØÙ[™H‹HÚ^™HÜˆØØ[H™Y™\™[˜ÙHÚ[ˆ\ÙY[—_NÂŸB‚‹Êˆ]ÞH™]\›œÈÚ\[™Ë\›Ùš[H]\ÈSY\ØØ\Yˆ™[™\š[™È[HÝ˜ZYÚˆ
+ˆ[È[ˆÜ[ÛˆÚÝÜÈH˜]È[]NˆÙ[\œÈØ]È’ÚY	ˆÌÎNÜÈ\›ÈYH‚ˆ
+ˆ[œÝXYÙˆ’ÚY	ÜÈ\›ÈYH‹ˆXÛÙHÛ˜ÙK\™KÛÈ]™\žHXÙH]š[ÈBˆ
+ˆ›Ùš[H˜[YHÙ]ÈH™X[Ú\˜XÝ\œËˆ
+‹Â™[˜Ý[ÛˆXÛÙT›Ùš[U]J]NœÝš[™Ê^Âˆ™]\›ˆ]Kœ™\XÙJÉˆÊ
+ÊNËÙË
+ËÛÙJOO”Ýš[™Ë™œ›ÛPÚ\ÛÙJ[X™\ŠÛÙJJJBˆœ™\XÙJÉˆÞ
+ÌNXKY—JÊNËÙÚK
+ËÛÙJOO”Ýš[™Ë™œ›ÛPÚ\ÛÙJ\œÙR[
+ÛÙKMŠJJBˆœ™\XÙJÉœ][ÝËÙË	È‰ÊKœ™\XÙJÉ˜\ÜÎËÙË‰ÈŠKœ™\XÙJÉ›ËÙËŠKœ™\XÙJÉ™ÝËÙËˆŠKœ™\XÙJÉ˜[\ËÙË‰ˆŠNÂŸB‹Êˆ0­È\ÈÝ]]ÎHÚ\˜XÝ\œÈÚ\™]™\ˆ][™Y[™HØ[\ˆ[‚ˆ\[™YˆÚ\[™È›Ùš[H‹ÛÈH™X[›Ùš[H™XY‘XÛÛ›Û^KTÝ[™\™‚ˆš[YžHÚÚXÙKØ\›x )ˆÚ\[™È›Ùš[HˆHHÛÜ™ÛXÙY[ˆ[ˆÚ]H›Ý[‚ˆÝ\YY\ˆ]ˆÝ]ÛˆHÛÜ™›Ý[™\žK[™™]™\ˆ™\X]HÛÜ™ÈBˆØ[\ˆ\ÈX›Ý]ÈYˆ
+‹Â‹ÊˆŒ0­ÈÛÈ˜][È[ˆÛ™H[™HÛˆH]™H™]šY]ËˆHØ[\ˆ\[™YBˆÛÜ™ÈœÚ\[™È›Ùš[HˆÈÚ]]™\ˆØ[YH˜XÚËÛÈ”Ý[™\™Ú\[™È‚ˆ™[™\™Y\È”Ý[™\™Ú\[™ÈÚ\[™È›Ùš[HŽÈ[™[žH˜[YHÝ™\ˆ‚ˆÚ\˜XÝ\œÈØ\ÈÝ]Ú][ˆ[\Ú\ËÛÈHÙ[\ˆÛÝ[›Ý™XYÚXÚˆ›Ùš[HØ\ÈX›Ý]È™H\ÙYH‘XÛÛ›Û^KTÝ[™\™ˆš[YžHÚÚXÙx )ˆÚ\[™Âˆ›Ùš[H‹ˆHX™[˜[Z[™ÈH[™È\ÈÈ˜[YH]‚‚ˆH[˜[YH\È[Ø^\È™]\›™Y›ÝËˆÚÜ[š[™ËÚ\™HH^[Ý]™YYÂˆ]\ÈÔÔÈHÚXÚÙY\ÈHÚÛHÝš[™È[ˆHÓK[ˆH]Bˆ]šX]K[™]˜Z[X›HÈHØÜ™Y[ˆ™XY\‹ˆ
+‹Â™[˜Ý[ÛˆœšY[™TÚ\[™Ô›Ùš[U]J˜]ÏÎœÝš[™Ê^ÂˆÛÛœÝ]O\˜]ÏÙXÛÙT›Ùš[U]J˜]ÊNœ˜]ÎÂˆYŠ]]J\™]\›ˆ”Ú\[™È›Ùš[H™YYYŽÂˆÊˆŒÈ0­È›Ý[™žHHXØÙ\[˜ÙH[‹ˆ\ÈÛÛ\ÙYU‘T–H›Ùš[H™YÚ[›š[™ÂˆÚ]”Ý[™\™ˆˆÈHØ[YH™YHÛÜ™Ëˆœš][žH\ÈÙ]™[ˆÙˆ[N‚‚ˆÝ[™\™ˆÝÚYÑØ\›Y[È
+Ú\ÊBˆÝ[™\™ˆÝÚYÑØ\›Y[È
+Ú\È
+ÈÚÜÊBˆÝ[™\™ˆÝÚYÑÛÙYKÝÙX]Ú\ˆÝ[™\™ˆÝÚYÑÚYÈÛÝ\ËÛ™Ë\ÛY]™KTÚ\[šÂˆÝ[™\™ˆš[YžHÚÚXÙK‹‹ˆ]YËL[Þ‹LÛÞ‚ˆ‹‹‚‚ˆ[Ù]™[ˆ™[™\™Y\È”Ý[™\™Ú\[™È›Ùš[HˆÛˆH›ÙXÝØ\™[™ˆÛˆHš[˜[™]šY]ËÛÈHÛ™HØÜ™Y[ˆ]^\ÝÈÈÛÛ™š\›HÚXÚ›Ùš[BˆH\Ý[™ÈX›\Ú\ÈÚ]ÛÝ[›Ý[[H\\H[™X›\Ú[™È[™\‚ˆHÜ›Û™È›Ùš[H\È^XÝHÚ]LˆÛÜÝ\‹‚‚ˆŒ™[[Ý™YH[˜Ø][Ûˆ›Üˆ\È™X\ÛÛˆ[™Y\È™Z[™ÚXÚØ\ÂˆÛÜœÙNˆH[˜Ø][Ûˆ\È]X\ÝÜÜÞH[ˆHš\ÚX›HØ^K\ÈØ\ÈÙ]™[‚ˆY™™\™[˜[Y\Èš[[™È\ÈÛ™KˆH™Yš^\È›ÜY™XØ]\ÙHH›ÝÂˆ[™XYHØ^\ÈÚ\[™Ë[™]™\ž][™È]\Ý[™ÝZ\Ú\È[H\ÈÙ\ˆ
+‹ÂˆÛÛœÝÚ]Ý]Ý[™\™]]Kœ™\XÙJ×œÝ[™\™—Ê‹ÚKˆŠKš[J
+NÂˆYŠ]Ú]Ý]Ý[™\™
+\™]\›ˆ”Ý[™\™Ú\[™ÈŽÂˆÊˆ˜Z[[™ÈœÚ\[™È›Ùš[Hˆ\ÈÝš\Y™XØ]\ÙHH›ÝÈ]Ú]È[ˆ[™XYBˆØ^\ÈÛÈH›ÝÈÚÜ[ˆ]ˆ
+‹Âˆ™]\›ˆÚ]Ý]Ý[™\™œ™\XÙJ×ÊœÚ\[™×Êœ›Ùš[WÊ‰ÚKˆŠKš[J
+_]Kš[J
+NÂŸB‚‹ÊˆH0­È]™\žHÛÙYH\Ý[™ÈÝÜYÛˆÛÜÝ\™HÝ[™YYY‹ˆÛÛYBˆ™KYš[È]™\žHÝ\ˆ]ÞHšY[œ›ÛHHš[YžH›ÙXÝ[™YHÛ™Bˆ]›ØÚÜÈX›\Ú[™ÈÈHX[X[ÛXÚÈÛˆHÛÛÚÜÙHÚÛHÚ[\È[Ë‚ˆ]ÞIÜÈÛÜÝ\™H˜[Y\È\™H[š\[ˆš\]X\\ˆš\[™[Ý™\‹[™ˆš[YžH˜[Y\ÈHØ\›Y[Z[›H[›ÝYÚÈÙ]H]ˆH›ÙXÝØ[YBˆ[^š\\ÈH[š\[™HÛÙYHÜˆÜ™]Û™XÚÈÚ]›Èš\[ˆ]È˜[YH\ÈBˆ[Ý™\‹ˆ[ž][™È]Ø^\Èžš\ˆÚ]Ý]Ø^Z[™ÈÒPÒ\ÈY[œ™\ÛÛ™Yˆ˜]\ˆ[ˆÝY\ÜÙYHHÜ›Û™È]šX]HÛÙ\ÈÛÈH]™H\Ý[™Ëˆ
+‹Â™^Ü[˜Ý[Ûˆ™\šYšYYÛÜÝ\™J›Y\š[]OÎœÝš[™Ë[Ù[ÎœÝš[™Ëœ˜[™ÎœÝš[™Ê^ÂˆÛÛœÝ^X	Ø›Y\š[]_ˆŸH	Û[Ù[ˆŸH	Øœ˜[™ˆŸXÓÝÙ\Ø\ÙJ
+NÂˆYŠ×™[ËW×OÞš\‹Ë\Ý
+^
+J\™]\›ˆ‘[š\ŽÂˆYŠ×Š]X\\ŸWÍ
+VËW×OÞš\‹Ë\Ý
+^
+J\™]\›ˆ”]X\\ˆš\ŽÂˆYŠ×Š[ŸWÌŠVËW×OÞš\‹Ë\Ý
+^
+J\™]\›ˆ’[ˆš\ŽÂˆYŠ×žš\‹Ë\Ý
+^
+J\™]\›ˆˆŽÂˆYŠ×Š[Ý™\ŸÛÙY_ÛÙYÝÙX]Ú\Ü™]Û™XÚßÜ™]È™XÚÊW‹Ë\Ý
+^
+J\™]\›ˆ”[Ý™\ˆŽÂˆ™]\›ˆˆŽÂŸB‚˜ÛÛœÝTT‘SÔ“ÑPÕÑSRSQTÏ[™]ÈÙ]
+ÈYH‹šÛÙYH‹˜Ü™]Û™XÚÈ‹[šÈ‹›Û™ÔÛY]™H—JNÂ™[˜Ý[ÛˆÚ\[™Ô›Ùš[QÜ›Ý\
+›Ùš[U]NœÝš[™Ë›Y\š[]NœÝš[™Ê^ÂˆÛÛœÝ›ÙXÝ\›ÙXÝ˜[Z[J›Y\š[]JK›Ùš[O\›ÙXÝ˜[Z[JXÛÙT›Ùš[U]J›Ùš[U]JJNÂˆYŠ›ÙXÝ	‰œ›Ùš[OOO\›ÙXÝ
+\™]\›ˆœ™XÛÛ[Y[™YŽÂˆYŠTT‘SÔ“ÑPÕÑSRSQTËš\Ê›ÙXÝ
+I‰TT‘SÔ“ÑPÕÑSRSQTËš\Ê›Ùš[JJ\™]\›ˆœ™[]YŽÂˆ™]\›ˆ›Ý\ˆŽÂŸB™[˜Ý[ÛˆÚ\[™Ô›Ùš[SÜ[Û“X™[
+›Ùš[N‘]ÞTÚ\[™Ô›Ùš[J^Ü™]\›˜	ÙXÛÙT›Ùš[U]J›Ùš[K]J_H0­È		Ü›Ùš[K™ÛY\ÝXÔš[X\žKÑš^Y
+Š_Hš\œÝ0­È		Ü›Ùš[K™ÛY\ÝXÐY][Û˜[Ñš^Y
+Š_HY][Û˜[B‚™[˜Ý[Ûˆ\œÛÛ˜[^˜][Û”›Ø›[J]Z[ÏÎ‘]ÞQ]Z[Ê^ØÛÛœÝ\œÛÛ˜[^˜][ÛY]Z[ÏËœ\œÛÛ˜[^˜][ÛŽÚYŠ\\œÛÛ˜[^˜][ÛË™[˜X›Y
+\™]\›ˆˆŽÚYŠ\\œÛÛ˜[^˜][Û‹œ]Y\Ý[ÛœË›[™Ý
+\™]\›ˆY]X\ÝÛ™H\œÛÛ˜[^˜][Ûˆ]Y\Ý[Û‹ˆŽÚYŠ\œÛÛ˜[^˜][Û‹œ]Y\Ý[ÛœË›[™ÝJ\™]\›ˆ‘]ÞH[ÝÜÈ\Èš]™H\œÛÛ˜[^˜][Ûˆ]Y\Ý[ÛœËˆŽÙ›ÜŠÛÛœÝÚ[™^]Y\Ý[Û—HÙˆ\œÛÛ˜[^˜][Û‹œ]Y\Ý[ÛœË™[šY\Ê
+J^ÚYŠ\]Y\Ý[Û‹œ]Y\Ý[Û‹š[J
+J\™]\›˜\œÛÛ˜[^˜][Ûˆ]Y\Ý[Ûˆ	Ú[™^
+Ì_H™YYÈH]Y\Ý[Û‹˜ÚYŠ]Y\Ý[Û‹\OOOH™›ÜÝÛˆŠ^ØÛÛœÝÜ[ÛœÏ\]Y\Ý[Û‹›Ü[ÛœË›X\
+Ü[ÛO›Ü[Û‹š[J
+JK™š[\Š›ÛÛX[ŠNÚYŠÜ[ÛœË›[™ÝŠ\™]\›˜\œÛÛ˜[^˜][Ûˆ]Y\Ý[Ûˆ	Ú[™^
+Ì_H™YYÈ]X\ÝÛÈ›ÜÝÛˆÚÚXÙ\Ë˜ÚYŠÜ[ÛœË›[™ÝŒÌ
+\™]\›˜\œÛÛ˜[^˜][Ûˆ]Y\Ý[Ûˆ	Ú[™^
+Ì_H\È[Ü™H[ˆÌ›ÜÝÛˆÚÚXÙ\Ë˜ÚYŠÜ[ÛœËœÛÛYJÜ[ÛO›Ü[Û‹›[™ÝŒŒ
+J\™]\›˜]™\žH›ÜÝÛˆÚÚXÙH[ˆ\œÛÛ˜[^˜][Ûˆ]Y\Ý[Ûˆ	Ú[™^
+Ì_H]\Ý™HŒÚ\˜XÝ\œÈÜˆ™]Ù\‹˜_\™]\›ˆˆŸB‚˜ÛÛœÝÓÔ’Ñ“Õ×ÔÕTÎˆ\œ˜^OÚY•ÛÜšÙ›ÝÔÝ\Û[X™\ŽœÝš[™ÎÛX™[œÝš[™ßOˆHÂˆÚYˆ˜ÛÛ›™XÝ‹[X™\ŽˆŒH‹X™[ˆÛÛ›™XÝš[YžHŸKˆÚYˆœÙ]\‹[X™\ŽˆŒˆ‹X™[ˆÚÛÜÙH›ÙXÝŸKˆÚYˆ™\ÚYÛœÈ‹[X™\ŽˆŒÈ‹X™[ˆY\ÚYÛœÈŸKˆÚYˆœ™]šY]È‹[X™\ŽˆŒ‹X™[ˆ”™]šY]È˜]ÚŸKˆÚYˆ™š[š\Ú‹[X™\ŽˆŒH‹X™[ˆ‘š[š\Ú\Ý[™ÜÈŸK—NÂ‹ÊˆŒMÈ0­È[™^ÈØ\È”™]šY]ÈšXÚ[™È‹ˆšXÚ[™È›ÝÈ]™\ÈÛˆH›ÙXÝYÙKˆ\™XÝH[™\ˆHÛÛÝ\œÈ[™Ú^™\È]XÚYHÚXÚ˜\šX[È^\ÝÛÈ\ÂˆÝ\\ÈÛ›H˜YÜ™X][Ûˆ[™\È˜[YY›Üˆ]ˆ
+‹Â˜ÛÛœÝ“ÑÔ‘TÔ×ÔÕTÈHÈÛÛ›™XÝš[YžH‹ÚÛÜÙH›ÙXÝ‹Y\ÚYÛœÈ‹Ü™X]Hš[YžH˜YÈ‹Ü™X]H˜YÈ‹“\Ý[™È]Z[È‹‘]ÞH\Ý[™È]Z[È‹“\Ý[™ÈÝÜÈ‹”X›\Ú—NÂ‹ÊˆH˜Z[\ÙYÈÚÝÈ[H“ÑÔ‘TÔ×ÔÕTÈ\È\]X[Y\œËˆ]Y›ÝX]ÚˆH™X[Ý]HXXÚ[™H
+ÛÜšÙ›ÝÔÝ\\ÈH˜[Y\ÊH[™][™[YH‘˜YÈ‚ˆÝ\]\È™X[HHÝ]ÛÛYHÙˆšXÚ[™ËˆH[™XÙ\È™[ÝÈ\™H[˜Ú[™ÙY8 %ˆÛ›HH™[™\š[™ÈÜ›Ý\È[NˆÜ[]™[Ý\Ë[ˆHš[š\Ú›ÙHÚÜÙHˆ\Ù\È™\Ý[™\›™X]]ˆÜ[”›ÙÜ™\ÜÔÝ\Ü›ÙÜ™\ÜÔÝ]\ÈÝ[ZÙHBˆÜšYÚ[˜[N[™^ÛÈ›Û™HÙˆHØ][™ÈX]Ú[™Ù\Ëˆ
+‹Â‹ÊˆŒMˆ0­ÈÛÛ›™XÝX]™\ÈH˜Z[ˆ]\ÈXØÛÝ[Ù]\[ÝHÛX\ˆÛ˜ÙK›ÝBˆÝYÙHÙˆ]™\žH˜]Ú[™Ø\œžZ[™È]\ÈX˜›HHXYHH›Ý\‹\\›ØˆÛÚÂˆZÙHš]™Kˆ]™[XZ[œÈH™XXÚX›HYÙH[™Ý[Ø]\È]™\ž][™ÈY\ˆ]8 %ˆÛ›H]ÈX˜›H\ÈÛÛ™Kˆ[X™\š[™È™[ÝÈÛÛY\Èœ›ÛH˜Z[ÔÒUSÓ‹›Ýœ›ÛBˆH“ÑÔ‘TÔ×ÔÕTÈ[™^ÚXÚÝ[[œÈNÛÈ›ÈØ][™ÈX]Ú[™Ù\Ëˆ
+‹Â‹ÊˆŒŒ0­È›Ý\ˆÝYÙ\ËXXÚÛÝ™\š[™ÈHYØXÞH“ÑÔ‘TÔ×ÔÕTÈ[™XÙ\È]›ÝÂˆ]™HÛˆHØ[YHYÙKˆ˜YÜ™X][Ûˆ
+Ë
+H[™[ØÚÝ\È
+ÊH[Ý™YÛÈBˆ[XYÙ\ÈYÙK[™]ÞH]Z[È
+ŠHÚ]ÈÚ]]\ÈÛˆ\Ý[™ËÛÈÜÙBˆ[™XÙ\È›ÈÛ™Ù\ˆÙ]X˜›\ÈÙˆZ\ˆÝÛ‹ˆHN[™XÙ\È\™H[ÝXÚYÛÂˆ]™\žHØ]KÝ]\È[™Y\[šÈÝ[™\ÛÛ™\Ëˆ
+‹Â˜ÛÛœÝRSÔÕQÑTÎˆ\œ˜^OÛX™[œÝš[™ÎÝ]NœÝš[™ÎÚ[™^›[X™\ŽØÛÝ™\œÎ›[X™\–×_OˆHÂˆÛX™[ˆ”›ÙXÝ‹[™^ŒK]NˆÚÛÜÙH›ÙXÝ‹ÛÝ™\œÎ–ÌW_KˆÛX™[ˆ’[XYÙ\È‹[™^Œ‹]Nˆ‘\ÚYÛœÈ
+È[XYÙ\È‹ÛÝ™\œÎ–Ì‹Ë×_KˆÛX™[ˆ“\Ý[™È‹[™^K]Nˆ•]\È
+È]ÞH]Z[È‹ÛÝ™\œÎ–ÍK—_KˆÛX™[ˆ”X›\Ú‹[™^Ž]Nˆ”™]šY]È
+ÈX›\Ú‹ÛÝ™\œÎ–Î_K—NÂ‹ÊˆŒŒˆ0­ÈRSÕÔRSÔ’PÒS‘ËRSÑQ•ËRSÑ’S’TÒRSÑ’S’TÒÑ’T”Õ[™ˆ’S’TÒÔRSÓP‘SÈ\ØÜšX™YHÛš]™KXX˜›H˜Z[Ú]]È™\ÝYš[š\Úˆ›ÙKˆRSÔÕQÑTÈ™\XÙY[Ùˆ[Kˆ
+‹Â˜ÛÛœÝÓÔ’Ñ“Õ×ÒSHÂˆÝ]NˆÛÛ›™XÝš[YžH[™]ÞH‹[›Îˆ›ÝXØÛÝ[È]\Ý™HÛÛ›™XÝY™Y›Ü™HÛÛYHØ[ˆZ[HÛÛ\]H\Ý[™Ëˆ‹ÙXÝ[ÛœÎ–ÞÚXY[™Îˆ”š[YžHÛÛ›™XÝ[Ûˆ‹ÛÜNˆÛÛ›™XÝHš[YžHXØÛÝ[]ÛÛZ[œÈ[Ý\ˆØ]™Y›ÙXÝˆÛÛYH\Ù\È]È™XY›ÙXÝÛÜÝÈ[™˜\šX[Ë\ØY\ÛÜšË[™Ü™X]H[œX›\ÚY›ÙXÝ˜YËˆŸKÚXY[™Îˆ‘]ÞHÛÛ›™XÝ[Ûˆ‹ÛÜNˆÛÛ›™XÝH]ÞHÚÜ[šÙYÈ]Ø]™Y›ÙXÝˆÛÛYH\Ù\È]Þx &\È™X[Ø]YÛÜšY\Ë]šX]\ËÚ\[™È›Ùš[\Ë[™X›\Ú[™ÈÛÛ›™XÝ[Û‹ˆŸKÚXY[™Îˆ“›Ý[™ÈX›\Ú\È\™H‹ÛÜNˆ•\ÈÝ\Û›H™\šYšY\ÈXØÙ\ÜËˆÛÛYHØ[››ÝX›\ÚH\Ý[™È[[[ÝH™XXÚHš[˜[™]šY]È[™ÛÛ™š\›HX›\Ú[™ÈHÙXÛÛ™[YKˆŸKÚXY[™Îˆ•\ÙHX]Ú[™ÈXØÛÝ[È‹ÛÜNˆÛÛ›™XÝHš[YžHXØÛÝ[]ÛÛZ[œÈHØ]™Y›ÙXÝ[™H]ÞHÚÜÚ\™H]›ÙXÝØ\ÈX›\ÚYˆYˆH›ÙXÝ™[Û™ÜÈÈHY™™\™[ÚÜÛÛYHÚ[ÝÜ[™^Z[ˆHZ\ÛX]ÚˆŸKÚXY[™Îˆ–[Ý\ˆX›\Ú[™ÈØY™YÝX\™‹ÛÜNˆÛÛ›™XÝ[™ÈÙ\È›ÝX›\Ú[ž][™ËˆÛÛYHš\œÝÜ™X]\È[œX›\ÚYš[YžH˜YËˆ\Ý[™ÜÈÛÈ]™HÛˆ]ÞHÛ›HY\ˆHš[˜[™]šY]È[™HÙXÛÛ™^XÚ]ÛÛ™š\›X][Û‹ˆŸW_KˆÝ]Nˆ”™\\™H[Ý\ˆ›ÙXÝ[ˆš[YžH‹[›Îˆ™Y›Ü™HÛÛYHØ[ˆØ]™HH›ÙXÝ]]\Ý™HX›\ÚYœ›ÛHš[YžHÈHØ[YH]ÞHÚÜ[ÝHÛÛ›™XÝYÈÛÛYKˆH›ÙXÝ]\ÈÝ[Û›HHš[YžH˜YÚ[›ÝÛÜšËˆ‹ÙXÝ[ÛœÎ–ÞÚXY[™ÎˆÚÛÜÙH[ˆ^\Ý[™ÈÜˆYXØ]Y›ÙXÝ‹ÛÜNˆ‘Z]\ˆÜ[ÛˆÛÜšÜËˆ‹[]Î–È•\ÙH[ˆ^\Ý[™È›ÙXÝ]\È[™XYHX›\ÚY[ˆ[Ý\ˆ]ÞHÚÜˆ‹Ü™X]HHÙ\\˜]H›ÙXÝÜXÚYšXØ[H›Üˆ\Ý[™È˜XÝÜžKˆ—_KÚXY[™Îˆ”Ù]\H›ÙXÝ[ˆš[YžH‹ÛÜNˆ•H[\Ü˜\žH\ÛÜšÈ\ÈÛ›H\ÙYÈØ]™HHXÙ[Y[ˆ]Ú[›Ý™H\ÙY›Üˆ[Ý\ˆ\Ý[™È˜XÝÜžH˜]Ú\Ëˆ‹Ý\Î–ÈÚÛÜÙHH›ÙXÝ[ÝHØ[ÈÙ[ˆ‹ÚÛÜÙH]Èš[›ÝšY\‹ˆ‹Y[\Ü˜\žH\ÛÜšËˆ‹”Ú^™H[™ÜÚ][ÛˆH\ÛÜšÈ^XÝHÚ\™H[ÝHØ[]\™H\ÚYÛœÈXÙYˆ‹”X›\ÚH›ÙXÝœ›ÛHš[YžHÈ[Ý\ˆÛÛ›™XÝY]ÞHÚÜˆ—_KÚXY[™ÎˆÛÜHHÛÜœ™XÝš[YžHT“‹ÛÜNˆY\ˆH›ÙXÝ\È™Y[ˆX›\ÚYˆ‹Ý\Î–È“Ü[ˆ^H›ÙXÝÈ[ˆš[YžKˆ‹”Ù[XÝH›ÙXÝˆ‹“Ü[ˆ]È\ÚYÛˆY]Ü¸ %HØÜ™Y[ˆÚ\™H[ÝHØ[ˆÙYH[™Y\ÝH\ÛÜšÈXÙ[Y[ˆ‹ÛÜHHÛÛ\]HT“œ›ÛH[Ý\ˆœ›ÝÜÙ\¸ &\ÈY™\ÜÈ˜\‹ˆ‹”\ÝH]T“[ÈÛÛYKˆ—_KÚXY[™Îˆ‘È›Ý\ÙH‹ÛÜNˆ“Û›HÛÜH[™\ÝHHÛÛ\]HT“ÜXÚYšXØ[Hœ›ÛHHš[YžH\ÚYÛˆY]Ü‹ˆÈ›Ý\ÙNˆ‹[]Î–È•H]ÞH\Ý[™ÈT“‹–[Ý\ˆ]ÞHÝÜ™Yœ›ÛT“‹•Hš[YžH^H›ÙXÝÈYÙHT“‹HX›XÈ›ÙXÝT“‹“Û›HHš[YžH›ÙXÝQ—_KÚXY[™Îˆ‘ÛÛYH[™\ÈH™\Ý‹ÛÜNˆ–[ÝHÈ›Ý™YYÈš[š\Ú]™\žH\Ý[™ÈÚÚXÙH[ˆš[YžKˆ[œÚYH\Ý[™È˜XÝÜžK[ÝHÚ[ÚÛÜÙHHÛÛÜœËÚ^™\ËšXÙ\ËÚ\[™È›Ùš[K\Ý[™ÈÝÜË[ØÚÝ\Ë]\ËYÜË\ØÜš\[Û‹]ÞH]Z[Ë[™\œÛÛ˜[^˜][Û‹ˆŸKÚXY[™ÎˆY\ˆ[ÝHØ]™HH›ÙXÝ‹ÛÜNˆ–[Ý\ˆØ]™Y›ÙXÝÚ[ÙY\ÛÜšÚ[™ÈYˆHÜšYÚ[˜[]ÞH\Ý[™ÈÙ[ÈÝ]™XÛÛY\È[˜XÝ]™KÜˆ\È[]Yˆ\ÝÙY\H›ÙXÝ[ˆš[YžKˆŸKÚXY[™ÎˆÜ™X][™ÈH›ÙXÝ[™OÈ‹ÛÜNˆÚÛÜÙHH[™HÚ[ˆ[ÝHØ[ÈXÙH]™\žH\ØYY\ÚYÛˆÛˆÛÈÈ›Ý\ˆØ]™Y›ÙXÝø %›Üˆ^[\KH\Ú\ÝÙX]Ú\[™ÛÙYKˆ[ÝHÚ[\ØYXXÚ\ÚYÛˆÛ˜ÙKˆÛÛYHÚ[Ü™X]HHÙ\\˜]H\Ý[™È›ÜˆXXÚ›ÙXÝ[™ÝZYH[ÝH›ÝYÚ]ÈÙ][™ÜÈÙ\\˜][KˆŸW_KˆÝ]NˆYš[š\ÚY\ÛÜšÈ‹[›Îˆ•\È˜]Ú™XÛÛY\ÈÛ™H\Ý[™È\ˆ\ØYY\ÚYÛˆ›ÜˆHÙ[XÝY›ÙXÝˆ‹ÙXÝ[ÛœÎ–ÞÚXY[™Îˆ•\ÙH›ÙXÝ[Û‹\™XYHš[\È‹ÛÜNˆ•\ØY‘ÈÜˆ”È\ÛÜšË›Ý[ØÚÝ\ÝÜËˆ\ÙH˜[œÜ\™[‘ÜÈÚ[ˆH˜XÚÙÜ›Ý[™ÚÝ[›Ýš[ˆŸKÚXY[™Îˆ•\ØY[ˆ[Ü™H[ˆÛ™H›Ý[™‹ÛÜNˆÚÛÜÚ[™È[›Ý\ˆ›Û\ˆÜˆ[Ü™H[™]šYX[š[\ÈYÈ[HÈH^\Ý[™È˜]Úˆ]Ù\È›Ý™\XÙHX\›Y\ˆ\ØYËˆ^XÝ\XØ]Hš[\È\™HÚÚ\YˆŸKÚXY[™ÎˆÚXÚÈ™\ÛÛ][Ûˆ‹ÛÜNˆ‘ÛÛYH™XYÈHÜšYÚ[˜[^[[Y[œÚ[ÛœÈÚ]Ý]™YXÚ[™ÈKˆYˆ\ÛÜšÈ˜[È™[ÝÈš[Yžx &\È™XÛÛ[Y[™][Ûˆ›ÜˆHÙ[XÝY›ÙXÝ™]šY]ÈHØ\›š[™È™Y›Ü™HÛÛ[Z[™ËˆŸKÚXY[™Îˆ˜]Ú[Z]È‹ÛÜNˆ‘XXÚ˜]ÚØ[ˆÛÛZ[ˆ\ÈŒ\ÚYÛœËÚ]HX^[][HÙˆLPˆ\ˆ[™]šYX[\ÚYÛ‹ˆŸW_KˆÝ]Nˆ”™]šY]ÈšXÙ\È[™Ú\[™È‹[›Îˆ”Ù]H^Y\‹Y˜XÚ[™È][HšXÙ\È[™ÛÛ™š\›HH]ÞHÚ\[™È›Ùš[H™Y›Ü™H[žHš[YžH˜YÈ\™HÜ™X]Yˆ‹ÙXÝ[ÛœÎ–ÞÚXY[™Îˆ•\ÙHH›Ùš]ÛØ[‹ÛÜNˆ‘ÛÛYHØ[Ý[]\ÈH™XÛÛ[Y[™YšXÙH›Üˆ]™\žH^XÝš[YžH›ÙXÝÛÜÝ\Ú[™ÈH]ÞH™YHÙ][™ÜÈÚÝÛˆ[ˆHØ[Ý[][Ûˆ]Z[Ëˆ^Y\‹\ZYÚ\[™ÈÝ^\ÈÙ\\˜]Hœ›ÛH][H›Ùš]ˆŸKÚXY[™Îˆ‘Y]X]Ú[™ËXÛÜÝÜ›Ý\È‹ÛÜNˆ•˜\šX[ÈÚ]H^XÝØ[YHš[YžHÛÜÝÚ\™HÛ™HšXÙHšY[ˆ[Ü™H^[œÚ]™HÛÛÜœËÚ^™\ËX]\šX[Ëš[š\Ú\ËÜˆÝ\ˆÜ[ÛœÈ™[XZ[ˆÙ\\˜]H]]ÛX]XØ[KˆŸKÚXY[™ÎˆÚÛÜÙHÚ\[™È‹ÛÜNˆ’ÙY\HÚ\[™È›Ùš[H[\ÜYœ›ÛHHØ]™Y›ÙXÝÜˆÜ™X]HH˜[YYÛÜHÚ]Y™™\™[ÛY\ÝXËY][Û˜[Z][KÜˆ[\›˜][Û˜[Ú\™Ù\ËˆŸKÚXY[™Îˆ\›Ý™HH™\Ý[‹ÛÜNˆ”™]šY]ÈHÝÙ\Ý\Ý[X]Y›Ùš][ˆ]™\žHÜ›Ý\ˆ^Y\‹\ZYÚ\[™ËÙ™œÚ]HYË[™Ø[\È^\™H^ÛYYœ›ÛH][H›Ùš]™XØ]\ÙH^H\™HÙ\\˜]HÜˆ˜\žHžHÜ™\‹ˆŸW_KˆÝ]NˆÜ™X]HHš[YžH˜YÈ‹[›Îˆ•\ÈÜ™X]\ÈÛ™H[œX›\ÚYš[YžH›ÙXÝ˜Y›Üˆ]™\žH\ØYY\ÚYÛ‹ˆ‹ÙXÝ[ÛœÎ–ÞÚXY[™Îˆ•Ú]ÛÛYHÛÜY\È‹ÛÜNˆ‘ÛÛYHÛÜY\ÈHÙ[XÝY›ÙXÝ[˜X›Y˜\šX[Ë\ÛÜšÈXÙ[Y[\›Ý™YšXÙ\Ë[™\ØYY\ÚYÛˆ[ÈXXÚ™]È˜YˆŸKÚXY[™Îˆ•Ú]\ÈÙ\È›ÝÈ‹ÛÜNˆ•H›ÙXÝÈ\™H›ÝX›\ÚYÈ]ÞH]\ÈÚ[ˆ^H™[XZ[ˆ[œX›\ÚYš[YžH˜YÈÚ[H[ÝHš[š\Ú]\Ë]ÞH]Z[Ë[™[XYÙ\ËˆŸKÚXY[™Îˆ’ÙY\HYÙHÜ[ˆ‹ÛÜNˆ“\™ÙH\ÛÜšÈ[™\™ÙH˜]Ú\ÈØ[ˆZÙH[YKˆÛÛYH›ØÙ\ÜÙ\ÈH˜]ÚØY™[H[™ÚÝÜÈ›ÙÜ™\ÜÈ\ÈXXÚ˜Y\ÈÛÛ\]YˆŸKÚXY[™Îˆ’YˆÛ™H˜Y˜Z[È‹ÛÜNˆ‘ÛÛYHÙY\ÈÝXØÙ\ÜÙ[˜YÈ[™Y[YšY\ÈH˜Z[Y\ÚYÛˆÛÈ]Ø[ˆ™H™]šYYÚ]Ý]\XØ][™ÈHÛÛ\]Y›ÙXÝËˆŸW_KˆÝ]NˆÜ™X]H]\ËYÜË[™\ØÜš\[ÛœÈ‹[›Îˆ‘š[š\ÚHÙX\˜ÚX›HÛÜ™È[™^Y\‹Y˜XÚ[™È\ØÜš\[Ûˆ›Üˆ]™\žH\Ý[™Ëˆ‹ÙXÝ[ÛœÎ–ÞÚXY[™Îˆ”Ý\Ú]H˜[Y]YÙ^]ÛÜ™˜[šÈ‹ÛÜNˆ‘ÛÛYHÛ›H\Ù\È^XÝ˜\Ù\Èœ›ÛHH˜[šÈ[ÝHÚÛÜÙKˆ]Ù\È›Ý[™[ÜˆYÙ^]ÛÜ™ËˆŸKÚXY[™Îˆ”™]šY]ÈRHYÛY[‹ÛÜNˆ‘ÛÛYHÚÛÜÙ\ÈH˜\Ù\È]™[Y]™\Èš]XXÚ\ÚYÛ‹]]Ø[››Ý™\ØÝYHHZ\ÛX]ÚYÙ^]ÛÜ™˜[šËˆ™]šY]È]™\žH]H[™Ú[™ÙH[ž][™È]Ù\È›Ýš]ˆŸKÚXY[™Îˆ‘Y]\Ý[™ÜÈ[™\[™[H‹ÛÜNˆ–[ÝHØ[ˆ™XZ[ÜˆX[X[HY]Û™H]H[™]ÈYÜÈÚ]Ý]Ú[™Ú[™È[žHÝ\ˆ\Ý[™È[ˆH˜]ÚˆŸKÚXY[™Îˆ•\ÙHHÚ\™Y\ØÜš\[Ûˆ‹ÛÜNˆ•H˜]Ú\ØÜš\[ÛˆÛÛY\Èœ›ÛHHØ]™Y›ÙXÝˆY]]Û˜ÙH›Üˆ]™\žH\Ý[™Ë[ˆY[ˆ[™]šYX[Ý™\œšYHÛ›HÚ\™HHÜXÚYšXÈ\ÚYÛˆ™YYÈY™™\™[ÛÜ™[™ËˆŸW_KˆÝ]Nˆ”™]šY]È]ÞH]Z[È‹[›Îˆ‘ÛÛYH™KYš[ÈHšY[È]Ø[ˆÛÛ™šY[HX]Úˆ[ÝH™[XZ[ˆ™\ÜÛœÚX›H›ÜˆÛÛ™š\›Z[™È]]™\žHÚÚXÙH\ÈXØÝ\˜]Kˆ‹ÙXÝ[ÛœÎ–ÞÚXY[™Îˆ•™\šYžHHØ]YÛÜžHš\œÝ‹ÛÜNˆÚ[™Ú[™ÈH]ÞHØ]YÛÜžHÚ[™Ù\ÈH›ÙXÝšY[È]]ÞH™\]Z\™\È[™Ù™™\œËˆÛÜœ™XÝHØ]YÛÜžH™Y›Ü™HY][™ÈHšY[È™[™X]]ˆŸKÚXY[™ÎˆÚXÚÈ]™\žHÙ[XÝY]šX]H‹ÛÜNˆ”™]šY]ÈX]\šX[ËÝ[KØØØ\Ú[Û‹™XÚ\Y[›ÛÛK[™Ý\ˆ›ÙXÝ\ÜXÚYšXÈÚÚXÙ\ËˆÜ[Û˜[šY[ÈÚÝ[Ý^H›[šÈÚ[ˆ\™H\È›ÈÛX\ˆX]ÚˆŸKÚXY[™ÎˆY\œÛÛ˜[^˜][ÛˆÛ›HÚ[ˆ™YYY‹ÛÜNˆ”\œÛÛ˜[^˜][ÛˆØ[ˆÛÛXÝ^Y\ˆ^H›ÜÝÛˆÚÚXÙKÜˆš[\ËˆXZÙHXXÚ]Y\Ý[ÛˆÜXÚYšXËÙ]Ú]\ˆ]\È™\]Z\™Y[™Ý^HÚ][ˆH[Z]ÈÚÝÛ‹ˆŸKÚXY[™Îˆ”Ø]™H[\Ý[™ÜÈ‹ÛÜNˆ‘ÛÛYHÚ[›ÝÛÛ[YH[[H™\]Z\™Y]ÞH]Z[È\™HÛÛ\]H›Üˆ]™\žH\Ý[™È[ˆH˜]ÚˆŸW_KˆÝ]NˆÚÛÜÙH[™\œ˜[™ÙH\Ý[™È[XYÙ\È‹[›Îˆ‘]™\žH\Ý[™È™YYÈ]X\ÝÛ™H[XYÙKˆ\ÈÝ\ÛÛXš[™\È™X[š[YžH›ÙXÝ[XYÙ\ËÝÜÈ[ÝH\ØY[™[ˆÜ[Û˜[Ú^™HÝZYKˆ‹ÙXÝ[ÛœÎ–ÞÚXY[™Îˆ”™]šY]ÈH™X[š[YžHXÙ[Y[‹ÛÜNˆ“Ü[ˆH˜Y[ˆš[YžHÚ[ˆH\ÛÜšÈ™YYÈ™\Ú^š[™ÈÜˆ™\ÜÚ][Ûš[™ËˆŸKÚXY[™ÎˆÚÛÜÙHš[YžHÝÜÈ‹ÛÜNˆ”Ù[XÝH›]^\È[™›ÙXÝšY]ÜÈ]™[Û™ÈÛˆH\Ý[™Ëˆ\HHØ[YHÙ[XÝ[ÛˆÈ]™\žH\Ý[™ÈÛ›HÚ[ˆÜÙHÝÜÈXZÙHÙ[œÙH›ÜˆH[\™H˜]ÚˆŸKÚXY[™Îˆ•\ØY[Ý\ˆÝÛˆÝÜÈ‹ÛÜNˆY[žHš[š\ÚYY™\Ý[H[ØÚÝ\ÈÜˆÝ\ˆ\Ý[™ÈÝÜÈ[ÝH[™XYH]™Kˆ\ØYÈÝ^HÚ]]^XÝ\Ý[™ËˆŸKÚXY[™Îˆ”Ù]H]ÞHÜ™\ˆ‹ÛÜNˆ‘˜YÈ[XYÙ\È[ÈHÜ™\ˆ^Y\œÈÚÝ[ÙYKˆ[ÝHØ[ˆ\œ˜[™ÙH\ÈÙ\\˜][H›Üˆ]™\žH\Ý[™ËˆŸW_KˆÝ]NˆÛÛ\]HHš[˜[™]šY]È‹[›Îˆ•\È\ÈH\ÝÚXÚÜÚ[™Y›Ü™HH\Ý[™ÜÈ\™HX›\ÚY]™HÛˆ]ÞKˆ‹ÙXÝ[ÛœÎ–ÞÚXY[™Îˆ“Ü[ˆ]™\žH\Ý[™ÈÝ[[X\žH‹ÛÜNˆ”™]šY]ÈH]KYÜË\ØÜš\[Û‹]ÞH]Z[ËšXÙ\ËÚ\[™Ë[™Ù[XÝY[XYÙ\Ëˆ\ÙHHY]]ÛœÈÈ™]\›ˆÈ[žH[™š[š\ÚYÙXÝ[Û‹ˆŸKÚXY[™Îˆ•[™\œÝ[™HX›\ÚXÝ[Ûˆ‹ÛÜNˆ•Hš[˜[XÝ[ÛˆX›\Ú\È]™H]ÞH\Ý[™ÜËˆ]Ù\È›ÝÜ™X]H]ÞH˜YËˆÛÛYHÚÝÜÈHÙXÛÛ™ÛÛ™š\›X][Ûˆ™Y›Ü™HX›\Ú[™È™YÚ[œËˆŸKÚXY[™Îˆ‘È›ÝÛÜÙHHYÙH‹ÛÜNˆ”X›\Ú[™ÈX^H™H]Y]YYœšYY›HÈ›ÝXÝ]Þx &\ÈÚ\™YTH[Z]ËˆÙY\HYÙHÜ[ˆ[[ÛÛYHÛÛ™š\›\ÈH™\Ý[Üˆ[È[ÝHH˜]Ú\ÈØY™[H]Y]YYˆŸKÚXY[™Îˆ”™]šY]ÈH™XÙZ\‹ÛÜNˆY\ˆX›\Ú[™ËÛÛYHÚÝÜÈÝÈX[žH\Ý[™ÜÈÙ[]™H[™Ú]Ø\ÈÛÛ\]Yˆ\ÙHH]ÞH[šÜÈÈ[œÜXÝH]™H\Ý[™ÜËˆŸW_K—NÂ‚˜ÛÛœÝPVÐUÒÑ’STÈHŒÂ‹ÊˆŒˆ0­ÈYX\Ý\™YYØZ[œÝH]™H[™Ú[™Y›Ü™HÚ[™Ú[™Ë™XØ]\ÙHH\Ýˆ[YHH™X\ÛÛ™YX›Ý][Z[™ÈÚ]Ý]YX\Ý\š[™ÈHØ\È™XY[™ÈHœ›Þ™[ˆX‹‚ˆÛ™HØ[[ˆÛÈ]Û˜ÙK[ˆ›Ý\ˆ]Û˜ÙK[YY›ÝYÚH™\ÛÝ\˜ÙBˆ[Z[™ÈTHÛÈH›ÝY˜XÚÙÜ›Ý[™XˆÛÝ[›Ý\ÝÜ]‚‚ˆH™\]Y\ÝÌÌ[\Âˆˆ™\]Y\ÝÈ˜]ÚŽMÍÛ\È
+ŽMÍJBˆ™\]Y\ÝÈ˜]ÚŽMM\È
+Œ‹ŒÌÎKŒÌÎKŽMLŠB‚ˆ]™\žH™\ÜÛœÙHŒˆ›ÈŽK›È^›È™]žHZÙ[‹[™H[™Ú[^ÜÙ\Âˆ›È˜]K[[Z]XY\œËˆØ[[YHÝ^\È›]œ›ÛHÛ™H™\]Y\ÝÈ›Ý\‹ÚXÚˆÛ›H\[œÈYˆHÛÜšÙ\ˆ\ÈYHØZ][™ÈÛˆH›ÝšY\ˆ˜]\ˆ[ˆÚ[™ÂˆÛÜšÈÙˆ]ÈÝÛˆHÛÈ\È\È›ÝÔHÜˆY[[ÜžH›Ý[™[œÚYHÛÛYK‚‚ˆ]KÛÈ\ÚYÛœÈÛÜÝX›Ý]‹Œ\È[™[ˆÛÜÝX›Ý]ÌË[\™[H[‚ˆÙ\]Y[˜ÙK›Üˆ›È™X\ÛÛˆHYX\Ý\™[Y[ÈÝ\Üˆ˜Z\ÙYÈ‹ÚXÚ\ÈBˆYÜ™YYØ\ˆ“Õ˜Z\ÙY\\Žˆ›Ý\ˆÚÝÙY›È›Ý[™ÈZ]\‹]›Ý[™Âˆ\™HYX\Ý\™\ÈH[‹Y\ÚYÛˆ\œÝYØZ[œÝH›ÝšY\‰ÜÈ™X[ÙZ[[™Ë[™Bˆ[X™\ˆÚÜÙ[ˆ™XØ]\ÙH]\[™YÈÛÜšÈÛ˜ÙH\ÈHÚ[™Ùˆ[™È\ÂˆÛÛ[Y[^\ÝÈÈ™]™[‚‚ˆ˜YÜ™X][ÛˆÝ^\È]PVÐÓÓÕT”‘S•ÑTÒQÓ”ÈH]\ØYÈ[\™\ÛÛ][Û‚ˆ\ÛÜšËÛÈ]\È›Ý[™YžHY[[ÜžH˜]\ˆ[ˆžH›ÝšY\ˆ][˜ÞK[™]ˆ\È›Ý™Y[ˆYX\Ý\™Yˆ
+‹Â˜ÛÛœÝPÒÑÔ“ÕS‘ÑUÖWÐÓÓÕT”‘SÖHHŽÂ˜ÛÛœÝPVÐÓÓÕT”‘S•ÑTÒQÓ”ÈHŽÂ˜ÛÛœÝT‘ÑWÐUÒÕ‘TÒÓH
+ˆL
+ˆLÂ˜ÛÛœÝQUSÔ’PÒS‘ÎˆšXÚ[™ÈHÈ\™Ù]›Ùš]ˆL]ÞQ™YT\˜Ù[ˆKKš^Y™YNˆŒK\Ý[™Ñ™YNˆŒŒÚ\[™ÐÛÜÝˆÚ\[™ÐÚ\™ÙYˆNÂ˜ÛÛœÝTÒPÐSÑUÖWÑ’QSÏK×ŠX]\šX[ÏßÛY]™H[™Ý™XÚÛ[™_ÛÝ[™ÈÝ[_Ú^™_Ú\_ÜšY[][ÛŸØ\XÚ]JIÚNÂ™[˜Ý[Ûˆ›ÙXÝ]ÞQY˜][Ê[\]N•[\]Q]Z[ß[Ø]™YÎ”™XÛÜ™Ýš[™ËÝš[™ß[X™\Ÿ[Š^ÂˆÛÛœÝ˜XÝÏX	Ý[\]OË˜›Y\š[]_ˆŸH	Ý[\]OË˜œ˜[™ˆŸH	Ý[\]OË›[Ù[ˆŸXÓÝÙ\Ø\ÙJ
+K\š]™Y”™XÛÜ™Ýš[™ËÝš[™Ï^ßNÂˆYŠØÛÝÛ‹Ë\Ý
+˜XÝÊJY\š]™Y“X]\šX[ÏHÛÝÛˆŽÙ[ÙHYŠÜÛY\Ý\‹Ë\Ý
+˜XÝÊJY\š]™Y“X]\šX[ÏH”ÛY\Ý\ˆŽÙ[ÙHYŠØÙ\˜[ZXËË\Ý
+˜XÝÊJY\š]™Y“X]\šX[ÏHÙ\˜[ZXÈŽÙ[ÙHYŠØØ[˜\ËË\Ý
+˜XÝÊJY\š]™Y“X]\šX[ÏHØ[˜\ÈŽÙ[ÙHYŠÜ\\ŸÜÝ\Ÿš[Ë\Ý
+˜XÝÊJY\š]™Y“X]\šX[ÏH”\\ˆŽÂˆYŠÜÚÜÜÛY]™_OÜÚ\YW‹Ë\Ý
+˜XÝÊJY\š]™YÈ”ÛY]™H[™Ý—OH”ÚÜÛY]™HŽÙ[ÙHYŠÛÛ™ËÜÛY]™_ÝÙX]Ú\Ü™]Û™XÚßÛÙYKË\Ý
+˜XÝÊJY\š]™YÈ”ÛY]™H[™Ý—OH“Û™ÈÛY]™HŽÂˆYŠÝ‹Û™XÚËË\Ý
+˜XÝÊJY\š]™Y“™XÚÛ[™OH•‹[™XÚÈŽÙ[ÙHYŠØÜ™]Û™XÚßÜ™]È™XÚßOÜÚ\YWŸÝÙX]Ú\Ë\Ý
+˜XÝÊJY\š]™Y“™XÚÛ[™OHÜ™]ÈŽÂˆYŠÚÛÙYKË\Ý
+˜XÝÊJY\š]™YÈÛÝ[™ÈÝ[H—OH’ÛÙYHŽÙ[ÙHYŠÜÝÙX]Ú\Ü™]Û™XÚËË\Ý
+˜XÝÊJY\š]™YÈÛÝ[™ÈÝ[H—OH”ÝÙX]Ú\ŽÙ[ÙHYŠÝOÜÚ\YW‹Ë\Ý
+˜XÝÊJY\š]™YÈÛÝ[™ÈÝ[H—OH•\Ú\ŽÂˆYŠ×[š\Ù^‹Ë\Ý
+˜XÝÊJY\š]™Y”Ú^™OH•[š\Ù^ŽÙ[ÙHYŠ×ž[Ý]ŸšÚYÏ×Ÿ˜Ú[™[—‹Ë\Ý
+˜XÝÊJY\š]™Y”Ú^™OH–[Ý]ŽÙ[ÙHYŠ×š[™˜[Ÿ˜˜XžW‹Ë\Ý
+˜XÝÊJY\š]™Y”Ú^™OH˜XžHŽÂˆ™]\›ˆË‹‹™\š]™Y‹‹“Øš™XÝ™œ›ÛQ[šY\ÊØš™XÝ™[šY\ÊØ]™YßJK™š[\Š
+ÚÙ^K˜[YWJOO”TÒPÐSÑUÖWÑ’QSË\Ý
+Ù^JI‰”Ýš[™Ê˜[YOÏÈˆŠKš[J
+JK›X\
+
+ÚÙ^K˜[YWJOO–ÚÙ^KÝš[™Ê˜[YJWJJ_NÂŸB™[˜Ý[Ûˆ\ÔšYÚY\\”›ÙXÝ
+[\]N•[\]Q]Z[ß[
+^Ü™]\›ˆÜÜÝ\Ÿš[Ø[˜\ß\\‹ÚK\Ý
+	Ý[\]OË˜›Y\š[]_ˆŸH	Ý[\]OË˜œ˜[™ˆŸH	Ý[\]OË›[Ù[ˆŸX
+_B‹ÊˆLLˆHH™XÛÛ[Y[™Yš[Ú^™HØ\ÈÛÜšÙYÝ][ˆ™YHÙ\\˜]HXÙ\È[™ˆH™YHY›ÝYÜ™YKˆÛÈ\ÙYXÙ[Y[ØØ[HH[™HÚXÚÈ\ÙYˆXÙ[Y[ØØ[HXÛÈH›ÙXÝÚ]›ÈXÙ[Y[ØØ[HØ\ÈÚ[[Bˆ^[\œ›ÛHH™\ÛÛ][ÛˆØ\›š[™ÈÛˆ]ÈÝÛˆ[™›YÙÙY[œÚYHH[™HBˆHØ[YH\ÚYÛ‹HØ[YH›ÙXÝÛÈ[œÝÙ\œÈ\[™[™ÈÛˆH›Ý]H[‹‚ˆÛ™H[˜Ý[ÛˆXÚY\È]ˆ
+‹Â™^Ü[˜Ý[Ûˆš[\™Ù]›ÜŠ[\]N•[\]Q]Z[ß[
+^ÂˆÛÛœÝØØ[OZ\ÔšYÚY\\”›ÙXÝ
+[\]JOÓX]›Z[Š[\]OËœXÙ[Y[ØØ[_KJN[\]OËœXÙ[Y[ØØ[_Âˆ™]\›ˆÜØØ[KÚY“X]œ›Ý[™
+
+[\]OË›X^š[ÚY
+JœØØ[JKZYÚ“X]œ›Ý[™
+
+[\]OË›X^š[ZYÚ
+JœØØ[JKš[ÚY[\]OË›X^š[ÚYNÂŸB™[˜Ý[Ûˆš[YžR[XYÙTXÚÙ\ŠÈ[XYÙ\Ë[™XÙ\Ë™\Ù\™YÝÜÏLÛ\SÛ™KÛ\P[Û”Ø]™T™XÚ\K˜\™HNˆÈ[XYÙ\ÎˆÝš[™Ö×NÚ[™XÙ\Î›[X™\–×NÜ™\Ù\™YÝÜÏÎ›[X™\ŽÛÛ\SÛ™NŠ[™XÙ\Î›[X™\–×JOO›ÚYÛÛ\P[Š[™XÙ\Î›[X™\–×JOO›ÚYØ˜\™OÎ˜›ÛÛX[ŽÛÛ”Ø]™T™XÚ\OÎŠ[™XÙ\Î›[X™\–×JOO›ÚY›ÛZ\ÙO›ÚYˆJHÂˆÛÛœÝÜÙ[XÝYÙ]Ù[XÝYO]\ÙTÝ]OÙ][X™\Š™]ÈÙ]
+[™XÙ\ËœÛXÙJX]›X^
+Œ\™\Ù\™YÝÜÊJJJKÙ^[™YÙ]^[™YO]\ÙTÝ]OÝš[™ÏŠˆŠKØXÝ[Û‹Ù]XÝ[Û—O]\ÙTÝ]O˜ÛX\ˆŸ˜[Ÿ™]\™HŸˆŠˆŠKÙ™YY˜XÚËÙ]™YY˜XÚ×O]\ÙTÝ]JˆŠKÜØ]š[™Ñ]\™KÙ]Ø]š[™Ñ]\™WO]\ÙTÝ]J˜[ÙJNÂˆ\ÙQY™™XÝ
+
+
+OOœÙ]Ù[XÝY
+™]ÈÙ]
+[™XÙ\ËœÛXÙJX]›X^
+Œ\™\Ù\™YÝÜÊJJJKÚ[™XÙ\Ë[XYÙ\Ë›[™Ý™\Ù\™YÝÜ×JNÂˆYŠZ[XYÙ\Ë›[™Ý
+\™]\›ˆÛ\ÜÓ˜[YOHœ™]šY]Ë\›ØÙ\ÜÚ[™È”š[YžH\ÈÝ[›ØÙ\ÜÚ[™È]È›ÙXÝ[ØÚÝ\ËˆÜ[ˆHY]ÜˆÈšY]È[HÛ˜ÙH^H\X\‹ÜŽÂˆÛÛœÝÚÜÙ[VË‹‹œÙ[XÝYKœÛÜ
+
+KŠOO˜KXŠKÙ[XÝ[Û’[XÚÜÙ[‹›[™ÝÈˆŽˆ”Ù[XÝHš[YžHÝÈ™[ÝÈš\œÝˆ‹ÛÝÓYSX]›X^
+Œ\™\Ù\™YÝÜË\Ù[XÝYœÚ^™JK][Z]\ÛÝÓYOOLÂˆ[˜Ý[ÛˆÙÙÛJ[™^›[X™\Š^ØÛÛœÝ™^[™]ÈÙ]
+Ù[XÝY
+NÚYŠ™^š\Ê[™^
+J[™^™[]J[™^
+NÙ[Ù^ÚYŠ][Z]
+^ÜÙ]™YY˜XÚÊ‘]ÞH[ÝÜÈŒ\Ý[™ÈÝÜËˆ™[[Ý™HHÙ[XÝYÝÈ™Y›Ü™HY[™È[›Ý\‹ˆŠNÜ™]\›Ÿ[™^˜Y
+[™^
+_\Ù]Ù[XÝY
+™^
+NÜÙ]XÝ[ÛŠˆŠNÜÙ]™YY˜XÚÊˆŠNÛÛ\SÛ™JË‹‹›™^KœÛÜ
+
+KŠOO˜KXŠJ_Bˆ[˜Ý[Ûˆ\Ù[XÝ
+
+^ÜÙ]Ù[XÝY
+™]ÈÙ]
+
+JNÜÙ]XÝ[ÛŠ˜ÛX\ˆŠNÜÙ]™YY˜XÚÊˆŠNÛÛ\SÛ™J×J_Bˆ[˜Ý[Ûˆ\P[
+
+^ÚYŠXÚÜÙ[‹›[™Ý
+\™]\›ŽÛÛ\P[
+ÚÜÙ[ŠNÜÙ]XÝ[ÛŠ˜[ŠNÜÙ]™YY˜XÚÊ¸§$È\ÙHš[YžHÝÜÈ\™H›ÝÈÙ[XÝYÛˆ]™\žH\Ý[™È[ˆ\È˜]ÚˆŠ_Bˆ\Þ[˜È[˜Ý[ÛˆØ]™Q]\™J
+^ÚYŠ[Û”Ø]™T™XÚ\_Ø]š[™Ñ]\™_XÚÜÙ[‹›[™Ý
+\™]\›ŽÜÙ]Ø]š[™Ñ]\™JYJNÜÙ]™YY˜XÚÊ”Ø]š[™È[Ý\ˆ™Y™\™[˜Ùx )ˆŠNÝž^Ø]ØZ]Û”Ø]™T™XÚ\JÚÜÙ[ŠNÜÙ]XÝ[ÛŠ™]\™HŠNÜÙ]™YY˜XÚÊ¸§$È\ÙHš[YžHÝÜÈÚ[™H™\Ù[XÝY›Üˆ]\™H˜]Ú\È\Ú[™È\È›ÙXÝˆŠ_XØ]Ú
+\œ›ÜŠ^ÜÙ]XÝ[ÛŠˆŠNÜÙ]™YY˜XÚÊ\œ›Üˆ[œÝ[˜Ù[Ùˆ\œ›ÜÙ\œ›Ü‹›Y\ÜØYÙNˆ•\ÙH™Y™\™[˜Ù\ÈÛÝ[›Ý™HØ]™YˆŠ_Yš[˜[^ÜÙ]Ø]š[™Ñ]\™J˜[ÙJ__BˆÛÛœÝYÚ›ÞY^[™Y	‰\[ÙˆØÝ[Y[OOH[™Yš[™YØÜ™X]TÜ[
+]ˆÛ\ÜÓ˜[YOHœš[YžK\ÝË[YÚ›Þˆ›ÛOH™X[ÙÈˆ\šXK[[Ù[HYHˆ\šXK[X™[H‘^[™Yš[YžHÝÈˆÛ“[Ý\ÙQÝÛ^Ù]™[OžÚYŠ]™[\™Ù]OOY]™[˜Ý\œ™[\™Ù]
+\Ù]^[™Y
+ˆŠ__O]Ûˆ\OH˜]ÛˆˆÛÛXÚÏ^Ê
+OOœÙ]^[™Y
+ˆŠ_H\šXK[X™[HÛÜÙH^[™YÝÈ°åÏØ]Û[YÈÜ˜Ï^Ù^[™YH[H‘^[™Yš[YžH›ÙXÝ[ØÚÝ\‹ÏÙ]‹ØÝ[Y[˜›ÙJN›[Âˆ™]\›ˆžËÊˆÈHØ\ÈÜ[ˆžHY˜][ÛÈ\œš]š[™ÈÛˆ[XYÙ\È›ÜY[ÝH[ÈBˆš\œÝ\Ý[™ÉÜÈš[YžHÝÜÈ™Y›Ü™H[ÝHYÚÜÙ[ˆÚ]ÈËˆ›Ý[™ÂˆÛˆ\ÈÝ\^[™È]Ù[‹ˆ
+‹ßBˆËÊˆLÎHHHÚ[ÛÛY\ÈÙ™‹ˆ\ÈXÚÙ\ˆ\ÙYÈ™H]ÈÝÛˆ\ØÛÜÝ\™HÚ]ˆ]ÈÝÛˆÝ[[X\žH[™]ÈÝÛˆÛÜÙH]Û‹™XØ]\ÙH]]™YÛˆHYÙH]ˆ™YYY]Ëˆ[œÚYHH›ÙXÝØ\™H›ÝÈX›Ý™H]\È[™XYHBˆ\ØÛÜÝ\™KÛÈHÚ[XYHHÙXÛÛ™XØÛÜ™[Ûˆ[œÚYHHš\œÝˆ
+‹ßBˆËÊˆMMHHš[YžR[XYÙTXÚÙ\ˆ\ÈØ[YÛ˜ÙK[Ø^\È˜\™KÛÈ\ÈÛÛ\Û™[ˆØ\œšYYHÙXÛÛ™ÛÜHÙˆH[\™HXÚÙ\ˆ]ÛÝ[™]™\ˆ™[™\‹ˆMMˆX™[YH[\È[ˆHÛÜH]\È\ÙYÈHXYÛ™HÝ[[BˆÛ[›X™[YÜšYˆ]\È^XÝHÝÈH]YÈYÈ\[™YHÛÈÛÜY\ÂˆÙˆÛ™H[KÛ™HÙˆ[Hš^YˆÛ™HÛÜKˆ
+‹ßBˆ]ˆÛ\ÜÓ˜[YOHœš[YžKZ[XYÙK\XÚÙ\ˆ˜\™H‘]ÞH[ÝÜÈŒ\Ý[™ÈÝÜÈÝ[ˆY™\Ý[H[ØÚÝ\È[™HÚ^™HÝZYH[™XYHÚÜÙ[ˆ›Üˆ\È\Ý[™ÈÛÝ[ÝØ\™][Z]ˆ\ÙHHš\ÚX›HÚXÚØ›ÞÈÙ[XÝHÝËÜ]ˆÛ\ÜÓ˜[YOHš[XYÙK\™Y‹XXÝ[ÛœÈ]Ûˆ\OH˜]ÛˆˆÛ\ÜÓ˜[YO^ØÛX\ˆ	ØXÝ[ÛOOH˜ÛX\ˆÈ˜ÛÛ™š\›YYŽˆˆŸXH\ØX›Y^ÈXÚÜÙ[‹›[™ÝHÛÛXÚÏ^Ù\Ù[XÝOžØXÝ[ÛOOH˜ÛX\ˆ‰‰Ü[ˆÛ\ÜÓ˜[YOH˜XÝ[Û‹XÚXÚÈ¸§$ÏÜÜ[ŸOžØXÝ[ÛOOH˜ÛX\ˆÈ”Ù[XÝ[ÛœÈÛX\™YŽˆÛX\ˆ\È\Ý[™ø &\ÈÙ[XÝ[ÛœÈŸOØÛX[žÜÙ[XÝ[Û’[”™[[Ý™H]™\žHÙ[XÝYš[YžHÝÈœ›ÛH\È\Ý[™ÈÛ›KˆŸOÜÛX[Ø]Û]Ûˆ\OH˜]ÛˆˆÛ\ÜÓ˜[YO^ØXÝ[ÛOOH˜[È˜ÛÛ™š\›YYŽˆˆŸH\ØX›Y^ÈXÚÜÙ[‹›[™ÝHÛÛXÚÏ^Ø\P[OžØXÝ[ÛOOH˜[‰‰Ü[ˆÛ\ÜÓ˜[YOH˜XÝ[Û‹XÚXÚÈ¸§$ÏÜÜ[ŸOžØXÝ[ÛOOH˜[È\YYÈ]™\žH\Ý[™ÈŽˆ\H\ÙHÝÜÈÈ]™\žH\Ý[™ÈŸOØÛX[žÜÙ[XÝ[Û’[ÚÛÜÙHHØ[YHš[YžHÝÜÈXÜ›ÜÜÈH[\™H˜]ÚˆŸOÜÛX[Ø]ÛÙ]žÙ™YY˜XÚÉ‰Û\ÜÓ˜[YOHš[XYÙK\™Y‹Y™YY˜XÚÈˆ›ÛOHœÝ]\ÈžÙ™YY˜XÚßOÜŸ^ËÊˆMŽHHYX\Ý\™YÛˆ\ˆÛÙYNˆMˆ[\È[ˆÛ™H\Ý[™ÉÜÈXÚÙ\‹NLˆ[ˆBˆ[™[[™Û›HLˆ\Ý[˜ÝX™[ÈH‘œ›ÛˆÚ^Y[ˆ[Y\Ë˜XÚÈˆÚ^Y[‚ˆ[Y\Ëˆ]™\žH[H\ÈH™X[Y™™\™[[XYÙH
+LˆØ[Y\˜HšY]ÜÈXÜ›ÜÜÈHˆÛÛÝ\œÈÚH[˜X›Y
+K]H›]Ø[ÙˆMˆÚ]H™\X]YÛ™K]ÛÜ™X™[ˆ\È›ÝÛÛY][™È[ž[Û™HØ[ˆÚÛÜÙHŒÝÜÈœ›ÛKˆÜ›Ý\YžHHšY]ËˆÚXÚ\ÈHÛ™H[™ÈHT“[È\È›ÜˆÙ\Z[‹ˆÛÛÝ\ˆ\È“ÕˆX™[Yˆš[YžIÜÈ[XYÙHÜ™\ˆ™YY›Ý›ÛÝÈ\ˆÛÛÝ\ˆÜ™\‹[™BˆÛØÛØHÛÙYHX™[Y•Ú]Hˆ\ÈÛÜœÙH[ˆÛ™HX™[YÛ›H‘œ›Û‹ˆ
+‹ßBˆÊ
+
+OOžÂˆÛÛœÝÜ›Ý\Î\œ˜^OÜÝš[™Ë\œ˜^OÜÝš[™Ë[X™\—O—OV×NÂˆ[XYÙ\Ë™›Ü‘XXÚ
+
+Ü˜Ë[™^
+OOžÂˆÛÛœÝšY]Ï\š[YžUšY]Ó˜[YJÜ˜Ê_“Ý\ˆÝÜÈŽÂˆÛÛœÝ›Ý[™YÜ›Ý\Ë™š[™
+[žOO™[žVÌOOO]šY]ÊNÂˆYŠ›Ý[™
+Y›Ý[™ÌWKœ\Ú
+ÜÜ˜Ë[™^JNÙ[ÙHÜ›Ý\Ëœ\Ú
+ÝšY]ËÖÜÜ˜Ë[™^WWJNÂˆJNÂˆ™]\›ˆÜ›Ý\Ë›X\
+
+ÝšY]Ë][\×JOO]ˆÛ\ÜÓ˜[YOHœš[YžK]šY]ËYÜ›Ý\ˆÙ^O^ÝšY]ßO‚ˆÛ\ÜÓ˜[YOHœš[YžK]šY]ËZXY[™ÈžÝšY]ßOÜ[žÚ][\Ë›[™ÝHÚ][\Ë›[™ÝOOLOÈ˜ÛÛÝ\ˆŽˆ˜ÛÛÝ\œÈŸOÜÜ[Ü‚ˆ]ˆÛ\ÜÓ˜[YOHœš[YžKZ[XYÙKYÜšYžÚ][\Ë›X\
+
+ÜÜ˜Ë[™^JOO]ˆÛ\ÜÓ˜[YO^Øš[YžKZ[XYÙK[Ü[Ûˆ	ÜÙ[XÝYš\Ê[™^
+OÈœÙ[XÝYŽˆˆŸXHÙ^O^ÜÜ˜ßOX™[Û\ÜÓ˜[YOHœš[YžK\ÝË\Ù[XÝÜˆ[œ]\OH˜ÚXÚØ›ÞˆÚXÚÙY^ÜÙ[XÝYš\Ê[™^
+_H\ØX›Y^È\Ù[XÝYš\Ê[™^
+I‰˜][Z]HÛÚ[™ÙO^Ê
+OOÙÙÛJ[™^
+_KÏÜ[ˆ\šXKZY[HYHžÜÙ[XÝYš\Ê[™^
+OÈ¸§$ÈŽˆˆŸOÜÜ[Ü[ˆÛ\ÜÓ˜[YOHœÜ‹[Û›H”Ù[XÝš[YžHÝÈÚ[™^
+Ì_OÜÜ[ÛX™[]Ûˆ\OH˜]ÛˆˆÛ\ÜÓ˜[YOHœš[YžK\ÝËY^[™ˆÛÛXÚÏ^Ê
+OOœÙ]^[™Y
+Ü˜Ê_H\šXK[X™[^ØšY]È	Üš[YžUšY]Ó˜[YJÜ˜Ê_š[YžHÝÈ	Ú[™^
+Ì_XH\™Ù\˜O[YÈÜ˜Ï^ÜÜ˜ßH[^Üš[YžUšY]Ó˜[YJÜ˜Ê_š[YžH›ÙXÝ[ØÚÝ\	Ú[™^
+Ì_XHØY[™ÏH›^žHˆXÛÙ[™ÏH˜\Þ[˜È‹ÏØ]ÛÙ]Š_OÙ]Ù]Š_JJ
+_OÙ]žÛYÚ›ÞOÏŽÂŸB‚‹ÊˆŒˆHØ[YHY™XÝH›Ùš]ÛØ[Y[ˆH\œÛÛ˜[^˜][ÛˆšY[Îˆ›Ý[™ˆÝ˜ZYÚÈH[X™\‹ÛÈÛX\š[™ÈH›ÞXYH[X™\ŠˆŠ_H[ÈK™XXÝˆÜ›ÝHHH˜XÚË[™]™\ž][™È\YY\ˆ][™Y™Z[™HÛX\ˆ]\BˆKÙ]ŒLH‹ˆšXÙQšY[[™XYHÛÛ™Y\È›Üˆ[Û™^NÈ\È\ÈHÚÛKBˆ[X™\ˆ™\œÚ[ÛˆÙˆHØ[YHYXKˆ
+‹Â™[˜Ý[Ûˆ[YÙ\‘šY[
+Ý˜[YKZ[‹X^X™[ÛÛÛ[Z]NžÝ˜[YN›[X™\ŽÛZ[Ž›[X™\ŽÛX^›[X™\ŽÛX™[œÝš[™ÎÛÛÛÛ[Z]Š™^›[X™\ŠOO›ÚYJ^ÂˆÛÛœÝÙ˜YÙ]˜YO]\ÙTÝ]OÝš[™ß[Š[
+NÂˆ™]\›ˆ[œ]\OH›[X™\ˆˆZ[^ÛZ[ŸHX^^ÛX^H\šXK[X™[^ÛX™[H˜[YO^Ù˜YÏÔÝš[™Ê˜[YJ_BˆÛÚ[™ÙO^Ù]™[OžØÛÛœÝ˜]ÏY]™[\™Ù]˜[YNÜÙ]˜Y
+˜]ÊNØÛÛœÝ\œÙYS[X™\Š˜]ÊNÂˆYŠ˜]ÈOOHˆ‰‰“[X™\‹š\Ñš[š]J\œÙY
+J[ÛÛÛ[Z]
+X]›X^
+Z[‹X]›Z[ŠX^X]œ›Ý[™
+\œÙY
+JJJ__BˆÛ›\^Ê
+OOœÙ]˜Y
+[
+_KÏŽÂŸB‚™[˜Ý[ÛˆšXÙQšY[
+Ý˜[YKZ[š[][KX™[ÛÛÛ[Z]NžÝ˜[YN›[X™\ŽÛZ[š[][N›[X™\ŽÛX™[œÝš[™ÎÛÛÛÛ[Z]ŠÙ[Î›[X™\ŠOO›ÚYJ^ØÛÛœÝÙ˜YÙ]˜YO]\ÙTÝ]J
+˜[YKÌL
+KÑš^Y
+ŠJKØÛÛ™š\›YYÙ]ÛÛ™š\›YYO]\ÙTÝ]J˜[ÙJNÝ\ÙQY™™XÝ
+
+
+OOœÙ]˜Y
+
+˜[YKÌL
+KÑš^Y
+ŠJKÝ˜[YWJNÙ[˜Ý[ÛˆÛÛ[Z]
+
+^ØÛÛœÝ[[Ý[S[X™\Š˜Y
+NÚYŠS[X™\‹š\Ñš[š]J[[Ý[
+J^ÜÙ]˜Y
+
+˜[YKÌL
+KÑš^Y
+ŠJNÜ™]\›ŸXÛÛœÝÙ[ÏSX]œ›Ý[™
+X]›X^
+Z[š[][K[[Ý[
+JŒL
+NÛÛÛÛ[Z]
+Ù[ÊNÜÙ]˜Y
+
+Ù[ËÌL
+KÑš^Y
+ŠJNÜÙ]ÛÛ™š\›YY
+YJNÝÚ[™ÝËœÙ][Y[Ý]
+
+
+OOœÙ]ÛÛ™š\›YY
+˜[ÙJKLŒ
+_\™]\›ˆX™[Û\ÜÓ˜[YO^ØÛÛ™š\›YYÈœšXÙKXÛÛ™š\›YYŽˆˆŸH\šXK[X™[^ÛX™[O‰[œ]\OH^ˆ[œ][ÙOH™XÚ[X[ˆ˜[YO^Ù˜YHÛÚ[™ÙO^Ù]™[OœÙ]˜Y
+]™[\™Ù]˜[YJ_HÛ›\^ØÛÛ[Z]HÛ’Ù^QÝÛ^Ù]™[OžÚYŠ]™[šÙ^OOOH‘[\ˆŠ^Ù]™[˜Ý\œ™[\™Ù]˜›\Š
+_ZYŠ]™[šÙ^OOOH‘\ØØ\HŠ^ÜÙ]˜Y
+
+˜[YKÌL
+KÑš^Y
+ŠJNÙ]™[˜Ý\œ™[\™Ù]˜›\Š
+___KÏÛX™[ŸB‚‹ÊˆŒÍˆ0­ÈH[™[Ü[™Yœ›ÛHH›ÙXÝXØ\™›ÝÈ]\Ý›Ý™KX[››Ý[˜ÙH]Ù[‹ˆBˆ›ÝÈX›Ý™H][™XYH™XYÈÛÛÜœÈ0­ÈXÚÈÛÛÜœÈ0­ÈÎH]˜Z[X›HŽÈH[™[Ø\Âˆ[ˆ™\X][™ÈÛÛÜœÈˆ\ÈHŒœØ\™]H\ÈHÙXÛÛ™ÛÝ[˜YÙKˆ[Ø\™ˆ›ÜÈH[™[	ÜÈÝÛˆXY[™ÙY\ÈÛ™H[™HÙˆ[\ˆ^ˆ
+‹Â™[˜Ý[Ûˆ›ÙXÝÛÛÜ”Ù[XÝÜŠÜ›ÙXÝÙ[XÝYÛÚ[™ÙKÛ”™[Y[X™\‹™[Y[X™\š[™Ë™[Y[X™\™Y[Ø\™NžÜ›ÙXÝ•[\]Q]Z[ÎÜÙ[XÝY›[X™\–×NÛÛÚ[™ÙNŠYÎ›[X™\–×JOO›ÚYÛÛ”™[Y[X™\ŽŠ
+OO›ÚYÜ™[Y[X™\š[™Î˜›ÛÛX[ŽÜ™[Y[X™\™Y˜›ÛÛX[ŽÚ[Ø\™Î˜›ÛÛX[ŸJ^ÂˆÛÛœÝÛÛÜœÏ\›ÙXÝ˜ÛÛÜ“Ü[Ûœß×K]˜Z[X›OXÛÛÜœË™š[\ŠÛÛÜO˜ÛÛÜ‹˜]˜Z[X›JKÙ[XÝYÙ][™]ÈÙ]
+Ù[XÝY
+KÙ^[™YÙ]^[™YO]\ÙTÝ]J[Ø\™ÝYNˆ\™[Y[X™\™Y
+NÂˆYŠXÛÛÜœË›[™Ý
+\™]\›ˆÙXÝ[ÛˆÛ\ÜÓ˜[YOHœ›ÙXÝXÛÛÜ‹\Ù[XÝÜˆ›ËXÛÛÜœÈ]Û\ÜÓ˜[YOH›Z[šK[X™[ÓÓÔ”È“ÔˆTÈUÒÜÏ•\È›ÙXÝ\È›ÈÙ\\˜]HÛÛÜˆÚÚXÙ\ËÚÏÜ[‘ÛÛYHÚ[ÙY\H˜[Y˜\šX[Èœ›ÛHHØ]™Yš[YžH›ÙXÝÜÜ[Ù]ÜÙXÝ[ÛŽÂˆ[˜Ý[ÛˆÙÙÛJY›[X™\Š^ØÛÛœÝ™^[™]ÈÙ]
+Ù[XÝYÙ]
+NÚYŠ™^š\ÊY
+J[™^™[]JY
+NÙ[ÙH™^˜Y
+Y
+NÛÛÚ[™ÙJË‹‹›™^J_BˆÛÛœÝÙ[XÝYÛÛÜœÏXÛÛÜœË™š[\ŠÛÛÜOœÙ[XÝYÙ]š\ÊÛÛÜ‹šY
+JNÂˆÊˆš\œÝ\[ˆœ˜[Z[™È›ÝÈ]™\ÈX›Ý™HH›ÙXÝÛÛ›ÛÈ[™\È\œÚ\ÝYžBˆÙ]\ÛÛ\]KˆÙY\\È™]\ØX›HÙ[XÝÜˆœ™YHÙˆ\™[[Û›HÝ]Kˆ
+‹ÂˆÛÛœÝ›ÙXÝš\œÝ[Y˜[ÙNÂˆ™]\›ˆÙXÝ[ÛˆÛ\ÜÓ˜[YOHœ›ÙXÝXÛÛÜ‹\Ù[XÝÜˆˆ\šXK[X™[^ØÚÛÜÙHÛÛÜœÈ›Üˆ	Ü›ÙXÝ˜›Y\š[]_XOžÚ[Ø\™ÏÛ\ÜÓ˜[YOHœ[™[Z[‘]™\žHÚ[™ÙHØ]™\ÈÈ\È›ÙXÝ]]ÛX]XØ[KÜŽ]ˆÛ\ÜÓ˜[YOH˜ÛÛÜ‹\Ù[XÝÜ‹ZXY]Û\ÜÓ˜[YOH›Z[šK[X™[ÓÓÔ”È“ÔˆTÈUÒÜÏÛÛÜœÏÚÏÜ[žÜ›ÙXÝš\œÝ[ÈÚÛÜÙHHÛÛÜœÈ[ÝHØ[ÈÙ™™\‹[ˆØ]™H[H\È\È›ÙXÝ	ÜÈY˜][ˆŽœ™[Y[X™\™YÈ‘œ›ÛH[Ý\ˆ\Ý˜]Ú8 %Ú[™ÙH[žKˆŽˆ•\ÙHÚ[™Ù\È\HÈ\È˜]Ú[›\ÜÈ[ÝHØ]™H[H\ÈH›ÙXÝY˜][ˆŸOÜÜ[Ù]žÜÙ[XÝY›[™ÝHÙ[XÝYØÙ]Ÿ^ÈY^[™Y	‰œÙ[XÝYÛÛÜœË›[™ÝŒ	‰]ˆÛ\ÜÓ˜[YOHœ™[Y[X™\™YXÛÛÜ‹\›ÝÈžÜÙ[XÝYÛÛÜœË›X\
+ÛÛÜOÜ[ˆÙ^O^ØÛÛÜ‹šYOHÝ[O^ÞØ˜XÚÙÜ›Ý[™˜ÛÛÜ‹œÝØ]Ú›[™X\‹YÜ˜YY[
+LÍYYËÙŽMÙY‹ØØXM
+HŸ_KÏžØÛÛÜ‹]_OÜÜ[Š_O]Ûˆ\OH˜]ÛˆˆÛÛXÚÏ^Ê
+OOœÙ]^[™Y
+YJ_OÚ[™ÙHÛÛÜœÏØ]ÛÙ]Ÿ^Ù^[™Y	‰]ˆÛ\ÜÓ˜[YOH˜ÛÛÜ‹XÚÚXÙKYÜšYžØÛÛÜœË›X\
+ÛÛÜO]Ûˆ\OH˜]ÛˆˆÙ^O^ØÛÛÜ‹šYH\ØX›Y^ÈXÛÛÜ‹˜]˜Z[X›_H\šXK\™\ÜÙY^ÜÙ[XÝYÙ]š\ÊÛÛÜ‹šY
+_HÛÛXÚÏ^Ê
+OOÙÙÛJÛÛÜ‹šY
+_HÛ\ÜÓ˜[YO^ÜÙ[XÝYÙ]š\ÊÛÛÜ‹šY
+OÈœÙ[XÝYŽˆˆŸOHÝ[O^ÞØ˜XÚÙÜ›Ý[™˜ÛÛÜ‹œÝØ]Ú›[™X\‹YÜ˜YY[
+LÍYYËÙŽMÙY‹ØØXM
+HŸ_KÏÜ[žØÛÛÜ‹]_OÜÜ[žÜÙ[XÝYÙ]š\ÊÛÛÜ‹šY
+I‰[O¸§$ÏÙ[OŸ^ÈXÛÛÜ‹˜]˜Z[X›I‰ÛX[•[˜]˜Z[X›OÜÛX[ŸOØ]ÛŠ_OÙ]]ˆÛ\ÜÓ˜[YOH˜ÛÛÜ‹\Ù[XÝÜ‹XXÝ[ÛœÈ]Ûˆ\OH˜]ÛˆˆÛÛXÚÏ^Ê
+OO›ÛÚ[™ÙJ]˜Z[X›K›X\
+ÛÛÜO˜ÛÛÜ‹šY
+J_O”Ù[XÝ[]˜Z[X›OØ]Û]Ûˆ\OH˜]ÛˆˆÛÛXÚÏ^Ê
+OOžØÛÛœÝ[\]PÛÛÜœÏJ›ÙXÝ˜ÛÛÜ“Ü[Ûœß×JK™š[\ŠÛÛÜO˜ÛÛÜ‹˜]˜Z[X›I‰˜ÛÛÜ‹[\]Q[˜X›Y
+K›X\
+ÛÛÜO˜ÛÛÜ‹šY
+NËÊˆÌMH0­ÈÚ^™\ÈY“X]Úš[YžH[\]Hˆ[™ÛÛÝ\œÈY›ÝÝYÚ›ÝˆØ\œžH[\]Q[˜X›Y[™H›ÝÈÚÜÝ]Ù™™\œÈ]›Üˆ›ÝˆØ[YBˆØ\Xš[]KÛ™H[™[YHÛÛ›Û[™HÝ\ˆY›Ýˆ›ÛÝÜÂˆŒLÎˆYˆH[\]H[˜X›\È›Ý[™ËX]Ú›Ý[™È˜]\ˆ[‚ˆ]ZY]HÙ[XÝ[™ÈHÚÛH›Y\š[ˆ
+‹ÛÛÚ[™ÙJ[\]PÛÛÜœÊ__O“X]Úš[YžH[\]OØ]Û]Ûˆ\OH˜]ÛˆˆÛÛXÚÏ^Ê
+OO›ÛÚ[™ÙJ×J_OÛX\ˆ[Ø]ÛžËÊˆÌN0­È‘Û™HÚÛÜÚ[™ÈÛÛÜœÈˆ^\ÝYÛˆÛÛÝ\œÈ[™›ÝÛˆÚ^™\Ë[™]ˆÛÛ\ÙYH[™[˜XÚÈÈHÝ[[X\žH8 %ÚXÚH›ÝÉÜÈÝÛˆÛÜÙBˆ]Ûˆ[™XYHÙ\Ë›Üˆ›ÝˆÛ™H›Ø‹ÛÈÛÛ›ÛË[™Û›HÛ‚ˆÛ™HÙˆHÛÈXÚÙ\œËˆ
+‹ß^Ú[Ø\™ÏÜ[ˆÛ\ÜÓ˜[YO^ØY˜][\Ø]™Y\Ý]IÜ™[Y[X™\™YÈˆØ]™YŽˆˆŸXOžËÊˆÌLH0­È[ˆHØ\™\ÙHÚÚXÙ\È\™H[™XYHÜš][ˆÈH›ÙXÝBˆ[ÛY[^HÚ[™ÙH8 %]\ÈÚ]\ÝX›\Ú
+
+HÙ\Ë[™]\ÈBˆ™Z]š[Ý\ˆœš][žH™Y™\œËˆX]š[™ÈH”Ø]™H\ÙH\È\È›ÙXÝ	ÜÂˆY˜][ÛÛÜœÈˆ]Ûˆ™^È]\ÚÙY›ÜˆHÛXÚÈ]Ø\È™]™\‚ˆ™\]Z\™Y[™[ˆ™XY¸§$ÈØ]™Y›Üˆ\È›ÙXÝˆÚ]Ý]Û™KˆÚXÚ\ÈÚH]ÛÚÙYZÙH]Ø\ÈZ[™ËˆHÝ]\Ë›ÝH]Û‹ˆ
+‹ß^Ü™[Y[X™\™YÈ¸§$ÈØ]™Y\È\È›ÙXÝ8 &\ÈY˜][Žˆ”Ø]š[™ø )ˆŸOÜÜ[Ž]Ûˆ\OH˜]ÛˆˆÛ\ÜÓ˜[YO^Ü™[Y[X™\™YÈœ™[Y[X™\™YŽˆˆŸH\ØX›Y^È\Ù[XÝY›[™Ý™[Y[X™\š[™ß™[Y[X™\™YHÛÛXÚÏ^ÛÛ”™[Y[X™\ŸOžÜ™[Y[X™\š[™ÏÈ”Ø]š[™ø )ˆŽœ™[Y[X™\™YÈ¸§$ÈØ]™Y›Üˆ\È›ÙXÝŽˆ”Ø]™H\ÙH\È\È›ÙXÝ8 &\ÈY˜][ÛÛÜœÈŸOØ]ÛŸOÙ]ÏŸ^È\Ù[XÝY›[™Ý	‰Û\ÜÓ˜[YOH˜ÛÛÜ‹\™\]Z\™Yˆ›ÛOH˜[\ÚÛÜÙH]X\ÝÛ™H]˜Z[X›HÛÛÜˆ™Y›Ü™HÛÛ[Z[™ËÜŸOÜÙXÝ[Û‚ŸB‚™[˜Ý[Ûˆ›ÙXÝÚ^™TÙ[XÝÜŠÜ›ÙXÝÙ[XÝYÛÚ[™ÙKÛ”™[Y[X™\‹™[Y[X™\š[™Ë™[Y[X™\™Y[Ø\™NžÜ›ÙXÝ•[\]Q]Z[ÎÜÙ[XÝY›[X™\–×NÛÛÚ[™ÙNŠYÎ›[X™\–×JOO›ÚYÛÛ”™[Y[X™\ŽŠ
+OO›ÚYÜ™[Y[X™\š[™Î˜›ÛÛX[ŽÜ™[Y[X™\™Y˜›ÛÛX[ŽÚ[Ø\™Î˜›ÛÛX[ŸJ^ÂˆÛÛœÝÚ^™\Ï\›ÙXÝœÚ^™SÜ[Ûœß×K]˜Z[X›O\Ú^™\Ë™š[\ŠÚ^™OOœÚ^™K˜]˜Z[X›JKÙ[XÝYÙ][™]ÈÙ]
+Ù[XÝY
+NÂˆÊˆH›Y\š[Ú]›ÈÚ^™H^\È
+H]YËHÝXÚÙ\ŠH™[™\œÈ›Ý[™È][ˆ˜]\ˆ[ˆ[ˆ[\HØ\™ˆ
+‹ÂˆYŠ\Ú^™\Ë›[™Ý
+\™]\›ˆ[Âˆ[˜Ý[ÛˆÙÙÛJY›[X™\Š^ØÛÛœÝ™^[™]ÈÙ]
+Ù[XÝYÙ]
+NÚYŠ™^š\ÊY
+J[™^™[]JY
+NÙ[ÙH™^˜Y
+Y
+NÛÛÚ[™ÙJË‹‹›™^J_Bˆ™]\›ˆÙXÝ[ÛˆÛ\ÜÓ˜[YOHœ›ÙXÝ\Ú^™K\Ù[XÝÜˆˆ\šXK[X™[^ØÚÛÜÙHÚ^™\È›Üˆ	Ü›ÙXÝ˜›Y\š[]_XO‚ˆÚ[Ø\™ÏÛ\ÜÓ˜[YOHœ[™[Z[‘]™\žHÚ[™ÙHØ]™\ÈÈ\È›ÙXÝ]]ÛX]XØ[KÜŽ]ˆÛ\ÜÓ˜[YOHœÚ^™K\Ù[XÝÜ‹ZXY]Û\ÜÓ˜[YOH›Z[šK[X™[”ÒV‘TÈ“ÔˆTÈUÒÜÏ”Ú^™\ÏÚÏÜ[žÜ™[Y[X™\™YÈ‘œ›ÛH[Ý\ˆ\Ý˜]Ú8 %Ú[™ÙH[žKˆŽˆ•\ÙHÚ[™Ù\È\HÈ\È˜]Ú[›\ÜÈ[ÝHØ]™H[H\ÈH›ÙXÝY˜][ˆŸOÜÜ[Ù]žÜÙ[XÝY›[™ÝHÙ[XÝYØÙ]ŸBˆ]ˆÛ\ÜÓ˜[YOHœÚ^™KXÚÚXÙKYÜšYžÜÚ^™\Ë›X\
+Ú^™OO]Ûˆ\OH˜]ÛˆˆÙ^O^ÜÚ^™KšYH\ØX›Y^È\Ú^™K˜]˜Z[X›_H\šXK\™\ÜÙY^ÜÙ[XÝYÙ]š\ÊÚ^™KšY
+_HÛÛXÚÏ^Ê
+OOÙÙÛJÚ^™KšY
+_HÛ\ÜÓ˜[YO^ÜÙ[XÝYÙ]š\ÊÚ^™KšY
+OÈœÙ[XÝYŽˆˆŸOÜ[žÜÚ^™K]_OÜÜ[žÜÙ[XÝYÙ]š\ÊÚ^™KšY
+I‰[O¸§$ÏÙ[OŸ^È\Ú^™K˜]˜Z[X›I‰ÛX[•[˜]˜Z[X›OÜÛX[ŸOØ]ÛŠ_OÙ]‚ˆ]ˆÛ\ÜÓ˜[YOHœÚ^™K\Ù[XÝÜ‹XXÝ[ÛœÈ]Ûˆ\OH˜]ÛˆˆÛÛXÚÏ^Ê
+OO›ÛÚ[™ÙJ]˜Z[X›K›X\
+Ú^™OOœÚ^™KšY
+J_O”Ù[XÝ[]˜Z[X›OØ]Û]Ûˆ\OH˜]ÛˆˆÛÛXÚÏ^Ê
+OOžØÛÛœÝ[\]TÚ^™\ÏJ›ÙXÝœÚ^™SÜ[Ûœß×JK™š[\ŠÚ^™OOœÚ^™K˜]˜Z[X›I‰œÚ^™K[\]Q[˜X›Y
+K›X\
+Ú^™OOœÚ^™KšY
+NÂˆÊˆŒLÈ0­È\È\ÙYÈ˜[˜XÚÈÈ]™\žH]˜Z[X›HÚ^™HÚ[ˆBˆ[\]HY›Û™H[˜X›YÛÈH]Ûˆ™XY[™È“X]Úš[YžBˆ[\]Hˆ]ZY]HÙ[XÝYHÚÛH›Y\š[ˆYˆ\™H\Âˆ›Ý[™ÈÈX]ÚX]Ú›Ý[™È[™]HÙ[\ˆÚÛÜÙKˆ
+‹ÂˆÛÚ[™ÙJ[\]TÚ^™\Ê__O“X]Úš[YžH[\]OØ]Û]Ûˆ\OH˜]ÛˆˆÛÛXÚÏ^Ê
+OO›ÛÚ[™ÙJ×J_OÛX\ˆ[Ø]ÛžËÊˆÌN0­ÈÛÛÝ\œÈYÛX\ˆ[[™Ú^™\ÈY›Ýˆ›ÝXÚÙ\œÈ›ÝÈÙ™™\ˆBˆØ[YH™YHXÝ[ÛœÈ[ˆHØ[YHÜ™\ŽˆÙ[XÝ[]˜Z[X›KˆX]Úš[YžH[\]KÛX\ˆ[ˆ
+‹ß^Ú[Ø\™ÏÜ[ˆÛ\ÜÓ˜[YO^ØY˜][\Ø]™Y\Ý]IÜ™[Y[X™\™YÈˆØ]™YŽˆˆŸXOžÜ™[Y[X™\™YÈ¸§$ÈØ]™Y\È\È›ÙXÝ8 &\ÈY˜][Žˆ”Ø]š[™ø )ˆŸOÜÜ[Ž]Ûˆ\OH˜]ÛˆˆÛ\ÜÓ˜[YO^Ü™[Y[X™\™YÈœ™[Y[X™\™YŽˆˆŸH\ØX›Y^È\Ù[XÝY›[™Ý™[Y[X™\š[™ß™[Y[X™\™YHÛÛXÚÏ^ÛÛ”™[Y[X™\ŸOžÜ™[Y[X™\š[™ÏÈ”Ø]š[™ø )ˆŽœ™[Y[X™\™YÈ¸§$ÈØ]™Y›Üˆ\È›ÙXÝŽˆ”Ø]™H\ÙH\È\È›ÙXÝ8 &\ÈY˜][Ú^™\ÈŸOØ]ÛŸOÙ]‚ˆÈ\Ù[XÝY›[™Ý	‰Û\ÜÓ˜[YOHœÚ^™K\™\]Z\™Yˆ›ÛOH˜[\ÚÛÜÙH]X\ÝÛ™HÚ^™H™Y›Ü™HÛÛ[Z[™ËÜŸBˆÜÙXÝ[Û‚ŸB‚‹ÊˆMÈH[Ý™YÈ\Û[ØÚÝ\XÛÛ\]Xš[]KËÚ\™H]\ÈHÛ›HÛÜKˆ
+‹Â™[˜Ý[Ûˆ[ØÚÝ\Ù]Ù[XÝÜŠÝ˜[YKÛÚ[™ÙKÙ[XÝYYÏV×KØ]™Y˜[YKØ]™YYËÛ”Ø]™QY˜][Ø]š[™Ëš\œÝ[Y˜[ÙK›ÙXÝ˜[YOHˆŸNžÝ˜[YNœÝš[™ÎÛÛÚ[™ÙNŠ˜[YNœÝš[™ËYÏÎœÝš[™Ö×JOO›ÚYÜÙ[XÝYYÏÎœÝš[™Ö×NÜØ]™Y˜[YNœÝš[™ÎÜØ]™YYÏÎœÝš[™Ö×NÛÛ”Ø]™QY˜][Š
+OO›ÚYÜØ]š[™Î˜›ÛÛX[ŽÙš\œÝ[Î˜›ÛÛX[ŽÜ›ÙXÝ˜[YOÎœÝš[™ßJ^ÂˆÛÛœÝÝ[\]\ËÙ][\]\×O]\ÙTÝ]O\œ˜^OÚYœÝš[™ÎÝ[YNœÝš[™ÎÛ˜[YNœÝš[™ÎÜÜ˜ÎœÝš[™ÎÜÝ\™˜XÙRÚ[™œÝš[™ÎÜ™\\˜][ÛÎ”ØÙ[™T™\\˜][ÛŸOŠ×JKÛØYYÙ]ØYYO]\ÙTÝ]J˜[ÙJKÙYYYY˜][]\ÙT™YŠ˜[ÙJNÂˆ\ÙQY™™XÝ
+
+
+OOžÙ™]Ú
+‹Ø\KÛ[ØÚÝ\ËÛXœ˜\žHŠK[Š™\ÜÛœÙOOœ™\ÜÛœÙKšœÛÛŠ
+JK[Š
+^[ØYžÝ[\]\ÏÎ\œ˜^OÚYÎœÝš[™ÎÝ[YOÎœÝš[™ÎÛ˜[YOÎœÝš[™ÎÜÜ˜ÏÎœÝš[™ÎÜÝ\™˜XÙRÚ[™ÎœÝš[™ÎÜ™\\˜][ÛÎ”ØÙ[™T™\\˜][ÛŸOŸJOOœÙ][\]\Ê
+^[ØY[\]\ß×JK›X\
+][OOŠÚY”Ýš[™Ê][KšYˆŠK[YN”Ýš[™Ê][K[Y_ˆŠKš[J
+K˜[YN”Ýš[™Ê][K›˜[Y_“[ØÚÝ\ŠKÜ˜Î”Ýš[™Ê][KœÜ˜ßˆŠKÝ\™˜XÙRÚ[™”Ýš[™Ê][KœÝ\™˜XÙRÚ[™œšYÚYY›]ŠK™\\˜][ÛŽš][Kœ™\\˜][ÛŸJJK™š[\Š][OOš][KšY	‰š][K[YI‰š][KœÜ˜ÊJJK˜Ø]Ú
+
+
+OO[™Yš[™Y
+K™š[˜[J
+
+OOœÙ]ØYY
+YJJ_K×JNÂˆÛÛœÝÛÛ\]X›U[\]\Ï][\]\Ë™š[\Š][OOœ›ÙXÝXØÙ\Ó[ØÚÝ\
+][KœÝ\™˜XÙRÚ[™›ÙXÝ˜[YJJK[Y\ÏVË‹‹›™]ÈÙ]
+ÛÛ\]X›U[\]\Ë›X\
+][OOš][K[YJJWKX]Ú[™Õ[\]\ÏXÛÛ\]X›U[\]\Ë™š[\Š][OOš][K[YOOO]˜[YJNÂˆÊˆÙYYHÝ\[™ÈÙ]ÓÑKˆ\È\ÙYÈ[ˆÛˆ]™\žH™[™\ˆÚ\™H˜[YXˆ
+ˆØ\È[\KÛÈÚÛÜÚ[™È“›È[ØÚÝ\È›Üˆ\È˜]ÚˆØ\È[™Û™H[œÝ[HžBˆ
+ˆHY™™XÝ8 %HÙ[XÝÛ˜\Y˜XÚÈÈHØ]™YÙ]Ú][ˆHœ˜[YH[™ˆ
+ˆHÙ[\ˆÛÝ[™]™\ˆ™[[Ý™H[ØÚÝ\Ëˆ™\šYšYY]™NˆÙ][™ÈH˜[YHÂˆ
+ˆˆˆ™]™\YÈPÒQTÈˆÚ[H[ˆY[XØ[Ú[™ÙHÛˆHÙ^]ÛÜ™X˜[šÂˆ
+ˆÙ[XÝÝXÚËˆÙYY[™ÈÛ˜ÙHÙY\ÈHÛÛ™[šY[˜ÙNÈH[X™\˜]HÛX\ˆ›ÝÂˆ
+ˆÝ\š]™\Ëˆ
+‹ÂˆÊˆŒŒHH\Ý[™ÜÈ›ÈÛ™Ù\ˆØ\œžHZ\ˆÝÛˆØÙ[™HÜšYÛÈ\ÈXÚÙ\ˆ\ÂˆHÛ›H[™È]Ø[ˆ[[HÚXÚØÙ[™\ÈÈ\ÙKˆYˆHÙ]\ÈÚÜÙ[ˆ]ˆ›ÈØÙ[™\È]™H™Y[ˆYYÈH˜]ÚÙYY[H\™HHÝ\Ú\ÙH]™\žBˆ\Ý[™È™XYÈŒØÙ[™\ÈÚÜÙ[ˆˆ[™]ÈÜ™X]H]ÛˆÝ^\ÈXYˆ
+‹Âˆ\ÙQY™™XÝ
+
+
+OOžÚYŠ\›ÙXÝ˜[Y_ÙYYYY˜][˜Ý\œ™[][\]\Ë›[™Ý
+\™]\›ŽÜÙYYYY˜][˜Ý\œ™[]YNÚYŠ˜[YI‰ˆ][Y\Ëš[˜ÛY\Ê˜[YJJ^ÛÛÚ[™ÙJˆ‹×JNÜ™]\›ŸZYŠ˜[YI‰[Y\Ëš[˜ÛY\Ê˜[YJI‰ˆ\Ù[XÝYYË›[™Ý
+^ÛÛÚ[™ÙJ˜[YKX]Ú[™Õ[\]\ËœÛXÙJ
+K›X\
+][OOš][KšY
+JNÜ™]\›ŸZYŠ˜[YOOO\Ø]™Y˜[YI‰œØ]™YYÏOO][™Yš[™Y
+^ÛÛÚ[™ÙJ˜[YKX]Ú[™Õ[\]\ËœÛXÙJ
+K›X\
+][OOš][KšY
+JNÜ™]\›ŸZYŠ]˜[YI‰œØ]™Y˜[YI‰[Y\Ëš[˜ÛY\ÊØ]™Y˜[YJJ^ØÛÛœÝYÏ\Ø]™YYÏOO][™Yš[™YØÛÛ\]X›U[\]\Ë™š[\Š][OOš][K[YOOO\Ø]™Y˜[YJKœÛXÙJ
+K›X\
+][OOš][KšY
+NœØ]™YYÎÛÛÚ[™ÙJØ]™Y˜[YKYÊ__KÝ˜[YKØ]™Y˜[YKØ]™YYË[Y\Ëš›Ú[ŠŸŠK[\]\Ë›[™Ý›ÙXÝ˜[YWJNÂˆYŠ\›ÙXÝ˜[YJ\™]\›ˆ[ÂˆÛÛœÝÙ[XÝY[™]ÈÙ]
+Ù[XÝYYÊKÚ[™ÙY]˜[YHOO\Ø]™Y˜[Y_”ÓÓ‹œÝš[™ÚYžJË‹‹œÙ[XÝYY×KœÛÜ
+
+JHOOR”ÓÓ‹œÝš[™ÚYžJË‹‹ŠØ]™YYß×JWKœÛÜ
+
+JNÂˆ[˜Ý[ÛˆÚÛÜÙU[YJ[YNœÝš[™Ê^ØÛÛœÝYÏ][YOOO\Ø]™Y˜[YOÊØ]™YYÏOO][™Yš[™YØÛÛ\]X›U[\]\Ë™š[\Š][OOš][K[YOOO][YJKœÛXÙJ
+K›X\
+][OOš][KšY
+NœØ]™YYÊN–×NÛÛÚ[™ÙJ[YKYÊ_Bˆ[˜Ý[ÛˆÙÙÛJYœÝš[™Ê^ØÛÛœÝ™^[™]ÈÙ]
+Ù[XÝY
+NÚYŠ™^š\ÊY
+J[™^™[]JY
+NÙ[ÙHYŠ™^œÚ^™O
+[™^˜Y
+Y
+NÛÛÚ[™ÙJ˜[YKË‹‹›™^J_BˆÛÛœÝØ]™YÙ]\ÐÛÛ\]X›OP›ÛÛX[ŠØ]™Y˜[YI‰[Y\Ëš[˜ÛY\ÊØ]™Y˜[YJJNÂˆ™]\›ˆÙXÝ[ÛˆÛ\ÜÓ˜[YOH˜˜]ÚYY˜][X›ØÚÈ[ØÚÝ\YY˜][X›ØÚÈ‚ˆ]ˆÛ\ÜÓ˜[YOH˜˜]ÚYY˜][ZXY[™È]Ï“[ØÚÝ\ÏÚÏÜ[žÙš\œÝ[ÈÚÛÜÙHH^XÝØÙ[™\È\È›ÙXÝÚÝ[Ý\Ú]ˆŽœØ]™YÙ]\ÐÛÛ\]X›I‰œÙ[XÝYYË›[™ÝÈ”Ø]™Y›Üˆ\È›ÙXÝ8 %™[[Ý™HÜˆY[žHØÙ[™KˆŽœØ]™YÙ]\ÐÛÛ\]X›OÈ•\ÈÙ]\ÈØ]™Y›Üˆ\È›ÙXÝˆÚÛÜÙHHØÙ[™\È[ÝHØ[œ›ÛH]ˆŽ˜[YOÈÚÛÜÙHH[™]šYX[ØÙ[™\È[ÝHØ[ˆ›Ý[™È\È[š\š]Yœ›ÛH[›Ý\ˆ›ÙXÝˆŽ›ØYY	‰ˆ][Y\Ë›[™ÝÈ“›ÈÛÛ\]X›H[ØÚÝ\Ù]\ÈØ]™Y›Üˆ\È›ÙXÝY]ˆŽ[Y\Ë›[™ÝÈ“›È[ØÚÝ\Ù]ÚÜÙ[ˆ›Üˆ\È›ÙXÝY]ˆŽˆ“ØY[™È[Ý\ˆØ]™Y[ØÚÝ\ÚÚXÙ\ø )ˆŸOÜÜ[Ù]žÝ˜[YOØ	ÜÙ[XÝYYË›[™ÝHÙ[XÝY›ØYYÈ“›Û™HÚÜÙ[ˆŽˆ“ØY[™ø )ˆŸOØÙ]‚ˆX™[Ü[“[ØÚÝ\Ù]ÜÜ[Ù[XÝ˜[YO^Ý˜[Y_HÛÚ[™ÙO^Ù]™[O˜ÚÛÜÙU[YJ]™[\™Ù]˜[YJ_H\ØX›Y^È][Y\Ë›[™ÝOžÝ[Y\Ë›[™ÝÏÜ[Ûˆ˜[YOHˆ“›È[ØÚÝ\È›Üˆ\È˜]ÚÛÜ[ÛŽÜ[Ûˆ˜[YOHˆžÛØYYÈ“›ÈÛÛ\]X›H[ØÚÝ\Ù]È›Üˆ\È›ÙXÝŽˆ“ØY[™È[ØÚÝ\Ù]ø )ˆŸOÛÜ[ÛŸ^Ý[Y\Ë›X\
+[YOOÜ[ÛˆÙ^O^Ý[Y_H˜[YO^Ý[Y_OžÝ[Y_OÛÜ[ÛŠ_OÜÙ[XÝÛX™[‚ˆHÛ\ÜÓ˜[YOH›X[˜YÙK[[ØÚÝ\\Ù]Èˆ™YH‹Û[ØÚÝ\Èˆ\™Ù]H—Ø›[šÈˆ™[H››ÛÜ[™\ˆ›Ü™Y™\œ™\ˆÜ™X]HÜˆY][ØÚÝ\Ù]È8¡¥ÏØO‚ˆÝ˜[YI‰]ˆÛ\ÜÓ˜[YOHœ›ÙXÝ[[ØÚÝ\\ØÙ[™\Èˆ\šXK[X™[^ØÚÛÜÙHØÙ[™\Èœ›ÛH	Ý˜[Y_XOžÛX]Ú[™Õ[\]\Ë›X\
+][OOX™[Ù^O^Ú][KšYHÛ\ÜÓ˜[YO^ÜÙ[XÝYš\Ê][KšY
+OÈœÙ[XÝYŽˆˆŸO[œ]\OH˜ÚXÚØ›ÞˆÚXÚÙY^ÜÙ[XÝYš\Ê][KšY
+_H\ØX›Y^È\Ù[XÝYš\Ê][KšY
+I‰œÙ[XÝYœÚ^™ONHÛÚ[™ÙO^Ê
+OOÙÙÛJ][KšY
+_KÏžËÊˆŒNH\È\È›ÝÈHÛ›HØÙ[™HXÚÙ\‹ÛÈ]Ø\œšY\ÈÚ]H\‹[\Ý[™ÈÜšY\ÙYÎˆHØÙ[™IÜÈ™X[˜[YH[™HØ\›š[™È]]\È›Ý™Y[ˆYX\Ý\™Y›Üˆ\È›ÙXÝY]‚‚ˆ“Õ^žKˆMÈØÛÜY^žK[ØY[™ÈÈHšYÈ™\X]YÜšYË[™MÈYX\Ý\™YÚNˆH^žH[XYÙHÚ]›È[š[œÚXÈÚ^™HÛÛ\Ù\ÈÈ›Ý[™ËÛÈHœ›ÝÜÙ\ˆ™]™\ˆXÚY\È]\È™X\ˆHšY]ÜÜÛÈ]™]™\ˆØYËˆ\ˆØÙ[™H[\ÈØYYÙˆXYÙ\ŽÈH^žH[X›˜Z[ÈØYYÙˆˆX›Ý][ˆ[\Ë[ÛˆØÜ™Y[‹ˆ
+‹ßO[YÈÜ˜Ï^Ú][KœÜ˜ßH[^Ú][K›˜[Y_HXÛÙ[™ÏH˜\Þ[˜È‹ÏÜ[ˆ]O^Ú][K›˜[Y_OžÚ][K›˜[YKœ™\XÙJ×–ØK^ŒNWJÉÚKˆŠKœ™\XÙJÖ×ËWJËÙËˆŠ_OÜÜ[žÈ\™\\˜][Û“X]Ú\Ô›ÙXÝ
+][Kœ™\\˜][Û‹›ÙXÝ˜[YJOÏ[HÛ\ÜÓ˜[YOHœØÙ[™K][›YX\Ý\™Y‘ÛÛYH™\\™\È\ÈØÙ[™H]]ÛX]XØ[H™Y›Ü™HÜ™X][™È]Ù[OŽ›[OÛX™[Š_OÙ]ÛX[žÜÙ[XÝYœÚ^™_HÙˆÛX]Ú[™Õ[\]\Ë›[™ÝHØÙ[™\ÈÚÜÙ[žÜÙ[XÝYœÚ^™ONÈˆ0­È]\ÈHX^[][HÙˆŽˆˆ0­È\ÈŸKˆÛXÚÈ[žHØÙ[™HÈYÜˆ™[[Ý™H]ÜÛX[ÏŸBˆÈYš\œÝ[‰‰˜Ú[™ÙY	‰]Ûˆ\OH˜]ÛˆˆÛ\ÜÓ˜[YOHœØ]™K\›ÙXÝYY˜][ˆ\ØX›Y^ÜØ]š[™ßHÛÛXÚÏ^ÛÛ”Ø]™QY˜][OžÜØ]š[™ÏÈ”Ø]š[™ø )ˆŽ˜[YOØØ]™H\ÙH	ÜÙ[XÝYYË›[™ÝH[ØÚÝ\È\È\È›ÙXÝ8 &\ÈY˜][ˆ”Ø]™H›È[ØÚÝ\È\È\È›ÙXÝ8 &\ÈY˜][ŸOØ]ÛŸBˆÜÙXÝ[Û‚ŸB‚™[˜Ý[Ûˆ›Ü›X[^™TšXÙ\ÐžPÛÜÝ
+˜\šX[Î”›ÙXÝ˜\šX[×K™^”™XÛÜ™Ýš[™Ë[X™\Š^ÂˆÛÛœÝØY™\ÝžPÛÜÝ[™]ÈX\[X™\‹[X™\Š
+NÂˆ›ÜŠÛÛœÝ˜\šX[Ùˆ˜\šX[Ê\ØY™\ÝžPÛÜÝœÙ]
+˜\šX[˜ÛÜÝX]›X^
+ØY™\ÝžPÛÜÝ™Ù]
+˜\šX[˜ÛÜÝ
+_™^ÔÝš[™Ê˜\šX[šY
+WOÏÝ˜\šX[[\]TšXÙJJNÂˆ™]\›ˆØš™XÝ™œ›ÛQ[šY\Ê˜\šX[Ë›X\
+˜\šX[O–ÔÝš[™Ê˜\šX[šY
+KØY™\ÝžPÛÜÝ™Ù]
+˜\šX[˜ÛÜÝ
+OÏÛ™^ÔÝš[™Ê˜\šX[šY
+WOÏÝ˜\šX[[\]TšXÙWJJNÂŸB‚˜\Þ[˜È[˜Ý[Ûˆ\ÚYÛ”™]šY]Ñ]U\›
+\ÚYÛŽ‘\ÚYÛ‘š[J^ÂˆYŠY\ÚYÛ‹›ÜšYÚ[˜[[˜]˜Z[X›J\™]\›ˆØY™R[XYÙT™]šY]Ñ]U\›
+\ÚYÛ‹™š[KLŒ˜[ÙJNÂˆYŠY\ÚYÛ‹œ™]šY]Õ\›
+]›ÝÈ™]È\œ›ÜŠ•HÜšYÚ[˜[\ØY\È›Ý]˜Z[X›H[ˆ\Èœ›ÝÜÙ\‹ˆ[ÝHØ[ˆÝ[Üš]H\È\Ý[™ÈX[X[KˆŠNÂˆž^ØÛÛœÝ™\ÜÛœÙOX]ØZ]™]Ú
+\ÚYÛ‹œ™]šY]Õ\›
+NÚYŠ\™\ÜÛœÙK›ÚÊ]›ÝÈ™]È\œ›ÜŠ
+NÜ™]\›ˆØY™R[XYÙT™]šY]Ñ]U\›
+]ØZ]™\ÜÛœÙK˜›ØŠ
+KLŒ˜[ÙJ_XØ]ÚÝ›ÝÈ™]È\œ›ÜŠ‘ÛÛYHÛÝ[›Ý™XYHØ]™Yš[YžH™]šY]Ëˆ[ÝHØ[ˆÝ[Üš]H\È\Ý[™ÈX[X[KˆŠ_BŸB˜\Þ[˜È[˜Ý[Ûˆ]]Õ]Q›Ü‘\ÚYÛŠ\ÚYÛŽ‘\ÚYÛ‘š[KÙ^]ÛÜ™ÎœÝš[™Ö×K\ÙPÛÛ[X\Î˜›ÛÛX[‹[\]N•[\]Q]Z[ß[
+^ØÛÛœÝ™\ÜÛœÙOX]ØZ]™]Ú
+‹Ø\KÛ\Ý[™ËZ[[YÙ[˜ÙH‹ÛY]Ùˆ”ÔÕ‹XY\œÎžÈÛÛ[U\HŽˆ˜\XØ][Û‹ÚœÛÛˆŸK›ÙN’”ÓÓ‹œÝš[™ÚYžJÛ[ÙNˆ]H‹[XYÙN˜]ØZ]\ÚYÛ”™]šY]Ñ]U\›
+\ÚYÛŠK›ÙXÝžØ›Y\š[]N[\]OË˜›Y\š[]Kœ˜[™[\]OË˜œ˜[™[Ù[[\]OË›[Ù[KÙ^]ÛÜ™Ë\ÙPÛÛ[X\ßJ_JK^[ØYX]ØZ]™\ÜÛœÙKšœÛÛŠ
+H\ÈÝ]OÎœÝš[™ÎÚÙ^]ÛÜ™ÏÎœÝš[™Ö×NÝYÜÏÎœÝš[™Ö×NÝ]UØ\›š[™ÏÎœÝš[™ÎÙ\œ›ÜÎœÝš[™ßNÚYŠ\™\ÜÛœÙK›Úß\^[ØY]J]›ÝÈ™]È\œ›ÜŠ^[ØY™\œ›ÜŸ‘ÛÛYHÛÝ[›ÝÜ™X]H\È]KˆŠNÜ™]\›ˆÝ]Nœ^[ØY]KÙ^]ÛÜ™Îœ^[ØYšÙ^]ÛÜ™ß×KYÜÎœ^[ØYYÜß×K]UØ\›š[™Îœ^[ØY]UØ\›š[™ßˆŸ_B‚™[˜Ý[Ûˆ[™]šYX[]]Õ]JÙ\ÚYÛ‹[\]K\ÙPÛÛ[X\Ë[š]X[˜[šÒY]\ÙYÛ\_NžÙ\ÚYÛŽ‘\ÚYÛ‘š[NÝ[\]N•[\]Q]Z[ß[Ý\ÙPÛÛ[X\Î˜›ÛÛX[ŽÚ[š]X[˜[šÒYÎœÝš[™ÎÜ]\ÙYÎ˜›ÛÛX[ŽÛÛ\NŠ]NœÝš[™ËYÜÎœÝš[™Ö×K]UØ\›š[™ÏÎœÝš[™ÊOO›ÚYJ^ØÛÛœÝØ˜[šËÙ]˜[š×O]\ÙTÝ]OÙ^]ÛÜ™\Ý[Š[
+KØZ[[™ËÙ]Z[[™×O]\ÙTÝ]J˜[ÙJKÛY\ÜØYÙKÙ]Y\ÜØYÙWO]\ÙTÝ]JˆŠNØ\Þ[˜È[˜Ý[ÛˆZ[
+
+^ÚYŠX˜[šÊ\™]\›ŽÜÙ]Z[[™ÊYJNÜÙ]Y\ÜØYÙJˆŠNÝž^ØÛÛœÝ™\Ý[X]ØZ]]]Õ]Q›Ü‘\ÚYÛŠ\ÚYÛ‹˜[šËšÙ^]ÛÜ™Ë\ÙPÛÛ[X\Ë[\]JNÛÛ\J™\Ý[]K™\Ý[YÜË™\Ý[]UØ\›š[™ÊNÜÙ]Y\ÜØYÙJ™\Ý[]UØ\›š[™ß¸§$È™]È]H[™Ù\\˜][H˜[šÙY]ÞHYÜÈ\YYÈ\È\Ý[™ÈÛ›KˆŠ_XØ]Ú
+\œ›ÜŠ^ÜÙ]Y\ÜØYÙJ\œ›Üˆ[œÝ[˜Ù[Ùˆ\œ›ÜÙ\œ›Ü‹›Y\ÜØYÙNˆ‘ÛÛYHÛÝ[›ÝÜ™X]H\È]KˆŠ_Yš[˜[^ÜÙ]Z[[™Ê˜[ÙJ__\™]\›ˆžÙ\ÚYÛ‹]UØ\›š[™É‰Û\ÜÓ˜[YOH]K[X]Ú]Ø\›š[™Èˆ›ÛOHœÝ]\ÈžÙ\ÚYÛ‹]UØ\›š[™ßOÜŸ^Ù\ÚYÛ‹]Q\œ›Ü‰‰Û\ÜÓ˜[YOH™šY[Y\œ›Üˆˆ›ÛOH˜[\žÙ\ÚYÛ‹]Q\œ›ÜŸOÜŸO]Z[ÈÛ\ÜÓ˜[YOHš[™]šYX[]]KXZ[\ˆˆÛÛXÚÏ^Ù]™[O™]™[œÝÜ›ÜYØ][ÛŠ
+_OÝ[[X\žOÜ™X]HHY™™\™[]HÚ]ROÜÝ[[X\žOÙ^]ÛÜ™˜[šÈÛÛ\XÝÙ[XÝ[Û“Û›H[š]X[Y^Ú[š]X[˜[šÒYˆŸH]OH’Ù^]ÛÜ™˜[šÈˆÛÜOH‘ÛÛYHÙ[XÝÈ^XÝ˜[Y]Y˜\Ù\Èœ›ÛH\È˜[šËˆ]™]™\ˆYÈÙ^]ÛÜ™ËˆˆÛ”Ù[XÝ^ÜÙ]˜[šßKÏ]ÛˆÛ\ÜÓ˜[YOH˜ZK]]KX]Ûˆˆ]O^Ü]\ÙYÈ•\È˜]Ú\ÈÜ[ˆ[ˆ[›Ý\ˆÛÛYHX‹ÛÈ›Ý[™ÈZ[\™HÛÝ[™HÙ\ˆŽˆX˜[šÏÈÚÛÜÙHHÙ^]ÛÜ™˜[šÈš\œÝˆŽ[™Yš[™YH\ØX›Y^ÈX˜[šßZ[[™ß›ÛÛX[Š]\ÙY
+_HÛÛXÚÏ^Ê
+OO›ÚYZ[
+
+_OžØZ[[™ÏÈÜ™X][™È\È]x )ˆŽˆÜ™X]H]H›Üˆ\È\ÚYÛˆŸOØ]ÛžÛY\ÜØYÙI‰Û\ÜÓ˜[YOH]KXZ[[Y\ÜØYÙHˆ›ÛOHœÝ]\ÈžÛY\ÜØYÙ_OÜŸO]Ûˆ\OH˜]ÛˆˆÛ\ÜÓ˜[YOHœ[™[XÛÛ\ÙKY›ÛÝˆÛÛXÚÏ^Ù]™[OžØÛÛœÝ›ÞJ]™[˜Ý\œ™[\™Ù]\ÈS[[Y[
+K˜ÛÜÙ\Ý
+™]Z[ÈŠNÚYŠ›Þ
+^Ê›Þ\ÈS]Z[Ñ[[Y[
+K›Ü[Y˜[ÙNØ›ÞœØÜ›Û[ÕšY]ÊØ›ØÚÎˆ›™X\™\ÝŸJ___OÛÜÙH]HZ[\Ø]ÛÙ]Z[Ï[™]šYX[X[X[]H\ÙPÛÛ[X\Ï^Ý\ÙPÛÛ[X\ßH[š]X[˜[šÒY^Ú[š]X[˜[šÒYHÛ\O^Ê]KYÜÊOO›Û\J]KYÜËˆŠ_KÏÏŸB‚™[˜Ý[Ûˆ[™]šYX[X[X[]JÝ\ÙPÛÛ[X\Ë[š]X[˜[šÒYÛ\_NžÝ\ÙPÛÛ[X\Î˜›ÛÛX[ŽÚ[š]X[˜[šÒYÎœÝš[™ÎÛÛ\NŠ]NœÝš[™ËYÜÎœÝš[™Ö×JOO›ÚYJ^ØÛÛœÝØ˜[šÒYÙ]˜[šÒYO]\ÙTÝ]J[š]X[˜[šÒYˆŠKÚÙ^]ÛÜ™ËÙ]Ù^]ÛÜ™×O]\ÙTÝ]OÝš[™Ö×OŠ×JKÛY\ÜØYÙKÙ]Y\ÜØYÙWO]\ÙTÝ]JˆŠNØÛÛœÝ]OZÙ^]ÛÜ™Ëš›Ú[Š\ÙPÛÛ[X\ÏÈ‹ŽˆˆŠNÙ[˜Ý[ÛˆY
+Ù^]ÛÜ™œÝš[™Ê^ÜÙ]Ù^]ÛÜ™ÊÝ\œ™[O˜Ý\œ™[š[˜ÛY\ÊÙ^]ÛÜ™
+OØÝ\œ™[–Ë‹‹˜Ý\œ™[Ù^]ÛÜ™JNÜÙ]Y\ÜØYÙJˆŠ_Y[˜Ý[Ûˆ\J
+^ÚYŠ]]J\™]\›ŽÛÛ\J]KYÜÑœ›ÛU]JÙ^]ÛÜ™Ëš›Ú[Š‹ŠJJNÜÙ]Y\ÜØYÙJ¸§$È[Ý\ˆ]H[™X]Ú[™ÈYÜÈÙ\™H\YYÈ\È\Ý[™ÈÛ›KˆŠ_\™]\›ˆ]Z[ÈÛ\ÜÓ˜[YOHš[™]šYX[]]KXZ[\ˆ[™]šYX[[X[X[]]HˆÛÛXÚÏ^Ù]™[O™]™[œÝÜ›ÜYØ][ÛŠ
+_OÝ[[X\žOZ[\È]H[Ý\œÙ[ˆœ›ÛHHÙ^]ÛÜ™˜[šÏÜÝ[[X\žOÙ^]ÛÜ™˜[šÈÛÛ\XÝ[š]X[Y^Ø˜[šÒYH]OHÚÛÜÙHHÙ^]ÛÜ™˜[šÈˆÛÜOHÛXÚÈÙ^]ÛÜ™È[ˆHÜ™\ˆ[ÝHØ[[H›Üˆ\È\Ý[™ËˆˆÛ”Ù[XÝ^Û\ÝOžÜÙ]˜[šÒY
+\ÝËšYˆŠNÜÙ]Ù^]ÛÜ™Ê×JNÜÙ]Y\ÜØYÙJˆŠ__HÛY^ØYKÏ]ˆÛ\ÜÓ˜[YOHš[™]šYX[ZÙ^]ÛÜ™\Ù[XÝ[Ûˆ]”Ù[XÝYÙ^]ÛÜ™ÏØžÚÙ^]ÛÜ™Ë›[™ÝŒ	‰]Ûˆ\OH˜]ÛˆˆÛÛXÚÏ^Ê
+OOœÙ]Ù^]ÛÜ™Ê×J_OÛX\ˆ[Ø]ÛŸOÙ]žÚÙ^]ÛÜ™Ë›[™ÝÏ]ˆÛ\ÜÓ˜[YOHœÙ[XÝYZÙ^]ÛÜ™XÚ\ÈžÚÙ^]ÛÜ™Ë›X\
+Ù^]ÛÜ™O]Ûˆ\OH˜]ÛˆˆÙ^O^ÚÙ^]ÛÜ™HÛÛXÚÏ^Ê
+OOœÙ]Ù^]ÛÜ™ÊÝ\œ™[O˜Ý\œ™[™š[\Š][OOš][HOOZÙ^]ÛÜ™
+J_OžÚÙ^]ÛÜ™OÜ[°åÏÜÜ[Ø]ÛŠ_OÙ]]ˆÛ\ÜÓ˜[YOHš[™]šYX[]]K\™]šY]ÈÛX[•]H™]šY]ÏÜÛX[Ü[žÝ]_OÜÜ[Ù]]Ûˆ\OH˜]ÛˆˆÛ\ÜÓ˜[YOH˜\K[X[X[]]HˆÛÛXÚÏ^Ø\_O\HÈ\È\Ý[™ÏØ]ÛÏŽÚÛÜÙHH˜[šË[ˆÛXÚÈHÙ^]ÛÜ™È[ÝHØ[È\ÙKÜŸ^ÛY\ÜØYÙI‰Û\ÜÓ˜[YOH]KXZ[[Y\ÜØYÙHˆ›ÛOHœÝ]\ÈžÛY\ÜØYÙ_OÜŸOÙ]Ù]Z[ÏŸB‚™[˜Ý[Ûˆ\œÛÛ˜[^˜][Û‘Y]ÜŠÝ˜[YKÛÚ[™Ù_NžÝ˜[YOÎ‘]ÞT\œÛÛ˜[^˜][ÛŽÛÛÚ[™ÙNŠ˜[YN‘]ÞT\œÛÛ˜[^˜][ÛŠOO›ÚYJ^ÂˆÛÛœÝ[˜X›YP›ÛÛX[Š˜[YOË™[˜X›Y
+K]Y\Ý[ÛœÏ]˜[YOËœ]Y\Ý[Ûœß×NÂˆ[˜Ý[Ûˆ›[šÊ\N”\œÛÛ˜[^˜][Û”]Y\Ý[Û–È\H—OH^Ú[œ]ŠN”\œÛÛ˜[^˜][Û”]Y\Ý[ÛžÜ™]\›žÚY˜Üž\Ëœ˜[™ÛUURQ
+
+K\K]Y\Ý[ÛŽ\OOOH^Ú[œ]È”\œÛÛ˜[^˜][ÛˆŽˆˆ‹[œÝXÝ[ÛœÎˆˆ‹™\]Z\™Y™˜[ÙKX^Ú\˜XÝ\œÎŒM‹X^š[\ÎŒKÜ[ÛœÎ\OOOH™›ÜÝÛˆÖÈ“Ü[ÛˆH‹“Ü[Ûˆˆ—N–×__Bˆ[˜Ý[Ûˆ\]JYœÝš[™Ë]Ú”\X[\œÛÛ˜[^˜][Û”]Y\Ý[ÛŠ^ÛÛÚ[™ÙJÙ[˜X›YYK]Y\Ý[ÛœÎœ]Y\Ý[ÛœË›X\
+]Y\Ý[ÛOœ]Y\Ý[Û‹šYOOZYÞË‹‹œ]Y\Ý[Û‹‹‹œ]ÚNœ]Y\Ý[ÛŠ_J_Bˆ[˜Ý[ÛˆÙÙÛJ™^˜›ÛÛX[Š^ÛÛÚ[™ÙJÙ[˜X›Y›™^]Y\Ý[ÛœÎ›™^Ê]Y\Ý[ÛœË›[™ÝÜ]Y\Ý[ÛœÎ–Ø›[šÊ
+WJNœ]Y\Ý[ÛœßJ_Bˆ™]\›ˆÙXÝ[ÛˆÛ\ÜÓ˜[YOHœ\œÛÛ˜[^˜][Û‹YY]Üˆ]ˆÛ\ÜÓ˜[YOHœ\œÛÛ˜[^˜][Û‹ZXY[™È]”\œÛÛ˜[^˜][ÛØÛX[“]^Y\œÈ[œÝÙ\ˆ]Y\Ý[ÛœÈÜˆ\ØYš[\È›Üˆ\È\Ý[™ËÜÛX[Ù]X™[Û\ÜÓ˜[YOHœ\œÛÛ˜[^˜][Û‹\ÝÚ]Ú[œ]\OH˜ÚXÚØ›Þˆ›ÛOHœÝÚ]Úˆ\šXK[X™[H”\œÛÛ˜[^˜][Ûˆˆ\šXKXÚXÚÙY^Ù[˜X›YHÚXÚÙY^Ù[˜X›YHÛÚ[™ÙO^Ù]™[OÙÙÛJ]™[\™Ù]˜ÚXÚÙY
+_KÏÜ[žÙ[˜X›YÈ“ÛˆŽˆ“Ù™ˆŸOÜÜ[ÛX™[Ù]žÙ[˜X›Y	‰]ˆÛ\ÜÓ˜[YOHœ\œÛÛ˜[^˜][Û‹\]Y\Ý[ÛœÈžÜ]Y\Ý[ÛœË›X\
+
+]Y\Ý[Û‹[™^
+OO\XÛHÙ^O^Ü]Y\Ý[Û‹šYO]ˆÛ\ÜÓ˜[YOHœ\œÛÛ˜[^˜][Û‹\]Y\Ý[Û‹ZXY”]Y\Ý[ÛˆÚ[™^
+Ì_OØ]Ûˆ\OH˜]ÛˆˆÛÛXÚÏ^Ê
+OO›ÛÚ[™ÙJÙ[˜X›YYK]Y\Ý[ÛœÎœ]Y\Ý[ÛœË™š[\Š][OOš][KšYOO\]Y\Ý[Û‹šY
+_J_O”™[[Ý™OØ]ÛÙ]X™[[œÝÙ\ˆ\OÙ[XÝ˜[YO^Ü]Y\Ý[Û‹\_HÛÚ[™ÙO^Ù]™[OžØÛÛœÝ\OY]™[\™Ù]˜[YH\È\œÛÛ˜[^˜][Û”]Y\Ý[Û–È\H—NÝ\]J]Y\Ý[Û‹šYÝ\KÜ[ÛœÎ\OOOH™›ÜÝÛˆ‰‰œ]Y\Ý[Û‹›Ü[ÛœË›[™ÝÖÈ“Ü[ÛˆH‹“Ü[Ûˆˆ—Nœ]Y\Ý[Û‹›Ü[ÛœßJ__OÜ[Ûˆ˜[YOH^Ú[œ]•^[œÝÙ\ÛÜ[ÛÜ[Ûˆ˜[YOH™›ÜÝÛˆ‘›ÜÝÛˆÚÚXÙ\ÏÛÜ[ÛÜ[Ûˆ˜[YOH[›X™[YÝ\ØY‘š[H\ØYÛÜ[ÛÜÙ[XÝÛX™[X™[”]Y\Ý[Û[œ]X^[™Ý^ÌLŒH˜[YO^Ü]Y\Ý[Û‹œ]Y\Ý[ÛŸHXÙZÛ\H‘^[\NˆÚ]˜[YHÚÝ[\X\ˆÛˆHÚ\ÈˆÛÚ[™ÙO^Ù]™[O\]J]Y\Ý[Û‹šYÜ]Y\Ý[ÛŽ™]™[\™Ù]˜[Y_J_KÏÛX™[žÜ]Y\Ý[Û‹\HOOH™›ÜÝÛˆ‰‰X™[’[œÝXÝ[ÛœÈÜ[žÜ]Y\Ý[Û‹š[œÝXÝ[ÛœË›[™ÝKÌLŒÜÜ[^\™XH›ÝÜÏ^ÌŸHX^[™Ý^ÌLŒH˜[YO^Ü]Y\Ý[Û‹š[œÝXÝ[ÛœßHXÙZÛ\H•[H^Y\ˆ^XÝHÚ]È›ÝšYKˆˆÛÚ[™ÙO^Ù]™[O\]J]Y\Ý[Û‹šYÚ[œÝXÝ[ÛœÎ™]™[\™Ù]˜[Y_J_KÏÛX™[Ÿ^Ü]Y\Ý[Û‹\OOOH^Ú[œ]‰‰X™[“X^[][HÚ\˜XÝ\œÏ[YÙ\‘šY[˜[YO^Ü]Y\Ý[Û‹›X^Ú\˜XÝ\œßHZ[^Ì_HX^^ÌLHX™[H“X^[][HÚ\˜XÝ\œÈˆÛÛÛ[Z]^Û™^O\]J]Y\Ý[Û‹šYÛX^Ú\˜XÝ\œÎ›™^J_KÏÛX™[Ÿ^Ü]Y\Ý[Û‹\OOOH[›X™[YÝ\ØY‰‰X™[“X^[][Hš[\Ï[YÙ\‘šY[˜[YO^Ü]Y\Ý[Û‹›X^š[\ßHZ[^Ì_HX^^ÌLHX™[H“X^[][Hš[\ÈˆÛÛÛ[Z]^Û™^O\]J]Y\Ý[Û‹šYÛX^š[\Î›™^J_KÏÛX™[Ÿ^Ü]Y\Ý[Û‹\OOOH™›ÜÝÛˆ‰‰X™[‘›ÜÝÛˆÚÚXÙ\Ï^\™XH›ÝÜÏ^ÌßH˜[YO^Ü]Y\Ý[Û‹›Ü[ÛœËš›Ú[Š—ˆŠ_HXÙZÛ\^È”ÛX[“YY][W“\™ÙHŸHÛÚ[™ÙO^Ù]™[O\]J]Y\Ý[Û‹šYÛÜ[ÛœÎ™]™[\™Ù]˜[YKœÜ]
+××‹ÊKœÛXÙJÌ
+_J_KÏÛX[‘[\ˆÛ™HÚÚXÙH\ˆ[™Kˆ]ÞH[ÝÜÈ\ÈÌÚÚXÙ\ËÚ]ŒÚ\˜XÝ\œÈ\ˆÚÚXÙKÜÛX[ÛX™[ŸOX™[Û\ÜÓ˜[YOHœ\œÛÛ˜[^˜][Û‹\™\]Z\™Y[œ]\OH˜ÚXÚØ›ÞˆÚXÚÙY^Ü]Y\Ý[Û‹œ™\]Z\™YHÛÚ[™ÙO^Ù]™[O\]J]Y\Ý[Û‹šYÜ™\]Z\™Y™]™[\™Ù]˜ÚXÚÙYJ_KÏ^Y\ˆ]\Ý[œÝÙ\ˆ\È]Y\Ý[ÛÛX™[Ø\XÛOŠ_OÙ]žÜ]Y\Ý[ÛœË›[™ÝI‰]Ûˆ\OH˜]ÛˆˆÛ\ÜÓ˜[YOH˜Y\\œÛÛ˜[^˜][Û‹\]Y\Ý[ÛˆˆÛÛXÚÏ^Ê
+OO›ÛÚ[™ÙJÙ[˜X›YYK]Y\Ý[ÛœÎ–Ë‹‹œ]Y\Ý[ÛœË›[šÊ
+W_J_OY[›Ý\ˆ]Y\Ý[ÛØ]ÛŸOÛX[Û\ÜÓ˜[YOHœ\œÛÛ˜[^˜][Û‹[›ÝH‘]ÞH[ÝÜÈ\Èš]™H]Y\Ý[ÛœËˆ™]šY]È]™\žH]Y\Ý[Ûˆ™Y›Ü™HX›\Ú[™ËÜÛX[ÏŸOÜÙXÝ[Û‚ŸB‚™[˜Ý[Ûˆ]ÞQ]Z[ÑY]ÜŠÙ\ÚYÛ‹Ø]YÛÜšY\ËÛÚ[™ÙKÛØ]YÛÜž_NžÙ\ÚYÛŽ‘\ÚYÛ‘š[NØØ]YÛÜšY\Î‘]ÞPØ]YÛÜžSÜ[Û–×NÛÛÚ[™ÙNŠ]Z[Î‘]ÞQ]Z[ÊOO›ÚYÛÛØ]YÛÜžNŠ^Û›Û^RY›[X™\ŠOO”›ÛZ\ÙO›ÚYŸJ^ÂˆÛÛœÝ]Z[ÏY\ÚYÛ‹™]ÞHKÛØY[™ËÙ]ØY[™×O]\ÙTÝ]J˜[ÙJNÂˆÛÛœÝ›Ü\Y\ÏY]Z[Ëœ›Ü\Y\ß×KÛÛ\]Y\›Ü\Y\Ë™š[\Š›Ü\OOœ›Ü\K˜[YKš[J
+JK\ÚXØ[XÛÛ\]Y™š[\Š›Ü\OO”TÒPÐSÑUÖWÑ’QSË\Ý
+›Ü\K›X™[
+JK™]šY]Ï\\ÚXØ[œÛXÙJÊK›X\
+›Ü\OOœ›Ü\K˜[YJKš›Ú[Š‹ŠNÂˆ\Þ[˜È[˜Ý[ÛˆÚÛÜÙJY›[X™\Š^ÜÙ]ØY[™ÊYJNÝž^Ø]ØZ]ÛØ]YÛÜžJY
+_Yš[˜[^ÜÙ]ØY[™Ê˜[ÙJ__Bˆ[˜Ý[ÛˆÙ]›Ü\J›Ü\N‘]ÞT›Ü\TÙ[XÝ[Û‹˜[YNœÝš[™Ê^ØÛÛœÝÜ[Û\›Ü\KœÜÜÚX›U˜[Y\Ë™š[™
+][OO”Ýš[™Ê][K˜[YWÚY
+OOO]˜[YJK™^^Ë‹‹œ›Ü\K˜[YRY›Ü[ÛË˜[YWÚY[˜[YN›Ü[ÛË›˜[Y_˜[Y_NÛÛÚ[™ÙJË‹‹™]Z[Ë›Ü\Y\ÎŠ]Z[Ëœ›Ü\Y\ß×JK›X\
+][OOš][Kœ›Ü\RYOO\›Ü\Kœ›Ü\RYÛ™^š][J_J_Bˆ™]\›ˆ]Z[ÈÛ\ÜÓ˜[YOH™]ÞKY]Z[ËYY]ÜˆÝ[[X\žOÜ[‘]ÞH]Z[ÏØÛX[žÊ
+
+OOžØÛÛœÝ™\]Z\™Y\›Ü\Y\Ë™š[\Š›Ü\OOœ›Ü\Kœ™\]Z\™Y
+K™\]Z\™YÛ™O\™\]Z\™Y™š[\Š›Ü\OOœ›Ü\K˜[YKš[J
+JNÜ™]\›ˆ™\]Z\™Y›[™ÝØ	Ü™\]Z\™YÛ™K›[™ÝHÙˆ	Ü™\]Z\™Y›[™ÝH™\]Z\™YÙ]˜	ØÛÛ\]Y›[™ÝHYY0­È[Ü[Û˜[JJ
+_^Ü™]šY]ÏØ0­È	Ü™]šY]ßXˆˆŸOÜÛX[ÜÜ[[O‘Y]Ù[OÜÝ[[X\žO]ˆÛ\ÜÓ˜[YOH™]ÞKY]Z[ËYY]Ü‹YšY[ÈX™[‘]ÞHØ]YÛÜžOÙ[XÝ˜[YO^Ù]Z[Ë^Û›Û^RYˆŸH\ØX›Y^ÛØY[™ßHÛÚ[™ÙO^Ù]™[O›ÚYÚÛÜÙJ[X™\Š]™[\™Ù]˜[YJJ_OžÈY]Z[Ë^Û›Û^RY	‰Ü[Ûˆ˜[YOHˆÚÛÜÙH[ˆ]ÞHØ]YÛÜžOÛÜ[ÛŸ^Ð›ÛÛX[Š]Z[Ë^Û›Û^RY
+I‰ˆXØ]YÛÜšY\ËœÛÛYJØ]YÛÜžOO˜Ø]YÛÜžKšYOOY]Z[Ë^Û›Û^RY
+I‰Ü[Ûˆ˜[YO^Ù]Z[Ë^Û›Û^RYOžÙ]Z[Ë˜Ø]YÛÜž_Ø]YÛÜžH[™XYHÚÜÙ[ˆ›Üˆ\È\Ý[™ÈŸOÛÜ[ÛŸ^ØØ]YÛÜšY\Ë›X\
+Ø]YÛÜžOOÜ[ÛˆÙ^O^ØØ]YÛÜžKšYH˜[YO^ØØ]YÛÜžKšYOžØØ]YÛÜžKœ]OÛÜ[ÛŠ_OÜÙ[XÝÛX™[žÛØY[™É‰ÛX[“ØY[™ÈH^XÝ]ÞHÜ[ÛœÈ›Üˆ\ÈØ]YÛÜžx )ÜÛX[ŸO]ˆÛ\ÜÓ˜[YOH™]ÞKX]šX]KYÜšYžÜ›Ü\Y\Ë›X\
+›Ü\OOX™[Ù^O^Ü›Ü\Kœ›Ü\RYOžÜ›Ü\K›X™[^Ü›Ü\Kœ™\]Z\™Y	‰[O”™\]Z\™YÙ[OŸ^Ü›Ü\KœÜÜÚX›U˜[Y\Ë›[™ÝÏÙ[XÝ˜[YO^Ü›Ü\K˜[YRYˆŸHÛÚ[™ÙO^Ù]™[OœÙ]›Ü\J›Ü\K]™[\™Ù]˜[YJ_OÜ[Ûˆ˜[YOHˆžÜ›Ü\Kœ™\]Z\™YÈÚÛÜÙHÛ™HŽˆ“›Ý\XØX›HŸOÛÜ[ÛžÜ›Ü\KœÜÜÚX›U˜[Y\Ë›X\
+Ü[ÛOÜ[ÛˆÙ^O^ÛÜ[Û‹˜[YWÚYH˜[YO^ÛÜ[Û‹˜[YWÚYOžÛÜ[Û‹›˜[Y_OÛÜ[ÛŠ_OÜÙ[XÝŽ[œ]˜[YO^Ü›Ü\K˜[Y_HÛÚ[™ÙO^Ù]™[OœÙ]›Ü\J›Ü\K]™[\™Ù]˜[YJ_KÏŸOÛX™[Š_OÙ]ÛX[Û\ÜÓ˜[YOH›Ü[Û˜[[›ÝH•\ÙH\™H]Þx &\ÈXÝX[šY[È›ÜˆHÙ[XÝYØ]YÛÜžKˆÜ[Û˜[šY[ÈØ[ˆÝ^H›[šËÜÛX[\œÛÛ˜[^˜][Û‘Y]Üˆ˜[YO^Ù]Z[Ëœ\œÛÛ˜[^˜][ÛŸHÛÚ[™ÙO^Ü\œÛÛ˜[^˜][ÛO›ÛÚ[™ÙJË‹‹™]Z[Ë\œÛÛ˜[^˜][ÛŸJ_KÏÙ]]Ûˆ\OH˜]ÛˆˆÛ\ÜÓ˜[YOHœ[™[XÛÛ\ÙKY›ÛÝˆÛÛXÚÏ^Ù]™[OžØÛÛœÝ›ÞJ]™[˜Ý\œ™[\™Ù]\ÈS[[Y[
+K˜ÛÜÙ\Ý
+™]Z[ÈŠNÚYŠ›Þ
+^Ê›Þ\ÈS]Z[Ñ[[Y[
+K›Ü[Y˜[ÙNØ›ÞœØÜ›Û[ÕšY]ÊØ›ØÚÎˆ›™X\™\ÝŸJ___OÛÜÙH]ÞH]Z[ÏØ]ÛÙ]Z[Ï‚ŸB‚™[˜Ý[Ûˆ[™]šYX[Ú^™QÝZYJÜ›ÙXÝY˜[YKÛ”Ø]™YNžÜ›ÙXÝYœÝš[™ÎÛ˜[YOÎœÝš[™ÎÛÛ”Ø]™YŠ˜[YNœÝš[™ÊOO›ÚYJ^ØÛÛœÝXÚÙ\]\ÙT™YS[œ][[Y[Š[
+KÜÝ]\ËÙ]Ý]\×O]\ÙTÝ]JˆŠKÜØ]š[™ËÙ]Ø]š[™×O]\ÙTÝ]J˜[ÙJNØ\Þ[˜È[˜Ý[ÛˆØ]™Jš[N‘š[J^ÚYŠØ]š[™Ê\™]\›ŽÜÙ]Ø]š[™ÊYJNÜÙ]Ý]\ÊØ]š[™È	Ùš[K›˜[Y_x )˜
+NÝž^ØÛÛœÝ›Ü›O[™]È›Ü›Q]J
+NÙ›Ü›KœÙ]
+œ›ÙXÝY‹›ÙXÝY
+NÙ›Ü›KœÙ]
+šÚ[™‹œÚ^™KYÝZYHŠNÙ›Ü›KœÙ]
+™š[H‹š[JNØÛÛœÝ™\ÜÛœÙOX]ØZ]™]Ú
+‹Ø\KÙ]ÞKÚ[XYÙ\È‹ÛY]Ùˆ”ÔÕ‹›ÙN™›Ü›_JK^[ØYX]ØZ]™\ÜÛœÙKšœÛÛŠ
+H\ÈÙ\œ›ÜÎœÝš[™ßNÚYŠ\™\ÜÛœÙK›ÚÊ]›ÝÈ™]È\œ›ÜŠ^[ØY™\œ›ÜŸ•\ÈÚ^™HÝZYHÛÝ[›Ý™HØ]™YˆŠNÛÛ”Ø]™Y
+š[K›˜[YJNÜÙ]Ý]\Ê8§$È	Ùš[K›˜[Y_HÚ[™H\ÙY›Üˆ\È\Ý[™Ë˜
+_XØ]Ú
+\œ›ÜŠ^ÜÙ]Ý]\Ê\œ›Üˆ[œÝ[˜Ù[Ùˆ\œ›ÜÙ\œ›Ü‹›Y\ÜØYÙNˆ•\ÈÚ^™HÝZYHÛÝ[›Ý™HØ]™YˆŠ_Yš[˜[^ÜÙ]Ø]š[™Ê˜[ÙJ__\™]\›ˆ]ˆÛ\ÜÓ˜[YOHš[™]šYX[\Ú^™KYÝZYH]”Ú^™HÝZYH›Üˆ\È\Ý[™ÏØÛX[žÛ˜[Y_•\Ú[™ÈH˜]ÚÚ^™HÝZYHŸOÜÛX[Ù][œ]™Y^ÜXÚÙ\ŸH\OH™š[HˆXØÙ\Hš[XYÙKÜ™Ë[XYÙKÚœYË[XYÙKÝÙXœˆY[ˆÛÚ[™ÙO^Ù]™[OžØÛÛœÝš[OY]™[\™Ù]™š[\ÏË–ÌNÚYŠš[J]›ÚYØ]™Jš[J__KÏ]Ûˆ\OH˜]Ûˆˆ\šXKX\ÞO^ÜØ]š[™ßH\ØX›Y^ÜØ]š[™ßHÛÛXÚÏ^Ê
+OOœXÚÙ\‹˜Ý\œ™[Ë˜ÛXÚÊ
+_OžÜØ]š[™ÏÈ”Ø]š[™ÈÚ^™HÝZYx )ˆŽ›˜[YOÈ”™\XÙHÝ\ÝÛHÚ^™HÝZYHŽˆ•\ÙHHY™™\™[Ú^™HÝZYHŸOØ]ÛžÜÝ]\É‰›ÛOHœÝ]\ÈžÜÝ]\ßOÜŸOÙ]ŸB‚™[˜Ý[ÛˆÝÛ›ØY\Ý[™ÔÝÜÊÜ›ÙXÝY˜[YK[™XÙ\ßNžÜ›ÙXÝYœÝš[™ÎÛ˜[YNœÝš[™ÎÚ[™XÙ\Î›[X™\–×_J^ØÛÛœÝÙÝÛ›ØY[™ËÙ]ÝÛ›ØY[™×O]\ÙTÝ]J˜[ÙJKÛY\ÜØYÙKÙ]Y\ÜØYÙWO]\ÙTÝ]JˆŠNØ\Þ[˜È[˜Ý[ÛˆÝÛ›ØY
+
+^ÚYŠÝÛ›ØY[™Ê\™]\›ŽÜÙ]ÝÛ›ØY[™ÊYJNÜÙ]Y\ÜØYÙJˆŠNÝž^ØÛÛœÝ™\ÜÛœÙOX]ØZ]™]Ú
+‹Ø\KÛ\Ý[™Ë\ÝÜËÙÝÛ›ØY‹ÛY]Ùˆ”ÔÕ‹XY\œÎžÈÛÛ[U\HŽˆ˜\XØ][Û‹ÚœÛÛˆŸK›ÙN’”ÓÓ‹œÝš[™ÚYžJÜ›ÙXÝYš[YžR[XYÙR[™XÙ\Îš[™XÙ\ßJ_JNÚYŠ\™\ÜÛœÙK›ÚÊ^ØÛÛœÝ^[ØYX]ØZ]™\ÜÛœÙKšœÛÛŠ
+H\ÈÙ\œ›ÜÎœÝš[™ßNÝ›ÝÈ™]È\œ›ÜŠ^[ØY™\œ›ÜŸ•\ÙH\Ý[™ÈÝÜÈÛÝ[›Ý™HÝÛ›ØYYˆŠ_XÛÛœÝ›ØX]ØZ]™\ÜÛœÙK˜›ØŠ
+K\›UT“˜Ü™X]SØš™XÝT“
+›ØŠK[šÏYØÝ[Y[˜Ü™X]Q[[Y[
+˜HŠNÛ[šËš™Y]\›Û[šË™ÝÛ›ØYX	Û˜[YKœ™\XÙJÖ×˜K^ŒNK—ËWJËÙÚK‹HŠKœÛXÙJL
+_›\Ý[™ÈŸK[\Ý[™Ë\ÝÜËžš\ÙØÝ[Y[˜›ÙK˜\[™Ú[
+[šÊNÛ[šË˜ÛXÚÊ
+NÛ[šËœ™[[Ý™J
+NÕT“œ™]›ÚÙSØš™XÝT“
+\›
+NÜÙ]Y\ÜØYÙJ¸§$ÈÝÛ›ØY™XYKˆŠ_XØ]Ú
+\œ›ÜŠ^ÜÙ]Y\ÜØYÙJ\œ›Üˆ[œÝ[˜Ù[Ùˆ\œ›ÜÙ\œ›Ü‹›Y\ÜØYÙNˆ•\ÙH\Ý[™ÈÝÜÈÛÝ[›Ý™HÝÛ›ØYYˆŠ_Yš[˜[^ÜÙ]ÝÛ›ØY[™Ê˜[ÙJ__\™]\›ˆ]ˆÛ\ÜÓ˜[YOH›\Ý[™Ë\ÝËYÝÛ›ØY]’ÙY\HØØ[ÛÜOØÛX[”Ù[XÝYš[YžHÝÜÈ[™[Ý\ˆ\ØYYÝÜÈ[ˆÛ™H’TÜÛX[Ù]]Ûˆ\OH˜]Ûˆˆ\šXKX\ÞO^ÙÝÛ›ØY[™ßH\ØX›Y^ÙÝÛ›ØY[™ßHÛÛXÚÏ^Ê
+OO›ÚYÝÛ›ØY
+
+_OžÙÝÛ›ØY[™ÏÈ”™\\š[™ÈÝÜø )ˆŽˆ‘ÝÛ›ØY\È\Ý[™ø &\ÈÝÜÈŸOØ]ÛžÛY\ÜØYÙI‰›ÛOHœÝ]\ÈžÛY\ÜØYÙ_OÜŸOÙ]ŸB‚™[˜Ý[ÛˆšXÚ[™Ô™]šY]ÊÜÙXÝ[ÛH˜[‹˜\šX[ËšXÚ[™ËšXÙ\Ë›ÙXÝ˜[YK›Ùš[\ËÙ[XÝY›Ùš[RY[\]TÚ\[™Ô›Ùš[RY›Ùš[\ÓØY[™Ë›Ùš[\Ñ\œ›Ü‹\›Ý™YÚÛS[X™\Y˜[ÙKÛ•ÚÛS[X™\‹Û”šXÚ[™ËÛ”šXÙ\ËÛ”Ù[XÝ›Ùš[KÛÜ™X]T›Ùš[KÛ\›Ý˜[Ú[™Ù_NžÝ˜\šX[Î”›ÙXÝ˜\šX[×NÜšXÚ[™Î”šXÚ[™ÎÜšXÙ\Î”™XÛÜ™Ýš[™Ë[X™\ŽÜ›ÙXÝ˜[YNœÝš[™ÎÜÙXÝ[ÛÎˆ˜[ŸœšXÙ\ÈŸœÚ\[™ÈŽÜ›Ùš[\Î‘]ÞTÚ\[™Ô›Ùš[V×NÜÙ[XÝY›Ùš[RY›[X™\ŽÝ[\]TÚ\[™Ô›Ùš[RY›[X™\ŽÜ›Ùš[\ÓØY[™Î˜›ÛÛX[ŽÜ›Ùš[\Ñ\œ›ÜŽœÝš[™ÎØ\›Ý™Y˜›ÛÛX[ŽÝÚÛS[X™\Î˜›ÛÛX[ŽÛÛ•ÚÛS[X™\ÎŠ˜[YN˜›ÛÛX[ŠOO›ÚYÛÛ”šXÚ[™ÎŠ˜[YN”šXÚ[™ÊOO›ÚYÛÛ”šXÙ\ÎŠ˜[YN”™XÛÜ™Ýš[™Ë[X™\ŠOO›ÚYÛÛ”Ù[XÝ›Ùš[NŠY›[X™\ŠOO›ÚYÛÛÜ™X]T›Ùš[NŠ˜\ÙRY›[X™\‹Ú\™ÙN›[X™\‹Y][Û˜[›[X™\‹]NœÝš[™Ë[\›˜][Û˜[’[\›˜][Û˜[Ú\[™Ô˜]V×JOO”›ÛZ\ÙO›ÚYŽÛÛ\›Ý˜[Ú[™ÙNŠ™XYN˜›ÛÛX[ŠOO›ÚYJ^ÂˆÛÛœÝÙ[XÝY›Ùš[O\›Ùš[\Ë™š[™
+›Ùš[OOœ›Ùš[KšYOO\Ù[XÝY›Ùš[RY
+NÂˆÛÛœÝš[YžTÚ\[™ÏSX]›X^
+‹‹˜\šX[Ë›X\
+˜\šX[O“[X™\Š˜\šX[œÚ\[™Ê_
+JNÂˆÛÛœÝÚ\[™ÔÚÜ˜[\Ù[XÝY›Ùš[OÜš[YžTÚ\[™Ë\Ù[XÝY›Ùš[K™ÛY\ÝXÔš[X\žNŒÂˆÛÛœÝØÝ\ÝÛPÚ\™ÙKÙ]Ý\ÝÛPÚ\™ÙWO]\ÙTÝ]JˆŠKØÝ\ÝÛPY][Û˜[Ù]Ý\ÝÛPY][Û˜[O]\ÙTÝ]JˆŠKØÝ\ÝÛR[\›˜][Û˜[Ù]Ý\ÝÛR[\›˜][Û˜[O]\ÙTÝ]OY]X›R[\›˜][Û˜[Ú\[™Ô˜]V×OŠ×JKØÝ\ÝÛT›Ùš[S˜[YKÙ]Ý\ÝÛT›Ùš[S˜[YWO]\ÙTÝ]JˆŠKÜØ]š[™Ô›Ùš[KÙ]Ø]š[™Ô›Ùš[WO]\ÙTÝ]J˜[ÙJKÜ›Ùš[SY\ÜØYÙKÙ]›Ùš[SY\ÜØYÙWO]\ÙTÝ]JˆŠKÜ™XÛÛ[Y[™][Û“Y\ÜØYÙKÙ]™XÛÛ[Y[™][Û“Y\ÜØYÙWO]\ÙTÝ]JˆŠKÝÚÛS[X™\”šXÚ[™ËÙ]ÚÛS[X™\”šXÚ[™×O]\ÙTÝ]J˜[ÙJKÜ›Ùš[TÙX\˜ÚÙ]›Ùš[TÙX\˜ÚO]\ÙTÝ]JˆŠNÂˆÛÛœÝØ]XÚY›Ùš[RYÙ]]XÚY›Ùš[RYO]\ÙTÝ]J
+K]XÚY›ÙXÝ˜[YO]\ÙT™YŠ›ÙXÝ˜[YJNÂˆ\ÙQY™™XÝ
+
+
+OOžÚYŠ]XÚY›ÙXÝ˜[YK˜Ý\œ™[OO\›ÙXÝ˜[YJ^Ø]XÚY›ÙXÝ˜[YK˜Ý\œ™[\›ÙXÝ˜[YNÜÙ]]XÚY›Ùš[RY
+Ù[XÝY›Ùš[RY
+NÜ™]\›ŸZYŠX]XÚY›Ùš[RY	‰œÙ[XÝY›Ùš[RY
+\Ù]]XÚY›Ùš[RY
+Ù[XÝY›Ùš[RY
+_KÜ›ÙXÝ˜[YKÙ[XÝY›Ùš[RY]XÚY›Ùš[RYJNÂˆ[˜Ý[Ûˆ™\Ù]›Ùš[QY]ÜŠ›Ùš[O\Ù[XÝY›Ùš[J^ÜÙ]Ý\ÝÛPÚ\™ÙJ›Ùš[OÜ›Ùš[K™ÛY\ÝXÔš[X\žKÑš^Y
+ŠNˆˆŠNÜÙ]Ý\ÝÛPY][Û˜[
+›Ùš[OÜ›Ùš[K™ÛY\ÝXÐY][Û˜[Ñš^Y
+ŠNˆˆŠNÜÙ]Ý\ÝÛR[\›˜][Û˜[
+›Ùš[OÜ›Ùš[Kš[\›˜][Û˜[›X\
+˜]OOŠË‹‹œ˜]Kš[X\žNœ˜]Kœš[X\žKÑš^Y
+ŠKY][Û˜[œ˜]K˜Y][Û˜[Ñš^Y
+Š_JJN–×JNÜÙ]Ý\ÝÛT›Ùš[S˜[YJˆŠNÜÙ]›Ùš[SY\ÜØYÙJˆŠ_Bˆ\ÙQY™™XÝ
+
+
+OOžÜ™\Ù]›Ùš[QY]ÜŠ
+_KÜÙ[XÝY›Ùš[RYÙ[XÝY›Ùš[OË]WJNÂˆÛÛœÝ[\™YÚ\™ÙOS[X™\ŠÝ\ÝÛPÚ\™ÙJK[\™YY][Û˜[S[X™\ŠÝ\ÝÛPY][Û˜[
+K^Y\”Ú\[™ÏS[X™\‹š\Ñš[š]J[\™YÚ\™ÙJI‰™[\™YÚ\™ÙOLÙ[\™YÚ\™ÙNœÙ[XÝY›Ùš[OË™ÛY\ÝXÔš[X\ž_[\›˜][Û˜[\OP›ÛÛX[ŠÙ[XÝY›Ùš[I‰˜Ý\ÝÛR[\›˜][Û˜[œÛÛYJ
+˜]K[™^
+OO“X]˜XœÊ[X™\Š˜]Kœš[X\žJK\Ù[XÝY›Ùš[Kš[\›˜][Û˜[Ú[™^OËœš[X\žJO‹ŒX]˜XœÊ[X™\Š˜]K˜Y][Û˜[
+K\Ù[XÝY›Ùš[Kš[\›˜][Û˜[Ú[™^OË˜Y][Û˜[
+O‹Œ
+JKÝ\ÝÛQ\OP›ÛÛX[ŠÙ[XÝY›Ùš[I‰ŠX]˜XœÊ^Y\”Ú\[™Ë\Ù[XÝY›Ùš[K™ÛY\ÝXÔš[X\žJO‹ŒX]˜XœÊ[\™YY][Û˜[\Ù[XÝY›Ùš[K™ÛY\ÝXÐY][Û˜[
+O‹Œ[\›˜][Û˜[\_›ÛÛX[ŠÝ\ÝÛT›Ùš[S˜[YKš[J
+JJJNÂˆ[˜Ý[ÛˆX\šÔÚ\[™ÑY]
+
+^ÛÛ\›Ý˜[Ú[™ÙJ˜[ÙJNÜÙ]›Ùš[SY\ÜØYÙJˆŠ_BˆÛÛœÝšXÙQÜ›Ý\Ï]\ÙSY[[Ê
+
+OOžØÛÛœÝÜ›Ý\Y[™]ÈX\[X™\‹›ÙXÝ˜\šX[×OŠ
+NÙ›ÜŠÛÛœÝ˜\šX[Ùˆ˜\šX[ÊYÜ›Ý\YœÙ]
+˜\šX[˜ÛÜÝË‹‹ŠÜ›Ý\Y™Ù]
+˜\šX[˜ÛÜÝ
+_×JK˜\šX[JNÜ™]\›ˆË‹‹™Ü›Ý\Y™[šY\Ê
+WKœÛÜ
+
+ØWKØ—JOO˜KXŠK›X\
+
+ØÛÜÝ][\×JOOŠØÛÜÝ][\ßJJ_KÝ˜\šX[×JNÂˆÛÛœÝÚÛTšXÙOJÙ[Î›[X™\ŠOOÚÛS[X™\”šXÚ[™ÏÓX]˜ÙZ[
+Ù[ËÌL
+JŒL˜Ù[ÎÂˆ[˜Ý[Ûˆ™XØ[Ý[]J™^šXÚ[™Ï\šXÚ[™Ê^ØÛÛœÝØ[Ý[]YSØš™XÝ™œ›ÛQ[šY\Ê˜\šX[Ë›X\
+˜\šX[O–ÔÝš[™Ê˜\šX[šY
+KÚÛTšXÙJ™XÛÛ[Y[™YšXÙJ˜\šX[˜ÛÜÝ™^šXÚ[™ÊJWJJK™^[›Ü›X[^™TšXÙ\ÐžPÛÜÝ
+˜\šX[ËØ[Ý[]Y
+KÚ[™ÙY]˜\šX[Ë™š[\Š˜\šX[O›™^ÔÝš[™Ê˜\šX[šY
+WHOOJšXÙ\ÖÔÝš[™Ê˜\šX[šY
+WOÏÝ˜\šX[[\]TšXÙJJK›[™ÝÛÛ”šXÙ\Ê™^
+NÜÙ]™XÛÛ[Y[™][Û“Y\ÜØYÙJÚ[™ÙYØ8§$È\]Y	ØÚ[™ÙYH	ØÚ[™ÙYOOLOÈœšXÙHŽˆœšXÙ\ÈŸKˆ™]šY]ÈXXÚÛÜÝÜ›Ý\™[ÝÈ™Y›Ü™HÛÛ[Z[™Ë˜ˆ¸§$È[Ý\ˆÝ\œ™[šXÙ\È[™XYHYY]\È›Ùš]ÛØ[ˆ›Ý[™È™YYYÈÚ[™ÙKˆŠ_BˆÛÛœÝ[š]X[šXÙTÚYÛ˜]\™O]˜\šX[Ë›X\
+˜\šX[O˜	Ý˜\šX[šYN‰Ý˜\šX[˜ÛÜÝN‰Ý˜\šX[œÚ\[™ßN‰Ý˜\šX[[\]TšXÙ_X
+Kš›Ú[ŠŸŠNÂˆ\ÙQY™™XÝ
+
+
+OOžÚYŠ\Ù[XÝY›Ùš[_]˜\šX[Ë›[™Ý
+\™]\›ŽØÛÛœÝÝ[\Ú[™Õ[\]TšXÙ\Ï]˜\šX[Ë™]™\žJ˜\šX[OŠšXÙ\ÖÔÝš[™Ê˜\šX[šY
+WOÏÝ˜\šX[[\]TšXÙJOOO]˜\šX[[\]TšXÙJNÚYŠ\Ý[\Ú[™Õ[\]TšXÙ\Ê\™]\›ŽØÛÛœÝØ[Ý[]YSØš™XÝ™œ›ÛQ[šY\Ê˜\šX[Ë›X\
+˜\šX[O–ÔÝš[™Ê˜\šX[šY
+K™XÛÛ[Y[™YšXÙJ˜\šX[˜ÛÜÝšXÚ[™ÊWJJNÛÛ”šXÙ\Ê›Ü›X[^™TšXÙ\ÐžPÛÜÝ
+˜\šX[ËØ[Ý[]Y
+JNÜÙ]™XÛÛ[Y[™][Û“Y\ÜØYÙJ¸§$ÈÛÛYHØ[Ý[]Y]™\žHšXÙHœ›ÛH[Ý\ˆ›Ùš]ÛØ[›ÙXÝÛÜÝË[™]ÞH™Y\ËˆŠ_KÜÙ[XÝY›Ùš[OËšY[š]X[šXÙTÚYÛ˜]\™WJNÂˆÊˆÌŒ0­ÈšXÙ\ÈÚÝÛˆÛˆ\œš]˜[Ù\™H™]™\ˆØ[Ý[]YˆHšXÙHX\Ý\Âˆ[\H[™]™\žH™XY˜[È›ÝYÚÈ˜\šX[[\]TšXÙX8 %H™]Z[ˆšXÙH[™XYHÛˆHš[YžH[\]H8 %Ú[HH˜[›™\ˆÛZ[YYÛÛYHYˆØ[Ý[]Y[Hœ›ÛHH›Ùš]ÛØ[‚‚ˆÌ0­ÈHš\œÝš^™]™\ˆ˜[ˆUSˆ]Ø\ÈÝX\™YÛˆ›Û›HØ[Ý[]HY‚ˆ›ÈšXÙH\ÈÙ]Y]‹]ØY[™ÈH›ÙXÝÙ\È\Î‚‚ˆÙ]˜\šX[šXÙ\Ê‹‹ˆ˜\šX[[\]TšXÙH‹‹ŠB‚ˆÛÈHX\\È[Ùˆš[YžIÜÈÝÛˆšXÙ\È™Y›Ü™HHY™™XÝ]™\ˆÛÚÜÈ]ˆ]ˆ]\ÈÚ\™H	MKŽYØZ[œÝH	ÌKNHÛÜÝØ[YHœ›ÛH8 %]\È›ÝBˆØ[Ý[][Û‹]\ÈÚ]š[YžH\ÈÛˆH˜\šX[ˆ™]™\ˆ\ÜÝ[YH[ˆ[\BˆX\YX[œÈ››Ý[™È\ÈXÚYY\ÈY]‹‚‚ˆHÙYY[ÛÈ˜[ˆÛ˜ÙH\ˆ˜\šX[Ù]ÚXÚØ\ÈÜ›Û™È›ÜˆHÙXÛÛ™ˆ™X\ÛÛŽˆÙ[XÝ™XÚ\HÙ]ÈH\™Ù]œ›ÛHH™XÚ\KHÙYY˜[ˆ]ˆU[X™\‹[™H]\ˆ™\Ù]ÈHY˜][LÚ[™ÙYHÛØ[Ú]Ý]ˆ™XØ[Ý[][™ËˆH™\Ý[Ø\ÈšXÙ\ÈÛÛ\]Y]	NLÚ][™È[™\ˆHÛØ[ˆ™XY[™È	L8 %ÛÈY™™\™[ÛÜÝÈ›ÝÚÝÚ[™È^XÝH	NL›Ùš]ÚXÚˆ\ÈHÚ]™X]Ø^H]^HÙ\™HØ[Ý[]Y\Ýœ›ÛHHÜ›Û™È[X™\‹‚‚ˆ[[šXÚ[™È\È\›Ý™YÜˆHÙ[\ˆY]ÈHšXÙHžH[™HšXÙ\ÂˆT‘HHÛØ[	ÜÈÝ]]ÛÈ^H›ÛÝÈ]ˆY\ˆZ]\‹^H\™HBˆÙ[\‰ÜÈ[™›Ý[™È™XÛÛ\]\È[Kˆ
+‹ÂˆÊˆHÙYYœ›ÛHHØ]™Y›ÙXÝÛÈHÙÙÛHÝ\š]™\ÈH™Yœ™\Ú[™Bˆ™[[Ý[ˆ˜[YKXÛÛ\\™YÛÈ\ÈØ[››ÝšYÚHÙ[\‰ÜÈÝÛˆÛXÚËˆ
+‹Âˆ\ÙQY™™XÝ
+
+
+OOžÜÙ]ÚÛS[X™\”šXÚ[™ÊÚÛS[X™\Š_KÝÚÛS[X™\—JNÂˆÊˆŒHHšY[Ø\È›Ý[™Ý˜ZYÚÈH[X™\‹ÛÈÛX\š[™È]XYBˆ[X™\ŠˆŠHHX]›X^
+
+HH[™™XXÝÜ›ÝHŒˆ˜XÚÈ[ÈH›Þ‚ˆ]™\ž][™È\YY\ˆ][™Y™Z[™H™\›ÎˆÛX\ˆHšY[\HL‹ˆÙ]ŒLˆ‹ˆÚ[HHšY[\È›ØÝ\È]ÛÈ^XÝHÚ]Ø\È\YÈBˆ[X™\ˆ\ÈÛÛ[Z]YÛ›HÚ[ˆ]\œÙ\Ë[™H˜Y\È›ÜYÛˆ›\ˆÛÂˆH›ÞÛÙ\È˜XÚÈÈÚÝÚ[™ÈH™X[˜[YKˆ
+‹ÂˆÛÛœÝÜ›Ùš]˜YÙ]›Ùš]˜YO]\ÙTÝ]OÝš[™ß[Š[
+NÂˆÛÛœÝX[X[šXÙQY]]\ÙT™YŠ˜[ÙJNÂˆÊˆÍL0­È\ÙH\ÈÙ\™HHØš™XÝÈ[\Ù[™\Ëˆ]Ø\Èš[™HÚ[BˆšXÚ[™Ô™]šY]È™[™\™YÛ˜ÙHÚ]Y[[Ú\ÙY›ÜË]ÌÍ™[™\œÈ]\‚ˆ[™H›ÙXÝ[™Z[È˜\šX[Ø[™šXÚ[™ØS“S‘H[ˆHX\8 %H™]Âˆ\œ˜^H[™H™]ÈØš™XÝÛˆ]™\žH™[™\‹ˆ™]ÈY[]Hš\™YHY™™XÝBˆY™™XÝÙ]Ý]KHÝ]HØ]\ÙYH™[™\‹[™H™[™\ˆXYH™]ÂˆY[]Y\Îˆ[ˆ[™š[š]HÛÜ][™ÈHYÙH™Y›Ü™H]š[š\ÚYØY[™Ë‚ˆ\[™ÛˆHSQTËÛÈHY™™XÝ[œÈÚ[ˆHšXÙHXÝX[HÚÝ[ˆÚ[™ÙH[™›ÝÚ[ˆ™XXÝ\[œÈÈ™K\™[™\‹ˆ
+‹ÂˆÛÛœÝ˜\šX[Ù^O]˜\šX[Ë›X\
+˜\šX[O˜	Ý˜\šX[šYN‰Ý˜\šX[˜ÛÜÝX
+Kš›Ú[Š‹ŠNÂˆÛÛœÝšXÚ[™ÒÙ^OX	ÜšXÚ[™Ë\™Ù]›Ùš]_	ÜšXÚ[™Ë™]ÞQ™YT\˜Ù[_	ÜšXÚ[™Ë™š^Y™Y__	ÜšXÚ[™Ë›\Ý[™Ñ™Y_XÂˆÛÛœÝšXÙ\ÒÙ^OSØš™XÝšÙ^\ÊšXÙ\ÊKœÛÜ
+
+K›X\
+YO˜	ÚYN‰ÜšXÙ\ÖÚY_X
+Kš›Ú[Š‹ŠNÂˆ\ÙQY™™XÝ
+
+
+OOžÂˆYŠ]˜\šX[Ë›[™Ý\›Ý™YX[X[šXÙQY]˜Ý\œ™[
+\™]\›ŽÂˆÛÛœÝØ[YSØš™XÝ™œ›ÛQ[šY\Ê˜\šX[Ë›X\
+˜\šX[O–ÔÝš[™Ê˜\šX[šY
+KÚÛTšXÙJ™XÛÛ[Y[™YšXÙJ˜\šX[˜ÛÜÝšXÚ[™ÊJWJJNÂˆÛÛœÝÙ]Y[›Ü›X[^™TšXÙ\ÐžPÛÜÝ
+˜\šX[ËØ[Y
+NÂˆÛÛœÝšYY]˜\šX[ËœÛÛYJ˜\šX[OœÙ]YÔÝš[™Ê˜\šX[šY
+WHOO\šXÙ\ÖÔÝš[™Ê˜\šX[šY
+WJNÂˆYŠšYY
+[Û”šXÙ\ÊÙ]Y
+NÂˆËÈ\Û[Y\ØX›K[™^[[™H™XXÝZÛÚÜËÙ^]\Ý]™KY\ÂˆKÝ˜\šX[Ù^KšXÚ[™ÒÙ^KšXÙ\ÒÙ^K\›Ý™YJNÂ‚ˆ[˜Ý[ÛˆÚ[™ÙT›Ùš]
+˜[YN›[X™\Š^ØÛÛœÝ™^šXÚ[™Ï^Ë‹‹œšXÚ[™Ë\™Ù]›Ùš]“X]›X^
+˜[YJ_NÛÛ”šXÚ[™Ê™^šXÚ[™ÊNÜ™XØ[Ý[]J™^šXÚ[™ÊNßBˆ[˜Ý[ÛˆÚ[™ÙPÛÜÝÜ›Ý\šXÙJÛÜÝ›[X™\‹Ù[Î›[X™\Š^ÛX[X[šXÙQY]˜Ý\œ™[]YNØÛÛœÝX]Ú[™Ï]˜\šX[Ë™š[\Š][OOš][K˜ÛÜÝOOXÛÜÝ
+KØY™PÙ[ÏSX]›X^
+ÚÛTšXÙJÙ[ÊKÛÜÝ
+K™^^Ë‹‹œšXÙ\ßNÙ›ÜŠÛÛœÝ][HÙˆX]Ú[™Ê[™^ÔÝš[™Ê][KšY
+WO\ØY™PÙ[ÎÛÛ”šXÙ\Ê™^
+NÜÙ]™XÛÛ[Y[™][Û“Y\ÜØYÙJ8§$È		ÊØY™PÙ[ËÌL
+KÑš^Y
+Š_H\YYÈ[	ÛX]Ú[™Ë›[™ÝH	ÛX]Ú[™Ë›[™ÝOOLOÈ˜\šX[Žˆ˜\šX[ÈŸHÚ]H		ÊÛÜÝÌL
+KÑš^Y
+Š_Hš[YžHÛÜÝ˜
+_Bˆ[˜Ý[ÛˆÚ[™ÙR[™]šYX[šXÙJ˜\šX[”›ÙXÝ˜\šX[Ù[Î›[X™\Š^ÛX[X[šXÙQY]˜Ý\œ™[]YNËÊˆH\È™]™\ˆÙ]H›YËÛÈH™XØ[Ý[]HY™™XÝÛÝ[Û˜\H[™]\Y˜\šX[šXÙH˜XÚÈÈHÛØ[ˆ
+‹ÛÛ”šXÙ\ÊË‹‹œšXÙ\ËÔÝš[™Ê˜\šX[šY
+WN“X]›X^
+ÚÛTšXÙJÙ[ÊK˜\šX[˜ÛÜÝ
+_JNÜÙ]™XÛÛ[Y[™][Û“Y\ÜØYÙJ8§$È	Ý˜\šX[]_H›ÝÈ\È]ÈÝÛˆšXÙKˆH™\ÝÙˆ]ÈÛÜÝÜ›Ý\Ø\È›ÝÚ[™ÙY˜
+_Bˆ[˜Ý[ÛˆÙÙÛUÚÛS[X™\”šXÚ[™ÊÚXÚÙY˜›ÛÛX[Š^ÜÙ]ÚÛS[X™\”šXÚ[™ÊÚXÚÙY
+NÛÛ•ÚÛS[X™\ËŠÚXÚÙY
+NÚYŠXÚXÚÙY
+\™]\›ŽØÛÛœÝ›Ý[™YSØš™XÝ™œ›ÛQ[šY\Ê˜\šX[Ë›X\
+˜\šX[OžØÛÛœÝÝ\œ™[\šXÙ\ÖÔÝš[™Ê˜\šX[šY
+WOÏÝ˜\šX[[\]TšXÙNÜ™]\›–ÔÝš[™Ê˜\šX[šY
+KX]›X^
+X]˜ÙZ[
+Ý\œ™[ÌL
+JŒL˜\šX[˜ÛÜÝ
+W_JJNÛÛ”šXÙ\Ê›Ü›X[^™TšXÙ\ÐžPÛÜÝ
+˜\šX[Ë›Ý[™Y
+JNÜÙ]™XÛÛ[Y[™][Û“Y\ÜØYÙJ¸§$È]™\žH][HšXÙH\È›ÝÈHÚÛH[X™\ˆÚ]Ý]›Ü[™È™[ÝÈH\Ü^YY›Ùš]ÛØ[ˆŠ_Bˆ[˜Ý[ÛˆÚÛÜÙT›Ùš[JY›[X™\Š^ØÛÛœÝ›Ùš[O\›Ùš[\Ë™š[™
+][OOš][KšYOOZY
+NÛÛ”Ù[XÝ›Ùš[JY
+NÜ™\Ù]›Ùš[QY]ÜŠ›Ùš[JNÚYŠ›Ùš[J\™XØ[Ý[]JšXÚ[™Ê_Bˆ[˜Ý[ÛˆÚ[™ÙR[\›˜][Û˜[
+[™^›[X™\‹šY[ˆœš[X\žHŸ˜Y][Û˜[‹˜[YNœÝš[™Ê^ÜÙ]Ý\ÝÛR[\›˜][Û˜[
+Ý\œ™[O˜Ý\œ™[›X\
+
+˜]KJOOšOOOZ[™^ÞË‹‹œ˜]KÙšY[N˜[Y_Nœ˜]JJNÛX\šÔÚ\[™ÑY]
+
+_Bˆ\Þ[˜È[˜Ý[ÛˆÜ™X]T›Ùš[J
+^ÚYŠ\Ù[XÝY›Ùš[J\™]\›ŽØÛÛœÝÚ\™ÙOS[X™\ŠÝ\ÝÛPÚ\™ÙJKY][Û˜[S[X™\ŠÝ\ÝÛPY][Û˜[
+K]OXÝ\ÝÛT›Ùš[S˜[YKš[J
+K[\›˜][Û˜[XÝ\ÝÛR[\›˜][Û˜[›X\
+˜]OOŠË‹‹œ˜]Kš[X\žN“[X™\Š˜]Kœš[X\žJKY][Û˜[“[X™\Š˜]K˜Y][Û˜[
+_JJK˜]\Õ˜[YZ[\›˜][Û˜[™]™\žJ˜]OOœ˜]Kœš[X\žOL	‰“[X™\‹š\Ñš[š]J˜]Kœš[X\žJI‰œ˜]K˜Y][Û˜[L	‰“[X™\‹š\Ñš[š]J˜]K˜Y][Û˜[
+JNÚYŠÝ\ÝÛPÚ\™ÙOOOHˆŸÝ\ÝÛPY][Û˜[OOHˆŸS[X™\‹š\Ñš[š]JÚ\™ÙJ_Ú\™ÙOS[X™\‹š\Ñš[š]JY][Û˜[
+_Y][Û˜[\˜]\Õ˜[Y]]J\™]\›ˆÙ]›Ùš[SY\ÜØYÙJ“˜[YHH›Ùš[H[™[\ˆ˜[Yš\œÝZ][H[™Y][Û˜[Z][HÚ\™Ù\È›Üˆ]™\žH\Ý[˜][Û‹ˆŠNÜÙ]Ø]š[™Ô›Ùš[JYJNÜÙ]›Ùš[SY\ÜØYÙJˆŠNÝž^Ø]ØZ]ÛÜ™X]T›Ùš[JÙ[XÝY›Ùš[KšYÚ\™ÙKY][Û˜[]K[\›˜][Û˜[
+NÜÙ]›Ùš[SY\ÜØYÙJ¸§$È™]È]ÞHÚ\[™È›Ùš[HØ]™Y[™Ù[XÝYˆŠ_XØ]Ú
+\œ›ÜŠ^ÜÙ]›Ùš[SY\ÜØYÙJ\œ›Üˆ[œÝ[˜Ù[Ùˆ\œ›ÜÙ\œ›Ü‹›Y\ÜØYÙNˆ•HÚ\[™È›Ùš[HÛÝ[›Ý™HØ]™YˆŠ_Yš[˜[^ÜÙ]Ø]š[™Ô›Ùš[J˜[ÙJ__BˆÛÛœÝ›Ü›X[^™Y›Ùš[TÙX\˜Ú\›Ùš[TÙX\˜Úš[J
+KÓØØ[SÝÙ\Ø\ÙJ
+NÂˆÊˆÍ0­ÈX]Ú\ÈÙ\™HY[ˆÚÜÜ™\‹ÛÈÙX\˜Ú[™ÈšÛÙYHˆ]Bˆ›Ùš[H]\˜[H˜[YY’ÛÙY\Èˆ\™™Z[™ÛÈÛ™Ù\ˆ˜[Y\È][ÛÂˆÛÛZ[ˆHÛÜ™ˆÚ[ˆÛÛY[Û™H\\ÈHÛÜ™HÛÜÙ\ÝX]ÚÈ]ÛÜ™ˆÛÙ\Èš\œÝˆ^XÝ˜[YK[ˆ˜[Y\È]Ý\Ú]][ˆH™\Ýˆ
+‹ÂˆÛÛœÝÙX\˜ÚY›Ùš[\ÏJ
+
+OOžÂˆÛÛœÝX]Ú\Ï\›Ùš[\Ë™š[\Š›Ùš[OOˆ[›Ü›X[^™Y›Ùš[TÙX\˜ÚXÛÙT›Ùš[U]J›Ùš[K]JKÓØØ[SÝÙ\Ø\ÙJ
+Kš[˜ÛY\Ê›Ü›X[^™Y›Ùš[TÙX\˜Ú
+JNÂˆYŠ[›Ü›X[^™Y›Ùš[TÙX\˜Ú
+\™]\›ˆX]Ú\ÎÂˆÛÛœÝ˜[šÏJ›Ùš[N‘]ÞTÚ\[™Ô›Ùš[JOOžÂˆÛÛœÝ]OYXÛÙT›Ùš[U]J›Ùš[K]JKÓØØ[SÝÙ\Ø\ÙJ
+NÂˆYŠ]OOO[›Ü›X[^™Y›Ùš[TÙX\˜Ú
+\™]\›ˆÂˆYŠ]KœÝ\ÕÚ]
+›Ü›X[^™Y›Ùš[TÙX\˜Ú
+J\™]\›ˆNÂˆÊˆHÚÛK]ÛÜ™]™X]ÈHØ[YH]\œÈ\šYY[œÚYH[›Ý\ˆÛÜ™
+‹ÂˆYŠ™]È™YÑ^
+‰Û›Ü›X[^™Y›Ùš[TÙX\˜Úœ™\XÙJÖËŠŠÏ×‰ßJ
+_×WKÙË—		ˆŠ_W˜
+K\Ý
+]JJ\™]\›ˆŽÂˆ™]\›ˆÎÂˆNÂˆ™]\›ˆË‹‹›X]Ú\×KœÛÜ
+
+KŠOOœ˜[šÊJK\˜[šÊŠ_XÛÙT›Ùš[U]JK]JK›[™ÝYXÛÙT›Ùš[U]J‹]JK›[™Ý
+NÂˆJJ
+NÂˆÛÛœÝ]XÚY›Ùš[O\›Ùš[\Ë™š[™
+›Ùš[OOœ›Ùš[KšYOOX]XÚY›Ùš[RY
+NÂˆÛÛœÝÚ]Ý]]XÚY\ÙX\˜ÚY›Ùš[\Ë™š[\Š›Ùš[OOœ›Ùš[KšYOOX]XÚY›Ùš[OËšY
+NÂˆÛÛœÝ™XÛÛ[Y[™Y›Ùš[\Ï]Ú]Ý]]XÚY™š[\Š›Ùš[OOœÚ\[™Ô›Ùš[QÜ›Ý\
+›Ùš[K]K›ÙXÝ˜[YJOOOHœ™XÛÛ[Y[™YŠNÂˆÛÛœÝ™[]Y›Ùš[\Ï]Ú]Ý]]XÚY™š[\Š›Ùš[OOœÚ\[™Ô›Ùš[QÜ›Ý\
+›Ùš[K]K›ÙXÝ˜[YJOOOHœ™[]YŠNÂˆÛÛœÝÝ\”›Ùš[\Ï]Ú]Ý]]XÚY™š[\Š›Ùš[OOœÚ\[™Ô›Ùš[QÜ›Ý\
+›Ùš[K]K›ÙXÝ˜[YJOOOH›Ý\ˆŠNÂˆÛÛœÝÙ[XÝY›Ùš[QÜ›Ý\\Ù[XÝY›Ùš[OÜÚ\[™Ô›Ùš[QÜ›Ý\
+Ù[XÝY›Ùš[K]K›ÙXÝ˜[YJNˆ›Ý\ˆŽÂˆÛÛœÝÙ[XÝY›Ùš[S™YYÔ™]šY]ÏP›ÛÛX[ŠÙ[XÝY›Ùš[I‰œÙ[XÝY›Ùš[KšYOOX]XÚY›Ùš[OËšY	‰œÙ[XÝY›Ùš[QÜ›Ý\OOHœ™XÛÛ[Y[™YŠNÂˆÛÛœÝÙ[XÝYÝ]ÚYTÙX\˜Ú\Ù[XÝY›Ùš[I‰ˆ\ÙX\˜ÚY›Ùš[\ËœÛÛYJ›Ùš[OOœ›Ùš[KšYOO\Ù[XÝY›Ùš[KšY
+OÜÙ[XÝY›Ùš[N›[ÂˆÊˆÌÈ0­ÈHY˜][\ÈHÚ\[™È›Ùš[HH’S•Q–HSTUH\Ù\È›Ü‚ˆ\È›ÙXÝˆ[[HÙ[\ˆØ]™\ÈHÚÚXÙHÙˆZ\ˆÝÛ‹]\ÈÚ]ˆÚÝ[[™XYH™HÙ[XÝY8 %^HÚ[™ÙH]Û›HYˆ^HØ[Ë‚‚ˆÌHšYYÈÈ\Èœ›ÛH]XÚY›Ùš[XÚXÚØ\ÈH›Ë[Üˆ]˜[YBˆ\È\š]™Yœ›ÛHÙ[XÝY›Ùš[RYÛÈÚ[ˆ›Ý[™ÈØ\ÈÙ[XÝY\™HØ\Âˆ›Ý[™ÈÈ˜[˜XÚÈËˆH[\]IÜÈY\ÈH™X[ÛÝ\˜ÙK[™]\Âˆ˜[Y]YYØZ[œÝHÙ[\‰ÜÈXÝX[]ÞH›Ùš[\Èš\œÝ8 %[ˆY]ˆX]Ú\È›Û™HÙˆ[H]\Ý›Ý™HÙ[XÝYÚXÚ\ÈHŒÌHXYØÚËˆ
+‹Âˆ\ÙQY™™XÝ
+
+
+OOžÂˆYŠ›Ùš[\ÓØY[™ßÙ[XÝY›Ùš[RY\›Ùš[\Ë›[™Ý
+\™]\›ŽÂˆÛÛœÝœ›ÛU[\]O\›Ùš[\Ë™š[™
+›Ùš[OOœ›Ùš[KšYOOS[X™\Š[\]TÚ\[™Ô›Ùš[RY
+JNÂˆYŠœ›ÛU[\]J[Û”Ù[XÝ›Ùš[Jœ›ÛU[\]KšY
+NÂˆKÜ›Ùš[\ÓØY[™ËÙ[XÝY›Ùš[RY›Ùš[\Ë[\]TÚ\[™Ô›Ùš[RYJNÂˆÛÛœÝ[\]T›Ùš[O\›Ùš[\Ë™š[™
+›Ùš[OOœ›Ùš[KšYOOS[X™\Š[\]TÚ\[™Ô›Ùš[RY
+JNÂˆÛÛœÝØÛÛX›ÓÜ[‹Ù]ÛÛX›ÓÜ[—O]\ÙTÝ]J˜[ÙJNÂˆÛÛœÝÛÛX›Ô™Y]\ÙT™YS]‘[[Y[[Š[
+NÂˆÊˆÌNH0­ÈÛXÚÚ[™È]Ø^HÛÜÙ\ÈH\ÝHØ^H]™\žHÝ\ˆXÚÙ\ˆ™Z]™\Ëˆ
+‹Âˆ\ÙQY™™XÝ
+
+
+OOžÂˆYŠXÛÛX›ÓÜ[Š\™]\›ŽÂˆÛÛœÝ]Ø^OJ]™[“[Ý\ÙQ]™[
+OOžÚYŠÛÛX›Ô™Y‹˜Ý\œ™[	‰ˆXÛÛX›Ô™Y‹˜Ý\œ™[˜ÛÛZ[œÊ]™[\™Ù]\È›ÙJJ^ÜÙ]ÛÛX›ÓÜ[Š˜[ÙJNÜÙ]›Ùš[TÙX\˜Ú
+ˆŠ__NÂˆØÝ[Y[˜Y]™[\Ý[™\Š›[Ý\ÙYÝÛˆ‹]Ø^JNÂˆ™]\›Š
+OO™ØÝ[Y[œ™[[Ý™Q]™[\Ý[™\Š›[Ý\ÙYÝÛˆ‹]Ø^JNÂˆKØÛÛX›ÓÜ[—JNÂˆÊˆHØ[YHÜ›Ý\[™ÈHÜÜ›Ý\œÈ\ÙYÛÈHÜ™\š[™ÈÙ[\œÈ[™XYHÛ›ÝÂˆÝ\š]™\ÈHÚ[™ÙHÙˆÛÛ›Ûˆ
+‹ÂˆÛÛœÝÛÛX›ÑÜ›Ý\ÏVÂˆÛX™[ˆÝ\œ™[Ù[XÝ[Ûˆ‹][\ÎœÙ[XÝYÝ]ÚYTÙX\˜ÚÖÜÙ[XÝYÝ]ÚYTÙX\˜ÚN–×_KˆÛX™[ˆÝ\œ™[H]XÚYÈ\È›ÙXÝ‹][\Î˜]XÚY›Ùš[I‰Š[›Ü›X[^™Y›Ùš[TÙX\˜ÚÙX\˜ÚY›Ùš[\ËœÛÛYJ›Ùš[OOœ›Ùš[KšYOOX]XÚY›Ùš[KšY
+JOÖØ]XÚY›Ùš[WN–×_KˆÛX™[˜™XÛÛ[Y[™Y›Üˆ	Ü›ÙXÝ˜[Y_X][\Îœ™XÛÛ[Y[™Y›Ùš[\ßKˆÛX™[ˆ“Ý\ˆ\\™[›Ùš[\È‹][\Îœ™[]Y›Ùš[\ßKˆÛX™[ˆ[Ý\ˆÚ\[™È›Ùš[\È‹][\Î›Ý\”›Ùš[\ßKˆNÂˆÛÛœÝ™[™\”›Ùš[SÜ[ÛœÏJ][\Î‘]ÞTÚ\[™Ô›Ùš[V×JOOš][\Ë›X\
+›Ùš[OOÜ[ÛˆÙ^O^Ü›Ùš[KšYH˜[YO^Ü›Ùš[KšYOžÜÚ\[™Ô›Ùš[SÜ[Û“X™[
+›Ùš[J_OÛÜ[ÛŠNÂˆ™]\›ˆ
+ˆÙXÝ[ÛˆÛ\ÜÓ˜[YO^È˜\šX[\šXÚ[™ÈŠÊ\›Ý™YÈ˜\›Ý™YŽˆˆŠ_O‚ˆ]ˆÛ\ÜÓ˜[YOH˜\šX[\šXÚ[™ËZXY‚ˆ]žËÊˆŒÌÈ0­ÈØ\™]\È˜[YHH[™Ë[ˆHØ[YH›ÚXÙH\ÈÛÛÜœÈˆ[™ˆ”Ú^™\È‹ˆ’][HšXÙ\È
+È^Y\‹\ZYÚ\[™ÈˆØ\ÈHÝ[[X\žHÙˆ]ÈÝÛ‚ˆÛÈÝXœÙXÝ[ÛœËÚXÚ\™H[™XYH]Y™[ÝÈ]ˆ
+‹ßBˆÜÙXÝ[ÛOOH˜[‰‰Ï”šXÚ[™ÏÚÏŸOÙ]‚ˆÜÙXÝ[ÛOOH˜[‰‰˜\›Ý™Y	‰Ü[¸§$È\›Ý™YÜÜ[ŸBˆÙ]‚ˆÊÙXÝ[ÛOOH˜[ŸÙXÝ[ÛOOHœšXÙ\ÈŠI‰ÙXÝ[ÛˆÛ\ÜÓ˜[YOHš][K\šXÚ[™Ë\ÙXÝ[Ûˆ]ˆÛ\ÜÓ˜[YOHš][K\šXÚ[™ËZXY[™ÈšXÚ[™Ë\ÙXÝ[Û‹ZXY[™È]]ˆÛ\ÜÓ˜[YOHšXY[™Ë]Ú]Z[žÜÙXÝ[ÛOOH˜[ÈŒKˆŽˆˆŸR][HšXÙ\ÞÜÙXÝ[ÛOOH˜[‰‰Ü[ˆ0­ÈÜ›ÙXÝ˜[Y_OÜÜ[ŸOÚÛÛ^[X™[H‘^Z[ˆ][HšXÚ[™Èˆ]OH’ÝÈÜ›Ý\YšXÚ[™ÈÛÜšÜÈˆ[›ÏH‘ÛÛYHÜ›Ý\È˜\šX[ÈÛ›HÚ[ˆš[YžHÚ\™Ù\ÈH^XÝØ[YH›ÙXÝÛÜÝˆ\ÈØ]™\È™\]]]™H\[™ÈÚ]Ý]ZÚ[™È]Ø^H[Ý\ˆÛÛ›ÛˆˆÙXÝ[ÛœÏ^ÖÞÚXY[™Îˆ”Ù][Ý\ˆ›Ùš]ÛØ[‹ÛÜNˆ‘[\ˆH][H›Ùš][ÝHØ[YY\ˆHš[YžH›ÙXÝÛÜÝ[™]ÞH™Y\Ëˆ^Y\‹\ZYÚ\[™È\ÈÛÛ™šYÝ\™Y[™ÚÝÛˆÙ\\˜][H™[ÝËˆŸKÚXY[™ÎˆÚ[™ÙHÛ™HX]Ú[™ËXÛÜÝÜ›Ý\‹ÛÜNˆ‘Y][™ÈHšXÙHÛˆHÜ›Ý\\]\È]™\žH˜\šX[Ú]]^XÝš[YžHÛÜÝˆHYÚ\‹XÛÜÝÛÛÜ‹Ú^™KX]\šX[š[š\ÚØ\XÚ]KÜˆ[Ù[Ý^\È[ˆHÙ\\˜]HÜ›Ý\]]ÛX]XØ[KˆŸKÚXY[™Îˆ“Ý™\œšYHÛ™H˜\šX[Û›H‹ÛÜNˆ“Ü[ˆ8 'šY]È[˜ÛYY˜\šX[ø 'HÚ[ˆÛ™HÜXÚYšXÈÜ[Ûˆ™YYÈHY™™\™[™]Z[šXÙKˆ][™]šYX[Y]Ù\È›ÝÚ[™ÙHH™\ÝÙˆ]ÈÜ›Ý\ˆŸKÚXY[™Îˆ”™]šY]È™Y›Ü™HÛÛ[Z[™È‹ÛÜNˆ•H][H›Ùš]ÚÝÛˆ[˜ÛY\È›ÙXÝÛÜÝ[™HØ]™Y]ÞH™YH›Ùš[Kˆ]Ù\È›Ý[˜ÛYH^Y\‹\ZYÚ\[™ËÙ™œÚ]HYËÜˆØ[\È^ˆŸW_KÏÙ]•˜\šX[ÈÚ]H^XÝØ[YHš[YžH›ÙXÝÛÜÝÚ\™HÛ™HšXÙKˆ][H›Ùš][˜ÛY\ÈHš[YžH›ÙXÝÛÜÝ[™]ÞH™Y\ËÜÙ]]ˆÛ\ÜÓ˜[YOHœšXÚ[™ËZXY[™ËXXÝ[ÛœÈX™[Û\ÜÓ˜[YOHÚÛK\šXÚ[™Ë]ÙÙÛH[œ]\OH˜ÚXÚØ›ÞˆÚXÚÙY^ÝÚÛS[X™\”šXÚ[™ßHÛÚ[™ÙO^Ù]™[OÙÙÛUÚÛS[X™\”šXÚ[™Ê]™[\™Ù]˜ÚXÚÙY
+_KÏÜ[ˆ\šXKZY[HYH‹ÏÜ™X]HÚÛK[[X™\ˆšXÚ[™ÏØÛX™[]ˆÛ\ÜÓ˜[YOHœ›Ùš]YÛØ[XÛÛ›ÛX™[”›Ùš]ÛØ[Ü[ˆÛ\ÜÓ˜[YOH›[Û™^KZ[œ]‰[œ]\šXK[X™[H”›Ùš]ÛØ[ˆ\OH›[X™\ˆˆZ[HŒˆÝ\HŒŒHˆ˜[YO^Ü›Ùš]˜YÏÔÝš[™ÊšXÚ[™Ë\™Ù]›Ùš]
+_HÛÚ[™ÙO^Ù]™[OžØÛÛœÝ˜]ÏY]™[\™Ù]˜[YNÜÙ]›Ùš]˜Y
+˜]ÊNØÛÛœÝ\œÙYS[X™\Š˜]ÊNÚYŠ˜]ÈOOHˆ‰‰“[X™\‹š\Ñš[š]J\œÙY
+JXÚ[™ÙT›Ùš]
+\œÙY
+__HÛ›\^Ê
+OOœÙ]›Ùš]˜Y
+[
+_KÏÜÜ[ÛX[”šXÙ\È\]H]]ÛX]XØ[KÜÛX[ÛX™[Ù]Ù]Ù]žÜ™XÛÛ[Y[™][Û“Y\ÜØYÙI‰Û\ÜÓ˜[YOHœ™XÛÛ[Y[™][Û‹\™\Ý[ˆ›ÛOHœÝ]\ÈžÜ™XÛÛ[Y[™][Û“Y\ÜØYÙ_OÜŸBˆ]ˆÛ\ÜÓ˜[YOHœšXÙKYÜ›Ý\[\ÝžÜšXÙQÜ›Ý\Ë›X\
+Ü›Ý\OžØÛÛœÝÜ›Ý\šXÙ\ÏYÜ›Ý\š][\Ë›X\
+˜\šX[OœšXÙ\ÖÔÝš[™Ê˜\šX[šY
+WOÏÝ˜\šX[[\]TšXÙJKÜ›Ý\šXÙOSX]›X^
+‹‹™Ü›Ý\šXÙ\ÊK›Ùš]ÏYÜ›Ý\š][\Ë›X\
+˜\šX[O™\Ý[X]Y›Ùš]
+Ü›Ý\šXÙK˜\šX[˜ÛÜÝšXÚ[™ÊJKÝÙ\Ý›Ùš]SX]›Z[Š‹‹œ›Ùš]ÊK^[\\ÏYÜ›Ý\š][\Ë›X\
+][OOš][K]JK™š[\Š›ÛÛX[ŠNÜ™]\›ˆ\XÛHÛ\ÜÓ˜[YOHœšXÙKYÜ›Ý\ˆÙ^O^ÙÜ›Ý\˜ÛÜÝO‚ˆ]ˆÛ\ÜÓ˜[YOHœšXÙKYÜ›Ý\\›ÝÈ]ˆÛ\ÜÓ˜[YOHœšXÙKYÜ›Ý\]˜\šX[ÈžÙÜ›Ý\š][\Ë›[™ÝHÙÜ›Ý\š][\Ë›[™ÝOOLOÈ˜\šX[Žˆ˜\šX[ÈŸOØÛX[žÙ^[\\ËœÛXÙJŠKš›Ú[Šˆ0­ÈŠ_^Ù^[\\Ë›[™ÝŒØ0­È
+ÉÙ^[\\Ë›[™ÝLŸH[Ü™XˆˆŸOÜÛX[Ù]]ÛX[”š[YžH›ÙXÝÛÜÝÜÛX[‰ÊÜ›Ý\˜ÛÜÝÌL
+KÑš^Y
+Š_OØÙ]]ÛX[–[Ý\ˆ][HšXÙOÜÛX[šXÙQšY[˜[YO^ÙÜ›Ý\šXÙ_HZ[š[][O^ÙÜ›Ý\˜ÛÜÝÌLHX™[^ØšXÙH›Üˆ[˜\šX[ÈÛÜÝ[™È		ÊÜ›Ý\˜ÛÜÝÌL
+KÑš^Y
+Š_XHÛÛÛ[Z]^ØÙ[ÏO˜Ú[™ÙPÛÜÝÜ›Ý\šXÙJÜ›Ý\˜ÛÜÝÙ[Ê_KÏÙ]]ˆÛ\ÜÓ˜[YO^ÛÝÙ\Ý›Ùš]
+ÌŒO\šXÚ[™Ë\™Ù]›Ùš]Èœ›Ùš]\\ÜÈŽˆœ›Ùš][ÝÈŸOÛX[“ÝÙ\Ý\Ý[X]Y][H›Ùš]ÜÛX[‰ÛÝÙ\Ý›Ùš]Ñš^Y
+Š_OØÛX[Û\ÜÓ˜[YOHœ›Ùš]Y™YK[›ÝH”Ú\[™È›Ý[˜ÛYYÜÛX[Ù]Ù]‚ˆ]Z[ÈÛ\ÜÓ˜[YOHœšXÙKYÜ›Ý\Y]Z[ÈÝ[[X\žO•šY]È[˜ÛYY˜\šX[ÈÜˆY]Û™HÙ\\˜][OÜÝ[[X\žO]ˆÛ\ÜÓ˜[YOHš[™]šYX[]˜\šX[[\ÝžÙÜ›Ý\š][\Ë›X\
+˜\šX[OžØÛÛœÝ][PÙ[Ï\šXÙ\ÖÔÝš[™Ê˜\šX[šY
+WOÏÝ˜\šX[[\]TšXÙK›Ùš]Y\Ý[X]Y›Ùš]
+][PÙ[Ë˜\šX[˜ÛÜÝšXÚ[™ÊNÜ™]\›ˆ]ˆÙ^O^Ý˜\šX[šYOÜ[žÝ˜\šX[]_OØÛX[”š[YžHÛÜÝ	Ê˜\šX[˜ÛÜÝÌL
+KÑš^Y
+Š_OÜÛX[ÜÜ[šXÙQšY[˜[YO^Ú][PÙ[ßHZ[š[][O^Ý˜\šX[˜ÛÜÝÌLHX™[^Ø[™]šYX[šXÙH›Üˆ	Ý˜\šX[]_XHÛÛÛ[Z]^ØÙ[ÏO˜Ú[™ÙR[™]šYX[šXÙJ˜\šX[Ù[Ê_KÏÜ[ˆÛ\ÜÓ˜[YO^Ü›Ùš]
+ÌŒO\šXÚ[™Ë\™Ù]›Ùš]Èœ›Ùš]\\ÜÈŽˆœ›Ùš][ÝÈŸO‰Ü›Ùš]Ñš^Y
+Š_H][H›Ùš]ØÛX[”Ú\[™È›Ý[˜ÛYYÜÛX[ÜÜ[Ù]ŸJ_OÙ]]Ûˆ\OH˜]ÛˆˆÛ\ÜÓ˜[YOHœ[™[XÛÛ\ÙKY›ÛÝˆÛÛXÚÏ^Ù]™[OžØÛÛœÝ›ÞJ]™[˜Ý\œ™[\™Ù]\ÈS[[Y[
+K˜ÛÜÙ\Ý
+™]Z[ÈŠNÚYŠ›Þ
+^Ê›Þ\ÈS]Z[Ñ[[Y[
+K›Ü[Y˜[ÙNØ›ÞœØÜ›Û[ÕšY]ÊØ›ØÚÎˆ›™X\™\ÝŸJ___OÛÜÙH˜\šX[ÏØ]ÛÙ]Z[Ï‚ˆØ\XÛOŸJ_OÙ]‚ˆËÊˆÌÈ0­ÈH8§$È[™H]HÜÙˆ\ÈØ\™[™XYHØ^\ÈÛÛYHØ[Ý[]Yˆ]™\žHšXÙHœ›ÛHH›Ùš]ÛØ[›ÙXÝÛÜÝÈ[™]ÞH™Y\Ëˆ\Âˆ^[™\ˆ[ˆ^Z[™YHØ[YH[™ÈYØZ[ˆ][™ÝˆH›ÜÙH\ÂˆÛÛ™NÈH™YHšYÝ\™\È[™H[šÈÈÚ[™ÙH[HÝ^K™XØ]\ÙHÜÙBˆ\™HHÛÛ›Û›Ý[ˆ^[˜][Û‹ˆ
+‹ßBˆ]ˆÛ\ÜÓ˜[YOH™™YK\›Ùš[K\Ý[[X\žHÜ[žÜšXÚ[™Ë™]ÞQ™YT\˜Ù[Ñš^Y
+J_IH]ÞH\˜Ù[YÙH™Y\ÏÜÜ[Ü[‰ÜšXÚ[™Ë™š^Y™YKÑš^Y
+Š_H^[Y[™YOÜÜ[Ü[‰ÜšXÚ[™Ë›\Ý[™Ñ™YKÑš^Y
+Š_H\Ý[™È™YOÜÜ[H™YH‹Ý\ØYÙHˆ\™Ù]H—Ø›[šÈˆ™[H››ÛÜ[™\ˆ›Ü™Y™\œ™\ˆÚ[™ÙH™YHÙ][™ÜÈ8¡¥ÏØOÙ]‚ˆÜÙXÝ[ÛŸBˆÊÙXÝ[ÛOOH˜[ŸÙXÝ[ÛOOHœÚ\[™ÈŠI‰ÙXÝ[ÛˆÛ\ÜÓ˜[YOHœÚ\[™Ë\šXÚ[™Ë\ÙXÝ[Ûˆ‚ˆ]ˆÛ\ÜÓ˜[YOHœšXÚ[™Ë\ÙXÝ[Û‹ZXY[™ÈÚ\[™Ë\ÙXÝ[Û‹ZXY[™È]]ˆÛ\ÜÓ˜[YOHšXY[™Ë]Ú]Z[žÜÙXÝ[ÛOOH˜[ÈŒ‹ˆŽˆˆŸQ]ÞHÚ\[™È›Ùš[^ÜÙXÝ[ÛOOH˜[‰‰Ü[ˆ0­ÈÜ›ÙXÝ˜[Y_OÜÜ[ŸOÚÛÛ^[X™[H‘^Z[ˆÚ\[™È›Ùš[\Èˆ]OHÚÛÜÙHHÚ\[™È^Y\œÈÚ[ÙYHÛˆ]ÞHˆ[›ÏH‘ÛÛYHÝ\ÈÚ]H]ÞHÚ\[™È›Ùš[H]XÚYÈ[Ý\ˆØ]™Y›ÙXÝˆ[ÝHØ[ˆÙY\]ÜˆÜ™X]HH™]È™]\ØX›HÛÜH›Üˆ\È˜]ÚˆˆÙXÝ[ÛœÏ^ÖÞÚXY[™Îˆ’ÙY\HØ]™Y›Ùš[H‹ÛÜNˆ’YˆHš\œÝZ][KY][Û˜[Z][K[™[\›˜][Û˜[˜]\È\™H[™XYHÛÜœ™XÝX]™HHÙ[XÝY›Ùš[H[˜Ú[™ÙYˆŸKÚXY[™ÎˆÜ™X]HHÝ\ÝÛH›Ùš[H‹ÛÜNˆ“Ü[ˆHÜ[Û˜[Ý\ÝÛK\›Ùš[HÙXÝ[Û‹˜[YHH™]È›Ùš[K[™Y][žHÛY\ÝXÈÜˆ[\›˜][Û˜[Ú\™ÙKˆÛÛYHÜ™X]\ÈHÛÜKˆ[Ý\ˆÜšYÚ[˜[]ÞH›Ùš[H\È›ÝÚ[™ÙYˆŸKÚXY[™Îˆ•[™\œÝ[™š\œÝ[™Y][Û˜[][H‹ÛÜNˆ‘š\œÝ][H\ÈÚ]H^Y\ˆ^\È›ÜˆÛ™H›ÙXÝˆY][Û˜[][H\ÈH^˜HÚ\[™ÈÚ\™ÙHÚ[ˆHØ[YHÜ™\ˆÛÛZ[œÈ[›Ý\ˆ[YÚX›H›ÙXÝˆŸKÚXY[™Îˆ”Ù\\˜]Hœ›ÛH][H›Ùš]‹ÛÜNˆ”Ú\[™È\ÈÛÛ™šYÝ\™Y\™H[™Ú\™ÙYÈH^Y\ˆÙ\\˜][Kˆ]Ù\È›ÝÚ[™ÙHH][K\›Ùš]šYÝ\™\È[ˆHšXÚ[™ÈÙXÝ[ÛˆX›Ý™KˆŸW_KÏÙ]žÜÙ[XÝY›Ùš[RYÈ‘ÛÛYHÝ\ÈÚ]HÚ\[™È›Ùš[H[™XYH\ÙY›Üˆ\È›ÙXÝˆÚ[™ÙH]Û›HYˆ™YYYˆŽˆ•\È›ÙXÝ\È›È]ÞHÚ\[™È›Ùš[HY]ˆXÚÈHÛ™H^Y\œÈÚÝ[ÙYKˆŸOÜÙ]Ù]‚ˆ]ˆÛ\ÜÓ˜[YOHœšXÚ[™ËXÛÛ›ÛÈ‚ˆ]ˆÛ\ÜÓ˜[YOHœÚ\[™Ë\›Ùš[K\XÚÙ\ˆ‚ˆËÊˆÌNH0­È\ÈØ\ÈH˜]]™HÙ[XÝˆÚ]HÙ\\˜]HÙX\˜Ú›ÞX›Ý™H]‚ˆ\[™Èš[\™YHÜ[Ûˆ\Ý8 %ÚXÚ[ÝHØ[››ÝÙYK™XØ]\ÙHBˆ›ÜÝÛˆ\ÈÛÜÙYÚ[H[ÝH\KˆHÛ›H™YY˜XÚÈØ\ÈH[™BˆÛÝ[[™ÈHX]Ú\ËÛÈHÙX\˜Ú\X\™YÈÈ›Ý[™È[™ˆÛÛ›™XÝÈ›Ý[™ËˆH˜]]™HÙ[XÝØ[››Ý™Hš[\™YÚ[HÜ[ŽÂˆHÛÛ›Û\ÈÈÝÛˆ]ÈÝÛˆ\Ýˆ
+‹ßBˆ]ˆÛ\ÜÓ˜[YOHœÚ\[™ËXÛÛX›Ø›Þˆ™Y^ØÛÛX›Ô™YŸO‚ˆÜ[ˆÛ\ÜÓ˜[YOHœÚ\[™ËXÛÛX›Ø›Þ[X™[ˆYHœÚ\[™ËXÛÛX›Ø›Þ[X™[‘]ÞHÚ\[™È›Ùš[OÜÜ[‚ˆ]Ûˆ\OH˜]ÛˆˆÛ\ÜÓ˜[YOHœÚ\[™ËXÛÛX›Ø›Þ]šYÙÙ\ˆˆ\ØX›Y^Ü›Ùš[\ÓØY[™ßBˆ\šXKZ\ÜÜ\H›\Ý›Þˆ\šXKY^[™Y^ØÛÛX›ÓÜ[ŸH\šXK[X™[YžOHœÚ\[™ËXÛÛX›Ø›Þ[X™[‚ˆÛÛXÚÏ^Ê
+OOœÙ]ÛÛX›ÓÜ[ŠÜ[Oˆ[Ü[Š_O‚ˆÜ[žÜ›Ùš[\ÓØY[™ÏÈ“ØY[™È[Ý\ˆÚ\[™È›Ùš[\ø )ˆŽœÙ[XÝY›Ùš[OÜÚ\[™Ô›Ùš[SÜ[Û“X™[
+Ù[XÝY›Ùš[JN[\]T›Ùš[OÜÚ\[™Ô›Ùš[SÜ[Û“X™[
+[\]T›Ùš[JNˆÚÛÜÙH[Ý\ˆ]ÞHÚ\[™È›Ùš[HŸOÜÜ[‚ˆ[H\šXKZY[HYH¸£!Ù[O‚ˆØ]Û‚ˆØÛÛX›ÓÜ[‰‰]ˆÛ\ÜÓ˜[YOHœÚ\[™ËXÛÛX›Ø›Þ\[™[‚ˆ[œ]Û\ÜÓ˜[YOHœÚ\[™ËXÛÛX›Ø›Þ\ÙX\˜Úˆ\OHœÙX\˜Úˆ]]Ñ›ØÝ\È˜[YO^Ü›Ùš[TÙX\˜ÚBˆXÙZÛ\^ØÙX\˜Ú	Ü›Ùš[\Ë›[™ÝHÚ\[™È›Ùš[\ØH\šXK[X™[H”ÙX\˜ÚÚ\[™È›Ùš[\È‚ˆÛÚ[™ÙO^Ù]™[OœÙ]›Ùš[TÙX\˜Ú
+]™[\™Ù]˜[YJ_BˆÛ’Ù^QÝÛ^Ù]™[OžÚYŠ]™[šÙ^OOOH‘\ØØ\HŠ^ÜÙ]ÛÛX›ÓÜ[Š˜[ÙJNÜÙ]›Ùš[TÙX\˜Ú
+ˆŠ___KÏ‚ˆ]ˆÛ\ÜÓ˜[YOHœÚ\[™ËXÛÛX›Ø›Þ[\Ýˆ›ÛOH›\Ý›Þˆ\šXK[X™[YžOHœÚ\[™ËXÛÛX›Ø›Þ[X™[‚ˆØÛÛX›ÑÜ›Ý\Ë›X\
+Ü›Ý\O™Ü›Ý\š][\Ë›[™ÝŒ	‰œ˜YÛY[Ù^O^ÙÜ›Ý\›X™[O‚ˆÛ\ÜÓ˜[YOHœÚ\[™ËXÛÛX›Ø›ÞYÜ›Ý\žÙÜ›Ý\›X™[OÜ‚ˆÙÜ›Ý\š][\Ë›X\
+›Ùš[OO]Ûˆ\OH˜]Ûˆˆ›ÛOH›Ü[ÛˆˆÙ^O^Ü›Ùš[KšYBˆ\šXK\Ù[XÝY^Ü›Ùš[KšYOO\Ù[XÝY›Ùš[RYBˆÛ\ÜÓ˜[YO^ØÚ\[™ËXÛÛX›Ø›Þ[Ü[Û‰Ü›Ùš[KšYOO\Ù[XÝY›Ùš[RYÈˆÙ[XÝYŽˆˆŸXBˆÛÛXÚÏ^Ê
+OOžØÚÛÜÙT›Ùš[J›Ùš[KšY
+NÜÙ]ÛÛX›ÓÜ[Š˜[ÙJNÜÙ]›Ùš[TÙX\˜Ú
+ˆŠ__O‚ˆÜÚ\[™Ô›Ùš[SÜ[Û“X™[
+›Ùš[J_BˆØ]ÛŠ_BˆÑœ˜YÛY[Š_BˆÈ\ÙX\˜ÚY›Ùš[\Ë›[™Ý	‰Û\ÜÓ˜[YOHœÚ\[™ËXÛÛX›Ø›ÞY[\Hˆ›ÛOHœÝ]\È‚ˆ›ÈÚ\[™È›Ùš[\ÈX]Ú8 'Ü›Ùš[TÙX\˜Úš[J
+_x 'K‚ˆÜŸBˆÙ]‚ˆÛ›Ü›X[^™Y›Ùš[TÙX\˜Ú	‰œÙX\˜ÚY›Ùš[\Ë›[™ÝŒ	‰Û\ÜÓ˜[YOHœÚ\[™ËXÛÛX›Ø›ÞXÛÝ[‚ˆÜÙX\˜ÚY›Ùš[\Ë›[™ÝHÙˆÜ›Ùš[\Ë›[™ÝH›Ùš[\ÂˆÜŸBˆÙ]ŸBˆÙ]‚ˆÙ]‚ˆÙ]‚ˆÜ›Ùš[\Ñ\œ›Ü‰‰]ˆÛ\ÜÓ˜[YOHœÚ\[™ËX\K[›ÝH\œ›Üˆ”Ú\[™È›Ùš[\ÈÛÝ[›Ý™HØYYØÜ[žÜ›Ùš[\Ñ\œ›ÜŸOÜÜ[Ù]ŸBˆÜÙ[XÝY›Ùš[I‰žÜÙ[XÝY›Ùš[S™YYÔ™]šY]É‰]ˆÛ\ÜÓ˜[YOHœÚ\[™Ë\›Ùš[KY˜[Z[K]Ø\›š[™Èˆ›ÛOHœÝ]\È‘ÝX›KXÚXÚÈ\È›Ùš[H›ÜˆÜ›ÙXÝ˜[Y_KØÜ[’]È˜[YHÙ\È›ÝÛX\›HX]Ú\È›ÙXÝ\KˆÛÛYH\È›ÝÚ[™ÙY]ÈÛÛ™š\›HH^Y\ˆÚ\™Ù\È™[ÝÈ™Y›Ü™H\›Ýš[™ËÜÜ[Ù]Ÿ^ËÊˆŒÌˆ0­È™YHÚ\È8 %‘]ÞH^Y\ˆÚ\™ÙH‹”š[YžHÚ\[™ÈÛÜÝ8 %Ú][ÝBˆ^H‹’[\›˜][Û˜[^Y\ˆÚ\™Ù\Èˆ8 %™\Ý]Y[X™\œÈH›ÜÝÛˆÜ[Û‚ˆ[™XYHÚÝÜÈ
+°­È	ÍHš\œÝ0­È	‹Y][Û˜[ŠKˆHÛ™HšYÝ\™H]\Âˆ“Õš\ÚX›H[Ù]Ú\™H\ÈHÚÜ˜[YØZ[œÝš[YžIÜÈÛÜÝ[™]ˆ\È]ÈÝÛˆØ\›š[™È™[ÝÈ[™Ý^\Ëˆ
+‹ß^ÜÚ\[™ÔÚÜ˜[‹ŒÏ]ˆÛ\ÜÓ˜[YOHœÚ\[™Ë\˜]K]Ø\›š[™Èˆ›ÛOH˜[\–[Ý\ˆ]ÞH^Y\ˆÚ\™ÙH\È	ÜÚ\[™ÔÚÜ˜[Ñš^Y
+Š_H™[ÝÈš[Yžx &\ÈÝ\œ™[Ú\[™ÈÛÜÝØÜ[”š[YžHX^HÚ\™ÙH\È	Üš[YžTÚ\[™ËÑš^Y
+Š_HÚ[HH^Y\ˆ^\È	ÜÙ[XÝY›Ùš[K™ÛY\ÝXÔš[X\žKÑš^Y
+Š_Kˆ[ÝHÛÝ[ÛÝ™\ˆHY™™\™[˜ÙKÜÜ[Ù]Ž]ˆÛ\ÜÓ˜[YOHœÚ\[™Ë\˜]KXÛÛ™š\›X][Ûˆ¸§$ÈH]ÞH^Y\ˆÚ\™ÙHÛÝ™\œÈš[Yžx &\ÈÝ\œ™[Ú\[™ÈÛÜÝØžËÊˆÍN0­È”Ú\[™È™[XZ[œÈÙ\\˜]Hœ›ÛHH][K\›Ùš]Ø[Ý[][ÛˆX›Ý™H‚ˆ\X\™YÛˆ›Ýœ˜[˜Ú\ÈÙˆ\È›ÝXÙK[™HšXÚ[™ÈØ\™Ø^\ÂˆHØ[YH[™ÈÚXÙH[Ü™Kˆ›Ø›ÙH\ÜÝ[Y\È][H›Ùš][˜ÛY\ÂˆÚ\[™ÎÈH\Ù\[œÚ\Ý[™ÈÛˆ]ˆ
+‹ßOÙ]ŸOÏŸBˆÜÙ[XÝY›Ùš[I‰]Z[ÈÛ\ÜÓ˜[YOH˜Ý\ÝÛK\Ú\[™ËXZ[\ˆÝ[[X\žOžØÝ\ÝÛQ\OÈ¸¦¨[œØ]™YÚ\[™ÈÚ[™Ù\ÈŽˆÜ™X]HHÝ\ÝÛHÚ\[™È›Ùš[H
+Ü[Û˜[
+HŸOÜÝ[[X\žO]ˆÛ\ÜÓ˜[YOH˜Ý\ÝÛK\Ú\[™ËX›ÙH]ˆÛ\ÜÓ˜[YOHœÚ\[™ËXZ[\‹Z[›ÈÜ™X]HHÛÜKˆ[Ý\ˆÜšYÚ[˜[›Ùš[HÚ[›ÝÚ[™ÙKØÜ[“˜[YH]Y\Ý[žH˜]\È[ÝHØ[[ˆØ]™H]ˆÛÛYHÚ[Ù[XÝH™]È›Ùš[H›Üˆ\È˜]ÚÜÜ[Ù]X™[Ü[ŒKˆ˜[YH[Ý\ˆ™]ÈÚ\[™È›Ùš[OÛX[•\È˜[YHÚ[\X\ˆ[ˆ]ÞH[™[ˆÛÛYH™^[YKÜÛX[ÜÜ[ˆÛ\ÜÓ˜[YOHœÚ\[™Ë\›Ùš[K[˜[YK[X™[”›Ùš[H˜[YOØ[œ]\šXK[X™[H“™]ÈÚ\[™È›Ùš[H˜[YHˆXÙZÛ\^Ø^[\Nˆ	ÜÙ[XÝY›Ùš[K]_K	TÈÚ\[™ØH˜[YO^ØÝ\ÝÛT›Ùš[S˜[Y_HX^[™Ý^ÍŒHÛÚ[™ÙO^Ù]™[OžÜÙ]Ý\ÝÛT›Ùš[S˜[YJ]™[\™Ù]˜[YJNÛX\šÔÚ\[™ÑY]
+
+__KÏÛX™[OŒ‹ˆY]ÜÙ[XÝY›Ùš[K›ÜšYÚ[ÛÝ[ž_HÚ\[™ÏÚO]ˆÛ\ÜÓ˜[YOHœÚ\[™Ë\˜]K\›ÝÈ‘ÛY\ÝXÏØX™[‘š\œÝ][OÜ[ˆÛ\ÜÓ˜[YOH›[Û™^KZ[œ]‰[œ][œ][ÙOH™XÚ[X[ˆ˜[YO^ØÝ\ÝÛPÚ\™Ù_HÛÚ[™ÙO^Ù]™[OžÜÙ]Ý\ÝÛPÚ\™ÙJ]™[\™Ù]˜[YJNÛX\šÔÚ\[™ÑY]
+
+__KÏÜÜ[ÛX™[X™[Y][Û˜[Ü[ˆÛ\ÜÓ˜[YOH›[Û™^KZ[œ]‰[œ][œ][ÙOH™XÚ[X[ˆ˜[YO^ØÝ\ÝÛPY][Û˜[HÛÚ[™ÙO^Ù]™[OžÜÙ]Ý\ÝÛPY][Û˜[
+]™[\™Ù]˜[YJNÛX\šÔÚ\[™ÑY]
+
+__KÏÜÜ[ÛX™[Ù]]Z[ÈÛ\ÜÓ˜[YOHš[\›˜][Û˜[\Ú\[™ËYY]ÜˆÝ[[X\žOŒËˆY][\›˜][Û˜[˜]\È
+Ü[Û˜[
+H0­ÈØÝ\ÝÛR[\›˜][Û˜[›[™ÝH\Ý[˜][ÛœÏÜÝ[[X\žOžØÝ\ÝÛR[\›˜][Û˜[›[™ÝÏ]ˆÛ\ÜÓ˜[YOHš[\›˜][Û˜[\˜]K[\ÝžØÝ\ÝÛR[\›˜][Û˜[›X\
+
+˜]K[™^
+OO]ˆÛ\ÜÓ˜[YOHœÚ\[™Ë\˜]K\›ÝÈˆÙ^O^Ü˜]KšÙ^_OžÜ˜]K›X™[OØX™[‘š\œÝ][OÜ[ˆÛ\ÜÓ˜[YOH›[Û™^KZ[œ]‰[œ]\šXK[X™[^Ø	Ü˜]K›X™[Hš\œÝ][XH[œ][ÙOH™XÚ[X[ˆ˜[YO^Ü˜]Kœš[X\ž_HÛÚ[™ÙO^Ù]™[O˜Ú[™ÙR[\›˜][Û˜[
+[™^œš[X\žH‹]™[\™Ù]˜[YJ_KÏÜÜ[ÛX™[X™[Y][Û˜[Ü[ˆÛ\ÜÓ˜[YOH›[Û™^KZ[œ]‰[œ]\šXK[X™[^Ø	Ü˜]K›X™[HY][Û˜[][XH[œ][ÙOH™XÚ[X[ˆ˜[YO^Ü˜]K˜Y][Û˜[HÛÚ[™ÙO^Ù]™[O˜Ú[™ÙR[\›˜][Û˜[
+[™^˜Y][Û˜[‹]™[\™Ù]˜[YJ_KÏÜÜ[ÛX™[Ù]Š_OÙ]ŽÛ\ÜÓ˜[YOH››ËZ[\›˜][Û˜[\˜]\È“›È[\›˜][Û˜[\Ý[˜][ÛœËÜŸO]Ûˆ\OH˜]ÛˆˆÛ\ÜÓ˜[YOHœ[™[XÛÛ\ÙKY›ÛÝˆÛÛXÚÏ^Ù]™[OžØÛÛœÝ›ÞJ]™[˜Ý\œ™[\™Ù]\ÈS[[Y[
+K˜ÛÜÙ\Ý
+™]Z[ÈŠNÚYŠ›Þ
+^Ê›Þ\ÈS]Z[Ñ[[Y[
+K›Ü[Y˜[ÙNØ›ÞœØÜ›Û[ÕšY]ÊØ›ØÚÎˆ›™X\™\ÝŸJ___OÛÜÙH[\›˜][Û˜[˜]\ÏØ]ÛÙ]Z[ÏžØÝ\ÝÛQ\OÏ]ˆÛ\ÜÓ˜[YOH˜Ý\ÝÛK\Ú\[™ËXXÝ[ÛœÈ]Ûˆ\šXKX\ÞO^ÜØ]š[™Ô›Ùš[_H\ØX›Y^ÜØ]š[™Ô›Ùš[_HÛÛXÚÏ^Ê
+OO›ÚYÜ™X]T›Ùš[J
+_OžÜØ]š[™Ô›Ùš[OÈ”Ø]š[™ÈÚ\[™È›Ùš[x )ˆŽˆ”Ø]™H™]ÈÚ\[™È›Ùš[HŸOØ]Û]Ûˆ\OH˜]Ûˆˆ\ØX›Y^ÜØ]š[™Ô›Ùš[_HÛÛXÚÏ^Ê
+OOœ™\Ù]›Ùš[QY]ÜŠ
+_O‘\ØØ\™Ú[™Ù\ÏØ]ÛÙ]Ž]ˆÛ\ÜÓ˜[YOHœÚ\[™Ë\Ø]™Y\Ý]H“›ÈÚ[™Ù\ÈXYKÙ]Ÿ^Ü›Ùš[SY\ÜØYÙI‰ÛX[›ÛOHœÝ]\ÈžÜ›Ùš[SY\ÜØYÙ_OÜÛX[ŸOÙ]]Ûˆ\OH˜]ÛˆˆÛ\ÜÓ˜[YOHœ[™[XÛÛ\ÙKY›ÛÝˆÛÛXÚÏ^Ù]™[OžØÛÛœÝ›ÞJ]™[˜Ý\œ™[\™Ù]\ÈS[[Y[
+K˜ÛÜÙ\Ý
+™]Z[ÈŠNÚYŠ›Þ
+^Ê›Þ\ÈS]Z[Ñ[[Y[
+K›Ü[Y˜[ÙNØ›ÞœØÜ›Û[ÕšY]ÊØ›ØÚÎˆ›™X\™\ÝŸJ___OÛÜÙHÝ\ÝÛH›Ùš[OØ]ÛÙ]Z[ÏŸBˆËÊˆŒŽH0­È\È]ÛˆØ]\ÈH[\™H˜]Ú[™\ÙYÈ™XY\›Ý™HšXÙ\È[™Ú\[™ÈˆÚ[HÜ™^YYÝ]Ú]]™\ˆH™X\ÛÛ‹ˆYX\Ý\™Y]™NˆHØ]™YÚ\[™È›Ùš[H]›ÈÛ™Ù\ˆ^\ÝÈÛˆHÚÜY›Ý[™ÈÙ[XÝYH]ÛˆXY[™›ÈY\ÜØYÙH[ž]Ú\™H8 %H[XYÙ\ÈYÙHÚ[Y\™H[™\ÈYÙH™Y\ÙYÚ]HÙ[\ˆÝXÚÈ™]ÙY[ˆ[Kˆ
+‹ßBˆÈ\Ù[XÝY›Ùš[I‰œÙ[XÝY›Ùš[RYŒ	‰ˆ\›Ùš[\ÓØY[™É‰Û\ÜÓ˜[YOHœÚ\[™Ë\›Ùš[K[Z\ÜÚ[™Èˆ›ÛOHœÝ]\ÈžËÊˆNH\ÈÛZ[YYHØ]™Y›Ùš[HY™Y[ˆ[]Yœ›ÛH\ˆÚÜ[™Û\ˆÈÚÛÜÙH[›Ý\ˆ˜™[ÝÈ‹Ú[HÚ][™È™[ÝÈHXÚÙ\ˆ]Ù[‹ˆÛˆH›ÙXÝÚHY\ÝÜ™X]Y\™HØ\È›ÈØ]™Y›Ùš[HÈÜÙNˆHYØ[YHœ›ÛHš[YžH[™Ú[\HÙ\È›ÝX]Ú[ž][™ÈÛˆH]ÞHÚÜˆØ^H][™Ú[HšYÚØ^Kˆ
+‹ßQÛÛYHÛÝ[›ÝX]Ú\È›ÙXÝ8 &\Èš[YžHÚ\[™ÈÈH›Ùš[HÛˆ[Ý\ˆ]ÞHÚÜˆXÚÈÛ™HX›Ý™H[™]Ú[™H™[Y[X™\™YÜŸBˆËÊˆÍŒÈ0­ÈÛ˜ÙH\›Ý™Y\™H\È›Ý[™ÈYÈ\›Ý™KÛÈH]Ûˆ™XØ[YBˆHÛÛ›Û]ÛÝ[›ÝÈ[ž][™È8 %]Ø]\™H\ØX›YZ[‹\Ü\š]ˆ\ÚÚ[™È›Üˆ[ˆXÝ[Ûˆ[™XYHZÙ[‹ˆ\›Ý™Y\ÈHÕUKÛÈ]™XYÈ\ÂˆÛ™Kˆ[žHÚ[™ÙHÈšXÙ\ËHÛØ[ÜˆH›Ùš[HÛX\œÈ\›Ý˜[ÚXÚˆœš[™ÜÈH]Ûˆ˜XÚÈÛˆ]ÈÝÛ‹ˆ
+‹ßBˆØ\›Ý™YˆÏÛ\ÜÓ˜[YOHœšXÚ[™ËX\›Ý™Y\Ý]Hˆ›ÛOHœÝ]\ÈÜ[ˆ\šXKZY[HYH¸§$ÏÜÜ[ˆšXÙ\È[™Ú\[™È\›Ý™YÜ‚ˆ]Ûˆ\OH˜]ÛˆˆÛ\ÜÓ˜[YOHœšXÚ[™ËX\›Ý˜[X]Ûˆˆ\ØX›Y^È\Ù[XÝY›Ùš[_Ý\ÝÛQ\_HÛÛXÚÏ^Ê
+OO›Û\›Ý˜[Ú[™ÙJYJ_OžØÝ\ÝÛQ\OÈ”Ø]™HÜˆ\ØØ\™[Ý\ˆÝ\ÝÛH›Ùš[HÈÛÛ[YHŽˆ\Ù[XÝY›Ùš[OÈÚÛÜÙHHÚ\[™È›Ùš[HÈÛÛ[YHŽˆ\›Ý™HšXÙ\È[™Ú\[™ÈŸOØ]ÛŸBˆÜÙXÝ[ÛŸBˆÜÙXÝ[Û‚ˆ
+NÂŸB‚˜\Þ[˜È[˜Ý[Ûˆ™]ÚÚ]XY[™J[œ]ˆ™\]Y\Ý[™›ÈT“[š]ˆ™\]Y\Ý[š]Z[\ÙXÛÛ™Îˆ[X™\ŠHÂˆÛÛœÝÛÛ›Û\ˆH™]ÈX›ÜÛÛ›Û\Š
+NÂˆÛÛœÝ[Y[Ý]HÚ[™ÝËœÙ][Y[Ý]
+
+
+HOˆÛÛ›Û\‹˜X›Ü
+
+KZ[\ÙXÛÛ™ÊNÂˆžHÈ™]\›ˆ]ØZ]™]Ú
+[œ]È‹‹š[š]ÚYÛ˜[ˆÛÛ›Û\‹œÚYÛ˜[JNÈBˆØ]Ú
+\œ›ÜŠHÂˆYˆ
+ÛÛ›Û\‹œÚYÛ˜[˜X›ÜY
+H›ÝÈ™]È\œ›ÜŠ•H™\]Y\ÝÛÚÈÛÈÛ™È[™Ø\ÈÝÜYØY™[KˆŠNÂˆ›ÝÈ\œ›ÜŽÂˆHš[˜[HÈÚ[™ÝË˜ÛX\•[Y[Ý]
+[Y[Ý]
+NÈBŸB‚™[˜Ý[ÛˆœšY[™U\ØY\œ›ÜŠ\œ›ÜŽˆ[šÛ›ÝÛŠHÂˆÛÛœÝY\ÜØYÙHH\œ›Üˆ[œÝ[˜Ù[Ùˆ\œ›ÜˆÈ\œ›Ü‹›Y\ÜØYÙHˆÝš[™Ê\œ›ÜˆÏÈˆŠNÂˆÛÛœÝÝ\Ü™Y™\™[˜ÙHHY\ÜØYÙK›X]Ú
+ÔÝ\Ü™Y™\™[˜ÙN—ÊŠÐKVŒNKWJÊKÚJOË–ÌWNÂˆÛÛœÝÚ]™Y™\™[˜ÙHH
+^ˆÝš[™ÊHOˆ	Ý^IÜÝ\Ü™Y™\™[˜ÙHÈÝ\Ü™Y™\™[˜ÙNˆ	ÜÝ\Ü™Y™\™[˜Ù_K˜ˆˆŸXÂˆYˆ
+ÎLß›ÝšYY[XYÙ\ÈÈ›Ý^\ÝY›Ýš[š\Ú
+Îœ›ØÙ\ÜÚ[™ß™YÚ\Ý\š[™ÊKÚK\Ý
+Y\ÜØYÙJJH™]\›ˆÚ]™Y™\™[˜ÙJ”š[YžH\È›Ýš[š\ÚY™YÚ\Ý\š[™È\È\ÚYÛˆY\ˆÛ™HZ[]KˆÙY\HÝXØÙ\ÜÙ[˜YÈ[™\ÙH™]žH˜Z[Y\ÚYÛœÈÚ[ˆH˜]Úš[š\Ú\ËˆŠNÂˆYˆ
+Ú[XYÙHÛÝ[›Ý™HXÛÙYÛÝ[›Ý™H™XY[˜[YÝ]Y\œ›ÜŸÛÝ\˜ÙH[XYÙHÛÝ[›Ý™HXÛÙYÚK\Ý
+Y\ÜØYÙJJH™]\›ˆÚ]™Y™\™[˜ÙJ‘ÛÛYHØ[ˆÙYH\Èš[[˜[YK]Ø[››Ý™XYHXÝX[[XYÙKˆÝÛ›ØY][HÈ[Ý\ˆÛÛ\]\‹[ˆ\ØY]YØZ[ˆ\ÈH‘ÈÜˆ”ËˆŠNÂˆYˆ
+Ù˜Z[YÈ™]Ú™]ÛÜšÙ\œ›ÜŸØY˜Z[YÙXÝ\™H\ÛÜšÈ[]™\ž_[\Ü˜\š[H[˜]˜Z[X›KÚK\Ý
+Y\ÜØYÙJJH™]\›ˆÚ]™Y™\™[˜ÙJ•H\ØYÛÛ›™XÝ[ÛˆØ\È[\œ\YˆÛÛYH™]šYY]]ÛX]XØ[K]š[YžHÝ[ÛÝ[›Ý™XÙZ]™H\È\ÚYÛ‹ˆ™]žH]Ú[ˆH˜]Úš[š\Ú\ËˆŠNÂˆYˆ
+Ü™\]Y\ÝÛÚÈÛÈÛ™ßÝ[ÛÛ\][™È\È^XÝ˜YÚK\Ý
+Y\ÜØYÙJJH™]\›ˆÚ]™Y™\™[˜ÙJ•\È˜YÛÚÈÛ™Ù\ˆ[ˆHØY™HØZ][™È\š[ÙˆÛÛYH™XÛÜ™Y]ÛÈH™]žHÚ[™XÛÝ™\ˆHØ[YH˜Y[œÝXYÙˆÜ™X][™ÈH\XØ]KˆŠNÂˆYˆ
+Ø˜]ÚÙ\ÜÚ[Ûˆ^\™YÚK\Ý
+Y\ÜØYÙJJH™]\›ˆÚ]™Y™\™[˜ÙJ•H›ÝXÝY˜]ÚÙ\ÜÚ[Ûˆ^\™YˆØYHØ[YHš[YžH[\]HYØZ[ŽÈ[Ý\ˆÙ[XÝYš[\ÈÚ[Ý^HÛˆ\ÈYÙKˆŠNÂˆYˆ
+Í_ÚÙ[Ÿ[˜]]Üš^™Y›ÝXØÙ\ÚK\Ý
+Y\ÜØYÙJJH™]\›ˆÚ]™Y™\™[˜ÙJ”š[YžH™Z™XÝYHØ]™YÛÛ›™XÝ[Û‹ˆ\ØÛÛ›™XÝš[YžKÜ™X]HH™]ÈÚÙ[ˆÚ][ØÛÜ\Ë[™™XÛÛ›™XÝˆŠNÂˆYˆ
+Ý[\]H›ÙXÝØ\È›Ý›Ý[™›Ý›Ý[™[ˆHÛÛ›™XÝYš[YžKÚK\Ý
+Y\ÜØYÙJJH™]\›ˆÚ]™Y™\™[˜ÙJ•\È[\]H™[Û™ÜÈÈHY™™\™[š[YžHXØÛÝ[ÜˆÚÜ[ˆHÛÛ›™XÝYÚÙ[‹ˆŠNÂˆYˆ
+ÎML˜[Y][Ûˆ˜Z[Yš[Ø\™X\ßXÙZÛ\‹ÚK\Ý
+Y\ÜØYÙJJH™]\›ˆÚ]™Y™\™[˜ÙJ”š[YžH™Z™XÝY\È[\]x &\Èš[X\™XHÙ]\ˆ™[ØYH[\]NÈYˆ]ÛÛ[Y\Ë\ÙHHœ™\ÚHØ]™YÛÜHÙˆHš[YžH›ÙXÝˆŠNÂˆYˆ
+ÍŽ_Û™Ù\ˆ[ˆ^XÝY˜]H[Z]ÚK\Ý
+Y\ÜØYÙJJH™]\›ˆÚ]™Y™\™[˜ÙJ”š[YžH\È[\Ü˜\š[H[Z][™È™\]Y\ÝËˆÛÛYH[™XYHØZ]Y[™™]šYYÈ™]žH\È\ÚYÛˆÚ[ˆH˜]Úš[š\Ú\ËˆŠNÂˆYˆ
+ÍLßÜÝ]H\ÈÛÈ\™Ù_š[H\ÈÛÈ\™ÙKÚK\Ý
+Y\ÜØYÙJJH™]\›ˆÚ]™Y™\™[˜ÙJ•\È\ÚYÛˆ\ÈÝ[ÛÈ\™ÙH›Üˆš[YžHY\ˆØY™H™\\˜][Û‹ˆ^Ü[ˆÜ[Z^™Y‘ÈÜˆ”È[™\ˆPŽÈÙY\H^[[Y[œÚ[ÛœÈ™YYY›ÜˆÌKˆŠNÂˆ™]\›ˆY\ÜØYÙH‘ÛÛYHÛÝ[›ÝÜ™X]H\È˜Yˆ™]žH]Ú[ˆH˜]Úš[š\Ú\ËˆŽÂŸB‚‹ÊˆŒÍÈ0­È]™\žH›ÙXÝXØ\™›ÝÈ^Ù\ÛÛÝ\œÈ[™Ú^™\ÈØ\ÈHXY]Û‹ˆBˆ[™\ˆÜ[™Y™]™\ž][™ËY[ÙXH›ØÚÈŒÌˆ[]YÈ]Y\žTÙ[XÝÜ‚ˆ™]\›™Y[HYˆ
+›ØÚÊXÝX\™ÝØ[ÝÙY][™HÛXÚÈY›Ý[™Âˆ8 %š]™HXYÛÛ›ÛÈÛˆ]™\žHØ\™Ûˆ]™\žHZ[Ú[˜ÙHŒÌ‹ˆ›Ý[™ÈØ]YÚˆ]™XØ]\ÙHH\ÝÈ\ÜÙ\X\šÝ\Ýš[™ÜË›Ý]HÛXÚÈ\™Ù]^\ÝË‚ˆ\ÙH\Ý[˜][ÛœÈ\™H]HÛÈHÝZ]HØ[ˆÚXÚÈXXÚÛ™H\È™[™\™Yˆ
+‹Â‹ÊˆŽM0­ÈŒËÌÈ™XYHˆØ]X›Ý™H™YH›ÝÜÈXXÚ™XY[™ÈŒÙˆH™\]Z\™YÙ]‹‚ˆ›ÝÙ\™HÛÜœ™XÝX›Ý]Y™™\™[[™ÜÎˆH[ÛÝ[Y\Ý[™ÜÈ]U‘Bˆ[ˆ]ÞHØš™XÝH›ÝÜÈÛÝ[Y™\]Z\™Y›Ü\Y\ÈXÝX[Hš[YˆÛ™BˆÛÜ™ÛÈYX[š[™ÜËÛˆHØÜ™Y[ˆ]Ø]\ÈX›\Ú[™Ëˆ™XYH›ÝÈYX[œÈÚ]ˆH›ÝÜÈ[™XYHYX[ˆ
+‹Â‹ÊˆÌˆ0­È¸§$ÈØ]™Y›Üˆ\È›ÙXÝˆ\ÙYÈ™HH‹‹\ÙXÛÛ™[Y\‹ÛÈBˆÛÛ™š\›X][Ûˆ˜[š\ÚYÚ[HHÙ[\ˆØ\ÈÝ[ÛÚÚ[™È]][™H]Û‚ˆÙ[˜XÚÈÈÙ™™\š[™ÈHØ]™H]Y[™XYH\[™YˆHÛ™\ÝÚYÛ˜[\Âˆ›Ý™YHØ]™H\Ýš[š\Úˆ]™Ù\ÈÚ]\ÈÛˆØÜ™Y[ˆX]ÚÚ]\ÂˆÝÜ™Yˆ8 %ÚXÚÝ^\ÈYH[[HÛÛÝ\ˆÜˆÚ^™H\ÈXÝX[HÚ[™ÙY[™ˆ›\È˜XÚÈžH]Ù[ˆH[ÛY[Û™H\Ëˆ
+‹Â™^Ü[˜Ý[ÛˆØ[YRYÙ]
+N›[X™\–×_[™Yš[™YŽ›[X™\–×_[™Yš[™Y
+N˜›ÛÛX[žÂˆÛÛœÝYVË‹‹›™]ÈÙ]
+_×JWKœÛÜ
+
+JOOž^JKšYÚVË‹‹›™]ÈÙ]
+Ÿ×JWKœÛÜ
+
+JOOž^JNÂˆ™]\›ˆY›[™ÝŒ	‰›Y›[™ÝOO\šYÚ›[™Ý	‰›Y™]™\žJ
+˜[YK[™^
+OO˜[YOOO\šYÚÚ[™^JNÂŸB‚‹ÊˆMH“™YYÈ™]šY]ÈˆØ\È[H\Ý[™ÈØZY[™HÛ™H[™ÈÝ[™[™Âˆ™]ÙY[ˆ\ˆ[™Ý\Ø\ÈHÚ[™ÛH™\]Z\™Y]ÞHšY[Ú]›È˜[YKˆÚHYˆÈÜ[ˆH›ÝË[ˆH]Z[ÈY]Ü‹[ˆ™XYÝÛˆH\ÝÙˆ›Ü\Y\ÂˆÈš[™ÚXÚÛ™KˆH›ÝÈÚÝ[Ø^HÚ]\ÈXÝX[HYˆ
+‹Â™^Ü[˜Ý[Ûˆ]ÞSZ\ÜÚ[™Ô™\]Z\™Y
+]ÞNžÜ›Ü\Y\ÏÎ\œ˜^OÜ™\]Z\™YÎ˜›ÛÛX[ŽÝ˜[YOÎœÝš[™ÎÛX™[ÎœÝš[™ßOŸ_[[™Yš[™Y
+NœÝš[™Ö×^ÂˆYŠY]ÞJ\™]\›–×NÂˆ™]\›ˆ
+]ÞKœ›Ü\Y\ß×JK™š[\Š›Ü\OOœ›Ü\Kœ™\]Z\™Y	‰ˆJ›Ü\K˜[Y_ˆŠKš[J
+JK›X\
+›Ü\OOœ›Ü\K›X™[˜H™\]Z\™YšY[ŠNÂŸB‚™^Ü[˜Ý[Ûˆ]ÞT™\]Z\™YÛÛ\]J]ÞNžÜ›Ü\Y\ÏÎ\œ˜^OÜ™\]Z\™YÎ˜›ÛÛX[ŽÝ˜[YOÎœÝš[™ßOŸ_[[™Yš[™Y
+N˜›ÛÛX[žÂˆYŠY]ÞJ\™]\›ˆ˜[ÙNÂˆÛÛœÝ™\]Z\™YJ]ÞKœ›Ü\Y\ß×JK™š[\Š›Ü\OOœ›Ü\Kœ™\]Z\™Y
+NÂˆ™]\›ˆ™\]Z\™Y™]™\žJ›Ü\OO›ÛÛX[Š
+›Ü\K˜[Y_ˆŠKš[J
+JJNÂŸB‚™^ÜÛÛœÝPÑUÑTÕSUSÓŽ”™XÛÜ™Ýš[™ËÜÝ\•ÛÜšÙ›ÝÔÝ\ÜÙ[XÝÜŽœÝš[™ßO^Âˆ[ØÚÝ\ÎžÜÝ\ˆ™\ÚYÛœÈ‹Ù[XÝÜŽˆ‹›[ØÚÝ\YY˜][X›ØÚÈŸKˆÙ^]ÛÜ™ÎžÜÝ\ˆ™š[š\Ú‹Ù[XÝÜŽˆ‹šÙ^]ÛÜ™X˜[šÈŸKˆ]ÞNžÜÝ\ˆ™š[š\Ú‹Ù[XÝÜŽˆ‹™]ÞKY]Z[Ë\Ý\ŸKˆÚ\[™ÎžÜÝ\ˆœÙ]\‹Ù[XÝÜŽˆ‹œÚ\[™Ë\ÙXÝ[Û‹ZXY[™ÈŸKˆ›Ùš]žÜÝ\ˆœÙ]\‹Ù[XÝÜŽˆ‹š][K\šXÚ[™ËZXY[™ÈŸKŸNÂ‚™^ÜY˜][[˜Ý[Ûˆ\Ý[™Ñ˜XÝÜžP\
+
+HÂˆÛÛœÝ›Û\”XÚÙ\ˆH\ÙT™YS[œ][[Y[Š[
+NÂˆÛÛœÝ[XYÙTXÚÙ\ˆH\ÙT™YS[œ][[Y[Š[
+NÂˆÛÛœÝÚ^™QÝZYTXÚÙ\ˆH\ÙT™YS[œ][[Y[Š[
+NÂˆÛÛœÝÞ[˜ÙY\Ý[™ÔÚYÛ˜]\™\ÈH\ÙT™YX\Ýš[™ËÝš[™ÏŠ™]ÈX\
+
+JNÂˆÛÛœÝ˜]ÚY™Y]\ÙT™YŠˆŠNÂˆÛÛœÝÛ˜\ÚÝ™XYO]\ÙT™YŠ˜[ÙJNÂˆÛÛœÝ™\Ý[YP][\Y]\ÙT™YŠ˜[ÙJNÂˆÛÛœÝ˜Y[XÝ]™O]\ÙT™YŠ˜[ÙJNÂˆÛÛœÝ[\]SØY™\œÚ[Û]\ÙT™YŠ
+NÂˆÛÛœÝ]ÞT™\\˜][Û•™\œÚ[Û]\ÙT™YŠ
+NÂˆÛÛœÝ]ÞT™\\˜][ÛXÝ]™O]\ÙT™YŠ˜[ÙJNÂˆÛÛœÝ]ÞTØ]™PXÝ]™O]\ÙT™YŠ˜[ÙJNÂˆÛÛœÝ]ÞT›ÙXÝ˜\Ù[[™O]\ÙT™YÝ^Û›Û^RYÎ›[X™\ŽØØ]YÛÜžNœÝš[™ÎØ]šX]\Î”™XÛÜ™Ýš[™ËÝš[™ÏŸ_[Š[
+NÂˆÛÛœÝÛÛ›™XÝ[Û]]ÔÚÚ\]\ÙT™YŠ˜[ÙJNÂˆÛÛœÝØÛÛ›™XÝYÙ]ÛÛ›™XÝYHH\ÙTÝ]J˜[ÙJNÂˆÛÛœÝÝÚÙ[‹Ù]ÚÙ[—HH\ÙTÝ]JˆŠNÂˆÛÛœÝÜÚÝÕÚÙ[‘›Ü›KÙ]ÚÝÕÚÙ[‘›Ü›WHH\ÙTÝ]J˜[ÙJNÂˆÛÛœÝØÛÛ›™XÝ[Û‘\œ›Ü‹Ù]ÛÛ›™XÝ[Û‘\œ›Ü—HH\ÙTÝ]JˆŠNÂˆÛÛœÝØÛÛ›™XÝ[™ËÙ]ÛÛ›™XÝ[™×HH\ÙTÝ]J˜[ÙJNÂˆÛÛœÝØÚXÚÚ[™ÐÛÛ›™XÝ[Û‹Ù]ÚXÚÚ[™ÐÛÛ›™XÝ[Û—HH\ÙTÝ]JYJNÂˆÛÛœÝÝ[\]KÙ][\]WHH\ÙTÝ]JˆŠNÂˆÛÛœÝÝ[\]Q]Z[ËÙ][\]Q]Z[×HH\ÙTÝ]O[\]Q]Z[È[Š[
+NÂˆÊˆŒLHHÚ]ÛÛYHÛ\ÜÚYšY\ÈH›ÙXÝžKˆš[YžIÜÈÝÛˆ›Y\š[ˆ]Kœ˜[™[™[Ù[™]™\ˆXÝ]™T™XÚ\K›˜[YNˆ]\ÈHÙ[\‰ÜÂˆšXÚÛ˜[YH›Üˆ\ˆØ]™Y›ÙXÝ[™˜[Z[™È]™\ÝYH›Üˆ\ÙYÈXZÙHBˆ›ÙXÝ[œ™XÛÙÛš\ØX›KÚ[[HÛÜÙ[š[™ÈHš[X\™XH›Ý[™ËBˆ™[™\š[™È[ÙH[™ÚXÚØÙ[™\È\™HÙ™™\™Y‚‚ˆÚ[ˆH˜\šX[Ü[ÛœÈY[YžHH›ÙXÝÝ]šYÚHËÓKÓÝ[˜Ù\Ëˆ[˜Ú\ËÛ™H[Ù[ÈH]Ú[œÈÝ™\ˆ[žHÝš[™È][ˆ
+‹ÂˆÛÛœÝÛ\ÜÚYžZ[™Ô›ÙXÝ˜[YHH\ÙSY[[Ê
+
+HOˆÂˆÛÛœÝX™[Hš[YžT›ÙXÝX™[
+[\]Q]Z[ÊNÂˆÛÛœÝ˜[Z[HH˜[Z[Qœ›ÛU˜\šX[Ê[\]Q]Z[ÈßJNÂˆÊˆHX™[Ý[˜]™[Ë›Üˆ›Û\È[™Y\ÜØYÙ\È]™XY™]\ˆÚ]Bˆ™X[›ÙXÝ˜[YH[ˆ[KˆH˜[Z[H\È\[™YÛÈ]™\žHÝÛœÝ™X[Bˆ™XY\ˆYÜ™Y\ÈÚ]HÝXÝ\™Y]šY[˜ÙH˜]\ˆ[ˆ™KYÝY\ÜÚ[™Ëˆ
+‹ÂˆÛÛœÝ[H˜[Z[HOOH˜\\™[ˆÈ˜\\™[ˆˆ˜[Z[HOOH˜Ý\™YˆÈ›]YÈˆˆ˜[Z[HOOH™›]ˆÈœš[ˆˆˆŽÂˆ™]\›ˆÛX™[[K™š[\Š›ÛÛX[ŠKš›Ú[ŠˆŠHX™[ÂˆKÝ[\]Q]Z[×JNÂˆÛÛœÝÝ[\]Q\œ›Ü‹Ù][\]Q\œ›Ü—HH\ÙTÝ]JˆŠNÂˆÛÛœÝÛØY[™Õ[\]KÙ]ØY[™Õ[\]WHH\ÙTÝ]J˜[ÙJNÂˆÛÛœÝÙ\ØÜš\[Û‹Ù]\ØÜš\[Û—HH\ÙTÝ]JˆŠNÂˆÛÛœÝÙš[\ËÙ]š[\×HH\ÙTÝ]O\ÚYÛ‘š[V×OŠ×JNÂˆÛÛœÝÙš[S›ÝXÙKÙ]š[S›ÝXÙWO]\ÙTÝ]JˆŠNÂˆÛÛœÝÙš[Q\œ›Ü‹Ù]š[Q\œ›Ü—HH\ÙTÝ]JˆŠNÂˆÛÛœÝÜ[›š[™ËÙ][›š[™×HH\ÙTÝ]J˜[ÙJNÂˆÛÛœÝØÛÛ\]KÙ]ÛÛ\]WHH\ÙTÝ]J˜[ÙJNÂˆÛÛœÝÜ›ØÙ\ÜÙYÙ]›ØÙ\ÜÙYHH\ÙTÝ]J
+NÂˆÛÛœÝÙ˜YËÙ]˜Y×HH\ÙTÝ]O˜Y™\Ý[×OŠ×JNÂˆÛÛœÝÛÜ[™Y˜YËÙ]Ü[™Y˜Y×HH\ÙTÝ]OÝš[™Ö×OŠ×JNÂˆÛÛœÝÛÜ[[Y\ÜØYÙKÙ]Ü[[Y\ÜØYÙWHH\ÙTÝ]JˆŠNÂˆÛÛœÝÛÝÛ™\‹Ù]ÝÛ™\—HH\ÙTÝ]J˜[ÙJNÂˆÛÛœÝÜÚYÛ™Y[‹Ù]ÚYÛ™Y[—HH\ÙTÝ]O›ÛÛX[ˆ[Š[
+NÂˆÛÛœÝÛØØ[™]šY]ËÙ]ØØ[™]šY]×O]\ÙTÝ]J˜[ÙJNÂˆÛÛœÝÜ™\\˜][Û“Y\ÜØYÙKÙ]™\\˜][Û“Y\ÜØYÙWHH\ÙTÝ]JˆŠNÂˆÛÛœÝÜ[•Ý[Ù][•Ý[HH\ÙTÝ]J
+NÂˆÛÛœÝÜšXÚ[™ËÙ]šXÚ[™×HH\ÙTÝ]OšXÚ[™ÏŠQUSÔ’PÒS‘ÊNÂˆÛÛœÝÛ[ØÚÝ\[YKÙ][ØÚÝ\[YWHH\ÙTÝ]JˆŠNÂˆÛÛœÝÜØ]š[™Ô›ÙXÝY˜][Ù]Ø]š[™Ô›ÙXÝY˜][O]\ÙTÝ]JˆŠNÂ‚ˆÛÛœÝØ[Õ]\ËÙ][Õ]\×HH\ÙTÝ]JˆŠNÂˆÛÛœÝØXÝ]™Q\ÚYÛ‹Ù]XÝ]™Q\ÚYÛ—HH\ÙTÝ]OÝš[™ÏŠˆŠNÂˆÛÛœÝØXÝ]™T™XÚ\KÙ]XÝ]™T™XÚ\WO]\ÙTÝ]O™XÚ\_[Š[
+NÂˆÊˆLÈ0­ÈØY[\]U\›™XÛÜ™ÈÚXÚš[YžHÝÜ™HH›ÙXÝØ[YHœ›ÛK]ˆ]™XYXÝ]™T™XÚ\Xœ›ÛH]ÈÛÜÝ\™HH[™ÚÛÜÙT™XÚ\HØ[È][ˆBˆØ[YHXÚÈ\ÈÙ]XÝ]™T™XÚ\KÛÈH˜[YH]Ø]ÈØ\ÈH‘U’SÕTÈ™XÚ\HÜ‚ˆ[ˆ›Ý[™ÈØ\È]™\ˆÜš][Žˆ›Ý\ˆØ]™Y›ÙXÝË›Ý\ˆš[YžHÝÜ™\Ëˆ[™]™\žHØ\™Ý[›[šËˆH™YˆÙ]\š[™È™[™\ˆ[Ø^\ÈÛÈHÝ\œ™[ˆÛ™KÚ]]™\ˆHÛÜÝ\™HØ\\™Yˆ
+‹ÂˆÛÛœÝXÝ]™T™XÚ\T™Y]\ÙT™Y™XÚ\_[Š[
+NÂˆXÝ]™T™XÚ\T™Y‹˜Ý\œ™[XXÝ]™T™XÚ\NÂˆÛÛœÝØXÝ]™P[™KÙ]XÝ]™P[™WO]\ÙTÝ]O›ÙXÝ[™_[Š[
+NÂˆÛÛœÝØ[™T™XÚ\\ËÙ][™T™XÚ\\×O]\ÙTÝ]O™XÚ\V×OŠ×JNÂˆÛÛœÝØ[™R[™^Ù][™R[™^O]\ÙTÝ]J
+NÂˆÛÛœÝØ[™PÛÛÜ”›ÙXÝËÙ][™PÛÛÜ”›ÙXÝ×O]\ÙTÝ]O™XÛÜ™Ýš[™Ë[\]Q]Z[ÏŠßJNÂˆÊˆÍÎHXXÚ[™HY[X™\ˆ\È]ÈÝÛˆ˜]ÚÜ™X]YÛ™HY\ˆ[›Ý\ˆžBˆÛÛ[YP[™Kˆ]Ø\È[š\ÚX›HÚ[HÛ›HÛ™H›ÙXÝÚÝÙY]H[YKˆ]Ý\È‹M›ÝÈ\Ý]™\žH›ÙXÝ\ÈHØ\™[™HØ\™[ÝHØ[››ÝÜ[‚ˆ\È›ÝHØ\™ˆ™[Y[X™\ˆÚXÚ˜]Ú™[Û™ÜÈÈÚXÚ›ÙXÝÛÈ[žHÙˆ[BˆØ[ˆ™HÜ[™Y›Ý\ÝH™^Û™Kˆ
+‹ÂˆÛÛœÝØ[™P˜]ÚYËÙ][™P˜]ÚY×O]\ÙTÝ]O™XÛÜ™Ýš[™ËÝš[™ÏŠßJNÂˆÊˆÍÎHHÚXÚØ\™\È™Z[™ÈÜ[™YÛÈHÛ™H[ÝHÛXÚÙYØ[ˆØ^HÛÈ[™Bˆ™\ÝØ[››Ý™HÛXÚÙY[™\›™X]HØY[™XYH[ˆ›YÚˆ
+‹ÂˆÛÛœÝÜÝÚ]Ú[™Ô›ÙXÝÙ]ÝÚ]Ú[™Ô›ÙXÝO]\ÙTÝ]JˆŠNÂˆÛÛœÝÝÚÛS[X™\žT™XÚ\KÙ]ÚÛS[X™\žT™XÚ\WO]\ÙTÝ]O™XÛÜ™Ýš[™Ë›ÛÛX[ŠßJNÂˆÊˆÍÎHHÛÜÙYØ\™\ÈÈØ^HÚ\™H]›ÙXÝÝ[™Ë[™HÛ™\ÝˆÛÝ\˜ÙH\ÈH˜]Ú\Ý˜]Ú\ÝÜžH[™XYH™XYÎˆÝ]\Ë˜YÛÝ[ˆX›\ÚYÛÝ[ˆÛ™H™]Ú™Yœ™\ÚYÚ[ˆH[™HÜˆ]È˜]Ú\ÈÚ[™ÙKˆ
+‹ÂˆÊˆLH[™P˜]ÚÝ[[X\šY\È\ÈÛÛ™NÈÛ™HX\[œÝÙ\œÈ›ÜˆXXÚ›ÙXÝˆ
+‹ÂˆÛÛœÝØ[™PÛÛÜÚÚXÙ\ËÙ][™PÛÛÜÚÚXÙ\×O]\ÙTÝ]O™XÛÜ™Ýš[™Ë[X™\–×OŠßJKØ[™TÚ^™PÚÚXÙ\ËÙ][™TÚ^™PÚÚXÙ\×O]\ÙTÝ]O™XÛÜ™Ýš[™Ë[X™\–×OŠßJKØ[™S[ØÚÝ\ÚÚXÙ\ËÙ][™S[ØÚÝ\ÚÚXÙ\×O]\ÙTÝ]O™XÛÜ™Ýš[™ËÝ[YNœÝš[™ÎÚYÎœÝš[™Ö×_OŠßJKØ[™RÙ^]ÛÜ™ÚÚXÙ\ËÙ][™RÙ^]ÛÜ™ÚÚXÙ\×O]\ÙTÝ]O™XÛÜ™Ýš[™ËÝš[™ÏŠßJNÂˆÊˆÌŽ0­ÈšXÚ[™ÈÝ]HØ\ÈHÚ[™ÛHÙ]ÙˆÛØ˜[ËÛÈH[™HÛÝ[Û›H]™\‚ˆšXÙHHXÝ]™H›ÙXÝˆ\ÙHÛHÝ\ˆ›ÙXÝÉÈšXÚ[™ËˆHXÝ]™Bˆ›ÙXÝÙY\È\Ú[™ÈHÜšYÚ[˜[Ý]KÛÈHÚ[™ÛK\›ÙXÝ]8 %HÛ™Bˆ]\Èš[˜[HÛÜšÚ[™È8 %\È[ÝXÚYˆ
+‹ÂˆÛÛœÝÛÜ[”šXÚ[™ËÙ]Ü[”šXÚ[™×O]\ÙTÝ]OÝš[™Ö×OŠ×JNÂˆÛÛœÝØ[™TšXÙ\ËÙ][™TšXÙ\×O]\ÙTÝ]O™XÛÜ™Ýš[™Ë™XÛÜ™Ýš[™Ë[X™\ŠßJNÂˆÛÛœÝØ[™TšXÚ[™ËÙ][™TšXÚ[™×O]\ÙTÝ]O™XÛÜ™Ýš[™ËšXÚ[™ÏŠßJNÂˆÛÛœÝØ[™TÚ\[™ËÙ][™TÚ\[™×O]\ÙTÝ]O™XÛÜ™Ýš[™Ë[X™\ŠßJNÂˆÛÛœÝØ[™P\›Ý™YÙ][™P\›Ý™YO]\ÙTÝ]O™XÛÜ™Ýš[™Ë›ÛÛX[ŠßJNÂˆÛÛœÝØ[™T]X[]QXÚ\Ú[ÛœËÙ][™T]X[]QXÚ\Ú[Ûœ×O]\ÙTÝ]O™XÛÜ™Ýš[™Ëš[˜ÛYHŸ™^ÛYHŠßJNÂˆÛÛœÝÜ™Y›YÚÜ[‹Ù]™Y›YÚÜ[—HH\ÙTÝ]J˜[ÙJNÂˆÛÛœÝÜš[YžR[XYÙR[™XÙ\ËÙ]š[YžR[XYÙR[™XÙ\×O]\ÙTÝ]O[X™\–×OŠ×JNÂˆÛÛœÝÜš[YžR[XYÙTÙ[XÝ[ÛœËÙ]š[YžR[XYÙTÙ[XÝ[Ûœ×O]\ÙTÝ]O™XÛÜ™Ýš[™Ë[X™\–×OŠßJNÂˆÛÛœÝÜÚ\™Y[ØÚÝ\ËÙ]Ú\™Y[ØÚÝ\×O]\ÙTÝ]OÝ[YNœÝš[™ÎÚYÎœÝš[™Ö×__[™Yš[™YŠ
+NÂˆÛÛœÝÜ™\\š[™Ñ]ÞKÙ]™\\š[™Ñ]ÞWO]\ÙTÝ]J˜[ÙJNÂˆÛÛœÝÜ™\\š[™Ó\Ý[™ÒYÙ]™\\š[™Ó\Ý[™ÒYO]\ÙTÝ]JˆŠNÂˆÛÛœÝÜØ]š[™Ñ]ÞQ]Z[ËÙ]Ø]š[™Ñ]ÞQ]Z[×O]\ÙTÝ]J˜[ÙJNÂˆÛÛœÝÝÛÜšÙ›ÝÔÝ\Ù]ÛÜšÙ›ÝÔÝ\O]\ÙTÝ]OÛÜšÙ›ÝÔÝ\Š˜ÛÛ›™XÝŠNÂˆÛÛœÝÜ™\ÝÜš[™Ð˜]ÚÙ]™\ÝÜš[™Ð˜]ÚO]\ÙTÝ]JYJNÂˆÛÛœÝÜ™\Ý[YT›ØÙ\ÜÚ[™ËÙ]™\Ý[YT›ØÙ\ÜÚ[™×O]\ÙTÝ]J˜[ÙJNÂˆÛÛœÝÙš[š\Ú\ÙKÙ]š[š\Ú\ÙWO]\ÙTÝ]Oš[š\Ú\ÙOŠ™]Z[ÈŠNÂˆÛÛœÝÝ\ØY›ÝXÙSÜ[‹Ù]\ØY›ÝXÙSÜ[—O]\ÙTÝ]J˜[ÙJNÂˆÛÛœÝÛX]™U\™Ù]Ù]X]™U\™Ù]O]\ÙTÝ]JˆŠNÂˆÛÛœÝÜX›\ÚÛÛ™š\›SÜ[‹Ù]X›\ÚÛÛ™š\›SÜ[—O]\ÙTÝ]J˜[ÙJNÂˆÛÛœÝÙ˜YØ]™SÜ[‹Ù]˜YØ]™SÜ[—O]\ÙTÝ]J˜[ÙJNÂˆÛÛœÝÙ˜YØ]™YÜ[‹Ù]˜YØ]™YÜ[—O]\ÙTÝ]J˜[ÙJNÂˆÛÛœÝÜ™\Ý\˜]ÚÜ[‹Ù]™\Ý\˜]ÚÜ[—O]\ÙTÝ]J˜[ÙJNÂˆÛÛœÝÜ™\Ý\˜]Ú˜[YKÙ]™\Ý\˜]Ú˜[YWO]\ÙTÝ]JˆŠNÂˆÛÛœÝÜ™\Ý\[™Ð˜]ÚÙ]™\Ý\[™Ð˜]ÚO]\ÙTÝ]J˜[ÙJNÂˆÛÛœÝØ˜]Ú\Ü^S˜[YKÙ]˜]Ú\Ü^S˜[YWO]\ÙTÝ]JˆŠNÂˆÛÛœÝÜØ]š[™Ñ˜Y˜]ÚÙ]Ø]š[™Ñ˜Y˜]ÚO]\ÙTÝ]J˜[ÙJNÂˆÛÛœÝÚÙ\\Ñ˜YËÙ]Ù\\Ñ˜Y×O]\ÙTÝ]J˜[ÙJNÂˆÛÛœÝÝ]R›Ú[™\‹Ù]]R›Ú[™\—O]\ÙTÝ]J‹ŠNÂˆÛÛœÝÝ]PØ\ËÙ]]PØ\×O]\ÙTÝ]JYJNÂˆÛÛœÝÝ˜\šX[šXÙ\ËÙ]˜\šX[šXÙ\×O]\ÙTÝ]O™XÛÜ™Ýš[™Ë[X™\ŠßJNÂˆÛÛœÝÜÙ[XÝYÛÛÜ’YËÙ]Ù[XÝYÛÛÜ’Y×O]\ÙTÝ]O[X™\–×OŠ×JNÂˆÛÛœÝÜ™[Y[X™\š[™ÐÛÛÜœËÙ]™[Y[X™\š[™ÐÛÛÜœ×O]\ÙTÝ]J˜[ÙJNÂˆÛÛœÝØÛÛÜœÔ™[Y[X™\™YÙ]ÛÛÜœÔ™[Y[X™\™YO]\ÙTÝ]J˜[ÙJNÂˆÛÛœÝÜÙ[XÝYÚ^™RYËÙ]Ù[XÝYÚ^™RY×O]\ÙTÝ]O[X™\–×OŠ×JNÂˆÛÛœÝÛÜ[‘˜XÙ]Ù]Ü[‘˜XÙ]O]\ÙTÝ]O™XÛÜ™Ýš[™ËÝš[™Ö×OŠßJNÂˆÛÛœÝØ™\ÝÝËÙ]™\ÝÝ×O]\ÙTÝ]O™XÛÜ™Ýš[™ËÝš[™ÏŠßJNÂˆÊˆŒˆ0­ÈÚ]H™YK\›ÙXÝ[™HÙ[XÝYHÛÛ›™XÝY\›ÙXÝ›ÝÂˆ
+ˆ\ØÜšX™YHÚ[™ÛHY[X™\Žˆ•[š\Ù^ZYÙZYÚÛÙÝ[H›YXÙHÛÙYH0­Âˆ
+ˆÛÛÜœÈ0åÈÚ^™\È‹ˆ[\]Q]Z[ÈÛÈÚXÚ]™\ˆ›ÙXÝ\ÈXÝ]™K[™ˆ
+ˆ›ÜˆH[™H]\È\ÝHš\œÝÛ™KÛÈH›ÝÈÚ[[HÜÚÙH›ÜˆBˆ
+ˆÚÛH[™HÚ[H˜[Z[™ÈÛ™HØ\›Y[[™Û™HØ\›Y[	ÜÈÛÛÝ\ˆÛÝ[‚ˆ
+ˆH[™H\È›Ý]Èš\œÝY[X™\ˆ8 %Ø^HÚ]Ø\ÈXÝX[HÙ[XÝYˆ
+‹ÂˆÛÛœÝ[™TÙ[XÝYP›ÛÛX[ŠXÝ]™P[™I‰˜[™T™XÚ\\Ë›[™ÝŒJNÂˆÊˆŒH0­È[\YY\ˆ]™\žH\ÝX›\Ú
+
+HÛÈHØ]™Y\›ÙXÝ[\È™Y™]Úˆ
+‹ÂˆÛÛœÝÜØ]™Y™]š\Ú[Û‹Ù]Ø]™Y™]š\Ú[Û—O]\ÙTÝ]J
+NÂˆÛÛœÝÝÔ›Ø™O]\ÙT™YÙ]Ýš[™ÏŠ™]ÈÙ]
+
+JNÂˆ[˜Ý[ÛˆXÚÔ›ÙXÝÝÊ›ÙXÝ•[\]Q]Z[Ê^ÂˆÛÛœÝØ[™Y]\ÏJ›ÙXÝœ™]šY]Ò[XYÙ\ß×JK™š[\Š›ÛÛX[ŠNÂˆYŠØ[™Y]\Ë›[™ÝŠ\™]\›ˆ›ÙXÝœ™]šY]Ò[XYÙ_Ø[™Y]\ÖÌ_ˆŽÂˆÛÛœÝÙ^OTÝš[™Ê›ÙXÝšY
+NÂˆÊˆÛ˜ÙHØÛÜ™YH[œÝÙ\ˆ\Èš[˜[[˜ÛY[™ÈH[X™\˜]Hˆˆ]YX[œÂˆ››È\ØX›HÝË˜]ÈHÛ\‹ˆÚXÚÈ™\Ù[˜ÙK›Ý][™\ÜËˆ
+‹ÂˆYŠÙ^H[ˆ™\ÝÝÊ\™]\›ˆ™\ÝÝÖÚÙ^WNÂˆYŠ\ÝÔ›Ø™K˜Ý\œ™[š\ÊÙ^JJ^ÂˆÝÔ›Ø™K˜Ý\œ™[˜Y
+Ù^JNÂˆ›ÚY
+\Þ[˜Ê
+OOžÂˆÊˆŒ0­ÈØÛÜ™H]™\žHØ[™Y]HÛˆÝXš™XÝ\ÛÛ][Û‹›ÝÛˆÝÈ]XÚÙ‚ˆHœ˜[YH]š[ËˆÙYH\Ü›ÙXÝ\ÝËÈ›ÜˆHYX\Ý\™[Y[È8 %ˆHÛ›[ÜÝ[šÈÚ[œÈˆ[HÙ[XÝYHXXÜ›ÈÚÝÙˆH›ÛYÛÜ›™\‚ˆ[™˜[šÙYHÛ›H\ØX›H›]^H\Ýˆ[Ú^\™HØ[\Y›ÝËˆ›Ý›Ý\ŽˆHÚ[›š[™ÈYHÚÝØ\ÈØ[™Y]HÌˆ]HÛÙYIÜÈØ\ÂˆÍÛÈHÛXÙJ
+HÛÝ[]™HZ\ÜÙY]ˆ
+‹ÂˆÛÛœÝÚÜ\ÝXØ[™Y]\ËœÛXÙJŠNÂˆÛÛœÝYX\Ý\™[Y[Î\œ˜^O™]\›•\O\[ÙˆÝÔÝ]ÏŸ[V×NÂˆ›ÜŠÛÛœÝÜ˜ÈÙˆÚÜ\Ý
+^ÂˆÛÛœÝYX\Ý\™YX]ØZ]™]È›ÛZ\ÙO™]\›•\O\[ÙˆÝÔÝ]ÏŸ[Š™\ÛÛ™OOžÂˆÛÛœÝ[XYÙOYØÝ[Y[˜Ü™X]Q[[Y[
+š[YÈŠNÈ[XYÙK˜Ü›ÜÜÓÜšYÚ[H˜[›Ûž[[Ý\ÈŽÂˆ[XYÙK›Û›ØYJ
+OOžÝž^ÂˆÛÛœÝÚ^™OTÕ×ÔÐSTWÔÒV‘NÂˆÛÛœÝØ[˜\ÏYØÝ[Y[˜Ü™X]Q[[Y[
+˜Ø[˜\ÈŠNÈØ[˜\ËÚY\Ú^™NÈØ[˜\ËšZYÚ\Ú^™NÂˆÛÛœÝÝXØ[˜\Ë™Ù]ÛÛ^
+Œ™‹ÝÚ[™XYœ™\]Y[NY_JNÂˆYŠXÝ
+\™]\›ˆ™\ÛÛ™J[
+NÂˆÝ™˜]Ò[XYÙJ[XYÙKÚ^™KÚ^™JNÂˆ™\ÛÛ™JÝÔÝ]ÊÝ™Ù][XYÙQ]JÚ^™KÚ^™JK™]KÚ^™JJNÂˆXØ]ÚÜ™\ÛÛ™J[
+__NÂˆ[XYÙK›Û™\œ›ÜJ
+OOœ™\ÛÛ™J[
+NÂˆ[XYÙKœÜ˜Ï\Ü˜ÎÂˆJNÂˆYX\Ý\™[Y[Ëœ\Ú
+YX\Ý\™Y
+NÂˆBˆÊˆÎ0­È™Y™\ˆH›]^NÈ˜[˜XÚÈÈH™\ÝÝÈ\™H\Ë]™[ˆBˆ[Ù[ÚÝ™XØ]\ÙHHÛÙYHÛˆH\œÛÛˆÝ[ÚÝÜÈHÛÙYKˆBˆÛ\\ÈÛ›H›Üˆ›ÙXÝÈÚ]›È\ØX›HÝÈ][ˆ
+‹ÂˆÛÛœÝÚÚXÙO\™Y™\œ™YÝÒ[™^
+YX\Ý\™[Y[ÊNÂˆÙ]™\ÝÝÊÝ\œ™[OŠË‹‹˜Ý\œ™[ÚÙ^WN˜ÚÚXÙOLÜÚÜ\ÝØÚÚXÙWNˆˆŸJJNÂˆJJ
+NÂˆBˆÊˆ›Ý[™È[[HØÛÜ™H[™ÎˆHÛ\]™XÛÛY\ÈHÝÈ\ÈØ[Y\‚ˆ[ˆH[Ù[ÚÝ]˜[š\Ú\Ëˆ
+‹Âˆ™]\›ˆˆŽÂˆBˆÛÛœÝÚÙ^]ÛÜ™˜[šÜËÙ]Ù^]ÛÜ™˜[šÜ×O]\ÙTÝ]O\œ˜^OÚYœÝš[™ÎÛ˜[YNœÝš[™ßOŠ×JNÂˆÛÛœÝÛ[ØÚÝ\Xœ˜\žKÙ][ØÚÝ\Xœ˜\žWO]\ÙTÝ]O\œ˜^OÝ[YNœÝš[™ÎÜÝ\™˜XÙRÚ[™œÝš[™ßOŠ×JNÂˆ\ÙQY™™XÝ
+
+
+OOžÝ›ÚY™]Ú
+‹Ø\KÚÙ^]ÛÜ™[\ÝÈŠK[ŠOœ‹šœÛÛŠ
+JK[Š
+^[ØYžÛ\ÝÏÎ\œ˜^OÚYÎœÝš[™ÎÛ˜[YOÎœÝš[™ßOŸJOOœÙ]Ù^]ÛÜ™˜[šÜÊ
+^[ØY›\Ýß×JK›X\
+\ÝOŠÚY”Ýš[™Ê\ÝšYˆŠK˜[YN”Ýš[™Ê\Ý›˜[Y_˜[šÈŠ_JJK™š[\Š\ÝO›\ÝšY
+JJK˜Ø]Ú
+
+
+OO[™Yš[™Y
+NÂˆ›ÚY™]Ú
+‹Ø\KÛ[ØÚÝ\ËÛXœ˜\žHŠK[ŠOœ‹šœÛÛŠ
+JK[Š
+^[ØYžÝ[\]\ÏÎ\œ˜^OÝ[YOÎœÝš[™ÎÜÝ\™˜XÙRÚ[™ÎœÝš[™ßOŸJOOœÙ][ØÚÝ\Xœ˜\žJ
+^[ØY[\]\ß×JK›X\
+][OOŠÝ[YN”Ýš[™Ê][K[Y_ˆŠKš[J
+KÝ\™˜XÙRÚ[™”Ýš[™Ê][KœÝ\™˜XÙRÚ[™œšYÚYY›]Š_JJK™š[\Š][OOš][K[YJJJK˜Ø]Ú
+
+
+OO[™Yš[™Y
+_K×JNÂˆÊˆ™XY[™\ÜÈ\ÈÛÛ\]Y\ˆ›ÙXÝ™]™\ˆ™XYœ›ÛHÙ]\ÛÛ\]Kˆ
+‹Âˆ[˜Ý[Ûˆ™XY[™\ÜÑ›ÜŠ›ÙXÝ•[\]Q]Z[Ë™XÚ\N”™XÚ\_[\›Ý™YÎ˜›ÛÛX[ŠN”™XY[™\ÜÞÂˆÛÛœÝÛÛ\]X›OVË‹‹›™]ÈÙ]
+[ØÚÝ\Xœ˜\žK™š[\Š][OOœ›ÙXÝXØÙ\Ó[ØÚÝ\
+][KœÝ\™˜XÙRÚ[™›ÙXÝ˜›Y\š[]JJK›X\
+][OOš][K[YJJWNÂˆ™]\›ˆ›ÙXÝ™XY[™\ÜÊØÛÛÜ“Ü[ÛœÎœ›ÙXÝ˜ÛÛÜ“Ü[Ûœß×KÚ^™SÜ[ÛœÎœ›ÙXÝœÚ^™SÜ[Ûœß×KÛÛ\]X›S[ØÚÝ\[Y\Î˜ÛÛ\]X›KÙ^]ÛÜ™˜[šÜËˆÚ\[™Ô›Ùš[\Î™]ÞTÚ\[™Ô›Ùš[\Ë›X\
+›Ùš[OOŠÚYœ›Ùš[KšY]N™œšY[™TÚ\[™Ô›Ùš[U]J›Ùš[K]J_Ýš[™Ê›Ùš[KšY
+_JJKˆ[\]TÚ\[™Ô›Ùš[RY“[X™\Š›ÙXÝœÚ\[™Õ[\]RY
+_ˆ]ÞQšY[Ô™\]Z\™YŒLKˆšXÚ[™Ð\›Ý™Y˜\›Ý™YˆØ]™YžÙY˜][ÛÛÜ’YÎœ™XÚ\OË™Y˜][ÛÛÜ’YËY˜][Ú^™RYÎœ™XÚ\OË™Y˜][Ú^™RYËY˜][[ØÚÝ\[YNœ™XÚ\OË™Y˜][[ØÚÝ\[YK[ØÚÝ\YÎœ™XÚ\OË›[ØÚÝ\YËÙ^]ÛÜ™\ÝYœ™XÚ\OËšÙ^]ÛÜ™\ÝYˆ]ÞTÚ\[™Ô›Ùš[RYœ™XÚ\OË™]ÞTÚ\[™Ô›Ùš[RYY˜][›Ùš]\™Ù]œ™XÚ\OË™Y˜][›Ùš]\™Ù]]ÞQY˜][Îœ™XÚ\OË™]ÞQY˜][ß_JNÂˆB‚ˆÊˆŒ0­ÈHÛÛ›™XÝY\›ÙXÝ[™H™\ÜYÙ[XÝYÛÛÜ’YËÜÙ[XÝYÚ^™RYËˆ
+ˆÚXÚ\™HÙYYYœ›ÛHHš[YžH[\]IÜÈ[˜X›Y˜\šX[ÈÛ™È™Y›Ü™Bˆ
+ˆHÙ[\ˆ[œÝÙ\œÈ[ž][™ËˆÛˆ[ˆ[™\ÝX›\ÚYÛÙYH]›ÙXÙY™YBˆ
+ˆY™™\™[[X™\œÈ›ÜˆHØ[YH˜XÝÈÛˆÛ™HØÜ™Y[ŽˆH[™HÛZ[YYˆ
+ˆÛÛÜœÈ0åÈˆÚ^™\È‹HÛÛÜœÈ›ÝÈØZY”XÚÈÛÛÜœÈ0­ÈH]˜Z[X›H‹[™ˆ
+ˆHÚ^™\È›ÝÈÙ™™\™Yˆ[\]HY˜][È\™Hš[YžIÜÈÚ[™Ë›ÝBˆ
+ˆÚÚXÙH8 %™\Ù[[™È[H\ÈÚÜÙ[ˆ\ÈH^XÝ˜Z[\™H]ÛÝ[X›\Úˆ
+ˆ\Ý[™ÜÈ[ˆÛÛÝ\œÈHÙ[\ˆ™]™\ˆXÚÙY‚ˆ
+‚ˆ
+ˆH[™H›ÝÈ\ÚÜÈHØ[YH™XY[™\ÜÈH›ÝÜÈËÛÈHÛÈØ[››Ýˆ
+ˆ\ØYÜ™YNˆÚÜÙ[ˆ˜XÙ]È™\ÜHÚÚXÙK[˜[œÝÙ\™YÛ™\È™\ÜÚ]\Âˆ
+ˆ]˜Z[X›Kˆ
+‹Âˆ[˜Ý[ÛˆÝ[[X\žP^\Ê›ÙXÝ•[\]Q]Z[Ë™XÚ\N”™XÚ\_[
+^ÂˆÛÛœÝ™XY[™\ÜÏ\™XY[™\ÜÑ›ÜŠ›ÙXÝ™XÚ\JNÂˆÛÛœÝ\ÚÙY[™]ÈÙ]
+™XY[™\ÜËœ]Y\Ý[ÛœÊNÂˆ™]\›ˆÂˆÛÛÜœÐÚÜÙ[ŽˆX\ÚÙYš\Ê˜ÛÛÜœÈŠKˆÚ^™\ÐÚÜÙ[ŽˆX\ÚÙYš\ÊœÚ^™\ÈŠKˆÛÛÜœÎœÙ[XÝYÛÛÜ’YË›[™ÝˆÚ^™\ÎœÙ[XÝYÚ^™RYË›[™Ýˆ]˜Z[X›PÛÛÜœÎŠ›ÙXÝ˜ÛÛÜ“Ü[Ûœß×JK™š[\ŠÛÛÜO˜ÛÛÜ‹˜]˜Z[X›JK›[™Ýˆ]˜Z[X›TÚ^™\ÎŠ›ÙXÝœÚ^™SÜ[Ûœß×JK™š[\ŠÚ^™OOœÚ^™K˜]˜Z[X›JK›[™ÝˆÝ[œšXÙY˜\šX[Ë›[™ÝˆNÂˆBˆÊˆHÚÚXÙHXYH[ˆH˜]ÚTÈH›ÙXÝ™Z[™È\ÝX›\ÚYÛÈ]\ÈØ]™YˆÈH™XÚ\H[[YYX][H˜]\ˆ[ˆ™Z[™HÙ\\˜]HœØ]™H\ÈY˜][‹ˆ
+‹Âˆ\Þ[˜È[˜Ý[Ûˆ\ÝX›\Ú
+™XÚ\N”™XÚ\KÚ[™ÙN”\X[™XÚ\OŠ^ÂˆÊˆŒÈHY\™ÙH[ÈHÝ\œ™[™XÚ\H˜]\ˆ[ˆHÛ™H\ÈÛÜÝ\™BˆØ\\™Y›ÜˆHØ[YH™X\ÛÛˆ\ÈØ]™T›ÙXÝY˜][Ëˆ
+‹ÂˆÙ]XÝ]™T™XÚ\JÝ\œ™[O˜Ý\œ™[	‰˜Ý\œ™[šYOO\™XÚ\KšYÞË‹‹˜Ý\œ™[‹‹˜Ú[™Ù_N˜Ý\œ™[
+NÂˆÙ][™T™XÚ\\ÊÝ\œ™[O˜Ý\œ™[›X\
+][OOš][KšYOO\™XÚ\KšYÞË‹‹š][K‹‹˜Ú[™Ù_Nš][JJNÂˆÊˆˆH\È\ÙYÈÔÕHÚÛHY\™ÙY™XÚ\KÛÈ]™\žHØ[™\Ù[ˆ]™\žHšY[œ›ÛHÚ]]™\ˆÛÜHHÛÜÝ\™HYØ\\™Yˆ[žHÜš]H]ˆš\™YY\ˆH™]Ù\ˆÛ™HHHX›Ý[˜ÙYšXÙHØ]™KHÛÝÈ™\]Y\Ý[™[™Âˆ]HH]]ÈÝ[HÛÜH˜XÚÈÝ™\ˆH™]Ù\ˆ˜[YKˆYX\Ý\™YˆÙ][™ÈBˆ›Ùš]ÛØ[ÈLˆYH›ÙXÝ™XY[™È	K™XØ]\ÙHHX›Ý[˜ÙYšXÙBˆÜš]HØ\œšYY[ˆÛ\ˆ\™Ù]›Ùš][™[™Y\Ý‚‚ˆHTH™\Ù\™\È[žHÙ^H]\ÈXœÙ[ÛÈÙ[™Û›HÚ]Ú[™ÙYˆØ[YBˆ[H\ÈÎL‹ÚXÚš^Y\Èœ›ÛHHØ]™Y\›ÙXÝ›Ü›NÈ\ÝX›\ÚYˆ]ÛÈ[™]Ø\ÈH[Ü™H[™Ù\›Ý\ÈÙˆHÛÈ™XØ]\ÙH]š\™\ÈÛˆ™X\›Bˆ]™\žHY]ˆ
+‹Âˆ]ØZ]™]Ú
+‹Ø\KÜ›ÙXÝ\™XÚ\\È‹ÛY]Ùˆ”ÔÕ‹XY\œÎžÈÛÛ[U\HŽˆ˜\XØ][Û‹ÚœÛÛˆŸK›ÙN’”ÓÓ‹œÝš[™ÚYžJÚYœ™XÚ\KšY˜[YNœ™XÚ\K›˜[YK[\]U\›œ™XÚ\K[\]U\›‹‹˜Ú[™Ù_J_JK˜Ø]Ú
+
+
+OO[™Yš[™Y
+NÂˆÊˆHØ]™Y\›ÙXÝ[\È™XYH\Ý™]ÚYÛ˜ÙHÛˆ[Ý[ÛÈÚ]Ý]\ÂˆHØ\™Ù\Ø^Z[™È“›È]Z[ÈØ]™YY]ˆX›Ý]H›ÙXÝÙHY\ÝˆÜš][ˆÛÛÜœÈ[™Ú^™\ÈËˆ
+‹ÂˆÙ]Ø]™Y™]š\Ú[ÛŠÝ\œ™[O˜Ý\œ™[
+ÌJNÂˆBˆÛÛœÝÜ™[Y[X™\š[™ÔÚ^™\ËÙ]™[Y[X™\š[™ÔÚ^™\×O]\ÙTÝ]J˜[ÙJNÂˆÛÛœÝÜÚ^™\Ô™[Y[X™\™YÙ]Ú^™\Ô™[Y[X™\™YO]\ÙTÝ]J˜[ÙJNÂˆÛÛœÝÙ]ÞTÚ\[™Ô›Ùš[\ËÙ]]ÞTÚ\[™Ô›Ùš[\×O]\ÙTÝ]O]ÞTÚ\[™Ô›Ùš[V×OŠ×JNÂˆÛÛœÝÙ]ÞTÚ\[™Ô›Ùš[RYÙ]]ÞTÚ\[™Ô›Ùš[RYO]\ÙTÝ]J
+NÂˆÛÛœÝÜÚ\[™Ô›Ùš[\ÓØY[™ËÙ]Ú\[™Ô›Ùš[\ÓØY[™×O]\ÙTÝ]J˜[ÙJNÂˆÛÛœÝÜÚ\[™Ô›Ùš[\Ñ\œ›Ü‹Ù]Ú\[™Ô›Ùš[\Ñ\œ›Ü—O]\ÙTÝ]JˆŠNÂˆÛÛœÝÜšXÚ[™Ð\›Ý™YÙ]šXÚ[™Ð\›Ý™YO]\ÙTÝ]J˜[ÙJNÂˆÛÛœÝÜX›\Ú[™ËÙ]X›\Ú[™×O]\ÙTÝ]J˜[ÙJNÂˆÛÛœÝÜX›\ÚY\ÜØYÙKÙ]X›\ÚY\ÜØYÙWO]\ÙTÝ]JˆŠNÂˆÛÛœÝÜÙ[XÝYX›\ÚYËÙ]Ù[XÝYX›\ÚY×O]\ÙTÝ]OÝš[™Ö×OŠ×JNÂˆÛÛœÝØ˜]Ú™XÙZ\Ù]˜]Ú™XÙZ\O]\ÙTÝ]O˜]Ú™XÙZ\[Š[
+NÂˆÊˆÍHHÚ[ˆHX›\Ú˜Z[YHÛ›HÚYÛˆØ\ÈHÙ[[˜ÙH]H™\žH›ÝÛBˆÙˆHÛ™ÈYÙHØ^Z[™ÈÝÈX[žH\Ý[™ÜÈ›™YY[Ý\ˆ][[Ûˆ‹Ú]›È™X\ÛÛ‚ˆ[™›Ý[™ÈÈÛXÚËˆœ›ÛHHÜÙˆHYÙHH˜Z[YX›\Ú[™BˆÝXØÙ\ÜÙ[Û™HÛÚÙYY[XØ[ˆ
+‹ÂˆÛÛœÝÜX›\Ú˜Z[\™\ËÙ]X›\Ú˜Z[\™\×O]\ÙTÝ]O\œ˜^OÜ›ÙXÝYœÝš[™ÎÙ\œ›ÜŽœÝš[™ßOŠ×JNÂˆÛÛœÝÝ]PZ[[™ËÙ]]PZ[[™×O]\ÙTÝ]J˜[ÙJNÂˆÛÛœÝÝ]PZ[Y\ÜØYÙKÙ]]PZ[Y\ÜØYÙWO]\ÙTÝ]JˆŠNÂˆÛÛœÝØ˜]ÚÙ^]ÛÜ™ËÙ]˜]ÚÙ^]ÛÜ™×O]\ÙTÝ]OÝš[™Ö×OŠ×JNÂˆÛÛœÝÝ]PZ[\“[ÙKÙ]]PZ[\“[ÙWO]\ÙTÝ]O˜ZHŸ›X[X[Š˜ZHŠNÂˆÛÛœÝØ]]Õ]P˜[šËÙ]]]Õ]P˜[š×O]\ÙTÝ]OÙ^]ÛÜ™\Ý[Š[
+NÂˆÛÛœÝØ]]Õ]P˜[šÒYÙ]]]Õ]P˜[šÒYO]\ÙTÝ]JˆŠNÂˆÛÛœÝÛX[X[Ù^]ÛÜ™˜[šÒYÙ]X[X[Ù^]ÛÜ™˜[šÒYO]\ÙTÝ]JˆŠNÂˆÛÛœÝØ›ØÚÚ[™Ó[Ù[Ù]›ØÚÚ[™Ó[Ù[O]\ÙTÝ]OÝ]NœÝš[™ÎÚ\ÜÝY\ÎœÝš[™Ö×NØÛÜOÎœÝš[™ß_[Š[
+NÂˆÊˆLNHHHÝX\™™[ÝÈ[œÈ™Y›Ü™HZ]\ˆ[ˆÝ]H\ÈXÛ\™YÛÈH˜XÝˆ]H[ˆ\È[ˆ›ÙÜ™\ÜÈ]™\È[ˆH™Yˆ›ÝÙˆ[HÙ]ˆ
+‹ÂˆÛÛœÝ[’[”›ÙÜ™\ÜÏ]\ÙT™YŠ˜[ÙJNÂˆÛÛœÝÜ^[Ø\›š[™ÓÜ[‹Ù]^[Ø\›š[™ÓÜ[—O]\ÙTÝ]J˜[ÙJNÂˆÛÛœÝÙ]ÞPÛÛ›™XÝYÙ]]ÞPÛÛ›™XÝYO]\ÙTÝ]J˜[ÙJNÂˆÛÛœÝÙ]ÞTÚÜÙ]]ÞTÚÜO]\ÙTÝ]JˆŠNÂˆÛÛœÝÙ]ÞPÛÛ›™XÝ[™ËÙ]]ÞPÛÛ›™XÝ[™×O]\ÙTÝ]J˜[ÙJNÂˆÛÛœÝÙ]ÞQ\œ›Ü‹Ù]]ÞQ\œ›Ü—O]\ÙTÝ]JˆŠNÂˆÛÛœÝÙ]ÞPØ]YÛÜšY\ËÙ]]ÞPØ]YÛÜšY\×O]\ÙTÝ]O]ÞPØ]YÛÜžSÜ[Û–×OŠ×JNÂˆÊˆN0­ÈH™Y‹›ÝHÝ]K[™Ù]Û›HÛ˜ÙHH™\ÜÛœÙH\ÈXÝX[BˆØ\œšYYH\Ýˆ™XY[™È]ÞPØ]YÛÜšY\Ë›[™Ý\™HÛÝ[™HHØ[YBˆÝ[HÛÜÝ\™H]œ›ÚÙH[™LÎˆÙ]™\˜[\ÚYÛœÈ™\ÛÛ™Bˆ[œÚYHÛ™HXÚË[Ùˆ[HÙYHH[\H\œ˜^H^HÙ\™HÜ™X]YÚ]ˆ[™]™\žHÛ™H\ÚÜÈ›ÜˆŒ’ÐˆYØZ[‹ˆH˜Z[Y™\]Y\Ý™]™\ˆÙ]È]ÛÈBˆXÚÙ\ˆØ[››Ý[™\\›X[™[H[\Kˆ
+‹ÂˆÛÛœÝ]™Q]ÞPØ]YÛÜšY\Ï]\ÙT™YŠ˜[ÙJNÂˆÛÛœÝÜ[™[™ÐØ]YÛÜžPÚ[™ÙKÙ][™[™ÐØ]YÛÜžPÚ[™ÙWO]\ÙTÝ]O[™[™ÐØ]YÛÜžPÚ[™Ù_[Š[
+NÂˆÛÛœÝÜÚ^™QÝZYS˜[YKÙ]Ú^™QÝZYS˜[YWO]\ÙTÝ]JˆŠNÂˆÛÛœÝÜÚ^™QÝZYTÝ]\ËÙ]Ú^™QÝZYTÝ]\×O]\ÙTÝ]JˆŠNÂˆÛÛœÝÛÛ[X[™Ù[\‘]O[[ÂˆÛÛœÝÜÚYX˜\•\ØYÙKÙ]ÚYX˜\•\ØYÙWO]\ÙTÝ]OÝ\ÙY›[X™\ŽÛ[Z]›[X™\Ÿ_[Š[
+NÂˆÊˆÍˆ0­ÈHÛØ[\ÈÙ™ˆ[›\ÜÈHÙ[\ˆ\›™Y]Û‹ˆ›ÝXÙ\È]Ø[‚ˆ\X\ˆ8 %\™H[™HX›\Ú™XÙZ\8 %™XY\ÈÛ™H˜[YKÛÈ]\È™]™\‚ˆ[‹\ÚÝÛ‹ˆ
+‹ÂˆÛÛœÝÛ\Ý[™ÑÛØ[Ù]\Ý[™ÑÛØ[O]\ÙTÝ]O\Ý[™ÑÛØ[[Š[
+NÂˆÛÛœÝÙÛØ[˜]Ú\ËÙ]ÛØ[˜]Ú\×O]\ÙTÝ]OX›\ÚY˜]Ú×OŠ×JNÂˆ\ÙQY™™XÝ
+
+
+OOžÚYŠÚYÛ™Y[ˆOO]YJ\™]\›ŽÂˆ›ÚY™]Ú
+‹Ø\KÜÙ[\‹\™Y™\™[˜Ù\ÈŠK[Š™\ÜÛœÙOOœ™\ÜÛœÙKšœÛÛŠ
+JK[Š
+™\Ý[žÛ\Ý[™ÑÛØ[Î“\Ý[™ÑÛØ[JOOžÂˆYŠ™\Ý[›\Ý[™ÑÛØ[Ë™[˜X›Y
+\Ù]\Ý[™ÑÛØ[
+™\Ý[›\Ý[™ÑÛØ[
+_JK˜Ø]Ú
+
+
+OO[™Yš[™Y
+NÂˆKÜÚYÛ™Y[—JNÂˆ\ÙQY™™XÝ
+
+
+OOžÚYŠ[\Ý[™ÑÛØ[
+\™]\›ŽÂˆ›ÚY™]Ú
+‹Ø\KØ˜]Ú\ÈŠK[Š™\ÜÛœÙOOœ™\ÜÛœÙKšœÛÛŠ
+JK[Š
+™\Ý[žØ˜]Ú\ÏÎ”X›\ÚY˜]Ú×_JOOžÂˆÙ]ÛØ[˜]Ú\Ê™\Ý[˜˜]Ú\ß×J_JK˜Ø]Ú
+
+
+OO[™Yš[™Y
+NÂˆKÛ\Ý[™ÑÛØ[˜]Ú™XÙZ\JNÂˆÛÛœÝÛØ[Û™O[\Ý[™ÑÛØ[ÜX›\ÚY\Ô\š[Ù
+ÛØ[˜]Ú\Ë\Ý[™ÑÛØ[
+NŒÂˆÛÛœÝÜ™\\™Y[ØÚÝ\ÛÝ[ËÙ]™\\™Y[ØÚÝ\ÛÝ[×O]\ÙTÝ]O™XÛÜ™Ýš[™Ë[X™\ŠßJNÂˆÛÛœÝÚ[XYÙTÝ\\œ›Ü‹Ù][XYÙTÝ\\œ›Ü—O]\ÙTÝ]JˆŠNÂˆÛÛœÝÛZ\ÜÚ[™ÔÝÑ˜YYËÙ]Z\ÜÚ[™ÔÝÑ˜YY×O]\ÙTÝ]OÝš[™Ö×OŠ×JNÂˆÛÛœÝÝ]T[ÙRYËÙ]]T[ÙRY×O]\ÙTÝ]OÙ]Ýš[™ÏŠ™]ÈÙ]
+
+JNÂ‚ˆ\ÙQY™™XÝ
+
+
+OOžÚYŠ[XYÙTÝ\\œ›Ü‰‰˜[Ü™X]Y\Ý[™ÜÒ]™R[XYÙ\Ê
+J\Ù][XYÙTÝ\\œ›ÜŠˆŠ_KÚ[XYÙTÝ\\œ›Ü‹š[YžR[XYÙR[™XÙ\Ëš[YžR[XYÙTÙ[XÝ[ÛœË™\\™Y[ØÚÝ\ÛÝ[Ë˜Y×JNÂˆÊˆMH\ÈØZ]Y›Üˆš[š\Ú\ÙOOOH™]ÞH‹H\ÙHH\™]™\ˆ[\œÎ‚ˆÛÛ[YUÑ]ÞQ]Z[Ê
+HÙ]È]È™]Z[Èˆ[™Û›HHT“ØZYÝ\Ú\ÙK‚ˆÛÈ™[Ü[š[™ÈHØ]™Y˜]ÚYH]ÞHØ]YÛÜžH›ÜÝÛˆÚ]›ÈÜ[ÛœÈÂˆÚÛÜÙHœ›ÛK™XØ]\ÙHHY™™XÝ]ØYÈ[H™]™\ˆ˜[‹ˆ]ØZ]È›ÜˆBˆ[™È]XÝX[H™YYÈ[œÝXYHH\Ý[™ÈÚ]]ÞH]Z[ÈÛˆ]ˆ
+‹Âˆ\ÙQY™™XÝ
+
+
+OOžÚYŠ]ÞPØ]YÛÜšY\Ë›[™Ý
+\™]\›ŽØÛÛœÝ™\ÝÜ™YYš[\Ë™š[™
+š[OO™š[K™]ÞJOË™]ÞNÚYŠ\™\ÝÜ™Y
+\™]\›ŽÝ›ÚY™\ÛÛ™Q]ÞSÜ[ÛœÊ™\ÝÜ™Y™\ÝÜ™Y^Û›Û^RY
+K˜Ø]Ú
+
+
+OO[™Yš[™Y
+_KÙ]ÞPØ]YÛÜšY\Ë›[™Ýš[\×JNÂˆ\ÙQY™™XÝ
+
+
+OOžÚYŠš[š\Ú\ÙHOOH›[ØÚÝ\ÈŸš[YžR[XYÙR[™XÙ\Ë›[™ÝØš™XÝšÙ^\Êš[YžR[XYÙTÙ[XÝ[ÛœÊK›[™Ý
+\™]\›ŽØÛÛœÝÝZYO\›ÙXÝÝÑÝZYJ[\]Q]Z[ÏË˜›Y\š[]_ˆ‹˜YË™š[™
+˜YO™˜Yœš[YžR[XYÙ\ÏË›[™Ý
+OËœš[YžR[XYÙ\ÏË›[™Ý
+KY˜][ÏSØš™XÝ™œ›ÛQ[šY\Ê˜YË™š[\Š˜YO™˜YšY	‰™˜YœÝ]\ÏOOHÜ™X]Y‰‰™˜Yœš[YžR[XYÙ\ÏË›[™Ý
+K›X\
+˜YO–Ù˜YšYK\œ˜^K™œ›ÛJÛ[™Ý“X]›Z[ŠÝZYK˜ÛÝ[˜Yœš[YžR[XYÙ\ÈK›[™Ý
+_K
+Ë[™^
+OOš[™^
+WJJNÚYŠØš™XÝšÙ^\ÊY˜][ÊK›[™Ý
+\Ù]š[YžR[XYÙTÙ[XÝ[ÛœÊY˜][Ê_KÙš[š\Ú\ÙKš[YžR[XYÙR[™XÙ\Ë›[™Ýš[YžR[XYÙTÙ[XÝ[ÛœË˜YË[\]Q]Z[ÏË˜›Y\š[]WJNÂˆ\ÙQY™™XÝ
+
+
+OOžØÛÛœÝÝXÚYJ
+OOžÜÙ[\ÚÜÙTX›\Ú˜Ý\œ™[]Y_NÝÚ[™ÝË˜Y]™[\Ý[™\Š™ÛÛYK\X›\Ú\Ù[XÝ[Û‹]ÝXÚY‹ÝXÚY
+NÜ™]\›Š
+OOÚ[™ÝËœ™[[Ý™Q]™[\Ý[™\Š™ÛÛYK\X›\Ú\Ù[XÝ[Û‹]ÝXÚY‹ÝXÚY
+_K×JNÂˆ\ÙQY™™XÝ
+
+
+OOžØÛÛœÝÙ[XÝJ]™[‘]™[
+OOœÙ]Ù[XÝYX›\ÚYÊ
+]™[\ÈÝ\ÝÛQ]™[Ýš[™Ö×OŠK™]Z[×JK™]žOJ]™[‘]™[
+OOžØÛÛœÝÛY[YJ]™[\ÈÝ\ÝÛQ]™[Ýš[™ÏŠK™]Z[ØÛÛœÝ\ÚYÛYš[\Ë™š[™
+š[OO™š[KšYOOXÛY[Y
+NÚYŠ\ÚYÛŠ]›ÚY[‘˜YÊÙ\ÚYÛ—KYJ_NÝÚ[™ÝË˜Y]™[\Ý[™\Š™ÛÛYK\X›\Ú\Ù[XÝ[Ûˆ‹Ù[XÝ
+NÝÚ[™ÝË˜Y]™[\Ý[™\Š™ÛÛYK\™]žK[\Ý[™È‹™]žJNÜ™]\›Š
+OOžÝÚ[™ÝËœ™[[Ý™Q]™[\Ý[™\Š™ÛÛYK\X›\Ú\Ù[XÝ[Ûˆ‹Ù[XÝ
+NÝÚ[™ÝËœ™[[Ý™Q]™[\Ý[™\Š™ÛÛYK\™]žK[\Ý[™È‹™]žJ__KÙš[\Ë˜Y×JNÂ‚ˆÛÛœÝ[\]SØYYH[\]Q]Z[ÈOOH[ÂˆÛÛœÝ›ÙXÝÙ[XÝYH›ÛÛX[ŠXÝ]™T™XÚ\JNÂˆÛÛœÝ™XYHHÛÛ›™XÝY	‰ˆ›ÙXÝÙ[XÝY	‰ˆ[\]SØYY	‰ˆš[\Ë›[™ÝˆÂˆÛÛœÝ\ÚYÛœÔ™XYO]\ÙSY[[Ê
+
+OO™š[\Ë™š[\Šš[OO›ÛÛX[Šš[KÚY	‰™š[KšZYÚ	‰™š[KœY[™ÔÝ]\ÈOOH˜ÚXÚÚ[™ÈŠJK›[™ÝÙš[\×JNÂˆÛÛœÝ\ÚYÛœÔ™\\š[™ÏSX]›X^
+š[\Ë›[™ÝY\ÚYÛœÔ™XYJNÂˆÛÛœÝ\ÚYÛœÑš[š\ÚYYš[\Ë›[™ÝŒ	‰™\ÚYÛœÔ™\\š[™ÏOOLÂˆÊˆLHH\ÚYÛœÈÝ[™Z[™ÈYX\Ý\™YÙ\™H›ÝÛ™HÙˆH™X\ÛÛœÈ\È]Û‚ˆÛÝ[˜[YKÛÈ]Ý^YY[˜X›Y[™HÛXÚÈ™]ÈH›ØÚÚ[™È[Ù[™XY[™Âˆ•ØZ][[]™\žH\ÚYÛˆš[š\Ú\ÈØY[™È[™ÚXÚÚ[™È‹ˆH]Ûˆ\ÈBˆ[™ÈÚH\ÈÛÚÚ[™È]È]ÚÝ[Ø^HÛÈ]Ù[‹ˆ
+‹ÂˆÛÛœÝZ\ÜÚ[™Ô™\]Z\™[Y[HXÛÛ›™XÝYÈÛÛ›™XÝš[YžHš\œÝˆˆ\›ÙXÝÙ[XÝYÈÚÛÜÙHÜˆYHØ]™Y›ÙXÝˆˆ][\]SØYYÈÛÛ›™XÝ]Èš[YžH[\]Hˆˆš[\Ë›[™ÝOOHÈY]X\ÝÛ™H\ÚYÛˆˆˆY\ÚYÛœÑš[š\ÚYÈÚXÚÚ[™È	Ù\ÚYÛœÔ™\\š[™ßH	Ù\ÚYÛœÔ™\\š[™ÏOOLOÈ™\ÚYÛˆŽˆ™\ÚYÛœÈŸWLŒ˜ˆˆŽÂˆÛÛœÝÝ[Ú^™HH\ÙSY[[Ê
+
+HOˆš[\Ëœ™YXÙJ
+Ý[Kš[JHOˆÝ[H
+Èš[KœÚ^™K
+KÙš[\×JNÂˆÛÛœÝ›ÙÜ™\ÜÒ[™^HÛÜšÙ›ÝÔÝ\OOH™š[š\ÚˆÈš[š\Ú\ÙOOOH™]Z[ÈÍN™š[š\Ú\ÙOOOH™]ÞHÍŽ™š[š\Ú\ÙOOOH›[ØÚÝ\ÈÍÎŽˆÛÜšÙ›ÝÔÝ\OOH˜ÛÛ›™XÝÌÛÜšÙ›ÝÔÝ\OOHœÙ]\ÌNÛÜšÙ›ÝÔÝ\OOH™\ÚYÛœÈÌŽŠ™Y›YÚÜ[Ÿ[›š[™ÊOÍŒÎÂˆËÈHÝZYY˜XÝÜžH[Ø^\ÈÜ[œÈÛˆH™X[ÛÛ›™XÝ[ÛˆÝ\ˆH™]\›š[™ÂˆËÈ\Ú›Ø\™™[XZ[œÈ]˜Z[X›H\ÈHÛÛ\Û™[]]\Ý™]™\ˆ™\XÙHÝ\BˆËÈÜˆ\X\ˆÚ[ˆHÙ[\ˆ\Ù\È˜XÚÈœ›ÛHH›ÙXÝÝ\‚ˆÛÛœÝ™]\›š[™ÒÛYOY˜[ÙNÂˆÊˆŒˆ0­ÈHÚYX˜\ˆ][ÝHØ\È™]ÚYÛ˜ÙHÛˆ[Ý[[™™]™\ˆYØZ[‹ÛÈY\‚ˆÜ™X][™È˜YÈ]Ù\ÚÝÚ[™ÈHÛ[X™\ˆ›ÜˆH™\ÝÙˆHÙ\ÜÚ[Ûˆ8 %ˆ]™XYŒMˆÈLˆ[[YYX][HY\ˆÜ[™[™ÈÛÈ\Ý[™ÜËˆ[\YÚ[‚ˆ˜YÈ\™HÜ™X]YÛÈHšYÝ\™HX]Ú\ÈÚ]Ø\È\ÝÜ[ˆ
+‹ÂˆÛÛœÝÝ\ØYÙT™]š\Ú[Û‹Ù]\ØYÙT™]š\Ú[Û—O]\ÙTÝ]J
+NÂˆ\ÙQY™™XÝ
+
+
+OOžÙ™]Ú
+‹Ø\KÝ\ØYÙHŠK[Š\Þ[˜È™\ÜÛœÙOOžÚYŠ\™\ÜÛœÙK›ÚÊ\™]\›ˆ[Ü™]\›ˆ™\ÜÛœÙKšœÛÛŠ
+H\È›ÛZ\ÙOÝ\ØYÙOÎžÙ˜YÏÎ›[X™\ŸNÜ[ÎžÙ˜YÏÎ›[X™\Ÿ_OŸJK[Š™\Ý[OžÚYŠ™\Ý[Ë\ØYÙI‰œ™\Ý[œ[Š\Ù]ÚYX˜\•\ØYÙJÝ\ÙY“[X™\Š™\Ý[\ØYÙK™˜Yß
+K[Z]“[X™\Š™\Ý[œ[‹™˜YßL
+_J_JK˜Ø]Ú
+
+
+OO[™Yš[™Y
+_KÝ\ØYÙT™]š\Ú[Û—JNÂˆÛÛœÝ[™T›ÙXÝÛÝ[XXÝ]™P[™OÓX]›X^
+K[™T™XÚ\\Ë›[™Ý
+NŒNÂˆÛÛœÝ[‘˜YÔ™[XZ[š[™Ï\ÚYX˜\•\ØYÙOÓX]›X^
+ÚYX˜\•\ØYÙK›[Z]\ÚYX˜\•\ØYÙK\ÙY
+N›[ÂˆÛÛœÝ˜]Ú\ÚYÛ“[Z]SX]›Z[ŠPVÐUÒÑ’STË[‘˜YÔ™[XZ[š[™ÏOO[[ÓPVÐUÒÑ’STÎ“X]™›ÛÜŠ[‘˜YÔ™[XZ[š[™ËØ[™T›ÙXÝÛÝ[
+JNÂˆÛÛœÝ™\]Y\ÝY\Ý[™ÐÛÝ[SX]›X^
+š[\Ë›[™Ý
+˜[™T›ÙXÝÛÝ[SØš™XÝ˜[Y\Ê[™T]X[]QXÚ\Ú[ÛœÊK™š[\Š˜[YOO˜[YOOOH™^ÛYHŠK›[™Ý
+NÂˆÛÛœÝY][Û˜[\ÚYÛœÐ]˜Z[X›OSX]›X^
+˜]Ú\ÚYÛ“[Z]Yš[\Ë›[™Ý
+NÂˆÊˆÌŽ0­È\Èš[\ˆ\ÙYÈ™H[›[™Y›ÜˆHXÝ]™H›ÙXÝÛ›KÚXÚ\ÂˆÚHH[™HšXÙYÛ™H›ÙXÝ[™YÛ›Ü™YH™\Ýˆ]™\žH›ÙXÝ[ˆBˆ[™H\È]ÈÝÛˆ[\]KÛÛÝ\œÈ[™Ú^™\ËÛÈH[H\ÈÈ™BˆØ[X›H\ˆ›ÙXÝ˜]\ˆ[ˆÛÜÙYÝ™\ˆHXÝ]™HÛ™Kˆ™Z]š[Ý\ˆ\Âˆ[˜Ú[™ÙY8 %HÝX\™È™[ÝÈ\™HHÜšYÚ[˜[Ëˆ
+‹Âˆ[˜Ý[Ûˆ˜\šX[Ñ›ÜŠ]Z[Î•[\]Q]Z[ß[[™Yš[™YÛÛÜ’YÎ›[X™\–×KÚ^™RYÎ›[X™\–×J^ÂˆÛÛœÝ˜\šX[ÏY]Z[ÏË˜\šX[ß×NÂˆÛÛœÝžPÛÛÜHY]Z[ÏË˜ÛÛÜ“Ü[ÛœÏË›[™ÝÝ˜\šX[ÎŠ
+
+OOžØÛÛœÝÙ[XÝY[™]ÈÙ]
+ÛÛÜ’YÊNÜ™]\›ˆ˜\šX[Ë™š[\Š˜\šX[O˜\šX[˜ÛÛÜ’YO[[Ù[XÝYš\Ê˜\šX[˜ÛÛÜ’Y
+J_JJ
+NÂˆÊˆ˜]Ú\ÈØ]™Y™Y›Ü™HÚ^™\ÈÙ\™HÙ[XÝX›H™\ÝÜ™HH[\]Q]Z[ÈÚ]›ÂˆÚ^™SÜ[ÛœË[™Z\ˆ˜\šX[ÈØ\œžH›ÈÚ^™RY8 %ÛÈ^H˜[Ý˜ZYÚˆ›ÝYÚ\™H[™™Z]™H^XÝH\È^HY™Y›Ü™Kˆ
+‹ÂˆYŠY]Z[ÏËœÚ^™SÜ[ÛœÏË›[™Ý
+\™]\›ˆžPÛÛÜŽÂˆÛÛœÝÚÜÙ[[™]ÈÙ]
+Ú^™RYÊNÂˆÊˆ™]™\ˆ]HÚ^™H^\È[\HH˜\šX[Ù]ˆ[ˆ[\HÙ[XÝ[ÛˆÛÝ[ˆšXÙH›Ý[™È[™[˜X›H›Ý[™ÈÛˆHš[YžH˜YÚXÚ\ÈHÛ™Bˆ˜Z[\™H\™H]ÛÜÝÈ[Û™^H˜]\ˆ[ˆÛÚÜÈÜ›Û™Ëˆ
+‹ÂˆYŠXÚÜÙ[‹œÚ^™J\™]\›ˆžPÛÛÜŽÂˆÛÛœÝžTÚ^™OXžPÛÛÜ‹™š[\Š˜\šX[O˜\šX[œÚ^™RYO[[ÚÜÙ[‹š\Ê˜\šX[œÚ^™RY
+JNÂˆ™]\›ˆžTÚ^™K›[™ÝØžTÚ^™N˜žPÛÛÜŽÂˆBˆÛÛœÝšXÙY˜\šX[Ï]\ÙSY[[Ê
+
+OO˜\šX[Ñ›ÜŠ[\]Q]Z[ËÙ[XÝYÛÛÜ’YËÙ[XÝYÚ^™RYÊKÝ[\]Q]Z[ËÙ[XÝYÛÛÜ’YËÙ[XÝYÚ^™RY×JNÂˆ\ÙQY™™XÝ
+
+
+OOžÚYŠ][\]Q]Z[ÏËšY\Ù[XÝYÛÛÜ’YË›[™Ý
+\™]\›ŽÝÚ[™ÝË›ØØ[ÝÜ˜YÙKœÙ]][JÛÛYKXÛÛÜœËIÝ[\]Q]Z[ËšYX”ÓÓ‹œÝš[™ÚYžJÙ[XÝYÛÛÜ’YÊJ_KÝ[\]Q]Z[ÏËšYÙ[XÝYÛÛÜ’Y×JNÂˆ\ÙQY™™XÝ
+
+
+OOžÚYŠ][\]Q]Z[ÏËšY\Ù[XÝYÚ^™RYË›[™Ý
+\™]\›ŽÝÚ[™ÝË›ØØ[ÝÜ˜YÙKœÙ]][JÛÛYK\Ú^™\ËIÝ[\]Q]Z[ËšYX”ÓÓ‹œÝš[™ÚYžJÙ[XÝYÚ^™RYÊJ_KÝ[\]Q]Z[ÏËšYÙ[XÝYÚ^™RY×JNÂˆÛÛœÝÜ™X]Y˜YÛÝ[Y˜YË™š[\Š˜YO™˜YœÝ]\ÏOOHÜ™X]YŠK›[™Ý]PÛÝ[Yš[\Ë™š[\Šš[OO™š[K]Kš[J
+JK›[™Ý]ÞT™XYPÛÝ[Yš[\Ë™š[\Šš[OO™]ÞT™\]Z\™YÛÛ\]Jš[K™]ÞJJK›[™ÝÂˆÛÛœÝÝÑPÛÝ[Yš[\Ë™š[\Šš[OOžÂˆÛÛœÝ]Z[Ï][\]Q]Z[Ëš[UÚYS[X™\Šš[KÚY
+NÂˆYŠY]Z[ßYš[UÚY
+\™]\›ˆ˜[ÙNÂˆÊˆLLˆHH›Ý\ÛÜHÙˆHØØ[H[Kˆ
+‹ÂˆÛÛœÝÜØØ[Kš[ÚYO\š[\™Ù]›ÜŠ]Z[ÊNÂˆYŠ\š[ÚY\ØØ[J\™]\›ˆ˜[ÙNÂˆÛÛœÝ]X[]O\š[YžQJš[UÚYš[ÚYØØ[JNÂˆ™]\›ˆ›ÛÛX[Š]X[]I‰œ]X[]K™OÌ
+NÂˆJK›[™ÝÂˆÛÛœÝ™XÛÛ[Y[™Y^[Ú^™O]\ÙSY[[Ê
+
+OOœš[\™Ù]›ÜŠ[\]Q]Z[ÊKÝ[\]Q]Z[×JNÂˆÛÛœÝ™[ÝÔ™XÛÛ[Y[™Y^[Ï]\ÙSY[[Ê
+
+OOžÚYŠ\™XÛÛ[Y[™Y^[Ú^™KÚY\™XÛÛ[Y[™Y^[Ú^™KšZYÚ
+\™]\›ˆ×NÜ™]\›ˆš[\Ë™š[\Šš[OO›ÛÛX[Šš[KÚY	‰™š[KšZYÚ	‰Šš[KÚY™XÛÛ[Y[™Y^[Ú^™KÚYš[KšZYÚ™XÛÛ[Y[™Y^[Ú^™KšZYÚ
+JJ_KÙš[\Ë™XÛÛ[Y[™Y^[Ú^™WJNÂˆÛÛœÝÜš]XØ[Qš[\Ï]\ÙSY[[Ê
+
+OOžØÛÛœÝÜØØ[Kš[ÚYO\š[\™Ù]›ÜŠ[\]Q]Z[ÊNÚYŠ\ØØ[_\š[ÚY
+\™]\›ˆ×NÜ™]\›ˆš[\Ë›X\
+š[OOŠÙš[KN™š[KÚYÜš[YžQJš[KÚYš[ÚYØØ[JOË™_ŒJJK™š[\Š][OOš][K™OŒ	‰š][K™OŒMJ_KÙš[\Ë[\]Q]Z[×JNÂˆÊˆNH0­È[™PÛÛÜ”›ÙXÝÈ[X™\˜][HÛÈÛ›HHÕTˆ›ÙXÝËÛÂˆ™XY[™È][Û™HÚÚ\YÚXÚ]™\ˆ›ÙXÝØ\ÈÜ[ˆH[™HÚX›[™È™]Úˆ]š[È]Ø]™H\Ú[[HY\ˆš[™HÙXÛÛ™ËÚXÚH›ÙXÝØYˆYX\Ý\™Y]‹KLË\ÈØ[ˆ^ÙYYˆZ]\ˆØ^HH›ÙXÝ˜[š\ÚYœ›ÛHHBˆÚXÚÈÚ]›Ý[™ÈØZYˆHØ[Ý›ÝYÚ›YÙÙYH\ÚYÛˆ\È˜™[ÝÈBˆ™XÛÛ[Y[™YÚ^™H›ÜˆÚ[[ˆÛÙYHˆ[ˆHÛË\›ÙXÝ[™H[™™]™\‚ˆY[[Û™YHÜ™]Û™XÚÈ][ˆÛ™HX\]™\žH›ÙXÝ[ˆH[™Kˆ
+‹ÂˆÊˆ0­È›Ý[™žHXØÙ\[˜ÙH[ˆKˆHÝË\™\ÛÛ][Ûˆ˜[›™\ˆÛ\‚ˆ‘ÛÛYHÚ[Y[YžH]™\žHY™™XÝY\ÚYÛˆÛÈ[ÝHØ[ˆ™\XÙH]Ü‚ˆÛÛ[YH[ž]Ø^HˆH[™[ˆY[YšYY›Ý[™Ë™XØ]\ÙHHÚÛHBˆ™]šY]ÈØ\ÈØ]YÛˆXÝ]™P[™KˆÛÈXÚÚ[™\ÚYÛœÈ]LMLMÛˆBˆÛÙYH˜Z\ÙYH˜[›™\ˆ[™Ù™™\™Y›È[™[›È\‹Y\ÚYÛˆ˜[Z[™È[™›Âˆ›ØÙYYÜˆ^ÛYHÛÛ›Û‚‚ˆ]\ÈH˜][^XÝHHH˜[›™\ˆ›ÛZ\Ú[™ÈHÛÛ™š\›X][ÛˆÝ\ˆ]™]™\ˆÛÛY\ÈHÝ[™\Ù[ÛˆHÚ[™ÛK\›ÙXÝ]Y\ˆ™Z[™Âˆš^Y›Üˆ[™\ËˆH˜]Ú\È›ÙXÝÈÚ]\ˆÜˆ›Ý]\ÈH[™KÛÂˆHÚXÚÈ›ÛÝÜÈH˜]Ú˜]\ˆ[ˆH[™Kˆ
+‹ÂˆÛÛœÝ›ÙXÝÒ[˜]Ú]\ÙSY[[Ê
+
+OOŠXÝ]™P[™I‰˜[™T™XÚ\\Ë›[™ÝØ[™T™XÚ\\Î˜XÝ]™T™XÚ\OÖØXÝ]™T™XÚ\WN–×JKØXÝ]™P[™K[™T™XÚ\\ËXÝ]™T™XÚ\WJNÂˆÛÛœÝ[™T›ÙXÝ]Z[Ï]\ÙSY[[Ê
+
+OOžÂˆÛÛœÝX\”™XÛÜ™Ýš[™Ë[\]Q]Z[Ï^Ë‹‹˜[™PÛÛÜ”›ÙXÝßNÂˆYŠXÝ]™T™XÚ\OËšY	‰[\]Q]Z[Ê[X\ØXÝ]™T™XÚ\KšYO][\]Q]Z[ÎÂˆ™]\›ˆX\ÂˆKØ[™PÛÛÜ”›ÙXÝËXÝ]™T™XÚ\K[\]Q]Z[×JNÂˆÊˆ˜[YYÛÈHÙ[\ˆX\›œÈH›ÙXÝÛÝ[›Ý™HÚXÚÙY[œÝXYÙˆ]ˆ]ZY]H›Ý\X\š[™Ëˆ
+‹ÂˆÛÛœÝ[™T›ÙXÝÕ[˜ÚXÚÙY]\ÙSY[[Ê
+
+OOœ›ÙXÝÒ[˜]Ú™š[\Š™XÚ\OOˆX[™T›ÙXÝ]Z[ÖÜ™XÚ\KšYJK›X\
+™XÚ\OOœ™XÚ\K›˜[YJKÜ›ÙXÝÒ[˜]Ú[™T›ÙXÝ]Z[×JNÂˆÊˆNH0­È[[˜X›Y˜\šX[È™]šY]ÙYˆØ\ÈHÔSˆ›ÙXÝ	ÜÈÛÝ[ÛˆBˆ[Ù[]Y\ÝÙ™™\™YÈÜ™X]H˜YÈXÜ›ÜÜÈÛÈ›ÙXÝËˆBˆÜ™]Û™XÚÉÜÈNÙ\™H™]™\ˆÛÝ[Y[™™]™\ˆÚÝÛ‹ˆÝ[YXÜ›ÜÜÈBˆ[™KÚ]H\‹\›ÙXÝÜ]˜[YY™\ÚYH]ÛÈH[X™\ˆØ[ˆ™BˆÚXÚÙY˜]\ˆ[ˆ\ÝYˆ
+‹ÂˆÊˆNH0­ÈH›ÝÈ™XY“›Û™HY]8 %Ü[Û˜[ˆÚ]H[™[\™XÝH™[™X]]ˆØ^Z[™È”Ø]™Y›Üˆ\È›ÙXÝˆÝ™\ˆÛÈÚÜÙ[ˆØÙ[™\Ëˆ›ÝÙ\™HYHÙ‚ˆY™™\™[[™ÜÈHH›ÝÈÛÝ[Y[ØÚÝ\È‘S‘T‘QH[™[ÚÝÙYØÙ[™\ÂˆÒÔÑSˆH[™›Ý[™ÈÛˆØÜ™Y[ˆØZYÛËÛÈHÝ[[X\žHÚ[\HÛÚÙYÜ›Û™Ë‚ˆÛ™H[\ˆ[œÝÙ\œÈÚ]›Ý˜XÝË[™]Ø[ˆ›ÈÛ™Ù\ˆØ^H››Û™HˆÚ[BˆØÙ[™\È\™HØ]™Yˆ
+‹Âˆ[˜Ý[ÛˆØÙ[™\ÐÚÜÙ[‘›ÜŠ™XÚ\N”™XÚ\K\ÐXÝ]™N˜›ÛÛX[Š^ÂˆYŠ\ÐXÝ]™J\™]\›ˆ
+Ú\™Y[ØÚÝ\ÏË[YOOO[[ØÚÝ\[YOÜÚ\™Y[ØÚÝ\ËšYÎ–×JOË›[™Ý
+XÝ]™T™XÚ\OË›[ØÚÝ\Yß×JK›[™ÝÂˆ™]\›ˆ
+[™S[ØÚÝ\ÚÚXÙ\ÖÜ™XÚ\KšYOËšYß™XÚ\K›[ØÚÝ\Yß×JK›[™ÝÂˆBˆ[˜Ý[Ûˆ[ØÚÝ\›ÝÕ˜[YJÜ™X]Y›[X™\‹ØÙ[™\Î›[X™\Š^ÂˆYŠÜ™X]Y	‰œØÙ[™\Ê\™]\›ˆ	ØÜ™X]YH	ØÜ™X]YOOLOÈ›[ØÚÝ\Žˆ›[ØÚÝ\ÈŸHœ›ÛH	ÜØÙ[™\ßH	ÜØÙ[™\ÏOOLOÈœØÙ[™HŽˆœØÙ[™\ÈŸXÂˆYŠÜ™X]Y
+\™]\›ˆ	ØÜ™X]YH	ØÜ™X]YOOLOÈ›[ØÚÝ\Žˆ›[ØÚÝ\ÈŸXÂˆYŠØÙ[™\Ê\™]\›ˆ	ÜØÙ[™\ßH	ÜØÙ[™\ÏOOLOÈœØÙ[™HŽˆœØÙ[™\ÈŸHÚÜÙ[ˆ8 %›ÝÜ™X]YY]Âˆ™]\›ˆ“›Û™HY]8 %Ü[Û˜[ŽÂˆBˆÛÛœÝØ\Z[™Ð˜[šÕÐ[™KÙ]\Z[™Ð˜[šÕÐ[™WO]\ÙTÝ]J˜[ÙJNÂˆ\Þ[˜È[˜Ý[Ûˆ\P˜[šÕÐ[™J
+^ÂˆYŠX]]Õ]P˜[šÒYX[™T™XÚ\\Ë›[™Ý
+\™]\›ŽÂˆÙ]\Z[™Ð˜[šÕÐ[™JYJNÂˆž^ÂˆÛÛœÝ\™Ù]ÏX[™T™XÚ\\Ë™š[\Š™XÚ\OOœ™XÚ\KšÙ^]ÛÜ™\ÝYOOX]]Õ]P˜[šÒY
+NÂˆ]ØZ]›ÛZ\ÙK˜[
+\™Ù]Ë›X\
+™XÚ\OO™™]Ú
+‹Ø\KÜ›ÙXÝ\™XÚ\\È‹ÛY]Ùˆ”ÔÕ‹XY\œÎžÈÛÛ[U\HŽˆ˜\XØ][Û‹ÚœÛÛˆŸK›ÙN’”ÓÓ‹œÝš[™ÚYžJÚYœ™XÚ\KšY˜[YNœ™XÚ\K›˜[YK[\]U\›œ™XÚ\K[\]U\›Ù^]ÛÜ™\ÝY˜]]Õ]P˜[šÒYJ_JK˜Ø]Ú
+
+
+OO[™Yš[™Y
+JJNÂˆÙ][™T™XÚ\\ÊÝ\œ™[O˜Ý\œ™[›X\
+™XÚ\OOŠË‹‹œ™XÚ\KÙ^]ÛÜ™\ÝY˜]]Õ]P˜[šÒYJJJNÂˆÙ]XÝ]™T™XÚ\JÝ\œ™[O˜Ý\œ™[ÞË‹‹˜Ý\œ™[Ù^]ÛÜ™\ÝY˜]]Õ]P˜[šÒYN˜Ý\œ™[
+NÂˆÙ]]PZ[Y\ÜØYÙJ\ÈÙ^]ÛÜ™˜[šÈ›ÝÈ\Y\ÈÈ[	Ø[™T™XÚ\\Ë›[™ÝH›ÙXÝÈ[ˆ\È[™K˜
+NÂˆYš[˜[^ÜÙ]\Z[™Ð˜[šÕÐ[™J˜[ÙJ_BˆBˆÛÛœÝ[™U˜\šX[ÛÝ[Ï]\ÙSY[[Ê
+
+OOžÂˆÛÛœÝ\”›ÙXÝJXÝ]™P[™I‰˜[™T™XÚ\\Ë›[™ÝŒOØ[™T™XÚ\\Î˜XÝ]™T™XÚ\OÖØXÝ]™T™XÚ\WN–×JK›X\
+™XÚ\OOžÂˆÛÛœÝ]Z[ÏX[™T›ÙXÝ]Z[ÖÜ™XÚ\KšYNÂˆÛÛœÝÛÝ[Y]Z[ÏÊ]Z[Ë˜\šX[ß×JK™š[\Š˜\šX[O˜\šX[[\]Q[˜X›YOOY˜[ÙJK›[™ÝŒÂˆ™]\›ˆÛ˜[YNœ™XÚ\K›˜[YKÛÝ[Û›ÝÛŽ›ÛÛX[Š]Z[Ê_NÂˆJNÂˆÛÛœÝÛ›ÝÛ\\”›ÙXÝ™š[\Š[žOO™[žKšÛ›ÝÛŠNÂˆÛÛœÝÝ[ZÛ›ÝÛ‹›[™ÝÚÛ›ÝÛ‹œ™YXÙJ
+Ý[K[žJOOœÝ[JÙ[žK˜ÛÝ[
+NœšXÙY˜\šX[Ë›[™ÝÂˆ™]\›ˆÝÝ[\”›ÙXÝ]Z[šÛ›ÝÛ‹›X\
+[žOO˜	Ù[žK›˜[Y_Nˆ	Ù[žK˜ÛÝ[X
+Kš›Ú[Šˆ0­ÈŠ_NÂˆKØXÝ]™P[™K[™T™XÚ\\ËXÝ]™T™XÚ\K[™T›ÙXÝ]Z[ËšXÙY˜\šX[×JNÂˆÛÛœÝ[™T]X[]R\ÜÝY\Ï]\ÙSY[[Ê
+
+OOœ›ÙXÝÒ[˜]Ú›[™ÝÙš[\Ë™›]X\
+š[OOœ›ÙXÝÒ[˜]Ú™›]X\
+™XÚ\OOžØÛÛœÝ]Z[ÏX[™T›ÙXÝ]Z[ÖÜ™XÚ\KšYNÚYŠY]Z[ßYš[KÚYYš[KšZYÚ
+\™]\›ˆ×NØÛÛœÝÜØØ[KÚYœ™\]Z\™YÚYZYÚœ™\]Z\™YZYÚš[ÚYO\š[\™Ù]›ÜŠ]Z[ÊKO\š[YžQJš[KÚYš[ÚYØØ[JOË™_ÚYŠ\™\]Z\™YÚY\™\]Z\™YZYÚš[KÚY\™\]Z\™YÚY	‰™š[KšZYÚ\™\]Z\™YZYÚ
+\™]\›ˆ×NÜ™]\›ˆÞÚÙ^N˜	Ü™XÚ\KšYN‰Ùš[KšYXš[RY™š[KšYš[S˜[YN™š[K›˜[YK™XÚ\RYœ™XÚ\KšY›ÙXÝ˜[YNœ™XÚ\K›˜[YK™\]Z\™YÚY™\]Z\™YZYÚXÝX[ÚY™š[KÚYXÝX[ZYÚ™š[KšZYÚKÜš]XØ[™OŒ	‰™OŒM_WHJJN–×KÜ›ÙXÝÒ[˜]Úš[\Ë[™T›ÙXÝ]Z[×JNÂ‚ˆÊˆÛ™H›YÙÙYZ\ˆ\ˆ\ÚYÛˆS‘\ˆ›ÙXÝYX[HËY\ÚYÛˆ[™HXÜ›ÜÜÈÂˆ›ÙXÝÈ\ÚÙY›Üˆ\ÈHÙ\\˜]HXÚÛ›ÝÛYÙ[Y[È8 %œš][žH]ˆ[™ˆÛÝ[›ÝÛÛ[YH[[]™\žHÛ™HØ\ÈÛXÚÙYˆH\‹\›ÙXÝ]Z[\Âˆ™X[
+HØ[YH\Ø[ˆ™HÚ\œÛˆHYH[™ÛÈÛX[ÛˆHÝJK]BˆPÒTÒSÓˆ™[Û™ÜÈÈH\ÚYÛ‹ˆÜ›Ý\HZ\œÈžH\ÚYÛˆÛÈÛ™HÚÚXÙBˆÙ]\È]™\žH›ÙXÝ]Y™™XÝË[™Ù™™\ˆH[ÈÛÛ›Û›ÜˆHÛÛ[[Û‚ˆØ\ÙHÚ\™HH[œÝÙ\ˆ\ÈHØ[YH›Üˆ[Ùˆ[Kˆ^ÛY[™ÈÝ[Û›Bˆ™[[Ý™\ÈH›YÙÙYZ\œËÛÈH\ÚYÛˆ]\Èš[™HÛˆÛ™H›ÙXÝÝ[ˆX›\Ú\È\™Kˆ
+‹ÂˆÛÛœÝ[™T]X[]QÜ›Ý\Ï]\ÙSY[[Ê
+
+OOžÂˆÛÛœÝžQš[O[™]ÈX\Ýš[™ËÙš[RYœÝš[™ÎÙš[S˜[YNœÝš[™ÎÚÙ^\ÎœÝš[™Ö×NÜ›ÙXÝÎœÝš[™Ö×NØÜš]XØ[˜›ÛÛX[ŽÝÛÜœÝN›[X™\ŽØXÝX[ÚY›[X™\ŽØXÝX[ZYÚ›[X™\ŸOŠ
+NÂˆ›ÜŠÛÛœÝ\ÜÝYHÙˆ[™T]X[]R\ÜÝY\Ê^ÂˆÛÛœÝ^\Ý[™ÏXžQš[K™Ù]
+\ÜÝYK™š[RY
+NÂˆYŠ^\Ý[™Ê^Ù^\Ý[™ËšÙ^\Ëœ\Ú
+\ÜÝYKšÙ^JNÙ^\Ý[™Ëœ›ÙXÝËœ\Ú
+\ÜÝYKœ›ÙXÝ˜[YJNÙ^\Ý[™Ë˜Üš]XØ[Y^\Ý[™Ë˜Üš]XØ[\ÜÝYK˜Üš]XØ[ÚYŠ\ÜÝYK™I‰ŠY^\Ý[™ËÛÜœÝ_\ÜÝYK™O^\Ý[™ËÛÜœÝJJY^\Ý[™ËÛÜœÝOZ\ÜÝYK™NßBˆ[ÙHžQš[KœÙ]
+\ÜÝYK™š[RYÙš[RYš\ÜÝYK™š[RYš[S˜[YNš\ÜÝYK™š[S˜[YKÙ^\Î–Ú\ÜÝYKšÙ^WK›ÙXÝÎ–Ú\ÜÝYKœ›ÙXÝ˜[YWKÜš]XØ[š\ÜÝYK˜Üš]XØ[ÛÜœÝNš\ÜÝYK™_XÝX[ÚYš\ÜÝYK˜XÝX[ÚYXÝX[ZYÚš\ÜÝYK˜XÝX[ZYÚJNÂˆBˆ™]\›ˆË‹‹˜žQš[K˜[Y\Ê
+WNÂˆKØ[™T]X[]R\ÜÝY\×JNÂˆ[˜Ý[ÛˆXÚYT]X[]QÜ›Ý\
+Ù^\ÎœÝš[™Ö×K˜[YNˆš[˜ÛYHŸ™^ÛYHŠ^ÜÙ][™T]X[]QXÚ\Ú[ÛœÊÝ\œ™[OžØÛÛœÝ™^^Ë‹‹˜Ý\œ™[NÙ›ÜŠÛÛœÝÙ^HÙˆÙ^\Ê[™^ÚÙ^WO]˜[YNÜ™]\›ˆ™^J_Bˆ[˜Ý[ÛˆXÚYP[]X[]J˜[YNˆš[˜ÛYHŸ™^ÛYHŠ^ÙXÚYT]X[]QÜ›Ý\
+[™T]X[]R\ÜÝY\Ë›X\
+\ÜÝYOOš\ÜÝYKšÙ^JK˜[YJ_BˆÛÛœÝ]X[]QÜ›Ý\XÚ\Ú[ÛJÙ^\ÎœÝš[™Ö×JOOžØÛÛœÝ˜[Y\ÏZÙ^\Ë›X\
+Ù^OO˜[™T]X[]QXÚ\Ú[ÛœÖÚÙ^WJNÜ™]\›ˆ˜[Y\Ë™]™\žJOOOHš[˜ÛYHŠOÈš[˜ÛYHŽ˜[Y\Ë™]™\žJOOOH™^ÛYHŠOÈ™^ÛYHŽˆˆŸNÂˆÊˆŒˆ0­È\ÙHX\È™[Û™ÈÈHÜ[ˆ›ÙXÝˆ\ÚÙYX›Ý]H[™HY[X™\‰ÜÂˆ˜Yš[YžR[XYÙTÙ[XÝ[ÛœÖÚYHØ\È[™Yš[™Y[™HÚXÚÈ™[›ÝYÚˆÈHÔSˆ›ÙXÝ	ÜÈš[YžR[XYÙR[™XÙ\ÈHÛÈHY[X™\ˆÚ]›ÈÝÜÈÙ‚ˆ]ÈÝÛˆÛÚÙY™XYH™XØ]\ÙHHY™™\™[›ÙXÝYÛÛYKˆXXÚ˜Y\Âˆ\ÚÙYX›Ý]]ÈÝÛˆ›ÙXÝ›ÝËˆ
+‹Âˆ[˜Ý[Ûˆ›ÙXÝY˜][[™XÙ\Ê˜YYœÝš[™Ê^ÂˆYŠ˜YËœÛÛYJ˜YO™˜YšYOOY˜YY
+J\™]\›ˆš[YžR[XYÙR[™XÙ\ÎÂˆÛÛœÝY[X™\SØš™XÝ˜[Y\Ê[™SY[X™\œÊK™š[™
+[žOO™[žK™˜YËœÛÛYJ˜YO™˜YšYOOY˜YY
+JNÂˆ™]\›ˆY[X™\ÛY[X™\‹š[™XÙ\Îœš[YžR[XYÙR[™XÙ\ÎÂˆBˆ[˜Ý[ÛˆÜ™X]Y\Ý[™ÜÓZ\ÜÚ[™Ò[XYÙ\ÊÛÝ\˜ÙOY˜YÊ^ØÛÛœÝÙ[XÝ[ÛœÏX[™TX›\ÚÙ[XÝ[ÛœÊ
+K[ØÚÝ\ÏX[™TX›\Ú[ØÚÝ\ÛÝ[Ê
+NÜ™]\›ˆÛÝ\˜ÙK™š[\Š˜YO™˜YœÝ]\ÏOOHÜ™X]Y‰‰™˜YšY	‰ˆJÙ[XÝ[ÛœÖÙ˜YšYOÏÜ›ÙXÝY˜][[™XÙ\Ê˜YšY
+JK›[™Ý	‰ˆJ[ØÚÝ\ÖÙ˜YšY_
+J_Bˆ[˜Ý[Ûˆ[Ü™X]Y\Ý[™ÜÒ]™R[XYÙ\ÊÛÝ\˜ÙOY˜YÊ^ØÛÛœÝÜ™X]Y\ÛÝ\˜ÙK™š[\Š˜YO™˜YœÝ]\ÏOOHÜ™X]Y‰‰™˜YšY
+NÜ™]\›ˆÜ™X]Y›[™ÝŒ	‰˜Ü™X]Y\Ý[™ÜÓZ\ÜÚ[™Ò[XYÙ\ÊÛÝ\˜ÙJK›[™ÝOOLBˆÊˆŒˆ0­ÈX›\Ú\™Ù]Ê
+HÙ[™ÈH[™NÈ\È™XYÛ™H›ÙXÝˆÛÈBˆÛÝ[ÛˆH]Û‹H™XY[™\ÜÈØ]H[™HÛÛ™š\›X][Ûˆ[\ØÜšX™YˆHÛX[\ˆ˜]Ú[ˆHÛ™H™Z[™ÈX›\ÚYˆØ[YH\ÝÛˆ›ÝÚY\Ëˆ
+‹Âˆ[˜Ý[ÛˆÙ[XÝYX›\Ú˜YÊ
+^ØÛÛœÝÙ[XÝY[™]ÈÙ]
+Ù[XÝYX›\ÚYÊNÜ™]\›ˆ[™TX›\Ú˜YÊ
+K™š[\Š˜YO™˜YœÝ]\ÏOOHÜ™X]Y‰‰™˜YšY	‰œÙ[XÝYš\Ê˜YšY
+J_BˆÊˆŒÍH0­ÈH]Ûˆ[™HÛXÚÈ]›ÛÝÜÈ]\ØYÜ™YYˆH]ÛˆØ\Âˆ\ØX›YžHX›\Ú[™ÈÈÝÜÈÛˆHÙ[XÝ[ÛˆÈ[ˆ[\HÙ[XÝ[ÛˆÂˆZ\ÜÚ[™ÔX›\ÚšY[ÎÈHÛXÚÈÝX\™Y][Û˜[HÚXÚÙYH]ÞBˆÛÛ›™XÝ[Û‹™\]Z\™Y›Ü”Ý\
+™š[š\ÚŠH[™HÚ]›È\™Ý[Y[ÛÈHÔS‚ˆ›ÙXÝ˜]\ˆ[ˆHÙ[XÝ[ÛˆHÜ™X]Y\Ý[™ÜÓZ\ÜÚ[™Ò[XYÙ\ËˆÛÈBˆ]ÛˆÛÝ[™XY”X›\Úˆ\Ý[™ÜÈ]™HÛˆ]ÞHˆ[™HÛXÚÈ[œÝÙ\‚ˆ‘š[š\Ú[ÙXÝ[ÛœÈš\œÝˆÚÛÜÙHHÙ^]ÛÜ™˜[šËY]X\ÝÛ™Bˆš[š\ÚY\ÚYÛˆ‹ˆYX\Ý\™Y]™HÛˆHË\›ÙXÝ[™K‚ˆ™\]Z\™Y›Ü”Ý\
+™š[š\ÚŠH\ÈHÜ›Û™È]Y\Ý[Ûˆ\™Nˆ]\ÚÜÈÚ]\ˆ\Âˆ›ÙXÝÛÝ[•RSH˜]ÚHHÙ^]ÛÜ™˜[šË]X\ÝÛ™H\ÚYÛˆ[ˆ[™BˆÚXÚ\È›Ý[™ÈÈÈÚ]Ú]\ˆ[™XYKXÜ™X]Y\Ý[™ÜÈØ[ˆX›\Ú‚ˆ™\]Z\š[™È]ÙˆÚXÚ]™\ˆ›ÙXÝ\[™YÈ™HÜ[ˆ\ÈÚ]ÝÜYBˆ[™HÚÜÙHÝ\ˆY[X™\œÈÙ\™HÛÛ\]K‚ˆÛ™H\Ý›ÝËØÛÜYÈH\Ý[™ÜÈXÝX[HÙ[XÝY™XYžH›Ýˆ
+‹Âˆ[˜Ý[ÛˆX›\Ú›ØÚÙ\œÊ
+^ÂˆÛÛœÝ\ÜÝY\ÎœÝš[™Ö×OV×NÂˆYŠ[ØØ[™]šY]É‰ˆY]ÞPÛÛ›™XÝY
+Z\ÜÝY\Ëœ\Ú
+ÛÛ›™XÝH]ÞHÚÜ]Ú[™XÙZ]™H\ÙH\Ý[™ÜËˆŠNÂˆYŠ˜]Ú[žP[›Ý\•XŠZ\ÜÝY\Ëœ\Ú
+•\È˜]Ú\ÈÜ[ˆ[ˆ[›Ý\ˆÛÛYHX‹ˆZÙHÝ™\ˆ\™HÜˆ\™H™Y›Ü™HX›\Ú[™ËÛÈH™XÙZ\\ÈØ]™YˆŠNÂˆÛÛœÝÚÜÙ[\Ù[XÝYX›\Ú˜YÊ
+NÂˆ\ÜÝY\Ëœ\Ú
+‹‹›Z\ÜÚ[™ÔX›\ÚšY[Ê
+JNÂˆ\ÜÝY\Ëœ\Ú
+‹‹˜Ü™X]Y\Ý[™ÜÓZ\ÜÚ[™Ò[XYÙ\ÊÚÜÙ[ŠK›X\
+˜YO˜	Ù˜Y›˜[Y_H™YYÈ]X\ÝÛ™H\Ý[™ÈÝË˜
+JNÂˆÊˆHX›\Ú›Ý]H™Z™XÝÈH›ØˆÚ]›È]ÞHÚ\[™È›Ùš[KÛÈBˆ\Ý[™ÈÚÜÙH›ÙXÝ™]™\ˆ™\ÛÛ™YÛ™H˜Z[ÈY\ˆH™\ÜÈ˜]\‚ˆ[ˆ™Y›Ü™H]ˆ
+‹ÂˆÊˆÈ0­ÈHØ]™Y˜]ÚÙY\ÈH]ÞHÚ\[™È›Ùš[H]Ø\ÈZ[Ú]ˆÚ[™ÙBˆHÛÛ›™XÝY]ÞHÚÜ[™]Y™[Û™ÜÈÈHÚÜÛÛYHØ[ˆ›ÈÛ™Ù\‚ˆÙYK]›Ý[™È™]˜[Y]Y]HÛÈH˜]ÚX›\ÚY\[H[™]ÞBˆ™Z™XÝY]™\žH\Ý[™ÈZYY›YÚˆÛÝ[›Ýš[™Ú\[™×Ü›Ùš[WÚYBˆ	ÍNNMMNLNIÈ\ÜÛØÚX]YÚ]ÚÜ	ÌŒMÍÍÍÎ	È‹ˆŒÌH[™XYH™X]È[‚ˆ[\ØX›HY\È[œÙ][ˆHÝ\LHXÚÙ\ŽÈ]™]™\ˆÛÚÙY]Ú]H˜]ÚˆYÝÜ™Y[™™]™\ˆ]H[™HY[X™\‰ÜÈÝÛˆ›Ùš[KˆÚXÚÙYYØZ[œÝˆH›Ùš[\È\È]ÞHÚÜXÝX[H\Ë™Y›Ü™HH™\ÜËˆ
+‹ÂˆÛÛœÝÚÜ›Ùš[\Ï[™]ÈÙ]
+]ÞTÚ\[™Ô›Ùš[\Ë›X\
+›Ùš[OO“[X™\Š›Ùš[KšY
+JJNÂˆ›ÜŠÛÛœÝ][HÙˆX›\Ú\™Ù]Ê
+J^ÂˆÛÛœÝ›Ùš[OS[X™\Š][KœÚ\[™Ô›Ùš[RY
+NÂˆYŠ\›Ùš[J^Ú\ÜÝY\Ëœ\Ú
+	Ú][Kœ›ÙXÝ˜[Y_•\È›ÙXÝŸH\È›È]ÞHÚ\[™È›Ùš[HÙ[XÝY˜
+NØÛÛ[Y_BˆYŠÚÜ›Ùš[\ËœÚ^™I‰ˆ\ÚÜ›Ùš[\Ëš\Ê›Ùš[JJZ\ÜÝY\Ëœ\Ú
+ÚÛÜÙHHÚ\[™È›Ùš[H›Üˆ\È]ÞHÚÜ8 %	Ú][Kœ›ÙXÝ˜[Y_\È›ÙXÝŸHÝ[\Ù\ÈÛ™Hœ›ÛHHY™™\™[ÚÜ˜
+NÂˆBˆ™]\›ˆË‹‹›™]ÈÙ]
+\ÜÝY\ÊWNÂˆBˆ[˜Ý[ÛˆÝYÙÙ\ÝY˜]Ú˜[YJ
+^ØÛÛœÝ›ÙXÝXXÝ]™T™XÚ\OË›˜[Y_[\]Q]Z[ÏË˜›Y\š[]_“\Ý[™È˜]Ú‹šXÚOYš[\ÖÌOËYÜÏË–Ì_š[\ÖÌOË]OËœÜ]
+‹ŠVÌOËš[J
+_“™]È\ÚYÛœÈ‹]O[™]È[‘]U[YQ›Ü›X]
+™[‹UTÈ‹Û[ÛˆœÚÜ‹^Nˆ›[Y\šXÈŸJK™›Ü›X]
+™]È]J
+JNÜ™]\›ˆ	Ü›ÙXÝH0­È	ÛšXÚ_H0­È	Ù]_XœÛXÙJMŒ
+_BˆÊˆÍÎHÙY\H›ÙXÝOˆ˜]ÚX\Ý\œ™[ˆÛÛ[YP[™HZ[ÈH™]Âˆ˜]Ú\ˆY[X™\‹[™H˜]ÚØ[ˆ[ÛÈ™HÜ™X]Y^š[HÛˆHš\œÝØ]™KˆÛÈš[™HY]Û˜\ÚÝ[YH˜]\ˆ[ˆ\Ý[™ÈÛ™HÛÙH]ˆ
+‹Âˆ[˜Ý[Ûˆ™[Y[X™\[™P˜]Ú
+™XÚ\RYœÝš[™ß[™Yš[™Y˜]ÚYœÝš[™Ê^ÂˆYŠ\™XÚ\RYX˜]ÚY
+\™]\›ŽÂˆÙ][™P˜]ÚYÊÝ\œ™[O˜Ý\œ™[Ü™XÚ\RYOOOX˜]ÚYØÝ\œ™[žË‹‹˜Ý\œ™[Ü™XÚ\RYN˜˜]ÚYJNÂˆBˆÊˆMÈH\ˆ™YK\›ÙXÝ[™H˜[ˆ\™™XÝNˆ˜]Ú\ÈZ[YMH[™LˆÙXÛÛ™È\\ÛÈ˜YÈXXÚ[™YHÛÛ\]Kˆ[ˆÝ\Û\ˆÛÂˆÙˆH™YH›ÙXÝÈÙ\™H›[šË™XØ]\ÙH\ÈX\\È\ˆ˜]Úˆ[™\ÈÜš][ˆ]H[ÛY[]˜]Ú\ÈØ]™Yˆ›ÙXÝIÜÈ˜]ÚØ\ÂˆÜš][ˆ™Y›Ü™H›ÙXÝÈˆ[™È^\ÝYÛÈ]ÛÈÛ™H[žH[™™]™\‚ˆX\›œÈX›Ý]H™\ÝHH˜]ÚÚHÜ[œÈœ›ÛH\ÈHÛ™H]Ø[ˆÙYHBˆX\Ýˆ™\šYšYYÛˆ\ˆ]NˆÛÙYIÜÈ˜]ÚX\YHÙˆËHYIÜÈX\Yˆ‹HÜ™]Û™XÚÉÜÈX\Y[Ë‚‚ˆ˜]\ˆ[ˆ\ÝHX\Üš][ˆ]HÜ›Û™È[ÛY[š[™HÚX›[™ÜËˆXXÚˆ˜]Ú	ÜÈÝÛˆÝ]H™XÛÜ™ÈH[™H[™H›ÙXÝ]™[Û™ÜÈËÛÈHØ\ˆØ[ˆ™Hš[YžHÛÚÚ[™Ë[™˜]Ú\ÈØ]™Y™Y›Ü™H\ÈX[[\Ù[™\ÈÚ[‚ˆÚHÜ[œÈ[Kˆ
+‹ÂˆÛÛœÝ[™TÚX›[™ÜÔØØ[›™Y]\ÙT™YŠˆŠNÂˆ\ÙQY™™XÝ
+
+
+OOžÂˆYŠ™\ÝÜš[™Ð˜]ÚXXÝ]™P[™_[™T™XÚ\\Ë›[™ÝŠ\™]\›ŽÂˆÛÛœÝZ\ÜÚ[™ÏX[™T™XÚ\\Ë™š[\Š™XÚ\OOœ™XÚ\KšYOOXXÝ]™T™XÚ\OËšY	‰ˆX[™P˜]ÚYÖÜ™XÚ\KšYJNÂˆYŠ[Z\ÜÚ[™Ë›[™Ý
+\™]\›ŽÂˆÛÛœÝÙ^OX	ØXÝ]™P[™KšYN‰Ø[™T™XÚ\\Ë›X\
+™XÚ\OOœ™XÚ\KšY
+Kš›Ú[Š‹Š_XÂˆYŠ[™TÚX›[™ÜÔØØ[›™Y˜Ý\œ™[OOZÙ^J\™]\›ŽÂˆ[™TÚX›[™ÜÔØØ[›™Y˜Ý\œ™[ZÙ^NÂˆ›ÚY
+\Þ[˜Ê
+OOžÂˆž^ÂˆÛÛœÝ\ÝX]ØZ]™]Ú
+‹Ø\KØ˜]Ú\ÈŠK[Š™\ÜÛœÙOOœ™\ÜÛœÙK›ÚÏÜ™\ÜÛœÙKšœÛÛŠ
+N›[
+H\ÈØ˜]Ú\ÏÎ\œ˜^OÚYœÝš[™ßOŸ_[ÂˆÊˆ™]Ù\Ýš\œÝÛÈH›ÙXÝ[ˆ[Ü™H[ˆÛ˜ÙH™\ÛÛ™\ÈÈ]È]\Ýˆ˜]ÚHHØ[YHÛ™HH[ˆ]Ù[ˆÛÝ[]™HØ\œšYY›ÜØ\™ˆ
+‹ÂˆÛÛœÝØ[™Y]\ÏJ\ÝË˜˜]Ú\ß×JK›X\
+˜]ÚO˜˜]ÚšY
+K™š[\ŠYOšY	‰šYOOX˜]ÚY™Y‹˜Ý\œ™[
+KœÛXÙJ
+NÂˆÛÛœÝ›Ý[™”™XÛÜ™Ýš[™ËÝš[™Ï^ßNÂˆ›ÜŠÛÛœÝYÙˆØ[™Y]\Ê^ÂˆYŠØš™XÝšÙ^\Ê›Ý[™
+K›[™Ý[Z\ÜÚ[™Ë›[™Ý
+Xœ™XZÎÂˆÛÛœÝ^[ØYX]ØZ]™]Ú
+Ø\KØ˜]Ú\ÏÚYIÙ[˜ÛÙUT’PÛÛ\Û™[
+Y
+_X
+K[Š™\ÜÛœÙOOœ™\ÜÛœÙK›ÚÏÜ™\ÜÛœÙKšœÛÛŠ
+N›[
+H\ÈØ˜]ÚÎžÜÝ]OÎžØXÝ]™P[™OÎžÚYÎœÝš[™ßNØXÝ]™T™XÚ\OÎžÚYÎœÝš[™ßNÙ˜YÏÎ[šÛ›ÝÛ–×____[ÂˆÛÛœÝÝ]O\^[ØYË˜˜]ÚËœÝ]NÂˆYŠÝ]OË˜XÝ]™P[™OËšYOOXXÝ]™P[™KšY
+XÛÛ[YNÂˆÛÛœÝ™XÚ\RY\Ý]OË˜XÝ]™T™XÚ\OËšYÂˆYŠ\™XÚ\RY›Ý[™Ü™XÚ\RY_[™P˜]ÚYÖÜ™XÚ\RYJXÛÛ[YNÂˆYŠ[Z\ÜÚ[™ËœÛÛYJ™XÚ\OOœ™XÚ\KšYOO\™XÚ\RY
+JXÛÛ[YNÂˆYŠJÝ]OË™˜Yß×JK›[™Ý
+XÛÛ[YNÂˆ›Ý[™Ü™XÚ\RYOZYÂˆBˆYŠØš™XÝšÙ^\Ê›Ý[™
+K›[™Ý
+\Ù][™P˜]ÚYÊÝ\œ™[OŠË‹‹™›Ý[™‹‹˜Ý\œ™[JJNÂˆXØ]ÚËÊˆHØ\™È[™XYHØ^H›[šÎÈH˜Z[YÛÚÈÚ[™Ù\È›Ý[™È
+‹ßBˆJJ
+NÂˆKÜ™\ÝÜš[™Ð˜]ÚXÝ]™P[™K[™T™XÚ\\ËXÝ]™T™XÚ\K[™P˜]ÚY×JNÂ‚ˆÊˆH\‹]˜\šX[šXÙ\È[™HÚÛK[[X™\ˆÙÙÛH]™YÛ›H[ˆ™XXÝˆÝ]H[™H˜]ÚÛ˜\ÚÝ[™]Û˜\ÚÝ\È›ÝÜš][ˆ[[H˜]Úˆ\È\ÚYÛœÈÜˆ˜YÈHÛÈÛˆH›ÙXÝÝ\^HÙ\™HØ]™Y›ÝÚ\™KˆÙ]ˆHšXÙKXÚÈÚÛK[[X™\ˆšXÚ[™Ë™Yœ™\Ú[™›ÝÙ\™HÛÛ™Kˆ^H™[Û™ÂˆÈHØ]™Y›ÙXÝˆX›Ý[˜ÙYˆHšXÙHšY[š\™\ÈÛˆ]™\žHÙ^\Ý›ÚÙKˆ
+‹ÂˆÛÛœÝšXÙT\œÚ\Ý]\ÙT™Y[X™\Ÿ[™Yš[™YŠ[™Yš[™Y
+NÂˆ[˜Ý[Ûˆ\œÚ\Ý›ÙXÝšXÚ[™Ê™XÚ\N”™XÚ\_[Ú[™ÙN”\X[™XÚ\OŠ^ÂˆYŠ\™XÚ\J\™]\›ŽÂˆÚ[™ÝË˜ÛX\•[Y[Ý]
+šXÙT\œÚ\Ý˜Ý\œ™[
+NÂˆšXÙT\œÚ\Ý˜Ý\œ™[]Ú[™ÝËœÙ][Y[Ý]
+
+
+OOžÝ›ÚY\ÝX›\Ú
+™XÚ\KÚ[™ÙJ_KÌ
+NÂˆBˆ[˜Ý[Ûˆ˜]ÚÝ]TÛ˜\ÚÝ
+
+^ØÛÛœÝ\ÚYÛœÏYš[\Ë›X\
+
+Ùš[NšYÛ›Ü™Yš[K™]šY]Õ\›šYÛ›Ü™Y™]šY]Ë‹‹™\ÚYÛŸJOO™\ÚYÛŠNÜ™]\›ˆÝ[\]K[\]Q]Z[Ë\ØÜš\[Û‹šXÚ[™ËÙ[XÝYÛÛÜ’YËÙ[XÝYÚ^™RYË˜\šX[šXÙ\Ë]ÞTÚ\[™Ô›Ùš[RYšXÚ[™Ð\›Ý™Y[ØÚÝ\[YKXÝ]™T™XÚ\KXÝ]™P[™K[™T™XÚ\\Ë[™R[™^[™P˜]ÚYË\ÚYÛœË˜YËÛÛ\]Kš[š\Ú\ÙK[Õ]\Ë˜]ÚÙ^]ÛÜ™Ë]R›Ú[™\‹]PZ[\“[ÙK]]Õ]P˜[šÒYX[X[Ù^]ÛÜ™˜[šÒYÚ\™Y[ØÚÝ\Ë™\\™Y[ØÚÝ\ÛÝ[Ëš[YžR[XYÙR[™XÙ\Ëš[YžR[XYÙTÙ[XÝ[ÛœËÚ^™QÝZYS˜[YKÙ\\Ñ˜YË˜]Ú™XÙZ\_Bˆ\Þ[˜È[˜Ý[ÛˆØ]™Q˜Y˜]Ú
+
+^ØÛÛœÝ˜[YOX˜]Ú\Ü^S˜[YKš[J
+NÚYŠ[˜[YJ\™]\›ŽÜÙ]Ø]š[™Ñ˜Y˜]Ú
+YJNÝž^ØÛÛœÝYX˜]ÚY™Y‹˜Ý\œ™[Üž\Ëœ˜[™ÛUURQ
+
+NØ˜]ÚY™Y‹˜Ý\œ™[ZYÝÚ[™ÝË›ØØ[ÝÜ˜YÙKœÙ]][J™ÛÛYKXXÝ]™KX˜]Ú‹Y
+NØ]ØZ]Ø]™P˜]Úš[\ÊYš[\Ë›X\
+š[OO™š[K™š[JJNÚYŠ[ØØ[™]šY]Ê^ØÛÛœÝ™\ÜÛœÙOX]ØZ]™]Ú
+‹Ø\KØ˜]Ú\È‹ÛY]Ùˆ”ÔÕ‹XY\œÎžÈÛÛ[U\HŽˆ˜\XØ][Û‹ÚœÛÛˆŸK›ÙN’”ÓÓ‹œÝš[™ÚYžJÚYÝ]\Îˆ™˜Y‹Ý\ÛÜšÙ›ÝÔÝ\Ù]\˜[YN›˜[YK›ÙXÝ]N[\]Q]Z[ÏË˜›Y\š[]_ˆ‹\ÚYÛÛÝ[™š[\Ë›[™ÝÝ]NžË‹‹˜˜]ÚÝ]TÛ˜\ÚÝ
+
+KÙ\\Ñ˜YÎ˜ÛÛ\]__J_JNÚYŠ\™\ÜÛœÙK›ÚÊ]›ÝÈ™]È\œ›ÜŠ‘ÛÛYHÛÝ[›ÝØ]™H\È˜]ÚˆŠ_\Ù]Ù\\Ñ˜YÊYJNÜÙ]˜YØ]™SÜ[Š˜[ÙJNÜÙ]˜YØ]™YÜ[ŠYJ_XØ]Ú
+\œ›ÜŠ^ÜÝÜÚ]
+•\È˜]ÚØ\È›ÝØ]™Yˆ‹Ù\œ›Üˆ[œÝ[˜Ù[Ùˆ\œ›ÜÙ\œ›Ü‹›Y\ÜØYÙNˆ•žHYØZ[ˆ[ˆH[ÛY[ˆ—J_Yš[˜[^ÜÙ]Ø]š[™Ñ˜Y˜]Ú
+˜[ÙJ__Bˆ[˜Ý[Ûˆ[\ÓZ\ÜÚ[™ÔÝÓ\Ý[™ÊÛY[YœÝš[™Ê^ÜÙ]Z\ÜÚ[™ÔÝÑ˜YYÊ×JNÝÚ[™ÝËœÙ][Y[Ý]
+
+
+OOžÂˆÊˆLÌˆHH\Ý[™ÈÛÛ\Ù\È›ÝË[™[ÝHØ[››ÝØÜ›ÛÈÛÛY][™È[œÚYHBˆÛÜÙY]Z[Ï‹ˆ\È\ÈH[\][œÝÙ\œÈÚXÚ\Ý[™È\È›ÂˆÝÈ‹ÛÈ]\ÈÈÜ[ˆHÛ™H]\ÈÙ[™[™È\ˆËˆ
+‹ÂˆÛÛœÝ›ÙOYØÝ[Y[™Ù][[Y[žRY
+\Ý[™ËZ[XYÙ\ËIØÛY[YX
+NÂˆYŠ›ÙH[œÝ[˜Ù[ÙˆS]Z[Ñ[[Y[
+[›ÙK›Ü[]YNÂˆ›ÙOËœØÜ›Û[ÕšY]ÊØ›ØÚÎˆœÝ\ŸJNÂˆK
+_Bˆ[˜Ý[ÛˆÛÛ[YQœ›ÛQ\ÚYÛœÊ
+^ÂˆYŠ™[ÝÔ™XÛÛ[Y[™Y^[Ë›[™Ý
+^ÜÙ]^[Ø\›š[™ÓÜ[ŠYJNÜ™]\›ŸBˆÊˆŒŒ0­È˜YÜ™X][Ûˆ\ÈÛˆ\ÈYÙH›ÝËˆYˆH˜YÈ[™XYH^\ÝBˆÝÜÈ\™H™[ÝËÛÈ\È[Ý™\ÈÛˆÈH\Ý[™È^ÈYˆ^HÈ›ÝBˆÜ™X]KY˜YÈ[™[\ÈÚ]ÛÛY\È™^[™]\ÈšYÚ\™Kˆ
+‹ÂˆYŠÛÛ\]J\™]\›ˆÛÕÔÝ\
+™š[š\Ú‹˜[ÙKYJNÂˆØÝ[Y[œ]Y\žTÙ[XÝÜŠ‹›][˜Ú\[™[ŠOËœØÜ›Û[ÕšY]ÊØ›ØÚÎˆœÝ\ŸJNÂˆBˆÊˆŒŒ0­ÈÚXÚÙˆH›Ý\ˆÝYÙ\ÈHÝ\œ™[YØXÞH[™^™[Û™ÜÈËˆBˆ‘š[š\Ú0­È[XYÙ\È
+È[ØÚÝ\È
+ÈÙˆ
+Hˆ˜\Ú[™ÈÙ[Ú]HÝXœ˜Z[È\™Bˆ\™HÛ›HÝYÙ\È›ÝËˆ
+‹ÂˆÛÛœÝÝYÙTÜÚ][ÛTRSÔÕQÑTË™š[™[™^
+ÝYÙOOœÝYÙK˜ÛÝ™\œËš[˜ÛY\Ê›ÙÜ™\ÜÒ[™^
+JNÂˆÛÛœÝÝ\œ™[ÝYÙOTRSÔÕQÑTÖÜÝYÙTÜÚ][Û—_RSÔÕQÑTÖÌNÂˆÛÛœÝ˜Z[Ü[X™\SX]›X^
+KÝYÙTÜÚ][ÛŠÌJNÂˆÛÛœÝ˜Z[[‘š[š\ÚXÝ\œ™[ÝYÙK›X™[OOH”X›\ÚŽÂˆ[˜Ý[Ûˆ[™T›ÙXÝÔ™XYJ
+^ÂˆÊˆMHHHØ[YH™XY[™\ÜÈH[™HØ\™È\Ü^K\ÚÙYÙˆ]™\žH›ÙXÝˆ˜]\ˆ[ˆHÛ™H]\[œÈÈ™HÜ[‹ˆYˆHØ\™ÚÝÜÈHØ\›š[™Âˆ˜YÙKH˜]ÚÙ\È›Ý[Ý™HÛ‹ˆ
+‹ÂˆYŠXXÝ]™P[™J\™]\›ˆYNÂˆYŠX[™T™XÚ\\Ë›[™Ý
+\™]\›ˆ˜[ÙNÂˆ™]\›ˆ[™T™XÚ\\Ë™]™\žJ
+™XÚ\K[™^
+OOžÂˆÛÛœÝ\ÐXÝ]™OX[™T™XÚ\\Ë›[™ÝŸ[™^OOX[™R[™^ÂˆÛÛœÝ›ÙXÝZ\ÐXÝ]™OÝ[\]Q]Z[Î˜[™PÛÛÜ”›ÙXÝÖÜ™XÚ\KšYNÂˆYŠ\›ÙXÝ
+\™]\›ˆ˜[ÙNÂˆ™]\›ˆ™XY[™\ÜÑ›ÜŠ›ÙXÝ™XÚ\K\ÐXÝ]™OÜšXÚ[™Ð\›Ý™Y›ÛÛX[Š[™P\›Ý™YÜ™XÚ\KšYJJK™\ÝX›\ÚYÂˆJNÂˆBˆÊˆLˆHH›ÙXÝØ\™ØZY™XYH[™HYÙHÝ[™Y\ÙYÈÛÛ[YKˆ™XØ]\ÙHHØ\™	ÜÈ™XY[™\ÜÈ[™H\›Ý˜[]Ø]\È™^Ù\™HÛÂˆY™™\™[[™ÜËˆHØ]™Y›ÙXÝØ\œšY\È[ˆ\›Ý™Y›Ùš]\™Ù][™[‚ˆ]ÞHÚ\[™È›Ùš[NÈ™[Ü[š[™ÈH˜]Ú™\ÝÜ™YšXÚ[™Ð\›Ý™Y\È˜[ÙBˆ[™›Ý[™È]™\ˆ]]˜XÚËÛÈÚHØ\È\ÚÙYÈ\›Ý™HšXÚ[™ÈÚHYˆ›ÝÝXÚYÛˆHØ\™[™XYH[[™È\ˆ]Ø\È™XYK‚‚ˆ\›Ý˜[\ÈÛ›HYX[š[™Ù[Û˜ÙHÛÛY][™È\ÈÚ[™ÙYˆYˆH›ÙXÝÝ[ˆØ\œšY\È]ÈØ]™Y\›Ý˜[[™H˜]Ú\ÈÝ[\Ú[™È]^XÝÚ\[™Âˆ›Ùš[K]\È\›Ý™Yˆ\È[œÈ›ÜˆHÜ[ˆ›ÙXÝ[™ÙYYÈ]™\žHÝ\‚ˆ›ÙXÝ[ˆH[™HHØ[YHØ^KÛÈH™\ÝÜ™Y[™HÙ\È›Ý\ÚÈYØZ[‹‚‚ˆ™\šYšYYYØZ[œÝ\ˆ]™H˜]Úˆ™XÚ\HØ\œšY\È\™Ù][™›Ùš[K˜]ÚˆÚ\[™ÈY\]X[ÈH™XÚ\IÜËšXÚ[™Ð\›Ý™YØ\È˜[ÙKˆ
+‹ÂˆÊˆLÌHÚHÙ\È]XZÙHYH™\Ù]HÚ\[™È›Ùš[H]™\žH[YHHÜ[ˆBˆ˜]ÚÈˆ™XØ]\ÙHH›ÙXÝ™[Y[X™\œÈ][™H˜]ÚÙ\È›Ý[™HÜ[‚ˆ›ÙXÝ™XYÈH˜]Úˆ\ˆ›Ý\ˆØ]™Y›ÙXÝÈ[ÛH˜[Y]ÞBˆ›Ùš[HYHÜ™]Û™XÚÈÎMÌŒNKÛÙYHÎMÌÌNMN‹›Ý™\Ù[[[Û™ÈBˆLÈ›Ùš[\ÈÛˆ\ˆÚÜH]H˜]ÚØ]™Y™Y›Ü™HÚHXÚÙYÛ™HØ\œšY\Âˆ™\›Ë[™™\ÝÜš[™È]˜]Ú]™\›È˜XÚÈÝ™\ˆH›ÙXÝ]Û™]ÈBˆ[œÝÙ\‹ˆH›ÙXÝ	ÜÈØ]™Y›Ùš[Hš[È[ˆ[\H˜]ÚÛ˜ÙHH™X[\Ýˆ\ÈØYYÛÈ[ˆY]›ÈÛ™Ù\ˆ^\ÝÈ\ÈÝ[Ø]YÚˆ
+‹Âˆ\ÙQY™™XÝ
+
+
+OOžÂˆYŠ™\ÝÜš[™Ð˜]ÚXXÝ]™T™XÚ\_]ÞTÚ\[™Ô›Ùš[RYY]ÞTÚ\[™Ô›Ùš[\Ë›[™Ý
+\™]\›ŽÂˆÛÛœÝØ]™YS[X™\ŠXÝ]™T™XÚ\K™]ÞTÚ\[™Ô›Ùš[RY
+_ÂˆYŠØ]™Y	‰™]ÞTÚ\[™Ô›Ùš[\ËœÛÛYJ›Ùš[OOœ›Ùš[KšYOO\Ø]™Y
+J\Ù]]ÞTÚ\[™Ô›Ùš[RY
+Ø]™Y
+NÂˆKÜ™\ÝÜš[™Ð˜]ÚXÝ]™T™XÚ\K]ÞTÚ\[™Ô›Ùš[RY]ÞTÚ\[™Ô›Ùš[\×JNÂ‚ˆ\ÙQY™™XÝ
+
+
+OOžÂˆYŠ™\ÝÜš[™Ð˜]ÚXXÝ]™T™XÚ\J\™]\›ŽÂˆÛÛœÝØ\œšY\Ï\™XÚ\PØ\œšY\Ð\›Ý™YšXÚ[™ÊÙY˜][›Ùš]\™Ù]˜XÝ]™T™XÚ\K™Y˜][›Ùš]\™Ù]]ÞTÚ\[™Ô›Ùš[RY˜XÝ]™T™XÚ\K™]ÞTÚ\[™Ô›Ùš[RYJNÂˆYŠØ\œšY\É‰ˆ\šXÚ[™Ð\›Ý™Y	‰“[X™\Š]ÞTÚ\[™Ô›Ùš[RY
+OOOS[X™\ŠXÝ]™T™XÚ\K™]ÞTÚ\[™Ô›Ùš[RY
+J\Ù]šXÚ[™Ð\›Ý™Y
+YJNÂˆKÜ™\ÝÜš[™Ð˜]ÚXÝ]™T™XÚ\KšXÚ[™Ð\›Ý™Y]ÞTÚ\[™Ô›Ùš[RYJNÂˆ\ÙQY™™XÝ
+
+
+OOžÂˆYŠ™\ÝÜš[™Ð˜]ÚXXÝ]™P[™_[™T™XÚ\\Ë›[™ÝŠ\™]\›ŽÂˆÛÛœÝÙYY”™XÛÜ™Ýš[™Ë›ÛÛX[^ßNÂˆ›ÜŠÛÛœÝ™XÚ\HÙˆ[™T™XÚ\\Ê^ÂˆYŠ™XÚ\KšYOOXXÝ]™T™XÚ\OËšY[™P\›Ý™YÜ™XÚ\KšYJXÛÛ[YNÂˆYŠ™XÚ\PØ\œšY\Ð\›Ý™YšXÚ[™ÊÙY˜][›Ùš]\™Ù]œ™XÚ\K™Y˜][›Ùš]\™Ù]]ÞTÚ\[™Ô›Ùš[RYœ™XÚ\K™]ÞTÚ\[™Ô›Ùš[RYJJ\ÙYYÜ™XÚ\KšYO]YNÂˆBˆYŠØš™XÝšÙ^\ÊÙYY
+K›[™Ý
+\Ù][™P\›Ý™Y
+Ý\œ™[OŠË‹‹˜Ý\œ™[‹‹œÙYYJJNÂˆKÜ™\ÝÜš[™Ð˜]ÚXÝ]™P[™K[™T™XÚ\\ËXÝ]™T™XÚ\K[™P\›Ý™YJNÂ‚ˆ[˜Ý[ÛˆØ]TÝ]J
+N“˜]šYØ][Û‘Ø]TÝ]^Ü™]\›ˆØ[™T›ÙXÝÔ™XYN˜[™T›ÙXÝÔ™XYJ
+KÛÛ›™XÝY]ÞPÛÛ›™XÝY›ÙXÝÙ[XÝY[\]T™XYN[\]SØYYÚ\[™Ô™XYN›ÛÛX[Š[\]Q]Z[ÏËœÚ\[™Õ[\]RY[\]Q]Z[ÏËœÚ\[™Ô›Ùš[S™YYÔÙ[XÝ[ÛŠK˜\šX[Ô™XYN›ÛÛX[Š[\]Q]Z[ÏË™[˜X›Y˜\šX[ÊKÛÛÜœÔ™XYNˆ][\]Q]Z[ÏË˜ÛÛÜ“Ü[ÛœÏË›[™ÝÙ[XÝYÛÛÜ’YË›[™ÝŒšXÙ\Ô™XYNœšXÙY˜\šX[Ë›[™ÝŒ\ÚYÛÛÝ[™š[\Ë›[™Ý\ÚYÛœÔ™XYN™š[\Ë™]™\žJš[OO›ÛÛX[Šš[KÚY	‰™š[KšZYÚ	‰™š[KœY[™ÔÝ]\ÈOOH˜ÚXÚÚ[™ÈŠJKÊˆLHHH[™H\ÈÛ™HÚ\[™È›Ùš[H[™Û™HšXÚ[™È\›Ý˜[Tˆ›ÙXÝ[™\ÈØ]H™XYÛ›HHXÝ]™HÛ™KˆÛÈÙˆ™YH›ÙXÝÈ[ˆ\ˆ–ˆTÕ•S‘HÚÝÙY”XÚÈHÚ\[™È›Ùš[HˆÚ[H™^Ý\Ý^YY[˜X›YÚXÚÛÝ[]™HÜ™X]Yš[YžH˜YÈ›Üˆ›ÙXÝÈÚ]›È˜[Y]ÞHÚ\[™È›Ùš[Kˆ]™\žH›ÙXÝ[ˆH[™H\ÈÈ™H™XYK›ÝÚXÚ]™\ˆÛ™H\[œÈÈ™HÜ[‹ˆ
+‹Ù]ÞTÚ\[™Ô›Ùš[T™XYN˜XÝ]™P[™OØ[™T™XÚ\\Ë›[™ÝŒ	‰˜[™T™XÚ\\Ë™]™\žJ™XÚ\OO“[X™\Š™XÚ\K™]ÞTÚ\[™Ô›Ùš[RY
+OŒ
+N›ÛÛX[Š]ÞTÚ\[™Ô›Ùš[RY
+KšXÚ[™Ð\›Ý™Y˜XÝ]™P[™OØ[™T™XÚ\\Ë›[™ÝŒ	‰˜[™T™XÚ\\Ë™]™\žJ™XÚ\OO˜[™P\›Ý™YÜ™XÚ\KšYOÏÜ™XÚ\PØ\œšY\Ð\›Ý™YšXÚ[™ÊÙY˜][›Ùš]\™Ù]œ™XÚ\K™Y˜][›Ùš]\™Ù]]ÞTÚ\[™Ô›Ùš[RYœ™XÚ\K™]ÞTÚ\[™Ô›Ùš[RYJJNœšXÚ[™Ð\›Ý™Y˜YÐÛÛ\]N˜ÛÛ\]KÜ™X]Y˜YÛÝ[]\Ô™XYN™š[\Ë›[™ÝŒ	‰™š[\Ë™]™\žJš[OO›ÛÛX[Šš[K]Kš[J
+JI‰ˆYš[K]Q\œ›ÜŠKYÜÔ™XYN™š[\Ë›[™ÝŒ	‰™š[\Ë™]™\žJš[OO™š[KYÜË›[™ÝŒ	‰ˆYš[K]Q\œ›ÜŠK\ØÜš\[Û”™XYN›ÛÛX[Š\ØÜš\[Û‹š[J
+JK]ÞQ]Z[Ô™XYN™š[\Ë›[™ÝŒ	‰™š[\Ë™]™\žJš[OO™]ÞT™\]Z\™YÛÛ\]Jš[K™]ÞJJK\œÛÛ˜[^˜][Û”™XYN™š[\Ë™]™\žJš[OOˆ\\œÛÛ˜[^˜][Û”›Ø›[Jš[K™]ÞJJK[XYÙ\Ô™XYN˜[Ü™X]Y\Ý[™ÜÒ]™R[XYÙ\Ê
+__Bˆ[˜Ý[Ûˆ›ÙÜ™\ÜÑØ]R\ÜÝY\Ê[™^›[X™\Š^Ü™]\›ˆØØ[™]šY]ÏÖ×N›˜]šYØ][Û’\ÜÝY\Ê[™^Ø]TÝ]J
+J_BˆÊˆHX]š[™È[XYÙ\È™YYÈÝÜË›Ý]\ËˆÙYHX]š[™Ò[XYÙ\Ò\ÜÝY\Ëˆ
+‹Âˆ[˜Ý[Ûˆ[XYÙ\ÔÝ\\ÜÝY\Ê
+^Ü™]\›ˆØØ[™]šY]ÏÖ×N›X]š[™Ò[XYÙ\Ò\ÜÝY\ÊØ]TÝ]J
+J_Bˆ[˜Ý[Ûˆ›ÙÜ™\ÜÔÝ]\Ê[™^›[X™\‹XÝ]™N˜›ÛÛX[‹Û™N˜›ÛÛX[‹›ØÚÙY˜›ÛÛX[Š^ØÛÛœÝ]™OXXÝ]™_X›ØÚÙYÚYŠ[™^OOL
+\™]\›ˆÛÛ›™XÝYÈ”š[YžHÛÛ›™XÝYŽ›]™OÈÛÛ›™XÝ[Ý\ˆXØÛÝ[Žˆ“›ÝÛÛ›™XÝYŽÚYŠ[™^OOLJ\™]\›ˆ[\]Q]Z[ÏÝ[\]Q]Z[Ë˜›Y\š[]N›]™OÈÚÛÜÙHHØ]™Y›ÙXÝŽˆÛÛ\]HHš[ÜˆÝ\ŽÚYŠ[™^OOLŠ\™]\›ˆš[\Ë›[™ÝØ	Ùš[\Ë›[™ÝH\ÚYÛœÈ™XYX›]™OÈYš[š\ÚY\ÚYÛœÈŽˆÛÛ\]HHš[ÜˆÝ\ŽÚYŠ[™^OOLÊ\™]\›ˆšXÚ[™Ð\›Ý™YÊšXÙY˜\šX[Ë›[™ÝØ	ÜšXÙY˜\šX[Ë›[™ÝH˜\šX[È\›Ý™Yˆ”šXÚ[™È\›Ý™YŠN›]™OÈ”™]šY]È]™\žH˜\šX[ŽˆÛÛ\]HHš[ÜˆÝ\ŽÚYŠ[™^OOM
+\™]\›ˆÛÛ\]OØ	ØÜ™X]Y˜YÛÝ[H˜YÈÜ™X]Y›]™I‰œ[›š[™ÏØ	Ü›ØÙ\ÜÙYHÙˆ	Ü[•Ý[HÜ™X]Yœ™XYOÈ”™XYHÈÜ™X]HŽˆÛÛ\]HHš[ÜˆÝ\ŽÚYŠ[™^OOMJ\™]\›ˆ]PÛÝ[OOYš[\Ë›[™Ý	‰™š[\Ë›[™ÝØ	Ý]PÛÝ[H]\ÈÛÛ\]X›]™OØ	Ý]PÛÝ[HÙˆ	Ùš[\Ë›[™ÝH]\ÈÛÛ\]X™Û™OÈ•]\ÈÛÛ\]HŽˆÛÛ\]HHš[ÜˆÝ\ŽÚYŠ[™^OOMŠ\™]\›ˆ]ÞT™XYPÛÝ[OOYš[\Ë›[™Ý	‰™š[\Ë›[™ÝØ	Ù]ÞT™XYPÛÝ[H\Ý[™ÜÈ™XYX›]™OØ	Ù]ÞT™XYPÛÝ[HÙˆ	Ùš[\Ë›[™ÝH™XYX™Û™OÈ‘]ÞH]Z[ÈÛÛ\]HŽˆÛÛ\]HHš[ÜˆÝ\ŽÚYŠ[™^OOMÊ\™]\›ˆÛ™OÈ“\Ý[™È[XYÙ\È™]šY]ÙYŽ›]™OØ	ØÜ™X]Y˜YÛÝ[H™]šY]ÜÈ™XYXˆÛÛ\]HHš[ÜˆÝ\ŽÜ™]\›ˆ˜]Ú™XÙZ\Ø	Ø˜]Ú™XÙZ\œX›\ÚYÛÝ[H\Ý[™ÜÈX›\ÚY›]™OÈ”™XYHÈX›\ÚŽˆÛÛ\]HHš[ÜˆÝ\ŸBˆ[˜Ý[ÛˆÝ\œ™[[œÚYÚ
+
+^ÚYŠ›ÙÜ™\ÜÒ[™^OOLJ\™]\›ˆXÝ]™T™XÚ\OØ[ÝH\ÙY	ØXÝ]™T™XÚ\K›˜[Y_H™XÙ[Kˆ]È›ÙXÝ˜XÝÈ[™Ø]™Y]ÞHÚ\[™È›Ùš[HÚ[Ø\œžH[È\È˜]Ú˜ˆÚÛÜÙHHØ]™Y›ÙXÝÛ˜ÙH[™ÛÛYHÚ[™]\ÙH]ÈXÙ[Y[˜\šX[ËÛÜÝË[™\ØÜš\[Û‹ˆŽÚYŠ›ÙÜ™\ÜÒ[™^OOLŠ\™]\›ˆš[\Ë›[™ÝÛÝÑPÛÝ[Ø	ÛÝÑPÛÝ[H	ÛÝÑPÛÝ[OOLOÈ™\ÚYÛˆ\ÈŽˆ™\ÚYÛœÈ\™HŸH™[ÝÈÌH]H\™Ù\Ý[˜X›YÚ^™Kˆ™]šY]ÈHHX™[™Y›Ü™HÜ™X][™È˜YË˜˜[	Ùš[\Ë›[™ÝH\ÚYÛœÈ\™HØYYˆÛÛYHÚ[™\Ù\™HZ\ˆÜšYÚ[˜[\ÛÜšÈ™\ÛÛ][Û‹˜ˆYš[š\ÚY\ÛÜšÈ[™ÛÛYHÚ[ÚXÚÈXXÚ\ÚYÛˆYØZ[œÝH™X[š[YžHš[Ú^™KˆŽÚYŠ›ÙÜ™\ÜÒ[™^OOLÊ\™]\›ˆšXÚ[™Ð\›Ý™YØ[	ÜšXÙY˜\šX[Ë›[™ÝH[˜X›Y˜\šX[È\™H\›Ý™YˆÛÛYHÚ[ÙY\ÜÙHÛÜÝYÜ›Ý\YšXÙ\ÈXÜ›ÜÜÈ]™\žH\Ý[™Ë˜ˆ‘ÛÛYH\ÈØ[Ý[][™ÈXXÚ[˜X›Y˜\šX[œ›ÛH]ÈÝÛˆ›ÙXÝÛÜÝ]ÞH™Y\Ë[™[Ý\ˆ\™Ù]›Ùš]ˆ^Y\‹\ZYÚ\[™È\È[™YÙ\\˜][KˆŽÚYŠ›ÙÜ™\ÜÒ[™^OOM
+\™]\›ˆ[›š[™ÏØ	Ü›ØÙ\ÜÙYHÙˆ	Ü[•Ý[Hš[YžH˜YÈ\™HÛÛ\]KˆÝXØÙ\ÜÙ[˜YÈÚ[›Ý™H\XØ]YYˆH™]žH\È™YYY˜ˆ‘ÛÛYH\È™XYHÈÜ™X]HÛ™H[œX›\ÚYš[YžH˜Y›Üˆ]™\žH\ÚYÛ‹ˆŽÚYŠ›ÙÜ™\ÜÒ[™^OOMJ\™]\›ˆÛÛYHÙ[XÝÈÛ›H^XÝ˜\Ù\Èœ›ÛH[Ý\ˆ˜[Y]YT˜[šÈÙ^]ÛÜ™˜[šÈ[™Ü™X]\ÈX]Ú[™È]ÞHYÜËˆ]™]™\ˆ[™[ÈÙ^]ÛÜ™Ë˜ÚYŠ›ÙÜ™\ÜÒ[™^OOMŠ\™]\›ˆ	Ù]ÞT™XYPÛÝ[HÙˆ	Ùš[\Ë›[™ÝH\Ý[™ÜÈ]™H›ÙXÝ\ÜXÚYšXÈ]ÞHØ]YÛÜšY\È[™]šX]\È™XYH›Üˆ™]šY]Ë˜ÚYŠ›ÙÜ™\ÜÒ[™^OOMÊ\™]\›ˆHš[YžH™]šY]È\ÈHXÙ[Y[™Y™\™[˜ÙKˆ\HÛ™H›]^HÙ[XÝ[ÛˆÈH˜]ÚÚ[ˆH\Ý[™ÜÈ\ÙHHØ[YH›ÙXÝÙ]\˜Ü™]\›ˆ˜]Ú™XÙZ\ØH˜]Ú\ÈÛÛ\]H[™]™\žH]ÞH[šÈ\È™XÛÜ™Y™[ÝË˜ˆ‘]™\žH™\]Z\™YÙXÝ[Ûˆ\È™XYKˆX›\Ú[™ÈÚ[Ù[™\ÙH\Ý[™ÜÈ]™K›ÝÈ]ÞH˜YËˆŸBˆ\Þ[˜È[˜Ý[ÛˆØY™]šY]Ñ[[Ê
+^ÂˆÛÛœÝ[XYÙT™\ÜÛœÙOX]ØZ]™]Ú
+	ËÛ[ØÚÝ\ËÜ[šËYÜ›KLK[X[š[™ËYœ˜[YKœ™ÉÊK›ØX]ØZ][XYÙT™\ÜÛœÙK˜›ØŠ
+Kš[O[™]Èš[JØ›Ø—K	ÝÙ\Ý\›‹\ÜÝ\‹œ™ÉËÝ\N˜›Ø‹\_	Ú[XYÙKÜ™ÉßJKÙXÛÛ™š[O[™]Èš[JØ›Ø—K	ØÛÝÙÚ\›\ÜÝ\‹œ™ÉËÝ\N˜›Ø‹\_	Ú[XYÙKÜ™ÉßJNÂˆÛÛœÝ]Z[Î•[\]Q]Z[Ï^ÚY‰Ü™]šY]Ë\ÜÝ\‰Ë˜]ÚY‰Ü™]šY]ËX˜]Ú	Ë]N‰ÓX]H™\XØ[ÜÝ\‰Ë\ØÜš\[ÛŽ‰Ó]\Ù][K\]X[]HÜÝ\ˆš[YÛˆ™[Z][HX]H\\‹——“XYHÈÜ™\ˆ[™Ø\™Y[HXÚØYÙY›ÜˆÚ\[™Ë‰Ë›Y\š[YŒK›Y\š[]N‰ÓX]H™\XØ[ÜÝ\‰Ëœ˜[™‰ÑÙ[™\šXÈœ˜[™	Ë[Ù[‰ÓX]H™\XØ[ÜÝ\‰Ë›ÝšY\Ž‰ÔÙ[œØ\šXIË[˜X›Y˜\šX[Î‹˜\šX[Î–ÞÚYŒLK]N‰Ð›XÚÈÈ0åÌL	ËÛÜÝL[\]TšXÙNŒMŒÚ\[™Î‹ŒŒŸKÚYŒL]N‰ÕÚ]HÈ0åÌL	ËÛÜÝL[\]TšXÙNŒMŒÚ\[™Î‹ŒŒŸKÚYŒL‹]N‰Ó˜]\˜[È0åÌL	ËÛÜÝÍK[\]TšXÙNŒMLÚ\[™Î‹ŒŒŸKÚYŒL‹]N‰Ð›XÚÈÈL°åÌN	ËÛÜÝŒLK[\]TšXÙNŒÚ\[™Î‹ŒŒŸKÚYŒLK]N‰ÕÚ]HÈL°åÌN	ËÛÜÝŒLK[\]TšXÙNŒÚ\[™Î‹ŒŒŸKÚYŒLË]N‰Ì0åÌÍ‰ËÛÜÝŒNL[\]TšXÙNŒÎÚ\[™Î‹ŒŒŸWKÚÜ‰Ô™]šY]ÈÚÜ	ËÝ[™\™Ú\[™Î‹ŒŒ‹Ú\[™ÐÝ\œ™[˜ÞN‰ÕTÑ	ËÚ\[™Õ[\]RY‰ÎLIËœ™YTÚ\[™Î™˜[ÙKX^š[ÚYÌŒX^š[ZYÚŒLXÙ[Y[ØØ[NŒ_NÂˆÛÛœÝ™]šY]ÐØ]YÛÜžN‘]ÞPØ]YÛÜžSÜ[Û^ÚYŒK]‰ÒÛYH	ˆ]š[™È0­ÈØ[XÛÜˆ0­Èš[ÉßNÂˆÛÛœÝ]ÞN‘]ÞQ]Z[Ï^ØØ]YÛÜžNœ™]šY]ÐØ]YÛÜžKœ]^Û›Û^RYœ™]šY]ÐØ]YÛÜžKšY›Ü\Y\Î–×K]šX]\ÎžßKÜ[Û˜[žßK›\˜Ž‰ÉËÛÛ™šY[˜ÙN‰ÚYÚ	ßNÂˆÛÛœÝ™]šY]Ñš[\Î‘\ÚYÛ‘š[V×OVÞÛ˜[YN™š[K›˜[YKÚ^™N™š[KœÚ^™KY‰Ü™]šY]ËY\ÚYÛ‹LIËš[K™]šY]Õ\›•T“˜Ü™X]SØš™XÝT“
+š[JK]N‰ÝÙ\Ý\›ˆØ[\ÛÝÙÚ\›ÜÝ\‹[šÈÙ\Ý\›ˆXÛÜ‰ËYÜÎ–ÉÝÙ\Ý\›ˆØ[\	Ë	ØÛÝÙÚ\›ÜÝ\‰Ë	Ü[šÈÙ\Ý\›ˆXÛÜ‰×KÚYŒZYÚŽLY[™ÔÝ]\Î‰Ù[	Ë]Þ_KÛ˜[YNœÙXÛÛ™š[K›˜[YKÚ^™NœÙXÛÛ™š[KœÚ^™KY‰Ü™]šY]ËY\ÚYÛ‹L‰Ëš[NœÙXÛÛ™š[K™]šY]Õ\›•T“˜Ü™X]SØš™XÝT“
+ÙXÛÛ™š[JK]N‰Ü™]›ÈÛÝÙÚ\›š[Ù\Ý\›ˆÜÝ\‹Ü›HØ[\	ËYÜÎ–ÉÜ™]›ÈÛÝÙÚ\›š[	Ë	ÝÙ\Ý\›ˆÜÝ\‰Ë	ÙÜ›HØ[\	×KÚYŒZYÚŽLY[™ÔÝ]\Î‰Ù[	Ë]Þ_WNÂˆÛÛœÝ›Ùš[N‘]ÞTÚ\[™Ô›Ùš[O^ÚYŽLK]N‰ÔÜÝ\ˆÚ\[™È0­È	TÉËÜšYÚ[ÛÝ[žN‰Õ[š]YÝ]\ÉËÝ\œ™[˜ÞN‰ÕTÑ	ËÛY\ÝXÔš[X\žNÛY\ÝXÐY][Û˜[Œ‹K[\›˜][Û˜[–ÞÚÙ^N‰ÐÐIËX™[‰ÐØ[˜YIËš[X\žNŒLËŽL‹Y][Û˜[Ž_KÚÙ^N‰ÑUIËX™[‰Ñ]\›ÜX[ˆ[š[Û‰Ëš[X\žNŒMË‹Y][Û˜[ŒLŒ_W_NÂˆÙ][\]J	ÚÎ‹ËÜš[YžK˜ÛÛKØ\Ü›ÙXÝËÜ™]šY]ÉÊNÜÙ][\]Q]Z[Ê]Z[ÊNÜÙ]\ØÜš\[ÛŠ]Z[Ë™\ØÜš\[ÛŠNÜÙ]š[\Ê™]šY]Ñš[\ÊNÜÙ]˜YÊ™]šY]Ñš[\Ë›X\
+
+\ÚYÛ‹[™^
+OOŠÚY˜™]šY]ËY˜YIÚ[™^
+Ì_XÛY[Y™\ÚYÛ‹šY˜[YN™\ÚYÛ‹›˜[YK]N™\ÚYÛ‹]KYÜÎ™\ÚYÛ‹YÜË™]šY]Õ\›‰ËÛ[ØÚÝ\ËÜ[šËYÜ›KLK[X[š[™ËYœ˜[YKœ™ÉËš[YžR[XYÙ\Î–ÉËÛ[ØÚÝ\ËÜ[šËYÜ›KLK[X[š[™ËYœ˜[YKœ™ÉË	ËÛ[ØÚÝ\ËÜ[šËYÜ›KL‹Z[™Ú[™Ë\ÜÝ\‹œ™ÉË	ËÛ[ØÚÝ\ËÜ[šËYÜ›KLË[X^[X[\ÝX™Yœ™É×KY]Ü•\›‰ÚÎ‹ËÜš[YžK˜ÛÛKØ\Ü›ÙXÝÉËÝ]\Î‰ÐÜ™X]Y	ßJJJNÜÙ]]ÞPØ]YÛÜšY\ÊÜ™]šY]ÐØ]YÛÜžWJNÜÙ]]ÞTÚ\[™Ô›Ùš[\ÊÜ›Ùš[WJNÜÙ]]ÞTÚ\[™Ô›Ùš[RY
+›Ùš[KšY
+NÜÙ]˜\šX[šXÙ\ÊÉÌLIÎŒMŒ	ÌL	ÎŒMŒ	ÌL‰ÎŒ	ÌLIÎŒ	ÌLÉÎŒÎJNÜÙ]šXÚ[™Ð\›Ý™Y
+˜[ÙJNÜÙ]ÛÛ\]JYJNÜÙ]š[š\Ú\ÙJ	Ù]Z[ÉÊNÜÙ]ÛÜšÙ›ÝÔÝ\
+	Ù\ÚYÛœÉÊNØÛÛœÝ\›[™]ÈT“
+Ú[™ÝË›ØØ][Û‹š™YŠNÝ\›œÙX\˜Ú\˜[\ËœÙ]
+	ÜÝ\	Ë	Ü™]šY]ÉÊNÝÚ[™ÝËš\ÝÜžKœ™\XÙTÝ]JßK	ÉË\›
+NÝÚ[™ÝËœØÜ›ÛÊÝÜŒ™Z]š[ÜŽ‰ÜÛ[ÛÝ	ßJNÂˆB‚ˆ\Þ[˜È[˜Ý[ÛˆÛÛ™š\›U\ØY[\œ\[ÛŠ
+^Ü™]\›ˆ\[›š[™ß]ØZ]ÛÛ™š\›PXÝ[ÛŠÝ]Nˆ“X]™H\ÈÝ\Ú[H\ØYÈ\™H[›š[™ÏÈ‹›ÙNˆ‘\ÚYÛˆ\ØYÈÝ[[ˆ›ÙÜ™\ÜÈX^HÝÜ™Y›Ü™HZ\ˆš[YžH˜YÈ\™Hš[š\ÚYˆ‹ÛÛ™š\›SX™[ˆ“X]™H[ž]Ø^H‹Ø[˜Ù[X™[ˆ”Ý^H\™H‹\ÝXÝ]™NY_J_Bˆ[˜Ý[ÛˆÝÜÚ]
+]NœÝš[™Ë\ÜÝY\ÎœÝš[™Ö×KÛÜOÎœÝš[™Ê^ÜÙ]›ØÚÚ[™Ó[Ù[
+Ý]K\ÜÝY\ËÛÜ_JNÜ™]\›ˆ˜[Ù_Bˆ[˜Ý[Ûˆ™\]Z\™Y›Ü”›ÙÜ™\ÜÊ[™^›[X™\Š^Ü™]\›ˆ›ÙÜ™\ÜÑØ]R\ÜÝY\Ê[™^
+_BˆÛÛœÝ[™RÙ^]ÛÜ™Ø\Ï]\ÙSY[[Ê
+
+OOžÂˆYŠXXÝ]™P[™_[™T™XÚ\\Ë›[™ÝŠ\™]\›ˆ×H\ÈÝš[™Ö×NÂˆ™]\›ˆ[™T™XÚ\\Ë™š[\Š
+™XÚ\K[™^
+OOžÂˆÛÛœÝÚÜÙ[Z[™^OOX[™R[™^Ê]]Õ]P˜[šÒYXÝ]™T™XÚ\OËšÙ^]ÛÜ™\ÝYˆŠNŠ[™RÙ^]ÛÜ™ÚÚXÙ\ÖÜ™XÚ\KšYOÏÜ™XÚ\KšÙ^]ÛÜ™\ÝYÏÈˆŠNÂˆ™]\›ˆXÚÜÙ[ŽÂˆJK›X\
+™XÚ\OOœ™XÚ\K›˜[YJNÂˆKØXÝ]™P[™K[™T™XÚ\\Ë[™R[™^[™RÙ^]ÛÜ™ÚÚXÙ\Ë]]Õ]P˜[šÒYXÝ]™T™XÚ\WJNÂˆÊˆŒˆHHØ[ÛˆH]YËˆ\È]Ûˆ™\]Z\™YHÛÛÝ\ˆÙ[XÝ[Û‹[™BˆÙ\˜[ZXÈ]YÈ\È›ÈÛÛÝ\œÈÈÙ[XÝHÛÈ]ÛÝ[™]™\ˆ[˜X›KÚ]]™\‚ˆÚHXÚÙYˆ][ÛÈØ\œšYY›È™X\ÛÛ‹ÛÈH\›X[™[H\ØX›Y™^ˆÝ\Ú[\HØ]\™HÚ[HÚHÛÚÙY›ÜˆH[™ÈÚHYZ\ÜÙY‚‚ˆÛÛÝ\œÈ\™H™\]Z\™YÛ›HÚ[ˆH›ÙXÝÙ™™\œÈ[KÚXÚ\ÈH[Bˆ™XY[™\ÜÈ[™]™\žHÝ\ˆØ]H[™XYH\ÙKˆ[™H\ØX›Y™^Ý\›ÝÂˆ[Ø^\ÈØ^\ÈÚ]]\ÈØZ][™È›Ü‹ˆ
+‹Âˆ[˜Ý[Ûˆ›ÙXÝÝ\›ØÚÙ\Š
+^ÂˆYŠ[\]Q]Z[ÏË˜ÛÛÜ“Ü[ÛœÏË›[™Ý	‰ˆ\Ù[XÝYÛÛÜ’YË›[™Ý
+\™]\›ˆÚÛÜÙH]X\ÝÛ™HÛÛÝ\ˆ›Üˆ\È›ÙXÝˆŽÂˆYŠ[\]Q]Z[ÏËœÚ^™SÜ[ÛœÏË›[™Ý	‰ˆ\Ù[XÝYÚ^™RYË›[™Ý
+\™]\›ˆÚÛÜÙH]X\ÝÛ™HÚ^™H›Üˆ\È›ÙXÝˆŽÂˆ™]\›ˆˆŽÂˆBˆ[˜Ý[Ûˆ™\]Z\™Y›Ü”Ý\
+Ý\•ÛÜšÙ›ÝÔÝ\
+^ÚYŠØØ[™]šY]Ê\™]\›ˆ×NØÛÛœÝ\ÜÝY\ÎœÝš[™Ö×OV×NÚYŠÝ\OOH˜ÛÛ›™XÝ‰‰ˆXÛÛ›™XÝY
+Z\ÜÝY\Ëœ\Ú
+ÛÛ›™XÝ[Ý\ˆš[YžHXØÛÝ[ˆŠNÚYŠÝ\OOH˜ÛÛ›™XÝ‰‰ˆY]ÞPÛÛ›™XÝY
+Z\ÜÝY\Ëœ\Ú
+ÛÛ›™XÝH]ÞHÚÜ]Ú[™XÙZ]™H\ÙH\Ý[™ÜËˆŠNÚYŠÈ™\ÚYÛœÈ‹œ™]šY]È‹™š[š\Ú—Kš[˜ÛY\ÊÝ\
+J^ÚYŠ\›ÙXÝÙ[XÝY
+Z\ÜÝY\Ëœ\Ú
+”Ø]™HÜˆÙ[XÝH›ÙXÝÜˆ›ÙXÝ[™KˆŠNÚYŠ][\]Q]Z[ÏËœÚ\[™Õ[\]RY	‰ˆ][\]Q]Z[ÏËœÚ\[™Ô›Ùš[S™YYÔÙ[XÝ[ÛŠZ\ÜÝY\Ëœ\Ú
+ÚÛÜÙHH˜[Yš[YžH›ÙXÝÚ][ˆ[\ÜYÚ\[™È›Ùš[KˆŠNÚYŠ][\]Q]Z[ÏË™[˜X›Y˜\šX[ÊZ\ÜÝY\Ëœ\Ú
+•H›ÙXÝ™YYÈ]X\ÝÛ™H[˜X›YÚ^™HÜˆÛÛÜ‹ˆŠNØÛÛœÝZ\ÜÚ[™ÐÛÛÜœÏP›ÛÛX[Š[\]Q]Z[ÏË˜ÛÛÜ“Ü[ÛœÏË›[™Ý	‰ˆ\Ù[XÝYÛÛÜ’YË›[™Ý
+NØÛÛœÝZ\ÜÚ[™ÔÚ^™\ÏP›ÛÛX[Š[\]Q]Z[ÏËœÚ^™SÜ[ÛœÏË›[™Ý	‰ˆ\Ù[XÝYÚ^™RYË›[™Ý
+NÚYŠZ\ÜÚ[™ÐÛÛÜœÊZ\ÜÝY\Ëœ\Ú
+ÚÛÜÙH]X\ÝÛ™H›ÙXÝÛÛÜˆ›Üˆ\È˜]ÚˆŠNÙ[ÙHYŠZ\ÜÚ[™ÔÚ^™\ÊZ\ÜÝY\Ëœ\Ú
+ÚÛÜÙH]X\ÝÛ™H›ÙXÝÚ^™H›Üˆ\È˜]ÚˆŠNÙ[ÙHYŠ\šXÙY˜\šX[Ë›[™Ý
+Z\ÜÝY\Ëœ\Ú
+›ÈÛÛÜˆ[™Ú^™HÛÛXš[˜][Ûˆ[ÝHXÚÙY\È]˜Z[X›H›Üˆ	Ý[\]Q]Z[ÏË˜›Y\š[]_\È›ÙXÝŸKˆÜ[ˆ]ÈÛÛÜœÈÜˆÚ^™\È[™ÚÛÜÙHHZ\š[™Èš[YžHÙ™™\œË˜
+NÚYŠ][\]Q]Z[ÏË˜˜]ÚY
+Z\ÜÝY\Ëœ\Ú
+”™[ØYHš[YžH›ÙXÝÛÈÛÛYHØ[ˆ™\\™H\È˜]ÚˆŠNßKÊˆŒŒH0­È]™\žH[™HY[X™\ˆÝ[™YYÈ]ÈÝÛˆÙ^]ÛÜ™˜[šÈ™Y›Ü™H]\ÈØ[‚ˆ™HÙ[™\˜]Y8 %HNH[H\È[˜Ú[™ÙYˆ][Ý™YÙ™ˆH›ÙXÝYÙKˆÚXÚØ\È›ØÚÚ[™ÈÛÛ[YHÛˆHÚÚXÙHXYHÛÈYÙ\È]\‹[™ÛÈBˆ\Ý[™ÈYÙHÚ\™HH˜[šÈ\ÈÚÜÙ[ˆ[™\ÙYˆ
+‹ÂˆYŠÝ\OOH™š[š\Ú‰‰˜[™RÙ^]ÛÜ™Ø\Ë›[™Ý
+Z\ÜÝY\Ëœ\Ú
+ÚÛÜÙHHÙ^]ÛÜ™˜[šÈ›Üˆ	Ø[™RÙ^]ÛÜ™Ø\Ëš›Ú[Š‹Š_K˜
+NÂˆYŠÈœ™]šY]È‹™š[š\Ú—Kš[˜ÛY\ÊÝ\
+J^ÚYŠYš[\Ë›[™Ý
+Z\ÜÝY\Ëœ\Ú
+Y]X\ÝÛ™Hš[š\ÚY\ÚYÛ‹ˆŠNÚYŠš[\ËœÛÛYJš[OOˆYš[KÚYYš[KšZYÚš[KœY[™ÔÝ]\ÏOOH˜ÚXÚÚ[™ÈŠJZ\ÜÝY\Ëœ\Ú
+•ØZ][[]™\žH\ÚYÛˆš[š\Ú\ÈØY[™È[™ÚXÚÚ[™ËˆŠNßKÊˆŽN0­ÈšXÙ\È[™HÚ\[™È›Ùš[H\™H›ÝÙ]ÛˆH“ÑPÕYÙK]ˆ\ÙHÛÈØ]\ÈÛ›Hš\™YÛˆ\Ý[™È8 %ÛÈÝ\È]\‹ˆÛÈ\›Ý™HšXÙ\Âˆ[™Ú\[™ÈˆÛÝ[™HYÛ›Ü™Y[\™[H[™ÛÛ[YHÈ[XYÙ\ÈÝ[ÛÜšÙYˆÚXÚXZÙ\ÈH]ÛˆÛÚÈXÛÜ˜]]™KˆHØ]H™[Û™ÜÈÛˆHÝ\]ˆÝÛœÈHXÚ\Ú[Û‹ˆ
+‹ÂˆYŠÈ™\ÚYÛœÈ‹œ™]šY]È‹™š[š\Ú—Kš[˜ÛY\ÊÝ\
+J^ÚYŠY]ÞTÚ\[™Ô·ã¿z¶‰žËkºwµçvG’÷VæVBâvöæRâ¢÷Ð¢ÆF—b6Æ74æÖSÒ'F6²×æVÂÖ&öG’#ç¶Æ—7F–æw2æÖ‚‡¶G&gBÆFW6–vâÇ6VÆV7FVD–ÖvW7Ò“ÓæG&gBç7FGW2ÓÒ$7&VFVB'ÇÂFW6–vçÇÂG&gBæ–CöçVÆÃ¢‚‚“Óç°¢6öç7B6÷VçC×6VÆV7FVD–ÖvW2æÆVæwF‚²‡&W&VDÖö6·W6÷VçG5¶G&gBæ–GÇÂ"%×ÇÃ“°¢&WGW&âÆF—b6Æ74æÖSÒ'F6²ÖÆ—7F–ær"¶W“×¶G&gBæ6Æ–VçD–GÓà¢ÆF—b6Æ74æÖSÒ'F6²ÖÆ—7F–ærÖ†VB#à¢¶G&gBç&Wf–WuW&ÃóÆ–Ör6Æ74æÖSÒ'F6²ÖÆ—7F–ær×F‡VÖ""7&3×¶G&gBç&Wf–WuW&ÇÒÇCÒ""óã£Ç7â6Æ74æÖSÒ'F6²ÖÆ—7F–ær×F‡VÖ""óçÐ¢Ç6Æ74æÖSÒ'F6²ÖÆ—7F–ærÖæÖR#ç¶FW6–vãòçF—FÆSòçG&–Ò‚—ÇÆFW6–vãòææÖWÇÆG&gBææÖWÇÂ$Æ—7F–ær'ÓÂ÷à¢Ç7â6Æ74æÖSÒ'F6²ÖÆ—7F–ærÖ6÷VçB#ç¶6÷VçGÒ¶6÷VçCÓÓÓò'†÷Fò#¢'†÷F÷2'ÓÂ÷7ãà¢ÂöF—cà¢ÆF—b6Æ74æÖSÒ'F6²ÖÆ—7F–ær×v÷&²#ç¶G&gBç7FGW3ÓÓÒ$7&VFVB"bcÅ&–çF–g”–ÖvU–6¶W"&&R–ÖvW3×²†G&gBç&–çF–g”–ÖvW7ÇÅµÒ’æf–ÇFW"„&ööÆVâ—Ò–æF–6W3×·6VÆV7FVD–ÖvW7Ò&W6W'fVE†÷F÷3×²‡&W&VDÖö6·W6÷VçG5¶G&gBæ–GÇÂ"%×ÇÃ’²†FW6–vãòç6—¦TwV–FTæÖWÇÇ6—¦TwV–FTæÖSó£—ÒöäÇ”öæS×·fÇVW3Óç²ò¢CCcRÒF†R†÷F÷26†R–6·2$RF†—2&öGV7Bw2FVfVÇBÂF†R6ÖRv’—G26öÆ÷W'2æB6—¦W2&RâF†W&Rv2%W6RF†W6R2F†—2&öGV7Bw2FVfVÇB"'WGFöâ6¶–ærVW7F–öâv—F‚öæR6Vç6–&ÆRç7vW#²F†R6VÆV7F–öâ6fW2—G6VÆbæ÷ræBF†R'WGFöâ—2vöæRâ¢ö–b†7F—fU&V6—R—fö–B6fT–ÖvU&VfW&Væ6W2‡fÇVW2“¶–b†G&gBæ–B—6WE&–çF–g”–ÖvU6VÆV7F–öç2†7W'&VçCÓâ‡²ââæ7W'&VçBÅ¶G&gBæ–BÓ§fÇVW7Ò’—×ÒöäÇ”ÆÃ×·fÇVW3Óç·6WE&–çF–g”–ÖvT–æF–6W2‡fÇVW2“·6WE&–çF–g”–ÖvU6VÆV7F–öç2„ö&¦V7Bæg&öÔVçG&–W2†G&gG2æf–ÇFW"†—FVÓÓæ—FVÒæ–B’æÖ†—FVÓÓç¶6öç7B—FVÔFW6–vãÖf–ÆW2æf–æB†f–ÆSÓæf–ÆRæ–CÓÓÖ—FVÒæ6Æ–VçD–B’Ç&W6W'fVCÒ‡&W&VDÖö6·W6÷VçG5¶—FVÒæ–B×ÇÃ’²†—FVÔFW6–vãòç6—¦TwV–FTæÖWÇÇ6—¦TwV–FTæÖSó£“·&WGW&å¶—FVÒæ–BÇfÇVW2ç6Æ–6RƒÄÖF‚æÖ‚ƒÃ#×&W6W'fVB’•×Ò’’—×Òöå6fU&V6—S×¶7F—fU&V6—S÷6fT–ÖvU&VfW&Væ6W3§VæFVf–æVGÒóçÓÂöF—cà¢ÂöF—cçÒ’‚’’ÓÂöF—cà¢Âóã°¢–b‡F6³ÓÓÒ&Æ–fW7G–ÆR"—&WGW&âÃà¢ÆF—b6Æ74æÖSÒ'F6²×æVÂÖÆVB#ãÇäÇ&VG’†fRf–æ—6†VBÆ–fW7G–ÆRÖö6·W2÷"÷F†W"Æ—7F–ær†÷F÷3òWÆöBF†VÒ†W&RâvöÆF–R7F÷&W2F†R÷&–v–æÂf–ÆW2v—F‚F†—2W†7BÆ—7F–æræBFG2F†VÒv†Vâ—BV&Æ—6†W2ãÂ÷ãÂöF—cà¢ÆF—b6Æ74æÖSÒ'F6²×æVÂÖ&öG’#ç¶Æ—7F–æw2æÖ‚‡¶G&gBÆFW6–vâÇ6VÆV7FVD–ÖvW7Ò“ÓæG&gBç7FGW2ÓÒ$7&VFVB'ÇÂFW6–vçÇÂG&gBæ–CöçVÆÃ¢‚‚“Óç°¢6öç7B6÷VçC×6VÆV7FVD–ÖvW2æÆVæwF‚²‡&W&VDÖö6·W6÷VçG5¶G&gBæ–GÇÂ"%×ÇÃ“°¢&WGW&âÆF—b6Æ74æÖSÒ'F6²ÖÆ—7F–ær"¶W“×¶G&gBæ6Æ–VçD–GÓà¢ÆF—b6Æ74æÖSÒ'F6²ÖÆ—7F–ærÖ†VB#à¢¶G&gBç&Wf–WuW&ÃóÆ–Ör6Æ74æÖSÒ'F6²ÖÆ—7F–ær×F‡VÖ""7&3×¶G&gBç&Wf–WuW&ÇÒÇCÒ""óã£Ç7â6Æ74æÖSÒ'F6²ÖÆ—7F–ær×F‡VÖ""óçÐ¢Ç6Æ74æÖSÒ'F6²ÖÆ—7F–ærÖæÖR#ç¶FW6–vãòçF—FÆSòçG&–Ò‚—ÇÆFW6–vãòææÖWÇÆG&gBææÖWÇÂ$Æ—7F–ær'ÓÂ÷à¢Ç7â6Æ74æÖSÒ'F6²ÖÆ—7F–ærÖ6÷VçB#ç¶6÷VçGÒ¶6÷VçCÓÓÓò'†÷Fò#¢'†÷F÷2'ÓÂ÷7ãà¢ÂöF—cà¢ÆF—b6Æ74æÖSÒ'F6²ÖÆ—7F–ær×v÷&²#à¢ÅWÆöFVDÆ—7F–æu†÷F÷2&öGV7D–C×¶G&gBæ–GÒöä6÷VçD6†ævS×¶6÷VçCÓç6WE&W&VDÖö6·W6÷VçG2†7W'&VçCÓâ‡²ââæ7W'&VçBÅ¶G&gBæ–BÓ¦6÷VçGÒ’—ÒóãÂöF—cà¢ÂöF—cçÒ’‚’’ÓÂöF—cà¢Âóã°¢–b‡F6³ÓÓÒ&÷&FW""—&WGW&âÃà¢²ò¢CSSBÒ6–Böæ6RÂ†W&RÂ–ç7FVBöböæ6RW"Æ—7F–ær–ç6–FRF†Rw&–Bâ¢÷Ð¢ÆF—b6Æ74æÖSÒ'F6²×æVÂÖÆVB#ãÇäG&rV6‚†÷Fòv†W&R–÷RvçB—BÂ÷"W6RF†R'&÷r'WGFöç2f÷"&V6—6RÆ6VÖVçBâF†Rf—'7B†÷Fò—2F†RöæR'W–W'26VR–â6V&6‚ãÂ÷ãÂöF—cà¢ÆF—b6Æ74æÖSÒ'F6²×æVÂÖ&öG’#ç¶Æ—7F–æw2æÖ‚‡¶G&gBÆFW6–vâÇ6VÆV7FVD–ÖvW7Ò“ÓæG&gBç7FGW2ÓÒ$7&VFVB'ÇÂFW6–vçÇÂG&gBæ–CöçVÆÃ¢‚‚“Óç°¢6öç7B6÷VçC×6VÆV7FVD–ÖvW2æÆVæwF‚²‡&W&VDÖö6·W6÷VçG5¶G&gBæ–GÇÂ"%×ÇÃ“°¢&WGW&âÆF—b6Æ74æÖSÒ'F6²ÖÆ—7F–ær"¶W“×¶G&gBæ6Æ–VçD–GÓà¢ÆF—b6Æ74æÖSÒ'F6²ÖÆ—7F–ærÖ†VB#à¢¶G&gBç&Wf–WuW&ÃóÆ–Ör6Æ74æÖSÒ'F6²ÖÆ—7F–ær×F‡VÖ""7&3×¶G&gBç&Wf–WuW&ÇÒÇCÒ""óã£Ç7â6Æ74æÖSÒ'F6²ÖÆ—7F–ær×F‡VÖ""óçÐ¢Ç6Æ74æÖSÒ'F6²ÖÆ—7F–ærÖæÖR#ç¶FW6–vãòçF—FÆSòçG&–Ò‚—ÇÆFW6–vãòææÖWÇÆG&gBææÖWÇÂ$Æ—7F–ær'ÓÂ÷à¢Ç7â6Æ74æÖSÒ'F6²ÖÆ—7F–ærÖ6÷VçB#ç¶6÷VçGÒ¶6÷VçCÓÓÓò'†÷Fò#¢'†÷F÷2'ÓÂ÷7ãà¢ÂöF—cà¢ÆF—b6Æ74æÖSÒ'F6²ÖÆ—7F–ær×v÷&²#ç¶G&gBç7FGW3ÓÓÒ$7&VFVB"bfG&gBæ–BbcÄÆ—7F–æu†÷Fô÷&FW"&öGV7D–C×¶G&gBæ–GÒ&–çF–g”–ÖvW3×²†G&gBç&–çF–g”–ÖvW7ÇÅµÒ’æf–ÇFW"„&ööÆVâ—Ò–æF–6W3×·6VÆV7FVD–ÖvW7Ò&Vg&W6„¶W“×¶G·&W&VDÖö6·W6÷VçG5¶G&gBæ–E×ÇÃÓ¢G¶FW6–vãòç6—¦TwV–FTæÖWÇÇ6—¦TwV–FTæÖWÖÒóç×¶G&gBç7FGW3ÓÓÒ$7&VFVB"bfFW6–vâbfG&gBæ–BbcÄ–æF—f–GVÅ6—¦TwV–FR&öGV7D–C×¶G&gBæ–GÒæÖS×¶FW6–vâç6—¦TwV–FTæÖWÒöå6fVC×¶æÖSÓçWFFTFW6–vâ†FW6–vâæ–BÇ·6—¦TwV–FTæÖS¦æÖWÒ—Òóç×¶G&gBç7FGW3ÓÓÒ$7&VFVB"bfG&gBæ–BbcÄF÷væÆöDÆ—7F–æu†÷F÷2&öGV7D–C×¶G&gBæ–GÒæÖS×¶G&gBçF—FÆWÇÆG&gBææÖWÒ–æF–6W3×·6VÆV7FVD–ÖvW7ÒóçÓÂöF—cà¢ÂöF—cçÒ’‚’’ÓÂöF—cà¢Âóã°¢&WGW&âçVÆÃ°¢Ð ¢gVæ7F–öâ7FW&öGV7D6&G2‡7FGW4f÷#¢‡&V6—S¥&V6—RÆ–æFWƒ¦çVÖ&W"“Óç¶Æ&VÃ§7G&–æs·FöæS¢'&VG’'Â&GFVçF–öâ'Â&Gf–6R'Â'v—F–ær'ÒÆ&öG“¥&V7DæöFRÆ†–FFVãÖfÇ6RÆfö÷FW#¥&V7DæöFSÖçVÆÂÇ6†÷t6&G3×G'VR—°¢6öç7B6†&VD7F–öãÔ&ööÆVâ†fö÷FW"“°¢6öç7BÆ—7CÖ7F—fT'VæFÆRbf'VæFÆU&V6—W2æÆVæwFƒãö'VæFÆU&V6—W3¢†7F—fU&V6—Sõ¶7F—fU&V6—UÓ¥µÒ“°¢–b‚Æ—7BæÆVæwF‚—&WGW&â&öG“°¢6öç7BÖç“ÖÆ—7BæÆVæwFƒã°¢ò¢C3ƒÒF†—2&–Â6'&–VB&F6‚×&öGV7G66ò—Bv÷VÆB–æ†W&—B7FWw0¢6&BÆ–÷WBâF†B6Æ72—2æ×6†VÆÂæ&F6‚×&öGV7G7¶F—7Æ“¦w&–@¢–×÷'FçGÖÂ6òäõD„”är6÷VÆB†–FRF†—26V7F–öâÒæ÷Bæ†–FFVâ×æVÂÂæ÷@¢â–æÆ–æRF—7Æ“¦æöæRâF†R&–Â7F–VB÷VâöâWfW'’7FWÂæB&V6W6R¢†BÇ6ò7G&—VBF†RG&gG2æVÂw2÷vâ†–FFVâ7FFRÂ7FW"w2$7&VFP¢–÷W"&–çF–g’G&gG2"ÆæFVBöâ7FWà ¢&÷'&÷v–ær6Æ72f÷"—G2Æ–÷WBÇ6ò&÷'&÷w2—G2–×÷'FçBâF†R&–Â÷vç0¢—G2÷vâÆ–÷WBæ÷rÂ†–FW2v—F‚â–æÆ–æR7G–ÆRÂæBF†RæVÂ–ç6–FR¶VW0¢†–F–ær—G6VÆbFöòÒGvò–æFWVæFVçBwV&G2Â&V6W6RöæRv2æ÷BVæ÷Vv‚â¢ð¢&WGW&âÇ6V7F–öâ6Æ74æÖSÒ'7FW×&öGV7BÖ6&G2"7G–ÆS×¶†–FFVã÷¶F—7Æ“¢&æöæR'Ó§VæFVf–æVGÒ&–ÖÆ&VÃÒ%&öGV7G2–âF†—2&F6‚#à¢·6†÷t6&G2bfÆ—7BæÖ‚‡&V6—RÆ–æFW‚“Óç°¢6öç7B÷VãÖÖç“ö–æFWƒÓÓÖ'VæFÆT–æFWƒ§G'VS°¢6öç7B&öGV7CÖ–æFWƒÓÓÖ'VæFÆT–æFWƒ÷FV×ÆFTFWF–Ç3¦'VæFÆT6öÆ÷%&öGV7G5·&V6—Ræ–EÓ°¢6öç7B7FGW3×7FGW4f÷"‡&V6—RÆ–æFW‚“°¢ò¢7VÆÆVB÷WB&F†W"F†â'V–ÇBv—F‚FöæRÒG²ââçÓ¢6Æ72F†R7G–ÆW6†VW@¢F&vWG2'WBæòf–ÆR6öçF–ç2—2W†7FÇ’v†BF†RÆ—fVæW72FW7BW†—7G0¢Fò6F6‚ÂæBFV×ÆFRÆ—FW&Â†–FW2—Bg&öÒF†B6†V6²â¢ð¢6öç7BFöæT6Æ73×7FGW2çFöæSÓÓÒ'&VG’#ò'FöæR×&VG’#§7FGW2çFöæSÓÓÒ&GFVçF–öâ#ò'FöæRÖGFVçF–öâ#§7FGW2çFöæSÓÓÒ&Gf–6R#ò'FöæRÖGf–6R#¢'FöæR×v—F–ær#°¢6öç7B†÷Fó×&öGV7C÷–6µ&öGV7E†÷Fò‡&öGV7B“¢"#°¢ò¢CCƒ"ÒF†RæW‡B&öGV7B–â'VæFÆRöffW&VB$÷Vâv–ÆFâFVR"g&öÒF†P¢fW'’f—'7B7FWÂ&Vf÷&RF†R&öGV7B6†Rv27GVÆÇ’v÷&¶–æröâ†@¢&öGV6VB6–ævÆRG&gBâ&W76–ær—B&â6öçF–çVT'VæFÆRÂv†–6‚6'&–W0¢F†RFW6–vç2f÷'v&BÂÖ–çG2g&W6‚&F6‚æB§V×2Fò&Wf–WrÒ6ò¢†ÆbÖf–æ—6†VB†ööF–Rv2&æFöæVBæBF†RFVR÷VæVBB7FWv—F€¢æ÷F†–ær–â—BÂv†–6‚F†VâfVÆÂ&6²FòF†R7F'BâF†B†æFöfb&VÆöæw0¢FòF†Rf–æ—6‚&V6V—BÂBF†Rö–çBF†R7W'&VçB&öGV7B—27GVÆÇ¢FöæRâ&öGV7BÇ&VG’VæFW'v’6â7F–ÆÂ&R&V÷VæVBBç’F–ÖS°¢v†B6ææ÷B†Vâ—27F'F–ærF†RæW‡BöæRV&Ç’â¢ð¢6öç7B&V6†&ÆSÖÖç’bb÷Vâbd&ööÆVâ†'VæFÆT&F6„–G5·&V6—Ræ–E×ÇÆ–æFWƒÓÓÖ'VæFÆT–æFW‚³“°¢6öç7B÷Væ–æs×7v—F6†–æu&öGV7CÓÓ×&V6—Ræ–C°¢&WGW&âÆ'F–6ÆR6Æ74æÖS×¶&F6‚×&öGV7BÖ6&B7FW×&öGV7BÖ6&BG¶÷Vãò&—2Ö÷Vâ#¢&—2Ö6Æ÷6VB'ÒG·7FGW2çFöæSÓÓÒ'&VG’'ÇÇ7FGW2çFöæSÓÓÒ&Gf–6R#ò&—2×&VG’#¢&æVVG2×6WGW'ÒG¶Öç“ò&–âÖ&F6‚#¢"'ÖÒ¶W“×·&V6—Ræ–GÓà¢Æ†VFW ¢²âââ‡&V6†&ÆS÷·&öÆS¢&'WGFöâ"ÇF$–æFWƒ£À¢öä6Æ–6³¢‚“Óæ÷Vä'VæFÆU&öGV7B†–æFW‚’À¢öä¶W”F÷vã¢†WfVçC¥&V7Bä¶W–&ö&DWfVçB“Óç¶–b†WfVçBæ¶W“ÓÓÒ$VçFW"'ÇÆWfVçBæ¶W“ÓÓÒ""—¶WfVçBç&WfVçDFVfVÇB‚“¶÷Vä'VæFÆU&öGV7B†–æFW‚—××Ó§·Ò—Ð¢6Æ74æÖS×·&V6†&ÆSò&—2Ö÷Væ&ÆR#§VæFVf–æVGÐ¢&–ÖW‡æFVC×¶Öç“ö÷Vã§VæFVf–æVGÐ¢&–Ö'W7“×¶÷Væ–æwÇÇVæFVf–æVGÓà¢·†÷FóóÆ–Ör6Æ74æÖSÒ&'VæFÆR×&öGV7B×†÷Fò"7&3×·†÷F÷ÒÇCÒ""ÆöF–æsÒ&Æ§’"FV6öF–æsÒ&7–æ2"óã£Å&öGV7DvÇ—‚F—FÆS×·&öGV7Còæ&ÇVW&–çEF—FÆWÇÇ&V6—RææÖWÒóçÐ¢Ç7â6Æ74æÖSÒ&'VæFÆR×&öGV7BÖ–B#à¢¶Öç’bcÆVÒ6Æ74æÖSÒ&&F6‚×&öGV7B×÷6—F–öâ#å&öGV7B¶–æFW‚³Òöb¶Æ—7BæÆVæwF‡ÓÂöVÓçÐ¢Æ#ç·&V6—RææÖWÓÂö#à¢²ò¢C3“bÒfVÆÂ&6²FòF†R7FGW2v†VâF†R&öGV7Bv2æ÷BÆöFVBÂ6ò¢6Æ÷6VB6&B&–çFVB&Ææ²Gv–6S¢öæ6R†W&RæBöæ6R–à¢F†R6†—&W6–FR—BâF†R6†—÷vç2F†R7FGW2â¢÷Ð¢Ç6ÖÆÃç·&öGV7Còæ&ÇVW&–çEF—FÆWÇÂ"'ÓÂ÷6ÖÆÃà¢Â÷7ãà¢Ç7â6Æ74æÖS×¶&F6‚×&öGV7B×7FFR7FW×&öGV7B×7FFRG·FöæT6Æ77ÖÓç·7FGW2æÆ&VÇÓÂ÷7ãà¢Âö†VFW#à¢²ò¢CC“’ÒF†R6ÖR&÷w27FWv—fW2WfW'’&öGV7BÂöâWfW'’7FWâF†P¢&öGV7B&V–ærv÷&¶VBÇ6ò6†÷w2—G2VF—F÷"VæFW&æVF‚F†VÓ²F†R&W7@¢6†÷rF†V—"&÷w2æB6†ævRF†B÷Vç2F†VÒ†W&Râ¢÷Ð¢²ò¢CSÒF†R&÷w2vW&RvFVBöâF†W&R&V–ærÖ÷&RF†âöæR&öGV7BÂ6ò¢6–ævÆR×&öGV7B&F6‚6†÷vVBæöæRöâ7FW2"ÓBv†–ÆR7FW6†÷w2F†VÐ¢f÷"öæR&öGV7B§W7BF†R6ÖRâ6&BvWG2—G2&÷w2V—F†W"v’â¢÷Ð¢²‚‚“Óç¶6öç7B&÷w3×&öGV7E&÷w2‡&V6—RÆ–æFWƒÓÓÖ'VæFÆT–æFW‚“¶–b‚&÷w2æÆVæwF‚—&WGW&âçVÆÃ°¢ò¢CS2Ò7FWw2&÷r—2&F6‚×&öGV7B×&÷r6WGFÆVB6Æ–6¶&ÆVv—F€¢&öÆSÖ'WGFöâÂF&–æFW‚æB&–ÖW‡æFVBÂ6òF†Rv†öÆR&÷r÷Vç2À¢'’Ö÷W6R÷"¶W–&ö&BÂæB—G26†ævR6'&–W26Æ72&÷rÖ÷VââÖ–æP¢vW&RÆ–âF—g2v†÷6RöæÇ’6öçG&öÂv2F†R'WGFöâÂ6ò6Æ–6¶–ærF†P¢&÷rF–Bæ÷F†–æræBæ÷F†–ærv2&V6†&ÆR'’¶W–&ö&Bâ6ÖR&÷râ¢ð¢ò¢CSRÒWfW'’&÷r67&öÆÆVBFòF†R6ÖRVÆVÖVçBÂF†R6&B&öG’Â6ð¢6Æ–6¶–ærF—FÆW2ÆæFVBöâF†RFW67&—F–öâæB6Æ–6¶–ærFW67&—F–öà¢F–Bæ÷F†–ær–÷R6÷VÆB6VRâ&÷rvöW2Fò—G2÷vâ6V7F–öâÂæB¢6V7F–öâF†B—2ÆFWF–Ç3â÷Vç2ÒæB6Æ÷6W2v–âöâ6V6öæ@¢6Æ–6²Â&V6W6R&÷rF†BöæÇ’WfW"÷Vç2—2æ÷B6öçG&öÂâ¢ð¢ò¢CS3’ÒF6²&÷r÷Vç2—G2÷vâæVÂ–ç6–FRF†—26&Bâ—BFöW0¢æ÷B67&öÆÂç—v†W&RÂ&V6W6RF†W&R—2æ÷v†W&RVÇ6RFòvòà¢CSCÒæBæ÷ræò&÷r†2ç—v†W&RVÇ6RFòvòâF†R6VÆV7F÷ ¢Ö6†–æW'’VæFW&æVF‚F†—2Ò÷VâF†R6V7F–öâÂvÆ²W÷Væ–ærWfW'¢ÆFWF–Ç3â&÷fR—BÂ67&öÆÂFò—BÂæB–b—B—2æ÷BöâF†—2†6P¢F‡&÷rF†R7FW&6²†6RFòf–æB—BÒW†—7FVBFò6W'fR&÷w2F†@¢vW&R&öö¶Ö&·2–çFò6†&VB&Æö6²â7FW22æBBvW&RF†RÆ7BGvð¢W6–ær—BÂæBæV—F†W"FöW2æ÷râ¢ð¢6öç7B÷Vå&÷sÒ…÷F&vWCó§7G&–ærÇF6³ó§7G&–ær“Óç°¢–b‚F6²—¶–b‚÷Vâbg&V6†&ÆR–÷Vä'VæFÆU&öGV7B†–æFW‚“·&WGW&çÐ¢–b‚÷Vâ—¶–b‡&V6†&ÆR—·6WD7F—fUF6²‡F6²“¶÷Vä'VæFÆU&öGV7B†–æFW‚—×&WGW&çÐ¢6WD7F—fUF6²†7W'&VçCÓæ7W'&VçCÓÓ×F6³ò"#§F6²“°¢Ó°¢&WGW&âÆF—b6Æ74æÖSÒ&&F6‚×&öGV7B×&÷w2#ç·&÷w2æÖ‡&÷sÓãÄg&vÖVçB¶W“×·&÷ræÆ&VÇÓãÆF—`¢6Æ74æÖS×¶&F6‚×&öGV7B×&÷rG·&÷ræFöæSò'6WGFÆVB#§&÷rçVæF–æsò'VæF–ær#§&÷ræ÷F–öæÃò&÷F–öæÂ#¢&æVVFVB'ÒG·&÷rç&W÷'Cò'&W÷'F–ær#§7v—F6†–æu&öGV7GÇÂ‚÷Vâbb&V6†&ÆR“ò"#¢&6Æ–6¶&ÆR'ÖÐ¢&öÆS×·&÷rç&W÷'GÇÇ7v—F6†–æu&öGV7GÇÂ‚÷Vâbb&V6†&ÆR“÷VæFVf–æVC¢&'WGFöâ'Ð¢F$–æFWƒ×·&÷rç&W÷'GÇÇ7v—F6†–æu&öGV7GÇÂ‚÷Vâbb&V6†&ÆR“÷VæFVf–æVC£Ð¢&–ÖW‡æFVC×¶÷VçÐ¢öä6Æ–6³×¶WfVçCÓç¶–b‡&÷rç&W÷'B—&WGW&ã¶†öÆE&÷t–åÆ6R‚†WfVçBæ7W'&VçEF&vWB2…DÔÄVÆVÖVçB’“¶÷Vå&÷r‡&÷rçF&vWBÇ&÷rçF6²—×Ð¢öä¶W”F÷vã×²†WfVçC¥&V7Bä¶W–&ö&DWfVçB“Óç¶–b†WfVçBæ¶W“ÓÓÒ$VçFW"'ÇÆWfVçBæ¶W“ÓÓÒ""—¶WfVçBç&WfVçDFVfVÇB‚“¶–b‡&÷rç&W÷'B—&WGW&ã¶†öÆE&÷t–åÆ6R†WfVçBæ7W'&VçEF&vWB2…DÔÄVÆVÖVçB“¶÷Vå&÷r‡&÷rçF&vWBÇ&÷rçF6²—××Óà¢Ç7â6Æ74æÖSÒ'&÷rÖÖ&²"&–Ö†–FFVãÒ'G'VR#ç·&÷ræFöæSò.)É2#§&÷rçVæF–æsò.(
+b#§&÷ræ÷F–öæÃò.(	2#¢"'ÓÂ÷7ãà¢Ç7â6Æ74æÖSÒ'&÷rÖÆ&VÂ#ç·&÷ræÆ&VÇÓÂ÷7ãà¢Ç7â6Æ74æÖSÒ'&÷r×fÇVR#ç·&÷rçfÇVW×·&÷ræFWF–ÃóÇ6ÖÆÃç·&÷ræFWF–ÇÓÂ÷6ÖÆÃã¦çVÆÇ×·&÷ræGf–6SóÇ6ÖÆÂ6Æ74æÖSÒ'&÷rÖGf–6R#ç·&÷ræGf–6WÓÂ÷6ÖÆÃã¦çVÆÇÓÂ÷7ãà¢²ò¢CS"Ò6GW&VBg&öÒ&÷F‚vW26–FR'’6–FS¢7FWWG26†ævP¢öâWfW'’&÷röbWfW'’6&BÂ–æ6ÇVF–ærF†R&öGV7BÇ&VG’÷Vâà¢7FW2WBöæRöæÇ’öâ6Æ÷6VBÂ&V6†&ÆR&öGV7BÒ6òF†R÷Và¢6&Bw2&÷w2†Bæò6öçG&öÂBÆÂæB&öGV7Bv—F–ær—G2GW&à¢†B$f–æ—6‚v–ÆFâFVRf—'7B"Æ–æR7FWæWfW"6†÷w2âWfW'¢&÷r6'&–W26†ævS²—B6—2v‡’v†Vâ—B6ææ÷B&RW6VBâ¢÷Ð¢²ò¢CSCÒ7FWB†2æòW"×&öGV7Bv÷&³¢F†R&Wf–WræBF†RöæP¢V&Æ—6‚'WGFöâ&R7FWÖÆWfVÂÂ–âF†Rfö÷FW"â&÷F‚öb—G2&÷w0¢6'&–VB6†ævRF†B67&öÆÆVBFòF†R6ÖR&Æö6²VæFW&æVF‚Â6ð¢GvòF–ffW&VçB&÷w2vVçBFòöæRÆ6Râ&÷rv—F‚æ÷F†–æröb—G0¢÷vâFò÷Vâ&W÷'G2æB6—26òâ¢÷Ð¢·&÷rç&W÷'CöçVÆÃ£Æ'WGFöâG—SÒ&'WGFöâ"6Æ74æÖSÒ'&÷rÖ÷Vâ ¢F—6&ÆVC×´&ööÆVâ‡7v—F6†–æu&öGV7B—ÇÂ‚÷Vâbb&V6†&ÆR—Ð¢F—FÆS×²÷Vâbb&V6†&ÆSöf–æ—6‚G¶Æ—7E¶–æFW‚ÓÓòææÖWÇÂ'F†R&öGV7B&÷fR'Òf—'7F§VæFVf–æVGÐ¢öä6Æ–6³×¶WfVçCÓç¶WfVçBç7F÷&÷vF–öâ‚“¶†öÆE&÷t–åÆ6R†WfVçBæ7W'&VçEF&vWBæ6Æ÷6W7B‚"æ&F6‚×&öGV7B×&÷r"’2…DÔÄVÆVÖVçGÆçVÆÂ“¶÷Vå&÷r‡&÷rçF&vWBÇ&÷rçF6²—×Óà¢¶÷Væ–æsò$÷Væ–æ~(
+b#¢$6†ævR'Ð¢Âö'WGFöãçÐ¢ÂöF—cà¢¶÷Vâbg&÷rçF6²bf7F—fUF6³ÓÓ×&÷rçF6²bcÆF—b6Æ74æÖSÒ'F6²×æVÂ#ç·F6µæVÂ‡&÷rçF6²—ÓÂöF—cçÐ¢Âôg&vÖVçCâ—ÓÂöF—cã°¢Ò’‚—Ð¢¶÷VâbcÆF—b6Æ74æÖSÒ'7FW×&öGV7BÖ&öG’#ç¶&öG—ÓÂöF—cçÐ¢²ò¢CC“‚Ò6Æ÷6VB&öGV7Bv2†VFW"v—F‚f÷&V–vâÖÆöö¶–ær$÷Và¢v–ÆFâFVR(i""'WGFöâ7GV6²VæFW"—BÂv†–6‚&VB2ÆVf–ærF†—2vP¢f÷"æ÷F†W"öæRâWfW'’&öGV7B—2F†R6ÖR6&C¢F†RöæR&V–ærv÷&¶V@¢—2W‡æFVBÂF†R&W7B&RF†R6ÖR6&B6öÆÆ6VBâ6Æ–6¶–ærF†P¢†VFW"÷Vç2—B–âÆ6RÂæBF†R6†Wg&öâ6—2F†B—2v†Bv–ÆÀ¢†Vââ¢÷Ð¢²ò¢CC“’ÒV6‚&÷r6'&–W2—G2÷vâ6†ævRÂW†7FÇ’27FWFöW2Â6òF†R6W&FRW‡æB7G&—F†B6BVæFW"F†R6&B—2vöæRâ¢÷Ð¢²ò¢C3“bÒ6&Bv—F‚æò6öçG&öÂæBæòW‡ÆæF–öâ&VG22'&ö¶VââV6€¢&öGV7B—2—G2÷vâ&F6‚æBF†W’&Rv÷&¶VB–â÷&FW"Â6ò6’v†–6‚öæP¢†2Fò6öÖRf—'7B&F†W"F†â6†÷v–ærâ–æW'B6&Bâ¢÷Ð¢²ò¢CS"ÒF†Rv—F–ærÆ–æR—2öâF†RF—6&ÆVB6†ævRæ÷rÂ6ò6&B—2æWfW"†VFW"v—F‚6VçFVæ6RVæFW"—Bâ¢÷Ð¢Âö'F–6ÆSã°¢Ò—Ð¢¶fö÷FW'Ð¢Â÷6V7F–öãã°¢Ð ¢ò¢C3s‚Ò7FW2"ÓBÆ—7BWfW'’&öGV7B–âF†R'VæFÆR26&BÂ6ò6VÆÆW"6à¢ö–çBBç’öbF†VÒÂæ÷BöæÇ’F†RæW‡BöæRâV6‚ÖVÖ&W"—26W&FR&F6‚À¢6ò÷Væ–æröæRÖVç2ÆöF–ær—G2&F6‚ÒF†R6ÖRF‚&W7VÖR&F6‚W6W2æ@¢F†RöæÇ’öæRF†B&W7F÷&W2G&gG2ÂF—FÆW2æBWG7’FWF–Ç26÷'&V7FÇ’à¢&öGV7BF†B†2æ÷B&VVâ7F'FVB–WB†2æò&F6‚FòÆöC²F†B—2v†@¢6öçF–çVT'VæFÆR—2f÷"ÂæB—BöæÇ’WfW"Ö÷fW2FòF†RæW‡BöæRâ¢ð¢gVæ7F–öâ÷Vä'VæFÆU&öGV7B†–æFWƒ¦çVÖ&W"—°¢–b†–æFWƒÓÓÖ'VæFÆT–æFW‚—&WGW&ã°¢6öç7B&V6—SÖ'VæFÆU&V6—W5¶–æFW…Ó°¢–b‚&V6—R—&WGW&ã°¢6öç7BW†—7F–æsÖ'VæFÆT&F6„–G5·&V6—Ræ–EÓ°¢–b†W†—7F–ær—°¢–b‡7v—F6†–æu&öGV7B—&WGW&ã°¢6WE7v—F6†–æu&öGV7B‡&V6—Ræ–B“°¢fö–B†7–æ2‚“Óç°¢G'—°¢ò¢C3s’ÒF†RWF÷6fR—2FV&÷Væ6VBÂ6òF†RÆ7BfWr‡VæG&V@¢Ö–ÆÆ—6V6öæG2öbG—–ærÖ’7F–ÆÂ&RVæF–ærâöæ6R&F6„–E&Vbö–çG0¢BF†R–æ6öÖ–ær&F6‚F†BVæF–ærw&—FRv÷VÆBÆæBöâF†Rw&öæp¢&öGV7BÂ6òfÇW6‚F†R÷WFvö–æröæRf—'7BæBv—Bf÷"—Bâ¢ð¢v—BW'6—7D&F6„æ÷r†&F6„–E&Vbæ7W'&VçB“°¢6WE&W7F÷&–æt&F6‚‡G'VR“°¢6æ6†÷E&VG’æ7W'&VçCÖfÇ6S°¢v—B&W7F÷&T&F6„'”–B†W†—7F–ærÇv÷&¶fÆ÷u7FWÆçVÆÂÇG'VR“°¢v–æF÷rç67&öÆÅFòƒÃ“°¢Öf–æÆÇ—·6WE7v—F6†–æu&öGV7B‚""—Ð¢Ò’‚“°¢&WGW&ã°¢Ð¢–b†–æFWƒÓÓÖ'VæFÆT–æFW‚³—fö–B6öçF–çVT'VæFÆR‚“°¢Ð ¢7–æ2gVæ7F–öâ6öçF–çVT'VæFÆR‚—°¢6öç7BæW‡CÖ'VæFÆU&V6—W5¶'VæFÆT–æFW‚³Ó¶–b‚7F—fT'VæFÆWÇÂæW‡B—&WGW&ã°¢ò¢CC“2ÒÖ÷f–ærFòF†RæW‡B&öGV7B&W6WBG&gG2æBÖ–çFVBæWr&F6‚–@¢v—F†÷WBf—'7Bw&—F–ærF†R÷WFvö–ær&öGV7Bw2&F6‚âWF÷6fR—2FV&÷Væ6VBÀ¢6òF†RG&gG2—B†B§W7B7&VFVBvW&R6ÆV&VBg&öÒ7FFR&Vf÷&RF†W’vW&P¢WfW"6fVBâfW&–f–VBöâ&VÂF‡&VR×&öGV7B'Vã¢&–çF–g’†VÆB6—‚G&gG2À¢æBvöÆF–Rw2÷vâ†—7F÷'’6†÷vVB"ÂæBÒF†Rf—'7BGvò&öGV7G2rv÷&°¢W†—7FVBöæÇ’–â&–çF–g’Âv—F‚æ÷F†–ær–âvöÆF–Rö–çF–ærB—Bà¢÷Vä'VæFÆU&öGV7BÇ&VG’fÇW6†W2&Vf÷&R7v—F6†–æs²F†—2F‚æWfW"F–Bâ¢ð¢v—BW'6—7D&F6„æ÷r†&F6„–E&Vbæ7W'&VçB“°¢6öç7B6'&–VDf–ÆW3Öf–ÆW2æÖ†f–ÆSÓâ‡²ââæf–ÆRÆ–C¦7'—Fòç&æFöÕUT”B‚’Ç&Wf–WuW&Ã¥U$Âæ7&VFTö&¦V7EU$Â†f–ÆRæf–ÆR’ÇF—FÆS¢""ÇFw3¥µÒÆ&ÇW&#§VæFVf–æVBÆFW67&—F–öä÷fW'&–FS§VæFVf–æVBÇ6—¦TwV–FTæÖS§VæFVf–æVBÆWG7“§VæFVf–æVBÆWG7”W'&÷#¢"'Ò’“°¢6öç7BæW‡D&F6„–CÖ7'—Fòç&æFöÕUT”B‚“¶&F6„–E&Vbæ7W'&VçCÖæW‡D&F6„–C·v–æF÷ræÆö6Å7F÷&vRç6WD—FVÒ‚&vöÆF–RÖ7F—fRÖ&F6‚"ÆæW‡D&F6„–B“¶6öç7BW&ÃÖæWrU$Â‡v–æF÷ræÆö6F–öâæ‡&Vb“·W&Âç6V&6…&×2ç6WB‚&&F6‚"ÆæW‡D&F6„–B“²ò¢CCƒBÒF†—2f÷&6VB'&Wf–Wr"æòÖGFW"v†–6‚7FW6†R÷VæVBF†R&öGV7@¢g&öÒâ÷Væ–ærF†RFVRg&öÒ7FW"F‡&Wr†W"–çFò7FW2v—F‚æòFW6–vç0¢&ö6W76VBæBæòG&gG2ÂæBF†R7FWwV&BvÆ¶VB†W"&6²FòF†R7F'BÐ¢v†B6†R6r2&V–ærGV×VBöâ7FWöæRâ'VæFÆRw2&öGV7G2&Rv÷&¶V@¢öâF†R6ÖRvR2V6‚÷F†W"ÂW†7FÇ’2F†W’&Röâ7FWÂ6ò÷Væ–æp¢öæR¶VW2F†R7FW6†R—2öââ¢ð¢ò¢CC“2ÒF†R–æ6öÖ–ær&öGV7B†2æòFV×ÆFRÆöFVB–WBÂ6òF†R7FWwV&@¢F÷væw&FW2Fò6WGWæB&Ww&—FW2F†RU$ÂÂÖ–B×'VââF†RvRF†Vâ6†÷vV@¢$FW6–vç2²–ÖvW2"v†–ÆRF†RU$Â6–B7FW×6WGWâCCƒrÇ&VG’'V–ÇBF†P¢Ö6†–æW'’f÷"W†7FÇ’F†—3¢&VÖVÖ&W"F†R7FWÂ&W7F÷&R—Böæ6R—B÷Vç2â¢ð¢&WVW7FVE7FWæ7W'&VçC×v÷&¶fÆ÷u7FW°¢W&Âç6V&6…&×2ç6WB‚'7FW"Çv÷&¶fÆ÷u7FW“·W&Âç6V&6…&×2æFVÆWFR‚'†6R"“·v–æF÷ræ†—7F÷'’çW6…7FFR‡·ÒÂ""ÇW&Â“°¢6WD'VæFÆT–æFW‚†7W'&VçCÓæ7W'&VçB³“·6WDG&gG2…µÒ“·6WD6ö×ÆWFR†fÇ6R“·6WE&ö6W76VBƒ“·6WE'VåF÷FÂƒ“·6WD÷VæVDG&gG2…µÒ“·6WD÷VäÆÄÖW76vR‚""“·6WE&VfÆ–v‡D÷Vâ†fÇ6R“·6WE&–çF–g”–ÖvU6VÆV7F–öç2‡·Ò“·6WE6†&VDÖö6·W2‡VæFVf–æVB“·6WE&W&VDÖö6·W6÷VçG2‡·Ò“·6WDf–æ—6…†6R‚&FWF–Ç2"“·6WEf&–çE&–6W2‡·Ò“·6WE&–6–æt&÷fVB†fÇ6R“·6WE6—¦TwV–FTæÖR‚""“·6WE6—¦TwV–FU7FGW2‚""“·6WD&F6…&V6V—B†çVÆÂ“·6WEV&Æ—6„ÖW76vR‚""“·6WDf–ÆW2†6'&–VDf–ÆW2“·6WDFW67&—F–öâ‚""“·6WD7F—fTFW6–vâ‚""“·7–æ6VDÆ—7F–æu6–væGW&W2æ7W'&VçBæ6ÆV"‚“°¢v—B6fT&F6„f–ÆW2†æW‡D&F6„–BÆ6'&–VDf–ÆW2æÖ†f–ÆSÓæf–ÆRæf–ÆR’’æ6F6‚‚‚“ÓçVæFVf–æVB“·6WD7F—fU&V6—R†æW‡B“·6WE&–çF–g”–ÖvT–æF–6W2†æW‡Bç&–çF–g”–ÖvT–æF–6W7ÇÅµÒ“·6WDWG7•6†—–æu&öf–ÆT–B„çVÖ&W"†æW‡BæWG7•6†—–æu&öf–ÆT–B—ÇÃ“·6WEFV×ÆFR†æW‡BçFV×ÆFUW&Â“·6WDÖö6·WF†VÖR†æW‡BæFVfVÇDÖö6·WF†VÖWÇÂ""“·6WDWFõF—FÆT&æ´–B†æW‡Bæ¶W—v÷&DÆ—7D–GÇÂ""“¶6öç7BæW‡E&–6–æs×²ââç&–6–ærÇF&vWE&öf—C¤çVÖ&W"†æW‡BæFVfVÇE&öf—EF&vWB—ÇÄDTdTÅEõ$”4”ärçF&vWE&öf—BÇ6†—–æt6÷7C£Ç6†—–æt6†&vVC£Ó·6WE&–6–ær†æW‡E&–6–ær“·6WEFV×ÆFTFWF–Ç2†çVÆÂ“¶6öç7BæW‡DFWF–Ç3Öv—BÆöEFV×ÆFUW&Â†æW‡BçFV×ÆFUW&ÂÆæW‡E&–6–ærÄçVÖ&W"†æW‡BæWG7•6†—–æu&öf–ÆT–B—ÇÃÆæW‡BæFVfVÇD6öÆ÷$–G7ÇÅµÒÆæW‡BæFVfVÇE6—¦T–G7ÇÅµÒ“¶–b†æW‡Bæ¶W—v÷&DÆ—7D–BbfæW‡DFWF–Ç2—¶6öç7B–ÆöCÖv—BfWF6‚‚"ö’ö¶W—v÷&BÖÆ—7G2"’çF†Vâ‡&W7öç6SÓç&W7öç6Ræ§6öâ‚’’æ6F6‚‚‚“Óâ‡¶Æ—7G3¥µ×Ò’’2¶Æ—7G3ó¤¶W—v÷&DÆ—7Eµ×ÒÆ&æ³×–ÆöBæÆ—7G3òæf–æB†Æ—7CÓæÆ—7Bæ–CÓÓÖæW‡Bæ¶W—v÷&DÆ—7D–B“¶–b†&æ²—¶6öç7BF—FÆVCÖv—B&öÖ—6RæÆÂ†6'&–VDf–ÆW2æÖ†7–æ2f–ÆSÓç·G'—¶6öç7B&W7VÇCÖv—BWFõF—FÆTf÷$FW6–vâ†f–ÆRÆ&æ²æ¶W—v÷&G2ÇF—FÆT¦ö–æW#ÓÓÒ"Â"ÆæW‡DFWF–Ç2“·&WGW&â²ââæf–ÆRÇF—FÆS§7G–ÆVEF—FÆR‡&W7VÇBçF—FÆR’ÇFw3§&W7VÇBçFw2ÇF—FÆUv&æ–æs§&W7VÇBçF—FÆUv&æ–ærÇF—FÆTW'&÷#¢"'×Ö6F6‚†W'&÷"—·&WGW&â²ââæf–ÆRÇF—FÆTW'&÷#¦W'&÷"–ç7Fæ6VöbW'&÷#öW'&÷"æÖW76vS¢$vöÆF–R6÷VÆBæ÷B7&VFR6ö×ÆWFRF—FÆRf÷"F†—2FW6–vââ'××Ò’“·6WDf–ÆW2‡F—FÆVB—××6WEv÷&¶fÆ÷u7FW‚&FW6–vç2"“·v–æF÷rç67&öÆÅFò‡·F÷£Ò“°¢Ð¢7–æ2gVæ7F–öâ7&VFT7W7FöÕ6†—–æu&öf–ÆR†&6U&öf–ÆT–C¦çVÖ&W"ÆFöÖW7F–5&–Ö'“¦çVÖ&W"ÆFöÖW7F–4FF—F–öæÃ¦çVÖ&W"ÇF—FÆS§7G&–ærÆ–çFW&æF–öæÃ¤–çFW&æF–öæÅ6†—–æu&FUµÒ—¶6öç7B&W7öç6SÖv—BfWF6‚‚"ö’öWG7’÷6†—–ær×&öf–ÆW2"Ç¶ÖWF†öC¢%õ5B"Æ†VFW'3§²$6öçFVçBÕG—R#¢&Æ–6F–öâö§6öâ'ÒÆ&öG“¤¥4ôâç7G&–æv–g’‡¶&6U&öf–ÆT–BÆFöÖW7F–5&–Ö'’ÆFöÖW7F–4FF—F–öæÂÇF—FÆRÆ–çFW&æF–öæÇÒ—Ò’Ç&W7VÇCÖv—B&W7öç6Ræ§6öâ‚’2¶–Có¦çVÖ&W#¶W'&÷#ó§7G&–æwÓ¶–b‚&W7öç6Ræö·ÇÂ&W7VÇBæ–B—F‡&÷ræWrW'&÷"‡&W7VÇBæW'&÷'ÇÂ%F†RWG7’6†—–ær&öf–ÆR6÷VÆBæ÷B&R6fVBâ"“¶v—BÆöDWG7•6†—–æu&öf–ÆW2‡&W7VÇBæ–B“¶–b†7F—fU&V6—R—¶6öç7BWFFVC×²ââæ7F—fU&V6—RÆWG7•6†—–æu&öf–ÆT–C§&W7VÇBæ–GÓ¶v—BfWF6‚‚"ö’÷&öGV7B×&V6—W2"Ç¶ÖWF†öC¢%õ5B"Æ†VFW'3§²$6öçFVçBÕG—R#¢&Æ–6F–öâö§6öâ'ÒÆ&öG“¤¥4ôâç7G&–æv–g’‡¶–C¦7F—fU&V6—Ræ–BÆæÖS¦7F—fU&V6—RææÖRÇFV×ÆFUW&Ã¦7F—fU&V6—RçFV×ÆFUW&ÂÆWG7•6†—–æu&öf–ÆT–C§&W7VÇBæ–GÒ—Ò“·6WD7F—fU&V6—R‡WFFVB—×6WE&–6–æt&÷fVB†fÇ6R—Ð¢ò¢C#R+r&öGV7BF†B†26fVBæöæRöb—G2÷vâFVfVÇG2—2&V–ær6WBWf÷ ¢¢F†Rf—'7BF–ÖRâF†R&WGW&æ–ær×&öGV7Bg&Ö–ær‚&g&öÒ–÷W"Æ7B&F6‚"À¢¢%6fVBf÷"F†—2&öGV7B"’—2fÇ6Rf÷"—BæB†–FW2F†BF†W6R&R6†ö–6W0¢¢7F–ÆÂFò&RÖFRâ¢ð¢ò¢CS2ÒF†—2v26ö×WFVBæBF†Vâ&VB'’æö&öG’Âv†–ÆRÖö6·W6WE6VÆV7F÷ ¢Föö²f—'7E'Vâ&÷F†Bæö&öG’76VBâC#Rw2v†öÆRö–çBv2F†B¢&öGV7B&V–ær6WBWf÷"F†Rf—'7BF–ÖR6†÷VÆBæ÷B&RFöÆB—G26†ö–6W26ÖP¢&g&öÒ–÷W"Æ7B&F6‚"ÒæBF†Bg&Ö–ær†2&VVâFVBf÷"WfW'’6VÆÆW ¢6–æ6RÂ&V6W6RF†RGvò†ÇfW2vW&RæWfW"¦ö–æVBâ¦ö–æVBæ÷rà ¢—BÇ6òW†6ÇVFVB'VæFÆW2÷WG&–v‡BÂ6ò'VæFÆRÖVÖ&W"&V–ær6WBWf÷"F†P¢f—'7BF–ÖRv÷BF†R&WGW&æ–ær×&öGV7Bv÷&F–ærWfVâöæ6R—Bv2v—&VBWà¢f—'7B'Vâ—2f7B&÷WBF†R&öGV7BÂæ÷B&÷WB†÷r—Bv2÷VæVBâ¢ð¢6öç7B&öGV7Df—'7E'VãÔ&ööÆVâ†7F—fU&V6—R¢bb7F—fU&V6—SòæFVfVÇD6öÆ÷$–G3òæÆVæwF€¢bb7F—fU&V6—SòæFVfVÇDÖö6·WF†VÖP¢bb7F—fU&V6—Sòæ¶W—v÷&DÆ—7D–C°¢7–æ2gVæ7F–öâ7F'DæWu&öGV7B‚—°¢–b‚†f–ÆW2æÆVæwFƒãÇÆG&gG2æÆVæwFƒãÇÆ6ö×ÆWFR’bbv—B6öæf—&Ô7F–öâ‡·F—FÆS¢$FBæWr&öGV7BæB6ÆV"F†—2&F6ƒò"Æ&öG“¢$ç’FW6–vç2æBVæf–æ—6†VBv÷&²–âF†—2&F6‚v–ÆÂ&R&VÖ÷fVBâ6fVB&öGV7G2Â¶W—v÷&B&æ·2æBÖö6·W6WG2&RVçF÷V6†VBâ"Æ6öæf—&ÔÆ&VÃ¢$FB&öGV7B"ÆFW7G'V7F—fS§G'VWÒ’—&WGW&âfÇ6S°¢6ÆV$7W'&VçD&F6‚‡G'VR“°¢&WGW&âG'VS°¢Ð¢7–æ2gVæ7F–öâ6†ævU&öGV7B‚—°¢–b‚†f–ÆW2æÆVæwFƒãÇÆG&gG2æÆVæwFƒãÇÆ6ö×ÆWFR’bbv—B6öæf—&Ô7F–öâ‡·F—FÆS¢$6†ævR&öGV7BæB7F'BæWr&F6ƒò"Æ&öG“¢%–÷W"WÆöFVBFW6–vç2æBVæf–æ—6†VBv÷&²–âF†—2&F6‚v–ÆÂ&R&VÖ÷fVBâ6fVB&öGV7G2Â¶W—v÷&B&æ·2æBÖö6·W6WG2&RVçF÷V6†VBâ"Æ6öæf—&ÔÆ&VÃ¢$6†ævR&öGV7B"ÆFW7G'V7F—fS§G'VWÒ’—&WGW&âfÇ6S°¢6ÆV$7W'&VçD&F6‚‡G'VR“·&WGW&âG'VS°¢Ð¢7–æ2gVæ7F–öâ6fT–ÖvU&VfW&Væ6W2†–æF–6W3¦çVÖ&W%µÒ—¶–b‚7F—fU&V6—R—&WGW&ã¶6öç7B&W7öç6SÖv—BfWF6‚‚"ö’÷&öGV7B×&V6—W2"Ç¶ÖWF†öC¢%õ5B"Æ†VFW'3§²$6öçFVçBÕG—R#¢&Æ–6F–öâö§6öâ'ÒÆ&öG“¤¥4ôâç7G&–æv–g’‡¶–C¦7F—fU&V6—Ræ–BÆæÖS¦7F—fU&V6—RææÖRÇFV×ÆFUW&Ã¦7F—fU&V6—RçFV×ÆFUW&ÂÇ&–çF–g”–ÖvT–æF–6W3¦–æF–6W7Ò—Ò“¶–b‚&W7öç6Ræö²—F‡&÷ræWrW'&÷"‚%F†W6R&–çF–g’†÷Fò&VfW&Væ6W26÷VÆBæ÷B&R6fVBâÆV6RG'’v–ââ"“·6WE&–çF–g”–ÖvT–æF–6W2†–æF–6W2“·6WD7F—fU&V6—R‡²ââæ7F—fU&V6—RÇ&–çF–g”–ÖvT–æF–6W3¦–æF–6W7Ò—Ð¢gVæ7F–öâ7G–ÆVEF—FÆR‡F—FÆS§7G&–ær—·&WGW&â‡F—FÆT63÷F—FÆRç&WÆ6R‚õÆ%µÇ´ÇÕÇ´çÕÒöwRÆ6†&7FW#Óæ6†&7FW"çFôÆö6ÆUWW$66R‚’“§F—FÆR’ç6Æ–6RƒÃC—Ð¢gVæ7F–öâÇ”&F6…F—FÆR‡F—FÆS§7G&–ærÆW‡Æ–6—EFw3ó§7G&–æuµÒ—¶6öç7BæW‡C×7G–ÆVEF—FÆR‡F—FÆR“·6WDf–ÆW2†7W'&VçCÓæ7W'&VçBæÖ†f–ÆSÓâ‡²ââæf–ÆRÇF—FÆS¦æW‡BÇFw3¦W‡Æ–6—EFw7ÇÇFw4g&öÕF—FÆR†æW‡B’ÆWG7“§VæFVf–æVBÆWG7”W'&÷#¢"'Ò’’—Ð¢gVæ7F–öâFD&F6„¶W—v÷&B†¶W—v÷&C§7G&–ær—¶–b†&F6„¶W—v÷&G2ç6öÖR‡fÇVSÓçfÇVRçFôÆö6ÆTÆ÷vW$66R‚“ÓÓÖ¶W—v÷&BçG&–Ò‚’çFôÆö6ÆTÆ÷vW$66R‚’’—&WGW&ã¶6öç7BæW‡CÕ²ââæ&F6„¶W—v÷&G2Æ¶W—v÷&BçG&–Ò‚•Ó·6WD&F6„¶W—v÷&G2†æW‡B“¶Ç”&F6…F—FÆR†æW‡Bæ¦ö–â‡F—FÆT¦ö–æW"’ÇFw4g&öÕF—FÆR†æW‡Bæ¦ö–â‚"Â"’’—Ð¢gVæ7F–öâ&VÖ÷fT&F6„¶W—v÷&B†¶W—v÷&C§7G&–ær—¶6öç7BæW‡CÖ&F6„¶W—v÷&G2æf–ÇFW"‡fÇVSÓçfÇVRÓÖ¶W—v÷&B“·6WD&F6„¶W—v÷&G2†æW‡B“¶Ç”&F6…F—FÆR†æW‡Bæ¦ö–â‡F—FÆT¦ö–æW"’ÇFw4g&öÕF—FÆR†æW‡Bæ¦ö–â‚"Â"’’—Ð¢gVæ7F–öâ6ÆV$&F6„¶W—v÷&G2‚—·6WD&F6„¶W—v÷&G2…µÒ“¶Ç”&F6…F—FÆR‚""ÅµÒ—Ð¢gVæ7F–öâ6†ævUF—FÆT¦ö–æW"†¦ö–æW#§7G&–ær—·6WEF—FÆT¦ö–æW"†¦ö–æW"“¶–b†&F6„¶W—v÷&G2æÆVæwF‚–Ç”&F6…F—FÆR†&F6„¶W—v÷&G2æ¦ö–â†¦ö–æW"’ÇFw4g&öÕF—FÆR†&F6„¶W—v÷&G2æ¦ö–â‚"Â"’’—Ð¢gVæ7F–öâ6†ævUF—FÆT62†Væ&ÆVC¦&ööÆVâ—·6WEF—FÆT62†Væ&ÆVB“·6WDf–ÆW2†7W'&VçCÓæ7W'&VçBæÖ†f–ÆSÓâ‡²ââæf–ÆRÇF—FÆS¢†Væ&ÆVCöf–ÆRçF—FÆRç&WÆ6R‚õÆ%µÇ´ÇÕÇ´çÕÒöwRÆ6†&7FW#Óæ6†&7FW"çFôÆö6ÆUWW$66R‚’“¦f–ÆRçF—FÆR’ç6Æ–6RƒÃC’ÆWG7“§VæFVf–æVBÆWG7”W'&÷#¢"'Ò’’—Ð¢7–æ2gVæ7F–öâ'V–ÆD&F6…F—FÆR‚—¶–b‚WFõF—FÆT&æ²—&WGW&â6WEF—FÆT'V–ÆDÖW76vR‚$6†ö÷6R¶W—v÷&B&æ²f—'7Bâ"“·6WEF—FÆT'V–ÆF–ær‡G'VR“·6WEF—FÆT'V–ÆDÖW76vR†7&VF–æröbG¶f–ÆW2æÆVæwF‡ÒF—FÆW>(
+f“¶ÆWB6ö×ÆWFVCÓÆf–ÆVCÓ¶v—B'Vä&÷VæFVB†f–ÆW2Ã"Æ7–æ2FW6–vãÓç·G'—¶6öç7B&W7VÇCÖv—BWFõF—FÆTf÷$FW6–vâ†FW6–vâÆWFõF—FÆT&æ²æ¶W—v÷&G2ÇF—FÆT¦ö–æW#ÓÓÒ"Â"ÇFV×ÆFTFWF–Ç2“·&WGW&â¶FW6–vâÇ&W7VÇG×Ö6F6‚†W'&÷"—·&WGW&â¶FW6–vâÆW'&÷#¦W'&÷"–ç7Fæ6VöbW'&÷#öW'&÷"æÖW76vS¢$vöÆF–R6÷VÆBæ÷B7&VFRF†—2F—FÆRâ'××ÒÆ—FVÓÓç¶6ö×ÆWFVB³Ó¶–b‚'&W7VÇB"–â—FVÒbf—FVÒç&W7VÇB—·WFFTFW6–vâ†—FVÒæFW6–vâæ–BÇ·F—FÆS§7G–ÆVEF—FÆR†—FVÒç&W7VÇBçF—FÆR’ÇFw3¦—FVÒç&W7VÇBçFw2ÇF—FÆUv&æ–æs¦—FVÒç&W7VÇBçF—FÆUv&æ–ærÇF—FÆTW'&÷#¢""ÆWG7“§VæFVf–æVBÆWG7”W'&÷#¢"'Ò“·VÇ6UF—FÆR†—FVÒæFW6–vâæ–B—ÖVÇ6W¶f–ÆVB³Ó·WFFTFW6–vâ†—FVÒæFW6–vâæ–BÇ·F—FÆTW'&÷#¦—FVÒæW'&÷"ÇF—FÆUv&æ–æs¢"'Ò—×6WEF—FÆT'V–ÆDÖW76vR†7&VF–ærG¶6ö×ÆWFVGÒöbG¶f–ÆW2æÆVæwF‡ÒF—FÆW>(
+f—Ò“²ò¢C#3+r&VB#F—FÆW27&VFVBâ"æVVBæ÷F†W"G'’"öâ&VÂ'Vââ¢ð¢6WEF—FÆT'V–ÆDÖW76vR†f–ÆVCöG¶f–ÆW2æÆVæwF‚Öf–ÆVGÒG¶f–ÆW2æÆVæwF‚Öf–ÆVCÓÓÓò'F—FÆR#¢'F—FÆW2'Ò7&VFVBâG¶f–ÆVGÒG¶f–ÆVCÓÓÓò&æVVG2#¢&æVVB'Òæ÷F†W"G'“²V6‚ffV7FVBÆ—7F–ærW‡Æ–ç2v‡’&VÆ÷ræ¦)É2G¶f–ÆW2æÆVæwF‡ÒVæ—VRG¶f–ÆW2æÆVæwFƒÓÓÓò'F—FÆR#¢'F—FÆW2'ÒæB6W&FVÇ’&æ¶VBWG7’Fw27&VFVBâ&Wf–WrF†VÒ&VÆ÷ræ“·6WEF—FÆT'V–ÆF–ær†fÇ6R’ò¢CSCÒF†—2W6VBFò‡VçBF÷vâF†R&W7VÇG2F&ÆRæB67&öÆÂFò—BÀ¢&V6W6RF†RF&ÆR6Bf"&VÆ÷rF†R'WGFöâ–ç6–FRöæRÆöær&Æö6²âF†P¢&W7VÇG2&RF†R&÷w2F—&V7FÇ’VæFW"F†—2'WGFöâæ÷rÂ–âF†R6ÖR÷Và¢æVÂÂ6òF†W&R—2æ÷v†W&RFòG&fVÂFòâ¢÷Ð ¢ò¢CSCbÒ6†R&V6†VB7FWBv—F‚GvòöbF‡&VR&öGV7G2æWfW"7F'FVBÂv2FöÆ@¢%–÷W"&F6‚—2&VG’f÷"—G2f–æÂ6†V6²"ÂæBöffW&VB%V&Æ—6‚ÆÂ0¢&öGV7G2Æ—fRöâWG7’"âfW&–f–VBv–ç7BF†R6fVB&F6ƒ¢F†R'VæFÆR†VÆ@¢F‡&VR&V6—W2æBW†7FÇ’öæR†B&F6‚BÆÂÒv–ÆFâFVRæBv–ÆFà¢7&WvæV6²†BæòG&gG2ÂæòF—FÆW2Âæ÷F†–ærâ&W76–ærV&Æ—6‚v÷VÆB†fRW@¢F†R†ööF–Rw2GvòÆ—7F–æw2Æ—fRæBF†Vâ7FÆÆVBöâ&öGV7Bv—F‚æ÷F†–ær–à¢—BâWfW'’çVÖ&W"öâF†BvR6÷VçFVBF†R÷Vâ&öGV7C²F†R'WGFöâ6÷VçFV@¢&öGV7G2âæV—F†W"6–Bv†Bv÷VÆB7GVÆÇ’&R7&VFVBâ¢ð¢gVæ7F–öâ'VæFÆU&öGV7G4æ÷E7F'FVB‚—°¢–b‚7F—fT'VæFÆWÇÆ'VæFÆU&V6—W2æÆVæwFƒÃ"—&WGW&åµÒ2&V6—UµÓ°¢ò¢CSC‚Ò&æò7VÖÖ'’–WB"—2æ÷BF†R6ÖR2&æòÆ—7F–æw2"âF†R÷F†W ¢&öGV7G2r&F6†W2&R&VBgFW"Ö÷VçBÂ6òf÷"ÖöÖVçBWfW'’öæRöbF†VÐ¢Æöö·2V×G’ÒæBCSCbv÷VÆB†fR&VgW6VBFòV&Æ—6‚&VG’'VæFÆRÀ¢æÖ–ær&öGV7G2F†BvW&RÖW&VÇ’Vç&VBâ&öGV7Bv—F‚&F6‚—2æ÷@¢Vç7F'FVC²öæÇ’&öGV7Bv—F‚æò&F6‚BÆÂ—2â¢ð¢ò¢Cc#rÒÖVÖ&W"v†÷6R&F6‚—2vöæR†2&F6‚–BæB¦W&òG&gG2Â6ò—@¢6Æ—VB7B&÷F‚†ÇfW2öbF†—2æBv÷VÆB†fR&VVâG&÷VBg&öÒF†P¢&W72–â6–ÆVæ6Râ—B6÷VçG22æ÷B7F'FVBâ¢ð¢&WGW&â'VæFÆU&V6—W2æf–ÇFW"‡&V6—SÓç&V6—Ræ–BÓÖ7F—fU&V6—Sòæ–Bbb†'VæFÆT&F6…7VÖÖ'•·&V6—Ræ–EÓòçVç&VF&ÆWÇÂ‚'VæFÆT&F6„–G5·&V6—Ræ–EÒbb„çVÖ&W"†'VæFÆT&F6…7VÖÖ'•·&V6—Ræ–EÓòæG&gG2—ÇÃ’’’“°¢Ð¢gVæ7F–öâ'VæFÆU&öGV7G57F–ÆÅ&VF–ær‚—°¢–b‚7F—fT'VæFÆWÇÆ'VæFÆU&V6—W2æÆVæwFƒÃ"—&WGW&åµÒ2&V6—UµÓ°¢&WGW&â'VæFÆU&V6—W2æf–ÇFW"‡&V6—SÓç&V6—Ræ–BÓÖ7F—fU&V6—Sòæ–Bbd&ööÆVâ†'VæFÆT&F6„–G5·&V6—Ræ–EÒ’bb'VæFÆT&F6…7VÖÖ'•·&V6—Ræ–EÒ“°¢Ð¢gVæ7F–öâ'VæFÆTÆ—7F–æw5FõV&Æ—6‚‚—°¢–b‚7F—fT'VæFÆWÇÆ'VæFÆU&V6—W2æÆVæwFƒÃ"—&WGW&â6VÆV7FVEV&Æ—6„G&gG2‚’æÆVæwFƒ°¢&WGW&â'VæFÆU&V6—W2ç&VGV6R‚‡F÷FÂÇ&V6—R“ÓçF÷FÂ²‡&V6—Ræ–CÓÓÖ7F—fU&V6—Sòæ–@¢÷6VÆV7FVEV&Æ—6„G&gG2‚’æÆVæwF€¢¤çVÖ&W"†'VæFÆT&F6…7VÖÖ'•·&V6—Ræ–EÓòæG&gG2—ÇÃ’Ã“°¢Ð ¢gVæ7F–öâÖ—76–æuV&Æ—6„f–VÆG2‚—²ò¢Cc#bÒf–ÆW6—2F†R÷Vâ&öGV7Bw2FW6–vç2Â6òF—FÆW2ÂFw2æBWG7’FWF–Ç2öâWfW'’÷F†W"&öGV7B–âF†R'VæFÆRvVçBVæ6†V6¶VBæB6÷VÆBV&Æ—6‚–æ6ö×ÆWFRâ¢ö6öç7B6†÷6Vã×6VÆV7FVEV&Æ—6„G&gG2‚’Æ6Æ–VçD–G3ÖæWr6WB†6†÷6VâæÖ†G&gCÓæG&gBæ6Æ–VçD–B’’Æ6†÷6Väf–ÆW3Ö'VæFÆUV&Æ—6„f–ÆW2‚’æf–ÇFW"†f–ÆSÓæ6Æ–VçD–G2æ†2†f–ÆRæ–B’’ÆÖ—76–æs§7G&–æuµÓÕµÓ¶–b‚6†÷6VâæÆVæwF‚–Ö—76–ærçW6‚‚%6VÆV7BBÆV7BöæR7V66W76gVÂÆ—7F–ær"“°¢ò¢Cc3RÒF†W6R&Æö6¶VBF†R&W72&V6W6R&öGV7B4ôÔUt„U$R–âF†R'VæFÆP¢v2V×G’÷"Vç&VF&ÆRÂv†WF†W"÷"æ÷B—Bv2&V–ærV&Æ—6†VBâF†B—0¢†÷rF†R&VG’&öGV7Bv÷B†VÆB†÷7FvR'’FVÆWFVB&F6‚âCSCbFFVB—@¢&V6W6RF†R6öæf—&ÖF–öâ6Æ–ÖVBFòV&Æ—6‚2&öGV7G2v†–ÆR"†@¢æ÷F†–æs²Cc3Bf—†VBF†B6Æ–ÒB—G26÷W&6RÂ6òF†R6öæf—&ÖF–öâæ÷p¢æÖW2öæÇ’v†Bv–ÆÂ7GVÆÇ’V&Æ—6‚æBF†—2æòÆöævW"†2FòwVW72à¢&öGV7Bv—F‚æòÆ—7F–æw2†2æò6VÆV7FVBÆ—7F–æw2Â6ò—B6ææ÷BÖ¶R¢&BV&Æ—6‚Ò—B6âöæÇ’7F÷vööBöæRâ7F–ÆÂ&VF–ær—2F–ffW&VçC ¢VçF–ÂÖVÖ&W"ç7vW'2ÂF†R6VÆV7F–öâvVçV–æVÇ’Ö’&R–æ6ö×ÆWFRâ¢ð¢–b†'VæFÆU&öGV7G57F–ÆÅ&VF–ær‚’æÆVæwF‚–Ö—76–ærçW6‚‚$vöÆF–R—27F–ÆÂ&VF–ærF†R÷F†W"&öGV7G2–âF†—2&F6‚"“¶–b†6†÷6Väf–ÆW2ç6öÖR†f–ÆSÓâf–ÆRçF—FÆRçG&–Ò‚’’–Ö—76–ærçW6‚‚%F—FÆW2"“¶–b†6†÷6Väf–ÆW2ç6öÖR†f–ÆSÓâf–ÆRçFw2æÆVæwF‚’–Ö—76–ærçW6‚‚%Fw2"“¶–b‚FW67&—F–öâçG&–Ò‚’–Ö—76–ærçW6‚‚%W&ÖæVçB&öGV7BFW67&—F–öâ"“¶–b†6†÷6Väf–ÆW2ç6öÖR†f–ÆSÓâWG7•&WV—&VD6ö×ÆWFR†f–ÆRæWG7’’’–Ö—76–ærçW6‚‚$WG7’FWF–Ç2"“¶–b†6†÷6Väf–ÆW2ç6öÖR†f–ÆSÓçW'6öæÆ—¦F–öå&ö&ÆVÒ†f–ÆRæWG7’’’–Ö—76–ærçW6‚‚%W'6öæÆ—¦F–öâ6WGF–æw2"“¶–b†6†÷6VâæÆVæwF‚bbÆÄ7&VFVDÆ—7F–æw4†fT–ÖvW2†6†÷6Vâ’–Ö—76–ærçW6‚‚$BÆV7BöæR–ÖvRöâWfW'’6VÆV7FVBÆ—7F–ær"“·&WGW&âÖ—76–æwÐ¢gVæ7F–öâ÷VåV&Æ—6„6öæf—&ÖF–öâ‚—¶6öç7B6†÷6Vã×6VÆV7FVEV&Æ—6„G&gG2‚’ÆÖ—76–æsÖÖ—76–æuV&Æ—6„f–VÆG2‚“¶–b†Ö—76–æræÆVæwF‚—&WGW&âfö–B7F÷v—F‚‚$6ö×ÆWFRWfW'’&WV—&VB6VÆV7FVBÆ—7F–ærf–VÆBâ"ÆÖ—76–æræÖ†f–VÆCÓæ&Vf÷&RV&Æ—6†–æs¢G¶f–VÆGÖ’“¶6öç7BÖ—76–æu†÷F÷3Ö7&VFVDÆ—7F–æw4Ö—76–æt–ÖvW2†6†÷6Vâ“¶–b†Ö—76–æu†÷F÷2æÆVæwF‚—&WGW&âfö–B7F÷v—F‚‚$FB†÷FòFòWfW'’6VÆV7FVBÆ—7F–ær&Vf÷&RV&Æ—6†–ærâ"ÆÖ—76–æu†÷F÷2æÖ†G&gCÓæG&gBææÖR’“·6WEV&Æ—6„6öæf—&Ô÷Vâ‡G'VR—Ð¢7–æ2gVæ7F–öâÖöæ—F÷%V&Æ—6„¦ö"†¦ö$–C§7G&–ærÇ&W7VÖ–æsÖfÇ6R—°¢ò¢CCsBÒF†—2Çv—26–B'&W7VÖ–ær"Â–æ6ÇVF–æröâV&Æ—6‚6†R†B§W7@¢7F'FVBÂv†–6‚&VG22F†÷Vv‚6öÖWF†–ærvVçBw&öærâ¢ð¢6WEV&Æ—6†–ær‡G'VR“·6WEV&Æ—6„ÖW76vR‡&W7VÖ–æsò$vöÆF–R—26fVÇ’&W7VÖ–ær–÷W"VWVVB&F6Ž(
+b#¢$vöÆF–R—2V&Æ—6†–ær–÷W"Æ—7F–æw>(
+b"“°¢G'—¶ÆWB¦ö#§¶–C§7G&–æs·7FGW3§7G&–æs·F÷FÃ¦çVÖ&W#¶6ö×ÆWFVC¦çVÖ&W#¶f–ÆVC¦çVÖ&W#·VWVVC¦çVÖ&W#·&ö6W76–æs¦çVÖ&W#¶f–æ—6†VC¤'&“Ç¶WG7”Æ—7F–æt–C¦çVÖ&W#·W&Ã§7G&–æwÓã¶f–ÇW&W3ó¤'&“Ç·&öGV7D–C§7G&–æs¶W'&÷#§7G&–æwÓã¶'VFvWCó§·&VÖ–æ–æs¦çVÖ&W'××ÇVæFVf–æVC°¢v†–ÆR‚¦ö'ÇÂ²&6ö×ÆWFVB"Â&æVVG5öGFVçF–öâ%Òæ–æ6ÇVFW2†¦ö"ç7FGW2—ÇÆ¦ö"çVWVVB¶¦ö"ç&ö6W76–æsã—¶–b†¦ö"—¶6öç7B7W'&VçD¦ö#Ö¦ö"ÆÆ÷t'VFvWCÖ7W'&VçD¦ö"æ'VFvWCòç&VÖ–æ–ærÓ×VæFVf–æVBbf7W'&VçD¦ö"æ'VFvWBç&VÖ–æ–æsÃ#S·6WEV&Æ—6„ÖW76vR†Æ÷t'VFvWCò%–÷W"&F6‚—26fR–âvöÆF–^(	—2VWVRâWG7ž(	—26†&VBÆÆ÷væ6R—2&W7F–ær&Vf÷&RF†RæW‡BÆ—7F–ær7F'G2â#¦V&Æ—6†–ær6fVÇ“¢G¶7W'&VçD¦ö"æ6ö×ÆWFVGÒöbG¶7W'&VçD¦ö"çF÷FÇÒÆ—7F–æw2&RÆ—fRâ–÷RÖ’ÆVfRF†—2vRæB&WGW&âÆFW"æ“¶v—BæWr&öÖ—6R‡&W6öÇfSÓç6WEF–ÖV÷WB‡&W6öÇfRÆÆ÷t'VFvWCó3£S’—Ö6öç7B&W7öç6SÖv—BfWF6‚†ö’÷&–çF–g’öG&gG2÷V&Æ—6ƒö¦ö$–CÒG¶Væ6öFUU$”6ö×öæVçB†¦ö$–B—ÖÇ¶66†S¢&æò×7F÷&R'Ò’Ç–ÆöCÖv—B&W7öç6Ræ§6öâ‚’2¶¦ö#ó§G—Vöb¦ö#¶W'&÷#ó§7G&–æwÓ¶–b‚&W7öç6Ræö·ÇÂ–ÆöBæ¦ö"—F‡&÷ræWrW'&÷"‡–ÆöBæW'&÷'ÇÂ$vöÆF–R6÷VÆBæ÷B6†V6²F†—2VWVVB&F6‚â"“¶¦ö#×–ÆöBæ¦ö'Ð¢–b‚¦ö"—F‡&÷ræWrW'&÷"‚$vöÆF–R6÷VÆBæ÷BÆöBF†—2VWVVB&F6‚â"“¶Æö6Å7F÷&vRç&VÖ÷fT—FVÒ‚&vöÆF–RÖ7F—fR×V&Æ—6‚Ö¦ö""“¶–b†¦ö"ç7FGW3ÓÓÒ&æVVG5öGFVçF–öâ"—·6WEV&Æ—6„f–ÇW&W2†¦ö"æf–ÇW&W7ÇÅµÒ“·F‡&÷ræWrW'&÷"†G¶¦ö"æ6ö×ÆWFVGÒöbG¶¦ö"çF÷FÇÒÆ—7F–æw2V&Æ—6†VBâG¶¦ö"æf–ÆVGÒG¶¦ö"æf–ÆVCÓÓÓò&Æ—7F–æræVVG2#¢&Æ—7F–æw2æVVB'Ò–÷W"GFVçF–öâ&Vf÷&RvöÆF–R6âf–æ—6‚F†R&F6‚æ—Öv—B&VÖVÖ&W$&F6„FVfVÇG4gFW%V&Æ—6‚‚“·6WD&F6…&V6V—B‡·V&Æ—6†VD6÷VçC¦¦ö"æ6ö×ÆWFVBÆWG7•W&Ç3¢†¦ö"æf–æ—6†VGÇÅµÒ’æÖ†—FVÓÓæ—FVÒçW&Â’æf–ÇFW"„&ööÆVâ’Æ6ö×ÆWFVDC¦æWrFFR‚’çFô•4õ7G&–ær‚—Ò“·6WEV&Æ—6„ÖW76vR‚""“°¢Ö6F6‚†W'&÷"—·6WEV&Æ—6„ÖW76vR†W'&÷"–ç7Fæ6VöbW'&÷#öW'&÷"æÖW76vS¢$vöÆF–R6÷VÆBæ÷B&W7VÖRF†—2VWVVB&F6‚â"—Öf–æÆÇ—·6WEV&Æ—6†–ær†fÇ6R—Ð¢Ð¢ò¢CC’ÒF†R6öæf—&ÒF–Æörw2V&Æ—6‚'WGFöâ†BæòF—6&ÆVB7FFRÂ6òF÷V&ÆP¢6Æ–6²f—&VBF†—2Gv–6R&Vf÷&R&V7B6÷VÆB&R×&VæFW"æB6Æ÷6RF†RF–Æös ¢Gvòõ5G2ÂGvòVWVVB¦ö'2ÂGWÆ–6FRÆ—fRÆ—7F–æw2æBGvòÆ÷G2öbWG7’w0¢Cã#Æ—7F–ærfVRW"FW6–vââF†R'WGFöâ—2F—6&ÆVBv†–ÆRV&Æ—6†–æræ@¢F†—2&VbÖ¶W2—B–×÷76–&ÆRFòVçFW"Gv–6R&Vv&FÆW72öbv†BF†RT’FöW2Ð¢F†RöæRÆ6R–âF†—2v†W&R7G&’6Æ–6²6÷7G2&VÂÖöæW’â¢ð¢6öç7BV&Æ—6„–äfÆ–v‡C×W6U&Vb†fÇ6R“°¢ò¢CC“RÒ'VæFÆRV&Æ—6†VBöæR&öGV7BBF–ÖS¢V&Æ—6‚F†R†ööF–Rw0¢Æ—7F–æw2ÂF†Vâvò&6²Â÷VâF†RFVRÂV&Æ—6‚v–âÂF†VâF†R7&WvæV6²à¢7FW"Ç&VG’7&VFW2WfW'’&öGV7Bw2G&gG2g&öÒöæR&W73²F†—2—2F†P¢6ÖR'VâBF†R÷F†W"VæBâvöÆF–RV&Æ—6†W2F†R÷Vâ&öGV7BÂÖ÷fW2—G6VÆ`¢FòF†RæW‡BöæRæBV&Æ—6†W2F†BÂVçF–ÂF†R'VæFÆR—2FöæRà ¢V&Æ—6†–ær7VæG2&VÂÖöæW’Â6òF†—2—2FVÆ–&W&FVÇ’Ö÷&R6WF–÷W2F†âF†P¢G&gG2'Vã¢—Bv–ÆÂæ÷B7F'B&öGV7Bv†÷6RÆ—7F–æw2&Ræ÷B&VG’â—@¢7F÷2æB6—2v†–6‚&öGV7BæBv†B—2Ö—76–ærÂæBæ÷F†–ær—2V&Æ—6†V@¢f÷"F†B&öGV7B÷"F†RöæW2gFW"—Bâ¢ð¢6öç7B·V&Æ—6…'VâÇ6WEV&Æ—6…'VåÓ×W6U7FFSÇ·F÷FÃ¦çVÖ&W'×ÆçVÆÃâ†çVÆÂ“°¢W6TVffV7B‚‚“Óç·'Vä–å&öw&W72æ7W'&VçCÔ&ööÆVâ‡V&Æ—6…'Vâ—ÒÅ·V&Æ—6…'VåÒ“°¢ò¢CSS’Òæ÷F†–ærGfæ6W2ç’Ö÷&S²öæR6ÆÂV&Æ—6†W2F†R'VæFÆRâ¢ð¢W6TVffV7B‚‚“Óç°¢–b‚V&Æ—6…'Vâ—&WGW&ã°¢–b‡V&Æ—6†–æwÇÇ7v—F6†–æu&öGV7GÇÇV&Æ—6„6öæf—&Ô÷VçÇÇ&W7F÷&–æt&F6‚—&WGW&ã°¢ò¢CSS’ÒF†—2W6VBFòV&Æ—6‚F†R÷Vâ&öGV7BÂv—Bf÷"—G2&V6V—BÂ7v—F6€¢F†Rv†öÆRFòF†RæW‡B&öGV7Bw2&F6‚ÂV&Æ—6‚F†BÂæB&WVBâF†P¢'VâFWVæFVBöâF†RF"7F––ær÷VâF‡&÷Vv‚Gvò&F6‚&W7F÷&W2ÂæB¢7FÆÂ&WGvVVâ&öGV7G2ÆVgB†W"†ÆbV&Æ—6†VBâöæR6ÆÂ6'&–W2F†Rv†öÆP¢'VæFÆRæ÷rÂ6òF†W&R—2æ÷F†–ærFòGfæ6RFòâ¢ð¢–b†&F6…&V6V—B—·6WEV&Æ—6…'Vâ†çVÆÂ“·&WGW&çÐ¢6öç7B6†÷6Vã×V&Æ—6…F&vWG2‚“°¢–b‚6†÷6VâæÆVæwF‚—&WGW&ã°¢6öç7B&Æö6¶W'3Õ²ââæÖ—76–æuV&Æ—6„f–VÆG2‚’Âââæ7&VFVDÆ—7F–æw4Ö—76–æt–ÖvW2‡6VÆV7FVEV&Æ—6„G&gG2‚’’æÖ†G&gCÓæG¶G&gBææÖWÒ†2æò†÷Fö•Ó°¢–b†&Æö6¶W'2æÆVæwF‚—°¢6WEV&Æ—6…'Vâ†çVÆÂ“°¢7F÷v—F‚‚%F†—2&F6‚—2æ÷B&VG’FòV&Æ—6‚â"Æ&Æö6¶W'2“°¢&WGW&ã°¢Ð¢fö–BV&Æ—6„ÆÂ‚“°¢ÒÅ·V&Æ—6…'VâÇV&Æ—6†–ærÇ7v—F6†–æu&öGV7BÇV&Æ—6„6öæf—&Ô÷VâÇ&W7F÷&–æt&F6‚Æ&F6…&V6V—BÆ'VæFÆT–æFW‚ÆG&gG2Æ7F—fU&V6—UÒ“° ¢ò¢CSS’ÒWfW'’Æ—7F–ærF†R&W72v–ÆÂ7&VFRÂ7&÷72WfW'’&öGV7B–âF†P¢'VæFÆRÂV6‚6''––ærF†R6WGF–æw26fVBv—F‚—G2÷vâ&F6‚âF†R÷Và¢&öGV7B—2&VBg&öÒ7FFR&V6W6RF†B—2g&W6†W"F†âç—F†–ær6fVC²F†P¢&W7B6öÖRg&öÒF†V—"÷vâ&F6†W2â¢ð¢ò¢CScÒF†R6÷VçBöâ67&VVâæBF†RÆ—7BF†BvWG26VçBvW&R'V–ÇBGvð¢F–ffW&VçBv—2Â6òF†W’6÷VÆBF—6w&VRÒæBF–C¢f—fRF–6¶VBÂ%V&Æ—6‚`¢Æ—7F–æw2"öâF†R'WGFöââöæR6÷W&6Ræ÷râWfW'—F†–ærF†R&Wf–Wr6†÷w2Âf–ÇFW&V@¢'’v†B—2F–6¶VBÂ6''––ærF†R6WGF–æw2öbv†–6†WfW"&öGV7B÷vç2—Bâ¢ð¢gVæ7F–öâV&Æ—6…F&vWG2‚—°¢6öç7B6†÷6VãÖæWr6WB‡6VÆV7FVEV&Æ—6„–G2“°¢6öç7BÖVÖ&W$öcÒ†–C§7G&–ær“Óäö&¦V7BçfÇVW2†'VæFÆTÖVÖ&W'2’æf–æB†ÖVÖ&W#ÓæÖVÖ&W"æG&gG2ç6öÖR†G&gCÓæG&gBæ–CÓÓÖ–B’“°¢&WGW&â'VæFÆUV&Æ—6„G&gG2‚’æf–ÇFW"†G&gCÓæG&gBç7FGW3ÓÓÒ$7&VFVB"bfG&gBæ–Bbf6†÷6Vâæ†2†G&gBæ–B’’æÖ†G&gCÓç°¢6öç7BÖ–æSÖG&gG2ç6öÖR†÷vãÓæ÷vâæ–CÓÓÖG&gBæ–B“°¢6öç7BÖVÖ&W#ÖÖ–æSöçVÆÃ¦ÖVÖ&W$öb†G&gBæ–B“°¢&WGW&â¶–C¦G&gBæ–BÇ&öGV7DæÖS¦G&gBç&öGV7DæÖWÇÆ7F—fU&V6—SòææÖWÇÂ""Æ6Æ–VçD–C¦G&gBæ6Æ–VçD–BÀ¢6VÆV7F–öç3¢†Ö–æS÷&–çF–g”–ÖvU6VÆV7F–öç3¦ÖVÖ&W#òç6VÆV7F–öç7ÇÇ·Ò•¶G&gBæ–B×ÇÅµÒÀ¢–æF–6W3¦Ö–æS÷&–çF–g”–ÖvT–æF–6W3¢†ÖVÖ&W#òæ–æF–6W7ÇÇ&–çF–g”–ÖvT–æF–6W2’À¢6†—–æu&öf–ÆT–C¢†Ö–æSöWG7•6†—–æu&öf–ÆT–C¦ÖVÖ&W#òç6†—–æu&öf–ÆT–B—ÇÆWG7•6†—–æu&öf–ÆT–GÓ°¢Ò“°¢Ð¢ò¢CSS’ÒF†RV&Æ—6‚&Wf–Wrw2–çWG2ÂvF†W&VB7&÷72F†R'VæFÆR&F†W"F†à¢F¶Vâg&öÒv†–6†WfW"&öGV7B†Vç2Fò&R÷Vââ¢ð¢gVæ7F–öâ'VæFÆUV&Æ—6„G&gG2‚—°¢–b‚7F—fT'VæFÆWÇÆ'VæFÆU&V6—W2æÆVæwFƒÃ"—&WGW&âG&gG3°¢6öç7B÷F†W'3Ö'VæFÆU&V6—W2æf–ÇFW"‡&V6—SÓç&V6—Ræ–BÓÖ7F—fU&V6—Sòæ–B’æfÆDÖ‡&V6—SÓç°¢6öç7BÖVÖ&W#Ö'VæFÆTÖVÖ&W'5·&V6—Ræ–EÓ¶–b‚ÖVÖ&W"—&WGW&âµÒ2G&gE&W7VÇEµÓ°¢&WGW&âÖVÖ&W"æG&gG2æÖ†G&gCÓâ‡²ââæG&gBÇ&öGV7DæÖS¦ÖVÖ&W"ç&öGV7DæÖWÒ’“°¢Ò“°¢&WGW&â²ââæG&gG2æÖ†G&gCÓâ‡²ââæG&gBÇ&öGV7DæÖS¦7F—fU&V6—SòææÖWÇÆG&gBç&öGV7DæÖWÒ’’Âââæ÷F†W'5Ó°¢Ð¢gVæ7F–öâ'VæFÆUV&Æ—6„f–ÆW2‚—°¢–b‚7F—fT'VæFÆWÇÆ'VæFÆU&V6—W2æÆVæwFƒÃ"—&WGW&âf–ÆW3°¢6öç7B÷F†W'3Ö'VæFÆU&V6—W2æf–ÇFW"‡&V6—SÓç&V6—Ræ–BÓÖ7F—fU&V6—Sòæ–B’æfÆDÖ‡&V6—SÓâ†'VæFÆTÖVÖ&W'5·&V6—Ræ–EÓòæFW6–vç7ÇÅµÒ’2'&“ÄöÖ—CÄFW6–väf–ÆRÂ&f–ÆR'Â'&Wf–WuW&Â#ãâ“°¢&WGW&â²ââæf–ÆW2Âââæ÷F†W'2æÖ†FW6–vãÓâ‡²ââæFW6–vâÆf–ÆS§VæFVf–æVB2Væ¶æ÷vâ2f–ÆRÇ&Wf–WuW&Ã¢"'Ò2FW6–väf–ÆR’•Ó°¢Ð¢gVæ7F–öâ'VæFÆUV&Æ—6…6VÆV7F–öç2‚—°¢–b‚7F—fT'VæFÆWÇÆ'VæFÆU&V6—W2æÆVæwFƒÃ"—&WGW&â&–çF–g”–ÖvU6VÆV7F–öç3°¢&WGW&â'VæFÆU&V6—W2æf–ÇFW"‡&V6—SÓç&V6—Ræ–BÓÖ7F—fU&V6—Sòæ–B¢ç&VGV6R‚†ÆÂÇ&V6—R“Óâ‡²ââæÆÂÂâââ†'VæFÆTÖVÖ&W'5·&V6—Ræ–EÓòç6VÆV7F–öç7ÇÇ·Ò—Ò’Ç²ââç&–çF–g”–ÖvU6VÆV7F–öç7Ò“°¢Ð¢gVæ7F–öâ'VæFÆUV&Æ—6„Öö6·W6÷VçG2‚—°¢–b‚7F—fT'VæFÆWÇÆ'VæFÆU&V6—W2æÆVæwFƒÃ"—&WGW&â&W&VDÖö6·W6÷VçG3°¢&WGW&â'VæFÆU&V6—W2æf–ÇFW"‡&V6—SÓç&V6—Ræ–BÓÖ7F—fU&V6—Sòæ–B¢ç&VGV6R‚†ÆÂÇ&V6—R“Óâ‡²ââæÆÂÂâââ†'VæFÆTÖVÖ&W'5·&V6—Ræ–EÓòç&W&VDÖö6·W6÷VçG7ÇÇ·Ò—Ò’Ç²ââç&W&VDÖö6·W6÷VçG7Ò“°¢Ð¢ò¢Cc#b+rÆ—fW2†W&RÂ&VÆ÷rF†R'VæFÆR7FFR—B&VG2â—G2FWVæFVæ7’'&’—0¢WfÇVFVBGW&–ær&VæFW"Â6òB—G2öÆB÷6—F–öâæV"F†R÷F†W"6VÆV7F–öà¢VffV7G2—B&VfW&Væ6VB'VæFÆTÖVÖ&W'2‡VæG&VG2öbÆ–æW2&Vf÷&RF†B7FFRv0¢FV6Æ&VBÒFV×÷&ÂFVB¦öæRF‡&÷röâWfW'’&VæFW"Â6Vv‡BöæÇ’&V6W6P¢G62fÆvvVB—Bâ¢ð¢ò¢Cc#b+rF†—2'VæVBF†RV&Æ—6‚6VÆV7F–öâF÷vâFòF†RõTâ&öGV7Bw2G&gG3 ¢7W'&VçBæf–ÇFW"†–CÓæ7&VFVBæ–æ6ÇVFW2†–B’’G&÷VBWfW'’'VæFÆRÖVÖ&W"w2–BÀ¢æBöæÇ’F†R÷Vâ&öGV7Bw2vW&RFFVB&6²âCSS’'V–ÇBF†Rv†öÆRöæRÖ6ÆÀ¢'VæFÆRV&Æ—6‚öâF÷öbF†—2Æ—7BÂ6òv†VæWfW"G&gG66†ævVB–FVçF—G’Ð¢&WG'’ÂÖö6·Wf–æ—6†–ærÂ&W7F÷&RÒF†R÷F†W"&öGV7G26–ÆVçFÇ’fVÆÀ¢÷WBöbF†RV&Æ—6‚æBF†R6VÆÆW"v2&6²FòV&Æ—6†–æröæR&öGV7BB¢F–ÖRv—F†÷WB&V–ærFöÆBâF†RÆ—7B—2F†R'VæFÆRw2æ÷rà¢CScw2'VÆRÆ–W2†W&RFöó¢Æ—7F–ær6VVâf÷"F†Rf—'7BF–ÖR7F'G0¢F–6¶VBÂ'WBgFW"F†B†W"6†ö–6R7FæG2Â6òF†—26âæWfW"&R×F–6²&÷€¢6†R6ÆV&VBâ¢ð¢6öç7B6VVFVEV&Æ—6„–G3×W6U&VcÅ6WCÇ7G&–æsãâ†æWr6WB‚’“°¢ò¢CcCRÒF†R6ÖR'VÆRöâF†—26–FRöbF†RWfVçBâ¢ð¢6öç7B6VÆÆW$6†÷6UV&Æ—6ƒ×W6U&Vb†fÇ6R“°¢W6TVffV7B‚‚“Óç°¢6öç7B7&VFVCÖ'VæFÆUV&Æ—6„G&gG2‚’æf–ÇFW"†G&gCÓæG&gBç7FGW3ÓÓÒ$7&VFVB"bfG&gBæ–B’æÖ†G&gCÓæG&gBæ–B“°¢6öç7Bg&W6ƒ×6VÆÆW$6†÷6UV&Æ—6‚æ7W'&VçCõµÓ¦7&VFVBæf–ÇFW"†–CÓâ6VVFVEV&Æ—6„–G2æ7W'&VçBæ†2†–B’“°¢7&VFVBæf÷$V6‚†–CÓç6VVFVEV&Æ—6„–G2æ7W'&VçBæFB†–B’“°¢6WE6VÆV7FVEV&Æ—6„–G2†7W'&VçCÓç°¢6öç7B¶WCÖ7W'&VçBæf–ÇFW"†–CÓæ7&VFVBæ–æ6ÇVFW2†–B’“°¢&WGW&âg&W6‚æÆVæwFƒõ²ââææWr6WB…²ââæ¶WBÂââæg&W6…Ò•Ó¦¶WC°¢Ò“°¢ÒÅ¶G&gG2Æ'VæFÆTÖVÖ&W'2Æ7F—fT'VæFÆRÆ'VæFÆU&V6—W2Æ7F—fU&V6—UÒ“° ¢7–æ2gVæ7F–öâV&Æ—6„ÆÂ‚—°¢–b‡V&Æ—6„–äfÆ–v‡Bæ7W'&VçB—&WGW&ã°¢ò¢CSS’ÒF†—26VçBF†R÷Vâ&öGV7Bw2Æ—7F–æw2öæÇ’ÂæBâVffV7BF†Và¢7v—F6†VBF†RFòF†RæW‡B&öGV7BæB6VçBF†BöæRÂæB6òöââöæP¢6ÆÂæ÷r6'&–W2WfW'’Æ—7F–ær–âF†R'VæFÆRv—F‚F†R6WGF–æw2—G2÷và¢&öGV7BæVVG2Â6òæ÷F†–ær7v—F6†W2æBæ÷F†–ær—2ÆVgB&V†–æBâ¢ð¢6öç7BWfW'—F†–æs×V&Æ—6…F&vWG2‚“°¢6öç7B–G3ÖWfW'—F†–æræÖ†—FVÓÓæ—FVÒæ–B“¶–b‚–G2æÆVæwF‚—&WGW&ã°¢6öç7B'•&öGV7CÔö&¦V7Bæg&öÔVçG&–W2†WfW'—F†–æræÖ†—FVÓÓå¶—FVÒæ–BÇ·6VÆV7F–öç3¦—FVÒç6VÆV7F–öç2Æ–æF–6W3¦—FVÒæ–æF–6W2Ç6†—–æu&öf–ÆT–C¦—FVÒç6†—–æu&öf–ÆT–GÕÒ’“°¢V&Æ—6„–äfÆ–v‡Bæ7W'&VçC×G'VS·6WEV&Æ—6„6öæf—&Ô÷Vâ†fÇ6R“·6WEV&Æ—6†–ær‡G'VR“·6WEV&Æ—6„f–ÇW&W2…µÒ“·6WEV&Æ—6„ÖW76vR†vöÆF–R—26fVÇ’VWV–ærG¶–G2æÆVæwF‡Ò6VÆV7FVBG¶–G2æÆVæwFƒÓÓÓò&Æ—7F–ær#¢&Æ—7F–æw2'Þ(
+f“·6WD&F6…&V6V—B†çVÆÂ“°¢G'—°¢6öç7B&W7öç6SÖv—BfWF6‚‚"ö’÷&–çF–g’öG&gG2÷V&Æ—6‚"Ç¶ÖWF†öC¢%õ5B"Æ†VFW'3§²$6öçFVçBÕG—R#¢&Æ–6F–öâö§6öâ'ÒÆ&öG“¤¥4ôâç7G&–æv–g’‡·&öGV7D–G3¦–G2Ç&–çF–g”–ÖvT–æF–6W2Ç&–çF–g”–ÖvU6VÆV7F–öç2ÆWG7•6†—–æu&öf–ÆT–BÆ'•&öGV7GÒ—Ò’Ç–ÆöCÖv—B&W7öç6Ræ§6öâ‚’2¶¦ö#ó§¶–C§7G&–æs·7FGW3§7G&–æs·F÷FÃ¦çVÖ&W#¶6ö×ÆWFVC¦çVÖ&W#¶f–ÆVC¦çVÖ&W#·VWVVC¦çVÖ&W#·&ö6W76–æs¦çVÖ&W#¶f–æ—6†VC¤'&“Ç¶WG7”Æ—7F–æt–C¦çVÖ&W#·W&Ã§7G&–æwÓã¶f–ÇW&W3ó¤'&“Ç·&öGV7D–C§7G&–æs¶W'&÷#§7G&–æwÓã¶'VFvWCó§·&VÖ–æ–æs¦çVÖ&W'×Ó¶W'&÷#ó§7G&–æwÓ¶–b‚&W7öç6Ræö·ÇÂ–ÆöBæ¦ö"—F‡&÷ræWrW'&÷"‡–ÆöBæW'&÷'ÇÂ%F†R&F6‚6÷VÆBæ÷B&RVWVVBâ"“°¢6öç7B¦ö$–C×–ÆöBæ¦ö"æ–C¶Æö6Å7F÷&vRç6WD—FVÒ‚&vöÆF–RÖ7F—fR×V&Æ—6‚Ö¦ö""Æ¦ö$–B“¶v—BÖöæ—F÷%V&Æ—6„¦ö"†¦ö$–B“°¢Ö6F6‚†W'&÷"—·6WEV&Æ—6„ÖW76vR†W'&÷"–ç7Fæ6VöbW'&÷#öW'&÷"æÖW76vS¢%F†R&F6‚6÷VÆBæ÷B&RV&Æ—6†VBâ"—Öf–æÆÇ—·V&Æ—6„–äfÆ–v‡Bæ7W'&VçCÖfÇ6S·6WEV&Æ—6†–ær†fÇ6R—Ð¢Ð¢ò¢CcS+r6—¦RwV–FR6÷VÆB&R&WÆ6VB'WBæWfW"&VÖ÷fVBâGF6‚F†Rw&öæp¢f–ÆRÒv†–6‚—2V7’Â—B—2öæR–6¶W"Ööær6WfW&ÂöâF†—27FWÒæBF†P¢öæÇ’v’÷WBv2FòGF6‚F–ffW&VçBw&öærf–ÆS²F†W&Rv2æòv’&6²Fð¢æöæRâ—BvöW2öçFòWfW'’Æ—7F–ær–âF†R&F6‚Â6òF†B—2æ÷B6ÖÆÀ¢Ö—7F¶RFò&R7GV6²v—F‚â&VÖ÷f–ær6ÆV'2—Bf÷"WfW'—F†–ærF†—2&F6‚†0¢æ÷BV&Æ—6†VB–WBÂæB6—2Æ–æÇ’v†B—B6ææ÷BVæFòâ¢ð¢7–æ2gVæ7F–öâ&VÖ÷fU6—¦TwV–FR‚—°¢6WE6—¦TwV–FTæÖR‚""“°¢6WDf–ÆW2†7W'&VçCÓæ7W'&VçBæÖ†FW6–vãÓâ‡²ââæFW6–vâÇ6—¦TwV–FTæÖS§VæFVf–æVGÒ’’“°¢6WE6—¦TwV–FU7FGW2‚%6—¦RwV–FR&VÖ÷fVBâÆ—7F–æw2F†—2&F6‚†2Ç&VG’V&Æ—6†VB¶VWF†RöæRF†W’vW&Rv—fVââ"“°¢Ð¢7–æ2gVæ7F–öâÇ•6—¦TwV–FR†f–ÆS¤f–ÆR—¶6öç7B–G3ÖG&gG2æf–ÇFW"†G&gCÓæG&gBç7FGW3ÓÓÒ$7&VFVB"bfG&gBæ–B’æÖ†G&gCÓæG&gBæ–B“¶–b‚–G2æÆVæwF‚—&WGW&ã·6WE6—¦TwV–FU7FGW2†Ç––ærG¶f–ÆRææÖWÒFòöbG¶–G2æÆVæwF‡ÒÆ—7F–æw>(
+f“·G'—¶ÆWB6ö×ÆWFT6÷VçCÓ¶f÷"†6öç7B&öGV7D–Böb–G2—¶6öç7Bf÷&ÓÖæWrf÷&ÔFF‚“¶f÷&Òç6WB‚'&öGV7D–B"Ç&öGV7D–B“¶f÷&Òç6WB‚&¶–æB"Â'6—¦RÖwV–FR"“¶f÷&Òç6WB‚&f–ÆR"Æf–ÆR“¶6öç7B&W7öç6SÖv—BfWF6‚‚"ö’öWG7’ö–ÖvW2"Ç¶ÖWF†öC¢%õ5B"Æ&öG“¦f÷&×Ò’Ç–ÆöCÖv—B&W7öç6Ræ§6öâ‚’2¶W'&÷#ó§7G&–æwÓ¶–b‚&W7öç6Ræö²—F‡&÷ræWrW'&÷"‡–ÆöBæW'&÷'ÇÂ%F†R6—¦RwV–FR6÷VÆBæ÷B&R6fVBâ"“¶6ö×ÆWFT6÷VçB³Ó·6WE6—¦TwV–FU7FGW2†Ç––ærG¶f–ÆRææÖWÒFòG¶6ö×ÆWFT6÷VçGÒöbG¶–G2æÆVæwF‡ÒÆ—7F–æw>(
+f—×6WDf–ÆW2†7W'&VçCÓæ7W'&VçBæÖ†FW6–vãÓâ‡²ââæFW6–vâÇ6—¦TwV–FTæÖS§VæFVf–æVGÒ’’“·6WE6—¦TwV–FTæÖR†f–ÆRææÖR“·6WE6—¦TwV–FU7FGW2†)É2G¶f–ÆRææÖWÒv–ÆÂ&RFFVBFòÆÂG¶–G2æÆVæwF‡ÒWG7’Æ—7F–æw2v†Vâ–÷RV&Æ—6‚æ—Ö6F6‚†W'&÷"—·6WE6—¦TwV–FU7FGW2†W'&÷"–ç7Fæ6VöbW'&÷#öW'&÷"æÖW76vS¢%F†R6—¦RwV–FR6÷VÆBæ÷B&R6fVBâ"—×Ð ¢7–æ2gVæ7F–öâ6öææV7E&–çF–g’‚’°¢6WD6öææV7F–ær‡G'VR“²6WD6öææV7F–öäW'&÷"‚""“°¢G'’°¢6öç7B&W7öç6RÒv—BfWF6…v—F„FVFÆ–æR‚"ö’÷&–çF–g’"Â²ÖWF†öC¢%õ5B"Â†VFW'3¢²$6öçFVçBÕG—R#¢&Æ–6F–öâö§6öâ"ÒÂ&öG“¢¥4ôâç7G&–æv–g’‡²Fö¶VâÒ’ÒÂc“°¢6öç7B&W7VÇBÒv—B&W7öç6Ræ§6öâ‚’2²6öææV7FVCó¢&ööÆVã²W'&÷#ó¢7G&–ærÓ°¢–b‚&W7öç6Ræö²ÇÂ&W7VÇBæ6öææV7FVB’F‡&÷ræWrW'&÷"‡&W7VÇBæW'&÷"ÇÂ%&–çF–g’6÷VÆBæ÷B&R6öææV7FVBâ"“°¢6WD6öææV7FVB‡G'VR“²6WEFö¶Vâ‚""“°¢Ò6F6‚†W'&÷"’²6WD6öææV7FVB†fÇ6R“²6WD6öææV7F–öäW'&÷"†W'&÷"–ç7Fæ6VöbW'&÷"òW'&÷"æÖW76vR¢%&–çF–g’6÷VÆBæ÷B&R6öææV7FVBâ"“²Ð¢f–æÆÇ’²6WD6öææV7F–ær†fÇ6R“²Ð¢Ð ¢7–æ2gVæ7F–öâ6öææV7DWG7’‚—·6WDWG7”6öææV7F–ær‡G'VR“·6WDWG7”W'&÷"‚""“·G'—¶6öç7B&W7öç6SÖv—BfWF6‚‚"ö’öWG7’"Ç¶ÖWF†öC¢%õ5B'Ò’Ç&W7VÇCÖv—B&W7öç6Ræ§6öâ‚’2¶WF†÷&—¦UW&Ãó§7G&–æs¶W'&÷#ó§7G&–æwÓ¶–b‚&W7öç6Ræö·ÇÂ&W7VÇBæWF†÷&—¦UW&Â—F‡&÷ræWrW'&÷"‡&W7VÇBæW'&÷'ÇÂ$WG7’6öææV7F–öâ6÷VÆBæ÷B7F'Bâ"“·v–æF÷ræÆö6F–öâæ‡&Vc×&W7VÇBæWF†÷&—¦UW&ÇÖ6F6‚†W'&÷"—·6WDWG7”W'&÷"†W'&÷"–ç7Fæ6VöbW'&÷#öW'&÷"æÖW76vS¢$WG7’6öææV7F–öâ6÷VÆBæ÷B7F'Bâ"“·6WDWG7”6öææV7F–ær†fÇ6R—×Ð ¢7–æ2gVæ7F–öâÆöEFV×ÆFUW&Â‡&öGV7EW&ÂÒFV×ÆFRÂ&–6–æt÷fW'&–FSó¥&–6–ærÂ6fVE6†—–æu&öf–ÆT–CÓÇ&VÖVÖ&W&VD6öÆ÷$–G3¦çVÖ&W%µÓÕµÒÇ&VÖVÖ&W&VE6—¦T–G3¦çVÖ&W%µÓÕµÒ“¥&öÖ—6SÅFV×ÆFTFWF–Ç7ÆçVÆÃâ°¢6öç7B&WVW7EfW'6–öãÒ²·FV×ÆFTÆöEfW'6–öâæ7W'&VçC°¢6WDÆöF–æuFV×ÆFR‡G'VR“²6WEFV×ÆFTW'&÷"‚""“²6WEFV×ÆFTFWF–Ç2†çVÆÂ“°¢G'’°¢6öç7B&W7öç6RÒv—BfWF6…v—F„FVFÆ–æR‚"ö’÷&–çF–g’"Â²ÖWF†öC¢%õ5B"Â†VFW'3¢²$6öçFVçBÕG—R#¢&Æ–6F–öâö§6öâ"ÒÂ&öG“¢¥4ôâç7G&–æv–g’‡²&öGV7EW&ÂÇ6fVE6†—–æu&öf–ÆT–BÒ’ÒÂ““°¢6öç7B&W7VÇBÒv—B&W7öç6Ræ§6öâ‚’2²&öGV7Có¢FV×ÆFTFWF–Ç3²W'&÷#ó¢7G&–æs¶—77VW3ó§7G&–æuµÓ·F—FÆSó§7G&–æs·6†÷ó§¶–C¦çVÖ&W#·F—FÆS§7G&–æs¶6÷VçCó¦çVÖ&W'ÒÓ°¢–b‡&WVW7EfW'6–öâÓ×FV×ÆFTÆöEfW'6–öâæ7W'&VçB—&WGW&âçVÆÃ°¢ò¢CcSBÒF†R7F÷&RÆ&VÂv2öæÇ’&V6÷&FVBöâ&öGV7BF†B54TBF†P¢6†÷6†V6²Â6òF†R&öGV7G2F†BÖ÷7BæVVBÆ&VÆÆ–ærÒF†RöæW2g&öÒ¢F–ffW&VçB7F÷&RÂv†–6‚—2F†Rv†öÆR&V6öâF†RÆ&VÂW†—7G2Ò7F–V@¢&Ææ²f÷&WfW"âF†R&VgW6Â¶æ÷w2F†R7F÷&RFöòâ¢ð¢–b‡&W7VÇBç6†÷òçF—FÆRbdçVÖ&W"‡&W7VÇBç6†÷æ6÷VçGÇÃ“ã—°¢6öç7B&VgW6VE&V6—SÖ7F—fU&V6—U&Vbæ7W'&VçC°¢–b‡&VgW6VE&V6—Rbg&VgW6VE&V6—Rç&–çF–g•6†÷F—FÆRÓ×&W7VÇBç6†÷çF—FÆR—°¢fö–BfWF6‚‚"ö’÷&öGV7B×&V6—W2"Ç¶ÖWF†öC¢%õ5B"Æ†VFW'3§²$6öçFVçBÕG—R#¢&Æ–6F–öâö§6öâ'ÒÆ&öG“¤¥4ôâç7G&–æv–g’‡¶–C§&VgW6VE&V6—Ræ–BÆæÖS§&VgW6VE&V6—RææÖRÇFV×ÆFUW&Ã§&VgW6VE&V6—RçFV×ÆFUW&ÂÇ&–çF–g•6†÷F—FÆS§&W7VÇBç6†÷çF—FÆRÇ&–çF–g•6†÷–C§&W7VÇBç6†÷æ–GÒ—Ò’æ6F6‚‚‚“ÓçVæFVf–æVB“°¢6WD7F—fU&V6—R†7W'&VçCÓæ7W'&VçBbf7W'&VçBæ–CÓÓ×&VgW6VE&V6—Ræ–C÷²ââæ7W'&VçBÇ&–çF–g•6†÷F—FÆS§&W7VÇBç6†÷çF—FÆRÇ&–çF–g•6†÷–C§&W7VÇBç6†÷æ–GÓ¦7W'&VçB“°¢ææ÷Væ6U6†÷‡&VgW6VE&V6—Ræ–BÇ&W7VÇBç6†÷çF—FÆRÇ&W7VÇBç6†÷æ–B“°¢6WD'VæFÆU&V6—W2†7W'&VçCÓæ7W'&VçBæÖ†—FVÓÓæ—FVÒæ–CÓÓ×&VgW6VE&V6—Ræ–C÷²ââæ—FVÒÇ&–çF–g•6†÷F—FÆS§&W7VÇBç6†÷çF—FÆRÇ&–çF–g•6†÷–C§&W7VÇBç6†÷æ–GÓ¦—FVÒ’“°¢Ð¢Ð¢–b‚&W7öç6Ræö²ÇÂ&W7VÇBç&öGV7B—°¢–b‡&W7F÷&–æu&VÖVÖ&W&VE&öGV7Bæ7W'&VçB—°¢6öç7Bv‡“Ò‡&W7VÇBæ—77VW2bg&W7VÇBæ—77VW5³Ò—ÇÇ&W7VÇBæW'&÷'ÇÂ$vöÆF–R6÷VÆBæ÷B÷Vâ—Bâ#°¢6WE&W7F÷&VE&öGV7Dæ÷F–6R†G¶7F—fU&V6—U&Vbæ7W'&VçCòææÖWÇÂ%F†R&öGV7B–÷RW6VBÆ7B'Ò6÷VÆBæ÷B&R&V÷VæVBâG·v‡—Ò6†ö÷6R&öGV7B&VÆ÷rFò7F'Bæ“°¢G'—·v–æF÷ræÆö6Å7F÷&vRç&VÖ÷fT—FVÒ‚&vöÆF–RÖ7F—fR×&V6—R"—Ö6F6‡²ò¢&—fFRÖöFR¢÷Ð¢6WD7F—fU&V6—R†çVÆÂ“·6WEFV×ÆFTFWF–Ç2†çVÆÂ“·6WEFV×ÆFR‚""“°¢F‡&÷ræWrW'&÷"‡&W7VÇBæW'&÷'ÇÂ%F†R&öGV7B6÷VÆBæ÷B&RÆöFVBâ"“°¢Ð¢6WD&Æö6¶–ætÖöFÂ‡·F—FÆS§&W7VÇBçF—FÆWÇÂ%F†—2&–çF–g’&öGV7B—6î(	—B&VG’–WBâ"Æ—77VW3§&W7VÇBæ—77VW3òæÆVæwFƒ÷&W7VÇBæ—77VW3¥·&W7VÇBæW'&÷'ÇÂ%F†R&öGV7B6÷VÆBæ÷B&RÆöFVBâ%ÒÆ6÷“§&W7öç6Rç7FGW3ÓÓÓC“ò$6öææV7B&–çF–g’æBWG7’FòF†R6ÖR6†÷ÂF†VâÆöBF†—2&öGV7Bv–ââ6öææV7F–öç2—2–âF†R6–FV&"â#¢$f—‚F†W6R—FV×2–â&–çF–g’Â6fRF†R&öGV7BÂF†Vâ7V&Ö—BF†R6ÖRÆ–æ²v–ââ'Ò“·F‡&÷ræWrW'&÷"‡&W7VÇBæW'&÷"ÇÂ%F†R&öGV7B6÷VÆBæ÷B&RÆöFVBâ"—Ð¢6öç7Bf–Æ&ÆSÖæWr6WB‚‡&W7VÇBç&öGV7Bæ6öÆ÷$÷F–öç7ÇÅµÒ’æf–ÇFW"†6öÆ÷#Óæ6öÆ÷"æf–Æ&ÆR’æÖ†6öÆ÷#Óæ6öÆ÷"æ–B’“¶ÆWB6W76–öä6öÆ÷'3¦çVÖ&W%µÓÕµÓ·G'—·6W76–öä6öÆ÷'3Ô¥4ôâç'6R‡v–æF÷ræÆö6Å7F÷&vRævWD—FVÒ†vöÆF–RÖ6öÆ÷'2ÒG·&W7VÇBç&öGV7Bæ–GÖ—ÇÂ%µÒ"’2çVÖ&W%µ×Ö6F6‡²ò¢–væ÷&Râ–çfÆ–B'&÷w6W"&VfW&Væ6Râ¢÷Ö6öç7B&VÖVÖ&W&VC×&VÖVÖ&W&VD6öÆ÷$–G2æf–ÇFW"†–CÓæf–Æ&ÆRæ†2†–B’“¶6öç7B6W76–öã×6W76–öä6öÆ÷'2æf–ÇFW"†–CÓæf–Æ&ÆRæ†2†–B’“²ò¢C#2+r&–çF–g’w2FV×ÆFR6WGF–æw2&Ræ÷BF†R6VÆÆW"w26†ö–6W2à¢F†R6VÆÆW"6WG26öÆ÷'2æB6—¦W2ôä4RÂ–âF†R6fVB×&öGV7B6WGWÂæBF†@¢&V6öÖW2F†R&V6—Râ&öGV7Bv—F‚æò&V6—RFVfVÇG2†2æ÷B&VVâ6WBWÂ6ð¢—B×W7B&R6WBW(	B–âF†R&F6‚–bF†B—2v†W&R—Bf—'7BV'2â6VVF–æp¢F†R6VÆV7F–öâg&öÒFV×ÆFTVæ&ÆVBÖFRâVæW7F&Æ—6†VB&öGV7BÆöö²FV6–FV@¢æBv÷VÆBV&Æ—6‚Æ—7F–æw2–â6öÆ÷'2F†R6VÆÆW"æWfW"–6¶VBâF†Rf–Æ&ÆV ¢fÆÆ&6²v2v÷'6S¢WfW'’6öÆ÷W"F†R&ÇVW&–çBöffW'2à¢V×G’—2F†R†öæW7B7FFRâ&öGV7E&VF–æW72Ç&VG’Ö&·2F†W6R&6²"ÂvFW0¢6öçF–çVRÂæB÷Vç2F†R–6¶W"&R×6VÆV7FVBv—F‚F†RFV×ÆFR25TttU5D”ôà¢F†R6VÆÆW"†2Fò66WBâ¢ð¢6öç7BFVfVÇG3×&VÖVÖ&W&VBæÆVæwFƒ÷&VÖVÖ&W&VC§6W76–öã·6WE6VÆV7FVD6öÆ÷$–G2†FVfVÇG2“·6WD6öÆ÷'5&VÖVÖ&W&VB„&ööÆVâ‡&VÖVÖ&W&VBæÆVæwF‚’“°¢ò¢6ÖRf÷W"×7FW&V6VFVæ6R26öÆ÷W'3¢6fVB&öGV7BFVfVÇBÂF†VâF†—0¢'&÷w6W"w2Æ7B6†ö–6RÂF†Vâv†FWfW"F†R&–çF–g’FV×ÆFR†BVæ&ÆVBÀ¢æBf–æÆÇ’WfW'’f–Æ&ÆR6—¦RâF†RF†—&B7FW—2v†BÖ¶W2à¢W†—7F–ær&öGV7B&V†fRW†7FÇ’2—BF–B&Vf÷&R6—¦W2vW&R6VÆV7F&ÆRâ¢ð¢6öç7B6—¦Tf–Æ&ÆSÖæWr6WB‚‡&W7VÇBç&öGV7Bç6—¦T÷F–öç7ÇÅµÒ’æf–ÇFW"‡6—¦SÓç6—¦Ræf–Æ&ÆR’æÖ‡6—¦SÓç6—¦Ræ–B’“¶ÆWB6W76–öå6—¦W3¦çVÖ&W%µÓÕµÓ·G'—·6W76–öå6—¦W3Ô¥4ôâç'6R‡v–æF÷ræÆö6Å7F÷&vRævWD—FVÒ†vöÆF–R×6—¦W2ÒG·&W7VÇBç&öGV7Bæ–GÖ—ÇÂ%µÒ"’2çVÖ&W%µ×Ö6F6‡²ò¢–væ÷&Râ–çfÆ–B'&÷w6W"&VfW&Væ6Râ¢÷Ð¢6öç7B&VÖVÖ&W&VE6—¦W3×&VÖVÖ&W&VE6—¦T–G2æf–ÇFW"†–CÓç6—¦Tf–Æ&ÆRæ†2†–B’’Ç6W76–öå6—¦T–G3×6W76–öå6—¦W2æf–ÇFW"†–CÓç6—¦Tf–Æ&ÆRæ†2†–B’“°¢ò¢C#2+r6ÖR'VÆR26öÆ÷W'3¢æòFV×ÆFR6VVF–ærâ¢ð¢6öç7B6—¦TFVfVÇG3×&VÖVÖ&W&VE6—¦W2æÆVæwFƒ÷&VÖVÖ&W&VE6—¦W3§6W76–öå6—¦T–G3°¢6WE6VÆV7FVE6—¦T–G2‡6—¦TFVfVÇG2“·6WE6—¦W5&VÖVÖ&W&VB„&ööÆVâ‡&VÖVÖ&W&VE6—¦W2æÆVæwF‚’“°¢ò¢C3#’+rÇ’F†RfW&–f–VBWG7’&öf–ÆRg&öÒF†—2W†7BFV×ÆFR&W7öç6Rà¢v—F–ærf÷"F†R–æFWVæFVçB&öf–ÆRÖÆ—7BæB–çfÆ–B×6fVBÖ–BVffV7G2Fð¢&6RÆVgBF†R–6¶W"öâ—G2Æ6V†öÆFW"WfVâgFW"F†R6W'fW"&V6÷fW&V@¢F†R&–v‡B&öf–ÆRg&öÒWG7’âF†RÆFW"&öf–ÆRÖÆ—7BfÆ–FF–öâ7F–ÆÀ¢6ÆV'2â–BF†BvVçV–æVÇ’—2æ÷BöâF†R6öææV7FVB6†÷â¢ð¢6öç7BfW&–f–VE&öf–ÆT–CÔçVÖ&W"‡&W7VÇBç&öGV7Bç6†—–æuFV×ÆFT–B—ÇÃ°¢ò¢C332+rÆ–VBöæÇ’v†Vâæ÷F†–ær—2Ç&VG’6†÷6Vââ6VÆV7E&V6—R6WG2F†P¢6VÆÆW"w26fVB&öf–ÆR§W7B&Vf÷&RF†—2'Vç2Â6òâVæ6öæF—F–öæÂ6W@¢&WÆ6VBF†V—"6fVB6†ö–6Rv—F‚F†R&–çF–g’FV×ÆFRw2WfW'’F–ÖRF†P¢&öGV7Bv26VÆV7FVB(	BF†RC#“b'VÆR–â&WfW'6RâF†RgVæ7F–öæÂf÷&Ð¢&VG2F†RfÇVRF†B—27GVÆÇ’7W'&VçB&F†W"F†â7FÆR6Æ÷7W&S ¢¶VWv†B—2F†W&RÂ÷F†W'v—6RF¶RF†RFV×ÆFRw2âC3#’w2÷vâ66RÂà¢V×G’–6¶W"gFW"F†R6W'fW"&V6÷fW&VBF†R&öf–ÆRg&öÒWG7’Â7F–ÆÀ¢v÷&·2Â&V6W6R–âF†B66RF†W&R—2æ÷F†–ærFò¶VWâ¢ð¢–b‡fW&–f–VE&öf–ÆT–B—6WDWG7•6†—–æu&öf–ÆT–B†7W'&VçCÓæ7W'&VçGÇÇfW&–f–VE&öf–ÆT–B“°¢ò¢CcC’Ò&V6÷&Bv†–6‚&–çF–g’7F÷&RF†—2&öGV7B6ÖRg&öÒÂ6ò—G26fV@¢6&B6â6’6ò–ç7FVBöbF†R6VÆÆW"f–æF–ær÷WB'’&V–ær&VgW6VBâ¢ð¢6öç7B&V6—Tf÷%6†÷Ö7F—fU&V6—U&Vbæ7W'&VçC°¢–b‡&W7VÇBç6†÷òçF—FÆRbdçVÖ&W"‡&W7VÇBç6†÷æ6÷VçGÇÃ“ãbg&V6—Tf÷%6†÷bg&V6—Tf÷%6†÷ç&–çF–g•6†÷F—FÆRÓ×&W7VÇBç6†÷çF—FÆR—°¢fö–BfWF6‚‚"ö’÷&öGV7B×&V6—W2"Ç¶ÖWF†öC¢%õ5B"Æ†VFW'3§²$6öçFVçBÕG—R#¢&Æ–6F–öâö§6öâ'ÒÆ&öG“¤¥4ôâç7G&–æv–g’‡¶–C§&V6—Tf÷%6†÷æ–BÆæÖS§&V6—Tf÷%6†÷ææÖRÇFV×ÆFUW&Ã§&V6—Tf÷%6†÷çFV×ÆFUW&ÂÇ&–çF–g•6†÷F—FÆS§&W7VÇBç6†÷çF—FÆRÇ&–çF–g•6†÷–C§&W7VÇBç6†÷æ–GÒ—Ò’æ6F6‚‚‚“ÓçVæFVf–æVB“°¢6WD7F—fU&V6—R†7W'&VçCÓæ7W'&VçBbf7W'&VçBæ–CÓÓ×&V6—Tf÷%6†÷æ–C÷²ââæ7W'&VçBÇ&–çF–g•6†÷F—FÆS§&W7VÇBç6†÷çF—FÆRÇ&–çF–g•6†÷–C§&W7VÇBç6†÷æ–GÓ¦7W'&VçB“°¢ææ÷Væ6U6†÷‡&V6—Tf÷%6†÷æ–BÇ&W7VÇBç6†÷çF—FÆRÇ&W7VÇBç6†÷æ–B“°¢Ð¢6WEFV×ÆFTFWF–Ç2‡&W7VÇBç&öGV7B“·6WDFW67&—F–öâ‡&W7VÇBç&öGV7BæFW67&—F–öçÇÂ""“¶–b‡&W7VÇBç&öGV7Bç7FæF&E6†—–ærÖçVÆÂ—6WE&–6–ær†7W'&VçCÓâ‡²ââæ7W'&VçBÇ6†—–æt6÷7C§&W7VÇBç&öGV7Bç7FæF&E6†—–ærÇ6†—–æt6†&vVC£Ò’“·6WEf&–çE&–6W2„ö&¦V7Bæg&öÔVçG&–W2‚‡&W7VÇBç&öGV7Bçf&–çG7ÇÅµÒ’æÖ‡f&–çCÓåµ7G&–ær‡f&–çBæ–B’Çf&–çBçFV×ÆFU&–6UÒ’’“²ò¢CCs"ÒÆöF–ærF†R&–çF–g’FV×ÆFRW6VBFò6ÆV"F†R&–6–ær&÷fÀ¢Væ6öæF—F–öæÆÇ’â6†ö÷6–ær6fVB&öGV7BÆöG2—G2FV×ÆFRÂ6òWfW'’&F6€¢&VvâVâÖ&÷fVBæòÖGFW"v†BF†R&öGV7B†B6fVBÒæBF†R6öçG&öÂFð¢&÷fRv–â6—G2–ç6–FRF†R6öÆÆ6VB6†—–ær6V7F–öâÂ6òæW‡B7FW ¢&VgW6VBv—F‚æ÷F†–æröâ67&VVâFò&W72â&W&öGV6VBöâ6ÆVâ&F6‚v—F‚¢&öGV7B6''––ærC"&öf—BF&vWBæBfÆ–BWG7’&öf–ÆRà ¢&öGV7BF†BÇ&VG’6'&–W2&÷fVB&–6–ær¶VW2—Bâ&÷fÂ—2öæÇ¢6ÆV&VBf÷"&öGV7BF†B†2æöæR6fVBÂv†–6‚—2F†R66R—Bv2f÷"â¢ð§6WE&–6–æt&÷fVB‡&V6—T6'&–W4&÷fVE&–6–ær‡¶FVfVÇE&öf—EF&vWC¦7F—fU&V6—SòæFVfVÇE&öf—EF&vWBÆWG7•6†—–æu&öf–ÆT–C¦7F—fU&V6—SòæWG7•6†—–æu&öf–ÆT–GÒ’“²&WGW&â&W7VÇBç&öGV7C°¢Ò6F6‚†W'&÷"’²–b‡&WVW7EfW'6–öãÓÓ×FV×ÆFTÆöEfW'6–öâæ7W'&VçB—6WEFV×ÆFTW'&÷"†W'&÷"–ç7Fæ6VöbW'&÷"òW'&÷"æÖW76vR¢%F†RFV×ÆFR6÷VÆBæ÷B&RÆöFVBâ"“²&WGW&âçVÆÃ²Ð¢f–æÆÇ’²–b‡&WVW7EfW'6–öãÓÓ×FV×ÆFTÆöEfW'6–öâæ7W'&VçB—6WDÆöF–æuFV×ÆFR†fÇ6R“²Ð¢Ð ¢7–æ2gVæ7F–öâ&VÖVÖ&W%&öGV7D6öÆ÷'2‚—¶–b‚7F—fU&V6—WÇÂ6VÆV7FVD6öÆ÷$–G2æÆVæwF‚—&WGW&ã·6WE&VÖVÖ&W&–æt6öÆ÷'2‡G'VR“·G'—¶6öç7BWFFVC×²ââæ7F—fU&V6—RÆFVfVÇD6öÆ÷$–G3§6VÆV7FVD6öÆ÷$–G7Ó¶6öç7B&W7öç6SÖv—BfWF6‚‚"ö’÷&öGV7B×&V6—W2"Ç¶ÖWF†öC¢%õ5B"Æ†VFW'3§²$6öçFVçBÕG—R#¢&Æ–6F–öâö§6öâ'ÒÆ&öG“¤¥4ôâç7G&–æv–g’‡¶–C¦7F—fU&V6—Ræ–BÆæÖS¦7F—fU&V6—RææÖRÇFV×ÆFUW&Ã¦7F—fU&V6—RçFV×ÆFUW&ÂÆFVfVÇD6öÆ÷$–G3§6VÆV7FVD6öÆ÷$–G7Ò—Ò“¶–b‚&W7öç6Ræö²—F‡&÷ræWrW'&÷"‚$vöÆF–R6÷VÆBæ÷B6fRF†W6R6öÆ÷"FVfVÇG2â"“·6WD7F—fU&V6—R‡WFFVB“·6WD6öÆ÷'5&VÖVÖ&W&VB‡G'VR—Ö6F6‚†W'&÷"—·7F÷v—F‚‚%F†W6R6öÆ÷"FVfVÇG2vW&Ræ÷B6fVBâ"Å¶W'&÷"–ç7Fæ6VöbW'&÷#öW'&÷"æÖW76vS¢%G'’v–â–âÖöÖVçBâ%Ò—Öf–æÆÇ—·6WE&VÖVÖ&W&–æt6öÆ÷'2†fÇ6R—×Ð ¢7–æ2gVæ7F–öâ&VÖVÖ&W%&öGV7E6—¦W2‚—¶–b‚7F—fU&V6—WÇÂ6VÆV7FVE6—¦T–G2æÆVæwF‚—&WGW&ã·6WE&VÖVÖ&W&–æu6—¦W2‡G'VR“·G'—¶6öç7BWFFVC×²ââæ7F—fU&V6—RÆFVfVÇE6—¦T–G3§6VÆV7FVE6—¦T–G7Ó¶6öç7B&W7öç6SÖv—BfWF6‚‚"ö’÷&öGV7B×&V6—W2"Ç¶ÖWF†öC¢%õ5B"Æ†VFW'3§²$6öçFVçBÕG—R#¢&Æ–6F–öâö§6öâ'ÒÆ&öG“¤¥4ôâç7G&–æv–g’‡¶–C¦7F—fU&V6—Ræ–BÆæÖS¦7F—fU&V6—RææÖRÇFV×ÆFUW&Ã¦7F—fU&V6—RçFV×ÆFUW&ÂÆFVfVÇE6—¦T–G3§6VÆV7FVE6—¦T–G7Ò—Ò“¶–b‚&W7öç6Ræö²—F‡&÷ræWrW'&÷"‚$vöÆF–R6÷VÆBæ÷B6fRF†W6R6—¦RFVfVÇG2â"“·6WD7F—fU&V6—R‡WFFVB“·6WE6—¦W5&VÖVÖ&W&VB‡G'VR—Ö6F6‚†W'&÷"—·7F÷v—F‚‚%F†W6R6—¦RFVfVÇG2vW&Ræ÷B6fVBâ"Å¶W'&÷"–ç7Fæ6VöbW'&÷#öW'&÷"æÖW76vS¢%G'’v–â–âÖöÖVçBâ%Ò—Öf–æÆÇ—·6WE&VÖVÖ&W&–æu6—¦W2†fÇ6R—×Ð ¢7–æ2gVæ7F–öâ&W&VEWÆöB†FW6–vã¢FW6–väf–ÆR’°¢–b†FW6–vâæ÷&–v–æÅVæf–Æ&ÆR—F‡&÷ræWrW'&÷"‚%WÆöBF†R÷&–v–æÂFW6–vâv–â–âF†—2'&÷w6W"&Vf÷&R&V7&VF–ær—G2&–çF–g’G&gBâ"“°¢òò&W6W'fR÷&–v–æÂ'—FW2v†VæWfW"&–çF–g’6â66WBF†VÒF—&V7FÇ’à¢òò÷fW'6—¦VB÷VR'Gv÷&²—2&V6ö×&W76VBv—F†÷WB6†æv–ærF–ÖVç6–öç3°¢òòG&ç7&VçB'Gv÷&²—2æWfW"fÆGFVæVB÷"6–ÆVçFÇ’FVw&FVBà¢6öç7Bf–ÆSÖFW6–vâæf–ÆS°¢–b‚õÂâ‡æwÆ§Sör’Bö’çFW7B†f–ÆRææÖR’ÇÂõæ–ÖvUÂò‡æwÆ§Vr’Bö’çFW7B†f–ÆRçG—RÇÂ&–ÖvR÷ær"’’°¢F‡&÷ræWrW'&÷"‚$6†ö÷6Rär÷"¥rf–ÆRâvV%'Gv÷&²×W7B&RW‡÷'FVB2är&Vf÷&RWÆöF–ærâ"“°¢Ð¢6öç7B&–v–EW%&öGV7CÖ—5&–v–EW%&öGV7B‡FV×ÆFTFWF–Ç2“°¢&WGW&â&W&T'Gv÷&´f–ÆR†f–ÆRÂFW6–vâæ†5G&ç7&Væ7’ÓÒfÇ6RÂ&–v–EW%&öGV7B“°¢Ð ¢7–æ2gVæ7F–öâ7FvUWÆöB†&Æö#¢&Æö"Âf–ÆTæÖS¢7G&–ærÂ&VfW&Væ6S¢7G&–ær’°¢6öç7Bv—G2Ò³ÂSÂCÓ°¢ÆWBÆ7DW'&÷"Ò%F†RFW6–vâ6÷VÆBæ÷B&R&W&VBf÷"&–çF–g’â#°¢f÷"†6öç7Bv—Böbv—G2’°¢–b‡v—B’v—BæWr&öÖ—6R‚‡&W6öÇfR’Óâv–æF÷rç6WEF–ÖV÷WB‡&W6öÇfRÂv—B’“°¢G'’°¢6öç7B&W7öç6RÒv—BfWF6…v—F„FVFÆ–æR†ö’÷&–çF–g’÷7FvSöf–ÆTæÖSÒG¶Væ6öFUU$”6ö×öæVçB†f–ÆTæÖR—Òg&VfW&Væ6SÒG¶Væ6öFUU$”6ö×öæVçB‡&VfW&Væ6R—ÖÂ°¢ÖWF†öC¢%õ5B"À¢†VFW'3¢²$6öçFVçBÕG—R#¢&Æö"çG—RÇÂ‚õÂçærBö’çFW7B†f–ÆTæÖR’ò&–ÖvR÷ær"¢&–ÖvRö§Vr"’ÒÀ¢&öG“¢&Æö"À¢ÒÂ““°¢6öç7B&W7VÇBÒv—B&W7öç6Ræ§6öâ‚’2²7FvVD–Có¢7G&–æs²W'&÷#ó¢7G&–ærÓ°¢–b‡&W7öç6Ræö²bb&W7VÇBç7FvVD–B’&WGW&â²7FvVD–C¢&W7VÇBç7FvVD–BÂ&VfW&Væ6RÓ°¢Æ7DW'&÷"Ò&W7VÇBæW'&÷"ÇÂÆ7DW'&÷#°¢–b‡&W7öç6Rç7FGW2ãÒCbb&W7öç6Rç7FGW2ÂSbb&W7öç6Rç7FGW2ÓÒC#’’'&V³°¢Ò6F6‚†W'&÷"’²Æ7DW'&÷"ÒW'&÷"–ç7Fæ6VöbW'&÷"òW'&÷"æÖW76vR¢Æ7DW'&÷#²Ð¢Ð¢F‡&÷ræWrW'&÷"†G¶Æ7DW'&÷'ÒG²õ7W÷'B&VfW&Væ6S¢ö’çFW7B†Æ7DW'&÷"’ò""¢7W÷'B&VfW&Væ6S¢G·&VfW&Væ6WÒæÖ“°¢Ð ¢7–æ2gVæ7F–öâ&V6÷fW$G&gB†&F6„–C¢7G&–ærÂ6Æ–VçD–C¢7G&–ær’°¢6öç7BFVÆ—2Ò³Â#ÂCÂƒÂ#ÂSÓ°¢f÷"†6öç7BFVÆ’öbFVÆ—2’°¢v—BæWr&öÖ—6R‚‡&W6öÇfR’Óâv–æF÷rç6WEF–ÖV÷WB‡&W6öÇfRÂFVÆ’’“°¢6öç7B&W7öç6RÒv—BfWF6…v—F„FVFÆ–æR†ö’÷&–çF–g’öG&gG3ö&F6„–CÒG¶Væ6öFUU$”6ö×öæVçB†&F6„–B—Òf6Æ–VçD–CÒG¶Væ6öFUU$”6ö×öæVçB†6Æ–VçD–B—ÖÂ·ÒÂ3“°¢6öç7B&W7VÇBÒv—B&W7öç6Ræ§6öâ‚’2²7FGW3ó¢7G&–æs²G&gCó¢G&gE&W7VÇBÓ°¢–b‡&W7VÇBç7FGW2ÓÓÒ'7V66VVFVB"bb&W7VÇBæG&gB’&WGW&â&W7VÇBæG&gC°¢–b‡&W7VÇBç7FGW2ÓÓÒ&f–ÆVB"ÇÂ&W7VÇBç7FGW2ÓÓÒ&æ÷Eöf÷VæB"’&WGW&âçVÆÃ°¢Ð¢&WGW&âçVÆÃ°¢Ð ¢7–æ2gVæ7F–öâ&ö6W74FW6–vâ†FW6–vã¢FW6–väf–ÆR“¢&öÖ—6SÄG&gE&W7VÇCâ°¢6öç7B&VfW&Væ6U&ö÷BÒtÄbÒG¶7'—Fòç&æFöÕUT”B‚’ç&WÆ6R‚òÒörÂ""’ç6Æ–6RƒÂ’çFõWW$66R‚—Ö°¢ÆWBf–æÄW'&÷#¢W'&÷"ÂçVÆÂÒçVÆÃ°¢G'’°¢6öç7BWÆöBÒv—B&W&VEWÆöB†FW6–vâ“°¢f÷"†ÆWB—VÆ–æTGFV×BÒ²—VÆ–æTGFV×BÃÒ3²—VÆ–æTGFV×B³Ò’°¢6öç7B7W÷'E&VfW&Væ6RÒG·&VfW&Væ6U&ö÷GÒÔG·—VÆ–æTGFV×GÖ°¢G'’°¢6öç7B7FvVBÒv—B7FvUWÆöB‡WÆöBæ&Æö"ÂWÆöBæf–ÆTæÖRÂ7W÷'E&VfW&Væ6R“°¢6öç7BgVÆÄFW67&—F–öãÕ¶FW6–vâæ&ÇW&'ÇÆFW6–vâæWG7“òæ&ÇW&"ÆFW67&—F–öåÒæf–ÇFW"„&ööÆVâ’æ¦ö–â‚%ÆåÆâ"“°¢6öç7B&W7öç6RÒv—BfWF6…v—F„FVFÆ–æR‚"ö’÷&–çF–g’öG&gG2"Â²ÖWF†öC¢%õ5B"Â†VFW'3¢²$6öçFVçBÕG—R#¢&Æ–6F–öâö§6öâ"ÒÂ&öG“¢¥4ôâç7G&–æv–g’‡²&F6„–C¢FV×ÆFTFWF–Ç3òæ&F6„–BÂF—FÆS¢FW6–vâçF—FÆRÇÂVæFVf–æVBÂFw3¢FW6–vâçFw2Â&–6–ærÂWG7”'W–W%6†—–æs¦WG7•6†—–æu&öf–ÆW2æf–æB‡&öf–ÆSÓç&öf–ÆRæ–CÓÓÖWG7•6†—–æu&öf–ÆT–B“òæFöÖW7F–5&–Ö'—ÇÃÂ6†—–æuFV×ÆFT–C¦WG7•6†—–æu&öf–ÆT–BÂf&–çE&–6W2Â6VÆV7FVEf&–çD–G3§&–6VEf&–çG2æÖ‡f&–çCÓçf&–çBæ–B’ÂFW67&—F–öã¦gVÆÄFW67&—F–öâÂÖ…Æ6VÖVçE66ÆS¦—5&–v–EW%&öGV7B‡FV×ÆFTFWF–Ç2“ó§VæFVf–æVBÂf–ÆTæÖS¢WÆöBæf–ÆTæÖRÂ7FvVD–C¢7FvVBç7FvVD–BÂ7W÷'E&VfW&Væ6S¢7FvVBç&VfW&Væ6RÂ6Æ–VçD–C¢FW6–vâæ–BÒ’ÒÂB¢c¢“°¢6öç7B&W7VÇBÒv—B&W7öç6Ræ§6öâ‚’2²G&gCó¢G&gE&W7VÇC²W'&÷#ó¢7G&–ærÓ°¢–b‚‚&W7öç6Ræö²ÇÂ&W7VÇBæG&gB’bb‡&W7öç6Rç7FGW2ÓÓÒC’ÇÂ÷7F–ÆÂ6ö×ÆWF–ærF†—2W†7BG&gBö’çFW7B‡&W7VÇBæW'&÷"óò""’’’°¢6öç7B&V6÷fW&VBÒv—B&V6÷fW$G&gB‡FV×ÆFTFWF–Ç2æ&F6„–BÂFW6–vâæ–B“°¢–b‡&V6÷fW&VB’&W7VÇBæG&gBÒ&V6÷fW&VC°¢Ð¢–b‚&W7VÇBæG&gB’F‡&÷ræWrW'&÷"‡&W7VÇBæW'&÷"ÇÂ%&–çF–g’F–Bæ÷B7&VFRF†—2G&gBâ"“°¢&WGW&â&W7VÇBæG&gC°¢Ò6F6‚†GFV×DW'&÷"’°¢f–æÄW'&÷"ÒGFV×DW'&÷"–ç7Fæ6VöbW'&÷"òGFV×DW'&÷"¢æWrW'&÷"‚%F†RFW6–vâf–ÆVBâ"“°¢6öç7BW&ÖæVçBÒ—5W&ÖæVçEWÆöDW'&÷"†f–æÄW'&÷"æÖW76vR“°¢–b‡W&ÖæVçBÇÂ—VÆ–æTGFV×BÓÓÒ2’'&V³°¢v—BæWr&öÖ—6R‚‡&W6öÇfR’Óâv–æF÷rç6WEF–ÖV÷WB‡&W6öÇfRÂ—VÆ–æTGFV×B¢S’“°¢Ð¢Ð¢F‡&÷rf–æÄW'&÷"óòæWrW'&÷"‚%&–çF–g’F–Bæ÷B7&VFRF†—2G&gBâ"“°¢Ò6F6‚†W'&÷"’°¢6öç7B&tÖW76vRÒW'&÷"–ç7Fæ6VöbW'&÷"òW'&÷"æÖW76vR¢%F†RFW6–vâf–ÆVBâ#°¢6öç7B7W÷'E&VfW&Væ6RÒG·&VfW&Væ6U&ö÷GÒÔ6°¢–b‚õ7W÷'B&VfW&Væ6S¢ö’çFW7B‡&tÖW76vR’’°¢fö–BfWF6‚‚"ö’÷&–çF–g’öF–væ÷7F–72"Â²ÖWF†öC¢%õ5B"Â†VFW'3¢²$6öçFVçBÕG—R#¢&Æ–6F–öâö§6öâ"ÒÂ&öG“¢¥4ôâç7G&–æv–g’‡²&VfW&Væ6S¢7W÷'E&VfW&Væ6RÂf–ÆTæÖS¢FW6–vâææÖRÂ7FvS¢&'&÷w6W%ö–ÖvU÷&W&F–öâ"ÂÖW76vS¢&tÖW76vRÒ’Ò“°¢Ð¢&WGW&â²6Æ–VçD–C¢FW6–vâæ–BÂæÖS¢FW6–vâææÖRÂ7FGW3¢$æVVG5&WG'’"ÂW'&÷#¢g&–VæFÇ•WÆöDW'&÷"†æWrW'&÷"†G·&tÖW76vWÒG²õ7W÷'B&VfW&Væ6S¢ö’çFW7B‡&tÖW76vR’ò""¢7W÷'B&VfW&Væ6S¢G·7W÷'E&VfW&Væ6WÒæÖ’’Ó°¢Ð¢Ð ¢ò¢CC’Ò6ÖRW‡÷7W&R2V&Æ—6†–æs¢F†R&VfÆ–v‡B6öæf—&Ò†BæòF—6&ÆV@¢7FFRÂ6òF÷V&ÆR6Æ–6²&âF†Rv†öÆRG&gB7&VF–öâGv–6RÒ&–çF–g’V÷F¢7VçBGv–6RæBGWÆ–6FRG&gG2F†BF†VâV&Æ—6‚2GWÆ–6FRÆ—7F–æw2â¢ð¢6öç7BG&gE'Vä–äfÆ–v‡C×W6U&Vb†fÇ6R“°¢7–æ2gVæ7F–öâ'VäG&gG2‡F&vWDf–ÆW3¢FW6–väf–ÆUµÒÂ¶VW7V66W76gVÂÒfÇ6R’°¢–b†G&gE'Vä–äfÆ–v‡Bæ7W'&VçB—&WGW&ã°¢G&gE'Vä–äfÆ–v‡Bæ7W'&VçC×G'VS°¢G'—°¢–b‚&VG’ÇÂF&vWDf–ÆW2æÆVæwF‚ÇÂG&gE'Vä7F—fRæ7W'&VçB’&WGW&ã°¢G&gE'Vä7F—fRæ7W'&VçC×G'VS°¢6öç7B6ö×ÆWFVDFW6–vä–G3ÖæWr6WCÇ7G&–æsâ‚“°¢6WE'Vææ–ær‡G'VR“°¢6WE'VåF÷FÂ‡F&vWDf–ÆW2æÆVæwF‚“°¢6WD6ö×ÆWFR†fÇ6R“°¢6öç7B&F6„'—FW3×F&vWDf–ÆW2ç&VGV6R‚‡7VÒÆf–ÆR“Óç7VÒ¶f–ÆRç6—¦RÃ“°¢6öç7B&F6„6öæ7W'&Væ7“Ö&F6„'—FW3äÄ$tUô$D4…õD…$U4„ôÄCó¤Ô…ô4ôä5U%$TåEôDU4”tå3°¢6WE&W&F–öäÖW76vR†&F6„6öæ7W'&Væ7“ÓÓÓò%F†—2—2Æ&vR†–v‚×&W6öÇWF–öâ&F6‚Â6òvöÆF–R—2&ö6W76–æröæRFW6–vâBF–ÖR6fVÇ’#¦&ö6W76–ærWFòG´ÖF‚æÖ–â†&F6„6öæ7W'&Væ7’ÂF&vWDf–ÆW2æÆVæwF‚—ÒG´ÖF‚æÖ–â†&F6„6öæ7W'&Væ7’ÂF&vWDf–ÆW2æÆVæwF‚“ÓÓÓò&FW6–vâ#¢&FW6–vç2'ÒBF–ÖRv—F†÷WBÆ÷vW&–ærF†V—"&–çB&W6öÇWF–öæ“°¢–b‚¶VW7V66W76gVÂ’6WDG&gG2…µÒ“°¢VÇ6R6WDG&gG2‚†7W'&VçB’Óâ7W'&VçBæf–ÇFW"‚†G&gB’ÓâG&gBç7FGW2ÓÓÒ$7&VFVB"’“°¢6WE&ö6W76VBƒ“°¢6öç7B7&VFVDFW6–vå&W7VÇG3¤'&“Ç·7FGW3ó§7G&–æs¶–Có§7G&–æwÆçVÆÃ¶W'&÷#ó§7G&–æwÓãÕµÓ°¢G'’°¢v—B'Vä&÷VæFVB‡F&vWDf–ÆW2Â&F6„6öæ7W'&Væ7’Â&ö6W74FW6–vâÂ‡&W7VÇB’Óâ°¢–b†6ö×ÆWFVDFW6–vä–G2æ†2‡&W7VÇBæ6Æ–VçD–B’—&WGW&ã°¢6ö×ÆWFVDFW6–vä–G2æFB‡&W7VÇBæ6Æ–VçD–B“°¢6öç7B&öGV7E&W7VÇC×²ââç&W7VÇBÇ&öGV7DæÖS¦7F—fU&V6—SòææÖWÇÇFV×ÆFTFWF–Ç3òæ&ÇVW&–çEF—FÆWÇÂ%6fVB&öGV7B'Ó°¢7&VFVDFW6–vå&W7VÇG2çW6‚‡&öGV7E&W7VÇB“°¢6WDG&gG2‚†7W'&VçB’Óâ²ââæ7W'&VçBÂ&öGV7E&W7VÇEÒ“°¢–b‡&W7VÇBæ–B—6WE&–çF–g”–ÖvU6VÆV7F–öç2†7W'&VçCÓæ7W'&VçE·&W7VÇBæ–BÓö7W'&VçC§²ââæ7W'&VçBÅ·&W7VÇBæ–BÓ§&–çF–g”–ÖvT–æF–6W7Ò“°¢–b‡&W7VÇBç&Wf–WuW&Â—WFFTFW6–vâ‡&W7VÇBæ6Æ–VçD–BÇ·&Wf–WuW&Ã§&W7VÇBç&Wf–WuW&ÇÒ“°¢6WE&ö6W76VB„ÖF‚æÖ–â†6ö×ÆWFVDFW6–vä–G2ç6—¦RÇF&vWDf–ÆW2æÆVæwF‚’“°¢Ò“°¢ò¢C##r+röæÇ’Ö÷fRöâ–bG&gB7GVÆÇ’W†—7G2â'VäG&gG2W6VBFò6W@¢6ö×ÆWFRæB§V×FòF†RÆ—7F–ærvRv†FWfW"6ÖR&6²Â6ò'Vâ–à¢v†–6‚WfW'’G&gBf–ÆVBÆöö¶VBW†7FÇ’Æ–¶R'Vâ–âv†–6‚WfW'’G&g@¢7V66VVFVC¢F†R6VÆÆW"v26'&–VBf÷'v&BÂvVæW&FVBF—FÆW2ÂæBöæÇ¢F†VâÖWB%F†RÖF6†–ær&–çF–g’G&gB6÷VÆBæ÷B&Rf÷VæB"&W6–FRV6€¢Æ—7F–ærÂv—F‚F†R&–Â&VgW6–ærF†RvRF†W’vW&R7FæF–æröâæBæð¢&÷WFR&6²âÖV7W&VBöâ&VÂ&F6ƒ¢&÷F‚G&gG26ÖR&6°¢7FGW3¢$æVVG5&WG'’"v—F‚çVÆÂ–BÂæBF†RGfæ6VBç—v’â¢ð¢6öç7B7&VFVDæ÷sÖ7&VFVDFW6–vå&W7VÇG2æf–ÇFW"‡&W7VÇCÓç&W7VÇBç7FGW3ÓÓÒ$7&VFVB"bg&W7VÇBæ–B’æÆVæwFƒ°¢–b†7&VFVDæ÷sã—°¢6WD6ö×ÆWFR‡G'VR“°¢ò¢CCCÒ7&VF–ærF†RG&gG2W6VBFò§V×7G&–v‡BFòÆ—7F–ærFWF–Ç2À¢v†–6‚—2v‡’6†R¶WB'&—f–ærB7FW2†f–æræWfW"6VVâ7FW"âF†P¢†÷F÷2æBÖö6·W2V"öâD„•2vRF†RÖöÖVçBF†RG&gG2W†—7BÂ6ð¢F†—27F—2WBæB67&öÆÇ2FòF†VÒâÆVf–ær–ÖvW2—2F†RæW‡B7FW ¢'WGFöâw2¦ö"ÂæBF†B'WGFöâ&VgW6W2VçF–ÂWfW'’Æ—7F–ær†2†÷Fòâ¢ð¢6WDf–æ—6…†6R‚&FWF–Ç2"“°¢v–æF÷rç6WEF–ÖV÷WB‚‚“ÓæFö7VÖVçBçVW'•6VÆV7F÷"‚"æG&gBÖ6&B"“òç67&öÆÄ–çFõf–Wr‡¶&Æö6³¢'7F'B'Ò’Ã“°¢ÖVÇ6W°¢6WD6ö×ÆWFR†fÇ6R“°¢7F÷v—F‚€¢F&vWDf–ÆW2æÆVæwFƒÓÓÓò%F†BG&gB6÷VÆBæ÷B&R7&VFVBâ#¢$æöæRöbF†W6RG&gG26÷VÆB&R7&VFVBâ"À¢²ââææWr6WB†7&VFVDFW6–vå&W7VÇG2æÖ‡&W7VÇCÓç&W7VÇBæW'&÷"’æf–ÇFW"„&ööÆVâ’27G&–æuµÒ•Òç6Æ–6RƒÃ2’À¢$æ÷F†–ærv26†&vVBv–ç7B–÷W"Æââf—‚F†R&V6öâ&VÆ÷ræBW6R7&VFR&–çF–g’G&gG2v–ââ"À¢“°¢Ð¢Òf–æÆÇ’°¢G&gE'Vä7F—fRæ7W'&VçCÖfÇ6S°¢6WE'Vææ–ær†fÇ6R“°¢6WE&W&F–öäÖW76vR‚""“°¢6WE'VåF÷FÂƒ“°¢Ð¢Öf–æÆÇ—¶G&gE'Vä–äfÆ–v‡Bæ7W'&VçCÖfÇ6WÐ¢Ð ¢gVæ7F–öâf–æÄFW67&—F–öâ†FW6–vã¤FW6–väf–ÆRÆFWF–Ç3ó¤WG7”FWF–Ç2—·&WGW&âFW6–vâæFW67&—F–öä÷fW'&–FSóõ¶FW6–vâæ&ÇW&#óöFWF–Ç3òæ&ÇW&#óò""ÆFW67&—F–öåÒæf–ÇFW"‡fÇVSÓçfÇVRçG&–Ò‚’’æ¦ö–â‚%ÆåÆâ"—Ð¢7–æ2gVæ7F–öâ7–æ4Æ—7F–ætf–VÆG2†FW6–vã¤FW6–väf–ÆRÆFWF–Ç3ó¤WG7”FWF–Ç2—¶6öç7BG&gCÖG&gG2æf–æB†—FVÓÓæ—FVÒæ6Æ–VçD–CÓÓÖFW6–vâæ–B“¶–b‚G&gCòæ–B—F‡&÷ræWrW'&÷"‚%F†RÖF6†–ær&–çF–g’G&gB6÷VÆBæ÷B&Rf÷VæBâ"“¶6öç7B&W7öç6SÖv—BfWF6‚‚"ö’÷&–çF–g’öG&gG2÷WFFR"Ç¶ÖWF†öC¢%D4‚"Æ†VFW'3§²$6öçFVçBÕG—R#¢&Æ–6F–öâö§6öâ'ÒÆ&öG“¤¥4ôâç7G&–æv–g’‡·&öGV7D–C¦G&gBæ–BÇF—FÆS¦FW6–vâçF—FÆRÇFw3¦FW6–vâçFw2ÆFW67&—F–öã¦f–æÄFW67&—F–öâ†FW6–vâÆFWF–Ç2’ÆWG7”FWF–Ç3¦FWF–Ç7Ò—Ò“¶6öç7B–ÆöCÖv—B&W7öç6Ræ§6öâ‚’2¶W'&÷#ó§7G&–æwÓ¶–b‚&W7öç6Ræö²—F‡&÷ræWrW'&÷"‡–ÆöBæW'&÷'ÇÂ%&–çF–g’6÷VÆBæ÷B6fRF†R6ö×ÆWFVBÆ—7F–ærâ"—Ð¢7–æ2gVæ7F–öâ7–æ5&W&VDÆ—7F–ær†FW6–vã¤FW6–väf–ÆRÆFWF–Ç3¤WG7”FWF–Ç2—¶v—B7–æ4Æ—7F–ætf–VÆG2†FW6–vâÆFWF–Ç2—Ð¢7–æ2gVæ7F–öâ&W6öÇfTWG7”÷F–öç2†FWF–Ç3¤WG7”FWF–Ç2ÇF†öæö×”–Có¦çVÖ&W"—¶6öç7B&W7öç6SÖv—BfWF6‚‚"ö’öWG7’÷F†öæö×’"Ç¶ÖWF†öC¢%õ5B"Æ†VFW'3§²$6öçFVçBÕG—R#¢&Æ–6F–öâö§6öâ'ÒÆ&öG“¤¥4ôâç7G&–æv–g’‡²ââæFWF–Ç2ÇF†öæö×”–BÆ–æ6ÇVFT6FVv÷&–W3¢†fTWG7”6FVv÷&–W2æ7W'&VçBÇ&öGV7C§¶&ÇVW&–çEF—FÆS§FV×ÆFTFWF–Ç3òæ&ÇVW&–çEF—FÆRÆ'&æC§FV×ÆFTFWF–Ç3òæ'&æBÆÖöFVÃ§FV×ÆFTFWF–Ç3òæÖöFVÇ×Ò—Ò’Ç–ÆöCÖv—B&W7öç6Ræ§6öâ‚’2¶6FVv÷&–W3ó¤WG7”6FVv÷'”÷F–öåµÓ·6VÆV7FVCó§¶–C¦çVÖ&W#·Fƒ§7G&–æwÓ·&÷W'F–W3ó¤WG7•&÷W'G•6VÆV7F–öåµÓ¶W'&÷#ó§7G&–æwÓ¶–b‚&W7öç6Ræö·ÇÂ–ÆöBç6VÆV7FVB—F‡&÷ræWrW'&÷"‡–ÆöBæW'&÷'ÇÂ$WG7’Æ—7F–ær÷F–öç26÷VÆBæ÷B&RÆöFVBâ"“¶–b‡–ÆöBæ6FVv÷&–W3òæÆVæwF‚—¶†fTWG7”6FVv÷&–W2æ7W'&VçC×G'VS·6WDWG7”6FVv÷&–W2‡–ÆöBæ6FVv÷&–W2—Ð¢ò¢CcC’Òf–ÆÂ6Æ÷7W&RöæÇ’v†VâF†R&öGV7BæÖR6WGFÆW2—BÂæBöæÇ’v†Và¢WG7’ÆVgB—B&Ææ²ââVç&W6öÇfVBöæR7F—2&Ææ²æB¶VW2&Æö6¶–ærÂv†–6€¢—2F†R†öæW7B÷WF6öÖRâ¢ð¢6öç7B6Æ÷7W&S×fW&–f–VD6Æ÷7W&R‡FV×ÆFTFWF–Ç3òæ&ÇVW&–çEF—FÆRÇFV×ÆFTFWF–Ç3òæÖöFVÂÇFV×ÆFTFWF–Ç3òæ'&æB“°¢–b†6Æ÷7W&Rbg–ÆöBç&÷W'F–W2—–ÆöBç&÷W'F–W3×–ÆöBç&÷W'F–W2æÖ‡&÷W'G“Óç°¢–b‚ö6Æ÷7W&Rö’çFW7B‡&÷W'G’æÆ&VÂ—ÇÇ&÷W'G’çfÇVRçG&–Ò‚’—&WGW&â&÷W'G“°¢6öç7BÖF6ƒÒ‡&÷W'G’ç÷76–&ÆUfÇVW7ÇÅµÒ’æf–æB†÷F–öãÓæ÷F–öâææÖRçFôÆ÷vW$66R‚“ÓÓÖ6Æ÷7W&RçFôÆ÷vW$66R‚’“°¢&WGW&âÖF6ƒ÷²ââç&÷W'G’ÇfÇVS¦ÖF6‚ææÖRÇfÇVT–C¦ÖF6‚çfÇVUö–GÓ§&÷W'G“°¢Ò“°¢&WGW&â²ââæFWF–Ç2Æ6FVv÷'“§–ÆöBç6VÆV7FVBçF‚ÇF†öæö×”–C§–ÆöBç6VÆV7FVBæ–BÇ&÷W'F–W3§–ÆöBç&÷W'F–W7ÇÅµ×ÒÐ¢7–æ2gVæ7F–öâ&VÖVÖ&W$WG7”FVfVÇG2†FWF–Ç3¤WG7”FWF–Ç2—¶–b‚7F—fU&V6—R—&WGW&ã¶6öç7B‡—6–6ÃÔö&¦V7Bæg&öÔVçG&–W2‚†FWF–Ç2ç&÷W'F–W7ÇÅµÒ’æf–ÇFW"‡&÷W'G“Óå…•4”4ÅôUE5•ôd”TÄE2çFW7B‡&÷W'G’æÆ&VÂ’bg&÷W'G’çfÇVRçG&–Ò‚’’æÖ‡&÷W'G“Óå·&÷W'G’æÆ&VÂÇ&÷W'G’çfÇVUÒ’“¶–b‚ö&¦V7Bæ¶W—2‡‡—6–6Â’æÆVæwF‚—&WGW&ã¶6öç7BWFFVC×²ââæ7F—fU&V6—RÆWG7”FVfVÇG3§²ââæ7F—fU&V6—RæWG7”FVfVÇG2Âââç‡—6–6Ç×Ó¶6öç7B&W7öç6SÖv—BfWF6‚‚"ö’÷&öGV7B×&V6—W2"Ç¶ÖWF†öC¢%õ5B"Æ†VFW'3§²$6öçFVçBÕG—R#¢&Æ–6F–öâö§6öâ'ÒÆ&öG“¤¥4ôâç7G&–æv–g’‡¶–C¦7F—fU&V6—Ræ–BÆæÖS¦7F—fU&V6—RææÖRÇFV×ÆFUW&Ã¦7F—fU&V6—RçFV×ÆFUW&ÂÆWG7”FVfVÇG3§²ââæ7F—fU&V6—RæWG7”FVfVÇG2Âââç‡—6–6Ç×Ò—Ò“¶–b‚&W7öç6Ræö²—F‡&÷ræWrW'&÷"‚$vöÆF–R&W&VBF†RWG7’FWF–Ç2'WB6÷VÆBæ÷B&VÖVÖ&W"F†R&öGV7BFVfVÇG2â"“·6WD7F—fU&V6—R‡WFFVB—Ð ¢ò¢Ccc"+rGvòBF–ÖRÂ'WBæ÷Bg&öÒF†Rf—'7BFW6–vâà¢ ¢CsÖFRöæR&F6‚6†&RöæRWG7’&öGV7B&6VÆ–æS¢F†Rf—'7BFW6–và¢&W&VBW7F&Æ—6†W2F†RF†öæö×’Â6FVv÷'’æB‡—6–6ÂGG&–'WFW2Âæ@¢WfW'’FW6–vâgFW"—B–æ†W&—G2F†VÒÂ6ò&F6‚6ææ÷BV&Æ—6‚FVâÆ—7F–æw0¢VæFW"7V'FÇ’F–ffW&VçBWG7’6FVv÷&–W2â6öæ7W'&Væ7’v2v†BÖFRF†@¢÷&FW&–ær†öÆBÂV–WFÇ’ÒæBF†RCsFW7B6Vv‡BF†—26†ævR&V–çG&öGV6–æp¢F†RfVÇBÂv†–6‚—2W†7FÇ’v†B—B—2F†W&Rf÷"à ¢&W&TöæR&VG2WG7•&öGV7D&6VÆ–æRæ7W'&VçBÂF†Vâv—G2ÂF†Vâw&—FW2—Bà¢7F'BGvòFW6–vç2FövWF†W"æB&÷F‚&VBçVÆÂÂ&÷F‚&W6öÇfR–æFWVæFVçFÇ’À¢æBF†RÆFW"w&—FRv–ç2ÒF†R&F6‚—2–æ6öç6—7FVçBv–âæBæ÷F†–æröà¢67&VVâv÷VÆB6’6òà ¢6òF†Rf—'7BFW6–vâ'Vç2ÆöæRFòW7F&Æ—6‚F†R&6VÆ–æRÂæBF†R&W7B'Và¢GvòBF–ÖR–æ†W&—F–ær—BâFVâÖFW6–vâ&F6‚vöW2g&öÒ&÷WBFVâ6ÆÇ0¢–â6WVVæ6RFòöæRÇW2æ–æR–â—'2ÂæB7F—2FWFW&Ö–æ—7F–2â¢ð¢7–æ2gVæ7F–öâ&W&TWG7”&F6‚‡VæF–æs¤FW6–väf–ÆUµÒ—°¢–b‚VæF–æræÆVæwF‚—&WGW&ã°¢6öç7B¶f—'7BÂââç&W7EÓ×VæF–æs°¢v—B&W&TöæR†f—'7B“°¢–b‚&W7BæÆVæwF‚—&WGW&ã°¢v—B'Vä&÷VæFVB‡&W7BÄ$4´u$õTäEôUE5•ô4ôä5U%$Tä5’Æ7–æ2f–ÆSÓç¶v—B&W&TöæR†f–ÆR“·&WGW&âf–ÆWÒÂ‚“ÓçVæFVf–æVB“°¢Ð¢7–æ2gVæ7F–öâ&W&TöæR†FW6–vã¤FW6–väf–ÆR—·G'—¶6öç7B&W7öç6SÖv—BfWF6‚‚"ö’öÆ—7F–ærÖ–çFVÆÆ–vVæ6R"Ç¶ÖWF†öC¢%õ5B"Æ†VFW'3§²$6öçFVçBÕG—R#¢&Æ–6F–öâö§6öâ'ÒÆ&öG“¤¥4ôâç7G&–æv–g’‡°¢–ÖvS¦v—BFW6–vå&Wf–WtFFW&Â†FW6–vâ’À¢&öGV7C§¶&ÇVW&–çEF—FÆS§FV×ÆFTFWF–Ç3òæ&ÇVW&–çEF—FÆRÆ'&æC§FV×ÆFTFWF–Ç3òæ'&æBÆÖöFVÃ§FV×ÆFTFWF–Ç3òæÖöFVÂÆFW67&—F–öçÒÇF—FÆS¦FW6–vâçF—FÆRÇFw3¦FW6–vâçFw7Ò—Ò’Ç–ÆöCÖv—B&W7öç6Ræ§6öâ‚’2¶FWF–Ç3ó¤WG7”FWF–Ç3¶W'&÷#ó§7G&–æwÓ¶–b‚&W7öç6Ræö·ÇÂ–ÆöBæFWF–Ç2—F‡&÷ræWrW'&÷"‡–ÆöBæW'&÷'ÇÂ$WG7’FWF–Ç26÷VÆBæ÷B&R&W&VBâ"“¶6öç7BFVfVÇG3×&öGV7DWG7”FVfVÇG2‡FV×ÆFTFWF–Ç2Æ7F—fU&V6—SòæWG7”FVfVÇG2’Æ–æ—F–Ã×²ââç–ÆöBæFWF–Ç2ÆGG&–'WFW3§²ââç–ÆöBæFWF–Ç2æGG&–'WFW2ÂââæFVfVÇG7ÒÆ&ÇW&#¦FW6–vâæ&ÇW&#òçG&–Ò‚—ÇÇ–ÆöBæFWF–Ç2æ&ÇW&'ÒÆ&6VÆ–æSÖWG7•&öGV7D&6VÆ–æRæ7W'&VçBÇ&W&VCÖ&6VÆ–æS÷²ââæ–æ—F–ÂÇF†öæö×”–C¦&6VÆ–æRçF†öæö×”–BÆ6FVv÷'“¦&6VÆ–æRæ6FVv÷'’ÆGG&–'WFW3§²ââæ–æ—F–ÂæGG&–'WFW2Âââæ&6VÆ–æRæGG&–'WFW7×Ó¦–æ—F–ÂÆFWF–Ç3Öv—B&W6öÇfTWG7”÷F–öç2‡&W&VB“¶–b‚&6VÆ–æR—¶6öç7B‡—6–6ÃÔö&¦V7Bæg&öÔVçG&–W2‚†FWF–Ç2ç&÷W'F–W7ÇÅµÒ’æf–ÇFW"‡&÷W'G“Óå…•4”4ÅôUE5•ôd”TÄE2çFW7B‡&÷W'G’æÆ&VÂ’bg&÷W'G’çfÇVRçG&–Ò‚’’æÖ‡&÷W'G“Óå·&÷W'G’æÆ&VÂÇ&÷W'G’çfÇVUÒ’“¶WG7•&öGV7D&6VÆ–æRæ7W'&VçC×·F†öæö×”–C¦FWF–Ç2çF†öæö×”–BÆ6FVv÷'“¦FWF–Ç2æ6FVv÷'’ÆGG&–'WFW3§‡—6–6Ç×Ö6öç7BWFFVDFW6–vã×²ââæFW6–vâÆ&ÇW&#¦FWF–Ç2æ&ÇW&'Ó¶v—B7–æ4Æ—7F–ætf–VÆG2‡WFFVDFW6–vâÆFWF–Ç2“·WFFTFW6–vâ†FW6–vâæ–BÇ¶&ÇW&#¦FWF–Ç2æ&ÇW&"ÆWG7“¦FWF–Ç2ÆWG7”W'&÷#¢"'Ò“·&WGW&âFWF–Ç7Ö6F6‚†W'&÷"—·WFFTFW6–vâ†FW6–vâæ–BÇ¶WG7”W'&÷#¦W'&÷"–ç7Fæ6VöbW'&÷#öW'&÷"æÖW76vS¢$WG7’FWF–Ç26÷VÆBæ÷B&R&W&VBâ'Ò“·&WGW&âçVÆÇ×Ð¢7–æ2gVæ7F–öâ&WG'”öæTWG7”Æ—7F–ær†FW6–vã¤FW6–väf–ÆR—¶–b‡&W&–ætÆ—7F–æt–B—&WGW&ã·6WE&W&–ætÆ—7F–æt–B†FW6–vâæ–B“·G'—¶v—B&W&TöæR†FW6–vâ—Öf–æÆÇ—·6WE&W&–ætÆ—7F–æt–B‚""—×Ð¢7–æ2gVæ7F–öâ6†ævTWG7”6FVv÷'’†FW6–vã¤FW6–väf–ÆRÇF†öæö×”–C¦çVÖ&W"—¶–b‚FW6–vâæWG7—ÇÇF†öæö×”–CÓÓÖFW6–vâæWG7’çF†öæö×”–B—&WGW&ã·G'—¶6öç7B&W6öÇfVCÖv—B&W6öÇfTWG7”÷F–öç2†FW6–vâæWG7’ÇF†öæö×”–B’ÆÖW&vVC×&W6W'fT6ö×F–&ÆTWG7•&÷W'F–W2†FW6–vâæWG7’ç&÷W'F–W7ÇÅµÒÇ&W6öÇfVBç&÷W'F–W7ÇÅµÒ’ÆFWF–Ç3×²ââç&W6öÇfVBÇ&÷W'F–W3¦ÖW&vVBç&÷W'F–W7Ó¶–b†ÖW&vVBæ6ÆV&VD6÷VçB—·6WEVæF–æt6FVv÷'”6†ævR‡¶FW6–vä–C¦FW6–vâæ–BÆFWF–Ç2Æ6ÆV&VD6÷VçC¦ÖW&vVBæ6ÆV&VD6÷VçGÒ“·&WGW&ç×WFFTFW6–vâ†FW6–vâæ–BÇ¶WG7“¦FWF–Ç2ÆWG7”W'&÷#¢"'Ò—Ö6F6‚†W'&÷"—·WFFTFW6–vâ†FW6–vâæ–BÇ¶WG7”W'&÷#¦W'&÷"–ç7Fæ6VöbW'&÷#öW'&÷"æÖW76vS¢$WG7’÷F–öç26÷VÆBæ÷B&RÆöFVBâ'Ò—×Ð¢7–æ2gVæ7F–öâ6öçF–çVUFôWG7”FWF–Ç2‚—°¢–b†WG7•&W&F–öä7F—fRæ7W'&VçB—&WGW&ã°¢6öç7BÖ—76–æs§7G&–æuµÓÕµÓ°¢–b†f–ÆW2ç6öÖR†f–ÆSÓâf–ÆRçF—FÆRçG&–Ò‚’’–Ö—76–ærçW6‚‚$WfW'’Æ—7F–æræVVG2F—FÆRâ"“°¢–b†f–ÆW2ç6öÖR†f–ÆSÓâf–ÆRçFw2æÆVæwF‚’–Ö—76–ærçW6‚‚$WfW'’Æ—7F–æræVVG2BÆV7BöæRFrâ"“°¢–b‚FW67&—F–öâçG&–Ò‚’–Ö—76–ærçW6‚‚$FBF†R&WW6&ÆR&öGV7BFW67&—F–öââ"“°¢–b†Ö—76–æræÆVæwF‚—&WGW&âfö–B7F÷v—F‚‚$f–æ—6‚ÆÂ6V7F–öç2f—'7Bâ"ÆÖ—76–ær“°¢WG7•&W&F–öä7F—fRæ7W'&VçC×G'VS°¢6öç7BfW'6–öãÒ²¶WG7•&W&F–öåfW'6–öâæ7W'&VçC°¢6WE&W&–ætWG7’‡G'VR“°¢G'—°¢ÆWBf–ÆVCÓÆf—'7E&W&VC¤WG7”FWF–Ç7ÆçVÆÃÖçVÆÃ°¢v—B'Vä&÷VæFVB†f–ÆW2Ã"Ç&W&TöæRÇ&W7VÇCÓç¶–b‚&W7VÇB–f–ÆVB³Ó¶VÇ6Rf—'7E&W&VCóó×&W7VÇGÒ“°¢–b‡fW'6–öâÓÖWG7•&W&F–öåfW'6–öâæ7W'&VçB—&WGW&ã°¢–b†f–ÆVB—&WGW&âfö–B7F÷v—F‚‚$vöÆF–R6÷VÆBæ÷B6ö×ÆWFRWfW'’WG7’Æ—7F–ærâ"Å¶G¶f–ÆVGÒG¶f–ÆVCÓÓÓò&Æ—7F–æræVVG2#¢&Æ—7F–æw2æVVB'Òæ÷F†W"GFV×BâW6RF†R&WG'’'WGFöâ&W6–FRV6‚Æ—7F–æræÒ“°¢–b†f—'7E&W&VB–v—B&VÖVÖ&W$WG7”FVfVÇG2†f—'7E&W&VB“°¢ò¢C##b+rG&gG2†fR§W7B&VVâ7&VFVBÂ6òF†R6–FV&"V÷F—2æ÷r7FÆRâ¢ð¢6WEW6vU&Wf—6–öâ†7W'&VçCÓæ7W'&VçB³“°¢ò¢C##+rWG7’FWF–Ç2Æ—fRöâF†RÆ—7F–ærvS²F†W&R—2æò6W&FR†6RFòÖ÷fRFòâ¢ð¢6WDf–æ—6…†6R‚&FWF–Ç2"“°¢ò¢CSCBÒF†—2w&÷FR†6SÖWG7’v†–ÆRF†RÆ–æR&÷fR6WG2F†R7FFRFð¢&FWF–Ç2"Â6òF†RU$ÂF—6w&VVBv—F‚F†Râ&VÆöF–ærF†Vâ&W7F÷&VB¢†6RF†RæWfW"7GVÆÇ’W6W2æB7FW2&V†fVBF–ffW&VçFÇ’&Vf÷&P¢æBgFW"&Vg&W6‚âF†RU$Â6—2v†B—2G'VRâ¢ð¢6öç7BW&ÃÖæWrU$Â‡v–æF÷ræÆö6F–öâæ‡&Vb“·W&Âç6V&6…&×2ç6WB‚'7FW"Â&f–æ—6‚"“·W&Âç6V&6…&×2ç6WB‚'†6R"Â&FWF–Ç2"“·v–æF÷ræ†—7F÷'’ç&WÆ6U7FFR‡·ÒÂ""ÇW&Â“°¢v–æF÷rç67&öÆÅFòƒÃ“°¢Öf–æÆÇ—°¢–b‡fW'6–öãÓÓÖWG7•&W&F–öåfW'6–öâæ7W'&VçB—6WE&W&–ætWG7’†fÇ6R“°¢WG7•&W&F–öä7F—fRæ7W'&VçCÖfÇ6S°¢Ð¢Ð¢7–æ2gVæ7F–öâ6fTÆÄWG7”FWF–Ç2‚—¶–b†WG7•6fT7F—fRæ7W'&VçB—&WGW&ã¶6öç7BVæf–æ—6†VCÖf–ÆW2æf–ÇFW"†f–ÆSÓâWG7•&WV—&VD6ö×ÆWFR†f–ÆRæWG7’’“¶–b‡Væf–æ—6†VBæÆVæwF‚—&WGW&âfö–B7F÷v—F‚‚$f–æ—6‚WfW'’WG7’Æ—7F–ærf—'7Bâ"ÇVæf–æ—6†VBæÖ†f–ÆSÓæG¶f–ÆRææÖWÒ7F–ÆÂæVVG2WG7’FWF–Ç2æ’“¶6öç7B–çfÆ–CÖf–ÆW2æÖ†f–ÆSÓâ‡¶f–ÆRÇ&ö&ÆVÓ§W'6öæÆ—¦F–öå&ö&ÆVÒ†f–ÆRæWG7’—Ò’’æf–ÇFW"†—FVÓÓæ—FVÒç&ö&ÆVÒ“¶–b†–çfÆ–BæÆVæwF‚—&WGW&âfö–B7F÷v—F‚‚$f–æ—6‚F†RW'6öæÆ—¦F–öâ÷F–öç2f—'7Bâ"Æ–çfÆ–BæÖ†—FVÓÓæG¶—FVÒæf–ÆRææÖWÓ¢G¶—FVÒç&ö&ÆV×Ö’“¶WG7•6fT7F—fRæ7W'&VçC×G'VS²²¶WG7•&W&F–öåfW'6–öâæ7W'&VçC·6WE&W&–ætWG7’†fÇ6R“·6WE6f–ætWG7”FWF–Ç2‡G'VR“·G'—¶ÆWBf–ÆVCÓ¶–b‚Æö6Å&Wf–Wr–v—B'Vä&÷VæFVB†f–ÆW2Ã"Æ7–æ2FW6–vãÓç·G'—¶v—B7–æ4Æ—7F–ætf–VÆG2†FW6–vâÆFW6–vâæWG7’“·&WGW&âG'VWÖ6F6‚†W'&÷"—·WFFTFW6–vâ†FW6–vâæ–BÇ¶WG7”W'&÷#¦W'&÷"–ç7Fæ6VöbW'&÷#öW'&÷"æÖW76vS¢$WG7’FWF–Ç26÷VÆBæ÷B&R6fVBâ'Ò“·&WGW&âfÇ6W×ÒÇ6fVCÓç¶–b‚6fVB–f–ÆVB³ÓÒ“¶–b†f–ÆVB—&WGW&âfö–B7F÷v—F‚‚%6öÖRWG7’FWF–Ç2vW&Ræ÷B6fVBâ"Å¶G¶f–ÆVGÒG¶f–ÆVCÓÓÓò&Æ—7F–æræVVG2#¢&Æ—7F–æw2æVVB'Òæ÷F†W"GFV×BæÒ“¶–b†7F—fU&V6—R—¶6öç7B‡—6–6ÃÔö&¦V7Bæg&öÔVçG&–W2‚†f–ÆW5³ÓòæWG7“òç&÷W'F–W7ÇÅµÒ’æf–ÇFW"‡&÷W'G“Óå…•4”4ÅôUE5•ôd”TÄE2çFW7B‡&÷W'G’æÆ&VÂ’bg&÷W'G’çfÇVRçG&–Ò‚’’æÖ‡&÷W'G“Óå·&÷W'G’æÆ&VÂÇ&÷W'G’çfÇVUÒ’“¶–b„ö&¦V7Bæ¶W—2‡‡—6–6Â’æÆVæwF‚—¶6öç7BWFFVC×²ââæ7F—fU&V6—RÆWG7”FVfVÇG3§²ââæ7F—fU&V6—RæWG7”FVfVÇG2Âââç‡—6–6Ç×Ó¶6öç7B&W7öç6SÖv—BfWF6‚‚"ö’÷&öGV7B×&V6—W2"Ç¶ÖWF†öC¢%õ5B"Æ†VFW'3§²$6öçFVçBÕG—R#¢&Æ–6F–öâö§6öâ'ÒÆ&öG“¤¥4ôâç7G&–æv–g’‡¶–C¦7F—fU&V6—Ræ–BÆæÖS¦7F—fU&V6—RææÖRÇFV×ÆFUW&Ã¦7F—fU&V6—RçFV×ÆFUW&ÂÆWG7”FVfVÇG3§²ââæ7F—fU&V6—RæWG7”FVfVÇG2Âââç‡—6–6Ç×Ò—Ò“¶–b‡&W7öç6Ræö²—6WD7F—fU&V6—R‡WFFVB—×Òò¢C##+r†÷F÷2Ö÷fVBFòF†R–ÖvW2vRÂ6ò6ö×ÆWF–ærWG7’FWF–Ç2Ö÷fW2öâFð¢F†RV&Æ—6‚vR&F†W"F†âFò†6RF†BæòÆöævW"&VæFW'2â¢ð¢6WDf–æ—6…†6R‚&f–æÂ"“¶6öç7BW&ÃÖæWrU$Â‡v–æF÷ræÆö6F–öâæ‡&Vb“·W&Âç6V&6…&×2ç6WB‚'7FW"Â&f–æ—6‚"“·W&Âç6V&6…&×2ç6WB‚'†6R"Â&f–æÂ"“·v–æF÷ræ†—7F÷'’ç&WÆ6U7FFR‡·ÒÂ""ÇW&Â“·v–æF÷rç67&öÆÅFòƒÃ—Öf–æÆÇ—¶WG7•6fT7F—fRæ7W'&VçCÖfÇ6S·6WE6f–ætWG7”FWF–Ç2†fÇ6R—×Ð¢ò¢CCƒRÒ'VæFÆRÖFR†W"&W72$7&VFR&–çF–g’G&gG2"öæ6RW"&öGV7BÀ¢vÆ¶–ærV6‚öæRF‡&÷Vv‚F†R7FW'’†æBÂv†Vâ7FW†BÇ&VG’6öÆÆV7FV@¢6öÆ÷W'2Â6—¦W2Â&–6W2æB6†—–ærf÷"ÆÂöbF†VÒBöæ6RâöæR&W72æ÷p¢v÷&·2F†Rv†öÆR'VæFÆS¢vöÆF–R7&VFW2F†R7W'&VçB&öGV7Bw2G&gG2ÂÖ÷fW0¢—G6VÆbFòF†RæW‡B&öGV7B6''––ærF†R6ÖRFW6–vç2ÂæB&WVG2âF†P¢6öæf—&ÖF–öâ—26¶VBöæ6RÂæ÷Böæ6RW"&öGV7Bâ¢ð¢6öç7B¶'VæFÆU'VâÇ6WD'VæFÆU'VåÓ×W6U7FFSÇ·F÷FÃ¦çVÖ&W'×ÆçVÆÃâ†çVÆÂ“°¢W6TVffV7B‚‚“Óç·'Vä–å&öw&W72æ7W'&VçCÔ&ööÆVâ†'VæFÆU'Vâ—ÒÅ¶'VæFÆU'VåÒ“°¢6öç7B'VæFÆTGfæ6–æs×W6U&Vb†fÇ6R“°¢W6TVffV7B‚‚“Óç°¢–b‚'VæFÆU'Vâ—&WGW&ã°¢–b‡'Vææ–æwÇÇ&W&–ætWG7—ÇÇ&VfÆ–v‡D÷VçÇÇ7v—F6†–æu&öGV7B—&WGW&ã°¢–b†6ö×ÆWFR—°¢–b†'VæFÆT–æFW‚³ãÖ'VæFÆU&V6—W2æÆVæwF‚—·6WD'VæFÆU'Vâ†çVÆÂ“·&WGW&çÐ¢–b†'VæFÆTGfæ6–æræ7W'&VçB—&WGW&ã°¢'VæFÆTGfæ6–æræ7W'&VçC×G'VS°¢fö–B6öçF–çVT'VæFÆR‚’æf–æÆÇ’‚‚“Óç¶'VæFÆTGfæ6–æræ7W'&VçCÖfÇ6WÒ“°¢&WGW&ã°¢Ð¢ò¢v—F–æröâF†R–æ6öÖ–ær&öGV7Bw2÷vâ6fVBFVfVÇG2FòÆæBâ–böæR—0¢vVçV–æVÇ’æ÷B6WBWÂ7F÷&F†W"F†âÆö÷Ò7F÷v—F‚æÖW2v†B—0¢Ö—76–ærÂæB&W76–ærF†R'WGFöâv–â&W7VÖW2g&öÒ†W&Râ¢ð¢–b‚&VG—ÇÂ&–6–æt&÷fVB—&WGW&ã°¢6öç7BF&vWG3Öf–ÆW2æf–ÇFW"†f–ÆSÓæ'VæFÆUVÆ—G”FV6—6–öç5¶G¶7F—fU&V6—Sòæ–GÓ¢G¶f–ÆRæ–GÖÒÓÒ&W†6ÇVFR"“°¢–b‚F&vWG2æÆVæwF‚—·6WD'VæFÆU'Vâ†çVÆÂ“·&WGW&çÐ¢fö–B'VäG&gG2‡F&vWG2“°¢ÒÅ¶'VæFÆU'VâÆ6ö×ÆWFRÇ'Vææ–ærÇ&W&–ætWG7’Ç&VfÆ–v‡D÷VâÇ7v—F6†–æu&öGV7BÇ&VG’Ç&–6–æt&÷fVBÆ'VæFÆT–æFW‚Æf–ÆW2Æ7F—fU&V6—UÒ“° ¢gVæ7F–öâ7&VFTG&gG2‚’¶6öç7B—77VW3×&WV—&VDf÷%7FW‚'&Wf–Wr"“¶–b†—77VW2æÆVæwF‚—&WGW&âfö–B7F÷v—F‚‚%F†—2&F6‚—6î(	—B&VG’Fò7&VFRâ"Æ—77VW2“¶6öç7BVæFV6–FVCÖ'VæFÆUVÆ—G”w&÷W2æf–ÇFW"†w&÷WÓæw&÷Wæ¶W—2ç6öÖR†¶W“Óâ'VæFÆUVÆ—G”FV6—6–öç5¶¶W•Ò’“°¢ò¢CS’ÒfÆvvVBFW6–vâ–â'VæFÆRv÷B&Æö6¶–ærF–Æöröb6VçFVæ6W2Ð¢öæR'VâÖöâÆ–æRW"FW6–vâW"&öGV7BÂæò6—¦W2ÂæBæòv’7B—BâF†P¢&W6öÇWF–öâF&ÆRÇ&VG’W†—7FVBæB†BFöæR6–æ6RF†R6–ævÆR×&öGV7@¢fÆ÷s¢FW6–vâÂWÆöFVB6—¦RÂv†B&–çF–g’&V6öÖÖVæG2ÂæB&ö6VV@¢ç—v’â'VæFÆRvVçBF÷vâF–ffW&VçBF‚æBæWfW"&V6†VB—Bâ6ÖP¢F&ÆRf÷"&÷F‚æ÷rÂæB—BFöW2æ÷B&Æö6³¢Æ÷r&W6öÇWF–öâ—2§VFvVÖVç@¢f÷"†W"FòÖ¶RÂæ÷BvÆÂâ¢ð¢–b‡VæFV6–FVBæÆVæwF‚—·6WE—†VÅv&æ–æt÷Vâ‡G'VR“·&WGW&çÖ–b‡ÆäG&gG5&VÖ–æ–ærÓÖçVÆÂbg&WVW7FVDÆ—7F–æt6÷VçCçÆäG&gG5&VÖ–æ–ær—&WGW&âfö–B7F÷v—F‚‚%F†—2&F6‚—2Æ&vW"F†â–÷W"&VÖ–æ–ærÆâÆÆ÷væ6Râ"Å¶7F—fT'VæFÆSöG¶f–ÆW2æÆVæwF‡ÒFW6–vç29rG¶'VæFÆU&öGV7D6÷VçGÒ&öGV7G2ÒG·&WVW7FVDÆ—7F–æt6÷VçGÒÆ—7F–æw2gFW"W†6ÇW6–öç2â–÷R†fRG·ÆäG&gG5&VÖ–æ–æwÒÆ—7F–æw2&VÖ–æ–ærF†—2ÖöçF‚æ¦G·ÆäG&gG5&VÖ–æ–æwÒG·ÆäG&gG5&VÖ–æ–æsÓÓÓò&Æ—7F–ær&VÖ–ç2#¢&Æ—7F–æw2&VÖ–â'ÒF†—2ÖöçF‚Â'WBF†—2&F6‚6öçF–ç2G¶f–ÆW2æÆVæwF‡ÒFW6–vç2æÒ“¶–b‚WG7•6†—–æu&öf–ÆT–B—&WGW&âfö–B7F÷v—F‚‚$6†ö÷6R6†—–ær&Vf÷&R7&VF–ærG&gG2â"Å²$6†ö÷6RF†RWG7’6†—–ær&öf–ÆRvöÆF–R6†÷VÆBÇ’FòWfW'’Æ—7F–ærâ%Ò“¶–b‚&–6–æt&÷fVB—&WGW&âfö–B7F÷v—F‚‚$f–æ—6‚6†—–ærf—'7Bâ"Å²$6†ö÷6R6†—–ær&öf–ÆRÂF†Vâ6fR÷"F—66&Bç’7W7FöÒ6†—–ær&öf–ÆR6†ævW2â%Ò“·6WE&VfÆ–v‡D÷Vâ‡G'VR“·Ð¢gVæ7F–öâ6öæf—&ÔG&gG2‚’²6öç7B&V6—T–CÖ7F—fU&V6—Sòæ–C¶6öç7BF&vWG3Öf–ÆW2æf–ÇFW"†f–ÆSÓæ'VæFÆUVÆ—G”FV6—6–öç5¶G·&V6—T–GÓ¢G¶f–ÆRæ–GÖÒÓÒ&W†6ÇVFR"“·6WE&VfÆ–v‡D÷Vâ†fÇ6R“¶–b†7F—fT'VæFÆRbf'VæFÆU&V6—W2æÆVæwFƒã—6WD'VæFÆU'Vâ‡·F÷FÃ¦'VæFÆU&V6—W2æÆVæwF‡Ò“·fö–B'VäG&gG2‡F&vWG2“²Ð ¢gVæ7F–öâ&WG'”f–ÆVB‚’°¢6öç7Bf–ÆVD–G2ÒæWr6WB†G&gG2æf–ÇFW"‚†G&gB’ÓâG&gBç7FGW2ÓÒ$7&VFVB"’æÖ‚†G&gB’ÓâG&gBæ6Æ–VçD–B’“°¢fö–B'VäG&gG2†f–ÆW2æf–ÇFW"‚†f–ÆR’Óâf–ÆVD–G2æ†2†f–ÆRæ–B’’ÂG'VR“°¢Ð ¢gVæ7F–öâ7F'D÷fW"‚’°¢6WE&W7F'D&F6„æÖR†&F6„F—7Æ”æÖWÇÇ7VvvW7FVD&F6„æÖR‚’“°¢6WE&W7F'D&F6„÷Vâ‡G'VR“°¢Ð ¢gVæ7F–öâf–æ—6…&W7F'B‡&W6W'fU6fVD&F6ƒÖfÇ6R—¶6ÆV$7W'&VçD&F6‚‡G'VRÇ&W6W'fU6fVD&F6‚“²ò¢CCƒ‚ÒF†RöæRF‚F†B—2ÆÆ÷vVBFòF—66&BÂ&V6W6R6†R6†÷6R—B'’æÖRâ¢÷6WE&W7F'D&F6„÷Vâ†fÇ6R“·6WE&W7F'D&F6„æÖR‚""“¶võFõ7FW†6öææV7FVCò'6WGW#¢&6öææV7B"ÇG'VRÇG'VR—Ð¢7–æ2gVæ7F–öâ6fTæE&W7F'B‚—¶6öç7BæÖS×&W7F'D&F6„æÖRçG&–Ò‚“¶–b‚æÖR—&WGW&ã·6WE&W7F'F–æt&F6‚‡G'VR“·G'—¶6öç7B–CÖ&F6„–E&Vbæ7W'&VçGÇÆ7'—Fòç&æFöÕUT”B‚“¶&F6„–E&Vbæ7W'&VçCÖ–C¶v—B6fT&F6„f–ÆW2†–BÆf–ÆW2æÖ†f–ÆSÓæf–ÆRæf–ÆR’“¶–b‚Æö6Å&Wf–Wr—¶6öç7B&W7öç6SÖv—BfWF6‚‚"ö’ö&F6†W2"Ç¶ÖWF†öC¢%õ5B"Æ†VFW'3§²$6öçFVçBÕG—R#¢&Æ–6F–öâö§6öâ'ÒÆ&öG“¤¥4ôâç7G&–æv–g’‡¶–BÇ7FGW3¢&G&gB"Ç7FW§v÷&¶fÆ÷u7FWÇ6WGWæÖS¦æÖRÇ&öGV7EF—FÆS§FV×ÆFTFWF–Ç3òæ&ÇVW&–çEF—FÆWÇÂ""ÆFW6–vä6÷VçC¦f–ÆW2æÆVæwF‚Ç7FFS§²ââæ&F6…7FFU6æ6†÷B‚’Æ¶WD4G&gG3§G'VW×Ò—Ò“¶–b‚&W7öç6Ræö²—F‡&÷ræWrW'&÷"‚$vöÆF–R6÷VÆBæ÷B6fRF†—2&F6‚â"—Öf–æ—6…&W7F'B‡G'VR—Ö6F6‚†W'&÷"—·7F÷v—F‚‚%F†—2&F6‚v2æ÷B6fVBâ"Å¶W'&÷"–ç7Fæ6VöbW'&÷#öW'&÷"æÖW76vS¢%G'’v–â–âÖöÖVçBâ%Ò—Öf–æÆÇ—·6WE&W7F'F–æt&F6‚†fÇ6R—×Ð ¢gVæ7F–öâ÷VäG&gB†G&gC¢G&gE&W7VÇB’°¢–b‚G&gBæ–BÇÂG&gBæVF—F÷%W&Â’&WGW&ã°¢v–æF÷ræ÷Vâ†G&gBæVF—F÷%W&ÂÂ%ö&Ææ²"Â&æö÷VæW"Ææ÷&VfW'&W""“°¢6WD÷VæVDG&gG2‚†7W'&VçB’Óâ7W'&VçBæ–æ6ÇVFW2†G&gBæ–B’ò7W'&VçB¢²ââæ7W'&VçBÂG&gBæ–BÒ“°¢Ð ¢gVæ7F–öâwV&Dæf–vF–öâ†WfVçC§·&WfVçDFVfVÇC¢‚“Óçfö–GÒÆ‡&Vc§7G&–ær—¶–b‚'Vææ–ær—&WGW&ã¶WfVçBç&WfVçDFVfVÇB‚“·6WDÆVfUF&vWB†‡&Vb“·6WEWÆöDæ÷F–6T÷Vâ‡G'VR—Ð ¢gVæ7F–öâ÷VäÆÄG&gG2‚’°¢6öç7BVF—F&ÆTG&gG2ÒG&gG2æf–ÇFW"‚†G&gB’ÓâG&gBæ–BbbG&gBæVF—F÷%W&Â“°¢ÆWB÷VæVBÒ°¢6öç7B÷VæVD–G3¢7G&–æuµÒÒµÓ°¢VF—F&ÆTG&gG2æf÷$V6‚‚†G&gB’Óâ°¢6öç7B&–çF–g•F"Òv–æF÷ræ÷Vâ†G&gBæVF—F÷%W&ÂÂ%ö&Ææ²"Â&æö÷VæW"Ææ÷&VfW'&W""“°¢–b‚&–çF–g•F"’&WGW&ã°¢÷VæVB³Ò°¢÷VæVD–G2çW6‚†G&gBæ–B“°¢Ò“°¢6WD÷VæVDG&gG2‚†7W'&VçB’Óâ²ââææWr6WB…²ââæ7W'&VçBÂââæ÷VæVD–G5Ò•Ò“°¢6WD÷VäÆÄÖW76vR†÷VæVBÓÓÒVF—F&ÆTG&gG2æÆVæwF‚òG¶÷VæVGÒ&–çF–g’VF—F÷"F'2÷VæVBæ¢–÷W"'&÷w6W"÷VæVBG¶÷VæVGÒöbG¶VF—F&ÆTG&gG2æÆVæwF‡ÒâÆÆ÷r÷×W2f÷"F†—26—FRFò÷VâF†R&W7Bæ“°¢Ð ¢6öç7Bv÷&¶fÆ÷t†W&òÒ°¢6öææV7C¢²W–V'&÷s¢$44õTåB4UEU"ÂF—FÆS¢$6öææV7B–÷W"66÷VçG2"Â6÷“¢6öææV7FVBbfWG7”6öææV7FVCò$&÷F‚66÷VçG2&R6öææV7FVBæB&VG’â#¢$6öææV7B&–çF–g’æBWG7’6òvöÆF–R6â'V–ÆBæBV&Æ—6‚–÷W"Æ—7F–æw2â"ÒÀ¢6WGW¢FV×ÆFTFWF–Ç2bg&öGV7E6VÆV7FV@¢ò¢C3#"+rF†—2F—FÆR6†ævVBöæ6R&öGV7Bv26VÆV7FVB(	B$6†ö÷6R&öGV7B ¢&V6ÖR$'V–ÆBF†—2&F6‚"(	B6ò7FW&VæÖVB—G6VÆbÖ–B×7FWæB7F'FV@¢FW67&–&–ærF†Rv†öÆRfÆ÷r&F†W"F†âF†R7FW–÷R&RöâÂv†–ÆRF†R&–À¢æBW–V'&÷r&÷F‚7F–ÆÂ&VB$ôET5BâF†R&–Âw2÷vâ7FvRF—FÆR—0¢$6†ö÷6R&öGV7B"Â6òF†B—2F†RæÖRF‡&VRÆ6W2Ç&VG’w&VRöââF†P¢F—FÆR7F—2WC²F†R6÷’6'&–W2F†R7FFRâ¢ð¢ò²W–V'&÷s¢%5DUôbB"ÂF—FÆS¢$6†ö÷6R&öGV7B"Â6÷“¢$6†V6²F†—2&öGV7N(	—26öÆ÷W'2Â6—¦W2æB&–6–ærÂF†Vâ6öçF–çVRFò–÷W"FW6–vç2â"Ð¢¢²W–V'&÷s¢%5DUôbB"ÂF—FÆS¢$6†ö÷6R&öGV7B"Â6÷“¢$6†ö÷6R6fVB&öGV7B÷"6öææV7B6ö×ÆWFVB&–çF–g’&öGV7Bâ"ÒÀ¢FW6–vç3¢²W–V'&÷s¢%5DU"ôbB"ÂF—FÆS¢$FW6–vç2²–ÖvW2"Â6÷“¢$FBWFò#f–æ—6†VBFW6–vç2ÂF†Vâ6†ö÷6RF†R†÷F÷2æBÖö6·W2f÷"V6‚Æ—7F–ærâ"ÒÀ¢&Wf–Ws¢²W–V'&÷s¢%5DU2ôbB"ÂF—FÆS¢$7&VFR&–çF–g’G&gG2"Â6÷“¢$vöÆF–R7&VFW2âVçV&Æ—6†VBG&gB–â&–çF–g’f÷"WfW'’FW6–vâ–âF†—2&F6‚â"ÒÀ¢f–æ—6ƒ¢f–æ—6…†6SÓÓÒ&FWF–Ç2"ò²W–V'&÷s¢%5DU2ôbB+rÄ•5D”är"ÂF—FÆS¢$Æ—7F–ærFWF–Ç2"Â6÷“¢$7&VFRF†RF—FÆW2æBFw2ÂF†Vâ&Wf–WrF†RFW67&—F–öâf÷"WfW'’Æ—7F–ærâ"Ò¢f–æ—6…†6SÓÓÒ&WG7’"ò²W–V'&÷s¢%5DU2ôbB+rÄ•5D”är"ÂF—FÆS¢$Æ—7F–ærFWF–Ç2"Â6÷“¢%&Wf–WrF†RWG7’6FVv÷'’æB&öGV7B×7V6–f–2FWF–Ç2â"Ò¢²W–V'&÷s¢%5DUBôbB+rT$Ä•4‚"ÂF—FÆS¢%V&Æ—6‚"Â6÷“¢%&Wf–WrWfW'’Æ—7F–ær&Vf÷&RV&Æ—6†–ær—BÆ—fRöâWG7’â"ÒÀ¢Õ·v÷&¶fÆ÷u7FWÓ° ¢&WGW&â€¢ÆÖ–â6Æ74æÖSÒ&×6†VÆÂ"FF×&öGV7B×6VÆV7FVC×·FV×ÆFTFWF–Ç3ò'G'VR#¢&fÇ6R'Óà¢²ò¢CS#‚ÒF†R†÷7BÆ—fW2BF†R&ö÷BÆ–÷WBæ÷rÂ6òWfW'’vR†2öæRâ¢÷Ð¢Ç6V7F–öâ6Æ74æÖSÒ&Öö&–ÆRÖvFR"&–ÖÆ&VÃÒ$FW6·F÷&WV—&VB#à¢ÆF—b6Æ74æÖSÒ&Öö&–ÆRÖ'&æB#ãÆF—b6Æ74æÖSÒ&&÷fVB×vÒ#ävöÆCÇ7â6Æ74æÖSÒ&&÷fVBÖ’#ìKÇ7ãî)ÊcÂ÷7ããÂ÷7ãæSÂöF—cãÆF—b6Æ74æÖSÒ&&÷fVB×7V"#äÆ—7F–ærf7F÷'“ÂöF—cãÂöF—cà¢ÆF—b6Æ74æÖSÒ&Öö&–ÆRÖ6&B#ãÆF—b6Æ74æÖSÒ&Öö&–ÆRÖ6öÖÖæB#î(ÉƒÂöF—cãÆƒäö÷2ÂF†—2öæRæVVG2&–vvW"67&VVâãÂöƒãÇävöÆF–RÆ—7F–ærf7F÷'’—2'V–ÇBf÷"FW6·F÷â†÷öçFò–÷W"6ö×WFW"æB6–vâ–ââ–÷W"6fVBv÷&²v–ÆÂ&Rv—F–ærf÷"–÷RãÂ÷ãÆF—b6Æ74æÖSÒ&Öö&–ÆR×6fVB#î)É2–÷W"&öw&W72—26fVBWFöÖF–6ÆÇ’ãÂöF—cãÂöF—cà¢ÆF—b6Æ74æÖSÒ&Öö&–ÆRÖfö÷FW"#å÷vW&VB'’vöÆF–R’+r*’##b&RvöÆb&—£ÂöF—cà¢Â÷6V7F–öãà¢Æ†VFW"6Æ74æÖSÒ'F÷&"#à¢ÆF—b6Æ74æÖSÒ&'&æBÖÆö6·W#à¢ÄvöÆF–Uv÷&FÖ&²6Æ74æÖSÒ&&÷fVBÖ'&æB"óà¢ÂöF—cà¢ÆF—b6Æ74æÖSÒ'F÷Ö7F–öç2#à¢Ææb6Æ74æÖSÒ'F÷Öæb"&–ÖÆ&VÃÒ$vöÆF–Ræf–vF–öâ#à¢Æ6Æ74æÖSÒ&7F—fR"‡&VcÒ"öÆ—7F–ærÖf7F÷'’"öä6Æ–6³×¶WfVçCÓæwV&Dæf–vF–öâ†WfVçBÂ"öÆ—7F–ærÖf7F÷'’"—ÓãÄæd–6öâæÖSÒ&Æ—7F–ætf7F÷'’"óäÆ—7F–ærf7F÷'“Âöà¢Æ‡&VcÒ"ö&F6†W2"öä6Æ–6³×¶WfVçCÓæwV&Dæf–vF–öâ†WfVçBÂ"ö&F6†W2"—ÓãÄæd–6öâæÖSÒ&&F6†W2"óä&F6‚†—7F÷'“Âöà¢Æ‡&VcÒ"ö¶W—v÷&G2"F&vWCÒ%ö&Ææ²"&VÃÒ&æö÷VæW"æ÷&VfW'&W"#ãÄæd–6öâæÖSÒ&¶W—v÷&G2"óä¶W—v÷&B&æ·3Âöà¢Æ‡&VcÒ"÷W6vR"öä6Æ–6³×¶WfVçCÓæwV&Dæf–vF–öâ†WfVçBÂ"÷W6vR"—ÓãÄæd–6öâæÖSÒ'W6vR"óåW6vR²ÆãÂöà¢²ò¢Cc3’Ò÷7FWÖ6öææV7B—2†öæ÷W&VB2âW‡Æ–6—B&WVW7BæBF†P¢WFò×6¶—ÆVfW2—BÆöæRÂ6òF†—2—2F†Rv’&6²FòF†P¢6öææV7F–öâ67&VVâ&F†W"F†âæWrvRâ¢÷Ð¢Æ‡&VcÒ"öÆ—7F–ærÖf7F÷'“÷7FWÖ6öææV7B"öä6Æ–6³×¶WfVçCÓæwV&Dæf–vF–öâ†WfVçBÂ"öÆ—7F–ærÖf7F÷'“÷7FWÖ6öææV7B"—ÓãÄæd–6öâæÖSÒ&6öææV7F–öç2"óä6öææV7F–öç3Âöà¢Âöæcà¢Æ'WGFöâ6Æ74æÖSÒ'v÷&¶fÆ÷r×&W7F'BÖ'WGFöâ"G—SÒ&'WGFöâ"F—6&ÆVC×·'Vææ–æwÒöä6Æ–6³×·7F'D÷fW'Óç²ò¢C3c"+rF†RvÇ—‚(k²&VæFW'2BFW‡BvV–v‡B–âÖ÷7BT’f6W2Â6òB‚—@¢&VB27G&’Ö&²&F†W"F†ââ'&÷râG&vâ–6öâ¶VW2—G0¢7G&ö¶RæB—G2'&÷v†VBBç’6—¦Râ¢÷Ð¢Ç7fr6Æ74æÖSÒ&æWrÖ&F6‚Ö–6öâ"f–Wt&÷ƒÒ##B#B"v–GFƒÒ#R"†V–v‡CÒ#R"f–ÆÃÒ&æöæR"7G&ö¶SÒ&7W'&VçD6öÆ÷""7G&ö¶Uv–GFƒÒ#""7G&ö¶TÆ–æV6Ò'&÷VæB"7G&ö¶TÆ–æV¦ö–ãÒ'&÷VæB"&–Ö†–FFVãÒ'G'VR#ãÇF‚CÒ$Ó2&’’Rã2ÓbãDÃ#‚"óãÇF‚CÒ$Ó#7cV‚ÓR"óãÇF‚CÒ$Ó#&’’ÓRã2bãDÃ2b"óãÇF‚CÒ$Ó2#bÓVƒR"óãÂ÷7fsâ7F'BæWr&F6ƒÂö'WGFöãà¢ÄvöÆF–T6öÖÖæD&"FF×¶6öÖÖæD6VçFW$FFÒöåW6U&öGV7C×·&V6—SÓç·fö–B6†ö÷6U&V6—R‡&V6—R’çF†Vâ‡6VÆV7FVCÓç¶–b‡6VÆV7FVB–võFõ7FW‚'6WGW"—Ò—×Òöå7F'D&Ææ³×²‚“Óç¶6ÆV$7W'&VçD&F6‚‡G'VR“¶võFõ7FW‚'6WGW"—×Òóà¢¶÷væW"bbÆ6Æ74æÖSÒ&F–væ÷7F–72ÖÆ–æ²"‡&VcÒ"öÖ7FW&Ö–æBÖFÖ–â"&–ÖÆ&VÃÒ$÷VâvöÆF–RF–væ÷7F–72"F—FÆSÒ$vöÆF–RF–væ÷7F–72#î)ˆSÂöçÐ¢Æ6Æ74æÖSÒ'W6vRÖÆ–æ²"‡&VcÒ"÷W6vR"öä6Æ–6³×¶WfVçCÓæwV&Dæf–vF–öâ†WfVçBÂ"÷W6vR"—ÓåW6vR²ÆãÂöà¢·6–væVD–âÓÖçVÆÂbb†Æö6Å&Wf–Wrbb6–væVD–ãóÇ7â6Æ74æÖSÒ&66÷VçBÖÆ–æ²"F—FÆSÒ$66÷VçB6–vâÖ–â—2f–Æ&ÆRöâF†RV&Æ—6†VBÆ—7F–ærf7F÷'’6—FRâ#å&Wf–WrÖöFSÂ÷7ãã£Æ6Æ74æÖSÒ&66÷VçBÖÆ–æ²"‡&Vc×·6–væVD–ãò"ö66÷VçB÷6–vâÖ÷WC÷&WGW&å÷FóÒS$fÆ—7F–ærÖf7F÷'’#¢"ö66÷VçB÷6–vâÖ–ã÷&WGW&å÷FóÒS$fÆ—7F–ærÖf7F÷'’'Óç·6–væVD–ãò%6–vâ÷WB#¢%6–vâ–â'ÓÂöâ—Ð¢ÂöF—cà¢ÆF—b6Æ74æÖSÒ&&÷fVB×6–FV&"Öfö÷FW"#ãÆ6Æ74æÖSÒ&&÷fVB×W6vR"‡&VcÒ"÷W6vR#ãÆ#åW6vR²ÆãÂö#ãÇ7ãç·6–FV&%W6vSöG·6–FV&%W6vRçW6VGÒòG·6–FV&%W6vRæÆ–Ö—GÒÆ—7F–æw6¢$ÆöF–ærW6v^(
+b'ÓÂ÷7ããÆF—b6Æ74æÖSÒ&&÷fVB×W6vR×G&6²"&–Ö†–FFVãÒ'G'VR#ãÆ’7G–ÆS×··v–GFƒ§6–FV&%W6vSöG´ÖF‚æÖ–âƒÇ6–FV&%W6vRçW6VB÷6–FV&%W6vRæÆ–Ö—B£—ÒV¢#R'×ÒóãÂöF—cãÂöç¶Æ—7F–ætvöÂbcÆ6Æ74æÖSÒ&Æ—7F–ærÖvöÂ×6–FR"‡&VcÒ"övöÇ2#ãÇ7â6Æ74æÖSÒ&Æ—7F–ærÖvöÂÖ6F–öâ#åF†—2¶Æ—7F–ætvöÂçW&–öGÒg'7Vó·2vöÃÂ÷7ããÆ#ç¶vöÄFöæWÒöb¶Æ—7F–ætvöÂçF&vWGÓÂö#ãÇ7â6Æ74æÖSÒ&Æ—7F–ærÖvöÂ×G&6²"&–Ö†–FFVãÒ'G'VR#ãÆ’7G–ÆS×··v–GFƒ¦G´ÖF‚æÖ–âƒÄÖF‚ç&÷VæB‚†vöÄFöæRôÖF‚æÖ‚ƒÆÆ—7F–ætvöÂçF&vWB’’£’—ÒV×ÒóãÂ÷7ããÂöç×²ò¢C3Sr+r%÷vW&VB'’vöÆF–R’"—2F†Rv–FW7BÆ–æR–âF†R6–FV&"Â6ò—B6WG0¢F†R6öÇVÖâw2f—7VÂVFvRâ6—GF–ær&÷fRF†R6÷—&–v‡BæBF†RWG7’æ÷F–6P¢—BÖFRF†÷6RÆöö²–æFVçFVC²BF†R&÷GFöÒF†R&Æö6²&VG22öæP¢ÆVgBÖÆ–væVB7F6²F†Bv–FVç22—BFW66VæG2â¢÷Ð¢Ç6ÖÆÃì*’##b&RvöÆb&—£Â÷6ÖÆÃãÇ6Æ74æÖSÒ&WG7’Ö’ÖF—66Æ÷7W&R#åF†RFW&Òf÷3´WG7’f÷3²—2G&FVÖ&²öbWG7’Â–æ2âF†—2Æ–6F–öâW6W2F†RWG7’’'WB—2æ÷BVæF÷'6VB÷"6W'F–f–VB'’WG7’Â–æ2ãÂ÷ãÆF—b6Æ74æÖSÒ&&÷fVB×÷vW&VB#ãÇ7ãå÷vW&VB'“Â÷7ããÆ#ävöÆCÇ7â6Æ74æÖSÒ&&÷fVBÖfö÷FW"Ö’#ìKÆ“î)ÊcÂö“ãÂ÷7ãæR“Âö#ãÂöF—cãÂöF—cà¢Âö†VFW#à ¢·'Vææ–ærbgWÆöDæ÷F–6T÷VâbcÆF—b6Æ74æÖSÒ'WÆöBÖæ÷F–6RÖ&6¶G&÷"&öÆSÒ'&W6VçFF–öâ#ãÇ6V7F–öâ6Æ74æÖSÒ'WÆöBÖæ÷F–6R"&öÆSÒ&ÆW'FF–Æör"&–ÖÖöFÃÒ'G'VR"&–ÖÆ&VÆÆVF'“Ò'WÆöBÖæ÷F–6R×F—FÆR"&–ÖFW67&–&VF'“Ò'WÆöBÖæ÷F–6RÖ6÷’#ãÇ7â6Æ74æÖSÒ'WÆöBÖæ÷F–6RÖ–6öâ#âÂ÷7ããÇ6Æ74æÖSÒ&Ö–æ’ÖÆ&VÂ#åUÄôE2”â$ôu$U53Â÷ãÆƒ"–CÒ'WÆöBÖæ÷F–6R×F—FÆR#åv—Bâ–÷W"f–ÆW2&R7F–ÆÂWÆöF–ærãÂöƒ#ãÇ–CÒ'WÆöBÖæ÷F–6RÖ6÷’#ä&R–÷R7W&R–÷RvçBFòÆVfSòÆVf–æræ÷rÖ’7F÷F†RVæf–æ—6†VBWÆöG2ãÂ÷ãÆF—b6Æ74æÖSÒ'WÆöBÖæ÷F–6R×&öw&W72#ãÇ7â6Æ74æÖSÒ'WÆöBÖwV&B×VÇ6R"óãÆ#ç·&ö6W76VGÒöb·'VåF÷FÇÒf–æ—6†VCÂö#ãÂöF—cãÆF—b6Æ74æÖSÒ'WÆöBÖæ÷F–6RÖ7F–öç2#ãÆ'WGFöâWFôfö7W2öä6Æ–6³×²‚“Óç·6WEWÆöDæ÷F–6T÷Vâ†fÇ6R“·6WDÆVfUF&vWB‚""—×Óå7F’öâF†—2vSÂö'WGFöããÆ'WGFöâ6Æ74æÖSÒ&FævW""öä6Æ–6³×²‚“Óç¶–b†ÆVfUF&vWB—v–æF÷ræÆö6F–öâæ‡&VcÖÆVfUF&vWG×ÓäÆVfRæB7F÷WÆöG3Âö'WGFöããÂöF—cãÂ÷6V7F–öããÂöF—cçÐ ¢²&WGW&æ–æt†öÖRbcÇ6V7F–öâ6Æ74æÖSÒ&†W&òv÷&¶fÆ÷rÖ†W&ò#à¢ÆF—cà¢Ç6Æ74æÖSÒ&W–V'&÷r#ç·v÷&¶fÆ÷t†W&òæW–V'&÷wÓÂ÷à¢·&W7F÷&Tæ÷F–6RbcÇ6Æ74æÖSÒ&&F6‚×&W7F÷&RÖæ÷F–6R"&öÆSÒ'7FGW2#ç·&W7F÷&Tæ÷F–6WÓÂ÷çÐ¢²ò¢CcS’+rv†W&RF†R&Æö6¶–ærÖöFÂW6VBFò&Râ6ÖR–æf÷&ÖF–öâÂöà¢F†RvRÂæW‡BFòF†R&öGV7G26†R6â7GVÆÇ’6†ö÷6Râ¢÷Ð¢·&W7F÷&VE&öGV7Dæ÷F–6RbcÇ6Æ74æÖSÒ&&F6‚×&W7F÷&RÖæ÷F–6R"&öÆSÒ'7FGW2#ç·&W7F÷&VE&öGV7Dæ÷F–6WÓÂ÷çÐ¢²ò¢CcS’+rÖ÷&RF†âöæR&F6‚—2÷VâÂ6òvöÆF–R6·2–ç7FVBö`¢–6¶–æröæRæB–ç7FVBöb&WFVæF–ærF†W&R—2æ÷F†–ærFò&W7VÖRâ¢÷Ð¢·&W7VÖT6†ö–6W2æÆVæwFƒãbcÇ6V7F–öâ6Æ74æÖSÒ&&F6‚×&W7VÖRÖ6†ö–6R"&–ÖÆ&VÃÒ$6†ö÷6Rv†–6‚&F6‚Fò&W7VÖR#ãÆ#åv†–6‚&F6‚Fò–÷RvçBFò6öçF–çVSóÂö#ãÇ7ãå–÷R†fR·&W7VÖT6†ö–6W2æÆVæwF‡Ò&F6†W2÷VââvöÆF–Rv–ÆÂæ÷BwVW72ãÂ÷7ããÇVÃç·&W7VÖT6†ö–6W2æÖ†6†ö–6SÓãÆÆ’¶W“×¶6†ö–6Ræ–GÓãÆ'WGFöâG—SÒ&'WGFöâ"öä6Æ–6³×²‚“Óç·6WE&W7VÖT6†ö–6W2…µÒ“·6WE&W7F÷&–æt&F6‚‡G'VR“¶6öç7BF&vWCÖæWrU$Â‡v–æF÷ræÆö6F–öâæ‡&Vb“·F&vWBç6V&6…&×2ç6WB‚&&F6‚"Æ6†ö–6Ræ–B“·v–æF÷ræ†—7F÷'’ç&WÆ6U7FFR‡·ÒÂ""ÇF&vWB“·fö–B&W7F÷&T&F6„'”–B†6†ö–6Ræ–BÇF&vWBç6V&6…&×2ævWB‚'7FW"’ÇF&vWBç6V&6…&×2ævWB‚'†6R"’—×ÓãÆ#ç¶6†ö–6RææÖWÓÂö#ãÇ6ÖÆÃç¶6†ö–6RæG&gG3öG¶6†ö–6RæG&gG7ÒG¶6†ö–6RæG&gG3ÓÓÓò&G&gB#¢&G&gG2'Ö¢$æòG&gG2–WB'ÓÂ÷6ÖÆÃãÂö'WGFöããÂöÆ“â—ÓÂ÷VÃãÆ'WGFöâG—SÒ&'WGFöâ"6Æ74æÖSÒ'6V6öæF'’Ö7F–öâ"öä6Æ–6³×²‚“Óç6WE&W7VÖT6†ö–6W2…µÒ—Óå7F'B6öÖWF†–æræWr–ç7FVCÂö'WGFöããÂ÷6V7F–öãçÐ¢ÆF—b6Æ74æÖSÒ&†VF–ær×v—F‚Ö†VÇ†W&ò×F—FÆRÖ†VÇ#ãÆƒç·v÷&¶fÆ÷t†W&òçF—FÆWÓÂöƒãÄ6öçFW‡D†VÇÆ&VÃ×¶÷VâFWF–ÆVB†VÇf÷"Gµ$ôu$U55õ5DU5·&öw&W74–æFW…×ÖÒF—FÆS×µtõ$´dÄõuô„TÅ·&öw&W74–æFW…ÒçF—FÆWÒ–çG&ó×µtõ$´dÄõuô„TÅ·&öw&W74–æFW…Òæ–çG&÷Ò6V7F–öç3×µtõ$´dÄõuô„TÅ·&öw&W74–æFW…Òç6V7F–öç7ÒóãÂöF—cà¢Ç6Æ74æÖSÒ&†W&ò×7FWÖ6÷VçB#ç·v÷&¶fÆ÷u7FWÓÓÒ&6öææV7B#ò$66÷VçB6WGW+r&Vf÷&R–÷R7F'B#¦7FWG·&–ÅF÷çVÖ&W'ÒöbGµ$”Åõ5DtU2æÆVæwF‡Ò+rG¶7W'&VçE7FvRæÆ&VÇÖÓÂ÷à¢Ç6Æ74æÖSÒ&†W&òÖ6÷’#ç·v÷&¶fÆ÷t†W&òæ6÷—ÓÂ÷à¢·v÷&¶fÆ÷u7FWÓÓÒ&6öææV7B"bcÆF—b6Æ74æÖSÒ'fÇVR×&ööb"&–ÖÆ&VÃÒ%v†BF†—2&F6‚7W÷'G2#ãÇ7ããÆ#åWFò#FW6–vç3Âö#ãÇ6ÖÆÃæ–âöæR&F6ƒÂ÷6ÖÆÃãÂ÷7ããÇ7ããÆ#ä6÷7G2æBfVW3Âö#ãÇ6ÖÆÃç6†÷vâf÷"WfW'’f&–çCÂ÷6ÖÆÃãÂ÷7ããÇ7ããÆ#å–÷R&÷fSÂö#ãÇ6ÖÆÃæ&Vf÷&Rç—F†–ærvöW2Æ—fSÂ÷6ÖÆÃãÂ÷7ããÂöF—cçÐ¢ÂöF—cà¢Â÷6V7F–öãçÐ ¢²&WGW&æ–æt†öÖRbcÇ6V7F–öâ6Æ74æÖS×¶v÷&·76RG¶6ö×ÆWFRbgv÷&¶fÆ÷u7FWÓÓÒ&FW6–vç2#ò&Öö6·W×v÷&·76R#¢"'ÖÓà¢Ææb6Æ74æÖSÒ'v÷&¶fÆ÷r×&öw&W72"&–ÖÆ&VÃÒ$Æ—7F–ærf7F÷'’&öw&W72"7G–ÆS×·²"Ò×&–ÂÖ6÷VçB#¥$”Åõ5DtU2æÆVæwF‡Ò2&V7Bä555&÷W'F–W7Óà¢ÆF—b6Æ74æÖSÒ'v÷&¶fÆ÷r×&öw&W72Ö†VB#ãÆF—cãÇ6Æ74æÖSÒ&Ö–æ’ÖÆ&VÂ#ç·v÷&¶fÆ÷u7FWÓÓÒ&6öææV7B#ò$44õTåB4UEU#¢%”õU"$D4‚'ÓÂ÷ç²ò¢CCbÒöâF†R6öææV7B7FWF†—2&VB%7FWöbB+r&öGV7B"VæFW"†VF–æp¢F†B6—2$6öææV7B–÷W"66÷VçG2"ÂæBF†R&–ÂÆ—BW&öGV7Bâ6öææV7F–æp¢—2öæR×F–ÖRvFR&Vf÷&RF†Rf÷W"7FW2Âæ÷BF†Rf—'7BöbF†VÒâ¢÷ÓÆ#ç·v÷&¶fÆ÷u7FWÓÓÒ&6öææV7B#ò$6öææV7B&–çF–g’æBWG7’#¦7FWG·&–ÅF÷çVÖ&W'ÒöbGµ$”Åõ5DtU2æÆVæwF‡Ò+rG¶7W'&VçE7FvRæÆ&VÇÖÓÂö#ãÂöF—cç²‡FV×ÆFWÇÆf–ÆW2æÆVæwFƒãÇÆG&gG2æÆVæwFƒã’bcÆ'WGFöâ6Æ74æÖSÒ'7F'BÖæWrÖ&F6‚"F—6&ÆVC×·'Vææ–æwÒöä6Æ–6³×·7F'D÷fW'Óä6ÆV"&F6‚²7F'B÷fW#Âö'WGFöãçÓÂöF—cà¢¶Æö6Å&Wf–WrbcÇ6Æ74æÖSÒ'&Wf–WrÖÖöFRÖæ÷FR#å&Wf–WrÖöFR+rWfW'’7FW—2VæÆö6¶VBÆ‡&VcÒ"öFW6–vâÖÆ"#ä÷VâFW6–vâÆ"(i#ÂöãÂ÷çÐ¢µ$”Åõ5DtU2æÖ‚‡7FvRÇ÷6—F–öâ“Óç°¢6öç7B7F—fS×7FvRæ6÷fW'2æ–æ6ÇVFW2‡&öw&W74–æFW‚“°¢ò¢C##b+r6ö×ÆWF–öâ—27FvRõ$DU"Âæ÷B&r–æFW‚â–ÖvW26÷fW'2F†P¢ÆVv7’–æF–6W2"Â2ÂBæBrÂæBr—2†–v†W"F†âÆ—7F–ærw2R(	B6ð¢6ö×&–ær–æF–6W2ÖVçB–ÖvW26÷VÆBæWfW"&VB2FöæRv†–ÆRF†P¢6VÆÆW"7FööBöâÆ—7F–ærâ—B6†÷vVB#""v—F‚F–6²&W6–FR—Böà¢&öGV7BæBæ÷F†–æröâF†R7FvRF†W’†B§W7Bf–æ—6†VBâ¢ð¢ò¢CSSrÒ&FöæR"ÖVçB'–÷R†fRvÆ¶VB7B—B"Â6òvö–ær&6²Fð¢7FW7G&—VBF†RF–6·2öfb–ÖvW2æBÆ—7F–æröâ&F6‚v†÷6P¢–ÖvW2æBÆ—7F–ærFWF–Ç2vW&Rf–æ—6†VBâÖV7W&VBöâ†W"'VæFÆS ¢F†R6ÖR&F6‚&VB$ôET5N)É2”ÔtU>)É2Ä•5D”äröâ7FW2æB$ôET5@¢”ÔtU2Ä•5D”äröâ7FWâ7FvR—2FöæRv†Vâ—G2÷vâv÷&²—0¢FöæRâ¢ð¢ò¢CcrÒÆ—7F–ær&VB2FöæRv†–ÆRF†R6VÆÆW"v27F–ÆÂöâ–ÖvW2à¢—G2'7F'FVB"FW7Bv26ö×ÆWFVÂv†–6‚ÖVç2F†R&–çF–g’G&gG0¢W†—7BÒæBG&gG2&R7&VFVBôâF†R–ÖvW27FWâ6òF†RÖöÖVçB¢&F6‚f–æ—6†VB7&VF–ærG&gG2ÂF†R&–ÂF–6¶VB7FvRv†÷6R÷và¢v÷&²†Bæ÷B&VVâF÷V6†VBà ¢CSSrÇ&VG’6WGFÆVBF†R'VÆS¢7FvR—2FöæRv†Vâ—G2õtâv÷&²—0¢FöæRâÆ—7F–ærw2v÷&²—2F—FÆW2æBWG7’FWF–Ç2Âæ÷BG&g@¢7&VF–öââ¢ð¢6öç7B7FvU7F'FVC×7FvRæ–æFWƒÓÓÓô&ööÆVâ†7F—fU&V6—WÇÆ7F—fT'VæFÆR¢§7FvRæ–æFWƒÓÓÓ#öf–ÆW2æÆVæwFƒã ¢§7FvRæ–æFWƒÓÓÓSöf–ÆW2æÆVæwFƒãbff–ÆW2æWfW'’†f–ÆSÓä&ööÆVâ†f–ÆRçF—FÆSòçG&–Ò‚’’¢¤çVÖ&W"†&F6…&V6V—CòçV&Æ—6†VD6÷VçGÇÃ“ã°¢ò¢Cc#Ò7FvR„TBöbF†RöæR6†R—27FæF–æröâæWfW"6†÷w2¢F–6²Âv†FWfW"—G2÷vâv÷&²6—2à ¢CSSrÖFR&FöæR"ÖVâ&—G2÷vâv÷&²—2f–æ—6†VB"Â6òF†BvÆ¶–æp¢&6²F–Bæ÷B7G&—F–6·2öfbf–æ—6†VBv÷&²âF†Bv2&–v‡B&÷W@¢vö–ær&6²æBw&öær&÷WBvö–ærf÷'v&C¢öâ–ÖvW2Âv—F‚F—FÆW0¢Ç&VG’w&—GFVâÂÆ—7F–ær6BF†W&RF–6¶VB2F†÷Vv‚7FW2vW&P¢&V†–æB†W"â&öw&W72&–ÂF†B6—27FW–÷R†fRæ÷B&V6†V@¢—26ö×ÆWFR—2æ÷B&W÷'F–ær&öw&W72à ¢&V†–æB†W#¢F–6¶VBv†Vâ—G2v÷&²—2FöæRâv†W&R6†R—3¢—G2çVÖ&W"à¢†VBöb†W#¢æWfW"F–6¶VBâ¢ð¢6öç7B&V6†VC×7FvU÷6—F–öãÃÇÇ÷6—F–öãÃ×7FvU÷6—F–öã°¢6öç7BFöæS×&V6†VBbb‡7FvRæ–æFWƒÓÓÓƒ÷7FvU7F'FVC¢‡7FvU7F'FVBbg&öw&W74vFT—77VW2‡7FvRæ–æFW‚’æÆVæwFƒÓÓÓ—ÇÂ‡7FvU÷6—F–öããÓbg÷6—F–öãÇ7FvU÷6—F–öâ’“°¢6öç7B—77VW3×&öw&W74vFT—77VW2‡7FvRæ–æFW‚“°¢6öç7BG&gDÆ–æS×7FvRæÆ&VÃÓÓÒ$–ÖvW2"bf6ö×ÆWFSö+rG¶7&VFVDG&gD6÷VçGÒG¶7&VFVDG&gD6÷VçCÓÓÓò&G&gB#¢&G&gG2'Ò7&VFVF¢"#°¢ò¢C##r+ræWfW"F—6&ÆRF†R7FvRF†R6VÆÆW"—27W'&VçFÇ’öââv†VâG&gG2f–ÆVBÀ¢F†R&–Âw&W–VB÷WBÆ—7F–ærv†–ÆRF†R6VÆÆW"v27FæF–æröâÆ—7F–ær(	@¢6öçG&öÂ&VgW6–ærF†RvR—Bv2Ç&VG’6†÷v–ærâ¢ð¢&WGW&âÆ'WGFöâ¶W“×·7FvRæÆ&VÇÒ6Æ74æÖS×¶G¶7F—fSò&7F—fR#¢"'ÒG¶FöæSò&FöæR#¢"'ÖÒF—6&ÆVC×²7F—fRbd&ööÆVâ†—77VW2æÆVæwF‚—Ò&–Ö7W'&VçC×¶7F—fSò'7FW#§VæFVf–æVGÒF—FÆS×¶—77VW5³×ÇÇVæFVf–æVGÒöä6Æ–6³×²‚“Óæ÷Vå&öw&W757FW‡7FvRæ–æFW‚—ÓãÆVÒ6Æ74æÖSÒ'&öw&W72Ö'V&&ÆRÖÆ&VÂ#ç·7FvRæÆ&VÇÓÂöVÓç²ò¢C3S"+r¦W&ò×FF–ærf÷W"7FW2‚#öbB"’—2FV×ÆFRF–2(	B—B–×Æ–W0¢ÆöævW"6WVVæ6RF†âW†—7G2æBFG26†&7FW"F†B6'&–W2æð¢–æf÷&ÖF–öââ¢÷Ð¢²ò¢Cc’ÒF†R7FW–÷R&R5DäD”äröâ6†÷w2—G2çVÖ&W"ÂæWfW"¢F–6²â—B&VæFW&VBF–6²–FVçF–6ÂFòF†Rf–æ—6†VB7FvW2Â6ð¢&öGV7BÂ–ÖvW2æBÆ—7F–ærÆÂ&VB&FöæR"Böæ6RæBF†P¢öæÇ’F†–ærÖ&¶–ær–÷W"÷6—F–öâv2ÆR&÷‚&V†–æBF†P¢Æ&VÂâ&VÖ÷fRF†R&÷‚æBæ÷F†–ær6–Bv†W&R–÷RvW&Rà ¢–÷R6ææ÷B†fRf–æ—6†VBF†R7FW–÷R&R7F–ÆÂöââ¢÷Ð¢Ç7ãç²7F—fRbfFöæSò.)É2#¥7G&–ær‡÷6—F–öâ³—ÓÂ÷7ããÇ7ããÆ#ç·7FvRçF—FÆWÓÂö#ãÇ6ÖÆÃç¶—77VW5³×ÇÆG·&öw&W757FGW2‡7FvRæ–æFW‚Æ7F—fRÆFöæRÄ&ööÆVâ†—77VW2æÆVæwF‚’—ÒG¶G&gDÆ–æWÖÓÂ÷6ÖÆÃãÂ÷7ããÂö'WGFöãçÒ—Ð¢Ç6Æ74æÖSÒ'v÷&¶fÆ÷rÖ†VÇ#ävöÆF–R6fW26ö×ÆWFVBv÷&²â–÷R6â&WGW&âFòâV&Æ–W"7FWv—F†÷WB7F'F–ær÷fW"ãÂ÷à¢Âöæcà¢ÆF—b6Æ74æÖSÒ'v÷&¶fÆ÷r×7FvR#à¢²ò¢CSSÒ÷Væ–ær6fVB&F6‚&VæFW'2F†R†VF–ærÂF†Vâæ÷F†–ærBÆÀ¢f÷"6WfW&Â6V6öæG2ÂF†VâF†Rv†öÆR7FWâ6GW&VBöâ7FW3¢F—FÆRÀ¢âV×G’vRÂæB$&6²ò6fVBWFöÖF–6ÆÇ’"fÆöF–ær–âF†RÖ–FFÆP¢öb—BâWfW'’÷F†W"6Æ÷rF†–ær–âvöÆF–R6—2—B—2v÷&¶–æs²F†—2öæP¢Æöö¶VB'&ö¶Vââ¢÷Ð¢·&W7F÷&–æt&F6‚bcÆF—b6Æ74æÖSÒ&&F6‚Ö÷Væ–ær"&öÆSÒ'7FGW2#ãÇ7â6Æ74æÖSÒ&&F6‚Ö÷Væ–ær×7–ææW""&–Ö†–FFVãÒ'G'VR"óãÆF—cãÆ#ä÷Væ–ær–÷W"&F6Ž(
+cÂö#ãÇ6ÖÆÃävöÆF–R—2&VF–ær–÷W"FW6–vç2ÂG&gG2æBÆ—7F–ærFWF–Ç2ãÂ÷6ÖÆÃãÂöF—cãÂöF—cçÐ¢·&öw&W74–æFWƒãbcÅv÷&¶fÆ÷tÖöÖVçGVÐ¢7W'&VçC×·&–ÅF÷çVÖ&W'Ð¢F÷FÃ×µ$”Åõ5DtU2æÆVæwF‡Ð¢Æ&VÃ×·&öw&W74–æFWƒÓÓÕ$ôu$U55õ5DU2æÆVæwF‚Óò$f–æÂ&Wf–Wr#¦æW‡C¢Gµ$ôu$U55õ5DU5´ÖF‚æÖ–â‡&öw&W74–æFW‚³Å$ôu$U55õ5DU2æÆVæwF‚Ó•×ÖÐ¢óçÐ¢²ò¢C3SR+rF†R'VæFÆR&ææW"—2vöæRâ—B6B&÷fRF†RvRææ÷Væ6–ærv†@¢†B§W7B&VVâ6VÆV7FVB(	B'WB6VÆV7F–ær—B—2v†BWB–÷R†W&RÂæBF†P¢&öGV7B6&G2&VÆ÷rV6‚6''’F†V—"÷vâæÖRâ—Bv2Æ&VÂf÷ ¢6öÖWF†–ærF†RvRv2Ç&VG’6†÷v–ærÂF¶–ærF†Rf—'7B67&VVægVÂâ¢÷Ð¢·&öw&W74–æFWƒãbcÄvöÆF–T–ç6–v‡Cç¶7W'&VçD–ç6–v‡B‚—ÓÂôvöÆF–T–ç6–v‡CçÐ¢·&öw&W74–æFWƒÓÓÓ2bff–ÆW2æÆVæwFƒãbcÄ7F–öå&V6V—B—FV×3×µ··fÇVS¦G¶f–ÆW2æÆVæwF‡ÒFW6–vç26†V6¶VFÆÆ&VÃ¢$÷&–v–æÂ'Gv÷&²&W6öÇWF–öâ&W6W'fVB'ÒÇ·fÇVS¦G·&–6VEf&–çG2æÆVæwF‡Òf&–çG6ÆÆ&VÃ§&–6–æt&÷fVCò%&–6–ær&÷fVB#¢%&VG’f÷"&–6–ær&Wf–Wr'Õ×ÒóçÐ¢·&öw&W74–æFWƒÓÓÓRbgF—FÆT6÷VçCãbcÄ7F–öå&V6V—B—FV×3×µ··fÇVS¦G·F—FÆT6÷VçGÒF—FÆW2&VG–ÆÆ&VÃ¢%fÆ–FFVB¶W—v÷&B‡&6W2öæÇ’'ÒÇ·fÇVS¦G¶f–ÆW2ç&VGV6R‚‡7VÒÆf–ÆR“Óç7VÒ¶f–ÆRçFw2æÆVæwF‚Ã—ÒÖF6†–ærFw6ÆÆ&VÃ¢%¦W&ò–çfVçFVB¶W—v÷&G2'Õ×ÒóçÐ¢ÆF—b6Æ74æÖS×¶7FW2Ö6öÇVÖâG·v÷&¶fÆ÷u7FWÒÖ6öÇVÖæÓà¢·v÷&¶fÆ÷u7FWÓÓÒ&f–æ—6‚"bff–æ—6…†6SÓÓÒ&WG7’"bffÇ6RbcÆF—b6Æ74æÖSÒ'7FW×7V66W72Ö&ææW""&öÆSÒ'7FGW2#ãÇ7â&–Ö†–FFVãÒ'G'VR#î)É3Â÷7ããÆF—cãÆ#åF—FÆW2ÂFw2ÂæBFW67&—F–öç26ö×ÆWFSÂö#ãÇ6ÖÆÃç¶f–ÆW2æÆVæwF‡Ò¶f–ÆW2æÆVæwFƒÓÓÓò&Æ—7F–ær—2#¢&Æ—7F–æw2&R'Ò&VG’f÷"WG7’FWF–Ç2ãÂ÷6ÖÆÃãÂöF—cãÂöF—cçÐ¢·v÷&¶fÆ÷u7FWÓÓÒ&FW6–vç2"bf6ö×ÆWFRbcÆF—b6Æ74æÖSÒ'7FW×7V66W72Ö&ææW""&öÆSÒ'7FGW2#ãÇ7â&–Ö†–FFVãÒ'G'VR#î)É3Â÷7ããÆF—cãÆ#äWG7’FWF–Ç26ö×ÆWFSÂö#ãÇ6ÖÆÃç¶f–ÆW2æÆVæwF‡Ò¶f–ÆW2æÆVæwFƒÓÓÓò&Æ—7F–ær—2#¢&Æ—7F–æw2&R'Ò&VG’f÷"†÷F÷2æBÖö6·W2ãÂ÷6ÖÆÃãÂöF—cãÂöF—cçÐ¢ ¢Æ'F–6ÆR6Æ74æÖS×¶7FWÖ6&B6öææV7B×7FWv÷&¶fÆ÷r×æVÂG¶6öææV7FVBò&FöæR"¢"'ÒG·v÷&¶fÆ÷u7FWÓÓÒ&6öææV7B#ò&7F—fR×æVÂ#¢&†–FFVâ×æVÂ'ÖÓà¢ ¢ÆF—b6Æ74æÖSÒ'7FWÖ6öçFVçB#à¢²ò¢C#ƒB+rF†RvRF—FÆRÇ&VG’&VG2$6öææV7B–÷W"66÷VçG2#²F†—26&B&WVFVB—Bv÷&Bf÷"v÷&BF—&V7FÇ’&VæVF‚â¢÷Ð¢Ç6Æ74æÖSÒ'7FWÖ6÷’#ç¶6öææV7FVBbfWG7”6öææV7FVCò$&÷F‚6öææV7F–öç2&RfW&–f–VBâvöÆF–Rv–ÆÂ&VÖVÖ&W"F†VÒf÷"gWGW&R&F6†W2â#¢$6öææV7BF†R&–çF–g’66÷VçBF†B7&VFW2–÷W"&öGV7G2æBF†RWG7’6†÷F†B&V6V—fW2F†VÒâ'ÓÂ÷à¢²‚6öææV7FVGÇÂWG7”6öææV7FVB’bcÇ6Æ74æÖSÒ&6öææV7B×F–Ö–ær#î){rf—'7B×F–ÖR6öææV7F–öâW7VÆÇ’F¶W2&÷WB"Ö–çWFW2ãÂ÷çÐ¢¶6†V6¶–æt6öææV7F–öâò€¢ÆF—b6Æ74æÖSÒ&6öææV7F–öâ×&÷r#ãÇ7â6Æ74æÖSÒ&6öææV7F–öâÖ–6öâ#åÂ÷7ããÆF—cãÆ#å6V7W&R6öææV7F–öâ6†V6¾(
+cÂö#ãÇ6ÖÆÃåF†—2F¶W2§W7BÖöÖVçCÂ÷6ÖÆÃãÂöF—cãÂöF—cà¢’¢6öææV7FVBò€¢ÆF—b6Æ74æÖSÒ&6öææV7F–öâ×7F6²6öææV7F–öâ×6WGW#à¢Ç6V7F–öâ6Æ74æÖSÒ'&–çF–g’×6W'f–6RÖw&÷W#à¢ÆF—b6Æ74æÖSÒ&6öææV7F–öâ×&÷r6W'f–6R×&÷r#ãÇ7â6Æ74æÖSÒ&6öææV7F–öâÖ–6öâ#ãÆ–Ör7&3Ò"÷&–çF–g’ÖÆövòç7fr"ÇCÒ""óãÂ÷7ããÆF—cãÆ#å&–çF–g“Âö#ãÇ6ÖÆÃä7&VFRæBWFFR–÷W"&öGV7BG&gG2ãÂ÷6ÖÆÃãÂöF—cãÆ'WGFöâöä6Æ–6³×²‚“Óç6WE6†÷uFö¶Väf÷&Ò‡fÇVSÓâfÇVR—Óç·6†÷uFö¶Väf÷&Óò$6Æ÷6R#¢$6öææV7B&–çF–g’'ÓÂö'WGFöããÂöF—cà¢·6†÷uFö¶Väf÷&ÒbcÆF—b6Æ74æÖSÒ&–æÆ–æRÖf–VÆB&÷fVB×Fö¶VâÖf÷&Ò#ãÆÆ&VÃå7FRF†RFö¶Vâ–÷R6÷–VBg&öÒ&–çF–g“ÂöÆ&VÃãÆ–çWBG—SÒ'77v÷&B"fÇVS×·Fö¶VçÒöä6†ævS×²†WfVçB’Óâ6WEFö¶Vâ†WfVçBçF&vWBçfÇVR—ÒÆ6V†öÆFW#Ò%7FRFö¶Vâ†W&R"&–ÖÆ&VÃÒ%&–çF–g’Fö¶Vâ"óãÆ'WGFöâ&–Ö'W7“×¶6öææV7F–æwÒöä6Æ–6³×¶6öææV7E&–çF–g—ÒF—6&ÆVC×²Fö¶VâçG&–Ò‚’ÇÂ6öææV7F–æwÓç¶6öææV7F–ærò$6öææV7F–æ~(
+b"¢$6öææV7B6V7W&VÇ’'ÓÂö'WGFöããÂöF—cçÐ¢¶6öææV7F–öäW'&÷"bbÇ6Æ74æÖSÒ&f–VÆBÖW'&÷""&öÆSÒ&ÆW'B#ç¶6öææV7F–öäW'&÷'ÓÂ÷çÐ¢ÆFWF–Ç26Æ74æÖSÒ'Fö¶VâÖ†VÇ&÷fVB×Fö¶VâÖ†VÇ#à¢Ç7VÖÖ'“ä†÷rFòvWB–÷W"&–çF–g’Fö¶VâÇ7frf–Wt&÷ƒÒ##B#B"&–Ö†–FFVãÒ'G'VR#ãÇF‚CÒ$Ó’fÃbbÓbb"óãÂ÷7fsãÂ÷7VÖÖ'“à¢ÆF—b6Æ74æÖSÒ&&÷fVB×Fö¶VâÖ–ç7G'V7F–öç2#ãÆ#ävWB–÷W"&–çF–g’Fö¶Vâ7FW'’7FWÂö#ãÆF—b6Æ74æÖSÒ'Fö¶Vâ×6†÷×v&æ–ær#ãÆ#äf—'7BÂÖ¶R7W&R–÷R&R–âF†R&–v‡B&–çF–g’66÷VçCÂö#ãÇ7ãå6–vâ–âFòF†R66÷VçBF†B6öçF–ç2F†RWG7’6†÷æB6fVB&öGV7G2–÷RvçBvöÆF–RFòW6RâFö¶Vâ6öææV7G2F†Rv†öÆR&–çF–g’66÷VçBâ–â7FW"Â–÷W"6fVB&öGV7BFVÆÇ2vöÆF–Rv†–6‚W†7B6†÷FòW6RãÂ÷7ããÂöF—cà¢ÆöÃà¢ÆÆ“ä÷Vâ&–çF–g’æB6Æ–6²–÷W"&öf–ÆR–6öâãÂöÆ“à¢ÆÆ“ä6†ö÷6RÆ#ä×’&öf–ÆSÂö#âÂF†Vâ÷VâÆ#ä6öææV7F–öç3Âö#âãÂöÆ“à¢ÆÆ“ä–b&–çF–g’6·2f÷"FWfVÆ÷W"6öçF7BVÖ–ÂÂVçFW"âVÖ–ÂFG&W72–÷R6†V6²æB6fR—BãÂöÆ“à¢ÆÆ“äf–æBÆ#åW'6öæÂ66W72Fö¶Vç3Âö#âæB6Æ–6²Æ#ävVæW&FSÂö#âãÂöÆ“à¢ÆÆ“äæÖRF†RFö¶VâÆ#ävöÆF–RÆ—7F–ærf7F÷'“Âö#âãÂöÆ“à¢ÆÆ“åGW&âöâF†W6RW&Ö—76–öç3¢Æ#ç6†÷2ç&VBÂ6FÆörç&VBÂ&öGV7G2ç&VBÂ&öGV7G2çw&—FRÂWÆöG2ç&VBÂWÆöG2çw&—FRÂæB&–çE÷&÷f–FW'2ç&VCÂö#ââvöÆF–RFöW2æ÷BæVVB÷&FW"W&Ö—76–öç2ãÂöÆ“à¢ÆÆ“ä6Æ–6²Æ#ävVæW&FRFö¶VãÂö#âÂF†Vâ6÷’—B–ÖÖVF–FVÇ’â&–çF–g’öæÇ’6†÷w2F†RgVÆÂFö¶Vâöæ6RãÂöÆ“à¢ÆÆ“ä6öÖR&6²FòF†—2vRÂ7FRF†RFö¶Vâ&VÆ÷rÂæB6Æ–6²Æ#ä6öææV7B&–çF–g“Âö#ââvöÆF–Rv–ÆÂfW&–g’F†R66÷VçB&Vf÷&RÆWGF–ær–÷R6öçF–çVRãÂöÆ“à¢ÂööÃà¢Æ‡&VcÒ&‡GG3¢òö†VÇç&–çF–g’æ6öÒö†2öVâ×W2ö'F–6ÆW2óCCƒ3c#cCCs#C’Ô†÷rÖ6âÔ’ÖvVæW&FRÖâÔ’×Fö¶Vâ"F&vWCÒ%ö&Ææ²"&VÃÒ&æ÷&VfW'&W"#ä÷Vâ&–çF–gž(	—2öff–6–ÂFö¶Vâ–ç7G'V7F–öç2(isÂöãÂöF—cà¢ÂöFWF–Ç3à¢Â÷6V7F–öãà¢ÆF—b6Æ74æÖS×¶6öææV7F–öâ×&÷rWG7’Ö6öææV7F–öâ6W'f–6R×&÷rG¶WG7”6öææV7FVCò&6öææV7FVB#¢"'ÖÓãÇ7â6Æ74æÖSÒ&6öææV7F–öâÖ–6öâ#ãÆ–Ör7&3Ò"öWG7’ÖÆövòç7fr"ÇCÒ""óãÂ÷7ããÆF—cãÆ#ç¶WG7”6öææV7FVCò$WG7’6öææV7FVB#¢$WG7’'ÓÂö#ç¶WG7”6öææV7FVBbcÆVÒ6Æ74æÖSÒ&WG7’×6†÷ÖæÖR#ç¶WG7•6†÷ÇÂ'–÷W"6†÷'ÓÂöVÓçÓÇ7â6Æ74æÖSÒ'7"ÖöæÇ’#ä6öææV7BWG7’&Vf÷&RV&Æ—6†–æsÂ÷7ããÇ6ÖÆÃç¶WG7”6öææV7FVCò$6öææV7FVBæBfW&–f–VBâ#¢%&WV—&VB&Vf÷&RvöÆF–RV&Æ—6†W2æBf–æ—6†W2–÷W"Æ—7F–æw2â'ÓÂ÷6ÖÆÃãÂöF—cç¶WG7”6öææV7FVCóÆ'WGFöâ6Æ74æÖSÒ&F—66öææV7BÖÆ–æ²"öä6Æ–6³×¶7–æ2‚“Óç¶–b‚v—B6öæf—&Ô7F–öâ‡·F—FÆS¢$F—66öææV7B–÷W"WG7’6†÷ò"Æ&öG“¢$vöÆF–Rv–ÆÂæ÷B&R&ÆRFòV&Æ—6‚Æ—7F–æw2VçF–Â–÷R&V6öææV7BæBWF†÷&—6R—Bv–ââ–÷W"W†—7F–ærWG7’Æ—7F–æw2&Ræ÷BffV7FVBâ"Æ6öæf—&ÔÆ&VÃ¢$F—66öææV7BWG7’"Æ6æ6VÄÆ&VÃ¢$¶VW6öææV7FVB'Ò’—&WGW&ã¶v—BfWF6‚‚"ö’öWG7’"Ç¶ÖWF†öC¢$DTÄUDR'Ò“·6WDWG7”6öææV7FVB†fÇ6R“·6WDWG7•6†÷‚""—×ÓäF—66öææV7CÂö'WGFöãã£Æ'WGFöâ6Æ74æÖSÒ'6V6öæF'’Ö7F–öâ"&–Ö'W7“×¶WG7”6öææV7F–æwÒöä6Æ–6³×²‚“Óçfö–B6öææV7DWG7’‚—ÒF—6&ÆVC×¶WG7”6öææV7F–æwÓç¶WG7”6öææV7F–æsò$÷Væ–ærWG7ž(
+b#¢$6öææV7BWG7’'ÓÂö'WGFöãçÓÂöF—cà¢Ç6ÖÆÂ6Æ74æÖSÒ'6V7W&RÖ6÷’#î)š"Væ7'—FVBæB6fVB6V7W&VÇ’ãÂ÷6ÖÆÃà¢ÂöF—cà¢’¢€¢ÆF—b6Æ74æÖSÒ&6öææV7F–öâ×7F6²6öææV7F–öâ×6WGW6öææV7FVBÖ6öææV7F–öâ×7F6²#à¢ÆF—b6Æ74æÖSÒ&6öææV7F–öâ×&÷r#ãÇ7â6Æ74æÖSÒ&6öææV7F–öâÖ–6öâ#ãÆ–Ör7&3Ò"÷&–çF–g’ÖÆövòç7fr"ÇCÒ""óãÂ÷7ããÆF—cãÆ#å&–çF–g’6öææV7FVCÂö#ãÇ6ÖÆÃå–÷W"6öææV7F–öâv–ÆÂ&R&VÖVÖ&W&VCÂ÷6ÖÆÃãÂöF—cãÆ'WGFöâ6Æ74æÖSÒ&F—66öææV7BÖÆ–æ²"öä6Æ–6³×¶7–æ2‚’Óâ²–b‚v—B6öæf—&Ô7F–öâ‡·F—FÆS¢$F—66öææV7B&–çF–g“ò"Æ&öG“¢$vöÆF–Rv–ÆÂæ÷B&R&ÆRFò7&VFR÷"V&Æ—6‚G&gG2VçF–Â–÷R&V6öææV7Bv—F‚æWr’Fö¶Vââ–÷W"&–çF–g’&öGV7G2&Ræ÷BffV7FVBâ"Æ6öæf—&ÔÆ&VÃ¢$F—66öææV7B&–çF–g’"Æ6æ6VÄÆ&VÃ¢$¶VW6öææV7FVB'Ò’—&WGW&ã²v—BfWF6‚‚"ö’÷&–çF–g’"Â²ÖWF†öC¢$DTÄUDR"Ò“²6WD6öææV7FVB†fÇ6R“²6WEFö¶Vâ‚""“²6WEFV×ÆFTFWF–Ç2†çVÆÂ“²6WD6öææV7F–öäW'&÷"‚""“²×ÓäF—66öææV7CÂö'WGFöããÂöF—cà¢ÆF—b6Æ74æÖS×¶6öææV7F–öâ×&÷rWG7’Ö6öææV7F–öâ6W'f–6R×&÷rG¶WG7”6öææV7FVCò&6öææV7FVB#¢"'ÖÓãÇ7â6Æ74æÖSÒ&6öææV7F–öâÖ–6öâ#ãÆ–Ör7&3Ò"öWG7’ÖÆövòç7fr"ÇCÒ""óãÂ÷7ããÆF—cãÆ#ç¶WG7”6öææV7FVCò$WG7’6öææV7FVB#¢$WG7’'ÓÂö#ç¶WG7”6öææV7FVBbcÆVÒ6Æ74æÖSÒ&WG7’×6†÷ÖæÖR#ç¶WG7•6†÷ÇÂ'–÷W"6†÷'ÓÂöVÓçÓÇ6ÖÆÃç¶WG7”6öææV7FVCò$6öææV7FVBæBfW&–f–VBâ#¢%&WV—&VB&Vf÷&RvöÆF–RV&Æ—6†W2æBf–æ—6†W2–÷W"Æ—7F–æw2â'ÓÂ÷6ÖÆÃãÂöF—cç¶WG7”6öææV7FVCóÆ'WGFöâ6Æ74æÖSÒ&F—66öææV7BÖÆ–æ²"öä6Æ–6³×¶7–æ2‚“Óç¶–b‚v—B6öæf—&Ô7F–öâ‡·F—FÆS¢$F—66öææV7B–÷W"WG7’6†÷ò"Æ&öG“¢$vöÆF–Rv–ÆÂæ÷B&R&ÆRFòV&Æ—6‚Æ—7F–æw2VçF–Â–÷R&V6öææV7BæBWF†÷&—6R—Bv–ââ–÷W"W†—7F–ærWG7’Æ—7F–æw2&Ræ÷BffV7FVBâ"Æ6öæf—&ÔÆ&VÃ¢$F—66öææV7BWG7’"Æ6æ6VÄÆ&VÃ¢$¶VW6öææV7FVB'Ò’—&WGW&ã¶v—BfWF6‚‚"ö’öWG7’"Ç¶ÖWF†öC¢$DTÄUDR'Ò“·6WDWG7”6öææV7FVB†fÇ6R“·6WDWG7•6†÷‚""—×ÓäF—66öææV7CÂö'WGFöãã£Æ'WGFöâ6Æ74æÖSÒ'6V6öæF'’Ö7F–öâ"öä6Æ–6³×²‚“Óçfö–B6öææV7DWG7’‚—ÒF—6&ÆVC×¶WG7”6öææV7F–æwÓç¶WG7”6öææV7F–æsò$÷Væ–ærWG7ž(
+b#¢$6öææV7BWG7’'ÓÂö'WGFöãçÓÂöF—cà¢ÂöF—cà¢—Ð¢¶6öææV7FVBbf6öææV7F–öäW'&÷"bcÇ6Æ74æÖSÒ&f–VÆB×v&æ–ær"&öÆSÒ'7FGW2#ç¶6öææV7F–öäW'&÷'ÓÂ÷çÐ¢¶WG7”W'&÷"bcÇ6Æ74æÖSÒ&f–VÆBÖW'&÷""&öÆSÒ&ÆW'B#ç¶WG7”W'&÷'ÓÂ÷çÐ¢²ò¢CcRÒf÷'v&B6öçG&öÂ&VÆöæw2FòF†R7FWF†B—2÷VâÂæBFð¢æò÷F†W"âF†—2öæR&VæFW&VBv†VæWfW"&–çF–g’æBWG7’vW&P¢6öææV7FVBÂ6ò—B6B–ç6–FRF†R6öÆÆ6VB6öææV7BæVÂf÷"F†P¢v†öÆR&W7BöbF†R&F6‚Â7F–ÆÂVæ&ÆVBÂ7F–ÆÂö–çF–ær&6²@¢&öGV7BâF†RæVÂ—2F—7Æ“¦æöæR6ò6VÆÆW"6÷VÆBæ÷B&V6€¢—BÒ'WBâVæ&ÆVB6öçG&öÂF†Bæf–vFW2&6·v&B†2æð¢'W6–æW72W†—7F–ærBÆÂÂæBöæR552&Vw&W76–öâ—2F†P¢F–ffW&Væ6R&WGvVVâ†–FFVâæBÆ—fRâ¢÷Ð¢·v÷&¶fÆ÷u7FWÓÓÒ&6öææV7B"bb†Æö6Å&Wf–WwÇÂ†6öææV7FVBbfWG7”6öææV7FVB’’bcÆ'WGFöâ6Æ74æÖSÒ'v÷&¶fÆ÷rÖæW‡B"öä6Æ–6³×²‚“ÓævõFõ7FW‚'6WGW"ÆfÇ6RÆÆö6Å&Wf–Wr—ÓäæW‡B7FWÇ7ãî(i#Â÷7ããÂö'WGFöãçÐ¢ÂöF—cà¢Âö'F–6ÆSà ¢ÆF—b6Æ74æÖS×¶&öGV7B×7FWv÷&¶fÆ÷r×æVÂG·v÷&¶fÆ÷u7FWÓÓÒ'6WGW#ò&7F—fR×æVÂ#¢&†–FFVâ×æVÂ'ÖÓãÅ6fVEv÷&¶fÆ÷r'VæFÆT6†÷6Vã×´&ööÆVâ†7F—fT'VæFÆRbf'VæFÆU&V6—W2æÆVæwFƒã—Ò6fVE&Wf—6–öã×·6fVE&Wf—6–öçÒ6öææV7FVC×¶6öææV7FVGÇÆÆö6Å&Wf–WwÒFV×ÆFUW&Ã×·FV×ÆFWÒFV×ÆFUfW&–f–VC×·FV×ÆFTÆöFVGÒÆöF–æuFV×ÆFS×¶ÆöF–æuFV×ÆFWÒ7VvvW7FVE&öGV7DæÖS×·FV×ÆFTFWF–Ç3õ·FV×ÆFTFWF–Ç2æ'&æBÇFV×ÆFTFWF–Ç2æÖöFVÅÒæf–ÇFW"„&ööÆVâ’æ¦ö–â‚""’çG&–Ò‚—ÇÇFV×ÆFTFWF–Ç2æ&ÇVW&–çEF—FÆWÇÂ"#¢"'Ò6VÆV7FVE&öGV7D–C×¶7F—fT'VæFÆSö'VæFÆS¢G¶7F—fT'VæFÆRæ–GÖ¦7F—fU&V6—Sòæ–GÇÂ"'Ò6VÆV7FVE7VÖÖ'“×·FV×ÆFTFWF–Ç3óÆF—b6Æ74æÖSÒ'FV×ÆFR×&ööb&V6—R×&ööb#ãÆF—b6Æ74æÖSÒ'&öGV7B×F‡VÖ"#ãÇ7ãå”õU#Æ'"óä%CÂ÷7ããÂöF—cãÆF—b6Æ74æÖSÒ'FV×ÆFRÖ–æfò#ç¶'VæFÆU6VÆV7FVCóÃãÆ#ç¶7F—fT'VæFÆSòææÖWÓÂö#ãÇ7ãç¶'VæFÆU&V6—W2æÆVæwF‡Ò&öGV7G2+r¶'VæFÆU&V6—W2æÖ†—FVÓÓæ—FVÒææÖR’æ¦ö–â‚"+r"—ÓÂ÷7ããÇ7ãî)É2V6‚&öGV7B¶VW2—G2÷vâ6öÆ÷'2Â6—¦W2ÂÖö6·W2ÂæB¶W—v÷&G3Â÷7ããÂóã£ÃãÆ#ç·FV×ÆFTFWF–Ç2æ&ÇVW&–çEF—FÆWÓÂö#ãÇ7ãç·FV×ÆFTFWF–Ç2ç&÷f–FW'Ò+r·f&–çE7VÖÖ'’‡7VÖÖ'”†W2‡FV×ÆFTFWF–Ç2Æ7F—fU&V6—R’—ÓÂ÷7ããÇ7ãî)É2&öGV7BÂÆ6VÖVçBÂ6—¦W2ÂæB6†—–ær&öf–ÆR–×÷'FVCÂ÷7ããÂóçÓÂöF—cãÇ7â6Æ74æÖSÒ'FV×ÆFRÖ&FvR#ç¶'VæFÆU6VÆV7FVCò$'VæFÆR6VÆV7FVB#§&öGV7E6VÆV7FVCò%&öGV7B6VÆV7FVB#¢%6fRF†—2&öGV7B'ÓÂ÷7ããÂöF—cã¦çVÆÇÒfW&–f–VE6†—–æu&öf–ÆT–C×´çVÖ&W"‡FV×ÆFTFWF–Ç3òç6†—–æuFV×ÆFT–B—ÇÃÒöåFV×ÆFUW&Ã×²‡fÇVR’Óâ²FV×ÆFTÆöEfW'6–öâæ7W'&VçB³Ó·6WDÆöF–æuFV×ÆFR†fÇ6R“·6WEFV×ÆFR‡fÇVR“·6WEFV×ÆFTFWF–Ç2†çVÆÂ“·6WEFV×ÆFTW'&÷"‚""“²×ÒöåW6U&V6—S×¶6†ö÷6U&V6—WÒöåW6T'VæFÆS×·W6T'VæFÆWÒöå7F'DæWu&öGV7C×·7F'DæWu&öGV7GÒöä6†ævU&öGV7C×¶6†ævU&öGV7GÒöåfW&–g•FV×ÆFS×¶ÆöEFV×ÆFUW&ÇÒóà¢¶Æö6Å&Wf–WrbbFV×ÆFTFWF–Ç2bcÆ'WGFöâ6Æ74æÖSÒ'&Wf–WrÖFVÖòÖ'WGFöâ"öä6Æ–6³×²‚“Óçfö–BÆöE&Wf–WtFVÖò‚—ÓäÆöB6ö×ÆWFR÷7FW"FVÖòFò&Wf–WrWfW'’7FWÂö'WGFöãçÐ¢·FV×ÆFTW'&÷"bbÇ6Æ74æÖSÒ&f–VÆBÖW'&÷"&V6—RÖW'&÷""&öÆSÒ&ÆW'B#ç·FV×ÆFTW'&÷'ÓÂ÷çÐ¢Ä&F6…&VfW&Væ6W5÷'FÃà¢²ò¢CCSrÒF†R'6WBWF†—2&öGV7B"g&Ö–ær—2vöæS²&öGV7B6fW2—G2÷vâFVfVÇG22F†W’&R6†÷6Vââ¢÷Ð¢ ¢·FV×ÆFTFWF–Ç2bg&öGV7E6VÆV7FVBbcÆF—b6Æ74æÖSÒ'6fVB×&öGV7BÖ&F6‚×vR#ãÇ6V7F–öâ6Æ74æÖSÒ&&F6‚×&öGV7G2"&–ÖÆ&VÃÒ%&öGV7G2–âF†—2&F6‚#ç²‚‚“Óç°¢ò¢C3ƒRÒöæR6&Bv—F‚öæR7–ææW"v†–ÆRF†R'VæFÆRÆöG2ÂF†VâWfW'¢&öGV7B&WfVÆVBFövWF†W"âæ÷BÆ–æRöb&÷6RW"&öGV7BÂæBæ÷@¢6¶VÆWFöâW"&öGV7BV—F†W"ÒöæR6&Bâ¢ð¢6öç7BÆ—7CÖ7F—fT'VæFÆRbf'VæFÆU&V6—W2æÆVæwFƒãö'VæFÆU&V6—W3¢†7F—fU&V6—Sõ¶7F—fU&V6—UÓ¥µÒ“°¢6öç7Bv—F–æsÖÆ—7Bç6öÖR‚‡&V6—RÆ–æFW‚“Óâ‚‚7F—fT'VæFÆWÇÆ'VæFÆU&V6—W2æÆVæwFƒÃ'ÇÆ–æFWƒÓÓÖ'VæFÆT–æFW‚“÷FV×ÆFTFWF–Ç3¦'VæFÆT6öÆ÷%&öGV7G5·&V6—Ræ–EÒ’“°¢–b‚v—F–ær—&WGW&âçVÆÃ°¢&WGW&âÆ'F–6ÆR6Æ74æÖSÒ&&F6‚×&öGV7BÖ6&B'VæFÆRÖÆöF–ærÖ6&B"&öÆSÒ'7FGW2"&–ÖÆ&VÃ×¶ÆöF–ærG¶Æ—7BæÆVæwF‡ÒG¶Æ—7BæÆVæwFƒÓÓÓò'&öGV7B#¢'&öGV7G2'ÖÓà¢Ç7â6Æ74æÖSÒ&'VæFÆRÖÆöF–ær×7–ææW""&–Ö†–FFVãÒ'G'VR"óà¢ÇäÆöF–ær¶Æ—7BæÆVæwF‡Ò¶Æ—7BæÆVæwFƒÓÓÓò'&öGV7B#¢'&öGV7G2'Þ(
+cÂ÷à¢Âö'F–6ÆSã°¢Ò’‚—×²†7F—fT'VæFÆRbf'VæFÆU&V6—W2æÆVæwFƒãö'VæFÆU&V6—W3¢†7F—fU&V6—Sõ¶7F—fU&V6—UÓ¥µÒ’’æÖ‚‡&V6—RÆ–æFW‚“Óç¶6öç7B—47F—fSÒ7F—fT'VæFÆWÇÆ'VæFÆU&V6—W2æÆVæwFƒÃ'ÇÆ–æFWƒÓÓÖ'VæFÆT–æFWƒ¶6öç7B&öGV7CÖ—47F—fS÷FV×ÆFTFWF–Ç3¦'VæFÆT6öÆ÷%&öGV7G5·&V6—Ræ–EÓ¶6öç7Bç•VæF–æsÒ†7F—fT'VæFÆRbf'VæFÆU&V6—W2æÆVæwFƒãö'VæFÆU&V6—W3¢†7F—fU&V6—Sõ¶7F—fU&V6—UÓ¥µÒ’’ç6öÖR‚†—FVÒÇ÷6—F–öâ“Óâ‚‚7F—fT'VæFÆWÇÆ'VæFÆU&V6—W2æÆVæwFƒÃ'ÇÇ÷6—F–öãÓÓÖ'VæFÆT–æFW‚“÷FV×ÆFTFWF–Ç3¦'VæFÆT6öÆ÷%&öGV7G5¶—FVÒæ–EÒ’“¶–b‚&öGV7GÇÆç•VæF–ær—&WGW&âçVÆÃ¶6öç7B&VG“×&VF–æW74f÷"‡&öGV7BÇ&V6—RÆ—47F—fS÷&–6–æt&÷fVC¤&ööÆVâ†'VæFÆT&÷fVE·&V6—Ræ–EÒ’“²ò¢C#3"+r6öÆ÷W'2æB6—¦W2&R÷Vâg&öÒF†R7F'BâF†W’&RF†RGvòF†–æw2¢6VÆÆW"6öÖW2FòF†—2vRFò6†V6²ÂæB6öÆÆ6VB&÷r—2V7’FòvÆ°¢7B(	B'F†R6öÆ÷'2æBF†R6—¦W26†÷VÆB&ö&&Ç’§W7B&RW‡æFVB6ð¢V÷ÆRFöâwB66–FVçFÆÇ’Ö—72F†VÒ"â&÷F‚6â&R÷VâBöæ6RÂ6òF†—0¢†öÆG2Æ—7B&F†W"F†â6–ævÆRæÖRâ¢ð¢ò¢C3#’+rWfW'’&öGV7BW6VBFò÷Vâ6öÆ÷W'2äB6—¦W2Böæ6RÂ6òF‡&VP¢&öGV7B'VæFÆRWBF‡&VRgVÆÂ6öÆ÷W"w&–G2öâ67&VVâFövWF†W"âöæÇ¢F†Rf—'7B&öGV7B7F'G2÷Vã²F†R÷F†W'2&RöæR6Æ–6²v’â¢ð¢ò¢C3Sb+rF†R&VæFW"æBF†RFövvÆRV6‚6'&–VBF†V—"õtâFVfVÇBf÷ ¢v†–6‚æVÇ2&R÷VâÂæBF†W’F—6w&VVC¢F†R&VæFW"÷VæV@¢²&6öÆ÷'2%ÒÂF†RFövvÆRfVÆÂ&6²Fò²&6öÆ÷'2"Â'6—¦W2%Òâ6òF†Rf—'7@¢6Æ–6²öâç’&÷r7F'FVBg&öÒÆ—7BF†BF–Bæ÷BÖF6‚F†R67&VVâ(	@¢6Æ–6¶–ær6†—–ær&öGV6VB²&6öÆ÷'2"Â'6—¦W2"Â'6†—–ær%ÒæB6—¦W0¢7&ær÷VâÆöæw6–FR—BâöæRFVfVÇBÂW6VB'’&÷F‚â¢ð¢ò¢C3c+ræ÷F†–ær÷Vç2'’FVfVÇBâ÷Væ–ær6öÆ÷W'2f÷"F†Rf—'7B&öGV7@¢6†÷6RF†R6VÆÆW"w27F'F–ærö–çBf÷"F†VÒÂæB'W&–VBF†R÷F†W"F‡&VP¢6FVv÷&–W2VæFW"3’×7vF6‚w&–B&Vf÷&RF†W’†B6VVâF†R6&BâÆÀ¢f÷W"&÷w2f—6–&ÆRÂF†W’–6²v†W&RFò&Vv–ââ¢ð¢6öç7BFVfVÇD÷Väf6WG3§7G&–æuµÓÕµÓ°¢6öç7B÷VäÆ—7CÖ÷Väf6WE·&V6—Ræ–EÓóöFVfVÇD÷Väf6WG3°¢6öç7B—4÷VãÒ†æÖS§7G&–ær“Óæ÷VäÆ—7Bæ–æ6ÇVFW2†æÖR“°¢ò¢CScBÒ7FWv2F†RöæÇ’7FWF†B7F6¶VBâÖV7W&VBöâ†W"'VæFÆS ¢F†R6&B—237‚6‡WBÂæB÷Væ–ær6öÆ÷'2Â6—¦W2Â&–6–æræ@¢6†—–ær–âGW&âFöö²—BFò“3BÂ#c2Â##ƒ’æB#s“‚Â&V6W6RWfW'¢&÷rFövvÆVB–æFWVæFVçFÇ’æBæ÷F†–ærWfW"6Æ÷6VBâ7FW2"Â2æB@¢†fR6†÷vâöæRæVÂBF–ÖR6–æ6RCS3’ÂæBF†—2—2F†Rf—'7@¢67&VVâ6†RF÷V6†W2âöæRBF–ÖR†W&RFöòâ¢ð¢6öç7BFövvÆSÒ†æÖS§7G&–ær“Óç6WD÷Väf6WB†7W'&VçCÓç¶6öç7BÆ—7CÖ7W'&VçE·&V6—Ræ–EÓóöFVfVÇD÷Väf6WG3·&WGW&â²ââæ7W'&VçBÅ·&V6—Ræ–EÓ¦Æ—7Bæ–æ6ÇVFW2†æÖR“õµÓ¥¶æÖU××Ò“°¢ò¢C#‚+rWfW'’–6¶W"W6VBFò&VæFW"gFW"F†Rv†öÆR&÷rÆ—7BÂ6ò6Æ–6¶–æp¢6†ævRöâ6öÆ÷W'2÷VæVBF†RÆWGFR&VÆ÷rWG7’FWF–Ç2æBF†R6VÆÆW"†@¢Fò67&öÆÂ7B6—‚&÷w2Fò&V6‚F†RF†–ærF†W’§W7B6¶VBf÷"âF†RæVÀ¢¥5‚—2Væ6†ævVC²—B—2VÖ—GFVB–ç6–FRF†R&÷rÖæ÷rÂF—&V7FÇ’&VæVF€¢F†R&÷rF†B÷VæVB—BâF†R&ÖWFW"6†F÷w2÷Væ6òF†RW†—7F–æp¢wV&G2&VB6÷'&V7FÇ’v—F†÷WB&Ww&—F–ærF†VÒâ¢ð¢6öç7B&–6–æuæVÄf÷#Ò‡v†–6ƒ¢'&–6W2'Â'6†—–ær"“Óç°¢6öç7BFWF–Ç3Ö—47F—fS÷FV×ÆFTFWF–Ç3¦'VæFÆT6öÆ÷%&öGV7G5·&V6—Ræ–EÓ°¢–b‚FWF–Ç2—&WGW&âçVÆÃ°¢6öç7B6öÆ÷$–G3Ò†—47F—fS÷6VÆV7FVD6öÆ÷$–G3¦'VæFÆT6öÆ÷$6†ö–6W5·&V6—Ræ–EÒ—ÇÇ&V6—RæFVfVÇD6öÆ÷$–G7ÇÅµÓ°¢6öç7B6—¦T–G3Ò†—47F—fS÷6VÆV7FVE6—¦T–G3¦'VæFÆU6—¦T6†ö–6W5·&V6—Ræ–EÒ—ÇÇ&V6—RæFVfVÇE6—¦T–G7ÇÅµÓ°¢6öç7B&V6—U&–6–æsÖ—47F—fS÷&–6–æs¢†'VæFÆU&–6–æu·&V6—Ræ–E×ÇÇ²ââç&–6–ærÇF&vWE&öf—C¤çVÖ&W"‡&V6—RæFVfVÇE&öf—EF&vWB—ÇÄDTdTÅEõ$”4”ärçF&vWE&öf—GÒ“°¢&WGW&âÅ&–6–æu&Wf–Wp¢6V7F–öã×·v†–6‡Ð¢f&–çG3×·f&–çG4f÷"†FWF–Ç2Æ6öÆ÷$–G2Ç6—¦T–G2—Ð¢&–6–æs×·&V6—U&–6–æwÐ¢&–6W3×¶—47F—fS÷f&–çE&–6W3¢†'VæFÆU&–6W5·&V6—Ræ–E×ÇÇ&V6—Rçf&–çE&–6W7ÇÇ·Ò—Ð¢&öGV7DæÖS×·&V6—RææÖWÐ¢&öf–ÆW3×¶WG7•6†—–æu&öf–ÆW7Ð¢6VÆV7FVE&öf–ÆT–C×¶—47F—fSöWG7•6†—–æu&öf–ÆT–C¢†'VæFÆU6†—–æu·&V6—Ræ–E×ÇÄçVÖ&W"‡&V6—RæWG7•6†—–æu&öf–ÆT–B—ÇÃ—Ð¢FV×ÆFU6†—–æu&öf–ÆT–C×´çVÖ&W"†FWF–Ç2ç6†—–æuFV×ÆFT–B—ÇÃÐ¢&öf–ÆW4ÆöF–æs×·6†—–æu&öf–ÆW4ÆöF–æwÐ¢&öf–ÆW4W'&÷#×·6†—–æu&öf–ÆW4W'&÷'Ð¢&÷fVC×¶—47F—fS÷&–6–æt&÷fVC¤&ööÆVâ†'VæFÆT&÷fVE·&V6—Ræ–EÒ—Ð¢öå&–6–æs×·fÇVSÓç°¢–b†—47F—fR—·6WE&–6–ær‡fÇVR“·6WE&–6–æt&÷fVB†fÇ6R—Ð¢VÇ6W·6WD'VæFÆU&–6–ær†7W'&VçCÓâ‡²ââæ7W'&VçBÅ·&V6—Ræ–EÓ§fÇVWÒ’“·6WD'VæFÆT&÷fVB†7W'&VçCÓâ‡²ââæ7W'&VçBÅ·&V6—Ræ–EÓ¦fÇ6WÒ’—Ð¢–b‡fÇVRçF&vWE&öf—BÓÔçVÖ&W"‡&V6—RæFVfVÇE&öf—EF&vWB’—fö–BW7F&Æ—6‚‡&V6—RÇ¶FVfVÇE&öf—EF&vWC§fÇVRçF&vWE&öf—GÒ—×Ð¢öå&–6W3×·fÇVSÓç°¢–b†—47F—fR—·6WEf&–çE&–6W2‡fÇVR“·6WE&–6–æt&÷fVB†fÇ6R—Ð¢VÇ6W·6WD'VæFÆU&–6W2†7W'&VçCÓâ‡²ââæ7W'&VçBÅ·&V6—Ræ–EÓ§fÇVWÒ’“·6WD'VæFÆT&÷fVB†7W'&VçCÓâ‡²ââæ7W'&VçBÅ·&V6—Ræ–EÓ¦fÇ6WÒ’—Ð¢W'6—7E&öGV7E&–6–ær‡&V6—RÇ·f&–çE&–6W3§fÇVWÒ—×Ð¢v†öÆTçVÖ&W#×´&ööÆVâ‡v†öÆTçVÖ&W$'•&V6—U·&V6—Ræ–EÓó÷&V6—Rçv†öÆTçVÖ&W%&–6–ær—Ð¢öåv†öÆTçVÖ&W#×·fÇVSÓç°¢6WEv†öÆTçVÖ&W$'•&V6—R†7W'&VçCÓâ‡²ââæ7W'&VçBÅ·&V6—Ræ–EÓ§fÇVWÒ’“°¢W'6—7E&öGV7E&–6–ær‡&V6—RÇ·v†öÆTçVÖ&W%&–6–æs§fÇVWÒ—×Ð¢öå6VÆV7E&öf–ÆS×·fÇVSÓç°¢ò¢CCcÒ–6¶–ær6†—–ær&öf–ÆRW6VBFòVâÖ&÷fRF†R&–6–ærÀ¢æBF†R'WGFöâFò&÷fR—Bv–âÆ—fW2–ç6–FRF†R6öÆÆ6V@¢6†—–ær6V7F–öââ6ò6†ö÷6–ær&öf–ÆRF—6&ÆVBæW‡B7FWv—F€¢æòf—6–&ÆR&V6öâæBæòf—6–&ÆRv’÷WBÒF†RvÆÂ6†R†—Böà¢F†R×Vrâ&öGV7BF†BÇ&VG’6'&–W2&öf—BF&vWBæB¢&öf–ÆR—2&÷fVC²&–6W2&V6Æ7VÆFRöâF†V—"÷vâÂæB6†R—0¢FöÆBv†BF†W’&RâöæÇ’&öGV7Bv—F‚æ÷F†–ær6fVB7F–ÆÂ†0¢Fò&÷fRöæ6Râ¢ð¢6öç7B6'&–W3×&V6—T6'&–W4&÷fVE&–6–ær‡¶FVfVÇE&öf—EF&vWC§&V6—RæFVfVÇE&öf—EF&vWBÆWG7•6†—–æu&öf–ÆT–C§fÇVWÒ“°¢–b†—47F—fR—·6WDWG7•6†—–æu&öf–ÆT–B‡fÇVR“·6WE&–6–æt&÷fVB†6'&–W2—Ð¢VÇ6W·6WD'VæFÆU6†—–ær†7W'&VçCÓâ‡²ââæ7W'&VçBÅ·&V6—Ræ–EÓ§fÇVWÒ’“·6WD'VæFÆT&÷fVB†7W'&VçCÓâ‡²ââæ7W'&VçBÅ·&V6—Ræ–EÓ¦6'&–W7Ò’—Ð¢–b‡fÇVRbgfÇVRÓÔçVÖ&W"‡&V6—RæWG7•6†—–æu&öf–ÆT–B’—fö–BW7F&Æ—6‚‡&V6—RÇ¶WG7•6†—–æu&öf–ÆT–C§fÇVWÒ—×Ð¢öä7&VFU&öf–ÆS×¶7&VFT7W7FöÕ6†—–æu&öf–ÆWÐ¢öä&÷fÄ6†ævS×·fÇVSÓç¶–b†—47F—fR—6WE&–6–æt&÷fVB‡fÇVR“¶VÇ6R6WD'VæFÆT&÷fVB†7W'&VçCÓâ‡²ââæ7W'&VçBÅ·&V6—Ræ–EÓ§fÇVWÒ’—×Ð¢óã°¢Ó°¢6öç7BæVÄf÷#Ò†÷Vã§7G&–ær“ÓãÃç¶÷VãÓÓÒ'&öf—B"bg&–6–æuæVÄf÷"‚'&–6W2"—×¶÷VãÓÓÒ'6†—–ær"bg&–6–æuæVÄf÷"‚'6†—–ær"—×¶÷VãÓÓÒ&6öÆ÷'2"bcÅ&öGV7D6öÆ÷%6VÆV7F÷"&öGV7C×·&öGV7GÒ6VÆV7FVC×·6†÷vä6öÆ÷'7Òöä6†ævS×¶–G3Óç¶–b†—47F—fR—·6WE6VÆV7FVD6öÆ÷$–G2†–G2“·6WE&–6–æt&÷fVB†fÇ6R—ÖVÇ6R6WD'VæFÆT6öÆ÷$6†ö–6W2†7W'&VçCÓâ‡²ââæ7W'&VçBÅ·&V6—Ræ–EÓ¦–G7Ò’“¶–b†–G2æÆVæwF‚—fö–BW7F&Æ—6‚‡&V6—RÇ¶FVfVÇD6öÆ÷$–G3¦–G7Ò—×Òöå&VÖVÖ&W#×²‚“Óçfö–B6fU&öGV7DFVfVÇG2‡¶FVfVÇD6öÆ÷$–G3§6†÷vä6öÆ÷'7ÒÆ6öÆ÷'3¢G·&V6—Ræ–GÖ—Ò&VÖVÖ&W&–æs×·6f–æu&öGV7DFVfVÇCÓÓÖ6öÆ÷'3¢G·&V6—Ræ–GÖÒ&VÖVÖ&W&VC×·6ÖT–E6WB‡6†÷vä6öÆ÷'2Ç&V6—RæFVfVÇD6öÆ÷$–G2—Ò–ä6&Bóç×¶÷VãÓÓÒ'6—¦W2"bcÅ&öGV7E6—¦U6VÆV7F÷"&öGV7C×·&öGV7GÒ6VÆV7FVC×·6†÷vå6—¦W7Òöä6†ævS×¶–G3Óç¶–b†—47F—fR—·6WE6VÆV7FVE6—¦T–G2†–G2“·6WE&–6–æt&÷fVB†fÇ6R—ÖVÇ6R6WD'VæFÆU6—¦T6†ö–6W2†7W'&VçCÓâ‡²ââæ7W'&VçBÅ·&V6—Ræ–EÓ¦–G7Ò’“¶–b†–G2æÆVæwF‚—fö–BW7F&Æ—6‚‡&V6—RÇ¶FVfVÇE6—¦T–G3¦–G7Ò—×Òöå&VÖVÖ&W#×²‚“Óçfö–B6fU&öGV7DFVfVÇG2‡¶FVfVÇE6—¦T–G3§6†÷vå6—¦W7ÒÆ6—¦W3¢G·&V6—Ræ–GÖ—Ò&VÖVÖ&W&–æs×·6f–æu&öGV7DFVfVÇCÓÓÖ6—¦W3¢G·&V6—Ræ–GÖÒ&VÖVÖ&W&VC×·6ÖT–E6WB‡6†÷vå6—¦W2Ç&V6—RæFVfVÇE6—¦T–G2—Ò–ä6&BóçÓÂóã¶6öç7B6öÆ÷$f6WC×&VG’æf6WG2æf–æB†f6WCÓæf6WBææÖSÓÓÒ&6öÆ÷'2"“¶6öç7B6—¦Tf6WC×&VG’æf6WG2æf–æB†f6WCÓæf6WBææÖSÓÓÒ'6—¦W2"“¶6öç7B6†÷vä6öÆ÷'3Ò†—47F—fS÷6VÆV7FVD6öÆ÷$–G3¦'VæFÆT6öÆ÷$6†ö–6W5·&V6—Ræ–EÒ—ÇÇ&V6—RæFVfVÇD6öÆ÷$–G7ÇÆ6öÆ÷$f6WCòç7VvvW7FVCòæ6öÆ÷$–G7ÇÅµÓ¶6öç7B6†÷vå6—¦W3Ò†—47F—fS÷6VÆV7FVE6—¦T–G3¦'VæFÆU6—¦T6†ö–6W5·&V6—Ræ–EÒ—ÇÇ&V6—RæFVfVÇE6—¦T–G7ÇÇ6—¦Tf6WCòç7VvvW7FVCòç6—¦T–G7ÇÅµÓ·&WGW&âÆ'F–6ÆR6Æ74æÖS×¶&F6‚×&öGV7BÖ6&BG·&VG’æW7F&Æ—6†VCò&—2×&VG’#¢&æVVG2×6WGW'ÒG¶'VæFÆU6VÆV7FVCò&–âÖ&F6‚#¢"'ÖÒ¶W“×·&V6—Ræ–GÓãÆ†VFW#ç·–6µ&öGV7E†÷Fò‡&öGV7B“óÆ–Ör6Æ74æÖSÒ&'VæFÆR×&öGV7B×†÷Fò"7&3×·–6µ&öGV7E†÷Fò‡&öGV7B—ÒÇCÒ""ÆöF–æsÒ&Æ§’"FV6öF–æsÒ&7–æ2"óã£Å&öGV7DvÇ—‚F—FÆS×·&öGV7Bæ&ÇVW&–çEF—FÆWÒóçÓÇ7â6Æ74æÖSÒ&'VæFÆR×&öGV7BÖ–B#ç¶'VæFÆU6VÆV7FVBbcÆVÒ6Æ74æÖSÒ&&F6‚×&öGV7B×÷6—F–öâ#å&öGV7B¶–æFW‚³Òöb¶'VæFÆU&V6—W2æÆVæwF‡ÓÂöVÓçÓÆ#ç·&V6—RææÖWÓÂö#ãÇ6ÖÆÃç·&öGV7Bæ&ÇVW&–çEF—FÆWÓÂ÷6ÖÆÃãÂ÷7ãç²ò¢C3Cr+rF†—2&VB#Fò6WB"Âv†–6‚æÖW26÷VçBv—F†÷WBæÖ–ærv†B—@¢6÷VçG2âF†R6&BÇ&VG’Ö&·2F†RW†7B&÷w2F†BæVVBGFVçF–öã²F†P¢†VFW"öæÇ’†2Fò6’F†B6öÖWF†–ær–â†W&RFöW2â¢÷Ð¢Ç7â6Æ74æÖS×¶&F6‚×&öGV7B×7FFRG·&VG’æW7F&Æ—6†VCò"#¢&GFVçF–öâ'ÖÒF—FÆS×·&VG’æW7F&Æ—6†VCò%&VG’#¦G·&VG’çVW7F–öç2æÆVæwF‡ÒG·&VG’çVW7F–öç2æÆVæwFƒÓÓÓò'6WGF–æræVVG2#¢'6WGF–æw2æVVB'Ò–÷W"GFVçF–öæÒ&–ÖÆ&VÃ×·&VG’æW7F&Æ—6†VCò%&VG’#¦G·&VG’çVW7F–öç2æÆVæwF‡ÒG·&VG’çVW7F–öç2æÆVæwFƒÓÓÓò'6WGF–æræVVG2#¢'6WGF–æw2æVVB'Ò–÷W"GFVçF–öæÓç·&VG’æW7F&Æ—6†VCò%&VG’#£ÆVÒ&–Ö†–FFVãÒ'G'VR#âÂöVÓçÓÂ÷7ããÂö†VFW#ãÆF—b6Æ74æÖSÒ&&F6‚×&öGV7B×&÷w2#ç²ò¢C33‚+rF†W6R&÷w2W6VBFò&R6÷'FVB6òç—F†–ærVç6WBfÆöFVBFòF†RF÷À¢6ò&öGV7Bv—F‚æò6†—–ær&öf–ÆR6†÷vVB6†—–ærf—'7BæB6öÆ÷'0¢F†—&B(	BF†R6FVv÷&–W2Ö÷fVBFWVæF–æröâv†B†VæVBFò&P¢Ö—76–ærâ÷6—F–öâ—2†÷r–÷Rf–æBF†–æw3²—B6ææ÷BFWVæBöâ7FFRà¢f—†VB÷&FW"ÂÇv—3¢6öÆ÷'2Â6—¦W2Â&–6–ærÂ6†—–ærââVç6WB&÷p¢7F–ÆÂÖ&·2—G6VÆbÂv†–6‚—2v†B&æVVFVB"Ç&VG’FöW2â¢ð¢&VG’æf6WG2æÖ†f6WCÓç¶6öç7BÆ&VÃÒ‡¶6öÆ÷'3¢$6öÆ÷'2"Ç6—¦W3¢%6—¦W2"ÆÖö6·W3¢$Öö6·W2"Æ¶W—v÷&G3¢$¶W—v÷&G2"Ç6†—–æs¢%6†—–ær"Ç&öf—C¢%&–6–ær"ÆWG7“¢$WG7’FWF–Ç2'Ò2&V6÷&CÇ7G&–ærÇ7G&–æsâ•¶f6WBææÖUÓ¶6öç7B7F–öãÒ‡¶6öÆ÷'3¢%–6²6öÆ÷'2"Ç6—¦W3¢%–6²6—¦W2"ÆÖö6·W3¢%–6²Öö6·W6WB"Æ¶W—v÷&G3¢%–6²¶W—v÷&B&æ²"Ç6†—–æs¢%–6²6†—–ær&öf–ÆR"Ç&öf—C¢%6WB&öf—BvöÂ"ÆWG7“¢$FBWG7’FWF–Ç2'Ò2&V6÷&CÇ7G&–ærÇ7G&–æsâ•¶f6WBææÖUÓ¶6öç7BæVVFVCÖf6WBç7FFSÓÓÒ&6²#¶6öç7B–ä6&CÕ²&6öÆ÷'2"Â'6—¦W2"Â'&öf—B"Â'6†—–ær%Òæ–æ6ÇVFW2†f6WBææÖR“¶6öç7B7VvvW7F–öãÒ†f6WBç7VvvW7FVCòæ6öÆ÷$–G7ÇÆf6WBç7VvvW7FVCòç6—¦T–G7ÇÅµÒ’æÆVæwFƒ¶6öç7B÷VåF†—3Ò‚“Óç¶–b†–ä6&B—·FövvÆR†f6WBææÖR“·&WGW&çÖ6öç7BFW7CÔd4UEôDU5D”äD”ôå¶f6WBææÖUÓ¶–b‚FW7B—&WGW&ã¶–b†FW7Bç7FWÓ×v÷&¶fÆ÷u7FW–võFõ7FW†FW7Bç7FW“·v–æF÷rç6WEF–ÖV÷WB‚‚“Óç¶6öç7B&Æö6³ÖFö7VÖVçBçVW'•6VÆV7F÷#Ä…DÔÄVÆVÖVçCâ†FW7Bç6VÆV7F÷"“¶–b‚&Æö6²—&WGW&ã¶&Æö6²ç67&öÆÄ–çFõf–Wr‡¶&Æö6³¢'7F'B'Ò“¶&Æö6²æ6Æ74Æ—7BæFB‚&§W7BÖ÷VæVB"“·v–æF÷rç6WEF–ÖV÷WB‚‚“Óæ&Æö6²æ6Æ74Æ—7Bç&VÖ÷fR‚&§W7BÖ÷VæVB"’Ãc—ÒÆFW7Bç7FWÓ×v÷&¶fÆ÷u7FWó#c£—Ó·&WGW&âÄg&vÖVçB¶W“×¶f6WBææÖWÓãÆF—b6Æ74æÖS×¶&F6‚×&öGV7B×&÷rG¶æVVFVCò&æVVFVB#¢'6WGFÆVB'ÒG¶—4÷Vâ†f6WBææÖR“ò&÷Vâ#¢"'ÒG¶–ä6&Cò&6Æ–6¶&ÆR#¢"'ÖÒ&öÆS×¶–ä6&Cò&'WGFöâ#§VæFVf–æVGÒF$–æFWƒ×¶–ä6&Có§VæFVf–æVGÒ&–ÖW‡æFVC×¶–ä6&Cö—4÷Vâ†f6WBææÖR“§VæFVf–æVGÒöä6Æ–6³×¶–ä6&CöWfVçCÓç¶–b‚†WfVçBçF&vWB2…DÔÄVÆVÖVçB’æ6Æ÷6W7B‚&'WGFöâ"’—&WGW&ã¶÷VåF†—2‚—Ó§VæFVf–æVGÒöä¶W”F÷vã×¶–ä6&CöWfVçCÓç¶–b†WfVçBæ¶W“ÓÓÒ$VçFW"'ÇÆWfVçBæ¶W“ÓÓÒ""—¶WfVçBç&WfVçDFVfVÇB‚“¶÷VåF†—2‚—×Ó§VæFVf–æVGÓãÇ7â6Æ74æÖSÒ'&÷rÖÖ&²"&–Ö†–FFVãÒ'G'VR#ç¶æVVFVCò"#¢%ÇS#s2'ÓÂ÷7ããÇ7â6Æ74æÖSÒ'&÷rÖÆ&VÂ#ç¶Æ&VÇÓÂ÷7ããÇ7â6Æ74æÖSÒ'&÷r×fÇVR#ç¶æVVFVCö7F–öã¦f6WBæÆ&VÇ×¶f6WBææ÷FSóÇ6ÖÆÃç¶f6WBææ÷FWÓÂ÷6ÖÆÃã¦çVÆÇÓÂ÷7ããÆ'WGFöâG—SÒ&'WGFöâ"6Æ74æÖSÒ'&÷rÖ÷Vâ"öä6Æ–6³×¶÷VåF†—7Óç¶—4÷Vâ†f6WBææÖR“ò$6Æ÷6R#¦æVVFVCò$6†ö÷6R#¢$6†ævR'ÓÂö'WGFöããÂöF—cç¶—4÷Vâ†f6WBææÖR“óÃç·æVÄf÷"†f6WBææÖR—ÓÆ'WGFöâG—SÒ&'WGFöâ"6Æ74æÖSÒ'æVÂÖ6öÆÆ6RÖfö÷B"öä6Æ–6³×²‚“ÓçFövvÆR†f6WBææÖR—Óä6Æ÷6R¶Æ&VÂçFôÆ÷vW$66R‚—ÓÂö'WGFöããÂóã¦çVÆÇÓÂôg&vÖVçCã·Ò—ÓÂöF—cãÂö'F–6ÆSçÒ—ÓÂ÷6V7F–öãç²ò¢C#3"+rF†R#Ç&öGV7Câ(	BFW67&—F–öâæBWG7’FWF–Ç2"&Æö6²—2vöæRâ—B†VÆ@¢¶W—v÷&B&æ²Â&öGV7BFW67&—F–öâÂWG7’FWF–Ç2æBÆ—7F–ær†÷F÷2(	BWfW'¢öæRöbv†–6‚æ÷rÆ—fW2öâF†RÆ—7F–ær÷"–ÖvW2vRâ—Bv2f–gF‚À¢Væ6&FVB6÷’öbf÷W"6WGF–æw2Â6—GF–æröâF†R$ôET5BvRv†W&RæöæRö`¢F†VÒ&VÆöærÂæB—B7W'f—fVBF‡&VR&÷VæG2öb&f–æBWfW'—F†–ær"â¢÷ÓÂöF—cçÐ¢ ¢·FV×ÆFTFWF–Ç2bb&öGV7E6VÆV7FVBbcÇ6Æ74æÖSÒ&f–VÆB×v&æ–ær&V6—RÖW'&÷""&öÆSÒ'7FGW2#äæÖRæB6fRF†—2&öGV7B&Vf÷&R6öçF–çV–ærÂ÷"6VÆV7BöæRöb–÷W"6fVB&öGV7G2&÷fRãÂ÷çÐ¢ ¢ ¢ ¢ ¢²ò¢C#r+r&–6–ærÖ÷fW2öçFòF†R&öGV7BvRâ6öÆ÷W'2æB6—¦W2FV6–FRv†–6€¢f&–çG2W†—7BÂæBF†R&–6R—26WBW"f&–çBÂ6ò&–6–ær6÷VÆBæWfW ¢&Rç7vW&VB&Vf÷&RF†VÒ(	B—Bv2v†öÆR6W&FR7FWf÷"æVÂF†@¢&VÆöæw2F—&V7FÇ’VæFW&æVF‚F†RF†–ær—B&–6W2âF†—2—2F†RW†—7F–æp¢&–6–æu&Wf–Wr6ö×öæVçBÖ÷fVB–çF7C¢w&÷WVBW"×6—¦R&–6W2ÂF†P¢ÖF6†–ærÖ6÷7Bw&÷W–ærÂv†öÆRÖçVÖ&W"&–6–æræBF†R6†—–ær&öf–ÆRÆÀ¢6öÖRv—F‚—Bâæ÷F†–ær†W&R—2&V'V–ÇBâ¢÷Ð¢²ò¢C3S2+rF†R7FæFÆöæR&–6–ær6&B—2vöæRâC33BWB&–6–æræ@¢6†—–æröâF†R&öGV7B6&B2æVÇ2ÂæBWfW'’6VÆV7F–öâ&VæFW'2¢6&B(	B6–ævÆR&öGV7B—2§W7B'VæFÆRöböæRâC33ræ'&÷vVBF†—2Fð¢6–ævÆR&öGV7G2Âv†–6‚f—†VBF†RGWÆ–6FRVæFW"'VæFÆRæBÆVgBF†P¢6ÖRGWÆ–6FRVæFW"â–æF—f–GVÂ&öGV7Bâ¢÷Ð¢²ò¢C33B+rF†R6W&FR'VæFÆR&–6–ær6&G2F†—2&WÆ6VBÆ—fVB&VÆ÷p¢F†R&öGV7B6&G2Â6ò&öGV7Bw26öÆ÷W'2vW&R–âöæRÆ6RæB—G0¢&–6W2–âæ÷F†W"â&–6–æræB6†—–ær&RæVÇ2–ç6–FRF†R&öGV7@¢6&Bæ÷rÂ&W6–FRF†R6öÆ÷W'2æB6—¦W2F†W’&VÆöærFòâ¢÷Ð¢·v÷&¶fÆ÷u7FWÓÓÒ'6WGW"bgFV×ÆFTFWF–Ç2bg&öGV7E6VÆV7FVBbcÆ'WGFöâG—SÒ&'WGFöâ"6Æ74æÖSÒ'v÷&¶fÆ÷rÖæW‡B6WGWÖf÷'v&B"F—6&ÆVC×²6ö×ÆWFRbd&ööÆVâ‡&öGV7E7FW&Æö6¶W"‚’—ÒF—FÆS×·&öGV7E7FW&Æö6¶W"‚—ÇÇVæFVf–æVGÒò¢CC"ÒF†—2W6VBFò6''’F–ffW&VçBÆ&VÂv†VâG&gG2Ç&VG’W†—7FVBÂæ@¢–âF†B66R—B§V×VB7G&–v‡BFò7FW2âC3ƒ2&VæÖVB—BFò$æW‡B7FW ¢v—F†÷WB6†æv–ærv†W&R—BvVçBÂ6ò&W76–æræW‡Böâ7FW6¶—VB–ÖvW0¢VçF—&VÇ’âæW‡B7FWÖVç2F†RæW‡B7FW²F†R&–Â—2†÷r–÷R§V×â¢ð¢öä6Æ–6³×²‚“ÓævõFõ7FW‚&FW6–vç2"—Óç²ò¢C3ƒ2ÒF†—2'WGFöâ&VÆ&VÆÆVB—G6VÆbv—F‚v†FWfW"v2Ö—76–æs¢%–6²¢¶W—v÷&B&æ²f÷"v–ÆFâ†ööF–R"Â$6†ö÷6R&öGV7B6öÆ÷'2Fò6öçF–çVR"à¢F†Rf÷'v&B'WGFöâ—2F†Rf÷'v&B'WGFöâöâWfW'’7FW²F†RvFP¢F–ÆörÇ&VG’Æ—7G2v†B—2Væf–æ—6†VBÂ'’æÖRÂv†Vâ–÷R&W72—Bà¢6öçG&öÂF†B&VæÖW2—G6VÆb—2æ÷B6öçG&öÂ–÷R6âÆV&ââ¢÷Ð¢æW‡B7FWÇ7ãî(i#Â÷7ããÂö'WGFöãçÐ¢Âô&F6…&VfW&Væ6W5÷'FÃà¢ÂöF—cà ¢Æ'F–6ÆR6Æ74æÖS×¶7FWÖ6&BFW6–vç2×7FWv÷&¶fÆ÷r×æVÂG·v÷&¶fÆ÷u7FWÓÓÒ'6WGW#ò&&F6‚ÖFW6–vâÖG&÷#¢"'ÒG¶f–ÆW2æÆVæwF‚ò&FöæR"¢"'ÒG·v÷&¶fÆ÷u7FWÓÓÒ&f–æ—6‚#ò&f–æ—6‚ÖÖöFR#¢"'ÒG·v÷&¶fÆ÷u7FWÓÓÒ&FW6–vç2#ò&7F—fR×æVÂ#¢&†–FFVâ×æVÂ'ÖÓç²ò¢C#3‚+r6†ö÷6–ærF†RÖö6·W4UBÆ—fVBöâ&öGV7Bv†–ÆRF†RÖö6·W2—B6öçG&öÇ2&RvVæW&FVB†W&Röâ–ÖvW2â6ÖR6WGF–ærÂGvòvW2(	BF†RW†7B7Æ—BF†B6W6VBF†R¶W—v÷&BÖ&æ²æB6†—–ærGWÆ–6F–öââ¢÷Ð¢ÆF—b6Æ74æÖSÒ'7FWÖçVÖ&W""&–Ö†–FFVãÒ'G'VR"óà¢ÆF—b6Æ74æÖSÒ'7FWÖ6öçFVçB#à¢ÆF—b6Æ74æÖSÒ'7FWÖ†VF–ær#ãÆF—cç·v÷&¶fÆ÷u7FWÓÒ&f–æ—6‚"bcÇ6Æ74æÖSÒ&Ö–æ’ÖÆ&VÂ#äDU4”tå2dõ"D„•2$D4ƒÂ÷ç×²ò¢C#s‚+röà¢Æ—7F–ærF†—2W–V'&÷r&VB%D•DÄU2ÂDu2²DU45$•D”ôå2"(	BF†RvP¢F—FÆRC#Sb&WF—&VB(	BF—&V7FÇ’VæFW"F†RvRW–V'&÷r%5DU2ôbB+p¢Ä•5D”är"â&VÖ÷f–ærF†R6&BF—FÆR–âC#C‚ÆVgB—B2F†RöæÇ’FW‡@¢–âF†R†VFW"Â7F–ÆÂæÖ–ærF†R7FWF†—&Bv’â¢÷ÓÆF—b6Æ74æÖSÒ&†VF–ær×v—F‚Ö†VÇ#ç·v÷&¶fÆ÷u7FWÓÒ&f–æ—6‚"bcÆƒ#äG&÷–÷W"FW6–vç2†W&SÂöƒ#ç×²ò¢C#C‚+röâÆ—7F–ærF†—0¢&VB$f–æ—6‚F—FÆW2ÂFw2ÂæBFW67&—F–öç2"F—&V7FÇ’VæFW"F†RvP¢F—FÆR%F—FÆW2ÂFw2²FW67&—F–öç2"(	BF†R6ÖRv÷&G2ÂGvò6W&–ÂÖ6öÖÖ¢7G–ÆW2Â#‚'BâF†RvRF—FÆRÇ&VG’æÖW2F†R7FWâ¢÷ÓÂöF—cãÂöF—cç¶f–ÆW2æÆVæwF‚âbbv÷&¶fÆ÷u7FWÓÓÒ&f–æ—6‚"bbÇ7â6Æ74æÖSÒ&FöæRÖÖ&²#î)É2¶f–ÆW2æÆVæwF‡ÒÆ—7F–æw3Â÷7ãçÓÂöF—cà¢Ç6Æ74æÖSÒ'7FWÖ6÷’#ç·v÷&¶fÆ÷u7FWÓÓÒ&f–æ—6‚#ò$7&VFRF—FÆW2æBÖF6†–ærFw2Â&Wf–WrV6‚Æ—7F–ærÂæB6öæf—&ÒF†RFW67&—F–öâ6†&VB7&÷72F†R&F6‚â#¦'V–ÆBöæRfö7W6VB&F6‚öbWFòG¶&F6„FW6–väÆ–Ö—GÒf–æ—6†VBFW6–vç2âWÆöBföÆFW"÷"6VÆV7B–æF—f–GVÂ–ÖvW2æÓÂ÷à¢²ò¢C#Cr+rF‡&VR×7FW7V"×&–Â–ç6–FR7FW2öbf÷W"×7FW&–ÂÂçVÖ&W&–æp¢F†Rv÷&²F–ffW&VçFÇ’g&öÒF†RçVÖ&W&VB6V7F–öç2F—&V7FÇ’&VæVF‚—C ¢F†R&–Â6ÆÆVB"%&Wf–WrV6‚Æ—7F–ær"v†–ÆRF†R6&B6ÆÆVB ¢$VF—BFW67&—F–öâ"âGvòçVÖ&W&–ær7—7FV×2Â6ÖRvRÂF—6w&VV–ærà¢F†R6&Bw26V7F–öç2&RF†R&VÂ7G'V7GW&RæB&Röâ67&VVââ¢÷Ð¢²f–ÆW2æÆVæwF‚bcÇ6Æ74æÖSÒ&&F6‚ÖÆ–Ö—G2"&–ÖÆ&VÃÒ$&F6‚Æ–Ö—G2#ãÇ7â6Æ74æÖSÒ&&F6‚ÖÆ–Ö—G2×V÷F#ãÆ#ç·ÆäG&gG5&VÖ–æ–æsÓÓÖçVÆÃò$6†V6¶–ær–÷W"ÆâÆ–Ö—N(
+b#¦G¶&F6„FW6–väÆ–Ö—GÒFW6–vç2f–Æ&ÆRf÷"F†—2&F6†ÓÂö#ãÆ’óãÆ#ç¶7F—fT'VæFÆSöG¶'VæFÆU&öGV7D6÷VçGÒÆ—7F–æw2W"FW6–væ¦G·ÆäG&gG5&VÖ–æ–æsóò.(	B'ÒÆ—7F–æw2&VÖ–âöâ–÷W"ÆæÓÂö#ãÂ÷7ããÇ7â6Æ74æÖSÒ&&F6‚ÖÆ–Ö—G2Öæ÷FR#ãÔ"W"FW6–vâ+r÷&–v–æÂ&–çBVÆ—G’&W6W'fVCÂ÷7ããÂ÷çÐ¢ÆF—b6Æ74æÖSÒ&f–ÆR×&VÖ–æFW"#ãÆ#ä&Vf÷&RWÆöF–æsÂö#ãÇ7ãäFW6–vç26†÷VÆBÇ&VG’&RgVÆÂ6—¦Râ6fR2ärv—F‚6VR×F‡&÷Vv‚&6¶w&÷VæB–b–÷RFöî(	—BvçB6öÆ÷&VB&÷‚&–çFVB&V†–æB–÷W"'BãÂ÷7ããÂöF—cà¢Æ–çWB&Vc×¶föÆFW%–6¶W'Ò6Æ74æÖSÒ&†–FFVâ×–6¶W""G—SÒ&f–ÆR"×VÇF—ÆR66WCÒ"çærÂæ§rÂæ§Vr"²âââ‡²vV&¶—FF—&V7F÷'“¢""ÂF—&V7F÷'“¢""Ò2&V7Bä–çWD…DÔÄGG&–'WFW3Ä…DÔÄ–çWDVÆVÖVçCâ—Òöä6†ævS×²†WfVçB’Óâfö–B6†ö÷6Tf–ÆW2†WfVçBçF&vWBæf–ÆW2—Òóà¢Æ–çWB&Vc×¶–ÖvU–6¶W'Ò6Æ74æÖSÒ&†–FFVâ×–6¶W""G—SÒ&f–ÆR"×VÇF—ÆR66WCÒ"çærÂæ§rÂæ§Vr"öä6†ævS×²†WfVçB’Óâfö–B6†ö÷6Tf–ÆW2†WfVçBçF&vWBæf–ÆW2—Òóà¢ÆF—b6Æ74æÖSÒ'WÆöBÖ7F–öç2#à¢Æ'WGFöâ6Æ74æÖSÒ&föÆFW"ÖG&÷"öä6Æ–6³×²‚’ÓâföÆFW%–6¶W"æ7W'&VçCòæ6Æ–6²‚—Óà¢Ç7â6Æ74æÖSÒ'WÆöBÖ–6öâ"&–Ö†–FFVãÒ'G'VR#î(iÂ÷7ãà¢Ç7ããÆ#ç¶f–ÆW2æÆVæwF‚òFW6–vç4f–æ—6†VCò$6†ö÷6RföÆFW"FòFBÖ÷&R#¦6†ö÷6RföÆFW"+r&W&–ærG¶FW6–vç5&VG—ÒöbG¶f–ÆW2æÆVæwF‡Ö¢$6†ö÷6RföÆFW"'ÓÂö#ãÇ6ÖÆÃç¶f–ÆW2æÆVæwF‚òG¶f–ÆW2æÆVæwF‡ÒFW6–vâG¶f–ÆW2æÆVæwFƒÓÓÓò"#¢'2'Ò&VG’+rG²‡F÷FÅ6—¦Rò#Bò#B’çFôf—†VBƒ—ÒÔ"6VÆV7FVBG·F÷FÅ6—¦SäÄ$tUô$D4…õD…$U4„ôÄCò"+rv–ÆÂ&ö6W72öæRBF–ÖR#¢"'Ò+r6†ö÷6Rv–âFòFBÖ÷&V¢FBWFòG¶&F6„FW6–väÆ–Ö—GÒFW6–vç2–âF†—2&F6†ÓÂ÷6ÖÆÃãÂ÷7ãà¢Ç7â6Æ74æÖSÒ&'&÷w6RÖ6†—#ä'&÷w6SÂ÷7ãà¢Âö'WGFöãà¢Æ'WGFöâ6Æ74æÖSÒ&föÆFW"ÖG&÷"öä6Æ–6³×²‚’Óâ–ÖvU–6¶W"æ7W'&VçCòæ6Æ–6²‚—Óà¢Ç7â6Æ74æÖSÒ'WÆöBÖ–6öâ"&–Ö†–FFVãÒ'G'VR#îûÈ³Â÷7ãà¢Ç7ããÆ#ä6†ö÷6R–æF—f–GVÂ–ÖvW3Âö#ãÇ6ÖÆÃå6VÆV7BöæR–ÖvR÷"6WfW&ÂBöæ6SÂ÷6ÖÆÃãÂ÷7ãà¢Ç7â6Æ74æÖSÒ&'&÷w6RÖ6†—#ä'&÷w6SÂ÷7ãà¢Âö'WGFöãà¢ÂöF—cà¢¶f–ÆTW'&÷"bbÇ6Æ74æÖSÒ&f–ÆRÖÆ–Ö—BÖW'&÷""&öÆSÒ&ÆW'B#ãÆ#åF†B&F6‚6î(	—B&RFFVBãÂö#ãÇ7ãç¶f–ÆTW'&÷'ÓÂ÷7ããÂ÷çÐ¢¶f–ÆTæ÷F–6Rbb‡v÷&¶fÆ÷u7FWÓÓÒ'6WGW'ÇÇv÷&¶fÆ÷u7FWÓÓÒ&FW6–vç2"’bcÇ6Æ74æÖSÒ&f–ÆRÖFBÖæ÷F–6R"&öÆSÒ'7FGW2#ãÆ#åWÆöBWFFVCÂö#ãÇ7ãç¶f–ÆTæ÷F–6WÓÂ÷7ããÂ÷çÐ¢¶f–ÆW2æÆVæwFƒãbbFW6–vç4f–æ—6†VBbcÇ6V7F–öâ6Æ74æÖSÒ&FW6–vâ×&W&F–öâ×7FGW2v÷&¶–ær"&öÆSÒ'7FGW2"&–ÖÆ—fSÒ'öÆ—FR#ãÇ7â6Æ74æÖSÒ&FW6–vâ×7FGW2Ö–6öâ"&–Ö†–FFVãÒ'G'VR"óãÆF—cãÆ#ç¶vöÆF–R—2&W&–ær–÷W"FW6–vç3¢G¶FW6–vç5&VG—ÒöbG¶f–ÆW2æÆVæwF‡Ò&VG–ÓÂö#ãÇ6ÖÆÃä¶VWF†—2vR÷VââvöÆF–R—2&VF–ærWfW'’f–ÆRæB6†V6¶–ær—G2F–ÖVç6–öç2&Vf÷&R–÷R6â6öçF–çVRãÂ÷6ÖÆÃãÆF—b6Æ74æÖSÒ&FW6–vâ×7FGW2×G&6²#ãÆ’7G–ÆS×··v–GFƒ¦G¶f–ÆW2æÆVæwFƒöFW6–vç5&VG’öf–ÆW2æÆVæwF‚££ÒV×ÒóãÂöF—cãÂöF—cãÇ7G&öæsç¶FW6–vç5&VG—Ò÷¶f–ÆW2æÆVæwF‡ÓÂ÷7G&öæsãÂ÷6V7F–öãçÐ¢¶f–ÆW2æÆVæwF‚âbbFW6–vç4f–æ—6†VBbbÆF—b6Æ74æÖSÒ&&F6‚Ö66—G’#ãÆ#ç·ÆäG&gG5&VÖ–æ–æsÓÓÖçVÆÃò$6†V6¶–ærÆâÆÆ÷væ6^(
+b#¦7F—fT'VæFÆSöG¶f–ÆW2æÆVæwF‡ÒFW6–vç29rG¶'VæFÆU&öGV7D6÷VçGÒ&öGV7G2ÒG·&WVW7FVDÆ—7F–æt6÷VçGÒÆ—7F–æw2+rG¶FF—F–öæÄFW6–vç4f–Æ&ÆWÒÖ÷&RFW6–vç2f–Æ&ÆV¦G¶f–ÆW2æÆVæwF‡ÒöbG¶&F6„FW6–väÆ–Ö—GÒFW6–vç2&VG’+rG¶FF—F–öæÄFW6–vç4f–Æ&ÆWÒÖ÷&Rf–Æ&ÆR+rG·ÆäG&gG5&VÖ–æ–æwÒÆ—7F–æw2ÆVgBöâ–÷W"ÆæÓÂö#ãÂöF—cçÐ¢¶'VæFÆUVÆ—G”w&÷W2æÆVæwFƒãbcÇ6V7F–öâ6Æ74æÖSÒ&'VæFÆR×VÆ—G’×&Wf–Wr"&–ÖÆ&VÃÒ%&öGV7B×7V6–f–2&–çBVÆ—G’v&æ–æw2#ãÆF—cãÆ#ç¶'VæFÆUVÆ—G”w&÷W2æÆVæwF‡Òöb¶f–ÆW2æÆVæwF‡Ò¶f–ÆW2æÆVæwFƒÓÓÓò&FW6–vâæVVG2#¢&FW6–vç2æVVB'Ò&–çBFV6—6–öãÂö#ãÇ7ãç·&öGV7G4–ä&F6‚æÆVæwFƒãò%F†R6ÖR'Gv÷&²6â&R6†'öâöæR&öGV7BæBFöò6ÖÆÂf÷"æ÷F†W"â#¢"'Ôç—F†–ær&VÆ÷r#RE’—2fÆvvVB2fW'’Æ÷r&W6öÇWF–öââæ÷F†–ær—26¶—VB6–ÆVçFÇ’ãÂ÷7ãç¶'VæFÆU&öGV7G5Væ6†V6¶VBæÆVæwFƒóÇ7â6Æ74æÖSÒ&–æÆ–æRÖæ÷FR"&öÆSÒ'7FGW2#ävöÆF–R6÷VÆBæ÷B&VB¶'VæFÆU&öGV7G5Væ6†V6¶VBæ¦ö–â‚"Â"—Ò–WBÂ6ò¶'VæFÆU&öGV7G5Væ6†V6¶VBæÆVæwFƒÓÓÓò&—B—2#¢'F†W’&R'Òæ÷B–æ6ÇVFVB–âF†—26†V6²â&V÷Vâ¶'VæFÆU&öGV7G5Væ6†V6¶VBæÆVæwFƒÓÓÓò'F†B&öGV7B#¢'F†÷6R&öGV7G2'ÒFò6†V6²¶'VæFÆU&öGV7G5Væ6†V6¶VBæÆVæwFƒÓÓÓò&—B#¢'F†VÒ'ÒãÂ÷7ãã¦çVÆÇÓÆF—b6Æ74æÖSÒ&'VæFÆR×VÆ—G’Ö'VÆ²#ãÆ'WGFöâG—SÒ&'WGFöâ"öä6Æ–6³×²‚“ÓæFV6–FTÆÅVÆ—G’‚&–æ6ÇVFR"—Óå&ö6VVBv—F‚ÆÂ¶'VæFÆUVÆ—G”w&÷W2æÆVæwF‡ÓÂö'WGFöããÆ'WGFöâG—SÒ&'WGFöâ"öä6Æ–6³×²‚“ÓæFV6–FTÆÅVÆ—G’‚&W†6ÇVFR"—ÓäW†6ÇVFRÆÂ¶'VæFÆUVÆ—G”w&÷W2æÆVæwF‡ÓÂö'WGFöããÂöF—cãÂöF—cç¶'VæFÆUVÆ—G”w&÷W2æÖ†w&÷WÓç¶6öç7BFV6—6–öã×VÆ—G”w&÷WFV6—6–öâ†w&÷Wæ¶W—2“¶6öç7B&öGV7DÆ—7CÕ²ââææWr6WB†w&÷Wç&öGV7G2•Ó·&WGW&âÆ'F–6ÆR6Æ74æÖS×¶w&÷Wæ7&—F–6Ãò&7&—F–6ÂÖG’#¢"'Ò¶W“×¶w&÷Wæf–ÆT–GÓãÆF—cãÆ#ç¶w&÷Wæf–ÆTæÖWÓÂö#ãÇ7ãç¶w&÷Wæ7&—F–6ÃóÇ7G&öæsådU%’Äõr$U4ôÅUD”ôâ+r¶w&÷Wçv÷'7DG—ÒE’+rÂ÷7G&öæsã¦çVÆÇ×¶w&÷Wæ7GVÅv–GF‡Ò9r¶w&÷Wæ7GVÄ†V–v‡G×‚—2&VÆ÷rF†R&V6öÖÖVæFVB6—¦W·&öGV7G4–ä&F6‚æÆVæwFƒãóÃâf÷"Ç7G&öæsç·&öGV7DÆ—7Bæ¦ö–â‚"Â"—ÓÂ÷7G&öæsç·&öGV7DÆ—7BæÆVæwFƒãö(	BG·&öGV7DÆ—7BæÆVæwF‡Ò&öGV7G2–âF†—2'VæFÆV¢"'ÓÂóã£Ãâf÷"Ç7G&öæsç·&öGV7DÆ—7E³×ÇÂ'F†—2&öGV7B'ÓÂ÷7G&öæsãÂóçÒãÂ÷7ããÂöF—cãÆF—cãÆ'WGFöâ6Æ74æÖS×¶FV6—6–öãÓÓÒ&–æ6ÇVFR#ò'6VÆV7FVB#¢"'Òöä6Æ–6³×²‚“ÓæFV6–FUVÆ—G”w&÷W†w&÷Wæ¶W—2Â&–æ6ÇVFR"—Óç¶w&÷Wæ7&—F–6Ãò$’VæFW'7FæB(	B&ö6VVB#¢%&ö6VVBç—v’'ÓÂö'WGFöããÆ'WGFöâ6Æ74æÖS×¶FV6—6–öãÓÓÒ&W†6ÇVFR#ò'6VÆV7FVBW†6ÇVFR#¢"'Òöä6Æ–6³×²‚“ÓæFV6–FUVÆ—G”w&÷W†w&÷Wæ¶W—2Â&W†6ÇVFR"—Óç·&öGV7DÆ—7BæÆVæwFƒãò$W†6ÇVFRF†W6RÆ—7F–æw2#¢$W†6ÇVFRF†—2Æ—7F–ær'ÓÂö'WGFöããÂöF—cãÂö'F–6ÆSçÒ—ÓÂ÷6V7F–öãçÐ¢¶f–ÆW2æÆVæwFƒãbb‡v÷&¶fÆ÷u7FWÓÓÒ'6WGW'ÇÇv÷&¶fÆ÷u7FWÓÓÒ&FW6–vç2"’bcÆF—b6Æ74æÖSÒ&FW6–vâ×WÆöB×&Wf–Wr"&–ÖÆ&VÃÒ%&Wf–WrWÆöFVBFW6–vç2#ç¶f–ÆW2æÖ†f–ÆSÓãÆ'F–6ÆR¶W“×¶f–ÆRæ–GÓãÆ–Ör7&3×¶f–ÆRç&Wf–WuW&ÇÒÇCÒ""ÆöF–æsÒ&Æ§’"FV6öF–æsÒ&7–æ2"óãÆF—cãÆ"F—FÆS×¶f–ÆRææÖWÓç¶f–ÆRææÖWÓÂö#ãÇ6ÖÆÃç¶f–ÆRçv–GF‚bff–ÆRæ†V–v‡CöG¶f–ÆRçv–GF‡Ò9rG¶f–ÆRæ†V–v‡G×†¢$6†V6¶–ærF–ÖVç6–öç>(
+b'ÓÂ÷6ÖÆÃãÂöF—cãÆ'WGFöâG—SÒ&'WGFöâ"öä6Æ–6³×²‚“Óç&VÖ÷fTFW6–vâ†f–ÆRæ–B—Ò&–ÖÆ&VÃ×¶&VÖ÷fRG¶f–ÆRææÖWÖÓå&VÖ÷fSÂö'WGFöããÂö'F–6ÆSâ—ÓÂöF—cçÐ¢¶f–ÆW2æÆVæwFƒãbb6ö×ÆWFRbb‡v÷&¶fÆ÷u7FWÓÓÒ'6WGW'ÇÇv÷&¶fÆ÷u7FWÓÓÒ&FW6–vç2"’bcÃç¶FW6–vç4f–æ—6†VBbf&VÆ÷u&V6öÖÖVæFVE—†VÇ2æÆVæwFƒãbcÆF—b6Æ74æÖS×¶—†VÂ×v&æ–ærÖ–æÆ–æRG¶7&—F–6ÄG”f–ÆW2æÆVæwFƒò&7&—F–6ÂÖG’#¢"'ÖÒ&öÆSÒ'7FGW2#ãÇ7ãâÂ÷7ããÆF—cãÆ#ç¶7&—F–6ÄG”f–ÆW2æÆVæwFƒöG¶7&—F–6ÄG”f–ÆW2æÆVæwF‡ÒG¶7&—F–6ÄG”f–ÆW2æÆVæwFƒÓÓÓò&FW6–vâ—2#¢&FW6–vç2&R'Ò&VÆ÷r#RE’(	BfW'’Æ÷r&W6öÇWF–öâæ¦&VÆ÷u&V6öÖÖVæFVE—†VÇ2æÆVæwFƒÓÓÓò$öæRFW6–vâ—2&VÆ÷r&–çF–gž(	—2&V6öÖÖVæFVB—†VÂ6—¦Râ#¢%6öÖRFW6–vç2&R&VÆ÷r&–çF–gž(	—2&V6öÖÖVæFVB—†VÂ6—¦Râ'ÓÂö#ãÇ6ÖÆÃç¶7&—F–6ÄG”f–ÆW2æÆVæwFƒò$vöÆF–Rv–ÆÂ–FVçF–g’WfW'’ffV7FVBFW6–vâ6ò–÷R6â&WÆ6R—B÷"6öçF–çVRç—v’â#¢%–÷R6â7F–ÆÂ6öçF–çVRÂ'WBvöÆF–Rv–ÆÂ6²–÷RFò6öæf—&Òf—'7Bâ'ÓÂ÷6ÖÆÃãÂöF—cãÂöF—cç×²ò¢C3“’Ò7FW"6†÷vVB$æW‡B7FW"†W&RäB$6öçF–çVRFò7&VFRG&gG2"–âF†P¢&öGV7B6&B&VÆ÷râ7&VF–ærF†RG&gG2—2F†R7FW²F†—2'WGFöâöæÇ¢67&öÆÆVBF÷vâFò—BâöæRf÷'v&B6öçG&öÂW"7FW¢F†R7F–öâv†–ÆRF†P¢G&gG2Fòæ÷BW†—7BÂF†Rf÷'v&Böæ6RF†W’Fòâ¢÷Ð¢·v÷&¶fÆ÷u7FWÓÒ'6WGW"bf6ö×ÆWFRbcÆ'WGFöâ6Æ74æÖSÒ'v÷&¶fÆ÷rÖæW‡B"F—6&ÆVC×²FW6–vç4f–æ—6†VGÒöä6Æ–6³×¶6öçF–çVTg&öÔFW6–vç7Óç¶FW6–vç4f–æ—6†VCò$æW‡B7FW#¦&W&–ærG¶FW6–vç5&W&–æwÒG¶FW6–vç5&W&–æsÓÓÓò&FW6–vâ#¢&FW6–vç2'Þ(
+fÒ¶FW6–vç4f–æ—6†VBbcÇ7ãî(i#Â÷7ãçÓÂö'WGFöãçÓÂóçÐ¢¶f–ÆW2æÆVæwFƒãbf6ö×ÆWFRbgv÷&¶fÆ÷u7FWÓÓÒ&FW6–vç2"bcÆ'WGFöâ6Æ74æÖSÒ'v÷&¶fÆ÷rÖæW‡B"öä6Æ–6³×²‚“ÓævõFõ7FW‚&f–æ—6‚"ÆfÇ6RÇG'VR—Óä&6²Fòf–æ—6†–ær–÷W"Æ—7F–æw2Ç7ãî(i#Â÷7ããÂö'WGFöãçÐ¢ÂöF—cà¢Âö'F–6ÆSà¢·v÷&¶fÆ÷u7FWÓÓÒ'6WGW"bcÆF—b–CÒ&&F6‚×&VfW&Væ6W2ÖgFW"ÖFW6–vç2"6Æ74æÖSÒ&&F6‚×&VfW&Væ6W2ÖgFW"ÖFW6–vç2"óçÐ¢²ò¢C##+rWG7’FWF–Ç2¦ö–ç2F—FÆW2ÂFw2æBFW67&—F–öç2öâöæRÆ—7F–ærvRâF†W¢&RF†R6ÖR¦ö"(	BF†Rv÷&G2æBÖWFFFöbF†RÆ—7F–ær(	BæBF†W’vW&RGvð¢67&VVç2'Bâ¢÷Ð¢·v÷&¶fÆ÷u7FWÓÓÒ&f–æ—6‚"bb†f–æ—6…†6SÓÓÒ&FWF–Ç2'ÇÆf–æ—6…†6SÓÓÒ&WG7’"’bg7FW&öGV7D6&G2†'VæFÆT6&E7FGW2‚&Æ—7F–ær"’Âò¢CSCÒ7FW2†VÆBöæR&Æö6³¢F—FÆR'V–ÆFW"ÂFW67&—F–öâVF—F÷"æB¢F&ÆRöbWfW'’Æ—7F–ærÂv—F‚Gvò&÷w2F†BvW&R&öö¶Ö&·2–çFò7÷G0¢–ç6–FR—Bâ6Æ–6¶–ærFW67&—F–öâ6†÷vVBF—FÆW2æBFw2FöòÂ&V6W6P¢F†W’vW&RæWfW"–â6V7F–öâöbF†V—"÷vââF†R&÷w2÷vâæVÇ2æ÷rÀ¢W†7FÇ’27FW"FöW2ÂæBF†R6&B76W2æò&öG’â¢ð¢çVÆÂÆfÇ6RÀ¢Ãà¢²ò¢CS#ÒF†Rf÷'v&B'WGFöâ&VÆöæw2FòF†R7FWÂæ÷BFòv†–6†WfW ¢&öGV7B†Vç2Fò&R÷VââöâF‡&VR×&öGV7B'VæFÆR—Bv0¢–ç6–FRF†R†ööF–R6&BÂ6òÆVf–ærF†R7FWÖVçBf–æF–ærF†P¢÷Vâ&öGV7Bf—'7Bâ¢÷Ð¢²ò¢CSCBÒF†—26¶VBf–æ—6…†6SÓÓÒ&FWF–Ç2"ÂæBC##†BÇ&VG’FV6–FVBF†P¢WG7’FWF–Ç2&VæFW"öâF†RÆ—7F–ærvRv—F‚æò†6RöbF†V—"÷vã ¢6öçF–çVUFôWG7”FWF–Ç2‚’6ÆÇ26WDf–æ—6…†6R‚&FWF–Ç2"’æBF†Vâw&—FW0¢†6SÖWG7’–çFòF†RU$Âç—v’â6òF†R7FFRæWfW"ÆVgB&FWF–Ç2"ÂF†P¢fö÷FW"æWfW"7vVBÂæB7FW2öffW&VB%&W&RWG7’FWF–Ç2"f÷&WfW ¢v—F‚æòv’Fò&V6‚7FWBâÖV7W&VBöâ†W"&F6ƒ¢FWF–Ç2&W&VBÀ¢&÷w2&VF–ær$æVVG2&Wf–Wr"ÂæBæòæW‡B7FW'WGFöâöâF†RvRà¢6²F†R&VÂVW7F–öâ–ç7FVBÒ†fRF†RWG7’FWF–Ç2&VVâ'V–ÇB–WBâ¢÷Ð¢²WG7”FWF–Ç5&W&VCóÃãÆ'WGFöâ6Æ74æÖSÒ'6V6öæF'’Ö7F–öâ&W&RÖWG7’"&–Ö'W7“×·&W&–ætWG7—ÒF—6&ÆVC×·&W&–ætWG7—ÇÇ&öw&W74vFT—77VW2ƒb’æÆVæwFƒãÇÆ&F6„†VÆD'”æ÷F†W%F'ÒF—FÆS×¶&F6„†VÆD'”æ÷F†W%F#ò%F†—2&F6‚—2÷Vâ–âæ÷F†W"vöÆF–RF"Â6òæ÷F†–ær&W&VB†W&Rv÷VÆB&R¶WBâ#§&öw&W74vFT—77VW2ƒb•³×Òöä6Æ–6³×²‚“Óçfö–B6öçF–çVUFôWG7”FWF–Ç2‚—Óç·&W&–ætWG7“ò%&W&–ærWG7’FWF–Ç>(
+b#¢%&W&RWG7’FWF–Ç2'ÓÂö'WGFöãç·&W&–ætWG7“óÇ6Æ74æÖSÒ&WG7’×&W&–ærÖæ÷FR"&öÆSÒ'7FGW2#åF†—26âF¶RÖöÖVçBv†Vâ–÷W"&F6‚†26WfW&ÂÆ—7F–æw2â¶VWF†—2vR÷Vâv†–ÆRvöÆF–R&W&W2V6‚öæRãÂ÷ã§&öw&W74vFT—77VW2ƒb•³ÒbcÇ6Æ74æÖSÒ&WG7’×&W&–ærÖæ÷FRvFR×&V6öâ"&öÆSÒ'7FGW2#ç·&öw&W74vFT—77VW2ƒb•³×ÓÂ÷çÓÂóã£ÃãÆ'WGFöâ6Æ74æÖSÒ'v÷&¶fÆ÷rÖæW‡B"&–Ö'W7“×·6f–ætWG7”FWF–Ç7ÒF—6&ÆVC×·6f–ætWG7”FWF–Ç7ÇÇ&öw&W74vFT—77VW2ƒr’æÆVæwFƒãÒF—FÆS×·&öw&W74vFT—77VW2ƒr•³×Òöä6Æ–6³×²‚“Óçfö–B6fTÆÄWG7”FWF–Ç2‚—Óç·6f–ætWG7”FWF–Ç3ò%6f–ærWG7’FWF–Ç>(
+b#¢$æW‡B7FW'ÒÇ7ãî(i#Â÷7ããÂö'WGFöãç²6f–ætWG7”FWF–Ç2bg&öw&W74vFT—77VW2ƒr•³ÒbcÇ6Æ74æÖSÒ&WG7’×&W&–ærÖæ÷FRvFR×&V6öâ"&öÆSÒ'7FGW2#ç·&öw&W74vFT—77VW2ƒr•³×ÓÂ÷çÓÂóçÐ¢Âóâ—Ð¢·v÷&¶fÆ÷u7FWÓÓÒ&f–æ—6‚"bff–æ—6…†6SÓÓÒ&f–æÂ"bg7FW&öGV7D6&G2†'VæFÆT6&E7FGW2‚'V&Æ—6‚"’ÆçVÆÂÆfÇ6RÃÃç²ò¢CC“rÒV&Æ—6‚6÷fW&VBöæR&öGV7BVçF–ÂCC“RÂ6òF†W6R6&G2¶WBF†V— ¢÷vâ÷Vâ6öçG&öÇ2âæ÷röæR&W72V&Æ—6†W2F†Rv†öÆR'VæFÆRÂæB6&@¢öffW&–ærFòvòæB÷Vâv–ÆFâFVR6W&FVÇ’6öçG&F–7G2F†R'WGFöà¢VæFW&æVF‚—BÒF†R6ÖRF†–ærF†Bv2w&öæröâ7FW"âF†R7F–öâ—2¢fö÷FW"†W&RFöòÂ6òF†R6&G2&W÷'BF†V—"&öGV7G2æBF†R6öçG&öÇ2vòâ¢÷×²ò¢C3ƒrÒF†—2&ææW"fÆöFVB&÷fRF†R&öGV7B6&Bâ—B&W÷'G2öâF†—0¢&öGV7Bw2Æ—7F–æw2Â6ò—B&VÆöæw2–ç6–FRF†R6&Bv—F‚F†VÒâ¢÷Ð¢²ò¢CSC‚Ò$WfW'’Æ—7F–ær†2BÆV7BöæR†÷Fò"v2ÖV7W&VBg&öÒF†RG&gG0¢öbF†R&öGV7BF†B†Vç2Fò&R÷VâÂæB6–B&WfW'’"âöâ'VæFÆP¢F†B—26Æ–Ò&÷WB&öGV7G2—BæWfW"Æöö¶VBBâ—B6—2v†÷6P¢Æ—7F–æw2—B6†V6¶VBâ¢÷Ð¢²ò¢Cc#R+rw&VVâ$Æ—7F–ær†÷F÷26ö×ÆWFR"&ææW"6BF—&V7FÇ’VæFW ¢F†R&öGV7B6&BÂöæR&÷r&VÆ÷rF†B6ÖR6&Bw2÷vâ$Æ—7F–æp¢†÷F÷2+rb†÷F÷2)É2"â—B&W7FFVBF–6²F†Bv2Ç&VG’öà¢67&VVâÂæBW6†VBF†RV&Æ—6‚æVÂgW'F†W"F÷vâf÷"—BâF†R6&@¢&W÷'G2†÷Fò&VF–æW73²æ÷F†–ærVÇ6RæVVG2FòâF†R&ææW"7G–ÆP¢—27F–ÆÂW6VB'’7FW"Â6òöæÇ’F†—2–ç7Fæ6RvöW2â¢÷Ð¢Æ'F–6ÆR6Æ74æÖSÒ'7FWÖ6&Bf–æÂ×&Wf–Wr7F—fR×æVÂ#ãÆF—b6Æ74æÖSÒ'7FWÖ6öçFVçB#ç¶&F6…&V6V—CóÄ÷WF6öÖU&V6V—BvöÄÆ–æS×¶Æ—7F–ætvöÃöF†B—2G¶vöÄFöæWÒöb–÷W"G¶Æ—7F–ætvöÂçF&vWGÒÆ—7F–æw2F†—2G¶Æ—7F–ætvöÂçW&–öGÒæ§VæFVf–æVGÒ&V6V—C×¶&F6…&V6V—GÒ&öGV7DæÖS×·FV×ÆFTFWF–Ç3òæ&ÇVW&–çEF—FÆWÇÂ"'Ò6†—–æu&öf–ÆS×¶WG7•6†—–æu&öf–ÆW2æf–æB‡&öf–ÆSÓç&öf–ÆRæ–CÓÓÖWG7•6†—–æu&öf–ÆT–B“òçF—FÆWÇÂ"'Ò–ÖvT6÷VçC×·&–çF–g”–ÖvT–æF–6W2æÆVæwF‡Ò6—¦TwV–FTæÖS×·6—¦TwV–FTæÖWÒFt6÷VçC×¶f–ÆW2ç&VGV6R‚‡7VÒÆf–ÆR“Óç7VÒ¶f–ÆRçFw2æÆVæwF‚Ã—ÒÖö6·W6÷VçC×´ö&¦V7BçfÇVW2‡&W&VDÖö6·W6÷VçG2’ç&VGV6R‚‡7VÒÆ6÷VçB“Óç7VÒ¶6÷VçBÃ—Òf&–çD6÷VçC×·&–6VEf&–çG2æÆVæwF‚¦f–ÆW2æÆVæwF‡ÒÖ–çWFW56fVC×´ÖF‚æÖ‚ƒ"ÄÖF‚ç&÷VæB†f–ÆW2æÆVæwF‚£ã’—ÒæW‡D'VæFÆU&öGV7C×¶'VæFÆU&V6—W5¶'VæFÆT–æFW‚³ÓòææÖWÒ'VæFÆT6ö×ÆWFS×´&ööÆVâ†7F—fT'VæFÆRbf'VæFÆT–æFWƒÓÓÖ'VæFÆU&V6—W2æÆVæwF‚Ó—ÒöäæW‡D'VæFÆU&öGV7C×²‚“Óçfö–B6öçF–çVT'VæFÆR‚—ÒöäæWt&F6ƒ×²‚“Óç¶6ÆV$7W'&VçD&F6‚‡G'VR“¶võFõ7FW‚'6WGW"—×Òóã£ÃãÆF—b6Æ74æÖSÒ'7FWÖ†VF–ær#ãÆF—cãÇ6Æ74æÖSÒ&Ö–æ’ÖÆ&VÂ#äd”äÂ$Ud”UsÂ÷ç²ò¢Ccc+rF†—26–B'&VG’f÷"—G2f–æÂ6†V6²"÷fW"¢F—6&ÆVBV&Æ—6‚'WGFöâæB&öGV7Bv—F‚æòF—FÆW2BÆÂà¢F†R†VF–ær†2Fòw&VRv—F‚F†RvFRF—&V7FÇ’&VæVF‚—Bâ¢÷Ð¢Æƒ#ç·V&Æ—6„&Æö6¶W'2‚’æÆVæwFƒò$f–æ—6‚F†W6R—FV×2&Vf÷&RV&Æ—6†–ær#¢%–÷W"&F6‚—2&VG’f÷"—G2f–æÂ6†V6²'ÓÂöƒ#ãÂöF—cãÇ7â6Æ74æÖSÒ&FöæRÖÖ&²#î)É2¶G&gG2æf–ÇFW"†G&gCÓæG&gBç7FGW3ÓÓÒ$7&VFVB"’æÆVæwF‡Ò¶G&gG2æf–ÇFW"†G&gCÓæG&gBç7FGW3ÓÓÒ$7&VFVB"’æÆVæwFƒÓÓÓò&G&gB#¢&G&gG2'×¶7F—fT'VæFÆRbf'VæFÆU&V6—W2æÆVæwFƒãööâG¶7F—fU&V6—SòææÖWÇÂ'F†—2&öGV7B'Ö¢"'ÓÂ÷7ããÂöF—cç²ò¢CSCbÒF†RöÆBÆVBÖ–âö–çFVBB6†V6¶Æ—7BF†B&WVFV@¢v†BF†R&öGV7B6&G2&÷fRÇ&VG’&W÷'BÂÆ–æRf÷"Æ–æRâF†R6&G0¢÷vâ—Bâv†BF†—27FW7F–ÆÂ†2Fò6’—2v†BV&Æ—6†–ærv–ÆÂFòâ¢÷ÓÇ6Æ74æÖSÒ'7FWÖ6÷’#ç¶7F—fT'VæFÆRbf'VæFÆU&V6—W2æÆVæwFƒãöWfW'’&öGV7B–âF†—2&F6‚V&Æ—6†W2–âGW&ââæ÷F†–ærvöW2Æ—fRVçF–Â–÷RW6RF†Rf–æÂ'WGFöâæ¢$æ÷F†–ær—2V&Æ—6†VBVçF–Â–÷RW6RF†Rf–æÂ'WGFöââ'ÓÂ÷ç²ò¢CSCbÒ†W"v÷&G2ÂÆöö¶–ærB—C¢'F†—2v†öÆR6V7F–öâFöW6âwBæVVBFò&Röà¢F†Rf–æÂ7FW&V6W6R&÷fR—BÂ–÷RÆ—7BWfW'’&öGV7BæBWfW'—F†–æp¢F†Bw2–âWfW'’&öGV7Bâ"—B&WVFVBF†R6&G2Æ–æRf÷"Æ–æRÒ&–6W2À¢FW67&—F–öâÂWG7’FWF–Ç2Â†÷F÷2ÒæBF†RGvòF†–æw2—BÆöæP¢&W÷'FVBÖ÷fVB–çFòF†R&÷w2F†B÷vâF†VÒâ¢÷Ð§²ò¢CSS’Ò†W"VW7F–öã¢'v‡’–bF†—2—2†ööF–RB6†—'BæB7&WræV6²&F6€¢v÷VÆB—B&R6†÷v–ærÖRGvò†ööF–W2öæÇ“ò"&V6W6R—Bv2†æFVBF†P¢÷Vâ&F6‚w2G&gG2Âv†–ÆRF†R'WGFöâV&Æ—6†VBÆÂF‡&VR&öGV7G2à¢—BvWG2WfW'’&öGV7Bw2Æ—7F–æw2æ÷rÂ6òF†R6†V6¶&÷†W2v÷fW&âF†P¢6—‚Æ—7F–æw2F†R&W72v–ÆÂ7GVÆÇ’7&VFRâ¢÷Ð¢Äf–æÄÆ—7F–æu&Wf–WrG&gG3×¶'VæFÆUV&Æ—6„G&gG2‚—Òf–ÆW3×¶'VæFÆUV&Æ—6„f–ÆW2‚—Ò6VÆV7F–öç3×¶'VæFÆUV&Æ—6…6VÆV7F–öç2‚—ÒFVfVÇD–æF–6W3×·&–çF–g”–ÖvT–æF–6W7Ò&W&VDÖö6·W6÷VçG3×¶'VæFÆUV&Æ—6„Öö6·W6÷VçG2‚—Ò&F6…6—¦TwV–FS×·6—¦TwV–FTæÖWÒöå&WG'“×¶6Æ–VçD–CÓç¶6öç7BFW6–vãÖf–ÆW2æf–æB†f–ÆSÓæf–ÆRæ–CÓÓÖ6Æ–VçD–B“¶–b†FW6–vâ—fö–B'VäG&gG2…¶FW6–våÒÇG'VR—×ÒöäVF—C×·6WDf–æ—6…†6WÒóç²ò¢CSC‚Ò&VB26öÖVöæR&÷WBFò7VæBÖöæW’ÂF†—26–BGvòVçG'VRF†–æw2à¢$öæÇ’F†RÆ—7F–æw26VÆV7FVB&÷fR"ÒF†R6VÆV7F–öâ6÷fW'2F†R&öGV7@¢F†B—2÷VâÂæBöâ'VæFÆRF†R'WGFöâV&Æ—6†W2WfW'’&öGV7BÂ6ð¢F†R6VçFVæ6R&öÖ—6VB6ÖÆÆW"&W72F†âF†RöæR—B6BVæFW"âæ@¢—BæÖVBF†RfVRW"Æ—7F–ærv—F†÷WBWfW"×VÇF—Ç––ær—BÂöâF†RöæP¢67&VVâv†W&RF†RF÷FÂ—2F†RF†–ærv÷'F‚¶æ÷v–ærâ¢÷Ð¢ÆF—b6Æ74æÖSÒ'V&Æ—6‚ÖÆ—fR×v&æ–ær#ç²‚‚“Óç°¢ò¢CScÒF†R6÷VçBföÆÆ÷w2†W"F–6·2æ÷rF†BF†W’v÷fW&âWfW'’Æ—7F–ærâ¢ð¢6öç7BF÷FÃ×V&Æ—6…F&vWG2‚’æÆVæwF‡ÇÆ'VæFÆTÆ—7F–æw5FõV&Æ—6‚‚“°¢ò¢Cc3bÒ&ÆÂ2&öGV7G2–âF†—2&F6‚"6÷VçFVBF†R'VæFÆRÂæ÷BF†P¢F–6·2Â6ò—B6BF—&V7FÇ’&÷fR#"Æ—7F–æw2"æB6öçG&F–7FVB—Bà¢Cc3Bf—†VBF†R6öæf—&ÖF–öã²F†W6RGvòÆ&VÇ2vW&R7F–ÆÂ6÷VçF–æp¢F†R'VæFÆRâÆ&VÇ2öæÇ’ÒF†R–ÆöB—2Væ6†ævVBâ¢ð¢6öç7B6†÷6Vå&öGV7G3ÖæWr6WB‡V&Æ—6…F&vWG2‚’æÖ†—FVÓÓæ—FVÒç&öGV7DæÖR’æf–ÇFW"„&ööÆVâ’’ç6—¦WÇÆ'VæFÆU&V6—W2æÆVæwFƒ°¢6öç7BÖç“Ô&ööÆVâ†7F—fT'VæFÆRbf'VæFÆU&V6—W2æÆVæwFƒã“°¢&WGW&âÃãÆ#ç¶Öç¢öV&Æ—6†–ær6VæG2G¶6†÷6Vå&öGV7G7Ò6VÆV7FVBG¶6†÷6Vå&öGV7G3ÓÓÓò'&öGV7B#¢'&öGV7G2'Ò(	BG·F÷FÇÒG·F÷FÃÓÓÓò&Æ—7F–ær#¢&Æ—7F–æw2'Ò(	BÆ—fRöâWG7’æ ¢¦öæÇ’F†RÆ—7F–æw26VÆV7FVB&÷fRv–ÆÂ&RV&Æ—6†VBÆ—fRöâWG7’æÓÂö#à¢Ç7ãç¶Öç“ò%VçF–6²ç’Æ—7F–ær&÷fRFòÆVfR—B÷WBâWfW'—F†–ærF–6¶VBV&Æ—6†W2–âöæR&W72â#¢$ç—F†–ær7F–ÆÂæVVF–ærÆöö²—2Æ—7FVB&÷fRâ'ÓÂ÷7ãà¢Ç6ÖÆÃäWG7’6†&vW2—G27FæF&BCã#U4BÆ—7F–ærfVRf÷"V6‚Æ—7F–ær7&VFVG·F÷FÃöÂ6òF†—2&W726÷7G2&÷WBBG²‡F÷FÂ£ã"’çFôf—†VBƒ"—ÒU4F¢"'ÒâF†—2fVR—26†&vVB'’WG7’æB—26W&FRg&öÒ–÷W"vöÆF–R7V'67&—F–öâãÂ÷6ÖÆÃãÂóã°¢Ò’‚—ÓÂöF—cãÆ'WGFöâ6Æ74æÖSÒ'V&Æ—6‚ÖÆÂÖ'WGFöâ"&–Ö'W7“×·V&Æ—6†–æwÒF—6&ÆVC×·V&Æ—6†–æwÇÇV&Æ—6„&Æö6¶W'2‚’æÆVæwFƒãÒF—FÆS×·V&Æ—6„&Æö6¶W'2‚•³Óö&Vf÷&RV&Æ—6†–æs¢G·V&Æ—6„&Æö6¶W'2‚•³×Ö§VæFVf–æVGÒöä6Æ–6³×¶÷VåV&Æ—6„6öæf—&ÖF–öçÓç²ò¢CC“RÒöæR&W72V&Æ—6†W2F†Rv†öÆR'VæFÆRÂ6òF†R'WGFöâ6—26òæ@¢&W÷'G2v†–6‚&öGV7B—B—2öâ&F†W"F†âæÖ–ærÆ—7F–ær6÷VçBF†@¢öæÇ’6÷fW'2F†R&öGV7B7W'&VçFÇ’÷Vââ¢÷Ð§·V&Æ—6…'VâbbV&Æ—6†–æsò%VWV–ærWfW'’Æ—7F–ær–âF†—2&F6Ž(
+b#§V&Æ—6†–æsò†7F—fT'VæFÆRbf'VæFÆU&V6—W2æÆVæwFƒãò‚‚“Óç°¢ò¢Cc3rÒF†R'W7’Æ&VÂv2F†RÆ7B7W&f6R7F–ÆÂ6÷VçF–ærF†P¢'VæFÆR&F†W"F†âF†R&W72â—B&VB%V&Æ—6†–ærbÆ—7F–æw0¢7&÷722&öGV7G>(
+b"÷fW"&öw&W72Æ–æRF†B6÷'&V7FÇ’6–@¢#öb"Æ—7F–æw2&RÆ—fR"â¢ð¢6öç7B6VæF–æs×V&Æ—6…F&vWG2‚’æÆVæwF‡ÇÆ'VæFÆTÆ—7F–æw5FõV&Æ—6‚‚“°¢6öç7B7&÷73ÖæWr6WB‡V&Æ—6…F&vWG2‚’æÖ‡F&vWCÓçF&vWBç&öGV7DæÖR’æf–ÇFW"„&ööÆVâ’’ç6—¦WÇÆ'VæFÆU&V6—W2æÆVæwFƒ°¢&WGW&âV&Æ—6†–ærG·6VæF–æwÒG·6VæF–æsÓÓÓò&Æ—7F–ær#¢&Æ—7F–æw2'Ò7&÷72G¶7&÷77ÒG¶7&÷73ÓÓÓò'&öGV7B#¢'&öGV7G2'Þ(
+f°¢Ò’‚“¢%V&Æ—6†–æ~(
+b"“¦7F—fT'VæFÆRbf'VæFÆU&V6—W2æÆVæwFƒãò‚‚“Óç°¢ò¢CSCbÒ%V&Æ—6‚ÆÂ2&öGV7G2"6÷VçFVB&öGV7G2v†–ÆRWfW'¢çVÖ&W"&÷fR—B6÷VçFVBF†R÷Vâ&öGV7Bw2Æ—7F–æw2Â6òæ÷F†–æp¢öâF†RvR6–B†÷rÖç’WG7’Æ—7F–æw2v÷VÆB&R7&VFVBÂ÷ ¢v†BF†W’v÷VÆB6÷7Bâ—B6—2F†RçVÖ&W"æ÷râ¢ð¢–b†'VæFÆU&öGV7G57F–ÆÅ&VF–ær‚’æÆVæwF‚—&WGW&â$6†V6¶–ærF†R÷F†W"&öGV7G>(
+b#°¢6öç7Bv—F–æsÖ'VæFÆU&öGV7G4æ÷E7F'FVB‚“°¢ò¢Cc#‚Ò$v–ÆFâ†ööF–R7F–ÆÂ†2æòÆ—7F–æw2"v2v†BF†—26–@¢&÷WB&öGV7Bv†÷6R&F6‚†B&VVâFVÆWFVBâ—BÖ’vVÆÂ†fP¢†BÆ—7F–æw3²F†R&F6‚—2vöæRâGvòF–ffW&VçB&ö&ÆV×2Âæ@¢öæÇ’öæRöbF†VÒ—2f—†VB'’vö–ær&6²æBFF–ærFW6–vç2â¢ð¢6öç7BÖ—76–æt&F6ƒ×v—F–æræf–ÇFW"‡&V6—SÓæ'VæFÆT&F6…7VÖÖ'•·&V6—Ræ–EÓòçVç&VF&ÆR“°¢–b†Ö—76–æt&F6‚æÆVæwF‚—&WGW&âÖ—76–æt&F6‚æÆVæwFƒÓÓÓöG¶Ö—76–æt&F6…³ÒææÖWÒw2&F6‚v2æ÷Bf÷VæF¦G¶Ö—76–æt&F6‚æÆVæwF‡Ò&öGV7G2r&F6†W2vW&Ræ÷Bf÷VæF°¢–b‡v—F–æræÆVæwF‚—&WGW&âG·v—F–æræÆVæwFƒÓÓÓ÷v—F–æu³ÒææÖS¦G·v—F–æræÆVæwF‡Ò&öGV7G6Ò7F–ÆÂG·v—F–æræÆVæwFƒÓÓÓò&†2#¢&†fR'ÒæòÆ—7F–æw6°¢6öç7BF÷FÃ×V&Æ—6…F&vWG2‚’æÆVæwF‡ÇÆ'VæFÆTÆ—7F–æw5FõV&Æ—6‚‚“°¢ò¢Cc3bÒF†RçVÖ&W"öbÆ—7F–æw2föÆÆ÷vVB†W"F–6·3²F†RçVÖ&W"ö`¢&öGV7G2&W6–FR—BF–Bæ÷BÂ6òF†R'WGFöâ&VB#"Æ—7F–æw2âââ0¢&öGV7G2"â&÷F‚6öÖRg&öÒF†R6ÖR'&’æ÷râ¢ð¢6öç7B&öGV7G3ÖæWr6WB‡V&Æ—6…F&vWG2‚’æÖ†—FVÓÓæ—FVÒç&öGV7DæÖR’æf–ÇFW"„&ööÆVâ’’ç6—¦WÇÆ'VæFÆU&V6—W2æÆVæwFƒ°¢&WGW&âV&Æ—6‚G·F÷FÇÒG·F÷FÃÓÓÓò&Æ—7F–ær#¢&Æ—7F–æw2'ÒÆ—fRöâWG7’+rG·&öGV7G7ÒG·&öGV7G3ÓÓÓò'&öGV7B#¢'&öGV7G2'Ö°¢Ò’‚“¦V&Æ—6‚G·6VÆV7FVEV&Æ—6„G&gG2‚’æÆVæwF‡Ò6VÆV7FVBG·6VÆV7FVEV&Æ—6„G&gG2‚’æÆVæwFƒÓÓÓò&Æ—7F–ær#¢&Æ—7F–æw2'ÒÆ—fRöâWG7–ÓÂö'WGFöããÆ'WGFöâ6Æ74æÖSÒ&¶VWÖG&gG2Ö'WGFöâ"G—SÒ&'WGFöâ"F—6&ÆVC×·V&Æ—6†–æwÒöä6Æ–6³×²‚“Óç·6WD&F6„F—7Æ”æÖR†7W'&VçCÓæ7W'&VçGÇÇ7VvvW7FVD&F6„æÖR‚’“·6WDG&gE6fT÷Vâ‡G'VR—×Óä¶VW2&–çF–g’G&gG2f÷"æ÷sÂö'WGFöãç²V&Æ—6†–ærbcÇ6ÖÆÂ6Æ74æÖSÒ&¶VWÖG&gG2Öæ÷FR#äæ÷F†–ærv–ÆÂV&Æ—6‚FòWG7’â&WGW&âFòF†—2W†7B&F6‚g&öÒ&F6‚†—7F÷'’ãÂ÷6ÖÆÃç×²ò¢CCsBÒF†—2FW67&–&W2F†R¶VW2G&gG2'WGFöâÂ'WB6BF†W&Rv†–ÆRF†P¢'WGFöâ&÷fR—B6–BV&Æ—6†–ærÂ6òF†RvR6–B&÷F‚F†B—Bv0¢V&Æ—6†–æræBF†Bæ÷F†–ærv÷VÆBV&Æ—6‚â—B&VÆöæw2Fò6†ö–6RF†B—0¢æòÆöævW"f–Æ&ÆRöæ6RV&Æ—6†–ær†27F'FVBâ¢÷×·V&Æ—6„ÖW76vRbcÇ6Æ74æÖSÒ'V&Æ—6‚ÖÖW76vR"&öÆSÒ'7FGW2#ç·V&Æ—6„ÖW76vWÓÂ÷ç×·V&Æ—6„f–ÇW&W2æÆVæwFƒãbcÇ6V7F–öâ6Æ74æÖSÒ'V&Æ—6‚Öf–ÇW&R×æVÂ"&öÆSÒ&ÆW'B#ãÇ6Æ74æÖSÒ&Ö–æ’ÖÆ&VÂ#ääõD„”ärt2T$Ä•4„TCÂ÷ãÆƒ3ç·V&Æ—6„f–ÇW&W2æÆVæwFƒÓÓÓò#Æ—7F–ær6÷VÆBæ÷B&RV&Æ—6†VB#¦G·V&Æ—6„f–ÇW&W2æÆVæwF‡ÒÆ—7F–æw26÷VÆBæ÷B&RV&Æ—6†VFÓÂöƒ3ãÇ6Æ74æÖSÒ'V&Æ—6‚Öf–ÇW&RÖÆVFR#äWG7’F–Bæ÷B7&VFR·V&Æ—6„f–ÇW&W2æÆVæwFƒÓÓÓò'F†—2Æ—7F–ær#¢'F†W6RÆ—7F–æw2'ÒÂ6ò–÷R†fRæ÷B&VVâ6†&vVBÆ—7F–ærfVRf÷"·V&Æ—6„f–ÇW&W2æÆVæwFƒÓÓÓò&—B#¢'F†VÒ'Òâ†W&R—2W†7FÇ’v†BWG7’6–C£Â÷ãÇVÂ6Æ74æÖSÒ'V&Æ—6‚Öf–ÇW&RÖÆ—7B#ç·V&Æ—6„f–ÇW&W2æÖ†f–ÇW&SÓç¶6öç7BG&gCÖG&gG2æf–æB†—FVÓÓæ—FVÒæ–CÓÓÖf–ÇW&Rç&öGV7D–B“·&WGW&âÆÆ’¶W“×¶f–ÇW&Rç&öGV7D–GÓãÇ7G&öæsç¶G&gCòçF—FÆSòç6Æ–6RƒÃc—ÇÆG&gCòæFW6–väæÖWÇÂ$Æ—7F–ær'ÓÂ÷7G&öæsãÇ7ãç¶f–ÇW&RæW'&÷'ÓÂ÷7ããÂöÆ“çÒ—ÓÂ÷VÃãÇ6Æ74æÖSÒ'V&Æ—6‚Öf–ÇW&RÖÆVFR#ävöÆF–R†2VÖ–ÆVBF†—2Fò–÷RæB&V6÷&FVB—Bâ–÷R6â&W72V&Æ—6‚v–âöæ6R—B—2f—†VBãÂ÷ãÂ÷6V7F–öãçÓÂóçÓÂöF—cãÂö'F–6ÆSãÂóâ—Ð¢ÂöF—cà ¢²ò¢C##+rG&gB7&VF–öâÖ÷fW2öçFòF†R–ÖvW2vRâWfW'’†÷Fò–âF†—2—0¢GF6†VBFò&–çF–g’G&gB(	B–çFVw&FVDÖö6·W2F¶W2&öGV7D–C×¶G&gBæ–GÒæ@¢&–çF–g”–ÖvU–6¶W"&VG2F†RG&gBw2÷vâ–ÖvW2(	B6ò†÷F÷26ææ÷B&R6†÷6Vâ&Vf÷&P¢G&gG2W†—7Bâ—Bv2—G2÷vâ67&VVâf÷"'WGFöââ—B—2æ÷rF†R7F–öâöâF†P¢–ÖvW2vRF†BVæÆö6·2F†R†÷Fò6V7F–öâ&VÆ÷r—BÂv†–6‚¶VW2WÆöBæBÖö6·W0¢öâöæR67&VVâ2–çFVæFVBâ—B7F—2âW‡Æ–6—B'WGFöâ&F†W"F†â6öÖWF†–æp¢6öçF–çVRFöW26–ÆVçFÇ’Â&V6W6R7&VF–ærG&gG27VæG2Æ—7F–ærV÷Fâ¢÷Ð¢²ò¢C3s‚ÒF†RG&gG2æVÂ—2F†RW"×&öGV7B†ÆböbF†R–ÖvW27FW¢F†P¢FW6–vç2&R6†&VB7&÷72F†R'VæFÆRÂF†R&–çF–g’G&gG2&Ræ÷Bâ—@¢7F—2Ö÷VçFVB7&÷727FW2Â6òF†R&–ÂF¶W2F†R†–FFVâ7FFR&F†W ¢F†âF†RG&VR6†æv–ær6†RæB&VÖ÷VçF–æræVÂÖ–B×'Vââ¢÷Ð¢·7FW&öGV7D6&G2†'VæFÆT6&E7FGW2‚&–ÖvW2"’ÆçVÆÂÂ‡v÷&¶fÆ÷u7FWÓÓÒ&FW6–vç2"’ÃÆ6–FR6Æ74æÖS×¶ÆVæ6‚×æVÂv÷&¶fÆ÷r×æVÂG·v÷&¶fÆ÷u7FWÓÓÒ&FW6–vç2#ò&7F—fR×æVÂ#¢&†–FFVâ×æVÂ'ÖÓà¢ÆF—b6Æ74æÖS×¶7FWÖçVÖ&W"ÆVæ6‚×7FWÖ–6öâ7&VFRÖG&gG2Ö–6öæÒ&–Ö†–FFVãÒ'G'VR"óà¢ÆF—b6Æ74æÖSÒ&ÆVæ6‚×F÷#à¢Ä–ÖvR7&3Ò"övöÆF–RÖrçær"v–GFƒ×³#Ò†V–v‡C×³#ÒÇCÒ""6Æ74æÖSÒ&vöÆF–RÖr"óà¢²‡'Vææ–æwÇÇv÷&¶fÆ÷u7FWÓÒ'&Wf–Wr"’bcÆƒ#ç·'Vææ–æròG·&ö6W76VGÒöbG·'VåF÷FÇÒ6ö×ÆWFV¢6ö×ÆWFRò$G&gG27&VFVB"¢$7&VFR–÷W"&–çF–g’G&gG2'ÓÂöƒ#çÐ¢Çç·'Vææ–ærò$vöÆF–R—2WÆöF–ærV6‚FW6–vâæB7&VF–ær—G2&–çF–g’G&gBâ"¢v÷&¶fÆ÷u7FWÓÓÒ'&Wf–Wr"ò$vöÆF–R7&VFW2âVçV&Æ—6†VB&–çF–g’G&gBf÷"WfW'’FW6–vâ–âF†—2&F6‚â"¢6ö×ÆWFRòG¶G&gG2æf–ÇFW"‚†G&gB’ÓâG&gBç7FGW2ÓÓÒ$7&VFVB"’æÆVæwF‡ÒöbG¶f–ÆW2æÆVæwF‡ÒG&gG2vW&R7&VFVB–â&–çF–g’æ¢"'ÓÂ÷à¢ÂöF—cà ¢  ¢ÆF—b6Æ74æÖSÒ'7VÖÖ'’ÖÆ—7B#à¢ÆF—cãÇ7ãå&–çF–g“Â÷7ããÆ"6Æ74æÖS×¶6öææV7FVBò'&VG’×FW‡B"¢'v—F–ær×FW‡B'Óç¶6öææV7FVBò$6öææV7FVB"¢%v—F–ær'ÓÂö#ãÂöF—cà¢²†7F—fT'VæFÆRbf'VæFÆU&V6—W2æÆVæwFƒã’bcÆF—cãÇ7ãå6fVB&öGV7CÂ÷7ããÆ#ç¶7F—fU&V6—SòææÖWÇÇFV×ÆFTFWF–Ç3òæ&ÇVW&–çEF—FÆWÇÂ$æ÷B6VÆV7FVB'ÓÂö#ãÆ'WGFöâöä6Æ–6³×²‚“ÓævõFõ7FW‚'6WGW"—ÓäVF—CÂö'WGFöããÂöF—cçÐ¢²†7F—fT'VæFÆRbf'VæFÆU&V6—W2æÆVæwFƒã’bcÆF—cãÇ7ãå&öGV7CÂ÷7ããÆ#ç·FV×ÆFTFWF–Ç3òæ&ÇVW&–çEF—FÆWÇÂ$æ÷B6VÆV7FVB'ÓÂö#ãÂöF—cçÐ¢ÆF—cãÇ7ãäFW6–vç3Â÷7ããÆ#ç¶f–ÆW2æÆVæwF‚òG¶f–ÆW2æÆVæwF‡Òò#¢$æ÷BFFVB'ÓÂö#ãÂöF—cà¢ ¢ÂöF—cà ¢·'Vææ–ærbb€¢ÆF—b6Æ74æÖSÒ&&F6‚×&öw&W72"&öÆSÒ'7FGW2"&–ÖÆ—fSÒ'öÆ—FR#à¢ÆF—b6Æ74æÖSÒ'&öw&W72×&–ær"&–Ö†–FFVãÒ'G'VR#ãÇ7ãç·&ö6W76VGÒ÷·'VåF÷FÇÓÂ÷7ããÂöF—cà¢ÆF—b6Æ74æÖSÒ'&öw&W72Ö6÷’#ãÆ#ä7&VF–ær–÷W"&–çF–g’G&gG3Âö#ãÇ7ãç·&W&F–öäÖW76vRÇÂ$¶VWF†—2vR÷Vâv†–ÆRvöÆF–Rf–æ—6†W2F†R&F6‚â'ÓÂ÷7ããÂöF—cà¢ÆF—b6Æ74æÖSÒ'&öw&W72×G&6²#ãÇ7â7G–ÆS×·²v–GFƒ¢G·'VåF÷FÂò‡&ö6W76VBò'VåF÷FÂ’¢¢ÒV×ÒóãÂöF—cà¢ÂöF—cà¢—Ð ¢²6ö×ÆWFRò€¢Æ'WGFöâ6Æ74æÖSÒ&ÆVæ6‚Ö'WGFöâ"&–Ö'W7“×·'Vææ–æwÇÇ&W&–ætWG7—ÇÄ&ööÆVâ†'VæFÆU'Vâ—ÒF—6&ÆVC×²&VG’ÇÂ&–6–æt&÷fVBÇÂ'Vææ–æwÇÇ&W&–ætWG7—ÇÄ&ööÆVâ†'VæFÆU'Vâ—Òöä6Æ–6³×¶7&VFTG&gG7Óà¢²ò¢CCƒRÒöæR&W726÷fW'2F†Rv†öÆR'VæFÆRÂ6òF†R'WGFöâ6—26ð¢&F†W"F†âæÖ–ær6–ævÆR&öGV7BÂæB&W÷'G2v†–6‚&öGV7@¢vöÆF–R—2öâv†–ÆR—Bv÷&·2—G2v’F‡&÷Vv‚F†VÒâ¢÷Ð¢Ç7â6Æ74æÖSÒ&'WGFöâÖvÆ–çB"óç¶'VæFÆU'Vâbb'Vææ–æsöÖ÷f–ærFòG¶'VæFÆU&V6—W5¶'VæFÆT–æFW‚³ÓòææÖWÇÂ'F†RæW‡B&öGV7B'Þ(
+f§&W&–ætWG7“ò$6ö×ÆWF–ærWG7’FWF–Ç>(
+b#§'Vææ–ærò†7F—fT'VæFÆRbf'VæFÆU&V6—W2æÆVæwFƒãöG¶7F—fU&V6—SòææÖWÇÂ%&öGV7B'ÒG¶'VæFÆT–æFW‚³ÒöbG¶'VæFÆU&V6—W2æÆVæwF‡Ó¢G·&ö6W76VGÒöbG·'VåF÷FÇÒ6ö×ÆWF^(
+f¦G·&ö6W76VGÒöbG·'VåF÷FÇÒ6ö×ÆWF^(
+f’¢&VG’òÖ—76–æu&WV—&VÖVçBò¢C##’+rF†R'WGFöâ—2Ç6òF—6&ÆVBv†Vâ&–6W2&Ræ÷B&÷fVBÂæBF†B'&æ6‚†BæòÆ&VÂ(	B—B&VB$6öçF–çVRFò7&VFRG&gG2"Âw&W–VB÷WBÂv—F‚æ÷F†–ærç—v†W&RöâF†RvR6––ærv‡’âWfW'’6öæF—F–öâF†BF—6&ÆW2F†—2'WGFöâæ÷ræÖW2—G6VÆbâ¢ò¢&–6–æt&÷fVBò$&÷fR&–6W2öâF†R&öGV7BvRFò6öçF–çVR"¢7F—fT'VæFÆRbf'VæFÆU&V6—W2æÆVæwFƒãö7&VFR&–çF–g’G&gG2f÷"ÆÂG¶'VæFÆU&V6—W2æÆVæwF‡Ò&öGV7G6¢$6öçF–çVRFò7&VFRG&gG2'ÓÇ7ãî(i#Â÷7ãà¢Âö'WGFöãà¢’¢€¢ÆF—b6Æ74æÖSÒ&&F6‚Ö7F–öç2#à¢¶G&gG2ç6öÖR‚†G&gB’ÓâG&gBç7FGW2ÓÒ$7&VFVB"’bbÆ'WGFöâ6Æ74æÖSÒ'&WG'’Ö'WGFöâ"öä6Æ–6³×·&WG'”f–ÆVGÓå&WG'’¶G&gG2æf–ÇFW"‚†G&gB’ÓâG&gBç7FGW2ÓÒ$7&VFVB"’æÆVæwF‡ÒÆ—7F–æw2F†BæVVBæ÷F†W"G'“Âö'WGFöãçÐ¢Æ'WGFöâ6Æ74æÖSÒ'v÷&¶fÆ÷rÖæW‡B"öä6Æ–6³×²‚“ÓævõFõ7FW‚&f–æ—6‚"ÆfÇ6RÇG'VR—Óä&6²Fòf–æ—6†–ær–÷W"Æ—7F–æw2Ç7ãî(i#Â÷7ããÂö'WGFöãà¢ÂöF—cà¢—Ð¢Ç6Æ74æÖSÒ&ÆVæ6‚Öæ÷FR#åF†—27FW7&VFW2VçV&Æ—6†VB&–çF–g’G&gG2âF†Rf–æÂvöÆF–R7FWV&Æ—6†W2F†VÒÆ—fRFòWG7’öæÇ’gFW"6V6öæB6öæf—&ÖF–öâãÂ÷à¢Âö6–FSâÆfÇ6R—Ð§²ò¢CC“bÒ†VÆBF"†2Fò6’6òv†W&R6†R—2v÷&¶–ærÂæ÷B6–ÆVçFÇ’7F÷ ¢6f–ærâ¢÷Ð¢¶&F6„†VÆD'”æ÷F†W%F"bcÆF—b6Æ74æÖSÒ&&F6‚×F"Ö6öæfÆ–7B"&öÆSÒ'7FGW2#ãÆ#åF†—2&F6‚—2÷Vâ–âæ÷F†W"vöÆF–RF"ãÂö#ãÇ7ãävöÆF–R†2W6VB6f–ær†W&R6òF†BF.(	—2v÷&²—2æ÷B÷fW'w&—GFVââ6öçF–çVR–âF†R÷F†W"F"Â÷"F¶R÷fW"†W&RæB—Bv–ÆÂW6RF†W&R–ç7FVBãÂ÷7ããÆ'WGFöâG—SÒ&'WGFöâ"öä6Æ–6³×·F¶T÷fW$&F6„†W&WÓåF¶R÷fW"VF—F–ær†W&SÂö'WGFöããÂöF—cçÐ¢ÆF—b6Æ74æÖSÒ'v÷&¶fÆ÷rÖfö÷FW"Ö7F–öç2#ç·&öw&W74–æFWƒãbcÆ'WGFöâ6Æ74æÖSÒ'v÷&¶fÆ÷rÖ&6²"G—SÒ&'WGFöâ"öä6Æ–6³×¶vô&6´öæU7FWÓãÇ7â&–Ö†–FFVãÒ'G'VR#î(iÂ÷7ãâ&6³Âö'WGFöãçÓÇ7â6Æ74æÖSÒ&WF÷6fRÖæ÷FR#ãÆ’&–Ö†–FFVãÒ'G'VR#î)É3Âö“â6fVBWFöÖF–6ÆÇ“Â÷7ãç²ò¢C3ƒbÒ6f–ærG&gBv2öæÇ’&V6†&ÆRg&öÒF†RV&Æ—6‚7FWÂ6ð¢7F÷–ær†Ægv’ÖVçBG'W7F–ærF†RWF÷6fRæB&VÖVÖ&W&–ærF†P¢&F6‚ÆFW"âæÖR—BæB&²—Bg&öÒv†W&WfW"–÷R&Râ¢÷×·v÷&¶fÆ÷u7FWÓÒ&6öææV7B"bb†f–ÆW2æÆVæwFƒãÇÆG&gG2æÆVæwFƒãÇÄ&ööÆVâ‡FV×ÆFTFWF–Ç2’’bcÆ'WGFöâ6Æ74æÖSÒ'6fRÖG&gBÖÆ–æ²"G—SÒ&'WGFöâ"öä6Æ–6³×²‚“Óç·6WD&F6„F—7Æ”æÖR†7W'&VçCÓæ7W'&VçGÇÇ7VvvW7FVD&F6„æÖR‚’“·6WDG&gE6fT÷Vâ‡G'VR—×Óå6fR2G&gCÂö'WGFöãçÓÂöF—cà¢ÂöF—cà¢Â÷6V7F–öãçÐ  ¢²ò¢CSCÒF†R6—¦RwV–FRÆ–W2FòWfW'’Æ—7F–ær–âF†R&F6‚æBF†P¢'&Wf–WrÆÂÆ—7F–æw2–â&–çF–g’"Æ–æ²÷Vç2ÆÂöbF†VÒÂ6òæV—F†W ¢&VÆöæw2–ç6–FRöæR&öGV7Bw26&BâF†W’6—B&÷fRF†R6&G2v—F‚F†P¢&W7BöbF†R6†&VB&F6‚v÷&²Âv†W&R6†R6â&V6‚F†R6—¦RwV–FRv†–ÆP¢6†R—2'&æv–ærç’&öGV7Bw2†÷F÷2â&öGV7B6&Bæ÷r†öÆG2öæÇ¢—G2&÷w2æBF†RöæRF6²æVÂ6†R÷VæVBâ¢÷Ð¢¶6ö×ÆWFRbbv÷&¶fÆ÷u7FWÓÓÒ&FW6–vç2"bbÇ6V7F–öâ6Æ74æÖSÒ'÷7BÖG&gB×v÷&·76R#à¢²ò¢CSCÒF†—2†VF–ærFW67&–&VBF†R&Æö6²CS3’&VÖ÷fVC¢'F†RÆ&vR&Wf–Wp¢&VÆ÷r"ö–çFVBB&Wf–WrF†B—2æ÷r–ç6–FRF†R&Wf–Wr&–çF–g’Æ6VÖVç@¢F6²ÂæB&6†ö÷6RÆ—7F–ær–ÖvW2"—2F†R&÷r&VæVF‚—Bâv†B—2ÆVgB†W&R—0¢F†R&F6‚×v–FRv÷&³¢÷VâWfW'’Æ—7F–ær–â&–çF–g’ÂæBF†R6—¦RwV–FRâ¢÷Ð¢ÆF—b6Æ74æÖSÒ'÷7BÖG&gBÖ†VF–ær#ç¶G&gG2æf–ÇFW"†G&gCÓæG&gBç7FGW3ÓÓÒ$7&VFVB"’æÆVæwFƒãbcÆ'WGFöâ6Æ74æÖSÒ&÷VâÖÆÂÖ'WGFöâ"öä6Æ–6³×¶÷VäÆÄG&gG7Óå&Wf–WrÆÂÆ—7F–æw2–â&–çF–g’(isÂö'WGFöãçÓÂöF—cà¢²ò¢CS3bÒF†R6—¦RwV–FRÆ–W2FòWfW'’Æ—7F–ær–âF†R&F6‚ÂæB6†P¢æVVG2—B–â†æBv†–ÆR6†R—2&V÷&FW&–ærV6‚Æ—7F–ærw2–ÖvW2Âæ÷@¢&¶VBVæFW&æVF‚ÆÂöbF†VÒâCS#Ö÷fVB—B÷WBöböæR&öGV7Bw0¢6&BÂv†–6‚v2&–v‡BÂæBÆVgB—BBF†RfW'’&÷GFöÒöbF†R7FWÀ¢v†–6‚v2æ÷Bâ—B6—G2&÷fRF†RæVÇ2—BÆ–W2Fòâ¢÷Ð¢Ç6V7F–öâ6Æ74æÖSÒ&&F6‚×6—¦RÖwV–FR#ãÆF—cãÇ6Æ74æÖSÒ&Ö–æ’ÖÆ&VÂ#äõD”ôäÂ+rÅ’DòD„Rt„ôÄR$D4ƒÂ÷ãÆƒ3äFBöæR6—¦RwV–FRFòWfW'’WG7’Æ—7F–æsÂöƒ3ãÇ7ãä6†ö÷6R—Böæ6RâvöÆF–RGF6†W2—BFòWfW'’Æ—7F–ær–âF†—2&F6‚WFöÖF–6ÆÇ’v†Vâ–÷RV&Æ—6‚ãÂ÷7ããÂöF—cãÆ–çWB&Vc×·6—¦TwV–FU–6¶W'ÒG—SÒ&f–ÆR"66WCÒ&–ÖvR÷ærÆ–ÖvRö§VrÆ–ÖvR÷vV'"†–FFVâöä6†ævS×¶WfVçCÓç¶6öç7Bf–ÆSÖWfVçBçF&vWBæf–ÆW3òå³Ó¶–b†f–ÆR—fö–BÇ•6—¦TwV–FR†f–ÆR—×ÒóãÆF—b6Æ74æÖSÒ'6—¦RÖwV–FRÖ7F–öç2#ãÆ'WGFöâöä6Æ–6³×²‚“Óç6—¦TwV–FU–6¶W"æ7W'&VçCòæ6Æ–6²‚—Óç·6—¦TwV–FTæÖSò%&WÆ6R6—¦RwV–FR#¢$6†ö÷6R6—¦RwV–FR'ÓÂö'WGFöãç·6—¦TwV–FTæÖRbcÆ'WGFöâG—SÒ&'WGFöâ"6Æ74æÖSÒ'6—¦RÖwV–FR×&VÖ÷fR"öä6Æ–6³×²‚“Óçfö–B&VÖ÷fU6—¦TwV–FR‚—Óå&VÖ÷fSÂö'WGFöãçÓÂöF—cç·6—¦TwV–FU7FGW2bcÇ&öÆSÒ'7FGW2#ç·6—¦TwV–FU7FGW7ÓÂ÷çÓÂ÷6V7F–öãà¢ ¢ ¢ ¢¶÷VäÆÄÖW76vRbcÇ6Æ74æÖSÒ&÷VâÖÆÂÖÖW76vR"&öÆSÒ'7FGW2#ç¶÷VäÆÄÖW76vWÓÂ÷çÐ¢²ò¢CS3’ÒF†Rv–çBv÷&·76R—2vöæRâV6‚F6²&÷r÷vç2—G2÷vâæVÂâ¢÷Ð¢Â÷6V7F–öãçÐ§¶6ö×ÆWFRbbv÷&¶fÆ÷u7FWÓÓÒ&FW6–vç2"bb7FW&öGV7D6&G2†'VæFÆT6&E7FGW2‚&–ÖvW2"’À¢ò¢CSrÒF†RÖö6·W2&RW"&öGV7C¢†ööF–R66VæR—2æ÷BFVR66VæRà¢CSrFöö²F†R&öGV7B6&G2öfbF†—27FW&V6W6RF†RFW6–vâWÆöB—0¢6†&VBÂæBFöö²F†RÖö6·W2v—F‚F†VÒÒ6ò6†R÷VæVB7FW"öâ¢F‡&VR×&öGV7B'VæFÆRæB6röæÇ’†ööF–W2Âv—F‚æòv’Fò&V6‚F†P¢÷F†W"GvòâF†RWÆöBæB—G2öæR'WGFöâ7F’6†&VBÂ&÷fS²öæ6RF†P¢G&gG2W†—7BÂV6‚&öGV7BvWG2F†R6ÖR6öÆÆ6–&ÆR6&B—BvWG2öà¢WfW'’÷F†W"7FWÂv—F‚—G2÷vâÖö6·W2–ç6–FR—Bâ¢ð¢çVÆÀ¢ÆfÇ6RÀ¢Ãà¢²ò¢CS#ÒF†R6–ævÆR×&öGV7BfÆ÷r—2F†R7V6–f–6F–öâæB'VæFÆR§W7@¢Æ–W2—BÂ6òV6‚&Æö6²6—G2v†W&R—G2÷vâv÷&G26’—B&VÆöæw2à¢F†—26—¦RwV–FR—2Æ&VÆÆVB&Ç’FòF†Rv†öÆR&F6‚"æBv2–ç6–FP¢öæR&öGV7Bw26&BâF†Rf÷'v&B'WGFöâ&VÆöæw2FòF†R7FWÂæ÷BFð¢v†–6†WfW"&öGV7B†Vç2Fò&R÷VâÂæB6òFöW2F†Ræ÷FR6––ærv‡¢—B—2F—6&ÆVBâ¢÷Ð¢ ¢¶–ÖvU7FWW'&÷"bcÇ6Æ74æÖSÒ&–ÖvR×7FWÖ&Æö6¶W""&öÆSÒ&ÆW'B#ç¶–ÖvU7FWW'&÷'ÓÂ÷çÐ¢Æ'WGFöâ6Æ74æÖSÒ'v÷&¶fÆ÷rÖæW‡B"G—SÒ&'WGFöâ"F—6&ÆVC×¶–ÖvW57FW—77VW2‚’æÆVæwFƒãÒF—FÆS×¶–ÖvW57FW—77VW2‚•³×Òöä6Æ–6³×²‚“Óç¶6öç7BÖ—76–æsÖ7&VFVDÆ—7F–æw4Ö—76–æt–ÖvW2‚“¶–b†Ö—76–æræÆVæwF‚—·6WD–ÖvU7FWW'&÷"†G¶Ö—76–æræÆVæwF‡ÒG¶Ö—76–æræÆVæwFƒÓÓÓò&Æ—7F–æræVVG2#¢&Æ—7F–æw2æVVB'ÒBÆV7BöæR†÷Fòæ“·6WDÖ—76–æu†÷FôG&gD–G2†Ö—76–æræÖ†G&gCÓæG&gBæ6Æ–VçD–B’“·&WGW&ç×6WD–ÖvU7FWW'&÷"‚""“·6WDÖ—76–æu†÷FôG&gD–G2…µÒ“²ò¢CC#rÒöæRæW‡B7FWöâF†—2vRÂæB—B—2F†RöæRF†B6†V6·2WfW'’Æ—7F–ær†2†÷FòâF†R6V6öæB6÷’–âF†R6&BÆ—7B'—76VBF†B6†V6²VçF—&VÇ’âvöW2FòÆ—7F–ærÂæ÷BV&Æ—6‚â¢÷6WDf–æ—6…†6R‚&FWF–Ç2"“·fö–BvõFõ7FW‚&f–æ—6‚"ÆfÇ6RÇG'VR“·v–æF÷rç67&öÆÅFòƒÃ—×ÓäæW‡B7FWÇ7â&–Ö†–FFVãÒ'G'VR#î(i#Â÷7ããÂö'WGFöãà¢¶–ÖvW57FW—77VW2‚•³ÒbcÇ6Æ74æÖSÒ&WG7’×&W&–ærÖæ÷FRvFR×&V6öâ"&öÆSÒ'7FGW2#ç¶–ÖvW57FW—77VW2‚•³×ÓÂ÷çÐ¢Âóà¢—Ð ¢¶6ö×ÆWFRbbv÷&¶fÆ÷u7FWÓÓÒ&FW6–vç2"bbÆF—b6Æ74æÖSÒ'v÷&¶fÆ÷rÖfö÷FW"Ö7F–öç2÷7BÖG&gBÖfö÷FW"#ãÆ'WGFöâ6Æ74æÖSÒ'v÷&¶fÆ÷rÖ&6²"G—SÒ&'WGFöâ"öä6Æ–6³×¶vô&6´öæU7FWÓãÇ7â&–Ö†–FFVãÒ'G'VR#î(iÂ÷7ãâ&6³Âö'WGFöããÇ7â6Æ74æÖSÒ&WF÷6fRÖæ÷FR#ãÆ’&–Ö†–FFVãÒ'G'VR#î)É3Âö“â6fVBWFöÖF–6ÆÇ“Â÷7ããÆ'WGFöâ6Æ74æÖSÒ'6fRÖG&gBÖÆ–æ²"G—SÒ&'WGFöâ"öä6Æ–6³×²‚“Óç·6WD&F6„F—7Æ”æÖR†7W'&VçCÓæ7W'&VçGÇÇ7VvvW7FVD&F6„æÖR‚’“·6WDG&gE6fT÷Vâ‡G'VR—×Óå6fR2G&gCÂö'WGFöããÂöF—cçÐ ¢·&VfÆ–v‡D÷VâbbÆF—b6Æ74æÖSÒ'&VfÆ–v‡BÖ&6¶G&÷"&öÆSÒ'&W6VçFF–öâ"öäÖ÷W6TF÷vã×²†R“Óç¶–b†RçF&vWCÓÓÖRæ7W'&VçEF&vWB—6WE&VfÆ–v‡D÷Vâ†fÇ6R—×ÓãÇ6V7F–öâ6Æ74æÖSÒ'&VfÆ–v‡B"&öÆSÒ&F–Æör"&–ÖÖöFÃÒ'G'VR"&–ÖÆ&VÆÆVF'“Ò'&VfÆ–v‡B×F—FÆR#ãÇ6Æ74æÖSÒ&Ö–æ’ÖÆ&VÂ#ä5$TDR$”åD”e’E$eE3Â÷ç²ò¢CC“"ÒF†R'WGFöâ6—2$7&VFR&–çF–g’G&gG2f÷"ÆÂ2&öGV7G2"æBF†—0¢F–ÆörÂF†RÆ7BF†–ær&Vf÷&R—B'Vç2Â6–B$7&VFR"&öGV7BG&gG3ò"æ@¢æÖVBöæÇ’F†R†ööF–Râ—Bv2FW67&–&–æröæR&öGV7Bv†–ÆR6—‚G&gG2vW&P¢&÷WBFò&RÖFRâF†R6öæf—&ÖF–öâ†2FòFW67&–&RF†R'Vâ—B6öæf—&×2â¢÷Ð£Æƒ"–CÒ'&VfÆ–v‡B×F—FÆR#ç¶7F—fT'VæFÆRbf'VæFÆU&V6—W2æÆVæwFƒãö7&VFRG¶f–ÆW2æÆVæwF‚¦'VæFÆU&V6—W2æÆVæwF‡Ò&öGV7BG&gG27&÷72G¶'VæFÆU&V6—W2æÆVæwF‡Ò&öGV7G3ö¦7&VFRG¶f–ÆW2æÆVæwF‡Ò&öGV7BG¶f–ÆW2æÆVæwFƒÓÓÓò&G&gB#¢&G&gG2'ÓöÓÂöƒ#ãÆF—b6Æ74æÖSÒ'&VfÆ–v‡BÖÆ—7B#ãÆF—cãÇ7ãç¶7F—fT'VæFÆRbf'VæFÆU&V6—W2æÆVæwFƒãò%&–çF–g’&öGV7G2#¢%&–çF–g’&öGV7B'ÓÂ÷7ããÆ#ç¶7F—fT'VæFÆRbf'VæFÆU&V6—W2æÆVæwFƒãö)É2G¶'VæFÆU&V6—W2æÖ‡&V6—SÓç&V6—RææÖR’æ¦ö–â‚"Â"—Ö¦)É2G·FV×ÆFTFWF–Ç3òæ&ÇVW&–çEF—FÆWÇÂ%6VÆV7FVB&öGV7B'ÖÓÂö#ãÂöF—cãÆF—cãÇ7ãäFW6–vâf–ÆW3Â÷7ããÆ#î)É2¶f–ÆW2æÆVæwF‡Ò&VG“Âö#ãÂöF—cãÆF—cãÇ7ãåÆâÆÆ÷væ6SÂ÷7ããÆ#ç·ÆäG&gG5&VÖ–æ–æsÓÓÖçVÆÃò$6†V6¶–ær7W'&VçBW6v^(
+b#¦)É2G·&WVW7FVDÆ—7F–æt6÷VçGÒöbG·ÆäG&gG5&VÖ–æ–æwÒ&VÖ–æ–ærÆ—7F–æw6ÓÂö#ãÂöF—cãÆF—cãÇ7ãåW&ÖæVçBFW67&—F–öãÂ÷7ããÆ#ç¶FW67&—F–öâçG&–Ò‚“ò.)É2–×÷'FVBg&öÒ&–çF–g’#¢$æöæRf÷VæBâ–÷R6âFBöæRÆFW"'ÓÂö#ãÂöF—cãÆF—cãÇ7ãåf&–çB&–6–æsÂ÷7ããÆ"F—FÆS×¶'VæFÆUf&–çD6÷VçG2æFWF–ÇÓî)É2ÆÂ¶'VæFÆUf&–çD6÷VçG2çF÷FÇÒVæ&ÆVBf&–çG2&Wf–WvVBæB&÷fVG¶'VæFÆUf&–çD6÷VçG2çW%&öGV7BæÆVæwFƒãö+rG¶'VæFÆUf&–çD6÷VçG2æFWF–ÇÖ¢"'ÓÂö#ãÂöF—cãÆF—cãÇ7ãåV&Æ—6†–æsÂ÷7ããÆ#åVçV&Æ—6†VB&–çF–g’G&gG2öæÇ“Âö#ãÂöF—cãÂöF—cç·FV×ÆFTFWF–Ç3òæ†4Æ&VÄ'Gv÷&³óÇ6Æ74æÖSÒ'&VfÆ–v‡BÖæ÷FR#ä–ç6–FRÖÆ&VÂ'Gv÷&²—2æ÷B6÷–VBFòæWr&öGV7G2ãÂ÷ã¦çVÆÇÓÇ6Æ74æÖSÒ'&VfÆ–v‡BÖW‡Æ–æW"#ägFW"F†W6RG&gG2W†—7BÂvöÆF–Rv–ÆÂ6†÷rF†V—"&VÂ&Wf–Ww2æB†VÇf–æ—6‚V6‚F—FÆRÂFw2ÂFW67&—F–öâÂWG7’FWF–Ç2ÂæBÖö6·W2ãÂ÷ãÆF—b6Æ74æÖSÒ'&VfÆ–v‡BÖ7F–öç2#ãÆ'WGFöâ6Æ74æÖSÒ'&VfÆ–v‡BÖ6æ6VÂ"öä6Æ–6³×²‚“Óç6WE&VfÆ–v‡D÷Vâ†fÇ6R—Óävò&6³Âö'WGFöããÆ'WGFöâ6Æ74æÖSÒ'&VfÆ–v‡BÖ6öæf—&Ò"F—6&ÆVC×·'Vææ–æwÒ&–Ö'W7“×·'Vææ–æwÒöä6Æ–6³×¶6öæf—&ÔG&gG7Óä7&VFR&–çF–g’G&gG2(i#Âö'WGFöããÂöF—cãÂ÷6V7F–öããÂöF—cçÐ ¢·V&Æ—6„6öæf—&Ô÷VâbcÆF—b6Æ74æÖSÒ'V&Æ—6‚Ö6öæf—&ÒÖ&6¶G&÷"&öÆSÒ'&W6VçFF–öâ#ãÇ6V7F–öâ6Æ74æÖSÒ'V&Æ—6‚Ö6öæf—&Ò"&öÆSÒ&ÆW'FF–Æör"&–ÖÖöFÃÒ'G'VR"&–ÖÆ&VÆÆVF'“Ò'V&Æ—6‚Ö6öæf—&Ò×F—FÆR#ãÇ7â6Æ74æÖSÒ'V&Æ—6‚Ö6öæf—&ÒÖ–6öâ#âÂ÷7ããÇ6Æ74æÖSÒ&Ö–æ’ÖÆ&VÂ#äd”äÂT$Ä•4‚4ôäd•$ÔD”ôãÂ÷ç²ò¢CC“RÒöæR&W72æ÷rV&Æ—6†W2WfW'’&öGV7B–âF†R'VæFÆRÂ6òF†RÆ7@¢67&VVâ&Vf÷&R&VÂÖöæW’—27VçB†2Fò6’†÷rÖç’Æ—7F–æw2F†B—0¢7&÷72†÷rÖç’&öGV7G2Âæ÷BFW67&–&RöæÇ’F†RöæRF†B—2÷Vââ¢÷Ð£Æƒ"–CÒ'V&Æ—6‚Ö6öæf—&Ò×F—FÆR#ç¶7F—fT'VæFÆRbf'VæFÆU&V6—W2æÆVæwFƒãöG·V&Æ—6…F&vWG2‚’æÆVæwF‡ÒG·V&Æ—6…F&vWG2‚’æÆVæwFƒÓÓÓò&Æ—7F–ær#¢&Æ—7F–æw2'Ò7&÷72G¶æWr6WB‡V&Æ—6…F&vWG2‚’æÖ†—FVÓÓæ—FVÒç&öGV7DæÖR’’ç6—¦WÒG¶æWr6WB‡V&Æ—6…F&vWG2‚’æÖ†—FVÓÓæ—FVÒç&öGV7DæÖR’’ç6—¦SÓÓÓò'&öGV7B#¢'&öGV7G2'Òv–ÆÂvòÆ—fRöâWG7’æ¢%F†W6RÆ—7F–æw2v–ÆÂvòÆ—fRöâWG7’â'ÓÂöƒ#ç¶7F—fT'VæFÆRbf'VæFÆU&V6—W2æÆVæwFƒãbcÇ6Æ74æÖSÒ'V&Æ—6‚Ö6öæf—&ÒÖ'VæFÆR#ävöÆF–RV&Æ—6†W2µ²ââææWr6WB‡V&Æ—6…F&vWG2‚’æÖ†—FVÓÓæ—FVÒç&öGV7DæÖR’æf–ÇFW"„&ööÆVâ’•Òæ¦ö–â‚"Â"—ÇÆ'VæFÆU&V6—W2æÖ‡&V6—SÓç&V6—RææÖR’æ¦ö–â‚"Â"—ÒöæRgFW"æ÷F†W"â–b&öGV7B—2æ÷B&VG’—B7F÷2F†W&RæBFVÆÇ2–÷Rv†B—2Ö—76–ær(	Bæ÷F†–ærgFW"—B—2V&Æ—6†VBãÂ÷çÓÇåF†W’v–ÆÂæ÷B&R6fVB2WG7’G&gG2âV&Æ—6†–ær7F'G226ööâ2–÷R6öæf—&Ò&VÆ÷râvöÆF–Rv–ÆÂ–ÖÖVF–FVÇ’Ç’F†R6VÆV7FVBWG7’6†—–ær&öf–ÆRãÂ÷ãÇ6Æ74æÖSÒ&WG7’ÖÆ—7F–ærÖfVRÖæ÷FR#äWG7’v–ÆÂ6†&vR—G27FæF&BCã#U4BÆ—7F–ærfVRf÷"V6‚Æ—7F–ær7&VFVG¶7F—fT'VæFÆRbf'VæFÆU&V6—W2æÆVæwFƒãöÇS#B&÷WBBG²‡V&Æ—6…F&vWG2‚’æÆVæwF‚£ã"’çFôf—†VBƒ"—Òf÷"G·V&Æ—6…F&vWG2‚’æÆVæwF‡ÒG·V&Æ—6…F&vWG2‚’æÆVæwFƒÓÓÓò&Æ—7F–ær#¢&Æ—7F–æw2'Ö¢"'ÒâF†—2WG7’fVR—26W&FRg&öÒ–÷W"vöÆF–R7V'67&—F–öâãÂ÷ç¶Ö—76–æuV&Æ—6„f–VÆG2‚’æÆVæwFƒãbcÆF—b6Æ74æÖSÒ'V&Æ—6‚ÖÖ—76–ær#ãÆ#ävöÆF–Rf÷VæB&Ææ²÷"Væf–æ—6†VBf–VÆG3£Âö#ãÇVÃç¶Ö—76–æuV&Æ—6„f–VÆG2‚’æÖ†f–VÆCÓãÆÆ’¶W“×¶f–VÆGÓç¶f–VÆGÓÂöÆ“â—ÓÂ÷VÃãÇ7ãå–÷R6â7F–ÆÂV&Æ—6‚Â'WB&Wf–WrF†W6Rf—'7B–bF†W’ÖGFW"FòF†—2&F6‚ãÂ÷7ããÂöF—cçÓÆF—b6Æ74æÖSÒ'V&Æ—6‚Ö6öæf—&ÒÖ7F–öç2#ãÆ'WGFöâöä6Æ–6³×²‚“Óç6WEV&Æ—6„6öæf—&Ô÷Vâ†fÇ6R—Óävò&6²æB&Wf–WsÂö'WGFöããÆ'WGFöâ6Æ74æÖSÒ&FævW""F—6&ÆVC×·V&Æ—6†–æwÒ&–Ö'W7“×·V&Æ—6†–æwÒöä6Æ–6³×²‚“Óç¶–b†7F—fT'VæFÆRbf'VæFÆU&V6—W2æÆVæwFƒã—6WEV&Æ—6…'Vâ‡·F÷FÃ¦'VæFÆU&V6—W2æÆVæwF‡Ò“·fö–BV&Æ—6„ÆÂ‚—×Óå–W2ÂV&Æ—6‚Æ—fRöâWG7“Âö'WGFöããÂöF—cãÂ÷6V7F–öããÂöF—cçÐ ¢¶G&gE6fT÷VâbcÆF—b6Æ74æÖSÒ'V&Æ—6‚Ö6öæf—&ÒÖ&6¶G&÷"&öÆSÒ'&W6VçFF–öâ"öäÖ÷W6TF÷vã×¶WfVçCÓç¶–b†WfVçBçF&vWCÓÓÖWfVçBæ7W'&VçEF&vWBbb6f–ætG&gD&F6‚—6WDG&gE6fT÷Vâ†fÇ6R—×ÓãÇ6V7F–öâ6Æ74æÖSÒ'V&Æ—6‚Ö6öæf—&Ò6fRÖG&gBÖÖöFÂ"&öÆSÒ&F–Æör"&–ÖÖöFÃÒ'G'VR"&–ÖÆ&VÆÆVF'“Ò'6fRÖG&gB×F—FÆR#ãÆ'WGFöâG—SÒ&'WGFöâ"6Æ74æÖSÒ&Ö—76–ær×†÷FòÖ6Æ÷6R"&–ÖÆ&VÃÒ$6Æ÷6R"F—6&ÆVC×·6f–ætG&gD&F6‡Òöä6Æ–6³×²‚“Óç6WDG&gE6fT÷Vâ†fÇ6R—Óì9sÂö'WGFöããÇ7â6Æ74æÖSÒ'V&Æ—6‚Ö6öæf—&ÒÖ–6öâ#î)É3Â÷7ããÇ6Æ74æÖSÒ&Ö–æ’ÖÆ&VÂ#å4dRdõ"ÄDU#Â÷ãÆƒ"–CÒ'6fRÖG&gB×F—FÆR#ä¶VWF†W6RÆ—7F–æw22&–çF–g’G&gG3óÂöƒ#ãÇäw&VN(	GF†—2&F6‚v–ÆÂ&Rv—F–ærf÷"–÷R–â&F6‚†—7F÷'’âæ÷F†–ærv–ÆÂV&Æ—6‚FòWG7’VçF–Â–÷R&WGW&âæB6†ö÷6RFòV&Æ—6‚—BãÂ÷ãÆÆ&VÃãÇ7ãäæÖRF†—2&F6ƒÂ÷7ããÆ–çWBWFôfö7W2Ö„ÆVæwFƒ×³cÒfÇVS×¶&F6„F—7Æ”æÖWÒöä6†ævS×¶WfVçCÓç6WD&F6„F—7Æ”æÖR†WfVçBçF&vWBçfÇVR—ÒÆ6V†öÆFW#Ò$W†×ÆS¢v–ÆFâFVR+r&6†VÆ÷&WGFRFW6–vç2"óãÇ6ÖÆÃävöÆF–R7VvvW7FVBæÖRg&öÒF†R6fVB&öGV7BæBf—'7BÆ—7F–ærF÷–2â6†ævR—BFòç—F†–ær–÷Rv–ÆÂ&V6övæ—¦RãÂ÷6ÖÆÃãÂöÆ&VÃãÆF—b6Æ74æÖSÒ'V&Æ—6‚Ö6öæf—&ÒÖ7F–öç2#ãÆ'WGFöâF—6&ÆVC×·6f–ætG&gD&F6‡Òöä6Æ–6³×²‚“Óç6WDG&gE6fT÷Vâ†fÇ6R—Óä6æ6VÃÂö'WGFöããÆ'WGFöâ6Æ74æÖSÒ'6fRÖG&gBÖ6öæf—&Ò"&–Ö'W7“×·6f–ætG&gD&F6‡ÒF—6&ÆVC×·6f–ætG&gD&F6‡ÇÂ&F6„F—7Æ”æÖRçG&–Ò‚—Òöä6Æ–6³×²‚“Óçfö–B6fTG&gD&F6‚‚—Óç·6f–ætG&gD&F6ƒò%6f–ær&F6Ž(
+b#¢%6fRFò&F6‚†—7F÷'’'ÓÂö'WGFöããÂöF—cãÂ÷6V7F–öããÂöF—cçÐ ¢¶G&gE6fVD÷VâbcÆF—b6Æ74æÖSÒ'V&Æ—6‚Ö6öæf—&ÒÖ&6¶G&÷"&öÆSÒ'&W6VçFF–öâ#ãÇ6V7F–öâ6Æ74æÖSÒ'V&Æ—6‚Ö6öæf—&Ò6fRÖG&gB×7V66W72"&öÆSÒ&F–Æör"&–ÖÖöFÃÒ'G'VR"&–ÖÆ&VÆÆVF'“Ò&G&gB×6fVB×F—FÆR#ãÇ7â6Æ74æÖSÒ'V&Æ—6‚Ö6öæf—&ÒÖ–6öâ#î)É3Â÷7ããÇ6Æ74æÖSÒ&Ö–æ’ÖÆ&VÂ#ä$D4‚4dTCÂ÷ãÆƒ"–CÒ&G&gB×6fVB×F—FÆR#äw&VN(	GF†—2&F6‚—2v—F–ærf÷"–÷RãÂöƒ#ãÇãÆ#ç¶&F6„F—7Æ”æÖWÓÂö#â—26fVB–â&F6‚†—7F÷'’âF†R&öGV7G2&VÖ–âVçV&Æ—6†VB&–çF–g’G&gG2ÂæBWfW'’F—FÆRÂWG7’FWF–ÂÂæB†÷Fò6†ö–6Rv–ÆÂ&R†W&Rv†Vâ–÷R&WGW&âãÂ÷ãÆF—b6Æ74æÖSÒ'V&Æ—6‚Ö6öæf—&ÒÖ7F–öç2#ãÆ'WGFöâöä6Æ–6³×²‚“Óç6WDG&gE6fVD÷Vâ†fÇ6R—Óä¶VWv÷&¶–ær†W&SÂö'WGFöããÆ'WGFöâ6Æ74æÖSÒ'6fRÖG&gBÖ6öæf—&Ò"öä6Æ–6³×²‚“Óç·v–æF÷ræÆö6F–öâæ‡&VcÒ"ö&F6†W2'×Óåf–Wr&F6‚†—7F÷'“Âö'WGFöããÂöF—cãÂ÷6V7F–öããÂöF—cçÐ ¢·&W7F'D&F6„÷VâbcÆF—b6Æ74æÖSÒ'V&Æ—6‚Ö6öæf—&ÒÖ&6¶G&÷"&öÆSÒ'&W6VçFF–öâ"öäÖ÷W6TF÷vã×¶WfVçCÓç¶–b†WfVçBçF&vWCÓÓÖWfVçBæ7W'&VçEF&vWBbb&W7F'F–æt&F6‚—6WE&W7F'D&F6„÷Vâ†fÇ6R—×ÓãÇ6V7F–öâ6Æ74æÖSÒ'V&Æ—6‚Ö6öæf—&Ò&W7F'BÖ&F6‚ÖÖöFÂ"&öÆSÒ&ÆW'FF–Æör"&–ÖÖöFÃÒ'G'VR"&–ÖÆ&VÆÆVF'“Ò'&W7F'BÖ&F6‚×F—FÆR#ãÆ'WGFöâG—SÒ&'WGFöâ"6Æ74æÖSÒ&Ö—76–ær×†÷FòÖ6Æ÷6R"&–ÖÆ&VÃÒ$6Æ÷6R"F—6&ÆVC×·&W7F'F–æt&F6‡Òöä6Æ–6³×²‚“Óç6WE&W7F'D&F6„÷Vâ†fÇ6R—Óì9sÂö'WGFöããÇ7â6Æ74æÖSÒ'V&Æ—6‚Ö6öæf—&ÒÖ–6öâ"&–Ö†–FFVãÒ'G'VR#î(k³Â÷7ããÇ6Æ74æÖSÒ&Ö–æ’ÖÆ&VÂ#å5D%BäUr$D4ƒÂ÷ãÆƒ"–CÒ'&W7F'BÖ&F6‚×F—FÆR#åv†B6†÷VÆBvöÆF–RFòv—F‚F†—2&F6ƒóÂöƒ#ãÇå–÷W"6fVB&öGV7G2Â&öGV7BFVfVÇG2Â¶W—v÷&B&æ·2ÂæBÖö6·W6WG2v–ÆÂ7F’W†7FÇ’2F†W’&RãÂ÷ç²†f–ÆW2æÆVæwFƒãÇÆG&gG2æÆVæwFƒã’bcÆÆ&VÃãÇ7ãäæÖRF†—2&F6‚&Vf÷&R6f–æsÂ÷7ããÆ–çWBÖ„ÆVæwFƒ×³cÒfÇVS×·&W7F'D&F6„æÖWÒöä6†ævS×¶WfVçCÓç6WE&W7F'D&F6„æÖR†WfVçBçF&vWBçfÇVR—ÒÆ6V†öÆFW#Ò$W†×ÆS¢v–ÆFâFVR+r&6†VÆ÷&WGFRFW6–vç2"óãÂöÆ&VÃçÓÆF—b6Æ74æÖSÒ'&W7F'BÖ&F6‚Ö7F–öç2#ãÆ'WGFöâG—SÒ&'WGFöâ"F—6&ÆVC×·&W7F'F–æt&F6‡Òöä6Æ–6³×²‚“Óç6WE&W7F'D&F6„÷Vâ†fÇ6R—Óä6æ6VÃÂö'WGFöãç²†f–ÆW2æÆVæwFƒãÇÆG&gG2æÆVæwFƒã’bcÆ'WGFöâG—SÒ&'WGFöâ"6Æ74æÖSÒ'6fR×&W7F'B"&–Ö'W7“×·&W7F'F–æt&F6‡ÒF—6&ÆVC×·&W7F'F–æt&F6‡ÇÂ&W7F'D&F6„æÖRçG&–Ò‚—Òöä6Æ–6³×²‚“Óçfö–B6fTæE&W7F'B‚—Óç·&W7F'F–æt&F6ƒò%6f–æ~(
+b#¢%6fRFò&F6‚†—7F÷'’²7F'BæWr'ÓÂö'WGFöãçÓÆ'WGFöâG—SÒ&'WGFöâ"6Æ74æÖSÒ&F—66&B×&W7F'B"F—6&ÆVC×·&W7F'F–æt&F6‡Òöä6Æ–6³×²‚“Óæf–æ—6…&W7F'B†fÇ6R—Óç¶f–ÆW2æÆVæwF‡ÇÆG&gG2æÆVæwFƒò$F—66&BF†—2&F6‚²7F'BæWr#¢%7F'BæWr&F6‚'ÓÂö'WGFöããÂöF—cãÇ6ÖÆÂ6Æ74æÖSÒ'&W7F'B×&–çF–g’Öæ÷FR#äW†—7F–ær&–çF–g’G&gG2&Ræ÷BFVÆWFVBg&öÒ&–çF–g’ãÂ÷6ÖÆÃãÂ÷6V7F–öããÂöF—cçÐ ¢¶&Æö6¶–ætÖöFÂbcÆF—b6Æ74æÖSÒ'V&Æ—6‚Ö6öæf—&ÒÖ&6¶G&÷"&öÆSÒ'&W6VçFF–öâ#ãÇ6V7F–öâ6Æ74æÖSÒ'V&Æ—6‚Ö6öæf—&Ò&Æö6¶–ærÖÖöFÂ"&öÆSÒ&ÆW'FF–Æör"&–ÖÖöFÃÒ'G'VR"&–ÖÆ&VÆÆVF'“Ò&&Æö6¶–ærÖÖöFÂ×F—FÆR#ãÇ7â6Æ74æÖSÒ'V&Æ—6‚Ö6öæf—&ÒÖ–6öâ#âÂ÷7ããÇ6Æ74æÖSÒ&Ö–æ’ÖÆ&VÂ#å$UT•$TB$Tdõ$R4ôåD”åT”äsÂ÷ãÆƒ"–CÒ&&Æö6¶–ærÖÖöFÂ×F—FÆR#ç¶&Æö6¶–ætÖöFÂçF—FÆWÓÂöƒ#ç¶&Æö6¶–ætÖöFÂæ6÷’bcÇç¶&Æö6¶–ætÖöFÂæ6÷—ÓÂ÷çÓÆF—b6Æ74æÖSÒ'V&Æ—6‚ÖÖ—76–ær#ãÆ#äf—‚F†W6R—FV×3£Âö#ãÇVÃç¶&Æö6¶–ætÖöFÂæ—77VW2æÖ†—77VSÓãÆÆ’¶W“×¶—77VWÓç¶—77VWÓÂöÆ“â—ÓÂ÷VÃãÂöF—cãÆF—b6Æ74æÖSÒ'V&Æ—6‚Ö6öæf—&ÒÖ7F–öç2#ãÆ'WGFöâWFôfö7W2öä6Æ–6³×²‚“Óç6WD&Æö6¶–ætÖöFÂ†çVÆÂ—Óäv÷B—Bâž(	–ÆÂf—‚F†—3Âö'WGFöããÂöF—cãÂ÷6V7F–öããÂöF—cçÐ¢·VæF–æt6FVv÷'”6†ævRbcÆF—b6Æ74æÖSÒ'V&Æ—6‚Ö6öæf—&ÒÖ&6¶G&÷"&öÆSÒ'&W6VçFF–öâ#ãÇ6V7F–öâ6Æ74æÖSÒ'V&Æ—6‚Ö6öæf—&Ò"&öÆSÒ&ÆW'FF–Æör"&–ÖÖöFÃÒ'G'VR"&–ÖÆ&VÆÆVF'“Ò&6FVv÷'’Ö6†ævR×F—FÆR#ãÇ7â6Æ74æÖSÒ'V&Æ—6‚Ö6öæf—&ÒÖ–6öâ#âÂ÷7ããÇ6Æ74æÖSÒ&Ö–æ’ÖÆ&VÂ#äUE5’4DTtõ%’4„ätSÂ÷ãÆƒ"–CÒ&6FVv÷'’Ö6†ævR×F—FÆR#ä6†ævRF†—2Æ—7F–æ~(	—2WG7’6FVv÷'“óÂöƒ#ãÇç·VæF–æt6FVv÷'”6†ævRæ6ÆV&VD6÷VçGÒ6ö×ÆWFVB·VæF–æt6FVv÷'”6†ævRæ6ÆV&VD6÷VçCÓÓÓò&f–VÆBFöW2#¢&f–VÆG2Fò'Òæ÷BW†—7B–âF†RæWr6FVv÷'’æBv–ÆÂ&R6ÆV&VBâç’6ö×F–&ÆRfÇVW2v–ÆÂ7F’f–ÆÆVBãÂ÷ãÆF—b6Æ74æÖSÒ'V&Æ—6‚Ö6öæf—&ÒÖ7F–öç2#ãÆ'WGFöâWFôfö7W2öä6Æ–6³×²‚“Óç6WEVæF–æt6FVv÷'”6†ævR†çVÆÂ—Óä¶VW7W'&VçB6FVv÷'“Âö'WGFöããÆ'WGFöâ6Æ74æÖSÒ&FævW""öä6Æ–6³×²‚“Óç¶6öç7BVæF–æs×VæF–æt6FVv÷'”6†ævS·6WEVæF–æt6FVv÷'”6†ævR†çVÆÂ“·WFFTFW6–vâ‡VæF–æræFW6–vä–BÇ¶WG7“§VæF–æræFWF–Ç2ÆWG7”W'&÷#¢"'Ò—×Óä6†ævR6FVv÷'’æB6ÆV"·VæF–æt6FVv÷'”6†ævRæ6ÆV&VD6÷VçGÓÂö'WGFöããÂöF—cãÂ÷6V7F–öããÂöF—cçÐ¢¶Ö—76–æu†÷FôG&gD–G2æÆVæwFƒãbgG—VöbFö7VÖVçBÓÒ'VæFVf–æVB"bf7&VFU÷'FÂƒÆF—b6Æ74æÖSÒ'V&Æ—6‚Ö6öæf—&ÒÖ&6¶G&÷Ö—76–ær×†÷FòÖ&6¶G&÷"&öÆSÒ'&W6VçFF–öâ#ãÇ6V7F–öâ6Æ74æÖSÒ'V&Æ—6‚Ö6öæf—&ÒÖ—76–ær×†÷FòÖÖöFÂ"&öÆSÒ&ÆW'FF–Æör"&–ÖÖöFÃÒ'G'VR"&–ÖÆ&VÆÆVF'“Ò&Ö—76–ær×†÷Fò×F—FÆR#ãÆ'WGFöâ6Æ74æÖSÒ&Ö—76–ær×†÷FòÖ6Æ÷6R"G—SÒ&'WGFöâ"&–ÖÆ&VÃÒ$6Æ÷6R"öä6Æ–6³×²‚“Óç6WDÖ—76–æu†÷FôG&gD–G2…µÒ—Óì9sÂö'WGFöããÇ7â6Æ74æÖSÒ'V&Æ—6‚Ö6öæf—&ÒÖ–6öâ#âÂ÷7ããÇ6Æ74æÖSÒ&Ö–æ’ÖÆ&VÂ#å„õDõ2$UT•$TCÂ÷ãÆƒ"–CÒ&Ö—76–ær×†÷Fò×F—FÆR#ç¶Ö—76–æu†÷FôG&gD–G2æÆVæwF‡Ò¶Ö—76–æu†÷FôG&gD–G2æÆVæwFƒÓÓÓò&Æ—7F–æræVVG2#¢&Æ—7F–æw2æVVB'Ò†÷FóÂöƒ#ãÇäFBBÆV7BöæR&–çF–g’†÷Fò÷"Æ–fW7G–ÆRÖö6·WFòWfW'’Æ—7F–ær6†÷vâ&VÆ÷rãÂ÷ãÆF—b6Æ74æÖSÒ&Ö—76–ær×†÷FòÖÆ—7B#ç¶Ö—76–æu†÷FôG&gD–G2æÖ†6Æ–VçD–CÓç¶6öç7BG&gCÖG&gG2æf–æB†—FVÓÓæ—FVÒæ6Æ–VçD–CÓÓÖ6Æ–VçD–B’ÆFW6–vãÖf–ÆW2æf–æB†—FVÓÓæ—FVÒæ–CÓÓÖ6Æ–VçD–B’Ç&Wf–WsÖG&gCòç&Wf–WuW&ÇÇÆFW6–vãòç&Wf–WuW&Ã·&WGW&âÆ'F–6ÆR¶W“×¶6Æ–VçD–GÓç·&Wf–WsóÆ–Ör7&3×·&Wf–WwÒÇCÒ%&öGV7BæBFW6–vâ&Wf–Wr"óã£ÆF—b6Æ74æÖSÒ&Ö—76–ær×†÷Fò×Æ6V†öÆFW""&–Ö†–FFVãÒ'G'VR"óçÓÆ#ç¶FW6–vãòææÖWÇÆG&gCòææÖWÇÂ$Æ—7F–ær'ÓÂö#ãÆ'WGFöâG—SÒ&'WGFöâ"öä6Æ–6³×²‚“Óæ§V×FôÖ—76–æu†÷FôÆ—7F–ær†6Æ–VçD–B—ÓävòFòF†—2Æ—7F–æsÂö'WGFöããÂö'F–6ÆSçÒ—ÓÂöF—cãÂ÷6V7F–öããÂöF—câÆFö7VÖVçBæ&öG’—Ð¢·—†VÅv&æ–æt÷VâbcÆF—b6Æ74æÖSÒ'V&Æ—6‚Ö6öæf—&ÒÖ&6¶G&÷"&öÆSÒ'&W6VçFF–öâ#ãÇ6V7F–öâ6Æ74æÖSÒ'V&Æ—6‚Ö6öæf—&Ò—†VÂ×v&æ–ærÖÖöFÂ"&öÆSÒ&ÆW'FF–Æör"&–ÖÖöFÃÒ'G'VR"&–ÖÆ&VÆÆVF'“Ò'—†VÂ×v&æ–ær×F—FÆR#ãÇ7â6Æ74æÖSÒ'V&Æ—6‚Ö6öæf—&ÒÖ–6öâ#âÂ÷7ããÇ6Æ74æÖSÒ&Ö–æ’ÖÆ&VÂ#å$”åB$U4ôÅUD”ôâ4„T4³Â÷ãÆƒ"–CÒ'—†VÂ×v&æ–ær×F—FÆR#äöæR÷"Ö÷&RöbF†W6RFW6–vç2fÆÂ&VÆ÷r&–çF–gž(	—2—†VÂ6—¦R&V6öÖÖVæFF–öç2f÷"F†—2&öGV7BãÂöƒ#ãÇåF†W6RFW6–vç2Ö’7F–ÆÂ&–çBÂ'WBF†W’Ö’6†÷rÆ÷vW"&W6öÇWF–öâ–ç6–FRF†R&–çF–g’VF—F÷"BF†RÆ&vW7BVæ&ÆVB6—¦Râ&Wf–WrF†R6ö×&—6öâ&VÆ÷r&Vf÷&RFV6–F–ærv†WF†W"Fò6öçF–çVRãÂ÷ãÆF—b6Æ74æÖSÒ'—†VÂÖ6ö×&—6öâ"&öÆSÒ'&Vv–öâ"&–ÖÆ&VÃÒ%WÆöFVBFW6–vâ—†VÂ6ö×&—6öâ#ãÆF—b6Æ74æÖSÒ'—†VÂÖ6ö×&—6öâÖ†VB"&–Ö†–FFVãÒ'G'VR#ãÆ#äFW6–vãÂö#ãÆ#åWÆöFVB6—¦SÂö#ãÆ#å&–çF–g’&V6öÖÖVæG3Âö#ãÂöF—cãÆF—b6Æ74æÖSÒ'—†VÂÖ6ö×&—6öâ×&÷w2#ç²†7F—fT'VæFÆRbf'VæFÆUVÆ—G”—77VW2æÆVæwF€¢ö'VæFÆUVÆ—G”—77VW2æÖ†—77VSÓâ‡¶–C¦—77VRæ¶W’ÆæÖS¦G¶—77VRæf–ÆTæÖWÒ+rG¶—77VRç&öGV7DæÖWÖÇv–GFƒ¦—77VRæ7GVÅv–GF‚Æ†V–v‡C¦—77VRæ7GVÄ†V–v‡BÆæVVEv–GFƒ¦—77VRç&WV—&VEv–GF‚ÆæVVD†V–v‡C¦—77VRç&WV—&VD†V–v‡GÒ’¢¦&VÆ÷u&V6öÖÖVæFVE—†VÇ2æÖ†f–ÆSÓâ‡¶–C¦f–ÆRæ–BÆæÖS¦f–ÆRææÖRÇv–GFƒ¦f–ÆRçv–GF‡ÇÃÆ†V–v‡C¦f–ÆRæ†V–v‡GÇÃÆæVVEv–GFƒ§&V6öÖÖVæFVE—†VÅ6—¦Rçv–GF‚ÆæVVD†V–v‡C§&V6öÖÖVæFVE—†VÅ6—¦Ræ†V–v‡GÒ’’¢æÖ‡&÷sÓãÆF—b6Æ74æÖSÒ'—†VÂÖ6ö×&—6öâ×&÷r"¶W“×·&÷ræ–GÓãÆ"F—FÆS×·&÷rææÖWÓç·&÷rææÖWÓÂö#ãÇ7ããÇ6ÖÆÃåWÆöFVB6—¦SÂ÷6ÖÆÃç·&÷rçv–GF‚çFôÆö6ÆU7G&–ær‚—Ò9r·&÷ræ†V–v‡BçFôÆö6ÆU7G&–ær‚—ÒƒÂ÷7ããÇ7ããÇ6ÖÆÃå&–çF–g’&V6öÖÖVæG3Â÷6ÖÆÃç·&÷rææVVEv–GF‚çFôÆö6ÆU7G&–ær‚—Ò9r·&÷rææVVD†V–v‡BçFôÆö6ÆU7G&–ær‚—ÒƒÂ÷7ããÂöF—câ—ÓÂöF—cãÂöF—cãÆF—b6Æ74æÖSÒ'V&Æ—6‚Ö6öæf—&ÒÖ7F–öç2#ãÆ'WGFöâWFôfö7W2öä6Æ–6³×²‚“Óç6WE—†VÅv&æ–æt÷Vâ†fÇ6R—Óävò&6²æB&Wf–WsÂö'WGFöããÆ'WGFöâ6Æ74æÖSÒ'—†VÂ×&ö6VVB"öä6Æ–6³×²‚“Óç·6WE—†VÅv&æ–æt÷Vâ†fÇ6R“°¢ò¢CS’Ò&W76–ærF†—2öâ'VæFÆR—2F†RFV6—6–öâF†RöÆBF–Æöp¢FVÖæFVBÂ6ò&V6÷&B—BæB6''’öâ&F†W"F†â6VæF–ær†W"&6°¢FòÖ¶R—Bv–âöâF†RvR&V†–æBâ¢ð¢6öç7BVæFV6–FVCÖ'VæFÆUVÆ—G”w&÷W2æf–ÇFW"†w&÷WÓæw&÷Wæ¶W—2ç6öÖR†¶W“Óâ'VæFÆUVÆ—G”FV6—6–öç5¶¶W•Ò’“°¢–b‡VæFV6–FVBæÆVæwF‚—¶FV6–FTÆÅVÆ—G’‚&–æ6ÇVFR"“·6WE&VfÆ–v‡D÷Vâ‡G'VR“·&WGW&çÐ¢–b†6ö×ÆWFR—·fö–BvõFõ7FW‚&f–æ—6‚"ÆfÇ6RÇG'VR—ÖVÇ6W¶Fö7VÖVçBçVW'•6VÆV7F÷"‚"æÆVæ6‚×æVÂ"“òç67&öÆÄ–çFõf–Wr‡¶&Æö6³¢'7F'B'Ò—××Óå&ö6VVBç—v“Âö'WGFöããÂöF—cãÂ÷6V7F–öããÂöF—cçÐ ¢Æfö÷FW#ãÇ7ãätôÄD”RÄ•5D”ärd5Dõ%“Â÷7ããÇ7ãä$RtôÄb$•¢+r##cÂ÷7ããÂöfö÷FW#à¢Å7W÷'D6†Bóà¢ÂöÖ–ãà¢“°§Ð
