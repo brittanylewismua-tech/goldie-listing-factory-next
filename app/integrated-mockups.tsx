@@ -411,13 +411,9 @@ export default function IntegratedMockups({design,productId,productName="",defau
    await runBounded(stale.map(scene=>scene),4,async scene=>withRecovery(async()=>{
      const response=await fetch(`/api/mockups/library/${encodeURIComponent(scene.id)}/prepare`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({productName})});
      const payload=await response.json() as {preparation?:ScenePreparation;error?:string};
-     /* D577 - the route always returns a ready preparation now. If the network
-        itself failed, the scene is still prepared here from the product's own
-        geometry rather than thrown away. Printify still owns the placement
-        inside the surface, so the mockup is correct where it matters. */
      if(!response.ok||!payload.preparation)return {scene,preparation:computedPreparation(productName,null,scene.printSide)};
      return {scene,preparation:payload.preparation};
-   }),({scene,preparation})=>{prepared.set(scene.id,preparation);setRenderStatus(`${prepared.size} of ${stale.length} scenes prepared. Goldie is finishing the rest automatically…`)});
+   }),({scene,preparation})=>{prepared.set(scene.id,preparation);setRenderStatus(`${prepared.size} of ${stale.length} scenes prepared automatically…`)});
    const apply=(item:Template):Template=>{const preparation=prepared.get(item.id);return preparation?{...item,corners:preparation.corners,normalized:true,printSide:preparation.printSide,quadMeans:"print-area",preparationStatus:"ready",preparation,occlusionUrl:preparation.occlusionKey?`/api/mockups/library/${encodeURIComponent(item.id)}/occlusion`:undefined,occlusionUrls:(preparation.occlusionKeys||[]).map((_,index)=>`/api/mockups/library/${encodeURIComponent(item.id)}/occlusion?layer=${index}`),occlusionConfirmed:true}:item};
    if(prepared.size)setLibrary(current=>current.map(apply));
    const applied=list.map(apply);
@@ -478,11 +474,11 @@ let previewFace:{left:number;top:number;right:number;bottom:number}|undefined;
              beaten by white ink, thin lettering, a small pocket print, a garment
              shadow, a neck label or a busy model shot, and it should never run
              when the exact answer was handed to us. */
-          /* A computed surface is a useful fallback, but it is not a measured
-             Printify print area. Applying Printify's near-full scale directly
-             to that guess is what put large hoodie artwork into the collar.
-             Computed scenes must use the preview measurement below. */
-          if(template.quadMeans==="print-area"&&placement&&isCalibrated(template)&&template.preparation?.derived!==true)
+          /* Every scene is now an automatically authored reusable template.
+             Printify's numbers map directly into that saved surface whether its
+             source was a measured quad or the silhouette-safe automatic
+             fallback. Never re-read preview colours to guess artwork pixels. */
+          if(template.quadMeans==="print-area"&&placement&&isCalibrated(template))
             {const exact=placementAdjustment(placement,template.surfaceKind||"rigid-flat","print-area");
              if(exact){const began=Date.now();
                const rendered=await rigid(design,template,exact);
@@ -510,7 +506,7 @@ let previewFace:{left:number;top:number;right:number;bottom:number}|undefined;
              Printify puts it. Nothing that redraws her scene can be used to place a
              design on it, however good the prompt. */
           return drawLocally();
-        });return{index,result}},({index,result})=>{completed.set(index,result);const ready=[...completed.entries()].sort((a,b)=>a[0]-b[0]).map(([,item])=>item);setResults(ready);setRenderStatus(`${ready.length} of ${chosen.length} finished. ${ready.length<chosen.length?"Goldie is creating the remaining scenes.":"Saving all finished mockups to this listing…"}`)});const made=[...completed.entries()].sort((a,b)=>a[0]-b[0]).map(([,item])=>item);if(made.length!==chosen.length){/* D446 - this said only that some scene failed, so the way out was to guess which one and deselect it. Name them. */const lost=chosen.filter((_,index)=>!completed.has(index)).map(template=>template.name);throw new Error(`Goldie could not finish ${lost.length===1?"this scene":"these scenes"}: ${lost.join(", ")}. Nothing was saved to this listing. Try again, or clear ${lost.length===1?"that scene":"those scenes"} and create the rest.`);}await stageForEtsy(made);const warning=made.find(item=>item.warning)?.warning;if(warning)setEtsyStatus(`✓ Mockups saved. ${warning}`)}catch(e){setError(e instanceof Error?e.message:"Mockups could not be created.")}finally{setBusy(false);setRenderStatus("")}}
+        });return{index,result}},({index,result})=>{completed.set(index,result);const ready=[...completed.entries()].sort((a,b)=>a[0]-b[0]).map(([,item])=>item);setResults(ready);setRenderStatus(`${ready.length} of ${measured.length} finished. ${ready.length<measured.length?"Goldie is creating the remaining scenes.":"Saving all finished mockups to this listing…"}`)});const made=[...completed.entries()].sort((a,b)=>a[0]-b[0]).map(([,item])=>item);if(made.length!==measured.length){const lost=measured.filter((_,index)=>!completed.has(index)).map(template=>template.name);throw new Error(`Goldie could not finish ${lost.length===1?"this scene":"these scenes"}: ${lost.join(", ")}. Nothing was saved to this listing.`);}await stageForEtsy(made);const warning=made.find(item=>item.warning)?.warning;if(warning)setEtsyStatus(`✓ Mockups saved. ${warning}`)}catch(e){setError(e instanceof Error?e.message:"Mockups could not be created.")}finally{setBusy(false);setRenderStatus("")}}
  async function adjustResult(result:Result,next:Adjustment){const template=library.find(item=>item.id===result.templateId);if(!template)return;setAdjustments(current=>({...current,[result.templateId]:next}));setBusy(true);try{const revised=await rigid(design,template,next),nextResults=results.map(item=>item===result?revised:item);URL.revokeObjectURL(result.url);setResults(nextResults);setExpanded(revised);await stageForEtsy(nextResults)}catch(e){setError(e instanceof Error?e.message:"This mockup could not be adjusted.")}finally{setBusy(false)}}
  function toggleTemplate(id:string){setSelected(current=>{const next=new Set(current);if(next.has(id)){next.delete(id);setError("");return next}if(next.size>=MAX_MOCKUPS_PER_LISTING){setError("You can create up to eight lifestyle mockups for one listing.");return next}next.add(id);setError("");return next})}
  const lightbox=expanded&&typeof document!=="undefined"?createPortal(<div className="inline-lightbox" role="dialog" aria-modal="true" onMouseDown={event=>{if(event.target===event.currentTarget)setExpanded(null)}}><button onClick={()=>setExpanded(null)} aria-label="Close">×</button><img src={expanded.url} alt={`${expanded.template} enlarged`}/>{isCalibratedSurface(expanded.surfaceKind)?<div className="mockup-adjust"><b>Adjust this mockup only</b>{(()=>{const value=adjustments[expanded.templateId]||placementAdjustment(placement,expanded.surfaceKind);return <><label>Design size<input type="range" min=".5" max="1.6" step=".02" value={value.scale} onChange={event=>void adjustResult(expanded,{...value,scale:Number(event.target.value)})}/></label><label>Left / right<input type="range" min="-.3" max=".3" step=".01" value={value.x} onChange={event=>void adjustResult(expanded,{...value,x:Number(event.target.value)})}/></label><label>Up / down<input type="range" min="-.3" max=".3" step=".01" value={value.y} onChange={event=>void adjustResult(expanded,{...value,y:Number(event.target.value)})}/></label></>})()}</div>:<p className="mockup-placement-lock">Placement is locked to the real Printify preview so the apparel mockup matches what the customer receives.</p>}</div>,document.body):null;

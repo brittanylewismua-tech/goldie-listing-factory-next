@@ -91,12 +91,12 @@ test("Reset preserves uploaded ink colour", async () => {
   assert.doesNotMatch(profile, /blendMode: mode === "fabric" \? "multiply"/);
 });
 
-test("computed scene geometry cannot take the exact-placement shortcut", async () => {
+test("every automatically prepared scene uses Printify placement, never preview colour guessing", async () => {
   const integrated = await read("app/integrated-mockups.tsx");
-  assert.match(integrated, /template\.preparation\?\.derived!==true/);
+  assert.doesNotMatch(integrated, /template\.preparation\?\.derived!==true/);
   const exact = integrated.indexOf('template.quadMeans==="print-area"&&placement');
   const preview = integrated.indexOf("if(fit&&isCalibrated(template))", exact);
-  assert.ok(exact >= 0 && preview > exact, "a derived scene falls through to the Printify preview measurement");
+  assert.ok(exact >= 0 && preview > exact, "the reusable scene surface must take the exact Printify placement first");
 });
 
 test("the card and Reset use the same automatic transform", async () => {

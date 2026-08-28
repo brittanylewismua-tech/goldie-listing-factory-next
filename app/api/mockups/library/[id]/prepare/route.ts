@@ -203,14 +203,15 @@ async function prepareOnce(imageUrl: string, productName: string, key: string, o
      The analyser's reading of the foreground is kept even when its corners are
      rejected. A hood does not stop being in front of the chest because the quad
      was a few pixels wide. */
+  /* Placeit-style rendering starts from an authored template surface. Goldie
+     authors it automatically. When the visual reading cannot be validated, the
+     detected product silhouette supplies a conservative family-specific panel;
+     no seller action and no missing scene. */
   const geometry = measured || {
     corners: fittedCorners || computed.corners, productBox, productBoundsVerified: true,
     productSilhouetteVerified: Boolean(fittedCorners),
     cornersSource: (fittedCorners ? "silhouette" : "computed") as "silhouette" | "computed",
     side: computed.printSide, geometry: computed.geometry,
-    /* D601 - the analyser's own reading, which survives a rejected quad. D600
-       took this from reading.geometry, which IS the object nulled by that
-       rejection, so it still read false on every scene. */
     occluded: reading.observation.occluded, derived: true,
   };
 

@@ -1792,7 +1792,7 @@ test("keeps lifestyle mockup creation specific to each listing",async()=>{
 test("creates selected lifestyle mockups concurrently without changing scene order",async()=>{
   const mockups=await readFile(new URL("../app/integrated-mockups.tsx",import.meta.url),"utf8");
   assert.match(mockups,/runBounded\(jobs,2/);
-  assert.match(mockups,/made\.length!==chosen\.length/);
+  assert.match(mockups,/made\.length!==measured\.length/);
   assert.match(mockups,/completed\.entries\(\)\]\.sort/);
   assert.doesNotMatch(mockups,/for\(const t of chosen\)/);
   assert.doesNotMatch(mockups,/scene needs another try/);
@@ -3120,7 +3120,7 @@ test("a failed scene names itself, and the rest are not silently lost — D446",
      stands, so a listing never ends up half replaced, but the message said only
      that "every selected scene" had not finished. The way out was to guess which
      scene and deselect it. */
-  assert.match(integrated, /const lost=chosen\.filter\(\(_,index\)=>!completed\.has\(index\)\)\.map\(template=>template\.name\)/);
+  assert.match(integrated, /const lost=measured\.filter\(\(_,index\)=>!completed\.has\(index\)\)\.map\(template=>template\.name\)/);
   assert.match(integrated, /Goldie could not finish \$\{lost\.length===1\?"this scene":"these scenes"\}/);
   assert.doesNotMatch(integrated, /could not finish every selected scene/);
 

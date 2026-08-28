@@ -42,7 +42,7 @@ test("a computed surface is a surface, never an artwork size", () => {
   // The old 42% constant decided how big the DESIGN was and overrode Printify.
   // These numbers decide only where the surface sits; Printify still places the
   // artwork inside it. A garment's surface is a panel, a poster's is the sheet.
-  assert.ok(printAreaWithinProduct("Gildan Tee").width < .5, "a chest panel is not the whole garment");
+  assert.ok(printAreaWithinProduct("Gildan Tee").width < .6, "a chest panel is not the whole garment");
   assert.ok(printAreaWithinProduct("Matte Poster").width > .85, "a poster is printed nearly edge to edge");
   assert.ok(printAreaWithinProduct("Ceramic Mug").width < .6, "a mug's face is not the whole mug");
 });

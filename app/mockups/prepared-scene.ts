@@ -8,7 +8,7 @@ import type { PrintSide } from "../placement-math.ts";
    Bumping this invalidates them and re-reads each scene the next time it is
    used - which is exactly the migration path that already exists and cannot
    fail. */
-export const SCENE_PREPARATION_VERSION = 13;
+export const SCENE_PREPARATION_VERSION = 14;
 
 export type SceneGeometry = "flat" | "perspective" | "cylindrical" | "flexible" | "irregular";
 export type NormalizedPoint = [number, number];
@@ -187,15 +187,16 @@ This is a BLANK mockup scene. The printable surface is the empty one waiting for
 
 The four corners must sit on the actual visible corners of that printable face. If the face is tilted, leaning, angled or seen from the side, its corners DO NOT form an upright rectangle: the top two corners have different heights, the sides have different lengths, and no two corners share an x or y value. Return the true quadrilateral you can see, not the upright box that surrounds it. Only return an upright rectangle when the face really is square to the camera.
 
-First identify the complete visible product boundary as productBox: left, top, right and bottom. Then return four corners of the complete Printify print area as it appears in this photograph, inside that product, ordered top-left, top-right, bottom-right, bottom-left. Use fractions from 0 to 1. Every print-area corner and its centre must stay inside productBox. Do not choose a default centre box. A hoodie print area stays above the pouch pocket. A mug print area stays below the rim and excludes the handle.
+First identify the complete visible product boundary as productBox: left, top, right and bottom. Then return four corners of the complete Printify print area as it appears in this photograph, inside that product, ordered top-left, top-right, bottom-right, bottom-left. Use fractions from 0 to 1. Every print-area corner and its centre must stay inside productBox. Do not choose a default centre box.
+
+For apparel, identify garment landmarks before choosing the surface. The top edge begins BELOW the neckline, hood and collar. The bottom edge ends ABOVE the pouch pocket, waistband or hem. The side edges stay on the front or back torso panel and exclude sleeves. Hair, hands, drawstrings and hood fabric are foreground layers, never part of the printable surface. The printable surface is the largest unobstructed torso panel between those landmarks, not a percentage of the whole garment bounding box. A mug print area stays below the rim and excludes the handle.
 
 Classify geometry as flat, perspective, cylindrical, flexible or irregular. Use perspective whenever the printable face is tilted or angled away from the camera, and flat only when it squarely faces the camera. Classify the visible print side as front, back, left-sleeve, right-sleeve, wrap or other. Set occluded true when a hood, hair, hand, arm, strap, seam flap or another foreground object crosses the printable surface.
 
 Return only compact JSON: {"productBox":{"left":0.1,"top":0.1,"right":0.9,"bottom":0.9},"corners":[[x,y],[x,y],[x,y],[x,y]],"side":"front","geometry":"flexible","occluded":true}`;
 }
 
-/* D577 - preparation always terminates in a ready scene.
-
+/* Emergency geometry remains available as the final automatic authoring pass.
    Every earlier version had a way to end without one: a validation failure, a
    model that would not answer, a provider that was down. Each of those became a
    scene that could not render, and a scene that cannot render is a seller who
@@ -215,7 +216,11 @@ export type ProductBox = { left: number; top: number; right: number; bottom: num
 export function printAreaWithinProduct(productName: string): { x: number; y: number; width: number; height: number } {
   switch (productSurfaceFamily(productName)) {
     // A chest or back panel: centred, upper torso, a little under half the width.
-    case "apparel": return { x: .5, y: .38, width: .42, height: .40 };
+    /* A safe torso panel starts below the neckline/hood and ends above a pouch
+       pocket or waistband. This is the automatic last resort after two visual
+       readings, not an artwork-size guess: Printify still owns placement inside
+       it. The previous y=.38 began inside a hoodie hood. */
+    case "apparel": return { x: .5, y: .46, width: .52, height: .36 };
     // The face turned toward the camera, clear of the handle and the rim.
     case "curved": return { x: .5, y: .52, width: .46, height: .46 };
     // Printed nearly edge to edge, inset so the design does not bleed off.
