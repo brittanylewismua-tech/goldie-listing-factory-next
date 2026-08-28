@@ -1262,7 +1262,12 @@ test("connects Etsy with PKCE and finishes only the exact Printify-linked Etsy l
      hands the item back to the queue if the id is not ready. */
   assert.match(queue,/pollForEtsyListing/);
   assert.match(queue,/product\.external\?\.id/);
-  assert.doesNotMatch(`${publish}\n${queue}`,/sort_on|newest|title.*match/i);
+  /* The rule is about locating a LISTING: never guess by sorting newest or
+     matching titles, only follow the exact Printify link. D639 compares Printify
+     SHOP titles against the connected Etsy shop name, which is a different
+     question, so the assertion now names the listing-lookup forms it guards. */
+  assert.doesNotMatch(`${publish}\n${queue}`,/sort_on|newest|listing.*title.*match|match.*listing.*title/i);
+  assert.doesNotMatch(`${publish}\n${queue}`,/findListingByTitle|searchListings/i);
   assert.match(finish,/listing\.shop_id/);
   assert.match(finish,/Goldie stopped without editing it/);
   assert.match(finish,/applyEtsyDetails/);
@@ -5921,4 +5926,64 @@ test("Goldie remembers publishing even when Printify has not answered — D638",
      minutes of hand diagnosis. */
   assert.match(queue, /const items=rows\.results\.map\(\(row:\{product_id:string;status:string;last_error\?:string;available_at:number\}\)=>\(\{productId:row\.product_id,status:row\.status,note:row\.last_error\|\|null/);
   assert.match(queue, /return \{\.\.\.job,items,finished,failures/);
+});
+
+/* D639 · The root cause of the whole publish failure, found by opening the same
+ * product URL under two Printify stores.
+ *
+ * Goldie created every draft in Printify shop 20191756 (HOWDYANGEL) while its
+ * Etsy connection was shesawolfclothing - the "She's A Wolf Clothing" store, a
+ * different storefront. Nothing compared them. So a batch could be built,
+ * drafted, titled, priced and sent, and the listings were created in a shop
+ * Goldie had no Etsy authorisation over. Etsy showed zero listings because we
+ * were watching the wrong shop.
+ *
+ * Printify names an Etsy store after the Etsy shop it publishes to, so the two
+ * are comparable once case and punctuation go. */
+test("a Printify shop that publishes elsewhere is refused by name — D639", async () => {
+  const [match, product, publish] = await Promise.all([
+    readFile(new URL("../app/api/printify/shop-match.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/printify/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/printify/drafts/publish/route.ts", import.meta.url), "utf8"),
+  ]);
+
+  // The comparison itself.
+  assert.match(match, /return String\(value\|\|""\)\.toLowerCase\(\)\.replace\(\/\[\^a-z0-9\]\+\/g,""\)/);
+  /* An unknown name is not evidence of a mismatch - Goldie must not block a
+     seller over something it cannot actually see. */
+  assert.match(match, /if\(!printify\|\|!etsy\)return true;/);
+
+  // Refused at step 1, where the whole batch would otherwise be built.
+  assert.match(product, /SELECT shop_name FROM etsy_connections WHERE user_id=\?/);
+  assert.match(product, /!shopsMatch\(found\.shop\.title, etsyShop\.shop_name\)\) return NextResponse\.json\(shopMismatch\(found\.shop\.title, etsyShop\.shop_name\), \{ status: 409 \}\)/);
+
+  // And again at publish, for batches built before the check existed.
+  assert.match(publish, /if\(shop&&!shopsMatch\(shop\.title,etsyName\.shop_name\)\)return NextResponse\.json\(shopMismatch\(shop\.title,etsyName\.shop_name\),\{status:409\}\)/);
+
+  // The refusal names both shops, or it is not actionable.
+  assert.match(match, /Printify store: \$\{printifyShopTitle\}/);
+  assert.match(match, /Goldie's Etsy shop: \$\{etsyShopName\}/);
+});
+
+/* D639 · Brittany, reading the refusal: "there's no navigation to go back to the
+ * Etsy or Printify connection after you've connected." She was right, and it
+ * made the refusal above unactionable - it tells a seller to reconnect Etsy with
+ * nowhere to do it. Once both accounts were connected the connect screen was
+ * unreachable: the auto-skip moves past it and nothing linked back. */
+test("the connection screen stays reachable after connecting — D639", async () => {
+  const [app, management, icons] = await Promise.all([
+    readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/management-nav.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/nav-icons.tsx", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(app, /href="\/listing-factory\?step=connect"[\s\S]{0,120}<NavIcon name="connections"\/>Connections/);
+  assert.match(management, /\{key:"connections",href:"\/listing-factory\?step=connect",label:"Connections"\}/,
+    "D203's rule: both navigations list the same destinations or they drift");
+  assert.match(icons, /case "connections":/);
+  assert.match(icons, /\| "connections";/);
+
+  /* The destination only works because an explicitly requested connect step is
+     left alone by the auto-skip. If that guard goes, this link bounces. */
+  assert.match(app, /if\(requestedStep\.current==="connect"\)return;/);
 });

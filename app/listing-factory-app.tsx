@@ -3140,6 +3140,10 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
             <a href="/keywords" target="_blank" rel="noopener noreferrer"><NavIcon name="keywords"/>Keyword Banks</a>
             <a href="/mockups" target="_blank" rel="noopener noreferrer"><NavIcon name="mockups"/>Mockup Library</a>
             <a href="/usage" onClick={event=>guardNavigation(event,"/usage")}><NavIcon name="usage"/>Usage + Plan</a>
+            {/* D639 - ?step=connect is honoured as an explicit request and the
+                auto-skip leaves it alone, so this is the way back to the
+                connection screen rather than a new page. */}
+            <a href="/listing-factory?step=connect" onClick={event=>guardNavigation(event,"/listing-factory?step=connect")}><NavIcon name="connections"/>Connections</a>
           </nav>
           <button className="workflow-restart-button" type="button" disabled={running} onClick={startOver}>{/* D362 · The glyph ↻ renders at text weight in most UI faces, so at 11px it
               read as a stray mark rather than an arrow. A drawn icon keeps its

@@ -1,7 +1,7 @@
 import GoldieWordmark from "./goldie-wordmark";
 import { NavIcon } from "./nav-icons";
 
-type Destination="batches"|"keywords"|"mockups"|"usage"|"operations";
+type Destination="batches"|"keywords"|"mockups"|"usage"|"operations"|"connections";
 
 export default function ManagementNav({active,listingFactoryHref="/listing-factory",showOperations=false}:{active?:Destination;listingFactoryHref?:string;showOperations?:boolean}){
   const links:Array<{key:Destination;href:string;label:string}>=[
@@ -9,6 +9,8 @@ export default function ManagementNav({active,listingFactoryHref="/listing-facto
     {key:"keywords",href:"/keywords",label:"Keyword Banks"},
     {key:"mockups",href:"/mockups",label:"Mockup Library"},
     {key:"usage",href:"/usage",label:"Usage + Plan"},
+    /* D639 - the same way back, on every management page. */
+    {key:"connections",href:"/listing-factory?step=connect",label:"Connections"},
   ];
   if(showOperations)links.push({key:"operations",href:"/operations",label:"Operations"});
   return <nav className="management-nav" aria-label="Goldie tools"><GoldieWordmark/><a href={listingFactoryHref}><NavIcon name="listingFactory"/>Listing Factory</a>{links.map(link=><a key={link.key} className={active===link.key?"active":undefined} href={link.href}><NavIcon name={link.key}/>{link.label}</a>)}{/* D398 - The management pages are a separate layout with no .app-shell, so

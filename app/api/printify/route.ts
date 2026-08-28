@@ -1,5 +1,6 @@
 import { env } from "cloudflare:workers";
 import { NextResponse } from "next/server";
+import { shopsMatch, shopMismatch } from "./shop-match";
 import { templateHasLabelArtwork } from "./product-payload";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { customerLaunchBlock } from "@/app/customer-launch-gate";
@@ -139,6 +140,11 @@ export async function POST(request: Request) {
       if (response.ok) { found = { shop, product: (await response.json()) as Product }; break; }
     }
     if (!found) return NextResponse.json({ error: "This Printify product cannot be used yet.", issues:["Use a product from the Printify shop connected to Goldie."] }, { status: 404 });
+    /* D639 - the earliest point at which Goldie knows both shops. Refusing here
+       stops a whole batch being built against a storefront its Etsy connection
+       cannot publish to. */
+    const etsyShop = await env.DB.prepare("SELECT shop_name FROM etsy_connections WHERE user_id=?").bind(user.userId).first<{shop_name:string}>();
+    if (etsyShop?.shop_name && !shopsMatch(found.shop.title, etsyShop.shop_name)) return NextResponse.json(shopMismatch(found.shop.title, etsyShop.shop_name), { status: 409 });
     /* D330 · This variable must contain an ETSY shipping_profile_id only.
        Printify's external.shipping_template_id is a different id system. If it
        seeds this value, an inactive Etsy listing lookup can fail while the

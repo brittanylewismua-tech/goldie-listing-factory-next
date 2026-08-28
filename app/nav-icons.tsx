@@ -9,7 +9,7 @@
  * and leave the two free to drift again on the next change. The icons live here
  * instead, keyed by destination, and both navigations render from this map — so
  * an icon added or changed in one place is added or changed in both. */
-export type NavKey = "listingFactory" | "batches" | "keywords" | "mockups" | "usage" | "operations";
+export type NavKey = "listingFactory" | "batches" | "keywords" | "mockups" | "usage" | "operations" | "connections";
 
 
 /* D246 · D203 centralised the icon MARKUP so the two navigations could not
@@ -37,6 +37,12 @@ export function NavIcon({ name }: { name: NavKey }) {
   switch (name) {
     case "listingFactory":
       return <svg {...ICON}><path d="M3 9l1-4h16l1 4M3 9h18M3 9v10a1 1 0 001 1h16a1 1 0 001-1V9M9 13h6"/></svg>;
+    /* D639 · Once Printify and Etsy were connected the connect screen was
+       unreachable: the auto-skip moves past it and nothing linked back. A seller
+       who connected the wrong shop - or needed to reconnect after Goldie told
+       them the two shops did not match - had nowhere to go. */
+    case "connections":
+      return <svg {...ICON}><path d="M9 17H7A5 5 0 017 7h2M15 7h2a5 5 0 010 10h-2M8 12h8"/></svg>;
     case "batches":
       return <svg {...ICON}><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 106 5.3L3 8"/><path d="M12 7v5l3 2"/></svg>;
     case "keywords":

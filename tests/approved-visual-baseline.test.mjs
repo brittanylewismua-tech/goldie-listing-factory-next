@@ -1413,7 +1413,9 @@ test("D203: one nav renders both sidebars, so icons cannot go missing on half th
   // The workflow nav renders from the same source rather than inline markup.
   const navBlock = app.slice(app.indexOf('<nav className="top-nav"'), app.indexOf("</nav>", app.indexOf('<nav className="top-nav"')));
   assert.doesNotMatch(navBlock, /<svg/, "no inline icon markup left to drift");
-  assert.equal((navBlock.match(/<NavIcon /g) || []).length, 5);
+  /* D639 added Connections - the way back to the connect screen, which was
+     unreachable once both accounts were connected. */
+  assert.equal((navBlock.match(/<NavIcon /g) || []).length, 6);
 });
 
 test("D203: cross-screen alignment and destructive-action faults are fixed", async () => {

@@ -4,6 +4,8 @@ import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { monthKey, planFor } from "@/app/plan-limits";
 import { drainGlobalPublishQueue, publishJobPayload } from "./queue";
 import { isOwner } from "@/app/mastermind/access";
+import { shopsMatch, shopMismatch } from "../../shop-match";
+import { decryptPrintifyToken } from "../../token-crypto";
 
 export async function POST(request:Request){
   const user=await getChatGPTUser();if(!user)return NextResponse.json({error:"Sign in to publish these listings."},{status:401});
@@ -28,6 +30,29 @@ export async function POST(request:Request){
   const completed=await env.DB.prepare(`SELECT job_id,COUNT(*) count FROM etsy_publish_items WHERE user_id=? AND product_id IN (${ids.map(()=>"?").join(",")}) AND status='completed' GROUP BY job_id ORDER BY count DESC LIMIT 1`).bind(user.userId,...ids).first<{job_id:string;count:number}>();if(Number(completed?.count||0)===ids.length)return NextResponse.json({ok:true,resumed:true,job:await publishJobPayload(user.userId,completed!.job_id)});
   const [etsy,printify,planRow,monthUsed,dayUsed,pending]=await Promise.all([env.DB.prepare("SELECT shop_id FROM etsy_connections WHERE user_id=?").bind(user.userId).first(),env.DB.prepare("SELECT 1 ready FROM printify_connections WHERE user_id=?").bind(user.userId).first(),env.DB.prepare("SELECT plan_key FROM account_plans WHERE user_id=?").bind(user.userId).first<{plan_key:string}>(),env.DB.prepare("SELECT COUNT(*) count FROM etsy_listing_usage WHERE user_id=? AND substr(published_at,1,7)=?").bind(user.userId,monthKey()).first<{count:number}>(),env.DB.prepare("SELECT COUNT(*) count FROM etsy_listing_usage WHERE user_id=? AND published_at>=datetime('now','-24 hours')").bind(user.userId).first<{count:number}>(),env.DB.prepare("SELECT COUNT(*) count FROM etsy_publish_items WHERE user_id=? AND status IN ('queued','running')").bind(user.userId).first<{count:number}>()]);
   if(!etsy)return NextResponse.json({error:"Connect Etsy before publishing. Goldie will not publish listings it cannot finish safely."},{status:400});if(!printify)return NextResponse.json({error:"Reconnect Printify before publishing."},{status:401});
+  /* D639 - the backstop. A batch built before the step-1 check existed, or one
+     whose Etsy connection changed after the drafts were made, would otherwise
+     publish into a shop Goldie cannot finish listings in. That is exactly what
+     job 050552ce did: Printify accepted the publish for HOWDYANGEL and the
+     listings were never going to appear in shesawolfclothing. Money is spent on
+     the far side of this call, so it is worth one extra request. */
+  const etsyName=await env.DB.prepare("SELECT shop_name FROM etsy_connections WHERE user_id=?").bind(user.userId).first<{shop_name:string}>();
+  const printifyToken=await env.DB.prepare("SELECT encrypted_token FROM printify_connections WHERE user_id=?").bind(user.userId).first<{encrypted_token:string}>();
+  const tokenKey=(env as unknown as {PRINTIFY_TOKEN_KEY?:string}).PRINTIFY_TOKEN_KEY;
+  if(etsyName?.shop_name&&printifyToken?.encrypted_token&&tokenKey){
+    const shopIds=[...new Set(rows.results.map((row:{response_json:string})=>{try{return Number((JSON.parse(row.response_json) as {shopId?:number}).shopId)}catch{return 0}}).filter(Boolean))];
+    if(shopIds.length){
+      const token=await decryptPrintifyToken(printifyToken.encrypted_token,tokenKey).catch(()=>"");
+      if(token){
+        const response=await fetch("https://api.printify.com/v1/shops.json",{headers:{Authorization:`Bearer ${token}`,"User-Agent":"Goldie-Listing-Factory"},cache:"no-store"}).catch(()=>null);
+        const shops=response&&response.ok?(await response.json().catch(()=>[]) as Array<{id:number;title:string}>):[];
+        for(const shopId of shopIds){
+          const shop=shops.find(entry=>Number(entry.id)===shopId);
+          if(shop&&!shopsMatch(shop.title,etsyName.shop_name))return NextResponse.json(shopMismatch(shop.title,etsyName.shop_name),{status:409});
+        }
+      }
+    }
+  }
   const plan=planFor(planRow?.plan_key,isOwner(user)),reserved=Number(pending?.count||0),monthlyRemaining=plan.drafts-Number(monthUsed?.count||0)-reserved,dailyRemaining=plan.dailyListings-Number(dayUsed?.count||0)-reserved;
   if(ids.length>monthlyRemaining)return NextResponse.json({error:`This batch would exceed your ${plan.drafts}-listing monthly allowance. You can queue ${Math.max(0,monthlyRemaining)} more ${monthlyRemaining===1?"listing":"listings"} this month.`},{status:429});if(ids.length>dailyRemaining)return NextResponse.json({error:`Goldie can publish ${Math.max(0,dailyRemaining)} more ${dailyRemaining===1?"listing":"listings"} for this account within the current 24-hour window. Your monthly listings remain available.`},{status:429});
   const proposedJobId=crypto.randomUUID(),drafts=rows.results.map(row=>JSON.parse(row.response_json) as {id:string;batchId?:string}),batchId=drafts[0]?.batchId||proposedJobId,/* D559 - one blob of settings per job meant one shipping profile and one set of
