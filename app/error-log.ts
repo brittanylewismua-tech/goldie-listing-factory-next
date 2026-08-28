@@ -1,3 +1,4 @@
+import { isSellerFixable } from "./error-classification";
 import { env } from "cloudflare:workers";
 
 // One place every failure gets written down.
@@ -25,12 +26,25 @@ export type LoggedError = {
   userAgent?: string | null;
   context?: Record<string, unknown> | null;
   severity?: "error" | "warning";
+  sellerFixable?: boolean;
 };
 
 type LogRuntime = { DB?: D1Database; RESEND_API_KEY?: string; GOLDIE_ALERT_EMAIL?: string; GOLDIE_SITE_URL?: string };
 function runtime() { return env as unknown as LogRuntime; }
 
 const cut = (value: unknown, max: number) => String(value ?? "").replace(/\s+/g, " ").trim().slice(0, max);
+
+/* D645 · Every alert email so far has been a problem only the seller could fix -
+   a shipping profile from the wrong shop, an incomplete Etsy field. Brittany's
+   words: "I don't need to know about the errors until somebody contacts me
+   anyways. It's not like I'm gonna see an error in my inbox and then email the
+   person about it." With one seller that is noise; with a hundred it is their
+   support queue landing in her inbox, burying the platform failures she does
+   need to see.
+
+   So the log keeps everything and the email is reserved for what she can act on:
+   Printify unreachable, Etsy tokens broken, the queue itself faulting. These
+   patterns are the seller's own to fix and are recorded silently. */
 
 /* Tokens and keys must never be written into a log we then email around. */
 const SECRETS = /\b(Bearer\s+[\w.\-]+|sk-[\w-]{8,}|key-[\w-]{8,}|gld-admin-[\w-]+|eyJ[\w.-]{20,})/gi;
@@ -100,7 +114,9 @@ async function alert(db: D1Database, id: string, input: LoggedError) {
   const config = runtime();
   const key = config.RESEND_API_KEY;
   const to = config.GOLDIE_ALERT_EMAIL || "brittanylewismua@gmail.com";
-  if (!key || input.severity === "warning") return;
+  /* D645 - a seller-fixable failure is recorded and never emailed, whatever its
+     severity. It is already on the seller's own screen. */
+  if (!key || input.severity === "warning" || (input.sellerFixable ?? isSellerFixable(input.message))) return;
   try {
     const recent = await db.prepare(
       `SELECT COUNT(*) AS count FROM error_log

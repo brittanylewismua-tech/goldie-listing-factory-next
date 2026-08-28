@@ -5153,7 +5153,10 @@ test("the publish ticks can actually be cleared — D560", async () => {
   assert.doesNotMatch(review, /\},\[drafts\]\)/);
 
   // A listing seen for the first time starts ticked; after that her choice stands.
-  assert.match(review, /const fresh=available\.filter\(id=>!knownIds\.current\.has\(id\)\)/);
+  /* D645 tightened this further: once the seller has touched the selection,
+     nothing new is auto-ticked at all. D560's rule - a listing seen for the
+     first time starts ticked - still holds until she chooses. */
+  assert.match(review, /const fresh=sellerChose\.current\?\[\]:available\.filter\(id=>!knownIds\.current\.has\(id\)\)/);
   assert.match(review, /return fresh\.length\?\[\.\.\.new Set\(\[\.\.\.kept,\.\.\.fresh\]\)\]:kept/);
 
   // And the button counts what is ticked.
@@ -5481,8 +5484,8 @@ test("nothing upstream of the send shrinks a bundle publish back to one product 
   const seeding = app.match(/const seededPublishIds=useRef<Set<string>>\(new Set\(\)\);[\s\S]*?\},\[drafts,bundleMembers,activeBundle,bundleRecipes,activeRecipe\]\);/)?.[0];
   assert.ok(seeding, "the publish selection must be seeded from the bundle");
   assert.match(seeding, /bundlePublishDrafts\(\)\.filter/);
-  assert.match(seeding, /const fresh=created\.filter\(id=>!seededPublishIds\.current\.has\(id\)\)/,
-    "only genuinely new listings may be added, or an untick comes back");
+  assert.match(seeding, /const fresh=sellerChosePublish\.current\?\[\]:created\.filter\(id=>!seededPublishIds\.current\.has\(id\)\)/,
+    "only genuinely new listings may be added, and none once the seller has chosen - D645");
   assert.match(seeding, /return fresh\.length\?\[\.\.\.new Set\(\[\.\.\.kept,\.\.\.fresh\]\)\]:kept/);
 
   /* The dependency array is evaluated during render, so this effect has to sit
@@ -6161,4 +6164,70 @@ test("the click guard reads the current blockers, not a stale closure — D644",
   assert.match(app, /issues=publishBlockersRef\.current\(\);/);
   assert.doesNotMatch(app, /issues=publishBlockers\(\);/,
     "calling it directly is what read the stale selection");
+});
+
+/* D645 · Three changes, one session's worth of evidence behind each.
+ *
+ * 1. Bundle members load in the background, so listings keep arriving after the
+ *    page is usable, and every arrival was treated as "seen for the first time,
+ *    so start it ticked". Measured live: two listings chosen, the other four
+ *    re-ticked themselves as their products loaded, and the press was then
+ *    refused naming products no longer shown as chosen.
+ * 2. Every alert email so far has been a problem only the seller could fix.
+ *    Brittany: "I don't need to know about the errors until somebody contacts
+ *    me anyways." With one seller that is noise; with a hundred it is their
+ *    support queue in her inbox, burying what she must actually see.
+ * 3. Which makes the owner page the place she looks, so the two kinds have to
+ *    be separable at a glance. */
+test("a chosen selection is never re-ticked by background loading — D645", async () => {
+  const [review, app] = await Promise.all([
+    readFile(new URL("../app/final-listing-review.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
+  ]);
+
+  // Only the seller's own controls flip the flag; the seeding effect sets state directly.
+  assert.match(review, /const sellerChose=useRef\(false\);/);
+  assert.match(review, /function changeSelection\(ids:string\[\]\)\{[\s\S]*?sellerChose\.current=true;[\s\S]*?setSelectedIds\(ids\);/);
+  assert.match(review, /const fresh=sellerChose\.current\?\[\]:available\.filter/);
+
+  // The app side hears the same moment and stops seeding too.
+  assert.match(review, /window\.dispatchEvent\(new Event\("goldie-publish-selection-touched"\)\)/);
+  assert.match(app, /window\.addEventListener\("goldie-publish-selection-touched",touched\)/);
+  assert.match(app, /const fresh=sellerChosePublish\.current\?\[\]:created\.filter/);
+
+  /* Arrivals are still RECORDED as known even when not ticked, or they would be
+     treated as new again on the next pass and tick themselves after all. */
+  assert.match(review, /available\.forEach\(id=>knownIds\.current\.add\(id\)\)/);
+  assert.match(app, /created\.forEach\(id=>seededPublishIds\.current\.add\(id\)\)/);
+});
+
+test("seller-fixable failures are recorded and never emailed — D645", async () => {
+  const [log, classification, control] = await Promise.all([
+    readFile(new URL("../app/error-log.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/error-classification.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/mastermind-admin/admin-control.tsx", import.meta.url), "utf8"),
+  ]);
+
+  // One classifier, shared, so the email rule and the page can never disagree.
+  assert.match(classification, /export function isSellerFixable\(message:string\)/);
+  assert.match(classification, /shipping_profile_id/);
+  assert.match(classification, /different shop/);
+  /* It must stay free of server imports - the admin page is a client component,
+     and importing error-log.ts dragged cloudflare:workers into the browser. */
+  assert.doesNotMatch(classification, /^\s*import .*(cloudflare:workers|next\/server)/m,
+    "the comment may name them; the module may not import them");
+  assert.match(log, /import \{ isSellerFixable \} from "\.\/error-classification"/);
+  assert.match(control, /import \{ isSellerFixable \} from "@\/app\/error-classification"/);
+
+  // The email is skipped; the write is not.
+  assert.match(log, /if \(!key \|\| input\.severity === "warning" \|\| \(input\.sellerFixable \?\? isSellerFixable\(input\.message\)\)\) return;/);
+  assert.match(log, /INSERT INTO error_log/, "everything is still recorded");
+
+  // And the page separates them rather than making her read every message.
+  assert.match(control, /const \[errorFilter, setErrorFilter\] = useState<"all"\|"platform"\|"seller">\("all"\)/);
+  assert.match(control, /errorFilter === "all" \|\| \(errorFilter === "seller"\) === isSellerFixable\(item\.message\)/);
+  assert.match(control, /Seller can fix/);
+  assert.match(control, /Needs Goldie/);
+  // The old copy promised an email for every area; it must not still say that.
+  assert.doesNotMatch(control, /Brittany is emailed the first error in each area/);
 });

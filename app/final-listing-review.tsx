@@ -38,10 +38,20 @@ export default function FinalListingReview({drafts,files,selections,defaultIndic
      A listing that appears for the first time starts selected; after that her
      choice stands. */
   const knownIds=useRef<Set<string>>(new Set());
+  /* D645 · Bundle members load in the background, so listings keep arriving after
+     the page is usable. Every arrival was treated as "seen for the first time,
+     so start it ticked" - which silently put back listings the seller had just
+     unticked. Measured live: two listings chosen, the other four re-ticked
+     themselves as their products finished loading, and the press was refused
+     naming products that were no longer on screen as chosen.
+     Once she has touched the selection it is hers. Later arrivals are still
+     recorded as known, so they never surprise her later either - they simply
+     arrive unticked. */
+  const sellerChose=useRef(false);
   const availableKey=selectable.map(draft=>draft.id!).sort().join(",");
   useEffect(()=>{
     const available=availableKey?availableKey.split(","):[];
-    const fresh=available.filter(id=>!knownIds.current.has(id));
+    const fresh=sellerChose.current?[]:available.filter(id=>!knownIds.current.has(id));
     available.forEach(id=>knownIds.current.add(id));
     setSelectedIds(current=>{
       const kept=current.filter(id=>available.includes(id));
@@ -49,7 +59,13 @@ export default function FinalListingReview({drafts,files,selections,defaultIndic
     });
   },[availableKey]);
   useEffect(()=>{window.dispatchEvent(new CustomEvent("goldie-publish-selection",{detail:selectedIds}))},[selectedIds]);
-  function changeSelection(ids:string[]){setSelectedIds(ids)}
+  function changeSelection(ids:string[]){
+    /* Only the seller's own controls call this - the seeding effect above sets
+       state directly - so this is exactly the moment her choice becomes hers. */
+    sellerChose.current=true;
+    window.dispatchEvent(new Event("goldie-publish-selection-touched"));
+    setSelectedIds(ids);
+  }
   function toggle(id:string){changeSelection(selected.has(id)?selectedIds.filter(value=>value!==id):[...selectedIds,id])}
   function contentReview(design?:Design){
     const shortTitle=!design||design.title.trim().length<100;

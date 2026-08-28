@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { isSellerFixable } from "@/app/error-classification";
 import Image from "next/image";
 
 export type Diagnostic = { reference: string; userEmail: string; fileName: string; stage: string; outcome: string; retryCount: number; errorCode: string | null; httpStatus: number | null; message: string | null; updatedAt: string };
@@ -16,6 +17,7 @@ export type LoggedFailure = { id: string; createdAt: string; area: string; sever
 
 export default function AdminControl({ initialActive, memberCount, initialDiagnostics, initialErrors = [] }: { initialActive: boolean; memberCount: number; initialDiagnostics: Diagnostic[]; initialErrors?: LoggedFailure[] }) {
   const [errorSearch, setErrorSearch] = useState("");
+  const [errorFilter, setErrorFilter] = useState<"all"|"platform"|"seller">("all");
   const [active, setActive] = useState(initialActive);
   const [diagnosticSearch, setDiagnosticSearch] = useState("");
   const [working, setWorking] = useState(false);
@@ -49,14 +51,25 @@ export default function AdminControl({ initialActive, memberCount, initialDiagno
     <section className="diagnostics-card">
       <p className="mini-label">ERROR LOG</p>
       <h2>Everything that failed</h2>
-      <p className="diagnostics-intro">Every browser crash and failed request across Listing Factory, newest first, with who it happened to. Brittany is emailed the first error in each area, then once every 15 minutes while it keeps happening.</p>
+      {/* D645 - the old copy promised an email for every area. Seller-fixable
+          failures are recorded and never emailed now, so the page says what is
+          actually true and becomes the place to look. */}
+      <p className="diagnostics-intro">Every browser crash and failed request across Listing Factory, newest first, with who it happened to. <b>Needs Goldie</b> means something only you can fix — those still email you, at most once per area every 15 minutes. <b>Seller can fix</b> means the seller has already been told on their own screen; recorded here, never emailed.</p>
+      <div className="diagnostics-filters" role="group" aria-label="Filter errors">
+        {([["all","All"],["platform","Needs Goldie"],["seller","Seller can fix"]] as const).map(([key,label])=>(
+          <button key={key} type="button" className={errorFilter===key?"diagnostics-filter is-on":"diagnostics-filter"} aria-pressed={errorFilter===key} onClick={()=>setErrorFilter(key)}>
+            {label} <span>{key==="all"?initialErrors.length:initialErrors.filter((item)=>(key==="seller")===isSellerFixable(item.message)).length}</span>
+          </button>
+        ))}
+      </div>
       {initialErrors.length > 0 && <input className="diagnostics-search" value={errorSearch} onChange={(event) => setErrorSearch(event.target.value)} placeholder="Search member, area, message or code" aria-label="Search errors" />}
       {initialErrors.length === 0 && <p className="diagnostics-empty">Nothing has failed yet.</p>}
       <div className="diagnostics-list">{initialErrors
+        .filter((item) => errorFilter === "all" || (errorFilter === "seller") === isSellerFixable(item.message))
         .filter((item) => `${item.area} ${item.userEmail ?? ""} ${item.userName ?? ""} ${item.message} ${item.errorCode ?? ""}`.toLowerCase().includes(errorSearch.trim().toLowerCase()))
         .map((item) => (
         <article key={item.id} className={`diagnostic-item${item.severity === "warning" ? "" : " diagnostic-row-error"}`}>
-          <div><b>{item.area}</b><span>{item.alerted ? "Emailed · " : ""}{standardTime(item.createdAt)}</span></div>
+          <div><b>{item.area}</b><span className={isSellerFixable(item.message) ? "diagnostic-tag is-seller" : "diagnostic-tag is-platform"}>{isSellerFixable(item.message) ? "Seller can fix" : "Needs Goldie"}</span><span>{item.alerted ? "Emailed · " : ""}{standardTime(item.createdAt)}</span></div>
           <dl>
             <div><dt>MEMBER</dt><dd>{item.userEmail || "Not signed in"}{item.userName ? ` · ${item.userName}` : ""}</dd></div>
             <div><dt>WHERE</dt><dd>{item.url || "—"}</dd></div>

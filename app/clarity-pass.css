@@ -3114,3 +3114,38 @@ body{min-width:1180px!important}
   text-overflow:ellipsis;
   white-space:nowrap;
 }
+
+/* ==========================================================================
+ * D645 · The diagnostics list is the place Brittany looks now that
+ * seller-fixable failures no longer email her, so the two kinds have to be
+ * separable at a glance rather than by reading every message.
+ * ========================================================================== */
+.diagnostics-filters{display:flex;gap:8px;margin:10px 0 14px;flex-wrap:wrap}
+.diagnostics-filter{
+  border:1px solid rgba(91,48,79,.18);
+  background:rgba(255,255,255,.55);
+  color:#4a2a3e;
+  border-radius:999px;
+  padding:6px 13px;
+  font:600 .72rem/1 "Manrope",system-ui,sans-serif;
+  cursor:pointer;
+  display:inline-flex;align-items:center;gap:7px;
+}
+.diagnostics-filter span{
+  font-weight:700;
+  font-size:.66rem;
+  background:rgba(91,48,79,.1);
+  border-radius:999px;
+  padding:2px 7px;
+}
+.diagnostics-filter.is-on{background:#4b283e;border-color:#4b283e;color:#fff}
+.diagnostics-filter.is-on span{background:rgba(255,255,255,.18)}
+.diagnostic-tag{
+  font:700 .6rem/1 "Manrope",system-ui,sans-serif;
+  letter-spacing:.02em;
+  border-radius:999px;
+  padding:3px 8px;
+  margin-left:8px;
+}
+.diagnostic-tag.is-platform{background:rgba(158,39,54,.12);color:#9e2736}
+.diagnostic-tag.is-seller{background:rgba(91,48,79,.1);color:#6b4a60}

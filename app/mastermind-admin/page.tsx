@@ -13,7 +13,7 @@ export default async function MastermindAdminPage() {
   const errors = db ? await db.prepare(
     `SELECT id, created_at AS createdAt, area, severity, user_email AS userEmail, user_name AS userName,
             message, error_code AS errorCode, http_status AS httpStatus, url, context, alerted
-     FROM error_log ORDER BY created_at DESC LIMIT 100`).all().catch(() => ({ results: [] })) : { results: [] };
+     FROM error_log ORDER BY created_at DESC LIMIT 250`).all().catch(() => ({ results: [] })) : { results: [] };
   const [setting, count, diagnostics] = db ? await Promise.all([
     db.prepare("SELECT active FROM mastermind_settings WHERE id = 1").first<{ active: number }>(),
     db.prepare("SELECT COUNT(*) AS count FROM mastermind_access").first<{ count: number }>(),

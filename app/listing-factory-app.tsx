@@ -1072,6 +1072,7 @@ export default function ListingFactoryApp() {
      thing it actually needs instead - a listing with Etsy details on it. */
   useEffect(()=>{if(etsyCategories.length)return;const restored=files.find(file=>file.etsy)?.etsy;if(!restored)return;void resolveEtsyOptions(restored,restored.taxonomyId).catch(()=>undefined)},[etsyCategories.length,files]);
   useEffect(()=>{if(finishPhase!=="mockups"||printifyImageIndices.length||Object.keys(printifyImageSelections).length)return;const guide=productPhotoGuide(templateDetails?.blueprintTitle||"",drafts.find(draft=>draft.printifyImages?.length)?.printifyImages?.length||0),defaults=Object.fromEntries(drafts.filter(draft=>draft.id&&draft.status==="Created"&&draft.printifyImages?.length).map(draft=>[draft.id!,Array.from({length:Math.min(guide.count,draft.printifyImages!.length)},(_,index)=>index)]));if(Object.keys(defaults).length)setPrintifyImageSelections(defaults)},[finishPhase,printifyImageIndices.length,printifyImageSelections,drafts,templateDetails?.blueprintTitle]);
+  useEffect(()=>{const touched=()=>{sellerChosePublish.current=true};window.addEventListener("goldie-publish-selection-touched",touched);return()=>window.removeEventListener("goldie-publish-selection-touched",touched)},[]);
   useEffect(()=>{const select=(event:Event)=>setSelectedPublishIds((event as CustomEvent<string[]>).detail||[]),retry=(event:Event)=>{const clientId=(event as CustomEvent<string>).detail;const design=files.find(file=>file.id===clientId);if(design)void runDrafts([design],true)};window.addEventListener("goldie-publish-selection",select);window.addEventListener("goldie-retry-listing",retry);return()=>{window.removeEventListener("goldie-publish-selection",select);window.removeEventListener("goldie-retry-listing",retry)}},[files,drafts]);
 
   const templateLoaded = templateDetails !== null;
@@ -2771,9 +2772,11 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
      ticked, but after that her choice stands, so this can never re-tick a box
      she cleared. */
   const seededPublishIds=useRef<Set<string>>(new Set());
+  /* D645 - the same rule on this side of the event. */
+  const sellerChosePublish=useRef(false);
   useEffect(()=>{
     const created=bundlePublishDrafts().filter(draft=>draft.status==="Created"&&draft.id).map(draft=>draft.id!);
-    const fresh=created.filter(id=>!seededPublishIds.current.has(id));
+    const fresh=sellerChosePublish.current?[]:created.filter(id=>!seededPublishIds.current.has(id));
     created.forEach(id=>seededPublishIds.current.add(id));
     setSelectedPublishIds(current=>{
       const kept=current.filter(id=>created.includes(id));
