@@ -201,7 +201,21 @@ function decodeProfileTitle(title:string){
     .replace(/&#x([0-9a-f]+);/gi,(_,code)=>String.fromCharCode(parseInt(code,16)))
     .replace(/&quot;/g,'"').replace(/&apos;/g,"'").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&amp;/g,"&");
 }
-function friendlyShippingProfileTitle(raw?:string){const title=raw?decodeProfileTitle(raw):raw;if(!title)return"Shipping profile needed";if(/^standard:/i.test(title))return"Standard shipping";return title.length>42?`${title.slice(0,39).trim()}…`:title}
+/* D648 · This cut at 39 characters wherever that landed and the caller then
+   appended " shipping profile", so a real profile read "Economy-Standard:
+   Printify Choice, Garm… shipping profile" - a word sliced in half with a noun
+   stapled after it. Cut on a word boundary, and never repeat the words the
+   caller is about to add. */
+function friendlyShippingProfileTitle(raw?:string){
+  const title=raw?decodeProfileTitle(raw):raw;
+  if(!title)return"Shipping profile needed";
+  if(/^standard:/i.test(title))return"Standard shipping";
+  const clean=title.replace(/\s*shipping\s*profile\s*$/i,"").trim();
+  if(clean.length<=42)return clean;
+  const cut=clean.slice(0,42);
+  const boundary=Math.max(cut.lastIndexOf(" "),cut.lastIndexOf(","));
+  return `${(boundary>18?cut.slice(0,boundary):cut).replace(/[,\s]+$/,"")}…`;
+}
 
 const APPAREL_PRODUCT_FAMILIES=new Set(["tee","hoodie","crewneck","tank","longSleeve"]);
 function shippingProfileGroup(profileTitle:string,blueprintTitle:string){
@@ -1954,6 +1968,14 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
           if(!files.length)return {label:"0 titled",tone:"attention"};
           if(titled<files.length)return {label:`${titled} of ${files.length} titled`,tone:"attention"};
           if(tagged<files.length)return {label:`${tagged} of ${files.length} fully tagged`,tone:"attention"};
+          /* D648 - the badge said "Titles and tags ready" in green directly above
+             a crimson "0 of 1 ready - Closure still needed". D624 taught it to
+             count tags; it still ignored the Etsy details on the same card, so
+             the card could call itself ready while a row under it could not
+             publish. It summarises every row it sits above or it summarises
+             nothing. */
+          const etsyReady=files.filter(file=>etsyRequiredComplete(file.etsy)).length;
+          if(etsyReady<files.length)return {label:`${etsyReady} of ${files.length} Etsy details ready`,tone:"attention"};
           return {label:"Titles and tags ready",tone:"ready"};
         }
         const published=Number(batchReceipt?.publishedCount)||0;
@@ -1968,7 +1990,7 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
       /* D627 - "Checking…" forever was the old answer here. Say what is true. */
       if(summary.unreadable)return {label:"Batch not found",tone:"attention"};
       if(summary.published)return {label:`${summary.published} published`,tone:"ready"};
-      if(summary.drafts)return {label:`${summary.drafts} drafts`,tone:summary.status==="complete"?"ready":"attention"};
+      if(summary.drafts)return {label:`${summary.drafts} ${summary.drafts===1?"draft":"drafts"}`,tone:summary.status==="complete"?"ready":"attention"};
       return {label:"Not started yet",tone:"waiting"};
     };
   }
@@ -3258,7 +3280,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
             const reached=stagePosition<0||position<=stagePosition;
             const done=reached&&(stage.index===8?stageStarted:(stageStarted&&progressGateIssues(stage.index).length===0)||(stagePosition>=0&&position<stagePosition));
             const issues=progressGateIssues(stage.index);
-            const draftLine=stage.label==="Images"&&complete?` · ${createdDraftCount} drafts created`:"";
+            const draftLine=stage.label==="Images"&&complete?` · ${createdDraftCount} ${createdDraftCount===1?"draft":"drafts"} created`:"";
             /* D227 · Never disable the stage the seller is currently on. When drafts failed,
                the rail greyed out Listing while the seller was standing on Listing —
                a control refusing the page it was already showing. */
@@ -3537,7 +3559,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
               {files.length > 0 && designsFinished && <div className="batch-capacity"><b>{planDraftsRemaining===null?"Checking plan allowance…":activeBundle?`${files.length} designs × ${bundleProductCount} products = ${requestedListingCount} listings · ${additionalDesignsAvailable} more designs available`:`${files.length} of ${batchDesignLimit} designs ready · ${additionalDesignsAvailable} more available · ${planDraftsRemaining} listings left on your plan`}</b></div>}
               {activeBundle&&bundleQualityGroups.length>0&&<section className="bundle-quality-review" aria-label="Product-specific print quality warnings"><div><b>{bundleQualityGroups.length} of {files.length} {files.length===1?"design needs":"designs need"} a print decision</b><span>The same artwork can be sharp on one product and too small for another. Anything below 215 DPI is flagged as very low resolution. Nothing is skipped silently.</span><div className="bundle-quality-bulk"><button type="button" onClick={()=>decideAllQuality("include")}>Proceed with all {bundleQualityGroups.length}</button><button type="button" onClick={()=>decideAllQuality("exclude")}>Exclude all {bundleQualityGroups.length}</button></div></div>{bundleQualityGroups.map(group=>{const decision=qualityGroupDecision(group.keys);const productList=[...new Set(group.products)];return <article className={group.critical?"critical-dpi":""} key={group.fileId}><div><b>{group.fileName}</b><span>{group.critical?<strong>VERY LOW RESOLUTION · {group.worstDpi} DPI · </strong>:null}{group.actualWidth} × {group.actualHeight}px is below the recommended size for <strong>{productList.join(", ")}</strong>{productList.length>1?` — ${productList.length} products in this bundle`:""}.</span></div><div><button className={decision==="include"?"selected":""} onClick={()=>decideQualityGroup(group.keys,"include")}>{group.critical?"I understand — proceed":"Proceed anyway"}</button><button className={decision==="exclude"?"selected exclude":""} onClick={()=>decideQualityGroup(group.keys,"exclude")}>{productList.length>1?"Exclude these listings":"Exclude this listing"}</button></div></article>})}</section>}
               {files.length>0&&(workflowStep==="setup"||workflowStep==="designs")&&<div className="design-upload-review" aria-label="Review uploaded designs">{files.map(file=><article key={file.id}><img src={file.previewUrl} alt="" loading="lazy" decoding="async"/><div><b title={file.name}>{file.name}</b><small>{file.width&&file.height?`${file.width} × ${file.height}px`:"Checking dimensions…"}</small></div><button type="button" onClick={()=>removeDesign(file.id)} aria-label={`Remove ${file.name}`}>Remove</button></article>)}</div>}
-              {files.length>0&&!complete&&(workflowStep==="setup"||workflowStep==="designs")&&<>{designsFinished&&belowRecommendedPixels.length>0&&<div className={`pixel-warning-inline ${criticalDpiFiles.length?"critical-dpi":""}`} role="status"><span>!</span><div><b>{criticalDpiFiles.length?`${criticalDpiFiles.length} ${criticalDpiFiles.length===1?"design is":"designs are"} below 215 DPI — very low resolution.`:belowRecommendedPixels.length===1?"One design is below Printify’s recommended pixel size.":"Some designs are below Printify’s recommended pixel size."}</b><small>{criticalDpiFiles.length?"Goldie will identify every affected design and require confirmation before continuing.":"You can still continue, but Goldie will ask you to confirm first."}</small></div></div>}{/* D399 - Step 2 showed "Next step" here AND "Continue to create drafts" in the
+              {files.length>0&&!complete&&(workflowStep==="setup"||workflowStep==="designs")&&<>{designsFinished&&belowRecommendedPixels.length>0&&<div className={`pixel-warning-inline ${criticalDpiFiles.length?"critical-dpi":""}`} role="status"><span>!</span><div><b>{criticalDpiFiles.length?`${criticalDpiFiles.length} ${criticalDpiFiles.length===1?"design is":"designs are"} below 215 DPI — very low resolution.`:belowRecommendedPixels.length===1?"One design is below Printify’s recommended pixel size.":"Some designs are below Printify’s recommended pixel size."}</b><small>{criticalDpiFiles.length?"Goldie will identify every affected design so you can replace it or continue anyway.":"You can still continue, but Goldie will ask you to confirm first."}</small></div></div>}{/* D399 - Step 2 showed "Next step" here AND "Continue to create drafts" in the
                 product card below. Creating the drafts is the step; this button only
                 scrolled down to it. One forward control per step: the action while the
                 drafts do not exist, the forward once they do. */}
@@ -3586,7 +3608,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
                 screen, and pushed the Publish panel further down for it. The card
                 reports photo readiness; nothing else needs to. The banner style
                 is still used by step 2, so only this instance goes. */}
-              <article className="step-card final-review active-panel"><div className="step-content">{batchReceipt?<OutcomeReceipt goalLine={listingGoal?`That is ${goalDone} of your ${listingGoal.target} listings this ${listingGoal.period}.`:undefined} receipt={batchReceipt} productName={templateDetails?.blueprintTitle||""} shippingProfile={etsyShippingProfiles.find(profile=>profile.id===etsyShippingProfileId)?.title||""} imageCount={printifyImageIndices.length} sizeGuideName={sizeGuideName} tagCount={files.reduce((sum,file)=>sum+file.tags.length,0)} mockupCount={Object.values(preparedMockupCounts).reduce((sum,count)=>sum+count,0)} variantCount={pricedVariants.length*files.length} minutesSaved={Math.max(12,Math.round(files.length*11.1))} nextBundleProduct={bundleRecipes[bundleIndex+1]?.name} bundleComplete={Boolean(activeBundle&&bundleIndex===bundleRecipes.length-1)} onNextBundleProduct={()=>void continueBundle()} onNewBatch={()=>{clearCurrentBatch(true);goToStep("setup")}}/>:<><div className="step-heading"><div><p className="mini-label">FINAL REVIEW</p><h2>Your batch is ready for its final check</h2></div><span className="done-mark">✓ {drafts.filter(draft=>draft.status==="Created").length} drafts{activeBundle&&bundleRecipes.length>1?` on ${activeRecipe?.name||"this product"}`:""}</span></div>{/* D546 - the old lead-in pointed at a checklist that repeated
+              <article className="step-card final-review active-panel"><div className="step-content">{batchReceipt?<OutcomeReceipt goalLine={listingGoal?`That is ${goalDone} of your ${listingGoal.target} listings this ${listingGoal.period}.`:undefined} receipt={batchReceipt} productName={templateDetails?.blueprintTitle||""} shippingProfile={etsyShippingProfiles.find(profile=>profile.id===etsyShippingProfileId)?.title||""} imageCount={printifyImageIndices.length} sizeGuideName={sizeGuideName} tagCount={files.reduce((sum,file)=>sum+file.tags.length,0)} mockupCount={Object.values(preparedMockupCounts).reduce((sum,count)=>sum+count,0)} variantCount={pricedVariants.length*files.length} minutesSaved={Math.max(12,Math.round(files.length*11.1))} nextBundleProduct={bundleRecipes[bundleIndex+1]?.name} bundleComplete={Boolean(activeBundle&&bundleIndex===bundleRecipes.length-1)} onNextBundleProduct={()=>void continueBundle()} onNewBatch={()=>{clearCurrentBatch(true);goToStep("setup")}}/>:<><div className="step-heading"><div><p className="mini-label">FINAL REVIEW</p><h2>Your batch is ready for its final check</h2></div><span className="done-mark">✓ {drafts.filter(draft=>draft.status==="Created").length} {drafts.filter(draft=>draft.status==="Created").length===1?"draft":"drafts"}{activeBundle&&bundleRecipes.length>1?` on ${activeRecipe?.name||"this product"}`:""}</span></div>{/* D546 - the old lead-in pointed at a checklist that repeated
               what the product cards above already report, line for line. The cards
               own it. What this step still has to say is what publishing will do. */}<p className="step-copy">{activeBundle&&bundleRecipes.length>1?`Every product in this batch publishes in turn. Nothing goes live until you use the final button.`:"Nothing is published until you use the final button."}</p>{/* D546 - her words, looking at it: "this whole section doesn't need to be on
               the final step because above it, you list every product and everything

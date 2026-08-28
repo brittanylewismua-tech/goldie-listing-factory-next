@@ -635,7 +635,9 @@ test("Etsy shipping profile names are decoded, not shown as raw entities — D11
   assert.match(page, /function shippingProfileOptionLabel\(profile:EtsyShippingProfile\)\{return`\$\{decodeProfileTitle\(profile\.title\)\}/,
     "Profile options must decode the title before rendering.");
   assert.match(page, /<option key=\{profile\.id\} value=\{profile\.id\}>\{shippingProfileOptionLabel\(profile\)\}<\/option>/);
-  assert.match(page, /function friendlyShippingProfileTitle\(raw\?:string\)\{const title=raw\?decodeProfileTitle\(raw\):raw;/);
+  /* D648 reformatted this function and taught it to cut on a word boundary. The
+     D116 rule it guards - decode the entities, never render raw ones - stands. */
+  assert.match(page, /function friendlyShippingProfileTitle\(raw\?:string\)\{\s*const title=raw\?decodeProfileTitle\(raw\):raw;/);
 });
 
 test("sizes are chosen in Goldie, not just inherited from Printify — D123, superseded by D164", async () => {

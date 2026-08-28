@@ -6288,3 +6288,33 @@ test("counts read correctly at one — D647", async () => {
   assert.doesNotMatch(app, /\$\{drafts\.length\} drafts`/);
   assert.match(app, /===1\?"design":"designs"\} at a time without lowering their print resolution/);
 });
+
+/* D648 · Everything the seller walkthrough turned up that was cosmetic or
+ * copy rather than broken machinery. Each was read off the screen while
+ * driving the real flow with a real design and a real draft. */
+test("the walkthrough's smaller faults are fixed — D648", async () => {
+  const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+
+  /* "Economy-Standard: Printify Choice, Garm… shipping profile" - cut at a
+     fixed 39 characters wherever that landed, with a noun stapled after it. */
+  assert.match(app, /const clean=title\.replace\(\/\\s\*shipping\\s\*profile\\s\*\$\/i,""\)\.trim\(\)/,
+    "never repeat the words the caller is about to append");
+  assert.match(app, /const boundary=Math\.max\(cut\.lastIndexOf\(" "\),cut\.lastIndexOf\(","\)\)/,
+    "cut on a word boundary");
+  assert.doesNotMatch(app, /title\.slice\(0,39\)\.trim\(\)/);
+
+  /* The low-resolution banner promised a confirmation step that never came;
+     the create dialog does not mention resolution at all. */
+  assert.doesNotMatch(app, /require confirmation before continuing/);
+  assert.match(app, /identify every affected design so you can replace it or continue anyway/);
+
+  // A one-design batch counted itself in the plural in four more places.
+  assert.match(app, /\$\{summary\.drafts\} \$\{summary\.drafts===1\?"draft":"drafts"\}/);
+  assert.match(app, /\$\{createdDraftCount\} \$\{createdDraftCount===1\?"draft":"drafts"\} created/);
+  assert.match(app, /length===1\?"draft":"drafts"\}\{activeBundle/);
+
+  /* And the step 3 badge called itself ready above a crimson row on the same
+     card - D624's fault again, one row further down. */
+  assert.match(app, /const etsyReady=files\.filter\(file=>etsyRequiredComplete\(file\.etsy\)\)\.length;/);
+  assert.match(app, /if\(etsyReady<files\.length\)return \{label:`\$\{etsyReady\} of \$\{files\.length\} Etsy details ready`,tone:"attention"\}/);
+});
