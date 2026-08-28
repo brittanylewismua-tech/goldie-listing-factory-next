@@ -2991,6 +2991,20 @@ body{min-width:1180px!important}
 .app-shell .post-draft-heading .open-all-button{margin:0}
 .app-shell .post-draft-workspace .batch-size-guide{margin:0}
 
+/* D681 · "Review all listings in Printify" sat 66px above the card it belongs
+   to, which read as the card floating low with a hole above it. Three separate
+   rules were stacking to make that space and D680 only reached one of them:
+
+     lilac-theme.css  .post-draft-workspace{padding-top:24px!important}
+     theme.css        .open-all-button{margin:0 0 8px;padding:10px}
+     this file        .post-draft-heading{margin:0 0 6px}
+
+   The workspace one carries !important, so overriding it needs the same. The
+   link is one line of text directly above its card and should sit like it. */
+.app-shell .post-draft-workspace{padding-top:0!important;margin-top:0!important}
+.app-shell .post-draft-heading .open-all-button{margin:0!important;padding:2px 0!important;width:auto!important}
+.app-shell .post-draft-heading{margin:0 0 6px!important;padding:0!important}
+
 /* D557 - placement carries the same head as every other panel now. */
 .app-shell .task-listing-work .draft-card-top{padding-top:4px}
 

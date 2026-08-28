@@ -7106,3 +7106,27 @@ test("the low-resolution review appears for one product, not only bundles — D6
   // The unchecked-product note follows the same rule.
   assert.match(app, /const bundleProductsUnchecked=useMemo\(\(\)=>productsInBatch\.filter\(/);
 });
+
+/* D681 · Measured on the live page, not read from source: "Review all listings
+   in Printify" sat 66px above the card it labels, which is why the card looked
+   like it was floating low with a hole above it. Three rules in three files
+   stacked to make that space, and a fix that reaches only one of them moves the
+   number without closing the gap - D679 and D680 each tried and it stayed at
+   68 then 66. */
+test("the Printify review link sits on its card — D681", async () => {
+  const clarity = await readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8");
+
+  /* lilac-theme sets padding-top:24px!important on the workspace, so the
+     override has to carry !important too or it silently loses. */
+  assert.match(clarity, /\.app-shell \.post-draft-workspace\{padding-top:0!important;margin-top:0!important\}/);
+  /* theme.css gives the link 10px padding and an 8px bottom margin, sized for a
+     full-width button it is no longer. */
+  assert.match(clarity, /\.app-shell \.post-draft-heading \.open-all-button\{margin:0!important;padding:2px 0!important;width:auto!important\}/);
+  assert.match(clarity, /\.app-shell \.post-draft-heading\{margin:0 0 6px!important;padding:0!important\}/);
+
+  /* All three live in different files, so the comment names them - the next
+     person to see a stubborn gap should not have to rediscover that. */
+  const why = clarity.slice(clarity.indexOf("/* D681"), clarity.indexOf("D681") + 900);
+  assert.match(why, /lilac-theme\.css/);
+  assert.match(why, /theme\.css/);
+});
