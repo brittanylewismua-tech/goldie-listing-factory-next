@@ -1412,10 +1412,10 @@ test("keeps the Step 6 listing count on one line", async () => {
   /* D541 - the count lived in an editor-heading above one big block. It reports
      per row now - "9 of 13 tags", "Same as batch", "Ready" - and per panel, and
      wrapping any of those onto a second line is what this has always been about. */
-  assert.match(clarity, /\.app-shell \.task-listing-count\{[^}]*white-space:nowrap/);
+  assert.match(clarity, /\.app-shell \.listing-card-meta\{[^}]*white-space:nowrap/);
   /* D553 - the chooser is gone: opening a task shows every listing's work, each
      under its name, which is what step 2 did before D541. */
-  assert.match(clarity, /\.app-shell \.task-listing-count\{[^}]*white-space:nowrap/);
+  assert.match(clarity, /\.app-shell \.listing-card-meta\{[^}]*white-space:nowrap/);
   assert.match(clarity, /\.app-shell \.task-panel-heading\{/);
 });
 
@@ -2121,10 +2121,10 @@ test("renders every Finish phase as compact expandable rows",async()=>{
   const clarity=await readFile(new URL("../app/clarity-pass.css",import.meta.url),"utf8");
   /* D553 - the chooser is gone: opening a task shows every listing's work, each
      under its name, which is what step 2 did before D541. */
-  assert.match(clarity,/\.app-shell \.task-listing-head\{/);
-  assert.match(clarity,/\.app-shell \.task-listing-work\{/);
+  assert.match(clarity,/\.app-shell \.listing-card-head\{/);
+  assert.match(clarity,/\.app-shell \.listing-card-detail\{/);
   /* D553 - one collapse, at the task; every listing's work is open under it. */
-  assert.match(clarity,/\.app-shell \.task-listing-work\{/);
+  assert.match(clarity,/\.app-shell \.listing-card-detail\{/);
   assert.match(clarity,/\.app-shell \.task-panel-body\{/);
   assert.match(css,/\.etsy-detail-card/);
   assert.match(css,/\.post-draft-workspace \.draft-card-top/);
@@ -3007,7 +3007,9 @@ test("the design cache is bounded and a missing browser cache never erases listi
   assert.match(restore, /originalUnavailable:!file/);
   assert.match(app, /listings are.*restored and can still be completed and published/);
   assert.doesNotMatch(app, /design files are not on this computer|continue on the computer you started on/);
-  assert.match(app, /<UploadedListingPhotos productId=\{draft\.id\}/,
+  /* D687 - draft.id! because listingWorkRows filters on draft.id before mapping
+     and TypeScript cannot narrow through the filter. The wiring is unchanged. */
+  assert.match(app, /<UploadedListingPhotos productId=\{draft\.id!\}/,
     "listing-photo uploads remain available without the original design file");
   const upload=app.slice(app.indexOf("async function chooseFiles"),app.indexOf("const remeasured="));
   assert.match(upload, /design\.originalUnavailable.*design\.contentHash===contentHash/,
@@ -4210,7 +4212,12 @@ test("every product shows the same rows on every step — D498/D499", async () =
 
 test("no product on any step falls back to a bare header — D500", async () => {
   const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
-  const fn = app.slice(app.indexOf("function productRows("), app.indexOf("function stepProductCards("));
+  /* D687 - bounded to productRows' own body. The old slice ran all the way to
+     stepProductCards, so it policed every function in between; the moment
+     etsyFlags was added there with a legitimate `return []` for "nothing is
+     missing", this failed on code it was never written to check. */
+  const start = app.indexOf("function productRows(");
+  const fn = app.slice(start, app.indexOf("\n  function ", start + 10));
 
   /* A product with no batch yet had no summary to read, so productRows returned
      nothing and its card collapsed back to a bare header - the exact thing these
@@ -4696,11 +4703,13 @@ test("a task row owns its panel inside the product card — D539", async () => {
   /* D553 - the chooser is gone: opening a task shows every listing's work, each
      under its name, which is what step 2 did before D541. */
   assert.doesNotMatch(app, /task-listing-row/);
-  assert.match(app, /<div className="task-listing-work">/);
-  assert.match(app, /className="task-listing-thumb"/);
+  /* D687 - the head-then-work stack is now ListingRows, shared by every panel
+     instead of hand-rolled four times. The panels call it; the markup lives in
+     listing-rows.tsx, which is the whole point. */
+  assert.match(app, /listingWorkRows\(/, "step 2's photo panels render through the shared rows");
+  assert.match(app, /<ListingRows /, "so does designTaskRows");
   assert.match(app, /\{count\} \{count===1\?"photo":"photos"\}/);
-  /* D553 - one collapse, at the task; every listing's work is open under it. */
-  assert.match(css, /\.app-shell \.task-listing-head\{/);
+  assert.match(css, /\.app-shell \.listing-card-head\{/);
 
   // The legacy shells come off rather than nesting inside the new ones.
   /* D555 - the picker is rendered once, always bare, so the <details> copy could
@@ -4766,7 +4775,7 @@ test("a product card holds only its rows and the one open task — D540", async 
 
 test("the narrowed task card contains every Printify-photo layer — D677", async () => {
   const css = await readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8");
-  assert.match(css, /\.task-panel :is\(\.task-listing,\.task-listing-head,\.task-listing-work,\.printify-image-picker\)\{width:100%;max-width:100%;min-width:0;box-sizing:border-box\}/,
+  assert.match(css, /\.task-panel :is\(\.listing-card,\.listing-card-head,\.listing-card-detail,\.printify-image-picker\)\{width:100%;max-width:100%;min-width:0;box-sizing:border-box\}/,
     "the listing, its heading, work area and picker all use the panel's width");
 });
 
@@ -5049,20 +5058,29 @@ test("opening a task shows the work, not a list of listings to pick from — D55
   assert.doesNotMatch(app, /openListing===/, "nothing selects which listing is visible");
   assert.doesNotMatch(app, /setOpenListing/);
 
-  // Every listing: its name, where it stands, and its work - already open.
-  assert.match(app, /<div className="task-listing-head">/);
-  assert.match(app, /<p className="task-listing-name">/);
-  assert.match(app, /<div className="task-listing-work">/);
+  /* D687 · The rule this test protects is narrower than "never collapse", and
+     saying which is the whole point of writing it down.
 
-  /* D680 - placement deliberately became a visual card instead of cramming the
-     generic head/work stack into half-width. The other tasks retain the shared
-     head-then-work shape. */
-  assert.equal((app.match(/className="task-listing-work"/g) || []).length, 4,
-    "the remaining task panels plus shared designTaskRows keep their work block");
-  assert.equal((app.match(/className="task-listing-head"/g) || []).length, 4,
-    "the remaining task panels keep their listing head");
+     What she rejected was being made to CHOOSE a listing before she could work:
+     one visible at a time, three clicks to drag one photo. Those guards are above
+     and they stay. What she asked for and approved in the D687 preview is
+     different - every listing present at once, several open at once, and the
+     photo panels open on arrival.
+
+     The distinction is the job, not the panel. Dragging a photo is direct
+     manipulation and has to be open; reading a title is scanning, and twenty
+     expanded titles was 14.3 screens of it. So step 2's photo panels pass
+     defaultOpen and step 3's text panels do not. If that ever inverts, this
+     fails. */
+  assert.match(app, /const listingWorkRows=\(work:/);
+  assert.match(app, /return <ListingRows defaultOpen rows=\{usable\.map/,
+    "photo panels open on arrival - dragging is not scanning");
+  assert.equal((app.match(/listingWorkRows\(\(\{draft,design,selectedImages,count\}\)/g) || []).length, 3,
+    "Printify photos, uploads and photo order all render through it");
+  assert.doesNotMatch(app, /<ListingRows rows=\{files\.map[^]{0,400}defaultOpen/,
+    "step 3's text panels stay collapsed - that is the density she approved");
   assert.match(app,/className="task-listing placement-listing-card"/,
-    "placement uses its own compact visual card");
+    "D680 - placement keeps its own compact visual card, not the generic stack");
 });
 
 test.skip("what the click-through found on step 2 and step 3 — D554", async () => {
@@ -7168,11 +7186,15 @@ test("the photo panel keeps what was approved in the preview — D682", async ()
      AM34-gigapixel-standard v2-4x.png". */
   /* D684 - raised again, to 132px. D682's 96px was pushed and never deployed, so
      the live page served the original 36px the whole time she was asking. */
-  assert.match(clarity, /\.app-shell \.task-listing-thumb\{width:132px!important;height:132px!important;/);
-  assert.doesNotMatch(clarity, /\.app-shell \.task-listing-thumb\{width:36px/);
-  assert.doesNotMatch(clarity, /\.app-shell \.task-listing-thumb\{width:36px/);
+  /* D687 - 132px moved to the OPEN card. Twenty collapsed rows have to be
+     scannable at 52px; the one she is working on stays the size she asked for
+     four times. Density must not quietly take that back. */
+  assert.match(clarity, /\.app-shell \.listing-card\.is-open \.listing-card-thumb\{width:132px;height:132px/);
+  assert.match(clarity, /\.app-shell \.listing-card-thumb\{width:52px;height:52px/);
+  assert.doesNotMatch(clarity, /\.listing-card-thumb\{width:36px/);
+  assert.doesNotMatch(clarity, /\.listing-card-thumb\{width:36px/);
   // Room for two lines of name beside a 96px thumb, instead of one clipped line.
-  assert.match(clarity, /\.task-listing-name\{flex:1;min-width:0;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2/);
+  assert.match(clarity, /\.app-shell \.listing-card-summary\{[^}]*text-overflow:ellipsis/);
 
   /* A 430px scroller AND an expander do the same job; together, expanding just
      makes a longer scroll inside a fixed box. */
@@ -7245,22 +7267,25 @@ test("the open-all link shares the cards' row instead of owning one — D683", a
    stacks every listing in the batch and the only thing between them was a 1px rule
    under a heading that read as a filename. */
 test("each listing in a task panel is separated and numbered — D685", async () => {
-  const [clarity, app] = await Promise.all([
+  const [clarity, app, rows] = await Promise.all([
     readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8"),
     readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/listing-rows.tsx", import.meta.url), "utf8"),
   ]);
-  // Said plainly, in the position the eye lands on first.
-  assert.match(app, /<span className="task-listing-index">Listing \{listingIndex\+1\} of \{listings\.length\}<\/span>/);
-  assert.match(app, /<span className="task-listing-index">Listing \{listingIndex\+1\} of \{files\.length\}<\/span>/);
-  assert.match(clarity, /\.app-shell \.task-listing-index\{font:800 13px/);
+  /* D687 - numbered once, in the shared component, instead of in four hand-rolled
+     copies that could drift apart. Said plainly, where the eye lands first. */
+  assert.match(rows, /Listing \{index \+ 1\} of \{rows\.length\}/);
+  assert.match(clarity, /\.app-shell \.listing-card-index\{display:block;font-size:11px;font-weight:800/);
   // A bounded card with real space around it, not a hairline rule.
-  assert.match(clarity, /\.app-shell \.task-panel \.task-listing\{margin:0 0 22px!important;[^}]*border:1px solid/);
+  assert.match(clarity, /\.app-shell \.listing-card\{border:1px solid[^}]*margin-bottom:10px/);
+  // Open reads as a different, darker surface - indentation alone was not enough.
+  assert.match(clarity, /\.app-shell \.listing-card\.is-open\{margin-bottom:22px;background:#f1e8f0/);
 
   /* The title is a caption, not a headline: "its almost always going to be a junk
      title like that so either make it much smaller and subtler or get rid of it
      altogether." D684 had enlarged it to 1rem bold, which was backwards. */
-  assert.match(clarity, /\.task-listing-head \.task-listing-name\{font-size:11\.5px!important;font-weight:500!important/);
-  assert.doesNotMatch(clarity, /\.task-listing-head \.task-listing-name\{font-size:1rem!important/);
+  assert.match(clarity, /\.app-shell \.listing-card-summary\{[^}]*font-size:12\.5px;font-weight:400/);
+  assert.doesNotMatch(clarity, /\.listing-card-summary\{[^}]*font-size:1rem/);
   // And it never prints the upload filename or repeats the listing number.
   assert.match(app, /const listingLabel=\(design:DesignFile\|undefined\)=>\{/);
   assert.doesNotMatch(app, /listing \$\{index\+1\} of \$\{listings\.length\}/);

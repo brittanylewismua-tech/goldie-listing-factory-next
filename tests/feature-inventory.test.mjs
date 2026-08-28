@@ -108,7 +108,7 @@ test("no capability is wired up only halfway", async () => {
   assert.equal((app.match(/printTargetFor\(/g) || []).length, 6,
     "five call sites plus the definition - it was written out five times");
 
-  assert.match(app, /<UploadedListingPhotos productId=\{draft\.id\}/);
+  assert.match(app, /<UploadedListingPhotos productId=\{draft\.id!\}/);
   assert.doesNotMatch(app, /<IntegratedMockups|<MockupSetSelector/);
 
   // And first run is a fact about the product, not about how it was opened.

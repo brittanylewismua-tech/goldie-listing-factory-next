@@ -6,7 +6,7 @@ const read=path=>readFile(new URL(`../${path}`,import.meta.url),"utf8");
 test("seller uploads are exact-listing photos that publish, reorder, download and remove",async()=>{
   const[app,uploader,images,order,finish,download,nav]=await Promise.all([
     read("app/listing-factory-app.tsx"),read("app/uploaded-listing-photos.tsx"),read("app/api/etsy/images/route.ts"),read("app/listing-photo-order.tsx"),read("app/api/etsy/finish.ts"),read("app/api/listing-photos/download/route.ts"),read("app/management-nav.tsx")]);
-  assert.match(app,/<UploadedListingPhotos productId=\{draft\.id\}/);
+  assert.match(app,/<UploadedListingPhotos productId=\{draft\.id!\}/);
   assert.match(app,/listing-photo-design-identity/);
   /* D684 - the uploads panel showed the design artwork and the design's filename.
      It has to show the listing she is uploading photos to. */

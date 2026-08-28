@@ -8,6 +8,7 @@ import { runBounded } from "./bounded-work";
 import { productReadiness, recipeCarriesApprovedPricing, type Readiness } from "./product-readiness";
 import { KeywordBank, SavedWorkflow, type KeywordList, type Pricing, type ProductBundle, type Recipe } from "./factory-tools";
 import UploadedListingPhotos from "./uploaded-listing-photos";
+import ListingRows, { type ListingFlag } from "./listing-rows";
 import { confirmAction } from "./confirm-dialog";
 import ListingPhotoOrder from "./listing-photo-order";
 import { tagsFromTitle } from "./seo-utils";
@@ -2470,17 +2471,54 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
    URL returned ok at 1536px. Those blank squares where a design thumbnail should
    be were never white-on-white artwork; they were images that never fetched. A
    panel is opened deliberately and holds a handful of images. */
-  function designTaskRows(task:string,standing:(design:DesignFile)=>string,inner:(design:DesignFile)=>ReactNode){
-    return <div className="task-panel-body">{files.map((design,listingIndex)=>{
-      const thumb=design.previewUrl||drafts.find(draft=>draft.clientId===design.id)?.previewUrl||"";
-      return <div className="task-listing" key={`${task}:${design.id}`} onFocus={()=>setActiveDesign(design.id)}>
-        <div className="task-listing-head">
-          {thumb?<img className="task-listing-thumb" src={thumb} alt="" decoding="async"/>:<span className="task-listing-thumb"/>}
-          <div className="task-listing-ident"><span className="task-listing-index">Listing {listingIndex+1} of {files.length}</span><p className="task-listing-name">{design.title.trim()||design.name}</p></div>
-          <span className="task-listing-count">{standing(design)}</span>
-        </div>
-        <div className="task-listing-work">{inner(design)}</div>
-      </div>})}</div>;
+  /* D687 · This used to render every listing fully expanded, one after another.
+     At twenty listings that was 10,820px - 14.3 screens inside one panel, with no
+     way to see which listings needed anything. It now renders through the shared
+     ListingRows: a 76px row per listing, expanding into the same editor that used
+     to always be open. `standing` becomes the row's meta counter and `flags`
+     decides which rows announce themselves. */
+  function designTaskRows(task:string,standing:(design:DesignFile)=>string,inner:(design:DesignFile)=>ReactNode,flags?:(design:DesignFile)=>ListingFlag[]){
+    return <ListingRows rows={files.map(design=>({
+      key:`${task}:${design.id}`,
+      thumb:design.previewUrl||drafts.find(draft=>draft.clientId===design.id)?.previewUrl||"",
+      summary:design.title.trim()||design.name,
+      meta:standing(design),
+      flags:flags?flags(design):[],
+      detail:<div onFocus={()=>setActiveDesign(design.id)}>{inner(design)}</div>,
+    }))}/>;
+  }
+
+  /* D687 · The mechanical checks. Every one of these was already computable and
+     was either reported too late or not at all: step 4 told her "1 title is under
+     100 characters" AFTER she had scrolled the whole panel, and never said which
+     listing. Catching mechanical failures before she reads a single row is what
+     lets her spend the time on judgement instead of hunting. */
+  function titleFlags(design:DesignFile):ListingFlag[]{
+    const flags:ListingFlag[]=[];
+    const length=(design.title||"").trim().length;
+    /* Over 140 was flagged by nothing at all. Etsy rejects it. */
+    if(length>140)flags.push({tone:"attention",label:`Over limit · ${length} chars`});
+    else if(!length)flags.push({tone:"attention",label:"No title yet"});
+    else if(length<100)flags.push({tone:"attention",label:`Short title · ${length} chars`});
+    /* Tags are an optimisation, not a blocker - she was explicit about that - so
+       this is a neutral note and never the accent. */
+    const tags=(design.tags||[]).length;
+    if(tags<13)flags.push({tone:"note",label:`${tags} of 13 tags`});
+    return flags;
+  }
+  function descriptionFlags(design:DesignFile):ListingFlag[]{
+    const text=finalDescription(design,design.etsy)||"";
+    if(!text.trim())return [{tone:"attention",label:"No description"}];
+    return [{tone:"note",label:design.descriptionOverride!==undefined?"Customized":"Same as batch"}];
+  }
+  function etsyFlags(design:DesignFile):ListingFlag[]{
+    if(!design.etsy)return [{tone:"attention",label:design.title.trim()?"Not created yet":"Waiting for a title"}];
+    if(etsyRequiredComplete(design.etsy))return [];
+    const missing=etsyMissingRequired(design.etsy);
+    if(!missing.length)return [{tone:"attention",label:"Needs review"}];
+    /* Name them. "2 required fields missing" still leaves her opening the row to
+       find out which. */
+    return [{tone:"attention",label:`Missing ${missing.slice(0,2).join(", ")}${missing.length>2?` +${missing.length-2}`:""}`}];
   }
 
   function taskPanel(task:string){
@@ -2496,16 +2534,16 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
              bundle can legitimately want different banks, so copying it around
              on her behalf would be a guess about her keywords. */}
              {activeBundle&&bundleRecipes.length>1&&autoTitleBankId&&bundleRecipes.some(recipe=>recipe.id!==activeRecipe?.id&&recipe.keywordListId!==autoTitleBankId)?<button type="button" className="secondary-action" disabled={applyingBankToBundle} onClick={()=>void applyBankToBundle()}>{applyingBankToBundle?"Applying to every product…":`Use this keyword bank for every product in this bundle (${bundleRecipes.length})`}</button>:null}{titleBuildMessage&&<p className="title-build-message" role="status">{titleBuildMessage}</p>}</div>:<div className="title-builder-pane manual-title-builder"><KeywordBank initialId={manualKeywordBankId||activeRecipe?.keywordListId||""} onSelect={list=>setManualKeywordBankId(list?.id||"")} onAdd={addBatchKeyword} title="Choose a keyword bank" copy="Click keywords in the order you want them. Every click updates all listings below."/><div className="selected-batch-keywords"><div><b>Selected keywords</b>{batchKeywords.length>0&&<button onClick={clearBatchKeywords}>Clear all</button>}</div>{batchKeywords.length?<div className="selected-keyword-chips">{batchKeywords.map(keyword=><button key={keyword} onClick={()=>removeBatchKeyword(keyword)}>{keyword}<span>×</span></button>)}</div>:<p>No keywords selected yet.</p>}</div>{batchKeywords.length>0&&<div className="batch-title-preview"><b>Batch title preview</b><span>{batchKeywords.join(titleJoiner)}</span><small>Applied to every listing below. You can still edit any listing individually.</small></div>}</div>}</div>
-      {designTaskRows("titles",design=>!design.title.trim()?"No title yet":`${design.tags.length} of 13 tags`,design=><div className="task-listing-edit">{/* D541 - D408 found this the hard way: at thumbnail size the artwork
+      {designTaskRows("titles",design=>`${(design.title||"").trim().length}/140`,design=><div className="task-listing-edit">{/* D541 - D408 found this the hard way: at thumbnail size the artwork
         is unreadable, so the card cannot tell you which design you are writing a
         title for. The row stays compact; the preview comes back at a size you can
-        read once the row is open. */}{(()=>{const shot=design.previewUrl||drafts.find(draft=>draft.clientId===design.id)?.previewUrl;return shot?<button type="button" className="task-listing-preview" onClick={()=>window.open(shot,"_blank","noopener,noreferrer")} aria-label={`Open a larger preview of ${design.title.trim()||design.name}`}><img src={shot} alt={design.name||"Design artwork"} decoding="async"/><span>Enlarge</span></button>:null})()}<div className="design-fields"><label>Title <span>{design.title.length}/140</span><textarea className="listing-title-field" rows={3} value={design.title} maxLength={140} onChange={event=>{const title=event.target.value;updateDesign(design.id,{title,tags:tagsFromTitle(title),etsy:undefined})}}/></label><label>Tags <span>{design.tags.length}/13</span><textarea className="listing-tags-field" rows={3} value={design.tags.join(", ")} onChange={event=>updateDesign(design.id,{tags:[...new Set(event.target.value.split(",").map(tag=>tag.trim().toLowerCase()).filter(tag=>tag&&tag.length<=20))].slice(0,13),etsy:undefined})} placeholder="Exact title phrases, separated by commas"/></label><div className="tag-row">{design.tags.map(tag=><span key={tag}>{tag}</span>)}{!design.tags.length&&<small>Goldie will create matching tags with the title.</small>}</div><IndividualAutoTitle design={design} template={templateDetails} useCommas={titleJoiner===", "} paused={batchHeldByAnotherTab} onApply={(title,tags)=>{setActiveDesign(design.id);updateDesign(design.id,{title,tags,etsy:undefined,etsyError:""})}}/>{design.etsyError&&<small className="field-error">{design.etsyError}</small>}</div></div>)}
+        read once the row is open. */}{(()=>{const shot=design.previewUrl||drafts.find(draft=>draft.clientId===design.id)?.previewUrl;return shot?<button type="button" className="task-listing-preview" onClick={()=>window.open(shot,"_blank","noopener,noreferrer")} aria-label={`Open a larger preview of ${design.title.trim()||design.name}`}><img src={shot} alt={design.name||"Design artwork"} decoding="async"/><span>Enlarge</span></button>:null})()}<div className="design-fields"><label>Title <span>{design.title.length}/140</span><textarea className="listing-title-field" rows={3} value={design.title} maxLength={140} onChange={event=>{const title=event.target.value;updateDesign(design.id,{title,tags:tagsFromTitle(title),etsy:undefined})}}/></label><label>Tags <span>{design.tags.length}/13</span><textarea className="listing-tags-field" rows={3} value={design.tags.join(", ")} onChange={event=>updateDesign(design.id,{tags:[...new Set(event.target.value.split(",").map(tag=>tag.trim().toLowerCase()).filter(tag=>tag&&tag.length<=20))].slice(0,13),etsy:undefined})} placeholder="Exact title phrases, separated by commas"/></label><div className="tag-row">{design.tags.map(tag=><span key={tag}>{tag}</span>)}{!design.tags.length&&<small>Goldie will create matching tags with the title.</small>}</div><IndividualAutoTitle design={design} template={templateDetails} useCommas={titleJoiner===", "} paused={batchHeldByAnotherTab} onApply={(title,tags)=>{setActiveDesign(design.id);updateDesign(design.id,{title,tags,etsy:undefined,etsyError:""})}}/>{design.etsyError&&<small className="field-error">{design.etsyError}</small>}</div></div>,titleFlags)}
     </div>;
     if(task==="description")return <>
       <div className="task-panel-lead"><div className="batch-description-body"><p>This came from your saved product. Edit it once here to change the shared description on every listing in this batch.</p><label>Description for every listing<textarea rows={9} value={description} onChange={event=>setDescription(event.target.value)} placeholder="Add sizing, materials, production, care, and shipping information"/></label><small>Open any listing below only when that listing needs different wording.</small>{/* D232 · "Save this description as the default" went with the settings block. The
                      shared editor survived the move but the way to keep the wording for future
                      batches did not, so it comes back where the description is now edited. */}{description.trim()!==String(activeRecipe?.description||"").trim()&&<button type="button" className="save-product-default" disabled={!description.trim()||savingProductDefault==="description"} onClick={()=>void saveProductDefaults({description},"description")}>{savingProductDefault==="description"?"Saving…":"Save this description as the default"}</button>}</div></div>
-      {designTaskRows("description",design=>design.descriptionOverride!==undefined?"Customized":"Same as batch",design=><div className="individual-description-body"><p>The complete description is shown below. Edit it only if this listing needs different wording or an additional blurb.</p><label>Description for this listing<textarea rows={10} value={finalDescription(design,design.etsy)} onChange={event=>updateDesign(design.id,{descriptionOverride:event.target.value,etsyError:""})}/></label>{design.descriptionOverride!==undefined&&<button type="button" onClick={()=>updateDesign(design.id,{descriptionOverride:undefined,etsyError:""})}>Use the batch description again</button>}<small>Spacing and line breaks are preserved when this description is sent to Printify and Etsy.</small></div>)}
+      {designTaskRows("description",design=>`${(finalDescription(design,design.etsy)||"").length} chars`,design=><div className="individual-description-body"><p>The complete description is shown below. Edit it only if this listing needs different wording or an additional blurb.</p><label>Description for this listing<textarea rows={10} value={finalDescription(design,design.etsy)} onChange={event=>updateDesign(design.id,{descriptionOverride:event.target.value,etsyError:""})}/></label>{design.descriptionOverride!==undefined&&<div className="listing-card-actions"><button type="button" onClick={()=>updateDesign(design.id,{descriptionOverride:undefined,etsyError:""})}>Use the batch description again</button></div>}<small>Spacing and line breaks are preserved when this description is sent to Printify and Etsy.</small></div>,descriptionFlags)}
     </>;
     if(task==="etsy")return <>
       <div className="task-panel-lead"><div className="task-panel-heading"><h3>Review your Etsy listing details</h3><span className="done-mark">{files.filter(file=>etsyRequiredComplete(file.etsy)).length}/{files.length} ready</span></div><p className="step-copy">Goldie has pre-filled the Etsy category and every product field it could confidently match for each listing. Look everything over and change any selection that does not fit.</p>{files.every(file=>etsyRequiredComplete(file.etsy))&&<div className="variant-transfer-note"><span>✓</span><div><b>Core listing information is ready for your review.</b><small>This step contains additional Etsy category and product fields. Optional fields stay blank when there is not a clear match.</small></div></div>}</div>
@@ -2514,7 +2552,7 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
         if(!design.etsy)return design.title.trim()?"Not created yet":"Waiting for a title";
         const missing=etsyMissingRequired(design.etsy);
         return missing.length===1?`${missing[0]} still needed`:missing.length?`${missing.length} required fields left`:"Needs review";
-      },design=><div className="etsy-detail-body">{design.etsy?<EtsyDetailsEditor design={design} categories={etsyCategories} onChange={etsy=>updateDesign(design.id,{etsy,etsyError:""})} onCategory={taxonomyId=>changeEtsyCategory(design,taxonomyId)}/>:<div className={design.title.trim()?"etsy-detail-error":"etsy-detail-pending"}><b>{design.title.trim()?"Etsy details still need to be created.":"Waiting for this listing’s title."}</b><span>{design.title.trim()?design.etsyError:"Goldie fills in the Etsy category and product fields automatically once a title exists. Create titles above and this completes itself."}</span>{design.title.trim()&&<button aria-busy={preparingListingId===design.id} disabled={Boolean(preparingListingId)} onClick={()=>void retryOneEtsyListing(design)}>{preparingListingId===design.id?"Preparing this listing…":"Try this listing again"}</button>}</div>}{design.etsyError&&<small className="field-error">{design.etsyError}</small>}</div>)}
+      },design=><div className="etsy-detail-body">{design.etsy?<EtsyDetailsEditor design={design} categories={etsyCategories} onChange={etsy=>updateDesign(design.id,{etsy,etsyError:""})} onCategory={taxonomyId=>changeEtsyCategory(design,taxonomyId)}/>:<div className={design.title.trim()?"etsy-detail-error":"etsy-detail-pending"}><b>{design.title.trim()?"Etsy details still need to be created.":"Waiting for this listing’s title."}</b><span>{design.title.trim()?design.etsyError:"Goldie fills in the Etsy category and product fields automatically once a title exists. Create titles above and this completes itself."}</span>{design.title.trim()&&<button aria-busy={preparingListingId===design.id} disabled={Boolean(preparingListingId)} onClick={()=>void retryOneEtsyListing(design)}>{preparingListingId===design.id?"Preparing this listing…":"Try this listing again"}</button>}</div>}{design.etsyError&&<small className="field-error">{design.etsyError}</small>}</div>,etsyFlags)}
     </>;
     const listings=drafts.map(draft=>({draft,design:files.find(file=>file.id===draft.clientId),selectedImages:draft.id?(printifyImageSelections[draft.id]??printifyImageIndices):printifyImageIndices}));
     /* D684 - "I don't need to see the title of the design... just show the listing
@@ -2530,6 +2568,33 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
       /* D685 - which listing of the batch this is now has its own heading
          ("Listing 1 of 2"), so repeating it here would say it twice. */
       return templateDetails?.blueprintTitle?.trim()||"Listing";
+    };
+    /* D687 · The three photo panels rendered this same head-then-work stack three
+       times, copy-pasted. They now share ListingRows with the step 3 panels, so
+       one change to a thumbnail size lands everywhere instead of in one of four
+       places. defaultOpen is not decoration: D553 - "when I click to expand
+       arrange final photo order, it is giving me columns of the listings with
+       their titles, which is so fucking stupid". Dragging a photo is direct
+       manipulation and has to be open. Reading a title is scanning, which is why
+       step 3 collapses and these do not. */
+    /* A listing with no photos cannot publish - step 4 already refuses it with
+       "Add at least one listing photo". Saying so here, on the listing, is the
+       difference between finding out now and finding out at the end. */
+    const photoFlags=({count}:{count:number}):ListingFlag[]=>count?[]:[{tone:"attention",label:"No photos yet"}];
+    const listingWorkRows=(work:(entry:{draft:typeof drafts[number];design:DesignFile;selectedImages:number[];count:number})=>ReactNode,flags?:(entry:{draft:typeof drafts[number];design:DesignFile;selectedImages:number[];count:number})=>ListingFlag[])=>{
+      const usable=listings.filter(({draft,design})=>draft.status==="Created"&&design&&draft.id);
+      return <ListingRows defaultOpen rows={usable.map(({draft,design,selectedImages})=>{
+        const count=selectedImages.length+(preparedMockupCounts[draft.id||""]||0);
+        const entry={draft,design:design as DesignFile,selectedImages,count};
+        return {
+          key:draft.clientId,
+          thumb:draft.previewUrl||"",
+          summary:listingLabel(design),
+          meta:`${count} ${count===1?"photo":"photos"}`,
+          flags:flags?flags(entry):[],
+          detail:work(entry),
+        };
+      })}/>;
     };
     if(!listings.length)return null;
     if(task==="placement")return <>
@@ -2552,45 +2617,18 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
               for. The row is called "Choose Printify photos" and the photos are
               listed underneath it with counts; a collapsed essay about which views
               to pick was advice nobody opened. Gone. */}
-          <div className="task-panel-body printify-photo-listings">{listings.map(({draft,design,selectedImages},listingIndex)=>draft.status!=="Created"||!design||!draft.id?null:(()=>{
-              const count=selectedImages.length+(preparedMockupCounts[draft.id||""]||0);
-              return <div className="task-listing" key={draft.clientId}>
-                <div className="task-listing-head">
-                  {draft.previewUrl?<img className="task-listing-thumb" src={draft.previewUrl} alt=""/>:<span className="task-listing-thumb"/>}
-                  <div className="task-listing-ident"><span className="task-listing-index">Listing {listingIndex+1} of {listings.length}</span><p className="task-listing-name">{listingLabel(design)}</p></div>
-                  <span className="task-listing-count">{count} {count===1?"photo":"photos"}</span>
-                </div>
-                <div className="task-listing-work">{draft.status==="Created"&&<PrintifyImagePicker bare images={(draft.printifyImages||[]).filter(Boolean)} indices={selectedImages} reservedPhotos={(preparedMockupCounts[draft.id||""]||0)+(design?.sizeGuideName||sizeGuideName?1:0)} onApplyOne={values=>{/* D465 - the photos she picks ARE this product's default, the same way its colours and sizes are. There was a "Use these as this product's default" button asking a question with one sensible answer; the selection saves itself now and the button is gone. */if(activeRecipe)void saveImagePreferences(values);if(draft.id)setPrintifyImageSelections(current=>({...current,[draft.id!]:values}))}} onApplyAll={values=>{setPrintifyImageIndices(values);setPrintifyImageSelections(Object.fromEntries(drafts.filter(item=>item.id).map(item=>{const itemDesign=files.find(file=>file.id===item.clientId),reserved=(preparedMockupCounts[item.id!]||0)+(itemDesign?.sizeGuideName||sizeGuideName?1:0);return[item.id!,values.slice(0,Math.max(0,20-reserved))]})))}} onSaveRecipe={activeRecipe?saveImagePreferences:undefined}/>}</div>
-              </div>})()) }</div>
+          <div className="task-panel-body printify-photo-listings">{listingWorkRows(({draft,design,selectedImages,count})=>(<>{draft.status==="Created"&&<PrintifyImagePicker bare images={(draft.printifyImages||[]).filter(Boolean)} indices={selectedImages} reservedPhotos={(preparedMockupCounts[draft.id||""]||0)+(design?.sizeGuideName||sizeGuideName?1:0)} onApplyOne={values=>{/* D465 - the photos she picks ARE this product's default, the same way its colours and sizes are. There was a "Use these as this product's default" button asking a question with one sensible answer; the selection saves itself now and the button is gone. */if(activeRecipe)void saveImagePreferences(values);if(draft.id)setPrintifyImageSelections(current=>({...current,[draft.id!]:values}))}} onApplyAll={values=>{setPrintifyImageIndices(values);setPrintifyImageSelections(Object.fromEntries(drafts.filter(item=>item.id).map(item=>{const itemDesign=files.find(file=>file.id===item.clientId),reserved=(preparedMockupCounts[item.id!]||0)+(itemDesign?.sizeGuideName||sizeGuideName?1:0);return[item.id!,values.slice(0,Math.max(0,20-reserved))]})))}} onSaveRecipe={activeRecipe?saveImagePreferences:undefined}/>}</>),photoFlags)}</div>
     </>;
     if(task==="lifestyle")return <>
           <div className="task-panel-lead"><p>Add finished photos to each design below. You can arrange them with the Printify photos in the next section.</p></div>
-          <div className="task-panel-body">{listings.map(({draft,design,selectedImages},listingIndex)=>draft.status!=="Created"||!design||!draft.id?null:(()=>{
-              const count=selectedImages.length+(preparedMockupCounts[draft.id||""]||0);
-              return <div className="task-listing" key={draft.clientId}>
-                <div className="task-listing-head">
-                  {draft.previewUrl?<img className="task-listing-thumb" src={draft.previewUrl} alt=""/>:<span className="task-listing-thumb"/>}
-                  <div className="task-listing-ident"><span className="task-listing-index">Listing {listingIndex+1} of {listings.length}</span><p className="task-listing-name">{listingLabel(design)}</p></div>
-                  <span className="task-listing-count">{count} {count===1?"photo":"photos"}</span>
-                </div>
-                <div className="task-listing-work">
+          <div className="task-panel-body">{listingWorkRows(({draft,design,selectedImages,count})=>(<>
                   <div className="listing-photo-design-identity">{(draft.previewUrl||design.previewUrl)?<img src={draft.previewUrl||design.previewUrl} alt={`${listingLabel(design)} listing photo`}/>:null}<div><span>YOU ARE ADDING PHOTOS TO</span><b>{listingLabel(design)}</b></div></div>
-                  <UploadedListingPhotos productId={draft.id} onCountChange={count=>setPreparedMockupCounts(current=>({...current,[draft.id!]:count}))}/></div>
-              </div>})()) }</div>
+                  <UploadedListingPhotos productId={draft.id!} onCountChange={count=>setPreparedMockupCounts(current=>({...current,[draft.id!]:count}))}/></>),photoFlags)}</div>
     </>;
     if(task==="order")return <>
       {/* D554 - said once, here, instead of once per listing inside the grid. */}
       <div className="task-panel-lead"><p>Drag each photo where you want it, or use the arrow buttons for precise placement. The first photo is the one buyers see in search.</p></div>
-          <div className="task-panel-body">{listings.map(({draft,design,selectedImages},listingIndex)=>draft.status!=="Created"||!design||!draft.id?null:(()=>{
-              const count=selectedImages.length+(preparedMockupCounts[draft.id||""]||0);
-              return <div className="task-listing" key={draft.clientId}>
-                <div className="task-listing-head">
-                  {draft.previewUrl?<img className="task-listing-thumb" src={draft.previewUrl} alt=""/>:<span className="task-listing-thumb"/>}
-                  <div className="task-listing-ident"><span className="task-listing-index">Listing {listingIndex+1} of {listings.length}</span><p className="task-listing-name">{listingLabel(design)}</p></div>
-                  <span className="task-listing-count">{count} {count===1?"photo":"photos"}</span>
-                </div>
-                <div className="task-listing-work"><div className="listing-photo-design-identity photo-order-design-identity">{(draft.previewUrl||design.previewUrl)?<img src={draft.previewUrl||design.previewUrl} alt={`${listingLabel(design)} listing photo`}/>:null}<div><span>ARRANGING PHOTOS FOR</span><b>{listingLabel(design)}</b><small>{count} {count===1?"photo":"photos"} in this listing</small></div></div>{draft.status==="Created"&&draft.id&&<ListingPhotoOrder productId={draft.id} printifyImages={(draft.printifyImages||[]).filter(Boolean)} indices={selectedImages} refreshKey={`${preparedMockupCounts[draft.id]||0}:${design?.sizeGuideName||sizeGuideName}`}/>}{draft.status==="Created"&&design&&draft.id&&<IndividualSizeGuide productId={draft.id} name={design.sizeGuideName} onSaved={name=>updateDesign(design.id,{sizeGuideName:name})}/>}{draft.status==="Created"&&draft.id&&<DownloadListingPhotos productId={draft.id} name={draft.title||draft.name} indices={selectedImages}/>}</div>
-              </div>})()) }</div>
+          <div className="task-panel-body">{listingWorkRows(({draft,design,selectedImages,count})=>(<><div className="listing-photo-design-identity photo-order-design-identity">{(draft.previewUrl||design.previewUrl)?<img src={draft.previewUrl||design.previewUrl} alt={`${listingLabel(design)} listing photo`}/>:null}<div><span>ARRANGING PHOTOS FOR</span><b>{listingLabel(design)}</b><small>{count} {count===1?"photo":"photos"} in this listing</small></div></div>{draft.status==="Created"&&draft.id&&<ListingPhotoOrder productId={draft.id} printifyImages={(draft.printifyImages||[]).filter(Boolean)} indices={selectedImages} refreshKey={`${preparedMockupCounts[draft.id]||0}:${design?.sizeGuideName||sizeGuideName}`}/>}{draft.status==="Created"&&design&&draft.id&&<IndividualSizeGuide productId={draft.id} name={design.sizeGuideName} onSaved={name=>updateDesign(design.id,{sizeGuideName:name})}/>}{draft.status==="Created"&&draft.id&&<DownloadListingPhotos productId={draft.id} name={draft.title||draft.name} indices={selectedImages}/>}</>),photoFlags)}</div>
     </>;
     return null;
   }

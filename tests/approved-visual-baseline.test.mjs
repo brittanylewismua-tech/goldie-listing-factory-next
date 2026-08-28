@@ -264,7 +264,9 @@ test("gives Step 6 a cohesive titles, tags, and descriptions layout", async () =
    * square. The artwork identifies the listing; the garment does not.
    * D541 - the per-listing table this belonged to is gone; the same preference
    * now picks the thumbnail on every task row. */
-  assert.match(page, /const thumb=design\.previewUrl\|\|drafts\.find\(draft=>draft\.clientId===design\.id\)\?\.previewUrl/);
+  /* D687 - the fallback moved into the shared ListingRows mapping. Same rule:
+     a design with no preview of its own borrows the draft's. */
+  assert.match(page, /thumb:design\.previewUrl\|\|drafts\.find\(draft=>draft\.clientId===design\.id\)\?\.previewUrl/);
   /* D541 - step 3 was one block: an always-open title builder, a collapsible
    * description and an always-open table of every listing, numbered 1, 2, 3.
    * Her rows were bookmarks into it, so opening Description showed titles and

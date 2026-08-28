@@ -2842,8 +2842,6 @@ body{min-width:1180px!important}
    for, and at 36px a dachshund and a stack of books are two grey smudges. The
    filenames do not separate them either - both are "ChatGPT Image Aug 28, 2026,
    10_4x_xx AM34-gigapixel-standard v2-4x.png". */
-.app-shell .task-listing-thumb{width:96px;height:96px;flex:none;border-radius:12px;object-fit:contain;background:#fff;padding:4px;box-sizing:border-box;box-shadow:0 1px 5px rgba(74,42,62,.16);border:0}
-.app-shell .task-listing-count{font-size:.8rem;color:#75576b;white-space:nowrap}
 .app-shell .printify-image-picker.bare{display:block}
 
 
@@ -2909,16 +2907,11 @@ body{min-width:1180px!important}
    each under its own name, which is what step 2 did before D541 wrapped them in
    choosers. */
 .app-shell .task-listing{padding:0;margin:0 0 18px}
-.app-shell .task-listing-head{display:flex;align-items:center;gap:14px;padding:10px 0;border-bottom:1px solid rgba(91,48,79,.1)}
-.app-shell .task-listing-head .task-listing-name{flex:1;min-width:0;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;white-space:normal;overflow-wrap:anywhere;margin:0;font:800 .86rem/1.3 "Manrope",system-ui,sans-serif;color:#4b283e}
-.app-shell .task-listing-work{padding:12px 0 0}
-.app-shell .task-listing-work>*{max-width:100%}
 /* D677 - D675 narrowed the step card to the same 612px column as step 3, but
    the Printify-photo task's listing wrappers could still resolve wider than
    their 610px panel. Contain every layer of that task instead of clipping only
    the visible picker; filenames, counts and future task content must all share
    the panel's actual width. */
-.app-shell .task-panel :is(.task-listing,.task-listing-head,.task-listing-work,.printify-image-picker){width:100%;max-width:100%;min-width:0;box-sizing:border-box}
 
 /* D678 - live-built against D677's real picker. A listing's nine view groups
    stacked into a 1,424px single column even though half of the panel was empty.
@@ -2968,17 +2961,6 @@ body{min-width:1180px!important}
 
 /* D553 - the step 3 editors, re-pointed from the collapsible panel that used to
    wrap them to the open surface that replaced it. */
-.app-shell .task-listing-work .design-fields{display:grid;gap:10px}
-.app-shell .task-listing-work .design-fields>label{display:grid;gap:4px;min-width:0;font:700 .74rem/1.2 "Manrope",system-ui,sans-serif;color:#6b4560;letter-spacing:.02em}
-.app-shell .task-listing-work .design-fields>label>span{font-weight:600;color:#8b6f83}
-.app-shell .task-listing-work .design-fields textarea{width:100%;padding:9px 11px;border:1px solid rgba(91,48,79,.18);border-radius:10px;background:#fff;font:500 .84rem/1.45 "Manrope",system-ui,sans-serif;color:#3f2438;resize:vertical}
-.app-shell .task-listing-work .design-fields textarea:focus{outline:0;border-color:#b777b0;box-shadow:0 0 0 3px rgba(183,119,176,.14)}
-.app-shell .task-listing-work .tag-row{display:flex;flex-wrap:wrap;gap:6px}
-.app-shell .task-listing-work .tag-row span{padding:3px 8px;border-radius:999px;background:rgba(220,177,218,.26);color:#67465f;font-size:.72rem;font-weight:700}
-.app-shell .task-listing-work .individual-description-body{display:grid;gap:8px}
-.app-shell .task-listing-work .individual-description-body label{display:grid;gap:4px;font:700 .74rem/1.2 "Manrope",system-ui,sans-serif;color:#6b4560}
-.app-shell .task-listing-work .individual-description-body textarea{width:100%;padding:10px 12px;border:1px solid rgba(91,48,79,.18);border-radius:10px;background:#fff;font:500 .84rem/1.5 "Manrope",system-ui,sans-serif;color:#3f2438}
-.app-shell .task-listing-work .individual-description-body small{color:rgba(74,42,62,.62);font-size:.72rem}
 
 /* D554 - the tile: artwork fills it, one label, the badge carries the number. */
 .app-shell .photo-order-strip>article>img{width:100%;height:112px;object-fit:contain;background:#fff;border-radius:9px}
@@ -3023,7 +3005,6 @@ body{min-width:1180px!important}
 .app-shell .post-draft-heading{margin:0 0 6px!important;padding:0!important}
 
 /* D557 - placement carries the same head as every other panel now. */
-.app-shell .task-listing-work .draft-card-top{padding-top:4px}
 
 /* D562 - the design, at a size that is worth looking at, above the products that
    carry it. A collapsed batch of twenty designs is twenty rows, not sixty. */
@@ -3279,8 +3260,6 @@ body{min-width:1180px!important}
    rather than letterboxed, so the product reads at a glance. object-fit:cover
    with no padding: a garment photo is mostly white and `contain` on a white tile
    left almost nothing visible. */
-.app-shell .task-listing-thumb{width:132px!important;height:132px!important;flex:none!important;border-radius:14px!important;object-fit:cover!important;background:#f7f2f6!important;padding:0!important;box-sizing:border-box!important;box-shadow:0 1px 6px rgba(74,42,62,.16)!important;border:1px solid rgba(91,48,79,.12)!important}
-.app-shell .task-listing-head{align-items:center!important;gap:18px!important;padding:14px 0!important}
 /* D685 - telling one listing from the next. Brittany: "you scroll past the
    printify photos, and then you see one picture of a design... another design.
    And I don't know that that's another listing. That's where I'm really
@@ -3298,10 +3277,8 @@ body{min-width:1180px!important}
    photo is what she recognises the listing by, not the text. */
 .app-shell .task-panel .task-listing{margin:0 0 22px!important;padding:16px 18px!important;border:1px solid rgba(91,48,79,.14)!important;border-radius:16px!important;background:rgba(255,255,255,.62)!important;box-shadow:0 1px 3px rgba(74,42,62,.05)!important}
 .app-shell .task-panel .task-listing:last-child{margin-bottom:0!important}
-.app-shell .task-listing-head{align-items:center!important;gap:18px!important;padding:0 0 14px!important}
 .app-shell .task-listing-ident{flex:1;min-width:0;display:grid;gap:3px}
 .app-shell .task-listing-index{font:800 13px/1.2 "Manrope",system-ui,sans-serif;letter-spacing:.06em;text-transform:uppercase;color:#5b304f}
-.app-shell .task-listing-head .task-listing-name{font-size:11.5px!important;font-weight:500!important;line-height:1.4!important;color:rgba(74,42,62,.5)!important;display:block!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;-webkit-line-clamp:none!important;margin:0!important}
 
 /* D684 - the Printify photo picker. "I need to see the fucking product that I'm
    picking the photos for."
@@ -3328,3 +3305,90 @@ body{min-width:1180px!important}
 /* A white garment needs a tile that is not white. */
 .app-shell .printify-image-grid .printify-image-option{padding:0!important;background:#efe7ee!important;border-radius:14px!important}
 .app-shell .printify-image-grid .printify-image-option img{aspect-ratio:1/1!important;height:auto!important;object-fit:cover!important;border-radius:12px!important;background:#efe7ee!important}
+
+/* D677 · Width containment. Without this the picker pushed the panel wider than
+   the card and the whole step scrolled sideways. Restored under D687's class
+   names - the rule was never wrong, only the markup it named. */
+.app-shell .task-panel :is(.listing-card,.listing-card-head,.listing-card-detail,.printify-image-picker){width:100%;max-width:100%;min-width:0;box-sizing:border-box}
+
+/* D687 · The shared listing rows. One set of rules for what used to be three
+   different treatments (designTaskRows, the step 2 listings.map blocks, and
+   final-listing-review). Sans throughout with a real fallback stack - a bare
+   `font:800 11px Manrope` with no fallback is what rendered these headings in a
+   serif when Manrope did not resolve. */
+.app-shell .listing-rows{padding:0 18px 4px}
+.app-shell .listing-rows,.app-shell .listing-rows *{font-family:'Manrope',system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif}
+
+/* Summary bar: the batch's shape in one line, then the two controls. */
+.app-shell .listing-rows-bar{display:flex;align-items:center;gap:10px;flex-wrap:nowrap;margin:0 0 18px;padding:14px 16px;border:1px solid rgba(91,48,79,.13);border-radius:14px;background:#fff}
+.app-shell .listing-rows-summary{display:flex;align-items:baseline;gap:8px;min-width:0;flex:1}
+.app-shell .listing-rows-summary>b{font-size:14px;font-weight:800;white-space:nowrap;color:#4a2a3e}
+/* The one accent in the whole component. Dusty red, not amber: desaturating red
+   to make it "faded" is what produced brown. Keep saturation, lighten instead. */
+.app-shell .listing-rows-attention{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:800;color:#b53838;white-space:nowrap}
+.app-shell .listing-rows-attention::before{content:"";width:7px;height:7px;border-radius:50%;background:#d94f4f;flex:none}
+.app-shell .listing-rows-rest{font-size:12.5px;color:rgba(74,42,62,.5);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.app-shell .listing-rows-actions{margin-left:auto;display:flex;align-items:center;gap:12px;flex:none}
+.app-shell .listing-rows-view{border:0;background:transparent;padding:0 4px;font-size:12px;font-weight:750;color:rgba(74,42,62,.58);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.app-shell .listing-rows-view:hover{color:#5b304f}
+.app-shell .listing-rows-jump{height:34px;border:1px solid #6b3f5e;border-radius:999px;background:#6b3f5e;padding:0 16px;font-size:12px;font-weight:700;color:#fff;white-space:nowrap;cursor:pointer}
+
+/* One listing = one bounded card. Closed cards are white and sit apart. */
+.app-shell .listing-card{border:1px solid rgba(91,48,79,.13);border-radius:13px;background:#fff;margin-bottom:10px;overflow:hidden}
+.app-shell .listing-card.is-flagged{border-left:3px solid #d94f4f}
+/* Open: a different, darker surface - indentation alone did not separate it from
+   the next listing. Fields stay white so they read as figure against that ground. */
+.app-shell .listing-card.is-open{margin-bottom:22px;background:#f1e8f0;border-color:rgba(91,48,79,.3);box-shadow:0 10px 30px rgba(74,42,62,.15)}
+.app-shell .listing-card-head{display:grid;grid-template-columns:18px 52px minmax(0,1fr) auto auto;gap:14px;align-items:center;padding:12px 15px;cursor:pointer}
+.app-shell .listing-card.is-open .listing-card-head{background:rgba(91,48,79,.06);border-bottom:1px solid rgba(91,48,79,.16)}
+.app-shell .listing-card-head:hover{background:rgba(91,48,79,.03)}
+.app-shell .listing-card-caret{color:rgba(74,42,62,.38);font-size:11px;text-align:center}
+.app-shell .listing-card-thumb{width:52px;height:52px;border-radius:9px;object-fit:cover;background:#f2ecf1;border:1px solid rgba(91,48,79,.1)}
+.app-shell .listing-card-ident{min-width:0}
+.app-shell .listing-card-index{display:block;font-size:11px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:#5b304f}
+/* A caption, not a headline. Until step 3 writes a title this is often the
+   upload's filename, and the photo is what she recognises the listing by. */
+.app-shell .listing-card-summary{display:block;margin-top:3px;font-size:12.5px;font-weight:400;color:rgba(74,42,62,.6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.app-shell .listing-card-meta{font-size:11.5px;color:rgba(74,42,62,.45);white-space:nowrap;font-variant-numeric:tabular-nums}
+.app-shell .listing-card-flags{display:flex;gap:7px}
+.app-shell .listing-flag{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:26px;padding:0 12px;border-radius:999px;background:rgba(74,42,62,.06);color:rgba(74,42,62,.62);font-size:11.5px;font-weight:700;white-space:nowrap;text-align:center}
+.app-shell .listing-flag.is-attention{background:rgba(217,79,79,.12);color:#b53838}
+.app-shell .listing-flag.is-attention::before{content:"";width:6px;height:6px;border-radius:50%;background:#d94f4f;flex:none}
+
+/* The detail, indented to the summary column so it reads as nested. */
+/* D687 · 52px is right for scanning twenty rows and wrong for working on one.
+   She asked four times for this thumbnail to be big enough to see - D682 raised
+   it to 96px and never deployed, D684 to 132px - so density must not quietly take
+   it back. The open card gets the full 132px; the closed rows stay dense. */
+.app-shell .listing-card.is-open .listing-card-head{grid-template-columns:18px 132px minmax(0,1fr) auto auto}
+.app-shell .listing-card.is-open .listing-card-thumb{width:132px;height:132px;border-radius:14px}
+.app-shell .listing-card.is-open .listing-card-detail{padding-left:179px}
+@media(max-width:700px){.app-shell .listing-card.is-open .listing-card-head{grid-template-columns:18px 96px minmax(0,1fr)}.app-shell .listing-card.is-open .listing-card-thumb{width:96px;height:96px}.app-shell .listing-card.is-open .listing-card-detail{padding-left:18px}}
+.app-shell .listing-card-detail{padding:18px 18px 18px 99px;background:transparent}
+.app-shell .listing-card-detail label{display:grid;grid-template-columns:1fr auto;gap:5px;margin-bottom:14px;font-size:11px;font-weight:800;color:#5b304f;align-items:baseline}
+.app-shell .listing-card-detail label>span{font-weight:600;color:rgba(74,42,62,.45);font-variant-numeric:tabular-nums}
+/* Spans the row like inputs already did - a textarea pinned to one grid column
+   left a 125-character title being edited in a 214px box. */
+.app-shell .listing-card-detail label>textarea,.app-shell .listing-card-detail label>input{grid-column:1/-1;width:100%;min-height:60px;field-sizing:content;padding:10px 12px;border:1px solid rgba(91,48,79,.24);border-radius:9px;font-size:13px;font-weight:400;line-height:1.45;color:#4a2a3e;background:#fff;resize:vertical}
+.app-shell .listing-card-detail label>input{min-height:0}
+/* D687 · These style the editors that live INSIDE the detail - the title and tag
+   fields, the per-listing description, the tag chips. They were scoped to
+   .task-listing-work, which no longer exists; the content they style still does.
+   Renamed, not redesigned. */
+.app-shell .listing-card-detail>*{max-width:100%}
+.app-shell .listing-card-detail .design-fields{display:grid;gap:10px}
+.app-shell .listing-card-detail .design-fields>label{display:grid;gap:4px;min-width:0;font:700 .74rem/1.2 "Manrope",system-ui,sans-serif;color:#6b4560;letter-spacing:.02em}
+.app-shell .listing-card-detail .design-fields>label>span{font-weight:600;color:#8b6f83}
+.app-shell .listing-card-detail .design-fields textarea{width:100%;padding:9px 11px;border:1px solid rgba(91,48,79,.18);border-radius:10px;background:#fff;font:500 .84rem/1.45 "Manrope",system-ui,sans-serif;color:#3f2438;resize:vertical}
+.app-shell .listing-card-detail .design-fields textarea:focus{outline:0;border-color:#b777b0;box-shadow:0 0 0 3px rgba(183,119,176,.14)}
+.app-shell .listing-card-detail .tag-row{display:flex;flex-wrap:wrap;gap:6px}
+.app-shell .listing-card-detail .tag-row span{padding:3px 8px;border-radius:999px;background:rgba(220,177,218,.26);color:#67465f;font-size:.72rem;font-weight:700}
+.app-shell .listing-card-detail .individual-description-body{display:grid;gap:8px}
+.app-shell .listing-card-detail .individual-description-body label{display:grid;gap:4px;font:700 .74rem/1.2 "Manrope",system-ui,sans-serif;color:#6b4560}
+.app-shell .listing-card-detail .individual-description-body textarea{width:100%;padding:10px 12px;border:1px solid rgba(91,48,79,.18);border-radius:10px;background:#fff;font:500 .84rem/1.5 "Manrope",system-ui,sans-serif;color:#3f2438}
+.app-shell .listing-card-detail .individual-description-body small{color:rgba(74,42,62,.62);font-size:.72rem}
+.app-shell .listing-card-detail .draft-card-top{padding-top:4px}
+.app-shell .listing-card-actions{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.app-shell .listing-card-actions button{height:32px;border:1px solid rgba(91,48,79,.28);border-radius:999px;background:#fff;padding:0 14px;font-size:11.5px;font-weight:750;color:#6b3f5e;cursor:pointer}
+.app-shell .listing-card-actions button:hover{background:#faf5f9;border-color:rgba(91,48,79,.45)}
+@media(max-width:700px){.app-shell .listing-card-detail{padding-left:18px}.app-shell .listing-rows-bar{flex-wrap:wrap;row-gap:10px}}
