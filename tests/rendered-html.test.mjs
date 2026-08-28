@@ -4761,7 +4761,13 @@ test("the narrowed task card contains every Printify-photo layer — D677", asyn
 
 test("Printify photo views stay compact and visibly selectable — D678/D679", async () => {
   const css = await readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8");
-  assert.match(css, /\.task-panel \.printify-image-picker\{max-height:430px;overflow-y:auto;/,
+  /* D682 · The scroll cap was how D678 kept a listing short, before the
+     expander existed. With both, opening "Show N more" just makes a longer
+     scroll inside a fixed 430px box. The expander is what keeps a listing short
+     now - front and back only until asked - so the cap is gone and this asserts
+     the mechanism that replaced it. */
+  assert.doesNotMatch(css, /\.task-panel \.printify-image-picker\{max-height:430px/);
+  assert.match(css, /\.printify-more-toggle\{display:inline-flex/,
     "one listing does not turn into a page-length photo wall");
   assert.match(css, /\.task-panel \.printify-view-groups\{display:grid;grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/,
     "view groups use a stable grid rather than balancing CSS columns");
@@ -7129,4 +7135,35 @@ test("the Printify review link sits on its card — D681", async () => {
   const why = clarity.slice(clarity.indexOf("/* D681"), clarity.indexOf("D681") + 900);
   assert.match(why, /lilac-theme\.css/);
   assert.match(why, /theme\.css/);
+});
+
+/* D682 · Three things I built in the browser, she approved, and I then never
+   put into the source. They were live only as injected CSS in one tab, so every
+   deploy shipped without them and she had to ask again. */
+test("the photo panel keeps what was approved in the preview — D682", async () => {
+  const [clarity, app] = await Promise.all([
+    readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8"),
+    readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
+  ]);
+
+  /* 36px was the only thing on the panel saying WHICH design you are picking
+     photos for, and both filenames are "ChatGPT Image Aug 28, 2026, 10_4x_xx
+     AM34-gigapixel-standard v2-4x.png". */
+  assert.match(clarity, /\.app-shell \.task-listing-thumb\{width:96px;height:96px;/);
+  assert.doesNotMatch(clarity, /\.app-shell \.task-listing-thumb\{width:36px/);
+  // Room for two lines of name beside a 96px thumb, instead of one clipped line.
+  assert.match(clarity, /\.task-listing-name\{flex:1;min-width:0;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2/);
+
+  /* A 430px scroller AND an expander do the same job; together, expanding just
+     makes a longer scroll inside a fixed box. */
+  assert.doesNotMatch(clarity, /printify-image-picker\{max-height:430px/);
+  assert.match(clarity, /\.app-shell \.task-panel \.printify-image-picker\{padding:14px;/);
+
+  /* display:grid + place-items:center puts the chevron on its own row above the
+     label - the same detached arrow this was supposed to fix. */
+  assert.match(clarity, /\.printify-more-toggle\{display:inline-flex;align-items:center;justify-content:center;gap:7px;width:max-content/);
+  assert.doesNotMatch(clarity, /\.printify-more-toggle\{display:grid;width:100%;place-items:center/);
+  // Chevron leads the label and turns over when open.
+  assert.match(app, /className=\{`printify-more-toggle\$\{showAll\?" is-open":""\}`\}[^]{0,160}<svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 7\.5 5 5 5-5"\/><\/svg><span>/);
+  assert.match(clarity, /\.printify-more-toggle\.is-open svg\{transform:rotate\(180deg\)\}/);
 });

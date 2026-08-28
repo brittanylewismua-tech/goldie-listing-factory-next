@@ -2836,7 +2836,13 @@ body{min-width:1180px!important}
    directly under the row that asked for it, and nothing else opens with it. */
 .app-shell .task-panel{padding:4px 0 14px;border-top:1px solid rgba(91,48,79,.1)}
 .app-shell .task-panel-body{display:grid;gap:8px;padding:10px 14px}
-.app-shell .task-listing-thumb{width:36px;height:36px;flex:none;border-radius:8px;object-fit:contain;background:#fff;border:1px solid rgba(91,48,79,.1)}
+/* D682 · 36px. Her words: "why is it so fucking small? Because I can see
+   nothing. I have no idea what I'm actually picking for." This thumbnail is the
+   only thing on the photo panel that says WHICH design you are choosing photos
+   for, and at 36px a dachshund and a stack of books are two grey smudges. The
+   filenames do not separate them either - both are "ChatGPT Image Aug 28, 2026,
+   10_4x_xx AM34-gigapixel-standard v2-4x.png". */
+.app-shell .task-listing-thumb{width:96px;height:96px;flex:none;border-radius:12px;object-fit:contain;background:#fff;padding:4px;box-sizing:border-box;box-shadow:0 1px 5px rgba(74,42,62,.16);border:0}
 .app-shell .task-listing-count{font-size:.8rem;color:#75576b;white-space:nowrap}
 .app-shell .printify-image-picker.bare{display:block}
 
@@ -2903,8 +2909,8 @@ body{min-width:1180px!important}
    each under its own name, which is what step 2 did before D541 wrapped them in
    choosers. */
 .app-shell .task-listing{padding:0;margin:0 0 18px}
-.app-shell .task-listing-head{display:flex;align-items:center;gap:10px;padding:8px 0 10px;border-bottom:1px solid rgba(91,48,79,.1)}
-.app-shell .task-listing-head .task-listing-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin:0;font:800 .86rem/1.3 "Manrope",system-ui,sans-serif;color:#4b283e}
+.app-shell .task-listing-head{display:flex;align-items:center;gap:14px;padding:10px 0;border-bottom:1px solid rgba(91,48,79,.1)}
+.app-shell .task-listing-head .task-listing-name{flex:1;min-width:0;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;white-space:normal;overflow-wrap:anywhere;margin:0;font:800 .86rem/1.3 "Manrope",system-ui,sans-serif;color:#4b283e}
 .app-shell .task-listing-work{padding:12px 0 0}
 .app-shell .task-listing-work>*{max-width:100%}
 /* D677 - D675 narrowed the step card to the same 612px column as step 3, but
@@ -2918,7 +2924,13 @@ body{min-width:1180px!important}
    stacked into a 1,424px single column even though half of the panel was empty.
    Keep each listing locally scrollable, flow named view groups two-up, and make
    selection read as a control rather than another lilac paragraph card. */
-.app-shell .task-panel .printify-image-picker{max-height:430px;overflow-y:auto;overscroll-behavior:contain;padding:14px;background:rgba(92,52,78,.055);border-radius:14px;box-shadow:inset 0 1px 3px rgba(74,42,62,.09)}
+/* D682 · The 430px scroller and the "Show N more" expander do the same job, and
+   together they do it badly: expanding grows the content inside a fixed box, so
+   the reward for opening it is a longer scroll in a small window. The expander
+   is the better of the two - it keeps front and back visible and lets the panel
+   grow in place - so the cap goes. A scroll area nested inside a scrolling page
+   is its own annoyance. */
+.app-shell .task-panel .printify-image-picker{padding:14px;background:rgba(92,52,78,.055);border-radius:14px;box-shadow:inset 0 1px 3px rgba(74,42,62,.09)}
 .app-shell .task-panel .printify-image-picker>p,.app-shell .task-panel .printify-image-picker>.image-pref-actions{column-span:all}
 .app-shell .task-panel .printify-image-picker>p{font-size:11.5px;line-height:1.45;color:#7a6274;margin:0 0 10px}
 .app-shell .task-panel .printify-image-picker>.image-pref-actions{display:flex!important;flex-direction:row;gap:8px!important;margin:0 0 14px!important}
@@ -2934,8 +2946,13 @@ body{min-width:1180px!important}
 .app-shell .task-panel .printify-image-option img{display:block;width:100%;height:auto}
 .app-shell .task-panel .printify-photo-selector{top:4px!important;left:4px!important;width:18px!important;height:18px!important;border-radius:5px!important;background:rgba(255,255,255,.94)!important;box-shadow:0 1px 3px rgba(74,42,62,.28)!important}
 .app-shell .task-panel .printify-image-option.selected .printify-photo-selector{background:#7a3f63!important;color:#fff}
-.app-shell .task-panel .printify-more-toggle{display:grid;width:100%;place-items:center;gap:4px;margin:12px 0 0;padding:9px;border:1px solid rgba(91,53,79,.18);border-radius:10px;background:rgba(255,255,255,.72);color:#623b57;font:800 11px/1.2 "Manrope",system-ui,sans-serif;cursor:pointer}
-.app-shell .task-panel .printify-more-toggle svg{display:block;width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+/* D682 · display:grid with place-items:center puts the chevron on its own row
+   ABOVE the label - the same "arrow sitting apart from the text" this was meant
+   to fix, in a new shape. It is one line of text with an icon beside it, so it
+   is an inline row, sized to its content and centred in the picker. */
+.app-shell .task-panel .printify-more-toggle{display:inline-flex;align-items:center;justify-content:center;gap:7px;width:max-content;max-width:100%;margin:12px auto 0;padding:8px 16px;border:1px solid rgba(91,53,79,.2);border-radius:999px;background:#fff;color:#6b3f5e;font-size:11.5px;font-weight:800;line-height:1;white-space:nowrap;cursor:pointer}
+.app-shell .task-panel .printify-more-toggle.is-open svg{transform:rotate(180deg)}
+.app-shell .task-panel .printify-more-toggle svg{display:block;width:12px;height:12px;flex:0 0 auto;transition:transform .16s ease;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 
 /* D679 - one visual card per listing for placement, auto-filling across the
    panel instead of stacking every 520px Printify preview into one long column. */
