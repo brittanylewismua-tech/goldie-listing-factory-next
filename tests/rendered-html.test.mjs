@@ -4761,6 +4761,18 @@ test("the narrowed task card contains every Printify-photo layer — D677", asyn
     "the listing, its heading, work area and picker all use the panel's width");
 });
 
+test("Printify photo views stay compact and visibly selectable — D678", async () => {
+  const css = await readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8");
+  assert.match(css, /\.task-panel \.printify-image-picker\{max-height:430px;overflow-y:auto;[^}]*column-count:2;column-gap:14px\}/,
+    "one listing does not turn into a page-length photo wall");
+  assert.match(css, /\.task-panel \.printify-view-group>\.printify-image-grid\{[^}]*grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/,
+    "each named view keeps its three photos together");
+  assert.match(css, /\.task-panel \.printify-image-option\.selected\{border-color:#7a3f63!important;[^}]*box-shadow:/,
+    "a selected photo has contrast beyond its checkbox");
+  assert.match(css, /\.image-pref-actions>button>small\{display:none\}/,
+    "picker actions remain compact controls rather than paragraph cards");
+});
+
 test("steps 2, 3 and 4 are the same shape and no row is a bookmark — D541", async () => {
   const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
 
