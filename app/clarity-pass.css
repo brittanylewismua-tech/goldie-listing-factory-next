@@ -2907,6 +2907,12 @@ body{min-width:1180px!important}
 .app-shell .task-listing-head .task-listing-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin:0;font:800 .86rem/1.3 "Manrope",system-ui,sans-serif;color:#4b283e}
 .app-shell .task-listing-work{padding:12px 0 0}
 .app-shell .task-listing-work>*{max-width:100%}
+/* D677 - D675 narrowed the step card to the same 612px column as step 3, but
+   the Printify-photo task's listing wrappers could still resolve wider than
+   their 610px panel. Contain every layer of that task instead of clipping only
+   the visible picker; filenames, counts and future task content must all share
+   the panel's actual width. */
+.app-shell .task-panel :is(.task-listing,.task-listing-head,.task-listing-work,.printify-image-picker){width:100%;max-width:100%;min-width:0;box-sizing:border-box}
 .app-shell .open-task-column{cursor:pointer}.app-shell .open-task-column :is(button,a,input,textarea,select,label,summary,[role="button"],[contenteditable="true"],[draggable="true"]){cursor:auto}
 
 /* D553 - the step 3 editors, re-pointed from the collapsible panel that used to

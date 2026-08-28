@@ -4755,6 +4755,12 @@ test("a product card holds only its rows and the one open task — D540", async 
   assert.doesNotMatch(app, /The large preview below is the real Printify placement/);
 });
 
+test("the narrowed task card contains every Printify-photo layer — D677", async () => {
+  const css = await readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8");
+  assert.match(css, /\.task-panel :is\(\.task-listing,\.task-listing-head,\.task-listing-work,\.printify-image-picker\)\{width:100%;max-width:100%;min-width:0;box-sizing:border-box\}/,
+    "the listing, its heading, work area and picker all use the panel's width");
+});
+
 test("steps 2, 3 and 4 are the same shape and no row is a bookmark — D541", async () => {
   const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
 
