@@ -372,7 +372,7 @@ export function printTargetFor(template:TemplateDetails|null){
   return {scale,width:Math.round((template?.maxPrintWidth||0)*scale),height:Math.round((template?.maxPrintHeight||0)*scale),printWidth:template?.maxPrintWidth||0};
 }
 function PrintifyImagePicker({ images,indices,reservedPhotos=0,onApplyOne,onApplyAll,onSaveRecipe,bare }: { images: string[];indices:number[];reservedPhotos?:number;onApplyOne:(indices:number[])=>void;onApplyAll:(indices:number[])=>void;bare?:boolean;onSaveRecipe?:(indices:number[])=>void|Promise<void> }) {
-  const [selected,setSelected]=useState<Set<number>>(new Set(indices.slice(0,Math.max(0,20-reservedPhotos)))),[expanded,setExpanded]=useState<string>(""),[action,setAction]=useState<"clear"|"all"|"future"|"">(""),[feedback,setFeedback]=useState(""),[savingFuture,setSavingFuture]=useState(false);
+  const [selected,setSelected]=useState<Set<number>>(new Set(indices.slice(0,Math.max(0,20-reservedPhotos)))),[expanded,setExpanded]=useState<string>(""),[showAll,setShowAll]=useState(false),[action,setAction]=useState<"clear"|"all"|"future"|"">(""),[feedback,setFeedback]=useState(""),[savingFuture,setSavingFuture]=useState(false);
   useEffect(()=>setSelected(new Set(indices.slice(0,Math.max(0,20-reservedPhotos)))),[indices,images.length,reservedPhotos]);
   if(!images.length)return <p className="preview-processing">Printify is still processing its product mockups. Open the editor to view them once they appear.</p>;
   const chosen=[...selected].sort((a,b)=>a-b),selectionHint=chosen.length?"":"Select a Printify photo below first.",slotsLeft=Math.max(0,20-reservedPhotos-selected.size),atLimit=slotsLeft===0;
@@ -408,9 +408,12 @@ function PrintifyImagePicker({ images,indices,reservedPhotos=0,onApplyOne,onAppl
           const found=groups.find(entry=>entry[0]===view);
           if(found)found[1].push([src,index]);else groups.push([view,[[src,index]]]);
         });
-        return groups.map(([view,items])=><div className="printify-view-group" key={view}>
+        const defaults=groups.filter(([view,items])=>/\b(front|back)\b/i.test(view)||items.some(([,index])=>selected.has(index)));
+        const visible=showAll?groups:(defaults.length?defaults:groups.slice(0,2));
+        const hiddenCount=groups.filter(group=>!visible.includes(group)).reduce((total,[,items])=>total+items.length,0);
+        return <><div className="printify-view-groups">{visible.map(([view,items])=><div className="printify-view-group" key={view}>
           <p className="printify-view-heading">{view}<span>{items.length} {items.length===1?"colour":"colours"}</span></p>
-          <div className="printify-image-grid">{items.map(([src,index])=><div className={`printify-image-option ${selected.has(index)?"selected":""}`} key={src}><label className="printify-photo-selector"><input type="checkbox" checked={selected.has(index)} disabled={!selected.has(index)&&atLimit} onChange={()=>toggle(index)}/><span aria-hidden="true">{selected.has(index)?"✓":""}</span><span className="sr-only">Select Printify photo {index+1}</span></label><button type="button" className="printify-photo-expand" onClick={()=>setExpanded(src)} aria-label={`View ${printifyViewName(src)||`Printify photo ${index+1}`} larger`}><img src={src} alt={printifyViewName(src)||`Printify product mockup ${index+1}`} loading="lazy" decoding="async"/></button></div>)}</div></div>)})()}</div>{lightbox}</>;
+          <div className="printify-image-grid">{items.map(([src,index])=><div className={`printify-image-option ${selected.has(index)?"selected":""}`} key={src}><label className="printify-photo-selector"><input type="checkbox" checked={selected.has(index)} disabled={!selected.has(index)&&atLimit} onChange={()=>toggle(index)}/><span aria-hidden="true">{selected.has(index)?"✓":""}</span><span className="sr-only">Select Printify photo {index+1}</span></label><button type="button" className="printify-photo-expand" onClick={()=>setExpanded(src)} aria-label={`View ${printifyViewName(src)||`Printify photo ${index+1}`} larger`}><img src={src} alt={printifyViewName(src)||`Printify product mockup ${index+1}`} loading="lazy" decoding="async"/></button></div>)}</div></div>)}</div>{hiddenCount>0||showAll?<button type="button" className="printify-more-toggle" onClick={()=>setShowAll(value=>!value)}><span>{showAll?"Show fewer Printify photos":`Show ${hiddenCount} more Printify photos`}</span><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 7.5 5 5 5-5"/></svg></button>:null}</>})()}</div>{lightbox}</>;
 }
 
 /* D422 - Same defect the profit goal had, in the personalization fields: bound
@@ -2516,7 +2519,7 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
     const listings=drafts.map(draft=>({draft,design:files.find(file=>file.id===draft.clientId),selectedImages:draft.id?(printifyImageSelections[draft.id]??printifyImageIndices):printifyImageIndices}));
     if(!listings.length)return null;
     if(task==="placement")return <>
-          <div className="task-panel-body">{listings.map(({draft,design})=>draft.status!=="Created"?<div className="task-listing failed" key={draft.clientId}>
+          <div className="task-panel-body placement-review-grid">{listings.map(({draft,design})=>draft.status!=="Created"?<div className="task-listing failed" key={draft.clientId}>
             <p className="task-listing-name">{design?.title?.trim()||design?.name||draft.name||"Listing"}</p>
             {/* D539 - a listing that failed to create still has to be reachable and
                 still has to offer its retry and its help. */}
@@ -2541,7 +2544,7 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
               for. The row is called "Choose Printify photos" and the photos are
               listed underneath it with counts; a collapsed essay about which views
               to pick was advice nobody opened. Gone. */}
-          <div className="task-panel-body">{listings.map(({draft,design,selectedImages})=>draft.status!=="Created"||!design||!draft.id?null:(()=>{
+          <div className="task-panel-body printify-photo-listings">{listings.map(({draft,design,selectedImages})=>draft.status!=="Created"||!design||!draft.id?null:(()=>{
               const count=selectedImages.length+(preparedMockupCounts[draft.id||""]||0);
               return <div className="task-listing" key={draft.clientId}>
                 <div className="task-listing-head">

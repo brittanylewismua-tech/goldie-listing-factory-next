@@ -4761,16 +4761,31 @@ test("the narrowed task card contains every Printify-photo layer — D677", asyn
     "the listing, its heading, work area and picker all use the panel's width");
 });
 
-test("Printify photo views stay compact and visibly selectable — D678", async () => {
+test("Printify photo views stay compact and visibly selectable — D678/D679", async () => {
   const css = await readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8");
-  assert.match(css, /\.task-panel \.printify-image-picker\{max-height:430px;overflow-y:auto;[^}]*column-count:2;column-gap:14px\}/,
+  assert.match(css, /\.task-panel \.printify-image-picker\{max-height:430px;overflow-y:auto;/,
     "one listing does not turn into a page-length photo wall");
+  assert.match(css, /\.task-panel \.printify-view-groups\{display:grid;grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/,
+    "view groups use a stable grid rather than balancing CSS columns");
   assert.match(css, /\.task-panel \.printify-view-group>\.printify-image-grid\{[^}]*grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/,
     "each named view keeps its three photos together");
   assert.match(css, /\.task-panel \.printify-image-option\.selected\{border-color:#7a3f63!important;[^}]*box-shadow:/,
     "a selected photo has contrast beyond its checkbox");
   assert.match(css, /\.image-pref-actions>button>small\{display:none\}/,
     "picker actions remain compact controls rather than paragraph cards");
+});
+
+test("placement previews wrap into identifiable listing cards — D679", async () => {
+  const [app,css] = await Promise.all([
+    readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8"),
+  ]);
+  assert.match(app, /className="task-panel-body placement-review-grid"/);
+  assert.match(css, /\.placement-review-grid\{grid-template-columns:repeat\(auto-fit,minmax\(240px,1fr\)\)/);
+  assert.match(css, /\.placement-review-grid \.printify-preview-button\{[^}]*max-width:250px!important;min-height:0!important;height:250px!important/);
+  assert.match(app, /showAll\?"Show fewer Printify photos":`Show \$\{hiddenCount\} more Printify photos`/);
+  assert.match(app, /const defaults=groups\.filter\(\(\[view,items\]\)=>\/\\b\(front\|back\)\\b\/i\.test\(view\)\|\|items\.some\(\(\[,index\]\)=>selected\.has\(index\)\)\)/,
+    "the collapsed picker never hides an angle containing a selected photo");
 });
 
 test("steps 2, 3 and 4 are the same shape and no row is a bookmark — D541", async () => {

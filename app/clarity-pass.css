@@ -2918,14 +2918,15 @@ body{min-width:1180px!important}
    stacked into a 1,424px single column even though half of the panel was empty.
    Keep each listing locally scrollable, flow named view groups two-up, and make
    selection read as a control rather than another lilac paragraph card. */
-.app-shell .task-panel .printify-image-picker{max-height:430px;overflow-y:auto;overscroll-behavior:contain;padding:14px;background:rgba(92,52,78,.055);border-radius:14px;box-shadow:inset 0 1px 3px rgba(74,42,62,.09);column-count:2;column-gap:14px}
+.app-shell .task-panel .printify-image-picker{max-height:430px;overflow-y:auto;overscroll-behavior:contain;padding:14px;background:rgba(92,52,78,.055);border-radius:14px;box-shadow:inset 0 1px 3px rgba(74,42,62,.09)}
 .app-shell .task-panel .printify-image-picker>p,.app-shell .task-panel .printify-image-picker>.image-pref-actions{column-span:all}
 .app-shell .task-panel .printify-image-picker>p{font-size:11.5px;line-height:1.45;color:#7a6274;margin:0 0 10px}
 .app-shell .task-panel .printify-image-picker>.image-pref-actions{display:flex!important;flex-direction:row;gap:8px!important;margin:0 0 14px!important}
 .app-shell .task-panel .printify-image-picker>.image-pref-actions>button{display:block!important;flex:0 0 auto;width:auto!important;min-height:0!important;padding:7px 12px!important;border-radius:999px!important;background:#fff!important;border:1px solid rgba(91,53,79,.2)!important;box-shadow:none!important;text-align:left}
 .app-shell .task-panel .printify-image-picker>.image-pref-actions>button>b{display:block;font-size:11.5px;font-weight:800;line-height:1}
 .app-shell .task-panel .printify-image-picker>.image-pref-actions>button>small{display:none}
-.app-shell .task-panel .printify-view-group{break-inside:avoid;-webkit-column-break-inside:avoid;display:block!important;width:auto;margin:0 0 12px}
+.app-shell .task-panel .printify-view-groups{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 14px}
+.app-shell .task-panel .printify-view-group{display:block!important;width:auto;margin:0}
 .app-shell .task-panel .printify-view-heading{font-size:10px;letter-spacing:.09em;font-weight:800;color:#6b3f5e;margin:0 0 6px}
 .app-shell .task-panel .printify-view-group>.printify-image-grid{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:6px!important}
 .app-shell .task-panel .printify-image-option{margin:0;width:auto;border-radius:10px!important;overflow:hidden;background:#fff!important;box-shadow:0 1px 4px rgba(74,42,62,.14);border:2px solid transparent!important;position:relative}
@@ -2933,6 +2934,21 @@ body{min-width:1180px!important}
 .app-shell .task-panel .printify-image-option img{display:block;width:100%;height:auto}
 .app-shell .task-panel .printify-photo-selector{top:4px!important;left:4px!important;width:18px!important;height:18px!important;border-radius:5px!important;background:rgba(255,255,255,.94)!important;box-shadow:0 1px 3px rgba(74,42,62,.28)!important}
 .app-shell .task-panel .printify-image-option.selected .printify-photo-selector{background:#7a3f63!important;color:#fff}
+.app-shell .task-panel .printify-more-toggle{display:grid;width:100%;place-items:center;gap:4px;margin:12px 0 0;padding:9px;border:1px solid rgba(91,53,79,.18);border-radius:10px;background:rgba(255,255,255,.72);color:#623b57;font:800 11px/1.2 "Manrope",system-ui,sans-serif;cursor:pointer}
+.app-shell .task-panel .printify-more-toggle svg{display:block;width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+
+/* D679 - one visual card per listing for placement, auto-filling across the
+   panel instead of stacking every 520px Printify preview into one long column. */
+.app-shell .placement-review-grid{grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}
+.app-shell .placement-review-grid>.task-listing{min-width:0;margin:0;padding:12px;border:1px solid rgba(91,48,79,.13);border-radius:14px;background:rgba(255,255,255,.52)}
+.app-shell .placement-review-grid .task-listing-head{padding:0 0 8px}
+.app-shell .placement-review-grid .task-listing-thumb{width:96px;height:96px}
+.app-shell .placement-review-grid .task-listing-work{display:grid;gap:9px;padding-top:8px}
+.app-shell .placement-review-grid .draft-card-top{display:grid!important;grid-template-columns:1fr!important;gap:7px!important}
+.app-shell .placement-review-grid .printify-preview-button{width:100%!important;max-width:250px!important;min-height:0!important;height:250px!important;aspect-ratio:auto!important;margin:0 auto!important;padding:5px!important}
+.app-shell .placement-review-grid .printify-preview-button img{width:100%!important;height:100%!important;max-height:none!important;object-fit:contain!important}
+.app-shell .placement-review-grid .quality-pill{margin:0!important}
+.app-shell .placement-review-grid .edit-draft-button{justify-self:center;margin:4px auto 0!important}
 .app-shell .open-task-column{cursor:pointer}.app-shell .open-task-column :is(button,a,input,textarea,select,label,summary,[role="button"],[contenteditable="true"],[draggable="true"]){cursor:auto}
 
 /* D553 - the step 3 editors, re-pointed from the collapsible panel that used to
