@@ -1201,7 +1201,20 @@ export default function ListingFactoryApp() {
     /* The publish route rejects a job with no Etsy shipping profile, so a
        listing whose product never resolved one fails after the press rather
        than before it. */
-    for(const item of publishTargets())if(!Number(item.shippingProfileId))issues.push(`${item.productName||"This product"} has no Etsy shipping profile selected.`);
+    /* D643 · A saved batch keeps the Etsy shipping profile it was built with. Change
+       the connected Etsy shop and that id belongs to a shop Goldie can no longer
+       see, but nothing revalidated it - so the batch published happily and Etsy
+       rejected every listing mid-flight: "Could not find shipping_profile_id=
+       '59955810985' associated with shop '21777478'". D231 already treats an
+       unusable id as unset in the step-1 picker; it never looked at what a batch
+       had stored, and never at a bundle member's own profile. Checked against
+       the profiles this Etsy shop actually has, before the press. */
+    const shopProfiles=new Set(etsyShippingProfiles.map(profile=>Number(profile.id)));
+    for(const item of publishTargets()){
+      const profile=Number(item.shippingProfileId);
+      if(!profile){issues.push(`${item.productName||"This product"} has no Etsy shipping profile selected.`);continue}
+      if(shopProfiles.size&&!shopProfiles.has(profile))issues.push(`Choose a shipping profile for this Etsy shop — ${item.productName||"this product"} still uses one from a different shop.`);
+    }
     return [...new Set(issues)];
   }
   function suggestedBatchName(){const product=activeRecipe?.name||templateDetails?.blueprintTitle||"Listing batch",niche=files[0]?.tags?.[0]||files[0]?.title?.split(",")[0]?.trim()||"New designs",date=new Intl.DateTimeFormat("en-US",{month:"short",day:"numeric"}).format(new Date());return `${product} · ${niche} · ${date}`.slice(0,160)}

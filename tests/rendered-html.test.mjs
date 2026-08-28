@@ -5785,7 +5785,12 @@ test("one list decides whether the press can happen, scoped to the selection —
 
   // A listing whose product never resolved a shipping profile fails at the
   // route with a 400, so it is caught before the press rather than after.
-  assert.match(blockers, /for\(const item of publishTargets\(\)\)if\(!Number\(item\.shippingProfileId\)\)/);
+  /* D643 widened this: a profile can also be present but belong to a different
+     Etsy shop, which Etsy only rejects mid-publish. */
+  assert.match(blockers, /for\(const item of publishTargets\(\)\)\{/);
+  assert.match(blockers, /if\(!profile\)\{issues\.push\(`\$\{item\.productName\|\|"This product"\} has no Etsy shipping profile selected\.`\);continue\}/);
+  assert.match(blockers, /if\(shopProfiles\.size&&!shopProfiles\.has\(profile\)\)issues\.push\(`Choose a shipping profile for this Etsy shop/,
+    "an id from a previous shop must be caught before the press, not by Etsy after it");
 
   // Both the button and the guard read it, so they cannot diverge again.
   assert.match(app, /disabled=\{publishing\|\|publishBlockers\(\)\.length>0\}/);
@@ -6088,4 +6093,44 @@ test("a retry after a publish that produced nothing may publish once more — D6
 
   // D638's guarantee is untouched for an in-flight publish.
   assert.match(queue, /VALUES \(\?,\?,\?,0,'publishing'/);
+});
+
+/* D643 · Two faults that together made a corrected shipping profile impossible
+ * to apply, both measured on job 050552ce after the seller moved Goldie to a
+ * different Etsy shop.
+ *
+ * Etsy rejected every listing with "Could not find shipping_profile_id=
+ * '59955810985' associated with shop '21777478'" - the batch still held a
+ * profile from the previous shop. Nothing revalidated it, so it was discovered
+ * mid-publish rather than before the press. And once discovered, it could not
+ * be corrected: pressing publish again re-queues the failed items FIRST, the
+ * `existing` check then sees them queued and returns `resumed`, and the write
+ * that stores settings_json sits after that early return. The profile captured
+ * on the first press was baked in permanently. */
+test("a corrected shipping profile reaches the job, and a stale one blocks first — D643", async () => {
+  const [route, app] = await Promise.all([
+    readFile(new URL("../app/api/printify/drafts/publish/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
+  ]);
+
+  // The settings are refreshed before anything can return early.
+  const refreshAt = route.indexOf("UPDATE etsy_publish_jobs SET settings_json=?,updated_at=CURRENT_TIMESTAMP");
+  const resumeAt = route.indexOf("const existing=await");
+  assert.ok(refreshAt > 0 && resumeAt > 0, "both statements must exist");
+  assert.ok(refreshAt < resumeAt,
+    "a retry must update the job's settings before the resume short-circuit");
+
+  // Scoped to this seller's own job for these products.
+  assert.match(route, /WHERE user_id=\? AND id IN \(SELECT DISTINCT job_id FROM etsy_publish_items WHERE user_id=\? AND product_id IN \(/);
+
+  // And the blob is built once, early, so both writers use the same value.
+  assert.match(route, /const settingsJson=JSON\.stringify\(\{printifyImageIndices:/);
+  assert.match(route, /\n  settings=settingsJson;/);
+
+  // A profile from another shop is refused before the press, by name.
+  assert.match(app, /const shopProfiles=new Set\(etsyShippingProfiles\.map\(profile=>Number\(profile\.id\)\)\)/);
+  assert.match(app, /Choose a shipping profile for this Etsy shop/);
+  /* Only when Goldie can actually see the shop's profiles - an empty list is a
+     load that has not finished, not evidence the profile is wrong. */
+  assert.match(app, /if\(shopProfiles\.size&&!shopProfiles\.has\(profile\)\)/);
 });
