@@ -5977,7 +5977,7 @@ test("shop pairing is proven against Etsy, never guessed from names — D641", a
     "the evidence is still a listing this Printify store published - D646 gathers several");
   /* D646 - reading the listing's own shop_id, not asking for it inside a shop.
      A 404 from the shop-scoped form meant "deleted" as often as "wrong shop". */
-  assert.match(match, /await etsyFetch<\{shop_id\?:number\}>\(`\/listings\/\$\{listingId\}`,etsyToken\)/);
+  assert.match(match, /await withTimeout\(etsyFetch<\{shop_id\?:number\}>\(`\/listings\/\$\{listingId\}`,etsyToken\),PAIRING_STEP_MS\)/);
   assert.match(match, /if\(owner===etsyShopId\)return \{result:"matched",listingId\}/);
 
   /* Three outcomes, not two - and only a denial blocks. An absent answer is not
@@ -5994,7 +5994,7 @@ test("shop pairing is proven against Etsy, never guessed from names — D641", a
   assert.match(match, /\n  return \{result:"unknown"\};\n\}/, "and neither does a run where no candidate could be read");
 
   // Both callers block on "mismatched" and nothing else.
-  assert.match(product, /if\(pairing\.result==="mismatched"\)return NextResponse\.json\(shopMismatch/);
+  assert.match(product, /if\(pairing\.result==="mismatched"\)return NextResponse\.json\(\{\.\.\.shopMismatch/);
   assert.match(publish, /if\(pairing\.result==="mismatched"\)return NextResponse\.json\(shopMismatch/);
   assert.equal((`${product}\n${publish}`.match(/pairing\.result===/g) || []).length, 2,
     "no caller may block on unknown");
@@ -6348,7 +6348,23 @@ test("a saved product says which Printify store it lives in — D649", async () 
 
   /* Shown only when recorded - a product saved before this says nothing rather
      than asserting a store Goldie never checked. */
-  assert.match(tools, /if \(recipe\.printifyShopTitle\) parts\.push\(recipe\.printifyShopTitle\)/);
+  assert.match(tools, /export function recipeShopLabel\(recipe: Recipe\): string \{\n\s*return recipe\.printifyShopTitle \|\| "";/);
+  /* D654 - it used to be appended to recipeSummary, which is clamped to one
+     line, so a live card rendered the store as "GO...". It must not go back
+     into that string. */
+  const summaryBody = tools.slice(tools.indexOf("export function recipeSummary"), tools.indexOf("export function recipeShopLabel"));
+  assert.ok(!/printifyShopTitle/.test(summaryBody),
+    "the store must not be appended to the clamped one-line summary");
+  assert.match(tools, /<small className="recipe-shop"/, "the store needs its own line on the card");
+
+  /* D654 - the label was recorded only on the success path, so a product from
+     another store - the one case the label exists for - could never be
+     labelled. The refusal carries the store too, and records it. */
+  assert.match(api, /shopMismatch\(found\.shop\.title,etsyLink\.shopName\|\|"your connected Etsy shop"\),shop:\{id:found\.shop\.id,title:found\.shop\.title,count:shops\.length\}\}/,
+    "the 409 must name the store it refused");
+  const refusalBranch = app.slice(0, app.indexOf('if (!response.ok || !result.product)'));
+  assert.ok(/const refusedRecipe=activeRecipeRef\.current;/.test(refusalBranch),
+    "the store must be recorded BEFORE the refusal returns, not after");
 });
 
 test("Closure is filled only when the product name settles it — D649", async () => {
@@ -6400,4 +6416,75 @@ test("a size guide can be removed, not only replaced — D651", async () => {
   const functional = await readFile(new URL("../app/approved-functional.css", import.meta.url), "utf8");
   assert.match(functional, /\.app-shell \.batch-size-guide button\.size-guide-remove\{[\s\S]*?background:transparent!important/);
   assert.match(functional, /\.app-shell \.batch-size-guide \.size-guide-actions\{display:flex/);
+});
+
+/* D654 · Found by walking the live app, not by reading it. Choosing the saved
+   "Gildan Tee" never finished: measured at over 120 seconds against a client
+   that gives up at 90, so the product simply could not be selected.
+
+   The cause was two multipliers stacked on the one request a seller waits on.
+   /api/printify asked each Printify store in turn whether it owns the product —
+   four stores, four round trips, before the product is even identified. Then
+   verifyShopPairing asked Etsy about up to five listings through etsyFetch,
+   which retries a 429 or a 5xx five times with backoff up to eight seconds
+   each: about 200 seconds of retrying in the worst case.
+
+   Every one of those retries was wasted. The candidate loop catches a failed
+   fetch and moves to the next one, so a retried failure and an immediate one
+   reach the same verdict. Retrying belongs to a seller's save, not to an
+   advisory probe whose honest answer is already "unknown". */
+test("choosing a saved product cannot outlive the request waiting on it — D654", async () => {
+  const [match, api] = await Promise.all([
+    readFile(new URL("../app/api/printify/shop-match.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/printify/route.ts", import.meta.url), "utf8"),
+  ]);
+
+  // A budget for the whole check, and a ceiling on any single step inside it.
+  assert.match(match, /export const PAIRING_BUDGET_MS=(\d+);/);
+  assert.match(match, /export const PAIRING_STEP_MS=(\d+);/);
+  const budget = Number(match.match(/PAIRING_BUDGET_MS=(\d+)/)[1]);
+  const step = Number(match.match(/PAIRING_STEP_MS=(\d+)/)[1]);
+  assert.ok(budget <= 15000, `the pairing check may not cost more than 15s of a seller's wait, got ${budget}`);
+  assert.ok(step <= budget, "a single step may not outlast the whole budget");
+
+  // The budget is actually consulted between candidates, not just declared.
+  assert.match(match, /const outOfTime=\(\)=>Date\.now\(\)-started>PAIRING_BUDGET_MS;/);
+  assert.match(match, /if\(outOfTime\(\)\)return \{result:"unknown"\}/,
+    "running out of time is 'unknown', the same as any other thing it could not establish");
+
+  // Every outbound call in the check is bounded.
+  assert.match(match, /signal:timeoutSignal\(PAIRING_STEP_MS\)/, "the Printify candidate fetch is bounded");
+  assert.match(match, /withTimeout\(etsyFetch/, "the Etsy listing fetch is bounded");
+
+  /* The store walk asks all stores at once. Four stores must cost one round
+     trip, not four. */
+  assert.match(api, /await Promise\.all\(shops\.map\(async shop => \{/);
+  assert.doesNotMatch(api, /for \(const shop of shops\) \{[\s\S]{0,400}?products\/\$\{productId\}/,
+    "the store walk must not go back to one request at a time");
+
+  /* D654 · and a store that errors is not a store that says no. Reporting a
+     Printify outage as "use a product from the connected shop" sends the seller
+     to check a connection that was never the problem. */
+  assert.match(api, /return response\.status===404\?undefined:\{ shop, unavailable:true as const \};/);
+  assert.match(api, /const unreachable = attempts\.some\(attempt => attempt && "unavailable" in attempt\);/);
+  assert.doesNotMatch(api, /issues:\["Use a product from the Printify shop connected to Goldie\."\]/,
+    "a link that matches no product is a link problem, not a connection problem");
+});
+
+/* D654 · Clicking "Add a new product" looked like it did nothing. The form
+   renders below the saved-product grid: measured live at 799px down a 812px
+   viewport. The click also clears the selected product, so the only part of the
+   page the seller can still see changes in a way that reads as a fault. */
+test("Add a new product takes you to the form it just opened — D654", async () => {
+  const tools = await readFile(new URL("../app/factory-tools.tsx", import.meta.url), "utf8");
+
+  assert.match(tools, /const formRef=useRef<HTMLDivElement\|null>\(null\);/);
+  assert.match(tools, /<div className="recipe-form" ref=\{formRef\}>/, "the ref has to be on the form itself");
+  assert.match(tools, /setMessage\(""\);revealForm\(\); \}\}>＋ Add a new product<\/button>/,
+    "the button must reveal the form it opened");
+  assert.match(tools, /node\.querySelector<HTMLInputElement>\("input"\)\?\.focus\(\{preventScroll:true\}\)/,
+    "land on the field the seller now has to fill in");
+  /* D146 · smooth scrolling never fires in this app, so asking for it here
+     would have left the form off screen exactly as before. */
+  assert.doesNotMatch(tools, /behavior:"smooth"/);
 });

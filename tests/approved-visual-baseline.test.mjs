@@ -376,7 +376,7 @@ test("the listing title field shows the whole title, not an ellipsis — D60", a
   assert.match(page, /<textarea className="listing-title-field" rows=\{3\} value=\{design\.title\} maxLength=\{140\}/,
     "The title is a single-line input again. 140 characters cannot fit on one line at this width.");
   assert.match(css, /\.listing-title-field\{[\s\S]*white-space:pre-wrap!important/);
-  assert.doesNotMatch(css, /\.listing-title-field\{[\s\S]*text-overflow:ellipsis/);
+  assert.doesNotMatch(css, /\.listing-title-field\{[^}]*text-overflow:ellipsis/);
 });
 
 test("the wrapping title field owns the full row and grows to its content — D94 live follow-up",async()=>{
@@ -421,7 +421,7 @@ test("the tags field shows all 13 tags, not 5 — D96", async () => {
   assert.match(page, /<textarea className="listing-tags-field" rows=\{3\} value=\{design\.tags\.join\(", "\)\}/,
     "Tags are a single-line input again. 13 tags is 238 characters and will not fit.");
   assert.match(css, /\.listing-tags-field\{[\s\S]*white-space:pre-wrap!important/);
-  assert.doesNotMatch(css, /\.listing-tags-field\{[\s\S]*text-overflow:ellipsis/);
+  assert.doesNotMatch(css, /\.listing-tags-field\{[^}]*text-overflow:ellipsis/);
 });
 
 test("listing and mockup images are lazy-loaded — D97", async () => {

@@ -21,6 +21,17 @@
    a seller on the strength of something it could not establish. */
 export type ShopPairing="matched"|"mismatched"|"unknown";
 
+/* D654 - a verdict Goldie could not reach in this long is a verdict it does not
+   have. Both numbers are budgets, not timeouts on a seller's own action. */
+export const PAIRING_BUDGET_MS=9000;
+export const PAIRING_STEP_MS=4000;
+
+function timeoutSignal(ms:number){return AbortSignal.timeout(ms)}
+
+function withTimeout<T>(work:Promise<T>,ms=PAIRING_STEP_MS):Promise<T>{
+  return Promise.race([work,new Promise<T>((_,reject)=>setTimeout(()=>reject(new Error("pairing step timed out")),ms))]);
+}
+
 type PrintifyProduct={external?:{id?:string}};
 
 export async function verifyShopPairing(options:{
@@ -49,17 +60,32 @@ export async function verifyShopPairing(options:{
      shop it says it is in. A listing that exists and belongs to another shop is
      a real mismatch. A listing that cannot be fetched proves nothing, so try the
      next candidate and, failing that, say so. */
+  /* D654 - this check ran on EVERY product load and could outlive the request
+     that needed it. etsyFetch retries a 429 or a 5xx up to five times, backing
+     off as far as eight seconds each; five candidate listings therefore cost up
+     to about 200 seconds. The browser gives up at 90. Loading a saved product
+     stopped completing at all - measured live at over two minutes for a product
+     Goldie could not verify.
+
+     Every one of those retries was wasted work: the loop below catches a failed
+     fetch and moves on, so a retried failure and an immediate one produce the
+     same verdict. Retrying is right for a seller's save; it is wrong for an
+     advisory probe whose honest answer is already "unknown". So this now runs
+     under one overall deadline and treats slow exactly as it treats broken. */
+  const started=Date.now();
+  const outOfTime=()=>Date.now()-started>PAIRING_BUDGET_MS;
   let candidates:number[]=[];
   try{
-    const response=await fetch(`https://api.printify.com/v1/shops/${printifyShopId}/products.json?limit=20`,{headers:{Authorization:`Bearer ${printifyToken}`,"User-Agent":"Goldie-Listing-Factory"},cache:"no-store"});
+    const response=await withTimeout(fetch(`https://api.printify.com/v1/shops/${printifyShopId}/products.json?limit=20`,{headers:{Authorization:`Bearer ${printifyToken}`,"User-Agent":"Goldie-Listing-Factory"},cache:"no-store",signal:timeoutSignal(PAIRING_STEP_MS)}));
     if(!response.ok)return {result:"unknown"};
     const payload=await response.json() as {data?:PrintifyProduct[]};
     candidates=(payload.data||[]).map(product=>Number(product.external?.id)).filter(id=>Number.isInteger(id)&&id>0);
   }catch{return {result:"unknown"}}
   if(!candidates.length)return {result:"unknown"};
   for(const listingId of candidates.slice(0,5)){
+    if(outOfTime())return {result:"unknown"};
     let listing:{shop_id?:number}|null=null;
-    try{listing=await etsyFetch<{shop_id?:number}>(`/listings/${listingId}`,etsyToken)}catch{continue}
+    try{listing=await withTimeout(etsyFetch<{shop_id?:number}>(`/listings/${listingId}`,etsyToken),PAIRING_STEP_MS)}catch{continue}
     const owner=Number(listing?.shop_id);
     if(!owner)continue;
     if(owner===etsyShopId)return {result:"matched",listingId};

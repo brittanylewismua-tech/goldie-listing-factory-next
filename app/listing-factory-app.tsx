@@ -2880,6 +2880,18 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
       const response = await fetchWithDeadline("/api/printify", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ productUrl,savedShippingProfileId }) }, 90000);
       const result = await response.json() as { product?: TemplateDetails; error?: string;issues?:string[];title?:string;shop?:{id:number;title:string;count?:number} };
       if(requestVersion!==templateLoadVersion.current)return null;
+      /* D654 - the store label was only recorded on a product that PASSED the
+         shop check, so the products that most need labelling - the ones from a
+         different store, which is the whole reason the label exists - stayed
+         blank forever. The refusal knows the store too. */
+      if(result.shop?.title&&Number(result.shop.count||0)>1){
+        const refusedRecipe=activeRecipeRef.current;
+        if(refusedRecipe&&refusedRecipe.printifyShopTitle!==result.shop.title){
+          void fetch("/api/product-recipes",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:refusedRecipe.id,name:refusedRecipe.name,templateUrl:refusedRecipe.templateUrl,printifyShopTitle:result.shop.title,printifyShopId:result.shop.id})}).catch(()=>undefined);
+          setActiveRecipe(current=>current&&current.id===refusedRecipe.id?{...current,printifyShopTitle:result.shop!.title,printifyShopId:result.shop!.id}:current);
+          setBundleRecipes(current=>current.map(item=>item.id===refusedRecipe.id?{...item,printifyShopTitle:result.shop!.title,printifyShopId:result.shop!.id}:item));
+        }
+      }
       if (!response.ok || !result.product){setBlockingModal({title:result.title||"This Printify product isn’t ready yet.",issues:result.issues?.length?result.issues:[result.error||"The product could not be loaded."],copy:response.status===409?"Connect Printify and Etsy to the same shop, then load this product again. Connections is in the sidebar.":"Fix these items in Printify, save the product, then submit the same link again."});throw new Error(result.error || "The product could not be loaded.")}
       const available=new Set((result.product.colorOptions||[]).filter(color=>color.available).map(color=>color.id));let sessionColors:number[]=[];try{sessionColors=JSON.parse(window.localStorage.getItem(`goldie-colors-${result.product.id}`)||"[]") as number[]}catch{/* Ignore an invalid browser preference. */}const remembered=rememberedColorIds.filter(id=>available.has(id));const session=sessionColors.filter(id=>available.has(id));/* D213 · Printify's template settings are not the seller's choices.
    The seller sets colors and sizes ONCE, in the saved-product setup, and that

@@ -1726,3 +1726,14 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
   border-color:rgba(158,39,54,.45)!important;
   color:#9e2736!important;
 }
+
+/* D654 · The Printify store name was appended to the one-line, clamped product
+   summary, so a real card rendered "… · keyword bank · GO…". A label that names
+   the store has to be readable, so it gets its own line and its own weight. */
+.app-shell .recipe-card .recipe-copy .recipe-shop{
+  display:inline-block!important;justify-self:start!important;width:auto!important;max-width:100%!important;
+  margin-top:3px!important;padding:2px 8px!important;border-radius:999px!important;
+  background:rgba(103,52,82,.09)!important;color:#6b3f5e!important;
+  font-size:11px!important;font-weight:800!important;letter-spacing:.02em!important;
+  overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important;
+}

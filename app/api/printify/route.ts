@@ -134,12 +134,28 @@ export async function POST(request: Request) {
 
     const productId = productIdFromUrl(body.productUrl.trim());
     if (!productId) return NextResponse.json({ error: "Goldie could not find a product in that link.", issues:["Open the product in Printify and copy the address bar. Either the design-editor page or the product page works.","The My Products list, the catalogue and the orders page do not identify a single product, so their links cannot be used."] }, { status: 400 });
-    let found: { shop: Shop; product: Product } | undefined;
-    for (const shop of shops) {
-      const response = await fetch(`${PRINTIFY_API}/shops/${shop.id}/products/${productId}.json`, { headers: { Authorization: `Bearer ${token}`, "User-Agent": "Goldie-Listing-Factory" }, cache: "no-store" });
-      if (response.ok) { found = { shop, product: (await response.json()) as Product }; break; }
+    /* D654 - this asked each shop in turn. With four stores that is four round
+       trips before the product is even identified, on the one request a seller
+       waits on. They do not depend on each other, so ask them together. */
+    const attempts = await Promise.all(shops.map(async shop => {
+      try{
+        const response = await fetch(`${PRINTIFY_API}/shops/${shop.id}/products/${productId}.json`, { headers: { Authorization: `Bearer ${token}`, "User-Agent": "Goldie-Listing-Factory" }, cache: "no-store" });
+        if (response.ok) return { shop, product: (await response.json()) as Product };
+        /* A 404 is "not this shop". Anything else is Printify having a bad
+           moment, and must not be reported to the seller as a wrong shop. */
+        return response.status===404?undefined:{ shop, unavailable:true as const };
+      }catch{ return { shop, unavailable:true as const } }
+    }));
+    const found = attempts.find((attempt): attempt is { shop: Shop; product: Product } => Boolean(attempt && "product" in attempt));
+    if (!found) {
+      /* D654 - every failure here said "use a product from the Printify shop
+         connected to Goldie", which sent a seller to check their connection
+         when the usual cause is a mistyped link or a product they deleted. */
+      const unreachable = attempts.some(attempt => attempt && "unavailable" in attempt);
+      return NextResponse.json({ error: "Goldie could not open that Printify product.", issues: unreachable
+        ? ["Printify did not answer for one of your stores just now. Wait a moment and submit the same link again."]
+        : [`Goldie looked in ${shops.length===1?"your Printify store":`all ${shops.length} of your Printify stores`} and no product with that id is in any of them.`,"Check the link you pasted, or open the product in Printify and copy the address bar again.","If you deleted this product in Printify, choose a different one."] }, { status: 404 });
     }
-    if (!found) return NextResponse.json({ error: "This Printify product cannot be used yet.", issues:["Use a product from the Printify shop connected to Goldie."] }, { status: 404 });
     /* D639 - the earliest point at which Goldie knows both shops. Refusing here
        stops a whole batch being built against a storefront its Etsy connection
        cannot publish to. */
@@ -147,7 +163,7 @@ export async function POST(request: Request) {
     try{
       const etsyLink=await etsyConnection(user.userId);
       const pairing=await verifyShopPairing({printifyToken:token,printifyShopId:found.shop.id,etsyShopId:etsyLink.shopId,etsyToken:etsyLink.token,etsyFetch});
-      if(pairing.result==="mismatched")return NextResponse.json(shopMismatch(found.shop.title,etsyLink.shopName||"your connected Etsy shop"),{status:409});
+      if(pairing.result==="mismatched")return NextResponse.json({...shopMismatch(found.shop.title,etsyLink.shopName||"your connected Etsy shop"),shop:{id:found.shop.id,title:found.shop.title,count:shops.length}},{status:409});
     }catch{/* Etsy not connected, or the check could not run. Not evidence. */}
     /* D330 · This variable must contain an ETSY shipping_profile_id only.
        Printify's external.shipping_template_id is a different id system. If it

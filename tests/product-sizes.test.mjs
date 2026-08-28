@@ -1444,7 +1444,7 @@ test("D406: establish sends only what changed", async () => {
   assert.doesNotMatch(app, /body:JSON\.stringify\(updated\)/,
     "posting the merged recipe is the bug, wherever it happens");
   assert.equal((app.match(/"\/api\/product-recipes",\{method:"POST"/g) || []).length,
-    (app.match(/templateUrl:(recipe|activeRecipe|recipeForShop)\.templateUrl,/g) || []).length,
+    (app.match(/templateUrl:(recipe|activeRecipe|recipeForShop|refusedRecipe)\.templateUrl,/g) || []).length,
     "every recipe POST sends an explicit minimal payload");
 
   /* The local copy still updates so the card does not go stale on screen. */
