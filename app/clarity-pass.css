@@ -2812,7 +2812,7 @@ body{min-width:1180px!important}
    342 / 1044. Too narrow, and still not aligned. Filling the content area and
    taking the same 54px gutters puts them at exactly 342 / 1044 - measured on the
    page, all three cards. */
-.app-shell .step-product-cards{width:min(720px,100%);max-width:720px;margin-left:auto;margin-right:auto;padding-left:54px;padding-right:54px;box-sizing:border-box}
+.app-shell .step-product-cards{width:min(720px,100%);max-width:720px;margin-left:auto;margin-right:auto;padding-left:0;padding-right:0;box-sizing:border-box}
 
 /* D539 - the task-section wrappers are gone; a task row owns its panel. What
    survives from D537 is the per-listing naming inside a task. */
@@ -2827,7 +2827,7 @@ body{min-width:1180px!important}
    floating panel inside the card. Aligned: card 342, rows 343, sections 344.
    And the row label column was a fixed 104px, so "Lifestyle mockups" wrapped to
    two lines while its neighbours were one. */
-.app-shell .step-product-card .post-draft-workspace{max-width:none;margin-left:0;margin-right:0;padding-left:0;padding-right:0;padding-top:14px}
+.app-shell .step-product-card .post-draft-workspace{max-width:none;margin-left:0;margin-right:0;padding-left:0;padding-right:0;padding-top:0}
 .app-shell .step-product-card .step-product-body{padding-left:0;padding-right:0}
 .app-shell .step-product-card .batch-product-row{grid-template-columns:22px 150px 1fr auto}
 .app-shell .step-product-card .batch-product-row.open{grid-template-columns:22px auto minmax(0,1fr) auto}
@@ -2940,15 +2940,13 @@ body{min-width:1180px!important}
 /* D679 - one visual card per listing for placement, auto-filling across the
    panel instead of stacking every 520px Printify preview into one long column. */
 .app-shell .placement-review-grid{grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}
-.app-shell .placement-review-grid>.task-listing{min-width:0;margin:0;padding:12px;border:1px solid rgba(91,48,79,.13);border-radius:14px;background:rgba(255,255,255,.52)}
-.app-shell .placement-review-grid .task-listing-head{padding:0 0 8px}
-.app-shell .placement-review-grid .task-listing-thumb{width:96px;height:96px}
-.app-shell .placement-review-grid .task-listing-work{display:grid;gap:9px;padding-top:8px}
-.app-shell .placement-review-grid .draft-card-top{display:grid!important;grid-template-columns:1fr!important;gap:7px!important}
-.app-shell .placement-review-grid .printify-preview-button{width:100%!important;max-width:250px!important;min-height:0!important;height:250px!important;aspect-ratio:auto!important;margin:0 auto!important;padding:5px!important}
+.app-shell .placement-review-grid>.task-listing{min-width:0;margin:0;padding:0 0 12px;border:1px solid rgba(91,48,79,.13);border-radius:14px;background:rgba(255,255,255,.52);overflow:hidden}
+.app-shell .placement-review-grid .printify-preview-button{display:block;width:100%!important;max-width:none!important;min-height:0!important;height:250px!important;aspect-ratio:auto!important;margin:0!important;padding:0!important;border:0!important;border-radius:0!important}
 .app-shell .placement-review-grid .printify-preview-button img{width:100%!important;height:100%!important;max-height:none!important;object-fit:contain!important}
-.app-shell .placement-review-grid .quality-pill{margin:0!important}
-.app-shell .placement-review-grid .edit-draft-button{justify-self:center;margin:4px auto 0!important}
+.app-shell .placement-review-grid .placement-design-name{display:-webkit-box;min-height:2.6em;margin:11px 12px 5px;overflow:hidden;-webkit-box-orient:vertical;-webkit-line-clamp:2;color:#4b283e;font:800 13px/1.3 "Manrope",system-ui,sans-serif}
+.app-shell .placement-review-grid .placement-dpi{margin:0 12px 7px;color:#75576b;font:700 11px/1.35 "Manrope",system-ui,sans-serif}
+.app-shell .placement-review-grid .placement-dpi.pass{color:#39704e}.app-shell .placement-review-grid .placement-dpi.check{color:#8a5a1d}
+.app-shell .placement-review-grid .placement-printify-link{display:block;margin:0 12px;padding:0;border:0;background:transparent;color:#704d75;font:800 11px/1.35 "Manrope",system-ui,sans-serif;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
 .app-shell .open-task-column{cursor:pointer}.app-shell .open-task-column :is(button,a,input,textarea,select,label,summary,[role="button"],[contenteditable="true"],[draggable="true"]){cursor:auto}
 
 /* D553 - the step 3 editors, re-pointed from the collapsible panel that used to
@@ -2988,8 +2986,8 @@ body{min-width:1180px!important}
 
 /* D557 - the batch-wide card was 254px holding 168px of content, with a single
    line of link centred in a 74px block of its own. Two items, said plainly. */
-.app-shell .post-draft-workspace{padding:14px 18px}
-.app-shell .post-draft-heading{display:flex;justify-content:flex-end;margin:0 0 8px;padding:0}
+.app-shell .post-draft-workspace{padding:0 18px 14px}
+.app-shell .post-draft-heading{display:flex;justify-content:center;margin:0 0 6px;padding:0}
 .app-shell .post-draft-heading .open-all-button{margin:0}
 .app-shell .post-draft-workspace .batch-size-guide{margin:0}
 

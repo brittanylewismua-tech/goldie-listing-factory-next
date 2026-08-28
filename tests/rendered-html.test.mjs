@@ -117,7 +117,7 @@ test("uses individual shop-aware Printify editor buttons", async () => {
     readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/api/printify/drafts/route.ts", import.meta.url), "utf8"),
   ]);
-  assert.match(page, /Open in Printify to resize or reposition/);
+  assert.match(page, /Adjust in Printify/);
   assert.match(page, /Clear this listing’s selections/);
   assert.match(page, /openedDrafts/);
   assert.match(page, /window\.open\(draft\.editorUrl/);
@@ -421,7 +421,7 @@ test("imports shipping and keeps final listing edits attached to the exact Print
   assert.match(update,/filter\(placeholder=>placeholder\.images\?\.some\(image=>image\.id\)\)/);
   assert.doesNotMatch(update,/\.\.\.area,placeholders/);
   assert.match(update,/placementScale=Math\.max/);
-  assert.match(page,/Open in Printify to resize or reposition/);
+  assert.match(page,/Adjust in Printify/);
 });
 
 test("matches Printify editor DPI instead of comparing against template pixel dimensions", async () => {
@@ -1736,11 +1736,9 @@ test("keeps each Printify editing action with its listing details",async()=>{
     readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8"),
     readFile(new URL("../app/approved-functional.css",import.meta.url),"utf8"),
   ]);
-  /* D539 - step 2 is about photographs now, so the listing's title and tags no
-     longer ride along beside the Printify button there; tag-row lives on step 3,
-     where titles and tags are edited. What must stay true is that the Printify
-     editor button is still attached to its own listing's preview. */
-  assert.match(page,/draft\.editorUrl[\s\S]{0,400}?Open in Printify to resize or reposition[\s\S]*?<\/div><\/div>/);
+  /* D680 - the compact placement card keeps the editor action inside the exact
+     draft's card, with shop guidance in a tooltip instead of visible copy. */
+  assert.match(page,/draft\.editorUrl&&draft\.id[\s\S]{0,300}?title="Choose the correct shop in your Printify account first\."[\s\S]{0,200}?Adjust in Printify/);
   assert.match(page,/className="tag-row"/, "and tag-row still exists on step 3");
   assert.match(styles,/div:not\(\.pending-preview\)>\.edit-draft-button\{margin:16px 0 0;align-self:flex-start\}/);
 });
@@ -4713,9 +4711,9 @@ test("step 2's rows go to their own section, and the card aligns — D538", asyn
   assert.match(app, /if\(node instanceof HTMLDetailsElement\)node\.open=true;/);
   assert.doesNotMatch(app, /node\.open=!node\.open/);
 
-  /* D675 - every step uses the same 720px container. Step 2 used to escape the
-     column and render a 1044px card beside step 3's 612px card. */
-  assert.match(css, /\.step-product-cards\{width:min\(720px,100%\);max-width:720px;margin-left:auto;margin-right:auto;padding-left:54px/);
+  /* D680 - the product cards now use the actual 720px step column, not a 720px
+     wrapper reduced to 612px by two additional 54px gutters. */
+  assert.match(css, /\.step-product-cards\{width:min\(720px,100%\);max-width:720px;margin-left:auto;margin-right:auto;padding-left:0;padding-right:0/);
 
   /* And inside the card the workspace still wore page-level chrome - a 48px
      margin, 72px gutters, an 1180px cap - putting the task sections at 486 while
@@ -4782,10 +4780,27 @@ test("placement previews wrap into identifiable listing cards — D679", async (
   ]);
   assert.match(app, /className="task-panel-body placement-review-grid"/);
   assert.match(css, /\.placement-review-grid\{grid-template-columns:repeat\(auto-fit,minmax\(240px,1fr\)\)/);
-  assert.match(css, /\.placement-review-grid \.printify-preview-button\{[^}]*max-width:250px!important;min-height:0!important;height:250px!important/);
+  assert.match(css, /\.placement-review-grid \.printify-preview-button\{[^}]*width:100%!important;max-width:none!important;min-height:0!important;height:250px!important/);
   assert.match(app, /showAll\?"Show fewer Printify photos":`Show \$\{hiddenCount\} more Printify photos`/);
   assert.match(app, /const defaults=groups\.filter\(\(\[view,items\]\)=>\/\\b\(front\|back\)\\b\/i\.test\(view\)\|\|items\.some\(\(\[,index\]\)=>selected\.has\(index\)\)\)/,
     "the collapsed picker never hides an angle containing a selected photo");
+});
+
+test("placement cards contain only the preview, identity, DPI and editor link — D680", async () => {
+  const [app,css] = await Promise.all([
+    readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8"),
+  ]);
+  const placement=app.slice(app.indexOf('if(task==="placement")'),app.indexOf('if(task==="printify")'));
+  assert.match(placement, /placement-listing-card/);
+  assert.match(placement, /placement-design-name/);
+  assert.match(placement, /placement-dpi/);
+  assert.match(placement, /className="placement-printify-link" title="Choose the correct shop in your Printify account first\."/);
+  assert.doesNotMatch(placement, /Printify views|Unpublished Printify draft|Choose the correct shop[^\"]*\)<\/small>/);
+  assert.match(css, /\.step-product-cards\{[^}]*padding-left:0;padding-right:0/,
+    "step 2 uses the full 720px column rather than two 54px gutters");
+  assert.match(css, /\.post-draft-workspace\{padding:0 18px 14px\}/);
+  assert.match(css, /\.post-draft-heading\{[^}]*justify-content:center;margin:0 0 6px;padding:0\}/);
 });
 
 test("steps 2, 3 and 4 are the same shape and no row is a bookmark — D541", async () => {
@@ -4829,7 +4844,7 @@ test("steps 2, 3 and 4 are the same shape and no row is a bookmark — D541", as
   /* The print-quality check went to Review Printify placement, which is the task
      it describes - it was sitting under Titles. */
   const placement = app.slice(app.indexOf('if(task==="placement")return <>'), app.indexOf('if(task==="printify")'));
-  assert.ok(placement.includes("quality-pill") && placement.includes("printifyDpi"));
+  assert.ok(placement.includes("placement-dpi") && placement.includes("printifyDpi"));
   assert.ok(!titles.includes("quality-pill"), "and it is not under Titles any more");
 
   // Step-level actions stay step-level.
@@ -5016,14 +5031,15 @@ test("opening a task shows the work, not a list of listings to pick from — D55
   assert.match(app, /<p className="task-listing-name">/);
   assert.match(app, /<div className="task-listing-work">/);
 
-  /* All four step 2 panels and all three step 3 panels use it, so the shape is
-     the same everywhere - which is the thing she has asked for from the start. */
-  /* D557 - and placement joined them, so all four step 2 panels and the shared
-     designTaskRows use the same head-then-work shape. */
-  assert.equal((app.match(/className="task-listing-work"/g) || []).length, 5,
-    "four step 2 panels plus the shared designTaskRows");
-  assert.equal((app.match(/className="task-listing-head"/g) || []).length, 5,
-    "and every one of them carries the same head");
+  /* D680 - placement deliberately became a visual card instead of cramming the
+     generic head/work stack into half-width. The other tasks retain the shared
+     head-then-work shape. */
+  assert.equal((app.match(/className="task-listing-work"/g) || []).length, 4,
+    "the remaining task panels plus shared designTaskRows keep their work block");
+  assert.equal((app.match(/className="task-listing-head"/g) || []).length, 4,
+    "the remaining task panels keep their listing head");
+  assert.match(app,/className="task-listing placement-listing-card"/,
+    "placement uses its own compact visual card");
 });
 
 test.skip("what the click-through found on step 2 and step 3 — D554", async () => {
