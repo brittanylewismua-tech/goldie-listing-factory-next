@@ -1960,7 +1960,18 @@ test("makes Batch History visual, identifiable, reversible, and truthful",async(
     readFile(new URL("../app/api/batches/route.ts",import.meta.url),"utf8"),
     readFile(new URL("../app/batch-history.css",import.meta.url),"utf8"),
   ]);
-  assert.match(route,/designName/);assert.match(route,/thumbnail_url/);assert.match(route,/state\.keptAsDrafts/);
+  assert.match(route,/designName/);assert.match(route,/thumbnail_url/);
+  /* D686 · "truthful" is the word in this test's own name, and the heading was not.
+     sellerNamed used to read row.setup_name, but the client writes that column from
+     `batchDisplayName||activeBundle?.name||activeRecipe?.name||""` - so an autosave
+     with no chosen name stored the RECIPE name there and this presented it as if she
+     had typed it. Batch b8ce58cb: setup_name "Gildan Hoodie", product_title "Unisex
+     Garment-Dyed Sweatshirt". The seller's typed name now travels in the state
+     snapshot, where an autosave cannot overwrite it with a recipe. */
+  assert.match(route,/const sellerNamed=String\(state\.batchDisplayName\|\|""\)\.trim\(\);/);
+  assert.doesNotMatch(route,/sellerNamed=state\.keptAsDrafts&&String\(row\.setup_name/);
+  // A stale recipe snapshot must never outrank the batch's real product.
+  assert.match(route,/\|\|designName\|\|row\.product_title\|\|row\.setup_name\|\|"Untitled batch"/);
   assert.match(history,/batch-history-thumbnail/);assert.match(history,/Permanently remove/);assert.match(history,/confirmAction\(\{/);
   assert.match(history,/Open published batch/);assert.match(history,/batch\.status==="complete"\?"&open=results":""/);
   assert.match(styles,/\.batch-history-thumbnail/);assert.match(styles,/\.batch-history-controls/);
@@ -2350,7 +2361,7 @@ test("reports published listings instead of workflow completion (fixes D88)",asy
   /* D386 · "SAVED · NOT YET DRAFTED" is now just "DRAFT" - see above. */
   assert.doesNotMatch(page,/SAVED · NOT YET DRAFTED/);
   assert.doesNotMatch(page,/status\.replace\("_"," "\)/);
-  assert.match(app,/keptAsDrafts,batchReceipt\}/);
+  assert.match(app,/keptAsDrafts,batchReceipt,batchDisplayName\}/);
   assert.match(app,/keptAsDrafts,batchReceipt\]\);/);
 });
 
