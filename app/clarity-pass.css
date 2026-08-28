@@ -2937,10 +2937,10 @@ body{min-width:1180px!important}
 .app-shell .task-panel .printify-image-picker>.image-pref-actions>button{display:block!important;flex:0 0 auto;width:auto!important;min-height:0!important;padding:7px 12px!important;border-radius:999px!important;background:#fff!important;border:1px solid rgba(91,53,79,.2)!important;box-shadow:none!important;text-align:left}
 .app-shell .task-panel .printify-image-picker>.image-pref-actions>button>b{display:block;font-size:11.5px;font-weight:800;line-height:1}
 .app-shell .task-panel .printify-image-picker>.image-pref-actions>button>small{display:none}
-.app-shell .task-panel .printify-view-groups{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 14px}
+.app-shell .task-panel .printify-view-groups{display:grid;grid-template-columns:minmax(0,1fr);gap:20px}
 .app-shell .task-panel .printify-view-group{display:block!important;width:auto;margin:0}
 .app-shell .task-panel .printify-view-heading{font-size:10px;letter-spacing:.09em;font-weight:800;color:#6b3f5e;margin:0 0 6px}
-.app-shell .task-panel .printify-view-group>.printify-image-grid{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:6px!important}
+.app-shell .task-panel .printify-view-group>.printify-image-grid{display:grid!important;grid-template-columns:repeat(auto-fill,168px)!important;justify-content:start!important;gap:12px!important}
 .app-shell .task-panel .printify-image-option{margin:0;width:auto;border-radius:10px!important;overflow:hidden;background:#fff!important;box-shadow:0 1px 4px rgba(74,42,62,.14);border:2px solid transparent!important;position:relative}
 .app-shell .task-panel .printify-image-option.selected{border-color:#7a3f63!important;box-shadow:0 2px 9px rgba(122,63,99,.32)!important}
 .app-shell .task-panel .printify-image-option img{display:block;width:100%;height:auto}
@@ -3281,7 +3281,27 @@ body{min-width:1180px!important}
    left almost nothing visible. */
 .app-shell .task-listing-thumb{width:132px!important;height:132px!important;flex:none!important;border-radius:14px!important;object-fit:cover!important;background:#f7f2f6!important;padding:0!important;box-sizing:border-box!important;box-shadow:0 1px 6px rgba(74,42,62,.16)!important;border:1px solid rgba(91,48,79,.12)!important}
 .app-shell .task-listing-head{align-items:center!important;gap:18px!important;padding:14px 0!important}
-.app-shell .task-listing-head .task-listing-name{font-size:1rem!important;line-height:1.35!important;-webkit-line-clamp:3!important}
+/* D685 - telling one listing from the next. Brittany: "you scroll past the
+   printify photos, and then you see one picture of a design... another design.
+   And I don't know that that's another listing. That's where I'm really
+   struggling is the differentiation is not enough."
+
+   The panel stacks every listing in the batch, and the only thing separating them
+   was a 1px rule under a heading that read as a filename. Two changes: each
+   listing is now a bounded card with real space around it, and the thing that
+   names it is "Listing 1 of 2" - stated plainly, in the position the eye lands on
+   first.
+
+   The title itself becomes a caption. Her words: "its almost always going to be a
+   junk title like that so either make it much smaller and subtler or get rid of it
+   altogether." D684 had enlarged it to 1rem bold, which was backwards - the 132px
+   photo is what she recognises the listing by, not the text. */
+.app-shell .task-panel .task-listing{margin:0 0 22px!important;padding:16px 18px!important;border:1px solid rgba(91,48,79,.14)!important;border-radius:16px!important;background:rgba(255,255,255,.62)!important;box-shadow:0 1px 3px rgba(74,42,62,.05)!important}
+.app-shell .task-panel .task-listing:last-child{margin-bottom:0!important}
+.app-shell .task-listing-head{align-items:center!important;gap:18px!important;padding:0 0 14px!important}
+.app-shell .task-listing-ident{flex:1;min-width:0;display:grid;gap:3px}
+.app-shell .task-listing-index{font:800 13px/1.2 "Manrope",system-ui,sans-serif;letter-spacing:.06em;text-transform:uppercase;color:#5b304f}
+.app-shell .task-listing-head .task-listing-name{font-size:11.5px!important;font-weight:500!important;line-height:1.4!important;color:rgba(74,42,62,.5)!important;display:block!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;-webkit-line-clamp:none!important;margin:0!important}
 
 /* D684 - the Printify photo picker. "I need to see the fucking product that I'm
    picking the photos for."
@@ -3297,8 +3317,14 @@ body{min-width:1180px!important}
    panel's full 660px and the tiles 216px - large enough to read the print. Only
    FRONT and BACK show by default (the rest are behind the expander), so this
    costs one extra row of scrolling, not twelve. */
-.app-shell .printify-view-groups{grid-template-columns:minmax(0,1fr)!important;gap:22px!important}
-.app-shell .printify-image-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:14px!important}
+/* D685 - 216px was too much scrolling ("I actually think the printify photos can
+   be a bit smaller"). Fixed 168px tiles rather than 1fr: the group is full width
+   for legibility, but the tiles stop growing to fill it. Still 62% larger than the
+   104px that made the ivory colourways invisible.
+   Both the column count and the group layout are edited on the ORIGINAL rules
+   above (.app-shell .task-panel .printify-view-group>.printify-image-grid, four
+   classes and a child combinator). Appending a lower-specificity override here is
+   what made two earlier attempts measure 203px and appear to do nothing. */
 /* A white garment needs a tile that is not white. */
 .app-shell .printify-image-grid .printify-image-option{padding:0!important;background:#efe7ee!important;border-radius:14px!important}
 .app-shell .printify-image-grid .printify-image-option img{aspect-ratio:1/1!important;height:auto!important;object-fit:cover!important;border-radius:12px!important;background:#efe7ee!important}

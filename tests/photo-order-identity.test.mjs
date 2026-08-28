@@ -16,7 +16,7 @@ test("final photo order identifies the exact original design at a readable size"
   assert.match(branch,/ARRANGING PHOTOS FOR/);
   assert.doesNotMatch(branch,/ARRANGING PHOTOS FOR THIS DESIGN/);
   assert.match(branch,/draft\.previewUrl\|\|design\.previewUrl/);
-  assert.match(branch,/listingLabel\(design,listingIndex\)/);
+  assert.match(branch,/listingLabel\(design\)/);
   // The upload filename must not come back as the heading.
   assert.doesNotMatch(branch,/design\.name\|\|"Untitled design"/);
   assert.match(branch,/photo-order-design-identity/);

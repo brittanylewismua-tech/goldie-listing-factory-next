@@ -2471,12 +2471,12 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
    be were never white-on-white artwork; they were images that never fetched. A
    panel is opened deliberately and holds a handful of images. */
   function designTaskRows(task:string,standing:(design:DesignFile)=>string,inner:(design:DesignFile)=>ReactNode){
-    return <div className="task-panel-body">{files.map(design=>{
+    return <div className="task-panel-body">{files.map((design,listingIndex)=>{
       const thumb=design.previewUrl||drafts.find(draft=>draft.clientId===design.id)?.previewUrl||"";
       return <div className="task-listing" key={`${task}:${design.id}`} onFocus={()=>setActiveDesign(design.id)}>
         <div className="task-listing-head">
           {thumb?<img className="task-listing-thumb" src={thumb} alt="" decoding="async"/>:<span className="task-listing-thumb"/>}
-          <p className="task-listing-name">{design.title.trim()||design.name}</p>
+          <div className="task-listing-ident"><span className="task-listing-index">Listing {listingIndex+1} of {files.length}</span><p className="task-listing-name">{design.title.trim()||design.name}</p></div>
           <span className="task-listing-count">{standing(design)}</span>
         </div>
         <div className="task-listing-work">{inner(design)}</div>
@@ -2524,16 +2524,17 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
        "ChatGPT Image Aug 28, 2026, 10_44_01 AM.png". That names a file on her disk.
        It never named the listing. Until a real title exists, say which product this
        is and which of the batch's listings she is looking at. */
-    const listingLabel=(design:DesignFile|undefined,index:number)=>{
+    const listingLabel=(design:DesignFile|undefined)=>{
       const chosen=design?.title?.trim();
       if(chosen)return chosen;
-      const product=templateDetails?.blueprintTitle?.trim()||"Listing";
-      return listings.length>1?`${product} · listing ${index+1} of ${listings.length}`:product;
+      /* D685 - which listing of the batch this is now has its own heading
+         ("Listing 1 of 2"), so repeating it here would say it twice. */
+      return templateDetails?.blueprintTitle?.trim()||"Listing";
     };
     if(!listings.length)return null;
     if(task==="placement")return <>
           <div className="task-panel-body placement-review-grid">{listings.map(({draft,design},listingIndex)=>draft.status!=="Created"?<div className="task-listing failed" key={draft.clientId}>
-            <p className="task-listing-name">{listingLabel(design,listingIndex)}</p>
+            <div className="task-listing-ident"><span className="task-listing-index">Listing {listingIndex+1} of {listings.length}</span><p className="task-listing-name">{listingLabel(design)}</p></div>
             {/* D539 - a listing that failed to create still has to be reachable and
                 still has to offer its retry and its help. */}
             {<><button className="error-help-link" onClick={()=>window.dispatchEvent(new CustomEvent("goldie-retry-listing",{detail:draft.clientId}))}>Retry this listing</button><button className="error-help-link" onClick={()=>window.dispatchEvent(new CustomEvent("goldie-support",{detail:draft.error??"A design failed"}))}>Get help with this error</button></>}
@@ -2556,7 +2557,7 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
               return <div className="task-listing" key={draft.clientId}>
                 <div className="task-listing-head">
                   {draft.previewUrl?<img className="task-listing-thumb" src={draft.previewUrl} alt=""/>:<span className="task-listing-thumb"/>}
-                  <p className="task-listing-name">{listingLabel(design,listingIndex)}</p>
+                  <div className="task-listing-ident"><span className="task-listing-index">Listing {listingIndex+1} of {listings.length}</span><p className="task-listing-name">{listingLabel(design)}</p></div>
                   <span className="task-listing-count">{count} {count===1?"photo":"photos"}</span>
                 </div>
                 <div className="task-listing-work">{draft.status==="Created"&&<PrintifyImagePicker bare images={(draft.printifyImages||[]).filter(Boolean)} indices={selectedImages} reservedPhotos={(preparedMockupCounts[draft.id||""]||0)+(design?.sizeGuideName||sizeGuideName?1:0)} onApplyOne={values=>{/* D465 - the photos she picks ARE this product's default, the same way its colours and sizes are. There was a "Use these as this product's default" button asking a question with one sensible answer; the selection saves itself now and the button is gone. */if(activeRecipe)void saveImagePreferences(values);if(draft.id)setPrintifyImageSelections(current=>({...current,[draft.id!]:values}))}} onApplyAll={values=>{setPrintifyImageIndices(values);setPrintifyImageSelections(Object.fromEntries(drafts.filter(item=>item.id).map(item=>{const itemDesign=files.find(file=>file.id===item.clientId),reserved=(preparedMockupCounts[item.id!]||0)+(itemDesign?.sizeGuideName||sizeGuideName?1:0);return[item.id!,values.slice(0,Math.max(0,20-reserved))]})))}} onSaveRecipe={activeRecipe?saveImagePreferences:undefined}/>}</div>
@@ -2569,11 +2570,11 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
               return <div className="task-listing" key={draft.clientId}>
                 <div className="task-listing-head">
                   {draft.previewUrl?<img className="task-listing-thumb" src={draft.previewUrl} alt=""/>:<span className="task-listing-thumb"/>}
-                  <p className="task-listing-name">{listingLabel(design,listingIndex)}</p>
+                  <div className="task-listing-ident"><span className="task-listing-index">Listing {listingIndex+1} of {listings.length}</span><p className="task-listing-name">{listingLabel(design)}</p></div>
                   <span className="task-listing-count">{count} {count===1?"photo":"photos"}</span>
                 </div>
                 <div className="task-listing-work">
-                  <div className="listing-photo-design-identity">{(draft.previewUrl||design.previewUrl)?<img src={draft.previewUrl||design.previewUrl} alt={`${listingLabel(design,listingIndex)} listing photo`}/>:null}<div><span>YOU ARE ADDING PHOTOS TO</span><b>{listingLabel(design,listingIndex)}</b></div></div>
+                  <div className="listing-photo-design-identity">{(draft.previewUrl||design.previewUrl)?<img src={draft.previewUrl||design.previewUrl} alt={`${listingLabel(design)} listing photo`}/>:null}<div><span>YOU ARE ADDING PHOTOS TO</span><b>{listingLabel(design)}</b></div></div>
                   <UploadedListingPhotos productId={draft.id} onCountChange={count=>setPreparedMockupCounts(current=>({...current,[draft.id!]:count}))}/></div>
               </div>})()) }</div>
     </>;
@@ -2585,10 +2586,10 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
               return <div className="task-listing" key={draft.clientId}>
                 <div className="task-listing-head">
                   {draft.previewUrl?<img className="task-listing-thumb" src={draft.previewUrl} alt=""/>:<span className="task-listing-thumb"/>}
-                  <p className="task-listing-name">{listingLabel(design,listingIndex)}</p>
+                  <div className="task-listing-ident"><span className="task-listing-index">Listing {listingIndex+1} of {listings.length}</span><p className="task-listing-name">{listingLabel(design)}</p></div>
                   <span className="task-listing-count">{count} {count===1?"photo":"photos"}</span>
                 </div>
-                <div className="task-listing-work"><div className="listing-photo-design-identity photo-order-design-identity">{(draft.previewUrl||design.previewUrl)?<img src={draft.previewUrl||design.previewUrl} alt={`${listingLabel(design,listingIndex)} listing photo`}/>:null}<div><span>ARRANGING PHOTOS FOR</span><b>{listingLabel(design,listingIndex)}</b><small>{count} {count===1?"photo":"photos"} in this listing</small></div></div>{draft.status==="Created"&&draft.id&&<ListingPhotoOrder productId={draft.id} printifyImages={(draft.printifyImages||[]).filter(Boolean)} indices={selectedImages} refreshKey={`${preparedMockupCounts[draft.id]||0}:${design?.sizeGuideName||sizeGuideName}`}/>}{draft.status==="Created"&&design&&draft.id&&<IndividualSizeGuide productId={draft.id} name={design.sizeGuideName} onSaved={name=>updateDesign(design.id,{sizeGuideName:name})}/>}{draft.status==="Created"&&draft.id&&<DownloadListingPhotos productId={draft.id} name={draft.title||draft.name} indices={selectedImages}/>}</div>
+                <div className="task-listing-work"><div className="listing-photo-design-identity photo-order-design-identity">{(draft.previewUrl||design.previewUrl)?<img src={draft.previewUrl||design.previewUrl} alt={`${listingLabel(design)} listing photo`}/>:null}<div><span>ARRANGING PHOTOS FOR</span><b>{listingLabel(design)}</b><small>{count} {count===1?"photo":"photos"} in this listing</small></div></div>{draft.status==="Created"&&draft.id&&<ListingPhotoOrder productId={draft.id} printifyImages={(draft.printifyImages||[]).filter(Boolean)} indices={selectedImages} refreshKey={`${preparedMockupCounts[draft.id]||0}:${design?.sizeGuideName||sizeGuideName}`}/>}{draft.status==="Created"&&design&&draft.id&&<IndividualSizeGuide productId={draft.id} name={design.sizeGuideName} onSaved={name=>updateDesign(design.id,{sizeGuideName:name})}/>}{draft.status==="Created"&&draft.id&&<DownloadListingPhotos productId={draft.id} name={draft.title||draft.name} indices={selectedImages}/>}</div>
               </div>})()) }</div>
     </>;
     return null;

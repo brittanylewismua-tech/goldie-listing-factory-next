@@ -4769,10 +4769,16 @@ test("Printify photo views stay compact and visibly selectable — D678/D679", a
   assert.doesNotMatch(css, /\.task-panel \.printify-image-picker\{max-height:430px/);
   assert.match(css, /\.printify-more-toggle\{display:inline-flex/,
     "one listing does not turn into a page-length photo wall");
-  assert.match(css, /\.task-panel \.printify-view-groups\{display:grid;grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/,
+  /* D685 · still a stable grid, never CSS columns - that is what this guards.
+     The two-column group layout held each tile to 104px, and these are garments
+     photographed on white, so the ivory colourways were invisible. One group per
+     row at a fixed 168px: readable, and the tiles no longer stretch to 216px. */
+  assert.match(css, /\.task-panel \.printify-view-groups\{display:grid;grid-template-columns:minmax\(0,1fr\)/,
     "view groups use a stable grid rather than balancing CSS columns");
-  assert.match(css, /\.task-panel \.printify-view-group>\.printify-image-grid\{[^}]*grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/,
-    "each named view keeps its three photos together");
+  assert.doesNotMatch(css, /printify-view-groups\{[^}]*column-count/,
+    "never CSS columns - they fragment horizontally inside an overflow box");
+  assert.match(css, /\.task-panel \.printify-view-group>\.printify-image-grid\{[^}]*grid-template-columns:repeat\(auto-fill,168px\)/,
+    "each named view keeps its photos together on one row");
   assert.match(css, /\.task-panel \.printify-image-option\.selected\{border-color:#7a3f63!important;[^}]*box-shadow:/,
     "a selected photo has contrast beyond its checkbox");
   assert.match(css, /\.image-pref-actions>button>small\{display:none\}/,
@@ -7178,8 +7184,12 @@ test("the photo panel keeps what was approved in the preview — D682", async ()
 test("the Printify photo tiles are big enough, on a tile that is not white — D684", async () => {
   const clarity = await readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8");
   // One camera group per row is what gives the tiles the panel's full width.
-  assert.match(clarity, /\.app-shell \.printify-view-groups\{grid-template-columns:minmax\(0,1fr\)!important/);
-  assert.match(clarity, /\.app-shell \.printify-image-grid\{grid-template-columns:repeat\(3,minmax\(0,1fr\)\)!important/);
+  assert.match(clarity, /\.app-shell \.task-panel \.printify-view-groups\{display:grid;grid-template-columns:minmax\(0,1fr\);/);
+  /* D685 - fixed 168px, not 1fr: full-width groups made the tiles 216px and that
+     was too much scrolling. */
+  assert.match(clarity, /\.app-shell \.task-panel \.printify-view-group>\.printify-image-grid\{display:grid!important;grid-template-columns:repeat\(auto-fill,168px\)!important;justify-content:start!important/);
+  // The 2-column group layout is what held the tiles to 104px.
+  assert.doesNotMatch(clarity, /printify-view-groups\{display:grid;grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
   // A white garment on a white tile is the defect. The tile has to be tinted.
   assert.match(clarity, /\.printify-image-option\{[^}]*background:#efe7ee!important/);
   assert.match(clarity, /\.printify-image-option img\{aspect-ratio:1\/1!important/);
@@ -7216,4 +7226,31 @@ test("the open-all link shares the cards' row instead of owning one — D683", a
   assert.match(clarity, /\.step-product-body:empty\{display:none!important\}/);
   // One colour means "done" in this card: the marks match the "N drafts" badge.
   assert.match(clarity, /\.batch-product-row\.settled \.row-mark\{background:rgba\(47,134,87,\.13\)!important/);
+});
+
+/* D685 · "you scroll past the printify photos, and then you see one picture of a
+   design... another design. And I don't know that that's another listing. That's
+   where I'm really struggling is the differentiation is not enough." The panel
+   stacks every listing in the batch and the only thing between them was a 1px rule
+   under a heading that read as a filename. */
+test("each listing in a task panel is separated and numbered — D685", async () => {
+  const [clarity, app] = await Promise.all([
+    readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8"),
+    readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
+  ]);
+  // Said plainly, in the position the eye lands on first.
+  assert.match(app, /<span className="task-listing-index">Listing \{listingIndex\+1\} of \{listings\.length\}<\/span>/);
+  assert.match(app, /<span className="task-listing-index">Listing \{listingIndex\+1\} of \{files\.length\}<\/span>/);
+  assert.match(clarity, /\.app-shell \.task-listing-index\{font:800 13px/);
+  // A bounded card with real space around it, not a hairline rule.
+  assert.match(clarity, /\.app-shell \.task-panel \.task-listing\{margin:0 0 22px!important;[^}]*border:1px solid/);
+
+  /* The title is a caption, not a headline: "its almost always going to be a junk
+     title like that so either make it much smaller and subtler or get rid of it
+     altogether." D684 had enlarged it to 1rem bold, which was backwards. */
+  assert.match(clarity, /\.task-listing-head \.task-listing-name\{font-size:11\.5px!important;font-weight:500!important/);
+  assert.doesNotMatch(clarity, /\.task-listing-head \.task-listing-name\{font-size:1rem!important/);
+  // And it never prints the upload filename or repeats the listing number.
+  assert.match(app, /const listingLabel=\(design:DesignFile\|undefined\)=>\{/);
+  assert.doesNotMatch(app, /listing \$\{index\+1\} of \$\{listings\.length\}/);
 });
