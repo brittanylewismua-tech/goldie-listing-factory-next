@@ -4482,7 +4482,7 @@ test("everything on step 2 that describes one product sits in that product's car
      different products. A hoodie scene is not a tee scene. */
   /* D540 - and specifically inside the task that uses it, rather than floating
      above every task in the card. */
-  assert.match(app, /if\(task==="lifestyle"\)return <>[\s\S]{0,1200}?<UploadedListingPhotos/);
+  assert.match(app, /if\(task==="lifestyle"\)return <>[\s\S]{0,2500}?<UploadedListingPhotos/);
 
   /* D520 - "Recommended photos for Unisex Midweight Softstyle Fleece Hoodie"
      rendered above all three cards, describing the open product only, with

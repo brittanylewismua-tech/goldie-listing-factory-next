@@ -2587,7 +2587,7 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
               </div>})()) }</div>
     </>;
     if(task==="lifestyle")return <>
-          <div className="task-panel-lead"><p>Already have finished lifestyle mockups or other listing photos? Upload them here. Goldie stores the original files with this exact listing and adds them when it publishes.</p></div>
+          <div className="task-panel-lead"><p>Add finished photos to each design below. You can arrange them with the Printify photos in the next section.</p></div>
           <div className="task-panel-body">{listings.map(({draft,design,selectedImages})=>draft.status!=="Created"||!design||!draft.id?null:(()=>{
               const count=selectedImages.length+(preparedMockupCounts[draft.id||""]||0);
               return <div className="task-listing" key={draft.clientId}>
@@ -2597,6 +2597,7 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
                   <span className="task-listing-count">{count} {count===1?"photo":"photos"}</span>
                 </div>
                 <div className="task-listing-work">
+                  <div className="listing-photo-design-identity">{design.previewUrl?<img src={design.previewUrl} alt={design.name||"Design artwork"}/>:null}<div><span>PHOTOS FOR THIS DESIGN</span><b>{design.name||"Untitled design"}</b></div></div>
                   <UploadedListingPhotos productId={draft.id} onCountChange={count=>setPreparedMockupCounts(current=>({...current,[draft.id!]:count}))}/></div>
               </div>})()) }</div>
     </>;
