@@ -6649,3 +6649,33 @@ test("the shared cache coalesces misses and never stores a failure — D657", as
   // Expiry is carried on the stored entry, not assumed.
   assert.match(shared, /"cache-control": `public, max-age=\$\{ttlSeconds\}`/);
 });
+
+/* D658 · Measured on the live build, from a synchronous request so no frozen
+   tab could distort it: /api/etsy/taxonomy returned 261,808 bytes and took
+   2.4-3.2s, every call, WITH D656's cache doing its job. D656 stopped the tree
+   being fetched per design; it did not stop the whole flattened category list
+   being serialised back to the browser per design. Ten designs shipped 2.6MB
+   and parsed it ten times into one piece of state that each design overwrote
+   with the identical array. */
+test("the category list is sent to the browser once, not per design — D658", async () => {
+  const [route, app] = await Promise.all([
+    readFile(new URL("../app/api/etsy/taxonomy/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(route, /includeCategories\?:boolean/);
+  assert.match(route, /\{\.\.\.\(body\.includeCategories\?\{categories:categories\.map\(\(\{id,path\}\)=>\(\{id,path\}\)\)\}:\{\}\),selected:/,
+    "categories ride along only when the browser says it needs them");
+  // selected and properties are per-design and must always be returned.
+  assert.match(route, /selected:\{id:selected\.id,path:selected\.path\},properties\}/);
+
+  assert.match(app, /includeCategories:!haveEtsyCategories\.current/);
+  /* A ref, not the state. Several designs resolve inside one tick; reading
+     etsyCategories.length there is the stale closure that broke D640, D644 and
+     D653, and every design would ask for the 262KB again. */
+  assert.match(app, /const haveEtsyCategories=useRef\(false\);/);
+  assert.doesNotMatch(app, /includeCategories:!etsyCategories\.length/,
+    "reading the state here is the stale-closure bug this exists to avoid");
+  // Only a response that actually carried the list may set it.
+  assert.match(app, /if\(payload\.categories\?\.length\)\{haveEtsyCategories\.current=true;setEtsyCategories\(payload\.categories\)\}/);
+});

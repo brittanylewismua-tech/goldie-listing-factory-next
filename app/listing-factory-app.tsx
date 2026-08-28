@@ -1080,6 +1080,13 @@ export default function ListingFactoryApp() {
   const [etsyConnecting,setEtsyConnecting]=useState(false);
   const [etsyError,setEtsyError]=useState("");
   const [etsyCategories,setEtsyCategories]=useState<EtsyCategoryOption[]>([]);
+  /* D658 · A ref, not the state, and set only once a response has actually
+     carried the list. Reading etsyCategories.length here would be the same
+     stale closure that broke D640, D644 and D653: several designs resolve
+     inside one tick, all of them see the empty array they were created with,
+     and every one asks for 262KB again. A failed request never sets it, so the
+     picker cannot end up permanently empty. */
+  const haveEtsyCategories=useRef(false);
   const [pendingCategoryChange,setPendingCategoryChange]=useState<PendingCategoryChange|null>(null);
   const [sizeGuideName,setSizeGuideName]=useState("");
   const [sizeGuideStatus,setSizeGuideStatus]=useState("");
@@ -3104,7 +3111,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
   function finalDescription(design:DesignFile,details?:EtsyDetails){return design.descriptionOverride??[design.blurb??details?.blurb??"",description].filter(value=>value.trim()).join("\n\n")}
   async function syncListingFields(design:DesignFile,details?:EtsyDetails){const draft=drafts.find(item=>item.clientId===design.id);if(!draft?.id)throw new Error("The matching Printify draft could not be found.");const response=await fetch("/api/printify/drafts/update",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({productId:draft.id,title:design.title,tags:design.tags,description:finalDescription(design,details),etsyDetails:details})});const payload=await response.json() as {error?:string};if(!response.ok)throw new Error(payload.error||"Printify could not save the completed listing.")}
   async function syncPreparedListing(design:DesignFile,details:EtsyDetails){await syncListingFields(design,details)}
-  async function resolveEtsyOptions(details:EtsyDetails,taxonomyId?:number){const response=await fetch("/api/etsy/taxonomy",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({...details,taxonomyId,product:{blueprintTitle:templateDetails?.blueprintTitle,brand:templateDetails?.brand,model:templateDetails?.model}})}),payload=await response.json() as {categories?:EtsyCategoryOption[];selected?:{id:number;path:string};properties?:EtsyPropertySelection[];error?:string};if(!response.ok||!payload.selected)throw new Error(payload.error||"Etsy listing options could not be loaded.");if(payload.categories?.length)setEtsyCategories(payload.categories);
+  async function resolveEtsyOptions(details:EtsyDetails,taxonomyId?:number){const response=await fetch("/api/etsy/taxonomy",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({...details,taxonomyId,includeCategories:!haveEtsyCategories.current,product:{blueprintTitle:templateDetails?.blueprintTitle,brand:templateDetails?.brand,model:templateDetails?.model}})}),payload=await response.json() as {categories?:EtsyCategoryOption[];selected?:{id:number;path:string};properties?:EtsyPropertySelection[];error?:string};if(!response.ok||!payload.selected)throw new Error(payload.error||"Etsy listing options could not be loaded.");if(payload.categories?.length){haveEtsyCategories.current=true;setEtsyCategories(payload.categories)}
     /* D649 - fill Closure only when the product name settles it, and only when
        Etsy left it blank. An unresolved one stays blank and keeps blocking, which
        is the honest outcome. */
