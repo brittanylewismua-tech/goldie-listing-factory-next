@@ -6390,5 +6390,9 @@ test("a size guide can be removed, not only replaced — D651", async () => {
 
   // Offered only when there is one to remove.
   assert.match(app, /\{sizeGuideName&&<button type="button" className="size-guide-remove"/);
-  assert.match(css, /\.app-shell \.size-guide-actions\{display:flex/);
+  /* D652 - it inherited `.batch-size-guide button`, a filled primary set with
+     !important, so the destructive action rendered as heavy as the safe one. */
+  const functional = await readFile(new URL("../app/approved-functional.css", import.meta.url), "utf8");
+  assert.match(functional, /\.app-shell \.batch-size-guide button\.size-guide-remove\{[\s\S]*?background:transparent!important/);
+  assert.match(functional, /\.app-shell \.batch-size-guide \.size-guide-actions\{display:flex/);
 });

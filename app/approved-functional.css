@@ -1704,3 +1704,25 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
   padding-top:16px!important;
   padding-bottom:0!important;
 }
+
+/* ==========================================================================
+ * D652 · The Remove I added beside the size guide picker inherited
+ * `.batch-size-guide button`, which is a filled primary with !important - so a
+ * destructive secondary rendered exactly as heavy as "Replace size guide", two
+ * solid dark buttons stacked, with nothing to say which one throws work away.
+ * Same specificity, stated after, so the pair reads as one action and one way
+ * out of it.
+ * ========================================================================== */
+.app-shell .batch-size-guide .size-guide-actions{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
+.app-shell .batch-size-guide button.size-guide-remove{
+  background:transparent!important;
+  border:1px solid rgba(91,48,79,.24)!important;
+  border-color:rgba(91,48,79,.24)!important;
+  color:#6b4a60!important;
+  box-shadow:none!important;
+  font-weight:600;
+}
+.app-shell .batch-size-guide button.size-guide-remove:hover{
+  border-color:rgba(158,39,54,.45)!important;
+  color:#9e2736!important;
+}
