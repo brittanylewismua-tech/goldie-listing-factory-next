@@ -2077,7 +2077,11 @@ test("keeps bundle titles, placement decisions, review, and failures product-spe
   assert.match(app,/autoTitleForDesign\(file,bank\.keywords,titleJoiner===", ",nextDetails\)/);
   assert.match(app,/bundleQualityIssues/);
   /* D167 groups these per design instead of per design-AND-product. */
-  assert.match(app,/is below the recommended size for <strong>\{productList\.join\(", "\)\}/);
+  /* D664 · The naming is still per product; the sentence now adapts, because a
+     seller with one product must not be told which of several it affects. */
+  assert.match(app,/is below the recommended size\{productsInBatch\.length>1\?<> for <strong>\{productList\.join\(", "\)\}/);
+  assert.match(app,/:<> for <strong>\{productList\[0\]\|\|"this product"\}<\/strong><\/>\}/,
+    "one product is still named, just without the bundle framing");
   assert.match(app,/Proceed anyway/);
   assert.match(app,/Exclude this listing/);
   assert.match(app,/Nothing is skipped silently/);
@@ -6986,4 +6990,44 @@ test("every shipping profile renders distinguishably — D663", async () => {
     `seven real profiles must render as seven distinct labels, got ${JSON.stringify(rendered)}`);
   // And nothing is cut short on the way.
   assert.ok(rendered.every((label) => !label.includes("…")), "no ellipsis");
+});
+
+/* D664 · Found by acceptance Run 1, step 2. Two real designs at 1254x1254 on a
+   hoodie raised the banner:
+
+     "2 designs are below 215 DPI - very low resolution.
+      Goldie will identify every affected design so you can replace it or
+      continue anyway."
+
+   and then identified nothing. No per-design panel, no naming, no Proceed or
+   Exclude control - because the entire DPI review was gated on activeBundle.
+
+   That is the D648 fault word for word, a banner promising a confirmation step
+   that never comes, still present on the single-product path after being fixed
+   for bundles. A batch has products whether or not it is a bundle. */
+test("the low-resolution review appears for one product, not only bundles — D664", async () => {
+  const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+
+  assert.match(app, /const productsInBatch=useMemo\(\(\)=>\(activeBundle&&bundleRecipes\.length\?bundleRecipes:activeRecipe\?\[activeRecipe\]:\[\]\),/);
+  assert.match(app, /const bundleQualityIssues=useMemo\(\(\)=>productsInBatch\.length\?files\.flatMap\(file=>productsInBatch\.flatMap\(recipe=>\{/);
+  assert.doesNotMatch(app, /const bundleQualityIssues=useMemo\(\(\)=>activeBundle\?/,
+    "the DPI check must follow the batch, not the bundle");
+
+  // The panel itself is no longer bundle-only.
+  assert.match(app, /\{bundleQualityGroups\.length>0&&<section className="bundle-quality-review"/);
+  assert.doesNotMatch(app, /\{activeBundle&&bundleQualityGroups\.length>0&&<section/);
+
+  /* The banner's promise is only kept if the seller can actually act, so the
+     per-design decision controls have to be in that panel. */
+  assert.match(app, /Proceed with all \{bundleQualityGroups\.length\}/);
+  assert.match(app, /decideQualityGroup\(group\.keys,"exclude"\)/);
+  // And creating drafts still waits for a decision on every flagged design.
+  assert.match(app, /const undecided=bundleQualityGroups\.filter\(group=>group\.keys\.some\(key=>!bundleQualityDecisions\[key\]\)\)/);
+
+  /* Copy that only makes sense for a bundle must not be shown to someone with
+     one product. */
+  assert.match(app, /\{productsInBatch\.length>1\?"The same artwork can be sharp on one product and too small for another\. ":""\}/);
+
+  // The unchecked-product note follows the same rule.
+  assert.match(app, /const bundleProductsUnchecked=useMemo\(\(\)=>productsInBatch\.filter\(/);
 });
