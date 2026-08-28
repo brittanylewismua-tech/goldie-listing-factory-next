@@ -10,7 +10,7 @@ export type Pricing = { targetProfit: number; etsyFeePercent: number; fixedFee: 
    batch — which currently fills only 2–3 of 11 fields and is not stable
    across listings in the same batch. */
 export type RecipeEtsyDefaults = Record<string, string | number | null>;
-export type Recipe = { id: string; name: string; templateUrl: string; description: string; defaultTitle: string; defaultMockupTheme?:string; mockupIds?:string[]; setupComplete?:boolean; defaultProfitTarget?:number;wholeNumberPricing?:boolean;variantPrices?:Record<string,number>; keywordListId?:string; printifyImageIndices?:number[]; normalizePadding?:boolean;etsyShippingProfileId?:number;defaultColorIds?:number[];defaultSizeIds?:number[];etsyDefaults?:RecipeEtsyDefaults };
+export type Recipe = { id: string; name: string; templateUrl: string; description: string; defaultTitle: string; defaultMockupTheme?:string; mockupIds?:string[]; setupComplete?:boolean; defaultProfitTarget?:number;wholeNumberPricing?:boolean;variantPrices?:Record<string,number>; keywordListId?:string; printifyImageIndices?:number[]; normalizePadding?:boolean;etsyShippingProfileId?:number;defaultColorIds?:number[];defaultSizeIds?:number[];etsyDefaults?:RecipeEtsyDefaults;printifyShopTitle?:string;printifyShopId?:number };
 export type ProductBundle = { id:string;name:string;recipeIds:string[] };
 
 /* D222 · A product cannot join a bundle until it has been set up. Creating a
@@ -51,6 +51,12 @@ export function recipeSummary(recipe: Recipe): string {
    * crewneck, so the card would have asserted a set the wizard immediately
    * calls incompatible. Report only what this screen can actually verify. */
   if (recipe.keywordListId) parts.push("keyword bank");
+  /* D649 - a seller with more than one Printify store could not tell which store
+     a saved product belonged to, so a product that cannot publish to the
+     connected Etsy shop looked identical to one that can, and the only way to
+     find out was to choose it and be refused. Shown only when Goldie recorded
+     it; an older product saved before this says nothing rather than guessing. */
+  if (recipe.printifyShopTitle) parts.push(recipe.printifyShopTitle);
   return parts.length ? parts.join(" \u00b7 ") : "No details saved yet";
 }
 

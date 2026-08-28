@@ -6318,3 +6318,52 @@ test("the walkthrough's smaller faults are fixed — D648", async () => {
   assert.match(app, /const etsyReady=files\.filter\(file=>etsyRequiredComplete\(file\.etsy\)\)\.length;/);
   assert.match(app, /if\(etsyReady<files\.length\)return \{label:`\$\{etsyReady\} of \$\{files\.length\} Etsy details ready`,tone:"attention"\}/);
 });
+
+/* D649 · The two gaps the walkthrough left open, both about telling the seller
+ * something Goldie already knows instead of making them find out by failing. */
+test("a saved product says which Printify store it lives in — D649", async () => {
+  const [api, tools, app, route] = await Promise.all([
+    readFile(new URL("../app/api/printify/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/factory-tools.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/product-recipes/route.ts", import.meta.url), "utf8"),
+  ]);
+
+  // The shop is known where the product is resolved, so it is returned.
+  assert.match(api, /shop: \{ id: found\.shop\.id, title: found\.shop\.title \}/);
+  // Recorded on the recipe when it changes, without clobbering anything else.
+  assert.match(app, /printifyShopTitle:result\.shop\.title,printifyShopId:result\.shop\.id/);
+  assert.match(app, /activeRecipe\.printifyShopTitle!==result\.shop\.title/,
+    "only write when it actually changed");
+  assert.match(route, /if \(body\.printifyShopTitle !== undefined\) patch\.printifyShopTitle/);
+
+  /* Shown only when recorded - a product saved before this says nothing rather
+     than asserting a store Goldie never checked. */
+  assert.match(tools, /if \(recipe\.printifyShopTitle\) parts\.push\(recipe\.printifyShopTitle\)/);
+});
+
+test("Closure is filled only when the product name settles it — D649", async () => {
+  const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+
+  const fn = app.match(/export function verifiedClosure\([\s\S]*?\n\}/)?.[0];
+  assert.ok(fn, "verifiedClosure must exist");
+
+  // Named closures are read straight off the product.
+  assert.match(fn, /full\[-\\s\]\?zip\\b\/\.test\(text\)\)return "Full zip"/);
+  assert.match(fn, /quarter\|1\\\/4\)\[-\\s\]\?zip\\b\/\.test\(text\)\)return "Quarter zip"/);
+  assert.match(fn, /half\|1\\\/2\)\[-\\s\]\?zip\\b\/\.test\(text\)\)return "Half zip"/);
+
+  /* A garment that says "zip" without saying which is left unresolved - the
+     whole point. Guessing writes a wrong attribute onto a live listing. */
+  assert.match(fn, /if\(\/\\bzip\\b\/\.test\(text\)\)return "";/);
+  assert.ok(fn.indexOf('\\bzip\\b') < fn.indexOf('pullover|hoodie'),
+    "the ambiguous-zip bail-out must come before the pullover fallback");
+  assert.match(fn, /pullover\|hoodie\|hooded\|sweatshirt\|crewneck\|crew neck\)\\b\/\.test\(text\)\)return "Pullover"/);
+  assert.match(fn, /return "";\n\}/, "anything else stays unresolved");
+
+  // It only ever fills a blank required field, matched against Etsy's own values.
+  assert.match(app, /if\(!\/closure\/i\.test\(property\.label\)\|\|property\.value\.trim\(\)\)return property;/);
+  assert.match(app, /\(property\.possibleValues\|\|\[\]\)\.find\(option=>option\.name\.toLowerCase\(\)===closure\.toLowerCase\(\)\)/);
+  assert.match(app, /return match\?\{\.\.\.property,value:match\.name,valueId:match\.value_id\}:property;/,
+    "no match means it stays blank and keeps blocking, which is honest");
+});

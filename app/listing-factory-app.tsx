@@ -217,6 +217,24 @@ function friendlyShippingProfileTitle(raw?:string){
   return `${(boundary>18?cut.slice(0,boundary):cut).replace(/[,\s]+$/,"")}…`;
 }
 
+/* D649 · Every hoodie listing stopped on "Closure still needed". Goldie
+   pre-fills every other Etsy field from the Printify product, and left the one
+   that blocks publishing to a manual click on a tool whose whole point is bulk.
+   Etsy's Closure values are Full zip, Half zip, Quarter zip and Pullover, and
+   Printify names the garment plainly enough to settle it: a product called a
+   full-zip is a full zip, and a hoodie or crewneck with no zip in its name is a
+   pullover. Anything that says "zip" without saying WHICH is left unresolved
+   rather than guessed - a wrong attribute goes onto a live listing. */
+export function verifiedClosure(blueprintTitle?:string,model?:string,brand?:string){
+  const text=`${blueprintTitle||""} ${model||""} ${brand||""}`.toLowerCase();
+  if(/\bfull[-\s]?zip\b/.test(text))return "Full zip";
+  if(/\b(quarter|1\/4)[-\s]?zip\b/.test(text))return "Quarter zip";
+  if(/\b(half|1\/2)[-\s]?zip\b/.test(text))return "Half zip";
+  if(/\bzip\b/.test(text))return "";
+  if(/\b(pullover|hoodie|hooded|sweatshirt|crewneck|crew neck)\b/.test(text))return "Pullover";
+  return "";
+}
+
 const APPAREL_PRODUCT_FAMILIES=new Set(["tee","hoodie","crewneck","tank","longSleeve"]);
 function shippingProfileGroup(profileTitle:string,blueprintTitle:string){
   const product=productFamily(blueprintTitle),profile=productFamily(decodeProfileTitle(profileTitle));
@@ -2841,7 +2859,7 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
     setLoadingTemplate(true); setTemplateError(""); setTemplateDetails(null);
     try {
       const response = await fetchWithDeadline("/api/printify", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ productUrl,savedShippingProfileId }) }, 90000);
-      const result = await response.json() as { product?: TemplateDetails; error?: string;issues?:string[];title?:string };
+      const result = await response.json() as { product?: TemplateDetails; error?: string;issues?:string[];title?:string;shop?:{id:number;title:string} };
       if(requestVersion!==templateLoadVersion.current)return null;
       if (!response.ok || !result.product){setBlockingModal({title:result.title||"This Printify product isn’t ready yet.",issues:result.issues?.length?result.issues:[result.error||"The product could not be loaded."],copy:response.status===409?"Connect Printify and Etsy to the same shop, then load this product again. Connections is in the sidebar.":"Fix these items in Printify, save the product, then submit the same link again."});throw new Error(result.error || "The product could not be loaded.")}
       const available=new Set((result.product.colorOptions||[]).filter(color=>color.available).map(color=>color.id));let sessionColors:number[]=[];try{sessionColors=JSON.parse(window.localStorage.getItem(`goldie-colors-${result.product.id}`)||"[]") as number[]}catch{/* Ignore an invalid browser preference. */}const remembered=rememberedColorIds.filter(id=>available.has(id));const session=sessionColors.filter(id=>available.has(id));/* D213 · Printify's template settings are not the seller's choices.
@@ -2879,6 +2897,11 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
          empty picker after the server recovered the profile from Etsy, still
          works, because in that case there is nothing to keep. */
       if(verifiedProfileId)setEtsyShippingProfileId(current=>current||verifiedProfileId);
+      /* D649 - record which Printify store this product came from, so its saved
+         card can say so instead of the seller finding out by being refused. */
+      if(result.shop?.title&&activeRecipe&&activeRecipe.printifyShopTitle!==result.shop.title){
+        void fetch("/api/product-recipes",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:activeRecipe.id,name:activeRecipe.name,templateUrl:activeRecipe.templateUrl,printifyShopTitle:result.shop.title,printifyShopId:result.shop.id})}).catch(()=>undefined);
+      }
       setTemplateDetails(result.product);setDescription(result.product.description||"");if(result.product.standardShipping!=null)setPricing(current=>({...current,shippingCost:result.product!.standardShipping!,shippingCharged:0}));setVariantPrices(Object.fromEntries((result.product.variants||[]).map(variant=>[String(variant.id),variant.templatePrice])));/* D472 - loading the Printify template used to clear the pricing approval
    unconditionally. Choosing a saved product loads its template, so every batch
    began un-approved no matter what the product had saved - and the control to
@@ -3048,7 +3071,17 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
   function finalDescription(design:DesignFile,details?:EtsyDetails){return design.descriptionOverride??[design.blurb??details?.blurb??"",description].filter(value=>value.trim()).join("\n\n")}
   async function syncListingFields(design:DesignFile,details?:EtsyDetails){const draft=drafts.find(item=>item.clientId===design.id);if(!draft?.id)throw new Error("The matching Printify draft could not be found.");const response=await fetch("/api/printify/drafts/update",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({productId:draft.id,title:design.title,tags:design.tags,description:finalDescription(design,details),etsyDetails:details})});const payload=await response.json() as {error?:string};if(!response.ok)throw new Error(payload.error||"Printify could not save the completed listing.")}
   async function syncPreparedListing(design:DesignFile,details:EtsyDetails){await syncListingFields(design,details)}
-  async function resolveEtsyOptions(details:EtsyDetails,taxonomyId?:number){const response=await fetch("/api/etsy/taxonomy",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({...details,taxonomyId,product:{blueprintTitle:templateDetails?.blueprintTitle,brand:templateDetails?.brand,model:templateDetails?.model}})}),payload=await response.json() as {categories?:EtsyCategoryOption[];selected?:{id:number;path:string};properties?:EtsyPropertySelection[];error?:string};if(!response.ok||!payload.selected)throw new Error(payload.error||"Etsy listing options could not be loaded.");if(payload.categories?.length)setEtsyCategories(payload.categories);return {...details,category:payload.selected.path,taxonomyId:payload.selected.id,properties:payload.properties||[]} }
+  async function resolveEtsyOptions(details:EtsyDetails,taxonomyId?:number){const response=await fetch("/api/etsy/taxonomy",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({...details,taxonomyId,product:{blueprintTitle:templateDetails?.blueprintTitle,brand:templateDetails?.brand,model:templateDetails?.model}})}),payload=await response.json() as {categories?:EtsyCategoryOption[];selected?:{id:number;path:string};properties?:EtsyPropertySelection[];error?:string};if(!response.ok||!payload.selected)throw new Error(payload.error||"Etsy listing options could not be loaded.");if(payload.categories?.length)setEtsyCategories(payload.categories);
+    /* D649 - fill Closure only when the product name settles it, and only when
+       Etsy left it blank. An unresolved one stays blank and keeps blocking, which
+       is the honest outcome. */
+    const closure=verifiedClosure(templateDetails?.blueprintTitle,templateDetails?.model,templateDetails?.brand);
+    if(closure&&payload.properties)payload.properties=payload.properties.map(property=>{
+      if(!/closure/i.test(property.label)||property.value.trim())return property;
+      const match=(property.possibleValues||[]).find(option=>option.name.toLowerCase()===closure.toLowerCase());
+      return match?{...property,value:match.name,valueId:match.value_id}:property;
+    });
+    return {...details,category:payload.selected.path,taxonomyId:payload.selected.id,properties:payload.properties||[]} }
   async function rememberEtsyDefaults(details:EtsyDetails){if(!activeRecipe)return;const physical=Object.fromEntries((details.properties||[]).filter(property=>PHYSICAL_ETSY_FIELDS.test(property.label)&&property.value.trim()).map(property=>[property.label,property.value]));if(!Object.keys(physical).length)return;const updated={...activeRecipe,etsyDefaults:{...activeRecipe.etsyDefaults,...physical}};const response=await fetch("/api/product-recipes",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:activeRecipe.id,name:activeRecipe.name,templateUrl:activeRecipe.templateUrl,etsyDefaults:{...activeRecipe.etsyDefaults,...physical}})});if(!response.ok)throw new Error("Goldie prepared the Etsy details but could not remember the product defaults.");setActiveRecipe(updated)}
 
   async function prepareOne(design:DesignFile){try{const response=await fetch("/api/listing-intelligence",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({

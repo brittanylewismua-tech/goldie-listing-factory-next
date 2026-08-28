@@ -8,13 +8,13 @@ export async function GET() {
   const user = await getChatGPTUser();
   if (!user) return NextResponse.json({ error: "Sign in to load product recipes." }, { status: 401 });
   const recipes = await getDb().select().from(productRecipes).where(eq(productRecipes.userId, user.userId)).orderBy(desc(productRecipes.updatedAt));
-  return NextResponse.json({ recipes: recipes.map((r) => {const saved=JSON.parse(r.pricingJson||"{}");return {...r,etsyShippingProfileId:Number(saved.etsyShippingProfileId)||0,defaultColorIds:Array.isArray(saved.defaultColorIds)?saved.defaultColorIds.filter(Number.isInteger):[],defaultSizeIds:Array.isArray(saved.defaultSizeIds)?saved.defaultSizeIds.filter(Number.isInteger):[],defaultProfitTarget:Number(saved.defaultProfitTarget)||10,wholeNumberPricing:saved.wholeNumberPricing===true,variantPrices:saved.variantPrices&&typeof saved.variantPrices==="object"?saved.variantPrices as Record<string,number>:{},etsyDefaults:saved.etsyDefaults&&typeof saved.etsyDefaults==="object"?saved.etsyDefaults:{},mockupIds:Array.isArray(saved.mockupIds)?saved.mockupIds.filter((id:unknown)=>typeof id==="string").slice(0,8):undefined,setupComplete:saved.setupComplete!==false,printifyImageIndices:JSON.parse(r.printifyImageIndicesJson||"[]")}}) });
+  return NextResponse.json({ recipes: recipes.map((r) => {const saved=JSON.parse(r.pricingJson||"{}");return {...r,etsyShippingProfileId:Number(saved.etsyShippingProfileId)||0,defaultColorIds:Array.isArray(saved.defaultColorIds)?saved.defaultColorIds.filter(Number.isInteger):[],defaultSizeIds:Array.isArray(saved.defaultSizeIds)?saved.defaultSizeIds.filter(Number.isInteger):[],defaultProfitTarget:Number(saved.defaultProfitTarget)||10,wholeNumberPricing:saved.wholeNumberPricing===true,variantPrices:saved.variantPrices&&typeof saved.variantPrices==="object"?saved.variantPrices as Record<string,number>:{},etsyDefaults:saved.etsyDefaults&&typeof saved.etsyDefaults==="object"?saved.etsyDefaults:{},printifyShopTitle:typeof saved.printifyShopTitle==="string"?saved.printifyShopTitle:"",printifyShopId:Number(saved.printifyShopId)||0,mockupIds:Array.isArray(saved.mockupIds)?saved.mockupIds.filter((id:unknown)=>typeof id==="string").slice(0,8):undefined,setupComplete:saved.setupComplete!==false,printifyImageIndices:JSON.parse(r.printifyImageIndicesJson||"[]")}}) });
 }
 
 export async function POST(request: Request) {
   const user = await getChatGPTUser();
   if (!user) return NextResponse.json({ error: "Sign in to save product recipes." }, { status: 401 });
-  const body = await request.json() as { id?: string; name?: string; templateUrl?: string; description?:string; keywordListId?:string; printifyImageIndices?:number[]; normalizePadding?:boolean;etsyShippingProfileId?:number;defaultColorIds?:number[];defaultSizeIds?:number[];etsyDefaults?:Record<string,unknown>;defaultMockupTheme?:string;mockupIds?:string[];setupComplete?:boolean;defaultProfitTarget?:number;wholeNumberPricing?:boolean;variantPrices?:Record<string,number> };
+  const body = await request.json() as { id?: string; name?: string; templateUrl?: string; description?:string; keywordListId?:string; printifyImageIndices?:number[]; normalizePadding?:boolean;printifyShopTitle?:string;printifyShopId?:number;etsyShippingProfileId?:number;defaultColorIds?:number[];defaultSizeIds?:number[];etsyDefaults?:Record<string,unknown>;defaultMockupTheme?:string;mockupIds?:string[];setupComplete?:boolean;defaultProfitTarget?:number;wholeNumberPricing?:boolean;variantPrices?:Record<string,number> };
   const name = String(body.name || "").trim().slice(0, 80), templateUrl = String(body.templateUrl || "").trim();
   if (!name || !templateUrl) return NextResponse.json({ error: "Name the recipe and add its Printify template." }, { status: 400 });
   const id = body.id || crypto.randomUUID();
@@ -43,6 +43,10 @@ export async function POST(request: Request) {
      sending an explicit [] still clears a list. */
   const patch: Record<string, unknown> = {};
   if (body.etsyShippingProfileId !== undefined) patch.etsyShippingProfileId = Number(body.etsyShippingProfileId) || 0;
+  /* D649 - which Printify store this product lives in, so the saved-product card
+     can say it. Recorded when the product is loaded; absent on older recipes. */
+  if (body.printifyShopTitle !== undefined) patch.printifyShopTitle = String(body.printifyShopTitle || "").slice(0, 80);
+  if (body.printifyShopId !== undefined) patch.printifyShopId = Number(body.printifyShopId) || 0;
   if (body.defaultColorIds !== undefined) patch.defaultColorIds = (body.defaultColorIds || []).filter(Number.isInteger);
   if (body.defaultSizeIds !== undefined) patch.defaultSizeIds = (body.defaultSizeIds || []).filter(Number.isInteger);
   if (body.defaultProfitTarget !== undefined) patch.defaultProfitTarget = Math.max(0, Math.min(500, Number(body.defaultProfitTarget) || 10));
