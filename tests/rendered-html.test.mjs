@@ -6371,3 +6371,24 @@ test("Closure is filled only when the product name settles it — D649", async (
   assert.match(app, /return match\?\{\.\.\.property,value:match\.name,valueId:match\.value_id\}:property;/,
     "no match means it stays blank and keeps blocking, which is honest");
 });
+
+/* D651 · Found by attaching the wrong file to it, which is easy - the size
+ * guide picker is one of several file inputs on step 2. There was no way back
+ * to none: only "Replace size guide". A size guide goes onto every listing in
+ * the batch, so being stuck with the wrong one is not a small mistake. */
+test("a size guide can be removed, not only replaced — D651", async () => {
+  const [app, css] = await Promise.all([
+    readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(app, /async function removeSizeGuide\(\)\{/);
+  // It clears the batch and every design's copy of the name.
+  assert.match(app, /setSizeGuideName\(""\);\n\s*setFiles\(current=>current\.map\(design=>\(\{\.\.\.design,sizeGuideName:undefined\}\)\)\)/);
+  /* And it does not pretend to reach listings that already went out with one. */
+  assert.match(app, /Listings this batch has already published keep the one they were given/);
+
+  // Offered only when there is one to remove.
+  assert.match(app, /\{sizeGuideName&&<button type="button" className="size-guide-remove"/);
+  assert.match(css, /\.app-shell \.size-guide-actions\{display:flex/);
+});

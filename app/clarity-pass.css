@@ -3149,3 +3149,17 @@ body{min-width:1180px!important}
 }
 .diagnostic-tag.is-platform{background:rgba(158,39,54,.12);color:#9e2736}
 .diagnostic-tag.is-seller{background:rgba(91,48,79,.1);color:#6b4a60}
+
+/* D651 · The size guide gained a Remove beside its picker, so the two controls
+   need to sit as a pair rather than the second one landing wherever it likes. */
+.app-shell .size-guide-actions{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
+.app-shell .size-guide-remove{
+  background:transparent;
+  border:1px solid rgba(91,48,79,.22);
+  color:#6b4a60;
+  border-radius:999px;
+  padding:9px 17px;
+  font:600 .78rem/1 "Manrope",system-ui,sans-serif;
+  cursor:pointer;
+}
+.app-shell .size-guide-remove:hover{border-color:rgba(91,48,79,.4);color:#4a2a3e}

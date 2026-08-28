@@ -2839,6 +2839,17 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
       const jobId=payload.job.id;localStorage.setItem("goldie-active-publish-job",jobId);await monitorPublishJob(jobId);
     }catch(error){setPublishMessage(error instanceof Error?error.message:"The batch could not be published.")}finally{publishInFlight.current=false;setPublishing(false)}
   }
+  /* D651 · A size guide could be replaced but never removed. Attach the wrong
+     file - which is easy, it is one picker among several on this step - and the
+     only way out was to attach a different wrong file; there was no way back to
+     none. It goes onto every listing in the batch, so that is not a small
+     mistake to be stuck with. Removing clears it for everything this batch has
+     not published yet, and says plainly what it cannot undo. */
+  async function removeSizeGuide(){
+    setSizeGuideName("");
+    setFiles(current=>current.map(design=>({...design,sizeGuideName:undefined})));
+    setSizeGuideStatus("Size guide removed. Listings this batch has already published keep the one they were given.");
+  }
   async function applySizeGuide(file:File){const ids=drafts.filter(draft=>draft.status==="Created"&&draft.id).map(draft=>draft.id!);if(!ids.length)return;setSizeGuideStatus(`Applying ${file.name} to 0 of ${ids.length} listings…`);try{let completeCount=0;for(const productId of ids){const form=new FormData();form.set("productId",productId);form.set("kind","size-guide");form.set("file",file);const response=await fetch("/api/etsy/images",{method:"POST",body:form}),payload=await response.json() as {error?:string};if(!response.ok)throw new Error(payload.error||"The size guide could not be saved.");completeCount+=1;setSizeGuideStatus(`Applying ${file.name} to ${completeCount} of ${ids.length} listings…`)}setFiles(current=>current.map(design=>({...design,sizeGuideName:undefined})));setSizeGuideName(file.name);setSizeGuideStatus(`✓ ${file.name} will be added to all ${ids.length} Etsy listings when you publish.`)}catch(error){setSizeGuideStatus(error instanceof Error?error.message:"The size guide could not be saved.")}}
 
   async function connectPrintify() {
@@ -3789,7 +3800,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
             parked underneath all of them. D521 moved it out of one product's
             card, which was right, and left it at the very bottom of the step,
             which was not. It sits above the panels it applies to. */}
-        <section className="batch-size-guide"><div><p className="mini-label">OPTIONAL · APPLY TO THE WHOLE BATCH</p><h3>Add one size guide to every Etsy listing</h3><span>Choose it once. Goldie attaches it to every listing in this batch automatically when you publish.</span></div><input ref={sizeGuidePicker} type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={event=>{const file=event.target.files?.[0];if(file)void applySizeGuide(file)}}/><button onClick={()=>sizeGuidePicker.current?.click()}>{sizeGuideName?"Replace size guide":"Choose size guide"}</button>{sizeGuideStatus&&<p role="status">{sizeGuideStatus}</p>}</section>
+        <section className="batch-size-guide"><div><p className="mini-label">OPTIONAL · APPLY TO THE WHOLE BATCH</p><h3>Add one size guide to every Etsy listing</h3><span>Choose it once. Goldie attaches it to every listing in this batch automatically when you publish.</span></div><input ref={sizeGuidePicker} type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={event=>{const file=event.target.files?.[0];if(file)void applySizeGuide(file)}}/><div className="size-guide-actions"><button onClick={()=>sizeGuidePicker.current?.click()}>{sizeGuideName?"Replace size guide":"Choose size guide"}</button>{sizeGuideName&&<button type="button" className="size-guide-remove" onClick={()=>void removeSizeGuide()}>Remove</button>}</div>{sizeGuideStatus&&<p role="status">{sizeGuideStatus}</p>}</section>
         
         
         
