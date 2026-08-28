@@ -95,7 +95,25 @@ export async function processNextPublishItem(userId:string,jobId:string){
        Printify has told it anything yet. The link row is written the moment the
        publish is accepted, with id 0 meaning "published, awaiting the id". */
     const priorAttempt=listingId?null:await runtime().DB.prepare("SELECT status FROM etsy_listing_links WHERE printify_product_id=? AND user_id=?").bind(draft.id,userId).first<{status:string}>();
-    const alreadyPublished=Boolean(priorAttempt&&priorAttempt.status==="publishing");
+    let alreadyPublished=Boolean(priorAttempt&&priorAttempt.status==="publishing");
+    /* D642 · D638 made Goldie remember that it published, so a resumed item never
+       publishes twice. That is right while a publish is in flight and wrong once
+       it has definitively failed: Printify can accept a publish and then error on
+       its own side - "Sorry, we couldn't publish this product" - leaving no Etsy
+       listing and no external id, forever. Goldie went on believing it had
+       published and would only ever poll, so the seller could never retry. Both
+       Hoodie products sat in exactly that state.
+       A deliberate retry is distinguishable: D475 resets attempts to 0 when the
+       seller presses publish on a FAILED item, and the queue's own polling never
+       does. So on the first pass of a retry, with Printify still showing no
+       listing, the remembered publish plainly did not take effect - clear it and
+       allow exactly one fresh publish. Every later pass in the same run still
+       refuses, so this can never become a loop of publish calls. */
+    if(alreadyPublished&&!listingId&&item.attempts===0){
+      await runtime().DB.prepare("UPDATE etsy_listing_links SET status='retrying',last_error=?,updated_at=CURRENT_TIMESTAMP WHERE printify_product_id=? AND user_id=? AND etsy_listing_id=0")
+        .bind("Printify accepted a publish that produced no Etsy listing; the seller retried and Goldie published once more.",draft.id,userId).run();
+      alreadyPublished=false;
+    }
     if(!listingId&&!alreadyPublished){
       const response=await fetch(`https://api.printify.com/v1/shops/${draft.shopId}/products/${draft.id}/publish.json`,{method:"POST",headers:{...printifyHeaders(token),"Content-Type":"application/json"},body:JSON.stringify({title:true,description:true,images:true,variants:true,tags:true,keyFeatures:true,shipping_template:true})});
       if(!response.ok)throw new Error(`Printify could not publish this listing (${response.status}).`);

@@ -5877,7 +5877,9 @@ test("an interrupted publish resumes instead of stalling forever — D637", asyn
     "Goldie's own link record is checked before publishing again");
   assert.ok(body.indexOf("printifyListingId(token,draft.shopId,draft.id)") < body.indexOf("publish.json"),
     "and Printify's external Etsy id is checked before publishing again");
-  assert.match(body, /const alreadyPublished=Boolean\(priorAttempt&&priorAttempt\.status==="publishing"\)/,
+  /* D642 made this a `let` so a retry of a publish that produced nothing can
+     clear it exactly once; the check itself is unchanged. */
+  assert.match(body, /alreadyPublished=Boolean\(priorAttempt&&priorAttempt\.status==="publishing"\)/,
     "and Goldie's own record that it published, which does not depend on Printify answering");
   assert.match(body, /if\(!listingId&&!alreadyPublished\)\{/,
     "publish only runs when none of the three found a listing");
@@ -6046,4 +6048,44 @@ test("a shop mismatch does not blame the product — D640", async () => {
     "the response may name its own failure; the product wording stays the fallback");
   assert.match(app, /response\.status===409\?"Connect Printify and Etsy to the same shop, then load this product again\. Connections is in the sidebar\."/,
     "and points at the fix that exists rather than at Printify");
+});
+
+/* D642 · D638 made Goldie remember its own publish so a resumed item could never
+ * publish twice. Correct while a publish is in flight; wrong once one has
+ * definitively failed.
+ *
+ * Measured on both Hoodie products: Printify accepted the publish, then errored
+ * on its own side - "Sorry, we couldn't publish this product." - leaving no Etsy
+ * listing and no external id, permanently. Goldie went on believing it had
+ * published, so every retry only ever polled, and the seller had no way back.
+ * Manually publishing the same product inside Printify worked, which proves the
+ * product was fine and the recorded publish had simply evaporated.
+ *
+ * A deliberate retry is distinguishable from the queue's own polling: D475
+ * resets attempts to 0 when the seller presses publish on a FAILED item, and
+ * nothing else does. */
+test("a retry after a publish that produced nothing may publish once more — D642", async () => {
+  const [queue, route] = await Promise.all([
+    readFile(new URL("../app/api/printify/drafts/publish/queue.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/printify/drafts/publish/route.ts", import.meta.url), "utf8"),
+  ]);
+
+  // The signal this depends on must keep meaning what it means.
+  assert.match(route, /UPDATE etsy_publish_items SET status='queued',attempts=0,available_at=0,locked_at=NULL,last_error=NULL,updated_at=CURRENT_TIMESTAMP WHERE user_id=\? AND status='failed'/,
+    "a deliberate retry resets attempts; the queue's own polling never does");
+
+  // Three conditions together, or it is not a retry of a publish that vanished.
+  assert.match(queue, /if\(alreadyPublished&&!listingId&&item\.attempts===0\)\{/);
+  assert.match(queue, /UPDATE etsy_listing_links SET status='retrying'[\s\S]*?AND etsy_listing_id=0/,
+    "only a link with no listing may be cleared - never one that has a real listing");
+  assert.match(queue, /alreadyPublished=false;/);
+
+  /* And it is one publish, not a loop: only the first pass of the retry clears
+     the marker, so every later pass in the same run still refuses. */
+  assert.match(queue, /let alreadyPublished=Boolean\(priorAttempt&&priorAttempt\.status==="publishing"\)/);
+  assert.match(queue, /if\(!listingId&&!alreadyPublished\)\{/,
+    "the publish itself is still gated on the marker");
+
+  // D638's guarantee is untouched for an in-flight publish.
+  assert.match(queue, /VALUES \(\?,\?,\?,0,'publishing'/);
 });
