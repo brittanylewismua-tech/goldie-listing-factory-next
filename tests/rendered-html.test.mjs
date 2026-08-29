@@ -7314,3 +7314,18 @@ test("the collapsed photo picker shows front and back, not everything containing
   // A group holding a photo she already chose still shows, collapsed or not.
   assert.match(app, /\|\|items\.some\(\(\[,index\]\)=>selected\.has\(index\)\)\)/);
 });
+
+/* D690 · Found on the live deploy, not in review: the indent that aligns a text
+   field with the summary column above it costs 179px, and the photo picker inside
+   an open card was fitting two 132px tiles a row instead of three. */
+test("panels that open by default get their width back — D690", async () => {
+  const [rows, clarity] = await Promise.all([
+    readFile(new URL("../app/listing-rows.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8"),
+  ]);
+  assert.match(rows, /className=\{`listing-rows\$\{defaultOpen \? " is-worksurface" : ""\}`\}/);
+  assert.match(clarity, /\.app-shell \.listing-rows\.is-worksurface \.listing-card-detail[^{]*\{padding-left:18px\}/);
+  // Text panels keep the alignment - that is what made the detail read as nested.
+  assert.match(clarity, /\.app-shell \.listing-card-detail\{padding:18px 18px 18px 99px/);
+  assert.match(clarity, /\.app-shell \.listing-card\.is-open \.listing-card-detail\{padding-left:179px\}/);
+});

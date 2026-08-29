@@ -75,7 +75,11 @@ export default function ListingRows({
   if (!rows.length) return null;
 
   return (
-    <div className="listing-rows">
+    /* D690 · Panels that open by default are working surfaces - the photo picker
+       needs its width. The indent that aligns a text field with the summary
+       column above it costs 179px, which squeezed the picker to two tiles a row.
+       Text panels keep the alignment; work surfaces get the width. */
+    <div className={`listing-rows${defaultOpen ? " is-worksurface" : ""}`}>
       <div className="listing-rows-bar">
         <div className="listing-rows-summary">
           <b>{rows.length} {rows.length === 1 ? noun : `${noun}s`}</b>

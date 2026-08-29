@@ -3367,6 +3367,10 @@ body{min-width:1180px!important}
 .app-shell .listing-card.is-open .listing-card-detail{padding-left:179px}
 @media(max-width:700px){.app-shell .listing-card.is-open .listing-card-head{grid-template-columns:18px 96px minmax(0,1fr)}.app-shell .listing-card.is-open .listing-card-thumb{width:96px;height:96px}.app-shell .listing-card.is-open .listing-card-detail{padding-left:18px}}
 .app-shell .listing-card-detail{padding:18px 18px 18px 99px;background:transparent}
+/* D690 · A work surface uses the full width; only text panels indent to align
+   with the summary column. Measured live: the 179px indent left the photo grid
+   fitting two 132px tiles a row instead of three. */
+.app-shell .listing-rows.is-worksurface .listing-card-detail,.app-shell .listing-rows.is-worksurface .listing-card.is-open .listing-card-detail{padding-left:18px}
 .app-shell .listing-card-detail label{display:grid;grid-template-columns:1fr auto;gap:5px;margin-bottom:14px;font-size:11px;font-weight:800;color:#5b304f;align-items:baseline}
 .app-shell .listing-card-detail label>span{font-weight:600;color:rgba(74,42,62,.45);font-variant-numeric:tabular-nums}
 /* Spans the row like inputs already did - a textarea pinned to one grid column
