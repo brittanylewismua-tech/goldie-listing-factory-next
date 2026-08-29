@@ -7492,3 +7492,14 @@ test("a bundle credits each listing to its own batch, and the button names the s
   assert.match(app, /<span className="publish-all-label">/);
   assert.match(clarity, /\.app-shell \.publish-all-button \.publish-all-shop\{display:block;font-size:11px/);
 });
+
+/* D699 · The publish-failure list named the field that does not exist. */
+test("a failed listing is named by a field it actually has — D699", async () => {
+  const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+  /* DraftResult has `name`, never `designName`, so `draft?.designName` was always
+     undefined and the fallback went straight to the word "Listing". It sat in the
+     publish-failure list - the one moment she most needs to know WHICH listing
+     failed - and it was the last standing type error in the file. */
+  assert.doesNotMatch(app, /draft\?\.designName/);
+  assert.match(app, /\{draft\?\.title\?\.slice\(0,60\)\|\|draft\?\.name\|\|"Listing"\}/);
+});
