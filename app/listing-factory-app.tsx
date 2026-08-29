@@ -2486,11 +2486,20 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
      ListingRows: a 76px row per listing, expanding into the same editor that used
      to always be open. `standing` becomes the row's meta counter and `flags`
      decides which rows announce themselves. */
+  /* D691 · The row's one line has to preview what THIS panel is asking her to
+     judge. All three showed the title, so Description and Etsy details rendered
+     as three identical lists of titles and the preview line told her nothing
+     about the thing she had opened the panel to check. */
+  function taskSummary(task:string,design:DesignFile):string{
+    if(task==="description")return (finalDescription(design,design.etsy)||"").replace(/\s+/g," ").trim()||"No description";
+    if(task==="etsy")return design.etsy?.category?.trim()||"No Etsy category yet";
+    return design.title.trim()||design.name;
+  }
   function designTaskRows(task:string,standing:(design:DesignFile)=>string,inner:(design:DesignFile)=>ReactNode,flags?:(design:DesignFile)=>ListingFlag[]){
     return <ListingRows rows={files.map(design=>({
       key:`${task}:${design.id}`,
       thumb:design.previewUrl||drafts.find(draft=>draft.clientId===design.id)?.previewUrl||"",
-      summary:design.title.trim()||design.name,
+      summary:taskSummary(task,design),
       meta:standing(design),
       flags:flags?flags(design):[],
       detail:<div onFocus={()=>setActiveDesign(design.id)}>{inner(design)}</div>,
@@ -2557,10 +2566,15 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
     if(task==="etsy")return <>
       <div className="task-panel-lead"><div className="task-panel-heading"><h3>Review your Etsy listing details</h3><span className="done-mark">{files.filter(file=>etsyRequiredComplete(file.etsy)).length}/{files.length} ready</span></div><p className="step-copy">Goldie has pre-filled the Etsy category and every product field it could confidently match for each listing. Look everything over and change any selection that does not fit.</p>{files.every(file=>etsyRequiredComplete(file.etsy))&&<div className="variant-transfer-note"><span>✓</span><div><b>Core listing information is ready for your review.</b><small>This step contains additional Etsy category and product fields. Optional fields stay blank when there is not a clear match.</small></div></div>}</div>
       {designTaskRows("etsy",design=>{
-        if(etsyRequiredComplete(design.etsy))return"Ready";
-        if(!design.etsy)return design.title.trim()?"Not created yet":"Waiting for a title";
-        const missing=etsyMissingRequired(design.etsy);
-        return missing.length===1?`${missing[0]} still needed`:missing.length?`${missing.length} required fields left`:"Needs review";
+        /* D691 · This is the row's right-hand counter, and etsyFlags already says
+           whether the listing is ready. Returning "Ready" here printed the word
+           twice on the same row, once as a chip and once beside it. Count the
+           fields instead - that is what a counter is for. */
+        const properties=(design.etsy?.properties)||[];
+        const required=properties.filter(property=>property.required);
+        if(!design.etsy)return "";
+        if(!required.length)return "No required fields";
+        return `${required.filter(property=>(property.value||"").trim()).length}/${required.length} fields`;
       },design=><div className="etsy-detail-body">{design.etsy?<EtsyDetailsEditor design={design} categories={etsyCategories} onChange={etsy=>updateDesign(design.id,{etsy,etsyError:""})} onCategory={taxonomyId=>changeEtsyCategory(design,taxonomyId)}/>:<div className={design.title.trim()?"etsy-detail-error":"etsy-detail-pending"}><b>{design.title.trim()?"Etsy details still need to be created.":"Waiting for this listing’s title."}</b><span>{design.title.trim()?design.etsyError:"Goldie fills in the Etsy category and product fields automatically once a title exists. Create titles above and this completes itself."}</span>{design.title.trim()&&<button aria-busy={preparingListingId===design.id} disabled={Boolean(preparingListingId)} onClick={()=>void retryOneEtsyListing(design)}>{preparingListingId===design.id?"Preparing this listing…":"Try this listing again"}</button>}</div>}{design.etsyError&&<small className="field-error">{design.etsyError}</small>}</div>,etsyFlags)}
     </>;
     const listings=drafts.map(draft=>({draft,design:files.find(file=>file.id===draft.clientId),selectedImages:draft.id?(printifyImageSelections[draft.id]??printifyImageIndices):printifyImageIndices}));

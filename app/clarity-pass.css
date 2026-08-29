@@ -2955,7 +2955,11 @@ body{min-width:1180px!important}
 .app-shell .placement-review-grid .printify-preview-button img{width:100%!important;height:100%!important;max-height:none!important;object-fit:contain!important}
 .app-shell .placement-review-grid .placement-design-name{display:-webkit-box;min-height:2.6em;margin:11px 12px 5px;overflow:hidden;-webkit-box-orient:vertical;-webkit-line-clamp:2;color:#4b283e;font:800 13px/1.3 "Manrope",system-ui,sans-serif}
 .app-shell .placement-review-grid .placement-dpi{margin:0 12px 7px;color:#75576b;font:700 11px/1.35 "Manrope",system-ui,sans-serif}
-.app-shell .placement-review-grid .placement-dpi.pass{color:#39704e}.app-shell .placement-review-grid .placement-dpi.check{color:#8a5a1d}
+/* D691 - the last two strays. #8a5a1d is the gold-era brown D153 rejected, and
+   #39704e a third green. The DPI readout now speaks the same two-colour
+   language as every other panel: neutral when it passes, the one accent when
+   it wants her. */
+.app-shell .placement-review-grid .placement-dpi.pass{color:rgba(74,42,62,.6)}.app-shell .placement-review-grid .placement-dpi.check{color:#b53838}
 .app-shell .placement-review-grid .placement-printify-link{display:block;margin:0 12px;padding:0;border:0;background:transparent;color:#704d75;font:800 11px/1.35 "Manrope",system-ui,sans-serif;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
 .app-shell .open-task-column{cursor:pointer}.app-shell .open-task-column :is(button,a,input,textarea,select,label,summary,[role="button"],[contenteditable="true"],[draggable="true"]){cursor:auto}
 
@@ -3398,3 +3402,6 @@ body{min-width:1180px!important}
 .app-shell .listing-card-actions button{height:32px;border:1px solid rgba(91,48,79,.28);border-radius:999px;background:#fff;padding:0 14px;font-size:11.5px;font-weight:750;color:#6b3f5e;cursor:pointer}
 .app-shell .listing-card-actions button:hover{background:#faf5f9;border-color:rgba(91,48,79,.45)}
 @media(max-width:700px){.app-shell .listing-card-detail{padding-left:18px}.app-shell .listing-rows-bar{flex-wrap:wrap;row-gap:10px}}
+
+/* D691 · The publish step's own heading was the last serif in the flow. */
+.app-shell .final-listing-review-heading h3{font-family:'Manrope',system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;font-weight:800}

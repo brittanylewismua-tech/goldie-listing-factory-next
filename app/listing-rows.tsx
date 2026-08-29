@@ -84,7 +84,7 @@ export default function ListingRows({
         <div className="listing-rows-summary">
           <b>{rows.length} {rows.length === 1 ? noun : `${noun}s`}</b>
           {flagged.length > 0 && (
-            <span className="listing-rows-attention">{flagged.length} need attention</span>
+            <span className="listing-rows-attention">{flagged.length} {flagged.length === 1 ? "needs" : "need"} attention</span>
           )}
           <span className="listing-rows-rest">
             · {rows.length - flagged.length} {readyLabel.toLowerCase()}

@@ -398,7 +398,12 @@ test("imports Printify product facts and automatically prepares product-specific
   /* D544 - "Needs review" told her nothing. When one required field is all that
      stands between her and step 4, the row names it. */
   assert.match(page,/export function etsyMissingRequired\(/);
-  assert.match(page,/missing\.length===1\?`\$\{missing\[0\]\} still needed`/);
+  /* D691 - naming the field moved from the row's counter into its flag, because
+     the counter was printing "Ready" beside a chip that already said Ready. The
+     rule D544 wrote down is unchanged: name what is missing, never just count it. */
+  assert.match(page,/return \[\{tone:"attention",label:`Missing \$\{missing\.slice\(0,2\)\.join\(", "\)\}/);
+  assert.doesNotMatch(page,/`\$\{missing\.length\} required fields left`/,
+    "a bare count tells her nothing about which field to go and fill");
   assert.match(page,/finalDescription/);assert.match(page,/descriptionOverride/);
   assert.match(intelligence,/fields differ/);assert.match(intelligence,/include every physical or product attribute you can confidently support/i);assert.match(intelligence,/Do not stop at required fields/);assert.match(intelligence,/Fill holiday, occasion, recipient, or style only when/);assert.match(intelligence,/Never guess simply to make a field non-empty/);
   assert.match(drafts,/template\.description/);
@@ -7328,4 +7333,44 @@ test("panels that open by default get their width back — D690", async () => {
   // Text panels keep the alignment - that is what made the detail read as nested.
   assert.match(clarity, /\.app-shell \.listing-card-detail\{padding:18px 18px 18px 99px/);
   assert.match(clarity, /\.app-shell \.listing-card\.is-open \.listing-card-detail\{padding-left:179px\}/);
+});
+
+/* D691 · Swept every panel on the live deploy of 11ea58e rather than fixing one
+   thing and shipping it. Six defects, all of them the same shape - a rule or a
+   colour that only got changed in one of the places it lives. */
+test("one language survives a sweep of every panel — D691", async () => {
+  const [app, rows, clarity, approved, globals] = await Promise.all([
+    readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/listing-rows.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8"),
+    readFile(new URL("../app/approved-functional.css", import.meta.url), "utf8"),
+    readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
+  ]);
+
+  /* Measured live on the publish step: "1 needs a look" rendered #874a32. D689
+     recoloured .final-listing-card .needs-attention and missed the group summary,
+     which is a different selector - so the brown she rejected twice was still on
+     screen. Every needs-attention surface, one colour. */
+  const strip = (css) => css.replace(/\/\*[^]*?\*\//g, "");
+  for (const brown of ["#874a32", "#8a5a1d", "#8a5a12"]) {
+    for (const sheet of [clarity, approved, globals]) {
+      // Declarations only - the comments recording why these were rejected stay.
+      assert.ok(!strip(sheet).includes(brown),
+        `${brown} is brown and she has rejected it three times`);
+    }
+  }
+  assert.match(globals, /summary em\.needs-attention\{background:rgba\(217,79,79,\.12\);color:#b53838\}/);
+
+  // Each panel's row previews what THAT panel asks her to judge, not the title thrice.
+  assert.match(app, /function taskSummary\(task:string,design:DesignFile\):string\{/);
+  assert.match(app, /if\(task==="description"\)return \(finalDescription/);
+  assert.match(app, /if\(task==="etsy"\)return design\.etsy\?\.category/);
+
+  // "1 need attention" was not English.
+  assert.match(rows, /\{flagged\.length === 1 \? "needs" : "need"\}/);
+
+  /* Sans everywhere. The uploads panel's heading - the one naming the listing she
+     is adding photos to - was still DM Serif Display. */
+  assert.doesNotMatch(approved, /listing-photo-design-identity b\{[^}]*DM Serif Display/);
+  assert.match(clarity, /\.final-listing-review-heading h3\{font-family:'Manrope'/);
 });
