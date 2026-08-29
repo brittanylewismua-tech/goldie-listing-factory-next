@@ -1767,6 +1767,15 @@ body{min-width:1180px!important}
   right:0!important;
 }
 .app-shell .step-card>.step-content>.step-heading{position:relative!important}
+/* The final-review heading can wrap for bundle names. Its count is part of the
+   flex row, never an absolutely positioned badge over the words. */
+.app-shell .final-review>.step-content>.step-heading>.done-mark{
+  position:static!important;
+  margin-left:auto!important;
+  max-width:100%!important;
+  white-space:normal!important;
+  text-align:right!important;
+}
 
 /* D310 · Measured on the deployed card: panel 718px inside a 720px card WITH
    22px margins each side, so its right edge sat 21px PAST the card. D236 added

@@ -5099,11 +5099,12 @@ test("the publish ticks can actually be cleared — D560", async () => {
   assert.match(review, /\},\[availableKey\]\)/, "keyed on the ids, not the array identity");
   assert.doesNotMatch(review, /\},\[drafts\]\)/);
 
-  // A listing seen for the first time starts ticked; after that her choice stands.
+  // A ready listing seen for the first time starts ticked; warnings are not consent.
   /* D645 tightened this further: once the seller has touched the selection,
      nothing new is auto-ticked at all. D560's rule - a listing seen for the
      first time starts ticked - still holds until she chooses. */
-  assert.match(review, /const fresh=sellerChose\.current\?\[\]:available\.filter\(id=>!knownIds\.current\.has\(id\)\)/);
+  assert.match(review, /const fresh=sellerChose\.current\?\[\]:available\.filter\(id=>!knownIds\.current\.has\(id\)&&!reviewNeeded/);
+  assert.match(review, /window\.confirm\("This listing still needs a title or tag review\./);
   assert.match(review, /return fresh\.length\?\[\.\.\.new Set\(\[\.\.\.kept,\.\.\.fresh\]\)\]:kept/);
 
   // And the button counts what is ticked.
@@ -7219,7 +7220,7 @@ test("every product's badge summarises its own rows, not just the open one — D
     "a closed product's badge has to answer the step it is on");
   assert.match(fn, /summary\.etsyReady<summary\.designs/,
     "including the blocker - Etsy fields are what stop a listing publishing");
-  assert.match(fn, /return \{label:`\$\{summary\.drafts\} ready`,tone:"attention"\}/,
+  assert.match(fn, /return \{label:`\$\{summary\.drafts\} \$\{summary\.drafts===1\?"Printify draft":"Printify drafts"\}`,tone:"attention"\}/,
     "and publish says ready, not drafts");
   assert.doesNotMatch(fn, /if\(summary\.published\)return[^]*?\n      if\(summary\.drafts\)return \{label:`\$\{summary\.drafts\} \$\{summary\.drafts===1\?"draft":"drafts"\}`,tone:summary\.status/,
     "the step-agnostic fallback is gone");

@@ -360,7 +360,11 @@ function productEtsyDefaults(template:TemplateDetails|null,saved?:Record<string,
   if(/v.?neck/.test(facts))derived.Neckline="V-neck";else if(/crewneck|crew neck|t-?shirt|\btee\b|sweatshirt/.test(facts))derived.Neckline="Crew";
   if(/hoodie/.test(facts))derived["Clothing style"]="Hoodie";else if(/sweatshirt|crewneck/.test(facts))derived["Clothing style"]="Sweatshirt";else if(/t-?shirt|\btee\b/.test(facts))derived["Clothing style"]="T-shirt";
   if(/\bunisex\b/.test(facts))derived.Size="Unisex";else if(/\byouth\b|\bkids?\b|\bchildren\b/.test(facts))derived.Size="Youth";else if(/\binfant\b|\bbaby\b/.test(facts))derived.Size="Baby";
-  return {...derived,...Object.fromEntries(Object.entries(saved||{}).filter(([key,value])=>PHYSICAL_ETSY_FIELDS.test(key)&&String(value??"").trim()).map(([key,value])=>[key,String(value)]))};
+  /* Product facts are authoritative for physical attributes. AI-prepared or
+     restored values may fill fields Goldie cannot prove, but they must never
+     overwrite a fact the Printify product settles (the live failure was a
+     hoodie restored as "Short sleeve" and then marked ready). */
+  return {...Object.fromEntries(Object.entries(saved||{}).filter(([key,value])=>PHYSICAL_ETSY_FIELDS.test(key)&&String(value??"").trim()).map(([key,value])=>[key,String(value)])),...derived};
 }
 function isRigidPaperProduct(template:TemplateDetails|null){return /poster|print|canvas|paper/i.test(`${template?.blueprintTitle||""} ${template?.brand||""} ${template?.model||""}`)}
 /* D512 - the recommended print size was worked out in three separate places and
@@ -425,6 +429,11 @@ function PrintifyImagePicker({ images,indices,reservedPhotos=0,onApplyOne,onAppl
         return <><div className="printify-view-groups">{visible.map(([view,items])=><div className="printify-view-group" key={view}>
           <p className="printify-view-heading">{view}<span>{items.length} {items.length===1?"colour":"colours"}</span></p>
           <div className="printify-image-grid">{items.map(([src,index])=><div className={`printify-image-option ${selected.has(index)?"selected":""}`} key={src}><label className="printify-photo-selector"><input type="checkbox" checked={selected.has(index)} disabled={!selected.has(index)&&atLimit} onChange={()=>toggle(index)}/><span aria-hidden="true">{selected.has(index)?"✓":""}</span><span className="sr-only">Select Printify photo {index+1}</span></label><button type="button" className="printify-photo-expand" onClick={()=>setExpanded(src)} aria-label={`View ${printifyViewName(src)||`Printify photo ${index+1}`} larger`}><img src={src} alt={printifyViewName(src)||`Printify product mockup ${index+1}`} loading="lazy" decoding="async"/></button></div>)}</div></div>)}</div>{hiddenCount>0||showAll?<button type="button" className={`printify-more-toggle${showAll?" is-open":""}`} onClick={()=>setShowAll(value=>!value)}><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 7.5 5 5 5-5"/></svg><span>{showAll?"Show fewer Printify photos":`Show ${hiddenCount} more Printify photos`}</span></button>:null}</>})()}</div>{lightbox}</>;
+}
+
+function UploadedDesignPreview({src,name}:{src:string;name:string}){
+  const [open,setOpen]=useState(false);
+  return <><button type="button" className="uploaded-design-preview" onClick={()=>setOpen(true)} aria-label={`View ${name} larger`}><img src={src} alt="" loading="lazy" decoding="async"/></button>{open&&typeof document!=="undefined"?createPortal(<div className="printify-photo-lightbox" role="dialog" aria-modal="true" aria-label={`Full-size preview of ${name}`} onMouseDown={event=>{if(event.target===event.currentTarget)setOpen(false)}}><button type="button" onClick={()=>setOpen(false)} aria-label="Close design preview">×</button><img src={src} alt={`Full-size preview of ${name}`}/></div>,document.body):null}</>;
 }
 
 /* D422 - Same defect the profit goal had, in the personalization fields: bound
@@ -1098,6 +1107,20 @@ export default function ListingFactoryApp() {
   const [publishMessage,setPublishMessage]=useState("");
   const [selectedPublishIds,setSelectedPublishIds]=useState<string[]>([]);
   const [batchReceipt,setBatchReceipt]=useState<BatchReceipt|null>(null);
+  /* The saved snapshot is not the authority on publication. A browser can miss
+     its final autosave, and older snapshots predate per-listing receipts. Read
+     completed publish items whenever a batch opens so Batch History and the
+     opened batch cannot disagree about what is live. */
+  useEffect(()=>{
+    if(restoringBatch||!batchIdRef.current)return;
+    let alive=true;
+    void fetch(`/api/batches?id=${encodeURIComponent(batchIdRef.current)}`)
+      .then(response=>response.ok?response.json():null)
+      .then((payload:{authoritativeReceipt?:BatchReceipt|null}|null)=>{
+        if(alive&&payload?.authoritativeReceipt?.publishedCount)setBatchReceipt(payload.authoritativeReceipt);
+      }).catch(()=>undefined);
+    return()=>{alive=false};
+  },[restoringBatch]);
   /* D475 - when a publish failed, the only sign was a sentence at the very bottom
      of a long page saying how many listings "need your attention", with no reason
      and nothing to click. From the top of the page a failed publish and a
@@ -2186,7 +2209,7 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
         const published=Number(batchReceipt?.publishedCount)||0;
         if(published)return {label:`${published} published`,tone:"ready"};
         const ready=drafts.filter(draft=>draft.status==="Created").length;
-        return {label:`${ready} ready`,tone:"attention"};
+        return {label:`${ready} ${ready===1?"Printify draft":"Printify drafts"}`,tone:"attention"};
       }
       /* D504 - this read a second map, loaded by a second effect, so the chip and
          the rows on the same card could disagree with each other. Same map now. */
@@ -2221,7 +2244,7 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
         return {label:"Titles and tags ready",tone:"ready"};
       }
       if(summary.published)return {label:`${summary.published} published`,tone:"ready"};
-      if(summary.drafts)return {label:`${summary.drafts} ready`,tone:"attention"};
+      if(summary.drafts)return {label:`${summary.drafts} ${summary.drafts===1?"Printify draft":"Printify drafts"}`,tone:"attention"};
       return {label:"Not started yet",tone:"waiting"};
     };
   }
@@ -3968,7 +3991,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
               {files.length>0&&!designsFinished&&<section className="design-preparation-status working" role="status" aria-live="polite"><span className="design-status-icon" aria-hidden="true"/><div><b>{`Goldie is preparing your designs: ${designsReady} of ${files.length} ready`}</b><small>Keep this page open. Goldie is reading every file and checking its dimensions before you can continue.</small><div className="design-status-track"><i style={{width:`${files.length?designsReady/files.length*100:0}%`}}/></div></div><strong>{designsReady}/{files.length}</strong></section>}
               {files.length > 0 && designsFinished && <div className="batch-capacity"><b>{planDraftsRemaining===null?"Checking plan allowance…":activeBundle?`${files.length} designs × ${bundleProductCount} products = ${requestedListingCount} listings · ${additionalDesignsAvailable} more designs available`:`${files.length} of ${batchDesignLimit} designs ready · ${additionalDesignsAvailable} more available · ${planDraftsRemaining} listings left on your plan`}</b></div>}
               {bundleQualityGroups.length>0&&<section className="bundle-quality-review" aria-label="Product-specific print quality warnings"><div><b>{bundleQualityGroups.length} of {files.length} {files.length===1?"design needs":"designs need"} a print decision</b><span>{productsInBatch.length>1?"The same artwork can be sharp on one product and too small for another. ":""}Anything below 215 DPI is flagged as very low resolution. Nothing is skipped silently.</span>{bundleProductsUnchecked.length?<span className="inline-note" role="status">Goldie could not read {bundleProductsUnchecked.join(", ")} yet, so {bundleProductsUnchecked.length===1?"it is":"they are"} not included in this check. Reopen {bundleProductsUnchecked.length===1?"that product":"those products"} to check {bundleProductsUnchecked.length===1?"it":"them"}.</span>:null}<div className="bundle-quality-bulk"><button type="button" onClick={()=>decideAllQuality("include")}>Proceed with all {bundleQualityGroups.length}</button><button type="button" onClick={()=>decideAllQuality("exclude")}>Exclude all {bundleQualityGroups.length}</button></div></div>{bundleQualityGroups.map(group=>{const decision=qualityGroupDecision(group.keys);const productList=[...new Set(group.products)];return <article className={group.critical?"critical-dpi":""} key={group.fileId}><div><b>{group.fileName}</b><span>{group.critical?<strong>VERY LOW RESOLUTION · {group.worstDpi} DPI · </strong>:null}{group.actualWidth} × {group.actualHeight}px is below the recommended size{productsInBatch.length>1?<> for <strong>{productList.join(", ")}</strong>{productList.length>1?` — ${productList.length} products in this bundle`:""}</>:<> for <strong>{productList[0]||"this product"}</strong></>}.</span></div><div><button className={decision==="include"?"selected":""} onClick={()=>decideQualityGroup(group.keys,"include")}>{group.critical?"I understand — proceed":"Proceed anyway"}</button><button className={decision==="exclude"?"selected exclude":""} onClick={()=>decideQualityGroup(group.keys,"exclude")}>{productList.length>1?"Exclude these listings":"Exclude this listing"}</button></div></article>})}</section>}
-              {files.length>0&&(workflowStep==="setup"||workflowStep==="designs")&&<div className="design-upload-review" aria-label="Review uploaded designs">{files.map(file=><article key={file.id}><img src={file.previewUrl} alt="" loading="lazy" decoding="async"/><div><b title={file.name}>{file.name}</b><small>{file.width&&file.height?`${file.width} × ${file.height}px`:"Checking dimensions…"}</small></div><button type="button" onClick={()=>removeDesign(file.id)} aria-label={`Remove ${file.name}`}>Remove</button></article>)}</div>}
+              {files.length>0&&(workflowStep==="setup"||workflowStep==="designs")&&<div className="design-upload-review" aria-label="Review uploaded designs">{files.map(file=><article key={file.id}><UploadedDesignPreview src={file.previewUrl} name={file.name}/><div><b title={file.name}>{file.name}</b><small>{file.width&&file.height?`${file.width} × ${file.height}px`:"Checking dimensions…"}</small></div><button type="button" onClick={()=>removeDesign(file.id)} aria-label={`Remove ${file.name}`}>Remove</button></article>)}</div>}
               {files.length>0&&!complete&&(workflowStep==="setup"||workflowStep==="designs")&&<>{designsFinished&&belowRecommendedPixels.length>0&&<div className={`pixel-warning-inline ${criticalDpiFiles.length?"critical-dpi":""}`} role="status"><span>!</span><div><b>{criticalDpiFiles.length?`${criticalDpiFiles.length} ${criticalDpiFiles.length===1?"design is":"designs are"} below 215 DPI — very low resolution.`:belowRecommendedPixels.length===1?"One design is below Printify’s recommended pixel size.":"Some designs are below Printify’s recommended pixel size."}</b><small>{criticalDpiFiles.length?"Goldie will identify every affected design so you can replace it or continue anyway.":"You can still continue, but Goldie will ask you to confirm first."}</small></div></div>}{/* D399 - Step 2 showed "Next step" here AND "Continue to create drafts" in the
                 product card below. Creating the drafts is the step; this button only
                 scrolled down to it. One forward control per step: the action while the

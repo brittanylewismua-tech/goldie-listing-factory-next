@@ -26,7 +26,10 @@ function readableDesignName(name: string): string {
 
 export default function FinalListingReview({drafts,files,selections,defaultIndices,preparedMockupCounts,batchSizeGuide,productName,onRetry,onEdit}:Props){
   const selectable=drafts.filter(draft=>draft.status==="Created"&&draft.id);
-  const [selectedIds,setSelectedIds]=useState<string[]>(()=>selectable.map(draft=>draft.id!));
+  const reviewNeeded=(draft:Draft)=>{const design=files.find(file=>file.id===draft.clientId)||files.find(file=>file.name===draft.name);return !design||design.title.trim().length<100||design.tags.length<13};
+  /* A warning is not consent. Listings that still need review arrive unticked;
+     the seller can include one only after acknowledging the exact warning. */
+  const [selectedIds,setSelectedIds]=useState<string[]>(()=>selectable.filter(draft=>!reviewNeeded(draft)).map(draft=>draft.id!));
   const selected=new Set(selectedIds),allSelected=selectable.length>0&&selectable.every(draft=>selected.has(draft.id!));
   const mixedProducts=batchHasMixedProducts(drafts);
   const groups=[...drafts.reduce((map,draft)=>{const key=draft.name||draft.clientId;map.set(key,[...(map.get(key)||[]),draft]);return map},new Map<string,Draft[]>()).entries()];
@@ -51,7 +54,7 @@ export default function FinalListingReview({drafts,files,selections,defaultIndic
   const availableKey=selectable.map(draft=>draft.id!).sort().join(",");
   useEffect(()=>{
     const available=availableKey?availableKey.split(","):[];
-    const fresh=sellerChose.current?[]:available.filter(id=>!knownIds.current.has(id));
+    const fresh=sellerChose.current?[]:available.filter(id=>!knownIds.current.has(id)&&!reviewNeeded(selectable.find(draft=>draft.id===id)!));
     available.forEach(id=>knownIds.current.add(id));
     setSelectedIds(current=>{
       const kept=current.filter(id=>available.includes(id));
@@ -66,7 +69,12 @@ export default function FinalListingReview({drafts,files,selections,defaultIndic
     window.dispatchEvent(new Event("goldie-publish-selection-touched"));
     setSelectedIds(ids);
   }
-  function toggle(id:string){changeSelection(selected.has(id)?selectedIds.filter(value=>value!==id):[...selectedIds,id])}
+  function toggle(id:string){
+    if(selected.has(id)){changeSelection(selectedIds.filter(value=>value!==id));return}
+    const draft=selectable.find(item=>item.id===id);
+    if(draft&&reviewNeeded(draft)&&!window.confirm("This listing still needs a title or tag review. Include it in this publish anyway?"))return;
+    changeSelection([...selectedIds,id]);
+  }
   function contentReview(design?:Design){
     const shortTitle=!design||design.title.trim().length<100;
     const missingTags=!design||design.tags.length<13;
@@ -77,7 +85,7 @@ export default function FinalListingReview({drafts,files,selections,defaultIndic
         listings, on a page whose button publishes three products. It lists the
         listings of the product that is open; it says so. */}
       <p className="mini-label">{productName?`LISTINGS ON ${productName.toUpperCase()}`:"EVERY LISTING IN THIS BATCH"}</p><h3>Choose exactly which listings to publish</h3></div><span>{selectedIds.length} of {selectable.length} selected</span></div>
-    <label className="final-select-all"><input type="checkbox" checked={allSelected} onChange={()=>changeSelection(allSelected?[]:selectable.map(draft=>draft.id!))}/><span>Select every successful listing</span></label>
+    <label className="final-select-all"><input type="checkbox" checked={allSelected} onChange={()=>changeSelection(allSelected?[]:selectable.filter(draft=>!reviewNeeded(draft)).map(draft=>draft.id!))}/><span>Select every listing that is ready</span></label>
     <div className="final-design-groups">{groups.map(([designName,group])=>{const attention=group.filter(draft=>{const design=files.find(file=>file.id===draft.clientId)||files.find(file=>file.name===draft.name);return draft.status!=="Created"||!draft.id||(selections[draft.id]??defaultIndices).length+(preparedMockupCounts[draft.id]||0)===0||contentReview(design).needed}).length;/* D562 - her words: "the checkbox panel on that last final step should be
       something that's collapsed. And when you open it, it shows the actual design
       large at the top... and then underneath that is every product with that
