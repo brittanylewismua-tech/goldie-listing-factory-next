@@ -101,3 +101,23 @@ means the cost is not the formatting - it is that she has to ask again.
 
   Nothing to do:  🚀 CHATGPT: Nothing to do — <sha> pushed, Vercel building.
   Something to do: 🚀 CHATGPT: <the one action>.
+
+## 8. Never say it is done, or ask her to look, before comparing the pictures.
+
+Comparing CSS values is not comparing the screens. Reading background,
+padding and font-size off both sides and finding them equal proves nothing
+about what she sees.
+
+Before any 'this matches', 'this is done', or 'go and look':
+
+  1. Screenshot the reference.
+  2. Screenshot the build.
+  3. Put them next to each other and list every difference found.
+  4. Only then report - and lead with what does NOT match.
+
+She said this at the start of the migration. I compared a table of values,
+called the step done, and asked her to inspect it; the top bar, page head,
+status chip, section components, artwork tiles and the entire sticky bar were
+all still wrong. She had to point that out herself.
+
+If the comparison has not been done, say so instead of reporting progress.
