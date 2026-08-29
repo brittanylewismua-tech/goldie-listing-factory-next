@@ -7455,3 +7455,40 @@ test("every product's badge summarises its own rows, not just the open one — D
   assert.doesNotMatch(app, /placement-listing-card[^]{0,600}<p className="task-listing-name">/,
     "the name belongs in .placement-design-name, once");
 });
+
+/* D697/D698 · Found verifying Brittany's first real bundle publish. */
+test("a bundle credits each listing to its own batch, and the button names the shop — D697/D698", async () => {
+  const [publish, batches, app, clarity, migration] = await Promise.all([
+    readFile(new URL("../app/api/printify/drafts/publish/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/batches/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8"),
+    readFile(new URL("../drizzle/0017_publish_items_batch.sql", import.meta.url), "utf8"),
+  ]);
+
+  /* One call publishes a bundle and the job stores a single batch_id, taken from
+     drafts[0]. After a real publish of the Hoodie + 1566 crewneck bundle, Batch
+     History read "4 PUBLISHED TO ETSY" on the hoodie and "DRAFT" with a Resume
+     button on the crewneck - whose two listings were live on Etsy. Resuming would
+     have published them twice and charged Etsy's fee again. */
+  assert.match(publish, /batchByProduct=Object\.fromEntries\(drafts\.filter\(draft=>draft\.id\)\.map\(draft=>\[String\(draft\.id\),String\(draft\.batchId\|\|batchId\)\]\)\)/,
+    "each draft already knew its own batch; keep the whole map");
+  assert.match(publish, /INSERT INTO etsy_publish_items \(id,job_id,user_id,product_id,batch_id,status,available_at\)/);
+  assert.match(publish, /batchByProduct\[String\(productId\)\]\|\|batchId/);
+
+  // Count the listings, not the jobs.
+  assert.match(batches, /SELECT batch_id,COUNT\(\*\) completed FROM etsy_publish_items WHERE user_id=\? AND status='completed' AND batch_id IS NOT NULL GROUP BY batch_id/);
+  assert.doesNotMatch(batches, /SUM\(completed\) completed FROM etsy_publish_jobs/,
+    "the job-level count is what credited a whole bundle to one product");
+
+  /* The column is new, so work already published has no batch_id. Without the
+     backfill her four live listings would read as unpublished on first deploy. */
+  assert.match(migration, /ALTER TABLE `etsy_publish_items` ADD `batch_id` text;/);
+  assert.match(migration, /UPDATE `etsy_publish_items`[^]*SET `batch_id` = \(SELECT `batch_id` FROM `etsy_publish_jobs`/);
+
+  /* D698 - "if they are working with multiple shops, it's just, like, another fail
+     safe to make sure it's going to the right place." */
+  assert.match(app, /<small className="publish-all-shop">to \{etsyShop\}<\/small>/);
+  assert.match(app, /<span className="publish-all-label">/);
+  assert.match(clarity, /\.app-shell \.publish-all-button \.publish-all-shop\{display:block;font-size:11px/);
+});
