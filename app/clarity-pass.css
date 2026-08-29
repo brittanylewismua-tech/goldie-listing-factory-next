@@ -267,14 +267,7 @@
 
 /* 4. Group what belongs together: money, then listing content, then plumbing.
  *    Source order is Profit · Keyword bank · Shipping · Description · Etsy
- *    details · Connection, which alternates between the two subjects. */
-.app-shell .everything-else-body{display:flex!important;flex-direction:column!important}
-.app-shell .everything-else-body>*:nth-child(1){order:1}  /* Profit goal   */
-.app-shell .everything-else-body>*:nth-child(3){order:2}  /* Shipping      */
-.app-shell .everything-else-body>*:nth-child(2){order:3}  /* Keyword bank  */
-.app-shell .everything-else-body>*:nth-child(4){order:4}  /* Description   */
-.app-shell .everything-else-body>.saved-setting-list{order:5}
-.app-shell .everything-else-body>.product-connection-details{order:6}
+ *    details · Connection, which alternates between the two subjects. */  /* Profit goal   */  /* Shipping      */  /* Keyword bank  */  /* Description   */
 
 /* 5. The status line in the summary is information, not controls. */
 .app-shell .everything-else>summary small{
@@ -301,41 +294,6 @@
  * below; type is left to the existing rules. */
 
 /* Primary action inside a card - roomier and lighter, sized to fit the tile */
-.app-shell :is(.step-card,.recipe-card) :is(.recipe-use,.bundle-use) em{
-  display:flex!important;
-  align-items:center!important;
-  justify-content:center!important;
-  gap:5px!important;
-  /* fit-content, not 100%. Full width was needed when the label was
-   * "Choose this product →" in a 117px column; with the shorter "Choose →" it
-   * fits, and stretching it made the UNSELECTED products the loudest thing on
-   * screen once the grid collapses to one column on selection. */
-  width:fit-content!important;
-  max-width:100%!important;
-  box-sizing:border-box!important;
-  min-height:30px!important;
-  margin-top:8px!important;
-  padding:0 14px!important;
-  border-radius:999px!important;
-  background:linear-gradient(135deg,#6b3a58,#8a4f73)!important;
-  color:#fff!important;
-  font-size:10.5px!important;
-  font-weight:700!important;
-  letter-spacing:.01em!important;
-  line-height:1!important;
-  white-space:nowrap!important;
-  overflow:hidden!important;
-  text-overflow:ellipsis!important;
-  box-shadow:0 4px 12px rgba(85,45,70,.18)!important;
-}
-.app-shell :is(.step-card,.recipe-card) .recipe-tile:hover :is(.recipe-use,.bundle-use) em{
-  background:linear-gradient(135deg,#5a2f4a,#7a4364)!important;
-}
-.app-shell :is(.step-card,.recipe-card) .recipe-tile.selected :is(.recipe-use,.bundle-use) em{
-  background:rgba(107,58,88,.12)!important;
-  color:#5f3352!important;
-  box-shadow:none!important;
-}
 
 /* Quiet actions - box only, no type changes (see note above) */
 .app-shell :is(.step-card,.recipe-card) :is(.edit-recipe,.change-product,.add-product-button){
@@ -416,22 +374,6 @@
    middle of the card. One column; nothing gets stranded. */
 .app-shell .mockup-default-block{grid-template-columns:minmax(0,1fr)!important}
 .app-shell .mockup-default-block>small{grid-column:1/-1!important}
-.app-shell .product-mockup-scenes{
-  display:grid!important;
-  grid-column:1/-1!important;  /* D138's "both span", finally written down */
-  grid-template-columns:repeat(auto-fill,minmax(132px,1fr))!important;
-  gap:12px!important;
-  width:100%!important;
-}
-.app-shell .product-mockup-scenes>label{min-width:0!important}
-.app-shell .product-mockup-scenes>label>img{width:100%!important;height:auto!important;aspect-ratio:4/5!important;object-fit:cover!important;border-radius:10px!important}
-.app-shell .product-mockup-scenes>label>span{
-  display:block!important;
-  margin-top:6px!important;
-  color:rgba(75,40,62,.6)!important;
-  font-size:10.5px!important;
-  font-weight:650!important;
-}
 
 /* ── D139 · Status chips were styled exactly like secondary buttons ─────────
  *
@@ -446,17 +388,6 @@
  *
  * One rule from here on: a control is white with a border. A status is tinted,
  * borderless and lighter. Nothing that cannot be clicked gets a button's box. */
-.app-shell .saved-settings-summary span{
-  border:0!important;
-  border-radius:8px!important;
-  padding:5px 9px!important;
-  background:rgba(107,58,88,.07)!important;
-  color:rgba(75,40,62,.78)!important;
-  font-size:11px!important;
-  font-weight:600!important;
-  letter-spacing:.01em!important;
-  cursor:default!important;
-}
 /* anything still outstanding reads as the one thing that needs attention */
 
 
@@ -490,7 +421,6 @@
  * blank squares. The thumbnail's only job in this list is telling one listing
  * from another, and the artwork does that; the garment preview does not.
  * Artwork is usually a transparent PNG, so it needs something to sit on. */
-.app-shell .design-line .printify-preview-button img,
 .app-shell .final-listing-card>img{
   background:linear-gradient(155deg,#efe6ef,#f7f1f6)!important;
   object-fit:contain!important;
@@ -714,8 +644,7 @@
    specificity — so the strip lost and the size block was still 612px inset at
    558 while colours sat 644 wide at 542. Verified on the deployed build before
    fixing. The strip has to live in the layer that wins. */
-.app-shell .saved-product-batch-page .product-size-selector,
-.app-shell .bundle-color-product .product-size-selector{
+.app-shell .saved-product-batch-page .product-size-selector{
   width:100%!important;
   margin:22px 0 0!important;
   padding:22px 0 0!important;
@@ -725,30 +654,9 @@
   background:transparent!important;
   box-shadow:none!important;
 }
-.app-shell .bundle-color-product .product-size-selector{
-  margin:15px 0 0!important;
-  padding:15px 0 0!important;
-}
 /* D175 · Every bundle member is now the same collapsed row: product photo,
    the seller's name for it, the real Printify product beneath, and a summary of
    what is set. No member is promoted. */
-.app-shell .bundle-color-product{
-  border:1px solid rgba(91,48,79,.16);
-  border-radius:16px;
-  background:rgba(255,255,255,.42);
-  overflow:hidden;
-}
-.app-shell .bundle-color-product+.bundle-color-product{margin-top:10px}
-.app-shell .bundle-color-product>summary{
-  display:grid;
-  grid-template-columns:52px minmax(0,1fr) auto;
-  align-items:center;
-  gap:14px;
-  padding:12px 16px;
-  cursor:pointer;
-  list-style:none;
-}
-.app-shell .bundle-color-product>summary::-webkit-details-marker{display:none}
 .app-shell .bundle-product-photo{
   width:52px;
   height:52px;
@@ -771,10 +679,6 @@
 }
 .app-shell .bundle-product-id>small{color:#75576b;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
-.app-shell .bundle-color-product[open]>summary{border-bottom:1px solid rgba(91,48,79,.12)}
-.app-shell .bundle-color-product>.product-color-selector,
-.app-shell .bundle-color-product>.product-size-selector{padding:14px 16px!important}
-
 
 /* D172 · The setup column stacks eleven ordered sections, and only some carried
  * `width:min(980px,calc(100% - 32px))`. Nested ones applied it a second time
@@ -792,16 +696,6 @@
  * so the cards sat 16px inside the heading above them and the Continue button
  * below — which is what made the screen look untended. One column, one edge.
  * After: all ten sections 720@504. */
-.app-shell .steps-column.setup-column > *,
-.app-shell .steps-column.setup-column .saved-product-batch-page,
-.app-shell .steps-column.setup-column .saved-product-batch-page > *,
-.app-shell .steps-column.setup-column .batch-preferences-after-designs,
-.app-shell .steps-column.setup-column .batch-preferences-after-designs > *,
-.app-shell .steps-column.setup-column .bundle-color-selectors{
-  width:100%!important;
-  max-width:none!important;
-  margin-inline:0!important;
-}
 
 /* D173 · approved-functional.css:1510 collapses the saved-product grid to a
  * single full-width column the moment a product is selected:
@@ -820,12 +714,6 @@
  * Fraunces ("Colours", "Sizes", "Mockups"). Wrong face, wrong size, and the
  * phrase repeated what the eyebrow above it already said
  * ("PRODUCT BUNDLE · PRODUCT 1 OF 2"). The product name alone is the heading. */
-.app-shell .bundle-progress>div b{
-  font:650 24px/1.15 "Fraunces",Georgia,serif!important;
-  color:#4c293f;
-}
-.app-shell .bundle-progress>div span{letter-spacing:.16em}
-.app-shell .bundle-progress>div small{margin-top:4px}
 
 /* D180 · A bundle runs several different product types. One batch-level mockup
  * set and one batch-level keyword bank could not be right for all of them —
@@ -833,16 +721,6 @@
  * was filtered to whichever product happened to be active and then applied to
  * every product in the bundle. Both now live inside each product's section,
  * alongside its colours and sizes. */
-.app-shell .bundle-color-product>.mockup-default-block{
-  margin:0!important;
-  padding:14px 16px!important;
-  border:0!important;
-  border-top:1px solid rgba(91,48,79,.12)!important;
-  border-radius:0!important;
-  background:transparent!important;
-  box-shadow:none!important;
-  width:100%!important;
-}
 
 
 
@@ -1532,10 +1410,6 @@
    one word per line, live, on the last screen before publishing to Etsy.
    Splitting a glyph off its sentence needs a wrapper element in the markup, not
    a layout mode. Until that markup exists this stays flow layout. */
-.app-shell .final-checklist>span{
-  display:block!important;
-  line-height:1.5!important;
-}
 
 /* D251 · Full-width primaries appear only on Images, Listing and Publish, and
    on Publish the SECONDARY was full width too, giving two equally weighted
@@ -1626,20 +1500,6 @@ body:has(.management-nav) .usage-card h2{
 /* D264 · "Capitalization: On" was a filled dark pill — the primary-action
    treatment — for what is a preference toggle. It read as the thing to click on
    a screen whose real primary action is "Auto-create all titles". */
-.app-shell .title-capitalization-control>button{
-  min-height:34px!important;
-  padding:0 14px!important;
-  border:1px solid rgba(91,48,79,.22)!important;
-  border-radius:999px!important;
-  background:rgba(255,255,255,.75)!important;
-  color:#603750!important;
-  font:800 11px/1 "Manrope",system-ui,sans-serif!important;
-}
-.app-shell .title-capitalization-control>button.active{
-  border-color:#78a98a!important;
-  background:#e8f5ec!important;
-  color:#276543!important;
-}
 
 /* D265 · Three different glyphs meant "expand this": ↓ on the Product page,
    ＋ on Listing, ⌄ on Mockup Library. One affordance, three symbols, three
@@ -1652,7 +1512,6 @@ body:has(.management-nav) .usage-card h2{
 /* D266 · Bundle cards and product cards are peer objects chosen the same way,
    and were built to different shapes: the bundle's Choose button did not fill
    its card and its title was uppercase 12px against the product's 14px. */
-.app-shell .bundle-tile>button{width:100%!important}
 
 /* D268 · Deleting a keyword bank was a bare red text link, while deleting a
    saved product is a bordered button. Same destructiveness, two weights — and
@@ -1712,30 +1571,22 @@ body:has(.management-nav) .usage-card h2{
    disclosure marker (list-style-type: disclosure-closed/open, drawn as ▶ / ▼)
    while the bundle block on Product uses a custom chevron. D265 unified the
    glyphs the app draws itself and missed the ones the browser draws. */
-.app-shell .recommended-listing-photos>summary,
-.app-shell .printify-image-picker>summary,
-.app-shell .draft-mockups>summary{
+.app-shell .printify-image-picker>summary{
   list-style:none!important;
   display:flex!important;
   align-items:center!important;
   gap:10px!important;
   cursor:pointer!important;
 }
-.app-shell .recommended-listing-photos>summary::-webkit-details-marker,
-.app-shell .printify-image-picker>summary::-webkit-details-marker,
-.app-shell .draft-mockups>summary::-webkit-details-marker{display:none!important}
-.app-shell .recommended-listing-photos>summary:after,
-.app-shell .printify-image-picker>summary:after,
-.app-shell .draft-mockups>summary:after{
+.app-shell .printify-image-picker>summary::-webkit-details-marker{display:none!important}
+.app-shell .printify-image-picker>summary:after{
   content:"⌄"!important;
   margin-left:auto!important;
   font-size:15px!important;
   color:#704b67!important;
   transition:transform .18s ease!important;
 }
-.app-shell .recommended-listing-photos[open]>summary:after,
-.app-shell .printify-image-picker[open]>summary:after,
-.app-shell .draft-mockups[open]>summary:after{transform:rotate(180deg)!important}
+.app-shell .printify-image-picker[open]>summary:after{transform:rotate(180deg)!important}
 
 /* D287 · The Images card header centres its eyebrow, title and copy while every
    other card header has been left-aligned since D249. Same object, two
@@ -2092,23 +1943,7 @@ body{min-width:1180px!important}
 
 /* D336 · The product list beside the bundle name is how you tell which product
    you are on, so it has to be readable rather than a caption. */
-.app-shell .bundle-progress>ol>li>b{
-  font:800 14px/1.3 "Manrope",system-ui,sans-serif!important;
-  color:#4c293f!important;
-}
-.app-shell .bundle-progress>ol>li.current>b{color:#3f2338!important}
-.app-shell .bundle-progress>ol>li>small{
-  font:600 12px/1.4 "Manrope",system-ui,sans-serif!important;
-  color:#75576b!important;
-}
-.app-shell .bundle-progress>ol>li>span{
-  width:30px!important;height:30px!important;
-  font:800 13px/1 "Manrope",system-ui,sans-serif!important;
-}
 /* The bundle's own name is the card title; the member list under it is support. */
-.app-shell .bundle-progress>div>small{
-  font:500 12px/1.5 "Manrope",system-ui,sans-serif!important;color:#75576b!important;
-}
 
 /* D338 · An open panel's category name grows, so with four panels on one card
    the one you are inside is obvious at a glance.
@@ -2553,7 +2388,6 @@ body{min-width:1180px!important}
    Two later commits overrode it to 56px with !important - at that size the
    design is unreadable, so you cannot tell which listing you are editing.
    Restored to the size it was. */
-.app-shell .listing-editor .design-line{grid-template-columns:152px minmax(0,1fr)!important}
 
 /* D405 · The compact-height rules live here because clarity-pass loads last -
    the earlier copy in approved-functional.css was silently outranked by
@@ -2621,23 +2455,9 @@ body{min-width:1180px!important}
 
    The card is 884px at a 1440px viewport, and the text column beside it needs
    about 420px, so the preview takes 38% and caps at 400px. */
-.app-shell .post-draft-workspace .draft-card-top{
-  grid-template-columns:minmax(280px,38%) minmax(0,1fr)!important;
-  gap:22px!important;align-items:start!important;
-}
-.app-shell .post-draft-workspace .draft-card-top .printify-preview-button{
-  width:100%!important;max-width:400px!important;height:auto!important;
-  min-height:0!important;aspect-ratio:1/1!important;padding:6px!important;
-}
-.app-shell .post-draft-workspace .draft-card-top .printify-preview-button img{
-  width:100%!important;height:100%!important;object-fit:contain!important;
-}
 /* The "View larger" affordance was hidden when the preview was a thumbnail. */
-.app-shell .post-draft-workspace .draft-card-top .printify-preview-button span{display:inline-block!important}
 
 @media (max-width:900px){
-  .app-shell .post-draft-workspace .draft-card-top{grid-template-columns:1fr!important}
-  .app-shell .post-draft-workspace .draft-card-top .printify-preview-button{max-width:100%!important}
 }
 
 /* D427 · Opening a batch that no longer exists. Informational, not a failure the
@@ -2660,17 +2480,7 @@ body{min-width:1180px!important}
  * rest of the interface, just no longer a shade of the same lilac. `order` on
  * direct children only — .final-checklist is the grid that lays these out, so a
  * descendant selector here would silently do nothing. */
-.app-shell .final-checklist>span.content-review{
-  order:-1;
-  border-color:rgba(163,44,76,.30)!important;
-  background:#fdeef3!important;
-  color:#7c3350!important;
-  font-weight:700!important;
-  box-shadow:inset 3px 0 0 #a32c4c!important;
-  padding-left:15px!important;
-}
 /* The ready items stay quiet and keep their place below. */
-.app-shell .final-checklist>span:not(.content-review){order:0}
 
 /* The same rule for the listings themselves: a design group still needing a look
    sorts above the finished ones. The badge that marks it sits inside the group's
@@ -2782,12 +2592,7 @@ body{min-width:1180px!important}
    aspect-ratio 1/1 and max-width 400px with !important, so the button stayed a
    318px square around a 168px picture - 150px of empty box per listing, which is
    worse than the size I was trying to fix. Same weight, or it loses again. */
-.app-shell .post-draft-workspace .draft-card-top .printify-preview-button,
-.app-shell .step-product-card .draft-card-top>.pending-preview{max-width:180px!important;aspect-ratio:auto!important;height:auto!important}
-.app-shell .post-draft-workspace .draft-card-top .printify-preview-button img{max-height:168px;object-fit:contain}
 .app-shell .step-product-card .photo-order-strip img{max-height:74px;object-fit:contain}
-.app-shell .step-product-card .photo-order-heading{padding-bottom:4px}
-.app-shell .step-product-card .draft-card-grid{gap:14px}
 
 /* D523 - the saved-products picker becomes a way to change the batch, not the
    first thing on a step whose products are already decided. */
@@ -2874,7 +2679,6 @@ body{min-width:1180px!important}
    and the two-column grid it inherited was built for a 152px thumbnail beside it. */
 
 /* D541 - the print-quality check came with the placement row it belongs to. */
-.app-shell .task-listing .quality-pill{margin-top:8px;width:auto}
 
 /* D541 - a step 4 row reports and offers nothing, so it must not look pressable. */
 .app-shell .batch-product-row.reporting{cursor:default}
@@ -3006,7 +2810,6 @@ body{min-width:1180px!important}
 .app-shell .post-draft-workspace{padding:0 18px 14px}
 .app-shell .post-draft-heading{display:flex;justify-content:center;margin:0 0 6px;padding:0}
 .app-shell .post-draft-heading .open-all-button{margin:0}
-.app-shell .post-draft-workspace .batch-size-guide{margin:0}
 
 /* D681 · "Review all listings in Printify" sat 66px above the card it belongs
    to, which read as the card floating low with a hole above it. Three separate
@@ -3157,12 +2960,6 @@ body{min-width:1180px!important}
    they made every tile a different shape and buried the thumbnail. One line,
    with the full name on hover for anyone whose filenames actually mean
    something. */
-.app-shell .product-mockup-scenes label>span{
-  display:block;
-  overflow:hidden;
-  text-overflow:ellipsis;
-  white-space:nowrap;
-}
 
 /* ==========================================================================
  * D645 · The diagnostics list is the place Brittany looks now that
@@ -3201,7 +2998,6 @@ body{min-width:1180px!important}
 
 /* D651 · The size guide gained a Remove beside its picker, so the two controls
    need to sit as a pair rather than the second one landing wherever it likes. */
-.app-shell .size-guide-actions{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
 .app-shell .size-guide-remove{
   background:transparent;
   border:1px solid rgba(91,48,79,.22);
@@ -3411,7 +3207,6 @@ body{min-width:1180px!important}
 .app-shell .listing-card-detail .individual-description-body label{display:grid;gap:4px;font:700 .74rem/1.2 "Manrope",system-ui,sans-serif;color:#6b4560}
 .app-shell .listing-card-detail .individual-description-body textarea{width:100%;padding:10px 12px;border:1px solid rgba(91,48,79,.18);border-radius:10px;background:#fff;font:500 .84rem/1.5 "Manrope",system-ui,sans-serif;color:#3f2438}
 .app-shell .listing-card-detail .individual-description-body small{color:rgba(74,42,62,.62);font-size:.72rem}
-.app-shell .listing-card-detail .draft-card-top{padding-top:4px}
 .app-shell .listing-card-actions{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
 .app-shell .listing-card-actions button{height:32px;border:1px solid rgba(91,48,79,.28);border-radius:999px;background:#fff;padding:0 14px;font-size:11.5px;font-weight:750;color:#6b3f5e;cursor:pointer}
 .app-shell .listing-card-actions button:hover{background:#faf5f9;border-color:rgba(91,48,79,.45)}

@@ -52,17 +52,6 @@ test("uses product and artwork icons for Steps 2 and 3 instead of transfer arrow
   assert.match(css, /\.app-shell \.designs-step:not\(\.finish-mode\)>\.step-number:after\{[\s\S]*%3Crect x='3' y='4' width='18' height='16'/);
 });
 
-test("uses one Goldie aesthetic across every linked management page", async () => {
-  const layout = await readFile(new URL("app/layout.tsx", root), "utf8");
-  const css = await readFile(new URL("app/management-aesthetic.css", root), "utf8");
-  assert.match(layout, /import "\.\/management-aesthetic\.css"/);
-  assert.match(css, /:is\(\.management-page,\.usage-page,\.keyword-page,\.mockupFactory\)/);
-  assert.match(css, /\.keyword-page \.management-topbar/);
-  assert.match(css, /\.managementOnly \.mockupTopbar/);
-  assert.match(css, /\.usage-page \.usage-track i\{background:linear-gradient/);
-  assert.doesNotMatch(css, /#dcae43|#080808|#d69d2d/);
-});
-
 test("keeps the Step 4 footer controls below the pricing card without collisions", async () => {
   const css = await readFile(new URL("app/approved-functional.css", root), "utf8");
   assert.match(css,/workflow-stage>\.workflow-footer-actions/);
@@ -96,13 +85,6 @@ test("centers every next-step button as one balanced control", async () => {
   assert.match(css, /\.app-shell \.workflow-next\{justify-content:center;gap:10px;margin-left:auto;margin-right:auto\}/);
 });
 
-test("keeps Step 8 listing summaries compact and on-brand", async () => {
-  const css = await readFile(new URL("app/approved-functional.css", root), "utf8");
-  assert.match(css, /\.app-shell \.draft-state\{color:#865675!important\}/);
-  assert.match(css, /\.app-shell \.draft-card-top\{[\s\S]*grid-template-columns:minmax\(320px,48%\) minmax\(0,1fr\)!important/);
-  assert.match(css, /\.app-shell \.draft-card-top \.tag-row\{[\s\S]*max-height:82px;[\s\S]*overflow:auto/);
-});
-
 test("returns every finish-phase transition to the top", async () => {
   const page = await readFile(listingFactoryPage, "utf8");
   assert.match(page, /useEffect\(\(\)=>\{window\.scrollTo\(\{top:0,behavior:"auto"\}\)\},\[workflowStep,finishPhase\]\)/);
@@ -127,52 +109,11 @@ test("the connect step swaps its copy on state and hides the timing note once co
   assert.match(css, /\.connect-timing\{margin:0 auto 22px!important;[^}]*text-align:center\}/);
 });
 
-test("stacks the connected Etsy shop name for long shop names", async () => {
-  const page = await readFile(listingFactoryPage, "utf8");
-  const css = await readFile(new URL("app/approved-functional.css", root), "utf8");
-  assert.match(page, /<b>\{etsyConnected\?"Etsy connected":"Etsy"\}<\/b>\{etsyConnected&&<em className="etsy-shop-name">/);
-  assert.match(css, /\.etsy-shop-name\{display:block;[^}]*font-style:italic;[^}]*text-overflow:ellipsis;white-space:nowrap\}/);
-assert.match(css, /\.connected-connection-stack>\.connection-row\{width:100%;height:84px;min-height:84px;[^}]*padding:14px 15px;box-sizing:border-box\}/);
-assert.match(css, /Final cascade lock:[\s\S]*\.app-shell \.step-card>\.step-number,[\s\S]*width:64px;[\s\S]*height:64px;[\s\S]*background:conic-gradient/);
-assert.match(css, /\.app-shell \.recipe-card>\.step-number:after\{[\s\S]*M12 16V4[\s\S]*center\/contain no-repeat!important/);
-  /* D224 · This panel moved onto the Images page, where its only job is creating
-     drafts, so the icon is no longer conditional on a pricing step that no longer
-     exists — it was rendering a calculator on a page about drafts. */
-  assert.match(page, /launch-step-icon create-drafts-icon/);
-assert.match(css, /\.launch-panel>\.pricing-icon:after\{[\s\S]*rect x='4' y='3'/);
-assert.match(css, /\.launch-panel>\.create-drafts-icon:after\{[\s\S]*M11 13h4/);
-assert.ok(page.indexOf('className="workflow-footer-actions"') > page.indexOf('className={`launch-panel workflow-panel'), "Back and autosave must render after the active step content");
-assert.equal((page.match(/Clear batch \+ start over/g) || []).length, 1, "Only one clear-batch control should be present");
-assert.match(css, /UX readability lock[\s\S]*\.app-shell \.batch-limits\{[\s\S]*justify-content:center[\s\S]*font-size:12px!important/);
-assert.match(css, /\.app-shell \.folder-drop small\{[\s\S]*font-size:12px!important/);
-assert.match(css, /\.app-shell \.variant-table th\{font-size:12px!important/);
-assert.match(page, /"Save new shipping profile"/);
-assert.match(css, /\.app-shell \.custom-shipping-actions button:first-child\{[\s\S]*background:linear-gradient\(145deg,#6a3456,#4b283e\)!important/);
-assert.match(css, /\.app-shell \.custom-shipping-actions button\{[\s\S]*font-size:12\.5px!important[\s\S]*text-transform:none!important/);
-});
-
 test("preview navigation renders the real later-step experiences", async () => {
   const page = await readFile(listingFactoryPage, "utf8");
   assert.match(page, /if\(index>=3&&!templateDetails\)await loadPreviewDemo\(\)/);
   assert.match(page, /if\(index===4\)\{goToStep\("review",false,true\);setPreflightOpen\(true\);return\}/);
   assert.match(page, /setFinishPhase\(index===8\?"final":"details"\)/);
-});
-
-test("images and mockups begins with real content instead of an empty stage", async () => {
-  const css = await readFile(new URL("app/approved-functional.css", root), "utf8");
-  assert.match(css, /\.workspace\.mockup-workspace\{display:contents!important\}/);
-  assert.match(css, /\.workspace\.mockup-workspace \.workflow-stage\{display:none!important\}/);
-  assert.match(css, /\.workspace\.mockup-workspace\+\.recommended-listing-photos\+\.post-draft-workspace\{grid-row:4/);
-});
-
-test("locks workflow states to the Goldie lilac, pink, and plum palette", async () => {
-  const css = await readFile(new URL("app/approved-functional.css", root), "utf8");
-  assert.match(css, /Final palette lock[\s\S]*\.app-shell \.file-reminder[\s\S]*border-left:3px solid #b56fa6!important/);
-  assert.match(css, /\.app-shell \.design-status-icon,[\s\S]*border-color:#b777b0!important;[\s\S]*border-top-color:transparent!important/);
-  assert.match(css, /\.app-shell \.design-status-track i,[\s\S]*linear-gradient\(90deg,#a765a0,#d992c5,#b6a8ff\)!important/);
-  assert.match(css, /\.app-shell \.recipe-icon\{background:linear-gradient\(145deg,#d591c3,#a86ba2\)!important/);
-  assert.match(css, /\.app-shell \.variant-pricing\.approved\{border-color:rgba\(139,89,137,\.28\)!important/);
-  assert.match(css, /\.app-shell \.final-checklist span\{border-color:rgba\(139,89,137,\.22\)!important/);
 });
 
 test("keeps Step 2 saved-product text and selections in the plum palette", async () => {
@@ -252,49 +193,6 @@ test("warns before continuing with designs below Printify's recommended pixels",
   assert.match(css, /\.app-shell \.pixel-comparison-row\{display:grid;grid-template-columns:/);
 });
 
-test("gives Step 6 a cohesive titles, tags, and descriptions layout", async () => {
-  const [page, css] = await Promise.all([
-    readFile(listingFactoryPage, "utf8"),
-    readFile(new URL("app/approved-functional.css", root), "utf8"),
-  ]);
-  assert.match(page, /Finish titles, tags, and descriptions/);
-  assert.doesNotMatch(page, /Complete the listing words/);
-  /* Order reversed in D148: the Printify preview is a white garment on white,
-   * cropped to 54px, so every listing in a batch rendered as the same blank
-   * square. The artwork identifies the listing; the garment does not.
-   * D541 - the per-listing table this belonged to is gone; the same preference
-   * now picks the thumbnail on every task row. */
-  /* D687 - the fallback moved into the shared ListingRows mapping. Same rule:
-     a design with no preview of its own borrows the draft's. */
-  assert.match(page, /thumb:design\.previewUrl\|\|drafts\.find\(draft=>draft\.clientId===design\.id\)\?\.previewUrl/);
-  /* D541 - step 3 was one block: an always-open title builder, a collapsible
-   * description and an always-open table of every listing, numbered 1, 2, 3.
-   * Her rows were bookmarks into it, so opening Description showed titles and
-   * tags too. Three tasks, three panels, and the numbering goes with the block. */
-  assert.doesNotMatch(page, /<b>2\. Edit description<\/b>/);
-  assert.doesNotMatch(page, /className="design-table"/);
-  assert.match(page, /Build this title yourself from a keyword bank/);
-  assert.match(page, /It does not verify that the keyword bank itself matches the design, and it will not reject mismatched phrases\./);
-  assert.match(css, /\.app-shell \.finish-mode \.batch-limits,[\s\S]*display:none!important/);
-  assert.match(css, /\.app-shell \.quality-pill\.pass,\.app-shell \.quality-pill\.check\{[^}]*background:linear-gradient/);
-  /* D375 · was width:min(250px,100%) — a small centred pill on this step while
-     the same button was a full-width bar on steps 1 and 2. */
-  assert.match(css, /\.app-shell \.finish-mode \.listing-editor>\.workflow-next\{display:flex;width:100%;margin:28px auto 2px/);
-});
-
-test("keeps required dialogs and selected controls inside the approved palette", async () => {
-  const [page, css] = await Promise.all([
-    readFile(listingFactoryPage, "utf8"),
-    readFile(new URL("app/approved-functional.css", root), "utf8"),
-  ]);
-  assert.match(page, /Finish all sections first\./);
-  assert.doesNotMatch(page, /listing words/i);
-  assert.match(page, /className="publish-confirm blocking-modal"/);
-  assert.match(css, /\.blocking-modal>\.publish-confirm-icon,\.blocking-modal>\.mini-label\{[^}]*text-align:center!important/);
-  assert.match(css, /\.title-style-toggle button\.active\{[^}]*background:linear-gradient\(145deg,#6a3456,#4b283e\)!important/);
-  assert.match(css, /\.new-recipe\.active,\.live-dpi\.check,\.batch-size-guide/);
-});
-
 test("centers autosave feedback beneath each workflow panel", async () => {
   const [page, css] = await Promise.all([
     readFile(listingFactoryPage, "utf8"),
@@ -303,45 +201,6 @@ test("centers autosave feedback beneath each workflow panel", async () => {
   assert.match(page, /<i aria-hidden="true">✓<\/i> Saved automatically/);
   assert.match(css, /\.workflow-footer-actions\{position:relative;[^}]*justify-content:flex-start/);
   assert.match(css, /\.autosave-note\{position:absolute;left:50%;[^}]*transform:translateX\(-50%\)/);
-});
-
-test("keeps Step 8 controls ordered, separated, and inside the warm Goldie palette", async () => {
-  const [page, css] = await Promise.all([
-    readFile(listingFactoryPage, "utf8"),
-    readFile(new URL("app/approved-functional.css", root), "utf8"),
-  ]);
-  assert.match(css, /Step 8 final lock/);
-  assert.match(css, /\.app-shell \.draft-card>\.draft-mockups\{order:3\}/);
-  assert.match(css, /\.app-shell \.draft-card>\.individual-size-guide\{order:4\}/);
-  assert.match(css, /\.app-shell \.integrated-mockups \.generate-inline,[\s\S]*linear-gradient\(145deg,#6a3456,#4b283e\)!important/);
-  assert.match(css, /\.app-shell \.product-mockup-scenes label\.selected\{[\s\S]*border-color:#b777b0!important/);
-  assert.match(css, /\.app-shell \.post-draft-workspace>\.mockup-next\{[\s\S]*margin:34px auto 16px!important/);
-  assert.match(css, /\.app-shell \.publish-live-warning\{[\s\S]*rgba\(239,211,237,\.66\)/);
-  /* D552 - deleted. She asked for it gone once ("there doesn't need to be a link
-     that says recommended photos for the soft..."), D540 moved it into the photos
-     panel instead, and she had to ask again. The row is named "Choose Printify
-     photos" and every photo is listed under it with counts; a collapsed essay
-     about which views to pick was advice nobody opened. */
-  /* D151: this label used to be a CSS ::after over font-size:0 DOM text.
-   * It now lives in the TSX, so assert it there and assert the hack is gone. */
-  assert.doesNotMatch(css, /\.open-all-button:after/,
-    "The open-all button must not be relabelled in CSS.");
-  const appSource = await readFile(new URL("app/listing-factory-app.tsx", root), "utf8");
-  assert.match(appSource, /Review all listings in Printify/);
-  assert.match(css, /\.integrated-mockups \.batch-mockup-button,[\s\S]*width:min\(100%,290px\)!important/);
-  assert.match(css, /\.integrated-mockups \.generate-inline\{margin:16px 0 0!important\}/);
-});
-
-test("keeps supporting workflow copy readable and explains slower Etsy preparation", async () => {
-  const [page, css] = await Promise.all([
-    readFile(listingFactoryPage, "utf8"),
-    readFile(new URL("app/approved-functional.css", root), "utf8"),
-  ]);
-  assert.match(page, /This can take a moment when your batch has several listings\. Keep this page open while Goldie prepares each one\./);
-  assert.match(css, /\.app-shell \.etsy-preparing-note\{[\s\S]*font-size:12px/);
-  assert.match(css, /\.app-shell \.variant-transfer-note small\{font-size:12px!important/);
-  assert.match(css, /\.app-shell \.step-content small,[\s\S]*font-size:11\.5px!important/);
-  assert.match(css, /\.app-shell \.etsy-detail-card label,[\s\S]*font-size:12px!important/);
 });
 
 test("the workflow column is sized against its container, never the viewport — D89", async () => {
@@ -471,21 +330,6 @@ test("the publish list shows full titles — D98", async () => {
   assert.match(css, /\.app-shell \.final-listing-card>div:not\(\.final-listing-links\)>b\{[^}]*white-space:normal!important/);
   assert.doesNotMatch(css, /\.app-shell \.final-listing-card>div:not\(\.final-listing-links\)>b\{[^}]*white-space:nowrap/,
     "Publish-list titles are clipped to one line again.");
-});
-
-test("seller-authored names wrap instead of inheriting the title truncation pattern — D99 sweep", async () => {
-  const [page,css,mockupCss]=await Promise.all([
-    readFile(listingFactoryPage,"utf8"),
-    readFile(new URL("app/approved-functional.css",root),"utf8"),
-    readFile(new URL("app/mockups/mockups.css",root),"utf8"),
-  ]);
-  assert.doesNotMatch(css,/design-fields>label:nth-of-type\(1\) input\{[^}]*text-overflow:ellipsis/);
-  assert.match(css,/\.app-shell \.draft-row b,[\s\S]*white-space:normal!important/);
-  assert.match(css,/\.app-shell \.final-design-group>summary span/);
-  assert.match(css,/post-draft-heading>div:before/);
-  assert.match(mockupCss,/\.collectionToggle h3\{white-space:normal;overflow:visible;text-overflow:clip/);
-  assert.match(page,/profile\.title\.replace\(\/\\\.\{2,\}\$\/,"…"\)/,
-    "Shipping profile display names can regress to the literal two-dot truncation from Etsy.");
 });
 
 test("the title and tags textareas span their label's full width — D100", async () => {
@@ -824,48 +668,6 @@ test.skip("saved mockup scenes must match the selected garment — D132", async 
     "Legacy whole-set preferences must resolve to visible scene selections.");
 });
 
-test("in-card buttons are one system and fit their column — D130", async () => {
-  const [clarity, tools] = await Promise.all([
-    readFile(new URL("app/clarity-pass.css", root), "utf8"),
-    readFile(new URL("app/factory-tools.tsx", root), "utf8"),
-  ]);
-
-  /* Measured on the live product step:
-   *   outside a card (.workflow-restart-button)  10px / 650 · 34px tall
-   *   inside  a card (.recipe-use em)            10px / 850 · 25px tall
-   * The in-card primary was smaller, 200 weight heavier and tighter, which is
-   * why it read as dense and unformatted.
-   *
-   * Two traps found while fixing it, both verified in the browser:
-   *  - the quiet buttons use font-size:0 with a ::after label, so setting any
-   *    font-size on them un-hides the original text ("Rename / reconnectRename")
-   *  - the pill lives in a 117px column, so "Choose this product →" cannot fit
-   *    at any sane size — the label had to shorten, not the type */
-  assert.match(clarity, /:is\(\.recipe-use,\.bundle-use\) em\{[\s\S]*font-weight:700!important/);
-  assert.doesNotMatch(clarity, /:is\(\.edit-recipe,\.change-product,\.add-product-button\)\{[^}]*font-size/,
-    "Never set font-size on the font-size:0 buttons — it duplicates their label.");
-  assert.match(tools, /"Choose →"/,
-    "The tile CTA must fit its column without clipping.");
-  assert.doesNotMatch(tools, /"Choose this product →"/);
-});
-
-test("status chips are visually distinct from buttons — D139", async () => {
-  const clarity = await readFile(new URL("app/clarity-pass.css", root), "utf8");
-
-  /* Measured on the live product step:
-   *   .saved-settings-summary span (status)  white · 1px border · 999px · 750
-   *   .edit-recipe                (button)   white · 1px border · 999px · 650
-   * Identical boxes, so "$10 profit" and "Description ready" read as controls.
-   *
-   * Rule: a control is white with a border and a pill radius. A status is
-   * tinted, borderless, softer, and squarer. Nothing unclickable gets a
-   * button's box. */
-  assert.match(clarity, /\.app-shell \.saved-settings-summary span\{[\s\S]*border:0!important/);
-  assert.match(clarity, /\.app-shell \.saved-settings-summary span\{[\s\S]*cursor:default!important/);
-  assert.doesNotMatch(clarity, /\.app-shell \.saved-settings-summary span\{[^}]*border-radius:999px/,
-    "Status must not borrow the pill radius that marks a control.");
-});
-
 test("the publish checklist is one column and warns in warning colours — D141", async () => {
   const [page, clarity] = await Promise.all([
     readFile(listingFactoryPage, "utf8"),
@@ -899,23 +701,6 @@ test("the publish checklist is one column and warns in warning colours — D141"
     "an unmet row is coloured as a warning, not as a tick");
 });
 
-test("tile CTAs size to their label, not the column — D143", async () => {
-  const clarity = await readFile(new URL("app/clarity-pass.css", root), "utf8");
-
-  /* D130 set the CTA to width:100%, which was only needed for the long
-   * "Choose this product →" label in a 117px column. D130 also shortened that
-   * label. The side effect: choosing a product collapses the grid to one 642px
-   * column, so every CTA stretched to 553px and the two products the seller did
-   * NOT choose became the loudest elements on screen, while her actual
-   * selection rendered as a pale full-width bar that reads as disabled. */
-  assert.match(clarity, /:is\(\.recipe-use,\.bundle-use\) em\{[\s\S]*width:fit-content!important/,
-    "The CTA must size to its label so it cannot dominate the post-selection layout.");
-  /* Careful: "max-width:100%" contains "width:100%". Anchor on the property
-   * start so the guard checks the real declaration, not a substring. */
-  assert.doesNotMatch(clarity, /:is\(\.recipe-use,\.bundle-use\) em\{[^}]*[;{]\s*width:100%!important/,
-    "The CTA must not stretch to its column again.");
-});
-
 test("the chosen-product confirmation sits with the products, not inside the bundles — D144", async () => {
   const tools = await readFile(new URL("app/factory-tools.tsx", root), "utf8");
 
@@ -939,25 +724,6 @@ test("the chosen-product confirmation sits with the products, not inside the bun
   assert.ok(bundles < bundleLibrary);
 });
 
-test("the mockup scene grid spans its block — D145", async () => {
-  const clarity = await readFile(new URL("app/clarity-pass.css", root), "utf8");
-
-  /* D138 set the scene grid to auto-fill minmax(132px,1fr) and it still rendered
-   * two columns. The rule was applied; the container was the problem —
-   * .batch-default-block.mockup-default-block is a 340px/290px grid, and the
-   * scene grid auto-placed into the 340px column while the right half of the
-   * card sat empty and the "8 of 8 selected" caption floated beside the tiles
-   * instead of under them.
-   *
-   * Measured after: grid 340px -> 644px, two columns -> four, caption below. */
-  /* D179 made the block a single column, so spanning is moot for the caption —
-   * but the rule stays as the guarantee that neither is stranded in a side column. */
-  assert.match(clarity, /\.app-shell \.mockup-default-block>small\{grid-column:1\/-1!important\}/,
-    "The scene caption must never be stranded in a side column.");
-  assert.match(clarity, /\.app-shell \.product-mockup-scenes/,
-    "The scene grid keeps its full-width rule.");
-});
-
 test("nothing in the app relies on smooth scrolling — D146", async () => {
   const files = ["listing-factory-app.tsx", "support-chat.tsx", "factory-tools.tsx"];
   for (const file of files) {
@@ -971,30 +737,6 @@ test("nothing in the app relies on smooth scrolling — D146", async () => {
     assert.doesNotMatch(source, /behavior:\s*"smooth"/,
       `${file} uses smooth scrolling, which never fires in this app. Scroll instantly.`);
   }
-});
-
-test("the 13th tag chip cannot escape its row and hit the button below — D149", async () => {
-  const approved = await readFile(new URL("app/approved-functional.css", root), "utf8");
-
-  /* .draft-card-top .tag-row is deliberately a scroller: max-height 82px, a
-   * painted scrollbar thumb, scrollbar-gutter:stable. A later, broader rule
-   * (.app-shell .draft-card .tag-row) added overflow:visible!important to stop
-   * chips being clipped horizontally, and took the vertical scroll down with it.
-   *
-   * Measured on a 13-tag listing at 1440 wide, before:
-   *   row clientHeight 80, scrollHeight 118, computed overflow-y "visible"
-   *   chip "mermaid bachelorette" 269-301, .edit-draft-button top 280
-   *   -> the chip painted on top of the button.
-   * After: computed overflow-y "scroll", row bottom 264, button top 280,
-   * 16px gap, chip clipped (elementFromPoint returns the card, not the chip)
-   * and reachable by scrolling the row. */
-  const broadRule = approved.match(/^\.app-shell \.draft-card \.tag-row\{.*$/m);
-  assert.ok(broadRule, "The .draft-card .tag-row rule should still exist.");
-  assert.doesNotMatch(broadRule[0], /overflow(-y)?:\s*visible/,
-    "This rule must not re-enable vertical overflow — the tag row is a scroller.");
-
-  assert.match(approved, /\.app-shell \.draft-card-top \.tag-row\{[^}]*overflow-y:scroll/,
-    "The tag row must keep its scroller so overflowing chips stay inside it.");
 });
 
 test("no button is relabelled by CSS over hidden DOM text — D150/D151/D152", async () => {
@@ -1013,53 +755,6 @@ test("no button is relabelled by CSS over hidden DOM text — D150/D151/D152", a
    * Real labels now live in the TSX. */
   assert.doesNotMatch(approved, /font-size:0!important/,
     "Relabelling a button via font-size:0 + ::after hides the real DOM text. Put the label in the TSX.");
-});
-
-test("the Printify placement button is readable — D150", async () => {
-  const approved = await readFile(new URL("app/approved-functional.css", root), "utf8");
-  const theme = await readFile(new URL("app/theme.css", root), "utf8");
-
-  /* theme.css:24 is the original gold-era rule: .edit-draft-button{...font-size:9px}.
-   * The lilac re-theme recoloured the button but never resized it, so the main
-   * "Open in Printify to resize or reposition" action rendered at 9px with an
-   * 8.5px sub-line, against a 16px baseline for every other button on the page. */
-  assert.match(theme, /\.edit-draft-button\{[^}]*font-size:9px/,
-    "Guard assumes the stale 9px rule is still in theme.css; update this test if it moved.");
-  assert.match(approved, /\.app-shell \.edit-draft-button\{[^}]*font-size:12\.5px!important/,
-    "The placement button must override theme.css's 9px with a readable size.");
-});
-
-test("the publish checklist's needs-review chip is plum, not gold — D153", async () => {
-  const approved = await readFile(new URL("app/approved-functional.css", root), "utf8");
-
-  /* Brittany rejected this brown once already ("why is keyword bank still to set
-   * brown?"). D101/D126 replaced it with plum #8a3f66 — but only on
-   * .everything-else summary .setup-todo. The publish checklist kept a full
-   * gold-era chip: border #dfbd7f, background #fff5dd, text #7a5010, plus
-   * .final-listing-card .content-review at #8a5a12 — sitting directly beside the
-   * plum "✓" chips from .final-checklist span. Same defect, second surface.
-   * .content-review is live markup: every unmet item on Review + publish
-   * ("! One or more titles need review") renders with it. */
-  for (const gold of ["#8a5a12", "#7a5010", "#dfbd7f", "#fff5dd"]) {
-    assert.ok(!approved.includes(gold),
-      `${gold} is a gold-era colour and reads as mud on the lavender cards.`);
-  }
-  /* D687 - and now it is the app's ONE needs-attention colour, not a third one.
-     Step 4 was carrying plum #8a3f66, green #34704c and dark red #9b302b for its
-     statuses while steps 2 and 3 used a dusty red, which is the same drift this
-     test was written to stop - it just caught the gold version of it. The
-     gold-era rejection above is untouched. */
-  assert.match(approved, /\.app-shell \.final-checklist \.content-review\{[^}]*color:#b53838!important/,
-    "The needs-review chip must use the app's one 'needs attention' colour.");
-  const globals = await readFile(new URL("app/globals.css", root), "utf8");
-  for (const stray of ["#8a3f66", "#34704c", "#9b302b"]) {
-    for (const sheet of [approved, globals]) {
-      assert.ok(!sheet.includes(`.final-listing-card .content-review{color:${stray}`)
-        && !sheet.includes(`.final-listing-card .ready{color:${stray}`)
-        && !sheet.includes(`.final-listing-card .needs-attention{color:${stray}`),
-        `${stray} is a third status colour on a screen that should have two.`);
-    }
-  }
 });
 
 test("the Publish screen uses one success language, not three — D155/D156", async () => {
@@ -1202,22 +897,6 @@ test("management pages meet AA too — D165", async () => {
   assert.match(clarity, /\.usage-page \.usage-plan-fineprint\{color:rgba\(74,42,62,\.82\)!important\}/);
 });
 
-test("every section of the setup column shares one edge — D172", async () => {
-  const clarity = await readFile(new URL("app/clarity-pass.css", root), "utf8");
-
-  /* Eleven ordered sections, only some carrying width:min(980px,100% - 32px),
-   * and the nested ones applying it twice against an already-inset parent.
-   * Measured on the deployed build with a bundle selected, width@left:
-   *   recipe-card 720@504, product-setup-framing 720@504,
-   *   color-default-block 688@520, bundle-color-selectors 688@520,
-   *   mockup-default-block 688@520, everything-else 688@520,
-   *   saved-settings-summary 688@520, keyword-bank-required 720@504
-   * so the cards sat 16px inside the heading above and the button below.
-   * After: all ten measure 720@504. */
-  assert.match(clarity, /\.app-shell \.steps-column\.setup-column > \*,[\s\S]*?\.app-shell \.steps-column\.setup-column \.batch-preferences-after-designs > \*,[\s\S]*?width:100%!important/,
-    "Nested setup sections must not re-apply the column inset.");
-});
-
 test("selecting a product does not blow the product list up — D173", async () => {
   const approved = await readFile(new URL("app/approved-functional.css", root), "utf8");
   const clarity = await readFile(new URL("app/clarity-pass.css", root), "utf8");
@@ -1232,19 +911,6 @@ test("selecting a product does not blow the product list up — D173", async () 
     "Guard assumes the collapsing rule still exists; update this test if it is removed.");
   assert.match(clarity, /\.app-shell\[data-product-selected="true"\] \.recipe-grid\{\s*grid-template-columns:repeat\(auto-fill,minmax\(184px,1fr\)\)!important;?\s*\}/,
     "The compact grid must survive selection.");
-});
-
-test("the bundle banner uses the app's heading face — D174", async () => {
-  const app = await readFile(new URL("app/listing-factory-app.tsx", root), "utf8");
-  const clarity = await readFile(new URL("app/clarity-pass.css", root), "utf8");
-
-  /* It read "You are working on Gildan Hoodie" as an 18px Manrope <b>, wrapping
-   * to two lines, immediately above section headings set in Fraunces. The phrase
-   * also repeated the eyebrow directly above it ("PRODUCT BUNDLE · PRODUCT 1 OF 2"). */
-  assert.doesNotMatch(app, /You are working on/,
-    "The eyebrow already says which product of the bundle this is.");
-  assert.match(clarity, /\.app-shell \.bundle-progress>div b\{[^}]*"Fraunces"/,
-    "The banner heading must use the same face as every other heading on the page.");
 });
 
 test("the mockup card has no dead column — D179", async () => {

@@ -34,14 +34,14 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .topbar>.approved-sidebar-footer{flex:0 0 auto;margin-top:auto}
 
 
-.brand-lockup{display:block;text-align:center;margin-bottom:34px}.approved-brand{color:#4b283e}.goldie-wordmark-lockup{display:grid;justify-items:center;gap:7px;color:#4b283e}.goldie-wordmark-name{font:400 64px/.88 'DM Serif Display',Georgia,serif;letter-spacing:-.04em;white-space:nowrap}.goldie-wordmark-lockup>b{font-size:11px;line-height:1;letter-spacing:.27em}.goldie-wordmark-i{position:relative;display:inline-block}.goldie-wordmark-i>i{position:absolute;left:50%;top:-.28em;transform:translateX(-50%);font:normal 18px/1 Georgia,serif;animation:approved-star 3.2s ease-in-out infinite}.approved-wm{font:400 64px/.88 'DM Serif Display',Georgia,serif;letter-spacing:-.04em;white-space:nowrap}.approved-i{position:relative;display:inline-block}.approved-i>span{position:absolute;top:-.28em;left:50%;font:normal 18px/1 Georgia,serif;transform:translateX(-50%);animation:approved-star 3.2s ease-in-out infinite}.approved-sub{margin-top:7px;color:#4b283e;font-size:11px;font-weight:700;line-height:1;letter-spacing:.27em;text-transform:uppercase}.powered-wordmark,.powered-label,.gpt-label,.wordmark{display:none}@keyframes approved-star{50%{transform:translateX(-50%) scale(1.14);filter:drop-shadow(0 0 8px rgba(115,63,106,.45))}}
-.top-actions{display:flex;min-height:0;flex:1;flex-direction:column;align-items:stretch;gap:8px}.top-nav{display:grid;gap:4px}.nav-group{display:grid;gap:4px}.top-nav a,.usage-link,.account-link{display:flex;align-items:center;min-height:46px;padding:0 15px;border-radius:14px;color:rgba(74,42,62,.58);font-size:13px;font-weight:650;text-decoration:none}.top-nav a:hover,.top-nav a.active,.usage-link:hover{color:var(--ink);background:rgba(255,255,255,.53)}.top-nav a.active{box-shadow:inset 0 0 0 1px rgba(255,255,255,.54)}.top-nav a[target="_blank"]{font-size:13px}.usage-link{display:flex}.account-link{justify-content:center;min-height:38px;border:1px solid rgba(74,42,62,.13)}.command-trigger,.command-bar,.diagnostics-link{display:none!important}.approved-sidebar-footer{display:grid;gap:9px;margin-top:16px}.approved-usage{display:grid;gap:4px;padding:16px;border:1px solid rgba(255,255,255,.62);border-radius:16px;background:rgba(255,255,255,.32);color:var(--ink);text-decoration:none}.approved-usage b{font-family:'DM Serif Display',Georgia,serif;font-size:19px;font-weight:400}.approved-usage span{color:rgba(74,42,62,.58);font-size:9px}.approved-powered{display:flex;align-items:baseline;gap:7px;color:rgba(74,42,62,.58)}.approved-powered>span{font-size:9px;font-weight:650;letter-spacing:.18em;text-transform:uppercase}.approved-powered>b{font:400 18px/1 'DM Serif Display',Georgia,serif}.approved-footer-i{position:relative;display:inline-block}.approved-footer-i i{position:absolute;top:-.18em;left:50%;font-size:.46em;font-style:normal;line-height:1;transform:translateX(-50%);animation:approved-star 5s ease-in-out infinite}.approved-sidebar-footer>small{color:rgba(74,42,62,.5);font-size:8px;letter-spacing:.08em;text-transform:uppercase}
+.brand-lockup{display:block;text-align:center;margin-bottom:34px}.approved-brand{color:#4b283e}.goldie-wordmark-lockup{display:grid;justify-items:center;gap:7px;color:#4b283e}.goldie-wordmark-name{font:400 64px/.88 'DM Serif Display',Georgia,serif;letter-spacing:-.04em;white-space:nowrap}.goldie-wordmark-lockup>b{font-size:11px;line-height:1;letter-spacing:.27em}.goldie-wordmark-i{position:relative;display:inline-block}.goldie-wordmark-i>i{position:absolute;left:50%;top:-.28em;transform:translateX(-50%);font:normal 18px/1 Georgia,serif;animation:approved-star 3.2s ease-in-out infinite}.approved-wm{font:400 64px/.88 'DM Serif Display',Georgia,serif;letter-spacing:-.04em;white-space:nowrap}.approved-i{position:relative;display:inline-block}.approved-i>span{position:absolute;top:-.28em;left:50%;font:normal 18px/1 Georgia,serif;transform:translateX(-50%);animation:approved-star 3.2s ease-in-out infinite}.approved-sub{margin-top:7px;color:#4b283e;font-size:11px;font-weight:700;line-height:1;letter-spacing:.27em;text-transform:uppercase}.wordmark{display:none}@keyframes approved-star{50%{transform:translateX(-50%) scale(1.14);filter:drop-shadow(0 0 8px rgba(115,63,106,.45))}}
+.top-actions{display:flex;min-height:0;flex:1;flex-direction:column;align-items:stretch;gap:8px}.top-nav{display:grid;gap:4px}.top-nav a,.usage-link,.account-link{display:flex;align-items:center;min-height:46px;padding:0 15px;border-radius:14px;color:rgba(74,42,62,.58);font-size:13px;font-weight:650;text-decoration:none}.top-nav a:hover,.top-nav a.active,.usage-link:hover{color:var(--ink);background:rgba(255,255,255,.53)}.top-nav a.active{box-shadow:inset 0 0 0 1px rgba(255,255,255,.54)}.top-nav a[target="_blank"]{font-size:13px}.usage-link{display:flex}.account-link{justify-content:center;min-height:38px;border:1px solid rgba(74,42,62,.13)}.command-trigger,.diagnostics-link{display:none!important}.approved-sidebar-footer{display:grid;gap:9px;margin-top:16px}.approved-usage{display:grid;gap:4px;padding:16px;border:1px solid rgba(255,255,255,.62);border-radius:16px;background:rgba(255,255,255,.32);color:var(--ink);text-decoration:none}.approved-usage b{font-family:'DM Serif Display',Georgia,serif;font-size:19px;font-weight:400}.approved-usage span{color:rgba(74,42,62,.58);font-size:9px}.approved-powered{display:flex;align-items:baseline;gap:7px;color:rgba(74,42,62,.58)}.approved-powered>span{font-size:9px;font-weight:650;letter-spacing:.18em;text-transform:uppercase}.approved-powered>b{font:400 18px/1 'DM Serif Display',Georgia,serif}.approved-footer-i{position:relative;display:inline-block}.approved-footer-i i{position:absolute;top:-.18em;left:50%;font-size:.46em;font-style:normal;line-height:1;transform:translateX(-50%);animation:approved-star 5s ease-in-out infinite}.approved-sidebar-footer>small{color:rgba(74,42,62,.5);font-size:8px;letter-spacing:.08em;text-transform:uppercase}
 .hero{max-width:1320px;padding:40px 54px 22px;align-items:start}.workflow-hero>div{max-width:880px}.eyebrow,.mini-label{color:#8d5c82}.hero h1{font-family:'DM Serif Display',Georgia,serif;color:var(--ink);font-size:clamp(40px,4.2vw,62px);font-weight:400;letter-spacing:-.035em}.hero-copy{color:rgba(74,42,62,.7);font-size:14px}.value-proof{border-color:rgba(255,255,255,.5)!important;background:rgba(255,250,253,.32)!important;backdrop-filter:blur(12px)}
 .workspace{max-width:1320px;margin:0 auto;padding:0 54px 70px;display:block}.workflow-progress{position:relative;top:auto;display:grid;grid-template-columns:repeat(9,minmax(0,1fr));gap:0;padding:12px 0 22px;border:0;border-radius:0;background:transparent;box-shadow:none;overflow:visible}.workflow-progress:before{content:"";position:absolute;left:4%;right:4%;top:67px;height:1px;background:rgba(74,42,62,.18)}.workflow-progress-head{grid-column:1/-1!important;display:flex!important;align-items:center;justify-content:space-between;padding:0 0 12px!important;border:0!important}.workflow-progress-head>div{display:flex;align-items:baseline;gap:10px}.workflow-progress-head .mini-label{margin:0}.workflow-progress-head>div>b{font:500 13px/1 'Manrope',sans-serif}.start-new-batch{width:auto!important;padding:8px 12px!important;border:1px solid rgba(74,42,62,.14)!important;border-radius:999px!important;background:rgba(255,255,255,.38)!important;font-size:10px!important}.workflow-progress .preview-mode-note,.workflow-help{display:none!important}.workflow-progress button{position:relative;z-index:1;display:grid;justify-items:center;grid-template-columns:1fr;gap:7px;min-width:0;width:auto;padding:10px 3px;border:0;background:transparent;text-align:center}.workflow-progress button:not(:last-of-type):after{display:none}.workflow-progress button>span:first-child{width:34px;height:34px;border:1px solid rgba(255,255,255,.7);background:rgba(255,250,253,.58);color:var(--ink);box-shadow:0 4px 16px rgba(74,42,62,.09)}.workflow-progress button>span:last-child{display:block;padding:0}.workflow-progress button b{display:block;font-size:9px;line-height:1.25}.workflow-progress button small{display:none}.workflow-progress button.active{background:transparent}.workflow-progress button.active>span:first-child{border-color:rgba(255,255,255,.86);background:linear-gradient(145deg,#5b304f,#7e4472);color:#fff;box-shadow:0 0 0 4px rgba(231,174,215,.24),0 0 22px rgba(97,48,87,.3);animation:goldie-step-breathe 3.2s ease-in-out infinite}.workflow-progress button.done>span:first-child{border-color:#dca5d7;background:linear-gradient(145deg,#e8b7e1,#c990d0);color:#fff;box-shadow:0 0 16px rgba(206,132,200,.34)}
 @keyframes goldie-step-breathe{50%{box-shadow:0 0 0 6px rgba(231,174,215,.13),0 0 28px rgba(97,48,87,.4)}}
 .workflow-stage{min-width:0}.workflow-stage>.steps-column,.workflow-stage>.launch-panel{width:min(930px,100%);margin:0 auto}.workflow-momentum,.goldie-insight,.action-receipt{border-color:rgba(255,255,255,.58)!important;background:rgba(255,249,253,.48)!important;backdrop-filter:blur(16px)}.workflow-back{border-color:rgba(74,42,62,.14);background:rgba(255,249,253,.5);color:var(--ink)}
-.step-card,.launch-panel,.post-draft-workspace,.preflight,.publish-confirm{border:1px solid rgba(255,255,255,.68);background:linear-gradient(145deg,rgba(255,250,253,.74),rgba(246,229,248,.58));box-shadow:var(--shadow);backdrop-filter:blur(24px) saturate(1.06)}.step-card{grid-template-columns:54px minmax(0,1fr);border-radius:24px}.step-card:hover{background:linear-gradient(145deg,rgba(255,250,253,.78),rgba(246,229,248,.62))}.step-number{border-right:1px solid rgba(74,42,62,.1);color:#8c5c82}.step-content{padding:28px 30px 32px}.step-heading h2,.launch-top h2,.preflight h2,.publish-confirm h2{font-family:'DM Serif Display',Georgia,serif;color:var(--ink);font-weight:400}.step-heading h2{font-size:28px}.step-copy{color:rgba(74,42,62,.68);font-size:13px}.done-mark{background:rgba(214,171,218,.28);color:#704d75}.connection-row,.connection-trust,.template-proof,.design-preparation-status,.variant-pricing,.keyword-workspace,.batch-description,.etsy-detail-card,.draft-card,.batch-size-guide{border-color:rgba(74,42,62,.12)!important;background:rgba(255,255,255,.47)!important}.primary-button,.launch-button,.inline-field button,.workflow-next,.approve-pricing,.publish-all-button{border:0!important;border-radius:14px!important;background:linear-gradient(145deg,#5b304f,#45263c)!important;color:#fff!important;box-shadow:0 14px 28px -20px rgba(74,42,62,.75)}
-.inline-field input,textarea,input,select{border-color:rgba(74,42,62,.16);background:rgba(255,255,255,.68);color:var(--ink)}.inline-field input:focus,textarea:focus,input:focus,select:focus{border-color:rgba(151,88,139,.55);box-shadow:0 0 0 3px rgba(218,169,219,.2);outline:none}.field-error{border-radius:12px;background:rgba(165,50,78,.09)!important;color:#7f2942!important}.shipping-profile-select select{border-color:rgba(119,70,109,.34);background:rgba(255,255,255,.68)}
+.step-card,.launch-panel,.post-draft-workspace,.preflight,.publish-confirm{border:1px solid rgba(255,255,255,.68);background:linear-gradient(145deg,rgba(255,250,253,.74),rgba(246,229,248,.58));box-shadow:var(--shadow);backdrop-filter:blur(24px) saturate(1.06)}.step-card{grid-template-columns:54px minmax(0,1fr);border-radius:24px}.step-card:hover{background:linear-gradient(145deg,rgba(255,250,253,.78),rgba(246,229,248,.62))}.step-number{border-right:1px solid rgba(74,42,62,.1);color:#8c5c82}.step-content{padding:28px 30px 32px}.step-heading h2,.launch-top h2,.preflight h2,.publish-confirm h2{font-family:'DM Serif Display',Georgia,serif;color:var(--ink);font-weight:400}.step-heading h2{font-size:28px}.step-copy{color:rgba(74,42,62,.68);font-size:13px}.done-mark{background:rgba(214,171,218,.28);color:#704d75}.connection-row,.template-proof,.design-preparation-status,.variant-pricing,.keyword-workspace,.batch-description,.draft-card{border-color:rgba(74,42,62,.12)!important;background:rgba(255,255,255,.47)!important}.launch-button,.inline-field button,.workflow-next,.publish-all-button{border:0!important;border-radius:14px!important;background:linear-gradient(145deg,#5b304f,#45263c)!important;color:#fff!important;box-shadow:0 14px 28px -20px rgba(74,42,62,.75)}
+.inline-field input,textarea,input,select{border-color:rgba(74,42,62,.16);background:rgba(255,255,255,.68);color:var(--ink)}.inline-field input:focus,textarea:focus,input:focus,select:focus{border-color:rgba(151,88,139,.55);box-shadow:0 0 0 3px rgba(218,169,219,.2);outline:none}.field-error{border-radius:12px;background:rgba(165,50,78,.09)!important;color:#7f2942!important}
 .post-draft-heading{color:var(--ink)!important}.post-draft-heading h2,.post-draft-heading .mini-label{color:var(--ink)!important}.post-draft-heading p{color:rgba(74,42,62,.68)!important}footer{margin-left:0;background:rgba(74,42,62,.78);border:0;color:rgba(255,255,255,.7)}.mockup-limit-note{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:12px;padding:12px 14px;border-radius:12px;background:rgba(218,169,219,.14);color:var(--ink)}.mockup-limit-note span{color:rgba(74,42,62,.65);font-size:12px}
 @media(max-width:1050px){.app-shell{padding-left:240px}.topbar{width:240px;padding-inline:20px}.wordmark{width:180px}.hero,.workspace{padding-inline:30px}.workflow-progress button b{font-size:8px}}
 /* D316 · superseded: the shell keeps its width and scrolls. */
@@ -51,7 +51,7 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 @media(min-width:821px){
   .app-shell{display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto 1fr;align-content:start;padding-left:288px}
   .workspace{display:contents}
-  .workflow-progress{grid-row:1;width:min(1130px,calc(100% - 108px));margin:22px auto 0;padding:18px 0 14px}.approved-step-count{position:absolute;top:0;left:0;margin:0;color:rgba(74,42,62,.58);font-size:10px;font-weight:650;letter-spacing:.22em;text-transform:uppercase}.workflow-progress-head{display:none!important}.workflow-progress:before{top:51px;left:4%;right:4%;background:rgba(255,255,255,.72);box-shadow:0 0 0 1px rgba(95,55,84,.08)}
+  .workflow-progress{grid-row:1;width:min(1130px,calc(100% - 108px));margin:22px auto 0;padding:18px 0 14px}.workflow-progress-head{display:none!important}.workflow-progress:before{top:51px;left:4%;right:4%;background:rgba(255,255,255,.72);box-shadow:0 0 0 1px rgba(95,55,84,.08)}
   .workflow-progress button{gap:0;padding:4px 2px;outline:none!important;box-shadow:none!important}.workflow-progress button:after{content:none!important;display:none!important}.workflow-progress button>span:first-child{width:34px;height:34px;border-radius:50%!important;font-size:10px}.workflow-progress button>span:last-child{display:none}
   .hero{grid-row:2;width:min(1130px,calc(100% - 108px));margin:0 auto;padding:0 0 18px!important;border:0!important;background:transparent!important;box-shadow:none!important}.workflow-hero>div{max-width:none}.hero .eyebrow,.hero .hero-copy,.hero .value-proof{display:none!important}.hero h1{margin:0;font-size:34px;letter-spacing:-.025em}
   .workflow-stage{grid-row:3;display:flex;flex-direction:column;width:min(1130px,calc(100% - 108px));margin:0 auto;padding:0 0 80px}.workflow-stage>.steps-column,.workflow-stage>.launch-panel{order:1;width:min(760px,100%)}.workflow-stage:has(.workflow-panel:first-child.active-panel)>.steps-column{width:min(680px,100%)}
@@ -62,9 +62,8 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
    cards, whichever card landed first inherited the icon belonging to the old
    occupant of that slot — which is why Choose product wore the Connect icon.
    Icons follow the class that says what the card IS. */
-.step-content{padding:34px 36px 38px}.step-heading{justify-content:center;text-align:center}.step-heading .mini-label{display:none}.step-heading h2{font-size:38px}.step-copy{max-width:560px;margin:8px auto 24px;text-align:center;font-size:14px;line-height:1.55}.done-mark{position:absolute;right:28px;top:28px}
-  .connection-trust{max-width:620px;margin:0 auto 14px}.connection-setup,.connection-row{max-width:620px;margin-left:auto;margin-right:auto}.connection-setup .connection-row{max-width:none}
-  .launch-panel,.post-draft-workspace{border-radius:28px}.recommended-listing-photos{width:min(930px,100%)}
+.step-content{padding:34px 36px 38px}.step-heading{justify-content:center;text-align:center}.step-heading .mini-label{display:none}.step-heading h2{font-size:38px}.step-copy{max-width:560px;margin:8px auto 24px;text-align:center;font-size:14px;line-height:1.55}.done-mark{position:absolute;right:28px;top:28px}.connection-setup,.connection-row{max-width:620px;margin-left:auto;margin-right:auto}.connection-setup .connection-row{max-width:none}
+  .launch-panel,.post-draft-workspace{border-radius:28px}
 }
 
 .app-shell .profit-goal-control label{align-items:start}
@@ -101,23 +100,13 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .app-shell .batch-capacity span{color:rgba(74,42,62,.72)!important;font-size:11.5px!important}
 .app-shell .design-upload-review{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px;margin-top:12px}.app-shell .design-upload-review article{display:grid;grid-template-columns:58px minmax(0,1fr) auto;align-items:center;gap:10px;padding:9px;border:1px solid rgba(74,42,62,.16);border-radius:10px;background:rgba(255,255,255,.58)}.app-shell .design-upload-review img{width:58px;height:58px;object-fit:contain;border-radius:7px;background:rgba(255,255,255,.78)}.app-shell .design-upload-review article>div{min-width:0;display:grid;gap:3px}.app-shell .design-upload-review b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11.5px;color:#4a2a3e}.app-shell .design-upload-review small{font-size:10px;color:rgba(74,42,62,.68)}.app-shell .design-upload-review button{border:0;background:transparent;color:#8c3d60;text-decoration:underline;font-size:10px;font-weight:700;cursor:pointer}
 .app-shell .pixel-warning-inline small{font-size:11.5px!important}
-
-.app-shell .variant-table th{font-size:12px!important;line-height:1.35!important}
-.app-shell .variant-table td{font-size:12px!important;line-height:1.4!important}
-.app-shell .variant-table .profit-fee-note{font-size:10.5px!important;line-height:1.35!important}
-.app-shell .variant-table .printify-product-cost b{color:var(--ink);font-variant-numeric:tabular-nums}
-.app-shell .variant-table .printify-product-cost small{font-size:10.5px!important;line-height:1.35!important}
 .app-shell .pricing-section-heading p{font-size:12px!important;line-height:1.55!important}
-.app-shell .profit-goal-control label,
-.app-shell .shipping-profile-select>span{font-size:12px!important}
-.app-shell .shipping-profile-select small,
-.app-shell .pricing-math p,
+.app-shell .profit-goal-control label{font-size:12px!important}
 .app-shell .custom-shipping-body small,
 .app-shell .custom-shipping-body label,
 .app-shell .shipping-builder-intro span,
 .app-shell .launch-note{color:rgba(74,42,62,.72)!important;font-size:11.5px!important;line-height:1.5!important}
-.app-shell .custom-shipping-builder>summary,
-.app-shell .pricing-math>summary{font-size:13px!important}
+.app-shell .custom-shipping-builder>summary{font-size:13px!important}
 
 /* Step 4 footer: keep every control in its own lane beneath the pricing card. */
 @media(min-width:821px){
@@ -154,44 +143,8 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 
 /* Step 8 listing summary: keep long titles and tag sets readable without
    forcing the image controls far down the card. */
-.app-shell .draft-state{color:#865675!important}
-.app-shell .draft-card-top{
-  grid-template-columns:minmax(320px,48%) minmax(0,1fr)!important;
-  grid-template-rows:auto auto;
-  column-gap:24px!important;
-  row-gap:14px!important;
-}
-.app-shell .draft-card-top>.printify-preview-button,
-.app-shell .draft-card-top>.pending-preview{grid-column:1;grid-row:1/3}
-.app-shell .draft-card-top>div:not(.pending-preview){grid-column:2;grid-row:1;display:flex;min-width:0;flex-direction:column;align-items:flex-start}
-.app-shell .draft-card-top>div:not(.pending-preview)>.edit-draft-button{margin:16px 0 0;align-self:flex-start}
 .app-shell .draft-card h3{max-width:none;overflow-wrap:anywhere;line-height:1.3}
-.app-shell .draft-card-top .tag-row{
-  display:flex;
-  flex-wrap:wrap;
-  gap:6px;
-  max-height:82px;
-  overflow-y:scroll;
-  scrollbar-gutter:stable;
-  scrollbar-width:auto;
-  scrollbar-color:#8d557f rgba(255,255,255,.62);
-  margin-top:12px;
-  padding:10px 24px 10px 10px;
-  border:1px solid rgba(105,62,92,.14);
-  border-radius:12px;
-  background-color:rgba(255,249,253,.54);
-  background-image:linear-gradient(#8d557f,#8d557f),linear-gradient(rgba(141,85,127,.18),rgba(141,85,127,.18));
-  background-position:calc(100% - 7px) 9px,calc(100% - 7px) 7px;
-  background-repeat:no-repeat;
-  background-size:7px 30px,7px calc(100% - 14px);
-}
-.app-shell .draft-card-top .tag-row::-webkit-scrollbar{width:11px}.app-shell .draft-card-top .tag-row::-webkit-scrollbar-track{border-radius:8px;background:rgba(255,255,255,.62)}.app-shell .draft-card-top .tag-row::-webkit-scrollbar-thumb{border:2px solid rgba(255,255,255,.62);border-radius:8px;background:#8d557f}
-.app-shell .draft-card-top .tag-row span{margin:0!important;white-space:nowrap}
 @media(max-width:1100px){
-  .app-shell .draft-card-top{grid-template-columns:1fr!important}
-  .app-shell .draft-card-top>.printify-preview-button,
-  .app-shell .draft-card-top>.pending-preview,
-  .app-shell .draft-card-top>div:not(.pending-preview){grid-column:1;grid-row:auto}
 }
 
 /* Steps 2 and 3 use object icons, never transfer arrows. The product icon is
@@ -221,7 +174,6 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 }
 .app-shell .variant-transfer-note b{font-size:13px!important;line-height:1.4!important}
 .app-shell .variant-transfer-note small{font-size:12px!important;line-height:1.55!important}
-.app-shell .etsy-detail-card label,
 .app-shell .optional-note{font-size:12px!important;line-height:1.45!important}
 .app-shell .step-content small,
 .app-shell .post-draft-workspace small{font-size:11.5px!important;line-height:1.5!important}
@@ -256,7 +208,6 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
   font-size:12.5px!important;
   font-weight:800;
 }
-.app-shell .integrated-mockups .batch-mockup-button,
 .app-shell .integrated-mockups .generate-inline{
   display:block!important;
   width:min(100%,290px)!important;
@@ -264,7 +215,6 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
   padding:10px 15px!important;
   font-size:11.5px!important;
 }
-.app-shell .integrated-mockups .batch-mockup-button{margin:18px 0 0!important}
 .app-shell .integrated-mockups .generate-inline{margin:16px 0 0!important}
 
 /* Resolution warning: compare every affected file without making the seller
@@ -340,16 +290,10 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 }
 
 /* Step 6: titles, tags, and descriptions workspace. */
-.app-shell .finish-mode .finish-guide{position:relative;gap:10px;margin:4px 0 22px}
-.app-shell .finish-mode .finish-guide:before{content:"";position:absolute;left:16.66%;right:16.66%;top:15px;height:1px;background:rgba(91,48,79,.28)}
-.app-shell .finish-mode .finish-guide span{position:relative;z-index:1;justify-content:center;padding:0 14px;border:0;border-radius:0;background:transparent;color:#5f3d59}
-.app-shell .finish-mode .finish-guide b{background:linear-gradient(145deg,#d591c3,#a86ba2);box-shadow:0 4px 14px rgba(130,76,123,.2)}
-.app-shell .batch-title-builder{margin:0 0 18px;padding:22px;border-color:rgba(139,89,137,.25);border-radius:16px;background:linear-gradient(145deg,rgba(252,244,254,.74),rgba(246,229,248,.58));box-shadow:0 14px 35px rgba(74,42,62,.07)}
-.app-shell .batch-title-builder>div>h3{color:#4b283e;font-family:'DM Serif Display',Georgia,serif;font-weight:400}
 .app-shell .title-builder-choice button{border-color:rgba(139,89,137,.2);border-radius:12px;background:rgba(255,255,255,.58);color:#4b283e}
 .app-shell .title-builder-choice button span{color:rgba(74,42,62,.62)}
 .app-shell .title-builder-choice button.active{border-color:#b777b0;background:linear-gradient(145deg,rgba(231,194,231,.6),rgba(244,215,232,.65));box-shadow:0 0 0 2px rgba(183,119,176,.12)}
-.app-shell .batch-title-builder .keyword-workspace,.app-shell .selected-batch-keywords{border-color:rgba(139,89,137,.2)!important;background:rgba(255,255,255,.56)!important}
+.app-shell .selected-batch-keywords{border-color:rgba(139,89,137,.2)!important;background:rgba(255,255,255,.56)!important}
 .app-shell .selected-batch-keywords>div:first-child button{color:#704d75}
 .app-shell .selected-keyword-chips button{border-color:rgba(183,119,176,.3);background:rgba(247,229,244,.72);color:#5b304f}
 .app-shell .batch-title-preview{background:linear-gradient(145deg,#5b304f,#45263c);box-shadow:0 12px 28px rgba(74,42,62,.16)}
@@ -361,13 +305,11 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .app-shell .individual-title-builder{border-color:rgba(139,89,137,.2);border-radius:11px;background:rgba(249,237,248,.55)}
 .app-shell .individual-title-builder>summary{color:#704d75}.app-shell .individual-title-builder[open]>summary{border-color:rgba(139,89,137,.18)}
 .app-shell .individual-description{border-color:rgba(139,89,137,.18);border-radius:11px;background:rgba(255,255,255,.52)}
-.app-shell .quality-pill.pass,.app-shell .quality-pill.check{min-height:76px;justify-content:center;border:1px solid rgba(139,89,137,.2);background:linear-gradient(145deg,rgba(239,223,247,.65),rgba(248,218,236,.58));color:#5b304f}
-.app-shell .quality-pill small{color:rgba(74,42,62,.62)}
 /* D375 - was width:min(250px,100%), which made the forward button a small
    centred pill on the listing step while the same button was a full-width
    bar on steps 1 and 2. Layout may vary; the button may not. */
 .app-shell .finish-mode .listing-editor>.workflow-next{display:flex;width:100%;margin:28px auto 2px;justify-content:center;gap:10px}
-@media(max-width:900px){.app-shell .design-line{grid-template-columns:110px minmax(0,1fr)}.app-shell .listing-preview-button{width:110px}.app-shell .listing-preview-button img{height:110px}.app-shell .quality-pill{grid-column:2}}
+@media(max-width:900px){}
 
 /* Keep the titles workspace clear, reviewable, and deliberately separated. */
 .app-shell .ai-title-disclaimer{
@@ -406,7 +348,6 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .app-shell .individual-title-preview small{font-size:9px;font-weight:850;text-transform:uppercase;letter-spacing:.08em}
 .app-shell .individual-title-preview span{font-size:11px;line-height:1.45}
 .app-shell .apply-manual-title{justify-self:start;min-height:38px;padding:9px 14px;border:0;border-radius:10px;background:linear-gradient(145deg,#5b304f,#45263c);color:#fff;font-size:10.5px;font-weight:800;cursor:pointer}
-.app-shell .item-pricing-section>.pricing-math{margin:18px 0 0}
 .app-shell .finish-mode .batch-limits,
 .app-shell .finish-mode .file-reminder,
 .app-shell .finish-mode .upload-actions,
@@ -417,7 +358,6 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 /* Final palette lock. Legacy factory states may communicate information,
    progress, and success, but they may not reintroduce the old gold/green UI. */
 .app-shell .file-reminder,
-.app-shell .manual-image-note,
 .app-shell .shipping-api-note,
 .app-shell .shipping-builder-intro,
 .app-shell .mockup-placement-lock,
@@ -460,11 +400,9 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
   border-top-color:transparent!important;
   color:#704d75!important;
 }
-.app-shell .design-status-track,
-.app-shell .capacity-track{background:rgba(151,104,153,.15)!important}
+.app-shell .design-status-track{background:rgba(151,104,153,.15)!important}
 .app-shell .design-status-track i,
-.app-shell .design-preparation-status.ready .design-status-track i,
-.app-shell .capacity-track span{background:linear-gradient(90deg,#a765a0,#d992c5,#b6a8ff)!important}
+.app-shell .design-preparation-status.ready .design-status-track i{background:linear-gradient(90deg,#a765a0,#d992c5,#b6a8ff)!important}
 .app-shell .done-mark,
 .app-shell .variant-pricing-head>span,
 .app-shell .recommendation-result,
@@ -488,12 +426,8 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .app-shell .ready-text,
 .app-shell .profit-pass,
 .app-shell .title-build-message,
-.app-shell .padding-note,
 .app-shell .individual-size-guide p{color:#704d75!important}
 .app-shell .variant-pricing.approved{border-color:rgba(139,89,137,.28)!important;background:rgba(252,244,254,.62)!important}
-.app-shell .approved .approve-pricing{background:linear-gradient(145deg,#5b304f,#45263c)!important}
-.app-shell .final-checklist span{border-color:rgba(139,89,137,.22)!important;background:linear-gradient(145deg,rgba(252,244,254,.68),rgba(246,229,248,.54))!important;color:#63435e!important}
-.app-shell .final-checklist>span:nth-child(6),.app-shell .final-checklist>span:nth-child(7){display:none}
 .app-shell .batch-progress{border-color:rgba(139,89,137,.28)!important;background:linear-gradient(145deg,rgba(252,244,254,.74),rgba(246,229,248,.58))!important}
 .app-shell .progress-ring{background:conic-gradient(#b777b0 0 25%,rgba(224,195,241,.62) 25% 100%)!important}
 .app-shell .progress-ring:before{background:#faf1f9!important}
@@ -509,20 +443,13 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .app-shell .field-warning{color:#704d75!important}
 .app-shell .ai-title-button{background:linear-gradient(145deg,#6a3c61,#4b2c47)!important;color:#fff!important}
 .app-shell .item-pricing-section{border-top-color:rgba(137,88,132,.22)!important}
-.app-shell .shipping-profile-select select{border-color:rgba(137,88,132,.36)!important;background:rgba(255,255,255,.72)!important;color:var(--ink)!important}
-.app-shell .shipping-profile-select select:focus{outline-color:rgba(190,126,180,.22)!important}
 .app-shell .summary-list div button,
 .app-shell .fee-profile-summary a,
 .app-shell .individual-description>summary,
 .app-shell .individual-description button{color:#704d75!important}
 .app-shell .batch-description>summary em,
 .app-shell .batch-description>summary:after{color:#704d75!important}
-.app-shell .etsy-detail-card label em{background:rgba(221,191,228,.42)!important;color:#704d75!important}
 .app-shell .individual-size-guide button{border-color:rgba(137,88,132,.28)!important;background:rgba(249,236,247,.7)!important;color:#654362!important}
-.app-shell .edit-draft-button,
-.app-shell .edit-draft-button.opened{border-color:rgba(137,88,132,.28)!important;background:rgba(249,236,247,.72)!important;color:#654362!important}
-.app-shell .edit-draft-button i,
-.app-shell .edit-draft-button.opened i{background:#a765a0!important;box-shadow:0 0 0 3px rgba(167,101,160,.13)!important}
 
 .app-shell .printify-image-picker>.image-pref-actions{
   display:grid!important;
@@ -552,7 +479,6 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .app-shell .printify-image-picker>.image-pref-actions small{color:rgba(74,42,62,.66);font-size:10px!important;line-height:1.45!important}
 @media(max-width:900px){.app-shell .printify-image-picker>.image-pref-actions{grid-template-columns:1fr!important}}
 .app-shell .printify-image-picker>.image-pref-actions+div,.app-shell .printify-image-picker>.image-pref-feedback+div{margin-top:26px!important;padding-top:20px!important;border-top:1px solid rgba(91,48,79,.18)}
-.app-shell .mockup-product-warning{display:none!important}
 
 /* Exact approved shell measurements from goldie-real.html. */
 @media(min-width:821px){
@@ -560,12 +486,11 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
   body:before{background:radial-gradient(38% 34% at 50% 44%,rgba(255,252,255,.11),rgba(255,252,255,0) 70%)}
   .topbar{width:288px;padding:40px 26px 34px;background:linear-gradient(180deg,rgba(255,250,253,.34),rgba(255,246,251,.16));backdrop-filter:blur(18px) saturate(1.1);border-right-color:rgba(255,255,255,.42)}
   .brand-lockup{margin:0 0 46px}.approved-wm{font-size:64px}.approved-sub{margin-top:7px;font-size:11px;font-weight:700}
-  .top-actions{flex:0 0 auto;gap:3px}.top-nav,.nav-group{gap:3px}.top-nav a{min-height:auto;padding:13px 16px;border-radius:14px;font-size:14.5px;font-weight:400}.top-nav a.active{font-weight:600;background:rgba(252,244,254,.76)}
+  .top-actions{flex:0 0 auto;gap:3px}.top-nav{gap:3px}.top-nav a{min-height:auto;padding:13px 16px;border-radius:14px;font-size:14.5px;font-weight:400}.top-nav a.active{font-weight:600;background:rgba(252,244,254,.76)}
   .usage-link{display:none!important}.account-link{position:absolute;right:26px;bottom:25px;z-index:2;min-height:26px;padding:0 10px;border:0;background:transparent!important;color:rgba(74,42,62,.46);font-size:9px}
   .approved-sidebar-footer{margin-top:auto;gap:0}.approved-usage{padding:18px;border-color:rgba(252,244,254,.46);border-radius:18px;background:rgba(252,244,254,.38)}.approved-usage b{font-size:19px}.approved-usage span{margin-top:5px;font-size:12px;font-weight:300}.approved-powered{margin-top:18px;padding-left:2px;gap:7px}.approved-powered>span{font-size:9.5px;font-weight:600;letter-spacing:.2em}.approved-powered>b{font-size:18px}.approved-sidebar-footer>small{margin-top:7px;padding-left:2px;font-size:8.5px;font-weight:600}
   .app-shell{padding-left:288px}.workflow-progress{width:calc(100% - 108px);margin-top:20px;padding-top:18px}.hero{width:calc(100% - 108px)}.workflow-stage{width:calc(100% - 108px);min-height:calc(100vh - 174px);justify-content:center;padding-bottom:76px}
   .workflow-stage>.steps-column,.workflow-stage>.launch-panel{width:min(720px,100%)}.workflow-stage:has(.connect-step.active-panel)>.steps-column{width:524px}
-  .steps-column.connect-column{width:524px!important}.steps-column.setup-column{width:min(720px,100%)!important}
   .step-card,.launch-panel,.post-draft-workspace,.preflight,.publish-confirm{background:linear-gradient(158deg,rgba(255,255,255,.62),rgba(255,252,255,.50)),url('/goldie-background-reference.jpg') center/100% 100% fixed no-repeat;border-color:rgba(255,255,255,.78);border-radius:30px;box-shadow:0 1px 0 rgba(255,255,255,.95) inset,0 -1px 0 rgba(255,255,255,.42) inset,0 30px 64px -34px rgba(74,42,62,.32),0 84px 130px -70px rgba(74,42,62,.28)}
   .step-card>.step-number{width:58px;height:58px;margin:34px 0 -6px;border:1px solid rgba(255,255,255,.8);background:rgba(252,244,254,.7);box-shadow:none}.connect-step>.step-number{width:74px;height:74px;margin-top:44px;border:0;background:conic-gradient(from 200deg,#b6a8ff,#d17cde,#ff8eba,#f7a6c8,#b8b2ff,#b6a8ff);box-shadow:none}.connect-step>.step-number:before{content:"";position:absolute;width:68px;height:68px;border-radius:50%;background:rgba(252,244,254,.96)}.connect-step>.step-number:after{position:relative;z-index:1;width:30px;height:30px}
   .step-content{padding:30px 38px 32px}.connect-step .step-content{padding:30px 54px 38px}.step-heading h2{font-size:36px;line-height:1.05}.connect-step .step-heading h2{font-size:50px;line-height:1.04}.step-copy{max-width:380px;margin:10px auto 24px;font-size:15.5px;font-weight:300;line-height:1.68}
@@ -595,7 +520,6 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 
 /* Preserve the approved sidebar and connection-card styling over legacy theme rules. */
 .app-shell .top-nav{padding:0;border:0;border-radius:0;background:transparent}
-.app-shell .top-nav .resource-nav{margin-left:0;padding-left:0;border-left:0}
 .app-shell .top-nav a.active{border:0;border-radius:14px}
 .app-shell .step-card.done{border-color:rgba(255,255,255,.78)!important}
 .app-shell .connect-step .connection-row button.secondary-action{
@@ -642,21 +566,13 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .blocking-modal>.mini-label{display:block;width:100%;margin-top:12px!important;color:#704d75!important}
 .blocking-modal>h2{text-align:center}
 .title-style-toggle button.active{border-color:#6a3456!important;background:linear-gradient(145deg,#6a3456,#4b283e)!important;color:#fff!important;box-shadow:0 8px 18px rgba(74,42,62,.18)!important}
-.new-recipe.active,.live-dpi.check,.batch-size-guide,.permanent-description,.download-inline-all,.shipping-api-note,.manual-image-note,.preflight-warning,.token-help,.token-shop-warning,.variant-pricing:not(.approved),.keyword-workspace{border-color:rgba(139,89,137,.22)!important;background:linear-gradient(145deg,rgba(252,244,254,.72),rgba(246,229,248,.56))!important;color:var(--ink)!important}
-.shipping-presets button.active,.shipping-profile-select select{border-color:#b777b0!important;background:rgba(255,255,255,.68)!important;color:var(--ink)!important;box-shadow:0 0 0 2px rgba(183,119,176,.12)!important}
-.shipping-api-note b,.token-shop-warning b,.token-shop-warning span,.publish-warning,.batch-description>summary em,.batch-description>summary:after,.individual-description>summary,.individual-description button,.mockup-control-row a{color:#704d75!important}
+.shipping-api-note,.token-help,.token-shop-warning,.variant-pricing:not(.approved),.keyword-workspace{border-color:rgba(139,89,137,.22)!important;background:linear-gradient(145deg,rgba(252,244,254,.72),rgba(246,229,248,.56))!important;color:var(--ink)!important}
+.shipping-api-note b,.token-shop-warning b,.token-shop-warning span,.batch-description>summary em,.batch-description>summary:after,.individual-description>summary,.individual-description button,.mockup-control-row a{color:#704d75!important}
 .upload-notice-progress{color:#704d75!important}
-.folder-icon,.folder-icon:before{background:linear-gradient(145deg,#d591c3,#a86ba2)!important}
-.folder-icon i{border-color:#fff!important}
 .batch-status:not(.complete):not(.processing):not(.needs_attention){background:rgba(220,177,218,.24)!important;color:#67465f!important}
 .batch-status.processing{background:rgba(226,197,245,.48)!important;color:#67465f!important}
-.variant-table th{background:rgba(232,207,236,.56)!important;color:var(--ink)!important}
-.variant-table td{border-color:rgba(139,89,137,.12)!important}
-.shipping-presets button,.download-inline-all{border-color:rgba(139,89,137,.2)!important;background:rgba(255,255,255,.66)!important;color:var(--ink)!important}
-.pricing-controls button,.placement-editor>button,.generate-inline,.batch-size-guide button{border-color:transparent!important;background:linear-gradient(145deg,#6a3456,#4b283e)!important;color:#fff!important;box-shadow:0 10px 22px rgba(74,42,62,.14)!important}
-.pricing-cost-snapshot>div,.custom-shipping,.fee-profile-summary span,.placement-editor,.inline-generated figure,.mockup-enlarge{border-color:rgba(139,89,137,.16)!important;background:rgba(255,255,255,.58)!important;color:var(--ink)!important}
-.product-mockup-scenes label{border-color:transparent!important;background:rgba(246,229,248,.56)!important}
-.product-mockup-scenes label.selected{border-color:#b777b0!important;background:rgba(239,211,237,.7)!important;box-shadow:0 0 0 2px rgba(183,119,176,.1)!important}
+.pricing-controls button,.generate-inline{border-color:transparent!important;background:linear-gradient(145deg,#6a3456,#4b283e)!important;color:#fff!important;box-shadow:0 10px 22px rgba(74,42,62,.14)!important}
+.custom-shipping,.fee-profile-summary span,.inline-generated figure,.mockup-enlarge{border-color:rgba(139,89,137,.16)!important;background:rgba(255,255,255,.58)!important;color:var(--ink)!important}
 .etsy-api-disclosure{max-width:210px;margin:10px 0 0;color:rgba(74,42,62,.58);font-size:8px;font-weight:400;letter-spacing:.01em;line-height:1.4;text-align:left}
 
 /* D307 · This gate fired on WIDTH ALONE, so narrowing a desktop Chrome window
@@ -680,9 +596,7 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 /* Step 8 final lock: one warm-plum action system, clear vertical order, and
    enough separation for every optional image control. */
 .app-shell .post-draft-workspace{padding-bottom:42px}
-.app-shell .batch-size-guide button,
-.app-shell .integrated-mockups .generate-inline,
-.app-shell .integrated-mockups .batch-mockup-button{
+.app-shell .integrated-mockups .generate-inline{
   border:0!important;
   border-radius:14px!important;
   background:linear-gradient(145deg,#6a3456,#4b283e)!important;
@@ -696,54 +610,10 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 
    It is a batch-wide, optional setting - so it should look like a calm sibling of
    the listing cards it applies to, not an alert box competing with them. */
-.app-shell .batch-size-guide{
-  grid-template-columns:minmax(0,1fr) auto;
-  gap:18px;
-  align-items:center;
-  margin:0 0 20px!important;
-  padding:22px 24px!important;
-  border:1px solid rgba(139,89,137,.18)!important;
-  border-radius:20px!important;
-  background:linear-gradient(145deg,rgba(255,250,253,.72),rgba(246,229,248,.54))!important;
-  box-shadow:var(--shadow);
-  backdrop-filter:blur(24px) saturate(1.06);
-}
-.app-shell .batch-size-guide>div{display:grid;gap:5px}
-.app-shell .batch-size-guide .mini-label{color:rgba(101,67,98,.72)}
-.app-shell .batch-size-guide h3{
-  margin:0;
-  font:400 21px/1.2 'DM Serif Display',Georgia,serif;
-  color:var(--ink);
-}
-.app-shell .batch-size-guide span{
-  color:rgba(74,42,62,.66);
-  font-size:12.5px;
-  line-height:1.5;
-}
-.app-shell .batch-size-guide button{
-  border:0!important;
-  border-radius:14px!important;
-  padding:12px 18px!important;
-  font:750 12.5px/1.2 inherit!important;
-  box-shadow:0 14px 28px -20px rgba(74,42,62,.75)!important;
-}
 /* The "attached" confirmation reads as a quiet note, not a second banner. */
-.app-shell .batch-size-guide>p{
-  grid-column:1/-1;
-  margin:2px 0 0!important;
-  padding:10px 12px!important;
-  border-radius:11px!important;
-  background:rgba(233,246,237,.72)!important;
-  color:#2f6146!important;
-  font-size:11.5px!important;
-  font-weight:650!important;
-}
 @media(max-width:700px){
-  .app-shell .batch-size-guide{grid-template-columns:1fr}
-  .app-shell .batch-size-guide button{width:100%}
 }
 .app-shell .draft-card{display:flex;flex-direction:column}
-.app-shell .draft-card>.draft-card-top{order:1}
 .app-shell .listing-photo-download{order:5;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 18px;align-items:center;margin-top:16px;padding:16px 18px;border:1px solid rgba(137,88,132,.22);border-radius:15px;background:rgba(255,249,253,.62)}
 .app-shell .listing-photo-download>div{display:grid;gap:3px}.app-shell .listing-photo-download b{color:#4a2a3e;font-size:14px}.app-shell .listing-photo-download small{color:rgba(74,42,62,.68);font-size:11.5px;line-height:1.45}.app-shell .listing-photo-download button{border:0;border-radius:12px;padding:11px 15px;background:linear-gradient(145deg,#653555,#4a293f);color:#fff;font:750 12px/1.2 inherit;cursor:pointer}.app-shell .listing-photo-download button:disabled{opacity:.65;cursor:wait}.app-shell .listing-photo-download>p{grid-column:1/-1;margin:0;color:#654362;font-size:11px;font-weight:650}
 @media(max-width:700px){.app-shell .listing-photo-download{grid-template-columns:1fr}.app-shell .listing-photo-download button{width:100%}}
@@ -758,7 +628,6 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .app-shell .listing-photo-design-identity small{color:#755f70;font-size:11.5px;line-height:1.45}.app-shell .photo-order-design-identity{margin-bottom:18px}.app-shell .photo-order-name{grid-column:1/-1;display:block;min-width:0;overflow-wrap:anywhere;color:#755f70;font-size:10px;line-height:1.35}.app-shell .photo-order-strip>article>b+.photo-order-name{margin-top:1px}
 @media(max-width:700px){.app-shell .listing-photo-design-identity{grid-template-columns:160px minmax(0,1fr)}.app-shell .listing-photo-design-identity>img{width:160px;height:160px}}
 .app-shell .draft-card>.printify-image-picker{order:2}
-.app-shell .draft-card>.draft-mockups{order:3}
 .app-shell .draft-card>.individual-size-guide{order:4}
 .app-shell .draft-card>.error-help-link{order:5}
 .app-shell .individual-size-guide{
@@ -770,17 +639,6 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
   background:rgba(255,255,255,.58)!important;
   color:#654362!important;
 }
-.app-shell .product-mockup-scenes label{
-  border:2px solid rgba(139,89,137,.14)!important;
-  background:rgba(246,229,248,.56)!important;
-}
-.app-shell .product-mockup-scenes label.selected{
-  border-color:#b777b0!important;
-  background:rgba(239,211,237,.72)!important;
-  box-shadow:0 0 0 3px rgba(183,119,176,.13)!important;
-}
-.app-shell .product-mockup-scenes input{accent-color:#8f5689}
-.app-shell .integrated-mockups .batch-mockup-button,
 .app-shell .integrated-mockups .generate-inline{
   position:static!important;
   width:min(100%,340px);
@@ -792,20 +650,13 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .app-shell .integrated-mockups .generate-inline{margin-top:12px!important}
 .app-shell .integrated-mockups .automatic-reference{clear:both;margin-top:14px}
 .app-shell .mockup-action-sequence{display:grid;gap:12px;margin-top:18px}
-.app-shell .mockup-primary-action,.app-shell .mockup-batch-option{display:grid;grid-template-columns:32px minmax(0,1fr) auto;gap:12px;align-items:center;padding:16px;border:1px solid rgba(139,89,137,.18);border-radius:14px;background:rgba(255,255,255,.58)}
-.app-shell .mockup-primary-action>span,.app-shell .mockup-batch-option>span{width:32px;height:32px;display:grid;place-items:center;border-radius:50%;background:linear-gradient(145deg,#b777b0,#744d75);color:#fff;font-weight:900}
-.app-shell .mockup-primary-action>div,.app-shell .mockup-batch-option>div{display:grid;gap:4px}
-.app-shell .mockup-primary-action b,.app-shell .mockup-batch-option b{color:var(--ink);font-size:13px}
-.app-shell .mockup-primary-action small,.app-shell .mockup-batch-option small{max-width:520px;color:#765f70;font-size:11px;line-height:1.45}
-.app-shell .mockup-primary-action .generate-inline,.app-shell .mockup-batch-option .batch-mockup-button{margin:0!important}
-.app-shell .mockup-batch-option{background:rgba(248,235,247,.48)}
-.app-shell .mockup-batch-option .batch-mockup-button{border:1px solid rgba(112,77,117,.3)!important;background:rgba(255,255,255,.78)!important;color:#5c3656!important;box-shadow:none!important}
-@media(max-width:850px){.app-shell .mockup-primary-action,.app-shell .mockup-batch-option{grid-template-columns:32px 1fr}.app-shell .mockup-primary-action button,.app-shell .mockup-batch-option button{grid-column:1/-1;width:100%!important}}
-.app-shell .post-draft-workspace>.mockup-next{
-  display:flex;
-  width:min(100%,260px);
-  margin:34px auto 16px!important;
-}
+.app-shell .mockup-primary-action{display:grid;grid-template-columns:32px minmax(0,1fr) auto;gap:12px;align-items:center;padding:16px;border:1px solid rgba(139,89,137,.18);border-radius:14px;background:rgba(255,255,255,.58)}
+.app-shell .mockup-primary-action>span{width:32px;height:32px;display:grid;place-items:center;border-radius:50%;background:linear-gradient(145deg,#b777b0,#744d75);color:#fff;font-weight:900}
+.app-shell .mockup-primary-action>div{display:grid;gap:4px}
+.app-shell .mockup-primary-action b{color:var(--ink);font-size:13px}
+.app-shell .mockup-primary-action small{max-width:520px;color:#765f70;font-size:11px;line-height:1.45}
+.app-shell .mockup-primary-action .generate-inline{margin:0!important}
+@media(max-width:850px){.app-shell .mockup-primary-action{grid-template-columns:32px 1fr}.app-shell .mockup-primary-action button{grid-column:1/-1;width:100%!important}}
 .app-shell .publish-live-warning{
   border-color:rgba(139,89,137,.32)!important;
   background:linear-gradient(145deg,rgba(252,244,254,.8),rgba(239,211,237,.66))!important;
@@ -842,8 +693,6 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 @media(min-width:821px){
   .workspace.mockup-workspace{display:contents!important}
   .workspace.mockup-workspace .workflow-stage{display:none!important}
-  .workspace.mockup-workspace+.recommended-listing-photos{grid-row:3;width:calc(100% - 108px);max-width:1130px;margin:0 auto 18px}
-  .workspace.mockup-workspace+.recommended-listing-photos+.post-draft-workspace{grid-row:4;width:calc(100% - 108px);max-width:1130px;margin:0 auto 70px;padding-top:0}
 }
   .app-shell .connect-step .printify-service-group{display:grid;border:1px solid rgba(74,42,62,.13);border-radius:15px;background:rgba(252,244,254,.46);overflow:visible}
   .app-shell .connect-step .printify-service-group>.connection-row{border:0!important;border-radius:15px;background:transparent!important}
@@ -918,15 +767,6 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
   border:1px solid rgba(139,89,137,.22)!important;
   background:rgba(225,194,231,.34)!important;
 }
-.app-shell .variant-table .profit-fee-note{
-  display:block;
-  margin-top:3px;
-  color:rgba(74,42,62,.58)!important;
-  font-size:8px;
-  font-weight:500;
-  line-height:1.25;
-  white-space:normal;
-}
 .app-shell .pricing-section-heading{
   align-items:flex-end;
   margin:0 0 18px;
@@ -965,19 +805,7 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
   box-shadow:0 12px 30px rgba(74,42,62,.06);
 }
 .app-shell .shipping-pricing-section .pricing-controls{margin:0 0 12px!important}
-.app-shell .shipping-profile-select>span{
-  color:#5b304f!important;
-  font-size:11px!important;
-  font-weight:800!important;
-}
-.app-shell .variant-table th{
-  color:#5b304f!important;
-  font-size:10px!important;
-  font-weight:850!important;
-  letter-spacing:.02em;
-}
-.app-shell .custom-shipping-builder>summary,
-.app-shell .pricing-math>summary{
+.app-shell .custom-shipping-builder>summary{
   color:#5b304f!important;
   font-size:12px!important;
   font-weight:800!important;
@@ -1079,11 +907,6 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
    area — this one was simply the wrong picture. */
 
   .app-shell .launch-panel>.launch-step-icon{margin:0 auto 20px}
-  .app-shell .launch-panel>.pricing-icon:after{
-    content:"";
-    background:var(--ink);
-    mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='4' y='3' width='16' height='18' rx='2'/%3E%3Cpath d='M8 7h8M8 12h2m4 0h2M8 16h2m4 0h2'/%3E%3C/svg%3E") center/contain no-repeat;
-  }
   .app-shell .launch-panel>.create-drafts-icon:after{
     content:"";
     background:var(--ink);
@@ -1093,20 +916,13 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 
 /* Final readability guard. Keep these values last so older step-specific
    rules cannot shrink essential pricing and shipping information again. */
-.app-shell .variant-table th{font-size:12px!important;line-height:1.35!important}
-.app-shell .variant-table td{font-size:12px!important;line-height:1.4!important}
-.app-shell .variant-table .profit-fee-note{font-size:10.5px!important;line-height:1.35!important}
 .app-shell .pricing-section-heading p{font-size:12px!important;line-height:1.55!important}
-.app-shell .profit-goal-control label,
-.app-shell .shipping-profile-select>span{font-size:12px!important}
-.app-shell .shipping-profile-select small,
-.app-shell .pricing-math p,
+.app-shell .profit-goal-control label{font-size:12px!important}
 .app-shell .custom-shipping-body small,
 .app-shell .custom-shipping-body label,
 .app-shell .shipping-builder-intro span,
 .app-shell .launch-note{color:rgba(74,42,62,.72)!important;font-size:11.5px!important;line-height:1.5!important}
-.app-shell .custom-shipping-builder>summary,
-.app-shell .pricing-math>summary{font-size:13px!important}
+.app-shell .custom-shipping-builder>summary{font-size:13px!important}
 
 /* Step 4 final lock. Keep this block last. */
 .app-shell .launch-panel{position:relative!important;top:auto!important}
@@ -1158,11 +974,9 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .app-shell .recipe-card .bundle-library>summary em{padding:3px 7px;border-radius:999px;background:rgba(255,255,255,.58);color:#7b526e;font-size:8px;font-style:normal;font-weight:850;letter-spacing:.08em;text-transform:uppercase}
 .app-shell .recipe-card .bundle-library[open]>summary>small:after{transform:rotate(180deg)}
 .app-shell .recipe-card .bundle-library-content{display:grid;gap:14px;padding:16px 2px 2px}
-.app-shell .recipe-card .recipe-tile.selected .recipe-copy em,.app-shell .recipe-card .bundle-tile.selected .bundle-use em{color:#713d62!important;font-weight:900!important}
-.app-shell .recipe-card .recipe-tile.selecting,
-.app-shell .recipe-card .bundle-tile.selecting{border-color:#b96aa6!important;box-shadow:0 0 0 3px rgba(225,145,207,.28),0 14px 34px rgba(91,48,79,.12)!important}
-.app-shell .recipe-card .recipe-tile.selecting .recipe-icon,
-.app-shell .recipe-card .bundle-tile.selecting .bundle-icon{animation:goldie-action-pulse 1s ease-in-out infinite}
+.app-shell .recipe-card .recipe-tile.selected .recipe-copy em{color:#713d62!important;font-weight:900!important}
+.app-shell .recipe-card .recipe-tile.selecting{border-color:#b96aa6!important;box-shadow:0 0 0 3px rgba(225,145,207,.28),0 14px 34px rgba(91,48,79,.12)!important}
+.app-shell .recipe-card .recipe-tile.selecting .recipe-icon{animation:goldie-action-pulse 1s ease-in-out infinite}
 .app-shell button[aria-busy="true"]{cursor:wait!important}
 .app-shell button[aria-busy="true"]::after{content:"";display:inline-block;width:.85em;height:.85em;margin-left:.55em;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;vertical-align:-.1em;animation:goldie-action-spin .72s linear infinite}
 @keyframes goldie-action-spin{to{transform:rotate(360deg)}}
@@ -1170,17 +984,9 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 @media(max-width:800px){.app-shell .recipe-card .bundle-library>summary{align-items:flex-start;flex-direction:column;gap:6px}.app-shell .recipe-card .bundle-library>summary>small{width:100%;justify-content:space-between}}
 
 /* Finish workspace: dense rows with one in-place editor instead of stacked cards. */
-.app-shell .listing-editor .design-table,.app-shell .etsy-detail-list,.app-shell .draft-card-grid{display:grid!important;gap:8px!important;margin-top:18px!important}
-.app-shell .etsy-detail-card{display:grid!important;grid-template-columns:56px minmax(0,1fr)!important;gap:14px!important;align-items:start!important;min-height:78px!important;padding:10px 12px!important;border:1px solid rgba(91,48,79,.14)!important;border-radius:12px!important;background:rgba(255,255,255,.45)!important;box-shadow:none!important}
-.app-shell .etsy-detail-card>img{width:56px!important;height:56px!important;border-radius:9px!important;object-fit:cover!important}
 .app-shell .etsy-details-editor>summary{min-height:42px!important;padding:8px 10px!important}
-.app-shell .post-draft-workspace .draft-card-grid{grid-template-columns:1fr!important}
 .app-shell .post-draft-workspace .draft-card{display:grid!important;grid-template-columns:1fr!important;gap:10px!important;padding:10px 12px!important;border-radius:12px!important;box-shadow:none!important}
-.app-shell .post-draft-workspace .draft-card-top{position:static!important;display:grid!important;grid-template-columns:72px minmax(0,1fr)!important;gap:12px!important;align-items:start!important;min-height:72px!important}
-.app-shell .post-draft-workspace .draft-card-top .printify-preview-button{width:72px!important;height:72px!important;min-height:72px!important;padding:0!important;overflow:hidden!important;border-radius:9px!important}
-.app-shell .post-draft-workspace .draft-card-top .printify-preview-button img{width:100%!important;height:100%!important;object-fit:cover!important}
-.app-shell .post-draft-workspace .draft-card-top .printify-preview-button span{display:none!important}
-.app-shell .post-draft-workspace .draft-card>.printify-image-picker,.app-shell .post-draft-workspace .draft-card>.draft-mockups,.app-shell .post-draft-workspace .draft-card>.individual-size-guide,.app-shell .post-draft-workspace .draft-card>.listing-photo-download,.app-shell .post-draft-workspace .draft-card>.listing-photo-order{grid-column:1!important}
+.app-shell .post-draft-workspace .draft-card>.printify-image-picker,.app-shell .post-draft-workspace .draft-card>.individual-size-guide,.app-shell .post-draft-workspace .draft-card>.listing-photo-download,.app-shell .post-draft-workspace .draft-card>.listing-photo-order{grid-column:1!important}
 .app-shell .final-listing-grid{display:grid!important;gap:6px!important}
 .app-shell .final-listing-card{display:grid!important;grid-template-columns:28px 56px minmax(0,1fr) auto!important;min-height:72px!important;padding:8px 10px!important;border-radius:10px!important;box-shadow:none!important}
 .app-shell .final-listing-card>img{width:56px!important;height:56px!important;object-fit:cover!important;border-radius:8px!important}
@@ -1196,24 +1002,16 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
    app, so the listing rows join the attention colour already in use. */
 .app-shell .final-listing-card.review-needed{border-color:rgba(157,80,130,.32)!important;background:#fdf2f8!important}
 .app-shell .final-listing-card .content-review{color:#b53838!important;font-size:10px!important;font-weight:850!important}
-.app-shell .final-checklist .content-review{border-color:rgba(217,79,79,.3)!important;background:rgba(217,79,79,.1)!important;color:#b53838!important}
-@media(max-width:1100px){.app-shell .listing-editor .design-line{grid-template-columns:56px minmax(0,1fr)!important}.app-shell .listing-editor .quality-pill{display:none!important}.app-shell .post-draft-workspace .draft-card>*{grid-column:1!important}}
+@media(max-width:1100px){.app-shell .post-draft-workspace .draft-card>*{grid-column:1!important}}
 
 /* Audit pass 2: make the returning workflow honest and action-led. */
 .app-shell .disconnect-link{min-height:0!important;padding:2px 0!important;border:0!important;background:transparent!important;box-shadow:none!important;color:#7b526e!important;font-size:10px!important;text-decoration:none!important}
 .app-shell .disconnect-link:hover{color:#4a2a3e!important;text-decoration:underline!important}
 .app-shell .connect-step .connection-row>button.disconnect-link{width:auto!important;min-width:0!important;max-width:none!important;background:transparent!important;color:#7b526e!important}
-.app-shell .saved-product-batch-page .batch-page-intro .mini-label,.app-shell .saved-product-batch-page .product-color-selector .mini-label,.app-shell .saved-product-batch-page .mockup-default-block .mini-label{display:none!important}
+.app-shell .saved-product-batch-page .product-color-selector .mini-label,.app-shell .saved-product-batch-page .mockup-default-block .mini-label{display:none!important}
 .app-shell .saved-product-batch-page .everything-else>summary small{display:none!important}
 
 /* D2: once a product is selected, show the artwork before batch-specific choices. */
-.app-shell .steps-column.setup-column{display:flex!important;flex-direction:column!important}
-.app-shell .steps-column.setup-column>.product-step,
-.app-shell .steps-column.setup-column .saved-product-batch-page{display:contents!important}
-.app-shell .steps-column.setup-column>.recipe-card{order:10}
-.app-shell .steps-column.setup-column>.template-proof,
-.app-shell .steps-column.setup-column>.selected-summary-block,
-.app-shell .steps-column.setup-column>.recipe-error{order:11;width:min(980px,calc(100% - 32px));margin-inline:auto}
 /* D369 · The order values above only mean anything for direct children of the
    column. .template-proof now lives three levels deep inside the recipe card,
    so the old descendant selector was still stamping order:11 on it and pushing
@@ -1222,55 +1020,20 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .app-shell .selected-summary-block{display:grid;width:min(980px,calc(100% - 32px));margin-inline:auto}
 .app-shell .selected-summary-block>.template-proof{order:0;width:auto;margin-inline:0}
 .app-shell .selected-summary-block>.change-bundle-link{order:1}
-.app-shell .steps-column.setup-column>.designs-step{order:20}
-.app-shell .steps-column.setup-column>.batch-preferences-after-designs{order:30;display:grid;gap:14px;width:100%}
-.app-shell .steps-column.setup-column .batch-page-intro{width:min(980px,calc(100% - 32px));margin:8px auto 0}
-.app-shell .steps-column.setup-column>.batch-page-intro{order:25}
-.app-shell .steps-column.setup-column .color-default-block{width:min(980px,calc(100% - 32px));margin-inline:auto}
-.app-shell .steps-column.setup-column>.color-default-block{order:30}
-.app-shell .steps-column.setup-column>.bundle-color-selectors{order:31}
-.app-shell .steps-column.setup-column .mockup-default-block{width:min(980px,calc(100% - 32px));margin-inline:auto}
-.app-shell .steps-column.setup-column>.mockup-default-block{order:40}
-.app-shell .steps-column.setup-column .fee-profile-product-summary{width:min(980px,calc(100% - 32px));margin-inline:auto}
-.app-shell .steps-column.setup-column>.fee-profile-product-summary{order:45}
-.app-shell .steps-column.setup-column .everything-else{width:min(980px,calc(100% - 32px));margin-inline:auto}
-.app-shell .steps-column.setup-column>.everything-else{order:50}
-.app-shell .steps-column.setup-column>.saved-settings-summary{order:51}
-.app-shell .steps-column.setup-column>.keyword-bank-required{order:52}
-.app-shell .steps-column.setup-column>.setup-forward{order:53}
-.app-shell .saved-settings-summary{display:flex!important;flex-wrap:wrap!important;gap:7px!important;margin:12px 0!important}
-.app-shell .saved-settings-summary span{padding:7px 10px!important;border:1px solid rgba(91,48,79,.14)!important;border-radius:999px!important;background:rgba(255,255,255,.5)!important;color:#5b304f!important;font-size:10px!important;font-weight:750!important}
-.app-shell .keyword-bank-required{display:grid!important;gap:3px!important;width:100%!important;margin:12px 0!important;padding:14px 16px!important;border:1px solid rgba(157,80,130,.32)!important;border-radius:12px!important;background:#fff1f8!important;color:#4f2944!important;text-align:left!important;box-shadow:none!important}
-.app-shell .keyword-bank-required b{font-size:12px!important}.app-shell .keyword-bank-required span{font-size:10px!important;font-weight:600!important}
 .app-shell .setup-forward{width:100%!important;margin:18px 0 6px!important}
 
 /* D125/D123 · A saved product owns its setup and exact mockup scenes. The
    legacy framing and whole-set picker remain mounted only to preserve batch
    state while older saved batches restore; the operative controls are the
    product-scoped controls below. */
-.app-shell .saved-product-batch-page>.batch-page-intro,
 .app-shell .saved-product-batch-page>.mockup-default-block{display:none!important}
-.app-shell .product-setup-framing{order:1;width:100%;padding:20px 22px;border:1px solid rgba(87,48,78,.16);border-radius:20px;background:rgba(255,255,255,.56)}
-.app-shell .product-setup-framing p{margin:0 0 5px}.app-shell .product-setup-framing span{display:block;color:#674c61}
-.app-shell .product-setup-framing.first-product-setup{border-color:#8e5d85;background:#fff8fd}
 .app-shell .saved-product-batch-page{order:2}.app-shell .saved-product-batch-page+.mockup-default-block{order:3;width:100%}
-.app-shell .product-mockup-scenes{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:12px;width:100%;margin:16px 0 10px}
-.app-shell .product-mockup-scenes label{position:relative;display:grid;gap:7px;padding:8px;border:2px solid transparent;border-radius:14px;background:rgba(255,255,255,.66);cursor:pointer}
-.app-shell .product-mockup-scenes label.selected{border-color:#71416a;background:#fff}
-.app-shell .product-mockup-scenes input{position:absolute;top:12px;left:12px;width:20px;height:20px;accent-color:#71416a;z-index:1}
-.app-shell .product-mockup-scenes img{width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:9px}.app-shell .product-mockup-scenes span{font-weight:700;color:#4f3048}
-.app-shell .save-initial-product-setup{order:51;width:100%;min-height:58px;border:0;border-radius:16px;background:#603653;color:#fff;font-weight:800;font-size:16px;cursor:pointer}
-.app-shell .save-initial-product-setup:disabled{background:#ddd2df;color:#563b50;cursor:not-allowed}
 .app-shell .recipe-card .add-product-button{border:1px solid rgba(91,48,79,.18)!important;background:rgba(255,255,255,.58)!important;color:#5b304f!important;box-shadow:none!important}
 .app-shell .recipe-card .recipe-library-head .add-product-button{border:0!important;background:transparent!important;color:#704d75!important;box-shadow:none!important;text-decoration:underline!important}
 .app-shell .recipe-card .recipe-library-head .add-product-button:hover{background:transparent!important;color:#4a2a3e!important;transform:none!important}
 .mockupFactory.managementOnly .newSetButton{border:0!important;background:transparent!important;color:#704d75!important;box-shadow:none!important;text-decoration:underline!important}
 .app-shell .recipe-card .recipe-use em{display:inline-block!important;justify-self:start!important;width:auto!important;max-width:max-content!important;margin-top:4px!important;padding:5px 9px!important;border-radius:999px!important;background:#673452!important;color:#fff!important;font-weight:850!important}
 .app-shell .recipe-card .delete-recipe{width:auto!important;min-width:48px!important;padding:4px 7px!important;font-size:9px!important;font-weight:800}
-.app-shell .everything-else-body .saved-setting-list>span:first-child{display:none!important}
-.app-shell .everything-else-body .saved-setting-list>span:last-child{padding:4px 0!important;border:0!important;background:transparent!important;box-shadow:none!important}
-.app-shell .fee-profile-product-summary{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 18px;padding:13px 16px;border:1px solid rgba(91,48,79,.14);border-radius:12px;background:rgba(255,255,255,.4);color:#5b304f;text-decoration:none}
-.app-shell .fee-profile-product-summary b{font-size:11px}.app-shell .fee-profile-product-summary span{font-size:9px}.app-shell .fee-profile-product-summary em{grid-column:2;grid-row:1/3;align-self:center;font-size:9px;font-style:normal;font-weight:850}
 .app-shell .pricing-approval-button{width:100%!important;margin-top:16px!important;padding:14px 18px!important;border:1px solid rgba(91,48,79,.18)!important;border-radius:11px!important;background:#663650!important;color:#fff!important;font-weight:850!important}
 .app-shell .pricing-approval-button.approved{background:#e8f5eb!important;color:#27663f!important}
 .app-shell .pricing-approval-button:disabled{opacity:.5!important;cursor:not-allowed!important}
@@ -1278,34 +1041,27 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 
 /* Saved-product and bundle cards: content and utility actions occupy separate
    rows so long names can never sit underneath Edit or Delete. */
-.app-shell .recipe-card .recipe-tile,
-.app-shell .recipe-card .bundle-tile{display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;align-items:center!important}
-.app-shell .recipe-card .recipe-use,
-.app-shell .recipe-card .bundle-use{grid-column:1/-1!important;min-width:0!important;padding:16px!important;border-bottom:1px solid rgba(91,48,79,.1)!important}
+.app-shell .recipe-card .recipe-tile{display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;align-items:center!important}
+.app-shell .recipe-card .recipe-use{grid-column:1/-1!important;min-width:0!important;padding:16px!important;border-bottom:1px solid rgba(91,48,79,.1)!important}
 .app-shell .recipe-card .recipe-use{grid-template-columns:44px minmax(0,1fr)!important}
-.app-shell .recipe-card .recipe-copy,
-.app-shell .recipe-card .bundle-use>span:last-child{min-width:0!important}
-.app-shell .recipe-card .recipe-copy b,
-.app-shell .recipe-card .bundle-use b{overflow-wrap:anywhere!important;word-break:normal!important}
+.app-shell .recipe-card .recipe-copy{min-width:0!important}
+.app-shell .recipe-card .recipe-copy b{overflow-wrap:anywhere!important;word-break:normal!important}
 .app-shell .recipe-card .edit-recipe{position:static!important;justify-self:end!important;margin:7px 2px 8px 0!important;padding:6px 9px!important;white-space:nowrap!important}
 .app-shell .recipe-card .delete-recipe{position:static!important;justify-self:end!important;margin:7px 9px 8px 0!important;width:auto!important;min-width:28px!important;height:28px!important;padding:0 7px!important}
 
 /* Collision safeguards shared by every workflow step. */
 .app-shell .step-heading>div,
 .app-shell .variant-pricing-head>div,
-.app-shell .editor-heading>div,
 .app-shell .post-draft-heading>div,
 .app-shell .summary-list b{min-width:0!important}
 .app-shell .step-heading h2,
 .app-shell .variant-pricing-head h3,
-.app-shell .editor-heading b,
 .app-shell .post-draft-heading h2,
 .app-shell .summary-list b{overflow-wrap:anywhere!important}
 .app-shell button{max-width:100%}
 @media(max-width:980px){
   .app-shell .step-heading,
   .app-shell .variant-pricing-head,
-  .app-shell .editor-heading,
   .app-shell .post-draft-heading{flex-wrap:wrap!important}
 }
 .approved-usage-track{height:7px;margin-top:8px;overflow:hidden;border-radius:99px;background:rgba(74,42,62,.12)}
@@ -1469,7 +1225,7 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .app-shell .price-group-row input{max-width:100%}
 .app-shell .workflow-back,.app-shell .workflow-back *{text-decoration:none!important}
 .app-shell .workflow-panel.active-panel,.app-shell .launch-panel.active-panel{border-color:rgba(153,79,130,.7);box-shadow:0 0 0 3px rgba(255,255,255,.42),0 18px 50px rgba(91,48,79,.12)}
-.app-shell .item-pricing-section:focus-within,.app-shell .shipping-pricing-section:focus-within,.app-shell .batch-title-builder:focus-within,.app-shell .batch-description:focus-within,.app-shell .etsy-detail-card:focus-within,.app-shell .draft-card:focus-within{border-color:rgba(153,79,130,.72);background:rgba(255,255,255,.72);box-shadow:0 0 0 4px rgba(192,125,177,.12)}
+.app-shell .item-pricing-section:focus-within,.app-shell .shipping-pricing-section:focus-within,.app-shell .batch-description:focus-within,.app-shell .draft-card:focus-within{border-color:rgba(153,79,130,.72);background:rgba(255,255,255,.72);box-shadow:0 0 0 4px rgba(192,125,177,.12)}
 @media(max-width:760px){.app-shell .pricing-heading-actions{align-items:stretch;flex-direction:column}.app-shell .whole-pricing-toggle{justify-content:center}.app-shell .price-group-row{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:480px){.app-shell .price-group-row{grid-template-columns:1fr}}
 /* Step 8 image-workflow verification pass. */
@@ -1478,15 +1234,13 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .app-shell .post-draft-workspace>.post-draft-heading>div{grid-column:1;width:100%!important;max-width:100%!important;margin-inline:auto!important;justify-self:stretch!important;justify-items:center!important;text-align:center!important}
 .app-shell .post-draft-heading h2{width:100%;max-width:900px;margin-inline:auto;text-align:center!important}
 .app-shell .post-draft-heading p{max-width:760px;margin-inline:auto;text-align:center!important}
-.app-shell .post-draft-workspace>.post-draft-heading>.open-all-button{grid-column:1;justify-self:center!important;align-self:center!important;margin-inline:auto!important}
-.app-shell .draft-card>.draft-card-top{order:1}.app-shell .draft-card>.printify-image-picker{order:2}.app-shell .draft-card>.draft-mockups{order:3}.app-shell .draft-card>.individual-size-guide{order:4}.app-shell .draft-card>.listing-photo-download{order:5}.app-shell .draft-card>.listing-photo-order{order:6}.app-shell .draft-card>.error-help-link{order:7}
-.app-shell .edit-draft-button{display:flex!important;align-items:center!important;gap:9px!important;text-align:left!important;font-size:12.5px!important}.app-shell .edit-draft-button>span{display:grid;gap:2px}.app-shell .edit-draft-button>span>small{color:rgba(74,42,62,.66)!important;font-size:10.5px!important;font-weight:600!important;line-height:1.35!important}
+.app-shell .post-draft-workspace>.post-draft-heading>.open-all-button{grid-column:1;justify-self:center!important;align-self:center!important;margin-inline:auto!important}.app-shell .draft-card>.printify-image-picker{order:2}.app-shell .draft-card>.individual-size-guide{order:4}.app-shell .draft-card>.listing-photo-download{order:5}.app-shell .draft-card>.listing-photo-order{order:6}.app-shell .draft-card>.error-help-link{order:7}
 .app-shell .printify-image-grid .printify-image-option{position:relative;overflow:hidden;border:2px solid transparent;border-radius:12px;padding:4px;background:rgba(255,249,253,.78)}.app-shell .printify-image-grid .printify-image-option.selected{border-color:#bd73ae;box-shadow:0 0 0 3px rgba(189,115,174,.12)}.app-shell .printify-photo-selector{position:absolute!important;z-index:3!important;top:8px!important;left:8px!important;display:grid!important;width:20px!important;height:20px!important;place-items:center!important;padding:0!important;border:2px solid #7d496f!important;border-radius:5px!important;background:rgba(255,255,255,.96)!important;box-shadow:0 2px 7px rgba(45,20,38,.18)!important;cursor:pointer!important}.app-shell .printify-photo-selector:has(input:checked){background:#7d496f!important}.app-shell .printify-photo-selector input{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;margin:0!important;opacity:0!important;cursor:pointer!important}.app-shell .printify-photo-selector>span[aria-hidden]{color:#fff;font-size:12px;font-weight:900;line-height:1}.app-shell .printify-photo-expand{display:block;width:100%;padding:0;border:0;background:transparent;cursor:zoom-in}.app-shell .printify-photo-expand img{display:block;width:100%;height:100%;object-fit:cover}
 .app-shell .image-pref-actions button{position:relative}.app-shell .image-pref-actions button.confirmed{border-color:#68a67b!important;background:#eef9f1!important;color:#285f3a!important;box-shadow:0 0 0 3px rgba(71,145,91,.1)!important}.app-shell .image-pref-actions button.confirmed small{color:#3e704d!important}.app-shell .action-check{position:absolute;right:11px;top:10px;display:grid;width:21px;height:21px;place-items:center;border-radius:50%;background:#3d8b55;color:#fff;font-size:11px;font-weight:900}.app-shell .image-pref-feedback{margin:10px 0 0;padding:9px 12px;border-radius:10px;background:rgba(232,247,236,.9);color:#306342!important;font-size:10.5px!important;font-weight:750!important;text-align:center}
 .printify-photo-lightbox{position:fixed;inset:0;z-index:1200;display:grid;place-items:center;padding:40px;background:rgba(43,20,36,.38);backdrop-filter:blur(3px);cursor:zoom-out}.printify-photo-lightbox>button{position:fixed;right:24px;top:20px;z-index:2;width:42px;height:42px;border:1px solid rgba(255,255,255,.72);border-radius:50%;background:rgba(255,255,255,.94);box-shadow:0 8px 24px rgba(42,18,34,.2);color:#522d48;font-size:25px;cursor:pointer}.printify-photo-lightbox>img{display:block;width:auto;height:auto;min-width:min(640px,82vw);max-width:92vw;max-height:90vh;border-radius:14px;background:transparent;box-shadow:0 24px 70px rgba(30,12,24,.38);object-fit:contain;cursor:default}@media(max-width:720px){.printify-photo-lightbox{padding:24px 14px}.printify-photo-lightbox>img{min-width:0;width:94vw;max-height:86vh}.printify-photo-lightbox>button{right:12px;top:12px}}
 .missing-photo-backdrop{z-index:1400!important;overflow:auto!important;padding:32px 18px!important}.missing-photo-modal{position:relative!important;width:min(760px,94vw)!important;max-height:none!important;margin:auto!important}.missing-photo-close{position:absolute;right:18px;top:14px;width:38px;height:38px;border:0;border-radius:50%;background:rgba(91,48,79,.1);color:#522d48;font-size:25px;cursor:pointer}.missing-photo-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:16px;margin-top:20px}.missing-photo-list article{display:grid;gap:10px;padding:12px;border:1px solid rgba(91,48,79,.16);border-radius:14px;background:#fff}.missing-photo-list img,.missing-photo-placeholder{width:100%;aspect-ratio:1/1;object-fit:contain;border-radius:10px;background:#f4edf5}.missing-photo-list button{min-height:44px;border:0;border-radius:10px;background:#5b304f;color:#fff;font-weight:850;cursor:pointer}
 .app-shell .individual-size-guide{min-height:92px!important;margin-top:18px!important;padding:18px 20px!important;border-radius:15px!important}.app-shell .individual-size-guide b{font-size:14px!important;line-height:1.3!important}.app-shell .individual-size-guide small{font-size:11px!important;line-height:1.45!important}.app-shell .individual-size-guide button{min-height:42px;padding:11px 15px!important;font-size:11px!important;font-weight:800!important}
-.app-shell .listing-photo-order{margin-top:20px;padding:22px;border:2px solid rgba(137,88,132,.25);border-radius:17px;background:rgba(255,250,254,.72)}.app-shell .photo-order-heading b{font:400 27px/1.15 'DM Serif Display',Georgia,serif;color:#4a2a3e}.app-shell .photo-order-heading span{margin-top:5px;color:#755f70;font-size:11.5px;line-height:1.5}.app-shell .photo-order-strip article{transition:border-color .15s ease,box-shadow .15s ease,transform .15s ease}.app-shell .photo-order-strip article.dragging{border-color:#9e5a91;box-shadow:0 0 0 4px rgba(183,119,176,.17),0 12px 25px rgba(74,42,62,.12);transform:scale(1.02);opacity:1}.app-shell .photo-order-buttons{display:flex;grid-column:1/-1;gap:6px;margin-top:5px}.app-shell .photo-order-buttons button{display:grid;width:30px;height:27px;place-items:center;border:1px solid rgba(91,48,79,.2);border-radius:8px;background:rgba(255,255,255,.8);color:#653955;font-size:12px;cursor:pointer}.app-shell .photo-order-buttons button:disabled{opacity:.32;cursor:default}.app-shell .image-step-blocker{font-size:12px!important}
+.app-shell .listing-photo-order{margin-top:20px;padding:22px;border:2px solid rgba(137,88,132,.25);border-radius:17px;background:rgba(255,250,254,.72)}.app-shell .photo-order-strip article{transition:border-color .15s ease,box-shadow .15s ease,transform .15s ease}.app-shell .photo-order-strip article.dragging{border-color:#9e5a91;box-shadow:0 0 0 4px rgba(183,119,176,.17),0 12px 25px rgba(74,42,62,.12);transform:scale(1.02);opacity:1}.app-shell .photo-order-buttons{display:flex;grid-column:1/-1;gap:6px;margin-top:5px}.app-shell .photo-order-buttons button{display:grid;width:30px;height:27px;place-items:center;border:1px solid rgba(91,48,79,.2);border-radius:8px;background:rgba(255,255,255,.8);color:#653955;font-size:12px;cursor:pointer}.app-shell .photo-order-buttons button:disabled{opacity:.32;cursor:default}.app-shell .image-step-blocker{font-size:12px!important}
 
 .app-shell .personalization-switch>span{
   position:absolute;
@@ -1510,36 +1264,24 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 
 /* PASS 1 defect copy/contrast cleanup: D3, D6-D9, D11, D24-D25, D38,
    D43-D44, D48, D61-D62, D66, D68-D69 and D72. */
-.app-shell .recipe-card .recipe-tile.selected .recipe-use em,
-.app-shell .recipe-card .bundle-tile.selected em{color:#fff!important;background:#673452!important}
+.app-shell .recipe-card .recipe-tile.selected .recipe-use em{color:#fff!important;background:#673452!important}
 .app-shell .recipe-card .edit-recipe{font-size:10px!important;font-weight:800}
-.app-shell .mockup-set-preview figcaption{display:none!important}
-.app-shell .mockup-default-block .batch-default-heading>b{display:none!important}
 .app-shell .everything-else>summary span:after{content:"Usually no changes needed";display:block;margin-top:3px;color:#80677a;font-size:9px;font-weight:600}
 .app-shell .variant-pricing :is(.item-pricing-section,.shipping-pricing-section) .heading-with-help>button{display:none!important}
 .app-shell .setup-forward:disabled{background:#ddd2df!important;color:#563b50!important;opacity:1!important;text-shadow:none!important}
-.app-shell .batch-title-builder>.mini-label,.app-shell .batch-title-builder>div>.mini-label{display:none!important}
 .app-shell .post-draft-heading .open-all-button{border:0!important;background:transparent!important;color:#68445f!important;box-shadow:none!important;text-decoration:underline!important;text-underline-offset:3px}
-.app-shell .batch-size-guide>button{border:1px solid rgba(91,48,79,.2)!important;background:rgba(255,255,255,.7)!important;color:#5b304f!important;box-shadow:none!important}
 .app-shell .draft-card .tag-row{display:flex!important;max-width:100%!important;flex-wrap:wrap!important}
 .app-shell .draft-card .tag-row span{max-width:100%!important;overflow-wrap:anywhere!important}
-.app-shell .batch-size-guide .mini-label,.app-shell .final-listing-review-heading .mini-label{display:none!important}
+.app-shell .final-listing-review-heading .mini-label{display:none!important}
 .app-shell .summary-list>div:has(>span:first-child){min-width:0}
 /* D418 - This hid the page eyebrow on Mockup Library, so it was the only
    management page with no eyebrow above its title while Batch History, Keyword
    Banks and Usage all had one. The duplicate inside the library head stays
    hidden; the page eyebrow comes back. */
 .managementOnly .managementLibraryHead .mockupEyebrow{display:none!important}
-.app-shell .draft-mockups>summary{font-size:16px!important;font-weight:850}
 
 /* PASS 2A layout: D13, D14 and D50. */
 .app-shell .everything-else{border-radius:18px 18px 0 0!important}
-.app-shell .everything-else-body>section:nth-of-type(3){grid-template-columns:minmax(0,1fr)!important;align-items:stretch!important}
-.app-shell .everything-else-body>section:nth-of-type(3)>select{width:100%!important;max-width:none!important}
-.app-shell .everything-else-body>section:nth-of-type(3)>.save-product-default{justify-self:start!important}
-.app-shell .description-default-editor textarea{min-height:190px!important;max-height:420px!important;overflow-y:scroll!important;resize:vertical!important;scrollbar-gutter:stable!important;line-height:1.55!important}
-.app-shell .saved-settings-summary{width:min(980px,calc(100% - 32px))!important;margin:-15px auto 12px!important;padding:0 21px 17px!important;border:1px solid rgba(91,48,79,.18)!important;border-top:0!important;border-radius:0 0 18px 18px!important;background:rgba(255,255,255,.62)!important;box-shadow:0 12px 35px rgba(91,48,79,.07)!important}
-.app-shell .saved-settings-summary span{background:#fff!important}
 
 /* PASS 2C remaining layout defects: D31 and D70. */
 .app-shell .design-upload-review article{grid-template-columns:76px minmax(0,1fr) auto!important;min-height:94px!important}
@@ -1626,7 +1368,6 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 /* Seller-authored and seller-selected names must remain readable wherever
  * they are reviewed. These were the remaining instances of the D60/D94/D96/
  * D98 single-line clipping pattern. Compact controls may grow vertically. */
-.app-shell .draft-row b,
 .app-shell .final-design-group>summary span,
 .app-shell[data-product-selected="true"] .post-draft-heading>div:before,
 .app-shell .connect-step .etsy-shop-name{
@@ -1723,19 +1464,6 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
  * Same specificity, stated after, so the pair reads as one action and one way
  * out of it.
  * ========================================================================== */
-.app-shell .batch-size-guide .size-guide-actions{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
-.app-shell .batch-size-guide button.size-guide-remove{
-  background:transparent!important;
-  border:1px solid rgba(91,48,79,.24)!important;
-  border-color:rgba(91,48,79,.24)!important;
-  color:#6b4a60!important;
-  box-shadow:none!important;
-  font-weight:600;
-}
-.app-shell .batch-size-guide button.size-guide-remove:hover{
-  border-color:rgba(158,39,54,.45)!important;
-  color:#9e2736!important;
-}
 .app-shell .size-guide-row-panel{display:grid;gap:12px;padding:12px 14px 6px}.app-shell .size-guide-row-panel>p{margin:0;color:rgba(74,42,62,.72);font-size:.82rem;line-height:1.55}.app-shell .size-guide-row-actions{display:flex;gap:9px;align-items:center;flex-wrap:wrap}.app-shell .size-guide-row-actions .secondary-action{width:auto;min-height:38px;margin:0;padding:9px 14px;border:1px solid rgba(91,48,79,.2);border-radius:10px;background:rgba(255,255,255,.72);color:#5b304f;box-shadow:none;font:800 .76rem/1.2 "Manrope",system-ui,sans-serif}.app-shell .size-guide-row-actions .size-guide-remove{color:#963d3d;border-color:#d8aaa7}.app-shell .size-guide-row-panel>p[role="status"]{color:#2f704b;font-size:.74rem;font-weight:750}
 .app-shell .preflight-timing{margin:0 0 12px;padding:10px 12px;border-radius:10px;background:rgba(139,89,137,.08);color:#684c61;font-size:.78rem;line-height:1.5}
 

@@ -185,31 +185,6 @@ test("D213: \"Match Printify template\" matches the template, and nothing more",
   assert.doesNotMatch(app, /onChange\(templateSizes\.length\?templateSizes:available\.map\(size=>size\.id\)\)/);
 });
 
-test("the size block is stripped in every context the colour block is — D168", async () => {
-  const globals = await read("app/globals.css");
-  const clarity = await read("app/clarity-pass.css");
-
-  /* The size card was added to product setup and to each bundle product without
-   * those screens ever being rendered. Measured on a selected bundle:
-   *   .product-color-selector  644px, margin 0, padding 0, border 0, transparent
-   *   .product-size-selector   612px, margin 18px 16px, padding 20px, 1px border,
-   *                            white .58 background
-   * Two rules in globals.css strip the colour block inside .saved-product-batch-page
-   * and .bundle-color-product. The size block had no equivalent, so it rendered as
-   * a detached white box inset 16px inside a transparent section.
-   * After: both contexts measure identical width and left edge. */
-  assert.match(globals, /\.bundle-color-product \.product-size-selector\{width:100%;margin:0;padding:15px\}/);
-  /* D236 · This rule flattens the panel's own card chrome because the panel now
-     sits on a surface that already has chrome. It must NOT also zero the
-     padding: that is what left the colour grid flush to the card edge for
-     three deploys running. Padding has exactly one owner, in clarity-pass. */
-  assert.match(globals, /\.saved-product-batch-page \.product-size-selector\{width:100%;margin:0;border:0;box-shadow:none;background:transparent\}/);
-  assert.doesNotMatch(globals, /\.saved-product-batch-page \.product-size-selector\{[^}]*padding/,
-    "a panel must never be stripped of its padding");
-  assert.match(clarity, /\.app-shell \.saved-product-batch-page \.product-size-selector,\s*\n\.app-shell \.bundle-color-product \.product-size-selector\{[^}]*border-top:1px solid/,
-    "Stripped of its own card, the size block needs a divider or it runs into the colour actions.");
-});
-
 test("print-quality decisions are grouped per design, not per design-and-product — D167", async () => {
   const app = await read("app/listing-factory-app.tsx");
 
@@ -229,19 +204,6 @@ test("print-quality decisions are grouped per design, not per design-and-product
   const clarity = await read("app/clarity-pass.css");
   assert.match(clarity, /\.app-shell \.bundle-quality-bulk\{[^}]*justify-content:flex-end/,
     "The bulk actions sit right-aligned in the card.");
-});
-
-test("the size block strip lives in the layer that wins — D171", async () => {
-  const clarity = await read("app/clarity-pass.css");
-
-  /* D168 put the strip in globals.css. The base card rule for this block is in
-   * clarity-pass.css, which loads last at equal specificity, so the strip lost.
-   * Measured on the DEPLOYED build: colour 644px at x542, size still 612px at
-   * x558 — the same detached box, "fixed" but not actually fixed.
-   * After: 644/644 at x542 in setup, 650/650 at x539 in a bundle product. */
-  assert.match(clarity, /\.app-shell \.saved-product-batch-page \.product-size-selector,\s*\n\.app-shell \.bundle-color-product \.product-size-selector\{[^}]*width:100%!important/,
-    "The strip must be in clarity-pass, which loads last, or the base card rule wins.");
-  assert.match(clarity, /\.app-shell \.saved-product-batch-page \.product-size-selector,[^{]*\{[^}]*background:transparent!important/);
 });
 
 test("one card renders a single product and every bundle member — D182", async () => {

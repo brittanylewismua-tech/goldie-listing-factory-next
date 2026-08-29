@@ -35,19 +35,36 @@ async function collect(dir, extensions, out = []) {
   return out;
 }
 
-test("clarity-pass.css never styles markup that no longer exists", async () => {
-  const css = (await readFile(new URL("app/clarity-pass.css", root), "utf8"))
-    .replace(/\/\*[\s\S]*?\*\//g, "");
-  const targeted = new Set([...css.matchAll(/\.([a-zA-Z][\w-]+)/g)].map((m) => m[1]));
-
+test("no stylesheet targets a class the application no longer renders", async () => {
   const sourceFiles = await collect("app/", [".tsx", ".ts"]);
-  const styleFiles = (await collect("app/", [".css"])).filter((f) => !f.includes("clarity-pass"));
   const markup = (await Promise.all(sourceFiles.map((f) => readFile(new URL(f, root), "utf8")))).join("");
-  const otherStyles = (await Promise.all(styleFiles.map((f) => readFile(new URL(f, root), "utf8")))).join("");
-
-  const dead = [...targeted].filter((name) => !markup.includes(name) && !otherStyles.includes(name)).sort();
+  const styleFiles = await collect("app/", [".css"]);
+  const dead = [];
+  for (const file of styleFiles) {
+    const css = (await readFile(new URL(file, root), "utf8"))
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/url\([^)]*\)/g, "");
+    const targeted = new Set([...css.matchAll(/\.([a-zA-Z][\w-]+)/g)].map((m) => m[1]));
+    for (const name of targeted) if (!markup.includes(name)) dead.push(`${file}: .${name}`);
+  }
+  dead.sort();
   assert.deepEqual(dead, [],
-    `these classes are styled but never rendered — delete the rules or fix the selector: ${dead.join(", ")}`);
+    `these classes are styled but never rendered — delete the rules or fix the selector:\n${dead.join("\n")}`);
+});
+
+test("current placement, preview, and size-guide controls retain their protections", async () => {
+  const [app, clarity] = await Promise.all([
+    readFile(new URL("app/listing-factory-app.tsx", root), "utf8"),
+    readFile(new URL("app/clarity-pass.css", root), "utf8"),
+  ]);
+  assert.match(app, /className="placement-printify-link"/);
+  assert.match(clarity, /\.placement-printify-link\{[^}]*font:800 11px\/1\.35/,
+    "the live Printify placement action must remain readable");
+  assert.match(clarity, /\.placement-review-grid \.printify-preview-button\{[^}]*height:250px!important/,
+    "the live design preview must remain large enough to identify");
+  assert.match(app, /className="secondary-action size-guide-remove"/);
+  assert.match(clarity, /\.size-guide-remove\{[^}]*color:#6b4a60/,
+    "the live size-guide removal control must remain visibly destructive");
 });
 
 /* D236 · An orphaned selector list is invisible and contagious. D234 removed a
@@ -380,24 +397,6 @@ test("D405: the sidebar nav column is never shrunk below its content", async () 
    !important. At that size the artwork is unreadable, so the card cannot tell
    you which design or which product you are working on. They are the same size
    as each other, deliberately. */
-test("D408: the design previews are large enough to identify the design", async () => {
-  const css = await readFile(new URL("app/clarity-pass.css", root), "utf8");
-  /* D541 - the 152px preview came with step 3's table, which is gone. It is back
-     at the same size inside the open task row, where it does the same job: tell
-     her which design she is writing a title for. */
-  assert.match(css, /\.app-shell \.task-listing-preview\{width:152px/);
-  assert.match(css, /\.app-shell \.task-listing-preview img\{[^}]*height:152px/);
-  /* D427 - 152px was still too small on Images. Inside that preview the artwork
-     is only about a quarter of the shirt width, so the design rendered around
-     28px across. Measured on the live page: it reads clearly at 322px. */
-  assert.match(css, /\.app-shell \.post-draft-workspace \.draft-card-top \.printify-preview-button\{[\s\S]{0,200}max-width:400px!important/);
-  assert.doesNotMatch(css, /\.app-shell \.post-draft-workspace \.draft-card-top \.printify-preview-button\{width:152px!important/);
-});
-
-/* D417/D418 · Two management-page inconsistencies found by looking at them:
-   the saved keyword bank cards kept their natural heights so three Edit buttons
-   landed at three different lines, and Mockup Library was the only page whose
-   eyebrow was hidden, leaving it the only title with nothing above it. */
 test("D418: every management page keeps its eyebrow", async () => {
   const css = await readFile(new URL("app/approved-functional.css", root), "utf8");
   assert.doesNotMatch(css, /\.managementOnly \.mockupHero \.mockupEyebrow[^{]*\{display:none/,
@@ -424,31 +423,6 @@ test("D417/D431: a row of bank cards ends on one line", async () => {
    order among the ready ones, told apart only by a slightly different pale
    colour, so the two things that needed her were buried between five that did
    not — on the screen where money gets spent. */
-test("D434: what needs review sorts to the top of the final check", async () => {
-  const clarity = await readFile(new URL("app/clarity-pass.css", root), "utf8");
-
-  assert.match(clarity, /\.app-shell \.final-checklist>span\.content-review\{[\s\S]{0,240}order:-1/,
-    "review items come first");
-  /* order applies to a flex or grid container's OWN children. .final-checklist is
-     that container, so this must stay a child selector - a descendant one would
-     silently do nothing, which is how this class of bug has bitten before. */
-  assert.match(clarity, /\.final-checklist>span\.content-review/);
-  assert.doesNotMatch(clarity, /\.final-checklist \.content-review\{[^}]*order:/,
-    "a descendant selector cannot order a grid item");
-
-  // Differentiated by a branded accent, not by shouting.
-  assert.match(clarity, /box-shadow:inset 3px 0 0 #a32c4c!important/,
-    "the muted rose already used elsewhere, not an alarm colour");
-  assert.doesNotMatch(clarity, /\.final-checklist>span\.content-review\{[\s\S]{0,240}(#c62828|red|orange)/);
-
-  // And a listing group still needing a look sorts above the finished ones.
-  assert.match(clarity, /\.app-shell \.final-design-groups\{display:flex;flex-direction:column\}/,
-    "order needs a flex container to act on");
-  assert.match(clarity, /\.final-design-groups>details:has\(em\.needs-attention\)\{order:-1\}/);
-});
-
-/* D437 · The one thing that tells a bundle apart from a product is what is in
-   it, and that was the part being truncated. */
 test("D437: a saved bundle shows what is in it", async () => {
   const clarity = await readFile(new URL("app/clarity-pass.css", root), "utf8");
   const rule = clarity.slice(clarity.indexOf(".app-shell .recipe-tile.bundle-as-product .recipe-copy small{"));

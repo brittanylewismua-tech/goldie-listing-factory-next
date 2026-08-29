@@ -23,10 +23,6 @@
 .editorRow button{border:1px solid #d9d2c6;background:#fff;border-radius:999px;padding:6px 12px;font-size:.82rem;cursor:pointer;color:#4a443c}
 .editorRow button:hover:not(:disabled){border-color:#c8b48a}
 .editorRow button:disabled{opacity:.45;cursor:default}
-.editorField{display:flex;flex-direction:column;gap:5px;font-size:.84rem;color:#4a443c}
-.editorField input[type=range]{width:100%}
-.editorField select{border:1px solid #d9d2c6;border-radius:8px;padding:6px 8px;font-size:.85rem}
-.editorHint{font-size:.75rem;color:#8a8177;line-height:1.35}
 .sceneEditorActions{display:flex;justify-content:flex-end;gap:8px;padding:12px 22px 18px;border-top:1px solid #eee7db}
 @media(max-width:900px){.sceneEditorBody{flex-direction:column}.sceneEditorControls{width:auto;flex:1}}
 .sceneState{font-size:.75rem;padding:2px 8px;border-radius:999px;background:#f0f7f1;color:#3f6b45;border:1px solid #cfe4d3}

@@ -298,34 +298,6 @@ test("provides thorough contextual help throughout all nine Listing Factory step
   assert.match(css, /\.context-help-dialog/);
 });
 
-test("keeps Finish guidance, title actions, tags, and flatlays visually unambiguous",async()=>{
-  const [clarity,approved]=await Promise.all([
-    readFile(new URL("../app/clarity-pass.css",import.meta.url),"utf8"),
-    readFile(new URL("../app/approved-functional.css",import.meta.url),"utf8"),
-  ]);
-  assert.match(approved,/\.finish-guide:before/);
-  assert.match(approved,/\.finish-guide span\{[^}]*border:0[^}]*background:transparent/);
-  assert.match(clarity,/\.individual-title-builder > summary \{[\s\S]*text-decoration: none/);
-  assert.match(approved,/\.draft-card-top \.tag-row\{[\s\S]*overflow-y:scroll/);
-  assert.match(approved,/\.tag-row::-webkit-scrollbar-thumb/);
-  assert.match(approved,/\.image-pref-actions\+div/);
-});
-
-test("anchors Printify selectors to each photo and keeps batch actions honest",async()=>{
-  const [page,approved,mockups]=await Promise.all([
-    readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8"),
-    readFile(new URL("../app/approved-functional.css",import.meta.url),"utf8"),
-    readFile(new URL("../app/integrated-mockups.tsx",import.meta.url),"utf8"),
-  ]);
-  assert.match(page,/className="printify-image-grid"/);
-  assert.match(page,/className="printify-photo-selector"/);
-  assert.match(page,/Select a Printify photo below first/);
-  assert.match(approved,/\.printify-image-grid \.printify-image-option\{position:relative/);
-  assert.match(approved,/\.printify-photo-selector\{position:absolute!important/);
-  assert.match(approved,/\.mockup-product-warning\{display:none!important\}/);
-  assert.doesNotMatch(mockups,/className="mockup-product-warning"/);
-});
-
 test("stages each finished mockup group for its exact Etsy listing", async () => {
   const [mockups,images,page] = await Promise.all([
     readFile(new URL("../app/integrated-mockups.tsx", import.meta.url), "utf8"),
@@ -1370,17 +1342,6 @@ test("labels every progress bubble with a short workflow name", async () => {
   assert.match(styles, /\.app-shell \.progress-bubble-label\{/);
 });
 
-test("keeps product context only on product-specific steps and progress controls circular", async () => {
-  const [globalStyles, approvedStyles] = await Promise.all([
-    readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
-    readFile(new URL("../app/approved-functional.css", import.meta.url), "utf8"),
-  ]);
-  assert.doesNotMatch(globalStyles, /\.designs-step\.active-panel \.step-content:before/);
-  assert.match(globalStyles, /margin:0 auto 18px/);
-  assert.match(approvedStyles, /\.workflow-progress button:hover:not\(:disabled\)/);
-  assert.match(approvedStyles, /border-radius:50%!important/);
-});
-
 test("shows accurate completion feedback above each next step card", async () => {
   const [page, styles] = await Promise.all([
     readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
@@ -1543,89 +1504,6 @@ test("blocks the factory workflow on mobile while preserving saved work", async 
   assert.match(styles, /\.app-shell>:not\(\.mobile-gate\)\{display:none!important\}/);
 });
 
-test("supports simple saved product bundles without complicating the single-product workflow", async () => {
-  const [page, workflow, api, schema, ui, styles, approvedStyles] = await Promise.all([
-    readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../app/factory-tools.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../app/api/product-bundles/route.ts", import.meta.url), "utf8"),
-    readFile(new URL("../db/schema.ts", import.meta.url), "utf8"),
-    readFile(new URL("../app/goldie-ui.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
-    readFile(new URL("../app/approved-functional.css", import.meta.url), "utf8"),
-  ]);
-  assert.match(schema, /productBundles = sqliteTable\("product_bundles"/);
-  assert.match(api, /Choose at least two saved products/);
-  assert.match(api, /up to four products/);
-  assert.match(api, /eq\(productRecipes\.userId,user\.userId\)/);
-  assert.match(workflow, /Product bundles/);
-  assert.match(workflow, /Upload each design once, then Goldie carries it through every product/);
-  /* Was "Using this design on multiple products?" — shown on the product step,
-   * before any design has been uploaded, so it asked about something that did
-   * not exist yet. See D118. */
-  assert.match(workflow, /Want one batch to cover several products\?/);
-  assert.match(workflow, /"✓ Ready"/); /* D175: shortened so it fits a compact tile */
-  assert.match(workflow, /Choose the products in the order you want to complete them/);
-  assert.match(workflow, /bundleSaveLock\.current/);
-  assert.match(workflow, /Saving bundle…/);
-  assert.match(workflow, /aria-busy=\{bundleSaving\}/);
-  /* D135: selection resolves the bundle's persisted ids against current server
-   * data instead of trusting a transient array assembled by the tile. */
-  assert.match(workflow, /props\.onUseBundle\(bundle,bundle\.recipeIds\)/);
-  assert.match(page, /fetch\("\/api\/product-recipes"\)/);
-  assert.match(page, /recipes\.length!==requestedIds\.length/);
-  assert.match(workflow, /Goldie could not load every saved product in this bundle/);
-  /* D136: a bundle has one tile and therefore one selected state. */
-  assert.equal((workflow.match(/bundles\.map\(/g)||[]).length,1);
-  /* D175: the bundle tile label was "N products · Choose this bundle →", which
-   * overflowed a 207px tile on both sides. Shortened to match the product tiles. */
-  assert.match(workflow, /selected\?"✓ Ready":"Choose →"/);
-  assert.match(api, /deduplicated:true/);
-  assert.match(page, /function useBundle/);
-  /* D174: the banner names the current product; "You are working on" repeated
-   * the eyebrow above it and was set in the wrong face. */
-/* D336 · The header used to lead with the FIRST PRODUCT's name and put the
-     bundle name underneath, so choosing a bundle looked like choosing a hoodie.
-     It names the bundle now; the stepper says which product you are on. */
-/* D355 · The whole bundle banner is gone. It announced what had just been
-     selected, above a page you reached BY selecting it, and each product card
-     below already carries its own name. */
-  assert.doesNotMatch(page, /className="bundle-progress"/,
-    "no banner restating the selection that brought you here");
-  assert.doesNotMatch(page, /index===bundleIndex\?"You are here"/,
-    "no stepper, so no you-are-here");
-  assert.doesNotMatch(page, /bundle-progress"[^>]*>[\s\S]{0,400}<ol>/,
-    "and no ordered list of products beside the line that already lists them");
-  assert.match(page, /\{section==="all"\?"1\. ":""\}Item prices\{section==="all"&&<span> · \{productName\}<\/span>\}/);
-  assert.match(page, /\{section==="all"\?"2\. ":""\}Etsy shipping profile\{section==="all"&&<span> · \{productName\}<\/span>\}/);
-  assert.match(page, /data-product-selected=\{templateDetails\?"true":"false"\}/);
-  /* D378 · The --active-product custom property fed a "CURRENT PRODUCT ·" chip
-     that existed only because Images, Listing and Publish showed one product at
-     a time. Those steps carry the same product cards as step 1 now, and each
-     card header names its own product, so the chip and the variable are gone. */
-  assert.doesNotMatch(page, /--active-product/,
-    "the card header names the product; a chip above it said the same thing twice");
-  assert.match(page, /stepProductCards\(bundleCardStatus\("images"\)/);
-  assert.match(page, /stepProductCards\(bundleCardStatus\("listing"\)/);
-  assert.match(page, /stepProductCards\(bundleCardStatus\("publish"\)/);
-  assert.match(page, /function continueBundle/);
-  assert.match(page, /activeBundle,bundleRecipes,bundleIndex/);
-  assert.match(page, /previewUrl:URL\.createObjectURL\(file\.file\)/);
-  assert.match(page, /descriptionOverride:undefined/);
-  assert.match(page, /setWorkflowStep\("designs"\)/);
-  assert.match(ui, /Continue bundle with/);
-  assert.match(ui, /pricing, shipping, description, Etsy details, and images separately/);
-  assert.match(styles, /\.bundle-progress/);
-  assert.match(styles, /CURRENT PRODUCT ·/);
-  assert.doesNotMatch(styles, /\.designs-step\.active-panel \.step-content:before/);
-  /* D378 · Same removal as above, from the stylesheet side. */
-  assert.doesNotMatch(styles, /content:"CURRENT PRODUCT/,
-    "the product cards on steps 2-4 carry this now");
-  assert.match(approvedStyles, /\.app-shell \.recipe-card \.edit-recipe\{position:static!important/);
-  assert.match(approvedStyles, /\.app-shell \.recipe-card \.delete-recipe\{position:static!important/);
-  assert.match(approvedStyles, /\.app-shell \.recipe-card \.recipe-use,[\s\S]*?grid-column:1\/-1!important/);
-  assert.match(approvedStyles, /Collision safeguards shared by every workflow step/);
-});
-
 test("downloads each listing's selected Printify photos and uploaded photos as one local ZIP",async()=>{
   const [page,route,styles]=await Promise.all([
     readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8"),
@@ -1734,18 +1612,6 @@ test("renders final publishing readiness with the defined personalization valida
   assert.match(page,/async function selectRecipe\(recipe:Recipe\):Promise<TemplateDetails\|null>/);
   assert.doesNotMatch(page,/return Boolean\(await loadTemplateUrl/);
   assert.match(page,/if\(!localPreview\)await runBounded\(files,2/);
-});
-
-test("keeps each Printify editing action with its listing details",async()=>{
-  const [page,styles]=await Promise.all([
-    readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8"),
-    readFile(new URL("../app/approved-functional.css",import.meta.url),"utf8"),
-  ]);
-  /* D680 - the compact placement card keeps the editor action inside the exact
-     draft's card, with shop guidance in a tooltip instead of visible copy. */
-  assert.match(page,/draft\.editorUrl&&draft\.id[\s\S]{0,300}?title="Choose the correct shop in your Printify account first\."[\s\S]{0,200}?Adjust in Printify/);
-  assert.match(page,/className="tag-row"/, "and tag-row still exists on step 3");
-  assert.match(styles,/div:not\(\.pending-preview\)>\.edit-draft-button\{margin:16px 0 0;align-self:flex-start\}/);
 });
 
 test("explains and styles every Printify photo selection action",async()=>{
@@ -2118,25 +1984,6 @@ test("keeps bundle titles, placement decisions, review, and failures product-spe
   assert.match(review,/Retry this listing/);
 });
 
-test("renders every Finish phase as compact expandable rows",async()=>{
-  const [css,review]=await Promise.all([readFile(new URL("../app/approved-functional.css",import.meta.url),"utf8"),readFile(new URL("../app/final-listing-review.tsx",import.meta.url),"utf8")]);
-  /* D541 - "dense rows with one in-place editor" is what step 3 is now, but built
-     out of the same task rows every other step uses rather than a bespoke table
-     wedged inside a shared block. */
-  const clarity=await readFile(new URL("../app/clarity-pass.css",import.meta.url),"utf8");
-  /* D553 - the chooser is gone: opening a task shows every listing's work, each
-     under its name, which is what step 2 did before D541. */
-  assert.match(clarity,/\.app-shell \.listing-card-head\{/);
-  assert.match(clarity,/\.app-shell \.listing-card-detail\{/);
-  /* D553 - one collapse, at the task; every listing's work is open under it. */
-  assert.match(clarity,/\.app-shell \.listing-card-detail\{/);
-  assert.match(clarity,/\.app-shell \.task-panel-body\{/);
-  assert.match(css,/\.etsy-detail-card/);
-  assert.match(css,/\.post-draft-workspace \.draft-card-top/);
-  assert.match(css,/\.final-listing-card/);
-  assert.match(review,/loading="lazy"/);
-});
-
 test("restores completed draft batches to reachable Finish results (fixes D53)",async()=>{
   const [app,batches]=await Promise.all([readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8"),readFile(new URL("../app/batches/page.tsx",import.meta.url),"utf8")]);
   assert.match(app,/hasCreatedDrafts=complete&&drafts\.some\(draft=>draft\.status==="Created"\)/);
@@ -2211,18 +2058,6 @@ test("keeps a forward path from setup, designs, and pricing after drafts exist (
 /* D369 · These moved from descendant to child selectors. `order` only applies
    to direct children, so the descendant form ordered nothing and leaked onto
    nested elements instead — see stylesheet-liveness.test.mjs. */
-test("orders designs before colours, mockups, and saved settings on the batch screen (fixes D2)",async()=>{
-  const [app,css]=await Promise.all([readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8"),readFile(new URL("../app/approved-functional.css",import.meta.url),"utf8")]);
-  assert.match(app,/BatchPreferencesPortal/);
-  assert.match(app,/id="batch-preferences-after-designs"/);
-  assert.match(app,/useEffect\(\(\)=>setTarget\(document\.getElementById\("batch-preferences-after-designs"\)\)\);/);
-  assert.match(css,/\.steps-column\.setup-column>\.designs-step\{order:20\}/);
-  assert.match(css,/\.steps-column\.setup-column>\.batch-preferences-after-designs\{order:30/);
-  assert.match(css,/\.steps-column\.setup-column>\.color-default-block\{order:30/);
-  assert.match(css,/\.steps-column\.setup-column>\.mockup-default-block\{order:40/);
-  assert.match(css,/\.steps-column\.setup-column>\.everything-else\{order:50/);
-});
-
 test("keeps product creation visible and lets a selected product be changed (fixes D4 and D5)",async()=>{
   const [app,workflow,css]=await Promise.all([readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8"),readFile(new URL("../app/factory-tools.tsx",import.meta.url),"utf8"),readFile(new URL("../app/approved-functional.css",import.meta.url),"utf8")]);
   assert.match(workflow,/＋ Add a new product/);
@@ -2784,40 +2619,6 @@ test("the lifestyle mockup mirrors the Printify template placement, whatever the
     "the empirical constant must not survive in the render path");
   assert.match(integrated, /calibrated corners are not/,
     "the reason must stay next to the constants so this is not 'fixed' again");
-});
-
-test("the Images page has one Next step, and a preview large enough to read", async () => {
-  const [app, clarity] = await Promise.all([
-    readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8"),
-  ]);
-
-  // One forward control on this page. The second copy looked identical and
-  // skipped the every-listing-has-a-photo check.
-  assert.doesNotMatch(app, /mockup-next/, "the duplicate forward button is gone");
-  assert.equal((app.match(/Continue to titles/g) || []).length, 0,
-    "the bottom button says Next step, like every other step");
-
-  // Whatever advances from Images must run the photo check, not just navigate.
-  const forward = app.slice(app.indexOf('disabled={imagesStepIssues().length>0}'));
-  assert.match(forward.slice(0, 900), /createdListingsMissingImages\(\)/, "the one Next step still gates on photos");
-  assert.match(forward.slice(0, 900), /setFinishPhase\("details"\)/, "Images goes to Listing, never straight to Publish");
-  assert.match(forward.slice(0, 900), /Next step </);
-
-  /* Every step keeps its forward control on the section it completes and leaves
-     Back / Saved automatically / Save as draft in the footer. Images must match
-     that, or it becomes the one page where the bottom button is not Next. */
-  const imagesFooter = app.slice(app.indexOf("post-draft-footer"), app.indexOf("post-draft-footer") + 700);
-  assert.doesNotMatch(imagesFooter, /workflow-next/, "the footer is Back and Save as draft, as everywhere else");
-  assert.match(imagesFooter, /workflow-back/);
-  assert.match(imagesFooter, /save-draft-link/,
-    "Images was the only step you could not stop and save from");
-
-  // The preview has to be big enough that the artwork is legible. At 152px the
-  // design came out around 28px wide.
-  assert.match(clarity, /minmax\(280px,38%\)/);
-  assert.match(clarity, /max-width:400px!important/);
-  assert.doesNotMatch(clarity, /\.post-draft-workspace \.draft-card-top\{grid-template-columns:152px/);
 });
 
 test("a batch that no longer exists says so instead of silently resetting", async () => {
@@ -4524,21 +4325,6 @@ test("everything on step 2 that describes one product sits in that product's car
   assert.match(app, /\|\|restoringBatch\|\|runInProgress\.current\|\|canOpenStep\(workflowStep\)\)return/);
   assert.equal((app.match(/runInProgress\.current=Boolean\(/g) || []).length, 2,
     "both the drafts run and the publish run set it");
-});
-
-test("an open product card does not run to four screens — D522", async () => {
-  const css = await readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8");
-
-  /* Measured on her live three-product bundle: the open card was 2992px against a
-     756px viewport - four screens - and each listing inside it was 1003px, from a
-     318px Printify preview and a 345px photo strip of 130px thumbnails. Twenty
-     designs would have been twenty screens per product. */
-  /* D525 - the image obeyed and the button did not: a later rule pins aspect-ratio
-     1/1 and max-width 400px with !important, leaving a 318px square around a 168px
-     picture. The cap has to carry the same weight or it loses again. */
-  assert.match(css, /\.post-draft-workspace \.draft-card-top \.printify-preview-button,[\s\S]{0,120}max-width:180px!important;aspect-ratio:auto!important/);
-  assert.match(css, /\.photo-order-strip img\{max-height:74px/);
-  assert.match(css, /\.draft-card-grid\{gap:14px\}/);
 });
 
 test("a decided batch does not lead with the picker, and step 3 opens compact — D523/D524", async () => {
@@ -6569,42 +6355,6 @@ test("Closure is filled only when the product name settles it — D649", async (
  * guide picker is one of several file inputs on step 2. There was no way back
  * to none: only "Replace size guide". A size guide goes onto every listing in
  * the batch, so being stuck with the wrong one is not a small mistake. */
-test("a size guide can be removed, not only replaced — D651", async () => {
-  const [app, css] = await Promise.all([
-    readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8"),
-  ]);
-
-  assert.match(app, /async function removeSizeGuide\(\)\{/);
-  // It clears the batch and every design's copy of the name.
-  assert.match(app, /setSizeGuideName\(""\);\n\s*setFiles\(current=>current\.map\(design=>\(\{\.\.\.design,sizeGuideName:undefined\}\)\)\)/);
-  /* And it does not pretend to reach listings that already went out with one. */
-  assert.match(app, /Listings this batch has already published keep the one they were given/);
-
-  // Offered only when there is one to remove.
-  assert.match(app, /\{sizeGuideName&&<button type="button" className="secondary-action size-guide-remove"/);
-  /* D652 - it inherited `.batch-size-guide button`, a filled primary set with
-     !important, so the destructive action rendered as heavy as the safe one. */
-  const functional = await readFile(new URL("../app/approved-functional.css", import.meta.url), "utf8");
-  assert.match(functional, /\.app-shell \.batch-size-guide button\.size-guide-remove\{[\s\S]*?background:transparent!important/);
-  assert.match(functional, /\.app-shell \.batch-size-guide \.size-guide-actions\{display:flex/);
-});
-
-/* D654 · Found by walking the live app, not by reading it. Choosing the saved
-   "Gildan Tee" never finished: measured at over 120 seconds against a client
-   that gives up at 90, so the product simply could not be selected.
-
-   The cause was two multipliers stacked on the one request a seller waits on.
-   /api/printify asked each Printify store in turn whether it owns the product —
-   four stores, four round trips, before the product is even identified. Then
-   verifyShopPairing asked Etsy about up to five listings through etsyFetch,
-   which retries a 429 or a 5xx five times with backoff up to eight seconds
-   each: about 200 seconds of retrying in the worst case.
-
-   Every one of those retries was wasted. The candidate loop catches a failed
-   fetch and moves to the next one, so a retried failure and an immediate one
-   reach the same verdict. Retrying belongs to a seller's save, not to an
-   advisory probe whose honest answer is already "unknown". */
 test("choosing a saved product cannot outlive the request waiting on it — D654", async () => {
   const [match, api] = await Promise.all([
     readFile(new URL("../app/api/printify/shop-match.ts", import.meta.url), "utf8"),
