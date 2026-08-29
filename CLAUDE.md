@@ -90,3 +90,14 @@ migration it needs. Do not bury it in prose.
 Prototype visual changes by injecting CSS or editing the DOM in her live page so
 she can approve them before they are written to source. Do not create preview
 branches or preview URLs.
+
+## 7. End every response with ONE line for ChatGPT.
+
+A single section, a single line, at the very bottom. Not a paragraph, not a
+checklist, not a block she has to read to find out there is nothing in it.
+
+She has asked for this more times than any other instruction in this file, which
+means the cost is not the formatting - it is that she has to ask again.
+
+  Nothing to do:  🚀 CHATGPT: Nothing to do — <sha> pushed, Vercel building.
+  Something to do: 🚀 CHATGPT: <the one action>.
