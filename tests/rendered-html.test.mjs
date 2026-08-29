@@ -1839,10 +1839,10 @@ test("makes Batch History visual, identifiable, reversible, and truthful",async(
      had typed it. Batch b8ce58cb: setup_name "Gildan Hoodie", product_title "Unisex
      Garment-Dyed Sweatshirt". The seller's typed name now travels in the state
      snapshot, where an autosave cannot overwrite it with a recipe. */
-  assert.match(route,/const sellerNamed=String\(state\.batchDisplayName\|\|""\)\.trim\(\);/);
+  assert.match(route,/const sellerNamed=String\(state\.batchDisplayName\|\|""\)\.trim\(\),bundleIdentity=bundleHistoryIdentity\(state\);/);
   assert.doesNotMatch(route,/sellerNamed=state\.keptAsDrafts&&String\(row\.setup_name/);
   // A stale recipe snapshot must never outrank the batch's real product.
-  assert.match(route,/\|\|designName\|\|row\.product_title\|\|row\.setup_name\|\|"Untitled batch"/);
+  assert.match(route,/bundleIdentity\?\.displayName\|\|sellerNamed\|\|designName\|\|row\.product_title\|\|row\.setup_name\|\|"Untitled batch"/);
   assert.match(history,/batch-history-thumbnail/);assert.match(history,/Permanently remove/);assert.match(history,/confirmAction\(\{/);
   assert.match(history,/Open published batch/);assert.match(history,/batch\.status==="complete"\?"&open=results":""/);
   assert.match(styles,/\.batch-history-thumbnail/);assert.match(styles,/\.batch-history-controls/);
@@ -2354,7 +2354,10 @@ test("a title never repeats a phrase it already contains — D157", async () => 
 });
 
 test("Batch History does not label a bundle with one member's product — D196", async () => {
-  const route = await readFile(new URL("../app/api/batches/route.ts", import.meta.url), "utf8");
+  const [route,identity] = await Promise.all([
+    readFile(new URL("../app/api/batches/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/batch-history-identity.ts", import.meta.url), "utf8"),
+  ]);
 
   /* A bundle batch stores the ACTIVE product's blueprint in product_title, so the
    * list showed "Unisex Midweight Softstyle Fleece Hoodie · 3 designs" for a
@@ -2366,8 +2369,8 @@ test("Batch History does not label a bundle with one member's product — D196",
   /* D551 - and it names which member, because D510's fix made every member of a
      run identical: "ZZ TEST BUNDLE / 3 products · 2 designs" three times over,
      one row per product, distinguishable only by timestamp. */
-  assert.match(route, /return name\?`\$\{name\} · product \$\{position\}`:`\$\{total\} products`/);
-  assert.match(route, /const position=Number\.isFinite\(index\)&&index>=0&&index<total\?`\$\{index\+1\} of \$\{total\}`/);
+  assert.match(identity, /productName\?`\$\{productName\} · product \$\{position\}`:`\$\{total\} products`/);
+  assert.match(identity, /const position=Number\.isFinite\(index\)&&index>=0&&index<total\?`\$\{index\+1\} of \$\{total\}`/);
 });
 
 /* D214/D407 · D214 forced this picker open because a closed fold meant sellers
@@ -4226,7 +4229,7 @@ test("low resolution shows the table and never blocks — D509/D510/D511", async
 
   /* D510 · Three batches of one bundle showed three different names, because
      setup_name is the saved product a batch started from - one member of three. */
-  assert.match(batches, /state\.activeBundle&&\(state\.bundleRecipes\|\|\[\]\)\.length>1\?String\(state\.activeBundle\.name\|\|""\)\.trim\(\):""/);
+  assert.match(batches, /bundleIdentity\?\.displayName\|\|sellerNamed/);
 
   /* D511 · A batch minted by the bundle run has no drafts yet, so Batch History
      showed a grey placeholder on the screen meant for recognising batches. */

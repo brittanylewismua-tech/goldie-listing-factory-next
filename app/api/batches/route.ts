@@ -1,6 +1,7 @@
 import { env } from "cloudflare:workers";
 import { NextResponse } from "next/server";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
+import { bundleHistoryIdentity } from "@/app/batch-history-identity";
 
 type RuntimeEnv={DB?:D1Database};
 type BatchListState={templateDetails?:{previewImage?:string;previewImages?:string[]};activeBundle?:{name?:string};activeRecipe?:{name?:string};bundleIndex?:number;bundleRecipes?:unknown[];keptAsDrafts?:boolean;batchDisplayName?:string;designs?:Array<{name?:string}>;drafts?:Array<{id?:string;previewUrl?:string}>;batchReceipt?:{publishedCount?:number}};
@@ -37,7 +38,7 @@ function batchListItem(row:Record<string,unknown>,publishedByBatch:Record<string
     if(!at)return found;
     return {count:found.count+1,at:at>found.at?at:found.at};
   },{count:0,at:""});
-  const sellerNamed=String(state.batchDisplayName||"").trim();return {id:row.id,status:row.status,step:row.step,setup_name:row.setup_name,/* A bundle batch stored the ACTIVE product's blueprint here, so Batch History
+  const sellerNamed=String(state.batchDisplayName||"").trim(),bundleIdentity=bundleHistoryIdentity(state);return {id:row.id,status:row.status,step:row.step,setup_name:row.setup_name,/* A bundle batch stored the ACTIVE product's blueprint here, so Batch History
    labelled a three-product bundle "Unisex Midweight Softstyle Fleece Hoodie" —
    naming one member as though it were the whole batch. */
   /* D551 - D510 stopped one member of a bundle being named as though it were the
@@ -46,17 +47,12 @@ function batchListItem(row:Record<string,unknown>,publishedByBatch:Record<string
      were identical apart from a timestamp. Verified on her history: six rows,
      nothing to tell them apart. The bundle names the batch; this says which of
      its products the batch actually holds. */
-  product_title:(state.activeBundle&&(state.bundleRecipes||[]).length>1)?(()=>{
-    const total=(state.bundleRecipes||[]).length,name=String(state.activeRecipe?.name||"").trim();
-    const index=Number(state.bundleIndex);
-    const position=Number.isFinite(index)&&index>=0&&index<total?`${index+1} of ${total}`:`1 of ${total}`;
-    return name?`${name} · product ${position}`:`${total} products`;
-  })():row.product_title,design_count:row.design_count,created_at:row.created_at,updated_at:row.updated_at,/* D510 - three batches of the same bundle showed three different names: one
+  product_title:bundleIdentity?.productTitle||row.product_title,design_count:row.design_count,created_at:row.created_at,updated_at:row.updated_at,/* D510 - three batches of the same bundle showed three different names: one
      read "Gildan Tee" over a hoodie thumbnail while the others read "ZZ TEST
      BUNDLE". setup_name holds the saved product a batch happened to start from,
      which for a bundle is one member of three and not what the batch is. A
      bundle is named by its bundle. */
-  display_name:sellerNamed||(state.activeBundle&&(state.bundleRecipes||[]).length>1?String(state.activeBundle.name||"").trim():"")||designName||row.product_title||row.setup_name||"Untitled batch",/* product_title before setup_name: product_title is derived from the batch's real drafts and stays current, setup_name is a snapshot of a recipe that may since have changed. *//* D225 · Batch History labelled every unpublished batch "DRAFTS READY", whether
+  display_name:bundleIdentity?.displayName||sellerNamed||designName||row.product_title||row.setup_name||"Untitled batch",/* product_title before setup_name: product_title is derived from the batch's real drafts and stays current, setup_name is a snapshot of a recipe that may since have changed. *//* D225 · Batch History labelled every unpublished batch "DRAFTS READY", whether
      or not a single draft existed. Measured across all 17 saved batches: not one
      had a draft in its snapshot, and all 17 claimed drafts were ready. The count
      is right here in the state, so report it. */
