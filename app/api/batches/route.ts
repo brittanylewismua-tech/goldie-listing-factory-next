@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
 
 type RuntimeEnv={DB?:D1Database};
-type BatchListState={templateDetails?:{previewImage?:string;previewImages?:string[]};activeBundle?:{name?:string};activeRecipe?:{name?:string};bundleIndex?:number;bundleRecipes?:unknown[];keptAsDrafts?:boolean;batchDisplayName?:string;designs?:Array<{name?:string}>;drafts?:Array<{previewUrl?:string}>;batchReceipt?:{publishedCount?:number}};
+type BatchListState={templateDetails?:{previewImage?:string;previewImages?:string[]};activeBundle?:{name?:string};activeRecipe?:{name?:string};bundleIndex?:number;bundleRecipes?:unknown[];keptAsDrafts?:boolean;batchDisplayName?:string;designs?:Array<{name?:string}>;drafts?:Array<{id?:string;previewUrl?:string}>;batchReceipt?:{publishedCount?:number}};
 function db(){return (env as unknown as RuntimeEnv).DB}
 async function ensure(database:D1Database){await database.prepare("CREATE TABLE IF NOT EXISTS listing_batches (id TEXT PRIMARY KEY, user_id TEXT NOT NULL, status TEXT NOT NULL, step TEXT NOT NULL, setup_name TEXT NOT NULL DEFAULT '', product_title TEXT NOT NULL DEFAULT '', design_count INTEGER NOT NULL DEFAULT 0, state_json TEXT NOT NULL DEFAULT '{}', created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)").run();await database.prepare("CREATE INDEX IF NOT EXISTS idx_listing_batches_user_updated ON listing_batches(user_id, updated_at)").run()}
 
@@ -22,7 +22,7 @@ function designLabel(name:string){
   if(letters<4)return "";
   return cleaned;
 }
-function batchListItem(row:Record<string,unknown>,publishedByBatch:Record<string,number>={},publishedAtByBatch:Record<string,string>={}){let state:BatchListState={};try{state=JSON.parse(String(row.state_json||"{}")) as BatchListState}catch{/* A damaged snapshot should not hide the rest of Batch History. */}const designs=(state.designs||[]).map(design=>designLabel(String(design.name||""))).filter(Boolean);const designName=designs.length>1?`${designs[0]} + ${designs.length-1} more`:designs[0];/* D686 - this used to read row.setup_name, and setup_name is not the name the
+function batchListItem(row:Record<string,unknown>,publishedByBatch:Record<string,number>={},publishedAtByBatch:Record<string,string>={},publishedAtByProduct:Record<string,string>={}){let state:BatchListState={};try{state=JSON.parse(String(row.state_json||"{}")) as BatchListState}catch{/* A damaged snapshot should not hide the rest of Batch History. */}const designs=(state.designs||[]).map(design=>designLabel(String(design.name||""))).filter(Boolean);const designName=designs.length>1?`${designs[0]} + ${designs.length-1} more`:designs[0];/* D686 - this used to read row.setup_name, and setup_name is not the name the
      seller chose. The client writes that one column from
      `batchDisplayName||activeBundle?.name||activeRecipe?.name||""`, so an autosave
      with no chosen name stores the RECIPE name there - and this line then presented
@@ -32,6 +32,11 @@ function batchListItem(row:Record<string,unknown>,publishedByBatch:Record<string
      "Comfort Colors 1566 crewneck". The name was frozen from whichever recipe
      happened to be active at one autosave and never reconciled. The seller's typed
      name now travels in the state snapshot, where nothing else can overwrite it. */
+  const mineByProduct=(state.drafts||[]).reduce((found,draft)=>{
+    const at=draft.id?publishedAtByProduct[String(draft.id)]:undefined;
+    if(!at)return found;
+    return {count:found.count+1,at:at>found.at?at:found.at};
+  },{count:0,at:""});
   const sellerNamed=String(state.batchDisplayName||"").trim();return {id:row.id,status:row.status,step:row.step,setup_name:row.setup_name,/* A bundle batch stored the ACTIVE product's blueprint here, so Batch History
    labelled a three-product bundle "Unisex Midweight Softstyle Fleece Hoodie" —
    naming one member as though it were the whole batch. */
@@ -64,7 +69,9 @@ function batchListItem(row:Record<string,unknown>,publishedByBatch:Record<string
      "0 of your 20 listings this week" on a page headed "2 listings are live on
      Etsy". How many listings are live is a fact about Etsy, not about whether a
      tab finished writing. The publish job's own completed count wins. */
-  published_at:publishedAtByBatch[String(row.id)]||null,published_count:Math.max(Number(publishedByBatch[String(row.id)])||0,Number(state.batchReceipt?.publishedCount)||0)}}
+  /* D704 · Its own products first; the batch-level counts stay as fallbacks so
+     nothing that reads correctly today starts reading zero. */
+  published_at:mineByProduct.at||publishedAtByBatch[String(row.id)]||null,published_count:Math.max(mineByProduct.count,Number(publishedByBatch[String(row.id)])||0,Number(state.batchReceipt?.publishedCount)||0)}}
 
 export async function GET(request:Request){const user=await getChatGPTUser();if(!user)return NextResponse.json({error:"Sign in to continue."},{status:401});const database=db();if(!database)return NextResponse.json({error:"Batch history is unavailable."},{status:503});await ensure(database);const url=new URL(request.url),id=url.searchParams.get("id");if(id){const row=await database.prepare("SELECT * FROM listing_batches WHERE id=? AND user_id=?").bind(id,user.userId).first<Record<string,unknown>>();return row?NextResponse.json({batch:{...row,state:JSON.parse(String(row.state_json||"{}"))}}):NextResponse.json({error:"That batch was not found."},{status:404})}const rows=await database.prepare("SELECT id,status,step,setup_name,product_title,design_count,state_json,created_at,updated_at FROM listing_batches WHERE user_id=? ORDER BY updated_at DESC LIMIT 20").bind(user.userId).all<Record<string,unknown>>();/* D701 · Falls back to the job's batch_id when the item has none. D697 added the
      column and a migration to backfill it; the backfill did not populate, so on the
@@ -81,6 +88,15 @@ export async function GET(request:Request){const user=await getChatGPTUser();if(
      with a Resume button on the crewneck, whose two listings were live on Etsy.
      Pressing Resume would have published them again and charged Etsy's fee twice.
      Each item now records the batch its own draft came from. */
+  /* D704 · Attribute by product, not by batch id. A bundle's drafts all carry the
+     batch they were first drafted in - measured on hers, every draft in both
+     products carried 3c6ac387, neither of the two current batch ids - so the job,
+     and D697's per-item column, both file under a batch that no longer owns
+     anything. The product id is the one link that survives: each batch's snapshot
+     lists the Printify products it owns, and etsy_publish_items records the product
+     it published. */
+  const publishedProducts=await database.prepare("SELECT product_id,MAX(updated_at) published_at FROM etsy_publish_items WHERE user_id=? AND status='completed' GROUP BY product_id").bind(user.userId).all<{product_id:string;published_at:string|null}>().catch(()=>({results:[] as Array<{product_id:string;published_at:string|null}>}));
+  const publishedAtByProduct=Object.fromEntries((publishedProducts.results||[]).map(row=>[String(row.product_id),String(row.published_at||"")]));
   const published=await database.prepare("SELECT COALESCE(i.batch_id,j.batch_id) batch_id,COUNT(*) completed,MAX(i.updated_at) published_at FROM etsy_publish_items i LEFT JOIN etsy_publish_jobs j ON j.id=i.job_id WHERE i.user_id=? AND i.status='completed' AND COALESCE(i.batch_id,j.batch_id) IS NOT NULL GROUP BY COALESCE(i.batch_id,j.batch_id)").bind(user.userId).all<{batch_id:string;completed:number;published_at:string|null}>().catch(()=>({results:[] as Array<{batch_id:string;completed:number}>}));
   /* D700 · Carry WHEN it published, not just how many. The weekly goal was counting
      a batch into the week it was CREATED, so work started one week and published the
@@ -88,7 +104,7 @@ export async function GET(request:Request){const user=await getChatGPTUser();if(
      would not have counted at all. */
   const publishedByBatch=Object.fromEntries(published.results.map(row=>[String(row.batch_id),Number(row.completed)||0]));
   const publishedAtByBatch=Object.fromEntries(published.results.map(row=>[String(row.batch_id),String(row.published_at||"")]));
-  return NextResponse.json({batches:rows.results.map(row=>batchListItem(row,publishedByBatch,publishedAtByBatch))})}
+  return NextResponse.json({batches:rows.results.map(row=>batchListItem(row,publishedByBatch,publishedAtByBatch,publishedAtByProduct))})}
 
 export async function POST(request:Request){const user=await getChatGPTUser();if(!user)return NextResponse.json({error:"Sign in to continue."},{status:401});const database=db();if(!database)return NextResponse.json({error:"Batch history is unavailable."},{status:503});await ensure(database);const body=await request.json() as {id?:string;status?:string;step?:string;setupName?:string;productTitle?:string;designCount?:number;state?:unknown};const id=String(body.id||crypto.randomUUID()).replace(/[^a-zA-Z0-9-]/g,"").slice(0,80);const allowedStatus=new Set(["draft","processing","needs_attention","complete"]),allowedStep=new Set(["connect","setup","designs","review","finish"]);const status=allowedStatus.has(String(body.status))?String(body.status):"draft",step=allowedStep.has(String(body.step))?String(body.step):"connect";const stateJson=JSON.stringify(body.state??{});if(stateJson.length>750000)return NextResponse.json({error:"This batch snapshot is too large."},{status:413});await database.prepare("INSERT INTO listing_batches (id,user_id,status,step,setup_name,product_title,design_count,state_json,updated_at) VALUES (?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP) ON CONFLICT(id) DO UPDATE SET status=excluded.status,step=excluded.step,setup_name=excluded.setup_name,product_title=excluded.product_title,design_count=excluded.design_count,state_json=excluded.state_json,updated_at=CURRENT_TIMESTAMP WHERE user_id=excluded.user_id").bind(id,user.userId,status,step,String(body.setupName||"").slice(0,160),String(body.productTitle||"").slice(0,200),Math.max(0,Math.min(20,Number(body.designCount||0))),stateJson).run();return NextResponse.json({id,saved:true})}
 

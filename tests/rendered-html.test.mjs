@@ -2193,7 +2193,13 @@ test("reports published listings instead of workflow completion (fixes D88)",asy
   const api=await readFile(new URL("../app/api/batches/route.ts",import.meta.url),"utf8");
   const page=await readFile(new URL("../app/batches/page.tsx",import.meta.url),"utf8");
   const app=await readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8");
-  assert.match(api,/published_count:Math\.max\(Number\(publishedByBatch\[String\(row\.id\)\]\)\|\|0,Number\(state\.batchReceipt\?\.publishedCount\)\|\|0\)/);
+  /* D704 - its own published products come first. A bundle's drafts carry the
+     batch they were first drafted in, so batch-level attribution files under a
+     batch that owns nothing; product id is the link that survives. The batch-level
+     count and the receipt stay as fallbacks, so what reads correctly today keeps
+     doing so. */
+  assert.match(api,/published_count:Math\.max\(mineByProduct\.count,Number\(publishedByBatch\[String\(row\.id\)\]\)\|\|0,Number\(state\.batchReceipt\?\.publishedCount\)\|\|0\)/);
+  assert.match(api,/SELECT product_id,MAX\(updated_at\) published_at FROM etsy_publish_items WHERE user_id=\? AND status='completed' GROUP BY product_id/);
   /* D225 · "DRAFTS READY" was the fallback for every unpublished batch, whether
      or not a draft existed. Measured across all 17 saved batches: none had a
      draft in its snapshot and all 17 claimed drafts were ready. The label now
@@ -7278,7 +7284,7 @@ test("the weekly goal counts the week the listings went live — D700", async ()
   // Both the bar and the goals-page history read the same resolver.
   assert.equal((goal.match(/publishedWhen\(batch\)/g) || []).length, 2);
   // And the API supplies it.
-  assert.match(batches, /published_at:publishedAtByBatch\[String\(row\.id\)\]\|\|null/);
+  assert.match(batches, /published_at:mineByProduct\.at\|\|publishedAtByBatch\[String\(row\.id\)\]\|\|null/);
 });
 
 /* D703 · Looking at a published batch destroyed the record of what published. */
