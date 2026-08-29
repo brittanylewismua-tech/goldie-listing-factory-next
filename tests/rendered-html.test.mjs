@@ -5670,7 +5670,10 @@ test("a bundle member whose batch cannot be opened is answered, not awaited — 
   const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
 
   // The failure path writes a real summary, so "still reading" becomes false.
-  assert.match(app, /if\(!state\)return \[recipe\.id,\{designs:0,titled:0,tagged:0,drafts:0,described:false,complete:false,published:0,status:"",photos:0,mockups:0,unreadable:true\}\] as const/,
+  /* D694 added etsyReady to the summary so a closed product's badge can see the
+     one thing that blocks publishing. The rule here is unchanged: the failure path
+     writes a real summary, so "still reading" becomes false. */
+  assert.match(app, /if\(!state\)return \[recipe\.id,\{designs:0,titled:0,tagged:0,etsyReady:0,drafts:0,described:false,complete:false,published:0,status:"",photos:0,mockups:0,unreadable:true\}\] as const/,
     "an unreadable member must record that it is unreadable");
   assert.doesNotMatch(app, /if\(!state\)return null;/,
     "returning nothing is what left the card checking forever");
@@ -5688,10 +5691,17 @@ test("a bundle member whose batch cannot be opened is answered, not awaited — 
   /* The unreadable branch has to be checked before the drafts/published
      branches, or a zero-draft unreadable member reads as "Not started yet"
      and loses the only accurate thing anyone can say about it. */
-  const status = app.match(/const summary=bundleBatchSummary\[recipe\.id\];[\s\S]*?return \{label:"Not started yet",tone:"waiting"\};/)?.[0];
+  /* D694 - this used to end the slice at the first "Not started yet", which is now
+     inside the per-step branches. The rule is the same and is asserted directly:
+     unreadable is answered before ANY branch that counts. */
+  const from = app.indexOf("const summary=bundleBatchSummary[recipe.id];");
+  const status = app.slice(from, app.indexOf("/* D378 -", from));
   assert.ok(status, "the member card status branch must be findable");
-  assert.ok(status.indexOf("summary.unreadable") < status.indexOf("if(summary.published)"),
-    "unreadable must be answered before the counting branches");
+  assert.ok(status.indexOf("summary.unreadable") > -1, "unreadable is still answered");
+  for (const counting of ['if(step==="images")', 'if(step==="listing")', "if(summary.published)"]) {
+    assert.ok(status.indexOf("summary.unreadable") < status.indexOf(counting),
+      `unreadable must be answered before ${counting}`);
+  }
 });
 
 /* D628 · Measured live on ZZ TEST BUNDLE the moment D627 landed. The gate was
@@ -7412,4 +7422,32 @@ test("the stale recipe name cannot launder itself into the seller's name — D69
   // And the badge says the opportunity rather than counting a deficit.
   assert.match(app, /`\$\{files\.length-tagged\} could use all 13 tags`/);
   assert.doesNotMatch(app, /`\$\{tagged\} of \$\{files\.length\} fully tagged`/);
+});
+
+/* D694 · Found by the Run 2 bundle acceptance pass on d463417. */
+test("every product's badge summarises its own rows, not just the open one — D694", async () => {
+  const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+  const start = app.indexOf("function bundleCardStatus(");
+  const fn = app.slice(start, app.indexOf("/* D378 -", start));
+
+  /* Measured on the Hoodie + 1566 crewneck bundle: two cards, identical rows -
+     "2 of 2 titles", "Attached", "2 of 2 ready" - and different badges. The open
+     product said "1 could use all 13 tags"; the other said "2 drafts", a step 2
+     answer sitting on a step 3 card. D624 wrote the rule down and fixed it for the
+     open product only, so the defect survived on every card but one. */
+  assert.match(fn, /if\(step==="listing"\)\{[^]*?summary\.titled<summary\.designs/,
+    "a closed product's badge has to answer the step it is on");
+  assert.match(fn, /summary\.etsyReady<summary\.designs/,
+    "including the blocker - Etsy fields are what stop a listing publishing");
+  assert.match(fn, /return \{label:`\$\{summary\.drafts\} ready`,tone:"attention"\}/,
+    "and publish says ready, not drafts");
+  assert.doesNotMatch(fn, /if\(summary\.published\)return[^]*?\n      if\(summary\.drafts\)return \{label:`\$\{summary\.drafts\} \$\{summary\.drafts===1\?"draft":"drafts"\}`,tone:summary\.status/,
+    "the step-agnostic fallback is gone");
+
+  // The badge and the rows must read the same map, or they can disagree again.
+  assert.match(app, /etsyReady:designs\.filter\(design=>etsyRequiredComplete/);
+
+  /* Placement kept its own card layout (D680) and with it lost the label every
+     other panel has - two unlabelled previews side by side. */
+  assert.match(app, /className="task-listing placement-listing-card"[^]{0,400}<span className="task-listing-index">Listing \{listingIndex\+1\} of \{listings\.length\}<\/span>/);
 });

@@ -2175,8 +2175,34 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
       if(!summary)return {label:bundleBatchIds[recipe.id]?"Checking…":"Not started yet",tone:"waiting"};
       /* D627 - "Checking…" forever was the old answer here. Say what is true. */
       if(summary.unreadable)return {label:"Batch not found",tone:"attention"};
+      /* D694 · This branch was step-agnostic while the rows above it were not.
+         On step 3 a card whose rows read "2 of 2 titles", "Attached", "2 of 2
+         ready" carried the badge "2 drafts" - a step 2 answer on a step 3 card -
+         and on step 4 it said "2 drafts" instead of "2 ready". Measured on the
+         Hoodie + 1566 crewneck bundle: two cards, identical rows, different
+         badges.
+
+         D624 already wrote the rule down - "the badge summarises the rows or it
+         summarises nothing" - and fixed it for the product she happens to be on.
+         The other products kept the old behaviour, so the same defect survived on
+         every card but one. Same per-step logic now, from the same map the rows
+         read. */
+      if(step==="images"){
+        if(summary.drafts)return {label:`${summary.drafts} ${summary.drafts===1?"draft":"drafts"}`,tone:summary.status==="complete"?"ready":"attention"};
+        if(summary.designs)return {label:`${summary.designs} ${summary.designs===1?"design":"designs"}`,tone:"attention"};
+        return {label:"Not started yet",tone:"waiting"};
+      }
+      if(step==="listing"){
+        if(!summary.designs)return {label:"Not started yet",tone:"waiting"};
+        if(summary.titled<summary.designs)return {label:`${summary.titled} of ${summary.designs} titled`,tone:"attention"};
+        /* A blocker outranks advice here too, so the badge never leads with the
+           tag shortfall while Etsy fields underneath cannot publish. */
+        if(summary.etsyReady<summary.designs)return {label:`${summary.etsyReady} of ${summary.designs} Etsy details ready`,tone:"attention"};
+        if(summary.tagged<summary.designs)return {label:`${summary.designs-summary.tagged} could use all 13 tags`,tone:"advice"};
+        return {label:"Titles and tags ready",tone:"ready"};
+      }
       if(summary.published)return {label:`${summary.published} published`,tone:"ready"};
-      if(summary.drafts)return {label:`${summary.drafts} ${summary.drafts===1?"draft":"drafts"}`,tone:summary.status==="complete"?"ready":"attention"};
+      if(summary.drafts)return {label:`${summary.drafts} ready`,tone:"attention"};
       return {label:"Not started yet",tone:"waiting"};
     };
   }
@@ -2228,7 +2254,7 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
      The other products' work lives in their own batches, so it has to be read
      from them; the product being worked is read from state, which is always
      fresher than anything saved. */
-  const [bundleBatchSummary,setBundleBatchSummary]=useState<Record<string,{designs:number;titled:number;tagged:number;drafts:number;described:boolean;complete:boolean;published:number;status:string;photos:number;mockups:number;unreadable?:boolean}>>({});
+  const [bundleBatchSummary,setBundleBatchSummary]=useState<Record<string,{designs:number;titled:number;tagged:number;etsyReady:number;drafts:number;described:boolean;complete:boolean;published:number;status:string;photos:number;mockups:number;unreadable?:boolean}>>({});
   /* D559 - the sibling batches were read for their counts and then thrown away,
      so the publish screen could only ever show the open product's listings while
      the button published all three. Her question, looking at it: "why if this is
@@ -2256,7 +2282,7 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
          "Goldie is still reading the other products in this batch". It was not
          still reading. The bundle could never be published by anyone, and the
          message promised it was about to finish. Unreadable is an answer. */
-      if(!state)return [recipe.id,{designs:0,titled:0,tagged:0,drafts:0,described:false,complete:false,published:0,status:"",photos:0,mockups:0,unreadable:true}] as const;
+      if(!state)return [recipe.id,{designs:0,titled:0,tagged:0,etsyReady:0,drafts:0,described:false,complete:false,published:0,status:"",photos:0,mockups:0,unreadable:true}] as const;
       const designs=state.designs||[];
       /* D504 - the chip and the rows on the same card were fed by two different
          maps, loaded by two different effects at two different moments, so one
@@ -2275,6 +2301,11 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
       return [recipe.id,{designs:designs.length,
         titled:designs.filter(design=>String(design.title||"").trim()).length,
         tagged:designs.filter(design=>(design.tags||[]).length>=13).length,
+        /* D694 - the badge for a product she is not currently on could not see
+           whether its Etsy fields were complete, so it had no way to report the
+           one thing on this step that actually blocks publishing. Same map the
+           rows read, so they cannot disagree. */
+        etsyReady:designs.filter(design=>etsyRequiredComplete((design as {etsy?:{properties?:Array<{required?:boolean;value?:string}>}}).etsy)).length,
         drafts:(state.drafts||[]).length,
         described:Boolean(String(state.description||"").trim()),
         complete:Boolean(state.complete),
@@ -2284,7 +2315,7 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
         mockups:Object.values(state.preparedMockupCounts||{}).reduce((total,count)=>total+(Number(count)||0),0)}] as const;
     })).then(entries=>{
       if(!alive)return;
-      const loaded=Object.fromEntries(entries.filter(Boolean) as Array<readonly [string,{designs:number;titled:number;tagged:number;drafts:number;described:boolean;complete:boolean;published:number;status:string;photos:number;mockups:number;unreadable?:boolean}]>);
+      const loaded=Object.fromEntries(entries.filter(Boolean) as Array<readonly [string,{designs:number;titled:number;tagged:number;etsyReady:number;drafts:number;described:boolean;complete:boolean;published:number;status:string;photos:number;mockups:number;unreadable?:boolean}]>);
       if(Object.keys(loaded).length)setBundleBatchSummary(current=>({...current,...loaded}));
       if(Object.keys(memberScratch).length)setBundleMembers(current=>({...current,...memberScratch}));
     });
@@ -2630,6 +2661,11 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
                 still has to offer its retry and its help. */}
             {<><button className="error-help-link" onClick={()=>window.dispatchEvent(new CustomEvent("goldie-retry-listing",{detail:draft.clientId}))}>Retry this listing</button><button className="error-help-link" onClick={()=>window.dispatchEvent(new CustomEvent("goldie-support",{detail:draft.error??"A design failed"}))}>Get help with this error</button></>}
           </div>:<div className="task-listing placement-listing-card" key={draft.clientId}>
+            {/* D694 · These cards carried no name and no number. Every other panel
+                says which listing you are looking at; placement showed two
+                unlabelled previews side by side, which is the differentiation
+                problem again on the one panel that kept its own layout. */}
+            <div className="task-listing-ident"><span className="task-listing-index">Listing {listingIndex+1} of {listings.length}</span><p className="task-listing-name">{listingLabel(design)}</p></div>
             {draft.previewUrl?<button className="printify-preview-button" onClick={()=>window.open(draft.previewUrl,"_blank","noopener,noreferrer")} aria-label={`Open a larger Printify preview for ${design?.title?.trim()||design?.name||draft.name||"this listing"}`}><img src={draft.previewUrl} alt={`Printify preview for ${draft.title||draft.name}`}/><span>Click to enlarge</span></button>:design?<div className="pending-preview"><img src={design.previewUrl} alt="Design preview" decoding="async"/><span>Printify preview processing</span></div>:<span className="draft-check">!</span>}
             <p className="placement-design-name">{design?.title?.trim()||design?.name||draft.name||"Listing"}</p>
             {design?(()=>{const displayScale=printTargetFor(templateDetails).scale;const quality=design.width&&templateDetails?.maxPrintWidth&&displayScale?printifyDpi(design.width,templateDetails.maxPrintWidth,displayScale):null;const qualityReady=Boolean(quality&&quality.dpi>=300);return <p className={`placement-dpi ${qualityReady?"pass":"check"}`}>{!quality?"Checking print quality…":qualityReady?`✓ ${quality.dpi} DPI · good to print`:`${quality.dpi} DPI · review before printing`}</p>})():null}
