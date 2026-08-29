@@ -14,6 +14,10 @@ import "./lilac-theme.css";
 import "./approved-functional.css";
 import "./management-aesthetic.css";
 import "./clarity-pass.css";
+/* The approved interface is deliberately last and scoped to .interface-v2.
+   Removing this import and that class restores the previous presentation
+   without touching workflow or server behaviour. */
+import "./interface-v2.css";
 import ReliableNavigation from "./reliable-navigation";
 
 export async function generateMetadata(): Promise<Metadata> {
