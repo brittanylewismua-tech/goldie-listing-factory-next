@@ -2109,7 +2109,7 @@ test("counts and caps every listing at Etsy's 20-photo limit (fixes D67)",async(
   const app=await readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8");
   assert.match(app,/slotsLeft=Math\.max\(0,20-reservedPhotos-selected\.size\)/);
   assert.match(app,/Etsy allows 20 listing photos/);
-  assert.match(app,/disabled=\{!selected\.has\(index\)&&atLimit\}/);
+  assert.match(app,/disabled=\{state!=="ready"\|\|\(!selected&&atLimit\)\}/);
   assert.match(app,/reservedPhotos=\{\(preparedMockupCounts\[draft\.id\|\|""\]\|\|0\)\+\(design\?\.sizeGuideName\|\|sizeGuideName\?1:0\)\}/);
   assert.match(app,/values\.slice\(0,Math\.max\(0,20-reserved\)\)/);
 });
@@ -6801,7 +6801,7 @@ test("the final review reads honestly — D660", async () => {
   assert.match(css, /\.app-shell \.row-value\{min-width:0!important;overflow-wrap:anywhere!important\}/);
 
   // The heading must agree with the button underneath it.
-  assert.match(app, /<h2>\{publishBlockers\(\)\.length\?"Finish these items before publishing":"Your batch is ready for its final check"\}<\/h2>/);
+  assert.match(app, /publishBlockers\(\)\.length\?"Finish these items before publishing":activeBundle\?"Your selected listings are ready for final review":"Your batch is ready for its final check"/);
 
   /* The heading and the draft chip overlapped once the chip carried a product
      name: "✓ 2 drafts on Gildan Hoodie" printed through the heading. */

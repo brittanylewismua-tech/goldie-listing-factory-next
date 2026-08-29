@@ -36,3 +36,24 @@ test("the final-review count cannot overlap its heading", async () => {
   const css = await read("app/clarity-pass.css");
   assert.match(css, /\.final-review>\.step-content>\.step-heading>\.done-mark\{[\s\S]*?position:static!important/);
 });
+
+test("Etsy category and property controls render only when the seller asks for them", async () => {
+  const app = await read("app/listing-factory-app.tsx");
+  const editor = app.match(/function EtsyDetailsEditor\([\s\S]*?\n\}/)?.[0] || "";
+  const property = app.match(/function LazyEtsyProperty\([\s\S]*?\n\}/)?.[0] || "";
+  assert.match(editor, /query\.trim\(\)\.length<2\?\[\]/);
+  assert.match(editor, /\.slice\(0,30\)/);
+  assert.match(editor, /Search Etsy categories/);
+  assert.doesNotMatch(editor, /categories\.map/);
+  assert.match(property, /open\?<label>/);
+  assert.match(property, /possibleValues\.map/);
+});
+
+test("Printify photos cannot be selected before they load and expose retry on failure", async () => {
+  const app = await read("app/listing-factory-app.tsx");
+  const tile = app.match(/function PrintifyImageTile\([\s\S]*?\n\}/)?.[0] || "";
+  assert.match(tile, /disabled=\{state!=="ready"/);
+  assert.match(tile, /onLoad=\{\(\)=>setState\("ready"\)\}/);
+  assert.match(tile, /onError=\{\(\)=>setState\("failed"\)\}/);
+  assert.match(tile, />Retry<\/button>/);
+});

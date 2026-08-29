@@ -1776,6 +1776,23 @@ body{min-width:1180px!important}
   white-space:normal!important;
   text-align:right!important;
 }
+.app-shell .etsy-category-results{display:grid;max-height:260px;overflow:auto;border:1px solid rgba(91,53,79,.16);border-radius:12px;background:#fff}
+.app-shell .etsy-category-results button{padding:10px 12px;border:0;border-bottom:1px solid rgba(91,53,79,.1);background:#fff;color:var(--ink);text-align:left;cursor:pointer}
+.app-shell .etsy-category-results button:hover,.app-shell .etsy-category-results button:focus-visible{background:#f5edf3}
+.app-shell .etsy-attribute-list{display:grid;gap:8px}
+.app-shell .etsy-lazy-property{border:1px solid rgba(91,53,79,.14);border-radius:12px;background:rgba(255,255,255,.62);overflow:hidden}
+.app-shell .etsy-lazy-property>summary{display:flex;justify-content:space-between;gap:12px;padding:11px 13px;cursor:pointer;list-style:none}
+.app-shell .etsy-lazy-property>summary span{display:flex;gap:7px;align-items:center;font-weight:750}
+.app-shell .etsy-lazy-property>summary em{font-size:10px;color:#b53838;font-style:normal;text-transform:uppercase;letter-spacing:.06em}
+.app-shell .etsy-lazy-property>summary b{font-size:12px;color:var(--muted);font-weight:650;text-align:right}
+.app-shell .etsy-lazy-property>label{display:block;padding:0 13px 13px}
+.app-shell .printify-image-option.is-loading,.app-shell .printify-image-option.is-failed{background:#f3edf1;min-height:92px}
+.app-shell .printify-image-option.is-loading img,.app-shell .printify-image-option.is-failed img{opacity:0}
+.app-shell .printify-photo-loading{position:absolute;inset:0;display:grid;place-items:center;padding:8px;text-align:center;font-size:11px;color:#715d6b;background:linear-gradient(100deg,#f3edf1 25%,#fff 45%,#f3edf1 65%);background-size:220% 100%;animation:goldie-photo-loading 1.4s linear infinite}
+.app-shell .printify-image-option.is-ready .printify-photo-loading{display:none}
+.app-shell .printify-image-option.is-failed .printify-photo-loading{animation:none;background:#f7f1f4;color:#8d3d44}
+.app-shell .printify-photo-retry{position:absolute;left:50%;bottom:8px;z-index:3;transform:translateX(-50%);padding:4px 9px!important;border-radius:999px!important;font-size:11px!important}
+@keyframes goldie-photo-loading{to{background-position:-220% 0}}
 
 /* D310 · Measured on the deployed card: panel 718px inside a 720px card WITH
    22px margins each side, so its right edge sat 21px PAST the card. D236 added
