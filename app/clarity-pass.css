@@ -2933,7 +2933,7 @@ body{min-width:1180px!important}
 .app-shell .task-panel .printify-view-groups{display:grid;grid-template-columns:minmax(0,1fr);gap:20px}
 .app-shell .task-panel .printify-view-group{display:block!important;width:auto;margin:0}
 .app-shell .task-panel .printify-view-heading{font-size:10px;letter-spacing:.09em;font-weight:800;color:#6b3f5e;margin:0 0 6px}
-.app-shell .task-panel .printify-view-group>.printify-image-grid{display:grid!important;grid-template-columns:repeat(auto-fill,168px)!important;justify-content:start!important;gap:12px!important}
+.app-shell .task-panel .printify-view-group>.printify-image-grid{display:grid!important;grid-template-columns:repeat(auto-fill,132px)!important;justify-content:start!important;gap:12px!important}
 .app-shell .task-panel .printify-image-option{margin:0;width:auto;border-radius:10px!important;overflow:hidden;background:#fff!important;box-shadow:0 1px 4px rgba(74,42,62,.14);border:2px solid transparent!important;position:relative}
 .app-shell .task-panel .printify-image-option.selected{border-color:#7a3f63!important;box-shadow:0 2px 9px rgba(122,63,99,.32)!important}
 .app-shell .task-panel .printify-image-option img{display:block;width:100%;height:auto}
@@ -3296,8 +3296,10 @@ body{min-width:1180px!important}
    costs one extra row of scrolling, not twelve. */
 /* D685 - 216px was too much scrolling ("I actually think the printify photos can
    be a bit smaller"). Fixed 168px tiles rather than 1fr: the group is full width
-   for legibility, but the tiles stop growing to fill it. Still 62% larger than the
-   104px that made the ivory colourways invisible.
+   for legibility, but the tiles stop growing to fill it. 168px was still too much
+   scrolling, so 132px: four across a group instead of three, roughly a quarter
+   less height, and still comfortably above the 104px that made the ivory
+   colourways invisible.
    Both the column count and the group layout are edited on the ORIGINAL rules
    above (.app-shell .task-panel .printify-view-group>.printify-image-grid, four
    classes and a child combinator). Appending a lower-specificity override here is

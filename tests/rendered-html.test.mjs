@@ -4797,7 +4797,7 @@ test("Printify photo views stay compact and visibly selectable — D678/D679", a
     "view groups use a stable grid rather than balancing CSS columns");
   assert.doesNotMatch(css, /printify-view-groups\{[^}]*column-count/,
     "never CSS columns - they fragment horizontally inside an overflow box");
-  assert.match(css, /\.task-panel \.printify-view-group>\.printify-image-grid\{[^}]*grid-template-columns:repeat\(auto-fill,168px\)/,
+  assert.match(css, /\.task-panel \.printify-view-group>\.printify-image-grid\{[^}]*grid-template-columns:repeat\(auto-fill,132px\)/,
     "each named view keeps its photos together on one row");
   assert.match(css, /\.task-panel \.printify-image-option\.selected\{border-color:#7a3f63!important;[^}]*box-shadow:/,
     "a selected photo has contrast beyond its checkbox");
@@ -4814,7 +4814,11 @@ test("placement previews wrap into identifiable listing cards — D679", async (
   assert.match(css, /\.placement-review-grid\{grid-template-columns:repeat\(auto-fit,minmax\(240px,1fr\)\)/);
   assert.match(css, /\.placement-review-grid \.printify-preview-button\{[^}]*width:100%!important;max-width:none!important;min-height:0!important;height:250px!important/);
   assert.match(app, /showAll\?"Show fewer Printify photos":`Show \$\{hiddenCount\} more Printify photos`/);
-  assert.match(app, /const defaults=groups\.filter\(\(\[view,items\]\)=>\/\\b\(front\|back\)\\b\/i\.test\(view\)\|\|items\.some\(\(\[,index\]\)=>selected\.has\(index\)\)\)/,
+  /* D688 - what this line is for is the second clause: an angle holding a photo
+     she already chose is never hidden. The anchor in the first clause changed
+     because \b(front|back)\b also matched "Model 1 front" and "Model 2 back",
+     so the collapsed default was showing six groups, not two. */
+  assert.match(app, /const defaults=groups\.filter\(\(\[view,items\]\)=>\/\^\(front\|back\)\$\/i\.test\(view\.trim\(\)\)\|\|items\.some\(\(\[,index\]\)=>selected\.has\(index\)\)\)/,
     "the collapsed picker never hides an angle containing a selected photo");
 });
 
@@ -7220,7 +7224,7 @@ test("the Printify photo tiles are big enough, on a tile that is not white — D
   assert.match(clarity, /\.app-shell \.task-panel \.printify-view-groups\{display:grid;grid-template-columns:minmax\(0,1fr\);/);
   /* D685 - fixed 168px, not 1fr: full-width groups made the tiles 216px and that
      was too much scrolling. */
-  assert.match(clarity, /\.app-shell \.task-panel \.printify-view-group>\.printify-image-grid\{display:grid!important;grid-template-columns:repeat\(auto-fill,168px\)!important;justify-content:start!important/);
+  assert.match(clarity, /\.app-shell \.task-panel \.printify-view-group>\.printify-image-grid\{display:grid!important;grid-template-columns:repeat\(auto-fill,132px\)!important;justify-content:start!important/);
   // The 2-column group layout is what held the tiles to 104px.
   assert.doesNotMatch(clarity, /printify-view-groups\{display:grid;grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
   // A white garment on a white tile is the defect. The tile has to be tinted.
@@ -7289,4 +7293,20 @@ test("each listing in a task panel is separated and numbered — D685", async ()
   // And it never prints the upload filename or repeats the listing number.
   assert.match(app, /const listingLabel=\(design:DesignFile\|undefined\)=>\{/);
   assert.doesNotMatch(app, /listing \$\{index\+1\} of \$\{listings\.length\}/);
+});
+
+/* D688 · The photo picker's collapsed default. Measured on her live page: the
+   toggle said "Show 9 more Printify photos" while twelve view groups - eighteen
+   photos across two listings - were rendered and visible. Not a styling problem;
+   the filter deciding what "front and back only" means was matching six groups. */
+test("the collapsed photo picker shows front and back, not everything containing the word — D688", async () => {
+  const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+  /* \b(front|back)\b matches "Model 1 front" and "Model 2 back" just as happily
+     as "Front", which is why the collapse never collapsed. */
+  assert.doesNotMatch(app, /\/\\b\(front\|back\)\\b\/i\.test\(view\)/,
+    "an unanchored word match lets every model shot through");
+  assert.match(app, /\/\^\(front\|back\)\$\/i\.test\(view\.trim\(\)\)/,
+    "the view has to BE front or back");
+  // A group holding a photo she already chose still shows, collapsed or not.
+  assert.match(app, /\|\|items\.some\(\(\[,index\]\)=>selected\.has\(index\)\)\)/);
 });

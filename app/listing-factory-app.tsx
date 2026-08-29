@@ -409,7 +409,16 @@ function PrintifyImagePicker({ images,indices,reservedPhotos=0,onApplyOne,onAppl
           const found=groups.find(entry=>entry[0]===view);
           if(found)found[1].push([src,index]);else groups.push([view,[[src,index]]]);
         });
-        const defaults=groups.filter(([view,items])=>/\b(front|back)\b/i.test(view)||items.some(([,index])=>selected.has(index)));
+        /* D688 · This tested for the WORD front or back anywhere in the view name,
+           so "Model 1 front", "Model 1 back", "Model 2 front" and "Model 2 back"
+           all matched it. The collapsed default has been showing six camera
+           groups - eighteen photos - since D682, while its own button correctly
+           said "Show 9 more". Her instruction was "just show the basic front and
+           back flat lays. And then underneath that, link the rest of all the
+           options of printify photos." Anchored, so the view has to BE front or
+           back, not merely contain the word. A group holding a photo she has
+           already chosen stays visible either way - that clause is untouched. */
+        const defaults=groups.filter(([view,items])=>/^(front|back)$/i.test(view.trim())||items.some(([,index])=>selected.has(index)));
         const visible=showAll?groups:(defaults.length?defaults:groups.slice(0,2));
         const hiddenCount=groups.filter(group=>!visible.includes(group)).reduce((total,[,items])=>total+items.length,0);
         return <><div className="printify-view-groups">{visible.map(([view,items])=><div className="printify-view-group" key={view}>
