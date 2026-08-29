@@ -7378,3 +7378,22 @@ test("one language survives a sweep of every panel — D691", async () => {
   assert.match(clarity, /\.managementOnly h3 \{\n  font-family: "Manrope"/);
   assert.doesNotMatch(clarity, /\.managementOnly h3 \{\n  font-family: "DM Serif Display"/);
 });
+
+/* D692 · Closing the refactor out. Three implementations of "show me every
+   listing in this batch" became one, and the old markup is gone rather than left
+   sitting beside the new. */
+test("only one implementation of the listing rows survives — D687/D692", async () => {
+  const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+  for (const stale of ["task-listing-work", "task-listing-head", "task-listing-count", "task-listing-thumb"]) {
+    assert.doesNotMatch(app, new RegExp(`className="${stale}"`),
+      `${stale} was the hand-rolled markup ListingRows replaced`);
+  }
+  // Step 3 through designTaskRows, step 2's photo panels through listingWorkRows.
+  assert.equal((app.match(/<ListingRows /g) || []).length, 2);
+  assert.equal((app.match(/listingWorkRows\(\(/g) || []).length, 3);
+
+  /* The product name was the last serif in the workflow stage. Its own rule
+     exists to make it match the card title, so it follows the card title. */
+  const clarity = await readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8");
+  assert.doesNotMatch(clarity, /\.app-shell \.bundle-product-id>b\{[^}]*(DM Serif Display|Fraunces)/);
+});

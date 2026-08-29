@@ -764,7 +764,7 @@
 .app-shell .bundle-product-id{display:grid;gap:2px;min-width:0}
 .app-shell .bundle-product-id>b{
   color:#4c293f;
-  font:650 18px/1.2 "Fraunces",Georgia,serif;
+  font:800 18px/1.2 "Manrope",system-ui,-apple-system,"Segoe UI",Helvetica,Arial,sans-serif;
   overflow:hidden;
   text-overflow:ellipsis;
   white-space:nowrap;
@@ -1437,9 +1437,11 @@
 }
 
 /* CARD TITLE · the product name was Fraunces 18/650 — a fourth family, and
-   smaller than the panel heading nested two levels inside it. */
+   smaller than the panel heading nested two levels inside it. This rule exists to
+   make it match the card title, so D692 carries it along: the card title is sans
+   now, and the product name is the last serif that was left in the workflow. */
 .app-shell .bundle-product-id>b{
-  font:400 22px/1.15 "DM Serif Display",Georgia,serif!important;
+  font:800 18px/1.2 "Manrope",system-ui,-apple-system,"Segoe UI",Helvetica,Arial,sans-serif!important;
   color:#4c293f!important;
 }
 
