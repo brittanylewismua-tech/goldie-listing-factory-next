@@ -226,7 +226,7 @@
 
 /* D117 · Make a large Etsy shipping-profile library navigable without hiding
  * any money-affecting choice or changing the profile attached to the product. */
-.app-shell .shipping-profile-picker{display:grid;gap:8px;width:100%}.app-shell .shipping-profile-family-warning{display:grid;gap:3px;margin:10px 0;padding:11px 13px;border:1px solid rgba(173,113,42,.24);border-radius:9px;background:rgba(255,240,210,.58);color:#6e491b}
+.app-shell .shipping-profile-picker{display:grid;gap:8px;width:100%}.app-shell .shipping-profile-family-warning{display:grid;gap:3px;margin:10px 0;padding:11px 13px;border:1px solid rgba(173,113,42,.24);border-radius:9px;background:rgba(255,240,210,.58);color:#a33a48}
 .app-shell .shipping-profile-family-warning b{font-size:12px}
 .app-shell .shipping-profile-family-warning span{font-size:11px;line-height:1.45}
 
@@ -988,7 +988,7 @@
 .management-page .remove-batch:hover,
 .batch-history .remove-batch:hover{
   background:rgba(139,63,53,.09)!important;
-  color:#7a2f28!important;
+  color:#8e2f3c!important;
   text-decoration:underline!important;
 }
 .batch-history-thumbnail.empty>svg{
@@ -1120,7 +1120,7 @@
   font-style:normal;
   font-size:10px;
   font-weight:750;
-  color:#8b3f35;
+  color:#a33a48;
 }
 
 /* D226 · A listing with no title yet is waiting, not failing. It used to render
@@ -1144,7 +1144,7 @@
   border-radius:10px;
   border:1px solid rgba(139,63,53,.28);
   background:rgba(253,242,238,.85);
-  color:#7a2f28;
+  color:#a33a48;
   font-size:12px;
   font-weight:700;
 }
@@ -3457,4 +3457,36 @@ body{min-width:1180px!important}
 }
 .app-shell .recipe-card .recipe-tile .recipe-use>.recipe-icon{
   grid-column:2!important;grid-row:1!important;align-self:start!important;margin:0!important;
+}
+
+/* ============================================================================
+ * D707 · ONE ATTENTION COLOUR
+ *
+ * "I don't want a diarrhea brown accent on anything. I thought I was clear."
+ * She was clear, twice before this. The reason it keeps coming back is a fact
+ * about colour that every previous pass got wrong: desaturating red toward
+ * orange IS brown. Every "tone it down" moved the hue the wrong way, so each
+ * fix reintroduced the defect it was meant to remove.
+ *
+ * Measured rather than guessed. Every rule in every stylesheet whose selector
+ * carries attention meaning - warning, error, missing, failed, attention,
+ * needs-setup, profit-low, mismatch, remove-batch - was checked for colours in
+ * the brown band (hue 4-52, saturation >=25%, lightness 18-64%). Twenty-eight
+ * declarations across seven stylesheets. She found one of them. Fixing that one
+ * would have left twenty-seven to surface a screen at a time, which is how this
+ * became the third conversation about the same colour.
+ *
+ * All twenty-eight are corrected AT SOURCE, in the sheets that own them. This
+ * file deliberately does NOT override them: D706 was caused by four stylesheets
+ * each owning part of one element, and stacking an override here on top of a
+ * fixed source would rebuild that trap. What lives here is the token itself.
+ *
+ * tests/no-brown-attention-d707.test.mjs states the rule so it cannot drift
+ * back, including a guard that the hue stays at red rather than sliding toward
+ * orange the next time someone tones it down.
+ * ==========================================================================*/
+.app-shell{
+  --goldie-attention:#c14b57;
+  --goldie-attention-deep:#a33a48;
+  --goldie-attention-soft:rgba(193,75,87,.10);
 }

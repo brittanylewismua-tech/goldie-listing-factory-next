@@ -1351,7 +1351,7 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
   font-weight:550!important;
   padding:13px!important;
 }
-.app-shell .title-match-warning{display:block;margin:10px 0;padding:10px 12px;border:1px solid #c18a42;border-radius:10px;background:#fff4dc;color:#5a3710;font-size:12px;line-height:1.45;font-weight:750}
+.app-shell .title-match-warning{display:block;margin:10px 0;padding:10px 12px;border:1px solid rgba(163,58,72,.34);border-radius:10px;background:#fff4dc;color:#a33a48;font-size:12px;line-height:1.45;font-weight:750}
 
 /* D96 · The tags field had the same problem the title field just had.
  * D79 raised tags from 4-7 to a full 13, which is correct — but 13 phrases is

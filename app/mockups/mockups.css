@@ -75,7 +75,7 @@
 .occlusionTools .occTool{border:1px solid #d9d2c6;background:#fff;border-radius:999px;padding:6px 14px;font-size:.86rem;cursor:pointer;color:#4a443c}
 .occlusionTools .occTool.on{background:#3d3730;border-color:#3d3730;color:#fff}
 .occlusionTools .occBrush{display:flex;align-items:center;gap:8px;font-size:.86rem;color:#6b6257}
-.mockChoice .sceneWarning{display:block;margin-top:6px;font-size:.78rem;color:#8a6a1f;background:#fdf5e2;border:1px solid #eeddb4;border-radius:8px;padding:4px 8px}
+.mockChoice .sceneWarning{display:block;margin-top:6px;font-size:.78rem;color:#a33a48;background:#fdf5e2;border:1px solid #eeddb4;border-radius:8px;padding:4px 8px}
 .mockChoice .sceneReady{display:block;margin-top:6px;font-size:.78rem;color:#3f6b45;background:#f0f7f1;border:1px solid #cfe4d3;border-radius:8px;padding:4px 8px}
 
 
