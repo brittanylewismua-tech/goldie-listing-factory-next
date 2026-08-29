@@ -1034,7 +1034,8 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .app-shell .recipe-card .recipe-library-head .add-product-button{border:0!important;background:transparent!important;color:#704d75!important;box-shadow:none!important;text-decoration:underline!important}
 .app-shell .recipe-card .recipe-library-head .add-product-button:hover{background:transparent!important;color:#4a2a3e!important;transform:none!important}
 .mockupFactory.managementOnly .newSetButton{border:0!important;background:transparent!important;color:#704d75!important;box-shadow:none!important;text-decoration:underline!important}
-.app-shell .recipe-card .recipe-use em{display:inline-block!important;justify-self:start!important;width:auto!important;max-width:max-content!important;margin-top:4px!important;padding:5px 9px!important;border-radius:999px!important;background:#673452!important;color:#fff!important;font-weight:850!important}
+/* D706 - one of four rules that each owned part of this pill; consolidated
+   into a single rule at the foot of clarity-pass.css. */
 .app-shell .recipe-card .delete-recipe{width:auto!important;min-width:48px!important;padding:4px 7px!important;font-size:9px!important;font-weight:800}
 .app-shell .pricing-approval-button{width:100%!important;margin-top:16px!important;padding:14px 18px!important;border:1px solid rgba(91,48,79,.18)!important;border-radius:11px!important;background:#663650!important;color:#fff!important;font-weight:850!important}
 .app-shell .pricing-approval-button.approved{background:#e8f5eb!important;color:#27663f!important}

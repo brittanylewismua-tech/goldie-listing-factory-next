@@ -232,12 +232,7 @@
 
 /* D120 · "Choose this product →" wrapped the arrow onto its own line in the
  * product tiles. Keep the label and its arrow together. */
-.app-shell .recipe-tile .recipe-use em{
-  display:inline-flex;
-  align-items:center;
-  gap:6px;
-  white-space:nowrap;
-}
+/* D706 - consolidated; see the single pill rule at the foot of this file. */
 
 /* ── D126 · "Saved for this product" was a mess ─────────────────────────────
  *
@@ -931,11 +926,7 @@
  * mockup set and a keyword bank would otherwise wrap and make its tile taller
  * than its neighbours, which is the ragged-row fault D190 and D195 already fixed
  * twice elsewhere. */
-.app-shell .recipe-grid .recipe-tile .recipe-copy em{
-  width:100%!important;
-  min-height:32px!important;
-  margin-top:2px!important;
-}
+/* D706 - the full-width intent here is kept, in the consolidated rule. */
 .app-shell .recipe-grid .recipe-tile .recipe-copy small{
   white-space:nowrap!important;
   overflow:hidden!important;
@@ -3385,3 +3376,85 @@ body{min-width:1180px!important}
    width but one. */
 .support-video-frame{position:relative;width:100%;padding-bottom:56.25%;background:#1a1017}
 .support-video-frame iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+
+/* ============================================================================
+ * D706 · THE CHOOSE / READY PILL HAD FOUR OWNERS
+ *
+ * Her words: "It's not centered in the button, and the button doesn't look
+ * right." Measured: font-size 10px, line-height 15px, padding 5px 9px, inside
+ * a box forced to min-height 32px - so the text sat in a 15px line box inside
+ * a 32px pill and printed high. It was not a matter of taste; the glyphs were
+ * genuinely off-centre by about 8px.
+ *
+ * The cause is that four rules from four different passes each owned a piece
+ * of one element, and none of them owned the whole thing:
+ *   approved-functional  .recipe-card .recipe-use em         display, padding, fill
+ *   clarity-pass    235  .recipe-tile .recipe-use em         inline-flex, centring
+ *   clarity-pass    934  .recipe-grid ... .recipe-copy em    width:100%, min-height
+ *   clarity-pass    495  .recipe-copy em                     font-size
+ * The centring rule at 235 carried no !important, so the blockifying rule in
+ * approved-functional beat it, which is why a rule that says align-items:center
+ * had been sitting in the file the whole time and doing nothing.
+ *
+ * D702's dead-CSS sweep then deleted a fifth rule - the one that set line-height
+ * to 1 and gave the pill a real flex box - because nothing else referenced it.
+ * It was not dead. That is what pushed this from "fine" to "sloppy".
+ *
+ * One rule now. Full width is kept deliberately: it is what made every tile the
+ * same height, which D190 and D195 both had to fix before.
+ * ==========================================================================*/
+.app-shell .recipe-card .recipe-tile .recipe-copy em,
+.app-shell .recipe-card .recipe-tile .recipe-use em{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:6px!important;
+  width:100%!important;
+  /* The rule this replaces set max-width:max-content, which silently capped the
+     pill at its text width and defeated width:100%. Reset both explicitly so a
+     survivor from another sheet cannot quietly win again. */
+  max-width:none!important;
+  justify-self:stretch!important;
+  box-sizing:border-box!important;
+  min-height:34px!important;
+  margin-top:10px!important;
+  padding:0 12px!important;
+  border-radius:999px!important;
+  border:0!important;
+  background:linear-gradient(135deg,#6b3a58,#8a4f73)!important;
+  color:#fff!important;
+  font-size:10.5px!important;
+  font-weight:800!important;
+  letter-spacing:.01em!important;
+  line-height:1!important;
+  white-space:nowrap!important;
+  box-shadow:0 4px 12px rgba(85,45,70,.18)!important;
+}
+.app-shell .recipe-card .recipe-tile:hover .recipe-copy em{
+  background:linear-gradient(135deg,#5a2f4a,#7a4364)!important;
+}
+/* Chosen is a state, not an offer. It stops shouting. */
+.app-shell .recipe-card .recipe-tile.selected .recipe-copy em,
+.app-shell .recipe-card .recipe-tile.selected .recipe-use em{
+  background:rgba(107,58,88,.12)!important;
+  color:#5f3352!important;
+  font-weight:800!important;
+  box-shadow:none!important;
+}
+
+/* A count on the left of a title reads as a bullet. On the right it reads as a
+   quantity, and it lands on the same edge as Edit and Delete below it. Built as
+   a real column rather than reserved padding: reserved padding is taken from
+   every row, which crushed the narrow bundle tiles to "Hoo…" when I tried it. */
+.app-shell .recipe-card .recipe-tile .recipe-use{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) auto!important;
+  column-gap:10px!important;
+  align-items:start!important;
+}
+.app-shell .recipe-card .recipe-tile .recipe-use>.recipe-copy{
+  grid-column:1!important;grid-row:1!important;min-width:0!important;
+}
+.app-shell .recipe-card .recipe-tile .recipe-use>.recipe-icon{
+  grid-column:2!important;grid-row:1!important;align-self:start!important;margin:0!important;
+}

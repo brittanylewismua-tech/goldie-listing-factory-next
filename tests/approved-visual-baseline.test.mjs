@@ -552,7 +552,13 @@ test("the product step stays usable after a product is chosen — D122/D119/D120
     "The suggested name must never overwrite something the seller typed.");
 
   /* D120 — the arrow wrapped onto its own line inside the product tiles. */
-  assert.match(clarity, /\.app-shell \.recipe-tile \.recipe-use em\{[\s\S]*white-space:nowrap/);
+  /* D706 · The pill had four owners across two stylesheets and this test named
+     one of them by selector. The rule it wanted — the arrow must not wrap — is
+     unchanged; it now lives in the single consolidated pill rule. Naming a
+     selector is how a test ends up passing while the element it describes is
+     visibly broken, which is exactly what happened here: this assertion was
+     green the whole time the text sat 8px off-centre. */
+  assert.match(clarity, /\.app-shell \.recipe-card \.recipe-tile \.recipe-copy em,[\s\S]*?white-space:nowrap!important/);
 });
 
 test("one help bubble per screen unless the subject is genuinely different — D121", async () => {
@@ -1009,8 +1015,16 @@ test("D198: the card CTA spans the tile and the subtitle says something real", a
   // The pill measured 81px in a 205px card while the whole card was clickable.
   assert.match(
     css,
-    /\.app-shell \.recipe-grid \.recipe-tile \.recipe-copy em\{[^}]*width:100%!important/,
+    /\.app-shell \.recipe-card \.recipe-tile \.recipe-copy em,[\s\S]*?width:100%!important/,
     "the Choose CTA spans the card instead of leaving 111px of dead space",
+  );
+  /* D706 · Spanning the card was never enough on its own. The box was 34px tall
+     around a 15px line box, so the label printed high inside its own pill. A CTA
+     that fills the card and prints off-centre still reads as broken. */
+  assert.match(
+    css,
+    /\.app-shell \.recipe-card \.recipe-tile \.recipe-copy em,[\s\S]*?line-height:1!important/,
+    "the label is centred in the pill, not floating in a taller box",
   );
 
   // A real summary can run long; one line keeps tiles the same height.
