@@ -104,7 +104,22 @@ export async function GET(request:Request){const user=await getChatGPTUser();if(
      would not have counted at all. */
   const publishedByBatch=Object.fromEntries(published.results.map(row=>[String(row.batch_id),Number(row.completed)||0]));
   const publishedAtByBatch=Object.fromEntries(published.results.map(row=>[String(row.batch_id),String(row.published_at||"")]));
-  return NextResponse.json({batches:rows.results.map(row=>batchListItem(row,publishedByBatch,publishedAtByBatch,publishedAtByProduct))})}
+  /* D708 · The weekly goal used to be summed from THIS list, and this list is
+     LIMIT 20. So every new batch pushed an older one off the end, and if that
+     older batch was published this week its listings stopped counting: her bar
+     went from 6 to 4 without her publishing or deleting anything. A number that
+     falls when you start unrelated work is worse than no number.
+
+     How many listings went live is a fact about the publish records, not about
+     which page of history happens to be loaded, so it is counted there and sent
+     alongside. Each product is counted once, on the day it most recently
+     completed, which is the same rule the per-product lookup above already uses
+     - a republish moves a listing, it does not mint a second one. */
+  const publishedDayRows=await database.prepare("SELECT substr(MAX(updated_at),1,10) day,product_id FROM etsy_publish_items WHERE user_id=? AND status='completed' GROUP BY product_id").bind(user.id).all();
+  const publishedByDay:Record<string,number>={};
+  for(const row of publishedDayRows.results||[]){const day=String((row as {day?:string}).day||"");if(!day)continue;publishedByDay[day]=(publishedByDay[day]||0)+1}
+  const publishedDays=Object.entries(publishedByDay).map(([day,count])=>({day,count})).sort((a,b)=>a.day<b.day?1:-1);
+  return NextResponse.json({batches:rows.results.map(row=>batchListItem(row,publishedByBatch,publishedAtByBatch,publishedAtByProduct)),published:publishedDays})}
 
 export async function POST(request:Request){const user=await getChatGPTUser();if(!user)return NextResponse.json({error:"Sign in to continue."},{status:401});const database=db();if(!database)return NextResponse.json({error:"Batch history is unavailable."},{status:503});await ensure(database);const body=await request.json() as {id?:string;status?:string;step?:string;setupName?:string;productTitle?:string;designCount?:number;state?:unknown};const id=String(body.id||crypto.randomUUID()).replace(/[^a-zA-Z0-9-]/g,"").slice(0,80);const allowedStatus=new Set(["draft","processing","needs_attention","complete"]),allowedStep=new Set(["connect","setup","designs","review","finish"]);const status=allowedStatus.has(String(body.status))?String(body.status):"draft",step=allowedStep.has(String(body.step))?String(body.step):"connect";const stateJson=JSON.stringify(body.state??{});if(stateJson.length>750000)return NextResponse.json({error:"This batch snapshot is too large."},{status:413});await database.prepare("INSERT INTO listing_batches (id,user_id,status,step,setup_name,product_title,design_count,state_json,updated_at) VALUES (?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP) ON CONFLICT(id) DO UPDATE SET status=excluded.status,step=excluded.step,setup_name=excluded.setup_name,product_title=excluded.product_title,design_count=excluded.design_count,state_json=excluded.state_json,updated_at=CURRENT_TIMESTAMP WHERE user_id=excluded.user_id").bind(id,user.userId,status,step,String(body.setupName||"").slice(0,160),String(body.productTitle||"").slice(0,200),Math.max(0,Math.min(20,Number(body.designCount||0))),stateJson).run();return NextResponse.json({id,saved:true})}
 

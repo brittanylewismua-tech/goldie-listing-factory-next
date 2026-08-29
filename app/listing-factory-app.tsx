@@ -49,7 +49,7 @@ function ProductGlyph({title}:{title?:string}){
   );
 }
 import { NavIcon } from "./nav-icons";
-import { publishedThisPeriod, type ListingGoal, type PublishedBatch } from "./listing-goal";
+import { publishedDaysThisPeriod, type ListingGoal, type PublishedDay } from "./listing-goal";
 
 /* D202 · "25 selected variants" is Printify's word, not a seller's. A seller
  * picked five colours and five sizes; "variants" is the internal name for the
@@ -1136,16 +1136,19 @@ export default function ListingFactoryApp() {
      appear — here and the publish receipt — read this one value, so it is never
      half-shown. */
   const [listingGoal,setListingGoal]=useState<ListingGoal|null>(null);
-  const [goalBatches,setGoalBatches]=useState<PublishedBatch[]>([]);
+  /* D708 · Was PublishedBatch[] summed from /api/batches, which is LIMIT 20, so
+     starting unrelated batches pushed published ones off the list and the bar
+     fell on its own. Counted from the publish records now. */
+  const [goalDays,setGoalDays]=useState<PublishedDay[]>([]);
   useEffect(()=>{if(signedIn!==true)return;
     void fetch("/api/seller-preferences").then(response=>response.json()).then((result:{listingGoal?:ListingGoal})=>{
       if(result.listingGoal?.enabled)setListingGoal(result.listingGoal)}).catch(()=>undefined);
   },[signedIn]);
   useEffect(()=>{if(!listingGoal)return;
     void fetch("/api/batches").then(response=>response.json()).then((result:{batches?:PublishedBatch[]})=>{
-      setGoalBatches(result.batches||[])}).catch(()=>undefined);
+      setGoalDays(result.published||[])}).catch(()=>undefined);
   },[listingGoal,batchReceipt]);
-  const goalDone=listingGoal?publishedThisPeriod(goalBatches,listingGoal):0;
+  const goalDone=listingGoal?publishedDaysThisPeriod(goalDays,listingGoal):0;
   const [preparedMockupCounts,setPreparedMockupCounts]=useState<Record<string,number>>({});
   const [imageStepError,setImageStepError]=useState("");
   const [missingPhotoDraftIds,setMissingPhotoDraftIds]=useState<string[]>([]);
@@ -4076,7 +4079,8 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
               just, like, another fail safe to make sure it's going to the right
               place." The connection panel already names it; the moment that
               matters is the press, and that is where it was missing. */}
-              {etsyShop?<small className="publish-all-shop">to {etsyShop}</small>:null}</button><button className="keep-drafts-button" type="button" disabled={publishing} onClick={()=>{setBatchDisplayName(current=>current||suggestedBatchName());setDraftSaveOpen(true)}}>Keep as Printify drafts for now</button>{!publishing&&<small className="keep-drafts-note">Nothing will publish to Etsy. Return to this exact batch from Batch History.</small>}{/* D474 - this describes the Keep as drafts button, but sat there while the
+              {etsyShop?<small className="publish-all-shop">to {etsyShop}</small>:null}</button>
+              {(publishing||Boolean(publishRun))&&<p className="working-note" role="status">Publishing to Etsy can take a few minutes. Keep this page open — Goldie will show each listing as it goes live.</p>}<button className="keep-drafts-button" type="button" disabled={publishing} onClick={()=>{setBatchDisplayName(current=>current||suggestedBatchName());setDraftSaveOpen(true)}}>Keep as Printify drafts for now</button>{!publishing&&<small className="keep-drafts-note">Nothing will publish to Etsy. Return to this exact batch from Batch History.</small>}{/* D474 - this describes the Keep as drafts button, but sat there while the
      button above it said Publishing, so the page said both that it was
      publishing and that nothing would publish. It belongs to a choice that is
      no longer available once publishing has started. */}{publishMessage&&<p className="publish-message" role="status">{publishMessage}</p>}{publishFailures.length>0&&<section className="publish-failure-panel" role="alert"><p className="mini-label">NOTHING WAS PUBLISHED</p><h3>{publishFailures.length===1?"1 listing could not be published":`${publishFailures.length} listings could not be published`}</h3><p className="publish-failure-lede">Etsy did not create {publishFailures.length===1?"this listing":"these listings"}, so you have not been charged a listing fee for {publishFailures.length===1?"it":"them"}. Here is exactly what Etsy said:</p><ul className="publish-failure-list">{publishFailures.map(failure=>{const draft=drafts.find(item=>item.id===failure.productId);return <li key={failure.productId}><strong>{draft?.title?.slice(0,60)||draft?.name||"Listing"}</strong><span>{failure.error}</span></li>})}</ul><p className="publish-failure-lede">Goldie has emailed this to you and recorded it. You can press publish again once it is fixed.</p></section>}</>}</div></article></>)}
@@ -4120,12 +4124,20 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
           )}
 
           {!complete ? (
+            <>
             <button className="launch-button" aria-busy={running||preparingEtsy||Boolean(bundleRun)} disabled={!ready || !pricingApproved || running||preparingEtsy||Boolean(bundleRun)} onClick={createDrafts}>
               {/* D485 - one press covers the whole bundle, so the button says so
                   rather than naming a single product, and reports which product
                   Goldie is on while it works its way through them. */}
               <span className="button-glint" />{bundleRun&&!running?`Moving to ${bundleRecipes[bundleIndex+1]?.name||"the next product"}…`:preparingEtsy?"Completing Etsy details…":running ? (activeBundle&&bundleRecipes.length>1?`${activeRecipe?.name||"Product"} ${bundleIndex+1} of ${bundleRecipes.length}: creating drafts · ${processed} of ${runTotal} finished…`:`Creating drafts · ${processed} of ${runTotal} finished…`) : !ready ? missingRequirement /* D229 · The button is also disabled when prices are not approved, and that branch had no label — it read "Continue to create drafts", greyed out, with nothing anywhere on the page saying why. Every condition that disables this button now names itself. */ : !pricingApproved ? "Approve prices on the Product page to continue" : activeBundle&&bundleRecipes.length>1?`Create Printify drafts for all ${bundleRecipes.length} products`:"Continue to create drafts"}<span>→</span>
             </button>
+              {/* D708 · The label already changes while Goldie works, but a changing
+                  label does not tell you HOW LONG. Draft creation and Etsy publishing
+                  are the two steps that can sit for minutes, and a screen that looks
+                  frozen is when a seller closes the tab or presses again. Her words:
+                  "so they know that nothing is wrong." */}
+              {(running||preparingEtsy||Boolean(bundleRun))&&<p className="working-note" role="status">This can take a few minutes. Keep this page open — Goldie will move on by itself when it is done.</p>}
+            </>
           ) : (
             <div className="batch-actions">
               {drafts.some((draft) => draft.status !== "Created") && <button className="retry-button" onClick={retryFailed}>Retry {drafts.filter((draft) => draft.status !== "Created").length} listings that need another try</button>}

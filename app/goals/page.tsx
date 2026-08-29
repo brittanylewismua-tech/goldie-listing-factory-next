@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import ManagementNav from "../management-nav";
-import { periodHistory, publishedThisPeriod, type ListingGoal, type PublishedBatch } from "../listing-goal";
+import { periodHistoryFromDays, publishedDaysThisPeriod, type ListingGoal, type PublishedDay } from "../listing-goal";
 
 /* D343 · The goals page. Its job is to show a seller their own history — "I did
    40 last week, 30 this week" — and nothing else. No badges, no streak, no
@@ -10,23 +10,25 @@ import { periodHistory, publishedThisPeriod, type ListingGoal, type PublishedBat
    read, so all three agree. */
 export default function GoalsPage() {
   const [goal, setGoal] = useState<ListingGoal | null>(null);
-  const [batches, setBatches] = useState<PublishedBatch[]>([]);
+  /* D708 · Same defect as the sidebar bar, and worse here: this page looks
+     back eight weeks over a history list that is capped at twenty rows. */
+  const [days, setDays] = useState<PublishedDay[]>([]);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     void Promise.all([
       fetch("/api/seller-preferences").then((r) => r.json()).catch(() => ({})),
       fetch("/api/batches").then((r) => r.json()).catch(() => ({})),
-    ]).then(([prefs, list]: [{ listingGoal?: ListingGoal }, { batches?: PublishedBatch[] }]) => {
+    ]).then(([prefs, list]: [{ listingGoal?: ListingGoal }, { published?: PublishedDay[] }]) => {
       setGoal(prefs.listingGoal || null);
-      setBatches(list.batches || []);
+      setDays(list.published || []);
       setLoaded(true);
     });
   }, []);
 
   const period = goal?.period || "week";
-  const rows = periodHistory(batches, period);
-  const thisPeriod = goal ? publishedThisPeriod(batches, goal) : 0;
+  const rows = periodHistoryFromDays(days, period);
+  const thisPeriod = goal ? publishedDaysThisPeriod(days, goal) : 0;
   const best = rows.reduce((most, row) => Math.max(most, row.published), 0);
 
   return (

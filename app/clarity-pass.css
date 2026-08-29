@@ -3490,3 +3490,15 @@ body{min-width:1180px!important}
   --goldie-attention-deep:#a33a48;
   --goldie-attention-soft:rgba(193,75,87,.10);
 }
+
+/* D708 · The waiting note under the two slow steps: draft creation and Etsy
+   publishing. Quiet, not an alert - nothing is wrong, it is just going to take
+   a while. Sized and coloured as supporting text so it reads as reassurance
+   rather than as a warning appearing mid-run. */
+.app-shell .working-note{
+  margin:10px auto 0!important;
+  max-width:46ch!important;
+  color:#7b6478!important;
+  font:600 12px/1.5 "Manrope",system-ui,sans-serif!important;
+  text-align:center!important;
+}

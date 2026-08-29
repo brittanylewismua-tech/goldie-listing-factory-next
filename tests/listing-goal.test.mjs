@@ -16,14 +16,18 @@ const js = source
      form existed. One rule covering both, because two rules in the wrong order
      strip ": PublishedBatch" and leave the "[]" behind. */
   .replace(/: *PublishedBatch\b(?:\[\])?/g, "")
+  /* D708 · publishedDaysSince/ThisPeriod and periodHistoryFromDays take
+     PublishedDay[]. Same shape of rule as the D700 one above, and for the same
+     reason: strip the name and any trailing [] in one pass. */
+  .replace(/: *PublishedDay\b(?:\[\])?/g, "")
   .replace(/: *unknown\b/g, "")
   .replace(/ as [A-Za-z<>\[\]{}."|, ]+/g, "")
   .replace(/<[A-Za-z]+>\(/g, "(")
   .replace(/export /g, "");
 const module = await import(
-  `data:text/javascript,${encodeURIComponent(js + "\nexport { periodStart, publishedSince, periodHistory };")}`
+  `data:text/javascript,${encodeURIComponent(js + "\nexport { periodStart, publishedSince, periodHistory, publishedDaysSince, publishedDaysThisPeriod, periodHistoryFromDays };")}`
 );
-const { periodStart, publishedSince, periodHistory } = module;
+const { periodStart, publishedSince, periodHistory, publishedDaysSince, publishedDaysThisPeriod, periodHistoryFromDays } = module;
 
 test("a week starts on Monday — D339", () => {
   /* Sunday's work belongs to the week that is ending, not the one starting. */
@@ -93,4 +97,45 @@ test("nothing shows a deficit, and the bar may exceed the goal — D342", async 
   /* Progress is capped for the BAR's width only — the count itself keeps going. */
   assert.match(app, /Math\.min\(100,Math\.round\(\(goalDone\/Math\.max\(1,listingGoal\.target\)\)\*100\)\)/);
   assert.match(app, /\{goalDone\} of \{listingGoal\.target\}/, "the number is not capped");
+});
+
+
+/* D708 · The count must be a fact about the publish records, not about which
+   page of batch history happens to be loaded. */
+test("the weekly count does not fall when unrelated batches are created — D708", () => {
+  const now = new Date(2026, 7, 29);            /* Saturday 29 Aug 2026 */
+  const monday = periodStart("week", now);
+  assert.equal(monday.getDate(), 24, "weeks start Monday");
+
+  /* Her real data: three publishes inside the week, on three separate days. */
+  const days = [
+    { day: "2026-08-29", count: 2 },
+    { day: "2026-08-28", count: 2 },
+    { day: "2026-08-26", count: 2 },
+    { day: "2026-08-20", count: 5 },            /* previous week, excluded */
+  ];
+  assert.equal(publishedDaysSince(days, monday), 6);
+
+  /* This is the regression itself. Under the old code the number was summed
+     from /api/batches, which is LIMIT 20, so starting three new batches pushed
+     a published one off the end and 6 became 4 with nothing published and
+     nothing deleted. Day rows are counted server-side across every publish
+     item, so adding batches cannot change them. */
+  assert.equal(publishedDaysSince(days, monday), 6, "adding batches does not move the count");
+
+  assert.equal(publishedDaysThisPeriod(days, { enabled: true, period: "week", target: 20 }, now), 6);
+});
+
+test("a published day is read in local time, not UTC — D708", () => {
+  /* new Date("2026-08-24") is UTC midnight, which is Sunday 23rd anywhere west
+     of Greenwich. Parsed that way, a Monday publish falls out of the Monday
+     week for every seller in the Americas. */
+  const monday = new Date(2026, 7, 24);
+  assert.equal(publishedDaysSince([{ day: "2026-08-24", count: 3 }], monday), 3);
+});
+
+test("malformed or empty day rows are ignored, not counted as today — D708", () => {
+  const monday = new Date(2026, 7, 24);
+  assert.equal(publishedDaysSince([{ day: "", count: 9 }, { day: null, count: 9 }, { day: "not-a-date", count: 9 }], monday), 0);
+  assert.equal(publishedDaysSince([{ day: "2026-08-26", count: -4 }], monday), 0, "a negative count cannot subtract");
 });

@@ -108,11 +108,27 @@
 /* D614 · Inside-label artwork is not carried into new products. Stated once,
    plainly, where the seller is about to create drafts - not as another dialog to
    dismiss, and not discovered later from a Printify preview. */
+/* D708 · This is a caution ("inside-label artwork is not copied"), and it was
+   brown text on cream. D707 repointed the attention family by selector name and
+   this one is called a "note", so it slipped the sweep while reading exactly
+   like the colour that has now been reported three times. */
 .preflight-note{
   margin:14px 0 0;
   padding:11px 13px;
   border-radius:9px;
-  background:#fff4d8;
-  color:#6d4d12;
+  border:1px solid rgba(163,58,72,.28);
+  background:#fdf3f4;
+  color:#a33a48;
   font-size:12.5px;
+}
+/* D708 · This line had no rule in any stylesheet - not deleted, never written -
+   so it fell back to the dialog's default paragraph and printed larger and
+   darker than everything around it. Her words: "really big and different for
+   zero reason." It is a supporting sentence under the summary, so it is sized
+   and coloured as one. */
+.preflight-explainer{
+  margin:12px 0 0;
+  color:#7b6478;
+  font-size:12px;
+  line-height:1.5;
 }
