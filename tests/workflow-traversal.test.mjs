@@ -484,7 +484,11 @@ test("the Listing card badge agrees with the row it summarises — D624", async 
   // So the badge may only say ready under the same two conditions.
   assert.match(badge, /file\.title\.trim\(\)/, "the badge must still count titles");
   assert.match(badge, /file\.tags\.length>=13/, "and it must count tags, which is what it was missing");
-  assert.match(badge, /if\(tagged<files\.length\)return \{label:`\$\{tagged\} of \$\{files\.length\} fully tagged`,tone:"advice"\};/,
+  /* D693 - the wording changed, the rule did not. "0 of 2 fully tagged" beside
+     three green ticks read as a failure; the tone was already advice, the words
+     were a deficit counter. What D624 protects is that the badge and the row
+     agree, and they still do - both advisory, both about the same shortfall. */
+  assert.match(badge, /if\(tagged<files\.length\)return \{label:`\$\{files\.length-tagged\} could use all 13 tags`,tone:"advice"\};/,
     "reported, but in the advice tone the row now uses");
   // A real blocker still outranks advice, so the badge never leads with it.
   assert.ok(badge.indexOf("Etsy details ready") < badge.indexOf('tone:"advice"'),

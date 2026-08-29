@@ -7397,3 +7397,19 @@ test("only one implementation of the listing rows survives — D687/D692", async
   const clarity = await readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8");
   assert.doesNotMatch(clarity, /\.app-shell \.bundle-product-id>b\{[^}]*(DM Serif Display|Fraunces)/);
 });
+
+/* D693 · Found by the Run 1 acceptance pass, in my own D686 fix. */
+test("the stale recipe name cannot launder itself into the seller's name — D693", async () => {
+  const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+  /* D686 stopped Batch History reading setup_name as a name she chose. Restore
+     still seeded the seller-name field FROM setup_name, autosave wrote that into
+     the snapshot, and the reader then trusted it. Measured on b8ce58cb after D686
+     shipped: state.batchDisplayName "Gildan Hoodie" on a sweatshirt batch whose
+     active recipe was "Comfort Colors 1566 crewneck". */
+  assert.match(app, /setBatchDisplayName\(state\.batchDisplayName\|\|""\);/);
+  assert.doesNotMatch(app, /setBatchDisplayName\(payload\.batch\.setup_name/,
+    "setup_name is a recipe snapshot and must never seed the seller's own name");
+  // And the badge says the opportunity rather than counting a deficit.
+  assert.match(app, /`\$\{files\.length-tagged\} could use all 13 tags`/);
+  assert.doesNotMatch(app, /`\$\{tagged\} of \$\{files\.length\} fully tagged`/);
+});
