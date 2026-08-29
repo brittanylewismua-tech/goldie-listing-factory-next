@@ -4046,7 +4046,7 @@ test("no product on any step falls back to a bare header — D500", async () => 
   // All three steps are covered, and each returns rows.
   const returns = fn.match(/return \[/g) || [];
   assert.equal(returns.length, 3, "D539 - one row set per step");
-  for (const label of ["Review Printify placement", "Choose Printify photos", "Upload your own listing photos", "Arrange final photo order", "Write titles and tags", "Edit description", "Review Etsy category and fields", "Listings ready", "Published"]) {
+  for (const label of ["Review Printify placement", "Choose Printify photos", "Your photos and their order", "Write titles and tags", "Edit description", "Review Etsy category and fields", "Listings ready", "Published"]) {
     assert.ok(fn.includes(`label:"${label}"`), `${label} row is built`);
   }
 
@@ -4276,8 +4276,12 @@ test("every step is the same shape: a collapsible card per product — D517", as
      already names them that way. */
   /* D539 - step 2's rows own panels rather than pointing at sections. */
   assert.match(app, /\{label:"Choose Printify photos"[^}]*task:"printify"\}/);
-  assert.match(app, /\{label:"Upload your own listing photos"[^}]*task:"lifestyle"\}/);
-  assert.match(app, /\{label:"Arrange final photo order"[^}]*task:"order"\}/);
+  /* D709 · Uploading photos and arranging them were two rows, and the second
+     could not be started until the first was done - it was the back half of the
+     same job, advertised as its own step. One row, one panel, one pass through
+     the listings. */
+  assert.match(app, /\{label:"Your photos and their order"[^}]*task:"lifestyle"\}/);
+  assert.doesNotMatch(app, /task:"order"/, "the split row is gone");
   assert.match(app, /\{label:"Review Printify placement"[^}]*task:"placement"\}/);
   assert.doesNotMatch(app, /target:"details\.recommended-listing-photos"/,
     "a row never points at an advice panel");
@@ -4816,10 +4820,15 @@ test("steps 1 to 3 say what their numbers mean — D550", async () => {
   // And a shipping profile's name is labelled as a profile, not left as a value.
   assert.match(readiness, /label: `\$\{match\.title\} profile`/);
 
-  /* Lifestyle mockups are optional - nothing about publishing requires them - and
-     the row rendered "! None made yet" in alert red on every product card, so a
-     finished step reported a problem that does not exist. */
-  assert.match(app, /\{label:"Upload your own listing photos"[\s\S]{0,200}optional:true/);
+  /* An optional row that is empty is not a warning - it used to render
+     "! None made yet" in alert red on every product card, so a finished step
+     reported a problem that does not exist.
+     D709 · The row this was written against was "Upload your own listing
+     photos", which has merged with the ordering row and is no longer optional:
+     once Printify photos exist the listing always has photos to arrange. The
+     size guide is the optional row on this step now. The rule is unchanged and
+     still needs a row to hold it. */
+  assert.match(app, /\{label:"Size guide"[\s\S]{0,200}optional:true/);
   assert.match(app, /row\.done\?"✓":row\.pending\?"…":row\.optional\?"–":"!"/);
   assert.match(css, /\.app-shell \.batch-product-row\.optional \.row-mark\{/);
 
@@ -4887,8 +4896,12 @@ test("opening a task shows the work, not a list of listings to pick from — D55
   assert.match(app, /const listingWorkRows=\(work:/);
   assert.match(app, /return <ListingRows defaultOpen rows=\{usable\.map/,
     "photo panels open on arrival - dragging is not scanning");
-  assert.equal((app.match(/listingWorkRows\(\(\{draft,design,selectedImages,count\}\)/g) || []).length, 3,
-    "Printify photos, uploads and photo order all render through it");
+  /* D709 · Two passes, not three. Uploading photos and arranging them were
+     separate panels, so the batch's listings were walked twice to finish one
+     job. They are one panel now, which is the whole point of the merge - the
+     number going down here is the change being verified, not a regression. */
+  assert.equal((app.match(/listingWorkRows\(\(\{draft,design,selectedImages,count\}\)/g) || []).length, 2,
+    "Printify photos, and uploads-with-their-order, render through it");
   assert.doesNotMatch(app, /<ListingRows rows=\{files\.map[^]{0,400}defaultOpen/,
     "step 3's text panels stay collapsed - that is the density she approved");
   assert.match(app,/className="task-listing placement-listing-card"/,
@@ -4911,7 +4924,7 @@ test.skip("what the click-through found on step 2 and step 3 — D554", async ()
   assert.match(order, /photo\.kind==="uploaded"\?"Uploaded photo"/);
 
   /* 2. And it printed "Rearrange listing photos" at display size once per
-        listing, under a task row already called Arrange final photo order. */
+        listing, under the task row that owns the photos. */
   assert.doesNotMatch(order, /photo-order-heading/);
   assert.match(app, /Drag each photo where you want it, or use the arrow buttons/);
 
@@ -5269,7 +5282,7 @@ test("one mockup set chooser, and the listings follow it — D566", async () => 
   /* At this step nothing has a title, so both listings read "ChatGPT Image Aug 21,
      2026, 05_32_41 PM (1).png" and a 36px thumbnail was all that told them apart.
      D408 measured that once already on another step. */
-  const lifestyle = app.slice(app.indexOf('if(task==="lifestyle")return <>'), app.indexOf('if(task==="order")'));
+  const lifestyle = app.slice(app.indexOf('if(task==="lifestyle")return <>'), app.indexOf('return null;', app.indexOf('if(task==="lifestyle")return <>')));
   assert.match(lifestyle, /className="task-listing-figure"/);
   assert.match(css, /\.app-shell \.task-listing-figure img\{width:min\(260px,60%\)/);
 });
@@ -6218,7 +6231,7 @@ test("the Create button follows the scenes the batch actually chose — D647", a
     readFile(new URL("../app/integrated-mockups.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
   ]);
-  assert.match(app, /Upload your own listing photos/);
+  assert.match(app, /Your photos and their order/);
   assert.doesNotMatch(app, /Create selected mockups|<IntegratedMockups/);
   return;
 
@@ -6726,7 +6739,7 @@ test("bundle DPI and variant totals cover every product — D659", async () => {
 
 test("the mockup row cannot say none while scenes are saved — D659", async () => {
   const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
-  assert.match(app, /Upload your own listing photos/);
+  assert.match(app, /Your photos and their order/);
   assert.doesNotMatch(app, /Create lifestyle mockups/);
   return;
 
@@ -7163,7 +7176,8 @@ test("only one implementation of the listing rows survives — D687/D692", async
   }
   // Step 3 through designTaskRows, step 2's photo panels through listingWorkRows.
   assert.equal((app.match(/<ListingRows /g) || []).length, 2);
-  assert.equal((app.match(/listingWorkRows\(\(/g) || []).length, 3);
+  /* D709 · Two, since uploads and photo order became one panel. */
+  assert.equal((app.match(/listingWorkRows\(\(/g) || []).length, 2);
 
   /* The product name was the last serif in the workflow stage. Its own rule
      exists to make it match the card title, so it follows the card title. */

@@ -10,7 +10,12 @@ test("seller uploads are exact-listing photos that publish, reorder, download an
   assert.match(app,/listing-photo-design-identity/);
   /* D684 - the uploads panel showed the design artwork and the design's filename.
      It has to show the listing she is uploading photos to. */
-  assert.match(app,/YOU ARE ADDING PHOTOS TO/);
+  /* D709 · Uploading and ordering are one panel now, so the identity block
+     heads both jobs and no longer says "adding". The rule it enforces is the
+     one that matters and is unchanged: this names the LISTING being worked on,
+     not the design's upload filename. */
+  assert.match(app,/PHOTOS FOR THIS LISTING/);
+  assert.doesNotMatch(app,/\{design\.name\|\|"Untitled design"\}<\/b>/);
   assert.doesNotMatch(app,/PHOTOS FOR THIS DESIGN/);
   assert.match(app,/draft\.previewUrl\|\|design\.previewUrl/);
   assert.match(uploader,/form\.set\("productId",productId\)/);

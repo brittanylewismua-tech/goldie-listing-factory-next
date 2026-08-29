@@ -2380,8 +2380,10 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
          The row still rendered "! None made yet" in alert red on every product
          card, so a finished step reported a problem that does not exist. An
          optional row that is empty is not a warning. */
-      {label:"Upload your own listing photos",value:started?plural(counts.mockups,"uploaded photo"):blank,pending,done:counts.mockups>0,optional:true,task:"lifestyle"},
-      {label:"Arrange final photo order",value:started?plural(counts.photos+counts.mockups,"photo"):blank,pending,done:counts.photos+counts.mockups>0,task:"order"},
+      /* D709 · One row. Uploading and ordering were two, and the second could
+         not be done until the first had been, so the card advertised a step that
+         was really the back half of the one above it. */
+      {label:"Your photos and their order",value:started?plural(counts.photos+counts.mockups,"photo"):blank,pending,done:counts.photos+counts.mockups>0,task:"lifestyle"},
     ];
     /* D541 - both of these rows pointed at .final-review, so Listings and Titles
        and tags took you to the same block below the cards. Nothing on this step
@@ -2704,16 +2706,24 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
           <div className="task-panel-body printify-photo-listings">{listingWorkRows(({draft,design,selectedImages,count})=>(<>{draft.status==="Created"&&<PrintifyImagePicker bare images={(draft.printifyImages||[]).filter(Boolean)} indices={selectedImages} reservedPhotos={(preparedMockupCounts[draft.id||""]||0)+(design?.sizeGuideName||sizeGuideName?1:0)} onApplyOne={values=>{/* D465 - the photos she picks ARE this product's default, the same way its colours and sizes are. There was a "Use these as this product's default" button asking a question with one sensible answer; the selection saves itself now and the button is gone. */if(activeRecipe)void saveImagePreferences(values);if(draft.id)setPrintifyImageSelections(current=>({...current,[draft.id!]:values}))}} onApplyAll={values=>{setPrintifyImageIndices(values);setPrintifyImageSelections(Object.fromEntries(drafts.filter(item=>item.id).map(item=>{const itemDesign=files.find(file=>file.id===item.clientId),reserved=(preparedMockupCounts[item.id!]||0)+(itemDesign?.sizeGuideName||sizeGuideName?1:0);return[item.id!,values.slice(0,Math.max(0,20-reserved))]})))}} onSaveRecipe={activeRecipe?saveImagePreferences:undefined}/>}</>),photoFlags)}</div>
     </>;
     if(task==="lifestyle")return <>
-          <div className="task-panel-lead"><p>Add finished photos to each design below. You can arrange them with the Printify photos in the next section.</p></div>
+          {/* D709 · Uploading photos and arranging them were two panels, so every
+              listing was walked twice to finish one job - and the ordering panel
+              could only be understood after the uploading panel had been used,
+              which is the definition of a step that should not be its own step.
+              Her words: "I don't think it needs to be two steps." Upload lands
+              the photo; the grid underneath it already holds the Printify photos
+              and the size guide, so the order can be set where the photos are.
+              The old lead here ended "you can arrange them with the Printify
+              photos in the next section" - a sentence that existed only to
+              apologise for the split. */}
+          <div className="task-panel-lead"><p>Add your own photos to each design below, then drag them into the order buyers will see. The first photo is the one that shows in search.</p></div>
           <div className="task-panel-body">{listingWorkRows(({draft,design,selectedImages,count})=>(<>
-                  <div className="listing-photo-design-identity">{(draft.previewUrl||design.previewUrl)?<img src={draft.previewUrl||design.previewUrl} alt={`${listingLabel(design)} listing photo`}/>:null}<div><span>YOU ARE ADDING PHOTOS TO</span><b>{listingLabel(design)}</b></div></div>
-                  <UploadedListingPhotos productId={draft.id!} onCountChange={count=>setPreparedMockupCounts(current=>({...current,[draft.id!]:count}))}/></>),photoFlags)}</div>
+                  <div className="listing-photo-design-identity">{(draft.previewUrl||design.previewUrl)?<img src={draft.previewUrl||design.previewUrl} alt={`${listingLabel(design)} listing photo`}/>:null}<div><span>PHOTOS FOR THIS LISTING</span><b>{listingLabel(design)}</b><small>{count} {count===1?"photo":"photos"} in this listing</small></div></div>
+                  <UploadedListingPhotos productId={draft.id!} onCountChange={count=>setPreparedMockupCounts(current=>({...current,[draft.id!]:count}))}/>{draft.status==="Created"&&draft.id&&<ListingPhotoOrder productId={draft.id} printifyImages={(draft.printifyImages||[]).filter(Boolean)} indices={selectedImages} refreshKey={`${preparedMockupCounts[draft.id]||0}:${design?.sizeGuideName||sizeGuideName}`}/>}{draft.status==="Created"&&design&&draft.id&&<IndividualSizeGuide productId={draft.id} name={design.sizeGuideName} onSaved={name=>updateDesign(design.id,{sizeGuideName:name})}/>}{draft.status==="Created"&&draft.id&&<DownloadListingPhotos productId={draft.id} name={draft.title||draft.name} indices={selectedImages}/>}</>),photoFlags)}</div>
     </>;
-    if(task==="order")return <>
-      {/* D554 - said once, here, instead of once per listing inside the grid. */}
-      <div className="task-panel-lead"><p>Drag each photo where you want it, or use the arrow buttons for precise placement. The first photo is the one buyers see in search.</p></div>
-          <div className="task-panel-body">{listingWorkRows(({draft,design,selectedImages,count})=>(<><div className="listing-photo-design-identity photo-order-design-identity">{(draft.previewUrl||design.previewUrl)?<img src={draft.previewUrl||design.previewUrl} alt={`${listingLabel(design)} listing photo`}/>:null}<div><span>ARRANGING PHOTOS FOR</span><b>{listingLabel(design)}</b><small>{count} {count===1?"photo":"photos"} in this listing</small></div></div>{draft.status==="Created"&&draft.id&&<ListingPhotoOrder productId={draft.id} printifyImages={(draft.printifyImages||[]).filter(Boolean)} indices={selectedImages} refreshKey={`${preparedMockupCounts[draft.id]||0}:${design?.sizeGuideName||sizeGuideName}`}/>}{draft.status==="Created"&&design&&draft.id&&<IndividualSizeGuide productId={draft.id} name={design.sizeGuideName} onSaved={name=>updateDesign(design.id,{sizeGuideName:name})}/>}{draft.status==="Created"&&draft.id&&<DownloadListingPhotos productId={draft.id} name={draft.title||draft.name} indices={selectedImages}/>}</>),photoFlags)}</div>
-    </>;
+    /* D709 · The ordering panel is gone; its work happens in the photos panel
+       above, on the same pass through the listings. task="order" is aliased to it
+       so older links still land somewhere real. */
     return null;
   }
 

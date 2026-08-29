@@ -625,7 +625,9 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
    headings should be a sans serif, really easy to read text." This one names
    the listing she is uploading photos to, which is exactly a heading. */
 .app-shell .listing-photo-design-identity b{overflow-wrap:anywhere;color:#4a2a3e;font:750 18px/1.3 'Manrope',system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif}
-.app-shell .listing-photo-design-identity small{color:#755f70;font-size:11.5px;line-height:1.45}.app-shell .photo-order-design-identity{margin-bottom:18px}.app-shell .photo-order-name{grid-column:1/-1;display:block;min-width:0;overflow-wrap:anywhere;color:#755f70;font-size:10px;line-height:1.35}.app-shell .photo-order-strip>article>b+.photo-order-name{margin-top:1px}
+.app-shell .listing-photo-design-identity small{color:#755f70;font-size:11.5px;line-height:1.45}/* D709 - the ordering panel merged into the photos panel, so its modifier
+   class is no longer rendered. The one identity block that survives already
+   carries its own spacing. */.app-shell .photo-order-name{grid-column:1/-1;display:block;min-width:0;overflow-wrap:anywhere;color:#755f70;font-size:10px;line-height:1.35}.app-shell .photo-order-strip>article>b+.photo-order-name{margin-top:1px}
 @media(max-width:700px){.app-shell .listing-photo-design-identity{grid-template-columns:160px minmax(0,1fr)}.app-shell .listing-photo-design-identity>img{width:160px;height:160px}}
 .app-shell .draft-card>.printify-image-picker{order:2}
 .app-shell .draft-card>.individual-size-guide{order:4}
