@@ -170,7 +170,21 @@ export default function ListingRows({
             {/* Indented to the summary column, on a darker surface than any closed
                 card, so it reads as inside this listing rather than as the next
                 one starting. Indentation alone was not enough separation. */}
-            {isOpen && <div className="listing-card-detail">{row.detail}</div>}
+            {isOpen && <div className="listing-card-detail">
+              {row.detail}
+              {/* D705 · An open listing is taller than the screen, so the only
+                  control that closed it - its head - was always somewhere above
+                  the viewport. Her words: "not have to go all the way to the top
+                  to click it." Two changes, because the problem has two halves:
+                  the head is now sticky so it is reachable at any scroll depth,
+                  and this bar closes the listing from where reading actually
+                  ends. Clicking the body itself is deliberately NOT a close -
+                  the body is a form, and a stray click while editing a title
+                  must never throw the panel shut. */}
+              <button type="button" className="listing-card-done" onClick={() => toggle(row.key)}>
+                Close listing {index + 1}
+              </button>
+            </div>}
           </article>
         );
       })}

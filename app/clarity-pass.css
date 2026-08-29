@@ -1503,11 +1503,12 @@ body:has(.management-nav) .usage-card h2{
 
 /* D265 · Three different glyphs meant "expand this": ↓ on the Product page,
    ＋ on Listing, ⌄ on Mockup Library. One affordance, three symbols, three
-   pages. The chevron is the one that also rotates to show state. */
-.app-shell .template-instructions-toggle>summary:after,
-.app-shell .recipe-card .bundle-library>summary>small:after{content:"⌄"!important;font-size:15px!important}
-.app-shell .template-instructions-toggle[open]>summary:after,
-.app-shell .recipe-card .bundle-library[open]>summary>small:after{transform:rotate(180deg)!important}
+   pages. The chevron is the one that also rotates to show state.
+   D705 · D265 got the principle right and then only reached three of the five
+   places that draw an arrow, so "⌄" survived here while "↓" survived in
+   approved-functional.css. Both glyphs and every rule that drew them are gone;
+   there is now one SVG chevron, at the foot of this file, and these selectors
+   are part of it. */
 
 /* D266 · Bundle cards and product cards are peer objects chosen the same way,
    and were built to different shapes: the bundle's Choose button did not fill
@@ -1579,14 +1580,8 @@ body:has(.management-nav) .usage-card h2{
   cursor:pointer!important;
 }
 .app-shell .printify-image-picker>summary::-webkit-details-marker{display:none!important}
-.app-shell .printify-image-picker>summary:after{
-  content:"⌄"!important;
-  margin-left:auto!important;
-  font-size:15px!important;
-  color:#704b67!important;
-  transition:transform .18s ease!important;
-}
-.app-shell .printify-image-picker[open]>summary:after{transform:rotate(180deg)!important}
+/* D705 - this picker now takes the shared chevron with every other
+   disclosure; the rule that drew it here is gone. */
 
 /* D287 · The Images card header centres its eyebrow, title and copy while every
    other card header has been left-aligned since D249. Same object, two
@@ -2598,7 +2593,7 @@ body{min-width:1180px!important}
    first thing on a step whose products are already decided. */
 .app-shell .recipe-library-change>summary{display:flex;align-items:center;gap:8px;margin:0 0 6px;padding:10px 14px;border:1px solid rgba(91,48,79,.16);border-radius:12px;background:rgba(255,255,255,.5);cursor:pointer;list-style:none;font:800 12px/1 "Manrope",system-ui,sans-serif;letter-spacing:.04em;color:#4c293f}
 .app-shell .recipe-library-change>summary::-webkit-details-marker{display:none}
-.app-shell .recipe-library-change>summary::after{content:"⌄";margin-left:auto;font-size:1rem}
+/* D705 - shared chevron. */
 
 /* D533 - she has said, repeatedly, that every product card must look the same.
    D531 made the collapsed ones compact and deliberately left the open one on the
@@ -3230,3 +3225,163 @@ body{min-width:1180px!important}
 .app-shell .publish-all-button{display:flex;flex-direction:column;align-items:center;gap:3px;line-height:1.25}
 .app-shell .publish-all-button .publish-all-label{display:block}
 .app-shell .publish-all-button .publish-all-shop{display:block;font-size:11px;font-weight:650;opacity:.78;letter-spacing:.01em}
+
+/* ============================================================================
+ * D705 · ELEVEN THINGS SHE FOUND IN ONE TESTING PASS
+ * Built together and previewed together, not one deploy each.
+ * ==========================================================================*/
+
+/* --- 2 · The colours panel put its instructions first and its controls last.
+   Reading order should be the order you act: the buttons you press are at the
+   top, and the reassurance that everything saves is a footnote, not a preface.
+   The panel is a grid, so its children take `order` directly; the markup stays
+   in the order that reads correctly with styles off. -------------------- */
+.app-shell .product-color-selector>.color-selector-actions,
+.app-shell .product-size-selector>.size-selector-actions{order:-1!important;margin-bottom:4px!important}
+.app-shell .product-color-selector>.panel-help,
+.app-shell .product-size-selector>.panel-help{order:9!important;margin-top:2px!important}
+
+/* --- 3 · An open listing is taller than the window, so its head - the only
+   thing that closed it - was always above the viewport. The head now sticks,
+   and a Close bar sits where reading ends. Clicking the body is deliberately
+   not a close: the body is a form. ---------------------------------------- */
+.app-shell .listing-card.is-open>.listing-card-head{
+  position:sticky!important;
+  top:0!important;
+  z-index:4!important;
+  background:#fbf6f1!important;
+  border-bottom:1px solid rgba(91,48,79,.1)!important;
+}
+.app-shell .listing-card-done{
+  display:block!important;
+  width:100%!important;
+  margin:16px 0 0!important;
+  padding:11px 14px!important;
+  border:1px solid rgba(91,48,79,.16)!important;
+  border-radius:10px!important;
+  background:rgba(255,255,255,.72)!important;
+  color:#6b4a63!important;
+  font:800 11px/1 "Manrope",system-ui,sans-serif!important;
+  letter-spacing:.04em!important;
+  text-transform:uppercase!important;
+  cursor:pointer!important;
+}
+.app-shell .listing-card-done:hover{background:#fff!important;color:#4a2f44!important}
+
+/* --- 4 · The Etsy fee figures are readings, not controls. They had a pill
+   border, a white fill and a 999px radius, which is this app's vocabulary for
+   "press me". Same information, no button chrome. ------------------------- */
+.app-shell .fee-profile-summary span{
+  padding:0!important;
+  border:0!important;
+  border-radius:0!important;
+  background:none!important;
+  color:#6f5266!important;
+  font-weight:700!important;
+}
+.app-shell .fee-profile-summary span+span{
+  padding-left:12px!important;
+  border-left:1px solid rgba(91,48,79,.16)!important;
+}
+
+/* --- 5 · D459 pushed this to the right because that is what was asked for at
+   the time. It is now asked to be centred: it is a confirmation of the whole
+   card, not an annotation on the card's right edge. ---------------------- */
+.app-shell .pricing-approved-state{margin:14px auto 0!important}
+
+/* --- 6 · Every disclosure in the app drew its own arrow. Two rules used "⌄"
+   (U+2304), which is a MODIFIER LETTER and sits low in its em box by design -
+   that is the arrow that "sits so low"; two more used "↓", a different glyph
+   at a different size. One centred SVG chevron replaces all four, sized in
+   pixels and painted with currentColor so it matches whatever it sits beside.
+   The two summaries also disagreed on type because one was bare text and the
+   other a <span> plus a <small>; both are now the same shape. ------------ */
+.app-shell{
+  --goldie-chevron:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+}
+.app-shell .recipe-library-change>summary::after,
+.app-shell .recipe-card .bundle-library>summary::after,
+.app-shell .printify-image-picker>summary::after,
+.app-shell .template-instructions-toggle>summary::after{
+  content:""!important;
+  flex:0 0 15px!important;
+  width:15px!important;
+  height:15px!important;
+  margin-left:auto!important;
+  background-color:currentColor!important;
+  opacity:.62!important;
+  -webkit-mask:var(--goldie-chevron) center/15px 15px no-repeat!important;
+  mask:var(--goldie-chevron) center/15px 15px no-repeat!important;
+  transition:transform .18s ease!important;
+}
+.app-shell .recipe-library-change[open]>summary::after,
+.app-shell .recipe-card .bundle-library[open]>summary::after,
+.app-shell .printify-image-picker[open]>summary::after,
+.app-shell .template-instructions-toggle[open]>summary::after{transform:rotate(180deg)!important}
+
+/* One type scale for both product disclosures. */
+.app-shell .recipe-library-change>summary,
+.app-shell .recipe-card .bundle-library>summary{
+  display:flex!important;
+  align-items:center!important;
+  gap:10px!important;
+  cursor:pointer!important;
+  list-style:none!important;
+}
+.app-shell .recipe-library-change>summary>span,
+.app-shell .recipe-card .bundle-library>summary>span{
+  font:800 13px/1.25 "Manrope",system-ui,sans-serif!important;
+  color:#4a2f44!important;
+}
+.app-shell .recipe-library-change>summary>small,
+.app-shell .recipe-card .bundle-library>summary>small{
+  font:650 11px/1.25 "Manrope",system-ui,sans-serif!important;
+  color:#84667c!important;
+}
+
+/* --- 11 · Watch this step. Sits beside the support launcher, same fixed
+   corner, visibly secondary to it. Rendered only where a video exists. --- */
+.support-video-launcher{
+  position:fixed;z-index:80;right:84px;bottom:27px;
+  width:46px;height:46px;padding:0;
+  display:grid;place-items:center;
+  border:1px solid rgba(91,48,79,.18);
+  border-radius:50%;
+  background:#fff;
+  color:#6b4a63;
+  box-shadow:0 6px 18px rgba(60,32,55,.16);
+  cursor:pointer;
+}
+.support-video-launcher:hover{background:#fdf7fb;color:#4a2f44}
+.support-video-launcher span{font-size:15px;line-height:1;padding-left:2px}
+@media(max-width:520px){.support-video-launcher{right:84px;bottom:19px}}
+
+.support-video-backdrop{
+  position:fixed;inset:0;z-index:2147483000;
+  display:grid;place-items:center;padding:24px;
+  background:rgba(38,20,35,.55);
+}
+.support-video-dialog{
+  width:min(880px,100%);
+  border-radius:18px;
+  background:#fffdfb;
+  box-shadow:0 30px 80px rgba(40,20,36,.4);
+  overflow:hidden;
+}
+.support-video-dialog header{
+  display:flex;align-items:flex-start;gap:12px;
+  padding:18px 20px 14px;
+  border-bottom:1px solid rgba(91,48,79,.12);
+}
+.support-video-dialog header>div{flex:1 1 auto}
+.support-video-dialog h2{margin:4px 0 0;font:800 18px/1.2 "Manrope",system-ui,sans-serif;color:#3f2a3b}
+.support-video-close{
+  flex:0 0 auto;width:32px;height:32px;padding:0;
+  border:1px solid rgba(91,48,79,.16);border-radius:50%;
+  background:#fff;color:#6b4a63;font-size:17px;line-height:1;cursor:pointer;
+}
+/* 16:9 by padding, the way Loom's own snippet does it, so the frame scales
+   with the dialog instead of being pinned to a height that is wrong at every
+   width but one. */
+.support-video-frame{position:relative;width:100%;padding-bottom:56.25%;background:#1a1017}
+.support-video-frame iframe{position:absolute;inset:0;width:100%;height:100%;border:0}

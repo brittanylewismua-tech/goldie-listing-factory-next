@@ -962,7 +962,7 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .app-shell .template-instructions-toggle{grid-column:1/-1;margin:0 0 4px}
 .app-shell .template-instructions-toggle>summary{display:inline-flex;align-items:center;gap:7px;color:#704b67;font-size:12px;font-weight:750;text-decoration:underline;text-underline-offset:3px;cursor:pointer;list-style:none}
 .app-shell .template-instructions-toggle>summary::-webkit-details-marker{display:none}
-.app-shell .template-instructions-toggle>summary:after{content:"↓";font-size:13px;text-decoration:none;transition:transform .18s ease}
+/* D705 - the arrow moved to one shared SVG chevron; see clarity-pass.css. */
 .app-shell .template-instructions-toggle[open]>summary:after{transform:rotate(180deg)}
 .app-shell .template-instructions-toggle .template-requirements{margin-top:14px}
 .app-shell .recipe-card .bundle-library{display:block!important;margin-top:26px!important;padding-top:18px!important;border-top:1px solid rgba(91,48,79,.14)!important}
@@ -970,7 +970,9 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .app-shell .recipe-card .bundle-library>summary::-webkit-details-marker{display:none}
 .app-shell .recipe-card .bundle-library>summary>span{font-size:14px!important;font-weight:800!important}
 .app-shell .recipe-card .bundle-library>summary>small{display:flex!important;align-items:center!important;gap:8px!important;color:rgba(74,42,62,.68)!important;font-size:11px!important}
-.app-shell .recipe-card .bundle-library>summary>small:after{content:"↓";color:#704b67;font-size:14px;transition:transform .18s ease}
+/* D705 - the arrow was attached to the <small>, which is why it sat at a
+   different size and baseline from every other disclosure. It now belongs to
+   the summary, once, in clarity-pass.css. */
 .app-shell .recipe-card .bundle-library>summary em{padding:3px 7px;border-radius:999px;background:rgba(255,255,255,.58);color:#7b526e;font-size:8px;font-style:normal;font-weight:850;letter-spacing:.08em;text-transform:uppercase}
 .app-shell .recipe-card .bundle-library[open]>summary>small:after{transform:rotate(180deg)}
 .app-shell .recipe-card .bundle-library-content{display:grid;gap:14px;padding:16px 2px 2px}

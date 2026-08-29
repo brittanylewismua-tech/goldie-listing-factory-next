@@ -50,7 +50,11 @@ export function recipeSummary(recipe: Recipe): string {
    * saved products here carry "BACH TEES", a tee set, against a hoodie and a
    * crewneck, so the card would have asserted a set the wizard immediately
    * calls incompatible. Report only what this screen can actually verify. */
-  if (recipe.keywordListId) parts.push("keyword bank");
+  /* D705 - every saved product carries a keyword bank, so "keyword bank" on
+     every card distinguished nothing; it was ink spent to say "normal". Her
+     words: "everything saves. So why would we need to notate that there's a
+     keyword bank on it?" The summary line is for what differs between two
+     products - colours, sizes, store - not for what they all have. */
   /* D649 - a seller with more than one Printify store could not tell which store
      a saved product belonged to, so a product that cannot publish to the
      connected Etsy shop looked identical to one that can, and the only way to
@@ -89,7 +93,7 @@ type WorkflowProps = {
 
 function LibraryShell({collapsed,children}:{collapsed?:boolean;children:ReactNode}){
   return collapsed
-    ?<details className="recipe-library-change"><summary>Change the products in this batch</summary>{children}</details>
+    ?<details className="recipe-library-change"><summary><span>Switch to a different product</span><small>Starts a new batch</small></summary>{children}</details>
     :<>{children}</>;
 }
 
@@ -220,7 +224,7 @@ export function SavedWorkflow(props: WorkflowProps) {
   }
   return <article className="step-card recipe-card"><div className="step-number" aria-hidden="true"/><div className="step-content">{/* D257 · The page title already reads "Choose product" and the rail already
           reads PRODUCT. This card added a third "Product" six pixels below the
-          second — the same defect as the Colors panel in D236. */}<p className="step-copy">Choose it once. Goldie remembers the product details, pricing, shipping, keywords, and Etsy settings for every future batch.</p>
+          second — the same defect as the Colors panel in D236. */}<p className="step-copy">Connect a product template to Printify once. Goldie will remember all the product details, pricing, shipping, keywords, and Etsy settings you choose for every future batch.</p>
     {recipes.length > 0 && <LibraryShell collapsed={props.bundleChosen}><div className="recipe-library-head"><span>{recipes.length} saved {recipes.length === 1 ? "product" : "products"}</span><button className="add-product-button" disabled={Boolean(pendingAction)} onClick={async () => { if(!await props.onStartNewProduct())return;setEditing(true);setEditingId("");setActiveId("");setName("");setKeywordListId("");setMessage("");revealForm(); }}>＋ Add a new product</button></div><div className="recipe-grid">{recipes.map((recipe) => {const selecting=pendingAction===`recipe:${recipe.id}`;return <article className={`recipe-tile ${activeId === recipe.id ? "selected" : ""} ${selecting?"selecting":""}`} aria-busy={selecting} key={recipe.id}><button className="recipe-use" title={recipe.name} disabled={Boolean(pendingAction)} onClick={async () => {if(actionLock.current)return;actionLock.current=true;setPendingAction(`recipe:${recipe.id}`);setActiveId(recipe.id);setMessage("");try{if(!await props.onUseRecipe(recipe)){setActiveId("");return}setKeywordListId(recipe.keywordListId||"");setEditing(false)}finally{actionLock.current=false;setPendingAction("")}}}><span className="recipe-icon">P</span><span className="recipe-copy"><b>{recipe.name}</b><small>{selecting?"Loading product details…":recipeSummary(recipe)}</small>{!selecting&&recipeShopLabel(recipe)?<small className="recipe-shop" title={`Printify store: ${recipeShopLabel(recipe)}`}>{recipeShopLabel(recipe)}</small>:null}<em>{selecting?`Loading ${recipe.name}…`:activeId === recipe.id ? (props.templateVerified ? "✓ Ready" : "Checking…") : "Choose →"}</em></span></button>{activeId===recipe.id&&<button className="change-product" disabled={Boolean(pendingAction)} onClick={async()=>{if(!await props.onChangeProduct())return;setActiveId("");setEditing(false);setMessage("")}}>Change product</button>}<button className="edit-recipe" title="Rename this product or reconnect its Printify template" disabled={Boolean(pendingAction)} onClick={async () => {if(actionLock.current)return;actionLock.current=true;setPendingAction(`edit:${recipe.id}`);setActiveId(recipe.id);try{if(!await props.onUseRecipe(recipe)){setActiveId("");return}setEditingId(recipe.id); setName(recipe.name);setKeywordListId(recipe.keywordListId||"");setEditing(true)}finally{actionLock.current=false;setPendingAction("")}}}>Edit</button><button className="delete-recipe" disabled={Boolean(pendingAction)} aria-label={`Delete ${recipe.name}`} title="Delete saved product" onClick={() => void remove(recipe)}>Delete</button></article>})}</div></LibraryShell>}
     {/* D323 · The edit form used to render after the saved-bundles section, so
         clicking Edit on a product opened the form below the bundles and the

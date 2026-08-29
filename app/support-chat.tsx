@@ -2,6 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { supportResponse, SupportTurn } from "./support-engine";
+import { loomEmbedUrl, stepVideoId, STEP_VIDEO_TITLES, type WorkflowScreen } from "./step-videos";
 
 const SUGGESTIONS = ["A design failed", "Printify won’t connect", "My template won’t load", "My image won’t upload"];
 const WELCOME: SupportTurn = { role:"support", text:"Hi 👋 I’m here to help with the Goldie Listing Factory. Tell me what happened or paste the error message you’re seeing, and we’ll work through it together." };
@@ -19,8 +20,12 @@ function SupportText({ text }: { text: string }) {
   return <>{parts.map((part, index) => part.startsWith("**") ? <b key={index}>{part.slice(2, -2)}</b> : part)}</>;
 }
 
-export default function SupportChat() {
+/* D705 · The launcher used to be one button because support was the only thing
+   down here. It is now a pair: watch this step, and ask a question. */
+export default function SupportChat({ screen }: { screen?: WorkflowScreen }) {
   const [open, setOpen] = useState(false);
+  const [video, setVideo] = useState(false);
+  const videoId = screen ? stepVideoId(screen) : "";
   const [view, setView] = useState<"chat"|"contact">("chat");
   const [query, setQuery] = useState("");
   const [messages, setMessages] = useState<SupportTurn[]>(initialMessages);
@@ -85,7 +90,33 @@ export default function SupportChat() {
     finally { setSending(false); }
   }
 
+  const videoDialog = video && videoId ? <div className="support-video-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) setVideo(false); }}>
+    <section className="support-video-dialog" role="dialog" aria-modal="true" aria-label={screen ? STEP_VIDEO_TITLES[screen] : "Walkthrough"}>
+      <header>
+        <div><p className="mini-label">WATCH THIS STEP</p><h2>{screen ? STEP_VIDEO_TITLES[screen] : "Walkthrough"}</h2></div>
+        <button type="button" className="support-video-close" aria-label="Close video" onClick={() => setVideo(false)}>×</button>
+      </header>
+      {/* 16:9 held by padding rather than a fixed height, which is what Loom's
+          own embed snippet does. There is no content-security-policy anywhere
+          in this app - checked before building this - so the frame loads. */}
+      <div className="support-video-frame">
+        <iframe src={loomEmbedUrl(videoId)} title={screen ? STEP_VIDEO_TITLES[screen] : "Walkthrough"} allowFullScreen/>
+      </div>
+    </section>
+  </div> : null;
+
   return <div className="support-root">
+    {videoDialog}
+    {/* Rendered only where a video exists for this screen. A button that opens
+        nothing is worse than no button, and it lets the videos be filmed and
+        added one at a time without anything half-built showing. */}
+    {videoId ? <button
+      type="button"
+      className="support-video-launcher"
+      onClick={() => { setVideo(true); setOpen(false); }}
+      aria-haspopup="dialog"
+      aria-label={`Watch: ${screen ? STEP_VIDEO_TITLES[screen] : "this step"}`}
+    ><span aria-hidden="true">▶</span></button> : null}
     <button className="support-launcher" onClick={() => setOpen((value) => !value)} aria-expanded={open} aria-controls="support-panel" aria-label="Open Goldie support"><span>G</span></button>
     {open && <section className="support-panel" id="support-panel" aria-label="Goldie support assistant">
       <header><nav><button className={view === "chat" ? "active" : ""} onClick={() => setView("chat")}>Chat</button><button className={view === "contact" ? "active" : ""} onClick={() => setView("contact")}>Contact Support</button></nav><button className="support-close" onClick={() => setOpen(false)} aria-label="Close support">×</button></header>

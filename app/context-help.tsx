@@ -3,7 +3,12 @@
 import { useEffect, useId, useState } from "react";
 import { createPortal } from "react-dom";
 
-export type HelpSection = { heading: string; copy: string; bullets?: string[]; steps?: string[] };
+/* D705 · `after` is copy that belongs UNDER a numbered list rather than above
+   it. "Goldie handles the rest" was its own section, which read as a new topic
+   when it is really the last word on the Printify setup steps: you have just
+   been told to publish the product, and the thing to say next is that you do
+   not have to finish the listing there. */
+export type HelpSection = { heading: string; copy: string; bullets?: string[]; steps?: string[]; after?: string };
 
 export default function ContextHelp({ label, title, intro, sections }: { label: string; title: string; intro: string; sections: HelpSection[] }) {
   const [open, setOpen] = useState(false);
@@ -26,6 +31,7 @@ export default function ContextHelp({ label, title, intro, sections }: { label: 
         <h3>{section.heading}</h3><p>{section.copy}</p>
         {section.bullets?.length ? <ul>{section.bullets.map(item => <li key={item}>{item}</li>)}</ul> : null}
         {section.steps?.length ? <ol>{section.steps.map(item => <li key={item}>{item}</li>)}</ol> : null}
+        {section.after ? <p className="context-help-after">{section.after}</p> : null}
       </article>)}</div>
     </section>
   </div>, document.body) : null;

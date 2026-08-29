@@ -492,7 +492,21 @@ test("the product photo picks the catalog shot that actually shows the garment �
    * Rather than trusting index 0, the client samples the first few candidates and
    * keeps the one with the most non-background pixels. A white-on-white frame
    * scores near zero and loses. */
-  assert.match(route, /previewImages:\(blueprint\.images\|\|\[\]\)\.slice\(0,6\)/);
+  /* D705 · This asserted the number 6 in one file while the client asserted
+     nothing about it, and the two drifting apart is exactly the bug that hid
+     for months: the API trimmed the candidate list to six before the scorer
+     ever saw it, so D370 recorded "all six of the hoodie's shots are model
+     shots — the source has nothing better" about a list that had already been
+     cut down. The rule worth pinning is not a magic number, it is that the
+     scorer is shown everything the API sends. */
+  const serverPool = route.match(/previewImages:\(blueprint\.images\|\|\[\]\)\.slice\(0,(\d+)\)/);
+  const clientPool = app.match(/const shortlist=candidates\.slice\(0,(\d+)\);/);
+  assert.ok(serverPool, "the API still caps how many catalog images it returns");
+  assert.ok(clientPool, "the client still scores a shortlist");
+  assert.equal(clientPool[1], serverPool[1],
+    "the scorer must see every candidate the API sends, or its verdict is about a list it was never given");
+  assert.ok(Number(serverPool[1]) >= 12,
+    "six was too few to contain a flat lay for every product — see D705");
   assert.match(app, /function pickProductPhoto\(product:TemplateDetails\)/);
   /* D200 retires the D194 metric. "Most non-background pixels" rewards whatever
    * fills the frame, and on the live tee that was a macro shot of a folded

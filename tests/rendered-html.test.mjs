@@ -4345,7 +4345,14 @@ test("a decided batch does not lead with the picker, and step 3 opens compact �
   assert.match(tools, /bundleChosen\?:boolean;/);
   assert.match(tools, /function LibraryShell\(\{collapsed,children\}/);
   assert.match(tools, /<LibraryShell collapsed=\{props\.bundleChosen\}>/);
-  assert.match(tools, /Change the products in this batch/);
+  /* D705 · The label used to read "Change the products in this batch", which
+     describes adding to the batch you are in. What it actually does is switch
+     the product and start a NEW batch, discarding the designs and every bit of
+     work in the current one — chooseRecipe confirms exactly that. A control
+     may not describe itself as less destructive than it is. */
+  assert.match(tools, /<summary><span>Switch to a different product<\/span><small>Starts a new batch<\/small><\/summary>/);
+  assert.doesNotMatch(tools, /Change the products in this batch/,
+    "the label that made a destructive switch sound additive is gone");
   assert.match(app, /<SavedWorkflow bundleChosen=\{Boolean\(activeBundle&&bundleRecipes\.length>1\)\}/);
 
   /* D524 - step 3's sections opened themselves, so one product's card measured

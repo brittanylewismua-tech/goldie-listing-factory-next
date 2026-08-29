@@ -1048,9 +1048,16 @@ test("D198: recipeSummary reports saved detail and is honest when there is none"
   // The mockup theme is deliberately excluded: this screen cannot verify that a
   // set fits the product, and asserting an incompatible one contradicts the
   // wizard on the very next screen.
+  /* D705 · The keyword bank is also deliberately excluded now, for the reason
+     the mockup theme was: it does not distinguish one saved product from
+     another. Every saved product has a bank, so printing it on every card said
+     nothing while taking the space a real difference would need. Her words:
+     "everything saves. So why would we need to notate that there's a keyword
+     bank on it?" The rule this test defends is unchanged and is stronger for
+     it — the summary carries only what differs. */
   assert.equal(
     recipeSummary({ defaultColorIds: [1], defaultMockupTheme: "BACH TEES", keywordListId: "k1" }),
-    "1 color · sizes not set · keyword bank",
+    "1 color · sizes not set",
   );
   assert.equal(recipeSummary({ defaultMockupTheme: "BACH TEES" }), "No details saved yet");
 });
