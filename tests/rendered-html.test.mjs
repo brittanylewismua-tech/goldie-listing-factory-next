@@ -7477,7 +7477,9 @@ test("a bundle credits each listing to its own batch, and the button names the s
   assert.match(publish, /batchByProduct\[String\(productId\)\]\|\|batchId/);
 
   // Count the listings, not the jobs.
-  assert.match(batches, /SELECT batch_id,COUNT\(\*\) completed FROM etsy_publish_items WHERE user_id=\? AND status='completed' AND batch_id IS NOT NULL GROUP BY batch_id/);
+  /* D700 added MAX(updated_at) so the weekly goal can count the week the listings
+     went live rather than the week the batch was created. */
+  assert.match(batches, /SELECT batch_id,COUNT\(\*\) completed,MAX\(updated_at\) published_at FROM etsy_publish_items WHERE user_id=\? AND status='completed' AND batch_id IS NOT NULL GROUP BY batch_id/);
   assert.doesNotMatch(batches, /SUM\(completed\) completed FROM etsy_publish_jobs/,
     "the job-level count is what credited a whole bundle to one product");
 
@@ -7502,4 +7504,25 @@ test("a failed listing is named by a field it actually has — D699", async () =
      failed - and it was the last standing type error in the file. */
   assert.doesNotMatch(app, /draft\?\.designName/);
   assert.match(app, /\{draft\?\.title\?\.slice\(0,60\)\|\|draft\?\.name\|\|"Listing"\}/);
+});
+
+/* D700 · The weekly goal counted the week the batch was CREATED. */
+test("the weekly goal counts the week the listings went live — D700", async () => {
+  const [goal, batches] = await Promise.all([
+    readFile(new URL("../app/listing-goal.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/batches/route.ts", import.meta.url), "utf8"),
+  ]);
+  /* Her words: "it shouldn't be counting from when the batch would be created. It
+     needs to count for the week that it's being published in." Work begun on a
+     Sunday and published on the Monday landed in the wrong week, and a batch
+     created weeks ago and published today did not count at all - listings go live
+     and the bar does not move. */
+  assert.match(goal, /const raw = batch\.published_at \|\| batch\.created_at;/);
+  assert.match(goal, /published_at\?: string \| null;/);
+  assert.doesNotMatch(goal, /const when = batch\.created_at \? new Date\(batch\.created_at\) : null;/,
+    "created_at is the fallback for old rows, never the primary");
+  // Both the bar and the goals-page history read the same resolver.
+  assert.equal((goal.match(/publishedWhen\(batch\)/g) || []).length, 2);
+  // And the API supplies it.
+  assert.match(batches, /published_at:publishedAtByBatch\[String\(row\.id\)\]\|\|null/);
 });

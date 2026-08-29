@@ -12,7 +12,10 @@ const js = source
   .replace(/: *"week" *\| *"month"/g, "")
   .replace(/: *Array<\{[^}]*\}>/g, "")
   .replace(/: *ListingGoal\b/g, "")
-  .replace(/: *PublishedBatch\[\]/g, "")
+  /* D700 · publishedWhen takes a single PublishedBatch; until now only the array
+     form existed. One rule covering both, because two rules in the wrong order
+     strip ": PublishedBatch" and leave the "[]" behind. */
+  .replace(/: *PublishedBatch\b(?:\[\])?/g, "")
   .replace(/: *unknown\b/g, "")
   .replace(/ as [A-Za-z<>\[\]{}."|, ]+/g, "")
   .replace(/<[A-Za-z]+>\(/g, "(")

@@ -2,7 +2,9 @@
    receipt and the goals page. Three surfaces disagreeing about when a week
    starts would be worse than not showing the number at all. */
 export type ListingGoal = { enabled: boolean; period: "week" | "month"; target: number };
-export type PublishedBatch = { created_at?: string | null; published_count?: number | null };
+/* D700 · published_at is when the listings actually went live. The goal counts the
+   week she published in, not the week she happened to start the batch. */
+export type PublishedBatch = { created_at?: string | null; published_at?: string | null; published_count?: number | null };
 
 /* Weeks start Monday. Sellers think in working weeks, and a Sunday reset makes
    Sunday's work land in the "next" week. */
@@ -14,10 +16,24 @@ export function periodStart(period: "week" | "month", now = new Date()): Date {
   return date;
 }
 
+/* D700 · This counted a batch into the week it was CREATED. Work begun on a Sunday
+   and published on the Monday landed in the wrong week, and a batch created weeks
+   ago and published today did not count at all - the seller sees listings go live
+   and the bar does not move. It counts the week they went live. created_at is the
+   fallback for rows published before the column existed. */
+/* No return-type annotation: tests/listing-goal.test.mjs strips types with a regex
+   and a union return type breaks it. Inferred is Date|null either way. */
+function publishedWhen(batch: PublishedBatch) {
+  const raw = batch.published_at || batch.created_at;
+  if (!raw) return null;
+  const when = new Date(raw);
+  return Number.isNaN(when.getTime()) ? null : when;
+}
+
 export function publishedSince(batches: PublishedBatch[], since: Date): number {
   return batches.reduce((total, batch) => {
-    const when = batch.created_at ? new Date(batch.created_at) : null;
-    if (!when || Number.isNaN(when.getTime()) || when < since) return total;
+    const when = publishedWhen(batch);
+    if (!when || when < since) return total;
     return total + Math.max(0, Number(batch.published_count) || 0);
   }, 0);
 }
@@ -40,8 +56,8 @@ export function periodHistory(batches: PublishedBatch[], period: "week" | "month
     if (period === "month") end.setMonth(end.getMonth() + 1);
     else end.setDate(end.getDate() + 7);
     const published = batches.reduce((total, batch) => {
-      const when = batch.created_at ? new Date(batch.created_at) : null;
-      if (!when || Number.isNaN(when.getTime()) || when < start || when >= end) return total;
+      const when = publishedWhen(batch);
+      if (!when || when < start || when >= end) return total;
       return total + Math.max(0, Number(batch.published_count) || 0);
     }, 0);
     rows.push({
