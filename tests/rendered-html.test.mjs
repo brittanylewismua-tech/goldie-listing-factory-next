@@ -7479,7 +7479,11 @@ test("a bundle credits each listing to its own batch, and the button names the s
   // Count the listings, not the jobs.
   /* D700 added MAX(updated_at) so the weekly goal can count the week the listings
      went live rather than the week the batch was created. */
-  assert.match(batches, /SELECT batch_id,COUNT\(\*\) completed,MAX\(updated_at\) published_at FROM etsy_publish_items WHERE user_id=\? AND status='completed' AND batch_id IS NOT NULL GROUP BY batch_id/);
+  /* D701 - and it falls back to the job's batch when an item has none, so the
+     count never depends on a data migration having run. It did not, and every
+     published batch read zero. */
+  assert.match(batches, /COALESCE\(i\.batch_id,j\.batch_id\) batch_id,COUNT\(\*\) completed,MAX\(i\.updated_at\) published_at FROM etsy_publish_items i LEFT JOIN etsy_publish_jobs j ON j\.id=i\.job_id/);
+  assert.doesNotMatch(batches, /FROM etsy_publish_items WHERE user_id=\? AND status='completed' AND batch_id IS NOT NULL/);
   assert.doesNotMatch(batches, /SUM\(completed\) completed FROM etsy_publish_jobs/,
     "the job-level count is what credited a whole bundle to one product");
 

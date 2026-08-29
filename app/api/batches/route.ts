@@ -66,14 +66,22 @@ function batchListItem(row:Record<string,unknown>,publishedByBatch:Record<string
      tab finished writing. The publish job's own completed count wins. */
   published_at:publishedAtByBatch[String(row.id)]||null,published_count:Math.max(Number(publishedByBatch[String(row.id)])||0,Number(state.batchReceipt?.publishedCount)||0)}}
 
-export async function GET(request:Request){const user=await getChatGPTUser();if(!user)return NextResponse.json({error:"Sign in to continue."},{status:401});const database=db();if(!database)return NextResponse.json({error:"Batch history is unavailable."},{status:503});await ensure(database);const url=new URL(request.url),id=url.searchParams.get("id");if(id){const row=await database.prepare("SELECT * FROM listing_batches WHERE id=? AND user_id=?").bind(id,user.userId).first<Record<string,unknown>>();return row?NextResponse.json({batch:{...row,state:JSON.parse(String(row.state_json||"{}"))}}):NextResponse.json({error:"That batch was not found."},{status:404})}const rows=await database.prepare("SELECT id,status,step,setup_name,product_title,design_count,state_json,created_at,updated_at FROM listing_batches WHERE user_id=? ORDER BY updated_at DESC LIMIT 20").bind(user.userId).all<Record<string,unknown>>();/* D697 · Count the listings, not the jobs. A bundle publishes in one call and the
+export async function GET(request:Request){const user=await getChatGPTUser();if(!user)return NextResponse.json({error:"Sign in to continue."},{status:401});const database=db();if(!database)return NextResponse.json({error:"Batch history is unavailable."},{status:503});await ensure(database);const url=new URL(request.url),id=url.searchParams.get("id");if(id){const row=await database.prepare("SELECT * FROM listing_batches WHERE id=? AND user_id=?").bind(id,user.userId).first<Record<string,unknown>>();return row?NextResponse.json({batch:{...row,state:JSON.parse(String(row.state_json||"{}"))}}):NextResponse.json({error:"That batch was not found."},{status:404})}const rows=await database.prepare("SELECT id,status,step,setup_name,product_title,design_count,state_json,created_at,updated_at FROM listing_batches WHERE user_id=? ORDER BY updated_at DESC LIMIT 20").bind(user.userId).all<Record<string,unknown>>();/* D701 · Falls back to the job's batch_id when the item has none. D697 added the
+     column and a migration to backfill it; the backfill did not populate, so on the
+     first deploy every completed item still had NULL and Batch History reported
+     zero published for work that is live on Etsy - the same Resume-and-republish
+     risk D697 existed to remove, now on both products instead of one. Correctness
+     here must not depend on a data migration having succeeded: the join gives the
+     old attribution for old rows and the new per-listing attribution for new ones.
+
+     D697 · Count the listings, not the jobs. A bundle publishes in one call and the
      job carries a single batch_id, so this credited every listing in the bundle to
      whichever product happened to be first. Measured after a real publish of the
      Hoodie + 1566 crewneck bundle: "4 PUBLISHED TO ETSY" on the hoodie, "DRAFT"
      with a Resume button on the crewneck, whose two listings were live on Etsy.
      Pressing Resume would have published them again and charged Etsy's fee twice.
      Each item now records the batch its own draft came from. */
-  const published=await database.prepare("SELECT batch_id,COUNT(*) completed,MAX(updated_at) published_at FROM etsy_publish_items WHERE user_id=? AND status='completed' AND batch_id IS NOT NULL GROUP BY batch_id").bind(user.userId).all<{batch_id:string;completed:number;published_at:string|null}>().catch(()=>({results:[] as Array<{batch_id:string;completed:number}>}));
+  const published=await database.prepare("SELECT COALESCE(i.batch_id,j.batch_id) batch_id,COUNT(*) completed,MAX(i.updated_at) published_at FROM etsy_publish_items i LEFT JOIN etsy_publish_jobs j ON j.id=i.job_id WHERE i.user_id=? AND i.status='completed' AND COALESCE(i.batch_id,j.batch_id) IS NOT NULL GROUP BY COALESCE(i.batch_id,j.batch_id)").bind(user.userId).all<{batch_id:string;completed:number;published_at:string|null}>().catch(()=>({results:[] as Array<{batch_id:string;completed:number}>}));
   /* D700 · Carry WHEN it published, not just how many. The weekly goal was counting
      a batch into the week it was CREATED, so work started one week and published the
      next landed in the wrong week - and a batch created weeks ago and published today
