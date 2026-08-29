@@ -2661,11 +2661,14 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
                 still has to offer its retry and its help. */}
             {<><button className="error-help-link" onClick={()=>window.dispatchEvent(new CustomEvent("goldie-retry-listing",{detail:draft.clientId}))}>Retry this listing</button><button className="error-help-link" onClick={()=>window.dispatchEvent(new CustomEvent("goldie-support",{detail:draft.error??"A design failed"}))}>Get help with this error</button></>}
           </div>:<div className="task-listing placement-listing-card" key={draft.clientId}>
-            {/* D694 · These cards carried no name and no number. Every other panel
-                says which listing you are looking at; placement showed two
-                unlabelled previews side by side, which is the differentiation
-                problem again on the one panel that kept its own layout. */}
-            <div className="task-listing-ident"><span className="task-listing-index">Listing {listingIndex+1} of {listings.length}</span><p className="task-listing-name">{listingLabel(design)}</p></div>
+            {/* D694/D695 · These cards carried no number - placement kept its own
+                layout under D680 and with it stayed exempt from the labelling
+                every other panel has, so a bundle showed two unlabelled previews
+                side by side. The number only: the name already sits under the
+                preview in .placement-design-name beside the DPI and the Printify
+                link, and D694 briefly printed it twice. Eyebrow identifies, the
+                block under the image describes. */}
+            <span className="task-listing-index placement-listing-index">Listing {listingIndex+1} of {listings.length}</span>
             {draft.previewUrl?<button className="printify-preview-button" onClick={()=>window.open(draft.previewUrl,"_blank","noopener,noreferrer")} aria-label={`Open a larger Printify preview for ${design?.title?.trim()||design?.name||draft.name||"this listing"}`}><img src={draft.previewUrl} alt={`Printify preview for ${draft.title||draft.name}`}/><span>Click to enlarge</span></button>:design?<div className="pending-preview"><img src={design.previewUrl} alt="Design preview" decoding="async"/><span>Printify preview processing</span></div>:<span className="draft-check">!</span>}
             <p className="placement-design-name">{design?.title?.trim()||design?.name||draft.name||"Listing"}</p>
             {design?(()=>{const displayScale=printTargetFor(templateDetails).scale;const quality=design.width&&templateDetails?.maxPrintWidth&&displayScale?printifyDpi(design.width,templateDetails.maxPrintWidth,displayScale):null;const qualityReady=Boolean(quality&&quality.dpi>=300);return <p className={`placement-dpi ${qualityReady?"pass":"check"}`}>{!quality?"Checking print quality…":qualityReady?`✓ ${quality.dpi} DPI · good to print`:`${quality.dpi} DPI · review before printing`}</p>})():null}

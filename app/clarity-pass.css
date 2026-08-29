@@ -3417,3 +3417,11 @@ body{min-width:1180px!important}
 .app-shell .listing-card-actions button:hover{background:#faf5f9;border-color:rgba(91,48,79,.45)}
 @media(max-width:700px){.app-shell .listing-card-detail{padding-left:18px}.app-shell .listing-rows-bar{flex-wrap:wrap;row-gap:10px}}
 
+
+/* D695 · The placement cards sit in a grid row and were different heights because
+   each card's name wraps to a different number of lines. Stretch them so the
+   previews and the DPI lines align across the row. */
+.app-shell .placement-review-grid{align-items:stretch}
+.app-shell .placement-listing-card{display:flex;flex-direction:column}
+.app-shell .placement-listing-card .placement-design-name{margin-top:auto}
+.app-shell .placement-listing-index{display:block;margin-bottom:8px}

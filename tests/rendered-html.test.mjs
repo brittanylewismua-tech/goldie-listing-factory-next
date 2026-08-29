@@ -7449,5 +7449,9 @@ test("every product's badge summarises its own rows, not just the open one — D
 
   /* Placement kept its own card layout (D680) and with it lost the label every
      other panel has - two unlabelled previews side by side. */
-  assert.match(app, /className="task-listing placement-listing-card"[^]{0,400}<span className="task-listing-index">Listing \{listingIndex\+1\} of \{listings\.length\}<\/span>/);
+  /* D695 - the number only. D694 also added the name, which this card already
+     carried under the preview, so each one printed its listing twice. */
+  assert.match(app, /className="task-listing placement-listing-card"[^]{0,600}<span className="task-listing-index placement-listing-index">Listing \{listingIndex\+1\} of \{listings\.length\}<\/span>/);
+  assert.doesNotMatch(app, /placement-listing-card[^]{0,600}<p className="task-listing-name">/,
+    "the name belongs in .placement-design-name, once");
 });
