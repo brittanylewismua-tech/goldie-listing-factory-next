@@ -5,8 +5,6 @@ import { createPortal } from "react-dom";
 import Image from "next/image";
 import SupportChat from "./support-chat";
 import { workflowScreen } from "./step-videos";
-import WorkflowRail, { type RailStep } from "./workflow-rail";
-import NavCollapseToggle from "./nav-collapse-toggle";
 import { runBounded } from "./bounded-work";
 import { productReadiness, recipeCarriesApprovedPricing, type Readiness } from "./product-readiness";
 import { KeywordBank, SavedWorkflow, type KeywordList, type Pricing, type ProductBundle, type Recipe } from "./factory-tools";
@@ -3596,7 +3594,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
         <div className="mobile-footer">Powered by Goldie AI · © 2026 Be A Wolf Biz</div>
       </section>
       <header className="topbar">
-        <NavCollapseToggle /><div className="brand-lockup">
+        <div className="brand-lockup">
           <GoldieWordmark className="approved-brand" />
         </div>
         <div className="top-actions">
@@ -4240,21 +4238,6 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
               if(complete){void goToStep("finish",false,true)}else{document.querySelector(".launch-panel")?.scrollIntoView({block:"start"})}}}>Proceed anyway</button></div></section></div>}
 
       <footer><span>GOLDIE LISTING FACTORY</span><span>BE A WOLF BIZ · 2026</span></footer>
-      {/* D710 · The rail is a grid column, not an overlay. It carries where you
-          are, what you have already decided, and the one button that moves the
-          batch on - the three things that were previously at opposite ends of a
-          page thousands of pixels tall. */}
-      <WorkflowRail
-        steps={(()=>{const at=workflowStep==="connect"?-1:workflowStep==="setup"?0:workflowStep==="designs"?1:finishPhase==="final"?3:2;
-          const answers=[activeBundle?.name||activeRecipe?.name||"",complete?`${drafts.length} ${drafts.length===1?"draft":"drafts"}`:"",drafts.filter(d=>d.title).length?`${drafts.filter(d=>d.title).length} titled`:"",""];
-          return ["Product","Designs + images","Listing","Publish"].map((label,index)=>({
-            key:label,label,
-            state:(index<at?"done":index===at?"current":"todo") as RailStep["state"],
-            answer:index<at?answers[index]||undefined:undefined,
-          }))})()}
-        showPrevious={progressIndex>0}
-        onPrevious={goBackOneStep}
-      />
       <SupportChat screen={workflowScreen(workflowStep,finishPhase,complete)} />
     </main>
   );

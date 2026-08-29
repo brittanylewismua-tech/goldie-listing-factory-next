@@ -104,35 +104,3 @@ test("the summary line carries what differs, not what everything has — D705", 
   assert.doesNotMatch(tools, /parts\.push\("keyword bank"\)/);
   assert.match(tools, /Connect a product template to Printify once\./);
 });
-
-test("the rail is a grid column that sticks, not a panel floating over the page — D710", async () => {
-  const css = await readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8");
-  const rail = await readFile(new URL("../app/workflow-rail.tsx", import.meta.url), "utf8");
-  const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
-
-  /* Three attempts at this failed the same way: a position:fixed panel cannot
-     align to a centred column, so it floated and every correction moved the
-     collision somewhere else. The grid changes instead of being overridden. */
-  assert.match(css, /grid-template-columns:minmax\(0,1fr\) 308px!important/);
-  assert.match(css, /\.workflow-rail\{grid-column:2!important;grid-row:1\/-1!important;align-self:start!important;position:sticky/);
-  assert.doesNotMatch(css, /\.workflow-rail\{[^}]*position:fixed/);
-
-  /* No card. Measured off the page she asked it to match: transparent, no
-     border, no shadow, no radius, no padding. */
-  assert.match(css, /\.workflow-rail\{background:none;border:0;box-shadow:none;border-radius:0;padding:0/);
-
-  /* One step indicator and one primary action per screen. */
-  assert.match(css, /\.app-shell nav\.workflow-progress\{display:none!important\}/);
-  assert.match(css, /\.app-shell \.workflow-hero\{grid-row:1!important\}/,
-    "the stepper held grid row 1; hiding it without moving the hero drops the title under the card");
-
-  /* The collapse is the shell's own two levers, not margins on every child. */
-  assert.match(css, /body\.nav-collapsed \.app-shell\{padding-left:76px!important\}/);
-  assert.match(css, /body\.nav-collapsed \.topbar\{width:76px!important/);
-  assert.match(css, /body\.nav-collapsed \.topbar \.approved-sidebar-footer\{display:none!important\}|body\.nav-collapsed \.topbar \.brand-lockup,[\s\S]{0,200}approved-sidebar-footer\{display:none!important\}/,
-    "a wrapped goal card at 76px reads as debris");
-
-  assert.match(app, /<WorkflowRail/);
-  assert.match(rail, /querySelectorAll<HTMLButtonElement>\(".workflow-next,.launch-button,.publish-all-button"\)/,
-    "the rail forwards to the step's own primary button rather than duplicating six handlers");
-});
