@@ -3629,7 +3629,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
   }[workflowStep];
 
   return (
-    <main className="app-shell interface-v2" data-product-selected={templateDetails?"true":"false"}>
+    <main className="app-shell" data-product-selected={templateDetails?"true":"false"}>
       {/* D528 - the host lives at the root layout now, so every page has one. */}
       <section className="mobile-gate" aria-label="Desktop required">
         <div className="mobile-brand"><div className="approved-wm">Gold<span className="approved-i">ı<span>✦</span></span>e</div><div className="approved-sub">Listing Factory</div></div>
