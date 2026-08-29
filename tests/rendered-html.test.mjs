@@ -7280,3 +7280,22 @@ test("the weekly goal counts the week the listings went live — D700", async ()
   // And the API supplies it.
   assert.match(batches, /published_at:publishedAtByBatch\[String\(row\.id\)\]\|\|null/);
 });
+
+/* D703 · Looking at a published batch destroyed the record of what published. */
+test("a published batch keeps its receipt when it is reopened — D703", async () => {
+  const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+
+  /* The autosave snapshot SAVES batchReceipt and the restore never read it back.
+     Open a batch that had published, the receipt sat at its initial null, the next
+     autosave wrote that null over the record, and Batch History then offered
+     "Resume" on listings that were already live on Etsy.
+
+     Measured on batch 0b79a9b6: receipt present at 02:53:56 with four Etsy URLs,
+     null by 02:59:23 - erased by opening the batch to verify it. */
+  assert.match(app, /setBatchReceipt\(state\.batchReceipt\|\|null\);/,
+    "restore must put the receipt back");
+  assert.match(app, /keptAsDrafts,batchReceipt,batchDisplayName/,
+    "the snapshot still saves it");
+  assert.match(app, /batchReceipt\?:BatchReceipt\|null\}/,
+    "and the restored-state type has to declare it or the read is silently dropped");
+});
