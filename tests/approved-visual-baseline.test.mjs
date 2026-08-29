@@ -1044,8 +1044,22 @@ test("the publish checklist's needs-review chip is plum, not gold — D153", asy
     assert.ok(!approved.includes(gold),
       `${gold} is a gold-era colour and reads as mud on the lavender cards.`);
   }
-  assert.match(approved, /\.app-shell \.final-checklist \.content-review\{[^}]*color:#8a3f66!important/,
-    "The needs-review chip must use the app's plum 'needs attention' colour.");
+  /* D687 - and now it is the app's ONE needs-attention colour, not a third one.
+     Step 4 was carrying plum #8a3f66, green #34704c and dark red #9b302b for its
+     statuses while steps 2 and 3 used a dusty red, which is the same drift this
+     test was written to stop - it just caught the gold version of it. The
+     gold-era rejection above is untouched. */
+  assert.match(approved, /\.app-shell \.final-checklist \.content-review\{[^}]*color:#b53838!important/,
+    "The needs-review chip must use the app's one 'needs attention' colour.");
+  const globals = await readFile(new URL("app/globals.css", root), "utf8");
+  for (const stray of ["#8a3f66", "#34704c", "#9b302b"]) {
+    for (const sheet of [approved, globals]) {
+      assert.ok(!sheet.includes(`.final-listing-card .content-review{color:${stray}`)
+        && !sheet.includes(`.final-listing-card .ready{color:${stray}`)
+        && !sheet.includes(`.final-listing-card .needs-attention{color:${stray}`),
+        `${stray} is a third status colour on a screen that should have two.`);
+    }
+  }
 });
 
 test("the Publish screen uses one success language, not three — D155/D156", async () => {

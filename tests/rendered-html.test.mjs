@@ -2171,7 +2171,11 @@ test("shows underfilled titles and tags as a non-blocking review state (fixes D6
     "and must count them, the same as the titles line");
   /* D153 recoloured this from the gold-era #8a5a12 to the app's plum. The point
    * of D64 is that it is a distinct non-blocking review state, not that it is amber. */
-  assert.match(css,/\.final-listing-card \.content-review\{color:#8a3f66!important/);
+  /* D687 - recoloured again, to the app's one needs-attention colour. What this
+     protects is the non-blocking REVIEW STATE, not a particular hex; D153 already
+     recoloured it once, away from gold. Step 4 had been carrying plum, green and
+     dark red while steps 2 and 3 used a dusty red - three languages on one flow. */
+  assert.match(css,/\.final-listing-card \.content-review\{color:#b53838!important/);
   assert.doesNotMatch(review,/review\.needed[^\n]{0,200}disabled/);
 });
 
