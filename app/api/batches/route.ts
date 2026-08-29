@@ -115,10 +115,24 @@ export async function GET(request:Request){const user=await getChatGPTUser();if(
      alongside. Each product is counted once, on the day it most recently
      completed, which is the same rule the per-product lookup above already uses
      - a republish moves a listing, it does not mint a second one. */
-  const publishedDayRows=await database.prepare("SELECT substr(MAX(updated_at),1,10) day,product_id FROM etsy_publish_items WHERE user_id=? AND status='completed' GROUP BY product_id").bind(user.id).all();
-  const publishedByDay:Record<string,number>={};
-  for(const row of publishedDayRows.results||[]){const day=String((row as {day?:string}).day||"");if(!day)continue;publishedByDay[day]=(publishedByDay[day]||0)+1}
-  const publishedDays=Object.entries(publishedByDay).map(([day,count])=>({day,count})).sort((a,b)=>a.day<b.day?1:-1);
+  /* D711 · Two defects, one line, and the second is the one that mattered.
+     The binding was user.id. The authenticated object exposes userId - every
+     other query in this file binds user.userId - so this bound undefined, D1
+     rejected the statement, the route threw, and Batch History went to 500.
+     A counter in the sidebar took down the batch list.
+     That is the real fault: this query is decoration for a goal bar, and it was
+     wired so that its failure destroys the page's primary data. It cannot throw
+     into the response any more. If the goal cannot be counted the seller sees
+     no goal; she does not lose her batches. */
+  let publishedDays:Array<{day:string;count:number}>=[];
+  try{
+    const publishedDayRows=await database.prepare("SELECT substr(MAX(updated_at),1,10) day,product_id FROM etsy_publish_items WHERE user_id=? AND status='completed' GROUP BY product_id").bind(user.userId).all();
+    const publishedByDay:Record<string,number>={};
+    for(const row of publishedDayRows.results||[]){const day=String((row as {day?:string}).day||"");if(!day)continue;publishedByDay[day]=(publishedByDay[day]||0)+1}
+    publishedDays=Object.entries(publishedByDay).map(([day,count])=>({day,count})).sort((a,b)=>a.day<b.day?1:-1);
+  }catch(error){
+    console.error("batches: weekly goal count failed, serving batches without it",error);
+  }
   return NextResponse.json({batches:rows.results.map(row=>batchListItem(row,publishedByBatch,publishedAtByBatch,publishedAtByProduct)),published:publishedDays})}
 
 export async function POST(request:Request){const user=await getChatGPTUser();if(!user)return NextResponse.json({error:"Sign in to continue."},{status:401});const database=db();if(!database)return NextResponse.json({error:"Batch history is unavailable."},{status:503});await ensure(database);const body=await request.json() as {id?:string;status?:string;step?:string;setupName?:string;productTitle?:string;designCount?:number;state?:unknown};const id=String(body.id||crypto.randomUUID()).replace(/[^a-zA-Z0-9-]/g,"").slice(0,80);const allowedStatus=new Set(["draft","processing","needs_attention","complete"]),allowedStep=new Set(["connect","setup","designs","review","finish"]);const status=allowedStatus.has(String(body.status))?String(body.status):"draft",step=allowedStep.has(String(body.step))?String(body.step):"connect";const stateJson=JSON.stringify(body.state??{});if(stateJson.length>750000)return NextResponse.json({error:"This batch snapshot is too large."},{status:413});await database.prepare("INSERT INTO listing_batches (id,user_id,status,step,setup_name,product_title,design_count,state_json,updated_at) VALUES (?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP) ON CONFLICT(id) DO UPDATE SET status=excluded.status,step=excluded.step,setup_name=excluded.setup_name,product_title=excluded.product_title,design_count=excluded.design_count,state_json=excluded.state_json,updated_at=CURRENT_TIMESTAMP WHERE user_id=excluded.user_id").bind(id,user.userId,status,step,String(body.setupName||"").slice(0,160),String(body.productTitle||"").slice(0,200),Math.max(0,Math.min(20,Number(body.designCount||0))),stateJson).run();return NextResponse.json({id,saved:true})}
