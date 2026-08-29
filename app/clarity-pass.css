@@ -1355,18 +1355,30 @@
   color: #3f2338 !important;
 }
 
-/* 2 · CARD TITLE — every h2 and h3 that names a card or panel. */
+/* 2 · CARD TITLE — every h2 and h3 that names a card or panel.
+   D692 · Sans. "I don't like the serif font... all of the titles, like, the
+   headings should be a sans serif, really easy to read text."
+
+   This rule is why. It is the reason a targeted override on one heading kept
+   losing: it carries !important and covers every card and panel title in the app,
+   so fixing headings one at a time could never finish. Changing it here is one
+   change instead of one per heading, and it is why the same instruction was
+   costing her a second telling every time.
+
+   The hero h1 is a separate rule and stays DM Serif Display - that is the brand
+   mark on the page title, not a heading she has to read at speed. */
 .app-shell .workflow-stage h2,
 .app-shell .workflow-stage h3,
 .management-page h2,
 .management-page h3,
 .managementOnly h2,
 .managementOnly h3 {
-  font-family: "DM Serif Display", Georgia, serif !important;
-  font-size: 22px !important;
-  font-weight: 400 !important;
-  line-height: 1.2 !important;
-  letter-spacing: -.012em !important;
+  font-family: "Manrope", system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif !important;
+  /* 18px, not 19 - D233 fixes the heading scale and 19 is not on it. */
+  font-size: 18px !important;
+  font-weight: 800 !important;
+  line-height: 1.25 !important;
+  letter-spacing: -.005em !important;
   color: #3f2338 !important;
   text-transform: none !important;
 }
@@ -3403,5 +3415,3 @@ body{min-width:1180px!important}
 .app-shell .listing-card-actions button:hover{background:#faf5f9;border-color:rgba(91,48,79,.45)}
 @media(max-width:700px){.app-shell .listing-card-detail{padding-left:18px}.app-shell .listing-rows-bar{flex-wrap:wrap;row-gap:10px}}
 
-/* D691 · The publish step's own heading was the last serif in the flow. */
-.app-shell .final-listing-review-heading h3{font-family:'Manrope',system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;font-weight:800}

@@ -7372,5 +7372,9 @@ test("one language survives a sweep of every panel — D691", async () => {
   /* Sans everywhere. The uploads panel's heading - the one naming the listing she
      is adding photos to - was still DM Serif Display. */
   assert.doesNotMatch(approved, /listing-photo-design-identity b\{[^}]*DM Serif Display/);
-  assert.match(clarity, /\.final-listing-review-heading h3\{font-family:'Manrope'/);
+  /* D692 - fixed at the rule that caused it instead of per heading. The CARD
+     TITLE rule carries !important and covers every card and panel title, which is
+     why a targeted override on one heading kept losing. */
+  assert.match(clarity, /\.managementOnly h3 \{\n  font-family: "Manrope"/);
+  assert.doesNotMatch(clarity, /\.managementOnly h3 \{\n  font-family: "DM Serif Display"/);
 });
