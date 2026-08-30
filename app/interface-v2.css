@@ -1007,3 +1007,10 @@ html, body { background: #f1d2dc; }
 .app-shell .factory-work{padding-bottom:96px}
 @media(max-width:1050px){.app-shell .workflow-footer-actions.post-draft-footer{width:calc(100vw - 240px);margin-left:calc(50% - 50vw + 120px)}}
 @media(max-width:820px){.app-shell .workflow-footer-actions.post-draft-footer{width:auto;margin-left:0;padding:14px 18px}}
+
+/* D769 · The photo tiles were capping their image at 74px - a rule written for
+   the old product card, which the strip no longer sits in. The measured tile
+   in the prototype is 91. Everything else in the tile is production's: the
+   rank, the kind, the file name, the reorder controls. */
+.app-shell .factory-photo-column .photo-order-strip img,
+.app-shell .photo-order-strip > article > img{height:91px;max-height:91px;object-fit:contain}
