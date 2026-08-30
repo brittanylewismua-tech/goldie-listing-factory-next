@@ -61,7 +61,6 @@ html, body { background: #f1d2dc; }
   background: conic-gradient(from 18deg,
     rgba(184,174,255,.45), rgba(230,172,216,.42), rgba(255,192,204,.38),
     rgba(188,181,255,.43), rgba(239,180,220,.4), rgba(184,174,255,.45));
-  animation: goldie-drift 34s linear infinite;
 }
 @keyframes goldie-drift {
   0% { transform: translate3d(0,0,0) rotate(0deg); }

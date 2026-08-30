@@ -1508,7 +1508,7 @@ body:has(.management-nav) .usage-card h2{
 .app-shell button:not(:disabled),
 .management-page button:not(:disabled),
 .context-help-dialog button:not(:disabled){
-  transition:transform .09s ease, box-shadow .09s ease, filter .09s ease!important;
+  transition:transform .16s ease, box-shadow .16s ease, filter .16s ease!important;
 }
 .app-shell button:not(:disabled):active,
 .management-page button:not(:disabled):active,
@@ -2610,7 +2610,7 @@ body{min-width:1180px!important}
   border-right:2px solid #8e4c78;
   border-bottom:2px solid #8e4c78;
   transform:rotate(45deg) translate(-2px,-2px);
-  transition:transform .18s ease;
+  transition:transform .16s ease;
 }
 .app-shell .final-design-group[open]>summary::after{transform:rotate(225deg) translate(-2px,-2px)}
 .app-shell .final-design-group>summary:hover{background:rgba(232,183,225,.22)}
@@ -3060,7 +3060,7 @@ body{min-width:1180px!important}
   opacity:.62!important;
   -webkit-mask:var(--goldie-chevron) center/15px 15px no-repeat!important;
   mask:var(--goldie-chevron) center/15px 15px no-repeat!important;
-  transition:transform .18s ease!important;
+  transition:transform .16s ease!important;
 }
 .app-shell .recipe-library-change[open]>summary::after,
 .app-shell .recipe-card .bundle-library[open]>summary::after,
