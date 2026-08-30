@@ -954,7 +954,7 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .app-shell .post-draft-workspace .draft-card{display:grid!important;grid-template-columns:1fr!important;gap:10px!important;padding:10px 12px!important;border-radius:12px!important;box-shadow:none!important}
 .app-shell .post-draft-workspace .draft-card>.printify-image-picker,.app-shell .post-draft-workspace .draft-card>.individual-size-guide,.app-shell .post-draft-workspace .draft-card>.listing-photo-download,.app-shell .post-draft-workspace .draft-card>.listing-photo-order{grid-column:1!important}
 .app-shell .final-listing-grid{display:grid!important;gap:6px!important}
-.app-shell .final-listing-card{display:grid!important;grid-template-columns:28px 56px minmax(0,1fr) auto!important;min-height:72px!important;padding:8px 10px!important;border-radius:10px!important;box-shadow:none!important}
+/* D731 · interface-v2 owns this row now - see .final-listing-card there. */
 .app-shell .final-listing-card>img{width:56px!important;height:56px!important;object-fit:cover!important;border-radius:8px!important}
 /* D98 · This is the last screen before listings go live on Etsy, and it showed
  * 38-41% of each title: 295px of visible width against up to 781px of content,

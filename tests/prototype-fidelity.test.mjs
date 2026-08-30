@@ -133,6 +133,10 @@ const CASES = [
   { name: "listing grid columns", chain: [...shell, el("div","factory-listing-grid")], property: "grid-template-columns", expect: /^1\.15fr \.85fr$/ },
   { name: "form card border", chain: [...shell, el("div","factory-listing-grid"), el("aside","factory-form-card")], property: "border", expect: /^1px solid #e4cedb$/ },
   { name: "checklist row rule", chain: [...shell, el("div","factory-checklist"), el("div","factory-check")], property: "border-bottom", expect: /^1px solid #eee9ec$/ },
+  // step 4 review rows
+  { name: "review row frame", chain: [...shell, el("div","final-listing-grid"), el("article","final-listing-card")], property: "border", expect: /^1px solid #ded6dc$/ },
+  { name: "review row columns", chain: [...shell, el("div","final-listing-grid"), el("article","final-listing-card")], property: "grid-template-columns", expect: /^28px 44px minmax\(0,1fr\)$/ },
+  { name: "review thumb size", chain: [...shell, el("div","final-listing-grid"), el("article","final-listing-card"), el("img","final-listing-no-image")], property: "height", expect: /^44px$/ },
   // photo layout
   { name: "photo layout columns", chain: [...shell, el("div","factory-photo-layout")], property: "grid-template-columns", expect: /^240px minmax\(0,1fr\)$/ },
   { name: "design-large size", chain: [...shell, el("div","factory-photo-layout"), el("aside","factory-listing-identity"), el("div","factory-design-large")], property: "height", expect: /^210px$/ },
