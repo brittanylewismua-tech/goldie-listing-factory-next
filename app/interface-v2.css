@@ -1837,3 +1837,28 @@ html, body { background: #f1d2dc; }
    pane and sits on top of whatever is there - on the receipt it covers the
    stat tiles. It clears the action bar rather than landing on the content. */
 .app-shell .new-build-notice{bottom:96px}
+
+/* ==========================================================================
+   D805 · The save-draft dialog: two identical presses and a red tick
+   ==========================================================================
+
+   Opened for the first time. It is in Inter on peach-glass with no stray greys
+   - that part is right. Two things are not.
+
+   Cancel and "Save to Batch History" are the same button: 244x38, filled
+   #5d3151 and #603454, white, weight 750. One of them ends the dialog without
+   saving and one of them saves; they are a shade apart and identical in every
+   other respect. This is the same fault D775 found in the publish box, where
+   the live press and "keep as drafts" carried equal weight - and it is worse
+   here, because the two buttons sit side by side at the same width.
+
+   And its icon is a #c93d32 disc - the alert red - on a dialog whose whole
+   message is "nothing will publish, this is safe, it will be waiting for you".
+   Red is the colour this app uses when something has failed. */
+.app-shell .publish-confirm-icon{background:#37704c;color:#fff}
+.app-shell .publish-confirm .save-draft-confirm{
+  background:#5d3151;color:#fff;border:0;font-weight:750}
+.app-shell .publish-confirm button:not(.save-draft-confirm):not(.missing-photo-close){
+  background:transparent;color:#5b304f;border:1px solid #d9cdd5;font-weight:700}
+.app-shell .publish-confirm button:not(.save-draft-confirm):not(.missing-photo-close):hover{
+  background:#faf5f8}
