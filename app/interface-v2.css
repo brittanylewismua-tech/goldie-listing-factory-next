@@ -1625,3 +1625,41 @@ html, body { background: #f1d2dc; }
    rules in these sheets set display on things inside a disclosure that the only
    reliable fix is to state the rule the UA was relying on. */
 .app-shell details:not([open]) > *:not(summary){display:none}
+
+/* D798 · The plan banner was dark plum text on a dark plum card.
+
+   Swept every page rather than only the four factory steps, after she asked
+   whether the rest looked like step 4. Batch History, Keyword Banks and Usage
+   are all structurally sound - no spilled grid rows, no clipped text, no
+   overflow, no leaking disclosures. Usage has this instead, and it is worse
+   than a layout fault because it hides information:
+
+     .plan-banner background  #56394f   (lilac-theme.css:212)
+     "CURRENT PLAN"           #704861   contrast 1.33:1
+     the plan name, 34px      #4c293f   contrast 1.23:1
+     "Testing access"         rgba(74,42,62,.8)  1.24:1
+     the reset date           rgba(74,42,62,.8)  1.24:1
+
+   AA wants 4.5:1 for body text and 3:1 for large. Every line on that card is
+   under 1.4, which is not "low contrast", it is invisible - the name of her
+   plan and the date her credits reset, unreadable on the page that exists to
+   tell her both. The card went dark in one theme and its text stayed with
+   another. On a dark card the text is light, the same three inks the publish
+   box uses. */
+.usage-page .plan-banner span{color:#c7b8c3}
+.usage-page .plan-banner h2{color:#fff}
+.usage-page .plan-banner p{color:#c8b9c4}
+
+/* D799 · The Connect card sat 132px right of everything else on its page.
+
+   Measured: the page head runs 392-1336; the card is 680px wide and started at
+   524. 944 - 680 = 264, halved is 132 - it was centred in the column while the
+   heading above it, the status line below it and every other screen in the app
+   start at the same left edge. She reported this weeks ago as "the card itself
+   is not aligned to the top rail"; the margin that centred it survived every
+   pass since, because it was never the thing being looked at.
+
+   The prototype puts everything on one left edge. So does this now. */
+.app-shell .factory-work .workflow-stage > .steps-column,
+.app-shell .factory-work .connect-step{
+  margin-left:0;margin-right:auto;align-self:start;justify-self:start}
