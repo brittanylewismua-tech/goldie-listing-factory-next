@@ -143,6 +143,8 @@ const CASES = [
   { name: "review row frame", chain: [...shell, el("div","final-listing-grid"), el("article","final-listing-card")], property: "border", expect: /^1px solid #ded6dc$/ },
   { name: "review row columns", chain: [...shell, el("div","final-listing-grid"), el("article","final-listing-card")], property: "grid-template-columns", expect: /^28px 44px minmax\(0,1fr\)$/ },
   { name: "review thumb size", chain: [...shell, el("div","final-listing-grid"), el("article","final-listing-card"), el("img","final-listing-no-image")], property: "height", expect: /^44px$/ },
+  { name: "field input frame", chain: [...shell, el("div","factory-listing-grid"), el("div","etsy-details-editor-fields","factory-form-card"), el("label"), el("input")], property: "border", expect: /^1px solid #d8cfd5$/ },
+  { name: "field input height", chain: [...shell, el("div","factory-listing-grid"), el("div","etsy-details-editor-fields","factory-form-card"), el("label"), el("input")], property: "min-height", expect: /^38px$/ },
   // photo layout
   { name: "photo layout columns", chain: [...shell, el("div","factory-photo-layout")], property: "grid-template-columns", expect: /^240px minmax\(0,1fr\)$/ },
   { name: "design-large size", chain: [...shell, el("div","factory-photo-layout"), el("aside","factory-listing-identity"), el("div","factory-design-large")], property: "height", expect: /^210px$/ },
