@@ -211,3 +211,29 @@ test("D789: the product wrapper carries no card of its own", () => {
   }
   assert.deepStrictEqual(faults, []);
 });
+
+test("D792: the panel head is one row — every child has a column of its own", () => {
+  /* Twice now an item has been dropped into a grid column that already had
+     something in it, and auto-placement has quietly moved it to a new row below
+     the fold: the action bar's forward control at y761 in a 756px window, and
+     the panel chevron under the state chip with every panel 92px instead of 66.
+     Neither showed up in any test, because every rule involved was present and
+     correct on its own.
+
+     So this counts. The head has four children when a panel can open - index,
+     title, state, chevron - and the template has to have a track for each. */
+  const template = resolve({
+    selectorTest: selector => /\.factory-panel-head$/.test(selector),
+    property: "grid-template-columns",
+  });
+  assert.ok(template, "the panel head declares its columns");
+  const tracks = template.value.split(/\s+(?![^(]*\))/).length;
+  assert.equal(tracks, 4,
+    `the head resolves to ${tracks} columns ("${template.value}") for four children — the fourth wraps to a second row`);
+
+  const chevron = resolve({
+    selectorTest: selector => /\.factory-panel-chevron$/.test(selector),
+    property: "grid-column",
+  });
+  assert.equal(chevron && chevron.value, "4", "the chevron sits in the fourth track, not on top of the state chip");
+});

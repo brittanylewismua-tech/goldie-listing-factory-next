@@ -384,10 +384,17 @@ html, body { background: #f1d2dc; }
      every panel title started 14px left of where the preview puts it. The
      fourth column is production's: the panel head carries a Change/Close
      control the preview has no equivalent for. */
-  /* D790 · Three columns, which is what the preview's head has: index, title,
-     state. The fourth existed only to hold a "Change" button that did what
-     clicking the head already did. The chevron sits inside the state column. */
-  display:grid;grid-template-columns:48px minmax(0,1fr) auto;
+  /* D790/D792 · Index, title, state, chevron. The old fourth column held a
+     "Change" button that did what clicking the head already did; this one is
+     12px wide and holds a glyph.
+
+     D790 tried to put the chevron in the state's column and it wrapped to a
+     second grid row - measured on her batch: head 90px tall instead of 64,
+     chevron sitting under the state chip at the panel's bottom edge, every
+     panel 92px instead of 66. The same auto-placement fault as the action bar,
+     one screen up. A grid column that already has an item is not a place to
+     put another one. */
+  display:grid;grid-template-columns:48px minmax(0,1fr) auto 12px;
   align-items:center;gap:13px;padding:15px 17px;background:#fffafc;
 }
 .app-shell .factory-panel-index{
@@ -1481,9 +1488,8 @@ html, body { background: #f1d2dc; }
 .app-shell .factory-panel-head[aria-disabled="true"]{cursor:not-allowed;opacity:.6}
 .app-shell .factory-panel-state{justify-self:end}
 .app-shell .factory-panel-chevron{
-  grid-column:3;justify-self:end;align-self:center;margin-left:10px;
+  grid-column:4;justify-self:end;align-self:center;
   color:#8b7a85;font:400 13px/1 Inter,ui-sans-serif,system-ui,sans-serif}
-.app-shell .factory-panel-head > .factory-panel-state + .factory-panel-chevron{margin-left:10px}
 
 /* D790 · The product identity is a heading above the panels, not a card around
    them. Image, name, blueprint, drafts - the same four facts, on the pane. For
