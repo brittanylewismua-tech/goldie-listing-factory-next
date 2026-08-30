@@ -699,3 +699,20 @@ html, body { background: #f1d2dc; }
 /* D707 · The warning tint is the rose attention token, not a brown one. She
    has reported brown three times; desaturating red toward orange IS brown. */
 .app-shell .token-shop-warning{border-radius:8px;background:var(--alert-tint);background-image:none;border:1px solid var(--alert-line);color:var(--alert-ink)}
+
+/* D738 · Two things the step-1 harness showed once the real .recipe-card
+   wrapper was in place:
+
+   The Choose / Ready chip was forced to justify-self:stretch by two
+   !important rules, so it rendered as a full-width bar across the tile - the
+   "the choose button looks amateur, it's not centred, it looks really bad"
+   defect, still live. It is a chip: it starts at the card's left edge and is
+   as wide as its own text.
+
+   And the panel body was nesting a second card - the legacy .step-card frame
+   inside .factory-panel-body, a pink rounded container wrapped around the
+   grid. A panel is the card; nothing inside it needs another one. */
+.app-shell .recipe-copy em,.app-shell .recipe-use em{justify-self:start;width:auto}
+.app-shell .factory-panel-body .step-card{margin:0;padding:0;border:0;border-radius:0;background:none;box-shadow:none;backdrop-filter:none}
+.app-shell .factory-panel-body .step-card>.step-content{padding:0}
+.app-shell .factory-panel-body .step-card>.step-number{display:none}

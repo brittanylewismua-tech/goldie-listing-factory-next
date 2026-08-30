@@ -3172,7 +3172,6 @@ body{min-width:1180px!important}
      pill at its text width and defeated width:100%. Reset both explicitly so a
      survivor from another sheet cannot quietly win again. */
   max-width:none!important;
-  justify-self:stretch!important;
   box-sizing:border-box!important;
   min-height:34px!important;
   margin-top:10px!important;
