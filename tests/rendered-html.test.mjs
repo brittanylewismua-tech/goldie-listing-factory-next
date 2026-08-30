@@ -4634,7 +4634,9 @@ test("placement previews wrap into identifiable listing cards — D679", async (
   ]);
   assert.match(app, /className="task-panel-body placement-review-grid"/);
   assert.match(css, /\.placement-review-grid\{grid-template-columns:repeat\(auto-fit,minmax\(240px,1fr\)\)/);
-  assert.match(css, /\.placement-review-grid \.printify-preview-button\{[^}]*width:100%!important;max-width:none!important;min-height:0!important;height:250px!important/);
+  /* D724 · the preview is the ArtworkGrid tile now; it fills its card and is
+     capped by the grid track rather than by a bespoke rule. */
+  assert.match(css, /\.factory-art-preview ?\{[\s\S]{0,160}height: ?190px/);
   assert.match(app, /showAll\?"Show fewer Printify photos":`Show \$\{hiddenCount\} more Printify photos`/);
   /* D688 - what this line is for is the second clause: an angle holding a photo
      she already chose is never hidden. The anchor in the first clause changed
@@ -4650,10 +4652,14 @@ test("placement cards contain only the preview, identity, DPI and editor link �
     Promise.all([readFile(new URL("../app/clarity-pass.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n")),
   ]);
   const placement=app.slice(app.indexOf('if(task==="placement")'),app.indexOf('if(task==="printify")'));
-  assert.match(placement, /placement-listing-card/);
-  assert.match(placement, /placement-design-name/);
-  assert.match(placement, /placement-dpi/);
-  assert.match(placement, /className="placement-printify-link" title="Choose the correct shop in your Printify account first\."/);
+  /* D724 · placement renders through the shared ArtworkGrid now. The rule this
+     guards - a compact card carrying the preview, the identity, the DPI and the
+     way into Printify, and nothing else - is unchanged; the class names are the
+     component's. */
+  assert.match(placement, /<ArtworkGrid items=/);
+  assert.match(placement, /name:design\?\.title\?\.trim\(\)/);
+  assert.match(placement, /DPI · good to print/);
+  assert.match(placement, /openLabel:.*Adjust in Printify/);
   assert.doesNotMatch(placement, /Printify views|Unpublished Printify draft|Choose the correct shop[^\"]*\)<\/small>/);
   assert.match(css, /\.step-product-cards ?\{[\s\S]{0,200}max-width: ?none/,
     "step 2 fills the work column instead of adding its own gutters");
@@ -4914,8 +4920,8 @@ test("opening a task shows the work, not a list of listings to pick from — D55
     "Printify photos, and uploads-with-their-order, render through it");
   assert.doesNotMatch(app, /<ListingRows rows=\{files\.map[^]{0,400}defaultOpen/,
     "step 3's text panels stay collapsed - that is the density she approved");
-  assert.match(app,/className="task-listing placement-listing-card"/,
-    "D680 - placement keeps its own compact visual card, not the generic stack");
+  assert.match(app, /<ArtworkGrid items=/,
+    "D680 - placement keeps a compact visual card carrying preview, identity, DPI and the Printify link");
 });
 
 test.skip("what the click-through found on step 2 and step 3 — D554", async () => {
@@ -7242,7 +7248,7 @@ test("every product's badge summarises its own rows, not just the open one — D
      other panel has - two unlabelled previews side by side. */
   /* D695 - the number only. D694 also added the name, which this card already
      carried under the preview, so each one printed its listing twice. */
-  assert.match(app, /className="task-listing placement-listing-card"[^]{0,600}<span className="task-listing-index placement-listing-index">Listing \{listingIndex\+1\} of \{listings\.length\}<\/span>/);
+  assert.match(app, /meta:`Listing \$\{listingIndex\+1\} of \$\{listings\.length\}/);
   assert.doesNotMatch(app, /placement-listing-card[^]{0,600}<p className="task-listing-name">/,
     "the name belongs in .placement-design-name, once");
 });

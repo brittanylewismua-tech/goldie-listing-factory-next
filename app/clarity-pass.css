@@ -2597,16 +2597,10 @@ body{min-width:1180px!important}
    panel instead of stacking every 520px Printify preview into one long column. */
 .app-shell .placement-review-grid{grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}
 .app-shell .placement-review-grid>.task-listing{min-width:0;margin:0;padding:0 0 12px;border:1px solid rgba(91,48,79,.13);border-radius:14px;background:rgba(255,255,255,.52);overflow:hidden}
-.app-shell .placement-review-grid .printify-preview-button{display:block;width:100%!important;max-width:none!important;min-height:0!important;height:250px!important;aspect-ratio:auto!important;margin:0!important;padding:0!important;border:0!important;border-radius:0!important}
-.app-shell .placement-review-grid .printify-preview-button img{width:100%!important;height:100%!important;max-height:none!important;object-fit:contain!important}
-.app-shell .placement-review-grid .placement-design-name{display:-webkit-box;min-height:2.6em;margin:11px 12px 5px;overflow:hidden;-webkit-box-orient:vertical;-webkit-line-clamp:2;color:#4b283e;font:800 13px/1.3 "Manrope",system-ui,sans-serif}
-.app-shell .placement-review-grid .placement-dpi{margin:0 12px 7px;color:#75576b;font:700 11px/1.35 "Manrope",system-ui,sans-serif}
 /* D691 - the last two strays. #8a5a1d is the gold-era brown D153 rejected, and
    #39704e a third green. The DPI readout now speaks the same two-colour
    language as every other panel: neutral when it passes, the one accent when
    it wants her. */
-.app-shell .placement-review-grid .placement-dpi.pass{color:rgba(74,42,62,.6)}.app-shell .placement-review-grid .placement-dpi.check{color:#b53838}
-.app-shell .placement-review-grid .placement-printify-link{display:block;margin:0 12px;padding:0;border:0;background:transparent;color:#704d75;font:800 11px/1.35 "Manrope",system-ui,sans-serif;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
 .app-shell .open-task-column{cursor:pointer}.app-shell .open-task-column :is(button,a,input,textarea,select,label,summary,[role="button"],[contenteditable="true"],[draggable="true"]){cursor:auto}
 
 /* D553 - the step 3 editors, re-pointed from the collapsible panel that used to
@@ -3031,7 +3025,6 @@ body{min-width:1180px!important}
    area happened to be, so the second card's name picked up a 22px top margin and
    its DPI line sat 22px below its neighbour's. The cards did not need aligning;
    they needed me to stop adding to them. */
-.app-shell .placement-listing-index{display:block;margin-bottom:8px}
 
 /* D698 · The publish button names its destination shop underneath the action, so
    a seller with more than one storefront can see where the press is going without

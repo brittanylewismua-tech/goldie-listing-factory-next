@@ -6,6 +6,7 @@ import Image from "next/image";
 import SupportChat from "./support-chat";
 import { workflowScreen } from "./step-videos";
 import FactoryPanel from "./factory-panel";
+import ArtworkGrid from "./artwork-grid";
 import { runBounded } from "./bounded-work";
 import { productReadiness, recipeCarriesApprovedPricing, type Readiness } from "./product-readiness";
 import { KeywordBank, SavedWorkflow, type KeywordList, type Pricing, type ProductBundle, type Recipe } from "./factory-tools";
@@ -2723,25 +2724,36 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
     };
     if(!listings.length)return null;
     if(task==="placement")return <>
-          <div className="task-panel-body placement-review-grid">{listings.map(({draft,design},listingIndex)=>draft.status!=="Created"?<div className="task-listing failed" key={draft.clientId}>
-            <div className="task-listing-ident"><span className="task-listing-index">Listing {listingIndex+1} of {listings.length}</span><p className="task-listing-name">{listingLabel(design)}</p></div>
-            {/* D539 - a listing that failed to create still has to be reachable and
-                still has to offer its retry and its help. */}
-            {<><button className="error-help-link" onClick={()=>window.dispatchEvent(new CustomEvent("goldie-retry-listing",{detail:draft.clientId}))}>Retry this listing</button><button className="error-help-link" onClick={()=>window.dispatchEvent(new CustomEvent("goldie-support",{detail:draft.error??"A design failed"}))}>Get help with this error</button></>}
-          </div>:<div className="task-listing placement-listing-card" key={draft.clientId}>
-            {/* D694/D695 · These cards carried no number - placement kept its own
-                layout under D680 and with it stayed exempt from the labelling
-                every other panel has, so a bundle showed two unlabelled previews
-                side by side. The number only: the name already sits under the
-                preview in .placement-design-name beside the DPI and the Printify
-                link, and D694 briefly printed it twice. Eyebrow identifies, the
-                block under the image describes. */}
-            <span className="task-listing-index placement-listing-index">Listing {listingIndex+1} of {listings.length}</span>
-            {draft.previewUrl?<button className="printify-preview-button" onClick={()=>window.open(draft.previewUrl,"_blank","noopener,noreferrer")} aria-label={`Open a larger Printify preview for ${design?.title?.trim()||design?.name||draft.name||"this listing"}`}><img src={draft.previewUrl} alt={`Printify preview for ${draft.title||draft.name}`}/><span>Click to enlarge</span></button>:design?<div className="pending-preview"><img src={design.previewUrl} alt="Design preview" decoding="async"/><span>Printify preview processing</span></div>:<span className="draft-check">!</span>}
-            <p className="placement-design-name">{design?.title?.trim()||design?.name||draft.name||"Listing"}</p>
-            {design?(()=>{const displayScale=printTargetFor(templateDetails).scale;const quality=design.width&&templateDetails?.maxPrintWidth&&displayScale?printifyDpi(design.width,templateDetails.maxPrintWidth,displayScale):null;const qualityReady=Boolean(quality&&quality.dpi>=300);return <p className={`placement-dpi ${qualityReady?"pass":"check"}`}>{!quality?"Checking print quality…":qualityReady?`✓ ${quality.dpi} DPI · good to print`:`${quality.dpi} DPI · review before printing`}</p>})():null}
-            {draft.editorUrl&&draft.id?<button type="button" className="placement-printify-link" title="Choose the correct shop in your Printify account first." onClick={()=>openDraft(draft)}>{openedDrafts.includes(draft.id)?"Printify opened":"Adjust in Printify"}</button>:null}
-          </div>)}</div>
+      {/* D724 · The prototype shows every design as a large tile with its
+          filename and DPI (.goldie-art-grid). Production showed a small preview
+          inside a bespoke card. Same data, same handlers - openDraft, the retry
+          and help events, the DPI calculation - rendered through the shared
+          component so the artwork is finally big enough to tell two listings
+          apart. Failed listings keep their own row: they have no preview to
+          show and they must still offer retry and help. */}
+      <div className="task-panel-body placement-review-grid">
+        {listings.filter(({draft})=>draft.status!=="Created").map(({draft,design},failedIndex)=>
+          <div className="task-listing failed" key={draft.clientId}>
+            <div className="task-listing-ident"><span className="task-listing-index">Listing {failedIndex+1} of {listings.length}</span><p className="task-listing-name">{listingLabel(design)}</p></div>
+            <button className="error-help-link" onClick={()=>window.dispatchEvent(new CustomEvent("goldie-retry-listing",{detail:draft.clientId}))}>Retry this listing</button>
+            <button className="error-help-link" onClick={()=>window.dispatchEvent(new CustomEvent("goldie-support",{detail:draft.error??"A design failed"}))}>Get help with this error</button>
+          </div>)}
+        <ArtworkGrid items={listings.filter(({draft})=>draft.status==="Created").map(({draft,design},listingIndex)=>{
+          const displayScale=printTargetFor(templateDetails).scale;
+          const quality=design?.width&&templateDetails?.maxPrintWidth&&displayScale?printifyDpi(design.width,templateDetails.maxPrintWidth,displayScale):null;
+          const dpi=!quality?"Checking print quality…":quality.dpi>=300?`${quality.dpi} DPI · good to print`:`${quality.dpi} DPI · review before printing`;
+          return {
+            key:draft.clientId,
+            previewUrl:draft.previewUrl||design?.previewUrl,
+            name:design?.title?.trim()||design?.name||draft.name||"Listing",
+            meta:`Listing ${listingIndex+1} of ${listings.length} · ${dpi}`,
+            onOpen:draft.editorUrl&&draft.id?()=>openDraft(draft):(draft.previewUrl?()=>window.open(draft.previewUrl,"_blank","noopener,noreferrer"):undefined),
+            openLabel:draft.editorUrl&&draft.id?(draft.id&&openedDrafts.includes(draft.id)?"Printify opened":"Adjust in Printify"):"View full size",
+            metaClassName:"placement-dpi",
+            linkClassName:"placement-printify-link",
+          };
+        })}/>
+      </div>
     </>;
     if(task==="printify")return <>
           {/* D552 - she asked for this gone once already: "there doesn't need to be

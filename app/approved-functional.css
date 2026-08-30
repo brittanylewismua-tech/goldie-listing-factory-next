@@ -411,11 +411,6 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
   background:rgba(225,194,231,.34)!important;
   color:#654362!important;
 }
-.app-shell .variant-transfer-note>span,
-.app-shell .draft-check{
-  background:linear-gradient(145deg,#a866a0,#7b4a76)!important;
-  color:#fff!important;
-}
 .app-shell .variant-transfer-note small{color:rgba(74,42,62,.68)!important}
 .app-shell .template-badge,
 .app-shell .ready-text,

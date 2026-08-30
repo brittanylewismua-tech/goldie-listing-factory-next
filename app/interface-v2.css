@@ -361,3 +361,30 @@ html, body { background: #f1d2dc; }
 .app-shell .factory-panel-toggle:hover:not(:disabled){background:#faf5f8}
 .app-shell .factory-panel-toggle:disabled{opacity:.45;cursor:not-allowed}
 .app-shell .factory-panel-body{border-top:1px solid #eee8ec;padding:18px;background:#fff}
+
+/* D724 · artwork grid — prototype .goldie-art-grid / .goldie-art-card */
+.app-shell .factory-art-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.app-shell .factory-art-card{background:#fff;border:1px solid #ded1d8;border-radius:10px;overflow:hidden}
+.app-shell .factory-art-preview{
+  height:190px;background:#f0ecef;display:grid;place-items:center;overflow:hidden;
+}
+.app-shell .factory-art-preview img{width:100%;height:100%;object-fit:contain}
+.app-shell .factory-art-meta{
+  display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:10px;
+  padding:12px 13px;border-top:1px solid #eee8ec;
+}
+.app-shell .factory-art-meta strong{display:block;font:700 13px/1.3 Inter,system-ui,sans-serif;color:#3d2538;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.app-shell .factory-art-meta small{display:block;font:400 11px/1.4 Inter,system-ui,sans-serif;color:#7d6d78;margin-top:3px}
+.app-shell .factory-link{
+  border:0;background:none;padding:0;cursor:pointer;
+  color:#6b365a;font:750 11px/1 Inter,system-ui,sans-serif;
+}
+.app-shell .factory-link:hover{text-decoration:underline;text-underline-offset:3px}
+
+/* D724 · Protections carried over from clarity-pass when the bespoke placement
+   markup became <ArtworkGrid>. Same guarantees, new owner, no !important:
+   the print-quality line and the live Printify action stay readable, and the
+   design preview stays large enough to tell two listings apart (it was 46px). */
+.app-shell .factory-art-card .placement-dpi{font:650 11px/1.35 Inter,system-ui,sans-serif;color:#7a5a6e}
+.app-shell .factory-art-card .placement-printify-link{font:800 11px/1.35 Inter,system-ui,sans-serif;color:#6b365a}

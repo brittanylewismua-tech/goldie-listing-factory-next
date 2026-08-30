@@ -57,10 +57,13 @@ test("current placement, preview, and size-guide controls retain their protectio
     readFile(new URL("app/listing-factory-app.tsx", root), "utf8"),
     readFile(new URL("app/clarity-pass.css", root), "utf8"),
   ]);
-  assert.match(app, /className="placement-printify-link"/);
-  assert.match(clarity, /\.placement-printify-link\{[^}]*font:800 11px\/1\.35/,
+  /* D724 · Placement renders through <ArtworkGrid> now, so interface-v2.css owns
+     these two guarantees. The guarantees themselves are unchanged. */
+  const v2 = await readFile(new URL("app/interface-v2.css", root), "utf8");
+  assert.match(app, /openLabel:.*Adjust in Printify/);
+  assert.match(v2, /\.placement-printify-link\{[^}]*font:800 11px\/1\.35/,
     "the live Printify placement action must remain readable");
-  assert.match(clarity, /\.placement-review-grid \.printify-preview-button\{[^}]*height:250px!important/,
+  assert.match(v2, /\.factory-art-preview\{[^}]*height:190px/,
     "the live design preview must remain large enough to identify");
   assert.match(app, /className="secondary-action size-guide-remove"/);
   assert.match(clarity, /\.size-guide-remove\{[^}]*color:#6b4a60/,
