@@ -1789,3 +1789,51 @@ html, body { background: #f1d2dc; }
 .app-shell .outcome-receipt h2,
 .app-shell .factory-work h2{
   font-family:Inter,ui-sans-serif,system-ui,-apple-system,sans-serif}
+
+/* ==========================================================================
+   D804 · The support panel is on a different palette entirely
+   ==========================================================================
+
+   Opened it for the first time. It is inside .app-shell and in Inter, so the
+   typeface hole D803 found does not reach it - but 30 of its colours are
+   neutral greys and near-blacks: #1a1a1a text, #111 on the active tab, #f2f2f2
+   message bubbles, rgba(0,0,0,.18) on the panel edge and rgba(0,0,0,.06) and
+   rgba(0,0,0,.1) on everything inside it. Plain white surface.
+
+   Every other surface in this app is #fffafc with plum hairlines and #3d2538
+   ink. This one is a grey chat widget sitting on top of it - and it is the
+   thing a seller opens when something has gone wrong, so it is the last place
+   that should feel like a different product.
+
+   The palette, not the layout: same panel, same tabs, same bubbles, same
+   composer, in peach-glass. */
+.app-shell .support-panel{
+  background:#fffafc;border:1px solid #dfc8d5;color:#3d2538}
+.app-shell .support-panel header,
+.app-shell .support-panel nav{color:#3d2538}
+.app-shell .support-panel nav button{color:#75576b}
+.app-shell .support-panel nav button.active{color:#3d2538}
+.app-shell .support-messages{background:#fffafc;color:#3d2538}
+.app-shell .support-message.support{
+  background:#f1ebef;border:1px solid #e4cedb;color:#3d2538}
+.app-shell .support-message.you{background:#5d3151;color:#fff}
+.app-shell .support-chat-form{
+  background:#fffafc;border-top:1px solid #e4cedb}
+.app-shell .support-chat-form input{
+  border:1px solid #d8cfd5;background:#fff;color:#3b2b36}
+.app-shell .support-chat-form input:focus{border-color:#a8679e}
+.app-shell .support-contact-form{background:#fffafc}
+.app-shell .support-contact-form > p{color:#6f5d69}
+.app-shell .support-contact-form > label{color:#3d2538}
+.app-shell .support-close{color:#75576b}
+/* The tabs and the composer's send button kept #111 and #1a1a1a - the last
+   near-blacks in the panel, and the only ones on any surface in this app. */
+.app-shell .support-panel button{color:#75576b}
+.app-shell .support-panel button.active,
+.app-shell .support-panel header button{color:#3d2538}
+.app-shell .support-chat-form button{background:#5d3151;color:#fff;border:0}
+
+/* D804 · The "a newer version is live" notice is fixed at the bottom of the
+   pane and sits on top of whatever is there - on the receipt it covers the
+   stat tiles. It clears the action bar rather than landing on the content. */
+.app-shell .new-build-notice{bottom:96px}
