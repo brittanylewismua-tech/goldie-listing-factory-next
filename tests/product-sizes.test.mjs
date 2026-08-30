@@ -545,6 +545,7 @@ test("D207: the dead-end variant message names the product and says what to do",
 
 test("D209: every readiness row that offers to open, opens in the card", async () => {
   const app = await read("app/listing-factory-app.tsx");
+  const panel = await readFile(new URL("../app/factory-panel.tsx", import.meta.url), "utf8");
 
   /* Four of seven rows opened in the card. Shipping, Profit and Etsy details
    * were wired to `.everything-else` — a legacy <details> at the foot of the
@@ -595,9 +596,12 @@ test("D209: every readiness row that offers to open, opens in the card", async (
   /* D329 · The panel still follows its own row; it now carries a closing control
      at its foot as well, so after scrolling a 39-colour grid the way out is
      where you already are rather than back at the top. */
-  assert.match(app, /<\/div>\{isOpen\(facet\.name\)\?<>\{panelFor\(facet\.name\)\}/,
+  /* D762 · The row is a FactoryPanel now, so "beneath its own row" is
+     structural rather than positional: the body is inside the panel, under its
+     own head, and cannot appear anywhere else. */
+  assert.match(app, /<FactoryPanel[\s\S]*?>\{isOpen\(facet\.name\)\?panelFor\(facet\.name\):null\}<\/FactoryPanel>/,
     "the panel follows its own row");
-  assert.match(app, /className="panel-collapse-foot" onClick=\{\(\)=>toggle\(facet\.name\)\}/,
+  assert.match(panel, /className="panel-collapse-foot" onClick=\{onToggle\}/,
     "and closes from the bottom as well as the top");
   /* D223 · Shipping and profit moved into the pricing panel, and establish moved
      with them — a value set there still becomes the product's default. */
@@ -992,6 +996,7 @@ test("saved-product and shipping guidance stays plain and brief — D331", async
    recipe already stores. */
 test("every bundle product gets its own pricing card — D332", async () => {
   const app = await read("app/listing-factory-app.tsx");
+  const panel = await readFile(new URL("../app/factory-panel.tsx", import.meta.url), "utf8");
 
   assert.match(app, /function variantsFor\(details:TemplateDetails\|null\|undefined,colorIds:number\[\],sizeIds:number\[\]\)/,
     "the variant filter must take a product rather than close over the active one");
@@ -1028,7 +1033,7 @@ test("every bundle product gets its own pricing card — D332", async () => {
     "the toggle must start from the same list that is on screen");
   assert.doesNotMatch(app, /current\[recipe\.id\]\?\?\["colors","sizes"\]/,
     "a second, stale default is what caused the bouncing");
-  assert.match(app, /role=\{inCard\?"button":undefined\}/,
+  assert.match(panel, /role=\{onToggle \? "button" : undefined\}/,
     "the row itself opens its panel, not only the Change button");
 });
 

@@ -51,7 +51,16 @@ export default function FactoryPanel({
 
   return (
     <section className={`factory-panel${toneClass}${open ? " is-open" : ""}`}>
-      <div className="factory-panel-head">
+      {/* D209/D332 · The head itself opens the panel, not only its button - the
+          row was always the target and a 34px button is a smaller one. */}
+      <div
+        className="factory-panel-head"
+        role={onToggle ? "button" : undefined}
+        tabIndex={onToggle ? 0 : undefined}
+        aria-expanded={onToggle ? open : undefined}
+        onClick={onToggle ? event => { if ((event.target as HTMLElement).closest("button")) return; onToggle(); } : undefined}
+        onKeyDown={onToggle ? event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onToggle(); } } : undefined}
+      >
         {/* The prototype prints a zero-padded ordinal. It is decorative: it
             names the seller's position in the step, not an id. */}
         <span className="factory-panel-index" aria-hidden="true">
@@ -79,7 +88,19 @@ export default function FactoryPanel({
           with every panel open. The prototype only ever shows two listings, so
           it can afford to render them all; production cannot. The capability
           wins and the layout adapts, which is the rule in the brief. */}
-      {open && children ? <div className="factory-panel-body">{children}</div> : null}
+      {/* D329 · A closing control at the foot as well: after scrolling a
+          39-colour grid the way out is where you already are, rather than back
+          at the top of the panel. */}
+      {open && children ? (
+        <div className="factory-panel-body">
+          {children}
+          {onToggle ? (
+            <button type="button" className="panel-collapse-foot" onClick={onToggle}>
+              Close {typeof title === "string" ? title.toLowerCase() : "this section"}
+            </button>
+          ) : null}
+        </div>
+      ) : null}
     </section>
   );
 }

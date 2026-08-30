@@ -156,7 +156,10 @@ const CASES = [
   { name: "publish box radius", chain: [...shell, el("div","factory-review"), el("div","factory-publish-box")], property: "border-radius", expect: /^12px$/ },
   { name: "publish box padding", chain: [...shell, el("div","factory-review"), el("div","factory-publish-box")], property: "padding", expect: /^20px$/ },
   // footers — D728/D733/D734
-  { name: "step footer tint", chain: [...shell, el("div","factory-footer")], property: "background", expect: /rgba\(255,255,255,\.96\)/ },
+  /* D761 · The step's forward row draws nothing now - the page already ends in
+     one bar (.workflow-footer-actions) and two was one too many. */
+  { name: "step footer draws nothing", chain: [...shell, el("div","factory-footer")], property: "background", expect: /^none$/ },
+  { name: "forward button is a button", chain: [...shell, el("div","factory-footer"), el("button","workflow-next")], property: "width", expect: /^auto$/ },
   { name: "action bar tint", chain: [...shell, el("div","workflow-footer-actions")], property: "background", expect: /rgba\(255,255,255,\.96\)/ },
   { name: "site footer tint", chain: [...shell, el("footer")], property: "background", expect: /rgba\(255,248,251,\.54\)/ },
   // step 1 product tiles
