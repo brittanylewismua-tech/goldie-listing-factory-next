@@ -2615,7 +2615,22 @@ body{min-width:1180px!important}
    The row was collapsible and said so nowhere: the native marker is hidden by
    globals.css and nothing replaced it. A chevron that turns when it opens, and a
    hover state so the whole row reads as pressable. */
-.app-shell .final-design-group>summary{grid-template-columns:minmax(0,1fr) auto auto 18px!important}
+/* D797 · Five tracks, because the row has five things in it.
+
+   D795 added a thumbnail and a checkbox to this row and declared its columns in
+   interface-v2.css, where they lost to this !important rule. The thumbnail took
+   the title's track, the title moved to the count's, the "needs a look" chip was
+   squeezed into 40px and clipped, and the ::after chevron below - which this row
+   has always had - was pushed to a second grid row. Every row came out 91px tall
+   with its parts scattered. That is what she was looking at when she said it was
+   chaos, and it was mine, one commit after I said I had swept for exactly this.
+
+   The tracks are declared here, at the rule that wins, rather than somewhere
+   that has to beat it: thumbnail, title, count, state chip, chevron. The
+   thumbnail track collapses to zero when a group has no artwork, so a row
+   without one still lines up with the rows that have one. */
+.app-shell .final-design-group>summary{grid-template-columns:44px minmax(0,1fr) auto auto 18px!important;align-items:center!important;gap:12px!important}
+.app-shell .final-design-group>summary>.final-group-select{grid-column:2!important;justify-self:start!important}
 .app-shell .final-design-group>summary::after{
   content:"";
   width:9px;height:9px;

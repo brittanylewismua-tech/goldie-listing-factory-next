@@ -1587,9 +1587,9 @@ html, body { background: #f1d2dc; }
    was "Select every listing that is ready", under a heading reading "Choose
    exactly which listings to publish". You could not choose one without opening
    it first. */
-.app-shell .final-design-group > summary{
-  display:grid;grid-template-columns:44px minmax(0,1fr) auto auto 22px;
-  align-items:center;gap:12px}
+/* D797 · The tracks are declared in clarity-pass.css, at the !important rule
+   that owns this row; declaring them here as well is what put the thumbnail in
+   the title's column. What stays here is the thumbnail itself. */
 .app-shell .final-group-thumb{
   width:44px;height:44px;border-radius:9px;object-fit:contain;background:#f0ecef}
 .app-shell .final-group-select{display:grid;place-items:center;cursor:pointer}
@@ -1607,8 +1607,10 @@ html, body { background: #f1d2dc; }
    chip on every unready row says what is unfinished, per listing rather than as
    a count, and the press stays disabled with its own reason. The list keeps its
    own header, which is the preview's second line. */
-.app-shell .final-review > .step-content > .step-heading,
-.app-shell .final-review > .step-content > .step-copy{display:none}
+/* D797 · The heading hide has to beat .app-shell .step-heading rules that carry
+   !important, or the screen keeps all three headings - which it did. */
+.app-shell .factory-work .final-review > .step-content > .step-heading,
+.app-shell .factory-work .final-review > .step-content > .step-copy{display:none!important}
 
 /* D796 · Collapsed disclosures were painting their contents onto the page.
 
