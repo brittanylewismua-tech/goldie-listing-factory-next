@@ -1500,3 +1500,15 @@ html, body { background: #f1d2dc; }
 .app-shell .batch-product-card > header .bundle-product-id small{
   font:400 12px/1.35 Inter,ui-sans-serif,system-ui,sans-serif;color:#7d6d78}
 .app-shell .batch-product-card + .batch-product-card > header{margin-top:22px}
+
+/* D791 · One bar, one row, five things in a fixed order.
+
+   Back, "Saved automatically", the current blocker, Save as draft, then the
+   step's forward control. The status is the only part that may shrink; every
+   control keeps its size, so the row cannot wrap into a second bar. */
+.app-shell .workflow-footer-actions{display:flex;flex-wrap:nowrap;align-items:center;gap:18px}
+.app-shell .workflow-footer-actions > .workflow-back{order:1;flex:0 0 auto}
+.app-shell .workflow-footer-actions > .autosave-note{order:2;flex:0 0 auto;white-space:nowrap}
+.app-shell .factory-footer.in-bar > small{order:3;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left}
+.app-shell .workflow-footer-actions > .save-draft-link{order:8;flex:0 0 auto;margin-left:auto}
+.app-shell .factory-footer.in-bar > *:not(small){order:9;flex:0 0 auto}

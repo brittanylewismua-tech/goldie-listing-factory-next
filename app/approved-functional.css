@@ -866,9 +866,19 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 
 /* Step 4 final lock. Keep this block last. */
 .app-shell .launch-panel{position:relative!important;top:auto!important}
-.app-shell .post-draft-footer{min-height:64px!important;display:grid!important;grid-template-columns:1fr auto 1fr!important;align-items:center!important;gap:24px!important}
-.app-shell .post-draft-footer .workflow-back{position:static!important;grid-column:1!important;justify-self:start!important;min-width:150px!important;margin:0!important;transform:none!important}
-.app-shell .post-draft-footer .autosave-note{position:static!important;grid-column:2!important;justify-self:center!important;margin:0!important;transform:none!important;white-space:nowrap!important}
+/* D791 · This bar was a three-column grid: Back in column 1, "Saved
+   automatically" in column 2, and a third column that nothing was placed in.
+   When the step's own footer began portalling into it (D776/D778) its status
+   and its forward control had nowhere to go, so grid auto-placement put them
+   on new rows - below a bar 70px tall, off the bottom of the window. That is
+   why step 2 showed a status strip with no buttons and read as two bars: the
+   buttons were laid out at y761 in a 756px window.
+
+   It is a single flex row now, and interface-v2.css orders it. The bar carries
+   five things and a fixed three-column grid could only ever hold three. */
+.app-shell .post-draft-footer{min-height:64px!important;display:flex!important;flex-wrap:nowrap!important;align-items:center!important;gap:24px!important}
+.app-shell .post-draft-footer .workflow-back{position:static!important;min-width:150px!important;margin:0!important;transform:none!important}
+.app-shell .post-draft-footer .autosave-note{position:static!important;margin:0!important;transform:none!important;white-space:nowrap!important}
 .app-shell .custom-shipping-body>label:first-of-type{display:grid!important;gap:8px!important;margin:18px 0 24px!important}
 .app-shell .custom-shipping-body>label:first-of-type>span{color:#4b283e!important;font-size:14px!important;font-weight:800!important;line-height:1.35!important}
 .app-shell .custom-shipping-body>label:first-of-type>span small{display:block!important;margin-top:5px!important;color:rgba(74,42,62,.72)!important;font-size:12px!important;font-weight:500!important}
@@ -879,9 +889,9 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .app-shell .launch-button{min-height:64px!important;padding:16px 22px!important;font-size:16px!important;font-weight:750!important;line-height:1.2!important}
 .app-shell .launch-panel .launch-note{position:static!important;display:block!important;margin:18px auto 0!important;padding:0 18px!important;max-width:720px!important;text-align:center!important}
 @media(min-width:821px){
-  .app-shell .workflow-stage>.workflow-footer-actions{/* D733 · width, margin and position left this rule; interface-v2 spans the bar. */min-height:64px!important;grid-template-columns:1fr auto 1fr!important;gap:24px!important}
-  .app-shell .workflow-footer-actions>.workflow-back{grid-column:1!important;justify-self:start!important;min-width:150px!important;transform:none!important}
-  .app-shell .workflow-footer-actions .autosave-note{position:static!important;grid-column:2!important;justify-self:center!important;margin:0!important;transform:none!important;white-space:nowrap!important}
+  .app-shell .workflow-stage>.workflow-footer-actions{/* D733 · width, margin and position left this rule; interface-v2 spans the bar. */min-height:64px!important;gap:24px!important}
+  .app-shell .workflow-footer-actions>.workflow-back{min-width:150px!important;transform:none!important}
+  .app-shell .workflow-footer-actions .autosave-note{position:static!important;margin:0!important;transform:none!important;white-space:nowrap!important}
 }
 
 /* Shared step header: progress first, then title and its step count, then the card. */
