@@ -1742,3 +1742,50 @@ html, body { background: #f1d2dc; }
   background:#eee7ec;border:1px solid #dfc8d5;color:#5a4152;
   font:750 11px/1 Inter,ui-sans-serif,system-ui,sans-serif;
   text-transform:none;letter-spacing:normal;white-space:nowrap}
+
+/* ==========================================================================
+   D803 · The help dialog is outside .app-shell, so nothing in this file
+   had ever reached it
+   ==========================================================================
+
+   .context-help-dialog renders in .context-help-backdrop, a sibling of the
+   shell, not a descendant. D774's "one typeface" rule is scoped to .app-shell,
+   and every other rule in this migration is too, so the dialog kept whatever it
+   had: 16 elements in Manrope, its close button in Helvetica Neue. Three
+   typefaces on a screen I said had one - and I had never opened it.
+
+   Measured against the prototype's .goldie-help-dialog:
+
+                       prototype              production
+     dialog            #fffafc, radius 22     transparent, radius 16
+     padding           29px                   38px
+     h2                DM Serif 26px #4b283e  DM Serif 22px #4c293f
+     body              Inter 13px #6f5d69     Manrope 16px
+     eyebrow           -                      Manrope 10px/800
+     close             -                      Helvetica Neue 20px
+
+   The serif heading is right: it is the one place besides the wordmark the
+   prototype uses DM Serif. Everything under it is Inter. */
+.context-help-dialog,
+.context-help-dialog *:not(h2){
+  font-family:Inter,ui-sans-serif,system-ui,-apple-system,sans-serif}
+.context-help-dialog{
+  background:#fffafc;border-radius:22px;padding:29px}
+.context-help-dialog h2{
+  font:400 26px/1.15 "DM Serif Display",Georgia,serif;color:#4b283e;margin:0 0 7px}
+.context-help-dialog .context-help-intro,
+.context-help-dialog .context-help-section p{
+  font:400 13px/1.55 Inter,ui-sans-serif,system-ui,sans-serif;color:#6f5d69}
+.context-help-dialog .mini-label{
+  font:750 10px/1.2 Inter,ui-sans-serif,system-ui,sans-serif;
+  letter-spacing:.16em;text-transform:uppercase;color:#8a6b80}
+.context-help-dialog .context-help-section h3{
+  font:700 13px/1.35 Inter,ui-sans-serif,system-ui,sans-serif;color:#3d2538}
+.context-help-dialog .context-help-close{
+  font:400 20px/1 Inter,ui-sans-serif,system-ui,sans-serif;color:#5b304f}
+
+/* And the receipt headline, inside the shell, was the one element D774's
+   exclusion list let through in Manrope. */
+.app-shell .outcome-receipt h2,
+.app-shell .factory-work h2{
+  font-family:Inter,ui-sans-serif,system-ui,-apple-system,sans-serif}

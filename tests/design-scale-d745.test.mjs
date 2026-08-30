@@ -17,7 +17,12 @@ import postcss from "postcss";
 
 /* Whole pixels. The rule being kept is that no size lands between two pixels -
    which of the whole sizes a heading uses is D233's business, not this test's. */
-const RADIUS = new Set([0, 6, 7, 8, 9, 10, 12, 14, 16]);
+/* D803 · 22 joins the scale because the prototype uses it - .goldie-help-dialog
+   is radius 22, measured off its own CSSOM. The scale was written from the
+   screens I had opened, and I had never opened the help dialog, so its corner
+   was missing from the list rather than wrong in the app. A scale built from a
+   partial walk of the product is a scale that will reject the product. */
+const RADIUS = new Set([0, 6, 7, 8, 9, 10, 12, 14, 16, 22]);
 
 const sheets = readdirSync(new URL("../app", import.meta.url)).filter(name => name.endsWith(".css"));
 const offences = { type: [], radius: [] };
