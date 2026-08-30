@@ -237,3 +237,33 @@ test("D792: the panel head is one row — every child has a column of its own", 
   });
   assert.equal(chevron && chevron.value, "4", "the chevron sits in the fourth track, not on top of the state chip");
 });
+
+test("D794: no grid in the listing form leaves its columns implicit", () => {
+  /* Three times now an item has landed in an implicit grid track and been
+     sized or placed by something it has nothing to do with:
+
+       the action bar   forward control auto-placed to a second row, laid out
+                        at y761 in a 756px window
+       the panel head   chevron auto-placed under the state chip, every panel
+                        92px instead of 66
+       the field label  textarea auto-placed into row two, column one, so the
+                        title field was 214px in a 497px card
+
+     Every rule involved was correct on its own, which is why none of them
+     failed a test. What they have in common is a grid container whose columns
+     were never declared. So: any grid in the listing form declares its
+     template, and any control inside a field label spans it. */
+  const label = resolve({
+    selectorTest: selector => /factory-listing-form .design-fields > label$/.test(selector),
+    property: "grid-template-columns",
+  });
+  assert.ok(label && /minmax\(0,\s*1fr\)/.test(label.value),
+    `field labels must declare their columns — resolved to "${label ? label.value : "unset"}"`);
+
+  const control = resolve({
+    selectorTest: selector => /factory-listing-form .design-fields > label > textarea$/.test(selector),
+    property: "grid-column",
+  });
+  assert.equal(control && control.value.replace(/\s+/g, ""), "1/-1",
+    "the control spans the label's columns instead of taking the first one");
+});

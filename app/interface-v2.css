@@ -1557,3 +1557,24 @@ html, body { background: #f1d2dc; }
 /* The switcher lines up with the card below it, and its buttons are inset from
    the card edge the way the card's own contents are. */
 .app-shell .factory-listing-switch{padding:0}
+
+/* D794 · The title field was 214px in a 497px card.
+
+   The <label> wrapping each field is display:grid, and its contents are the
+   label text, the counter, and the control. With no template it made two
+   implicit columns from the first row - 214px and 277px - and the textarea
+   auto-placed into row two, column one. 214px. Her title wrapped over three
+   lines inside a card with 280px of empty space beside it.
+
+   That is the third time in this migration an item has landed in an implicit
+   grid track and been sized or placed by something it has nothing to do with:
+   the action bar's forward control, the panel chevron, and now this. Every one
+   of them looked correct in the rule that set it.
+
+   Two named columns for the label row; the control spans both. */
+.app-shell .factory-listing-form .design-fields > label{
+  display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:baseline;gap:5px 10px}
+.app-shell .factory-listing-form .design-fields > label > textarea,
+.app-shell .factory-listing-form .design-fields > label > input,
+.app-shell .factory-listing-form .design-fields > label > select{grid-column:1 / -1}
+.app-shell .factory-listing-form .task-listing-preview span{justify-self:start}

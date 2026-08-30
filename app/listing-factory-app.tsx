@@ -2940,7 +2940,10 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
               Shortened from the middle, the way D494 shortens them elsewhere -
               filenames differ at the end, so both ends have to survive. */}
           <h3>{(()=>{const raw=design.file?.name||`Listing ${index+1}`;
-            const short=raw.length<=42?raw:`${raw.slice(0,20)}…${raw.slice(-18)}`;
+            /* D794 - 42 was still two lines in a 497px card at 14/700. Her
+               names run to 60-odd characters; this keeps the front and the
+               extension, which is what tells two exports apart. */
+            const short=raw.length<=30?raw:`${raw.slice(0,14)}…${raw.slice(-13)}`;
             return `${short} · Listing ${index+1} of ${files.length}`;})()}</h3>
           {titlesRows(design)}
           {descriptionRows(design)}
