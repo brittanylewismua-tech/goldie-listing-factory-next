@@ -379,7 +379,12 @@ html, body { background: #f1d2dc; }
 .app-shell .factory-art-preview{
   height:190px;background:#f0ecef;display:grid;place-items:center;overflow:hidden;
 }
-.app-shell .factory-art-preview img{width:100%;height:100%;object-fit:contain}
+/* D768 · Seen on production: a 1200x1200 Printify mockup was rendering 430x430
+   inside a 190px preview with overflow:hidden, so the panel called "Review
+   Printify placement" showed the blank middle of a shirt and none of the art.
+   The preview is a centred grid cell; the image fits inside it rather than
+   filling it. */
+.app-shell .factory-art-preview img{width:100%;height:190px;max-height:190px;object-fit:contain}
 .app-shell .factory-art-meta{
   display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:10px;
   padding:12px 13px;border-top:1px solid #eee8ec;
