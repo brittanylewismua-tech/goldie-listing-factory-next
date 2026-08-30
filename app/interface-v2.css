@@ -808,3 +808,17 @@ html, body { background: #f1d2dc; }
    sheets, which is a rounded rectangle nobody can see against a transparent
    background but which shows the moment one is focused or hovered. */
 .app-shell nav.workflow-progress button{border-radius:0}
+
+/* D747 · I nearly undid D198 here.
+
+   The Choose / Ready control renders as a full-width 34px pill with a gradient
+   and white text. That looked to me like the "amateur" button she reported, so
+   I deleted the seven legacy rules producing it - and the tests stopped me.
+   D198 is her decision: the pill measured 81px in a 205px card while the whole
+   card was clickable, so the CTA spans the tile. D706 then centred the label
+   inside it. Spanning is the fix, not the defect; what she reported was the
+   label sitting off-centre and left-aligned in a right-aligned box, and that
+   is already fixed.
+
+   interface-v2 owns the chip only where there is no CTA to span - the panel
+   state chips - and leaves this one to the rules that were argued for. */
