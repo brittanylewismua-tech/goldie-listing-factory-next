@@ -122,9 +122,15 @@ test("preview navigation renders the real later-step experiences", async () => {
 test("keeps Step 2 saved-product text and selections in the plum palette", async () => {
   const css = await Promise.all([readFile(new URL("app/approved-functional.css",root),"utf8"),readFile(new URL("app/interface-v2.css",root),"utf8")]).then(x=>x.join("\n"));
   assert.match(css, /Step 2 saved-product palette lock/);
-  assert.match(css, /\.app-shell \.recipe-card \.recipe-copy small,[\s\S]*color:#654362!important/);
-  assert.match(css, /\.app-shell \.recipe-card \.recipe-tile\.selected\{[\s\S]*border-color:#b777b0!important/);
-  assert.match(css, /\.app-shell \.recipe-card \.recipe-icon,[\s\S]*linear-gradient\(145deg,#d591c3,#a86ba2\)!important/);
+  /* D729 · The tile's own colours come from the approved preview now
+     (goldie-ux-preview-site @ aad9208): a #6c3a5c selected edge against
+     #ded5db, and the neutral 145deg band the prototype puts behind the
+     product. The rule this test protects is that the tile reads as one
+     deliberate palette and its text stays legible - both still checked
+     below - not that the palette is that particular plum. */
+  assert.match(css, /\.app-shell \.recipe-tile\.selected\{border:2px solid #6c3a5c/);
+  assert.match(css, /\.app-shell \.recipe-icon\{[^}]*linear-gradient\(145deg,#f5f2f4,#e8e1e6\)/);
+  assert.match(css, /\.app-shell \.recipe-copy>small\{color:#7d6d78/);
   assert.match(css, /\.app-shell \.recipe-card \.active-recipe\{[\s\S]*background:rgba\(225,194,231,\.34\)!important/);
 });
 
@@ -855,8 +861,11 @@ test("saved-product tiles line up regardless of name length — D162", async () 
   /* D190 replaced the 1fr pin: tiles stretch to the tallest in their row, so on a
    * shorter tile the 1fr row consumed the full height and pushed the footer 36px
    * below the card. Auto rows size to content and stay inside. */
-  assert.match(clarity, /\.app-shell \.recipe-tile\{grid-template-rows:auto auto!important;align-content:start!important\}/);
-  assert.match(clarity, /\.app-shell \.recipe-use\{height:auto!important\}/);
+  /* D729 · interface-v2 owns the tile now, without !important - it is the only
+     sheet styling it, so nothing needs to shout. The rule is the same one: rows
+     are auto auto and content starts at the top. */
+  assert.match(clarity, /\.app-shell \.recipe-tile\{[^}]*grid-template-rows:auto auto;align-content:start/);
+  assert.match(clarity, /\.app-shell \.recipe-use\{[^}]*height:auto/);
   /* D166 replaced the two-line reservation: it aligned the rows but left a 24px
    * hole under one-line names. Wider tiles (250px min instead of 170px) give the
    * name column 226px instead of 117px, so names fit on one line and there is no
@@ -864,7 +873,11 @@ test("saved-product tiles line up regardless of name length — D162", async () 
   /* D170: 250px tiles fixed the wrapping but cost density — with many saved
    * products that is a wall of large cards. Room comes from the icon and type
    * instead: 26px icon, 13px name, tile 215px tall -> 163px, 3 per row. */
-  assert.match(clarity, /\.app-shell \.recipe-grid\{grid-template-columns:repeat\(auto-fill,minmax\(184px,1fr\)\)!important/,
+  /* D729 · The prototype fixes three per row rather than fitting as many
+     184px tiles as the width allows. Same outcome for the density this test is
+     protecting - three across, not a wall of large cards - and it is the
+     approved layout. */
+  assert.match(clarity, /\.app-shell \.recipe-grid\{[^}]*grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/,
     "Tiles must stay compact so a long product list does not become a wall of cards.");
   assert.match(clarity, /\.app-shell \.recipe-copy>b:first-child\{[^}]*text-overflow:ellipsis/,
     "A name too long for one line truncates rather than reflowing the card.");
@@ -922,9 +935,12 @@ test("selecting a product does not blow the product list up — D173", async () 
    * likely to be scanning the list.
    * Measured: tile 207px -> 642px wide, ~158px tall. Twelve saved products would
    * be ~1,900px of stacked full-width cards. */
-  assert.match(approved, /\.app-shell\[data-product-selected="true"\] \.recipe-grid\{grid-template-columns:1fr!important\}/,
-    "Guard assumes the collapsing rule still exists; update this test if it is removed.");
-  assert.match(clarity, /\.app-shell\[data-product-selected="true"\] \.recipe-grid\{\s*grid-template-columns:repeat\(auto-fill,minmax\(184px,1fr\)\)!important;?\s*\}/,
+  /* D729 · The collapsing rule is gone entirely - interface-v2 owns this grid
+     and never had one. That is what this test wanted: nothing rewrites the grid
+     when a product is selected. */
+  assert.doesNotMatch(approved, /\[data-product-selected="true"\] \.recipe-grid\{grid-template-columns:1fr/,
+    "Selecting a product must not blow the list up into one full-width column.");
+  assert.match(clarity, /\.app-shell \.recipe-grid\{[^}]*grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/,
     "The compact grid must survive selection.");
 });
 
@@ -953,7 +969,7 @@ test("a selected product tile does not clip its own actions — D186", async () 
    * here — the same way the mockup dead column survived five reports. */
   /* The wrapping-flex attempt made it worse — one button per row, tile 163px ->
    * 296px. The grid was nearly right; the label was too long. */
-  assert.match(clarity, /\.app-shell \.recipe-grid \.recipe-tile\{overflow:visible!important\}/);
+  assert.match(clarity, /\.app-shell \.recipe-tile\{[^}]*overflow:visible/);
   assert.match(clarity, /\.app-shell \.recipe-card \.change-product:after\{content:"Change"/);
   assert.doesNotMatch(clarity, /\.recipe-grid \.recipe-tile\{[^}]*flex-wrap:wrap/,
     "Flex made each action take its own row.");
@@ -979,24 +995,25 @@ test("keyword bank cards keep Delete quiet and end their row on one line — D19
 
 test("D197: product tiles pad their actions and drop the meaningless Printify initial", async () => {
   const css = await Promise.all([readFile(new URL("app/clarity-pass.css",root),"utf8"),readFile(new URL("app/interface-v2.css",root),"utf8")]).then(x=>x.join("\n"));
+  const tools = await readFile(new URL("app/factory-tools.tsx", root), "utf8");
 
   // Padding moved off the tile and onto the children, so Edit/Delete stop
   // sitting flush against the frame (measured 0px padding, delete right:10).
-  assert.match(css, /\.app-shell \.recipe-grid \.recipe-tile\{[^}]*padding:0!important/);
+  assert.match(css, /\.app-shell \.recipe-tile\{[^}]*padding:0;/);
   assert.match(
     css,
-    /\.app-shell \.recipe-grid \.recipe-tile>button:not\(\.recipe-use\):last-child\{margin-right:12px!important\}/,
+    /\.app-shell \.recipe-tile>button:not\(\.recipe-use\):last-child\{margin-right:12px\}/,
     "the last action keeps a right margin off the tile edge",
   );
   assert.match(
     css,
-    /\.app-shell \.recipe-grid \.recipe-tile>button:not\(\.recipe-use\)\{margin-bottom:12px!important\}/,
+    /\.app-shell \.recipe-tile>button:not\(\.recipe-use\)\{margin-bottom:12px\}/,
     "the action row keeps a bottom margin off the tile edge",
   );
 
   // The primary button spans the tile via width, not negative margins — those
   // measured 181px inside a 207px tile and left the hairline stopping short.
-  assert.match(css, /\.app-shell \.recipe-grid \.recipe-tile>\.recipe-use\{[^}]*width:100%!important/);
+  assert.match(css, /\.app-shell \.recipe-use\{[^}]*width:100%/);
   assert.doesNotMatch(
     css,
     /\.app-shell \.recipe-grid \.recipe-tile>\.recipe-use\{[^}]*margin:0 -12px/,
@@ -1005,9 +1022,12 @@ test("D197: product tiles pad their actions and drop the meaningless Printify in
 
   // "P" on every product card is Printify's initial and identical across all of
   // them; "3" on a bundle tile is the member count and stays.
+  /* D729 · The initial is gone from the markup rather than hidden by a rule -
+     the band it sat in is the prototype's product image area and stays. A
+     bundle tile still fills its band with the member count. */
   assert.match(
-    css,
-    /\.app-shell \.recipe-grid \.recipe-tile:not\(\.bundle-as-product\) \.recipe-icon\{display:none!important\}/,
+    tools,
+    /<span className="recipe-icon" aria-hidden="true"\/>/,
     "product tiles hide the icon",
   );
   assert.doesNotMatch(

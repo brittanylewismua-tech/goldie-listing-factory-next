@@ -429,7 +429,6 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .app-shell .upload-notice-icon{background:linear-gradient(145deg,#d591c3,#a86ba2)!important;color:#fff!important}
 .app-shell .upload-notice-progress{color:#633f5c!important}
 .app-shell .upload-notice button:not(.danger){background:linear-gradient(145deg,#5b304f,#45263c)!important;color:#fff!important}
-.app-shell .recipe-icon{background:linear-gradient(145deg,#d591c3,#a86ba2)!important;color:#fff!important}
 .app-shell .field-warning{color:#704d75!important}
 .app-shell .ai-title-button{background:linear-gradient(145deg,#6a3c61,#4b2c47)!important;color:#fff!important}
 .app-shell .item-pricing-section{border-top-color:rgba(137,88,132,.22)!important}
@@ -714,37 +713,10 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 /* Step 2 saved-product palette lock. Product information and actions are
    plum, never legacy olive, green, gold, or brown. Green remains reserved
    for true success and progress feedback elsewhere in the workflow. */
-.app-shell .recipe-card .recipe-library-head>span,
-.app-shell .recipe-card .recipe-tile,
-.app-shell .recipe-card .recipe-copy small,
-.app-shell .recipe-card .recipe-copy em,
-.app-shell .recipe-card .edit-recipe,
-.app-shell .recipe-card .recipe-library-head button,
-.app-shell .recipe-card .first-recipe-callout,
-.app-shell .recipe-card .first-recipe-callout p,
-.app-shell .recipe-card .active-recipe,
-.app-shell .recipe-card .active-recipe button{
-  color:#654362!important;
-}
 .app-shell .recipe-card .recipe-copy b,
 .app-shell .recipe-card .first-recipe-callout b,
 .app-shell .recipe-card .recipe-form-heading b{
   color:#4b283e!important;
-}
-.app-shell .recipe-card .recipe-tile{
-  border-color:rgba(139,89,137,.2)!important;
-  background:rgba(255,255,255,.5)!important;
-}
-.app-shell .recipe-card .recipe-tile.selected{
-  border-color:#b777b0!important;
-  background:linear-gradient(145deg,rgba(252,244,254,.76),rgba(246,229,248,.62))!important;
-  box-shadow:0 0 0 3px rgba(183,119,176,.13),0 14px 30px rgba(74,42,62,.08)!important;
-}
-.app-shell .recipe-card .recipe-use{color:#654362!important}
-.app-shell .recipe-card .recipe-icon,
-.app-shell .recipe-card .first-recipe-callout>span{
-  background:linear-gradient(145deg,#d591c3,#a86ba2)!important;
-  color:#fff!important;
 }
 .app-shell .recipe-card .edit-recipe:hover,
 .app-shell .recipe-card .recipe-library-head button:hover{color:#4b283e!important}
@@ -971,8 +943,6 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .app-shell .recipe-card .bundle-library[open]>summary>small:after{transform:rotate(180deg)}
 .app-shell .recipe-card .bundle-library-content{display:grid;gap:14px;padding:16px 2px 2px}
 .app-shell .recipe-card .recipe-tile.selected .recipe-copy em{color:#713d62!important;font-weight:900!important}
-.app-shell .recipe-card .recipe-tile.selecting{border-color:#b96aa6!important;box-shadow:0 0 0 3px rgba(225,145,207,.28),0 14px 34px rgba(91,48,79,.12)!important}
-.app-shell .recipe-card .recipe-tile.selecting .recipe-icon{animation:goldie-action-pulse 1s ease-in-out infinite}
 .app-shell button[aria-busy="true"]{cursor:wait!important}
 .app-shell button[aria-busy="true"]::after{content:"";display:inline-block;width:.85em;height:.85em;margin-left:.55em;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;vertical-align:-.1em;animation:goldie-action-spin .72s linear infinite}
 @keyframes goldie-action-spin{to{transform:rotate(360deg)}}
@@ -1038,10 +1008,6 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 
 /* Saved-product and bundle cards: content and utility actions occupy separate
    rows so long names can never sit underneath Edit or Delete. */
-.app-shell .recipe-card .recipe-tile{display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;align-items:center!important}
-.app-shell .recipe-card .recipe-use{grid-column:1/-1!important;min-width:0!important;padding:16px!important;border-bottom:1px solid rgba(91,48,79,.1)!important}
-.app-shell .recipe-card .recipe-use{grid-template-columns:44px minmax(0,1fr)!important}
-.app-shell .recipe-card .recipe-copy{min-width:0!important}
 .app-shell .recipe-card .recipe-copy b{overflow-wrap:anywhere!important;word-break:normal!important}
 .app-shell .recipe-card .edit-recipe{position:static!important;justify-self:end!important;margin:7px 2px 8px 0!important;padding:6px 9px!important;white-space:nowrap!important}
 .app-shell .recipe-card .delete-recipe{position:static!important;justify-self:end!important;margin:7px 9px 8px 0!important;width:auto!important;min-width:28px!important;height:28px!important;padding:0 7px!important}
@@ -1292,11 +1258,7 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
  * way back was to unselect. It is a collapsed <details> — one summary line —
  * so it can stay visible without adding noise. */
 .app-shell[data-product-selected="true"] .bundle-library{display:block!important}
-.app-shell[data-product-selected="true"] .recipe-grid{grid-template-columns:1fr!important}
-.app-shell .recipe-card .recipe-tile{grid-template-columns:minmax(0,1fr) auto auto auto!important;column-gap:10px!important}
 .app-shell .recipe-card .change-product{position:static;grid-column:2;justify-self:end;margin:7px 2px 8px 0;padding:6px 9px;border:0;background:transparent;color:#68445f;font-size:10px;font-weight:850;text-decoration:underline;text-underline-offset:3px;white-space:nowrap;cursor:pointer}
-.app-shell .recipe-card .recipe-tile>.edit-recipe{grid-column:3}
-.app-shell .recipe-card .recipe-tile>.delete-recipe{grid-column:4}
 .app-shell .variant-pricing .heading-with-help>button{display:none!important}
 .keyword-page .keyword-workspace{display:flex!important;flex-direction:column!important}
 .keyword-page .bank-library{order:1}

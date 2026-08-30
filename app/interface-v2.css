@@ -443,3 +443,46 @@ html, body { background: #f1d2dc; }
 .app-shell .workflow-next{border:0;border-radius:8px;background:#5d3151;color:#fff;padding:11px 18px;height:auto;min-height:0;font:750 13px/1.2 Inter,ui-sans-serif,system-ui,sans-serif;cursor:pointer}
 .app-shell .workflow-next:disabled{opacity:.5;cursor:not-allowed}
 @media(max-width:1050px){.app-shell .factory-footer{width:calc(100vw - 240px);margin-left:calc(.5 * (100% + 240px - 100vw))}}
+
+/* D729 · Step 1's saved products, from the prototype's .goldie-product-grid.
+   Measured from its CSSOM:
+
+     .goldie-product-grid   grid, repeat(3,1fr), gap 12
+     .goldie-product        1px #ded5db, radius 10, padding 12, #fff
+     .goldie-product.chosen 2px #6c3a5c, padding 11, #fbf7fa
+     .goldie-product-image  116 tall, radius 8, gradient 145deg #f5f2f4→#e8e1e6,
+                            place-items centre, margin-bottom 11, 12px #8d7c87
+
+   41 rules across three sheets were styling these tiles, every one of them
+   !important, which is why the Choose pill kept coming back wrong: four owners,
+   none of them final. interface-v2 owns them now and carries no !important.
+   The tile's markup, choose handler, ownership check and bundle behaviour are
+   untouched - this is the tile production already renders, wearing the
+   prototype's measurements. */
+.app-shell .recipe-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+/* The tile keeps the column arrangement its own action buttons are written
+   against - Change / Edit / Delete still land on the right of the row under the
+   card - and takes the prototype's frame. D162: rows are auto auto and content
+   starts at the top, so a two-line product name cannot push one tile's contents
+   out of line with its neighbours. D186: nothing is clipped. D197: the padding
+   is on the children, so the actions do not sit flush against the frame. */
+.app-shell .recipe-tile{position:relative;display:grid;grid-template-columns:minmax(0,1fr) auto auto auto;grid-template-rows:auto auto;align-content:start;column-gap:10px;padding:0;overflow:visible;border:1px solid #ded5db;border-radius:10px;background:#fff;box-shadow:0 4px 14px rgba(75,40,62,.07)}
+.app-shell .recipe-tile>button:not(.recipe-use){margin-bottom:12px}
+.app-shell .recipe-tile>button:not(.recipe-use):last-child{margin-right:12px}
+.app-shell .recipe-tile.selected{border:2px solid #6c3a5c;background:#fbf7fa}
+.app-shell .recipe-use{grid-column:1/-1;display:grid;width:100%;min-width:0;height:auto;padding:12px;border:0;background:none;text-align:left;cursor:pointer}
+.app-shell .recipe-tile.selected .recipe-use{padding:11px}
+.app-shell .recipe-icon{display:grid;place-items:center;height:116px;margin-bottom:11px;border-radius:8px;background:linear-gradient(145deg,#f5f2f4,#e8e1e6);color:#8d7c87;font:750 12px/1 Inter,ui-sans-serif,system-ui,sans-serif}
+.app-shell .recipe-copy{display:grid;gap:3px;min-width:0}
+/* D162 · A name too long for one line truncates. It must not reflow the card
+   and push this tile out of line with the two beside it. */
+.app-shell .recipe-copy>b:first-child{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#3d2538;font:700 13px/1.3 Inter,ui-sans-serif,system-ui,sans-serif}
+.app-shell .recipe-copy>small{color:#7d6d78;font:11px/1.4 Inter,ui-sans-serif,system-ui,sans-serif}
+/* The Choose / Ready control reads as one chip, aligned to the card's own edge.
+   It was left-aligned inside a right-aligned box and looked, in her words,
+   amateur; it is a chip on the left of the card, the way every state chip in
+   this interface is. */
+.app-shell .recipe-copy>em{justify-self:start;margin-top:6px;padding:6px 9px;border:1px solid #e2d9e0;border-radius:7px;background:#f5f2f5;color:#5d3151;font:750 11px/1 Inter,ui-sans-serif,system-ui,sans-serif;font-style:normal;white-space:nowrap}
+.app-shell .recipe-tile.selected .recipe-copy>em{border-color:#cae5d2;background:#edf7f0;color:#37704c}
+@media(max-width:1100px){.app-shell .recipe-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:760px){.app-shell .recipe-grid{grid-template-columns:minmax(0,1fr)}}

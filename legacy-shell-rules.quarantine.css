@@ -594,3 +594,100 @@
 
 /* clarity-pass */
 .app-shell .step-product-cards{margin-top:10px!important}
+
+
+/* D729 - product tiles, removed when interface-v2 took ownership */
+/* approved-functional.css */ .app-shell .recipe-icon{background:linear-gradient(145deg,#d591c3,#a86ba2)!important;color:#fff!important}
+/* approved-functional.css */ .app-shell .recipe-card .recipe-library-head>span,
+.app-shell .recipe-card .recipe-tile,
+.app-shell .recipe-card .recipe-copy small,
+.app-shell .recipe-card .recipe-copy em,
+.app-shell .recipe-card .edit-recipe,
+.app-shell .recipe-card .recipe-library-head button,
+.app-shell .recipe-card .first-recipe-callout,
+.app-shell .recipe-card .first-recipe-callout p,
+.app-shell .recipe-card .active-recipe,
+.app-shell .recipe-card .active-recipe button{
+  color:#654362!important;
+}
+/* approved-functional.css */ .app-shell .recipe-card .recipe-tile{
+  border-color:rgba(139,89,137,.2)!important;
+  background:rgba(255,255,255,.5)!important;
+}
+/* approved-functional.css */ .app-shell .recipe-card .recipe-tile.selected{
+  border-color:#b777b0!important;
+  background:linear-gradient(145deg,rgba(252,244,254,.76),rgba(246,229,248,.62))!important;
+  box-shadow:0 0 0 3px rgba(183,119,176,.13),0 14px 30px rgba(74,42,62,.08)!important;
+}
+/* approved-functional.css */ .app-shell .recipe-card .recipe-use{color:#654362!important}
+/* approved-functional.css */ .app-shell .recipe-card .recipe-icon,
+.app-shell .recipe-card .first-recipe-callout>span{
+  background:linear-gradient(145deg,#d591c3,#a86ba2)!important;
+  color:#fff!important;
+}
+/* approved-functional.css */ .app-shell .recipe-card .recipe-tile.selecting{border-color:#b96aa6!important;box-shadow:0 0 0 3px rgba(225,145,207,.28),0 14px 34px rgba(91,48,79,.12)!important}
+/* approved-functional.css */ .app-shell .recipe-card .recipe-tile.selecting .recipe-icon{animation:goldie-action-pulse 1s ease-in-out infinite}
+/* approved-functional.css */ .app-shell .recipe-card .recipe-tile{display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;align-items:center!important}
+/* approved-functional.css */ .app-shell .recipe-card .recipe-use{grid-column:1/-1!important;min-width:0!important;padding:16px!important;border-bottom:1px solid rgba(91,48,79,.1)!important}
+/* approved-functional.css */ .app-shell .recipe-card .recipe-use{grid-template-columns:44px minmax(0,1fr)!important}
+/* approved-functional.css */ .app-shell .recipe-card .recipe-copy{min-width:0!important}
+/* approved-functional.css */ .app-shell[data-product-selected="true"] .recipe-grid{grid-template-columns:1fr!important}
+/* approved-functional.css */ .app-shell .recipe-card .recipe-tile{grid-template-columns:minmax(0,1fr) auto auto auto!important;column-gap:10px!important}
+/* approved-functional.css */ .app-shell .recipe-card .recipe-tile>.edit-recipe{grid-column:3}
+/* approved-functional.css */ .app-shell .recipe-card .recipe-tile>.delete-recipe{grid-column:4}
+/* clarity-pass.css */ .app-shell .recipe-tile{grid-template-rows:auto auto!important;align-content:start!important}
+/* clarity-pass.css */ .app-shell .recipe-use{height:auto!important}
+/* clarity-pass.css */ .app-shell .recipe-grid{grid-template-columns:repeat(auto-fill,minmax(184px,1fr))!important;gap:10px!important}
+/* clarity-pass.css */ .app-shell .recipe-tile .recipe-icon{width:26px!important;height:26px!important;font-size:11px!important}
+/* clarity-pass.css */ .app-shell .recipe-use{padding:12px!important}
+/* clarity-pass.css */ .app-shell .recipe-copy>small{font-size:10px!important}
+/* clarity-pass.css */ .app-shell .recipe-copy>b:first-child{
+  display:block;
+  min-height:0;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  font-size:13px;
+  line-height:1.25;
+}
+/* clarity-pass.css */ .app-shell[data-product-selected="true"] .recipe-grid{
+  grid-template-columns:repeat(auto-fill,minmax(184px,1fr))!important;
+}
+/* clarity-pass.css */ .app-shell .recipe-grid .recipe-tile{overflow:visible!important}
+/* clarity-pass.css */ .app-shell .recipe-grid .recipe-tile{
+  grid-template-columns:1fr auto auto auto!important;
+  padding:0!important;
+  column-gap:8px!important;
+  row-gap:0!important;
+  align-items:center!important;
+}
+/* clarity-pass.css */ .app-shell .recipe-grid .recipe-tile>.recipe-use{
+  grid-column:1/-1!important;
+  width:100%!important;
+  margin:0 0 12px!important;
+  padding:14px!important;
+  border-bottom:1px solid rgba(91,48,79,.12)!important;
+}
+/* clarity-pass.css */ .app-shell .recipe-grid .recipe-tile>button:not(.recipe-use){margin-bottom:12px!important}
+/* clarity-pass.css */ .app-shell .recipe-grid .recipe-tile>button:not(.recipe-use):last-child{margin-right:12px!important}
+/* clarity-pass.css */ .app-shell .recipe-grid .recipe-tile:not(.bundle-as-product) .recipe-icon{display:none!important}
+/* clarity-pass.css */ .app-shell .recipe-grid .recipe-tile:not(.bundle-as-product) .recipe-use{grid-template-columns:minmax(0,1fr)!important}
+/* clarity-pass.css */ .app-shell .recipe-card .recipe-tile .recipe-use{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) auto!important;
+  column-gap:10px!important;
+  align-items:start!important;
+}
+/* clarity-pass.css */ .app-shell .recipe-card .recipe-tile .recipe-use>.recipe-copy{
+  grid-column:1!important;grid-row:1!important;min-width:0!important;
+}
+/* clarity-pass.css */ .app-shell .recipe-card .recipe-tile .recipe-use>.recipe-icon{
+  grid-column:2!important;grid-row:1!important;align-self:start!important;margin:0!important;
+}
+/* factory-tools.css */ .recipe-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin:16px 0}
+/* factory-tools.css */ .recipe-tile{display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:16px;border:1px solid #ddcfb6;border-radius:14px;background:#fff;text-align:left;color:#241f1a}
+/* factory-tools.css */ .recipe-tile{position:relative;padding:0;overflow:hidden}
+/* factory-tools.css */ .recipe-tile.selected{border-color:#4e855e;box-shadow:0 0 0 2px rgba(78,133,94,.14)}
+/* factory-tools.css */ .recipe-use{width:100%;display:grid;grid-template-columns:38px 1fr;gap:11px;align-items:start;padding:15px 38px 15px 15px;border:0;background:transparent;text-align:left;color:inherit}
+/* factory-tools.css */ .recipe-icon{width:36px;height:36px;display:grid;place-items:center;border-radius:9px;background:#45b96e;color:white;font-weight:900}
+/* factory-tools.css */ .recipe-copy{display:grid;gap:4px}

@@ -466,8 +466,6 @@
    the shorter unselected tiles the 1fr row ate the whole 163px and the footer row
    landed 36px BELOW the card. `overflow:hidden` had been hiding that; removing it
    for D186 made it visible. Auto rows size to content and stay inside. */
-.app-shell .recipe-tile{grid-template-rows:auto auto!important;align-content:start!important}
-.app-shell .recipe-use{height:auto!important}
 /* D166 · Reserving two lines for every name kept the rows aligned but left a
    24px hole under the one-line ones, which is what made the cards look
    unconsidered. The real cause was width: in a 642px container the tiles were
@@ -478,20 +476,7 @@
    tiles compact and buy the room back from the icon and the type instead:
    26px icon and 13px name fit "gildan crewneck" on one line at 207px, and the
    tile drops from 215px tall to 163px. */
-.app-shell .recipe-grid{grid-template-columns:repeat(auto-fill,minmax(184px,1fr))!important;gap:10px!important}
-.app-shell .recipe-tile .recipe-icon{width:26px!important;height:26px!important;font-size:11px!important}
-.app-shell .recipe-use{padding:12px!important}
-.app-shell .recipe-copy>small{font-size:10px!important}
 .app-shell .recipe-copy em{font-size:10px!important}
-.app-shell .recipe-copy>b:first-child{
-  display:block;
-  min-height:0;
-  white-space:nowrap;
-  overflow:hidden;
-  text-overflow:ellipsis;
-  font-size:13px;
-  line-height:1.25;
-}
 /* Edit sat in an outlined pill next to Delete as bare text — two treatments for
    one pair of equally-weighted actions. */
 .app-shell .recipe-card .delete-recipe{
@@ -676,9 +661,6 @@
  * the list. Measured: tiles 207px -> 642px wide, ~158px tall each. With twelve
  * saved products that is roughly 1,900px of stacked full-width cards.
  * Selecting a product is no reason to make the list harder to scan. */
-.app-shell[data-product-selected="true"] .recipe-grid{
-  grid-template-columns:repeat(auto-fill,minmax(184px,1fr))!important;
-}
 
 /* D174 · The bundle banner read "You are working on Gildan Hoodie" as an 18px
  * Manrope <b>, wrapping to two lines, directly above section headings set in
@@ -729,7 +711,6 @@
  * button took its own row and the tile went 163px -> 296px tall. Measured on the
  * deployed build, which is the only reason I caught it. The grid was nearly right;
  * the label was too long and the overflow was hiding the evidence. */
-.app-shell .recipe-grid .recipe-tile{overflow:visible!important}
 .app-shell .recipe-card .change-product{
   font-size:0!important;
   padding:4px 9px!important;
@@ -796,24 +777,6 @@
  * Measured after: tile 207 wide / 169 tall, recipe-use 205 (full width inside
  * the 1px border), action row inset 13px right and 13px bottom, nothing
  * overflowing the frame, icon hidden on products and shown on the bundle. */
-.app-shell .recipe-grid .recipe-tile{
-  grid-template-columns:1fr auto auto auto!important;
-  padding:0!important;
-  column-gap:8px!important;
-  row-gap:0!important;
-  align-items:center!important;
-}
-.app-shell .recipe-grid .recipe-tile>.recipe-use{
-  grid-column:1/-1!important;
-  width:100%!important;
-  margin:0 0 12px!important;
-  padding:14px!important;
-  border-bottom:1px solid rgba(91,48,79,.12)!important;
-}
-.app-shell .recipe-grid .recipe-tile>button:not(.recipe-use){margin-bottom:12px!important}
-.app-shell .recipe-grid .recipe-tile>button:not(.recipe-use):last-child{margin-right:12px!important}
-.app-shell .recipe-grid .recipe-tile:not(.bundle-as-product) .recipe-icon{display:none!important}
-.app-shell .recipe-grid .recipe-tile:not(.bundle-as-product) .recipe-use{grid-template-columns:minmax(0,1fr)!important}
 
 /* D198 · Two leftovers on the same card, both measured live.
  *
@@ -3265,18 +3228,6 @@ body{min-width:1180px!important}
    quantity, and it lands on the same edge as Edit and Delete below it. Built as
    a real column rather than reserved padding: reserved padding is taken from
    every row, which crushed the narrow bundle tiles to "Hoo…" when I tried it. */
-.app-shell .recipe-card .recipe-tile .recipe-use{
-  display:grid!important;
-  grid-template-columns:minmax(0,1fr) auto!important;
-  column-gap:10px!important;
-  align-items:start!important;
-}
-.app-shell .recipe-card .recipe-tile .recipe-use>.recipe-copy{
-  grid-column:1!important;grid-row:1!important;min-width:0!important;
-}
-.app-shell .recipe-card .recipe-tile .recipe-use>.recipe-icon{
-  grid-column:2!important;grid-row:1!important;align-self:start!important;margin:0!important;
-}
 
 /* ============================================================================
  * D707 · ONE ATTENTION COLOUR
