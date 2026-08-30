@@ -283,3 +283,24 @@ test("D796: a closed disclosure hides its contents", () => {
   assert.equal(winner && winner.value, "none",
     "closed disclosures must hide their non-summary children");
 });
+
+test("D801: a bundle product that fails to load is reported, not spun on forever", async () => {
+  const app = await fs.promises.readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+
+  /* Her ZZ TEST BUNDLE could not be opened at all. /api/printify answers 409
+     for two of its three products - a proven shop mismatch, which is a correct
+     refusal - and the loader threw the answer away: `response.ok ? ... :
+     undefined`, `.catch(()=>undefined)`, and a handler that only wrote state
+     when something had loaded. Nothing changed, so the effect's own dependency
+     never changed, so "Loading 3 products…" span forever with nothing behind
+     it and no way out. */
+  assert.match(app, /setBundleLoadErrors/, "failures are recorded");
+  assert.match(app, /!bundleLoadErrors\[recipe\.id\]&&recipe\.templateUrl/,
+    "a product that has already failed is not fetched again in a loop");
+  assert.match(app, /bundle-load-failed/, "and the failure is rendered");
+  assert.match(app, /Try these again/, "with a way to retry");
+
+  /* The spinner must stop for a product that failed, or the report never shows. */
+  assert.match(app, /const waiting=list\.some\([\s\S]{0,220}?bundleLoadErrors\[recipe\.id\]\)/,
+    "waiting excludes products that failed, or the report never shows");
+});

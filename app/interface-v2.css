@@ -1712,3 +1712,22 @@ html, body { background: #f1d2dc; }
 .app-shell .workflow-footer-actions{position:relative}
 .app-shell .workflow-footer-actions > .autosave-note{
   position:absolute;left:50%;transform:translateX(-50%);margin:0}
+
+/* D801 · The bundle that could not be opened, and said nothing.
+
+   .bundle-loading-card was a spinner with no failure state. When every product
+   failed there was nothing to show and nothing to press - just a spinner on
+   bare pane, forever. It reports now, in the same card, with the reason
+   Printify gave and a way to try again. */
+.app-shell .bundle-load-failed{
+  display:grid;gap:8px;padding:18px;
+  border:1px solid #eccdd4;border-radius:12px;background:#fdf1f3;
+  color:#3d2538;text-align:left}
+.app-shell .bundle-load-failed > b{
+  font:700 13px/1.4 Inter,ui-sans-serif,system-ui,sans-serif;color:#a33a48}
+.app-shell .bundle-load-failed p{
+  margin:0;font:400 12px/1.5 Inter,ui-sans-serif,system-ui,sans-serif;color:#5a4152}
+.app-shell .bundle-load-failed button{
+  justify-self:start;margin-top:4px;border:0;border-radius:8px;
+  background:#5d3151;color:#fff;padding:9px 14px;
+  font:750 12px/1 Inter,ui-sans-serif,system-ui,sans-serif;cursor:pointer}

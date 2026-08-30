@@ -958,6 +958,8 @@ export default function ListingFactoryApp() {
   const [bundleRecipes,setBundleRecipes]=useState<Recipe[]>([]);
   const [bundleIndex,setBundleIndex]=useState(0);
   const [bundleColorProducts,setBundleColorProducts]=useState<Record<string,TemplateDetails>>({});
+  /* D801 · Which bundle products failed to load, and what Printify said. */
+  const [bundleLoadErrors,setBundleLoadErrors]=useState<Record<string,string>>({});
   /* D378 - Each bundle member is its own batch, created one after another by
      continueBundle. That was invisible while only one product showed at a time,
      but steps 2-4 now list every product as a card, and a card you cannot open
@@ -2319,17 +2321,38 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
      job is to show her the three products she is about to build. */
   useEffect(()=>{
     if(!activeBundle||bundleRecipes.length<2)return;
-    const missing=bundleRecipes.filter(recipe=>recipe.id!==activeRecipe?.id&&!bundleColorProducts[recipe.id]&&recipe.templateUrl);
+    const missing=bundleRecipes.filter(recipe=>recipe.id!==activeRecipe?.id&&!bundleColorProducts[recipe.id]&&!bundleLoadErrors[recipe.id]&&recipe.templateUrl);
     if(!missing.length)return;
     let alive=true;
+    /* D801 · A failure here used to disappear. The fetch swallowed everything -
+       `response.ok ? ... : undefined` and `.catch(()=>undefined)` - and the
+       handler below only ever wrote state when something had loaded. So when
+       every product failed, `bundleColorProducts` never changed, the effect's
+       own dependency never changed, and the card that says "Loading 3
+       products…" span forever with nothing behind it.
+
+       Found on her ZZ TEST BUNDLE: /api/printify answers 409 for two of its
+       three products - a proven shop mismatch, the product lives in a Printify
+       shop that is not paired with the connected Etsy shop. A real, correct
+       refusal, reported as an eternal spinner. The batch could not be opened at
+       all, and nothing on the screen said why.
+
+       Every outcome is recorded now: what loaded, and what did not and why. */
     void Promise.all(missing.map(async recipe=>{
-      const details=await fetchWithDeadline("/api/printify",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({productUrl:recipe.templateUrl,savedShippingProfileId:Number(recipe.etsyShippingProfileId)||0})},30000)
-        .then(async response=>response.ok?(await response.json() as {product?:TemplateDetails}).product:undefined)
-        .catch(()=>undefined);
-      return details?[recipe.id,details] as const:null;
+      const outcome=await fetchWithDeadline("/api/printify",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({productUrl:recipe.templateUrl,savedShippingProfileId:Number(recipe.etsyShippingProfileId)||0})},30000)
+        .then(async response=>{
+          if(response.ok)return {product:(await response.json() as {product?:TemplateDetails}).product};
+          const body=await response.json().catch(()=>null) as {error?:string;message?:string}|null;
+          return {error:body?.error||body?.message||`Printify could not return this product (${response.status}).`};
+        })
+        .catch(()=>({error:"Goldie could not reach Printify for this product."}));
+      if("product" in outcome&&outcome.product)return [recipe.id,outcome.product] as const;
+      return {failed:recipe.id,reason:("error" in outcome&&outcome.error)||"This product could not be loaded."} as const;
     })).then(entries=>{
       if(!alive)return;
-      const loaded=Object.fromEntries(entries.filter(Boolean) as Array<readonly [string,TemplateDetails]>);
+      const loaded=Object.fromEntries(entries.filter(entry=>Array.isArray(entry)) as Array<readonly [string,TemplateDetails]>);
+      const failures=Object.fromEntries((entries.filter(entry=>!Array.isArray(entry)) as Array<{failed:string;reason:string}>).map(entry=>[entry.failed,entry.reason]));
+      if(Object.keys(failures).length)setBundleLoadErrors(current=>({...current,...failures}));
       if(Object.keys(loaded).length)setBundleColorProducts(current=>({...current,...loaded}));
     });
     return()=>{alive=false};
@@ -4121,8 +4144,14 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
                product revealed together. Not a line of prose per product, and not
                a skeleton per product either - one card. */
             const list=activeBundle&&bundleRecipes.length>1?bundleRecipes:(activeRecipe?[activeRecipe]:[]);
-            const waiting=list.some((recipe,index)=>!((!activeBundle||bundleRecipes.length<2||index===bundleIndex)?templateDetails:bundleColorProducts[recipe.id]));
-            if(!waiting)return null;
+            const waiting=list.some((recipe,index)=>!((!activeBundle||bundleRecipes.length<2||index===bundleIndex)?templateDetails:bundleColorProducts[recipe.id])&&!bundleLoadErrors[recipe.id]);
+            const failed=list.filter(recipe=>bundleLoadErrors[recipe.id]);
+            if(!waiting&&!failed.length)return null;
+            if(!waiting)return <article className="batch-product-card bundle-loading-card bundle-load-failed" role="alert">
+              <b>{failed.length} of {list.length} products in this bundle could not be opened.</b>
+              {failed.map(recipe=><p key={recipe.id}><b>{recipe.name}</b> — {bundleLoadErrors[recipe.id]}</p>)}
+              <button type="button" onClick={()=>setBundleLoadErrors({})}>Try these again</button>
+            </article>;
             return <article className="batch-product-card bundle-loading-card" role="status" aria-label={`Loading ${list.length} ${list.length===1?"product":"products"}`}>
               <span className="bundle-loading-spinner" aria-hidden="true"/>
               <p>Loading {list.length} {list.length===1?"product":"products"}…</p>
@@ -4412,7 +4441,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
                   shipping, published - every one of them, with the same value
                   and the same wording productRows gave them. */}
               <dl className="publish-box-reports">{publishReports().map(report=>(
-                <div key={report.label} className={report.done?"is-done":report.optional?"is-optional":"needs-work"}>
+                <div key={report.label} className={report.done?"is-done":"needs-work"}>
                   <dt>{report.label}</dt><dd>{report.value}</dd>
                   {report.detail||report.advice?<dd className="publish-report-detail">{report.detail||report.advice}</dd>:null}
                 </div>))}</dl>
