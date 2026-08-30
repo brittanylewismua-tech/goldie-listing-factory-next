@@ -103,3 +103,5 @@ the question. Each of these is deliberate, and each is guarded by a test:
 | step number under the title | absent | present — D416, it is what stops Connect reading as step one |
 | review list | flat rows | collapsed disclosures — D562, the artwork shows once at a size worth judging and nothing opens itself |
 | forward button | one per screen | one per screen, plus the gate reason beside it — D375/D107 |
+| site footer, right end | ends 34px from the pane edge | ends 88px from it — D779. The support launcher is fixed 16px from that corner and 60px wide, so at 34px the copyright year sits underneath it. The prototype has the same collision; it is only invisible there because its footer is below the fold at the scroll position it was drawn at. This is the one place the preview is copied with a correction rather than exactly. |
+| site footer, links | Support · Privacy · Terms | omitted — D779. There is no `/privacy` or `/terms` route in this app, and three links where two 404 is worse than none. |

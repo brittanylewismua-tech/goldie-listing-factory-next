@@ -637,7 +637,7 @@ html, body { background: #f1d2dc; }
 /* D746 · The footer spans the pane, so its own 34px padding started its text
    at 322 while every other line on the page starts at the column's 392. Same
    max() the action bar uses, so the two bars and the column share one edge. */
-.app-shell .factory-work footer{box-sizing:border-box;width:calc(100vw - 288px);margin:32px 0 0 calc(50% - 50vw + 144px);padding:24px max(34px,50vw - 616px);display:flex;align-items:flex-start;justify-content:space-between;gap:26px;border-top:1px solid #ded6dc;border-radius:0;background:rgba(255,248,251,.54);color:#76616f;font:11px/1.5 Inter,ui-sans-serif,system-ui,sans-serif;backdrop-filter:blur(12px)}
+.app-shell .factory-work footer{box-sizing:border-box;width:calc(100vw - 288px);margin:32px 0 0 calc(50% - 50vw + 144px);padding:24px 88px 24px 34px;display:flex;align-items:flex-start;justify-content:space-between;gap:26px;border-top:1px solid #e4cedb;border-radius:0;background:rgba(255,248,251,.54);color:#76616f;font:11px/1.5 Inter,ui-sans-serif,system-ui,sans-serif;backdrop-filter:blur(12px)}
 @media(max-width:1050px){.app-shell .factory-work footer{width:calc(100vw - 240px);margin-left:calc(50% - 50vw + 120px)}}
 @media(max-width:820px){.app-shell .factory-work footer{width:auto;margin-left:0;padding:24px 18px}}
 
@@ -1191,3 +1191,28 @@ html, body { background: #f1d2dc; }
   padding:11px 18px;height:auto;min-height:0;
   font:750 13px/1.2 Inter,ui-sans-serif,system-ui,sans-serif;cursor:pointer}
 .app-shell .factory-footer.in-bar > *:not(small):disabled{opacity:.5;cursor:not-allowed}
+
+/* D779 · The site footer is chrome, not content, and it lines up with the top
+   rail rather than with the column of panels.
+
+   Measured on both pages at the same width. The prototype puts its top rail's
+   "New listing batch" at x=322 and its footer's first line at x=322 - the same
+   34px pane gutter, one at the top of the pane and one at the bottom. Production
+   had the rail at 322 and the footer at 392, because the footer was padded with
+   max(34px, 50vw - 616px) to follow the centred work column. So the one strip
+   at the bottom of every screen sat 70px right of the strip at the top of it,
+   and lined up with nothing else at that scroll position.
+
+   Its edge is the prototype's too - a plum hairline rather than the grey
+   #ded6dc it carried. The prototype writes it rgba(143,100,124,.17); over the
+   footer's own tint that composites to about #e4d0db, so it takes #e4cedb from
+   D756's family instead of opening a new alpha two points away from one that
+   already exists.
+
+   The right end stops 88px in rather than 34. The support launcher is fixed
+   16px from that corner and 60px wide, so at 34 the copyright year sits under
+   it - "BE A WOLF BIZ ·" and then a button. The prototype collides in exactly
+   the same way; it is only invisible there because its footer sits below the
+   fold at the scroll position the preview was drawn at. Recorded in
+   docs/prototype-spec.md as the one place the preview is copied with a
+   correction rather than exactly. */
