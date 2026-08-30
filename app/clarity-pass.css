@@ -124,7 +124,6 @@
 
 @media (max-width: 1180px) {
   .app-shell .workflow-progress {
-    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
     overflow-x: visible !important;
   }
 }
@@ -412,9 +411,7 @@
  * from another, and the artwork does that; the garment preview does not.
  * Artwork is usually a transparent PNG, so it needs something to sit on. */
 .app-shell .final-listing-card>img{
-  background:linear-gradient(155deg,#efe6ef,#f7f1f6)!important;
   object-fit:contain!important;
-  padding:3px!important;
 }
 
 /* D156 · The Publish screen showed THREE success languages at once: plum ticks
@@ -883,7 +880,6 @@
   font-size:13px!important;
   font-weight:700!important;
   min-height:40px!important;
-  background:rgba(255,255,255,.62)!important;
   border-color:rgba(74,42,62,.24)!important;
 }
 
@@ -1227,7 +1223,6 @@
 .app-shell .step-heading .heading-with-help,
 .app-shell .step-copy,
 .app-shell .final-review .step-content>p{
-  text-align:left!important;
   justify-content:flex-start!important;
 }
 .app-shell .step-heading{align-items:flex-start!important}
@@ -1327,12 +1322,10 @@ body:has(.management-nav) .usage-card h2{
    which is what the rule underneath is for. */
 .app-shell .final-listing-links{
   grid-column:1/-1!important;
-  display:flex!important;
   flex-wrap:wrap!important;
   align-items:center!important;
   justify-content:flex-end!important;
   gap:8px!important;
-  margin-top:8px!important;
 }
 
 /* D264 · "Capitalization: On" was a filled dark pill — the primary-action
@@ -1389,7 +1382,7 @@ body:has(.management-nav) .usage-card h2{
    header: `.step-copy` is text-align:left but carries `margin:10px 144px 24px`,
    so the BOX is inset 144px on both sides and the copy still reads as centred
    under a left-aligned heading. Alignment is not just text-align. */
-.app-shell .step-copy{margin-inline:0!important;max-width:64ch!important}
+.app-shell .step-copy{margin-inline:0!important}
 
 /* And the step icon sat flush at the card's left edge (1px) while the heading
    started at 26px, so the one thing above the title was off the content axis. */
@@ -1593,7 +1586,6 @@ body{min-width:1180px!important}
 .app-shell .step-card>.step-content>.step-heading{align-items:center!important}
 .app-shell .step-card>.step-content>.step-copy{
   margin-inline:0;
-  max-width:62ch!important;
 }
 /* The count chip belongs on the card's edge, not in the centred stack. */
 .app-shell .step-card>.step-content>.step-heading>.done-mark{
@@ -1760,7 +1752,6 @@ body{min-width:1180px!important}
 }
 .app-shell .pricing-controls .shipping-combobox-option.selected,
 .app-shell .shipping-combobox-option.selected{
-  background:#f7e6f3!important;
   background-image:none!important;
   color:#4c293f!important;
   font-weight:800!important;
@@ -1956,10 +1947,6 @@ body{min-width:1180px!important}
 /* D360 · The sidebar footer stacked tight under the goal card. The legal notice
    drops away from the interface, and the copyright sits just above it as its
    caption rather than floating against the goal. */
-.app-shell .approved-sidebar-footer>small{
-  margin-top:26px!important;
-  display:block!important;
-}
 .app-shell .etsy-api-disclosure{
   margin-top:6px!important;
 }
@@ -2019,7 +2006,6 @@ body{min-width:1180px!important}
 .batch-select{display:flex;align-items:center;padding-right:4px}
 .batch-history article.selected{
   border-color:rgba(157,80,130,.42)!important;
-  background:rgba(253,242,248,.75)!important;
 }
 
 /* D365 · The link back to the bundle list. Sits under the card that shows the
@@ -2097,7 +2083,6 @@ body{min-width:1180px!important}
   background:transparent!important;
   box-shadow:none!important;
   backdrop-filter:none!important;
-  width:auto!important;
   min-width:0!important;
 }
 .app-shell .step-product-body>.launch-panel{position:static!important;padding:0!important}
@@ -2600,7 +2585,10 @@ body{min-width:1180px!important}
    link is one line of text directly above its card and should sit like it. */
 .app-shell .post-draft-workspace{padding-top:0!important;margin-top:0!important}
 .app-shell .post-draft-heading .open-all-button{margin:0!important;padding:2px 0!important;width:auto!important}
+/* D737 · Kept: interface-v2 only scopes this heading inside
+   .step-product-cards, so this rule is not a duplicate of it. */
 .app-shell .post-draft-heading{margin:0 0 6px!important;padding:0!important}
+.app-shell .post-draft-heading{padding:0!important}
 
 /* D557 - placement carries the same head as every other panel now. */
 

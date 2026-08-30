@@ -353,7 +353,10 @@ test("the publish list shows full titles — D98", async () => {
    * live: titles clipped to a single nowrap line, 295px visible against up to
    * 781px of content — 38-41% readable. You cannot confirm what you cannot
    * read. Fourth instance of the same shape: D60, D94, D96, D98. */
-  assert.match(css, /\.app-shell \.final-listing-card>div:not\(\.final-listing-links\)>b\{[^}]*white-space:normal!important/);
+  /* D737 · interface-v2 owns this row now and is the only sheet styling it, so
+     the declaration no longer has to shout. The rule is unchanged: the title
+     wraps in full. */
+  assert.match(css, /\.app-shell \.final-listing-card>div:not\(\.final-listing-links\)>b\{[^}]*white-space:normal/);
   assert.doesNotMatch(css, /\.app-shell \.final-listing-card>div:not\(\.final-listing-links\)>b\{[^}]*white-space:nowrap/,
     "Publish-list titles are clipped to one line again.");
 });

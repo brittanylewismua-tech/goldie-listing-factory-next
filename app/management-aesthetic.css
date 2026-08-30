@@ -15,7 +15,7 @@
 :is(.management-page,.usage-page)>.management-nav a{display:flex;align-items:center;min-height:46px;padding:0 15px;border-radius:14px;color:rgba(74,42,62,.58)!important;font-size:13px;font-weight:650;text-decoration:none}
 :is(.management-page,.usage-page)>.management-nav a:first-of-type{margin-top:0}
 :is(.management-page,.usage-page)>.management-nav a:hover,
-:is(.management-page,.usage-page)>.management-nav a.active{color:var(--ink)!important;background:rgba(255,255,255,.53);box-shadow:inset 0 0 0 1px rgba(255,255,255,.54)}
+:is(.management-page,.usage-page)>.management-nav a.active{background:rgba(255,255,255,.53);box-shadow:inset 0 0 0 1px rgba(255,255,255,.54)}
 
 :is(.management-page,.usage-page)>header{max-width:1080px;margin:18px auto 30px}
 :is(.management-page,.usage-page)>header h1{margin:0;color:var(--ink);font:400 34px/1 'DM Serif Display',Georgia,serif;letter-spacing:-.035em}
@@ -125,12 +125,6 @@
   font-size:13px!important;
   font-weight:650!important;
   text-decoration:none!important;
-}
-:is(.keyword-page,.mockupFactory.managementOnly).management-page>.management-nav a:hover,
-:is(.keyword-page,.mockupFactory.managementOnly).management-page>.management-nav a.active{
-  color:var(--ink)!important;
-  background:rgba(255,255,255,.53)!important;
-  box-shadow:inset 0 0 0 1px rgba(255,255,255,.54)!important;
 }
 :is(.keyword-page,.mockupFactory.managementOnly).management-page>header{
   display:block!important;
