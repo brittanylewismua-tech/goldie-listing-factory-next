@@ -1169,7 +1169,7 @@ test("the rail digits use the app's own type — D352", async () => {
   const app = await read("app/listing-factory-app.tsx");
   const block = css.slice(css.indexOf("D352 · THE RAIL NUMBERS"));
 
-  assert.match(block, /font-family:"Manrope"/, "not a system fallback");
+  assert.match(block, /font-family:"Inter"/, "not a system fallback");
   assert.match(block, /font-variant-numeric:tabular-nums lining-nums!important/,
     "so 1 and 4 occupy the same width and sit identically in their circles");
 

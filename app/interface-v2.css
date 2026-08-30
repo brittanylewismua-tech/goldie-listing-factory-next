@@ -1034,11 +1034,33 @@ html, body { background: #f1d2dc; }
 .app-shell .recipe-copy>small{display:inline;margin:0;color:#7d6d78;font:11px/1.4 Inter,ui-sans-serif,system-ui,sans-serif}
 .app-shell .recipe-copy>em{display:block;margin-top:8px}
 
-/* D772 · The last Manrope on a rendered screen: the sidebar goal caption and
-   figure, and the saved-products library headings. Swept by walking every
-   text-bearing element on production and listing the ones whose resolved
-   family was not Inter - the wordmark and its star are the only exceptions,
-   and they are the logo. */
-.app-shell .listing-goal-side,.app-shell .listing-goal-caption,.app-shell .listing-goal-side b,
-.app-shell .recipe-library-head,.app-shell .recipe-library-head span,.app-shell .recipe-library-head small,
-.app-shell .recipe-library-change summary,.app-shell .recipe-library-change small{font-family:Inter,ui-sans-serif,system-ui,-apple-system,sans-serif}
+/* D772/D774 · One typeface, enforced by inheritance rather than by naming
+   classes one at a time.
+
+   Four sweeps in a row found "the last Manrope on the page" and each time it
+   was a different class - the goal caption, then the library headings, then
+   H2, H3 and the listing-rows controls. Naming them individually is how the
+   list never ends. Everything inside the shell inherits the shell's family;
+   the wordmark and its star are the only things that carry their own, because
+   they are the logo. */
+.app-shell,.app-shell *:not([class*="wordmark"]):not(.approved-wm):not(.approved-i):not(.approved-footer-i):not(.approved-wm *):not(.goldie-wordmark-name *){font-family:Inter,ui-sans-serif,system-ui,-apple-system,sans-serif}
+.app-shell [class*="wordmark"],.app-shell .approved-wm,.app-shell .approved-i,.app-shell .approved-footer-i{font-family:"DM Serif Display",Georgia,serif}
+
+/* D773 · Full-sweep findings, run on every step with every panel open.
+
+   .factory-design-large held a 240x240 image in a 240x210 box with
+   overflow:hidden - the same crop the placement preview had, on the listing's
+   own identity artwork. Contained to the box.
+
+   The sidebar's "Start a new batch" was 235 wide with 2px of side margin
+   inside a 235 parent, so it overhung its column by 2px. The prototype's
+   .goldie-restart carries that margin because its sidebar is wider; here the
+   button is the column.
+
+   And the step's forward row let its button overflow when the status line runs
+   long: the status takes the space it needs, the button never shrinks, and
+   together they wrap rather than spill. */
+.app-shell .factory-design-large img{width:100%;height:210px;max-height:210px;object-fit:contain}
+.app-shell .workflow-restart-button{box-sizing:border-box;width:100%;max-width:100%;margin:12px 0 0}
+.app-shell .factory-footer{flex-wrap:wrap;row-gap:10px}
+.app-shell .factory-footer>small{flex:1 1 240px;min-width:0}

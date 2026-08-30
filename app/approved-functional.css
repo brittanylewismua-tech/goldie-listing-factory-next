@@ -1260,7 +1260,7 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
   resize:none!important;
   min-height:70px!important;
   line-height:1.5!important;
-  font:inherit!important;
+  font:inherit;
 }
 
 /* Seller-authored and seller-selected names must remain readable wherever
