@@ -120,7 +120,13 @@ const CASES = [
   // panels
   { name: "panel background", chain: [...shell, el("section","factory-panel")], property: "background", expect: /#fffafc/ },
   { name: "panel radius", chain: [...shell, el("section","factory-panel")], property: "border-radius", expect: /^12px$/ },
-  { name: "panel head columns", chain: [...shell, el("section","factory-panel"), el("div","factory-panel-head")], property: "grid-template-columns", expect: /34px/ },
+  /* D786 - this asserted 34px, which was production's value, not the
+     prototype's. The prototype's head resolves to "48px minmax(0px, 1fr) auto":
+     48 is the column, 34 is the disc inside it. Asserting what production
+     happened to do is how a fidelity test ends up certifying a deviation - the
+     exact failure mode ChatGPT's audit found in this file. The fourth column is
+     production's own: its head carries a Change/Close control. */
+  { name: "panel head columns", chain: [...shell, el("section","factory-panel"), el("div","factory-panel-head")], property: "grid-template-columns", expect: /48px minmax\(0,1fr\)/ },
   // artwork grid
   { name: "artwork grid columns", chain: [...shell, el("div","factory-art-grid")], property: "grid-template-columns", expect: /repeat\(2,/ },
   { name: "artwork preview height", chain: [...shell, el("div","factory-art-grid"), el("article","factory-art-card"), el("div","factory-art-preview")], property: "height", expect: /^190px$/ },

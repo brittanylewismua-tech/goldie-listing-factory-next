@@ -58,11 +58,29 @@ html, body { background: #f1d2dc; }
   width: min(61vw, 790px); aspect-ratio: 1; right: 2vw; top: 17vh;
   border-radius: 46% 54% 58% 42% / 52% 44% 56% 48%;
   pointer-events: none; filter: blur(34px); opacity: .48;
+  /* D786 · Read off the prototype's own ::before, stop for stop. The violet is
+     the point: this is the approved orb, and D782's sweep muted it to plum
+     because the sweep could not tell decoration from a leftover theme. It can
+     now - the palette test exempts this one selector by name, and only this
+     one. The fifth stop is .45, not the .4 I first wrote.
+
+     And it turns. 34 seconds, linear, forever. The reduced-motion rule below
+     has been sitting here since D721 switching off an animation that was never
+     written - which is exactly the kind of thing a CSS-reading test cannot
+     catch, because the rule it checks was present and correct. */
   background: conic-gradient(from 18deg,
-    rgba(223,200,213,.45), rgba(230,172,216,.42), rgba(255,192,204,.38),
-    rgba(223,200,213,.43), rgba(239,180,220,.4), rgba(223,200,213,.45));
+    rgba(184,174,255,.45), rgba(230,172,216,.42), rgba(255,192,204,.38),
+    rgba(188,181,255,.43), rgba(239,180,220,.45), rgba(184,174,255,.45));
+  animation: 34s linear infinite goldie-orb-turn;
 }
+@keyframes goldie-orb-turn { 100% { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .app-shell > .factory-main::before { animation: none; } }
+
+/* D786 · The star over the Goldie "i" breathes: 3.2s, ease-in-out, forever.
+   The prototype has it; production had the glyph and none of the motion. */
+.app-shell .approved-i{animation:3.2s ease-in-out infinite approved-star}
+@keyframes approved-star{50%{transform:translateX(-50%) scale(1.14);filter:drop-shadow(0 0 8px rgba(115,63,106,.45))}}
+@media (prefers-reduced-motion: reduce){.app-shell .approved-i{animation:none}}
 
 /* work column — prototype .goldie-work */
 .app-shell .factory-work {
@@ -340,7 +358,12 @@ html, body { background: #f1d2dc; }
   margin-bottom:14px;overflow:hidden;box-shadow:0 12px 32px rgba(75,40,62,.11);
 }
 .app-shell .factory-panel-head{
-  display:grid;grid-template-columns:34px minmax(0,1fr) auto auto;
+  /* D786 · 48px, measured off the prototype's own head. Production had 34 -
+     the width of the disc rather than the width of the column it sits in - so
+     every panel title started 14px left of where the preview puts it. The
+     fourth column is production's: the panel head carries a Change/Close
+     control the preview has no equivalent for. */
+  display:grid;grid-template-columns:48px minmax(0,1fr) auto auto;
   align-items:center;gap:13px;padding:15px 17px;background:#fffafc;
 }
 .app-shell .factory-panel-index{
@@ -1345,3 +1368,21 @@ html, body { background: #f1d2dc; }
      tint that is #d9cbd3, which is already in D756's family */
   border:1px solid #d9cbd3;
   box-shadow:0 12px 32px rgba(93,49,81,.18)}
+
+/* D785 · The publish box, against the prototype's own, read side by side.
+
+   The prototype opens the box by naming the destination: a "PUBLISHING TO"
+   eyebrow at 10px/400 uppercase #c7b8c3, the shop at 20px/700 white, then the
+   detail at 11px/400 #c8b9c4, then the press. Production opened with a
+   three-line 18px sentence and put the shop inside the press at 10px - the one
+   fact that says whether you are about to publish to the right shop was the
+   smallest thing on the screen where money is spent. */
+.app-shell .factory-publish-box .publish-box-eyebrow{
+  display:block;color:#c7b8c3;font:400 10px/1.2 Inter,ui-sans-serif,system-ui,sans-serif;
+  text-transform:uppercase;letter-spacing:.08em}
+.app-shell .factory-publish-box h3{margin:7px 0 5px;color:#fff;
+  font:700 20px/1.2 Inter,ui-sans-serif,system-ui,sans-serif}
+.app-shell .factory-publish-box .publish-live-warning b{
+  font:700 13px/1.45 Inter,ui-sans-serif,system-ui,sans-serif;color:#fff}
+.app-shell .factory-publish-box .publish-live-warning span{
+  color:#c8b9c4;font:400 11px/1.5 Inter,ui-sans-serif,system-ui,sans-serif}

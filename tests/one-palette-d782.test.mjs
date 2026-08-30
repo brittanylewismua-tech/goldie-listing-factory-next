@@ -44,12 +44,28 @@ const hexToHsl = (hex) => {
 const reachesTheFactory = (selector) =>
   /\.app-shell|\.factory-|\.workflow-|\.step-card|\.listing-card|\.keyword-bank|\.title-style-toggle|\.tag-row|\.recipe-|\.batch-product/.test(selector);
 
+/* D786 · One exemption, by name.
+ *
+ * The orb behind the pane is violet on purpose - rgba(184,174,255) and
+ * rgba(188,181,255) are two of its six stops in the approved prototype. D782's
+ * sweep could not tell approved decoration from a leftover theme and muted it
+ * to plum, and then this test locked the mistake in by forbidding the hue it
+ * had just removed. A rule that bans a colour the preview uses is not a
+ * fidelity test.
+ *
+ * It is exempt by selector, not by hue: any OTHER rule introducing violet still
+ * fails. If a second piece of approved decoration needs a hue outside the
+ * palette, it gets its own line here and a reason, so the list of things that
+ * are allowed to break the palette stays short and readable. */
+const APPROVED_DECORATION = [".app-shell > .factory-main::before"];
+
 const offenders = [];
 for (const name of readdirSync(new URL("../app", import.meta.url)).filter(file => file.endsWith(".css"))) {
   postcss.parse(readFileSync(new URL(`../app/${name}`, import.meta.url), "utf8")).walkDecls(decl => {
     if (!/color$|^background$|^border/.test(decl.prop)) return;
     const selector = decl.parent.selector || "";
     if (!reachesTheFactory(selector)) return;
+    if (APPROVED_DECORATION.some(allowed => selector.replace(/\s+/g, " ").trim() === allowed)) return;
     const literals = [
       ...[...decl.value.matchAll(/#[0-9a-fA-F]{6}\b|#[0-9a-fA-F]{3}\b/g)].map(m => [m[0], hexToHsl(m[0])]),
       /* rgba() carries hue too - the last lilac surfaces in the app were

@@ -105,3 +105,37 @@ the question. Each of these is deliberate, and each is guarded by a test:
 | forward button | one per screen | one per screen, plus the gate reason beside it — D375/D107 |
 | site footer, right end | ends 34px from the pane edge | ends 88px from it — D779. The support launcher is fixed 16px from that corner and 60px wide, so at 34px the copyright year sits underneath it. The prototype has the same collision; it is only invisible there because its footer is below the fold at the scroll position it was drawn at. This is the one place the preview is copied with a correction rather than exactly. |
 | site footer, links | Support · Privacy · Terms | omitted — D779. There is no `/privacy` or `/terms` route in this app, and three links where two 404 is worse than none. |
+
+## What counts as evidence
+
+D786. `tools/render-screens.tsx` is deleted. It server-rendered six real
+components — FactoryPanel, ArtworkGrid, PhotoLayout, PageHead,
+RequiredDetailsChecklist, FactoryFooter — and hand-wrote everything around them:
+step 1's product tiles, step 4's review rows, the Etsy-details fields, the photo
+strip. Its header disclosed the step 1 gap and not the others.
+
+That is worse than no harness. A screen can look right in it while the component
+production actually renders is wrong, and the screenshot it produces is evidence
+of nothing. It was written when the preview environment had no Printify
+connection and steps 1-4 could not be reached there; production with a real
+batch can be reached, and that is where every check now happens.
+
+Nothing in this repo may stand in for a production screen. If a screen cannot be
+reached, say so.
+
+### What the fidelity tests do and do not prove
+
+`tests/prototype-fidelity.test.mjs` resolves declared CSS through the cascade
+against values measured off the prototype. That is all it does. It does not open
+the app, render a component, or compare an image. It cannot see geometry, text
+wrapping, content density, open and closed states, hover or focus, responsive
+widths, overflow, or collisions, and it skips most pseudo-selectors.
+
+It is a CSS regression test. Passing it is not evidence that a screen matches
+the preview. Only looking at the screen is.
+
+Its worst failure mode is asserting what production already does: the panel head
+line asserted `34px` for years because that is what production had, when the
+prototype's own head resolves to `48px`. A fidelity test that copies production
+certifies the deviation instead of catching it. Every value in that file must be
+traceable to a measurement of the prototype, not to the app.

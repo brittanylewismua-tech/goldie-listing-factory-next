@@ -1251,7 +1251,11 @@
 /* D251 · Full-width primaries appear only on Images, Listing and Publish, and
    on Publish the SECONDARY was full width too, giving two equally weighted
    buttons stacked. A secondary never spans the card. */
-.app-shell .keep-drafts-button{
+/* D785 - min-width:260px inside the publish box's 250px content width made
+   this button hang 10px past the press above it and past the box's own
+   padding. The 260 was written for the old full-width layout, where this
+   button stood alone across the page. */
+.app-shell :not(.factory-publish-box) > .keep-drafts-button{
   width:auto!important;
   min-width:260px!important;
   margin-inline:auto!important;

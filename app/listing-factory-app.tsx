@@ -923,6 +923,9 @@ export default function ListingFactoryApp() {
   const [openAllMessage, setOpenAllMessage] = useState("");
   const [owner, setOwner] = useState(false);
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
+  /* D786 · Whose account this is. The rail used to say "Brittany" to everyone. */
+  const [accountName, setAccountName] = useState<string | null>(null);
+  const [accountInitials, setAccountInitials] = useState<string | null>(null);
   const [localPreview,setLocalPreview]=useState(false);
   const [preparationMessage, setPreparationMessage] = useState("");
   const [runTotal, setRunTotal] = useState(0);
@@ -1837,7 +1840,7 @@ export default function ListingFactoryApp() {
     })();
   },[restoringBatch,activeRecipe,activeBundle,signedIn]);
 
-  useEffect(()=>{setLocalPreview(["localhost","127.0.0.1"].includes(window.location.hostname));fetch("/api/account").then(response=>response.json()).then((result:{signedIn?:boolean})=>setSignedIn(Boolean(result.signedIn))).catch(()=>setSignedIn(null))},[]);
+  useEffect(()=>{setLocalPreview(["localhost","127.0.0.1"].includes(window.location.hostname));fetch("/api/account").then(response=>response.json()).then((result:{signedIn?:boolean;name?:string|null;initials?:string|null})=>{setSignedIn(Boolean(result.signedIn));setAccountName(result.name||null);setAccountInitials(result.initials||null)}).catch(()=>setSignedIn(null))},[]);
   useEffect(()=>{if(signedIn!==true||publishing)return;const jobId=window.localStorage.getItem("goldie-active-publish-job");if(jobId)void monitorPublishJob(jobId,true);
   },[signedIn]);
 
@@ -3770,8 +3773,13 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
             <div className="factory-account-wrap">
               <button type="button" className="factory-account" aria-haspopup="menu"
                 aria-expanded={accountMenuOpen} onClick={()=>setAccountMenuOpen(open=>!open)}>
-                <span className="factory-avatar" aria-hidden="true">BL</span>
-                <span className="factory-account-label"><strong>Brittany</strong><small>Account</small></span>
+                {/* D786 - these two were the literal strings "BL" and "Brittany".
+                    Every seller who signed in was shown the owner's name and
+                    initials in the top right of their own batch. They come from
+                    the signed-in account now, and fall back to a neutral label
+                    rather than to somebody else's name. */}
+                <span className="factory-avatar" aria-hidden="true">{accountInitials||"\u2022"}</span>
+                <span className="factory-account-label"><strong>{accountName||"Your account"}</strong><small>Account</small></span>
                 <span className="factory-account-caret" aria-hidden="true">⌄</span>
               </button>
               {accountMenuOpen&&<div className="factory-account-menu open" role="menu">
@@ -4248,7 +4256,13 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
               the sentence promised a smaller press than the one it sat under. And
               it named the fee per listing without ever multiplying it, on the one
               screen where the total is the thing worth knowing. */}
-            </div><div className="factory-publish-box"><div className="publish-live-warning">{(()=>{
+            </div><div className="factory-publish-box">{/* D785 - the prototype's box opens by
+              naming where this is going: a "Publishing to" eyebrow over the shop
+              in 20px. Production had the shop only inside the press, at 10px,
+              under a three-line sentence - the one fact that says whether you
+              are about to publish to the right place was the smallest thing in
+              the box. */}
+              {etsyShop?<><small className="publish-box-eyebrow">Publishing to</small><h3>{etsyShop}</h3></>:null}<div className="publish-live-warning">{(()=>{
               /* D560 - the count follows her ticks now that they govern every listing. */
               const total=publishTargets().length||bundleListingsToPublish();
               /* D636 - "all 3 products in this batch" counted the bundle, not the
@@ -4297,7 +4311,10 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
               itself. Her words: "if they are working with multiple shops, it's
               just, like, another fail safe to make sure it's going to the right
               place." The connection panel already names it; the moment that
-              matters is the press, and that is where it was missing. */}
+              matters is the press, and that is where it was missing. */}{/* D785 - the shop stays in the press. D697/D698 put it here on purpose:
+                 at the moment of pressing, the control itself has to say which
+                 shop it is publishing to. The eyebrow above repeats it larger;
+                 it does not replace it. */}
               {etsyShop?<small className="publish-all-shop">to {etsyShop}</small>:null}</button>
               {(publishing||Boolean(publishRun))&&<p className="working-note" role="status">Publishing to Etsy can take a few minutes. Keep this page open — Goldie will show each listing as it goes live.</p>}<button className="keep-drafts-button" type="button" disabled={publishing} onClick={()=>{setBatchDisplayName(current=>current||suggestedBatchName());setDraftSaveOpen(true)}}>Keep as Printify drafts for now</button>{!publishing&&<small className="keep-drafts-note">Nothing will publish to Etsy. Return to this exact batch from Batch History.</small>}{/* D474 - this describes the Keep as drafts button, but sat there while the
      button above it said Publishing, so the page said both that it was
