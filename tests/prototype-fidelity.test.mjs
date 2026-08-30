@@ -124,6 +124,25 @@ const CASES = [
   // artwork grid
   { name: "artwork grid columns", chain: [...shell, el("div","factory-art-grid")], property: "grid-template-columns", expect: /repeat\(2,/ },
   { name: "artwork preview height", chain: [...shell, el("div","factory-art-grid"), el("article","factory-art-card"), el("div","factory-art-preview")], property: "height", expect: /^190px$/ },
+  // shell chrome — D734/D736/D737
+  { name: "shell typeface", chain: [el("main","app-shell")], property: "font-family", expect: /^Inter,/ },
+  { name: "sidebar edge", chain: [el("main","app-shell"), el("aside","topbar")], property: "border-right", expect: /rgba\(255,255,255,\.72\)/ },
+  { name: "top bar tint", chain: [...shell.slice(0,2), el("header","factory-top")], property: "background", expect: /rgba\(255,248,252,\.72\)/ },
+  { name: "restart button radius", chain: [el("main","app-shell"), el("aside","topbar"), el("button","workflow-restart-button")], property: "border-radius", expect: /^12px$/ },
+  { name: "usage figure", chain: [el("main","app-shell"), el("aside","topbar"), el("a","approved-usage"), el("span")], property: "font", expect: /^700 15px/ },
+  // panel internals — D723
+  { name: "panel index tile", chain: [...shell, el("section","factory-panel"), el("div","factory-panel-head"), el("span","factory-panel-index")], property: "border-radius", expect: /^9px$/ },
+  { name: "panel state chip", chain: [...shell, el("section","factory-panel"), el("div","factory-panel-head"), el("span","factory-panel-state")], property: "background", expect: /#edf7f0/ },
+  { name: "panel body rule", chain: [...shell, el("section","factory-panel"), el("div","factory-panel-body")], property: "border-top", expect: /#eee8ec/ },
+  // step 3 fields — D730
+  { name: "tag chip", chain: [...shell, el("div","factory-listing-grid"), el("span","factory-tag")], property: "background", expect: /#f1ebef/, optional: true },
+  // step 4 publish box — D731
+  { name: "publish box radius", chain: [...shell, el("div","factory-review"), el("div","factory-publish-box")], property: "border-radius", expect: /^12px$/ },
+  { name: "publish box padding", chain: [...shell, el("div","factory-review"), el("div","factory-publish-box")], property: "padding", expect: /^20px$/ },
+  // footers — D728/D733/D734
+  { name: "step footer tint", chain: [...shell, el("div","factory-footer")], property: "background", expect: /rgba\(255,255,255,\.96\)/ },
+  { name: "action bar tint", chain: [...shell, el("div","workflow-footer-actions")], property: "background", expect: /rgba\(255,255,255,\.96\)/ },
+  { name: "site footer tint", chain: [...shell, el("footer")], property: "background", expect: /rgba\(255,248,251,\.54\)/ },
   // step 1 product tiles
   { name: "product grid columns", chain: [...shell, el("div","recipe-grid")], property: "grid-template-columns", expect: /repeat\(3,minmax\(0,1fr\)\)/ },
   { name: "product tile border", chain: [...shell, el("div","recipe-grid"), el("article","recipe-tile")], property: "border", expect: /^1px solid #ded5db$/ },
@@ -165,7 +184,10 @@ test("every migrated component wins its own cascade with the prototype's values"
       }
       continue;
     }
-    if (!won) { failures.push(`${item.name}: nothing sets ${item.property}`); continue; }
+    if (!won) {
+      if (item.optional) continue;   /* rendered only when the step has data */
+      failures.push(`${item.name}: nothing sets ${item.property}`); continue;
+    }
     if (!item.expect.test(won.value)) {
       failures.push(`${item.name}: ${item.property} resolves to "${won.value}" from ${won.rule.sheet} (${won.rule.selector}), not ${item.expect}`);
     }
