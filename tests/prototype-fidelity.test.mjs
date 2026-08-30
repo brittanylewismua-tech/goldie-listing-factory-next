@@ -33,7 +33,10 @@ SHEETS.forEach((name, sheetIndex) => {
     const atRule = rule.parent?.type === "atrule" ? rule.parent : null;
     if (atRule && !(atRule.name === "media" && /min-width/.test(atRule.params) && !/max-width/.test(atRule.params))) return;
     for (const selector of rule.selectors) {
-      if (/[>+~]|::|:hover|:focus|:active/.test(selector)) continue;
+      /* Position-dependent and state selectors cannot be resolved from a
+         chain that carries no siblings or interaction, so they are out of this
+         cascade rather than silently treated as matching everything. */
+      if (/[>+~]|::|:hover|:focus|:active|:first-child|:last-child|:nth-|:only-|:empty/.test(selector)) continue;
       const declarations = {};
       rule.walkDecls(decl => { declarations[decl.prop] = { value: decl.value, important: decl.important }; });
       rules.push({ sheet: name, sheetIndex, order, selector, specificity: specificity(selector), declarations, media: atRule?.params });
@@ -126,6 +129,10 @@ const CASES = [
   { name: "product tile border", chain: [...shell, el("div","recipe-grid"), el("article","recipe-tile")], property: "border", expect: /^1px solid #ded5db$/ },
   { name: "chosen tile border", chain: [...shell, el("div","recipe-grid"), el("article","recipe-tile","selected")], property: "border", expect: /^2px solid #6c3a5c$/ },
   { name: "product image band", chain: [...shell, el("div","recipe-grid"), el("article","recipe-tile"), el("button","recipe-use"), el("span","recipe-icon")], property: "height", expect: /^116px$/ },
+  // step 3 listing details
+  { name: "listing grid columns", chain: [...shell, el("div","factory-listing-grid")], property: "grid-template-columns", expect: /^1\.15fr \.85fr$/ },
+  { name: "form card border", chain: [...shell, el("div","factory-listing-grid"), el("aside","factory-form-card")], property: "border", expect: /^1px solid #e4cedb$/ },
+  { name: "checklist row rule", chain: [...shell, el("div","factory-checklist"), el("div","factory-check")], property: "border-bottom", expect: /^1px solid #eee9ec$/ },
   // photo layout
   { name: "photo layout columns", chain: [...shell, el("div","factory-photo-layout")], property: "grid-template-columns", expect: /^240px minmax\(0,1fr\)$/ },
   { name: "design-large size", chain: [...shell, el("div","factory-photo-layout"), el("aside","factory-listing-identity"), el("div","factory-design-large")], property: "height", expect: /^210px$/ },
