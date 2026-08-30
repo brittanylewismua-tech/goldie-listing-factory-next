@@ -1216,3 +1216,33 @@ html, body { background: #f1d2dc; }
    fold at the scroll position the preview was drawn at. Recorded in
    docs/prototype-spec.md as the one place the preview is copied with a
    correction rather than exactly. */
+
+/* ==========================================================================
+   D780 · The final review is a screen, not a card inside a screen
+   ==========================================================================
+
+   The last screen before anything goes live was the one screen never migrated.
+   It renders as .step-card.final-review - the old shell's card - so the review
+   list and the publish box sat inside a 16px-radius white card that sat inside
+   the pane, and its heading was centred: `.step-heading{text-align:center}` in
+   approved-functional.css:62, the only centred text in the work column on any
+   screen. The prototype centres nothing and puts nothing inside a card that is
+   already inside a card.
+
+   Reproduced by building the same DOM against the live stylesheets rather than
+   guessing: card chrome off, heading left with its draft count on the right,
+   and .factory-review resolves to 638px + 290px across the full 944 column -
+   the prototype's minmax(0,1fr) 290px, which it could not reach at 866px
+   inside the card's padding.
+
+   Scoped to .final-review: the connect step uses .step-heading too and is not
+   this screen. */
+.app-shell .factory-work .step-card.final-review{
+  display:block;border:0;border-radius:0;background:none;box-shadow:none;padding:0}
+.app-shell .factory-work .step-card.final-review > .step-content{padding:0}
+.app-shell .factory-work .final-review .step-heading,
+.app-shell .factory-work .final-review .step-heading > div,
+.app-shell .factory-work .final-review .step-heading h2{text-align:left}
+.app-shell .factory-work .final-review .step-heading{align-items:flex-end;margin:0 0 7px}
+.app-shell .factory-work .final-review .step-heading h2{margin:0}
+.app-shell .factory-work .final-review .step-copy{margin:0 0 25px;max-width:610px}

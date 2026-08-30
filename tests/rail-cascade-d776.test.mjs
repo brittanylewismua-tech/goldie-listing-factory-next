@@ -147,3 +147,32 @@ test("D778: every footer bar has a slot for the step's forward action", async ()
   assert.match(footer, /offsetParent !== null/,
     "FactoryFooter must pick the slot inside a bar that is actually rendered");
 });
+
+test("D780: nothing in the work column is centred, and the final review is not a card", () => {
+  const faults = [];
+
+  /* The prototype centres no text in the work column on any screen. */
+  const heading = resolve({
+    /* the heading row itself - not .done-mark inside it, which is right-aligned
+       on purpose so a wrapping bundle name keeps its count against the edge */
+    selectorTest: selector => /final-review/.test(selector) && /\.step-heading$/.test(selector),
+    property: "text-align",
+  });
+  if (!heading || heading.value !== "left") {
+    faults.push(`the final review's heading resolves to text-align:${heading ? heading.value : "unset"} from ${heading ? `${heading.file}:${heading.line}` : "nowhere"}`);
+  }
+
+  /* And it is the screen, not a card sitting inside the pane holding more
+     cards - the review list and the publish box are the cards. */
+  for (const property of ["background", "border", "box-shadow"]) {
+    const winner = resolve({
+      selectorTest: selector => /\.step-card\.final-review$/.test(selector),
+      property,
+    });
+    if (!winner || !/^(none|0)$/.test(winner.value)) {
+      faults.push(`.step-card.final-review resolves to ${property}:${winner ? winner.value : "unset"} - it should carry no card chrome of its own`);
+    }
+  }
+
+  assert.deepStrictEqual(faults, []);
+});
