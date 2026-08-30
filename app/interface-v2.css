@@ -989,3 +989,16 @@ html, body { background: #f1d2dc; }
    not need both. */
 .app-shell .hero + .workspace .factory-panel:first-of-type,
 .app-shell .factory-work .steps-column > .factory-panel:first-child{margin-top:0}
+
+/* D766 · Step 2's action bar is a second element with its own class, and it
+   kept min(720px, 100vw - 400) centred - a 720px strip in a 1152px pane while
+   the step's own forward row ran the full 944. Two bars, two widths, one
+   overlapping the other. It spans the pane like the first.
+
+   And the work column now clears the sticky bar: with the bar pinned to the
+   bottom, the last row of content sat underneath it and the forward button was
+   half hidden behind "Save as draft". */
+.app-shell .workflow-footer-actions.post-draft-footer{box-sizing:border-box;width:calc(100vw - 288px);max-width:none;margin:18px 0 0 calc(50% - 50vw + 144px);padding:14px max(38px,50vw - 616px)}
+.app-shell .factory-work{padding-bottom:96px}
+@media(max-width:1050px){.app-shell .workflow-footer-actions.post-draft-footer{width:calc(100vw - 240px);margin-left:calc(50% - 50vw + 120px)}}
+@media(max-width:820px){.app-shell .workflow-footer-actions.post-draft-footer{width:auto;margin-left:0;padding:14px 18px}}
