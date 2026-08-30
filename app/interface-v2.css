@@ -429,3 +429,17 @@ html, body { background: #f1d2dc; }
    put 80px between the title and the first panel where the prototype has 25.
    The head owns its spacing; the wrapper carries none. */
 .app-shell .hero.workflow-hero{margin:0;padding:0;border:0}
+
+/* D728 · .goldie-footer, measured from the prototype. It sits inside the work
+   column but spans the whole main pane, which is what the negative margin and
+   the 288px sidebar width in the two calc()s are doing - both read from the
+   prototype, not invented. */
+.app-shell .factory-footer{position:sticky;z-index:18;bottom:0;display:flex;align-items:center;justify-content:space-between;gap:16px;width:calc(100vw - 288px);margin:18px 0 0 calc(.5 * (100% + 288px - 100vw));padding:14px max(38px,50vw - 616px);background:rgba(255,255,255,.96);border-top:1px solid #d9cbd3;box-shadow:0 -8px 24px rgba(75,40,62,.07);backdrop-filter:blur(10px)}
+.app-shell .factory-footer>small{color:#776873;font:11px/1.4 Inter,ui-sans-serif,system-ui,sans-serif}
+/* D375 holds: the footer POSITIONS the button, it does not restyle it. The
+   appearance below belongs to the button itself, wherever it is rendered, and
+   is the prototype's .goldie-next. */
+.app-shell .factory-footer .workflow-next{flex:none;margin:0}
+.app-shell .workflow-next{border:0;border-radius:8px;background:#5d3151;color:#fff;padding:11px 18px;height:auto;min-height:0;font:750 13px/1.2 Inter,ui-sans-serif,system-ui,sans-serif;cursor:pointer}
+.app-shell .workflow-next:disabled{opacity:.5;cursor:not-allowed}
+@media(max-width:1050px){.app-shell .factory-footer{width:calc(100vw - 240px);margin-left:calc(.5 * (100% + 240px - 100vw))}}

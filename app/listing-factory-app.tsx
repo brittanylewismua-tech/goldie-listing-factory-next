@@ -16,6 +16,7 @@ import { confirmAction } from "./confirm-dialog";
 import ListingPhotoOrder from "./listing-photo-order";
 import PhotoLayout from "./photo-layout";
 import PageHead from "./page-head";
+import FactoryFooter from "./factory-footer";
 import { tagsFromTitle } from "./seo-utils";
 import { printifyDpi } from "./print-quality";
 import { isPermanentUploadError, MAX_FILE_BYTES, oversizedFileMessage } from "./upload-policy";
@@ -3932,7 +3933,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
                   it - but an enabled control that navigates backward has no
                   business existing at all, and one CSS regression is the
                   difference between hidden and live. */}
-              {workflowStep==="connect"&&(localPreview||(connected&&etsyConnected))&&<button className="workflow-next" onClick={()=>goToStep("setup",false,localPreview)}>Next step <span>→</span></button>}
+              {workflowStep==="connect"&&(localPreview||(connected&&etsyConnected))&&<FactoryFooter status={connected&&etsyConnected?"Printify and Etsy are connected":"Preview mode · every step is unlocked"}><button className="workflow-next" onClick={()=>goToStep("setup",false,localPreview)}>Next step <span>→</span></button></FactoryFooter>}
             </div>
           </article>
 
@@ -4070,7 +4071,10 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
               the product cards, so a product's colours were in one place and its
               prices in another. Pricing and shipping are panels inside the product
               card now, beside the colours and sizes they belong to. */}
-          {workflowStep==="setup"&&templateDetails&&productSelected&&<button type="button" className="workflow-next setup-forward" disabled={!complete&&Boolean(productStepBlocker())} title={productStepBlocker()||undefined} /* D402 - This used to carry a different label when drafts already existed, and
+          {/* D728 - prototype .goldie-footer: the step's forward action and the
+              reason it is blocked share one bar at the bottom of the step. The
+              button keeps its own gate check, title and handler. */}
+          {workflowStep==="setup"&&templateDetails&&productSelected&&<FactoryFooter status={productStepBlocker()||"All product requirements complete"}><button type="button" className="workflow-next setup-forward" disabled={!complete&&Boolean(productStepBlocker())} title={productStepBlocker()||undefined} /* D402 - This used to carry a different label when drafts already existed, and
                  in that case it jumped straight to step 3. D383 renamed it to "Next step"
                  without changing where it went, so pressing Next on step 1 skipped Images
                  entirely. Next step means the next step; the rail is how you jump. */
@@ -4079,7 +4083,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
                  The forward button is the forward button on every step; the gate
                  dialog already lists what is unfinished, by name, when you press it.
                  A control that renames itself is not a control you can learn. */}
-              Next step <span>→</span></button>}
+              Next step <span>→</span></button></FactoryFooter>}
           </BatchPreferencesPortal>
           </div>
 
@@ -4126,7 +4130,9 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
                 product card below. Creating the drafts is the step; this button only
                 scrolled down to it. One forward control per step: the action while the
                 drafts do not exist, the forward once they do. */}
-              {workflowStep!=="setup"&&complete&&<button className="workflow-next" disabled={!designsFinished} onClick={continueFromDesigns}>{designsFinished?"Next step":`Preparing ${designsPreparing} ${designsPreparing===1?"design":"designs"}…`} {designsFinished&&<span>→</span>}</button>}</>}
+              {/* D728 - prototype .goldie-footer: the designs step's forward
+                  action and its status share one bar. Same gate, same handler. */}
+              {workflowStep!=="setup"&&complete&&<FactoryFooter status={designsFinished?"Every design is ready":`Preparing ${designsPreparing} ${designsPreparing===1?"design":"designs"}…`}><button className="workflow-next" disabled={!designsFinished} onClick={continueFromDesigns}>{designsFinished?"Next step":`Preparing ${designsPreparing} ${designsPreparing===1?"design":"designs"}…`} {designsFinished&&<span>→</span>}</button></FactoryFooter>}</>}
               {files.length>0&&complete&&workflowStep==="designs"&&<button className="workflow-next" onClick={()=>goToStep("finish",false,true)}>Back to finishing your listings <span>→</span></button>}
             </div>
           </article>
@@ -4344,8 +4350,13 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
             it is disabled. */}
         
         {imageStepError&&<p className="image-step-blocker" role="alert">{imageStepError}</p>}
+        {/* D728 - prototype .goldie-footer. The reason you cannot continue moves
+            from a paragraph under the button to the left of the bar the button
+            sits in, so the step states its own gate in one place. The button
+            below is unchanged: same gate check, same handler. */}
+        <FactoryFooter status={imagesStepIssues()[0]||"Every listing has at least one photo"}>
         <button className="workflow-next" type="button" disabled={imagesStepIssues().length>0} title={imagesStepIssues()[0]} onClick={()=>{const missing=createdListingsMissingImages();if(missing.length){setImageStepError(`${missing.length} ${missing.length===1?"listing needs":"listings need"} at least one photo.`);setMissingPhotoDraftIds(missing.map(draft=>draft.clientId));return}setImageStepError("");setMissingPhotoDraftIds([]);/* D427 - one Next step on this page, and it is the one that checks every listing has a photo. The second copy in the card list bypassed that check entirely. Goes to Listing, not Publish. */setFinishPhase("details");void goToStep("finish",false,true);window.scrollTo(0,0)}}>Next step <span aria-hidden="true">→</span></button>
-        {imagesStepIssues()[0]&&<p className="etsy-preparing-note gate-reason" role="status">{imagesStepIssues()[0]}</p>}
+        </FactoryFooter>
         </>
         ,true,
         /* D683 - the batch-wide "open every listing in Printify" link. It renders
