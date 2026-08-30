@@ -7109,7 +7109,7 @@ test("each listing in a task panel is separated and numbered — D685", async ()
   /* The title is a caption, not a headline: "its almost always going to be a junk
      title like that so either make it much smaller and subtler or get rid of it
      altogether." D684 had enlarged it to 1rem bold, which was backwards. */
-  assert.match(clarity, /\.app-shell \.listing-card-summary\{[^}]*font-size:12\.5px;font-weight:400/);
+  assert.match(clarity, /\.app-shell \.listing-card-summary\{[^}]*font-size:12px;font-weight:400/);
   assert.doesNotMatch(clarity, /\.listing-card-summary\{[^}]*font-size:1rem/);
   // And it never prints the upload filename or repeats the listing number.
   assert.match(app, /const listingLabel=\(design:DesignFile\|undefined\)=>\{/);

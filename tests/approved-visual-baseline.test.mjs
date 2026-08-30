@@ -165,8 +165,8 @@ test("places item pricing before shipping in the pricing review", async () => {
   assert.match(page, /className="pricing-section-heading shipping-section-heading"/);
   assert.match(page, /\{section==="all"\?"2\. ":""\}Etsy shipping profile/);
   assert.match(css, /\.app-shell \.pricing-section-heading h4\{[\s\S]*font-size:26px!important/);
-  assert.match(css, /\.app-shell \.item-pricing-section\{[\s\S]*border-radius:18px/);
-  assert.match(css, /\.app-shell \.shipping-pricing-section\{[\s\S]*border-radius:18px/);
+  assert.match(css, /\.app-shell \.item-pricing-section\{[\s\S]*border-radius:16px/);
+  assert.match(css, /\.app-shell \.shipping-pricing-section\{[\s\S]*border-radius:16px/);
 });
 
 test("keeps later workflow footers usable and removes obsolete description language", async () => {
@@ -1191,7 +1191,7 @@ test("D203: cross-screen alignment and destructive-action faults are fixed", asy
   assert.match(css, /\.remove-batch\{[^}]*font-size:11px!important/);
   assert.match(css, /\.remove-batch\{[^}]*margin-top:14px!important/);
   // Legacy warm brown at 9px, 2.8:1.
-  assert.match(css, /\.individual-size-guide small\{color:#654362!important;font-size:10\.5px!important\}/);
+  assert.match(css, /\.individual-size-guide small\{color:#654362!important;font-size:10px!important\}/);
 
   // A batch's first initial is not information — "0 las vegas..." rendered "0".
   assert.doesNotMatch(batches, /display_name\.slice\(0,1\)\.toUpperCase\(\)/, "no initial-as-thumbnail");

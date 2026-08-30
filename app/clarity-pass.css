@@ -51,7 +51,7 @@
   border-radius: 9px;
   background: rgba(225, 199, 239, .78);
   color: #3f1f39;
-  font-size: 10.5px;
+  font-size: 10px;
   font-weight: 800;
   text-decoration: none;
 }
@@ -79,7 +79,7 @@
   background: transparent !important;
   box-shadow: none !important;
   color: rgba(74, 42, 62, .62) !important;
-  font-size: 12.5px !important;
+  font-size: 12px !important;
   font-weight: 600 !important;
   text-decoration: none !important;
 }
@@ -203,7 +203,7 @@
 /* (superseded by the D126 chip treatment below) */
 
 /* D111 · One quiet, persistent escape in the fixed workflow sidebar. */
-.app-shell .workflow-restart-button{display:inline-flex;align-items:center;justify-content:center;gap:6px;width:100%;min-height:34px;margin:3px 0 8px;padding:7px 11px;border:1px solid rgba(74,42,62,.16);border-radius:999px;background:rgba(255,255,255,.38);color:#66465d;font-size:10px;font-weight:650;cursor:pointer}
+.app-shell .workflow-restart-button{display:inline-flex;align-items:center;justify-content:center;gap:6px;width:100%;min-height:34px;margin:3px 0 8px;padding:7px 11px;border:1px solid rgba(74,42,62,.16);border-radius:16px;background:rgba(255,255,255,.38);color:#66465d;font-size:10px;font-weight:650;cursor:pointer}
 .app-shell .workflow-restart-button:hover:not(:disabled){border-color:rgba(91,48,79,.34);background:rgba(255,255,255,.7);color:#4b2b42}
 .app-shell .workflow-restart-button:disabled{cursor:not-allowed;opacity:.48}
 .restart-batch-modal label{display:grid;gap:7px;margin-top:18px;text-align:left;color:#4b2b42;font-size:11px;font-weight:750}
@@ -263,7 +263,7 @@
   display:block;
   margin-top:4px;
   color:rgba(74,42,62,.62)!important;
-  font-size:11.5px!important;
+  font-size:11px!important;
   font-weight:500!important;
   line-height:1.5!important;
 }
@@ -289,7 +289,7 @@
   min-height:30px!important;
   padding:0 12px!important;
   border:1px solid rgba(107,58,88,.2)!important;
-  border-radius:999px!important;
+  border-radius:16px!important;
   background:rgba(255,255,255,.55)!important;
   text-decoration:none!important;
 }
@@ -308,7 +308,7 @@
   min-height:38px!important;
   padding:0 20px!important;
   border:0!important;
-  border-radius:999px!important;
+  border-radius:16px!important;
   background:linear-gradient(135deg,#6b3a58,#8a4f73)!important;
   color:#fff!important;
   box-shadow:0 5px 14px rgba(85,45,70,.2)!important;
@@ -480,7 +480,7 @@
   min-height:30px;
   padding:6px 12px!important;
   border:1px solid rgba(91,48,79,.18)!important;
-  border-radius:999px!important;
+  border-radius:16px!important;
   background:rgba(255,255,255,.6)!important;
 }
 
@@ -516,7 +516,7 @@
   margin:18px auto;
   padding:20px;
   border:1px solid rgba(91,48,79,.2);
-  border-radius:17px;
+  border-radius:16px;
   background:rgba(255,255,255,.58);
   box-shadow:0 12px 35px rgba(91,48,79,.08);
 }
@@ -526,7 +526,7 @@
    25px Fraunces, a fourth family, and only lost on !important. */
 .app-shell .size-selector-head h3{margin:0}
 .app-shell .size-selector-head span{max-width:670px;color:#75576b;font-size:11px;line-height:1.5}
-.app-shell .size-selector-head>b{flex:0 0 auto;padding:7px 10px;border-radius:999px;background:rgba(244,212,237,.75);color:#623a56;font-size:10px}
+.app-shell .size-selector-head>b{flex:0 0 auto;padding:7px 10px;border-radius:16px;background:rgba(244,212,237,.75);color:#623a56;font-size:10px}
 .app-shell .size-choice-grid{display:flex;flex-wrap:wrap;gap:9px}
 .app-shell .size-choice-grid button{
   position:relative;
@@ -537,7 +537,7 @@
   min-height:44px;
   padding:10px 14px;
   border:1px solid rgba(91,48,79,.15);
-  border-radius:11px;
+  border-radius:10px;
   background:rgba(255,255,255,.72);
   color:#563047;
   cursor:pointer;
@@ -549,7 +549,7 @@
 .app-shell .size-choice-grid em{display:grid;place-items:center;width:19px;height:19px;border-radius:50%;background:#5c304f;color:#fff;font-size:9px;font-style:normal}
 .app-shell .size-choice-grid small{color:#795e70;font-size:8px}
 .app-shell .size-selector-actions{display:flex;flex-wrap:wrap;gap:8px;padding-top:2px}
-.app-shell .size-selector-actions button{min-height:38px;padding:9px 13px;border:1px solid rgba(91,48,79,.2);border-radius:999px;background:rgba(255,255,255,.75);color:#603750;font-size:9px;font-weight:850;cursor:pointer}
+.app-shell .size-selector-actions button{min-height:38px;padding:9px 13px;border:1px solid rgba(91,48,79,.2);border-radius:16px;background:rgba(255,255,255,.75);color:#603750;font-size:9px;font-weight:850;cursor:pointer}
 .app-shell .size-selector-actions button:last-child{margin-left:auto;background:#5c304f;color:#fff}
 .app-shell .size-selector-actions button.remembered{border-color:rgba(157,80,130,.4);background:linear-gradient(145deg,rgba(232,183,225,.55),rgba(201,144,208,.45));color:#4b283e}
 .app-shell .size-required{margin:0;padding:10px 12px;border:1px solid #bd7188;border-radius:9px;background:#fff3f7;color:#79374e;font-size:10px;font-weight:800}
@@ -589,7 +589,7 @@
   min-height:34px;
   padding:8px 14px;
   border:1px solid rgba(91,48,79,.22);
-  border-radius:999px;
+  border-radius:16px;
   background:rgba(255,255,255,.72);
   color:#5b304f;
   font-size:10px;
@@ -842,7 +842,7 @@
 .batch-history .remove-batch{
   margin-top:14px!important;
   padding:6px 10px!important;
-  border-radius:999px!important;
+  border-radius:16px!important;
   font-size:11px!important;
   text-decoration:none!important;
   color:#87435d!important;
@@ -865,7 +865,7 @@
  * converted to plum in approved-functional.css and the `small` was missed.
  * Appears once per draft card, so three times on a three-design batch.
  * Measured after: #654362 at 10.5px, 8.29:1. */
-.app-shell .individual-size-guide small{color:#654362!important;font-size:10.5px!important}
+.app-shell .individual-size-guide small{color:#654362!important;font-size:10px!important}
 
 /* D208 · Brittany could not find the reset and believed it had never been built.
  * It had: `.workflow-restart-button` in the sidebar on every workflow step, plus
@@ -958,7 +958,7 @@
   display:block;
   margin-bottom:2px;
   font-style:normal;
-  font-size:9.5px;
+  font-size:9px;
   font-weight:900;
   letter-spacing:.1em;
   text-transform:uppercase;
@@ -987,7 +987,7 @@
   background:rgba(247,240,250,.7);
 }
 .app-shell .etsy-detail-pending b{display:block;color:#4b283e;font-size:13px}
-.app-shell .etsy-detail-pending span{display:block;margin-top:4px;color:#6b4a66;font-size:11.5px;line-height:1.45}
+.app-shell .etsy-detail-pending span{display:block;margin-top:4px;color:#6b4a66;font-size:11px;line-height:1.45}
 
 /* D229 · A saved shipping profile can vanish from the Etsy shop. Say so where
  * the choice is made, instead of leaving the approve button dead and silent. */
@@ -1302,7 +1302,7 @@ body:has(.management-nav) .usage-card h2{
 .not-found-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:6px}
 .not-found-primary,.not-found-secondary{
   min-height:42px;display:inline-flex;align-items:center;padding:0 18px;
-  border-radius:999px;text-decoration:none;
+  border-radius:16px;text-decoration:none;
   font:800 12px/1 "Manrope",system-ui,sans-serif;
 }
 .not-found-primary{background:#5c304f;color:#fff}
@@ -1352,7 +1352,7 @@ body:has(.management-nav) .usage-card h2{
   min-height:34px!important;
   padding:0 13px!important;
   border:1px solid rgba(91,48,79,.2)!important;
-  border-radius:999px!important;
+  border-radius:16px!important;
   background:rgba(255,255,255,.75)!important;
   color:#8a3f52!important;
   font:800 11px/1 "Manrope",system-ui,sans-serif!important;
@@ -1618,7 +1618,7 @@ body{min-width:1180px!important}
 .app-shell .printify-photo-loading{position:absolute;inset:0;display:grid;place-items:center;padding:8px;text-align:center;font-size:11px;color:#715d6b;background:linear-gradient(100deg,#f3edf1 25%,#fff 45%,#f3edf1 65%);background-size:220% 100%;animation:goldie-photo-loading 1.4s linear infinite}
 .app-shell .printify-image-option.is-ready .printify-photo-loading{display:none}
 .app-shell .printify-image-option.is-failed .printify-photo-loading{animation:none;background:#f7f1f4;color:#8d3d44}
-.app-shell .printify-photo-retry{position:absolute;left:50%;bottom:8px;z-index:3;transform:translateX(-50%);padding:4px 9px!important;border-radius:999px!important;font-size:11px!important}
+.app-shell .printify-photo-retry{position:absolute;left:50%;bottom:8px;z-index:3;transform:translateX(-50%);padding:4px 9px!important;border-radius:16px!important;font-size:11px!important}
 @keyframes goldie-photo-loading{to{background-position:-220% 0}}
 
 /* D310 · Measured on the deployed card: panel 718px inside a 720px card WITH
@@ -1648,7 +1648,7 @@ body{min-width:1180px!important}
   min-height:38px!important;
   margin-left:auto!important;
   padding:0 15px!important;
-  border-radius:999px!important;
+  border-radius:16px!important;
   color:#75576b!important;
   font:800 11px/1 "Manrope",system-ui,sans-serif!important;
   white-space:nowrap!important;
@@ -1692,7 +1692,7 @@ body{min-width:1180px!important}
 .app-shell .shipping-combobox-trigger{
   display:flex;align-items:center;justify-content:space-between;gap:12px;
   width:100%;min-height:45px;padding:0 14px;
-  border:1px solid rgba(91,48,79,.22);border-radius:11px;
+  border:1px solid rgba(91,48,79,.22);border-radius:10px;
   background:#fff;color:#4f2b42;text-align:left;cursor:pointer;
   font:600 12px/1.4 "Manrope",system-ui,sans-serif;
 }
@@ -1788,7 +1788,7 @@ body{min-width:1180px!important}
    not a feature being sold. */
 .listing-goal-settings{
   display:grid;gap:10px;margin:0 0 18px;padding:22px;
-  border:1px solid rgba(91,48,79,.18);border-radius:18px;
+  border:1px solid rgba(91,48,79,.18);border-radius:16px;
   background:rgba(255,255,255,.55);
 }
 .listing-goal-intro{margin:0;color:#75576b;font:500 12px/1.6 "Manrope",system-ui,sans-serif;max-width:62ch}
@@ -1799,7 +1799,7 @@ body{min-width:1180px!important}
 .goal-number input{width:74px;min-height:38px;padding:0 10px;border:1px solid rgba(91,48,79,.22);border-radius:10px;font:800 13px/1 "Manrope",system-ui,sans-serif;text-align:center}
 .goal-period{display:flex;gap:6px}
 .goal-period button{
-  min-height:34px;padding:0 13px;border:1px solid rgba(91,48,79,.2);border-radius:999px;
+  min-height:34px;padding:0 13px;border:1px solid rgba(91,48,79,.2);border-radius:16px;
   background:rgba(255,255,255,.75);color:#603750;font:800 11px/1 "Manrope",system-ui,sans-serif;cursor:pointer;
 }
 .goal-period button.active{border-color:#8e4c78;background:#f4d8ec;color:#4c293f}
@@ -1832,12 +1832,12 @@ body{min-width:1180px!important}
   font-variant-numeric:tabular-nums!important;
 }
 .app-shell .listing-goal-track{
-  display:block!important;height:6px!important;border-radius:999px!important;
+  display:block!important;height:6px!important;border-radius:16px!important;
   background:rgba(91,48,79,.13)!important;overflow:hidden!important;
   box-shadow:inset 0 1px 2px rgba(74,42,62,.16)!important;
 }
 .app-shell .listing-goal-track>i{
-  display:block!important;height:100%!important;border-radius:999px!important;
+  display:block!important;height:100%!important;border-radius:16px!important;
   background:linear-gradient(90deg,#d7a6cf,#8e4c78)!important;
   box-shadow:0 0 10px -2px rgba(214,150,200,.95)!important;
 }
@@ -1851,11 +1851,11 @@ body{min-width:1180px!important}
 .goals-page header p{margin:0;color:#75576b;font:500 12px/1.6 "Manrope",system-ui,sans-serif}
 .goals-current,.goals-history,.goals-off{
   display:grid;gap:10px;margin-bottom:16px;padding:22px;
-  border:1px solid rgba(91,48,79,.18);border-radius:18px;background:rgba(255,255,255,.55);
+  border:1px solid rgba(91,48,79,.18);border-radius:16px;background:rgba(255,255,255,.55);
 }
 .goals-current h2{margin:0;font:400 34px/1.05 "DM Serif Display",Georgia,serif;color:#4c293f}
-.goals-track,.goals-bar{display:block;height:8px;border-radius:999px;background:rgba(91,48,79,.14);overflow:hidden}
-.goals-track>i,.goals-bar>i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#c58fbe,#8e4c78)}
+.goals-track,.goals-bar{display:block;height:8px;border-radius:16px;background:rgba(91,48,79,.14);overflow:hidden}
+.goals-track>i,.goals-bar>i{display:block;height:100%;border-radius:16px;background:linear-gradient(90deg,#c58fbe,#8e4c78)}
 .goals-history ol{display:grid;gap:10px;margin:0;padding:0;list-style:none}
 .goals-history li{display:grid;grid-template-columns:minmax(0,190px) minmax(0,1fr) 48px;align-items:center;gap:14px}
 .goals-history li>b{font:800 12px/1.3 "Manrope",system-ui,sans-serif;color:#4c293f}
@@ -1864,7 +1864,7 @@ body{min-width:1180px!important}
 .goals-empty{margin:0;color:#75576b;font:500 12px/1.6 "Manrope",system-ui,sans-serif}
 .goals-cta,.listing-goal-history-link{
   justify-self:start;min-height:40px;display:inline-flex;align-items:center;padding:0 16px;
-  border-radius:999px;background:#5c304f;color:#fff;text-decoration:none;
+  border-radius:16px;background:#5c304f;color:#fff;text-decoration:none;
   font:800 12px/1 "Manrope",system-ui,sans-serif;
 }
 .listing-goal-history-link{background:rgba(255,255,255,.72);color:#603750;border:1px solid rgba(91,48,79,.2)}
@@ -1938,7 +1938,7 @@ body{min-width:1180px!important}
 /* D384 - No arrow glyph, and the link centres under the panel it closes.
    The arrow read as a control of its own next to a text link, and a link
    hanging off the left edge of a centred panel looked unfinished. */
-.app-shell .panel-collapse-foot{display:block!important;width:auto!important;margin:14px auto 22px!important;min-height:0!important;padding:2px 0!important;border:0!important;border-radius:0!important;background:none!important;box-shadow:none!important;color:#5b304f!important;font-size:11.5px!important;font-weight:700!important;text-align:center!important;text-decoration:underline!important;text-underline-offset:3px!important;cursor:pointer!important}
+.app-shell .panel-collapse-foot{display:block!important;width:auto!important;margin:14px auto 22px!important;min-height:0!important;padding:2px 0!important;border:0!important;border-radius:0!important;background:none!important;box-shadow:none!important;color:#5b304f!important;font-size:11px!important;font-weight:700!important;text-align:center!important;text-decoration:underline!important;text-underline-offset:3px!important;cursor:pointer!important}
 .app-shell .panel-collapse-foot:hover{
   background:none!important;color:#4c293f!important;text-decoration-thickness:2px!important;
 }
@@ -1973,7 +1973,7 @@ body{min-width:1180px!important}
   gap:8px!important;
   margin:14px 0 0 auto!important;
   padding:9px 14px!important;
-  border-radius:999px!important;
+  border-radius:16px!important;
   border:1px solid rgba(120,169,138,.5)!important;
   background:#e8f5ec!important;
   color:#276543!important;
@@ -1998,7 +1998,7 @@ body{min-width:1180px!important}
   font:800 12px/1 "Manrope",system-ui,sans-serif;color:#4c293f}
 .batch-select-all input,.batch-select input{width:17px;height:17px;accent-color:#71416a;cursor:pointer}
 .batch-delete-selected{
-  min-height:36px;padding:0 15px;border:1px solid rgba(157,80,130,.4);border-radius:999px;
+  min-height:36px;padding:0 15px;border:1px solid rgba(157,80,130,.4);border-radius:16px;
   background:#fdf2f8;color:#8a3f52;cursor:pointer;
   font:800 11px/1 "Manrope",system-ui,sans-serif;
 }
@@ -2089,7 +2089,7 @@ body{min-width:1180px!important}
 .app-shell .step-product-body>.step-card{padding:0!important}
 .app-shell .step-product-body>.step-card{display:block!important}
 
-.app-shell .step-product-state{display:inline-flex;align-items:center;white-space:nowrap;border-radius:999px;padding:5px 11px;font-size:10px;font-weight:800;letter-spacing:.04em}
+.app-shell .step-product-state{display:inline-flex;align-items:center;white-space:nowrap;border-radius:16px;padding:5px 11px;font-size:10px;font-weight:800;letter-spacing:.04em}
 .app-shell .step-product-state.tone-ready{background:rgba(214,232,214,.72);color:#2f6a45}
 .app-shell .step-product-state.tone-attention{background:rgba(250,226,238,.85);color:#8a3f66}
 .app-shell .step-product-state.tone-waiting{background:rgba(233,226,238,.8);color:#6b5f70}
@@ -2125,7 +2125,7 @@ body{min-width:1180px!important}
   margin-left:auto;
   padding:8px 15px;
   border:1px solid rgba(91,48,79,.2);
-  border-radius:999px;
+  border-radius:16px;
   background:rgba(255,255,255,.6);
   color:#5b304f;
   font:inherit;font-size:12px;font-weight:700;
@@ -2163,7 +2163,7 @@ body{min-width:1180px!important}
 .app-shell .prepare-etsy{
   display:block;width:fit-content;margin:20px auto 4px;
   min-height:0;padding:9px 16px;
-  border:1px solid rgba(91,48,79,.2);border-radius:999px;
+  border:1px solid rgba(91,48,79,.2);border-radius:16px;
   background:rgba(255,255,255,.72);color:#5b304f;
   font:inherit;font-size:12px;font-weight:700;cursor:pointer;
 }
@@ -2200,8 +2200,8 @@ body{min-width:1180px!important}
    15px radius - the visual weight of a primary action, for a convenience. Sized
    to what it is. */
 .app-shell .listing-photo-download{margin-top:12px!important;padding:10px 14px!important;border-radius:12px!important;gap:6px 14px!important}
-.app-shell .listing-photo-download b{font-size:12.5px!important}
-.app-shell .listing-photo-download small{font-size:10.5px!important}
+.app-shell .listing-photo-download b{font-size:12px!important}
+.app-shell .listing-photo-download small{font-size:10px!important}
 .app-shell .listing-photo-download button{padding:8px 13px!important;border-radius:10px!important;font-size:11px!important}
 
 /* D411 · Reordering listing photos. The card being moved now stays solid and
@@ -2221,7 +2221,7 @@ body{min-width:1180px!important}
 .app-shell .photo-order-strip article.dragging::after{
   content:"Moving";
   position:absolute;top:8px;left:8px;z-index:2;
-  padding:3px 8px;border-radius:999px;
+  padding:3px 8px;border-radius:16px;
   background:#5b304f;color:#fff;
   font-size:9px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;
 }
@@ -2251,7 +2251,7 @@ body{min-width:1180px!important}
    rather than anything alarming. */
 .app-shell .batch-restore-notice{
   max-width:640px;margin:10px 0 0;padding:11px 14px;
-  border:1px solid rgba(163,44,76,.22);border-radius:11px;
+  border:1px solid rgba(163,44,76,.22);border-radius:10px;
   background:rgba(163,44,76,.06);color:#7c3350;
   font-size:12px;line-height:1.5;
 }
@@ -2351,7 +2351,7 @@ body{min-width:1180px!important}
 .app-shell .batch-tab-conflict{display:grid;gap:6px;justify-items:start;margin:0 0 14px;padding:14px 16px;border:1px solid rgba(184,60,74,.28);border-left:4px solid var(--alert-line);border-radius:12px;background:var(--alert-tint)}
 .app-shell .batch-tab-conflict b{font-size:.92rem;color:#4a3b31}
 .app-shell .batch-tab-conflict span{font-size:.85rem;line-height:1.5;color:#6b5748}
-.app-shell .batch-tab-conflict button{margin-top:4px;padding:7px 14px;border:1px solid var(--alert-line);border-radius:999px;background:#fff;font-size:.84rem;font-weight:650;color:var(--alert-ink);cursor:pointer}
+.app-shell .batch-tab-conflict button{margin-top:4px;padding:7px 14px;border:1px solid var(--alert-line);border-radius:16px;background:#fff;font-size:.84rem;font-weight:650;color:var(--alert-ink);cursor:pointer}
 
 /* D499 - each product's rows carry their own Change, as step 1 does, so the
    expand strip D498 added under the card is gone. The rows themselves are
@@ -2471,7 +2471,7 @@ body{min-width:1180px!important}
 .new-build-notice>div{display:grid;gap:2px;min-width:0}
 .new-build-notice b{font:800 .88rem/1.25 "Manrope",system-ui,sans-serif;color:#4b283e}
 .new-build-notice small{color:rgba(74,42,62,.72);font-size:.76rem;line-height:1.45}
-.new-build-notice button{flex:none;padding:9px 16px;border:0;border-radius:999px;background:linear-gradient(145deg,#d591c3,#a86ba2);color:#fff;font:800 .8rem/1 "Manrope",system-ui,sans-serif;cursor:pointer}
+.new-build-notice button{flex:none;padding:9px 16px;border:0;border-radius:16px;background:linear-gradient(145deg,#d591c3,#a86ba2);color:#fff;font:800 .8rem/1 "Manrope",system-ui,sans-serif;cursor:pointer}
 .new-build-notice button:hover{filter:brightness(1.05)}
 @media(prefers-reduced-motion:no-preference){.new-build-notice{animation:notice-arrive .3s ease both}@keyframes notice-arrive{from{opacity:0;transform:translate(-50%,8px)}to{opacity:1;transform:translate(-50%,0)}}}
 
@@ -2513,10 +2513,10 @@ body{min-width:1180px!important}
    is its own annoyance. */
 .app-shell .task-panel .printify-image-picker{padding:14px;background:rgba(92,52,78,.055);border-radius:14px;box-shadow:inset 0 1px 3px rgba(74,42,62,.09)}
 .app-shell .task-panel .printify-image-picker>p,.app-shell .task-panel .printify-image-picker>.image-pref-actions{column-span:all}
-.app-shell .task-panel .printify-image-picker>p{font-size:11.5px;line-height:1.45;color:#7a6274;margin:0 0 10px}
+.app-shell .task-panel .printify-image-picker>p{font-size:11px;line-height:1.45;color:#7a6274;margin:0 0 10px}
 .app-shell .task-panel .printify-image-picker>.image-pref-actions{display:flex!important;flex-direction:row;gap:8px!important;margin:0 0 14px!important}
-.app-shell .task-panel .printify-image-picker>.image-pref-actions>button{display:block!important;flex:0 0 auto;width:auto!important;min-height:0!important;padding:7px 12px!important;border-radius:999px!important;background:#fff!important;border:1px solid rgba(91,53,79,.2)!important;box-shadow:none!important;text-align:left}
-.app-shell .task-panel .printify-image-picker>.image-pref-actions>button>b{display:block;font-size:11.5px;font-weight:800;line-height:1}
+.app-shell .task-panel .printify-image-picker>.image-pref-actions>button{display:block!important;flex:0 0 auto;width:auto!important;min-height:0!important;padding:7px 12px!important;border-radius:16px!important;background:#fff!important;border:1px solid rgba(91,53,79,.2)!important;box-shadow:none!important;text-align:left}
+.app-shell .task-panel .printify-image-picker>.image-pref-actions>button>b{display:block;font-size:11px;font-weight:800;line-height:1}
 .app-shell .task-panel .printify-image-picker>.image-pref-actions>button>small{display:none}
 .app-shell .task-panel .printify-view-groups{display:grid;grid-template-columns:minmax(0,1fr);gap:20px}
 .app-shell .task-panel .printify-view-group{display:block!important;width:auto;margin:0}
@@ -2525,13 +2525,13 @@ body{min-width:1180px!important}
 .app-shell .task-panel .printify-image-option{margin:0;width:auto;border-radius:10px!important;overflow:hidden;background:#fff!important;box-shadow:0 1px 4px rgba(74,42,62,.14);border:2px solid transparent!important;position:relative}
 .app-shell .task-panel .printify-image-option.selected{border-color:#7a3f63!important;box-shadow:0 2px 9px rgba(122,63,99,.32)!important}
 .app-shell .task-panel .printify-image-option img{display:block;width:100%;height:auto}
-.app-shell .task-panel .printify-photo-selector{top:4px!important;left:4px!important;width:18px!important;height:18px!important;border-radius:5px!important;background:rgba(255,255,255,.94)!important;box-shadow:0 1px 3px rgba(74,42,62,.28)!important}
+.app-shell .task-panel .printify-photo-selector{top:4px!important;left:4px!important;width:18px!important;height:18px!important;border-radius:6px!important;background:rgba(255,255,255,.94)!important;box-shadow:0 1px 3px rgba(74,42,62,.28)!important}
 .app-shell .task-panel .printify-image-option.selected .printify-photo-selector{background:#7a3f63!important;color:#fff}
 /* D682 · display:grid with place-items:center puts the chevron on its own row
    ABOVE the label - the same "arrow sitting apart from the text" this was meant
    to fix, in a new shape. It is one line of text with an icon beside it, so it
    is an inline row, sized to its content and centred in the picker. */
-.app-shell .task-panel .printify-more-toggle{display:inline-flex;align-items:center;justify-content:center;gap:7px;width:max-content;max-width:100%;margin:12px auto 0;padding:8px 16px;border:1px solid rgba(91,53,79,.2);border-radius:999px;background:#fff;color:#6b3f5e;font-size:11.5px;font-weight:800;line-height:1;white-space:nowrap;cursor:pointer}
+.app-shell .task-panel .printify-more-toggle{display:inline-flex;align-items:center;justify-content:center;gap:7px;width:max-content;max-width:100%;margin:12px auto 0;padding:8px 16px;border:1px solid rgba(91,53,79,.2);border-radius:16px;background:#fff;color:#6b3f5e;font-size:11px;font-weight:800;line-height:1;white-space:nowrap;cursor:pointer}
 .app-shell .task-panel .printify-more-toggle.is-open svg{transform:rotate(180deg)}
 .app-shell .task-panel .printify-more-toggle svg{display:block;width:12px;height:12px;flex:0 0 auto;transition:transform .16s ease;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 
@@ -2735,7 +2735,7 @@ body{min-width:1180px!important}
   border:1px solid rgba(91,48,79,.18);
   background:rgba(255,255,255,.55);
   color:#4a2a3e;
-  border-radius:999px;
+  border-radius:16px;
   padding:6px 13px;
   font:600 .72rem/1 "Manrope",system-ui,sans-serif;
   cursor:pointer;
@@ -2745,7 +2745,7 @@ body{min-width:1180px!important}
   font-weight:700;
   font-size:.66rem;
   background:rgba(91,48,79,.1);
-  border-radius:999px;
+  border-radius:16px;
   padding:2px 7px;
 }
 .diagnostics-filter.is-on{background:#4b283e;border-color:#4b283e;color:#fff}
@@ -2753,7 +2753,7 @@ body{min-width:1180px!important}
 .diagnostic-tag{
   font:700 .6rem/1 "Manrope",system-ui,sans-serif;
   letter-spacing:.02em;
-  border-radius:999px;
+  border-radius:16px;
   padding:3px 8px;
   margin-left:8px;
 }
@@ -2766,7 +2766,7 @@ body{min-width:1180px!important}
   background:transparent;
   border:1px solid rgba(91,48,79,.22);
   color:#6b4a60;
-  border-radius:999px;
+  border-radius:16px;
   padding:9px 17px;
   font:600 .78rem/1 "Manrope",system-ui,sans-serif;
   cursor:pointer;
@@ -2889,16 +2889,16 @@ body{min-width:1180px!important}
 .app-shell .listing-rows-summary>b{font-size:14px;font-weight:800;white-space:nowrap;color:#4a2a3e}
 /* The one accent in the whole component. Dusty red, not amber: desaturating red
    to make it "faded" is what produced brown. Keep saturation, lighten instead. */
-.app-shell .listing-rows-attention{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:800;color:#b53838;white-space:nowrap}
+.app-shell .listing-rows-attention{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:800;color:#b53838;white-space:nowrap}
 .app-shell .listing-rows-attention::before{content:"";width:7px;height:7px;border-radius:50%;background:#d94f4f;flex:none}
-.app-shell .listing-rows-rest{font-size:12.5px;color:rgba(74,42,62,.5);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.app-shell .listing-rows-rest{font-size:12px;color:rgba(74,42,62,.5);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .app-shell .listing-rows-actions{margin-left:auto;display:flex;align-items:center;gap:12px;flex:none}
 .app-shell .listing-rows-view{border:0;background:transparent;padding:0 4px;font-size:12px;font-weight:750;color:rgba(74,42,62,.58);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
 .app-shell .listing-rows-view:hover{color:#5b304f}
-.app-shell .listing-rows-jump{height:34px;border:1px solid #6b3f5e;border-radius:999px;background:#6b3f5e;padding:0 16px;font-size:12px;font-weight:700;color:#fff;white-space:nowrap;cursor:pointer}
+.app-shell .listing-rows-jump{height:34px;border:1px solid #6b3f5e;border-radius:16px;background:#6b3f5e;padding:0 16px;font-size:12px;font-weight:700;color:#fff;white-space:nowrap;cursor:pointer}
 
 /* One listing = one bounded card. Closed cards are white and sit apart. */
-.app-shell .listing-card{border:1px solid rgba(91,48,79,.13);border-radius:13px;background:#fff;margin-bottom:10px;overflow:hidden}
+.app-shell .listing-card{border:1px solid rgba(91,48,79,.13);border-radius:12px;background:#fff;margin-bottom:10px;overflow:hidden}
 .app-shell .listing-card.is-flagged{border-left:3px solid #d94f4f}
 /* Open: a different, darker surface - indentation alone did not separate it from
    the next listing. Fields stay white so they read as figure against that ground. */
@@ -2912,10 +2912,10 @@ body{min-width:1180px!important}
 .app-shell .listing-card-index{display:block;font-size:11px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:#5b304f}
 /* A caption, not a headline. Until step 3 writes a title this is often the
    upload's filename, and the photo is what she recognises the listing by. */
-.app-shell .listing-card-summary{display:block;margin-top:3px;font-size:12.5px;font-weight:400;color:rgba(74,42,62,.6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.app-shell .listing-card-meta{font-size:11.5px;color:rgba(74,42,62,.45);white-space:nowrap;font-variant-numeric:tabular-nums}
+.app-shell .listing-card-summary{display:block;margin-top:3px;font-size:12px;font-weight:400;color:rgba(74,42,62,.6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.app-shell .listing-card-meta{font-size:11px;color:rgba(74,42,62,.45);white-space:nowrap;font-variant-numeric:tabular-nums}
 .app-shell .listing-card-flags{display:flex;gap:7px}
-.app-shell .listing-flag{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:26px;padding:0 12px;border-radius:999px;background:rgba(74,42,62,.06);color:rgba(74,42,62,.62);font-size:11.5px;font-weight:700;white-space:nowrap;text-align:center}
+.app-shell .listing-flag{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:26px;padding:0 12px;border-radius:16px;background:rgba(74,42,62,.06);color:rgba(74,42,62,.62);font-size:11px;font-weight:700;white-space:nowrap;text-align:center}
 .app-shell .listing-flag.is-attention{background:rgba(217,79,79,.12);color:#b53838}
 .app-shell .listing-flag.is-attention::before{content:"";width:6px;height:6px;border-radius:50%;background:#d94f4f;flex:none}
 
@@ -2950,13 +2950,13 @@ body{min-width:1180px!important}
 .app-shell .listing-card-detail .design-fields textarea{width:100%;padding:9px 11px;border:1px solid rgba(91,48,79,.18);border-radius:10px;background:#fff;font:500 .84rem/1.45 "Manrope",system-ui,sans-serif;color:#3f2438;resize:vertical}
 .app-shell .listing-card-detail .design-fields textarea:focus{outline:0;border-color:#b777b0;box-shadow:0 0 0 3px rgba(183,119,176,.14)}
 .app-shell .listing-card-detail .tag-row{display:flex;flex-wrap:wrap;gap:6px}
-.app-shell .listing-card-detail .tag-row span{padding:3px 8px;border-radius:999px;background:rgba(220,177,218,.26);color:#67465f;font-size:.72rem;font-weight:700}
+.app-shell .listing-card-detail .tag-row span{padding:3px 8px;border-radius:16px;background:rgba(220,177,218,.26);color:#67465f;font-size:.72rem;font-weight:700}
 .app-shell .listing-card-detail .individual-description-body{display:grid;gap:8px}
 .app-shell .listing-card-detail .individual-description-body label{display:grid;gap:4px;font:700 .74rem/1.2 "Manrope",system-ui,sans-serif;color:#6b4560}
 .app-shell .listing-card-detail .individual-description-body textarea{width:100%;padding:10px 12px;border:1px solid rgba(91,48,79,.18);border-radius:10px;background:#fff;font:500 .84rem/1.5 "Manrope",system-ui,sans-serif;color:#3f2438}
 .app-shell .listing-card-detail .individual-description-body small{color:rgba(74,42,62,.62);font-size:.72rem}
 .app-shell .listing-card-actions{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
-.app-shell .listing-card-actions button{height:32px;border:1px solid rgba(91,48,79,.28);border-radius:999px;background:#fff;padding:0 14px;font-size:11.5px;font-weight:750;color:#6b3f5e;cursor:pointer}
+.app-shell .listing-card-actions button{height:32px;border:1px solid rgba(91,48,79,.28);border-radius:16px;background:#fff;padding:0 14px;font-size:11px;font-weight:750;color:#6b3f5e;cursor:pointer}
 .app-shell .listing-card-actions button:hover{background:#faf5f9;border-color:rgba(91,48,79,.45)}
 @media(max-width:700px){.app-shell .listing-card-detail{padding-left:18px}.app-shell .listing-rows-bar{flex-wrap:wrap;row-gap:10px}}
 
@@ -3112,7 +3112,7 @@ body{min-width:1180px!important}
 }
 .support-video-dialog{
   width:min(880px,100%);
-  border-radius:18px;
+  border-radius:16px;
   background:#fffdfb;
   box-shadow:0 30px 80px rgba(40,20,36,.4);
   overflow:hidden;
@@ -3176,11 +3176,11 @@ body{min-width:1180px!important}
   min-height:34px!important;
   margin-top:10px!important;
   padding:0 12px!important;
-  border-radius:999px!important;
+  border-radius:16px!important;
   border:0!important;
   background:linear-gradient(135deg,#6b3a58,#8a4f73)!important;
   color:#fff!important;
-  font-size:10.5px!important;
+  font-size:10px!important;
   font-weight:800!important;
   letter-spacing:.01em!important;
   line-height:1!important;
