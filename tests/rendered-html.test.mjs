@@ -4722,7 +4722,7 @@ test("steps 2, 3 and 4 are the same shape and no row is a bookmark — D541", as
      to be in. Keying it on finishPhase==="details" meant the button never swapped
      for Next step, because D221 had already made that phase permanent - so step 3
      had no way forward at all. */
-  assert.match(app, /\{!etsyDetailsPrepared\?<><button className="secondary-action prepare-etsy"/,
+  assert.match(app, /\{!etsyDetailsPrepared\?<FactoryFooter status=[\s\S]*?><button className="secondary-action prepare-etsy"/,
     "preparing Etsy details covers the batch, so it sits under the cards");
   assert.match(app, /const etsyDetailsPrepared=files\.length>0&&files\.every\(file=>Boolean\(file\.etsy\)\)/);
   assert.doesNotMatch(app, /url\.searchParams\.set\("phase","etsy"\)/,

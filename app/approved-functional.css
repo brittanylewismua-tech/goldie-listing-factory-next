@@ -159,14 +159,6 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 }
 
 /* Workflow readability and Step 7/8 hierarchy lock. */
-.app-shell .etsy-preparing-note{
-  max-width:620px;
-  margin:12px auto 0;
-  color:rgba(74,42,62,.72);
-  font-size:12px;
-  line-height:1.55;
-  text-align:center;
-}
 .app-shell .variant-transfer-note b{font-size:13px!important;line-height:1.4!important}
 .app-shell .variant-transfer-note small{font-size:12px!important;line-height:1.55!important}
 .app-shell .optional-note{font-size:12px!important;line-height:1.45!important}

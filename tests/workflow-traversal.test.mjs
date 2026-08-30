@@ -363,9 +363,12 @@ test("step 3 always has a way forward — D544", async () => {
 
   /* The footer offers exactly one of the two, and which one depends on whether
      the work is done - so there is never a step 3 with neither. */
-  const footer = app.slice(app.indexOf('{!etsyDetailsPrepared?<><button className="secondary-action prepare-etsy"'));
+  /* D767 · Both branches sit in the step's footer row now, the same one every
+     other step uses. The rule is unchanged: exactly one of the two, chosen by
+     whether the work is done, so there is never a step 3 with neither. */
+  const footer = app.slice(app.indexOf('{!etsyDetailsPrepared?<FactoryFooter'));
   assert.ok(footer.indexOf('className="workflow-next"') > 0, "the other branch is Next step");
-  assert.ok(footer.indexOf('className="workflow-next"') < footer.indexOf("</>)}"), "in the same footer");
+  assert.ok(footer.indexOf('className="workflow-next"') < footer.indexOf("</FactoryFooter>}"), "in the same footer");
 
   // The URL is not allowed to claim a phase the app never enters.
   assert.doesNotMatch(app, /url\.searchParams\.set\("phase","etsy"\)/);

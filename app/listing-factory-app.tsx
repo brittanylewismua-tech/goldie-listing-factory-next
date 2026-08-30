@@ -2903,7 +2903,12 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
        reachability rules are unchanged and are handed to the panel. */
     return <div className="batch-product-rows">{rows.map((row,rowIndex)=>{const rowOpen=Boolean(open&&row.task&&activeTask===row.task);
       const reachableRow=!(switchingProduct||(!open&&!reachable));
-      if(!row.report) return <FactoryPanel
+      /* D767 · A reporting row has nothing of its own to open (D541), which is a
+         reason to have no Change control - not a reason to be a different
+         component. Step 4's five rows were the only sections left rendering as
+         legacy rows with a tick square instead of panels with a state chip.
+         Same panel, no toggle. The Fragment branch below is unreachable now. */
+      return <FactoryPanel
         key={row.label}
         index={rowIndex+1}
         title={row.label}
@@ -2911,7 +2916,7 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
         state={row.value}
         tone={row.done?"done":row.pending?"pending":row.optional?"optional":"attention"}
         open={rowOpen}
-        onToggle={()=>{openRow(row.target,row.task)}}
+        onToggle={row.report?undefined:()=>{openRow(row.target,row.task)}}
         toggleLabel={opening?"Opening…":rowOpen?"Close":"Change"}
         toggleDisabled={!reachableRow}
         toggleTitle={!reachableRow?`Finish ${list[index-1]?.name||"the product above"} first`:undefined}
@@ -4194,7 +4199,12 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
                  with no way to reach step 4. Measured on her batch: details prepared,
                  rows reading "Needs review", and no Next step button on the page.
                  Ask the real question instead - have the Etsy details been built yet. */}
-              {!etsyDetailsPrepared?<><button className="secondary-action prepare-etsy" aria-busy={preparingEtsy} disabled={preparingEtsy||progressGateIssues(6).length>0||batchHeldByAnotherTab} title={batchHeldByAnotherTab?"This batch is open in another Goldie tab, so nothing prepared here would be kept.":progressGateIssues(6)[0]} onClick={()=>void continueToEtsyDetails()}>{preparingEtsy?"Preparing Etsy details…":"Prepare Etsy details"}</button>{preparingEtsy?<p className="etsy-preparing-note" role="status">This can take a moment when your batch has several listings. Keep this page open while Goldie prepares each one.</p>:progressGateIssues(6)[0]&&<p className="etsy-preparing-note gate-reason" role="status">{progressGateIssues(6)[0]}</p>}</>:<><button className="workflow-next" aria-busy={savingEtsyDetails} disabled={savingEtsyDetails||progressGateIssues(7).length>0} title={progressGateIssues(7)[0]} onClick={()=>void saveAllEtsyDetails()}>{savingEtsyDetails?"Saving Etsy details…":"Next step"} <span>→</span></button>{!savingEtsyDetails&&progressGateIssues(7)[0]&&<p className="etsy-preparing-note gate-reason" role="status">{progressGateIssues(7)[0]}</p>}</>}
+              {/* D767 · Step 3's action sat centred between the panels and the bar
+                  with its reason underneath it - a third place for a step action,
+                  after the footer row and the bar. It uses the same row every
+                  other step uses: the reason on the left, the action on the
+                  right. Same button, same gate, same handler. */}
+              {!etsyDetailsPrepared?<FactoryFooter status={preparingEtsy?"This can take a moment when your batch has several listings. Keep this page open.":progressGateIssues(6)[0]||"Every listing has a title and tags"}><button className="secondary-action prepare-etsy" aria-busy={preparingEtsy} disabled={preparingEtsy||progressGateIssues(6).length>0||batchHeldByAnotherTab} title={batchHeldByAnotherTab?"This batch is open in another Goldie tab, so nothing prepared here would be kept.":progressGateIssues(6)[0]} onClick={()=>void continueToEtsyDetails()}>{preparingEtsy?"Preparing Etsy details…":"Prepare Etsy details"}</button></FactoryFooter>:<FactoryFooter status={savingEtsyDetails?"Saving Etsy details…":progressGateIssues(7)[0]||"Every listing is ready for review"}><button className="workflow-next" aria-busy={savingEtsyDetails} disabled={savingEtsyDetails||progressGateIssues(7).length>0} title={progressGateIssues(7)[0]} onClick={()=>void saveAllEtsyDetails()}>{savingEtsyDetails?"Saving Etsy details…":"Next step"} <span>→</span></button></FactoryFooter>}
             </>)}
           {workflowStep==="finish"&&finishPhase==="final"&&stepProductCards(bundleCardStatus("publish"),null,false,<>{/* D497 - publish covered one product until D495, so these cards kept their
     own open controls. Now one press publishes the whole bundle, and a card
