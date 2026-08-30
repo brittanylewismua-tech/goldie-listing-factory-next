@@ -124,6 +124,16 @@ const CASES = [
   // artwork grid
   { name: "artwork grid columns", chain: [...shell, el("div","factory-art-grid")], property: "grid-template-columns", expect: /repeat\(2,/ },
   { name: "artwork preview height", chain: [...shell, el("div","factory-art-grid"), el("article","factory-art-card"), el("div","factory-art-preview")], property: "height", expect: /^190px$/ },
+  /* D733/D734 · The two bars that break the work column to span the pane. The
+     offset only lands on the pane's left edge while their container is centred
+     inside it - which .factory-work{margin:auto} and the two 100%-width rules
+     below it guarantee. Verified in the browser at 1440: x=288, right=1440. */
+  { name: "action bar spans the pane", chain: [...shell, el("div","workflow-footer-actions")], property: "width", expect: /^calc\(100vw - 288px\)$/ },
+  { name: "action bar offset", chain: [...shell, el("div","workflow-footer-actions")], property: "margin", expect: /calc\(50% - 50vw \+ 144px\)$/ },
+  { name: "site footer spans the pane", chain: [...shell, el("footer")], property: "width", expect: /^calc\(100vw - 288px\)$/ },
+  { name: "work column centres", chain: [el("main","app-shell"), el("div","factory-main"), el("div","factory-work")], property: "margin", expect: /^auto$/ },
+  { name: "stage fills the column", chain: [...shell, el("section","workspace"), el("div","workflow-stage")], property: "width", expect: /^100%$/ },
+  { name: "steps column fills the stage", chain: [...shell, el("section","workspace"), el("div","workflow-stage"), el("div","steps-column")], property: "width", expect: /^100%$/ },
   // shell chrome — D734/D736/D737
   { name: "shell typeface", chain: [el("main","app-shell")], property: "font-family", expect: /^Inter,/ },
   { name: "sidebar edge", chain: [el("main","app-shell"), el("aside","topbar")], property: "border-right", expect: /rgba\(255,255,255,\.72\)/ },
