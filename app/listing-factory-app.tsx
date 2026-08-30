@@ -14,6 +14,7 @@ import UploadedListingPhotos from "./uploaded-listing-photos";
 import ListingRows, { type ListingFlag } from "./listing-rows";
 import { confirmAction } from "./confirm-dialog";
 import ListingPhotoOrder from "./listing-photo-order";
+import PhotoLayout from "./photo-layout";
 import { tagsFromTitle } from "./seo-utils";
 import { printifyDpi } from "./print-quality";
 import { isPermanentUploadError, MAX_FILE_BYTES, oversizedFileMessage } from "./upload-policy";
@@ -2777,8 +2778,13 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
               apologise for the split. */}
           <div className="task-panel-lead"><p>Add your own photos to each design below, then drag them into the order buyers will see. The first photo is the one that shows in search.</p></div>
           <div className="task-panel-body">{listingWorkRows(({draft,design,selectedImages,count})=>(<>
-                  <div className="listing-photo-design-identity">{(draft.previewUrl||design.previewUrl)?<img src={draft.previewUrl||design.previewUrl} alt={`${listingLabel(design)} listing photo`}/>:null}<div><span>PHOTOS FOR THIS LISTING</span><b>{listingLabel(design)}</b><small>{count} {count===1?"photo":"photos"} in this listing</small></div></div>
-                  <UploadedListingPhotos productId={draft.id!} onCountChange={count=>setPreparedMockupCounts(current=>({...current,[draft.id!]:count}))}/>{draft.status==="Created"&&draft.id&&<ListingPhotoOrder productId={draft.id} printifyImages={(draft.printifyImages||[]).filter(Boolean)} indices={selectedImages} refreshKey={`${preparedMockupCounts[draft.id]||0}:${design?.sizeGuideName||sizeGuideName}`}/>}{draft.status==="Created"&&design&&draft.id&&<IndividualSizeGuide productId={draft.id} name={design.sizeGuideName} onSaved={name=>updateDesign(design.id,{sizeGuideName:name})}/>}{draft.status==="Created"&&draft.id&&<DownloadListingPhotos productId={draft.id} name={draft.title||draft.name} indices={selectedImages}/>}</>),photoFlags)}</div>
+                  {/* D725 - the identity block and the photos are one layout now
+                      (prototype .goldie-photo-layout), so the design stays beside
+                      the photos being chosen for it instead of scrolling away
+                      above them. Every control below is the same component with
+                      the same handlers. */}
+                  <PhotoLayout previewUrl={draft.previewUrl||design.previewUrl} name={listingLabel(design)} meta={`${count} of 20 photos`}>
+                  <UploadedListingPhotos productId={draft.id!} onCountChange={count=>setPreparedMockupCounts(current=>({...current,[draft.id!]:count}))}/>{draft.status==="Created"&&draft.id&&<ListingPhotoOrder productId={draft.id} printifyImages={(draft.printifyImages||[]).filter(Boolean)} indices={selectedImages} refreshKey={`${preparedMockupCounts[draft.id]||0}:${design?.sizeGuideName||sizeGuideName}`}/>}{draft.status==="Created"&&design&&draft.id&&<IndividualSizeGuide productId={draft.id} name={design.sizeGuideName} onSaved={name=>updateDesign(design.id,{sizeGuideName:name})}/>}{draft.status==="Created"&&draft.id&&<DownloadListingPhotos productId={draft.id} name={draft.title||draft.name} indices={selectedImages}/>}</PhotoLayout></>),photoFlags)}</div>
     </>;
     /* D709 · The ordering panel is gone; its work happens in the photos panel
        above, on the same pass through the listings. task="order" is aliased to it

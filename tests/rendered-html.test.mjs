@@ -4529,7 +4529,7 @@ test("a task row owns its panel inside the product card — D539", async () => {
      listing-rows.tsx, which is the whole point. */
   assert.match(app, /listingWorkRows\(/, "step 2's photo panels render through the shared rows");
   assert.match(app, /<ListingRows /, "so does designTaskRows");
-  assert.match(app, /\{count\} \{count===1\?"photo":"photos"\}/);
+  assert.match(app, /\$\{count\} of 20 photos/, "each listing still says how many photos it has - now against the cap");
   assert.match(css, /\.app-shell \.listing-card-head\{/);
 
   // The legacy shells come off rather than nesting inside the new ones.

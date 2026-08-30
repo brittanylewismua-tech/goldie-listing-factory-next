@@ -388,3 +388,30 @@ html, body { background: #f1d2dc; }
    design preview stays large enough to tell two listings apart (it was 46px). */
 .app-shell .factory-art-card .placement-dpi{font:650 11px/1.35 Inter,system-ui,sans-serif;color:#7a5a6e}
 .app-shell .factory-art-card .placement-printify-link{font:800 11px/1.35 Inter,system-ui,sans-serif;color:#6b365a}
+
+/* D725 · .goldie-photo-layout, measured from the prototype's computed styles.
+   The artwork sits beside the photos instead of above them, so the design a
+   listing is for stays in view while its photos are chosen and ordered. */
+/* The prototype's identity column is 190 wide with a 171x150 design. D684
+   settled that 180 was too small to judge a design by and production went to
+   240 square; a capability beats the preview, so the column adapts: 240 wide,
+   and the artwork keeps the prototype's 1.14:1 frame at 240x210. */
+.app-shell .factory-photo-layout{display:grid;grid-template-columns:240px minmax(0,1fr);gap:18px;align-items:start}
+.app-shell .factory-listing-identity{padding-right:18px}
+.app-shell .factory-design-large{display:grid;place-items:center;width:240px;height:210px;overflow:hidden;border-radius:9px;background:#f1edef}
+.app-shell .factory-design-large img{width:100%;height:100%;object-fit:contain}
+.app-shell .factory-listing-identity>strong{display:block;margin-top:9px;overflow-wrap:anywhere;color:#3d2538;font:700 13px/1.35 Inter,ui-sans-serif,system-ui,sans-serif}
+.app-shell .factory-listing-identity>small{display:block;margin-top:5px;color:#796a74;font:11px/1.4 Inter,ui-sans-serif,system-ui,sans-serif}
+.app-shell .factory-photo-column{min-width:0}
+@media(max-width:760px){.app-shell .factory-photo-layout{grid-template-columns:minmax(0,1fr)}.app-shell .factory-listing-identity{padding-right:0}}
+
+/* The ordering strip is the prototype's .goldie-photos: four columns, gap 8,
+   91-tall tiles, radius 8. Selection is a 2px #6d3b5e edge against 1px #ddd5da
+   - the same weight step the prototype uses, so the chosen photo reads without
+   a second colour. Drag, nudge and save behaviour is untouched. */
+.app-shell .photo-order-strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.app-shell .photo-order-strip>article{display:grid;align-content:start;gap:4px;padding:6px;border:1px solid #ddd5da;border-radius:8px;background:#fff}
+.app-shell .photo-order-strip>article>img{width:100%;height:91px;object-fit:contain;border-radius:6px;background:#fff}
+.app-shell .photo-order-strip>article>b{font:800 10px/1.3 Inter,ui-sans-serif,system-ui,sans-serif;color:#6b4560}
+.app-shell .photo-order-strip>article>.photo-order-name{font:10px/1.35 Inter,ui-sans-serif,system-ui,sans-serif;color:#8b7a85}
+@media(max-width:900px){.app-shell .photo-order-strip{grid-template-columns:repeat(2,minmax(0,1fr))}}
