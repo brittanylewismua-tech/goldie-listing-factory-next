@@ -66,3 +66,40 @@ its line here.
 | `.goldie-help-trigger` | `25px circle; 850 12px; color:#5d3151; border:1px solid rgba(75,40,62,.22); background:rgba(255,255,255,.72)` |
 | `.goldie-state` | `11px 750; color:#37704c; background:#edf7f0; border:1px solid #cae5d2; padding:6px 9px; radius:7px` |
 | `.goldie-link` | `border:0; background:transparent; color:#6b365a; font:750 11px; padding:0` |
+
+## Shell chrome (measured D734–D737)
+
+| selector | declarations |
+| --- | --- |
+| `.goldie-sidebar` | `background:linear-gradient(rgba(255,250,253,.58),rgba(255,246,251,.36)); border-right:1px solid rgba(255,255,255,.72); backdrop-filter:blur(20px) saturate(1.12); padding:36px 26px 25px` |
+| `.goldie-nav` item | `padding:12px 14px; radius 14; 650 13px`; active `background:rgba(255,255,255,.62)`, inactive `color:rgba(74,42,62,.62)` |
+| `.goldie-restart` | `margin:12px 2px 0; padding:10px 12px; border:1px solid rgba(74,42,62,.14); radius 12; background:rgba(255,255,255,.38); 750 11px; text-align:left` |
+| `.goldie-meter` | `background:rgba(255,255,255,.36); border:1px solid rgba(255,255,255,.65); radius 16; padding:13px 14px` |
+| meter label | `750 9px; uppercase; letter-spacing .08em; rgba(74,42,62,.6)` |
+| meter figure | `700 15px; #4b283e; margin:4px 0 8px` |
+| `.goldie-meter-track` | `height:5px; radius 99; rgba(74,42,62,.12)` |
+| `.goldie-top` | `height:64px; padding:0 34px; background:rgba(255,248,252,.72); border-bottom:1px solid rgba(176,127,153,.18); backdrop-filter:blur(14px)` |
+| `.goldie-avatar` | `34x34; radius 50%; background:#4b283e; 800 11px; letter-spacing .04em` |
+| `.goldie-progress` | `grid; repeat(4,1fr); border-bottom:1px solid #ddd5da; margin-bottom:32px` |
+| `.goldie-progress button` | `padding:0 4px 15px; 750 11px; uppercase; letter-spacing .04em; #83737e` |
+| `.goldie-work` | `max-width:1020px; margin:auto; padding:34px 38px 0` |
+| `.goldie-footer` | `sticky bottom:0; width:calc(100vw - 288px); margin:18px 0 0 calc(.5*(100% + 288px - 100vw)); padding:14px max(38px,50vw - 616px); background:rgba(255,255,255,.96); border-top:1px solid #d9cbd3; box-shadow:0 -8px 24px rgba(75,40,62,.07); backdrop-filter:blur(10px)` |
+| `.goldie-footer small` | `11px; #776873` |
+| `.goldie-next` | `radius 8; background:#5d3151; #fff; padding:11px 18px; weight 750` |
+| `.goldie-site-footer` | `padding:24px 34px; border-top:1px solid rgba(143,100,124,.17); background:rgba(255,248,251,.54); flex; space-between; gap 26; #76616f; backdrop-filter:blur(12px)` |
+
+Base typeface throughout is `Inter, ui-sans-serif, system-ui, -apple-system,
+sans-serif` at normal tracking. The only serif is the Goldie wordmark.
+
+## Where production keeps its own answer
+
+The preview is the spec except where a production capability already settled
+the question. Each of these is deliberate, and each is guarded by a test:
+
+| what | prototype | production, and why |
+| --- | --- | --- |
+| artwork beside the photos | 171×150 | 240×210 — D684 settled that 180 was too small to judge a design by |
+| publish-list titles | one line, ellipsis | wrap in full — D98, the last place the whole title can be read |
+| step number under the title | absent | present — D416, it is what stops Connect reading as step one |
+| review list | flat rows | collapsed disclosures — D562, the artwork shows once at a size worth judging and nothing opens itself |
+| forward button | one per screen | one per screen, plus the gate reason beside it — D375/D107 |

@@ -1,10 +1,33 @@
+/* Renders the migrated screens to static HTML so they can be looked at.
+
+   The preview environment has no Printify connection and no batch, so it can
+   only ever render the Connect screen - steps 1 to 4 do not exist there. This
+   is how they get seen: it server-renders the real components with fixture
+   data, and the output goes into a browser beside the prototype.
+
+   Every defect in D738-D741 was found this way and none of them were visible
+   in the components on their own.
+
+     node_modules/.bin/esbuild tools/render-screens.tsx --bundle --platform=node \
+       --format=cjs --jsx=automatic --outfile=screens.cjs \
+       --external:react --external:react-dom
+     node screens.cjs images > /tmp/images.html      # product | images | listing | publish
+
+   The bundle has to sit at the repo root so node resolves react from
+   node_modules; delete it afterwards.
+
+   Known gap: SavedWorkflow loads its products in an effect, and effects do not
+   run under server rendering, so step 1's tiles below are written from that
+   component's source rather than produced by it. Everything else is the real
+   component's own output. */
+
 import { renderToStaticMarkup } from "react-dom/server";
-import FactoryPanel from "./app/factory-panel";
-import ArtworkGrid from "./app/artwork-grid";
-import PhotoLayout from "./app/photo-layout";
-import PageHead from "./app/page-head";
-import FactoryFooter from "./app/factory-footer";
-import RequiredDetailsChecklist from "./app/required-details-checklist";
+import FactoryPanel from "../app/factory-panel";
+import ArtworkGrid from "../app/artwork-grid";
+import PhotoLayout from "../app/photo-layout";
+import PageHead from "../app/page-head";
+import FactoryFooter from "../app/factory-footer";
+import RequiredDetailsChecklist from "../app/required-details-checklist";
 
 const art = (l: string) => `data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><rect width="200" height="200" fill="#fbf7fa"/><text x="100" y="96" font-family="Georgia" font-size="17" font-weight="800" fill="#b4464d" text-anchor="middle">LIFE IS BETTER</text><text x="100" y="126" font-family="Georgia" font-size="20" fill="#b4464d" text-anchor="middle">${l}</text></svg>`)}`;
 
