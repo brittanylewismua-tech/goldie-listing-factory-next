@@ -3805,7 +3805,10 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
             chip on the right, nothing else. With this strip inside it the left
             column grew and the chip, aligned to the bottom, was left stranded
             halfway down the page. It belongs under the head. */}
-          {workflowStep==="connect"&&<div className="value-proof" aria-label="What this batch supports"><span><b>Up to 20 designs</b><small>in one batch</small></span><span><b>Costs and fees</b><small>shown for every variant</small></span><span><b>You approve</b><small>before anything goes live</small></span></div>}
+        {/* D744 · "Up to 20 designs / Costs and fees / You approve" is gone.
+            Her words: "that whole thing. Get rid of that whole shit. None of
+            that needs to be there." It was a marketing strip on a screen whose
+            only job is connecting two accounts. */}
       </section>}
 
       {!returningHome&&<section className={`workspace ${complete&&workflowStep==="designs"?"mockup-workspace":""}`}>

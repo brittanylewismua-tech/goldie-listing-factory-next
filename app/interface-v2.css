@@ -779,3 +779,23 @@ html, body { background: #f1d2dc; }
    preview rather than the preview. */
 .app-shell .context-help-trigger{width:25px;height:25px;display:grid;place-items:center;padding:0;border:1px solid rgba(75,40,62,.22);border-radius:50%;background:rgba(255,255,255,.72);color:#5d3151;font:850 12px/1 Inter,ui-sans-serif,system-ui,sans-serif}
 .app-shell .factory-top-save{color:#6d5d68;font:12px/1.2 Inter,ui-sans-serif,system-ui,sans-serif}
+
+/* D744 · Two things on the Connect screen she named:
+
+   The card was running the full 944 of the column. It holds two rows and a
+   line of copy; at that width the Connect buttons sit a screen away from the
+   words they answer. It reads at 680, which is where it was before the column
+   stopped narrowing itself - the difference is that it starts at the column's
+   left edge now instead of floating in the middle.
+
+   And the bottom of the page had two long bars with a gap of background
+   between them: the step's action bar, then 108px of nothing, then the site
+   footer. The work column fills the pane now and the footer is pushed to the
+   end of it, so the two bars meet. */
+.app-shell .connect-step{max-width:680px}
+.app-shell .factory-work{min-height:calc(100vh - 64px)}
+.app-shell .factory-work footer{margin-top:auto}
+/* The 76px under the stage was there to clear a floating forward button. The
+   bar is the bottom of the step now, so the space only opened a gap between
+   the two bars. */
+.app-shell .factory-work .workflow-stage{padding-bottom:0}
