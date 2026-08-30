@@ -49,8 +49,11 @@
 .app-shell .design-fields .individual-title-builder > summary {
   padding: 10px 12px;
   border-radius: 9px;
-  background: rgba(225, 199, 239, .78);
-  color: #3f1f39;
+  /* D782 - rgba(225,199,239) is hue 279, a lilac from the theme this app used
+     to wear. These two strips were the last cool-purple surfaces left inside
+     a listing row. */
+  background: #eee4eb;
+  color: #4d2a43;
   font-size: 10px;
   font-weight: 800;
   text-decoration: none;
@@ -58,7 +61,7 @@
 
 .app-shell .design-fields .individual-title-builder[open] > summary {
   border-bottom: 0;
-  color: #76531c;
+  color: #4b283e;
 }
 
 .app-shell .design-fields .individual-manual-title { margin-top: 2px; }
@@ -222,7 +225,7 @@
 
 /* D117 · Make a large Etsy shipping-profile library navigable without hiding
  * any money-affecting choice or changing the profile attached to the product. */
-.app-shell .shipping-profile-picker{display:grid;gap:8px;width:100%}.app-shell .shipping-profile-family-warning{display:grid;gap:3px;margin:10px 0;padding:11px 13px;border:1px solid rgba(173,113,42,.24);border-radius:9px;background:rgba(255,240,210,.58);color:#a33a48}
+.app-shell .shipping-profile-picker{display:grid;gap:8px;width:100%}.app-shell .shipping-profile-family-warning{display:grid;gap:3px;margin:10px 0;padding:11px 13px;border:1px solid #d9cbd3;border-radius:9px;background:rgba(232,214,226,.58);color:#a33a48}
 .app-shell .shipping-profile-family-warning b{font-size:12px}
 .app-shell .shipping-profile-family-warning span{font-size:11px;line-height:1.45}
 
@@ -424,7 +427,7 @@
  * use the plum the rest of the screen already uses. */
 .app-shell .ready{color:#63435e!important}
 .app-shell .final-design-group>summary em.ready{
-  background:linear-gradient(145deg,rgba(252,244,254,.78),rgba(246,229,248,.62))!important;
+  background:linear-gradient(145deg,rgba(252,244,254,.78),rgba(232,214,226,.62))!important;
   color:#63435e!important;
 }
 
@@ -436,12 +439,12 @@
  * It isn't broken, but it reads as broken. Give the tile a pending tint so an
  * unloaded photo looks like it is arriving rather than missing. */
 .app-shell .printify-photo-expand{
-  background:linear-gradient(145deg,rgba(246,229,248,.72),rgba(238,222,247,.58))!important;
+  background:linear-gradient(145deg,rgba(232,214,226,.72),rgba(232,214,226,.58))!important;
   border-radius:10px;
   overflow:hidden;
 }
 .app-shell .printify-photo-expand img{
-  background:linear-gradient(145deg,rgba(246,229,248,.72),rgba(238,222,247,.58));
+  background:linear-gradient(145deg,rgba(232,214,226,.72),rgba(232,214,226,.58));
 }
 
 /* D162 · The saved-product tiles are one grid row, all 215px tall, but their
@@ -543,7 +546,7 @@
   cursor:pointer;
 }
 .app-shell .size-choice-grid button:hover{border-color:rgba(153,79,130,.52)}
-.app-shell .size-choice-grid button.selected{border-color:#a2578d;background:linear-gradient(120deg,rgba(250,218,236,.92),rgba(225,207,248,.87));box-shadow:0 0 0 2px rgba(255,255,255,.72)}
+.app-shell .size-choice-grid button.selected{border-color:#a2578d;background:linear-gradient(120deg,rgba(250,218,236,.92),rgba(223,200,213,.87));box-shadow:0 0 0 2px rgba(255,255,255,.72)}
 .app-shell .size-choice-grid button:disabled{opacity:.42;cursor:not-allowed}
 .app-shell .size-choice-grid span{font-size:11px;font-weight:800;white-space:nowrap}
 .app-shell .size-choice-grid em{display:grid;place-items:center;width:19px;height:19px;border-radius:50%;background:#5c304f;color:#fff;font-size:9px;font-style:normal}
@@ -551,7 +554,7 @@
 .app-shell .size-selector-actions{display:flex;flex-wrap:wrap;gap:8px;padding-top:2px}
 .app-shell .size-selector-actions button{min-height:38px;padding:9px 13px;border:1px solid #ded5db;border-radius:16px;background:rgba(255,255,255,.75);color:#603750;font-size:9px;font-weight:850;cursor:pointer}
 .app-shell .size-selector-actions button:last-child{margin-left:auto;background:#5c304f;color:#fff}
-.app-shell .size-selector-actions button.remembered{border-color:rgba(157,80,130,.4);background:linear-gradient(145deg,rgba(232,183,225,.55),rgba(201,144,208,.45));color:#4b283e}
+.app-shell .size-selector-actions button.remembered{border-color:rgba(157,80,130,.4);background:linear-gradient(145deg,rgba(232,183,225,.55),rgba(201,157,186,.45));color:#4b283e}
 .app-shell .size-required{margin:0;padding:10px 12px;border:1px solid #bd7188;border-radius:9px;background:#fff3f7;color:#79374e;font-size:10px;font-weight:800}
 @media(max-width:650px){
   .app-shell .size-selector-head{align-items:start;flex-direction:column}
@@ -562,7 +565,7 @@
  * #e8f5ec / #276543) — same leftover family as D156. */
 .app-shell .color-selector-actions button.remembered{
   border-color:rgba(157,80,130,.4)!important;
-  background:linear-gradient(145deg,rgba(232,183,225,.55),rgba(201,144,208,.45))!important;
+  background:linear-gradient(145deg,rgba(232,183,225,.55),rgba(201,157,186,.45))!important;
   color:#4b283e!important;
 }
 
@@ -983,7 +986,7 @@
   padding:14px 16px;
   border-radius:12px;
   border:1px solid #ded6dc;
-  background:rgba(247,240,250,.7);
+  background:rgba(232,214,226,.7);
 }
 .app-shell .etsy-detail-pending b{display:block;color:#4b283e;font-size:13px}
 .app-shell .etsy-detail-pending span{display:block;margin-top:4px;color:#6b4a66;font-size:11px;line-height:1.45}
@@ -2096,7 +2099,7 @@ body{min-width:1180px!important}
 .app-shell .step-product-state{display:inline-flex;align-items:center;white-space:nowrap;border-radius:16px;padding:5px 11px;font-size:10px;font-weight:800;letter-spacing:.04em}
 .app-shell .step-product-state.tone-ready{background:rgba(214,232,214,.72);color:#2f6a45}
 .app-shell .step-product-state.tone-attention{background:rgba(250,226,238,.85);color:#8a3f66}
-.app-shell .step-product-state.tone-waiting{background:rgba(233,226,238,.8);color:#6b5f70}
+.app-shell .step-product-state.tone-waiting{background:rgba(232,214,226,.8);color:#6b5f70}
 
 /* D498 - step-product-open was replaced by step-product-expand. */
 
@@ -2338,23 +2341,23 @@ body{min-width:1180px!important}
    button as small bold text. And the failure panel moved out from above the
    checklist to below the buttons, where she is actually looking when she
    presses publish. */
-.app-shell .publish-message{background:none!important;border:0!important;border-color:transparent!important;padding:6px 0 0;margin:0;text-align:center;font-size:13px;font-weight:700;line-height:1.4;color:#6f5f7d}
+.app-shell .publish-message{background:none!important;border:0!important;border-color:transparent!important;padding:6px 0 0;margin:0;text-align:center;font-size:13px;font-weight:700;line-height:1.4;color:#6b365a}
 .app-shell .publish-failure-panel{margin:16px 0 0;text-align:left}
 
 /* D481 - the four summary tiles were near-black slabs (#2e2038) dropped into a
    lilac celebration screen, the only pure-dark surface anywhere in the flow.
    They now sit in the brand's own purple. */
-.app-shell .receipt-value-strip>div{background:linear-gradient(160deg,#7b5aa6,#8b5989)!important;color:#fff;box-shadow:0 6px 16px rgba(88,58,110,.22)}
+.app-shell .receipt-value-strip>div{background:linear-gradient(160deg,#75576b,#8b5989)!important;color:#fff;box-shadow:0 6px 16px rgba(109,59,94,.22)}
 .app-shell .receipt-value-strip b{color:#fff}
 .app-shell .receipt-value-strip span{color:rgba(255,255,255,.82)!important}
 
 /* D495 - the bundle publish dialog names every product it is about to publish. */
-.app-shell .publish-confirm-bundle{margin:0 0 10px;font-size:14px;line-height:1.5;color:#6b5748}
+.app-shell .publish-confirm-bundle{margin:0 0 10px;font-size:14px;line-height:1.5;color:#6b365a}
 
 /* D496 - the same batch open in two tabs. */
 .app-shell .batch-tab-conflict{display:grid;gap:6px;justify-items:start;margin:0 0 14px;padding:14px 16px;border:1px solid #dfc8d5;border-left:4px solid var(--alert-line);border-radius:12px;background:var(--alert-tint)}
-.app-shell .batch-tab-conflict b{font-size:15px;color:#4a3b31}
-.app-shell .batch-tab-conflict span{font-size:14px;line-height:1.5;color:#6b5748}
+.app-shell .batch-tab-conflict b{font-size:15px;color:#4b283e}
+.app-shell .batch-tab-conflict span{font-size:14px;line-height:1.5;color:#6b365a}
 .app-shell .batch-tab-conflict button{margin-top:4px;padding:7px 14px;border:1px solid var(--alert-line);border-radius:16px;background:#fff;font-size:13px;font-weight:650;color:var(--alert-ink);cursor:pointer}
 
 /* D499 - each product's rows carry their own Change, as step 1 does, so the
@@ -2466,7 +2469,7 @@ body{min-width:1180px!important}
 .app-shell .task-listing-edit{display:grid;grid-template-columns:152px minmax(0,1fr);gap:16px;align-items:start}
 .app-shell .task-listing-preview{width:152px;padding:0;border:1px solid #ded6dc;border-radius:12px;background:#fff;cursor:zoom-in;overflow:hidden}
 .app-shell .task-listing-preview img{display:block;width:100%;height:152px;object-fit:contain;background:rgba(255,255,255,.6)}
-.app-shell .task-listing-preview span{display:block;padding:6px;color:#704d75;font-size:10px;font-weight:800;letter-spacing:.06em;text-align:center;text-transform:uppercase}
+.app-shell .task-listing-preview span{display:block;padding:6px;color:#6b365a;font-size:10px;font-weight:800;letter-spacing:.06em;text-align:center;text-transform:uppercase}
 @media(max-width:900px){.app-shell .task-listing-edit{grid-template-columns:minmax(0,1fr)}.app-shell .task-listing-preview{width:110px}.app-shell .task-listing-preview img{height:110px}}
 
 /* D542 - a deploy she cannot see is the same to her as a deploy that did not
@@ -3006,7 +3009,7 @@ body{min-width:1180px!important}
   position:sticky!important;
   top:0!important;
   z-index:4!important;
-  background:#fbf6f1!important;
+  background:#fffafc!important;
   border-bottom:1px solid #eee8ec!important;
 }
 .app-shell .listing-card-done{

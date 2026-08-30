@@ -50,7 +50,7 @@ html, body { background: #f1d2dc; }
   position: relative;
   isolation: isolate;
   padding: 0;
-  background: linear-gradient(145deg, rgba(248,228,237,.93), rgba(238,218,239,.9));
+  background: linear-gradient(145deg, rgba(248,228,237,.93), rgba(232,214,226,.9));
 }
 .app-shell > .factory-main::before {
   content: "";
@@ -59,8 +59,8 @@ html, body { background: #f1d2dc; }
   border-radius: 46% 54% 58% 42% / 52% 44% 56% 48%;
   pointer-events: none; filter: blur(34px); opacity: .48;
   background: conic-gradient(from 18deg,
-    rgba(184,174,255,.45), rgba(230,172,216,.42), rgba(255,192,204,.38),
-    rgba(188,181,255,.43), rgba(239,180,220,.4), rgba(184,174,255,.45));
+    rgba(223,200,213,.45), rgba(230,172,216,.42), rgba(255,192,204,.38),
+    rgba(223,200,213,.43), rgba(239,180,220,.4), rgba(223,200,213,.45));
 }
 @media (prefers-reduced-motion: reduce) { .app-shell > .factory-main::before { animation: none; } }
 
@@ -1113,8 +1113,9 @@ html, body { background: #f1d2dc; }
 .app-shell nav.workflow-progress > button.active > span:first-of-type{background:#6d3b5e;color:#fff}
 /* Production keeps the tick for work that is finished behind you - the
    prototype has no notion of a completed step, so it has no rule to copy. It
-   takes the same disc so the rail reads as one family. */
-.app-shell nav.workflow-progress > button.done:not(.active) > span:first-of-type{background:#c88dce;color:#fff}
+   takes the same disc so the rail reads as one family. (D782 corrects the
+   colour - see the palette block at the foot of this file.) */
+.app-shell nav.workflow-progress > button.done:not(.active) > span:first-of-type{color:#fff}
 
 /* The top rail carried two backgrounds and two borders: the prototype's
    rgba(255,249,252,.9) over #dcc5d2 at the top of this file, and a later sweep's
@@ -1246,3 +1247,47 @@ html, body { background: #f1d2dc; }
 .app-shell .factory-work .final-review .step-heading{align-items:flex-end;margin:0 0 7px}
 .app-shell .factory-work .final-review .step-heading h2{margin:0}
 .app-shell .factory-work .final-review .step-copy{margin:0 0 25px;max-width:610px}
+
+/* ==========================================================================
+   D782 · One palette. Three were on screen at once.
+   ==========================================================================
+
+   Counted every colour actually rendered inside the pane on step 3, against
+   the same count on the prototype: 91 distinct against 51. The extra forty
+   were not drift. They were two whole themes this app used to wear, still
+   winning elements the migration never named:
+
+     the cream/gold one   #FBF6F1 behind a listing row, #F0EEEB behind the
+                          keyword bank, #76531C on "Upload or manage keyword
+                          banks", #D9D4CA and #D2C4AE on a select and a
+                          toggle. 235 distinct warm hex values still live in
+                          the sheets.
+     the lilac one        #6547B5 filling the selected title-format pill,
+                          #EEE9FA/#5143 6F/#D7CAEF on the tag chips, #704D75
+                          on two labels. 182 violet, 15 blue.
+
+   Which one won an element depended on where its rule happened to sit in the
+   cascade, which is why one screen could show gold, periwinkle, plum and rose
+   at the same time.
+
+   Each of these takes the prototype's value for the same job, read off its own
+   CSSOM: tag #f1ebef/#5a4152 at radius 6; the selected pill #eee4eb on #6d3b5e
+   and the unselected one white on #d9cdd5; inputs #d8cfd5; links #6b365a;
+   muted labels #7d6d78; surfaces #fff and #fffafc. */
+.app-shell .factory-work .title-style-toggle > button{
+  background:#fff;color:#695461;border:1px solid #d9cdd5;border-radius:8px;font-weight:700}
+.app-shell .factory-work .title-style-toggle > button.active{
+  background:#eee4eb;color:#4d2a43;border-color:#6d3b5e}
+.app-shell .factory-work .keyword-bank.keyword-workspace{background:#fff;border-color:#dfc8d5}
+.app-shell .factory-work .keyword-workspace-heading a{color:#6b365a}
+.app-shell .factory-work .keyword-list-picker select{border-color:#d8cfd5;color:#3b2b36}
+.app-shell .factory-work .title-build-message{color:#7d6d78}
+.app-shell .factory-work .listing-card-head{background:#fffafc}
+.app-shell .factory-work .task-listing-preview span{color:#6b365a}
+.app-shell .factory-work .tag-row > span{
+  background:#f1ebef;color:#5a4152;border-color:transparent;border-radius:6px}
+
+/* And the tick on a finished rail step. D776 gave it #c88dce, which is the
+   orchid the old shell used - h294, nowhere near the plum family. It is the
+   same disc as the current step, one step quieter. */
+.app-shell nav.workflow-progress > button.done:not(.active) > span:first-of-type{background:#6d3b5e}

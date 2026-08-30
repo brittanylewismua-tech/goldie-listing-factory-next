@@ -136,7 +136,7 @@ test("keeps Step 2 saved-product text and selections in the plum palette", async
   assert.match(css, /\.app-shell \.recipe-tile\.selected\{border:2px solid #6c3a5c/);
   assert.match(css, /\.app-shell \.recipe-icon\{[^}]*linear-gradient\(145deg,#f5f2f4,#e8e1e6\)/);
   assert.match(css, /\.app-shell \.recipe-copy>small\{color:#7d6d78/);
-  assert.match(css, /\.app-shell \.recipe-card \.active-recipe\{[\s\S]*background:rgba\(225,194,231,\.34\)!important/);
+  assert.match(css, /\.app-shell \.recipe-card \.active-recipe\{[\s\S]*background:rgba\(223,200,213,\.34\)!important/);
 });
 
 test("places item pricing before shipping in the pricing review", async () => {
@@ -180,8 +180,10 @@ test("keeps later workflow footers usable and removes obsolete description langu
 test("uses the Goldie palette while Printify drafts are being created", async () => {
   const css = await Promise.all([readFile(new URL("app/approved-functional.css",root),"utf8"),readFile(new URL("app/interface-v2.css",root),"utf8")]).then(x=>x.join("\n"));
   assert.match(css, /\.app-shell \.batch-progress\{border-color:#dfc8d5!important/);
-  assert.match(css, /\.app-shell \.progress-ring\{background:conic-gradient\(#b777b0 0 25%,rgba\(224,195,241,\.62\) 25% 100%\)!important/);
-  assert.match(css, /\.app-shell \.progress-track span\{background:linear-gradient\(90deg,#a765a0,#d992c5,#b6a8ff\)!important/);
+  assert.match(css, /\.app-shell \.progress-ring\{background:conic-gradient\(#b777b0 0 25%,rgba\(223,200,213,\.62\) 25% 100%\)!important/);
+  /* D782 - the third stop was #b6a8ff, a periwinkle from the lilac theme this
+     app used to wear. The bar now ends in the plum family it starts in. */
+  assert.match(css, /\.app-shell \.progress-track span\{background:linear-gradient\(90deg,#a765a0,#d992c5,#eee4eb\)!important/);
   assert.match(css, /\.app-shell \.upload-notice\{border-color:rgba\(183,119,176,\.58\)!important/);
 });
 
@@ -814,8 +816,12 @@ test("the Publish screen uses one success language, not three — D155/D156", as
    * same gradient as the rail's completed step. */
   assert.doesNotMatch(approved, /#245d3b|#3f9a63|#47745a/,
     "The success banner must not use the old green palette.");
-  assert.match(approved, /\.app-shell \.step-success-banner>span\{[^}]*background:linear-gradient\(145deg,#e8b7e1,#c990d0\)/,
-    "The banner tick must use the app's completion gradient.");
+  /* D782 - that gradient ran to #c990d0, an orchid at hue 293 that belonged to
+     the lilac theme, not to peach-glass. The rail's completed step is a flat
+     #6d3b5e disc now, so the banner tick is the same disc: still "the same as
+     the rail's completed step", which was always the point of this line. */
+  assert.match(approved, /\.app-shell \.step-success-banner>span\{[^}]*background:#6d3b5e/,
+    "The banner tick must use the same disc as the rail's completed step.");
   assert.match(clarity, /\.app-shell \.ready\{color:#63435e!important\}/,
     "Ready chips must use the plum, not green.");
   assert.doesNotMatch(clarity.replace(/\/\*[\s\S]*?\*\//g, ""), /\.final-safety-readiness/,

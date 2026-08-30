@@ -2,9 +2,9 @@ html,body{background:#050504}
 .diagnostics-link{width:31px;height:31px;display:grid;place-items:center;border:1px solid #d9a541;border-radius:50%;color:#e7b64e;text-decoration:none;font-size:15px;line-height:1;filter:drop-shadow(0 0 6px rgba(231,182,78,.2))}.diagnostics-link:hover{background:#e7b64e;color:#17130d;filter:drop-shadow(0 0 9px rgba(231,182,78,.5))}
 .diagnostics-search{width:100%;margin:0 0 12px;padding:11px 12px;border:1px solid #cdbd9f;border-radius:8px;background:#fff;font:inherit;font-size:11px}
 .account-diagnosis-link{display:inline-block;margin-top:10px;color:#74500c;font-size:9px;font-weight:800;text-decoration:underline;text-underline-offset:3px}.hero .eyebrow{color:#e7b64e}.hero h1,.hero h1 em{color:#f8edd8}.hero h1{font-family:"Hanken Grotesk",Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-weight:700;letter-spacing:-.04em}
-.step-card{background:#f5f0e6;border-color:rgba(234,184,76,.68);box-shadow:0 0 0 1px rgba(234,184,76,.06),0 0 24px rgba(213,153,36,.07),0 18px 45px rgba(0,0,0,.22)}
-.step-card:hover{background:#f8f4ec;border-color:#f2c967;box-shadow:0 0 0 1px rgba(255,213,111,.2),0 0 28px rgba(234,184,76,.14),0 18px 45px rgba(0,0,0,.28)}
-.step-card:focus-within{border-color:#ffd978;box-shadow:0 0 0 1px rgba(255,217,120,.2),0 0 30px rgba(234,184,76,.16)}.step-card.done{border-color:#e7bd61}
+.step-card{background:#fffafc;border-color:rgba(157,80,130,.68);box-shadow:0 0 0 1px rgba(157,80,130,.06),0 0 24px rgba(157,80,130,.07),0 18px 45px rgba(0,0,0,.22)}
+.step-card:hover{background:#fffafc;border-color:#d9cdd5;box-shadow:0 0 0 1px rgba(201,157,186,.2),0 0 28px rgba(157,80,130,.14),0 18px 45px rgba(0,0,0,.28)}
+.step-card:focus-within{border-color:#d9cdd5;box-shadow:0 0 0 1px rgba(201,157,186,.2),0 0 30px rgba(157,80,130,.16)}.step-card.done{border-color:#d9cdd5}
 .inline-field button{background:#eab84c;color:#171006;border:1px solid #f2ca72;box-shadow:0 0 17px rgba(234,184,76,.22)}.inline-field button:hover{background:#f2c965;box-shadow:0 0 23px rgba(234,184,76,.34)}
 .inline-field button:disabled,.launch-button:disabled{background:#d8cfbd;color:#918879;border-color:#d8cfbd;box-shadow:none}
 .launch-panel{background:#f5f0e6;border-color:#f0c765;box-shadow:0 0 0 1px rgba(255,210,104,.08),0 0 34px rgba(234,184,76,.14),0 22px 55px rgba(0,0,0,.3)}
