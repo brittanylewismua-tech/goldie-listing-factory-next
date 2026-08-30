@@ -4670,7 +4670,11 @@ test("placement cards contain only the preview, identity, DPI and editor link â€
   assert.match(css, /\.step-product-cards ?\{[\s\S]{0,200}max-width: ?none/,
     "step 2 fills the work column instead of adding its own gutters");
   assert.match(css, /\.post-draft-workspace\{padding:0 18px 14px\}/);
-  assert.match(css, /\.post-draft-heading\{[^}]*justify-content:center;margin:0 0 6px;padding:0\}/);
+  /* D778 - this asserted justify-content:center. The "Review all listings in
+     Printify" link was the only thing in the work column floating in the
+     middle of the page; every other line on step 2 starts at the same left
+     edge, and nothing in the prototype is centred. */
+  assert.match(css, /\.post-draft-heading\{[^}]*justify-content:flex-start;margin:0 0 6px;padding:0\}/);
 });
 
 test("steps 2, 3 and 4 are the same shape and no row is a bookmark â€” D541", async () => {

@@ -124,3 +124,26 @@ test("D776c: the rail keeps the prototype's underline and segment height", () =>
 
   assert.deepStrictEqual(faults, []);
 });
+
+test("D778: every footer bar has a slot for the step's forward action", async () => {
+  const app = await fs.promises.readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+  const footer = await fs.promises.readFile(new URL("../app/factory-footer.tsx", import.meta.url), "utf8");
+
+  /* Once the Printify drafts exist, step 2 swaps its bar for .post-draft-footer
+     and leaves the ordinary one in the tree, hidden. Both need a slot, or the
+     step's footer portals into whichever one happens to come first in the
+     document - which on step 2 was the hidden one, leaving the bar the seller
+     could see with Back, "Saved automatically", "Save as draft", and no way
+     forward at all. */
+  const bars = [...app.matchAll(/className="workflow-footer-actions[^"]*"/g)];
+  assert.ok(bars.length >= 2, "expected more than one footer bar to exist");
+
+  const slots = [...app.matchAll(/className="factory-footer-slot"/g)];
+  assert.equal(slots.length, bars.length,
+    `${bars.length} footer bars but ${slots.length} slots - a bar without a slot shows no way forward`);
+
+  /* And the portal has to choose the bar that is actually laid out, not the
+     first one in the document. */
+  assert.match(footer, /offsetParent !== null/,
+    "FactoryFooter must pick the slot inside a bar that is actually rendered");
+});

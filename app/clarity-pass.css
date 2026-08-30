@@ -2574,7 +2574,8 @@ body{min-width:1180px!important}
 /* D557 - the batch-wide card was 254px holding 168px of content, with a single
    line of link centred in a 74px block of its own. Two items, said plainly. */
 .app-shell .post-draft-workspace{padding:0 18px 14px}
-.app-shell .post-draft-heading{display:flex;justify-content:center;margin:0 0 6px;padding:0}
+/* D778 - centred, alone, above a page where every other line starts at the same left edge. Nothing in the prototype floats in the middle of the column. */
+.app-shell .post-draft-heading{display:flex;justify-content:flex-start;margin:0 0 6px;padding:0}
 .app-shell .post-draft-heading .open-all-button{margin:0}
 
 /* D681 · "Review all listings in Printify" sat 66px above the card it belongs

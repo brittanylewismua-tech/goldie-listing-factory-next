@@ -40,15 +40,31 @@ import { createPortal } from "react-dom";
 
 export default function FactoryFooter({ status, children }: { status?: ReactNode; children: ReactNode }) {
   const [slot, setSlot] = useState<Element | null>(null);
+  /* D778 · There is more than one bar. Once the Printify drafts exist, step 2
+     swaps its bar for .post-draft-footer and leaves the ordinary one in the
+     tree, hidden. Taking the first slot in the document put the step's footer
+     inside the hidden bar: the visible one showed Back, "Saved automatically"
+     and "Save as draft", and no way forward at all - the same fault D776 fixed
+     on step 1, wearing different clothes.
+
+     So: the slot inside a bar that is actually laid out. No deps, because
+     which bar is showing changes with the step, not with a mount. Setting the
+     same node back is a no-op in React, so this does not loop. */
   useEffect(() => {
-    const find = () => setSlot(document.querySelector(".factory-footer-slot"));
+    const find = () => {
+      const slots = [...document.querySelectorAll(".factory-footer-slot")];
+      const visible = slots.find(candidate => {
+        const bar = candidate.closest(".workflow-footer-actions");
+        return bar instanceof HTMLElement && bar.offsetParent !== null && bar.getBoundingClientRect().width > 0;
+      });
+      setSlot(visible || slots[0] || null);
+    };
     find();
-    /* The bar renders in the same commit, so one pass after paint is enough;
-       the observer is for steps that mount their bar late (an opening batch). */
+    /* For a bar that mounts later than this - an opening batch, say. */
     const observer = new MutationObserver(find);
     observer.observe(document.body, { childList: true, subtree: true });
     return () => observer.disconnect();
-  }, []);
+  });
 
   const body = (
     <>
