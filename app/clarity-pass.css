@@ -1591,20 +1591,9 @@ body{min-width:1180px!important}
   margin-right:auto!important;
   align-self:center!important;
 }
-.app-shell .step-card>.step-content>.step-heading,
-.app-shell .step-card>.step-content>.step-heading>div,
-.app-shell .step-card>.step-content>.step-heading .heading-with-help,
-.app-shell .step-card>.step-content>.step-copy,
-.app-shell .post-draft-heading,
-.app-shell .post-draft-heading>div,
-.app-shell .post-draft-heading h2,
-.app-shell .post-draft-heading p{
-  text-align:center!important;
-  justify-content:center!important;
-}
 .app-shell .step-card>.step-content>.step-heading{align-items:center!important}
 .app-shell .step-card>.step-content>.step-copy{
-  margin-inline:auto!important;
+  margin-inline:0;
   max-width:62ch!important;
 }
 /* The count chip belongs on the card's edge, not in the centred stack. */

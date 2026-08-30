@@ -96,6 +96,7 @@ test("returns every finish-phase transition to the top", async () => {
 test("the connect step swaps its copy on state and hides the timing note once connected", async () => {
   const page = await readFile(listingFactoryPage, "utf8");
   const css = await Promise.all([readFile(new URL("app/approved-functional.css",root),"utf8"),readFile(new URL("app/interface-v2.css",root),"utf8")]).then(x=>x.join("\n"));
+  const v2 = await readFile(new URL("app/interface-v2.css",root),"utf8");
   // C4: the heading covers both accounts, not just Printify.
   /* D284 · The page title already reads "Connect your accounts"; this card
      repeated it word for word directly beneath, the same defect as the Colors
@@ -109,7 +110,11 @@ test("the connect step swaps its copy on state and hides the timing note once co
   assert.match(page, /\{\(!connected\|\|!etsyConnected\)&&<p className="connect-timing">/);
   // C1: a returning seller sees a confirmation, not setup instructions.
   assert.match(page, /connected&&etsyConnected\?"Both connections are verified\./);
-  assert.match(css, /\.connect-timing\{margin:0 auto 22px!important;[^}]*text-align:center\}/);
+  /* D735 · The note still sits under the copy and still disappears once both
+     accounts are connected - both checked above, from the markup. What changed
+     is only that it reads left, with the rest of the migrated screen, instead
+     of centred like the old marketing card. */
+  assert.match(v2, /\.connect-step \.connect-timing\{[^}]*text-align:left\}|\.connect-timing\{text-align:left\}/);
 });
 
 test("preview navigation renders the real later-step experiences", async () => {
@@ -214,6 +219,7 @@ test("centers autosave feedback beneath each workflow panel", async () => {
 
 test("the workflow column is sized against its container, never the viewport — D89", async () => {
   const css = await Promise.all([readFile(new URL("app/approved-functional.css",root),"utf8"),readFile(new URL("app/interface-v2.css",root),"utf8")]).then(x=>x.join("\n"));
+  const v2 = await readFile(new URL("app/interface-v2.css",root),"utf8");
 
   /* .steps-column, .launch-panel and .workflow-footer-actions all live inside
    * .app-shell, which is inset by a 288px sidebar. A vw unit measures the whole
@@ -228,7 +234,18 @@ test("the workflow column is sized against its container, never the viewport —
   assert.doesNotMatch(css, /72vw/,
     "72vw was the specific value that overflowed .app-shell. It must not come back.");
 
-  assert.match(css, /\.workflow-stage>\.steps-column,\.workflow-stage>\.launch-panel\{width:min\(720px,100%\)\}/);
+  /* D735 · The column is sized by interface-v2 now, at a plain 100% of the work
+     column, which is the same rule this test protects - a percentage, resolved
+     against the container. The legacy min(720px,100%) went with the narrow
+     shell it belonged to; it was re-narrowing a column that is already 1020
+     wide, and it pinned the Connect card to 680 inside a 944 content area. */
+  assert.match(css, /\.app-shell \.factory-work \.steps-column,\.app-shell \.factory-work \.launch-panel\{width:100%/);
+  /* The two bars that deliberately break the column to span the pane subtract
+     the sidebar explicitly - calc(100vw - 288px) - and are checked in the
+     browser, not inferred: x=288, right=1440 at a 1440 viewport. That is the
+     opposite of the D89 defect, which measured the viewport and ignored the
+     inset entirely. */
+  assert.match(v2, /\.workflow-footer-actions\{[^}]*width:calc\(100vw - 288px\)/);
 });
 
 test("the listing title field shows the whole title, not an ellipsis — D60", async () => {

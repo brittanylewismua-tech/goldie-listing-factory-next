@@ -584,3 +584,64 @@ html, body { background: #f1d2dc; }
 .app-shell .workflow-footer-actions{position:sticky;bottom:0;z-index:18;box-sizing:border-box;width:calc(100vw - 288px);margin:18px 0 0 calc(50% - 50vw + 144px);padding:14px max(38px,50vw - 616px);background:rgba(255,255,255,.96);border-top:1px solid #d9cbd3;box-shadow:0 -8px 24px rgba(75,40,62,.07);backdrop-filter:blur(10px)}
 @media(max-width:1050px){.app-shell .workflow-footer-actions{width:calc(100vw - 240px);margin-left:calc(50% - 50vw + 120px)}}
 @media(max-width:820px){.app-shell .workflow-footer-actions{width:auto;margin-left:0;padding:14px 18px}}
+
+/* ============================================================================
+ * D734 · SHELL CHROME — the differences left between the built page and the
+ * prototype, measured side by side in the browser rather than guessed:
+ *
+ *   base typeface  Inter, ui-sans-serif, system-ui  (built page: Manrope,
+ *                  "Hanken Grotesk", Inter — so every element that did not
+ *                  name a font, which is most of them, was in the wrong one)
+ *   base tracking  normal                            (built page: -.012em)
+ *   sidebar        linear-gradient(rgba(255,250,253,.58), rgba(255,246,251,.36))
+ *                  border-right 1px rgba(255,255,255,.72)
+ *                  backdrop blur(20px) saturate(1.12)
+ *   top bar        rgba(255,248,252,.72), border-bottom rgba(176,127,153,.18)
+ *   site footer    light, spans the pane, padding 24 34,
+ *                  border-top rgba(143,100,124,.17), colour #76616f
+ *                  (built page: a dark 944px slab inside the content column)
+ *
+ * The rail, the rail's buttons and the sidebar nav were already right and are
+ * left alone.
+ * ========================================================================== */
+.app-shell{font-family:Inter,ui-sans-serif,system-ui,-apple-system,sans-serif;letter-spacing:normal}
+.app-shell > .topbar{background:linear-gradient(rgba(255,250,253,.58),rgba(255,246,251,.36));border-right:1px solid rgba(255,255,255,.72);backdrop-filter:blur(20px) saturate(1.12)}
+.app-shell .factory-top{background:rgba(255,248,252,.72);border-bottom:1px solid rgba(176,127,153,.18)}
+
+/* The footer is the last thing on the page and the prototype runs it edge to
+   edge under the content, in the same light glass as the top bar - not a dark
+   slab floating inside the column. Same full-bleed offset as the action bar,
+   verified in the browser. */
+.app-shell .factory-work > footer{box-sizing:border-box;width:calc(100vw - 288px);margin:32px 0 0 calc(50% - 50vw + 144px);padding:24px 34px;display:flex;align-items:flex-start;justify-content:space-between;gap:26px;border-top:1px solid rgba(143,100,124,.17);border-radius:0;background:rgba(255,248,251,.54);color:#76616f;font:11px/1.5 Inter,ui-sans-serif,system-ui,sans-serif;backdrop-filter:blur(12px)}
+@media(max-width:1050px){.app-shell .factory-work > footer{width:calc(100vw - 240px);margin-left:calc(50% - 50vw + 120px)}}
+@media(max-width:820px){.app-shell .factory-work > footer{width:auto;margin-left:0;padding:24px 18px}}
+
+/* D735 · The Connect screen. The prototype has no Connect step, so this card
+   was never migrated - and it is the only screen the preview environment can
+   render, so it is the one screen Brittany keeps being shown. Measured on the
+   built page: a 680px slab at 30px radius, a 158deg gradient, a 1px
+   rgba(153,79,130,.7) edge and centred text, inside a column where every other
+   surface is a #fffafc panel with a 12px radius and left-aligned text.
+
+   It takes the panel treatment the prototype gives every other section. No
+   markup, no handler and no connection check changes - this is the same card. */
+.app-shell .connect-step{width:100%;border:1px solid #dfc8d5;border-radius:12px;background:#fffafc;box-shadow:0 12px 32px rgba(75,40,62,.11)}
+.app-shell .connect-step > .step-content{padding:18px}
+.app-shell .connect-step .step-copy,.app-shell .connect-step .connect-timing{max-width:64ch;margin-left:0;margin-right:0;text-align:left}
+.app-shell .connect-step .step-copy{color:#6e606a;font:14px/1.55 Inter,ui-sans-serif,system-ui,sans-serif}
+.app-shell .connect-step .connect-timing{color:#7d6d78;font:12px/1.5 Inter,ui-sans-serif,system-ui,sans-serif}
+.app-shell .connect-step .connection-stack{width:100%;max-width:none}
+
+/* D735 · The work column is 1020 wide with 38px of padding, so a step's content
+   area is 944. The legacy shell narrowed it again inside itself - the stage to
+   calc(100% - 108px), the steps column to min(720px,100%), and a :has() rule
+   pinned the Connect step to 524px - which is why the Connect card rendered as
+   a 680px slab floating in a 944px column while every migrated panel beside it
+   ran the full width. The column is the column. */
+.app-shell .factory-work .workflow-stage{width:100%;max-width:none;margin-left:0;margin-right:0}
+.app-shell .factory-work .steps-column,.app-shell .factory-work .launch-panel{width:100%;max-width:none}
+/* The prototype left-aligns its copy everywhere; the centred step copy was a
+   leftover of the old marketing-style cards. */
+.app-shell .step-card > .step-content > .step-copy,.app-shell .connect-step .connect-timing{text-align:left}
+.app-shell .connect-step .step-copy{margin-left:0;margin-right:0;max-width:64ch}
+.app-shell .connect-step .connection-setup,.app-shell .connect-step .connection-stack{width:100%;max-width:none;margin-left:0;margin-right:0}
