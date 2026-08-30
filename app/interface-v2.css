@@ -822,3 +822,23 @@ html, body { background: #f1d2dc; }
 
    interface-v2 owns the chip only where there is no CTA to span - the panel
    state chips - and leaves this one to the rules that were argued for. */
+
+/* D748 · A disabled control that looks enabled is a lie, and this interface
+   disables a lot of them: the picker while a product loads, Save while a name
+   is blank, Prepare while the gate is unmet. Nine of the fifteen buttons that
+   can be disabled had no disabled style at all - they simply stopped
+   responding. One rule, so it cannot be forgotten on the next one. */
+.app-shell button:disabled,.app-shell button[aria-disabled="true"]{opacity:.5;cursor:not-allowed;box-shadow:none}
+.app-shell button:disabled:hover,.app-shell button[aria-disabled="true"]:hover{filter:none;transform:none}
+/* Focus has to be visible for keyboard use, and only for keyboard use. */
+.app-shell button:focus-visible,.app-shell a:focus-visible,.app-shell input:focus-visible,.app-shell select:focus-visible,.app-shell textarea:focus-visible,.app-shell summary:focus-visible{outline:2px solid #6c3a5c;outline-offset:2px}
+
+/* D748 · "18 listings ready" was printing #3f2338 on the #2d1d29 publish box -
+   dark on dark, the headline of the screen where money is spent. D233's card
+   -title rule sets colour with !important on every h3 inside .workflow-stage,
+   and the publish box is inside it. The box is the one dark surface in the
+   interface, so it states its own text colours rather than inheriting a rule
+   written for pale cards. */
+.app-shell .factory-publish-box h3,.app-shell .factory-publish-box .publish-live-warning h3{color:#fff}
+.app-shell .factory-publish-box small,.app-shell .factory-publish-box .publish-live-warning small{color:#c7b8c3}
+.app-shell .factory-publish-box p,.app-shell .factory-publish-box .publish-live-warning p{color:#c8b9c4}

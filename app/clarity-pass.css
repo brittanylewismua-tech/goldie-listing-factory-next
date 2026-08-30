@@ -1095,8 +1095,11 @@
 
    The hero h1 is a separate rule and stays DM Serif Display - that is the brand
    mark on the page title, not a heading she has to read at speed. */
-.app-shell .workflow-stage h2,
-.app-shell .workflow-stage h3,
+/* D748 · The dark publish box is inside .workflow-stage and this rule sets
+   colour with !important, so "18 listings ready" printed #3f2338 on #2d1d29.
+   The card-title system is for pale cards; the one dark surface opts out. */
+.app-shell .workflow-stage h2:not(.factory-publish-box *),
+.app-shell .workflow-stage h3:not(.factory-publish-box *),
 .management-page h2,
 .management-page h3,
 .managementOnly h2,
