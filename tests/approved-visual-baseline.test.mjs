@@ -1317,19 +1317,28 @@ test("D233: one heading system, two typefaces, no child larger than its parent",
   assert.match(css, /D233 · ONE HEADING SYSTEM FOR THE WHOLE APP/);
 
   const scale = css.slice(css.indexOf("D233 · ONE HEADING SYSTEM"));
-  const sizeOf = (selector) => {
-    const block = scale.slice(scale.indexOf(selector));
-    return Number(/font-size:\s*(\d+)px/.exec(block.slice(0, block.indexOf("}")))?.[1]);
+  const sizeOf = (selector, source = scale) => {
+    const block = source.slice(source.indexOf(selector));
+    const declarations = block.slice(0, block.indexOf("}"));
+    /* D727 · The factory title is written as a `font` shorthand now, so the
+       size can arrive either way. */
+    return Number((/font-size:\s*(\d+)px/.exec(declarations) || /font:[^;]*?(\d+)px\//.exec(declarations))?.[1]);
   };
 
-  const page = sizeOf(".app-shell .workflow-hero h1");
+  /* D727 · The Listing Factory's page title left this block: it was set here in
+     DM Serif 34px with !important, which beat the rule interface-v2 wrote for
+     it and kept the migrated head serif. interface-v2 owns it now, at the
+     prototype's Inter 700 29px. The rule this test exists for is unchanged -
+     the page title still outranks the card title beneath it. */
+  const page = sizeOf(".app-shell .factory-page-head h1", css);
   const card = sizeOf(".app-shell .workflow-stage h2");
   const group = sizeOf(".app-shell .workflow-stage h4");
 
   assert.ok(page > card, `page title ${page} must outrank card title ${card}`);
   assert.ok(card > group, `card title ${card} must outrank group title ${group}`);
 
-  /* Management and workflow page titles must be the same role, one size. */
+  /* The management pages are not being migrated, so their title keeps the
+     size this block gave it. */
   assert.match(scale, /\.management-page h1[\s\S]{0,160}font-size: 34px/);
   /* And Fraunces must not reappear in a heading RULE — the comment above the
      scale names it as the thing being removed, so strip comments first. */

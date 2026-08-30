@@ -1106,8 +1106,14 @@
    /mockups, /batches and /usage. So the D233 scale never reached the
    management pages at all, and the "second type scale" I chased through D254
    was simply this rule not applying. The scoping is the bug. */
-.app-shell .workflow-hero h1,
-.app-shell .hero h1,
+/* D727 · The two .app-shell selectors left this block. They set the Listing
+   Factory's page title in DM Serif at 34px with six !important declarations,
+   which is why the title rendered serif no matter what interface-v2 said - a
+   defect that survived a screenshot review because the rule written for it
+   existed and simply lost. The prototype's title is Inter 700 29px, and her
+   own note on headings was "the headings should be a sans serif, really easy
+   to read text". interface-v2 owns the factory title now; the management
+   pages, which are not being migrated, keep theirs unchanged. */
 .management-page h1,
 .mockupHero h1 {
   font-family: "DM Serif Display", Georgia, serif !important;

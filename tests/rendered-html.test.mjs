@@ -1326,7 +1326,13 @@ test("places each step count directly below its page title", async () => {
   assert.match(page, /<p className="hero-step-count">\{workflowStep==="connect"\?"Account setup · before you start":`Step \$\{railTopNumber\} of \$\{RAIL_STAGES\.length\} · \$\{currentStage\.label\}`\}<\/p>/);
   assert.doesNotMatch(page, /className="approved-step-count"/);
   assert.match(styles, /\.app-shell \.hero-step-count/);
-  assert.match(styles, /\.app-shell \.hero\{padding-bottom:30px!important\}/);
+  /* D727 · The room under the head used to come from
+     `.app-shell .hero{padding-bottom:30px!important}`. The migrated head owns
+     its own spacing now, at the 25px measured from the prototype, and the
+     !important is gone - it was beating interface-v2 and putting 80px between
+     the title and the first panel. */
+  assert.match(styles, /\.app-shell \.factory-page-head\{[^}]*margin:0 0 25px/);
+  assert.doesNotMatch(styles, /\.app-shell \.hero\{padding-bottom:30px!important\}/);
 });
 
 test("labels every progress bubble with a short workflow name", async () => {

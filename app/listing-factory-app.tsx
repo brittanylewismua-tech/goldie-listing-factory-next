@@ -15,6 +15,7 @@ import ListingRows, { type ListingFlag } from "./listing-rows";
 import { confirmAction } from "./confirm-dialog";
 import ListingPhotoOrder from "./listing-photo-order";
 import PhotoLayout from "./photo-layout";
+import PageHead from "./page-head";
 import { tagsFromTitle } from "./seo-utils";
 import { printifyDpi } from "./print-quality";
 import { isPermanentUploadError, MAX_FILE_BYTES, oversizedFileMessage } from "./upload-policy";
@@ -3669,6 +3670,18 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
     setOpenAllMessage(opened === editableDrafts.length ? `${opened} Printify editor tabs opened.` : `Your browser opened ${opened} of ${editableDrafts.length}. Allow pop-ups for this site to open the rest.`);
   }
 
+  /* D726 · The prototype's .goldie-summary chip. Every value is read from the
+     same state the step itself renders, so it cannot drift from the screen. */
+  const createdDrafts = drafts.filter(draft=>draft.status==="Created").length;
+  const heroSummary = workflowStep==="connect"
+    ? (connected&&etsyConnected?"Both accounts connected":connected?"Printify connected":etsyConnected?"Etsy connected":"Not connected yet")
+    : workflowStep==="setup"
+      ? (productSelected?"1 product selected":"No product selected")
+      : workflowStep==="designs"
+        ? `${files.length} ${files.length===1?"design":"designs"}${createdDrafts?` · ${createdDrafts} drafts`:""}`
+        : workflowStep==="review"
+          ? `${createdDrafts} of ${files.length} drafts created`
+          : `${files.length} ${files.length===1?"listing":"listings"} in this batch`;
   const workflowHero = {
     connect: { eyebrow: "ACCOUNT SETUP", title: "Connect your accounts", copy: connected&&etsyConnected?"Both accounts are connected and ready.":"Connect Printify and Etsy so Goldie can build and publish your listings." },
     setup: templateDetails&&productSelected
@@ -3760,8 +3773,18 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
       {running&&uploadNoticeOpen&&<div className="upload-notice-backdrop" role="presentation"><section className="upload-notice" role="alertdialog" aria-modal="true" aria-labelledby="upload-notice-title" aria-describedby="upload-notice-copy"><span className="upload-notice-icon">!</span><p className="mini-label">UPLOADS IN PROGRESS</p><h2 id="upload-notice-title">Wait. Your files are still uploading.</h2><p id="upload-notice-copy">Are you sure you want to leave? Leaving now may stop the unfinished uploads.</p><div className="upload-notice-progress"><span className="upload-guard-pulse"/><b>{processed} of {runTotal} finished</b></div><div className="upload-notice-actions"><button autoFocus onClick={()=>{setUploadNoticeOpen(false);setLeaveTarget("")}}>Stay on this page</button><button className="danger" onClick={()=>{if(leaveTarget)window.location.href=leaveTarget}}>Leave and stop uploads</button></div></section></div>}
 
       {!returningHome&&<section className="hero workflow-hero">
-        <div>
-          <p className="eyebrow">{workflowHero.eyebrow}</p>
+        {/* D726 · prototype .goldie-page-head. The eyebrow ("STEP 1 OF 4") and
+            the step-count line ("Step 1 of 4 · Choose product") both left with
+            the old head: the rail immediately beneath prints that same fact,
+            so the screen said it three times. The chip on the right states
+            where the step actually stands, from live state. */}
+        <PageHead
+          title={workflowHero.title}
+          copy={workflowHero.copy}
+          help={<ContextHelp label={`Open detailed help for ${PROGRESS_STEPS[progressIndex]}`} title={WORKFLOW_HELP[progressIndex].title} intro={WORKFLOW_HELP[progressIndex].intro} sections={WORKFLOW_HELP[progressIndex].sections}/>}
+          stepCount={<p className="hero-step-count">{workflowStep==="connect"?"Account setup · before you start":`Step ${railTopNumber} of ${RAIL_STAGES.length} · ${currentStage.label}`}</p>}
+          summary={heroSummary}
+        >
           {restoreNotice&&<p className="batch-restore-notice" role="status">{restoreNotice}</p>}
           {/* D659 · Where the blocking modal used to be. Same information, on
               the page, next to the products she can actually choose. */}
@@ -3769,11 +3792,8 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
           {/* D659 · More than one batch is open, so Goldie asks instead of
               picking one and instead of pretending there is nothing to resume. */}
           {resumeChoices.length>1&&<section className="batch-resume-choice" aria-label="Choose which batch to resume"><b>Which batch do you want to continue?</b><span>You have {resumeChoices.length} batches open. Goldie will not guess.</span><ul>{resumeChoices.map(choice=><li key={choice.id}><button type="button" onClick={()=>{setResumeChoices([]);setRestoringBatch(true);const target=new URL(window.location.href);target.searchParams.set("batch",choice.id);window.history.replaceState({},"",target);void restoreBatchById(choice.id,target.searchParams.get("step"),target.searchParams.get("phase"))}}><b>{choice.name}</b><small>{choice.drafts?`${choice.drafts} ${choice.drafts===1?"draft":"drafts"}`:"No drafts yet"}</small></button></li>)}</ul><button type="button" className="secondary-action" onClick={()=>setResumeChoices([])}>Start something new instead</button></section>}
-          <div className="heading-with-help hero-title-help"><h1>{workflowHero.title}</h1><ContextHelp label={`Open detailed help for ${PROGRESS_STEPS[progressIndex]}`} title={WORKFLOW_HELP[progressIndex].title} intro={WORKFLOW_HELP[progressIndex].intro} sections={WORKFLOW_HELP[progressIndex].sections}/></div>
-          <p className="hero-step-count">{workflowStep==="connect"?"Account setup · before you start":`Step ${railTopNumber} of ${RAIL_STAGES.length} · ${currentStage.label}`}</p>
-          <p className="hero-copy">{workflowHero.copy}</p>
           {workflowStep==="connect"&&<div className="value-proof" aria-label="What this batch supports"><span><b>Up to 20 designs</b><small>in one batch</small></span><span><b>Costs and fees</b><small>shown for every variant</small></span><span><b>You approve</b><small>before anything goes live</small></span></div>}
-        </div>
+        </PageHead>
       </section>}
 
       {!returningHome&&<section className={`workspace ${complete&&workflowStep==="designs"?"mockup-workspace":""}`}>
