@@ -961,3 +961,16 @@ html, body { background: #f1d2dc; }
 /* And the forward button was stretching to the full width of the row - a
    1,140px dark slab across the page. It is a button. */
 .app-shell .factory-footer .workflow-next{width:auto;flex:0 0 auto;justify-self:end}
+
+/* D764 · The 122px between the head and the Connect card.
+
+   25 of it is the head's own margin, which is the prototype's. The other 97
+   came from .workflow-stage: it carries min-height:calc(100vh - 174px) and
+   justify-content:center, so on a short screen it centres its content
+   vertically and pushes the card down - 97px above, 97 below. That is the old
+   shell's full-height stage, and in a column that already starts under a rail
+   it just opens a hole under the heading.
+
+   Content starts at the top. The stage keeps its min-height so the footer
+   still sits at the bottom of a short page. */
+.app-shell .factory-work .workflow-stage{justify-content:flex-start}
