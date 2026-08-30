@@ -1099,8 +1099,8 @@ html, body { background: #f1d2dc; }
    visible: the segment ran 59px tall against the prototype's 37; the circle on
    the step you were STANDING on had no fill, so its white numeral sat on the
    pane and the step read as empty; and with a single label ink the rail could
-   not say where you were. Those rules are gone; these are the prototype's. */
-.app-shell nav.workflow-progress > button{padding:0 4px 15px}
+   not say where you were. Those rules are gone; these are the prototype's.
+   (The 0/4/15 padding is already stated where the rail is first defined.) */
 .app-shell nav.workflow-progress > button > span:first-of-type{
   width:22px;height:22px;min-width:22px;flex:0 0 22px;
   border:0;border-radius:50%;box-shadow:none;
