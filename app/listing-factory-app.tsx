@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import Image from "next/image";
 import SupportChat from "./support-chat";
 import { workflowScreen } from "./step-videos";
+import FactoryPanel from "./factory-panel";
 import { runBounded } from "./bounded-work";
 import { productReadiness, recipeCarriesApprovedPricing, type Readiness } from "./product-readiness";
 import { KeywordBank, SavedWorkflow, type KeywordList, type Pricing, type ProductBundle, type Recipe } from "./factory-tools";
@@ -2870,7 +2871,32 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
               if(!open){if(reachable){setActiveTask(task);openBundleProduct(index)}return}
               setActiveTask(current=>current===task?"":task);
             };
-            return <div className="batch-product-rows">{rows.map(row=>{const rowOpen=Boolean(open&&row.task&&activeTask===row.task);return <Fragment key={row.label}><div
+            /* D723 · Each task row is a prototype panel: index chip, title, description,
+       state chip, and its work in the body. The row's own handlers, guards and
+       reachability rules are unchanged and are handed to the panel. */
+    return <div className="batch-product-rows">{rows.map((row,rowIndex)=>{const rowOpen=Boolean(open&&row.task&&activeTask===row.task);
+      const reachableRow=!(switchingProduct||(!open&&!reachable));
+      if(!row.report) return <FactoryPanel
+        key={row.label}
+        index={rowIndex+1}
+        title={row.label}
+        description={row.detail||row.advice||undefined}
+        state={row.value}
+        tone={row.done?"done":row.pending?"pending":row.optional?"optional":"attention"}
+        open={rowOpen}
+        onToggle={()=>{openRow(row.target,row.task)}}
+        toggleLabel={opening?"Opening…":rowOpen?"Close":"Change"}
+        toggleDisabled={!reachableRow}
+        toggleTitle={!reachableRow?`Finish ${list[index-1]?.name||"the product above"} first`:undefined}
+      >
+        {/* D553 · clicking the panel's own surface closes it, while every real
+            control inside keeps working. Carried over unchanged from the row
+            implementation this replaces. */}
+        <div onClick={event=>{const target=event.target as HTMLElement;
+          if(target.closest("button,a,input,textarea,select,label,summary,[role='button'],[contenteditable='true'],[draggable='true']"))return;
+          openRow(row.target,row.task)}}>{row.task?taskPanel(row.task):null}</div>
+      </FactoryPanel>;
+      return <Fragment key={row.label}><div
               className={`batch-product-row ${row.done?"settled":row.pending?"pending":row.optional?"optional":"needed"} ${rowOpen?"open":""} ${row.report?"reporting":switchingProduct||(!open&&!reachable)?"":"clickable"}`}
               role={row.report||switchingProduct||(!open&&!reachable)?undefined:"button"}
               tabIndex={row.report||switchingProduct||(!open&&!reachable)?undefined:0}

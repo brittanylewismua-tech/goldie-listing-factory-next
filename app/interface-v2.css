@@ -317,3 +317,47 @@ html, body { background: #f1d2dc; }
 .app-shell .factory-work > .workspace > nav.workflow-progress { order: 1; }
 .app-shell .factory-work > *:not(nav.workflow-progress):not(.hero) { order: 3; }
 .app-shell .factory-work > .workflow-footer-actions { order: 9; margin-top: auto; }
+
+/* ============================================================================
+ * D723 · FACTORY PANEL — the prototype's .goldie-panel, as a real component.
+ * Measured: panel #fffafc / 1px #dfc8d5 / r12 / 0 12px 32px rgba(75,40,62,.11)
+ *           head  grid 48px 1fr auto, gap 13, padding 15 17, bg #fffafc
+ *           index 34x34 r9 #eee7ec #643e5a 800/12
+ *           title strong 14 (mb 3) / small 12 #7d6d78
+ *           state #edf7f0 1px #cae5d2 r7 750/11 #37704c pad 7 9
+ *           body  border-top 1px #eee8ec, padding 18, bg #fff
+ * ==========================================================================*/
+.app-shell .factory-panel{
+  background:#fffafc;border:1px solid #dfc8d5;border-radius:12px;
+  margin-bottom:14px;overflow:hidden;box-shadow:0 12px 32px rgba(75,40,62,.11);
+}
+.app-shell .factory-panel-head{
+  display:grid;grid-template-columns:34px minmax(0,1fr) auto auto;
+  align-items:center;gap:13px;padding:15px 17px;background:#fffafc;
+}
+.app-shell .factory-panel-index{
+  width:34px;height:34px;border-radius:9px;background:#eee7ec;color:#643e5a;
+  display:grid;place-items:center;font:800 12px/1 Inter,system-ui,sans-serif;
+}
+.app-shell .factory-panel-title{min-width:0}
+.app-shell .factory-panel-title strong{
+  display:block;font:700 14px/1.3 Inter,system-ui,sans-serif;color:#3d2538;margin-bottom:3px;
+}
+.app-shell .factory-panel-title small{
+  display:block;font:400 12px/1.35 Inter,system-ui,sans-serif;color:#7d6d78;
+}
+.app-shell .factory-panel-state{
+  background:#edf7f0;border:1px solid #cae5d2;border-radius:7px;padding:7px 9px;
+  color:#37704c;font:750 11px/1 Inter,system-ui,sans-serif;white-space:nowrap;
+}
+.app-shell .factory-panel.is-attention .factory-panel-state{background:#fdf1f3;border-color:#eccdd4;color:#a33a48}
+.app-shell .factory-panel.is-pending  .factory-panel-state{background:#fdf6ee;border-color:#ecdcc6;color:#8a5a20}
+.app-shell .factory-panel.is-optional .factory-panel-state{background:#f5f2f5;border-color:#e2d9e0;color:#7d6d78}
+.app-shell .factory-panel-toggle{
+  border:1px solid #ded5db;background:#fff;color:#3d2538;border-radius:8px;
+  padding:0 14px;height:34px;min-height:0;min-width:0;
+  font:700 12px/1 Inter,system-ui,sans-serif;cursor:pointer;
+}
+.app-shell .factory-panel-toggle:hover:not(:disabled){background:#faf5f8}
+.app-shell .factory-panel-toggle:disabled{opacity:.45;cursor:not-allowed}
+.app-shell .factory-panel-body{border-top:1px solid #eee8ec;padding:18px;background:#fff}
