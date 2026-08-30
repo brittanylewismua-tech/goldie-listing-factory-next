@@ -1186,7 +1186,6 @@
    the 18px wordmark. Selector taken from the live DOM, not guessed — the first
    attempt invented two class names that render nowhere, which the liveness test
    caught before this shipped. */
-.app-shell .approved-usage>b{font-size:18px!important}
 
 /* PANEL SHELL · the in-card panel is an inset surface with the same padding and
    radius as a pricing section, so the two read as the same kind of object. */
