@@ -3681,8 +3681,12 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
   /* D726 · The prototype's .goldie-summary chip. Every value is read from the
      same state the step itself renders, so it cannot drift from the screen. */
   const createdDrafts = drafts.filter(draft=>draft.status==="Created").length;
+  const connectStatus = connected&&etsyConnected?"Both accounts connected":connected?"Printify connected":etsyConnected?"Etsy connected":"Not connected yet";
+  /* D760 · On Connect the status belongs on the card it describes, not in the
+     page head's far corner. Her words: "they're not connected yet should be on
+     the card and not way off in the far right". */
   const heroSummary = workflowStep==="connect"
-    ? (connected&&etsyConnected?"Both accounts connected":connected?"Printify connected":etsyConnected?"Etsy connected":"Not connected yet")
+    ? undefined
     : workflowStep==="setup"
       ? (productSelected?"1 product selected":"No product selected")
       : workflowStep==="designs"
@@ -3901,6 +3905,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
           <article className={`step-card connect-step workflow-panel ${connected ? "done" : ""} ${workflowStep==="connect"?"active-panel":"hidden-panel"}`}>
             
             <div className="step-content">
+              <p className="connect-status">{connectStatus}</p>
               {/* D284 · The page title already reads "Connect your accounts"; this card repeated it word for word directly beneath. */}
               <p className="step-copy">{connected&&etsyConnected?"Both connections are verified. Goldie will remember them for future batches.":"Connect the Printify account that creates your products and the Etsy shop that receives them."}</p>
               {(!connected||!etsyConnected)&&<p className="connect-timing">◷ First-time connection usually takes about 2 minutes.</p>}
