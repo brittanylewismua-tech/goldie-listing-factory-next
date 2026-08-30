@@ -974,3 +974,18 @@ html, body { background: #f1d2dc; }
    Content starts at the top. The stage keeps its min-height so the footer
    still sits at the bottom of a short page. */
 .app-shell .factory-work .workflow-stage{justify-content:flex-start}
+
+/* D765 · Inside panel 01 the body opened with three lines of explainer -
+   "Connect a product template to Printify once…" - above a "5 SAVED PRODUCTS"
+   sub-heading, above the grid. The panel's own description line already names
+   the chosen product, and the prototype's panel goes straight from its head to
+   its products. The explainer is for the empty state, where there is nothing
+   else to look at; once products exist it is 58px of preamble in front of
+   them. */
+.app-shell .factory-panel .recipe-card .step-copy{display:none}
+.app-shell .factory-panel .recipe-card:has(.recipe-grid) .recipe-library-head{margin-top:0}
+/* The gap under the head measured 33 against the prototype's 25: the panel
+   carries its own 14px bottom margin and the head 25, and the first panel does
+   not need both. */
+.app-shell .hero + .workspace .factory-panel:first-of-type,
+.app-shell .factory-work .steps-column > .factory-panel:first-child{margin-top:0}
