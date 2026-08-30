@@ -118,6 +118,7 @@ html, body { background: #f1d2dc; }
 
 /* workflow rail — prototype .goldie-progress */
 .app-shell .workspace { display: contents; }
+.app-shell .factory-work { display: flex; flex-direction: column; }
 .app-shell nav.workflow-progress {
   display: grid; grid-template-columns: repeat(4, 1fr); align-items: end;
   border-bottom: 1px solid #ddd5da; margin: 0 0 32px; padding: 0;
@@ -307,3 +308,12 @@ html, body { background: #f1d2dc; }
 .app-shell .batch-product-row.open .row-label{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 /* D348 · the card must let an open shipping dropdown out */
 .app-shell .step-card:has(.shipping-combobox-panel){overflow:visible}
+
+/* D721 · The work column wrapper moved these a level down, so ordering rules
+   aimed at .factory-main's children stopped applying and the page title
+   rendered above the rail. They belong to .factory-work now. */
+.app-shell .factory-work > .hero { order: 2; }
+.app-shell .factory-work > nav.workflow-progress,
+.app-shell .factory-work > .workspace > nav.workflow-progress { order: 1; }
+.app-shell .factory-work > *:not(nav.workflow-progress):not(.hero) { order: 3; }
+.app-shell .factory-work > .workflow-footer-actions { order: 9; margin-top: auto; }
