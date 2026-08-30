@@ -882,3 +882,32 @@ html, body { background: #f1d2dc; }
 .app-shell .preflight h2,.app-shell .publish-confirm h2,.app-shell .upload-notice h2,.app-shell .context-help-dialog h2,.app-shell .batch-opening b{font-family:Inter,ui-sans-serif,system-ui,-apple-system,sans-serif;font-weight:700;letter-spacing:-.01em}
 /* And the eyebrow above them: .mini-label was the last Manrope on the page. */
 .app-shell .mini-label{font-family:Inter,ui-sans-serif,system-ui,-apple-system,sans-serif}
+
+/* D754 · Flat surfaces.
+
+   The prototype uses a gradient in exactly three places: the sidebar, the main
+   pane behind the content, and the band behind a product image. Everything
+   else is a flat tint with one hairline. Production still had 41 gradient
+   surfaces rendering inside the factory - cards, modals, notices, panel heads,
+   icon discs - which is why panels read as pillowy next to the preview's flat
+   ones no matter how the borders and radii were set.
+
+   These are the containers. Their fills come from the same three tints the
+   migrated panels use: #fffafc for a card, #fff for a row, rgba(255,249,252,.9)
+   for a bar. */
+.app-shell .step-card,.app-shell .launch-panel,.app-shell .post-draft-workspace,
+.app-shell .publish-confirm,.app-shell .upload-notice,.app-shell .preflight,
+.app-shell .approved-token-form,.app-shell .approved-token-instructions,
+.app-shell .task-panel-heading,.app-shell .batch-progress,.app-shell .file-reminder,
+.app-shell .batch-title-preview,.app-shell .ai-title-disclaimer{background-image:none}
+.app-shell .step-card,.app-shell .launch-panel,.app-shell .post-draft-workspace{background-color:#fffafc}
+.app-shell .publish-confirm,.app-shell .upload-notice,.app-shell .preflight{background-color:#fffafc}
+.app-shell .approved-token-form,.app-shell .approved-token-instructions{background-color:#fff}
+.app-shell .task-panel-heading,.app-shell .batch-progress,.app-shell .file-reminder{background-color:#fffafc}
+
+/* D754 · The modal's one action was a 999px pill in a translucent white,
+   beside a preflight whose buttons are radius-8 and filled. Two dialogs, two
+   button languages. The modal takes the same pair the preflight uses, and the
+   alert disc keeps its red - that one is doing a job. */
+.app-shell .publish-confirm-actions button{border:0;border-radius:8px;background:#5d3151;color:#fff;padding:11px 18px;font:750 13px/1.2 Inter,ui-sans-serif,system-ui,sans-serif}
+.app-shell .publish-confirm-actions button:hover:not(:disabled){background:#4e2844}

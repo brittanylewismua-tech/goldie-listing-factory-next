@@ -360,7 +360,6 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .app-shell .modalSaving,
 .app-shell .batch-description{
   border-color:rgba(142,88,134,.24)!important;
-  background:linear-gradient(145deg,rgba(251,241,249,.72),rgba(239,223,247,.58))!important;
   color:rgba(74,42,62,.72)!important;
 }
 .app-shell .file-reminder{border-left:3px solid #b56fa6!important}
@@ -419,15 +418,15 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .app-shell .title-build-message,
 .app-shell .individual-size-guide p{color:#704d75!important}
 .app-shell .variant-pricing.approved{border-color:rgba(139,89,137,.28)!important;background:rgba(252,244,254,.62)!important}
-.app-shell .batch-progress{border-color:rgba(139,89,137,.28)!important;background:linear-gradient(145deg,rgba(252,244,254,.74),rgba(246,229,248,.58))!important}
+.app-shell .batch-progress{border-color:rgba(139,89,137,.28)!important}
 .app-shell .progress-ring{background:conic-gradient(#b777b0 0 25%,rgba(224,195,241,.62) 25% 100%)!important}
 .app-shell .progress-ring:before{background:#faf1f9!important}
 .app-shell .progress-ring span{color:#5b304f!important}
 .app-shell .progress-copy span{color:rgba(74,42,62,.68)!important}
 .app-shell .progress-track{background:rgba(176,122,171,.16)!important}
 .app-shell .progress-track span{background:linear-gradient(90deg,#a765a0,#d992c5,#b6a8ff)!important}
-.app-shell .upload-notice{border-color:rgba(183,119,176,.58)!important;background:linear-gradient(145deg,rgba(255,250,253,.96),rgba(246,229,248,.94))!important;color:#4b283e!important}
-.app-shell .upload-notice-icon{background:linear-gradient(145deg,#d591c3,#a86ba2)!important;color:#fff!important}
+.app-shell .upload-notice{border-color:rgba(183,119,176,.58)!important;color:#4b283e!important}
+.app-shell .upload-notice-icon{color:#fff!important}
 .app-shell .upload-notice-progress{color:#633f5c!important}
 .app-shell .upload-notice button:not(.danger){background:linear-gradient(145deg,#5b304f,#45263c)!important;color:#fff!important}
 .app-shell .field-warning{color:#704d75!important}
@@ -541,8 +540,8 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 
 /* Every interruption and confirmation stays inside the approved visual system. */
 .publish-confirm-backdrop,.upload-notice-backdrop{background:rgba(74,42,62,.25)!important;backdrop-filter:blur(12px)!important}
-.publish-confirm,.upload-notice{border:1px solid rgba(255,255,255,.8)!important;border-radius:16px!important;background:linear-gradient(145deg,rgba(255,247,252,.96),rgba(246,225,250,.93))!important;box-shadow:0 28px 90px rgba(74,42,62,.28)!important;color:var(--ink)!important}
-.publish-confirm-icon,.upload-notice-icon{background:linear-gradient(145deg,#e8b7de,#c9b4f5)!important;color:var(--ink)!important}
+.publish-confirm,.upload-notice{border:1px solid rgba(255,255,255,.8)!important;border-radius:16px!important;box-shadow:0 28px 90px rgba(74,42,62,.28)!important;color:var(--ink)!important}
+.publish-confirm-icon,.upload-notice-icon{color:var(--ink)!important}
 .publish-missing{background:rgba(255,255,255,.5)!important;color:var(--ink)!important}
 .publish-confirm-actions button,.upload-notice-actions button{border-color:rgba(74,42,62,.18)!important;border-radius:16px!important;background:rgba(255,255,255,.68)!important;color:var(--ink)!important}
 .publish-confirm-actions .danger,.upload-notice-actions .danger{border-color:transparent!important;background:linear-gradient(145deg,#6a3456,#4b283e)!important;color:#fff!important}
