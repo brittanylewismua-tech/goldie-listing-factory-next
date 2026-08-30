@@ -2325,19 +2325,19 @@ body{min-width:1180px!important}
    but clearly distinct from the success receipt. */
 .app-shell .publish-failure-panel{margin:0 0 22px;padding:20px 22px;border:1px solid rgba(184,60,74,.28);border-left:4px solid var(--alert-line);border-radius:14px;background:var(--alert-tint)}
 .app-shell .publish-failure-panel .mini-label{color:var(--alert-ink);margin:0 0 6px}
-.app-shell .publish-failure-panel h3{margin:0 0 8px;font-size:1.05rem;color:#4a3b31}
-.app-shell .publish-failure-lede{margin:0 0 12px;font-size:.9rem;line-height:1.5;color:#6b5748}
+.app-shell .publish-failure-panel h3{margin:0 0 8px;font-size:18px;color:var(--alert-ink)}
+.app-shell .publish-failure-lede{margin:0 0 12px;font-size:14px;line-height:1.5;color:#6e5560}
 .app-shell .publish-failure-list{list-style:none;margin:0 0 12px;padding:0;display:grid;gap:8px}
 .app-shell .publish-failure-list li{display:grid;gap:3px;padding:10px 12px;border-radius:10px;background:#fff;border:1px solid rgba(184,60,74,.18)}
-.app-shell .publish-failure-list strong{font-size:.88rem;color:#4a3b31}
-.app-shell .publish-failure-list span{font-size:.84rem;line-height:1.45;color:#8a6a55}
+.app-shell .publish-failure-list strong{font-size:14px;color:var(--alert-ink)}
+.app-shell .publish-failure-list span{font-size:13px;line-height:1.45;color:#7a5a6e}
 
 /* D478 - the live status was a wide lilac slab that read like a system banner.
    It is one line about the button directly above it, so it now sits under that
    button as small bold text. And the failure panel moved out from above the
    checklist to below the buttons, where she is actually looking when she
    presses publish. */
-.app-shell .publish-message{background:none!important;border:0!important;border-color:transparent!important;padding:6px 0 0;margin:0;text-align:center;font-size:.82rem;font-weight:700;line-height:1.4;color:#6f5f7d}
+.app-shell .publish-message{background:none!important;border:0!important;border-color:transparent!important;padding:6px 0 0;margin:0;text-align:center;font-size:13px;font-weight:700;line-height:1.4;color:#6f5f7d}
 .app-shell .publish-failure-panel{margin:16px 0 0;text-align:left}
 
 /* D481 - the four summary tiles were near-black slabs (#2e2038) dropped into a
@@ -2348,13 +2348,13 @@ body{min-width:1180px!important}
 .app-shell .receipt-value-strip span{color:rgba(255,255,255,.82)!important}
 
 /* D495 - the bundle publish dialog names every product it is about to publish. */
-.app-shell .publish-confirm-bundle{margin:0 0 10px;font-size:.86rem;line-height:1.5;color:#6b5748}
+.app-shell .publish-confirm-bundle{margin:0 0 10px;font-size:14px;line-height:1.5;color:#6b5748}
 
 /* D496 - the same batch open in two tabs. */
 .app-shell .batch-tab-conflict{display:grid;gap:6px;justify-items:start;margin:0 0 14px;padding:14px 16px;border:1px solid rgba(184,60,74,.28);border-left:4px solid var(--alert-line);border-radius:12px;background:var(--alert-tint)}
-.app-shell .batch-tab-conflict b{font-size:.92rem;color:#4a3b31}
-.app-shell .batch-tab-conflict span{font-size:.85rem;line-height:1.5;color:#6b5748}
-.app-shell .batch-tab-conflict button{margin-top:4px;padding:7px 14px;border:1px solid var(--alert-line);border-radius:16px;background:#fff;font-size:.84rem;font-weight:650;color:var(--alert-ink);cursor:pointer}
+.app-shell .batch-tab-conflict b{font-size:15px;color:#4a3b31}
+.app-shell .batch-tab-conflict span{font-size:14px;line-height:1.5;color:#6b5748}
+.app-shell .batch-tab-conflict button{margin-top:4px;padding:7px 14px;border:1px solid var(--alert-line);border-radius:16px;background:#fff;font-size:13px;font-weight:650;color:var(--alert-ink);cursor:pointer}
 
 /* D499 - each product's rows carry their own Change, as step 1 does, so the
    expand strip D498 added under the card is gone. The rows themselves are
@@ -2394,8 +2394,8 @@ body{min-width:1180px!important}
    been asking me to stop doing. The body being open, and the chevron, already
    say which one is in hand. One header, every state. */
 .app-shell .step-product-card .bundle-product-id b{font-size:15px!important;line-height:1.15!important}
-.app-shell .step-product-card .bundle-product-id small{font-size:.74rem!important}
-.app-shell .step-product-card .batch-product-position{font-size:.62rem!important}
+.app-shell .step-product-card .bundle-product-id small{font-size:12px!important}
+.app-shell .step-product-card .batch-product-position{font-size:10px!important}
 
 /* D537 - the per-listing collapse this replaced is gone; step 2 groups by task. */
 
@@ -2416,7 +2416,7 @@ body{min-width:1180px!important}
 /* D539 - the task-section wrappers are gone; a task row owns its panel. What
    survives from D537 is the per-listing naming inside a task. */
 .app-shell .task-listing{padding:0}
-.app-shell .task-listing-name{margin:0 0 8px;font:700 .84rem/1.3 "Manrope",system-ui,sans-serif;color:#5b304f}
+.app-shell .task-listing-name{margin:0 0 8px;font:700 13px/1.3 "Manrope",system-ui,sans-serif;color:#5b304f}
 .app-shell .task-listing.failed{padding:12px;border:1px solid rgba(184,60,74,.28);border-radius:12px;background:var(--alert-tint)}
 
 /* D538 - inside a product card the workspace was still wearing the page-level
@@ -2447,9 +2447,9 @@ body{min-width:1180px!important}
    the markup that is actually on the page. */
 .app-shell .task-panel-lead{display:grid;gap:10px;padding:12px 14px 4px}
 .app-shell .task-panel-lead>div:first-child h3,.app-shell .task-panel-lead h3{margin:0;font:800 1rem/1.25 "Manrope",system-ui,sans-serif;color:#4b283e}
-.app-shell .task-panel-lead p{margin:0;color:rgba(74,42,62,.72);font-size:.82rem;line-height:1.55}
+.app-shell .task-panel-lead p{margin:0;color:rgba(74,42,62,.72);font-size:13px;line-height:1.55}
 .app-shell .task-panel-heading{display:flex;align-items:center;justify-content:space-between;gap:10px}
-.app-shell .task-panel-lead .mini-label{margin:0;font-size:.64rem;letter-spacing:.09em;color:#8e4c78}
+.app-shell .task-panel-lead .mini-label{margin:0;font-size:10px;letter-spacing:.09em;color:#8e4c78}
 .app-shell .task-panel-lead>div>h3{margin:2px 0 0}
 
 /* The title fields: one column, full width, because the panel is already narrow
@@ -2465,16 +2465,16 @@ body{min-width:1180px!important}
 .app-shell .task-listing-edit{display:grid;grid-template-columns:152px minmax(0,1fr);gap:16px;align-items:start}
 .app-shell .task-listing-preview{width:152px;padding:0;border:1px solid rgba(91,48,79,.16);border-radius:12px;background:#fff;cursor:zoom-in;overflow:hidden}
 .app-shell .task-listing-preview img{display:block;width:100%;height:152px;object-fit:contain;background:rgba(255,255,255,.6)}
-.app-shell .task-listing-preview span{display:block;padding:6px;color:#704d75;font-size:.6rem;font-weight:800;letter-spacing:.06em;text-align:center;text-transform:uppercase}
+.app-shell .task-listing-preview span{display:block;padding:6px;color:#704d75;font-size:10px;font-weight:800;letter-spacing:.06em;text-align:center;text-transform:uppercase}
 @media(max-width:900px){.app-shell .task-listing-edit{grid-template-columns:minmax(0,1fr)}.app-shell .task-listing-preview{width:110px}.app-shell .task-listing-preview img{height:110px}}
 
 /* D542 - a deploy she cannot see is the same to her as a deploy that did not
    happen. This sits out of the way until the tab is genuinely behind. */
 .app-shell .new-build-notice,.new-build-notice{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:9999;display:flex;align-items:center;gap:14px;max-width:min(560px,calc(100vw - 32px));padding:12px 14px;border:1px solid rgba(91,48,79,.2);border-radius:14px;background:#fffdfa;box-shadow:0 14px 40px rgba(74,42,62,.18)}
 .new-build-notice>div{display:grid;gap:2px;min-width:0}
-.new-build-notice b{font:800 .88rem/1.25 "Manrope",system-ui,sans-serif;color:#4b283e}
-.new-build-notice small{color:rgba(74,42,62,.72);font-size:.76rem;line-height:1.45}
-.new-build-notice button{flex:none;padding:9px 16px;border:0;border-radius:16px;background:linear-gradient(145deg,#d591c3,#a86ba2);color:#fff;font:800 .8rem/1 "Manrope",system-ui,sans-serif;cursor:pointer}
+.new-build-notice b{font:800 14px/1.25 "Manrope",system-ui,sans-serif;color:#4b283e}
+.new-build-notice small{color:rgba(74,42,62,.72);font-size:12px;line-height:1.45}
+.new-build-notice button{flex:none;padding:9px 16px;border:0;border-radius:16px;background:linear-gradient(145deg,#d591c3,#a86ba2);color:#fff;font:800 13px/1 "Manrope",system-ui,sans-serif;cursor:pointer}
 .new-build-notice button:hover{filter:brightness(1.05)}
 @media(prefers-reduced-motion:no-preference){.new-build-notice{animation:notice-arrive .3s ease both}@keyframes notice-arrive{from{opacity:0;transform:translate(-50%,8px)}to{opacity:1;transform:translate(-50%,0)}}}
 
@@ -2483,8 +2483,8 @@ body{min-width:1180px!important}
 
 /* D550 - the opening state. Quiet, centred, and gone the moment the batch is read. */
 .app-shell .batch-opening{display:flex;align-items:center;gap:14px;margin:26px auto;padding:16px 20px;max-width:520px;border:1px solid rgba(91,48,79,.14);border-radius:16px;background:rgba(255,255,255,.62)}
-.app-shell .batch-opening b{display:block;font:800 .92rem/1.3 "Manrope",system-ui,sans-serif;color:#4b283e}
-.app-shell .batch-opening small{color:rgba(74,42,62,.7);font-size:.78rem;line-height:1.5}
+.app-shell .batch-opening b{display:block;font:800 15px/1.3 "Manrope",system-ui,sans-serif;color:#4b283e}
+.app-shell .batch-opening small{color:rgba(74,42,62,.7);font-size:12px;line-height:1.5}
 .app-shell .batch-opening-spinner{flex:none;width:20px;height:20px;border-radius:50%;border:2px solid rgba(139,89,137,.25);border-top-color:#a86ba2;animation:batch-opening-spin .8s linear infinite}
 @keyframes batch-opening-spin{to{transform:rotate(360deg)}}
 @media(prefers-reduced-motion:reduce){.app-shell .batch-opening-spinner{animation:none}}
@@ -2553,7 +2553,7 @@ body{min-width:1180px!important}
 
 /* D554 - the tile: artwork fills it, one label, the badge carries the number. */
 .app-shell .photo-order-strip>article>img{width:100%;height:112px;object-fit:contain;background:#fff;border-radius:9px}
-.app-shell .photo-order-strip>article>b{display:block;font:800 .68rem/1.3 "Manrope",system-ui,sans-serif;color:#6b4560;letter-spacing:.02em}
+.app-shell .photo-order-strip>article>b{display:block;font:800 11px/1.3 "Manrope",system-ui,sans-serif;color:#6b4560;letter-spacing:.02em}
 
 /* D554 - every tile says which view it is, and a white garment on white gets an
    edge so it is not an empty square. */
@@ -2652,7 +2652,7 @@ body{min-width:1180px!important}
 
 /* D566 - the design being worked on, at a size that identifies it. */
 /* D566 - one set chooser; the per-listing blocks name the set they follow. */
-.app-shell .mockup-set-name{font:800 .74rem/1.2 "Manrope",system-ui,sans-serif;color:#6b4560;letter-spacing:.02em}
+.app-shell .mockup-set-name{font:800 12px/1.2 "Manrope",system-ui,sans-serif;color:#6b4560;letter-spacing:.02em}
 
 /* D568 - the product card's own thumbnail does load: measured 2048px, complete,
    rendered at 34px. It is a white garment photographed on a white studio
@@ -2671,8 +2671,8 @@ body{min-width:1180px!important}
 /* D569 - 96 tiles in one picker, grouped by the view they show, so choosing 20
    photos is choosing from 12 named groups rather than scrolling a wall. */
 .app-shell .printify-view-group{margin:0 0 14px}
-.app-shell .printify-view-heading{display:flex;align-items:baseline;gap:8px;margin:0 0 6px;font:800 .7rem/1.2 "Manrope",system-ui,sans-serif;color:#5b304f;letter-spacing:.05em;text-transform:uppercase}
-.app-shell .printify-view-heading span{font-size:.62rem;font-weight:600;letter-spacing:.02em;text-transform:none;color:#8b6f83}
+.app-shell .printify-view-heading{display:flex;align-items:baseline;gap:8px;margin:0 0 6px;font:800 11px/1.2 "Manrope",system-ui,sans-serif;color:#5b304f;letter-spacing:.05em;text-transform:uppercase}
+.app-shell .printify-view-heading span{font-size:10px;font-weight:600;letter-spacing:.02em;text-transform:none;color:#8b6f83}
 
 /* D570 - D569's grouping shipped broken and I caught it on the page: the group
    picked up a display:grid from an inherited rule and the tile grid landed in a
@@ -2740,13 +2740,13 @@ body{min-width:1180px!important}
   color:#4a2a3e;
   border-radius:16px;
   padding:6px 13px;
-  font:600 .72rem/1 "Manrope",system-ui,sans-serif;
+  font:600 12px/1 "Manrope",system-ui,sans-serif;
   cursor:pointer;
   display:inline-flex;align-items:center;gap:7px;
 }
 .diagnostics-filter span{
   font-weight:700;
-  font-size:.66rem;
+  font-size:11px;
   background:rgba(91,48,79,.1);
   border-radius:16px;
   padding:2px 7px;
@@ -2754,7 +2754,7 @@ body{min-width:1180px!important}
 .diagnostics-filter.is-on{background:#4b283e;border-color:#4b283e;color:#fff}
 .diagnostics-filter.is-on span{background:rgba(255,255,255,.18)}
 .diagnostic-tag{
-  font:700 .6rem/1 "Manrope",system-ui,sans-serif;
+  font:700 10px/1 "Manrope",system-ui,sans-serif;
   letter-spacing:.02em;
   border-radius:16px;
   padding:3px 8px;
@@ -2771,7 +2771,7 @@ body{min-width:1180px!important}
   color:#6b4a60;
   border-radius:16px;
   padding:9px 17px;
-  font:600 .78rem/1 "Manrope",system-ui,sans-serif;
+  font:600 12px/1 "Manrope",system-ui,sans-serif;
   cursor:pointer;
 }
 .app-shell .size-guide-remove:hover{border-color:rgba(91,48,79,.4);color:#4a2a3e}
@@ -2948,16 +2948,16 @@ body{min-width:1180px!important}
    Renamed, not redesigned. */
 .app-shell .listing-card-detail>*{max-width:100%}
 .app-shell .listing-card-detail .design-fields{display:grid;gap:10px}
-.app-shell .listing-card-detail .design-fields>label{display:grid;gap:4px;min-width:0;font:700 .74rem/1.2 "Manrope",system-ui,sans-serif;color:#6b4560;letter-spacing:.02em}
+.app-shell .listing-card-detail .design-fields>label{display:grid;gap:4px;min-width:0;font:700 12px/1.2 "Manrope",system-ui,sans-serif;color:#6b4560;letter-spacing:.02em}
 .app-shell .listing-card-detail .design-fields>label>span{font-weight:600;color:#8b6f83}
-.app-shell .listing-card-detail .design-fields textarea{width:100%;padding:9px 11px;border:1px solid rgba(91,48,79,.18);border-radius:10px;background:#fff;font:500 .84rem/1.45 "Manrope",system-ui,sans-serif;color:#3f2438;resize:vertical}
+.app-shell .listing-card-detail .design-fields textarea{width:100%;padding:9px 11px;border:1px solid rgba(91,48,79,.18);border-radius:10px;background:#fff;font:500 13px/1.45 "Manrope",system-ui,sans-serif;color:#3f2438;resize:vertical}
 .app-shell .listing-card-detail .design-fields textarea:focus{outline:0;border-color:#b777b0;box-shadow:0 0 0 3px rgba(183,119,176,.14)}
 .app-shell .listing-card-detail .tag-row{display:flex;flex-wrap:wrap;gap:6px}
-.app-shell .listing-card-detail .tag-row span{padding:3px 8px;border-radius:16px;background:rgba(220,177,218,.26);color:#67465f;font-size:.72rem;font-weight:700}
+.app-shell .listing-card-detail .tag-row span{padding:3px 8px;border-radius:16px;background:rgba(220,177,218,.26);color:#67465f;font-size:12px;font-weight:700}
 .app-shell .listing-card-detail .individual-description-body{display:grid;gap:8px}
-.app-shell .listing-card-detail .individual-description-body label{display:grid;gap:4px;font:700 .74rem/1.2 "Manrope",system-ui,sans-serif;color:#6b4560}
-.app-shell .listing-card-detail .individual-description-body textarea{width:100%;padding:10px 12px;border:1px solid rgba(91,48,79,.18);border-radius:10px;background:#fff;font:500 .84rem/1.5 "Manrope",system-ui,sans-serif;color:#3f2438}
-.app-shell .listing-card-detail .individual-description-body small{color:rgba(74,42,62,.62);font-size:.72rem}
+.app-shell .listing-card-detail .individual-description-body label{display:grid;gap:4px;font:700 12px/1.2 "Manrope",system-ui,sans-serif;color:#6b4560}
+.app-shell .listing-card-detail .individual-description-body textarea{width:100%;padding:10px 12px;border:1px solid rgba(91,48,79,.18);border-radius:10px;background:#fff;font:500 13px/1.5 "Manrope",system-ui,sans-serif;color:#3f2438}
+.app-shell .listing-card-detail .individual-description-body small{color:rgba(74,42,62,.62);font-size:12px}
 .app-shell .listing-card-actions{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
 .app-shell .listing-card-actions button{height:32px;border:1px solid rgba(91,48,79,.28);border-radius:16px;background:#fff;padding:0 14px;font-size:11px;font-weight:750;color:#6b3f5e;cursor:pointer}
 .app-shell .listing-card-actions button:hover{background:#faf5f9;border-color:rgba(91,48,79,.45)}

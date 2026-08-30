@@ -27,18 +27,20 @@ for (const name of sheets) {
   postcss.parse(css).walkDecls(decl => {
     const where = `${name}: ${decl.parent.selector?.replace(/\s+/g, " ").slice(0, 46)}`;
     if (/font-size$/.test(decl.prop) || decl.prop === "font") {
-      for (const [, raw] of decl.value.matchAll(/(\d+(?:\.\d+)?)px/g)) {
-        const size = parseFloat(raw);
+      /* rem is the same defect wearing another unit: .84rem is 13.44px. */
+      for (const [, raw, unit] of decl.value.matchAll(/(\d*\.?\d+)(px|rem)/g)) {
+        const size = unit === "rem" ? parseFloat(raw) * 16 : parseFloat(raw);
         /* `font` shorthand carries a line-height in px too; only the size
            precedes the slash, and clamp()/calc() are responsive, not scale. */
-        if (decl.prop === "font" && decl.value.indexOf(`${raw}px/`) === -1) continue;
+        if (decl.prop === "font" && decl.value.indexOf(`${raw}${unit}/`) === -1) continue;
         if (/clamp|calc|var\(/.test(decl.value)) continue;
         if (!Number.isInteger(size)) offences.type.push(`${where} — ${size}px`);
       }
     }
     if (/^border(-[a-z]+)?-radius$/.test(decl.prop)) {
-      for (const [, raw] of decl.value.matchAll(/(\d+(?:\.\d+)?)px/g)) {
-        const size = parseFloat(raw);
+      /* rem is the same defect wearing another unit: .84rem is 13.44px. */
+      for (const [, raw, unit] of decl.value.matchAll(/(\d*\.?\d+)(px|rem)/g)) {
+        const size = unit === "rem" ? parseFloat(raw) * 16 : parseFloat(raw);
         if (!RADIUS.has(size)) offences.radius.push(`${where} — ${size}px`);
       }
     }

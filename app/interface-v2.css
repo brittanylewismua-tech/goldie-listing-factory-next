@@ -856,3 +856,19 @@ html, body { background: #f1d2dc; }
    figure the band is actually for. */
 .app-shell .recipe-tile.bundle-as-product .recipe-icon{align-content:center;gap:2px;color:#6c3a5c;font:800 30px/1 Inter,ui-sans-serif,system-ui,sans-serif}
 .app-shell .recipe-tile.bundle-as-product .recipe-icon::after{content:"products in this bundle";display:block;color:#8d7c87;font:750 10px/1.3 Inter,ui-sans-serif,system-ui,sans-serif}
+
+/* D751 · Brown, on the migrated screens, for the fourth time.
+
+   Swept every colour the built page actually computes rather than every
+   colour the sheets contain: 57 browns and golds exist across the CSS, but
+   only two reach a Listing Factory surface - the tile's Edit action at
+   #7e5b27 and the "first saved product" callout edge at #c6a45f. Both are
+   from the older gold theme. On the migrated tiles they read as the brown
+   accent she has now reported three times.
+
+   The publish-failure panel was worse and is fixed at its source: its
+   heading, lede and item text were #4a3b31, #6b5748 and #8a6a55 - warm
+   browns on a rose alert panel, on the screen that tells her a publish
+   failed. They are the rose alert tokens now. */
+.app-shell .edit-recipe{color:#6b4560}
+.app-shell .first-recipe-callout{border-color:#dfc8d5}
