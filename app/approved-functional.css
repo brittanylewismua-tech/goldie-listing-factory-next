@@ -109,9 +109,10 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 /* Step 4 footer: keep every control in its own lane beneath the pricing card. */
 @media(min-width:821px){
   .app-shell .workflow-stage>.workflow-footer-actions{
-    width:min(720px,100%)!important;
+    /* D733 · width, margin and position left this rule. The bar spans the
+       whole pane now, the way the prototype's footer does; interface-v2 owns
+       that. The lanes below - back left, autosave centre, next right - stay. */
     min-height:56px!important;
-    margin:24px auto 0!important;
     display:grid!important;
     grid-template-columns:1fr auto 1fr!important;
     align-items:center!important;
@@ -905,7 +906,7 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .app-shell .launch-button{min-height:64px!important;padding:16px 22px!important;font-size:16.5px!important;font-weight:750!important;line-height:1.2!important}
 .app-shell .launch-panel .launch-note{position:static!important;display:block!important;margin:18px auto 0!important;padding:0 18px!important;max-width:720px!important;text-align:center!important}
 @media(min-width:821px){
-  .app-shell .workflow-stage>.workflow-footer-actions{position:relative!important;width:min(720px,100%)!important;min-height:64px!important;margin:28px auto 0!important;display:grid!important;grid-template-columns:1fr auto 1fr!important;align-items:center!important;gap:24px!important}
+  .app-shell .workflow-stage>.workflow-footer-actions{/* D733 · width, margin and position left this rule; interface-v2 spans the bar. */min-height:64px!important;display:grid!important;grid-template-columns:1fr auto 1fr!important;align-items:center!important;gap:24px!important}
   .app-shell .workflow-footer-actions>.workflow-back{position:static!important;grid-column:1!important;justify-self:start!important;min-width:150px!important;margin:0!important;transform:none!important}
   .app-shell .workflow-footer-actions .autosave-note{position:static!important;grid-column:2!important;justify-self:center!important;margin:0!important;transform:none!important;white-space:nowrap!important}
 }
