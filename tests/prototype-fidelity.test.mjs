@@ -134,6 +134,9 @@ const CASES = [
   { name: "work column centres", chain: [el("main","app-shell"), el("div","factory-main"), el("div","factory-work")], property: "margin", expect: /^auto$/ },
   { name: "stage fills the column", chain: [...shell, el("section","workspace"), el("div","workflow-stage")], property: "width", expect: /^100%$/ },
   { name: "steps column fills the stage", chain: [...shell, el("section","workspace"), el("div","workflow-stage"), el("div","steps-column")], property: "width", expect: /^100%$/ },
+  { name: "avatar size", chain: [el("main","app-shell"), el("div","factory-main"), el("header","factory-top"), el("span","factory-avatar")], property: "width", expect: /^34px$/ },
+  { name: "help trigger fill", chain: [...shell, el("section","hero"), el("div","factory-page-head"), el("button","context-help-trigger")], property: "background", expect: /rgba\(255,255,255,\.72\)/ },
+  { name: "saved label", chain: [el("main","app-shell"), el("div","factory-main"), el("header","factory-top"), el("span","factory-top-save")], property: "font", expect: /^12px/ },
   // shell chrome — D734/D736/D737
   { name: "shell typeface", chain: [el("main","app-shell")], property: "font-family", expect: /^Inter,/ },
   { name: "sidebar edge", chain: [el("main","app-shell"), el("aside","topbar")], property: "border-right", expect: /rgba\(255,255,255,\.72\)/ },

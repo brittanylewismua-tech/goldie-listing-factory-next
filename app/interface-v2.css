@@ -98,9 +98,12 @@ html, body { background: #f1d2dc; }
   border: 0; background: transparent; display: flex; align-items: center; gap: 9px;
   color: #4b283e; cursor: pointer; padding: 5px 7px; border-radius: 10px;
 }
+/* D743 · Measured against the prototype's .goldie-avatar: 34, #4b283e, 800,
+   and it carries .04em of tracking on the initials. */
 .app-shell .factory-avatar {
-  width: 32px; height: 32px; border-radius: 50%; background: #5d3151; color: #fff;
-  display: grid; place-items: center; font: 700 11px/1 Inter, system-ui, sans-serif;
+  width: 34px; height: 34px; border-radius: 50%; background: #4b283e; color: #fff;
+  display: grid; place-items: center; letter-spacing: .04em;
+  font: 800 11px/1 Inter, ui-sans-serif, system-ui, sans-serif;
 }
 .app-shell .factory-account-label { display: grid; text-align: left; line-height: 1.2; }
 .app-shell .factory-account-label strong { font-size: 12px; font-weight: 700; }
@@ -764,3 +767,15 @@ html, body { background: #f1d2dc; }
 .app-shell .final-design-group summary em{padding:6px 9px;border:1px solid var(--alert-line);border-radius:7px;background:var(--alert-tint);color:var(--alert-ink);font:750 11px/1 Inter,ui-sans-serif,system-ui,sans-serif;font-style:normal;white-space:nowrap}
 .app-shell .final-design-group summary em.ready{border-color:#cae5d2;background:#edf7f0;color:#37704c}
 .app-shell .final-design-group summary>b{color:#766772;font:11px/1.3 Inter,ui-sans-serif,system-ui,sans-serif}
+
+/* D743 · The last of the top bar, measured against the prototype:
+
+     .goldie-help-trigger  25 circle, 850 12px, #5d3151,
+                           background rgba(255,255,255,.72),
+                           border 1px rgba(75,40,62,.22)
+     .goldie-save          12px, #6d5d68  (the built page had 9px, #806b78)
+
+   Small on their own; together they are why the top bar reads as nearly the
+   preview rather than the preview. */
+.app-shell .context-help-trigger{width:25px;height:25px;display:grid;place-items:center;padding:0;border:1px solid rgba(75,40,62,.22);border-radius:50%;background:rgba(255,255,255,.72);color:#5d3151;font:850 12px/1 Inter,ui-sans-serif,system-ui,sans-serif}
+.app-shell .factory-top-save{color:#6d5d68;font:12px/1.2 Inter,ui-sans-serif,system-ui,sans-serif}
