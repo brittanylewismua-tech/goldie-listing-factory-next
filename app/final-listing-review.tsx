@@ -101,7 +101,10 @@ export default function FinalListingReview({drafts,files,selections,defaultIndic
       }
       return "";
     })();
-    return <details className="final-design-group" key={designName}><summary>{/* D558 - D253 already set this rule: "a seller reviewing a batch read
+    const groupSelectable=group.filter(draft=>draft.id&&!reviewNeeded(draft));
+    const groupIds=groupSelectable.map(draft=>draft.id!);
+    const groupAllSelected=groupIds.length>0&&groupIds.every(id=>selected.has(id));
+    return <details className="final-design-group" key={designName}><summary>{artwork?<img className="final-group-thumb" src={artwork} alt="" loading="lazy" decoding="async"/>:null}{/* D558 - D253 already set this rule: "a seller reviewing a batch read
         'ChatGPT Image Aug 21, 2026, 05_32_41 PM (2).png' as the heading over their
         own listing. Prefer the design's own title; otherwise tidy the filename."
         The rule was applied to the listing rows and not to the heading above them,
@@ -122,7 +125,19 @@ export default function FinalListingReview({drafts,files,selections,defaultIndic
           const named=design?.title?.trim()||draft.title?.trim();
           if(named)return named;
         }
-        return readableDesignName(designName)})()}</span><b>{group.length} {group.length===1?"listing":"listings"}</b><em className={attention?"needs-attention":"ready"}>{attention?`${attention} ${attention===1?"needs":"need"} a look`:"✓ Ready"}</em></summary>{artwork?<div className="final-design-art"><img src={artwork} alt={`Design ${readableDesignName(designName)}`} loading="lazy" decoding="async"/></div>:null}<div className="final-listing-grid">{group.map(draft=>{const design=files.find(file=>file.id===draft.clientId)||files.find(file=>file.name===draft.name),selectedCount=draft.id?(selections[draft.id]??defaultIndices).length:defaultIndices.length,mockupCount=draft.id?preparedMockupCounts[draft.id]||0:0,hasPhoto=selectedCount+mockupCount>0,publishable=draft.status==="Created"&&hasPhoto,review=contentReview(design),reviewMessage=review.shortTitle&&review.missingTags?"Title and tags need review":review.shortTitle?"Title needs review":"Tags need review";return <article className={`final-listing-card ${publishable?(review.needed?"review-needed":""):"failed"}`} key={`${draft.productName||"product"}:${draft.clientId}`}>
+        return readableDesignName(designName)})()}</span><b>{group.length} {group.length===1?"listing":"listings"}</b><em className={attention?"needs-attention":"ready"}>{attention?`${attention} ${attention===1?"needs":"need"} a look`:"✓ Ready"}</em>{/* D795 · The preview's review row carries its own thumbnail and its own
+        checkbox. Production had neither: the artwork only appeared once the row
+        was open, and the only visible control was "Select every listing that is
+        ready" - under a heading that says "Choose exactly which listings to
+        publish". You could not choose one without opening it first.
+
+        The checkbox governs every selectable draft in this group, which is the
+        same set the row is a group of. It stops the click from reaching the
+        summary, so ticking a row does not also open it. Nothing about what
+        counts as selectable, or what reviewNeeded refuses to select, changes. */}
+      {groupSelectable.length>0&&<label className="final-group-select" onClick={event=>{event.preventDefault();event.stopPropagation();changeSelection(groupAllSelected?selectedIds.filter(id=>!groupIds.includes(id)):[...new Set([...selectedIds,...groupSelectable.map(draft=>draft.id!)])])}}>
+        <input type="checkbox" readOnly checked={groupAllSelected} aria-label={`Publish ${group.length===1?"this listing":"these listings"}`}/>
+      </label>}</summary>{artwork?<div className="final-design-art"><img src={artwork} alt={`Design ${readableDesignName(designName)}`} loading="lazy" decoding="async"/></div>:null}<div className="final-listing-grid">{group.map(draft=>{const design=files.find(file=>file.id===draft.clientId)||files.find(file=>file.name===draft.name),selectedCount=draft.id?(selections[draft.id]??defaultIndices).length:defaultIndices.length,mockupCount=draft.id?preparedMockupCounts[draft.id]||0:0,hasPhoto=selectedCount+mockupCount>0,publishable=draft.status==="Created"&&hasPhoto,review=contentReview(design),reviewMessage=review.shortTitle&&review.missingTags?"Title and tags need review":review.shortTitle?"Title needs review":"Tags need review";return <article className={`final-listing-card ${publishable?(review.needed?"review-needed":""):"failed"}`} key={`${draft.productName||"product"}:${draft.clientId}`}>
       {draft.id&&draft.status==="Created"?<label className="final-listing-select" aria-label={`Select ${design?.title||draft.title||draft.name} for publishing`}><input type="checkbox" checked={selected.has(draft.id)} onChange={()=>toggle(draft.id!)}/></label>:<span className="final-listing-select-placeholder"/>}{draft.previewUrl?<img loading="lazy" src={draft.previewUrl} alt={`Preview for ${design?.title||draft.title||draft.name}`}/>:design?<img loading="lazy" src={design.previewUrl} alt={`Preview for ${design.title||design.name}`}/>:<span className="final-listing-no-image">No preview</span>}
       <div>{mixedProducts&&<small className="final-product-name">{draft.productName||"Saved product"}</small>}<b>{design?.title||draft.title||draft.name}</b><small>{(design?.title||draft.title||draft.name).length}/140 characters · {design?.tags?.length||0}/13 tags · {selectedCount+mockupCount} {selectedCount+mockupCount===1?"photo":"photos"}{design?.sizeGuideName||batchSizeGuide?" · size guide ready":""}</small><span className={!publishable?"needs-attention":review.needed?"content-review":"ready"}>{!publishable?(draft.status!=="Created"?`! ${draft.error||"Draft needs attention"}`:"! Add at least one listing photo"):review.needed?`! ${reviewMessage} · publishing is still available`:"✓ Ready for final publish"}</span></div>
       <div className="final-listing-links">{draft.status!=="Created"?<button onClick={()=>onRetry?.(draft.clientId)||window.dispatchEvent(new CustomEvent("goldie-retry-listing",{detail:draft.clientId}))}>Retry this listing</button>:<><button onClick={()=>onEdit("details")}>Edit title</button><button onClick={()=>onEdit("mockups")}>Edit images</button></>}{draft.editorUrl&&<a href={draft.editorUrl} target="_blank" rel="noopener noreferrer">View in Printify ↗</a>}</div>

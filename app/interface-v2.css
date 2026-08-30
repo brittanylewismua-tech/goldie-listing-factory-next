@@ -1578,3 +1578,34 @@ html, body { background: #f1d2dc; }
 .app-shell .factory-listing-form .design-fields > label > input,
 .app-shell .factory-listing-form .design-fields > label > select{grid-column:1 / -1}
 .app-shell .factory-listing-form .task-listing-preview span{justify-self:start}
+
+/* D795 · The review row, against the preview's own.
+
+   The preview's row is thumbnail, title, meta, checkbox - everything you need
+   to decide, on the row. Production's was title, count, status chip, chevron:
+   the artwork appeared only after opening the row, and the only visible control
+   was "Select every listing that is ready", under a heading reading "Choose
+   exactly which listings to publish". You could not choose one without opening
+   it first. */
+.app-shell .final-design-group > summary{
+  display:grid;grid-template-columns:44px minmax(0,1fr) auto auto 22px;
+  align-items:center;gap:12px}
+.app-shell .final-group-thumb{
+  width:44px;height:44px;border-radius:9px;object-fit:contain;background:#f0ecef}
+.app-shell .final-group-select{display:grid;place-items:center;cursor:pointer}
+.app-shell .final-group-select input{width:17px;height:17px;accent-color:#5d3151;cursor:pointer}
+
+/* D795 · One heading on the publish screen.
+
+   The page head says "Publish · Review every listing before publishing it live
+   on Etsy". Under it the final-review card said "Finish these items before
+   publishing · Nothing is published until you use the final button", and under
+   that the list said "Choose exactly which listings to publish". Three headings
+   for one screen; the preview has one and then the rows.
+
+   The card's heading goes. What it carried is not lost: the rose "needs a look"
+   chip on every unready row says what is unfinished, per listing rather than as
+   a count, and the press stays disabled with its own reason. The list keeps its
+   own header, which is the preview's second line. */
+.app-shell .final-review > .step-content > .step-heading,
+.app-shell .final-review > .step-content > .step-copy{display:none}
