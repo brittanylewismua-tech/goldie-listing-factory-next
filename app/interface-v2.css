@@ -1855,10 +1855,18 @@ html, body { background: #f1d2dc; }
    And its icon is a #c93d32 disc - the alert red - on a dialog whose whole
    message is "nothing will publish, this is safe, it will be waiting for you".
    Red is the colour this app uses when something has failed. */
-.app-shell .publish-confirm-icon{background:#37704c;color:#fff}
-.app-shell .publish-confirm .save-draft-confirm{
+/* Scoped by :has(.save-draft-confirm) to THIS dialog. The first version of
+   this rule matched every .publish-confirm, and the start-a-new-batch modal
+   shares that class - it turned all three of its buttons into outlines, so
+   "Save to Batch History + start new" and "Discard this batch + start new"
+   became indistinguishable from Cancel and from each other. That modal already
+   had the hierarchy right on its own: quiet Cancel, filled primary, rose
+   destructive. Caught by opening it; it would have shipped otherwise. */
+.app-shell .publish-confirm:has(.save-draft-confirm) .publish-confirm-icon{
+  background:#37704c;color:#fff}
+.app-shell .publish-confirm:has(.save-draft-confirm) .save-draft-confirm{
   background:#5d3151;color:#fff;border:0;font-weight:750}
-.app-shell .publish-confirm button:not(.save-draft-confirm):not(.missing-photo-close){
+.app-shell .publish-confirm:has(.save-draft-confirm) button:not(.save-draft-confirm):not(.missing-photo-close){
   background:transparent;color:#5b304f;border:1px solid #d9cdd5;font-weight:700}
-.app-shell .publish-confirm button:not(.save-draft-confirm):not(.missing-photo-close):hover{
+.app-shell .publish-confirm:has(.save-draft-confirm) button:not(.save-draft-confirm):not(.missing-photo-close):hover{
   background:#faf5f8}
