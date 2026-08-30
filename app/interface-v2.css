@@ -618,7 +618,10 @@ html, body { background: #f1d2dc; }
    edge under the content, in the same light glass as the top bar - not a dark
    slab floating inside the column. Same full-bleed offset as the action bar,
    verified in the browser. */
-.app-shell .factory-work footer{box-sizing:border-box;width:calc(100vw - 288px);margin:32px 0 0 calc(50% - 50vw + 144px);padding:24px 34px;display:flex;align-items:flex-start;justify-content:space-between;gap:26px;border-top:1px solid rgba(143,100,124,.17);border-radius:0;background:rgba(255,248,251,.54);color:#76616f;font:11px/1.5 Inter,ui-sans-serif,system-ui,sans-serif;backdrop-filter:blur(12px)}
+/* D746 · The footer spans the pane, so its own 34px padding started its text
+   at 322 while every other line on the page starts at the column's 392. Same
+   max() the action bar uses, so the two bars and the column share one edge. */
+.app-shell .factory-work footer{box-sizing:border-box;width:calc(100vw - 288px);margin:32px 0 0 calc(50% - 50vw + 144px);padding:24px max(34px,50vw - 616px);display:flex;align-items:flex-start;justify-content:space-between;gap:26px;border-top:1px solid rgba(143,100,124,.17);border-radius:0;background:rgba(255,248,251,.54);color:#76616f;font:11px/1.5 Inter,ui-sans-serif,system-ui,sans-serif;backdrop-filter:blur(12px)}
 @media(max-width:1050px){.app-shell .factory-work footer{width:calc(100vw - 240px);margin-left:calc(50% - 50vw + 120px)}}
 @media(max-width:820px){.app-shell .factory-work footer{width:auto;margin-left:0;padding:24px 18px}}
 
@@ -799,3 +802,9 @@ html, body { background: #f1d2dc; }
    bar is the bottom of the step now, so the space only opened a gap between
    the two bars. */
 .app-shell .factory-work .workflow-stage{padding-bottom:0}
+
+/* D746 · The rail's step buttons are plain text under a hairline in the
+   prototype - no corner at all. Production had given them 10px and 6px in two
+   sheets, which is a rounded rectangle nobody can see against a transparent
+   background but which shows the moment one is focused or hovered. */
+.app-shell nav.workflow-progress button{border-radius:0}
