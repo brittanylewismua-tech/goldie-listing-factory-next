@@ -1106,6 +1106,9 @@ html, body { background: #f1d2dc; }
   border:0;border-radius:50%;box-shadow:none;
   background:#eee8ec;color:#654f60}
 .app-shell nav.workflow-progress > button{color:#83737e}
+/* globals.css draws a 1px connector through button:after at top:43px. The
+   underline has to say top:auto and width:auto or it inherits that geometry. */
+.app-shell nav.workflow-progress > button.active::after{top:auto;width:auto}
 .app-shell nav.workflow-progress > button.active{color:#4f2b46}
 .app-shell nav.workflow-progress > button.active > span:first-of-type{background:#6d3b5e;color:#fff}
 /* Production keeps the tick for work that is finished behind you - the
