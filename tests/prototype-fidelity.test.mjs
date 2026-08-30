@@ -162,7 +162,7 @@ const CASES = [
   { name: "chosen tile border", chain: [...shell, el("div","recipe-grid"), el("article","recipe-tile","selected")], property: "border", expect: /^2px solid #6c3a5c$/ },
   { name: "product image band", chain: [...shell, el("div","recipe-grid"), el("article","recipe-tile"), el("button","recipe-use"), el("span","recipe-icon")], property: "height", expect: /^116px$/ },
   // step 3 listing details
-  { name: "listing grid columns", chain: [...shell, el("div","factory-listing-grid")], property: "grid-template-columns", expect: /^1\.15fr \.85fr$/ },
+  { name: "listing grid columns", chain: [...shell, el("div","factory-listing-grid")], property: "grid-template-columns", expect: /^minmax\(0,1\.15fr\) minmax\(0,\.85fr\)$/ },
   { name: "form card border", chain: [...shell, el("div","factory-listing-grid"), el("aside","factory-form-card")], property: "border", expect: /^1px solid #e4cedb$/ },
   { name: "checklist row rule", chain: [...shell, el("div","factory-checklist"), el("div","factory-check")], property: "border-bottom", expect: /^1px solid #eee9ec$/ },
   { name: "review split", chain: [...shell, el("div","factory-review")], property: "grid-template-columns", expect: /^minmax\(0,1fr\) 290px$/ },
