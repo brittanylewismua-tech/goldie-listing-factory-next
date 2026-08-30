@@ -909,5 +909,21 @@ html, body { background: #f1d2dc; }
    beside a preflight whose buttons are radius-8 and filled. Two dialogs, two
    button languages. The modal takes the same pair the preflight uses, and the
    alert disc keeps its red - that one is doing a job. */
-.app-shell .publish-confirm-actions button{border:0;border-radius:8px;background:#5d3151;color:#fff;padding:11px 18px;font:750 13px/1.2 Inter,ui-sans-serif,system-ui,sans-serif}
-.app-shell .publish-confirm-actions button:hover:not(:disabled){background:#4e2844}
+.app-shell .publish-confirm-actions button,.app-shell .upload-notice-actions button{border:0;border-radius:8px;background:#5d3151;color:#fff;padding:11px 18px;font:750 13px/1.2 Inter,ui-sans-serif,system-ui,sans-serif}
+.app-shell .publish-confirm-actions button:hover:not(:disabled),.app-shell .upload-notice-actions button:hover:not(:disabled){background:#4e2844}
+
+/* D755 · Shadow depth. The prototype's heaviest shadow is 32px of blur on a
+   panel; cards use 14, the form card 18, the footer 24. Production was running
+   28 to 90 on eighteen rendered surfaces - a 90px haze under a modal reads as
+   fog rather than elevation, and at that radius the edge of the card stops
+   being legible against the backdrop.
+
+   Two depths: surfaces sit at the panel's 32, dialogs at 60 with enough
+   opacity to separate them from the page behind. */
+.app-shell .step-card,.app-shell .batch-title-preview,.app-shell .item-pricing-section,
+.app-shell .shipping-pricing-section,.app-shell .custom-shipping-body,
+.app-shell .active-panel,.app-shell .launch-button{box-shadow:0 12px 32px rgba(75,40,62,.11)}
+.app-shell .product-size-selector,.app-shell .product-color-selector,
+.app-shell .shipping-combobox-panel,.app-shell .factory-account-menu{box-shadow:0 12px 28px rgba(75,40,62,.14)}
+.app-shell .publish-confirm,.app-shell .upload-notice,.app-shell .preflight,
+.app-shell .printify-photo-lightbox,.app-shell .mobile-card{box-shadow:0 24px 60px rgba(45,25,40,.28)}

@@ -311,12 +311,10 @@
   border-radius:16px!important;
   background:linear-gradient(135deg,#6b3a58,#8a4f73)!important;
   color:#fff!important;
-  box-shadow:0 5px 14px rgba(85,45,70,.2)!important;
 }
 .app-shell :is(.step-card,.recipe-card) .save-recipe:disabled{
   background:rgba(107,58,88,.14)!important;
   color:rgba(74,42,62,.5)!important;
-  box-shadow:none!important;
 }
 
 /* D137 · The batch-limits row is a wrapping flex with dot separators between
@@ -623,7 +621,6 @@
   border-top:1px solid rgba(91,48,79,.14)!important;
   border-radius:0!important;
   background:transparent!important;
-  box-shadow:none!important;
 }
 /* D175 · Every bundle member is now the same collapsed row: product photo,
    the seller's name for it, the real Printify product beneath, and a summary of
@@ -2084,7 +2081,6 @@ body{min-width:1180px!important}
   border:0!important;
   border-radius:0!important;
   background:transparent!important;
-  box-shadow:none!important;
   backdrop-filter:none!important;
   min-width:0!important;
 }

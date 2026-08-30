@@ -137,6 +137,9 @@ const CASES = [
   { name: "avatar size", chain: [el("main","app-shell"), el("div","factory-main"), el("header","factory-top"), el("span","factory-avatar")], property: "width", expect: /^34px$/ },
   { name: "help trigger fill", chain: [...shell, el("section","hero"), el("div","factory-page-head"), el("button","context-help-trigger")], property: "background", expect: /rgba\(255,255,255,\.72\)/ },
   { name: "saved label", chain: [el("main","app-shell"), el("div","factory-main"), el("header","factory-top"), el("span","factory-top-save")], property: "font", expect: /^12px/ },
+  { name: "panel shadow depth", chain: [...shell, el("article","step-card")], property: "box-shadow", expect: /^0 12px 32px/ },
+  { name: "dialog shadow depth", chain: [...shell, el("section","preflight")], property: "box-shadow", expect: /^0 24px 60px/ },
+  { name: "modal action shape", chain: [...shell, el("section","publish-confirm"), el("div","publish-confirm-actions"), el("button")], property: "border-radius", expect: /^8px$/ },
   // shell chrome — D734/D736/D737
   { name: "shell typeface", chain: [el("main","app-shell")], property: "font-family", expect: /^Inter,/ },
   { name: "sidebar edge", chain: [el("main","app-shell"), el("aside","topbar")], property: "border-right", expect: /rgba\(255,255,255,\.72\)/ },

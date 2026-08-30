@@ -74,7 +74,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 .inline-field button,.step-card .connection-row button{min-height:50px;font-size:11px;font-weight:800;line-height:1;letter-spacing:.065em;text-transform:uppercase}
 .workflow-next:hover,.launch-button:hover,.inline-field button:hover,.save-recipe:hover,.management-create-foot button:hover,.publish-all-button:hover{background:linear-gradient(135deg,#633e7e 0%,#85508f 58%,#a7628e 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.28),0 12px 30px rgba(75,32,83,.36);transform:translateY(-1px)}
 button:disabled{transform:none!important;box-shadow:none!important;filter:saturate(.55)!important;opacity:.52!important;cursor:not-allowed!important}
-.inline-field button:disabled,.launch-button:disabled{border-color:rgba(230,203,225,.42)!important;background:linear-gradient(135deg,#70498a 0%,#945b9e 58%,#b66f9b 100%)!important;color:#fff!important;text-shadow:none!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.24),0 9px 24px rgba(75,32,83,.28)!important;filter:none;opacity:1;cursor:not-allowed}
+.inline-field button:disabled,.launch-button:disabled{border-color:rgba(230,203,225,.42)!important;background:linear-gradient(135deg,#70498a 0%,#945b9e 58%,#b66f9b 100%)!important;color:#fff!important;text-shadow:none!important;filter:none;opacity:1;cursor:not-allowed}
 .inline-field input,input,select,textarea{border-color:#d8d1e8;background:#fff;color:#211a2e;border-radius:9px}
 .inline-field input:focus,input:focus,select:focus,textarea:focus{border-color:#8a6bd6;box-shadow:0 0 0 4px rgba(132,103,215,.1);outline:0}
 .folder-drop,.token-help,.template-proof,.recipe-proof,.batch-capacity,.keyword-workspace{border-color:#d8cfed;background:#f7f4fd}

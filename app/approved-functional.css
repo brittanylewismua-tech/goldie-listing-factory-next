@@ -540,10 +540,9 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 
 /* Every interruption and confirmation stays inside the approved visual system. */
 .publish-confirm-backdrop,.upload-notice-backdrop{background:rgba(74,42,62,.25)!important;backdrop-filter:blur(12px)!important}
-.publish-confirm,.upload-notice{border:1px solid rgba(255,255,255,.8)!important;border-radius:16px!important;box-shadow:0 28px 90px rgba(74,42,62,.28)!important;color:var(--ink)!important}
+.publish-confirm,.upload-notice{border:1px solid rgba(255,255,255,.8)!important;border-radius:16px!important;color:var(--ink)!important}
 .publish-confirm-icon,.upload-notice-icon{color:var(--ink)!important}
 .publish-missing{background:rgba(255,255,255,.5)!important;color:var(--ink)!important}
-.publish-confirm-actions button,.upload-notice-actions button{border-color:rgba(74,42,62,.18)!important;border-radius:16px!important;background:rgba(255,255,255,.68)!important;color:var(--ink)!important}
 .publish-confirm-actions .danger,.upload-notice-actions .danger{border-color:transparent!important;background:linear-gradient(145deg,#6a3456,#4b283e)!important;color:#fff!important}
 
 /* Required-state dialogs and every non-success control use Goldie's warm palette. */
@@ -888,9 +887,9 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .app-shell .custom-shipping-body>label:first-of-type>span{color:#4b283e!important;font-size:14px!important;font-weight:800!important;line-height:1.35!important}
 .app-shell .custom-shipping-body>label:first-of-type>span small{display:block!important;margin-top:5px!important;color:rgba(74,42,62,.72)!important;font-size:12px!important;font-weight:500!important}
 .app-shell .shipping-profile-name-label{display:block!important;margin:8px 0 0!important;color:#4b283e!important;font-size:12px!important;font-weight:750!important}
-.app-shell .custom-shipping-body>label:first-of-type>input{display:block!important;width:100%!important;min-height:56px!important;padding:14px 16px!important;border:2px solid rgba(91,48,79,.48)!important;border-radius:14px!important;background:rgba(255,255,255,.94)!important;color:#4b283e!important;box-shadow:0 0 0 4px rgba(213,145,195,.12),0 10px 24px rgba(74,42,62,.07)!important;font-size:14px!important;font-weight:650!important}
+.app-shell .custom-shipping-body>label:first-of-type>input{display:block!important;width:100%!important;min-height:56px!important;padding:14px 16px!important;border:2px solid rgba(91,48,79,.48)!important;border-radius:14px!important;background:rgba(255,255,255,.94)!important;color:#4b283e!important;font-size:14px!important;font-weight:650!important}
 .app-shell .custom-shipping-body>label:first-of-type>input::placeholder{color:rgba(74,42,62,.5)!important;font-weight:550!important;opacity:1!important}
-.app-shell .custom-shipping-body>label:first-of-type>input:focus{border-color:#a8679e!important;outline:0!important;box-shadow:0 0 0 4px rgba(213,145,195,.24),0 12px 28px rgba(74,42,62,.1)!important}
+.app-shell .custom-shipping-body>label:first-of-type>input:focus{border-color:#a8679e!important;outline:0!important}
 .app-shell .launch-button{min-height:64px!important;padding:16px 22px!important;font-size:16px!important;font-weight:750!important;line-height:1.2!important}
 .app-shell .launch-panel .launch-note{position:static!important;display:block!important;margin:18px auto 0!important;padding:0 18px!important;max-width:720px!important;text-align:center!important}
 @media(min-width:821px){
