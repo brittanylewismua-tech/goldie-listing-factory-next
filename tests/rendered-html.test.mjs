@@ -4051,15 +4051,40 @@ test("no product on any step falls back to a bare header — D500", async () => 
      nothing and its card collapsed back to a bare header - the exact thing these
      rows exist to stop. Step 1 never does that: a product that is not set up
      still shows every row, saying it is not set. */
-  assert.doesNotMatch(fn, /return \[\];/, "no branch may return an empty row list");
+  /* D787 - step 3 returns no rows on purpose now, and its card is not bare:
+     the preview's listing grid is the body under the product strip. What this
+     line is really guarding is a product whose card has neither rows nor a
+     body, so it checks that the one empty branch is the one that supplies a
+     body, and that every other branch still returns rows. */
+  const emptyReturns = fn.match(/return \[\];/g) || [];
+  assert.equal(emptyReturns.length, 2, "only steps 3 and 4, which render the preview's own screens instead, may return no rows");
+  assert.match(fn, /if\(finishPhase==="details"\|\|finishPhase==="etsy"\)return \[\];/, "step 3 is one of them");
+  assert.match(fn, /if\(finishPhase==="final"\)return \[\];/, "step 4 is the other");
+  assert.match(app, /listingGridScreen\(\),false,/,
+    "step 3 passes the listing grid as its body, so the card is never a bare header");
+  /* And step 4's five reporting lines are not lost with the rows - they move
+     into the publish box, which is where the preview puts what is about to
+     happen. */
+  assert.match(app, /function publishReports\(\)/, "step 4's five reports still exist");
+  assert.match(app, /publishReports\(\)\.map/, "and they are rendered");
   assert.match(fn, /const counts=mine\|\|\{designs:0,titled:0,tagged:0,drafts:0,described:false,complete:false,published:0,status:"",photos:0,mockups:0\}/);
   assert.match(fn, /const started=Boolean\(mine\)/);
 
   // All three steps are covered, and each returns rows.
   const returns = fn.match(/return \[/g) || [];
-  assert.equal(returns.length, 3, "D539 - one row set per step");
-  for (const label of ["Review Printify placement", "Choose Printify photos", "Your photos and their order", "Write titles and tags", "Edit description", "Review Etsy category and fields", "Listings ready", "Published"]) {
+  assert.equal(returns.length, 4, "D539/D787 - step 1 and step 2 return rows; steps 3 and 4 return none and render the preview's screens");
+  /* D787 - steps 1 and 2 still build rows here. Step 4's five reporting lines
+     moved to publishReports() with their wording intact, and step 3's three
+     were row labels for panels the preview does not have: the work they named
+     is checked by name in the D541 test below, which reads the lead and editor
+     functions directly. */
+  for (const label of ["Review Printify placement", "Choose Printify photos", "Your photos and their order"]) {
     assert.ok(fn.includes(`label:"${label}"`), `${label} row is built`);
+  }
+  const reportsAt = app.indexOf("function publishReports(");
+  const reports = app.slice(reportsAt, app.indexOf("\n  function ", reportsAt + 10));
+  for (const label of ["Listings ready", "Titles and tags", "Listing photos", "Pricing and shipping", "Published"]) {
+    assert.ok(reports.includes(`label:"${label}"`), `${label} is still reported on step 4`);
   }
 
   // An unstarted product says so rather than claiming zero of zero.
@@ -4068,7 +4093,11 @@ test("no product on any step falls back to a bare header — D500", async () => 
      lie that had step 4 refusing to publish a ready bundle. */
   assert.match(fn, /const unread=!isActive&&!mine&&Boolean\(bundleBatchIds\[recipe\.id\]\)/);
   assert.match(fn, /const blank=unread\?"Checking…":"Not started yet"/);
-  assert.ok((fn.match(/\bblank\b/g) || []).length >= 12, "every row uses it");
+  /* D787 - twelve was the count when productRows held four steps' rows. It
+     holds two now; the other two render the preview's own screens. What this
+     line is for is that no row prints "0 of 0" at a product whose batch has not
+     been read - so it counts the rows that remain. */
+  assert.ok((fn.match(/\bblank\b/g) || []).length >= 6, "every remaining row uses it");
 });
 
 test("the bundle cards do not churn the network or the tab claim — D501", async () => {
@@ -4312,9 +4341,13 @@ test("every step is the same shape: a collapsible card per product — D517", as
     const next = app.indexOf('{label:"', at + 8);
     return app.slice(at, next > at ? next : app.indexOf("\n];", at));
   };
-  for (const [label, task] of [["Write titles and tags", "titles"], ["Edit description", "description"], ["Review Etsy category and fields", "etsy"]]) {
-    assert.ok(row(label).includes(`task:"${task}"`), `${label} owns the ${task} panel`);
+  /* D787 - step 3's three rows are gone with the panel stack the preview does
+     not have. Each one's work is now reachable directly on the listing grid,
+     which is what the row was a lid on. */
+  for (const piece of ["titlesRows(design)", "descriptionRows(design)", "etsyRows(design)"]) {
+    assert.ok(app.includes(piece), `${piece} renders on the listing grid`);
   }
+  /* And step 4's reports still say they report - none of them opens anything. */
   for (const reporting of ["Listings ready", "Listing photos", "Published"]) {
     assert.ok(row(reporting).includes("report:true"),
       `step 4 reports ${reporting} rather than pretending to open it`);
@@ -4698,11 +4731,19 @@ test("steps 2, 3 and 4 are the same shape and no row is a bookmark — D541", as
 
   /* Everything the dissolved step 3 table did still happens, in the task that
      owns it - checked one by one because a rewrite is where things go missing. */
-  const panel = (task) => {
-    const at = app.indexOf(`if(task==="${task}")return <`);
-    assert.ok(at > 0, `${task} panel exists`);
-    return app.slice(at, app.indexOf('if(task==="', at + 20));
+  /* D787 - each of these three branches used to hold its batch-wide tool and
+     its per-listing editor in one expression, which is exactly why step 3 could
+     only render as a stack of panels. They are named functions now - xLead()
+     and xRows() - so the prototype can put the first above the listing grid and
+     the second inside it. What each one has to contain is unchanged, so this
+     reads the pair rather than the branch. */
+  const fn = (name) => {
+    const at = app.indexOf(`function ${name}(`);
+    assert.ok(at > 0, `${name} exists`);
+    const next = app.indexOf("\n  function ", at + 10);
+    return app.slice(at, next > 0 ? next : at + 8000);
   };
+  const panel = (task) => fn(`${task}Lead`) + fn(`${task}Rows`);
   const titles = panel("titles"), description = panel("description"), etsy = panel("etsy");
 
   assert.ok(titles.includes("listing-title-field") && titles.includes("listing-tags-field"),

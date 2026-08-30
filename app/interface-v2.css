@@ -1386,3 +1386,60 @@ html, body { background: #f1d2dc; }
   font:700 13px/1.45 Inter,ui-sans-serif,system-ui,sans-serif;color:#fff}
 .app-shell .factory-publish-box .publish-live-warning span{
   color:#c8b9c4;font:400 11px/1.5 Inter,ui-sans-serif,system-ui,sans-serif}
+
+/* D787 · Step 4's five reports, inside the publish box.
+
+   They were a stack of five numbered panels standing between the seller and the
+   review list. The preview has no such stack - its step 4 is the review beside
+   the box - and none of these five open anything: they report. So they report
+   here, under the shop being published to, in the box the preview already gives
+   to "what is about to happen". */
+.app-shell .factory-publish-box .publish-box-reports{
+  display:grid;gap:7px;margin:14px 0 16px;padding:14px 0 0;
+  border-top:1px solid rgba(255,255,255,.14)}
+.app-shell .factory-publish-box .publish-box-reports > div{
+  display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:8px}
+.app-shell .factory-publish-box .publish-box-reports dt{
+  color:#c8b9c4;font:400 11px/1.4 Inter,ui-sans-serif,system-ui,sans-serif}
+.app-shell .factory-publish-box .publish-box-reports dd{
+  margin:0;color:#fff;font:750 11px/1.4 Inter,ui-sans-serif,system-ui,sans-serif;text-align:right}
+.app-shell .factory-publish-box .publish-box-reports .needs-work dd{color:#f0b8c8}
+.app-shell .factory-publish-box .publish-box-reports .publish-report-detail{
+  flex:1 0 100%;color:#c7b8c3;font:400 10px/1.45 Inter,ui-sans-serif,system-ui,sans-serif;text-align:left}
+
+/* ==========================================================================
+   D787 · Step 3 is the preview's listing grid, not a panel stack
+   ==========================================================================
+
+   .goldie-listing-grid, measured on the preview's own screen 3: two cards side
+   by side, 1.15fr / .85fr, gap 14, aligned to their tops. One listing at a
+   time. The switcher above it is production's - the preview shows a single
+   listing and never says how you reach the second - and the batch tools panel
+   above that is production's too, kept whole and put where it cannot be
+   mistaken for the listing being edited. */
+.app-shell .factory-listing-screen{display:grid;gap:14px}
+.app-shell .factory-listing-screen > .factory-panel{margin:0}
+
+.app-shell .factory-listing-switch{display:flex;flex-wrap:wrap;gap:8px;margin:0}
+.app-shell .factory-listing-switch button{
+  display:grid;gap:2px;justify-items:start;min-width:118px;
+  padding:8px 11px;border:1px solid #d9cdd5;border-radius:8px;
+  background:#fff;color:#695461;cursor:pointer;text-align:left}
+.app-shell .factory-listing-switch button b{
+  font:700 11px/1.3 Inter,ui-sans-serif,system-ui,sans-serif;color:#3d2538}
+.app-shell .factory-listing-switch button small{
+  font:400 10px/1.3 Inter,ui-sans-serif,system-ui,sans-serif;color:#7d6d78}
+.app-shell .factory-listing-switch button.is-active{background:#eee4eb;border-color:#6d3b5e}
+.app-shell .factory-listing-switch button.is-active b{color:#4d2a43}
+.app-shell .factory-listing-switch button.needs-work small{color:#a33a48}
+
+/* The form card holds the listing's own editors one under another, which is
+   what the preview's left column is: title, tags, description, category. Each
+   editor keeps the markup it had inside its old panel, so the fields, counters,
+   flags and handlers are untouched - only where they sit has changed. */
+.app-shell .factory-listing-form{display:grid;gap:16px}
+.app-shell .factory-listing-form > h3{margin:0}
+.app-shell .factory-listing-form .task-listing-edit{grid-template-columns:190px minmax(0,1fr);gap:18px}
+.app-shell .factory-listing-form .listing-card,
+.app-shell .factory-listing-form .listing-card-detail{
+  border:0;background:none;box-shadow:none;padding:0}

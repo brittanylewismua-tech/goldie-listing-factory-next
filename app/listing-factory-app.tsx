@@ -935,6 +935,8 @@ export default function ListingFactoryApp() {
 
   const [bulkTitles, setBulkTitles] = useState("");
   const [activeDesign, setActiveDesign] = useState<string>("");
+  /* D787 · The batch-wide tools open on their own, above the listing grid. */
+  const [batchToolsOpen, setBatchToolsOpen] = useState<boolean>(false);
   const [activeRecipe,setActiveRecipe]=useState<Recipe|null>(null);
   /* D653 · loadTemplateUrl records which Printify store a product came from, but
      it read `activeRecipe` from its closure - and chooseRecipe calls it in the
@@ -2451,53 +2453,15 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
        is per product: choosing what to publish and publishing it are one press
        in the footer, over the whole bundle. So the card reports what is about to
        go out for this product and does not offer to open anything. */
-    if(finishPhase==="final"){
-      /* D546 - the checklist under these cards repeated them line for line, so it
-         went. Two of its lines were not repeated anywhere - how many titles are
-         under 100 characters, and whether pricing and shipping were approved -
-         and they belong on the rows that own that work. */
-      const shortTitles=isActive?files.filter(file=>file.title.trim().length<100).length:0;
-      return [
-        {label:"Listings ready",value:started?plural(counts.drafts,"listing"):blank,pending,done:counts.drafts>0,report:true},
-        {label:"Titles and tags",value:started?(()=>{
-        /* D549 - her question, and she was right to ask it: "2 of 2 written · 1 at
-           13 tags. Is that supposed to say one of thirteen tags? How could there be
-           two titles written but only one tag?" It counted listings on the left and
-           listings on the right, but only the left side said so, so the right side
-           read as a tag count. Both sides count listings, out loud. */
-        if(counts.tagged===counts.designs&&counts.designs>0)return `${counts.titled} of ${counts.designs} titles · all 13 tags`;
-        return `${counts.titled} of ${counts.designs} titles · ${counts.tagged} of ${counts.designs} with all 13 tags`;
-      })():blank,detail:isActive&&shortTitles?`${shortTitles} ${shortTitles===1?"title is":"titles are"} under 100 characters`:undefined,pending,/* D660 · Tags were folded into the same done-test as titles, so a listing with
-   fewer than 13 tags carried the alert mark and the alert colour beside a
-   product that genuinely could not publish. A missing title blocks; tags below
-   thirteen are an optimisation, and Etsy accepts the listing either way -
-   publishBlockers never mentions them. Done means titled; short tag counts are
-   advice, in the detail line, not an error. */
-done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&counts.designs>0&&counts.titled===counts.designs&&counts.tagged<counts.designs?`${counts.designs-counts.tagged} of ${counts.designs} could use all 13 tags — optional, but Etsy ranks on them`:undefined,report:true},
-        /* D490 - the checklist said only that one or more selected listings needed
-           a photo, making her go and find which, on a page where everything else
-           counted precisely. createdListingsMissingImages already knows exactly
-           which drafts they are, so the row names them. D546 - it moved here with
-           the checklist it used to live in. */
-        {label:"Listing photos",value:started?plural(counts.photos+counts.mockups,"photo"):blank,detail:isActive?(()=>{
-          const missing=createdListingsMissingImages(selectedPublishDrafts());
-          if(!missing.length)return undefined;
-          /* D494 - two designs exported minutes apart truncated to the same string,
-             which is worse than not naming them. Filenames differ at the end, so
-             keep both ends. */
-          const shorten=(name:string,limit:number)=>name.length<=limit?name:`${name.slice(0,Math.ceil(limit/2)-1)}…${name.slice(-Math.floor(limit/2))}`;
-          const named=missing.map(draft=>files.find(file=>file.id===draft.clientId)?.title?.trim()||files.find(file=>file.id===draft.clientId)?.file.name||"").filter(Boolean);
-          if(missing.length===1&&named[0])return `${shorten(named[0],60)} still needs a photo`;
-          if(named.length&&named.length===missing.length)return `${missing.length} listings still need a photo: ${named.map(name=>shorten(name,40)).join(", ")}`;
-          return `${missing.length} of ${selectedPublishDrafts().length} selected listings still need a photo`;
-        })():undefined,pending,done:counts.photos+counts.mockups>0,report:true},
-        /* D548 - the checklist read "✓ Hoodies will be applied automatically", which is
-           the name of her shipping profile in a sentence that sounds like it is about
-           the garment. Say what the name refers to. */
-        {label:"Pricing and shipping",value:isActive?(pricingApproved?`Approved · ${friendlyShippingProfileTitle(etsyShippingProfiles.find(profile=>profile.id===etsyShippingProfileId)?.title)||"Etsy shipping profile"}`:"Needs review"):started?"Approved":blank,pending,done:isActive?pricingApproved:started,report:true},
-        {label:"Published",value:counts.published?plural(counts.published,"listing"):"Not published yet",pending,done:counts.published>0,report:true},
-      ];
-    }
+    if(finishPhase==="final")return [];
+    /* D787 · Step 3 has no row stack. The preview's step 3 is one listing at a
+       time in a two-column grid - .goldie-listing-grid - not a numbered panel
+       for each kind of field, and rows that open panels are what forced the
+       stack. Everything those three rows carried still renders: the batch-wide
+       tools sit in one subordinate section above the grid, each listing's own
+       state is on its flags and in the checklist beside it, and the counts they
+       reported are in the page head's chip. */
+    if(finishPhase==="details"||finishPhase==="etsy")return [];
     return [
       /* D516 - Titles and Tags were two rows pointing at two different sections,
          which split one job in half on the page. Etsy tags come out of the same
@@ -2611,7 +2575,13 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
     if(task==="etsy")return design.etsy?.category?.trim()||"No Etsy category yet";
     return design.title.trim()||design.name;
   }
-  function designTaskRows(task:string,standing:(design:DesignFile)=>string,inner:(design:DesignFile)=>ReactNode,flags?:(design:DesignFile)=>ListingFlag[]){
+  function designTaskRows(task:string,standing:(design:DesignFile)=>string,inner:(design:DesignFile)=>ReactNode,flags?:(design:DesignFile)=>ListingFlag[],only?:DesignFile){
+    /* D787 · With `only`, this returns that one listing's editor and nothing
+       else - no row, no chrome, no other listings. The prototype's step 3 works
+       one listing at a time inside a two-column grid, so the editor has to be
+       available on its own; the row list is what the panel stack needed, not
+       what the editor is. Same renderer, same onFocus, same everything else. */
+    if(only)return <div onFocus={()=>setActiveDesign(only.id)}>{inner(only)}</div>;
     return <ListingRows rows={files.map(design=>({
       key:`${task}:${design.id}`,
       thumb:design.previewUrl||drafts.find(draft=>draft.clientId===design.id)?.previewUrl||"",
@@ -2655,12 +2625,14 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
     return [{tone:"attention",label:`Missing ${missing.slice(0,2).join(", ")}${missing.length>2?` +${missing.length-2}`:""}`}];
   }
 
-  function taskPanel(task:string){
-    if(task==="sizeguide")return <div className="size-guide-row-panel"><p>Choose one image. Goldie adds it to every listing in this batch.</p><input ref={sizeGuidePicker} type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={event=>{const file=event.target.files?.[0];if(file)void applySizeGuide(file)}}/><div className="size-guide-row-actions"><button type="button" className="secondary-action" onClick={()=>sizeGuidePicker.current?.click()}>{sizeGuideName?"Replace size guide":"Choose size guide"}</button>{sizeGuideName&&<button type="button" className="secondary-action size-guide-remove" onClick={()=>void removeSizeGuide()}>Remove</button>}</div>{sizeGuideStatus&&<p role="status">{sizeGuideStatus}</p>}</div>;
-    /* D541 - titles-resolving drives the pulse on each title field as the batch
-       run fills them in. It rode on the listing-editor wrapper, so it went out
-       with the block; it belongs on whatever holds the title fields. */
-    if(task==="titles")return <div className={titlePulseIds.size?"titles-resolving":""}>
+  /* D787 · The batch-wide tools and the per-listing editors, named separately.
+     They used to be one expression each inside taskPanel, which is why step 3
+     could only ever render as a stack of panels: the tool that applies to the
+     whole batch and the field that belongs to one listing came out of the same
+     return. The prototype puts the first above the grid and the second inside
+     it, so they have to be separable. Nothing inside them is changed - the same
+     handlers, guards, counters and flags, moved intact. */
+  function titlesLead(){return <>
       <div className="task-panel-lead"><div><p className="mini-label">BATCH TITLE BUILDER</p><h3>Create titles for the whole batch</h3><p>Let Goldie select from your validated bank for each design, or choose the exact phrases yourself. No new keywords are ever added.</p></div><div className="title-builder-choice" role="group" aria-label="How do you want to create batch titles?"><button className={titleBuilderMode==="ai"?"active":""} onClick={()=>setTitleBuilderMode("ai")}><b>Goldie selects from my bank</b><span>Creates a different title for each design</span></button><button className={titleBuilderMode==="manual"?"active":""} onClick={()=>setTitleBuilderMode("manual")}><b>I choose from my bank</b><span>Uses your selections across the batch</span></button></div><div className="title-style-toggle"><span>Title format</span><button className={titleJoiner===", "?"active":""} onClick={()=>changeTitleJoiner(", ")}>With commas</button><button className={titleJoiner===" "?"active":""} onClick={()=>changeTitleJoiner(" ")}>Without commas</button>{/* D413 - Capitalization sat in its own card above the builder, but it is the
                     same decision as the comma style: how the title is formatted. One group. */}<button type="button" className={titleCaps?"active":""} aria-pressed={titleCaps} onClick={()=>changeTitleCaps(!titleCaps)}>{titleCaps?"Capitalized":"Not capitalized"}</button></div>{titleBuilderMode==="ai"?<div className="title-builder-pane"><KeywordBank selectionOnly initialId={autoTitleBankId||activeRecipe?.keywordListId||""} onSelect={list=>{setAutoTitleBank(list);setAutoTitleBankId(list?.id||"");/* D221 · Choosing the bank here IS establishing it for this product, the same as it was on the product card before the picker moved. Without this the choice would apply to this batch only and the next one would ask again. */if(activeRecipe&&list?.id&&list.id!==activeRecipe.keywordListId)void establish(activeRecipe,{keywordListId:list.id})}} title="Choose a keyword bank" copy="Goldie selects only exact phrases from this bank. It will not add keywords."/><div className="ai-title-disclaimer"><b>Review every title Goldie creates.</b><span>Goldie chooses the phrases it believes fit each design best from the bank you select. It does not verify that the keyword bank itself matches the design, and it will not reject mismatched phrases. Use your judgment before continuing.</span></div><button className="ai-title-button" title={batchHeldByAnotherTab?"This batch is open in another Goldie tab, so nothing saved here would be kept.":!autoTitleBank?"Choose a keyword bank first.":!files.length?"Upload a design first.":undefined} disabled={titleBuilding||!autoTitleBank||!files.length||batchHeldByAnotherTab} onClick={()=>void buildBatchTitle()}>{titleBuilding?`Creating ${files.length} titles…`:"Auto-create all titles"}</button>{/* D660 · The 1566 crewneck joined a bundle with no
              keyword bank, and only said so at step 3 with Auto-create disabled.
@@ -2668,20 +2640,21 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
              bundle can legitimately want different banks, so copying it around
              on her behalf would be a guess about her keywords. */}
              {activeBundle&&bundleRecipes.length>1&&autoTitleBankId&&bundleRecipes.some(recipe=>recipe.id!==activeRecipe?.id&&recipe.keywordListId!==autoTitleBankId)?<button type="button" className="secondary-action" disabled={applyingBankToBundle} onClick={()=>void applyBankToBundle()}>{applyingBankToBundle?"Applying to every product…":`Use this keyword bank for every product in this bundle (${bundleRecipes.length})`}</button>:null}{titleBuildMessage&&<p className="title-build-message" role="status">{titleBuildMessage}</p>}</div>:<div className="title-builder-pane manual-title-builder"><KeywordBank initialId={manualKeywordBankId||activeRecipe?.keywordListId||""} onSelect={list=>setManualKeywordBankId(list?.id||"")} onAdd={addBatchKeyword} title="Choose a keyword bank" copy="Click keywords in the order you want them. Every click updates all listings below."/><div className="selected-batch-keywords"><div><b>Selected keywords</b>{batchKeywords.length>0&&<button onClick={clearBatchKeywords}>Clear all</button>}</div>{batchKeywords.length?<div className="selected-keyword-chips">{batchKeywords.map(keyword=><button key={keyword} onClick={()=>removeBatchKeyword(keyword)}>{keyword}<span>×</span></button>)}</div>:<p>No keywords selected yet.</p>}</div>{batchKeywords.length>0&&<div className="batch-title-preview"><b>Batch title preview</b><span>{batchKeywords.join(titleJoiner)}</span><small>Applied to every listing below. You can still edit any listing individually.</small></div>}</div>}</div>
-      {designTaskRows("titles",design=>`${(design.title||"").trim().length}/140`,design=><div className="task-listing-edit">{/* D541 - D408 found this the hard way: at thumbnail size the artwork
+  </>;}
+  function titlesRows(only?:DesignFile){return designTaskRows("titles",design=>`${(design.title||"").trim().length}/140`,design=><div className="task-listing-edit">{/* D541 - D408 found this the hard way: at thumbnail size the artwork
         is unreadable, so the card cannot tell you which design you are writing a
         title for. The row stays compact; the preview comes back at a size you can
-        read once the row is open. */}{(()=>{const shot=design.previewUrl||drafts.find(draft=>draft.clientId===design.id)?.previewUrl;return shot?<button type="button" className="task-listing-preview" onClick={()=>window.open(shot,"_blank","noopener,noreferrer")} aria-label={`Open a larger preview of ${design.title.trim()||design.name}`}><img src={shot} alt={design.name||"Design artwork"} decoding="async"/><span>Enlarge</span></button>:null})()}<div className="design-fields"><label>Title <span>{design.title.length}/140</span><textarea className="listing-title-field" rows={3} value={design.title} maxLength={140} onChange={event=>{const title=event.target.value;updateDesign(design.id,{title,tags:tagsFromTitle(title),etsy:undefined})}}/></label><label>Tags <span>{design.tags.length}/13</span><textarea className="listing-tags-field" rows={3} value={design.tags.join(", ")} onChange={event=>updateDesign(design.id,{tags:[...new Set(event.target.value.split(",").map(tag=>tag.trim().toLowerCase()).filter(tag=>tag&&tag.length<=20))].slice(0,13),etsy:undefined})} placeholder="Exact title phrases, separated by commas"/></label><div className="tag-row">{design.tags.map(tag=><span key={tag}>{tag}</span>)}{!design.tags.length&&<small>Goldie will create matching tags with the title.</small>}</div><IndividualAutoTitle design={design} template={templateDetails} useCommas={titleJoiner===", "} paused={batchHeldByAnotherTab} onApply={(title,tags)=>{setActiveDesign(design.id);updateDesign(design.id,{title,tags,etsy:undefined,etsyError:""})}}/>{design.etsyError&&<small className="field-error">{design.etsyError}</small>}</div></div>,titleFlags)}
-    </div>;
-    if(task==="description")return <>
+        read once the row is open. */}{(()=>{const shot=design.previewUrl||drafts.find(draft=>draft.clientId===design.id)?.previewUrl;return shot?<button type="button" className="task-listing-preview" onClick={()=>window.open(shot,"_blank","noopener,noreferrer")} aria-label={`Open a larger preview of ${design.title.trim()||design.name}`}><img src={shot} alt={design.name||"Design artwork"} decoding="async"/><span>Enlarge</span></button>:null})()}<div className="design-fields"><label>Title <span>{design.title.length}/140</span><textarea className="listing-title-field" rows={3} value={design.title} maxLength={140} onChange={event=>{const title=event.target.value;updateDesign(design.id,{title,tags:tagsFromTitle(title),etsy:undefined})}}/></label><label>Tags <span>{design.tags.length}/13</span><textarea className="listing-tags-field" rows={3} value={design.tags.join(", ")} onChange={event=>updateDesign(design.id,{tags:[...new Set(event.target.value.split(",").map(tag=>tag.trim().toLowerCase()).filter(tag=>tag&&tag.length<=20))].slice(0,13),etsy:undefined})} placeholder="Exact title phrases, separated by commas"/></label><div className="tag-row">{design.tags.map(tag=><span key={tag}>{tag}</span>)}{!design.tags.length&&<small>Goldie will create matching tags with the title.</small>}</div><IndividualAutoTitle design={design} template={templateDetails} useCommas={titleJoiner===", "} paused={batchHeldByAnotherTab} onApply={(title,tags)=>{setActiveDesign(design.id);updateDesign(design.id,{title,tags,etsy:undefined,etsyError:""})}}/>{design.etsyError&&<small className="field-error">{design.etsyError}</small>}</div></div>,titleFlags,only);}
+  function descriptionLead(){return <>
       <div className="task-panel-lead"><div className="batch-description-body"><p>This came from your saved product. Edit it once here to change the shared description on every listing in this batch.</p><label>Description for every listing<textarea rows={9} value={description} onChange={event=>setDescription(event.target.value)} placeholder="Add sizing, materials, production, care, and shipping information"/></label><small>Open any listing below only when that listing needs different wording.</small>{/* D232 · "Save this description as the default" went with the settings block. The
                      shared editor survived the move but the way to keep the wording for future
                      batches did not, so it comes back where the description is now edited. */}{description.trim()!==String(activeRecipe?.description||"").trim()&&<button type="button" className="save-product-default" disabled={!description.trim()||savingProductDefault==="description"} onClick={()=>void saveProductDefaults({description},"description")}>{savingProductDefault==="description"?"Saving…":"Save this description as the default"}</button>}</div></div>
-      {designTaskRows("description",design=>`${(finalDescription(design,design.etsy)||"").length} chars`,design=><div className="individual-description-body"><p>The complete description is shown below. Edit it only if this listing needs different wording or an additional blurb.</p><label>Description for this listing<textarea rows={10} value={finalDescription(design,design.etsy)} onChange={event=>updateDesign(design.id,{descriptionOverride:event.target.value,etsyError:""})}/></label>{design.descriptionOverride!==undefined&&<div className="listing-card-actions"><button type="button" onClick={()=>updateDesign(design.id,{descriptionOverride:undefined,etsyError:""})}>Use the batch description again</button></div>}<small>Spacing and line breaks are preserved when this description is sent to Printify and Etsy.</small></div>,descriptionFlags)}
-    </>;
-    if(task==="etsy")return <>
+  </>;}
+  function descriptionRows(only?:DesignFile){return designTaskRows("description",design=>`${(finalDescription(design,design.etsy)||"").length} chars`,design=><div className="individual-description-body"><p>The complete description is shown below. Edit it only if this listing needs different wording or an additional blurb.</p><label>Description for this listing<textarea rows={10} value={finalDescription(design,design.etsy)} onChange={event=>updateDesign(design.id,{descriptionOverride:event.target.value,etsyError:""})}/></label>{design.descriptionOverride!==undefined&&<div className="listing-card-actions"><button type="button" onClick={()=>updateDesign(design.id,{descriptionOverride:undefined,etsyError:""})}>Use the batch description again</button></div>}<small>Spacing and line breaks are preserved when this description is sent to Printify and Etsy.</small></div>,descriptionFlags,only);}
+  function etsyLead(){return <>
       <div className="task-panel-lead"><div className="task-panel-heading"><h3>Review your Etsy listing details</h3><span className="done-mark">{files.filter(file=>etsyRequiredComplete(file.etsy)).length}/{files.length} ready</span></div><p className="step-copy">Goldie has pre-filled the Etsy category and every product field it could confidently match for each listing. Look everything over and change any selection that does not fit.</p>{files.every(file=>etsyRequiredComplete(file.etsy))&&<div className="variant-transfer-note"><span>✓</span><div><b>Core listing information is ready for your review.</b><small>This step contains additional Etsy category and product fields. Optional fields stay blank when there is not a clear match.</small></div></div>}</div>
-      {designTaskRows("etsy",design=>{
+  </>;}
+  function etsyRows(only?:DesignFile){return designTaskRows("etsy",design=>{
         /* D691 · This is the row's right-hand counter, and etsyFlags already says
            whether the listing is ready. Returning "Ready" here printed the word
            twice on the same row, once as a chip and once beside it. Count the
@@ -2691,7 +2664,23 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
         if(!design.etsy)return "";
         if(!required.length)return "No required fields";
         return `${required.filter(property=>(property.value||"").trim()).length}/${required.length} fields`;
-      },design=><div className="etsy-detail-body">{design.etsy?<EtsyDetailsEditor design={design} categories={etsyCategories} onChange={etsy=>updateDesign(design.id,{etsy,etsyError:""})} onCategory={taxonomyId=>changeEtsyCategory(design,taxonomyId)}/>:<div className={design.title.trim()?"etsy-detail-error":"etsy-detail-pending"}><b>{design.title.trim()?"Etsy details still need to be created.":"Waiting for this listing’s title."}</b><span>{design.title.trim()?design.etsyError:"Goldie fills in the Etsy category and product fields automatically once a title exists. Create titles above and this completes itself."}</span>{design.title.trim()&&<button aria-busy={preparingListingId===design.id} disabled={Boolean(preparingListingId)} onClick={()=>void retryOneEtsyListing(design)}>{preparingListingId===design.id?"Preparing this listing…":"Try this listing again"}</button>}</div>}{design.etsyError&&<small className="field-error">{design.etsyError}</small>}</div>,etsyFlags)}
+      },design=><div className="etsy-detail-body">{design.etsy?<EtsyDetailsEditor design={design} categories={etsyCategories} onChange={etsy=>updateDesign(design.id,{etsy,etsyError:""})} onCategory={taxonomyId=>changeEtsyCategory(design,taxonomyId)}/>:<div className={design.title.trim()?"etsy-detail-error":"etsy-detail-pending"}><b>{design.title.trim()?"Etsy details still need to be created.":"Waiting for this listing’s title."}</b><span>{design.title.trim()?design.etsyError:"Goldie fills in the Etsy category and product fields automatically once a title exists. Create titles above and this completes itself."}</span>{design.title.trim()&&<button aria-busy={preparingListingId===design.id} disabled={Boolean(preparingListingId)} onClick={()=>void retryOneEtsyListing(design)}>{preparingListingId===design.id?"Preparing this listing…":"Try this listing again"}</button>}</div>}{design.etsyError&&<small className="field-error">{design.etsyError}</small>}</div>,etsyFlags,only);}
+  function taskPanel(task:string){
+    if(task==="sizeguide")return <div className="size-guide-row-panel"><p>Choose one image. Goldie adds it to every listing in this batch.</p><input ref={sizeGuidePicker} type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={event=>{const file=event.target.files?.[0];if(file)void applySizeGuide(file)}}/><div className="size-guide-row-actions"><button type="button" className="secondary-action" onClick={()=>sizeGuidePicker.current?.click()}>{sizeGuideName?"Replace size guide":"Choose size guide"}</button>{sizeGuideName&&<button type="button" className="secondary-action size-guide-remove" onClick={()=>void removeSizeGuide()}>Remove</button>}</div>{sizeGuideStatus&&<p role="status">{sizeGuideStatus}</p>}</div>;
+    /* D541 - titles-resolving drives the pulse on each title field as the batch
+       run fills them in. It rode on the listing-editor wrapper, so it went out
+       with the block; it belongs on whatever holds the title fields. */
+    if(task==="titles")return <div className={titlePulseIds.size?"titles-resolving":""}>
+      {titlesLead()}
+      {titlesRows()}
+    </div>;
+    if(task==="description")return <>
+      {descriptionLead()}
+      {descriptionRows()}
+    </>;
+    if(task==="etsy")return <>
+      {etsyLead()}
+      {etsyRows()}
     </>;
     const listings=drafts.map(draft=>({draft,design:files.find(file=>file.id===draft.clientId),selectedImages:draft.id?(printifyImageSelections[draft.id]??printifyImageIndices):printifyImageIndices}));
     /* D684 - "I don't need to see the title of the design... just show the listing
@@ -2815,6 +2804,138 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
      the other column is sizing. Rendering the link inside this section puts it in
      the same row as the cards, where the section's own 22px grid gap is the only
      thing between them. */
+  /* D787 · Step 3, rebuilt to the approved preview's own structure.
+
+     The preview (goldie-ux-preview-site @ aad9208, screen 3) is
+     .goldie-listing-grid: two cards side by side, one listing at a time. Left,
+     the listing's design and its title, tags, description and Etsy category.
+     Right, what Etsy still needs. No panels, no numbered stack, no row list.
+
+     Production had a product strip, three numbered panels, and inside the first
+     of them a batch title builder followed by a list of every listing. Nothing
+     about that shape came from the preview; it came from the shell this
+     migration is replacing.
+
+     What production has and the preview does not - batch title creation, AI
+     titles, keyword-bank selection, the shared description default, the Etsy
+     details lead - is kept, whole, in one subordinate section above the grid.
+     The rule is the one she set: where the preview conflicts with a capability,
+     the capability wins and the layout adapts around it. */
+  /* D787 · Step 4 has no panel stack either. The preview's step 4 is the
+     review list beside the publish box - .goldie-review - and nothing in
+     front of it. These five lines were reporting rows: they open nothing and
+     do no work, they state where the batch stands. They still do, inside the
+     publish box, which is where the preview puts the detail about what is
+     going to happen. Not one of them is dropped. */
+  function publishReports(){
+    /* The same five facts productRows used to return for this phase, computed
+       the same way from the active product's own batch. isActive is true by
+       definition here: step 4 reports on the product being published. */
+    const isActive=true;
+    const recipe=activeRecipe;
+    const mine={designs:files.length,titled:files.filter(file=>file.title.trim()).length,tagged:files.filter(file=>file.tags.length>=13).length,drafts:drafts.filter(draft=>draft.status==="Created").length,described:Boolean(description.trim()),complete,published:Number(batchReceipt?.publishedCount||0),status:"",photos:printifyImageIndices.length,mockups:Object.values(preparedMockupCounts).reduce((sum,count)=>sum+count,0)};
+    const counts=mine;
+    const started=true;
+    const blank="Not started yet";
+    const pending=false;
+    const plural=(count:number,word:string)=>`${count} ${count===1?word:`${word}s`}`;
+      /* D546 - the checklist under these cards repeated them line for line, so it
+         went. Two of its lines were not repeated anywhere - how many titles are
+         under 100 characters, and whether pricing and shipping were approved -
+         and they belong on the rows that own that work. */
+      const shortTitles=isActive?files.filter(file=>file.title.trim().length<100).length:0;
+      return [
+        {label:"Listings ready",value:started?plural(counts.drafts,"listing"):blank,pending,done:counts.drafts>0,report:true},
+        {label:"Titles and tags",value:started?(()=>{
+        /* D549 - her question, and she was right to ask it: "2 of 2 written · 1 at
+           13 tags. Is that supposed to say one of thirteen tags? How could there be
+           two titles written but only one tag?" It counted listings on the left and
+           listings on the right, but only the left side said so, so the right side
+           read as a tag count. Both sides count listings, out loud. */
+        if(counts.tagged===counts.designs&&counts.designs>0)return `${counts.titled} of ${counts.designs} titles · all 13 tags`;
+        return `${counts.titled} of ${counts.designs} titles · ${counts.tagged} of ${counts.designs} with all 13 tags`;
+      })():blank,detail:isActive&&shortTitles?`${shortTitles} ${shortTitles===1?"title is":"titles are"} under 100 characters`:undefined,pending,/* D660 · Tags were folded into the same done-test as titles, so a listing with
+   fewer than 13 tags carried the alert mark and the alert colour beside a
+   product that genuinely could not publish. A missing title blocks; tags below
+   thirteen are an optimisation, and Etsy accepts the listing either way -
+   publishBlockers never mentions them. Done means titled; short tag counts are
+   advice, in the detail line, not an error. */
+done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&counts.designs>0&&counts.titled===counts.designs&&counts.tagged<counts.designs?`${counts.designs-counts.tagged} of ${counts.designs} could use all 13 tags — optional, but Etsy ranks on them`:undefined,report:true},
+        /* D490 - the checklist said only that one or more selected listings needed
+           a photo, making her go and find which, on a page where everything else
+           counted precisely. createdListingsMissingImages already knows exactly
+           which drafts they are, so the row names them. D546 - it moved here with
+           the checklist it used to live in. */
+        {label:"Listing photos",value:started?plural(counts.photos+counts.mockups,"photo"):blank,detail:isActive?(()=>{
+          const missing=createdListingsMissingImages(selectedPublishDrafts());
+          if(!missing.length)return undefined;
+          /* D494 - two designs exported minutes apart truncated to the same string,
+             which is worse than not naming them. Filenames differ at the end, so
+             keep both ends. */
+          const shorten=(name:string,limit:number)=>name.length<=limit?name:`${name.slice(0,Math.ceil(limit/2)-1)}…${name.slice(-Math.floor(limit/2))}`;
+          const named=missing.map(draft=>files.find(file=>file.id===draft.clientId)?.title?.trim()||files.find(file=>file.id===draft.clientId)?.file.name||"").filter(Boolean);
+          if(missing.length===1&&named[0])return `${shorten(named[0],60)} still needs a photo`;
+          if(named.length&&named.length===missing.length)return `${missing.length} listings still need a photo: ${named.map(name=>shorten(name,40)).join(", ")}`;
+          return `${missing.length} of ${selectedPublishDrafts().length} selected listings still need a photo`;
+        })():undefined,pending,done:counts.photos+counts.mockups>0,report:true},
+        /* D548 - the checklist read "✓ Hoodies will be applied automatically", which is
+           the name of her shipping profile in a sentence that sounds like it is about
+           the garment. Say what the name refers to. */
+        {label:"Pricing and shipping",value:isActive?(pricingApproved?`Approved · ${friendlyShippingProfileTitle(etsyShippingProfiles.find(profile=>profile.id===etsyShippingProfileId)?.title)||"Etsy shipping profile"}`:"Needs review"):started?"Approved":blank,pending,done:isActive?pricingApproved:started,report:true},
+        {label:"Published",value:counts.published?plural(counts.published,"listing"):"Not published yet",pending,done:counts.published>0,report:true},
+      ];
+  }
+  function listingGridScreen(){
+    if(!files.length)return null;
+    const design=files.find(item=>item.id===activeDesign)||files[0];
+    const index=files.findIndex(item=>item.id===design.id);
+    const properties=(design.etsy?.properties)||[];
+    const items=properties.map((property,position)=>({
+      key:String(property.propertyId??position),
+      label:property.label,
+      value:property.value||"",
+      required:Boolean(property.required),
+    }));
+    const titled=files.filter(item=>(item.title||"").trim()).length;
+    return <div className="factory-listing-screen">
+      {/* Subordinate, and it says so: one section, collapsed by default once
+          the titles exist, holding every batch-wide tool unchanged. */}
+      <FactoryPanel index={1} title="Batch tools"
+        description="Title builder, keyword bank and the shared description — these apply to every listing in this batch"
+        state={`${titled} of ${files.length} titled`}
+        tone={titled===files.length?"done":"attention"}
+        open={batchToolsOpen}
+        onToggle={()=>setBatchToolsOpen(open=>!open)}
+        toggleLabel={batchToolsOpen?"Close":"Open"}>
+        <div className={titlePulseIds.size?"titles-resolving":""}>
+          {titlesLead()}
+          {descriptionLead()}
+          {etsyLead()}
+        </div>
+      </FactoryPanel>
+      {files.length>1&&<nav className="factory-listing-switch" aria-label="Listing">
+        {files.map((item,position)=>{
+          const ready=Boolean((item.title||"").trim())&&etsyRequiredComplete(item.etsy);
+          return <button type="button" key={item.id}
+            className={`${item.id===design.id?"is-active":""} ${ready?"is-ready":"needs-work"}`}
+            aria-current={item.id===design.id?"true":undefined}
+            onClick={()=>setActiveDesign(item.id)}>
+            <b>Listing {position+1}</b><small>{ready?"Ready":"Needs a look"}</small>
+          </button>;
+        })}
+      </nav>}
+      <div className="factory-listing-grid">
+        <div className="factory-form-card factory-listing-form">
+          <h3>{(design.file?.name||`Listing ${index+1}`)} · Listing {index+1} of {files.length}</h3>
+          {titlesRows(design)}
+          {descriptionRows(design)}
+          {etsyRows(design)}
+        </div>
+        <RequiredDetailsChecklist items={items}/>
+      </div>
+    </div>;
+  }
+
   function stepProductCards(statusFor:(recipe:Recipe,index:number)=>{label:string;tone:"ready"|"attention"|"advice"|"waiting"},body:ReactNode,hidden=false,footer:ReactNode=null,showCards=true,header:ReactNode=null){
     const sharedAction=Boolean(footer);
     const list=activeBundle&&bundleRecipes.length>1?bundleRecipes:(activeRecipe?[activeRecipe]:[]);
@@ -4193,7 +4314,9 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
               inside it. Clicking Description showed titles and tags too, because
               they were never in a section of their own. The rows own panels now,
               exactly as step 2 does, and the card passes no body. */
-            null,false,
+            /* D787 - the body is the preview's listing grid now, not null; the
+               rows that used to stand in for it are gone from this phase. */
+            listingGridScreen(),false,
             <>
             {/* D521 - the forward button belongs to the step, not to whichever
                 product happens to be open. On a three-product bundle it was
@@ -4262,7 +4385,20 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
               under a three-line sentence - the one fact that says whether you
               are about to publish to the right place was the smallest thing in
               the box. */}
-              {etsyShop?<><small className="publish-box-eyebrow">Publishing to</small><h3>{etsyShop}</h3></>:null}<div className="publish-live-warning">{(()=>{
+              {etsyShop?<><small className="publish-box-eyebrow">Publishing to</small><h3>{etsyShop}</h3></>:null}
+              {/* D787 - the five reporting lines that used to stand as a panel
+                  stack in front of this screen. They open nothing and do no
+                  work; they say where the batch stands, and the preview puts
+                  that kind of detail in this box, under the shop it is going to.
+                  Listings ready, titles and tags, listing photos, pricing and
+                  shipping, published - every one of them, with the same value
+                  and the same wording productRows gave them. */}
+              <dl className="publish-box-reports">{publishReports().map(report=>(
+                <div key={report.label} className={report.done?"is-done":report.optional?"is-optional":"needs-work"}>
+                  <dt>{report.label}</dt><dd>{report.value}</dd>
+                  {report.detail||report.advice?<dd className="publish-report-detail">{report.detail||report.advice}</dd>:null}
+                </div>))}</dl>
+              <div className="publish-live-warning">{(()=>{
               /* D560 - the count follows her ticks now that they govern every listing. */
               const total=publishTargets().length||bundleListingsToPublish();
               /* D636 - "all 3 products in this batch" counted the bundle, not the
