@@ -25,7 +25,7 @@ html, body { background: #f1d2dc; }
   padding: 36px 26px 25px;
   color: #4b283e;
   background: linear-gradient(rgba(255,241,244,.94), rgba(247,221,232,.9));
-  border-right: 1px solid rgba(113,65,91,.15);
+  border-right: 1px solid #ded6dc;
   backdrop-filter: blur(24px) saturate(1.04);
 }
 .app-shell > .topbar .top-nav { display: grid; gap: 6px; }
@@ -618,7 +618,7 @@ html, body { background: #f1d2dc; }
  * ========================================================================== */
 .app-shell{font-family:Inter,ui-sans-serif,system-ui,-apple-system,sans-serif;letter-spacing:normal}
 .app-shell .topbar{background:linear-gradient(rgba(255,250,253,.58),rgba(255,246,251,.36));border-right:1px solid rgba(255,255,255,.72);backdrop-filter:blur(20px) saturate(1.12)}
-.app-shell .factory-top{background:rgba(255,248,252,.72);border-bottom:1px solid rgba(176,127,153,.18)}
+.app-shell .factory-top{background:rgba(255,248,252,.72);border-bottom:1px solid #eee8ec}
 
 /* The footer is the last thing on the page and the prototype runs it edge to
    edge under the content, in the same light glass as the top bar - not a dark
@@ -627,7 +627,7 @@ html, body { background: #f1d2dc; }
 /* D746 · The footer spans the pane, so its own 34px padding started its text
    at 322 while every other line on the page starts at the column's 392. Same
    max() the action bar uses, so the two bars and the column share one edge. */
-.app-shell .factory-work footer{box-sizing:border-box;width:calc(100vw - 288px);margin:32px 0 0 calc(50% - 50vw + 144px);padding:24px max(34px,50vw - 616px);display:flex;align-items:flex-start;justify-content:space-between;gap:26px;border-top:1px solid rgba(143,100,124,.17);border-radius:0;background:rgba(255,248,251,.54);color:#76616f;font:11px/1.5 Inter,ui-sans-serif,system-ui,sans-serif;backdrop-filter:blur(12px)}
+.app-shell .factory-work footer{box-sizing:border-box;width:calc(100vw - 288px);margin:32px 0 0 calc(50% - 50vw + 144px);padding:24px max(34px,50vw - 616px);display:flex;align-items:flex-start;justify-content:space-between;gap:26px;border-top:1px solid #ded6dc;border-radius:0;background:rgba(255,248,251,.54);color:#76616f;font:11px/1.5 Inter,ui-sans-serif,system-ui,sans-serif;backdrop-filter:blur(12px)}
 @media(max-width:1050px){.app-shell .factory-work footer{width:calc(100vw - 240px);margin-left:calc(50% - 50vw + 120px)}}
 @media(max-width:820px){.app-shell .factory-work footer{width:auto;margin-left:0;padding:24px 18px}}
 
@@ -702,7 +702,7 @@ html, body { background: #f1d2dc; }
      buttons          radius 8 - the prototype has no 99px pills
      panels           radius 12, one hairline, one soft shadow
      alerts           flat tint, no gradient */
-.app-shell .workflow-restart-button{margin:12px 2px 0;padding:10px 12px;border:1px solid rgba(74,42,62,.14);border-radius:12px;background:rgba(255,255,255,.38);color:#4b283e;font:750 11px/1.35 Inter,ui-sans-serif,system-ui,sans-serif;text-align:left}
+.app-shell .workflow-restart-button{margin:12px 2px 0;padding:10px 12px;border:1px solid #ded6dc;border-radius:12px;background:rgba(255,255,255,.38);color:#4b283e;font:750 11px/1.35 Inter,ui-sans-serif,system-ui,sans-serif;text-align:left}
 .app-shell .connect-step .connection-row{border-radius:12px;background:#fff}
 .app-shell .connect-step .connection-icon{border-radius:9px;background:#f1edef}
 .app-shell .connect-step .connection-row button,.app-shell .connect-step .connection-row button.secondary-action{border:1px solid #ded5db;border-radius:8px;background:#fff;color:#3d2538;font:700 12px/1.2 Inter,ui-sans-serif,system-ui,sans-serif;padding:9px 14px;box-shadow:none}
@@ -786,7 +786,7 @@ html, body { background: #f1d2dc; }
 
    Small on their own; together they are why the top bar reads as nearly the
    preview rather than the preview. */
-.app-shell .context-help-trigger{width:25px;height:25px;display:grid;place-items:center;padding:0;border:1px solid rgba(75,40,62,.22);border-radius:50%;background:rgba(255,255,255,.72);color:#5d3151;font:850 12px/1 Inter,ui-sans-serif,system-ui,sans-serif}
+.app-shell .context-help-trigger{width:25px;height:25px;display:grid;place-items:center;padding:0;border:1px solid #d9cbd3;border-radius:50%;background:rgba(255,255,255,.72);color:#5d3151;font:850 12px/1 Inter,ui-sans-serif,system-ui,sans-serif}
 .app-shell .factory-top-save{color:#6d5d68;font:12px/1.2 Inter,ui-sans-serif,system-ui,sans-serif}
 
 /* D744 · Two things on the Connect screen she named:

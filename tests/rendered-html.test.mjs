@@ -1364,7 +1364,7 @@ test("shows accurate completion feedback above each next step card", async () =>
   assert.match(styles, /\.app-shell \.step-success-banner\{/);
   /* D156 recoloured this from green to the app palette; the point of this test is
    * that the banner exists and is styled, not that it is green. */
-  assert.match(styles, /border:1px solid rgba\(139,89,137,\.28\)/);
+  assert.match(styles, /border:1px solid #dfc8d5/);
 });
 
 /* D413 · Capitalization moved into the Title format group beside the comma

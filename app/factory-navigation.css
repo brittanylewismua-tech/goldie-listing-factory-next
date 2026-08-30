@@ -3,7 +3,7 @@
 /* D398 · The sidebar footer on the management pages. Matches the workflow rail:
    copyright, the Etsy API attribution, then the wordmark, pinned to the bottom. */
 .management-nav{display:flex;flex-direction:column}
-.management-nav-footer{margin-top:auto;padding-top:18px;border-top:1px solid rgba(91,48,79,.12)}
+.management-nav-footer{margin-top:auto;padding-top:18px;border-top:1px solid #eee8ec}
 .management-nav-footer .management-copyright{margin:0 0 8px;color:rgba(74,42,62,.62);font-size:10px;letter-spacing:.06em;text-transform:uppercase}
 .management-nav-footer .etsy-api-disclosure{margin:0 0 12px;color:rgba(74,42,62,.5);font-size:8px;line-height:1.4}
 .management-nav-footer .approved-powered{display:flex;align-items:center;gap:7px;margin:0;color:rgba(74,42,62,.55);font-size:9px;font-weight:800;letter-spacing:.14em}
