@@ -58,8 +58,11 @@ export default function FactoryPanel({
         role={onToggle ? "button" : undefined}
         tabIndex={onToggle ? 0 : undefined}
         aria-expanded={onToggle ? open : undefined}
-        onClick={onToggle ? event => { if ((event.target as HTMLElement).closest("button")) return; onToggle(); } : undefined}
-        onKeyDown={onToggle ? event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onToggle(); } } : undefined}
+        aria-label={onToggle ? `${toggleLabel ?? (open ? "Close" : "Open")} — ${title}` : undefined}
+        aria-disabled={onToggle && toggleDisabled ? true : undefined}
+        title={toggleTitle}
+        onClick={onToggle ? event => { if (toggleDisabled) return; if ((event.target as HTMLElement).closest("button,a,input,select,textarea")) return; onToggle(); } : undefined}
+        onKeyDown={onToggle ? event => { if (toggleDisabled) return; if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onToggle(); } } : undefined}
       >
         {/* The prototype prints a zero-padded ordinal. It is decorative: it
             names the seller's position in the step, not an id. */}
@@ -71,17 +74,22 @@ export default function FactoryPanel({
           {description ? <small>{description}</small> : null}
         </div>
         {state ? <span className="factory-panel-state">{state}</span> : null}
+        {/* D790 · A chevron, not a "Change" button.
+            The head has been the open/close target since D209/D332, so the
+            button beside it was a second control for the same act, sized like a
+            primary action and taking a fourth grid column the preview does not
+            have. The preview's panel head is three columns: index, title, state.
+
+            The chevron is the affordance and nothing else - aria-hidden, not
+            focusable, no separate handler. Everything that made this operable
+            stays on the head: role=button, tabIndex, aria-expanded, Enter and
+            Space. A screen reader reads one control per panel now instead of a
+            row and a button that do the same thing.
+
+            toggleDisabled and toggleTitle still say when a panel cannot be
+            opened - on the head, where the click lands. */}
         {onToggle ? (
-          <button
-            type="button"
-            className="factory-panel-toggle"
-            aria-expanded={open}
-            disabled={toggleDisabled}
-            title={toggleTitle}
-            onClick={onToggle}
-          >
-            {toggleLabel ?? (open ? "Close" : "Open")}
-          </button>
+          <span className="factory-panel-chevron" aria-hidden="true">{open ? "\u2303" : "\u2304"}</span>
         ) : null}
       </div>
       {/* D687 kept the collapse because a batch of twenty designs is 34 screens

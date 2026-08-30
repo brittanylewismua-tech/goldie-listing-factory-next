@@ -198,14 +198,16 @@ test("D789: the product wrapper carries no card of its own", () => {
       faults.push(`.batch-product-card resolves to ${property}:${winner ? winner.value : "unset"} — a wrapper is not a card`);
     }
   }
-  /* And the strip inside it is a card, so the step reads as separate cards
-     rather than one slab with hairlines through it. */
+  /* D790 · And the product identity above them is a heading, not a card
+     either. D789 gave the strip its own card; she was clear that the product
+     should read as a compact heading over independent panels, so the only
+     thing that may carry card chrome on this step is a panel. */
   const strip = resolve({
     selectorTest: selector => /\.batch-product-card > header$/.test(selector),
     property: "background",
   });
-  if (!strip || strip.value === "none") {
-    faults.push("the product strip has no card of its own");
+  if (!strip || strip.value !== "none") {
+    faults.push(`the product identity resolves to background:${strip ? strip.value : "unset"} — it is a heading, not a card`);
   }
   assert.deepStrictEqual(faults, []);
 });

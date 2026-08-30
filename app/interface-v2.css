@@ -384,7 +384,10 @@ html, body { background: #f1d2dc; }
      every panel title started 14px left of where the preview puts it. The
      fourth column is production's: the panel head carries a Change/Close
      control the preview has no equivalent for. */
-  display:grid;grid-template-columns:48px minmax(0,1fr) auto auto;
+  /* D790 · Three columns, which is what the preview's head has: index, title,
+     state. The fourth existed only to hold a "Change" button that did what
+     clicking the head already did. The chevron sits inside the state column. */
+  display:grid;grid-template-columns:48px minmax(0,1fr) auto;
   align-items:center;gap:13px;padding:15px 17px;background:#fffafc;
 }
 .app-shell .factory-panel-index{
@@ -408,13 +411,9 @@ html, body { background: #f1d2dc; }
    the three states are green / rose / plum, none of them brown. */
 .app-shell .factory-panel.is-pending  .factory-panel-state{background:#f7f1f6;border-color:#e4d6e2;color:#6b4560}
 .app-shell .factory-panel.is-optional .factory-panel-state{background:#f5f2f5;border-color:#e2d9e0;color:#7d6d78}
-.app-shell .factory-panel-toggle{
-  border:1px solid #ded5db;background:#fff;color:#3d2538;border-radius:8px;
-  padding:0 14px;height:34px;min-height:0;min-width:0;
-  font:700 12px/1 Inter,system-ui,sans-serif;cursor:pointer;
-}
-.app-shell .factory-panel-toggle:hover:not(:disabled){background:#faf5f8}
-.app-shell .factory-panel-toggle:disabled{opacity:.45;cursor:not-allowed}
+/* D790 · .factory-panel-toggle is gone: the head is the control, and the
+   chevron beside the state chip is the affordance. The rules that styled a
+   second button for the same act went with it. */
 .app-shell .factory-panel-body{border-top:1px solid #eee8ec;padding:18px;background:#fff}
 
 /* D724 · artwork grid — prototype .goldie-art-grid / .goldie-art-card */
@@ -1473,3 +1472,31 @@ html, body { background: #f1d2dc; }
 .app-shell .workflow-footer-actions{flex-wrap:nowrap}
 .app-shell .workflow-footer-actions > .autosave-note{flex:0 0 auto;white-space:nowrap}
 .app-shell .factory-footer.in-bar > small{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+
+/* D790 · The chevron. Decoration for an affordance the head already has. */
+/* Only a head that actually opens something looks clickable - the reporting
+   panels on step 4 have no toggle and must not offer one. */
+.app-shell .factory-panel-head[role="button"]{cursor:pointer}
+.app-shell .factory-panel-head[aria-disabled="true"]{cursor:not-allowed;opacity:.6}
+.app-shell .factory-panel-state{justify-self:end}
+.app-shell .factory-panel-chevron{
+  grid-column:3;justify-self:end;align-self:center;margin-left:10px;
+  color:#8b7a85;font:400 13px/1 Inter,ui-sans-serif,system-ui,sans-serif}
+.app-shell .factory-panel-head > .factory-panel-state + .factory-panel-chevron{margin-left:10px}
+
+/* D790 · The product identity is a heading above the panels, not a card around
+   them. Image, name, blueprint, drafts - the same four facts, on the pane. For
+   a bundle it repeats once per product, above that product's panels. */
+.app-shell .batch-product-card > header{
+  display:grid;grid-template-columns:44px minmax(0,1fr) auto;
+  align-items:center;gap:12px;
+  margin:0 0 12px;padding:0 2px;
+  background:none;border:0;border-radius:0;box-shadow:none}
+.app-shell .batch-product-card > header .bundle-product-photo{
+  width:44px;height:44px;border-radius:9px;object-fit:cover}
+.app-shell .batch-product-card > header .bundle-product-id b{
+  font:700 14px/1.25 Inter,ui-sans-serif,system-ui,sans-serif;color:#3d2538}
+.app-shell .batch-product-card > header .bundle-product-id small{
+  font:400 12px/1.35 Inter,ui-sans-serif,system-ui,sans-serif;color:#7d6d78}
+.app-shell .batch-product-card + .batch-product-card > header{margin-top:22px}
