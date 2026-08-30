@@ -3800,8 +3800,12 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
           {/* D659 · More than one batch is open, so Goldie asks instead of
               picking one and instead of pretending there is nothing to resume. */}
           {resumeChoices.length>1&&<section className="batch-resume-choice" aria-label="Choose which batch to resume"><b>Which batch do you want to continue?</b><span>You have {resumeChoices.length} batches open. Goldie will not guess.</span><ul>{resumeChoices.map(choice=><li key={choice.id}><button type="button" onClick={()=>{setResumeChoices([]);setRestoringBatch(true);const target=new URL(window.location.href);target.searchParams.set("batch",choice.id);window.history.replaceState({},"",target);void restoreBatchById(choice.id,target.searchParams.get("step"),target.searchParams.get("phase"))}}><b>{choice.name}</b><small>{choice.drafts?`${choice.drafts} ${choice.drafts===1?"draft":"drafts"}`:"No drafts yet"}</small></button></li>)}</ul><button type="button" className="secondary-action" onClick={()=>setResumeChoices([])}>Start something new instead</button></section>}
-          {workflowStep==="connect"&&<div className="value-proof" aria-label="What this batch supports"><span><b>Up to 20 designs</b><small>in one batch</small></span><span><b>Costs and fees</b><small>shown for every variant</small></span><span><b>You approve</b><small>before anything goes live</small></span></div>}
         </PageHead>
+        {/* D732 - the prototype's head is a title, a line of copy and the status
+            chip on the right, nothing else. With this strip inside it the left
+            column grew and the chip, aligned to the bottom, was left stranded
+            halfway down the page. It belongs under the head. */}
+          {workflowStep==="connect"&&<div className="value-proof" aria-label="What this batch supports"><span><b>Up to 20 designs</b><small>in one batch</small></span><span><b>Costs and fees</b><small>shown for every variant</small></span><span><b>You approve</b><small>before anything goes live</small></span></div>}
       </section>}
 
       {!returningHome&&<section className={`workspace ${complete&&workflowStep==="designs"?"mockup-workspace":""}`}>

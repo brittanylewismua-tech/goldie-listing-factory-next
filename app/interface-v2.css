@@ -316,7 +316,16 @@ html, body { background: #f1d2dc; }
 .app-shell .factory-work > nav.workflow-progress,
 .app-shell .factory-work > .workspace > nav.workflow-progress { order: 1; }
 .app-shell .factory-work > *:not(nav.workflow-progress):not(.hero) { order: 3; }
-.app-shell .factory-work > .workflow-footer-actions { order: 9; margin-top: auto; }
+/* D732 · .workspace is display:contents, so its children are the ones the work
+   column actually orders - and no rule named them. Everything inside it
+   defaulted to order 0 and rendered ABOVE the rail and the page title: the
+   Connect card first, the rail underneath it, the heading last. Verified on
+   the deployed preview, where the head sat 830px down the page. The children
+   promoted out of .workspace are ordered here, by name. */
+.app-shell .factory-work > .workspace > * { order: 3; }
+.app-shell .factory-work > .workspace > nav.workflow-progress { order: 1; }
+.app-shell .factory-work > .workflow-footer-actions,
+.app-shell .factory-work > .workspace > .workflow-footer-actions { order: 9; margin-top: auto; }
 
 /* ============================================================================
  * D723 · FACTORY PANEL — the prototype's .goldie-panel, as a real component.
