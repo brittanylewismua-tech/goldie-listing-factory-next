@@ -36,7 +36,7 @@ SHEETS.forEach((name, sheetIndex) => {
       /* Position-dependent and state selectors cannot be resolved from a
          chain that carries no siblings or interaction, so they are out of this
          cascade rather than silently treated as matching everything. */
-      if (/[>+~]|::|:hover|:focus|:active|:first-child|:last-child|:nth-|:only-|:empty/.test(selector)) continue;
+      if (/[>+~]|::|:hover|:focus|:active|:disabled|:checked|:first-child|:last-child|:nth-|:only-|:empty/.test(selector)) continue;
       const declarations = {};
       rule.walkDecls(decl => { declarations[decl.prop] = { value: decl.value, important: decl.important }; });
       rules.push({ sheet: name, sheetIndex, order, selector, specificity: specificity(selector), declarations, media: atRule?.params });
@@ -135,6 +135,10 @@ const CASES = [
   { name: "checklist row rule", chain: [...shell, el("div","factory-checklist"), el("div","factory-check")], property: "border-bottom", expect: /^1px solid #eee9ec$/ },
   { name: "review split", chain: [...shell, el("div","factory-review")], property: "grid-template-columns", expect: /^minmax\(0,1fr\) 290px$/ },
   { name: "publish box background", chain: [...shell, el("div","factory-review"), el("div","factory-publish-box")], property: "background", expect: /^#2d1d29$/ },
+  { name: "product band is visible", chain: [...shell, el("div","recipe-grid"), el("article","recipe-tile"), el("button","recipe-use"), el("span","recipe-icon")], property: "display", expect: /^grid$/ },
+  { name: "forward button background", chain: [...shell, el("div","factory-footer"), el("button","workflow-next")], property: "background", expect: /#5d3151/ },
+  { name: "forward button padding", chain: [...shell, el("div","factory-footer"), el("button","workflow-next")], property: "padding", expect: /^11px 18px$/ },
+  { name: "publish press background", chain: [...shell, el("div","factory-review"), el("div","factory-publish-box"), el("button","publish-all-button")], property: "background", expect: /#f3dbe9/ },
   // step 4 review rows
   { name: "review row frame", chain: [...shell, el("div","final-listing-grid"), el("article","final-listing-card")], property: "border", expect: /^1px solid #ded6dc$/ },
   { name: "review row columns", chain: [...shell, el("div","final-listing-grid"), el("article","final-listing-card")], property: "grid-template-columns", expect: /^28px 44px minmax\(0,1fr\)$/ },
