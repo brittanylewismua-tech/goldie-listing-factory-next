@@ -1291,3 +1291,44 @@ html, body { background: #f1d2dc; }
    orchid the old shell used - h294, nowhere near the plum family. It is the
    same disc as the current step, one step quieter. */
 .app-shell nav.workflow-progress > button.done:not(.active) > span:first-of-type{background:#6d3b5e}
+
+/* ==========================================================================
+   D783 · The open listing row, measured against the prototype's step 3
+   ==========================================================================
+
+   The prototype's step 3 is .goldie-listing-grid: the design at 190px on the
+   left, the form card beside it, one field style throughout. Production's row
+   had drifted from all of it.
+
+   The dead column first. .listing-card-detail carried
+   padding:18px 18px 18px 179px - 179px of nothing down the left of every open
+   listing, which is why the design and the fields started a third of the way
+   across a card whose header started at its own edge. It was written to clear
+   the header's thumbnail, but the body has its own thumbnail; it was clearing
+   something that is not above it.
+
+   Then the fields. The prototype uses one input: 12px/400 #3b2b36 on white,
+   1px #d8cfd5, radius 8, padding 10px 11px, and labels at 11px/750 #55434f.
+   Production had the title at 15px/550 and the tags at 13px/500 - two weights
+   and two sizes for two fields that sit one above the other - on radius 10
+   with 13px of padding and a #ded5db edge. The card behind them was #f1e8f0,
+   a grey-lilac, where the prototype's form card is #fffafc.
+
+   And two full-width filled bars for "Create a different title with AI" and
+   "Build this title yourself", plus a full-width outlined "CLOSE LISTING 1".
+   Three heavy controls under a form. The prototype's quiet affordance is
+   .goldie-link - 11px/750 plum, no chrome - and that is what these are. */
+.app-shell .factory-work .listing-card-detail{padding:18px}
+.app-shell .factory-work .task-listing-edit{grid-template-columns:190px minmax(0,1fr);gap:18px}
+.app-shell .factory-work .listing-card{background:#fffafc;border-color:#dfc8d5}
+.app-shell .factory-work .design-fields label{
+  font:750 11px/1.3 Inter,ui-sans-serif,system-ui,sans-serif;color:#55434f}
+.app-shell .factory-work .listing-title-field,
+.app-shell .factory-work .listing-tags-field{
+  font:400 12px/1.4 Inter,ui-sans-serif,system-ui,sans-serif;color:#3b2b36;
+  border:1px solid #d8cfd5;border-radius:8px;padding:10px 11px}
+.app-shell .factory-work .individual-title-builder > summary,
+.app-shell .factory-work .listing-card-done{
+  background:none;border:0;box-shadow:none;padding:0;width:auto;
+  color:#6b365a;font:750 11px/1.4 Inter,ui-sans-serif,system-ui,sans-serif;
+  text-align:left;text-transform:none;letter-spacing:normal}
