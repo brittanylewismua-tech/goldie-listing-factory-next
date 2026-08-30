@@ -3858,7 +3858,14 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
   const heroSummary = workflowStep==="connect"
     ? undefined
     : workflowStep==="setup"
-      ? (productSelected?"1 product selected":"No product selected")
+      /* D802 · This said "1 product selected" on a three-product bundle. The
+         chip is the page head's count of what the step has settled, and on a
+         bundle what it has settled is the bundle. */
+      ? (productSelected
+          ? (activeBundle&&bundleRecipes.length>1
+              ? `Bundle · ${bundleRecipes.length} products`
+              : "1 product selected")
+          : "No product selected")
       : workflowStep==="designs"
         ? `${files.length} ${files.length===1?"design":"designs"}${createdDrafts?` · ${createdDrafts} drafts`:""}`
         : workflowStep==="review"

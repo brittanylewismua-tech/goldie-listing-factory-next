@@ -1731,3 +1731,14 @@ html, body { background: #f1d2dc; }
   justify-self:start;margin-top:4px;border:0;border-radius:8px;
   background:#5d3151;color:#fff;padding:9px 14px;
   font:750 12px/1 Inter,ui-sans-serif,system-ui,sans-serif;cursor:pointer}
+
+/* D802 · "BUNDLE SELECTED" was bare 9px uppercase text at the end of a row
+   where every other status in the app is a chip. .template-badge marks the
+   product or bundle a batch is using - the same job .factory-panel-state does
+   at the other end of a panel head - so it takes the same chip. */
+.app-shell .template-badge{
+  display:inline-flex;align-items:center;
+  padding:6px 9px;border-radius:7px;
+  background:#eee7ec;border:1px solid #dfc8d5;color:#5a4152;
+  font:750 11px/1 Inter,ui-sans-serif,system-ui,sans-serif;
+  text-transform:none;letter-spacing:normal;white-space:nowrap}
