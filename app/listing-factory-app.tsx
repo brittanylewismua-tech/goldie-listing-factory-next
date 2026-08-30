@@ -4199,13 +4199,18 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
                 open batch's drafts, while the button published all three products.
                 It gets every product's listings now, so the checkboxes govern the
                 six listings the press will actually create. */}
+            {/* D731 - prototype .goldie-review: the listings on the left, the press
+                and everything it warns about in a box beside them that stays in
+                place while the list scrolls. Every gate, warning, confirmation
+                and failure path below is the same code in the same order. */}
+            <div className="factory-review"><div className="factory-review-list">
             <FinalListingReview drafts={bundlePublishDrafts()} files={bundlePublishFiles()} selections={bundlePublishSelections()} defaultIndices={printifyImageIndices} preparedMockupCounts={bundlePublishMockupCounts()} batchSizeGuide={sizeGuideName} onRetry={clientId=>{const design=files.find(file=>file.id===clientId);if(design)void runDrafts([design],true)}} onEdit={setFinishPhase}/>{/* D548 - read as someone about to spend money, this said two untrue things.
               "Only the listings selected above" - the selection covers the product
               that is open, and on a bundle the button publishes every product, so
               the sentence promised a smaller press than the one it sat under. And
               it named the fee per listing without ever multiplying it, on the one
               screen where the total is the thing worth knowing. */}
-            <div className="publish-live-warning">{(()=>{
+            </div><div className="factory-publish-box"><div className="publish-live-warning">{(()=>{
               /* D560 - the count follows her ticks now that they govern every listing. */
               const total=publishTargets().length||bundleListingsToPublish();
               /* D636 - "all 3 products in this batch" counted the bundle, not the
@@ -4259,7 +4264,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
               {(publishing||Boolean(publishRun))&&<p className="working-note" role="status">Publishing to Etsy can take a few minutes. Keep this page open — Goldie will show each listing as it goes live.</p>}<button className="keep-drafts-button" type="button" disabled={publishing} onClick={()=>{setBatchDisplayName(current=>current||suggestedBatchName());setDraftSaveOpen(true)}}>Keep as Printify drafts for now</button>{!publishing&&<small className="keep-drafts-note">Nothing will publish to Etsy. Return to this exact batch from Batch History.</small>}{/* D474 - this describes the Keep as drafts button, but sat there while the
      button above it said Publishing, so the page said both that it was
      publishing and that nothing would publish. It belongs to a choice that is
-     no longer available once publishing has started. */}{publishMessage&&<p className="publish-message" role="status">{publishMessage}</p>}{publishFailures.length>0&&<section className="publish-failure-panel" role="alert"><p className="mini-label">NOTHING WAS PUBLISHED</p><h3>{publishFailures.length===1?"1 listing could not be published":`${publishFailures.length} listings could not be published`}</h3><p className="publish-failure-lede">Etsy did not create {publishFailures.length===1?"this listing":"these listings"}, so you have not been charged a listing fee for {publishFailures.length===1?"it":"them"}. Here is exactly what Etsy said:</p><ul className="publish-failure-list">{publishFailures.map(failure=>{const draft=drafts.find(item=>item.id===failure.productId);return <li key={failure.productId}><strong>{draft?.title?.slice(0,60)||draft?.name||"Listing"}</strong><span>{failure.error}</span></li>})}</ul><p className="publish-failure-lede">Goldie has emailed this to you and recorded it. You can press publish again once it is fixed.</p></section>}</>}</div></article></>)}
+     no longer available once publishing has started. */}{publishMessage&&<p className="publish-message" role="status">{publishMessage}</p>}{publishFailures.length>0&&<section className="publish-failure-panel" role="alert"><p className="mini-label">NOTHING WAS PUBLISHED</p><h3>{publishFailures.length===1?"1 listing could not be published":`${publishFailures.length} listings could not be published`}</h3><p className="publish-failure-lede">Etsy did not create {publishFailures.length===1?"this listing":"these listings"}, so you have not been charged a listing fee for {publishFailures.length===1?"it":"them"}. Here is exactly what Etsy said:</p><ul className="publish-failure-list">{publishFailures.map(failure=>{const draft=drafts.find(item=>item.id===failure.productId);return <li key={failure.productId}><strong>{draft?.title?.slice(0,60)||draft?.name||"Listing"}</strong><span>{failure.error}</span></li>})}</ul><p className="publish-failure-lede">Goldie has emailed this to you and recorded it. You can press publish again once it is fixed.</p></section>}</div></div></>}</div></article></>)}
         </div>
 
         {/* D220 · Draft creation moves onto the Images page. Every photo in this app is
