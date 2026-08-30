@@ -645,3 +645,10 @@ html, body { background: #f1d2dc; }
 .app-shell .step-card > .step-content > .step-copy,.app-shell .connect-step .connect-timing{text-align:left}
 .app-shell .connect-step .step-copy{margin-left:0;margin-right:0;max-width:64ch}
 .app-shell .connect-step .connection-setup,.app-shell .connect-step .connection-stack{width:100%;max-width:none;margin-left:0;margin-right:0}
+/* D735 · The connection rows fill the panel and start at its left edge, the way
+   every other row in the migrated interface does. They were capped at 620px and
+   centred, which left the Printify and Etsy logos floating in the middle of a
+   906px panel with nothing beside them. */
+.app-shell .connect-step .connect-timing{margin-left:0;margin-right:0}
+.app-shell .connect-step .printify-service-group,.app-shell .connect-step .connection-stack{display:grid;justify-items:stretch;gap:12px}
+.app-shell .connect-step .connection-row{width:100%;max-width:none;margin-left:0;margin-right:0}
