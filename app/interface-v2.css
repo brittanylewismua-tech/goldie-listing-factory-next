@@ -517,9 +517,9 @@ html, body { background: #f1d2dc; }
 /* The value wraps rather than truncating. "Clothing > Unisex Adult Clothing >
    Tops & Tees > Sweatshirts" ellipsised to "Clothing > Unisex …", which hides
    the only part that says which category was chosen. */
-.app-shell .factory-check>b{flex:0 1 auto;max-width:58%;min-width:0;overflow-wrap:anywhere;white-space:normal;text-align:right;font:750 11px/1.35 Inter,ui-sans-serif,system-ui,sans-serif}
-.app-shell .factory-check>b.is-set{color:#37704c}
-.app-shell .factory-check>b.is-missing{color:#a33a48}
+.app-shell .factory-check b{flex:0 1 auto;max-width:58%;min-width:0;overflow-wrap:anywhere;white-space:normal;text-align:right;font:750 11px/1.35 Inter,ui-sans-serif,system-ui,sans-serif}
+.app-shell .factory-check b.is-set{color:#37704c}
+.app-shell .factory-check b.is-missing{color:#a33a48}
 @media(max-width:900px){.app-shell .factory-listing-grid{grid-template-columns:minmax(0,1fr)}}
 
 /* D731 · Step 4's review rows, from the prototype's .goldie-review-row.

@@ -171,6 +171,10 @@ const CASES = [
   { name: "forward button background", chain: [...shell, el("div","factory-footer"), el("button","workflow-next")], property: "background", expect: /#5d3151/ },
   { name: "forward button padding", chain: [...shell, el("div","factory-footer"), el("button","workflow-next")], property: "padding", expect: /^11px 18px$/ },
   { name: "publish press background", chain: [...shell, el("div","factory-review"), el("div","factory-publish-box"), el("button","publish-all-button")], property: "background", expect: /#f3dbe9/ },
+  { name: "publish box heading is light", chain: [...shell, el("div","factory-review"), el("div","factory-publish-box"), el("h3")], property: "color", expect: /^#fff$/ },
+  { name: "publish box body is light", chain: [...shell, el("div","factory-review"), el("div","factory-publish-box"), el("p")], property: "color", expect: /^#c8b9c4$/ },
+  { name: "checklist values wrap", chain: [...shell, el("div","factory-checklist"), el("div","factory-check"), el("b")], property: "overflow-wrap", expect: /^anywhere$/ },
+  { name: "bundle band figure", chain: [...shell, el("article","recipe-tile","bundle-as-product"), el("button","recipe-use"), el("span","recipe-icon")], property: "font", expect: /^800 30px/ },
   // step 4 review rows
   { name: "review row frame", chain: [...shell, el("div","final-listing-grid"), el("article","final-listing-card")], property: "border", expect: /^1px solid #ded6dc$/ },
   { name: "review row columns", chain: [...shell, el("div","final-listing-grid"), el("article","final-listing-card")], property: "grid-template-columns", expect: /^28px 44px minmax\(0,1fr\)$/ },
