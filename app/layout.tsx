@@ -13,7 +13,8 @@ import "./theme.css";
 import "./lilac-theme.css";
 import "./approved-functional.css";
 import "./management-aesthetic.css";
-import "./clarity-pass.css";
+import "./clarity-pass.css"
+import "./interface-v2.css";
 import ReliableNavigation from "./reliable-navigation";
 
 export async function generateMetadata(): Promise<Metadata> {

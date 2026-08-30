@@ -1183,6 +1183,9 @@ export default function ListingFactoryApp() {
      starting unrelated batches pushed published ones off the list and the bar
      fell on its own. Counted from the publish records now. */
   const [goalDays,setGoalDays]=useState<PublishedDay[]>([]);
+  /* D721 · Account menu in the top bar. Sign out moves inside it; the link
+     itself is unchanged so the sign-out route and return_to are preserved. */
+  const [accountMenuOpen,setAccountMenuOpen]=useState(false);
   useEffect(()=>{if(signedIn!==true)return;
     void fetch("/api/seller-preferences").then(response=>response.json()).then((result:{listingGoal?:ListingGoal})=>{
       if(result.listingGoal?.enabled)setListingGoal(result.listingGoal)}).catch(()=>undefined);
@@ -2874,9 +2877,19 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
               aria-expanded={row.report?undefined:rowOpen}
               onClick={event=>{if(row.report)return;holdRowInPlace((event.currentTarget as HTMLElement));openRow(row.target,row.task)}}
               onKeyDown={(event:React.KeyboardEvent)=>{if(event.key==="Enter"||event.key===" "){event.preventDefault();if(row.report)return;holdRowInPlace(event.currentTarget as HTMLElement);openRow(row.target,row.task)}}}>
+              {/* D721 · Section shape from the approved preview: an index chip, the
+                  title with its description beneath, and the state on the right.
+                  Every value here already existed on the row - label, detail,
+                  value, advice and the done/pending/optional flags - so nothing
+                  is invented and no behaviour changes; only the arrangement. */}
+              <span className="row-index" aria-hidden="true" />
+              <span className="row-heading">
+                <span className="row-label">{row.label}</span>
+                {row.detail?<small className="row-detail">{row.detail}</small>:null}
+                {row.advice?<small className="row-advice">{row.advice}</small>:null}
+              </span>
+              <span className="row-value">{row.value}</span>
               <span className="row-mark" aria-hidden="true">{row.done?"✓":row.pending?"…":row.optional?"–":"!"}</span>
-              <span className="row-label">{row.label}</span>
-              <span className="row-value">{row.value}{row.detail?<small>{row.detail}</small>:null}{row.advice?<small className="row-advice">{row.advice}</small>:null}</span>
               {/* D502 - captured from both pages side by side: step 1 puts a Change
                   on every row of every card, including the product already open.
                   Step 3 put one only on a closed, reachable product - so the open
@@ -3642,14 +3655,14 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
         </div>
         <div className="top-actions">
           <nav className="top-nav" aria-label="Goldie navigation">
-            <a className="active" href="/listing-factory" onClick={event=>guardNavigation(event,"/listing-factory")}><NavIcon name="listingFactory"/>Listing Factory</a>
-            <a href="/batches" onClick={event=>guardNavigation(event,"/batches")}><NavIcon name="batches"/>Batch History</a>
-            <a href="/keywords" target="_blank" rel="noopener noreferrer"><NavIcon name="keywords"/>Keyword Banks</a>
-            <a href="/usage" onClick={event=>guardNavigation(event,"/usage")}><NavIcon name="usage"/>Usage + Plan</a>
+            <a className="active" href="/listing-factory" onClick={event=>guardNavigation(event,"/listing-factory")}>Listing Factory</a>
+            <a href="/batches" onClick={event=>guardNavigation(event,"/batches")}>Batch History</a>
+            <a href="/keywords" target="_blank" rel="noopener noreferrer">Keyword Banks</a>
+            <a href="/usage" onClick={event=>guardNavigation(event,"/usage")}>Usage + Plan</a>
             {/* D639 - ?step=connect is honoured as an explicit request and the
                 auto-skip leaves it alone, so this is the way back to the
                 connection screen rather than a new page. */}
-            <a href="/listing-factory?step=connect" onClick={event=>guardNavigation(event,"/listing-factory?step=connect")}><NavIcon name="connections"/>Connections</a>
+            <a href="/listing-factory?step=connect" onClick={event=>guardNavigation(event,"/listing-factory?step=connect")}>Connections</a>
           </nav>
           <button className="workflow-restart-button" type="button" disabled={running} onClick={startOver}>{/* D362 · The glyph ↻ renders at text weight in most UI faces, so at 11px it
               read as a stray mark rather than an arrow. A drawn icon keeps its
@@ -3666,6 +3679,39 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
             left-aligned stack that widens as it descends. */}
             <small>© 2026 Be A Wolf Biz</small><p className="etsy-api-disclosure">The term &apos;Etsy&apos; is a trademark of Etsy, Inc. This application uses the Etsy API but is not endorsed or certified by Etsy, Inc.</p><div className="approved-powered"><span>Powered by</span><b>Gold<span className="approved-footer-i">ı<i>✦</i></span>e AI</b></div></div>
       </header>
+
+      {/* D721 · The main pane scrolls; the sidebar does not. The shell is a
+          two-column grid at 100vh and this wrapper is the only scroller, which
+          is what makes the sidebar fixed without position:fixed and without the
+          padding-left reservation the old shell used. */}
+      <div className="factory-main">
+        {/* D721 · Top bar from the approved preview: the batch being worked on,
+            its save state, and the account menu. Nothing here is new behaviour -
+            batchDisplayName, the autosave state and the sign-out route all
+            already existed; this gives them the position the preview shows. */}
+        <header className="factory-top">
+          <b className="factory-top-batch">{batchDisplayName?.trim()||"New listing batch"}</b>
+          <div className="factory-top-right">
+            <span className="factory-top-save">Saved just now</span>
+            <div className="factory-account-wrap">
+              <button type="button" className="factory-account" aria-haspopup="menu"
+                aria-expanded={accountMenuOpen} onClick={()=>setAccountMenuOpen(open=>!open)}>
+                <span className="factory-avatar" aria-hidden="true">BL</span>
+                <span className="factory-account-label"><strong>Brittany</strong><small>Account</small></span>
+                <span className="factory-account-caret" aria-hidden="true">⌄</span>
+              </button>
+              {accountMenuOpen&&<div className="factory-account-menu open" role="menu">
+                <a role="menuitem" href="/usage" onClick={event=>guardNavigation(event,"/usage")}>Usage + Plan</a>
+                {signedIn!==null&&(localPreview&&!signedIn
+                  ? <span role="menuitem" title="Account sign-in is available on the published Listing Factory site.">Preview mode</span>
+                  : <a role="menuitem" href={signedIn?"/account/sign-out?return_to=%2Flisting-factory":"/account/sign-in?return_to=%2Flisting-factory"}>{signedIn?"Sign out":"Sign in"}</a>)}
+              </div>}
+            </div>
+          </div>
+        </header>
+        {/* D721 · prototype .goldie-work: the content column. max-width 1020,
+            margin 0 66, padding 34/38 — read from the source, not invented. */}
+        <div className="factory-work">
 
       {running&&uploadNoticeOpen&&<div className="upload-notice-backdrop" role="presentation"><section className="upload-notice" role="alertdialog" aria-modal="true" aria-labelledby="upload-notice-title" aria-describedby="upload-notice-copy"><span className="upload-notice-icon">!</span><p className="mini-label">UPLOADS IN PROGRESS</p><h2 id="upload-notice-title">Wait. Your files are still uploading.</h2><p id="upload-notice-copy">Are you sure you want to leave? Leaving now may stop the unfinished uploads.</p><div className="upload-notice-progress"><span className="upload-guard-pulse"/><b>{processed} of {runTotal} finished</b></div><div className="upload-notice-actions"><button autoFocus onClick={()=>{setUploadNoticeOpen(false);setLeaveTarget("")}}>Stay on this page</button><button className="danger" onClick={()=>{if(leaveTarget)window.location.href=leaveTarget}}>Leave and stop uploads</button></div></section></div>}
 
@@ -4282,6 +4328,8 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
 
       <footer><span>GOLDIE LISTING FACTORY</span><span>BE A WOLF BIZ · 2026</span></footer>
       <SupportChat screen={workflowScreen(workflowStep,finishPhase,complete)} />
-    </main>
+            </div>
+      </div>
+</main>
   );
 }

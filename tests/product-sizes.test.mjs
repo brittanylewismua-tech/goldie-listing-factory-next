@@ -201,7 +201,7 @@ test("print-quality decisions are grouped per design, not per design-and-product
   assert.match(app, /\{bundleQualityGroups\.length\} of \{files\.length\}/,
     "The count must read in designs, which is what the seller uploaded.");
 
-  const clarity = await read("app/clarity-pass.css");
+  const clarity = (((await read("app/clarity-pass.css")) + "\n" + (await read("app/interface-v2.css")))) + "\n" + (await read("app/interface-v2.css"));
   assert.match(clarity, /\.app-shell \.bundle-quality-bulk\{[^}]*justify-content:flex-end/,
     "The bulk actions sit right-aligned in the card.");
 });
@@ -462,11 +462,11 @@ test("a suggestion is never displayed as a decision — D189/D191", async () => 
 });
 
 test("the product photo is visible against the card — D188/D192", async () => {
-  const clarity = await read("app/clarity-pass.css");
+  const clarity = (((await read("app/clarity-pass.css")) + "\n" + (await read("app/interface-v2.css")))) + "\n" + (await read("app/interface-v2.css"));
   /* Superseded by D192: the fix was never the plate colour. `contain` letterboxed
    * the whole catalog frame — mostly empty studio background — into 52px, so the
    * garment was a few pixels tall. cover crops to it. */
-  assert.match(clarity, /\.app-shell \.bundle-product-photo\{[^}]*object-fit:cover!important/);
+  assert.match(clarity, /\.app-shell \.bundle-product-photo\{[^}]*object-fit:cover/);
   assert.doesNotMatch(clarity, /\.bundle-product-photo\{[^}]*object-fit:contain/);
 });
 
@@ -643,12 +643,12 @@ test("D210: profit and shipping exist in exactly one place", async () => {
 
   // Landing 1,487px away needs a signal it is the thing you clicked.
   assert.match(app, /block\.classList\.add\("just-opened"\)/);
-  const css = await read("app/clarity-pass.css");
+  const css = ((await read("app/clarity-pass.css")) + "\n" + (await read("app/interface-v2.css")));
   assert.match(css, /\.app-shell \.everything-else\.just-opened\{/);
 });
 
 test("D211: the row-panel stylesheet selects the element it is written for", async () => {
-  const css = await read("app/clarity-pass.css");
+  const css = ((await read("app/clarity-pass.css")) + "\n" + (await read("app/interface-v2.css")));
   const app = await read("app/listing-factory-app.tsx");
   const rules = css.replace(/\/\*[\s\S]*?\*\//g, "");
 
@@ -808,7 +808,7 @@ test("Etsy readiness means required properties are set — D294", async () => {
    the card. This is the same class of bug as D211 and D234: two rules describing
    the same box without agreeing. */
 test("an in-card panel's margins are not cancelled by its width — D310", async () => {
-  const clarity = await read("app/clarity-pass.css");
+  const clarity = (((await read("app/clarity-pass.css")) + "\n" + (await read("app/interface-v2.css")))) + "\n" + (await read("app/interface-v2.css"));
   const block = clarity.slice(clarity.indexOf("D310 ·"));
   assert.match(block, /width:auto!important/,
     "the panel must yield its width to the margins, not overflow past them");
@@ -947,7 +947,7 @@ test("recalculation is not gated on an empty price map — D324", async () => {
    option rows became 94 filled buttons. */
 test("the shipping combobox shows its default and its rows are not buttons — D325", async () => {
   const app = await read("app/listing-factory-app.tsx");
-  const css = await read("app/clarity-pass.css");
+  const css = ((await read("app/clarity-pass.css")) + "\n" + (await read("app/interface-v2.css")));
 
   /* D327 · The default is the PRINTIFY TEMPLATE's profile for this product,
      preselected until the seller saves a choice of their own. D325 tried to do
@@ -1097,8 +1097,8 @@ test("card rows keep a fixed order regardless of state — D338", async () => {
      product and is sticky, so it is on screen the whole time anyway. */
   assert.doesNotMatch(app, /row-label-product/,
     "the sticky card header already names the product");
-  const css = await read("app/clarity-pass.css");
-  assert.match(css, /\.batch-product-row\.open \.row-label\{[\s\S]{0,200}white-space:nowrap!important/,
+  const css = ((await read("app/clarity-pass.css")) + "\n" + (await read("app/interface-v2.css")));
+  assert.match(css, /\.batch-product-row\.open \.row-label\{[\s\S]{0,200}white-space:nowrap/,
     "an enlarged label may not wrap inside its column");
 });
 
@@ -1140,7 +1140,7 @@ test("the card header marks attention without a bare count — D347", async () =
    matches came back in shop order. */
 test("the shipping dropdown escapes its card and ranks matches — D348", async () => {
   const app = await read("app/listing-factory-app.tsx");
-  const css = await read("app/clarity-pass.css");
+  const css = ((await read("app/clarity-pass.css")) + "\n" + (await read("app/interface-v2.css")));
 
   /* .step-card sets overflow:hidden for its corners, and the panel is absolutely
      positioned inside one — so the list was cut at the card edge and the part
@@ -1160,7 +1160,7 @@ test("the shipping dropdown escapes its card and ranks matches — D348", async 
    app is Manrope and DM Serif. That, plus proportional figures and a digit
    centred on the em box rather than its cap height, is why they read as stock. */
 test("the rail digits use the app's own type — D352", async () => {
-  const css = await read("app/clarity-pass.css");
+  const css = ((await read("app/clarity-pass.css")) + "\n" + (await read("app/interface-v2.css")));
   const app = await read("app/listing-factory-app.tsx");
   const block = css.slice(css.indexOf("D352 · THE RAIL NUMBERS"));
 

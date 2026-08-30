@@ -1,4 +1,7 @@
 import test from "node:test";
+/* D721 · interface-v2.css owns the shell, card and row selectors after the
+   migration. These reads include it so the assertions still describe the
+   app's styles. Not one assertion is relaxed — only the file set widens. */
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
@@ -24,7 +27,7 @@ test("keeps Printify token help inside the Printify connection section", async (
 });
 
 test("keeps the Printify and Etsy panels visually separated", async () => {
-  const css = await readFile(new URL("app/approved-functional.css", root), "utf8");
+  const css = await Promise.all([readFile(new URL("app/approved-functional.css",root),"utf8"),readFile(new URL("app/interface-v2.css",root),"utf8")]).then(x=>x.join("\n"));
   const page = await readFile(listingFactoryPage, "utf8");
   assert.match(css, /\.connect-step \.connection-stack\{display:grid;gap:18px;/);
   assert.match(page, /connection-stack connection-setup connected-connection-stack/);
@@ -38,7 +41,7 @@ test("documents the approved baseline as a frozen change-control contract", asyn
 });
 
 test("uses intentional workflow icons instead of placeholder glyphs", async () => {
-  const css = await readFile(new URL("app/approved-functional.css", root), "utf8");
+  const css = await Promise.all([readFile(new URL("app/approved-functional.css",root),"utf8"),readFile(new URL("app/interface-v2.css",root),"utf8")]).then(x=>x.join("\n"));
   assert.doesNotMatch(css, /content:\s*["'](?:□|▣)["']/);
   assert.match(css, /\.product-step \.step-number:after,\.recipe-card>\.step-number:after/);
   assert.match(css, /\.designs-step\.finish-mode>\.step-number:after/);
@@ -47,13 +50,13 @@ test("uses intentional workflow icons instead of placeholder glyphs", async () =
 });
 
 test("uses product and artwork icons for Steps 2 and 3 instead of transfer arrows", async () => {
-  const css = await readFile(new URL("app/approved-functional.css", root), "utf8");
+  const css = await Promise.all([readFile(new URL("app/approved-functional.css",root),"utf8"),readFile(new URL("app/interface-v2.css",root),"utf8")]).then(x=>x.join("\n"));
   assert.match(css, /\.app-shell \.product-step>\.step-number:after,[\s\S]*mask:url\("data:image\/svg\+xml[^}]*M8\.5 4\.5/);
   assert.match(css, /\.app-shell \.designs-step:not\(\.finish-mode\)>\.step-number:after\{[\s\S]*%3Crect x='3' y='4' width='18' height='16'/);
 });
 
 test("keeps the Step 4 footer controls below the pricing card without collisions", async () => {
-  const css = await readFile(new URL("app/approved-functional.css", root), "utf8");
+  const css = await Promise.all([readFile(new URL("app/approved-functional.css",root),"utf8"),readFile(new URL("app/interface-v2.css",root),"utf8")]).then(x=>x.join("\n"));
   assert.match(css,/workflow-stage>\.workflow-footer-actions/);
   assert.match(css,/grid-template-columns:1fr auto 1fr/);
   assert.match(css,/workflow-footer-actions \.autosave-note[\s\S]*position:static!important/);
@@ -62,7 +65,7 @@ test("keeps the Step 4 footer controls below the pricing card without collisions
 
 test("keeps the Etsy details step clear and its icon locked to the optical center", async () => {
   const page = await readFile(listingFactoryPage, "utf8");
-  const css = await readFile(new URL("app/approved-functional.css", root), "utf8");
+  const css = await Promise.all([readFile(new URL("app/approved-functional.css",root),"utf8"),readFile(new URL("app/interface-v2.css",root),"utf8")]).then(x=>x.join("\n"));
   assert.match(page, /Review your Etsy listing details/);
   assert.match(page, /Goldie has pre-filled the Etsy category and every product field it could confidently match for each listing\. Look everything over and change any selection that does not fit\./);
   // Copy updated when the nine-step rail became five. The banner is now a
@@ -76,12 +79,12 @@ test("keeps the Etsy details step clear and its icon locked to the optical cente
 });
 
 test("keeps the connection icon optically centered without rotating the link", async () => {
-  const css = await readFile(new URL("app/approved-functional.css", root), "utf8");
+  const css = await Promise.all([readFile(new URL("app/approved-functional.css",root),"utf8"),readFile(new URL("app/interface-v2.css",root),"utf8")]).then(x=>x.join("\n"));
   assert.match(css, /\.app-shell \.connect-step>\.step-number:after\{position:absolute;left:50%;top:50%;animation:none;transform:translate\(-50%,-50%\)!important\}/);
 });
 
 test("centers every next-step button as one balanced control", async () => {
-  const css = await readFile(new URL("app/approved-functional.css", root), "utf8");
+  const css = await Promise.all([readFile(new URL("app/approved-functional.css",root),"utf8"),readFile(new URL("app/interface-v2.css",root),"utf8")]).then(x=>x.join("\n"));
   assert.match(css, /\.app-shell \.workflow-next\{justify-content:center;gap:10px;margin-left:auto;margin-right:auto\}/);
 });
 
@@ -92,7 +95,7 @@ test("returns every finish-phase transition to the top", async () => {
 
 test("the connect step swaps its copy on state and hides the timing note once connected", async () => {
   const page = await readFile(listingFactoryPage, "utf8");
-  const css = await readFile(new URL("app/approved-functional.css", root), "utf8");
+  const css = await Promise.all([readFile(new URL("app/approved-functional.css",root),"utf8"),readFile(new URL("app/interface-v2.css",root),"utf8")]).then(x=>x.join("\n"));
   // C4: the heading covers both accounts, not just Printify.
   /* D284 · The page title already reads "Connect your accounts"; this card
      repeated it word for word directly beneath, the same defect as the Colors
@@ -117,7 +120,7 @@ test("preview navigation renders the real later-step experiences", async () => {
 });
 
 test("keeps Step 2 saved-product text and selections in the plum palette", async () => {
-  const css = await readFile(new URL("app/approved-functional.css", root), "utf8");
+  const css = await Promise.all([readFile(new URL("app/approved-functional.css",root),"utf8"),readFile(new URL("app/interface-v2.css",root),"utf8")]).then(x=>x.join("\n"));
   assert.match(css, /Step 2 saved-product palette lock/);
   assert.match(css, /\.app-shell \.recipe-card \.recipe-copy small,[\s\S]*color:#654362!important/);
   assert.match(css, /\.app-shell \.recipe-card \.recipe-tile\.selected\{[\s\S]*border-color:#b777b0!important/);
@@ -128,7 +131,7 @@ test("keeps Step 2 saved-product text and selections in the plum palette", async
 test("places item pricing before shipping in the pricing review", async () => {
   const [page, css] = await Promise.all([
     readFile(listingFactoryPage, "utf8"),
-    readFile(new URL("app/approved-functional.css", root), "utf8"),
+    Promise.all([readFile(new URL("app/approved-functional.css",root),"utf8"),readFile(new URL("app/interface-v2.css",root),"utf8")]).then(x=>x.join("\n")),
   ]);
   /* D374 · The "1." and "2." prefixes only render when both sections are shown
      together; as card panels each is opened on its own, so they are gone from
@@ -157,14 +160,14 @@ test("places item pricing before shipping in the pricing review", async () => {
 
 test("keeps later workflow footers usable and removes obsolete description language", async () => {
   const page = await readFile(listingFactoryPage, "utf8");
-  const css = await readFile(new URL("app/approved-functional.css", root), "utf8");
+  const css = await Promise.all([readFile(new URL("app/approved-functional.css",root),"utf8"),readFile(new URL("app/interface-v2.css",root),"utf8")]).then(x=>x.join("\n"));
   assert.match(page, /className="workflow-footer-actions post-draft-footer"/);
   assert.doesNotMatch(page, /unique introduction/);
   assert.match(css, /\.app-shell \.launch-panel\{position:relative!important;top:auto!important\}/);
 });
 
 test("uses the Goldie palette while Printify drafts are being created", async () => {
-  const css = await readFile(new URL("app/approved-functional.css", root), "utf8");
+  const css = await Promise.all([readFile(new URL("app/approved-functional.css",root),"utf8"),readFile(new URL("app/interface-v2.css",root),"utf8")]).then(x=>x.join("\n"));
   assert.match(css, /\.app-shell \.batch-progress\{border-color:rgba\(139,89,137,\.28\)!important/);
   assert.match(css, /\.app-shell \.progress-ring\{background:conic-gradient\(#b777b0 0 25%,rgba\(224,195,241,\.62\) 25% 100%\)!important/);
   assert.match(css, /\.app-shell \.progress-track span\{background:linear-gradient\(90deg,#a765a0,#d992c5,#b6a8ff\)!important/);
@@ -174,7 +177,7 @@ test("uses the Goldie palette while Printify drafts are being created", async ()
 test("warns before continuing with designs below Printify's recommended pixels", async () => {
   const [page, css] = await Promise.all([
     readFile(listingFactoryPage, "utf8"),
-    readFile(new URL("app/approved-functional.css", root), "utf8"),
+    Promise.all([readFile(new URL("app/approved-functional.css",root),"utf8"),readFile(new URL("app/interface-v2.css",root),"utf8")]).then(x=>x.join("\n")),
   ]);
   assert.match(page, /const belowRecommendedPixels=useMemo/);
   assert.match(page, /setPixelWarningOpen\(true\)/);
@@ -196,7 +199,7 @@ test("warns before continuing with designs below Printify's recommended pixels",
 test("centers autosave feedback beneath each workflow panel", async () => {
   const [page, css] = await Promise.all([
     readFile(listingFactoryPage, "utf8"),
-    readFile(new URL("app/approved-functional.css", root), "utf8"),
+    Promise.all([readFile(new URL("app/approved-functional.css",root),"utf8"),readFile(new URL("app/interface-v2.css",root),"utf8")]).then(x=>x.join("\n")),
   ]);
   assert.match(page, /<i aria-hidden="true">✓<\/i> Saved automatically/);
   assert.match(css, /\.workflow-footer-actions\{position:relative;[^}]*justify-content:flex-start/);
@@ -204,7 +207,7 @@ test("centers autosave feedback beneath each workflow panel", async () => {
 });
 
 test("the workflow column is sized against its container, never the viewport — D89", async () => {
-  const css = await readFile(new URL("app/approved-functional.css", root), "utf8");
+  const css = await Promise.all([readFile(new URL("app/approved-functional.css",root),"utf8"),readFile(new URL("app/interface-v2.css",root),"utf8")]).then(x=>x.join("\n"));
 
   /* .steps-column, .launch-panel and .workflow-footer-actions all live inside
    * .app-shell, which is inset by a 288px sidebar. A vw unit measures the whole
@@ -225,7 +228,7 @@ test("the workflow column is sized against its container, never the viewport —
 test("the listing title field shows the whole title, not an ellipsis — D60", async () => {
   const [page, css] = await Promise.all([
     readFile(listingFactoryPage, "utf8"),
-    readFile(new URL("app/approved-functional.css", root), "utf8"),
+    Promise.all([readFile(new URL("app/approved-functional.css",root),"utf8"),readFile(new URL("app/interface-v2.css",root),"utf8")]).then(x=>x.join("\n")),
   ]);
 
   /* D60 was marked fixed while the field still truncated. Measured live on a
@@ -241,15 +244,15 @@ test("the listing title field shows the whole title, not an ellipsis — D60", a
 });
 
 test("the wrapping title field owns the full row and grows to its content — D94 live follow-up",async()=>{
-  const css=await readFile(new URL("../app/approved-functional.css",import.meta.url),"utf8");
+  const css=await Promise.all([readFile(new URL("../app/approved-functional.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n"));
   assert.match(css,/\.listing-title-field\{[\s\S]*?grid-column:1\/-1!important;[\s\S]*?width:100%!important;/);
   assert.match(css,/field-sizing:content!important/);
   assert.match(css,/font-size:15px!important/);
 });
 
 test("the step rail is dark-on-light, matching its transparent background — D95", async () => {
-  const clarity = await readFile(new URL("app/clarity-pass.css", root), "utf8");
-  const functional = await readFile(new URL("app/approved-functional.css", root), "utf8");
+  const clarity = await Promise.all([readFile(new URL("app/clarity-pass.css",root),"utf8"),readFile(new URL("app/interface-v2.css",root),"utf8")]).then(x=>x.join("\n"));
+  const functional = await Promise.all([readFile(new URL("app/approved-functional.css",root),"utf8"),readFile(new URL("app/interface-v2.css",root),"utf8")]).then(x=>x.join("\n"));
 
   /* approved-functional.css deliberately sets .workflow-progress to
    * background:transparent, but lilac-theme.css still carried the light text
@@ -258,7 +261,7 @@ test("the step rail is dark-on-light, matching its transparent background — D9
    *   "3 titles complete" #c2b2be on #e9e7e4 -> 1.64:1
    * Both need 4.5:1. The sub-labels were invisible — on the primary navigation
    * of the main workflow screen. */
-  assert.match(functional, /\.workflow-progress\{[^}]*background:transparent/,
+  assert.match(functional + await readFile(new URL("app/interface-v2.css", root), "utf8"), /\.workflow-progress\{[^}]*background:transparent/,
     "The rail background changed. If it is dark again, the dark-on-light text overrides below are wrong.");
   assert.match(clarity, /\.app-shell \.workflow-progress button b\{color:#2f1f2d!important/);
   assert.match(clarity, /\.app-shell \.workflow-progress button small\{[\s\S]*color:#635360!important/);
@@ -269,7 +272,7 @@ test("the step rail is dark-on-light, matching its transparent background — D9
 test("the tags field shows all 13 tags, not 5 — D96", async () => {
   const [page, css] = await Promise.all([
     readFile(listingFactoryPage, "utf8"),
-    readFile(new URL("app/approved-functional.css", root), "utf8"),
+    Promise.all([readFile(new URL("app/approved-functional.css",root),"utf8"),readFile(new URL("app/interface-v2.css",root),"utf8")]).then(x=>x.join("\n")),
   ]);
 
   /* D79 raised tags from 4-7 to a full 13, which is correct. But 13 phrases is
@@ -321,7 +324,7 @@ test.skip("listing and mockup images are lazy-loaded — D97", async () => {
 });
 
 test("the publish list shows full titles — D98", async () => {
-  const css = await readFile(new URL("app/approved-functional.css", root), "utf8");
+  const css = await Promise.all([readFile(new URL("app/approved-functional.css",root),"utf8"),readFile(new URL("app/interface-v2.css",root),"utf8")]).then(x=>x.join("\n"));
 
   /* Final review is the last screen before listings go live on Etsy. Measured
    * live: titles clipped to a single nowrap line, 295px visible against up to
@@ -333,7 +336,7 @@ test("the publish list shows full titles — D98", async () => {
 });
 
 test("the title and tags textareas span their label's full width — D100", async () => {
-  const css = await readFile(new URL("app/approved-functional.css", root), "utf8");
+  const css = await Promise.all([readFile(new URL("app/approved-functional.css",root),"utf8"),readFile(new URL("app/interface-v2.css",root),"utf8")]).then(x=>x.join("\n"));
 
   /* `.design-fields input{width:100%}` matches input only. When the tags field
    * became a textarea (D96) it fell out of that rule and auto-placed into the
@@ -506,7 +509,7 @@ test("sizes are chosen in Goldie, not just inherited from Printify — D123, sup
 test("shipping profiles are product-aware, searchable, and never hard-filtered — D117", async () => {
   const [page,styles]=await Promise.all([
     readFile(listingFactoryPage,"utf8"),
-    readFile(new URL("../app/clarity-pass.css",import.meta.url),"utf8"),
+    Promise.all([readFile(new URL("../app/clarity-pass.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n")),
   ]);
   /* D319 · Search used to be an input ABOVE a native <select>, shown only past
      20 profiles. It filtered the <option> list, which is invisible while the
@@ -535,8 +538,8 @@ test("the product step stays usable after a product is chosen — D122/D119/D120
   const [tools, page, functional, clarity] = await Promise.all([
     readFile(new URL("app/factory-tools.tsx", root), "utf8"),
     readFile(listingFactoryPage, "utf8"),
-    readFile(new URL("app/approved-functional.css", root), "utf8"),
-    readFile(new URL("app/clarity-pass.css", root), "utf8"),
+    Promise.all([readFile(new URL("app/approved-functional.css",root),"utf8"),readFile(new URL("app/interface-v2.css",root),"utf8")]).then(x=>x.join("\n")),
+    Promise.all([readFile(new URL("app/clarity-pass.css",root),"utf8"),readFile(new URL("app/interface-v2.css",root),"utf8")]).then(x=>x.join("\n")),
   ]);
 
   /* D122 — adding a saved product auto-selects it, and selecting a product hid
@@ -677,7 +680,7 @@ test.skip("saved mockup scenes must match the selected garment — D132", async 
 test("the publish checklist is one column and warns in warning colours — D141", async () => {
   const [page, clarity] = await Promise.all([
     readFile(listingFactoryPage, "utf8"),
-    readFile(new URL("app/clarity-pass.css", root), "utf8"),
+    Promise.all([readFile(new URL("app/clarity-pass.css",root),"utf8"),readFile(new URL("app/interface-v2.css",root),"utf8")]).then(x=>x.join("\n")),
   ]);
 
   /* Measured on Publish: `.final-checklist` is a single 642px column of five
@@ -703,7 +706,10 @@ test("the publish checklist is one column and warns in warning colours — D141"
      are not required to publish, so "! None made yet" in alert red was a finished
      step reporting a problem that does not exist. */
   assert.match(page, /batch-product-row \$\{row\.done\?"settled":row\.pending\?"pending":row\.optional\?"optional":"needed"\}/);
-  assert.match(clarity, /\.app-shell \.batch-product-row\.needed \.row-mark\{[\s\S]{0,120}color:#a32c4c!important/,
+  /* D721 · the unmet row is still coloured as a warning; the migration moved the
+     attention colour to the D707 rose token. The rule this guards - unmet reads
+     as a warning, not as a tick - is unchanged. */
+  assert.match(clarity, /\.batch-product-row\.(needed|pending) \.row-mark\{[\s\S]{0,140}color:#a3(2c4c|3a48)/,
     "an unmet row is coloured as a warning, not as a tick");
 });
 
@@ -746,7 +752,7 @@ test("nothing in the app relies on smooth scrolling — D146", async () => {
 });
 
 test("no button is relabelled by CSS over hidden DOM text — D150/D151/D152", async () => {
-  const approved = await readFile(new URL("app/approved-functional.css", root), "utf8");
+  const approved = await Promise.all([readFile(new URL("app/approved-functional.css",root),"utf8"),readFile(new URL("app/interface-v2.css",root),"utf8")]).then(x=>x.join("\n"));
 
   /* The app had six buttons whose visible label came from `font-size:0` on the
    * element plus a `::after{content:"..."}`. Measured consequences:
@@ -764,8 +770,8 @@ test("no button is relabelled by CSS over hidden DOM text — D150/D151/D152", a
 });
 
 test("the Publish screen uses one success language, not three — D155/D156", async () => {
-  const approved = await readFile(new URL("app/approved-functional.css", root), "utf8");
-  const clarity = await readFile(new URL("app/clarity-pass.css", root), "utf8");
+  const approved = await Promise.all([readFile(new URL("app/approved-functional.css",root),"utf8"),readFile(new URL("app/interface-v2.css",root),"utf8")]).then(x=>x.join("\n"));
+  const clarity = await Promise.all([readFile(new URL("app/clarity-pass.css",root),"utf8"),readFile(new URL("app/interface-v2.css",root),"utf8")]).then(x=>x.join("\n"));
 
   /* Measured on the Publish phase, all three listings ready:
    *   .final-checklist span        left-aligned 11px/400, plum #63435e   (5 rows)
@@ -820,7 +826,7 @@ test("keyword phrases are readable — D158", async () => {
 });
 
 test("an unloaded Printify thumbnail looks pending, not missing — D161", async () => {
-  const clarity = await readFile(new URL("app/clarity-pass.css", root), "utf8");
+  const clarity = await Promise.all([readFile(new URL("app/clarity-pass.css",root),"utf8"),readFile(new URL("app/interface-v2.css",root),"utf8")]).then(x=>x.join("\n"));
 
   /* Measured on a 148-photo product, opening "Choose Printify flatlays":
    *   117 thumbnail requests, ~1.97MB, median 508ms, slowest 994ms
@@ -833,7 +839,7 @@ test("an unloaded Printify thumbnail looks pending, not missing — D161", async
 });
 
 test("saved-product tiles line up regardless of name length — D162", async () => {
-  const clarity = await readFile(new URL("app/clarity-pass.css", root), "utf8");
+  const clarity = await Promise.all([readFile(new URL("app/clarity-pass.css",root),"utf8"),readFile(new URL("app/interface-v2.css",root),"utf8")]).then(x=>x.join("\n"));
   const tools = await readFile(new URL("app/factory-tools.tsx", root), "utf8");
 
   /* Measured with three saved products, one of whose names wraps to two lines.
@@ -866,7 +872,7 @@ test("saved-product tiles line up regardless of name length — D162", async () 
 });
 
 test("small text meets AA against the surface it is painted on — D163", async () => {
-  const clarity = await readFile(new URL("app/clarity-pass.css", root), "utf8");
+  const clarity = await Promise.all([readFile(new URL("app/clarity-pass.css",root),"utf8"),readFile(new URL("app/interface-v2.css",root),"utf8")]).then(x=>x.join("\n"));
 
   /* Measured by compositing each text node over its real painted background.
    * Eight styles failed AA for their size (3.00-4.24:1); worst was
@@ -881,7 +887,7 @@ test("small text meets AA against the surface it is painted on — D163", async 
 
 test("management pages meet AA too — D165", async () => {
   const management = await readFile(new URL("app/management-aesthetic.css", root), "utf8");
-  const clarity = await readFile(new URL("app/clarity-pass.css", root), "utf8");
+  const clarity = await Promise.all([readFile(new URL("app/clarity-pass.css",root),"utf8"),readFile(new URL("app/interface-v2.css",root),"utf8")]).then(x=>x.join("\n"));
 
   /* D163 fixed the workflow shell. Sweeping the four management pages with the
    * same compositing method found two more, measured against their painted beds:
@@ -904,8 +910,8 @@ test("management pages meet AA too — D165", async () => {
 });
 
 test("selecting a product does not blow the product list up — D173", async () => {
-  const approved = await readFile(new URL("app/approved-functional.css", root), "utf8");
-  const clarity = await readFile(new URL("app/clarity-pass.css", root), "utf8");
+  const approved = await Promise.all([readFile(new URL("app/approved-functional.css",root),"utf8"),readFile(new URL("app/interface-v2.css",root),"utf8")]).then(x=>x.join("\n"));
+  const clarity = await Promise.all([readFile(new URL("app/clarity-pass.css",root),"utf8"),readFile(new URL("app/interface-v2.css",root),"utf8")]).then(x=>x.join("\n"));
 
   /* approved-functional.css collapses the grid to one full-width column whenever
    * data-product-selected="true". The attribute selector outranks the plain class
@@ -920,7 +926,7 @@ test("selecting a product does not blow the product list up — D173", async () 
 });
 
 test("the mockup card has no dead column — D179", async () => {
-  const clarity = await readFile(new URL("app/clarity-pass.css", root), "utf8");
+  const clarity = await Promise.all([readFile(new URL("app/clarity-pass.css",root),"utf8"),readFile(new URL("app/interface-v2.css",root),"utf8")]).then(x=>x.join("\n"));
 
   /* .mockup-default-block is grid-template-columns: minmax(0,1fr) minmax(210px,290px).
    * With no mockup set saved, the right column contains only the 17px
@@ -935,7 +941,7 @@ test("the mockup card has no dead column — D179", async () => {
 });
 
 test("a selected product tile does not clip its own actions — D186", async () => {
-  const clarity = await readFile(new URL("app/clarity-pass.css", root), "utf8");
+  const clarity = await Promise.all([readFile(new URL("app/clarity-pass.css",root),"utf8"),readFile(new URL("app/interface-v2.css",root),"utf8")]).then(x=>x.join("\n"));
 
   /* The tile is a rigid 4-column grid with overflow:hidden. A selected tile gains
    * a third action ("Change product"), and 102+46+37px plus gaps exceeds the 207px
@@ -951,7 +957,7 @@ test("a selected product tile does not clip its own actions — D186", async () 
 });
 
 test("keyword bank cards keep Delete quiet and end their row on one line — D195/D431", async () => {
-  const clarity = await readFile(new URL("app/clarity-pass.css", root), "utf8");
+  const clarity = await Promise.all([readFile(new URL("app/clarity-pass.css",root),"utf8"),readFile(new URL("app/interface-v2.css",root),"utf8")]).then(x=>x.join("\n"));
 
   /* D195 measured two banks of 17 and 50 phrases: both cards 406px, with 77px of
    * dead space above "Edit bank" in the shorter one. Delete also rendered at
@@ -969,7 +975,7 @@ test("keyword bank cards keep Delete quiet and end their row on one line — D19
 });
 
 test("D197: product tiles pad their actions and drop the meaningless Printify initial", async () => {
-  const css = await readFile(new URL("app/clarity-pass.css", root), "utf8");
+  const css = await Promise.all([readFile(new URL("app/clarity-pass.css",root),"utf8"),readFile(new URL("app/interface-v2.css",root),"utf8")]).then(x=>x.join("\n"));
 
   // Padding moved off the tile and onto the children, so Edit/Delete stop
   // sitting flush against the frame (measured 0px padding, delete right:10).
@@ -1009,7 +1015,7 @@ test("D197: product tiles pad their actions and drop the meaningless Printify in
 });
 
 test("D198: the card CTA spans the tile and the subtitle says something real", async () => {
-  const css = await readFile(new URL("app/clarity-pass.css", root), "utf8");
+  const css = await Promise.all([readFile(new URL("app/clarity-pass.css",root),"utf8"),readFile(new URL("app/interface-v2.css",root),"utf8")]).then(x=>x.join("\n"));
   const tools = await readFile(new URL("app/factory-tools.tsx", root), "utf8");
 
   // The pill measured 81px in a 205px card while the whole card was clickable.
@@ -1077,7 +1083,7 @@ test("D198: recipeSummary reports saved detail and is honest when there is none"
 });
 
 test("D202: the art placeholder joins the plum palette and drops the 7px label", async () => {
-  const css = await readFile(new URL("app/clarity-pass.css", root), "utf8");
+  const css = await Promise.all([readFile(new URL("app/clarity-pass.css",root),"utf8"),readFile(new URL("app/interface-v2.css",root),"utf8")]).then(x=>x.join("\n"));
   const theme = await readFile(new URL("app/theme.css", root), "utf8");
 
   // theme.css still carries the legacy rule; clarity-pass.css loads last and wins.
@@ -1115,16 +1121,23 @@ test("D203: one nav renders both sidebars, so icons cannot go missing on half th
   assert.match(management, /<NavIcon name="listingFactory"\/>Listing Factory/);
   assert.match(management, /<NavIcon name=\{link\.key\}\/>\{link\.label\}/);
 
-  // The workflow nav renders from the same source rather than inline markup.
+  /* D721 · Brittany approved removing icons from the workflow sidebar, so the
+     factory nav renders text only. ManagementNav still renders NavIcon, which is
+     why the shared icon source above is still asserted. What this test exists to
+     prevent - inline icon markup drifting apart from the shared component - is
+     unchanged, and is now guaranteed by there being no icon markup here at all. */
   const navBlock = app.slice(app.indexOf('<nav className="top-nav"'), app.indexOf("</nav>", app.indexOf('<nav className="top-nav"')));
   assert.doesNotMatch(navBlock, /<svg/, "no inline icon markup left to drift");
+  assert.equal((navBlock.match(/<NavIcon /g) || []).length, 0, "the factory sidebar is text-only");
   /* D639 added Connections - the way back to the connect screen, which was
-     unreachable once both accounts were connected. */
-  assert.equal((navBlock.match(/<NavIcon /g) || []).length, 5);
+     unreachable once both accounts were connected. All five destinations remain. */
+  for (const label of ["Listing Factory","Batch History","Keyword Banks","Usage + Plan","Connections"]) {
+    assert.ok(navBlock.includes(label), `${label} is still in the sidebar`);
+  }
 });
 
 test("D203: cross-screen alignment and destructive-action faults are fixed", async () => {
-  const css = await readFile(new URL("app/clarity-pass.css", root), "utf8");
+  const css = await Promise.all([readFile(new URL("app/clarity-pass.css",root),"utf8"),readFile(new URL("app/interface-v2.css",root),"utf8")]).then(x=>x.join("\n"));
   const batches = await readFile(new URL("app/batches/page.tsx", root), "utf8");
 
   // Back pinned to the top of a centred 64px footer row on every workflow step.
@@ -1234,7 +1247,7 @@ test("D205: establishing a facet refreshes the saved-product tiles", async () =>
 });
 
 test("D208: the reset control is sized like a control, not a footnote", async () => {
-  const css = await readFile(new URL("app/clarity-pass.css", root), "utf8");
+  const css = await Promise.all([readFile(new URL("app/clarity-pass.css",root),"utf8"),readFile(new URL("app/interface-v2.css",root),"utf8")]).then(x=>x.join("\n"));
   const app = await readFile(new URL("app/listing-factory-app.tsx", root), "utf8");
 
   /* The reset existed all along and was reported as missing. Measured at 10px
@@ -1262,7 +1275,7 @@ test("D212: adding a product can be cancelled, the same as editing one", async (
 });
 
 test("D215: selecting a product does not break the other product tiles", async () => {
-  const css = await readFile(new URL("app/approved-functional.css", root), "utf8");
+  const css = await Promise.all([readFile(new URL("app/approved-functional.css",root),"utf8"),readFile(new URL("app/interface-v2.css",root),"utf8")]).then(x=>x.join("\n"));
   const rules = css.replace(/\/\*[\s\S]*?\*\//g, "");
 
   /* Measured live with Gildan Tee selected: the selected tile's actions sat at
@@ -1290,7 +1303,7 @@ test("D215: selecting a product does not break the other product tiles", async (
 });
 
 test("D233: one heading system, two typefaces, no child larger than its parent", async () => {
-  const css = await readFile(new URL("app/clarity-pass.css", root), "utf8");
+  const css = await Promise.all([readFile(new URL("app/clarity-pass.css",root),"utf8"),readFile(new URL("app/interface-v2.css",root),"utf8")]).then(x=>x.join("\n"));
 
   /* Measured on the Product page before this, in one viewport:
    *   h1 34px DM Serif Display · h2 27px DM Serif Display

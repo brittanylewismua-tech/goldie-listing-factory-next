@@ -66,9 +66,10 @@ test("no attention state is painted brown — D707", async () => {
 });
 
 test("the rose token exists and is genuinely red, not orange — D707", async () => {
-  const css = await readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8");
+  /* D721 · token moved to interface-v2.css with the shell. */
+  const css = await readFile(new URL("../app/interface-v2.css", import.meta.url), "utf8");
   const declared = /--goldie-attention:\s*(#[0-9a-f]{6})/i.exec(css);
-  assert.ok(declared, "--goldie-attention must be defined in clarity-pass.css");
+  assert.ok(declared, "--goldie-attention must be defined by whichever sheet owns .app-shell");
   const [h, s] = hsl(rgb(declared[1]));
   /* The failure mode this guards is a future "tone it down" pass sliding the
      hue toward orange, which is precisely how brown was reintroduced twice. */

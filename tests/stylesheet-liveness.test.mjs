@@ -350,7 +350,9 @@ test("D389: nothing inside a product card widens itself with negative margins", 
    what cut off every product row, buttons included. Any grid that holds the
    product rows must declare a constrained track. */
 test("D395: the product rows grid declares a constrained track", async () => {
-  const css = (await readFile(new URL("app/clarity-pass.css", root), "utf8"));
+  /* D721 · the shell migration moved ownership of these selectors to
+     interface-v2.css. The rule and the defect it prevents are unchanged. */
+  const css = (await readFile(new URL("app/interface-v2.css", root), "utf8"));
   assert.match(css, /\.app-shell \.batch-product-rows\{grid-template-columns:minmax\(0,1fr\)\}/,
     "an implicit auto track sizes to the row, not to the card");
   assert.match(css, /\.app-shell \.batch-product-row\{min-width:0\}/);
@@ -381,7 +383,8 @@ test("D398: the management pages carry the Etsy attribution too", async () => {
    A column that packs its content to one end must never be shrunk below that
    content. */
 test("D405: the sidebar nav column is never shrunk below its content", async () => {
-  const css = await readFile(new URL("app/approved-functional.css", root), "utf8");
+  /* D721 · same move; interface-v2.css owns the sidebar now and loads last. */
+  const css = await readFile(new URL("app/interface-v2.css", root), "utf8");
   assert.match(css, /\.topbar>\.top-actions\{flex:0 0 auto;justify-content:flex-start\}/,
     "flex:0 1 auto here pushes the nav up over the wordmark");
   assert.doesNotMatch(css, /\.topbar>\.top-actions\{flex:0 1 auto/);

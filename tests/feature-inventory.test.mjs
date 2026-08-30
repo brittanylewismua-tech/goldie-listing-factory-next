@@ -26,7 +26,7 @@ const RENDERED_COMPONENTS = [
   "ActionReceipt", "BatchPreferencesPortal", "ContextHelp", "DownloadListingPhotos",
   "EtsyDetailsEditor", "FinalListingReview", "GoldieCommandBar", "GoldieInsight",
   "GoldieWordmark", "IndividualAutoTitle", "IndividualManualTitle", "IndividualSizeGuide",
-  "UploadedListingPhotos", "KeywordBank", "ListingPhotoOrder", "NavIcon",
+  "UploadedListingPhotos", "KeywordBank", "ListingPhotoOrder", 
   "OutcomeReceipt", "PersonalizationEditor", "PriceField", "PricingReview",
   "PrintifyImagePicker", "ProductColorSelector", "ProductSizeSelector", "SavedWorkflow",
   "SupportChat", "WorkflowMomentum",
