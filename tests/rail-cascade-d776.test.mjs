@@ -267,3 +267,19 @@ test("D794: no grid in the listing form leaves its columns implicit", () => {
   assert.equal(control && control.value.replace(/\s+/g, ""), "1/-1",
     "the control spans the label's columns instead of taking the first one");
 });
+
+test("D796: a closed disclosure hides its contents", () => {
+  /* Measured on step 3: <details class="individual-title-builder"> 15px tall
+     and correctly closed, with its keyword bank at 132px rendering below it,
+     outside its box, over the next field. Twice per listing.
+
+     A closed <details> hides its children through the UA's slot; a rule that
+     sets display on one of them takes it back out, and these sheets set display
+     on a great many things inside disclosures. The rule has to be stated. */
+  const winner = resolve({
+    selectorTest: selector => /details:not\(\[open\]\) > \*:not\(summary\)$/.test(selector),
+    property: "display",
+  });
+  assert.equal(winner && winner.value, "none",
+    "closed disclosures must hide their non-summary children");
+});

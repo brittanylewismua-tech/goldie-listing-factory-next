@@ -1609,3 +1609,17 @@ html, body { background: #f1d2dc; }
    own header, which is the preview's second line. */
 .app-shell .final-review > .step-content > .step-heading,
 .app-shell .final-review > .step-content > .step-copy{display:none}
+
+/* D796 · Collapsed disclosures were painting their contents onto the page.
+
+   Found by sweeping all four steps rather than by being told. On step 3, both
+   <details class="individual-title-builder"> elements measured 15px tall - the
+   summary alone, correctly closed - while their keyword bank (132px), their
+   AI-title button and their collapse control rendered underneath, outside the
+   element's own box, over whatever followed. Two per listing.
+
+   A closed <details> hides its non-summary children through the UA's slot, and
+   a rule that sets display on one of those children takes it back out. Enough
+   rules in these sheets set display on things inside a disclosure that the only
+   reliable fix is to state the rule the UA was relying on. */
+.app-shell details:not([open]) > *:not(summary){display:none}
