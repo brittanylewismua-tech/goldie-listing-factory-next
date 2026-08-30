@@ -1663,3 +1663,52 @@ html, body { background: #f1d2dc; }
 .app-shell .factory-work .workflow-stage > .steps-column,
 .app-shell .factory-work .connect-step{
   margin-left:0;margin-right:auto;align-self:start;justify-self:start}
+
+/* ==========================================================================
+   D800 · Step 2, in the state before any designs exist
+   ==========================================================================
+
+   I had only ever looked at this step with her drafts already made. On a fresh
+   batch it renders the state she opened it in, and all four of the things she
+   asked about are real.
+
+   1 · the order was backwards
+
+     .steps-column carries order:1 from approved-functional.css:54, and
+     .step-product-cards - which holds "Create your Printify drafts" - has none,
+     so it took order 0 and went first. Measured: "Create your Printify drafts"
+     at y278, "Drop your designs here" at y718. The step asked her to create
+     drafts from designs, above the place where designs are added. The upload
+     goes first, which is the order the work happens in.
+
+   2 · no space between the two cards
+
+     y718 to y718. They shared an edge. The stage had no gap at all; every other
+     stack in this migration is 14px, so this one is too.
+
+   3 · an icon on one card and no other
+
+     .launch-step-icon draws a circular glyph on "Create your Printify drafts".
+     Nothing else on any step has one, so it read as decoration that had lost
+     its family. The card keeps its heading and its rows; the glyph goes.
+
+   4 · "Saved automatically" was not centred
+
+     D791 rebuilt the action bar as a flex row and, in doing so, dropped the
+     absolute centring the note had. It sat at x631 in a bar centred on 864 -
+     233px off, which is exactly far enough to look like a mistake rather than a
+     choice. It is centred on the bar again, and the bar stays one nowrap row.
+     Verified rendered: note centre 864, bar centre 864. */
+/* Scoped by :has(.designs-step) rather than by .designs-column, because that
+   class is built as `steps-column ${workflowStep}-column` and never appears in
+   the source as a literal - the liveness test cannot see it, and a class a test
+   cannot see is a class that gets deleted by a future sweep. And written with
+   one child combinator, because order only means anything to a direct child
+   and D369's test is right to insist the selector says so. */
+.app-shell .factory-work .workflow-stage{gap:14px}
+.app-shell .workflow-stage:has(.designs-step) > .steps-column{order:0}
+.app-shell .workflow-stage:has(.designs-step) > .step-product-cards{order:1}
+.app-shell .factory-work .launch-panel > .launch-step-icon{display:none}
+.app-shell .workflow-footer-actions{position:relative}
+.app-shell .workflow-footer-actions > .autosave-note{
+  position:absolute;left:50%;transform:translateX(-50%);margin:0}
