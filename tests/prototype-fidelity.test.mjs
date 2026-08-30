@@ -143,7 +143,12 @@ const CASES = [
   // shell chrome — D734/D736/D737
   { name: "shell typeface", chain: [el("main","app-shell")], property: "font-family", expect: /^Inter,/ },
   { name: "sidebar edge", chain: [el("main","app-shell"), el("aside","topbar")], property: "border-right", expect: /rgba\(255,255,255,\.72\)/ },
-  { name: "top bar tint", chain: [...shell.slice(0,2), el("header","factory-top")], property: "background", expect: /rgba\(255,248,252,\.72\)/ },
+  // D776 - this line asserted .72, which is not the prototype's value; it was
+  // the value a later sweep had left on the page. Read off the running
+  // prototype: rgba(255,249,252,.9) over a #dcc5d2 edge. A fidelity test that
+  // encodes the defect keeps the defect.
+  { name: "top bar tint", chain: [...shell.slice(0,2), el("header","factory-top")], property: "background", expect: /rgba\(255,249,252,\.9\)/ },
+  { name: "top bar edge", chain: [...shell.slice(0,2), el("header","factory-top")], property: "border-bottom", expect: /#dcc5d2/ },
   { name: "restart button radius", chain: [el("main","app-shell"), el("aside","topbar"), el("button","workflow-restart-button")], property: "border-radius", expect: /^12px$/ },
   { name: "usage figure", chain: [el("main","app-shell"), el("aside","topbar"), el("a","approved-usage"), el("span")], property: "font", expect: /^700 15px/ },
   // panel internals — D723

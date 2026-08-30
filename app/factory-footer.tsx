@@ -1,6 +1,7 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 
 /* D728 · The prototype's .goldie-footer (source: goldie-ux-preview-site
    @ aad9208, peach-glass). Read from its own CSSOM:
@@ -19,13 +20,43 @@ import type { ReactNode } from "react";
    on the right, both visible without scrolling to find them.
 
    The button is passed in, not built here - it keeps its own disabled state,
-   title, gate checks and handler exactly as production wrote them. */
+   title, gate checks and handler exactly as production wrote them.
+
+   D776 · and it has to be IN the bar. Measured on step 1 with her five saved
+   products: this rendered where it stood in the step, which put "Next step" at
+   y=2003 on a 2278px page - 1,260px below the fold, under every product card,
+   while the sticky bar at the bottom of the window showed only Back, "Saved
+   automatically" and "Save as draft". Two bars, and the one you could see was
+   the one without the way forward.
+
+   So it portals into the sticky bar, which is the only bar production has on
+   every step. The slot is a DOM node rather than a prop because the forward
+   control is built deep inside each step's own JSX, next to the gate checks it
+   reads - and moving those up would mean rewriting five steps' worth of
+   conditions to say the same thing somewhere else.
+
+   No slot (server render, or a step that has no bar) means it renders in place,
+   exactly as it did before. */
 
 export default function FactoryFooter({ status, children }: { status?: ReactNode; children: ReactNode }) {
-  return (
-    <div className="factory-footer">
+  const [slot, setSlot] = useState<Element | null>(null);
+  useEffect(() => {
+    const find = () => setSlot(document.querySelector(".factory-footer-slot"));
+    find();
+    /* The bar renders in the same commit, so one pass after paint is enough;
+       the observer is for steps that mount their bar late (an opening batch). */
+    const observer = new MutationObserver(find);
+    observer.observe(document.body, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, []);
+
+  const body = (
+    <>
       <small>{status}</small>
       {children}
-    </div>
+    </>
   );
+
+  if (slot) return createPortal(<div className="factory-footer in-bar">{body}</div>, slot);
+  return <div className="factory-footer">{body}</div>;
 }

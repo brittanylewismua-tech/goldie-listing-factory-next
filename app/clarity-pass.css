@@ -182,7 +182,9 @@
  * The background change was correct; the text colours simply never followed it. */
 .app-shell .workflow-progress .mini-label{color:#7a5573!important}
 .app-shell .workflow-progress>div b{color:#332230!important}
-.app-shell .workflow-progress button{color:#3b2838!important}
+/* D776 - one ink for every segment meant the rail could not say where you
+   stood. The prototype separates them: #4f2b46 on the step you are on, #83737e
+   on the rest. interface-v2.css owns both now. */
 .app-shell .workflow-progress button b{color:#2f1f2d!important;font-weight:700!important}
 .app-shell .workflow-progress button small{
   color:#635360!important;
@@ -193,7 +195,7 @@
 .app-shell .workflow-progress button[aria-disabled="true"]{color:#6f6070!important}
 .app-shell .workflow-progress button:disabled small,
 .app-shell .workflow-progress button[aria-disabled="true"] small{color:#7b6c79!important}
-.app-shell .workflow-progress button.active b{color:#251723!important}
+
 
 /* D101 · An unfinished task was formatted exactly like the settled ones.
  * "Saved for this product · $10 profit · Standard shipping · Choose a keyword
@@ -1908,8 +1910,10 @@ body{min-width:1180px!important}
      is the same one: the digits use the interface's typeface rather than a
      system fallback, with lining tabular figures so 1 and 4 sit alike. */
   font-family:"Inter",ui-sans-serif,system-ui,sans-serif!important;
-  font-weight:800!important;
-  font-size:13px!important;
+  /* D776 - 11px/750, measured off the prototype's own bubble. 13px/800 was
+     sized for the 34px circle this rail used to draw. */
+  font-weight:750!important;
+  font-size:11px!important;
   line-height:1!important;
   font-variant-numeric:tabular-nums lining-nums!important;
   font-feature-settings:"tnum" 1,"lnum" 1!important;
@@ -3090,8 +3094,12 @@ body{min-width:1180px!important}
 
 /* --- 11 · Watch this step. Sits beside the support launcher, same fixed
    corner, visibly secondary to it. Rendered only where a video exists. --- */
+/* D776 - "beside the support launcher" put it at right:84px, which is inside
+   the sticky footer's right-hand control. Measured on step 1: the launcher
+   spans 1310-1356 and "Save as draft" ends at 1336, so the video button sat on
+   top of the press. It stacks above the ? now, where nothing else goes. */
 .support-video-launcher{
-  position:fixed;z-index:80;right:84px;bottom:27px;
+  position:fixed;z-index:80;right:23px;bottom:88px;
   width:46px;height:46px;padding:0;
   display:grid;place-items:center;
   border:1px solid #ded5db;
@@ -3103,7 +3111,7 @@ body{min-width:1180px!important}
 }
 .support-video-launcher:hover{background:#fdf7fb;color:#4a2f44}
 .support-video-launcher span{font-size:15px;line-height:1;padding-left:2px}
-@media(max-width:520px){.support-video-launcher{right:84px;bottom:19px}}
+@media(max-width:520px){.support-video-launcher{right:20px;bottom:80px}}
 
 .support-video-backdrop{
   position:fixed;inset:0;z-index:2147483000;
