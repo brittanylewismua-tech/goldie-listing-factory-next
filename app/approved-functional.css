@@ -646,7 +646,6 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 @media(max-width:850px){.app-shell .mockup-primary-action{grid-template-columns:32px 1fr}.app-shell .mockup-primary-action button{grid-column:1/-1;width:100%!important}}
 .app-shell .publish-live-warning{
   border-color:rgba(139,89,137,.32)!important;
-  background:linear-gradient(145deg,rgba(252,244,254,.8),rgba(239,211,237,.66))!important;
 }
 .app-shell .publish-live-warning small{display:block;margin-top:6px;color:rgba(74,42,62,.72);font-size:11px;line-height:1.5}
 .app-shell .etsy-listing-fee-note{padding:12px 14px;border-radius:12px;background:rgba(239,211,237,.55);color:#66465d;font-size:12px;line-height:1.55}

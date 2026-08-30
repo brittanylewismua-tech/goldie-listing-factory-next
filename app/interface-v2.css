@@ -716,3 +716,29 @@ html, body { background: #f1d2dc; }
 .app-shell .factory-panel-body .step-card{margin:0;padding:0;border:0;border-radius:0;background:none;box-shadow:none;backdrop-filter:none}
 .app-shell .factory-panel-body .step-card>.step-content{padding:0}
 .app-shell .factory-panel-body .step-card>.step-number{display:none}
+
+/* D738 · Same nesting again, one level down: the photo strip carried its own
+   2px bordered, 17px-radius, tinted card inside the panel body. The panel is
+   the card. Measured on the harness at 22px of padding inside a panel that
+   already has 18. */
+.app-shell .factory-photo-column .listing-photo-order{margin:0;padding:0;border:0;border-radius:0;background:none}
+
+/* D738 · Step 4, from the harness. Three things:
+
+   The review list sat inside its own pale rounded card (.final-listing-review)
+   which sat inside the column - the same nesting as steps 1 and 2. The rows
+   are the cards.
+
+   The publish box is dark, and .publish-live-warning brought its own pale
+   panel with it, so the warning printed pale text on a pale panel inside a
+   #2d1d29 box - the one message on the screen that must be readable, on the
+   screen where money is spent.
+
+   The row's own actions were rendering at button scale on their own line.
+   They are links off a row: 11px, one hairline, radius 8. */
+.app-shell .factory-review-list .final-listing-review{margin:0;padding:0;border:0;border-radius:0;background:none;box-shadow:none}
+.app-shell .factory-publish-box .publish-live-warning{margin:0 0 14px;padding:0;border:0;border-radius:0;background:none;box-shadow:none;color:#e4d2de}
+.app-shell .factory-publish-box .publish-live-warning small{color:#c7b8c3}
+.app-shell .factory-publish-box .publish-live-warning h3{color:#fff}
+.app-shell .factory-publish-box .publish-live-warning p{color:#c8b9c4}
+.app-shell .final-listing-links button,.app-shell .final-listing-links a{min-height:0;padding:7px 9px;border:1px solid #ded6dc;border-radius:8px;background:#fff;color:#5d3151;font:750 11px/1.2 Inter,ui-sans-serif,system-ui,sans-serif}
