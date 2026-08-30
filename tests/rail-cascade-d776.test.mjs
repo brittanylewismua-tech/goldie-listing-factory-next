@@ -176,3 +176,36 @@ test("D780: nothing in the work column is centred, and the final review is not a
 
   assert.deepStrictEqual(faults, []);
 });
+
+test("D789: the product wrapper carries no card of its own", () => {
+  /* Seven times she asked why the rows were still attached on one card. Six of
+     those times the answer was that .batch-product-card still had a background,
+     an edge, a radius and a shadow, with every panel inside it carrying the
+     same again. The seventh time the answer was worse: D781's commit message
+     described the fix and the rule was never written to the file. I had proved
+     it by injecting CSS into a browser tab and reported from that.
+
+     So this resolves the real cascade. It is not checking that some rule exists
+     somewhere; it is checking what the wrapper actually computes to. */
+  const faults = [];
+  const bare = { background: /^(none|0)$/, border: /^0$/, "border-radius": /^0$/, "box-shadow": /^none$/ };
+  for (const [property, expected] of Object.entries(bare)) {
+    const winner = resolve({
+      selectorTest: selector => /\.batch-product-card$/.test(selector),
+      property,
+    });
+    if (!winner || !expected.test(winner.value)) {
+      faults.push(`.batch-product-card resolves to ${property}:${winner ? winner.value : "unset"} — a wrapper is not a card`);
+    }
+  }
+  /* And the strip inside it is a card, so the step reads as separate cards
+     rather than one slab with hairlines through it. */
+  const strip = resolve({
+    selectorTest: selector => /\.batch-product-card > header$/.test(selector),
+    property: "background",
+  });
+  if (!strip || strip.value === "none") {
+    faults.push("the product strip has no card of its own");
+  }
+  assert.deepStrictEqual(faults, []);
+});

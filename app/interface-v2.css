@@ -198,20 +198,41 @@ html, body { background: #f1d2dc; }
  * ==========================================================================*/
 .app-shell .step-product-cards { display: block; width: 100%; max-width: none; margin: 0; }
 
+/* D789 · This is the wrapper, and a wrapper is not a card.
+   ---------------------------------------------------------------------------
+   It carried a background, a 1px edge, a 12px radius, a shadow and
+   overflow:hidden - and every .factory-panel inside it carried the same again,
+   inset by one pixel, joined by their own hairlines. That is the "rows all
+   attached on one card" she asked about seven times.
+
+   D781 said this was fixed. It was not. I proved the fix by injecting CSS into
+   a browser tab, wrote the commit message from what I saw there, and never put
+   the rule in this file - the D781 commit's only mention of
+   .batch-product-card is inside a comment. Nothing on her screen changed, and
+   I told her twice that it had.
+
+   Corrected at the rule itself rather than by stacking an override on top of
+   it, and a test below asserts the wrapper stays bare. The prototype has no
+   wrapper at all: panels stand on the pane, 14px apart, each its own card. */
 .app-shell .batch-product-card {
-  background: rgba(255,252,254,.92);
-  /* peach-glass overrides the base .goldie-panel border and shadow. These are
-     the COMPUTED values off the prototype, not the base rule - reading the
-     base rule is how the oval and the wrong shadow both happened. */
-  border: 1px solid #dfc8d5;
-  border-radius: 12px;
-  margin-bottom: 14px;
-  overflow: hidden;
-  box-shadow: 0 12px 32px rgba(75,40,62,.11);
+  background: none;
+  border: 0;
+  border-radius: 0;
+  margin: 0;
+  padding: 0;
+  overflow: visible;
+  box-shadow: none;
 }
+/* The product strip that used to be this wrapper's header is a card in its own
+   right, the same card the panels below it are. */
 .app-shell .batch-product-card > header {
   display: grid; grid-template-columns: 48px minmax(0,1fr) auto;
   align-items: center; gap: 13px; padding: 15px 17px;
+  margin: 0 0 14px;
+  background: #fffafc;
+  border: 1px solid #dfc8d5;
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(75,40,62,.11);
 }
 .app-shell .bundle-product-photo { width: 48px; height: 48px; border-radius: 9px; object-fit: cover; }
 .app-shell .bundle-product-id { display: block; min-width: 0; }
@@ -1443,3 +1464,12 @@ html, body { background: #f1d2dc; }
 .app-shell .factory-listing-form .listing-card,
 .app-shell .factory-listing-form .listing-card-detail{
   border:0;background:none;box-shadow:none;padding:0}
+
+
+/* D789 · The action bar was wrapping. On step 2 the status line pushed "Save as
+   draft" and the forward control onto a second row, so the bottom of the page
+   was two stacked bars again - the thing she named as an atrocity. The status
+   is the only part that may shrink; the controls keep their size. */
+.app-shell .workflow-footer-actions{flex-wrap:nowrap}
+.app-shell .workflow-footer-actions > .autosave-note{flex:0 0 auto;white-space:nowrap}
+.app-shell .factory-footer.in-bar > small{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
