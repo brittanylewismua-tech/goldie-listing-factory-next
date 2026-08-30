@@ -41,7 +41,7 @@ test("the video that plays follows the screen, not the step number — D705", as
 });
 
 test("every list in the help dialog draws its markers — D705", async () => {
-  const globals = await read("app/globals.css");
+  const globals = ((await read("app/globals.css")) + "\n" + (await read("app/interface-v2.css")));
   /* display:grid on a <ul> or <ol> suppresses ::marker, so both the bullets and
      the step NUMBERS vanished while padding-left kept holding space for them. */
   assert.doesNotMatch(globals, /\.context-help-sections ul,\.context-help-sections ol\{display:grid/,
@@ -61,7 +61,7 @@ test("copy that belongs under the Printify steps is not its own topic — D705",
 
 test("an open listing can be closed from where reading ends — D705", async () => {
   const rows = await read("app/listing-rows.tsx");
-  const css = await read("app/clarity-pass.css");
+  const css = ((await read("app/clarity-pass.css")) + "\n" + (await read("app/interface-v2.css")));
   assert.match(rows, /className="listing-card-done" onClick=\{\(\) => toggle\(row\.key\)\}/);
   assert.match(css, /\.listing-card\.is-open>\.listing-card-head\{[^}]*position:sticky/s,
     "the head must stay reachable at any scroll depth inside a tall listing");
@@ -71,7 +71,7 @@ test("an open listing can be closed from where reading ends — D705", async () 
 });
 
 test("readings do not wear button chrome, and confirmation is centred — D705", async () => {
-  const css = await read("app/clarity-pass.css");
+  const css = ((await read("app/clarity-pass.css")) + "\n" + (await read("app/interface-v2.css")));
   assert.match(css, /\.app-shell \.fee-profile-summary span\{[^}]*border:0!important/s,
     "the Etsy fee figures are readings, not controls");
   assert.match(css, /\.app-shell \.pricing-approved-state\{margin:14px auto 0!important\}/,
@@ -88,7 +88,10 @@ test("one chevron, centred, for every disclosure in the app — D705", async () 
      at three different sizes. */
   const glyphs = live.match(/content:\s*"[⌄↓]"/g) || [];
   assert.equal(glyphs.length, 0, `hand-drawn arrow glyphs left behind: ${glyphs.join(", ")}`);
-  assert.match(sheets[0], /--goldie-chevron:url\("data:image\/svg\+xml/);
+  /* D721 · the shell migration moved the token declarations off clarity-pass
+     onto .app-shell in interface-v2.css. Same token, same rule, new owner. */
+  const v2 = await read("app/interface-v2.css");
+  assert.match(v2, /--goldie-chevron: *url\("data:image\/svg\+xml/);
 });
 
 test("a destructive switch does not describe itself as additive — D705", async () => {

@@ -5,6 +5,8 @@ import { createPortal } from "react-dom";
 import Image from "next/image";
 import SupportChat from "./support-chat";
 import { workflowScreen } from "./step-videos";
+import FactoryPanel from "./factory-panel";
+import ArtworkGrid from "./artwork-grid";
 import { runBounded } from "./bounded-work";
 import { productReadiness, recipeCarriesApprovedPricing, type Readiness } from "./product-readiness";
 import { KeywordBank, SavedWorkflow, type KeywordList, type Pricing, type ProductBundle, type Recipe } from "./factory-tools";
@@ -12,6 +14,10 @@ import UploadedListingPhotos from "./uploaded-listing-photos";
 import ListingRows, { type ListingFlag } from "./listing-rows";
 import { confirmAction } from "./confirm-dialog";
 import ListingPhotoOrder from "./listing-photo-order";
+import PhotoLayout from "./photo-layout";
+import PageHead from "./page-head";
+import FactoryFooter from "./factory-footer";
+import RequiredDetailsChecklist from "./required-details-checklist";
 import { tagsFromTitle } from "./seo-utils";
 import { printifyDpi } from "./print-quality";
 import { isPermanentUploadError, MAX_FILE_BYTES, oversizedFileMessage } from "./upload-policy";
@@ -534,7 +540,10 @@ function LegacyEtsyDetailsEditor({design,categories,onChange,onCategory}:{design
   const properties=details.properties||[],completed=properties.filter(property=>property.value.trim()),physical=completed.filter(property=>PHYSICAL_ETSY_FIELDS.test(property.label)),preview=physical.slice(0,3).map(property=>property.value).join(", ");
   async function choose(id:number){setLoading(true);try{await onCategory(id)}finally{setLoading(false)}}
   function setProperty(property:EtsyPropertySelection,value:string){const option=property.possibleValues.find(item=>String(item.value_id)===value),next={...property,valueId:option?.value_id||null,value:option?.name||value};onChange({...details,properties:(details.properties||[]).map(item=>item.propertyId===property.propertyId?next:item)})}
-  return <details className="etsy-details-editor"><summary><span><b>Etsy details</b><small>{(()=>{const required=properties.filter(property=>property.required),requiredDone=required.filter(property=>property.value.trim());return required.length?`${requiredDone.length} of ${required.length} required set`:`${completed.length} added · all optional`})()}{preview?` · ${preview}`:""}</small></span><em>Edit</em></summary><div className="etsy-details-editor-fields"><label>Etsy category<select value={details.taxonomyId||""} disabled={loading} onChange={event=>void choose(Number(event.target.value))}>{!details.taxonomyId&&<option value="">Choose an Etsy category</option>}{Boolean(details.taxonomyId)&&!categories.some(category=>category.id===details.taxonomyId)&&<option value={details.taxonomyId}>{details.category||"Category already chosen for this listing"}</option>}{categories.map(category=><option key={category.id} value={category.id}>{category.path}</option>)}</select></label>{loading&&<small>Loading the exact Etsy options for this category…</small>}<div className="etsy-attribute-grid">{properties.map(property=><label key={property.propertyId}>{property.label}{property.required&&<em>Required</em>}{property.possibleValues.length?<select value={property.valueId||""} onChange={event=>setProperty(property,event.target.value)}><option value="">{property.required?"Choose one":"Not applicable"}</option>{property.possibleValues.map(option=><option key={option.value_id} value={option.value_id}>{option.name}</option>)}</select>:<input value={property.value} onChange={event=>setProperty(property,event.target.value)}/>}</label>)}</div><small className="optional-note">These are Etsy’s actual fields for the selected category. Optional fields can stay blank.</small><PersonalizationEditor value={details.personalization} onChange={personalization=>onChange({...details,personalization})}/></div><button type="button" className="panel-collapse-foot" onClick={event=>{const box=(event.currentTarget as HTMLElement).closest("details");if(box){(box as HTMLDetailsElement).open=false;box.scrollIntoView({block:"nearest"})}}}>Close Etsy details</button></details>
+  return <details className="etsy-details-editor"><summary><span><b>Etsy details</b><small>{(()=>{const required=properties.filter(property=>property.required),requiredDone=required.filter(property=>property.value.trim());return required.length?`${requiredDone.length} of ${required.length} required set`:`${completed.length} added · all optional`})()}{preview?` · ${preview}`:""}</small></span><em>Edit</em></summary><div className="factory-listing-grid">{/* D730 - prototype .goldie-listing-grid: the fields on the left, and
+      beside them the list of what Etsy still needs. The summary line already
+      counted them ("2 of 5 required set"); the checklist names them. Every
+      field, handler and validation below is unchanged. */}<div className="etsy-details-editor-fields factory-form-card"><label>Etsy category<select value={details.taxonomyId||""} disabled={loading} onChange={event=>void choose(Number(event.target.value))}>{!details.taxonomyId&&<option value="">Choose an Etsy category</option>}{Boolean(details.taxonomyId)&&!categories.some(category=>category.id===details.taxonomyId)&&<option value={details.taxonomyId}>{details.category||"Category already chosen for this listing"}</option>}{categories.map(category=><option key={category.id} value={category.id}>{category.path}</option>)}</select></label>{loading&&<small>Loading the exact Etsy options for this category…</small>}<div className="etsy-attribute-grid">{properties.map(property=><label key={property.propertyId}>{property.label}{property.required&&<em>Required</em>}{property.possibleValues.length?<select value={property.valueId||""} onChange={event=>setProperty(property,event.target.value)}><option value="">{property.required?"Choose one":"Not applicable"}</option>{property.possibleValues.map(option=><option key={option.value_id} value={option.value_id}>{option.name}</option>)}</select>:<input value={property.value} onChange={event=>setProperty(property,event.target.value)}/>}</label>)}</div><small className="optional-note">These are Etsy’s actual fields for the selected category. Optional fields can stay blank.</small><PersonalizationEditor value={details.personalization} onChange={personalization=>onChange({...details,personalization})}/></div><RequiredDetailsChecklist items={[{key:"category",label:"Etsy category",value:details.category||"",required:true},...properties.filter(property=>property.required||property.value.trim()).map(property=>({key:String(property.propertyId),label:property.label,value:property.value,required:property.required}))]}/></div><button type="button" className="panel-collapse-foot" onClick={event=>{const box=(event.currentTarget as HTMLElement).closest("details");if(box){(box as HTMLDetailsElement).open=false;box.scrollIntoView({block:"nearest"})}}}>Close Etsy details</button></details>
 }
 
 function LazyEtsyProperty({property,onValue}:{property:EtsyPropertySelection;onValue:(value:string)=>void}){
@@ -549,7 +558,10 @@ function EtsyDetailsEditor({design,categories,onChange,onCategory}:{design:Desig
   async function choose(id:number){setLoading(true);try{await onCategory(id);setQuery("")}finally{setLoading(false)}}
   function setProperty(property:EtsyPropertySelection,value:string){const option=property.possibleValues.find(item=>String(item.value_id)===value),next={...property,valueId:option?.value_id||null,value:option?.name||value};onChange({...details,properties:properties.map(item=>item.propertyId===property.propertyId?next:item)})}
   const required=properties.filter(property=>property.required),requiredDone=required.filter(property=>property.value.trim());
-  return <details className="etsy-details-editor"><summary><span><b>Etsy details</b><small>{required.length?`${requiredDone.length} of ${required.length} required set`:`${completed.length} added · all optional`}{preview?` · ${preview}`:""}</small></span><em>Edit</em></summary><div className="etsy-details-editor-fields"><label>Etsy category<small>Current: {details.category||"None chosen"}</small><input type="search" value={query} placeholder="Search Etsy categories" onChange={event=>setQuery(event.target.value)} disabled={loading}/></label>{matches.length?<div className="etsy-category-results" role="listbox" aria-label="Matching Etsy categories">{matches.map(category=><button type="button" key={category.id} onClick={()=>void choose(category.id)}>{category.path}</button>)}</div>:query.trim().length>=2?<small>No matching Etsy categories.</small>:null}{loading&&<small>Loading the exact Etsy options for this category…</small>}<div className="etsy-attribute-list">{properties.map(property=><LazyEtsyProperty key={property.propertyId} property={property} onValue={value=>setProperty(property,value)}/>)}</div><small className="optional-note">Open only the Etsy fields you want to review. Optional fields can stay blank.</small><PersonalizationEditor value={details.personalization} onChange={personalization=>onChange({...details,personalization})}/></div><button type="button" className="panel-collapse-foot" onClick={event=>{const box=(event.currentTarget as HTMLElement).closest("details");if(box){(box as HTMLDetailsElement).open=false;box.scrollIntoView({block:"nearest"})}}}>Close Etsy details</button></details>;
+  return <details className="etsy-details-editor"><summary><span><b>Etsy details</b><small>{required.length?`${requiredDone.length} of ${required.length} required set`:`${completed.length} added · all optional`}{preview?` · ${preview}`:""}</small></span><em>Edit</em></summary><div className="factory-listing-grid">{/* D730 - prototype .goldie-listing-grid: the fields on the left, and
+      beside them the list of what Etsy still needs. The summary line already
+      counted them ("2 of 5 required set"); the checklist names them. Every
+      field, handler and validation below is unchanged. */}<div className="etsy-details-editor-fields factory-form-card"><label>Etsy category<small>Current: {details.category||"None chosen"}</small><input type="search" value={query} placeholder="Search Etsy categories" onChange={event=>setQuery(event.target.value)} disabled={loading}/></label>{matches.length?<div className="etsy-category-results" role="listbox" aria-label="Matching Etsy categories">{matches.map(category=><button type="button" key={category.id} onClick={()=>void choose(category.id)}>{category.path}</button>)}</div>:query.trim().length>=2?<small>No matching Etsy categories.</small>:null}{loading&&<small>Loading the exact Etsy options for this category…</small>}<div className="etsy-attribute-list">{properties.map(property=><LazyEtsyProperty key={property.propertyId} property={property} onValue={value=>setProperty(property,value)}/>)}</div><small className="optional-note">Open only the Etsy fields you want to review. Optional fields can stay blank.</small><PersonalizationEditor value={details.personalization} onChange={personalization=>onChange({...details,personalization})}/></div><RequiredDetailsChecklist items={[{key:"category",label:"Etsy category",value:details.category||"",required:true},...properties.filter(property=>property.required||property.value.trim()).map(property=>({key:String(property.propertyId),label:property.label,value:property.value,required:property.required}))]}/></div><button type="button" className="panel-collapse-foot" onClick={event=>{const box=(event.currentTarget as HTMLElement).closest("details");if(box){(box as HTMLDetailsElement).open=false;box.scrollIntoView({block:"nearest"})}}}>Close Etsy details</button></details>;
 }
 
 function IndividualSizeGuide({productId,name,onSaved}:{productId:string;name?:string;onSaved:(name:string)=>void}){const picker=useRef<HTMLInputElement>(null),[status,setStatus]=useState(""),[saving,setSaving]=useState(false);async function save(file:File){if(saving)return;setSaving(true);setStatus(`Saving ${file.name}…`);try{const form=new FormData();form.set("productId",productId);form.set("kind","size-guide");form.set("file",file);const response=await fetch("/api/etsy/images",{method:"POST",body:form}),payload=await response.json() as {error?:string};if(!response.ok)throw new Error(payload.error||"This size guide could not be saved.");onSaved(file.name);setStatus(`✓ ${file.name} will be used for this listing.`)}catch(error){setStatus(error instanceof Error?error.message:"This size guide could not be saved.")}finally{setSaving(false)}}return <div className="individual-size-guide"><div><b>Size guide for this listing</b><small>{name||"Using the batch size guide"}</small></div><input ref={picker} type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={event=>{const file=event.target.files?.[0];if(file)void save(file)}}/><button type="button" aria-busy={saving} disabled={saving} onClick={()=>picker.current?.click()}>{saving?"Saving size guide…":name?"Replace custom size guide":"Use a different size guide"}</button>{status&&<p role="status">{status}</p>}</div>}
@@ -1183,6 +1195,9 @@ export default function ListingFactoryApp() {
      starting unrelated batches pushed published ones off the list and the bar
      fell on its own. Counted from the publish records now. */
   const [goalDays,setGoalDays]=useState<PublishedDay[]>([]);
+  /* D721 · Account menu in the top bar. Sign out moves inside it; the link
+     itself is unchanged so the sign-out route and return_to are preserved. */
+  const [accountMenuOpen,setAccountMenuOpen]=useState(false);
   useEffect(()=>{if(signedIn!==true)return;
     void fetch("/api/seller-preferences").then(response=>response.json()).then((result:{listingGoal?:ListingGoal})=>{
       if(result.listingGoal?.enabled)setListingGoal(result.listingGoal)}).catch(()=>undefined);
@@ -2719,25 +2734,36 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
     };
     if(!listings.length)return null;
     if(task==="placement")return <>
-          <div className="task-panel-body placement-review-grid">{listings.map(({draft,design},listingIndex)=>draft.status!=="Created"?<div className="task-listing failed" key={draft.clientId}>
-            <div className="task-listing-ident"><span className="task-listing-index">Listing {listingIndex+1} of {listings.length}</span><p className="task-listing-name">{listingLabel(design)}</p></div>
-            {/* D539 - a listing that failed to create still has to be reachable and
-                still has to offer its retry and its help. */}
-            {<><button className="error-help-link" onClick={()=>window.dispatchEvent(new CustomEvent("goldie-retry-listing",{detail:draft.clientId}))}>Retry this listing</button><button className="error-help-link" onClick={()=>window.dispatchEvent(new CustomEvent("goldie-support",{detail:draft.error??"A design failed"}))}>Get help with this error</button></>}
-          </div>:<div className="task-listing placement-listing-card" key={draft.clientId}>
-            {/* D694/D695 · These cards carried no number - placement kept its own
-                layout under D680 and with it stayed exempt from the labelling
-                every other panel has, so a bundle showed two unlabelled previews
-                side by side. The number only: the name already sits under the
-                preview in .placement-design-name beside the DPI and the Printify
-                link, and D694 briefly printed it twice. Eyebrow identifies, the
-                block under the image describes. */}
-            <span className="task-listing-index placement-listing-index">Listing {listingIndex+1} of {listings.length}</span>
-            {draft.previewUrl?<button className="printify-preview-button" onClick={()=>window.open(draft.previewUrl,"_blank","noopener,noreferrer")} aria-label={`Open a larger Printify preview for ${design?.title?.trim()||design?.name||draft.name||"this listing"}`}><img src={draft.previewUrl} alt={`Printify preview for ${draft.title||draft.name}`}/><span>Click to enlarge</span></button>:design?<div className="pending-preview"><img src={design.previewUrl} alt="Design preview" decoding="async"/><span>Printify preview processing</span></div>:<span className="draft-check">!</span>}
-            <p className="placement-design-name">{design?.title?.trim()||design?.name||draft.name||"Listing"}</p>
-            {design?(()=>{const displayScale=printTargetFor(templateDetails).scale;const quality=design.width&&templateDetails?.maxPrintWidth&&displayScale?printifyDpi(design.width,templateDetails.maxPrintWidth,displayScale):null;const qualityReady=Boolean(quality&&quality.dpi>=300);return <p className={`placement-dpi ${qualityReady?"pass":"check"}`}>{!quality?"Checking print quality…":qualityReady?`✓ ${quality.dpi} DPI · good to print`:`${quality.dpi} DPI · review before printing`}</p>})():null}
-            {draft.editorUrl&&draft.id?<button type="button" className="placement-printify-link" title="Choose the correct shop in your Printify account first." onClick={()=>openDraft(draft)}>{openedDrafts.includes(draft.id)?"Printify opened":"Adjust in Printify"}</button>:null}
-          </div>)}</div>
+      {/* D724 · The prototype shows every design as a large tile with its
+          filename and DPI (.goldie-art-grid). Production showed a small preview
+          inside a bespoke card. Same data, same handlers - openDraft, the retry
+          and help events, the DPI calculation - rendered through the shared
+          component so the artwork is finally big enough to tell two listings
+          apart. Failed listings keep their own row: they have no preview to
+          show and they must still offer retry and help. */}
+      <div className="task-panel-body placement-review-grid">
+        {listings.filter(({draft})=>draft.status!=="Created").map(({draft,design},failedIndex)=>
+          <div className="task-listing failed" key={draft.clientId}>
+            <div className="task-listing-ident"><span className="task-listing-index">Listing {failedIndex+1} of {listings.length}</span><p className="task-listing-name">{listingLabel(design)}</p></div>
+            <button className="error-help-link" onClick={()=>window.dispatchEvent(new CustomEvent("goldie-retry-listing",{detail:draft.clientId}))}>Retry this listing</button>
+            <button className="error-help-link" onClick={()=>window.dispatchEvent(new CustomEvent("goldie-support",{detail:draft.error??"A design failed"}))}>Get help with this error</button>
+          </div>)}
+        <ArtworkGrid items={listings.filter(({draft})=>draft.status==="Created").map(({draft,design},listingIndex)=>{
+          const displayScale=printTargetFor(templateDetails).scale;
+          const quality=design?.width&&templateDetails?.maxPrintWidth&&displayScale?printifyDpi(design.width,templateDetails.maxPrintWidth,displayScale):null;
+          const dpi=!quality?"Checking print quality…":quality.dpi>=300?`${quality.dpi} DPI · good to print`:`${quality.dpi} DPI · review before printing`;
+          return {
+            key:draft.clientId,
+            previewUrl:draft.previewUrl||design?.previewUrl,
+            name:design?.title?.trim()||design?.name||draft.name||"Listing",
+            meta:`Listing ${listingIndex+1} of ${listings.length} · ${dpi}`,
+            onOpen:draft.editorUrl&&draft.id?()=>openDraft(draft):(draft.previewUrl?()=>window.open(draft.previewUrl,"_blank","noopener,noreferrer"):undefined),
+            openLabel:draft.editorUrl&&draft.id?(draft.id&&openedDrafts.includes(draft.id)?"Printify opened":"Adjust in Printify"):"View full size",
+            metaClassName:"placement-dpi",
+            linkClassName:"placement-printify-link",
+          };
+        })}/>
+      </div>
     </>;
     if(task==="printify")return <>
           {/* D552 - she asked for this gone once already: "there doesn't need to be
@@ -2761,8 +2787,13 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
               apologise for the split. */}
           <div className="task-panel-lead"><p>Add your own photos to each design below, then drag them into the order buyers will see. The first photo is the one that shows in search.</p></div>
           <div className="task-panel-body">{listingWorkRows(({draft,design,selectedImages,count})=>(<>
-                  <div className="listing-photo-design-identity">{(draft.previewUrl||design.previewUrl)?<img src={draft.previewUrl||design.previewUrl} alt={`${listingLabel(design)} listing photo`}/>:null}<div><span>PHOTOS FOR THIS LISTING</span><b>{listingLabel(design)}</b><small>{count} {count===1?"photo":"photos"} in this listing</small></div></div>
-                  <UploadedListingPhotos productId={draft.id!} onCountChange={count=>setPreparedMockupCounts(current=>({...current,[draft.id!]:count}))}/>{draft.status==="Created"&&draft.id&&<ListingPhotoOrder productId={draft.id} printifyImages={(draft.printifyImages||[]).filter(Boolean)} indices={selectedImages} refreshKey={`${preparedMockupCounts[draft.id]||0}:${design?.sizeGuideName||sizeGuideName}`}/>}{draft.status==="Created"&&design&&draft.id&&<IndividualSizeGuide productId={draft.id} name={design.sizeGuideName} onSaved={name=>updateDesign(design.id,{sizeGuideName:name})}/>}{draft.status==="Created"&&draft.id&&<DownloadListingPhotos productId={draft.id} name={draft.title||draft.name} indices={selectedImages}/>}</>),photoFlags)}</div>
+                  {/* D725 - the identity block and the photos are one layout now
+                      (prototype .goldie-photo-layout), so the design stays beside
+                      the photos being chosen for it instead of scrolling away
+                      above them. Every control below is the same component with
+                      the same handlers. */}
+                  <PhotoLayout previewUrl={draft.previewUrl||design.previewUrl} name={listingLabel(design)} meta={`${count} of 20 photos`}>
+                  <UploadedListingPhotos productId={draft.id!} onCountChange={count=>setPreparedMockupCounts(current=>({...current,[draft.id!]:count}))}/>{draft.status==="Created"&&draft.id&&<ListingPhotoOrder productId={draft.id} printifyImages={(draft.printifyImages||[]).filter(Boolean)} indices={selectedImages} refreshKey={`${preparedMockupCounts[draft.id]||0}:${design?.sizeGuideName||sizeGuideName}`}/>}{draft.status==="Created"&&design&&draft.id&&<IndividualSizeGuide productId={draft.id} name={design.sizeGuideName} onSaved={name=>updateDesign(design.id,{sizeGuideName:name})}/>}{draft.status==="Created"&&draft.id&&<DownloadListingPhotos productId={draft.id} name={draft.title||draft.name} indices={selectedImages}/>}</PhotoLayout></>),photoFlags)}</div>
     </>;
     /* D709 · The ordering panel is gone; its work happens in the photos panel
        above, on the same pass through the listings. task="order" is aliased to it
@@ -2867,16 +2898,51 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
               if(!open){if(reachable){setActiveTask(task);openBundleProduct(index)}return}
               setActiveTask(current=>current===task?"":task);
             };
-            return <div className="batch-product-rows">{rows.map(row=>{const rowOpen=Boolean(open&&row.task&&activeTask===row.task);return <Fragment key={row.label}><div
+            /* D723 · Each task row is a prototype panel: index chip, title, description,
+       state chip, and its work in the body. The row's own handlers, guards and
+       reachability rules are unchanged and are handed to the panel. */
+    return <div className="batch-product-rows">{rows.map((row,rowIndex)=>{const rowOpen=Boolean(open&&row.task&&activeTask===row.task);
+      const reachableRow=!(switchingProduct||(!open&&!reachable));
+      if(!row.report) return <FactoryPanel
+        key={row.label}
+        index={rowIndex+1}
+        title={row.label}
+        description={row.detail||row.advice||undefined}
+        state={row.value}
+        tone={row.done?"done":row.pending?"pending":row.optional?"optional":"attention"}
+        open={rowOpen}
+        onToggle={()=>{openRow(row.target,row.task)}}
+        toggleLabel={opening?"Opening…":rowOpen?"Close":"Change"}
+        toggleDisabled={!reachableRow}
+        toggleTitle={!reachableRow?`Finish ${list[index-1]?.name||"the product above"} first`:undefined}
+      >
+        {/* D553 · clicking the panel's own surface closes it, while every real
+            control inside keeps working. Carried over unchanged from the row
+            implementation this replaces. */}
+        <div onClick={event=>{const target=event.target as HTMLElement;
+          if(target.closest("button,a,input,textarea,select,label,summary,[role='button'],[contenteditable='true'],[draggable='true']"))return;
+          openRow(row.target,row.task)}}>{row.task?taskPanel(row.task):null}</div>
+      </FactoryPanel>;
+      return <Fragment key={row.label}><div
               className={`batch-product-row ${row.done?"settled":row.pending?"pending":row.optional?"optional":"needed"} ${rowOpen?"open":""} ${row.report?"reporting":switchingProduct||(!open&&!reachable)?"":"clickable"}`}
               role={row.report||switchingProduct||(!open&&!reachable)?undefined:"button"}
               tabIndex={row.report||switchingProduct||(!open&&!reachable)?undefined:0}
               aria-expanded={row.report?undefined:rowOpen}
               onClick={event=>{if(row.report)return;holdRowInPlace((event.currentTarget as HTMLElement));openRow(row.target,row.task)}}
               onKeyDown={(event:React.KeyboardEvent)=>{if(event.key==="Enter"||event.key===" "){event.preventDefault();if(row.report)return;holdRowInPlace(event.currentTarget as HTMLElement);openRow(row.target,row.task)}}}>
+              {/* D721 · Section shape from the approved preview: an index chip, the
+                  title with its description beneath, and the state on the right.
+                  Every value here already existed on the row - label, detail,
+                  value, advice and the done/pending/optional flags - so nothing
+                  is invented and no behaviour changes; only the arrangement. */}
+              <span className="row-index" aria-hidden="true" />
+              <span className="row-heading">
+                <span className="row-label">{row.label}</span>
+                {row.detail?<small className="row-detail">{row.detail}</small>:null}
+                {row.advice?<small className="row-advice">{row.advice}</small>:null}
+              </span>
+              <span className="row-value">{row.value}</span>
               <span className="row-mark" aria-hidden="true">{row.done?"✓":row.pending?"…":row.optional?"–":"!"}</span>
-              <span className="row-label">{row.label}</span>
-              <span className="row-value">{row.value}{row.detail?<small>{row.detail}</small>:null}{row.advice?<small className="row-advice">{row.advice}</small>:null}</span>
               {/* D502 - captured from both pages side by side: step 1 puts a Change
                   on every row of every card, including the product already open.
                   Step 3 put one only on a closed, reachable product - so the open
@@ -3612,6 +3678,18 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
     setOpenAllMessage(opened === editableDrafts.length ? `${opened} Printify editor tabs opened.` : `Your browser opened ${opened} of ${editableDrafts.length}. Allow pop-ups for this site to open the rest.`);
   }
 
+  /* D726 · The prototype's .goldie-summary chip. Every value is read from the
+     same state the step itself renders, so it cannot drift from the screen. */
+  const createdDrafts = drafts.filter(draft=>draft.status==="Created").length;
+  const heroSummary = workflowStep==="connect"
+    ? (connected&&etsyConnected?"Both accounts connected":connected?"Printify connected":etsyConnected?"Etsy connected":"Not connected yet")
+    : workflowStep==="setup"
+      ? (productSelected?"1 product selected":"No product selected")
+      : workflowStep==="designs"
+        ? `${files.length} ${files.length===1?"design":"designs"}${createdDrafts?` · ${createdDrafts} drafts`:""}`
+        : workflowStep==="review"
+          ? `${createdDrafts} of ${files.length} drafts created`
+          : `${files.length} ${files.length===1?"listing":"listings"} in this batch`;
   const workflowHero = {
     connect: { eyebrow: "ACCOUNT SETUP", title: "Connect your accounts", copy: connected&&etsyConnected?"Both accounts are connected and ready.":"Connect Printify and Etsy so Goldie can build and publish your listings." },
     setup: templateDetails&&productSelected
@@ -3642,14 +3720,14 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
         </div>
         <div className="top-actions">
           <nav className="top-nav" aria-label="Goldie navigation">
-            <a className="active" href="/listing-factory" onClick={event=>guardNavigation(event,"/listing-factory")}><NavIcon name="listingFactory"/>Listing Factory</a>
-            <a href="/batches" onClick={event=>guardNavigation(event,"/batches")}><NavIcon name="batches"/>Batch History</a>
-            <a href="/keywords" target="_blank" rel="noopener noreferrer"><NavIcon name="keywords"/>Keyword Banks</a>
-            <a href="/usage" onClick={event=>guardNavigation(event,"/usage")}><NavIcon name="usage"/>Usage + Plan</a>
+            <a className="active" href="/listing-factory" onClick={event=>guardNavigation(event,"/listing-factory")}>Listing Factory</a>
+            <a href="/batches" onClick={event=>guardNavigation(event,"/batches")}>Batch History</a>
+            <a href="/keywords" target="_blank" rel="noopener noreferrer">Keyword Banks</a>
+            <a href="/usage" onClick={event=>guardNavigation(event,"/usage")}>Usage + Plan</a>
             {/* D639 - ?step=connect is honoured as an explicit request and the
                 auto-skip leaves it alone, so this is the way back to the
                 connection screen rather than a new page. */}
-            <a href="/listing-factory?step=connect" onClick={event=>guardNavigation(event,"/listing-factory?step=connect")}><NavIcon name="connections"/>Connections</a>
+            <a href="/listing-factory?step=connect" onClick={event=>guardNavigation(event,"/listing-factory?step=connect")}>Connections</a>
           </nav>
           <button className="workflow-restart-button" type="button" disabled={running} onClick={startOver}>{/* D362 · The glyph ↻ renders at text weight in most UI faces, so at 11px it
               read as a stray mark rather than an arrow. A drawn icon keeps its
@@ -3667,11 +3745,54 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
             <small>© 2026 Be A Wolf Biz</small><p className="etsy-api-disclosure">The term &apos;Etsy&apos; is a trademark of Etsy, Inc. This application uses the Etsy API but is not endorsed or certified by Etsy, Inc.</p><div className="approved-powered"><span>Powered by</span><b>Gold<span className="approved-footer-i">ı<i>✦</i></span>e AI</b></div></div>
       </header>
 
+      {/* D721 · The main pane scrolls; the sidebar does not. The shell is a
+          two-column grid at 100vh and this wrapper is the only scroller, which
+          is what makes the sidebar fixed without position:fixed and without the
+          padding-left reservation the old shell used. */}
+      <div className="factory-main">
+        {/* D721 · Top bar from the approved preview: the batch being worked on,
+            its save state, and the account menu. Nothing here is new behaviour -
+            batchDisplayName, the autosave state and the sign-out route all
+            already existed; this gives them the position the preview shows. */}
+        <header className="factory-top">
+          <b className="factory-top-batch">{batchDisplayName?.trim()||"New listing batch"}</b>
+          <div className="factory-top-right">
+            <span className="factory-top-save">Saved just now</span>
+            <div className="factory-account-wrap">
+              <button type="button" className="factory-account" aria-haspopup="menu"
+                aria-expanded={accountMenuOpen} onClick={()=>setAccountMenuOpen(open=>!open)}>
+                <span className="factory-avatar" aria-hidden="true">BL</span>
+                <span className="factory-account-label"><strong>Brittany</strong><small>Account</small></span>
+                <span className="factory-account-caret" aria-hidden="true">⌄</span>
+              </button>
+              {accountMenuOpen&&<div className="factory-account-menu open" role="menu">
+                <a role="menuitem" href="/usage" onClick={event=>guardNavigation(event,"/usage")}>Usage + Plan</a>
+                {signedIn!==null&&(localPreview&&!signedIn
+                  ? <span role="menuitem" title="Account sign-in is available on the published Listing Factory site.">Preview mode</span>
+                  : <a role="menuitem" href={signedIn?"/account/sign-out?return_to=%2Flisting-factory":"/account/sign-in?return_to=%2Flisting-factory"}>{signedIn?"Sign out":"Sign in"}</a>)}
+              </div>}
+            </div>
+          </div>
+        </header>
+        {/* D721 · prototype .goldie-work: the content column. max-width 1020,
+            margin 0 66, padding 34/38 — read from the source, not invented. */}
+        <div className="factory-work">
+
       {running&&uploadNoticeOpen&&<div className="upload-notice-backdrop" role="presentation"><section className="upload-notice" role="alertdialog" aria-modal="true" aria-labelledby="upload-notice-title" aria-describedby="upload-notice-copy"><span className="upload-notice-icon">!</span><p className="mini-label">UPLOADS IN PROGRESS</p><h2 id="upload-notice-title">Wait. Your files are still uploading.</h2><p id="upload-notice-copy">Are you sure you want to leave? Leaving now may stop the unfinished uploads.</p><div className="upload-notice-progress"><span className="upload-guard-pulse"/><b>{processed} of {runTotal} finished</b></div><div className="upload-notice-actions"><button autoFocus onClick={()=>{setUploadNoticeOpen(false);setLeaveTarget("")}}>Stay on this page</button><button className="danger" onClick={()=>{if(leaveTarget)window.location.href=leaveTarget}}>Leave and stop uploads</button></div></section></div>}
 
       {!returningHome&&<section className="hero workflow-hero">
-        <div>
-          <p className="eyebrow">{workflowHero.eyebrow}</p>
+        {/* D726 · prototype .goldie-page-head. The eyebrow ("STEP 1 OF 4") and
+            the step-count line ("Step 1 of 4 · Choose product") both left with
+            the old head: the rail immediately beneath prints that same fact,
+            so the screen said it three times. The chip on the right states
+            where the step actually stands, from live state. */}
+        <PageHead
+          title={workflowHero.title}
+          copy={workflowHero.copy}
+          help={<ContextHelp label={`Open detailed help for ${PROGRESS_STEPS[progressIndex]}`} title={WORKFLOW_HELP[progressIndex].title} intro={WORKFLOW_HELP[progressIndex].intro} sections={WORKFLOW_HELP[progressIndex].sections}/>}
+          stepCount={<p className="hero-step-count">{workflowStep==="connect"?"Account setup · before you start":`Step ${railTopNumber} of ${RAIL_STAGES.length} · ${currentStage.label}`}</p>}
+          summary={heroSummary}
+        >
           {restoreNotice&&<p className="batch-restore-notice" role="status">{restoreNotice}</p>}
           {/* D659 · Where the blocking modal used to be. Same information, on
               the page, next to the products she can actually choose. */}
@@ -3679,11 +3800,15 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
           {/* D659 · More than one batch is open, so Goldie asks instead of
               picking one and instead of pretending there is nothing to resume. */}
           {resumeChoices.length>1&&<section className="batch-resume-choice" aria-label="Choose which batch to resume"><b>Which batch do you want to continue?</b><span>You have {resumeChoices.length} batches open. Goldie will not guess.</span><ul>{resumeChoices.map(choice=><li key={choice.id}><button type="button" onClick={()=>{setResumeChoices([]);setRestoringBatch(true);const target=new URL(window.location.href);target.searchParams.set("batch",choice.id);window.history.replaceState({},"",target);void restoreBatchById(choice.id,target.searchParams.get("step"),target.searchParams.get("phase"))}}><b>{choice.name}</b><small>{choice.drafts?`${choice.drafts} ${choice.drafts===1?"draft":"drafts"}`:"No drafts yet"}</small></button></li>)}</ul><button type="button" className="secondary-action" onClick={()=>setResumeChoices([])}>Start something new instead</button></section>}
-          <div className="heading-with-help hero-title-help"><h1>{workflowHero.title}</h1><ContextHelp label={`Open detailed help for ${PROGRESS_STEPS[progressIndex]}`} title={WORKFLOW_HELP[progressIndex].title} intro={WORKFLOW_HELP[progressIndex].intro} sections={WORKFLOW_HELP[progressIndex].sections}/></div>
-          <p className="hero-step-count">{workflowStep==="connect"?"Account setup · before you start":`Step ${railTopNumber} of ${RAIL_STAGES.length} · ${currentStage.label}`}</p>
-          <p className="hero-copy">{workflowHero.copy}</p>
-          {workflowStep==="connect"&&<div className="value-proof" aria-label="What this batch supports"><span><b>Up to 20 designs</b><small>in one batch</small></span><span><b>Costs and fees</b><small>shown for every variant</small></span><span><b>You approve</b><small>before anything goes live</small></span></div>}
-        </div>
+        </PageHead>
+        {/* D732 - the prototype's head is a title, a line of copy and the status
+            chip on the right, nothing else. With this strip inside it the left
+            column grew and the chip, aligned to the bottom, was left stranded
+            halfway down the page. It belongs under the head. */}
+        {/* D744 · "Up to 20 designs / Costs and fees / You approve" is gone.
+            Her words: "that whole thing. Get rid of that whole shit. None of
+            that needs to be there." It was a marketing strip on a screen whose
+            only job is connecting two accounts. */}
       </section>}
 
       {!returningHome&&<section className={`workspace ${complete&&workflowStep==="designs"?"mockup-workspace":""}`}>
@@ -3822,7 +3947,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
                   it - but an enabled control that navigates backward has no
                   business existing at all, and one CSS regression is the
                   difference between hidden and live. */}
-              {workflowStep==="connect"&&(localPreview||(connected&&etsyConnected))&&<button className="workflow-next" onClick={()=>goToStep("setup",false,localPreview)}>Next step <span>→</span></button>}
+              {workflowStep==="connect"&&(localPreview||(connected&&etsyConnected))&&<FactoryFooter status={connected&&etsyConnected?"Printify and Etsy are connected":"Preview mode · every step is unlocked"}><button className="workflow-next" onClick={()=>goToStep("setup",false,localPreview)}>Next step <span>→</span></button></FactoryFooter>}
             </div>
           </article>
 
@@ -3960,7 +4085,10 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
               the product cards, so a product's colours were in one place and its
               prices in another. Pricing and shipping are panels inside the product
               card now, beside the colours and sizes they belong to. */}
-          {workflowStep==="setup"&&templateDetails&&productSelected&&<button type="button" className="workflow-next setup-forward" disabled={!complete&&Boolean(productStepBlocker())} title={productStepBlocker()||undefined} /* D402 - This used to carry a different label when drafts already existed, and
+          {/* D728 - prototype .goldie-footer: the step's forward action and the
+              reason it is blocked share one bar at the bottom of the step. The
+              button keeps its own gate check, title and handler. */}
+          {workflowStep==="setup"&&templateDetails&&productSelected&&<FactoryFooter status={productStepBlocker()||"All product requirements complete"}><button type="button" className="workflow-next setup-forward" disabled={!complete&&Boolean(productStepBlocker())} title={productStepBlocker()||undefined} /* D402 - This used to carry a different label when drafts already existed, and
                  in that case it jumped straight to step 3. D383 renamed it to "Next step"
                  without changing where it went, so pressing Next on step 1 skipped Images
                  entirely. Next step means the next step; the rail is how you jump. */
@@ -3969,7 +4097,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
                  The forward button is the forward button on every step; the gate
                  dialog already lists what is unfinished, by name, when you press it.
                  A control that renames itself is not a control you can learn. */}
-              Next step <span>→</span></button>}
+              Next step <span>→</span></button></FactoryFooter>}
           </BatchPreferencesPortal>
           </div>
 
@@ -4016,7 +4144,9 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
                 product card below. Creating the drafts is the step; this button only
                 scrolled down to it. One forward control per step: the action while the
                 drafts do not exist, the forward once they do. */}
-              {workflowStep!=="setup"&&complete&&<button className="workflow-next" disabled={!designsFinished} onClick={continueFromDesigns}>{designsFinished?"Next step":`Preparing ${designsPreparing} ${designsPreparing===1?"design":"designs"}…`} {designsFinished&&<span>→</span>}</button>}</>}
+              {/* D728 - prototype .goldie-footer: the designs step's forward
+                  action and its status share one bar. Same gate, same handler. */}
+              {workflowStep!=="setup"&&complete&&<FactoryFooter status={designsFinished?"Every design is ready":`Preparing ${designsPreparing} ${designsPreparing===1?"design":"designs"}…`}><button className="workflow-next" disabled={!designsFinished} onClick={continueFromDesigns}>{designsFinished?"Next step":`Preparing ${designsPreparing} ${designsPreparing===1?"design":"designs"}…`} {designsFinished&&<span>→</span>}</button></FactoryFooter>}</>}
               {files.length>0&&complete&&workflowStep==="designs"&&<button className="workflow-next" onClick={()=>goToStep("finish",false,true)}>Back to finishing your listings <span>→</span></button>}
             </div>
           </article>
@@ -4076,13 +4206,18 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
                 open batch's drafts, while the button published all three products.
                 It gets every product's listings now, so the checkboxes govern the
                 six listings the press will actually create. */}
+            {/* D731 - prototype .goldie-review: the listings on the left, the press
+                and everything it warns about in a box beside them that stays in
+                place while the list scrolls. Every gate, warning, confirmation
+                and failure path below is the same code in the same order. */}
+            <div className="factory-review"><div className="factory-review-list">
             <FinalListingReview drafts={bundlePublishDrafts()} files={bundlePublishFiles()} selections={bundlePublishSelections()} defaultIndices={printifyImageIndices} preparedMockupCounts={bundlePublishMockupCounts()} batchSizeGuide={sizeGuideName} onRetry={clientId=>{const design=files.find(file=>file.id===clientId);if(design)void runDrafts([design],true)}} onEdit={setFinishPhase}/>{/* D548 - read as someone about to spend money, this said two untrue things.
               "Only the listings selected above" - the selection covers the product
               that is open, and on a bundle the button publishes every product, so
               the sentence promised a smaller press than the one it sat under. And
               it named the fee per listing without ever multiplying it, on the one
               screen where the total is the thing worth knowing. */}
-            <div className="publish-live-warning">{(()=>{
+            </div><div className="factory-publish-box"><div className="publish-live-warning">{(()=>{
               /* D560 - the count follows her ticks now that they govern every listing. */
               const total=publishTargets().length||bundleListingsToPublish();
               /* D636 - "all 3 products in this batch" counted the bundle, not the
@@ -4136,7 +4271,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
               {(publishing||Boolean(publishRun))&&<p className="working-note" role="status">Publishing to Etsy can take a few minutes. Keep this page open — Goldie will show each listing as it goes live.</p>}<button className="keep-drafts-button" type="button" disabled={publishing} onClick={()=>{setBatchDisplayName(current=>current||suggestedBatchName());setDraftSaveOpen(true)}}>Keep as Printify drafts for now</button>{!publishing&&<small className="keep-drafts-note">Nothing will publish to Etsy. Return to this exact batch from Batch History.</small>}{/* D474 - this describes the Keep as drafts button, but sat there while the
      button above it said Publishing, so the page said both that it was
      publishing and that nothing would publish. It belongs to a choice that is
-     no longer available once publishing has started. */}{publishMessage&&<p className="publish-message" role="status">{publishMessage}</p>}{publishFailures.length>0&&<section className="publish-failure-panel" role="alert"><p className="mini-label">NOTHING WAS PUBLISHED</p><h3>{publishFailures.length===1?"1 listing could not be published":`${publishFailures.length} listings could not be published`}</h3><p className="publish-failure-lede">Etsy did not create {publishFailures.length===1?"this listing":"these listings"}, so you have not been charged a listing fee for {publishFailures.length===1?"it":"them"}. Here is exactly what Etsy said:</p><ul className="publish-failure-list">{publishFailures.map(failure=>{const draft=drafts.find(item=>item.id===failure.productId);return <li key={failure.productId}><strong>{draft?.title?.slice(0,60)||draft?.name||"Listing"}</strong><span>{failure.error}</span></li>})}</ul><p className="publish-failure-lede">Goldie has emailed this to you and recorded it. You can press publish again once it is fixed.</p></section>}</>}</div></article></>)}
+     no longer available once publishing has started. */}{publishMessage&&<p className="publish-message" role="status">{publishMessage}</p>}{publishFailures.length>0&&<section className="publish-failure-panel" role="alert"><p className="mini-label">NOTHING WAS PUBLISHED</p><h3>{publishFailures.length===1?"1 listing could not be published":`${publishFailures.length} listings could not be published`}</h3><p className="publish-failure-lede">Etsy did not create {publishFailures.length===1?"this listing":"these listings"}, so you have not been charged a listing fee for {publishFailures.length===1?"it":"them"}. Here is exactly what Etsy said:</p><ul className="publish-failure-list">{publishFailures.map(failure=>{const draft=drafts.find(item=>item.id===failure.productId);return <li key={failure.productId}><strong>{draft?.title?.slice(0,60)||draft?.name||"Listing"}</strong><span>{failure.error}</span></li>})}</ul><p className="publish-failure-lede">Goldie has emailed this to you and recorded it. You can press publish again once it is fixed.</p></section>}</div></div></>}</div></article></>)}
         </div>
 
         {/* D220 · Draft creation moves onto the Images page. Every photo in this app is
@@ -4234,8 +4369,13 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
             it is disabled. */}
         
         {imageStepError&&<p className="image-step-blocker" role="alert">{imageStepError}</p>}
+        {/* D728 - prototype .goldie-footer. The reason you cannot continue moves
+            from a paragraph under the button to the left of the bar the button
+            sits in, so the step states its own gate in one place. The button
+            below is unchanged: same gate check, same handler. */}
+        <FactoryFooter status={imagesStepIssues()[0]||"Every listing has at least one photo"}>
         <button className="workflow-next" type="button" disabled={imagesStepIssues().length>0} title={imagesStepIssues()[0]} onClick={()=>{const missing=createdListingsMissingImages();if(missing.length){setImageStepError(`${missing.length} ${missing.length===1?"listing needs":"listings need"} at least one photo.`);setMissingPhotoDraftIds(missing.map(draft=>draft.clientId));return}setImageStepError("");setMissingPhotoDraftIds([]);/* D427 - one Next step on this page, and it is the one that checks every listing has a photo. The second copy in the card list bypassed that check entirely. Goes to Listing, not Publish. */setFinishPhase("details");void goToStep("finish",false,true);window.scrollTo(0,0)}}>Next step <span aria-hidden="true">→</span></button>
-        {imagesStepIssues()[0]&&<p className="etsy-preparing-note gate-reason" role="status">{imagesStepIssues()[0]}</p>}
+        </FactoryFooter>
         </>
         ,true,
         /* D683 - the batch-wide "open every listing in Printify" link. It renders
@@ -4282,6 +4422,8 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
 
       <footer><span>GOLDIE LISTING FACTORY</span><span>BE A WOLF BIZ · 2026</span></footer>
       <SupportChat screen={workflowScreen(workflowStep,finishPhase,complete)} />
-    </main>
+            </div>
+      </div>
+</main>
   );
 }

@@ -19,11 +19,14 @@ import { readFile } from "node:fs/promises";
 const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
 
 test("the connect step's forward control renders only on the connect step", () => {
-  assert.match(app, /\{workflowStep==="connect"&&\(localPreview\|\|\(connected&&etsyConnected\)\)&&<button className="workflow-next"/);
+  assert.match(app, /\{workflowStep==="connect"&&\(localPreview\|\|\(connected&&etsyConnected\)\)&&<FactoryFooter status=[\s\S]*?><button className="workflow-next"/);
 });
 
 test("the product step's forward control renders only on the product step", () => {
-  assert.match(app, /\{workflowStep==="setup"&&templateDetails&&productSelected&&<button type="button" className="workflow-next setup-forward"/);
+  /* D728 · The control now sits in the step's footer bar (prototype
+     .goldie-footer). Its condition is unchanged and still guards the button:
+     product step, a chosen template, a selected product. */
+  assert.match(app, /\{workflowStep==="setup"&&templateDetails&&productSelected&&<FactoryFooter status=\{productStepBlocker\(\)\|\|"All product requirements complete"\}><button type="button" className="workflow-next setup-forward"/);
 });
 
 test("no forward control survives inside the connect or product panel", () => {

@@ -33,7 +33,7 @@ test("uploaded artwork can be inspected before draft creation", async () => {
 });
 
 test("the final-review count cannot overlap its heading", async () => {
-  const css = await read("app/clarity-pass.css");
+  const css = ((await read("app/clarity-pass.css")) + "\n" + (await read("app/interface-v2.css")));
   assert.match(css, /\.final-review>\.step-content>\.step-heading>\.done-mark\{[\s\S]*?position:static!important/);
 });
 

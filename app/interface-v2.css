@@ -1,0 +1,801 @@
+/* ============================================================================
+ * D721 · INTERFACE V2 — SHELL
+ * Every value below is the COMPUTED value read from the approved prototype
+ * (goldie-ux-preview-site @ aad9208, public/prototype.html, peach-glass).
+ * Not from base rules, not from screenshots.
+ * ==========================================================================*/
+html, body { background: #f1d2dc; }
+
+.app-shell {
+  display: grid;
+  grid-template-columns: 288px minmax(0, 1fr);
+  height: 100vh;
+  overflow: hidden;
+  padding: 0;
+}
+
+/* sidebar (production's .topbar) */
+.app-shell > .topbar {
+  position: static;
+  width: 288px;
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  padding: 36px 26px 25px;
+  color: #4b283e;
+  background: linear-gradient(rgba(255,241,244,.94), rgba(247,221,232,.9));
+  border-right: 1px solid rgba(113,65,91,.15);
+  backdrop-filter: blur(24px) saturate(1.04);
+}
+.app-shell > .topbar .top-nav { display: grid; gap: 6px; }
+.app-shell > .topbar .top-nav a {
+  border: 0; background: transparent; color: rgba(74,42,62,.62);
+  text-align: left; padding: 12px 14px; border-radius: 14px;
+  font: 650 13px/1.2 Inter, system-ui, sans-serif; text-decoration: none; display: block;
+}
+.app-shell > .topbar .top-nav a.active {
+  color: #4b283e; background: rgba(255,255,255,.62);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.65);
+}
+.app-shell > .topbar .approved-sidebar-footer { margin-top: auto; padding: 16px 0 0; display: grid; gap: 9px; }
+.app-shell > .topbar .account-link { display: none; }
+
+/* main pane — the only scroller. padding lives on the work column, not here. */
+.app-shell > .factory-main {
+  min-width: 0;
+  height: 100vh;
+  overflow: hidden auto;
+  overscroll-behavior: contain;
+  position: relative;
+  isolation: isolate;
+  padding: 0;
+  background: linear-gradient(145deg, rgba(248,228,237,.93), rgba(238,218,239,.9));
+}
+.app-shell > .factory-main::before {
+  content: "";
+  position: fixed; z-index: -1;
+  width: min(61vw, 790px); aspect-ratio: 1; right: 2vw; top: 17vh;
+  border-radius: 46% 54% 58% 42% / 52% 44% 56% 48%;
+  pointer-events: none; filter: blur(34px); opacity: .48;
+  background: conic-gradient(from 18deg,
+    rgba(184,174,255,.45), rgba(230,172,216,.42), rgba(255,192,204,.38),
+    rgba(188,181,255,.43), rgba(239,180,220,.4), rgba(184,174,255,.45));
+  animation: goldie-drift 34s linear infinite;
+}
+@keyframes goldie-drift {
+  0% { transform: translate3d(0,0,0) rotate(0deg); }
+  50% { transform: translate3d(-3%,4%,0) rotate(180deg); }
+  100% { transform: translate3d(0,0,0) rotate(360deg); }
+}
+@media (prefers-reduced-motion: reduce) { .app-shell > .factory-main::before { animation: none; } }
+
+/* work column — prototype .goldie-work */
+.app-shell .factory-work {
+  max-width: 1020px;
+  /* D733 · the prototype centres this column (margin:auto). A fixed 66px on
+     each side only looked centred at one pane width. */
+  margin: auto;
+  padding: 34px 38px 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* top bar — prototype .goldie-top */
+.app-shell .factory-top {
+  position: sticky; top: 0; z-index: 20;
+  display: flex; align-items: center; justify-content: space-between;
+  height: 64px; flex: 0 0 64px; padding: 0 34px;
+  background: rgba(255,249,252,.9);
+  backdrop-filter: blur(14px);
+  border-bottom: 1px solid #dcc5d2;
+}
+.app-shell .factory-top-batch { font: 700 14px/1.2 Inter, system-ui, sans-serif; color: #3d2538; }
+.app-shell .factory-top-right { display: flex; align-items: center; gap: 16px; }
+.app-shell .factory-top-save { font: 400 12px/1 Inter, system-ui, sans-serif; color: #6d5d68; }
+.app-shell .factory-account-wrap { position: relative; }
+.app-shell .factory-account {
+  border: 0; background: transparent; display: flex; align-items: center; gap: 9px;
+  color: #4b283e; cursor: pointer; padding: 5px 7px; border-radius: 10px;
+}
+/* D743 · Measured against the prototype's .goldie-avatar: 34, #4b283e, 800,
+   and it carries .04em of tracking on the initials. */
+.app-shell .factory-avatar {
+  width: 34px; height: 34px; border-radius: 50%; background: #4b283e; color: #fff;
+  display: grid; place-items: center; letter-spacing: .04em;
+  font: 800 11px/1 Inter, ui-sans-serif, system-ui, sans-serif;
+}
+.app-shell .factory-account-label { display: grid; text-align: left; line-height: 1.2; }
+.app-shell .factory-account-label strong { font-size: 12px; font-weight: 700; }
+.app-shell .factory-account-label small { font-size: 9px; color: #806b78; }
+.app-shell .factory-account-caret { font-size: 11px; color: #806b78; }
+.app-shell .factory-account-menu {
+  display: grid; position: absolute; z-index: 30; right: 0; top: 50px; width: 190px;
+  background: #fffafc; border: 1px solid #ead9e2; border-radius: 12px; padding: 7px;
+  box-shadow: 0 16px 40px rgba(72,40,60,.18);
+}
+.app-shell .factory-account-menu a,
+.app-shell .factory-account-menu span {
+  border: 0; background: transparent; color: #553548; text-align: left;
+  padding: 10px 11px; border-radius: 8px; font-size: 12px; text-decoration: none; cursor: pointer;
+}
+.app-shell .factory-account-menu a:hover { background: #f7edf2; }
+
+/* workflow rail — prototype .goldie-progress */
+.app-shell .workspace { display: contents; }
+.app-shell .factory-work { display: flex; flex-direction: column; }
+.app-shell nav.workflow-progress {
+  display: grid; grid-template-columns: repeat(4, 1fr); align-items: end;
+  border-bottom: 1px solid #ddd5da; margin: 0 0 32px; padding: 0;
+  background: none; width: auto;
+}
+.app-shell nav.workflow-progress > .workflow-progress-head,
+.app-shell nav.workflow-progress > .workflow-help { display: none; }
+.app-shell nav.workflow-progress > button {
+  position: relative; display: flex; align-items: center; gap: 7px;
+  border: 0; background: transparent; text-align: left; padding: 0 4px 15px; margin: 0;
+  color: #83737e; font: 750 11px/1 Inter, system-ui, sans-serif;
+  letter-spacing: .04em; text-transform: uppercase; cursor: pointer;
+}
+.app-shell nav.workflow-progress > button > span:first-of-type {
+  order: 1; display: inline-grid; place-items: center;
+  width: 22px; height: 22px; min-height: 22px; max-height: 22px; flex: 0 0 22px;
+  align-self: center; box-sizing: border-box; border-radius: 50%;
+  background: #eee8ec; color: #654f60; font: 750 11px/1 Inter, system-ui, sans-serif;
+}
+.app-shell nav.workflow-progress > button > em.progress-bubble-label {
+  order: 2; position: static; left: auto; top: auto; transform: none;
+  font: 750 11px/1 Inter, system-ui, sans-serif; font-style: normal;
+  letter-spacing: .04em; text-transform: uppercase;
+}
+.app-shell nav.workflow-progress > button > span:last-of-type { display: none; }
+.app-shell nav.workflow-progress > button.active { color: #4f2b46; }
+.app-shell nav.workflow-progress > button.active > span:first-of-type { background: #6d3b5e; color: #fff; }
+.app-shell nav.workflow-progress > button.active::after {
+  content: ""; height: 3px; background: #6d3b5e; position: absolute;
+  left: 0; right: 18px; bottom: -2px; border-radius: 3px;
+}
+
+/* page head */
+.app-shell .hero { text-align: left; margin: 0 0 25px; padding: 0; width: 100%; max-width: none; height: auto; overflow: visible; }
+.app-shell .hero h1 { font: 700 29px/1.12 Inter, system-ui, sans-serif; letter-spacing: -.035em; color: #3d2538; margin: 0 0 7px; text-align: left; }
+.app-shell .hero .eyebrow { display: none; }
+
+/* sticky action bar — prototype .goldie-footer */
+.app-shell .workflow-footer-actions {
+  position: sticky; bottom: 0; z-index: 18;
+  height: 70px; padding: 14px 104px; margin: 18px 0 0;
+  background: rgba(255,255,255,.96); border-top: 1px solid #d9cbd3;
+  display: flex; align-items: center; justify-content: space-between; width: auto;
+}
+.app-shell .workflow-next {
+  background: #5d3151; color: #fff; border: 0; border-radius: 8px;
+  padding: 11px 18px; min-width: 0; font: 750 16px/1 Inter, system-ui, sans-serif;
+  box-shadow: none; animation: none;
+}
+.app-shell .workflow-next:hover { background: #4e2844; }
+
+/* ============================================================================
+ * D721 · CARD + SECTION ROWS — measured off the prototype, sole owner.
+ * .goldie-panel        bg rgba(255,252,254,.92)  1px #e4cedb  r12  0 5px 18px rgba(90,48,79,.07)
+ * .goldie-panel-head   grid 48px 1fr auto  gap 13  padding 15 17
+ * .goldie-panel-index  34x34  r9  #eee7ec  #643e5a  800 12
+ * .goldie-panel-title  strong 14 / small 12 #7d6d78
+ * .goldie-state        #edf7f0  1px #cae5d2  r7  750 11 #37704c  pad 6 9
+ * .goldie-panel-body   border-top 1px #eee8ec  padding 18
+ * ==========================================================================*/
+.app-shell .step-product-cards { display: block; width: 100%; max-width: none; margin: 0; }
+
+.app-shell .batch-product-card {
+  background: rgba(255,252,254,.92);
+  /* peach-glass overrides the base .goldie-panel border and shadow. These are
+     the COMPUTED values off the prototype, not the base rule - reading the
+     base rule is how the oval and the wrong shadow both happened. */
+  border: 1px solid #dfc8d5;
+  border-radius: 12px;
+  margin-bottom: 14px;
+  overflow: hidden;
+  box-shadow: 0 12px 32px rgba(75,40,62,.11);
+}
+.app-shell .batch-product-card > header {
+  display: grid; grid-template-columns: 48px minmax(0,1fr) auto;
+  align-items: center; gap: 13px; padding: 15px 17px;
+}
+.app-shell .bundle-product-photo { width: 48px; height: 48px; border-radius: 9px; object-fit: cover; }
+.app-shell .bundle-product-id { display: block; min-width: 0; }
+.app-shell .bundle-product-id b { display: block; font: 700 14px/1.3 Inter, system-ui, sans-serif; color: #3d2538; margin-bottom: 3px; }
+.app-shell .bundle-product-id small { display: block; font: 400 12px/1.35 Inter, system-ui, sans-serif; color: #7d6d78; }
+.app-shell .batch-product-state {
+  background: #edf7f0; border: 1px solid #cae5d2; border-radius: 7px;
+  padding: 7px 9px; color: #37704c; font: 750 11px/1 Inter, system-ui, sans-serif;
+}
+
+/* rows as numbered sections */
+.app-shell .batch-product-rows { counter-reset: goldie-step; }
+.app-shell .batch-product-row {
+  counter-increment: goldie-step;
+  display: grid; grid-template-columns: 34px minmax(0,1fr) auto auto;
+  align-items: center; gap: 13px; padding: 15px 17px;
+  border-top: 1px solid #eee8ec; background: transparent; border-radius: 0;
+}
+.app-shell .row-index {
+  width: 34px; height: 34px; border-radius: 9px; background: #eee7ec; color: #643e5a;
+  display: grid; place-items: center; font: 800 12px/1 Inter, system-ui, sans-serif;
+}
+.app-shell .row-index::before { content: "0" counter(goldie-step); }
+.app-shell .row-heading { display: block; min-width: 0; }
+.app-shell .row-label { display: block; font: 700 14px/1.3 Inter, system-ui, sans-serif; color: #3d2538; }
+.app-shell .row-detail,
+.app-shell .row-advice { display: block; font: 400 12px/1.35 Inter, system-ui, sans-serif; color: #7d6d78; margin-top: 3px; }
+.app-shell .row-value { font: 400 12px/1.35 Inter, system-ui, sans-serif; color: #7d6d78; white-space: nowrap; }
+.app-shell .row-mark {
+  display: grid; place-items: center; width: auto; height: auto;
+  background: #edf7f0; border: 1px solid #cae5d2; border-radius: 7px; padding: 7px 9px;
+  color: #37704c; font: 750 11px/1 Inter, system-ui, sans-serif;
+}
+.app-shell .batch-product-row.needed .row-mark,
+.app-shell .batch-product-row.pending .row-mark { background: #fdf1f3; border-color: #eccdd4; color: #a33a48; }
+.app-shell .batch-product-row.optional .row-mark { background: #f5f2f5; border-color: #e2d9e0; color: #7d6d78; }
+.app-shell .row-open {
+  border: 1px solid #ded5db; background: #fff; color: #3d2538; border-radius: 8px;
+  padding: 0 14px; height: 34px; min-height: 0; min-width: 0;
+  font: 700 12px/1 Inter, system-ui, sans-serif;
+}
+.app-shell .task-panel.open-task-column { border-top: 1px solid #eee8ec; padding: 18px; background: #fffcfe; }
+
+/* ============================================================================
+ * D721 · TOKENS RECOVERED FROM THE STRIPPED SHELL RULES
+ * These custom properties were declared on .app-shell in the legacy sheets and
+ * were removed with them. They are not shell layout - they are the design
+ * tokens D705 and D707 introduced (the rose attention colour, the shared
+ * chevron, alert and panel tokens) and other components still read them.
+ * v2 owns .app-shell now, so v2 carries them.
+ * ==========================================================================*/
+.app-shell {
+  --panel-pad: 22px;
+  --panel-radius: 18px;
+  --alert-line: #b83c4a;
+  --alert-tint: #fff0f1;
+  --alert-ink: #9e2736;
+  --goldie-chevron: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  --goldie-attention: #c14b57;
+  --goldie-attention-deep: #a33a48;
+  --goldie-attention-soft: rgba(193,75,87,.10);
+}
+
+/* ============================================================================
+ * D721 · BEHAVIOUR PRESERVED FROM THE LEGACY SHEETS
+ * These are not prototype styling. They are rules the suite guards because a
+ * real defect was fixed by each one, and the shell migration removed the file
+ * that carried them. The capability wins over the layout, so they come back —
+ * expressed against the selectors v2 now owns.
+ * ==========================================================================*/
+
+/* D395 · an implicit auto track sizes to the row, not to the card, so a long
+   value pushed the action out of the card. The track is declared. */
+.app-shell .batch-product-rows{grid-template-columns:minmax(0,1fr)}
+.app-shell .batch-product-row{min-width:0}
+
+/* D405 · flex:0 1 auto let the nav column shrink under its own content and
+   ride up over the wordmark. It may not shrink. */
+.topbar>.top-actions{flex:0 0 auto;justify-content:flex-start}
+
+/* D95 · the rail sits on a transparent background, which is what makes the
+   dark-on-light text overrides correct. If this ever goes dark again those
+   overrides are wrong — the test says so and it is right. */
+.workflow-progress{background:transparent}
+
+/* D550/D338 · the step label beside each bubble. The prototype renders the
+   label inline with the chip; this keeps the element addressable and stops an
+   enlarged label wrapping inside its column. */
+.app-shell .progress-bubble-label { white-space: nowrap; }
+
+/* — behaviour the suite guards, restored against v2's selectors — */
+.app-shell .bundle-product-photo{object-fit:cover}
+.app-shell .progress-bubble-label{white-space:nowrap}
+.app-shell .row-value{min-width:0;overflow-wrap:anywhere}
+.app-shell{min-width:1180px}
+.app-shell .batch-product-row.optional .row-mark{background:#f5f2f5;border-color:#e2d9e0;color:#7d6d78}
+.app-shell .batch-product-row.pending .row-mark{background:#fdf1f3;border-color:#eccdd4;color:#a33a48}
+.app-shell{--alert-line:#b83c4a;--alert-tint:#fff0f1;--alert-ink:#9e2736}
+
+/* — remaining guarded behaviour, restored against v2's selectors — */
+/* D338 · an enlarged label may not wrap inside its column */
+.app-shell .row-label{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* D348 · the card must let an open dropdown out */
+.app-shell .batch-product-card{overflow:visible}
+.app-shell .batch-product-card>header{border-radius:12px 12px 0 0}
+/* row advice keeps the muted tone */
+.app-shell .row-value>small.row-advice,.app-shell .row-advice{color:var(--muted,#7d6d78)}
+/* D683 · the open-all link shares the cards' row */
+.app-shell .step-product-cards>.post-draft-heading{margin:0}
+/* D338 · an open row's label may not wrap inside its column */
+.app-shell .batch-product-row.open .row-label{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* D348 · the card must let an open shipping dropdown out */
+.app-shell .step-card:has(.shipping-combobox-panel){overflow:visible}
+
+/* D721 · The work column wrapper moved these a level down, so ordering rules
+   aimed at .factory-main's children stopped applying and the page title
+   rendered above the rail. They belong to .factory-work now. */
+.app-shell .factory-work > .hero { order: 2; }
+.app-shell .factory-work > nav.workflow-progress,
+.app-shell .factory-work > .workspace > nav.workflow-progress { order: 1; }
+.app-shell .factory-work > *:not(nav.workflow-progress):not(.hero) { order: 3; }
+/* D732 · .workspace is display:contents, so its children are the ones the work
+   column actually orders - and no rule named them. Everything inside it
+   defaulted to order 0 and rendered ABOVE the rail and the page title: the
+   Connect card first, the rail underneath it, the heading last. Verified on
+   the deployed preview, where the head sat 830px down the page. The children
+   promoted out of .workspace are ordered here, by name. */
+.app-shell .factory-work > .workspace > * { order: 3; }
+.app-shell .factory-work > .workspace > nav.workflow-progress { order: 1; }
+.app-shell .factory-work > .workflow-footer-actions,
+.app-shell .factory-work > .workspace > .workflow-footer-actions { order: 9; margin-top: auto; }
+
+/* ============================================================================
+ * D723 · FACTORY PANEL — the prototype's .goldie-panel, as a real component.
+ * Measured: panel #fffafc / 1px #dfc8d5 / r12 / 0 12px 32px rgba(75,40,62,.11)
+ *           head  grid 48px 1fr auto, gap 13, padding 15 17, bg #fffafc
+ *           index 34x34 r9 #eee7ec #643e5a 800/12
+ *           title strong 14 (mb 3) / small 12 #7d6d78
+ *           state #edf7f0 1px #cae5d2 r7 750/11 #37704c pad 7 9
+ *           body  border-top 1px #eee8ec, padding 18, bg #fff
+ * ==========================================================================*/
+.app-shell .factory-panel{
+  background:#fffafc;border:1px solid #dfc8d5;border-radius:12px;
+  margin-bottom:14px;overflow:hidden;box-shadow:0 12px 32px rgba(75,40,62,.11);
+}
+.app-shell .factory-panel-head{
+  display:grid;grid-template-columns:34px minmax(0,1fr) auto auto;
+  align-items:center;gap:13px;padding:15px 17px;background:#fffafc;
+}
+.app-shell .factory-panel-index{
+  width:34px;height:34px;border-radius:9px;background:#eee7ec;color:#643e5a;
+  display:grid;place-items:center;font:800 12px/1 Inter,system-ui,sans-serif;
+}
+.app-shell .factory-panel-title{min-width:0}
+.app-shell .factory-panel-title strong{
+  display:block;font:700 14px/1.3 Inter,system-ui,sans-serif;color:#3d2538;margin-bottom:3px;
+}
+.app-shell .factory-panel-title small{
+  display:block;font:400 12px/1.35 Inter,system-ui,sans-serif;color:#7d6d78;
+}
+.app-shell .factory-panel-state{
+  background:#edf7f0;border:1px solid #cae5d2;border-radius:7px;padding:7px 9px;
+  color:#37704c;font:750 11px/1 Inter,system-ui,sans-serif;white-space:nowrap;
+}
+.app-shell .factory-panel.is-attention .factory-panel-state{background:#fdf1f3;border-color:#eccdd4;color:#a33a48}
+/* D707 · "Pending" was the same brown she has reported three times - a red
+   desaturated toward orange is brown. It reads as a quieter plum instead, so
+   the three states are green / rose / plum, none of them brown. */
+.app-shell .factory-panel.is-pending  .factory-panel-state{background:#f7f1f6;border-color:#e4d6e2;color:#6b4560}
+.app-shell .factory-panel.is-optional .factory-panel-state{background:#f5f2f5;border-color:#e2d9e0;color:#7d6d78}
+.app-shell .factory-panel-toggle{
+  border:1px solid #ded5db;background:#fff;color:#3d2538;border-radius:8px;
+  padding:0 14px;height:34px;min-height:0;min-width:0;
+  font:700 12px/1 Inter,system-ui,sans-serif;cursor:pointer;
+}
+.app-shell .factory-panel-toggle:hover:not(:disabled){background:#faf5f8}
+.app-shell .factory-panel-toggle:disabled{opacity:.45;cursor:not-allowed}
+.app-shell .factory-panel-body{border-top:1px solid #eee8ec;padding:18px;background:#fff}
+
+/* D724 · artwork grid — prototype .goldie-art-grid / .goldie-art-card */
+.app-shell .factory-art-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.app-shell .factory-art-card{background:#fff;border:1px solid #ded1d8;border-radius:10px;overflow:hidden}
+.app-shell .factory-art-preview{
+  height:190px;background:#f0ecef;display:grid;place-items:center;overflow:hidden;
+}
+.app-shell .factory-art-preview img{width:100%;height:100%;object-fit:contain}
+.app-shell .factory-art-meta{
+  display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:10px;
+  padding:12px 13px;border-top:1px solid #eee8ec;
+}
+.app-shell .factory-art-meta strong{display:block;font:700 13px/1.3 Inter,system-ui,sans-serif;color:#3d2538;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.app-shell .factory-art-meta small{display:block;font:400 11px/1.4 Inter,system-ui,sans-serif;color:#7d6d78;margin-top:3px}
+.app-shell .factory-link{
+  border:0;background:none;padding:0;cursor:pointer;
+  color:#6b365a;font:750 11px/1 Inter,system-ui,sans-serif;
+}
+.app-shell .factory-link:hover{text-decoration:underline;text-underline-offset:3px}
+
+/* D724 · Protections carried over from clarity-pass when the bespoke placement
+   markup became <ArtworkGrid>. Same guarantees, new owner, no !important:
+   the print-quality line and the live Printify action stay readable, and the
+   design preview stays large enough to tell two listings apart (it was 46px). */
+.app-shell .factory-art-card .placement-dpi{font:650 11px/1.35 Inter,system-ui,sans-serif;color:#7a5a6e}
+.app-shell .factory-art-card .placement-printify-link{font:800 11px/1.35 Inter,system-ui,sans-serif;color:#6b365a}
+
+/* D725 · .goldie-photo-layout, measured from the prototype's computed styles.
+   The artwork sits beside the photos instead of above them, so the design a
+   listing is for stays in view while its photos are chosen and ordered. */
+/* The prototype's identity column is 190 wide with a 171x150 design. D684
+   settled that 180 was too small to judge a design by and production went to
+   240 square; a capability beats the preview, so the column adapts: 240 wide,
+   and the artwork keeps the prototype's 1.14:1 frame at 240x210. */
+.app-shell .factory-photo-layout{display:grid;grid-template-columns:240px minmax(0,1fr);gap:18px;align-items:start}
+.app-shell .factory-listing-identity{padding-right:18px}
+.app-shell .factory-design-large{display:grid;place-items:center;width:240px;height:210px;overflow:hidden;border-radius:9px;background:#f1edef}
+.app-shell .factory-design-large img{width:100%;height:100%;object-fit:contain}
+.app-shell .factory-listing-identity>strong{display:block;margin-top:9px;overflow-wrap:anywhere;color:#3d2538;font:700 13px/1.35 Inter,ui-sans-serif,system-ui,sans-serif}
+.app-shell .factory-listing-identity>small{display:block;margin-top:5px;color:#796a74;font:11px/1.4 Inter,ui-sans-serif,system-ui,sans-serif}
+.app-shell .factory-photo-column{min-width:0}
+@media(max-width:760px){.app-shell .factory-photo-layout{grid-template-columns:minmax(0,1fr)}.app-shell .factory-listing-identity{padding-right:0}}
+
+/* The ordering strip is the prototype's .goldie-photos: four columns, gap 8,
+   91-tall tiles, radius 8. Selection is a 2px #6d3b5e edge against 1px #ddd5da
+   - the same weight step the prototype uses, so the chosen photo reads without
+   a second colour. Drag, nudge and save behaviour is untouched. */
+.app-shell .photo-order-strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.app-shell .photo-order-strip>article{display:grid;align-content:start;gap:4px;padding:6px;border:1px solid #ddd5da;border-radius:8px;background:#fff}
+.app-shell .photo-order-strip>article>img{width:100%;height:91px;object-fit:contain;border-radius:6px;background:#fff}
+.app-shell .photo-order-strip>article>b{font:800 10px/1.3 Inter,ui-sans-serif,system-ui,sans-serif;color:#6b4560}
+.app-shell .photo-order-strip>article>.photo-order-name{font:10px/1.35 Inter,ui-sans-serif,system-ui,sans-serif;color:#8b7a85}
+@media(max-width:900px){.app-shell .photo-order-strip{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* D726 · .goldie-page-head, measured from the prototype's computed styles. */
+.app-shell .factory-page-head{display:flex;gap:20px;align-items:flex-end;justify-content:space-between;margin:0 0 25px}
+.app-shell .factory-page-head h1{margin:0 0 7px;color:#3d2538;font:700 29px/1.12 Inter,ui-sans-serif,system-ui,sans-serif;letter-spacing:-1.015px}
+.app-shell .factory-page-head p{margin:0;max-width:64ch;color:#6e606a;font:14px/1.55 Inter,ui-sans-serif,system-ui,sans-serif}
+.app-shell .factory-heading-with-help{display:flex;gap:9px;align-items:center}
+.app-shell .factory-summary{flex:none;padding:8px 11px;border:1px solid #dfcbd6;border-radius:8px;background:#fff7fa;color:#57384b;font:12px/1.3 Inter,ui-sans-serif,system-ui,sans-serif;white-space:nowrap}
+@media(max-width:760px){.app-shell .factory-page-head{flex-direction:column;align-items:flex-start}}
+
+/* D727 · The head sits inside the legacy .hero section, which still carried
+   30px of padding and 25px of margin under it. With the head's own 25px that
+   put 80px between the title and the first panel where the prototype has 25.
+   The head owns its spacing; the wrapper carries none. */
+.app-shell .hero.workflow-hero{margin:0;padding:0;border:0}
+
+/* D728 · .goldie-footer, measured from the prototype. It sits inside the work
+   column but spans the whole main pane, which is what the negative margin and
+   the 288px sidebar width in the two calc()s are doing - both read from the
+   prototype, not invented. */
+.app-shell .factory-footer{position:sticky;z-index:18;bottom:0;display:flex;align-items:center;justify-content:space-between;gap:16px;width:calc(100vw - 288px);margin:18px 0 0 calc(.5 * (100% + 288px - 100vw));padding:14px max(38px,50vw - 616px);background:rgba(255,255,255,.96);border-top:1px solid #d9cbd3;box-shadow:0 -8px 24px rgba(75,40,62,.07);backdrop-filter:blur(10px)}
+.app-shell .factory-footer>small{color:#776873;font:11px/1.4 Inter,ui-sans-serif,system-ui,sans-serif}
+/* D375 holds: the footer POSITIONS the button, it does not restyle it. The
+   appearance below belongs to the button itself, wherever it is rendered, and
+   is the prototype's .goldie-next. */
+.app-shell .factory-footer .workflow-next{flex:none;margin:0}
+.app-shell .workflow-next{border:0;border-radius:8px;background:#5d3151;color:#fff;padding:11px 18px;height:auto;min-height:0;font:750 13px/1.2 Inter,ui-sans-serif,system-ui,sans-serif;cursor:pointer}
+.app-shell .workflow-next:disabled{opacity:.5;cursor:not-allowed}
+@media(max-width:1050px){.app-shell .factory-footer{width:calc(100vw - 240px);margin-left:calc(.5 * (100% + 240px - 100vw))}}
+
+/* D729 · Step 1's saved products, from the prototype's .goldie-product-grid.
+   Measured from its CSSOM:
+
+     .goldie-product-grid   grid, repeat(3,1fr), gap 12
+     .goldie-product        1px #ded5db, radius 10, padding 12, #fff
+     .goldie-product.chosen 2px #6c3a5c, padding 11, #fbf7fa
+     .goldie-product-image  116 tall, radius 8, gradient 145deg #f5f2f4→#e8e1e6,
+                            place-items centre, margin-bottom 11, 12px #8d7c87
+
+   41 rules across three sheets were styling these tiles, every one of them
+   !important, which is why the Choose pill kept coming back wrong: four owners,
+   none of them final. interface-v2 owns them now and carries no !important.
+   The tile's markup, choose handler, ownership check and bundle behaviour are
+   untouched - this is the tile production already renders, wearing the
+   prototype's measurements. */
+.app-shell .recipe-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+/* The tile keeps the column arrangement its own action buttons are written
+   against - Change / Edit / Delete still land on the right of the row under the
+   card - and takes the prototype's frame. D162: rows are auto auto and content
+   starts at the top, so a two-line product name cannot push one tile's contents
+   out of line with its neighbours. D186: nothing is clipped. D197: the padding
+   is on the children, so the actions do not sit flush against the frame. */
+.app-shell .recipe-tile{position:relative;display:grid;grid-template-columns:minmax(0,1fr) auto auto auto;grid-template-rows:auto auto;align-content:start;column-gap:10px;padding:0;overflow:visible;border:1px solid #ded5db;border-radius:10px;background:#fff;box-shadow:0 4px 14px rgba(75,40,62,.07)}
+.app-shell .recipe-tile>button:not(.recipe-use){margin-bottom:12px}
+.app-shell .recipe-tile>button:not(.recipe-use):last-child{margin-right:12px}
+.app-shell .recipe-tile.selected{border:2px solid #6c3a5c;background:#fbf7fa}
+.app-shell .recipe-use{grid-column:1/-1;display:grid;width:100%;min-width:0;height:auto;padding:12px;border:0;background:none;text-align:left;cursor:pointer}
+.app-shell .recipe-tile.selected .recipe-use{padding:11px}
+.app-shell .recipe-icon{display:grid;place-items:center;height:116px;margin-bottom:11px;border-radius:8px;background:linear-gradient(145deg,#f5f2f4,#e8e1e6);color:#8d7c87;font:750 12px/1 Inter,ui-sans-serif,system-ui,sans-serif}
+.app-shell .recipe-copy{display:grid;gap:3px;min-width:0}
+/* D162 · A name too long for one line truncates. It must not reflow the card
+   and push this tile out of line with the two beside it. */
+.app-shell .recipe-copy>b:first-child{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#3d2538;font:700 13px/1.3 Inter,ui-sans-serif,system-ui,sans-serif}
+.app-shell .recipe-copy>small{color:#7d6d78;font:11px/1.4 Inter,ui-sans-serif,system-ui,sans-serif}
+/* The Choose / Ready control reads as one chip, aligned to the card's own edge.
+   It was left-aligned inside a right-aligned box and looked, in her words,
+   amateur; it is a chip on the left of the card, the way every state chip in
+   this interface is. */
+.app-shell .recipe-copy>em{justify-self:start;margin-top:6px;padding:6px 9px;border:1px solid #e2d9e0;border-radius:7px;background:#f5f2f5;color:#5d3151;font:750 11px/1 Inter,ui-sans-serif,system-ui,sans-serif;font-style:normal;white-space:nowrap}
+.app-shell .recipe-tile.selected .recipe-copy>em{border-color:#cae5d2;background:#edf7f0;color:#37704c}
+@media(max-width:1100px){.app-shell .recipe-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:760px){.app-shell .recipe-grid{grid-template-columns:minmax(0,1fr)}}
+
+/* D730 · Step 3's two columns, measured from the prototype's CSSOM. */
+.app-shell .factory-listing-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:14px;align-items:start}
+.app-shell .factory-form-card{padding:18px;border:1px solid #e4cedb;border-radius:12px;background:rgba(255,252,254,.92);box-shadow:0 5px 18px rgba(90,48,79,.07)}
+.app-shell .factory-form-card h3{margin:0 0 14px;color:#3d2538;font:700 14px/1.3 Inter,ui-sans-serif,system-ui,sans-serif}
+.app-shell .factory-checklist{display:grid;gap:8px}
+.app-shell .factory-check{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid #eee9ec;color:#55434f;font:12px/1.4 Inter,ui-sans-serif,system-ui,sans-serif}
+.app-shell .factory-check:last-child{border-bottom:0}
+.app-shell .factory-check>b{flex:none;max-width:52%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:750 11px/1.3 Inter,ui-sans-serif,system-ui,sans-serif}
+.app-shell .factory-check>b.is-set{color:#37704c}
+.app-shell .factory-check>b.is-missing{color:#a33a48}
+@media(max-width:900px){.app-shell .factory-listing-grid{grid-template-columns:minmax(0,1fr)}}
+
+/* D731 · Step 4's review rows, from the prototype's .goldie-review-row.
+   Measured from its CSSOM:
+
+     .goldie-review-list  grid, gap 10
+     .goldie-review-row   #fff, 1px #ded6dc, radius 10, padding 13,
+                          grid 44px / rest / auto, gap 11, centred
+     .goldie-thumb        44x44, radius 7, #f0ecef
+     row strong           12px (production wraps it - see D98 below)
+     row small            10px, #766772, margin-top 3
+
+   Production's row carries one column the prototype has no need for: the
+   checkbox that decides whether this listing publishes. It keeps it, at the
+   28px it already used, and the rest is the prototype's row. */
+.app-shell .final-listing-grid{display:grid;gap:10px}
+.app-shell .final-listing-card{display:grid;grid-template-columns:28px 44px minmax(0,1fr);gap:11px;align-items:center;min-height:0;padding:13px;border:1px solid #ded6dc;border-radius:10px;background:#fff}
+.app-shell .final-listing-card img,.app-shell .final-listing-no-image{width:44px;height:44px;border-radius:7px;object-fit:cover;background:#f0ecef}
+/* D98 · The prototype's row ellipsises its title. This list is the last place
+   the whole title can be read before it is published, and D98 settled that it
+   shows in full. The capability wins; the row grows to fit it. */
+.app-shell .final-listing-card>div:not(.final-listing-links)>b{display:block;max-width:100%;overflow:visible;white-space:normal;text-overflow:clip;overflow-wrap:anywhere;color:#3d2538;font:700 12px/1.35 Inter,ui-sans-serif,system-ui,sans-serif}
+.app-shell .final-listing-card>div:not(.final-listing-links)>small{display:block;margin-top:3px;color:#766772;font:10px/1.4 Inter,ui-sans-serif,system-ui,sans-serif}
+/* The press itself is the prototype's .goldie-primary. */
+.app-shell .publish-all-button{width:100%;border:0;border-radius:8px;background:#5d3151;color:#fff;padding:12px;font:800 13px/1.3 Inter,ui-sans-serif,system-ui,sans-serif;cursor:pointer}
+.app-shell .publish-all-button:disabled{opacity:.5;cursor:not-allowed}
+
+/* D731 · The prototype's .goldie-review two-column split and .goldie-publish-box,
+   measured from its CSSOM:
+
+     .goldie-review       grid minmax(0,1fr) 290px, gap 16
+     .goldie-publish-box  #2d1d29, #fff, radius 12, padding 20,
+                          align-self:start, sticky top 16
+     box small            #c7b8c3, 10px, uppercase, letter-spacing .08em
+     box h3               20px, margin 7 0 5
+     box p                11px, #c8b9c4, line-height 1.55, margin-bottom 16
+
+   The press and the warnings that gate it sit together in one box that stays
+   in view while the listing list scrolls past it. Nothing about what the press
+   checks, confirms or recovers from changed. */
+.app-shell .factory-review{display:grid;grid-template-columns:minmax(0,1fr) 290px;gap:16px;align-items:start}
+.app-shell .factory-review-list{min-width:0}
+.app-shell .factory-publish-box{position:sticky;top:16px;align-self:start;padding:20px;border-radius:12px;background:#2d1d29;color:#fff}
+.app-shell .factory-publish-box small{color:#c7b8c3;font-size:10px;text-transform:uppercase;letter-spacing:.08em}
+.app-shell .factory-publish-box h3{margin:7px 0 5px;color:#fff;font:700 20px/1.25 Inter,ui-sans-serif,system-ui,sans-serif}
+.app-shell .factory-publish-box p{margin:0 0 16px;color:#c8b9c4;font:11px/1.55 Inter,ui-sans-serif,system-ui,sans-serif}
+.app-shell .factory-publish-box b,.app-shell .factory-publish-box strong{color:#fff}
+/* On the dark box the press is the prototype's .goldie-primary: pale on dark. */
+.app-shell .factory-publish-box .publish-all-button{background:#f3dbe9;color:#3d2637}
+.app-shell .factory-publish-box .publish-live-warning{margin-bottom:14px;color:#e4d2de}
+@media(max-width:1000px){.app-shell .factory-review{grid-template-columns:minmax(0,1fr)}.app-shell .factory-publish-box{position:static}}
+
+/* D730 · The fields themselves, from the prototype's .goldie-field/.goldie-input:
+
+     .goldie-field        margin-bottom 13
+     .goldie-field label  flex, space-between, 11px, 750, #55434f, margin-bottom 6
+     .goldie-input        1px #d8cfd5, radius 8, #fff, padding 10 11, 12px,
+                          #3b2b36, line-height 1.4, min-height 38
+     .goldie-tag          #f1ebef, #5a4152, radius 6, padding 5 7, 10px */
+.app-shell .etsy-details-editor-fields{display:grid;gap:13px}
+.app-shell .etsy-details-editor-fields>label{display:grid;gap:6px;color:#55434f;font:750 11px/1.3 Inter,ui-sans-serif,system-ui,sans-serif}
+.app-shell .etsy-details-editor-fields>label>small{color:#7d6d78;font:400 11px/1.4 Inter,ui-sans-serif,system-ui,sans-serif}
+.app-shell .etsy-details-editor-fields input,.app-shell .etsy-details-editor-fields select,.app-shell .etsy-details-editor-fields textarea{min-height:38px;padding:10px 11px;border:1px solid #d8cfd5;border-radius:8px;background:#fff;color:#3b2b36;font:12px/1.4 Inter,ui-sans-serif,system-ui,sans-serif}
+
+/* D733 · The step's action bar spans the pane, the way the prototype's footer
+   does. It was pinned to min(720px,100%) and centred by two !important blocks,
+   so it floated as a 720px white slab in the middle of the page - measured on
+   the deployed preview at x=504..1224 inside a pane running 288..1440.
+
+   The offset: the bar's container is centred inside the pane, and the pane's
+   centre sits 144px (half the 288px sidebar) right of the viewport centre, so
+   `50% - 50vw + 144px` puts its left edge on the pane's left edge. Verified in
+   the browser: x=288, right=1440, width=1152 at a 1440 viewport. */
+.app-shell .workflow-footer-actions{position:sticky;bottom:0;z-index:18;box-sizing:border-box;width:calc(100vw - 288px);margin:18px 0 0 calc(50% - 50vw + 144px);padding:14px max(38px,50vw - 616px);background:rgba(255,255,255,.96);border-top:1px solid #d9cbd3;box-shadow:0 -8px 24px rgba(75,40,62,.07);backdrop-filter:blur(10px)}
+@media(max-width:1050px){.app-shell .workflow-footer-actions{width:calc(100vw - 240px);margin-left:calc(50% - 50vw + 120px)}}
+@media(max-width:820px){.app-shell .workflow-footer-actions{width:auto;margin-left:0;padding:14px 18px}}
+
+/* ============================================================================
+ * D734 · SHELL CHROME — the differences left between the built page and the
+ * prototype, measured side by side in the browser rather than guessed:
+ *
+ *   base typeface  Inter, ui-sans-serif, system-ui  (built page: Manrope,
+ *                  "Hanken Grotesk", Inter — so every element that did not
+ *                  name a font, which is most of them, was in the wrong one)
+ *   base tracking  normal                            (built page: -.012em)
+ *   sidebar        linear-gradient(rgba(255,250,253,.58), rgba(255,246,251,.36))
+ *                  border-right 1px rgba(255,255,255,.72)
+ *                  backdrop blur(20px) saturate(1.12)
+ *   top bar        rgba(255,248,252,.72), border-bottom rgba(176,127,153,.18)
+ *   site footer    light, spans the pane, padding 24 34,
+ *                  border-top rgba(143,100,124,.17), colour #76616f
+ *                  (built page: a dark 944px slab inside the content column)
+ *
+ * The rail, the rail's buttons and the sidebar nav were already right and are
+ * left alone.
+ * ========================================================================== */
+.app-shell{font-family:Inter,ui-sans-serif,system-ui,-apple-system,sans-serif;letter-spacing:normal}
+.app-shell .topbar{background:linear-gradient(rgba(255,250,253,.58),rgba(255,246,251,.36));border-right:1px solid rgba(255,255,255,.72);backdrop-filter:blur(20px) saturate(1.12)}
+.app-shell .factory-top{background:rgba(255,248,252,.72);border-bottom:1px solid rgba(176,127,153,.18)}
+
+/* The footer is the last thing on the page and the prototype runs it edge to
+   edge under the content, in the same light glass as the top bar - not a dark
+   slab floating inside the column. Same full-bleed offset as the action bar,
+   verified in the browser. */
+.app-shell .factory-work footer{box-sizing:border-box;width:calc(100vw - 288px);margin:32px 0 0 calc(50% - 50vw + 144px);padding:24px 34px;display:flex;align-items:flex-start;justify-content:space-between;gap:26px;border-top:1px solid rgba(143,100,124,.17);border-radius:0;background:rgba(255,248,251,.54);color:#76616f;font:11px/1.5 Inter,ui-sans-serif,system-ui,sans-serif;backdrop-filter:blur(12px)}
+@media(max-width:1050px){.app-shell .factory-work footer{width:calc(100vw - 240px);margin-left:calc(50% - 50vw + 120px)}}
+@media(max-width:820px){.app-shell .factory-work footer{width:auto;margin-left:0;padding:24px 18px}}
+
+/* D735 · The Connect screen. The prototype has no Connect step, so this card
+   was never migrated - and it is the only screen the preview environment can
+   render, so it is the one screen Brittany keeps being shown. Measured on the
+   built page: a 680px slab at 30px radius, a 158deg gradient, a 1px
+   rgba(153,79,130,.7) edge and centred text, inside a column where every other
+   surface is a #fffafc panel with a 12px radius and left-aligned text.
+
+   It takes the panel treatment the prototype gives every other section. No
+   markup, no handler and no connection check changes - this is the same card. */
+.app-shell .connect-step{width:100%;border:1px solid #dfc8d5;border-radius:12px;background:#fffafc;box-shadow:0 12px 32px rgba(75,40,62,.11)}
+.app-shell .connect-step > .step-content{padding:18px}
+.app-shell .connect-step .step-copy,.app-shell .connect-step .connect-timing{max-width:64ch;margin-left:0;margin-right:0;text-align:left}
+.app-shell .connect-step .step-copy{color:#6e606a;font:14px/1.55 Inter,ui-sans-serif,system-ui,sans-serif}
+.app-shell .connect-step .connect-timing{color:#7d6d78;font:12px/1.5 Inter,ui-sans-serif,system-ui,sans-serif}
+.app-shell .connect-step .connection-stack{width:100%;max-width:none}
+
+/* D735 · The work column is 1020 wide with 38px of padding, so a step's content
+   area is 944. The legacy shell narrowed it again inside itself - the stage to
+   calc(100% - 108px), the steps column to min(720px,100%), and a :has() rule
+   pinned the Connect step to 524px - which is why the Connect card rendered as
+   a 680px slab floating in a 944px column while every migrated panel beside it
+   ran the full width. The column is the column. */
+.app-shell .factory-work .workflow-stage{width:100%;max-width:none;margin-left:0;margin-right:0}
+.app-shell .factory-work .steps-column,.app-shell .factory-work .launch-panel{width:100%;max-width:none}
+/* The prototype left-aligns its copy everywhere; the centred step copy was a
+   leftover of the old marketing-style cards. */
+.app-shell .step-card > .step-content > .step-copy,.app-shell .connect-step .connect-timing{text-align:left}
+.app-shell .connect-step .step-copy{margin-left:0;margin-right:0;max-width:64ch}
+.app-shell .connect-step .connection-setup,.app-shell .connect-step .connection-stack{width:100%;max-width:none;margin-left:0;margin-right:0}
+/* D735 · The connection rows fill the panel and start at its left edge, the way
+   every other row in the migrated interface does. They were capped at 620px and
+   centred, which left the Printify and Etsy logos floating in the middle of a
+   906px panel with nothing beside them. */
+.app-shell .connect-step .connect-timing{margin-left:0;margin-right:0}
+.app-shell .connect-step .printify-service-group,.app-shell .connect-step .connection-stack{display:grid;justify-items:stretch;gap:12px}
+.app-shell .connect-step .connection-row{width:100%;max-width:none;margin-left:0;margin-right:0}
+
+/* D736 · The sidebar's usage card. Its title was rendering in DM Serif Display
+   at 18px - the last serif left in a shell the prototype keeps entirely in
+   Inter. Measured from the prototype's .goldie-meter:
+
+     label   750 9px, uppercase, letter-spacing .08em, rgba(74,42,62,.6)
+     figure  700 15px, #4b283e, margin 4px 0 8px
+     track   5px tall, radius 99, rgba(74,42,62,.12)
+     card    rgba(255,255,255,.36), 1px rgba(255,255,255,.65), radius 16,
+             padding 13 14 */
+.app-shell .approved-usage{display:block;padding:13px 14px;border:1px solid rgba(255,255,255,.65);border-radius:16px;background:rgba(255,255,255,.36);color:#4b283e;text-decoration:none}
+.app-shell .approved-usage b{display:block;color:rgba(74,42,62,.6);font:750 9px/1.3 Inter,ui-sans-serif,system-ui,sans-serif;letter-spacing:.08em;text-transform:uppercase}
+.app-shell .approved-usage span{display:block;margin:4px 0 8px;color:#4b283e;font:700 15px/1.3 Inter,ui-sans-serif,system-ui,sans-serif}
+.app-shell .approved-usage-track{height:5px;border-radius:99px;background:rgba(74,42,62,.12)}
+
+/* D736 · Controls were falling back to their own stacks - "Start a new batch",
+   the account name, the help "?", and both Connect buttons were rendering in
+   Helvetica Neue or Hanken Grotesk while everything around them was Inter.
+   Swept by walking every text-bearing element on the built page and listing
+   the ones whose resolved family was not Inter; this is that list, closed.
+   The Goldie wordmark keeps DM Serif Display - it is the logo, and the
+   prototype's lockup is the same one. */
+.app-shell button,.app-shell input,.app-shell select,.app-shell textarea,.app-shell a,.app-shell strong,.app-shell small,.app-shell b,.app-shell em{font-family:Inter,ui-sans-serif,system-ui,-apple-system,sans-serif}
+.app-shell .approved-wm,.app-shell .approved-i,.app-shell .approved-footer-i,.app-shell [class*="wordmark"]{font-family:"DM Serif Display",Georgia,serif}
+
+/* D737 · Surfaces on the Connect screen that were still speaking the old
+   language. Swept by listing every element on the built page carrying a
+   gradient, a radius over 16, or a shadow heavier than the prototype's, then
+   set against the prototype's own values:
+
+     .goldie-restart  radius 12, 1px rgba(74,42,62,.14),
+                      rgba(255,255,255,.38), 750 11px, left aligned
+     buttons          radius 8 - the prototype has no 99px pills
+     panels           radius 12, one hairline, one soft shadow
+     alerts           flat tint, no gradient */
+.app-shell .workflow-restart-button{margin:12px 2px 0;padding:10px 12px;border:1px solid rgba(74,42,62,.14);border-radius:12px;background:rgba(255,255,255,.38);color:#4b283e;font:750 11px/1.35 Inter,ui-sans-serif,system-ui,sans-serif;text-align:left}
+.app-shell .connect-step .connection-row{border-radius:12px;background:#fff}
+.app-shell .connect-step .connection-icon{border-radius:9px;background:#f1edef}
+.app-shell .connect-step .connection-row button,.app-shell .connect-step .connection-row button.secondary-action{border:1px solid #ded5db;border-radius:8px;background:#fff;color:#3d2538;font:700 12px/1.2 Inter,ui-sans-serif,system-ui,sans-serif;padding:9px 14px;box-shadow:none}
+.app-shell .connect-step{box-shadow:0 12px 32px rgba(75,40,62,.11)}
+.app-shell .approved-token-instructions{border-radius:12px}
+/* D707 · The warning tint is the rose attention token, not a brown one. She
+   has reported brown three times; desaturating red toward orange IS brown. */
+.app-shell .token-shop-warning{border-radius:8px;background:var(--alert-tint);background-image:none;border:1px solid var(--alert-line);color:var(--alert-ink)}
+
+/* D738 · Two things the step-1 harness showed once the real .recipe-card
+   wrapper was in place:
+
+   The Choose / Ready chip was forced to justify-self:stretch by two
+   !important rules, so it rendered as a full-width bar across the tile - the
+   "the choose button looks amateur, it's not centred, it looks really bad"
+   defect, still live. It is a chip: it starts at the card's left edge and is
+   as wide as its own text.
+
+   And the panel body was nesting a second card - the legacy .step-card frame
+   inside .factory-panel-body, a pink rounded container wrapped around the
+   grid. A panel is the card; nothing inside it needs another one. */
+.app-shell .recipe-copy em,.app-shell .recipe-use em{justify-self:start;width:auto}
+.app-shell .factory-panel-body .step-card{margin:0;padding:0;border:0;border-radius:0;background:none;box-shadow:none;backdrop-filter:none}
+.app-shell .factory-panel-body .step-card>.step-content{padding:0}
+.app-shell .factory-panel-body .step-card>.step-number{display:none}
+
+/* D738 · Same nesting again, one level down: the photo strip carried its own
+   2px bordered, 17px-radius, tinted card inside the panel body. The panel is
+   the card. Measured on the harness at 22px of padding inside a panel that
+   already has 18. */
+.app-shell .factory-photo-column .listing-photo-order{margin:0;padding:0;border:0;border-radius:0;background:none}
+
+/* D738 · Step 4, from the harness. Three things:
+
+   The review list sat inside its own pale rounded card (.final-listing-review)
+   which sat inside the column - the same nesting as steps 1 and 2. The rows
+   are the cards.
+
+   The publish box is dark, and .publish-live-warning brought its own pale
+   panel with it, so the warning printed pale text on a pale panel inside a
+   #2d1d29 box - the one message on the screen that must be readable, on the
+   screen where money is spent.
+
+   The row's own actions were rendering at button scale on their own line.
+   They are links off a row: 11px, one hairline, radius 8. */
+.app-shell .factory-review-list .final-listing-review{margin:0;padding:0;border:0;border-radius:0;background:none;box-shadow:none}
+.app-shell .factory-publish-box .publish-live-warning{margin:0 0 14px;padding:0;border:0;border-radius:0;background:none;box-shadow:none;color:#e4d2de}
+.app-shell .factory-publish-box .publish-live-warning small{color:#c7b8c3}
+.app-shell .factory-publish-box .publish-live-warning h3{color:#fff}
+.app-shell .factory-publish-box .publish-live-warning p{color:#c8b9c4}
+.app-shell .final-listing-links button,.app-shell .final-listing-links a{min-height:0;padding:7px 9px;border:1px solid #ded6dc;border-radius:8px;background:#fff;color:#5d3151;font:750 11px/1.2 Inter,ui-sans-serif,system-ui,sans-serif}
+
+/* D739 · Step 4 at rest. The groups are collapsed disclosures on arrival
+   (D562: "nothing opens itself"), so the screen is a short list of one row per
+   design with its state - which is the prototype's review list, arrived at by
+   a different route. The rows themselves were still translucent 13px-radius
+   panels; they take the prototype's row: white, one #ded6dc hairline,
+   radius 10. Opening a group still shows the artwork at a size worth judging,
+   which D562 settled and this does not touch. */
+.app-shell .final-design-group{border:1px solid #ded6dc;border-radius:10px;background:#fff}
+.app-shell .final-design-group summary{padding:13px;font:12px/1.35 Inter,ui-sans-serif,system-ui,sans-serif}
+.app-shell .final-design-group summary>span{color:#3d2538;font:700 12px/1.35 Inter,ui-sans-serif,system-ui,sans-serif}
+.app-shell .final-design-groups{display:grid;gap:10px}
+.app-shell .final-select-all{border:1px solid #ded6dc;border-radius:8px;background:#fff;padding:8px 11px;color:#55434f;font:12px/1.3 Inter,ui-sans-serif,system-ui,sans-serif}
+.app-shell .final-listing-review-heading h3{margin:0;color:#3d2538;font:700 14px/1.3 Inter,ui-sans-serif,system-ui,sans-serif}
+
+/* D741 · The group's state chip was 8px. The smallest type anywhere in the
+   prototype is the 9px sidebar label, and every state chip in it is 11px 750.
+   It also takes the rose alert tokens rather than a bare red, so "needs a
+   look" matches every other attention state in the interface. */
+.app-shell .final-design-group summary em{padding:6px 9px;border:1px solid var(--alert-line);border-radius:7px;background:var(--alert-tint);color:var(--alert-ink);font:750 11px/1 Inter,ui-sans-serif,system-ui,sans-serif;font-style:normal;white-space:nowrap}
+.app-shell .final-design-group summary em.ready{border-color:#cae5d2;background:#edf7f0;color:#37704c}
+.app-shell .final-design-group summary>b{color:#766772;font:11px/1.3 Inter,ui-sans-serif,system-ui,sans-serif}
+
+/* D743 · The last of the top bar, measured against the prototype:
+
+     .goldie-help-trigger  25 circle, 850 12px, #5d3151,
+                           background rgba(255,255,255,.72),
+                           border 1px rgba(75,40,62,.22)
+     .goldie-save          12px, #6d5d68  (the built page had 9px, #806b78)
+
+   Small on their own; together they are why the top bar reads as nearly the
+   preview rather than the preview. */
+.app-shell .context-help-trigger{width:25px;height:25px;display:grid;place-items:center;padding:0;border:1px solid rgba(75,40,62,.22);border-radius:50%;background:rgba(255,255,255,.72);color:#5d3151;font:850 12px/1 Inter,ui-sans-serif,system-ui,sans-serif}
+.app-shell .factory-top-save{color:#6d5d68;font:12px/1.2 Inter,ui-sans-serif,system-ui,sans-serif}
+
+/* D744 · Two things on the Connect screen she named:
+
+   The card was running the full 944 of the column. It holds two rows and a
+   line of copy; at that width the Connect buttons sit a screen away from the
+   words they answer. It reads at 680, which is where it was before the column
+   stopped narrowing itself - the difference is that it starts at the column's
+   left edge now instead of floating in the middle.
+
+   And the bottom of the page had two long bars with a gap of background
+   between them: the step's action bar, then 108px of nothing, then the site
+   footer. The work column fills the pane now and the footer is pushed to the
+   end of it, so the two bars meet. */
+.app-shell .connect-step{max-width:680px}
+.app-shell .factory-work{min-height:calc(100vh - 64px)}
+.app-shell .factory-work footer{margin-top:auto}
+/* The 76px under the stage was there to clear a floating forward button. The
+   bar is the bottom of the step now, so the space only opened a gap between
+   the two bars. */
+.app-shell .factory-work .workflow-stage{padding-bottom:0}

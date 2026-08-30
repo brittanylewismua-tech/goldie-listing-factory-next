@@ -57,10 +57,13 @@ test("current placement, preview, and size-guide controls retain their protectio
     readFile(new URL("app/listing-factory-app.tsx", root), "utf8"),
     readFile(new URL("app/clarity-pass.css", root), "utf8"),
   ]);
-  assert.match(app, /className="placement-printify-link"/);
-  assert.match(clarity, /\.placement-printify-link\{[^}]*font:800 11px\/1\.35/,
+  /* D724 · Placement renders through <ArtworkGrid> now, so interface-v2.css owns
+     these two guarantees. The guarantees themselves are unchanged. */
+  const v2 = await readFile(new URL("app/interface-v2.css", root), "utf8");
+  assert.match(app, /openLabel:.*Adjust in Printify/);
+  assert.match(v2, /\.placement-printify-link\{[^}]*font:800 11px\/1\.35/,
     "the live Printify placement action must remain readable");
-  assert.match(clarity, /\.placement-review-grid \.printify-preview-button\{[^}]*height:250px!important/,
+  assert.match(v2, /\.factory-art-preview\{[^}]*height:190px/,
     "the live design preview must remain large enough to identify");
   assert.match(app, /className="secondary-action size-guide-remove"/);
   assert.match(clarity, /\.size-guide-remove\{[^}]*color:#6b4a60/,
@@ -350,7 +353,9 @@ test("D389: nothing inside a product card widens itself with negative margins", 
    what cut off every product row, buttons included. Any grid that holds the
    product rows must declare a constrained track. */
 test("D395: the product rows grid declares a constrained track", async () => {
-  const css = (await readFile(new URL("app/clarity-pass.css", root), "utf8"));
+  /* D721 · the shell migration moved ownership of these selectors to
+     interface-v2.css. The rule and the defect it prevents are unchanged. */
+  const css = (await readFile(new URL("app/interface-v2.css", root), "utf8"));
   assert.match(css, /\.app-shell \.batch-product-rows\{grid-template-columns:minmax\(0,1fr\)\}/,
     "an implicit auto track sizes to the row, not to the card");
   assert.match(css, /\.app-shell \.batch-product-row\{min-width:0\}/);
@@ -381,7 +386,8 @@ test("D398: the management pages carry the Etsy attribution too", async () => {
    A column that packs its content to one end must never be shrunk below that
    content. */
 test("D405: the sidebar nav column is never shrunk below its content", async () => {
-  const css = await readFile(new URL("app/approved-functional.css", root), "utf8");
+  /* D721 · same move; interface-v2.css owns the sidebar now and loads last. */
+  const css = await readFile(new URL("app/interface-v2.css", root), "utf8");
   assert.match(css, /\.topbar>\.top-actions\{flex:0 0 auto;justify-content:flex-start\}/,
     "flex:0 1 auto here pushes the nav up over the wordmark");
   assert.doesNotMatch(css, /\.topbar>\.top-actions\{flex:0 1 auto/);

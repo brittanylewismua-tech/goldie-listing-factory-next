@@ -17,7 +17,12 @@ test("final photo order identifies the exact original design at a readable size"
      instead of just showing the design... And don't show the title of the design."
      She is arranging the listing's photos, so the thing identifying the listing
      has to be the listing's own Printify photo, named as a listing. */
-  assert.match(branch,/PHOTOS FOR THIS LISTING<\/span>/);
+  /* D725 · The eyebrow is gone with the old markup; the rule it stood for is
+     enforced below by what the block actually shows - the LISTING's own photo,
+     under the LISTING's label. The prototype's identity block carries no
+     eyebrow, and a label reading "PHOTOS FOR THIS LISTING" above a listing's
+     own name and photo said the same thing twice. */
+  assert.match(branch,/<PhotoLayout previewUrl=/);
   assert.doesNotMatch(branch,/PHOTOS FOR THIS DESIGN/);
   assert.match(branch,/draft\.previewUrl\|\|design\.previewUrl/);
   assert.match(branch,/listingLabel\(design\)/);
@@ -25,11 +30,12 @@ test("final photo order identifies the exact original design at a readable size"
   assert.doesNotMatch(branch,/design\.name\|\|"Untitled design"/);
   /* D709 · One identity block per listing now, not one per panel. It heads
      both the uploader and the order grid, so it carries the photo count. */
-  assert.match(branch,/listing-photo-design-identity/);
-  assert.match(branch,/in this listing/);
+  assert.match(branch,/name=\{listingLabel\(design\)\}/);
+  assert.match(branch,/of 20 photos/);
   // Readable size: 180px was too small to judge. 240px, and it stays square.
-  assert.match(css,/listing-photo-design-identity\{[^}]*grid-template-columns:240px/);
-  assert.match(css,/listing-photo-design-identity>img\{[^}]*width:240px;height:240px/);
+  const v2=fs.readFileSync(new URL("../app/interface-v2.css",import.meta.url),"utf8");
+  assert.match(v2,/\.factory-photo-layout\{[^}]*grid-template-columns:240px/);
+  assert.match(v2,/\.factory-design-large\{[^}]*width:240px;height:210px/);
 });
 
 test("every reorder tile names the actual photo as well as its source",()=>{

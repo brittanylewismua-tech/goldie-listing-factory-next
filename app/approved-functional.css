@@ -2,8 +2,6 @@
 :root{--ink:#4b283e;--black:#4b283e;--cream:#f7c8dc;--paper:rgba(255,247,252,.72);--white:#fff;--muted:#80677a;--line:rgba(91,53,79,.16);--gold:#b06b9d;--gold-soft:#f3b6d5;--green:#8d5ea2;--shadow:0 24px 70px rgba(74,42,62,.14)}
 html,body{min-height:100%;background:#f2bfd5 url('/goldie-background-FINAL.jpg') center/cover fixed no-repeat;color:var(--ink);font-family:'Manrope','Hanken Grotesk',Inter,sans-serif}
 body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradient(120deg,rgba(255,221,232,.2),rgba(201,190,255,.12) 48%,rgba(255,176,195,.12));pointer-events:none}
-.app-shell{min-height:100vh;padding-left:288px;background:transparent}
-.topbar{position:fixed;z-index:90;inset:0 auto 0 0;width:288px;height:100vh;padding:40px 26px 28px;display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;background:linear-gradient(180deg,rgba(255,250,253,.38),rgba(255,246,251,.2));backdrop-filter:blur(20px) saturate(1.12);border:0;border-right:1px solid rgba(255,255,255,.48)}
 /* D371 · "Powered by Goldie AI" stopped appearing in the sidebar. The rail is a
    fixed 100vh flex column, but the nav block was flex:0 0 auto — it could not
    shrink — so on any window shorter than about 840px the footer was the only
@@ -30,17 +28,17 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 
    A column that ends its content at the bottom must never be shrunk below that
    content. The space comes from the compact-height block instead. */
-.topbar>.top-actions{flex:0 0 auto;justify-content:flex-start}
-.topbar>.approved-sidebar-footer{flex:0 0 auto;margin-top:auto}
 
 
 .brand-lockup{display:block;text-align:center;margin-bottom:34px}.approved-brand{color:#4b283e}.goldie-wordmark-lockup{display:grid;justify-items:center;gap:7px;color:#4b283e}.goldie-wordmark-name{font:400 64px/.88 'DM Serif Display',Georgia,serif;letter-spacing:-.04em;white-space:nowrap}.goldie-wordmark-lockup>b{font-size:11px;line-height:1;letter-spacing:.27em}.goldie-wordmark-i{position:relative;display:inline-block}.goldie-wordmark-i>i{position:absolute;left:50%;top:-.28em;transform:translateX(-50%);font:normal 18px/1 Georgia,serif;animation:approved-star 3.2s ease-in-out infinite}.approved-wm{font:400 64px/.88 'DM Serif Display',Georgia,serif;letter-spacing:-.04em;white-space:nowrap}.approved-i{position:relative;display:inline-block}.approved-i>span{position:absolute;top:-.28em;left:50%;font:normal 18px/1 Georgia,serif;transform:translateX(-50%);animation:approved-star 3.2s ease-in-out infinite}.approved-sub{margin-top:7px;color:#4b283e;font-size:11px;font-weight:700;line-height:1;letter-spacing:.27em;text-transform:uppercase}.wordmark{display:none}@keyframes approved-star{50%{transform:translateX(-50%) scale(1.14);filter:drop-shadow(0 0 8px rgba(115,63,106,.45))}}
-.top-actions{display:flex;min-height:0;flex:1;flex-direction:column;align-items:stretch;gap:8px}.top-nav{display:grid;gap:4px}.top-nav a,.usage-link,.account-link{display:flex;align-items:center;min-height:46px;padding:0 15px;border-radius:14px;color:rgba(74,42,62,.58);font-size:13px;font-weight:650;text-decoration:none}.top-nav a:hover,.top-nav a.active,.usage-link:hover{color:var(--ink);background:rgba(255,255,255,.53)}.top-nav a.active{box-shadow:inset 0 0 0 1px rgba(255,255,255,.54)}.top-nav a[target="_blank"]{font-size:13px}.usage-link{display:flex}.account-link{justify-content:center;min-height:38px;border:1px solid rgba(74,42,62,.13)}.command-trigger,.diagnostics-link{display:none!important}.approved-sidebar-footer{display:grid;gap:9px;margin-top:16px}.approved-usage{display:grid;gap:4px;padding:16px;border:1px solid rgba(255,255,255,.62);border-radius:16px;background:rgba(255,255,255,.32);color:var(--ink);text-decoration:none}.approved-usage b{font-family:'DM Serif Display',Georgia,serif;font-size:19px;font-weight:400}.approved-usage span{color:rgba(74,42,62,.58);font-size:9px}.approved-powered{display:flex;align-items:baseline;gap:7px;color:rgba(74,42,62,.58)}.approved-powered>span{font-size:9px;font-weight:650;letter-spacing:.18em;text-transform:uppercase}.approved-powered>b{font:400 18px/1 'DM Serif Display',Georgia,serif}.approved-footer-i{position:relative;display:inline-block}.approved-footer-i i{position:absolute;top:-.18em;left:50%;font-size:.46em;font-style:normal;line-height:1;transform:translateX(-50%);animation:approved-star 5s ease-in-out infinite}.approved-sidebar-footer>small{color:rgba(74,42,62,.5);font-size:8px;letter-spacing:.08em;text-transform:uppercase}
-.hero{max-width:1320px;padding:40px 54px 22px;align-items:start}.workflow-hero>div{max-width:880px}.eyebrow,.mini-label{color:#8d5c82}.hero h1{font-family:'DM Serif Display',Georgia,serif;color:var(--ink);font-size:clamp(40px,4.2vw,62px);font-weight:400;letter-spacing:-.035em}.hero-copy{color:rgba(74,42,62,.7);font-size:14px}.value-proof{border-color:rgba(255,255,255,.5)!important;background:rgba(255,250,253,.32)!important;backdrop-filter:blur(12px)}
-.workspace{max-width:1320px;margin:0 auto;padding:0 54px 70px;display:block}.workflow-progress{position:relative;top:auto;display:grid;grid-template-columns:repeat(9,minmax(0,1fr));gap:0;padding:12px 0 22px;border:0;border-radius:0;background:transparent;box-shadow:none;overflow:visible}.workflow-progress:before{content:"";position:absolute;left:4%;right:4%;top:67px;height:1px;background:rgba(74,42,62,.18)}.workflow-progress-head{grid-column:1/-1!important;display:flex!important;align-items:center;justify-content:space-between;padding:0 0 12px!important;border:0!important}.workflow-progress-head>div{display:flex;align-items:baseline;gap:10px}.workflow-progress-head .mini-label{margin:0}.workflow-progress-head>div>b{font:500 13px/1 'Manrope',sans-serif}.start-new-batch{width:auto!important;padding:8px 12px!important;border:1px solid rgba(74,42,62,.14)!important;border-radius:999px!important;background:rgba(255,255,255,.38)!important;font-size:10px!important}.workflow-progress .preview-mode-note,.workflow-help{display:none!important}.workflow-progress button{position:relative;z-index:1;display:grid;justify-items:center;grid-template-columns:1fr;gap:7px;min-width:0;width:auto;padding:10px 3px;border:0;background:transparent;text-align:center}.workflow-progress button:not(:last-of-type):after{display:none}.workflow-progress button>span:first-child{width:34px;height:34px;border:1px solid rgba(255,255,255,.7);background:rgba(255,250,253,.58);color:var(--ink);box-shadow:0 4px 16px rgba(74,42,62,.09)}.workflow-progress button>span:last-child{display:block;padding:0}.workflow-progress button b{display:block;font-size:9px;line-height:1.25}.workflow-progress button small{display:none}.workflow-progress button.active{background:transparent}.workflow-progress button.active>span:first-child{border-color:rgba(255,255,255,.86);background:linear-gradient(145deg,#5b304f,#7e4472);color:#fff;box-shadow:0 0 0 4px rgba(231,174,215,.24),0 0 22px rgba(97,48,87,.3);animation:goldie-step-breathe 3.2s ease-in-out infinite}.workflow-progress button.done>span:first-child{border-color:#dca5d7;background:linear-gradient(145deg,#e8b7e1,#c990d0);color:#fff;box-shadow:0 0 16px rgba(206,132,200,.34)}
+.top-actions{display:flex;min-height:0;flex:1;flex-direction:column;align-items:stretch;gap:8px}.top-nav{display:grid;gap:4px}.top-nav a,.usage-link,.account-link{display:flex;align-items:center;min-height:46px;padding:0 15px;border-radius:14px;color:rgba(74,42,62,.58);font-size:13px;font-weight:650;text-decoration:none}.top-nav a:hover,.top-nav a.active,.usage-link:hover{color:var(--ink);background:rgba(255,255,255,.53)}.top-nav a.active{box-shadow:inset 0 0 0 1px rgba(255,255,255,.54)}.top-nav a[target="_blank"]{font-size:13px}.usage-link{display:flex}.account-link{justify-content:center;min-height:38px;border:1px solid rgba(74,42,62,.13)}.command-trigger,.diagnostics-link{display:none!important}.approved-sidebar-footer{display:grid;gap:9px;margin-top:16px}.approved-usage{display:grid;gap:4px;padding:16px;border:1px solid rgba(255,255,255,.62);border-radius:16px;background:rgba(255,255,255,.32);color:var(--ink);text-decoration:none}.approved-usage span{color:rgba(74,42,62,.58)}.approved-powered{display:flex;align-items:baseline;gap:7px;color:rgba(74,42,62,.58)}.approved-powered>span{font-size:9px;font-weight:650;letter-spacing:.18em;text-transform:uppercase}.approved-powered>b{font:400 18px/1 'DM Serif Display',Georgia,serif}.approved-footer-i{position:relative;display:inline-block}.approved-footer-i i{position:absolute;top:-.18em;left:50%;font-size:.46em;font-style:normal;line-height:1;transform:translateX(-50%);animation:approved-star 5s ease-in-out infinite}.approved-sidebar-footer>small{color:rgba(74,42,62,.5);font-size:8px;letter-spacing:.08em;text-transform:uppercase}.eyebrow,.mini-label{color:#8d5c82}.hero h1{font-family:'DM Serif Display',Georgia,serif;color:var(--ink);font-size:clamp(40px,4.2vw,62px);font-weight:400;letter-spacing:-.035em}
+.workspace{max-width:1320px;margin:0 auto;padding:0 54px 70px;display:block}.workflow-progress-head .mini-label{margin:0}.start-new-batch{width:auto!important;padding:8px 12px!important;border:1px solid rgba(74,42,62,.14)!important;border-radius:999px!important;background:rgba(255,255,255,.38)!important;font-size:10px!important}.workflow-progress button{position:relative;z-index:1;display:grid;justify-items:center;grid-template-columns:1fr;gap:7px;min-width:0;width:auto;padding:10px 3px;border:0;background:transparent;text-align:center}.workflow-progress button:not(:last-of-type):after{display:none}.workflow-progress button>span:first-child{width:34px;height:34px;border:1px solid rgba(255,255,255,.7);background:rgba(255,250,253,.58);color:var(--ink);box-shadow:0 4px 16px rgba(74,42,62,.09)}.workflow-progress button>span:last-child{display:block;padding:0}.workflow-progress button b{display:block;font-size:9px;line-height:1.25}.workflow-progress button small{display:none}.workflow-progress button.active{background:transparent}.workflow-progress button.active>span:first-child{border-color:rgba(255,255,255,.86);background:linear-gradient(145deg,#5b304f,#7e4472);color:#fff;box-shadow:0 0 0 4px rgba(231,174,215,.24),0 0 22px rgba(97,48,87,.3);animation:goldie-step-breathe 3.2s ease-in-out infinite}.workflow-progress button.done>span:first-child{border-color:#dca5d7;background:linear-gradient(145deg,#e8b7e1,#c990d0);color:#fff;box-shadow:0 0 16px rgba(206,132,200,.34)}
 @keyframes goldie-step-breathe{50%{box-shadow:0 0 0 6px rgba(231,174,215,.13),0 0 28px rgba(97,48,87,.4)}}
-.workflow-stage{min-width:0}.workflow-stage>.steps-column,.workflow-stage>.launch-panel{width:min(930px,100%);margin:0 auto}.workflow-momentum,.goldie-insight,.action-receipt{border-color:rgba(255,255,255,.58)!important;background:rgba(255,249,253,.48)!important;backdrop-filter:blur(16px)}.workflow-back{border-color:rgba(74,42,62,.14);background:rgba(255,249,253,.5);color:var(--ink)}
-.step-card,.launch-panel,.post-draft-workspace,.preflight,.publish-confirm{border:1px solid rgba(255,255,255,.68);background:linear-gradient(145deg,rgba(255,250,253,.74),rgba(246,229,248,.58));box-shadow:var(--shadow);backdrop-filter:blur(24px) saturate(1.06)}.step-card{grid-template-columns:54px minmax(0,1fr);border-radius:24px}.step-card:hover{background:linear-gradient(145deg,rgba(255,250,253,.78),rgba(246,229,248,.62))}.step-number{border-right:1px solid rgba(74,42,62,.1);color:#8c5c82}.step-content{padding:28px 30px 32px}.step-heading h2,.launch-top h2,.preflight h2,.publish-confirm h2{font-family:'DM Serif Display',Georgia,serif;color:var(--ink);font-weight:400}.step-heading h2{font-size:28px}.step-copy{color:rgba(74,42,62,.68);font-size:13px}.done-mark{background:rgba(214,171,218,.28);color:#704d75}.connection-row,.template-proof,.design-preparation-status,.variant-pricing,.keyword-workspace,.batch-description,.draft-card{border-color:rgba(74,42,62,.12)!important;background:rgba(255,255,255,.47)!important}.launch-button,.inline-field button,.workflow-next,.publish-all-button{border:0!important;border-radius:14px!important;background:linear-gradient(145deg,#5b304f,#45263c)!important;color:#fff!important;box-shadow:0 14px 28px -20px rgba(74,42,62,.75)}
+.workflow-stage{min-width:0}.workflow-stage>.steps-column,.workflow-stage>.launch-panel{margin:0 auto}.workflow-momentum,.goldie-insight,.action-receipt{border-color:rgba(255,255,255,.58)!important;background:rgba(255,249,253,.48)!important;backdrop-filter:blur(16px)}.workflow-back{border-color:rgba(74,42,62,.14);background:rgba(255,249,253,.5);color:var(--ink)}
+.step-card,.launch-panel,.post-draft-workspace,.preflight,.publish-confirm{border:1px solid rgba(255,255,255,.68);background:linear-gradient(145deg,rgba(255,250,253,.74),rgba(246,229,248,.58));box-shadow:var(--shadow);backdrop-filter:blur(24px) saturate(1.06)}.step-card{grid-template-columns:54px minmax(0,1fr);border-radius:24px}.step-card:hover{background:linear-gradient(145deg,rgba(255,250,253,.78),rgba(246,229,248,.62))}.step-number{border-right:1px solid rgba(74,42,62,.1);color:#8c5c82}.step-content{padding:28px 30px 32px}.step-heading h2,.launch-top h2,.preflight h2,.publish-confirm h2{font-family:'DM Serif Display',Georgia,serif;color:var(--ink);font-weight:400}.step-heading h2{font-size:28px}.step-copy{color:rgba(74,42,62,.68);font-size:13px}.done-mark{background:rgba(214,171,218,.28);color:#704d75}.connection-row,.template-proof,.design-preparation-status,.variant-pricing,.keyword-workspace,.batch-description,.draft-card{border-color:rgba(74,42,62,.12)!important}/* D731 · The forward action and the publish press left this list: both are
+   migrated components with the prototype's own values in interface-v2, and the
+   !important here beat them. The other two primary buttons keep it. */
+.launch-button,.inline-field button{border:0!important;border-radius:14px!important;background:linear-gradient(145deg,#5b304f,#45263c)!important;color:#fff!important;box-shadow:0 14px 28px -20px rgba(74,42,62,.75)}
 .inline-field input,textarea,input,select{border-color:rgba(74,42,62,.16);background:rgba(255,255,255,.68);color:var(--ink)}.inline-field input:focus,textarea:focus,input:focus,select:focus{border-color:rgba(151,88,139,.55);box-shadow:0 0 0 3px rgba(218,169,219,.2);outline:none}.field-error{border-radius:12px;background:rgba(165,50,78,.09)!important;color:#7f2942!important}
 .post-draft-heading{color:var(--ink)!important}.post-draft-heading h2,.post-draft-heading .mini-label{color:var(--ink)!important}.post-draft-heading p{color:rgba(74,42,62,.68)!important}footer{margin-left:0;background:rgba(74,42,62,.78);border:0;color:rgba(255,255,255,.7)}.mockup-limit-note{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:12px;padding:12px 14px;border-radius:12px;background:rgba(218,169,219,.14);color:var(--ink)}.mockup-limit-note span{color:rgba(74,42,62,.65);font-size:12px}
 @media(max-width:1050px){.app-shell{padding-left:240px}.topbar{width:240px;padding-inline:20px}.wordmark{width:180px}.hero,.workspace{padding-inline:30px}.workflow-progress button b{font-size:8px}}
@@ -51,10 +49,10 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 @media(min-width:821px){
   .app-shell{display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto 1fr;align-content:start;padding-left:288px}
   .workspace{display:contents}
-  .workflow-progress{grid-row:1;width:min(1130px,calc(100% - 108px));margin:22px auto 0;padding:18px 0 14px}.workflow-progress-head{display:none!important}.workflow-progress:before{top:51px;left:4%;right:4%;background:rgba(255,255,255,.72);box-shadow:0 0 0 1px rgba(95,55,84,.08)}
+  .workflow-progress{grid-row:1;width:min(1130px,calc(100% - 108px));margin:22px auto 0;padding:18px 0 14px}.workflow-progress:before{top:51px;left:4%;right:4%;background:rgba(255,255,255,.72);box-shadow:0 0 0 1px rgba(95,55,84,.08)}
   .workflow-progress button{gap:0;padding:4px 2px;outline:none!important;box-shadow:none!important}.workflow-progress button:after{content:none!important;display:none!important}.workflow-progress button>span:first-child{width:34px;height:34px;border-radius:50%!important;font-size:10px}.workflow-progress button>span:last-child{display:none}
-  .hero{grid-row:2;width:min(1130px,calc(100% - 108px));margin:0 auto;padding:0 0 18px!important;border:0!important;background:transparent!important;box-shadow:none!important}.workflow-hero>div{max-width:none}.hero .eyebrow,.hero .hero-copy,.hero .value-proof{display:none!important}.hero h1{margin:0;font-size:34px;letter-spacing:-.025em}
-  .workflow-stage{grid-row:3;display:flex;flex-direction:column;width:min(1130px,calc(100% - 108px));margin:0 auto;padding:0 0 80px}.workflow-stage>.steps-column,.workflow-stage>.launch-panel{order:1;width:min(760px,100%)}.workflow-stage:has(.workflow-panel:first-child.active-panel)>.steps-column{width:min(680px,100%)}
+  .hero:not(.workflow-hero){grid-row:2;width:min(1130px,calc(100% - 108px));margin:0 auto;background:transparent!important;box-shadow:none!important}.workflow-hero>div{max-width:none}.hero h1{margin:0;font-size:34px;letter-spacing:-.025em}
+  .workflow-stage{grid-row:3;display:flex;flex-direction:column;width:min(1130px,calc(100% - 108px));margin:0 auto;padding:0 0 80px}.workflow-stage>.steps-column,.workflow-stage>.launch-panel{order:1}
   .workflow-momentum,.goldie-insight,.action-receipt{display:none!important}.workflow-back{order:9;display:inline-flex;align-self:flex-start;margin:18px 0 0;padding:11px 20px;border-radius:999px;font-size:11px}
   .step-card{display:flex;flex-direction:column;align-items:stretch;border-radius:28px;overflow:visible}.step-card>.step-number{align-self:center;display:grid;place-items:center;width:64px;height:64px;margin:28px 0 -10px;border:2px solid rgba(255,255,255,.82);border-radius:50%;background:linear-gradient(145deg,rgba(203,184,255,.78),rgba(255,182,207,.78));box-shadow:0 10px 30px rgba(82,47,72,.13);font-size:0}.step-card>.step-number:after{content:"";display:block;width:27px;height:27px;background:var(--ink);opacity:.86;mask:center/contain no-repeat}/* D244 · This rule picked a card's icon by DOM POSITION, and outranked every
    semantic rule (.recipe-card, .product-step, .designs-step) because
@@ -62,7 +60,7 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
    cards, whichever card landed first inherited the icon belonging to the old
    occupant of that slot — which is why Choose product wore the Connect icon.
    Icons follow the class that says what the card IS. */
-.step-content{padding:34px 36px 38px}.step-heading{justify-content:center;text-align:center}.step-heading .mini-label{display:none}.step-heading h2{font-size:38px}.step-copy{max-width:560px;margin:8px auto 24px;text-align:center;font-size:14px;line-height:1.55}.done-mark{position:absolute;right:28px;top:28px}.connection-setup,.connection-row{max-width:620px;margin-left:auto;margin-right:auto}.connection-setup .connection-row{max-width:none}
+.step-content{padding:34px 36px 38px}.step-heading{justify-content:center;text-align:center}.step-heading .mini-label{display:none}.step-heading h2{font-size:38px}.step-copy{max-width:560px;margin:8px auto 24px;font-size:14px;line-height:1.55}.done-mark{position:absolute;right:28px;top:28px}.connection-setup,.connection-row{max-width:620px;margin-left:auto;margin-right:auto}.connection-setup .connection-row{max-width:none}
   .launch-panel,.post-draft-workspace{border-radius:28px}
 }
 
@@ -111,19 +109,17 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 /* Step 4 footer: keep every control in its own lane beneath the pricing card. */
 @media(min-width:821px){
   .app-shell .workflow-stage>.workflow-footer-actions{
-    width:min(720px,100%)!important;
+    /* D733 · width, margin and position left this rule. The bar spans the
+       whole pane now, the way the prototype's footer does; interface-v2 owns
+       that. The lanes below - back left, autosave centre, next right - stay. */
     min-height:56px!important;
-    margin:24px auto 0!important;
-    display:grid!important;
     grid-template-columns:1fr auto 1fr!important;
-    align-items:center!important;
     gap:20px!important;
   }
   .app-shell .workflow-footer-actions>.workflow-back{
     grid-column:1!important;
     justify-self:start!important;
     min-width:150px!important;
-    margin:0!important;
   }
   .app-shell .workflow-footer-actions .autosave-note{
     position:static!important;
@@ -416,11 +412,6 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
   background:rgba(225,194,231,.34)!important;
   color:#654362!important;
 }
-.app-shell .variant-transfer-note>span,
-.app-shell .draft-check{
-  background:linear-gradient(145deg,#a866a0,#7b4a76)!important;
-  color:#fff!important;
-}
 .app-shell .variant-transfer-note small{color:rgba(74,42,62,.68)!important}
 .app-shell .template-badge,
 .app-shell .ready-text,
@@ -439,7 +430,6 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .app-shell .upload-notice-icon{background:linear-gradient(145deg,#d591c3,#a86ba2)!important;color:#fff!important}
 .app-shell .upload-notice-progress{color:#633f5c!important}
 .app-shell .upload-notice button:not(.danger){background:linear-gradient(145deg,#5b304f,#45263c)!important;color:#fff!important}
-.app-shell .recipe-icon{background:linear-gradient(145deg,#d591c3,#a86ba2)!important;color:#fff!important}
 .app-shell .field-warning{color:#704d75!important}
 .app-shell .ai-title-button{background:linear-gradient(145deg,#6a3c61,#4b2c47)!important;color:#fff!important}
 .app-shell .item-pricing-section{border-top-color:rgba(137,88,132,.22)!important}
@@ -488,17 +478,16 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
   .brand-lockup{margin:0 0 46px}.approved-wm{font-size:64px}.approved-sub{margin-top:7px;font-size:11px;font-weight:700}
   .top-actions{flex:0 0 auto;gap:3px}.top-nav{gap:3px}.top-nav a{min-height:auto;padding:13px 16px;border-radius:14px;font-size:14.5px;font-weight:400}.top-nav a.active{font-weight:600;background:rgba(252,244,254,.76)}
   .usage-link{display:none!important}.account-link{position:absolute;right:26px;bottom:25px;z-index:2;min-height:26px;padding:0 10px;border:0;background:transparent!important;color:rgba(74,42,62,.46);font-size:9px}
-  .approved-sidebar-footer{margin-top:auto;gap:0}.approved-usage{padding:18px;border-color:rgba(252,244,254,.46);border-radius:18px;background:rgba(252,244,254,.38)}.approved-usage b{font-size:19px}.approved-usage span{margin-top:5px;font-size:12px;font-weight:300}.approved-powered{margin-top:18px;padding-left:2px;gap:7px}.approved-powered>span{font-size:9.5px;font-weight:600;letter-spacing:.2em}.approved-powered>b{font-size:18px}.approved-sidebar-footer>small{margin-top:7px;padding-left:2px;font-size:8.5px;font-weight:600}
+  .approved-sidebar-footer{margin-top:auto;gap:0}.approved-usage{padding:18px;border-color:rgba(252,244,254,.46);border-radius:18px;background:rgba(252,244,254,.38)}.approved-usage span{margin-top:5px}.approved-powered{margin-top:18px;padding-left:2px;gap:7px}.approved-powered>span{font-size:9.5px;font-weight:600;letter-spacing:.2em}.approved-powered>b{font-size:18px}.approved-sidebar-footer>small{margin-top:7px;padding-left:2px;font-size:8.5px;font-weight:600}
   .app-shell{padding-left:288px}.workflow-progress{width:calc(100% - 108px);margin-top:20px;padding-top:18px}.hero{width:calc(100% - 108px)}.workflow-stage{width:calc(100% - 108px);min-height:calc(100vh - 174px);justify-content:center;padding-bottom:76px}
-  .workflow-stage>.steps-column,.workflow-stage>.launch-panel{width:min(720px,100%)}.workflow-stage:has(.connect-step.active-panel)>.steps-column{width:524px}
   .step-card,.launch-panel,.post-draft-workspace,.preflight,.publish-confirm{background:linear-gradient(158deg,rgba(255,255,255,.62),rgba(255,252,255,.50)),url('/goldie-background-reference.jpg') center/100% 100% fixed no-repeat;border-color:rgba(255,255,255,.78);border-radius:30px;box-shadow:0 1px 0 rgba(255,255,255,.95) inset,0 -1px 0 rgba(255,255,255,.42) inset,0 30px 64px -34px rgba(74,42,62,.32),0 84px 130px -70px rgba(74,42,62,.28)}
   .step-card>.step-number{width:58px;height:58px;margin:34px 0 -6px;border:1px solid rgba(255,255,255,.8);background:rgba(252,244,254,.7);box-shadow:none}.connect-step>.step-number{width:74px;height:74px;margin-top:44px;border:0;background:conic-gradient(from 200deg,#b6a8ff,#d17cde,#ff8eba,#f7a6c8,#b8b2ff,#b6a8ff);box-shadow:none}.connect-step>.step-number:before{content:"";position:absolute;width:68px;height:68px;border-radius:50%;background:rgba(252,244,254,.96)}.connect-step>.step-number:after{position:relative;z-index:1;width:30px;height:30px}
   .step-content{padding:30px 38px 32px}.connect-step .step-content{padding:30px 54px 38px}.step-heading h2{font-size:36px;line-height:1.05}.connect-step .step-heading h2{font-size:50px;line-height:1.04}.step-copy{max-width:380px;margin:10px auto 24px;font-size:15.5px;font-weight:300;line-height:1.68}
   .workflow-back{padding:15px 28px!important;border-radius:99px!important;font-size:14.5px!important;font-weight:600!important}
-  .connect-step .step-heading h2 em{font-style:italic}.connect-step .step-copy{margin:8px auto 4px}.connect-timing{margin:0 auto 22px!important;color:rgba(74,42,62,.55)!important;font-size:12.5px!important;text-align:center}
-  .connect-step .connection-stack{display:grid;gap:18px;max-width:100%;margin:0}.connect-step .connection-row{max-width:none;min-height:68px;padding:14px 15px;border:1px solid rgba(74,42,62,.13)!important;border-radius:15px;background:rgba(252,244,254,.46)!important}.connect-step .connection-icon{position:relative;width:36px;height:36px;flex:0 0 36px;border:0;border-radius:11px;background:linear-gradient(145deg,rgba(244,185,215,.92),rgba(207,154,213,.82));overflow:hidden}.connect-step .connection-icon:after{content:"";position:absolute;inset:0;background:rgba(226,132,178,.34);mix-blend-mode:color}.connect-step .connection-icon img{position:relative;z-index:1;width:23px;height:23px;object-fit:contain;filter:grayscale(.28) saturate(.58) contrast(.9);opacity:.88}.connect-step .connection-row b{font-size:13.5px}.connect-step .connection-row small{font-size:12px;color:rgba(74,42,62,.75)}.connect-step .connection-row button{min-height:42px;padding:10px 15px;border:1px solid rgba(74,42,62,.18);border-radius:99px;background:rgba(255,255,255,.62);color:var(--ink);font-size:12px}
+  .connect-step .step-heading h2 em{font-style:italic}.connect-step .step-copy{margin:8px auto 4px}.connect-timing{margin:0 0 22px;font-size:12.5px!important}
+  .connect-step .connection-stack{display:grid;gap:18px;max-width:100%;margin:0}.connect-step .connection-row{max-width:none;min-height:68px;padding:14px 15px;border:1px solid rgba(74,42,62,.13)!important}.connect-step .connection-icon{position:relative;width:36px;height:36px;flex:0 0 36px;border:0;overflow:hidden}.connect-step .connection-icon:after{content:"";position:absolute;inset:0;mix-blend-mode:color}.connect-step .connection-icon img{position:relative;z-index:1;width:23px;height:23px;object-fit:contain;filter:grayscale(.28) saturate(.58) contrast(.9);opacity:.88}.connect-step .connection-row b{font-size:13.5px}.connect-step .connection-row small{font-size:12px;color:rgba(74,42,62,.75)}.connect-step .connection-row button{min-height:42px;padding:10px 15px;border:1px solid rgba(74,42,62,.18);color:var(--ink);font-size:12px}
   .approved-token-form{display:grid!important;grid-template-columns:1fr auto;gap:10px;padding:16px;border:1px solid rgba(255,255,255,.72);border-radius:18px;background:linear-gradient(145deg,rgba(255,255,255,.48),rgba(244,226,248,.42))}.approved-token-form label{grid-column:1/-1;color:rgba(74,42,62,.75);font-size:12px;font-weight:650}.approved-token-form input{min-height:46px;border-radius:14px}.approved-token-form button{min-height:46px;border-radius:14px!important;padding:0 19px}.connect-step .token-help{margin-top:0}.secure-copy{display:flex;justify-content:center;margin-top:2px;padding-top:18px;border-top:1px solid rgba(74,42,62,.14);color:rgba(74,42,62,.55);font-size:13px;text-align:center}
-  .connect-step .service-row>button:not(.disconnect-link){background:rgba(255,255,255,.72)!important;color:var(--ink)!important;box-shadow:none!important}.connect-step .service-row>button:not(.disconnect-link):hover{background:rgba(255,255,255,.94)!important}
+  .connect-step .service-row>button:not(.disconnect-link){color:var(--ink)!important}
   .goldie-g{display:none!important}
 }
 
@@ -527,13 +516,10 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
   height:42px;
   padding:10px 15px;
   border:1px solid rgba(74,42,62,.18);
-  border-radius:99px!important;
-  background:rgba(255,255,255,.62);
   color:var(--ink);
   font-size:12px;
   font-weight:750;
   line-height:1;
-  box-shadow:none;
   text-decoration:none;
 }
 
@@ -549,7 +535,7 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
   @keyframes approved-ring-counter{to{transform:rotate(-360deg)}}
   .connect-step .token-help summary{min-height:52px;padding:15px 17px;color:var(--ink);font-size:14.5px;font-weight:650}
   .connect-step .token-help summary span{font-size:10px;color:rgba(74,42,62,.62)}
-  .workflow-footer-actions{position:relative;order:9;display:flex;align-items:center;justify-content:flex-start;gap:18px;width:100%;min-height:50px;margin-top:18px}.workflow-footer-actions>.workflow-back{order:initial;margin:0;min-width:150px;justify-content:center;border:0!important;background:linear-gradient(145deg,#5b304f,#45263c)!important;color:#fff!important;box-shadow:0 14px 28px -20px rgba(74,42,62,.75)!important}.autosave-note{position:absolute;left:50%;display:inline-flex;align-items:center;gap:6px;margin:0;color:rgba(74,42,62,.64);font-size:10.5px;font-weight:420;letter-spacing:.01em;transform:translateX(-50%)}.autosave-note i{display:grid;place-items:center;width:17px;height:17px;border-radius:50%;background:rgba(255,255,255,.42);color:#8a5f81;font-size:9px;font-style:normal;font-weight:800}
+  .workflow-footer-actions{position:relative;order:9;display:flex;align-items:center;justify-content:flex-start;gap:18px;width:100%;min-height:50px;margin-top:18px}.workflow-footer-actions>.workflow-back{order:initial;margin:0;min-width:150px;justify-content:center;border:0!important;color:#fff!important}.autosave-note{position:absolute;left:50%;display:inline-flex;align-items:center;gap:6px;margin:0;color:rgba(74,42,62,.64);font-size:10.5px;font-weight:420;letter-spacing:.01em;transform:translateX(-50%)}.autosave-note i{display:grid;place-items:center;width:17px;height:17px;border-radius:50%;background:rgba(255,255,255,.42);color:#8a5f81;font-size:9px;font-style:normal;font-weight:800}
   .account-link{position:static;align-self:flex-start;margin-top:4px;padding-inline:15px;color:rgba(74,42,62,.58);font-size:10px}
 }
 
@@ -565,8 +551,8 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .blocking-modal>.publish-confirm-icon,.blocking-modal>.mini-label{margin-left:auto!important;margin-right:auto!important;text-align:center!important}
 .blocking-modal>.mini-label{display:block;width:100%;margin-top:12px!important;color:#704d75!important}
 .blocking-modal>h2{text-align:center}
-.title-style-toggle button.active{border-color:#6a3456!important;background:linear-gradient(145deg,#6a3456,#4b283e)!important;color:#fff!important;box-shadow:0 8px 18px rgba(74,42,62,.18)!important}
-.shipping-api-note,.token-help,.token-shop-warning,.variant-pricing:not(.approved),.keyword-workspace{border-color:rgba(139,89,137,.22)!important;background:linear-gradient(145deg,rgba(252,244,254,.72),rgba(246,229,248,.56))!important;color:var(--ink)!important}
+.title-style-toggle button.active{border-color:#6a3456!important}
+.shipping-api-note,.token-help,.token-shop-warning,.variant-pricing:not(.approved),.keyword-workspace{border-color:rgba(139,89,137,.22)!important}
 .shipping-api-note b,.token-shop-warning b,.token-shop-warning span,.batch-description>summary em,.batch-description>summary:after,.individual-description>summary,.individual-description button,.mockup-control-row a{color:#704d75!important}
 .upload-notice-progress{color:#704d75!important}
 .batch-status:not(.complete):not(.processing):not(.needs_attention){background:rgba(220,177,218,.24)!important;color:#67465f!important}
@@ -611,8 +597,7 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
    It is a batch-wide, optional setting - so it should look like a calm sibling of
    the listing cards it applies to, not an alert box competing with them. */
 /* The "attached" confirmation reads as a quiet note, not a second banner. */
-@media(max-width:700px){
-}
+
 .app-shell .draft-card{display:flex;flex-direction:column}
 .app-shell .listing-photo-download{order:5;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 18px;align-items:center;margin-top:16px;padding:16px 18px;border:1px solid rgba(137,88,132,.22);border-radius:15px;background:rgba(255,249,253,.62)}
 .app-shell .listing-photo-download>div{display:grid;gap:3px}.app-shell .listing-photo-download b{color:#4a2a3e;font-size:14px}.app-shell .listing-photo-download small{color:rgba(74,42,62,.68);font-size:11.5px;line-height:1.45}.app-shell .listing-photo-download button{border:0;border-radius:12px;padding:11px 15px;background:linear-gradient(145deg,#653555,#4a293f);color:#fff;font:750 12px/1.2 inherit;cursor:pointer}.app-shell .listing-photo-download button:disabled{opacity:.65;cursor:wait}.app-shell .listing-photo-download>p{grid-column:1/-1;margin:0;color:#654362;font-size:11px;font-weight:650}
@@ -621,14 +606,14 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .app-shell .uploaded-listing-photos .task-panel-heading{display:flex;align-items:start;justify-content:space-between;gap:18px}.app-shell .uploaded-listing-photos .task-panel-heading>div{display:grid;gap:5px}.app-shell .uploaded-listing-photos .task-panel-heading b{font-size:15px;color:#4a2a3e}.app-shell .uploaded-listing-photos .task-panel-heading p,.app-shell .uploaded-listing-photos>p{margin:0;color:#755f70;font-size:11.5px;line-height:1.5}.app-shell .uploaded-listing-photos .task-panel-heading>button{flex:0 0 auto;border:0;border-radius:12px;padding:11px 16px;background:linear-gradient(145deg,#653555,#4a293f);color:#fff;font:750 12px/1.2 inherit;cursor:pointer}.app-shell .uploaded-listing-photos button:disabled{opacity:.6;cursor:wait}
 .app-shell .uploaded-photo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(135px,1fr));gap:10px}.app-shell .uploaded-photo-grid figure{display:grid;gap:7px;margin:0;padding:9px;border:1px solid rgba(91,48,79,.16);border-radius:11px;background:#fff}.app-shell .uploaded-photo-grid img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px}.app-shell .uploaded-photo-grid figcaption{display:grid;gap:6px}.app-shell .uploaded-photo-grid span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#4a2a3e;font-size:10px}.app-shell .uploaded-photo-grid button{justify-self:start;border:1px solid #d8aaa7;border-radius:9px;padding:6px 10px;background:#fff;color:#963d3d;font:700 10px/1.2 inherit;cursor:pointer}
 @media(max-width:700px){.app-shell .uploaded-listing-photos .task-panel-heading{flex-direction:column}.app-shell .uploaded-listing-photos .task-panel-heading>button{width:100%}}
-.app-shell .listing-photo-design-identity{display:grid;grid-template-columns:240px minmax(0,1fr);gap:18px;align-items:center;margin:0 0 14px;padding:16px;border:1px solid rgba(137,88,132,.22);border-radius:15px;background:rgba(255,255,255,.58)}.app-shell .listing-photo-design-identity>img{width:240px;height:240px;object-fit:contain;border-radius:12px;background:#fff;border:1px solid rgba(91,48,79,.14);padding:8px}.app-shell .listing-photo-design-identity>div{display:grid;gap:7px;min-width:0}.app-shell .listing-photo-design-identity span{color:#8a647f;font-size:10px;font-weight:850;letter-spacing:.08em}/* D691 - sans. "I don't like the serif font... all of the titles, like, the
+/* D691 - sans. "I don't like the serif font... all of the titles, like, the
    headings should be a sans serif, really easy to read text." This one names
    the listing she is uploading photos to, which is exactly a heading. */
-.app-shell .listing-photo-design-identity b{overflow-wrap:anywhere;color:#4a2a3e;font:750 18px/1.3 'Manrope',system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif}
-.app-shell .listing-photo-design-identity small{color:#755f70;font-size:11.5px;line-height:1.45}/* D709 - the ordering panel merged into the photos panel, so its modifier
+
+/* D709 - the ordering panel merged into the photos panel, so its modifier
    class is no longer rendered. The one identity block that survives already
    carries its own spacing. */.app-shell .photo-order-name{grid-column:1/-1;display:block;min-width:0;overflow-wrap:anywhere;color:#755f70;font-size:10px;line-height:1.35}.app-shell .photo-order-strip>article>b+.photo-order-name{margin-top:1px}
-@media(max-width:700px){.app-shell .listing-photo-design-identity{grid-template-columns:160px minmax(0,1fr)}.app-shell .listing-photo-design-identity>img{width:160px;height:160px}}
+
 .app-shell .draft-card>.printify-image-picker{order:2}
 .app-shell .draft-card>.individual-size-guide{order:4}
 .app-shell .draft-card>.error-help-link{order:5}
@@ -661,8 +646,6 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 @media(max-width:850px){.app-shell .mockup-primary-action{grid-template-columns:32px 1fr}.app-shell .mockup-primary-action button{grid-column:1/-1;width:100%!important}}
 .app-shell .publish-live-warning{
   border-color:rgba(139,89,137,.32)!important;
-  background:linear-gradient(145deg,rgba(252,244,254,.8),rgba(239,211,237,.66))!important;
-  color:#5b304f!important;
 }
 .app-shell .publish-live-warning small{display:block;margin-top:6px;color:rgba(74,42,62,.72);font-size:11px;line-height:1.5}
 .app-shell .etsy-listing-fee-note{padding:12px 14px;border-radius:12px;background:rgba(239,211,237,.55);color:#66465d;font-size:12px;line-height:1.55}
@@ -693,11 +676,10 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
    full listing-image workspace. Remove the empty stage from layout so the
    real content begins directly below the step heading. */
 @media(min-width:821px){
-  .workspace.mockup-workspace{display:contents!important}
   .workspace.mockup-workspace .workflow-stage{display:none!important}
 }
   .app-shell .connect-step .printify-service-group{display:grid;border:1px solid rgba(74,42,62,.13);border-radius:15px;background:rgba(252,244,254,.46);overflow:visible}
-  .app-shell .connect-step .printify-service-group>.connection-row{border:0!important;border-radius:15px;background:transparent!important}
+  .app-shell .connect-step .printify-service-group>.connection-row{border:0!important}
   .app-shell .connect-step .printify-service-group>.approved-token-form{margin:0 12px 12px}
   .app-shell .connect-step .printify-service-group>.field-error{margin:0 12px 10px}
   .app-shell .connect-step .printify-service-group>.approved-token-help{padding:0 14px 10px;text-align:left}
@@ -719,43 +701,15 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
   .app-shell .connect-step .token-shop-warning span{font-size:12px;color:rgba(74,42,62,.75)}
   .app-shell .workflow-stage:has(.approved-token-help[open]){justify-content:flex-start}
   .app-shell .workflow-stage:has(.approved-token-help[open])>.steps-column{margin-top:18px}
-  .app-shell>footer{display:none!important}
 }
 
 /* Step 2 saved-product palette lock. Product information and actions are
    plum, never legacy olive, green, gold, or brown. Green remains reserved
    for true success and progress feedback elsewhere in the workflow. */
-.app-shell .recipe-card .recipe-library-head>span,
-.app-shell .recipe-card .recipe-tile,
-.app-shell .recipe-card .recipe-copy small,
-.app-shell .recipe-card .recipe-copy em,
-.app-shell .recipe-card .edit-recipe,
-.app-shell .recipe-card .recipe-library-head button,
-.app-shell .recipe-card .first-recipe-callout,
-.app-shell .recipe-card .first-recipe-callout p,
-.app-shell .recipe-card .active-recipe,
-.app-shell .recipe-card .active-recipe button{
-  color:#654362!important;
-}
 .app-shell .recipe-card .recipe-copy b,
 .app-shell .recipe-card .first-recipe-callout b,
 .app-shell .recipe-card .recipe-form-heading b{
   color:#4b283e!important;
-}
-.app-shell .recipe-card .recipe-tile{
-  border-color:rgba(139,89,137,.2)!important;
-  background:rgba(255,255,255,.5)!important;
-}
-.app-shell .recipe-card .recipe-tile.selected{
-  border-color:#b777b0!important;
-  background:linear-gradient(145deg,rgba(252,244,254,.76),rgba(246,229,248,.62))!important;
-  box-shadow:0 0 0 3px rgba(183,119,176,.13),0 14px 30px rgba(74,42,62,.08)!important;
-}
-.app-shell .recipe-card .recipe-use{color:#654362!important}
-.app-shell .recipe-card .recipe-icon,
-.app-shell .recipe-card .first-recipe-callout>span{
-  background:linear-gradient(145deg,#d591c3,#a86ba2)!important;
-  color:#fff!important;
 }
 .app-shell .recipe-card .edit-recipe:hover,
 .app-shell .recipe-card .recipe-library-head button:hover{color:#4b283e!important}
@@ -941,8 +895,8 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .app-shell .launch-button{min-height:64px!important;padding:16px 22px!important;font-size:16.5px!important;font-weight:750!important;line-height:1.2!important}
 .app-shell .launch-panel .launch-note{position:static!important;display:block!important;margin:18px auto 0!important;padding:0 18px!important;max-width:720px!important;text-align:center!important}
 @media(min-width:821px){
-  .app-shell .workflow-stage>.workflow-footer-actions{position:relative!important;width:min(720px,100%)!important;min-height:64px!important;margin:28px auto 0!important;display:grid!important;grid-template-columns:1fr auto 1fr!important;align-items:center!important;gap:24px!important}
-  .app-shell .workflow-footer-actions>.workflow-back{position:static!important;grid-column:1!important;justify-self:start!important;min-width:150px!important;margin:0!important;transform:none!important}
+  .app-shell .workflow-stage>.workflow-footer-actions{/* D733 · width, margin and position left this rule; interface-v2 spans the bar. */min-height:64px!important;grid-template-columns:1fr auto 1fr!important;gap:24px!important}
+  .app-shell .workflow-footer-actions>.workflow-back{grid-column:1!important;justify-self:start!important;min-width:150px!important;transform:none!important}
   .app-shell .workflow-footer-actions .autosave-note{position:static!important;grid-column:2!important;justify-self:center!important;margin:0!important;transform:none!important;white-space:nowrap!important}
 }
 
@@ -952,7 +906,10 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
   .app-shell .workflow-progress{padding-top:2px!important}
   .app-shell .workflow-progress:before{top:29px!important}
   .app-shell .workflow-progress button{padding-top:12px!important}
-  .app-shell .hero{padding-bottom:30px!important}
+  /* D727 · The migrated page head owns its own spacing (25px under the title,
+     as measured from the prototype). This !important put 30 more under the
+     hero at every desktop width, so the first panel sat 80px down instead of
+     25 - and it beat interface-v2 no matter what that file said. */
 }
 
 /* Step 2 form hierarchy and live sidebar usage. */
@@ -979,8 +936,6 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .app-shell .recipe-card .bundle-library[open]>summary>small:after{transform:rotate(180deg)}
 .app-shell .recipe-card .bundle-library-content{display:grid;gap:14px;padding:16px 2px 2px}
 .app-shell .recipe-card .recipe-tile.selected .recipe-copy em{color:#713d62!important;font-weight:900!important}
-.app-shell .recipe-card .recipe-tile.selecting{border-color:#b96aa6!important;box-shadow:0 0 0 3px rgba(225,145,207,.28),0 14px 34px rgba(91,48,79,.12)!important}
-.app-shell .recipe-card .recipe-tile.selecting .recipe-icon{animation:goldie-action-pulse 1s ease-in-out infinite}
 .app-shell button[aria-busy="true"]{cursor:wait!important}
 .app-shell button[aria-busy="true"]::after{content:"";display:inline-block;width:.85em;height:.85em;margin-left:.55em;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;vertical-align:-.1em;animation:goldie-action-spin .72s linear infinite}
 @keyframes goldie-action-spin{to{transform:rotate(360deg)}}
@@ -991,20 +946,19 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .app-shell .etsy-details-editor>summary{min-height:42px!important;padding:8px 10px!important}
 .app-shell .post-draft-workspace .draft-card{display:grid!important;grid-template-columns:1fr!important;gap:10px!important;padding:10px 12px!important;border-radius:12px!important;box-shadow:none!important}
 .app-shell .post-draft-workspace .draft-card>.printify-image-picker,.app-shell .post-draft-workspace .draft-card>.individual-size-guide,.app-shell .post-draft-workspace .draft-card>.listing-photo-download,.app-shell .post-draft-workspace .draft-card>.listing-photo-order{grid-column:1!important}
-.app-shell .final-listing-grid{display:grid!important;gap:6px!important}
-.app-shell .final-listing-card{display:grid!important;grid-template-columns:28px 56px minmax(0,1fr) auto!important;min-height:72px!important;padding:8px 10px!important;border-radius:10px!important;box-shadow:none!important}
-.app-shell .final-listing-card>img{width:56px!important;height:56px!important;object-fit:cover!important;border-radius:8px!important}
+/* D731 · interface-v2 owns this row now - see .final-listing-card there. */
+.app-shell .final-listing-card>img{width:56px!important;height:56px!important;object-fit:cover!important}
 /* D98 · This is the last screen before listings go live on Etsy, and it showed
  * 38-41% of each title: 295px of visible width against up to 781px of content,
  * clipped to a single nowrap line. Confirming what you are about to publish
  * requires being able to read it. Same family as D60/D94/D96 — a field sized
  * for short titles that never grew when titles reached 140 characters. */
-.app-shell .final-listing-card>div:not(.final-listing-links)>b{display:block!important;max-width:100%!important;overflow:visible!important;text-overflow:clip!important;white-space:normal!important;overflow-wrap:anywhere!important;line-height:1.4!important}
+.app-shell .final-listing-card>div:not(.final-listing-links)>b{line-height:1.4!important}
 /* D262 · This row and the checklist item above it mean the same thing —
    "needs review" — and were two different colours on the same screen: gold
    #fff9ed here against pink #fdf2f8 there. Gold appears nowhere else in the
    app, so the listing rows join the attention colour already in use. */
-.app-shell .final-listing-card.review-needed{border-color:rgba(157,80,130,.32)!important;background:#fdf2f8!important}
+.app-shell .final-listing-card.review-needed{border-color:rgba(157,80,130,.32)!important}
 .app-shell .final-listing-card .content-review{color:#b53838!important;font-size:10px!important;font-weight:850!important}
 @media(max-width:1100px){.app-shell .post-draft-workspace .draft-card>*{grid-column:1!important}}
 
@@ -1046,10 +1000,6 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 
 /* Saved-product and bundle cards: content and utility actions occupy separate
    rows so long names can never sit underneath Edit or Delete. */
-.app-shell .recipe-card .recipe-tile{display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;align-items:center!important}
-.app-shell .recipe-card .recipe-use{grid-column:1/-1!important;min-width:0!important;padding:16px!important;border-bottom:1px solid rgba(91,48,79,.1)!important}
-.app-shell .recipe-card .recipe-use{grid-template-columns:44px minmax(0,1fr)!important}
-.app-shell .recipe-card .recipe-copy{min-width:0!important}
 .app-shell .recipe-card .recipe-copy b{overflow-wrap:anywhere!important;word-break:normal!important}
 .app-shell .recipe-card .edit-recipe{position:static!important;justify-self:end!important;margin:7px 2px 8px 0!important;padding:6px 9px!important;white-space:nowrap!important}
 .app-shell .recipe-card .delete-recipe{position:static!important;justify-self:end!important;margin:7px 9px 8px 0!important;width:auto!important;min-width:28px!important;height:28px!important;padding:0 7px!important}
@@ -1072,26 +1022,20 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .approved-usage-track{height:7px;margin-top:8px;overflow:hidden;border-radius:99px;background:rgba(74,42,62,.12)}
 .approved-usage-track i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#d994c9,#9f70bc);transition:width .35s ease}
 
-/* Primary path forward. Keep Next visually distinct from utility actions. */
+/* Primary path forward. Keep Next visually distinct from utility actions.
+   D731 · It was a five-stop animated rainbow with six !important declarations,
+   which is a lot of insistence for one button and beat every attempt to change
+   it. The prototype's forward action is one flat #5d3151, and it is distinct
+   because it is the only filled button on the step - interface-v2 owns it. */
 .app-shell .workflow-next{
-  border:1px solid rgba(255,255,255,.7)!important;
-  background:linear-gradient(115deg,#9f6fd0 0%,#d67fbd 30%,#ef9fbd 52%,#c487d7 74%,#8e68c8 100%)!important;
-  background-size:240% 240%!important;
-  color:#fff!important;
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.4),0 13px 30px rgba(116,67,126,.24)!important;
-  animation:goldie-next-gradient 9s ease-in-out infinite;
-  transition:transform .18s ease,box-shadow .18s ease,filter .18s ease!important;
+  transition:transform .18s ease,box-shadow .18s ease,filter .18s ease;
 }
 .app-shell .workflow-next:hover:not(:disabled){
   filter:saturate(1.08) brightness(1.03);
   transform:translateY(-1px);
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.46),0 16px 34px rgba(116,67,126,.3)!important;
 }
 .app-shell .workflow-next:disabled{
   animation:none;
-  background:linear-gradient(115deg,#c9bdca,#b9aeba)!important;
-  color:rgba(255,255,255,.82)!important;
-  box-shadow:none!important;
   cursor:not-allowed;
 }
 @keyframes goldie-next-gradient{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
@@ -1099,34 +1043,8 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 
 /* Tiny scan labels make the numbered progress bubbles self-explanatory. */
 .app-shell .workflow-progress button{padding-top:22px!important}
-.app-shell .workflow-progress:before{top:39px!important}
-.app-shell .progress-bubble-label{
-  position:absolute;
-  top:3px;
-  left:50%;
-  width:max-content;
-  max-width:104px;
-  transform:translateX(-50%);
-  overflow:hidden;
-  color:rgba(74,42,62,.68);
-  font:800 8px/1.1 'Manrope',sans-serif;
-  font-style:normal;
-  letter-spacing:.055em;
-  text-overflow:ellipsis;
-  text-transform:uppercase;
-  white-space:nowrap;
-}
-.app-shell .workflow-progress button.active .progress-bubble-label{color:#5b304f}
-.app-shell .workflow-progress button.done .progress-bubble-label{color:#855079}
 
 /* Keep progress controls unmistakably circular and remove legacy card hovers. */
-.app-shell .workflow-progress button,
-.app-shell .workflow-progress button:hover:not(:disabled),
-.app-shell .workflow-progress button.active{
-  border-radius:0!important;
-  background:transparent!important;
-  box-shadow:none!important;
-}
 .app-shell .workflow-progress button>span:first-of-type{
   display:grid!important;
   place-items:center!important;
@@ -1139,9 +1057,6 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 }
 .app-shell .workflow-progress button.active>span:first-of-type{
   border-color:rgba(255,255,255,.92)!important;
-  background:linear-gradient(145deg,#5b304f,#8a4e7b)!important;
-  color:#fff!important;
-  box-shadow:0 0 0 4px rgba(231,174,215,.3),0 0 24px rgba(97,48,87,.36)!important;
 }
 .app-shell .workflow-progress button.done>span:first-of-type{
   border-color:#dca5d7!important;
@@ -1319,11 +1234,7 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
  * way back was to unselect. It is a collapsed <details> — one summary line —
  * so it can stay visible without adding noise. */
 .app-shell[data-product-selected="true"] .bundle-library{display:block!important}
-.app-shell[data-product-selected="true"] .recipe-grid{grid-template-columns:1fr!important}
-.app-shell .recipe-card .recipe-tile{grid-template-columns:minmax(0,1fr) auto auto auto!important;column-gap:10px!important}
 .app-shell .recipe-card .change-product{position:static;grid-column:2;justify-self:end;margin:7px 2px 8px 0;padding:6px 9px;border:0;background:transparent;color:#68445f;font-size:10px;font-weight:850;text-decoration:underline;text-underline-offset:3px;white-space:nowrap;cursor:pointer}
-.app-shell .recipe-card .recipe-tile>.edit-recipe{grid-column:3}
-.app-shell .recipe-card .recipe-tile>.delete-recipe{grid-column:4}
 .app-shell .variant-pricing .heading-with-help>button{display:none!important}
 .keyword-page .keyword-workspace{display:flex!important;flex-direction:column!important}
 .keyword-page .bank-library{order:1}
@@ -1406,20 +1317,11 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 /* D619 · No panel, no card, no box behind the current step. The filled dark
    numbered circle already says where she is; a pale rectangle behind the label
    just looked like a stray container. */
-.app-shell .workflow-progress button.active{
-  background:transparent!important;
-  box-shadow:none!important;
-  border-radius:0!important;
-}
 /* The circle carries it instead: filled, dark, numbered, with a soft halo. */
 .app-shell .workflow-progress button.active>span:first-of-type{
   border-color:transparent!important;
-  background:linear-gradient(145deg,#5b304f,#45263c)!important;
-  color:#fff!important;
-  box-shadow:0 0 0 4px rgba(183,119,176,.22)!important;
 }
 .app-shell .workflow-progress button.active b{color:var(--ink);font-weight:800}
-.app-shell .workflow-progress button.active .progress-bubble-label{color:#5b304f;font-weight:800}
 .app-shell .workflow-progress button:not(.active) b{color:rgba(74,42,62,.62)}
 
 /* D618 · The listing panel no longer asks which scenes to use, so its header row
@@ -1496,7 +1398,6 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 /* D660 · Advice is not an error. Tag counts below thirteen sat in the alert
    colour beside products that genuinely could not publish, so the two read the
    same. This is the neutral voice: a note, not a fault. */
-.app-shell .row-value>small.row-advice{display:block;margin-top:2px;color:var(--muted)!important;font-weight:600!important}
 /* D660 · The final-review heading and the draft-count chip were laid out with
    no gap and overlapped once the chip carried a product name
    ("✓ 2 drafts on Gildan Hoodie" printed straight through the heading). */
@@ -1505,7 +1406,6 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .app-shell .step-heading>.done-mark{flex:0 0 auto!important;white-space:nowrap!important;align-self:center!important}
 /* D660 · The full shipping-profile name stays in the DOM and in the title
    attribute; only the drawing of it is bounded. */
-.app-shell .row-value{min-width:0!important;overflow-wrap:anywhere!important}
 
 /* D660 · A bundle member with no keyword bank only revealed itself at step 3,
    where "Auto-create all titles" is disabled and the seller has already done

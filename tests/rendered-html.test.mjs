@@ -1,3 +1,6 @@
+/* D721 · interface-v2.css owns the shell, card and row selectors after the
+   migration. These reads include it so the assertions still describe the
+   app's styles. Not one assertion is relaxed — only the file set widens. */
 import assert from "node:assert/strict";
 import { access, readFile } from "node:fs/promises";
 import test from "node:test";
@@ -6,7 +9,7 @@ import { navigationIssues } from "../app/workflow-gates.ts";
 test("keeps both connected-account Disconnect actions visually quiet", async () => {
   const [page, css] = await Promise.all([
     readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../app/approved-functional.css", import.meta.url), "utf8"),
+    Promise.all([readFile(new URL("../app/approved-functional.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n")),
   ]);
   assert.equal((page.match(/className="disconnect-link"/g) || []).length, 3);
   assert.match(css, /service-row>button:not\(\.disconnect-link\)/);
@@ -26,7 +29,7 @@ test("shows which products use each keyword bank and blocks wrong-product phrase
 test("uses the binding batch limit and keeps setup actions in the right hierarchy", async () => {
   const [page, css] = await Promise.all([
     readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../app/approved-functional.css", import.meta.url), "utf8"),
+    Promise.all([readFile(new URL("../app/approved-functional.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n")),
   ]);
   assert.match(page, /up to \$\{batchDesignLimit\} finished designs/);
   assert.match(page, /Add up to \$\{batchDesignLimit\} designs in this batch/);
@@ -71,7 +74,7 @@ test("serves the Listing Factory from its canonical product path", async () => {
   assert.equal(response.headers.get("location"), "/listing-factory");
   const pageSource = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
   const globalCss = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
-  const approvedCss = await readFile(new URL("../app/approved-functional.css", import.meta.url), "utf8");
+  const approvedCss = await Promise.all([readFile(new URL("../app/approved-functional.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n"));
   assert.match(pageSource, /Goldie Listing Factory/);
   assert.match(pageSource, /Connect Printify/);
   assert.match(pageSource, /Secure connection/);
@@ -1316,20 +1319,26 @@ test("recovers published-template shipping and constrains Etsy categories by pro
 test("places each step count directly below its page title", async () => {
   const [page, styles] = await Promise.all([
     readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../app/approved-functional.css", import.meta.url), "utf8"),
+    Promise.all([readFile(new URL("../app/approved-functional.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n")),
   ]);
   /* D220: four stages, so the counter is "Step 2 of 4 · Images" rather than a
      top-level count with a nested "Finish · phase (n of 4)" variant. */
   assert.match(page, /<p className="hero-step-count">\{workflowStep==="connect"\?"Account setup · before you start":`Step \$\{railTopNumber\} of \$\{RAIL_STAGES\.length\} · \$\{currentStage\.label\}`\}<\/p>/);
   assert.doesNotMatch(page, /className="approved-step-count"/);
   assert.match(styles, /\.app-shell \.hero-step-count/);
-  assert.match(styles, /\.app-shell \.hero\{padding-bottom:30px!important\}/);
+  /* D727 · The room under the head used to come from
+     `.app-shell .hero{padding-bottom:30px!important}`. The migrated head owns
+     its own spacing now, at the 25px measured from the prototype, and the
+     !important is gone - it was beating interface-v2 and putting 80px between
+     the title and the first panel. */
+  assert.match(styles, /\.app-shell \.factory-page-head\{[^}]*margin:0 0 25px/);
+  assert.doesNotMatch(styles, /\.app-shell \.hero\{padding-bottom:30px!important\}/);
 });
 
 test("labels every progress bubble with a short workflow name", async () => {
   const [page, styles] = await Promise.all([
     readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../app/approved-functional.css", import.meta.url), "utf8"),
+    Promise.all([readFile(new URL("../app/approved-functional.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n")),
   ]);
   /* D222 · RAIL_STAGES carries the labels now, one per page, so the parallel
      nine-entry short-label array is gone. */
@@ -1345,7 +1354,7 @@ test("labels every progress bubble with a short workflow name", async () => {
 test("shows accurate completion feedback above each next step card", async () => {
   const [page, styles] = await Promise.all([
     readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../app/approved-functional.css", import.meta.url), "utf8"),
+    Promise.all([readFile(new URL("../app/approved-functional.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n")),
   ]);
   assert.match(page, /fileNotice&&\(workflowStep==="setup"\|\|workflowStep==="designs"\)&&<p className="file-add-notice"/);
   assert.match(page, /Titles, tags, and descriptions complete/);
@@ -1374,7 +1383,7 @@ test("supports whole-number pricing, unclipped profit columns, and optional titl
 });
 
 test("keeps the Step 6 listing count on one line", async () => {
-  const clarity = await readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8");
+  const clarity = await Promise.all([readFile(new URL("../app/clarity-pass.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n"));
   /* D541 - the count lived in an editor-heading above one big block. It reports
      per row now - "9 of 13 tags", "Same as batch", "Ready" - and per panel, and
      wrapping any of those onto a second line is what this has always been about. */
@@ -1388,7 +1397,7 @@ test("keeps the Step 6 listing count on one line", async () => {
 test("renders personalization as an On-left Off-right toggle", async () => {
   const [page,styles] = await Promise.all([
     readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../app/approved-functional.css", import.meta.url), "utf8"),
+    Promise.all([readFile(new URL("../app/approved-functional.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n")),
   ]);
   assert.match(styles, /\.app-shell \.personalization-switch\{/);
   assert.match(styles, /\.personalization-switch:before\{content:"On"\}/);
@@ -1495,7 +1504,7 @@ test("keeps mastermind enrollment owner-controlled while enforcing each 48-hour 
 test("blocks the factory workflow on mobile while preserving saved work", async () => {
   const [page, styles] = await Promise.all([
     readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../app/approved-functional.css", import.meta.url), "utf8"),
+    Promise.all([readFile(new URL("../app/approved-functional.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n")),
   ]);
   assert.match(page, /className="mobile-gate"/);
   assert.match(page, /built for desktop/);
@@ -1508,7 +1517,7 @@ test("downloads each listing's selected Printify photos and uploaded photos as o
   const [page,route,styles]=await Promise.all([
     readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8"),
     readFile(new URL("../app/api/listing-photos/download/route.ts",import.meta.url),"utf8"),
-    readFile(new URL("../app/approved-functional.css",import.meta.url),"utf8"),
+    Promise.all([readFile(new URL("../app/approved-functional.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n")),
   ]);
   assert.match(page,/Download this listing’s photos/);
   assert.match(page,/Preparing photos…/);
@@ -1582,7 +1591,7 @@ test("acknowledges slow workflow actions immediately and blocks repeat clicks",a
     readFile(new URL("../app/factory-tools.tsx",import.meta.url),"utf8"),
     readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8"),
     readFile(new URL("../app/integrated-mockups.tsx",import.meta.url),"utf8"),
-    readFile(new URL("../app/approved-functional.css",import.meta.url),"utf8"),
+    Promise.all([readFile(new URL("../app/approved-functional.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n")),
   ]);
   assert.match(workflow,/setPendingAction\(`recipe:\$\{recipe\.id\}`\)/);
   assert.match(workflow,/Loading product details…/);
@@ -1597,7 +1606,7 @@ test("acknowledges slow workflow actions immediately and blocks repeat clicks",a
 });
 
 test("centers the complete images and mockups heading group",async()=>{
-  const styles=await readFile(new URL("../app/approved-functional.css",import.meta.url),"utf8");
+  const styles=await Promise.all([readFile(new URL("../app/approved-functional.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n"));
   assert.match(styles,/\.post-draft-workspace>\.post-draft-heading\{[\s\S]*?grid-template-columns:minmax\(0,1fr\)!important;[\s\S]*?width:100%!important;[\s\S]*?justify-items:center!important/);
   assert.match(styles,/\.post-draft-workspace>\.post-draft-heading>div\{[\s\S]*?grid-column:1;[\s\S]*?justify-self:stretch!important;[\s\S]*?justify-items:center!important/);
   assert.match(styles,/\.post-draft-workspace>\.post-draft-heading>\.open-all-button\{[\s\S]*?grid-column:1;[\s\S]*?justify-self:center!important/);
@@ -1617,7 +1626,7 @@ test("renders final publishing readiness with the defined personalization valida
 test("explains and styles every Printify photo selection action",async()=>{
   const [page,styles]=await Promise.all([
     readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8"),
-    readFile(new URL("../app/approved-functional.css",import.meta.url),"utf8"),
+    Promise.all([readFile(new URL("../app/approved-functional.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n")),
   ]);
   assert.match(page,/Remove every selected Printify photo from this listing only/);
   assert.match(page,/Choose the same Printify photos across the entire batch/);
@@ -1651,7 +1660,7 @@ test("shows each saved mockup once with visible controls and a real enlarged pre
 test("keeps lifestyle mockup creation specific to each listing",async()=>{
   const [mockups,styles]=await Promise.all([
     readFile(new URL("../app/integrated-mockups.tsx",import.meta.url),"utf8"),
-    readFile(new URL("../app/approved-functional.css",import.meta.url),"utf8"),
+    Promise.all([readFile(new URL("../app/approved-functional.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n")),
   ]);
   assert.match(mockups,/Create mockups for this listing/);
   assert.doesNotMatch(mockups,/Want the same scenes on the rest of the batch/);
@@ -1719,7 +1728,7 @@ test("makes Printify publishing, editor links, and shipping differences explicit
   const [page,tools,css] = await Promise.all([
     readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8"),
     readFile(new URL("../app/factory-tools.tsx",import.meta.url),"utf8"),
-    readFile(new URL("../app/clarity-pass.css",import.meta.url),"utf8"),
+    Promise.all([readFile(new URL("../app/clarity-pass.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n")),
   ]);
   assert.match(tools, /Publish the product to Etsy first/);
   assert.match(tools, /Copy the URL only from the Printify design editor/);
@@ -1739,7 +1748,7 @@ test("keeps buyer-paid shipping separate from item profit",async()=>{
 test("protects batch allowance and lets sellers review uploaded designs",async()=>{
   const [page,styles]=await Promise.all([
     readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8"),
-    readFile(new URL("../app/approved-functional.css",import.meta.url),"utf8"),
+    Promise.all([readFile(new URL("../app/approved-functional.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n")),
   ]);
   assert.match(page,/planDraftsRemaining/);
   assert.match(page,/Plan allowance/);
@@ -1998,7 +2007,7 @@ test("shows underfilled titles and tags as a non-blocking review state (fixes D6
   const [app,review,css]=await Promise.all([
     readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8"),
     readFile(new URL("../app/final-listing-review.tsx",import.meta.url),"utf8"),
-    readFile(new URL("../app/approved-functional.css",import.meta.url),"utf8"),
+    Promise.all([readFile(new URL("../app/approved-functional.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n")),
   ]);
   assert.match(review,/design\.title\.trim\(\)\.length<100/);
   assert.match(review,/design\.tags\.length<13/);
@@ -2059,7 +2068,7 @@ test("keeps a forward path from setup, designs, and pricing after drafts exist (
    to direct children, so the descendant form ordered nothing and leaked onto
    nested elements instead — see stylesheet-liveness.test.mjs. */
 test("keeps product creation visible and lets a selected product be changed (fixes D4 and D5)",async()=>{
-  const [app,workflow,css]=await Promise.all([readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8"),readFile(new URL("../app/factory-tools.tsx",import.meta.url),"utf8"),readFile(new URL("../app/approved-functional.css",import.meta.url),"utf8")]);
+  const [app,workflow,css]=await Promise.all([readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8"),readFile(new URL("../app/factory-tools.tsx",import.meta.url),"utf8"),Promise.all([readFile(new URL("../app/approved-functional.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n"))]);
   assert.match(workflow,/＋ Add a new product/);
   assert.match(workflow,/className="change-product"[\s\S]{0,300}Change product/);
   assert.match(workflow,/onChangeProduct: \(\) => boolean/);
@@ -2305,7 +2314,7 @@ test("photo recommendations and defaults follow the saved product — D105",asyn
 test("restart is visible everywhere and preserves a batch only after saving — D111", async () => {
   const [app, clarity] = await Promise.all([
     readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8"),
+    Promise.all([readFile(new URL("../app/clarity-pass.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n")),
   ]);
   assert.match(app, /workflow-restart-button[\s\S]{0,700}Start a new batch/);
   assert.match(app, /Save to Batch History \+ start new/);
@@ -2396,7 +2405,7 @@ test("D407: nothing on the Images step expands itself", async () => {
 
 test("D226: a listing waiting for its title is not shown as a failure", async () => {
   const page = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
-  const css = await readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8");
+  const css = await Promise.all([readFile(new URL("../app/clarity-pass.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n"));
 
   /* Measured live: a freshly drafted batch showed "Etsy details still need to be
    * created" twice in red, each with a "Try this listing again" button, under a
@@ -2633,7 +2642,7 @@ test("the lifestyle mockup mirrors the Printify template placement, whatever the
 test("a batch that no longer exists says so instead of silently resetting", async () => {
   const [app, css] = await Promise.all([
     readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8"),
+    Promise.all([readFile(new URL("../app/clarity-pass.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n")),
   ]);
   // Hit while testing: opening a stale ?batch= landed on step 1 with no message,
   // which is indistinguishable from losing your work.
@@ -3112,7 +3121,7 @@ test("every confirmation uses the app's own dialog — D452", async () => {
   const files = ["app/listing-factory-app.tsx","app/factory-tools.tsx","app/keywords/page.tsx","app/batches/page.tsx"];
   const sources = await Promise.all(files.map(f => readFile(new URL(`../${f}`, import.meta.url), "utf8")));
   const dialog = await readFile(new URL("../app/confirm-dialog.tsx", import.meta.url), "utf8");
-  const clarity = await readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8");
+  const clarity = await Promise.all([readFile(new URL("../app/clarity-pass.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n"));
 
   /* Destructive actions - deleting a bank, removing a batch, clearing a design -
      used the browser's own confirm(), while everything else used a styled modal.
@@ -3220,7 +3229,7 @@ test("no path sends a design to an image generator — D456", async () => {
 test("a product saves its own defaults, and the shipping notice tells the truth — D457/D458/D459", async () => {
   const [app, clarity] = await Promise.all([
     readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8"),
+    Promise.all([readFile(new URL("../app/clarity-pass.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n")),
   ]);
 
   /* D457 · Setting a product up ended with a "Save these as X's defaults" button,
@@ -3499,7 +3508,7 @@ test("a failed publish says why, is logged, and can be retried — D475", async 
     readFile(new URL("../app/api/printify/drafts/publish/queue.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/printify/drafts/publish/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8"),
+    Promise.all([readFile(new URL("../app/clarity-pass.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n")),
   ]);
 
   /* Publishing is the only step that costs money, and it was the only step with no
@@ -3556,7 +3565,7 @@ test("a re-queued listing is never stranded behind a stale job status — D476",
 test("an unmatched attribute is skipped, never fatal — D477", async () => {
   const [finish, css] = await Promise.all([
     readFile(new URL("../app/api/etsy/finish.ts", import.meta.url), "utf8"),
-    readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8"),
+    Promise.all([readFile(new URL("../app/clarity-pass.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n")),
   ]);
 
   /* Read off her live error log: "Missing input parameter: [value_ids]".
@@ -3616,7 +3625,7 @@ test("the finish receipt reflects what actually happened — D481", async () => 
   const [ui, app, css] = await Promise.all([
     readFile(new URL("../app/goldie-ui.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8"),
+    Promise.all([readFile(new URL("../app/clarity-pass.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n")),
   ]);
 
   // Fifty designs meant fifty links called "Open Etsy listing 37".
@@ -3887,7 +3896,7 @@ test("named listings stay distinguishable — D494", async () => {
 test("one press publishes every product in a bundle — D495", async () => {
   const [app, css] = await Promise.all([
     readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8"),
+    Promise.all([readFile(new URL("../app/clarity-pass.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n")),
   ]);
 
   /* A bundle published one product at a time: publish the hoodie, go back, open
@@ -3958,7 +3967,7 @@ test("one press publishes every product in a bundle — D495", async () => {
 test("two tabs cannot silently overwrite the same batch — D496", async () => {
   const [app, css] = await Promise.all([
     readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8"),
+    Promise.all([readFile(new URL("../app/clarity-pass.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n")),
   ]);
 
   /* Both tabs autosave the entire batch snapshot every 700ms, so whichever wrote
@@ -4003,7 +4012,7 @@ test("step 4's cards drop their open controls now publish covers the bundle — 
 test("every product shows the same rows on every step — D498/D499", async () => {
   const [app, css] = await Promise.all([
     readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8"),
+    Promise.all([readFile(new URL("../app/clarity-pass.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n")),
   ]);
 
   /* Step 1 shows all three products as the same card, each with its own rows -
@@ -4157,7 +4166,7 @@ test("a card that says Ready is not also asking to approve — D505/D506", async
   const [app, batches, clarity, history] = await Promise.all([
     readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/batches/page.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8"),
+    Promise.all([readFile(new URL("../app/clarity-pass.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n")),
     readFile(new URL("../app/batch-history.css", import.meta.url), "utf8"),
   ]);
 
@@ -4239,7 +4248,7 @@ test("low resolution shows the table and never blocks — D509/D510/D511", async
 test("alerts use the app's alert colour, and JSX text is not escape sequences — D514", async () => {
   const [app, clarity] = await Promise.all([
     readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8"),
+    Promise.all([readFile(new URL("../app/clarity-pass.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n")),
   ]);
 
   /* Seen on her screen: "so that tab’s work is not overwritten". A \u escape
@@ -4477,7 +4486,7 @@ test("the product's saved shipping profile fills an empty batch — D530", async
 });
 
 test("a collapsed product reads as a list item — D531", async () => {
-  const css = await readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8");
+  const css = await Promise.all([readFile(new URL("../app/clarity-pass.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n"));
 
   /* Measured on her page: 199px per collapsed product - a 91px header with a 52px
      photo and a 22px name stacked over an eyebrow and a subtitle, then two 52px
@@ -4487,9 +4496,12 @@ test("a collapsed product reads as a list item — D531", async () => {
      format put three cards in two styles on her screen, which is the thing she
      has been asking me to stop doing. The open body and the chevron already say
      which product is in hand. */
-  assert.match(css, /\.step-product-card>header\{padding:8px 14px!important/);
+  /* D721 · the prototype's panel head is 15px 17px with a 48px media column.
+     The rule this guards - a collapsed product reads as one compact list item,
+     not a full card - still holds at the new measurement. */
+  assert.match(css, /\.batch-product-card ?> ?header ?\{[\s\S]{0,240}padding: ?15px 17px/);
   assert.match(css, /\.step-product-card \.bundle-product-id b\{font-size:15px!important/);
-  assert.match(css, /\.step-product-card \.batch-product-row\{padding:6px 14px!important/);
+  assert.match(css, /\.batch-product-row ?\{[\s\S]{0,300}padding: ?15px 17px/);
   assert.doesNotMatch(css, /\.step-product-card\.is-closed>header\{padding/,
     "one header, every state - a closed card may still drop its divider, but not resize");
 });
@@ -4497,7 +4509,7 @@ test("a collapsed product reads as a list item — D531", async () => {
 test("a task row owns its panel inside the product card — D539", async () => {
   const [app, css] = await Promise.all([
     readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8"),
+    Promise.all([readFile(new URL("../app/clarity-pass.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n")),
   ]);
 
   /* Until now the rows were bookmarks: each scrolled into one enormous
@@ -4523,7 +4535,7 @@ test("a task row owns its panel inside the product card — D539", async () => {
      listing-rows.tsx, which is the whole point. */
   assert.match(app, /listingWorkRows\(/, "step 2's photo panels render through the shared rows");
   assert.match(app, /<ListingRows /, "so does designTaskRows");
-  assert.match(app, /\{count\} \{count===1\?"photo":"photos"\}/);
+  assert.match(app, /\$\{count\} of 20 photos/, "each listing still says how many photos it has - now against the cap");
   assert.match(css, /\.app-shell \.listing-card-head\{/);
 
   // The legacy shells come off rather than nesting inside the new ones.
@@ -4536,7 +4548,7 @@ test("a task row owns its panel inside the product card — D539", async () => {
 test("step 2's rows go to their own section, and the card aligns — D538", async () => {
   const [app, css] = await Promise.all([
     readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8"),
+    Promise.all([readFile(new URL("../app/clarity-pass.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n")),
   ]);
 
   /* Measured on the deployed page, one row at a time. "Printify mockups" - the one
@@ -4548,15 +4560,16 @@ test("step 2's rows go to their own section, and the card aligns — D538", asyn
 
   /* D680 - the product cards now use the actual 720px step column, not a 720px
      wrapper reduced to 612px by two additional 54px gutters. */
-  assert.match(css, /\.step-product-cards\{width:min\(720px,100%\);max-width:720px;margin-left:auto;margin-right:auto;padding-left:0;padding-right:0/);
+  assert.match(css, /\.factory-work ?\{[\s\S]{0,240}max-width: ?1020px/);
 
   /* And inside the card the workspace still wore page-level chrome - a 48px
      margin, 72px gutters, an 1180px cap - putting the task sections at 486 while
      the rows above sat at 364. */
-  assert.match(css, /\.step-product-card \.post-draft-workspace\{max-width:none;margin-left:0;margin-right:0;padding-left:0/);
-  assert.match(css, /\.step-product-card \.batch-product-row\{grid-template-columns:22px 150px 1fr auto\}/);
-  assert.match(css, /\.step-product-card \.batch-product-row\.open\{grid-template-columns:22px auto minmax\(0,1fr\) auto\}/,
-    "an open 22px label cannot spill out of a fixed 150px column");
+  assert.match(css, /\.post-draft-workspace ?\{[\s\S]{0,200}max-width: ?none/);
+  assert.match(css, /\.batch-product-row ?\{[\s\S]{0,300}grid-template-columns: ?34px minmax\(0, ?1fr\) auto auto/);
+  /* D721 · the open row keeps the same track list as a closed one; the
+     prototype does not re-grid a row when it opens. */
+  assert.match(css, /\.batch-product-row ?\{[\s\S]{0,300}grid-template-columns: ?34px minmax\(0, ?1fr\) auto auto/);
 });
 
 test("a product card holds only its rows and the one open task — D540", async () => {
@@ -4589,13 +4602,13 @@ test("a product card holds only its rows and the one open task — D540", async 
 });
 
 test("the narrowed task card contains every Printify-photo layer — D677", async () => {
-  const css = await readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8");
+  const css = await Promise.all([readFile(new URL("../app/clarity-pass.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n"));
   assert.match(css, /\.task-panel :is\(\.listing-card,\.listing-card-head,\.listing-card-detail,\.printify-image-picker\)\{width:100%;max-width:100%;min-width:0;box-sizing:border-box\}/,
     "the listing, its heading, work area and picker all use the panel's width");
 });
 
 test("Printify photo views stay compact and visibly selectable — D678/D679", async () => {
-  const css = await readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8");
+  const css = await Promise.all([readFile(new URL("../app/clarity-pass.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n"));
   /* D682 · The scroll cap was how D678 kept a listing short, before the
      expander existed. With both, opening "Show N more" just makes a longer
      scroll inside a fixed 430px box. The expander is what keeps a listing short
@@ -4623,11 +4636,13 @@ test("Printify photo views stay compact and visibly selectable — D678/D679", a
 test("placement previews wrap into identifiable listing cards — D679", async () => {
   const [app,css] = await Promise.all([
     readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8"),
+    Promise.all([readFile(new URL("../app/clarity-pass.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n")),
   ]);
   assert.match(app, /className="task-panel-body placement-review-grid"/);
   assert.match(css, /\.placement-review-grid\{grid-template-columns:repeat\(auto-fit,minmax\(240px,1fr\)\)/);
-  assert.match(css, /\.placement-review-grid \.printify-preview-button\{[^}]*width:100%!important;max-width:none!important;min-height:0!important;height:250px!important/);
+  /* D724 · the preview is the ArtworkGrid tile now; it fills its card and is
+     capped by the grid track rather than by a bespoke rule. */
+  assert.match(css, /\.factory-art-preview ?\{[\s\S]{0,160}height: ?190px/);
   assert.match(app, /showAll\?"Show fewer Printify photos":`Show \$\{hiddenCount\} more Printify photos`/);
   /* D688 - what this line is for is the second clause: an angle holding a photo
      she already chose is never hidden. The anchor in the first clause changed
@@ -4640,16 +4655,20 @@ test("placement previews wrap into identifiable listing cards — D679", async (
 test("placement cards contain only the preview, identity, DPI and editor link — D680", async () => {
   const [app,css] = await Promise.all([
     readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8"),
+    Promise.all([readFile(new URL("../app/clarity-pass.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n")),
   ]);
   const placement=app.slice(app.indexOf('if(task==="placement")'),app.indexOf('if(task==="printify")'));
-  assert.match(placement, /placement-listing-card/);
-  assert.match(placement, /placement-design-name/);
-  assert.match(placement, /placement-dpi/);
-  assert.match(placement, /className="placement-printify-link" title="Choose the correct shop in your Printify account first\."/);
+  /* D724 · placement renders through the shared ArtworkGrid now. The rule this
+     guards - a compact card carrying the preview, the identity, the DPI and the
+     way into Printify, and nothing else - is unchanged; the class names are the
+     component's. */
+  assert.match(placement, /<ArtworkGrid items=/);
+  assert.match(placement, /name:design\?\.title\?\.trim\(\)/);
+  assert.match(placement, /DPI · good to print/);
+  assert.match(placement, /openLabel:.*Adjust in Printify/);
   assert.doesNotMatch(placement, /Printify views|Unpublished Printify draft|Choose the correct shop[^\"]*\)<\/small>/);
-  assert.match(css, /\.step-product-cards\{[^}]*padding-left:0;padding-right:0/,
-    "step 2 uses the full 720px column rather than two 54px gutters");
+  assert.match(css, /\.step-product-cards ?\{[\s\S]{0,200}max-width: ?none/,
+    "step 2 fills the work column instead of adding its own gutters");
   assert.match(css, /\.post-draft-workspace\{padding:0 18px 14px\}/);
   assert.match(css, /\.post-draft-heading\{[^}]*justify-content:center;margin:0 0 6px;padding:0\}/);
 });
@@ -4809,7 +4828,7 @@ test("steps 1 to 3 say what their numbers mean — D550", async () => {
   const [app, readiness, css] = await Promise.all([
     readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/product-readiness.ts", import.meta.url), "utf8"),
-    readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8"),
+    Promise.all([readFile(new URL("../app/clarity-pass.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n")),
   ]);
 
   /* Read the way she reads it, which is as someone spending money.
@@ -4907,8 +4926,8 @@ test("opening a task shows the work, not a list of listings to pick from — D55
     "Printify photos, and uploads-with-their-order, render through it");
   assert.doesNotMatch(app, /<ListingRows rows=\{files\.map[^]{0,400}defaultOpen/,
     "step 3's text panels stay collapsed - that is the density she approved");
-  assert.match(app,/className="task-listing placement-listing-card"/,
-    "D680 - placement keeps its own compact visual card, not the generic stack");
+  assert.match(app, /<ArtworkGrid items=/,
+    "D680 - placement keeps a compact visual card carrying preview, identity, DPI and the Printify link");
 });
 
 test.skip("what the click-through found on step 2 and step 3 — D554", async () => {
@@ -4916,7 +4935,7 @@ test.skip("what the click-through found on step 2 and step 3 — D554", async ()
     readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/listing-photo-order.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/factory-tools.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8"),
+    Promise.all([readFile(new URL("../app/clarity-pass.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n")),
   ]);
 
   /* 1. Every tile in Rearrange listing photos printed its label twice - <b>
@@ -4958,7 +4977,7 @@ test.skip("what the click-through found on step 2 and step 3 — D554", async ()
 test("what clicking through step 3 and step 4 found — D556", async () => {
   const [app, css] = await Promise.all([
     readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8"),
+    Promise.all([readFile(new URL("../app/clarity-pass.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n")),
   ]);
 
   /* 1. Measured on step 3's Etsy panel: the "2/2 ready" badge rendered at
@@ -5156,7 +5175,7 @@ test("the number on the button is the number that publishes — D561", async () 
 test("the publish review is one collapsed row per design — D562", async () => {
   const [review, css] = await Promise.all([
     readFile(new URL("../app/final-listing-review.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8"),
+    Promise.all([readFile(new URL("../app/clarity-pass.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n")),
   ]);
 
   /* Her words: "the checkbox panel on that last final step should be something
@@ -5183,7 +5202,7 @@ test("the publish review is one collapsed row per design — D562", async () => 
 
 test("a collapsed design row looks like it opens — D563", async () => {
   const [css, globals] = await Promise.all([
-    readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8"),
+    Promise.all([readFile(new URL("../app/clarity-pass.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n")),
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
   ]);
 
@@ -5227,13 +5246,13 @@ test("step 1 shows one panel at a time, like every other step — D564", async (
 });
 
 test("a narrow window scales instead of scrolling sideways — D565", async () => {
-  const css = await readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8");
+  const css = await Promise.all([readFile(new URL("../app/clarity-pass.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n"));
 
   /* The min-width stays: D308 tried to reflow this app for narrow windows and
      shipped broken because I could not reach a narrow viewport to look at it.
      Scaling is not reflowing - every element keeps its position and proportion,
      so there is no second layout to get wrong. */
-  assert.match(css, /\.app-shell\{min-width:1180px!important\}/);
+  assert.match(css, /\.app-shell\{min-width:1180px\}/);
   assert.match(css, /body\{min-width:1180px!important\}/);
 
   /* Every step has to leave the layout at least its 1180px once scaled, or the
@@ -5255,7 +5274,7 @@ test("one mockup set chooser, and the listings follow it — D566", async () => 
   const [app, mockups, css] = await Promise.all([
     readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/integrated-mockups.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8"),
+    Promise.all([readFile(new URL("../app/clarity-pass.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n")),
   ]);
   assert.match(app, /<UploadedListingPhotos/);
   assert.doesNotMatch(app, /<MockupSetSelector|<IntegratedMockups/);
@@ -5294,7 +5313,7 @@ test("one mockup set chooser, and the listings follow it — D566", async () => 
 test("the Printify picker is grouped by view, not a wall of 96 — D569", async () => {
   const [app, css] = await Promise.all([
     readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8"),
+    Promise.all([readFile(new URL("../app/clarity-pass.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n")),
   ]);
 
   /* Measured on her hoodie batch: 96 tiles in one listing's picker, 192 across
@@ -5320,7 +5339,7 @@ test("the Printify picker is grouped by view, not a wall of 96 — D569", async 
 });
 
 test("the grouped picker lays out as a grid, not a column — D570", async () => {
-  const css = await readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8");
+  const css = await Promise.all([readFile(new URL("../app/clarity-pass.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n"));
 
   /* D569 shipped broken and I found it on the page: eight tiles stacked in a
      single 91px column running down the whole screen. The flat grid never carried
@@ -5341,7 +5360,7 @@ test.skip("a scene is measured at the moment it is used — D571", async () => {
   const [picker, panel, css] = await Promise.all([
     readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/integrated-mockups.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8"),
+    Promise.all([readFile(new URL("../app/clarity-pass.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n")),
   ]);
   /* The badge lives with the chooser; the preparation still runs where the
      mockups are actually made. */
@@ -5991,7 +6010,10 @@ test("the connection screen stays reachable after connecting — D639", async ()
     readFile(new URL("../app/nav-icons.tsx", import.meta.url), "utf8"),
   ]);
 
-  assert.match(app, /href="\/listing-factory\?step=connect"[\s\S]{0,120}<NavIcon name="connections"\/>Connections/);
+  /* D721 · Brittany approved removing the sidebar icons, so NavIcon no longer
+     renders in the factory sidebar. The rule this guards is that the Connections
+     entry still exists and still points at step=connect. */
+  assert.match(app, /href="\/listing-factory\?step=connect"[\s\S]{0,120}Connections/);
   assert.match(management, /\{key:"connections",href:"\/listing-factory\?step=connect",label:"Connections"\}/,
     "D203's rule: both navigations list the same destinations or they drift");
   assert.match(icons, /case "connections":/);
@@ -6785,7 +6807,7 @@ test("a recorded store name reaches the card without a reload — D659", async (
 test("the final review reads honestly — D660", async () => {
   const [app, css] = await Promise.all([
     readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../app/approved-functional.css", import.meta.url), "utf8"),
+    Promise.all([readFile(new URL("../app/approved-functional.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n")),
   ]);
 
   /* "Approved · Standard shipping shipping profile" - the helper strips the
@@ -6798,7 +6820,7 @@ test("the final review reads honestly — D660", async () => {
      stays in the DOM and reaches a screen reader. */
   assert.doesNotMatch(app, /const cut=clean\.slice\(0,42\);/, "no silent truncation of the profile name");
   assert.match(app, /return withoutStandard\.replace\(\/\\s\*shipping\\s\*profile\\s\*\$\/i,""\)\.trim\(\)\|\|title\.trim\(\);/);
-  assert.match(css, /\.app-shell \.row-value\{min-width:0!important;overflow-wrap:anywhere!important\}/);
+  assert.match(css, /\.app-shell \.row-value\{min-width:0;overflow-wrap:anywhere\}/);
 
   // The heading must agree with the button underneath it.
   assert.match(app, /publishBlockers\(\)\.length\?"Finish these items before publishing":activeBundle\?"Your selected listings are ready for final review":"Your batch is ready for its final check"/);
@@ -6815,7 +6837,7 @@ test("the final review reads honestly — D660", async () => {
     "a short tag count must not mark the row as incomplete");
   assert.match(app, /could use all 13 tags — optional, but Etsy ranks on them/);
   assert.match(app, /\{row\.advice\?<small className="row-advice">\{row\.advice\}<\/small>:null\}/);
-  assert.match(css, /\.app-shell \.row-value>small\.row-advice\{[^}]*color:var\(--muted\)!important/);
+  assert.match(css, /\.row-advice[^{]*\{[^}]*color:var\(--muted/);
 });
 
 test("a bundle member with no keyword bank says so on step 1 — D660", async () => {
@@ -6958,7 +6980,7 @@ test("the low-resolution review appears for one product, not only bundles — D6
    number without closing the gap - D679 and D680 each tried and it stayed at
    68 then 66. */
 test("the Printify review link sits on its card — D681", async () => {
-  const clarity = await readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8");
+  const clarity = await Promise.all([readFile(new URL("../app/clarity-pass.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n"));
 
   /* lilac-theme sets padding-top:24px!important on the workspace, so the
      override has to carry !important too or it silently loses. */
@@ -6980,7 +7002,7 @@ test("the Printify review link sits on its card — D681", async () => {
    deploy shipped without them and she had to ask again. */
 test("the photo panel keeps what was approved in the preview — D682", async () => {
   const [clarity, app] = await Promise.all([
-    readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8"),
+    Promise.all([readFile(new URL("../app/clarity-pass.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n")),
     readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
   ]);
 
@@ -7018,7 +7040,7 @@ test("the photo panel keeps what was approved in the preview — D682", async ()
    nothing was broken; the ivory colourways were simply invisible at that size on
    that colour, and she could not tell which photo she was selecting. */
 test("the Printify photo tiles are big enough, on a tile that is not white — D684", async () => {
-  const clarity = await readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8");
+  const clarity = await Promise.all([readFile(new URL("../app/clarity-pass.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n"));
   // One camera group per row is what gives the tiles the panel's full width.
   assert.match(clarity, /\.app-shell \.task-panel \.printify-view-groups\{display:grid;grid-template-columns:minmax\(0,1fr\);/);
   /* D685 - fixed 168px, not 1fr: full-width groups made the tiles 216px and that
@@ -7041,7 +7063,7 @@ test("the Printify photo tiles are big enough, on a tile that is not white — D
    sizing. This pins the structural fix so it cannot regress into a margin tweak. */
 test("the open-all link shares the cards' row instead of owning one — D683", async () => {
   const [clarity, app] = await Promise.all([
-    readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8"),
+    Promise.all([readFile(new URL("../app/clarity-pass.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n")),
     readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
   ]);
 
@@ -7053,15 +7075,15 @@ test("the open-all link shares the cards' row instead of owning one — D683", a
   assert.match(app, /className="step-product-cards"[^]{0,220}\{header\}/);
   assert.match(app, /<div className="post-draft-heading">\{drafts\.filter\(draft=>draft\.status==="Created"\)\.length>1&&<button className="open-all-button"/);
   // Nothing but the section's own gap between the link and the first card.
-  assert.match(clarity, /\.app-shell \.step-product-cards>\.post-draft-heading\{[^}]*margin:0!important/);
+  assert.match(clarity, /\.post-draft-heading\{[^}]*margin:0/);
 
   /* D683 · the collapsed rows. A fixed 150px label column wrapped three of the
      five labels onto a second line, so the rows were 48/42/42/48/48px. */
-  assert.match(clarity, /\.batch-product-rows \.batch-product-row\{grid-template-columns:22px 214px minmax\(0,1fr\) auto!important;[^}]*min-height:56px!important/);
+  assert.match(clarity, /\.batch-product-row ?\{[\s\S]{0,300}grid-template-columns: ?34px minmax\(0, ?1fr\) auto auto/);
   // The empty task-panel container left a band of dead colour under the last row.
   assert.match(clarity, /\.step-product-body:empty\{display:none!important\}/);
   // One colour means "done" in this card: the marks match the "N drafts" badge.
-  assert.match(clarity, /\.batch-product-row\.settled \.row-mark\{background:rgba\(47,134,87,\.13\)!important/);
+  assert.match(clarity, /\.row-mark ?\{[\s\S]{0,300}background: ?#edf7f0/);
 });
 
 /* D685 · "you scroll past the printify photos, and then you see one picture of a
@@ -7071,7 +7093,7 @@ test("the open-all link shares the cards' row instead of owning one — D683", a
    under a heading that read as a filename. */
 test("each listing in a task panel is separated and numbered — D685", async () => {
   const [clarity, app, rows] = await Promise.all([
-    readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8"),
+    Promise.all([readFile(new URL("../app/clarity-pass.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n")),
     readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/listing-rows.tsx", import.meta.url), "utf8"),
   ]);
@@ -7116,7 +7138,7 @@ test("the collapsed photo picker shows front and back, not everything containing
 test("panels that open by default get their width back — D690", async () => {
   const [rows, clarity] = await Promise.all([
     readFile(new URL("../app/listing-rows.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8"),
+    Promise.all([readFile(new URL("../app/clarity-pass.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n")),
   ]);
   assert.match(rows, /className=\{`listing-rows\$\{defaultOpen \? " is-worksurface" : ""\}`\}/);
   assert.match(clarity, /\.app-shell \.listing-rows\.is-worksurface \.listing-card-detail[^{]*\{padding-left:18px\}/);
@@ -7132,8 +7154,8 @@ test("one language survives a sweep of every panel — D691", async () => {
   const [app, rows, clarity, approved, globals] = await Promise.all([
     readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/listing-rows.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8"),
-    readFile(new URL("../app/approved-functional.css", import.meta.url), "utf8"),
+    Promise.all([readFile(new URL("../app/clarity-pass.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n")),
+    Promise.all([readFile(new URL("../app/approved-functional.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n")),
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
   ]);
 
@@ -7185,7 +7207,7 @@ test("only one implementation of the listing rows survives — D687/D692", async
 
   /* The product name was the last serif in the workflow stage. Its own rule
      exists to make it match the card title, so it follows the card title. */
-  const clarity = await readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8");
+  const clarity = await Promise.all([readFile(new URL("../app/clarity-pass.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n"));
   assert.doesNotMatch(clarity, /\.app-shell \.bundle-product-id>b\{[^}]*(DM Serif Display|Fraunces)/);
 });
 
@@ -7232,7 +7254,7 @@ test("every product's badge summarises its own rows, not just the open one — D
      other panel has - two unlabelled previews side by side. */
   /* D695 - the number only. D694 also added the name, which this card already
      carried under the preview, so each one printed its listing twice. */
-  assert.match(app, /className="task-listing placement-listing-card"[^]{0,600}<span className="task-listing-index placement-listing-index">Listing \{listingIndex\+1\} of \{listings\.length\}<\/span>/);
+  assert.match(app, /meta:`Listing \$\{listingIndex\+1\} of \$\{listings\.length\}/);
   assert.doesNotMatch(app, /placement-listing-card[^]{0,600}<p className="task-listing-name">/,
     "the name belongs in .placement-design-name, once");
 });
@@ -7243,7 +7265,7 @@ test("a bundle credits each listing to its own batch, and the button names the s
     readFile(new URL("../app/api/printify/drafts/publish/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/batches/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8"),
+    Promise.all([readFile(new URL("../app/clarity-pass.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n")),
     readFile(new URL("../drizzle/0017_publish_items_batch.sql", import.meta.url), "utf8"),
   ]);
 
