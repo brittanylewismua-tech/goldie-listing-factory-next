@@ -681,3 +681,85 @@ test("D831: 'Try these again' actually tries them again", async () => {
   assert.match(app, /function failedBundleNames\(\)/);
   assert.match(app, /could not be opened, so this batch cannot make its listings\./);
 });
+
+/* D832 · Two defects the re-verification of D831 found still standing. Both
+   tests below compute the outcome from the whole stack rather than looking for
+   the text of the fix, because for both of these the text of the fix was
+   already present somewhere and losing. */
+
+test("D832: no image the seller can see is deferred until it has a size", async () => {
+  /* Measured on the deployed build, step 4 of batch 3da79823, both groups open:
+       .final-listing-card img   shown 44x56, naturalWidth 0, loading="lazy"
+     Two visible empty boxes in the publish review list. D829 removed the
+     attribute from five images in this exact class and missed these two.
+
+     Computed, not matched: every <img> in every component is collected and any
+     that carries loading="lazy" is an offence. The retired mockups route is out
+     of scope - notFound() means no seller reaches it. */
+  const dir = new URL("../app/", import.meta.url);
+  const files = [];
+  const walk = async (base) => {
+    for (const entry of await fs.promises.readdir(base, { withFileTypes: true })) {
+      const next = new URL(`${entry.name}${entry.isDirectory() ? "/" : ""}`, base);
+      if (entry.isDirectory()) { if (entry.name !== "mockups") await walk(next); }
+      else if (entry.name.endsWith(".tsx")) files.push(next);
+    }
+  };
+  await walk(dir);
+
+  const offences = [];
+  for (const file of files) {
+    const source = await fs.promises.readFile(file, "utf8");
+    source.split("\n").forEach((line, index) => {
+      for (const tag of line.match(/<img\b[^>]*>/g) || []) {
+        if (/loading=["']lazy["']/.test(tag)) {
+          offences.push(`${file.pathname.split("/app/")[1]}:${index + 1}  ${tag.slice(0, 70)}`);
+        }
+      }
+    });
+  }
+  assert.deepEqual(offences, [],
+    `an image is deferred until it is near the viewport, inside a box that is 0x0 until it loads:\n${offences.join("\n")}`);
+});
+
+test("D832: the shell fits the phone the desktop-required card is shown on", () => {
+  /* Measured on an emulated Pixel 8 at 375x812 on the deployed build:
+       clientWidth 375, body.scrollWidth 1180, the card laid out 0..199 of 375.
+
+     This resolves .app-shell's width and min-width the way a browser would at
+     375px with a coarse pointer - every stylesheet in load order, media
+     conditions evaluated against that viewport - rather than asserting that a
+     rule exists. It has to be computed: `min-width:0` written into
+     approved-functional.css is present and loses, because interface-v2 declares
+     min-width:1180px later at the same specificity. */
+  const load = ["globals.css", "factory-navigation.css", "theme.css", "lilac-theme.css",
+    "approved-functional.css", "management-aesthetic.css", "clarity-pass.css", "interface-v2.css"];
+  const candidates = [];
+  load.forEach((name, order) => {
+    const css = fs.readFileSync(new URL(`../app/${name}`, import.meta.url), "utf8");
+    postcss.parse(css).walkRules(rule => {
+      if (!rule.selectors.some(one => one.replace(/\s+/g, " ").trim() === ".app-shell")) return;
+      const media = rule.parent.type === "atrule" ? rule.parent.params : "";
+      if (media) {
+        const max = /max-width:\s*(\d+)px/.exec(media), min = /min-width:\s*(\d+)px/.exec(media);
+        if (max && 375 > Number(max[1])) return;
+        if (min && 375 < Number(min[1])) return;
+        if (/pointer:\s*fine/.test(media)) return;
+      }
+      rule.walkDecls(/^(min-width|width)$/, decl => {
+        candidates.push({ name, order, line: decl.source.start.line, prop: decl.prop, value: decl.value, important: decl.important === true });
+      });
+    });
+  });
+  const winner = prop => {
+    const list = candidates.filter(one => one.prop === prop)
+      .sort((a, b) => Number(a.important) - Number(b.important) || a.order - b.order || a.line - b.line);
+    return list[list.length - 1];
+  };
+  const minWidth = winner("min-width");
+  assert.ok(minWidth && /^0(px)?$/.test(minWidth.value),
+    `.app-shell min-width resolves to ${minWidth ? `${minWidth.value} (${minWidth.name}:${minWidth.line})` : "unset"} at 375px, so the gate cannot fit`);
+  const width = winner("width");
+  assert.ok(width && width.value === "100%",
+    `.app-shell width resolves to ${width ? width.value : "unset"} at 375px`);
+});

@@ -2373,3 +2373,28 @@ html, body { background: #f1d2dc; }
    on all of them and changes only the colour, which is why its tiles do not
    move. Same here now. */
 .app-shell .recipe-tile{border:2px solid #ded1d8;background:#fbf7fa}
+
+/* ==========================================================================
+   D832 · the desktop-required card has to fit the phone it is shown on
+   ==========================================================================
+
+   `.app-shell{min-width:1180px}` is unconditional and interface-v2 loads last,
+   so inside the gate breakpoint the shell was still 1180 wide against a 375
+   viewport. Measured on an emulated Pixel 8 at 375x812 on the deployed build:
+
+     document.documentElement.clientWidth   375
+     body.scrollWidth                       1180
+     .mobile-gate box                       0..199 of 375   (clipped, off-centre)
+
+   `html,body{overflow:hidden}` in the same block stops the seller scrolling to
+   the overflow, so nothing could be reached - but the card itself was laid out
+   inside a 1180px box, which is why it sat left of centre and cut off rather
+   than centred in the screen.
+
+   Putting this in approved-functional.css does not work and I checked before
+   writing it here: that file loads before this one at the same specificity, so
+   its `min-width:0` loses to line 332 above. Same condition as the gate, in the
+   file that owns the rule it is correcting. */
+@media(max-width:820px) and (pointer:coarse){
+  .app-shell{min-width:0;width:100%}
+}
