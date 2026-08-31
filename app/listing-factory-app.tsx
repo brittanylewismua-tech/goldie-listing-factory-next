@@ -2697,7 +2697,29 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
   function titlesRows(only?:DesignFile){return designTaskRows("titles",design=>`${(design.title||"").trim().length}/140`,design=><div className="task-listing-edit">{/* D541 - D408 found this the hard way: at thumbnail size the artwork
         is unreadable, so the card cannot tell you which design you are writing a
         title for. The row stays compact; the preview comes back at a size you can
-        read once the row is open. */}{(()=>{const shot=design.previewUrl||drafts.find(draft=>draft.clientId===design.id)?.previewUrl;return shot?<button type="button" className="task-listing-preview" onClick={()=>window.open(shot,"_blank","noopener,noreferrer")} aria-label={`Open a larger preview of ${design.title.trim()||design.name}`}><img src={shot} alt={design.name||"Design artwork"} decoding="async"/><span>Enlarge</span></button>:null})()}<div className="design-fields"><label>Title <span>{design.title.length}/140</span><textarea className="listing-title-field" rows={3} value={design.title} maxLength={140} onChange={event=>{const title=event.target.value;updateDesign(design.id,{title,tags:tagsFromTitle(title),etsy:undefined})}}/></label><label>Tags <span>{design.tags.length}/13</span><textarea className="listing-tags-field" rows={3} value={design.tags.join(", ")} onChange={event=>updateDesign(design.id,{tags:[...new Set(event.target.value.split(",").map(tag=>tag.trim().toLowerCase()).filter(tag=>tag&&tag.length<=20))].slice(0,13),etsy:undefined})} placeholder="Exact title phrases, separated by commas"/></label><div className="tag-row">{design.tags.map(tag=><span key={tag}>{tag}</span>)}{!design.tags.length&&<small>Goldie will create matching tags with the title.</small>}</div><IndividualAutoTitle design={design} template={templateDetails} useCommas={titleJoiner===", "} paused={batchHeldByAnotherTab} onApply={(title,tags)=>{setActiveDesign(design.id);updateDesign(design.id,{title,tags,etsy:undefined,etsyError:""})}}/>{design.etsyError&&<small className="field-error">{design.etsyError}</small>}</div></div>,titleFlags,only);}
+        read once the row is open. */}{(()=>{const shot=design.previewUrl||drafts.find(draft=>draft.clientId===design.id)?.previewUrl;return shot?<button type="button" className="task-listing-preview" onClick={()=>window.open(shot,"_blank","noopener,noreferrer")} aria-label={`Open a larger preview of ${design.title.trim()||design.name}`}><img src={shot} alt={design.name||"Design artwork"} decoding="async"/><span>Enlarge</span></button>:null})()}<div className="design-fields"><label>Title <span>{design.title.length}/140</span><textarea className="listing-title-field" rows={3} value={design.title} maxLength={140} onChange={event=>{const title=event.target.value;
+                    /* D830 · This used to be `tags:tagsFromTitle(title)`, unconditionally,
+                       on every keystroke. Two things went wrong with that.
+
+                       tagsFromTitle keeps only comma phrases of 20 characters or
+                       fewer, and a real Etsy title is mostly longer phrases than
+                       that. Measured live on batch 3da79823: a 110-character
+                       title with three phrases - 36, 27 and 43 characters - and
+                       the tag list went to 0 of 13. The listing would have
+                       published with no tags at all.
+
+                       And it overwrote tags the seller had entered by hand. I
+                       typed thirteen researched tags, then edited the title, and
+                       all thirteen were gone.
+
+                       So: the title still fills the tags while they are still
+                       Goldie's - untouched, or exactly what the previous title
+                       produced - and it never replaces them with nothing. */
+                    const derived=tagsFromTitle(design.title);
+                    const untouched=!design.tags.length||(design.tags.length===derived.length&&design.tags.every((tag,index)=>tag===derived[index]));
+                    const next=tagsFromTitle(title);
+                    const keep=!untouched||(!next.length&&design.tags.length>0);
+                    updateDesign(design.id,keep?{title,etsy:undefined}:{title,tags:next,etsy:undefined})}}/></label><label>Tags <span>{design.tags.length}/13</span><textarea className="listing-tags-field" rows={3} value={design.tags.join(", ")} onChange={event=>updateDesign(design.id,{tags:[...new Set(event.target.value.split(",").map(tag=>tag.trim().toLowerCase()).filter(tag=>tag&&tag.length<=20))].slice(0,13),etsy:undefined})} placeholder="Exact title phrases, separated by commas"/></label><div className="tag-row">{design.tags.map(tag=><span key={tag}>{tag}</span>)}{!design.tags.length&&<small>Goldie will create matching tags with the title.</small>}</div><IndividualAutoTitle design={design} template={templateDetails} useCommas={titleJoiner===", "} paused={batchHeldByAnotherTab} onApply={(title,tags)=>{setActiveDesign(design.id);updateDesign(design.id,{title,tags,etsy:undefined,etsyError:""})}}/>{design.etsyError&&<small className="field-error">{design.etsyError}</small>}</div></div>,titleFlags,only);}
   function descriptionLead(){return <>
       <div className="task-panel-lead"><div className="batch-description-body"><p>This came from your saved product. Edit it once here to change the shared description on every listing in this batch.</p><label>Description for every listing<textarea rows={9} value={description} onChange={event=>setDescription(event.target.value)} placeholder="Add sizing, materials, production, care, and shipping information"/></label><small>Open any listing below only when that listing needs different wording.</small>{/* D232 · "Save this description as the default" went with the settings block. The
                      shared editor survived the move but the way to keep the wording for future

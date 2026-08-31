@@ -639,3 +639,22 @@ test("D826: nothing outside interface-v2 dresses an interior heading", async () 
   assert.doesNotMatch(management, /\.keyword-page \.keyword-hero h1[^{]*\{[^}]*font-family/,
     "Keyword Banks does not");
 });
+
+test("D830: editing a title never empties the tags or overwrites the seller's", async () => {
+  /* Measured live on batch 3da79823, on the deployed build:
+       tags entered by hand      13 of 13
+       then the title was edited  0 of 13
+     tagsFromTitle keeps only comma phrases of 20 characters or fewer, and the
+     handler applied its result unconditionally on every keystroke. A 110
+     character title with phrases of 36, 27 and 43 characters produces nothing,
+     so the listing would have published with no tags. */
+  const app = await fs.promises.readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+  assert.doesNotMatch(app, /const title=event\.target\.value;updateDesign\(design\.id,\{title,tags:tagsFromTitle\(title\),etsy:undefined\}\)/,
+    "the title must not overwrite tags unconditionally");
+  assert.match(app, /const untouched=!design\.tags\.length\|\|/, "it replaces them only while they are still Goldie's");
+  assert.match(app, /const keep=!untouched\|\|\(!next\.length&&design\.tags\.length>0\)/, "and never replaces them with nothing");
+
+  /* And the rule itself, so the 20-character filter cannot be blamed later. */
+  const seo = await fs.promises.readFile(new URL("../app/seo-utils.ts", import.meta.url), "utf8");
+  assert.match(seo, /phrase\.length <= 20/, "tagsFromTitle still keeps only short phrases - that part is deliberate");
+});
