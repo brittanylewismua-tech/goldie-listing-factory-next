@@ -528,3 +528,34 @@ test("D821: the shell's own surface resolves to the prototype's, not to a later 
   assert.ok(pane && /rgba\(238,218,239,\.9\)/.test(pane.value),
     `the pane resolves to ${pane ? pane.value : "unset"}`);
 });
+
+test("D822: no interior page reserves room for a rail the shell already owns", async () => {
+  /* Measured live on /keywords after D818: the wrapper computed
+     `padding: 42px 54px 90px 342px`, so the page head and the card rendered at
+     x734 inside a column that starts at 392. The 342px is the space these
+     pages used to leave for a rail they did not contain. Inside the shell the
+     rail is a grid track and the reservation is 342px of nothing.
+
+     /batches and /usage escaped it only because their copy of the rule carries
+     no !important. The keyword and mockup copy carries !important on every
+     line, which is the whole difference between a page that looked right and
+     a page that looked broken. */
+  const files = ["management-aesthetic.css", "globals.css", "clarity-pass.css", "approved-functional.css"];
+  const offenders = [];
+  for (const file of files) {
+    const css = await fs.promises.readFile(new URL(`../app/${file}`, import.meta.url), "utf8");
+    postcss.parse(css).walkDecls(/^padding(-left)?$/, decl => {
+      if (!/342px/.test(decl.value)) return;
+      offenders.push(`${file}:${decl.source.start.line} ${decl.parent.selector?.slice(0, 50)} — ${decl.value}`);
+    });
+  }
+  assert.deepEqual(offenders, [], `a rail reservation survives inside the shell:\n${offenders.join("\n")}`);
+
+  /* And the last unreadable line on the plan card. */
+  const eyebrow = resolve({
+    selectorTest: s => /plan-banner ?> ?div ?> ?span$|plan-banner span$/.test(s),
+    property: "color",
+  });
+  assert.ok(eyebrow && /#e7c9dd/i.test(eyebrow.value),
+    `"CURRENT PLAN" resolves to ${eyebrow ? `${eyebrow.value} (${eyebrow.file}:${eyebrow.line})` : "unset"}`);
+});

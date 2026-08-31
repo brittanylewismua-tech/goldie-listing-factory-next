@@ -1,12 +1,11 @@
 /* Goldie management pages share the frozen Listing Factory visual system. */
 :is(.management-page,.usage-page,.keyword-page,.mockupFactory){
-  --ink:#4b283e;--muted:#80677a;--line:rgba(91,53,79,.16);--paper:rgba(255,247,252,.62);
-  min-height:100vh;color:var(--ink);font-family:'Manrope','Hanken Grotesk',Inter,sans-serif;
+  --ink:#4b283e;--muted:#80677a;--line:rgba(91,53,79,.16);--paper:rgba(255,247,252,.62);color:var(--ink);font-family:'Manrope','Hanken Grotesk',Inter,sans-serif;
   background:transparent!important;
 }
-:is(.management-page,.usage-page){max-width:none;margin:0;padding:42px 54px 90px 342px}
+:is(.management-page,.usage-page){max-width:none;margin:0;padding:0}
 
-:is(.management-page,.usage-page)>header{max-width:1080px;margin:18px auto 30px}
+:is(.management-page,.usage-page)>header{margin:18px 0 30px}
 :is(.management-page,.usage-page)>header h1{margin:0;color:var(--ink);font:400 34px/1 'DM Serif Display',Georgia,serif;letter-spacing:-.035em}
 :is(.management-page,.usage-page)>header>p:last-child{max-width:720px;color:rgba(74,42,62,.7);font-size:14px;line-height:1.6}
 .management-page>.batch-history,.usage-page>:not(nav):not(header){max-width:1080px;margin-left:auto;margin-right:auto}
@@ -29,7 +28,7 @@
 /* Keyword Banks */
 .keyword-page{padding-left:288px}
 .keyword-page .keyword-hero{max-width:1188px;margin:0 auto;padding:58px 54px 26px;background:transparent;color:var(--ink)}.keyword-page .keyword-hero h1{color:var(--ink);font-family:'DM Serif Display',Georgia,serif;font-weight:400}.keyword-page .keyword-hero>div>p:last-child{color:rgba(74,42,62,.7);font-size:14px}
-.keyword-page .keyword-workspace{max-width:1080px!important;padding:14px 54px 90px!important}.keyword-page .management-create,.keyword-page .bank-library{padding:26px;margin-top:18px}.keyword-page .section-heading h2,.keyword-page .bank-library h2{font-family:'DM Serif Display',Georgia,serif;font-size:30px;font-weight:400}.keyword-page .file-label{border-color:#dfc8d5;background:rgba(255,255,255,.4)}.keyword-page .new-bank-button{border-color:#ded5db;background:rgba(255,255,255,.46);color:var(--ink)}
+.keyword-page .keyword-workspace{padding:14px 0 0!important}.keyword-page .management-create,.keyword-page .bank-library{padding:26px;margin-top:18px}.keyword-page .section-heading h2,.keyword-page .bank-library h2{font-family:'DM Serif Display',Georgia,serif;font-size:30px;font-weight:400}.keyword-page .file-label{border-color:#dfc8d5;background:rgba(255,255,255,.4)}.keyword-page .new-bank-button{border-color:#ded5db;background:rgba(255,255,255,.46);color:var(--ink)}
 .keyword-page .bank-grid article{border-color:#ded6dc;border-radius:16px;background:rgba(255,255,255,.42)}.keyword-page .bank-grid article.current{border-color:#b777b0;box-shadow:0 0 0 3px rgba(183,119,176,.14)}.keyword-page .bank-grid article span{background:rgba(234,205,231,.55);color:#65445d;font-size:11px}.keyword-page .bank-grid .edit-bank{width:100%}.keyword-page .save-toast{border-color:rgba(255,255,255,.55);background:linear-gradient(145deg,#5b304f,#45263c);box-shadow:0 24px 70px rgba(74,42,62,.28)}
 
 /* Usage */
@@ -65,9 +64,8 @@
    legacy page-level styles cannot reintroduce gray panels or side rails. */
 :is(.keyword-page,.mockupFactory.managementOnly).management-page{
   max-width:none!important;
-  min-height:100vh!important;
   margin:0!important;
-  padding:42px 54px 90px 342px!important;
+  padding:0!important;
   overflow-x:clip!important;
   color:var(--ink)!important;
   background:transparent!important;
@@ -79,8 +77,7 @@
 }
 :is(.keyword-page,.mockupFactory.managementOnly).management-page>header{
   display:block!important;
-  max-width:1080px!important;
-  margin:18px auto 30px!important;
+  margin:18px 0 30px!important;
   padding:0!important;
   border:0!important;
   background:transparent!important;
@@ -115,7 +112,7 @@
     padding:20px 18px 70px!important;
     overflow-x:hidden!important;
   }
-    :is(.keyword-page,.mockupFactory.managementOnly).management-page>header{margin:18px auto 24px!important}
+    :is(.keyword-page,.mockupFactory.managementOnly).management-page>header{margin:18px 0 24px!important}
   .keyword-page .keyword-workspace,
   .mockupFactory.managementOnly .mockupWorkspace{padding:8px 0 70px!important}
 }
@@ -171,7 +168,7 @@
   line-height:1.5!important;
 }
 .usage-page .plan-banner>div>span{
-  color:#704861!important;
+  color:#e7c9dd!important;
   font-size:12px!important;
   font-weight:850!important;
   letter-spacing:.14em!important;

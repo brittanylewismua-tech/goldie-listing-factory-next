@@ -2285,3 +2285,26 @@ html, body { background: #f1d2dc; }
 /* The forward action. Same padding, same radius, same plum - three pixels
    smaller than the prototype's, on the one button every step ends with. */
 .app-shell .workflow-next{font-size:16px}
+
+/* D822 · /keywords was pushed into the right half of the pane, and two more
+   contrast failures on /usage.
+
+   Measured on the live build after D818: the keyword page's content wrapper
+   computed `padding: 42px 54px 90px 342px`. That 342px is the reservation the
+   interior pages used to make for a rail they did not contain - the column was
+   "342px from the left" because nothing else put it there. Inside the shell the
+   rail is a grid track, so the reservation is 342px of nothing, and the page
+   head and the card were rendering at x734 in a 944px column that starts at
+   392. /batches and /usage escaped it because their copy of the rule carries no
+   !important and D818's rule beat it; the keyword and mockup copy carries
+   !important on every line, so it won.
+
+   The reservation, the 100vh, the 1080px caps and the auto margins that centred
+   the header are all removed at their source in management-aesthetic.css. This
+   file already declares the wrapper's box.
+
+   On /usage: "CURRENT PLAN" computed #704861 on the #56394f card - 1.33:1, the
+   last line of D798's four still unreadable, from a separate !important rule
+   one selector deeper than the one D818 deleted. And the allowance caption
+   under each meter is 11px at 3.57:1, which is under AA for body text. */
+.app-shell .factory-work .usage-card b span{color:#6e606a}
