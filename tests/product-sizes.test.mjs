@@ -297,7 +297,9 @@ test("Edit bundle visibly does something — D176", async () => {
      `open={bundleForm}` still has to drive it — that is what makes "Edit bundle"
      on a saved bundle card open this block with the form already filled in. */
   assert.match(tools, /<details className="bundle-library" open=\{bundleForm\} onToggle=/);
-  assert.match(tools, /if\(open&&!bundleForm&&recipes\.length>=2&&!pendingAction\)openBundle\(\)/,
+  /* D860 · reads `reachable`, not `recipes`: the availability check counted
+     products from a shop the seller is not in. */
+  assert.match(tools, /if\(open&&!bundleForm&&reachable\.length>=2&&!pendingAction\)openBundle\(\)/,
     "opening the section must open the form, not reveal a second button");
   assert.match(tools, /document\.querySelector\("\.bundle-library"\)\?\.scrollIntoView\(\{block:"start"\}\)/,
     "Opening the form must bring it into view. Instant — smooth scrolling never fires here (D146).");

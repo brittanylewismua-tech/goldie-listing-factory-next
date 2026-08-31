@@ -81,7 +81,8 @@ test("the route asks the resolver rather than keeping its own copy", () => {
 
 test("the products scoped away are offered as a count and a way to switch", () => {
   const tools = readFileSync(new URL("../app/factory-tools.tsx", import.meta.url), "utf8");
-  assert.match(tools, /const elsewhere = recipes\.filter\(recipe => recipe\.reach === "away"\);/);
+  const scope = readFileSync(new URL("../app/bank-scope.ts", import.meta.url), "utf8");
+  assert.match(scope, /const elsewhere = recipes\.filter\(recipe => recipe\.reach === "away"\);/);
   assert.match(tools, /not offered while you are in/);
   assert.match(tools, /Switch shop/);
 });
@@ -97,8 +98,9 @@ test("a bundle from another shop is taken out of the grid, not greyed out in it 
        ZZ TEST BUNDLE           2 of 3 members under GODISAGIRLAPPAREL
 
      A control you cannot use is not information. */
-  assert.match(tools, /const usableBundles = bundles\.filter\(bundle => bundleBlockers\(bundle\)\.away\.length === 0\);/);
-  assert.match(tools, /const bundlesElsewhere = bundles\.filter\(bundle => bundleBlockers\(bundle\)\.away\.length > 0\);/);
+  const scope = readFileSync(new URL("../app/bank-scope.ts", import.meta.url), "utf8");
+  assert.match(scope, /const usableBundles = bundles\.filter\(bundle => blockedMembers\(bundle\)\.length === 0\);/);
+  assert.match(scope, /const bundlesElsewhere = bundles\.filter\(bundle => blockedMembers\(bundle\)\.length > 0\);/);
 
   /* The grid and its heading both count only what can be used. */
   const section = tools.slice(tools.indexOf("bundle-card-heading") - 200);
@@ -111,8 +113,9 @@ test("one line accounts for every hidden product and bundle — D859", () => {
   const tools = readFileSync(new URL("../app/factory-tools.tsx", import.meta.url), "utf8");
   /* Hiding work without saying how much was hidden, or where it went, is how a
      seller concludes Goldie lost it. */
-  assert.match(tools, /const hiddenCount = elsewhere\.length \+ bundlesElsewhere\.length;/);
-  assert.match(tools, /const hiddenStores = \[\.\.\.new Set\(\[\.\.\.elsewhereStores, \.\.\.bundlesElsewhere\.flatMap\(bundle => bundleBlockers\(bundle\)\.stores\)\]\)\];/);
+  const scope = readFileSync(new URL("../app/bank-scope.ts", import.meta.url), "utf8");
+  assert.match(scope, /const hiddenCount = elsewhere\.length \+ bundlesElsewhere\.length;/);
+  assert.match(scope, /hiddenStores = \[\.\.\.new Set\(\[/);
   assert.match(tools, /\{hiddenCount>0&&<p className="recipe-other-store">/);
   assert.match(tools, /Switch shop/);
 });

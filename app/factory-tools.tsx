@@ -1,5 +1,6 @@
 "use client";
 import { confirmAction } from "./confirm-dialog";
+import { scopeBank } from "./bank-scope";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
 export type Pricing = { targetProfit: number; etsyFeePercent: number; fixedFee: number; listingFee: number; shippingCost: number; shippingCharged: number };
@@ -155,30 +156,14 @@ export function SavedWorkflow(props: WorkflowProps) {
      whose Printify store is proven to publish somewhere else can only end in a
      409, so it is filed under its own store rather than offered here. Nothing
      is hidden on a guess: a store with no verdict yet still shows. */
-  const reachable = recipes.filter(recipe => recipe.reach !== "away");
-  const elsewhere = recipes.filter(recipe => recipe.reach === "away");
-  const elsewhereStores = [...new Set(elsewhere.map(recipe => recipe.printifyShopTitle || "another store"))];
-  /* D836 · A bundle is only as reachable as its least reachable member. The
-     tiles were filtered and the bundles were not, so a bundle holding a product
-     from another store stayed selectable and led to the same 409 one step
-     later - which is the exact failure this scoping exists to remove. */
+  /* D860 · One answer for every surface. This was five separate derivations
+     living next to each other, and the bundle CREATOR quietly kept using the
+     unscoped list - see app/bank-scope.ts for what that cost. */
+  const { reachable, elsewhere, usableBundles, bundlesElsewhere, hiddenCount, hiddenStores, blockedMembers } = scopeBank(recipes, bundles);
   const bundleBlockers = (bundle: ProductBundle) => {
-    const members = bundle.recipeIds.map(id => recipes.find(recipe => recipe.id === id)).filter(Boolean) as Recipe[];
-    const away = members.filter(recipe => recipe.reach === "away");
+    const away = blockedMembers(bundle);
     return { away, stores: [...new Set(away.map(recipe => recipe.printifyShopTitle || "another store"))] };
   };
-  /* D859 · And then the bundles are taken out of the grid, not greyed out in
-     it. D836 disabled a bundle holding another store's product and left the
-     tile sitting there reading "Different Etsy shop"; after D857 scoped the
-     products away, both of her bundles were unusable and both were still on
-     display, which is the same thing she has now asked for four times. A
-     control you cannot use is not information, it is furniture. */
-  const usableBundles = bundles.filter(bundle => bundleBlockers(bundle).away.length === 0);
-  const bundlesElsewhere = bundles.filter(bundle => bundleBlockers(bundle).away.length > 0);
-  /* One line covers both, and it names every store the hidden work belongs to
-     so the count is never a mystery. */
-  const hiddenCount = elsewhere.length + bundlesElsewhere.length;
-  const hiddenStores = [...new Set([...elsewhereStores, ...bundlesElsewhere.flatMap(bundle => bundleBlockers(bundle).stores)])];
 
   const reload = () => Promise.all([fetch("/api/product-recipes").then((r) => r.json()),fetch("/api/product-bundles").then(r=>r.json())]).then(([products,groups])=>{setRecipes(products.recipes||[]);setActiveShop(products.activeEtsyShop||null);setBundles(groups.bundles||[]);backfillPhotos(products.recipes||[])}).catch(() => undefined);
   /* D848 · Fill in the flatlays the bank never had. D842 remembers a photo when
@@ -337,18 +322,18 @@ export function SavedWorkflow(props: WorkflowProps) {
     {!recipes.length && <div className="first-recipe-callout"><span>＋</span><div><b>Create your first saved product</b><p>Name it and connect the completed product from Printify. That is all this step needs.</p></div></div>}
 
     {message && <p className="field-warning" role="status">{message}</p>}
-    <details className="bundle-library" open={bundleForm} onToggle={event=>{const open=(event.currentTarget as HTMLDetailsElement).open;if(open&&!bundleForm&&recipes.length>=2&&!pendingAction)openBundle();if(!open&&bundleForm)setBundleForm(false);}}>{/* D302 · This was a door onto another door: the section read "Product
+    <details className="bundle-library" open={bundleForm} onToggle={event=>{const open=(event.currentTarget as HTMLDetailsElement).open;if(open&&!bundleForm&&reachable.length>=2&&!pendingAction)openBundle();if(!open&&bundleForm)setBundleForm(false);}}>{/* D302 · This was a door onto another door: the section read "Product
            bundles", and opening it revealed an explainer and a "＋ Create a
            product bundle" button that opened the actual form. The saved bundles
            are already listed above this, so the section has exactly one job.
            Opening it now opens the form. */}{/* D232 · "Want one batch to cover several products?" is a pitch for a feature you
            have already used. Once a bundle exists it is a place to make another one, so
            it says that instead. */}
-      <summary><span>{bundleForm?(editingBundleId?`Editing ${bundleName||"this bundle"}`:"New product bundle"):"Create a product bundle"}</span><small>{bundleForm?"Choose which saved products belong to it, then save.":recipes.length<2?<>Save 2 products first <em>Optional</em></>:<>Combine two to four saved products <em>Optional</em></>}</small></summary><div className="bundle-library-content"><div className="recipe-library-head"><div>{/* D271 · the <summary> that opens this block already reads "Product bundles"; this repeated it immediately below. */}<small>Combine two to four saved products. Upload each design once, then Goldie carries it through every product.</small></div></div>{bundleForm&&<div className="bundle-form"><div><b>{editingBundleId?"Edit product bundle":"New product bundle"}</b><span>Choose the products in the order you want to complete them.</span></div><label>Bundle name<input value={bundleName} onChange={event=>setBundleName(event.target.value)} placeholder="Example: Tee + sweatshirt + hoodie"/></label><fieldset><legend>Products</legend>{/* D293 · The 4-product cap and the 2-product minimum were enforced only by
+      <summary><span>{bundleForm?(editingBundleId?`Editing ${bundleName||"this bundle"}`:"New product bundle"):"Create a product bundle"}</span><small>{bundleForm?"Choose which saved products belong to it, then save.":reachable.length<2?<>Save 2 products first <em>Optional</em></>:<>Combine two to four saved products <em>Optional</em></>}</small></summary><div className="bundle-library-content"><div className="recipe-library-head"><div>{/* D271 · the <summary> that opens this block already reads "Product bundles"; this repeated it immediately below. */}<small>Combine two to four saved products. Upload each design once, then Goldie carries it through every product.</small></div></div>{bundleForm&&<div className="bundle-form"><div><b>{editingBundleId?"Edit product bundle":"New product bundle"}</b><span>Choose the products in the order you want to complete them.</span></div><label>Bundle name<input value={bundleName} onChange={event=>setBundleName(event.target.value)} placeholder="Example: Tee + sweatshirt + hoodie"/></label><fieldset><legend>Products</legend>{/* D293 · The 4-product cap and the 2-product minimum were enforced only by
             disabling controls. A checkbox that goes dead with no reason is the same
             defect as the dead rows in D237 — the control is there, it does nothing,
             and nothing says why. */}
-<p className="bundle-rule">{bundleIds.length>=4?"A bundle holds up to 4 saved products. Remove one to add another.":bundleIds.length<2?`Choose at least 2 saved products. ${bundleIds.length} chosen.`:`${bundleIds.length} of 4 chosen.`}</p>{recipes.map(recipe=><label className={bundleIds.includes(recipe.id)?"selected":""} key={recipe.id}><input type="checkbox" checked={bundleIds.includes(recipe.id)} disabled={!recipeIsSetUp(recipe)||(!bundleIds.includes(recipe.id)&&bundleIds.length>=4)} title={!recipeIsSetUp(recipe)?`Finish setting up ${recipe.name} before adding it to a bundle.`:(!bundleIds.includes(recipe.id)&&bundleIds.length>=4)?"A bundle holds up to 4 saved products. Remove one to add another.":undefined} onChange={()=>setBundleIds(current=>current.includes(recipe.id)?current.filter(id=>id!==recipe.id):[...current,recipe.id])}/><span><b>{recipe.name}</b>{!recipeIsSetUp(recipe)&&<em className="needs-setup-note">Finish this product’s setup first</em>}{recipeIsSetUp(recipe)&&!recipe.keywordListId&&<em className="needs-bank-note">No keyword bank yet — titles cannot be auto-written for it</em>}<small>{bundleIds.includes(recipe.id)?`Product ${bundleIds.indexOf(recipe.id)+1}`:"Add to bundle"}</small></span></label>)}</fieldset><div className="bundle-form-actions"><button className="secondary-action" disabled={bundleSaving} onClick={()=>setBundleForm(false)}>Cancel</button><button className="save-recipe" aria-busy={bundleSaving} disabled={bundleSaving||!bundleName.trim()||bundleIds.length<2} onClick={()=>void saveBundle()}>{bundleSaving?"Saving bundle…":editingBundleId?"Update product bundle":"Save product bundle"}</button></div></div>}</div></details>
+<p className="bundle-rule">{bundleIds.length>=4?"A bundle holds up to 4 saved products. Remove one to add another.":bundleIds.length<2?`Choose at least 2 saved products. ${bundleIds.length} chosen.`:`${bundleIds.length} of 4 chosen.`}</p>{reachable.map(recipe=><label className={bundleIds.includes(recipe.id)?"selected":""} key={recipe.id}><input type="checkbox" checked={bundleIds.includes(recipe.id)} disabled={!recipeIsSetUp(recipe)||(!bundleIds.includes(recipe.id)&&bundleIds.length>=4)} title={!recipeIsSetUp(recipe)?`Finish setting up ${recipe.name} before adding it to a bundle.`:(!bundleIds.includes(recipe.id)&&bundleIds.length>=4)?"A bundle holds up to 4 saved products. Remove one to add another.":undefined} onChange={()=>setBundleIds(current=>current.includes(recipe.id)?current.filter(id=>id!==recipe.id):[...current,recipe.id])}/><span><b>{recipe.name}</b>{!recipeIsSetUp(recipe)&&<em className="needs-setup-note">Finish this product’s setup first</em>}{recipeIsSetUp(recipe)&&!recipe.keywordListId&&<em className="needs-bank-note">No keyword bank yet — titles cannot be auto-written for it</em>}<small>{bundleIds.includes(recipe.id)?`Product ${bundleIds.indexOf(recipe.id)+1}`:"Add to bundle"}</small></span></label>)}</fieldset><div className="bundle-form-actions"><button className="secondary-action" disabled={bundleSaving} onClick={()=>setBundleForm(false)}>Cancel</button><button className="save-recipe" aria-busy={bundleSaving} disabled={bundleSaving||!bundleName.trim()||bundleIds.length<2} onClick={()=>void saveBundle()}>{bundleSaving?"Saving bundle…":editingBundleId?"Update product bundle":"Save product bundle"}</button></div></div>}</div></details>
   </div></article>;
 }
 
