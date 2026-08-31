@@ -55,3 +55,17 @@ test("the bank asks for photos once, and only when a tile is missing one", () =>
   assert.match(client, /if\(!loaded\.some\(recipe=>!recipe\.previewImage\)\)return;/);
   assert.match(client, /fetch\("\/api\/product-recipes\/photos",\{method:"POST"\}\)/);
 });
+
+test("a thumbnail plate is never the same colour as the artwork — D851", () => {
+  const css = readFileSync(new URL("../app/interface-v2.css", import.meta.url), "utf8");
+  /* Measured live on the publish step, every image loaded and complete: a white
+     sweatshirt mockup and a pale-ink design both read as empty 52px boxes on
+     D844's white plate. A checker is never the same colour as the art. */
+  const block = css.slice(css.indexOf("D851 · the thumbnails"));
+  for (const selector of ["bundle-product-photo", "final-group-thumb", "batch-history-thumbnail", "recipe-icon > img", "task-listing-preview img"]) {
+    assert.ok(block.includes(selector), `${selector} still sits on a plain plate`);
+  }
+  assert.match(block, /background-image:\s*\n?\s*linear-gradient\(45deg,#f0e9ee/);
+  assert.match(block, /background-size:8px 8px/);
+  assert.match(block, /background-position:0 0,4px 4px/);
+});

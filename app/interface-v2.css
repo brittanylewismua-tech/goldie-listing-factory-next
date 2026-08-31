@@ -2699,3 +2699,36 @@ html, body { background: #f1d2dc; }
 /* The bundle library's summary badge sat at 8px, which is smaller than the
    legal disclosure in the rail. */
 .app-shell .bundle-library > summary small em{font-size:10px;letter-spacing:.5px}
+
+/* ==========================================================================
+   D851 · the thumbnails that were blank because the art is white
+   ==========================================================================
+
+   D823 called these "white artwork on white" and was talked out of it by D829,
+   which found a real and different fault - lazy images deadlocked in 0x0 boxes.
+   Both were true, and D844's white plate made the first one worse. Measured on
+   the deployed publish step just now, with every image loaded and complete:
+
+     bundle-product-photo   2048x2048   a white sweatshirt mockup on white
+     final-group-thumb (1)  5016x5016   dark ink, 78% transparent - visible
+     final-group-thumb (2)  5016x5016   pale ink                 - invisible
+
+   Three framed 52px boxes, two of them reading as empty, on the last screen
+   before a seller publishes to Etsy.
+
+   A plain plate cannot win this: white ink vanishes on a light one and black
+   ink vanishes on a dark one. A checker is the answer every image editor
+   settled on, because it is never the same colour as the art and it says
+   "transparent" while it does it. Kept faint and small, so at 52px it reads as
+   texture rather than as pattern. */
+.app-shell .bundle-product-photo,
+.app-shell .final-group-thumb,
+.app-shell .batch-history-thumbnail,
+.app-shell .recipe-icon > img,
+.app-shell .task-listing-preview img{
+  background-color:#fff;
+  background-image:
+    linear-gradient(45deg,#f0e9ee 25%,transparent 25%,transparent 75%,#f0e9ee 75%),
+    linear-gradient(45deg,#f0e9ee 25%,transparent 25%,transparent 75%,#f0e9ee 75%);
+  background-size:8px 8px;
+  background-position:0 0,4px 4px}
