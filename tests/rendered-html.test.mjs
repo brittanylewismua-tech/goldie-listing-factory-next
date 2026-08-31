@@ -7243,8 +7243,14 @@ test("one language survives a sweep of every panel — D691", async () => {
   /* D692 - fixed at the rule that caused it instead of per heading. The CARD
      TITLE rule carries !important and covers every card and panel title, which is
      why a targeted override on one heading kept losing. */
-  assert.match(clarity, /\.managementOnly h3 \{\n  font-family: "Manrope"/);
-  assert.doesNotMatch(clarity, /\.managementOnly h3 \{\n  font-family: "DM Serif Display"/);
+  /* D819 - that CARD TITLE rule is deleted. It was the reason a targeted
+     override kept losing, and it stayed the reason after the override became
+     the migrated one: it set Manrope with !important, so interface-v2's Inter
+     lost too, and step 3's card titles were still Manrope on the live build.
+     What this assertion is for - sans, everywhere, decided in one place - now
+     holds in interface-v2, without an !important to beat next time. */
+  assert.doesNotMatch(clarity, /\.managementOnly h3/);
+  assert.match(clarity, /font-family: "Inter"|font:700 14px\/1\.3 Inter/);
 });
 
 /* D692 · Closing the refactor out. Three implementations of "show me every

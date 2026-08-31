@@ -1363,7 +1363,9 @@ test("D233: one heading system, two typefaces, no child larger than its parent",
 
   const scale = css.slice(css.indexOf("D233 · ONE HEADING SYSTEM"));
   const sizeOf = (selector, source = scale) => {
-    const block = source.slice(source.indexOf(selector));
+    /* D819 · from the LAST declaration of the selector, not the first: a
+       selector can appear in an earlier block that sets only its typeface. */
+    const block = source.slice(source.lastIndexOf(selector));
     const declarations = block.slice(0, block.indexOf("}"));
     /* D727 · The factory title is written as a `font` shorthand now, so the
        size can arrive either way. */
@@ -1375,16 +1377,23 @@ test("D233: one heading system, two typefaces, no child larger than its parent",
      it and kept the migrated head serif. interface-v2 owns it now, at the
      prototype's Inter 700 29px. The rule this test exists for is unchanged -
      the page title still outranks the card title beneath it. */
+  /* D819 · the card title left this block too, for the same reason the page
+     title did: it set every h2 and h3 in the shell to Manrope 800 18px with
+     !important, so D816's Inter could never win and step 3's card titles were
+     still Manrope on the live build. interface-v2 owns both now. The rule this
+     test exists for is unchanged - the ranking still has to hold. */
   const page = sizeOf(".app-shell .factory-page-head h1", css);
-  const card = sizeOf(".app-shell .workflow-stage h2");
-  const group = sizeOf(".app-shell .workflow-stage h4");
+  const card = sizeOf(".app-shell .factory-work h2", css);
+  const sub = sizeOf(".app-shell .factory-work h3", css);
+  const group = sizeOf(".app-shell .factory-work h4", css);
 
   assert.ok(page > card, `page title ${page} must outrank card title ${card}`);
-  assert.ok(card > group, `card title ${card} must outrank group title ${group}`);
+  assert.ok(card > sub, `card title ${card} must outrank the panel title ${sub}`);
+  assert.ok(sub >= group, `panel title ${sub} must not sit under the group title ${group}`);
 
-  /* The management pages are not being migrated, so their title keeps the
-     size this block gave it. */
-  assert.match(scale, /\.management-page h1[\s\S]{0,160}font-size: 34px/);
+  /* D818/D819 · the management pages ARE migrated now. Their title is the
+     shell's, so nothing in this block may set it any more. */
+  assert.doesNotMatch(scale, /\.management-page h1/);
   /* And Fraunces must not reappear in a heading RULE — the comment above the
      scale names it as the thing being removed, so strip comments first. */
   const rules = scale.slice(scale.indexOf("*/") + 2).replace(/\/\*[\s\S]*?\*\//g, "");

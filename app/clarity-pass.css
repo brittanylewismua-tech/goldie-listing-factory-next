@@ -1075,15 +1075,10 @@
    own note on headings was "the headings should be a sans serif, really easy
    to read text". interface-v2 owns the factory title now; the management
    pages, which are not being migrated, keep theirs unchanged. */
-.management-page h1,
-.mockupHero h1 {
-  font-family: "DM Serif Display", Georgia, serif !important;
-  font-size: 34px !important;
-  font-weight: 400 !important;
-  line-height: 1.12 !important;
-  letter-spacing: -.02em !important;
-  color: #3f2338 !important;
-}
+/* D819 · deleted. This set the interior page title in DM Serif 34px with six
+   !important declarations, and the comment above it said the management pages
+   "are not being migrated". They are now - they render the shell, so their
+   title is the shell's Inter 700 29px, which is the preview's value. */
 
 /* 2 · CARD TITLE — every h2 and h3 that names a card or panel.
    D692 · Sans. "I don't like the serif font... all of the titles, like, the
@@ -1100,35 +1095,28 @@
 /* D748 · The dark publish box is inside .workflow-stage and this rule sets
    colour with !important, so "18 listings ready" printed #3f2338 on #2d1d29.
    The card-title system is for pale cards; the one dark surface opts out. */
-.app-shell .workflow-stage h2:not(.factory-publish-box *),
-.app-shell .workflow-stage h3:not(.factory-publish-box *),
-.management-page h2,
-.management-page h3,
-.managementOnly h2,
-.managementOnly h3 {
-  font-family: "Manrope", system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif !important;
-  /* 18px, not 19 - D233 fixes the heading scale and 19 is not on it. */
-  font-size: 18px !important;
-  font-weight: 800 !important;
-  line-height: 1.25 !important;
-  letter-spacing: -.005em !important;
-  color: #3f2338 !important;
-  text-transform: none !important;
-}
+/* D819 · deleted, and this is the rule that made D816 false. It set every card
+   and panel title in the shell to Manrope 800 18px with !important on the
+   family, the size, the weight, the leading, the tracking and the colour.
+   D816 declared Inter for .factory-work h3 and could never win.
+
+   Confirmed on the live build, on step 3, with el.matches() against the real
+   stylesheets: five rules set font-family on "What Etsy needs" - four say Inter
+   and one says Manrope with !important, and the important one wins. It computed
+   to Manrope 800 18px while the preview computes to Inter 700 14px.
+
+   interface-v2 owns card titles: .factory-form-card > h3, .task-panel-lead h3,
+   .task-panel-heading h3 and .factory-checklist-card > h3 are 700 14px/1.3
+   Inter, read from the prototype. h2 keeps 18px, in Inter, declared below. */
 
 /* 3 · GROUP TITLE — a labelled group inside a card. Must never outweigh its
-      card title, which is what "1. Item prices" at 26px was doing. */
-.app-shell .workflow-stage h4,
-.management-page h4,
-.managementOnly h4 {
-  font-family: Manrope, "Hanken Grotesk", Inter, system-ui, sans-serif !important;
-  font-size: 15px !important;
-  font-weight: 800 !important;
-  line-height: 1.35 !important;
-  letter-spacing: -.01em !important;
-  color: #4b283e !important;
-  text-transform: none !important;
-}
+      card title, which is what "1. Item prices" at 26px was doing.
+   D819 · and which it was doing again, quietly: 15px Manrope under a card title
+   this same block was forcing to 18px, so the ranking held only because the
+   card title was inflated. With the card title at the prototype's 14px, a 15px
+   group title is a child heading larger than its parent - the exact defect D233
+   exists to catch. The prototype's scale inside a card is 14 / 11 / 12 / 10, so
+   a group title sits at 12. It moves to interface-v2 with the rest. */
 
 /* 4 · FIELD LABEL — already correct on the readiness rows; stated here so the
       scale is complete and the next label matches it rather than inventing one. */
