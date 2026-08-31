@@ -2921,12 +2921,22 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
     const design=files.find(item=>item.id===activeDesign)||files[0];
     const index=files.findIndex(item=>item.id===design.id);
     const properties=(design.etsy?.properties)||[];
+    /* D810 · What Etsy already has, first. The preview's checklist opens with
+       the details that are set - Closure, Sleeve length, Neckline - and ends
+       with what is still to review. Production listed them in whatever order
+       Printify returned, which for her products put five empty optional rows at
+       the top, so the column read as nothing but blanks. Required before
+       optional, set before empty; the order inside each group is unchanged. */
     const items=properties.map((property,position)=>({
       key:String(property.propertyId??position),
       label:property.label,
       value:property.value||"",
       required:Boolean(property.required),
-    }));
+    })).slice().sort((a,b)=>{
+      const rank=(item:{value:string;required:boolean})=>
+        (item.required?0:2)+(item.value.trim()?0:1);
+      return rank(a)-rank(b);
+    });
     const titled=files.filter(item=>(item.title||"").trim()).length;
     return <div className="factory-listing-screen">
       {/* Subordinate, and it says so: one section, collapsed by default once

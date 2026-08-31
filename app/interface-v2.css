@@ -1925,3 +1925,20 @@ html, body { background: #f1d2dc; }
    anything to a direct child, and the selector has to say so. */
 .app-shell .workflow-stage > .batch-tab-conflict{
   order:-1;position:sticky;top:12px;z-index:19;margin:0 0 14px}
+
+/* D810 · The title field was below the fold on step 3.
+
+   Side by side at 1440: the preview's left card opens with Title at y348,
+   readable the moment the step loads. Production opened with a 120px design
+   block that pushed Title to y707 - past the bottom of the window - so the
+   first thing the step is for could not be seen without scrolling.
+
+   The preview's card carries no artwork at all; its heading names the file and
+   that is how you know which listing you are on. D408 is still right that a
+   thumbnail alone cannot identify a design - so the artwork stays, at 44px
+   beside the heading where it costs nothing, with Enlarge for the full size. */
+.app-shell .factory-listing-form .task-listing-preview{
+  grid-template-columns:44px minmax(0,1fr);gap:10px;padding:0;border:0;background:none}
+.app-shell .factory-listing-form .task-listing-preview img{
+  width:44px;height:44px;border-radius:9px}
+.app-shell .factory-listing-form .task-listing-edit{gap:10px}
