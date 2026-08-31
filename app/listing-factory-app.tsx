@@ -960,6 +960,8 @@ export default function ListingFactoryApp() {
   const [bundleColorProducts,setBundleColorProducts]=useState<Record<string,TemplateDetails>>({});
   /* D801 · Which bundle products failed to load, and what Printify said. */
   const [bundleLoadErrors,setBundleLoadErrors]=useState<Record<string,string>>({});
+  /* D835 · The Etsy shops this seller has connected, and which one is active. */
+  const [etsyShops,setEtsyShops]=useState<{shopId:number;shopName:string;active:boolean}[]>([]);
   /* D378 - Each bundle member is its own batch, created one after another by
      continueBundle. That was invisible while only one product showed at a time,
      but steps 2-4 now list every product as a card, and a card you cannot open
@@ -1866,6 +1868,7 @@ export default function ListingFactoryApp() {
     })();
   },[restoringBatch,activeRecipe,activeBundle,signedIn]);
 
+  useEffect(()=>{void fetch("/api/etsy").then(response=>response.json()).then((result:{shops?:{shopId:number;shopName:string;active:boolean}[]})=>setEtsyShops(result.shops||[])).catch(()=>undefined)},[]);
   useEffect(()=>{setLocalPreview(["localhost","127.0.0.1"].includes(window.location.hostname));fetch("/api/account").then(response=>response.json()).then((result:{signedIn?:boolean;name?:string|null;initials?:string|null})=>{setSignedIn(Boolean(result.signedIn));setAccountName(result.name||null);setAccountInitials(result.initials||null)}).catch(()=>setSignedIn(null))},[]);
   useEffect(()=>{if(signedIn!==true||publishing)return;const jobId=window.localStorage.getItem("goldie-active-publish-job");if(jobId)void monitorPublishJob(jobId,true);
   },[signedIn]);
@@ -4016,6 +4019,13 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
                 <span className="factory-account-caret" aria-hidden="true">⌄</span>
               </button>
               {accountMenuOpen&&<div className="factory-account-menu open" role="menu">
+                {etsyShops.length>1&&<div className="factory-account-shops" role="group" aria-label="Etsy shop">
+                  <small>Etsy shop</small>
+                  {etsyShops.map(shop=><button key={shop.shopId} type="button" role="menuitemradio" aria-checked={shop.active}
+                    className={shop.active?"is-active":undefined} disabled={shop.active}
+                    onClick={()=>{void fetch("/api/etsy/active",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({shopId:shop.shopId})}).then(()=>window.location.reload())}}>
+                    {shop.shopName}{shop.active?" ✓":""}</button>)}
+                </div>}
                 <a role="menuitem" href="/usage" onClick={event=>guardNavigation(event,"/usage")}>Usage + Plan</a>
                 {/* D639 · ?step=connect is honoured as an explicit request and the
                     auto-skip leaves it alone, so this is the way back to the

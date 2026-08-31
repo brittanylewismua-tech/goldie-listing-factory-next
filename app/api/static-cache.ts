@@ -96,9 +96,20 @@ export async function rememberPairing(userId: string, printifyShopId: number, et
 }
 
 /* D661 · Called when either connection changes, so a proof cannot outlive the
-   connection it was about. */
-export async function forgetPairings(userId: string): Promise<void> {
+   connection it was about.
+   D835 · A seller can hold several Etsy shops now. Reconnecting one of them
+   voids the proofs about THAT shop; the proofs about the others describe
+   pairings that have not changed, and dropping them would make every switch a
+   full re-verification of everything the seller owns. Called with no shop it
+   still clears the lot, which is what a Printify token change needs. */
+export async function forgetPairings(userId: string, etsyShopId?: number): Promise<void> {
   const store = db();
   if (!store || !userId) return;
-  try { await store.prepare("DELETE FROM shop_pairing_proofs WHERE user_id=?").bind(userId).run() } catch { /* best effort */ }
+  try {
+    if (Number.isInteger(etsyShopId) && Number(etsyShopId) > 0) {
+      await store.prepare("DELETE FROM shop_pairing_proofs WHERE user_id=? AND etsy_shop_id=?").bind(userId, etsyShopId).run();
+      return;
+    }
+    await store.prepare("DELETE FROM shop_pairing_proofs WHERE user_id=?").bind(userId).run();
+  } catch { /* best effort */ }
 }

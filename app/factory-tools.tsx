@@ -10,7 +10,11 @@ export type Pricing = { targetProfit: number; etsyFeePercent: number; fixedFee: 
    batch — which currently fills only 2–3 of 11 fields and is not stable
    across listings in the same batch. */
 export type RecipeEtsyDefaults = Record<string, string | number | null>;
-export type Recipe = { id: string; name: string; templateUrl: string; description: string; defaultTitle: string; defaultMockupTheme?:string; mockupIds?:string[]; setupComplete?:boolean; defaultProfitTarget?:number;wholeNumberPricing?:boolean;variantPrices?:Record<string,number>; keywordListId?:string; printifyImageIndices?:number[]; normalizePadding?:boolean;etsyShippingProfileId?:number;defaultColorIds?:number[];defaultSizeIds?:number[];etsyDefaults?:RecipeEtsyDefaults;printifyShopTitle?:string;printifyShopId?:number };
+export type Recipe = { id: string; name: string; templateUrl: string; description: string; defaultTitle: string; defaultMockupTheme?:string; mockupIds?:string[]; setupComplete?:boolean; defaultProfitTarget?:number;wholeNumberPricing?:boolean;variantPrices?:Record<string,number>; keywordListId?:string; printifyImageIndices?:number[]; normalizePadding?:boolean;etsyShippingProfileId?:number;defaultColorIds?:number[];defaultSizeIds?:number[];etsyDefaults?:RecipeEtsyDefaults;printifyShopTitle?:string;printifyShopId?:number;
+  /* D835 · Whether this product's Printify store can publish to the Etsy shop
+     the seller is working in. "away" means a proof says it publishes somewhere
+     else, so the product is filed under its own store rather than offered. */
+  reach?:"here"|"away"|"unproven" };
 export type ProductBundle = { id:string;name:string;recipeIds:string[] };
 
 /* D222 · A product cannot join a bundle until it has been set up. Creating a
@@ -98,7 +102,7 @@ function LibraryShell({collapsed,children}:{collapsed?:boolean;children:ReactNod
 }
 
 export function SavedWorkflow(props: WorkflowProps) {
-  const [recipes, setRecipes] = useState<Recipe[]>([]), [name, setName] = useState(""), [message, setMessage] = useState(""), [editing, setEditing] = useState(false), [editingId, setEditingId] = useState(""), [activeId, setActiveId] = useState("");
+  const [recipes, setRecipes] = useState<Recipe[]>([]), [activeShop, setActiveShop] = useState<{shopId:number;shopName:string}|null>(null), [name, setName] = useState(""), [message, setMessage] = useState(""), [editing, setEditing] = useState(false), [editingId, setEditingId] = useState(""), [activeId, setActiveId] = useState("");
   /* D654 - "Add a new product" rendered the form below the saved-product grid
      and left the page where it was. Measured live: the form opened at 799px in
      an 812px viewport, so nothing visibly happened. Clicking it also clears the
@@ -139,7 +143,15 @@ export function SavedWorkflow(props: WorkflowProps) {
   const [pendingAction,setPendingAction]=useState("");
   const actionLock=useRef(false);
   const [,setKeywordLists]=useState<KeywordList[]>([]),[keywordListId,setKeywordListId]=useState("");
-  const reload = () => Promise.all([fetch("/api/product-recipes").then((r) => r.json()),fetch("/api/product-bundles").then(r=>r.json())]).then(([products,groups])=>{setRecipes(products.recipes||[]);setBundles(groups.bundles||[])}).catch(() => undefined);
+  /* D835 · The bank is scoped to the Etsy shop she is working in. A product
+     whose Printify store is proven to publish somewhere else can only end in a
+     409, so it is filed under its own store rather than offered here. Nothing
+     is hidden on a guess: a store with no verdict yet still shows. */
+  const reachable = recipes.filter(recipe => recipe.reach !== "away");
+  const elsewhere = recipes.filter(recipe => recipe.reach === "away");
+  const elsewhereStores = [...new Set(elsewhere.map(recipe => recipe.printifyShopTitle || "another store"))];
+
+  const reload = () => Promise.all([fetch("/api/product-recipes").then((r) => r.json()),fetch("/api/product-bundles").then(r=>r.json())]).then(([products,groups])=>{setRecipes(products.recipes||[]);setActiveShop(products.activeEtsyShop||null);setBundles(groups.bundles||[])}).catch(() => undefined);
 
   useEffect(() => { reload(); fetch("/api/keyword-lists").then(r=>r.json()).then(r=>setKeywordLists(r.lists||[])); }, []);
   /* Establishing colors, sizes, mockups or a keyword bank saves straight to the
@@ -225,7 +237,7 @@ export function SavedWorkflow(props: WorkflowProps) {
   return <article className="step-card recipe-card"><div className="step-number" aria-hidden="true"/><div className="step-content">{/* D257 · The page title already reads "Choose product" and the rail already
           reads PRODUCT. This card added a third "Product" six pixels below the
           second — the same defect as the Colors panel in D236. */}<p className="step-copy">Connect a product template to Printify once. Goldie will remember all the product details, pricing, shipping, keywords, and Etsy settings you choose for every future batch.</p>
-    {recipes.length > 0 && <LibraryShell collapsed={props.bundleChosen}><div className="recipe-library-head"><span>{recipes.length} saved {recipes.length === 1 ? "product" : "products"}</span><button className="add-product-button" disabled={Boolean(pendingAction)} onClick={async () => { if(!await props.onStartNewProduct())return;setEditing(true);setEditingId("");setActiveId("");setName("");setKeywordListId("");setMessage("");revealForm(); }}>＋ Add a new product</button></div><div className="recipe-grid">{recipes.map((recipe) => {const selecting=pendingAction===`recipe:${recipe.id}`;return <article className={`recipe-tile ${activeId === recipe.id ? "selected" : ""} ${selecting?"selecting":""}`} aria-busy={selecting} key={recipe.id}><button className="recipe-use" title={recipe.name} disabled={Boolean(pendingAction)} onClick={async () => {if(actionLock.current)return;actionLock.current=true;setPendingAction(`recipe:${recipe.id}`);setActiveId(recipe.id);setMessage("");try{if(!await props.onUseRecipe(recipe)){setActiveId("");return}setKeywordListId(recipe.keywordListId||"");setEditing(false)}finally{actionLock.current=false;setPendingAction("")}}}>{/* D729 · The band the prototype puts above a product's name. D197 removed
+    {reachable.length > 0 && <LibraryShell collapsed={props.bundleChosen}><div className="recipe-library-head"><span>{reachable.length} saved {reachable.length === 1 ? "product" : "products"}</span><button className="add-product-button" disabled={Boolean(pendingAction)} onClick={async () => { if(!await props.onStartNewProduct())return;setEditing(true);setEditingId("");setActiveId("");setName("");setKeywordListId("");setMessage("");revealForm(); }}>＋ Add a new product</button></div><div className="recipe-grid">{reachable.map((recipe) => {const selecting=pendingAction===`recipe:${recipe.id}`;return <article className={`recipe-tile ${activeId === recipe.id ? "selected" : ""} ${selecting?"selecting":""}`} aria-busy={selecting} key={recipe.id}><button className="recipe-use" title={recipe.name} disabled={Boolean(pendingAction)} onClick={async () => {if(actionLock.current)return;actionLock.current=true;setPendingAction(`recipe:${recipe.id}`);setActiveId(recipe.id);setMessage("");try{if(!await props.onUseRecipe(recipe)){setActiveId("");return}setKeywordListId(recipe.keywordListId||"");setEditing(false)}finally{actionLock.current=false;setPendingAction("")}}}>{/* D729 · The band the prototype puts above a product's name. D197 removed
                 what used to sit in it - a "P" for Printify, identical on every card and
                 meaningless on all of them. The band stays because it is what makes the
                 tile a product card; a bundle tile still fills it with its member count. */}<span className="recipe-icon" aria-hidden="true"/><span className="recipe-copy"><b>{recipe.name}</b><small>{selecting?"Loading product details…":recipeSummary(recipe)}</small>{!selecting&&recipeShopLabel(recipe)?<small className="recipe-shop" title={`Printify store: ${recipeShopLabel(recipe)}`}>{recipeShopLabel(recipe)}</small>:null}<em>{selecting?`Loading ${recipe.name}…`:activeId === recipe.id ? (props.templateVerified ? "✓ Ready" : "Checking…") : "Choose →"}</em></span></button>{activeId===recipe.id&&<button className="change-product" disabled={Boolean(pendingAction)} onClick={async()=>{if(!await props.onChangeProduct())return;setActiveId("");setEditing(false);setMessage("")}}>Change product</button>}<button className="edit-recipe" title="Rename this product or reconnect its Printify template" disabled={Boolean(pendingAction)} onClick={async () => {if(actionLock.current)return;actionLock.current=true;setPendingAction(`edit:${recipe.id}`);setActiveId(recipe.id);try{if(!await props.onUseRecipe(recipe)){setActiveId("");return}setEditingId(recipe.id); setName(recipe.name);setKeywordListId(recipe.keywordListId||"");setEditing(true)}finally{actionLock.current=false;setPendingAction("")}}}>Edit</button><button className="delete-recipe" disabled={Boolean(pendingAction)} aria-label={`Delete ${recipe.name}`} title="Delete saved product" onClick={() => void remove(recipe)}>Delete</button></article>})}</div></LibraryShell>}
@@ -265,6 +277,11 @@ export function SavedWorkflow(props: WorkflowProps) {
     </div>}
     {/* Once a bundle is the current selection its members are already listed above,
         so re-showing the bundle grid underneath just offered the same bundle again. */}
+    {elsewhere.length>0&&<p className="recipe-other-store">
+      <b>{elsewhere.length} more saved {elsewhere.length===1?"product":"products"}</b> under {elsewhereStores.join(" and ")}.
+      {" "}Those publish to a different Etsy shop, so they are not offered while you are in {activeShop?.shopName||"this shop"}.
+      {" "}<a href="/listing-factory?step=connect">Switch shop</a>
+    </p>}
     {bundles.length>0&&!activeId.startsWith("bundle:")&&<><div className="recipe-library-head bundle-card-heading"><span>{bundles.length} saved product {bundles.length===1?"bundle":"bundles"}</span>{/* D304 · "Bundles are selected exactly like individual products" removed — it described the mechanism, not anything the seller needs to decide. */}</div><div className="recipe-grid unified-bundle-grid">{bundles.map(bundle=>{const included=bundle.recipeIds.map(id=>recipes.find(recipe=>recipe.id===id)).filter(Boolean) as Recipe[],selecting=pendingAction===`bundle:${bundle.id}`,selected=activeId===`bundle:${bundle.id}`;return <article className={`recipe-tile bundle-as-product ${selected?"selected":""}`} aria-busy={selecting} key={bundle.id}><button className="recipe-use" title={bundle.name} disabled={included.length<2||Boolean(pendingAction)} onClick={()=>void chooseBundle(bundle)}><span className="recipe-icon">{included.length}</span><span className="recipe-copy"><b>{bundle.name}</b><small>{selecting?<span className="bundle-loading"><span className="goldie-spinner" aria-hidden="true"/>Preparing {included.length} products</span>:included.map(recipe=>recipe.name).join(" · ")||"Saved products missing"}</small><em>{selecting?"":selected?"✓ Ready":"Choose →"}</em></span></button><button className="edit-recipe" disabled={Boolean(pendingAction)} onClick={()=>openBundle(bundle)}>Edit</button><button className="delete-recipe" disabled={Boolean(pendingAction)} aria-label={`Delete ${bundle.name}`} title="Delete bundle" onClick={()=>void removeBundle(bundle)}>Delete</button></article>})}</div></>}
     {!recipes.length && <div className="first-recipe-callout"><span>＋</span><div><b>Create your first saved product</b><p>Name it and connect the completed product from Printify. That is all this step needs.</p></div></div>}
 

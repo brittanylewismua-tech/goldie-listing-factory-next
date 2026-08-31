@@ -31,12 +31,13 @@ async function refresh(userId:string,refreshToken:string){
   const response=await fetch("https://api.etsy.com/v3/public/oauth/token",{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:new URLSearchParams({grant_type:"refresh_token",client_id:apiKey(),refresh_token:refreshToken})});
   const payload=await response.json() as {access_token?:string;refresh_token?:string;expires_in?:number;error_description?:string};
   if(!response.ok||!payload.access_token||!payload.refresh_token)throw new Error(payload.error_description||"Reconnect Etsy to continue.");
-  await runtime().DB.prepare("UPDATE etsy_connections SET encrypted_access_token=?, encrypted_refresh_token=?, expires_at=?, updated_at=CURRENT_TIMESTAMP WHERE user_id=?").bind(await encryptEtsy(payload.access_token),await encryptEtsy(payload.refresh_token),Math.floor(Date.now()/1000)+Number(payload.expires_in||3600),userId).run();
+  await runtime().DB.prepare("UPDATE etsy_connections SET encrypted_access_token=?, encrypted_refresh_token=?, expires_at=?, updated_at=CURRENT_TIMESTAMP WHERE user_id=? AND is_active=1").bind(await encryptEtsy(payload.access_token),await encryptEtsy(payload.refresh_token),Math.floor(Date.now()/1000)+Number(payload.expires_in||3600),userId).run();
   return payload.access_token;
 }
 
 export async function etsyConnection(userId:string){
-  const row=await runtime().DB.prepare("SELECT encrypted_access_token, encrypted_refresh_token, expires_at, etsy_user_id, shop_id, shop_name FROM etsy_connections WHERE user_id=?").bind(userId).first<{encrypted_access_token:string;encrypted_refresh_token:string;expires_at:number;etsy_user_id:number;shop_id:number;shop_name:string}>();
+  const row=await runtime().DB.prepare(/* D835 · the seller may have several shops connected; this is the one they are working in. */
+    "SELECT encrypted_access_token, encrypted_refresh_token, expires_at, etsy_user_id, shop_id, shop_name FROM etsy_connections WHERE user_id=? AND is_active=1").bind(userId).first<{encrypted_access_token:string;encrypted_refresh_token:string;expires_at:number;etsy_user_id:number;shop_id:number;shop_name:string}>();
   if(!row)throw new Error("Connect Etsy before publishing this batch.");
   let token=await decryptEtsy(row.encrypted_access_token);
   if(row.expires_at<Math.floor(Date.now()/1000)+120)token=await refresh(userId,await decryptEtsy(row.encrypted_refresh_token));

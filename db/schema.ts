@@ -157,16 +157,20 @@ export const accountPlans = sqliteTable("account_plans", {
   updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });
 
+/* D835 · One row per Etsy shop the seller has connected, one of them active.
+   user_id was the primary key, which is what forced a seller to hold exactly
+   one shop while their product bank held products from any Printify store. */
 export const etsyConnections = sqliteTable("etsy_connections", {
-  userId: text("user_id").primaryKey(),
+  userId: text("user_id").notNull(),
+  shopId: integer("shop_id").notNull(),
   encryptedAccessToken: text("encrypted_access_token").notNull(),
   encryptedRefreshToken: text("encrypted_refresh_token").notNull(),
   expiresAt: integer("expires_at").notNull(),
   etsyUserId: integer("etsy_user_id").notNull(),
-  shopId: integer("shop_id").notNull(),
   shopName: text("shop_name").notNull(),
+  isActive: integer("is_active", { mode: "boolean" }).notNull().default(false),
   updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
-});
+}, (table) => [primaryKey({ columns: [table.userId, table.shopId] }), index("idx_etsy_connections_active").on(table.userId, table.isActive)]);
 
 export const etsyOauthStates = sqliteTable("etsy_oauth_states", {
   state: text("state").primaryKey(),

@@ -42,6 +42,10 @@ export default function FactoryShell({ active, title, children }:
   const [goal, setGoal] = useState<ListingGoal | null>(null);
   const [goalDays, setGoalDays] = useState<PublishedDay[]>([]);
   const [account, setAccount] = useState<{ name: string; initials: string; signedIn: boolean } | null>(null);
+  /* D835 · Every Etsy shop this seller has connected. The active one is the shop
+     the product bank is scoped to; switching is a menu choice, not an OAuth
+     round trip, because the token for each shop is already stored. */
+  const [shops, setShops] = useState<{ shopId: number; shopName: string; active: boolean }[]>([]);
   const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
@@ -53,6 +57,9 @@ export default function FactoryShell({ active, title, children }:
     }).catch(() => undefined);
     void fetch("/api/batches").then(response => response.json()).then((result: { published?: PublishedDay[] }) => {
       setGoalDays(result.published || []);
+    }).catch(() => undefined);
+    void fetch("/api/etsy").then(response => response.json()).then((result: { shops?: { shopId: number; shopName: string; active: boolean }[] }) => {
+      setShops(result.shops || []);
     }).catch(() => undefined);
     void fetch("/api/account").then(response => response.json()).then((result: { signedIn?: boolean; name?: string; initials?: string }) => {
       setAccount({ signedIn: Boolean(result.signedIn), name: result.name || "", initials: result.initials || "" });
@@ -110,6 +117,13 @@ export default function FactoryShell({ active, title, children }:
               <span className="factory-account-caret" aria-hidden="true">&#8964;</span>
             </button>
             {menuOpen && <div className="factory-account-menu open" role="menu">
+              {shops.length > 1 && <div className="factory-account-shops" role="group" aria-label="Etsy shop">
+                <small>Etsy shop</small>
+                {shops.map(shop => <button key={shop.shopId} type="button" role="menuitemradio" aria-checked={shop.active}
+                  className={shop.active ? "is-active" : undefined} disabled={shop.active}
+                  onClick={() => { void fetch("/api/etsy/active", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ shopId: shop.shopId }) }).then(() => window.location.reload()); }}>
+                  {shop.shopName}{shop.active ? " ✓" : ""}</button>)}
+              </div>}
               <a role="menuitem" href="/usage">Usage + Plan</a>
               <a role="menuitem" href="/listing-factory?step=connect">Connections</a>
               {account && <a role="menuitem" href={account.signedIn

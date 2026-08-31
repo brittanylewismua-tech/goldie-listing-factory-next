@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { env } from "cloudflare:workers";
 import { desc, eq, and } from "drizzle-orm";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { getDb } from "@/db";
@@ -8,7 +9,35 @@ export async function GET() {
   const user = await getChatGPTUser();
   if (!user) return NextResponse.json({ error: "Sign in to load product recipes." }, { status: 401 });
   const recipes = await getDb().select().from(productRecipes).where(eq(productRecipes.userId, user.userId)).orderBy(desc(productRecipes.updatedAt));
-  return NextResponse.json({ recipes: recipes.map((r) => {const saved=JSON.parse(r.pricingJson||"{}");return {...r,etsyShippingProfileId:Number(saved.etsyShippingProfileId)||0,defaultColorIds:Array.isArray(saved.defaultColorIds)?saved.defaultColorIds.filter(Number.isInteger):[],defaultSizeIds:Array.isArray(saved.defaultSizeIds)?saved.defaultSizeIds.filter(Number.isInteger):[],defaultProfitTarget:Number(saved.defaultProfitTarget)||10,wholeNumberPricing:saved.wholeNumberPricing===true,variantPrices:saved.variantPrices&&typeof saved.variantPrices==="object"?saved.variantPrices as Record<string,number>:{},etsyDefaults:saved.etsyDefaults&&typeof saved.etsyDefaults==="object"?saved.etsyDefaults:{},printifyShopTitle:typeof saved.printifyShopTitle==="string"?saved.printifyShopTitle:"",printifyShopId:Number(saved.printifyShopId)||0,mockupIds:Array.isArray(saved.mockupIds)?saved.mockupIds.filter((id:unknown)=>typeof id==="string").slice(0,8):undefined,setupComplete:saved.setupComplete!==false,printifyImageIndices:JSON.parse(r.printifyImageIndicesJson||"[]")}}) });
+  /* D835 · The bank is scoped to the Etsy shop the seller is working in.
+     A product can only be built into a listing if its Printify store publishes
+     to the active Etsy shop, and shop_pairing_proofs is where that verdict
+     already lives. Three states, and the difference matters:
+
+       paired here   a proof says this Printify store publishes to the active
+                     shop. Offer it.
+       unproven      no verdict yet for this store. Offer it - hiding a product
+                     on no evidence is how a seller loses work they can do.
+       paired away   a proof says it publishes to one of their OTHER connected
+                     shops. Hide it behind a count and a way to switch, because
+                     choosing it here can only end in a 409.
+
+     Measured on her account: with godisagirlapparel connected, three of four
+     products loaded; connecting She's A Wolf Clothing inverted it to one of
+     four. That is the whole reason for this. */
+  const active = await env.DB.prepare("SELECT shop_id, shop_name FROM etsy_connections WHERE user_id=? AND is_active=1")
+    .bind(user.userId).first<{ shop_id: number; shop_name: string }>();
+  const proofs = await env.DB.prepare("SELECT printify_shop_id, etsy_shop_id FROM shop_pairing_proofs WHERE user_id=?")
+    .bind(user.userId).all<{ printify_shop_id: number; etsy_shop_id: number }>();
+  const here = new Set<number>(), away = new Set<number>();
+  for (const proof of proofs.results || []) {
+    if (active && proof.etsy_shop_id === active.shop_id) here.add(proof.printify_shop_id);
+    else away.add(proof.printify_shop_id);
+  }
+  const reach = (printifyShopId: number) =>
+    !printifyShopId || here.has(printifyShopId) ? "here" : away.has(printifyShopId) ? "away" : "unproven";
+
+  return NextResponse.json({ activeEtsyShop: active ? { shopId: active.shop_id, shopName: active.shop_name } : null, recipes: recipes.map((r) => {const saved=JSON.parse(r.pricingJson||"{}");return {...r,etsyShippingProfileId:Number(saved.etsyShippingProfileId)||0,defaultColorIds:Array.isArray(saved.defaultColorIds)?saved.defaultColorIds.filter(Number.isInteger):[],defaultSizeIds:Array.isArray(saved.defaultSizeIds)?saved.defaultSizeIds.filter(Number.isInteger):[],defaultProfitTarget:Number(saved.defaultProfitTarget)||10,wholeNumberPricing:saved.wholeNumberPricing===true,variantPrices:saved.variantPrices&&typeof saved.variantPrices==="object"?saved.variantPrices as Record<string,number>:{},etsyDefaults:saved.etsyDefaults&&typeof saved.etsyDefaults==="object"?saved.etsyDefaults:{},printifyShopTitle:typeof saved.printifyShopTitle==="string"?saved.printifyShopTitle:"",printifyShopId:Number(saved.printifyShopId)||0,mockupIds:Array.isArray(saved.mockupIds)?saved.mockupIds.filter((id:unknown)=>typeof id==="string").slice(0,8):undefined,setupComplete:saved.setupComplete!==false,reach:reach(Number(saved.printifyShopId)||0),printifyImageIndices:JSON.parse(r.printifyImageIndicesJson||"[]")}}) });
 }
 
 export async function POST(request: Request) {

@@ -8,8 +8,12 @@ function base64url(bytes:Uint8Array){let value="";for(const byte of bytes)value+
 
 export async function GET(){
   const user=await getChatGPTUser();if(!user)return NextResponse.json({connected:false},{status:401});
-  const row=await env.DB.prepare("SELECT shop_id, shop_name FROM etsy_connections WHERE user_id=?").bind(user.userId).first<{shop_id:number;shop_name:string}>();
-  return NextResponse.json(row?{connected:true,shopId:row.shop_id,shopName:row.shop_name}:{connected:false});
+  /* D835 · Several shops can be connected. The active one is the shop this
+     seller is working in; the list is what the switcher offers. */
+  const rows=await env.DB.prepare("SELECT shop_id, shop_name, is_active FROM etsy_connections WHERE user_id=? ORDER BY shop_name").bind(user.userId).all<{shop_id:number;shop_name:string;is_active:number}>();
+  const shops=(rows.results||[]).map(row=>({shopId:row.shop_id,shopName:row.shop_name,active:row.is_active===1}));
+  const active=shops.find(shop=>shop.active);
+  return NextResponse.json(active?{connected:true,shopId:active.shopId,shopName:active.shopName,shops}:{connected:false,shops});
 }
 
 export async function POST(){
@@ -22,4 +26,10 @@ export async function POST(){
   }catch(error){return NextResponse.json({error:error instanceof Error?error.message:"Etsy connection could not start."},{status:500})}
 }
 
-export async function DELETE(){const user=await getChatGPTUser();if(!user)return NextResponse.json({error:"Sign in to continue."},{status:401});await env.DB.prepare("DELETE FROM etsy_connections WHERE user_id=?").bind(user.userId).run();/* D661 · A pairing proof is about one Etsy shop. Disconnecting voids it. */await forgetPairings(user.userId);return NextResponse.json({connected:false})}
+export async function DELETE(){const user=await getChatGPTUser();if(!user)return NextResponse.json({error:"Sign in to continue."},{status:401});/* D835 · Disconnect the shop the seller is in, and promote another if one
+  remains, so "disconnect" never leaves them connected to nothing while other
+  shops are still authorised. */
+  const going=await env.DB.prepare("SELECT shop_id FROM etsy_connections WHERE user_id=? AND is_active=1").bind(user.userId).first<{shop_id:number}>();
+  await env.DB.prepare("DELETE FROM etsy_connections WHERE user_id=? AND is_active=1").bind(user.userId).run();
+  const next=await env.DB.prepare("SELECT shop_id FROM etsy_connections WHERE user_id=? ORDER BY updated_at DESC LIMIT 1").bind(user.userId).first<{shop_id:number}>();
+  if(next)await env.DB.prepare("UPDATE etsy_connections SET is_active=1 WHERE user_id=? AND shop_id=?").bind(user.userId,next.shop_id).run();/* D661 · A pairing proof is about one Etsy shop. Disconnecting voids it. */await forgetPairings(user.userId,going?.shop_id);return NextResponse.json({connected:false})}

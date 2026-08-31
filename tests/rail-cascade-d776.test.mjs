@@ -794,3 +794,55 @@ test("D833: every declaration that sizes the gate resolves for a 375px phone", (
   assert.deepEqual(reversed, [],
     `a later declaration reverses a resolved value:\n${reversed.join("\n")}`);
 });
+
+test("D835: the rail is fixed and its contents fit inside it", () => {
+  /* D834 restored "Powered by Goldie AI" by letting the rail scroll. The rail
+     is fixed - one scroller in the pane - so the contents have to fit instead.
+
+     Measured live before this: rail clientHeight 643, content 769, the
+     powered-by line laid out at y712..744 and clipped.
+
+     Two things are asserted. First, nothing may make the rail a scrolling
+     region: overflow-y resolved at desktop must be neither auto nor scroll.
+     Second, the savings that make it fit have to still be there - if someone
+     puts the nav links or the padding back, the line is clipped again and no
+     test would notice. */
+  const load = ["globals.css", "factory-navigation.css", "theme.css", "lilac-theme.css",
+    "approved-functional.css", "management-aesthetic.css", "clarity-pass.css", "interface-v2.css"];
+  const winner = (matches, property) => {
+    const found = [];
+    load.forEach((name, order) => {
+      const css = fs.readFileSync(new URL(`../app/${name}`, import.meta.url), "utf8");
+      postcss.parse(css).walkRules(rule => {
+        if (!rule.selectors.some(one => matches(one.replace(/\s+/g, " ").trim()))) return;
+        const media = rule.parent.type === "atrule" ? rule.parent.params : "";
+        /* desktop: the gate breakpoint does not apply */
+        if (/max-width:\s*(\d+)px/.test(media) && Number(/max-width:\s*(\d+)px/.exec(media)[1]) < 1180) return;
+        rule.walkDecls(property, decl => found.push({
+          where: `${name}:${decl.source.start.line}`, order, line: decl.source.start.line,
+          value: decl.value, important: decl.important === true,
+        }));
+      });
+    });
+    found.sort((a, b) => Number(a.important) - Number(b.important) || a.order - b.order || a.line - b.line);
+    return found[found.length - 1];
+  };
+  const isRail = one => one === ".app-shell > .topbar" || one === ".app-shell .topbar" || one === ".topbar";
+
+  for (const property of ["overflow", "overflow-y"]) {
+    const found = winner(isRail, property);
+    if (!found) continue;
+    assert.doesNotMatch(found.value, /auto|scroll/,
+      `the rail must not scroll — ${property} resolves to ${found.value} (${found.where})`);
+  }
+
+  /* The savings, so they cannot quietly come back. */
+  const v2 = fs.readFileSync(new URL("../app/interface-v2.css", import.meta.url), "utf8");
+  const shell = fs.readFileSync(new URL("../app/factory-shell.tsx", import.meta.url), "utf8");
+  const navCount = (shell.match(/\{ key: "/g) || []).length;
+  assert.equal(navCount, 3, `the rail carries ${navCount} nav links; the height budget assumes 3`);
+  assert.match(v2, /\.app-shell > \.topbar\{overflow:hidden;padding-top:26px;padding-bottom:18px\}/);
+  assert.match(v2, /\.app-shell > \.topbar > \.brand-lockup\{margin-bottom:18px\}/);
+  assert.match(v2, /\.app-shell \.approved-sidebar-footer\{gap:7px;padding-top:12px\}/);
+  assert.match(v2, /\.listing-goal-side\{\s*border-radius:16px;padding:10px 14px/);
+});

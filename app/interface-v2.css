@@ -2469,7 +2469,7 @@ html, body { background: #f1d2dc; }
 
 .app-shell .topbar .approved-usage,
 .app-shell .topbar .listing-goal-side{
-  border-radius:16px;padding:13px 14px;margin:0}
+  border-radius:16px;padding:10px 14px;margin:0}
 .app-shell .topbar .listing-goal-side{margin-top:12px}
 .app-shell .topbar .approved-usage{
   background:rgba(255,255,255,.36);border:1px solid rgba(255,255,255,.65)}
@@ -2483,14 +2483,32 @@ html, body { background: #f1d2dc; }
 .app-shell .topbar .listing-goal-track{background:rgba(123,62,105,.16)}
 .app-shell .topbar .listing-goal-track > i{background:#7b3e69}
 
-/* D834b · "Powered by Goldie AI" had disappeared from the bottom of the rail.
-   Measured live: the rail is height 100vh with overflow hidden - 643px at her
-   viewport - and its content is 769px tall. .approved-powered was laid out at
-   y712..744, sixty-nine pixels below the rail's own bottom edge, and clipped.
+/* D835b · "Powered by Goldie AI" had disappeared from the bottom of the rail.
+   Measured live at her viewport: rail clientHeight 643, content 769, so the
+   line was laid out at y712..744 - sixty-nine pixels past the rail's own
+   bottom edge - and clipped.
 
-   Trimming two links off the nav gives most of that back, and the rail scrolls
-   rather than swallowing its own footer if it ever runs long again. */
-.app-shell > .topbar{overflow-y:auto;overscroll-behavior:contain}
+   D834 fixed that by letting the rail scroll. That was wrong: the rail is
+   fixed, one scroller in the pane, and she has said so. The contents have to
+   fit instead. Budget, measured rather than guessed:
+
+     over by            126   (769 - 643, before D834's counter change)
+     two nav links      -92   2 x 40 tall + 2 x 6 gap
+     brand margin       -24   42 -> 18
+     rail padding       -17   36/25 -> 26/18
+     footer gap         -8    9 -> 7, four gaps
+     counter padding    -12   13 -> 10, two cards
+     footer padding-top -4    16 -> 12
+                        ----
+                        -157 against 126 needed, and 136 with D834's counters
+
+   which leaves the rail fitting at 643 with room, and still fitting near 600.
+   The overflow stays hidden and D835's test asserts scrollHeight <= clientHeight
+   with overflow-y neither auto nor scroll. */
+.app-shell > .topbar{overflow:hidden;padding-top:26px;padding-bottom:18px}
+.app-shell > .topbar > .brand-lockup{margin-bottom:18px}
+.app-shell .approved-sidebar-footer{gap:7px;padding-top:12px}
+.app-shell .etsy-api-disclosure{line-height:1.35}
 
 /* D834c · the finished-section tick, and the product's own photo where the
    words "YOUR ART" used to be. Both were in the app before the shell migration
@@ -2503,3 +2521,20 @@ html, body { background: #f1d2dc; }
 .app-shell .template-proof > .product-thumb{
   width:52px;height:52px;flex:0 0 52px;object-fit:contain;
   border:1px solid #e4cedb;border-radius:10px;background:#fff}
+
+/* D835c · the shop switcher in the account menu, and the line that says where
+   the rest of the bank is. */
+.app-shell .factory-account-shops{display:grid;gap:2px;padding:4px 0 8px;margin:0 0 6px;border-bottom:1px solid #eadfe6}
+.app-shell .factory-account-shops > small{
+  padding:0 12px 4px;color:#8a6b80;
+  font:750 10px/1.2 Inter,ui-sans-serif,system-ui,sans-serif;letter-spacing:.14em;text-transform:uppercase}
+.app-shell .factory-account-shops > button{
+  width:100%;padding:8px 12px;border:0;border-radius:8px;background:transparent;color:#3d2538;
+  font:600 13px/1.3 Inter,ui-sans-serif,system-ui,sans-serif;text-align:left;cursor:pointer}
+.app-shell .factory-account-shops > button:hover:not(:disabled){background:#f7edf3}
+.app-shell .factory-account-shops > button.is-active{color:#7b3e69;background:rgba(123,62,105,.10);cursor:default}
+.app-shell .recipe-other-store{
+  margin:14px 0 0;padding:12px 14px;border:1px solid #e4cedb;border-radius:12px;background:#fffafc;
+  color:#6e606a;font:12px/1.55 Inter,ui-sans-serif,system-ui,sans-serif}
+.app-shell .recipe-other-store b{color:#3d2538}
+.app-shell .recipe-other-store a{color:#7b3e69;text-decoration:underline;text-underline-offset:3px}
