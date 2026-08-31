@@ -2378,7 +2378,22 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
       if(Object.keys(loaded).length)setBundleColorProducts(current=>({...current,...loaded}));
     });
     return()=>{alive=false};
-  },[activeBundle,bundleRecipes,activeRecipe,bundleColorProducts]);
+  /* D831 · bundleLoadErrors is read by the `missing` filter above and was not in
+     this list, so clearing it did not re-run the effect. "Try these again" is
+     `setBundleLoadErrors({})` and nothing else, which means it removed the only
+     honest thing on the screen and reloaded nothing.
+
+     Verified live on the ZZ TEST BUNDLE: one click and the card reading "1 of 3
+     products in this bundle could not be opened" was gone for good - no retry
+     control, no message - while /api/printify still answered 409 for the Gildan
+     Tee at that same moment. The step then read "Complete" and "All product
+     requirements complete" with a product it cannot build.
+
+     With the dependency present, clearing the errors makes those recipes missing
+     again, they are refetched, and a failure is recorded again. It settles
+     rather than looping: once an error is recorded the filter excludes that
+     recipe, so `missing` empties and the effect returns early. */
+  },[activeBundle,bundleRecipes,activeRecipe,bundleColorProducts,bundleLoadErrors]);
 
   /* D499 - step 1 shows every product in the bundle as the same card, expanded,
      each with its own rows - Colors, Sizes, Pricing, Shipping - and a Change

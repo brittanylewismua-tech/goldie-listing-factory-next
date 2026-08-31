@@ -658,3 +658,26 @@ test("D830: editing a title never empties the tags or overwrites the seller's", 
   const seo = await fs.promises.readFile(new URL("../app/seo-utils.ts", import.meta.url), "utf8");
   assert.match(seo, /phrase\.length <= 20/, "tagsFromTitle still keeps only short phrases - that part is deliberate");
 });
+
+test("D831: 'Try these again' actually tries them again", async () => {
+  /* Exercised live on the ZZ TEST BUNDLE. One click on the failure card's own
+     retry control and the card was gone permanently - no message, no retry
+     button - while /api/printify still answered 409 for the Gildan Tee at that
+     same moment, confirmed by calling it from the page immediately after. The
+     step then read "Complete" and "All product requirements complete" for a
+     bundle with a product it cannot build.
+
+     The button is `setBundleLoadErrors({})`. The effect that loads the missing
+     products reads bundleLoadErrors in its filter and did not list it as a
+     dependency, so clearing it reloaded nothing. */
+  const app = await fs.promises.readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+  assert.match(app, /\},\[activeBundle,bundleRecipes,activeRecipe,bundleColorProducts,bundleLoadErrors\]\);/,
+    "the loader must re-run when the errors are cleared");
+  assert.match(app, /onClick=\{\(\)=>setBundleLoadErrors\(\{\}\)\}>Try these again/,
+    "and the retry control still clears them");
+
+  /* D828's companion: while a member is unloadable the step may not claim to be
+     complete. Both halves have to hold or the retry hides a broken batch. */
+  assert.match(app, /function failedBundleNames\(\)/);
+  assert.match(app, /could not be opened, so this batch cannot make its listings\./);
+});
