@@ -2342,8 +2342,16 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
       const outcome=await fetchWithDeadline("/api/printify",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({productUrl:recipe.templateUrl,savedShippingProfileId:Number(recipe.etsyShippingProfileId)||0})},30000)
         .then(async response=>{
           if(response.ok)return {product:(await response.json() as {product?:TemplateDetails}).product};
-          const body=await response.json().catch(()=>null) as {error?:string;message?:string}|null;
-          return {error:body?.error||body?.message||`Printify could not return this product (${response.status}).`};
+          const body=await response.json().catch(()=>null) as {error?:string;message?:string;issues?:string[]}|null;
+          /* D817 · The API says what to do and D801 was throwing it away. A 400
+             answers "This Printify product cannot be used yet." and then an
+             `issues` array with the actual instruction - on her bundle, "Publish
+             this product to Etsy once with the shipping profile you want Goldie
+             to copy." Without it the card states a dead end; with it, it states
+             the fix. */
+          const detail=(body?.issues||[]).filter(Boolean).join(" ");
+          const headline=body?.error||body?.message||`Printify could not return this product (${response.status}).`;
+          return {error:detail?`${headline} ${detail}`:headline};
         })
         .catch(()=>({error:"Goldie could not reach Printify for this product."}));
       if("product" in outcome&&outcome.product)return [recipe.id,outcome.product] as const;

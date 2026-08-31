@@ -387,3 +387,20 @@ test("D816: every heading in the pane resolves to Inter", () => {
       `${heading} in the pane resolves to ${winner ? winner.value : "unset"}`);
   }
 });
+
+test("D817: a bundle product's failure carries the API's instruction, not just its headline", () => {
+  /* Diagnosed on her ZZ TEST BUNDLE by calling the endpoint directly:
+
+       Gildan Hoodie    400 "This Printify product cannot be used yet."
+                            issues: "Publish this product to Etsy once with the
+                            shipping profile you want Goldie to copy."
+       gildan crewneck  400  same
+       Gildan Tee       409 "This Printify store publishes to a different Etsy
+                            shop than the one Goldie is connected to."
+                            shop: "She's A Wolf Clothing"
+
+     The headline alone is a dead end; the issues array is the instruction. */
+  const app = fs.readFileSync(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+  assert.match(app, /body\?\.issues/, "the failure path reads the API's issues");
+  assert.match(app, /detail\?`\$\{headline\} \$\{detail\}`:headline/, "and shows them with the headline");
+});
