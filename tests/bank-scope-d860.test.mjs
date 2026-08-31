@@ -95,3 +95,14 @@ test("every surface reads the one scoped list — D860", () => {
     assert.ok(!body.includes(leak), `the unscoped list is still read: ${leak}`);
   }
 });
+
+test("the bundle disclosure does not open when fewer than two products are available — D861", () => {
+  const tools = readFileSync(new URL("../app/factory-tools.tsx", import.meta.url), "utf8");
+  const css = readFileSync(new URL("../app/interface-v2.css", import.meta.url), "utf8");
+
+  assert.match(tools, /<details className="bundle-library" open=\{bundleForm\}/,
+    "Edit bundle must still be able to open the controlled disclosure");
+  assert.match(tools, /<summary aria-disabled=\{reachable\.length<2&&!bundleForm\} onClick=\{event=>\{if\(reachable\.length<2&&!bundleForm\)event\.preventDefault\(\)\}\}>/,
+    "the native details toggle must be cancelled when no bundle can be created");
+  assert.match(css, /\.bundle-library > summary\[aria-disabled="true"\]\{cursor:default;opacity:\.72\}/);
+});

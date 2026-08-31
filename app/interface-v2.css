@@ -2805,3 +2805,10 @@ html, body { background: #f1d2dc; }
    might be white ink on nothing and wrong as a 268x116 field behind an opaque
    Printify mockup - the tile read as patterned rather than as a product. */
 .app-shell .recipe-icon > img{width:auto;max-width:100%;height:100%;min-height:0;max-height:100%}
+
+/* D861 · With fewer than two products available in the active shop, the
+   bundle disclosure has no form it can open. It reads as unavailable rather
+   than behaving like an empty control. */
+.app-shell .bundle-library > summary[aria-disabled="true"]{cursor:default;opacity:.72}
+.app-shell .bundle-library > summary[aria-disabled="true"]::marker{color:transparent}
+.app-shell .bundle-library > summary[aria-disabled="true"]::-webkit-details-marker{color:transparent}
