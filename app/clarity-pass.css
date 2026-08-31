@@ -3222,13 +3222,11 @@ body{min-width:1180px!important}
   background:linear-gradient(135deg,#5a2f4a,#7a4364)!important;
 }
 /* Chosen is a state, not an offer. It stops shouting. */
+/* D813 - a third rule filling the same label. D812 removed one, missed two,
+   and said it was done; the resolver test now names whichever one wins. The
+   tile is a button and its label is a word. */
 .app-shell .recipe-card .recipe-tile.selected .recipe-copy em,
-.app-shell .recipe-card .recipe-tile.selected .recipe-use em{
-  background:rgba(107,58,88,.12)!important;
-  color:#5f3352!important;
-  font-weight:800!important;
-  box-shadow:none!important;
-}
+.app-shell .recipe-card .recipe-tile.selected .recipe-use em{background:none;border-color:transparent;color:#37704c}
 
 /* A count on the left of a title reads as a bullet. On the right it reads as a
    quantity, and it lands on the same edge as Edit and Delete below it. Built as

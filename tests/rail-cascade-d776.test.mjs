@@ -304,3 +304,26 @@ test("D801: a bundle product that fails to load is reported, not spun on forever
   assert.match(app, /const waiting=list\.some\([\s\S]{0,220}?bundleLoadErrors\[recipe\.id\]\)/,
     "waiting excludes products that failed, or the report never shows");
 });
+
+test("D813: the product tile's label is a word, not a filled bar", () => {
+  /* D812 said this was done and it was not. Removing one rule left two behind:
+     the very next line in the same file restored the green fill, and
+     approved-functional restored a #673452 fill with !important, which beat
+     everything. The commit's claim and the resolved cascade disagreed, and no
+     test was checking the difference - so this resolves it.
+
+     The tile is a <button>: clicking anywhere on it chooses that product. A
+     filled bar inside it is a second control for the act the card already
+     performs. */
+  const faults = [];
+  for (const selectorTest of [
+    (selector) => /\.recipe-copy>em$/.test(selector),
+    (selector) => /\.recipe-tile\.selected[^,]*em$/.test(selector),
+  ]) {
+    const winner = resolve({ selectorTest, property: "background" });
+    if (winner && !/^(none|transparent|rgba\(0, ?0, ?0, ?0\))$/.test(winner.value)) {
+      faults.push(`the tile label resolves to background:${winner.value} from ${winner.file}:${winner.line} (${winner.selector})`);
+    }
+  }
+  assert.deepStrictEqual(faults, []);
+});

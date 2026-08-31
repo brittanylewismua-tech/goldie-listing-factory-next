@@ -1167,7 +1167,10 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 
 /* PASS 1 defect copy/contrast cleanup: D3, D6-D9, D11, D24-D25, D38,
    D43-D44, D48, D61-D62, D66, D68-D69 and D72. */
-.app-shell .recipe-card .recipe-tile.selected .recipe-use em{color:#fff!important;background:#673452!important}
+/* D813 - this repainted the chosen tile's label as a filled #673452 bar with
+   !important, which is the bar D812 removed. The tile is a button; its label is
+   a word. The ring around the card is what says it is chosen. */
+.app-shell .recipe-card .recipe-tile.selected .recipe-use em{color:#37704c!important;background:none!important}
 .app-shell .recipe-card .edit-recipe{font-size:10px!important;font-weight:800}
 .app-shell .everything-else>summary span:after{content:"Usually no changes needed";display:block;margin-top:3px;color:#80677a;font-size:9px;font-weight:600}
 .app-shell .variant-pricing :is(.item-pricing-section,.shipping-pricing-section) .heading-with-help>button{display:none!important}
