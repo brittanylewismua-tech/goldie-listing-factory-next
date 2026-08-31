@@ -572,3 +572,36 @@ test("D823: both sidebars format the allowance the way the prototype does", asyn
     assert.match(source, /published/, `${file} names what the goal counts`);
   }
 });
+
+test("D826: nothing outside interface-v2 dresses an interior heading", async () => {
+  /* D818's own test asserted the interior h1 resolved to #3d2538 and it did
+     not: it rendered #241f24 on the live build. The resolver's selectorTest
+     matched only selectors ENDING in `interior-page > header h1`, so
+     `.management-page>header h1{color:var(--studio-ink)!important}` in
+     lilac-theme was never a candidate. That is the same blind spot that let
+     D816 pass while step 3 rendered Manrope.
+
+     A suffix match cannot be trusted to find the winner, so this asserts the
+     absence of the whole class of rule instead: no sheet other than
+     interface-v2 may set a typeface, a size or a weight on a heading inside
+     .management-page, .usage-page, .keyword-page or .keyword-hero. Those pages
+     render the shell now; the shell's scale is the only one they get.
+
+     .mockupFactory is deliberately out of scope - it has its own camelCase
+     design and I cannot verify it rendered as thoroughly. */
+  const interior = /\.(management-page|usage-page|keyword-page|keyword-hero)(?![\w-])/;
+  const files = (await fs.promises.readdir(new URL("../app", import.meta.url))).filter(name => name.endsWith(".css"));
+  const offenders = [];
+  for (const file of files) {
+    if (file === "interface-v2.css") continue;
+    const css = await fs.promises.readFile(new URL(`../app/${file}`, import.meta.url), "utf8");
+    postcss.parse(css).walkDecls(decl => {
+      if (!/^font(-family|-size|-weight)?$/.test(decl.prop)) return;
+      const selector = (decl.parent.selector || "").replace(/\s+/g, " ");
+      if (!/\bh[1-4]\b/.test(selector) || !interior.test(selector) || /mockup/i.test(selector)) return;
+      offenders.push(`${file}:${decl.source.start.line} ${selector.slice(0, 56)} — ${decl.prop}:${decl.value.slice(0, 30)}`);
+    });
+  }
+  assert.deepEqual(offenders, [],
+    `a second heading scale still reaches the interior pages:\n${offenders.join("\n")}`);
+});
