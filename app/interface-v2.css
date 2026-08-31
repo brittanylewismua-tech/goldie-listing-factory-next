@@ -2668,3 +2668,34 @@ html, body { background: #f1d2dc; }
 .app-shell .bank-library .bank-legend{
   margin:5px 0 0;max-width:52ch;color:#7a6672;
   font:600 12px/1.45 Inter,ui-sans-serif,system-ui,sans-serif}
+
+/* ==========================================================================
+   D850 · the tile actions were too small to read
+   ==========================================================================
+
+   Measured on the deployed build, in a 290px tile:
+
+     Change product   font-size 0   (label drawn by a ::after at 9px)
+     Edit             10px
+     Delete            9px
+     "Optional" badge  8px
+
+   Nine and ten pixels is eyebrow-label size, and these are not eyebrows - they
+   are the three controls that rename, swap and destroy a saved product. They
+   were sized for D186's 207px tile, which has not existed for a long time. At
+   11px the row measures roughly 178px of the 290 available, so nothing is
+   cramped and nothing wraps.
+
+   The real word goes back on the button too: with clarity-pass's font-size:0
+   gone, "Change product" is its own label rather than a pseudo-element that
+   copy, search and a screen reader all read differently from what is drawn. */
+.app-shell .recipe-card .change-product,
+.app-shell .recipe-tile .change-product{
+  font-size:11px;font-weight:800;padding:0 12px;min-width:0}
+.app-shell .recipe-card .change-product::after,
+.app-shell .recipe-tile .change-product::after{content:none}
+.app-shell .edit-recipe,.app-shell .delete-recipe{font-size:11px;font-weight:800}
+
+/* The bundle library's summary badge sat at 8px, which is smaller than the
+   legal disclosure in the rail. */
+.app-shell .bundle-library > summary small em{font-size:10px;letter-spacing:.5px}

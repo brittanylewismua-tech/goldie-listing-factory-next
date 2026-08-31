@@ -709,13 +709,14 @@
  * A first attempt replaced the grid with wrapping flex. That was worse — each
  * button took its own row and the tile went 163px -> 296px tall. Measured on the
  * deployed build, which is the only reason I caught it. The grid was nearly right;
- * the label was too long and the overflow was hiding the evidence. */
-.app-shell .recipe-card .change-product{
-  font-size:0!important;
-  padding:4px 9px!important;
-  min-width:0!important;
-}
-.app-shell .recipe-card .change-product:after{content:"Change";font-size:9px;font-weight:800}
+ * the label was too long and the overflow was hiding the evidence.
+ *
+ * D850 · Removed. The tile is 290px now, not 207px, so the crowding this was
+ * solving no longer exists — and what it left behind was a button whose own
+ * font-size was 0 with its label smuggled in through ::after at 9px. Measured on
+ * the deployed build: change 56px + edit 47px + delete 57px = 160px of buttons in
+ * a 290px tile. There is room for the real words at a readable size, and
+ * interface-v2.css sets them. */
 
 /* D188 · The blueprint catalog image is a blank garment shot on white, so at 52px
  * a white tee vanished into the card. White plate, contained, bordered. */

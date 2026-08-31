@@ -1000,8 +1000,20 @@ test("a selected product tile does not clip its own actions — D186", async () 
    * here — the same way the mockup dead column survived five reports. */
   /* The wrapping-flex attempt made it worse — one button per row, tile 163px ->
    * 296px. The grid was nearly right; the label was too long. */
+  /* D850 · The truncation this test used to require is gone. The tile is 290px
+   * now, not 207px, so the crowding is gone with it - and what D186 left behind
+   * was a button with font-size:0 whose label was smuggled in through ::after at
+   * 9px, so what a screen reader announced and what copy/search found was not
+   * what was drawn. Measured on the deployed build: change 56 + edit 47 +
+   * delete 57 = 160px of buttons in a 290px tile, and at 11px roughly 178.
+   * The three things that must still hold: the tile does not clip, the label is
+   * real text, and the row does not wrap to one button per line. */
   assert.match(clarity, /\.app-shell \.recipe-tile\{[^}]*overflow:visible/);
-  assert.match(clarity, /\.app-shell \.recipe-card \.change-product:after\{content:"Change"/);
+  assert.doesNotMatch(clarity, /\.change-product\{[^}]*font-size:0/,
+    "A button whose own label is invisible is not a labelled button.");
+  assert.match(clarity, /\.change-product,\n\.app-shell \.recipe-tile \.change-product\{\n?\s*font-size:11px/,
+    "The tile actions are read at 11px, the same size the keyword cards use.");
+  assert.match(clarity, /\.app-shell \.edit-recipe,\.app-shell \.delete-recipe\{font-size:11px/);
   assert.doesNotMatch(clarity, /\.recipe-grid \.recipe-tile\{[^}]*flex-wrap:wrap/,
     "Flex made each action take its own row.");
 });
