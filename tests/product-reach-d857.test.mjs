@@ -52,9 +52,25 @@ test("a recipe that never recorded its store is never hidden", () => {
   assert.equal(reach(0), "here");
 });
 
-test("with no Etsy shop connected nothing is scoped away", () => {
+test("with no Etsy shop connected nothing is scoped away — D858", () => {
+  /* The first version of this test asked only about GODISAGIRL, which returns
+     "unproven" whether the rule holds or not, and so passed over a real bug:
+     with activeEtsyShopId 0 the loop tested every proof against 0, dropped all
+     of them into `away`, and scoped out the one store that had been PROVEN
+     good. The proven store is the case that has to be asserted. */
   const reach = reachResolver(0, [{ printify_shop_id: WOLF_PRINTIFY, etsy_shop_id: SHESAWOLF }]);
+  assert.equal(reach(WOLF_PRINTIFY), "unproven", "a proven store must not be hidden with no active shop");
   assert.equal(reach(GODISAGIRL), "unproven");
+  assert.equal(reach(0), "unproven");
+});
+
+test("nothing is EVER away while no Etsy shop is active — D858", () => {
+  /* Whatever the proof table says, and however many shops it names. */
+  const reach = reachResolver(0, [
+    { printify_shop_id: WOLF_PRINTIFY, etsy_shop_id: SHESAWOLF },
+    { printify_shop_id: GODISAGIRL, etsy_shop_id: ETSY_OTHER },
+  ]);
+  for (const store of [WOLF_PRINTIFY, GODISAGIRL, 5150]) assert.equal(reach(store), "unproven");
 });
 
 test("the route asks the resolver rather than keeping its own copy", () => {
