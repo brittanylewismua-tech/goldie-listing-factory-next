@@ -2463,8 +2463,18 @@ html, body { background: #f1d2dc; }
        so they are still a pair. */
 .app-shell .workflow-footer-actions{
   background:transparent;border-top:0;backdrop-filter:none}
+/* D839 · left:50% + translate:-50% measured 65px off - exactly half the note's
+   own width - because the note also carries justify-self and lane rules from
+   the era when this bar was a grid, and the two ways of placing it fought.
+   Measured live: containing block 288..1440, left resolved to 576px, and the
+   note's centre landed at 799 against a bar centre of 864.
+
+   Nothing to reason about with insets and auto margins: the box is centred in
+   its containing block by definition, and the bar's centre is the column's
+   centre (both 864, measured). No transform, nothing to be half of. */
 .app-shell .workflow-footer-actions > .autosave-note{
-  position:absolute;left:50%;translate:-50% 0;margin:0;white-space:nowrap}
+  position:absolute;left:0;right:0;margin-inline:auto;translate:none;
+  width:max-content;max-width:calc(100% - 320px);margin-block:0;white-space:nowrap}
 .app-shell .factory-work{padding-bottom:110px}
 
 .app-shell .topbar .approved-usage,

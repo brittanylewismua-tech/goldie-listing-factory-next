@@ -883,6 +883,19 @@ test("D838: the two things D834 declared and never won", () => {
   assert.ok(position && position.value === "absolute",
     `the save note resolves to position:${position ? `${position.value} (${position.where})` : "unset"} — it cannot be centred while it is static`);
 
+  /* D839 · position:absolute alone was not enough. left:50% with translate:-50%
+     measured 65px off - exactly half the note's own width - because the lane
+     rules left over from the grid era were still placing it too. Insets and an
+     auto margin centre a box in its containing block by definition, with no
+     transform to be half of, so that is what it uses. */
+  const left = winner(one => /\.autosave-note$/.test(one), "left");
+  const right = winner(one => /\.autosave-note$/.test(one), "right");
+  const translate = winner(one => /\.autosave-note$/.test(one), "translate");
+  assert.ok(left && left.value === "0", `left resolves to ${left ? left.value : "unset"}`);
+  assert.ok(right && right.value === "0", `right resolves to ${right ? right.value : "unset"}`);
+  assert.ok(!translate || translate.value === "none",
+    `a transform on the note puts it off centre by half its width — resolves to ${translate ? translate.value : "none"}`);
+
   const fill = winner(one => one === ".app-shell .listing-goal-side" || /\.listing-goal-side$/.test(one), "background");
   assert.ok(fill && /123,\s*62,\s*105/.test(fill.value),
     `the goal counter resolves to ${fill ? `${fill.value} (${fill.where})` : "unset"} — the two counters are told apart by that tint`);
