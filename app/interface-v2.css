@@ -2583,3 +2583,37 @@ html, body { background: #f1d2dc; }
 .app-shell .recipe-icon > img{
   width:100%;height:100%;object-fit:contain;border-radius:8px;background:#fff;display:block}
 .app-shell .recipe-tile.bundle-as-product .recipe-icon > img{display:none}
+
+/* ==========================================================================
+   D844 · the thumbnails that read as empty gaps
+   ==========================================================================
+
+   She has said three times that the Printify mockup is missing next to the
+   product name. It is not missing. Measured on the live build:
+
+     .bundle-product-photo   44x44 on screen, naturalWidth 2048, loaded
+     .final-group-thumb      44x44, naturalWidth 4500, loaded
+
+   They are white garments photographed on white, drawn at 44px with no frame
+   and no fill behind them, so they render as blank space beside the heading -
+   which is indistinguishable from a broken image, and that is what she keeps
+   seeing.
+
+   A frame, a white bed and a little air. 52px so the garment is actually
+   readable at a glance rather than a smudge. Nothing here changes which image
+   loads; it changes whether the thing that loaded can be seen. */
+.app-shell .bundle-product-photo,
+.app-shell .final-group-thumb,
+.app-shell .batch-history-thumbnail{
+  width:52px;height:52px;flex:0 0 52px;padding:3px;
+  object-fit:contain;background:#fff;
+  border:1px solid #e4cedb;border-radius:10px}
+
+/* The design artwork beside a listing's title, same reason, same treatment. */
+.app-shell .task-listing-preview{
+  border:1px solid #e4cedb;border-radius:10px;background:#fff;overflow:hidden}
+.app-shell .task-listing-preview img{object-fit:contain;background:#fff}
+
+/* And the tile's own band keeps its edge, so a pale flatlay still reads as a
+   photo rather than as an empty card. */
+.app-shell .recipe-icon:has(> img){border:1px solid #e4cedb;background:#fff;padding:4px}
