@@ -998,7 +998,9 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .mockupFactory.managementOnly .newSetButton{border:0!important;background:transparent!important;color:#704d75!important;box-shadow:none!important;text-decoration:underline!important}
 /* D706 - one of four rules that each owned part of this pill; consolidated
    into a single rule at the foot of clarity-pass.css. */
-.app-shell .recipe-card .delete-recipe{width:auto!important;min-width:48px!important;padding:4px 7px!important;font-size:9px!important;font-weight:800}
+/* D856 · 9px was D186's answer to a 207px tile. The tile is 294px now and
+   this is a real control, not an eyebrow label. */
+.app-shell .recipe-card .delete-recipe{width:auto!important;min-width:48px!important;padding:4px 7px!important;font-size:11px!important;font-weight:800}
 .app-shell .pricing-approval-button{width:100%!important;margin-top:16px!important;padding:14px 18px!important;border:1px solid #ded5db!important;border-radius:10px!important;background:#663650!important;color:#fff!important;font-weight:850!important}
 .app-shell .pricing-approval-button.approved{background:#e8f5eb!important;color:#27663f!important}
 .app-shell .pricing-approval-button:disabled{opacity:.5!important;cursor:not-allowed!important}
@@ -1181,7 +1183,7 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
    !important, which is the bar D812 removed. The tile is a button; its label is
    a word. The ring around the card is what says it is chosen. */
 .app-shell .recipe-card .recipe-tile.selected .recipe-use em{color:#37704c!important;background:none!important}
-.app-shell .recipe-card .edit-recipe{font-size:10px!important;font-weight:800}
+.app-shell .recipe-card .edit-recipe{font-size:11px!important;font-weight:800}
 .app-shell .everything-else>summary span:after{content:"Usually no changes needed";display:block;margin-top:3px;color:#80677a;font-size:9px;font-weight:600}
 .app-shell .variant-pricing :is(.item-pricing-section,.shipping-pricing-section) .heading-with-help>button{display:none!important}
 .app-shell .setup-forward:disabled{background:#eee4eb!important;color:#563b50!important;opacity:1!important;text-shadow:none!important}

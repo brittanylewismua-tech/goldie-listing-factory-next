@@ -2699,6 +2699,9 @@ html, body { background: #f1d2dc; }
   font-size:11px;font-weight:800;padding:0 12px;min-width:0}
 .app-shell .recipe-card .change-product::after,
 .app-shell .recipe-tile .change-product::after{content:none}
+/* The !important sizes that actually win these two live in
+   approved-functional.css and were set to 10px and 9px there; D856 raised them
+   at source rather than out-specifying them from here. */
 .app-shell .edit-recipe,.app-shell .delete-recipe{font-size:11px;font-weight:800}
 
 /* The bundle library's summary badge sat at 8px, which is smaller than the
@@ -2775,3 +2778,30 @@ html, body { background: #f1d2dc; }
 .app-shell .workflow-stage{flex:1 0 auto}
 .app-shell .workflow-stage > .steps-column{padding-bottom:26px}
 
+
+
+/* ==========================================================================
+   D856 · the flatlay printed itself over the product name
+   ==========================================================================
+
+   Measured on the deployed D852, first tile:
+
+     .recipe-icon   height 116px, grid-template-rows 258px
+     the <img>      y417..675, 258px tall
+     .recipe-copy   y539..628
+
+   The band is a grid with no explicit rows, so the row sized to the image's
+   intrinsic 1200x1200 scaled to the 258px column - the img overflowed 142px
+   past its own 116px band and printed the garment through the product name and
+   the store badge underneath it. D848 uncovered this by removing the ::before
+   that used to size the row.
+
+   One row, exactly the band's height, and an image allowed to shrink into it.
+   object-fit:contain then does what it was always meant to. */
+.app-shell .recipe-icon:has(> img){grid-template-rows:minmax(0,1fr);overflow:hidden}
+
+/* And the image's box hugs the artwork rather than stretching the band's full
+   268px. It carries D851's checker, which is right behind a 44px design that
+   might be white ink on nothing and wrong as a 268x116 field behind an opaque
+   Printify mockup - the tile read as patterned rather than as a product. */
+.app-shell .recipe-icon > img{width:auto;max-width:100%;height:100%;min-height:0;max-height:100%}

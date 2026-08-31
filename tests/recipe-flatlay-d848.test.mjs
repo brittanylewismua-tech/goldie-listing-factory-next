@@ -69,3 +69,21 @@ test("a thumbnail plate is never the same colour as the artwork — D851", () =>
   assert.match(block, /background-size:8px 8px/);
   assert.match(block, /background-position:0 0,4px 4px/);
 });
+
+test("the flatlay stays inside its band — D856", () => {
+  const css = readFileSync(new URL("../app/interface-v2.css", import.meta.url), "utf8");
+  /* Measured on the deployed D852: .recipe-icon was height 116px with
+     grid-template-rows 258px, so the img rendered 258px tall and printed the
+     garment straight through the product name and the store badge below it.
+     D848 uncovered this by removing the ::before that used to size the row. */
+  assert.match(css, /\.recipe-icon:has\(> img\)\{grid-template-rows:minmax\(0,1fr\);overflow:hidden\}/);
+  assert.match(css, /\.recipe-icon > img\{width:auto;max-width:100%;height:100%;min-height:0;max-height:100%\}/);
+});
+
+test("the tile actions are legible where their sizes actually win — D856", () => {
+  const approved = readFileSync(new URL("../app/approved-functional.css", import.meta.url), "utf8");
+  /* D850 set 11px in interface-v2.css and measured 10px and 9px live: the
+     !important declarations that win these two live here. */
+  assert.match(approved, /\.recipe-card \.delete-recipe\{[^}]*font-size:11px!important/);
+  assert.match(approved, /\.recipe-card \.edit-recipe\{font-size:11px!important/);
+});
