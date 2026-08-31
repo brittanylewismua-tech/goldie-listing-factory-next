@@ -2039,3 +2039,27 @@ html, body { background: #f1d2dc; }
 .app-shell .factory-listing-form > h3{
   font:700 14px/1.25 Inter,ui-sans-serif,system-ui,sans-serif;color:#3d2538}
 .app-shell .factory-check{color:#3d2538}
+
+/* D816 · The last of Manrope, and the heading size that came with it.
+
+   Swept every heading in the pane on the live build: four h3 still rendering
+   in Manrope at 18px - the batch title builder's, the Etsy details lead's, the
+   listing card's and the checklist's. D774 claimed one typeface and D803
+   closed the h2 hole; nothing had ever covered h3 or h4, because I had never
+   opened the panels they live in.
+
+   The preview's .goldie-form-card h3 is 14px/700 Inter. Every heading inside
+   the pane is Inter now, and the ones that head a card take the preview's
+   size, so a card's title and a panel's title are the same thing on the page
+   rather than one being four pixels and a typeface apart from the other.
+
+   The wordmark keeps DM Serif, as it always has, and so does the help
+   dialog's h2 - the one other place the preview uses it. */
+.app-shell .factory-work h3,
+.app-shell .factory-work h4{
+  font-family:Inter,ui-sans-serif,system-ui,-apple-system,sans-serif}
+.app-shell .factory-work .factory-form-card > h3,
+.app-shell .factory-work .task-panel-lead h3,
+.app-shell .factory-work .task-panel-heading h3,
+.app-shell .factory-work .factory-checklist-card > h3{
+  font:700 14px/1.3 Inter,ui-sans-serif,system-ui,sans-serif;color:#3d2538}

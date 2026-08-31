@@ -370,3 +370,20 @@ test("D815: the listing form's parts resolve to the preview's values", () => {
   }
   assert.deepStrictEqual(faults, []);
 });
+
+test("D816: every heading in the pane resolves to Inter", () => {
+  /* Four h3 were still in Manrope on the live build - the batch title
+     builder's, the Etsy details lead's, the listing card's and the
+     checklist's. D774 claimed one typeface, D803 closed h2, and nothing had
+     ever covered h3 or h4 because I had not opened the panels they live in.
+     The wordmark and the help dialog's h2 keep DM Serif; they are the two
+     places the preview uses it. */
+  for (const heading of ["h3", "h4"]) {
+    const winner = resolve({
+      selectorTest: selector => new RegExp(`factory-work ${heading}$`).test(selector),
+      property: "font-family",
+    });
+    assert.ok(winner && /^Inter/.test(winner.value),
+      `${heading} in the pane resolves to ${winner ? winner.value : "unset"}`);
+  }
+});
