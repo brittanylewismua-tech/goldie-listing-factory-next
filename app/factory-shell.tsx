@@ -47,6 +47,8 @@ export default function FactoryShell({ active, title, children }:
      round trip, because the token for each shop is already stored. */
   const [shops, setShops] = useState<{ shopId: number; shopName: string; active: boolean }[]>([]);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [switchError, setSwitchError] = useState("");
+  const [switching, setSwitching] = useState(0);
 
   useEffect(() => {
     void fetch("/api/usage").then(response => response.json()).then((result: { plan?: { drafts: number }; usage?: { drafts: number } }) => {
@@ -121,8 +123,22 @@ export default function FactoryShell({ active, title, children }:
                 <small>Etsy shop</small>
                 {shops.map(shop => <button key={shop.shopId} type="button" role="menuitemradio" aria-checked={shop.active}
                   className={shop.active ? "is-active" : undefined} disabled={shop.active}
-                  onClick={() => { void fetch("/api/etsy/active", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ shopId: shop.shopId }) }).then(() => window.location.reload()); }}>
-                  {shop.shopName}{shop.active ? " ✓" : ""}</button>)}
+                  /* D836 · A failed switch used to reload anyway, so the seller
+                     landed back on the same shop with no idea why. */
+                  onClick={async () => {
+                    setSwitchError(""); setSwitching(shop.shopId);
+                    try {
+                      const response = await fetch("/api/etsy/active", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ shopId: shop.shopId }) });
+                      const result = await response.json().catch(() => ({})) as { error?: string };
+                      if (!response.ok) throw new Error(result.error || "That shop could not be opened.");
+                      window.location.reload();
+                    } catch (error) {
+                      setSwitchError(error instanceof Error ? error.message : "That shop could not be opened.");
+                      setSwitching(0);
+                    }
+                  }}>
+                  {shop.shopName}{shop.active ? " ✓" : switching === shop.shopId ? " …" : ""}</button>)}
+                {switchError && <small role="alert" className="factory-account-shop-error">{switchError}</small>}
               </div>}
               <a role="menuitem" href="/usage">Usage + Plan</a>
               <a role="menuitem" href="/listing-factory?step=connect">Connections</a>

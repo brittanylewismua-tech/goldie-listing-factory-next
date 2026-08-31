@@ -31,5 +31,9 @@ export async function DELETE(){const user=await getChatGPTUser();if(!user)return
   shops are still authorised. */
   const going=await env.DB.prepare("SELECT shop_id FROM etsy_connections WHERE user_id=? AND is_active=1").bind(user.userId).first<{shop_id:number}>();
   await env.DB.prepare("DELETE FROM etsy_connections WHERE user_id=? AND is_active=1").bind(user.userId).run();
-  const next=await env.DB.prepare("SELECT shop_id FROM etsy_connections WHERE user_id=? ORDER BY updated_at DESC LIMIT 1").bind(user.userId).first<{shop_id:number}>();
-  if(next)await env.DB.prepare("UPDATE etsy_connections SET is_active=1 WHERE user_id=? AND shop_id=?").bind(user.userId,next.shop_id).run();/* D661 · A pairing proof is about one Etsy shop. Disconnecting voids it. */await forgetPairings(user.userId,going?.shop_id);return NextResponse.json({connected:false})}
+  const next=await env.DB.prepare("SELECT shop_id, shop_name FROM etsy_connections WHERE user_id=? ORDER BY updated_at DESC LIMIT 1").bind(user.userId).first<{shop_id:number;shop_name:string}>();
+  if(next)await env.DB.prepare("UPDATE etsy_connections SET is_active=1 WHERE user_id=? AND shop_id=?").bind(user.userId,next.shop_id).run();/* D661 · A pairing proof is about one Etsy shop. Disconnecting voids it. */await forgetPairings(user.userId,going?.shop_id);/* D836 · Disconnecting one shop while others remain does not disconnect the
+  seller. Saying {connected:false} made the UI clear Etsy entirely while a
+  promoted shop was live, so the next publish would have used a connection the
+  screen said did not exist. */
+  return NextResponse.json(next?{connected:true,shopId:next.shop_id,shopName:next.shop_name}:{connected:false})}

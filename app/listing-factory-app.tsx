@@ -962,6 +962,7 @@ export default function ListingFactoryApp() {
   const [bundleLoadErrors,setBundleLoadErrors]=useState<Record<string,string>>({});
   /* D835 · The Etsy shops this seller has connected, and which one is active. */
   const [etsyShops,setEtsyShops]=useState<{shopId:number;shopName:string;active:boolean}[]>([]);
+  const [shopSwitchError,setShopSwitchError]=useState("");
   /* D378 - Each bundle member is its own batch, created one after another by
      continueBundle. That was invisible while only one product showed at a time,
      but steps 2-4 now list every product as a card, and a card you cannot open
@@ -4023,8 +4024,14 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
                   <small>Etsy shop</small>
                   {etsyShops.map(shop=><button key={shop.shopId} type="button" role="menuitemradio" aria-checked={shop.active}
                     className={shop.active?"is-active":undefined} disabled={shop.active}
-                    onClick={()=>{void fetch("/api/etsy/active",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({shopId:shop.shopId})}).then(()=>window.location.reload())}}>
+                    onClick={async()=>{setShopSwitchError("");
+                      try{const response=await fetch("/api/etsy/active",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({shopId:shop.shopId})});
+                        const result=await response.json().catch(()=>({})) as {error?:string};
+                        if(!response.ok)throw new Error(result.error||"That shop could not be opened.");
+                        window.location.reload()}
+                      catch(error){setShopSwitchError(error instanceof Error?error.message:"That shop could not be opened.")}}}>
                     {shop.shopName}{shop.active?" ✓":""}</button>)}
+                  {shopSwitchError&&<small role="alert" className="factory-account-shop-error">{shopSwitchError}</small>}
                 </div>}
                 <a role="menuitem" href="/usage" onClick={event=>guardNavigation(event,"/usage")}>Usage + Plan</a>
                 {/* D639 · ?step=connect is honoured as an explicit request and the
@@ -4193,7 +4200,18 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
                     <a href="https://help.printify.com/hc/en-us/articles/4483626447249-How-can-I-generate-an-API-token" target="_blank" rel="noreferrer">Open Printify’s official token instructions ↗</a></div>
                   </details>
                   </section>
-                  <div className={`connection-row etsy-connection service-row ${etsyConnected?"connected":""}`}><span className="connection-icon"><img src="/etsy-logo.svg" alt="" /></span><div><b>{etsyConnected?"Etsy connected":"Etsy"}</b>{etsyConnected&&<em className="etsy-shop-name">{etsyShop||"your shop"}</em>}<span className="sr-only">Connect Etsy before publishing</span><small>{etsyConnected?"Connected and verified.":"Required before Goldie publishes and finishes your listings."}</small></div>{etsyConnected?<button className="disconnect-link" onClick={async()=>{if(!await confirmAction({title:"Disconnect your Etsy shop?",body:"Goldie will not be able to publish listings until you reconnect and authorise it again. Your existing Etsy listings are not affected.",confirmLabel:"Disconnect Etsy",cancelLabel:"Keep connected"}))return;await fetch("/api/etsy",{method:"DELETE"});setEtsyConnected(false);setEtsyShop("")}}>Disconnect</button>:<button className="secondary-action" aria-busy={etsyConnecting} onClick={()=>void connectEtsy()} disabled={etsyConnecting}>{etsyConnecting?"Opening Etsy…":"Connect Etsy"}</button>}</div>
+                  <div className={`connection-row etsy-connection service-row ${etsyConnected?"connected":""}`}><span className="connection-icon"><img src="/etsy-logo.svg" alt="" /></span><div><b>{etsyConnected?"Etsy connected":"Etsy"}</b>{etsyConnected&&<em className="etsy-shop-name">{etsyShop||"your shop"}</em>}<span className="sr-only">Connect Etsy before publishing</span><small>{etsyConnected?"Connected and verified.":"Required before Goldie publishes and finishes your listings."}</small></div>{etsyConnected?<><button className="disconnect-link" onClick={async()=>{if(!await confirmAction({title:"Disconnect your Etsy shop?",body:"Goldie will not be able to publish listings until you reconnect and authorise it again. Your existing Etsy listings are not affected.",confirmLabel:"Disconnect Etsy",cancelLabel:"Keep connected"}))return;/* D836 · Another shop may remain, and the API promotes it. Apply what
+                    it returns rather than assuming the seller is now disconnected. */
+                    const response=await fetch("/api/etsy",{method:"DELETE"});
+                    const result=await response.json().catch(()=>({connected:false})) as {connected?:boolean;shopName?:string};
+                    setEtsyConnected(Boolean(result.connected));setEtsyShop(result.connected?result.shopName||"":"");
+                    void fetch("/api/etsy").then(r=>r.json()).then((payload:{shops?:{shopId:number;shopName:string;active:boolean}[]})=>setEtsyShops(payload.shops||[])).catch(()=>undefined)}}>Disconnect</button>
+                  {/* D836 · Without this there is no way to accumulate the shops the
+                      switcher needs: the callback adds a shop, but nothing offered
+                      to start that flow while one was already connected. */}
+                  <button className="secondary-action add-shop-link" aria-busy={etsyConnecting} disabled={etsyConnecting}
+                    onClick={()=>void connectEtsy()}>{etsyConnecting?"Opening Etsy…":"Connect another Etsy shop"}</button>
+                  </>:<button className="secondary-action" aria-busy={etsyConnecting} onClick={()=>void connectEtsy()} disabled={etsyConnecting}>{etsyConnecting?"Opening Etsy…":"Connect Etsy"}</button>}</div>
                   <small className="secure-copy">♢ Encrypted and saved securely.</small>
                 </div>
               ) : (

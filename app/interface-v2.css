@@ -2538,3 +2538,13 @@ html, body { background: #f1d2dc; }
   color:#6e606a;font:12px/1.55 Inter,ui-sans-serif,system-ui,sans-serif}
 .app-shell .recipe-other-store b{color:#3d2538}
 .app-shell .recipe-other-store a{color:#7b3e69;text-decoration:underline;text-underline-offset:3px}
+
+/* D836 · a bundle holding a product from another shop cannot be chosen here. */
+.app-shell .recipe-tile.bundle-as-product.other-shop{opacity:.62}
+.app-shell .recipe-tile.other-shop .recipe-use{cursor:not-allowed}
+.app-shell .bundle-other-shop{
+  display:block;margin-top:6px;color:#8a3650;
+  font:11px/1.45 Inter,ui-sans-serif,system-ui,sans-serif}
+.app-shell .factory-account-shop-error{
+  display:block;padding:4px 12px 0;color:#9e2736;
+  font:11px/1.45 Inter,ui-sans-serif,system-ui,sans-serif}
