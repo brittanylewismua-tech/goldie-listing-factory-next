@@ -39,3 +39,17 @@ test("a blocker says where it lives, not just what it is — D854", () => {
   assert.match(gates, /Choose the Etsy shipping profile on the Product step\./);
   assert.match(gates, /Approve prices and buyer-paid shipping on the Product step\./);
 });
+
+test("Disconnect sits in the same place on every connection row — D855", () => {
+  const app = readFileSync(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+  const row = app.slice(app.indexOf("function etsyConnectionRow"));
+  const body = row.slice(0, row.indexOf("async function connectEtsy"));
+  /* Measured live after D847 right-aligned the group: the Printify row's
+     Disconnect at x979, the Etsy row's at x841 - the same control in the same
+     column of two identical rows, 138px apart, because the Etsy row has a
+     second button after it. Rightmost is the position both rows share. */
+  const addShop = body.indexOf("add-shop-link");
+  const disconnect = body.indexOf('className="disconnect-link"');
+  assert.ok(addShop > -1 && disconnect > -1, "both actions must still be on the row");
+  assert.ok(addShop < disconnect, "Connect another Etsy shop comes first; Disconnect is last");
+});

@@ -3573,12 +3573,20 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
         <small>{etsyConnected?"Connected and verified.":"Required before Goldie publishes and finishes your listings."}</small>
       </div>
       {etsyConnected
-        ? <><button className="disconnect-link" onClick={()=>void disconnectEtsy()}>Disconnect</button>
-            {/* D836 · Without this there is no way to accumulate the shops the
+        ? <>{/* D836 · Without this there is no way to accumulate the shops the
                 switcher needs: the callback adds a shop, but nothing offered to
-                start that flow while one was already connected. */}
+                start that flow while one was already connected.
+
+                D855 · Disconnect goes last. D847 right-aligned the group, which
+                left the Printify row's Disconnect at x979 and the Etsy row's at
+                x841, because the Etsy row has a second button after it - the
+                same control in the same column of two identical rows, 138px
+                apart. Rightmost is the one position both rows share, and the
+                destructive action sitting in a fixed place is worth more than
+                it sitting first. */}
             <button className="secondary-action add-shop-link" aria-busy={etsyConnecting} disabled={etsyConnecting}
-              onClick={()=>void connectEtsy()}>{etsyConnecting?"Opening Etsy…":"Connect another Etsy shop"}</button></>
+              onClick={()=>void connectEtsy()}>{etsyConnecting?"Opening Etsy…":"Connect another Etsy shop"}</button>
+            <button className="disconnect-link" onClick={()=>void disconnectEtsy()}>Disconnect</button></>
         : <button className="secondary-action" aria-busy={etsyConnecting} onClick={()=>void connectEtsy()} disabled={etsyConnecting}>{etsyConnecting?"Opening Etsy…":"Connect Etsy"}</button>}
     </div>;
   }
