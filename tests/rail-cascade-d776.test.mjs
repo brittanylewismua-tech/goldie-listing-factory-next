@@ -577,31 +577,65 @@ test("D826: nothing outside interface-v2 dresses an interior heading", async () 
   /* D818's own test asserted the interior h1 resolved to #3d2538 and it did
      not: it rendered #241f24 on the live build. The resolver's selectorTest
      matched only selectors ENDING in `interior-page > header h1`, so
-     `.management-page>header h1{color:var(--studio-ink)!important}` in
-     lilac-theme was never a candidate. That is the same blind spot that let
-     D816 pass while step 3 rendered Manrope.
+     `.management-page>header h1{color:var(--studio-ink)!important}` was never a
+     candidate - the same blind spot that let D816 pass while step 3 rendered
+     Manrope.
 
-     A suffix match cannot be trusted to find the winner, so this asserts the
-     absence of the whole class of rule instead: no sheet other than
-     interface-v2 may set a typeface, a size or a weight on a heading inside
-     .management-page, .usage-page, .keyword-page or .keyword-hero. Those pages
-     render the shell now; the shell's scale is the only one they get.
+     D826's first version had a third version of it. It read the rule's WHOLE
+     selector as one string and skipped the rule if `mockup` appeared anywhere
+     in it, so
 
-     .mockupFactory is deliberately out of scope - it has its own camelCase
-     design and I cannot verify it rendered as thoroughly. */
+       .keyword-page .keyword-hero h1,
+       .managementOnly .mockupHero h1 { font-family:"DM Serif Display"!important }
+
+     was skipped entirely and Keyword Banks kept its DM Serif heading while
+     twenty tests passed. A rule is not one selector. Each comma-separated
+     selector is evaluated on its own here, and an `:is()` list is expanded into
+     its alternatives, because that is the level at which a rule actually
+     matches an element.
+
+     .mockupFactory and .mockupHero are out of scope: that page has its own
+     camelCase design and I cannot verify it rendered as thoroughly. Being out
+     of scope may not launder a selector that is in scope, which is exactly what
+     went wrong. */
   const interior = /\.(management-page|usage-page|keyword-page|keyword-hero)(?![\w-])/;
+  const mockup = /mockup/i;
+
+  /* One selector can carry an :is() list that mixes an in-scope alternative
+     with an out-of-scope one. Expand it so each is judged separately. */
+  const expand = selector => {
+    const match = selector.match(/:is\(([^()]*)\)/);
+    if (!match) return [selector];
+    return postcss.list.comma(match[1])
+      .flatMap(alt => expand(selector.replace(match[0], alt)));
+  };
+
   const files = (await fs.promises.readdir(new URL("../app", import.meta.url))).filter(name => name.endsWith(".css"));
   const offenders = [];
   for (const file of files) {
     if (file === "interface-v2.css") continue;
     const css = await fs.promises.readFile(new URL(`../app/${file}`, import.meta.url), "utf8");
-    postcss.parse(css).walkDecls(decl => {
-      if (!/^font(-family|-size|-weight)?$/.test(decl.prop)) return;
-      const selector = (decl.parent.selector || "").replace(/\s+/g, " ");
-      if (!/\bh[1-4]\b/.test(selector) || !interior.test(selector) || /mockup/i.test(selector)) return;
-      offenders.push(`${file}:${decl.source.start.line} ${selector.slice(0, 56)} — ${decl.prop}:${decl.value.slice(0, 30)}`);
+    postcss.parse(css).walkRules(rule => {
+      const typography = rule.nodes.filter(node =>
+        node.type === "decl" && /^font(-family|-size|-weight)?$/.test(node.prop));
+      if (!typography.length) return;
+      for (const selector of rule.selectors) {
+        for (const one of expand(selector.replace(/\s+/g, " "))) {
+          if (!/\bh[1-4]\b/.test(one)) continue;
+          if (!interior.test(one) || mockup.test(one)) continue;
+          offenders.push(`${file}:${rule.source.start.line}  ${one.slice(0, 60)}  — ${typography.map(d => d.prop).join(", ")}`);
+        }
+      }
     });
   }
   assert.deepEqual(offenders, [],
     `a second heading scale still reaches the interior pages:\n${offenders.join("\n")}`);
+
+  /* And the split has to hold: Mockup Library keeps the styling that was taken
+     off Keyword Banks, in a rule of its own. */
+  const management = await fs.promises.readFile(new URL("../app/management-aesthetic.css", import.meta.url), "utf8");
+  assert.match(management, /\.managementOnly \.mockupHero h1\{[^}]*DM Serif Display/,
+    "Mockup Library keeps its own heading");
+  assert.doesNotMatch(management, /\.keyword-page \.keyword-hero h1[^{]*\{[^}]*font-family/,
+    "Keyword Banks does not");
 });
