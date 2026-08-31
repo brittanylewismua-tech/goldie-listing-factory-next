@@ -2395,6 +2395,27 @@ html, body { background: #f1d2dc; }
    writing it here: that file loads before this one at the same specificity, so
    its `min-width:0` loses to line 332 above. Same condition as the gate, in the
    file that owns the rule it is correcting. */
+/* D833 · min-width alone was one of three declarations that define that box,
+   and I shipped it as the whole fix. Measured again on the deployed D832, at
+   375x812 with a coarse pointer:
+
+     .app-shell min-width   0px      the D832 fix, landed
+     body       min-width   1180px   clarity-pass.css:1543, !important
+     .app-shell display     grid     interface-v2.css:10
+     result                          body 1180 wide, so width:100% is 1180;
+                                     shell still a 288px + 1fr grid, so the
+                                     card was laid into the sidebar track -
+                                     168px wide, hard against the left edge
+
+   The body is the containing block, so its min-width decides the shell's width
+   whatever the shell's own min-width says. And the gate block's display:block
+   lives in approved-functional.css, which loads before this file at the same
+   specificity, so it loses - the same way the min-width:0 I first wrote there
+   would have.
+
+   All three, in the file that loads last. body's needs !important because the
+   rule it has to beat carries one. */
 @media(max-width:820px) and (pointer:coarse){
-  .app-shell{min-width:0;width:100%}
+  body{min-width:0!important}
+  .app-shell{min-width:0;width:100%;display:block}
 }

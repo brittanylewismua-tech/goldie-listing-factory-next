@@ -722,44 +722,75 @@ test("D832: no image the seller can see is deferred until it has a size", async 
     `an image is deferred until it is near the viewport, inside a box that is 0x0 until it loads:\n${offences.join("\n")}`);
 });
 
-test("D832: the shell fits the phone the desktop-required card is shown on", () => {
-  /* Measured on an emulated Pixel 8 at 375x812 on the deployed build:
-       clientWidth 375, body.scrollWidth 1180, the card laid out 0..199 of 375.
+test("D833: every declaration that sizes the gate resolves for a 375px phone", () => {
+  /* Measured on the deployed D832 at 375x812 with a coarse pointer:
+       .app-shell min-width  0px      the D832 fix, landed
+       body       min-width  1180px   clarity-pass.css:1543, !important
+       .app-shell display    grid     interface-v2.css:10
+       card                  168px wide at x15, document 1180 wide
 
-     This resolves .app-shell's width and min-width the way a browser would at
-     375px with a coarse pointer - every stylesheet in load order, media
-     conditions evaluated against that viewport - rather than asserting that a
-     rule exists. It has to be computed: `min-width:0` written into
-     approved-functional.css is present and loses, because interface-v2 declares
-     min-width:1180px later at the same specificity. */
+     min-width on the shell was one of three declarations that define that box.
+     The body is the containing block, so its min-width decides the shell's
+     width whatever the shell says; and while the shell is still a grid the card
+     is laid into the 288px sidebar track. So all five outcomes are resolved
+     here, the way a browser would at that viewport - every sheet in load order,
+     media conditions evaluated against 375px and a coarse pointer, !important
+     first, then order. Asserting the rules exist is what let D832 ship half a
+     fix; the last assertion is the one that would have caught it. */
   const load = ["globals.css", "factory-navigation.css", "theme.css", "lilac-theme.css",
     "approved-functional.css", "management-aesthetic.css", "clarity-pass.css", "interface-v2.css"];
-  const candidates = [];
-  load.forEach((name, order) => {
-    const css = fs.readFileSync(new URL(`../app/${name}`, import.meta.url), "utf8");
-    postcss.parse(css).walkRules(rule => {
-      if (!rule.selectors.some(one => one.replace(/\s+/g, " ").trim() === ".app-shell")) return;
-      const media = rule.parent.type === "atrule" ? rule.parent.params : "";
-      if (media) {
-        const max = /max-width:\s*(\d+)px/.exec(media), min = /min-width:\s*(\d+)px/.exec(media);
-        if (max && 375 > Number(max[1])) return;
-        if (min && 375 < Number(min[1])) return;
-        if (/pointer:\s*fine/.test(media)) return;
-      }
-      rule.walkDecls(/^(min-width|width)$/, decl => {
-        candidates.push({ name, order, line: decl.source.start.line, prop: decl.prop, value: decl.value, important: decl.important === true });
+
+  const appliesAt375Coarse = media => {
+    if (!media) return true;
+    const max = /max-width:\s*(\d+)px/.exec(media), min = /min-width:\s*(\d+)px/.exec(media);
+    if (max && 375 > Number(max[1])) return false;
+    if (min && 375 < Number(min[1])) return false;
+    if (/pointer:\s*fine/.test(media)) return false;
+    return true;
+  };
+
+  /* Every declaration of `property` that could apply, in cascade order. */
+  const candidates = (matches, property) => {
+    const found = [];
+    load.forEach((name, order) => {
+      const css = fs.readFileSync(new URL(`../app/${name}`, import.meta.url), "utf8");
+      postcss.parse(css).walkRules(rule => {
+        if (!rule.selectors.some(one => matches(one.replace(/\s+/g, " ").trim()))) return;
+        const media = rule.parent.type === "atrule" ? rule.parent.params : "";
+        if (!appliesAt375Coarse(media)) return;
+        rule.walkDecls(property, decl => found.push({
+          where: `${name}:${decl.source.start.line}`, order, line: decl.source.start.line,
+          value: decl.value, important: decl.important === true, media: media || "(none)",
+        }));
       });
     });
-  });
-  const winner = prop => {
-    const list = candidates.filter(one => one.prop === prop)
-      .sort((a, b) => Number(a.important) - Number(b.important) || a.order - b.order || a.line - b.line);
-    return list[list.length - 1];
+    return found.sort((a, b) =>
+      Number(a.important) - Number(b.important) || a.order - b.order || a.line - b.line);
   };
-  const minWidth = winner("min-width");
-  assert.ok(minWidth && /^0(px)?$/.test(minWidth.value),
-    `.app-shell min-width resolves to ${minWidth ? `${minWidth.value} (${minWidth.name}:${minWidth.line})` : "unset"} at 375px, so the gate cannot fit`);
-  const width = winner("width");
-  assert.ok(width && width.value === "100%",
-    `.app-shell width resolves to ${width ? width.value : "unset"} at 375px`);
+
+  const isBody = one => one.split(",").map(part => part.trim()).includes("body");
+  const isShell = one => one === ".app-shell";
+
+  const expected = [
+    { name: "body min-width", matches: isBody, property: "min-width", want: /^0(px)?$/ },
+    { name: ".app-shell min-width", matches: isShell, property: "min-width", want: /^0(px)?$/ },
+    { name: ".app-shell width", matches: isShell, property: "width", want: /^100%$/ },
+    { name: ".app-shell display", matches: isShell, property: "display", want: /^block$/ },
+  ];
+
+  const reversed = [];
+  for (const one of expected) {
+    const list = candidates(one.matches, one.property);
+    const winner = list[list.length - 1];
+    assert.ok(winner && one.want.test(winner.value),
+      `${one.name} resolves to ${winner ? `${winner.value} (${winner.where})` : "unset"} at 375px/coarse\n  candidates: ${list.map(c => `${c.where}=${c.value}${c.important ? "!" : ""} @${c.media}`).join(" | ")}`);
+
+    /* Nothing after the winner may put it back. A later declaration only loses
+       if it is unimportant while the winner is important, so anything later
+       that disagrees is a reversal waiting to happen. */
+    const after = list.slice(list.indexOf(winner) + 1).filter(c => !one.want.test(c.value));
+    if (after.length) reversed.push(`${one.name}: ${after.map(c => `${c.where}=${c.value}`).join(", ")}`);
+  }
+  assert.deepEqual(reversed, [],
+    `a later declaration reverses a resolved value:\n${reversed.join("\n")}`);
 });
