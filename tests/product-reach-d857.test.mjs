@@ -85,3 +85,34 @@ test("the products scoped away are offered as a count and a way to switch", () =
   assert.match(tools, /not offered while you are in/);
   assert.match(tools, /Switch shop/);
 });
+
+test("a bundle from another shop is taken out of the grid, not greyed out in it — D859", () => {
+  const tools = readFileSync(new URL("../app/factory-tools.tsx", import.meta.url), "utf8");
+
+  /* D836 disabled a bundle holding another store's product and left the tile
+     on display reading "Different Etsy shop". After D857 scoped the products
+     away, both of her bundles were unusable and both were still shown:
+
+       Hoodie + 1566 crewneck   2 of 2 members under GODISAGIRLAPPAREL
+       ZZ TEST BUNDLE           2 of 3 members under GODISAGIRLAPPAREL
+
+     A control you cannot use is not information. */
+  assert.match(tools, /const usableBundles = bundles\.filter\(bundle => bundleBlockers\(bundle\)\.away\.length === 0\);/);
+  assert.match(tools, /const bundlesElsewhere = bundles\.filter\(bundle => bundleBlockers\(bundle\)\.away\.length > 0\);/);
+
+  /* The grid and its heading both count only what can be used. */
+  const section = tools.slice(tools.indexOf("bundle-card-heading") - 200);
+  const heading = section.slice(0, section.indexOf("</div>"));
+  assert.doesNotMatch(heading, /\{bundles\.length\}/, "the heading must not count bundles it does not render");
+  assert.match(tools, /recipe-grid unified-bundle-grid">\{usableBundles\.map/);
+});
+
+test("one line accounts for every hidden product and bundle — D859", () => {
+  const tools = readFileSync(new URL("../app/factory-tools.tsx", import.meta.url), "utf8");
+  /* Hiding work without saying how much was hidden, or where it went, is how a
+     seller concludes Goldie lost it. */
+  assert.match(tools, /const hiddenCount = elsewhere\.length \+ bundlesElsewhere\.length;/);
+  assert.match(tools, /const hiddenStores = \[\.\.\.new Set\(\[\.\.\.elsewhereStores, \.\.\.bundlesElsewhere\.flatMap\(bundle => bundleBlockers\(bundle\)\.stores\)\]\)\];/);
+  assert.match(tools, /\{hiddenCount>0&&<p className="recipe-other-store">/);
+  assert.match(tools, /Switch shop/);
+});
