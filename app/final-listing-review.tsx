@@ -26,7 +26,15 @@ function readableDesignName(name: string): string {
 
 export default function FinalListingReview({drafts,files,selections,defaultIndices,preparedMockupCounts,batchSizeGuide,productName,onRetry,onEdit}:Props){
   const selectable=drafts.filter(draft=>draft.status==="Created"&&draft.id);
-  const reviewNeeded=(draft:Draft)=>{const design=files.find(file=>file.id===draft.clientId)||files.find(file=>file.name===draft.name);return !design||design.title.trim().length<100||design.tags.length<13};
+  /* D841 · The title-length half of this is gone. Etsy's limit is 140 and there
+     is no minimum, so a 99-character title was being called "needs a look" -
+     which unticked it in "select every listing that is ready" and put a
+     confirmation in front of choosing it by hand, for no reason anyone could
+     act on. Nothing about a 99-character title needs looking at.
+
+     Tags stay: Etsy allows 13 and a listing using fewer is measurably worse to
+     find, which is a thing she can act on. */
+  const reviewNeeded=(draft:Draft)=>{const design=files.find(file=>file.id===draft.clientId)||files.find(file=>file.name===draft.name);return !design||design.tags.length<13};
   /* A warning is not consent. Listings that still need review arrive unticked;
      the seller can include one only after acknowledging the exact warning. */
   const [selectedIds,setSelectedIds]=useState<string[]>(()=>selectable.filter(draft=>!reviewNeeded(draft)).map(draft=>draft.id!));
@@ -76,9 +84,12 @@ export default function FinalListingReview({drafts,files,selections,defaultIndic
     changeSelection([...selectedIds,id]);
   }
   function contentReview(design?:Design){
-    const shortTitle=!design||design.title.trim().length<100;
+    /* D841 · shortTitle is no longer a reason to hold a listing back. It is
+       still reported, because a very short title is worth seeing - it just does
+       not make the listing "not ready". */
+    const shortTitle=!design||design.title.trim().length<60;
     const missingTags=!design||design.tags.length<13;
-    return {shortTitle,missingTags,needed:shortTitle||missingTags};
+    return {shortTitle,missingTags,needed:missingTags};
   }
   return <section className="final-listing-review">
     <div className="final-listing-review-heading"><div>{/* D548 - "EVERY LISTING IN THIS BATCH" over a list holding one product's

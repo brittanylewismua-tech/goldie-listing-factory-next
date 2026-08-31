@@ -2034,7 +2034,15 @@ test("shows underfilled titles and tags as a non-blocking review state (fixes D6
     readFile(new URL("../app/final-listing-review.tsx",import.meta.url),"utf8"),
     Promise.all([readFile(new URL("../app/approved-functional.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n")),
   ]);
-  assert.match(review,/design\.title\.trim\(\)\.length<100/);
+  /* D841 · The 100-character title rule is gone. Etsy's limit is 140 and there
+     is no minimum, so it called a 99-character title "needs a look" - which
+     unticked it in "select every listing that is ready" and put a confirmation
+     in front of choosing it by hand, over nothing anyone could act on. What
+     this test is for is unchanged: the state is reported and never blocks
+     publishing. Tags stay, because 13 is Etsy's cap and using fewer is a real,
+     actionable difference. */
+  assert.doesNotMatch(review,/design\.title\.trim\(\)\.length<100/);
+  assert.match(review,/needed:missingTags/);
   assert.match(review,/design\.tags\.length<13/);
   assert.match(review,/publishing is still available/);
   assert.match(review,/review\.needed\?"content-review":"ready"/);
@@ -2045,9 +2053,10 @@ test("shows underfilled titles and tags as a non-blocking review state (fixes D6
   /* D546 - the checklist that carried these was deleted: it repeated the product
      cards above it line for line. Both counts moved onto the rows that own them,
      which is where she is already reading everything else. */
-  assert.match(app,/under 100 characters/);
-  assert.match(app,/const shortTitles=isActive\?files\.filter\(file=>file\.title\.trim\(\)\.length<100\)\.length:0/,
-    "the Titles and tags row counts the listings that need review");
+  /* D841 · counted at 60, where a short title is actually worth mentioning,
+     rather than at an invented 100-character minimum Etsy does not have. */
+  assert.match(app,/const shortTitles=isActive\?files\.filter\(file=>file\.title\.trim\(\)\.length<60\)\.length:0/,
+    "the Titles and tags row counts the listings worth a second look");
   /* D549 - "2 of 2 written · 1 at 13 tags" counted listings on both sides but
      only said so on one, so the right-hand number read as a tag count. Her
      question: "is that supposed to say one of thirteen tags?" */
@@ -2904,7 +2913,9 @@ test("creating drafts stays on Images, and the final check says what is wrong �
   /* D439 · One list, one class, so every alert can sort to the top together. */
   assert.doesNotMatch(app, /"ready":"needs-review"/, "one state vocabulary, not two");
   assert.doesNotMatch(app, /final-safety-readiness/, "the separate readiness grid is gone");
-  assert.match(app, /under 100 characters/, "say what is wrong, not that it needs review");
+  /* D841 · was "under 100 characters", an invented minimum. The rule this
+     guards is unchanged - name the thing, do not say "needs review". */
+  assert.match(app, /very short/, "say what is wrong, not that it needs review");
   assert.doesNotMatch(app, /need another try stay here/,
     "nothing reaches Publish that cannot publish");
 });
@@ -3839,11 +3850,11 @@ test("the publish checklist names what is wrong and counts in English — D490",
   assert.match(app, /const missing=createdListingsMissingImages\(selectedPublishDrafts\(\)\)/);
   assert.match(app, /still needs a photo/);
 
-  // "1 photos", and "1 of 2 titles are under 100 characters".
+  // "1 photos", and "1 of 2 titles are very short".
   assert.doesNotMatch(review, /\{selectedCount\+mockupCount\} photos/);
   assert.match(review, /===1\?"photo":"photos"/);
   /* D546 - the publish checklist repeated the cards above it, so it went; each fact moved to the row that owns it. */
-  assert.match(app, /===1\?"title is":"titles are"\} under 100 characters/);
+  assert.match(app, /===1\?"title is":"titles are"\} very short/);
 });
 
 test("a reopened batch finishes preparing and the button says why it cannot run — D491", async () => {

@@ -2675,7 +2675,8 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
     /* Over 140 was flagged by nothing at all. Etsy rejects it. */
     if(length>140)flags.push({tone:"attention",label:`Over limit · ${length} chars`});
     else if(!length)flags.push({tone:"attention",label:"No title yet"});
-    else if(length<100)flags.push({tone:"attention",label:`Short title · ${length} chars`});
+    /* D841 · a note, at the length where it is actually worth saying. */
+    else if(length<60)flags.push({tone:"note",label:`Short title · ${length} chars`});
     /* Tags are an optimisation, not a blocker - she was explicit about that - so
        this is a neutral note and never the accent. */
     const tags=(design.tags||[]).length;
@@ -2935,9 +2936,10 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
     const plural=(count:number,word:string)=>`${count} ${count===1?word:`${word}s`}`;
       /* D546 - the checklist under these cards repeated them line for line, so it
          went. Two of its lines were not repeated anywhere - how many titles are
-         under 100 characters, and whether pricing and shipping were approved -
+         very short, and whether pricing and shipping were approved -
          and they belong on the rows that own that work. */
-      const shortTitles=isActive?files.filter(file=>file.title.trim().length<100).length:0;
+      /* D841 · reported, not a gate. Etsy has no minimum title length. */
+      const shortTitles=isActive?files.filter(file=>file.title.trim().length<60).length:0;
       return [
         {label:"Listings ready",value:started?plural(counts.drafts,"listing"):blank,pending,done:counts.drafts>0,report:true},
         {label:"Titles and tags",value:started?(()=>{
@@ -2948,7 +2950,7 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
            read as a tag count. Both sides count listings, out loud. */
         if(counts.tagged===counts.designs&&counts.designs>0)return `${counts.titled} of ${counts.designs} titles · all 13 tags`;
         return `${counts.titled} of ${counts.designs} titles · ${counts.tagged} of ${counts.designs} with all 13 tags`;
-      })():blank,detail:isActive&&shortTitles?`${shortTitles} ${shortTitles===1?"title is":"titles are"} under 100 characters`:undefined,pending,/* D660 · Tags were folded into the same done-test as titles, so a listing with
+      })():blank,detail:isActive&&shortTitles?`${shortTitles} ${shortTitles===1?"title is":"titles are"} very short`:undefined,pending,/* D660 · Tags were folded into the same done-test as titles, so a listing with
    fewer than 13 tags carried the alert mark and the alert colour beside a
    product that genuinely could not publish. A missing title blocks; tags below
    thirteen are an optimisation, and Etsy accepts the listing either way -
