@@ -58,6 +58,17 @@ const reachesTheFactory = (selector) =>
  * palette, it gets its own line here and a reason, so the list of things that
  * are allowed to break the palette stays short and readable. */
 const APPROVED_DECORATION = [".app-shell > .factory-main::before"];
+/* D821 · and the pane itself. Its second gradient stop is rgba(238,218,239,.9)
+   - hue 297, inside the band this test forbids - because that is what the
+   approved prototype's .goldie-main computes to, read off its own CSSOM.
+   Production had rgba(232,214,226,.9), a greyer pink, which passed this test
+   and did not match the design.
+
+   This is the same distinction the orb exemption draws: the test exists to
+   catch violet that was invented here, not violet that was measured off the
+   thing we are copying. A value only earns this list by being read from the
+   prototype and named with the element it was read from. */
+const APPROVED_MEASURED = new Map([[".app-shell > .factory-main", "rgba(238,218,239"]]);
 
 const offenders = [];
 for (const name of readdirSync(new URL("../app", import.meta.url)).filter(file => file.endsWith(".css"))) {
@@ -66,6 +77,7 @@ for (const name of readdirSync(new URL("../app", import.meta.url)).filter(file =
     const selector = decl.parent.selector || "";
     if (!reachesTheFactory(selector)) return;
     if (APPROVED_DECORATION.some(allowed => selector.replace(/\s+/g, " ").trim() === allowed)) return;
+    const measured = APPROVED_MEASURED.get(selector.replace(/\s+/g, " ").trim());
     const literals = [
       ...[...decl.value.matchAll(/#[0-9a-fA-F]{6}\b|#[0-9a-fA-F]{3}\b/g)].map(m => [m[0], hexToHsl(m[0])]),
       /* rgba() carries hue too - the last lilac surfaces in the app were
@@ -77,6 +89,7 @@ for (const name of readdirSync(new URL("../app", import.meta.url)).filter(file =
       /* Near-neutrals carry almost no hue and read as grey whatever their
          nominal angle; the near-black and near-white ends likewise. */
       if (saturation < 12 || lightness < 8 || lightness > 97) continue;
+      if (measured && raw.startsWith(measured)) continue;
       const warmGold = hue >= 20 && hue < 70;
       const blueViolet = hue >= 180 && hue < 300;
       if (!warmGold && !blueViolet) continue;

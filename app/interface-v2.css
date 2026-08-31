@@ -50,7 +50,9 @@ html, body { background: #f1d2dc; }
   position: relative;
   isolation: isolate;
   padding: 0;
-  background: linear-gradient(145deg, rgba(248,228,237,.93), rgba(232,214,226,.9));
+  /* D821 · the second stop was rgba(232,214,226,.9), a greyer pink than the
+     prototype's. Read off .goldie-main's own CSSOM: rgba(238,218,239,.9). */
+  background: linear-gradient(145deg, rgba(248,228,237,.93), rgba(238,218,239,.9));
 }
 .app-shell > .factory-main::before {
   content: "";
@@ -687,7 +689,21 @@ html, body { background: #f1d2dc; }
  * left alone.
  * ========================================================================== */
 .app-shell{font-family:Inter,ui-sans-serif,system-ui,-apple-system,sans-serif;letter-spacing:normal}
-.app-shell .topbar{background:linear-gradient(rgba(255,250,253,.58),rgba(255,246,251,.36));border-right:1px solid rgba(255,255,255,.72);backdrop-filter:blur(20px) saturate(1.12)}
+/* D821 · this line is deleted. D803 listed these three values in its header as
+   the prototype's and they are not the prototype's - they are what production
+   was already doing. Read live off .goldie-sidebar's own CSSOM:
+
+     gradient   rgba(255,241,244,.94) -> rgba(247,221,232,.9)
+                (this line said .58 -> .36, less than half the opacity)
+     edge       1px rgba(113,65,91,.15)   (this line said white at .72)
+     backdrop   blur(24px) saturate(1.04) (this line said 20px / 1.12)
+
+   D721 measured the rail correctly at the top of this file and this overwrote
+   it 650 lines later, so the rail has been washed out on every screen in the
+   app since - which is most of why the whole thing reads paler than the
+   preview. D721's block stands; only the edge is restated, at the prototype's
+   exact rgba rather than the #ded6dc approximation. */
+.app-shell .topbar{border-right:1px solid rgba(113,65,91,.15)}
 .app-shell .factory-top{background:rgba(255,248,252,.72);border-bottom:1px solid #eee8ec}
 
 /* The footer is the last thing on the page and the prototype runs it edge to

@@ -498,3 +498,33 @@ test("D820: step 3's parts resolve to the values measured off the prototype", ()
   assert.ok(chip && /(^|\s)10px/.test(chip.value),
     `the tag chip resolves to ${chip ? `${chip.value} (${chip.file}:${chip.line})` : "unset"}`);
 });
+
+test("D821: the shell's own surface resolves to the prototype's, not to a later restatement", () => {
+  /* Read live off .goldie-sidebar and .goldie-main in the prototype, beside
+     .topbar and .factory-main on thegoldiesuite.com, same viewport:
+
+       sidebar gradient  rgba(255,241,244,.94) -> rgba(247,221,232,.9)
+                         production: .58 -> .36, less than half the opacity
+       sidebar edge      1px rgba(113,65,91,.15)   production: white at .72
+       backdrop          blur(24px) saturate(1.04) production: 20px / 1.12
+       main gradient     ...rgba(238,218,239,.9)   production: rgba(232,214,226,.9)
+
+     D721 measured all of this correctly. D803 listed the production values in
+     its own header as if they were the prototype's and overwrote D721 with
+     them 650 lines later, so the rail was washed out on every screen. */
+  const gradient = resolve({ selectorTest: s => /\.app-shell > \.topbar$|\.app-shell \.topbar$/.test(s), property: "background" });
+  assert.ok(gradient && /rgba\(255,241,244,\.94\)/.test(gradient.value),
+    `the rail resolves to ${gradient ? `${gradient.value} (${gradient.file}:${gradient.line})` : "unset"}`);
+
+  const edge = resolve({ selectorTest: s => /\.app-shell > \.topbar$|\.app-shell \.topbar$/.test(s), property: ["border-right", "border-right-color"] });
+  assert.ok(edge && /113,\s*65,\s*91/.test(edge.value),
+    `the rail's edge resolves to ${edge ? edge.value : "unset"}`);
+
+  const blur = resolve({ selectorTest: s => /\.app-shell > \.topbar$|\.app-shell \.topbar$/.test(s), property: "backdrop-filter" });
+  assert.ok(blur && /blur\(24px\) saturate\(1\.04\)/.test(blur.value),
+    `the rail's backdrop resolves to ${blur ? blur.value : "unset"}`);
+
+  const pane = resolve({ selectorTest: s => /\.app-shell > \.factory-main$/.test(s), property: "background" });
+  assert.ok(pane && /rgba\(238,218,239,\.9\)/.test(pane.value),
+    `the pane resolves to ${pane ? pane.value : "unset"}`);
+});

@@ -148,7 +148,10 @@ const CASES = [
   { name: "modal action shape", chain: [...shell, el("section","publish-confirm"), el("div","publish-confirm-actions"), el("button")], property: "border-radius", expect: /^8px$/ },
   // shell chrome — D734/D736/D737
   { name: "shell typeface", chain: [el("main","app-shell")], property: "font-family", expect: /^Inter,/ },
-  { name: "sidebar edge", chain: [el("main","app-shell"), el("aside","topbar")], property: "border-right", expect: /rgba\(255,255,255,\.72\)/ },
+  /* D821 · this expected D803's value, which D803 recorded as the prototype's
+     and which the prototype does not use. Read off .goldie-sidebar live:
+     1px rgba(113,65,91,.15). */
+  { name: "sidebar edge", chain: [el("main","app-shell"), el("aside","topbar")], property: "border-right", expect: /rgba\(113,65,91,\.15\)/ },
   // D776 - this line asserted .72, which is not the prototype's value; it was
   // the value a later sweep had left on the page. Read off the running
   // prototype: rgba(255,249,252,.9) over a #dcc5d2 edge. A fidelity test that
