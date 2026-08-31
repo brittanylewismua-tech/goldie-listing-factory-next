@@ -2308,3 +2308,25 @@ html, body { background: #f1d2dc; }
    one selector deeper than the one D818 deleted. And the allowance caption
    under each meter is 11px at 3.57:1, which is under AA for body text. */
 .app-shell .factory-work .usage-card b span{color:#6e606a}
+
+/* D823 · the review row, and the two sidebars saying the same number two ways.
+
+   Read live on step 4 of batch 04712deb beside the prototype:
+
+     .goldie-review        grid minmax(0,1fr) 290px, gap 16   matched
+     .goldie-review-list   gap 10                             matched
+     .goldie-publish-box   290 wide, pad 20, radius 12,
+                           bg rgb(45,29,41)                   matched
+     .goldie-review-row    gap 11, hairline #ded1d8           production had
+                                                              gap 12, #ded6dc
+
+   Both hairlines are in the family; the prototype's row uses the other one.
+
+   D818 formatted the interior sidebar's allowance as the prototype does -
+   "80 / 10,000 listings", "8 of 20 published" - and left the workflow's own
+   sidebar printing "80 / 10000 listings" and "8 of 20". The same rail, on two
+   pages, saying the same number two different ways, because I fixed the copy I
+   was writing and not the copy I was copying it from. Both say it the
+   prototype's way now. */
+.app-shell .final-design-group{border-color:#ded1d8}
+.app-shell .final-design-group summary{gap:11px}

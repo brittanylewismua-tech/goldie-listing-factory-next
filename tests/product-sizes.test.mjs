@@ -1182,8 +1182,17 @@ test("the rail digits use the app's own type — D352", async () => {
 test("the sidebar goal names the period — D351", async () => {
   const app = await read("app/listing-factory-app.tsx");
   assert.match(app, /className="listing-goal-caption">This \{listingGoal\.period\}&rsquo;s goal<\/span>/);
-  assert.match(app, /<b>\{goalDone\} of \{listingGoal\.target\}<\/b>/,
+  /* D823 · the prototype writes this line "6 of 20 published". D818 gave the
+     interior sidebar that wording and left the workflow's own saying "8 of 20",
+     so the same rail said the same number two ways depending on the page. What
+     D351 guards is unchanged: progress only, no deficit, no cap. */
+  assert.match(app, /<b>\{goalDone\} of \{listingGoal\.target\} published<\/b>/,
     "progress only — still no deficit, and the count is not capped");
+  assert.doesNotMatch(app, /\{listingGoal\.target - goalDone\}|Math\.min\(goalDone/,
+    "no deficit and no cap");
+  const shell = await read("app/factory-shell.tsx");
+  assert.match(shell, /\{goalDone\} of \{goal\.target\} published/,
+    "and the interior rail says it the same way");
 });
 
 /* D357 · "Powered by Goldie AI" is the widest line in the sidebar, so it sets

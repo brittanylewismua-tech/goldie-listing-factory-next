@@ -559,3 +559,16 @@ test("D822: no interior page reserves room for a rail the shell already owns", a
   assert.ok(eyebrow && /#e7c9dd/i.test(eyebrow.value),
     `"CURRENT PLAN" resolves to ${eyebrow ? `${eyebrow.value} (${eyebrow.file}:${eyebrow.line})` : "unset"}`);
 });
+
+test("D823: both sidebars format the allowance the way the prototype does", async () => {
+  /* The prototype's rail reads "62 / 10,000 listings" and "6 of 20 published".
+     D818 gave the interior rail that formatting and left the workflow's own
+     printing the raw integer and dropping the last word, so the same component
+     on two pages said the same number two ways. */
+  for (const file of ["listing-factory-app.tsx", "factory-shell.tsx"]) {
+    const source = await fs.promises.readFile(new URL(`../app/${file}`, import.meta.url), "utf8");
+    assert.match(source, /toLocaleString\(\)\} \/ \$\{[a-zA-Z.]+\.toLocaleString\(\)\} listings/,
+      `${file} formats the allowance with separators`);
+    assert.match(source, /published/, `${file} names what the goal counts`);
+  }
+});
