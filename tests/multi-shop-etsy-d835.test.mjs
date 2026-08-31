@@ -166,3 +166,37 @@ test("D836: a bundle is only as reachable as its least reachable member", async 
   assert.deepEqual(blocked(["a", "c"]), [], "here + unproven is usable");
   assert.deepEqual(blocked(["a", "b"]), ["b"], "one member from another shop blocks the bundle");
 });
+
+test("D837: one Etsy row, and no path clears the connection without being told to", async () => {
+  const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+
+  /* D836 fixed the Etsy row on the connect screen and left the copy inside
+     .connected-connection-stack untouched: it offered only Disconnect, called
+     DELETE, then ran setEtsyConnected(false) unconditionally. Disconnecting one
+     shop while another remained told the seller they had no Etsy connection at
+     all, over a promoted shop the next publish would have used.
+
+     Two copies of a handler is the defect, so this asserts there is one. */
+  assert.equal((app.match(/connection-row etsy-connection service-row/g) || []).length, 1,
+    "the Etsy row is written once");
+  assert.equal((app.match(/etsyConnectionRow\(/g) || []).length, 3,
+    "one definition, two render paths");
+  assert.equal((app.match(/fetch\("\/api\/etsy",\{method:"DELETE"\}\)/g) || []).length, 1,
+    "one disconnect path");
+
+  /* Nothing may assume the seller is disconnected after a DELETE. The only
+     setEtsyConnected(false) allowed is one derived from what the route said. */
+  const afterDelete = app.slice(app.indexOf('fetch("/api/etsy",{method:"DELETE"})'));
+  const window = afterDelete.slice(0, 900);
+  assert.doesNotMatch(window, /setEtsyConnected\(false\)/,
+    "the promoted shop must survive a disconnect");
+  assert.match(window, /if\(!response\.ok\)throw new Error/, "a non-2xx DELETE is handled");
+  assert.match(window, /setEtsyConnected\(Boolean\(result\.connected\)\)/, "the route's answer is applied");
+  assert.match(window, /setEtsyShops\(listing\.shops\|\|\[\]\)/, "and the switcher list is refreshed");
+
+  /* Every connected Etsy row offers the way to add the next shop - without it
+     the switcher can never have anything to switch to. */
+  const row = app.slice(app.indexOf("function etsyConnectionRow"));
+  assert.match(row.slice(0, 1600), /Connect another Etsy shop/,
+    "the connected row offers adding another shop");
+});

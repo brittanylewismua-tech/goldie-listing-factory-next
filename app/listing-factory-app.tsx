@@ -3528,6 +3528,47 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
     finally { setConnecting(false); }
   }
 
+  /* D837 · One Etsy row, rendered in both places. There were two copies of this
+     markup and its handler, and D836 fixed one of them: the copy inside
+     .connected-connection-stack still offered only Disconnect, called DELETE,
+     and then ran setEtsyConnected(false) unconditionally - so disconnecting one
+     shop while another remained told the seller they had no Etsy connection at
+     all, over a promoted shop the next publish would have used.
+
+     Two copies of a handler is the defect. One component, used twice. */
+  async function disconnectEtsy(){
+    if(!await confirmAction({title:"Disconnect this Etsy shop?",body:"Goldie will not publish to this shop until you connect it again. Any other shop you have connected stays connected, and your existing Etsy listings are not affected.",confirmLabel:"Disconnect",cancelLabel:"Keep connected"}))return;
+    setEtsyError("");
+    try{
+      const response=await fetch("/api/etsy",{method:"DELETE"});
+      const result=await response.json().catch(()=>({})) as {connected?:boolean;shopName?:string;error?:string};
+      if(!response.ok)throw new Error(result.error||"That shop could not be disconnected.");
+      /* Another shop may remain, and the API promotes it. Apply what it says. */
+      setEtsyConnected(Boolean(result.connected));
+      setEtsyShop(result.connected?result.shopName||"":"");
+      const listing=await fetch("/api/etsy").then(r=>r.json()).catch(()=>({shops:[]})) as {shops?:{shopId:number;shopName:string;active:boolean}[]};
+      setEtsyShops(listing.shops||[]);
+    }catch(error){setEtsyError(error instanceof Error?error.message:"That shop could not be disconnected.")}
+  }
+  function etsyConnectionRow(withHint:boolean){
+    return <div className={`connection-row etsy-connection service-row ${etsyConnected?"connected":""}`}>
+      <span className="connection-icon"><img src="/etsy-logo.svg" alt="" /></span>
+      <div><b>{etsyConnected?"Etsy connected":"Etsy"}</b>
+        {etsyConnected&&<em className="etsy-shop-name">{etsyShop||"your shop"}</em>}
+        {withHint&&<span className="sr-only">Connect Etsy before publishing</span>}
+        <small>{etsyConnected?"Connected and verified.":"Required before Goldie publishes and finishes your listings."}</small>
+      </div>
+      {etsyConnected
+        ? <><button className="disconnect-link" onClick={()=>void disconnectEtsy()}>Disconnect</button>
+            {/* D836 · Without this there is no way to accumulate the shops the
+                switcher needs: the callback adds a shop, but nothing offered to
+                start that flow while one was already connected. */}
+            <button className="secondary-action add-shop-link" aria-busy={etsyConnecting} disabled={etsyConnecting}
+              onClick={()=>void connectEtsy()}>{etsyConnecting?"Opening Etsy…":"Connect another Etsy shop"}</button></>
+        : <button className="secondary-action" aria-busy={etsyConnecting} onClick={()=>void connectEtsy()} disabled={etsyConnecting}>{etsyConnecting?"Opening Etsy…":"Connect Etsy"}</button>}
+    </div>;
+  }
+
   async function connectEtsy(){setEtsyConnecting(true);setEtsyError("");try{const response=await fetch("/api/etsy",{method:"POST"}),result=await response.json() as {authorizeUrl?:string;error?:string};if(!response.ok||!result.authorizeUrl)throw new Error(result.error||"Etsy connection could not start.");window.location.href=result.authorizeUrl}catch(error){setEtsyError(error instanceof Error?error.message:"Etsy connection could not start.");setEtsyConnecting(false)}}
 
   async function loadTemplateUrl(productUrl = template, pricingOverride?:Pricing, savedShippingProfileId=0,rememberedColorIds:number[]=[],rememberedSizeIds:number[]=[]):Promise<TemplateDetails|null> {
@@ -4200,24 +4241,13 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
                     <a href="https://help.printify.com/hc/en-us/articles/4483626447249-How-can-I-generate-an-API-token" target="_blank" rel="noreferrer">Open Printify’s official token instructions ↗</a></div>
                   </details>
                   </section>
-                  <div className={`connection-row etsy-connection service-row ${etsyConnected?"connected":""}`}><span className="connection-icon"><img src="/etsy-logo.svg" alt="" /></span><div><b>{etsyConnected?"Etsy connected":"Etsy"}</b>{etsyConnected&&<em className="etsy-shop-name">{etsyShop||"your shop"}</em>}<span className="sr-only">Connect Etsy before publishing</span><small>{etsyConnected?"Connected and verified.":"Required before Goldie publishes and finishes your listings."}</small></div>{etsyConnected?<><button className="disconnect-link" onClick={async()=>{if(!await confirmAction({title:"Disconnect your Etsy shop?",body:"Goldie will not be able to publish listings until you reconnect and authorise it again. Your existing Etsy listings are not affected.",confirmLabel:"Disconnect Etsy",cancelLabel:"Keep connected"}))return;/* D836 · Another shop may remain, and the API promotes it. Apply what
-                    it returns rather than assuming the seller is now disconnected. */
-                    const response=await fetch("/api/etsy",{method:"DELETE"});
-                    const result=await response.json().catch(()=>({connected:false})) as {connected?:boolean;shopName?:string};
-                    setEtsyConnected(Boolean(result.connected));setEtsyShop(result.connected?result.shopName||"":"");
-                    void fetch("/api/etsy").then(r=>r.json()).then((payload:{shops?:{shopId:number;shopName:string;active:boolean}[]})=>setEtsyShops(payload.shops||[])).catch(()=>undefined)}}>Disconnect</button>
-                  {/* D836 · Without this there is no way to accumulate the shops the
-                      switcher needs: the callback adds a shop, but nothing offered
-                      to start that flow while one was already connected. */}
-                  <button className="secondary-action add-shop-link" aria-busy={etsyConnecting} disabled={etsyConnecting}
-                    onClick={()=>void connectEtsy()}>{etsyConnecting?"Opening Etsy…":"Connect another Etsy shop"}</button>
-                  </>:<button className="secondary-action" aria-busy={etsyConnecting} onClick={()=>void connectEtsy()} disabled={etsyConnecting}>{etsyConnecting?"Opening Etsy…":"Connect Etsy"}</button>}</div>
+                  {etsyConnectionRow(true)}
                   <small className="secure-copy">♢ Encrypted and saved securely.</small>
                 </div>
               ) : (
                 <div className="connection-stack connection-setup connected-connection-stack">
                   <div className="connection-row"><span className="connection-icon"><img src="/printify-logo.svg" alt="" /></span><div><b>Printify connected</b><small>Your connection will be remembered</small></div><button className="disconnect-link" onClick={async () => { if(!await confirmAction({title:"Disconnect Printify?",body:"Goldie will not be able to create or publish drafts until you reconnect with a new API token. Your Printify products are not affected.",confirmLabel:"Disconnect Printify",cancelLabel:"Keep connected"}))return; await fetch("/api/printify", { method: "DELETE" }); setConnected(false); setToken(""); setTemplateDetails(null); setConnectionError(""); }}>Disconnect</button></div>
-                  <div className={`connection-row etsy-connection service-row ${etsyConnected?"connected":""}`}><span className="connection-icon"><img src="/etsy-logo.svg" alt="" /></span><div><b>{etsyConnected?"Etsy connected":"Etsy"}</b>{etsyConnected&&<em className="etsy-shop-name">{etsyShop||"your shop"}</em>}<small>{etsyConnected?"Connected and verified.":"Required before Goldie publishes and finishes your listings."}</small></div>{etsyConnected?<button className="disconnect-link" onClick={async()=>{if(!await confirmAction({title:"Disconnect your Etsy shop?",body:"Goldie will not be able to publish listings until you reconnect and authorise it again. Your existing Etsy listings are not affected.",confirmLabel:"Disconnect Etsy",cancelLabel:"Keep connected"}))return;await fetch("/api/etsy",{method:"DELETE"});setEtsyConnected(false);setEtsyShop("")}}>Disconnect</button>:<button className="secondary-action" onClick={()=>void connectEtsy()} disabled={etsyConnecting}>{etsyConnecting?"Opening Etsy…":"Connect Etsy"}</button>}</div>
+                  {etsyConnectionRow(false)}
                 </div>
               )}
               {connected&&connectionError&&<p className="field-warning" role="status">{connectionError}</p>}

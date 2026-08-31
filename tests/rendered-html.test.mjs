@@ -11,7 +11,11 @@ test("keeps both connected-account Disconnect actions visually quiet", async () 
     readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
     Promise.all([readFile(new URL("../app/approved-functional.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n")),
   ]);
-  assert.equal((page.match(/className="disconnect-link"/g) || []).length, 3);
+  /* D837 · Two of these were two copies of the same Etsy row, and D836 fixed
+     only one of them. There is one Etsy row now, rendered twice from one
+     component, plus Printify's - so two occurrences, not three. What this test
+     guards is unchanged: every Disconnect stays visually quiet. */
+  assert.equal((page.match(/className="disconnect-link"/g) || []).length, 2);
   assert.match(css, /service-row>button:not\(\.disconnect-link\)/);
   assert.match(css, /connection-row>button\.disconnect-link\{width:auto!important;min-width:0!important;max-width:none!important;background:transparent!important/);
 });
@@ -3806,8 +3810,14 @@ test("nothing destructive happens on a single click — D489", async () => {
     "disconnecting Etsy must be confirmed");
   assert.doesNotMatch(app, /onClick=\{async \(\) => \{ await fetch\("\/api\/printify", \{ method: "DELETE" \} \)/,
     "disconnecting Printify must be confirmed");
-  assert.equal((app.match(/title:"Disconnect your Etsy shop\?"/g) || []).length, 2,
-    "both Etsy rows confirm");
+  /* D837 · Both Etsy rows are one component now, so the confirmation is written
+     once and cannot be present on one path and missing on the other - which is
+     exactly how D836 shipped a fix to one of them. The rule is the same: no
+     Etsy DELETE without a confirmation in front of it. */
+  assert.equal((app.match(/fetch\("\/api\/etsy",\{method:"DELETE"\}\)/g) || []).length, 1,
+    "one Etsy disconnect path, not two that can drift");
+  assert.match(app, /confirmAction\(\{title:"Disconnect this Etsy shop\?"[\s\S]{0,400}?fetch\("\/api\/etsy",\{method:"DELETE"\}\)/,
+    "and it is confirmed before the request goes out");
   assert.match(app, /title:"Disconnect Printify\?"/);
 
   // Staged Etsy images can belong to listings that are already live.
