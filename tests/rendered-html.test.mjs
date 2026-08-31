@@ -2204,7 +2204,10 @@ test("traverses every workflow phase with one shared gate and never enables an i
   assert.match(navigationIssues(7,drafts).join(" "),/Etsy details/);
   assert.match(navigationIssues(8,{...complete,imagesReady:false}).join(" "),/photo/);
   const app=await readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8");
-  assert.match(app,/disabled=\{!active&&Boolean\(issues\.length\)\}/);
+  /* D853 · The gate applies only to a stage AHEAD of the seller now; a
+     finished step behind her is always reachable. `!active` still leads, which
+     is the part this assertion exists for. */
+  assert.match(app,/disabled=\{!active&&ahead&&Boolean\(issues\.length\)\}/);
   /* D220: the rail composes its own status line, so the fallback now reads
      issues[0] || `${progressStatus(...)}${draftLine}`. The rule is unchanged -
      a gate issue always wins over a computed status. */

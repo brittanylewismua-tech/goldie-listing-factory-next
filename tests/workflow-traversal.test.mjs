@@ -212,7 +212,10 @@ test("D227: a run where every draft fails does not pretend to have succeeded", a
   assert.match(source, /Nothing was charged against your plan/);
 
   /* And the rail must never disable the stage the seller is on. */
-  assert.match(source, /disabled=\{!active&&Boolean\(issues\.length\)\}/);
+  /* D853 · The gate now only applies to a stage AHEAD of the seller. `!active`
+     still leads it, which is what this assertion is about: the stage she is
+     standing on is never disabled. */
+  assert.match(source, /disabled=\{!active&&ahead&&Boolean\(issues\.length\)\}/);
 });
 
 test("D229: no disabled control is silent about why", async () => {

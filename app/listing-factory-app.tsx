@@ -4188,7 +4188,21 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
             /* D227 · Never disable the stage the seller is currently on. When drafts failed,
                the rail greyed out Listing while the seller was standing on Listing —
                a control refusing the page it was already showing. */
-            return <button key={stage.label} className={`${active?"active":""} ${done?"done":""}`} disabled={!active&&Boolean(issues.length)} aria-current={active?"step":undefined} title={issues[0]||undefined} onClick={()=>openProgressStep(stage.index)}><em className="progress-bubble-label">{stage.label}</em>{/* D352 · Zero-padding four steps ("01 of 04") is a template tic — it implies
+            /* D853 - the rail promised "you can return to an earlier step without
+               starting over" and then refused to. Standing on Publish, the
+               Listing button was disabled: its gate still had something to say,
+               and the gate was being applied in both directions. So a finished
+               step behind her was unclickable AND drawn grey, because the
+               disabled dimming took the tick down with it - a completed step
+               rendered as though it were not done, on the one screen where she
+               is deciding whether to publish.
+
+               D620 already drew the line: behind her, where she is, ahead of
+               her. A gate is a statement about work not yet done, which is only
+               ever true of a step ahead. Going back is how you fix what the gate
+               is complaining about. */
+            const ahead=stagePosition>=0&&position>stagePosition;
+            return <button key={stage.label} className={`${active?"active":""} ${done?"done":""}`} disabled={!active&&ahead&&Boolean(issues.length)} aria-current={active?"step":undefined} title={issues[0]||undefined} onClick={()=>openProgressStep(stage.index)}><em className="progress-bubble-label">{stage.label}</em>{/* D352 · Zero-padding four steps ("01 of 04") is a template tic — it implies
                 a longer sequence than exists and adds a character that carries no
                 information. */}
                 {/* D619 - the step you are STANDING on shows its number, never a
