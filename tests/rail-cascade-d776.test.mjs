@@ -846,3 +846,44 @@ test("D835: the rail is fixed and its contents fit inside it", () => {
   assert.match(v2, /\.app-shell \.approved-sidebar-footer\{gap:7px;padding-top:12px\}/);
   assert.match(v2, /\.listing-goal-side\{\s*border-radius:16px;padding:10px 14px/);
 });
+
+test("D838: the two things D834 declared and never won", () => {
+  /* Both landed in the file and both lost, and the deploy is what showed it:
+
+       .autosave-note position   static!important   approved-functional:124
+                                 measured live at 501..631 on a bar centred
+                                 on 864 - "centred on the card" was never true
+       .listing-goal-side        a full !important surface block in
+                                 clarity-pass:1794, so the plum tint that tells
+                                 the two counters apart computed rgba(0,0,0,0)
+
+     Resolved here rather than asserted, because asserting is exactly what
+     missed them: the rules existed, they were just losing. */
+  const load = ["globals.css", "factory-navigation.css", "theme.css", "lilac-theme.css",
+    "approved-functional.css", "management-aesthetic.css", "clarity-pass.css", "interface-v2.css"];
+  const winner = (matches, property) => {
+    const found = [];
+    load.forEach((name, order) => {
+      const css = fs.readFileSync(new URL(`../app/${name}`, import.meta.url), "utf8");
+      postcss.parse(css).walkRules(rule => {
+        if (!rule.selectors.some(one => matches(one.replace(/\s+/g, " ").trim()))) return;
+        const media = rule.parent.type === "atrule" ? rule.parent.params : "";
+        if (/max-width:\s*(\d+)px/.test(media) && Number(/max-width:\s*(\d+)px/.exec(media)[1]) < 1180) return;
+        rule.walkDecls(property, decl => found.push({
+          where: `${name}:${decl.source.start.line}`, order, line: decl.source.start.line,
+          value: decl.value, important: decl.important === true,
+        }));
+      });
+    });
+    found.sort((a, b) => Number(a.important) - Number(b.important) || a.order - b.order || a.line - b.line);
+    return found[found.length - 1];
+  };
+
+  const position = winner(one => /\.autosave-note$/.test(one), "position");
+  assert.ok(position && position.value === "absolute",
+    `the save note resolves to position:${position ? `${position.value} (${position.where})` : "unset"} — it cannot be centred while it is static`);
+
+  const fill = winner(one => one === ".app-shell .listing-goal-side" || /\.listing-goal-side$/.test(one), "background");
+  assert.ok(fill && /123,\s*62,\s*105/.test(fill.value),
+    `the goal counter resolves to ${fill ? `${fill.value} (${fill.where})` : "unset"} — the two counters are told apart by that tint`);
+});

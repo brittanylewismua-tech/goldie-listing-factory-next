@@ -120,11 +120,17 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
     justify-self:start!important;
     min-width:150px!important;
   }
+  /* D838 · position:static!important and transform:none!important are gone.
+     They were written when this bar was a three-lane grid and the note sat in
+     lane 2; interface-v2 has made the bar a flex row since D791, so the lane
+     never applied and the static did - which is why the note has been sitting
+     wherever the free space left it (measured live at 501..631 against a bar
+     centred on 864). The lane declarations stay, inert under flex and correct
+     again if the bar ever returns to a grid. The centring lives in
+     interface-v2 now, on the axis that is actually in use. */
   .app-shell .workflow-footer-actions .autosave-note{
-    position:static!important;
     grid-column:2!important;
     justify-self:center!important;
-    transform:none!important;
     white-space:nowrap!important;
   }
   .app-shell .launch-panel .launch-note{

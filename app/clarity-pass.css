@@ -1791,13 +1791,14 @@ body{min-width:1180px!important}
    meter. A thin off-white edge with a soft bloom behind it, over a slightly
    deeper surface so the edge has something to sit against. No animation and no
    saturated colour — it should look lit, not gamified. */
+/* D838 · The surface declarations left this rule. She has asked twice for the
+   two sidebar counters to read differently, and every one of these carried
+   !important, so interface-v2's plum tint lost silently - measured live, the
+   goal card computed rgba(0,0,0,0) with this gradient painted over it. The
+   layout and the link reset stay; the colour and the shape are interface-v2's,
+   where the pair is decided together. */
 .app-shell .listing-goal-side{
   display:grid!important;gap:7px!important;
-  margin-top:12px!important;padding:12px 14px!important;
-  border-radius:14px!important;
-  border:1px solid rgba(255,251,247,.62)!important;
-  background:linear-gradient(150deg,rgba(92,48,79,.10),rgba(255,255,255,.30))!important;
-  box-shadow:0 0 0 1px rgba(255,255,255,.16),0 0 22px -8px rgba(255,238,248,.9),inset 0 1px 0 rgba(255,255,255,.55)!important;
   text-decoration:none!important;
 }
 .app-shell .listing-goal-caption{
