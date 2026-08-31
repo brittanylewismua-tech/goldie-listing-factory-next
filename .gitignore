@@ -47,3 +47,7 @@ yarn-error.log*
 .projects/state.local.test.json
 !.env.example
 _HANDOFF-read-me-on-other-laptop/
+
+# D826 - throwaway diagnostic scripts are never committed. Three of them rode
+# in on a `git add -A` and stopped a deploy.
+/*.cjs
