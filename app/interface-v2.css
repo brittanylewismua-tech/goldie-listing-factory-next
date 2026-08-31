@@ -1997,3 +1997,28 @@ html, body { background: #f1d2dc; }
 .app-shell .start-new-batch{
   background:rgba(255,255,255,.38);padding:10px 12px;border-radius:12px;color:#4b283e}
 .app-shell .approved-usage{padding:13px 14px}
+
+/* D814 · The photo strip lost 102px to nested padding.
+
+   Preview, step 2 with the photos panel open:
+     .goldie-photo-layout   906 wide, 190px design column, 698px photo column
+     .goldie-photos         4 tracks of 168.5, gap 8
+     .goldie-photo          169x91
+
+   Production, measured on her batch:
+     .factory-photo-layout  804 wide, 240px design column (D684), 546 photos
+     .photo-order-strip     4 tracks of 130.5
+     tile                   131x211
+
+   The 102px is four levels of inset the preview does not have, counted down
+   the chain: .task-panel-body 14+14, .listing-rows 18+18, .listing-card's
+   22px left margin, .listing-card-detail 18+18. Every one of them is a
+   container wrapping a container. The rows and the card margin come off; the
+   card keeps its own padding, because that is the card.
+
+   The tile stays taller than the preview's 91px and that is not a defect: it
+   carries a rank badge, the filename, reorder buttons and a drag handle, none
+   of which the preview's tile has. It gets wider, which is what was costing
+   a row. */
+.app-shell .factory-work .listing-rows{padding-left:0;padding-right:0}
+.app-shell .factory-work .listing-rows .listing-card{margin-left:0}

@@ -327,3 +327,25 @@ test("D813: the product tile's label is a word, not a filled bar", () => {
   }
   assert.deepStrictEqual(faults, []);
 });
+
+test("D814: the photo strip is not squeezed by nested containers", () => {
+  /* 102px of the photo layout's width went to four levels of inset the preview
+     does not have, which cost the strip a whole column: tiles at 131px against
+     the preview's 169. Two of the four were containers wrapping containers. */
+  const faults = [];
+  const rows = resolve({
+    selectorTest: selector => /factory-work .listing-rows$/.test(selector),
+    property: "padding-left",
+  });
+  if (!rows || !/^0(px)?$/.test(rows.value)) {
+    faults.push(`.listing-rows resolves to padding-left:${rows ? rows.value : "unset"} — it is a list, not a card`);
+  }
+  const card = resolve({
+    selectorTest: selector => /\.listing-rows .listing-card$/.test(selector),
+    property: "margin-left",
+  });
+  if (!card || !/^0(px)?$/.test(card.value)) {
+    faults.push(`.listing-card resolves to margin-left:${card ? card.value : "unset"} inside the rows`);
+  }
+  assert.deepStrictEqual(faults, []);
+});
