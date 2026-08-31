@@ -4,6 +4,7 @@ import { desc, eq, and } from "drizzle-orm";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { getDb } from "@/db";
 import { productRecipes } from "@/db/schema";
+import { reachResolver, type Proof } from "./reach";
 
 export async function GET() {
   const user = await getChatGPTUser();
@@ -24,18 +25,30 @@ export async function GET() {
 
      Measured on her account: with godisagirlapparel connected, three of four
      products loaded; connecting She's A Wolf Clothing inverted it to one of
-     four. That is the whole reason for this. */
+     four. That is the whole reason for this.
+
+     D857 · "unproven means offer it" was wrong, and it is why she was still
+     looking at four GODISAGIRLAPPAREL products in a She's A Wolf Clothing
+     portal. Measured live:
+
+       active Etsy shop   16538900  shesawolfclothing
+       Gildan Tee         1374648   She's A Wolf Clothing   here
+       four others        20191756  GODISAGIRLAPPAREL       unproven
+
+     A Printify store publishes to exactly one Etsy shop. So the moment ONE
+     store is proven to be the one that pairs with the active shop, every other
+     store is proven not to be - there is nothing left to prove about 20191756,
+     and offering its products can only ever end in the 409 those three
+     actually returned.
+
+     The generous reading of "unproven" is still right, but only while nothing
+     is known: with no proof for the active shop, every store is a candidate
+     and all of them are offered. One proof settles the question. */
   const active = await env.DB.prepare("SELECT shop_id, shop_name FROM etsy_connections WHERE user_id=? AND is_active=1")
     .bind(user.userId).first<{ shop_id: number; shop_name: string }>();
   const proofs = await env.DB.prepare("SELECT printify_shop_id, etsy_shop_id FROM shop_pairing_proofs WHERE user_id=?")
-    .bind(user.userId).all<{ printify_shop_id: number; etsy_shop_id: number }>();
-  const here = new Set<number>(), away = new Set<number>();
-  for (const proof of proofs.results || []) {
-    if (active && proof.etsy_shop_id === active.shop_id) here.add(proof.printify_shop_id);
-    else away.add(proof.printify_shop_id);
-  }
-  const reach = (printifyShopId: number) =>
-    !printifyShopId || here.has(printifyShopId) ? "here" : away.has(printifyShopId) ? "away" : "unproven";
+    .bind(user.userId).all<Proof>();
+  const reach = reachResolver(active?.shop_id || 0, proofs.results || []);
 
   return NextResponse.json({ activeEtsyShop: active ? { shopId: active.shop_id, shopName: active.shop_name } : null, recipes: recipes.map((r) => {const saved=JSON.parse(r.pricingJson||"{}");return {...r,etsyShippingProfileId:Number(saved.etsyShippingProfileId)||0,defaultColorIds:Array.isArray(saved.defaultColorIds)?saved.defaultColorIds.filter(Number.isInteger):[],defaultSizeIds:Array.isArray(saved.defaultSizeIds)?saved.defaultSizeIds.filter(Number.isInteger):[],defaultProfitTarget:Number(saved.defaultProfitTarget)||10,wholeNumberPricing:saved.wholeNumberPricing===true,variantPrices:saved.variantPrices&&typeof saved.variantPrices==="object"?saved.variantPrices as Record<string,number>:{},etsyDefaults:saved.etsyDefaults&&typeof saved.etsyDefaults==="object"?saved.etsyDefaults:{},previewImage:typeof saved.previewImage==="string"?saved.previewImage:"",printifyShopTitle:typeof saved.printifyShopTitle==="string"?saved.printifyShopTitle:"",printifyShopId:Number(saved.printifyShopId)||0,mockupIds:Array.isArray(saved.mockupIds)?saved.mockupIds.filter((id:unknown)=>typeof id==="string").slice(0,8):undefined,setupComplete:saved.setupComplete!==false,reach:reach(Number(saved.printifyShopId)||0),printifyImageIndices:JSON.parse(r.printifyImageIndicesJson||"[]")}}) });
 }
