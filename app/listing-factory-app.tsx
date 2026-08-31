@@ -3971,11 +3971,8 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
             <a className="active" href="/listing-factory" onClick={event=>guardNavigation(event,"/listing-factory")}>Listing Factory</a>
             <a href="/batches" onClick={event=>guardNavigation(event,"/batches")}>Batch History</a>
             <a href="/keywords" target="_blank" rel="noopener noreferrer">Keyword Banks</a>
-            <a href="/usage" onClick={event=>guardNavigation(event,"/usage")}>Usage + Plan</a>
-            {/* D639 - ?step=connect is honoured as an explicit request and the
-                auto-skip leaves it alone, so this is the way back to the
-                connection screen rather than a new page. */}
-            <a href="/listing-factory?step=connect" onClick={event=>guardNavigation(event,"/listing-factory?step=connect")}>Connections</a>
+            {/* D834 · Usage + Plan and Connections live in the account menu now,
+                with the account. The rail is the three places work happens. */}
           </nav>
           <button className="workflow-restart-button" type="button" disabled={running} onClick={startOver}>{/* D362 · The glyph ↻ renders at text weight in most UI faces, so at 11px it
               read as a stray mark rather than an arrow. A drawn icon keeps its
@@ -4020,6 +4017,10 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
               </button>
               {accountMenuOpen&&<div className="factory-account-menu open" role="menu">
                 <a role="menuitem" href="/usage" onClick={event=>guardNavigation(event,"/usage")}>Usage + Plan</a>
+                {/* D639 · ?step=connect is honoured as an explicit request and the
+                    auto-skip leaves it alone, so this is the way back to the
+                    connection screen rather than a new page. */}
+                <a role="menuitem" href="/listing-factory?step=connect" onClick={event=>guardNavigation(event,"/listing-factory?step=connect")}>Connections</a>
                 {signedIn!==null&&(localPreview&&!signedIn
                   ? <span role="menuitem" title="Account sign-in is available on the published Listing Factory site.">Preview mode</span>
                   : <a role="menuitem" href={signedIn?"/account/sign-out?return_to=%2Flisting-factory":"/account/sign-in?return_to=%2Flisting-factory"}>{signedIn?"Sign out":"Sign in"}</a>)}
@@ -4207,7 +4208,16 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
 
           <div className={`product-step workflow-panel ${workflowStep==="setup"?"active-panel":"hidden-panel"}`}>{/* D763 · Panel 01. The facets below number from 02, and until now
             there was no 01 - the picker sat in the old card while the settings
-            under it had already become panels. */}<FactoryPanel index={1} title="Saved product" description={activeBundle?`Bundle · ${bundleRecipes.length} products`:activeRecipe?.name||"Choose the Printify product for this batch"} state={failedBundleNames().length?"Needs a look":productSelected||bundleSelected?"Complete":"Needed"} tone={failedBundleNames().length?"attention":productSelected||bundleSelected?"done":"attention"} open><SavedWorkflow bundleChosen={Boolean(activeBundle&&bundleRecipes.length>1)} savedRevision={savedRevision} connected={connected||localPreview} templateUrl={template} templateVerified={templateLoaded} loadingTemplate={loadingTemplate} suggestedProductName={templateDetails?[templateDetails.brand,templateDetails.model].filter(Boolean).join(" ").trim()||templateDetails.blueprintTitle||"":""} selectedProductId={activeBundle?`bundle:${activeBundle.id}`:activeRecipe?.id||""} selectedSummary={templateDetails?<div className="template-proof recipe-proof"><div className="product-thumb"><span>YOUR<br/>ART</span></div><div className="template-info">{bundleSelected?<><b>{activeBundle?.name}</b><span>{bundleRecipes.length} products · {bundleRecipes.map(item=>item.name).join(" · ")}</span><span>✓ Each product keeps its own colors, sizes, mockups, and keywords</span></>:<><b>{templateDetails.blueprintTitle}</b><span>{templateDetails.provider} · {variantSummary(summaryAxes(templateDetails,activeRecipe))}</span><span>✓ Product, placement, sizes, and shipping profile imported</span></>}</div><span className="template-badge">{bundleSelected?"Bundle selected":productSelected?"Product selected":"Save this product"}</span></div>:null} verifiedShippingProfileId={Number(templateDetails?.shippingTemplateId)||0} onTemplateUrl={(value) => { templateLoadVersion.current+=1;setLoadingTemplate(false);setTemplate(value);setTemplateDetails(null);setTemplateError(""); }} onUseRecipe={chooseRecipe} onUseBundle={useBundle} onStartNewProduct={startNewProduct} onChangeProduct={changeProduct} onVerifyTemplate={loadTemplateUrl} /></FactoryPanel>
+            under it had already become panels. */}<FactoryPanel index={1} title="Saved product" description={activeBundle?`Bundle · ${bundleRecipes.length} products`:activeRecipe?.name||"Choose the Printify product for this batch"} state={failedBundleNames().length?"Needs a look":productSelected||bundleSelected?"Complete":"Needed"} tone={failedBundleNames().length?"attention":productSelected||bundleSelected?"done":"attention"} open><SavedWorkflow bundleChosen={Boolean(activeBundle&&bundleRecipes.length>1)} savedRevision={savedRevision} connected={connected||localPreview} templateUrl={template} templateVerified={templateLoaded} loadingTemplate={loadingTemplate} suggestedProductName={templateDetails?[templateDetails.brand,templateDetails.model].filter(Boolean).join(" ").trim()||templateDetails.blueprintTitle||"":""} selectedProductId={activeBundle?`bundle:${activeBundle.id}`:activeRecipe?.id||""} selectedSummary={templateDetails?<div className="template-proof recipe-proof">{/* D834 · This drew the words "YOUR ART" in a box. The product's own
+                   Printify flatlay is available here - pickProductPhoto scores the
+                   previews and returns the best one - and showing it is what the
+                   panel is for: she is confirming which garment this batch prints
+                   on. The lettered box remains only when Printify has no usable
+                   photo. */}
+                {(()=>{const photo=templateDetails?pickProductPhoto(templateDetails):"";
+                  return photo
+                    ? <img className="product-thumb bundle-product-photo" src={photo} alt={templateDetails?.blueprintTitle||"Product"} decoding="async"/>
+                    : <div className="product-thumb"><span>YOUR<br/>ART</span></div>})()}<div className="template-info">{bundleSelected?<><b>{activeBundle?.name}</b><span>{bundleRecipes.length} products · {bundleRecipes.map(item=>item.name).join(" · ")}</span><span>✓ Each product keeps its own colors, sizes, mockups, and keywords</span></>:<><b>{templateDetails.blueprintTitle}</b><span>{templateDetails.provider} · {variantSummary(summaryAxes(templateDetails,activeRecipe))}</span><span>✓ Product, placement, sizes, and shipping profile imported</span></>}</div><span className="template-badge">{bundleSelected?"Bundle selected":productSelected?"Product selected":"Save this product"}</span></div>:null} verifiedShippingProfileId={Number(templateDetails?.shippingTemplateId)||0} onTemplateUrl={(value) => { templateLoadVersion.current+=1;setLoadingTemplate(false);setTemplate(value);setTemplateDetails(null);setTemplateError(""); }} onUseRecipe={chooseRecipe} onUseBundle={useBundle} onStartNewProduct={startNewProduct} onChangeProduct={changeProduct} onVerifyTemplate={loadTemplateUrl} /></FactoryPanel>
           {localPreview&&!templateDetails&&<button className="preview-demo-button" onClick={()=>void loadPreviewDemo()}>Load a complete poster demo to review every step</button>}
           {templateError && <p className="field-error recipe-error" role="alert">{templateError}</p>}
           <BatchPreferencesPortal>

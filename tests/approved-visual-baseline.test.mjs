@@ -1172,10 +1172,21 @@ test("D818: one component renders the interior sidebar, and it matches the workf
 
      What this still guards is that the five destinations exist on both, so a
      page cannot fall off the interior nav the way Connections once did. */
-  for (const label of ["Listing Factory", "Batch History", "Keyword Banks", "Usage + Plan", "Connections"]) {
-    assert.ok(shell.includes(`label: "${label}"`), `${label} is on the interior nav`);
-    assert.ok(app.includes(`>${label}</a>`), `${label} is on the workflow nav`);
+  /* D834 · Usage + Plan and Connections moved into the account menu, with the
+     account. The rail is the three places work happens. Both destinations still
+     have to exist on both surfaces - that is what this guards - they are just
+     reached from the menu now. */
+  for (const label of ["Listing Factory", "Batch History", "Keyword Banks"]) {
+    assert.ok(shell.includes(`label: "${label}"`), `${label} is on the interior rail`);
+    assert.ok(app.includes(`>${label}</a>`), `${label} is on the workflow rail`);
   }
+  for (const source of [shell, app]) {
+    const menu = source.slice(source.indexOf("factory-account-menu"));
+    assert.match(menu, /role="menuitem"[^>]*href="\/usage"/, "Usage + Plan is in the account menu");
+    assert.match(menu, /role="menuitem"[^>]*href="\/listing-factory\?step=connect"/, "Connections is in the account menu");
+  }
+  assert.doesNotMatch(shell.slice(0, shell.indexOf("NAV.map")), /label: "Usage \+ Plan"|label: "Connections"/,
+    "and neither is still on the rail");
   assert.match(shell, /<nav className="top-nav"/, "the same nav element as the workflow");
   assert.doesNotMatch(shell, /NavIcon/, "the approved preview sidebar has no icons");
   assert.doesNotMatch(app, /NavIcon/);

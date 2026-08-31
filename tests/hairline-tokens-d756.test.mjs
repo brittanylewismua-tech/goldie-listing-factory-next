@@ -21,7 +21,15 @@ const HAIRLINES = new Set(["#dfc8d5", "#ded1d8", "#ded5db", "#d8cfd5", "#eee8ec"
    D721 approximated it as #ded6dc, which composites greyer than the prototype
    does over the pink pane. It is named here so it is a member of the family
    rather than the one-off this test exists to catch. */
-const NAMED_ALPHAS = new Set(["rgba(113,65,91,.15)"]);
+const NAMED_ALPHAS = new Set([
+  "rgba(113,65,91,.15)",
+  /* D834 · the goal counter's edge. It is an accent, not a hairline - the two
+     sidebar counters were the same object twice and she asked for them to read
+     differently, so the goal card carries a plum tint and a plum edge while the
+     usage card stays neutral glass. Named here so it is a member of the family
+     rather than the one-off this test exists to catch. */
+  "rgba(123,62,105,.22)",
+]);
 /* Alphas below this read as a hairline against the pane and belong to the
    family; anything stronger is doing a different job. */
 const isPlumHairline = (value) => {

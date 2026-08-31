@@ -28,12 +28,12 @@ import { publishedDaysThisPeriod, type ListingGoal, type PublishedDay } from "./
 
 type NavKey = "factory" | "batches" | "keywords" | "usage" | "connections";
 
+/* D834 · Usage + Plan and Connections moved into the account menu, where the
+   account itself already lives. The rail is the three places work happens. */
 const NAV: { key: NavKey; label: string; href: string }[] = [
   { key: "factory", label: "Listing Factory", href: "/listing-factory" },
   { key: "batches", label: "Batch History", href: "/batches" },
   { key: "keywords", label: "Keyword Banks", href: "/keywords" },
-  { key: "usage", label: "Usage + Plan", href: "/usage" },
-  { key: "connections", label: "Connections", href: "/listing-factory?step=connect" },
 ];
 
 export default function FactoryShell({ active, title, children }:
@@ -111,6 +111,7 @@ export default function FactoryShell({ active, title, children }:
             </button>
             {menuOpen && <div className="factory-account-menu open" role="menu">
               <a role="menuitem" href="/usage">Usage + Plan</a>
+              <a role="menuitem" href="/listing-factory?step=connect">Connections</a>
               {account && <a role="menuitem" href={account.signedIn
                 ? "/account/sign-out?return_to=%2Flisting-factory"
                 : "/account/sign-in?return_to=%2Flisting-factory"}>{account.signedIn ? "Sign out" : "Sign in"}</a>}

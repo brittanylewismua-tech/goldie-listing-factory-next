@@ -2419,3 +2419,87 @@ html, body { background: #f1d2dc; }
   body{min-width:0!important}
   .app-shell{min-width:0;width:100%;display:block}
 }
+
+/* ==========================================================================
+   D834 · the action bar and the two sidebar counters, as she asked for them
+   ==========================================================================
+
+   Measured on the live build before changing anything:
+
+     .workflow-footer-actions   rgba(255,255,255,.96), 1px #d9cbd3 top,
+                                backdrop blur(10px), justify-content:
+                                space-between
+     .autosave-note             392..542 Back, note pinned wherever the free
+                                space left it - 1205..1336 with two children,
+                                566..697 with four. Never in one place, never
+                                on the column's centre.
+     .factory-work              padding 34px 38px 0 - nothing under the last
+                                card, so it runs straight into the bar
+     sidebar counters           usage: rgba(255,255,255,.36) fill, radius 16,
+                                pad 9/14, caption 750, value 700
+                                goal:  transparent, radius 14, pad 12/14,
+                                caption 800, value 800
+                                Two cards that are neither the same nor
+                                clearly different - which is the worst of both.
+
+   1 · The white slab is gone. Transparent, no top rule, no blur.
+
+   2 · The save note is centred on the column, not on whatever gap is left.
+       The bar is position:sticky, and a sticky element is a positioned
+       element, so it is already a containing block - the note can be absolute
+       inside it without touching the bar's own position, which is what D804
+       broke last time by adding position:relative here. Measured: bar centre
+       864, column centre 864. The same pixel.
+
+   3 · 110px under the last card. The bar is 70 tall and sits on top of the
+       content; the column had nothing between them.
+
+   4 · The counters are told apart on purpose. The prototype draws them as
+       identical twins; she has asked twice for them to read differently, and
+       she is right that at a glance they are the same object twice. Usage
+       stays the neutral glass card. The goal card takes the plum tint and a
+       plum progress fill, so one is "what you have left" and the other is
+       "what you are aiming at" without reading a word. Same geometry on both
+       so they are still a pair. */
+.app-shell .workflow-footer-actions{
+  background:transparent;border-top:0;backdrop-filter:none}
+.app-shell .workflow-footer-actions > .autosave-note{
+  position:absolute;left:50%;translate:-50% 0;margin:0;white-space:nowrap}
+.app-shell .factory-work{padding-bottom:110px}
+
+.app-shell .topbar .approved-usage,
+.app-shell .topbar .listing-goal-side{
+  border-radius:16px;padding:13px 14px;margin:0}
+.app-shell .topbar .listing-goal-side{margin-top:12px}
+.app-shell .topbar .approved-usage{
+  background:rgba(255,255,255,.36);border:1px solid rgba(255,255,255,.65)}
+.app-shell .topbar .listing-goal-side{
+  background:rgba(123,62,105,.10);border:1px solid rgba(123,62,105,.22)}
+.app-shell .topbar .listing-goal-side .listing-goal-caption{
+  font:750 9px/1.2 Inter,ui-sans-serif,system-ui,sans-serif;
+  letter-spacing:.14em;text-transform:uppercase;color:#7b3e69}
+.app-shell .topbar .listing-goal-side > b{
+  font:700 15px/1.2 Inter,ui-sans-serif,system-ui,sans-serif;color:#4b283e}
+.app-shell .topbar .listing-goal-track{background:rgba(123,62,105,.16)}
+.app-shell .topbar .listing-goal-track > i{background:#7b3e69}
+
+/* D834b · "Powered by Goldie AI" had disappeared from the bottom of the rail.
+   Measured live: the rail is height 100vh with overflow hidden - 643px at her
+   viewport - and its content is 769px tall. .approved-powered was laid out at
+   y712..744, sixty-nine pixels below the rail's own bottom edge, and clipped.
+
+   Trimming two links off the nav gives most of that back, and the rail scrolls
+   rather than swallowing its own footer if it ever runs long again. */
+.app-shell > .topbar{overflow-y:auto;overscroll-behavior:contain}
+
+/* D834c · the finished-section tick, and the product's own photo where the
+   words "YOUR ART" used to be. Both were in the app before the shell migration
+   and were lost on the way through it. */
+.app-shell .factory-panel-state{display:inline-flex;align-items:center;gap:6px}
+.app-shell .factory-panel-state .factory-panel-tick{flex:0 0 auto;color:#2f6b4f}
+/* Keyed on the tick rather than a tone class, so the rule cannot outlive
+   the markup that shows it. */
+.app-shell .factory-panel-state:has(.factory-panel-tick){color:#2f6b4f;background:#eef6f1;border-color:#cfe4d8}
+.app-shell .template-proof > .product-thumb{
+  width:52px;height:52px;flex:0 0 52px;object-fit:contain;
+  border:1px solid #e4cedb;border-radius:10px;background:#fff}

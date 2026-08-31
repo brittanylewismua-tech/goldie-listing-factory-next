@@ -2195,7 +2195,11 @@ test("traverses every workflow phase with one shared gate and never enables an i
 test("uses one management navigation vocabulary everywhere (fixes D84)",async()=>{
   const nav=await readFile(new URL("../app/factory-shell.tsx",import.meta.url),"utf8");
   assert.doesNotMatch(nav,/label: "Mockup Library"/);
-  assert.match(nav,/label: "Usage \+ Plan"/);
+  /* D834 · Usage + Plan is reached from the account menu now, not the rail.
+     The vocabulary rule is unchanged: one name for the destination, wherever
+     it is offered. */
+  assert.match(nav,/>Usage \+ Plan</);
+  assert.doesNotMatch(nav,/Usage and Plan|Plan \+ Usage|Billing/);
   /* D818 - the interior pages mount the shell rather than a nav of their own,
      which is what makes one vocabulary structural instead of a convention. */
   for(const page of ["batches","keywords","usage","goals","mockups","operations"]){
@@ -6082,7 +6086,10 @@ test("the connection screen stays reachable after connecting — D639", async ()
      renders in the factory sidebar. The rule this guards is that the Connections
      entry still exists and still points at step=connect. */
   assert.match(app, /href="\/listing-factory\?step=connect"[\s\S]{0,120}Connections/);
-  assert.match(management, /\{ key: "connections", label: "Connections", href: "\/listing-factory\?step=connect" \}/,
+  /* D834 · Connections moved into the account menu. What D639 guards is that
+     the way back to the connection screen exists at all, and that it still
+     points at ?step=connect - not which list it sits in. */
+  assert.match(management, /role="menuitem" href="\/listing-factory\?step=connect">Connections<\/a>/,
     "D203's rule: both navigations list the same destinations or they drift");
   assert.match(icons, /case "connections":/);
   assert.match(icons, /\| "connections";/);
