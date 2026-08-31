@@ -475,3 +475,26 @@ test("D818b: no text on an interior page is smaller than the pane's floor", asyn
   });
   assert.deepEqual(offences, [], `under the pane's 10px floor:\n${offences.join("\n")}`);
 });
+
+test("D820: step 3's parts resolve to the values measured off the prototype", () => {
+  /* Read live off both CSSOMs, the preview beside her batch 04712deb, same
+     viewport. Each of these was a difference between the two, not a guess. */
+  const cases = [
+    { name: "both form cards", test: s => /\.factory-form-card$/.test(s), prop: "background", want: "#fffafc" },
+    { name: "both form cards", test: s => /\.factory-form-card$/.test(s), prop: "border-color", want: "#dfc8d5" },
+    { name: "card rhythm", test: s => /\.factory-listing-form$/.test(s), prop: "gap", want: "13px" },
+    { name: "forward action", test: s => /\.workflow-next$/.test(s), prop: "font-size", want: "16px" },
+  ];
+  for (const c of cases) {
+    const winner = resolve({ selectorTest: c.test, property: c.prop });
+    assert.ok(winner && winner.value === c.want,
+      `${c.name}: ${c.prop} resolves to ${winner ? `${winner.value} (${winner.file}:${winner.line})` : "unset"}, not ${c.want}`);
+  }
+
+  /* The tag chip is 10px in the prototype. It was 12px here, from a lilac-theme
+     rule with !important - the D783 shape again, so it is resolved rather than
+     asserted from the file it is written in. */
+  const chip = resolve({ selectorTest: s => /\.tag-row span$/.test(s), property: ["font", "font-size"] });
+  assert.ok(chip && /(^|\s)10px/.test(chip.value),
+    `the tag chip resolves to ${chip ? `${chip.value} (${chip.file}:${chip.line})` : "unset"}`);
+});
