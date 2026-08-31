@@ -98,7 +98,10 @@ export async function logError(input: LoggedError): Promise<string | null> {
         input.userAgent ? cut(input.userAgent, 300) : null,
         input.context ? scrubSecrets(cut(JSON.stringify(input.context), 2000)) : null,
       ).run();
-    await alert(db, id, { ...input, message });
+    /* D845 · No email. Every failure is still written to error_log with who,
+       when, where and why, and /mastermind-admin is where it is read. She asked
+       for a maintenance view the two of us can open, not an inbox that fills up
+       with the same integration failing two hundred times. */
     return id;
   } catch {
     return null;
@@ -110,62 +113,12 @@ export async function logError(input: LoggedError): Promise<string | null> {
    alerting at all. The log keeps every one; the email says it is happening. */
 const ALERT_WINDOW_MINUTES = 15;
 
-async function alert(db: D1Database, id: string, input: LoggedError) {
-  const config = runtime();
-  const key = config.RESEND_API_KEY;
-  const to = config.GOLDIE_ALERT_EMAIL || "brittanylewismua@gmail.com";
-  /* D645 - a seller-fixable failure is recorded and never emailed, whatever its
-     severity. It is already on the seller's own screen. */
-  if (!key || input.severity === "warning" || (input.sellerFixable ?? isSellerFixable(input.message))) return;
-  try {
-    const recent = await db.prepare(
-      `SELECT COUNT(*) AS count FROM error_log
-       WHERE area = ? AND alerted = 1 AND created_at > datetime('now', ?)`)
-      .bind(input.area, `-${ALERT_WINDOW_MINUTES} minutes`).first<{ count: number }>();
-    if ((recent?.count ?? 0) > 0) return;
-
-    const site = (config.GOLDIE_SITE_URL || "https://thegoldiesuite.com").replace(/\/$/, "");
-    const escape = (value: string) => value.replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c] || c));
-    const row = (label: string, value?: string | number | null) =>
-      value === null || value === undefined || value === "" ? "" :
-      `<tr><td style="padding:6px 14px 6px 0;color:#7a6a76;font:600 12px system-ui">${label}</td>
-       <td style="padding:6px 0;color:#2c1f2a;font:400 13px system-ui">${escape(String(value))}</td></tr>`;
-
-    const html = `<div style="font-family:system-ui,sans-serif;max-width:640px">
-      <p style="font:700 15px system-ui;color:#7c3350;margin:0 0 4px">Listing Factory error</p>
-      <p style="font:400 13px system-ui;color:#6b5c67;margin:0 0 16px">${escape(input.area)}</p>
-      <table style="border-collapse:collapse">
-        ${row("Who", input.userEmail || input.userId || "Not signed in")}
-        ${row("Name", input.userName)}
-        ${row("When", new Date().toISOString())}
-        ${row("Where", input.url)}
-        ${row("Code", input.errorCode)}
-        ${row("HTTP", input.httpStatus)}
-        ${row("Browser", input.userAgent)}
-      </table>
-      <p style="font:600 13px system-ui;color:#2c1f2a;margin:16px 0 4px">What happened</p>
-      <pre style="white-space:pre-wrap;background:#fdeef3;border-left:3px solid #a32c4c;padding:12px;font:400 12px ui-monospace,monospace;color:#4a2b3d;margin:0">${escape(input.message)}</pre>
-      ${input.context ? `<p style="font:600 13px system-ui;color:#2c1f2a;margin:16px 0 4px">Context</p>
-      <pre style="white-space:pre-wrap;background:#faf6fb;padding:12px;font:400 12px ui-monospace,monospace;color:#4a2b3d;margin:0">${escape(JSON.stringify(input.context, null, 2).slice(0, 1500))}</pre>` : ""}
-      <p style="font:400 12px system-ui;color:#6b5c67;margin:18px 0 0">
-        Reference ${escape(id)} · <a href="${site}/mastermind-admin" style="color:#7c3350">Open the error log</a><br>
-        Further ${escape(input.area)} errors in the next ${ALERT_WINDOW_MINUTES} minutes are recorded but not emailed.
-      </p></div>`;
-
-    const response = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        from: "Listing Factory <hello@mail.thegoldiesuite.com>",
-        to: [to],
-        subject: `Listing Factory error · ${input.area}${input.userEmail ? ` · ${input.userEmail}` : ""}`,
-        html,
-      }),
-      signal: AbortSignal.timeout(8000),
-    });
-    if (response.ok) await db.prepare("UPDATE error_log SET alerted = 1 WHERE id = ?").bind(id).run();
-  } catch { /* An alert that cannot send must not turn one failure into two. */ }
-}
+/* D845 · The emailer lived here. It sent one message per area per fifteen
+   minutes to brittanylewismua@gmail.com for every non-seller-fixable failure.
+   It is gone: nothing in this file sends mail. The record it was built to
+   deliver is the error_log row, which is written either way, and the place to
+   read it is /mastermind-admin - owner only, which is the maintenance site she
+   asked for. */
 
 /* Wrapping a route handler catches what instrumenting each return site by hand
    would miss: the throw nobody predicted. Handlers that return an error response
@@ -202,26 +155,5 @@ export function withErrorLog<R extends Request, T extends unknown[]>(
    that a broken mailer cannot turn one error into two - which also means a
    silent mailer looks exactly like a working one. This reports what actually
    happened, without ever returning the key itself. */
-export async function testAlertEmail(to?: string) {
-  const config = runtime();
-  const key = config.RESEND_API_KEY;
-  const target = to || config.GOLDIE_ALERT_EMAIL || "brittanylewismua@gmail.com";
-  if (!key) return { configured: false, to: target, sent: false, detail: "RESEND_API_KEY is not set for this Worker." };
-  try {
-    const response = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        from: "Listing Factory <hello@mail.thegoldiesuite.com>",
-        to: [target],
-        subject: "Listing Factory error alerts are working",
-        html: `<div style="font-family:system-ui,sans-serif"><p>This is the test alert. If you are reading it, Listing Factory can email you when something fails.</p><p style="color:#6b5c67;font-size:12px">Sent ${new Date().toISOString()}</p></div>`,
-      }),
-      signal: AbortSignal.timeout(10000),
-    });
-    const body = await response.text();
-    return { configured: true, to: target, sent: response.ok, status: response.status, detail: body.slice(0, 400) };
-  } catch (error) {
-    return { configured: true, to: target, sent: false, detail: error instanceof Error ? error.message : String(error) };
-  }
-}
+/* D845 · testAlertEmail went with the emailer. There is no mailer left to
+   test. */

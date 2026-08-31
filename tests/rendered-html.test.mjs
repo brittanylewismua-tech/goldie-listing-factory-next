@@ -2950,16 +2950,19 @@ test("every failure is recorded against a person, and Brittany is emailed — D4
   }
 
   // Logging must never become its own outage.
-  assert.match(log, /export async function logError[\s\S]{0,1400}\}\s*catch\s*\{\s*return null;/);
-  assert.match(log, /catch \{ \/\* An alert that cannot send must not turn one failure into two\. \*\/ \}/);
+  assert.match(log, /export async function logError[\s\S]{0,1800}\}\s*catch\s*\{\s*return null;/);
+  /* D845 · No email. She asked for a maintenance view the two of us open, not
+     an inbox that fills with the same integration failing two hundred times.
+     What D441 exists for is unchanged and asserted below: every failure is
+     recorded, against a person. Nothing in this module may send mail. */
+  assert.doesNotMatch(log, /api\.resend\.com/, "the error log must not email");
+  assert.doesNotMatch(log, /RESEND_API_KEY[\s\S]{0,200}fetch\(/, "nor reach a mailer any other way");
 
   // Tokens must not be written into a log that gets emailed around.
   assert.match(log, /export function scrubSecrets/);
   assert.match(log, /Bearer\\s\+\[\\w\.\\-\]\+/);
 
-  // One email per area per 15 minutes: an inbox nobody can face is no alerting.
-  assert.match(log, /const ALERT_WINDOW_MINUTES = 15/);
-  assert.match(log, /alerted = 1 AND created_at > datetime\('now', \?\)/);
+  /* D845 · The 15-minute throttle went with the emailer it throttled. */
 
   // Browser crashes now carry identity, read server-side rather than trusted.
   assert.match(client, /const user = await getChatGPTUser\(\)\.catch\(\(\) => null\)/);
@@ -6333,9 +6336,12 @@ test("seller-fixable failures are recorded and never emailed — D645", async ()
   assert.match(log, /import \{ isSellerFixable \} from "\.\/error-classification"/);
   assert.match(control, /import \{ isSellerFixable \} from "@\/app\/error-classification"/);
 
-  // The email is skipped; the write is not.
-  assert.match(log, /if \(!key \|\| input\.severity === "warning" \|\| \(input\.sellerFixable \?\? isSellerFixable\(input\.message\)\)\) return;/);
+  /* D845 · Nothing is emailed at all now, seller-fixable or not, so the skip
+     that D645 checked has nothing left to skip. The half that matters - the
+     write happens either way - is what this asserts, and the classification is
+     still what sorts the two kinds apart on the maintenance page. */
   assert.match(log, /INSERT INTO error_log/, "everything is still recorded");
+  assert.doesNotMatch(log, /api\.resend\.com/);
 
   // And the page separates them rather than making her read every message.
   assert.match(control, /const \[errorFilter, setErrorFilter\] = useState<"all"\|"platform"\|"seller">\("all"\)/);

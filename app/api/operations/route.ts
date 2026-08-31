@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { isOwner, runtime } from "@/app/mastermind/access";
 import { drainGlobalPublishQueue } from "@/app/api/printify/drafts/publish/queue";
-import { testAlertEmail } from "@/app/error-log";
 
 /* D476 - there was no way to see why a publish failed without adding code and
    deploying. Owner-only: recent publish jobs and every item's exact error. */
@@ -21,6 +20,6 @@ export async function POST(request:Request){
   if(body.action==="resume"){await db.prepare("UPDATE etsy_queue_state SET manually_paused=0,paused_until=0,last_worker_status='ready',last_error=NULL,updated_at=CURRENT_TIMESTAMP WHERE id=1").run();return NextResponse.json({ok:true,message:"Publishing queue resumed."})}
   if(body.action==="retry_failed"){const now=Math.floor(Date.now()/1000),result=await db.prepare("UPDATE etsy_publish_items SET status='queued',attempts=0,available_at=?,locked_at=NULL,last_error=NULL,updated_at=CURRENT_TIMESTAMP WHERE status='failed'").bind(now).run();await db.prepare("UPDATE etsy_publish_jobs SET status='processing',failed=0,last_error=NULL,updated_at=CURRENT_TIMESTAMP WHERE id IN (SELECT DISTINCT job_id FROM etsy_publish_items WHERE status='queued')").run();return NextResponse.json({ok:true,message:`${result.meta.changes} failed ${result.meta.changes===1?"listing":"listings"} returned to the queue.`})}
   if(body.action==="run_now"){const result=await drainGlobalPublishQueue();return NextResponse.json({ok:true,message:`Worker finished. ${result.processed} ${result.processed===1?"listing":"listings"} processed.`})}
-  if(body.action==="email_test")return NextResponse.json(await testAlertEmail(body.to));
+  /* D845 · The email test went with the emailer; errors are read at /mastermind-admin. */
   return NextResponse.json({error:"Unknown operation."},{status:400});
 }
