@@ -163,13 +163,6 @@
 }
 
 @media (max-width: 760px) {
-  .managementOnly .mockupTopbar {
-    height: auto;
-    min-height: 72px;
-    padding: 12px 14px;
-    flex-wrap: wrap;
-    gap: 10px;
-  }
 
   .managementOnly .mockupHero,
   .managementOnly .mockupWorkspace {

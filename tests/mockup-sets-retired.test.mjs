@@ -9,7 +9,7 @@ test("D671 — saved mockup sets are retired without removing listing photos", a
   const [layout, factory, navigation, operations, signup, usage, uploads, order] = await Promise.all([
     read("app/mockups/layout.tsx"),
     read("app/listing-factory-app.tsx"),
-    read("app/management-nav.tsx"),
+    read("app/factory-shell.tsx"),
     read("app/operations/page.tsx"),
     read("app/signup/signup-client.tsx"),
     read("app/usage/page.tsx"),

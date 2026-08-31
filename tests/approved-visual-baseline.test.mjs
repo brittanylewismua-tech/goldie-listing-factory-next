@@ -1160,34 +1160,25 @@ test("D202: the product summary states the choices, not Printify's word for them
   assert.match(app, /function variantSummary\(axes:\{colorsChosen:boolean/);
 });
 
-test("D203: one nav renders both sidebars, so icons cannot go missing on half the app", async () => {
-  const icons = await readFile(new URL("app/nav-icons.tsx", root), "utf8");
-  const management = await readFile(new URL("app/management-nav.tsx", root), "utf8");
+test("D818: one component renders the interior sidebar, and it matches the workflow's", async () => {
+  const shell = await readFile(new URL("app/factory-shell.tsx", root), "utf8");
   const app = await readFile(new URL("app/listing-factory-app.tsx", root), "utf8");
 
-  /* Batch History, Keyword Banks, Mockup Library and Usage render
-     ManagementNav, which had bare text links, while the workflow rendered its
-     own .top-nav with icons. Same five destinations, two components. */
-  for (const key of ["listingFactory", "batches", "keywords", "usage", "operations"]) {
-    assert.match(icons, new RegExp(`case "${key}":`), `${key} has a shared icon`);
-  }
-  assert.match(management, /import \{ NavIcon \} from "\.\/nav-icons"/);
-  assert.match(management, /<NavIcon name="listingFactory"\/>Listing Factory/);
-  assert.match(management, /<NavIcon name=\{link\.key\}\/>\{link\.label\}/);
+  /* D203 asserted that two nav components rendered the same five destinations
+     with the same icons. There is one component now: the interior pages mount
+     FactoryShell, which renders the same .topbar > .top-nav markup the workflow
+     builds inline. The icons are gone from both, which is what the approved
+     preview shows - its sidebar links are text.
 
-  /* D721 · Brittany approved removing icons from the workflow sidebar, so the
-     factory nav renders text only. ManagementNav still renders NavIcon, which is
-     why the shared icon source above is still asserted. What this test exists to
-     prevent - inline icon markup drifting apart from the shared component - is
-     unchanged, and is now guaranteed by there being no icon markup here at all. */
-  const navBlock = app.slice(app.indexOf('<nav className="top-nav"'), app.indexOf("</nav>", app.indexOf('<nav className="top-nav"')));
-  assert.doesNotMatch(navBlock, /<svg/, "no inline icon markup left to drift");
-  assert.equal((navBlock.match(/<NavIcon /g) || []).length, 0, "the factory sidebar is text-only");
-  /* D639 added Connections - the way back to the connect screen, which was
-     unreachable once both accounts were connected. All five destinations remain. */
-  for (const label of ["Listing Factory","Batch History","Keyword Banks","Usage + Plan","Connections"]) {
-    assert.ok(navBlock.includes(label), `${label} is still in the sidebar`);
+     What this still guards is that the five destinations exist on both, so a
+     page cannot fall off the interior nav the way Connections once did. */
+  for (const label of ["Listing Factory", "Batch History", "Keyword Banks", "Usage + Plan", "Connections"]) {
+    assert.ok(shell.includes(`label: "${label}"`), `${label} is on the interior nav`);
+    assert.ok(app.includes(`>${label}</a>`), `${label} is on the workflow nav`);
   }
+  assert.match(shell, /<nav className="top-nav"/, "the same nav element as the workflow");
+  assert.doesNotMatch(shell, /NavIcon/, "the approved preview sidebar has no icons");
+  assert.doesNotMatch(app, /NavIcon/);
 });
 
 test("D203: cross-screen alignment and destructive-action faults are fixed", async () => {

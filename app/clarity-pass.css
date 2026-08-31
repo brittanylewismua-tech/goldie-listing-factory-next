@@ -1281,21 +1281,11 @@
  * Scoped with :has(.management-nav) so it follows the section, not a list of
  * page classes that will drift the next time a page is added.
  * ========================================================================== */
-body:has(.management-nav) h1{
-  font:400 34px/1.05 "DM Serif Display",Georgia,serif;
-  color:#4c293f!important;
-}
-body:has(.management-nav) h2,
-body:has(.management-nav) .setTitleRow h3,
-body:has(.management-nav) .keyword-workspace h3{
-  font:400 22px/1.15 "DM Serif Display",Georgia,serif;
-  color:#4c293f!important;
-}
-/* The usage tiles label a number; that is a field label, not a card title. */
-body:has(.management-nav) .usage-card h2{
-  font:800 12px/1.3 "Manrope",system-ui,sans-serif;
-  color:#75576b!important;
-}
+/* D818 · this block moved to interface-v2.css and lost its !important on
+   colour. It keyed off the presence of .management-nav, which no longer
+   exists - the interior pages render the shell now, so their type scale is
+   declared with the shell rather than against a nav element. It is also why
+   D798 never won: an important on a colour beat it for two months. */
 
 /* D261 · Branded not-found, so a mistyped URL lands somewhere that looks like
    the product and offers a way back. */
@@ -1306,7 +1296,6 @@ body:has(.management-nav) .usage-card h2{
   text-align:left;max-width:640px;margin:0 auto;
 }
 .not-found-page h1{font:400 34px/1.1 "DM Serif Display",Georgia,serif;color:#4c293f;margin:0}
-.not-found-copy{color:#75576b;font:500 12px/1.6 "Manrope",system-ui,sans-serif;margin:0;max-width:52ch}
 .not-found-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:6px}
 .not-found-primary,.not-found-secondary{
   min-height:42px;display:inline-flex;align-items:center;padding:0 18px;
@@ -1372,12 +1361,6 @@ body:has(.management-nav) .usage-card h2{
    `.management-nav a` is a flex row with no gap, and the icon was only ever
    held off the label by the enormous box it used to occupy. Measured on the
    deployed page: icon right edge 59px, label left edge 59px. */
-.management-nav a{
-  display:flex!important;
-  align-items:center!important;
-  gap:10px!important;
-}
-.management-nav a>svg{flex:0 0 18px!important}
 
 /* D276 · The branded 404 put its background on a 640px column, so the page
    rendered as a pale stripe down the middle of a different gradient. The

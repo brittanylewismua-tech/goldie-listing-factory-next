@@ -54,7 +54,6 @@ function ProductGlyph({title}:{title?:string}){
     </span>
   );
 }
-import { NavIcon } from "./nav-icons";
 import { publishedDaysThisPeriod, type ListingGoal, type PublishedDay } from "./listing-goal";
 
 /* D202 · "25 selected variants" is Printify's word, not a seller's. A seller

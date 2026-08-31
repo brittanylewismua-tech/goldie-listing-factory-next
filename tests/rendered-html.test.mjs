@@ -330,7 +330,7 @@ test.skip("renders Mockup Library as management only", async () => {
   assert.match(html, /<h1>Your mockup sets<\/h1>/);
   assert.match(html, /MOCKUP LIBRARY/);
   assert.match(html, /Add mockup set/);
-  assert.match(html, /class="management-nav"/);
+  assert.match(html, /class="top-nav"/);
   assert.match(html, />Listing Factory<\/a>/);
   assert.doesNotMatch(html, /mockupFooter/);
   assert.doesNotMatch(html, /Add this design/);
@@ -1182,8 +1182,17 @@ test("keeps pricing simple while using a real Etsy shipping profile and exact te
 
 test("keeps management headings readable and shows the complete workflow map on phones", async () => {
   const css = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
-  assert.match(css,/management-page>header h1,.usage-page>header h1\{color:#f7f0e4\}/);
-  assert.match(css,/management-page \.management-nav a\.active,.usage-page \.management-nav a\.active\{color:#fff\}/);
+  const v2 = await readFile(new URL("../app/interface-v2.css", import.meta.url), "utf8");
+  /* D818 - this asserted `.management-page>header h1{color:#f7f0e4}`, a near-white
+     heading from the era when these pages had a dark hero behind them. The hero
+     went years ago; the rule stayed, and the interior pages now sit on the light
+     pane, where a #f7f0e4 heading is invisible. It is deleted, and the heading
+     ink is the shell's own #3d2538 - the same value the workflow h1 computes to
+     and the same value the approved preview computes to.
+
+     The nav-active assertion went with .management-nav itself. */
+  assert.doesNotMatch(css, /management-page>header h1/);
+  assert.match(v2, /\.app-shell \.factory-work > \.interior-page > header h1\{[\s\S]{0,120}color:#3d2538/);
   assert.match(css,/@media\(max-width:600px\)\{\.workflow-progress\{display:grid;grid-template-columns:repeat\(2/);
 });
 
@@ -2172,12 +2181,14 @@ test("traverses every workflow phase with one shared gate and never enables an i
 });
 
 test("uses one management navigation vocabulary everywhere (fixes D84)",async()=>{
-  const nav=await readFile(new URL("../app/management-nav.tsx",import.meta.url),"utf8");
-  assert.doesNotMatch(nav,/label:"Mockup Library"/);
-  assert.match(nav,/label:"Usage \+ Plan"/);
-  for(const page of ["batches","keywords","usage"]){
+  const nav=await readFile(new URL("../app/factory-shell.tsx",import.meta.url),"utf8");
+  assert.doesNotMatch(nav,/label: "Mockup Library"/);
+  assert.match(nav,/label: "Usage \+ Plan"/);
+  /* D818 - the interior pages mount the shell rather than a nav of their own,
+     which is what makes one vocabulary structural instead of a convention. */
+  for(const page of ["batches","keywords","usage","goals","mockups","operations"]){
     const source=await readFile(new URL(`../app/${page}/page.tsx`,import.meta.url),"utf8");
-    assert.match(source,/ManagementNav/);
+    assert.match(source,/FactoryShell/,`${page} mounts the shell`);
   }
 });
 
@@ -6051,7 +6062,7 @@ test("shop pairing is proven against Etsy, never guessed from names — D641", a
 test("the connection screen stays reachable after connecting — D639", async () => {
   const [app, management, icons] = await Promise.all([
     readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../app/management-nav.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/factory-shell.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/nav-icons.tsx", import.meta.url), "utf8"),
   ]);
 
@@ -6059,7 +6070,7 @@ test("the connection screen stays reachable after connecting — D639", async ()
      renders in the factory sidebar. The rule this guards is that the Connections
      entry still exists and still points at step=connect. */
   assert.match(app, /href="\/listing-factory\?step=connect"[\s\S]{0,120}Connections/);
-  assert.match(management, /\{key:"connections",href:"\/listing-factory\?step=connect",label:"Connections"\}/,
+  assert.match(management, /\{ key: "connections", label: "Connections", href: "\/listing-factory\?step=connect" \}/,
     "D203's rule: both navigations list the same destinations or they drift");
   assert.match(icons, /case "connections":/);
   assert.match(icons, /\| "connections";/);

@@ -2063,3 +2063,132 @@ html, body { background: #f1d2dc; }
 .app-shell .factory-work .task-panel-heading h3,
 .app-shell .factory-work .factory-checklist-card > h3{
   font:700 14px/1.3 Inter,ui-sans-serif,system-ui,sans-serif;color:#3d2538}
+
+/* ==========================================================================
+   D818 · The interior pages, inside the shell for the first time
+   ==========================================================================
+
+   Batch History, Keyword Banks, Usage + Plan, Goals, Mockups and
+   Operations rendered `<main class="management-page">` at the body root. Every
+   rule in this file is scoped to `.app-shell`, so none of it reached them: six
+   pages of the product were never migrated, and nobody could see that from the
+   stylesheet because the stylesheet was correct - it simply had no way in.
+
+   management-nav.tsx said so out loud, in D398: "The management pages are a
+   separate layout with no .app-shell." That was written as a reason to give
+   the nav its own footer instead of as the defect it was.
+
+   They mount FactoryShell now. The page's own class stays on the content
+   wrapper so its tuned descendant rules survive, and the wrapper's own box -
+   the 1100px cap, the auto margins, the 30px of padding and the 100vh - is
+   declared for its new context here, because .factory-work already owns the
+   column those values were duplicating.
+
+   Confirmed rendered before this was written: /batches, /keywords and /usage
+   returned document.querySelector('.app-shell') === null, and 81 of the 118
+   text nodes on /keywords computed to Manrope. */
+.app-shell .factory-work > .interior-page{
+  max-width:none;min-height:0;margin:0;padding:0;background:transparent}
+
+/* The page head. Same three values as .factory-page-head, which is the head
+   the prototype draws - these pages just build theirs from a <header> instead
+   of the component. */
+.app-shell .factory-work > .interior-page > header{margin:0 0 25px}
+.app-shell .factory-work > .interior-page > header h1{
+  margin:0 0 7px;color:#3d2538;
+  font:700 29px/1.12 Inter,ui-sans-serif,system-ui,sans-serif;letter-spacing:-1.015px}
+.app-shell .factory-work > .interior-page > header > p:last-child{
+  margin:0;max-width:64ch;color:#6e606a;
+  font:14px/1.55 Inter,ui-sans-serif,system-ui,sans-serif}
+.app-shell .factory-work .interior-page h2{
+  margin:0;color:#3d2538;font:700 18px/1.25 Inter,ui-sans-serif,system-ui,sans-serif}
+.app-shell .factory-work .interior-page h3{
+  margin:0;color:#3d2538;font:700 14px/1.3 Inter,ui-sans-serif,system-ui,sans-serif}
+.app-shell .factory-work .interior-page .mini-label{
+  font:750 10px/1.2 Inter,ui-sans-serif,system-ui,sans-serif;
+  letter-spacing:.16em;text-transform:uppercase;color:#8a6b80}
+
+/* D818b · Batch History.
+
+   The row was drawn by batch-history.css, which predates the migration: 8px
+   uppercase chip text, 9px timestamps, 10px body. The pane's smallest type is
+   10px and its body is 12-13px, so every line in this list was between one and
+   five pixels under the rest of the app. */
+.app-shell .factory-work .batch-history{display:grid;gap:12px}
+.app-shell .factory-work .batch-history article{
+  border:1px solid #eadfe6;border-radius:14px;background:#fffafc;padding:20px 22px}
+.app-shell .factory-work .batch-history article.selected{
+  border-color:#c9a3bd;box-shadow:0 0 0 2px rgba(201,163,189,.22)}
+.app-shell .factory-work .batch-history h2{
+  font:700 15px/1.3 Inter,ui-sans-serif,system-ui,sans-serif;color:#3d2538}
+.app-shell .factory-work .batch-history p{
+  margin:3px 0 0;font:12px/1.45 Inter,ui-sans-serif,system-ui,sans-serif;color:#6e606a}
+.app-shell .factory-work .batch-history small{
+  font:11px/1.35 Inter,ui-sans-serif,system-ui,sans-serif;color:#8b7a85}
+.app-shell .factory-work .batch-history .remove-batch{
+  font:11px/1.35 Inter,ui-sans-serif,system-ui,sans-serif;color:#9e2736}
+/* The chip. rgba(226,197,245,.48) is hue 276 - blue-violet, which the palette
+   test forbids everywhere else in the app and which this list has been wearing
+   since before the palette was one. */
+.app-shell .factory-work .batch-status{
+  display:inline-block;padding:5px 9px;border-radius:6px;
+  background:#f7edf3;color:#6b4560;
+  font:800 10px/1.2 Inter,ui-sans-serif,system-ui,sans-serif;
+  letter-spacing:.1em;text-transform:uppercase}
+.app-shell .factory-work .batch-status.complete{background:#eef6f1;color:#2f6b4f}
+.app-shell .factory-work .batch-status.processing{background:#fdf1f3;color:#a33a48}
+.app-shell .factory-work .batch-status.needs_attention{background:#fdf1f3;color:#9e2736}
+
+/* D818c · Usage + Plan. The plan banner, for real this time.
+
+   D798 declared the light ink for this card and it never won. The card is dark
+   (#56394f, lilac-theme.css:212) and its heading is an <h2>, and clarity-pass
+   carried `body:has(.management-nav) h2{color:#4c293f!important}` - an
+   important on a colour, which no unimportant rule can beat no matter how
+   specific. So the plan name rendered at 1.23:1 on the page whose only job is
+   to tell her which plan she is on.
+
+   That block is deleted, not overridden. Its type scale lives here now, keyed
+   to the shell rather than to the presence of a nav element. */
+.app-shell .factory-work .plan-banner{
+  border-radius:14px;padding:25px;background:#56394f;border:1px solid rgba(255,255,255,.14)}
+.app-shell .factory-work .plan-banner h2{color:#fff;font:400 30px/1.1 "DM Serif Display",Georgia,serif}
+.app-shell .factory-work .plan-banner p{color:#e3d4de}
+.app-shell .factory-work .plan-banner span,
+.app-shell .factory-work .plan-banner .mini-label{color:#e7c9dd}
+.app-shell .factory-work .usage-card{
+  border:1px solid #eadfe6;border-radius:14px;background:#fffafc;padding:20px}
+.app-shell .factory-work .usage-card h2{
+  font:800 11px/1.3 Inter,ui-sans-serif,system-ui,sans-serif;
+  letter-spacing:.04em;color:#75576b}
+.app-shell .factory-work .usage-card b{
+  font:700 22px/1.1 Inter,ui-sans-serif,system-ui,sans-serif;color:#3d2538}
+.app-shell .factory-work .usage-card b span{
+  font:11px/1.3 Inter,ui-sans-serif,system-ui,sans-serif;color:#8b7a85}
+.app-shell .factory-work .usage-card p{
+  font:11px/1.4 Inter,ui-sans-serif,system-ui,sans-serif;color:#6e606a}
+.app-shell .factory-work .usage-track{
+  height:6px;border-radius:16px;background:#f1e6ee;overflow:hidden}
+.app-shell .factory-work .usage-track i{background:#a3628f}
+.app-shell .factory-work .usage-note,
+.app-shell .factory-work .usage-plan-fineprint,
+.app-shell .factory-work .pricing-caveat{
+  font:11px/1.5 Inter,ui-sans-serif,system-ui,sans-serif;color:#6e606a}
+
+/* D818d · Keyword Banks. The bank cards carried 9px and 10px type and a warm
+   #eee5d5 chip left over from the pre-lilac palette. */
+.app-shell .factory-work .bank-grid article{
+  border:1px solid #eadfe6;border-radius:14px;background:#fffafc;padding:18px}
+.app-shell .factory-work .bank-grid h3{
+  font:700 14px/1.3 Inter,ui-sans-serif,system-ui,sans-serif;color:#3d2538}
+.app-shell .factory-work .bank-grid p,
+.app-shell .factory-work .bank-grid small{
+  font:11px/1.45 Inter,ui-sans-serif,system-ui,sans-serif;color:#6e606a}
+.app-shell .factory-work .bank-grid article span{
+  padding:5px 9px;border-radius:6px;background:#f7edf3;color:#6b4560;
+  font:11px/1.2 Inter,ui-sans-serif,system-ui,sans-serif}
+
+/* D818e · The 404. It rendered outside the shell too, in Manrope with a 10px
+   eyebrow, which is how a mistyped URL announced that it belonged to a
+   different application. */
+.app-shell .factory-work .not-found-page{display:grid;gap:14px;max-width:60ch}

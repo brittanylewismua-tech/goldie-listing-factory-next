@@ -7,7 +7,7 @@ import { ChangeEvent, DragEvent, useEffect, useMemo, useRef, useState } from "re
 import { zipSync } from "fflate";
 import "./mockups.css";
 import "./management.css";
-import ManagementNav from "../management-nav";
+import FactoryShell from "../factory-shell";
 import type { ScenePreparation } from "./prepared-scene";
 
 type Point = [number, number];
@@ -330,8 +330,8 @@ export default function Home() {
 
   const addMockupsManaged=async(e:ChangeEvent<HTMLInputElement>)=>{const count=e.target.files?.length||0;if(!count)return;setLibraryBusy(true);setLibraryProgress(0);setLibraryTotal(count);try{const theme=themeName.trim()||"My mockup set",existing=library.filter(item=>item.custom&&item.theme===theme).length;if(existing>=MAX_MOCKUPS_PER_SET){e.target.value="";setGenerationError("This mockup set already contains 50 mockups. Create another themed set to add more.");return}if(count>MAX_MOCKUPS_PER_SET-existing){e.target.value="";setGenerationError(`Choose no more than ${MAX_MOCKUPS_PER_SET-existing} additional mockups for this set.`);return}await addMockups(e);setShowAddSet(false)}finally{setLibraryBusy(false);setLibraryProgress(0);setLibraryTotal(0)}};
 
-  return <main className="management-page mockupFactory managementOnly">
-    <ManagementNav active="mockups"/>
+  return <FactoryShell active="factory" title="Your saved mockups"><div className="management-page mockupFactory managementOnly interior-page">
+    
     <header className="mockupHero"><p className="mockupEyebrow">MOCKUP LIBRARY</p><h1>Your mockup sets</h1><p className="lede">Add and organize blank mockups here. You can choose from these sets when you create listing images in the Listing Factory.</p></header>
     <section className="mockupWorkspace"><div className="mockupStep managementLibrary"><div className="managementLibraryHead"><div><p className="mockupEyebrow">SAVED SETS</p><h2>{library.length?"Saved mockup sets":"Create your first mockup set"}</h2><p>Each set can hold up to 50 blank mockups.</p></div><button className="newSetButton" onClick={()=>setShowAddSet(true)}>＋ Add mockup set</button></div>
       {generationError&&<p className="smartError" role="alert"><b>Goldie couldn’t complete that change.</b><span>{generationError}</span></p>}
@@ -354,10 +354,10 @@ export default function Home() {
     {deletingTheme&&<div className="confirmOverlay" role="dialog" aria-modal="true" aria-labelledby="delete-set-title"><div className="confirmDialog"><p className="mockupEyebrow">DELETE MOCKUP SET</p><h2 id="delete-set-title">Delete “{deletingTheme}”?</h2><p>This permanently removes the set and every saved mockup inside it.</p><div className="confirmActions"><button className="cancelConfirm" onClick={()=>setDeletingTheme("")}>Keep this set</button><button className="confirmDelete" onClick={deleteSet}>Yes, delete set</button></div></div></div>}
     {libraryPreview&&<div className="mockupLightbox" role="dialog" aria-modal="true" aria-label={`${libraryPreview.name} enlarged preview`} onMouseDown={event=>{if(event.target===event.currentTarget)setLibraryPreview(null)}}><button className="lightboxClose" onClick={()=>setLibraryPreview(null)} aria-label="Close enlarged mockup">×</button><div className="lightboxContent"><img src={libraryPreview.src} alt={`${libraryPreview.name} enlarged`}/><div><strong>{libraryPreview.name}</strong></div></div></div>}
     {testing&&<div className="modal"><div className="calibrator"><button className="close" onClick={()=>setTesting(null)}>×</button><p className="mockupEyebrow">TEST PRINT</p><h2>{testing.name}</h2><p>This sample is deliberately small and off to the left. If it lands small and left, the scene is following Printify. If it comes out centred or filling the shirt, it is not.</p><div className="calImage"><img src={testing.url} alt={`${testing.name} test print`}/></div></div></div>}
-  </main>;
+  </div></FactoryShell>;
 
-  return <main className="mockupFactory">
-    <header className="mockupTopbar"><div className="brand"><span className="brandGold">Goldie</span><span>LISTING FACTORY</span></div><ManagementNav active="mockups"/><span className="privateNote">Saved mockup library</span></header>
+  return <FactoryShell active="factory" title="Your saved mockups"><div className="mockupFactory interior-page">
+    
     <section className="mockupHero"><p className="mockupEyebrow">YOUR SAVED MOCKUP LIBRARY</p><h1>Manage your mockup sets.</h1><p className="lede">Create, rename, adjust, or delete your saved sets here. Use them to create listing images in the Listing Factory.</p></section>
     <section className="mockupWorkspace">
       <div className="mockupStep"><div className="stepHead"><span>1</span><div><h2>Add this design</h2><p>One design at a time · PNG, JPG, or WEBP · already upscaled if needed</p></div></div>
@@ -393,5 +393,5 @@ export default function Home() {
     {renamingTheme&&<div className="confirmOverlay" role="dialog" aria-modal="true" aria-labelledby="rename-set-title"><div className="confirmDialog"><p className="mockupEyebrow">EDIT MOCKUP SET</p><h2 id="rename-set-title">Name and product surface</h2><input value={renameValue} onChange={event=>setRenameValue(event.target.value)} maxLength={80} autoFocus/><label className="renameSurface"><span>Product surface</span><select value={renameSurface} onChange={event=>setRenameSurface(event.target.value as SurfaceKind)}>{Object.entries(SURFACE_LABELS).filter(([value])=>value!=="apparel").map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label><small className="renameSurfaceNote">Changing the surface reads every photograph in this set again.</small><div className="confirmActions"><button className="cancelConfirm" onClick={()=>{setRenamingTheme("");setRenameValue("")}}>Cancel</button><button className="confirmRename" disabled={!renameValue.trim()} onClick={renameSet}>Save changes</button></div></div></div>}
     {deletingTheme&&<div className="confirmOverlay" role="dialog" aria-modal="true" aria-labelledby="delete-set-title"><div className="confirmDialog"><p className="mockupEyebrow">DELETE MOCKUP SET</p><h2 id="delete-set-title">Delete “{deletingTheme}”?</h2><p>This permanently removes the set and every saved mockup inside it.</p><div className="confirmActions"><button className="cancelConfirm" onClick={()=>setDeletingTheme("")}>Keep this set</button><button className="confirmDelete" onClick={deleteSet}>Yes, delete set</button></div></div></div>}
     <footer className="mockupFooter"><span>GOLDIE MOCKUP FACTORY</span><p>Product-aware placement for reusable mockup sets.</p></footer>
-  </main>;
+  </div></FactoryShell>;
 }

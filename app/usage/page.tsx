@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import "../pricing-profile.css";
-import ManagementNav from "../management-nav";
+import FactoryShell from "../factory-shell";
 type PlanKey="trial"|"goldie"|"pro"|"scale"|"mastermind_beta"|"owner_test";
 type Data={plan:{key:PlanKey;name:string;price:number;drafts:number;dailyListings:number;aiMockups:number;mockupSets:number;mockupsPerSet:number};resetAt:string;usage:{drafts:number;aiMockups:number;mockupSets:number;publishedToday:number;publishing:number};billing?:{active:boolean;subscription?:{status:string;currentPeriodEnd:number|null;cancelAtPeriodEnd:number}|null}};
 type Fees={etsyFeePercent:number;fixedFee:number;listingFee:number};
@@ -36,8 +36,8 @@ export default function UsagePage(){
   async function saveFees(){setFeeMessage("Saving…");const response=await fetch("/api/seller-preferences",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pricing:fees})});setFeeMessage(response.ok?"Pricing profile saved for every future batch.":"Pricing profile could not be saved.")}
   async function manageBilling(){setBillingMessage("Opening secure billing…");const response=await fetch("/api/billing/portal",{method:"POST"}),result=await response.json() as {url?:string;error?:string};if(response.ok&&result.url){window.location.href=result.url;return}setBillingMessage(result.error||"Billing could not be opened.")}
   async function choosePlan(plan:"goldie"|"pro"|"scale"){if(data?.billing?.active){await manageBilling();return}setCheckoutPlan(plan);setBillingMessage("");const response=await fetch("/api/billing/checkout",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({plan})}),result=await response.json() as {url?:string;error?:string};if(response.ok&&result.url){window.location.href=result.url;return}setBillingMessage(result.error||"Secure checkout could not be opened.");setCheckoutPlan(null)}
-  return <main className="usage-page">
-    <ManagementNav active="usage"/>
+  return <FactoryShell active="usage" title="Usage + Plan"><div className="usage-page interior-page">
+    
     <header><p className="mini-label">USAGE + PLAN</p><h1>Your Listing Factory plan</h1><p>Your included credits reset automatically each month. Failed listing attempts and failed AI renders never use your allowance.</p></header>
     {loadError?<section className="usage-load-error" role="alert"><h2>Sign in to view your plan and usage</h2><p>{loadError}</p><Link href="/listing-factory">Return to Listing Factory</Link></section>:!data?<p>Loading your usage…</p>:<>
       <section className="plan-banner"><div><span>CURRENT PLAN</span><h2>{data.plan.name}</h2><p>{data.plan.key==="owner_test"?"Testing access":data.plan.price?`$${data.plan.price}/month`:"Free trial"}</p></div><div><p>{data.plan.key==="trial"&&data.billing?.subscription?.status==="trialing"&&data.billing.subscription.currentPeriodEnd?`Trial ends ${new Date(data.billing.subscription.currentPeriodEnd*1000).toLocaleDateString(undefined,{month:"long",day:"numeric",year:"numeric"})}`:`Monthly credits reset ${new Date(data.resetAt).toLocaleDateString(undefined,{month:"long",day:"numeric",year:"numeric"})}`}</p>{data.billing?.active&&<button onClick={()=>void manageBilling()}>Manage billing</button>}{billingMessage&&<small role="status">{billingMessage}</small>}</div></section>
@@ -80,5 +80,5 @@ export default function UsagePage(){
         {billingMessage&&<p className="usage-billing-message" role="status">{billingMessage}</p>}
       </section>
     </>}
-  </main>
+  </div></FactoryShell>
 }

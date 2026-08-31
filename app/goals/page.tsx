@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import ManagementNav from "../management-nav";
+import FactoryShell from "../factory-shell";
 import { periodHistoryFromDays, publishedDaysThisPeriod, type ListingGoal, type PublishedDay } from "../listing-goal";
 
 /* D343 · The goals page. Its job is to show a seller their own history — "I did
@@ -32,8 +32,8 @@ export default function GoalsPage() {
   const best = rows.reduce((most, row) => Math.max(most, row.published), 0);
 
   return (
-    <main className="management-page goals-page">
-      <ManagementNav />
+    <FactoryShell active="usage" title="Listing goal"><div className="management-page goals-page interior-page">
+      
       <header>
         <p className="mini-label">LISTING GOAL</p>
         <h1>Your listing history</h1>
@@ -79,6 +79,6 @@ export default function GoalsPage() {
           </section>
         </>
       )}
-    </main>
+    </div></FactoryShell>
   );
 }

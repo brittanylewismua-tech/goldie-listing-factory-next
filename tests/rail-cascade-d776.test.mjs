@@ -404,3 +404,74 @@ test("D817: a bundle product's failure carries the API's instruction, not just i
   assert.match(app, /body\?\.issues/, "the failure path reads the API's issues");
   assert.match(app, /detail\?`\$\{headline\} \$\{detail\}`:headline/, "and shows them with the headline");
 });
+
+test("D818: the interior pages are inside the shell, and the plan name is legible", async () => {
+  /* Confirmed rendered before this was written. On the live build:
+
+       /batches   document.querySelector('.app-shell') === null
+       /keywords  same, and 81 of its text nodes computed to Manrope
+       /usage     same, plus Fraunces and Helvetica Neue
+
+     Every rule in interface-v2.css is scoped to `.app-shell`, so six pages of
+     the product were outside the migration entirely and no amount of work in
+     that file could reach them. They mount FactoryShell now. */
+  const pages = ["batches", "keywords", "usage", "goals", "mockups", "operations"];
+  for (const page of pages) {
+    const source = await fs.promises.readFile(new URL(`../app/${page}/page.tsx`, import.meta.url), "utf8");
+    assert.match(source, /FactoryShell/, `/${page} mounts the shell`);
+    assert.doesNotMatch(source, /<main className="(management-page|usage-page)/,
+      `/${page} no longer renders a bare management page as its root`);
+  }
+  const shell = await fs.promises.readFile(new URL("../app/factory-shell.tsx", import.meta.url), "utf8");
+  assert.match(shell, /className="app-shell interior-shell"/);
+  assert.match(shell, /className="factory-work"/);
+
+  /* D798 declared the light ink for the dark plan banner and never won, because
+     clarity-pass carried `body:has(.management-nav) h2{color:#4c293f!important}`
+     and an important on a colour cannot be out-specified. The plan name rendered
+     at 1.23:1 - invisible - on the page whose only job is to name the plan. That
+     block is deleted rather than overridden, so this resolves for real. */
+  const banner = resolve({
+    selectorTest: selector => /plan-banner h2$/.test(selector),
+    property: "color",
+  });
+  assert.ok(banner && banner.value === "#fff",
+    `the plan name resolves to ${banner ? `${banner.value} (${banner.file}:${banner.line})` : "unset"}`);
+
+  const heading = resolve({
+    selectorTest: selector => /interior-page > header h1$/.test(selector),
+    property: "color",
+  });
+  assert.ok(heading && heading.value === "#3d2538",
+    `the interior page heading resolves to ${heading ? heading.value : "unset"}`);
+
+  /* And nothing may key off the deleted nav again. */
+  for (const file of ["clarity-pass.css", "globals.css", "factory-navigation.css", "management-aesthetic.css"]) {
+    const css = await fs.promises.readFile(new URL(`../app/${file}`, import.meta.url), "utf8");
+    const rules = css.split("\n").filter(line => /^[^*/]*\.management-nav(?![\w-])[^{]*\{/.test(line));
+    assert.deepEqual(rules, [], `${file} still styles the deleted nav:\n${rules.join("\n")}`);
+  }
+});
+
+test("D818b: no text on an interior page is smaller than the pane's floor", async () => {
+  /* Batch History was drawn by batch-history.css, which predates the migration:
+     8px uppercase chips, 9px timestamps, 10px body. The pane's floor is 10px
+     and its body is 12-13px, so every line in that list sat one to five pixels
+     under the rest of the app. Measured on the live build: "DRAFT" and
+     "2 PUBLISHED TO ETSY" both computed to 8px. */
+  const css = fs.readFileSync(new URL("../app/interface-v2.css", import.meta.url), "utf8");
+  const offences = [];
+  postcss.parse(css).walkRules(rule => {
+    if (!/interior-page|batch-history|batch-status|usage-card|bank-grid|plan-banner/.test(rule.selector)) return;
+    rule.walkDecls(/^font(-size)?$/, decl => {
+      for (const [, raw] of decl.value.matchAll(/(\d+(?:\.\d+)?)px\//g)) {
+        if (parseFloat(raw) < 10) offences.push(`${rule.selector} — ${raw}px`);
+      }
+      if (decl.prop === "font-size") {
+        const size = parseFloat(decl.value);
+        if (Number.isFinite(size) && size < 10) offences.push(`${rule.selector} — ${size}px`);
+      }
+    });
+  });
+  assert.deepEqual(offences, [], `under the pane's 10px floor:\n${offences.join("\n")}`);
+});

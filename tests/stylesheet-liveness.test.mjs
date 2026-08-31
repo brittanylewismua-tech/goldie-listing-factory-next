@@ -366,15 +366,19 @@ test("D395: the product rows grid declares a constrained track", async () => {
    fix has always skipped them. The Etsy API attribution has to appear wherever
    Etsy data is shown, and these pages show it. */
 test("D398: the management pages carry the Etsy attribution too", async () => {
-  const nav = await readFile(new URL("app/management-nav.tsx", root), "utf8");
-  assert.match(nav, /etsy-api-disclosure/,
+  /* D818 - they carried it in a nav footer of their own because they had no
+     shell to inherit one from. They render the shell now, so the attribution,
+     the copyright and the Powered-by line are the same elements the workflow
+     shows rather than a second copy that can drift. */
+  const shell = await readFile(new URL("app/factory-shell.tsx", root), "utf8");
+  assert.match(shell, /etsy-api-disclosure/,
     "Etsy attribution is required on every page that shows Etsy data");
-  assert.match(nav, /management-nav-footer/);
-  assert.match(nav, /approved-powered/);
+  assert.match(shell, /approved-sidebar-footer/);
+  assert.match(shell, /approved-powered/);
 
-  const css = await readFile(new URL("app/factory-navigation.css", root), "utf8");
-  assert.match(css, /\.management-nav-footer\{margin-top:auto/,
-    "pinned to the bottom like the workflow rail");
+  const css = await readFile(new URL("app/interface-v2.css", root), "utf8");
+  assert.match(css, /\.approved-sidebar-footer \{ margin-top: auto/,
+    "pinned to the bottom of the rail");
 });
 
 /* D405 · .top-actions is a column with justify-content:flex-end. Make it
