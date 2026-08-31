@@ -556,7 +556,18 @@ html, body { background: #f1d2dc; }
    It was left-aligned inside a right-aligned box and looked, in her words,
    amateur; it is a chip on the left of the card, the way every state chip in
    this interface is. */
-.app-shell .recipe-copy>em{justify-self:start;margin-top:6px;padding:6px 9px;border:1px solid #e2d9e0;border-radius:7px;background:#f5f2f5;color:#5d3151;font:750 11px/1 Inter,ui-sans-serif,system-ui,sans-serif;font-style:normal;white-space:nowrap}
+/* D812 · The whole tile is a <button class="recipe-use"> - clicking anywhere on
+   the card chooses that product. This <em> sat inside it as a filled bar
+   reading "Choose →", which is a second control for the act the card already
+   performs, and it is what makes production's card 291px against the preview's
+   190. The preview's card has no such bar: the ring around the chosen card is
+   how selection reads.
+
+   It stays as a word, because production's card also carries Edit and Delete
+   and without a label the tile would be three controls and no statement of
+   what the tile itself does. A word, not a bar. */
+.app-shell .recipe-copy>em{background:none;border:0;box-shadow:none;padding:0;color:#6b365a;font:750 11px/1.4 Inter,ui-sans-serif,system-ui,sans-serif;justify-content:flex-start}
+.app-shell .recipe-tile.selected .recipe-copy>em{background:none;color:#37704c}
 .app-shell .recipe-tile.selected .recipe-copy>em{border-color:#cae5d2;background:#edf7f0;color:#37704c}
 @media(max-width:1100px){.app-shell .recipe-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:760px){.app-shell .recipe-grid{grid-template-columns:minmax(0,1fr)}}
@@ -1968,3 +1979,22 @@ html, body { background: #f1d2dc; }
    tallest thing in its column - pinning the tallest element is what created
    this. It scrolls with the page, which is what the preview does. */
 .app-shell .factory-publish-box{position:static;max-height:none;overflow:visible}
+
+/* D812 · The sidebar, measured against the preview's rather than assumed.
+
+   It is closer than anything else in this migration: 288px wide, 36/26/25
+   padding, nav links 235x39 at 13px/650 on rgba(255,255,255,.62) at radius 14 -
+   all identical. Two pieces were not.
+
+     .goldie-restart   rgba(255,255,255,.38), padding 10px 12px, radius 12,
+                       ink #4b283e
+     .start-new-batch  rgba(255,255,255,.5),  padding 9px 14px,  radius 16,
+                       ink #5b304f
+
+     .goldie-meter     73px tall, padding 13px 14px
+     .approved-usage   68px tall, padding 9px 14px
+
+   Nothing here changes what either control does. */
+.app-shell .start-new-batch{
+  background:rgba(255,255,255,.38);padding:10px 12px;border-radius:12px;color:#4b283e}
+.app-shell .approved-usage{padding:13px 14px}
