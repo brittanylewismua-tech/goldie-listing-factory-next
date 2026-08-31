@@ -349,3 +349,24 @@ test("D814: the photo strip is not squeezed by nested containers", () => {
   }
   assert.deepStrictEqual(faults, []);
 });
+
+test("D815: the listing form's parts resolve to the preview's values", () => {
+  /* Measured on both windows at 1440. Each of these was a rule I had already
+     written once and which never won - the input from an !important in
+     approved-functional, the chips from one in lilac-theme. Asserting the rule
+     exists is what let that happen twice, so this asserts what wins. */
+  const faults = [];
+  const expect = [
+    [selector => /\.listing-title-field$/.test(selector), "font-size", /^12px$/],
+    [selector => /\.listing-title-field$/.test(selector), "padding", /^10px 11px$/],
+    [selector => /\.tag-row span$/.test(selector), "font-size", /^10px$/],
+    [selector => /\.tag-row span$/.test(selector), "background", /^#f1ebef$/i],
+  ];
+  for (const [selectorTest, property, want] of expect) {
+    const winner = resolve({ selectorTest, property });
+    if (!winner || !want.test(winner.value)) {
+      faults.push(`${property} resolves to "${winner ? winner.value : "unset"}" from ${winner ? `${winner.file}:${winner.line}` : "nowhere"}, wanted ${want}`);
+    }
+  }
+  assert.deepStrictEqual(faults, []);
+});

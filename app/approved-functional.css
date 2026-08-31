@@ -1244,11 +1244,14 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
   resize:none!important;
   field-sizing:content!important;
   height:auto!important;
+  /* D815 - 15px/550 with 13px of padding was this field's own size, set here
+     with !important, so D783's 12px/400 at 10px 11px never applied. The
+     preview uses one input everywhere: 12px/400, padding 10px 11px. */
   min-height:76px!important;
   line-height:1.45!important;
-  font-size:15px!important;
-  font-weight:550!important;
-  padding:13px!important;
+  font-size:12px!important;
+  font-weight:400!important;
+  padding:10px 11px!important;
 }
 .app-shell .title-match-warning{display:block;margin:10px 0;padding:10px 12px;border:1px solid rgba(163,58,72,.34);border-radius:10px;background:#fffafc;color:#a33a48;font-size:12px;line-height:1.45;font-weight:750}
 

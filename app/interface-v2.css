@@ -2022,3 +2022,20 @@ html, body { background: #f1d2dc; }
    a row. */
 .app-shell .factory-work .listing-rows{padding-left:0;padding-right:0}
 .app-shell .factory-work .listing-rows .listing-card{margin-left:0}
+
+/* D815 · Component-by-component against the preview's step 3, measured on both
+   at 1440 rather than compared by eye.
+
+     form card   #fffafc / 1px #dfc8d5   against rgba(255,252,254,.92) / #e4cedb
+     its h3      14px / 700 / #3d2538    against 18px / 800 / #3f2338
+     check row   ink #3d2538             against #55434f
+
+   The input and the tag chips were the same kind of miss as D812: rules I
+   wrote in D782 and D783 that never won. The title field is 15px/550 with 13px
+   padding from an !important rule in approved-functional; the chips are 12px on
+   a lilac wash from lilac-theme, also !important. Both corrected where they
+   win, both covered by the resolver test below. */
+.app-shell .factory-listing-form{background:#fffafc;border-color:#dfc8d5}
+.app-shell .factory-listing-form > h3{
+  font:700 14px/1.25 Inter,ui-sans-serif,system-ui,sans-serif;color:#3d2538}
+.app-shell .factory-check{color:#3d2538}

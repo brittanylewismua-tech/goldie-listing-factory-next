@@ -2977,7 +2977,9 @@ body{min-width:1180px!important}
 .app-shell .listing-card-detail .design-fields textarea{width:100%;padding:9px 11px;border:1px solid #ded5db;border-radius:10px;background:#fff;font:500 13px/1.45 "Manrope",system-ui,sans-serif;color:#3f2438;resize:vertical}
 .app-shell .listing-card-detail .design-fields textarea:focus{outline:0;border-color:#b777b0;box-shadow:0 0 0 3px rgba(183,119,176,.14)}
 .app-shell .listing-card-detail .tag-row{display:flex;flex-wrap:wrap;gap:6px}
-.app-shell .listing-card-detail .tag-row span{padding:3px 8px;border-radius:16px;background:rgba(220,177,218,.26);color:#67465f;font-size:12px;font-weight:700}
+/* D815 - the preview's .goldie-tag: 10px/400 #5a4152 on #f1ebef, radius 6,
+   padding 5px 7px, no edge. This was 12px/700 on a lilac wash at radius 16. */
+.app-shell .listing-card-detail .tag-row span{padding:5px 7px;border-radius:6px;background:#f1ebef;color:#5a4152;font-size:10px;font-weight:400}
 .app-shell .listing-card-detail .individual-description-body{display:grid;gap:8px}
 .app-shell .listing-card-detail .individual-description-body label{display:grid;gap:4px;font:700 12px/1.2 "Manrope",system-ui,sans-serif;color:#6b4560}
 .app-shell .listing-card-detail .individual-description-body textarea{width:100%;padding:10px 12px;border:1px solid #ded5db;border-radius:10px;background:#fff;font:500 13px/1.5 "Manrope",system-ui,sans-serif;color:#3f2438}

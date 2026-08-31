@@ -272,7 +272,12 @@ test("the wrapping title field owns the full row and grows to its content — D9
   const css=await Promise.all([readFile(new URL("../app/approved-functional.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n"));
   assert.match(css,/\.listing-title-field\{[\s\S]*?grid-column:1\/-1!important;[\s\S]*?width:100%!important;/);
   assert.match(css,/field-sizing:content!important/);
-  assert.match(css,/font-size:15px!important/);
+  /* D815 - this asserted 15px, which was this field's own size and not the
+     preview's. The preview uses one input everywhere: .goldie-input at 12px/400
+     with 10px 11px of padding, and the title field is an input like any other.
+     What D94 was protecting is the field owning its row and growing to its
+     content, which the two lines above check; the size was never the point. */
+  assert.match(css,/font-size:12px!important/);
 });
 
 test("the step rail is dark-on-light, matching its transparent background — D95", async () => {
