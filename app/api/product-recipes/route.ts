@@ -37,13 +37,13 @@ export async function GET() {
   const reach = (printifyShopId: number) =>
     !printifyShopId || here.has(printifyShopId) ? "here" : away.has(printifyShopId) ? "away" : "unproven";
 
-  return NextResponse.json({ activeEtsyShop: active ? { shopId: active.shop_id, shopName: active.shop_name } : null, recipes: recipes.map((r) => {const saved=JSON.parse(r.pricingJson||"{}");return {...r,etsyShippingProfileId:Number(saved.etsyShippingProfileId)||0,defaultColorIds:Array.isArray(saved.defaultColorIds)?saved.defaultColorIds.filter(Number.isInteger):[],defaultSizeIds:Array.isArray(saved.defaultSizeIds)?saved.defaultSizeIds.filter(Number.isInteger):[],defaultProfitTarget:Number(saved.defaultProfitTarget)||10,wholeNumberPricing:saved.wholeNumberPricing===true,variantPrices:saved.variantPrices&&typeof saved.variantPrices==="object"?saved.variantPrices as Record<string,number>:{},etsyDefaults:saved.etsyDefaults&&typeof saved.etsyDefaults==="object"?saved.etsyDefaults:{},printifyShopTitle:typeof saved.printifyShopTitle==="string"?saved.printifyShopTitle:"",printifyShopId:Number(saved.printifyShopId)||0,mockupIds:Array.isArray(saved.mockupIds)?saved.mockupIds.filter((id:unknown)=>typeof id==="string").slice(0,8):undefined,setupComplete:saved.setupComplete!==false,reach:reach(Number(saved.printifyShopId)||0),printifyImageIndices:JSON.parse(r.printifyImageIndicesJson||"[]")}}) });
+  return NextResponse.json({ activeEtsyShop: active ? { shopId: active.shop_id, shopName: active.shop_name } : null, recipes: recipes.map((r) => {const saved=JSON.parse(r.pricingJson||"{}");return {...r,etsyShippingProfileId:Number(saved.etsyShippingProfileId)||0,defaultColorIds:Array.isArray(saved.defaultColorIds)?saved.defaultColorIds.filter(Number.isInteger):[],defaultSizeIds:Array.isArray(saved.defaultSizeIds)?saved.defaultSizeIds.filter(Number.isInteger):[],defaultProfitTarget:Number(saved.defaultProfitTarget)||10,wholeNumberPricing:saved.wholeNumberPricing===true,variantPrices:saved.variantPrices&&typeof saved.variantPrices==="object"?saved.variantPrices as Record<string,number>:{},etsyDefaults:saved.etsyDefaults&&typeof saved.etsyDefaults==="object"?saved.etsyDefaults:{},previewImage:typeof saved.previewImage==="string"?saved.previewImage:"",printifyShopTitle:typeof saved.printifyShopTitle==="string"?saved.printifyShopTitle:"",printifyShopId:Number(saved.printifyShopId)||0,mockupIds:Array.isArray(saved.mockupIds)?saved.mockupIds.filter((id:unknown)=>typeof id==="string").slice(0,8):undefined,setupComplete:saved.setupComplete!==false,reach:reach(Number(saved.printifyShopId)||0),printifyImageIndices:JSON.parse(r.printifyImageIndicesJson||"[]")}}) });
 }
 
 export async function POST(request: Request) {
   const user = await getChatGPTUser();
   if (!user) return NextResponse.json({ error: "Sign in to save product recipes." }, { status: 401 });
-  const body = await request.json() as { id?: string; name?: string; templateUrl?: string; description?:string; keywordListId?:string; printifyImageIndices?:number[]; normalizePadding?:boolean;printifyShopTitle?:string;printifyShopId?:number;etsyShippingProfileId?:number;defaultColorIds?:number[];defaultSizeIds?:number[];etsyDefaults?:Record<string,unknown>;defaultMockupTheme?:string;mockupIds?:string[];setupComplete?:boolean;defaultProfitTarget?:number;wholeNumberPricing?:boolean;variantPrices?:Record<string,number> };
+  const body = await request.json() as { id?: string; name?: string; templateUrl?: string; description?:string; keywordListId?:string; printifyImageIndices?:number[]; normalizePadding?:boolean;previewImage?:string;printifyShopTitle?:string;printifyShopId?:number;etsyShippingProfileId?:number;defaultColorIds?:number[];defaultSizeIds?:number[];etsyDefaults?:Record<string,unknown>;defaultMockupTheme?:string;mockupIds?:string[];setupComplete?:boolean;defaultProfitTarget?:number;wholeNumberPricing?:boolean;variantPrices?:Record<string,number> };
   const name = String(body.name || "").trim().slice(0, 80), templateUrl = String(body.templateUrl || "").trim();
   if (!name || !templateUrl) return NextResponse.json({ error: "Name the recipe and add its Printify template." }, { status: 400 });
   const id = body.id || crypto.randomUUID();
@@ -74,6 +74,10 @@ export async function POST(request: Request) {
   if (body.etsyShippingProfileId !== undefined) patch.etsyShippingProfileId = Number(body.etsyShippingProfileId) || 0;
   /* D649 - which Printify store this product lives in, so the saved-product card
      can say it. Recorded when the product is loaded; absent on older recipes. */
+  /* D842 · The product's own Printify flatlay, remembered on the recipe so the
+     saved-product tiles can show the garment instead of a grey placeholder.
+     Fetching it per tile would be one Printify round trip per card. */
+  if (body.previewImage !== undefined) patch.previewImage = String(body.previewImage || "").slice(0, 300);
   if (body.printifyShopTitle !== undefined) patch.printifyShopTitle = String(body.printifyShopTitle || "").slice(0, 80);
   if (body.printifyShopId !== undefined) patch.printifyShopId = Number(body.printifyShopId) || 0;
   if (body.defaultColorIds !== undefined) patch.defaultColorIds = (body.defaultColorIds || []).filter(Number.isInteger);

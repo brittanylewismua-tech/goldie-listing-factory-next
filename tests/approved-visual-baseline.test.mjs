@@ -1001,7 +1001,12 @@ test("a selected product tile does not clip its own actions — D186", async () 
   /* The wrapping-flex attempt made it worse — one button per row, tile 163px ->
    * 296px. The grid was nearly right; the label was too long. */
   assert.match(clarity, /\.app-shell \.recipe-tile\{[^}]*overflow:visible/);
-  assert.match(clarity, /\.app-shell \.recipe-card \.change-product:after\{content:"Change"/);
+  /* D842 · That rule shortened "Change product" to "Change" so a three-button
+     action row would fit the tile. The button is gone - the selected tile now
+     carries the same Edit and Delete as every other one - so there is nothing
+     to shorten and nothing to clip. What this test guards, that the tile does
+     not clip its own actions, is asserted by the row itself being uniform. */
+  assert.doesNotMatch(clarity, /\.change-product/);
   assert.doesNotMatch(clarity, /\.recipe-grid \.recipe-tile\{[^}]*flex-wrap:wrap/,
     "Flex made each action take its own row.");
 });
@@ -1056,10 +1061,14 @@ test("D197: product tiles pad their actions and drop the meaningless Printify in
   /* D729 · The initial is gone from the markup rather than hidden by a rule -
      the band it sat in is the prototype's product image area and stays. A
      bundle tile still fills its band with the member count. */
+  /* D842 · The band is the prototype's product image area and it holds the
+     product's own Printify flatlay now, which is what it was always for. The
+     meaningless "P" initial D197 removed has not come back - that is the rule
+     this guards. */
   assert.match(
     tools,
-    /<span className="recipe-icon" aria-hidden="true"\/>/,
-    "product tiles hide the icon",
+    /<span className="recipe-icon" aria-hidden="true">\{recipe\.previewImage\?<img/,
+    "product tiles show the product, not an initial",
   );
   assert.doesNotMatch(
     css,

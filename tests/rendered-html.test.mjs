@@ -2104,8 +2104,14 @@ test("keeps a forward path from setup, designs, and pricing after drafts exist (
 test("keeps product creation visible and lets a selected product be changed (fixes D4 and D5)",async()=>{
   const [app,workflow,css]=await Promise.all([readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8"),readFile(new URL("../app/factory-tools.tsx",import.meta.url),"utf8"),Promise.all([readFile(new URL("../app/approved-functional.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n"))]);
   assert.match(workflow,/＋ Add a new product/);
-  assert.match(workflow,/className="change-product"[\s\S]{0,300}Change product/);
+  /* D842 · "Change product" left the tile. Every other tile carries Edit and
+     Delete, so the selected one carried three buttons where the rest carry two
+     and the action rows across the grid did not line up. Choosing another tile
+     is how a product is changed - that path, onUseRecipe, is what this guards -
+     and onChangeProduct is still the guard that runs when it happens. */
+  assert.match(workflow,/onUseRecipe\(recipe\)/);
   assert.match(workflow,/onChangeProduct: \(\) => boolean/);
+  assert.doesNotMatch(workflow,/className="change-product"/);
   assert.match(workflow,/useEffect\(\(\)=>setActiveId\(props\.selectedProductId\),\[props\.selectedProductId\]\)/);
   assert.match(app,/onChangeProduct=\{changeProduct\}/);
   assert.match(app,/selectedProductId=\{activeBundle\?`bundle:\$\{activeBundle\.id\}`:activeRecipe\?\.id\|\|""\}/);
@@ -6895,7 +6901,7 @@ test("a recorded store name reaches the card without a reload — D659", async (
   assert.equal((app.match(/announceShop\(/g) || []).length, 3, "announced on both the refusal and the success path");
   assert.match(tools, /window\.addEventListener\("goldie-recipe-shop",onShop\);/);
   assert.match(tools, /setRecipes\(current=>current\.map\(recipe=>recipe\.id===detail\.recipeId\?\{\.\.\.recipe,printifyShopTitle:detail\.title,printifyShopId:detail\.shopId\}:recipe\)\);/);
-  assert.match(tools, /return \(\)=>window\.removeEventListener\("goldie-recipe-shop",onShop\);/);
+  assert.match(tools, /window\.removeEventListener\("goldie-recipe-shop",onShop\)/);
 });
 
 /* D660 · The cosmetic pass from the completed bundle review. Every item was

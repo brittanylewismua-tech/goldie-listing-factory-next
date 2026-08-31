@@ -10,7 +10,7 @@ export type Pricing = { targetProfit: number; etsyFeePercent: number; fixedFee: 
    batch — which currently fills only 2–3 of 11 fields and is not stable
    across listings in the same batch. */
 export type RecipeEtsyDefaults = Record<string, string | number | null>;
-export type Recipe = { id: string; name: string; templateUrl: string; description: string; defaultTitle: string; defaultMockupTheme?:string; mockupIds?:string[]; setupComplete?:boolean; defaultProfitTarget?:number;wholeNumberPricing?:boolean;variantPrices?:Record<string,number>; keywordListId?:string; printifyImageIndices?:number[]; normalizePadding?:boolean;etsyShippingProfileId?:number;defaultColorIds?:number[];defaultSizeIds?:number[];etsyDefaults?:RecipeEtsyDefaults;printifyShopTitle?:string;printifyShopId?:number;
+export type Recipe = { id: string; name: string; templateUrl: string; description: string; defaultTitle: string; defaultMockupTheme?:string; mockupIds?:string[]; setupComplete?:boolean; defaultProfitTarget?:number;wholeNumberPricing?:boolean;variantPrices?:Record<string,number>; keywordListId?:string; printifyImageIndices?:number[]; normalizePadding?:boolean;etsyShippingProfileId?:number;defaultColorIds?:number[];defaultSizeIds?:number[];etsyDefaults?:RecipeEtsyDefaults;previewImage?:string;printifyShopTitle?:string;printifyShopId?:number;
   /* D835 · Whether this product's Printify store can publish to the Etsy shop
      the seller is working in. "away" means a proof says it publishes somewhere
      else, so the product is filed under its own store rather than offered. */
@@ -111,13 +111,21 @@ export function SavedWorkflow(props: WorkflowProps) {
   /* D659 · Applied the moment the server records it, so the card stops waiting
      for a reload to admit which store a product came from. */
   useEffect(()=>{
+    /* D842 · Applied the moment the product is opened, so a tile stops showing a
+       placeholder without waiting for a reload. */
+    function onPhoto(event:Event){
+      const detail=(event as CustomEvent<{recipeId?:string;previewImage?:string}>).detail;
+      if(!detail?.recipeId||!detail.previewImage)return;
+      setRecipes(current=>current.map(recipe=>recipe.id===detail.recipeId?{...recipe,previewImage:detail.previewImage}:recipe));
+    }
+    window.addEventListener("goldie-recipe-photo",onPhoto);
     function onShop(event:Event){
       const detail=(event as CustomEvent<{recipeId?:string;title?:string;shopId?:number}>).detail;
       if(!detail?.recipeId||!detail.title)return;
       setRecipes(current=>current.map(recipe=>recipe.id===detail.recipeId?{...recipe,printifyShopTitle:detail.title,printifyShopId:detail.shopId}:recipe));
     }
     window.addEventListener("goldie-recipe-shop",onShop);
-    return ()=>window.removeEventListener("goldie-recipe-shop",onShop);
+    return ()=>{window.removeEventListener("goldie-recipe-shop",onShop);window.removeEventListener("goldie-recipe-photo",onPhoto)};
   },[]);
   const formRef=useRef<HTMLDivElement|null>(null);
   function revealForm(){
@@ -249,7 +257,10 @@ export function SavedWorkflow(props: WorkflowProps) {
     {reachable.length > 0 && <LibraryShell collapsed={props.bundleChosen}><div className="recipe-library-head"><span>{reachable.length} saved {reachable.length === 1 ? "product" : "products"}</span><button className="add-product-button" disabled={Boolean(pendingAction)} onClick={async () => { if(!await props.onStartNewProduct())return;setEditing(true);setEditingId("");setActiveId("");setName("");setKeywordListId("");setMessage("");revealForm(); }}>＋ Add a new product</button></div><div className="recipe-grid">{reachable.map((recipe) => {const selecting=pendingAction===`recipe:${recipe.id}`;return <article className={`recipe-tile ${activeId === recipe.id ? "selected" : ""} ${selecting?"selecting":""}`} aria-busy={selecting} key={recipe.id}><button className="recipe-use" title={recipe.name} disabled={Boolean(pendingAction)} onClick={async () => {if(actionLock.current)return;actionLock.current=true;setPendingAction(`recipe:${recipe.id}`);setActiveId(recipe.id);setMessage("");try{if(!await props.onUseRecipe(recipe)){setActiveId("");return}setKeywordListId(recipe.keywordListId||"");setEditing(false)}finally{actionLock.current=false;setPendingAction("")}}}>{/* D729 · The band the prototype puts above a product's name. D197 removed
                 what used to sit in it - a "P" for Printify, identical on every card and
                 meaningless on all of them. The band stays because it is what makes the
-                tile a product card; a bundle tile still fills it with its member count. */}<span className="recipe-icon" aria-hidden="true"/><span className="recipe-copy"><b>{recipe.name}</b><small>{selecting?"Loading product details…":recipeSummary(recipe)}</small>{!selecting&&recipeShopLabel(recipe)?<small className="recipe-shop" title={`Printify store: ${recipeShopLabel(recipe)}`}>{recipeShopLabel(recipe)}</small>:null}<em>{selecting?`Loading ${recipe.name}…`:activeId === recipe.id ? (props.templateVerified ? "✓ Ready" : "Checking…") : "Choose →"}</em></span></button>{activeId===recipe.id&&<button className="change-product" disabled={Boolean(pendingAction)} onClick={async()=>{if(!await props.onChangeProduct())return;setActiveId("");setEditing(false);setMessage("")}}>Change product</button>}<button className="edit-recipe" title="Rename this product or reconnect its Printify template" disabled={Boolean(pendingAction)} onClick={async () => {if(actionLock.current)return;actionLock.current=true;setPendingAction(`edit:${recipe.id}`);setActiveId(recipe.id);try{if(!await props.onUseRecipe(recipe)){setActiveId("");return}setEditingId(recipe.id); setName(recipe.name);setKeywordListId(recipe.keywordListId||"");setEditing(true)}finally{actionLock.current=false;setPendingAction("")}}}>Edit</button><button className="delete-recipe" disabled={Boolean(pendingAction)} aria-label={`Delete ${recipe.name}`} title="Delete saved product" onClick={() => void remove(recipe)}>Delete</button></article>})}</div></LibraryShell>}
+                tile a product card; a bundle tile still fills it with its member count. */}<span className="recipe-icon" aria-hidden="true">{recipe.previewImage?<img src={recipe.previewImage} alt="" decoding="async"/>:null}</span><span className="recipe-copy"><b>{recipe.name}</b><small>{selecting?"Loading product details…":recipeSummary(recipe)}</small>{!selecting&&recipeShopLabel(recipe)?<small className="recipe-shop" title={`Printify store: ${recipeShopLabel(recipe)}`}>{recipeShopLabel(recipe)}</small>:null}<em>{selecting?`Loading ${recipe.name}…`:activeId === recipe.id ? (props.templateVerified ? "✓ Ready" : "Checking…") : "Choose →"}</em></span></button>{activeId===recipe.id&&{/* D842 · "Change product" left the tile. Every other tile carries Edit and
+                    Delete, so the selected one carried three where the rest carry two and
+                    the action rows across the grid did not line up. Choosing another tile
+                    is how a product is changed, which is what the grid is for. */}}<button className="edit-recipe" title="Rename this product or reconnect its Printify template" disabled={Boolean(pendingAction)} onClick={async () => {if(actionLock.current)return;actionLock.current=true;setPendingAction(`edit:${recipe.id}`);setActiveId(recipe.id);try{if(!await props.onUseRecipe(recipe)){setActiveId("");return}setEditingId(recipe.id); setName(recipe.name);setKeywordListId(recipe.keywordListId||"");setEditing(true)}finally{actionLock.current=false;setPendingAction("")}}}>Edit</button><button className="delete-recipe" disabled={Boolean(pendingAction)} aria-label={`Delete ${recipe.name}`} title="Delete saved product" onClick={() => void remove(recipe)}>Delete</button></article>})}</div></LibraryShell>}
     {/* D323 · The edit form used to render after the saved-bundles section, so
         clicking Edit on a product opened the form below the bundles and the
         disclosure — far from the tile that was clicked, often off screen. It

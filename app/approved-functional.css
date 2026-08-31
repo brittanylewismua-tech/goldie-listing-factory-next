@@ -1230,7 +1230,6 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
  * way back was to unselect. It is a collapsed <details> — one summary line —
  * so it can stay visible without adding noise. */
 .app-shell[data-product-selected="true"] .bundle-library{display:block!important}
-.app-shell .recipe-card .change-product{position:static;grid-column:2;justify-self:end;margin:7px 2px 8px 0;padding:6px 9px;border:0;background:transparent;color:#68445f;font-size:10px;font-weight:850;text-decoration:underline;text-underline-offset:3px;white-space:nowrap;cursor:pointer}
 .app-shell .variant-pricing .heading-with-help>button{display:none!important}
 .keyword-page .keyword-workspace{display:flex!important;flex-direction:column!important}
 .keyword-page .bank-library{order:1}
