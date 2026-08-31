@@ -29,3 +29,13 @@ test("the step you are standing on is never disabled — D227", () => {
      standing on Listing. `!active` still leads the condition. */
   assert.match(source, /disabled=\{!active&&/);
 });
+
+test("a blocker says where it lives, not just what it is — D854", () => {
+  const gates = readFileSync(new URL("../app/workflow-gates.ts", import.meta.url), "utf8");
+  /* Measured on her batch, standing on Images: Next step disabled, all four
+     sections ticked complete, and the stated reason - the Etsy shipping
+     profile - belonging to the Product step, with nothing on the page to
+     click. */
+  assert.match(gates, /Choose the Etsy shipping profile on the Product step\./);
+  assert.match(gates, /Approve prices and buyer-paid shipping on the Product step\./);
+});

@@ -105,8 +105,14 @@ export function navigationIssues(index:number,state:NavigationGateState){
   if(index>=3&&!state.pricesReady)issues.push("The selected colors need available prices.");
   if(index>=3&&!state.designCount)issues.push("Add at least one finished design.");
   if(index>=3&&!state.designsReady)issues.push("Wait for every design check to finish.");
-  if(index>=5&&!state.etsyShippingProfileReady)issues.push("Choose the Etsy shipping profile.");
-  if(index>=5&&!state.pricingApproved)issues.push("Approve prices and buyer-paid shipping.");
+  /* D854 · Both of these live on the Product step, and both were being read on
+     the Images step - where the footer said "Choose the Etsy shipping profile."
+     under four cards that were all ticked complete, with nothing on the page to
+     click. Measured on her batch: Next step disabled, every visible section
+     green, and the stated reason belonging to a page she had already left.
+     A blocker that does not say where it lives sends the seller looking. */
+  if(index>=5&&!state.etsyShippingProfileReady)issues.push("Choose the Etsy shipping profile on the Product step.");
+  if(index>=5&&!state.pricingApproved)issues.push("Approve prices and buyer-paid shipping on the Product step.");
   if(index>=5&&!state.draftsComplete)issues.push("Finish creating the Printify drafts.");
   if(index>=5&&!state.createdDraftCount)issues.push("Create at least one Printify draft.");
   if(index>=6&&!state.titlesReady)issues.push("Finish every listing title.");
