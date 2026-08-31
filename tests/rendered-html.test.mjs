@@ -2111,7 +2111,12 @@ test("keeps product creation visible and lets a selected product be changed (fix
      and onChangeProduct is still the guard that runs when it happens. */
   assert.match(workflow,/onUseRecipe\(recipe\)/);
   assert.match(workflow,/onChangeProduct: \(\) => boolean/);
-  assert.doesNotMatch(workflow,/className="change-product"/);
+  /* D843 · The change-product button stays for now. D842 tried to remove it and
+     the removal left a stray brace that took the whole Listing Factory down in
+     production - every step, not just the one I was looking at. Removing it is
+     a tidy-up; it is not worth a second outage on the same day, and it will be
+     done on its own with the render checked before and after. */
+  assert.match(workflow,/className="change-product"/);
   assert.match(workflow,/useEffect\(\(\)=>setActiveId\(props\.selectedProductId\),\[props\.selectedProductId\]\)/);
   assert.match(app,/onChangeProduct=\{changeProduct\}/);
   assert.match(app,/selectedProductId=\{activeBundle\?`bundle:\$\{activeBundle\.id\}`:activeRecipe\?\.id\|\|""\}/);

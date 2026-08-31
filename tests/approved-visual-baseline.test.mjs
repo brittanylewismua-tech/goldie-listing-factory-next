@@ -1001,12 +1001,7 @@ test("a selected product tile does not clip its own actions — D186", async () 
   /* The wrapping-flex attempt made it worse — one button per row, tile 163px ->
    * 296px. The grid was nearly right; the label was too long. */
   assert.match(clarity, /\.app-shell \.recipe-tile\{[^}]*overflow:visible/);
-  /* D842 · That rule shortened "Change product" to "Change" so a three-button
-     action row would fit the tile. The button is gone - the selected tile now
-     carries the same Edit and Delete as every other one - so there is nothing
-     to shorten and nothing to clip. What this test guards, that the tile does
-     not clip its own actions, is asserted by the row itself being uniform. */
-  assert.doesNotMatch(clarity, /\.change-product/);
+  assert.match(clarity, /\.app-shell \.recipe-card \.change-product:after\{content:"Change"/);
   assert.doesNotMatch(clarity, /\.recipe-grid \.recipe-tile\{[^}]*flex-wrap:wrap/,
     "Flex made each action take its own row.");
 });

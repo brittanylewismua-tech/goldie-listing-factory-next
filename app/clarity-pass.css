@@ -290,6 +290,18 @@
 /* Primary action inside a card - roomier and lighter, sized to fit the tile */
 
 /* Quiet actions - box only, no type changes (see note above) */
+.app-shell :is(.step-card,.recipe-card) :is(.edit-recipe,.change-product,.add-product-button){
+  min-height:30px!important;
+  padding:0 12px!important;
+  border:1px solid #ded1d8!important;
+  border-radius:16px!important;
+  background:rgba(255,255,255,.55)!important;
+  text-decoration:none!important;
+}
+.app-shell :is(.step-card,.recipe-card) :is(.edit-recipe,.change-product,.add-product-button):hover{
+  border-color:rgba(107,58,88,.38)!important;
+  background:#fff!important;
+}
 
 /* Save / confirm actions match the primary.
    D375 - .workflow-next used to be in this list, so the SAME forward button
@@ -698,6 +710,12 @@
  * button took its own row and the tile went 163px -> 296px tall. Measured on the
  * deployed build, which is the only reason I caught it. The grid was nearly right;
  * the label was too long and the overflow was hiding the evidence. */
+.app-shell .recipe-card .change-product{
+  font-size:0!important;
+  padding:4px 9px!important;
+  min-width:0!important;
+}
+.app-shell .recipe-card .change-product:after{content:"Change";font-size:9px;font-weight:800}
 
 /* D188 · The blueprint catalog image is a blank garment shot on white, so at 52px
  * a white tee vanished into the card. White plate, contained, bordered. */
