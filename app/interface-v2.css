@@ -1942,3 +1942,29 @@ html, body { background: #f1d2dc; }
 .app-shell .factory-listing-form .task-listing-preview img{
   width:44px;height:44px;border-radius:9px}
 .app-shell .factory-listing-form .task-listing-edit{gap:10px}
+
+/* D811 · The publish button could not be reached.
+
+   Side by side at 1440, step 4. The preview's box is 205px and sits entirely
+   in view with "Review and publish 1 listing" at the bottom of it. Production's
+   is 638px - it carries the five reports, the live warning and the Etsy fee
+   that the preview's box does not - and it is position:sticky, so it pins at
+   top:16 and its press lands at y779, behind the action bar at y742. Scrolling
+   does not help: a sticky box stays pinned, so the press stays under the bar.
+
+   The button that spends money on a screen whose only job is to press it,
+   unreachable. Measured, not inferred: press y779, bar y742, viewport 812.
+
+   Capping its height and scrolling inside it was the wrong fix and I checked
+   it rather than assuming: the box is 638px, the space between rail and bar is
+   about 640, so no cap engaged and nothing changed. The actual cause is that a
+   sticky element taller than its own container has nowhere to stick - measured
+   at the bottom of the page, the box sat at y-25 with "PUBLISHING TO
+   godisagirlapparel" cut off above the viewport. At the top of the page the
+   press was hidden; at the bottom the shop name was. Never both in view.
+
+   So it is not sticky. The preview's box is 205px and needs no pinning;
+   production's carries five reports, the live warning and the fee, and is the
+   tallest thing in its column - pinning the tallest element is what created
+   this. It scrolls with the page, which is what the preview does. */
+.app-shell .factory-publish-box{position:static;max-height:none;overflow:visible}
