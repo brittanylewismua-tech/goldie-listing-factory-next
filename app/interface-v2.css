@@ -2624,3 +2624,42 @@ html, body { background: #f1d2dc; }
 /* And the tile's own band keeps its edge, so a pale flatlay still reads as a
    photo rather than as an empty card. */
 .app-shell .recipe-icon:has(> img){border:1px solid #e4cedb;background:#fff;padding:4px}
+
+/* ==========================================================================
+   D847 · the connection rows' actions did not line up
+   ==========================================================================
+
+   Measured on the connect screen:
+
+     Printify row   Disconnect   x979..1037   margin-left 302.8 (auto)
+     Etsy row       Disconnect   x727..785    margin-left 116.8 (auto)
+                    Connect another Etsy shop x913..1037  margin-left 116.8
+
+   Every action carries margin-left:auto, so with two of them the free space is
+   split between them and the first one lands in the middle of the row. The two
+   Disconnects sat 252px apart on rows that are otherwise identical.
+
+   One auto margin, on the first action only. The rest sit beside it on the
+   row's own gap, so the group is right-aligned and the Disconnects agree. */
+.app-shell .connection-row > button{margin-left:0}
+.app-shell .connection-row > button:first-of-type{margin-left:auto}
+.app-shell .connection-row{gap:14px}
+
+/* And the additive action reads as a button rather than an input: the same
+   quiet pill the pane uses elsewhere, not a bordered box. */
+.app-shell .connection-row > .add-shop-link{
+  padding:9px 14px;border:1px solid #dfc8d5;border-radius:8px;
+  background:#fffafc;color:#7b3e69;
+  font:750 12px/1.2 Inter,ui-sans-serif,system-ui,sans-serif;white-space:nowrap}
+.app-shell .connection-row > .add-shop-link:hover:not(:disabled){background:#f7edf3}
+
+/* ==========================================================================
+   D848 · the placeholder garment stayed behind the real one
+   ==========================================================================
+
+   .recipe-icon is display:grid with a ::before that draws the grey shirt. The
+   band has no explicit rows, so once a real photo arrives the pseudo-element
+   and the <img> take a row each and the flatlay is squashed into half a band
+   with a fake shirt sitting above it. A product that has its photo does not
+   need a stand-in for one. */
+.app-shell .recipe-tile:not(.bundle-as-product) .recipe-icon:has(> img)::before{content:none}

@@ -168,7 +168,24 @@ export function SavedWorkflow(props: WorkflowProps) {
     return { away, stores: [...new Set(away.map(recipe => recipe.printifyShopTitle || "another store"))] };
   };
 
-  const reload = () => Promise.all([fetch("/api/product-recipes").then((r) => r.json()),fetch("/api/product-bundles").then(r=>r.json())]).then(([products,groups])=>{setRecipes(products.recipes||[]);setActiveShop(products.activeEtsyShop||null);setBundles(groups.bundles||[])}).catch(() => undefined);
+  const reload = () => Promise.all([fetch("/api/product-recipes").then((r) => r.json()),fetch("/api/product-bundles").then(r=>r.json())]).then(([products,groups])=>{setRecipes(products.recipes||[]);setActiveShop(products.activeEtsyShop||null);setBundles(groups.bundles||[]);backfillPhotos(products.recipes||[])}).catch(() => undefined);
+  /* D848 · Fill in the flatlays the bank never had. D842 remembers a photo when
+     a product is OPENED, which leaves every product saved before it showing the
+     placeholder garment forever - all five of hers. Ask the server once, only
+     when a tile is actually missing its photo, and paint the answers in.
+     photoBackfill guards it so a re-render or a second reload cannot repeat a
+     round trip that has already been made. */
+  const photoBackfill=useRef(false);
+  function backfillPhotos(loaded:Recipe[]){
+    if(photoBackfill.current)return;
+    if(!loaded.some(recipe=>!recipe.previewImage))return;
+    photoBackfill.current=true;
+    void fetch("/api/product-recipes/photos",{method:"POST"}).then(r=>r.ok?r.json():null).then((payload:{photos?:Record<string,string>}|null)=>{
+      const photos=payload?.photos||{};
+      if(!Object.keys(photos).length)return;
+      setRecipes(current=>current.map(recipe=>photos[recipe.id]?{...recipe,previewImage:photos[recipe.id]}:recipe));
+    }).catch(()=>undefined);
+  }
 
   useEffect(() => { reload(); fetch("/api/keyword-lists").then(r=>r.json()).then(r=>setKeywordLists(r.lists||[])); }, []);
   /* Establishing colors, sizes, mockups or a keyword bank saves straight to the
