@@ -884,7 +884,7 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
    five things and a fixed three-column grid could only ever hold three. */
 .app-shell .post-draft-footer{min-height:64px!important;display:flex!important;flex-wrap:nowrap!important;align-items:center!important;gap:24px!important}
 .app-shell .post-draft-footer .workflow-back{position:static!important;min-width:150px!important;margin:0!important;transform:none!important}
-.app-shell .post-draft-footer .autosave-note{margin:0!important;white-space:nowrap!important}
+.app-shell .post-draft-footer .autosave-note{margin-block:0!important;white-space:nowrap!important}
 .app-shell .custom-shipping-body>label:first-of-type{display:grid!important;gap:8px!important;margin:18px 0 24px!important}
 .app-shell .custom-shipping-body>label:first-of-type>span{color:#4b283e!important;font-size:14px!important;font-weight:800!important;line-height:1.35!important}
 .app-shell .custom-shipping-body>label:first-of-type>span small{display:block!important;margin-top:5px!important;color:rgba(74,42,62,.72)!important;font-size:12px!important;font-weight:500!important}
@@ -897,7 +897,11 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 @media(min-width:821px){
   .app-shell .workflow-stage>.workflow-footer-actions{/* D733 · width, margin and position left this rule; interface-v2 spans the bar. */min-height:64px!important;gap:24px!important}
   .app-shell .workflow-footer-actions>.workflow-back{min-width:150px!important;transform:none!important}
-  /* D809 - position and transform left this rule: the note is centred on the bar again (D804), and forcing static here overrode that silently. Margin and nowrap are still its business. */.app-shell .workflow-footer-actions .autosave-note{margin:0!important;white-space:nowrap!important}
+  /* D809 - position and transform left this rule: the note is centred on the bar again (D804), and forcing static here overrode that silently. Margin and nowrap are still its business. *//* D840 · margin:0!important left this rule. It is a shorthand, so it also set
+     margin-inline, and the note is centred by auto inline margins now - this
+     would have beaten that the same way position:static beat the last attempt.
+     The block margins are what it was for; those stay. */
+  .app-shell .workflow-footer-actions .autosave-note{margin-block:0!important;white-space:nowrap!important}
 }
 
 /* Shared step header: progress first, then title and its step count, then the card. */

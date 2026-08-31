@@ -1747,8 +1747,12 @@ html, body { background: #f1d2dc; }
    found it by putting production beside the preview at the same width, which is
    the check that finds this kind of thing and the one I should have been
    running all along. */
-.app-shell .workflow-footer-actions > .autosave-note{
-  position:absolute;left:50%;transform:translateX(-50%);margin:0}
+/* D840 · This was the earlier attempt at the same thing and it is what kept
+   the note 65px off centre: left:50% with a translateX(-50%) of its own width.
+   D839 replaced the placement with insets and set translate:none, but the
+   shift here is a `transform`, not the `translate` property, so it survived
+   and was still measured on the live build. Placement lives in one rule now. */
+.app-shell .workflow-footer-actions > .autosave-note{margin:0}
 
 /* D801 · The bundle that could not be opened, and said nothing.
 
@@ -2461,8 +2465,19 @@ html, body { background: #f1d2dc; }
        plum progress fill, so one is "what you have left" and the other is
        "what you are aiming at" without reading a word. Same geometry on both
        so they are still a pair. */
+/* D840 · D834 removed the white slab, which she asked for twice, and that was
+   right - but fully transparent is worse than the slab. Measured on the live
+   build at a 699px viewport: the bar sits at y629..699 and three product tiles
+   pass behind it, so "Back", "Change", "Edit", "Delete", "Saved automatically"
+   and "Next step" print on top of each other and none of them is readable.
+
+   The page fades out under the controls instead. No slab, no rule across the
+   pane, no white: the pane's own colour rising to full over the last 40% so
+   text has something to sit on, and nothing to sit on where there is no text. */
 .app-shell .workflow-footer-actions{
-  background:transparent;border-top:0;backdrop-filter:none}
+  background:linear-gradient(to top,
+    rgba(247,231,241,.97) 0%, rgba(247,231,241,.93) 58%, rgba(247,231,241,0) 100%);
+  border-top:0;backdrop-filter:blur(7px)}
 /* D839 · left:50% + translate:-50% measured 65px off - exactly half the note's
    own width - because the note also carries justify-self and lane rules from
    the era when this bar was a grid, and the two ways of placing it fought.
@@ -2473,7 +2488,8 @@ html, body { background: #f1d2dc; }
    its containing block by definition, and the bar's centre is the column's
    centre (both 864, measured). No transform, nothing to be half of. */
 .app-shell .workflow-footer-actions > .autosave-note{
-  position:absolute;left:0;right:0;margin-inline:auto;translate:none;
+  position:absolute;left:0;right:0;margin-inline:auto;
+  transform:none;translate:none;
   width:max-content;max-width:calc(100% - 320px);margin-block:0;white-space:nowrap}
 .app-shell .factory-work{padding-bottom:110px}
 

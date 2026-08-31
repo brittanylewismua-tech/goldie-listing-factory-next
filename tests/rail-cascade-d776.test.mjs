@@ -896,6 +896,23 @@ test("D838: the two things D834 declared and never won", () => {
   assert.ok(!translate || translate.value === "none",
     `a transform on the note puts it off centre by half its width — resolves to ${translate ? translate.value : "none"}`);
 
+  /* D840 · Three separate things beat the centring in turn: position:static,
+     then a transform, then `margin:0!important` - a shorthand that also sets
+     the inline axis the auto margins need. Each was individually reasonable
+     and each silently undid the fix. All four are resolved here. */
+  const transform = winner(one => /\.autosave-note$/.test(one), "transform");
+  assert.ok(!transform || transform.value === "none",
+    `transform resolves to ${transform ? transform.value : "none"} — it must not shift the note`);
+  const inline = winner(one => /\.autosave-note$/.test(one), "margin-inline");
+  assert.ok(inline && inline.value === "auto",
+    `margin-inline resolves to ${inline ? `${inline.value} (${inline.where})` : "unset"} — auto margins are what centre it`);
+
+  /* And the bar has to be readable. Fully transparent measured three product
+     tiles printing through it on a 699px viewport. */
+  const barFill = winner(one => /\.workflow-footer-actions$/.test(one), "background");
+  assert.ok(barFill && /linear-gradient\(to top/.test(barFill.value),
+    `the action bar resolves to ${barFill ? barFill.value.slice(0, 40) : "unset"} — content must not print through it`);
+
   const fill = winner(one => one === ".app-shell .listing-goal-side" || /\.listing-goal-side$/.test(one), "background");
   assert.ok(fill && /123,\s*62,\s*105/.test(fill.value),
     `the goal counter resolves to ${fill ? `${fill.value} (${fill.where})` : "unset"} — the two counters are told apart by that tint`);

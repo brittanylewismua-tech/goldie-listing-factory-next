@@ -176,7 +176,11 @@ const CASES = [
   { name: "forward button is a button", chain: [...shell, el("div","factory-footer"), el("button","workflow-next")], property: "width", expect: /^auto$/ },
   /* D834 · she asked twice for the white slab under Back to go. The prototype
      draws the bar in glass; production does not draw it at all now. */
-  { name: "action bar tint", chain: [...shell, el("div","workflow-footer-actions")], property: "background", expect: /^transparent$/ },
+  /* D840 · Not the prototype's glass slab, which she rejected twice, and not
+     transparent either - measured live, three product tiles printed through it
+     and nothing in the bar was readable. The pane's own colour fades up under
+     the controls. */
+  { name: "action bar tint", chain: [...shell, el("div","workflow-footer-actions")], property: "background", expect: /linear-gradient\(to top/ },
   { name: "site footer tint", chain: [...shell, el("footer")], property: "background", expect: /rgba\(255,248,251,\.54\)/ },
   // step 1 product tiles
   { name: "product grid columns", chain: [...shell, el("div","recipe-grid")], property: "grid-template-columns", expect: /repeat\(3,minmax\(0,1fr\)\)/ },
