@@ -23,6 +23,7 @@
  * ==========================================================================*/
 import { useEffect, useState } from "react";
 import GoldieWordmark from "./goldie-wordmark";
+import MobileGate from "./mobile-gate";
 import { publishedDaysThisPeriod, type ListingGoal, type PublishedDay } from "./listing-goal";
 
 type NavKey = "factory" | "batches" | "keywords" | "usage" | "connections";
@@ -68,6 +69,9 @@ export default function FactoryShell({ active, title, children }:
     : "Loading usage…";
 
   return <main className="app-shell interior-shell">
+    {/* D828 · the shell hides every child but this one on a phone. Without it
+        these pages rendered as a blank screen. */}
+    <MobileGate />
     <header className="topbar">
       <div className="brand-lockup"><GoldieWordmark className="approved-brand" /></div>
       <div className="top-actions">

@@ -830,7 +830,9 @@ test("ships official brand assets and removes the starter", async () => {
     readFile(new URL("../package.json", import.meta.url), "utf8"),
   ]);
   assert.match(page, /approved-brand/);
-  assert.match(page, /approved-wm/);
+  /* D828 · approved-wm moved into mobile-gate.tsx with the card it belongs to. */
+  const gateMarkup = await readFile(new URL("../app/mobile-gate.tsx", import.meta.url), "utf8");
+  assert.match(gateMarkup, /approved-wm/);
   assert.match(layout, /Goldie Listing Factory/);
   assert.doesNotMatch(packageJson, /react-loading-skeleton/);
   await access(new URL("../public/goldie-logo.png", import.meta.url));
@@ -1515,9 +1517,19 @@ test("blocks the factory workflow on mobile while preserving saved work", async 
     readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
     Promise.all([readFile(new URL("../app/approved-functional.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n")),
   ]);
-  assert.match(page, /className="mobile-gate"/);
-  assert.match(page, /built for desktop/);
-  assert.match(page, /Your saved work will be waiting for you/);
+  /* D828 · the card is one component now, shared by the workflow and by
+     FactoryShell, because the interior pages inherited the rule that hides
+     every shell child and had nothing to leave visible. Verified on an
+     emulated Pixel 8 at 375px: both .topbar and .factory-main computed
+     display:none on /no-such-page and no .mobile-gate existed - a blank
+     screen. Asserted of the component and of both mounts. */
+  const gate = await readFile(new URL("../app/mobile-gate.tsx", import.meta.url), "utf8");
+  const shell = await readFile(new URL("../app/factory-shell.tsx", import.meta.url), "utf8");
+  assert.match(gate, /className="mobile-gate"/);
+  assert.match(gate, /built for desktop/);
+  assert.match(gate, /Your saved work will be waiting for you/);
+  assert.match(page, /<MobileGate \/>/, "the workflow mounts it");
+  assert.match(shell, /<MobileGate \/>/, "and so does every page that renders the shell");
   assert.match(styles, /@media\(max-width:820px\)/);
   assert.match(styles, /\.app-shell>:not\(\.mobile-gate\)\{display:none!important\}/);
 });

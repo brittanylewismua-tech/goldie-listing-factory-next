@@ -31,6 +31,7 @@ import { GoldieCommandBar } from "./returning-command-center";
 import FinalListingReview from "./final-listing-review";
 import ContextHelp from "./context-help";
 import GoldieWordmark from "./goldie-wordmark";
+import MobileGate from "./mobile-gate";
 import { productFamily } from "./product-type-utils";
 import { photoStats, preferredPhotoIndex, PHOTO_SAMPLE_SIZE } from "./product-photo";
 
@@ -1628,9 +1629,23 @@ export default function ListingFactoryApp() {
      Colours are required only when the product offers them, which is the rule
      readiness and every other gate already use. And a disabled Next step now
      always says what it is waiting for. */
+  /* D828 · A bundle member that cannot be opened is a product this batch will
+     never produce a listing for. Step 1 was reporting "All product requirements
+     complete" and a Complete chip on the same screen that said "1 of 3 products
+     in this bundle could not be opened", with Continue enabled - verified live
+     on the ZZ TEST BUNDLE, where Gildan Tee returns 409 because its Printify
+     store publishes to a different Etsy shop. The failure card was right and
+     everything around it was wrong. */
+  function failedBundleNames(){
+    return bundleRecipes.filter(recipe=>bundleLoadErrors[recipe.id]).map(recipe=>recipe.name);
+  }
   function productStepBlocker(){
     if(templateDetails?.colorOptions?.length&&!selectedColorIds.length)return "Choose at least one colour for this product.";
     if(templateDetails?.sizeOptions?.length&&!selectedSizeIds.length)return "Choose at least one size for this product.";
+    const failed=failedBundleNames();
+    if(failed.length)return failed.length===1
+      ? `${failed[0]} could not be opened, so this batch cannot make its listings.`
+      : `${failed.length} products in this bundle could not be opened, so this batch cannot make their listings.`;
     return "";
   }
   function requiredForStep(step:WorkflowStep){if(localPreview)return [];const issues:string[]=[];if(step!=="connect"&&!connected)issues.push("Connect your Printify account.");if(step!=="connect"&&!etsyConnected)issues.push("Connect the Etsy shop that will receive these listings.");if(["designs","review","finish"].includes(step)){if(!productSelected)issues.push("Save or select a product or product bundle.");if(!templateDetails?.shippingTemplateId&&!templateDetails?.shippingProfileNeedsSelection)issues.push("Choose a valid Printify product with an imported shipping profile.");if(!templateDetails?.enabledVariants)issues.push("The product needs at least one enabled size or color.");const missingColors=Boolean(templateDetails?.colorOptions?.length&&!selectedColorIds.length);const missingSizes=Boolean(templateDetails?.sizeOptions?.length&&!selectedSizeIds.length);if(missingColors)issues.push("Choose at least one product color for this batch.");else if(missingSizes)issues.push("Choose at least one product size for this batch.");else if(!pricedVariants.length)issues.push(`No color and size combination you picked is available for ${templateDetails?.blueprintTitle||"this product"}. Open its Colors or Sizes and choose a pairing Printify offers.`);if(!templateDetails?.batchId)issues.push("Reload the Printify product so Goldie can prepare this batch.");}/* D221 · Every bundle member still needs its own keyword bank before titles can
@@ -3907,11 +3922,9 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
   return (
     <main className="app-shell" data-product-selected={templateDetails?"true":"false"}>
       {/* D528 - the host lives at the root layout now, so every page has one. */}
-      <section className="mobile-gate" aria-label="Desktop required">
-        <div className="mobile-brand"><div className="approved-wm">Gold<span className="approved-i">ı<span>✦</span></span>e</div><div className="approved-sub">Listing Factory</div></div>
-        <div className="mobile-card"><div className="mobile-command">⌘</div><h1>Oops, this one needs a bigger screen.</h1><p>Goldie Listing Factory is built for desktop. Hop onto your computer and sign in. Your saved work will be waiting for you.</p><div className="mobile-saved">✓ Your progress is saved automatically.</div></div>
-        <div className="mobile-footer">Powered by Goldie AI · © 2026 Be A Wolf Biz</div>
-      </section>
+      {/* D828 · one component now, shared with FactoryShell, so the workflow
+          and the interior pages cannot drift apart. */}
+      <MobileGate />
       <header className="topbar">
         <div className="brand-lockup">
           <GoldieWordmark className="approved-brand" />
@@ -4157,7 +4170,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
 
           <div className={`product-step workflow-panel ${workflowStep==="setup"?"active-panel":"hidden-panel"}`}>{/* D763 · Panel 01. The facets below number from 02, and until now
             there was no 01 - the picker sat in the old card while the settings
-            under it had already become panels. */}<FactoryPanel index={1} title="Saved product" description={activeBundle?`Bundle · ${bundleRecipes.length} products`:activeRecipe?.name||"Choose the Printify product for this batch"} state={productSelected||bundleSelected?"Complete":"Needed"} tone={productSelected||bundleSelected?"done":"attention"} open><SavedWorkflow bundleChosen={Boolean(activeBundle&&bundleRecipes.length>1)} savedRevision={savedRevision} connected={connected||localPreview} templateUrl={template} templateVerified={templateLoaded} loadingTemplate={loadingTemplate} suggestedProductName={templateDetails?[templateDetails.brand,templateDetails.model].filter(Boolean).join(" ").trim()||templateDetails.blueprintTitle||"":""} selectedProductId={activeBundle?`bundle:${activeBundle.id}`:activeRecipe?.id||""} selectedSummary={templateDetails?<div className="template-proof recipe-proof"><div className="product-thumb"><span>YOUR<br/>ART</span></div><div className="template-info">{bundleSelected?<><b>{activeBundle?.name}</b><span>{bundleRecipes.length} products · {bundleRecipes.map(item=>item.name).join(" · ")}</span><span>✓ Each product keeps its own colors, sizes, mockups, and keywords</span></>:<><b>{templateDetails.blueprintTitle}</b><span>{templateDetails.provider} · {variantSummary(summaryAxes(templateDetails,activeRecipe))}</span><span>✓ Product, placement, sizes, and shipping profile imported</span></>}</div><span className="template-badge">{bundleSelected?"Bundle selected":productSelected?"Product selected":"Save this product"}</span></div>:null} verifiedShippingProfileId={Number(templateDetails?.shippingTemplateId)||0} onTemplateUrl={(value) => { templateLoadVersion.current+=1;setLoadingTemplate(false);setTemplate(value);setTemplateDetails(null);setTemplateError(""); }} onUseRecipe={chooseRecipe} onUseBundle={useBundle} onStartNewProduct={startNewProduct} onChangeProduct={changeProduct} onVerifyTemplate={loadTemplateUrl} /></FactoryPanel>
+            under it had already become panels. */}<FactoryPanel index={1} title="Saved product" description={activeBundle?`Bundle · ${bundleRecipes.length} products`:activeRecipe?.name||"Choose the Printify product for this batch"} state={failedBundleNames().length?"Needs a look":productSelected||bundleSelected?"Complete":"Needed"} tone={failedBundleNames().length?"attention":productSelected||bundleSelected?"done":"attention"} open><SavedWorkflow bundleChosen={Boolean(activeBundle&&bundleRecipes.length>1)} savedRevision={savedRevision} connected={connected||localPreview} templateUrl={template} templateVerified={templateLoaded} loadingTemplate={loadingTemplate} suggestedProductName={templateDetails?[templateDetails.brand,templateDetails.model].filter(Boolean).join(" ").trim()||templateDetails.blueprintTitle||"":""} selectedProductId={activeBundle?`bundle:${activeBundle.id}`:activeRecipe?.id||""} selectedSummary={templateDetails?<div className="template-proof recipe-proof"><div className="product-thumb"><span>YOUR<br/>ART</span></div><div className="template-info">{bundleSelected?<><b>{activeBundle?.name}</b><span>{bundleRecipes.length} products · {bundleRecipes.map(item=>item.name).join(" · ")}</span><span>✓ Each product keeps its own colors, sizes, mockups, and keywords</span></>:<><b>{templateDetails.blueprintTitle}</b><span>{templateDetails.provider} · {variantSummary(summaryAxes(templateDetails,activeRecipe))}</span><span>✓ Product, placement, sizes, and shipping profile imported</span></>}</div><span className="template-badge">{bundleSelected?"Bundle selected":productSelected?"Product selected":"Save this product"}</span></div>:null} verifiedShippingProfileId={Number(templateDetails?.shippingTemplateId)||0} onTemplateUrl={(value) => { templateLoadVersion.current+=1;setLoadingTemplate(false);setTemplate(value);setTemplateDetails(null);setTemplateError(""); }} onUseRecipe={chooseRecipe} onUseBundle={useBundle} onStartNewProduct={startNewProduct} onChangeProduct={changeProduct} onVerifyTemplate={loadTemplateUrl} /></FactoryPanel>
           {localPreview&&!templateDetails&&<button className="preview-demo-button" onClick={()=>void loadPreviewDemo()}>Load a complete poster demo to review every step</button>}
           {templateError && <p className="field-error recipe-error" role="alert">{templateError}</p>}
           <BatchPreferencesPortal>
