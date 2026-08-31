@@ -36,7 +36,11 @@ export default function ArtworkGrid({ items }: { items: ArtworkItem[] }) {
         <article className="factory-art-card" key={item.key}>
           <div className="factory-art-preview">
             {item.previewUrl
-              ? <img src={item.previewUrl} alt="" decoding="async" loading="lazy" />
+              ? /* D829 · no lazy attribute here either. D567 named the deadlock - a lazy
+                   image with no intrinsic size never becomes "near the viewport", so it
+                   never loads, so it never gets a size - and removed it from the panel
+                   thumbnails. These two were missed. */
+              <img src={item.previewUrl} alt="" decoding="async" />
               : null}
           </div>
           <div className="factory-art-meta">
