@@ -1896,3 +1896,21 @@ html, body { background: #f1d2dc; }
 .publish-confirm h2,
 .context-help-dialog h2{
   font-family:"DM Serif Display",Georgia,serif}
+
+/* D808 · The "this batch is open in another tab" warning was below the fold.
+
+   Triggered it for real - opened the same batch in a second tab - and the
+   banner appeared at y1022 in a 756px viewport. It is a flex child of
+   .workflow-stage with order 0, the same order as the step itself, so DOM
+   order put it after the entire step: past the product headings, past the
+   receipt, past the stat tiles. A warning that says "Goldie has paused saving
+   here so that tab's work is not overwritten" is worth nothing 300px below
+   the last thing on the page.
+
+   It goes first, above the step, and stays there while you scroll - because
+   the thing it is warning about is happening whatever you are looking at.
+   Its own surface is already right: rose, plum hairline, Inter. */
+/* One descendant then a child combinator, per D369 - order only means
+   anything to a direct child, and the selector has to say so. */
+.app-shell .workflow-stage > .batch-tab-conflict{
+  order:-1;position:sticky;top:12px;z-index:19;margin:0 0 14px}
