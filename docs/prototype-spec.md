@@ -139,3 +139,33 @@ line asserted `34px` for years because that is what production had, when the
 prototype's own head resolves to `48px`. A fidelity test that copies production
 certifies the deviation instead of catching it. Every value in that file must be
 traceable to a measurement of the prototype, not to the app.
+
+## What cannot be verified on this surface (D825)
+
+Recorded so it is not silently skipped again.
+
+**Narrow and mobile widths.** The browser I drive renders every tab at a fixed
+1440px logical viewport; resizing the window changes `outerWidth` and leaves
+`innerWidth` at 1440, so no `max-width` media query in this app has ever been
+exercised by a rendered check. `.app-shell{min-width:1180px}` and the
+`.mobile-gate` section are both unverified rendered. They are covered only by
+source assertions, which is exactly the kind of coverage D781 and D819 showed
+can pass on a defect.
+
+**Publish failure and retry.** Reaching it means publishing to a live Etsy shop
+and having it fail. Not something to trigger on her account.
+
+**The upload-to-drafts path.** Requires uploading files into a real batch.
+
+**A missing required Etsy field.** Her products do not have one, so the state
+has no way to occur on this data.
+
+## Deviations added since the table above
+
+| Element | Prototype | Production | Why |
+|---|---|---|---|
+| interior `.factory-top` | batch name + "Saved just now" | page name, no save state | nothing on an interior page autosaves |
+| interior "Start a new batch" | button | link | no live batch state to clear |
+| `.factory-listing-form` | block flow, 14/13 rhythm | grid, 13px gap + 1px on the title | D794: declared tracks fixed a real spill |
+| `.final-design-group` row | 3 columns | 4 | selection checkbox and state chip |
+| `.support-video-launcher` | no equivalent | 46px, launcher palette | opens the walkthrough for the step |

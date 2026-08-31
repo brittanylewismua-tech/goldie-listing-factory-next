@@ -2330,3 +2330,46 @@ html, body { background: #f1d2dc; }
    prototype's way now. */
 .app-shell .final-design-group{border-color:#ded1d8}
 .app-shell .final-design-group summary{gap:11px}
+
+/* D824 · the two floating buttons in the corner.
+
+   Read live beside the prototype:
+
+     .goldie-support-launcher   58x58, rgba(255,247,251,.94), shadow
+                                0 12px 32px rgba(93,49,81,.18), glyph 25px
+     production                 58x58, same fill, same shadow, glyph 16px
+
+   D785 brought the button down from 60px and off Hanken Grotesk and took the
+   glyph with it. The prototype's "?" is 25px; 16px is the size of body text in
+   a 58px circle, which reads as an empty button with a mark in the middle.
+
+   The video launcher is a capability the prototype has no equivalent for - it
+   opens the walkthrough for the step you are on. It stays, and it stops being
+   the only white circle in a plum-tinted app: same fill, same edge, same
+   shadow family as the button it sits above, at the smaller size a secondary
+   control should have. */
+.app-shell ~ .support-root .support-launcher,
+.support-root .support-launcher{font-size:25px;line-height:1}
+.app-shell ~ .support-root .support-video-launcher,
+.support-root .support-video-launcher{
+  width:46px;height:46px;
+  border:1px solid #d9cbd3;
+  background:rgba(255,247,251,.94);
+  color:#653653;
+  font-size:15px;line-height:1;
+  box-shadow:0 8px 22px rgba(93,49,81,.16)}
+
+/* D825 · the product tile, and a one-pixel jump nobody could name.
+
+   Read live off .goldie-product beside .recipe-tile:
+
+     prototype    2px rgb(222,209,216), background rgb(251,247,250), radius 10
+     production   1px rgb(222,213,219), background #fff, radius 10
+
+   The selected tile already carries `border:2px solid #6c3a5c` and the
+   prototype's #fbf7fa tint, so with a 1px edge on the unselected one every
+   selection redrew the tile's contents one pixel in and one pixel up - on a
+   grid of tiles, every time she picked a product. The prototype puts the 2px
+   on all of them and changes only the colour, which is why its tiles do not
+   move. Same here now. */
+.app-shell .recipe-tile{border:2px solid #ded1d8;background:#fbf7fa}

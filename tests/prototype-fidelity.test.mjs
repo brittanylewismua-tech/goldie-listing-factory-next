@@ -178,7 +178,12 @@ const CASES = [
   { name: "site footer tint", chain: [...shell, el("footer")], property: "background", expect: /rgba\(255,248,251,\.54\)/ },
   // step 1 product tiles
   { name: "product grid columns", chain: [...shell, el("div","recipe-grid")], property: "grid-template-columns", expect: /repeat\(3,minmax\(0,1fr\)\)/ },
-  { name: "product tile border", chain: [...shell, el("div","recipe-grid"), el("article","recipe-tile")], property: "border", expect: /^1px solid #ded5db$/ },
+  /* D825 · the prototype's .goldie-product is 2px rgb(222,209,216) on every
+     tile, not 1px on the unselected ones. The selected tile has always been
+     2px here, so a 1px unselected edge redrew the tile's contents one pixel in
+     and one pixel up on every selection. */
+  { name: "product tile border", chain: [...shell, el("div","recipe-grid"), el("article","recipe-tile")], property: "border", expect: /^2px solid #ded1d8$/ },
+  { name: "product tile fill", chain: [...shell, el("div","recipe-grid"), el("article","recipe-tile")], property: "background", expect: /#fbf7fa/ },
   { name: "chosen tile border", chain: [...shell, el("div","recipe-grid"), el("article","recipe-tile","selected")], property: "border", expect: /^2px solid #6c3a5c$/ },
   { name: "product image band", chain: [...shell, el("div","recipe-grid"), el("article","recipe-tile"), el("button","recipe-use"), el("span","recipe-icon")], property: "height", expect: /^116px$/ },
   // step 3 listing details
