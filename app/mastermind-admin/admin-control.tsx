@@ -54,7 +54,7 @@ export default function AdminControl({ initialActive, memberCount, initialDiagno
       {/* D645 - the old copy promised an email for every area. Seller-fixable
           failures are recorded and never emailed now, so the page says what is
           actually true and becomes the place to look. */}
-      <p className="diagnostics-intro">Every browser crash and failed request across Listing Factory, newest first, with who it happened to. <b>Needs Goldie</b> means something only you can fix — those still email you, at most once per area every 15 minutes. <b>Seller can fix</b> means the seller has already been told on their own screen; recorded here, never emailed.</p>
+      <p className="diagnostics-intro">Every browser crash and failed request across Listing Factory, newest first, with who it happened to. <b>Needs Goldie</b> means something only you can fix. <b>Seller can fix</b> means the seller has already been told on their own screen. Nothing is emailed — this page is where failures are read.</p>
       <div className="diagnostics-filters" role="group" aria-label="Filter errors">
         {([["all","All"],["platform","Needs Goldie"],["seller","Seller can fix"]] as const).map(([key,label])=>(
           <button key={key} type="button" className={errorFilter===key?"diagnostics-filter is-on":"diagnostics-filter"} aria-pressed={errorFilter===key} onClick={()=>setErrorFilter(key)}>

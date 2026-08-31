@@ -2204,9 +2204,16 @@ html, body { background: #f1d2dc; }
 .app-shell .factory-work .bank-grid p,
 .app-shell .factory-work .bank-grid small{
   font:11px/1.45 Inter,ui-sans-serif,system-ui,sans-serif;color:#6e606a}
-.app-shell .factory-work .bank-grid article span{
+/* D846 · This styled EVERY span in a bank card as a keyword chip, including
+   ".bank-tag-usable" - the "· 15 short enough for Etsy tags" caption, which sat
+   in the phrase list's own colours and read as if it were one of her phrases.
+   Chips are the phrases; the caption is a caption. */
+.app-shell .factory-work .bank-grid article > div:not(:first-child) > span{
   padding:5px 9px;border-radius:6px;background:#f7edf3;color:#6b4560;
   font:11px/1.2 Inter,ui-sans-serif,system-ui,sans-serif}
+.app-shell .factory-work .bank-grid article .bank-tag-usable{
+  padding:0;background:none;border-radius:0;color:#8b7a85;
+  font:11px/1.45 Inter,ui-sans-serif,system-ui,sans-serif}
 
 /* D818e · The 404. It rendered outside the shell too, in Manrope with a 10px
    eyebrow, which is how a mistyped URL announced that it belonged to a
