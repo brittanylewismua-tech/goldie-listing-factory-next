@@ -2663,3 +2663,8 @@ html, body { background: #f1d2dc; }
    with a fake shirt sitting above it. A product that has its photo does not
    need a stand-in for one. */
 .app-shell .recipe-tile:not(.bundle-as-product) .recipe-icon:has(> img)::before{content:none}
+
+/* D849 · the one line that explains the dashed chips */
+.app-shell .bank-library .bank-legend{
+  margin:5px 0 0;max-width:52ch;color:#7a6672;
+  font:600 12px/1.45 Inter,ui-sans-serif,system-ui,sans-serif}
