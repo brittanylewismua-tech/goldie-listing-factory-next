@@ -1709,7 +1709,18 @@ html, body { background: #f1d2dc; }
 .app-shell .workflow-stage:has(.designs-step) > .steps-column{order:0}
 .app-shell .workflow-stage:has(.designs-step) > .step-product-cards{order:1}
 .app-shell .factory-work .launch-panel > .launch-step-icon{display:none}
-.app-shell .workflow-footer-actions{position:relative}
+/* D809 · This line said position:relative and it un-stuck the action bar on
+   every step. It was written in D804 to give "Saved automatically" a
+   positioning context to be centred in - but the bar is already
+   position:sticky, and a sticky element is a positioned element, so it was
+   already the containing block. All the relative did was overwrite the sticky
+   at line 656 - same specificity, later in the file - and drop the bar into the
+   flow. Measured on step 1: y1981 on an 812px viewport, 1,169px below the fold.
+
+   The bar she has asked about more than once. I broke it three commits ago and
+   found it by putting production beside the preview at the same width, which is
+   the check that finds this kind of thing and the one I should have been
+   running all along. */
 .app-shell .workflow-footer-actions > .autosave-note{
   position:absolute;left:50%;transform:translateX(-50%);margin:0}
 
