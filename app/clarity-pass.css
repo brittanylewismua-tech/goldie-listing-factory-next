@@ -1541,7 +1541,7 @@
    enough to make the document scroll on its own. The background is
    `attachment:fixed`, so it anchors to the viewport — but its BOX still has to
    span the scrollable width, which is what min-width on body does. */
-body{min-width:1180px!important}
+body{min-width:0}
 
 /* ============================================================================
  * D309 · CENTRED CARD HEADERS — SUPERSEDES THE ALIGNMENT IN D249 / D279 / D287
@@ -2640,12 +2640,6 @@ body{min-width:1180px!important}
  *
  * The steps stop at 821px because the mobile gate takes over below that.
  * ========================================================================== */
-@media(max-width:1179px){html{zoom:0.94}}
-@media(max-width:1120px){html{zoom:0.89}}
-@media(max-width:1060px){html{zoom:0.84}}
-@media(max-width:1000px){html{zoom:0.79}}
-@media(max-width:940px){html{zoom:0.74}}
-@media(max-width:880px){html{zoom:0.69}}
 
 /* D566 - the design being worked on, at a size that identifies it. */
 /* D566 - one set chooser; the per-listing blocks name the set they follow. */

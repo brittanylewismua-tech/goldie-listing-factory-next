@@ -28,7 +28,7 @@ export function ActionReceipt({items}:{items:Array<{value:string;label:string}>}
 
 export type BatchReceipt={publishedCount:number;etsyUrls:string[];completedAt:string};
 
-export function OutcomeReceipt({goalLine,receipt,productName,shippingProfile,imageCount,sizeGuideName,tagCount,mockupCount,variantCount,minutesSaved,nextBundleProduct,bundleComplete,onNextBundleProduct,onNewBatch}:{goalLine?:string;receipt:BatchReceipt;productName:string;shippingProfile:string;imageCount:number;sizeGuideName?:string;tagCount:number;mockupCount:number;variantCount:number;minutesSaved:number;nextBundleProduct?:string;bundleComplete?:boolean;onNextBundleProduct?:()=>void;onNewBatch:()=>void}){
+export function OutcomeReceipt({goalLine,receipt,productName,shippingProfile,imageCount,sizeGuideName,tagCount,variantCount,minutesSaved,nextBundleProduct,bundleComplete,onNextBundleProduct,onNewBatch}:{goalLine?:string;receipt:BatchReceipt;productName:string;shippingProfile:string;imageCount:number;sizeGuideName?:string;tagCount:number;variantCount:number;minutesSaved:number;nextBundleProduct?:string;bundleComplete?:boolean;onNextBundleProduct?:()=>void;onNewBatch:()=>void}){
   return <section className="outcome-receipt" aria-live="polite">
     <div className="receipt-celebration" aria-hidden="true"><span>✓</span></div>
     <p className="mini-label">BATCH COMPLETE</p>
@@ -39,7 +39,7 @@ export function OutcomeReceipt({goalLine,receipt,productName,shippingProfile,ima
         register. Shown only when the seller turned the goal on. */}
     {goalLine&&<p className="receipt-goal">{goalLine}</p>}
     <p>Your batch is finished. Here is a quick summary of what Goldie completed.</p>
-    <div className="receipt-value-strip"><div><b>{tagCount}</b><span>tags generated</span></div><div><b>{mockupCount}</b><span>mockups prepared</span></div><div><b>{variantCount}</b><span>variant prices approved</span></div><div><b>{Math.floor(minutesSaved/60)}h {minutesSaved%60}m</b><span>estimated setup time saved</span></div></div>
+    <div className="receipt-value-strip"><div><b>{receipt.publishedCount}</b><span>Etsy {receipt.publishedCount===1?"listing":"listings"} published</span></div><div><b>{tagCount}</b><span>tags generated</span></div><div><b>{variantCount}</b><span>variant prices approved</span></div><div><b>{Math.floor(minutesSaved/60)}h {minutesSaved%60}m</b><span>estimated setup time saved</span></div></div>
     <div className="receipt-grid">
       <article><span>Published</span><b>{receipt.publishedCount} Etsy {receipt.publishedCount===1?"listing":"listings"}</b></article>
       <article><span>Product</span><b>{productName||"Printify product"}</b></article>

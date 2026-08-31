@@ -329,7 +329,7 @@ html, body { background: #f1d2dc; }
 .app-shell .bundle-product-photo{object-fit:cover}
 .app-shell .progress-bubble-label{white-space:nowrap}
 .app-shell .row-value{min-width:0;overflow-wrap:anywhere}
-.app-shell{min-width:1180px}
+.app-shell{min-width:0}
 .app-shell .batch-product-row.optional .row-mark{background:#f5f2f5;border-color:#e2d9e0;color:#7d6d78}
 .app-shell .batch-product-row.pending .row-mark{background:#fdf1f3;border-color:#eccdd4;color:#a33a48}
 .app-shell{--alert-line:#b83c4a;--alert-tint:#fff0f1;--alert-ink:#9e2736}
@@ -642,7 +642,7 @@ html, body { background: #f1d2dc; }
 /* On the dark box the press is the prototype's .goldie-primary: pale on dark. */
 .app-shell .factory-publish-box .publish-all-button{background:#f3dbe9;color:#3d2637}
 .app-shell .factory-publish-box .publish-live-warning{margin-bottom:14px;color:#e4d2de}
-@media(max-width:1000px){.app-shell .factory-review{grid-template-columns:minmax(0,1fr)}.app-shell .factory-publish-box{position:static}}
+@media(max-width:1100px){.app-shell .factory-review{grid-template-columns:minmax(0,1fr)}.app-shell .factory-publish-box{position:static}}
 
 /* D730 · The fields themselves, from the prototype's .goldie-field/.goldie-input:
 
@@ -872,7 +872,7 @@ html, body { background: #f1d2dc; }
 
    Small on their own; together they are why the top bar reads as nearly the
    preview rather than the preview. */
-.app-shell .context-help-trigger{width:25px;height:25px;display:grid;place-items:center;padding:0;border:1px solid #d9cbd3;border-radius:50%;background:rgba(255,255,255,.72);color:#5d3151;font:850 12px/1 Inter,ui-sans-serif,system-ui,sans-serif}
+.app-shell .context-help-trigger{width:36px;height:36px;display:grid;place-items:center;padding:0;border:1px solid #d9cbd3;border-radius:50%;background:rgba(255,255,255,.72);color:#5d3151;font:850 13px/1 Inter,ui-sans-serif,system-ui,sans-serif}
 .app-shell .factory-top-save{color:#6d5d68;font:12px/1.2 Inter,ui-sans-serif,system-ui,sans-serif}
 
 /* D744 · Two things on the Connect screen she named:
@@ -2704,6 +2704,13 @@ html, body { background: #f1d2dc; }
    at source rather than out-specifying them from here. */
 .app-shell .edit-recipe,.app-shell .delete-recipe{font-size:11px;font-weight:800}
 
+/* All seller actions have a usable target even when their visual treatment is
+   intentionally quiet. These controls measured 25–31px on the live app. */
+.app-shell .recipe-tile .edit-recipe,
+.app-shell .recipe-tile .delete-recipe{min-height:36px}
+.keyword-page .bank-keyword-toggle,
+.keyword-page .bank-grid .edit-bank{min-height:36px}
+
 /* The bundle library's summary badge sat at 8px, which is smaller than the
    legal disclosure in the rail. */
 .app-shell .bundle-library > summary small em{font-size:10px;letter-spacing:.5px}
@@ -2812,3 +2819,19 @@ html, body { background: #f1d2dc; }
 .app-shell .bundle-library > summary[aria-disabled="true"]{cursor:default;opacity:.72}
 .app-shell .bundle-library > summary[aria-disabled="true"]::marker{color:transparent}
 .app-shell .bundle-library > summary[aria-disabled="true"]::-webkit-details-marker{color:transparent}
+
+/* Desktop and laptop widths reflow; they never scale the entire application.
+   The previous html zoom made type and controls physically smaller and still
+   left a 1180px document inside a 1024px window. */
+@media(min-width:821px) and (max-width:1179px){
+  html{zoom:1!important}
+  body{min-width:0!important}
+  .app-shell{min-width:0;grid-template-columns:240px minmax(0,1fr)}
+  .app-shell>.topbar{width:240px;padding:26px 18px 18px}
+  .app-shell .factory-top{padding-inline:24px}
+  .app-shell .factory-work{width:100%;max-width:none;padding:28px 24px 0}
+  .app-shell .factory-listing-grid{grid-template-columns:minmax(0,1fr)}
+  .app-shell .factory-review{grid-template-columns:minmax(0,1fr)}
+  .app-shell .factory-publish-box{position:static}
+  .app-shell .workflow-footer-actions{padding-inline:24px}
+}

@@ -5355,29 +5355,12 @@ test("step 1 shows one panel at a time, like every other step — D564", async (
   assert.match(app, /setActiveTask\(current=>current===task\?"":task\)/);
 });
 
-test("a narrow window scales instead of scrolling sideways — D565", async () => {
+test("a narrow laptop reflows instead of shrinking or scrolling sideways — D862 supersedes D565", async () => {
   const css = await Promise.all([readFile(new URL("../app/clarity-pass.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n"));
 
-  /* The min-width stays: D308 tried to reflow this app for narrow windows and
-     shipped broken because I could not reach a narrow viewport to look at it.
-     Scaling is not reflowing - every element keeps its position and proportion,
-     so there is no second layout to get wrong. */
-  assert.match(css, /\.app-shell\{min-width:1180px\}/);
-  assert.match(css, /body\{min-width:1180px!important\}/);
-
-  /* Every step has to leave the layout at least its 1180px once scaled, or the
-     sideways scroll comes back inside that band. */
-  const steps = [...css.matchAll(/@media\(max-width:(\d+)px\)\{html\{zoom:([\d.]+)\}\}/g)]
-    .map((m) => ({ width: Number(m[1]), zoom: Number(m[2]) }));
-  assert.ok(steps.length >= 6, "the band from the mobile gate up to 1180 is covered");
-  steps.forEach((step, index) => {
-    const floor = index + 1 < steps.length ? steps[index + 1].width + 1 : 821;
-    assert.ok(floor / step.zoom >= 1180,
-      `at ${floor}px, zoom ${step.zoom} leaves ${Math.round(floor / step.zoom)}px - under the 1180 the layout needs`);
-  });
-
-  // It stops where the mobile gate takes over rather than shrinking forever.
-  assert.equal(Math.min(...steps.map((step) => step.width)), 880);
+  assert.doesNotMatch(css, /@media\(max-width:\d+px\)\{html\{zoom:/);
+  assert.match(css, /@media\(min-width:821px\) and \(max-width:1179px\)\{[\s\S]*body\{min-width:0!important\}[\s\S]*\.app-shell\{min-width:0;grid-template-columns:240px minmax\(0,1fr\)\}/);
+  assert.match(css, /\.factory-review\{grid-template-columns:minmax\(0,1fr\)\}/);
 });
 
 test("one mockup set chooser, and the listings follow it — D566", async () => {

@@ -3,8 +3,8 @@
    go hunting for a CSS class in the built stylesheet. This string is bumped
    with every deployable commit and served from /api/version, so "is my fix
    actually live" is one request with a yes or no answer. */
-/* D861 is the first build shipped from the restored canonical checkout. */
-export const BUILD_MARKER = "D861";
+/* D862 closes the post-audit navigation, responsive layout, copy and truth gaps. */
+export const BUILD_MARKER = "D862";
 
 /* D629 - and then it went stale for two deploys running, which is the exact
    failure D479 built it to prevent: D627 and D628 both shipped while this file

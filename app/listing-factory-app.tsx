@@ -1667,7 +1667,11 @@ export default function ListingFactoryApp() {
     /* D220 · Draft creation (3, 4) and mockups (7) live on the Images page now, so
        any legacy index pointing at them resolves there. Deep links and saved batch
        state still use the 0-8 numbering. */
-    const index=rawIndex===3||rawIndex===4||rawIndex===7?2:rawIndex;if(localPreview){if(index===0)return goToStep("connect",false,true);if(index===1)return goToStep("setup",false,true);if(index===2)return goToStep("designs",false,true);if(index>=3&&!templateDetails)await loadPreviewDemo();if(index===3){setPreflightOpen(false);return goToStep("review",false,true)}if(index===4){goToStep("review",false,true);setPreflightOpen(true);return}setPreflightOpen(false);setFinishPhase(index===8?"final":"details");return goToStep("finish",false,true)}const issues=requiredForProgress(index);if(issues.length)return stopWith("Finish all sections first.",issues);if(index===0)return goToStep("connect");if(index===1)return goToStep("setup");if(index===2)return goToStep("designs");if(index===3)return goToStep("review");if(index===4){goToStep("review");return createDrafts()}setFinishPhase(index===8?"final":"details");goToStep("finish",false,true)}
+    const index=rawIndex===3||rawIndex===4||rawIndex===7?2:rawIndex;if(localPreview){if(index===0)return goToStep("connect",false,true);if(index===1)return goToStep("setup",false,true);if(index===2)return goToStep("designs",false,true);if(index>=3&&!templateDetails)await loadPreviewDemo();if(index===3){setPreflightOpen(false);return goToStep("review",false,true)}if(index===4){goToStep("review",false,true);setPreflightOpen(true);return}setPreflightOpen(false);setFinishPhase(index===8?"final":"details");return goToStep("finish",false,true)}
+    const targetStage=RAIL_STAGES.findIndex(stage=>stage.covers.includes(index));
+    const movingBackward=targetStage>=0&&targetStage<stagePosition;
+    if(!movingBackward){const issues=requiredForProgress(index);if(issues.length)return stopWith("Finish all sections first.",issues)}
+    if(index===0)return goToStep("connect",false,movingBackward);if(index===1)return goToStep("setup",false,movingBackward);if(index===2)return goToStep("designs",false,movingBackward);if(index===3)return goToStep("review",false,movingBackward);if(index===4){goToStep("review",false,movingBackward);return createDrafts()}setFinishPhase(index===8?"final":"details");goToStep("finish",false,movingBackward)}
 
   async function goBackOneStep(){
     if(!await confirmUploadInterruption())return;
@@ -1734,12 +1738,13 @@ export default function ListingFactoryApp() {
     goToStep(wanted,true,true);
   },[localPreview,checkingConnection,restoringBatch,connected,etsyConnected,templateLoaded,files.length,complete,workflowStep]);
 
+  function scrollFactoryToTop(){document.querySelector<HTMLElement>(".factory-main")?.scrollTo({top:0,behavior:"auto"});window.scrollTo({top:0,behavior:"auto"})}
   function goToStep(rawStep:WorkflowStep,replace=false,force=false){
-    const step=normalizeStep(rawStep);if(!force){const issues=requiredForStep(step);if(issues.length)return stopWith("Finish all sections first.",issues);if(!canOpenStep(step))return;}setWorkflowStep(normalizeStep(step));const url=new URL(window.location.href);url.searchParams.set("step",step);window.history[replace?"replaceState":"pushState"]({},"",url);window.scrollTo(0,0)}
+    const step=normalizeStep(rawStep);if(!force){const issues=requiredForStep(step);if(issues.length)return stopWith("Finish all sections first.",issues);if(!canOpenStep(step))return;}setWorkflowStep(normalizeStep(step));const url=new URL(window.location.href);url.searchParams.set("step",step);window.history[replace?"replaceState":"pushState"]({},"",url);scrollFactoryToTop()}
 
   useEffect(()=>{const read=()=>{const url=new URL(window.location.href),value=url.searchParams.get("step") as WorkflowStep|null,phase=url.searchParams.get("phase") as FinishPhase|null;const canonical=canonicalStep(value);if(canonical)setWorkflowStep(normalizeStep(canonical));if(phase&&["details","etsy","mockups","final"].includes(phase))setFinishPhase(phase)};read();window.addEventListener("popstate",read);return()=>window.removeEventListener("popstate",read)},[]);
   useEffect(()=>{if(workflowStep!=="finish")return;const url=new URL(window.location.href);url.searchParams.set("phase",finishPhase);window.history.replaceState({},"",url)},[workflowStep,finishPhase]);
-  useEffect(()=>{window.scrollTo({top:0,behavior:"auto"})},[workflowStep,finishPhase]);
+  useEffect(()=>{scrollFactoryToTop()},[workflowStep,finishPhase]);
   useEffect(()=>{if(connectionAutoSkip.current||localPreview||checkingConnection||restoringBatch||workflowStep!=="connect"||!connected||!etsyConnected)return;if(askedForConnect.current)return;connectionAutoSkip.current=true;goToStep("setup",true,true)},[localPreview,checkingConnection,restoringBatch,workflowStep,connected,etsyConnected]);
   /* D519 - while a bundle run is advancing, the app is mid-switch: the next
      product's template has not loaded yet, so this fell back to step 1 and she
@@ -3809,7 +3814,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
         setComplete(true);
         /* D440 - creating the drafts used to jump straight to Listing details,
            which is why she kept arriving at step 3 having never seen step 2. The
-           photos and mockups appear on THIS page the moment the drafts exist, so
+           listing-photo tools appear on THIS page the moment the drafts exist, so
            this stays put and scrolls to them. Leaving Images is the Next step
            button's job, and that button refuses until every listing has a photo. */
         setFinishPhase("details");
@@ -4018,7 +4023,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
          title stays put; the copy carries the state. */
       ? { eyebrow: "STEP 1 OF 4", title: "Choose product", copy: "Check this product’s colours, sizes and pricing, then continue to your designs." }
       : { eyebrow: "STEP 1 OF 4", title: "Choose product", copy: "Choose a saved product or connect a completed Printify product." },
-    designs: { eyebrow: "STEP 2 OF 4", title: "Designs + images", copy: "Add up to 20 finished designs, then choose the photos and mockups for each listing." },
+    designs: { eyebrow: "STEP 2 OF 4", title: "Designs + images", copy: "Add up to 20 finished designs, then choose and arrange the listing photos for each one." },
     review: { eyebrow: "STEP 3 OF 4", title: "Create Printify drafts", copy: "Goldie creates an unpublished draft in Printify for every design in this batch." },
     finish: finishPhase==="details" ? { eyebrow: "STEP 3 OF 4 · LISTING", title: "Listing details", copy: "Create the titles and tags, then review the description for every listing." } : finishPhase==="etsy" ? { eyebrow: "STEP 3 OF 4 · LISTING", title: "Listing details", copy: "Review the Etsy category and product-specific details." } : { eyebrow: "STEP 4 OF 4 · PUBLISH", title: "Publish", copy: "Review every listing before publishing it live on Etsy." },
   }[workflowStep];
@@ -4244,7 +4249,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
         {progressIndex===5&&titleCount>0&&<ActionReceipt items={[{value:`${titleCount} titles ready`,label:"Validated keyword phrases only"},{value:`${files.reduce((sum,file)=>sum+file.tags.length,0)} matching tags`,label:"Zero invented keywords"}]}/>}
         <div className={`steps-column ${workflowStep}-column`}>
           {workflowStep==="finish"&&finishPhase==="etsy"&&false&&<div className="step-success-banner" role="status"><span aria-hidden="true">✓</span><div><b>Titles, tags, and descriptions complete</b><small>{files.length} {files.length===1?"listing is":"listings are"} ready for Etsy details.</small></div></div>}
-          {workflowStep==="designs"&&complete&&<div className="step-success-banner" role="status"><span aria-hidden="true">✓</span><div><b>Etsy details complete</b><small>{files.length} {files.length===1?"listing is":"listings are"} ready for photos and mockups.</small></div></div>}
+          {workflowStep==="designs"&&complete&&<div className="step-success-banner" role="status"><span aria-hidden="true">✓</span><div><b>Etsy details complete</b><small>{files.length} {files.length===1?"listing is":"listings are"} ready for listing photos.</small></div></div>}
           
           <article className={`step-card connect-step workflow-panel ${connected ? "done" : ""} ${workflowStep==="connect"?"active-panel":"hidden-panel"}`}>
             
@@ -4578,7 +4583,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
                 screen, and pushed the Publish panel further down for it. The card
                 reports photo readiness; nothing else needs to. The banner style
                 is still used by step 2, so only this instance goes. */}
-              <article className="step-card final-review active-panel"><div className="step-content">{batchReceipt?<OutcomeReceipt goalLine={listingGoal?`That is ${goalDone} of your ${listingGoal.target} listings this ${listingGoal.period}.`:undefined} receipt={batchReceipt} productName={templateDetails?.blueprintTitle||""} shippingProfile={etsyShippingProfiles.find(profile=>profile.id===etsyShippingProfileId)?.title||""} imageCount={printifyImageIndices.length} sizeGuideName={sizeGuideName} tagCount={files.reduce((sum,file)=>sum+file.tags.length,0)} mockupCount={Object.values(preparedMockupCounts).reduce((sum,count)=>sum+count,0)} variantCount={pricedVariants.length*files.length} minutesSaved={Math.max(12,Math.round(files.length*11.1))} nextBundleProduct={bundleRecipes[bundleIndex+1]?.name} bundleComplete={Boolean(activeBundle&&bundleIndex===bundleRecipes.length-1)} onNextBundleProduct={()=>void continueBundle()} onNewBatch={()=>{clearCurrentBatch(true);goToStep("setup")}}/>:<><div className="step-heading"><div><p className="mini-label">FINAL REVIEW</p>{/* D660 · This said "ready for its final check" over a
+              <article className="step-card final-review active-panel"><div className="step-content">{batchReceipt?<OutcomeReceipt goalLine={listingGoal?`That is ${goalDone} of your ${listingGoal.target} listings this ${listingGoal.period}.`:undefined} receipt={batchReceipt} productName={templateDetails?.blueprintTitle||""} shippingProfile={etsyShippingProfiles.find(profile=>profile.id===etsyShippingProfileId)?.title||""} imageCount={printifyImageIndices.length} sizeGuideName={sizeGuideName} tagCount={files.reduce((sum,file)=>sum+file.tags.length,0)} variantCount={pricedVariants.length*files.length} minutesSaved={Math.max(12,Math.round(files.length*11.1))} nextBundleProduct={bundleRecipes[bundleIndex+1]?.name} bundleComplete={Boolean(activeBundle&&bundleRecipes.length>0&&bundleRecipes.every((recipe,index)=>index===bundleIndex?Number(batchReceipt?.publishedCount)>0:Number(bundleBatchSummary[recipe.id]?.published)>0))} onNextBundleProduct={()=>void continueBundle()} onNewBatch={()=>{clearCurrentBatch(true);goToStep("setup")}}/>:<><div className="step-heading"><div><p className="mini-label">FINAL REVIEW</p>{/* D660 · This said "ready for its final check" over a
                    disabled Publish button and a product with no titles at all.
                    The heading has to agree with the gate directly beneath it. */}
                    <h2>{publishBlockers().length?"Finish these items before publishing":activeBundle?"Your selected listings are ready for final review":"Your batch is ready for its final check"}</h2></div><span className="done-mark">✓ {drafts.filter(draft=>draft.status==="Created").length} {drafts.filter(draft=>draft.status==="Created").length===1?"draft":"drafts"}{activeBundle&&bundleRecipes.length>1?` on ${activeRecipe?.name||"this product"}`:""}</span></div>{/* D546 - the old lead-in pointed at a checklist that repeated
