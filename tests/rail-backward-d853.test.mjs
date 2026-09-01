@@ -37,7 +37,8 @@ test("a blocker says where it lives, not just what it is — D854", () => {
      profile - belonging to the Product step, with nothing on the page to
      click. */
   assert.match(gates, /Choose the Etsy shipping profile on the Product step\./);
-  assert.match(gates, /Approve prices and buyer-paid shipping on the Product step\./);
+  const app = readFileSync(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+  assert.match(app, /final pricing approval after Printify calculated the finished product costs/);
 });
 
 test("Disconnect sits in the same place on every connection row — D855", () => {

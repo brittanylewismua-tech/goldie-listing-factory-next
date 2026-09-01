@@ -230,12 +230,9 @@ test("D229: no disabled control is silent about why", async () => {
   const launch = source.slice(source.indexOf('className="launch-button"'));
   const label = launch.slice(0, launch.indexOf("</button>"));
 
-  assert.match(label, /!pricingApproved \? "Approve prices on the Product page to continue"/,
-    "the pricing-approval branch must have a label");
-
   /* Every condition in `disabled` needs a matching branch in the label. */
   const disabled = /disabled=\{([^}]*)\}/.exec(launch)[1];
-  for (const condition of ["ready", "pricingApproved", "running", "preparingEtsy"]) {
+  for (const condition of ["ready", "running", "preparingEtsy"]) {
     assert.ok(disabled.includes(condition), `${condition} still gates the button`);
     assert.ok(label.includes(condition), `${condition} must be reflected in the label`);
   }

@@ -1143,7 +1143,7 @@ test("keeps pricing simple while using a real Etsy shipping profile and exact te
   assert.match(page,/Your current prices already meet this profit goal/);
   assert.match(page,/recommendation-result/);
   assert.match(page,/Discard changes/);
-  assert.match(page,/save or discard any custom shipping profile changes/i);
+  assert.match(page,/Save or discard your custom profile to continue/i);
   assert.doesNotMatch(page,/Approve pricing \+ shipping/);
   /* D232 · That chip restated what the dropdown option already shows. The figure
      that is NOT visible elsewhere — the shortfall against Printify's cost — keeps
@@ -2009,7 +2009,7 @@ test("keeps bundle titles, placement decisions, review, and failures product-spe
      selection to createdListingsMissingImages. The guarantee is unchanged: the
      press is judged on the listings selected, never on the open product. */
   assert.match(app,/createdListingsMissingImages\(chosen\)\.map\(draft=>`\$\{draft\.name\} needs at least one listing photo\.`\)/);
-  assert.match(app,/const chosen=selectedPublishDrafts\(\);\n    issues\.push\(\.\.\.missingPublishFields\(\)\)/);
+  assert.match(app,/const chosen=selectedPublishDrafts\(\);[\s\S]{0,600}issues\.push\(\.\.\.missingPublishFields\(\)\)/);
   assert.match(app,/Anything still needing a look is listed above/);
   assert.match(app,/status: "NeedsRetry"/);
   assert.match(review,/final-design-group/);
@@ -2094,9 +2094,9 @@ test("keeps a forward path from setup, designs, and pricing after drafts exist (
   assert.match(app,/disabled=\{!complete&&Boolean\(productStepBlocker\(\)\)\}/  /* D164 sizes, D181 per-product keyword banks */);
   /* D402 · The setup forward no longer branches on `complete`; it always goes to
      Images. The route back to finishing lives in batch-actions. */
-  assert.match(app,/className="batch-actions"[\s\S]{0,500}Back to finishing your listings/);
+  assert.match(app,/className="batch-actions"[\s\S]{0,1800}Back to finishing your listings/);
   assert.match(app,/files\.length>0&&complete&&workflowStep==="designs"/);
-  assert.match(app,/className="batch-actions"[\s\S]{0,500}Back to finishing your listings/);
+  assert.match(app,/className="batch-actions"[\s\S]{0,1800}Back to finishing your listings/);
 });
 
 /* D369 · These moved from descendant to child selectors. `order` only applies
@@ -3013,7 +3013,10 @@ test("leaving Images needs photos, not titles — D444", async () => {
   assert.deepEqual(leavingImagesIssues({ ...ready, createdDraftCount: 0 }),
     ["Create at least one Printify draft."]);
 
-  assert.match(app, /function imagesStepIssues\(\)\{return localPreview\?\[\]:leavingImagesIssues\(gateState\(\)\)\}/);
+  assert.match(app, /function imagesStepIssues\(\)\{if\(localPreview\)return \[\];const issues=leavingImagesIssues\(gateState\(\)\);/);
+  assert.match(app, /const pending=costReviewDrafts\(\)\.filter/,
+    "bundle members' finished costs are checked before leaving Images too");
+  assert.match(app, /final pricing approval after Printify calculated the finished product costs/);
   assert.doesNotMatch(app, /progressGateIssues\(8\)/,
     "the Images page must not be gated on the Publish requirements");
 });
@@ -3749,7 +3752,8 @@ test("one press creates drafts for every product in a bundle — D485", async ()
     "it must not start a product while one is mid-flight or awaiting confirmation");
 
   // A product that is genuinely not set up stops the run instead of spinning.
-  assert.match(app, /if\(!ready\|\|!pricingApproved\)return/);
+  // Pricing is intentionally approved only after the finished draft reports its costs.
+  assert.match(app, /if\(!ready\)return/);
 
   // She can see which product it is on.
   assert.match(app, /\$\{bundleIndex\+1\} of \$\{bundleRecipes\.length\}/);
@@ -5277,8 +5281,8 @@ test("the number on the button is the number that publishes — D561", async () 
      selection seeding effect and selectedPublishDrafts - because both were
      quietly shrinking the publish back down to the open product. */
   assert.ok(app.indexOf("function bundlePublishDrafts()") > 0);
-  assert.equal((app.match(/bundlePublishDrafts\(\)/g) || []).length, 5,
-    "declared once; the review, publishTargets, the gates and the seeding all read it");
+  assert.equal((app.match(/bundlePublishDrafts\(\)/g) || []).length, 6,
+    "declared once; the review, publish targets, selections, seeding and cost approval all read it");
   assert.doesNotMatch(app, /function selectedPublishDrafts\(\)\{const selected=new Set\(selectedPublishIds\);return drafts\.filter/,
     "the button's count must not be taken from the open product alone");
 });

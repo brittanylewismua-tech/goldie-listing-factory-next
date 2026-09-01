@@ -112,7 +112,6 @@ export function navigationIssues(index:number,state:NavigationGateState){
      green, and the stated reason belonging to a page she had already left.
      A blocker that does not say where it lives sends the seller looking. */
   if(index>=5&&!state.etsyShippingProfileReady)issues.push("Choose the Etsy shipping profile on the Product step.");
-  if(index>=5&&!state.pricingApproved)issues.push("Approve prices and buyer-paid shipping on the Product step.");
   if(index>=5&&!state.draftsComplete)issues.push("Finish creating the Printify drafts.");
   if(index>=5&&!state.createdDraftCount)issues.push("Create at least one Printify draft.");
   if(index>=6&&!state.titlesReady)issues.push("Finish every listing title.");

@@ -11,6 +11,7 @@ import { planFor } from "@/app/plan-limits";
 import { decryptPrintifyToken } from "../token-crypto";
 import { recommendedPrice } from "@/app/pricing";
 import { isOwner } from "@/app/mastermind/access";
+import { actualCostReview } from "@/app/draft-pricing";
 
 const PRINTIFY_API = "https://api.printify.com/v1";
 type UploadedImage = { id: string; width?: number; height?: number; mime_type?: string };
@@ -39,6 +40,7 @@ type PrintAreaPlaceholder = { position?: string; images?: PrintAreaImage[] };
 type CreatedProduct = {
   id: string; title?: string;
   images?: Array<{ src?: string; is_default?: boolean }>;
+  variants?:Array<{id:number;title?:string;cost?:number;price?:number;is_enabled?:boolean}>;
   /* D591 - the created product carries where the design ACTUALLY went. */
   print_areas?: Array<{ placeholders?: PrintAreaPlaceholder[] }>;
 };
@@ -239,7 +241,9 @@ async function handlePOST(request: Request) {
       },
     });
     await recordDiagnostic(runtimeEnv().DB, supportReference, { stage: diagnosticStage, event: "succeeded", shopId: shop.id });
-    let productImages = created.images ?? [];
+    let resolvedProduct=created;
+    try { resolvedProduct=await api<CreatedProduct>(`/shops/${shop.id}/products/${created.id}.json`,token); } catch { /* The create response remains usable; cost review will stay blocked if costs are absent. */ }
+    let productImages = resolvedProduct.images ?? created.images ?? [];
     let previewUrl = productImages.find((image) => image.is_default)?.src || productImages[0]?.src;
     if (!previewUrl) {
       try { const loaded = await api<CreatedProduct>(`/shops/${shop.id}/products/${created.id}.json`, token); productImages = loaded.images ?? []; previewUrl = productImages.find((image) => image.is_default)?.src || productImages[0]?.src; } catch { /* Preview can appear moments later. */ }
@@ -265,6 +269,7 @@ async function handlePOST(request: Request) {
        truth, and this reads it. The blank template is kept only as a last
        resort so an older draft still produces something. */
     let placedAreas = created.print_areas ?? [];
+    if(resolvedProduct.print_areas?.length)placedAreas=resolvedProduct.print_areas;
     if (!placedAreas.some((area) => area.placeholders?.some((p) => p.images?.length))) {
       try {
         const loaded = await api<CreatedProduct>(`/shops/${shop.id}/products/${created.id}.json`, token);
@@ -324,7 +329,13 @@ async function handlePOST(request: Request) {
       createdTopKeys: Object.keys(created as Record<string, unknown>).slice(0, 14),
     };
     const placement = { ...artworkPlacement(dominantTemplatePlacement, body.visibleBounds, body.maxPlacementScale), side: readPrintSide(dominantPlaceholder?.position) };
-    const draft = { id: created.id, placement, placementDebug, batchId:body.batchId, clientId: body.clientId ?? body.fileName, name: body.fileName, title, tags: body.tags ?? [], description:body.description??template.description??"", previewUrl, printifyImages: productImages.map((image) => image.src).filter(Boolean), shopId: shop.id, editorUrl: `https://printify.com/app/editor/${created.id}`, status: "Created" };
+    const selectedVariants=(resolvedProduct.variants||[]).filter(variant=>variant.is_enabled!==false&&(!body.selectedVariantIds?.length||body.selectedVariantIds.includes(variant.id)));
+    const costVariants=selectedVariants.map(variant=>({id:variant.id,title:variant.title,cost:Number(variant.cost),price:Number(variant.price),isEnabled:variant.is_enabled!==false}));
+    /* Prices are provisional until the finished product reports its own costs.
+       This is required for every new draft, not only back prints, so a future
+       Printify surcharge or provider change cannot bypass the same safeguard. */
+    const costReview=actualCostReview(costVariants);
+    const draft = { id: created.id, placement, placementDebug, batchId:body.batchId, clientId: body.clientId ?? body.fileName, name: body.fileName, title, tags: body.tags ?? [], description:body.description??template.description??"", previewUrl, printifyImages: productImages.map((image) => image.src).filter(Boolean), shopId: shop.id, editorUrl: `https://printify.com/app/editor/${created.id}`, status: "Created",costReview };
     await db.prepare("UPDATE printify_draft_results SET status = 'succeeded', response_json = ?, updated_at = CURRENT_TIMESTAMP WHERE request_key = ?").bind(JSON.stringify(draft), idempotencyKey).run();
     return NextResponse.json({ draft });
   } catch (error) {

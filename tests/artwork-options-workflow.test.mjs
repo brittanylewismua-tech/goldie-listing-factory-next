@@ -16,15 +16,16 @@ test("artwork versions stay attached to one listing design and survive resume", 
 });
 
 test("the controls distinguish colour artwork from a separate back print", async () => {
-  const app = await read("../app/listing-factory-app.tsx");
-  assert.match(app, /Artwork for certain colors/);
-  assert.match(app, /Choose at least one garment color to use this artwork/);
+  const [app,assignment] = await Promise.all([read("../app/listing-factory-app.tsx"),read("../app/artwork-assignment.ts")]);
+  assert.match(app, /Front artwork by garment color/);
+  assert.match(app, /Every selected color gets exactly one front design/);
   assert.match(app, /artworkVersions\|\|\[\]\)\.every\(artwork=>!artwork\.originalUnavailable&&artwork\.file\?\.size&&artwork\.colorIds\.length>0\)/, "unused or missing secondary artwork must hold the draft gate");
-  assert.match(app, /Back print becomes available when this saved Printify product has artwork positioned on the back/);
+  assert.match(app, /This saved Printify product does not currently expose a back print area/);
   assert.match(app, /addArtworkVersion\(file\.id,"front"/);
   assert.match(app, /addArtworkVersion\(file\.id,"back"/);
+  assert.match(app, /assignFrontArtwork/);
   assert.match(app, /toggleArtworkColor/);
-  assert.match(app, /choosing\?\{\.\.\.artwork,colorIds:artwork\.colorIds\.filter/, "one colour cannot silently use two artworks on the same side");
+  assert.match(assignment, /artwork\.id===artworkId\?\[\.\.\.new Set\(\[\.\.\.artwork\.colorIds,colorId\]\)\]:artwork\.colorIds\.filter/, "one front color cannot silently use two artworks");
 });
 
 test("ordinary one-artwork listings retain the established request", async () => {

@@ -2882,3 +2882,15 @@ html, body { background: #f1d2dc; }
 .app-shell .artwork-version fieldset button.selected{border-color:#6b3a58;background:#f3e9ef;box-shadow:inset 0 0 0 1px #6b3a58}
 .app-shell .artwork-version fieldset i{width:13px;height:13px;border:1px solid #ded6dc;border-radius:50%}
 .app-shell .artwork-color-required{display:block;margin-top:5px;color:#963f54;font-size:12px;font-style:normal;font-weight:700}
+.artwork-assignment-matrix{display:grid;gap:8px;padding:14px;border:1px solid #ded6dc;border-radius:12px;background:#fff}
+.artwork-assignment-matrix>div{display:grid;gap:2px}.artwork-assignment-matrix>div small{color:#75606f}
+.artwork-assignment-matrix>label{display:grid;grid-template-columns:minmax(140px,.8fr) minmax(220px,1.2fr);align-items:center;gap:12px}
+.artwork-assignment-matrix>label>span{display:flex;align-items:center;gap:8px;min-width:0;font-weight:700}
+.artwork-assignment-matrix i,.artwork-version fieldset i{width:16px;height:16px;border-radius:50%;border:1px solid #ded6dc;flex:none}
+.artwork-assignment-matrix select{width:100%;min-width:0;height:38px;border:1px solid #ded6dc;border-radius:8px;background:#fff;color:#3d2538;padding:0 34px 0 10px}
+.artwork-version.compact{min-height:72px}.artwork-version.compact img{width:56px;height:56px;object-fit:contain}
+.actual-cost-review{display:flex;align-items:center;justify-content:space-between;gap:16px;width:100%;padding:14px;border:1px solid #e7b9cb;border-radius:12px;background:#fff7fa}
+.actual-cost-review>div{display:grid;gap:3px}.actual-cost-review span{color:#755d6d;font-size:12px}.actual-cost-review button{flex:none}.actual-cost-review.approved{border-color:#b9ddc5;background:#f3faf5}.actual-cost-review>strong{color:#34734a}
+.final-artwork-summary{display:grid;gap:5px;margin:8px 0;padding:8px 10px;border-left:2px solid #b86d91;background:#fbf7fa}
+.final-artwork-summary>span{display:grid;gap:1px}.final-artwork-summary b{font-size:12px}.final-artwork-summary small{font-size:11px;color:#755d6d}
+@media(max-width:1050px){.artwork-assignment-matrix>label{grid-template-columns:1fr}.actual-cost-review{align-items:flex-start;flex-direction:column}}
