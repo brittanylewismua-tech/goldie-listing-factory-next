@@ -3,8 +3,8 @@
    go hunting for a CSS class in the built stylesheet. This string is bumped
    with every deployable commit and served from /api/version, so "is my fix
    actually live" is one request with a yes or no answer. */
-/* D865 keeps fixed support controls clear of the workflow action bar. */
-export const BUILD_MARKER = "D865";
+/* D866 tracks the sticky workflow bar instead of assuming a fixed offset. */
+export const BUILD_MARKER = "D866";
 
 /* D629 - and then it went stale for two deploys running, which is the exact
    failure D479 built it to prevent: D627 and D628 both shipped while this file

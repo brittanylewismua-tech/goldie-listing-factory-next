@@ -36,6 +36,7 @@ export default function SupportChat({ screen }: { screen?: WorkflowScreen }) {
   const [contactStatus, setContactStatus] = useState("");
   const [sending, setSending] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
 
   const answer = useCallback((value: string) => {
     const clean = value.trim();
@@ -63,6 +64,52 @@ export default function SupportChat({ screen }: { screen?: WorkflowScreen }) {
   }, [answer]);
 
   useEffect(() => { endRef.current?.scrollIntoView(); }, [messages, open]);
+
+  /* D866 · The action bar is sticky, not permanently fixed to the viewport.
+     When it settles above the site footer its top edge moves, so a fixed
+     launcher offset eventually overlaps it. Measure the visible bar on every
+     event that can move or resize it and keep the launchers 16px above it. The
+     update is intentionally synchronous: a hidden tab does not run animation
+     frames, but it can still receive layout-changing events before it returns. */
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+
+    const measure = () => {
+      const viewportHeight = window.innerHeight;
+      const tops = Array.from(document.querySelectorAll<HTMLElement>(".workflow-footer-actions"))
+        .map(element => element.getBoundingClientRect())
+        .filter(rect => rect.height > 0 && rect.bottom > 0 && rect.top < viewportHeight)
+        .map(rect => Math.max(0, rect.top));
+      const barTop = tops.length ? Math.min(...tops) : viewportHeight;
+      const bottom = Math.max(20, Math.ceil(viewportHeight - barTop + 16));
+      root.style.setProperty("--support-launcher-bottom", `${bottom}px`);
+      root.style.setProperty("--support-video-bottom", `${bottom + 60}px`);
+    };
+
+    const resizeObserver = new ResizeObserver(measure);
+    document.querySelectorAll<HTMLElement>(".workflow-footer-actions").forEach(element => resizeObserver.observe(element));
+    const mutationObserver = new MutationObserver(() => {
+      resizeObserver.disconnect();
+      document.querySelectorAll<HTMLElement>(".workflow-footer-actions").forEach(element => resizeObserver.observe(element));
+      measure();
+    });
+    mutationObserver.observe(document.body, { childList:true, subtree:true });
+    window.addEventListener("scroll", measure, true);
+    window.addEventListener("resize", measure);
+    document.addEventListener("visibilitychange", measure);
+    measure();
+
+    return () => {
+      window.removeEventListener("scroll", measure, true);
+      window.removeEventListener("resize", measure);
+      document.removeEventListener("visibilitychange", measure);
+      resizeObserver.disconnect();
+      mutationObserver.disconnect();
+      root.style.removeProperty("--support-launcher-bottom");
+      root.style.removeProperty("--support-video-bottom");
+    };
+  }, [screen]);
 
   function submit(event: FormEvent) { event.preventDefault(); answer(query); }
 
@@ -105,7 +152,7 @@ export default function SupportChat({ screen }: { screen?: WorkflowScreen }) {
     </section>
   </div> : null;
 
-  return <div className="support-root">
+  return <div className="support-root" ref={rootRef}>
     {videoDialog}
     {/* Rendered only where a video exists for this screen. A button that opens
         nothing is worse than no button, and it lets the videos be filmed and

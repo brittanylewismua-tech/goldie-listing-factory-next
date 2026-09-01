@@ -2841,10 +2841,9 @@ html, body { background: #f1d2dc; }
     white-space:normal;overflow:visible;text-overflow:clip}
 }
 
-/* D865 · Keep the fixed help controls clear of the Listing Factory's
-   70px sticky action bar. SupportChat is rendered inside .app-shell, so this
-   must be a descendant selector; the former sibling selector never matched. */
+/* D866 · SupportChat measures the sticky action bar because it can settle
+   higher above the site footer. These fallbacks protect the first paint. */
 @media(min-width:821px){
-  .app-shell .support-root .support-launcher{bottom:86px}
-  .app-shell .support-root .support-video-launcher{bottom:146px}
+  .app-shell .support-root .support-launcher{bottom:var(--support-launcher-bottom,86px)}
+  .app-shell .support-root .support-video-launcher{bottom:var(--support-video-bottom,146px)}
 }
