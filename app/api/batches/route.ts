@@ -6,7 +6,29 @@ import { bundleHistoryIdentity } from "@/app/batch-history-identity";
 type RuntimeEnv={DB?:D1Database};
 type BatchListState={templateDetails?:{previewImage?:string;previewImages?:string[]};activeBundle?:{name?:string};activeRecipe?:{name?:string};bundleIndex?:number;bundleRecipes?:unknown[];keptAsDrafts?:boolean;batchDisplayName?:string;designs?:Array<{name?:string}>;drafts?:Array<{id?:string;previewUrl?:string}>;batchReceipt?:{publishedCount?:number}};
 function db(){return (env as unknown as RuntimeEnv).DB}
-async function ensure(database:D1Database){await database.prepare("CREATE TABLE IF NOT EXISTS listing_batches (id TEXT PRIMARY KEY, user_id TEXT NOT NULL, status TEXT NOT NULL, step TEXT NOT NULL, setup_name TEXT NOT NULL DEFAULT '', product_title TEXT NOT NULL DEFAULT '', design_count INTEGER NOT NULL DEFAULT 0, state_json TEXT NOT NULL DEFAULT '{}', created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)").run();await database.prepare("CREATE INDEX IF NOT EXISTS idx_listing_batches_user_updated ON listing_batches(user_id, updated_at)").run()}
+async function ensure(database:D1Database){await database.prepare("CREATE TABLE IF NOT EXISTS listing_batches (id TEXT PRIMARY KEY, user_id TEXT NOT NULL, status TEXT NOT NULL, step TEXT NOT NULL, setup_name TEXT NOT NULL DEFAULT '', product_title TEXT NOT NULL DEFAULT '', design_count INTEGER NOT NULL DEFAULT 0, state_json TEXT NOT NULL DEFAULT '{}', created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)").run();await database.prepare("CREATE INDEX IF NOT EXISTS idx_listing_batches_user_updated ON listing_batches(user_id, updated_at)").run();
+  /* D871 · A bundle run is one job the seller started, and it was stored as one
+     row per product: same name, same badge, separate history, separate resume,
+     separate publish. D697 records what that already nearly cost - a bundle's
+     listings credited to one member, a Resume button over work that was live,
+     and pressing it "would have published them again and charged Etsy's fee
+     twice".
+
+     The fix is a parent, not a rewrite. One row owns what the seller sees -
+     identity, history, resume, deletion, publish authorisation and the receipt
+     - and the existing per-product rows hang off it as children, keeping their
+     own state and their own isolation exactly as they are. The children stop
+     owning anything seller-facing; that is the whole change.
+
+     Deliberately NOT a bundle_runs table: etsy_publish_jobs is
+     UNIQUE(user_id,batch_id) against a listing_batches id, so keeping the
+     parent in the same id space means the publish job, its per-item
+     attribution and the receipt need no schema change at all.
+
+     listing_batches is created here rather than by drizzle, so the column is
+     added here too. ALTER fails once the column exists; that is the guard. */
+  await database.prepare("ALTER TABLE listing_batches ADD parent_batch_id TEXT").run().catch(()=>undefined);
+  await database.prepare("CREATE INDEX IF NOT EXISTS idx_listing_batches_parent ON listing_batches(user_id, parent_batch_id)").run().catch(()=>undefined)}
 
 /* A design filename only makes a good batch name when the seller named the file.
  * Machine defaults do not: a batch called "ChatGPT Image Aug 21, 2026, 05 32 41
@@ -69,7 +91,72 @@ function batchListItem(row:Record<string,unknown>,publishedByBatch:Record<string
      nothing that reads correctly today starts reading zero. */
   published_at:mineByProduct.at||publishedAtByBatch[String(row.id)]||null,published_count:Math.max(mineByProduct.count,Number(publishedByBatch[String(row.id)])||0,Number(state.batchReceipt?.publishedCount)||0)}}
 
-export async function GET(request:Request){const user=await getChatGPTUser();if(!user)return NextResponse.json({error:"Sign in to continue."},{status:401});const database=db();if(!database)return NextResponse.json({error:"Batch history is unavailable."},{status:503});await ensure(database);const url=new URL(request.url),id=url.searchParams.get("id");if(id){const row=await database.prepare("SELECT * FROM listing_batches WHERE id=? AND user_id=?").bind(id,user.userId).first<Record<string,unknown>>();if(!row)return NextResponse.json({error:"That batch was not found."},{status:404});const state=JSON.parse(String(row.state_json||"{}")) as BatchListState,productIds=(state.drafts||[]).map(draft=>String(draft.id||"")).filter(Boolean);let authoritativeReceipt:{publishedCount:number;etsyUrls:string[];completedAt:string}|null=null;if(productIds.length){const marks=productIds.map(()=>"?").join(","),items=await database.prepare(`SELECT result_json,updated_at FROM etsy_publish_items WHERE user_id=? AND status='completed' AND product_id IN (${marks})`).bind(user.userId,...productIds).all<{result_json:string|null;updated_at:string}>().catch(()=>({results:[]}));const parsed=(items.results||[]).map(item=>{try{return {result:JSON.parse(item.result_json||"{}") as {url?:string},at:String(item.updated_at||"")}}catch{return {result:{},at:String(item.updated_at||"")}}});if(parsed.length)authoritativeReceipt={publishedCount:parsed.length,etsyUrls:parsed.map(item=>String(item.result.url||"")).filter(Boolean),completedAt:parsed.reduce((latest,item)=>item.at>latest?item.at:latest,"")}}return NextResponse.json({batch:{...row,state},authoritativeReceipt})}const rows=await database.prepare("SELECT id,status,step,setup_name,product_title,design_count,state_json,created_at,updated_at FROM listing_batches WHERE user_id=? ORDER BY updated_at DESC LIMIT 20").bind(user.userId).all<Record<string,unknown>>();/* D701 · Falls back to the job's batch_id when the item has none. D697 added the
+/* D871 · What the run's card reports, gathered from its children.
+   The parent row carries the run's identity and the seller's chosen name; the
+   children carry the per-product work, and they are the only place the counts
+   honestly exist. Listings are designs x products because that is what she
+   asked for - counting the child rows that happen to exist reported 2 while
+   she was making 4. */
+type RunChild={batchId:string;productName:string;position:number;drafts:number;published:number;done:boolean};
+function withRunProgress(item:Record<string,unknown>,parent:Record<string,unknown>,children:Array<Record<string,unknown>>,publishedByBatch:Record<string,number>,publishedAtByProduct:Record<string,string>){
+  let parentState:{run?:{bundleName?:string;productOrder?:string[];activeProductId?:string}}={};
+  try{parentState=JSON.parse(String(parent.state_json||"{}"))}catch{/* a damaged parent must not hide the run */}
+  const order=parentState.run?.productOrder||[];
+  const read=(child:Record<string,unknown>)=>{let state:BatchListState&{activeRecipe?:{id?:string;name?:string}}={};try{state=JSON.parse(String(child.state_json||"{}"))}catch{/* keep going */}return state};
+  const members:RunChild[]=children.map(child=>{
+    const state=read(child);
+    const recipeId=String(state.activeRecipe?.id||"");
+    const drafts=(state.drafts||[]);
+    /* Published is counted per Printify product, the same way the rest of this
+       route does it, so a child reports what is actually live rather than what
+       a snapshot managed to autosave. */
+    const published=drafts.filter(draft=>draft.id&&publishedAtByProduct[String(draft.id)]).length
+      ||Number(publishedByBatch[String(child.id)])||0;
+    const position=order.indexOf(recipeId);
+    return {batchId:String(child.id),productName:String(state.activeRecipe?.name||"").trim(),position:position>=0?position+1:order.length+1,drafts:drafts.length,published,done:published>0};
+  }).sort((a,b)=>a.position-b.position);
+  const total=Math.max(order.length,members.length);
+  const designs=Math.max(0,...children.map(child=>Number(child.design_count)||0));
+  const listings=designs*Math.max(1,total);
+  const publishedTotal=members.reduce((sum,member)=>sum+member.published,0);
+  /* Where the work stopped, not where it started. D697's near-miss was a Resume
+     button over listings that were already live. */
+  const resumeInto=members.find(member=>!member.done)?.batchId||members[members.length-1]?.batchId||String(parent.id);
+  return {...item,
+    display_name:String(parentState.run?.bundleName||item.display_name||"Bundle run"),
+    product_title:`${total} products · ${listings} ${listings===1?"listing":"listings"} · ${designs} ${designs===1?"design":"designs"}`,
+    design_count:designs,
+    draft_count:members.reduce((sum,member)=>sum+member.drafts,0),
+    published_count:publishedTotal,
+    thumbnail_url:String(item.thumbnail_url||"")||children.map(child=>{const state=read(child);return (state.drafts||[]).find(draft=>draft.previewUrl)?.previewUrl||state.templateDetails?.previewImage||""}).find(Boolean)||"",
+    members,
+    bundle_total:total,
+    resume_batch_id:resumeInto};
+}
+
+export async function GET(request:Request){const user=await getChatGPTUser();if(!user)return NextResponse.json({error:"Sign in to continue."},{status:401});const database=db();if(!database)return NextResponse.json({error:"Batch history is unavailable."},{status:503});await ensure(database);const url=new URL(request.url),id=url.searchParams.get("id");if(id){const row=await database.prepare("SELECT * FROM listing_batches WHERE id=? AND user_id=?").bind(id,user.userId).first<Record<string,unknown>>();if(!row)return NextResponse.json({error:"That batch was not found."},{status:404});const state=JSON.parse(String(row.state_json||"{}")) as BatchListState,productIds=(state.drafts||[]).map(draft=>String(draft.id||"")).filter(Boolean);let authoritativeReceipt:{publishedCount:number;etsyUrls:string[];completedAt:string}|null=null;if(productIds.length){const marks=productIds.map(()=>"?").join(","),items=await database.prepare(`SELECT result_json,updated_at FROM etsy_publish_items WHERE user_id=? AND status='completed' AND product_id IN (${marks})`).bind(user.userId,...productIds).all<{result_json:string|null;updated_at:string}>().catch(()=>({results:[]}));const parsed=(items.results||[]).map(item=>{try{return {result:JSON.parse(item.result_json||"{}") as {url?:string},at:String(item.updated_at||"")}}catch{return {result:{},at:String(item.updated_at||"")}}});if(parsed.length)authoritativeReceipt={publishedCount:parsed.length,etsyUrls:parsed.map(item=>String(item.result.url||"")).filter(Boolean),completedAt:parsed.reduce((latest,item)=>item.at>latest?item.at:latest,"")}}/* D871 · A run row is asked for by the URL, and what the page needs is the
+       product record to open. The children come with it so resume is one round
+       trip and one decision: the product she left open, or the first that has
+       not published. */
+    const kids=await database.prepare("SELECT id,status,step,product_title,design_count,state_json,updated_at FROM listing_batches WHERE user_id=? AND parent_batch_id=?").bind(user.userId,String(row.id)).all<Record<string,unknown>>().catch(()=>({results:[] as Array<Record<string,unknown>>}));
+    /* Live on Etsy is a fact about the publish records, not about what a tab
+       managed to autosave, so it is read from there. */
+    const done=await database.prepare("SELECT product_id FROM etsy_publish_items WHERE user_id=? AND status='completed'").bind(user.userId).all<{product_id:string}>().catch(()=>({results:[] as Array<{product_id:string}>}));
+    const publishedProductIds=new Set((done.results||[]).map(item=>String(item.product_id)));
+    const children=(kids.results||[]).map(child=>{let childState:BatchListState&{activeRecipe?:{id?:string;name?:string}}={};try{childState=JSON.parse(String(child.state_json||"{}"))}catch{/* keep going */}const drafts=childState.drafts||[];return {id:String(child.id),productId:String(childState.activeRecipe?.id||""),productName:String(childState.activeRecipe?.name||""),drafts:drafts.length,published:drafts.filter(draft=>draft.id&&publishedProductIds.has(String(draft.id))).length,updated_at:String(child.updated_at||"")}});
+    return NextResponse.json({batch:{...row,state},children,authoritativeReceipt})}/* D871 · Batch History lists runs, not the records a run keeps for each of its
+     products. A parent and a single-product batch both have no parent of their
+     own; a child never appears on its own. Legacy sibling rows predate the
+     column, so parent_batch_id is NULL on all of them and they list exactly as
+     they do today - ungrouped, untouched. */
+  const rows=await database.prepare("SELECT id,status,step,setup_name,product_title,design_count,state_json,created_at,updated_at FROM listing_batches WHERE user_id=? AND parent_batch_id IS NULL ORDER BY updated_at DESC LIMIT 20").bind(user.userId).all<Record<string,unknown>>();
+  /* Each run's children, for the aggregate the card reports. One query. */
+  const parentIds=(rows.results||[]).map(row=>String(row.id));
+  const childRows=parentIds.length
+    ?await database.prepare(`SELECT id,parent_batch_id,status,step,product_title,design_count,state_json,updated_at FROM listing_batches WHERE user_id=? AND parent_batch_id IN (${parentIds.map(()=>"?").join(",")})`).bind(user.userId,...parentIds).all<Record<string,unknown>>().catch(()=>({results:[] as Array<Record<string,unknown>>}))
+    :{results:[] as Array<Record<string,unknown>>};
+  const childrenByParent=new Map<string,Array<Record<string,unknown>>>();
+  for(const child of childRows.results||[]){const key=String(child.parent_batch_id||"");if(!childrenByParent.has(key))childrenByParent.set(key,[]);childrenByParent.get(key)!.push(child)}/* D701 · Falls back to the job's batch_id when the item has none. D697 added the
      column and a migration to backfill it; the backfill did not populate, so on the
      first deploy every completed item still had NULL and Batch History reported
      zero published for work that is live on Etsy - the same Resume-and-republish
@@ -129,11 +216,18 @@ export async function GET(request:Request){const user=await getChatGPTUser();if(
   }catch(error){
     console.error("batches: weekly goal count failed, serving batches without it",error);
   }
-  return NextResponse.json({batches:rows.results.map(row=>batchListItem(row,publishedByBatch,publishedAtByBatch,publishedAtByProduct)),published:publishedDays})}
+  return NextResponse.json({batches:rows.results.map(row=>{const item=batchListItem(row,publishedByBatch,publishedAtByBatch,publishedAtByProduct);const children=childrenByParent.get(String(row.id))||[];return children.length?withRunProgress(item,row,children,publishedByBatch,publishedAtByProduct):item}),published:publishedDays})}
 
-export async function POST(request:Request){const user=await getChatGPTUser();if(!user)return NextResponse.json({error:"Sign in to continue."},{status:401});const database=db();if(!database)return NextResponse.json({error:"Batch history is unavailable."},{status:503});await ensure(database);const body=await request.json() as {id?:string;status?:string;step?:string;setupName?:string;productTitle?:string;designCount?:number;state?:unknown};const id=String(body.id||crypto.randomUUID()).replace(/[^a-zA-Z0-9-]/g,"").slice(0,80);const allowedStatus=new Set(["draft","processing","needs_attention","complete"]),allowedStep=new Set(["connect","setup","designs","review","finish"]);const status=allowedStatus.has(String(body.status))?String(body.status):"draft",step=allowedStep.has(String(body.step))?String(body.step):"connect";const stateJson=JSON.stringify(body.state??{});if(stateJson.length>750000)return NextResponse.json({error:"This batch snapshot is too large."},{status:413});await database.prepare("INSERT INTO listing_batches (id,user_id,status,step,setup_name,product_title,design_count,state_json,updated_at) VALUES (?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP) ON CONFLICT(id) DO UPDATE SET status=excluded.status,step=excluded.step,setup_name=excluded.setup_name,product_title=excluded.product_title,design_count=excluded.design_count,state_json=excluded.state_json,updated_at=CURRENT_TIMESTAMP WHERE user_id=excluded.user_id").bind(id,user.userId,status,step,String(body.setupName||"").slice(0,160),String(body.productTitle||"").slice(0,200),Math.max(0,Math.min(20,Number(body.designCount||0))),stateJson).run();return NextResponse.json({id,saved:true})}
+export async function POST(request:Request){const user=await getChatGPTUser();if(!user)return NextResponse.json({error:"Sign in to continue."},{status:401});const database=db();if(!database)return NextResponse.json({error:"Batch history is unavailable."},{status:503});await ensure(database);const body=await request.json() as {id?:string;status?:string;step?:string;setupName?:string;productTitle?:string;designCount?:number;state?:unknown;parentBatchId?:string};const id=String(body.id||crypto.randomUUID()).replace(/[^a-zA-Z0-9-]/g,"").slice(0,80);const allowedStatus=new Set(["draft","processing","needs_attention","complete"]),allowedStep=new Set(["connect","setup","designs","review","finish"]);const status=allowedStatus.has(String(body.status))?String(body.status):"draft",step=allowedStep.has(String(body.step))?String(body.step):"connect";const stateJson=JSON.stringify(body.state??{});if(stateJson.length>750000)return NextResponse.json({error:"This batch snapshot is too large."},{status:413});/* D871 · A child names its parent run once, when it is first written. The
+     COALESCE keeps it: a later autosave that omits it must not orphan a child
+     mid-run, which would put it back in Batch History as a job of its own. */
+  const parentBatchId=String(body.parentBatchId||"").replace(/[^a-zA-Z0-9-]/g,"").slice(0,80)||null;
+  await database.prepare("INSERT INTO listing_batches (id,user_id,status,step,setup_name,product_title,design_count,state_json,parent_batch_id,updated_at) VALUES (?,?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP) ON CONFLICT(id) DO UPDATE SET parent_batch_id=COALESCE(excluded.parent_batch_id,listing_batches.parent_batch_id),status=excluded.status,step=excluded.step,setup_name=excluded.setup_name,product_title=excluded.product_title,design_count=excluded.design_count,state_json=excluded.state_json,updated_at=CURRENT_TIMESTAMP WHERE user_id=excluded.user_id").bind(id,user.userId,status,step,String(body.setupName||"").slice(0,160),String(body.productTitle||"").slice(0,200),Math.max(0,Math.min(20,Number(body.designCount||0))),stateJson,parentBatchId).run();return NextResponse.json({id,saved:true})}
 
-export async function DELETE(request:Request){const user=await getChatGPTUser();if(!user)return NextResponse.json({error:"Sign in to continue."},{status:401});const database=db();if(!database)return NextResponse.json({error:"Batch history is unavailable."},{status:503});await ensure(database);const id=String(new URL(request.url).searchParams.get("id")||"").replace(/[^a-zA-Z0-9-]/g,"").slice(0,80);if(!id)return NextResponse.json({error:"Choose a batch to clear."},{status:400});await database.prepare("DELETE FROM listing_batches WHERE id=? AND user_id=?").bind(id,user.userId).run();
+export async function DELETE(request:Request){const user=await getChatGPTUser();if(!user)return NextResponse.json({error:"Sign in to continue."},{status:401});const database=db();if(!database)return NextResponse.json({error:"Batch history is unavailable."},{status:503});await ensure(database);const id=String(new URL(request.url).searchParams.get("id")||"").replace(/[^a-zA-Z0-9-]/g,"").slice(0,80);if(!id)return NextResponse.json({error:"Choose a batch to clear."},{status:400});/* D871 · Deleting a run deletes the run. A child is the run's own record for
+     one of its products, not a separate job the seller can keep. */
+  await database.prepare("DELETE FROM listing_batches WHERE user_id=? AND parent_batch_id=?").bind(user.userId,id).run().catch(()=>undefined);
+  await database.prepare("DELETE FROM listing_batches WHERE id=? AND user_id=?").bind(id,user.userId).run();
   /* D631 - deleting a batch left every bundle that referenced it pointing at
      something gone. Measured on ZZ TEST BUNDLE: its Gildan Hoodie member pointed
      at batch 2d2650a1, deleted at some point, and step 4 sat on "Checking…"

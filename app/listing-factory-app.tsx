@@ -883,6 +883,16 @@ export default function ListingFactoryApp() {
   const sizeGuidePicker = useRef<HTMLInputElement>(null);
   const syncedListingSignatures = useRef<Map<string,string>>(new Map());
   const batchIdRef=useRef("");
+  /* D871 · The run the seller is in, as opposed to the record Goldie is keeping
+     for the product she is looking at. A single product run has no parent and
+     these are the same thing. A bundle run mints this once, at the start, and
+     never again: switching products changes batchIdRef and leaves this alone,
+     which is what makes the run one job in the URL, in Batch History, on
+     resume, on delete and at publish. It is per EXECUTION - running the same
+     saved bundle twice produces two of them, which activeBundle.id (the saved
+     definition, shared by every run of it) can never do. */
+  const runIdRef=useRef("");
+  const runStartedRef=useRef("");
   const snapshotReady=useRef(false);
   const resumeAttempted=useRef(false);
   const draftRunActive=useRef(false);
@@ -1772,7 +1782,23 @@ export default function ListingFactoryApp() {
      the dead id so a refresh does not repeat it. */
   const [restoreNotice,setRestoreNotice]=useState("");
   async function restoreBatchById(id:string,requestedStep:string|null,requestedPhase:string|null,push=false):Promise<boolean>{
-    try{const url=new URL(window.location.href);if(!id)return false;const response=await fetch(`/api/batches?id=${encodeURIComponent(id)}`);if(!response.ok)return false;const payload=await response.json() as {batch?:{id:string;step:WorkflowStep;status:string;setup_name?:string;state?:Record<string,unknown>}};if(!payload.batch?.state)return false;const state=payload.batch.state as {template?:string;templateDetails?:TemplateDetails;description?:string;pricing?:Pricing;mockupTheme?:string;activeRecipe?:Recipe;activeBundle?:ProductBundle;bundleRecipes?:Recipe[];bundleIndex?:number;bundleBatchIds?:Record<string,string>;designs?:Array<Omit<DesignFile,"file"|"previewUrl">>;drafts?:DraftResult[];complete?:boolean;finishPhase?:FinishPhase;bulkTitles?:string;printifyImageIndices?:number[];printifyImageSelections?:Record<string,number[]>;selectedColorIds?:number[];selectedSizeIds?:number[];variantPrices?:Record<string,number>;etsyShippingProfileId?:number;pricingApproved?:boolean;sizeGuideName?:string;batchKeywords?:string[];titleJoiner?:string;titleBuilderMode?:"ai"|"manual";autoTitleBankId?:string;manualKeywordBankId?:string;sharedMockups?:{theme:string;ids:string[]};preparedMockupCounts?:Record<string,number>;keptAsDrafts?:boolean;batchDisplayName?:string;batchReceipt?:BatchReceipt|null};
+    try{const url=new URL(window.location.href);if(!id)return false;const response=await fetch(`/api/batches?id=${encodeURIComponent(id)}`);if(!response.ok)return false;const payload=await response.json() as {batch?:{id:string;step:WorkflowStep;status:string;setup_name?:string;state?:Record<string,unknown>};children?:Array<{id:string;productId:string;productName:string;drafts:number;published:number}>};if(!payload.batch?.state)return false;
+    /* D871 · The URL carries the run. A run holds no product work of its own, so
+       opening one means opening one of its products: the one she left open, or
+       the first that has not published yet. D697's near-miss was a Resume that
+       landed on a product whose listings were already live - resuming into a
+       finished product is the thing that must not happen. */
+    const runState=payload.batch.state as {run?:{activeProductId?:string;productOrder?:string[]}};
+    if(runState.run&&(payload.children||[]).length){
+      const children=payload.children||[];
+      const order=runState.run.productOrder||[];
+      const byOrder=[...children].sort((a,b)=>order.indexOf(a.productId)-order.indexOf(b.productId));
+      const open=byOrder.find(child=>child.id!==id&&child.productId===runState.run?.activeProductId&&child.published===0)
+        ||byOrder.find(child=>child.published===0)
+        ||byOrder[byOrder.length-1];
+      runIdRef.current=id;
+      if(open&&open.id!==id)return restoreBatchById(open.id,requestedStep,requestedPhase,push);
+    }const state=payload.batch.state as {template?:string;templateDetails?:TemplateDetails;description?:string;pricing?:Pricing;mockupTheme?:string;activeRecipe?:Recipe;activeBundle?:ProductBundle;bundleRecipes?:Recipe[];bundleIndex?:number;bundleBatchIds?:Record<string,string>;designs?:Array<Omit<DesignFile,"file"|"previewUrl">>;drafts?:DraftResult[];complete?:boolean;finishPhase?:FinishPhase;bulkTitles?:string;printifyImageIndices?:number[];printifyImageSelections?:Record<string,number[]>;selectedColorIds?:number[];selectedSizeIds?:number[];variantPrices?:Record<string,number>;etsyShippingProfileId?:number;pricingApproved?:boolean;sizeGuideName?:string;batchKeywords?:string[];titleJoiner?:string;titleBuilderMode?:"ai"|"manual";autoTitleBankId?:string;manualKeywordBankId?:string;sharedMockups?:{theme:string;ids:string[]};preparedMockupCounts?:Record<string,number>;keptAsDrafts?:boolean;batchDisplayName?:string;batchReceipt?:BatchReceipt|null};
     const cached=await loadBatchFiles(id).catch(()=>[]);
     const savedDrafts=state.drafts||[];
     const designs=(state.designs||[]).map((design,index)=>{
@@ -1934,12 +1960,31 @@ export default function ListingFactoryApp() {
     batchChannel.current?.postMessage({type:"claim",batchId:batchIdRef.current,tabId:tabId.current});
   }
 
+  /* D871 · The parent row for this run. It holds no product work - only what
+     the seller sees: which bundle is running, in what order, and which product
+     is open. Written whenever a child is, so the run row is never behind. */
+  async function persistRunNow(){
+    const runId=runIdRef.current;
+    if(!runId||!activeBundle||bundleRecipes.length<2)return;
+    await fetch("/api/batches",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({
+      id:runId,
+      status:batchReceipt?.publishedCount?"complete":running?"processing":"draft",
+      step:workflowStep,
+      setupName:activeBundle.name,
+      productTitle:`${bundleRecipes.length} products`,
+      designCount:files.length,
+      state:{run:{bundleId:activeBundle.id,bundleName:activeBundle.name,productOrder:bundleRecipes.map(recipe=>recipe.id),activeProductId:activeRecipe?.id||"",startedAt:runStartedRef.current},batchReceipt:batchReceipt||null},
+    })}).catch(()=>undefined);
+  }
+
   async function persistBatchNow(existingId?:string){
     const id=existingId||batchIdRef.current||crypto.randomUUID();
     batchIdRef.current=id;
     rememberBundleBatch(activeRecipe?.id,id);
     window.localStorage.setItem("goldie-active-batch",id);
-    await fetch("/api/batches",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,status:running?"processing":keptAsDrafts?"draft":complete?drafts.some(draft=>draft.status!=="Created")?"needs_attention":"complete":"draft",step:workflowStep,setupName:batchDisplayName||activeBundle?.name||activeRecipe?.name||"",productTitle:templateDetails?.blueprintTitle||"",designCount:files.length,state:batchStateSnapshot()})}).catch(()=>undefined);
+    /* The child names its run, and the run row is kept alongside it. */
+    void persistRunNow();
+    await fetch("/api/batches",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,parentBatchId:runIdRef.current&&runIdRef.current!==id?runIdRef.current:undefined,status:running?"processing":keptAsDrafts?"draft":complete?drafts.some(draft=>draft.status!=="Created")?"needs_attention":"complete":"draft",step:workflowStep,setupName:batchDisplayName||activeBundle?.name||activeRecipe?.name||"",productTitle:templateDetails?.blueprintTitle||"",designCount:files.length,state:batchStateSnapshot()})}).catch(()=>undefined);
   }
   useEffect(()=>{if(!snapshotReady.current||restoringBatch||batchHeldByAnotherTab||(!files.length&&!drafts.length))return;const timer=window.setTimeout(()=>{void persistBatchNow();},700);return()=>window.clearTimeout(timer);
   },[restoringBatch,workflowStep,finishPhase,template,templateDetails,description,pricing,selectedColorIds,selectedSizeIds,variantPrices,etsyShippingProfileId,pricingApproved,mockupTheme,activeRecipe,activeBundle,bundleRecipes,bundleIndex,files.map(file=>`${file.id}:${file.title}:${file.tags.join("|")}:${file.blurb||""}:${file.descriptionOverride??""}:${file.sizeGuideName||""}:${JSON.stringify(file.etsy||{})}`).join(";"),drafts,complete,running,bulkTitles,batchKeywords,titleJoiner,titleBuilderMode,autoTitleBankId,manualKeywordBankId,sharedMockups,preparedMockupCounts,printifyImageIndices,printifyImageSelections,sizeGuideName,batchDisplayName,keptAsDrafts,batchReceipt]);
@@ -2216,6 +2261,11 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
      * its only unique effect was a failure she could not avoid. See D129. */
     if((files.length>0||drafts.length>0||complete)&&!await confirmAction({title:`Start “${bundle.name}” and clear this batch?`,body:"Your current designs and unfinished work will be removed. Your saved products and keyword banks are untouched.",confirmLabel:"Start this bundle",destructive:true}))return false;
     clearCurrentBatch(true);
+    /* D871 · One run id per EXECUTION, minted here and never again. Running the
+       same saved bundle next week mints another: bundle.id identifies the
+       bundle she saved, not the run she just started, so it can never be the
+       run's identity. */
+    runIdRef.current=crypto.randomUUID();runStartedRef.current=new Date().toISOString();
     setActiveBundle(bundle);setBundleRecipes(recipes);setBundleIndex(0);const first=await selectRecipe(recipes[0]);if(!first)return false;/* D354 · Written AFTER selectRecipe, because selectRecipe writes the
        single-product key and used to clear this one. Refresh must land on the
        bundle, not on its first member. */
@@ -3287,7 +3337,13 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
        openBundleProduct already flushes before switching; this path never did. */
     await persistBatchNow(batchIdRef.current);
     const carriedFiles=files.map(file=>({...file,id:crypto.randomUUID(),previewUrl:URL.createObjectURL(file.file),title:"",tags:[],blurb:undefined,descriptionOverride:undefined,sizeGuideName:undefined,etsy:undefined,etsyError:""}));
-    const nextBatchId=crypto.randomUUID();batchIdRef.current=nextBatchId;window.localStorage.setItem("goldie-active-batch",nextBatchId);const url=new URL(window.location.href);url.searchParams.set("batch",nextBatchId);/* D484 - this forced "review" no matter which step she opened the product
+    /* D871 · The next product gets its own record, and the seller stays in the
+       same run. This used to put the new child id in the URL, which is what
+       made one job look like several: the address changed under her, Batch
+       History gained a row, and resume, completion and publishing all followed
+       the child instead of the run. The child id is internal now; the URL keeps
+       the run. */
+    const nextBatchId=crypto.randomUUID();batchIdRef.current=nextBatchId;window.localStorage.setItem("goldie-active-batch",nextBatchId);const url=new URL(window.location.href);url.searchParams.set("batch",runIdRef.current||nextBatchId);/* D484 - this forced "review" no matter which step she opened the product
        from. Opening the tee from step 2 threw her into step 3 with no designs
        processed and no drafts, and the step guard walked her back to the start -
        what she saw as being dumped on step one. A bundle's products are worked
