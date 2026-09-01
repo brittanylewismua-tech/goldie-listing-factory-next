@@ -2847,3 +2847,8 @@ html, body { background: #f1d2dc; }
   .app-shell .support-root .support-launcher{bottom:calc(var(--goldie-launcher-lift, 70px) + 16px)}
   .app-shell .support-root .support-video-launcher{bottom:calc(var(--goldie-launcher-lift, 70px) + 76px)}
 }
+
+/* D868 · The top rail already reports the save state. Repeating it as an
+   absolutely-centred item inside the action bar lets long status copy paint
+   underneath it, so the redundant in-bar copy stays out at every shell width. */
+.app-shell .workflow-footer-actions>.autosave-note{display:none}
