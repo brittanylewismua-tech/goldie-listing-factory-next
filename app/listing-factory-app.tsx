@@ -1620,7 +1620,7 @@ export default function ListingFactoryApp() {
   },[restoringBatch,activeBundle,bundleRecipes,activeRecipe,bundleApproved]);
 
   function gateState():NavigationGateState{return {bundleProductsReady:bundleProductsReady(),connected,etsyConnected,productSelected,templateReady:templateLoaded,shippingReady:Boolean(templateDetails?.shippingTemplateId||templateDetails?.shippingProfileNeedsSelection),variantsReady:Boolean(templateDetails?.enabledVariants),colorsReady:!templateDetails?.colorOptions?.length||selectedColorIds.length>0,pricesReady:pricedVariants.length>0,designCount:files.length,designsReady:files.every(designArtworkReady),/* D451 - a bundle has one shipping profile and one pricing approval PER product, and this gate read only the active one. Two of three products in her ZZ TEST BUNDLE showed "Pick a shipping profile" while Next step stayed enabled, which would have created Printify drafts for products with no valid Etsy shipping profile. Every product in the bundle has to be ready, not whichever one happens to be open. */etsyShippingProfileReady:activeBundle?bundleRecipes.length>0&&bundleRecipes.every(recipe=>Number(recipe.etsyShippingProfileId)>0):Boolean(etsyShippingProfileId),pricingApproved:activeBundle?bundleRecipes.length>0&&bundleRecipes.every(recipe=>bundleApproved[recipe.id]??recipeCarriesApprovedPricing({defaultProfitTarget:recipe.defaultProfitTarget,etsyShippingProfileId:recipe.etsyShippingProfileId})):pricingApproved,draftsComplete:complete,createdDraftCount,titlesReady:files.length>0&&files.every(file=>Boolean(file.title.trim())&&!file.titleError),tagsReady:files.length>0&&files.every(file=>file.tags.length>0&&!file.titleError),descriptionReady:Boolean(description.trim()),etsyDetailsReady:files.length>0&&files.every(file=>etsyRequiredComplete(file.etsy)),personalizationReady:files.every(file=>!personalizationProblem(file.etsy)),imagesReady:allCreatedListingsHaveImages()}}
-  function progressGateIssues(index:number){return localPreview?[]:navigationIssues(index,gateState())}
+  function progressGateIssues(index:number){if(localPreview)return [];const issues=navigationIssues(index,gateState());if(index>=6)issues.push(...runProductGaps());return [...new Set(issues)]}
   /* D444 - leaving Images needs photos, not titles. See leavingImagesIssues. */
   function imagesStepIssues(){if(localPreview)return [];const issues=leavingImagesIssues(gateState());if(bundleProductsStillReading().length)issues.push("Goldie is still reading the finished costs for the other products in this bundle.");const pending=costReviewDrafts().filter(draft=>!draft.costReview?.approved);if(pending.length)issues.push(`${pending.length} ${pending.length===1?"listing needs":"listings need"} final pricing approval after Printify calculated the finished product costs.`);return issues}
   function progressStatus(index:number,active:boolean,done:boolean,blocked:boolean){const live=active||!blocked;if(index===0)return connected?"Printify connected":live?"Connect your account":"Not connected";if(index===1)return templateDetails?templateDetails.blueprintTitle:live?"Choose a saved product":"Complete the prior step";if(index===2)return files.length?`${files.length} designs ready`:live?"Add finished designs":"Complete the prior step";if(index===3)return pricingApproved?(pricedVariants.length?`${pricedVariants.length} variants approved`:"Pricing approved"):live?"Review every variant":"Complete the prior step";if(index===4)return complete?`${createdDraftCount} drafts created`:live&&running?`${processed} of ${runTotal} created`:ready?"Ready to create":"Complete the prior step";if(index===5)return titleCount===files.length&&files.length?`${titleCount} titles complete`:live?`${titleCount} of ${files.length} titles complete`:done?"Titles complete":"Complete the prior step";if(index===6)return etsyReadyCount===files.length&&files.length?`${etsyReadyCount} listings ready`:live?`${etsyReadyCount} of ${files.length} ready`:done?"Etsy details complete":"Complete the prior step";if(index===7)return done?"Listing images reviewed":live?`${createdDraftCount} previews ready`:"Complete the prior step";return batchReceipt?`${batchReceipt.publishedCount} listings published`:live?"Ready to publish":"Complete the prior step"}
@@ -1808,7 +1808,7 @@ export default function ListingFactoryApp() {
         ||byOrder.find(child=>child.published===0)
         ||byOrder[byOrder.length-1];
       runIdRef.current=id;
-      if(open&&open.id!==id)return restoreBatchById(open.id,requestedStep,requestedPhase,push);
+      if(open&&open.id!==id){const restored=await restoreBatchById(open.id,requestedStep,requestedPhase,push);if(restored){const childMap=Object.fromEntries(children.filter(child=>child.productId&&child.id).map(child=>[child.productId,child.id]));setBundleBatchIds(current=>({...childMap,...current}))}return restored}
     }const state=payload.batch.state as {template?:string;templateDetails?:TemplateDetails;description?:string;pricing?:Pricing;mockupTheme?:string;activeRecipe?:Recipe;activeBundle?:ProductBundle;bundleRecipes?:Recipe[];bundleIndex?:number;bundleBatchIds?:Record<string,string>;designs?:Array<Omit<DesignFile,"file"|"previewUrl"|"artworkVersions">&{artworkVersions?:Array<Omit<ArtworkVersion,"file"|"previewUrl">>}>;drafts?:DraftResult[];complete?:boolean;finishPhase?:FinishPhase;bulkTitles?:string;printifyImageIndices?:number[];printifyImageSelections?:Record<string,number[]>;selectedColorIds?:number[];selectedSizeIds?:number[];variantPrices?:Record<string,number>;etsyShippingProfileId?:number;pricingApproved?:boolean;sizeGuideName?:string;batchKeywords?:string[];titleJoiner?:string;titleBuilderMode?:"ai"|"manual";autoTitleBankId?:string;manualKeywordBankId?:string;sharedMockups?:{theme:string;ids:string[]};preparedMockupCounts?:Record<string,number>;keptAsDrafts?:boolean;batchDisplayName?:string;batchReceipt?:BatchReceipt|null};
     const cached=await loadBatchFiles(id).catch(()=>[]);
     const cachedArtwork=await loadBatchArtworkAssets(id).catch(()=>({} as Record<string,File>));
@@ -1976,17 +1976,17 @@ export default function ListingFactoryApp() {
   /* D871 · The parent row for this run. It holds no product work - only what
      the seller sees: which bundle is running, in what order, and which product
      is open. Written whenever a child is, so the run row is never behind. */
-  async function persistRunNow(){
+  async function persistRunNow(receipt:BatchReceipt|null=batchReceipt){
     const runId=runIdRef.current;
     if(!runId||!activeBundle||bundleRecipes.length<2)return;
     await fetch("/api/batches",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({
       id:runId,
-      status:batchReceipt?.publishedCount?"complete":running?"processing":"draft",
+      status:receipt?.publishedCount?"complete":running?"processing":"draft",
       step:workflowStep,
       setupName:activeBundle.name,
       productTitle:`${bundleRecipes.length} products`,
       designCount:files.length,
-      state:{run:{bundleId:activeBundle.id,bundleName:activeBundle.name,productOrder:bundleRecipes.map(recipe=>recipe.id),activeProductId:activeRecipe?.id||"",startedAt:runStartedRef.current},batchReceipt:batchReceipt||null},
+      state:{run:{bundleId:activeBundle.id,bundleName:activeBundle.name,productOrder:bundleRecipes.map(recipe=>recipe.id),activeProductId:activeRecipe?.id||"",startedAt:runStartedRef.current},batchReceipt:receipt||null},
     })}).catch(()=>undefined);
   }
 
@@ -2534,7 +2534,7 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
         preparedMockupCounts:state.preparedMockupCounts||{}};
       return [recipe.id,{designs:designs.length,
         titled:designs.filter(design=>String(design.title||"").trim()).length,
-        tagged:designs.filter(design=>(design.tags||[]).length>=13).length,
+        tagged:designs.filter(design=>(design.tags||[]).length>0).length,
         /* D694 - the badge for a product she is not currently on could not see
            whether its Etsy fields were complete, so it had no way to report the
            one thing on this step that actually blocks publishing. Same map the
@@ -2563,7 +2563,7 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
 
   function productRows(recipe:Recipe,isActive:boolean):Array<{label:string;value:string;detail?:string;advice?:string;done:boolean;target?:string;task?:string;report?:boolean;optional?:boolean;pending?:boolean}>{
     const mine=isActive
-      ?{designs:files.length,titled:files.filter(file=>file.title.trim()).length,tagged:files.filter(file=>file.tags.length>=13).length,drafts:drafts.filter(draft=>draft.status==="Created").length,described:Boolean(description.trim()),complete,published:Number(batchReceipt?.publishedCount)||0,status:"",photos:Object.values(printifyImageSelections).reduce((total,ids)=>total+ids.length,0)||printifyImageIndices.length,mockups:Object.values(preparedMockupCounts).reduce((total,count)=>total+(Number(count)||0),0)}
+      ?{designs:files.length,titled:files.filter(file=>file.title.trim()).length,tagged:files.filter(file=>file.tags.length>0).length,drafts:drafts.filter(draft=>draft.status==="Created").length,described:Boolean(description.trim()),complete,published:Number(batchReceipt?.publishedCount)||0,status:"",photos:Object.values(printifyImageSelections).reduce((total,ids)=>total+ids.length,0)||printifyImageIndices.length,mockups:Object.values(preparedMockupCounts).reduce((total,count)=>total+(Number(count)||0),0)}
       :bundleBatchSummary[recipe.id];
     /* D500 - a product with no batch yet had no summary to read, so it returned
        no rows and its card collapsed back to a bare header - the exact thing
@@ -3436,6 +3436,19 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
     if(!activeBundle||bundleRecipes.length<2)return[] as Recipe[];
     return bundleRecipes.filter(recipe=>recipe.id!==activeRecipe?.id&&Boolean(bundleBatchIds[recipe.id])&&!bundleBatchSummary[recipe.id]);
   }
+  function runProductGaps(){
+    if(!activeBundle||bundleRecipes.length<2)return[] as string[];
+    for(const recipe of bundleRecipes){
+      const active=recipe.id===activeRecipe?.id;
+      const counts=active
+        ?{designs:files.length,titled:files.filter(file=>Boolean(file.title.trim())).length,tagged:files.filter(file=>file.tags.length>0).length}
+        :bundleBatchSummary[recipe.id];
+      if(!counts)return [`Goldie is still reading ${recipe.name}.`];
+      if(counts.titled<counts.designs)return [`Finish ${counts.designs-counts.titled} ${counts.designs-counts.titled===1?"title":"titles"} for ${recipe.name}.`];
+      if(counts.tagged<counts.designs)return [`Add tags to ${counts.designs-counts.tagged} ${counts.designs-counts.tagged===1?"listing":"listings"} for ${recipe.name}.`];
+    }
+    return [];
+  }
   function bundleListingsToPublish(){
     if(!activeBundle||bundleRecipes.length<2)return selectedPublishDrafts().length;
     return bundleRecipes.reduce((total,recipe)=>total+(recipe.id===activeRecipe?.id
@@ -3461,9 +3474,9 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
     setPublishing(true);setPublishMessage(resuming?"Goldie is safely resuming your queued batch…":"Goldie is publishing your listings…");
     try{let job:{id:string;status:string;total:number;completed:number;failed:number;queued:number;processing:number;finished:Array<{etsyListingId:number;url:string}>;failures?:Array<{productId:string;error:string}>;budget?:{remaining:number}}|undefined;
       while(!job||!["completed","needs_attention"].includes(job.status)||job.queued+job.processing>0){if(job){const currentJob=job,lowBudget=currentJob.budget?.remaining!==undefined&&currentJob.budget.remaining<25;setPublishMessage(lowBudget?"Your batch is safe in Goldie’s queue. Etsy’s shared allowance is resting before the next listing starts.":`Publishing safely: ${currentJob.completed} of ${currentJob.total} listings are live. You may leave this page and return later.`);await new Promise(resolve=>setTimeout(resolve,lowBudget?30000:1500))}const response=await fetch(`/api/printify/drafts/publish?jobId=${encodeURIComponent(jobId)}`,{cache:"no-store"}),payload=await response.json() as {job?:typeof job;error?:string};if(!response.ok||!payload.job)throw new Error(payload.error||"Goldie could not check this queued batch.");job=payload.job}
-      if(!job)throw new Error("Goldie could not load this queued batch.");localStorage.removeItem("goldie-active-publish-job");if(job.status==="needs_attention"){setPublishFailures(job.failures||[]);throw new Error(`${job.completed} of ${job.total} listings published. ${job.failed} ${job.failed===1?"listing needs":"listings need"} your attention before Goldie can finish the batch.`)}await rememberBatchDefaultsAfterPublish();setBatchReceipt({publishedCount:job.completed,etsyUrls:(job.finished||[]).map(item=>item.url).filter(Boolean),completedAt:new Date().toISOString()});/* D872 · One receipt, on the run. Autosave would get there eventually, but a
-        receipt that exists only in a tab is the thing D704 had to reconstruct
-        from publish records; write it to the run the moment it is known. */void persistRunNow();setPublishMessage("");
+      if(!job)throw new Error("Goldie could not load this queued batch.");localStorage.removeItem("goldie-active-publish-job");if(job.status==="needs_attention"){setPublishFailures(job.failures||[]);throw new Error(`${job.completed} of ${job.total} listings published. ${job.failed} ${job.failed===1?"listing needs":"listings need"} your attention before Goldie can finish the batch.`)}await rememberBatchDefaultsAfterPublish();const receipt={publishedCount:job.completed,etsyUrls:(job.finished||[]).map(item=>item.url).filter(Boolean),completedAt:new Date().toISOString()};setBatchReceipt(receipt);/* D874 · React state is asynchronous. Passing the receipt explicitly prevents
+        the run write from reading the prior null value and offering Resume over
+        listings that are already live. */await persistRunNow(receipt);setPublishMessage("");
     }catch(error){setPublishMessage(error instanceof Error?error.message:"Goldie could not resume this queued batch.")}finally{setPublishing(false)}
   }
   /* D419 - The confirm dialog's publish button had no disabled state, so a double

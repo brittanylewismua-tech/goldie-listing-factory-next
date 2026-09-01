@@ -87,7 +87,7 @@ test("the authorised set is frozen onto the job", () => {
 
 test("the client authorises the run, and records the receipt on it", () => {
   assert.match(app, /runBatchId:runIdRef\.current\|\|batchIdRef\.current/);
-  assert.match(app, /setBatchReceipt\(\{publishedCount:job\.completed[\s\S]{0,400}?void persistRunNow\(\);/);
+  assert.match(app, /const receipt=\{publishedCount:job\.completed[\s\S]{0,400}?setBatchReceipt\(receipt\)[\s\S]{0,400}?await persistRunNow\(receipt\);/);
   /* The run row is where the receipt lives, so history reports the whole run. */
-  assert.match(app, /state:\{run:\{[\s\S]*?\},batchReceipt:batchReceipt\|\|null\}/);
+  assert.match(app, /state:\{run:\{[\s\S]*?\},batchReceipt:receipt\|\|null\}/);
 });
