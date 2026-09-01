@@ -1336,11 +1336,13 @@ html, body { background: var(--lf-paper); }
    Step 3's is .secondary-action.prepare-etsy - an outline button - so with
    "Save as draft" beside it in its white pill, the quiet escape read as the
    louder of the two and the step's actual next move read as the aside. The
-   prototype's forward control is filled plum on every screen. Each step still
+   approved factory reference uses a black face with a hot-pink offset on every
+   screen. Each step still
    owns its own gate check, title and handler; only the treatment is shared. */
 .app-shell .factory-footer.in-bar > *:not(small){
-  border:0;border-radius:8px;background:#5d3151;color:#fff;
-  padding:11px 18px;height:auto;min-height:0;
+  border:0;border-radius:10px;background:#0d0b0c;color:#fff;
+  padding:13px 20px;height:auto;min-height:0;
+  box-shadow:4px 4px 0 var(--lf-pink);
   font:750 13px/1.2 Inter,ui-sans-serif,system-ui,sans-serif;cursor:pointer}
 .app-shell .factory-footer.in-bar > *:not(small):disabled{opacity:.5;cursor:not-allowed}
 

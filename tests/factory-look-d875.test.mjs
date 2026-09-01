@@ -60,6 +60,8 @@ test("Next step is black with a pink offset; Publish inverts it", () => {
      pink edge; the one that spends money is a lit pink face with a deep-plum
      edge, because black would vanish on the publish panel. */
   assert.match(css, /\.workflow-next\{[^}]*background:#0d0b0c[^}]*box-shadow:4px 4px 0 var\(--lf-pink\)/);
+  assert.match(css, /\.factory-footer\.in-bar > \*:not\(small\)\{[^}]*background:#0d0b0c[^}]*box-shadow:4px 4px 0 var\(--lf-pink\)/,
+    "the footer's more-specific shared action rule must not repaint Next step plum");
   assert.match(css, /\.publish-all-button\{[\s\S]*?background:linear-gradient\(#ff6ecd,#f52fb2\);[\s\S]*?4px 4px 0 var\(--lf-action-shadow\)/);
   assert.match(css, /--lf-action-shadow:#000/);
   /* Both need a disabled state: these buttons spend most of their life gated. */
@@ -86,4 +88,9 @@ test("the reference rail keeps opaque dark counters and its original spacing", (
   assert.match(css, /\.app-shell > \.topbar\{overflow:hidden;padding-top:36px;padding-bottom:25px\}/);
   assert.match(css, /\.approved-usage b,[\s\S]*?\.approved-usage span,[\s\S]*?\.listing-goal-side b\{color:#fff\}/,
     "counter values must remain readable white on the black rail");
+  const clarity = fs.readFileSync(new URL("../app/clarity-pass.css", import.meta.url), "utf8");
+  assert.match(clarity, /\.app-shell \.approved-usage span\{color:#fff!important\}/,
+    "the legacy important usage value is corrected at its source");
+  assert.match(clarity, /\.app-shell \.listing-goal-side>b\{[\s\S]*?color:#fff!important/,
+    "the legacy important goal value is corrected at its source");
 });

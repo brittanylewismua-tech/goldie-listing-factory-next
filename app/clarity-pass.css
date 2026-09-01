@@ -504,10 +504,10 @@
 .app-shell .recipe-card .delete-recipe{color:rgba(74,42,62,.72)!important}
 .app-shell .hero-step-count{color:rgba(74,42,62,.9)!important}
 .app-shell .account-link,
-.app-shell .approved-usage span,
 .app-shell .approved-powered>span,
 .app-shell .approved-sidebar-footer>small,
 .app-shell .etsy-api-disclosure{color:rgba(74,42,62,.95)!important}
+.app-shell .approved-usage span{color:#fff!important}
 
 /* D164 · Sizes became a selectable axis, so they get the colour card's idiom.
  * Size labels are short and their order is meaningful (S, M, L, 2XL), so they
@@ -1803,12 +1803,12 @@ body{min-width:0}
   text-decoration:none!important;
 }
 .app-shell .listing-goal-caption{
-  color:#7d5f74!important;
-  font:800 9px/1.2 "Manrope",system-ui,sans-serif;
+  color:#8e8e8e!important;
+  font:750 9px/1.2 Inter,system-ui,sans-serif;
   letter-spacing:.14em!important;text-transform:uppercase!important;
 }
 .app-shell .listing-goal-side>b{
-  color:#4c293f!important;font:800 15px/1.15 "Manrope",system-ui,sans-serif;
+  color:#fff!important;font:700 15px/1.2 Inter,system-ui,sans-serif;
   font-variant-numeric:tabular-nums!important;
 }
 .app-shell .listing-goal-track{
