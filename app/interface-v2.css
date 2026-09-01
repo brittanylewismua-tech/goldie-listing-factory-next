@@ -1418,7 +1418,6 @@ html, body { background: #f1d2dc; }
    rgba(255,247,251,.94) inside a rgba(104,54,88,.2) hairline. Production had
    60px on a flat #f8f4f6 inside #ded1d8, and its "?" was 30px Hanken
    Grotesk - the last place a second typeface was still rendering after D774. */
-.app-shell ~ .support-root .support-launcher,
 .support-root .support-launcher{
   width:58px;height:58px;
   background:rgba(255,247,251,.94);
@@ -2364,9 +2363,7 @@ html, body { background: #f1d2dc; }
    the only white circle in a plum-tinted app: same fill, same edge, same
    shadow family as the button it sits above, at the smaller size a secondary
    control should have. */
-.app-shell ~ .support-root .support-launcher,
 .support-root .support-launcher{font-size:25px;line-height:1}
-.app-shell ~ .support-root .support-video-launcher,
 .support-root .support-video-launcher{
   width:46px;height:46px;
   border:1px solid #d9cbd3;
@@ -2842,4 +2839,12 @@ html, body { background: #f1d2dc; }
   .app-shell .workflow-footer-actions>.autosave-note{display:none}
   .app-shell .factory-footer.in-bar>small{
     white-space:normal;overflow:visible;text-overflow:clip}
+}
+
+/* D865 · Keep the fixed help controls clear of the Listing Factory's
+   70px sticky action bar. SupportChat is rendered inside .app-shell, so this
+   must be a descendant selector; the former sibling selector never matched. */
+@media(min-width:821px){
+  .app-shell .support-root .support-launcher{bottom:86px}
+  .app-shell .support-root .support-video-launcher{bottom:146px}
 }
