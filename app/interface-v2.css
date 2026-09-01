@@ -2969,3 +2969,27 @@ html, body { background: var(--lf-paper); }
 .final-artwork-summary{display:grid;gap:5px;margin:8px 0;padding:8px 10px;border-left:2px solid #b86d91;background:#fbf7fa}
 .final-artwork-summary>span{display:grid;gap:1px}.final-artwork-summary b{font-size:12px}.final-artwork-summary small{font-size:11px;color:#755d6d}
 @media(max-width:1050px){.artwork-assignment-matrix>label{grid-template-columns:1fr}.actual-cost-review{align-items:flex-start;flex-direction:column}}
+
+/* D881 · The artwork assignment matrix was rendering inside the 282px columns
+   of the design review grid. At three designs it measured 402px in a 282px
+   card and painted over both neighbours, and .design-artwork-primary collapsed
+   its middle track to 0px so the filename and Remove overprinted the copy.
+   A colour table with a swatch, a name and a file select is a workspace, not a
+   thumbnail caption, so the review drops to one full-width column for any card
+   that carries the tools. Cards without them keep the compact grid. */
+.app-shell .design-upload-review:has(.artwork-version-tools){grid-template-columns:minmax(0,1fr)}
+.app-shell .design-artwork-card:has(.artwork-version-tools){grid-template-columns:minmax(0,1fr)}
+.app-shell .design-artwork-card:has(.artwork-version-tools)>.design-artwork-primary{
+  grid-template-columns:76px minmax(0,1fr) auto;align-items:center}
+.app-shell .artwork-assignment-matrix{width:100%;max-width:none}
+.app-shell .artwork-assignment-matrix label{grid-template-columns:minmax(160px,1fr) minmax(0,2fr)}
+.app-shell .artwork-assignment-matrix select{width:100%;text-overflow:ellipsis}
+
+/* The release control for a financial gate was rendering as bare text. */
+.app-shell .actual-cost-review button{
+  border:0;border-radius:10px;padding:10px 16px;
+  background:linear-gradient(145deg,#ff6ecd,#f52fb2);color:#3d0b2b;
+  font-weight:800;cursor:pointer}
+.app-shell .actual-cost-review button:disabled{
+  background:rgba(109,26,78,.12);color:rgba(74,42,62,.55);cursor:not-allowed}
+.app-shell .actual-cost-review.approved>strong{color:#2f6b45}

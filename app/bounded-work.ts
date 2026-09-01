@@ -1,4 +1,4 @@
-export async function runBounded<T, R>(items: T[], limit: number, task: (item: T) => Promise<R>, onComplete: (result: R) => void | Promise<void>) {
+export async function runBounded<T, R>(items: T[], limit: number, task: (item: T) => Promise<R>, onComplete?: (result: R) => void | Promise<void>) {
   if (!Number.isInteger(limit) || limit < 1) throw new Error("Concurrency limit must be a positive integer.");
   let nextIndex = 0;
   async function worker() {
@@ -6,7 +6,10 @@ export async function runBounded<T, R>(items: T[], limit: number, task: (item: T
       const index = nextIndex;
       nextIndex += 1;
       const result = await task(items[index]);
-      await onComplete(result);
+      /* D881 · Optional by contract now. It was required, invoked unguarded, and
+         one caller in seven omitted it - the finished-cost approval - so that
+         gate threw on every press and no seller could ever release it. */
+      if (onComplete) await onComplete(result);
     }
   }
   await Promise.all(Array.from({ length: Math.min(limit, items.length) }, () => worker()));

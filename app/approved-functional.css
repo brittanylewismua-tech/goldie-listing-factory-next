@@ -667,7 +667,7 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
    full listing-image workspace. Remove the empty stage from layout so the
    real content begins directly below the step heading. */
 @media(min-width:821px){
-  .workspace.mockup-workspace .workflow-stage{display:none!important}
+  .workspace.mockup-workspace .workflow-stage:not(:has(.actual-cost-review,.retry-button)){display:none!important}
 }
   .app-shell .connect-step .printify-service-group{display:grid;border:1px solid #ded6dc;border-radius:14px;background:rgba(252,244,254,.46);overflow:visible}
   .app-shell .connect-step .printify-service-group>.connection-row{border:0!important}
