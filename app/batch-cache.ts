@@ -14,7 +14,7 @@ const DB_NAME="goldie-listing-factory";
 const STORE="batch-files";
 const KEEP_RECENT=12;
 
-type Entry={files:File[];savedAt:number};
+type Entry={files:File[];assets?:Record<string,File>;savedAt:number};
 
 function openDb(){return new Promise<IDBDatabase>((resolve,reject)=>{const request=indexedDB.open(DB_NAME,1);request.onupgradeneeded=()=>{if(!request.result.objectStoreNames.contains(STORE))request.result.createObjectStore(STORE)};request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error)})}
 
@@ -50,7 +50,8 @@ export async function saveBatchFiles(batchId:string,files:File[]):Promise<boolea
   let database:IDBDatabase|null=null;
   try{
     database=await openDb();
-    const entry:Entry={files,savedAt:Date.now()};
+    const prior=await new Promise<unknown>(resolve=>{const request=database!.transaction(STORE).objectStore(STORE).get(batchId);request.onsuccess=()=>resolve(request.result);request.onerror=()=>resolve(null)});
+    const entry:Entry={files,assets:readEntry(prior)?.assets,savedAt:Date.now()};
     try{
       await put(database,batchId,entry);
     }catch{
@@ -64,6 +65,28 @@ export async function saveBatchFiles(batchId:string,files:File[]):Promise<boolea
   }catch{
     return false;
   }finally{ database?.close() }
+}
+
+/** Cache secondary colour/back artwork without disturbing the primary designs. */
+export async function saveBatchArtworkAssets(batchId:string,assets:Record<string,File>):Promise<boolean>{
+  let database:IDBDatabase|null=null;
+  try{
+    database=await openDb();
+    const prior=await new Promise<unknown>(resolve=>{const request=database!.transaction(STORE).objectStore(STORE).get(batchId);request.onsuccess=()=>resolve(request.result);request.onerror=()=>resolve(null)});
+    const entry=readEntry(prior)||{files:[],savedAt:0};
+    await put(database,batchId,{...entry,assets,savedAt:Date.now()});
+    await pruneOldest(database,KEEP_RECENT);
+    return true;
+  }catch{return false}finally{database?.close()}
+}
+
+export async function loadBatchArtworkAssets(batchId:string):Promise<Record<string,File>>{
+  let database:IDBDatabase|null=null;
+  try{
+    database=await openDb();
+    const value=await new Promise<unknown>((resolve,reject)=>{const request=database!.transaction(STORE).objectStore(STORE).get(batchId);request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error)});
+    return readEntry(value)?.assets??{};
+  }catch{return {}}finally{database?.close()}
 }
 
 export async function loadBatchFiles(batchId:string):Promise<File[]>{

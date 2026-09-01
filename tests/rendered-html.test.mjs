@@ -147,7 +147,7 @@ test("uses individual shop-aware Printify editor buttons", async () => {
   assert.match(page, /Add at least one design/);
   assert.match(page, /title: design\.title \|\| undefined/);
   assert.doesNotMatch(page, /listingTitle/);
-  assert.match(route, /body\.title\?\.trim\(\)\.slice\(0, 255\) \|\| body\.fileName/);
+  assert.match(route, /body\.title\?\.trim\(\)\.slice\(0, 255\) \|\| requestedArtworks\[0\]\.fileName/);
   assert.match(page, /Choose or add a saved product/);
   assert.match(page, /function startOver\(\)/);
   assert.match(page, /Clear batch \+ start over/);
@@ -180,7 +180,7 @@ test("uses individual shop-aware Printify editor buttons", async () => {
   assert.match(page, /8253\|Provided images do not exist/);
   assert.match(page, /Download it fully to your computer/);
   assert.match(page, /const waits = \[0, 1500, 4000\]/);
-  assert.match(route, /stagedIdForCleanup/);
+  assert.match(route, /stagedIdsForCleanup/);
   assert.match(route, /finally/);
   assert.match(route, /printAreasWithOnlyCurrentArtwork/);
   assert.doesNotMatch(route, /image\.id === primaryTemplateImageId/);
@@ -539,9 +539,10 @@ test("retries Printify remote-artwork download interruptions before failing the 
 
 test("sends optimized staged artwork directly to Printify", async () => {
   const route = await readFile(new URL("../app/api/printify/drafts/route.ts", import.meta.url), "utf8");
-  assert.match(route, /ARTWORK\?\.get\(body\.stagedId\)/);
-  assert.match(route, /contents = await artworkContents/);
-  assert.match(route, /file_name: body\.fileName!, contents/);
+  assert.match(route, /ARTWORK\?\.get\(artwork\.stagedId\)/);
+  assert.match(route, /contents: await artworkContents/);
+  assert.match(route, /file_name: source\.fileName, contents: source\.contents/);
+  assert.match(route, /for \(const artwork of requestedArtworks\)/, "every colour or print-side asset is ownership-checked and uploaded");
 });
 
 test("parses real eRank exports and creates Etsy-valid title phrases", async () => {

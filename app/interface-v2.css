@@ -2852,7 +2852,6 @@ html, body { background: #f1d2dc; }
    absolutely-centred item inside the action bar lets long status copy paint
    underneath it, so the redundant in-bar copy stays out at every shell width. */
 .app-shell .workflow-footer-actions>.autosave-note{display:none}
-
 /* D871 · The products inside a bundle run's history card. */
 .app-shell .batch-history-members{display:flex;flex-wrap:wrap;gap:7px 16px;margin:9px 0 0;padding:0;list-style:none}
 .app-shell .batch-history-members li{display:flex;align-items:center;gap:7px;min-width:0}
@@ -2860,3 +2859,26 @@ html, body { background: #f1d2dc; }
 .app-shell .batch-history-members small{font:600 11px/1.2 Inter,ui-sans-serif,system-ui,sans-serif;color:rgba(74,42,62,.62)}
 .app-shell .batch-history-members .member-mark{display:inline-grid;place-items:center;flex:0 0 18px;width:18px;height:18px;border-radius:50%;background:#eee8ec;color:#654f60;font:750 10px/1 Inter,ui-sans-serif,system-ui,sans-serif}
 .app-shell .batch-history-members li.done .member-mark{background:#e4f2e8;color:#2f7350}
+
+/* Artwork variants belong to one listing design. Keep the primary identity and
+   every optional print asset in one card rather than making alternates look
+   like additional Etsy listings. */
+.app-shell .design-artwork-card{display:grid;gap:12px;padding:14px;background:#fff;border:1px solid #ded6dc;border-radius:12px}
+.app-shell .design-artwork-primary{display:grid;grid-template-columns:64px minmax(0,1fr) auto;gap:12px;align-items:center}
+.app-shell .design-artwork-primary>div{display:grid;gap:3px;min-width:0}
+.app-shell .design-artwork-primary b,.app-shell .design-artwork-primary small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.app-shell .design-artwork-primary em{font-size:11px;font-style:normal;color:#765e70}
+.app-shell .artwork-version-tools{display:grid;gap:6px;padding-top:12px;border-top:1px solid #eee8ec}
+.app-shell .artwork-version-tools>small{color:#765e70}
+.app-shell .artwork-version-tools>div{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.app-shell .artwork-version-tools label.secondary-action{display:inline-flex;align-items:center;min-height:36px;padding:8px 12px;cursor:pointer}
+.app-shell .print-area-unavailable{max-width:430px;font-size:11px;line-height:1.4;color:#806b7a}
+.app-shell .artwork-version{display:grid;grid-template-columns:72px minmax(0,1fr) auto;gap:12px;align-items:start;padding:12px;background:#fbf8fa;border:1px solid #e5dce2;border-radius:10px}
+.app-shell .artwork-version>img{width:72px;height:72px;object-fit:contain;border-radius:8px;background-color:#f3eff2;background-image:linear-gradient(45deg,#e4dde2 25%,transparent 25%),linear-gradient(-45deg,#e4dde2 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#e4dde2 75%),linear-gradient(-45deg,transparent 75%,#e4dde2 75%);background-size:12px 12px;background-position:0 0,0 6px,6px -6px,-6px 0}
+.app-shell .artwork-version>div{display:grid;gap:3px;min-width:0}
+.app-shell .artwork-version fieldset{display:flex;gap:6px;flex-wrap:wrap;margin:7px 0 0;padding:0;border:0}
+.app-shell .artwork-version legend{width:100%;margin-bottom:4px;font-size:11px;color:#765e70}
+.app-shell .artwork-version fieldset button{display:inline-flex;align-items:center;gap:5px;min-height:30px;padding:5px 8px;background:#fff;border:1px solid #ded6dc;border-radius:8px;font-size:11px;color:#55344c}
+.app-shell .artwork-version fieldset button.selected{border-color:#6b3a58;background:#f3e9ef;box-shadow:inset 0 0 0 1px #6b3a58}
+.app-shell .artwork-version fieldset i{width:13px;height:13px;border:1px solid #ded6dc;border-radius:50%}
+.app-shell .artwork-color-required{display:block;margin-top:5px;color:#963f54;font-size:12px;font-style:normal;font-weight:700}

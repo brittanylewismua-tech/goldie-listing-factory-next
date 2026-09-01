@@ -6,6 +6,17 @@ type TemplateArea = {
   background?: string;
 };
 
+export type ArtworkAssignment = {
+  /** The exact Printify placeholder, normally `front` or `back`. */
+  position: string;
+  /** Printify variant ids receiving this artwork on this side. */
+  variantIds: number[];
+  /** A caller-owned key resolved to the freshly uploaded Printify image id. */
+  artworkKey: string;
+  bounds?: { left: number; top: number; right: number; bottom: number };
+  maxPlacementScale?: number;
+};
+
 /* D614 - internal label placeholders are excluded from new products.
 
    D594 saw a small copy of the design at the collar and concluded the seller had
@@ -73,6 +84,74 @@ export function printAreasWithOnlyCurrentArtwork(areas: TemplateArea[], currentI
   }
   if (result.some((area) => area.placeholders.some((placeholder) => isLabelPlaceholder(placeholder.position)))) {
     throw new Error("Goldie blocked a draft that would write to an inside-label placeholder.");
+  }
+  return result;
+}
+
+/**
+ * Build Printify print areas for artwork that varies by garment variant and/or
+ * print side. The saved product remains the source of placement geometry; only
+ * freshly uploaded artwork ids may leave this function.
+ *
+ * Printify groups variants into print areas. A colour-artwork mapping may split
+ * one saved area into several outgoing areas, each retaining the placement for
+ * the requested side. Front and back assignments may coexist for the same
+ * variants in the same outgoing area when they use the same artwork grouping.
+ */
+export function printAreasForArtworkAssignments(
+  areas: TemplateArea[],
+  assignments: ArtworkAssignment[],
+  uploadedImageIds: Record<string, string>,
+) {
+  if (!assignments.length) throw new Error("Choose artwork for at least one print area.");
+  const canonicalPosition=(position:string)=>/front|chest/i.test(position)?"front":/back/i.test(position)?"back":position.toLowerCase();
+
+  const claimed = new Set<string>();
+  for (const assignment of assignments) {
+    if (!assignment.artworkKey || !uploadedImageIds[assignment.artworkKey]) {
+      throw new Error(`Artwork for ${assignment.position || "a print area"} was not uploaded.`);
+    }
+    if (isLabelPlaceholder(assignment.position)) {
+      throw new Error("Goldie blocked artwork assigned to an inside-label placeholder.");
+    }
+    for (const variantId of assignment.variantIds) {
+      const key = `${canonicalPosition(assignment.position)}:${variantId}`;
+      if (claimed.has(key)) throw new Error(`Variant ${variantId} has more than one artwork assignment for ${assignment.position}.`);
+      claimed.add(key);
+    }
+  }
+
+  const result: Array<{ variant_ids: number[]; placeholders: Array<{ position: string; images: Array<{ id: string; x: number; y: number; scale: number; angle: number }> }>; background?: string }> = [];
+  for (const area of areas) {
+    const grouped=new Map<string,{variant_ids:number[];placeholders:Array<{position:string;images:Array<{id:string;x:number;y:number;scale:number;angle:number}>}>;background?:string}>();
+    for(const variantId of area.variant_ids){
+      const matching=assignments.filter(assignment=>assignment.variantIds.includes(variantId));
+      if(!matching.length)continue;
+      const placeholders=matching.map(assignment=>{
+        const requestedPosition=assignment.position.toLowerCase();
+        const matchesPosition=(actual:string)=>actual.toLowerCase()===requestedPosition||(requestedPosition==="front"&&/front|chest/i.test(actual))||(requestedPosition==="back"&&/back/i.test(actual));
+        const placeholder=area.placeholders.find(candidate=>matchesPosition(candidate.position));
+        if(!placeholder?.images?.[0])throw new Error(`The saved Printify product does not have prepared placement for ${assignment.position}.`);
+        const placement=artworkPlacement(placeholder.images[0],assignment.bounds,assignment.maxPlacementScale);
+        return {position:placeholder.position,images:[{id:uploadedImageIds[assignment.artworkKey],x:placement.x,y:placement.y,scale:placement.scale,angle:placement.angle}]};
+      }).sort((left,right)=>left.position.localeCompare(right.position));
+      const signature=JSON.stringify(placeholders);
+      const existing=grouped.get(signature);
+      if(existing)existing.variant_ids.push(variantId);
+      else grouped.set(signature,{variant_ids:[variantId],placeholders,...(area.background?{background:area.background}:{})});
+    }
+    result.push(...grouped.values());
+  }
+
+  const requested = new Set(assignments.flatMap((assignment) => assignment.variantIds.map((id) => `${canonicalPosition(assignment.position)}:${id}`)));
+  const produced = new Set(result.flatMap((area) => area.placeholders.flatMap((placeholder) => area.variant_ids.map((id) => `${canonicalPosition(placeholder.position)}:${id}`))));
+  const missing = [...requested].filter((key) => !produced.has(key));
+  if (missing.length) throw new Error(`The saved Printify product cannot print ${missing.length} selected artwork assignment${missing.length === 1 ? "" : "s"}.`);
+
+  const allowedIds = new Set(Object.values(uploadedImageIds));
+  const outgoingIds = result.flatMap((area) => area.placeholders.flatMap((placeholder) => placeholder.images.map((image) => image.id)));
+  if (outgoingIds.some((id) => !allowedIds.has(id))) {
+    throw new Error("Goldie blocked a draft containing an inherited template image ID.");
   }
   return result;
 }

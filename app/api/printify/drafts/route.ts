@@ -6,7 +6,7 @@ import { customerLaunchBlock } from "@/app/customer-launch-gate";
 import { publicSupportReference, recordDiagnostic } from "../diagnostics";
 import { createProductWithImageRetries } from "../product-creation";
 import { readPrintSide, artworkPlacement } from "../../../placement-math.ts";
-import { printAreasWithOnlyCurrentArtwork } from "../product-payload";
+import { printAreasForArtworkAssignments, printAreasWithOnlyCurrentArtwork, type ArtworkAssignment } from "../product-payload";
 import { planFor } from "@/app/plan-limits";
 import { decryptPrintifyToken } from "../token-crypto";
 import { recommendedPrice } from "@/app/pricing";
@@ -128,18 +128,24 @@ async function handlePOST(request: Request) {
   if (!user) return NextResponse.json({ error: "Sign in to continue." }, { status: 401 });
   const launchBlock = await customerLaunchBlock(user);
   if (launchBlock) return NextResponse.json({ error: launchBlock }, { status: 503 });
-  let stagedIdForCleanup = "";
+  const stagedIdsForCleanup: string[] = [];
   let supportReference = "";
   let diagnosticStage = "request_validation";
   let idempotencyKey = "";
   try {
-    const body = (await request.json()) as { batchId?: string; title?: string; tags?: string[]; description?: string; visibleBounds?:{left:number;top:number;right:number;bottom:number}; maxPlacementScale?:number; fileName?: string; stagedId?: string; supportReference?: string; clientId?: string; variantPrices?:Record<string,number>; selectedVariantIds?:number[]; etsyBuyerShipping?:number; shippingTemplateId?:number; pricing?: { targetProfit?: number; etsyFeePercent?: number; fixedFee?: number; listingFee?: number; shippingCost?: number; shippingCharged?: number } };
-    stagedIdForCleanup = body.stagedId ?? "";
+    const body = (await request.json()) as { batchId?: string; title?: string; tags?: string[]; description?: string; visibleBounds?:{left:number;top:number;right:number;bottom:number}; maxPlacementScale?:number; fileName?: string; stagedId?: string; artworks?:Array<{key:string;fileName:string;stagedId:string;bounds?:{left:number;top:number;right:number;bottom:number};maxPlacementScale?:number}>; artworkAssignments?:ArtworkAssignment[]; supportReference?: string; clientId?: string; variantPrices?:Record<string,number>; selectedVariantIds?:number[]; etsyBuyerShipping?:number; shippingTemplateId?:number; pricing?: { targetProfit?: number; etsyFeePercent?: number; fixedFee?: number; listingFee?: number; shippingCost?: number; shippingCharged?: number } };
+    stagedIdsForCleanup.push(...(body.artworks?.map((artwork) => artwork.stagedId) ?? []), ...(body.stagedId ? [body.stagedId] : []));
     supportReference = body.supportReference?.replace(/[^A-Z0-9-]/gi, "").slice(0, 40) ?? "";
-    if (!body.batchId || !body.fileName || !body.stagedId) return NextResponse.json({ error: "The prepared batch and design file are required." }, { status: 400 });
+    const requestedArtworks = body.artworks?.length
+      ? body.artworks
+      : body.fileName && body.stagedId
+        ? [{ key: "primary", fileName: body.fileName, stagedId: body.stagedId, bounds: body.visibleBounds, maxPlacementScale: body.maxPlacementScale }]
+        : [];
+    if (!body.batchId || !requestedArtworks.length) return NextResponse.json({ error: "The prepared batch and design file are required." }, { status: 400 });
+    if (new Set(requestedArtworks.map((artwork) => artwork.key)).size !== requestedArtworks.length) return NextResponse.json({ error: "Each artwork version needs a unique identifier." }, { status: 400 });
     const db = runtimeEnv().DB;
     if (!db) throw new Error("Secure batch storage is unavailable.");
-    idempotencyKey = await requestKey(body.batchId, body.clientId ?? body.fileName);
+    idempotencyKey = await requestKey(body.batchId, body.clientId ?? body.fileName ?? requestedArtworks[0].fileName);
     const prior = await db.prepare("SELECT status, response_json, updated_at FROM printify_draft_results WHERE request_key = ? AND user_id = ?")
       .bind(idempotencyKey, user.userId).first<{ status: string; response_json: string | null; updated_at: string }>();
     if (prior?.status === "succeeded" && prior.response_json) return NextResponse.json({ draft: JSON.parse(prior.response_json) });
@@ -147,7 +153,7 @@ async function handlePOST(request: Request) {
       return NextResponse.json({ error: "Goldie is still completing this exact draft. It will be checked again automatically." }, { status: 409 });
     }
     await db.prepare("INSERT INTO printify_draft_results (request_key, user_id, batch_id, client_id, status, updated_at) VALUES (?, ?, ?, ?, 'running', CURRENT_TIMESTAMP) ON CONFLICT(request_key) DO UPDATE SET status = 'running', response_json = NULL, updated_at = CURRENT_TIMESTAMP")
-      .bind(idempotencyKey, user.userId, body.batchId, body.clientId ?? body.fileName).run();
+      .bind(idempotencyKey, user.userId, body.batchId, body.clientId ?? body.fileName ?? requestedArtworks[0].fileName).run();
     const planRow = await db.prepare("SELECT plan_key FROM account_plans WHERE user_id=?").bind(user.userId).first<{plan_key:string}>();
     const plan = planFor(planRow?.plan_key, isOwner(user));
     const reserved = await db.prepare("SELECT COUNT(*) count FROM printify_draft_results WHERE user_id=? AND ((status='succeeded' AND updated_at>=datetime('now','start of month')) OR (status='running' AND updated_at>=datetime('now','-10 minutes')))").bind(user.userId).first<{count:number}>();
@@ -173,17 +179,27 @@ async function handlePOST(request: Request) {
 
     diagnosticStage = "printify_upload";
     await recordDiagnostic(runtimeEnv().DB, supportReference, { stage: diagnosticStage, event: "started", shopId: shop.id });
-    const stagedArtwork = await runtimeEnv().ARTWORK?.get(body.stagedId);
-    if (!stagedArtwork) throw new Error("Goldie could not retrieve the staged artwork.");
-    if (stagedArtwork.customMetadata?.owner !== user.userId) throw new Error("This staged artwork does not belong to the signed-in account.");
-    if (Number(stagedArtwork.customMetadata?.expires ?? 0) <= Date.now()) throw new Error("The staged artwork expired before Printify could retrieve it.");
-    const contents = await artworkContents(stagedArtwork.body);
-    const uploadArtwork = () => api<UploadedImage>("/uploads/images.json", token, {
-        method: "POST",
-        body: JSON.stringify({ file_name: body.fileName!, contents }),
-      }, (attempt, status) => recordDiagnostic(runtimeEnv().DB, supportReference, { stage: "printify_upload", event: "retry", attempt, httpStatus: status ?? null, shopId: shop.id }));
-    let upload = await uploadArtwork();
-    if (!upload.id) throw new Error("Printify accepted the artwork request but did not return an image ID.");
+    const artworkSources = new Map<string, { fileName: string; contents: string }>();
+    for (const artwork of requestedArtworks) {
+      const stagedArtwork = await runtimeEnv().ARTWORK?.get(artwork.stagedId);
+      if (!stagedArtwork) throw new Error(`Goldie could not retrieve ${artwork.fileName}.`);
+      if (stagedArtwork.customMetadata?.owner !== user.userId) throw new Error("This staged artwork does not belong to the signed-in account.");
+      if (Number(stagedArtwork.customMetadata?.expires ?? 0) <= Date.now()) throw new Error(`${artwork.fileName} expired before Printify could retrieve it.`);
+      artworkSources.set(artwork.key, { fileName: artwork.fileName, contents: await artworkContents(stagedArtwork.body) });
+    }
+    const uploadedImageIds: Record<string, string> = {};
+    const uploadAllArtwork = async () => {
+      for (const artwork of requestedArtworks) {
+        const source = artworkSources.get(artwork.key)!;
+        const upload = await api<UploadedImage>("/uploads/images.json", token, {
+          method: "POST",
+          body: JSON.stringify({ file_name: source.fileName, contents: source.contents }),
+        }, (attempt, status) => recordDiagnostic(runtimeEnv().DB, supportReference, { stage: "printify_upload", event: "retry", attempt, httpStatus: status ?? null, shopId: shop.id }));
+        if (!upload.id) throw new Error(`Printify accepted ${source.fileName} but did not return an image ID.`);
+        uploadedImageIds[artwork.key] = upload.id;
+      }
+    };
+    await uploadAllArtwork();
     await recordDiagnostic(runtimeEnv().DB, supportReference, { stage: diagnosticStage, event: "succeeded", shopId: shop.id });
     // The private app sends the staged bytes directly to Printify. Large opaque
     // artwork is optimized in the browser first so this request stays reliable.
@@ -191,7 +207,7 @@ async function handlePOST(request: Request) {
     // that lookup even though the uploaded image ID is valid. Draft creation
     // below is the authoritative registration check and retries only when
     // Printify itself returns image-not-ready error 8253.
-    const title = body.title?.trim().slice(0, 255) || body.fileName.replace(/\.[^.]+$/, "").replace(/[_-]+/g, " ").trim();
+    const title = body.title?.trim().slice(0, 255) || requestedArtworks[0].fileName.replace(/\.[^.]+$/, "").replace(/[_-]+/g, " ").trim();
     const selectedShippingTemplateId=Number(body.shippingTemplateId)>0?String(Math.trunc(Number(body.shippingTemplateId))):template.shippingTemplateId;
     if(!selectedShippingTemplateId)throw new Error("Choose the shipping profile for this batch before creating drafts.");
     const productBody = () => JSON.stringify({
@@ -205,7 +221,9 @@ async function handlePOST(request: Request) {
         sales_channel_properties:{free_shipping:Boolean(template.freeShipping)},
         // Never carry media-library IDs from the template into a different
         // product request. Only the image uploaded in this request is valid.
-        print_areas: printAreasWithOnlyCurrentArtwork(template.print_areas, upload.id, body.visibleBounds, body.maxPlacementScale),
+        print_areas: body.artworkAssignments?.length
+          ? printAreasForArtworkAssignments(template.print_areas, body.artworkAssignments, uploadedImageIds)
+          : printAreasWithOnlyCurrentArtwork(template.print_areas, uploadedImageIds.primary, body.visibleBounds, body.maxPlacementScale),
     });
     diagnosticStage = "draft_creation";
     await recordDiagnostic(runtimeEnv().DB, supportReference, { stage: diagnosticStage, event: "started", shopId: shop.id });
@@ -216,8 +234,7 @@ async function handlePOST(request: Request) {
         /* D613 - one controlled re-upload, on the FIRST image error rather than
            the third. If the replacement is rejected too, the ladder stops. */
         if (imageErrors === 1) {
-          upload = await uploadArtwork();
-          if (!upload.id) throw new Error("Printify did not return a replacement image ID.");
+          await uploadAllArtwork();
         }
       },
     });
@@ -316,7 +333,7 @@ async function handlePOST(request: Request) {
     await recordDiagnostic(runtimeEnv().DB, supportReference, { stage: diagnosticStage, event: "failed", message });
     return NextResponse.json({ error: `${message}${publicSupportReference(supportReference)}` }, { status: 500 });
   } finally {
-    if (stagedIdForCleanup) await runtimeEnv().ARTWORK?.delete(stagedIdForCleanup).catch(() => undefined);
+    await Promise.all([...new Set(stagedIdsForCleanup)].map((stagedId) => runtimeEnv().ARTWORK?.delete(stagedId).catch(() => undefined)));
   }
 }
 
