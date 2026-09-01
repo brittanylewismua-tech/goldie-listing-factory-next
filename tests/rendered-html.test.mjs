@@ -4007,7 +4007,7 @@ test("one press publishes every product in a bundle — D495", async () => {
   // Every listing in the bundle goes in one request, each with its own settings.
   assert.match(app, /function publishTargets\(\)/);
   assert.match(app, /const byProduct=Object\.fromEntries\(everything\.map\(item=>\[item\.id,\{selections:item\.selections,indices:item\.indices,shippingProfileId:item\.shippingProfileId\}\]\)\)/);
-  assert.match(app, /productIds:ids,printifyImageIndices,printifyImageSelections,etsyShippingProfileId,byProduct/);
+  assert.match(app, /productIds:ids,\/\*[\s\S]*?\*\/runBatchId:runIdRef\.current\|\|batchIdRef\.current,printifyImageIndices,printifyImageSelections,etsyShippingProfileId,byProduct/);
 
   // The last screen before money is spent has to state the real total and fee.
   /* D634 - this asserted the confirmation counted designs x products. It does
@@ -5909,9 +5909,13 @@ test("every number on the publish screen comes from the selected targets — D63
   assert.doesNotMatch(app, /Publishing sends all \$\{bundleRecipes\.length\} products in this batch/);
 
   /* Guard the instruction that came with this change: labels only. The sent
-     payload and the confirmation must be exactly as D626/D634 left them. */
-  assert.match(app, /body:JSON\.stringify\(\{productIds:ids,printifyImageIndices,printifyImageSelections,etsyShippingProfileId,byProduct\}\)/,
-    "the publish payload is unchanged");
+     payload and the confirmation must be exactly as D626/D634 left them, apart
+     from D872's runBatchId - the run the seller authorised, which makes the
+     queue create one job for the whole bundle instead of one per product
+     record. The selected targets are still the only thing that decides WHAT is
+     published. */
+  assert.match(app, /body:JSON\.stringify\(\{productIds:ids,[\s\S]*?runBatchId:runIdRef\.current\|\|batchIdRef\.current,printifyImageIndices,printifyImageSelections,etsyShippingProfileId,byProduct\}\)/,
+    "the publish payload adds only the run it belongs to");
   assert.match(app, /const everything=publishTargets\(\);\n    const ids=everything\.map\(item=>item\.id\);if\(!ids\.length\)return;/,
     "publishAll still sends exactly the selected targets");
 });
@@ -6234,7 +6238,7 @@ test("a corrected shipping profile reaches the job, and a stale one blocks first
 
   // And the blob is built once, early, so both writers use the same value.
   assert.match(route, /const settingsJson=JSON\.stringify\(\{printifyImageIndices:/);
-  assert.match(route, /\n  settings=settingsJson;/);
+  assert.match(route, /settings=JSON\.stringify\(\{\.\.\.JSON\.parse\(settingsJson\|\|"\{\}"\),frozenProductIds:ids\.map\(String\),frozenAt:new Date\(\)\.toISOString\(\)\}\);/);
 
   // A profile from another shop is refused before the press, by name.
   assert.match(app, /const shopProfiles=new Set\(etsyShippingProfiles\.map\(profile=>Number\(profile\.id\)\)\)/);

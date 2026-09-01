@@ -10,7 +10,7 @@ import { etsyConnection, etsyFetch } from "@/app/api/etsy/client";
 
 export async function POST(request:Request){
   const user=await getChatGPTUser();if(!user)return NextResponse.json({error:"Sign in to publish these listings."},{status:401});
-  const body=await request.json() as {productIds?:string[];printifyImageIndices?:number[];printifyImageSelections?:Record<string,number[]>;etsyShippingProfileId?:number;byProduct?:Record<string,{indices?:number[];selections?:number[];shippingProfileId?:number}>},ids=[...new Set((body.productIds||[]).map(String).filter(Boolean))],etsyShippingProfileId=Number(body.etsyShippingProfileId);
+  const body=await request.json() as {productIds?:string[];runBatchId?:string;printifyImageIndices?:number[];printifyImageSelections?:Record<string,number[]>;etsyShippingProfileId?:number;byProduct?:Record<string,{indices?:number[];selections?:number[];shippingProfileId?:number}>},ids=[...new Set((body.productIds||[]).map(String).filter(Boolean))],etsyShippingProfileId=Number(body.etsyShippingProfileId);
   if(!ids.length)return NextResponse.json({error:"Choose at least one completed listing."},{status:400});
   /* D643 - built here so a retry can refresh the job before anything returns early. */
   const settingsJson=JSON.stringify({printifyImageIndices:[...new Set((body.printifyImageIndices||[]).map(Number).filter(Number.isInteger))],printifyImageSelections:body.printifyImageSelections||{},etsyShippingProfileId,byProduct:Object.fromEntries(Object.entries(body.byProduct||{}).map(([productId,entry])=>[String(productId),{indices:Array.isArray(entry?.indices)?entry.indices.map(Number).filter(Number.isInteger):undefined,selections:Array.isArray(entry?.selections)?entry.selections.map(Number).filter(Number.isInteger):undefined,shippingProfileId:Number(entry?.shippingProfileId)||undefined}]))});if(!Number.isInteger(etsyShippingProfileId)||etsyShippingProfileId<=0)return NextResponse.json({error:"Choose an Etsy shipping profile before publishing."},{status:400});
@@ -71,10 +71,21 @@ export async function POST(request:Request){
   }
   const plan=planFor(planRow?.plan_key,isOwner(user)),reserved=Number(pending?.count||0),monthlyRemaining=plan.drafts-Number(monthUsed?.count||0)-reserved,dailyRemaining=plan.dailyListings-Number(dayUsed?.count||0)-reserved;
   if(ids.length>monthlyRemaining)return NextResponse.json({error:`This batch would exceed your ${plan.drafts}-listing monthly allowance. You can queue ${Math.max(0,monthlyRemaining)} more ${monthlyRemaining===1?"listing":"listings"} this month.`},{status:429});if(ids.length>dailyRemaining)return NextResponse.json({error:`Goldie can publish ${Math.max(0,dailyRemaining)} more ${dailyRemaining===1?"listing":"listings"} for this account within the current 24-hour window. Your monthly listings remain available.`},{status:429});
-  const proposedJobId=crypto.randomUUID(),drafts=rows.results.map(row=>JSON.parse(row.response_json) as {id:string;batchId?:string}),batchId=drafts[0]?.batchId||proposedJobId,/* D697 - every draft already carries its own batchId and the job keeps only the first one, so a bundle credited all of its listings to whichever product happened to be first. Keep the whole map. */batchByProduct=Object.fromEntries(drafts.filter(draft=>draft.id).map(draft=>[String(draft.id),String(draft.batchId||batchId)])),/* D559 - one blob of settings per job meant one shipping profile and one set of
+  const proposedJobId=crypto.randomUUID(),drafts=rows.results.map(row=>JSON.parse(row.response_json) as {id:string;batchId?:string}),/* D872 · The JOB is the seller's one authorisation, so it keys on the run she
+     authorised - not on whichever product happened to be drafted first. A bundle
+     run publishes every product in one call (D559) and etsy_publish_jobs is
+     UNIQUE(user_id,batch_id), so a run id here means exactly one job for the
+     whole run: one confirmation, one queue, one receipt. Falls back to the
+     first draft's batch, which is what a single-product batch has always sent
+     and is its own run. */
+  batchId=String(body.runBatchId||"").replace(/[^a-zA-Z0-9-]/g,"").slice(0,80)||drafts[0]?.batchId||proposedJobId,/* D697 - every draft already carries its own batchId and the job keeps only the first one, so a bundle credited all of its listings to whichever product happened to be first. Keep the whole map. */batchByProduct=Object.fromEntries(drafts.filter(draft=>draft.id).map(draft=>[String(draft.id),String(draft.batchId||batchId)])),/* D559 - one blob of settings per job meant one shipping profile and one set of
      image selections for every listing in it, so a bundle could not be published in
      a single call. Each product carries its own now. */
-  settings=settingsJson;
+/* D872 · The set she confirmed, frozen onto the job. A resumed or retried run
+     re-enqueues from this, so nothing can widen the authorisation after the
+     fact: a listing that was not in the confirmation cannot be published by
+     coming back to the run later. */
+  settings=JSON.stringify({...JSON.parse(settingsJson||"{}"),frozenProductIds:ids.map(String),frozenAt:new Date().toISOString()});
   await env.DB.prepare("INSERT INTO etsy_publish_jobs (id,user_id,batch_id,status,total,settings_json) VALUES (?,?,?,'queued',?,?) ON CONFLICT(user_id,batch_id) DO UPDATE SET status='queued',settings_json=excluded.settings_json,total=MAX(etsy_publish_jobs.total,excluded.total),failed=0,last_error=NULL,updated_at=CURRENT_TIMESTAMP").bind(proposedJobId,user.userId,batchId,ids.length,settings).run();
   const canonical=await env.DB.prepare("SELECT id FROM etsy_publish_jobs WHERE user_id=? AND batch_id=?").bind(user.userId,batchId).first<{id:string}>(),jobId=canonical?.id||proposedJobId;
   await env.DB.batch(ids.map(productId=>env.DB.prepare("INSERT INTO etsy_publish_items (id,job_id,user_id,product_id,batch_id,status,available_at) VALUES (?,?,?,?,?,'queued',0) ON CONFLICT(user_id,product_id) DO UPDATE SET job_id=excluded.job_id,status=CASE WHEN etsy_publish_items.status='completed' THEN 'completed' ELSE 'queued' END,attempts=0,available_at=0,last_error=NULL,locked_at=NULL,updated_at=CURRENT_TIMESTAMP").bind(crypto.randomUUID(),jobId,user.userId,productId,batchByProduct[String(productId)]||batchId)));
