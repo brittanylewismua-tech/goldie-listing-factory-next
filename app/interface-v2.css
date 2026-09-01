@@ -2826,12 +2826,20 @@ html, body { background: #f1d2dc; }
 @media(min-width:821px) and (max-width:1179px){
   html{zoom:1!important}
   body{min-width:0!important}
-  .app-shell{min-width:0;grid-template-columns:240px minmax(0,1fr)}
+  .app-shell{min-width:0;padding-left:0;grid-template-columns:240px minmax(0,1fr)}
   .app-shell>.topbar{width:240px;padding:26px 18px 18px}
   .app-shell .factory-top{padding-inline:24px}
   .app-shell .factory-work{width:100%;max-width:none;padding:28px 24px 0}
   .app-shell .factory-listing-grid{grid-template-columns:minmax(0,1fr)}
   .app-shell .factory-review{grid-template-columns:minmax(0,1fr)}
   .app-shell .factory-publish-box{position:static}
+  .app-shell .factory-footer,
+  .app-shell .workflow-footer-actions,
+  .app-shell .factory-work footer,
+  .app-shell .workflow-footer-actions.post-draft-footer{
+    width:100%;margin-left:0}
   .app-shell .workflow-footer-actions{padding-inline:24px}
+  .app-shell .workflow-footer-actions>.autosave-note{display:none}
+  .app-shell .factory-footer.in-bar>small{
+    white-space:normal;overflow:visible;text-overflow:clip}
 }

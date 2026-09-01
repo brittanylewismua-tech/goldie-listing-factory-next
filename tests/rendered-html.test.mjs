@@ -5359,7 +5359,7 @@ test("a narrow laptop reflows instead of shrinking or scrolling sideways — D86
   const css = await Promise.all([readFile(new URL("../app/clarity-pass.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n"));
 
   assert.doesNotMatch(css, /@media\(max-width:\d+px\)\{html\{zoom:/);
-  assert.match(css, /@media\(min-width:821px\) and \(max-width:1179px\)\{[\s\S]*body\{min-width:0!important\}[\s\S]*\.app-shell\{min-width:0;grid-template-columns:240px minmax\(0,1fr\)\}/);
+  assert.match(css, /@media\(min-width:821px\) and \(max-width:1179px\)\{[\s\S]*body\{min-width:0!important\}[\s\S]*\.app-shell\{min-width:0;padding-left:0;grid-template-columns:240px minmax\(0,1fr\)\}/);
   assert.match(css, /\.factory-review\{grid-template-columns:minmax\(0,1fr\)\}/);
 });
 
