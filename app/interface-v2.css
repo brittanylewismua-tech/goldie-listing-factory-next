@@ -38,7 +38,7 @@ html, body { background: var(--lf-paper); }
 
 /* sidebar (production's .topbar) */
 .app-shell > .topbar {
-  position: static;
+  position: relative;
   width: 288px;
   height: 100vh;
   overflow: hidden;
@@ -50,12 +50,17 @@ html, body { background: var(--lf-paper); }
   border-right: 1px solid #1c1c1c;
   /* One gear, cropped by the corner, turning once every 84 seconds. A
      background image rather than markup, so the rail stays one element. */
-  background-image:
+  --lf-rail-gear:
     url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%27-215%20-215%20430%20430%27%3E%3Cpath%20fill%3D%27%23ff4fc3%27%20fill-opacity%3D%27.30%27%20fill-rule%3D%27evenodd%27%20d%3D%27M%20102.85%20-18.51%20L%20130.87%20-17.23%20L%20153.53%20-12.08%20L%20153.53%2012.08%20L%20130.87%2017.23%20L%20102.85%2018.51%20L%2098.32%2035.40%20L%20121.95%2050.51%20L%20139.00%2066.30%20L%20126.92%2087.23%20L%20104.72%2080.36%20L%2079.82%2067.45%20L%2067.45%2079.82%20L%2080.36%20104.72%20L%2087.23%20126.92%20L%2066.30%20139.00%20L%2050.51%20121.95%20L%2035.40%2098.32%20L%2018.51%20102.85%20L%2017.23%20130.87%20L%2012.08%20153.53%20L%20-12.08%20153.53%20L%20-17.23%20130.87%20L%20-18.51%20102.85%20L%20-35.40%2098.32%20L%20-50.51%20121.95%20L%20-66.30%20139.00%20L%20-87.23%20126.92%20L%20-80.36%20104.72%20L%20-67.45%2079.82%20L%20-79.82%2067.45%20L%20-104.72%2080.36%20L%20-126.92%2087.23%20L%20-139.00%2066.30%20L%20-121.95%2050.51%20L%20-98.32%2035.40%20L%20-102.85%2018.51%20L%20-130.87%2017.23%20L%20-153.53%2012.08%20L%20-153.53%20-12.08%20L%20-130.87%20-17.23%20L%20-102.85%20-18.51%20L%20-98.32%20-35.40%20L%20-121.95%20-50.51%20L%20-139.00%20-66.30%20L%20-126.92%20-87.23%20L%20-104.72%20-80.36%20L%20-79.82%20-67.45%20L%20-67.45%20-79.82%20L%20-80.36%20-104.72%20L%20-87.23%20-126.92%20L%20-66.30%20-139.00%20L%20-50.51%20-121.95%20L%20-35.40%20-98.32%20L%20-18.51%20-102.85%20L%20-17.23%20-130.87%20L%20-12.08%20-153.53%20L%2012.08%20-153.53%20L%2017.23%20-130.87%20L%2018.51%20-102.85%20L%2035.40%20-98.32%20L%2050.51%20-121.95%20L%2066.30%20-139.00%20L%2087.23%20-126.92%20L%2080.36%20-104.72%20L%2067.45%20-79.82%20L%2079.82%20-67.45%20L%20104.72%20-80.36%20L%20126.92%20-87.23%20L%20139.00%20-66.30%20L%20121.95%20-50.51%20L%2098.32%20-35.40%20Z%20M%2043.89%200%20A%2043.89%2043.89%200%201%200%20-43.89%200%20A%2043.89%2043.89%200%201%200%2043.89%200%20Z%27%2F%3E%3C%2Fsvg%3E");
-  background-repeat: no-repeat;
-  background-position: -118px calc(100% + 118px);
-  background-size: 420px 420px;
 }
+.app-shell > .topbar::before{
+  content:"";position:absolute;left:-118px;bottom:-118px;width:420px;height:420px;
+  z-index:0;pointer-events:none;background:var(--lf-rail-gear) center/contain no-repeat;
+  transform-origin:50% 50%;animation:84s linear infinite lf-rail-gear-turn;
+}
+.app-shell > .topbar>*{position:relative;z-index:1}
+@keyframes lf-rail-gear-turn{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.app-shell > .topbar::before{animation:none}}
 /* D875 · The lockup is an image now, so the rail only has to size it. */
 .app-shell .goldie-wordmark-lockup{margin:0 0 32px;padding:0;border:0;background:none}
 .app-shell .goldie-wordmark-lockup img{display:block;width:196px;height:auto}
@@ -113,27 +118,11 @@ html, body { background: var(--lf-paper); }
 }
 .app-shell > .factory-main::before {
   content: "";
-  position: fixed; z-index: -1;
-  width: min(61vw, 790px); aspect-ratio: 1; right: 2vw; top: 17vh;
-  border-radius: 46% 54% 58% 42% / 52% 44% 56% 48%;
-  pointer-events: none; filter: blur(34px); opacity: .48;
-  /* D786 · Read off the prototype's own ::before, stop for stop. The violet is
-     the point: this is the approved orb, and D782's sweep muted it to plum
-     because the sweep could not tell decoration from a leftover theme. It can
-     now - the palette test exempts this one selector by name, and only this
-     one. The fifth stop is .45, not the .4 I first wrote.
-
-     And it turns. 34 seconds, linear, forever. The reduced-motion rule below
-     has been sitting here since D721 switching off an animation that was never
-     written - which is exactly the kind of thing a CSS-reading test cannot
-     catch, because the rule it checks was present and correct. */
-  background: conic-gradient(from 18deg,
-    rgba(184,174,255,.45), rgba(230,172,216,.42), rgba(255,192,204,.38),
-    rgba(188,181,255,.43), rgba(239,180,220,.45), rgba(184,174,255,.45));
-  animation: 34s linear infinite goldie-orb-turn;
+  /* D876 · The approved factory reference is crisp paper and a pink grid.
+     The older peach-glass orb was still painting behind D875's new surface,
+     which made production a hybrid of two approved directions. */
+  display:none;
 }
-@keyframes goldie-orb-turn { 100% { transform: rotate(360deg); } }
-@media (prefers-reduced-motion: reduce) { .app-shell > .factory-main::before { animation: none; } }
 
 /* D786 · The star over the Goldie "i" breathes: 3.2s, ease-in-out, forever.
    The prototype has it; production had the glyph and none of the motion. */
@@ -2581,19 +2570,19 @@ html, body { background: var(--lf-paper); }
 
 .app-shell .topbar .approved-usage,
 .app-shell .topbar .listing-goal-side{
-  border-radius:16px;padding:10px 14px;margin:0}
+  border-radius:14px;padding:12px 14px;margin:0}
 .app-shell .topbar .listing-goal-side{margin-top:12px}
 .app-shell .topbar .approved-usage{
-  background:rgba(255,255,255,.36);border:1px solid rgba(255,255,255,.65)}
+  background:#0b0b0b;border:1.5px solid #232323;color:#fff}
 .app-shell .topbar .listing-goal-side{
-  background:rgba(123,62,105,.10);border:1px solid rgba(123,62,105,.22)}
+  background:linear-gradient(#141014,#0c0b0c);border:1.5px solid #3a2334;color:#fff}
 .app-shell .topbar .listing-goal-side .listing-goal-caption{
   font:750 9px/1.2 Inter,ui-sans-serif,system-ui,sans-serif;
-  letter-spacing:.14em;text-transform:uppercase;color:#7b3e69}
+  letter-spacing:.14em;text-transform:uppercase;color:#8e8e8e}
 .app-shell .topbar .listing-goal-side > b{
-  font:700 15px/1.2 Inter,ui-sans-serif,system-ui,sans-serif;color:#4b283e}
-.app-shell .topbar .listing-goal-track{background:rgba(123,62,105,.16)}
-.app-shell .topbar .listing-goal-track > i{background:#7b3e69}
+  font:700 15px/1.2 Inter,ui-sans-serif,system-ui,sans-serif;color:#fff}
+.app-shell .topbar .listing-goal-track{background:#222}
+.app-shell .topbar .listing-goal-track > i{background:var(--lf-pink)}
 
 /* D835b · "Powered by Goldie AI" had disappeared from the bottom of the rail.
    Measured live at her viewport: rail clientHeight 643, content 769, so the
@@ -2617,9 +2606,9 @@ html, body { background: var(--lf-paper); }
    which leaves the rail fitting at 643 with room, and still fitting near 600.
    The overflow stays hidden and D835's test asserts scrollHeight <= clientHeight
    with overflow-y neither auto nor scroll. */
-.app-shell > .topbar{overflow:hidden;padding-top:26px;padding-bottom:18px}
-.app-shell > .topbar > .brand-lockup{margin-bottom:18px}
-.app-shell .approved-sidebar-footer{gap:7px;padding-top:12px}
+.app-shell > .topbar{overflow:hidden;padding-top:36px;padding-bottom:25px}
+.app-shell > .topbar > .brand-lockup{margin-bottom:34px}
+.app-shell .approved-sidebar-footer{gap:9px;padding-top:16px}
 .app-shell .etsy-api-disclosure{line-height:1.35}
 
 /* D834c · the finished-section tick, and the product's own photo where the

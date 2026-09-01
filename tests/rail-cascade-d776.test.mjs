@@ -833,10 +833,10 @@ test("D835: the rail is fixed and its contents fit inside it", () => {
   const shell = fs.readFileSync(new URL("../app/factory-shell.tsx", import.meta.url), "utf8");
   const navCount = (shell.match(/\{ key: "/g) || []).length;
   assert.equal(navCount, 3, `the rail carries ${navCount} nav links; the height budget assumes 3`);
-  assert.match(v2, /\.app-shell > \.topbar\{overflow:hidden;padding-top:26px;padding-bottom:18px\}/);
-  assert.match(v2, /\.app-shell > \.topbar > \.brand-lockup\{margin-bottom:18px\}/);
-  assert.match(v2, /\.app-shell \.approved-sidebar-footer\{gap:7px;padding-top:12px\}/);
-  assert.match(v2, /\.listing-goal-side\{\s*border-radius:16px;padding:10px 14px/);
+  assert.match(v2, /\.app-shell > \.topbar\{overflow:hidden;padding-top:36px;padding-bottom:25px\}/);
+  assert.match(v2, /\.app-shell > \.topbar > \.brand-lockup\{margin-bottom:34px\}/);
+  assert.match(v2, /\.app-shell \.approved-sidebar-footer\{gap:9px;padding-top:16px\}/);
+  assert.match(v2, /\.listing-goal-side\{\s*border-radius:14px;padding:12px 14px/);
 });
 
 test("D838: the two things D834 declared and never won", () => {
@@ -906,6 +906,6 @@ test("D838: the two things D834 declared and never won", () => {
     `the action bar resolves to ${barFill ? barFill.value.slice(0, 40) : "unset"} — content must not print through it`);
 
   const fill = winner(one => one === ".app-shell .listing-goal-side" || /\.listing-goal-side$/.test(one), "background");
-  assert.ok(fill && /123,\s*62,\s*105/.test(fill.value),
-    `the goal counter resolves to ${fill ? `${fill.value} (${fill.where})` : "unset"} — the two counters are told apart by that tint`);
+  assert.ok(fill && fill.value === "linear-gradient(#141014,#0c0b0c)",
+    `the goal counter resolves to ${fill ? `${fill.value} (${fill.where})` : "unset"} — the two counters are told apart by the reference's dark gradient`);
 });

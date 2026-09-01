@@ -25,9 +25,9 @@ test("the rail is black and carries the bright pink", () => {
   assert.match(css, /background: var\(--lf-rail\)/);
   assert.match(css, /--lf-rail:#000/);
   assert.match(css, /\.top-nav a\.active \{[\s\S]*?background: var\(--lf-pink\)/);
-  /* One gear, cropped by the bottom-left corner, as a background image so the
-     rail stays a single element. */
-  assert.match(css, /background-position: -118px calc\(100% \+ 118px\)/);
+  /* One gear, cropped by the bottom-left corner, rotating behind the rail
+     contents rather than bleeding through the counter surfaces. */
+  assert.match(css, /\.app-shell > \.topbar::before\{[\s\S]*?left:-118px;bottom:-118px;[\s\S]*?animation:84s linear infinite lf-rail-gear-turn/);
   assert.match(css, /data:image\/svg\+xml,%3Csvg/);
 });
 
@@ -70,4 +70,14 @@ test("the mark is the Listing Factory lockup, not the old Goldie type", () => {
   assert.ok(fs.existsSync(new URL("../public/listing-factory-lockup.png", import.meta.url)),
     "the asset ships with the app");
   assert.match(css, /\.goldie-wordmark-lockup img\{display:block;width:196px/);
+});
+
+test("the approved reference is a crisp grid without the old glowing orb", () => {
+  assert.match(css, /\.app-shell > \.factory-main::before \{[\s\S]*?display:none;/);
+});
+
+test("the reference rail keeps opaque dark counters and its original spacing", () => {
+  assert.match(css, /\.approved-usage\{\s*background:#0b0b0b;border:1\.5px solid #232323;color:#fff\}/);
+  assert.match(css, /\.listing-goal-side\{\s*background:linear-gradient\(#141014,#0c0b0c\);border:1\.5px solid #3a2334;color:#fff\}/);
+  assert.match(css, /\.app-shell > \.topbar\{overflow:hidden;padding-top:36px;padding-bottom:25px\}/);
 });
