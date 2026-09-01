@@ -19,7 +19,7 @@
   --lf-pink:#ff4fc3;
   --lf-pink-soft:rgba(255,79,195,.18);
   --lf-grid:rgba(255,79,195,.10);
-  --lf-plum-deep:#6d1a4e;
+  --lf-action-shadow:#000;
   --lf-rail:#000;
   --lf-rail-ink:#fff;
   --lf-rail-dim:rgba(255,255,255,.62);
@@ -85,7 +85,11 @@ html, body { background: var(--lf-paper); }
 .app-shell > .topbar .listing-goal-side{border-color:#3a2334;background:linear-gradient(#141014,#0c0b0c)}
 .app-shell > .topbar .approved-usage .mini-label,
 .app-shell > .topbar .listing-goal-side .listing-goal-caption{color:#8e8e8e}
+.app-shell > .topbar .approved-usage b,
+.app-shell > .topbar .approved-usage span,
+.app-shell > .topbar .listing-goal-side b{color:#fff}
 .app-shell > .topbar .usage-track,
+.app-shell > .topbar .approved-usage-track,
 .app-shell > .topbar .listing-goal-track{background:#222}
 .app-shell > .topbar .usage-track i,
 .app-shell > .topbar .listing-goal-track i{background:var(--lf-pink)}
@@ -209,10 +213,10 @@ html, body { background: var(--lf-paper); }
   letter-spacing: .04em; text-transform: uppercase;
 }
 .app-shell nav.workflow-progress > button > span:last-of-type { display: none; }
-.app-shell nav.workflow-progress > button.active { color: #4f2b46; }
-.app-shell nav.workflow-progress > button.active > span:first-of-type { background: #6d3b5e; color: #fff; }
+.app-shell nav.workflow-progress > button.active { color: #1b0e17; }
+.app-shell nav.workflow-progress > button.active > span:first-of-type { background: var(--lf-pink); color: #1b0e17; }
 .app-shell nav.workflow-progress > button.active::after {
-  content: ""; height: 3px; background: #6d3b5e; position: absolute;
+  content: ""; height: 3px; background: var(--lf-pink); position: absolute;
   left: 0; right: 18px; bottom: -2px; border-radius: 6px;
 }
 
@@ -229,11 +233,11 @@ html, body { background: var(--lf-paper); }
   display: flex; align-items: center; justify-content: space-between; width: auto;
 }
 .app-shell .workflow-next {
-  background: #5d3151; color: #fff; border: 0; border-radius: 8px;
-  padding: 11px 18px; min-width: 0; font: 750 16px/1 Inter, system-ui, sans-serif;
-  box-shadow: none; animation: none;
+  background: #0d0b0c; color: #fff; border: 0; border-radius: 10px;
+  padding: 13px 20px; min-width: 0; font: 750 16px/1.2 Inter, system-ui, sans-serif;
+  box-shadow: 4px 4px 0 var(--lf-pink); animation: none;
 }
-.app-shell .workflow-next:hover { background: #4e2844; }
+.app-shell .workflow-next:hover { background: #171117; }
 
 /* ============================================================================
  * D721 · CARD + SECTION ROWS — measured off the prototype, sole owner.
@@ -1225,10 +1229,10 @@ html, body { background: var(--lf-paper); }
    disappear. */
 .app-shell .factory-publish-box .publish-all-button{
   border:0;border-radius:10px;color:#fff;background:linear-gradient(#ff6ecd,#f52fb2);
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.5),4px 4px 0 var(--lf-plum-deep);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.5),4px 4px 0 var(--lf-action-shadow);
   transition:transform .16s ease,box-shadow .16s ease}
 .app-shell .factory-publish-box .publish-all-button:hover:not(:disabled){
-  transform:translate(-1px,-1px);box-shadow:inset 0 1px 0 rgba(255,255,255,.6),6px 6px 0 var(--lf-plum-deep)}
+  transform:translate(-1px,-1px);box-shadow:inset 0 1px 0 rgba(255,255,255,.6),6px 6px 0 var(--lf-action-shadow)}
 .app-shell .factory-publish-box .publish-all-button:disabled{opacity:1!important;background:rgba(255,255,255,.12);color:rgba(255,244,250,.76);box-shadow:none;transform:none;filter:none!important}
 .app-shell .factory-publish-box .publish-all-button:disabled .publish-all-shop{opacity:1;color:rgba(255,244,250,.6)}
 .app-shell .factory-publish-box .keep-drafts-button{margin-top:10px;border:1px solid rgba(255,255,255,.28);border-radius:8px;background:transparent;color:#e4d2de;padding:11px 14px;font:750 12px/1.3 Inter,ui-sans-serif,system-ui,sans-serif}
@@ -1256,7 +1260,7 @@ html, body { background: var(--lf-paper); }
 /* globals.css draws a 1px connector through button:after at top:43px. The
    underline has to say top:auto and width:auto or it inherits that geometry. */
 .app-shell nav.workflow-progress > button.active::after{top:auto;width:auto}
-.app-shell nav.workflow-progress > button.active{color:#4f2b46}
+.app-shell nav.workflow-progress > button.active{color:#1b0e17}
 .app-shell nav.workflow-progress > button.active > span:first-of-type{background:var(--lf-pink);color:#1b0e17}
 /* Production keeps the tick for work that is finished behind you - the
    prototype has no notion of a completed step, so it has no rule to copy. It
@@ -1437,7 +1441,7 @@ html, body { background: var(--lf-paper); }
 /* And the tick on a finished rail step. D776 gave it #c88dce, which is the
    orchid the old shell used - h294, nowhere near the plum family. It is the
    same disc as the current step, one step quieter. */
-.app-shell nav.workflow-progress > button.done:not(.active) > span:first-of-type{background:#6d3b5e}
+.app-shell nav.workflow-progress > button.done:not(.active) > span:first-of-type{background:var(--lf-pink);color:#1b0e17}
 
 /* ==========================================================================
    D783 · The open listing row, measured against the prototype's step 3

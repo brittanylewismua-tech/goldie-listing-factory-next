@@ -44,6 +44,10 @@ test("the step rail keeps the bright pink", () => {
   /* Explicitly asked for: the numbers and the underline stay bright. Muting
      them was a mistake made once already. */
   assert.match(css, /button\.active > span:first-of-type\{background:var\(--lf-pink\);color:#1b0e17\}/);
+  assert.match(css, /button\.active::after\s*\{[^}]*background:\s*var\(--lf-pink\)/,
+    "the visible line beneath the active step must be pink, never legacy plum");
+  assert.match(css, /button\.active\{color:#1b0e17\}/,
+    "the active step label uses neutral ink, not a purple accent");
 });
 
 test("the selected product is a whisper, not a ring", () => {
@@ -56,8 +60,8 @@ test("Next step is black with a pink offset; Publish inverts it", () => {
      pink edge; the one that spends money is a lit pink face with a deep-plum
      edge, because black would vanish on the publish panel. */
   assert.match(css, /\.workflow-next\{[^}]*background:#0d0b0c[^}]*box-shadow:4px 4px 0 var\(--lf-pink\)/);
-  assert.match(css, /\.publish-all-button\{[\s\S]*?background:linear-gradient\(#ff6ecd,#f52fb2\);[\s\S]*?4px 4px 0 var\(--lf-plum-deep\)/);
-  assert.match(css, /--lf-plum-deep:#6d1a4e/);
+  assert.match(css, /\.publish-all-button\{[\s\S]*?background:linear-gradient\(#ff6ecd,#f52fb2\);[\s\S]*?4px 4px 0 var\(--lf-action-shadow\)/);
+  assert.match(css, /--lf-action-shadow:#000/);
   /* Both need a disabled state: these buttons spend most of their life gated. */
   assert.match(css, /\.workflow-next:disabled\{opacity:1;background:#efe7ec/);
 });
@@ -80,4 +84,6 @@ test("the reference rail keeps opaque dark counters and its original spacing", (
   assert.match(css, /\.approved-usage\{\s*background:#0b0b0b;border:1\.5px solid #232323;color:#fff\}/);
   assert.match(css, /\.listing-goal-side\{\s*background:linear-gradient\(#141014,#0c0b0c\);border:1\.5px solid #3a2334;color:#fff\}/);
   assert.match(css, /\.app-shell > \.topbar\{overflow:hidden;padding-top:36px;padding-bottom:25px\}/);
+  assert.match(css, /\.approved-usage b,[\s\S]*?\.approved-usage span,[\s\S]*?\.listing-goal-side b\{color:#fff\}/,
+    "counter values must remain readable white on the black rail");
 });
