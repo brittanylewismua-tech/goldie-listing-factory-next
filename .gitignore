@@ -53,3 +53,5 @@ _HANDOFF-read-me-on-other-laptop/
 /*.cjs
 
 tsconfig.tsbuildinfo
+
+__pycache__/

@@ -4,7 +4,29 @@
  * (goldie-ux-preview-site @ aad9208, public/prototype.html, peach-glass).
  * Not from base rules, not from screenshots.
  * ==========================================================================*/
-html, body { background: #f1d2dc; }
+/* ============================================================================
+ * D875 · THE FACTORY LOOK
+ * Black rail, one pink, white workspace on a pink grid. Every value below is a
+ * theme token so a colour decision lives in one place instead of forty.
+ *
+ * Two strengths of the SAME pink, never two hues. Bright is for the things you
+ * glance at - the rail, the step numbers, a button edge. Muted is the same
+ * colour at lower strength for the surfaces you sit in front of all day; a
+ * DARKER mix of that hue reads as purple, which is why it is an alpha and not
+ * a second colour.
+ * ==========================================================================*/
+:root{
+  --lf-pink:#ff4fc3;
+  --lf-pink-soft:rgba(255,79,195,.18);
+  --lf-grid:rgba(255,79,195,.10);
+  --lf-plum-deep:#6d1a4e;
+  --lf-rail:#000;
+  --lf-rail-ink:#fff;
+  --lf-rail-dim:rgba(255,255,255,.62);
+  --lf-paper:#fdf8fb;
+  --lf-card:#fff;
+}
+html, body { background: var(--lf-paper); }
 
 .app-shell {
   display: grid;
@@ -23,21 +45,50 @@ html, body { background: #f1d2dc; }
   display: flex;
   flex-direction: column;
   padding: 36px 26px 25px;
-  color: #4b283e;
-  background: linear-gradient(rgba(255,241,244,.94), rgba(247,221,232,.9));
-  border-right: 1px solid #ded6dc;
-  backdrop-filter: blur(24px) saturate(1.04);
+  color: var(--lf-rail-ink);
+  background: var(--lf-rail);
+  border-right: 1px solid #1c1c1c;
+  /* One gear, cropped by the corner, turning once every 84 seconds. A
+     background image rather than markup, so the rail stays one element. */
+  background-image:
+    url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%27-215%20-215%20430%20430%27%3E%3Cpath%20fill%3D%27%23ff4fc3%27%20fill-opacity%3D%27.30%27%20fill-rule%3D%27evenodd%27%20d%3D%27M%20102.85%20-18.51%20L%20130.87%20-17.23%20L%20153.53%20-12.08%20L%20153.53%2012.08%20L%20130.87%2017.23%20L%20102.85%2018.51%20L%2098.32%2035.40%20L%20121.95%2050.51%20L%20139.00%2066.30%20L%20126.92%2087.23%20L%20104.72%2080.36%20L%2079.82%2067.45%20L%2067.45%2079.82%20L%2080.36%20104.72%20L%2087.23%20126.92%20L%2066.30%20139.00%20L%2050.51%20121.95%20L%2035.40%2098.32%20L%2018.51%20102.85%20L%2017.23%20130.87%20L%2012.08%20153.53%20L%20-12.08%20153.53%20L%20-17.23%20130.87%20L%20-18.51%20102.85%20L%20-35.40%2098.32%20L%20-50.51%20121.95%20L%20-66.30%20139.00%20L%20-87.23%20126.92%20L%20-80.36%20104.72%20L%20-67.45%2079.82%20L%20-79.82%2067.45%20L%20-104.72%2080.36%20L%20-126.92%2087.23%20L%20-139.00%2066.30%20L%20-121.95%2050.51%20L%20-98.32%2035.40%20L%20-102.85%2018.51%20L%20-130.87%2017.23%20L%20-153.53%2012.08%20L%20-153.53%20-12.08%20L%20-130.87%20-17.23%20L%20-102.85%20-18.51%20L%20-98.32%20-35.40%20L%20-121.95%20-50.51%20L%20-139.00%20-66.30%20L%20-126.92%20-87.23%20L%20-104.72%20-80.36%20L%20-79.82%20-67.45%20L%20-67.45%20-79.82%20L%20-80.36%20-104.72%20L%20-87.23%20-126.92%20L%20-66.30%20-139.00%20L%20-50.51%20-121.95%20L%20-35.40%20-98.32%20L%20-18.51%20-102.85%20L%20-17.23%20-130.87%20L%20-12.08%20-153.53%20L%2012.08%20-153.53%20L%2017.23%20-130.87%20L%2018.51%20-102.85%20L%2035.40%20-98.32%20L%2050.51%20-121.95%20L%2066.30%20-139.00%20L%2087.23%20-126.92%20L%2080.36%20-104.72%20L%2067.45%20-79.82%20L%2079.82%20-67.45%20L%20104.72%20-80.36%20L%20126.92%20-87.23%20L%20139.00%20-66.30%20L%20121.95%20-50.51%20L%2098.32%20-35.40%20Z%20M%2043.89%200%20A%2043.89%2043.89%200%201%200%20-43.89%200%20A%2043.89%2043.89%200%201%200%2043.89%200%20Z%27%2F%3E%3C%2Fsvg%3E");
+  background-repeat: no-repeat;
+  background-position: -118px calc(100% + 118px);
+  background-size: 420px 420px;
 }
+/* D875 · The lockup is an image now, so the rail only has to size it. */
+.app-shell .goldie-wordmark-lockup{margin:0 0 32px;padding:0;border:0;background:none}
+.app-shell .goldie-wordmark-lockup img{display:block;width:196px;height:auto}
 .app-shell > .topbar .top-nav { display: grid; gap: 6px; }
 .app-shell > .topbar .top-nav a {
-  border: 0; background: transparent; color: rgba(74,42,62,.62);
+  border: 0; background: transparent; color: var(--lf-rail-dim);
   text-align: left; padding: 12px 14px; border-radius: 14px;
   font: 650 13px/1.2 Inter, system-ui, sans-serif; text-decoration: none; display: block;
 }
 .app-shell > .topbar .top-nav a.active {
-  color: #4b283e; background: rgba(255,255,255,.62);
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,.65);
+  color: #1b0e17; background: var(--lf-pink); font-weight: 700;
+  box-shadow: none;
 }
+.app-shell > .topbar .top-nav a:hover:not(.active){background:#141414;color:#fff}
+
+/* D875 · Everything the rail carries below the nav, on black. The usage and
+   goal cards had a white-on-white treatment that vanished the moment the rail
+   went dark. */
+.app-shell > .topbar .approved-usage,
+.app-shell > .topbar .listing-goal-side{
+  border:1.5px solid #232323;border-radius:14px;background:#0b0b0b;color:var(--lf-rail-ink)}
+.app-shell > .topbar .listing-goal-side{border-color:#3a2334;background:linear-gradient(#141014,#0c0b0c)}
+.app-shell > .topbar .approved-usage .mini-label,
+.app-shell > .topbar .listing-goal-side .listing-goal-caption{color:#8e8e8e}
+.app-shell > .topbar .usage-track,
+.app-shell > .topbar .listing-goal-track{background:#222}
+.app-shell > .topbar .usage-track i,
+.app-shell > .topbar .listing-goal-track i{background:var(--lf-pink)}
+.app-shell > .topbar .approved-sidebar-footer{color:#6e6e6e}
+.app-shell > .topbar .etsy-api-disclosure{color:#6e6e6e}
+.app-shell > .topbar .workflow-restart-button{
+  border:1.5px solid #2b2b2b;background:#0d0d0d;color:#fff}
+.app-shell > .topbar .workflow-restart-button .new-batch-icon{color:var(--lf-pink)}
 .app-shell > .topbar .approved-sidebar-footer { margin-top: auto; padding: 16px 0 0; display: grid; gap: 9px; }
 .app-shell > .topbar .account-link { display: none; }
 
@@ -52,7 +103,13 @@ html, body { background: #f1d2dc; }
   padding: 0;
   /* D821 · the second stop was rgba(232,214,226,.9), a greyer pink than the
      prototype's. Read off .goldie-main's own CSSOM: rgba(238,218,239,.9). */
-  background: linear-gradient(145deg, rgba(248,228,237,.93), rgba(238,218,239,.9));
+  /* D875 · White paper with the faintest blush, so a true-white card reads as a
+     surface sitting on it rather than a rectangle drawn on it - about 2% of
+     luminance, which is enough. The grid is the pink, at a tenth. */
+  background: var(--lf-paper);
+  background-image:
+    repeating-linear-gradient(90deg,transparent 0 47px,var(--lf-grid) 47px 48px),
+    repeating-linear-gradient(0deg,transparent 0 47px,var(--lf-grid) 47px 48px);
 }
 .app-shell > .factory-main::before {
   content: "";
@@ -378,7 +435,7 @@ html, body { background: #f1d2dc; }
  * ==========================================================================*/
 .app-shell .factory-panel{
   background:#fffafc;border:1px solid #dfc8d5;border-radius:12px;
-  margin-bottom:14px;overflow:hidden;box-shadow:0 12px 32px rgba(75,40,62,.11);
+  margin-bottom:14px;overflow:hidden;box-shadow:0 1px 2px rgba(90,48,79,.05),0 10px 30px rgba(90,48,79,.06);
 }
 .app-shell .factory-panel-head{
   /* D786 · 48px, measured off the prototype's own head. Production had 34 -
@@ -516,8 +573,13 @@ html, body { background: #f1d2dc; }
    appearance below belongs to the button itself, wherever it is rendered, and
    is the prototype's .goldie-next. */
 .app-shell .factory-footer .workflow-next{flex:none;width:auto;min-width:0;margin:0}
-.app-shell .workflow-next{border:0;border-radius:8px;background:#5d3151;color:#fff;padding:11px 18px;height:auto;min-height:0;font:750 13px/1.2 Inter,ui-sans-serif,system-ui,sans-serif;cursor:pointer}
-.app-shell .workflow-next:disabled{opacity:.5;cursor:not-allowed}
+/* D875 · Flat saturated pink read cheap: a fully lit fill, a grey shadow and no
+   edge. Black face with a pink offset borrows the rail's own language and
+   demotes the pink to an accent. */
+.app-shell .workflow-next{border:0;border-radius:10px;background:#0d0b0c;color:#fff;padding:13px 20px;height:auto;min-height:0;font:750 15px/1.2 Inter,ui-sans-serif,system-ui,sans-serif;cursor:pointer;box-shadow:4px 4px 0 var(--lf-pink);transition:transform .16s ease,box-shadow .16s ease}
+.app-shell .workflow-next:hover:not(:disabled){transform:translate(-1px,-1px);box-shadow:6px 6px 0 var(--lf-pink)}
+.app-shell .workflow-next:active:not(:disabled){transform:translate(1px,1px);box-shadow:2px 2px 0 var(--lf-pink)}
+.app-shell .workflow-next:disabled{opacity:1;background:#efe7ec;color:#a2909c;box-shadow:4px 4px 0 #f3d9ea;transform:none;cursor:not-allowed}
 @media(max-width:1050px){.app-shell .factory-footer{width:calc(100vw - 240px);margin-left:calc(.5 * (100% + 240px - 100vw))}}
 
 /* D729 · Step 1's saved products, from the prototype's .goldie-product-grid.
@@ -545,7 +607,12 @@ html, body { background: #f1d2dc; }
 .app-shell .recipe-tile{position:relative;display:grid;grid-template-columns:minmax(0,1fr) auto auto auto;grid-template-rows:auto auto;align-content:start;column-gap:10px;padding:0;overflow:visible;border:1px solid #ded5db;border-radius:10px;background:#fff;box-shadow:0 4px 14px rgba(75,40,62,.07)}
 .app-shell .recipe-tile>button:not(.recipe-use){margin-bottom:12px}
 .app-shell .recipe-tile>button:not(.recipe-use):last-child{margin-right:12px}
-.app-shell .recipe-tile.selected{border:2px solid #6c3a5c;background:#fbf7fa}
+/* D875 · Selected product. A 2px saturated ring is the thing you end up
+   staring at all day, so the tile is marked by a warm-white fill and the
+   softest halo instead - the "Ready" line already says which one is chosen. */
+.app-shell .recipe-tile.selected{
+  border:1px solid var(--lf-pink-soft);background:#fffbfd;
+  box-shadow:0 0 0 3px rgba(255,79,195,.04),0 0 12px rgba(255,79,195,.07)}
 .app-shell .recipe-use{grid-column:1/-1;display:grid;width:100%;min-width:0;height:auto;padding:12px;border:0;background:none;text-align:left;cursor:pointer}
 .app-shell .recipe-tile.selected .recipe-use{padding:11px}
 .app-shell .recipe-icon{display:grid;place-items:center;height:116px;margin-bottom:11px;border-radius:8px;background:linear-gradient(145deg,#f5f2f4,#e8e1e6);color:#8d7c87;font:750 12px/1 Inter,ui-sans-serif,system-ui,sans-serif}
@@ -1132,7 +1199,7 @@ html, body { background: #f1d2dc; }
    list never ends. Everything inside the shell inherits the shell's family;
    the wordmark and its star are the only things that carry their own, because
    they are the logo. */
-.app-shell,.app-shell *:not([class*="wordmark"]):not(.approved-wm):not(.approved-i):not(.approved-footer-i):not(.approved-wm *):not(.goldie-wordmark-name *){font-family:Inter,ui-sans-serif,system-ui,-apple-system,sans-serif}
+.app-shell,.app-shell *:not([class*="wordmark"]):not(.approved-wm):not(.approved-i):not(.approved-footer-i):not(.approved-wm *){font-family:Inter,ui-sans-serif,system-ui,-apple-system,sans-serif}
 .app-shell [class*="wordmark"],.app-shell .approved-wm,.app-shell .approved-i,.app-shell .approved-footer-i{font-family:"DM Serif Display",Georgia,serif}
 
 /* D773 · Full-sweep findings, run on every step with every panel open.
@@ -1163,7 +1230,17 @@ html, body { background: #f1d2dc; }
    saturate(.55) - dark plum on dark plum, on a near-black panel, measured at
    about 1.5:1. Disabled is not the same as unreadable: this button is what
    tells a seller to go and select a listing. */
-.app-shell .factory-publish-box .publish-all-button:disabled{opacity:1!important;background:rgba(255,255,255,.12);color:rgba(255,244,250,.76);filter:none!important}
+/* D875 · Publish inverts Next step: a lit pink face with a deep-plum offset.
+   Same offset language, opposite weighting, so the irreversible action never
+   looks like the routine one - and black on this near-black panel would
+   disappear. */
+.app-shell .factory-publish-box .publish-all-button{
+  border:0;border-radius:10px;color:#fff;background:linear-gradient(#ff6ecd,#f52fb2);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.5),4px 4px 0 var(--lf-plum-deep);
+  transition:transform .16s ease,box-shadow .16s ease}
+.app-shell .factory-publish-box .publish-all-button:hover:not(:disabled){
+  transform:translate(-1px,-1px);box-shadow:inset 0 1px 0 rgba(255,255,255,.6),6px 6px 0 var(--lf-plum-deep)}
+.app-shell .factory-publish-box .publish-all-button:disabled{opacity:1!important;background:rgba(255,255,255,.12);color:rgba(255,244,250,.76);box-shadow:none;transform:none;filter:none!important}
 .app-shell .factory-publish-box .publish-all-button:disabled .publish-all-shop{opacity:1;color:rgba(255,244,250,.6)}
 .app-shell .factory-publish-box .keep-drafts-button{margin-top:10px;border:1px solid rgba(255,255,255,.28);border-radius:8px;background:transparent;color:#e4d2de;padding:11px 14px;font:750 12px/1.3 Inter,ui-sans-serif,system-ui,sans-serif}
 
@@ -1191,7 +1268,7 @@ html, body { background: #f1d2dc; }
    underline has to say top:auto and width:auto or it inherits that geometry. */
 .app-shell nav.workflow-progress > button.active::after{top:auto;width:auto}
 .app-shell nav.workflow-progress > button.active{color:#4f2b46}
-.app-shell nav.workflow-progress > button.active > span:first-of-type{background:#6d3b5e;color:#fff}
+.app-shell nav.workflow-progress > button.active > span:first-of-type{background:var(--lf-pink);color:#1b0e17}
 /* Production keeps the tick for work that is finished behind you - the
    prototype has no notion of a completed step, so it has no rule to copy. It
    takes the same disc so the rail reads as one family. (D782 corrects the

@@ -125,6 +125,10 @@ test("preview navigation renders the real later-step experiences", async () => {
   assert.match(page, /setFinishPhase\(index===8\?"final":"details"\)/);
 });
 
+/* D875 · The plum palette is superseded. A 2px saturated ring on the tile you
+   are working in was the thing being stared at all day; selection is now a
+   warm-white fill and a soft halo. The guard still exists - it just locks the
+   new value. */
 test("keeps Step 2 saved-product text and selections in the plum palette", async () => {
   const css = await Promise.all([readFile(new URL("app/approved-functional.css",root),"utf8"),readFile(new URL("app/interface-v2.css",root),"utf8")]).then(x=>x.join("\n"));
   assert.match(css, /Step 2 saved-product palette lock/);
@@ -134,7 +138,7 @@ test("keeps Step 2 saved-product text and selections in the plum palette", async
      product. The rule this test protects is that the tile reads as one
      deliberate palette and its text stays legible - both still checked
      below - not that the palette is that particular plum. */
-  assert.match(css, /\.app-shell \.recipe-tile\.selected\{border:2px solid #6c3a5c/);
+  assert.match(css, /\.app-shell \.recipe-tile\.selected\{\s*border:1px solid var\(--lf-pink-soft\)/);
   assert.match(css, /\.app-shell \.recipe-icon\{[^}]*linear-gradient\(145deg,#f5f2f4,#e8e1e6\)/);
   assert.match(css, /\.app-shell \.recipe-copy>small\{color:#7d6d78/);
   assert.match(css, /\.app-shell \.recipe-card \.active-recipe\{[\s\S]*background:rgba\(223,200,213,\.34\)!important/);

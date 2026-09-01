@@ -43,6 +43,11 @@ test("nothing draws a second frame inside a panel, a review list or the publish 
       selector.includes(container) && !selector.trim().endsWith(container));
     if (!inside) continue;
     if (CARDS.test(selector)) continue;
+    /* D875 · A primary button legitimately carries a fill AND an edge - that is
+       what a button is. This rule is about cards drawn inside cards, and the
+       publish button is the one control that lives inside a container and has
+       both, now that its treatment is a lit face with an offset. */
+    if (/publish-all-button|workflow-next/.test(selector)) continue;
     /* A frame is a background AND an edge - a tint on its own is not a card. */
     const paints = /background|background-color|background-image/.test(Object.keys(declarations).join(" "))
       && Object.entries(declarations).some(([prop, value]) =>

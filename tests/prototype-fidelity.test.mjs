@@ -190,7 +190,7 @@ const CASES = [
      and one pixel up on every selection. */
   { name: "product tile border", chain: [...shell, el("div","recipe-grid"), el("article","recipe-tile")], property: "border", expect: /^2px solid #ded1d8$/ },
   { name: "product tile fill", chain: [...shell, el("div","recipe-grid"), el("article","recipe-tile")], property: "background", expect: /#fbf7fa/ },
-  { name: "chosen tile border", chain: [...shell, el("div","recipe-grid"), el("article","recipe-tile","selected")], property: "border", expect: /^2px solid #6c3a5c$/ },
+  { name: "chosen tile border", chain: [...shell, el("div","recipe-grid"), el("article","recipe-tile","selected")], property: "border", expect: /^1px solid var\(--lf-pink-soft\)$/ },
   { name: "product image band", chain: [...shell, el("div","recipe-grid"), el("article","recipe-tile"), el("button","recipe-use"), el("span","recipe-icon")], property: "height", expect: /^116px$/ },
   // step 3 listing details
   { name: "listing grid columns", chain: [...shell, el("div","factory-listing-grid")], property: "grid-template-columns", expect: /^minmax\(0,1\.15fr\) minmax\(0,\.85fr\)$/ },
@@ -199,9 +199,9 @@ const CASES = [
   { name: "review split", chain: [...shell, el("div","factory-review")], property: "grid-template-columns", expect: /^minmax\(0,1fr\) 290px$/ },
   { name: "publish box background", chain: [...shell, el("div","factory-review"), el("div","factory-publish-box")], property: "background", expect: /^#2d1d29$/ },
   { name: "product band is visible", chain: [...shell, el("div","recipe-grid"), el("article","recipe-tile"), el("button","recipe-use"), el("span","recipe-icon")], property: "display", expect: /^grid$/ },
-  { name: "forward button background", chain: [...shell, el("div","factory-footer"), el("button","workflow-next")], property: "background", expect: /#5d3151/ },
-  { name: "forward button padding", chain: [...shell, el("div","factory-footer"), el("button","workflow-next")], property: "padding", expect: /^11px 18px$/ },
-  { name: "publish press background", chain: [...shell, el("div","factory-review"), el("div","factory-publish-box"), el("button","publish-all-button")], property: "background", expect: /#f3dbe9/ },
+  { name: "forward button background", chain: [...shell, el("div","factory-footer"), el("button","workflow-next")], property: "background", expect: /#0d0b0c/ },
+  { name: "forward button padding", chain: [...shell, el("div","factory-footer"), el("button","workflow-next")], property: "padding", expect: /^13px 20px$/ },
+  { name: "publish press background", chain: [...shell, el("div","factory-review"), el("div","factory-publish-box"), el("button","publish-all-button")], property: "background", expect: /linear-gradient\(#ff6ecd,#f52fb2\)/ },
   { name: "publish box heading is light", chain: [...shell, el("div","factory-review"), el("div","factory-publish-box"), el("h3")], property: "color", expect: /^#fff$/ },
   { name: "publish box body is light", chain: [...shell, el("div","factory-review"), el("div","factory-publish-box"), el("p")], property: "color", expect: /^#c8b9c4$/ },
   { name: "checklist values wrap", chain: [...shell, el("div","factory-checklist"), el("div","factory-check"), el("b")], property: "overflow-wrap", expect: /^anywhere$/ },
@@ -218,6 +218,11 @@ const CASES = [
   { name: "photo strip columns", chain: [...shell, el("div","factory-photo-column"), el("section","listing-photo-order"), el("div","photo-order-strip")], property: "grid-template-columns", expect: /repeat\(4,/ },
 ];
 
+/* D875 · The peach-glass prototype is superseded by the factory look: black
+   rail, one pink at two strengths, white paper on a pink grid. What this test
+   is FOR has not changed and is why it survives - every migrated component must
+   still win its own cascade rather than be quietly overwritten by a later
+   sheet. Only the values it locks have moved. */
 test("every migrated component wins its own cascade with the prototype's values", () => {
   const failures = [];
   for (const item of CASES) {
