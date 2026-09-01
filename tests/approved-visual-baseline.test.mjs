@@ -929,12 +929,12 @@ test("small text meets AA against the surface it is painted on — D163", async 
   /* Measured by compositing each text node over its real painted background.
    * Eight styles failed AA for their size (3.00-4.24:1); worst was
    * .delete-recipe at 3.00 — an enabled control that read as disabled.
-   * The sidebar's pink rgb(232,177,200) cannot carry the app ink at AA below
-   * ~0.95 alpha (at 0.80 it tops out at 4.43), hence the near-opaque tokens.
+   * The factory rail is now black. Its legal and attribution copy uses white
+   * at .60, which composites to 7.4:1 while remaining visually subordinate.
    * After: 0 of 8 failing. */
   assert.match(clarity, /\.app-shell \.recipe-card \.delete-recipe\{color:rgba\(74,42,62,\.72\)!important\}/);
   assert.match(clarity, /\.app-shell \.hero-step-count\{color:rgba\(74,42,62,\.9\)!important\}/);
-  assert.match(clarity, /\.app-shell \.etsy-api-disclosure\{color:rgba\(74,42,62,\.95\)!important\}/);
+  assert.match(clarity, /\.app-shell \.etsy-api-disclosure\{color:rgba\(255,255,255,\.6\)!important\}/);
 });
 
 test("management pages meet AA too — D165", async () => {

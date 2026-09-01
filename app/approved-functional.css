@@ -37,7 +37,7 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .step-card,.launch-panel,.post-draft-workspace,.preflight,.publish-confirm{border:1px solid rgba(255,255,255,.68);background:linear-gradient(145deg,rgba(255,250,253,.74),rgba(232,214,226,.58));box-shadow:var(--shadow);backdrop-filter:blur(24px) saturate(1.06)}.step-card{grid-template-columns:54px minmax(0,1fr);border-radius:16px}.step-card:hover{background:linear-gradient(145deg,rgba(255,250,253,.78),rgba(232,214,226,.62))}.step-number{border-right:1px solid #eee8ec;color:#8c5c82}.step-content{padding:28px 30px 32px}.step-heading h2,.launch-top h2,.preflight h2,.publish-confirm h2{font-family:'DM Serif Display',Georgia,serif;color:var(--ink);font-weight:400}.step-heading h2{font-size:28px}.step-copy{color:rgba(74,42,62,.68);font-size:13px}.done-mark{background:rgba(214,171,218,.28);color:#704d75}.connection-row,.template-proof,.design-preparation-status,.variant-pricing,.keyword-workspace,.batch-description,.draft-card{border-color:#eee8ec!important}/* D731 · The forward action and the publish press left this list: both are
    migrated components with the prototype's own values in interface-v2, and the
    !important here beat them. The other two primary buttons keep it. */
-.launch-button,.inline-field button{border:0!important;border-radius:14px!important;background:linear-gradient(145deg,#5b304f,#45263c)!important;color:#fff!important;box-shadow:0 14px 28px -20px rgba(74,42,62,.75)}
+.launch-button,.inline-field button{border:0!important;border-radius:14px!important;background:#ff4fc3!important;color:#171014!important;box-shadow:0 14px 28px -20px rgba(255,79,195,.72)}
 .inline-field input,textarea,input,select{border-color:#ded5db;background:rgba(255,255,255,.68);color:var(--ink)}.inline-field input:focus,textarea:focus,input:focus,select:focus{border-color:rgba(151,88,139,.55);box-shadow:0 0 0 3px rgba(218,169,219,.2);outline:none}.field-error{border-radius:12px;background:rgba(165,50,78,.09)!important;color:#7f2942!important}
 .post-draft-heading{color:var(--ink)!important}.post-draft-heading h2,.post-draft-heading .mini-label{color:var(--ink)!important}.post-draft-heading p{color:rgba(74,42,62,.68)!important}footer{margin-left:0;background:rgba(74,42,62,.78);border:0;color:rgba(255,255,255,.7)}.mockup-limit-note{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:12px;padding:12px 14px;border-radius:12px;background:rgba(218,169,219,.14);color:var(--ink)}.mockup-limit-note span{color:rgba(74,42,62,.65);font-size:12px}
 @media(max-width:1050px){.app-shell{padding-left:0}.topbar{width:240px;padding-inline:20px}.wordmark{width:180px}.hero,.workspace{padding-inline:30px}.workflow-progress button b{font-size:8px}}
@@ -289,7 +289,7 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .app-shell .selected-batch-keywords{border-color:#ded6dc!important;background:rgba(255,255,255,.56)!important}
 .app-shell .selected-batch-keywords>div:first-child button{color:#6b365a}
 .app-shell .selected-keyword-chips button{border-color:#e4cedb;background:rgba(247,229,244,.72);color:#5b304f}
-.app-shell .batch-title-preview{background:linear-gradient(145deg,#5b304f,#45263c);box-shadow:0 12px 28px rgba(74,42,62,.16)}
+.app-shell .batch-title-preview{background:#0d0b0c;box-shadow:0 12px 28px rgba(13,11,12,.16)}
 .app-shell .batch-title-preview b{color:#efc9e8}.app-shell .batch-title-preview small{color:rgba(255,255,255,.68)}
 .app-shell .batch-description{border-color:#ded6dc!important;background:rgba(255,255,255,.5)!important}
 .app-shell .batch-description>summary{padding:17px 18px}.app-shell .batch-description[open]>summary{border-color:#ded6dc}
@@ -340,7 +340,7 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .app-shell .individual-title-preview{display:grid;gap:4px;padding:11px 12px;border-radius:10px;background:rgba(247,229,244,.72);color:#4b283e}
 .app-shell .individual-title-preview small{font-size:9px;font-weight:850;text-transform:uppercase;letter-spacing:.08em}
 .app-shell .individual-title-preview span{font-size:11px;line-height:1.45}
-.app-shell .apply-manual-title{justify-self:start;min-height:38px;padding:9px 14px;border:0;border-radius:10px;background:linear-gradient(145deg,#5b304f,#45263c);color:#fff;font-size:10px;font-weight:800;cursor:pointer}
+.app-shell .apply-manual-title{justify-self:start;min-height:38px;padding:9px 14px;border:0;border-radius:10px;background:#ff4fc3;color:#171014;font-size:10px;font-weight:800;cursor:pointer}
 .app-shell .finish-mode .batch-limits,
 .app-shell .finish-mode .file-reminder,
 .app-shell .finish-mode .upload-actions,
@@ -425,9 +425,9 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .app-shell .upload-notice{border-color:rgba(183,119,176,.58)!important;color:#4b283e!important}
 .app-shell .upload-notice-icon{color:#fff!important}
 .app-shell .upload-notice-progress{color:#633f5c!important}
-.app-shell .upload-notice button:not(.danger){background:linear-gradient(145deg,#5b304f,#45263c)!important;color:#fff!important}
+.app-shell .upload-notice button:not(.danger){background:#ff4fc3!important;color:#171014!important}
 .app-shell .field-warning{color:#6b365a!important}
-.app-shell .ai-title-button{background:linear-gradient(145deg,#6a3c61,#4b2c47)!important;color:#fff!important}
+.app-shell .ai-title-button{background:#ff4fc3!important;color:#171014!important}
 .app-shell .item-pricing-section{border-top-color:#ded6dc!important}
 .app-shell .summary-list div button,
 .app-shell .fee-profile-summary a,

@@ -506,7 +506,7 @@
 .app-shell .account-link,
 .app-shell .approved-powered>span,
 .app-shell .approved-sidebar-footer>small,
-.app-shell .etsy-api-disclosure{color:rgba(74,42,62,.95)!important}
+.app-shell .etsy-api-disclosure{color:rgba(255,255,255,.6)!important}
 .app-shell .approved-usage span{color:#fff!important}
 
 /* D164 · Sizes became a selectable axis, so they get the colour card's idiom.
