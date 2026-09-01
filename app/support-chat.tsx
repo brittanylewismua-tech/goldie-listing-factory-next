@@ -36,7 +36,6 @@ export default function SupportChat({ screen }: { screen?: WorkflowScreen }) {
   const [contactStatus, setContactStatus] = useState("");
   const [sending, setSending] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
-  const rootRef = useRef<HTMLDivElement>(null);
 
   const answer = useCallback((value: string) => {
     const clean = value.trim();
@@ -72,8 +71,7 @@ export default function SupportChat({ screen }: { screen?: WorkflowScreen }) {
      update is intentionally synchronous: a hidden tab does not run animation
      frames, but it can still receive layout-changing events before it returns. */
   useEffect(() => {
-    const root = rootRef.current;
-    if (!root) return;
+    const root = document.documentElement;
 
     const measure = () => {
       const viewportHeight = window.innerHeight;
@@ -81,10 +79,13 @@ export default function SupportChat({ screen }: { screen?: WorkflowScreen }) {
         .map(element => element.getBoundingClientRect())
         .filter(rect => rect.height > 0 && rect.bottom > 0 && rect.top < viewportHeight)
         .map(rect => Math.max(0, rect.top));
-      const barTop = tops.length ? Math.min(...tops) : viewportHeight;
-      const bottom = Math.max(20, Math.ceil(viewportHeight - barTop + 16));
-      root.style.setProperty("--support-launcher-bottom", `${bottom}px`);
-      root.style.setProperty("--support-video-bottom", `${bottom + 60}px`);
+      if (!tops.length) {
+        root.style.removeProperty("--goldie-launcher-lift");
+        return;
+      }
+      const barTop = Math.min(...tops);
+      const lift = Math.max(0, Math.ceil(viewportHeight - barTop));
+      root.style.setProperty("--goldie-launcher-lift", `${lift}px`);
     };
 
     const resizeObserver = new ResizeObserver(measure);
@@ -95,19 +96,19 @@ export default function SupportChat({ screen }: { screen?: WorkflowScreen }) {
       measure();
     });
     mutationObserver.observe(document.body, { childList:true, subtree:true });
-    window.addEventListener("scroll", measure, true);
+    const scroller = document.querySelector<HTMLElement>(".factory-main");
+    scroller?.addEventListener("scroll", measure);
     window.addEventListener("resize", measure);
     document.addEventListener("visibilitychange", measure);
     measure();
 
     return () => {
-      window.removeEventListener("scroll", measure, true);
+      scroller?.removeEventListener("scroll", measure);
       window.removeEventListener("resize", measure);
       document.removeEventListener("visibilitychange", measure);
       resizeObserver.disconnect();
       mutationObserver.disconnect();
-      root.style.removeProperty("--support-launcher-bottom");
-      root.style.removeProperty("--support-video-bottom");
+      root.style.removeProperty("--goldie-launcher-lift");
     };
   }, [screen]);
 
@@ -152,7 +153,7 @@ export default function SupportChat({ screen }: { screen?: WorkflowScreen }) {
     </section>
   </div> : null;
 
-  return <div className="support-root" ref={rootRef}>
+  return <div className="support-root">
     {videoDialog}
     {/* Rendered only where a video exists for this screen. A button that opens
         nothing is worse than no button, and it lets the videos be filmed and

@@ -2841,9 +2841,9 @@ html, body { background: #f1d2dc; }
     white-space:normal;overflow:visible;text-overflow:clip}
 }
 
-/* D866 · SupportChat measures the sticky action bar because it can settle
-   higher above the site footer. These fallbacks protect the first paint. */
+/* D867 · The launcher lift is the measured space from the action bar's top to
+   the viewport bottom. The extra 16px is the visible gap above that bar. */
 @media(min-width:821px){
-  .app-shell .support-root .support-launcher{bottom:var(--support-launcher-bottom,86px)}
-  .app-shell .support-root .support-video-launcher{bottom:var(--support-video-bottom,146px)}
+  .app-shell .support-root .support-launcher{bottom:calc(var(--goldie-launcher-lift, 70px) + 16px)}
+  .app-shell .support-root .support-video-launcher{bottom:calc(var(--goldie-launcher-lift, 70px) + 76px)}
 }

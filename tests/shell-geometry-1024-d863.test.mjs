@@ -4,6 +4,7 @@ import fs from "node:fs";
 import postcss from "postcss";
 
 const v2=fs.readFileSync(new URL("../app/interface-v2.css",import.meta.url),"utf8");
+const v2Root=postcss.parse(v2);
 const sheetPaths=["globals.css","factory-navigation.css","theme.css","lilac-theme.css","approved-functional.css","management-aesthetic.css","clarity-pass.css","interface-v2.css"];
 
 function mediaApplies(node,width){
@@ -31,8 +32,13 @@ function resolvedAppShell(property,width){
   return candidates.sort((a,b)=>Number(a.important)-Number(b.important)||a.sheetIndex-b.sheetIndex||a.order-b.order).at(-1);
 }
 
+function laptopRules(){
+  const media=v2Root.nodes.find(node=>node.type==="atrule"&&node.name==="media"&&node.params.replaceAll(" ","")==="(min-width:821px)and(max-width:1179px)");
+  return media?.toString()||"";
+}
+
 test("D863: the 1024px shell allocates its sidebar exactly once",()=>{
-  const laptop=v2.match(/@media\(min-width:821px\) and \(max-width:1179px\)\{([\s\S]*)\}\s*$/)?.[1]||"";
+  const laptop=laptopRules();
   assert.match(laptop,/\.app-shell\{min-width:0;padding-left:0;grid-template-columns:240px minmax\(0,1fr\)\}/);
   const padding=resolvedAppShell("padding-left",1024);
   const columns=resolvedAppShell("grid-template-columns",1024);
@@ -43,7 +49,7 @@ test("D863: the 1024px shell allocates its sidebar exactly once",()=>{
 });
 
 test("D863: full-width laptop bars are bounded by the pane, not viewport maths",()=>{
-  const laptop=v2.match(/@media\(min-width:821px\) and \(max-width:1179px\)\{([\s\S]*)\}\s*$/)?.[1]||"";
+  const laptop=laptopRules();
   assert.match(laptop,/\.factory-footer,[\s\S]*\.workflow-footer-actions,[\s\S]*\.factory-work footer,[\s\S]*\.workflow-footer-actions\.post-draft-footer\{\s*width:100%;margin-left:0\}/);
   assert.doesNotMatch(laptop,/100vw|50vw|calc\(/);
   const pane={left:240,width:784},workGutter=24,bar={left:240+workGutter,width:784-2*workGutter};
@@ -51,7 +57,7 @@ test("D863: full-width laptop bars are bounded by the pane, not viewport maths",
 });
 
 test("D863: every action-bar item keeps reachable space at 1024",()=>{
-  const laptop=v2.match(/@media\(min-width:821px\) and \(max-width:1179px\)\{([\s\S]*)\}\s*$/)?.[1]||"";
+  const laptop=laptopRules();
   assert.match(laptop,/\.workflow-footer-actions>\.autosave-note\{display:none\}/);
   assert.match(laptop,/\.factory-footer\.in-bar>small\{\s*white-space:normal;overflow:visible;text-overflow:clip\}/);
   const barWidth=736,back=150,gaps=3*18,saveDraft=130,next=125,status=barWidth-back-gaps-saveDraft-next;

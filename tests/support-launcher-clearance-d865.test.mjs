@@ -26,7 +26,7 @@ function desktopDeclarations(selector, property) {
   return values;
 }
 
-test("D866: workflow support controls track the sticky action bar", () => {
+test("D867: workflow support controls track the sticky action bar", () => {
   assert.equal(css.includes(".app-shell ~ .support-root"), false,
     "a sibling selector cannot match SupportChat inside the shell");
 
@@ -35,15 +35,19 @@ test("D866: workflow support controls track the sticky action bar", () => {
   const videoBottom = desktopDeclarations(
     ".app-shell .support-root .support-video-launcher", "bottom");
 
-  assert.equal(launcherBottom.at(-1), "var(--support-launcher-bottom,86px)");
-  assert.equal(videoBottom.at(-1), "var(--support-video-bottom,146px)");
+  assert.equal(launcherBottom.at(-1), "calc(var(--goldie-launcher-lift, 70px) + 16px)");
+  assert.equal(videoBottom.at(-1), "calc(var(--goldie-launcher-lift, 70px) + 76px)");
 
-  assert.match(component, /viewportHeight\s*-\s*barTop\s*\+\s*16/,
-    "the offset must follow the rendered bar top with a 16px gap");
-  assert.match(component, /--support-video-bottom",\s*`\$\{bottom \+ 60\}px`/,
-    "the video control must track above the measured help control");
-  assert.match(component, /addEventListener\("scroll",\s*measure,\s*true\)/,
-    "scrolling any workflow container must update the offset");
+  assert.match(component, /viewportHeight\s*-\s*barTop/,
+    "the lift must follow the rendered bar top");
+  assert.match(component, /document\.documentElement/,
+    "the measurement must be published where the CSS can always inherit it");
+  assert.match(component, /setProperty\("--goldie-launcher-lift"/,
+    "the effect and stylesheet must share one observable property");
+  assert.match(component, /querySelector<HTMLElement>\("\.factory-main"\)/,
+    "the listener must attach to the element that actually scrolls");
+  assert.match(component, /scroller\?\.addEventListener\("scroll",\s*measure\)/,
+    "scrolling the workflow must update the lift synchronously");
   assert.match(component, /addEventListener\("resize",\s*measure\)/,
     "resizing must update the offset");
   assert.match(component, /visibilitychange/,
