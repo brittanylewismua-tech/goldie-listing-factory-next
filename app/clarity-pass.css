@@ -216,7 +216,7 @@
 .restart-batch-actions{display:grid;gap:9px;margin-top:22px}
 .restart-batch-actions button{min-height:44px;padding:11px 14px;border-radius:6px;font-weight:700;cursor:pointer}
 .restart-batch-actions>button:first-child{border:1px solid #ded6dc;background:transparent;color:#65495d}
-.restart-batch-actions .save-restart{border:0;background:#5b304f;color:#fff}
+.restart-batch-actions .save-restart{border:0;background:var(--lf-pink);color:#3d0b2b}
 .restart-batch-actions .discard-restart{border:1px solid #dfc8d5;background:#fff4f6;color:#8a3048}
 .restart-printify-note{display:block;margin-top:12px;color:#7a6574;font-size:10px}
 
@@ -314,8 +314,8 @@
   padding:0 20px!important;
   border:0!important;
   border-radius:16px!important;
-  background:linear-gradient(135deg,#6b3a58,#8a4f73)!important;
-  color:#fff!important;
+  background:linear-gradient(145deg,#ff6ecd,#f52fb2)!important;
+  color:#3d0b2b!important;
 }
 .app-shell :is(.step-card,.recipe-card) .save-recipe:disabled{
   background:rgba(107,58,88,.14)!important;
@@ -549,11 +549,11 @@
 .app-shell .size-choice-grid button.selected{border-color:#a2578d;background:linear-gradient(120deg,rgba(250,218,236,.92),rgba(223,200,213,.87));box-shadow:0 0 0 2px rgba(255,255,255,.72)}
 .app-shell .size-choice-grid button:disabled{opacity:.42;cursor:not-allowed}
 .app-shell .size-choice-grid span{font-size:11px;font-weight:800;white-space:nowrap}
-.app-shell .size-choice-grid em{display:grid;place-items:center;width:19px;height:19px;border-radius:50%;background:#5c304f;color:#fff;font-size:9px;font-style:normal}
+.app-shell .size-choice-grid em{display:grid;place-items:center;width:19px;height:19px;border-radius:50%;background:var(--lf-pink);color:#3d0b2b;font-size:9px;font-style:normal}
 .app-shell .size-choice-grid small{color:#795e70;font-size:8px}
 .app-shell .size-selector-actions{display:flex;flex-wrap:wrap;gap:8px;padding-top:2px}
 .app-shell .size-selector-actions button{min-height:38px;padding:9px 13px;border:1px solid #ded5db;border-radius:16px;background:rgba(255,255,255,.75);color:#603750;font-size:9px;font-weight:850;cursor:pointer}
-.app-shell .size-selector-actions button:last-child{margin-left:auto;background:#5c304f;color:#fff}
+.app-shell .size-selector-actions button:last-child{margin-left:auto;background:var(--lf-pink);color:#3d0b2b}
 .app-shell .size-selector-actions button.remembered{border-color:rgba(157,80,130,.4);background:linear-gradient(145deg,rgba(232,183,225,.55),rgba(201,157,186,.45));color:#4b283e}
 .app-shell .size-required{margin:0;padding:10px 12px;border:1px solid #bd7188;border-radius:9px;background:#fff3f7;color:#79374e;font-size:10px;font-weight:800}
 @media(max-width:650px){
@@ -1844,7 +1844,7 @@ body{min-width:0}
 .goals-empty{margin:0;color:#75576b;font:500 12px/1.6 "Manrope",system-ui,sans-serif}
 .goals-cta,.listing-goal-history-link{
   justify-self:start;min-height:40px;display:inline-flex;align-items:center;padding:0 16px;
-  border-radius:16px;background:#5c304f;color:#fff;text-decoration:none;
+  border-radius:16px;background:var(--lf-pink);color:#3d0b2b;text-decoration:none;
   font:800 12px/1 "Manrope",system-ui,sans-serif;
 }
 .listing-goal-history-link{background:rgba(255,255,255,.72);color:#603750;border:1px solid #ded5db}
@@ -2293,7 +2293,7 @@ body{min-width:0}
 }
 .confirm-action-cancel:hover{background:#fdf7fd}
 .confirm-action-go{
-  border:0;background:#5b304f;color:#fff;
+  border:0;background:var(--lf-pink);color:#3d0b2b;
 }
 /* Destructive actions carry the muted rose used everywhere else for a warning,
    never an alarm red. */
@@ -3178,8 +3178,8 @@ body{min-width:0}
   padding:0 12px!important;
   border-radius:16px!important;
   border:0!important;
-  background:linear-gradient(135deg,#6b3a58,#8a4f73)!important;
-  color:#fff!important;
+  background:linear-gradient(145deg,#ff6ecd,#f52fb2)!important;
+  color:#3d0b2b!important;
   font-size:10px!important;
   font-weight:800!important;
   letter-spacing:.01em!important;
@@ -3188,7 +3188,7 @@ body{min-width:0}
   box-shadow:0 4px 12px rgba(85,45,70,.18)!important;
 }
 .app-shell .recipe-card .recipe-tile:hover .recipe-copy em{
-  background:linear-gradient(135deg,#5a2f4a,#7a4364)!important;
+  background:linear-gradient(145deg,#ff6ecd,#f52fb2)!important;
 }
 /* Chosen is a state, not an offer. It stops shouting. */
 /* D813 - a third rule filling the same label. D812 removed one, missed two,
