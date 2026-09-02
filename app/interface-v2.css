@@ -2954,10 +2954,8 @@ html, body { background: var(--lf-paper); }
 .app-shell .artwork-version-tools{display:grid;gap:6px;padding-top:12px;border-top:1px solid #eee8ec}
 .app-shell .artwork-version-tools>small{color:#765e70}
 .app-shell .artwork-version-tools>div{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.app-shell .artwork-version-tools .text-action,
 .app-shell .artwork-version-tools label.secondary-action{display:inline-flex;align-items:center;justify-content:center;min-height:40px;margin:0;padding:8px 14px;border:1px solid #d8ccd4;border-radius:10px;background:#fff;color:#3d2538;text-decoration:none;font:700 12px/1.2 Inter,ui-sans-serif,system-ui,sans-serif;box-shadow:0 2px 5px rgba(50,25,42,.05);cursor:pointer}
 .app-shell .artwork-version-tools label.secondary-action{border-color:#111;background:#111;color:#fff;box-shadow:4px 4px 0 #ff49bd}
-.app-shell .artwork-version-tools .text-action:hover{border-color:#a98f9f;background:#fbf8fa}
 .app-shell .artwork-version-tools label.secondary-action:hover{background:#272127}
 .app-shell .design-artwork-primary>.artwork-remove-action{display:inline-flex;align-items:center;justify-content:center;min-height:38px;padding:8px 13px;border:1px solid #e3b9c5;border-radius:10px;background:#fff;color:#9b3d55;text-decoration:none;font:700 12px/1 Inter,ui-sans-serif,system-ui,sans-serif;cursor:pointer}
 .app-shell .design-artwork-primary>.artwork-remove-action:hover{background:#fff4f6;border-color:#c96f86}
