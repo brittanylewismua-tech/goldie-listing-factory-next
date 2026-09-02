@@ -2161,6 +2161,12 @@ test("D902: upload starts with the choices and primary workflow cards remain dis
   assert.match(css,/\.designs-step:not\(\.finish-mode\) \.upload-actions\{gap:16px;margin:0 0 16px\}/);
 });
 
+test("D903: the Images page describes only work performed on that page",async()=>{
+  const app=await readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8");
+  assert.match(app,/designs: \{ eyebrow: "STEP 2 OF 4", title: "Designs \+ images", copy: "Upload your finished designs, then assign front and back artwork where needed\." \}/);
+  assert.doesNotMatch(app,/choose and arrange the listing photos/);
+});
+
 test("names every listing missing a required photo (fixes D33)",async()=>{
   const app=await readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8");
   assert.match(app,/missingPhotoDraftIds\.map\(clientId=>/);

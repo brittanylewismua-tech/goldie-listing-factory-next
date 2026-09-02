@@ -4080,7 +4080,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
          title stays put; the copy carries the state. */
       ? { eyebrow: "STEP 1 OF 4", title: "Choose product", copy: "Your product is selected. Continue to upload the designs for this batch." }
       : { eyebrow: "STEP 1 OF 4", title: "Choose product", copy: "Choose a saved product or connect a completed Printify product." },
-    designs: { eyebrow: "STEP 2 OF 4", title: "Designs + images", copy: "Add up to 20 finished designs, then choose and arrange the listing photos for each one." },
+    designs: { eyebrow: "STEP 2 OF 4", title: "Designs + images", copy: "Upload your finished designs, then assign front and back artwork where needed." },
     review: { eyebrow: "STEP 3 OF 4", title: "Create Printify drafts", copy: "Goldie creates an unpublished draft in Printify for every design in this batch." },
     finish: finishPhase==="details" ? { eyebrow: "STEP 3 OF 4 · LISTING", title: "Listing details", copy: "Create the titles and tags, then review the description for every listing." } : finishPhase==="etsy" ? { eyebrow: "STEP 3 OF 4 · LISTING", title: "Listing details", copy: "Review the Etsy category and product-specific details." } : { eyebrow: "STEP 4 OF 4 · PUBLISH", title: "Publish", copy: "Review every listing before publishing it live on Etsy." },
   }[workflowStep];
