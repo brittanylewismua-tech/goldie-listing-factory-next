@@ -84,6 +84,12 @@ test("D894: similar products stay allowed while exact-looking setups require ack
   assert.match(css,/\.bundle-duplicate-warning\{[^}]*background:#fffaf0/);
 });
 
+test("D895: growing product libraries keep prominent, separated section headers",()=>{
+  assert.match(css,/\.recipe-card \.recipe-library-head\{[^}]*margin:0 0 16px[^}]*padding:0 0 11px[^}]*border-bottom:1px solid #e5dde2/);
+  assert.match(css,/\.recipe-card \.recipe-library-head>span\{[^}]*background:#2b2027[^}]*color:#fff[^}]*font:800 11px/);
+  assert.match(css,/\.recipe-card \.bundle-card-heading\{margin-top:38px!important;margin-bottom:16px!important\}/);
+});
+
 test("D886: pricing waits for finished draft costs",()=>{
   assert.match(app,/ready\.facets\.filter\(facet=>facet\.name!=="profit"\)/);
   assert.match(app,/Final Printify production cost/);
