@@ -6,7 +6,7 @@ const app=readFileSync(new URL("../app/listing-factory-app.tsx",import.meta.url)
 const css=readFileSync(new URL("../app/interface-v2.css",import.meta.url),"utf8");
 
 test("D949: the upload screen presents one short instruction and compact progress",()=>{
-  assert.match(app,/title: "Add your designs", copy: "Upload the artwork for this batch\."/);
+  assert.match(app,/title: "Add your designs", copy: ""/);
   assert.match(app,/Upload one \{uploadPrimaryLabel\} design per listing\./);
   assert.doesNotMatch(app,/Main upload: one/);
   assert.doesNotMatch(app,/listings left on your plan/);

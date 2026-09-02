@@ -1154,7 +1154,7 @@ test("keeps pricing simple while using a real Etsy shipping profile and exact te
   /* D217: pricing moved onto the Product page, so this step is draft creation
      and is described as that. The pricing UI itself is asserted intact by
      tests/feature-inventory.test.mjs. */
-  assert.match(page, /Goldie creates an unpublished draft in Printify for every design in this batch/);
+  assert.match(page, /Review the plan, then create the private drafts/);
   assert.doesNotMatch(page,/pricing target, keyword bank, and mockup defaults/);
   assert.match(page,/variant\.templatePrice/);
   /* D303 · Replaced by the ✓ line above it; the fee controls remain. */
@@ -1343,7 +1343,7 @@ test("places each step count directly below its page title", async () => {
   ]);
   /* D220: four stages, so the counter is "Step 2 of 4 · Images" rather than a
      top-level count with a nested "Finish · phase (n of 4)" variant. */
-  assert.match(page, /<p className="hero-step-count">\{workflowStep==="connect"\?"Account setup · before you start":`Step \$\{railTopNumber\} of \$\{RAIL_STAGES\.length\} · \$\{currentStage\.label\}`\}<\/p>/);
+  assert.match(page, /stepCount=\{workflowStep==="connect"\?<p className="hero-step-count">Account setup · before you start<\/p>:undefined\}/);
   assert.doesNotMatch(page, /className="approved-step-count"/);
   assert.match(styles, /\.app-shell \.hero-step-count/);
   /* D727 · The room under the head used to come from
@@ -2161,7 +2161,7 @@ test("D902: upload starts with the choices and primary workflow cards remain dis
   ]);
   assert.doesNotMatch(app,/Drop your designs here|Build one focused batch|Before uploading/);
   assert.match(app,/className="upload-actions"[\s\S]{0,1800}className="upload-guidance batch-limits file-reminder"/);
-  assert.match(css,/:is\(\.step-card,\.factory-panel,\.factory-form-card,\.design-artwork-card,\.final-listing-card,\.listing-card,\.recipe-tile,\.everything-else\)\{[\s\S]{0,180}border-color:#d4c2cc;[\s\S]{0,180}box-shadow:/);
+  assert.match(css,/:is\(\.step-card,\.factory-panel,\.factory-form-card,\.design-artwork-card,\.final-listing-card,\.listing-card,\.recipe-tile,\.everything-else\)\{[\s\S]{0,180}border-color:#c9b8c2;[\s\S]{0,180}box-shadow:/);
   assert.match(css,/\.designs-step:not\(\.finish-mode\) \.upload-actions\{gap:16px;margin:0 0 14px\}/);
 });
 
@@ -2603,7 +2603,7 @@ test("D415: ranking uses what the model saw, not only readable text", async () =
 test("D416: Connect does not pretend to be step one", async () => {
   const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
 
-  assert.match(app, /workflowStep==="connect"\?"Account setup · before you start"/,
+  assert.match(app, /workflowStep==="connect"\?<p className="hero-step-count">Account setup · before you start<\/p>:undefined/,
     "the step count under the title");
   assert.match(app, /workflowStep==="connect"\?"Connect Printify and Etsy"/,
     "and the batch header beside the rail");

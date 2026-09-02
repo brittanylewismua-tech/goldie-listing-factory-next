@@ -3061,7 +3061,7 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
       {/* Subordinate, and it says so: one section, collapsed by default once
           the titles exist, holding every batch-wide tool unchanged. */}
       <FactoryPanel index={1} title="Titles for this batch"
-        description="Choose a keyword bank, build the titles, and edit the description shared by every listing"
+        description="Create titles, tags, and the shared description"
         state={`${titled} of ${files.length} titled`}
         tone={titled===files.length?"done":"attention"}
         open={batchToolsOpen}
@@ -4189,13 +4189,13 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
          and eyebrow both still read PRODUCT. The rail's own stage title is
          "Choose product", so that is the name three places already agree on. The
          title stays put; the copy carries the state. */
-      ? { eyebrow: "STEP 1 OF 4", title: "Add your designs", copy: `${activeBundle?"Your bundle":"Your product"} is selected. Upload the finished designs for this batch.` }
+      ? { eyebrow: "STEP 1 OF 4", title: "Add your designs", copy: "" }
       : { eyebrow: "STEP 1 OF 4", title: "Choose a product or bundle", copy: "Select one to start your batch." },
     designs: complete
-      ? { eyebrow: "STEP 2 OF 4", title: "Finish your Printify drafts", copy: activeBundle&&bundleRecipes.length>1?"For each product, confirm colors, sizes, placement, pricing, shipping, and listing photos.":"Confirm colors, sizes, placement, pricing, shipping, and listing photos." }
-      : { eyebrow: "STEP 2 OF 4", title: "Add your designs", copy: "Upload the artwork for this batch." },
-    review: { eyebrow: "STEP 3 OF 4", title: "Create Printify drafts", copy: "Goldie creates an unpublished draft in Printify for every design in this batch." },
-    finish: finishPhase==="details" ? { eyebrow: "STEP 3 OF 4 · LISTING", title: "Listing details", copy: "Create the titles and tags, then review the description for every listing." } : finishPhase==="etsy" ? { eyebrow: "STEP 3 OF 4 · LISTING", title: "Listing details", copy: "Review the Etsy category and product-specific details." } : { eyebrow: "STEP 4 OF 4 · FINISH", title: "Final review", copy: "Review every listing, then finish in Printify My Products." },
+      ? { eyebrow: "STEP 2 OF 4", title: "Finish your Printify drafts", copy: activeBundle&&bundleRecipes.length>1?"Complete each product from top to bottom.":"Complete each section from top to bottom." }
+      : { eyebrow: "STEP 2 OF 4", title: "Add your designs", copy: "" },
+    review: { eyebrow: "STEP 3 OF 4", title: "Create Printify drafts", copy: "Review the plan, then create the private drafts." },
+    finish: finishPhase==="details" ? { eyebrow: "STEP 3 OF 4 · LISTING", title: "Listing details", copy: "Finish each listing’s title, tags, and description." } : finishPhase==="etsy" ? { eyebrow: "STEP 3 OF 4 · LISTING", title: "Listing details", copy: "Finish the Etsy details." } : { eyebrow: "STEP 4 OF 4 · FINISH", title: "Final review", copy: "Review the batch, then open it in Printify." },
   }[workflowStep];
   const workflowHelp=workflowStep==="designs"
     ?complete
@@ -4309,7 +4309,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
           title={workflowHero.title}
           copy={workflowHero.copy}
           help={<ContextHelp label={`Open detailed help for ${workflowHero.title}`} title={workflowHelp.title} intro={workflowHelp.intro} sections={workflowHelp.sections}/>}
-          stepCount={<p className="hero-step-count">{workflowStep==="connect"?"Account setup · before you start":`Step ${railTopNumber} of ${RAIL_STAGES.length} · ${currentStage.label}`}</p>}
+          stepCount={workflowStep==="connect"?<p className="hero-step-count">Account setup · before you start</p>:undefined}
           summary={heroSummary}
         >
           {restoreNotice&&<p className="batch-restore-notice" role="status">{restoreNotice}</p>}
