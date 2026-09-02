@@ -17,16 +17,16 @@ const CI_COMMIT_VARIABLES = [
 ];
 
 export function resolveBuildCommit(): string {
-  for (const name of CI_COMMIT_VARIABLES) {
-    const value = (process.env[name] || "").trim();
-    if (/^[0-9a-f]{7,40}$/i.test(value)) return value.slice(0, 40);
-  }
   try {
     const value = execSync("git rev-parse HEAD", { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim();
     if (/^[0-9a-f]{40}$/i.test(value)) return value;
   } catch {
     /* No .git in the build context. An empty commit degrades to the readable
-       marker, which is exactly how D629 behaves today - never worse. */
+     marker, which is exactly how D629 behaves today - never worse. */
+  }
+  for (const name of CI_COMMIT_VARIABLES) {
+    const value = (process.env[name] || "").trim();
+    if (/^[0-9a-f]{7,40}$/i.test(value)) return value.slice(0, 40);
   }
   return "";
 }

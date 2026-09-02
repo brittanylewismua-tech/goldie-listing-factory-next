@@ -7,6 +7,7 @@ const review=await readFile(new URL("../app/final-listing-review.tsx",import.met
 const route=await readFile(new URL("../app/api/printify/drafts/publish/route.ts",import.meta.url),"utf8");
 const worker=await readFile(new URL("../worker/index.ts",import.meta.url),"utf8");
 const operations=await readFile(new URL("../app/api/operations/route.ts",import.meta.url),"utf8");
+const buildCommit=await readFile(new URL("../build/build-commit.ts",import.meta.url),"utf8");
 
 test("D931: the final action hands the seller to Printify without publishing",()=>{
   assert.match(app,/href="https:\/\/printify\.com\/app\/products"/);
@@ -25,4 +26,8 @@ test("D931: every server-side route fails closed and no worker drains the queue"
   assert.doesNotMatch(getBody,/drainGlobalPublishQueue\(/);
   assert.doesNotMatch(worker,/kickGlobalPublishQueueIfDue|drainGlobalPublishQueue/);
   assert.match(operations,/\["resume","retry_failed","run_now"\][\s\S]*?status:410/);
+});
+
+test("D931: a stale CI variable cannot overwrite the commit actually being built",()=>{
+  assert.ok(buildCommit.indexOf('execSync("git rev-parse HEAD"')<buildCommit.indexOf("for (const name of CI_COMMIT_VARIABLES)"));
 });

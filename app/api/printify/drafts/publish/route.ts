@@ -2,7 +2,7 @@ import { env } from "cloudflare:workers";
 import { NextResponse } from "next/server";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { monthKey, planFor } from "@/app/plan-limits";
-import { drainGlobalPublishQueue, publishJobPayload } from "./queue";
+import { publishJobPayload } from "./queue";
 import { isOwner } from "@/app/mastermind/access";
 import { verifyShopPairing, shopMismatch } from "../../shop-match";
 import { decryptPrintifyToken } from "../../token-crypto";
