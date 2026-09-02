@@ -41,6 +41,7 @@ export default function FactoryShell({ active, title, children }:
   const [usage, setUsage] = useState<{ used: number; limit: number } | null>(null);
   const [goal, setGoal] = useState<ListingGoal | null>(null);
   const [goalDays, setGoalDays] = useState<PublishedDay[]>([]);
+  const [goalDaysLoaded, setGoalDaysLoaded] = useState(false);
   const [account, setAccount] = useState<{ name: string; initials: string; signedIn: boolean } | null>(null);
   /* D835 · Every Etsy shop this seller has connected. The active one is the shop
      the product bank is scoped to; switching is a menu choice, not an OAuth
@@ -59,6 +60,7 @@ export default function FactoryShell({ active, title, children }:
     }).catch(() => undefined);
     void fetch("/api/batches").then(response => response.json()).then((result: { published?: PublishedDay[] }) => {
       setGoalDays(result.published || []);
+      setGoalDaysLoaded(true);
     }).catch(() => undefined);
     void fetch("/api/etsy").then(response => response.json()).then((result: { shops?: { shopId: number; shopName: string; active: boolean }[] }) => {
       setShops(result.shops || []);
@@ -97,7 +99,7 @@ export default function FactoryShell({ active, title, children }:
       <div className="approved-sidebar-footer">
         <a className="approved-usage" href="/usage"><b>Usage + Plan</b><span>{usageLine}</span>
           <div className="approved-usage-track" aria-hidden="true"><i style={{ width: usage ? `${Math.min(100, usage.used / Math.max(1, usage.limit) * 100)}%` : "0%" }} /></div></a>
-        {goal && <a className="listing-goal-side" href="/goals">
+        {goal && goalDaysLoaded && <a className="listing-goal-side" href="/goals">
           <span className="listing-goal-caption">This {goal.period}&rsquo;s goal</span>
           <b>{goalDone} of {goal.target} published</b>
           <span className="listing-goal-track" aria-hidden="true"><i style={{ width: `${Math.min(100, Math.round((goalDone / Math.max(1, goal.target)) * 100))}%` }} /></span></a>}

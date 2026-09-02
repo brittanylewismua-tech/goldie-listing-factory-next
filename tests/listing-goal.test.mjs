@@ -72,7 +72,7 @@ test("the goal is one switch, off by default — D341", async () => {
   /* The sidebar and the receipt are the same feature seen twice — they cannot
      be enabled separately, so both read the one value. */
   assert.match(app, /if\(result\.listingGoal\?\.enabled\)setListingGoal\(result\.listingGoal\)/);
-  assert.match(app, /\{listingGoal&&<a className="listing-goal-side"/);
+  assert.match(app, /\{listingGoal&&goalDaysLoaded&&<a className="listing-goal-side"/);
   assert.match(app, /goalLine=\{listingGoal\?/);
   assert.match(ui, /\{goalLine&&<p className="receipt-goal">/);
 });
