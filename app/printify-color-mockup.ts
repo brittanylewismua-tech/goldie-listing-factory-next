@@ -1,6 +1,15 @@
 export type PrintifyMockupImage={src:string;variantIds:number[];position:string};
 export type PrintifyColorVariant={id:number;colorId?:number|null;options?:number[]};
 
+export function printifyMockupDetails(images:string[]|undefined){
+  return (images||[]).filter(Boolean).map(src=>{
+    const url=new URL(src),parts=url.pathname.split("/").filter(Boolean),mockup=parts.indexOf("mockup");
+    const variantId=mockup>=0?Number(parts[mockup+2]):NaN;
+    const camera=url.searchParams.get("camera_label")||parts.at(-1)||"";
+    return {src,variantIds:Number.isFinite(variantId)?[variantId]:[],position:camera};
+  });
+}
+
 /* Older saved batches predate the normalized `colorId` field. Their raw
    Printify option ids are still present in `options`, so color previews must
    accept either representation instead of silently falling back to one image

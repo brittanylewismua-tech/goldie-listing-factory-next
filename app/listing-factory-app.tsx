@@ -35,7 +35,7 @@ import ContextHelp from "./context-help";
 import GoldieWordmark from "./goldie-wordmark";
 import MobileGate from "./mobile-gate";
 import { productFamily } from "./product-type-utils";
-import { printifyMockupForColor, printifyVariantIdsForColor } from "./printify-color-mockup";
+import { printifyMockupDetails, printifyMockupForColor, printifyVariantIdsForColor } from "./printify-color-mockup";
 import { orderedPrintSides,primaryPrintSide,printSideLabel,productNoun } from "./print-sides";
 
 /* The product glyph is a last-resort identity image after Printify has answered
@@ -507,7 +507,12 @@ function ProductColorSelector({product,selected,onChange,onRemember,remembering,
 }
 
 function DraftColorSelector({product,drafts,selected,saving,onChange}:{product:TemplateDetails;drafts:DraftResult[];selected:number[];saving:boolean;onChange:(ids:number[])=>void}){
-  const colors=(product.colorOptions||[]).filter(color=>color.available),selectedSet=new Set(selected);
+  const colors=[...(product.colorOptions||[]).filter(color=>color.available).reduce((groups,color)=>{
+    const key=color.title.trim().toLowerCase(),existing=groups.get(key);
+    if(existing)existing.ids=[...new Set([existing.id,...(existing.ids||[]),color.id,...(color.ids||[])])];
+    else groups.set(key,{...color,ids:[...new Set([color.id,...(color.ids||[])])]});
+    return groups;
+  },new Map<string,ProductColor>()).values()],selectedSet=new Set(selected);
   const [activeDraft,setActiveDraft]=useState("");
   const [activeColor,setActiveColor]=useState<number|null>(selected[0]??colors[0]?.id??null);
   const draft=drafts.find(item=>item.id===activeDraft)||drafts.find(item=>item.status==="Created");
@@ -517,7 +522,7 @@ function DraftColorSelector({product,drafts,selected,saving,onChange}:{product:T
   const variantIdsFor=(color:ProductColor)=>printifyVariantIdsForColor(product.variants,idsFor(color));
   const imageFor=(color:ProductColor)=>{
     const variants=variantIdsFor(color);
-    return printifyMockupForColor(draft.printifyImageDetails,variants)
+    return printifyMockupForColor(draft.printifyImageDetails?.length?draft.printifyImageDetails:printifyMockupDetails(draft.printifyImages),variants)
       ||draft.previewUrl||draft.printifyImages?.[0]||"";
   };
   const focused=colors.find(color=>color.id===activeColor)||colors[0];

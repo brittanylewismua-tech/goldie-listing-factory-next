@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
-import {printifyMockupForColor,printifyVariantIdsForColor} from "../app/printify-color-mockup.ts";
+import {printifyMockupDetails,printifyMockupForColor,printifyVariantIdsForColor} from "../app/printify-color-mockup.ts";
 
 const app=readFileSync(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8");
 const css=readFileSync(new URL("../app/interface-v2.css",import.meta.url),"utf8");
@@ -47,6 +47,18 @@ test("D916: restored batches resolve color variants from raw Printify options",(
   assert.deepEqual([...printifyVariantIdsForColor(variants,[101])],[92570]);
   assert.deepEqual([...printifyVariantIdsForColor(variants,[102])],[92571]);
   assert.deepEqual([...printifyVariantIdsForColor(variants,[103])],[92572]);
+});
+
+test("D917: restored drafts recover variant metadata from their saved Printify URLs",()=>{
+  const saved=[
+    "https://images.printify.com/mockup/6a977424f8329d96f40c1205/12100/92570/front-dark.jpg?camera_label=front",
+    "https://images.printify.com/mockup/6a977424f8329d96f40c1205/12124/92570/front-dark.jpg?camera_label=front",
+    "https://images.printify.com/mockup/6a977424f8329d96f40c1205/12100/92571/back-dark.jpg?camera_label=back",
+  ];
+  const details=printifyMockupDetails(saved);
+  assert.deepEqual(details.map(item=>item.variantIds),[[12100],[12124],[12100]]);
+  assert.equal(printifyMockupForColor(details,[12124]),saved[1]);
+  assert.equal(printifyMockupForColor(details,[12100]),saved[0]);
 });
 
 test("D911: Step 1 keeps a visible disabled continuation before upload",()=>{
