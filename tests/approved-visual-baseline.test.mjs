@@ -427,11 +427,12 @@ test("the setup step has exactly one forward control, and it gates every section
   /* D399 · Also requires `complete`: while the drafts do not exist the step's one
      action is "Continue to create drafts" in the product card, and this button
      only scrolled down to it. */
-  /* D728 · The control moved into the step's footer bar (prototype
-     .goldie-footer). The condition that keeps it off the setup step is the
-     same one, in the same place, still guarding the same button. */
-  assert.match(page, /\{workflowStep!=="setup"&&complete&&<FactoryFooter status=[\s\S]*?><button className="workflow-next" disabled=\{!designsFinished\} onClick=\{continueFromDesigns\}>/,
-    "The designs-block forward button renders on the setup step again, above Colours and Mockups.");
+  /* D907 · Product selection now reveals artwork directly below it. The one
+     forward control therefore belongs after that artwork and advances only to
+     the Images/draft-creation step. It remains in the persistent footer, never
+     inside the selected-product card. */
+  assert.match(page, /\{workflowStep==="setup"&&<FactoryFooter status=[\s\S]*?><button className="workflow-next" disabled=\{!designsFinished\} onClick=\{\(\)=>goToStep\("designs"\)\}>/,
+    "the setup step must expose one gated way forward after artwork is ready");
   // the real gate must keep naming what is missing
   /* D383 · The forward button used to relabel itself with whatever was missing
      ("Pick a keyword bank for Gildan Hoodie", "Choose product colors to

@@ -2957,6 +2957,7 @@ html, body { background: var(--lf-paper); }
 .app-shell .artwork-version-tools label.secondary-action{display:inline-flex;align-items:center;justify-content:center;min-height:40px;margin:0;padding:8px 14px;border:1px solid #d8ccd4;border-radius:10px;background:#fff;color:#3d2538;text-decoration:none;font:700 12px/1.2 Inter,ui-sans-serif,system-ui,sans-serif;box-shadow:0 2px 5px rgba(50,25,42,.05);cursor:pointer}
 .app-shell .artwork-version-tools label.secondary-action{border-color:#111;background:#111;color:#fff;box-shadow:4px 4px 0 #ff49bd}
 .app-shell .artwork-version-tools label.secondary-action:hover{background:#272127}
+.app-shell .artwork-version-tools label.secondary-action:focus-visible{outline:3px solid rgba(245,47,178,.24);outline-offset:3px}
 .app-shell .design-artwork-primary>.artwork-remove-action{display:inline-flex;align-items:center;justify-content:center;min-height:38px;padding:8px 13px;border:1px solid #e3b9c5;border-radius:10px;background:#fff;color:#9b3d55;text-decoration:none;font:700 12px/1 Inter,ui-sans-serif,system-ui,sans-serif;cursor:pointer}
 .app-shell .design-artwork-primary>.artwork-remove-action:hover{background:#fff4f6;border-color:#c96f86}
 .app-shell .print-area-unavailable{flex-basis:100%;max-width:none;padding-top:2px;font-size:11px;line-height:1.4;color:#806b7a}
@@ -3064,3 +3065,16 @@ html, body { background: var(--lf-paper); }
 .app-shell .draft-color-grid img,.app-shell .draft-color-grid i{grid-row:1/3;width:54px;height:54px;object-fit:contain;border-radius:7px;background:#f4f1f3}.app-shell .draft-color-grid span{font-size:13px;font-weight:700;overflow:hidden;text-overflow:ellipsis}.app-shell .draft-color-grid em{font-size:11px;font-style:normal;color:#766873}.app-shell .draft-color-grid button.selected em{color:#2f7a50;font-weight:700}
 @media(max-width:1050px){.app-shell .draft-color-workspace{grid-template-columns:240px minmax(0,1fr)}.app-shell .draft-color-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .app-shell .post-draft-shipping-review{margin-top:14px;padding:18px;background:#fff;border:1px solid #ded6dc;border-radius:12px;box-shadow:0 1px 2px rgba(40,24,36,.08),0 14px 32px rgba(40,24,36,.08)}
+
+/* D907 · Small text links were being used for real workflow actions. Keep the
+   compact summary, but give its control the same visible, usable button shape
+   as the rest of the factory. The persistent draft action also keeps a reliable
+   target size at every step. */
+.app-shell .summary-list div button{
+  min-height:36px;padding:7px 10px;border:1px solid #d4c8cf!important;
+  border-radius:8px;background:#fff!important;color:#3d2538!important;
+  text-decoration:none!important;font:750 11px/1 Inter,ui-sans-serif,system-ui,sans-serif!important;
+}
+.app-shell .summary-list div button:hover{border-color:#756871!important;background:#faf8f9!important}
+.app-shell .summary-list div button:focus-visible{outline:3px solid rgba(245,47,178,.2);outline-offset:2px}
+.app-shell .workflow-footer-actions>.save-draft-link{min-height:38px;padding:8px 12px}

@@ -286,7 +286,7 @@ test("provides thorough contextual help throughout all nine Listing Factory step
   assert.match(page, /still only a Printify draft will not work/);
   assert.match(page, /Copy the correct Printify URL/);
   assert.match(page, /Add finished artwork/);
-  assert.match(page, /Review prices and shipping/);
+  assert.match(page, /Review the draft plan/);
   assert.match(page, /Create the Printify drafts/);
   assert.match(page, /Create titles, tags, and descriptions/);
   assert.match(page, /Review Etsy details/);
@@ -350,7 +350,7 @@ test("guides sellers through the complete resumable nine-step workflow",async()=
     readFile(new URL("../app/batch-cache.ts",import.meta.url),"utf8"),
     readFile(new URL("../app/globals.css",import.meta.url),"utf8"),
   ]);
-  assert.match(page,/Connect Printify/);assert.match(page,/Choose product/);assert.match(page,/Add designs/);assert.match(page,/Review pricing/);assert.match(page,/Create drafts/);assert.match(page,/Titles, tags \+ descriptions/);assert.match(page,/Etsy listing details/);assert.match(page,/Images \+ mockups/);assert.match(page,/Final review/);
+  assert.match(page,/Connect Printify/);assert.match(page,/Choose product/);assert.match(page,/Add designs/);assert.match(page,/Review draft plan/);assert.match(page,/Create Printify drafts/);assert.match(page,/Titles, tags \+ descriptions/);assert.match(page,/Etsy listing details/);assert.match(page,/Images \+ mockups/);assert.match(page,/Final review/);
   assert.match(page,/searchParams\.get\("batch"\)/);assert.doesNotMatch(page,/const id=window\.localStorage\.getItem\("goldie-active-batch"\)/);
   assert.match(page,/aria-current=\{active\?"step"/);assert.match(page,/progressStatus/);assert.match(page,/designs ready/);assert.match(page,/Ready to publish/);assert.match(page,/Complete the prior step/);
   assert.match(page,/goldie-active-batch/);assert.match(page,/saveBatchFiles/);assert.match(page,/\/api\/batches/);
@@ -1769,7 +1769,7 @@ test("keeps buyer-paid shipping separate from item profit",async()=>{
   const page=await readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8");
   assert.match(page,/Lowest estimated item profit/);
   assert.match(page,/Shipping not included/);
-  assert.match(page,/Buyer-paid shipping stays separate/);
+  assert.match(page,/Shipping not included/);
   assert.doesNotMatch(page,/estimatedProfit\([^)]*shipping/i);
 });
 
