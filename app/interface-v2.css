@@ -3299,6 +3299,21 @@ html, body { background: var(--lf-paper); }
 }
 .context-help-dialog :is(.mini-label,h3,p,li){font-family:Inter,ui-sans-serif,system-ui,-apple-system,sans-serif!important}
 
+/* D953 · The artwork is the content; filenames are incidental metadata and
+   are often long machine-generated strings. */
+.app-shell .design-artwork-primary{
+  grid-template-columns:104px minmax(0,1fr) auto!important;
+  gap:15px!important;
+}
+.app-shell .uploaded-design-preview{width:104px!important;height:104px!important}
+.app-shell .design-artwork-primary>div{gap:5px!important}
+.app-shell .design-artwork-primary em{
+  font:750 14px/1.2 Inter,ui-sans-serif,system-ui,sans-serif!important;color:#2d2028!important}
+.app-shell .design-artwork-primary b{
+  font:500 11px/1.35 Inter,ui-sans-serif,system-ui,sans-serif!important;color:#7a6d75!important}
+.app-shell .design-artwork-primary small{
+  font:500 11px/1.3 Inter,ui-sans-serif,system-ui,sans-serif!important;color:#8b7f87!important}
+
 /* D907 · Small text links were being used for real workflow actions. Keep the
    compact summary, but give its control the same visible, usable button shape
    as the rest of the factory. The persistent draft action also keeps a reliable

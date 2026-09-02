@@ -19,6 +19,16 @@ test("D952: help and management surfaces use the same visual language",()=>{
   assert.match(managementLock,/\.usage-page \.plan-banner :is\(h2,p,span\)\{color:#fff!important\}/);
 });
 
+test("D953: uploaded artwork outranks its filename",()=>{
+  const app=readFileSync(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8");
+  const css=readFileSync(new URL("../app/interface-v2.css",import.meta.url),"utf8");
+  assert.match(app,/UploadedDesignPreview[^<]+<div><em>[\s\S]*?<b title=\{file\.name\}>/);
+  const lock=css.slice(css.indexOf("/* D953"));
+  assert.match(lock,/grid-template-columns:104px minmax\(0,1fr\) auto!important/);
+  assert.match(lock,/\.uploaded-design-preview\{width:104px!important;height:104px!important\}/);
+  assert.match(lock,/\.design-artwork-primary b\{[\s\S]*?font:500 11px/);
+});
+
 test("D950: every workflow hero states only the immediate task",()=>{
   for(const copy of [
     "Complete each section from top to bottom.",
