@@ -4161,7 +4161,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
           <GoldieCommandBar data={commandCenterData} onUseProduct={recipe=>{void chooseRecipe(recipe).then(selected=>{if(selected)goToStep("setup")})}} onStartBlank={()=>{clearCurrentBatch(true);goToStep("setup")}}/>
           {owner && <a className="diagnostics-link" href="/mastermind-admin" aria-label="Open Goldie Diagnostics" title="Goldie Diagnostics">★</a>}
           <a className="usage-link" href="/usage" onClick={event=>guardNavigation(event,"/usage")}>Usage + Plan</a>
-          {signedIn!==null&&(localPreview&&!signedIn?<span className="account-link" title="Account sign-in is available on the published Listing Factory site.">Preview mode</span>:<a className="account-link" href={signedIn?"/account/sign-out?return_to=%2Flisting-factory%3Fstep%3Dconnect":"/account/sign-in?return_to=%2Flisting-factory%3Fstep%3Dconnect"}>{signedIn?"Sign out":"Sign in"}</a>)}
+          {signedIn!==null&&(localPreview&&!signedIn?<span className="account-link" title="Account sign-in is available on the published Listing Factory site.">Preview mode</span>:<a className="account-link" href={signedIn?"/account/sign-out?return_to=%2Flisting-factory":"/account/sign-in?return_to=%2Flisting-factory"}>{signedIn?"Sign out":"Sign in"}</a>)}
         </div>
         <div className="approved-sidebar-footer"><a className="approved-usage" href="/usage"><b>Usage + Plan</b><span>{sidebarUsage?`${sidebarUsage.used.toLocaleString()} / ${sidebarUsage.limit.toLocaleString()} listings`:"Loading usage…"}</span><div className="approved-usage-track" aria-hidden="true"><i style={{width:sidebarUsage?`${Math.min(100,sidebarUsage.used/sidebarUsage.limit*100)}%`:"0%"}} /></div></a>{listingGoal&&<a className="listing-goal-side" href="/goals"><span className="listing-goal-caption">This {listingGoal.period}&rsquo;s goal</span><b>{goalDone} of {listingGoal.target} published</b><span className="listing-goal-track" aria-hidden="true"><i style={{width:`${Math.min(100,Math.round((goalDone/Math.max(1,listingGoal.target))*100))}%`}}/></span></a>}{/* D357 · "Powered by Goldie AI" is the widest line in the sidebar, so it sets
             the column's visual edge. Sitting above the copyright and the Etsy notice
@@ -4216,7 +4216,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
                 <a role="menuitem" href="/listing-factory?step=connect" onClick={event=>guardNavigation(event,"/listing-factory?step=connect")}>Connections</a>
                 {signedIn!==null&&(localPreview&&!signedIn
                   ? <span role="menuitem" title="Account sign-in is available on the published Listing Factory site.">Preview mode</span>
-                  : <a role="menuitem" href={signedIn?"/account/sign-out?return_to=%2Flisting-factory%3Fstep%3Dconnect":"/account/sign-in?return_to=%2Flisting-factory%3Fstep%3Dconnect"}>{signedIn?"Sign out":"Sign in"}</a>)}
+                  : <a role="menuitem" href={signedIn?"/account/sign-out?return_to=%2Flisting-factory":"/account/sign-in?return_to=%2Flisting-factory"}>{signedIn?"Sign out":"Sign in"}</a>)}
               </div>}
             </div>
           </div>

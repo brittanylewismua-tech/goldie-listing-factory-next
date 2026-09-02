@@ -143,8 +143,8 @@ export default function FactoryShell({ active, title, children }:
               <a role="menuitem" href="/usage">Usage + Plan</a>
               <a role="menuitem" href="/listing-factory?step=connect">Connections</a>
               {account && <a role="menuitem" href={account.signedIn
-                ? "/account/sign-out?return_to=%2Flisting-factory%3Fstep%3Dconnect"
-                : "/account/sign-in?return_to=%2Flisting-factory%3Fstep%3Dconnect"}>{account.signedIn ? "Sign out" : "Sign in"}</a>}
+                ? "/account/sign-out?return_to=%2Flisting-factory"
+                : "/account/sign-in?return_to=%2Flisting-factory"}>{account.signedIn ? "Sign out" : "Sign in"}</a>}
             </div>}
           </div>
         </div>
