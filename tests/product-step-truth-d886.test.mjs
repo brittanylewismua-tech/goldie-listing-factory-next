@@ -59,7 +59,8 @@ test("D891: product and bundle selection use one card grid",()=>{
   assert.match(app,/headerActions=\{bundleCreationMode\?undefined:[\s\S]{0,280}>＋ Add a new product<\/button>[\s\S]{0,220}>＋ Create a new bundle<\/button>/);
   assert.match(app,/addProductRequest=\{addProductRequest\}/);
   assert.match(app,/bundleCreationAvailable&&<button type="button" className="panel-create-action"[\s\S]{0,100}>＋ Create a new bundle<\/button>/);
-  assert.equal((app.match(/className="panel-create-action"/g)||[]).length,3);
+  assert.equal((app.match(/className="panel-create-action"/g)||[]).length,4);
+  assert.match(app,/>Choose a different bundle<\/button>/);
   assert.match(css,/\.factory-panel-actions \.panel-create-action\{[^}]*border:1px solid #cfc5cb[^}]*border-radius:8px[^}]*text-decoration:none/);
   assert.match(tools,/className=\{`recipe-grid \$\{bundleForm\?"bundle-selection-grid":""\}`\}/);
   assert.match(tools,/if\(bundleForm\)\{setBundleIds\(/);

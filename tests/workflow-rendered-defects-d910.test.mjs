@@ -31,3 +31,22 @@ test("D910: bundle language and one-column listing states tell the truth",()=>{
   assert.match(app,/activeBundle\?"Your bundle":"Your product"/);
   assert.match(css,/factory-listing-grid:has\(>\.factory-form-card:only-child\)/);
 });
+
+test("D911: a broad single Printify image is addressed by the requested color variant",()=>{
+  const broad=[{src:"https://images-api.printify.com/mockup/12100/92570/front-dark.jpg",variantIds:[92570,92571,92572],position:"front"}];
+  assert.equal(printifyMockupForColor(broad,[92571]),"https://images-api.printify.com/mockup/12100/92571/front-dark.jpg");
+  assert.equal(printifyMockupForColor(broad,[92572]),"https://images-api.printify.com/mockup/12100/92572/front-dark.jpg");
+});
+
+test("D911: Step 1 keeps a visible disabled continuation before upload",()=>{
+  assert.match(app,/workflowStep==="setup"&&files\.length===0&&<FactoryFooter status="Add at least one design to continue"><button className="workflow-next" type="button" disabled>Add at least one design<\/button>/);
+});
+
+test("D911: selected bundles are named and destructive controls meet the target floor",()=>{
+  assert.match(app,/bundleSelected\?<button[\s\S]{0,220}>Choose a different bundle<\/button>:<button[\s\S]{0,220}>Choose a different product<\/button>/);
+  assert.match(css,/batch-history \.remove-batch\{[\s\S]*?min-height:36px/);
+});
+
+test("D911: every action-bar button uses the same 44px box",()=>{
+  assert.match(css,/workflow-footer-actions>\.save-draft-link,[\s\S]*?factory-footer\.in-bar>\*:not\(small\)\{[\s\S]*?height:44px!important;min-height:44px!important/);
+});

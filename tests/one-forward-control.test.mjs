@@ -27,7 +27,7 @@ test("the product step hands off directly to its visible design uploader", () =>
   assert.doesNotMatch(app, /className="workflow-next setup-forward"/);
 });
 
-test("no forward control survives inside the connect or product panel", () => {
+test("connect remains scoped and Product exposes only its gated continuation", () => {
   /* Scoped deliberately. A blanket source rule over every workflow-next passes by
      luck - the other forward controls live inside step-owned panels and are
      guarded further up than any fixed lookback would catch. What regressed was
@@ -43,8 +43,7 @@ test("no forward control survives inside the connect or product panel", () => {
       "a forward control in the Connect panel must require the Connect step");
   }
   const setupPanel = app.slice(app.indexOf("product-step workflow-panel"), app.indexOf("designs-step workflow-panel"));
-  assert.doesNotMatch(setupPanel,/className="workflow-next[^"]*"/,
-    "Product has no separate forward button because its next action is the uploader directly below");
+  assert.match(setupPanel,/files\.length===0&&<FactoryFooter status="Add at least one design to continue"><button className="workflow-next" type="button" disabled>Add at least one design<\/button>/);
 });
 
 test("no forward control navigates to an earlier step from a later one", () => {
