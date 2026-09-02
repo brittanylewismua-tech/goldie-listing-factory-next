@@ -1378,7 +1378,8 @@ test("shows accurate completion feedback above each next step card", async () =>
   ]);
   assert.match(page, /fileNotice&&\(workflowStep==="setup"\|\|workflowStep==="designs"\)&&<p className="file-add-notice"/);
   assert.match(page, /Titles, tags, and descriptions complete/);
-  assert.match(page, /Etsy details complete/);
+  assert.match(page, /Printify drafts created/);
+  assert.doesNotMatch(page, /workflowStep==="designs"&&complete&&[^\n]*Etsy details complete/);
   assert.match(page, /Listing photos complete/);
   assert.doesNotMatch(page, /fileNotice&&workflowStep!=="designs"/);
   assert.match(styles, /\.app-shell \.step-success-banner\{/);

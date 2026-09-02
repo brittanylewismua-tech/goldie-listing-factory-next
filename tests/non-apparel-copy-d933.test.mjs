@@ -9,7 +9,8 @@ test("the design step describes the product's real print areas instead of assumi
   assert.doesNotMatch(app,/assign front and back artwork where needed/);
 });
 
-test("the uploaded design identifies its primary area without calling the artwork itself front artwork",()=>{
-  assert.match(app,/Primary artwork · \{printSideLabel\(primarySide\)\}/);
+test("the uploaded design uses neutral primary-artwork copy when Printify's side name is misleading",()=>{
+  assert.match(app,/<em>Primary artwork<\/em>/);
+  assert.doesNotMatch(app,/Primary artwork · \{printSideLabel\(primarySide\)\}/);
   assert.doesNotMatch(app,/Primary \{printSideLabel\(primarySide\).*?artwork/);
 });
