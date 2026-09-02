@@ -1852,17 +1852,6 @@ html, body { background: var(--lf-paper); }
   background:var(--lf-pink);color:#3d0b2b;padding:9px 14px;
   font:750 12px/1 Inter,ui-sans-serif,system-ui,sans-serif;cursor:pointer}
 
-/* D802 · "BUNDLE SELECTED" was bare 9px uppercase text at the end of a row
-   where every other status in the app is a chip. .template-badge marks the
-   product or bundle a batch is using - the same job .factory-panel-state does
-   at the other end of a panel head - so it takes the same chip. */
-.app-shell .template-badge{
-  display:inline-flex;align-items:center;
-  padding:6px 9px;border-radius:7px;
-  background:#eee7ec;border:1px solid #dfc8d5;color:#5a4152;
-  font:750 11px/1 Inter,ui-sans-serif,system-ui,sans-serif;
-  text-transform:none;letter-spacing:normal;white-space:nowrap}
-
 /* ==========================================================================
    D803 · The help dialog is outside .app-shell, so nothing in this file
    had ever reached it
@@ -2898,11 +2887,11 @@ html, body { background: var(--lf-paper); }
 .app-shell .recipe-card .bundle-selection-grid .recipe-tile.bundle-selected .recipe-copy>em,
 .app-shell .recipe-card .bundle-selection-grid .recipe-tile.bundle-selected:hover .recipe-copy>em{background:transparent!important;color:#2f7a4b!important;font-weight:800!important}
 .app-shell .recipe-card .bundle-placement-cue{margin-top:5px;color:#5d5159;font:700 10px/1.2 Inter,ui-sans-serif,system-ui,sans-serif}
-.app-shell .recipe-card .bundle-duplicate-warning{display:flex;align-items:flex-start;gap:11px;margin-top:20px;padding:14px 16px;border:1px solid #d8b86f;border-radius:9px;background:#fffaf0;color:#3d3424;cursor:pointer}
+.app-shell .recipe-card .bundle-duplicate-warning{display:flex;align-items:flex-start;gap:11px;margin-top:20px;padding:14px 16px;border:1px solid #e4a5b3;border-radius:9px;background:#fff4f6;color:#6f2438;cursor:pointer}
 .app-shell .recipe-card .bundle-duplicate-warning input{flex:0 0 auto;width:18px;height:18px;margin:1px 0 0;accent-color:#2f7a4b}
 .app-shell .recipe-card .bundle-duplicate-warning span{display:grid;gap:4px}
 .app-shell .recipe-card .bundle-duplicate-warning b{font:750 12px/1.3 Inter,ui-sans-serif,system-ui,sans-serif}
-.app-shell .recipe-card .bundle-duplicate-warning small{font:500 11px/1.45 Inter,ui-sans-serif,system-ui,sans-serif;color:#6b5e45}
+.app-shell .recipe-card .bundle-duplicate-warning small{font:500 11px/1.45 Inter,ui-sans-serif,system-ui,sans-serif;color:#7d4d5a}
 .app-shell .recipe-card:has(.bundle-builder) .bundle-card-heading,
 .app-shell .recipe-card:has(.bundle-builder) .unified-bundle-grid{display:none!important}
 .app-shell .recipe-card .bundle-builder-actions{display:flex;justify-content:flex-end;align-items:center;gap:10px;margin-top:24px;padding-top:18px;border-top:1px solid #e2d9de}
@@ -3031,7 +3020,6 @@ html, body { background: var(--lf-paper); }
 .app-shell .factory-panel-actions .panel-create-action{min-height:36px;padding:0 13px;border:1px solid #cfc5cb;background:#fff;box-shadow:0 1px 2px rgba(45,29,39,.05);border-radius:8px;color:#3d2538;font:750 11px/1 Inter,ui-sans-serif,system-ui,sans-serif;text-decoration:none;transition:border-color .16s ease,box-shadow .16s ease,background .16s ease}
 .app-shell .factory-panel-actions .panel-create-action:hover{border-color:#746971;background:#faf8f9;box-shadow:0 3px 9px rgba(45,29,39,.1)}
 .app-shell .factory-panel-actions .panel-create-action:focus-visible{outline:3px solid rgba(245,47,178,.2);outline-offset:2px}
-.app-shell .factory-panel-actions .remove-product-from-batch{color:#955065}
 
 /* Selection is a success state, not a brand accent. */
 .app-shell .color-choice-grid em,.app-shell .size-choice-grid em{background:#2f7a4b!important;color:#fff!important}

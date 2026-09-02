@@ -492,15 +492,19 @@ test("the product photo picks the catalog shot that actually shows the garment �
      shots — the source has nothing better" about a list that had already been
      cut down. The rule worth pinning is not a magic number, it is that the
      scorer is shown everything the API sends. */
-  const serverPool = route.match(/previewImages:\(blueprint\.images\|\|\[\]\)\.slice\(0,(\d+)\)/);
+  const serverPool = route.match(/productMockups=[\s\S]{0,260}slice\(0,(\d+)\)/);
   const clientPool = app.match(/const shortlist=candidates\.slice\(0,(\d+)\);/);
-  assert.ok(serverPool, "the API still caps how many catalog images it returns");
+  assert.ok(serverPool, "the API caps how many saved-product mockups it returns");
   assert.ok(clientPool, "the client still scores a shortlist");
   assert.equal(clientPool[1], serverPool[1],
     "the scorer must see every candidate the API sends, or its verdict is about a list it was never given");
   assert.ok(Number(serverPool[1]) >= 12,
     "six was too few to contain a flat lay for every product — see D705");
   assert.match(app, /function pickProductPhoto\(product:TemplateDetails\)/);
+  assert.match(route,/found\.product\.images/,
+    "the card must use the linked product's real Printify mockups");
+  assert.doesNotMatch(route,/previewImages:\(blueprint\.images/,
+    "generic catalogue photography must never stand in for the saved product");
   /* D200 retires the D194 metric. "Most non-background pixels" rewards whatever
    * fills the frame, and on the live tee that was a macro shot of a folded
    * corner (99% ink) while the only usable flat lay ranked last (64%). Scoring
@@ -1220,8 +1224,8 @@ test("a selected bundle can be swapped for another — D365", async () => {
   const tools = await read("app/factory-tools.tsx");
   const app = await read("app/listing-factory-app.tsx");
   assert.match(app, /setShowProductLibrary\(true\).*Choose a different product/);
-  assert.match(app, /className="remove-product-from-batch" onClick=\{\(\)=>void changeProduct\(\)\}/,
-    "removal reuses the confirm-and-clear path rather than inventing a second one");
+  assert.doesNotMatch(app, /remove-product-from-batch/,
+    "the header must not offer a redundant destructive path beside switching");
   assert.match(app, /headerActions=/, "management belongs in the selected panel head");
 });
 

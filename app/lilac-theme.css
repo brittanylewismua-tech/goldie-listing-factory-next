@@ -84,7 +84,7 @@ button:disabled{transform:none!important;box-shadow:none!important;filter:satura
 .inline-field input:focus,input:focus,select:focus,textarea:focus{border-color:#8a6bd6;box-shadow:0 0 0 4px rgba(132,103,215,.1);outline:0}
 .folder-drop,.token-help,.template-proof,.recipe-proof,.batch-capacity,.keyword-workspace{border-color:#dfc8d5;background:#fffafc}
 .folder-drop:hover{border-color:#9579d8;background:#fbfaff}.upload-icon{border-color:#9b80da;color:#7052b4;background:#f0ebfc}
-.browse-chip{border-color:#d4c9ec;color:#553b95}.template-badge{color:#267454}
+.browse-chip{border-color:#d4c9ec;color:#553b95}
 .connection-row{border-color:rgba(201,178,207,.72);background:rgba(252,247,251,.8)}.connection-icon{background:linear-gradient(135deg,#80528f,#b86d9e)}
 .step-card .connection-row button{padding:0 16px;border:1px solid rgba(230,203,225,.42);border-radius:10px;background:linear-gradient(145deg,#ff6ecd,#f52fb2);color:#3d0b2b;text-decoration:none;box-shadow:inset 0 1px 0 rgba(255,255,255,.24),0 9px 24px rgba(75,40,62,.28)}
 .step-card .connection-row button:hover{background:linear-gradient(145deg,#ff6ecd,#f52fb2);box-shadow:inset 0 1px 0 rgba(255,255,255,.28),0 9px 20px rgba(75,40,62,.3)}

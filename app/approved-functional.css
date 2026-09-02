@@ -409,7 +409,6 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
   color:#654362!important;
 }
 .app-shell .variant-transfer-note small{color:rgba(74,42,62,.68)!important}
-.app-shell .template-badge,
 .app-shell .ready-text,
 .app-shell .profit-pass,
 .app-shell .title-build-message,

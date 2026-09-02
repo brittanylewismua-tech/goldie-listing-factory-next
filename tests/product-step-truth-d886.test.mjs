@@ -23,6 +23,9 @@ test("D886: the selected header uses the saved flatlay and owns its management",
   assert.match(app,/previewImage:chosen/);
   assert.match(panel,/headerActions \? <div className="factory-panel-actions">/);
   assert.match(app,/headerActions=.*Choose a different product/);
+  assert.doesNotMatch(app,/>Remove from this batch<\/button>/);
+  assert.doesNotMatch(app,/className="template-badge"/);
+  assert.doesNotMatch(app,/: "1 product selected"/);
   assert.doesNotMatch(tools,/selected-product-actions/);
 });
 
@@ -57,7 +60,7 @@ test("D891: product and bundle selection use one card grid",()=>{
   assert.match(app,/headerActions=\{bundleCreationMode\?undefined:[\s\S]{0,280}>＋ Add a new product<\/button>[\s\S]{0,220}>＋ Create a new bundle<\/button>/);
   assert.match(app,/addProductRequest=\{addProductRequest\}/);
   assert.match(app,/bundleCreationAvailable&&<button type="button" className="panel-create-action"[\s\S]{0,100}>＋ Create a new bundle<\/button>/);
-  assert.equal((app.match(/className="panel-create-action"/g)||[]).length,2);
+  assert.equal((app.match(/className="panel-create-action"/g)||[]).length,3);
   assert.match(css,/\.factory-panel-actions \.panel-create-action\{[^}]*border:1px solid #cfc5cb[^}]*border-radius:8px[^}]*text-decoration:none/);
   assert.match(tools,/className=\{`recipe-grid \$\{bundleForm\?"bundle-selection-grid":""\}`\}/);
   assert.match(tools,/if\(bundleForm\)\{setBundleIds\(/);
@@ -81,13 +84,20 @@ test("D894: similar products stay allowed while exact-looking setups require ack
     "the same saved product toggles out instead of being added twice");
   assert.doesNotMatch(tools,/same product type[^\n]*disabled/i,
     "two configurations of the same garment type must remain allowed");
-  assert.match(css,/\.bundle-duplicate-warning\{[^}]*background:#fffaf0/);
+  assert.match(css,/\.bundle-duplicate-warning\{[^}]*background:#fff4f6/);
 });
 
 test("D895: growing product libraries keep prominent, separated section headers",()=>{
   assert.match(css,/\.recipe-card \.recipe-library-head\{[^}]*margin:0 0 16px[^}]*padding:0 0 11px[^}]*border-bottom:1px solid #e5dde2/);
   assert.match(css,/\.recipe-card \.recipe-library-head>span\{[^}]*background:#2b2027[^}]*color:#fff[^}]*font:800 11px/);
   assert.match(css,/\.recipe-card \.bundle-card-heading\{margin-top:38px!important;margin-bottom:16px!important\}/);
+});
+
+test("D896: library headings describe the library, not a misleading item count",()=>{
+  assert.match(tools,/<span>\{bundleForm\?"Products":"Saved products"\}<\/span>/);
+  assert.match(tools,/bundle-card-heading"><span>Saved bundles<\/span>/);
+  assert.doesNotMatch(tools,/reachable\.length} saved/);
+  assert.doesNotMatch(tools,/usableBundles\.length} saved product/);
 });
 
 test("D886: pricing waits for finished draft costs",()=>{
