@@ -40,3 +40,9 @@ test("D943: every post-draft panel uses a plain-language task name",()=>{
   }
   assert.match(app,/title="Titles for this batch"/);
 });
+
+test("D943: the Drafts help explains the screen that is actually open",()=>{
+  assert.match(app,/const workflowHelp=workflowStep==="designs"[\s\S]*title:"Finish your Printify drafts"[\s\S]*:WORKFLOW_HELP\[3\]/);
+  assert.match(app,/Open detailed help for \$\{workflowHero\.title\}/);
+  assert.match(app,/title=\{workflowHelp\.title\} intro=\{workflowHelp\.intro\} sections=\{workflowHelp\.sections\}/);
+});

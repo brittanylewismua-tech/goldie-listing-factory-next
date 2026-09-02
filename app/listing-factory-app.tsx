@@ -4197,6 +4197,11 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
     review: { eyebrow: "STEP 3 OF 4", title: "Create Printify drafts", copy: "Goldie creates an unpublished draft in Printify for every design in this batch." },
     finish: finishPhase==="details" ? { eyebrow: "STEP 3 OF 4 · LISTING", title: "Listing details", copy: "Create the titles and tags, then review the description for every listing." } : finishPhase==="etsy" ? { eyebrow: "STEP 3 OF 4 · LISTING", title: "Listing details", copy: "Review the Etsy category and product-specific details." } : { eyebrow: "STEP 4 OF 4 · FINISH", title: "Final review", copy: "Review every listing, then finish in Printify My Products." },
   }[workflowStep];
+  const workflowHelp=workflowStep==="designs"
+    ?complete
+      ?{title:"Finish your Printify drafts",intro:"Work from top to bottom for every product. Goldie will tell you when the batch is ready for listing details.",sections:[{heading:"Product colors and sizes",copy:"Use the real Printify previews to keep only the options that work with this design."},{heading:"Artwork placement",copy:"Check the finished draft in Printify and correct the placement there if it needs adjustment."},{heading:"Product photos",copy:"Choose the Printify product views buyers should see."},{heading:"Pricing and shipping",copy:"Approve prices only after Printify has calculated the finished production cost, then confirm the Etsy shipping profile."},{heading:"Final photo order",copy:"Add any extra photos or a size guide, then arrange the final order for the listing."}]}
+      :WORKFLOW_HELP[3]
+    :WORKFLOW_HELP[progressIndex];
   const uploadPrintSides=orderedPrintSides(templateDetails?.printPositions);
   const uploadPrimarySide=primaryPrintSide(uploadPrintSides);
   const uploadPrimaryLabel=(uploadPrimarySide?printSideLabel(uploadPrimarySide):"Main").toLocaleLowerCase();
@@ -4303,7 +4308,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
         <PageHead
           title={workflowHero.title}
           copy={workflowHero.copy}
-          help={<ContextHelp label={`Open detailed help for ${PROGRESS_STEPS[progressIndex]}`} title={WORKFLOW_HELP[progressIndex].title} intro={WORKFLOW_HELP[progressIndex].intro} sections={WORKFLOW_HELP[progressIndex].sections}/>}
+          help={<ContextHelp label={`Open detailed help for ${workflowHero.title}`} title={workflowHelp.title} intro={workflowHelp.intro} sections={workflowHelp.sections}/>}
           stepCount={<p className="hero-step-count">{workflowStep==="connect"?"Account setup · before you start":`Step ${railTopNumber} of ${RAIL_STAGES.length} · ${currentStage.label}`}</p>}
           summary={heroSummary}
         >
