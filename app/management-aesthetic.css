@@ -60,6 +60,55 @@
 .keyword-page .keyword-hero h1{color:var(--ink)!important}
 .managementOnly .mockupHero h1{color:var(--ink)!important;font-family:'DM Serif Display',Georgia,serif!important;font-weight:400!important}
 
+/* D951 · Pink identifies the Goldie frame and active state; it is not a
+   button face. Management pages use the same calm action language as the
+   workflow: black primary, white secondary, pink offset. */
+:is(.management-page,.usage-page,.keyword-page,.mockupFactory,.operations-page) :is(
+  .management-create-foot button,
+  .edit-bank,
+  .empty-history a,
+  .batch-row-actions button:first-child,
+  .pricing-profile>button,
+  .newSetButton,
+  .setControls>button,
+  .confirmRename,
+  .generate,
+  .downloadAll,
+  .operations-actions button,
+  .operations-actions a,
+  .usage-plan-grid button,
+  .usage-load-error a,
+  .operations-auth a
+){
+  border:1px solid #0d0b0c!important;
+  border-radius:8px!important;
+  background:#0d0b0c!important;
+  color:#fff!important;
+  box-shadow:4px 4px 0 #ff4fc3!important;
+  text-shadow:none!important;
+}
+:is(.management-page,.usage-page,.keyword-page,.mockupFactory,.operations-page) :is(
+  .management-create-foot button,
+  .edit-bank,
+  .empty-history a,
+  .batch-row-actions button:first-child,
+  .pricing-profile>button,
+  .newSetButton,
+  .setControls>button,
+  .confirmRename,
+  .generate,
+  .downloadAll,
+  .operations-actions button,
+  .usage-plan-grid button
+):disabled{
+  border-color:#ddd4d9!important;
+  background:#eee9ec!important;
+  color:#9b8e96!important;
+  box-shadow:4px 4px 0 #f2dce9!important;
+}
+.usage-plan-grid article.current button:not(:disabled){
+  border-color:#d2c7cd!important;background:#fff!important;color:#3d2538!important;box-shadow:none!important}
+
 /* Frozen management shell: Keyword Banks and Mockup Sets use the same
    page frame as Batch History and Usage + Plan. Keep this block last so
    legacy page-level styles cannot reintroduce gray panels or side rails. */

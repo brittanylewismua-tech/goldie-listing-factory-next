@@ -57,12 +57,15 @@ test("no press is filled with the pre-factory plum, whichever hex spells it", ()
     `presses still filled with plum:\n${offenders.join("\n")}`);
 });
 
-test("the tile press and the bank save both resolve to the pink", () => {
-  const clarity = readFileSync(new URL("clarity-pass.css", dir), "utf8");
-  for (const sel of ["\\.recipe-use em", ":is\\(\\.step-card,\\.recipe-card\\) \\.save-recipe"]) {
-    const rx = new RegExp(`${sel}\\{[^}]*background:linear-gradient\\(145deg,#ff6ecd,#f52fb2\\)!important`);
-    assert.match(clarity.replace(/\s*\n\s*/g, ""), rx, `${sel} must carry the pink fill`);
-  }
+test("working controls resolve to black rather than a flat pink face", () => {
+  const interfaceCss = readFileSync(new URL("interface-v2.css", dir), "utf8");
+  const managementCss = readFileSync(new URL("management-aesthetic.css", dir), "utf8");
+  const workflowLock = interfaceCss.slice(interfaceCss.indexOf("/* D945"));
+  const managementLock = managementCss.slice(managementCss.indexOf("/* D951"));
+  assert.match(workflowLock,/\.recipe-card \.recipe-tile \.recipe-use em\{[\s\S]*?background:#0d0b0c!important/);
+  assert.match(workflowLock,/\.save-recipe,[\s\S]*?background:#0d0b0c!important/);
+  assert.match(managementLock,/\.batch-row-actions button:first-child,[\s\S]*?background:#0d0b0c!important/);
+  assert.match(managementLock,/box-shadow:4px 4px 0 #ff4fc3!important/);
 });
 
 test("destructive presses are still red, not repainted pink", () => {
