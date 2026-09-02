@@ -15,17 +15,17 @@ test("artwork versions stay attached to one listing design and survive resume", 
   assert.match(cache, /loadBatchArtworkAssets/);
 });
 
-test("the controls distinguish colour artwork from a separate back print", async () => {
+test("the controls distinguish primary colour artwork from every secondary print area", async () => {
   const [app,assignment] = await Promise.all([read("../app/listing-factory-app.tsx"),read("../app/artwork-assignment.ts")]);
-  assert.match(app, /Front artwork by garment color/);
-  assert.match(app, /Every selected color gets exactly one front design/);
+  assert.match(app, /Artwork by color/);
+  assert.match(app, /Every selected color gets exactly one \{printSideLabel\(primarySide\)/);
   assert.match(app, /artworkVersions\|\|\[\]\)\.every\(artwork=>!artwork\.originalUnavailable&&artwork\.file\?\.size&&artwork\.colorIds\.length>0\)/, "unused or missing secondary artwork must hold the draft gate");
-  assert.match(app, /This saved Printify product does not currently expose a back print area/);
-  assert.match(app, /addArtworkVersion\(file\.id,"front"/);
-  assert.match(app, /addArtworkVersion\(file\.id,"back"/);
-  assert.match(app, /assignFrontArtwork/);
+  assert.match(app, /This saved Printify product has one print area/);
+  assert.match(app, /addArtworkVersion\(file\.id,primarySide/);
+  assert.match(app, /addArtworkVersion\(file\.id,side/);
+  assert.match(app, /assignPrimaryArtwork/);
   assert.match(app, /toggleArtworkColor/);
-  assert.match(assignment, /artwork\.id===artworkId\?\[\.\.\.new Set\(\[\.\.\.artwork\.colorIds,colorId\]\)\]:artwork\.colorIds\.filter/, "one front color cannot silently use two artworks");
+  assert.match(assignment, /artwork\.id===artworkId\?\[\.\.\.new Set\(\[\.\.\.artwork\.colorIds,colorId\]\)\]:artwork\.colorIds\.filter/, "one primary-side color cannot silently use two artworks");
 });
 
 test("ordinary one-artwork listings retain the established request", async () => {

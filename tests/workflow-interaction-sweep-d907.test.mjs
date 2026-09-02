@@ -18,8 +18,9 @@ test("D907: the private-draft action stays in the one persistent action bar",()=
 });
 
 test("D907: artwork file actions work for mouse and keyboard",()=>{
-  const actions=[...app.matchAll(/<label className="secondary-action" role="button" tabIndex=\{0\} onKeyDown=\{event=>\{if\(event\.key==="Enter"\|\|event\.key===" "\)\{event\.preventDefault\(\);event\.currentTarget\.querySelector\("input"\)\?\.click\(\)\}\}\}>/g)];
-  assert.equal(actions.length,2,"both alternate-front and back-print upload actions must be keyboard operable");
+  const controls=[...app.matchAll(/<label className="secondary-action"[\s\S]*?<input className="hidden-picker"/g)].map(match=>match[0]);
+  assert.ok(controls.length>=2,"primary and generated secondary-side upload actions exist");
+  assert.ok(controls.every(control=>/role="button"/.test(control)&&/tabIndex=\{0\}/.test(control)&&/event\.key==="Enter"\|\|event\.key===" "/.test(control)),"no artwork upload action may exist without Enter and Space support");
   assert.match(css,/artwork-version-tools label\.secondary-action:focus-visible\{outline:/);
 });
 

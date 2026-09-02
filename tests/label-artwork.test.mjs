@@ -38,7 +38,7 @@ test("label positions are recognised", () => {
 test("no label placeholder reaches product creation", () => {
   const result = printAreasWithOnlyCurrentArtwork(areas(), "new-design");
   const positions = result.flatMap((area) => area.placeholders.map((p) => p.position));
-  assert.deepEqual(positions.sort(), ["front", "left_sleeve"]);
+  assert.deepEqual(positions, ["front"]);
   assert.ok(!positions.some(isLabelPlaceholder), "no neck, collar, inner or tag placeholder goes out");
 });
 
@@ -63,7 +63,7 @@ test("a product with a label still creates normally", () => {
   const result = printAreasWithOnlyCurrentArtwork(areas(), "new-design");
   assert.equal(result.length, 1, "the print area survives");
   assert.equal(result[0].variant_ids.length, 2, "its variants are intact");
-  assert.equal(result[0].placeholders.length, 2);
+  assert.equal(result[0].placeholders.length, 1);
 });
 
 test("a product whose only placeholder is a label produces no empty area", () => {

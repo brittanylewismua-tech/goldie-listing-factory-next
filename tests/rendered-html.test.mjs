@@ -682,7 +682,7 @@ test("removes every inherited template image ID from the outgoing Printify produ
   }];
   const result = printAreasWithOnlyCurrentArtwork(template, "fresh-upload");
   const ids = result.flatMap((area)=>area.placeholders.flatMap((placeholder)=>placeholder.images.map((image)=>image.id)));
-  assert.deepEqual(ids, ["fresh-upload", "fresh-upload"]);
+  assert.deepEqual(ids, ["fresh-upload"]);
   assert.doesNotMatch(JSON.stringify(result), /stale-primary|stale-layer|another-stale/);
   assert.deepEqual(result[0].placeholders[0].images[0], {id:"fresh-upload",x:0.4,y:0.6,scale:0.8,angle:2});
   const qualityProtected = printAreasWithOnlyCurrentArtwork(template, "fresh-upload", {left:.06,top:0,right:.94,bottom:1}, .8);

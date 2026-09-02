@@ -25,9 +25,9 @@ test("a back-only product still prints, or the garment ships blank", () => {
   assert.deepEqual(positionsOf(result), ["back"]);
 });
 
-test("other print sides are untouched by this rule", () => {
+test("every secondary print side requires an explicit paid assignment", () => {
   const result = printAreasWithOnlyCurrentArtwork([area(["front", "sleeve", "back"])], "new-img");
-  assert.deepEqual(positionsOf(result), ["front", "sleeve"]);
+  assert.deepEqual(positionsOf(result), ["front"]);
 });
 
 test("inside-label placeholders stay excluded, and never count as a print side", () => {
