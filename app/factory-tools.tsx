@@ -76,6 +76,27 @@ export function recipeShopLabel(recipe: Recipe): string {
   return recipe.printifyShopTitle || "";
 }
 
+export function recipePlacementCue(recipe: Recipe): string {
+  const name=recipe.name.toLowerCase();
+  if(/\b(back|rear)\s*(print|placement)?\b/.test(name))return "Back print";
+  if(/\b(front|chest|pocket)\s*(print|placement)?\b/.test(name))return "Front print";
+  return "Placement saved in Printify";
+}
+
+export function bundleDuplicatePairs(recipes: Recipe[]): string[] {
+  const pairs:string[]=[];
+  for(let left=0;left<recipes.length;left++)for(let right=left+1;right<recipes.length;right++){
+    const a=recipes[left],b=recipes[right];
+    const sameTemplate=Boolean(a.templateUrl.trim())&&a.templateUrl.trim().toLowerCase()===b.templateUrl.trim().toLowerCase();
+    const sameSavedSetup=a.name.trim().toLowerCase()===b.name.trim().toLowerCase()
+      && JSON.stringify([...(a.defaultColorIds||[])].sort((x,y)=>x-y))===JSON.stringify([...(b.defaultColorIds||[])].sort((x,y)=>x-y))
+      && JSON.stringify([...(a.defaultSizeIds||[])].sort((x,y)=>x-y))===JSON.stringify([...(b.defaultSizeIds||[])].sort((x,y)=>x-y))
+      && (a.printifyShopId||0)===(b.printifyShopId||0);
+    if(sameTemplate||sameSavedSetup)pairs.push(`${a.name} and ${b.name}`);
+  }
+  return pairs;
+}
+
 export type KeywordList = { id: string; name: string; keywords: string[] };
 
 type WorkflowProps = {
@@ -160,6 +181,8 @@ export function SavedWorkflow(props: WorkflowProps) {
   const [bundles,setBundles]=useState<ProductBundle[]>([]),[bundleForm,setBundleForm]=useState(false),[bundleName,setBundleName]=useState(""),[bundleIds,setBundleIds]=useState<string[]>([]),[editingBundleId,setEditingBundleId]=useState("");
   useEffect(()=>props.onBundleModeChange?.(bundleForm),[bundleForm,props.onBundleModeChange]);
   const [bundleSaving,setBundleSaving]=useState(false);
+  const [duplicateAcknowledged,setDuplicateAcknowledged]=useState(false);
+  useEffect(()=>setDuplicateAcknowledged(false),[bundleIds.join(",")]);
   const bundleSaveLock=useRef(false);
   /* D119 · Connecting the Printify product already tells us what it is, so the
    * seller should not have to retype it. Fill the name once, only while it is
@@ -262,7 +285,7 @@ export function SavedWorkflow(props: WorkflowProps) {
     finally{actionLock.current=false;setPendingAction("")}
   }
   async function remove(recipe: Recipe) { if (!await confirmAction({title:`Delete “${recipe.name}”?`,body:"This removes only the saved product in Goldie. The connected Printify product is not touched.",confirmLabel:"Delete product",destructive:true})) return; await fetch("/api/product-recipes", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: recipe.id }) }); if (activeId === recipe.id) setActiveId(""); reload(); }
-  function openBundle(bundle?:ProductBundle){setBundleForm(true);setEditingBundleId(bundle?.id||"");setBundleName(bundle?.name||"");setBundleIds(bundle?.recipeIds||[]);setBundleSaving(false);bundleSaveLock.current=false;setMessage("");window.setTimeout(()=>{document.querySelector(".bundle-builder")?.scrollIntoView({block:"center"})},0)}
+  function openBundle(bundle?:ProductBundle){setBundleForm(true);setEditingBundleId(bundle?.id||"");setBundleName(bundle?.name||"");setBundleIds(bundle?.recipeIds||[]);setDuplicateAcknowledged(false);setBundleSaving(false);bundleSaveLock.current=false;setMessage("");window.setTimeout(()=>{document.querySelector(".bundle-builder")?.scrollIntoView({block:"center"})},0)}
   async function saveBundle(){
     if(bundleSaveLock.current)return;
     bundleSaveLock.current=true;setBundleSaving(true);setMessage("");
@@ -286,13 +309,15 @@ export function SavedWorkflow(props: WorkflowProps) {
       setActiveId("");setMessage("Goldie could not load this bundle. Try again in a moment.");
     }finally{actionLock.current=false;setPendingAction("")}
   }
+  const selectedBundleRecipes=bundleIds.map(id=>reachable.find(recipe=>recipe.id===id)).filter(Boolean) as Recipe[];
+  const duplicatePairs=bundleDuplicatePairs(selectedBundleRecipes);
   return <article className="step-card recipe-card"><div className="step-number" aria-hidden="true"/><div className="step-content">{/* D257 · The page title already reads "Choose product" and the rail already
           reads PRODUCT. This card added a third "Product" six pixels below the
           second — the same defect as the Colors panel in D236. */}<p className="step-copy">Select a product to use for this batch.</p>
     {reachable.length > 0 && (!activeId||showLibrary) && <>{bundleForm&&<div className="bundle-builder"><label><span>{editingBundleId?"Bundle name":"Name your bundle"}</span><input value={bundleName} onChange={event=>setBundleName(event.target.value)} placeholder="Example: Tee + sweatshirt + hoodie" autoFocus/></label><div className="bundle-builder-instruction"><b>Choose 2 to 4 products</b><span>{bundleIds.length===0?"Click the product cards below":`${bundleIds.length} selected`}</span></div></div>}<div className="recipe-library-head"><span>{bundleForm?"Products":`${reachable.length} saved ${reachable.length === 1 ? "product" : "products"}`}</span></div><div className={`recipe-grid ${bundleForm?"bundle-selection-grid":""}`}>{reachable.map((recipe) => {const selecting=pendingAction===`recipe:${recipe.id}`,inBundle=bundleIds.includes(recipe.id),bundleDisabled=bundleForm&&(!recipeIsSetUp(recipe)||(!inBundle&&bundleIds.length>=4)),bundleReason=bundleForm&&!recipeIsSetUp(recipe)?`Finish setting up ${recipe.name} before adding it to a bundle.`:bundleForm&&!inBundle&&bundleIds.length>=4?"A bundle holds up to 4 products. Remove one to add another.":"";return <article className={`recipe-tile ${bundleForm&&inBundle?"selected bundle-selected":activeId === recipe.id ? "selected" : ""} ${selecting?"selecting":""}`} aria-busy={selecting} key={recipe.id}><button className="recipe-use" title={bundleReason||(bundleForm?(inBundle?`Remove ${recipe.name} from bundle`:`Add ${recipe.name} to bundle`):`Choose ${recipe.name}`)} aria-label={bundleForm?(inBundle?`Remove ${recipe.name} from bundle`:`Add ${recipe.name} to bundle`):`Choose ${recipe.name}`} aria-pressed={bundleForm?inBundle:undefined} disabled={Boolean(pendingAction)||bundleDisabled} onClick={async () => {if(bundleForm){setBundleIds(current=>current.includes(recipe.id)?current.filter(id=>id!==recipe.id):[...current,recipe.id]);return}if(actionLock.current)return;actionLock.current=true;setPendingAction(`recipe:${recipe.id}`);setActiveId(recipe.id);setMessage("");try{if(!await props.onUseRecipe(recipe)){setActiveId("");return}setKeywordListId(recipe.keywordListId||"");setEditing(false);setShowLibrary(false)}finally{actionLock.current=false;setPendingAction("")}}}>{/* D729 · The band the prototype puts above a product's name. D197 removed
                 what used to sit in it - a "P" for Printify, identical on every card and
                 meaningless on all of them. The band stays because it is what makes the
-                tile a product card; a bundle tile still fills it with its member count. */}<span className="recipe-icon" aria-hidden="true">{recipe.previewImage?<img src={recipe.previewImage} alt="" decoding="async"/>:null}</span><span className="recipe-copy"><b>{recipe.name}</b><small>{selecting?"Loading product details…":recipeSummary(recipe)}</small>{!selecting&&recipeShopLabel(recipe)?<small className="recipe-shop" title={`Printify store: ${recipeShopLabel(recipe)}`}>Shop: {recipeShopLabel(recipe)}</small>:null}{bundleForm&&inBundle?<em>✓ Product {bundleIds.indexOf(recipe.id)+1}</em>:bundleForm&&!recipeIsSetUp(recipe)?<em>Finish setup first</em>:selecting?<em>Loading {recipe.name}…</em>:null}</span></button>{!bundleForm&&<><button className="edit-recipe" title="Rename this product or reconnect its Printify template" disabled={Boolean(pendingAction)} onClick={async () => {if(actionLock.current)return;actionLock.current=true;setPendingAction(`edit:${recipe.id}`);setActiveId(recipe.id);try{if(!await props.onUseRecipe(recipe)){setActiveId("");return}setEditingId(recipe.id); setName(recipe.name);setKeywordListId(recipe.keywordListId||"");setEditing(true)}finally{actionLock.current=false;setPendingAction("")}}}>Edit</button><button className="delete-recipe" disabled={Boolean(pendingAction)} aria-label={`Delete ${recipe.name}`} title="Delete saved product" onClick={() => void remove(recipe)}>Delete</button></>}</article>})}</div>{bundleForm&&<div className="bundle-builder-actions"><button className="secondary-action" disabled={bundleSaving} onClick={()=>setBundleForm(false)}>Cancel</button><button className="save-recipe" aria-busy={bundleSaving} disabled={bundleSaving||!bundleName.trim()||bundleIds.length<2} onClick={()=>void saveBundle()}>{bundleSaving?"Saving bundle…":editingBundleId?"Update bundle":`Save bundle${bundleIds.length>=2?` · ${bundleIds.length} products`:""}`}</button></div>}</>}
+                tile a product card; a bundle tile still fills it with its member count. */}<span className="recipe-icon" aria-hidden="true">{recipe.previewImage?<img src={recipe.previewImage} alt="" decoding="async"/>:null}</span><span className="recipe-copy"><b>{recipe.name}</b><small>{selecting?"Loading product details…":recipeSummary(recipe)}</small>{!selecting&&recipeShopLabel(recipe)?<small className="recipe-shop" title={`Printify store: ${recipeShopLabel(recipe)}`}>Shop: {recipeShopLabel(recipe)}</small>:null}{bundleForm&&<small className="bundle-placement-cue">{recipePlacementCue(recipe)}</small>}{bundleForm&&inBundle?<em>✓ Product {bundleIds.indexOf(recipe.id)+1}</em>:bundleForm&&!recipeIsSetUp(recipe)?<em>Finish setup first</em>:selecting?<em>Loading {recipe.name}…</em>:null}</span></button>{!bundleForm&&<><button className="edit-recipe" title="Rename this product or reconnect its Printify template" disabled={Boolean(pendingAction)} onClick={async () => {if(actionLock.current)return;actionLock.current=true;setPendingAction(`edit:${recipe.id}`);setActiveId(recipe.id);try{if(!await props.onUseRecipe(recipe)){setActiveId("");return}setEditingId(recipe.id); setName(recipe.name);setKeywordListId(recipe.keywordListId||"");setEditing(true)}finally{actionLock.current=false;setPendingAction("")}}}>Edit</button><button className="delete-recipe" disabled={Boolean(pendingAction)} aria-label={`Delete ${recipe.name}`} title="Delete saved product" onClick={() => void remove(recipe)}>Delete</button></>}</article>})}</div>{bundleForm&&duplicatePairs.length>0&&<label className="bundle-duplicate-warning"><input type="checkbox" checked={duplicateAcknowledged} onChange={event=>setDuplicateAcknowledged(event.target.checked)}/><span><b>These products appear to use the same garment and print setup.</b><small>{duplicatePairs.join("; ")}. Keep both only if that is intentional.</small></span></label>}{bundleForm&&<div className="bundle-builder-actions"><button className="secondary-action" disabled={bundleSaving} onClick={()=>setBundleForm(false)}>Cancel</button><button className="save-recipe" aria-busy={bundleSaving} disabled={bundleSaving||!bundleName.trim()||bundleIds.length<2||(duplicatePairs.length>0&&!duplicateAcknowledged)} onClick={()=>void saveBundle()}>{bundleSaving?"Saving bundle…":editingBundleId?"Update bundle":`Save bundle${bundleIds.length>=2?` · ${bundleIds.length} products`:""}`}</button></div>}</>}
     {/* D323 · The edit form used to render after the saved-bundles section, so
         clicking Edit on a product opened the form below the bundles and the
         disclosure — far from the tile that was clicked, often off screen. It

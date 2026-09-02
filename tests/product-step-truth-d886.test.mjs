@@ -67,6 +67,23 @@ test("D891: product and bundle selection use one card grid",()=>{
   assert.match(css,/\.bundle-selection-grid \.recipe-tile\.bundle-selected::after\{content:"✓"/);
 });
 
+test("D894: similar products stay allowed while exact-looking setups require acknowledgment",()=>{
+  assert.match(tools,/export function recipePlacementCue\(recipe: Recipe\)/);
+  assert.match(tools,/return "Back print"/);
+  assert.match(tools,/return "Front print"/);
+  assert.match(tools,/export function bundleDuplicatePairs\(recipes: Recipe\[\]\)/);
+  assert.match(tools,/sameTemplate\|\|sameSavedSetup/);
+  assert.match(tools,/className="bundle-placement-cue"/);
+  assert.match(tools,/className="bundle-duplicate-warning"/);
+  assert.match(tools,/Keep both only if that is intentional/);
+  assert.match(tools,/duplicatePairs\.length>0&&!duplicateAcknowledged/);
+  assert.match(tools,/current\.includes\(recipe\.id\)\?current\.filter/,
+    "the same saved product toggles out instead of being added twice");
+  assert.doesNotMatch(tools,/same product type[^\n]*disabled/i,
+    "two configurations of the same garment type must remain allowed");
+  assert.match(css,/\.bundle-duplicate-warning\{[^}]*background:#fffaf0/);
+});
+
 test("D886: pricing waits for finished draft costs",()=>{
   assert.match(app,/ready\.facets\.filter\(facet=>facet\.name!=="profit"\)/);
   assert.match(app,/Final Printify production cost/);
