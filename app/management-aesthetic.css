@@ -108,6 +108,14 @@
 }
 .usage-plan-grid article.current button:not(:disabled){
   border-color:#d2c7cd!important;background:#fff!important;color:#3d2538!important;box-shadow:none!important}
+.usage-page .plan-banner{
+  border-color:#0d0b0c!important;
+  background:#0d0b0c!important;
+  color:#fff!important;
+  box-shadow:0 18px 38px rgba(13,11,12,.16)!important;
+}
+.usage-page .plan-banner :is(h2,p,span){color:#fff!important}
+.usage-page .plan-banner p{opacity:.72}
 
 /* Frozen management shell: Keyword Banks and Mockup Sets use the same
    page frame as Batch History and Usage + Plan. Keep this block last so

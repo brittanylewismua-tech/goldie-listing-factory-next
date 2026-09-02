@@ -3290,6 +3290,15 @@ html, body { background: var(--lf-paper); }
   background:#171117!important;box-shadow:6px 6px 0 var(--lf-pink)!important;transform:translate(-1px,-1px)}
 .missing-photo-close{top:18px!important;right:18px!important;width:38px!important;height:38px!important;border-radius:50%!important;background:#f3eef1!important;color:#4a3342!important;box-shadow:none!important}
 
+/* D952 · Help is part of the product, not a branded editorial interlude. It
+   uses the same type hierarchy as the page beneath it. */
+.context-help-dialog h2{
+  font:750 26px/1.15 Inter,ui-sans-serif,system-ui,-apple-system,sans-serif!important;
+  letter-spacing:-.025em!important;
+  color:#2d2028!important;
+}
+.context-help-dialog :is(.mini-label,h3,p,li){font-family:Inter,ui-sans-serif,system-ui,-apple-system,sans-serif!important}
+
 /* D907 · Small text links were being used for real workflow actions. Keep the
    compact summary, but give its control the same visible, usable button shape
    as the rest of the factory. The persistent draft action also keeps a reliable
