@@ -1410,7 +1410,6 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
    the designs. Said on step 1, where the bundle is chosen. Advice, not a
    blocker: a product without a bank still publishes, its titles are just typed
    by hand. */
-.app-shell .recipe-card .bundle-form label .needs-bank-note{display:block;margin-top:2px;color:var(--muted);font-size:11px;font-weight:650}
 
 /* D660 · The advice tone: everything that can publish does publish, and this is
    only a suggestion for reach. Deliberately not the attention colour, and the

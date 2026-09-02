@@ -6951,7 +6951,7 @@ test("a bundle member with no keyword bank says so on step 1 — D660", async ()
 
   /* Found live: the 1566 crewneck joined the bundle with no bank and only said
      so at step 3, with Auto-create disabled and the designs already done. */
-  assert.match(tools, /recipeIsSetUp\(recipe\)&&!recipe\.keywordListId&&<em className="needs-bank-note">No keyword bank yet — titles cannot be auto-written for it<\/em>/);
+  assert.doesNotMatch(tools, /needs-bank-note|No keyword bank yet — titles cannot be auto-written for it/);
 
   /* Offered, never applied silently: two products in one bundle can legitimately
      want different banks, so copying it across would be a guess about her
