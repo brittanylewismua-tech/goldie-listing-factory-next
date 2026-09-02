@@ -3270,6 +3270,11 @@ html, body { background: var(--lf-paper); }
 .publish-confirm-actions button{min-height:44px;border-radius:9px}
 .save-draft-modal{text-align:center}
 .save-draft-modal label{text-align:left}
+.app-shell .publish-confirm .save-draft-confirm{
+  border-color:#0d0b0c!important;background:#0d0b0c!important;color:#fff!important;
+  box-shadow:4px 4px 0 var(--lf-pink)!important}
+.app-shell .publish-confirm .save-draft-confirm:hover:not(:disabled){
+  background:#171117!important;box-shadow:6px 6px 0 var(--lf-pink)!important;transform:translate(-1px,-1px)}
 .missing-photo-close{top:18px!important;right:18px!important;width:38px!important;height:38px!important;border-radius:50%!important;background:#f3eef1!important;color:#4a3342!important;box-shadow:none!important}
 
 /* D907 · Small text links were being used for real workflow actions. Keep the
