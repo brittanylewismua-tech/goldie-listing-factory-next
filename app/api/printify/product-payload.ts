@@ -51,8 +51,33 @@ export function templateHasLabelArtwork(areas: TemplateArea[] | undefined) {
     isLabelPlaceholder(placeholder.position) && (placeholder.images?.length ?? 0) > 0)));
 }
 
+/* D884 - a second print side is a charge, so it is never assumed.
+
+   This is the path taken when the seller uploaded one design and assigned no
+   per-colour or back artwork. It wrote that design into EVERY populated
+   placeholder the saved product carried. On a template that keeps a back print
+   area - which is the entire point of a product saved as "back print" - one
+   uploaded design was printed front AND back, and Printify charged the second
+   location on every garment colour. Measured on the deployed build: 18.54 a
+   unit against 12.38 for the same shirt with one print, a silent 6.16 the
+   seller never asked for. The listing's own artwork summary said "back: none"
+   the whole time, so nothing on screen disagreed with the invoice.
+
+   Goldie prints where the seller put artwork. One design means the front. A
+   back print is added deliberately, in the artwork step, and shows up in the
+   cost review before it is approved. The only exception is a product with no
+   front-ish side at all, where the back IS the print side and skipping it
+   would produce a blank garment. */
+export function isBackPlaceholder(position?: string) {
+  return /back/i.test(String(position || ""));
+}
+
 export function printAreasWithOnlyCurrentArtwork(areas: TemplateArea[], currentImageId: string, bounds?:{left:number;top:number;right:number;bottom:number}, maxPlacementScale?:number) {
   if (!currentImageId) throw new Error("The current Printify image ID is missing.");
+  const printableSides = areas.flatMap((area) => area.placeholders
+    .filter((placeholder) => placeholder.images?.[0] && !isLabelPlaceholder(placeholder.position))
+    .map((placeholder) => placeholder.position));
+  const backIsTheOnlySide = printableSides.length > 0 && printableSides.every(isBackPlaceholder);
   const result = areas.map((area) => ({
     variant_ids: area.variant_ids,
     placeholders: area.placeholders.flatMap((placeholder) => {
@@ -60,6 +85,7 @@ export function printAreasWithOnlyCurrentArtwork(areas: TemplateArea[], currentI
       if (!placement) return [];
       /* Left out of the request altogether. */
       if (isLabelPlaceholder(placeholder.position)) return [];
+      if (isBackPlaceholder(placeholder.position) && !backIsTheOnlySide) return [];
       const resolved = artworkPlacement(placement, bounds, maxPlacementScale);
       return [{
         position: placeholder.position,

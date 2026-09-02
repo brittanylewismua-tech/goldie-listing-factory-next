@@ -675,7 +675,8 @@ test("removes every inherited template image ID from the outgoing Printify produ
     variant_ids:[1,2],
     placeholders:[
       { position:"front", images:[{id:"stale-primary",x:0.4,y:0.6,scale:0.8,angle:2},{id:"stale-layer"}] },
-      { position:"back", images:[{id:"another-stale",x:0.5,y:0.5,scale:0.4,angle:0}] },
+      /* D884 - a sleeve, not a back; this test is about inherited ids. */
+      { position:"left_sleeve", images:[{id:"another-stale",x:0.5,y:0.5,scale:0.4,angle:0}] },
     ],
   }];
   const result = printAreasWithOnlyCurrentArtwork(template, "fresh-upload");

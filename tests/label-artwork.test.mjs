@@ -21,7 +21,9 @@ const areas = () => ([{
   variant_ids: [1, 2],
   placeholders: [
     { position: "front", images: [{ id: "old-front", x: .5, y: .45, scale: .9, angle: 0 }] },
-    { position: "back", images: [{ id: "old-back", x: .5, y: .5, scale: .8, angle: 0 }] },
+    /* D884 - a sleeve, not a back. A back print is never assumed now, and this
+       file tests labels and inherited ids, not which print sides exist. */
+    { position: "left_sleeve", images: [{ id: "old-back", x: .5, y: .5, scale: .8, angle: 0 }] },
     { position: "neck", images: [{ id: "internal-label", x: .5, y: .1, scale: 1, angle: 0 }] },
   ],
 }]);
@@ -36,7 +38,7 @@ test("label positions are recognised", () => {
 test("no label placeholder reaches product creation", () => {
   const result = printAreasWithOnlyCurrentArtwork(areas(), "new-design");
   const positions = result.flatMap((area) => area.placeholders.map((p) => p.position));
-  assert.deepEqual(positions.sort(), ["back", "front"]);
+  assert.deepEqual(positions.sort(), ["front", "left_sleeve"]);
   assert.ok(!positions.some(isLabelPlaceholder), "no neck, collar, inner or tag placeholder goes out");
 });
 
