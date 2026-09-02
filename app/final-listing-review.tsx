@@ -4,7 +4,7 @@ import { printSideLabel } from "./print-sides";
 
 type Draft = { clientId:string; id?:string; name:string; title?:string; status:string; previewUrl?:string; editorUrl?:string; error?:string; productName?:string;artworkSummary?:Record<string,Array<{name:string;colors:string[]}>> };
 type Design = { id:string; name:string; title:string; tags:string[]; previewUrl:string; sizeGuideName?:string };
-type Props = { drafts:Draft[]; files:Design[]; selections:Record<string,number[]>; defaultIndices:number[]; preparedMockupCounts:Record<string,number>; batchSizeGuide:string; productName?:string; onRetry?:(clientId:string)=>void; onEdit:(phase:"details"|"mockups")=>void };
+type Props = { drafts:Draft[]; files:Design[]; selections:Record<string,number[]>; defaultIndices:number[]; preparedMockupCounts:Record<string,number>; batchSizeGuide:string; productName?:string; onRetry?:(clientId:string)=>void; onEdit:(phase:"details"|"mockups")=>void; onSelectionChange?:(ids:string[])=>void; onSelectionTouched?:()=>void };
 
 /* D253 · The Publish page grouped listings under the raw upload filename, so a
    seller reviewing a batch read "ChatGPT Image Aug 21, 2026, 05_32_41 PM (2).png"
@@ -25,7 +25,7 @@ function readableDesignName(name: string): string {
   return tidy || name || "Untitled design";
 }
 
-export default function FinalListingReview({drafts,files,selections,defaultIndices,preparedMockupCounts,batchSizeGuide,productName,onRetry,onEdit}:Props){
+export default function FinalListingReview({drafts,files,selections,defaultIndices,preparedMockupCounts,batchSizeGuide,productName,onRetry,onEdit,onSelectionChange,onSelectionTouched}:Props){
   const selectable=drafts.filter(draft=>draft.status==="Created"&&draft.id);
   /* D841 · The title-length half of this is gone. Etsy's limit is 140 and there
      is no minimum, so a 99-character title was being called "needs a look" -
@@ -70,11 +70,12 @@ export default function FinalListingReview({drafts,files,selections,defaultIndic
       return fresh.length?[...new Set([...kept,...fresh])]:kept;
     });
   },[availableKey]);
-  useEffect(()=>{window.dispatchEvent(new CustomEvent("goldie-publish-selection",{detail:selectedIds}))},[selectedIds]);
+  useEffect(()=>{onSelectionChange?.(selectedIds);window.dispatchEvent(new CustomEvent("goldie-publish-selection",{detail:selectedIds}))},[selectedIds,onSelectionChange]);
   function changeSelection(ids:string[]){
     /* Only the seller's own controls call this - the seeding effect above sets
        state directly - so this is exactly the moment her choice becomes hers. */
     sellerChose.current=true;
+    onSelectionTouched?.();
     window.dispatchEvent(new Event("goldie-publish-selection-touched"));
     setSelectedIds(ids);
   }
