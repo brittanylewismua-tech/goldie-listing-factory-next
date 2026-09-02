@@ -3,6 +3,7 @@ import { decryptPrintifyToken } from "../../token-crypto";
 import { etsyBudget } from "../../../etsy/client";
 import { finishEtsyListing } from "../../../etsy/finish";
 import { logError } from "@/app/error-log";
+import { readPrintifyPublishState } from "../../publish-state";
 
 /* D559 - a job carried ONE settings blob: one shipping profile, one set of image
    selections. A bundle's products each have their own - her hoodie ships on the
@@ -41,7 +42,7 @@ async function queueCapacity(now:number){
   return {budget,estimatedCalls,active,paused,canStart:!paused&&active<MAX_CONCURRENT_LISTINGS&&budget.remaining-active*estimatedCalls>=estimatedCalls};
 }
 
-async function printifyListingId(token:string,shopId:number,productId:string){const response=await fetch(`https://api.printify.com/v1/shops/${shopId}/products/${productId}.json`,{headers:printifyHeaders(token)});if(!response.ok)return 0;const product=await response.json() as {external?:{id?:string}};return Number(product.external?.id)||0}
+async function printifyListingId(token:string,shopId:number,productId:string){const result=await readPrintifyPublishState(fetch,token,shopId,productId);return result.state==="published"?result.listingId:0}
 /* D637 - this polled 18 times at 2.5s, so a single item could hold an execution
    for 45 seconds plus the publish call. Cloudflare ends the request long before
    that, and because the item was already marked running with no sweep on the
@@ -86,7 +87,12 @@ export async function processNextPublishItem(userId:string,jobId:string){
        Either one means the listing exists and must not be created a second
        time - which is what makes retrying an interrupted item safe. */
     const linked=await runtime().DB.prepare("SELECT etsy_listing_id FROM etsy_listing_links WHERE printify_product_id=? AND user_id=? AND etsy_listing_id>0").bind(draft.id,userId).first<{etsy_listing_id:number}>();
-    let listingId=Number(linked?.etsy_listing_id)||await printifyListingId(token,draft.shopId,draft.id);
+    let listingId=Number(linked?.etsy_listing_id)||0;
+    if(!listingId){
+      const publishState=await readPrintifyPublishState(fetch,token,draft.shopId,draft.id);
+      if(publishState.state==="unknown")throw new Error(`${publishState.reason} Goldie stopped before publishing so it cannot create a duplicate Etsy listing.`);
+      if(publishState.state==="published")listingId=publishState.listingId;
+    }
     /* D638 - D637's idempotency rested entirely on Printify eventually setting
        external.id. Watching job 050552ce recover, it never did: each pass found
        no id, called publish.json AGAIN, polled, and requeued - so the "no

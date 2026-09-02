@@ -1237,13 +1237,14 @@ test("keeps batch history useful instead of accumulating unmanageable empty sess
 });
 
 test("connects Etsy with PKCE and finishes only the exact Printify-linked Etsy listing", async()=>{
-  const [page,oauth,callback,client,publish,queue,finish,migration]=await Promise.all([
+  const [page,oauth,callback,client,publish,queue,publishState,finish,migration]=await Promise.all([
     readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8"),
     readFile(new URL("../app/api/etsy/route.ts",import.meta.url),"utf8"),
     readFile(new URL("../app/api/etsy/callback/route.ts",import.meta.url),"utf8"),
     readFile(new URL("../app/api/etsy/client.ts",import.meta.url),"utf8"),
     readFile(new URL("../app/api/printify/drafts/publish/route.ts",import.meta.url),"utf8"),
     readFile(new URL("../app/api/printify/drafts/publish/queue.ts",import.meta.url),"utf8"),
+    readFile(new URL("../app/api/printify/publish-state.ts",import.meta.url),"utf8"),
     readFile(new URL("../app/api/etsy/finish.ts",import.meta.url),"utf8"),
     readFile(new URL("../drizzle/0009_etsy_connection.sql",import.meta.url),"utf8"),
   ]);
@@ -1260,7 +1261,8 @@ test("connects Etsy with PKCE and finishes only the exact Printify-linked Etsy l
   /* D637 renamed this: it no longer WAITS, it takes a short bounded look and
      hands the item back to the queue if the id is not ready. */
   assert.match(queue,/pollForEtsyListing/);
-  assert.match(queue,/product\.external\?\.id/);
+  assert.match(publishState,/product\.external\?\.id/);
+  assert.match(queue,/readPrintifyPublishState/);
   /* The rule is about locating a LISTING: never guess by sorting newest or
      matching titles, only follow the exact Printify link. D639 compares Printify
      SHOP titles against the connected Etsy shop name, which is a different
