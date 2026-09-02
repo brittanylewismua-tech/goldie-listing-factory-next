@@ -290,7 +290,7 @@
 /* Primary action inside a card - roomier and lighter, sized to fit the tile */
 
 /* Quiet actions - box only, no type changes (see note above) */
-.app-shell :is(.step-card,.recipe-card) :is(.edit-recipe,.change-product,.add-product-button){
+.app-shell :is(.step-card,.recipe-card) :is(.edit-recipe,.add-product-button){
   min-height:30px!important;
   padding:0 12px!important;
   border:1px solid #ded1d8!important;
@@ -298,7 +298,7 @@
   background:rgba(255,255,255,.55)!important;
   text-decoration:none!important;
 }
-.app-shell :is(.step-card,.recipe-card) :is(.edit-recipe,.change-product,.add-product-button):hover{
+.app-shell :is(.step-card,.recipe-card) :is(.edit-recipe,.add-product-button):hover{
   border-color:rgba(107,58,88,.38)!important;
   background:#fff!important;
 }
@@ -1998,27 +1998,6 @@ body{min-width:0}
    belongs to the card. Link styling, matching the panel close links, because it
    is a change of mind rather than an action on the batch. */
 .app-shell .selected-summary-block{display:grid}
-.app-shell .change-bundle-link{
-  justify-self:start!important;
-  margin:10px 0 0 16px!important;
-  padding:2px 0!important;
-  border:0!important;
-  border-radius:0!important;
-  background:none!important;
-  background-image:none!important;
-  box-shadow:none!important;
-  min-height:0!important;
-  color:#68405a!important;
-  font:800 11px/1.2 "Manrope",system-ui,sans-serif;
-  text-decoration:underline!important;
-  text-underline-offset:3px!important;
-  text-decoration-thickness:1px!important;
-  cursor:pointer!important;
-}
-.app-shell .change-bundle-link:hover{
-  background:none!important;color:#4c293f!important;text-decoration-thickness:2px!important;
-}
-.app-shell .change-bundle-link:disabled{opacity:.55!important;cursor:not-allowed!important}
 
 /* D366 · One spinner while a bundle loads, instead of a line of text per
    product. The cards already appear together — setBundleColorProducts is set
@@ -2362,10 +2341,6 @@ body{min-width:0}
    worse than the size I was trying to fix. Same weight, or it loses again. */
 .app-shell .step-product-card .photo-order-strip img{max-height:74px;object-fit:contain}
 
-/* D523 - the saved-products picker becomes a way to change the batch, not the
-   first thing on a step whose products are already decided. */
-.app-shell .recipe-library-change>summary{display:flex;align-items:center;gap:8px;margin:0 0 6px;padding:10px 14px;border:1px solid #ded6dc;border-radius:12px;background:rgba(255,255,255,.5);cursor:pointer;list-style:none;font:800 12px/1 "Manrope",system-ui,sans-serif;letter-spacing:.04em;color:#4c293f}
-.app-shell .recipe-library-change>summary::-webkit-details-marker{display:none}
 /* D705 - shared chevron. */
 
 /* D533 - she has said, repeatedly, that every product card must look the same.
@@ -3044,7 +3019,6 @@ body{min-width:0}
    pixels and painted with currentColor so it matches whatever it sits beside.
    The two summaries also disagreed on type because one was bare text and the
    other a <span> plus a <small>; both are now the same shape. ------------ */
-.app-shell .recipe-library-change>summary::after,
 .app-shell .recipe-card .bundle-library>summary::after,
 .app-shell .printify-image-picker>summary::after,
 .app-shell .template-instructions-toggle>summary::after{
@@ -3059,13 +3033,11 @@ body{min-width:0}
   mask:var(--goldie-chevron) center/15px 15px no-repeat!important;
   transition:transform .16s ease!important;
 }
-.app-shell .recipe-library-change[open]>summary::after,
 .app-shell .recipe-card .bundle-library[open]>summary::after,
 .app-shell .printify-image-picker[open]>summary::after,
 .app-shell .template-instructions-toggle[open]>summary::after{transform:rotate(180deg)!important}
 
 /* One type scale for both product disclosures. */
-.app-shell .recipe-library-change>summary,
 .app-shell .recipe-card .bundle-library>summary{
   display:flex!important;
   align-items:center!important;
@@ -3073,12 +3045,10 @@ body{min-width:0}
   cursor:pointer!important;
   list-style:none!important;
 }
-.app-shell .recipe-library-change>summary>span,
 .app-shell .recipe-card .bundle-library>summary>span{
   font:800 13px/1.25 "Manrope",system-ui,sans-serif;
   color:#4a2f44!important;
 }
-.app-shell .recipe-library-change>summary>small,
 .app-shell .recipe-card .bundle-library>summary>small{
   font:650 11px/1.25 "Manrope",system-ui,sans-serif;
   color:#84667c!important;

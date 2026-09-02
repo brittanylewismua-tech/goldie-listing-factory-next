@@ -97,7 +97,8 @@ test("one chevron, centred, for every disclosure in the app — D705", async () 
 test("a destructive switch does not describe itself as additive — D705", async () => {
   const tools = await read("app/factory-tools.tsx");
   const app = await read("app/listing-factory-app.tsx");
-  assert.match(tools, /<small>Starts a new batch<\/small>/);
+  assert.match(tools, />Choose a different product<\/button>/);
+  assert.match(tools, />Remove from this batch<\/button>/);
   /* The warning has to be true: confirm that choosing really does discard. */
   assert.match(app, /This removes \$\{count\} \$\{count===1\?"design":"designs"\} and all work from the current batch/);
 });
@@ -105,5 +106,5 @@ test("a destructive switch does not describe itself as additive — D705", async
 test("the summary line carries what differs, not what everything has — D705", async () => {
   const tools = await read("app/factory-tools.tsx");
   assert.doesNotMatch(tools, /parts\.push\("keyword bank"\)/);
-  assert.match(tools, /Connect a product template to Printify once\./);
+  assert.match(tools, /Select a product to use for this batch\./);
 });

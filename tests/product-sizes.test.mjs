@@ -1234,12 +1234,13 @@ test("the approve button leaves once there is nothing to approve — D363", asyn
    discarding work exactly as Change product does. */
 test("a selected bundle can be swapped for another — D365", async () => {
   const tools = await read("app/factory-tools.tsx");
-  assert.match(tools, /activeId\.startsWith\("bundle:"\)&&<button type="button" className="change-bundle-link"/);
-  assert.match(tools, /onClick=\{\(\)=>\{if\(!props\.onChangeProduct\(\)\)return;setActiveId\(""\)/,
-    "it reuses the confirm-and-clear path rather than inventing a second one");
+  assert.match(tools, /className="choose-different-product"/);
+  assert.match(tools, /className="remove-product-from-batch"/);
+  assert.match(tools, /if\(!await props\.onChangeProduct\(\)\)return;setActiveId\(""\)/,
+    "removal reuses the confirm-and-clear path rather than inventing a second one");
 
   const block = tools.indexOf('className="selected-summary-block"');
-  const link = tools.indexOf('className="change-bundle-link"');
+  const link = tools.indexOf('className="choose-different-product"');
   assert.ok(block > 0 && link > block, "the link belongs to the card it changes");
 });
 

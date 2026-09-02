@@ -2112,13 +2112,8 @@ test("keeps product creation visible and lets a selected product be changed (fix
      and onChangeProduct is still the guard that runs when it happens. */
   assert.match(workflow,/onUseRecipe\(recipe\)/);
   assert.match(workflow,/onChangeProduct: \(\) => boolean/);
-  /* D843 · The change-product button stays for now. D842 tried to remove it and
-     the removal left a stray brace that took the whole Listing Factory down in
-     production - every step, not just the one I was looking at. Removing it is
-     a tidy-up; it is not worth a second outage on the same day, and it will be
-     done on its own with the render checked before and after. */
-  assert.match(workflow,/className="change-product"/);
-  assert.match(workflow,/useEffect\(\(\)=>setActiveId\(props\.selectedProductId\),\[props\.selectedProductId\]\)/);
+  assert.doesNotMatch(workflow,/className="change-product"/);
+  assert.match(workflow,/useEffect\(\(\)=>\{setActiveId\(props\.selectedProductId\);setShowLibrary\(false\)\}/);
   assert.match(app,/onChangeProduct=\{changeProduct\}/);
   assert.match(app,/selectedProductId=\{activeBundle\?`bundle:\$\{activeBundle\.id\}`:activeRecipe\?\.id\|\|""\}/);
   assert.match(app,/function changeProduct\(\)[\s\S]{0,400}clearCurrentBatch\(true\);return true/);
@@ -4461,15 +4456,14 @@ test("a decided batch does not lead with the picker, and step 3 opens compact �
   /* Measured live: on a batch whose bundle is already chosen, step 1 led with the
      saved-products picker and her three product cards started at 1099px, below
      the fold. The choice is made; the picker is how you change it. */
-  assert.match(tools, /bundleChosen\?:boolean;/);
-  assert.match(tools, /function LibraryShell\(\{collapsed,children\}/);
-  assert.match(tools, /<LibraryShell collapsed=\{props\.bundleChosen\}>/);
+  assert.match(tools, /\(!activeId\|\|showLibrary\)/);
+  assert.match(tools, /className="choose-different-product"/);
   /* D705 · The label used to read "Change the products in this batch", which
      describes adding to the batch you are in. What it actually does is switch
      the product and start a NEW batch, discarding the designs and every bit of
      work in the current one — chooseRecipe confirms exactly that. A control
      may not describe itself as less destructive than it is. */
-  assert.match(tools, /<summary><span>Switch to a different product<\/span><small>Starts a new batch<\/small><\/summary>/);
+  assert.match(tools, />Choose a different product<\/button>/);
   assert.doesNotMatch(tools, /Change the products in this batch/,
     "the label that made a destructive switch sound additive is gone");
   assert.match(app, /<SavedWorkflow bundleChosen=\{Boolean\(activeBundle&&bundleRecipes\.length>1\)\}/);

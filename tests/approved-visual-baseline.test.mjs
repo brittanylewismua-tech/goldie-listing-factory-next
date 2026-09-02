@@ -919,8 +919,8 @@ test("saved-product tiles line up regardless of name length — D162", async () 
     "A name too long for one line truncates rather than reflowing the card.");
 
   /* The name is clamped to two lines, so the full name must stay reachable. */
-  assert.match(tools, /className="recipe-use" title=\{recipe\.name\}/);
-  assert.match(tools, /className="recipe-use" title=\{bundle\.name\}/);
+  assert.match(tools, /className="recipe-use" title=\{`Choose \$\{recipe\.name\}`\}/);
+  assert.match(tools, /className="recipe-use" title=\{`Choose \$\{bundle\.name\}`\}/);
 });
 
 test("small text meets AA against the surface it is painted on — D163", async () => {
@@ -1014,10 +1014,8 @@ test("a selected product tile does not clip its own actions — D186", async () 
    * The three things that must still hold: the tile does not clip, the label is
    * real text, and the row does not wrap to one button per line. */
   assert.match(clarity, /\.app-shell \.recipe-tile\{[^}]*overflow:visible/);
-  assert.doesNotMatch(clarity, /\.change-product\{[^}]*font-size:0/,
-    "A button whose own label is invisible is not a labelled button.");
-  assert.match(clarity, /\.change-product,\n\.app-shell \.recipe-tile \.change-product\{\n?\s*font-size:11px/,
-    "The tile actions are read at 11px, the same size the keyword cards use.");
+  assert.doesNotMatch(clarity, /\.change-product/,
+    "Product switching belongs to the selected header, not one tile in the grid.");
   assert.match(clarity, /\.app-shell \.edit-recipe,\.app-shell \.delete-recipe\{font-size:11px/);
   assert.doesNotMatch(clarity, /\.recipe-grid \.recipe-tile\{[^}]*flex-wrap:wrap/,
     "Flex made each action take its own row.");

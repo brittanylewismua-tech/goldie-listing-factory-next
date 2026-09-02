@@ -2766,11 +2766,6 @@ html, body { background: var(--lf-paper); }
    The real word goes back on the button too: with clarity-pass's font-size:0
    gone, "Change product" is its own label rather than a pseudo-element that
    copy, search and a screen reader all read differently from what is drawn. */
-.app-shell .recipe-card .change-product,
-.app-shell .recipe-tile .change-product{
-  font-size:11px;font-weight:800;padding:0 12px;min-width:0}
-.app-shell .recipe-card .change-product::after,
-.app-shell .recipe-tile .change-product::after{content:none}
 /* The !important sizes that actually win these two live in
    approved-functional.css and were set to 10px and 9px there; D856 raised them
    at source rather than out-specifying them from here. */
@@ -2993,3 +2988,25 @@ html, body { background: var(--lf-paper); }
 .app-shell .actual-cost-review button:disabled{
   background:rgba(109,26,78,.12);color:rgba(74,42,62,.55);cursor:not-allowed}
 .app-shell .actual-cost-review.approved>strong{color:#2f6b45}
+
+/* D883 · The card is the selection control. Once chosen, the product becomes
+   the working header and the bank recedes; management stays available without
+   competing with the workflow's Next action. */
+.app-shell .recipe-tile:not(.other-shop){transition:transform .16s,border-color .16s,box-shadow .16s}
+.app-shell .recipe-tile:not(.other-shop):hover{border-color:#2b2027;box-shadow:0 9px 24px rgba(45,29,39,.12);transform:translateY(-2px)}
+.app-shell .recipe-tile .recipe-use:focus-visible{outline:3px solid rgba(248,62,181,.28);outline-offset:3px;border-radius:9px}
+.app-shell .selected-summary-block{width:100%;margin:0}
+.app-shell .selected-summary-block>.selected-product-header{
+  min-height:86px;margin:0;padding:14px 16px;border:0;border-radius:0;
+  background:#fff;box-shadow:none}
+.app-shell .selected-summary-block>.selected-product-header>.product-thumb{
+  width:58px;height:58px;flex-basis:58px}
+.app-shell .selected-summary-block>.selected-product-header .template-info b{font-size:15px}
+.app-shell .selected-product-actions{display:flex;align-items:center;gap:18px;padding:10px 16px 2px}
+.app-shell .selected-product-actions button{
+  min-height:34px;padding:0;border:0;background:transparent;box-shadow:none;
+  color:#604655;font:750 11px/1.2 Inter,ui-sans-serif,system-ui,sans-serif;
+  text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.app-shell .selected-product-actions .remove-product-from-batch{color:#955065}
+.app-shell .selected-product-actions button:hover{color:#191217;text-decoration-thickness:2px}
+.app-shell .selected-product-actions button:disabled{opacity:.5;cursor:not-allowed}

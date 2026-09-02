@@ -116,6 +116,6 @@ test("one line accounts for every hidden product and bundle — D859", () => {
   const scope = readFileSync(new URL("../app/bank-scope.ts", import.meta.url), "utf8");
   assert.match(scope, /const hiddenCount = elsewhere\.length \+ bundlesElsewhere\.length;/);
   assert.match(scope, /hiddenStores = \[\.\.\.new Set\(\[/);
-  assert.match(tools, /\{hiddenCount>0&&<p className="recipe-other-store">/);
+  assert.match(tools, /\{hiddenCount>0&&\(!activeId\|\|showLibrary\)&&<p className="recipe-other-store">/);
   assert.match(tools, /Switch shop/);
 });
