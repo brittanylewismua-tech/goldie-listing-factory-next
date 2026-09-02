@@ -473,50 +473,25 @@ test("a suggestion has exactly one control — D193", async () => {
 
 });
 
-test("the product photo picks the catalog shot that actually shows the garment — D194", async () => {
+test("the product photo stays on the saved Printify product's primary mockup — D897", async () => {
   const app = await read("app/listing-factory-app.tsx");
   const route = await read("app/api/printify/route.ts");
 
-  /* Blueprint catalog images are inconsistent: some are model shots, some are a
-   * white garment on a white background that reads as a blank square at 52px
-   * however it is cropped or filtered. Measured across three products — the
-   * hoodie and sweatshirt have usable shots at index 0, the tee does not.
-   *
-   * Rather than trusting index 0, the client samples the first few candidates and
-   * keeps the one with the most non-background pixels. A white-on-white frame
-   * scores near zero and loses. */
-  /* D705 · This asserted the number 6 in one file while the client asserted
-     nothing about it, and the two drifting apart is exactly the bug that hid
-     for months: the API trimmed the candidate list to six before the scorer
-     ever saw it, so D370 recorded "all six of the hoodie's shots are model
-     shots — the source has nothing better" about a list that had already been
-     cut down. The rule worth pinning is not a magic number, it is that the
-     scorer is shown everything the API sends. */
+  /* The API returns the linked product's actual mockups with Printify's default
+     first. The client must keep that stable instead of asynchronously scoring
+     the remaining colours and swapping the garment after the controls load. */
   const serverPool = route.match(/productMockups=[\s\S]{0,260}slice\(0,(\d+)\)/);
-  const clientPool = app.match(/const shortlist=candidates\.slice\(0,(\d+)\);/);
   assert.ok(serverPool, "the API caps how many saved-product mockups it returns");
-  assert.ok(clientPool, "the client still scores a shortlist");
-  assert.equal(clientPool[1], serverPool[1],
-    "the scorer must see every candidate the API sends, or its verdict is about a list it was never given");
   assert.ok(Number(serverPool[1]) >= 12,
-    "six was too few to contain a flat lay for every product — see D705");
+    "the real product's full mockup choice remains available downstream");
   assert.match(app, /function pickProductPhoto\(product:TemplateDetails\)/);
   assert.match(route,/found\.product\.images/,
     "the card must use the linked product's real Printify mockups");
   assert.doesNotMatch(route,/previewImages:\(blueprint\.images/,
     "generic catalogue photography must never stand in for the saved product");
-  /* D200 retires the D194 metric. "Most non-background pixels" rewards whatever
-   * fills the frame, and on the live tee that was a macro shot of a folded
-   * corner (99% ink) while the only usable flat lay ranked last (64%). Scoring
-   * moved to app/product-photo.ts and is covered by tests/product-photo.test.mjs;
-   * what remains asserted here is that the client still samples rather than
-   * trusting index 0. */
-  assert.doesNotMatch(app, /if\(v<225\)ink\+\+/, "the inverted D194 metric is gone");
-  assert.match(app, /photoStats\(ctx\.getImageData/, "scoring runs through the shared module");
-  assert.match(app, /if\(candidates\.length<2\)return product\.previewImage/,
-    "One candidate is not a choice — do not probe.");
-  /* next/image shadows the global Image constructor in this file. */
-  assert.match(app, /const image=document\.createElement\("img"\)/);
+  assert.match(app,/return product\.previewImage\|\|\(product\.previewImages\|\|\[\]\)\.find\(Boolean\)\|\|""/);
+  assert.doesNotMatch(app,/setBestPhoto|photoProbe|preferredPhotoIndex|photoStats\(/,
+    "no delayed image scorer may replace the product identity photo");
 });
 
 test("D207: a bundle facet shortcut never writes another product's choice into the active one", async () => {

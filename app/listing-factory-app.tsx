@@ -35,7 +35,6 @@ import ContextHelp from "./context-help";
 import GoldieWordmark from "./goldie-wordmark";
 import MobileGate from "./mobile-gate";
 import { productFamily } from "./product-type-utils";
-import { photoStats, preferredPhotoIndex, PHOTO_SAMPLE_SIZE } from "./product-photo";
 
 /* D370 · The garment glyph a card falls back to when no catalog photo reads as
    the product. Shape follows the blueprint title so a hoodie does not draw as a
@@ -1038,7 +1037,6 @@ export default function ListingFactoryApp() {
   const [bundleCreationAvailable,setBundleCreationAvailable]=useState(false);
   const [bundleCreationMode,setBundleCreationMode]=useState(false);
   const [openFacet,setOpenFacet]=useState<Record<string,string[]>>({});
-  const [bestPhoto,setBestPhoto]=useState<Record<string,string>>({});
   /* D206 · With a three-product bundle selected, the connected-product row
    * described a single member: "Unisex Midweight Softstyle Fleece Hoodie ·
    * 4 colors × 8 sizes". templateDetails holds whichever product is active, and
@@ -1048,70 +1046,12 @@ export default function ListingFactoryApp() {
   const bundleSelected=Boolean(activeBundle&&bundleRecipes.length>1);
   /* D205 · Bumped after every establish() so the saved-product tiles refetch. */
   const [savedRevision,setSavedRevision]=useState(0);
-  const photoProbe=useRef<Set<string>>(new Set());
   function pickProductPhoto(product:TemplateDetails){
-    const candidates=(product.previewImages||[]).filter(Boolean);
-    if(candidates.length<2)return product.previewImage||candidates[0]||"";
-    const key=String(product.id);
-    /* Once scored the answer is final, including the deliberate "" that means
-       "no usable photo, draw the glyph". Check presence, not truthiness. */
-    if(key in bestPhoto)return bestPhoto[key];
-    if(!photoProbe.current.has(key)){
-      photoProbe.current.add(key);
-      void (async()=>{
-        /* D200 · Score every candidate on subject isolation, not on how much of
-           the frame it fills. See app/product-photo.ts for the measurements —
-           the old "most ink wins" rule selected a macro shot of a folded corner
-           and ranked the only usable flat lay last. All six are sampled now,
-           not four: the winning tee shot was candidate #2 but the hoodie's was
-           #4, so a slice(0,4) would have missed it. */
-        /* D705 · The hoodie kept showing a model shot, and D370 recorded the
-           reason as "all six blueprint candidates are model shots - the source
-           has nothing better". That measurement was taken on a list the API had
-           already cut down: /api/printify returned blueprint.images.slice(0,6),
-           so "all six" was all six it was SHOWN, not all Printify has. The
-           scorer was never given the chance to find a flat lay sitting at index
-           six or later. Both ends now carry twelve. Scoring is cached per
-           product id, so this costs one pass the first time a product is
-           opened and nothing afterwards. */
-        const shortlist=candidates.slice(0,12);
-        const measurements:Array<ReturnType<typeof photoStats>|null>=[];
-        for(const src of shortlist){
-          const measured=await new Promise<ReturnType<typeof photoStats>|null>(resolve=>{
-            const image=document.createElement("img"); image.crossOrigin="anonymous";
-            image.onload=()=>{try{
-              const size=PHOTO_SAMPLE_SIZE;
-              const canvas=document.createElement("canvas"); canvas.width=size; canvas.height=size;
-              const ctx=canvas.getContext("2d",{willReadFrequently:true});
-              if(!ctx)return resolve(null);
-              ctx.drawImage(image,0,0,size,size);
-              resolve(photoStats(ctx.getImageData(0,0,size,size).data,size));
-            }catch{resolve(null)}};
-            image.onerror=()=>resolve(null);
-            image.src=src;
-          });
-          measurements.push(measured);
-        }
-        /* D380 · Prefer a flat lay; fall back to the best photo there is, even a
-           model shot, because a hoodie on a person still shows the hoodie. The
-           glyph is only for products with no usable photo at all. */
-        const choice=preferredPhotoIndex(measurements);
-        const chosen=choice>=0?shortlist[choice]:"";
-        setBestPhoto(current=>({...current,[key]:chosen}));
-        /* The visual scorer is the authority for a flatlay. Persist its answer
-           after it finishes instead of preserving the server's first "front"
-           image forever (which can be Printify's fabric-detail shot). */
-        if(chosen&&activeRecipe&&String(templateDetails?.id)===key&&chosen!==activeRecipe.previewImage){
-          const recipe=activeRecipe;
-          setActiveRecipe(current=>current&&current.id===recipe.id?{...current,previewImage:chosen}:current);
-          void fetch("/api/product-recipes",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:recipe.id,name:recipe.name,templateUrl:recipe.templateUrl,previewImage:chosen})}).catch(()=>undefined);
-          window.dispatchEvent(new CustomEvent("goldie-recipe-photo",{detail:{recipeId:recipe.id,previewImage:chosen}}));
-        }
-      })();
-    }
-    /* Nothing until the score lands: a glyph that becomes a photo is calmer
-       than a model shot that vanishes. */
-    return "";
+    /* D897 · Printify already tells us which real product mockup is primary.
+       The old client scorer loaded every candidate after selection and could
+       replace a black saved-product mockup with a blue one seconds later. A
+       product identity image must not change while the seller is reading it. */
+    return product.previewImage||(product.previewImages||[]).find(Boolean)||"";
   }
   const [keywordBanks,setKeywordBanks]=useState<Array<{id:string;name:string}>>([]);
   useEffect(()=>{void fetch("/api/keyword-lists").then(r=>r.json()).then((payload:{lists?:Array<{id?:string;name?:string}>})=>setKeywordBanks((payload.lists||[]).map(list=>({id:String(list.id||""),name:String(list.name||"Bank")})).filter(list=>list.id))).catch(()=>undefined);},[]);
@@ -4418,7 +4358,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
                    panel is for: she is confirming which garment this batch prints
                    on. The lettered box remains only when Printify has no usable
                    photo. */}
-                {(()=>{const photo=(templateDetails?pickProductPhoto(templateDetails):"")||activeRecipe?.previewImage||"";
+                {(()=>{const photo=activeRecipe?.previewImage||(templateDetails?pickProductPhoto(templateDetails):"")||"";
                   return photo
                     ? <img className="product-thumb bundle-product-photo" src={photo} alt={templateDetails?.blueprintTitle||"Product"} decoding="async"/>
                     : <div className="product-thumb product-photo-loading" aria-label="Loading product photo"><span className="goldie-spinner" aria-hidden="true"/></div>})()}<div className="template-info">{bundleSelected?<><b>{activeBundle?.name}</b><span>{bundleRecipes.length} products · {bundleRecipes.map(item=>item.name).join(" · ")}</span><span>✓ Each product keeps its own colors, sizes, mockups, and keywords</span></>:<><b>{templateDetails.blueprintTitle}</b><span>{templateDetails.provider} · {variantSummary(summaryAxes(templateDetails,activeRecipe))}</span><span>✓ Product, placement, sizes, and shipping profile imported</span></>}</div></div>:null} verifiedShippingProfileId={Number(templateDetails?.shippingTemplateId)||0} onTemplateUrl={(value) => { templateLoadVersion.current+=1;setLoadingTemplate(false);setTemplate(value);setTemplateDetails(null);setTemplateError(""); }} onUseRecipe={chooseRecipe} onUseBundle={useBundle} onStartNewProduct={startNewProduct} onChangeProduct={changeProduct} onVerifyTemplate={loadTemplateUrl} /></FactoryPanel>

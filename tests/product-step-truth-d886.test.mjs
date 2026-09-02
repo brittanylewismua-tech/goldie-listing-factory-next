@@ -17,10 +17,9 @@ test("D886: a fresh product step shows the library and never chooses the first r
   assert.match(app,/restoreBatchById\(id,url\.searchParams\.get\("step"\)/,"an explicit saved-batch URL must still restore its product");
 });
 
-test("D886: the selected header uses the saved flatlay and owns its management",()=>{
-  assert.match(app,/const photo=\(templateDetails\?pickProductPhoto\(templateDetails\):""\)\|\|activeRecipe\?\.previewImage/);
-  assert.match(app,/const chosen=choice>=0\?shortlist\[choice\]:""/);
-  assert.match(app,/previewImage:chosen/);
+test("D897: the selected header keeps the saved mockup and owns its management",()=>{
+  assert.match(app,/const photo=activeRecipe\?\.previewImage\|\|\(templateDetails\?pickProductPhoto\(templateDetails\):""\)/);
+  assert.doesNotMatch(app,/const chosen=choice>=0\?shortlist\[choice\]:""/);
   assert.match(panel,/headerActions \? <div className="factory-panel-actions">/);
   assert.match(app,/headerActions=.*Choose a different product/);
   assert.doesNotMatch(app,/>Remove from this batch<\/button>/);
