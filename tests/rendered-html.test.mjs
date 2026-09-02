@@ -2165,7 +2165,7 @@ test("D902: upload starts with the choices and primary workflow cards remain dis
 
 test("D903: the Images page describes only work performed on that page",async()=>{
   const app=await readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8");
-  assert.match(app,/designs: \{ eyebrow: "STEP 2 OF 4", title: "Designs \+ images", copy: "Upload your finished designs, then assign front and back artwork where needed\." \}/);
+  assert.match(app,/designs: \{ eyebrow: "STEP 2 OF 4", title: "Designs \+ images", copy: "Upload your finished designs, then assign artwork to the print areas this product supports\." \}/);
   assert.doesNotMatch(app,/choose and arrange the listing photos/);
 });
 
