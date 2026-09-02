@@ -38,7 +38,7 @@ test("uses the binding batch limit and keeps setup actions in the right hierarch
   assert.match(page, /up to \$\{batchDesignLimit\} finished designs/);
   assert.match(page, /Add up to \$\{batchDesignLimit\} designs in this batch/);
   assert.doesNotMatch(page, /Your folder can contain up to 20 designs/);
-  assert.match(page, /headerActions=\{bundleCreationMode\?undefined:[\s\S]{0,240}>＋ Add a new product<\/button>[\s\S]{0,180}>Create a bundle<\/button>/);
+  assert.match(page, /headerActions=\{bundleCreationMode\?undefined:[\s\S]{0,280}>＋ Add a new product<\/button>[\s\S]{0,220}>＋ Create a new bundle<\/button>/);
   assert.match(css, /managementOnly \.newSetButton\{border:0!important;background:transparent!important/);
 });
 

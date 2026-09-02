@@ -54,9 +54,11 @@ test("D889: cross-shop inventory adds no picker clutter",()=>{
 
 test("D891: product and bundle selection use one card grid",()=>{
   assert.match(app,/title=\{bundleCreationMode\?"Create a product bundle":showProductLibrary/);
-  assert.match(app,/headerActions=\{bundleCreationMode\?undefined:[\s\S]{0,240}>＋ Add a new product<\/button>[\s\S]{0,180}>Create a bundle<\/button>/);
+  assert.match(app,/headerActions=\{bundleCreationMode\?undefined:[\s\S]{0,280}>＋ Add a new product<\/button>[\s\S]{0,220}>＋ Create a new bundle<\/button>/);
   assert.match(app,/addProductRequest=\{addProductRequest\}/);
-  assert.match(app,/bundleCreationAvailable&&<button type="button"[\s\S]{0,100}>Create a bundle<\/button>/);
+  assert.match(app,/bundleCreationAvailable&&<button type="button" className="panel-create-action"[\s\S]{0,100}>＋ Create a new bundle<\/button>/);
+  assert.equal((app.match(/className="panel-create-action"/g)||[]).length,2);
+  assert.match(css,/\.factory-panel-actions \.panel-create-action\{[^}]*border:1px solid #cfc5cb[^}]*border-radius:8px[^}]*text-decoration:none/);
   assert.match(tools,/className=\{`recipe-grid \$\{bundleForm\?"bundle-selection-grid":""\}`\}/);
   assert.match(tools,/if\(bundleForm\)\{setBundleIds\(/);
   assert.match(tools,/bundleForm&&inBundle\?<em>✓ Product \{bundleIds\.indexOf\(recipe\.id\)\+1\}<\/em>/);

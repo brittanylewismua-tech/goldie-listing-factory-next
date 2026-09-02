@@ -585,7 +585,7 @@ test("the product step stays usable after a product is chosen — D122/D119/D120
 
   /* D122 — bundle creation remains a first-class header action whenever at
    * least two scoped products exist; it is no longer a disclosure below them. */
-  assert.match(page, /bundleCreationAvailable&&<button type="button"[\s\S]{0,100}>Create a bundle<\/button>/,
+  assert.match(page, /bundleCreationAvailable&&<button type="button" className="panel-create-action"[\s\S]{0,100}>＋ Create a new bundle<\/button>/,
     "The picker must keep an explicit route into bundle creation.");
 
   /* D119 — the connected Printify product already knows what it is. */

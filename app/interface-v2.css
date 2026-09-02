@@ -3017,6 +3017,9 @@ html, body { background: var(--lf-paper); }
 /* D886 · Product management belongs in the selected product's panel head. */
 .app-shell .factory-panel-actions{display:flex;align-items:center;justify-content:flex-end;gap:14px;min-width:0}
 .app-shell .factory-panel-actions button{padding:0;border:0;background:transparent;box-shadow:none;color:#604655;font:750 11px/1.2 Inter,ui-sans-serif,system-ui,sans-serif;text-decoration:underline;text-underline-offset:3px;white-space:nowrap;cursor:pointer}
+.app-shell .factory-panel-actions .panel-create-action{min-height:36px;padding:0 13px;border:1px solid #cfc5cb;background:#fff;box-shadow:0 1px 2px rgba(45,29,39,.05);border-radius:8px;color:#3d2538;font:750 11px/1 Inter,ui-sans-serif,system-ui,sans-serif;text-decoration:none;transition:border-color .16s ease,box-shadow .16s ease,background .16s ease}
+.app-shell .factory-panel-actions .panel-create-action:hover{border-color:#746971;background:#faf8f9;box-shadow:0 3px 9px rgba(45,29,39,.1)}
+.app-shell .factory-panel-actions .panel-create-action:focus-visible{outline:3px solid rgba(245,47,178,.2);outline-offset:2px}
 .app-shell .factory-panel-actions .remove-product-from-batch{color:#955065}
 
 /* Selection is a success state, not a brand accent. */
