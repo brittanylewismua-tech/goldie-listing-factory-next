@@ -8,7 +8,10 @@ import { verifyShopPairing, shopMismatch } from "../../shop-match";
 import { decryptPrintifyToken } from "../../token-crypto";
 import { etsyConnection, etsyFetch } from "@/app/api/etsy/client";
 
+const GOLDIE_ETSY_PUBLISHING_ENABLED=false;
+
 export async function POST(request:Request){
+  if(!GOLDIE_ETSY_PUBLISHING_ENABLED)return NextResponse.json({error:"Goldie no longer publishes listings to Etsy. Open My Products in Printify to choose and publish your drafts."},{status:410});
   const user=await getChatGPTUser();if(!user)return NextResponse.json({error:"Sign in to publish these listings."},{status:401});
   const body=await request.json() as {productIds?:string[];runBatchId?:string;printifyImageIndices?:number[];printifyImageSelections?:Record<string,number[]>;etsyShippingProfileId?:number;byProduct?:Record<string,{indices?:number[];selections?:number[];shippingProfileId?:number}>},ids=[...new Set((body.productIds||[]).map(String).filter(Boolean))],etsyShippingProfileId=Number(body.etsyShippingProfileId);
   if(!ids.length)return NextResponse.json({error:"Choose at least one completed listing."},{status:400});
@@ -92,4 +95,4 @@ export async function POST(request:Request){
   return NextResponse.json({ok:true,job:await publishJobPayload(user.userId,jobId)},{status:202});
 }
 
-export async function GET(request:Request){const user=await getChatGPTUser();if(!user)return NextResponse.json({error:"Sign in to view this publish job."},{status:401});const jobId=new URL(request.url).searchParams.get("jobId")||"";if(!jobId)return NextResponse.json({error:"A publish job is required."},{status:400});const current=await publishJobPayload(user.userId,jobId);if(!current)return NextResponse.json({error:"This publish job was not found."},{status:404});if(current.queued+current.processing>0)await drainGlobalPublishQueue();/* D480 - each poll advanced exactly one listing, and the browser waits for the reply before polling again, so the whole batch ran strictly one at a time. *//* D476 - was gated on the job's status string, which could say needs_attention while items sat queued underneath it, stalling the queue permanently. */return NextResponse.json({ok:true,job:await publishJobPayload(user.userId,jobId)})}
+export async function GET(request:Request){const user=await getChatGPTUser();if(!user)return NextResponse.json({error:"Sign in to view this publish job."},{status:401});const jobId=new URL(request.url).searchParams.get("jobId")||"";if(!jobId)return NextResponse.json({error:"A publish job is required."},{status:400});const current=await publishJobPayload(user.userId,jobId);if(!current)return NextResponse.json({error:"This publish job was not found."},{status:404});/* Historical jobs remain readable, but Goldie never advances them. */return NextResponse.json({ok:true,job:current})}

@@ -29,7 +29,7 @@ const worker = {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
 
-    if(env?.DB&&url.pathname==="/api/printify/drafts/publish")ctx.waitUntil(import("../app/api/printify/drafts/publish/queue").then(({ kickGlobalPublishQueueIfDue }) => kickGlobalPublishQueueIfDue()).then(()=>undefined));
+    /* D931 · Etsy publishing is seller-controlled in Printify. Never kick the retired Goldie queue. */
 
     if (url.pathname === "/_vinext/image") {
       const allowedWidths = [...DEFAULT_DEVICE_SIZES, ...DEFAULT_IMAGE_SIZES];
@@ -44,8 +44,8 @@ const worker = {
 
     return handler.fetch(request, env, ctx);
   },
-  async scheduled(_controller: ScheduledController, _env: Env, ctx: ExecutionContext): Promise<void> {
-    ctx.waitUntil(import("../app/api/printify/drafts/publish/queue").then(({ drainGlobalPublishQueue }) => drainGlobalPublishQueue()).then(()=>undefined));
+  async scheduled(_controller: ScheduledController, _env: Env, _ctx: ExecutionContext): Promise<void> {
+    /* Intentionally empty: Goldie no longer publishes listings to Etsy. */
   },
 };
 

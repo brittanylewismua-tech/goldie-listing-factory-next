@@ -1365,7 +1365,7 @@ test("labels every progress bubble with a short workflow name", async () => {
   assert.match(page, /\{label:"Product",index:1,title:"Choose product"/);
   assert.match(page, /\{label:"Images",index:2,title:"Designs \+ images"/);
   assert.match(page, /\{label:"Listing",index:5,title:"Titles \+ Etsy details"/);
-  assert.match(page, /\{label:"Publish",index:8,title:"Review \+ publish"/);
+  assert.match(page, /\{label:"Finish",index:8,title:"Review \+ finish"/);
   assert.match(page, /<em className="progress-bubble-label">\{stage\.label\}<\/em>/);
   assert.match(page, /className="progress-bubble-label"/);
   assert.match(styles, /\.app-shell \.progress-bubble-label\{/);
@@ -1605,14 +1605,14 @@ test("queues Etsy publishing durably and protects shared API capacity",async()=>
   assert.match(usage,/AVG\(api_calls\)/);
 });
 
-test("runs the Etsy queue every minute and gives the owner operational controls",async()=>{
+test("the retired Etsy queue cannot run in the background or from owner controls",async()=>{
   const [worker,vite,queue,client,finish,operations,api,schema,migration]=await Promise.all([
     readFile(new URL("../worker/index.ts",import.meta.url),"utf8"),readFile(new URL("../vite.config.ts",import.meta.url),"utf8"),readFile(new URL("../app/api/printify/drafts/publish/queue.ts",import.meta.url),"utf8"),readFile(new URL("../app/api/etsy/client.ts",import.meta.url),"utf8"),readFile(new URL("../app/api/etsy/finish.ts",import.meta.url),"utf8"),readFile(new URL("../app/operations/page.tsx",import.meta.url),"utf8"),readFile(new URL("../app/api/operations/route.ts",import.meta.url),"utf8"),readFile(new URL("../db/schema.ts",import.meta.url),"utf8"),readFile(new URL("../drizzle/0012_etsy_queue_operations.sql",import.meta.url),"utf8"),
   ]);
-  assert.match(worker,/async scheduled/);assert.match(worker,/drainGlobalPublishQueue/);assert.match(worker,/kickGlobalPublishQueueIfDue/);assert.match(vite,/crons: \["\* \* \* \* \*"\]/);
+  assert.match(worker,/async scheduled/);assert.doesNotMatch(worker,/drainGlobalPublishQueue|kickGlobalPublishQueueIfDue/);assert.match(vite,/crons: \["\* \* \* \* \*"\]/);
   assert.match(queue,/MAX_CONCURRENT_LISTINGS=4/);assert.match(queue,/AVG\(api_calls\)/);assert.match(queue,/Math\.ceil\(Number\(average\?\.average/);assert.match(queue,/paused_until/);assert.match(queue,/DELETE FROM etsy_api_usage_buckets/);assert.match(queue,/DELETE FROM etsy_worker_runs/);
   assert.match(client,/retry-after/);assert.match(client,/Etsy asked Goldie to slow down/);assert.match(finish,/meter\.calls/);assert.match(finish,/apiCalls:meter\.calls/);
-  assert.match(operations,/Etsy operations/);assert.match(operations,/Shared Etsy quota/);assert.match(operations,/Measured API cost/);assert.match(operations,/Failed listings/);assert.match(api,/retry_failed/);assert.match(api,/run_now/);assert.match(api,/isOwner/);
+  assert.match(operations,/Etsy operations/);assert.match(operations,/Shared Etsy quota/);assert.match(operations,/Measured API cost/);assert.match(operations,/Failed listings/);assert.match(api,/\["resume","retry_failed","run_now"\][\s\S]*status:410/);assert.match(api,/isOwner/);
   assert.match(schema,/etsyQueueState/);assert.match(schema,/etsyWorkerRuns/);assert.match(migration,/etsy_queue_state/);assert.match(migration,/etsy_worker_runs/);
 });
 
@@ -1901,7 +1901,7 @@ test("D220: the rail is four stages, and every legacy phase has a home",async()=
     "designs, draft creation and mockups share the Images page");
   assert.match(stages,/\{label:"Listing",index:5,.*covers:\[5,6\]\}/,
     "titles and Etsy details share the Listing page");
-  assert.match(stages,/\{label:"Publish",index:8,.*covers:\[8\]\}/);
+  assert.match(stages,/\{label:"Finish",index:8,.*covers:\[8\]\}/);
 
   const covered=[...stages.matchAll(/covers:\[([0-9,]+)\]/g)].flatMap(m=>m[1].split(",").map(Number));
   for(const index of [1,2,3,4,5,6,7,8]){
@@ -1948,8 +1948,8 @@ test("passes the defined saved-product selector into the product workflow",async
 
 test("does not crash when the production worker starts without injected bindings",async()=>{
   const worker=await readFile(new URL("../worker/index.ts",import.meta.url),"utf8");
-  assert.match(worker,/if\(env\?\.DB&&url\.pathname==="\/api\/printify\/drafts\/publish"\)/);
-  assert.doesNotMatch(worker,/if\(env\.DB&&url\.pathname==="\/api\/printify\/drafts\/publish"\)/);
+  assert.doesNotMatch(worker,/env\??\.DB&&url\.pathname==="\/api\/printify\/drafts\/publish"/);
+  assert.match(worker,/Intentionally empty: Goldie no longer publishes listings to Etsy/);
 });
 
 test("records startup failures before the Listing Factory bundle mounts",async()=>{
@@ -2050,7 +2050,7 @@ test("shows underfilled titles and tags as a non-blocking review state (fixes D6
   assert.doesNotMatch(review,/design\.title\.trim\(\)\.length<100/);
   assert.match(review,/needed:missingTags/);
   assert.match(review,/design\.tags\.length<13/);
-  assert.match(review,/publishing is still available/);
+  assert.match(review,/review before publishing in Printify/);
   assert.match(review,/review\.needed\?"content-review":"ready"/);
   /* D255 · This used to be "One or more titles need review" — vaguer than the
      rows immediately below it, which name every listing individually. The
@@ -3628,8 +3628,9 @@ test("a re-queued listing is never stranded behind a stale job status — D476",
      with an empty failure panel because the items were no longer failed.
      Three independent places now refuse to let a stale status strand work. */
   assert.match(route, /UPDATE etsy_publish_jobs SET status='processing',failed=0,last_error=NULL[^`]*status IN \('queued','running'\)/);
-  assert.match(route, /if\(current\.queued\+current\.processing>0\)await drainGlobalPublishQueue\(\)/,
-    "D480 replaced the single-item call here with the parallel drain");
+  const getBody=route.slice(route.indexOf("export async function GET"));
+  assert.doesNotMatch(getBody,/drainGlobalPublishQueue\(/,
+    "reading a historical job must never restart paid publishing");
   assert.doesNotMatch(route, /if\(!\["completed","needs_attention"\]\.includes\(current\.status\)\)await processNextGlobalPublishItem/);
   assert.match(app, /while\(!job\|\|!\["completed","needs_attention"\]\.includes\(job\.status\)\|\|job\.queued\+job\.processing>0\)/);
 
@@ -4167,7 +4168,7 @@ test("no product on any step falls back to a bare header — D500", async () => 
   }
   const reportsAt = app.indexOf("function publishReports(");
   const reports = app.slice(reportsAt, app.indexOf("\n  function ", reportsAt + 10));
-  for (const label of ["Listings ready", "Titles and tags", "Listing photos", "Pricing and shipping", "Published"]) {
+  for (const label of ["Listings ready", "Titles and tags", "Listing photos", "Pricing and shipping", "Printify status"]) {
     assert.ok(reports.includes(`label:"${label}"`), `${label} is still reported on step 4`);
   }
 
@@ -4432,7 +4433,7 @@ test("every step is the same shape: a collapsible card per product — D517", as
     assert.ok(app.includes(piece), `${piece} renders on the listing grid`);
   }
   /* And step 4's reports still say they report - none of them opens anything. */
-  for (const reporting of ["Listings ready", "Listing photos", "Published"]) {
+  for (const reporting of ["Listings ready", "Listing photos", "Printify status"]) {
     assert.ok(row(reporting).includes("report:true"),
       `step 4 reports ${reporting} rather than pretending to open it`);
   }
@@ -5225,7 +5226,7 @@ test("the publish screen shows every listing the press will create — D559", as
   assert.match(app, /const \[bundleMembers,setBundleMembers\]/);
   assert.match(app, /memberScratch\[recipe\.id\]=\{recipeId:recipe\.id,productName:recipe\.name,/);
   assert.match(app, /function bundlePublishDrafts\(\)/);
-  assert.match(app, /<FinalListingReview drafts=\{bundlePublishDrafts\(\)\}/);
+  assert.match(app, /<FinalListingReview handoffOnly drafts=\{bundlePublishDrafts\(\)\}/);
 
   // And the selection governs every listing, not the open product's.
   assert.match(app, /const chosen=new Set\(selectedPublishIds\);/);

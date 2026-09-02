@@ -16,6 +16,7 @@ test("D921: selection intent is reported directly instead of relying on event ti
   assert.match(factory,/onSelectionTouched=\{\(\)=>\{sellerChosePublish\.current=true\}\}/);
 });
 
-test("D921: the paid publish press is blocked whenever publish readiness has an issue",()=>{
-  assert.match(factory,/disabled=\{publishing\|\|publishBlockers\(\)\.length>0\}/);
+test("D931: the retired paid publish press is not rendered",()=>{
+  assert.match(factory,/\{false&&<>\s*<div className="publish-live-warning"/);
+  assert.match(factory,/Open My Products in Printify/);
 });
