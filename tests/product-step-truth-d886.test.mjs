@@ -32,6 +32,15 @@ test("D887: selected-product management disappears while the product library is 
   assert.match(app,/description=\{showProductLibrary\?"Select one to continue"/);
 });
 
+test("D888: the empty picker does not repeat its state and shop metadata is quiet",()=>{
+  const approved=fs.readFileSync(new URL("../app/approved-functional.css",import.meta.url),"utf8");
+  assert.doesNotMatch(app, /: "No product selected"/);
+  assert.match(app, /state=\{failedBundleNames\(\)\.length\?"Needs a look":undefined\}/);
+  assert.match(tools, />Shop: \{recipeShopLabel\(recipe\)\}<\/small>/);
+  assert.match(approved, /\.recipe-card \.recipe-copy \.recipe-shop\{[\s\S]{0,350}background:transparent!important/);
+  assert.match(approved, /\.recipe-card \.recipe-copy \.recipe-shop\{[\s\S]{0,350}font-size:10px!important;font-weight:500!important/);
+});
+
 test("D886: pricing waits for finished draft costs",()=>{
   assert.match(app,/ready\.facets\.filter\(facet=>facet\.name!=="profit"\)/);
   assert.match(app,/Final Printify production cost/);

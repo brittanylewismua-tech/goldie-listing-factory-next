@@ -1376,10 +1376,10 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
    summary, so a real card rendered "… · keyword bank · GO…". A label that names
    the store has to be readable, so it gets its own line and its own weight. */
 .app-shell .recipe-card .recipe-copy .recipe-shop{
-  display:inline-block!important;justify-self:start!important;width:auto!important;max-width:100%!important;
-  margin-top:3px!important;padding:2px 8px!important;border-radius:16px!important;
-  background:rgba(103,52,82,.09)!important;color:#6b3f5e!important;
-  font-size:11px!important;font-weight:800!important;letter-spacing:.02em!important;
+  display:block!important;width:auto!important;max-width:100%!important;
+  margin-top:3px!important;padding:0!important;border:0!important;border-radius:0!important;
+  background:transparent!important;color:#8a7d86!important;
+  font-size:10px!important;font-weight:500!important;letter-spacing:0!important;
   overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important;
 }
 

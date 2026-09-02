@@ -49,11 +49,15 @@ test("the real photo replaces the placeholder rather than stacking above it", ()
   assert.match(css, /\.recipe-icon:has\(> img\)::before\{content:none\}/);
 });
 
-test("the bank asks for photos once, and only when a tile is missing one", () => {
+test("the bank asks once and repairs stale or missing product photos", () => {
   const client = readFileSync(new URL("../app/factory-tools.tsx", import.meta.url), "utf8");
+  const route = readFileSync(new URL("../app/api/product-recipes/photos/route.ts", import.meta.url), "utf8");
   assert.match(client, /if\(photoBackfill\.current\)return;/);
-  assert.match(client, /if\(!loaded\.some\(recipe=>!recipe\.previewImage\)\)return;/);
+  assert.doesNotMatch(client, /if\(!loaded\.some\(recipe=>!recipe\.previewImage\)\)return;/,
+    "an existing fabric-detail image must not prevent the real product mockup replacing it");
   assert.match(client, /fetch\("\/api\/product-recipes\/photos",\{method:"POST"\}\)/);
+  assert.match(route, /\.filter\(\(entry\) => Boolean\(entry\.productId\)\)/,
+    "the server must refresh stale photos as well as fill blank ones");
 });
 
 test("a thumbnail plate is never the same colour as the artwork — D851", () => {

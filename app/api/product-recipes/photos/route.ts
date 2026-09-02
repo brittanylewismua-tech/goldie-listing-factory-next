@@ -5,7 +5,7 @@ import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { getDb } from "@/db";
 import { productRecipes } from "@/db/schema";
 import { decryptPrintifyToken } from "@/app/api/printify/token-crypto";
-import { productIdFromUrl, flatlayOf, needsPhoto, type ProductImage } from "../flatlay";
+import { productIdFromUrl, flatlayOf, type ProductImage } from "../flatlay";
 
 /* D848 · The saved-product tiles drew a grey placeholder garment.
  *
@@ -58,7 +58,7 @@ export async function POST() {
       try { pricing = JSON.parse(recipe.pricingJson || "{}") } catch { pricing = {} }
       return { recipe, pricing, productId: productIdFromUrl(String(recipe.templateUrl || "")) };
     })
-    .filter((entry) => needsPhoto({ templateUrl: entry.recipe.templateUrl, previewImage: entry.pricing.previewImage }))
+    .filter((entry) => Boolean(entry.productId))
     .slice(0, MAX_PER_CALL);
   if (!missing.length) return NextResponse.json({ photos: {} });
 
