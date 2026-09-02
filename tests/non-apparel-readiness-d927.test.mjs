@@ -33,3 +33,11 @@ test("D928: saved readiness refreshes the chooser before bundle selection",()=>{
   assert.ok(save.indexOf("if(!response.ok)throw")<save.indexOf("setSavedRevision(current=>current+1)"),
     "a failed save must not refresh the chooser as though it succeeded");
 });
+
+test("D929: the library cannot pretend a slow request means zero saved products",()=>{
+  assert.match(tools,/const \[recipesLoaded,setRecipesLoaded\]=useState\(false\)/);
+  assert.match(tools,/finally\(\(\)=>setRecipesLoaded\(true\)\)/);
+  assert.match(tools,/!recipesLoaded&&<div className="recipe-library-loading" role="status"/);
+  assert.match(tools,/editing \|\| \(recipesLoaded&&!recipes\.length\)/);
+  assert.match(tools,/recipesLoaded&&!recipes\.length && <div className="first-recipe-callout"/);
+});
