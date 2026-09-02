@@ -3103,6 +3103,120 @@ html, body { background: var(--lf-paper); }
 @media(max-width:1050px){.app-shell .draft-color-workspace{grid-template-columns:240px minmax(0,1fr)}.app-shell .draft-color-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .app-shell .post-draft-shipping-review{margin-top:14px;padding:18px;background:#fff;border:1px solid #ded6dc;border-radius:12px;box-shadow:0 1px 2px rgba(40,24,36,.08),0 14px 32px rgba(40,24,36,.08)}
 
+/* D945 · Pink belongs to the factory's frame and state accents, not to the
+   face of a working control. A seller should be able to scan the page and see
+   one calm, consistent primary-action language: black face, white label and
+   the pink offset that ties it back to the brand. Keep destructive controls
+   red and selection controls green; neither belongs in this action list. */
+.app-shell :is(
+  .launch-button,
+  .workflow-next,
+  .inline-field button,
+  .save-recipe,
+  .management-create-foot button,
+  .publish-all-button,
+  .goldie-button.primary,
+  .connection-row button,
+  .open-all-button,
+  .custom-shipping-actions button:first-child,
+  .apply-manual-title,
+  .upload-notice button:not(.danger),
+  .ai-title-button,
+  .pricing-controls button,
+  .generate-inline,
+  .listing-photo-download button,
+  .uploaded-listing-photos .task-panel-heading>button,
+  .pricing-approval-button,
+  .missing-photo-list button,
+  .restart-batch-actions .save-restart,
+  .size-selector-actions button:last-child,
+  .confirm-action-go:not(.destructive),
+  .factory-startup-error button,
+  .bundle-load-failed button,
+  .support-chat-form button,
+  .actual-cost-review button
+){
+  border-color:#0d0b0c!important;
+  background:#0d0b0c!important;
+  color:#fff!important;
+  box-shadow:4px 4px 0 var(--lf-pink)!important;
+  text-shadow:none!important;
+  filter:none;
+}
+.app-shell :is(
+  .launch-button,
+  .workflow-next,
+  .inline-field button,
+  .save-recipe,
+  .management-create-foot button,
+  .publish-all-button,
+  .goldie-button.primary,
+  .connection-row button,
+  .open-all-button,
+  .custom-shipping-actions button:first-child,
+  .apply-manual-title,
+  .upload-notice button:not(.danger),
+  .ai-title-button,
+  .pricing-controls button,
+  .generate-inline,
+  .listing-photo-download button,
+  .uploaded-listing-photos .task-panel-heading>button,
+  .pricing-approval-button,
+  .missing-photo-list button,
+  .restart-batch-actions .save-restart,
+  .size-selector-actions button:last-child,
+  .confirm-action-go:not(.destructive),
+  .factory-startup-error button,
+  .bundle-load-failed button,
+  .support-chat-form button,
+  .actual-cost-review button
+):hover:not(:disabled){
+  background:#171117!important;
+  box-shadow:6px 6px 0 var(--lf-pink)!important;
+  transform:translate(-1px,-1px);
+}
+.app-shell :is(
+  .launch-button,
+  .workflow-next,
+  .inline-field button,
+  .save-recipe,
+  .management-create-foot button,
+  .publish-all-button,
+  .goldie-button.primary,
+  .connection-row button,
+  .open-all-button,
+  .custom-shipping-actions button:first-child,
+  .apply-manual-title,
+  .upload-notice button:not(.danger),
+  .ai-title-button,
+  .pricing-controls button,
+  .generate-inline,
+  .listing-photo-download button,
+  .uploaded-listing-photos .task-panel-heading>button,
+  .pricing-approval-button,
+  .missing-photo-list button,
+  .restart-batch-actions .save-restart,
+  .size-selector-actions button:last-child,
+  .confirm-action-go:not(.destructive),
+  .factory-startup-error button,
+  .bundle-load-failed button,
+  .support-chat-form button,
+  .actual-cost-review button
+):disabled{
+  border-color:#ddd4d9!important;
+  background:#eee9ec!important;
+  color:#9b8e96!important;
+  box-shadow:4px 4px 0 #f2dce9!important;
+  transform:none!important;
+  cursor:not-allowed;
+}
+
+/* The product tile uses an em as its visible press face. It follows the same
+   action language even though the click target is the surrounding button. */
+.app-shell .recipe-card .recipe-tile .recipe-use em{
+  border-color:#0d0b0c!important;background:#0d0b0c!important;color:#fff!important;
+  box-shadow:4px 4px 0 var(--lf-pink)!important}
+
 /* D907 · Small text links were being used for real workflow actions. Keep the
    compact summary, but give its control the same visible, usable button shape
    as the rest of the factory. The persistent draft action also keeps a reliable
