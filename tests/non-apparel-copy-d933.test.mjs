@@ -5,7 +5,8 @@ import {readFile} from "node:fs/promises";
 const app=await readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8");
 
 test("the design step describes the product's real print areas instead of assuming apparel",()=>{
-  assert.match(app,/assign artwork to the print areas this product supports/);
+  assert.match(app,/orderedPrintSides\(templateDetails\?\.printPositions\)/);
+  assert.doesNotMatch(app,/garment colors|front artwork by garment/i);
   assert.doesNotMatch(app,/assign front and back artwork where needed/);
 });
 

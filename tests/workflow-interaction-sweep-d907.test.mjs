@@ -8,7 +8,7 @@ const css=readFileSync(new URL("../app/interface-v2.css",import.meta.url),"utf8"
 test("D907: product plus artwork has an obvious way into the draft step",()=>{
   assert.match(app,/workflowStep==="setup"&&<FactoryFooter status=\{setupForwardReady\?"Your product and designs are ready"/);
   assert.match(app,/onClick=\{\(\)=>goToStep\("designs"\)\}/);
-  assert.match(app,/setupForwardReady\?"Continue to create drafts"/);
+  assert.match(app,/setupForwardReady\?"Review draft plan"/);
   assert.doesNotMatch(app,/workflowStep!=="setup"&&complete&&<FactoryFooter/);
 });
 
@@ -32,7 +32,7 @@ test("D907: workflow copy agrees with the post-draft pricing order",()=>{
 });
 
 test("D907: visible counts use singular draft grammar",()=>{
-  assert.match(app,/createdDrafts===1\?"draft":"drafts"/);
+  assert.match(app,/bundleRunDrafts===1\?"draft":"drafts"/);
 });
 
 test("D907: compact workflow actions are still real, usable buttons",()=>{

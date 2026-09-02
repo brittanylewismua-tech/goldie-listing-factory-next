@@ -325,7 +325,7 @@ const PROGRESS_STEPS = ["Connect Printify","Choose product","Add designs","Revie
    every gate, status and deep link still resolves. */
 const RAIL_STAGES: Array<{label:string;title:string;index:number;covers:number[]}> = [
   {label:"Product",index:1,title:"Choose product",covers:[1]},
-  {label:"Images",index:2,title:"Designs + images",covers:[2,3,4,7]},
+  {label:"Drafts",index:2,title:"Create and finish drafts",covers:[2,3,4,7]},
   {label:"Listing",index:5,title:"Titles + Etsy details",covers:[5,6]},
   {label:"Finish",index:8,title:"Review + finish",covers:[8]},
 ];
@@ -1818,9 +1818,9 @@ export default function ListingFactoryApp() {
     }) as DesignFile[];
     /* D632 - IndexedDB belongs to one browser profile, not one computer. Losing
        that cache must never delete the server-saved design records: existing
-       Printify drafts can still be titled, completed and published. */
+       Printify drafts can still be finished in Goldie. */
     const unavailable=designs.filter(design=>design.originalUnavailable).length;
-    if(unavailable)setRestoreNotice(`${unavailable===designs.length?"The original uploads are":"Some original uploads are"} not available in this browser. Your ${unavailable===1?"listing is":"listings are"} restored and can still be completed and published. Upload the original ${unavailable===1?"file":"files"} again only if you need to recreate a Printify draft.`);
+    if(unavailable)setRestoreNotice(`${unavailable===designs.length?"The original uploads are":"Some original uploads are"} not available in this browser. Your ${unavailable===1?"listing is":"listings are"} restored and can still be finished in Goldie. Upload the original ${unavailable===1?"file":"files"} again only if you need to recreate a Printify draft.`);
     const savedProductColors=state.templateDetails?.id?JSON.parse(window.localStorage.getItem(`goldie-colors-${state.templateDetails.id}`)||"[]") as number[]:[];const savedProductSizes=state.templateDetails?.id?JSON.parse(window.localStorage.getItem(`goldie-sizes-${state.templateDetails.id}`)||"[]") as number[]:[];batchIdRef.current=id;setBatchDisplayName(state.batchDisplayName||"");/* D693 - restoring this from setup_name is how the stale recipe name kept coming back. D686 stopped Batch History READING setup_name as a seller-chosen name, but restore still seeded the seller-name field from it, autosave then wrote that into the snapshot, and the reader trusted it - the stale name laundered itself into the field meant to hold only what she typed. Measured on batch b8ce58cb after D686 deployed: state.batchDisplayName "Gildan Hoodie", activeRecipe "Comfort Colors 1566 crewneck", product_title "Unisex Garment-Dyed Sweatshirt". A batch she never named restores blank, and Batch History falls through to the design or the product, which is the truth. */setKeptAsDrafts(Boolean(state.keptAsDrafts));/* D703 - the snapshot SAVES batchReceipt and the restore never read it back, so
     opening a batch that had published left the receipt at its initial null, the
     next autosave wrote that null over the record, and the proof of what went live
@@ -2557,10 +2557,10 @@ setSavedRevision(current=>current+1);}catch(error){stopWith("This default was no
       const rowProduct=isActive?templateDetails:bundleColorProducts[recipe.id];
       const hasColorAxis=rowProduct?Boolean(rowProduct.colorOptions?.length):recipe.requiresColorSelection!==false;
       return [
-      ...(hasColorAxis?[{label:"Colors on your design",value:selectedColorIds.length?plural(selectedColorIds.length,"color"):"Choose colors",pending,done:selectedColorIds.length>0,task:"draft-colors"}]:[]),
+      ...(hasColorAxis?[{label:"Product colors",value:selectedColorIds.length?plural(selectedColorIds.length,"color"):"Choose colors",pending,done:selectedColorIds.length>0,task:"draft-colors"}]:[]),
       {label:"Sizes",value:selectedSizeIds.length?plural(selectedSizeIds.length,"size"):"Choose sizes",pending,done:selectedSizeIds.length>0,task:"draft-sizes"},
-      {label:"Review Printify placement",value:started?plural(counts.drafts,"listing"):blank,pending,done:counts.drafts>0,task:"placement"},
-      {label:"Choose Printify photos",value:started?plural(counts.photos,"photo"):blank,pending,done:counts.photos>0,task:"printify"},
+      {label:"Artwork placement",value:started?plural(counts.drafts,"listing"):blank,pending,done:counts.drafts>0,task:"placement"},
+      {label:"Product photos",value:started?plural(counts.photos,"photo"):blank,pending,done:counts.photos>0,task:"printify"},
       {label:"Size guide",value:sizeGuideName||"None chosen",pending,done:Boolean(sizeGuideName),optional:true,task:"sizeguide"},
       /* D550 - lifestyle mockups are optional: nothing about publishing requires
          them, and her hoodie published-ready with four Printify photos and none.
@@ -2570,7 +2570,7 @@ setSavedRevision(current=>current+1);}catch(error){stopWith("This default was no
       /* D709 · One row. Uploading and ordering were two, and the second could
          not be done until the first had been, so the card advertised a step that
          was really the back half of the one above it. */
-      {label:"Your photos and their order",value:started?plural(counts.photos+counts.mockups,"photo"):blank,pending,done:counts.photos+counts.mockups>0,task:"lifestyle"},
+      {label:"Final photo order",value:started?plural(counts.photos+counts.mockups,"photo"):blank,pending,done:counts.photos+counts.mockups>0,task:"lifestyle"},
     ];}
     /* D541 - both of these rows pointed at .final-review, so Listings and Titles
        and tags took you to the same block below the cards. Nothing on this step
@@ -3060,8 +3060,8 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
     return <div className="factory-listing-screen">
       {/* Subordinate, and it says so: one section, collapsed by default once
           the titles exist, holding every batch-wide tool unchanged. */}
-      <FactoryPanel index={1} title="Batch tools"
-        description="Title builder, keyword bank and the shared description — these apply to every listing in this batch"
+      <FactoryPanel index={1} title="Titles for this batch"
+        description="Choose a keyword bank, build the titles, and edit the description shared by every listing"
         state={`${titled} of ${files.length} titled`}
         tone={titled===files.length?"done":"attention"}
         open={batchToolsOpen}
@@ -3645,7 +3645,7 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
 
      Two copies of a handler is the defect. One component, used twice. */
   async function disconnectEtsy(){
-    if(!await confirmAction({title:"Disconnect this Etsy shop?",body:"Goldie will not publish to this shop until you connect it again. Any other shop you have connected stays connected, and your existing Etsy listings are not affected.",confirmLabel:"Disconnect",cancelLabel:"Keep connected"}))return;
+    if(!await confirmAction({title:"Disconnect this Etsy shop?",body:"Goldie will not be able to prepare listings for this shop until you connect it again. Any other shop you have connected stays connected, and your existing Etsy listings are not affected.",confirmLabel:"Disconnect",cancelLabel:"Keep connected"}))return;
     setEtsyError("");
     try{
       const response=await fetch("/api/etsy",{method:"DELETE"});
@@ -4159,6 +4159,11 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
   /* D726 · The prototype's .goldie-summary chip. Every value is read from the
      same state the step itself renders, so it cannot drift from the screen. */
   const createdDrafts = drafts.filter(draft=>draft.status==="Created").length;
+  const bundleRunDrafts=activeBundle&&bundleRecipes.length>1
+    ?bundleRecipes.reduce((total,recipe,index)=>total+(index===bundleIndex?createdDrafts:Number(bundleBatchSummary[recipe.id]?.drafts)||0),0)
+    :createdDrafts;
+  const bundleRunListings=activeBundle&&bundleRecipes.length>1?requestedListingCount:files.length;
+  const runCountLabel=activeBundle&&bundleRecipes.length>1?`${bundleRunListings} ${bundleRunListings===1?"listing":"listings"} · ${bundleRecipes.length} products`:`${files.length} ${files.length===1?"listing":"listings"} in this batch`;
   const connectStatus = connected&&etsyConnected?"Both accounts connected":connected?"Printify connected":etsyConnected?"Etsy connected":"Not connected yet";
   /* D760 · On Connect the status belongs on the card it describes, not in the
      page head's far corner. Her words: "they're not connected yet should be on
@@ -4171,12 +4176,12 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
          bundle what it has settled is the bundle. */
       ? undefined
       : workflowStep==="designs"
-        ? `${files.length} ${files.length===1?"design":"designs"}${createdDrafts?` · ${createdDrafts} ${createdDrafts===1?"draft":"drafts"}`:""}`
+        ? `${files.length} ${files.length===1?"design":"designs"}${bundleRunDrafts?` · ${bundleRunDrafts} Printify ${bundleRunDrafts===1?"draft":"drafts"}`:""}`
         : workflowStep==="review"
-          ? `${createdDrafts} of ${files.length} drafts created`
-          : `${files.length} ${files.length===1?"listing":"listings"} in this batch`;
+          ? `${bundleRunDrafts} of ${Math.max(bundleRunListings,files.length)} drafts created`
+          : runCountLabel;
   const workflowHero = {
-    connect: { eyebrow: "ACCOUNT SETUP", title: "Connect your accounts", copy: connected&&etsyConnected?"Both accounts are connected and ready.":"Connect Printify and Etsy so Goldie can build and publish your listings." },
+    connect: { eyebrow: "ACCOUNT SETUP", title: "Connect your accounts", copy: connected&&etsyConnected?"Both accounts are connected and ready.":"Connect Printify and Etsy so Goldie can prepare your listings." },
     setup: templateDetails&&productSelected
       /* D322 · This title changed once a product was selected — "Choose product"
          became "Build this batch" — so step 1 renamed itself mid-step and started
@@ -4186,9 +4191,11 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
          title stays put; the copy carries the state. */
       ? { eyebrow: "STEP 1 OF 4", title: "Choose product", copy: `${activeBundle?"Your bundle":"Your product"} is selected. Add your finished designs below, then continue to create private Printify drafts.` }
       : { eyebrow: "STEP 1 OF 4", title: "Choose product", copy: "Choose a saved product or connect a completed Printify product." },
-    designs: { eyebrow: "STEP 2 OF 4", title: "Designs + images", copy: "Upload your finished designs, then assign artwork to the print areas this product supports." },
+    designs: complete
+      ? { eyebrow: "STEP 2 OF 4", title: "Finish your Printify drafts", copy: activeBundle&&bundleRecipes.length>1?"For each product, confirm colors, sizes, placement, pricing, shipping, and listing photos.":"Confirm colors, sizes, placement, pricing, shipping, and listing photos." }
+      : { eyebrow: "STEP 2 OF 4", title: "Review your draft plan", copy: activeBundle&&bundleRecipes.length>1?"Check the designs and every product below, then create the private Printify drafts.":"Check the product and designs below, then create the private Printify drafts." },
     review: { eyebrow: "STEP 3 OF 4", title: "Create Printify drafts", copy: "Goldie creates an unpublished draft in Printify for every design in this batch." },
-    finish: finishPhase==="details" ? { eyebrow: "STEP 3 OF 4 · LISTING", title: "Listing details", copy: "Create the titles and tags, then review the description for every listing." } : finishPhase==="etsy" ? { eyebrow: "STEP 3 OF 4 · LISTING", title: "Listing details", copy: "Review the Etsy category and product-specific details." } : { eyebrow: "STEP 4 OF 4 · FINISH", title: "Final review", copy: "Review every listing, then finish publishing from Printify My Products." },
+    finish: finishPhase==="details" ? { eyebrow: "STEP 3 OF 4 · LISTING", title: "Listing details", copy: "Create the titles and tags, then review the description for every listing." } : finishPhase==="etsy" ? { eyebrow: "STEP 3 OF 4 · LISTING", title: "Listing details", copy: "Review the Etsy category and product-specific details." } : { eyebrow: "STEP 4 OF 4 · FINISH", title: "Final review", copy: "Review every listing, then finish in Printify My Products." },
   }[workflowStep];
   const uploadPrintSides=orderedPrintSides(templateDetails?.printPositions);
   const uploadPrimarySide=primaryPrintSide(uploadPrintSides);
@@ -4452,7 +4459,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
                 </div>
               ) : (
                 <div className="connection-stack connection-setup connected-connection-stack">
-                  <div className="connection-row"><span className="connection-icon"><img src="/printify-logo.svg" alt="" /></span><div><b>Printify connected</b><small>Your connection will be remembered</small></div><button className="disconnect-link" onClick={async () => { if(!await confirmAction({title:"Disconnect Printify?",body:"Goldie will not be able to create or publish drafts until you reconnect with a new API token. Your Printify products are not affected.",confirmLabel:"Disconnect Printify",cancelLabel:"Keep connected"}))return; await fetch("/api/printify", { method: "DELETE" }); setConnected(false); setToken(""); setTemplateDetails(null); setConnectionError(""); }}>Disconnect</button></div>
+                  <div className="connection-row"><span className="connection-icon"><img src="/printify-logo.svg" alt="" /></span><div><b>Printify connected</b><small>Your connection will be remembered</small></div><button className="disconnect-link" onClick={async () => { if(!await confirmAction({title:"Disconnect Printify?",body:"Goldie will not be able to create Printify drafts until you reconnect with a new API token. Your Printify products are not affected.",confirmLabel:"Disconnect Printify",cancelLabel:"Keep connected"}))return; await fetch("/api/printify", { method: "DELETE" }); setConnected(false); setToken(""); setTemplateDetails(null); setConnectionError(""); }}>Disconnect</button></div>
                   {etsyConnectionRow(false)}
                 </div>
               )}
@@ -4695,7 +4702,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
                 drafts do not exist, the forward once they do. */}
               {/* D728 - prototype .goldie-footer: the designs step's forward
                   action and its status share one bar. Same gate, same handler. */}
-              {workflowStep==="setup"&&<FactoryFooter status={setupForwardReady?"Your product and designs are ready":templateError||missingRequirement||failedBundleNames()[0]||`Preparing ${designsPreparing} ${designsPreparing===1?"design":"designs"}…`}><button className="workflow-next" disabled={!setupForwardReady} onClick={()=>goToStep("designs")}>{setupForwardReady?"Continue to create drafts":templateError||missingRequirement||"Finish the product above"} {setupForwardReady&&<span>→</span>}</button></FactoryFooter>}</>}
+              {workflowStep==="setup"&&<FactoryFooter status={setupForwardReady?"Your product and designs are ready":templateError||missingRequirement||failedBundleNames()[0]||`Preparing ${designsPreparing} ${designsPreparing===1?"design":"designs"}…`}><button className="workflow-next" disabled={!setupForwardReady} onClick={()=>goToStep("designs")}>{setupForwardReady?"Review draft plan":templateError||missingRequirement||"Finish the product above"} {setupForwardReady&&<span>→</span>}</button></FactoryFooter>}</>}
               {files.length>0&&complete&&workflowStep==="designs"&&<button className="workflow-next" onClick={()=>goToStep("finish",false,true)}>Back to finishing your listings <span>→</span></button>}
             </div>
           </article>
@@ -4905,7 +4912,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
               {/* D485 - one press covers the whole bundle, so the button says so
                   rather than naming a single product, and reports which product
                   Goldie is on while it works its way through them. */}
-              <span className="button-glint" />{bundleRun&&!running?`Moving to ${bundleRecipes[bundleIndex+1]?.name||"the next product"}…`:preparingEtsy?"Completing Etsy details…":running ? (activeBundle&&bundleRecipes.length>1?`${activeRecipe?.name||"Product"} ${bundleIndex+1} of ${bundleRecipes.length}: creating drafts · ${processed} of ${runTotal} finished…`:`Creating drafts · ${processed} of ${runTotal} finished…`) : !ready ? missingRequirement : activeBundle&&bundleRecipes.length>1?`Create Printify drafts for all ${bundleRecipes.length} products`:"Continue to create drafts"}<span>→</span>
+              <span className="button-glint" />{bundleRun&&!running?`Moving to ${bundleRecipes[bundleIndex+1]?.name||"the next product"}…`:preparingEtsy?"Completing Etsy details…":running ? (activeBundle&&bundleRecipes.length>1?`${activeRecipe?.name||"Product"} ${bundleIndex+1} of ${bundleRecipes.length}: creating drafts · ${processed} of ${runTotal} finished…`:`Creating drafts · ${processed} of ${runTotal} finished…`) : !ready ? missingRequirement : activeBundle&&bundleRecipes.length>1?`Create drafts for all ${bundleRecipes.length} products`:"Create Printify drafts"}<span>→</span>
             </button></FactoryFooter>}
               {/* D708 · The label already changes while Goldie works, but a changing
                   label does not tell you HOW LONG. Draft creation and Etsy publishing

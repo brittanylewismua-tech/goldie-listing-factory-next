@@ -260,7 +260,7 @@ test("groups equal-cost Printify variants while preserving individual review and
   assert.doesNotMatch(page, /Sizes and colors shown below/);
   assert.match(page, /edit one separately/i);
   assert.doesNotMatch(page, /Approve pricing \+ shipping/);
-  assert.match(page, /Continue to create drafts/);
+  assert.match(page, /Review draft plan/);
   assert.match(page, /Approve prices and shipping/);
   assert.doesNotMatch(page, /onApprovalChange\(Boolean\(selectedProfile&&!customDirty\)\)/);
   assert.match(page, /variantPrices/);
@@ -1363,7 +1363,7 @@ test("labels every progress bubble with a short workflow name", async () => {
   /* D222 · RAIL_STAGES carries the labels now, one per page, so the parallel
      nine-entry short-label array is gone. */
   assert.match(page, /\{label:"Product",index:1,title:"Choose product"/);
-  assert.match(page, /\{label:"Images",index:2,title:"Designs \+ images"/);
+  assert.match(page, /\{label:"Drafts",index:2,title:"Create and finish drafts"/);
   assert.match(page, /\{label:"Listing",index:5,title:"Titles \+ Etsy details"/);
   assert.match(page, /\{label:"Finish",index:8,title:"Review \+ finish"/);
   assert.match(page, /<em className="progress-bubble-label">\{stage\.label\}<\/em>/);
@@ -1898,7 +1898,7 @@ test("D220: the rail is four stages, and every legacy phase has a home",async()=
      What matters is that no legacy index was orphaned by the merge. */
   const stages=page.slice(page.indexOf("const RAIL_STAGES"),page.indexOf("const RAIL_TOP"));
   assert.match(stages,/\{label:"Product",index:1,.*covers:\[1\]\}/);
-  assert.match(stages,/\{label:"Images",index:2,.*covers:\[2,3,4,7\]\}/,
+  assert.match(stages,/\{label:"Drafts",index:2,.*covers:\[2,3,4,7\]\}/,
     "designs, draft creation and mockups share the Images page");
   assert.match(stages,/\{label:"Listing",index:5,.*covers:\[5,6\]\}/,
     "titles and Etsy details share the Listing page");
@@ -2166,7 +2166,7 @@ test("D902: upload starts with the choices and primary workflow cards remain dis
 
 test("D903: the Images page describes only work performed on that page",async()=>{
   const app=await readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8");
-  assert.match(app,/designs: \{ eyebrow: "STEP 2 OF 4", title: "Designs \+ images", copy: "Upload your finished designs, then assign artwork to the print areas this product supports\." \}/);
+  assert.match(app,/designs: complete[\s\S]*title: "Finish your Printify drafts"[\s\S]*title: "Review your draft plan"/);
   assert.doesNotMatch(app,/choose and arrange the listing photos/);
 });
 
@@ -2906,7 +2906,7 @@ test("the design cache is bounded and a missing browser cache never erases listi
   assert.match(restore, /draft\?\.previewUrl\|\|draft\?\.printifyImages\?\.\[0\]/,
     "the existing Printify draft supplies a useful preview");
   assert.match(restore, /originalUnavailable:!file/);
-  assert.match(app, /listings are.*restored and can still be completed and published/);
+  assert.match(app, /listings are.*restored and can still be finished in Goldie/);
   assert.doesNotMatch(app, /design files are not on this computer|continue on the computer you started on/);
   /* D687 - draft.id! because listingWorkRows filters on draft.id before mapping
      and TypeScript cannot narrow through the filter. The wiring is unchanged. */
@@ -3759,7 +3759,7 @@ test("one press creates drafts for every product in a bundle — D485", async ()
   assert.match(app, /const \[bundleRun,setBundleRun\]=useState<\{total:number\}\|null>\(null\)/);
   assert.match(app, /if\(activeBundle&&bundleRecipes\.length>1\)setBundleRun\(\{total:bundleRecipes\.length\}\)/,
     "the single confirmation starts the whole run");
-  assert.match(app, /Create Printify drafts for all \$\{bundleRecipes\.length\} products/);
+  assert.match(app, /Create drafts for all \$\{bundleRecipes\.length\} products/);
 
   // It advances itself, and stops at the end rather than looping.
   assert.match(app, /if\(bundleIndex\+1>=bundleRecipes\.length\)\{setBundleRun\(null\);return\}/);
@@ -4164,7 +4164,7 @@ test("no product on any step falls back to a bare header — D500", async () => 
      were row labels for panels the preview does not have: the work they named
      is checked by name in the D541 test below, which reads the lead and editor
      functions directly. */
-  for (const label of ["Review Printify placement", "Choose Printify photos", "Your photos and their order"]) {
+  for (const label of ["Artwork placement", "Product photos", "Final photo order"]) {
     assert.ok(fn.includes(`label:"${label}"`), `${label} row is built`);
   }
   const reportsAt = app.indexOf("function publishReports(");
@@ -4402,14 +4402,14 @@ test("every step is the same shape: a collapsible card per product — D517", as
      are the Printify picker and the lifestyle mockup builder, and the page
      already names them that way. */
   /* D539 - step 2's rows own panels rather than pointing at sections. */
-  assert.match(app, /\{label:"Choose Printify photos"[^}]*task:"printify"\}/);
+  assert.match(app, /\{label:"Product photos"[^}]*task:"printify"\}/);
   /* D709 · Uploading photos and arranging them were two rows, and the second
      could not be started until the first was done - it was the back half of the
      same job, advertised as its own step. One row, one panel, one pass through
      the listings. */
-  assert.match(app, /\{label:"Your photos and their order"[^}]*task:"lifestyle"\}/);
+  assert.match(app, /\{label:"Final photo order"[^}]*task:"lifestyle"\}/);
   assert.doesNotMatch(app, /task:"order"/, "the split row is gone");
-  assert.match(app, /\{label:"Review Printify placement"[^}]*task:"placement"\}/);
+  assert.match(app, /\{label:"Artwork placement"[^}]*task:"placement"\}/);
   assert.doesNotMatch(app, /target:"details\.recommended-listing-photos"/,
     "a row never points at an advice panel");
 
@@ -6380,7 +6380,7 @@ test("the Create button follows the scenes the batch actually chose — D647", a
     readFile(new URL("../app/integrated-mockups.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
   ]);
-  assert.match(app, /Your photos and their order/);
+  assert.match(app, /Final photo order/);
   assert.doesNotMatch(app, /Create selected mockups|<IntegratedMockups/);
   return;
 
@@ -6883,7 +6883,7 @@ test("bundle DPI and variant totals cover every product — D659", async () => {
 
 test("the mockup row cannot say none while scenes are saved — D659", async () => {
   const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
-  assert.match(app, /Your photos and their order/);
+  assert.match(app, /Final photo order/);
   assert.doesNotMatch(app, /Create lifestyle mockups/);
   return;
 
