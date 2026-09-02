@@ -54,3 +54,13 @@ test("Disconnect sits in the same place on every connection row — D855", () =>
   assert.ok(addShop > -1 && disconnect > -1, "both actions must still be on the row");
   assert.ok(addShop < disconnect, "Connect another Etsy shop comes first; Disconnect is last");
 });
+
+test("the additive Etsy action cannot be forced into the shared 124px box — D930", () => {
+  const css = readFileSync(new URL("../app/interface-v2.css", import.meta.url), "utf8");
+  const rule = css.match(/\.app-shell \.connect-step \.connection-row > button\.add-shop-link\s*\{([^}]*)\}/)?.[1] || "";
+  assert.match(rule, /width\s*:\s*auto/);
+  assert.match(rule, /min-width\s*:\s*0/);
+  assert.match(rule, /max-width\s*:\s*none/);
+  assert.doesNotMatch(rule, /124px/,
+    "the full Connect another Etsy shop label must fit without painting through Disconnect");
+});

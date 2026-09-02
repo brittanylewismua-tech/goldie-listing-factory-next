@@ -2713,6 +2713,13 @@ html, body { background: var(--lf-paper); }
   font:750 12px/1.2 Inter,ui-sans-serif,system-ui,sans-serif;white-space:nowrap}
 .app-shell .connection-row > .add-shop-link:hover:not(:disabled){background:#f7edf3}
 
+/* D930 · The shared desktop connection rule gives every action a 124px box.
+   "Connect another Etsy shop" cannot fit in that box and was painting through
+   the Disconnect link.  The additive action owns its intrinsic width; the
+   destructive text link remains compact at its right. */
+.app-shell .connect-step .connection-row > button.add-shop-link{
+  width:auto;min-width:0;max-width:none;flex:0 0 auto}
+
 /* ==========================================================================
    D848 · the placeholder garment stayed behind the real one
    ==========================================================================
