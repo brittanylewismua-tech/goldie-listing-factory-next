@@ -1265,8 +1265,8 @@ test("D378: any product card can be opened, not only the next one", async () => 
   assert.match(app, /bundleRecipes,bundleIndex,bundleBatchIds,/,
     "and it has to survive a refresh like everything else on these steps");
   assert.match(app, /function openBundleProduct\(index:number\)/);
-  assert.match(app, /if\(index===bundleIndex\+1\)void continueBundle\(\)/,
-    "a product with no batch yet is the one case continueBundle still handles");
+  assert.match(app, /void continueBundle\(index\)/,
+    "a product with no batch yet can be started from either side of a partial bundle");
 });
 
 /* D379 · Opening a product card on steps 2-4 first did window.location.assign:
