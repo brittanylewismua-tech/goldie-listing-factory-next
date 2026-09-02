@@ -438,11 +438,11 @@ test("the setup step has exactly one forward control, and it gates every section
      continue"). It says "Next step" on every step now; the gate dialog names
      each unfinished item when you press it. What still has to hold is the
      ENFORCEMENT, which is what these assert. */
-  assert.match(page, /disabled=\{Boolean\(productStepBlocker\(\)\)\}/,
-    "a product load failure still gates the product-selection step");
+  assert.match(page, /productSelected&&!failedBundleNames\(\)\.length\)\?"active-panel":"hidden-panel"/,
+    "a product load failure must not expose design upload for an incomplete bundle");
   assert.match(page, /if\(\["review","finish"\]\.includes\(step\)\)\{const missingColors=/,
     "colours and sizes gate draft creation after artwork is visible");
-  assert.match(page, /Next step <span>→<\/span>/);
+  assert.doesNotMatch(page,/className="workflow-next setup-forward"/);
 });
 
 test("a saved later step cannot overwrite an explicit safe return to setup — D108",async()=>{

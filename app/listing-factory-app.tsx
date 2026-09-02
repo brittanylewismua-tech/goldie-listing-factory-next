@@ -1625,13 +1625,6 @@ export default function ListingFactoryApp() {
   function failedBundleNames(){
     return bundleRecipes.filter(recipe=>bundleLoadErrors[recipe.id]).map(recipe=>recipe.name);
   }
-  function productStepBlocker(){
-    const failed=failedBundleNames();
-    if(failed.length)return failed.length===1
-      ? `${failed[0]} could not be opened, so this batch cannot make its listings.`
-      : `${failed.length} products in this bundle could not be opened, so this batch cannot make their listings.`;
-    return "";
-  }
   function requiredForStep(step:WorkflowStep){if(localPreview)return [];const issues:string[]=[];if(step!=="connect"&&!connected)issues.push("Connect your Printify account.");if(step!=="connect"&&!etsyConnected)issues.push("Connect the Etsy shop that will receive these listings.");if(["designs","review","finish"].includes(step)){if(!productSelected)issues.push("Save or select a product or product bundle.");if(!templateDetails?.shippingTemplateId&&!templateDetails?.shippingProfileNeedsSelection)issues.push("Choose a valid Printify product with an imported shipping profile.");if(!templateDetails?.enabledVariants)issues.push("The product needs at least one enabled size or color.");if(!templateDetails?.batchId)issues.push("Reload the Printify product so Goldie can prepare this batch.");}if(["review","finish"].includes(step)){const missingColors=Boolean(templateDetails?.colorOptions?.length&&!selectedColorIds.length);const missingSizes=Boolean(templateDetails?.sizeOptions?.length&&!selectedSizeIds.length);if(missingColors)issues.push("Choose at least one product color for this batch.");else if(missingSizes)issues.push("Choose at least one product size for this batch.");else if(!pricedVariants.length)issues.push(`No color and size combination you picked is available for ${templateDetails?.blueprintTitle||"this product"}. Open its Colors or Sizes and choose a pairing Printify offers.`);}/* D221 · Every bundle member still needs its own keyword bank before titles can
      be generated — the D181 rule is unchanged. It moved off the Product page,
      which was blocking Continue on a choice made two pages later, and onto the
@@ -2011,6 +2004,17 @@ export default function ListingFactoryApp() {
     const combined=[...files.map(design=>{const restored=replacements.get(design.id);return restored?{...design,...restored,originalUnavailable:false}:design}),...images];
     setFileError("");setFileNotice(replacements.size?`${replacements.size} original ${replacements.size===1?"file is":"files are"} available in this browser again.`:duplicateCount?`${duplicateCount} exact ${duplicateCount===1?"duplicate was":"duplicates were"} skipped.`:"");
     setFiles(combined);
+    /* D899 · Product selection and design upload are consecutive parts of one
+       decision. The uploader is already visible directly under the selected
+       product; once a real file is accepted, advance the rail to Images while
+       keeping that same uploader on screen. Do not leave the seller on Product
+       with instructions to continue and no continuation control. */
+    if(workflowStep==="setup"){
+      setWorkflowStep("designs");
+      const stepUrl=new URL(window.location.href);
+      stepUrl.searchParams.set("step","designs");
+      window.history.replaceState({},"",stepUrl);
+    }
     const durableBatchId=batchIdRef.current||crypto.randomUUID();batchIdRef.current=durableBatchId;window.localStorage.setItem("goldie-active-batch",durableBatchId);const batchUrl=new URL(window.location.href);batchUrl.searchParams.set("batch",durableBatchId);window.history.replaceState({},"",batchUrl);void saveBatchFiles(durableBatchId,combined.map(image=>image.file)).catch(()=>undefined);
     if(images.length){setComplete(false);setDrafts([]);setProcessed(0)}
     const restoredAndNew=[...combined.filter(design=>replacements.has(design.id)),...images];
@@ -4524,20 +4528,10 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
           {/* D728 - prototype .goldie-footer: the step's forward action and the
               reason it is blocked share one bar at the bottom of the step. The
               button keeps its own gate check, title and handler. */}
-          {workflowStep==="setup"&&templateDetails&&productSelected&&<FactoryFooter status={productStepBlocker()||"Product selected"}><button type="button" className="workflow-next setup-forward" disabled={Boolean(productStepBlocker())} title={productStepBlocker()||undefined} /* D402 - This used to carry a different label when drafts already existed, and
-                 in that case it jumped straight to step 3. D383 renamed it to "Next step"
-                 without changing where it went, so pressing Next on step 1 skipped Images
-                 entirely. Next step means the next step; the rail is how you jump. */
-                 onClick={()=>goToStep("designs")}>{/* D383 - This button relabelled itself with whatever was missing: "Pick a
-                 keyword bank for Gildan Hoodie", "Choose product colors to continue".
-                 The forward button is the forward button on every step; the gate
-                 dialog already lists what is unfinished, by name, when you press it.
-                 A control that renames itself is not a control you can learn. */}
-              Next step <span>→</span></button></FactoryFooter>}
           </BatchPreferencesPortal>
           </div>
 
-          <article className={`step-card designs-step workflow-panel ${workflowStep==="setup"?"batch-design-drop":""} ${files.length ? "done" : ""} ${workflowStep==="finish"?"finish-mode":""} ${workflowStep==="designs"?"active-panel":"hidden-panel"}`}>{/* D238 · Choosing the mockup SET lived on Product while the mockups it controls are generated here on Images. Same setting, two pages — the exact split that caused the keyword-bank and shipping duplication. */}
+          <article className={`step-card designs-step workflow-panel ${workflowStep==="setup"?"batch-design-drop":""} ${files.length ? "done" : ""} ${workflowStep==="finish"?"finish-mode":""} ${workflowStep==="designs"||(workflowStep==="setup"&&Boolean(templateDetails)&&productSelected&&!failedBundleNames().length)?"active-panel":"hidden-panel"}`}>{/* D238 · Choosing the mockup SET lived on Product while the mockups it controls are generated here on Images. Same setting, two pages — the exact split that caused the keyword-bank and shipping duplication. */}
             <div className="step-number" aria-hidden="true"/>
             <div className="step-content">
               <div className="step-heading"><div>{workflowStep!=="finish"&&<p className="mini-label">DESIGNS FOR THIS BATCH</p>}{/* D278 · On

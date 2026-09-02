@@ -1305,7 +1305,6 @@ html, body { background: var(--lf-paper); }
 .app-shell .factory-footer.in-bar > *:not(small){flex:0 0 auto;order:9}
 /* The forward control sizes to its label in the bar. Full width was written for
    a button that stood alone at the foot of the step. */
-.app-shell .workflow-footer-actions .factory-footer .setup-forward{width:auto;margin:0}
 /* D777 supersedes the order:9 that stood here - see the block below. */
 
 /* ==========================================================================

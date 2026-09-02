@@ -404,18 +404,13 @@ test("shipping, profit and Etsy details are per-product facts — D183", async (
     "and must switch steps when the destination lives on another one");
 });
 
-test("the product step does not also collect designs — D184", async () => {
+test("the selected product reveals the design uploader directly below — D899", async () => {
   const app = await read("app/listing-factory-app.tsx");
 
-  /* Measured on the deployed build: 538px of dropzone, quota and "before
-   * uploading" copy rendered at the top of step 2, while "Add designs" is step 3.
-   * One job in two places, and it was the first thing on a step called
-   * "Choose product". */
-  /* D387 · This panel used to stay active through step 3 because it held the
-     titles editor. That editor moved into the product card, so the panel is now
-     only the uploader, and only the designs step shows it. */
-  assert.match(app, /\$\{workflowStep==="designs"\?"active-panel":"hidden-panel"\}/,
-    "The designs panel belongs to the designs step, not the product step.");
+  assert.match(app, /workflowStep==="designs"\|\|\(workflowStep==="setup"&&Boolean\(templateDetails\)&&productSelected&&!failedBundleNames\(\)\.length\)\?"active-panel":"hidden-panel"/,
+    "A selected product must expose the uploader without another navigation action.");
+  assert.match(app,/if\(workflowStep==="setup"\)\{\s*setWorkflowStep\("designs"\)/,
+    "Accepting the first design advances the rail to Images while preserving the uploader.");
 });
 
 test("opening a facet shows the choices, not a summary — D187", async () => {

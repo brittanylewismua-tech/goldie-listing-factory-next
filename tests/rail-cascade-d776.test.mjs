@@ -671,7 +671,8 @@ test("D831: 'Try these again' actually tries them again", async () => {
   /* D828's companion: while a member is unloadable the step may not claim to be
      complete. Both halves have to hold or the retry hides a broken batch. */
   assert.match(app, /function failedBundleNames\(\)/);
-  assert.match(app, /could not be opened, so this batch cannot make its listings\./);
+  assert.match(app, /productSelected&&!failedBundleNames\(\)\.length\)\?"active-panel":"hidden-panel"/,
+    "an unloadable bundle member keeps the uploader unavailable");
 });
 
 /* D832 · Two defects the re-verification of D831 found still standing. Both

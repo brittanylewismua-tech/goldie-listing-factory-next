@@ -968,7 +968,6 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .app-shell .selected-summary-block{display:grid;width:min(980px,calc(100% - 32px));margin-inline:auto}
 .app-shell .selected-summary-block>.template-proof{order:0;width:auto;margin-inline:0}
 /* D776 - full width and an 18px top margin were right for a button standing alone at the foot of the step. It lives in the sticky bar now and sizes to its label; interface-v2.css owns it. */
-.app-shell .setup-forward{margin:0}
 
 /* D125/D123 · A saved product owns its setup and exact mockup scenes. The
    legacy framing and whole-set picker remain mounted only to preserve batch
@@ -1167,7 +1166,6 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .app-shell .recipe-card .edit-recipe{font-size:11px!important;font-weight:800}
 .app-shell .everything-else>summary span:after{content:"Usually no changes needed";display:block;margin-top:3px;color:#80677a;font-size:9px;font-weight:600}
 .app-shell .variant-pricing :is(.item-pricing-section,.shipping-pricing-section) .heading-with-help>button{display:none!important}
-.app-shell .setup-forward:disabled{background:#eee4eb!important;color:#563b50!important;opacity:1!important;text-shadow:none!important}
 .app-shell .post-draft-heading .open-all-button{border:0!important;background:transparent!important;color:#68445f!important;box-shadow:none!important;text-decoration:underline!important;text-underline-offset:3px}
 .app-shell .draft-card .tag-row{display:flex!important;max-width:100%!important;flex-wrap:wrap!important}
 .app-shell .draft-card .tag-row span{max-width:100%!important;overflow-wrap:anywhere!important}

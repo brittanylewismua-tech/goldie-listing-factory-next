@@ -39,4 +39,6 @@ test("product is chosen first, but color decisions wait until artwork exists",as
   assert.doesNotMatch(app,/function productStepBlocker\(\)\{\s*if\(templateDetails\?\.colorOptions/);
   assert.match(app,/if\(\["review","finish"\]\.includes\(step\)\)\{const missingColors=/);
   assert.match(app,/title: "Choose product", copy: "Your product is selected\. Continue to upload the designs for this batch\."/);
+  assert.match(app,/workflowStep==="designs"\|\|\(workflowStep==="setup"&&Boolean\(templateDetails\)&&productSelected&&!failedBundleNames\(\)\.length\)\?"active-panel":"hidden-panel"/);
+  assert.doesNotMatch(app,/className="workflow-next setup-forward"/);
 });

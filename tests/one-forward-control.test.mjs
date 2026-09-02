@@ -22,11 +22,9 @@ test("the connect step's forward control renders only on the connect step", () =
   assert.match(app, /\{workflowStep==="connect"&&\(localPreview\|\|\(connected&&etsyConnected\)\)&&<FactoryFooter status=[\s\S]*?><button className="workflow-next"/);
 });
 
-test("the product step's forward control renders only on the product step", () => {
-  /* D728 · The control now sits in the step's footer bar (prototype
-     .goldie-footer). Its condition is unchanged and still guards the button:
-     product step, a chosen template, a selected product. */
-  assert.match(app, /\{workflowStep==="setup"&&templateDetails&&productSelected&&<FactoryFooter status=\{productStepBlocker\(\)\|\|"Product selected"\}><button type="button" className="workflow-next setup-forward"/);
+test("the product step hands off directly to its visible design uploader", () => {
+  assert.match(app, /workflowStep==="designs"\|\|\(workflowStep==="setup"&&Boolean\(templateDetails\)&&productSelected&&!failedBundleNames\(\)\.length\)\?"active-panel":"hidden-panel"/);
+  assert.doesNotMatch(app, /className="workflow-next setup-forward"/);
 });
 
 test("no forward control survives inside the connect or product panel", () => {
@@ -45,11 +43,8 @@ test("no forward control survives inside the connect or product panel", () => {
       "a forward control in the Connect panel must require the Connect step");
   }
   const setupPanel = app.slice(app.indexOf("product-step workflow-panel"), app.indexOf("designs-step workflow-panel"));
-  for (const match of setupPanel.matchAll(/className="workflow-next[^"]*"/g)) {
-    const before = setupPanel.slice(0, match.index);
-    assert.match(before.slice(-220), /workflowStep==="setup"/,
-      "a forward control in the Product panel must require the Product step");
-  }
+  assert.doesNotMatch(setupPanel,/className="workflow-next[^"]*"/,
+    "Product has no separate forward button because its next action is the uploader directly below");
 });
 
 test("no forward control navigates to an earlier step from a later one", () => {
