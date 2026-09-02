@@ -4534,22 +4534,20 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
           <article className={`step-card designs-step workflow-panel ${workflowStep==="setup"?"batch-design-drop":""} ${files.length ? "done" : ""} ${workflowStep==="finish"?"finish-mode":""} ${workflowStep==="designs"||(workflowStep==="setup"&&Boolean(templateDetails)&&productSelected&&!failedBundleNames().length)?"active-panel":"hidden-panel"}`}>{/* D238 · Choosing the mockup SET lived on Product while the mockups it controls are generated here on Images. Same setting, two pages — the exact split that caused the keyword-bank and shipping duplication. */}
             <div className="step-number" aria-hidden="true"/>
             <div className="step-content">
-              <div className="step-heading"><div>{workflowStep!=="finish"&&<p className="mini-label">DESIGNS FOR THIS BATCH</p>}{/* D278 · On
+              {workflowStep==="finish"&&<div className="step-heading"><div>{/* D278 · On
                 Listing this eyebrow read "TITLES, TAGS + DESCRIPTIONS" — the page
                 title D256 retired — directly under the page eyebrow "STEP 3 OF 4 ·
                 LISTING". Removing the card title in D248 left it as the only text
-                in the header, still naming the step a third way. */}<div className="heading-with-help">{workflowStep!=="finish"&&<h2>Drop your designs here</h2>}{/* D248 · on Listing this
+                in the header, still naming the step a third way. */}<div className="heading-with-help">{/* D248 · on Listing this
                 read "Finish titles, tags, and descriptions" directly under the page
                 title "Titles, tags + descriptions" — the same words, two serial-comma
-                styles, 200px apart. The page title already names the step. */}</div></div>{files.length > 0 && workflowStep==="finish" && <span className="done-mark">✓ {files.length} listings</span>}</div>
-              <p className="step-copy">{workflowStep==="finish"?"Create titles and matching tags, review each listing, and confirm the description shared across the batch.":`Build one focused batch of up to ${batchDesignLimit} finished designs. Upload a folder or select individual images.`}</p>
+                styles, 200px apart. The page title already names the step. */}</div></div>{files.length > 0 && <span className="done-mark">✓ {files.length} listings</span>}</div>}
+              {workflowStep==="finish"&&<p className="step-copy">Create titles and matching tags, review each listing, and confirm the description shared across the batch.</p>}
               {/* D247 · A three-step sub-rail inside step 3 of a four-step rail, numbering
               the work differently from the numbered sections directly beneath it:
               the rail called 2 "Review each listing" while the card called 2
               "Edit description". Two numbering systems, same page, disagreeing.
               The card's sections are the real structure and are on screen. */}
-              {!files.length&&<p className="batch-limits" aria-label="Batch limits"><span className="batch-limits-quota"><b>{planDraftsRemaining===null?"Checking your plan limit…":`${batchDesignLimit} designs available for this batch`}</b><i /><b>{activeBundle?`${bundleProductCount} listings per design`:`${planDraftsRemaining??"—"} listings remain on your plan`}</b></span><span className="batch-limits-note">100 MB per design · original print quality preserved</span></p>}
-              <div className="file-reminder"><b>Before uploading</b><span>Designs should already be full size. Save as a PNG with a see-through background if you don’t want a colored box printed behind your art.</span></div>
               <input ref={folderPicker} className="hidden-picker" type="file" multiple accept=".png,.jpg,.jpeg" {...({ webkitdirectory: "", directory: "" } as React.InputHTMLAttributes<HTMLInputElement>)} onChange={(event) => void chooseFiles(event.target.files)} />
               <input ref={imagePicker} className="hidden-picker" type="file" multiple accept=".png,.jpg,.jpeg" onChange={(event) => void chooseFiles(event.target.files)} />
               <div className="upload-actions">
@@ -4564,6 +4562,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
                 <span className="browse-chip">Browse</span>
               </button>
               </div>
+              <p className="upload-guidance batch-limits file-reminder"><span className="batch-limits-quota"><b>Up to {batchDesignLimit} finished designs · 100 MB each</b></span><span className="batch-limits-note">Use a transparent PNG when you don’t want a background printed behind your artwork.</span></p>
               {fileError && <p className="file-limit-error" role="alert"><b>That batch can’t be added.</b><span>{fileError}</span></p>}
               {fileNotice&&(workflowStep==="setup"||workflowStep==="designs")&&<p className="file-add-notice" role="status"><b>Upload updated</b><span>{fileNotice}</span></p>}
               {files.length>0&&!designsFinished&&<section className="design-preparation-status working" role="status" aria-live="polite"><span className="design-status-icon" aria-hidden="true"/><div><b>{`Goldie is preparing your designs: ${designsReady} of ${files.length} ready`}</b><small>Keep this page open. Goldie is reading every file and checking its dimensions before you can continue.</small><div className="design-status-track"><i style={{width:`${files.length?designsReady/files.length*100:0}%`}}/></div></div><strong>{designsReady}/{files.length}</strong></section>}

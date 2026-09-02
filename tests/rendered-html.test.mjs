@@ -35,7 +35,7 @@ test("uses the binding batch limit and keeps setup actions in the right hierarch
     readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
     Promise.all([readFile(new URL("../app/approved-functional.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n")),
   ]);
-  assert.match(page, /up to \$\{batchDesignLimit\} finished designs/);
+  assert.match(page, /Up to \{batchDesignLimit\} finished designs/);
   assert.match(page, /Add up to \$\{batchDesignLimit\} designs in this batch/);
   assert.doesNotMatch(page, /Your folder can contain up to 20 designs/);
   assert.match(page, /headerActions=\{bundleCreationMode\?undefined:[\s\S]{0,280}>＋ Add a new product<\/button>[\s\S]{0,220}>＋ Create a new bundle<\/button>/);
@@ -2144,10 +2144,21 @@ test("shows one binding design-capacity status after uploads (fixes D28 and D49)
   const app=await readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8");
   assert.match(app,/files\.length > 0 && designsFinished && <div className="batch-capacity">/);
   assert.match(app,/\$\{files\.length\} of \$\{batchDesignLimit\} designs ready · \$\{additionalDesignsAvailable\} more available · \$\{planDraftsRemaining\} listings left on your plan/);
-  assert.match(app,/!files\.length&&<p className="batch-limits"/);
+  assert.match(app,/<p className="upload-guidance batch-limits file-reminder">/);
   assert.match(app,/files\.length>0&&!designsFinished&&<section className="design-preparation-status working"/);
   assert.doesNotMatch(app,/All \$\{files\.length\} designs are ready/);
   assert.doesNotMatch(app,/\$\{files\.length\} of 20 designs ready/);
+});
+
+test("D902: upload starts with the choices and primary workflow cards remain distinct",async()=>{
+  const [app,css]=await Promise.all([
+    readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8"),
+    readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8"),
+  ]);
+  assert.doesNotMatch(app,/Drop your designs here|Build one focused batch|Before uploading/);
+  assert.match(app,/className="upload-actions"[\s\S]{0,1800}className="upload-guidance batch-limits file-reminder"/);
+  assert.match(css,/:is\(\.step-card,\.factory-panel,\.factory-form-card,\.design-artwork-card,\.final-listing-card,\.listing-card,\.recipe-tile,\.everything-else\)\{[\s\S]{0,180}border-color:#d4c2cc;[\s\S]{0,180}box-shadow:/);
+  assert.match(css,/\.designs-step:not\(\.finish-mode\) \.upload-actions\{gap:16px;margin:0 0 16px\}/);
 });
 
 test("names every listing missing a required photo (fixes D33)",async()=>{
