@@ -57,31 +57,21 @@ test("batches saved before sizes existed behave exactly as they did", async () =
     "a template with no size axis still falls straight through")
 });
 
-test("D213: seeding stops at the recipe — the template is never a choice", async () => {
+test("D904: a saved template seeds the private draft before mockup refinement", async () => {
   const app = await read("app/listing-factory-app.tsx");
 
-  /* This test used to require the opposite, in these words: "saved product
-   * default -> this browser's last choice -> what the template had enabled ->
-   * every available size", with a final assertion that the selection must never
-   * be empty.
-   *
-   * That rule is wrong, and it is the one that matters most. The seller chooses
-   * colors and sizes once, in the saved-product setup, and that becomes the
-   * recipe. A product with no recipe defaults has NOT been set up. Falling back
-   * to Printify's templateEnabled made it look decided and would publish in
-   * colors the seller never picked; falling back to every available size was
-   * worse still.
-   *
-   * Empty is the honest state. productReadiness already marks these facets
-   * "ask", gates Continue, and opens the picker pre-selected with the template
-   * as a suggestion the seller has to accept. */
+  /* D904 changes the decision point: a saved recipe or the browser's last choice
+   * still wins, but otherwise Goldie uses exactly the variants enabled on the
+   * saved Printify template to make private drafts. The seller then sees the
+   * real generated garment mockups before adding or removing colors. It still
+   * must never fall back to every variant the blueprint happens to offer. */
   assert.match(app, /const rememberedSizes=rememberedSizeIds\.filter\(id=>sizeAvailable\.has\(id\)\)/);
-  assert.match(app, /const sizeDefaults=rememberedSizes\.length\?rememberedSizes:sessionSizeIds;/);
+  assert.match(app, /const sizeDefaults=rememberedSizes\.length\?rememberedSizes:sessionSizeIds\.length\?sessionSizeIds:templateSizes;/);
   assert.doesNotMatch(app, /setSelectedSizeIds\(sizeDefaults\.length\?sizeDefaults:\[\.\.\.sizeAvailable\]\)/,
     "no all-available fallback");
   assert.doesNotMatch(app, /setSelectedColorIds\(defaults\.length\?defaults:\[\.\.\.available\]\)/,
     "no all-available fallback for colours either");
-  assert.match(app, /const defaults=remembered\.length\?remembered:session;setSelectedColorIds\(defaults\);/);
+  assert.match(app, /const defaults=remembered\.length\?remembered:session\.length\?session:templateColors;setSelectedColorIds\(defaults\);/);
 
   // A bundle member with no saved colours is left empty so its card asks.
   /* Whitespace-tolerant: D373 moved this into a helper, and the rule is what
@@ -1037,8 +1027,10 @@ test("the card has a row for every panel it can open — D337", async () => {
   assert.ok(inCard, "the in-card list must exist");
   for (const facet of ["shipping"])
     assert.ok(inCard[1].includes(`"${facet}"`), `${facet} opens in the card`);
-  assert.match(app, /ready\.facets\.filter\(facet=>facet\.name!=="profit"\)/,
-    "pricing is not shown before finished Printify costs exist");
+  assert.match(app, /ready\.facets\.filter\(facet=>facet\.name==="shipping"\)/,
+    "only the profile required to create a private draft remains before artwork");
+  assert.match(app, /task:"draft-colors"/,
+    "color decisions move after the finished Printify drafts can show the real design");
   assert.match(app, /costReviewGroups\(\)\.map/,
     "final pricing is reviewed after the drafts expose their real costs");
 

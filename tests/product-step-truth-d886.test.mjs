@@ -100,7 +100,7 @@ test("D896: library headings describe the library, not a misleading item count",
 });
 
 test("D886: pricing waits for finished draft costs",()=>{
-  assert.match(app,/ready\.facets\.filter\(facet=>facet\.name!=="profit"\)/);
+  assert.match(app,/ready\.facets\.filter\(facet=>facet\.name==="shipping"\)/);
   assert.match(app,/Final Printify production cost/);
   assert.match(app,/Approve final prices/);
 });

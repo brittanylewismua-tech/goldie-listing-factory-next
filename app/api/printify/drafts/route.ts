@@ -39,7 +39,7 @@ type PrintAreaImage = { x?: number; y?: number; scale?: number; angle?: number; 
 type PrintAreaPlaceholder = { position?: string; images?: PrintAreaImage[] };
 type CreatedProduct = {
   id: string; title?: string;
-  images?: Array<{ src?: string; is_default?: boolean }>;
+  images?: Array<{ src?: string; is_default?: boolean; variant_ids?:number[]; position?:string }>;
   variants?:Array<{id:number;title?:string;cost?:number;price?:number;is_enabled?:boolean}>;
   /* D591 - the created product carries where the design ACTUALLY went. */
   print_areas?: Array<{ placeholders?: PrintAreaPlaceholder[] }>;
@@ -335,7 +335,7 @@ async function handlePOST(request: Request) {
        This is required for every new draft, not only back prints, so a future
        Printify surcharge or provider change cannot bypass the same safeguard. */
     const costReview=actualCostReview(costVariants);
-    const draft = { id: created.id, placement, placementDebug, batchId:body.batchId, clientId: body.clientId ?? body.fileName, name: body.fileName, title, tags: body.tags ?? [], description:body.description??template.description??"", previewUrl, printifyImages: productImages.map((image) => image.src).filter(Boolean), shopId: shop.id, editorUrl: `https://printify.com/app/editor/${created.id}`, status: "Created",costReview };
+    const draft = { id: created.id, placement, placementDebug, batchId:body.batchId, clientId: body.clientId ?? body.fileName, name: body.fileName, title, tags: body.tags ?? [], description:body.description??template.description??"", previewUrl, printifyImages: productImages.map((image) => image.src).filter(Boolean), printifyImageDetails:productImages.filter(image=>image.src).map(image=>({src:image.src!,variantIds:image.variant_ids||[],position:image.position||""})), shopId: shop.id, editorUrl: `https://printify.com/app/editor/${created.id}`, status: "Created",costReview };
     await db.prepare("UPDATE printify_draft_results SET status = 'succeeded', response_json = ?, updated_at = CURRENT_TIMESTAMP WHERE request_key = ?").bind(JSON.stringify(draft), idempotencyKey).run();
     return NextResponse.json({ draft });
   } catch (error) {

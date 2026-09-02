@@ -102,7 +102,7 @@ type EtsyShippingProfile={id:number;title:string;originCountry:string;currency:s
 type TemplateDetails = { id: string; batchId: string; title: string; description:string; blueprintId:number;blueprintTitle:string;brand:string;model:string;provider: string; enabledVariants: number;previewImage?:string;previewImages?:string[];colorOptions?:ProductColor[];sizeOptions?:ProductSize[]; variants:ProductVariant[];printPositions?:string[]; shop: string; standardShipping?:number|null;shippingCurrency?:string;shippingTemplateId:string;shippingProfileNeedsSelection?:boolean;freeShipping:boolean;maxPrintWidth?: number | null; maxPrintHeight?: number | null; placementScale?: number | null; hasLabelArtwork?: boolean };
 type ArtworkSummary={front:Array<{name:string;colors:string[]}>;back:Array<{name:string;colors:string[]}>};
 type DraftCostReview={required:boolean;verified:boolean;approved:boolean;variants:Array<{id:number;title?:string;cost:number;price:number;isEnabled:boolean}>};
-type DraftResult = { id?: string; batchId?: string; clientId: string; name: string; title?: string; tags?: string[]; previewUrl?: string; printifyImages?: string[]; shopId?: number; editorUrl?: string; status: "Created" | "Failed" | "NeedsRetry"; error?: string; productName?:string; placement?:{x:number;y:number;scale:number;angle:number};placementScale?:number;artworkSummary?:ArtworkSummary;costReview?:DraftCostReview };
+type DraftResult = { id?: string; batchId?: string; clientId: string; name: string; title?: string; tags?: string[]; previewUrl?: string; printifyImages?: string[]; printifyImageDetails?:Array<{src:string;variantIds:number[];position:string}>; selectedVariantIds?:number[]; shopId?: number; editorUrl?: string; status: "Created" | "Failed" | "NeedsRetry"; error?: string; productName?:string; placement?:{x:number;y:number;scale:number;angle:number};placementScale?:number;artworkSummary?:ArtworkSummary;costReview?:DraftCostReview };
 type WorkflowStep = "connect" | "setup" | "designs" | "review" | "finish";
 type FinishPhase = "details" | "etsy" | "mockups" | "final";
 type PendingCategoryChange={designId:string;details:EtsyDetails;clearedCount:number};
@@ -473,7 +473,7 @@ function PriceField({value,minimum,label,onCommit}:{value:number;minimum:number;
 function ProductColorSelector({product,selected,onChange,onRemember,remembering,remembered,inCard}:{product:TemplateDetails;selected:number[];onChange:(ids:number[])=>void;onRemember:()=>void;remembering:boolean;remembered:boolean;inCard?:boolean}){
   const colors=product.colorOptions||[],available=colors.filter(color=>color.available),selectedSet=new Set(selected),[expanded,setExpanded]=useState(inCard?true:!remembered);
   if(!colors.length)return <section className="product-color-selector no-colors"><div><p className="mini-label">COLORS FOR THIS BATCH</p><h3>This product has no separate color choices.</h3><span>Goldie will keep the valid variants from the saved Printify product.</span></div></section>;
-  const idsFor=(color:ProductColor)=>color.ids?.length?color.ids:[color.id];
+  const idsFor=(color:ProductColor)=>[...new Set([color.id,...(color.ids||[])])];
   const isSelected=(color:ProductColor)=>idsFor(color).some(id=>selectedSet.has(id));
   function toggle(color:ProductColor){const next=new Set(selectedSet),ids=idsFor(color),choosing=!isSelected(color);for(const id of ids)next.delete(id);if(choosing)next.add(color.id);onChange([...next])}
   const selectedColors=colors.filter(isSelected);
@@ -493,6 +493,29 @@ function ProductColorSelector({product,selected,onChange,onRemember,remembering,
                   default colors" button next to it asked for a click that was never
                   required, and then read "✓ Saved for this product" without one,
                   which is why it looked like it was lying. A status, not a button. */}{remembered?"✓ Saved as this product’s default":"Saving…"}</span>:<button type="button" className={remembered?"remembered":""} disabled={!selected.length||remembering||remembered} onClick={onRemember}>{remembering?"Saving…":remembered?"✓ Saved for this product":"Save these as this product’s default colors"}</button>}</div></>}{!selected.length&&<p className="color-required" role="alert">Choose at least one available color before continuing.</p>}</section>
+}
+
+function DraftColorSelector({product,drafts,selected,saving,onChange}:{product:TemplateDetails;drafts:DraftResult[];selected:number[];saving:boolean;onChange:(ids:number[])=>void}){
+  const colors=(product.colorOptions||[]).filter(color=>color.available),selectedSet=new Set(selected);
+  const [activeDraft,setActiveDraft]=useState("");
+  const [activeColor,setActiveColor]=useState<number|null>(selected[0]??colors[0]?.id??null);
+  const draft=drafts.find(item=>item.id===activeDraft)||drafts.find(item=>item.status==="Created");
+  useEffect(()=>{if(draft?.id&&!activeDraft)setActiveDraft(draft.id)},[draft?.id,activeDraft]);
+  if(!colors.length||!draft)return null;
+  const idsFor=(color:ProductColor)=>[...new Set([color.id,...(color.ids||[])])];
+  const variantIdsFor=(color:ProductColor)=>new Set(product.variants.filter(variant=>variant.colorId!=null&&idsFor(color).includes(variant.colorId)).map(variant=>variant.id));
+  const imageFor=(color:ProductColor)=>{
+    const variants=variantIdsFor(color);
+    return draft.printifyImageDetails?.find(image=>image.variantIds.some(id=>variants.has(id))&&/front|chest/i.test(image.position||""))?.src
+      ||draft.printifyImageDetails?.find(image=>image.variantIds.some(id=>variants.has(id)))?.src
+      ||draft.previewUrl||draft.printifyImages?.[0]||"";
+  };
+  const focused=colors.find(color=>color.id===activeColor)||colors[0];
+  function toggle(color:ProductColor){const next=new Set(selectedSet);if(idsFor(color).some(id=>next.has(id))){for(const id of idsFor(color))next.delete(id)}else next.add(color.id);if(next.size){setActiveColor(color.id);onChange([...next])}}
+  return <section className="draft-color-selector" aria-label="Preview and choose product colors">
+    <div className="draft-color-heading"><div><p className="mini-label">REAL PRINTIFY PREVIEW</p><h3>Choose colors with the design on the product</h3><p>These are the private draft mockups Printify generated. Select only colors where the artwork reads clearly.</p></div>{drafts.length>1?<label>Design preview<select value={draft.id||""} onChange={event=>setActiveDraft(event.target.value)}>{drafts.filter(item=>item.id).map((item,index)=><option value={item.id} key={item.id}>Design {index+1} · {item.name}</option>)}</select></label>:null}</div>
+    <div className="draft-color-workspace"><div className="draft-color-main">{imageFor(focused)?<img src={imageFor(focused)} alt={`${focused.title} product with this design`}/>:<ProductGlyph title={product.blueprintTitle}/>}<b>{focused.title}</b><span>{saving?"Saving this selection to Printify…":"Saved to the private Printify drafts"}</span></div><div className="draft-color-grid">{colors.map(color=><button type="button" key={color.id} aria-pressed={idsFor(color).some(id=>selectedSet.has(id))} className={idsFor(color).some(id=>selectedSet.has(id))?"selected":""} disabled={saving} onMouseEnter={()=>setActiveColor(color.id)} onFocus={()=>setActiveColor(color.id)} onClick={()=>toggle(color)}>{imageFor(color)?<img src={imageFor(color)} alt=""/>:<i style={{background:color.swatch||"#ddd"}}/>}<span>{color.title}</span><em>{idsFor(color).some(id=>selectedSet.has(id))?"✓ Included":"Add"}</em></button>)}</div></div>
+  </section>;
 }
 
 function ProductSizeSelector({product,selected,onChange,onRemember,remembering,remembered,inCard}:{product:TemplateDetails;selected:number[];onChange:(ids:number[])=>void;onRemember:()=>void;remembering:boolean;remembered:boolean;inCard?:boolean}){
@@ -1030,6 +1053,8 @@ export default function ListingFactoryApp() {
   const [titleCaps,setTitleCaps]=useState(true);
   const [variantPrices,setVariantPrices]=useState<Record<string,number>>({});
   const [selectedColorIds,setSelectedColorIds]=useState<number[]>([]);
+  const [savingDraftVariants,setSavingDraftVariants]=useState(false);
+  const [draftVariantError,setDraftVariantError]=useState("");
   const [rememberingColors,setRememberingColors]=useState(false);
   const [colorsRemembered,setColorsRemembered]=useState(false);
   const [selectedSizeIds,setSelectedSizeIds]=useState<number[]>([]);
@@ -1584,7 +1609,7 @@ export default function ListingFactoryApp() {
   function gateState():NavigationGateState{return {bundleProductsReady:bundleProductsReady(),connected,etsyConnected,productSelected,templateReady:templateLoaded,shippingReady:Boolean(templateDetails?.shippingTemplateId||templateDetails?.shippingProfileNeedsSelection),variantsReady:Boolean(templateDetails?.enabledVariants),colorsReady:!templateDetails?.colorOptions?.length||selectedColorIds.length>0,pricesReady:pricedVariants.length>0,designCount:files.length,designsReady:files.every(designArtworkReady),/* D451 - a bundle has one shipping profile and one pricing approval PER product, and this gate read only the active one. Two of three products in her ZZ TEST BUNDLE showed "Pick a shipping profile" while Next step stayed enabled, which would have created Printify drafts for products with no valid Etsy shipping profile. Every product in the bundle has to be ready, not whichever one happens to be open. */etsyShippingProfileReady:activeBundle?bundleRecipes.length>0&&bundleRecipes.every(recipe=>Number(recipe.etsyShippingProfileId)>0):Boolean(etsyShippingProfileId),pricingApproved:activeBundle?bundleRecipes.length>0&&bundleRecipes.every(recipe=>bundleApproved[recipe.id]??recipeCarriesApprovedPricing({defaultProfitTarget:recipe.defaultProfitTarget,etsyShippingProfileId:recipe.etsyShippingProfileId})):pricingApproved,draftsComplete:complete,createdDraftCount,titlesReady:files.length>0&&files.every(file=>Boolean(file.title.trim())&&!file.titleError),tagsReady:files.length>0&&files.every(file=>file.tags.length>0&&!file.titleError),descriptionReady:Boolean(description.trim()),etsyDetailsReady:files.length>0&&files.every(file=>etsyRequiredComplete(file.etsy)),personalizationReady:files.every(file=>!personalizationProblem(file.etsy)),imagesReady:allCreatedListingsHaveImages()}}
   function progressGateIssues(index:number){if(localPreview)return [];const issues=navigationIssues(index,gateState());if(index>=6)issues.push(...runProductGaps());return [...new Set(issues)]}
   /* D444 - leaving Images needs photos, not titles. See leavingImagesIssues. */
-  function imagesStepIssues(){if(localPreview)return [];const issues=leavingImagesIssues(gateState());if(bundleProductsStillReading().length)issues.push("Goldie is still reading the finished costs for the other products in this bundle.");const pending=costReviewDrafts().filter(draft=>!draft.costReview?.approved);if(pending.length)issues.push(`${pending.length} ${pending.length===1?"listing needs":"listings need"} final pricing approval after Printify calculated the finished product costs.`);return issues}
+  function imagesStepIssues(){if(localPreview)return [];const issues=leavingImagesIssues(gateState());if(templateDetails?.colorOptions?.length&&!selectedColorIds.length)issues.push("Choose at least one product color.");if(templateDetails?.sizeOptions?.length&&!selectedSizeIds.length)issues.push("Choose at least one product size.");if(savingDraftVariants)issues.push("Wait while Goldie saves the product colors and sizes to Printify.");if(draftVariantError)issues.push(draftVariantError);if(bundleProductsStillReading().length)issues.push("Goldie is still reading the finished costs for the other products in this bundle.");const pending=costReviewDrafts().filter(draft=>!draft.costReview?.approved);if(pending.length)issues.push(`${pending.length} ${pending.length===1?"listing needs":"listings need"} final pricing approval after Printify calculated the finished product costs.`);return issues}
   function progressStatus(index:number,active:boolean,done:boolean,blocked:boolean){const live=active||!blocked;if(index===0)return connected?"Printify connected":live?"Connect your account":"Not connected";if(index===1)return templateDetails?templateDetails.blueprintTitle:live?"Choose a saved product":"Complete the prior step";if(index===2)return files.length?`${files.length} designs ready`:live?"Add finished designs":"Complete the prior step";if(index===3)return pricingApproved?(pricedVariants.length?`${pricedVariants.length} variants approved`:"Pricing approved"):live?"Review every variant":"Complete the prior step";if(index===4)return complete?`${createdDraftCount} drafts created`:live&&running?`${processed} of ${runTotal} created`:ready?"Ready to create":"Complete the prior step";if(index===5)return titleCount===files.length&&files.length?`${titleCount} titles complete`:live?`${titleCount} of ${files.length} titles complete`:done?"Titles complete":"Complete the prior step";if(index===6)return etsyReadyCount===files.length&&files.length?`${etsyReadyCount} listings ready`:live?`${etsyReadyCount} of ${files.length} ready`:done?"Etsy details complete":"Complete the prior step";if(index===7)return done?"Listing images reviewed":live?`${createdDraftCount} previews ready`:"Complete the prior step";return batchReceipt?`${batchReceipt.publishedCount} listings published`:live?"Ready to publish":"Complete the prior step"}
   function currentInsight(){if(progressIndex===1)return activeRecipe?`You used ${activeRecipe.name} recently. Its product facts and saved Etsy shipping profile will carry into this batch.`:"Choose a saved product once and Goldie will reuse its placement, variants, costs, and description.";if(progressIndex===2)return files.length?lowDpiCount?`${lowDpiCount} ${lowDpiCount===1?"design is":"designs are"} below 300 DPI at the largest enabled size. Review the DPI label before creating drafts.`:`All ${files.length} designs are loaded. Goldie will preserve their original artwork resolution.`:"Add finished artwork and Goldie will check each design against the real Printify print size.";if(progressIndex===3)return pricingApproved?`All ${pricedVariants.length} enabled variants are approved. Goldie will keep those cost-grouped prices across every listing.`:"Goldie is calculating each enabled variant from its own product cost, Etsy fees, and your target profit. Buyer-paid shipping is handled separately.";if(progressIndex===4)return running?`${processed} of ${runTotal} Printify drafts are complete. Successful drafts will not be duplicated if a retry is needed.`:"Goldie is ready to create one unpublished Printify draft for every design.";if(progressIndex===5)return `Goldie selects only exact phrases from your validated eRank keyword bank and creates matching Etsy tags. It never invents keywords.`;if(progressIndex===6)return `${etsyReadyCount} of ${files.length} listings have product-specific Etsy categories and attributes ready for review.`;if(progressIndex===7)return `The Printify preview is the placement reference. Apply one flatlay selection to the batch when the listings use the same product setup.`;return batchReceipt?`The batch is complete and every Etsy link is recorded below.`:"Every required section is ready. Publishing will send these listings live, not to Etsy drafts."}
   async function loadPreviewDemo(){
@@ -2499,6 +2524,8 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
        in the order she does them. Each one owns its panel; none of them points
        anywhere. */
     if(workflowStep==="designs")return [
+      {label:"Colors on your design",value:selectedColorIds.length?plural(selectedColorIds.length,"color"):"Choose colors",pending,done:selectedColorIds.length>0,task:"draft-colors"},
+      {label:"Sizes",value:selectedSizeIds.length?plural(selectedSizeIds.length,"size"):"Choose sizes",pending,done:selectedSizeIds.length>0,task:"draft-sizes"},
       {label:"Review Printify placement",value:started?plural(counts.drafts,"listing"):blank,pending,done:counts.drafts>0,task:"placement"},
       {label:"Choose Printify photos",value:started?plural(counts.photos,"photo"):blank,pending,done:counts.photos>0,task:"printify"},
       {label:"Size guide",value:sizeGuideName||"None chosen",pending,done:Boolean(sizeGuideName),optional:true,task:"sizeguide"},
@@ -2753,6 +2780,8 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
         return `${required.filter(property=>(property.value||"").trim()).length}/${required.length} fields`;
       },design=><div className="etsy-detail-body">{design.etsy?<EtsyDetailsEditor design={design} categories={etsyCategories} onChange={etsy=>updateDesign(design.id,{etsy,etsyError:""})} onCategory={taxonomyId=>changeEtsyCategory(design,taxonomyId)} checklist={!only}/>:<div className={design.title.trim()?"etsy-detail-error":"etsy-detail-pending"}><b>{design.title.trim()?"Etsy details still need to be created.":"Waiting for this listing’s title."}</b><span>{design.title.trim()?design.etsyError:"Goldie fills in the Etsy category and product fields automatically once a title exists. Create titles above and this completes itself."}</span>{design.title.trim()&&<button aria-busy={preparingListingId===design.id} disabled={Boolean(preparingListingId)} onClick={()=>void retryOneEtsyListing(design)}>{preparingListingId===design.id?"Preparing this listing…":"Try this listing again"}</button>}</div>}{design.etsyError&&<small className="field-error">{design.etsyError}</small>}</div>,etsyFlags,only);}
   function taskPanel(task:string){
+    if(task==="draft-colors"&&templateDetails)return <><DraftColorSelector product={templateDetails} drafts={drafts.filter(draft=>draft.status==="Created")} selected={selectedColorIds} saving={savingDraftVariants} onChange={ids=>void syncDraftVariantChoices(ids,selectedSizeIds)}/>{draftVariantError&&<p className="field-error" role="alert">{draftVariantError}</p>}</>;
+    if(task==="draft-sizes"&&templateDetails)return <><ProductSizeSelector product={templateDetails} selected={selectedSizeIds} onChange={ids=>void syncDraftVariantChoices(selectedColorIds,ids)} onRemember={()=>undefined} remembering={savingDraftVariants} remembered inCard/>{draftVariantError&&<p className="field-error" role="alert">{draftVariantError}</p>}</>;
     if(task==="sizeguide")return <div className="size-guide-row-panel"><p>Choose one image. Goldie adds it to every listing in this batch.</p><input ref={sizeGuidePicker} type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={event=>{const file=event.target.files?.[0];if(file)void applySizeGuide(file)}}/><div className="size-guide-row-actions"><button type="button" className="secondary-action" onClick={()=>sizeGuidePicker.current?.click()}>{sizeGuideName?"Replace size guide":"Choose size guide"}</button>{sizeGuideName&&<button type="button" className="secondary-action size-guide-remove" onClick={()=>void removeSizeGuide()}>Remove</button>}</div>{sizeGuideStatus&&<p role="status">{sizeGuideStatus}</p>}</div>;
     /* D541 - titles-resolving drives the pulse on each title field as the batch
        run fills them in. It rode on the listing-editor wrapper, so it went out
@@ -3637,25 +3666,21 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
       }
       if (!response.ok || !result.product){
         setBlockingModal({title:result.title||"This Printify product isn’t ready yet.",issues:result.issues?.length?result.issues:[result.error||"The product could not be loaded."],copy:response.status===409?"Connect Printify and Etsy to the same shop, then load this product again. Connections is in the sidebar.":"Fix these items in Printify, save the product, then submit the same link again."});throw new Error(result.error || "The product could not be loaded.")}
-      const available=new Set((result.product.colorOptions||[]).filter(color=>color.available).map(color=>color.id));let sessionColors:number[]=[];try{sessionColors=JSON.parse(window.localStorage.getItem(`goldie-colors-${result.product.id}`)||"[]") as number[]}catch{/* Ignore an invalid browser preference. */}const remembered=normalizeColorIds(result.product,rememberedColorIds).filter(id=>available.has(id));const session=normalizeColorIds(result.product,sessionColors).filter(id=>available.has(id));/* D213 · Printify's template settings are not the seller's choices.
-   The seller sets colors and sizes ONCE, in the saved-product setup, and that
-   becomes the recipe. A product with no recipe defaults has not been set up, so
-   it must be set up — in the batch if that is where it first appears. Seeding
-   the selection from templateEnabled made an unestablished product look decided
-   and would publish listings in colors the seller never picked. The `available`
-   fallback was worse: every colour the blueprint offers.
-   Empty is the honest state. productReadiness already marks these "ask", gates
-   Continue, and opens the picker pre-selected with the template as a SUGGESTION
-   the seller has to accept. */
-            const defaults=remembered.length?remembered:session;setSelectedColorIds(defaults);setColorsRemembered(Boolean(remembered.length));
+      const available=new Set((result.product.colorOptions||[]).filter(color=>color.available).map(color=>color.id));let sessionColors:number[]=[];try{sessionColors=JSON.parse(window.localStorage.getItem(`goldie-colors-${result.product.id}`)||"[]") as number[]}catch{/* Ignore an invalid browser preference. */}const remembered=normalizeColorIds(result.product,rememberedColorIds).filter(id=>available.has(id));const session=normalizeColorIds(result.product,sessionColors).filter(id=>available.has(id));
+      /* D904 · The saved Printify product is now the safe starting state, not
+         the final color decision. Goldie creates private drafts with the colors
+         already enabled on that template, then the seller refines them against
+         real generated mockups before Etsy is involved. */
+      const templateColors=(result.product.colorOptions||[]).filter(color=>color.available&&color.templateEnabled).map(color=>color.id);
+      const defaults=remembered.length?remembered:session.length?session:templateColors;setSelectedColorIds(defaults);setColorsRemembered(Boolean(remembered.length));
       /* Same four-step precedence as colours: saved product default, then this
          browser's last choice, then whatever the Printify template had enabled,
          and finally every available size. The third step is what makes an
          existing product behave exactly as it did before sizes were selectable. */
       const sizeAvailable=new Set((result.product.sizeOptions||[]).filter(size=>size.available).map(size=>size.id));let sessionSizes:number[]=[];try{sessionSizes=JSON.parse(window.localStorage.getItem(`goldie-sizes-${result.product.id}`)||"[]") as number[]}catch{/* Ignore an invalid browser preference. */}
       const rememberedSizes=rememberedSizeIds.filter(id=>sizeAvailable.has(id)),sessionSizeIds=sessionSizes.filter(id=>sizeAvailable.has(id));
-      /* D213 · Same rule as colours: no template seeding. */
-            const sizeDefaults=rememberedSizes.length?rememberedSizes:sessionSizeIds;
+      const templateSizes=(result.product.sizeOptions||[]).filter(size=>size.available&&size.templateEnabled).map(size=>size.id);
+      const sizeDefaults=rememberedSizes.length?rememberedSizes:sessionSizeIds.length?sessionSizeIds:templateSizes;
       setSelectedSizeIds(sizeDefaults);setSizesRemembered(Boolean(rememberedSizes.length));
       /* D329 · Apply the verified Etsy profile from this exact template response.
          Waiting for the independent profile-list and invalid-saved-id effects to
@@ -3879,6 +3904,28 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
   }
 
   function finalDescription(design:DesignFile,details?:EtsyDetails){return design.descriptionOverride??[design.blurb??details?.blurb??"",description].filter(value=>value.trim()).join("\n\n")}
+  async function syncDraftVariantChoices(nextColors:number[],nextSizes:number[]){
+    if(!templateDetails)return;
+    const selectedVariants=variantsFor(templateDetails,nextColors,nextSizes).map(variant=>variant.id);
+    if(!selectedVariants.length){setDraftVariantError("Choose a color and size combination Printify offers.");return}
+    const created=drafts.filter(draft=>draft.status==="Created"&&draft.id);
+    const previousColors=selectedColorIds,previousSizes=selectedSizeIds;
+    setSelectedColorIds(nextColors);setSelectedSizeIds(nextSizes);
+    setSavingDraftVariants(true);setDraftVariantError("");
+    try{
+      const updated=await Promise.all(created.map(async draft=>{
+        const response=await fetch("/api/printify/drafts/update",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({productId:draft.id,selectedVariantIds:selectedVariants})});
+        const payload=await response.json().catch(()=>({})) as {draft?:DraftResult;error?:string};
+        if(!response.ok||!payload.draft)throw new Error(payload.error||`Printify could not update ${draft.name}.`);
+        return payload.draft;
+      }));
+      const byId=new Map(updated.map(draft=>[draft.id,draft]));
+      setDrafts(current=>current.map(draft=>byId.get(draft.id)||draft));
+      setPricingApproved(false);
+      if(activeRecipe)void establish(activeRecipe,{defaultColorIds:nextColors,defaultSizeIds:nextSizes});
+    }catch(error){setSelectedColorIds(previousColors);setSelectedSizeIds(previousSizes);setDraftVariantError(error instanceof Error?error.message:"Printify could not save these product choices.")}
+    finally{setSavingDraftVariants(false)}
+  }
   async function syncListingFields(design:DesignFile,details?:EtsyDetails){const draft=drafts.find(item=>item.clientId===design.id);if(!draft?.id)throw new Error("The matching Printify draft could not be found.");const response=await fetch("/api/printify/drafts/update",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({productId:draft.id,title:design.title,tags:design.tags,description:finalDescription(design,details),etsyDetails:details})});const payload=await response.json() as {error?:string};if(!response.ok)throw new Error(payload.error||"Printify could not save the completed listing.")}
   async function saveActualDraftPricing(draft:DraftResult){
     if(!draft.id||!draft.costReview?.verified)throw new Error("Printify's finished costs are not available for this listing yet.");
@@ -4484,7 +4531,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
                  Fixed order, always: Colors, Sizes, Shipping. Final pricing waits
                  for the finished Printify drafts, when every print cost is known. An unset row
                  still marks itself, which is what "needed" already does. */
-                ready.facets.filter(facet=>facet.name!=="profit").map((facet,facetIndex)=>{const label=({colors:"Colors",sizes:"Sizes",mockups:"Listing photos",keywords:"Keywords",shipping:"Shipping",profit:"Pricing",etsy:"Etsy details"} as Record<string,string>)[facet.name];const action=({colors:"Pick colors",sizes:"Pick sizes",mockups:"Upload listing photos",keywords:"Pick a keyword bank",shipping:"Pick a shipping profile",profit:"Set a profit goal",etsy:"Add Etsy details"} as Record<string,string>)[facet.name];const needed=facet.state==="ask";const inCard=["colors","sizes","shipping"].includes(facet.name);const suggestion=(facet.suggested?.colorIds||facet.suggested?.sizeIds||[]).length;const openThis=()=>{if(inCard){toggle(facet.name);return}const dest=FACET_DESTINATION[facet.name];if(!dest)return;if(dest.step!==workflowStep)goToStep(dest.step);window.setTimeout(()=>{const block=document.querySelector<HTMLElement>(dest.selector);if(!block)return;block.scrollIntoView({block:"start"});block.classList.add("just-opened");window.setTimeout(()=>block.classList.remove("just-opened"),1600)},dest.step!==workflowStep?260:0)};/* D762 · These rows are the prototype's panels wearing row markup. Same
+                ready.facets.filter(facet=>facet.name==="shipping").map((facet,facetIndex)=>{const label=({colors:"Colors",sizes:"Sizes",mockups:"Listing photos",keywords:"Keywords",shipping:"Shipping",profit:"Pricing",etsy:"Etsy details"} as Record<string,string>)[facet.name];const action=({colors:"Pick colors",sizes:"Pick sizes",mockups:"Upload listing photos",keywords:"Pick a keyword bank",shipping:"Pick a shipping profile",profit:"Set a profit goal",etsy:"Add Etsy details"} as Record<string,string>)[facet.name];const needed=facet.state==="ask";const inCard=["colors","sizes","shipping"].includes(facet.name);const suggestion=(facet.suggested?.colorIds||facet.suggested?.sizeIds||[]).length;const openThis=()=>{if(inCard){toggle(facet.name);return}const dest=FACET_DESTINATION[facet.name];if(!dest)return;if(dest.step!==workflowStep)goToStep(dest.step);window.setTimeout(()=>{const block=document.querySelector<HTMLElement>(dest.selector);if(!block)return;block.scrollIntoView({block:"start"});block.classList.add("just-opened");window.setTimeout(()=>block.classList.remove("just-opened"),1600)},dest.step!==workflowStep?260:0)};/* D762 · These rows are the prototype's panels wearing row markup. Same
                    data, same handlers, same open/close: the facet's name is the
                    panel title, its value is the description, its state is the chip,
                    and what used to open below the row is the panel body. */
