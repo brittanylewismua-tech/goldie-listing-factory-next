@@ -216,7 +216,18 @@ export async function GET(request:Request){const user=await getChatGPTUser();if(
   }catch(error){
     console.error("batches: weekly goal count failed, serving batches without it",error);
   }
-  return NextResponse.json({batches:rows.results.map(row=>{const item=batchListItem(row,publishedByBatch,publishedAtByBatch,publishedAtByProduct);const children=childrenByParent.get(String(row.id))||[];return children.length?withRunProgress(item,row,children,publishedByBatch,publishedAtByProduct):item}),published:publishedDays})}
+  /* D938 · Goldie now stops at private Printify drafts, so a goal based on Etsy
+     publishes can never move. Count the successful draft records the seller
+     actually creates in Goldie. The old `published` history remains in the
+     response for truthful legacy receipts and Batch History attribution. */
+  let preparedDays:Array<{day:string;count:number}>=[];
+  try{
+    const preparedDayRows=await database.prepare("SELECT substr(updated_at,1,10) day,COUNT(*) count FROM printify_draft_results WHERE user_id=? AND status='succeeded' GROUP BY substr(updated_at,1,10) ORDER BY day DESC").bind(user.userId).all<{day:string;count:number}>();
+    preparedDays=(preparedDayRows.results||[]).map(row=>({day:String(row.day||""),count:Math.max(0,Number(row.count)||0)})).filter(row=>row.day);
+  }catch(error){
+    console.error("batches: listing goal count failed, serving batches without it",error);
+  }
+  return NextResponse.json({batches:rows.results.map(row=>{const item=batchListItem(row,publishedByBatch,publishedAtByBatch,publishedAtByProduct);const children=childrenByParent.get(String(row.id))||[];return children.length?withRunProgress(item,row,children,publishedByBatch,publishedAtByProduct):item}),prepared:preparedDays,published:publishedDays})}
 
 export async function POST(request:Request){const user=await getChatGPTUser();if(!user)return NextResponse.json({error:"Sign in to continue."},{status:401});const database=db();if(!database)return NextResponse.json({error:"Batch history is unavailable."},{status:503});await ensure(database);const body=await request.json() as {id?:string;status?:string;step?:string;setupName?:string;productTitle?:string;designCount?:number;state?:unknown;parentBatchId?:string};const id=String(body.id||crypto.randomUUID()).replace(/[^a-zA-Z0-9-]/g,"").slice(0,80);const allowedStatus=new Set(["draft","processing","needs_attention","complete"]),allowedStep=new Set(["connect","setup","designs","review","finish"]);const status=allowedStatus.has(String(body.status))?String(body.status):"draft",step=allowedStep.has(String(body.step))?String(body.step):"connect";const stateJson=JSON.stringify(body.state??{});if(stateJson.length>750000)return NextResponse.json({error:"This batch snapshot is too large."},{status:413});/* D871 · A child names its parent run once, when it is first written. The
      COALESCE keeps it: a later autosave that omits it must not orphan a child

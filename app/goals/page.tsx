@@ -19,9 +19,9 @@ export default function GoalsPage() {
     void Promise.all([
       fetch("/api/seller-preferences").then((r) => r.json()).catch(() => ({})),
       fetch("/api/batches").then((r) => r.json()).catch(() => ({})),
-    ]).then(([prefs, list]: [{ listingGoal?: ListingGoal }, { published?: PublishedDay[] }]) => {
+    ]).then(([prefs, list]: [{ listingGoal?: ListingGoal }, { prepared?: PublishedDay[] }]) => {
       setGoal(prefs.listingGoal || null);
-      setDays(list.published || []);
+      setDays(list.prepared || []);
       setLoaded(true);
     });
   }, []);
@@ -37,7 +37,7 @@ export default function GoalsPage() {
       <header>
         <p className="mini-label">LISTING GOAL</p>
         <h1>Your listing history</h1>
-        <p>Every listing you have published with Goldie, by {period}.</p>
+        <p>Every listing you have prepared as a Printify draft, by {period}.</p>
       </header>
 
       {!loaded && <p className="goals-empty">Loading your history…</p>}
@@ -45,7 +45,7 @@ export default function GoalsPage() {
       {loaded && !goal?.enabled && (
         <section className="goals-off">
           <h2>You have not set a goal yet</h2>
-          <p>Turn one on in Usage + Plan and Goldie will show your progress here, in the sidebar, and on your publish receipt.</p>
+          <p>Turn one on in Usage + Plan and Goldie will show your progress here and in the sidebar.</p>
           <Link className="goals-cta" href="/usage">Set a listing goal</Link>
         </section>
       )}
@@ -74,7 +74,7 @@ export default function GoalsPage() {
               ))}
             </ol>
             {rows.length === 1 && rows[0].published === 0 && (
-              <p className="goals-empty">Publish your first batch and it will show up here.</p>
+              <p className="goals-empty">Create your first Printify draft and it will show up here.</p>
             )}
           </section>
         </>

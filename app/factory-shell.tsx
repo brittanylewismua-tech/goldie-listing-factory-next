@@ -58,8 +58,8 @@ export default function FactoryShell({ active, title, children }:
     void fetch("/api/seller-preferences").then(response => response.json()).then((result: { listingGoal?: ListingGoal }) => {
       if (result.listingGoal?.enabled) setGoal(result.listingGoal);
     }).catch(() => undefined);
-    void fetch("/api/batches").then(response => response.json()).then((result: { published?: PublishedDay[] }) => {
-      setGoalDays(result.published || []);
+    void fetch("/api/batches").then(response => response.json()).then((result: { prepared?: PublishedDay[] }) => {
+      setGoalDays(result.prepared || []);
       setGoalDaysLoaded(true);
     }).catch(() => undefined);
     void fetch("/api/etsy").then(response => response.json()).then((result: { shops?: { shopId: number; shopName: string; active: boolean }[] }) => {
@@ -101,7 +101,7 @@ export default function FactoryShell({ active, title, children }:
           <div className="approved-usage-track" aria-hidden="true"><i style={{ width: usage ? `${Math.min(100, usage.used / Math.max(1, usage.limit) * 100)}%` : "0%" }} /></div></a>
         {goal && goalDaysLoaded && <a className="listing-goal-side" href="/goals">
           <span className="listing-goal-caption">This {goal.period}&rsquo;s goal</span>
-          <b>{goalDone} of {goal.target} published</b>
+          <b>{goalDone} of {goal.target} prepared</b>
           <span className="listing-goal-track" aria-hidden="true"><i style={{ width: `${Math.min(100, Math.round((goalDone / Math.max(1, goal.target)) * 100))}%` }} /></span></a>}
         <small>&copy; 2026 Be A Wolf Biz</small>
         <p className="etsy-api-disclosure">The term &apos;Etsy&apos; is a trademark of Etsy, Inc. This application uses the Etsy API but is not endorsed or certified by Etsy, Inc.</p>

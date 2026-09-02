@@ -38,7 +38,7 @@ export default function UsagePage(){
   async function choosePlan(plan:"goldie"|"pro"|"scale"){if(data?.billing?.active){await manageBilling();return}setCheckoutPlan(plan);setBillingMessage("");const response=await fetch("/api/billing/checkout",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({plan})}),result=await response.json() as {url?:string;error?:string};if(response.ok&&result.url){window.location.href=result.url;return}setBillingMessage(result.error||"Secure checkout could not be opened.");setCheckoutPlan(null)}
   return <FactoryShell active="usage" title="Usage + Plan"><div className="usage-page interior-page">
     
-    <header><p className="mini-label">USAGE + PLAN</p><h1>Your Listing Factory plan</h1><p>Your included credits reset automatically each month. Failed listing attempts and failed AI renders never use your allowance.</p></header>
+    <header><p className="mini-label">USAGE + PLAN</p><h1>Your Listing Factory plan</h1><p>Your included credits reset automatically each month. Failed draft attempts and failed AI renders never use your allowance.</p></header>
     {loadError?<section className="usage-load-error" role="alert"><h2>Sign in to view your plan and usage</h2><p>{loadError}</p><Link href="/listing-factory">Return to Listing Factory</Link></section>:!data?<p>Loading your usage…</p>:<>
       <section className="plan-banner"><div><span>CURRENT PLAN</span><h2>{data.plan.name}</h2><p>{data.plan.key==="owner_test"?"Testing access":data.plan.price?`$${data.plan.price}/month`:"Free trial"}</p></div><div><p>{data.plan.key==="trial"&&data.billing?.subscription?.status==="trialing"&&data.billing.subscription.currentPeriodEnd?`Trial ends ${new Date(data.billing.subscription.currentPeriodEnd*1000).toLocaleDateString(undefined,{month:"long",day:"numeric",year:"numeric"})}`:`Monthly credits reset ${new Date(data.resetAt).toLocaleDateString(undefined,{month:"long",day:"numeric",year:"numeric"})}`}</p>{data.billing?.active&&<button onClick={()=>void manageBilling()}>Manage billing</button>}{billingMessage&&<small role="status">{billingMessage}</small>}</div></section>
       <section className="usage-grid"><Meter label="Monthly listing creations" used={data.usage.drafts} limit={data.plan.drafts}/></section>
@@ -46,13 +46,13 @@ export default function UsagePage(){
       <section className="listing-goal-settings">
       <p className="mini-label">OPTIONAL</p>
       <h2>Listing goal</h2>
-      <p className="listing-goal-intro">Set a target and Goldie shows your progress in the sidebar and on your publish receipt. Off by default, and you can turn it off again any time.</p>
+      <p className="listing-goal-intro">Set a target for listings prepared as Printify drafts. Goldie shows your progress here and in the sidebar. Off by default, and you can turn it off again any time.</p>
       <label className="listing-goal-switch">
         <input type="checkbox" checked={goal.enabled} onChange={event=>void saveGoal({...goal,enabled:event.target.checked})}/>
         <span>Show my listing goal</span>
       </label>
       {goal.enabled&&<div className="listing-goal-fields">
-        <label>I want to publish
+        <label>I want to prepare
           <span className="goal-number"><input type="text" inputMode="numeric" aria-label="Listing goal target" value={String(goal.target)}
             onChange={event=>{const digits=event.target.value.replace(/[^0-9]/g,"");setGoal(current=>({...current,target:Number(digits||0)}))}}
             onBlur={()=>void saveGoal({...goal,target:Math.max(1,goal.target||1)})}/></span>
