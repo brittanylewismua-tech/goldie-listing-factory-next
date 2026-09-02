@@ -2946,6 +2946,8 @@ html, body { background: var(--lf-paper); }
    like additional Etsy listings. */
 .app-shell .design-artwork-card{display:grid;gap:12px;padding:14px;background:#fff;border:1px solid #ded6dc;border-radius:12px}
 .app-shell .design-artwork-primary{display:grid;grid-template-columns:64px minmax(0,1fr) auto;gap:12px;align-items:center}
+.app-shell .uploaded-design-preview{display:block;width:76px;height:76px;padding:0;border:1px solid #e5dce2;border-radius:8px;background:#f3eff2;overflow:hidden;cursor:zoom-in}
+.app-shell .uploaded-design-preview img{display:block;width:100%;height:100%;object-fit:contain}
 .app-shell .design-artwork-primary>div{display:grid;gap:3px;min-width:0}
 .app-shell .design-artwork-primary b,.app-shell .design-artwork-primary small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .app-shell .design-artwork-primary em{font-size:11px;font-style:normal;color:#765e70}
@@ -2984,7 +2986,7 @@ html, body { background: var(--lf-paper); }
    thumbnail caption, so the review drops to one full-width column for any card
    that carries the tools. Cards without them keep the compact grid. */
 .app-shell .design-upload-review:has(.artwork-version-tools){grid-template-columns:minmax(0,1fr)}
-.app-shell .design-artwork-card:has(.artwork-version-tools){grid-template-columns:minmax(0,1fr)}
+.app-shell .design-artwork-card:has(.artwork-version-tools){grid-template-columns:minmax(0,1fr);align-items:stretch;min-height:0}
 .app-shell .design-artwork-card:has(.artwork-version-tools)>.design-artwork-primary{
   grid-template-columns:76px minmax(0,1fr) auto;align-items:center}
 .app-shell .artwork-assignment-matrix{width:100%;max-width:none}

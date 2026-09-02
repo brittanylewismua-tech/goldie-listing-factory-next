@@ -1782,8 +1782,9 @@ test("protects batch allowance and lets sellers review uploaded designs",async()
   assert.match(page,/Plan allowance/);
   assert.match(page,/removeDesign/);
   assert.match(page,/design-upload-review/);
-  assert.match(styles,/\.design-upload-review article\{grid-template-columns:76px/);
-  assert.match(styles,/\.design-upload-review img\{width:76px!important;height:76px/);
+  assert.doesNotMatch(styles,/\.design-upload-review article\{grid-template-columns:76px/,
+    "the legacy thumbnail-row grid must not own the full artwork workspace");
+  assert.match(styles,/\.uploaded-design-preview\{display:block;width:76px;height:76px/);
 });
 
 test("remembers safe Etsy product defaults without design-specific assumptions",async()=>{

@@ -50,6 +50,10 @@ test("the assignment matrix is a full-width workspace, not a 282px caption", () 
   assert.match(v2, /\.design-upload-review:has\(\.artwork-version-tools\)\{grid-template-columns:minmax\(0,1fr\)\}/);
   assert.match(v2, /\.design-artwork-card:has\(\.artwork-version-tools\)>\.design-artwork-primary\{[\s\S]*?grid-template-columns:76px minmax\(0,1fr\) auto/,
     "the collapsed 0px middle track is what made the filename overprint the copy");
+  assert.doesNotMatch(approved,/\.design-upload-review article\{[^}]*grid-template-columns/,
+    "the legacy thumbnail-row grid must not turn the full artwork card into three columns");
+  assert.doesNotMatch(approved,/\.design-upload-review img\{[^}]*!important/,
+    "legacy image sizing must not override the component's own preview geometry");
   assert.match(v2, /\.artwork-assignment-matrix select\{width:100%;text-overflow:ellipsis\}/);
 });
 
