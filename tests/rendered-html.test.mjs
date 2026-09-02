@@ -2093,7 +2093,7 @@ test("keeps a forward path from setup, designs, and pricing after drafts exist (
    * step selects listing images separately - and requiring one made "No mockups
    * for this batch" unreachable: choosing it disabled the only way forward.
    * See D110. */
-  assert.match(app,/disabled=\{!complete&&Boolean\(productStepBlocker\(\)\)\}/  /* D164 sizes, D181 per-product keyword banks */);
+  assert.match(app,/disabled=\{Boolean\(productStepBlocker\(\)\)\}/  /* D898: selection gates load failures; color\/size gates live after upload */);
   /* D402 · The setup forward no longer branches on `complete`; it always goes to
      Images. The route back to finishing lives in batch-actions. */
   assert.match(app,/className="batch-actions"[\s\S]{0,1800}Back to finishing your listings/);
@@ -3333,13 +3333,13 @@ test("a product with no colour axis can still leave step 1 — D461/D462", async
      with no reason given. The button required a colour selection - and a ceramic
      mug has no colours - so it could never enable, whatever she picked. */
   assert.match(app, /function productStepBlocker\(\)\{/);
-  assert.match(app, /templateDetails\?\.colorOptions\?\.length&&!selectedColorIds\.length/,
-    "colours are required only when the product offers them");
-  assert.doesNotMatch(app, /disabled=\{!complete&&\(!selectedColorIds\.length/,
-    "the unconditional colour requirement is gone");
+  assert.match(app, /const missingColors=Boolean\(templateDetails\?\.colorOptions\?\.length&&!selectedColorIds\.length\)/,
+    "colours are required only when the product offers them, after artwork exists");
+  assert.doesNotMatch(app, /function productStepBlocker\(\)\{\s*if\(templateDetails\?\.colorOptions/,
+    "the product-selection step does not demand colors before artwork exists");
 
   // A disabled forward control must always say what it is waiting for.
-  assert.match(app, /disabled=\{!complete&&Boolean\(productStepBlocker\(\)\)\} title=\{productStepBlocker\(\)\|\|undefined\}/);
+  assert.match(app, /disabled=\{Boolean\(productStepBlocker\(\)\)\} title=\{productStepBlocker\(\)\|\|undefined\}/);
 
   /* D461 · Picking a shipping profile un-approved the pricing, and the button to
      approve it again sits inside the collapsed Shipping section - so choosing a

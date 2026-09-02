@@ -26,7 +26,7 @@ test("the product step's forward control renders only on the product step", () =
   /* D728 · The control now sits in the step's footer bar (prototype
      .goldie-footer). Its condition is unchanged and still guards the button:
      product step, a chosen template, a selected product. */
-  assert.match(app, /\{workflowStep==="setup"&&templateDetails&&productSelected&&<FactoryFooter status=\{productStepBlocker\(\)\|\|"All product requirements complete"\}><button type="button" className="workflow-next setup-forward"/);
+  assert.match(app, /\{workflowStep==="setup"&&templateDetails&&productSelected&&<FactoryFooter status=\{productStepBlocker\(\)\|\|"Product selected"\}><button type="button" className="workflow-next setup-forward"/);
 });
 
 test("no forward control survives inside the connect or product panel", () => {

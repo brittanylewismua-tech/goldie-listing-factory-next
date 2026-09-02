@@ -86,7 +86,8 @@ test("D213: seeding stops at the recipe — the template is never a choice", asy
   // A bundle member with no saved colours is left empty so its card asks.
   /* Whitespace-tolerant: D373 moved this into a helper, and the rule is what
      matters, not the line it sits on. */
-  assert.match(app, /const ids=\(recipe\.defaultColorIds\|\|\[\]\)\.filter\(id=>available\.has\(id\)\);\s*choices\[recipe\.id\]=ids/);
+  assert.match(app, /const ids=normalizeColorIds\(details,recipe\.defaultColorIds\|\|\[\]\)\.filter\(id=>available\.has\(id\)\);\s*choices\[recipe\.id\]=ids/,
+    "bundle defaults are still recipe-only, with duplicate Printify ids normalized to the one visible color");
 });
 
 test("sizes survive a reload, a batch restore and a bundle hop", async () => {
@@ -160,13 +161,13 @@ test("the size card's promise matches what the gate actually enforces — D164",
      continue"). It says "Next step" on every step now; the gate dialog names
      each unfinished item when you press it. What still has to hold is the
      ENFORCEMENT, which is what these assert. */
-  /* D462 · The same enforcement, moved into productStepBlocker so the button can
-     also say what it is waiting for - and so a product with no colour axis, like
-     a ceramic mug, is not asked for a colour it does not have. */
-  assert.match(app, /templateDetails\?\.sizeOptions\?\.length&&!selectedSizeIds\.length\)return "Choose at least one size for this product\."/,
-    "a product with a size axis still cannot move forward without sizes");
-  assert.match(app, /templateDetails\?\.colorOptions\?\.length&&!selectedColorIds\.length\)return "Choose at least one colour for this product\."/,
-    "and colours are required only when the product offers them");
+  /* D898 · Product selection is allowed to continue to artwork before these
+     choices exist. The draft gate still enforces both after artwork is visible,
+     which is where the seller can make an informed colour decision. */
+  assert.doesNotMatch(app, /function productStepBlocker\(\)\{\s*if\(templateDetails\?\.colorOptions/,
+    "the product-selection step no longer asks for colors before artwork exists");
+  assert.match(app, /if\(\["review","finish"\]\.includes\(step\)\)\{const missingColors=/,
+    "colors and sizes are enforced before draft creation and publishing");
 });
 
 test("D213: \"Match Printify template\" matches the template, and nothing more", async () => {

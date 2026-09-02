@@ -438,8 +438,10 @@ test("the setup step has exactly one forward control, and it gates every section
      continue"). It says "Next step" on every step now; the gate dialog names
      each unfinished item when you press it. What still has to hold is the
      ENFORCEMENT, which is what these assert. */
-  assert.match(page, /disabled=\{!complete&&Boolean\(productStepBlocker\(\)\)\}/,
-    "colours and sizes still gate the forward button, when the product has them");
+  assert.match(page, /disabled=\{Boolean\(productStepBlocker\(\)\)\}/,
+    "a product load failure still gates the product-selection step");
+  assert.match(page, /if\(\["review","finish"\]\.includes\(step\)\)\{const missingColors=/,
+    "colours and sizes gate draft creation after artwork is visible");
   assert.match(page, /Next step <span>→<\/span>/);
 });
 
