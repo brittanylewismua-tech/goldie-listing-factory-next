@@ -32,7 +32,7 @@ test("the rail is black and carries the bright pink", () => {
 });
 
 test("the workspace is paper with a pink grid, and cards sit on it", () => {
-  assert.match(css, /--lf-paper:#fdf8fb/);
+  assert.match(css, /--lf-paper:#fff/);
   assert.match(css, /background: var\(--lf-paper\)/);
   assert.match(css, /repeating-linear-gradient\(90deg,transparent 0 47px,var\(--lf-grid\) 47px 48px\)/);
   /* Two shadows: a contact shadow that seats the card and a wide one that lifts

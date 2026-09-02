@@ -386,7 +386,7 @@ test("shipping, profit and Etsy details are per-product facts — D183", async (
      profit goal and the shipping profile, because the per-variant prices are
      computed from them. Keeping them on the card too put two controls for one
      value on one screen. */
-  assert.match(app, /const inCard=\["colors","sizes","profit","shipping"\]\.includes\(facet\.name\);/);
+  assert.match(app, /const inCard=\["colors","sizes","shipping"\]\.includes\(facet\.name\);/);
 /* D237 · This used to assert the row handler opened `.everything-else`. D232
      deleted that block, so the assertion was pinning a querySelector that could
      only ever return null — five dead buttons per card, and a test that called
@@ -563,7 +563,7 @@ test("D209: every readiness row that offers to open, opens in the card", async (
      profit goal and the shipping profile, because the per-variant prices are
      computed from them. Keeping them on the card too put two controls for one
      value on one screen. */
-  assert.match(app, /const inCard=\["colors","sizes","profit","shipping"\]\.includes\(facet\.name\);/);
+  assert.match(app, /const inCard=\["colors","sizes","shipping"\]\.includes\(facet\.name\);/);
 
   // Both new panels render inside the card, scoped to the row's own recipe.
   /* D223 · These two moved into the pricing panel below the card. */
@@ -1071,8 +1071,12 @@ test("the card has a row for every panel it can open — D337", async () => {
 
   const inCard = app.match(/const inCard=\[([^\]]*)\]/);
   assert.ok(inCard, "the in-card list must exist");
-  for (const facet of ["profit", "shipping"])
+  for (const facet of ["shipping"])
     assert.ok(inCard[1].includes(`"${facet}"`), `${facet} opens in the card`);
+  assert.match(app, /ready\.facets\.filter\(facet=>facet\.name!=="profit"\)/,
+    "pricing is not shown before finished Printify costs exist");
+  assert.match(app, /costReviewGroups\(\)\.map/,
+    "final pricing is reviewed after the drafts expose their real costs");
 
   /* And the standalone block must not double up underneath a bundle. */
   /* D353 · There is no standalone pricing card to gate any more. Every
@@ -1234,14 +1238,11 @@ test("the approve button leaves once there is nothing to approve — D363", asyn
    discarding work exactly as Change product does. */
 test("a selected bundle can be swapped for another — D365", async () => {
   const tools = await read("app/factory-tools.tsx");
-  assert.match(tools, /className="choose-different-product"/);
-  assert.match(tools, /className="remove-product-from-batch"/);
-  assert.match(tools, /if\(!await props\.onChangeProduct\(\)\)return;setActiveId\(""\)/,
+  const app = await read("app/listing-factory-app.tsx");
+  assert.match(app, /setShowProductLibrary\(true\).*Choose a different product/);
+  assert.match(app, /className="remove-product-from-batch" onClick=\{\(\)=>void changeProduct\(\)\}/,
     "removal reuses the confirm-and-clear path rather than inventing a second one");
-
-  const block = tools.indexOf('className="selected-summary-block"');
-  const link = tools.indexOf('className="choose-different-product"');
-  assert.ok(block > 0 && link > block, "the link belongs to the card it changes");
+  assert.match(app, /headerActions=/, "management belongs in the selected panel head");
 });
 
 /* D385 · One card with one spinner while a bundle loads, then every product

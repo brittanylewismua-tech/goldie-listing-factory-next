@@ -1,0 +1,36 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import fs from "node:fs";
+
+const app=fs.readFileSync(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8");
+const tools=fs.readFileSync(new URL("../app/factory-tools.tsx",import.meta.url),"utf8");
+const panel=fs.readFileSync(new URL("../app/factory-panel.tsx",import.meta.url),"utf8");
+const css=fs.readFileSync(new URL("../app/interface-v2.css",import.meta.url),"utf8");
+
+test("D886: a fresh product step shows the library and never chooses the first recipe",()=>{
+  assert.match(tools,/const showLibrary=Boolean\(props\.showLibrary\)/);
+  assert.match(tools,/reachable\.length > 0 && \(!activeId\|\|showLibrary\)/);
+  assert.doesNotMatch(tools,/setActiveId\(recipes\[0\]/);
+  assert.doesNotMatch(app,/setActiveRecipe\(recipes\[0\]/);
+});
+
+test("D886: the selected header uses the saved flatlay and owns its management",()=>{
+  assert.match(app,/const photo=\(templateDetails\?pickProductPhoto\(templateDetails\):""\)\|\|activeRecipe\?\.previewImage/);
+  assert.match(app,/const chosen=choice>=0\?shortlist\[choice\]:""/);
+  assert.match(app,/previewImage:chosen/);
+  assert.match(panel,/headerActions \? <div className="factory-panel-actions">/);
+  assert.match(app,/headerActions=.*Choose a different product/);
+  assert.doesNotMatch(tools,/selected-product-actions/);
+});
+
+test("D886: pricing waits for finished draft costs",()=>{
+  assert.match(app,/ready\.facets\.filter\(facet=>facet\.name!=="profit"\)/);
+  assert.match(app,/Final Printify production cost/);
+  assert.match(app,/Approve final prices/);
+});
+
+test("D886: the workspace is white-grid paper and selection is green",()=>{
+  assert.match(css,/--lf-paper:#fff/);
+  assert.match(css,/\.color-choice-grid em,.app-shell \.size-choice-grid em\{background:#2f7a4b!important/);
+  assert.match(css,/\.printify-photo-selector:has\(input:checked\)\{border-color:#2f7a4b!important;background:#2f7a4b!important/);
+});

@@ -18,7 +18,7 @@ test("D883: a chosen product becomes the header and the library recedes",()=>{
 });
 
 test("D883: selected-product header offers both safe management paths",()=>{
-  assert.match(tools,/>Choose a different product<\/button>/);
-  assert.match(tools,/>Remove from this batch<\/button>/);
-  assert.match(tools,/if\(!await props\.onChangeProduct\(\)\)return;setActiveId\(""\)/);
+  assert.match(app,/headerActions=\{productSelected\|\|bundleSelected\?<><button type="button" onClick=\{\(\)=>setShowProductLibrary\(true\)\}>Choose a different product<\/button>/);
+  assert.match(app,/>Remove from this batch<\/button>/);
+  assert.match(tools,/showLibrary\?:boolean/);
 });

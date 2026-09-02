@@ -23,6 +23,7 @@ export default function FactoryPanel({
   title,
   description,
   state,
+  headerActions,
   tone = "done",
   open = false,
   onToggle,
@@ -35,6 +36,7 @@ export default function FactoryPanel({
   title: string;
   description?: ReactNode;
   state?: ReactNode;
+  headerActions?: ReactNode;
   tone?: PanelTone;
   open?: boolean;
   onToggle?: () => void;
@@ -77,6 +79,7 @@ export default function FactoryPanel({
             The tick is drawn, not a glyph, so it keeps its stroke at 11px and
             renders the same on every platform. Decorative: the state text
             beside it already carries the meaning for a screen reader. */}
+        {headerActions ? <div className="factory-panel-actions">{headerActions}</div> : null}
         {state ? <span className="factory-panel-state">
           {tone === "done" ? <svg className="factory-panel-tick" viewBox="0 0 16 16" width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 4.8" /></svg> : null}
           {state}

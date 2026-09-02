@@ -87,6 +87,8 @@ type WorkflowProps = {
   connected: boolean; templateUrl: string; templateVerified: boolean; loadingTemplate: boolean;
   selectedProductId:string;
   selectedSummary?:ReactNode;
+  showLibrary?:boolean;
+  onShowLibraryChange?:(show:boolean)=>void;
   suggestedProductName?:string;
   verifiedShippingProfileId:number;
   /* D205 · Incremented by the workflow whenever establishing a facet writes to a
@@ -97,7 +99,9 @@ type WorkflowProps = {
 };
 
 export function SavedWorkflow(props: WorkflowProps) {
-  const [recipes, setRecipes] = useState<Recipe[]>([]), [activeShop, setActiveShop] = useState<{shopId:number;shopName:string}|null>(null), [name, setName] = useState(""), [message, setMessage] = useState(""), [editing, setEditing] = useState(false), [editingId, setEditingId] = useState(""), [activeId, setActiveId] = useState(""), [showLibrary,setShowLibrary]=useState(false);
+  const [recipes, setRecipes] = useState<Recipe[]>([]), [activeShop, setActiveShop] = useState<{shopId:number;shopName:string}|null>(null), [name, setName] = useState(""), [message, setMessage] = useState(""), [editing, setEditing] = useState(false), [editingId, setEditingId] = useState(""), [activeId, setActiveId] = useState("");
+  const showLibrary=Boolean(props.showLibrary);
+  const setShowLibrary=(show:boolean)=>props.onShowLibraryChange?.(show);
   /* D654 - "Add a new product" rendered the form below the saved-product grid
      and left the page where it was. Measured live: the form opened at 799px in
      an 812px viewport, so nothing visibly happened. Clicking it also clears the
@@ -287,15 +291,7 @@ export function SavedWorkflow(props: WorkflowProps) {
          Adding is the case where a seller is most likely to have clicked by
          mistake. */}
 {editing&&<button type="button" className="secondary-action" onClick={()=>{setEditing(false);setEditingId("");setName("");setKeywordListId("");setMessage("")}}>Cancel</button>}</div>}
-    {activeId&&<div className="selected-summary-block">
-      {props.selectedSummary}
-      {/* D365 · Once a bundle is chosen the bundle grid hides, so there was no way
-          back — picking the wrong one meant starting the batch over. It sits under
-          the card that shows what is selected, because that card is the thing it
-          changes, and it goes through changeProduct() so it asks before discarding
-          work exactly like Change product does. */}
-      <div className="selected-product-actions"><button type="button" className="choose-different-product" disabled={Boolean(pendingAction)} onClick={()=>{setShowLibrary(true);setEditing(false);setMessage("")}}>Choose a different product</button><button type="button" className="remove-product-from-batch" disabled={Boolean(pendingAction)} onClick={async()=>{if(!await props.onChangeProduct())return;setActiveId("");setShowLibrary(false);setEditing(false);setMessage("")}}>Remove from this batch</button></div>
-    </div>}
+    {activeId&&<div className="selected-summary-block">{props.selectedSummary}</div>}
     {/* Once a bundle is the current selection its members are already listed above,
         so re-showing the bundle grid underneath just offered the same bundle again. */}
     {hiddenCount>0&&(!activeId||showLibrary)&&<p className="recipe-other-store">

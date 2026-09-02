@@ -97,8 +97,8 @@ test("one chevron, centred, for every disclosure in the app — D705", async () 
 test("a destructive switch does not describe itself as additive — D705", async () => {
   const tools = await read("app/factory-tools.tsx");
   const app = await read("app/listing-factory-app.tsx");
-  assert.match(tools, />Choose a different product<\/button>/);
-  assert.match(tools, />Remove from this batch<\/button>/);
+  assert.match(app, />Choose a different product<\/button>/);
+  assert.match(app, />Remove from this batch<\/button>/);
   /* The warning has to be true: confirm that choosing really does discard. */
   assert.match(app, /This removes \$\{count\} \$\{count===1\?"design":"designs"\} and all work from the current batch/);
 });

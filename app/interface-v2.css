@@ -23,7 +23,7 @@
   --lf-rail:#000;
   --lf-rail-ink:#fff;
   --lf-rail-dim:rgba(255,255,255,.62);
-  --lf-paper:#fdf8fb;
+  --lf-paper:#fff;
   --lf-card:#fff;
 }
 html, body { background: var(--lf-paper); }
@@ -3002,11 +3002,12 @@ html, body { background: var(--lf-paper); }
 .app-shell .selected-summary-block>.selected-product-header>.product-thumb{
   width:58px;height:58px;flex-basis:58px}
 .app-shell .selected-summary-block>.selected-product-header .template-info b{font-size:15px}
-.app-shell .selected-product-actions{display:flex;align-items:center;gap:18px;padding:10px 16px 2px}
-.app-shell .selected-product-actions button{
-  min-height:34px;padding:0;border:0;background:transparent;box-shadow:none;
-  color:#604655;font:750 11px/1.2 Inter,ui-sans-serif,system-ui,sans-serif;
-  text-decoration:underline;text-underline-offset:3px;cursor:pointer}
-.app-shell .selected-product-actions .remove-product-from-batch{color:#955065}
-.app-shell .selected-product-actions button:hover{color:#191217;text-decoration-thickness:2px}
-.app-shell .selected-product-actions button:disabled{opacity:.5;cursor:not-allowed}
+/* D886 · Product management belongs in the selected product's panel head. */
+.app-shell .factory-panel-actions{display:flex;align-items:center;justify-content:flex-end;gap:14px;min-width:0}
+.app-shell .factory-panel-actions button{padding:0;border:0;background:transparent;box-shadow:none;color:#604655;font:750 11px/1.2 Inter,ui-sans-serif,system-ui,sans-serif;text-decoration:underline;text-underline-offset:3px;white-space:nowrap;cursor:pointer}
+.app-shell .factory-panel-actions .remove-product-from-batch{color:#955065}
+
+/* Selection is a success state, not a brand accent. */
+.app-shell .color-choice-grid em,.app-shell .size-choice-grid em{background:#2f7a4b!important;color:#fff!important}
+.app-shell .color-choice-grid button.selected,.app-shell .size-choice-grid button.selected{border-color:#86b99a!important;background:#f2faf5!important;box-shadow:0 0 0 2px rgba(47,122,75,.10)!important}
+.app-shell .printify-photo-selector:has(input:checked){border-color:#2f7a4b!important;background:#2f7a4b!important}

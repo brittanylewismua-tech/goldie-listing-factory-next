@@ -1032,6 +1032,7 @@ export default function ListingFactoryApp() {
   const [rememberingColors,setRememberingColors]=useState(false);
   const [colorsRemembered,setColorsRemembered]=useState(false);
   const [selectedSizeIds,setSelectedSizeIds]=useState<number[]>([]);
+  const [showProductLibrary,setShowProductLibrary]=useState(false);
   const [openFacet,setOpenFacet]=useState<Record<string,string[]>>({});
   const [bestPhoto,setBestPhoto]=useState<Record<string,string>>({});
   /* D206 · With a three-product bundle selected, the connected-product row
@@ -1091,7 +1092,17 @@ export default function ListingFactoryApp() {
            model shot, because a hoodie on a person still shows the hoodie. The
            glyph is only for products with no usable photo at all. */
         const choice=preferredPhotoIndex(measurements);
-        setBestPhoto(current=>({...current,[key]:choice>=0?shortlist[choice]:""}));
+        const chosen=choice>=0?shortlist[choice]:"";
+        setBestPhoto(current=>({...current,[key]:chosen}));
+        /* The visual scorer is the authority for a flatlay. Persist its answer
+           after it finishes instead of preserving the server's first "front"
+           image forever (which can be Printify's fabric-detail shot). */
+        if(chosen&&activeRecipe&&String(templateDetails?.id)===key&&chosen!==activeRecipe.previewImage){
+          const recipe=activeRecipe;
+          setActiveRecipe(current=>current&&current.id===recipe.id?{...current,previewImage:chosen}:current);
+          void fetch("/api/product-recipes",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:recipe.id,name:recipe.name,templateUrl:recipe.templateUrl,previewImage:chosen})}).catch(()=>undefined);
+          window.dispatchEvent(new CustomEvent("goldie-recipe-photo",{detail:{recipeId:recipe.id,previewImage:chosen}}));
+        }
       })();
     }
     /* Nothing until the score lands: a glyph that becomes a photo is calmer
@@ -4463,13 +4474,13 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
 
           <div className={`product-step workflow-panel ${workflowStep==="setup"?"active-panel":"hidden-panel"}`}>{/* D763 · Panel 01. The facets below number from 02, and until now
             there was no 01 - the picker sat in the old card while the settings
-            under it had already become panels. */}<FactoryPanel index={1} title={activeBundle?.name||activeRecipe?.name||"Choose a product"} description={productSelected||bundleSelected?"Selected for this batch":"Select one to continue"} state={failedBundleNames().length?"Needs a look":productSelected||bundleSelected?"Complete":"Needed"} tone={failedBundleNames().length?"attention":productSelected||bundleSelected?"done":"attention"} open><SavedWorkflow bundleChosen={Boolean(activeBundle&&bundleRecipes.length>1)} savedRevision={savedRevision} connected={connected||localPreview} templateUrl={template} templateVerified={templateLoaded} loadingTemplate={loadingTemplate} suggestedProductName={templateDetails?[templateDetails.brand,templateDetails.model].filter(Boolean).join(" ").trim()||templateDetails.blueprintTitle||"":""} selectedProductId={activeBundle?`bundle:${activeBundle.id}`:activeRecipe?.id||""} selectedSummary={templateDetails?<div className="template-proof recipe-proof selected-product-header">{/* D834 · This drew the words "YOUR ART" in a box. The product's own
+            under it had already become panels. */}<FactoryPanel index={1} title={activeBundle?.name||activeRecipe?.name||"Choose a product"} description={productSelected||bundleSelected?"Selected for this batch":"Select one to continue"} state={failedBundleNames().length?"Needs a look":productSelected||bundleSelected?undefined:"Needed"} headerActions={productSelected||bundleSelected?<><button type="button" onClick={()=>setShowProductLibrary(true)}>Choose a different product</button><button type="button" className="remove-product-from-batch" onClick={()=>void changeProduct()}>Remove from this batch</button></>:undefined} tone={failedBundleNames().length?"attention":productSelected||bundleSelected?"done":"attention"} open><SavedWorkflow bundleChosen={Boolean(activeBundle&&bundleRecipes.length>1)} savedRevision={savedRevision} connected={connected||localPreview} templateUrl={template} templateVerified={templateLoaded} loadingTemplate={loadingTemplate} suggestedProductName={templateDetails?[templateDetails.brand,templateDetails.model].filter(Boolean).join(" ").trim()||templateDetails.blueprintTitle||"":""} selectedProductId={activeBundle?`bundle:${activeBundle.id}`:activeRecipe?.id||""} showLibrary={showProductLibrary} onShowLibraryChange={setShowProductLibrary} selectedSummary={templateDetails?<div className="template-proof recipe-proof selected-product-header">{/* D834 · This drew the words "YOUR ART" in a box. The product's own
                    Printify flatlay is available here - pickProductPhoto scores the
                    previews and returns the best one - and showing it is what the
                    panel is for: she is confirming which garment this batch prints
                    on. The lettered box remains only when Printify has no usable
                    photo. */}
-                {(()=>{const photo=templateDetails?pickProductPhoto(templateDetails):"";
+                {(()=>{const photo=(templateDetails?pickProductPhoto(templateDetails):"")||activeRecipe?.previewImage||"";
                   return photo
                     ? <img className="product-thumb bundle-product-photo" src={photo} alt={templateDetails?.blueprintTitle||"Product"} decoding="async"/>
                     : <div className="product-thumb"><span>YOUR<br/>ART</span></div>})()}<div className="template-info">{bundleSelected?<><b>{activeBundle?.name}</b><span>{bundleRecipes.length} products · {bundleRecipes.map(item=>item.name).join(" · ")}</span><span>✓ Each product keeps its own colors, sizes, mockups, and keywords</span></>:<><b>{templateDetails.blueprintTitle}</b><span>{templateDetails.provider} · {variantSummary(summaryAxes(templateDetails,activeRecipe))}</span><span>✓ Product, placement, sizes, and shipping profile imported</span></>}</div><span className="template-badge">{bundleSelected?"Bundle selected":productSelected?"Product selected":"Save this product"}</span></div>:null} verifiedShippingProfileId={Number(templateDetails?.shippingTemplateId)||0} onTemplateUrl={(value) => { templateLoadVersion.current+=1;setLoadingTemplate(false);setTemplate(value);setTemplateDetails(null);setTemplateError(""); }} onUseRecipe={chooseRecipe} onUseBundle={useBundle} onStartNewProduct={startNewProduct} onChangeProduct={changeProduct} onVerifyTemplate={loadTemplateUrl} /></FactoryPanel>
@@ -4583,9 +4594,10 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
                  so a product with no shipping profile showed Shipping first and Colors
                  third — the categories moved depending on what happened to be
                  missing. Position is how you find things; it cannot depend on state.
-                 Fixed order, always: Colors, Sizes, Pricing, Shipping. An unset row
+                 Fixed order, always: Colors, Sizes, Shipping. Final pricing waits
+                 for the finished Printify drafts, when every print cost is known. An unset row
                  still marks itself, which is what "needed" already does. */
-                ready.facets.map((facet,facetIndex)=>{const label=({colors:"Colors",sizes:"Sizes",mockups:"Listing photos",keywords:"Keywords",shipping:"Shipping",profit:"Pricing",etsy:"Etsy details"} as Record<string,string>)[facet.name];const action=({colors:"Pick colors",sizes:"Pick sizes",mockups:"Upload listing photos",keywords:"Pick a keyword bank",shipping:"Pick a shipping profile",profit:"Set a profit goal",etsy:"Add Etsy details"} as Record<string,string>)[facet.name];const needed=facet.state==="ask";const inCard=["colors","sizes","profit","shipping"].includes(facet.name);const suggestion=(facet.suggested?.colorIds||facet.suggested?.sizeIds||[]).length;const openThis=()=>{if(inCard){toggle(facet.name);return}const dest=FACET_DESTINATION[facet.name];if(!dest)return;if(dest.step!==workflowStep)goToStep(dest.step);window.setTimeout(()=>{const block=document.querySelector<HTMLElement>(dest.selector);if(!block)return;block.scrollIntoView({block:"start"});block.classList.add("just-opened");window.setTimeout(()=>block.classList.remove("just-opened"),1600)},dest.step!==workflowStep?260:0)};/* D762 · These rows are the prototype's panels wearing row markup. Same
+                ready.facets.filter(facet=>facet.name!=="profit").map((facet,facetIndex)=>{const label=({colors:"Colors",sizes:"Sizes",mockups:"Listing photos",keywords:"Keywords",shipping:"Shipping",profit:"Pricing",etsy:"Etsy details"} as Record<string,string>)[facet.name];const action=({colors:"Pick colors",sizes:"Pick sizes",mockups:"Upload listing photos",keywords:"Pick a keyword bank",shipping:"Pick a shipping profile",profit:"Set a profit goal",etsy:"Add Etsy details"} as Record<string,string>)[facet.name];const needed=facet.state==="ask";const inCard=["colors","sizes","shipping"].includes(facet.name);const suggestion=(facet.suggested?.colorIds||facet.suggested?.sizeIds||[]).length;const openThis=()=>{if(inCard){toggle(facet.name);return}const dest=FACET_DESTINATION[facet.name];if(!dest)return;if(dest.step!==workflowStep)goToStep(dest.step);window.setTimeout(()=>{const block=document.querySelector<HTMLElement>(dest.selector);if(!block)return;block.scrollIntoView({block:"start"});block.classList.add("just-opened");window.setTimeout(()=>block.classList.remove("just-opened"),1600)},dest.step!==workflowStep?260:0)};/* D762 · These rows are the prototype's panels wearing row markup. Same
                    data, same handlers, same open/close: the facet's name is the
                    panel title, its value is the description, its state is the chip,
                    and what used to open below the row is the panel body. */

@@ -4458,13 +4458,13 @@ test("a decided batch does not lead with the picker, and step 3 opens compact �
      saved-products picker and her three product cards started at 1099px, below
      the fold. The choice is made; the picker is how you change it. */
   assert.match(tools, /\(!activeId\|\|showLibrary\)/);
-  assert.match(tools, /className="choose-different-product"/);
+  assert.match(app, /setShowProductLibrary\(true\)/);
   /* D705 · The label used to read "Change the products in this batch", which
      describes adding to the batch you are in. What it actually does is switch
      the product and start a NEW batch, discarding the designs and every bit of
      work in the current one — chooseRecipe confirms exactly that. A control
      may not describe itself as less destructive than it is. */
-  assert.match(tools, />Choose a different product<\/button>/);
+  assert.match(app, />Choose a different product<\/button>/);
   assert.doesNotMatch(tools, /Change the products in this batch/,
     "the label that made a destructive switch sound additive is gone");
   assert.match(app, /<SavedWorkflow bundleChosen=\{Boolean\(activeBundle&&bundleRecipes\.length>1\)\}/);
