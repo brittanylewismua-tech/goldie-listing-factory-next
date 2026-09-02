@@ -37,22 +37,31 @@ import MobileGate from "./mobile-gate";
 import { productFamily } from "./product-type-utils";
 import { printifyMockupForColor } from "./printify-color-mockup";
 
-/* D370 · The garment glyph a card falls back to when no catalog photo reads as
-   the product. Shape follows the blueprint title so a hoodie does not draw as a
-   tee — the point of the tile is to say which garment this row is. */
+/* The product glyph is a last-resort identity image after Printify has answered
+   but has not supplied a usable mockup. It must never silently turn an unknown
+   product into apparel: loading uses a spinner, known families use their own
+   silhouette, and everything else gets a neutral package. */
 function ProductGlyph({title}:{title?:string}){
   const name=String(title||"").toLowerCase();
+  const family=productFamily(name);
   const hooded=/hood/.test(name);
   const longSleeve=hooded||/sweat|crew|fleece|long sleeve|longsleeve/.test(name);
-  const body=longSleeve
+  const garment=family==="tee"||family==="hoodie"||family==="crewneck"||family==="tank"||family==="longSleeve";
+  const garmentBody=longSleeve
     ?"M8.6 3 L3.6 5.9 5.7 15.6 8.4 14.5 V21 H15.6 V14.5 L18.3 15.6 20.4 5.9 15.4 3 C14.6 4.8 9.4 4.8 8.6 3 Z"
     :"M8.6 3 L4 5.9 6.1 11 8.4 9.7 V21 H15.6 V9.7 L17.9 11 20 5.9 15.4 3 C14.6 4.8 9.4 4.8 8.6 3 Z";
   return (
-    <span className="bundle-product-photo placeholder" aria-hidden="true">
+    <span className={`bundle-product-photo placeholder product-glyph-${family||"other"}`} aria-hidden="true">
       <svg viewBox="0 0 24 24" focusable="false">
-        <path d={body} />
-        {hooded && <path className="glyph-line" d="M9.2 3.4 C10.2 6.8 13.8 6.8 14.8 3.4" />}
-        {hooded && <path className="glyph-line" d="M9.7 16.2 H14.3" />}
+        {garment&&<path d={garmentBody} />}
+        {garment&&hooded&&<path className="glyph-line" d="M9.2 3.4 C10.2 6.8 13.8 6.8 14.8 3.4" />}
+        {garment&&hooded&&<path className="glyph-line" d="M9.7 16.2 H14.3" />}
+        {family==="mug"&&<><path d="M4 5h12v14H4z"/><path className="glyph-line" d="M16 8h1.5a3 3 0 0 1 0 6H16"/></>}
+        {family==="tumbler"&&<><path d="M7 4h10l-1 17H8z"/><path className="glyph-line" d="M9 2h6M13 2l3-2"/></>}
+        {family==="tote"&&<><path d="M4 7h16v14H4z"/><path className="glyph-line" d="M8 8V6a4 4 0 0 1 8 0v2"/></>}
+        {family==="poster"&&<><path d="M4 3h16v18H4z"/><path className="glyph-line" d="m7 17 4-5 2 2 2-3 2 6z"/></>}
+        {family==="sticker"&&<path d="M4 3h16v11l-7 7H4zm9 18v-7h7"/>}
+        {!garment&&!['mug','tumbler','tote','poster','sticker'].includes(family)&&<><path d="m3 7 9-4 9 4-9 4z"/><path d="M3 7v10l9 4V11zm18 0v10l-9 4V11z"/></>}
       </svg>
     </span>
   );
