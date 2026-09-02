@@ -24,3 +24,8 @@ test("D946: restart dialog has one primary action and a quiet destructive choice
   assert.match(css,/\.restart-batch-actions \.save-restart\{grid-column:1\/-1;grid-row:1\}/);
   assert.match(css,/\.restart-batch-actions \.discard-restart\{background:#fff!important;color:#9b334c!important/);
 });
+
+test("D946: opening the product library hides the previous task instead of stacking both",()=>{
+  assert.match(app,/data-product-library=\{showProductLibrary\?"true":"false"\}/);
+  assert.match(css,/data-product-library="true"[^}]*selected-summary-block[^}]*batch-design-drop[^}]*workflow-footer-actions[^}]*display:none!important/);
+});

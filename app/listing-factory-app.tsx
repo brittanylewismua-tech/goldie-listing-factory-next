@@ -4182,7 +4182,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
           : runCountLabel;
   const workflowHero = {
     connect: { eyebrow: "ACCOUNT SETUP", title: "Connect your accounts", copy: connected&&etsyConnected?"Both accounts are connected and ready.":"Connect Printify and Etsy so Goldie can prepare your listings." },
-    setup: templateDetails&&productSelected
+    setup: templateDetails&&productSelected&&!showProductLibrary
       /* D322 · This title changed once a product was selected — "Choose product"
          became "Build this batch" — so step 1 renamed itself mid-step and started
          describing the whole flow rather than the step you are on, while the rail
@@ -4209,7 +4209,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
   const uploadSecondaryLabel=uploadSecondaryLabels.length>1?`${uploadSecondaryLabels.slice(0,-1).join(", ")} or ${uploadSecondaryLabels.at(-1)}`:uploadSecondaryLabels[0]||"";
 
   return (
-    <main className="app-shell" data-product-selected={templateDetails?"true":"false"}>
+    <main className="app-shell" data-product-selected={templateDetails?"true":"false"} data-product-library={showProductLibrary?"true":"false"}>
       {/* D528 - the host lives at the root layout now, so every page has one. */}
       {/* D828 · one component now, shared with FactoryShell, so the workflow
           and the interior pages cannot drift apart. */}
