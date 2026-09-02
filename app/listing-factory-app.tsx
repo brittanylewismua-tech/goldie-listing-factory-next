@@ -4657,15 +4657,16 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
               The card's sections are the real structure and are on screen. */}
               <input ref={folderPicker} className="hidden-picker" type="file" multiple accept=".png,.jpg,.jpeg" {...({ webkitdirectory: "", directory: "" } as React.InputHTMLAttributes<HTMLInputElement>)} onChange={(event) => void chooseFiles(event.target.files)} />
               <input ref={imagePicker} className="hidden-picker" type="file" multiple accept=".png,.jpg,.jpeg" onChange={(event) => void chooseFiles(event.target.files)} />
+              <p className="upload-primary-note"><b>Upload one main design per listing.</b> Add alternate-color artwork or artwork for another supported print area to that design card afterward.</p>
               <div className="upload-actions">
               <button className="folder-drop" onClick={() => folderPicker.current?.click()}>
                 <span className="upload-icon" aria-hidden="true">↑</span>
-                <span><b>{files.length ? designsFinished?"Choose a folder to add more":`Choose a folder · preparing ${designsReady} of ${files.length}` : "Choose a folder"}</b><small>{files.length ? `${files.length} design${files.length===1?"":"s"} ready · ${(totalSize / 1024 / 1024).toFixed(1)} MB selected${totalSize>LARGE_BATCH_THRESHOLD?" · will process one at a time":""} · Choose again to add more` : `Add up to ${batchDesignLimit} designs in this batch`}</small></span>
+                <span><b>{files.length ? designsFinished?"Choose a folder to add more":`Choose a folder · preparing ${designsReady} of ${files.length}` : "Choose a folder of main designs"}</b><small>{files.length ? `${files.length} design${files.length===1?"":"s"} ready · ${(totalSize / 1024 / 1024).toFixed(1)} MB selected${totalSize>LARGE_BATCH_THRESHOLD?" · will process one at a time":""} · Choose again to add more` : `Each image creates one listing · up to ${batchDesignLimit}`}</small></span>
                 <span className="browse-chip">Browse</span>
               </button>
               <button className="folder-drop" onClick={() => imagePicker.current?.click()}>
                 <span className="upload-icon" aria-hidden="true">＋</span>
-                <span><b>Choose individual images</b><small>Select one image or several at once</small></span>
+                <span><b>Choose main design images</b><small>Select one listing design or several at once</small></span>
                 <span className="browse-chip">Browse</span>
               </button>
               </div>

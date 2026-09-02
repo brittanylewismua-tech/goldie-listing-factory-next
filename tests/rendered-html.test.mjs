@@ -36,7 +36,7 @@ test("uses the binding batch limit and keeps setup actions in the right hierarch
     Promise.all([readFile(new URL("../app/approved-functional.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n")),
   ]);
   assert.match(page, /Up to \{batchDesignLimit\} finished designs/);
-  assert.match(page, /Add up to \$\{batchDesignLimit\} designs in this batch/);
+  assert.match(page, /Each image creates one listing · up to \$\{batchDesignLimit\}/);
   assert.doesNotMatch(page, /Your folder can contain up to 20 designs/);
   assert.match(page, /headerActions=\{bundleCreationMode\|\|productFormMode\?undefined:[\s\S]{0,380}>＋ Add a new product<\/button>[\s\S]{0,220}>＋ Create a new bundle<\/button>/);
   assert.match(css, /managementOnly \.newSetButton\{border:0!important;background:transparent!important/);
@@ -2161,7 +2161,7 @@ test("D902: upload starts with the choices and primary workflow cards remain dis
   assert.doesNotMatch(app,/Drop your designs here|Build one focused batch|Before uploading/);
   assert.match(app,/className="upload-actions"[\s\S]{0,1800}className="upload-guidance batch-limits file-reminder"/);
   assert.match(css,/:is\(\.step-card,\.factory-panel,\.factory-form-card,\.design-artwork-card,\.final-listing-card,\.listing-card,\.recipe-tile,\.everything-else\)\{[\s\S]{0,180}border-color:#d4c2cc;[\s\S]{0,180}box-shadow:/);
-  assert.match(css,/\.designs-step:not\(\.finish-mode\) \.upload-actions\{gap:16px;margin:0 0 16px\}/);
+  assert.match(css,/\.designs-step:not\(\.finish-mode\) \.upload-actions\{gap:16px;margin:0 0 14px\}/);
 });
 
 test("D903: the Images page describes only work performed on that page",async()=>{
