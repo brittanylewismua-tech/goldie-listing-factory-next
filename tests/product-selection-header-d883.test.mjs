@@ -12,13 +12,13 @@ test("D883: product cards select directly and do not contain a second Choose con
 });
 
 test("D883: a chosen product becomes the header and the library recedes",()=>{
-  assert.match(app,/title={activeBundle\?\.name\|\|activeRecipe\?\.name\|\|"Choose a product"}/);
+  assert.match(app,/title={showProductLibrary\?"Choose a product":activeBundle\?\.name\|\|activeRecipe\?\.name\|\|"Choose a product"}/);
   assert.match(tools,/\(!activeId\|\|showLibrary\)/);
   assert.match(tools,/setShowLibrary\(false\)/);
 });
 
 test("D883: selected-product header offers both safe management paths",()=>{
-  assert.match(app,/headerActions=\{productSelected\|\|bundleSelected\?<><button type="button" onClick=\{\(\)=>setShowProductLibrary\(true\)\}>Choose a different product<\/button>/);
+  assert.match(app,/headerActions=\{\(productSelected\|\|bundleSelected\)&&!showProductLibrary\?<><button type="button" onClick=\{\(\)=>setShowProductLibrary\(true\)\}>Choose a different product<\/button>/);
   assert.match(app,/>Remove from this batch<\/button>/);
   assert.match(tools,/showLibrary\?:boolean/);
 });

@@ -1116,23 +1116,14 @@ test("card rows keep a fixed order regardless of state — D338", async () => {
 /* D345 · Refresh must change nothing. D301 remembered the selected RECIPE only,
    so refreshing with a bundle selected restored whichever single product had
    been chosen last. A bundle is a selection too. */
-test("a refresh restores a selected bundle, not the last product — D345", async () => {
+test("a fresh batch restores neither a prior bundle nor a prior product — D887", async () => {
   const app = await read("app/listing-factory-app.tsx");
-  assert.match(app, /window\.localStorage\.setItem\("goldie-active-bundle"/,
-    "choosing a bundle remembers it");
-/* D354 · The clear lives in chooseRecipe, not selectRecipe. selectRecipe is the
-     shared loader — useBundle calls it for the bundle's first product, so
-     clearing there erased the bundle key a moment after useBundle wrote it and
-     left a breadcrumb pointing at that first member. That is what kept
-     restoring a single product. */
-  assert.match(app, /try\{window\.localStorage\.removeItem\("goldie-active-bundle"\)\}catch\{[^}]*\}setActiveBundle\(null\)/,
-    "choosing a single product is what forgets a bundle");
-  assert.doesNotMatch(app, /setItem\("goldie-active-recipe",recipe\.id\);window\.localStorage\.removeItem\("goldie-active-bundle"\)/,
-    "the shared loader must not decide what was selected");
-  assert.match(app, /if\(bundle&&\(saved\.recipeIds\|\|\[\]\)\.length\)\{await useBundle\(bundle,saved\.recipeIds\|\|\[\]\);return\}/,
-    "the bundle is restored through the same path that selects one normally");
-  assert.match(app, /activeRecipe\|\|activeBundle\|\|signedIn!==true\)return;/,
-    "and a restore never fights a selection already made");
+  assert.doesNotMatch(app, /localStorage\.getItem\("goldie-active-(?:recipe|bundle)"\)/,
+    "opening a fresh page must not read a previous selection");
+  assert.doesNotMatch(app, /localStorage\.setItem\("goldie-active-(?:recipe|bundle)"/,
+    "choosing in one batch must not silently choose for the next batch");
+  assert.match(app, /restoreBatchById\(id,url\.searchParams\.get\("step"\)/,
+    "an explicit batch resume still restores its saved product or bundle");
 });
 
 /* D346/D347 · Two labels that explained instead of showed. */

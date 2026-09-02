@@ -6824,19 +6824,12 @@ test("a step URL with no batch resumes or asks — never silently starts over �
   assert.match(app, /batch\.status!=="published"&&batch\.status!=="archived"/);
 });
 
-test("a remembered product Goldie cannot open never blocks the page — D659", async () => {
+test("a fresh batch never attempts to reopen a remembered product — D887", async () => {
   const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
-
-  assert.match(app, /const restoringRememberedProduct=useRef\(false\);/);
-  assert.match(app, /if\(match\)\{restoringRememberedProduct\.current=true;try\{await selectRecipe\(match\)\}finally\{restoringRememberedProduct\.current=false\}\}/);
-  // The modal is skipped only on that path, so a product she chose still gets one.
-  const guard = app.slice(app.indexOf("if (!response.ok || !result.product){"), app.indexOf("if (!response.ok || !result.product){") + 700);
-  assert.ok(guard.indexOf("restoringRememberedProduct.current") < guard.indexOf("setBlockingModal"),
-    "the restore path must return before the modal is raised");
-  assert.match(app, /setRestoredProductNotice\(/);
-  assert.match(app, /\{restoredProductNotice&&<p className="batch-restore-notice" role="status">/);
-  // And the dead selection is cleared, so it cannot repeat on the next load.
-  assert.match(app, /window\.localStorage\.removeItem\("goldie-active-recipe"\)\}catch\{\/\* private mode \*\/\}\n?\s*setActiveRecipe\(null\)/);
+  assert.doesNotMatch(app, /restoringRememberedProduct|restoredProductNotice/);
+  assert.doesNotMatch(app, /localStorage\.getItem\("goldie-active-recipe"\)/);
+  assert.match(app, /if \(!response\.ok \|\| !result\.product\)\{[\s\S]{0,700}setBlockingModal/,
+    "a product explicitly chosen by the seller still reports why it cannot open");
 });
 
 test("bundle DPI and variant totals cover every product — D659", async () => {

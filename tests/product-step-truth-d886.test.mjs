@@ -12,6 +12,9 @@ test("D886: a fresh product step shows the library and never chooses the first r
   assert.match(tools,/reachable\.length > 0 && \(!activeId\|\|showLibrary\)/);
   assert.doesNotMatch(tools,/setActiveId\(recipes\[0\]/);
   assert.doesNotMatch(app,/setActiveRecipe\(recipes\[0\]/);
+  assert.doesNotMatch(app,/localStorage\.getItem\("goldie-active-recipe"\)/,"a fresh page must not restore the previously used product");
+  assert.doesNotMatch(app,/localStorage\.getItem\("goldie-active-bundle"\)/,"a fresh page must not restore the previously used bundle");
+  assert.match(app,/restoreBatchById\(id,url\.searchParams\.get\("step"\)/,"an explicit saved-batch URL must still restore its product");
 });
 
 test("D886: the selected header uses the saved flatlay and owns its management",()=>{
@@ -21,6 +24,12 @@ test("D886: the selected header uses the saved flatlay and owns its management",
   assert.match(panel,/headerActions \? <div className="factory-panel-actions">/);
   assert.match(app,/headerActions=.*Choose a different product/);
   assert.doesNotMatch(tools,/selected-product-actions/);
+});
+
+test("D887: selected-product management disappears while the product library is open",()=>{
+  assert.match(app,/headerActions=\{\(productSelected\|\|bundleSelected\)&&!showProductLibrary\?/);
+  assert.match(app,/title=\{showProductLibrary\?"Choose a product"/);
+  assert.match(app,/description=\{showProductLibrary\?"Select one to continue"/);
 });
 
 test("D886: pricing waits for finished draft costs",()=>{

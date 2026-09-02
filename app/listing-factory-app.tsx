@@ -1866,15 +1866,6 @@ export default function ListingFactoryApp() {
       })();
       return;
     }void restoreBatchById(id,url.searchParams.get("step"),url.searchParams.get("phase")).then(restored=>{if(restored)return;setRestoreNotice("That batch could not be opened - it may have been deleted. Nothing else was lost; you can pick up from Batch History or start a new batch.");const clean=new URL(window.location.href);clean.searchParams.delete("batch");clean.searchParams.delete("step");clean.searchParams.delete("phase");window.history.replaceState({},"",clean.toString());})},[]);
-  /* D301 · Restore the remembered product on load. The recipe list lives in
-     factory-tools, not here, so this asks the API rather than referencing a
-     `recipes` variable that does not exist in this component. Guarded so it can
-     never fight the two things that legitimately own the selection: a ?batch=
-     resume, and a product already chosen in this session. */
-  const productRestoreAttempted=useRef(false);
-  /* D659 · Set only while a REMEMBERED product is being restored, so the very
-     same failure still opens a modal when she chose the product herself. */
-  const restoringRememberedProduct=useRef(false);
   /* D659 · The store was recorded on the server the moment a product loaded,
      but the card that shows it lives in factory-tools and only re-reads the
      recipe list on its own schedule - so the label appeared on the NEXT page
@@ -1883,47 +1874,6 @@ export default function ListingFactoryApp() {
   function announceShop(recipeId:string,title:string,shopId:number){
     window.dispatchEvent(new CustomEvent("goldie-recipe-shop",{detail:{recipeId,title,shopId}}));
   }
-  const [restoredProductNotice,setRestoredProductNotice]=useState("");
-  useEffect(()=>{
-    if(productRestoreAttempted.current||restoringBatch||activeRecipe||activeBundle||signedIn!==true)return;
-    if(new URL(window.location.href).searchParams.get("batch"))return;
-    let remembered="";let rememberedBundle="";
-    try{
-      remembered=window.localStorage.getItem("goldie-active-recipe")||"";
-      rememberedBundle=window.localStorage.getItem("goldie-active-bundle")||"";
-    }catch{/* private mode */}
-    if(!remembered&&!rememberedBundle)return;
-    productRestoreAttempted.current=true;
-    void(async()=>{
-      try{
-        /* D345 · A remembered bundle wins: it is the larger selection, and
-           choosing one clears the single-product key, so both being present
-           means the bundle was chosen more recently. */
-        if(rememberedBundle){
-          const saved=JSON.parse(rememberedBundle) as {id?:string;recipeIds?:string[]};
-          const bundles=await fetch("/api/product-bundles").then(r=>r.ok?r.json():null).catch(()=>null) as {bundles?:ProductBundle[]}|null;
-          const bundle=(bundles?.bundles||[]).find(item=>item.id===saved.id);
-          if(bundle&&(saved.recipeIds||[]).length){await useBundle(bundle,saved.recipeIds||[]);return}
-          window.localStorage.removeItem("goldie-active-bundle");
-        }
-        if(!remembered)return;
-        const response=await fetch("/api/product-recipes");
-        if(!response.ok)return;
-        const payload=await response.json() as {recipes?:Recipe[]};
-        const match=(payload.recipes||[]).find(recipe=>recipe.id===remembered);
-        /* D659 · A remembered product that Goldie can no longer use greeted her
-           with "REQUIRED BEFORE CONTINUING" on EVERY page load - measured live
-           with "Generic brand", a product never published to Etsy. She had not
-           asked for it; the page simply restored it and then refused it. A
-           modal is for something the seller just did. Restoring is something
-           Goldie did, so a failure there deselects quietly and explains itself
-           on the page. */
-        if(match){restoringRememberedProduct.current=true;try{await selectRecipe(match)}finally{restoringRememberedProduct.current=false}}
-        else window.localStorage.removeItem("goldie-active-recipe");
-      }catch{/* a failed restore must never block the page */}
-    })();
-  },[restoringBatch,activeRecipe,activeBundle,signedIn]);
-
   useEffect(()=>{void fetch("/api/etsy").then(response=>response.json()).then((result:{shops?:{shopId:number;shopName:string;active:boolean}[]})=>setEtsyShops(result.shops||[])).catch(()=>undefined)},[]);
   useEffect(()=>{setLocalPreview(["localhost","127.0.0.1"].includes(window.location.hostname));fetch("/api/account").then(response=>response.json()).then((result:{signedIn?:boolean;name?:string|null;initials?:string|null})=>{setSignedIn(Boolean(result.signedIn));setAccountName(result.name||null);setAccountInitials(result.initials||null)}).catch(()=>setSignedIn(null))},[]);
   useEffect(()=>{if(signedIn!==true||publishing)return;const jobId=window.localStorage.getItem("goldie-active-publish-job");if(jobId)void monitorPublishJob(jobId,true);
@@ -2198,7 +2148,6 @@ export default function ListingFactoryApp() {
        useBundle wrote it — and left a single-product breadcrumb pointing at the
        first member, which is what the next refresh restored. The two callers own
        that decision now: chooseRecipe clears the bundle, useBundle writes it. */
-    try{window.localStorage.setItem("goldie-active-recipe",recipe.id)}catch{/* private mode */}
     setActiveRecipe(recipe);setPrintifyImageIndices(recipe.printifyImageIndices||[]);setEtsyShippingProfileId(Number(recipe.etsyShippingProfileId)||0);/* D394 - A saved product already carries the seller's profit target and their
        chosen shipping profile. Asking them to approve it again on every batch is a
        question already answered, and it is what left a card of ticks sitting behind
@@ -2293,7 +2242,6 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
     setActiveBundle(bundle);setBundleRecipes(recipes);setBundleIndex(0);const first=await selectRecipe(recipes[0]);if(!first)return false;/* D354 · Written AFTER selectRecipe, because selectRecipe writes the
        single-product key and used to clear this one. Refresh must land on the
        bundle, not on its first member. */
-    try{window.localStorage.setItem("goldie-active-bundle",JSON.stringify({id:bundle.id,recipeIds:recipes.map(item=>item.id)}))}catch{/* private mode */}
     /* D373 - The other bundle members were fetched one after another, each with a
        90 second deadline, and nothing was written to state until the whole loop
        finished. On a three-product bundle that left "Loading Gildan Tee..." and
@@ -3735,13 +3683,6 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
         }
       }
       if (!response.ok || !result.product){
-        if(restoringRememberedProduct.current){
-          const why=(result.issues&&result.issues[0])||result.error||"Goldie could not open it.";
-          setRestoredProductNotice(`${activeRecipeRef.current?.name||"The product you used last"} could not be reopened. ${why} Choose a product below to start.`);
-          try{window.localStorage.removeItem("goldie-active-recipe")}catch{/* private mode */}
-          setActiveRecipe(null);setTemplateDetails(null);setTemplate("");
-          throw new Error(result.error||"The product could not be loaded.");
-        }
         setBlockingModal({title:result.title||"This Printify product isn’t ready yet.",issues:result.issues?.length?result.issues:[result.error||"The product could not be loaded."],copy:response.status===409?"Connect Printify and Etsy to the same shop, then load this product again. Connections is in the sidebar.":"Fix these items in Printify, save the product, then submit the same link again."});throw new Error(result.error || "The product could not be loaded.")}
       const available=new Set((result.product.colorOptions||[]).filter(color=>color.available).map(color=>color.id));let sessionColors:number[]=[];try{sessionColors=JSON.parse(window.localStorage.getItem(`goldie-colors-${result.product.id}`)||"[]") as number[]}catch{/* Ignore an invalid browser preference. */}const remembered=rememberedColorIds.filter(id=>available.has(id));const session=sessionColors.filter(id=>available.has(id));/* D213 · Printify's template settings are not the seller's choices.
    The seller sets colors and sizes ONCE, in the saved-product setup, and that
@@ -4300,9 +4241,6 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
           summary={heroSummary}
         >
           {restoreNotice&&<p className="batch-restore-notice" role="status">{restoreNotice}</p>}
-          {/* D659 · Where the blocking modal used to be. Same information, on
-              the page, next to the products she can actually choose. */}
-          {restoredProductNotice&&<p className="batch-restore-notice" role="status">{restoredProductNotice}</p>}
           {/* D659 · More than one batch is open, so Goldie asks instead of
               picking one and instead of pretending there is nothing to resume. */}
           {resumeChoices.length>1&&<section className="batch-resume-choice" aria-label="Choose which batch to resume"><b>Which batch do you want to continue?</b><span>You have {resumeChoices.length} batches open. Goldie will not guess.</span><ul>{resumeChoices.map(choice=><li key={choice.id}><button type="button" onClick={()=>{setResumeChoices([]);setRestoringBatch(true);const target=new URL(window.location.href);target.searchParams.set("batch",choice.id);window.history.replaceState({},"",target);void restoreBatchById(choice.id,target.searchParams.get("step"),target.searchParams.get("phase"))}}><b>{choice.name}</b><small>{choice.drafts?`${choice.drafts} ${choice.drafts===1?"draft":"drafts"}`:"No drafts yet"}</small></button></li>)}</ul><button type="button" className="secondary-action" onClick={()=>setResumeChoices([])}>Start something new instead</button></section>}
@@ -4474,7 +4412,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
 
           <div className={`product-step workflow-panel ${workflowStep==="setup"?"active-panel":"hidden-panel"}`}>{/* D763 · Panel 01. The facets below number from 02, and until now
             there was no 01 - the picker sat in the old card while the settings
-            under it had already become panels. */}<FactoryPanel index={1} title={activeBundle?.name||activeRecipe?.name||"Choose a product"} description={productSelected||bundleSelected?"Selected for this batch":"Select one to continue"} state={failedBundleNames().length?"Needs a look":productSelected||bundleSelected?undefined:"Needed"} headerActions={productSelected||bundleSelected?<><button type="button" onClick={()=>setShowProductLibrary(true)}>Choose a different product</button><button type="button" className="remove-product-from-batch" onClick={()=>void changeProduct()}>Remove from this batch</button></>:undefined} tone={failedBundleNames().length?"attention":productSelected||bundleSelected?"done":"attention"} open><SavedWorkflow bundleChosen={Boolean(activeBundle&&bundleRecipes.length>1)} savedRevision={savedRevision} connected={connected||localPreview} templateUrl={template} templateVerified={templateLoaded} loadingTemplate={loadingTemplate} suggestedProductName={templateDetails?[templateDetails.brand,templateDetails.model].filter(Boolean).join(" ").trim()||templateDetails.blueprintTitle||"":""} selectedProductId={activeBundle?`bundle:${activeBundle.id}`:activeRecipe?.id||""} showLibrary={showProductLibrary} onShowLibraryChange={setShowProductLibrary} selectedSummary={templateDetails?<div className="template-proof recipe-proof selected-product-header">{/* D834 · This drew the words "YOUR ART" in a box. The product's own
+            under it had already become panels. */}<FactoryPanel index={1} title={showProductLibrary?"Choose a product":activeBundle?.name||activeRecipe?.name||"Choose a product"} description={showProductLibrary?"Select one to continue":productSelected||bundleSelected?"Selected for this batch":"Select one to continue"} state={failedBundleNames().length?"Needs a look":(productSelected||bundleSelected)&&!showProductLibrary?undefined:"Needed"} headerActions={(productSelected||bundleSelected)&&!showProductLibrary?<><button type="button" onClick={()=>setShowProductLibrary(true)}>Choose a different product</button><button type="button" className="remove-product-from-batch" onClick={()=>void changeProduct()}>Remove from this batch</button></>:undefined} tone={failedBundleNames().length?"attention":productSelected||bundleSelected?"done":"attention"} open><SavedWorkflow bundleChosen={Boolean(activeBundle&&bundleRecipes.length>1)} savedRevision={savedRevision} connected={connected||localPreview} templateUrl={template} templateVerified={templateLoaded} loadingTemplate={loadingTemplate} suggestedProductName={templateDetails?[templateDetails.brand,templateDetails.model].filter(Boolean).join(" ").trim()||templateDetails.blueprintTitle||"":""} selectedProductId={activeBundle?`bundle:${activeBundle.id}`:activeRecipe?.id||""} showLibrary={showProductLibrary} onShowLibraryChange={setShowProductLibrary} selectedSummary={templateDetails?<div className="template-proof recipe-proof selected-product-header">{/* D834 · This drew the words "YOUR ART" in a box. The product's own
                    Printify flatlay is available here - pickProductPhoto scores the
                    previews and returns the best one - and showing it is what the
                    panel is for: she is confirming which garment this batch prints
