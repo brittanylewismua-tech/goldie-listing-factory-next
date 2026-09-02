@@ -431,7 +431,7 @@ test("the setup step has exactly one forward control, and it gates every section
      forward control therefore belongs after that artwork and advances only to
      the Images/draft-creation step. It remains in the persistent footer, never
      inside the selected-product card. */
-  assert.match(page, /\{workflowStep==="setup"&&<FactoryFooter status=[\s\S]*?><button className="workflow-next" disabled=\{!designsFinished\} onClick=\{\(\)=>goToStep\("designs"\)\}>/,
+  assert.match(page, /\{workflowStep==="setup"&&<FactoryFooter status=[\s\S]*?><button className="workflow-next" disabled=\{!setupForwardReady\} onClick=\{\(\)=>goToStep\("designs"\)\}>/,
     "the setup step must expose one gated way forward after artwork is ready");
   // the real gate must keep naming what is missing
   /* D383 · The forward button used to relabel itself with whatever was missing
