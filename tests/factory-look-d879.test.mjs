@@ -7,7 +7,7 @@ const read = name => readFile(new URL(name, root), "utf8");
 
 test("D879: the rail gear is texture, not a foreground illustration", async () => {
   const css = await read("app/interface-v2.css");
-  assert.match(css, /fill-opacity%3D%27\.13%27/);
+  assert.match(css, /fill-opacity%3D%27\.19%27/);
   assert.doesNotMatch(css, /fill-opacity%3D%27\.30%27/);
 });
 
