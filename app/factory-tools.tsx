@@ -157,7 +157,7 @@ export function SavedWorkflow(props: WorkflowProps) {
   /* D860 · One answer for every surface. This was five separate derivations
      living next to each other, and the bundle CREATOR quietly kept using the
      unscoped list - see app/bank-scope.ts for what that cost. */
-  const { reachable, elsewhere, usableBundles, bundlesElsewhere, hiddenCount, hiddenStores, blockedMembers } = scopeBank(recipes, bundles);
+  const { reachable, usableBundles, hiddenCount, blockedMembers } = scopeBank(recipes, bundles);
   const bundleBlockers = (bundle: ProductBundle) => {
     const away = blockedMembers(bundle);
     return { away, stores: [...new Set(away.map(recipe => recipe.printifyShopTitle || "another store"))] };
@@ -293,15 +293,6 @@ export function SavedWorkflow(props: WorkflowProps) {
     {activeId&&<div className="selected-summary-block">{props.selectedSummary}</div>}
     {/* Once a bundle is the current selection its members are already listed above,
         so re-showing the bundle grid underneath just offered the same bundle again. */}
-    {hiddenCount>0&&(!activeId||showLibrary)&&<p className="recipe-other-store">
-      <b>{hiddenCount} more saved {hiddenCount===1?"item":"items"}</b>
-      {elsewhere.length>0&&bundlesElsewhere.length>0
-        ? ` (${elsewhere.length} ${elsewhere.length===1?"product":"products"} and ${bundlesElsewhere.length} ${bundlesElsewhere.length===1?"bundle":"bundles"})`
-        : ""}
-      {" "}under {hiddenStores.join(" and ")}.
-      {" "}Those publish to a different Etsy shop, so they are not offered while you are in {activeShop?.shopName||"this shop"}.
-      {" "}<a href="/listing-factory?step=connect">Switch shop</a>
-    </p>}
     {usableBundles.length>0&&(!activeId||showLibrary)&&<><div className="recipe-library-head bundle-card-heading"><span>{usableBundles.length} saved product {usableBundles.length===1?"bundle":"bundles"}</span>{/* D304 · "Bundles are selected exactly like individual products" removed — it described the mechanism, not anything the seller needs to decide. */}</div><div className="recipe-grid unified-bundle-grid">{usableBundles.map(bundle=>{const included=bundle.recipeIds.map(id=>recipes.find(recipe=>recipe.id===id)).filter(Boolean) as Recipe[],selecting=pendingAction===`bundle:${bundle.id}`,selected=activeId===`bundle:${bundle.id}`,blocked=bundleBlockers(bundle);return <article className={`recipe-tile bundle-as-product ${selected?"selected":""} ${blocked.away.length?"other-shop":""}`} aria-busy={selecting} key={bundle.id}><button className="recipe-use" title={`Choose ${bundle.name}`} aria-label={`Choose ${bundle.name}`} disabled={included.length<2||blocked.away.length>0||Boolean(pendingAction)} onClick={()=>void chooseBundle(bundle)}><span className="recipe-icon">{included.length}</span><span className="recipe-copy"><b>{bundle.name}</b><small>{selecting?<span className="bundle-loading"><span className="goldie-spinner" aria-hidden="true"/>Preparing {included.length} products</span>:included.map(recipe=>recipe.name).join(" · ")||"Saved products missing"}</small>{selecting?<em>Preparing bundle…</em>:blocked.away.length?<em>Different Etsy shop</em>:null}
       {blocked.away.length>0&&<small className="bundle-other-shop">{blocked.away.length===1?`${blocked.away[0].name} is`:`${blocked.away.length} of these are`} saved under {blocked.stores.join(" and ")}, which publishes to a different Etsy shop{activeShop?` than ${activeShop.shopName}`:""}.</small>}</span></button><button className="edit-recipe" disabled={Boolean(pendingAction)} onClick={()=>openBundle(bundle)}>Edit</button><button className="delete-recipe" disabled={Boolean(pendingAction)} aria-label={`Delete ${bundle.name}`} title="Delete bundle" onClick={()=>void removeBundle(bundle)}>Delete</button></article>})}</div></>}
     {!recipes.length && <div className="first-recipe-callout"><span>＋</span><div><b>Create your first saved product</b><p>Name it and connect the completed product from Printify. That is all this step needs.</p></div></div>}

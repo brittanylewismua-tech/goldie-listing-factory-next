@@ -79,12 +79,12 @@ test("the route asks the resolver rather than keeping its own copy", () => {
   assert.match(route, /const reach = reachResolver\(active\?\.shop_id \|\| 0, proofs\.results \|\| \[\]\);/);
 });
 
-test("the products scoped away are offered as a count and a way to switch", () => {
+test("products scoped away do not clutter the product picker", () => {
   const tools = readFileSync(new URL("../app/factory-tools.tsx", import.meta.url), "utf8");
   const scope = readFileSync(new URL("../app/bank-scope.ts", import.meta.url), "utf8");
   assert.match(scope, /const elsewhere = recipes\.filter\(recipe => recipe\.reach === "away"\);/);
-  assert.match(tools, /not offered while you are in/);
-  assert.match(tools, /Switch shop/);
+  assert.doesNotMatch(tools, /not offered while you are in/);
+  assert.doesNotMatch(tools, /Switch shop/);
 });
 
 test("a bundle from another shop is taken out of the grid, not greyed out in it — D859", () => {
@@ -109,13 +109,13 @@ test("a bundle from another shop is taken out of the grid, not greyed out in it 
   assert.match(tools, /recipe-grid unified-bundle-grid">\{usableBundles\.map/);
 });
 
-test("one line accounts for every hidden product and bundle — D859", () => {
+test("hidden inventory stays scoped without adding an explanatory card — D889", () => {
   const tools = readFileSync(new URL("../app/factory-tools.tsx", import.meta.url), "utf8");
-  /* Hiding work without saying how much was hidden, or where it went, is how a
-     seller concludes Goldie lost it. */
+  /* The account menu owns shop identity; the product picker only shows choices
+     available to the active shop. */
   const scope = readFileSync(new URL("../app/bank-scope.ts", import.meta.url), "utf8");
   assert.match(scope, /const hiddenCount = elsewhere\.length \+ bundlesElsewhere\.length;/);
   assert.match(scope, /hiddenStores = \[\.\.\.new Set\(\[/);
-  assert.match(tools, /\{hiddenCount>0&&\(!activeId\|\|showLibrary\)&&<p className="recipe-other-store">/);
-  assert.match(tools, /Switch shop/);
+  assert.doesNotMatch(tools, /recipe-other-store/);
+  assert.doesNotMatch(tools, /Switch shop/);
 });

@@ -41,6 +41,16 @@ test("D888: the empty picker does not repeat its state and shop metadata is quie
   assert.match(approved, /\.recipe-card \.recipe-copy \.recipe-shop\{[\s\S]{0,350}font-size:10px!important;font-weight:500!important/);
 });
 
+test("D889: cross-shop inventory adds no picker clutter",()=>{
+  assert.doesNotMatch(tools,/recipe-other-store/);
+  assert.doesNotMatch(tools,/Those publish to a different Etsy shop/);
+  assert.doesNotMatch(app,/>Switch shop<\/a>/);
+  assert.match(app,/sign-out\?return_to=%2Flisting-factory%3Fstep%3Dconnect/);
+  assert.match(app,/etsyShops\.length>0&&<div className="factory-account-shops"/);
+  assert.match(css,/\.recipe-card \.bundle-card-heading\{margin-top:28px!important;margin-bottom:10px!important\}/);
+  assert.match(css,/\.recipe-card \.unified-bundle-grid\{margin-top:0!important;margin-bottom:30px!important\}/);
+});
+
 test("D886: pricing waits for finished draft costs",()=>{
   assert.match(app,/ready\.facets\.filter\(facet=>facet\.name!=="profit"\)/);
   assert.match(app,/Final Printify production cost/);

@@ -82,7 +82,7 @@ test("a bundle naming a product that no longer exists is not treated as away", (
 
 test("every surface reads the one scoped list — D860", () => {
   const tools = readFileSync(new URL("../app/factory-tools.tsx", import.meta.url), "utf8");
-  assert.match(tools, /const \{ reachable, elsewhere, usableBundles, bundlesElsewhere, hiddenCount, hiddenStores, blockedMembers \} = scopeBank\(recipes, bundles\);/);
+  assert.match(tools, /const \{ reachable, usableBundles, hiddenCount, blockedMembers \} = scopeBank\(recipes, bundles\);/);
 
   /* The three surfaces she found still on the unscoped list. */
   assert.match(tools, /if\(open&&!bundleForm&&reachable\.length>=2&&!pendingAction\)openBundle\(\)/, "availability check");
