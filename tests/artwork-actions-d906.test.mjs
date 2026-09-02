@@ -10,7 +10,7 @@ test("D906: no pre-draft control pretends it can change product colors",()=>{
 });
 
 test("D906: the alternate-artwork action says exactly what it does",()=>{
-  assert.match(app,/Use a different design on some colors/);
+  assert.match(app,/Use different artwork on some colors/);
   assert.match(app,/addArtworkVersion\(file\.id,primarySide,event\.target\.files\)/);
   assert.doesNotMatch(app,/Add another front colorway/);
 });

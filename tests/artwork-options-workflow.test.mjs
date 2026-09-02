@@ -19,7 +19,7 @@ test("the controls distinguish primary colour artwork from every secondary print
   const [app,assignment] = await Promise.all([read("../app/listing-factory-app.tsx"),read("../app/artwork-assignment.ts")]);
   assert.match(app, /Artwork by color/);
   assert.match(app, /Every selected color gets exactly one \{printSideLabel\(primarySide\)/);
-  assert.match(app, /artworkVersions\|\|\[\]\)\.every\(artwork=>!artwork\.originalUnavailable&&artwork\.file\?\.size&&artwork\.colorIds\.length>0\)/, "unused or missing secondary artwork must hold the draft gate");
+  assert.match(app, /artworkVersions\|\|\[\]\)\.every\(artwork=>!artwork\.originalUnavailable&&artwork\.file\?\.size&&artwork\.colorIds\.length>0&&\(artwork\.productIds\?\.length\?\?1\)>0\)/, "unused, unassigned, or missing secondary artwork must hold the draft gate");
   assert.match(app, /This saved Printify product has one print area/);
   assert.match(app, /addArtworkVersion\(file\.id,primarySide/);
   assert.match(app, /addArtworkVersion\(file\.id,side/);
