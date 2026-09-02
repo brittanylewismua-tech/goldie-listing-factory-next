@@ -657,7 +657,8 @@ test("D222: a product cannot join a bundle until it has been set up", async () =
    * an unconfigured product reached a batch and had to be answered for there —
    * the thing the recipe exists to prevent. */
   assert.match(tools, /export function recipeIsSetUp\(recipe: Recipe\)/);
-  assert.match(tools, /return Boolean\(\(recipe\.defaultColorIds \|\| \[\]\)\.length\) && Boolean\(\(recipe\.defaultSizeIds \|\| \[\]\)\.length\);/);
+  assert.match(tools, /recipe\.requiresColorSelection===false\|\|Boolean\(\(recipe\.defaultColorIds\|\|\[\]\)\.length\)/);
+  assert.match(tools, /recipe\.requiresSizeSelection===false\|\|Boolean\(\(recipe\.defaultSizeIds\|\|\[\]\)\.length\)/);
   assert.match(tools, /bundleDisabled=bundleForm&&\(!recipeIsSetUp\(recipe\)\|\|/, "the card is disabled");
   assert.match(tools, /Finish setting up \$\{recipe\.name\} before adding it to a bundle/, "and the card says why in its tooltip");
 
@@ -670,6 +671,8 @@ test("D222: a product cannot join a bundle until it has been set up", async () =
   assert.equal(recipeIsSetUp({ defaultSizeIds: [2] }), false, "sizes alone is not set up");
   assert.equal(recipeIsSetUp({}), false);
   assert.equal(recipeIsSetUp({ defaultColorIds: [], defaultSizeIds: [] }), false);
+  assert.equal(recipeIsSetUp({ requiresColorSelection: false, defaultSizeIds: [2] }), true, "a mug without a colour axis only needs its real size axis");
+  assert.equal(recipeIsSetUp({ requiresColorSelection: false, requiresSizeSelection: false }), true, "a product with neither choice axis is already configured by its Printify template");
 });
 
 test("D222: the Images page continues to Listing, not past it to Publish", async () => {

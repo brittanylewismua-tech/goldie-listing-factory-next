@@ -12,6 +12,7 @@ export type Pricing = { targetProfit: number; etsyFeePercent: number; fixedFee: 
    across listings in the same batch. */
 export type RecipeEtsyDefaults = Record<string, string | number | null>;
 export type Recipe = { id: string; name: string; templateUrl: string; description: string; defaultTitle: string; defaultMockupTheme?:string; mockupIds?:string[]; setupComplete?:boolean; defaultProfitTarget?:number;wholeNumberPricing?:boolean;variantPrices?:Record<string,number>; keywordListId?:string; printifyImageIndices?:number[]; normalizePadding?:boolean;etsyShippingProfileId?:number;defaultColorIds?:number[];defaultSizeIds?:number[];etsyDefaults?:RecipeEtsyDefaults;printifyShopTitle?:string;printifyShopId?:number;
+  requiresColorSelection?:boolean;requiresSizeSelection?:boolean;
   /* D835 · Whether this product's Printify store can publish to the Etsy shop
      the seller is working in. "away" means a proof says it publishes somewhere
      else, so the product is filed under its own store rather than offered. */
@@ -25,7 +26,9 @@ export type ProductBundle = { id:string;name:string;recipeIds:string[] };
  * unconfigured product reached a batch and had to be answered for there, which
  * is the thing the recipe exists to prevent. */
 export function recipeIsSetUp(recipe: Recipe) {
-  return Boolean((recipe.defaultColorIds || []).length) && Boolean((recipe.defaultSizeIds || []).length);
+  const colorsReady=recipe.requiresColorSelection===false||Boolean((recipe.defaultColorIds||[]).length);
+  const sizesReady=recipe.requiresSizeSelection===false||Boolean((recipe.defaultSizeIds||[]).length);
+  return colorsReady&&sizesReady;
 }
 
 
@@ -46,9 +49,9 @@ export function recipeSummary(recipe: Recipe): string {
      selected. A recipe with sizes but no colours is half-configured, and the
      card is where that has to be visible. */
   if (colors) parts.push(`${colors} color${colors === 1 ? "" : "s"}`);
-  else if (sizes) parts.push("colors not set");
+  else if (recipe.requiresColorSelection!==false&&sizes) parts.push("colors not set");
   if (sizes) parts.push(`${sizes} size${sizes === 1 ? "" : "s"}`);
-  else if (colors) parts.push("sizes not set");
+  else if (recipe.requiresSizeSelection!==false&&colors) parts.push("sizes not set");
   /* Deliberately NOT the saved mockup theme. Whether a set fits depends on its
    * surfaceKind against the product's blueprint title, and this screen never
    * loads either — it would take one Printify fetch per card. Two of the three
@@ -341,7 +344,7 @@ export function SavedWorkflow(props: WorkflowProps) {
          Adding is the case where a seller is most likely to have clicked by
          mistake. */}
 {editing&&<button type="button" className="secondary-action" onClick={()=>{setEditing(false);setEditingId("");setName("");setKeywordListId("");setMessage("")}}>Cancel</button>}</div>}
-    {activeId&&!bundleForm&&<div className="selected-summary-block">{props.selectedSummary}</div>}
+    {activeId&&!bundleForm&&<div className="selected-summary-block">{props.selectedSummary??(props.loadingTemplate?<div className="selected-product-loading" role="status"><span className="goldie-spinner" aria-hidden="true"/>Loading product details…</div>:null)}</div>}
     {/* Once a bundle is the current selection its members are already listed above,
         so re-showing the bundle grid underneath just offered the same bundle again. */}
     {!editing&&usableBundles.length>0&&(!activeId||showLibrary)&&<><div className="recipe-library-head bundle-card-heading"><span>Saved bundles</span>{/* D304 · "Bundles are selected exactly like individual products" removed — it described the mechanism, not anything the seller needs to decide. */}</div><div className="recipe-grid unified-bundle-grid">{usableBundles.map(bundle=>{const included=bundle.recipeIds.map(id=>recipes.find(recipe=>recipe.id===id)).filter(Boolean) as Recipe[],selecting=pendingAction===`bundle:${bundle.id}`,selected=activeId===`bundle:${bundle.id}`,blocked=bundleBlockers(bundle);return <article className={`recipe-tile bundle-as-product ${selected?"selected":""} ${blocked.away.length?"other-shop":""}`} aria-busy={selecting} key={bundle.id}><button className="recipe-use" title={`Choose ${bundle.name}`} aria-label={`Choose ${bundle.name}`} disabled={included.length<2||blocked.away.length>0||Boolean(pendingAction)} onClick={()=>void chooseBundle(bundle)}><span className="recipe-icon">{included.length}</span><span className="recipe-copy"><b>{bundle.name}</b><small>{selecting?<span className="bundle-loading"><span className="goldie-spinner" aria-hidden="true"/>Preparing {included.length} products</span>:included.map(recipe=>recipe.name).join(" · ")||"Saved products missing"}</small>{selecting?<em>Preparing bundle…</em>:blocked.away.length?<em>Different Etsy shop</em>:null}

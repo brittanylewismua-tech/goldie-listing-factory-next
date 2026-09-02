@@ -6893,10 +6893,11 @@ test("the mockup row cannot say none while scenes are saved — D659", async () 
     "the row counted rendered mockups only, and read 'None yet' over two saved scenes");
 });
 
-test("setupComplete cannot be true without both colours and sizes — D659", async () => {
+test("setupComplete cannot be true without every axis the product actually exposes — D659/D927", async () => {
   const route = await readFile(new URL("../app/api/product-recipes/route.ts", import.meta.url), "utf8");
 
-  assert.match(route, /if \(merged\.setupComplete && \(!\(merged\.defaultColorIds \|\| \[\]\)\.length \|\| !\(merged\.defaultSizeIds \|\| \[\]\)\.length\)\) merged\.setupComplete = false;/);
+  assert.match(route, /merged\.requiresColorSelection!==false&&!\(merged\.defaultColorIds\|\|\[\]\)\.length/);
+  assert.match(route, /merged\.requiresSizeSelection!==false&&!\(merged\.defaultSizeIds\|\|\[\]\)\.length/);
   /* Settled against the MERGED record, so a patch that touches one axis - or
      neither - still cannot leave the flag disagreeing with the values stored
      beside it. */

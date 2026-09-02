@@ -2206,6 +2206,8 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
         setupComplete:true,
         defaultColorIds:selectedColorIds,
         defaultSizeIds:selectedSizeIds,
+        requiresColorSelection:Boolean(templateDetails.colorOptions?.length),
+        requiresSizeSelection:Boolean(templateDetails.sizeOptions?.length),
         defaultMockupTheme:mockupTheme,
         mockupIds:sharedMockups?.theme===mockupTheme?sharedMockups.ids:[],
         ...(etsyShippingProfileId?{etsyShippingProfileId}:{}),
@@ -2214,7 +2216,7 @@ setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:c
     return ()=>window.clearTimeout(timer);
   },[defaultsSignature,activeRecipe,templateDetails]);
 
-  async function completeProductSetup(){if(!activeRecipe)return;await saveProductDefaults({setupComplete:true,defaultColorIds:selectedColorIds,defaultSizeIds:selectedSizeIds,defaultMockupTheme:mockupTheme,mockupIds:sharedMockups?.theme===mockupTheme?sharedMockups.ids:[]},"initial-setup")}
+  async function completeProductSetup(){if(!activeRecipe||!templateDetails)return;await saveProductDefaults({setupComplete:true,defaultColorIds:selectedColorIds,defaultSizeIds:selectedSizeIds,requiresColorSelection:Boolean(templateDetails.colorOptions?.length),requiresSizeSelection:Boolean(templateDetails.sizeOptions?.length),defaultMockupTheme:mockupTheme,mockupIds:sharedMockups?.theme===mockupTheme?sharedMockups.ids:[]},"initial-setup")}
   async function chooseRecipe(recipe: Recipe) { const changingProduct=Boolean((activeRecipe?.id&&activeRecipe.id!==recipe.id)||(template&&template!==recipe.templateUrl));if(changingProduct&&(files.length>0||drafts.length>0||complete)){const count=files.length;if(!await confirmAction({title:`Switch to “${recipe.name}” and start a new batch?`,body:`This removes ${count} ${count===1?"design":"designs"} and all work from the current batch. Your saved products and keyword banks are untouched.`,confirmLabel:"Switch product",destructive:true}))return false;clearCurrentBatch(false)}try{window.localStorage.removeItem("goldie-active-bundle")}catch{/* private mode */}setActiveBundle(null);setBundleRecipes([]);setBundleIndex(0);return Boolean(await selectRecipe(recipe)); }
   async function useBundle(bundle:ProductBundle,recipeIds:string[]){
     const requestedIds=[...new Set(recipeIds.filter(Boolean))];

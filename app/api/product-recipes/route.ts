@@ -50,13 +50,13 @@ export async function GET() {
     .bind(user.userId).all<Proof>();
   const reach = reachResolver(active?.shop_id || 0, proofs.results || []);
 
-  return NextResponse.json({ activeEtsyShop: active ? { shopId: active.shop_id, shopName: active.shop_name } : null, recipes: recipes.map((r) => {const saved=JSON.parse(r.pricingJson||"{}");return {...r,etsyShippingProfileId:Number(saved.etsyShippingProfileId)||0,defaultColorIds:Array.isArray(saved.defaultColorIds)?saved.defaultColorIds.filter(Number.isInteger):[],defaultSizeIds:Array.isArray(saved.defaultSizeIds)?saved.defaultSizeIds.filter(Number.isInteger):[],defaultProfitTarget:Number(saved.defaultProfitTarget)||10,wholeNumberPricing:saved.wholeNumberPricing===true,variantPrices:saved.variantPrices&&typeof saved.variantPrices==="object"?saved.variantPrices as Record<string,number>:{},etsyDefaults:saved.etsyDefaults&&typeof saved.etsyDefaults==="object"?saved.etsyDefaults:{},previewImage:typeof saved.previewImage==="string"?saved.previewImage:"",printifyShopTitle:typeof saved.printifyShopTitle==="string"?saved.printifyShopTitle:"",printifyShopId:Number(saved.printifyShopId)||0,mockupIds:Array.isArray(saved.mockupIds)?saved.mockupIds.filter((id:unknown)=>typeof id==="string").slice(0,8):undefined,setupComplete:saved.setupComplete!==false,reach:reach(Number(saved.printifyShopId)||0),printifyImageIndices:JSON.parse(r.printifyImageIndicesJson||"[]")}}) });
+  return NextResponse.json({ activeEtsyShop: active ? { shopId: active.shop_id, shopName: active.shop_name } : null, recipes: recipes.map((r) => {const saved=JSON.parse(r.pricingJson||"{}");return {...r,etsyShippingProfileId:Number(saved.etsyShippingProfileId)||0,defaultColorIds:Array.isArray(saved.defaultColorIds)?saved.defaultColorIds.filter(Number.isInteger):[],defaultSizeIds:Array.isArray(saved.defaultSizeIds)?saved.defaultSizeIds.filter(Number.isInteger):[],requiresColorSelection:typeof saved.requiresColorSelection==="boolean"?saved.requiresColorSelection:true,requiresSizeSelection:typeof saved.requiresSizeSelection==="boolean"?saved.requiresSizeSelection:true,defaultProfitTarget:Number(saved.defaultProfitTarget)||10,wholeNumberPricing:saved.wholeNumberPricing===true,variantPrices:saved.variantPrices&&typeof saved.variantPrices==="object"?saved.variantPrices as Record<string,number>:{},etsyDefaults:saved.etsyDefaults&&typeof saved.etsyDefaults==="object"?saved.etsyDefaults:{},previewImage:typeof saved.previewImage==="string"?saved.previewImage:"",printifyShopTitle:typeof saved.printifyShopTitle==="string"?saved.printifyShopTitle:"",printifyShopId:Number(saved.printifyShopId)||0,mockupIds:Array.isArray(saved.mockupIds)?saved.mockupIds.filter((id:unknown)=>typeof id==="string").slice(0,8):undefined,setupComplete:saved.setupComplete!==false,reach:reach(Number(saved.printifyShopId)||0),printifyImageIndices:JSON.parse(r.printifyImageIndicesJson||"[]")}}) });
 }
 
 export async function POST(request: Request) {
   const user = await getChatGPTUser();
   if (!user) return NextResponse.json({ error: "Sign in to save product recipes." }, { status: 401 });
-  const body = await request.json() as { id?: string; name?: string; templateUrl?: string; description?:string; keywordListId?:string; printifyImageIndices?:number[]; normalizePadding?:boolean;previewImage?:string;printifyShopTitle?:string;printifyShopId?:number;etsyShippingProfileId?:number;defaultColorIds?:number[];defaultSizeIds?:number[];etsyDefaults?:Record<string,unknown>;defaultMockupTheme?:string;mockupIds?:string[];setupComplete?:boolean;defaultProfitTarget?:number;wholeNumberPricing?:boolean;variantPrices?:Record<string,number> };
+  const body = await request.json() as { id?: string; name?: string; templateUrl?: string; description?:string; keywordListId?:string; printifyImageIndices?:number[]; normalizePadding?:boolean;previewImage?:string;printifyShopTitle?:string;printifyShopId?:number;etsyShippingProfileId?:number;defaultColorIds?:number[];defaultSizeIds?:number[];requiresColorSelection?:boolean;requiresSizeSelection?:boolean;etsyDefaults?:Record<string,unknown>;defaultMockupTheme?:string;mockupIds?:string[];setupComplete?:boolean;defaultProfitTarget?:number;wholeNumberPricing?:boolean;variantPrices?:Record<string,number> };
   const name = String(body.name || "").trim().slice(0, 80), templateUrl = String(body.templateUrl || "").trim();
   if (!name || !templateUrl) return NextResponse.json({ error: "Name the recipe and add its Printify template." }, { status: 400 });
   const id = body.id || crypto.randomUUID();
@@ -95,6 +95,8 @@ export async function POST(request: Request) {
   if (body.printifyShopId !== undefined) patch.printifyShopId = Number(body.printifyShopId) || 0;
   if (body.defaultColorIds !== undefined) patch.defaultColorIds = (body.defaultColorIds || []).filter(Number.isInteger);
   if (body.defaultSizeIds !== undefined) patch.defaultSizeIds = (body.defaultSizeIds || []).filter(Number.isInteger);
+  if (body.requiresColorSelection !== undefined) patch.requiresColorSelection = body.requiresColorSelection === true;
+  if (body.requiresSizeSelection !== undefined) patch.requiresSizeSelection = body.requiresSizeSelection === true;
   if (body.defaultProfitTarget !== undefined) patch.defaultProfitTarget = Math.max(0, Math.min(500, Number(body.defaultProfitTarget) || 10));
   if (body.etsyDefaults !== undefined) patch.etsyDefaults = etsyDefaults;
   if (body.mockupIds !== undefined) patch.mockupIds = Array.isArray(body.mockupIds) ? body.mockupIds.map(id=>String(id).trim()).filter(Boolean).slice(0,8) : undefined;
@@ -125,7 +127,7 @@ export async function POST(request: Request) {
     }
     patch.variantPrices = prices;
   }
-  const merged = { etsyShippingProfileId: 0, defaultColorIds: [], defaultSizeIds: [], defaultProfitTarget: 10, etsyDefaults: {}, setupComplete: true, wholeNumberPricing: false, variantPrices: {}, ...existingSaved, ...patch };
+  const merged = { etsyShippingProfileId: 0, defaultColorIds: [], defaultSizeIds: [], requiresColorSelection: true, requiresSizeSelection: true, defaultProfitTarget: 10, etsyDefaults: {}, setupComplete: true, wholeNumberPricing: false, variantPrices: {}, ...existingSaved, ...patch };
   /* D659 · Measured live: the 1566 crewneck saved as setupComplete with three
      colours and ZERO sizes, because the client's auto-save fires as soon as
      colours settle. The step gate still refused to continue, so the flag and
@@ -136,7 +138,7 @@ export async function POST(request: Request) {
      several places, and only the merged record sees the flag together with the
      values stored beside it. So a patch that touches one axis, or none, still
      cannot leave the pair inconsistent. */
-  if (merged.setupComplete && (!(merged.defaultColorIds || []).length || !(merged.defaultSizeIds || []).length)) merged.setupComplete = false;
+  if (merged.setupComplete && ((merged.requiresColorSelection!==false&&!(merged.defaultColorIds||[]).length)||(merged.requiresSizeSelection!==false&&!(merged.defaultSizeIds||[]).length))) merged.setupComplete = false;
   const extras={keywordListId:body.keywordListId!==undefined?String(body.keywordListId||""):String(existingRow?.keywordListId||""),printifyImageIndicesJson:body.printifyImageIndices!==undefined?JSON.stringify((body.printifyImageIndices||[]).filter(Number.isInteger).slice(0,20)):String(existingRow?.printifyImageIndicesJson||"[]"),normalizePadding:body.normalizePadding!==false,pricingJson:JSON.stringify(merged)};
   await getDb().insert(productRecipes).values({ id, userId: user.userId, name, templateUrl, description,defaultTitle:"",defaultMockupTheme,...extras }).onConflictDoUpdate({ target: productRecipes.id, set: { name, templateUrl,description,defaultTitle:"",defaultMockupTheme,...extras,updatedAt:new Date().toISOString() } });
   return NextResponse.json({ id });
