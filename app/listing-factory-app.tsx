@@ -2170,7 +2170,11 @@ export default function ListingFactoryApp() {
    the Shipping row red saying "Pick a shipping profile" while the server had
    the profile saved, and a reload fixed it. Merging into whatever the recipe
    is NOW cannot go backwards. */
-setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:current);setBundleRecipes(current=>current.map(item=>item.id===recipeId?{...item,...change}:item));}catch(error){stopWith("This default was not saved.",[error instanceof Error?error.message:"Try again in a moment."])}finally{setSavingProductDefault("")}}
+setActiveRecipe(current=>current&&current.id===recipeId?{...current,...change}:current);setBundleRecipes(current=>current.map(item=>item.id===recipeId?{...item,...change}:item));
+/* D928 · The chooser owns a separate fetched copy of every recipe. Refresh it
+   after this write so returning from a newly established mug or case cannot
+   show the pre-save card and falsely disable it in the bundle builder. */
+setSavedRevision(current=>current+1);}catch(error){stopWith("This default was not saved.",[error instanceof Error?error.message:"Try again in a moment."])}finally{setSavingProductDefault("")}}
   async function rememberBatchDefaultsAfterPublish(){if(!activeRecipe)return;const updated={...activeRecipe,defaultColorIds:selectedColorIds,defaultSizeIds:selectedSizeIds,defaultMockupTheme:mockupTheme,mockupIds:sharedMockups?.theme===mockupTheme?sharedMockups.ids:[]};const response=await fetch("/api/product-recipes",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:activeRecipe.id,name:activeRecipe.name,templateUrl:activeRecipe.templateUrl,defaultColorIds:selectedColorIds,defaultSizeIds:selectedSizeIds,defaultMockupTheme:mockupTheme,mockupIds:sharedMockups?.theme===mockupTheme?sharedMockups.ids:[]})});if(response.ok){setActiveRecipe(updated);setColorsRemembered(true);setSizesRemembered(true)}}
   /* D457 - a product saves its own defaults.
    *

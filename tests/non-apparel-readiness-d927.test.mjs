@@ -22,3 +22,14 @@ test("D927: selecting a product immediately shows an honest loading state",()=>{
   assert.match(tools,/selected-product-loading/);
   assert.match(tools,/Loading product details…/);
 });
+
+test("D928: saved readiness refreshes the chooser before bundle selection",()=>{
+  const start=app.indexOf("async function saveProductDefaults");
+  const end=app.indexOf("async function rememberBatchDefaultsAfterPublish",start);
+  const save=app.slice(start,end);
+  assert.match(save,/if\(!response\.ok\)throw/);
+  assert.match(save,/setSavedRevision\(current=>current\+1\)/,
+    "a successful defaults write must invalidate the chooser's fetched recipe copy");
+  assert.ok(save.indexOf("if(!response.ok)throw")<save.indexOf("setSavedRevision(current=>current+1)"),
+    "a failed save must not refresh the chooser as though it succeeded");
+});
