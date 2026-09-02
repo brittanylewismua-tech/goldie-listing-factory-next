@@ -439,7 +439,7 @@ test("the setup step has exactly one forward control, and it gates every section
      continue"). It says "Next step" on every step now; the gate dialog names
      each unfinished item when you press it. What still has to hold is the
      ENFORCEMENT, which is what these assert. */
-  assert.match(page, /productSelected&&!failedBundleNames\(\)\.length\)\?"active-panel":"hidden-panel"/,
+  assert.match(page, /productSelected&&!failedBundleNames\(\)\.length&&!bundleCreationMode\)\?"active-panel":"hidden-panel"/,
     "a product load failure must not expose design upload for an incomplete bundle");
   assert.match(page, /if\(\["review","finish"\]\.includes\(step\)\)\{const missingColors=/,
     "colours and sizes gate draft creation after artwork is visible");
@@ -767,13 +767,15 @@ test("the chosen-product confirmation sits with the products, not inside the bun
 /* D365 · The summary is wrapped so the "choose a different bundle" link can sit
      under it, attached to the card it changes. Its POSITION is what this test is
      about and that is unchanged. */
-  const summary = tools.indexOf('{activeId&&<div className="selected-summary-block">');
+  const summary = tools.indexOf('{activeId&&!bundleForm&&<div className="selected-summary-block">');
   /* D169 also gates both bundle blocks on a bundle not already being the
    * selection, so match on the stable part of each. Ordering is what matters. */
   const bundles = tools.indexOf('<div className="recipe-library-head bundle-card-heading"');
   assert.ok(summary > 0 && bundles > 0);
   assert.ok(summary < bundles,
     "The chosen-product confirmation must render before the bundle list, not between the bundle list and the bundle prompt.");
+  assert.match(tools,/activeId&&!bundleForm&&<div className="selected-summary-block">/,
+    "bundle creation is a separate task and must not retain the chosen-product confirmation");
 });
 
 test("nothing in the app relies on smooth scrolling — D146", async () => {

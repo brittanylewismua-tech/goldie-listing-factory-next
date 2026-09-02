@@ -48,7 +48,7 @@ test("places the selected-product proof before bundle setup and exposes Finish p
     readFile(new URL("../app/factory-tools.tsx", import.meta.url), "utf8"),
   ]);
   assert.match(app, /selectedSummary=\{templateDetails\?</);
-  assert.match(tools, /\{activeId&&<div className="selected-summary-block">/);
+  assert.match(tools, /\{activeId&&!bundleForm&&<div className="selected-summary-block">/);
   assert.match(tools, /\{bundleForm&&<div className="bundle-builder">/);
   /* D220 retired the Finish node and its four-phase subrail. The workflow is now
      four stages - Product, Images, Listing, Publish - and the phases that used to
@@ -2096,7 +2096,7 @@ test("keeps a forward path from setup, designs, and pricing after drafts exist (
    * step selects listing images separately - and requiring one made "No mockups
    * for this batch" unreachable: choosing it disabled the only way forward.
    * See D110. */
-  assert.match(app,/workflowStep==="designs"\|\|\(workflowStep==="setup"&&Boolean\(templateDetails\)&&productSelected&&!failedBundleNames\(\)\.length\)\?"active-panel":"hidden-panel"/);
+  assert.match(app,/workflowStep==="designs"\|\|\(workflowStep==="setup"&&Boolean\(templateDetails\)&&productSelected&&!failedBundleNames\(\)\.length&&!bundleCreationMode\)\?"active-panel":"hidden-panel"/);
   /* D402 · The setup forward no longer branches on `complete`; it always goes to
      Images. The route back to finishing lives in batch-actions. */
   assert.match(app,/className="batch-actions"[\s\S]{0,5000}Back to finishing your listings/);
@@ -3355,7 +3355,7 @@ test("a product with no colour axis can still leave step 1 — D461/D462", async
      mug has no colours - so it could never enable, whatever she picked. */
   assert.match(app, /const missingColors=Boolean\(templateDetails\?\.colorOptions\?\.length&&!selectedColorIds\.length\)/,
     "colours are required only when the product offers them, after artwork exists");
-  assert.match(app, /workflowStep==="designs"\|\|\(workflowStep==="setup"&&Boolean\(templateDetails\)&&productSelected&&!failedBundleNames\(\)\.length\)\?"active-panel":"hidden-panel"/,
+  assert.match(app, /workflowStep==="designs"\|\|\(workflowStep==="setup"&&Boolean\(templateDetails\)&&productSelected&&!failedBundleNames\(\)\.length&&!bundleCreationMode\)\?"active-panel":"hidden-panel"/,
     "a product without a colour axis still receives the same visible uploader");
 
   /* D461 · Picking a shipping profile un-approved the pricing, and the button to

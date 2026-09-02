@@ -397,7 +397,7 @@ test("shipping, profit and Etsy details are per-product facts — D183", async (
 test("the selected product reveals the design uploader directly below — D899", async () => {
   const app = await read("app/listing-factory-app.tsx");
 
-  assert.match(app, /workflowStep==="designs"\|\|\(workflowStep==="setup"&&Boolean\(templateDetails\)&&productSelected&&!failedBundleNames\(\)\.length\)\?"active-panel":"hidden-panel"/,
+  assert.match(app, /workflowStep==="designs"\|\|\(workflowStep==="setup"&&Boolean\(templateDetails\)&&productSelected&&!failedBundleNames\(\)\.length&&!bundleCreationMode\)\?"active-panel":"hidden-panel"/,
     "A selected product must expose the uploader without another navigation action.");
   assert.match(app,/if\(workflowStep==="setup"\)\{\s*setWorkflowStep\("designs"\)/,
     "Accepting the first design advances the rail to Images while preserving the uploader.");

@@ -23,7 +23,7 @@ test("the connect step's forward control renders only on the connect step", () =
 });
 
 test("the product step hands off directly to its visible design uploader", () => {
-  assert.match(app, /workflowStep==="designs"\|\|\(workflowStep==="setup"&&Boolean\(templateDetails\)&&productSelected&&!failedBundleNames\(\)\.length\)\?"active-panel":"hidden-panel"/);
+  assert.match(app, /workflowStep==="designs"\|\|\(workflowStep==="setup"&&Boolean\(templateDetails\)&&productSelected&&!failedBundleNames\(\)\.length&&!bundleCreationMode\)\?"active-panel":"hidden-panel"/);
   assert.doesNotMatch(app, /className="workflow-next setup-forward"/);
 });
 
@@ -43,7 +43,7 @@ test("connect remains scoped and Product exposes only its gated continuation", (
       "a forward control in the Connect panel must require the Connect step");
   }
   const setupPanel = app.slice(app.indexOf("product-step workflow-panel"), app.indexOf("designs-step workflow-panel"));
-  assert.match(setupPanel,/files\.length===0&&<FactoryFooter status="Add at least one design to continue"><button className="workflow-next" type="button" disabled>Add at least one design<\/button>/);
+  assert.match(setupPanel,/files\.length===0&&!bundleCreationMode&&<FactoryFooter status="Add at least one design to continue"><button className="workflow-next" type="button" disabled>Add at least one design<\/button>/);
 });
 
 test("no forward control navigates to an earlier step from a later one", () => {

@@ -62,7 +62,7 @@ test("D917: restored drafts recover variant metadata from their saved Printify U
 });
 
 test("D911: Step 1 keeps a visible disabled continuation before upload",()=>{
-  assert.match(app,/workflowStep==="setup"&&files\.length===0&&<FactoryFooter status="Add at least one design to continue"><button className="workflow-next" type="button" disabled>Add at least one design<\/button>/);
+  assert.match(app,/workflowStep==="setup"&&files\.length===0&&!bundleCreationMode&&<FactoryFooter status="Add at least one design to continue"><button className="workflow-next" type="button" disabled>Add at least one design<\/button>/);
 });
 
 test("D911: selected bundles are named and destructive controls meet the target floor",()=>{
