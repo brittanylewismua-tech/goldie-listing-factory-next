@@ -2097,9 +2097,9 @@ test("keeps a forward path from setup, designs, and pricing after drafts exist (
   assert.match(app,/workflowStep==="designs"\|\|\(workflowStep==="setup"&&Boolean\(templateDetails\)&&productSelected&&!failedBundleNames\(\)\.length\)\?"active-panel":"hidden-panel"/);
   /* D402 · The setup forward no longer branches on `complete`; it always goes to
      Images. The route back to finishing lives in batch-actions. */
-  assert.match(app,/className="batch-actions"[\s\S]{0,1800}Back to finishing your listings/);
+  assert.match(app,/className="batch-actions"[\s\S]{0,5000}Back to finishing your listings/);
   assert.match(app,/files\.length>0&&complete&&workflowStep==="designs"/);
-  assert.match(app,/className="batch-actions"[\s\S]{0,1800}Back to finishing your listings/);
+  assert.match(app,/className="batch-actions"[\s\S]{0,5000}Back to finishing your listings/);
 });
 
 /* D369 · These moved from descendant to child selectors. `order` only applies
@@ -3285,8 +3285,9 @@ test("every product in a bundle must be finished, not the open one — D455", as
 
   // A single product is unaffected: with no bundle active this is always true.
   assert.match(app, /if\(!activeBundle\)return true;/);
-  // And it is the same readiness the cards display, not a second opinion.
-  assert.match(app, /return readinessFor\(product,recipe,isActive\?pricingApproved:Boolean\(bundleApproved\[recipe\.id\]\)\)\.established/);
+  // Before drafts, every sibling must be a real loaded Printify template. The
+  // final price and shipping checks happen later, against the finished drafts.
+  assert.match(app, /return bundleRecipes\.every\([\s\S]{0,500}return Boolean\(product\.enabledVariants\)/);
 });
 
 test("no path sends a design to an image generator — D456", async () => {
@@ -6868,7 +6869,9 @@ test("bundle DPI and variant totals cover every product — D659", async () => {
 
   // Variants total the bundle, with the split inspectable.
   assert.match(app, /const bundleVariantCounts=useMemo\(/);
-  assert.match(app, /\{bundleVariantCounts\.total\} enabled variants reviewed and approved/);
+  assert.match(app, /Using the colors and sizes saved in Printify/);
+  assert.match(app, /Pricing \+ shipping/);
+  assert.match(app, /Reviewed after Printify calculates the finished drafts/);
   assert.match(app, /detail:known\.map\(entry=>`\$\{entry\.name\}: \$\{entry\.count\}`\)\.join\(" · "\)/);
   assert.doesNotMatch(app, /All \{pricedVariants\.length\} enabled variants/,
     "the open product's count is not the bundle's count");

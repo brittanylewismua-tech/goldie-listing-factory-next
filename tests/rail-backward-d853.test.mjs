@@ -36,7 +36,7 @@ test("a blocker says where it lives, not just what it is — D854", () => {
      sections ticked complete, and the stated reason - the Etsy shipping
      profile - belonging to the Product step, with nothing on the page to
      click. */
-  assert.match(gates, /Choose the Etsy shipping profile on the Product step\./);
+  assert.match(gates, /Choose the Etsy shipping profile after approving the finished prices on the Images step\./);
   const app = readFileSync(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
   assert.match(app, /final pricing approval after Printify calculated the finished product costs/);
 });

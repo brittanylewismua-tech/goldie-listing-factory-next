@@ -1025,10 +1025,10 @@ test("the card has a row for every panel it can open — D337", async () => {
 
   const inCard = app.match(/const inCard=\[([^\]]*)\]/);
   assert.ok(inCard, "the in-card list must exist");
-  for (const facet of ["shipping"])
-    assert.ok(inCard[1].includes(`"${facet}"`), `${facet} opens in the card`);
-  assert.match(app, /ready\.facets\.filter\(facet=>facet\.name==="shipping"\)/,
-    "only the profile required to create a private draft remains before artwork");
+  assert.doesNotMatch(app, /ready\.facets\.filter\(facet=>facet\.name==="shipping"\)/,
+    "shipping no longer appears before Printify has calculated the finished draft costs");
+  assert.match(app, /className="post-draft-shipping-review"[\s\S]{0,300}<PricingReview section="shipping"/,
+    "shipping follows the finished-price review");
   assert.match(app, /task:"draft-colors"/,
     "color decisions move after the finished Printify drafts can show the real design");
   assert.match(app, /costReviewGroups\(\)\.map/,

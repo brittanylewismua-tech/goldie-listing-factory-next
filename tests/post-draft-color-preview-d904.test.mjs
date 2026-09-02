@@ -19,7 +19,7 @@ test("D904: color decisions happen after real Printify mockups exist",()=>{
   assert.match(app,/function DraftColorSelector/);
   assert.match(app,/REAL PRINTIFY PREVIEW/);
   assert.match(app,/task:"draft-colors"/);
-  assert.match(app,/ready\.facets\.filter\(facet=>facet\.name==="shipping"\)/);
+  assert.match(app,/className="post-draft-shipping-review"/);
   assert.doesNotMatch(app,/ready\.facets\.filter\(facet=>facet\.name!=="profit"\)/);
 });
 
