@@ -19,10 +19,14 @@ export async function PATCH(request:Request){
     if(!currentResponse.ok)return NextResponse.json({error:`Printify could not load this draft (${currentResponse.status}).`},{status:currentResponse.status});
     const current=await currentResponse.json() as typeof currentProduct;
     currentProduct=current;
-    // Printify's product response contains read-only image metadata. Sending that
-    // metadata back in an update is rejected for some apparel products, so rebuild
-    // the documented writable print-area shape instead of spreading the GET body.
-    placementPayload=(current.print_areas||[]).map(area=>({
+    /* D882 · This block is entered for a placement change OR a price approval,
+       but everything below dereferences body.placement. Approving finished
+       prices sends variantPrices and no placement, so the non-null assertions
+       threw and the worker returned a bodiless 500 - which is why the finished
+       cost gate could never be released. Only rebuild print areas when a
+       placement actually came in; the fetch above is still needed either way,
+       because the price check reads currentProduct.variants. */
+    if(body.placement)placementPayload=(current.print_areas||[]).map(area=>({
       variant_ids:area.variant_ids,
       ...(area.background?{background:area.background}:{}),
       placeholders:(area.placeholders||[]).filter(placeholder=>placeholder.images?.some(image=>image.id)).map(placeholder=>({

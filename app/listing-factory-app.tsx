@@ -3979,8 +3979,11 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
     if(!draft.id||!draft.costReview?.verified)throw new Error("Printify's finished costs are not available for this listing yet.");
     const variantPrices=pricesFromActualCosts({...draft.costReview,required:true},pricingForDraft(draft));
     const response=await fetch("/api/printify/drafts/update",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({productId:draft.id,variantPrices})});
-    const payload=await response.json() as {draft?:DraftResult;error?:string};
-    if(!response.ok||!payload.draft)throw new Error(payload.error||"Printify could not save the final variant prices.");
+    /* D882 · An unhandled worker error returns a bodiless 500, and parsing that
+       threw "Unexpected end of JSON input" - which is what the seller saw
+       instead of anything about prices. Read the status when there is no body. */
+    const payload=await response.json().catch(()=>({})) as {draft?:DraftResult;error?:string};
+    if(!response.ok||!payload.draft)throw new Error(payload.error||`Printify could not save the final variant prices (${response.status}).`);
     setDrafts(current=>current.map(item=>item.id===draft.id?{...item,...payload.draft}:item));
     setBundleMembers(current=>Object.fromEntries(Object.entries(current).map(([recipeId,member])=>[recipeId,{...member,drafts:member.drafts.map(item=>item.id===draft.id?{...item,...payload.draft}:item)}])));
   }
