@@ -12,7 +12,7 @@ test("D883: product cards select directly and do not contain a second Choose con
 });
 
 test("D883: a chosen product becomes the header and the library recedes",()=>{
-  assert.match(app,/title=\{bundleCreationMode\?"Create a product bundle":productFormMode\?"Add a saved product":showProductLibrary\|\|\(!productSelected&&!bundleSelected\)\?"Choose a product or bundle"/);
+  assert.match(app,/title=\{bundleCreationMode\?"Create a product bundle":productFormMode\?"Add a saved product":showProductLibrary\|\|\(!productSelected&&!bundleSelected\)\?"Saved products and bundles"/);
   assert.match(tools,/\(!activeId\|\|showLibrary\)/);
   assert.match(tools,/setShowLibrary\(false\)/);
 });

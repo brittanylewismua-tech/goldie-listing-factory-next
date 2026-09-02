@@ -3217,6 +3217,59 @@ html, body { background: var(--lf-paper); }
   border-color:#0d0b0c!important;background:#0d0b0c!important;color:#fff!important;
   box-shadow:4px 4px 0 var(--lf-pink)!important}
 
+/* D946 · The chooser and its dialogs use one clear visual hierarchy.
+   Instructions are stated once, section labels divide large libraries, and
+   the two creation actions read as a matched pair rather than stray links. */
+.app-shell .factory-panel:has(.recipe-card)>.factory-panel-head{
+  min-height:72px;padding:14px 18px;background:#fffafd;border-bottom-color:#e0d3da}
+.app-shell .factory-panel:has(.recipe-card)>.factory-panel-body{padding:22px 18px 26px;background:#fff}
+.app-shell .factory-panel:has(.recipe-card) .recipe-card{
+  border:0!important;background:transparent!important;box-shadow:none!important}
+.app-shell .factory-panel:has(.recipe-card) .recipe-card>.step-content{padding:0!important}
+.app-shell .recipe-card .recipe-library-head{margin:0 0 18px;padding:0 0 10px}
+.app-shell .recipe-card .bundle-card-heading{margin-top:34px}
+.app-shell .factory-panel-actions{gap:8px}
+.app-shell .factory-panel-actions .panel-create-action{
+  min-height:40px;padding:0 14px;border-color:#bfb4ba;background:#fff;color:#2d2028;
+  font-size:12px;box-shadow:0 2px 6px rgba(45,29,39,.07)}
+.app-shell .factory-panel-actions .panel-create-action:hover{
+  border-color:#2d2028;background:#f9f6f8;box-shadow:0 4px 12px rgba(45,29,39,.1);transform:translateY(-1px)}
+
+/* Dialogs are decisions, not another full workflow page. Keep the purpose
+   centered, the content narrow, and reserve red for the destructive choice. */
+.publish-confirm-backdrop,.upload-notice-backdrop{
+  background:rgba(20,14,18,.46)!important;backdrop-filter:blur(10px)!important}
+.publish-confirm,.upload-notice{
+  width:min(540px,calc(100vw - 32px));padding:30px;border:1px solid #d9ccd3!important;
+  border-radius:14px!important;background:#fff!important;color:#2d2028!important;
+  box-shadow:0 28px 80px rgba(20,14,18,.28)!important}
+.publish-confirm h2,.upload-notice h2{
+  margin:7px 0 8px;font:750 25px/1.16 Inter,ui-sans-serif,system-ui,sans-serif!important;
+  letter-spacing:-.025em;color:#2d2028!important}
+.publish-confirm>p:not(.mini-label),.upload-notice>p:not(.mini-label){color:#71656d;font-size:14px;line-height:1.5}
+.publish-confirm .publish-confirm-icon,.upload-notice .upload-notice-icon{
+  width:54px;height:54px;margin:0 auto 12px;border:0;border-radius:14px;
+  background:#0d0b0c!important;color:var(--lf-pink)!important;font-size:25px;box-shadow:4px 4px 0 var(--lf-pink)}
+.publish-confirm>.mini-label,.upload-notice>.mini-label{text-align:center;margin:0;color:#756871}
+.publish-confirm>.mini-label+h2,.upload-notice>.mini-label+h2{text-align:center}
+.restart-batch-head{text-align:center}
+.restart-batch-head .mini-label{margin:0;color:#756871}
+.restart-batch-head>p:last-child{max-width:410px;margin:0 auto;color:#71656d;font-size:14px;line-height:1.5}
+.restart-batch-modal label{gap:7px;margin:22px 0 0;color:#3d2538;font-size:12px;font-weight:750}
+.restart-batch-modal input{min-height:46px;border-color:#d8cdd3;border-radius:9px;padding:11px 13px;font-size:14px}
+.restart-batch-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:20px}
+.restart-batch-actions button{min-height:46px;border-radius:9px;font-size:13px}
+.restart-batch-actions .save-restart{grid-column:1/-1;grid-row:1}
+.restart-batch-actions>button:not(.save-restart):not(.discard-restart){background:#fff!important;color:#3d2538!important;border:1px solid #d2c7cd!important;box-shadow:none!important}
+.restart-batch-actions .discard-restart{background:#fff!important;color:#9b334c!important;border:1px solid #e1bac5!important;box-shadow:none!important}
+.restart-batch-actions .discard-restart:hover:not(:disabled){background:#fff5f7!important;border-color:#ba536b!important;transform:none}
+.restart-printify-note{display:block;margin-top:14px;color:#837781;text-align:center;font-size:11px;line-height:1.45}
+.publish-confirm-actions{display:flex;justify-content:center;gap:10px}
+.publish-confirm-actions button{min-height:44px;border-radius:9px}
+.save-draft-modal{text-align:center}
+.save-draft-modal label{text-align:left}
+.missing-photo-close{top:18px!important;right:18px!important;width:38px!important;height:38px!important;border-radius:50%!important;background:#f3eef1!important;color:#4a3342!important;box-shadow:none!important}
+
 /* D907 · Small text links were being used for real workflow actions. Keep the
    compact summary, but give its control the same visible, usable button shape
    as the rest of the factory. The persistent draft action also keeps a reliable

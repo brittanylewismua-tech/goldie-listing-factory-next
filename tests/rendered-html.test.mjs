@@ -2390,7 +2390,7 @@ test("restart is visible everywhere and preserves a batch only after saving — 
     Promise.all([readFile(new URL("../app/clarity-pass.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n")),
   ]);
   assert.match(app, /workflow-restart-button[\s\S]{0,700}Start a new batch/);
-  assert.match(app, /Save to Batch History \+ start new/);
+  assert.match(app, /Save batch \+ start new/);
   assert.match(app, /Discard this batch \+ start new/);
   assert.match(app, /clearCurrentBatch\(true,preserveSavedBatch\)/);
   assert.match(app, /if\(priorBatch&&!preserveSavedBatch&&!publishedThisBatch\)/);

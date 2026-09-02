@@ -846,16 +846,15 @@ test("the product edit form renders under the products it edits — D323", async
   assert.ok(form < bundles, "and before the saved bundles, not after them");
 });
 
-/* D322 · Step 1 renamed itself once a product was selected — "Choose product"
-   became "Build this batch" — so the page appeared to become a different page
-   mid-step, and the new name described the whole flow rather than the step,
-   while the rail and eyebrow both still read PRODUCT. */
-test("step 1 keeps one title in both states — D322", async () => {
+/* D946 · The page head names the one action available in each state. It never
+   uses the vague "Build this batch" label, and it does not keep asking the
+   seller to choose after the choice is complete. */
+test("step 1 names the current action in both states — D322/D946", async () => {
   const app = await read("app/listing-factory-app.tsx");
   assert.doesNotMatch(app, /title: "Build this batch"/,
     "a step may not rename itself when something is selected");
-  assert.equal((app.match(/title: "Choose product"/g) || []).length, 2,
-    "both branches of step 1 use the name the rail already uses");
+  assert.match(app,/title: "Choose a product or bundle"/);
+  assert.match(app,/title: "Add your designs"/);
 });
 
 /* D324 · Twice now the pricing section has shown prices that do not meet the

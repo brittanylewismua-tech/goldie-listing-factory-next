@@ -106,5 +106,6 @@ test("a destructive switch does not describe itself as additive — D705", async
 test("the summary line carries what differs, not what everything has — D705", async () => {
   const tools = await read("app/factory-tools.tsx");
   assert.doesNotMatch(tools, /parts\.push\("keyword bank"\)/);
-  assert.match(tools, /Select a product to use for this batch\./);
+  assert.doesNotMatch(tools, /Select a product to use for this batch\./,
+    "the page and panel already state the choice; the inner card must not repeat it");
 });
