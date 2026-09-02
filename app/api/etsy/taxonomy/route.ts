@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { etsyConnection, etsyFetch } from "../client";
 import { cachedJson, TAXONOMY_TTL_SECONDS } from "../../static-cache";
+import { drinkwareCategoryScore } from "@/app/etsy-category-score";
 
 type TaxonomyNode={id:number;name:string;children?:TaxonomyNode[]};
 type PossibleValue={value_id:number;name:string};
@@ -26,7 +27,12 @@ function productCategoryScore(product:Requested["product"],path:string){
   }
   if(/tank top/.test(facts))return /tank tops?/.test(leaf)?7000+audienceScore:-10000;
   if(/onesie|bodysuit/.test(facts))return /bodysuits?|one-pieces?/.test(leaf)?7000+audienceScore:-10000;
-  if(/mug|tumbler|wine glass|water bottle/.test(facts))return /(mugs?|tumblers?|drinkware|barware|water bottles?)/.test(leaf)?5000:candidate.includes("kitchen & dining")?800:-5000;
+  /* D935 - "mug" and "tumbler" used one broad family score. Every leaf in
+     that family received the same 5000 points, so alphabetical path order sent
+     a live 11 oz mug to Craft Supplies > Equipment > Tumblers and invented a
+     required Craft type field. Prefer the exact physical product first; broad
+     drinkware categories are only the fallback. */
+  const drinkwareScore=drinkwareCategoryScore(facts,path);if(drinkwareScore!==null)return drinkwareScore;
   if(/tote/.test(facts))return candidate.includes("bags & purses")&&/totes?/.test(leaf)?5000:candidate.includes("bags & purses")?800:-5000;
   if(/backpack/.test(facts))return /backpacks?/.test(leaf)?6000:candidate.includes("bags & purses")?800:-5000;
   if(/bag/.test(facts))return candidate.includes("bags & purses")?1000:-3000;
