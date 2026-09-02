@@ -35,8 +35,8 @@ test("uses the binding batch limit and keeps setup actions in the right hierarch
     readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
     Promise.all([readFile(new URL("../app/approved-functional.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n")),
   ]);
-  assert.match(page, /Up to \{batchDesignLimit\} finished designs/);
-  assert.match(page, /Each image creates one listing · up to \$\{batchDesignLimit\}/);
+  assert.match(page, /PNG or JPG · up to \{batchDesignLimit\} designs · 100 MB each/);
+  assert.match(page, /Upload one \{uploadPrimaryLabel\} design per listing/);
   assert.doesNotMatch(page, /Your folder can contain up to 20 designs/);
   assert.match(page, /headerActions=\{bundleCreationMode\|\|productFormMode\?undefined:[\s\S]{0,380}>＋ Add a new product<\/button>[\s\S]{0,220}>＋ Create a new bundle<\/button>/);
   assert.match(css, /managementOnly \.newSetButton\{border:0!important;background:transparent!important/);
@@ -1471,7 +1471,7 @@ test("appends later design selections and skips only exact file duplicates", asy
   assert.match(page, /setFiles\(combined\)/);
   assert.match(page, /exact \$\{duplicateCount===1\?"duplicate was":"duplicates were"\} skipped/);
   assert.match(page, /saveBatchFiles\(durableBatchId,combined\.map/);
-  assert.match(page, /Choose again to add more/);
+  assert.match(page, /designsFinished\?"Add another folder"/);
   assert.match(page, /className="file-add-notice"/);
 });
 
@@ -2146,7 +2146,8 @@ test("records real pricing approval and invalidates it after edits (fixes D23 an
 test("shows one binding design-capacity status after uploads (fixes D28 and D49)",async()=>{
   const app=await readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8");
   assert.match(app,/files\.length > 0 && designsFinished && <div className="batch-capacity">/);
-  assert.match(app,/\$\{files\.length\} of \$\{batchDesignLimit\} designs ready · \$\{additionalDesignsAvailable\} more available · \$\{planDraftsRemaining\} listings left on your plan/);
+  assert.match(app,/`\$\{files\.length\} design\$\{files\.length===1\?"":"s"\} added`/);
+  assert.doesNotMatch(app,/listings left on your plan/);
   assert.match(app,/<p className="upload-guidance batch-limits file-reminder">/);
   assert.match(app,/files\.length>0&&!designsFinished&&<section className="design-preparation-status working"/);
   assert.doesNotMatch(app,/All \$\{files\.length\} designs are ready/);
@@ -2166,7 +2167,7 @@ test("D902: upload starts with the choices and primary workflow cards remain dis
 
 test("D903: the Images page describes only work performed on that page",async()=>{
   const app=await readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8");
-  assert.match(app,/designs: complete[\s\S]*title: "Finish your Printify drafts"[\s\S]*title: "Review your draft plan"/);
+  assert.match(app,/designs: complete[\s\S]*title: "Finish your Printify drafts"[\s\S]*title: "Add your designs"/);
   assert.doesNotMatch(app,/choose and arrange the listing photos/);
 });
 
