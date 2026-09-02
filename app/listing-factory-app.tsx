@@ -2548,8 +2548,16 @@ setSavedRevision(current=>current+1);}catch(error){stopWith("This default was no
     /* D539 - step 2's rows are the four things she does to a product's photos,
        in the order she does them. Each one owns its panel; none of them points
        anywhere. */
-    if(workflowStep==="designs")return [
-      {label:"Colors on your design",value:selectedColorIds.length?plural(selectedColorIds.length,"color"):"Choose colors",pending,done:selectedColorIds.length>0,task:"draft-colors"},
+    if(workflowStep==="designs"){
+      /* D934 - Printify products without a colour option (the 11 oz mug was the
+         first live example) rendered a "Colors on your design" row whose panel
+         was empty. A task must only exist when the product exposes that axis.
+         For a sibling whose template has not loaded yet, keep the row unless
+         its saved product explicitly says colour selection is not required. */
+      const rowProduct=isActive?templateDetails:bundleColorProducts[recipe.id];
+      const hasColorAxis=rowProduct?Boolean(rowProduct.colorOptions?.length):recipe.requiresColorSelection!==false;
+      return [
+      ...(hasColorAxis?[{label:"Colors on your design",value:selectedColorIds.length?plural(selectedColorIds.length,"color"):"Choose colors",pending,done:selectedColorIds.length>0,task:"draft-colors"}]:[]),
       {label:"Sizes",value:selectedSizeIds.length?plural(selectedSizeIds.length,"size"):"Choose sizes",pending,done:selectedSizeIds.length>0,task:"draft-sizes"},
       {label:"Review Printify placement",value:started?plural(counts.drafts,"listing"):blank,pending,done:counts.drafts>0,task:"placement"},
       {label:"Choose Printify photos",value:started?plural(counts.photos,"photo"):blank,pending,done:counts.photos>0,task:"printify"},
@@ -2563,7 +2571,7 @@ setSavedRevision(current=>current+1);}catch(error){stopWith("This default was no
          not be done until the first had been, so the card advertised a step that
          was really the back half of the one above it. */
       {label:"Your photos and their order",value:started?plural(counts.photos+counts.mockups,"photo"):blank,pending,done:counts.photos+counts.mockups>0,task:"lifestyle"},
-    ];
+    ];}
     /* D541 - both of these rows pointed at .final-review, so Listings and Titles
        and tags took you to the same block below the cards. Nothing on this step
        is per product: choosing what to publish and publishing it are one press
