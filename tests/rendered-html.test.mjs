@@ -38,7 +38,7 @@ test("uses the binding batch limit and keeps setup actions in the right hierarch
   assert.match(page, /up to \$\{batchDesignLimit\} finished designs/);
   assert.match(page, /Add up to \$\{batchDesignLimit\} designs in this batch/);
   assert.doesNotMatch(page, /Your folder can contain up to 20 designs/);
-  assert.match(css, /recipe-library-head \.add-product-button\{border:0!important;background:transparent!important/);
+  assert.match(page, /headerActions=\{showProductLibrary\|\|\(!productSelected&&!bundleSelected\)\?<button[\s\S]{0,140}>＋ Add a new product<\/button>/);
   assert.match(css, /managementOnly \.newSetButton\{border:0!important;background:transparent!important/);
 });
 
@@ -2105,7 +2105,7 @@ test("keeps a forward path from setup, designs, and pricing after drafts exist (
    nested elements instead — see stylesheet-liveness.test.mjs. */
 test("keeps product creation visible and lets a selected product be changed (fixes D4 and D5)",async()=>{
   const [app,workflow,css]=await Promise.all([readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8"),readFile(new URL("../app/factory-tools.tsx",import.meta.url),"utf8"),Promise.all([readFile(new URL("../app/approved-functional.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n"))]);
-  assert.match(workflow,/＋ Add a new product/);
+  assert.match(app,/＋ Add a new product/);
   /* D842 · "Change product" left the tile. Every other tile carries Edit and
      Delete, so the selected one carried three buttons where the rest carry two
      and the action rows across the grid did not line up. Choosing another tile
@@ -6558,8 +6558,8 @@ test("Add a new product takes you to the form it just opened — D654", async ()
 
   assert.match(tools, /const formRef=useRef<HTMLDivElement\|null>\(null\);/);
   assert.match(tools, /<div className="recipe-form" ref=\{formRef\}>/, "the ref has to be on the form itself");
-  assert.match(tools, /setMessage\(""\);revealForm\(\); \}\}>＋ Add a new product<\/button>/,
-    "the button must reveal the form it opened");
+  assert.match(tools, /async function beginAddProduct\(\)\{[\s\S]{0,300}setMessage\(""\);revealForm\(\)/,
+    "the header action must reveal the form it opened");
   assert.match(tools, /node\.querySelector<HTMLInputElement>\("input"\)\?\.focus\(\{preventScroll:true\}\)/,
     "land on the field the seller now has to fill in");
   /* D146 · smooth scrolling never fires in this app, so asking for it here

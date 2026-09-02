@@ -922,8 +922,6 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .app-shell .recipe-card .recipe-form-heading{display:grid!important;grid-template-columns:1fr!important;gap:8px!important;padding-bottom:18px!important}
 .app-shell .recipe-card .recipe-form-heading b{display:block;font-size:24px!important;line-height:1.15!important}
 .app-shell .recipe-card .recipe-form-heading span{display:block;max-width:820px;color:rgba(74,42,62,.7)!important;font-size:14px!important;line-height:1.55!important}
-.app-shell .recipe-card .recipe-library-head .add-product-button{min-height:42px;padding:10px 16px!important;border:1px solid #ded1d8!important;border-radius:12px!important;background:linear-gradient(145deg,#ff6ecd,#f52fb2)!important;color:#3d0b2b!important;box-shadow:0 9px 20px rgba(74,42,62,.14)!important;font-size:12px!important;font-weight:750!important;text-decoration:none!important;cursor:pointer}
-.app-shell .recipe-card .recipe-library-head .add-product-button:hover{background:linear-gradient(145deg,#ff6ecd,#f52fb2)!important;color:#3d0b2b!important;transform:translateY(-1px)}
 .app-shell .template-instructions-toggle{grid-column:1/-1;margin:0 0 4px}
 .app-shell .template-instructions-toggle>summary{display:inline-flex;align-items:center;gap:7px;color:#704b67;font-size:12px;font-weight:750;text-decoration:underline;text-underline-offset:3px;cursor:pointer;list-style:none}
 .app-shell .template-instructions-toggle>summary::-webkit-details-marker{display:none}
@@ -991,9 +989,6 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
    product-scoped controls below. */
 .app-shell .saved-product-batch-page>.mockup-default-block{display:none!important}
 .app-shell .saved-product-batch-page{order:2}.app-shell .saved-product-batch-page+.mockup-default-block{order:3;width:100%}
-.app-shell .recipe-card .add-product-button{border:1px solid #ded5db!important;background:rgba(255,255,255,.58)!important;color:#5b304f!important;box-shadow:none!important}
-.app-shell .recipe-card .recipe-library-head .add-product-button{border:0!important;background:transparent!important;color:#6b365a!important;box-shadow:none!important;text-decoration:underline!important}
-.app-shell .recipe-card .recipe-library-head .add-product-button:hover{background:transparent!important;color:#4a2a3e!important;transform:none!important}
 .mockupFactory.managementOnly .newSetButton{border:0!important;background:transparent!important;color:#704d75!important;box-shadow:none!important;text-decoration:underline!important}
 /* D706 - one of four rules that each owned part of this pill; consolidated
    into a single rule at the foot of clarity-pass.css. */

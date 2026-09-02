@@ -27,9 +27,9 @@ test("D886: the selected header uses the saved flatlay and owns its management",
 });
 
 test("D887: selected-product management disappears while the product library is open",()=>{
-  assert.match(app,/headerActions=\{\(productSelected\|\|bundleSelected\)&&!showProductLibrary\?/);
-  assert.match(app,/title=\{showProductLibrary\?"Choose a product"/);
-  assert.match(app,/description=\{showProductLibrary\?"Select one to continue"/);
+  assert.match(app,/headerActions=\{showProductLibrary\|\|\(!productSelected&&!bundleSelected\)\?<button/);
+  assert.match(app,/title=\{showProductLibrary\|\|\(!productSelected&&!bundleSelected\)\?"Choose a product or bundle"/);
+  assert.match(app,/description=\{showProductLibrary\|\|\(!productSelected&&!bundleSelected\)\?"Select one to continue"/);
 });
 
 test("D888: the empty picker does not repeat its state and shop metadata is quiet",()=>{
@@ -50,6 +50,17 @@ test("D889: cross-shop inventory adds no picker clutter",()=>{
   assert.match(app,/etsyShops\.length>0&&<div className="factory-account-shops"/);
   assert.match(css,/\.recipe-card \.bundle-card-heading\{margin-top:28px!important;margin-bottom:10px!important\}/);
   assert.match(css,/\.recipe-card \.unified-bundle-grid\{margin-top:0!important;margin-bottom:30px!important\}/);
+});
+
+test("D891: product and bundle selection use one card grid",()=>{
+  assert.match(app,/title=\{showProductLibrary\|\|\(!productSelected&&!bundleSelected\)\?"Choose a product or bundle"/);
+  assert.match(app,/headerActions=\{showProductLibrary\|\|\(!productSelected&&!bundleSelected\)\?<button[\s\S]{0,140}>＋ Add a new product<\/button>/);
+  assert.match(app,/addProductRequest=\{addProductRequest\}/);
+  assert.match(tools,/!bundleForm&&reachable\.length>=2&&<button className="create-bundle-button"/);
+  assert.match(tools,/className=\{`recipe-grid \$\{bundleForm\?"bundle-selection-grid":""\}`\}/);
+  assert.match(tools,/if\(bundleForm\)\{setBundleIds\(/);
+  assert.match(tools,/bundleForm&&inBundle\?<em>Product \{bundleIds\.indexOf\(recipe\.id\)\+1\}<\/em>/);
+  assert.match(css,/\.bundle-library\[open\] \.bundle-form fieldset\{display:none!important\}/);
 });
 
 test("D886: pricing waits for finished draft costs",()=>{

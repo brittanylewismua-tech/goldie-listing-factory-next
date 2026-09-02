@@ -919,7 +919,7 @@ test("saved-product tiles line up regardless of name length — D162", async () 
     "A name too long for one line truncates rather than reflowing the card.");
 
   /* The name is clamped to two lines, so the full name must stay reachable. */
-  assert.match(tools, /className="recipe-use" title=\{`Choose \$\{recipe\.name\}`\}/);
+  assert.match(tools, /className="recipe-use" title=\{bundleForm\?[\s\S]{0,180}:`Choose \$\{recipe\.name\}`\}/);
   assert.match(tools, /className="recipe-use" title=\{`Choose \$\{bundle\.name\}`\}/);
 });
 

@@ -2886,6 +2886,17 @@ html, body { background: var(--lf-paper); }
 .app-shell .recipe-card .bundle-card-heading{margin-top:28px!important;margin-bottom:10px!important}
 .app-shell .recipe-card .unified-bundle-grid{margin-top:0!important;margin-bottom:30px!important}
 
+/* D891 · Bundle creation reuses the saved-product cards instead of opening a
+   second list of long checkbox rows. */
+.app-shell .recipe-card .create-bundle-button{border:0;background:transparent;color:#6b365a;font-size:12px;font-weight:750;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.app-shell .recipe-card .bundle-selection-grid .recipe-tile{cursor:pointer}
+.app-shell .recipe-card .bundle-selection-grid .recipe-tile.bundle-selected{border-color:#2f7a4b!important;box-shadow:0 0 0 2px rgba(47,122,75,.14)!important}
+.app-shell .recipe-card .bundle-selection-grid .recipe-tile.bundle-selected .recipe-copy>em{color:#2f7a4b!important;font-weight:800!important}
+.app-shell .recipe-card:has(.bundle-library[open]) .bundle-card-heading,
+.app-shell .recipe-card:has(.bundle-library[open]) .unified-bundle-grid{display:none!important}
+.app-shell .recipe-card .bundle-library:not([open]){display:none!important}
+.app-shell .recipe-card .bundle-library[open] .bundle-form fieldset{display:none!important}
+
 /* Desktop and laptop widths reflow; they never scale the entire application.
    The previous html zoom made type and controls physically smaller and still
    left a 1180px document inside a 1024px window. */

@@ -881,7 +881,7 @@ test("the colour and size pickers offer the same actions — D318", async () => 
    directly under them. */
 test("the product edit form renders under the products it edits — D323", async () => {
   const tools = await read("app/factory-tools.tsx");
-  const productsGrid = tools.indexOf('className="recipe-grid"');
+  const productsGrid = tools.indexOf('className={`recipe-grid ${bundleForm?"bundle-selection-grid":""}`}');
   const form = tools.indexOf('className="recipe-form"');
   const bundles = tools.indexOf("bundle-card-heading");
   assert.ok(productsGrid >= 0 && form >= 0 && bundles >= 0);
