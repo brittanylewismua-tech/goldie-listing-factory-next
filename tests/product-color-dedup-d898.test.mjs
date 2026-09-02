@@ -38,7 +38,7 @@ test("product is chosen first, but color decisions wait until artwork exists",as
   assert.match(app,/workflowStep==="designs"&&files\.length>0&&<div id="batch-preferences-after-designs"/);
   assert.doesNotMatch(app,/function productStepBlocker\(\)\{\s*if\(templateDetails\?\.colorOptions/);
   assert.match(app,/if\(\["review","finish"\]\.includes\(step\)\)\{const missingColors=/);
-  assert.match(app,/title: "Choose product", copy: "Your product is selected\. Add your finished designs below, then continue to create private Printify drafts\."/);
+  assert.match(app,/title: "Choose product", copy: `\$\{activeBundle\?"Your bundle":"Your product"\} is selected\. Add your finished designs below, then continue to create private Printify drafts\.`/);
   assert.match(app,/workflowStep==="designs"\|\|\(workflowStep==="setup"&&Boolean\(templateDetails\)&&productSelected&&!failedBundleNames\(\)\.length\)\?"active-panel":"hidden-panel"/);
   assert.doesNotMatch(app,/className="workflow-next setup-forward"/);
 });

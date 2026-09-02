@@ -3082,3 +3082,14 @@ html, body { background: var(--lf-paper); }
   width:auto!important;max-width:min(460px,48%)!important;min-height:44px!important;flex:0 0 auto;
   padding:11px 16px!important;white-space:normal;text-align:center;font-size:13px!important;
 }
+
+/* D910 · One visible bar, aligned controls, and a disabled state that still
+   looks like a control. */
+.app-shell .workflow-footer-actions>.workflow-back{
+  height:44px!important;min-height:44px!important;padding-block:0!important;
+  align-items:center!important;justify-content:center!important;
+}
+.app-shell .factory-footer.in-bar>*:not(small):disabled{
+  opacity:1;background:#ded4da;color:#675762;box-shadow:4px 4px 0 #ead0e1;cursor:not-allowed;
+}
+.app-shell .factory-listing-grid:has(>.factory-form-card:only-child){grid-template-columns:minmax(0,1fr)}

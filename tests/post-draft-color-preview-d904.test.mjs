@@ -29,7 +29,7 @@ test("D904: Printify image variant metadata survives creation and refresh",()=>{
     assert.match(source,/printifyImageDetails/);
     assert.match(source,/variantIds:image\.variant_ids\|\|\[\]/);
   }
-  assert.match(app,/image\.variantIds\.some\(id=>variants\.has\(id\)\)/);
+  assert.match(app,/printifyMockupForColor\(draft\.printifyImageDetails,variants\)/);
 });
 
 test("D904: changing colors updates owned private drafts, never Etsy",()=>{

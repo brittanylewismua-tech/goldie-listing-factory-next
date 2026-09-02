@@ -35,6 +35,7 @@ import ContextHelp from "./context-help";
 import GoldieWordmark from "./goldie-wordmark";
 import MobileGate from "./mobile-gate";
 import { productFamily } from "./product-type-utils";
+import { printifyMockupForColor } from "./printify-color-mockup";
 
 /* D370 · The garment glyph a card falls back to when no catalog photo reads as
    the product. Shape follows the blueprint title so a hoodie does not draw as a
@@ -506,8 +507,7 @@ function DraftColorSelector({product,drafts,selected,saving,onChange}:{product:T
   const variantIdsFor=(color:ProductColor)=>new Set(product.variants.filter(variant=>variant.colorId!=null&&idsFor(color).includes(variant.colorId)).map(variant=>variant.id));
   const imageFor=(color:ProductColor)=>{
     const variants=variantIdsFor(color);
-    return draft.printifyImageDetails?.find(image=>image.variantIds.some(id=>variants.has(id))&&/front|chest/i.test(image.position||""))?.src
-      ||draft.printifyImageDetails?.find(image=>image.variantIds.some(id=>variants.has(id)))?.src
+    return printifyMockupForColor(draft.printifyImageDetails,variants)
       ||draft.previewUrl||draft.printifyImages?.[0]||"";
   };
   const focused=colors.find(color=>color.id===activeColor)||colors[0];
@@ -4126,7 +4126,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
          and eyebrow both still read PRODUCT. The rail's own stage title is
          "Choose product", so that is the name three places already agree on. The
          title stays put; the copy carries the state. */
-      ? { eyebrow: "STEP 1 OF 4", title: "Choose product", copy: "Your product is selected. Add your finished designs below, then continue to create private Printify drafts." }
+      ? { eyebrow: "STEP 1 OF 4", title: "Choose product", copy: `${activeBundle?"Your bundle":"Your product"} is selected. Add your finished designs below, then continue to create private Printify drafts.` }
       : { eyebrow: "STEP 1 OF 4", title: "Choose product", copy: "Choose a saved product or connect a completed Printify product." },
     designs: { eyebrow: "STEP 2 OF 4", title: "Designs + images", copy: "Upload your finished designs, then assign front and back artwork where needed." },
     review: { eyebrow: "STEP 3 OF 4", title: "Create Printify drafts", copy: "Goldie creates an unpublished draft in Printify for every design in this batch." },
@@ -4825,12 +4825,12 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
 
           {!complete ? (
             <>
-            <FactoryFooter status={running||preparingEtsy||Boolean(bundleRun)?preparationMessage||"Creating private Printify drafts…":!ready?missingRequirement:"Ready to create private Printify drafts"}><button className="launch-button" aria-busy={running||preparingEtsy||Boolean(bundleRun)} disabled={!ready || running||preparingEtsy||Boolean(bundleRun)} onClick={createDrafts}>
+            {workflowStep==="designs"&&<FactoryFooter status={running||preparingEtsy||Boolean(bundleRun)?preparationMessage||"Creating private Printify drafts…":!ready?missingRequirement:"Ready to create private Printify drafts"}><button className="launch-button" aria-busy={running||preparingEtsy||Boolean(bundleRun)} disabled={!ready || running||preparingEtsy||Boolean(bundleRun)} onClick={createDrafts}>
               {/* D485 - one press covers the whole bundle, so the button says so
                   rather than naming a single product, and reports which product
                   Goldie is on while it works its way through them. */}
               <span className="button-glint" />{bundleRun&&!running?`Moving to ${bundleRecipes[bundleIndex+1]?.name||"the next product"}…`:preparingEtsy?"Completing Etsy details…":running ? (activeBundle&&bundleRecipes.length>1?`${activeRecipe?.name||"Product"} ${bundleIndex+1} of ${bundleRecipes.length}: creating drafts · ${processed} of ${runTotal} finished…`:`Creating drafts · ${processed} of ${runTotal} finished…`) : !ready ? missingRequirement : activeBundle&&bundleRecipes.length>1?`Create Printify drafts for all ${bundleRecipes.length} products`:"Continue to create drafts"}<span>→</span>
-            </button></FactoryFooter>
+            </button></FactoryFooter>}
               {/* D708 · The label already changes while Goldie works, but a changing
                   label does not tell you HOW LONG. Draft creation and Etsy publishing
                   are the two steps that can sit for minutes, and a screen that looks
@@ -4851,9 +4851,9 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
 {/* D496 - a held tab has to say so where she is working, not silently stop
     saving. */}
         {batchHeldByAnotherTab&&<div className="batch-tab-conflict" role="status"><b>This batch is open in another Goldie tab.</b><span>Goldie has paused saving here so that tab’s work is not overwritten. Continue in the other tab, or take over here and it will pause there instead.</span><button type="button" onClick={takeOverBatchHere}>Take over editing here</button></div>}
-        <div className="workflow-footer-actions">{progressIndex>0&&<button className="workflow-back" type="button" onClick={goBackOneStep}><span aria-hidden="true">←</span> Back</button>}<span className="autosave-note"><i aria-hidden="true">✓</i> Saved automatically</span>{/* D776 - the step's own footer (status + forward) lands here, so the bar the seller can see is the bar with the way forward in it. */}<span className="factory-footer-slot"/>{/* D386 - Saving a draft was only reachable from the Publish step, so
+        {!(complete&&workflowStep==="designs")&&<div className="workflow-footer-actions">{progressIndex>0&&<button className="workflow-back" type="button" onClick={goBackOneStep}><span aria-hidden="true">←</span> Back</button>}<span className="autosave-note"><i aria-hidden="true">✓</i> Saved automatically</span>{/* D776 - the step's own footer (status + forward) lands here, so the bar the seller can see is the bar with the way forward in it. */}<span className="factory-footer-slot"/>{/* D386 - Saving a draft was only reachable from the Publish step, so
                 stopping halfway meant trusting the autosave and remembering the
-                batch later. Name it and park it from wherever you are. */}{workflowStep!=="connect"&&(files.length>0||drafts.length>0||Boolean(templateDetails))&&<button className="save-draft-link" type="button" onClick={()=>{setBatchDisplayName(current=>current||suggestedBatchName());setDraftSaveOpen(true)}}>Save as draft</button>}</div>
+                batch later. Name it and park it from wherever you are. */}{workflowStep!=="connect"&&(files.length>0||drafts.length>0||Boolean(templateDetails))&&<button className="save-draft-link" type="button" onClick={()=>{setBatchDisplayName(current=>current||suggestedBatchName());setDraftSaveOpen(true)}}>Save as draft</button>}</div>}
         </div>
       </section>}
 
