@@ -57,6 +57,12 @@ test("the assignment matrix is a full-width workspace, not a 282px caption", () 
   assert.match(v2, /\.artwork-assignment-matrix select\{width:100%;text-overflow:ellipsis\}/);
 });
 
+test("artwork actions use the workflow's button hierarchy instead of bare links", () => {
+  assert.match(v2,/\.artwork-version-tools \.text-action,[\s\S]*?label\.secondary-action\{[\s\S]*?border:1px solid #d8ccd4[\s\S]*?border-radius:10px[\s\S]*?text-decoration:none/);
+  assert.match(v2,/label\.secondary-action\{border-color:#111;background:#111;color:#fff;box-shadow:4px 4px 0 #ff49bd/);
+  assert.match(v2,/\.design-artwork-primary>\.artwork-remove-action\{[\s\S]*?border:1px solid #e3b9c5[\s\S]*?color:#9b3d55[\s\S]*?text-decoration:none/);
+});
+
 test("the release control reads as a press", () => {
   assert.match(v2, /\.actual-cost-review button\{[\s\S]*?background:linear-gradient\(145deg,#ff6ecd,#f52fb2\)/);
   assert.match(v2, /\.actual-cost-review button:disabled\{/);
