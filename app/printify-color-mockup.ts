@@ -1,4 +1,14 @@
 export type PrintifyMockupImage={src:string;variantIds:number[];position:string};
+export type PrintifyColorVariant={id:number;colorId?:number|null;options?:number[]};
+
+/* Older saved batches predate the normalized `colorId` field. Their raw
+   Printify option ids are still present in `options`, so color previews must
+   accept either representation instead of silently falling back to one image
+   for every swatch. */
+export function printifyVariantIdsForColor(variants:PrintifyColorVariant[],colorIds:Iterable<number>){
+  const ids=new Set([...colorIds].filter(Number.isFinite));
+  return new Set(variants.filter(variant=>(variant.colorId!=null&&ids.has(variant.colorId))||(variant.options||[]).some(id=>ids.has(id))).map(variant=>variant.id));
+}
 
 /* Printify can return a broad fallback image before the color-specific images.
    Choosing the first metadata match makes every color look identical. Prefer

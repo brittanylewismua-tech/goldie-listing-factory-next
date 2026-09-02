@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
-import {printifyMockupForColor} from "../app/printify-color-mockup.ts";
+import {printifyMockupForColor,printifyVariantIdsForColor} from "../app/printify-color-mockup.ts";
 
 const app=readFileSync(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8");
 const css=readFileSync(new URL("../app/interface-v2.css",import.meta.url),"utf8");
@@ -36,6 +36,17 @@ test("D911: a broad single Printify image is addressed by the requested color va
   const broad=[{src:"https://images-api.printify.com/mockup/12100/92570/front-dark.jpg",variantIds:[92570,92571,92572],position:"front"}];
   assert.equal(printifyMockupForColor(broad,[92571]),"https://images-api.printify.com/mockup/12100/92571/front-dark.jpg");
   assert.equal(printifyMockupForColor(broad,[92572]),"https://images-api.printify.com/mockup/12100/92572/front-dark.jpg");
+});
+
+test("D916: restored batches resolve color variants from raw Printify options",()=>{
+  const variants=[
+    {id:92570,options:[101,201]},
+    {id:92571,options:[102,201]},
+    {id:92572,colorId:103,options:[103,201]},
+  ];
+  assert.deepEqual([...printifyVariantIdsForColor(variants,[101])],[92570]);
+  assert.deepEqual([...printifyVariantIdsForColor(variants,[102])],[92571]);
+  assert.deepEqual([...printifyVariantIdsForColor(variants,[103])],[92572]);
 });
 
 test("D911: Step 1 keeps a visible disabled continuation before upload",()=>{

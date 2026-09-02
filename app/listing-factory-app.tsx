@@ -35,7 +35,7 @@ import ContextHelp from "./context-help";
 import GoldieWordmark from "./goldie-wordmark";
 import MobileGate from "./mobile-gate";
 import { productFamily } from "./product-type-utils";
-import { printifyMockupForColor } from "./printify-color-mockup";
+import { printifyMockupForColor, printifyVariantIdsForColor } from "./printify-color-mockup";
 import { orderedPrintSides,primaryPrintSide,printSideLabel,productNoun } from "./print-sides";
 
 /* The product glyph is a last-resort identity image after Printify has answered
@@ -514,7 +514,7 @@ function DraftColorSelector({product,drafts,selected,saving,onChange}:{product:T
   useEffect(()=>{if(draft?.id&&!activeDraft)setActiveDraft(draft.id)},[draft?.id,activeDraft]);
   if(!colors.length||!draft)return null;
   const idsFor=(color:ProductColor)=>[...new Set([color.id,...(color.ids||[])])];
-  const variantIdsFor=(color:ProductColor)=>new Set(product.variants.filter(variant=>variant.colorId!=null&&idsFor(color).includes(variant.colorId)).map(variant=>variant.id));
+  const variantIdsFor=(color:ProductColor)=>printifyVariantIdsForColor(product.variants,idsFor(color));
   const imageFor=(color:ProductColor)=>{
     const variants=variantIdsFor(color);
     return printifyMockupForColor(draft.printifyImageDetails,variants)
