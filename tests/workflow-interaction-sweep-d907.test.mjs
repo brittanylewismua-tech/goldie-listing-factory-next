@@ -38,5 +38,5 @@ test("D907: compact workflow actions are still real, usable buttons",()=>{
   assert.match(app,/aria-label="Change saved product"/);
   assert.match(css,/\.summary-list div button\{[\s\S]*?min-height:36px/);
   assert.match(css,/\.workflow-footer-actions>\.save-draft-link\{min-height:38px/);
-  assert.match(css,/\.workflow-footer-actions>\.launch-button\{[\s\S]*?width:auto;[\s\S]*?min-height:44px;flex:0 0 auto/);
+  assert.match(css,/\.workflow-footer-actions \.launch-button\{[\s\S]*?width:auto!important;[\s\S]*?min-height:44px!important;flex:0 0 auto/);
 });
