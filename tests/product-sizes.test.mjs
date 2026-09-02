@@ -291,20 +291,11 @@ test("Edit bundle visibly does something — D176", async () => {
    *
    * The grid stays hidden when a bundle is selected (it was re-offering the
    * bundle you already picked); the form does not. */
-  assert.doesNotMatch(tools, /\{!activeId\.startsWith\("bundle:"\)&&<details className="bundle-library"/,
-    "The edit form must stay reachable while a bundle is selected.");
-/* D302 · The disclosure now IS the create action, so it carries an onToggle.
-     `open={bundleForm}` still has to drive it — that is what makes "Edit bundle"
-     on a saved bundle card open this block with the form already filled in. */
-  assert.match(tools, /<details className="bundle-library" open=\{bundleForm\} onToggle=/);
-  /* D860 · reads `reachable`, not `recipes`: the availability check counted
-     products from a shop the seller is not in. */
-  assert.match(tools, /if\(open&&!bundleForm&&reachable\.length>=2&&!pendingAction\)openBundle\(\)/,
-    "opening the section must open the form, not reveal a second button");
-  assert.match(tools, /document\.querySelector\("\.bundle-library"\)\?\.scrollIntoView\(\{block:"start"\}\)/,
+  assert.match(tools, /function openBundle\(bundle\?:ProductBundle\)/,
+    "The edit button must open the shared bundle builder.");
+  assert.match(tools, /document\.querySelector\("\.bundle-builder"\)\?\.scrollIntoView\(\{block:"center"\}\)/,
     "Opening the form must bring it into view. Instant — smooth scrolling never fires here (D146).");
-  /* And the header has to say what just happened, or it still reads as inert. */
-  assert.match(tools, /\{bundleForm\?\(editingBundleId\?`Editing \$\{bundleName\|\|"this bundle"\}`:"New product bundle"\)/);
+  assert.match(tools, /editingBundleId\?"Bundle name":"Name your bundle"/);
 });
 
 test("the setup screen does not announce itself twice — D177", async () => {
@@ -702,8 +693,8 @@ test("D222: a product cannot join a bundle until it has been set up", async () =
    * the thing the recipe exists to prevent. */
   assert.match(tools, /export function recipeIsSetUp\(recipe: Recipe\)/);
   assert.match(tools, /return Boolean\(\(recipe\.defaultColorIds \|\| \[\]\)\.length\) && Boolean\(\(recipe\.defaultSizeIds \|\| \[\]\)\.length\);/);
-  assert.match(tools, /disabled=\{!recipeIsSetUp\(recipe\)\|\|/, "the checkbox is disabled");
-  assert.match(tools, /Finish this product’s setup first/, "and the row says why, not just a tooltip");
+  assert.match(tools, /bundleDisabled=bundleForm&&\(!recipeIsSetUp\(recipe\)\|\|/, "the card is disabled");
+  assert.match(tools, /Finish setting up \$\{recipe\.name\} before adding it to a bundle/, "and the card says why in its tooltip");
 
   const body = tools.slice(tools.indexOf("export function recipeIsSetUp"));
   const source = body.slice(0, body.indexOf("\n}") + 2).replace("export function recipeIsSetUp(recipe: Recipe)", "function recipeIsSetUp(recipe)");
@@ -762,11 +753,9 @@ test("D228: an empty colour or size selection is never written to a recipe", asy
 test("bundle limits explain themselves — D293", async () => {
   const tools = await read("app/factory-tools.tsx");
 
-  assert.match(tools, /bundleIds\.length>=4\)\?"A bundle holds up to 4 saved products/,
-    "the capped checkbox must carry the reason");
-  assert.match(tools, /className="bundle-rule"/,
-    "and the rule must be on screen, not only in a title attribute");
-  assert.match(tools, /Choose at least 2 saved products/,
+  assert.match(tools, /A bundle holds up to 4 products\. Remove one to add another/,
+    "the capped card must carry the reason");
+  assert.match(tools, /Choose 2 to 4 products/,
     "the minimum must be stated too");
 
   /* The enforcement itself must stay. */

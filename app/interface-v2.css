@@ -2772,10 +2772,6 @@ html, body { background: var(--lf-paper); }
 .keyword-page .bank-keyword-toggle,
 .keyword-page .bank-grid .edit-bank{min-height:36px}
 
-/* The bundle library's summary badge sat at 8px, which is smaller than the
-   legal disclosure in the rail. */
-.app-shell .bundle-library > summary small em{font-size:10px;letter-spacing:.5px}
-
 /* ==========================================================================
    D851 · the thumbnails that were blank because the art is white
    ==========================================================================
@@ -2874,28 +2870,34 @@ html, body { background: var(--lf-paper); }
    Printify mockup - the tile read as patterned rather than as a product. */
 .app-shell .recipe-icon > img{width:auto;max-width:100%;height:100%;min-height:0;max-height:100%}
 
-/* D861 · With fewer than two products available in the active shop, the
-   bundle disclosure has no form it can open. It reads as unavailable rather
-   than behaving like an empty control. */
-.app-shell .bundle-library > summary[aria-disabled="true"]{cursor:default;opacity:.72}
-.app-shell .bundle-library > summary[aria-disabled="true"]::marker{color:transparent}
-.app-shell .bundle-library > summary[aria-disabled="true"]::-webkit-details-marker{color:transparent}
-
 /* D889 · Product groups are separate decisions. The removed cross-shop essay
    used to create accidental spacing between them; the layout owns that rhythm. */
 .app-shell .recipe-card .bundle-card-heading{margin-top:28px!important;margin-bottom:10px!important}
 .app-shell .recipe-card .unified-bundle-grid{margin-top:0!important;margin-bottom:30px!important}
 
-/* D891 · Bundle creation reuses the saved-product cards instead of opening a
-   second list of long checkbox rows. */
-.app-shell .recipe-card .create-bundle-button{border:0;background:transparent;color:#6b365a;font-size:12px;font-weight:750;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
-.app-shell .recipe-card .bundle-selection-grid .recipe-tile{cursor:pointer}
-.app-shell .recipe-card .bundle-selection-grid .recipe-tile.bundle-selected{border-color:#2f7a4b!important;box-shadow:0 0 0 2px rgba(47,122,75,.14)!important}
-.app-shell .recipe-card .bundle-selection-grid .recipe-tile.bundle-selected .recipe-copy>em{color:#2f7a4b!important;font-weight:800!important}
-.app-shell .recipe-card:has(.bundle-library[open]) .bundle-card-heading,
-.app-shell .recipe-card:has(.bundle-library[open]) .unified-bundle-grid{display:none!important}
-.app-shell .recipe-card .bundle-library:not([open]){display:none!important}
-.app-shell .recipe-card .bundle-library[open] .bundle-form fieldset{display:none!important}
+/* D892 · Bundle creation is one linear task, not a disclosure beneath the
+   products. Name it first, select unmistakable cards, then save. */
+.app-shell .recipe-card .bundle-builder{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:18px;margin:0 0 24px;padding:18px 20px;background:#f7fbf8;border:1px solid #cfe2d5;border-radius:10px}
+.app-shell .recipe-card .bundle-builder label{display:grid;gap:7px;color:#3d2538;font:750 12px/1.25 Inter,ui-sans-serif,system-ui,sans-serif}
+.app-shell .recipe-card .bundle-builder input{width:100%;height:44px;box-sizing:border-box;padding:0 13px;background:#fff;border:1px solid #cfc5cb;border-radius:8px;color:#2b2027;font:500 14px/1 Inter,ui-sans-serif,system-ui,sans-serif}
+.app-shell .recipe-card .bundle-builder input:focus{outline:3px solid rgba(47,122,75,.16);border-color:#2f7a4b}
+.app-shell .recipe-card .bundle-builder-instruction{display:grid;gap:4px;min-width:190px;padding-bottom:4px;text-align:right}
+.app-shell .recipe-card .bundle-builder-instruction b{color:#2b2027;font:750 13px/1.2 Inter,ui-sans-serif,system-ui,sans-serif}
+.app-shell .recipe-card .bundle-builder-instruction span{color:#746971;font:500 12px/1.2 Inter,ui-sans-serif,system-ui,sans-serif}
+.app-shell .recipe-card .bundle-selection-grid .recipe-tile{position:relative;cursor:pointer;transition:border-color .16s ease,box-shadow .16s ease,background .16s ease,transform .16s ease}
+.app-shell .recipe-card .bundle-selection-grid .recipe-tile:hover{border-color:#746971!important;background:#fff!important;box-shadow:0 7px 18px rgba(45,29,39,.1)!important;transform:translateY(-1px)}
+.app-shell .recipe-card .bundle-selection-grid .recipe-tile:hover .recipe-copy>em{background:transparent!important;color:#746971!important}
+.app-shell .recipe-card .bundle-selection-grid .recipe-tile.bundle-selected,
+.app-shell .recipe-card .bundle-selection-grid .recipe-tile.bundle-selected:hover{border:3px solid #2f7a4b!important;background:#f1f8f3!important;box-shadow:0 0 0 4px rgba(47,122,75,.14)!important;transform:none}
+.app-shell .recipe-card .bundle-selection-grid .recipe-tile.bundle-selected::after{content:"✓";position:absolute;z-index:3;top:10px;right:10px;display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:#2f7a4b;color:#fff;font:900 15px/1 Inter,ui-sans-serif,system-ui,sans-serif;box-shadow:0 2px 8px rgba(47,122,75,.28)}
+.app-shell .recipe-card .bundle-selection-grid .recipe-tile.bundle-selected .recipe-copy>em,
+.app-shell .recipe-card .bundle-selection-grid .recipe-tile.bundle-selected:hover .recipe-copy>em{background:transparent!important;color:#2f7a4b!important;font-weight:800!important}
+.app-shell .recipe-card:has(.bundle-builder) .bundle-card-heading,
+.app-shell .recipe-card:has(.bundle-builder) .unified-bundle-grid{display:none!important}
+.app-shell .recipe-card .bundle-builder-actions{display:flex;justify-content:flex-end;align-items:center;gap:10px;margin-top:24px;padding-top:18px;border-top:1px solid #e2d9de}
+.app-shell .recipe-card .bundle-builder-actions button{width:auto!important;min-width:116px!important;margin:0!important}
+.app-shell .recipe-card .bundle-builder-actions .save-recipe{background:#111!important;color:#fff!important;border:1px solid #111!important;box-shadow:4px 4px 0 #2f7a4b!important}
+.app-shell .recipe-card .bundle-builder-actions .save-recipe:disabled{background:#ebe8ea!important;color:#aaa1a7!important;border-color:#ded8dc!important;box-shadow:none!important}
 
 /* Desktop and laptop widths reflow; they never scale the entire application.
    The previous html zoom made type and controls physically smaller and still

@@ -968,17 +968,6 @@
   color:#8b5989;
 }
 
-/* D222 · A product that has not been set up cannot join a bundle, and the reason
- * is stated on the row rather than hidden in a tooltip nobody hovers. */
-.app-shell .needs-setup-note{
-  display:block;
-  margin-top:2px;
-  font-style:normal;
-  font-size:10px;
-  font-weight:750;
-  color:#a33a48;
-}
-
 /* D226 · A listing with no title yet is waiting, not failing. It used to render
  * the same red "Etsy details still need to be created" card as a genuine
  * failure, with a retry button that could not succeed, because Etsy details are
@@ -1460,14 +1449,6 @@
 }
 .context-help-dialog .context-help-intro,
 .context-help-dialog p{
-}
-
-/* D293 · The bundle rule line: says why a control is unavailable before you
-   click a dead one. */
-.app-shell .bundle-rule{
-  margin:0 0 10px!important;
-  color:#75576b!important;
-  font:500 12px/1.5 "Manrope",system-ui,sans-serif;
 }
 
 /* ============================================================================
@@ -3019,7 +3000,6 @@ body{min-width:0}
    pixels and painted with currentColor so it matches whatever it sits beside.
    The two summaries also disagreed on type because one was bare text and the
    other a <span> plus a <small>; both are now the same shape. ------------ */
-.app-shell .recipe-card .bundle-library>summary::after,
 .app-shell .printify-image-picker>summary::after,
 .app-shell .template-instructions-toggle>summary::after{
   content:""!important;
@@ -3033,26 +3013,8 @@ body{min-width:0}
   mask:var(--goldie-chevron) center/15px 15px no-repeat!important;
   transition:transform .16s ease!important;
 }
-.app-shell .recipe-card .bundle-library[open]>summary::after,
 .app-shell .printify-image-picker[open]>summary::after,
 .app-shell .template-instructions-toggle[open]>summary::after{transform:rotate(180deg)!important}
-
-/* One type scale for both product disclosures. */
-.app-shell .recipe-card .bundle-library>summary{
-  display:flex!important;
-  align-items:center!important;
-  gap:10px!important;
-  cursor:pointer!important;
-  list-style:none!important;
-}
-.app-shell .recipe-card .bundle-library>summary>span{
-  font:800 13px/1.25 "Manrope",system-ui,sans-serif;
-  color:#4a2f44!important;
-}
-.app-shell .recipe-card .bundle-library>summary>small{
-  font:650 11px/1.25 "Manrope",system-ui,sans-serif;
-  color:#84667c!important;
-}
 
 /* --- 11 · Watch this step. Sits beside the support launcher, same fixed
    corner, visibly secondary to it. Rendered only where a video exists. --- */

@@ -38,7 +38,7 @@ test("uses the binding batch limit and keeps setup actions in the right hierarch
   assert.match(page, /up to \$\{batchDesignLimit\} finished designs/);
   assert.match(page, /Add up to \$\{batchDesignLimit\} designs in this batch/);
   assert.doesNotMatch(page, /Your folder can contain up to 20 designs/);
-  assert.match(page, /headerActions=\{showProductLibrary\|\|\(!productSelected&&!bundleSelected\)\?<button[\s\S]{0,140}>＋ Add a new product<\/button>/);
+  assert.match(page, /headerActions=\{bundleCreationMode\?undefined:[\s\S]{0,240}>＋ Add a new product<\/button>[\s\S]{0,180}>Create a bundle<\/button>/);
   assert.match(css, /managementOnly \.newSetButton\{border:0!important;background:transparent!important/);
 });
 
@@ -48,7 +48,8 @@ test("places the selected-product proof before bundle setup and exposes Finish p
     readFile(new URL("../app/factory-tools.tsx", import.meta.url), "utf8"),
   ]);
   assert.match(app, /selectedSummary=\{templateDetails\?</);
-  assert.match(tools, /\{activeId&&<div className="selected-summary-block">[\s\S]*<details className="bundle-library"/);
+  assert.match(tools, /\{activeId&&<div className="selected-summary-block">/);
+  assert.match(tools, /\{bundleForm&&<div className="bundle-builder">/);
   /* D220 retired the Finish node and its four-phase subrail. The workflow is now
      four stages - Product, Images, Listing, Publish - and the phases that used to
      nest under Finish were merged onto those pages: draft creation and mockups

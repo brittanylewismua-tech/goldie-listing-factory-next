@@ -583,12 +583,10 @@ test("the product step stays usable after a product is chosen — D122/D119/D120
     Promise.all([readFile(new URL("app/clarity-pass.css",root),"utf8"),readFile(new URL("app/interface-v2.css",root),"utf8")]).then(x=>x.join("\n")),
   ]);
 
-  /* D122 — adding a saved product auto-selects it, and selecting a product hid
-   * the bundle block entirely, so the seller had no route to a bundle except
-   * unselecting the product they had just added. It is a collapsed <details>;
-   * it can stay. */
-  assert.match(functional, /\.app-shell\[data-product-selected="true"\] \.bundle-library\{display:block!important\}/,
-    "Selecting a product must not remove the bundle option.");
+  /* D122 — bundle creation remains a first-class header action whenever at
+   * least two scoped products exist; it is no longer a disclosure below them. */
+  assert.match(page, /bundleCreationAvailable&&<button type="button"[\s\S]{0,100}>Create a bundle<\/button>/,
+    "The picker must keep an explicit route into bundle creation.");
 
   /* D119 — the connected Printify product already knows what it is. */
   assert.match(page, /suggestedProductName=\{templateDetails\?\[templateDetails\.brand,templateDetails\.model\]/);
@@ -770,11 +768,9 @@ test("the chosen-product confirmation sits with the products, not inside the bun
   /* D169 also gates both bundle blocks on a bundle not already being the
    * selection, so match on the stable part of each. Ordering is what matters. */
   const bundles = tools.indexOf('<div className="recipe-library-head bundle-card-heading"');
-  const bundleLibrary = tools.indexOf('<details className="bundle-library"');
-  assert.ok(summary > 0 && bundles > 0 && bundleLibrary > 0);
+  assert.ok(summary > 0 && bundles > 0);
   assert.ok(summary < bundles,
     "The chosen-product confirmation must render before the bundle list, not between the bundle list and the bundle prompt.");
-  assert.ok(bundles < bundleLibrary);
 });
 
 test("nothing in the app relies on smooth scrolling — D146", async () => {
@@ -919,7 +915,7 @@ test("saved-product tiles line up regardless of name length — D162", async () 
     "A name too long for one line truncates rather than reflowing the card.");
 
   /* The name is clamped to two lines, so the full name must stay reachable. */
-  assert.match(tools, /className="recipe-use" title=\{bundleForm\?[\s\S]{0,180}:`Choose \$\{recipe\.name\}`\}/);
+  assert.match(tools, /className="recipe-use" title=\{bundleReason\|\|\(bundleForm\?[\s\S]{0,180}:`Choose \$\{recipe\.name\}`\)\}/);
   assert.match(tools, /className="recipe-use" title=\{`Choose \$\{bundle\.name\}`\}/);
 });
 
@@ -1373,8 +1369,8 @@ test("D215: selecting a product does not break the other product tiles", async (
     "and must not be given display:block anywhere",
   );
 
-  // The rule it was wrongly attached to still does its own job.
-  assert.match(rules, /\.app-shell\[data-product-selected="true"\] \.bundle-library\{display:block!important\}/);
+  assert.doesNotMatch(rules, /bundle-library/,
+    "the retired disclosure cannot affect product-tile layout again");
 });
 
 test("D233: one heading system, two typefaces, no child larger than its parent", async () => {

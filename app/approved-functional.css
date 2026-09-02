@@ -928,22 +928,10 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 /* D705 - the arrow moved to one shared SVG chevron; see clarity-pass.css. */
 .app-shell .template-instructions-toggle[open]>summary:after{transform:rotate(180deg)}
 .app-shell .template-instructions-toggle .template-requirements{margin-top:14px}
-.app-shell .recipe-card .bundle-library{display:block!important;margin-top:26px!important;padding-top:18px!important;border-top:1px solid #ded6dc!important}
-.app-shell .recipe-card .bundle-library>summary{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:18px!important;padding:14px 16px!important;border:1px solid #ded6dc!important;border-radius:12px!important;background:rgba(255,255,255,.34)!important;color:#4a2a3e!important;cursor:pointer!important;list-style:none!important}
-.app-shell .recipe-card .bundle-library>summary::-webkit-details-marker{display:none}
-.app-shell .recipe-card .bundle-library>summary>span{font-size:14px!important;font-weight:800!important}
-.app-shell .recipe-card .bundle-library>summary>small{display:flex!important;align-items:center!important;gap:8px!important;color:rgba(74,42,62,.68)!important;font-size:11px!important}
-/* D705 - the arrow was attached to the <small>, which is why it sat at a
-   different size and baseline from every other disclosure. It now belongs to
-   the summary, once, in clarity-pass.css. */
-.app-shell .recipe-card .bundle-library>summary em{padding:3px 7px;border-radius:16px;background:rgba(255,255,255,.58);color:#7b526e;font-size:8px;font-style:normal;font-weight:850;letter-spacing:.08em;text-transform:uppercase}
-.app-shell .recipe-card .bundle-library[open]>summary>small:after{transform:rotate(180deg)}
-.app-shell .recipe-card .bundle-library-content{display:grid;gap:14px;padding:16px 2px 2px}
 .app-shell .recipe-card .recipe-tile.selected .recipe-copy em{color:#713d62!important;font-weight:900!important}
 .app-shell button[aria-busy="true"]{cursor:wait!important}
 .app-shell button[aria-busy="true"]::after{content:"";display:inline-block;width:.85em;height:.85em;margin-left:.55em;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;vertical-align:-.1em;animation:goldie-action-spin .72s linear infinite}
 @keyframes goldie-action-spin{to{transform:rotate(360deg)}}
-@media(max-width:800px){.app-shell .recipe-card .bundle-library>summary{align-items:flex-start;flex-direction:column;gap:6px}.app-shell .recipe-card .bundle-library>summary>small{width:100%;justify-content:space-between}}
 
 /* Finish workspace: dense rows with one in-place editor instead of stacked cards. */
 .app-shell .etsy-details-editor>summary{min-height:42px!important;padding:8px 10px!important}
@@ -1220,12 +1208,8 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
  * and the same broken-but-consistent layout. The selector is higher specificity
  * than anything in clarity-pass.css, so no later rule could win.
  *
- * The display:block was only ever meant for .bundle-library. */
-/* D122 · Hiding the bundle block once a product is selected trapped sellers:
- * adding a product auto-selects it, the bundle option vanished, and the only
- * way back was to unselect. It is a collapsed <details> — one summary line —
- * so it can stay visible without adding noise. */
-.app-shell[data-product-selected="true"] .bundle-library{display:block!important}
+ * The obsolete bundle disclosure was removed when bundle creation became a
+ * single builder above the product cards. */
 .app-shell .variant-pricing .heading-with-help>button{display:none!important}
 .keyword-page .keyword-workspace{display:flex!important;flex-direction:column!important}
 .keyword-page .bank-library{order:1}

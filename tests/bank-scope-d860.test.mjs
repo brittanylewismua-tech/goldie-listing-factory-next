@@ -84,10 +84,9 @@ test("every surface reads the one scoped list — D860", () => {
   const tools = readFileSync(new URL("../app/factory-tools.tsx", import.meta.url), "utf8");
   assert.match(tools, /const \{ reachable, usableBundles, hiddenCount, blockedMembers \} = scopeBank\(recipes, bundles\);/);
 
-  /* The three surfaces she found still on the unscoped list. */
-  assert.match(tools, /if\(open&&!bundleForm&&reachable\.length>=2&&!pendingAction\)openBundle\(\)/, "availability check");
-  assert.match(tools, /:reachable\.length<2\?<>Save 2 products first/, "the two-product copy");
-  assert.match(tools, /\{reachable\.map\(recipe=><label/, "the checkbox list");
+  /* Availability and the shared card grid both read the scoped list. */
+  assert.match(tools, /onBundleAvailabilityChange\?\.\(reachable\.length>=2\)/, "availability check");
+  assert.match(tools, /\{reachable\.map\(\(recipe\) =>/, "the bundle card grid");
 
   /* And nothing renders or counts from the raw list any more. */
   const body = tools.slice(tools.indexOf("const { reachable,"));
@@ -96,13 +95,13 @@ test("every surface reads the one scoped list — D860", () => {
   }
 });
 
-test("the bundle disclosure does not open when fewer than two products are available — D861", () => {
+test("bundle creation is unavailable until two scoped products exist — D861", () => {
   const tools = readFileSync(new URL("../app/factory-tools.tsx", import.meta.url), "utf8");
   const css = readFileSync(new URL("../app/interface-v2.css", import.meta.url), "utf8");
 
-  assert.match(tools, /<details className="bundle-library" open=\{bundleForm\}/,
-    "Edit bundle must still be able to open the controlled disclosure");
-  assert.match(tools, /<summary aria-disabled=\{reachable\.length<2&&!bundleForm\} onClick=\{event=>\{if\(reachable\.length<2&&!bundleForm\)event\.preventDefault\(\)\}\}>/,
-    "the native details toggle must be cancelled when no bundle can be created");
-  assert.match(css, /\.bundle-library > summary\[aria-disabled="true"\]\{cursor:default;opacity:\.72\}/);
+  assert.match(tools, /onBundleAvailabilityChange\?\.\(reachable\.length>=2\)/);
+  assert.match(tools, /function openBundle\(bundle\?:ProductBundle\)/,
+    "Edit bundle must still open the same builder with its saved values");
+  assert.doesNotMatch(css, /bundle-library/,
+    "the retired disclosure must not survive as a second bundle interface");
 });
