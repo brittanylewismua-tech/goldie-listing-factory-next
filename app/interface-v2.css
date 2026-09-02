@@ -3104,3 +3104,10 @@ html, body { background: var(--lf-paper); }
   box-sizing:border-box;min-height:36px;padding:8px 10px!important;
   display:inline-flex;align-items:center;justify-content:center;
 }
+
+/* D926 · Adding a saved product is a focused subtask. Do not leave the batch
+   navigation bar visible underneath the form; it offers an unrelated Back
+   action and makes the form look like it is still part of the batch flow. */
+.app-shell .workflow-stage:has(.recipe-form)>.workflow-footer-actions{
+  display:none!important;
+}
