@@ -3078,3 +3078,7 @@ html, body { background: var(--lf-paper); }
 .app-shell .summary-list div button:hover{border-color:#756871!important;background:#faf8f9!important}
 .app-shell .summary-list div button:focus-visible{outline:3px solid rgba(245,47,178,.2);outline-offset:2px}
 .app-shell .workflow-footer-actions>.save-draft-link{min-height:38px;padding:8px 12px}
+.app-shell .workflow-footer-actions>.launch-button{
+  width:auto;max-width:min(460px,48%);min-height:44px;flex:0 0 auto;
+  padding:11px 16px;white-space:normal;text-align:center;
+}
