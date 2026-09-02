@@ -43,7 +43,7 @@ test("connect remains scoped and Product exposes only its gated continuation", (
       "a forward control in the Connect panel must require the Connect step");
   }
   const setupPanel = app.slice(app.indexOf("product-step workflow-panel"), app.indexOf("designs-step workflow-panel"));
-  assert.match(setupPanel,/files\.length===0&&!bundleCreationMode&&<FactoryFooter status="Add at least one design to continue"><button className="workflow-next" type="button" disabled>Add at least one design<\/button>/);
+  assert.match(setupPanel,/files\.length===0&&!bundleCreationMode&&!productFormMode&&<FactoryFooter status="Add at least one design to continue"><button className="workflow-next" type="button" disabled>Add at least one design<\/button>/);
 });
 
 test("no forward control navigates to an earlier step from a later one", () => {

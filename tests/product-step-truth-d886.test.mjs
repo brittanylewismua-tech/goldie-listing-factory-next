@@ -29,9 +29,9 @@ test("D897: the selected header keeps the saved mockup and owns its management",
 });
 
 test("D887: selected-product management disappears while the product library is open",()=>{
-  assert.match(app,/headerActions=\{bundleCreationMode\?undefined:/);
-  assert.match(app,/title=\{bundleCreationMode\?"Create a product bundle":showProductLibrary/);
-  assert.match(app,/description=\{bundleCreationMode\?"Name it, then choose 2 to 4 products":showProductLibrary/);
+  assert.match(app,/headerActions=\{bundleCreationMode\|\|productFormMode\?undefined:/);
+  assert.match(app,/title=\{bundleCreationMode\?"Create a product bundle":productFormMode\?"Add a saved product":showProductLibrary/);
+  assert.match(app,/description=\{bundleCreationMode\?"Name it, then choose 2 to 4 products":productFormMode\?"Connect one completed Printify product":showProductLibrary/);
 });
 
 test("D888: the empty picker does not repeat its state and shop metadata is quiet",()=>{
@@ -55,8 +55,8 @@ test("D889: cross-shop inventory adds no picker clutter",()=>{
 });
 
 test("D891: product and bundle selection use one card grid",()=>{
-  assert.match(app,/title=\{bundleCreationMode\?"Create a product bundle":showProductLibrary/);
-  assert.match(app,/headerActions=\{bundleCreationMode\?undefined:[\s\S]{0,280}>＋ Add a new product<\/button>[\s\S]{0,220}>＋ Create a new bundle<\/button>/);
+  assert.match(app,/title=\{bundleCreationMode\?"Create a product bundle":productFormMode\?"Add a saved product":showProductLibrary/);
+  assert.match(app,/headerActions=\{bundleCreationMode\|\|productFormMode\?undefined:[\s\S]{0,380}>＋ Add a new product<\/button>[\s\S]{0,220}>＋ Create a new bundle<\/button>/);
   assert.match(app,/addProductRequest=\{addProductRequest\}/);
   assert.match(app,/bundleCreationAvailable&&<button type="button" className="panel-create-action"[\s\S]{0,100}>＋ Create a new bundle<\/button>/);
   assert.equal((app.match(/className="panel-create-action"/g)||[]).length,4);
