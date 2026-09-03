@@ -1845,6 +1845,14 @@ export default function ListingFactoryApp() {
     verify it. Batch History then reported it as a DRAFT with a Resume button while
     its four listings were live on Etsy. */setBatchReceipt(state.batchReceipt||null);setTemplate(state.template||"");setTemplateDetails(state.templateDetails||null);setDescription(state.description||"");if(state.pricing)setPricing(state.pricing);setVariantPrices(state.variantPrices||{});setSelectedColorIds(state.selectedColorIds?.length?state.selectedColorIds:state.activeRecipe?.defaultColorIds?.length?state.activeRecipe.defaultColorIds:savedProductColors);setSelectedSizeIds(state.selectedSizeIds?.length?state.selectedSizeIds:state.activeRecipe?.defaultSizeIds?.length?state.activeRecipe.defaultSizeIds:savedProductSizes);setEtsyShippingProfileId(Number(state.etsyShippingProfileId)||0);setPricingApproved(Boolean(state.pricingApproved)||Boolean(state.complete&&(state.drafts||[]).some(draft=>draft.status==="Created")));setMockupTheme(state.mockupTheme||"");setActiveRecipe(state.activeRecipe||null);setActiveBundle(state.activeBundle||null);setBundleRecipes(state.bundleRecipes||[]);setBundleIndex(Math.max(0,Number(state.bundleIndex)||0));setBundleBatchIds(state.bundleBatchIds||{});setFiles(designs);setDrafts(state.drafts||[]);setComplete(Boolean(state.complete));setFinishPhase(restoredFinishPhase(state.finishPhase||"details",requestedPhase??requestedFinishPhase(requestedStep),Boolean(state.complete)));setBulkTitles(state.bulkTitles||"");setBatchKeywords(state.batchKeywords||[]);setTitleJoiner(state.titleJoiner||", ");setTitleBuilderMode(state.titleBuilderMode||"ai");setAutoTitleBankId(state.autoTitleBankId||"");setManualKeywordBankId(state.manualKeywordBankId||"");setSharedMockups(state.sharedMockups);setPreparedMockupCounts(state.preparedMockupCounts||{});setPrintifyImageIndices(state.printifyImageIndices||[]);setPrintifyImageSelections(state.printifyImageSelections||{});setSizeGuideName(state.sizeGuideName||"");setResumeProcessing(payload.batch.status==="processing"&&designs.length>0);const step=restoredWorkflowStep(payload.batch.step||"connect",requestedStep,Boolean(state.complete));setWorkflowStep(normalizeStep(step));url.searchParams.set("batch",id);url.searchParams.set("step",step);url.searchParams.delete("phase");if(push)window.history.pushState({},"",url);else window.history.replaceState({},"",url);if(payload.batch.status==="processing"&&state.template)void loadTemplateUrl(state.template);return true}finally{snapshotReady.current=true;setRestoringBatch(false)}
   }
+  /* Restored batches keep their exact saved decisions, but refresh the product
+     catalogue once so every available colour has a current Printify variant
+     before the colour panel is opened. */
+  useEffect(()=>{
+    if(!restoringBatch&&snapshotReady.current&&template&&templateDetails?.id)void refreshRestoredTemplate(template,etsyShippingProfileId);
+    // This is a one-time post-restore refresh. Product selection has its own loader.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[restoringBatch]);
   /* D659 · A workflow URL with no ?batch= dropped straight to step 1. Measured
      live: opening ?step=designs after four Printify drafts existed silently
      landed on "Choose product", looking exactly like the batch had been thrown
@@ -3772,6 +3780,21 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
 setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecipe?.defaultProfitTarget,etsyShippingProfileId:activeRecipe?.etsyShippingProfileId})); return result.product;
     } catch (error) { if(requestVersion===templateLoadVersion.current)setTemplateError(error instanceof Error ? error.message : "The template could not be loaded."); return null; }
     finally { if(requestVersion===templateLoadVersion.current)setLoadingTemplate(false); }
+  }
+
+  /* A saved batch contains the product snapshot that existed when it was last
+     written. Older snapshots can contain only the variants that were enabled
+     then, which is enough to resume the batch but not enough to preview every
+     currently available colour before the seller clicks it. Refresh only the
+     product catalogue facts on restore; keep the batch's selected colours,
+     sizes, prices, drafts, and progress exactly as saved. */
+  async function refreshRestoredTemplate(productUrl:string,savedShippingProfileId=0){
+    if(!productUrl)return;
+    try{
+      const response=await fetchWithDeadline("/api/printify",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({productUrl,savedShippingProfileId})},90000);
+      const result=await response.json() as {product?:TemplateDetails};
+      if(response.ok&&result.product)setTemplateDetails(current=>current?.id&&current.id!==result.product!.id?current:{...current,...result.product!});
+    }catch{/* A temporary catalogue refresh failure must never make a resumable batch unusable. */}
   }
 
   async function rememberProductColors(){if(!activeRecipe||!selectedColorIds.length)return;setRememberingColors(true);try{const updated={...activeRecipe,defaultColorIds:selectedColorIds};const response=await fetch("/api/product-recipes",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:activeRecipe.id,name:activeRecipe.name,templateUrl:activeRecipe.templateUrl,defaultColorIds:selectedColorIds})});if(!response.ok)throw new Error("These color defaults could not be saved.");setActiveRecipe(updated);setColorsRemembered(true)}catch(error){stopWith("These color defaults were not saved.",[error instanceof Error?error.message:"Try again in a moment."])}finally{setRememberingColors(false)}}
