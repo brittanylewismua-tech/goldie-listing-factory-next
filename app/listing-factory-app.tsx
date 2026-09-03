@@ -387,6 +387,13 @@ function productEtsyDefaults(template:TemplateDetails|null,saved?:Record<string,
      hoodie restored as "Short sleeve" and then marked ready). */
   return {...Object.fromEntries(Object.entries(saved||{}).filter(([key,value])=>PHYSICAL_ETSY_FIELDS.test(key)&&String(value??"").trim()).map(([key,value])=>[key,String(value)])),...derived};
 }
+function restoreAuthoritativeProductFacts(design:DesignFile,template:TemplateDetails|null,recipe?:Recipe|null):DesignFile{
+  if(!design.etsy)return design;
+  const facts=productEtsyDefaults(template,recipe?.etsyDefaults);
+  if(!Object.keys(facts).length)return design;
+  const properties=(design.etsy.properties||[]).map(property=>facts[property.label]?{...property,value:facts[property.label]}:property);
+  return {...design,etsy:{...design.etsy,attributes:{...design.etsy.attributes,...facts},properties}};
+}
 function isRigidPaperProduct(template:TemplateDetails|null){return /poster|print|canvas|paper/i.test(`${template?.blueprintTitle||""} ${template?.brand||""} ${template?.model||""}`)}
 /* D512 - the recommended print size was worked out in three separate places and
    the three did not agree. Two used `placementScale || 0`, the bundle check used
@@ -1820,7 +1827,7 @@ export default function ListingFactoryApp() {
       const cachedFile=cached[index],file=cachedFile?.size?cachedFile:undefined,draft=savedDrafts.find(item=>item.clientId===design.id);
       const previewUrl=file?URL.createObjectURL(file):draft?.previewUrl||draft?.printifyImages?.[0]||"";
       const artworkVersions=(design.artworkVersions||[]).map(artwork=>{const artworkFile=cachedArtwork[`${design.id}:${artwork.id}`];return {...artwork,file:artworkFile||new File([],artwork.name,{type:"application/octet-stream"}),previewUrl:artworkFile?URL.createObjectURL(artworkFile):"",originalUnavailable:!artworkFile}});
-      return {...design,artworkVersions,file:file||new File([],design.name,{type:"application/octet-stream"}),previewUrl,originalUnavailable:!file};
+      return restoreAuthoritativeProductFacts({...design,artworkVersions,file:file||new File([],design.name,{type:"application/octet-stream"}),previewUrl,originalUnavailable:!file} as DesignFile,state.templateDetails||null,state.activeRecipe);
     }) as DesignFile[];
     /* D632 - IndexedDB belongs to one browser profile, not one computer. Losing
        that cache must never delete the server-saved design records: existing
