@@ -3317,10 +3317,10 @@ html, body { background: var(--lf-paper); }
 /* D955 · The footer marks its own forward control. Class names such as
    workflow-next and launch-button also exist inside content, so they cannot
    reliably express the visual hierarchy. */
-.app-shell .footer-forward-action{
+.app-shell .factory-footer.in-bar .footer-forward-action{
   box-shadow:4px 4px 0 var(--lf-pink)!important;
 }
-.app-shell .footer-forward-action:hover:not(:disabled){
+.app-shell .factory-footer.in-bar .footer-forward-action:hover:not(:disabled){
   box-shadow:6px 6px 0 var(--lf-pink)!important;
   transform:translate(-1px,-1px);
 }

@@ -20,7 +20,7 @@ test("D955: internal workflow actions use a flat black face",()=>{
 test("D955: only the footer's forward action receives the pink offset",()=>{
   const footer=readFileSync(new URL("../app/factory-footer.tsx",import.meta.url),"utf8");
   assert.match(footer,/cloneElement\(children[\s\S]*?footer-forward-action/);
-  assert.match(css,/\.app-shell \.footer-forward-action\{\s*box-shadow:4px 4px 0 var\(--lf-pink\)!important/);
+  assert.match(css,/\.app-shell \.factory-footer\.in-bar \.footer-forward-action\{\s*box-shadow:4px 4px 0 var\(--lf-pink\)!important/);
   assert.doesNotMatch(css.slice(css.indexOf("/* D955")),/\.app-shell \.workflow-next\{/);
 });
 

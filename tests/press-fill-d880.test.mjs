@@ -83,7 +83,7 @@ test("D955: internal workflow actions are flat; only the footer forward action h
   assert.match(block,/background:#0d0b0c!important;\s*color:#fff!important;\s*box-shadow:none!important/);
   assert.match(block,/\.recipe-card \.recipe-tile \.recipe-use em\{[\s\S]*?background:#0d0b0c!important;[\s\S]*?box-shadow:none!important/);
   assert.match(block,/:hover:not\(:disabled\)\{\s*background:#171117!important;\s*box-shadow:none!important;\s*transform:none/);
-  assert.match(css,/\.app-shell \.footer-forward-action\{\s*box-shadow:4px 4px 0 var\(--lf-pink\)!important/);
+  assert.match(css,/\.app-shell \.factory-footer\.in-bar \.footer-forward-action\{\s*box-shadow:4px 4px 0 var\(--lf-pink\)!important/);
   assert.match(css,/\.blocking-modal \.publish-confirm-actions button,[\s\S]*?box-shadow:none!important/);
 });
 
