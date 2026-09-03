@@ -12,7 +12,7 @@ import { decryptPrintifyToken } from "../token-crypto";
 import { recommendedPrice } from "@/app/pricing";
 import { isOwner } from "@/app/mastermind/access";
 import { actualCostReview } from "@/app/draft-pricing";
-import { creationVariantIds, mockupCoverageComplete, restoredVariants } from "@/app/draft-preview-variants";
+import { creationVariantIds, expandPrintAreasForPreview, mockupCoverageComplete, restoredVariants } from "@/app/draft-preview-variants";
 
 const PRINTIFY_API = "https://api.printify.com/v1";
 type UploadedImage = { id: string; width?: number; height?: number; mime_type?: string };
@@ -136,7 +136,7 @@ async function handlePOST(request: Request) {
   let diagnosticStage = "request_validation";
   let idempotencyKey = "";
   try {
-    const body = (await request.json()) as { batchId?: string; title?: string; tags?: string[]; description?: string; visibleBounds?:{left:number;top:number;right:number;bottom:number}; maxPlacementScale?:number; fileName?: string; stagedId?: string; artworks?:Array<{key:string;fileName:string;stagedId:string;bounds?:{left:number;top:number;right:number;bottom:number};maxPlacementScale?:number}>; artworkAssignments?:ArtworkAssignment[]; supportReference?: string; clientId?: string; variantPrices?:Record<string,number>; selectedVariantIds?:number[]; mockupVariantIds?:number[]; etsyBuyerShipping?:number; shippingTemplateId?:number; pricing?: { targetProfit?: number; etsyFeePercent?: number; fixedFee?: number; listingFee?: number; shippingCost?: number; shippingCharged?: number } };
+    const body = (await request.json()) as { batchId?: string; title?: string; tags?: string[]; description?: string; visibleBounds?:{left:number;top:number;right:number;bottom:number}; maxPlacementScale?:number; fileName?: string; stagedId?: string; artworks?:Array<{key:string;fileName:string;stagedId:string;bounds?:{left:number;top:number;right:number;bottom:number};maxPlacementScale?:number}>; artworkAssignments?:ArtworkAssignment[]; supportReference?: string; clientId?: string; variantPrices?:Record<string,number>; selectedVariantIds?:number[]; mockupVariantIds?:number[]; mockupVariantSources?:Record<string,number>; etsyBuyerShipping?:number; shippingTemplateId?:number; pricing?: { targetProfit?: number; etsyFeePercent?: number; fixedFee?: number; listingFee?: number; shippingCost?: number; shippingCharged?: number } };
     stagedIdsForCleanup.push(...(body.artworks?.map((artwork) => artwork.stagedId) ?? []), ...(body.stagedId ? [body.stagedId] : []));
     supportReference = body.supportReference?.replace(/[^A-Z0-9-]/gi, "").slice(0, 40) ?? "";
     const requestedArtworks = body.artworks?.length
@@ -215,6 +215,7 @@ async function handlePOST(request: Request) {
     if(!selectedShippingTemplateId)throw new Error("Choose the shipping profile for this batch before creating drafts.");
     const finalVariantIds=(body.selectedVariantIds||[]).filter(id=>template.variants.some(variant=>variant.id===id));
     const enabledForCreation=creationVariantIds(finalVariantIds,body.mockupVariantIds||[]);
+    const creationPrintAreas=expandPrintAreasForPreview(template.print_areas,body.mockupVariantSources||{});
     const productBody = () => JSON.stringify({
         title: title || "Untitled design",
         description: body.description ?? template.description ?? "",
@@ -227,8 +228,8 @@ async function handlePOST(request: Request) {
         // Never carry media-library IDs from the template into a different
         // product request. Only the image uploaded in this request is valid.
         print_areas: body.artworkAssignments?.length
-          ? printAreasForArtworkAssignments(template.print_areas, body.artworkAssignments, uploadedImageIds)
-          : printAreasWithOnlyCurrentArtwork(template.print_areas, uploadedImageIds.primary, body.visibleBounds, body.maxPlacementScale),
+          ? printAreasForArtworkAssignments(creationPrintAreas, body.artworkAssignments, uploadedImageIds)
+          : printAreasWithOnlyCurrentArtwork(creationPrintAreas, uploadedImageIds.primary, body.visibleBounds, body.maxPlacementScale),
     });
     diagnosticStage = "draft_creation";
     await recordDiagnostic(runtimeEnv().DB, supportReference, { stage: diagnosticStage, event: "started", shopId: shop.id });

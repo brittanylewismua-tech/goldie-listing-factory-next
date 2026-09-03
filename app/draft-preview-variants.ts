@@ -1,5 +1,18 @@
 export type DraftVariant={id:number;is_enabled?:boolean};
 export type DraftMockupImage={variant_ids?:number[]};
+export type DraftPrintArea<T=unknown>={variant_ids:number[];placeholders:T[];background?:string};
+
+export function expandPrintAreasForPreview<T>(areas:DraftPrintArea<T>[],variantSources:Record<string,number>){
+  return areas.map(area=>({
+    ...area,
+    variant_ids:[...new Set([
+      ...area.variant_ids,
+      ...Object.entries(variantSources)
+        .filter(([,source])=>area.variant_ids.includes(Number(source)))
+        .map(([variant])=>Number(variant)),
+    ])],
+  }));
+}
 
 export function creationVariantIds(selectedVariantIds:number[],previewVariantIds:number[]){
   const selected=[...new Set(selectedVariantIds.filter(Number.isFinite))];

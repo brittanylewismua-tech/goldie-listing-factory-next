@@ -3886,6 +3886,10 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
             const stagedArtworks=await Promise.all(prepared.map(async item=>{const staged=await stageUpload(item.upload.blob,item.upload.fileName,`${supportReference}-${item.key.slice(0,8)}`);return {key:item.key,fileName:item.upload.fileName,stagedId:staged.stagedId,reference:staged.reference,bounds:item.artwork.visibleBounds,maxPlacementScale:isRigidPaperProduct(templateDetails)?1:undefined}}));
             const availableColorIds=(templateDetails?.colorOptions||[]).filter(color=>color.available).map(color=>color.id);
             const mockupVariants=variantsFor(templateDetails,availableColorIds,selectedSizeIds);
+            const mockupVariantSources=Object.fromEntries(mockupVariants.map(variant=>{
+              const source=pricedVariants.find(selected=>selected.sizeId!=null&&selected.sizeId===variant.sizeId)||pricedVariants[0];
+              return [String(variant.id),source?.id||variant.id];
+            }));
             /* Printify generates a color mockup only when that variant is both
                enabled and included in the artwork assignment. Use the broad
                preview set here; the server restores the seller's narrower
@@ -3901,7 +3905,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
               batchId: templateDetails?.batchId,
               fileName:design.name,
               title: design.title || undefined,
-              tags:design.tags,pricing,etsyBuyerShipping:etsyShippingProfiles.find(profile=>profile.id===etsyShippingProfileId)?.domesticPrimary||0,shippingTemplateId:etsyShippingProfileId,variantPrices,selectedVariantIds:pricedVariants.map(variant=>variant.id),mockupVariantIds:mockupVariants.map(variant=>variant.id),description:fullDescription,
+              tags:design.tags,pricing,etsyBuyerShipping:etsyShippingProfiles.find(profile=>profile.id===etsyShippingProfileId)?.domesticPrimary||0,shippingTemplateId:etsyShippingProfileId,variantPrices,selectedVariantIds:pricedVariants.map(variant=>variant.id),mockupVariantIds:mockupVariants.map(variant=>variant.id),mockupVariantSources,description:fullDescription,
               supportReference: staged.reference,
               clientId:design.id,
             };
