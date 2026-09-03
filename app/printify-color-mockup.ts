@@ -16,7 +16,15 @@ export function printifyMockupDetails(images:string[]|undefined){
    for every swatch. */
 export function printifyVariantIdsForColor(variants:PrintifyColorVariant[],colorIds:Iterable<number>){
   const ids=new Set([...colorIds].filter(Number.isFinite));
-  return new Set(variants.filter(variant=>(variant.colorId!=null&&ids.has(variant.colorId))||(variant.options||[]).some(id=>ids.has(id))).map(variant=>variant.id));
+  /* Option-value ids are only meaningful inside their own axis. A colour id
+     can numerically collide with a size/style id, and the old OR condition
+     then chose (usually) the White/S variant for unrelated colours. Fresh
+     product data carries the normalized colour axis explicitly, so use it
+     exclusively whenever it exists. Raw options remain the compatibility
+     fallback for older saved batches that predate `colorId`. */
+  return new Set(variants.filter(variant=>variant.colorId!=null
+    ? ids.has(variant.colorId)
+    : (variant.options||[]).some(id=>ids.has(id))).map(variant=>variant.id));
 }
 
 /* Printify can return a broad fallback image before the color-specific images.

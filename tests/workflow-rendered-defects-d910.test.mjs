@@ -54,6 +54,17 @@ test("D916: restored batches resolve color variants from raw Printify options",(
   assert.deepEqual([...printifyVariantIdsForColor(variants,[103])],[92572]);
 });
 
+test("D974: a size option id cannot make every colour use the same garment mockup",()=>{
+  const variants=[
+    {id:12100,colorId:101,options:[101,201]},
+    {id:12101,colorId:102,options:[102,101]}, // size id collides with White's colour id
+    {id:12102,colorId:103,options:[103,201]},
+  ];
+  assert.deepEqual([...printifyVariantIdsForColor(variants,[101])],[12100]);
+  assert.deepEqual([...printifyVariantIdsForColor(variants,[102])],[12101]);
+  assert.deepEqual([...printifyVariantIdsForColor(variants,[103])],[12102]);
+});
+
 test("D917: restored drafts recover variant metadata from their saved Printify URLs",()=>{
   const saved=[
     "https://images.printify.com/mockup/6a977424f8329d96f40c1205/12100/92570/front-dark.jpg?camera_label=front",
