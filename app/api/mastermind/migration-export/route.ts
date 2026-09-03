@@ -4,7 +4,7 @@ import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { isOwner } from "@/app/mastermind/access";
 import { decryptPrintifyToken, encryptPrintifyToken } from "@/app/api/printify/token-crypto";
 
-type Runtime = { DB?: D1Database; ARTWORK?: R2Bucket; PRINTIFY_TOKEN_KEY?: string };
+type Runtime = { DB?: D1Database; ARTWORK?: R2Bucket; PRINTIFY_TOKEN_KEY?: string; MIGRATION_EXPORT_SECRET?: string };
 
 function runtime() { return env as unknown as Runtime; }
 function safeTable(name: string) { return /^[A-Za-z_][A-Za-z0-9_]*$/.test(name); }
@@ -12,6 +12,13 @@ function safeTable(name: string) { return /^[A-Za-z_][A-Za-z0-9_]*$/.test(name);
 async function owner() {
   const user = await getChatGPTUser();
   return Boolean(user && isOwner(user));
+}
+
+async function authorized(request: Request) {
+  const supplied = request.headers.get("x-goldie-migration-secret") || "";
+  const expected = runtime().MIGRATION_EXPORT_SECRET || "";
+  if (expected && supplied.length === expected.length && supplied === expected) return true;
+  return owner();
 }
 
 async function rotateTokens(table: string, rows: Record<string, unknown>[], oldKey: string, newKey: string) {
@@ -32,7 +39,7 @@ async function rotateTokens(table: string, rows: Record<string, unknown>[], oldK
 }
 
 export async function POST(request: Request) {
-  if (!(await owner())) return NextResponse.json({ error: "Not authorized." }, { status: 403 });
+  if (!(await authorized(request))) return NextResponse.json({ error: "Not authorized." }, { status: 403 });
   const { DB, PRINTIFY_TOKEN_KEY } = runtime();
   const body = await request.json().catch(() => ({})) as { newTokenKey?: string; table?: string };
   const newKey = body.newTokenKey?.trim() || "";
@@ -49,7 +56,7 @@ export async function POST(request: Request) {
 }
 
 export async function GET(request: Request) {
-  if (!(await owner())) return NextResponse.json({ error: "Not authorized." }, { status: 403 });
+  if (!(await authorized(request))) return NextResponse.json({ error: "Not authorized." }, { status: 403 });
   const bucket = runtime().ARTWORK;
   if (!bucket) return NextResponse.json({ error: "Storage is unavailable." }, { status: 503 });
   const url = new URL(request.url);

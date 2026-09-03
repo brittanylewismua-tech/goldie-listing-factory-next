@@ -5,8 +5,14 @@ import { readFile } from "node:fs/promises";
 const route = await readFile(new URL("../app/api/mastermind/migration-export/route.ts", import.meta.url), "utf8");
 
 test("D995 migration export is owner-only and excludes reset copies", () => {
-  assert.match(route, /if \(!\(await owner\(\)\)\) return NextResponse\.json\(\{ error: "Not authorized\." \}, \{ status: 403 \}\)/);
+  assert.match(route, /if \(!\(await authorized\(request\)\)\) return NextResponse\.json\(\{ error: "Not authorized\." \}, \{ status: 403 \}\)/);
   assert.match(route, /name NOT LIKE '_account_reset_%'/);
+});
+
+test("D997 supports the explicitly authorized temporary migration credential", () => {
+  assert.match(route, /request\.headers\.get\("x-goldie-migration-secret"\)/);
+  assert.match(route, /MIGRATION_EXPORT_SECRET/);
+  assert.match(route, /if \(expected && supplied\.length === expected\.length && supplied === expected\) return true/);
 });
 
 test("D995 rotates connection secrets before export instead of returning plaintext", () => {
