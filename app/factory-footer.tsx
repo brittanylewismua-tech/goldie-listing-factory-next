@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { cloneElement, isValidElement, useEffect, useState, type ReactElement, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 
 /* D728 · The prototype's .goldie-footer (source: goldie-ux-preview-site
@@ -66,10 +66,20 @@ export default function FactoryFooter({ status, children }: { status?: ReactNode
     return () => observer.disconnect();
   });
 
+  /* D955 · The pink offset belongs to the forward action because it lives in
+     the persistent footer, not because a button happens to use a historical
+     class name. Mark the footer's control here so every step gets the same
+     hierarchy and no in-card control can accidentally inherit it. */
+  const forward = isValidElement(children)
+    ? cloneElement(children as ReactElement<{className?: string}>, {
+        className: `${(children.props as {className?: string}).className || ""} footer-forward-action`.trim()
+      })
+    : children;
+
   const body = (
     <>
       <small>{status}</small>
-      {children}
+      {forward}
     </>
   );
 

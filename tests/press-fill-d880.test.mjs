@@ -73,7 +73,7 @@ test("destructive presses are still red, not repainted pink", () => {
   assert.match(clarity, /\.confirm-action-go\.destructive\{[^}]*background:#a32c4c/);
 });
 
-test("D954: internal workflow actions use a flat black face",()=>{
+test("D955: internal workflow actions are flat; only the footer forward action has the pink offset",()=>{
   const css=readFileSync(new URL("interface-v2.css",dir),"utf8");
   const block=css.slice(css.indexOf("/* D945"));
   for(const selector of [
@@ -82,7 +82,8 @@ test("D954: internal workflow actions use a flat black face",()=>{
   ]) assert.ok(block.includes(selector),`${selector} must use the shared primary-action treatment`);
   assert.match(block,/background:#0d0b0c!important;\s*color:#fff!important;\s*box-shadow:none!important/);
   assert.match(block,/\.recipe-card \.recipe-tile \.recipe-use em\{[\s\S]*?background:#0d0b0c!important;[\s\S]*?box-shadow:none!important/);
-  assert.match(css,/\.app-shell \.workflow-next\{\s*box-shadow:4px 4px 0 var\(--lf-pink\)!important/);
+  assert.match(block,/:hover:not\(:disabled\)\{\s*background:#171117!important;\s*box-shadow:none!important;\s*transform:none/);
+  assert.match(css,/\.app-shell \.footer-forward-action\{\s*box-shadow:4px 4px 0 var\(--lf-pink\)!important/);
   assert.match(css,/\.blocking-modal \.publish-confirm-actions button,[\s\S]*?box-shadow:none!important/);
 });
 

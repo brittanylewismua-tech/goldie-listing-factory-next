@@ -4,7 +4,7 @@ import {readFileSync} from "node:fs";
 
 const css=readFileSync(new URL("../app/interface-v2.css",import.meta.url),"utf8");
 
-test("D954: internal workflow actions use a flat black face",()=>{
+test("D955: internal workflow actions use a flat black face",()=>{
   const start=css.indexOf("/* D945");
   assert.ok(start>0,"the workflow action hierarchy must have one named owner");
   const block=css.slice(start);
@@ -13,7 +13,15 @@ test("D954: internal workflow actions use a flat black face",()=>{
     ".pricing-approval-button",".actual-cost-review button",".support-chat-form button"
   ]) assert.ok(block.includes(selector),`${selector} must use the shared primary-action treatment`);
   assert.match(block,/background:#0d0b0c!important;\s*color:#fff!important;\s*box-shadow:none!important/);
+  assert.match(block,/:hover:not\(:disabled\)\{\s*background:#171117!important;\s*box-shadow:none!important;\s*transform:none/);
   assert.match(block,/\.recipe-card \.recipe-tile \.recipe-use em\{[\s\S]*?background:#0d0b0c!important;[\s\S]*?box-shadow:none!important/);
+});
+
+test("D955: only the footer's forward action receives the pink offset",()=>{
+  const footer=readFileSync(new URL("../app/factory-footer.tsx",import.meta.url),"utf8");
+  assert.match(footer,/cloneElement\(children[\s\S]*?footer-forward-action/);
+  assert.match(css,/\.app-shell \.footer-forward-action\{\s*box-shadow:4px 4px 0 var\(--lf-pink\)!important/);
+  assert.doesNotMatch(css.slice(css.indexOf("/* D955")),/\.app-shell \.workflow-next\{/);
 });
 
 test("D945: disabled actions remain visibly disabled instead of hot pink",()=>{
