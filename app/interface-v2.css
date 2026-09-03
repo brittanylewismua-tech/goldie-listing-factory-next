@@ -3052,12 +3052,17 @@ html, body { background: var(--lf-paper); }
 .app-shell .color-choice-grid button.selected,.app-shell .size-choice-grid button.selected{border-color:#86b99a!important;background:#f2faf5!important;box-shadow:0 0 0 2px rgba(47,122,75,.10)!important}
 .app-shell .printify-photo-selector:has(input:checked){border-color:#2f7a4b!important;background:#2f7a4b!important}
 
-/* D902 · Primary work surfaces need a visible edge against the white grid.
-   This is one shared treatment across every workflow step, not a one-off fix
-   for the uploader. Nested rows retain their quieter styling. */
-.app-shell :is(.step-card,.factory-panel,.factory-form-card,.design-artwork-card,.final-listing-card,.listing-card,.recipe-tile,.everything-else){
+/* D994 · The large working cards use one crisp black offset shadow. It keeps
+   their edges unmistakable against the white grid without adding another
+   tint or a foggy glow. Small product/listing tiles stay quiet so the page
+   still has one clear level of emphasis. */
+.app-shell :is(.step-card,.factory-panel,.factory-form-card,.design-artwork-card,.listing-card,.everything-else){
+  border:2px solid #171217;
+  box-shadow:7px 7px 0 #0d0b0c;
+}
+.app-shell :is(.final-listing-card,.recipe-tile){
   border-color:#c9b8c2;
-  box-shadow:0 1px 2px rgba(45,29,39,.09),0 12px 28px rgba(45,29,39,.11);
+  box-shadow:0 1px 2px rgba(45,29,39,.09),0 8px 20px rgba(45,29,39,.09);
 }
 .app-shell .designs-step:not(.finish-mode)>.step-content{padding-top:24px}
 .app-shell .upload-primary-note{display:grid;gap:3px;width:min(100%,760px);margin:0 auto 14px;color:#55434f;font:500 13px/1.45 Inter,ui-sans-serif,system-ui,sans-serif;text-align:center}

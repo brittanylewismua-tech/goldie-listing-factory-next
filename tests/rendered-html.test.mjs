@@ -2152,14 +2152,15 @@ test("shows one binding design-capacity status after uploads (fixes D28 and D49)
   assert.doesNotMatch(app,/\$\{files\.length\} of 20 designs ready/);
 });
 
-test("D902: upload starts with the choices and primary workflow cards remain distinct",async()=>{
+test("D994: upload starts with the choices and primary workflow cards have a crisp hard edge",async()=>{
   const [app,css]=await Promise.all([
     readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8"),
     readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8"),
   ]);
   assert.doesNotMatch(app,/Drop your designs here|Build one focused batch|Before uploading/);
   assert.match(app,/className="upload-actions"[\s\S]{0,1800}className="upload-guidance batch-limits file-reminder"/);
-  assert.match(css,/:is\(\.step-card,\.factory-panel,\.factory-form-card,\.design-artwork-card,\.final-listing-card,\.listing-card,\.recipe-tile,\.everything-else\)\{[\s\S]{0,180}border-color:#c9b8c2;[\s\S]{0,180}box-shadow:/);
+  assert.match(css,/:is\(\.step-card,\.factory-panel,\.factory-form-card,\.design-artwork-card,\.listing-card,\.everything-else\)\{[\s\S]{0,180}border:2px solid #171217;[\s\S]{0,180}box-shadow:7px 7px 0 #0d0b0c/);
+  assert.match(css,/:is\(\.final-listing-card,\.recipe-tile\)\{[\s\S]{0,160}border-color:#c9b8c2;[\s\S]{0,160}box-shadow:/);
   assert.match(css,/\.designs-step:not\(\.finish-mode\) \.upload-actions\{gap:16px;margin:0 0 14px\}/);
 });
 
