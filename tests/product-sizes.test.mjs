@@ -185,7 +185,8 @@ test("print-quality decisions are grouped per design, not per design-and-product
    * be sharp on a tee and too small on a tote — but the decision belongs to the
    * design. Excluding still removes only the flagged pairs, so a design that is
    * fine on one product still publishes there. */
-  assert.match(app, /const bundleQualityGroups=useMemo/);
+  assert.match(app, /const allBundleQualityGroups=useMemo/);
+  assert.match(app, /const bundleQualityGroups=allBundleQualityGroups\.filter\(group=>!qualityGroupDecision\(group\.keys\)\)/);
   assert.match(app, /function decideQualityGroup\(keys:string\[\],value:"include"\|"exclude"\)/);
   assert.match(app, /function decideAllQuality\(value:"include"\|"exclude"\)/,
     "A bulk control is needed for the common case where the answer is the same.");

@@ -1406,7 +1406,7 @@ export default function ListingFactoryApp() {
      case where the answer is the same for all of them. Excluding still only
      removes the flagged pairs, so a design that is fine on one product still
      publishes there. */
-  const bundleQualityGroups=useMemo(()=>{
+  const allBundleQualityGroups=useMemo(()=>{
     const byFile=new Map<string,{fileId:string;fileName:string;keys:string[];products:string[];critical:boolean;worstDpi:number;actualWidth:number;actualHeight:number}>();
     for(const issue of bundleQualityIssues){
       const existing=byFile.get(issue.fileId);
@@ -1418,6 +1418,7 @@ export default function ListingFactoryApp() {
   function decideQualityGroup(keys:string[],value:"include"|"exclude"){setBundleQualityDecisions(current=>{const next={...current};for(const key of keys)next[key]=value;return next})}
   function decideAllQuality(value:"include"|"exclude"){decideQualityGroup(bundleQualityIssues.map(issue=>issue.key),value)}
   const qualityGroupDecision=(keys:string[])=>{const values=keys.map(key=>bundleQualityDecisions[key]);return values.every(v=>v==="include")?"include":values.every(v=>v==="exclude")?"exclude":""};
+  const bundleQualityGroups=allBundleQualityGroups.filter(group=>!qualityGroupDecision(group.keys));
   /* D626 · These maps belong to the open product. Asked about a bundle member's
      draft, printifyImageSelections[id] was undefined and the check fell through
      to the OPEN product's printifyImageIndices - so a member with no photos of
@@ -3354,6 +3355,10 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
       setSwitchingProduct(recipe.id);
       void (async()=>{
         try{
+          /* Each child was saved at a different moment in the run, so an older
+             child can carry an older map. Keep every link this live session
+             already knows when that child is restored. */
+          const knownBatchIds={...bundleBatchIds};
           /* D379 - The autosave is debounced, so the last few hundred
              milliseconds of typing may still be pending. Once batchIdRef points
              at the incoming batch that pending write would land on the wrong
@@ -3362,6 +3367,7 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
           setRestoringBatch(true);
           snapshotReady.current=false;
           await restoreBatchById(existing,workflowStep,null,true);
+          setBundleBatchIds(current=>({...current,...knownBatchIds}));
           window.scrollTo(0,0);
         }finally{setSwitchingProduct("")}
       })();
@@ -4821,7 +4827,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
                 {secondarySides.length>0&&<div className="artwork-version-tools"><b>Optional artwork for this listing</b><small>Add artwork only for another print area already prepared in this Printify product.</small><div>{secondarySides.map(side=><label className="secondary-action" role="button" tabIndex={0} onKeyDown={event=>{if(event.key==="Enter"||event.key===" "){event.preventDefault();event.currentTarget.querySelector("input")?.click()}}} key={side}>＋ Add {printSideLabel(side).toLocaleLowerCase()} artwork to this design<input className="hidden-picker" type="file" accept=".png,.jpg,.jpeg" onChange={event=>{void addArtworkVersion(file.id,side,event.target.files);event.target.value=""}}/></label>)}</div></div>}
                 {secondaryVersions.map(artwork=>{const compatibleProducts=productsInBatch.filter(recipe=>orderedPrintSides(bundleProductDetails[recipe.id]?.printPositions).some(side=>side.toLocaleLowerCase()===artwork.side.toLocaleLowerCase())),assignedProducts=artwork.productIds?.length?artwork.productIds:(artwork.ownerProductId?[artwork.ownerProductId]:activeRecipe?.id?[activeRecipe.id]:[]);return <section className="artwork-version" key={artwork.id}><img src={artwork.previewUrl} alt=""/><div><b>{printSideLabel(artwork.side)} artwork for this listing design</b><small>{artwork.name}</small>{!artwork.colorIds.length&&<em className="artwork-color-required">Choose at least one {itemNoun} color for this {printSideLabel(artwork.side).toLocaleLowerCase()} print.</em>}{colors.length?<fieldset><legend>Use it on these {activeRecipe?.name||itemNoun} colors</legend>{colors.map(color=><button type="button" key={color.id} className={artwork.colorIds.includes(color.id)?"selected":""} aria-pressed={artwork.colorIds.includes(color.id)} onClick={()=>toggleArtworkColor(file.id,artwork.id,color.id)}><i style={{background:color.swatch||"#ddd"}}/>{color.title}</button>)}</fieldset>:null}{activeBundle&&bundleRecipes.length>1?<fieldset className="bundle-print-products"><legend>Which products get this {printSideLabel(artwork.side).toLocaleLowerCase()} artwork?</legend><small>Only products that support this print area are included. Every other product keeps its primary artwork only.</small>{compatibleProducts.map(recipe=><button type="button" key={recipe.id} className={assignedProducts.includes(recipe.id)?"selected":""} aria-pressed={assignedProducts.includes(recipe.id)} onClick={()=>toggleArtworkProduct(file.id,artwork.id,recipe.id)}><span aria-hidden="true">{assignedProducts.includes(recipe.id)?"✓":""}</span>{recipe.name}</button>)}</fieldset>:null}</div><button type="button" onClick={()=>removeArtworkVersion(file.id,artwork.id)} aria-label={`Remove ${artwork.name}`}>Remove</button></section>})}
               </article>})}</div>}
-              {files.length>0&&!complete&&(workflowStep==="setup"||workflowStep==="designs")&&<>{designsFinished&&belowRecommendedPixels.length>0&&<div className={`pixel-warning-inline ${criticalDpiFiles.length?"critical-dpi":""}`} role="status"><span>!</span><div><b>{criticalDpiFiles.length?`${criticalDpiFiles.length} ${criticalDpiFiles.length===1?"design is":"designs are"} below 215 DPI — very low resolution.`:belowRecommendedPixels.length===1?"One design is below Printify’s recommended pixel size.":"Some designs are below Printify’s recommended pixel size."}</b><small>{criticalDpiFiles.length?"Each affected design must be replaced or approved.":"You can still continue after confirming."}</small></div></div>}{/* D399 - Step 2 showed "Next step" here AND "Continue to create drafts" in the
+              {files.length>0&&!complete&&(workflowStep==="setup"||workflowStep==="designs")&&<>{designsFinished&&belowRecommendedPixels.length>0&&bundleQualityGroups.length>0&&<div className={`pixel-warning-inline ${criticalDpiFiles.length?"critical-dpi":""}`} role="status"><span>!</span><div><b>{criticalDpiFiles.length?`${criticalDpiFiles.length} ${criticalDpiFiles.length===1?"design is":"designs are"} below 215 DPI — very low resolution.`:belowRecommendedPixels.length===1?"One design is below Printify’s recommended pixel size.":"Some designs are below Printify’s recommended pixel size."}</b><small>{criticalDpiFiles.length?"Each affected design must be replaced or approved.":"You can still continue after confirming."}</small></div></div>}{/* D399 - Step 2 showed "Next step" here AND "Continue to create drafts" in the
                 product card below. Creating the drafts is the step; this button only
                 scrolled down to it. One forward control per step: the action while the
                 drafts do not exist, the forward once they do. */}
