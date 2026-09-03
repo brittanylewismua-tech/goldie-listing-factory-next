@@ -29,8 +29,8 @@ test("D943: bundle summaries count the whole run",()=>{
   assert.match(app,/runCountLabel=activeBundle&&bundleRecipes\.length>1\?`\$\{bundleRunListings\}.*\$\{bundleRecipes\.length\} products`/);
 });
 
-test("D943: restored work never claims Goldie will publish it",()=>{
-  assert.match(app,/restored and can still be finished in Goldie/);
+test("D943: restored work never claims it will publish automatically",()=>{
+  assert.match(app,/restored and can still be finished here/);
   assert.doesNotMatch(app,/restored and can still be completed and published/);
 });
 

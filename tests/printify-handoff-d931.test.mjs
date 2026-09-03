@@ -13,7 +13,7 @@ test("D931: the final action hands the seller to Printify without publishing",()
   assert.match(app,/href="https:\/\/printify\.com\/app\/products"/);
   assert.match(app,/Open My Products in Printify/);
   assert.match(app,/Nothing has been published to Etsy, and no Etsy listing fees have been charged/);
-  assert.match(app,/Goldie will never publish these drafts or charge an Etsy listing fee/);
+  assert.match(app,/Nothing is published automatically/);
   assert.match(app,/<FinalListingReview handoffOnly/);
   assert.match(review,/handoffOnly\?"Review the drafts created for this batch"/);
   assert.match(review,/!handoffOnly&&<label className="final-select-all"/);

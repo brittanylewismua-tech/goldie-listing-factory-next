@@ -290,7 +290,7 @@ export function SavedWorkflow(props: WorkflowProps) {
     }catch{setMessage("The product could not be saved. Try again.")}
     finally{actionLock.current=false;setPendingAction("")}
   }
-  async function remove(recipe: Recipe) { if (!await confirmAction({title:`Delete “${recipe.name}”?`,body:"This removes only the saved product in Goldie. The connected Printify product is not touched.",confirmLabel:"Delete product",destructive:true})) return; await fetch("/api/product-recipes", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: recipe.id }) }); if (activeId === recipe.id) setActiveId(""); reload(); }
+  async function remove(recipe: Recipe) { if (!await confirmAction({title:`Delete “${recipe.name}”?`,body:"This removes only the saved product. The connected Printify product is not touched.",confirmLabel:"Delete product",destructive:true})) return; await fetch("/api/product-recipes", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: recipe.id }) }); if (activeId === recipe.id) setActiveId(""); reload(); }
   function openBundle(bundle?:ProductBundle){setBundleForm(true);setEditingBundleId(bundle?.id||"");setBundleName(bundle?.name||"");setBundleIds(bundle?.recipeIds||[]);setDuplicateAcknowledged(false);setBundleSaving(false);bundleSaveLock.current=false;setMessage("");window.setTimeout(()=>{document.querySelector(".bundle-builder")?.scrollIntoView({block:"center"})},0)}
   async function saveBundle(){
     if(bundleSaveLock.current)return;
@@ -299,7 +299,7 @@ export function SavedWorkflow(props: WorkflowProps) {
       const response=await fetch("/api/product-bundles",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:editingBundleId||undefined,name:bundleName,recipeIds:bundleIds})});
       const result=await response.json() as {error?:string};
       if(!response.ok){setMessage(result.error||"The product bundle could not be saved.");return}
-      setBundleForm(false);setEditingBundleId("");setBundleName("");setBundleIds([]);setMessage("Product bundle saved. Upload each design once and Goldie will carry it through every product.");await reload();
+      setBundleForm(false);setEditingBundleId("");setBundleName("");setBundleIds([]);setMessage("Product bundle saved.");await reload();
     }catch{setMessage("The product bundle could not be saved. Try again.")}
     finally{bundleSaveLock.current=false;setBundleSaving(false)}
   }
@@ -309,10 +309,10 @@ export function SavedWorkflow(props: WorkflowProps) {
     actionLock.current=true;setPendingAction(`bundle:${bundle.id}`);setActiveId(`bundle:${bundle.id}`);setMessage("");
     try{
       if(await props.onUseBundle(bundle,bundle.recipeIds)){setEditing(false);setBundleForm(false);setShowLibrary(false);return}
-      setActiveId("");setMessage("Goldie could not load every saved product in this bundle. Edit the bundle or refresh the page, then try again.");
+      setActiveId("");setMessage("Some saved products in this bundle could not be loaded. Edit the bundle or refresh the page, then try again.");
     }catch(error){
       console.error("Bundle selection failed",error);
-      setActiveId("");setMessage("Goldie could not load this bundle. Try again in a moment.");
+      setActiveId("");setMessage("This bundle could not be loaded. Try again in a moment.");
     }finally{actionLock.current=false;setPendingAction("")}
   }
   const selectedBundleRecipes=bundleIds.map(id=>reachable.find(recipe=>recipe.id===id)).filter(Boolean) as Recipe[];
@@ -329,14 +329,14 @@ export function SavedWorkflow(props: WorkflowProps) {
         clicking Edit on a product opened the form below the bundles and the
         disclosure — far from the tile that was clicked, often off screen. It
         belongs directly under the products it edits. */}
-    {(editing || (recipesLoaded&&!recipes.length)) && <div className="recipe-form" ref={formRef}><div className="recipe-form-heading"><b>{editingId ? "Edit saved product" : "New saved product"}</b><span>Paste the link to the completed product in Printify. Goldie names it for you.</span></div>
-      <details className="template-instructions-toggle"><summary>How to prepare the Printify product</summary><section className="template-requirements" aria-labelledby="template-requirements-title"><div className="template-requirements-heading"><span>Required before you paste the link</span><div><b id="template-requirements-title">Publish the product to Etsy first</b><small>Use an already-published product or create one specifically for Listing Factory. Either works.</small></div></div><ol><li><span>1</span><div><b>Choose the product and print provider</b><small>Select the exact physical product and manufacturer Goldie should copy.</small></div></li><li><span>2</span><div><b>Add temporary artwork and set its placement</b><small>Resize and position it exactly where every finished design should print. The temporary artwork itself does not matter.</small></div></li><li><span>3</span><div><b>Publish the product from Printify to Etsy</b><small>This is required. Publish it to the same Etsy shop connected to Goldie before copying the link.</small></div></li></ol><div className="template-link-instructions"><b>Copy the URL only from the Printify design editor</b><p>In Printify, open <strong>My Products</strong>, select the published product, and enter its design editor so the artwork placement controls are visible. Copy the complete URL from the browser address bar there—and nowhere else.</p><div><span>✓ Use: the URL from the open Printify design editor</span><span>× Do not use: an Etsy URL, public product URL, Printify product-list URL, or product ID alone</span></div></div></section></details>
+    {(editing || (recipesLoaded&&!recipes.length)) && <div className="recipe-form" ref={formRef}><div className="recipe-form-heading"><b>{editingId ? "Edit saved product" : "New saved product"}</b><span>Paste the link to the completed product in Printify.</span></div>
+      <details className="template-instructions-toggle"><summary>How to prepare the Printify product</summary><section className="template-requirements" aria-labelledby="template-requirements-title"><div className="template-requirements-heading"><span>Required before you paste the link</span><div><b id="template-requirements-title">Publish the product to Etsy first</b><small>Use an already-published product or create one specifically for Listing Factory. Either works.</small></div></div><ol><li><span>1</span><div><b>Choose the product and print provider</b><small>Select the exact physical product and manufacturer to copy.</small></div></li><li><span>2</span><div><b>Add temporary artwork and set its placement</b><small>Resize and position it exactly where every finished design should print. The temporary artwork itself does not matter.</small></div></li><li><span>3</span><div><b>Publish the product from Printify to Etsy</b><small>This is required. Publish it to the connected Etsy shop before copying the link.</small></div></li></ol><div className="template-link-instructions"><b>Copy the URL only from the Printify design editor</b><p>In Printify, open <strong>My Products</strong>, select the published product, and enter its design editor so the artwork placement controls are visible. Copy the complete URL from the browser address bar there—and nowhere else.</p><div><span>✓ Use: the URL from the open Printify design editor</span><span>× Do not use: an Etsy URL, public product URL, Printify product-list URL, or product ID alone</span></div></div></section></details>
       {/* D335 · The link came second, under a name field the seller had to invent
           before Goldie knew what the product was. The link is the source of truth:
           paste it, Goldie verifies it and names the product from the Printify
           brand and model. The name stays editable and a manual edit sticks — the
           nameTouched guard already handled that. */}
-        <label className="wide"><span>Printify product link</span><div className="inline-field"><input value={props.templateUrl} onChange={(e) => props.onTemplateUrl(e.target.value)} placeholder="Paste the Printify product-editor link"/><button aria-busy={props.loadingTemplate} onClick={() => void props.onVerifyTemplate(props.templateUrl)} disabled={!props.connected || !props.templateUrl.trim() || props.loadingTemplate||Boolean(pendingAction)}>{props.loadingTemplate ? "Checking…" : props.templateVerified ? "✓ Product connected" : "Check product"}</button></div><small>Paste this once. Goldie imports the variations, placement, shipping, costs, and description.</small></label><label><span>Product name</span><input value={name} onChange={(e) => {nameTouched.current=true;setName(e.target.value)}} placeholder="Example: Comfort Colors 1717 shirts"/>{/* D346 · The name field explained itself under every save. Once the link is
+        <label className="wide"><span>Printify product link</span><div className="inline-field"><input value={props.templateUrl} onChange={(e) => props.onTemplateUrl(e.target.value)} placeholder="Paste the Printify product-editor link"/><button aria-busy={props.loadingTemplate} onClick={() => void props.onVerifyTemplate(props.templateUrl)} disabled={!props.connected || !props.templateUrl.trim() || props.loadingTemplate||Boolean(pendingAction)}>{props.loadingTemplate ? "Checking…" : props.templateVerified ? "✓ Product connected" : "Check product"}</button></div></label><label><span>Product name</span><input value={name} onChange={(e) => {nameTouched.current=true;setName(e.target.value)}} placeholder="Example: Comfort Colors 1717 shirts"/>{/* D346 · The name field explained itself under every save. Once the link is
                 above it and the field is filled in, the behaviour is visible — the
                 name appeared, and it is a text input, so it can be changed. Saying
                 so is the same over-explaining as D303 and D314. */}</label><button className="save-recipe" aria-busy={pendingAction==="save-product"} onClick={() => void save()} disabled={Boolean(pendingAction)||!name.trim() || !props.templateUrl.trim()}>{pendingAction==="save-product"?"Saving product…":editingId ? "Update product" : "Save product"}</button>{/* D212 · Cancel rendered only while editing an existing product, so "Add
@@ -361,7 +361,7 @@ let keywordListsCache:KeywordList[]|null=null;
 let keywordListsRequest:Promise<KeywordList[]>|null=null;
 function loadKeywordLists(){if(keywordListsCache)return Promise.resolve(keywordListsCache);if(!keywordListsRequest)keywordListsRequest=fetch("/api/keyword-lists").then(r=>r.json()).then(r=>{keywordListsCache=r.lists||[];return keywordListsCache!}).catch(()=>[]).finally(()=>{keywordListsRequest=null});return keywordListsRequest}
 
-export function KeywordBank({ onAdd=()=>undefined,onSelect,title="Choose a keyword bank",copy="Goldie will use only phrases from this validated bank.",compact=false,selectionOnly=false,initialId="" }: { onAdd?: (keyword: string) => void;onSelect?:(list:KeywordList|null)=>void;title?:string;copy?:string;compact?:boolean;selectionOnly?:boolean;initialId?:string }) {
+export function KeywordBank({ onAdd=()=>undefined,onSelect,title="Choose a keyword bank",copy="Only phrases from this validated bank will be used.",compact=false,selectionOnly=false,initialId="" }: { onAdd?: (keyword: string) => void;onSelect?:(list:KeywordList|null)=>void;title?:string;copy?:string;compact?:boolean;selectionOnly?:boolean;initialId?:string }) {
   const [lists, setLists] = useState<KeywordList[]>([]), [active, setActive] = useState("");
   useEffect(() => { void loadKeywordLists().then(setLists); }, []);
   useEffect(()=>{if(!initialId||!lists.some(list=>list.id===initialId)||active)return;setActive(initialId);onSelect?.(lists.find(list=>list.id===initialId)||null)},[lists,initialId,active,onSelect]);
@@ -373,6 +373,6 @@ export function KeywordBank({ onAdd=()=>undefined,onSelect,title="Choose a keywo
          characters and 30 of her 50 are longer, so the tag pool is 20 before the
          product filter has even run. Both numbers, plainly. */
       const tagUsable=chosen.keywords.filter(word=>word.length<=20).length;
-      return <p>✓ {chosen.keywords.length} validated {chosen.keywords.length===1?"phrase":"phrases"} available to Goldie{tagUsable<chosen.keywords.length?` · ${tagUsable} short enough for Etsy tags`:""}.</p>;
+      return <p>✓ {chosen.keywords.length} validated {chosen.keywords.length===1?"phrase":"phrases"} available{tagUsable<chosen.keywords.length?` · ${tagUsable} short enough for Etsy tags`:""}.</p>;
     })():<><p>Click any phrase to add it.</p><div className="keyword-chips">{chosen.keywords.map((word) => <button type="button" key={word} onClick={() => onAdd(word)}>+ {word}</button>)}</div></> : <p>Choose a bank to continue.</p>}</section>;
 }

@@ -24,7 +24,7 @@ const read = (path) => readFile(new URL(path, root), "utf8");
 
 const RENDERED_COMPONENTS = [
   "ActionReceipt", "BatchPreferencesPortal", "ContextHelp", "DownloadListingPhotos",
-  "EtsyDetailsEditor", "FinalListingReview", "GoldieCommandBar", "GoldieInsight",
+  "EtsyDetailsEditor", "FinalListingReview", "GoldieCommandBar",
   "GoldieWordmark", "IndividualAutoTitle", "IndividualManualTitle", "IndividualSizeGuide",
   "UploadedListingPhotos", "KeywordBank", "ListingPhotoOrder", 
   "OutcomeReceipt", "PersonalizationEditor", "PriceField", "PricingReview",
@@ -43,7 +43,7 @@ test("every component that renders today still renders", async () => {
  * proves the behaviour, not merely the component. */
 const FEATURES = [
   ["grouped per-size pricing", /Item prices \+ buyer-paid shipping/],
-  ["pricing groups by identical Printify cost", /Goldie groups variants only when Printify charges the/],
+  ["pricing groups by identical Printify cost", /Variants are grouped only when Printify charges the/],
   ["a price field per group", /<PriceField/],
   ["whole-number pricing toggle", /Create whole-number pricing/],
   ["download every listing photo as a zip", /function DownloadListingPhotos/],
@@ -51,7 +51,7 @@ const FEATURES = [
   ["Printify product photos are selectable", /printify-image-picker bare/],
   ["seller photos can be uploaded", /<UploadedListingPhotos/],
   ["all listing photos can be reordered", /<ListingPhotoOrder/],
-  ["a size guide can be added to every listing", /Goldie adds it to every listing in this batch/],
+  ["a size guide can be added to every listing", /Choose one image for every listing in this batch/],
   ["AI titles for the whole batch", /Create titles for the whole batch/],
   ["manual title building from a bank", /Build this title yourself from a keyword bank/],
   /* D541 - the override moved out of a nested disclosure inside step 3's table
@@ -260,8 +260,8 @@ test("a batch held by another tab cannot spend credits on work it will discard",
   /* And it says why, rather than sitting there greyed out - the D229/D527 rule.
      The batch title builder was the last control still breaking it: with no
      keyword bank chosen it was disabled and silent. */
-  assert.match(app, /title=\{batchHeldByAnotherTab\?"This batch is open in another Goldie tab, so nothing saved here would be kept\.":!autoTitleBank\?"Choose a keyword bank first\.":!files\.length\?"Upload a design first\.":undefined\}/);
-  assert.match(app, /title=\{paused\?"This batch is open in another Goldie tab, so nothing built here would be kept\.":!bank\?"Choose a keyword bank first\.":undefined\}/);
+  assert.match(app, /title=\{batchHeldByAnotherTab\?"This batch is open in another tab, so nothing saved here would be kept\.":!autoTitleBank\?"Choose a keyword bank first\.":!files\.length\?"Upload a design first\.":undefined\}/);
+  assert.match(app, /title=\{paused\?"This batch is open in another tab, so nothing built here would be kept\.":!bank\?"Choose a keyword bank first\.":undefined\}/);
   // and the per-listing builder is told about it by the page that knows.
   assert.match(app, /<IndividualAutoTitle design=\{design\}[^>]*paused=\{batchHeldByAnotherTab\}/);
 });

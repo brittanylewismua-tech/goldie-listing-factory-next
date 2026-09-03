@@ -12,7 +12,7 @@ test("D960: the empty Product step names the actual missing requirement", () => 
 });
 
 test("D960: bundle upload guidance explains one upload across every product", () => {
-  assert.match(app, /Upload each \$\{uploadPrimaryLabel\} design once\. Goldie uses it on every product in this bundle\./);
+  assert.match(app, /Upload each \$\{uploadPrimaryLabel\} design once for every product in this bundle\./);
 });
 
 test("D960: completed drafts suppress the stale missing-local-file warning", () => {

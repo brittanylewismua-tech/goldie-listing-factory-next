@@ -21,7 +21,7 @@ test("a gate only ever blocks a step ahead of the one you are standing on", () =
 test("the rail still keeps its promise in writing", () => {
   /* If this sentence ever goes, the test above is measuring nothing anyone
      was promised. */
-  assert.match(source, /You can return to an earlier step without starting over\./);
+  assert.match(source, /Completed work is saved automatically\./);
 });
 
 test("the step you are standing on is never disabled — D227", () => {

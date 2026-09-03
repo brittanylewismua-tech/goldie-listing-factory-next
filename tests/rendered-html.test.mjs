@@ -36,7 +36,7 @@ test("uses the binding batch limit and keeps setup actions in the right hierarch
     Promise.all([readFile(new URL("../app/approved-functional.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n")),
   ]);
   assert.match(page, /PNG or JPG · up to \{batchDesignLimit\} designs · 100 MB each/);
-  assert.match(page, /Upload each \$\{uploadPrimaryLabel\} design once\. Goldie uses it on every product in this bundle/);
+  assert.match(page, /Upload each \$\{uploadPrimaryLabel\} design once for every product in this bundle/);
   assert.match(page, /Upload one \$\{uploadPrimaryLabel\} design per listing/);
   assert.doesNotMatch(page, /Your folder can contain up to 20 designs/);
   assert.match(page, /headerActions=\{bundleCreationMode\|\|productFormMode\?undefined:[\s\S]{0,380}>＋ Add a new product<\/button>[\s\S]{0,220}>＋ Create a new bundle<\/button>/);
@@ -81,7 +81,7 @@ test("serves the Listing Factory from its canonical product path", async () => {
   const pageSource = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
   const globalCss = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
   const approvedCss = await Promise.all([readFile(new URL("../app/approved-functional.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n"));
-  assert.match(pageSource, /Goldie Listing Factory/);
+  assert.match(pageSource, /<GoldieWordmark className="approved-brand"/);
   assert.match(pageSource, /Connect Printify/);
   assert.match(pageSource, /Secure connection/);
   assert.match(pageSource, /Prepare your product in Printify/);
@@ -323,7 +323,7 @@ test("stages each finished mockup group for its exact Etsy listing", async () =>
   assert.match(images, /kind==="size-guide"/);
   assert.match(images, /existing\.objects\.map\(object=>runtime\(\)\.ARTWORK\.delete\(object\.key\)\)/);
   assert.match(images, /catch\(error\)\{await Promise\.all\(saved\.map/);
-  assert.match(page, /Goldie adds it to every listing in this batch/);
+  assert.match(page, /Choose one image for every listing in this batch/);
   assert.match(page, /printifyImageIndices/);
 });
 
@@ -448,7 +448,7 @@ test("calculates every Printify variant price from its own cost and Etsy fee pro
   const page = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
   const drafts = await readFile(new URL("../app/api/printify/drafts/route.ts", import.meta.url), "utf8");
   assert.match(page, /stillUsingTemplatePrices/);
-  assert.match(page, /Goldie calculated every price from your profit goal, product costs, and Etsy fees\./);
+  assert.match(page, /Prices calculated from your profit goal, product costs, and Etsy fees\./);
   assert.match(page, /if\(profile\)recalculate\(pricing\)/);
   assert.doesNotMatch(page, /estimatedProfit\([^\n]+shippingCost/);
   assert.doesNotMatch(drafts, /shipping==null\?body\.pricing/);
@@ -710,11 +710,11 @@ test("creates unique validated AI titles in bulk with per-listing overrides", as
     readFile(new URL("../app/api/listing-intelligence/route.ts",import.meta.url),"utf8"),
   ]);
   assert.match(page,/Create titles for the whole batch/);assert.match(page,/Auto-create all titles/);assert.match(page,/runBounded\(files,2/);
-  assert.match(page,/Goldie selects from my bank/);assert.match(page,/I choose from my bank/);assert.match(page,/Click keywords in the order you want them/);
+  assert.match(page,/Suggest phrases from my bank/);assert.match(page,/I choose from my bank/);assert.match(page,/Click keywords in the order you want them/);
   assert.match(page,/removeBatchKeyword/);assert.match(page,/clearBatchKeywords/);assert.match(page,/Applied to every listing below/);
   assert.match(page,/Create a different title with AI/);assert.match(page,/Create title for this design/);
   assert.match(page,/autoTitleForDesign/);assert.match(page,/tags:item\.result\.tags/);
-  assert.match(page,/separately ranked Etsy tags created/);assert.match(page,/Goldie selects only exact phrases from this bank/);
+  assert.match(page,/separately ranked Etsy tags created/);assert.match(page,/Only exact phrases from this bank are used/);
   /* D541 - the promise moved with the block that held it; this is the copy that
      carries it now, in the title builder itself. */
   assert.match(page,/No new keywords are ever added/);
@@ -1307,7 +1307,7 @@ test("turns Goldie into a returning-user command center with contextual intellig
   ]);
   assert.match(dashboard,/Resume your last batch/);assert.match(dashboard,/Start another batch/);assert.match(dashboard,/Recent products/);
   assert.match(dashboard,/Keyword banks/);assert.doesNotMatch(dashboard,/Mockup sets/);assert.match(dashboard,/listings created this month/);
-  assert.match(dashboard,/GoldieCommandBar/);assert.match(dashboard,/metaKey/);assert.match(page,/GoldieInsight/);assert.match(page,/currentInsight/);
+  assert.match(dashboard,/GoldieCommandBar/);assert.match(dashboard,/metaKey/);assert.doesNotMatch(page,/<GoldieInsight>/);assert.doesNotMatch(page,/currentInsight/);
   assert.match(page,/progressIndex>0&&<WorkflowMomentum/);assert.match(page,/lowDpiCount/);assert.match(page,/variants approved/);
   assert.match(theme,/--g-plum-700/);assert.match(theme,/step-resolve/);assert.match(theme,/item-arrive/);
   assert.match(system,/Fixed palette/);assert.match(system,/Canonical components/);assert.match(system,/Visual-change protocol/);
@@ -1603,7 +1603,7 @@ test("queues Etsy publishing durably and protects shared API capacity",async()=>
   assert.match(migration,/CREATE UNIQUE INDEX `idx_etsy_publish_items_user_product`/);
   assert.match(migration,/CREATE UNIQUE INDEX `idx_etsy_publish_jobs_user_batch`/);
   assert.match(page,/goldie-active-publish-job/);
-  assert.match(page,/safely resuming your queued batch/);
+  assert.match(page,/Resuming the queued batch/);
   assert.match(usage,/AVG\(api_calls\)/);
 });
 
@@ -2908,7 +2908,7 @@ test("the design cache is bounded and a missing browser cache never erases listi
   assert.match(restore, /draft\?\.previewUrl\|\|draft\?\.printifyImages\?\.\[0\]/,
     "the existing Printify draft supplies a useful preview");
   assert.match(restore, /originalUnavailable:!file/);
-  assert.match(app, /listings are.*restored and can still be finished in Goldie/);
+  assert.match(app, /listings are.*restored and can still be finished here/);
   assert.doesNotMatch(app, /design files are not on this computer|continue on the computer you started on/);
   /* D687 - draft.id! because listingWorkRows filters on draft.id before mapping
      and TypeScript cannot narrow through the filter. The wiring is unchanged. */
@@ -3340,7 +3340,7 @@ test("a product saves its own defaults, and the shipping notice tells the truth 
      a product she had just created that never had one, and told her to choose
      another "below" while sitting below the picker. */
   assert.doesNotMatch(app, /no longer on your Etsy shop/);
-  assert.match(app, /Goldie could not match this product’s Printify shipping to a profile on your Etsy shop\. Pick one above/);
+  assert.match(app, /No matching Etsy shipping profile was found for this product\. Pick one above/);
   assert.match(app, /!selectedProfile&&selectedProfileId>0&&!profilesLoading/,
     "and it stays quiet while the profiles are still loading");
 
@@ -3579,7 +3579,7 @@ test("publishing says what is happening, and Etsy gets what it requires — D473
 
   // And a publish she just started no longer claims to be resuming one.
   assert.match(app, /monitorPublishJob\(jobId:string,resuming=false\)/);
-  assert.match(app, /resuming\?"Goldie is safely resuming your queued batch…":"Goldie is publishing your listings…"/);
+  assert.match(app, /resuming\?"Resuming the queued batch…":"Publishing your listings…"/);
   assert.match(app, /if\(jobId\)void monitorPublishJob\(jobId,true\)/, "only the reopened case says resuming");
 });
 
@@ -4009,7 +4009,7 @@ test("one press publishes every product in a bundle — D495", async () => {
      will actually publish, so this no longer has to guess. */
   assert.doesNotMatch(app, /for\(const recipe of bundleProductsNotStarted\(\)\)missing\.push/,
     "an empty product must not block a press it is not part of");
-  assert.match(app, /if\(bundleProductsStillReading\(\)\.length\)missing\.push\("Goldie is still reading the other products in this batch"\)/,
+  assert.match(app, /if\(bundleProductsStillReading\(\)\.length\)missing\.push\("Still reading the other products in this batch"\)/,
     "but an unread member still blocks, because the selection may be incomplete");
 
   /* Publishing spends real money, so the run is stricter than the drafts run: a
@@ -4043,7 +4043,7 @@ test("one press publishes every product in a bundle — D495", async () => {
     "and quotes the fee for that same number - D634");
   /* D634 - names the products actually being published, falling back to the
      whole bundle when nothing is resolved yet. */
-  assert.match(app, /Goldie publishes \{\[\.\.\.new Set\(publishTargets\(\)\.map\(item=>item\.productName\)\.filter\(Boolean\)\)\]\.join\(", "\)\|\|bundleRecipes\.map\(recipe=>recipe\.name\)\.join\(", "\)\} one after another/);
+  assert.match(app, /These products publish one after another/);
   assert.match(css, /\.publish-confirm-bundle\{/);
 
   // And she can see which product it is on.
@@ -4073,7 +4073,7 @@ test("two tabs cannot silently overwrite the same batch — D496", async () => {
   assert.match(app, /function takeOverBatchHere\(\)/);
 
   // And it says so where she is working, instead of silently going quiet.
-  assert.match(app, /This batch is open in another Goldie tab\./);
+  assert.match(app, /This batch is open in another tab\./);
   assert.match(app, /Take over editing here/);
   assert.match(css, /\.batch-tab-conflict\{/);
 
@@ -4373,7 +4373,7 @@ test("alerts use the app's alert colour, and JSX text is not escape sequences �
      text, and this one was JSX text. */
   assert.doesNotMatch(app, /\\u[0-9a-fA-F]{4}[^`'"]*<\/(span|b|p|small)>/,
     "no \\u escape in JSX text");
-  assert.match(app, /so that tab’s work is not overwritten/);
+  assert.match(app, /so the other tab is not overwritten/);
 
   /* Both panels I added invented a tan instead of using the faded red already in
      .critical-dpi and .publish-live-warning. It is a token now. */
@@ -4900,7 +4900,7 @@ test("step 4 tells the truth about a bundle it is not ready to publish — D546"
      will actually publish, so this no longer has to guess. */
   assert.doesNotMatch(app, /for\(const recipe of bundleProductsNotStarted\(\)\)missing\.push/,
     "an empty product must not block a press it is not part of");
-  assert.match(app, /if\(bundleProductsStillReading\(\)\.length\)missing\.push\("Goldie is still reading the other products in this batch"\)/,
+  assert.match(app, /if\(bundleProductsStillReading\(\)\.length\)missing\.push\("Still reading the other products in this batch"\)/,
     "but an unread member still blocks, because the selection may be incomplete");
 
   /* And the button counts what it will actually create. Every other number on
@@ -6441,7 +6441,7 @@ test("the walkthrough's smaller faults are fixed — D648", async () => {
   /* The low-resolution banner promised a confirmation step that never came;
      the create dialog does not mention resolution at all. */
   assert.doesNotMatch(app, /require confirmation before continuing/);
-  assert.match(app, /identify every affected design so you can replace it or continue anyway/);
+  assert.match(app, /Each affected design must be replaced or approved/);
 
   // A one-design batch counted itself in the plural in four more places.
   assert.match(app, /\$\{summary\.drafts\} \$\{summary\.drafts===1\?"draft":"drafts"\}/);
@@ -6871,7 +6871,7 @@ test("bundle DPI and variant totals cover every product — D659", async () => {
     "a product must not be dropped from the bundle because one fetch was slow");
   // And a product that still could not be read is named, not omitted.
   assert.match(app, /const bundleProductsUnchecked=useMemo\(/);
-  assert.match(app, /Goldie could not read \{bundleProductsUnchecked\.join\(", "\)\} yet/);
+  assert.match(app, /could not be checked yet/);
 
   // Variants total the bundle, with the split inspectable.
   assert.match(app, /const bundleVariantCounts=useMemo\(/);

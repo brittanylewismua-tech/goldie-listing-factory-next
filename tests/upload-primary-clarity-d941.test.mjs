@@ -6,7 +6,7 @@ const app=await readFile(new URL("../app/listing-factory-app.tsx",import.meta.ur
 const css=await readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8");
 
 test("D949: the main uploader cannot be mistaken for a front-and-back pair",()=>{
-  assert.match(app,/activeBundle&&bundleRecipes\.length>1\?`Upload each \$\{uploadPrimaryLabel\} design once\. Goldie uses it on every product in this bundle\.`:`Upload one \$\{uploadPrimaryLabel\} design per listing\.`/);
+  assert.match(app,/activeBundle&&bundleRecipes\.length>1\?`Upload each \$\{uploadPrimaryLabel\} design once for every product in this bundle\.`:`Upload one \$\{uploadPrimaryLabel\} design per listing\.`/);
   assert.match(app,/uploadSecondaryLabel\?` Add optional \$\{uploadSecondaryLabel\} artwork afterward\.`/);
   assert.doesNotMatch(app,/upload-primary-note[^\n]*\bback\b/i);
   assert.match(app,/secondarySides=sides\.filter\(side=>side!==primarySide\)/);

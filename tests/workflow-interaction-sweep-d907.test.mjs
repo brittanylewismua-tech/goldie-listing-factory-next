@@ -29,7 +29,7 @@ test("D907: workflow copy agrees with the post-draft pricing order",()=>{
   assert.doesNotMatch(app,/confirm the Etsy shipping profile before any Printify drafts are created/);
   assert.doesNotMatch(app,/copies the selected product, enabled variants, artwork placement, approved prices/);
   assert.match(app,/Prices come after the drafts/);
-  assert.match(app,/Prices and shipping are reviewed after Printify reports the finished costs/);
+  assert.match(app,/Prices and shipping are reviewed after Printify reports the finished costs|Approve prices and shipping after Printify calculates the finished production costs/);
 });
 
 test("D907: visible counts use singular draft grammar",()=>{

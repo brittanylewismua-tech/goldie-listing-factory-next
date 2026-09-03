@@ -17,13 +17,13 @@ test("D940: bundle draft creation filters extra artwork by the current product",
 
 test("D940: the upload card makes product scope explicit and selectable",()=>{
   assert.match(app,/Which products get this \{printSideLabel\(artwork\.side\)\.toLocaleLowerCase\(\)\} artwork\?/);
-  assert.match(app,/Goldie applies it only to products that support this print area/);
+  assert.match(app,/Only products that support this print area are included/);
   assert.match(app,/onClick=\{\(\)=>toggleArtworkProduct\(file\.id,artwork\.id,recipe\.id\)\}/);
   assert.match(css,/\.bundle-print-products button\.selected\{border-color:#2f7a50;background:#f1faf4!important/);
 });
 
 test("D940: final confirmation states listing and print-area scope",()=>{
   assert.match(app,/one listing per design on each product/);
-  assert.match(app,/Goldie never turns a back file into another product’s front design/);
+  assert.match(app,/Back artwork is never used as another product’s front design/);
   assert.match(app,/files\.map\(printPlanFor\)/);
 });
