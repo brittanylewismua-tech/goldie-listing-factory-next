@@ -17,13 +17,11 @@ test("artwork versions stay attached to one listing design and survive resume", 
 
 test("the controls distinguish primary colour artwork from every secondary print area", async () => {
   const [app,assignment] = await Promise.all([read("../app/listing-factory-app.tsx"),read("../app/artwork-assignment.ts")]);
-  assert.match(app, /Artwork by color/);
-  assert.match(app, /Every selected color gets exactly one \{printSideLabel\(primarySide\)/);
+  assert.match(app, /Use different artwork for \$\{focused\.title\}/);
+  assert.match(app, /Using the main design/);
+  assert.match(app, /Use main design/);
   assert.match(app, /artworkVersions\|\|\[\]\)\.every\(artwork=>!artwork\.originalUnavailable&&artwork\.file\?\.size&&artwork\.colorIds\.length>0&&\(artwork\.productIds\?\.length\?\?1\)>0\)/, "unused, unassigned, or missing secondary artwork must hold the draft gate");
-  assert.match(app, /This saved Printify product has one print area/);
-  assert.match(app, /addArtworkVersion\(file\.id,primarySide/);
   assert.match(app, /addArtworkVersion\(file\.id,side/);
-  assert.match(app, /assignPrimaryArtwork/);
   assert.match(app, /toggleArtworkColor/);
   assert.match(assignment, /artwork\.id===artworkId\?\[\.\.\.new Set\(\[\.\.\.artwork\.colorIds,colorId\]\)\]:artwork\.colorIds\.filter/, "one primary-side color cannot silently use two artworks");
 });

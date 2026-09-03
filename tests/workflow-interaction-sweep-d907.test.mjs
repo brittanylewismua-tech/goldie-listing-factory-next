@@ -19,8 +19,9 @@ test("D907: the private-draft action stays in the one persistent action bar",()=
 
 test("D907: artwork file actions work for mouse and keyboard",()=>{
   const controls=[...app.matchAll(/<label className="secondary-action"[\s\S]*?<input className="hidden-picker"/g)].map(match=>match[0]);
-  assert.ok(controls.length>=2,"primary and generated secondary-side upload actions exist");
+  assert.ok(controls.length>=1,"generated secondary-side upload actions exist when Printify prepared the side");
   assert.ok(controls.every(control=>/role="button"/.test(control)&&/tabIndex=\{0\}/.test(control)&&/event\.key==="Enter"\|\|event\.key===" "/.test(control)),"no artwork upload action may exist without Enter and Space support");
+  assert.match(app,/draft-color-artwork-action[^]*?role="button"[^]*?event\.key==="Enter"\|\|event\.key===" "/,"the focused-color artwork action has the same keyboard behavior");
   assert.match(css,/artwork-version-tools label\.secondary-action:focus-visible\{outline:/);
 });
 

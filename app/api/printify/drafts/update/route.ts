@@ -2,19 +2,23 @@ import { env } from "cloudflare:workers";
 import { NextResponse } from "next/server";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { decryptPrintifyToken } from "../../token-crypto";
+import { primaryImageForSide,replaceArtworkForVariants,type DraftPrintArea } from "../color-artwork";
+
+type ArtworkUpdate={stagedId?:string;fileName?:string;position:string;variantIds:number[];colorId:number;colorTitle:string;reset?:boolean;bounds?:{left:number;top:number;right:number;bottom:number};maxPlacementScale?:number};
+async function artworkContents(stream?:ReadableStream){if(!stream)throw new Error("Goldie could not read the staged artwork.");const bytes=new Uint8Array(await new Response(stream).arrayBuffer());let binary="";for(let index=0;index<bytes.length;index+=0x8000)binary+=String.fromCharCode(...bytes.subarray(index,index+0x8000));return btoa(binary)}
 
 export async function PATCH(request:Request){
   const user=await getChatGPTUser();if(!user)return NextResponse.json({error:"Sign in to update this draft."},{status:401});
-  const body=await request.json() as {productId?:string;title?:string;tags?:string[];description?:string;etsyDetails?:unknown;placement?:{x:number;y:number;scale:number};variantPrices?:Record<string,number>;selectedVariantIds?:number[]},productId=String(body.productId||"");
+  const body=await request.json() as {productId?:string;title?:string;tags?:string[];description?:string;etsyDetails?:unknown;placement?:{x:number;y:number;scale:number};variantPrices?:Record<string,number>;selectedVariantIds?:number[];artworkUpdate?:ArtworkUpdate},productId=String(body.productId||"");
   const owned=await env.DB.prepare("SELECT response_json FROM printify_draft_results WHERE user_id=? AND status='succeeded' AND json_extract(response_json,'$.id')=? LIMIT 1").bind(user.userId,productId).first<{response_json:string}>();
   if(!owned)return NextResponse.json({error:"That Printify draft was not created by this Listing Factory account."},{status:404});
-  const draft=JSON.parse(owned.response_json) as {shopId:number},connection=await env.DB.prepare("SELECT encrypted_token FROM printify_connections WHERE user_id=?").bind(user.userId).first<{encrypted_token:string}>(),secret=(env as unknown as {PRINTIFY_TOKEN_KEY?:string}).PRINTIFY_TOKEN_KEY;
+  const draft=JSON.parse(owned.response_json) as {shopId:number;primaryArtworkImageIds?:Record<string,string>;artworkOverrides?:Record<string,{name:string;position:string}>},connection=await env.DB.prepare("SELECT encrypted_token FROM printify_connections WHERE user_id=?").bind(user.userId).first<{encrypted_token:string}>(),secret=(env as unknown as {PRINTIFY_TOKEN_KEY?:string}).PRINTIFY_TOKEN_KEY;
   if(!connection||!secret)return NextResponse.json({error:"Reconnect Printify to update this draft."},{status:401});
   const token=await decryptPrintifyToken(connection.encrypted_token,secret),url=`https://api.printify.com/v1/shops/${draft.shopId}/products/${productId}.json`;
   let placementPayload:unknown;
   let placementScale:number|undefined;
   let currentProduct:{variants?:Array<{id:number;cost?:number;price?:number;is_enabled?:boolean}>;images?:Array<{src?:string;is_default?:boolean;variant_ids?:number[];position?:string}>;print_areas?:Array<{variant_ids:number[];background?:string;placeholders?:Array<{position:string;images?:Array<{id?:string;x?:number;y?:number;scale?:number;angle?:number}>}>}>}|undefined;
-  if(body.placement||body.variantPrices){
+  if(body.placement||body.variantPrices||body.artworkUpdate){
     const currentResponse=await fetch(url,{headers:{Authorization:`Bearer ${token}`,"User-Agent":"Goldie-Listing-Factory"}});
     if(!currentResponse.ok)return NextResponse.json({error:`Printify could not load this draft (${currentResponse.status}).`},{status:currentResponse.status});
     const current=await currentResponse.json() as typeof currentProduct;
@@ -49,6 +53,24 @@ export async function PATCH(request:Request){
   if(body.description!==undefined)updateBody.description=String(body.description||"");
   if(body.tags!==undefined)updateBody.tags=(body.tags||[]).slice(0,13);
   if(placementPayload)updateBody.print_areas=placementPayload;
+  let primaryArtworkId:string|undefined;
+  if(body.artworkUpdate){
+    const change=body.artworkUpdate,areas=(currentProduct?.print_areas||[]) as DraftPrintArea[];
+    if(!change.position||!change.variantIds?.length)return NextResponse.json({error:"Choose a product color before changing its artwork."},{status:400});
+    primaryArtworkId=draft.primaryArtworkImageIds?.[change.position]||primaryImageForSide(areas,change.position);
+    if(!primaryArtworkId)return NextResponse.json({error:`Goldie could not identify the main ${change.position} artwork in this draft.`},{status:409});
+    let imageId=primaryArtworkId;
+    if(!change.reset){
+      const runtime=env as unknown as {ARTWORK?:{get(key:string):Promise<{body?:ReadableStream;customMetadata?:Record<string,string>}|null>}};
+      const staged=change.stagedId?await runtime.ARTWORK?.get(change.stagedId):null;
+      if(!staged||staged.customMetadata?.owner!==user.userId||Number(staged.customMetadata?.expires||0)<=Date.now())return NextResponse.json({error:"That artwork upload expired. Choose the file again."},{status:400});
+      const upload=await fetch("https://api.printify.com/v1/uploads/images.json",{method:"POST",headers:{Authorization:`Bearer ${token}`,"Content-Type":"application/json","User-Agent":"Goldie-Listing-Factory"},body:JSON.stringify({file_name:String(change.fileName||"alternate-artwork.png"),contents:await artworkContents(staged.body)})});
+      if(!upload.ok)return NextResponse.json({error:`Printify could not upload that artwork (${upload.status}).`},{status:upload.status});
+      imageId=String(((await upload.json()) as {id?:string}).id||"");
+      if(!imageId)return NextResponse.json({error:"Printify did not return an image ID for that artwork."},{status:502});
+    }
+    updateBody.print_areas=replaceArtworkForVariants(areas,change.position,change.variantIds,imageId,change.bounds,change.maxPlacementScale);
+  }
   if(body.variantPrices){
     const variants=currentProduct?.variants||[];
     if(!variants.length)return NextResponse.json({error:"Printify did not return the actual variant costs, so Goldie will not approve these prices."},{status:409});
@@ -74,8 +96,8 @@ export async function PATCH(request:Request){
      original template. The PUT can finish before those images are attached, so
      read the product back instead of making the seller reload and hope. */
   let refreshed=updated;
-  if(body.selectedVariantIds){
-    const newlyEnabled=new Set(body.selectedVariantIds.filter(id=>!(currentProduct?.variants||[]).some(variant=>variant.id===id&&variant.is_enabled!==false)));
+  if(body.selectedVariantIds||body.artworkUpdate){
+    const newlyEnabled=new Set((body.selectedVariantIds||body.artworkUpdate?.variantIds||[]).filter(id=>!(currentProduct?.variants||[]).some(variant=>variant.id===id&&variant.is_enabled!==false)));
     for(const wait of [0,900,1800]){
       if(wait)await new Promise(resolve=>setTimeout(resolve,wait));
       const read=await fetch(url,{headers:{Authorization:`Bearer ${token}`,"User-Agent":"Goldie-Listing-Factory"}});
@@ -86,7 +108,9 @@ export async function PATCH(request:Request){
     }
   }
   const images=refreshed.images||updated.images||currentProduct?.images;
-  const stored={...draft,...(body.title!==undefined?{title:String(body.title||"").slice(0,255)}:{}),...(body.tags!==undefined?{tags:(body.tags||[]).slice(0,13)}:{}),...(body.description!==undefined?{description:String(body.description||"")}:{}) ,...(body.etsyDetails!==undefined?{etsyDetails:body.etsyDetails||null}:{}),...(body.placement?{placement:body.placement,placementScale}:{}),...(body.selectedVariantIds?{selectedVariantIds:body.selectedVariantIds,costReview:{...(draft as {costReview?:Record<string,unknown>}).costReview,approved:false,variants:(currentProduct?.variants||[]).map(variant=>({...variant,cost:Number(variant.cost),price:Number(variant.price),isEnabled:body.selectedVariantIds!.includes(variant.id)}))}}:{}),...(body.variantPrices?{costReview:{...(draft as {costReview?:Record<string,unknown>}).costReview,verified:true,approved:true,variants:(currentProduct?.variants||[]).map(variant=>({...variant,cost:Number(variant.cost),price:Number(body.variantPrices?.[String(variant.id)]??variant.price),isEnabled:body.selectedVariantIds?body.selectedVariantIds.includes(variant.id):variant.is_enabled!==false}))}}:{}),...(images?{printifyImages:images.map(image=>image.src).filter(Boolean),printifyImageDetails:images.filter(image=>image.src).map(image=>({src:image.src!,variantIds:image.variant_ids||[],position:image.position||""})),previewUrl:images.find(image=>image.is_default)?.src||images[0]?.src}: {})};
+  const nextOverrides={...(draft.artworkOverrides||{})};
+  if(body.artworkUpdate){if(body.artworkUpdate.reset)delete nextOverrides[String(body.artworkUpdate.colorId)];else nextOverrides[String(body.artworkUpdate.colorId)]={name:String(body.artworkUpdate.fileName||"Alternate artwork"),position:body.artworkUpdate.position};}
+  const stored={...draft,artworkOverrides:nextOverrides,...(body.artworkUpdate&&primaryArtworkId?{primaryArtworkImageIds:{...(draft.primaryArtworkImageIds||{}),[body.artworkUpdate.position]:primaryArtworkId}}:{}),...(body.title!==undefined?{title:String(body.title||"").slice(0,255)}:{}),...(body.tags!==undefined?{tags:(body.tags||[]).slice(0,13)}:{}),...(body.description!==undefined?{description:String(body.description||"")}:{}) ,...(body.etsyDetails!==undefined?{etsyDetails:body.etsyDetails||null}:{}),...(body.placement?{placement:body.placement,placementScale}:{}),...(body.selectedVariantIds?{selectedVariantIds:body.selectedVariantIds,costReview:{...(draft as {costReview?:Record<string,unknown>}).costReview,approved:false,variants:(currentProduct?.variants||[]).map(variant=>({...variant,cost:Number(variant.cost),price:Number(variant.price),isEnabled:body.selectedVariantIds!.includes(variant.id)}))}}:{}),...(body.variantPrices?{costReview:{...(draft as {costReview?:Record<string,unknown>}).costReview,verified:true,approved:true,variants:(currentProduct?.variants||[]).map(variant=>({...variant,cost:Number(variant.cost),price:Number(body.variantPrices?.[String(variant.id)]??variant.price),isEnabled:body.selectedVariantIds?body.selectedVariantIds.includes(variant.id):variant.is_enabled!==false}))}}:{}),...(images?{printifyImages:images.map(image=>image.src).filter(Boolean),printifyImageDetails:images.filter(image=>image.src).map(image=>({src:image.src!,variantIds:image.variant_ids||[],position:image.position||""})),previewUrl:images.find(image=>image.is_default)?.src||images[0]?.src}: {})};
   await env.DB.prepare("UPDATE printify_draft_results SET response_json=? WHERE user_id=? AND status='succeeded' AND json_extract(response_json,'$.id')=?").bind(JSON.stringify(stored),user.userId,productId).run();
   return NextResponse.json({ok:true,draft:stored});
 }

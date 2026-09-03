@@ -46,7 +46,7 @@ test("no entrance animation can leave required content invisible", () => {
     "a stranded animation pinned the panel at opacity 0 and inline opacity lost to it");
 });
 
-test("the assignment matrix is a full-width workspace, not a 282px caption", () => {
+test("artwork controls use full-width workspaces, not 282px captions", () => {
   assert.match(v2, /\.design-upload-review:has\(\.artwork-version-tools\)\{grid-template-columns:minmax\(0,1fr\)\}/);
   assert.match(v2, /\.design-artwork-card:has\(\.artwork-version-tools\)>\.design-artwork-primary\{[\s\S]*?grid-template-columns:76px minmax\(0,1fr\) auto/,
     "the collapsed 0px middle track is what made the filename overprint the copy");
@@ -54,7 +54,8 @@ test("the assignment matrix is a full-width workspace, not a 282px caption", () 
     "the legacy thumbnail-row grid must not turn the full artwork card into three columns");
   assert.doesNotMatch(approved,/\.design-upload-review img\{[^}]*!important/,
     "legacy image sizing must not override the component's own preview geometry");
-  assert.match(v2, /\.artwork-assignment-matrix select\{width:100%;text-overflow:ellipsis\}/);
+  assert.match(v2, /\.draft-color-workspace\{display:grid;grid-template-columns:minmax\(260px,36%\) minmax\(0,1fr\)/);
+  assert.match(v2, /\.draft-color-artwork-action label/);
 });
 
 test("artwork actions use the workflow's button hierarchy instead of bare links", () => {

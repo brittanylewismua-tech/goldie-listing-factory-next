@@ -10,8 +10,9 @@ test("D906: no pre-draft control pretends it can change product colors",()=>{
 });
 
 test("D906: the alternate-artwork action says exactly what it does",()=>{
-  assert.match(app,/Use different artwork on some colors/);
-  assert.match(app,/addArtworkVersion\(file\.id,primarySide,event\.target\.files\)/);
+  assert.match(app,/Use different artwork for \$\{focused\.title\}/);
+  assert.match(app,/onArtworkChange\(draft,focused,event\.target\.files\)/);
+  assert.doesNotMatch(app,/>＋ Use different artwork on some colors/);
   assert.doesNotMatch(app,/Add another front colorway/);
 });
 
@@ -20,4 +21,5 @@ test("D906: actual color changes stay on the post-draft control with real previe
   assert.match(app,/REAL PRINTIFY PREVIEW/);
   assert.match(app,/task==="draft-colors"/);
   assert.match(app,/syncDraftVariantChoices\(ids,selectedSizeIds\)/);
+  assert.match(app,/updateDraftColorArtwork/);
 });
