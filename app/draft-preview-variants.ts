@@ -43,9 +43,9 @@ export function previewVariantChunks(variantIds:number[],size=20){
   return chunks;
 }
 
-/* Printify regenerates mockups asynchronously after a variant rotation. The
-   second window regularly takes longer than fifteen seconds on a real draft,
-   so keep the wait bounded but long enough for the service's observed queue. */
+/* Printify generates mockups asynchronously. Each independent window runs in
+   parallel, so this is the ceiling for the whole preview phase rather than a
+   delay paid once per twenty colors. */
 export const PREVIEW_MOCKUP_WAITS_MS=[2000,4000,8000,16000,30000] as const;
 
 export function mergeMockupImages<T extends DraftMockupImage>(...sets:T[][]){

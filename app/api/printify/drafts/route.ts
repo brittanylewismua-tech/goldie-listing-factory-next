@@ -260,10 +260,12 @@ async function handlePOST(request: Request) {
     let colorPreviewImages=resolvedProduct.images||[];
     const widened=previewVariantIds.some(id=>!finalVariantIds.includes(id));
     if(widened){
-      let previewImages=colorPreviewImages;
       try{
-        for(const chunk of previewVariantChunks(previewVariantIds)){
-          if(exactMockupCoverageComplete(previewImages,chunk))continue;
+        const missingChunks=previewVariantChunks(previewVariantIds).filter(chunk=>!exactMockupCoverageComplete(colorPreviewImages,chunk));
+        /* Every independent color window is generated at the same time. A
+           39-color product therefore waits for one Printify window, not two
+           consecutive windows that could hold the seller here for a minute. */
+        const generatedWindows=await Promise.all(missingChunks.map(async chunk=>{
           let previewProduct:CreatedProduct|undefined;
           try{
             /* Updating enabled variants does not make Printify regenerate its
@@ -281,11 +283,12 @@ async function handlePOST(request: Request) {
               chunkImages=loaded.images||[];
             }
             if(!exactMockupCoverageComplete(chunkImages,chunk))throw new Error("Printify did not finish generating every product color preview. No draft was kept; try again.");
-            previewImages=mergeMockupImages(previewImages,chunkImages);
+            return chunkImages;
           }finally{
             if(previewProduct?.id)await fetch(`${PRINTIFY_API}/shops/${shop.id}/products/${previewProduct.id}.json`,{method:"DELETE",headers:{Authorization:`Bearer ${token}`,"User-Agent":"Goldie-Listing-Factory"}}).catch(()=>undefined);
           }
-        }
+        }));
+        const previewImages=mergeMockupImages(colorPreviewImages,...generatedWindows);
         const restored=restoredVariants(resolvedProduct.variants||template.variants,finalVariantIds).map(variant=>{
           const source=(resolvedProduct.variants||template.variants).find(item=>item.id===variant.id);
           return {...variant,price:Number(source?.price||template.variants.find(item=>item.id===variant.id)?.price||0)};

@@ -44,9 +44,9 @@ test("D988 rotates through Printify's twenty-image mockup window",()=>{
   assert.deepEqual(mergeMockupImages(first,first,second),[first[0],second[0]]);
 });
 
-test("D989 gives Printify's asynchronous mockup window a bounded minute",()=>{
+test("D989 keeps each asynchronous Printify mockup window bounded",()=>{
   assert.deepEqual(PREVIEW_MOCKUP_WAITS_MS,[2000,4000,8000,16000,30000]);
-  assert.equal(PREVIEW_MOCKUP_WAITS_MS.reduce((sum,wait)=>sum+wait,0),60000);
+  assert.equal(PREVIEW_MOCKUP_WAITS_MS.slice(0,4).reduce((sum,wait)=>sum+wait,0),30000);
 });
 
 test("D984 sends the broad preview set but keeps the seller selection separate",()=>{
@@ -75,4 +75,12 @@ test("D992 keeps helper color previews out of the listing-photo collection",()=>
   assert.match(route,/printifyImages: productImages\.map/);
   assert.match(route,/colorPreviewImageDetails:colorPreviewImages\.filter/);
   assert.match(app,/draft\.colorPreviewImageDetails\?\.length\?draft\.colorPreviewImageDetails:draft\.printifyImageDetails/);
+});
+
+test("D993 generates every missing color window concurrently",()=>{
+  const route=fs.readFileSync(new URL("../app/api/printify/drafts/route.ts",import.meta.url),"utf8");
+  assert.match(route,/const missingChunks=previewVariantChunks\(previewVariantIds\)\.filter/);
+  assert.match(route,/await Promise\.all\(missingChunks\.map\(async chunk=>/);
+  assert.doesNotMatch(route,/for\(const chunk of previewVariantChunks\(previewVariantIds\)\)/);
+  assert.match(route,/mergeMockupImages\(colorPreviewImages,\.\.\.generatedWindows\)/);
 });
