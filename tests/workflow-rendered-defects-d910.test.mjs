@@ -66,7 +66,8 @@ test("D974: a size option id cannot make every colour use the same garment mocku
 });
 
 test("D975: restored batches refresh the full product catalogue before color review",()=>{
-  assert.match(app,/if\(!restoringBatch&&snapshotReady\.current&&template&&templateDetails\?\.id\)void refreshRestoredTemplate\(template,etsyShippingProfileId\)/);
+  assert.match(app,/if\(!restoringBatch&&snapshotReady\.current&&template&&templateDetails\?\.id&&restoredCatalogueRefresh\.current!==key\)/);
+  assert.match(app,/\[restoringBatch,template,templateDetails\?\.id\]/);
   assert.match(app,/async function refreshRestoredTemplate[\s\S]*?setTemplateDetails\(current=>current\?\.id&&current\.id!==result\.product!\.id\?current:\{\.\.\.current,\.\.\.result\.product!\}\)/);
 });
 

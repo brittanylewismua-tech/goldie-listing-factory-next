@@ -1163,6 +1163,7 @@ export default function ListingFactoryApp() {
   const [publishMessage,setPublishMessage]=useState("");
   const [selectedPublishIds,setSelectedPublishIds]=useState<string[]>([]);
   const [batchReceipt,setBatchReceipt]=useState<BatchReceipt|null>(null);
+  const restoredCatalogueRefresh=useRef("");
   /* The saved snapshot is not the authority on publication. A browser can miss
      its final autosave, and older snapshots predate per-listing receipts. Read
      completed publish items whenever a batch opens so Batch History and the
@@ -1849,10 +1850,14 @@ export default function ListingFactoryApp() {
      catalogue once so every available colour has a current Printify variant
      before the colour panel is opened. */
   useEffect(()=>{
-    if(!restoringBatch&&snapshotReady.current&&template&&templateDetails?.id)void refreshRestoredTemplate(template,etsyShippingProfileId);
+    const key=`${batchIdRef.current||""}:${templateDetails?.id||""}`;
+    if(!restoringBatch&&snapshotReady.current&&template&&templateDetails?.id&&restoredCatalogueRefresh.current!==key){
+      restoredCatalogueRefresh.current=key;
+      void refreshRestoredTemplate(template,etsyShippingProfileId);
+    }
     // This is a one-time post-restore refresh. Product selection has its own loader.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  },[restoringBatch]);
+  },[restoringBatch,template,templateDetails?.id]);
   /* D659 · A workflow URL with no ?batch= dropped straight to step 1. Measured
      live: opening ?step=designs after four Printify drafts existed silently
      landed on "Choose product", looking exactly like the batch had been thrown
