@@ -3885,7 +3885,10 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
           try {
             const stagedArtworks=await Promise.all(prepared.map(async item=>{const staged=await stageUpload(item.upload.blob,item.upload.fileName,`${supportReference}-${item.key.slice(0,8)}`);return {key:item.key,fileName:item.upload.fileName,stagedId:staged.stagedId,reference:staged.reference,bounds:item.artwork.visibleBounds,maxPlacementScale:isRigidPaperProduct(templateDetails)?1:undefined}}));
             const availableColorIds=(templateDetails?.colorOptions||[]).filter(color=>color.available).map(color=>color.id);
-            const mockupVariants=variantsFor(templateDetails,availableColorIds,selectedSizeIds);
+            /* One representative size is enough to generate an honest image
+               for every colour. Asking for every colour at every selected size
+               can exceed Printify's hard 100-enabled-variant ceiling. */
+            const mockupVariants=variantsFor(templateDetails,availableColorIds,selectedSizeIds.slice(0,1));
             const mockupVariantSources=Object.fromEntries(mockupVariants.map(variant=>{
               const source=pricedVariants.find(selected=>selected.sizeId!=null&&selected.sizeId===variant.sizeId)||pricedVariants[0];
               return [String(variant.id),source?.id||variant.id];

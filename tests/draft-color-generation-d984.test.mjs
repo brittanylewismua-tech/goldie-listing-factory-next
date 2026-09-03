@@ -5,10 +5,18 @@ import fs from "node:fs";
 
 test("D984 creates real previews broadly and restores the paid draft choices",()=>{
   assert.deepEqual(creationVariantIds([11,12],[11,12,21,22]),[11,12,21,22]);
-  assert.deepEqual(creationVariantIds([11,12],[21,22]),[11,12]);
+  assert.deepEqual(creationVariantIds([11,12],[21,22]),[11,12,21,22]);
   assert.deepEqual(restoredVariants([{id:11},{id:12},{id:21}],[11,12]),[
     {id:11,is_enabled:true},{id:12,is_enabled:true},{id:21,is_enabled:false},
   ]);
+});
+
+test("D987 never asks Printify to enable more than 100 variants",()=>{
+  const selected=Array.from({length:21},(_,index)=>index+1);
+  const previews=Array.from({length:120},(_,index)=>index+20);
+  const enabled=creationVariantIds(selected,previews);
+  assert.equal(enabled.length,100);
+  assert.deepEqual(enabled.slice(0,21),selected);
 });
 
 test("D985 expands each print area with preview variants that share its selected source",()=>{
@@ -28,6 +36,7 @@ test("D984 sends the broad preview set but keeps the seller selection separate",
   const app=fs.readFileSync(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8");
   const route=fs.readFileSync(new URL("../app/api/printify/drafts/route.ts",import.meta.url),"utf8");
   assert.match(app,/mockupVariantIds:mockupVariants\.map\(variant=>variant\.id\)/);
+  assert.match(app,/selectedSizeIds\.slice\(0,1\)/);
   assert.match(app,/const mockupVariants=variantsFor[\s\S]{0,900}const variants=mockupVariants;[\s\S]{0,900}artworkAssignments=/);
   assert.match(route,/enabledForCreation=creationVariantIds\(finalVariantIds,body\.mockupVariantIds\|\|\[\]\)/);
   assert.match(route,/mockupCoverageComplete\(previewImages,enabledForCreation\)/);

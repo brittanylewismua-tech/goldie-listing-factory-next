@@ -18,7 +18,10 @@ export function creationVariantIds(selectedVariantIds:number[],previewVariantIds
   const selected=[...new Set(selectedVariantIds.filter(Number.isFinite))];
   const preview=[...new Set(previewVariantIds.filter(Number.isFinite))];
   if(!selected.length)return [];
-  return preview.length&&selected.every(id=>preview.includes(id))?preview:selected;
+  /* Printify permits at most 100 enabled variants. Preserve every seller
+     choice first, then use the remaining slots for one real preview variant
+     per additional colour. */
+  return [...new Set([...selected,...preview])].slice(0,100);
 }
 
 export function mockupCoverageComplete(images:DraftMockupImage[],variantIds:number[]){
