@@ -257,9 +257,10 @@ async function handlePOST(request: Request) {
        The broad image set is retained in Goldie for the colour picker; the
        Printify draft itself never remains widened. */
     const previewVariantIds=(body.mockupVariantIds||[]).filter(id=>template.variants.some(variant=>variant.id===id));
+    let colorPreviewImages=resolvedProduct.images||[];
     const widened=previewVariantIds.some(id=>!finalVariantIds.includes(id));
     if(widened){
-      let previewImages=resolvedProduct.images||[];
+      let previewImages=colorPreviewImages;
       try{
         for(const chunk of previewVariantChunks(previewVariantIds)){
           if(exactMockupCoverageComplete(previewImages,chunk))continue;
@@ -290,7 +291,8 @@ async function handlePOST(request: Request) {
           return {...variant,price:Number(source?.price||template.variants.find(item=>item.id===variant.id)?.price||0)};
         });
         await api<CreatedProduct>(`/shops/${shop.id}/products/${created.id}.json`,token,{method:"PUT",body:JSON.stringify({variants:restored})});
-        resolvedProduct={...resolvedProduct,images:previewImages,variants:(resolvedProduct.variants||[]).map(variant=>({...variant,is_enabled:finalVariantIds.includes(variant.id)}))};
+        colorPreviewImages=previewImages;
+        resolvedProduct={...resolvedProduct,variants:(resolvedProduct.variants||[]).map(variant=>({...variant,is_enabled:finalVariantIds.includes(variant.id)}))};
       }catch(error){
         await fetch(`${PRINTIFY_API}/shops/${shop.id}/products/${created.id}.json`,{method:"DELETE",headers:{Authorization:`Bearer ${token}`,"User-Agent":"Goldie-Listing-Factory"}}).catch(()=>undefined);
         throw error;
@@ -388,7 +390,7 @@ async function handlePOST(request: Request) {
        This is required for every new draft, not only back prints, so a future
        Printify surcharge or provider change cannot bypass the same safeguard. */
     const costReview=actualCostReview(costVariants);
-    const draft = { id: created.id, placement, placementDebug, batchId:body.batchId, clientId: body.clientId ?? body.fileName, name: body.fileName, title, tags: body.tags ?? [], description:body.description??template.description??"", selectedVariantIds:finalVariantIds, previewUrl, printifyImages: productImages.map((image) => image.src).filter(Boolean), printifyImageDetails:productImages.filter(image=>image.src).map(image=>({src:image.src!,variantIds:image.variant_ids||[],position:image.position||""})), shopId: shop.id, editorUrl: `https://printify.com/app/editor/${created.id}`, status: "Created",costReview };
+    const draft = { id: created.id, placement, placementDebug, batchId:body.batchId, clientId: body.clientId ?? body.fileName, name: body.fileName, title, tags: body.tags ?? [], description:body.description??template.description??"", selectedVariantIds:finalVariantIds, previewUrl, printifyImages: productImages.map((image) => image.src).filter(Boolean), printifyImageDetails:productImages.filter(image=>image.src).map(image=>({src:image.src!,variantIds:image.variant_ids||[],position:image.position||""})), colorPreviewImageDetails:colorPreviewImages.filter(image=>image.src).map(image=>({src:image.src!,variantIds:image.variant_ids||[],position:image.position||""})), shopId: shop.id, editorUrl: `https://printify.com/app/editor/${created.id}`, status: "Created",costReview };
     await db.prepare("UPDATE printify_draft_results SET status = 'succeeded', response_json = ?, updated_at = CURRENT_TIMESTAMP WHERE request_key = ?").bind(JSON.stringify(draft), idempotencyKey).run();
     return NextResponse.json({ draft });
   } catch (error) {

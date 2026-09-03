@@ -112,7 +112,7 @@ type EtsyShippingProfile={id:number;title:string;originCountry:string;currency:s
 type TemplateDetails = { id: string; batchId: string; title: string; description:string; blueprintId:number;blueprintTitle:string;brand:string;model:string;provider: string; enabledVariants: number;previewImage?:string;previewImages?:string[];colorOptions?:ProductColor[];sizeOptions?:ProductSize[]; variants:ProductVariant[];printPositions?:string[]; shop: string; standardShipping?:number|null;shippingCurrency?:string;shippingTemplateId:string;shippingProfileNeedsSelection?:boolean;freeShipping:boolean;maxPrintWidth?: number | null; maxPrintHeight?: number | null; placementScale?: number | null; hasLabelArtwork?: boolean };
 type ArtworkSummary=Record<string,Array<{name:string;colors:string[]}>>;
 type DraftCostReview={required:boolean;verified:boolean;approved:boolean;variants:Array<{id:number;title?:string;cost:number;price:number;isEnabled:boolean}>};
-type DraftResult = { id?: string; batchId?: string; clientId: string; name: string; title?: string; tags?: string[]; previewUrl?: string; printifyImages?: string[]; printifyImageDetails?:Array<{src:string;variantIds:number[];position:string}>; selectedVariantIds?:number[]; shopId?: number; editorUrl?: string; status: "Created" | "Failed" | "NeedsRetry"; error?: string; productName?:string; placement?:{x:number;y:number;scale:number;angle:number};placementScale?:number;artworkSummary?:ArtworkSummary;artworkOverrides?:Record<string,{name:string;position:string}>;primaryArtworkImageIds?:Record<string,string>;costReview?:DraftCostReview };
+type DraftResult = { id?: string; batchId?: string; clientId: string; name: string; title?: string; tags?: string[]; previewUrl?: string; printifyImages?: string[]; printifyImageDetails?:Array<{src:string;variantIds:number[];position:string}>; colorPreviewImageDetails?:Array<{src:string;variantIds:number[];position:string}>; selectedVariantIds?:number[]; shopId?: number; editorUrl?: string; status: "Created" | "Failed" | "NeedsRetry"; error?: string; productName?:string; placement?:{x:number;y:number;scale:number;angle:number};placementScale?:number;artworkSummary?:ArtworkSummary;artworkOverrides?:Record<string,{name:string;position:string}>;primaryArtworkImageIds?:Record<string,string>;costReview?:DraftCostReview };
 type WorkflowStep = "connect" | "setup" | "designs" | "review" | "finish";
 type FinishPhase = "details" | "etsy" | "mockups" | "final";
 type PendingCategoryChange={designId:string;details:EtsyDetails;clearedCount:number};
@@ -511,7 +511,7 @@ function DraftColorSelector({product,drafts,selected,saving,onChange,onArtworkCh
   const variantIdsFor=(color:ProductColor)=>color.variantIds?.length?new Set(color.variantIds):printifyVariantIdsForColor(product.variants,idsFor(color));
   const imageFor=(color:ProductColor)=>{
     const variants=variantIdsFor(color);
-    return printifyMockupForColor(draft.printifyImageDetails?.length?draft.printifyImageDetails:printifyMockupDetails(draft.printifyImages),variants)
+    return printifyMockupForColor(draft.colorPreviewImageDetails?.length?draft.colorPreviewImageDetails:draft.printifyImageDetails?.length?draft.printifyImageDetails:printifyMockupDetails(draft.printifyImages),variants)
       ||draft.previewUrl||draft.printifyImages?.[0]||"";
   };
   const focused=colors.find(color=>color.id===activeColor)||colors[0];

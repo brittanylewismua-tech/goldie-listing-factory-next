@@ -30,7 +30,7 @@ test("D904: Printify image variant metadata survives creation and refresh",()=>{
     assert.match(source,/printifyImageDetails/);
     assert.match(source,/variantIds:image\.variant_ids\|\|\[\]/);
   }
-  assert.match(app,/printifyMockupForColor\(draft\.printifyImageDetails\?\.length\?draft\.printifyImageDetails:printifyMockupDetails\(draft\.printifyImages\),variants\)/);
+  assert.match(app,/printifyMockupForColor\(draft\.colorPreviewImageDetails\?\.length\?draft\.colorPreviewImageDetails:draft\.printifyImageDetails\?\.length\?draft\.printifyImageDetails:printifyMockupDetails\(draft\.printifyImages\),variants\)/);
 });
 
 test("D904: changing colors updates owned private drafts, never Etsy",()=>{

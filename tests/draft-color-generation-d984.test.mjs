@@ -65,3 +65,14 @@ test("D984 sends the broad preview set but keeps the seller selection separate",
   assert.match(route,/catch\(error\)[\s\S]{0,350}method:"DELETE"/);
   assert.match(route,/No draft was kept; try again/);
 });
+
+test("D992 keeps helper color previews out of the listing-photo collection",()=>{
+  const app=fs.readFileSync(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8");
+  const route=fs.readFileSync(new URL("../app/api/printify/drafts/route.ts",import.meta.url),"utf8");
+  assert.match(route,/let colorPreviewImages=resolvedProduct\.images\|\|\[\]/);
+  assert.match(route,/colorPreviewImages=previewImages;\s*resolvedProduct=\{\.\.\.resolvedProduct,variants:/);
+  assert.doesNotMatch(route,/resolvedProduct=\{\.\.\.resolvedProduct,images:previewImages/);
+  assert.match(route,/printifyImages: productImages\.map/);
+  assert.match(route,/colorPreviewImageDetails:colorPreviewImages\.filter/);
+  assert.match(app,/draft\.colorPreviewImageDetails\?\.length\?draft\.colorPreviewImageDetails:draft\.printifyImageDetails/);
+});
