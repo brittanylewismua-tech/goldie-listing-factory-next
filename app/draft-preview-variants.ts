@@ -1,5 +1,5 @@
 export type DraftVariant={id:number;is_enabled?:boolean};
-export type DraftMockupImage={variant_ids?:number[]};
+export type DraftMockupImage={src?:string;variant_ids?:number[]};
 export type DraftPrintArea<T=unknown>={variant_ids:number[];placeholders:T[];background?:string};
 
 export function expandPrintAreasForPreview<T>(areas:DraftPrintArea<T>[],variantSources:Record<string,number>){
@@ -27,6 +27,25 @@ export function creationVariantIds(selectedVariantIds:number[],previewVariantIds
 export function mockupCoverageComplete(images:DraftMockupImage[],variantIds:number[]){
   const pictured=new Set(images.flatMap(image=>image.variant_ids||[]));
   return variantIds.every(id=>pictured.has(id));
+}
+
+function urlNamesVariant(src:string|undefined,id:number){
+  return new RegExp(`(?:/|_|-)${id}(?:/|_|-|\\.|\\?)`).test(src||"");
+}
+
+export function exactMockupCoverageComplete(images:DraftMockupImage[],variantIds:number[]){
+  return variantIds.every(id=>images.some(image=>urlNamesVariant(image.src,id)));
+}
+
+export function previewVariantChunks(variantIds:number[],size=20){
+  const ids=[...new Set(variantIds.filter(Number.isFinite))],chunks:number[][]=[];
+  for(let index=0;index<ids.length;index+=size)chunks.push(ids.slice(index,index+size));
+  return chunks;
+}
+
+export function mergeMockupImages<T extends DraftMockupImage>(...sets:T[][]){
+  const seen=new Set<string>();
+  return sets.flat().filter(image=>{const key=image.src||JSON.stringify(image);if(seen.has(key))return false;seen.add(key);return true});
 }
 
 export function restoredVariants(variants:DraftVariant[],selectedVariantIds:number[]){

@@ -12,7 +12,7 @@ import { decryptPrintifyToken } from "../token-crypto";
 import { recommendedPrice } from "@/app/pricing";
 import { isOwner } from "@/app/mastermind/access";
 import { actualCostReview } from "@/app/draft-pricing";
-import { creationVariantIds, expandPrintAreasForPreview, mockupCoverageComplete, restoredVariants } from "@/app/draft-preview-variants";
+import { creationVariantIds, exactMockupCoverageComplete, expandPrintAreasForPreview, mergeMockupImages, previewVariantChunks, restoredVariants } from "@/app/draft-preview-variants";
 
 const PRINTIFY_API = "https://api.printify.com/v1";
 type UploadedImage = { id: string; width?: number; height?: number; mime_type?: string };
@@ -252,20 +252,29 @@ async function handlePOST(request: Request) {
        images, then restore the seller's exact choices before reporting success.
        The broad image set is retained in Goldie for the colour picker; the
        Printify draft itself never remains widened. */
-    const widened=enabledForCreation.some(id=>!finalVariantIds.includes(id));
+    const previewVariantIds=(body.mockupVariantIds||[]).filter(id=>template.variants.some(variant=>variant.id===id));
+    const widened=previewVariantIds.some(id=>!finalVariantIds.includes(id));
     if(widened){
-      for(const wait of [0,1000,2000,4000,8000]){
-        if(wait)await new Promise(resolve=>setTimeout(resolve,wait));
-        const loaded=await api<CreatedProduct>(`/shops/${shop.id}/products/${created.id}.json`,token);
-        resolvedProduct=loaded;
-        if(mockupCoverageComplete(loaded.images||[],enabledForCreation))break;
-      }
-      const previewImages=resolvedProduct.images||[];
-      if(!mockupCoverageComplete(previewImages,enabledForCreation)){
-        await fetch(`${PRINTIFY_API}/shops/${shop.id}/products/${created.id}.json`,{method:"DELETE",headers:{Authorization:`Bearer ${token}`,"User-Agent":"Goldie-Listing-Factory"}}).catch(()=>undefined);
-        throw new Error("Printify did not finish generating the product color previews. No draft was kept; try again.");
-      }
+      let previewImages=resolvedProduct.images||[];
       try{
+        for(const chunk of previewVariantChunks(previewVariantIds)){
+          if(exactMockupCoverageComplete(previewImages,chunk))continue;
+          const previewVariants=restoredVariants(resolvedProduct.variants||template.variants,chunk).map(variant=>{
+            const source=(resolvedProduct.variants||template.variants).find(item=>item.id===variant.id);
+            return {...variant,price:Number(source?.price||template.variants.find(item=>item.id===variant.id)?.price||0)};
+          });
+          await api<CreatedProduct>(`/shops/${shop.id}/products/${created.id}.json`,token,{method:"PUT",body:JSON.stringify({variants:previewVariants})});
+          let chunkImages:NonNullable<CreatedProduct["images"]>=[];
+          for(const wait of [1000,2000,4000,8000]){
+            await new Promise(resolve=>setTimeout(resolve,wait));
+            const loaded=await api<CreatedProduct>(`/shops/${shop.id}/products/${created.id}.json`,token);
+            resolvedProduct=loaded;
+            chunkImages=loaded.images||[];
+            if(exactMockupCoverageComplete(chunkImages,chunk))break;
+          }
+          if(!exactMockupCoverageComplete(chunkImages,chunk))throw new Error("Printify did not finish generating every product color preview. No draft was kept; try again.");
+          previewImages=mergeMockupImages(previewImages,chunkImages);
+        }
         const restored=restoredVariants(resolvedProduct.variants||template.variants,finalVariantIds).map(variant=>{
           const source=(resolvedProduct.variants||template.variants).find(item=>item.id===variant.id);
           return {...variant,price:Number(source?.price||template.variants.find(item=>item.id===variant.id)?.price||0)};

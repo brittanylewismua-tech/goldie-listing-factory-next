@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {creationVariantIds,expandPrintAreasForPreview,mockupCoverageComplete,restoredVariants} from "../app/draft-preview-variants.ts";
+import {creationVariantIds,exactMockupCoverageComplete,expandPrintAreasForPreview,mergeMockupImages,mockupCoverageComplete,previewVariantChunks,restoredVariants} from "../app/draft-preview-variants.ts";
 import fs from "node:fs";
 
 test("D984 creates real previews broadly and restores the paid draft choices",()=>{
@@ -32,6 +32,18 @@ test("D984 refuses to call color previews complete until every requested variant
   assert.equal(mockupCoverageComplete([{variant_ids:[11,12]}],[11,12,21,22]),false);
 });
 
+test("D988 rotates through Printify's twenty-image mockup window",()=>{
+  assert.deepEqual(previewVariantChunks(Array.from({length:39},(_,index)=>index+1)),[
+    Array.from({length:20},(_,index)=>index+1),
+    Array.from({length:19},(_,index)=>index+21),
+  ]);
+  const first=[{src:"https://images.printify.com/mockup/p/11/front.jpg",variant_ids:[11,12]}];
+  const second=[{src:"https://images.printify.com/mockup/p/12/front.jpg",variant_ids:[11,12]}];
+  assert.equal(exactMockupCoverageComplete(first,[11]),true);
+  assert.equal(exactMockupCoverageComplete(first,[11,12]),false);
+  assert.deepEqual(mergeMockupImages(first,first,second),[first[0],second[0]]);
+});
+
 test("D984 sends the broad preview set but keeps the seller selection separate",()=>{
   const app=fs.readFileSync(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8");
   const route=fs.readFileSync(new URL("../app/api/printify/drafts/route.ts",import.meta.url),"utf8");
@@ -39,7 +51,10 @@ test("D984 sends the broad preview set but keeps the seller selection separate",
   assert.match(app,/selectedSizeIds\.slice\(0,1\)/);
   assert.match(app,/const mockupVariants=variantsFor[\s\S]{0,900}const variants=mockupVariants;[\s\S]{0,900}artworkAssignments=/);
   assert.match(route,/enabledForCreation=creationVariantIds\(finalVariantIds,body\.mockupVariantIds\|\|\[\]\)/);
-  assert.match(route,/mockupCoverageComplete\(previewImages,enabledForCreation\)/);
+  assert.match(route,/exactMockupCoverageComplete\(chunkImages,chunk\)/);
   assert.match(route,/restoredVariants\(resolvedProduct\.variants\|\|template\.variants,finalVariantIds\)/);
-  assert.match(route,/method:"DELETE"[\s\S]{0,350}No draft was kept/);
+  assert.match(route,/previewVariantChunks\(previewVariantIds\)/);
+  assert.match(route,/exactMockupCoverageComplete\(chunkImages,chunk\)/);
+  assert.match(route,/catch\(error\)[\s\S]{0,350}method:"DELETE"/);
+  assert.match(route,/No draft was kept; try again/);
 });
