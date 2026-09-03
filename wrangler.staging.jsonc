@@ -1,0 +1,31 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "goldie-listing-factory-staging",
+  "account_id": "81acaa875c17f523e6b248516ffac0e5",
+  "main": "./dist/server/index.js",
+  "compatibility_date": "2026-05-15",
+  "compatibility_flags": ["nodejs_compat"],
+  "no_bundle": true,
+  "rules": [
+    { "type": "ESModule", "globs": ["**/*.js", "**/*.mjs"] }
+  ],
+  "assets": {
+    "binding": "ASSETS",
+    "directory": "./dist/client"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "goldie-listing-factory-db",
+      "database_id": "42a9eb4d-d434-4590-ac69-0f8a77d5885d"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "ARTWORK",
+      "bucket_name": "goldie-listing-factory-artwork"
+    }
+  ],
+  "images": { "binding": "IMAGES" },
+  "observability": { "enabled": true }
+}
