@@ -26,6 +26,13 @@ test("the controls distinguish primary colour artwork from every secondary print
   assert.match(assignment, /artwork\.id===artworkId\?\[\.\.\.new Set\(\[\.\.\.artwork\.colorIds,colorId\]\)\]:artwork\.colorIds\.filter/, "one primary-side color cannot silently use two artworks");
 });
 
+test("colour-specific artwork is introduced only after Printify has rendered the draft previews", async () => {
+  const app = await read("../app/listing-factory-app.tsx");
+  assert.match(app, /Color-specific artwork is chosen later, beside the finished Printify color previews\./);
+  assert.doesNotMatch(app, /Review the primary artwork, any color-specific alternatives/);
+  assert.match(app, /heading "Choose colors with the design on the product"|Choose colors with the design on the product/);
+});
+
 test("ordinary one-artwork listings retain the established request", async () => {
   const app = await read("../app/listing-factory-app.tsx");
   assert.match(app, /versions\.length\?\{\.\.\.commonDraftRequest,artworks:stagedArtworks,artworkAssignments\}:\{\.\.\.commonDraftRequest,maxPlacementScale/);
