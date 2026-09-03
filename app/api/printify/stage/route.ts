@@ -79,10 +79,23 @@ export async function POST(request: Request) {
     if (!request.body) throw new Error("The uploaded file was empty.");
     const storageStream = await validateImageHeader(request.body, contentType);
     await removeExpiredArtwork(artwork);
-    await artwork.put(stagedId, storageStream, {
+    const metadata={
       httpMetadata: { contentType },
       customMetadata: { owner: user.userId, expires: String(expires), fileName },
-    });
+    };
+    if(contentLength>0){
+      /* R2 accepts request bodies directly because their length is known.  The
+         validated stream above is equivalent bytes but no longer carries that
+         metadata, so restore it explicitly without buffering the whole file. */
+      const fixed=new FixedLengthStream(contentLength);
+      const piping=storageStream.pipeTo(fixed.writable);
+      await Promise.all([artwork.put(stagedId,fixed.readable,metadata),piping]);
+    }else{
+      /* Browser uploads include Content-Length.  Keep a bounded fallback for
+         unusual clients rather than handing R2 an indeterminate stream. */
+      const bytes=await new Response(storageStream).arrayBuffer();
+      await artwork.put(stagedId,bytes,metadata);
+    }
     await recordDiagnostic(runtimeEnv().DB, reference, { stage: "artwork_staging", event: "succeeded" });
     return NextResponse.json({ stagedId });
   } catch (error) {

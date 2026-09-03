@@ -17,6 +17,8 @@ test("large artwork is validated and stored through one stream", () => {
   assert.doesNotMatch(stage, /request\.body\.tee\(\)/);
   assert.match(stage, /const storageStream = await validateImageHeader\(request\.body, contentType\)/);
   assert.match(stage, /return new ReadableStream<Uint8Array>/);
+  assert.match(stage, /new FixedLengthStream\(contentLength\)/);
+  assert.match(stage, /Promise\.all\(\[artwork\.put\(stagedId,fixed\.readable,metadata\),piping\]\)/);
 });
 
 test("credential guidance is reserved for credential-shaped failures", () => {
