@@ -5,7 +5,6 @@ import { isOwner } from "@/app/mastermind/access";
 import { decryptPrintifyToken, encryptPrintifyToken } from "@/app/api/printify/token-crypto";
 
 type Runtime = { DB?: D1Database; ARTWORK?: R2Bucket; PRINTIFY_TOKEN_KEY?: string };
-type ExportTable = { name: string; sql: string; rows: Record<string, unknown>[] };
 
 function runtime() { return env as unknown as Runtime; }
 function safeTable(name: string) { return /^[A-Za-z_][A-Za-z0-9_]*$/.test(name); }
@@ -35,19 +34,18 @@ async function rotateTokens(table: string, rows: Record<string, unknown>[], oldK
 export async function POST(request: Request) {
   if (!(await owner())) return NextResponse.json({ error: "Not authorized." }, { status: 403 });
   const { DB, PRINTIFY_TOKEN_KEY } = runtime();
-  const body = await request.json().catch(() => ({})) as { newTokenKey?: string };
+  const body = await request.json().catch(() => ({})) as { newTokenKey?: string; table?: string };
   const newKey = body.newTokenKey?.trim() || "";
   if (!DB || !PRINTIFY_TOKEN_KEY || !/^[a-f0-9]{64}$/i.test(newKey)) return NextResponse.json({ error: "Migration is not configured." }, { status: 400 });
 
   const schemas = await DB.prepare("SELECT name, sql FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '_account_reset_%' ORDER BY name").all<{name:string;sql:string}>();
-  const tables: ExportTable[] = [];
-  for (const schema of schemas.results) {
-    if (!safeTable(schema.name) || !schema.sql) continue;
-    const rows = (await DB.prepare(`SELECT * FROM \`${schema.name}\``).all<Record<string, unknown>>()).results;
-    await rotateTokens(schema.name, rows, PRINTIFY_TOKEN_KEY, newKey);
-    tables.push({ name: schema.name, sql: schema.sql, rows });
-  }
-  return NextResponse.json({ exportedAt: new Date().toISOString(), tables });
+  if (!body.table) return NextResponse.json({ tables: schemas.results.filter(schema => safeTable(schema.name) && schema.sql) });
+  const selected = schemas.results.find(schema => schema.name === body.table && safeTable(schema.name) && schema.sql);
+  if (!selected) return NextResponse.json({ error: "Table not found." }, { status: 404 });
+  const rows = (await DB.prepare(`SELECT * FROM \`${selected.name}\``).all<Record<string, unknown>>()).results;
+  await rotateTokens(selected.name, rows, PRINTIFY_TOKEN_KEY, newKey);
+  return NextResponse.json({ table: { name: selected.name, sql: selected.sql, rows } });
+
 }
 
 export async function GET(request: Request) {
