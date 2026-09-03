@@ -104,6 +104,8 @@ test("D886: pricing waits for finished draft costs",()=>{
   assert.match(app,/className="post-draft-shipping-review"/);
   assert.match(app,/Final Printify production cost/);
   assert.match(app,/Approve final prices/);
+  assert.match(app,/task:"draft-pricing"/);
+  assert.match(app,/task:"draft-shipping"/);
 });
 
 test("D886: the workspace is white-grid paper and selection is green",()=>{

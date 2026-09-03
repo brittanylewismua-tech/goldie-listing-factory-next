@@ -2084,26 +2084,23 @@ test("shows underfilled titles and tags as a non-blocking review state (fixes D6
 
 test("keeps a forward path from setup, designs, and pricing after drafts exist (fixes D1)",async()=>{
   const app=await readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8");
-  /* D383 · Was 3. The setup step's forward button used to relabel itself to
-     "Back to finishing your listings" when drafts already existed; it says
-     "Next step" now and still routes to finish. The two remaining are the
-     batch-actions links, which are not the forward button. */
+  /* A completed draft phase must not leave behind a second route into listing
+     work. The product task sequence owns the only continuation. */
   /* D402 · Was 2, and the setup button used to branch on `complete` to jump
      straight to finishing. Renaming it "Next step" made that jump wrong - it
      skipped Images. Next step goes to the next step; the rail is how you jump. */
-  assert.equal((app.match(/Back to finishing your listings/g)||[]).length,2);
+  assert.equal((app.match(/Back to finishing your listings/g)||[]).length,0);
   assert.doesNotMatch(app,/className="workflow-next setup-forward"/,
     "the selected product reveals upload directly instead of requiring a second forward action");
   /* mockupTheme was removed from this gate. Mockups are optional - the Finish
    * step selects listing images separately - and requiring one made "No mockups
    * for this batch" unreachable: choosing it disabled the only way forward.
    * See D110. */
-  assert.match(app,/workflowStep==="designs"\|\|\(workflowStep==="setup"&&Boolean\(templateDetails\)&&productSelected&&!failedBundleNames\(\)\.length&&!bundleCreationMode\)\?"active-panel":"hidden-panel"/);
-  /* D402 · The setup forward no longer branches on `complete`; it always goes to
-     Images. The route back to finishing lives in batch-actions. */
-  assert.match(app,/className="batch-actions"[\s\S]{0,5000}Back to finishing your listings/);
-  assert.match(app,/files\.length>0&&complete&&workflowStep==="designs"/);
-  assert.match(app,/className="batch-actions"[\s\S]{0,5000}Back to finishing your listings/);
+  assert.match(app,/\(workflowStep==="designs"&&!complete\)\|\|\(workflowStep==="setup"&&Boolean\(templateDetails\)&&productSelected&&!failedBundleNames\(\)\.length&&!bundleCreationMode\)\?"active-panel":"hidden-panel"/);
+  assert.match(app,/!\(workflowStep==="designs"\)\|\|complete/,
+    "after drafts exist, upload and launch surfaces leave the page instead of stacking over product work");
+  assert.match(app,/task:"draft-pricing"/);
+  assert.match(app,/task:"draft-shipping"/);
 });
 
 /* D369 · These moved from descendant to child selectors. `order` only applies
@@ -3358,7 +3355,7 @@ test("a product with no colour axis can still leave step 1 — D461/D462", async
      mug has no colours - so it could never enable, whatever she picked. */
   assert.match(app, /const missingColors=Boolean\(templateDetails\?\.colorOptions\?\.length&&!selectedColorIds\.length\)/,
     "colours are required only when the product offers them, after artwork exists");
-  assert.match(app, /workflowStep==="designs"\|\|\(workflowStep==="setup"&&Boolean\(templateDetails\)&&productSelected&&!failedBundleNames\(\)\.length&&!bundleCreationMode\)\?"active-panel":"hidden-panel"/,
+  assert.match(app, /\(workflowStep==="designs"&&!complete\)\|\|\(workflowStep==="setup"&&Boolean\(templateDetails\)&&productSelected&&!failedBundleNames\(\)\.length&&!bundleCreationMode\)\?"active-panel":"hidden-panel"/,
     "a product without a colour axis still receives the same visible uploader");
 
   /* D461 · Picking a shipping profile un-approved the pricing, and the button to
@@ -3788,7 +3785,7 @@ test("a bundle's shared action sits below its products, not inside one — D486"
   assert.match(app, /footer:ReactNode=null,showCards=true,header:ReactNode=null\)\{\n\s*const sharedAction=Boolean\(footer\)/);
   /* D507 - step 2 lists no products at all now: the designs are uploaded once and
      carried to every product, so there is no per-product state to report there. */
-  assert.match(app, /stepProductCards\(bundleCardStatus\("images"\),null,!\(workflowStep==="designs"\),<aside/,
+  assert.match(app, /stepProductCards\(bundleCardStatus\("images"\),null,!\(workflowStep==="designs"\)\|\|complete,<aside/,
     "the designs step passes its action as a footer");
   assert.match(app, /<\/aside>,false\)\}/, "and asks for no cards");
 
@@ -3959,8 +3956,7 @@ test("a bundle run saves each product's work before moving on — D493", async (
   assert.match(body, /requestedStep\.current=workflowStep;/);
 
   // And the three product cards vanished the moment drafts existed.
-  assert.match(app, /,null,!\(workflowStep==="designs"\),<aside/);
-  assert.doesNotMatch(app, /,null,!\(workflowStep==="designs"&&!complete\),<aside/);
+  assert.match(app, /,null,!\(workflowStep==="designs"\)\|\|complete,<aside/);
 });
 
 test("named listings stay distinguishable — D494", async () => {

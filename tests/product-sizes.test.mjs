@@ -397,7 +397,7 @@ test("shipping, profit and Etsy details are per-product facts — D183", async (
 test("the selected product reveals the design uploader directly below — D899", async () => {
   const app = await read("app/listing-factory-app.tsx");
 
-  assert.match(app, /workflowStep==="designs"\|\|\(workflowStep==="setup"&&Boolean\(templateDetails\)&&productSelected&&!failedBundleNames\(\)\.length&&!bundleCreationMode\)\?"active-panel":"hidden-panel"/,
+  assert.match(app, /\(workflowStep==="designs"&&!complete\)\|\|\(workflowStep==="setup"&&Boolean\(templateDetails\)&&productSelected&&!failedBundleNames\(\)\.length&&!bundleCreationMode\)\?"active-panel":"hidden-panel"/,
     "A selected product must expose the uploader without another navigation action.");
   assert.match(app,/if\(workflowStep==="setup"\)\{\s*setWorkflowStep\("designs"\)/,
     "Accepting the first design advances the rail to Images while preserving the uploader.");
@@ -1029,11 +1029,11 @@ test("the card has a row for every panel it can open — D337", async () => {
   assert.ok(inCard, "the in-card list must exist");
   assert.doesNotMatch(app, /ready\.facets\.filter\(facet=>facet\.name==="shipping"\)/,
     "shipping no longer appears before Printify has calculated the finished draft costs");
-  assert.match(app, /className="post-draft-shipping-review"[\s\S]{0,300}<PricingReview section="shipping"/,
+  assert.match(app, /className="post-draft-shipping-review"><PricingReview section="shipping"/,
     "shipping follows the finished-price review");
   assert.match(app, /task:"draft-colors"/,
     "color decisions move after the finished Printify drafts can show the real design");
-  assert.match(app, /costReviewGroups\(\)\.map/,
+  assert.match(app, /task:"draft-pricing"/,
     "final pricing is reviewed after the drafts expose their real costs");
 
   /* And the standalone block must not double up underneath a bundle. */
@@ -1245,7 +1245,7 @@ test("D378: steps 2-4 wrap their work in the same product card as step 1", async
      lost to .app-shell .step-product-cards{display:grid} in the built
      stylesheet. Result: step 2's "Create your Printify drafts" panel rendered
      on step 1. Two independent guards now, because one was clearly not enough. */
-  assert.match(app, /launch-panel workflow-panel \$\{workflowStep==="designs"\?"active-panel":"hidden-panel"\}/,
+  assert.match(app, /launch-panel workflow-panel \$\{workflowStep==="designs"&&!complete\?"active-panel":"hidden-panel"\}/,
     "the panel must keep hiding itself, whatever the rail does");
   assert.match(app, /style=\{hidden\?\{display:"none"\}:undefined\}/,
     "and the rail must hide with an inline style, which cannot lose to a cascade");
@@ -1255,7 +1255,7 @@ test("D378: steps 2-4 wrap their work in the same product card as step 1", async
      cards, so the condition now sits in the third argument rather than at the
      end of the call. The guarantee is unchanged: the rail is handed exactly the
      condition the panel applies to itself. */
-  assert.match(app, /,null,!\(workflowStep==="designs"\),<aside/,
+  assert.match(app, /,null,!\(workflowStep==="designs"\)\|\|complete,<aside/,
     "and the rail is handed the same condition the panel applies to itself");
 });
 

@@ -31,13 +31,17 @@ test("the cost approval still calls runBounded without an onComplete", () => {
   assert.match(call.slice(0, 900), /runBounded\(group\.drafts\.filter\(draft=>!draft\.costReview\?\.approved\),2,async draft=>/);
 });
 
-test("the post-draft stage is only hidden when it holds nothing a seller needs", () => {
+test("the post-draft stage no longer owns price approval or retry controls", () => {
   assert.match(approved,
-    /\.workspace\.mockup-workspace \.workflow-stage:not\(:has\(\.actual-cost-review,\.retry-button\)\)\{display:none!important\}/,
-    "the cost approval and the failed-draft retry both live in this stage");
+    /\.workspace\.mockup-workspace \.workflow-stage:not\(:has\(\.actual-cost-review\)\)\{display:none!important\}/,
+    "legacy empty stages remain hidden without preserving a second retry surface");
   assert.doesNotMatch(approved,
     /\.workspace\.mockup-workspace \.workflow-stage\{display:none!important\}/,
     "the unconditional hide is gone, not merely overridden");
+  assert.match(app,/task:"draft-pricing"/,
+    "price approval belongs to the product's ordered task list");
+  assert.doesNotMatch(app,/className="retry-button"/,
+    "a second global retry route must not return beneath the product tasks");
 });
 
 test("no entrance animation can leave required content invisible", () => {

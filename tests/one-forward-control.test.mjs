@@ -23,7 +23,7 @@ test("the connect step's forward control renders only on the connect step", () =
 });
 
 test("the product step hands off directly to its visible design uploader", () => {
-  assert.match(app, /workflowStep==="designs"\|\|\(workflowStep==="setup"&&Boolean\(templateDetails\)&&productSelected&&!failedBundleNames\(\)\.length&&!bundleCreationMode\)\?"active-panel":"hidden-panel"/);
+  assert.match(app, /\(workflowStep==="designs"&&!complete\)\|\|\(workflowStep==="setup"&&Boolean\(templateDetails\)&&productSelected&&!failedBundleNames\(\)\.length&&!bundleCreationMode\)\?"active-panel":"hidden-panel"/);
   assert.doesNotMatch(app, /className="workflow-next setup-forward"/);
 });
 

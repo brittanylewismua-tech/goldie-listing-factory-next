@@ -2568,11 +2568,21 @@ setSavedRevision(current=>current+1);}catch(error){stopWith("This default was no
          its saved product explicitly says colour selection is not required. */
       const rowProduct=isActive?templateDetails:bundleColorProducts[recipe.id];
       const hasColorAxis=rowProduct?Boolean(rowProduct.colorOptions?.length):recipe.requiresColorSelection!==false;
+      const rowColors=(isActive?selectedColorIds:bundleColorChoices[recipe.id])||recipe.defaultColorIds||[];
+      const rowSizes=(isActive?selectedSizeIds:bundleSizeChoices[recipe.id])||recipe.defaultSizeIds||[];
+      const productDrafts=isActive?drafts:(bundleMembers[recipe.id]?.drafts||[]);
+      const ownerPrefix=`${recipe.id}:`;
+      const priceGroups=costReviewGroups().filter(group=>group.key.startsWith(ownerPrefix));
+      const priceReviewRequired=priceGroups.length>0;
+      const priceApproved=productDrafts.length>0&&(!priceReviewRequired||priceGroups.every(group=>group.drafts.every(draft=>draft.costReview?.approved)));
+      const shippingReady=isActive?Boolean(etsyShippingProfileId):Boolean(bundleMembers[recipe.id]?.shippingProfileId||recipe.etsyShippingProfileId);
       return [
-      ...(hasColorAxis?[{label:"Product colors",value:selectedColorIds.length?plural(selectedColorIds.length,"color"):"Choose colors",pending,done:selectedColorIds.length>0,task:"draft-colors"}]:[]),
-      {label:"Sizes",value:selectedSizeIds.length?plural(selectedSizeIds.length,"size"):"Choose sizes",pending,done:selectedSizeIds.length>0,task:"draft-sizes"},
+      ...(hasColorAxis?[{label:"Product colors",value:rowColors.length?plural(rowColors.length,"color"):"Choose colors",pending,done:rowColors.length>0,task:"draft-colors"}]:[]),
+      {label:"Sizes",value:rowSizes.length?plural(rowSizes.length,"size"):"Choose sizes",pending,done:rowSizes.length>0,task:"draft-sizes"},
       {label:"Artwork placement",value:started?plural(counts.drafts,"listing"):blank,pending,done:counts.drafts>0,task:"placement"},
       {label:"Product photos",value:started?plural(counts.photos,"photo"):blank,pending,done:counts.photos>0,task:"printify"},
+      {label:"Final prices",value:priceApproved?(priceReviewRequired?"Approved":"Ready"):"Review prices",pending,done:priceApproved,task:"draft-pricing"},
+      {label:"Etsy shipping",value:shippingReady?"Selected":"Choose shipping",pending,done:shippingReady,task:"draft-shipping"},
       {label:"Size guide",value:sizeGuideName||"None chosen",pending,done:Boolean(sizeGuideName),optional:true,task:"sizeguide"},
       /* D550 - lifestyle mockups are optional: nothing about publishing requires
          them, and her hoodie published-ready with four Printify photos and none.
@@ -2843,6 +2853,12 @@ setSavedRevision(current=>current+1);}catch(error){stopWith("This default was no
       {etsyLead()}
       {etsyRows()}
     </>;
+    if(task==="draft-pricing"){
+      const ownerPrefix=`${activeRecipe?.id||""}:`;
+      const groups=costReviewGroups().filter(group=>group.key.startsWith(ownerPrefix));
+      return <div className="post-draft-pricing-panel">{groups.length?groups.map(group=>{const costs=group.review.variants.filter(variant=>variant.isEnabled).map(variant=>variant.cost),low=costs.length?Math.min(...costs):0,high=costs.length?Math.max(...costs):0,approved=group.drafts.every(draft=>draft.costReview?.approved),verified=group.drafts.every(draft=>draft.costReview?.verified);return <section className={`actual-cost-review ${approved?"approved":""}`} key={group.key}><div><b>{group.productName}</b><small>{group.drafts.length} {group.drafts.length===1?"listing":"listings"} · Final Printify production cost {low===high?`$${(low/100).toFixed(2)}`:`$${(low/100).toFixed(2)}–$${(high/100).toFixed(2)}`}</small><span>{verified?"Calculated from the finished Printify drafts.":"Finished production costs are still loading."}</span></div>{approved?<strong>✓ Final prices approved</strong>:<button type="button" disabled={!verified||Boolean(pricingApprovalGroup)} onClick={()=>void approveActualPricingGroup(group)}>{pricingApprovalGroup===group.key?"Saving final prices…":verified?`Approve final prices for ${group.drafts.length} ${group.drafts.length===1?"listing":"listings"}`:"Costs unavailable"}</button>}</section>}):<p className="task-panel-empty">No final price review is needed for this product.</p>}</div>;
+    }
+    if(task==="draft-shipping"&&templateDetails)return <div className="post-draft-shipping-review"><PricingReview section="shipping" variants={pricedVariants} pricing={pricing} prices={variantPrices} productName={classifyingProductName||templateDetails.blueprintTitle} profiles={etsyShippingProfiles} selectedProfileId={etsyShippingProfileId} templateShippingProfileId={Number(templateDetails.shippingTemplateId)||0} profilesLoading={shippingProfilesLoading} profilesError={shippingProfilesError} approved={pricingApproved} onPricing={setPricing} onPrices={setVariantPrices} onSelectProfile={value=>{setEtsyShippingProfileId(value);setPricingApproved(Boolean(value)&&costReviewDrafts().every(draft=>!draft.costReview?.required||draft.costReview.approved));if(activeRecipe&&value!==Number(activeRecipe.etsyShippingProfileId))void establish(activeRecipe,{etsyShippingProfileId:value})}} onCreateProfile={createCustomShippingProfile} onApprovalChange={setPricingApproved}/></div>;
     const listings=drafts.map(draft=>({draft,design:files.find(file=>file.id===draft.clientId),selectedImages:draft.id?(printifyImageSelections[draft.id]??printifyImageIndices):printifyImageIndices}));
     /* D684 - "I don't need to see the title of the design... just show the listing
        photo and create some title that says what the listing is." Step 2 runs
@@ -4692,7 +4708,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
           </BatchPreferencesPortal>
           </div>
 
-          <article className={`step-card designs-step workflow-panel ${workflowStep==="setup"?"batch-design-drop":""} ${files.length ? "done" : ""} ${workflowStep==="finish"?"finish-mode":""} ${workflowStep==="designs"||(workflowStep==="setup"&&Boolean(templateDetails)&&productSelected&&!failedBundleNames().length&&!bundleCreationMode)?"active-panel":"hidden-panel"}`}>{/* D238 · Choosing the mockup SET lived on Product while the mockups it controls are generated here on Images. Same setting, two pages — the exact split that caused the keyword-bank and shipping duplication. */}
+          <article className={`step-card designs-step workflow-panel ${workflowStep==="setup"?"batch-design-drop":""} ${files.length ? "done" : ""} ${workflowStep==="finish"?"finish-mode":""} ${(workflowStep==="designs"&&!complete)||(workflowStep==="setup"&&Boolean(templateDetails)&&productSelected&&!failedBundleNames().length&&!bundleCreationMode)?"active-panel":"hidden-panel"}`}>{/* D238 · Choosing the mockup SET lived on Product while the mockups it controls are generated here on Images. Same setting, two pages — the exact split that caused the keyword-bank and shipping duplication. */}
             <div className="step-number" aria-hidden="true"/>
             <div className="step-content">
               {workflowStep==="finish"&&<div className="step-heading"><div>{/* D278 · On
@@ -4711,7 +4727,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
               The card's sections are the real structure and are on screen. */}
               <input ref={folderPicker} className="hidden-picker" type="file" multiple accept=".png,.jpg,.jpeg" {...({ webkitdirectory: "", directory: "" } as React.InputHTMLAttributes<HTMLInputElement>)} onChange={(event) => void chooseFiles(event.target.files)} />
               <input ref={imagePicker} className="hidden-picker" type="file" multiple accept=".png,.jpg,.jpeg" onChange={(event) => void chooseFiles(event.target.files)} />
-              <p className="upload-primary-note">{activeBundle&&bundleRecipes.length>1?`Upload each ${uploadPrimaryLabel} design once for every product in this bundle.`:`Upload one ${uploadPrimaryLabel} design per listing.`}{uploadSecondaryLabel?` Add optional ${uploadSecondaryLabel} artwork afterward.`:""}</p>
+              {!files.length&&<><p className="upload-primary-note">{activeBundle&&bundleRecipes.length>1?`Upload each ${uploadPrimaryLabel} design once for every product in this bundle.`:`Upload one ${uploadPrimaryLabel} design per listing.`}{uploadSecondaryLabel?` Add optional ${uploadSecondaryLabel} artwork afterward.`:""}</p>
               <div className="upload-actions">
               <button className="folder-drop" onClick={() => folderPicker.current?.click()}>
                 <span className="upload-icon" aria-hidden="true">↑</span>
@@ -4724,7 +4740,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
                 <span className="browse-chip">Browse</span>
               </button>
               </div>
-              <p className="upload-guidance batch-limits file-reminder"><span className="batch-limits-quota"><b>PNG or JPG · up to {batchDesignLimit} designs · 100 MB each</b></span></p>
+              <p className="upload-guidance batch-limits file-reminder"><span className="batch-limits-quota"><b>PNG or JPG · up to {batchDesignLimit} designs · 100 MB each</b></span></p></>}
               {fileError && <p className="file-limit-error" role="alert"><b>That batch can’t be added.</b><span>{fileError}</span></p>}
               {fileNotice&&(workflowStep==="setup"||workflowStep==="designs")&&<p className="file-add-notice" role="status"><b>Upload updated</b><span>{fileNotice}</span></p>}
               {files.length>0&&!designsFinished&&<section className="design-preparation-status working" role="status" aria-live="polite"><span className="design-status-icon" aria-hidden="true"/><div><b>{`Preparing designs: ${designsReady} of ${files.length} ready`}</b><small>Keep this page open while the files are checked.</small><div className="design-status-track"><i style={{width:`${files.length?designsReady/files.length*100:0}%`}}/></div></div><strong>{designsReady}/{files.length}</strong></section>}
@@ -4743,7 +4759,6 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
               {/* D728 - prototype .goldie-footer: the designs step's forward
                   action and its status share one bar. Same gate, same handler. */}
               {workflowStep==="setup"&&<FactoryFooter status={setupForwardReady?"Your product and designs are ready":templateError||missingRequirement||failedBundleNames()[0]||`Preparing ${designsPreparing} ${designsPreparing===1?"design":"designs"}…`}><button className="workflow-next" disabled={!setupForwardReady} onClick={()=>goToStep("designs")}>{setupForwardReady?"Review draft plan":templateError||missingRequirement||"Finish the product above"} {setupForwardReady&&<span>→</span>}</button></FactoryFooter>}</>}
-              {files.length>0&&complete&&workflowStep==="designs"&&<button className="workflow-next" onClick={()=>goToStep("finish",false,true)}>Back to finishing your listings <span>→</span></button>}
             </div>
           </article>
           {/* D221 · Etsy details joins titles, tags and descriptions on one Listing page. They
@@ -4919,7 +4934,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
             designs are shared across the bundle, the Printify drafts are not. It
             stays mounted across steps, so the rail takes the hidden state rather
             than the tree changing shape and remounting a panel mid-run. */}
-        {stepProductCards(bundleCardStatus("images"),null,!(workflowStep==="designs"),<aside className={`launch-panel workflow-panel ${workflowStep==="designs"?"active-panel":"hidden-panel"}`}>
+        {stepProductCards(bundleCardStatus("images"),null,!(workflowStep==="designs")||complete,<aside className={`launch-panel workflow-panel ${workflowStep==="designs"&&!complete?"active-panel":"hidden-panel"}`}>
           <div className={`step-number launch-step-icon create-drafts-icon`} aria-hidden="true"/>
           <div className="launch-top">
             <Image src="/goldie-g.png" width={2000} height={2000} alt="" className="goldie-g" />
@@ -4960,15 +4975,8 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
                   "so they know that nothing is wrong." */}
               {(running||preparingEtsy||Boolean(bundleRun))&&<p className="working-note" role="status">This can take a few minutes. Keep this page open.</p>}
             </>
-          ) : (
-            <div className="batch-actions">
-              {costReviewGroups().map(group=>{const costs=group.review.variants.filter(variant=>variant.isEnabled).map(variant=>variant.cost),low=costs.length?Math.min(...costs):0,high=costs.length?Math.max(...costs):0,approved=group.drafts.every(draft=>draft.costReview?.approved),verified=group.drafts.every(draft=>draft.costReview?.verified);return <section className={`actual-cost-review ${approved?"approved":""}`} key={group.key}><div><b>{group.productName}</b><small>{group.drafts.length} {group.drafts.length===1?"listing":"listings"} · Final Printify production cost {low===high?`$${(low/100).toFixed(2)}`:`$${(low/100).toFixed(2)}–$${(high/100).toFixed(2)}`}</small><span>{verified?"Read from the finished Printify drafts after every print location was applied.":"Some finished production costs are still unavailable."}</span></div>{approved?<strong>✓ Final prices approved</strong>:<button type="button" disabled={!verified||Boolean(pricingApprovalGroup)} onClick={()=>void approveActualPricingGroup(group)}>{pricingApprovalGroup===group.key?"Saving final prices…":verified?`Approve final prices for ${group.drafts.length} ${group.drafts.length===1?"listing":"listings"}`:"Actual costs unavailable"}</button>}</section>})}
-              {templateDetails&&<section className="post-draft-shipping-review" aria-label="Shipping after pricing"><PricingReview section="shipping" variants={pricedVariants} pricing={pricing} prices={variantPrices} productName={classifyingProductName||templateDetails.blueprintTitle} profiles={etsyShippingProfiles} selectedProfileId={etsyShippingProfileId} templateShippingProfileId={Number(templateDetails.shippingTemplateId)||0} profilesLoading={shippingProfilesLoading} profilesError={shippingProfilesError} approved={pricingApproved} onPricing={setPricing} onPrices={setVariantPrices} onSelectProfile={value=>{setEtsyShippingProfileId(value);setPricingApproved(Boolean(value)&&costReviewDrafts().every(draft=>!draft.costReview?.required||draft.costReview.approved));if(activeRecipe&&value!==Number(activeRecipe.etsyShippingProfileId))void establish(activeRecipe,{etsyShippingProfileId:value})}} onCreateProfile={createCustomShippingProfile} onApprovalChange={setPricingApproved}/></section>}
-              {drafts.some((draft) => draft.status !== "Created") && <button className="retry-button" onClick={retryFailed}>Retry {drafts.filter((draft) => draft.status !== "Created").length} listings that need another try</button>}
-              <button className="workflow-next" onClick={()=>goToStep("finish",false,true)}>Back to finishing your listings <span>→</span></button>
-            </div>
-          )}
-          <p className="launch-note">This step creates unpublished Printify drafts. Publish them later from Printify My Products.</p>
+          ) : null}
+          {!complete&&<p className="launch-note">Creates unpublished Printify drafts.</p>}
         </aside>,false)}
 {/* D496 - a held tab has to say so where she is working, not silently stop
     saving. */}
