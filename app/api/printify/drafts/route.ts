@@ -12,7 +12,7 @@ import { decryptPrintifyToken } from "../token-crypto";
 import { recommendedPrice } from "@/app/pricing";
 import { isOwner } from "@/app/mastermind/access";
 import { actualCostReview } from "@/app/draft-pricing";
-import { creationVariantIds, exactMockupCoverageComplete, expandPrintAreasForPreview, mergeMockupImages, PREVIEW_MOCKUP_WAITS_MS, previewVariantChunks, restoredVariants } from "@/app/draft-preview-variants";
+import { exactMockupCoverageComplete, expandPrintAreasForPreview, mergeMockupImages, PREVIEW_MOCKUP_WAITS_MS, previewVariantChunks, restoredVariants } from "@/app/draft-preview-variants";
 
 const PRINTIFY_API = "https://api.printify.com/v1";
 type UploadedImage = { id: string; width?: number; height?: number; mime_type?: string };
@@ -214,7 +214,11 @@ async function handlePOST(request: Request) {
     const selectedShippingTemplateId=Number(body.shippingTemplateId)>0?String(Math.trunc(Number(body.shippingTemplateId))):template.shippingTemplateId;
     if(!selectedShippingTemplateId)throw new Error("Choose the shipping profile for this batch before creating drafts.");
     const finalVariantIds=(body.selectedVariantIds||[]).filter(id=>template.variants.some(variant=>variant.id===id));
-    const enabledForCreation=creationVariantIds(finalVariantIds,body.mockupVariantIds||[]);
+    /* The real product is created only with the seller's saved choices. Broad
+       colour coverage belongs exclusively to the disposable preview helpers;
+       widening the real draft crowds its normal camera angles out of the
+       listing-photo response. */
+    const enabledForCreation=finalVariantIds;
     const creationPrintAreas=expandPrintAreasForPreview(template.print_areas,body.mockupVariantSources||{});
     const productBody = (variantIds=enabledForCreation,previewOnly=false) => JSON.stringify({
         title: previewOnly?`Preview — ${title || "Untitled design"}`:(title || "Untitled design"),

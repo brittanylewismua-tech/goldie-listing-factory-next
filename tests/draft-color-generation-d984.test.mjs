@@ -55,7 +55,7 @@ test("D984 sends the broad preview set but keeps the seller selection separate",
   assert.match(app,/mockupVariantIds:mockupVariants\.map\(variant=>variant\.id\)/);
   assert.match(app,/selectedSizeIds\.slice\(0,1\)/);
   assert.match(app,/const mockupVariants=variantsFor[\s\S]{0,900}const variants=mockupVariants;[\s\S]{0,900}artworkAssignments=/);
-  assert.match(route,/enabledForCreation=creationVariantIds\(finalVariantIds,body\.mockupVariantIds\|\|\[\]\)/);
+  assert.match(route,/const enabledForCreation=finalVariantIds/);
   assert.match(route,/exactMockupCoverageComplete\(chunkImages,chunk\)/);
   assert.match(route,/restoredVariants\(resolvedProduct\.variants\|\|template\.variants,finalVariantIds\)/);
   assert.match(route,/previewVariantChunks\(previewVariantIds\)/);
