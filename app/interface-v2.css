@@ -3020,6 +3020,7 @@ html, body { background: var(--lf-paper); }
    thumbnail caption, so the review drops to one full-width column for any card
    that carries the tools. Cards without them keep the compact grid. */
 .app-shell .design-upload-review:has(.artwork-version-tools){grid-template-columns:minmax(0,1fr)}
+.app-shell .design-upload-review{grid-template-columns:repeat(auto-fit,minmax(390px,1fr))}
 .app-shell .design-artwork-card:has(.artwork-version-tools){grid-template-columns:minmax(0,1fr);align-items:stretch;min-height:0}
 .app-shell .design-artwork-card:has(.artwork-version-tools)>.design-artwork-primary{
   grid-template-columns:76px minmax(0,1fr) auto;align-items:center}
@@ -3295,7 +3296,7 @@ html, body { background: var(--lf-paper); }
    are often long machine-generated strings. */
 .app-shell .design-artwork-primary{
   grid-template-columns:104px minmax(0,1fr) auto!important;
-  gap:15px!important;
+  gap:15px!important;min-width:0;width:100%;
 }
 .app-shell .uploaded-design-preview{width:104px!important;height:104px!important}
 .app-shell .design-artwork-primary>div{gap:5px!important}
