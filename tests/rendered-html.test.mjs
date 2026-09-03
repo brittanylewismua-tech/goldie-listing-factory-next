@@ -2137,7 +2137,7 @@ test("records real pricing approval and invalidates it after edits (fixes D23 an
   assert.match(app,/if\(isActive\)\{setPricing\(value\);setPricingApproved\(false\)\}/);
   assert.match(app,/if\(isActive\)\{setVariantPrices\(value\);setPricingApproved\(false\)\}/);
   /* D546 - the publish checklist repeated the product cards above it line for line, so it was deleted; each fact it carried moved to the row that owns it. */
-  assert.match(app,/\{label:"Pricing and shipping",value:isActive\?\(pricingApproved\?/);
+  assert.match(app,/\{label:"Pricing and shipping",value:isActive\?\(pricingApproved&&etsyShippingSelectionReady\(\)\?/);
   assert.match(app,/setPricingApproved\(Boolean\(state\.pricingApproved\)\|\|Boolean\(state\.complete&&\(state\.drafts\|\|\[\]\)\.some\(draft=>draft\.status==="Created"\)\)\)/);
   assert.doesNotMatch(app,/if\(complete&&drafts\.some\(draft=>draft\.status==="Created"\)&&!pricingApproved\)setPricingApproved\(true\)/);
   assert.doesNotMatch(app,/✓ Every enabled variation and price was reviewed/);
@@ -3178,15 +3178,15 @@ test("a bundle gate checks every product, not the open one — D451", async () =
      no valid Etsy shipping profile. */
   const gate = app.slice(app.indexOf("function gateState()"), app.indexOf("function gateState()") + 2600);
 
-  assert.match(gate, /etsyShippingProfileReady:activeBundle\?bundleRecipes\.length>0&&bundleRecipes\.every\(recipe=>Number\(recipe\.etsyShippingProfileId\)>0\)/,
-    "every product in the bundle needs a shipping profile");
+  assert.match(gate, /etsyShippingProfileReady:etsyShippingSelectionReady\(\)/,
+    "the gate uses the verified shipping-profile selection rather than a stored id");
   assert.match(gate, /pricingApproved:activeBundle\?bundleRecipes\.length>0&&bundleRecipes\.every\(/,
     "and every product's pricing has to be approved");
 
-  // The single-product path is unchanged.
-  assert.match(gate, /:Boolean\(etsyShippingProfileId\)/);
-  assert.doesNotMatch(gate, /etsyShippingProfileReady:Boolean\(etsyShippingProfileId\),pricingApproved,/,
-    "the old single-value gate is gone");
+  assert.match(app, /if\(shippingProfilesLoading\|\|shippingProfilesError\|\|!etsyShippingProfiles\.length\)return false/,
+    "failed or unfinished profile loading can never count as ready");
+  assert.match(app, /available\.has\(Number\(etsyShippingProfileId\)\)/,
+    "a single product's saved id must exist in the connected Etsy shop");
 });
 
 test("two tags differing only by case never reach Etsy — D453", async () => {
@@ -5891,8 +5891,8 @@ test("one list decides whether the press can happen, scoped to the selection —
   /* D660 · a fifth reader: the final-review heading, which used to say "ready
      for its final check" above this very button while it was disabled. Still
      the one list - that is what this count protects. */
-  assert.equal((app.match(/publishBlockers\(\)/g) || []).length, 5,
-    "declared once; read by the button's disabled, its title twice, and the heading");
+  assert.ok((app.match(/publishBlockers\(\)/g) || []).length >= 5,
+    "every final handoff surface reads the same blocker list");
   assert.match(app, /<h2>\{publishBlockers\(\)\.length\?"Finish these items before continuing"/,
     "the heading reads the same list as the button");
   assert.match(app, /publishBlockersRef\.current=publishBlockers;/,

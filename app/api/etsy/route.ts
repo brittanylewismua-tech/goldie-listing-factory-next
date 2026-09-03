@@ -2,7 +2,7 @@ import { forgetPairings } from "../static-cache";
 import { env } from "cloudflare:workers";
 import { NextResponse } from "next/server";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
-import { apiKey, etsyRedirectUri } from "./client";
+import { apiKey, etsyConnection, etsyRedirectUri } from "./client";
 
 function base64url(bytes:Uint8Array){let value="";for(const byte of bytes)value+=String.fromCharCode(byte);return btoa(value).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/g,"")}
 
@@ -13,7 +13,19 @@ export async function GET(){
   const rows=await env.DB.prepare("SELECT shop_id, shop_name, is_active FROM etsy_connections WHERE user_id=? ORDER BY shop_name").bind(user.userId).all<{shop_id:number;shop_name:string;is_active:number}>();
   const shops=(rows.results||[]).map(row=>({shopId:row.shop_id,shopName:row.shop_name,active:row.is_active===1}));
   const active=shops.find(shop=>shop.active);
-  return NextResponse.json(active?{connected:true,shopId:active.shopId,shopName:active.shopName,shops}:{connected:false,shops});
+  if(!active)return NextResponse.json({connected:false,shops});
+  /* A row is not proof of a usable Etsy connection. Access tokens expire and
+     refresh tokens can be revoked; reporting "connected" from the row alone
+     let the workflow claim shipping was saved while every Etsy request failed.
+     etsyConnection decrypts the token and refreshes it when necessary, so the
+     status shown to the seller now reflects the connection the workflow can
+     actually use. */
+  try{
+    await etsyConnection(user.userId);
+    return NextResponse.json({connected:true,shopId:active.shopId,shopName:active.shopName,shops});
+  }catch(error){
+    return NextResponse.json({connected:false,shops,error:error instanceof Error?error.message:"Reconnect Etsy to continue."});
+  }
 }
 
 export async function POST(){
