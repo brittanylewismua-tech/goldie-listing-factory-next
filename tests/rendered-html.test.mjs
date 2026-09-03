@@ -2063,7 +2063,7 @@ test("shows underfilled titles and tags as a non-blocking review state (fixes D6
      which is where she is already reading everything else. */
   /* D841 · counted at 60, where a short title is actually worth mentioning,
      rather than at an invented 100-character minimum Etsy does not have. */
-  assert.match(app,/const shortTitles=isActive\?files\.filter\(file=>file\.title\.trim\(\)\.length<60\)\.length:0/,
+  assert.match(app,/const shortTitles=isActive\?reportFiles\.filter\(file=>file\.title\.trim\(\)\.length<60\)\.length:0/,
     "the Titles and tags row counts the listings worth a second look");
   /* D549 - "2 of 2 written · 1 at 13 tags" counted listings on both sides but
      only said so on one, so the right-hand number read as a tag count. Her
@@ -4953,7 +4953,7 @@ test("the publish screen states its true scope and its true cost — D548", asyn
   /* D660 · was `...} shipping profile` - the helper strips the trailing words
      and this added them straight back, so the live review read "Approved ·
      Standard shipping shipping profile". The row label already says shipping. */
-  assert.match(app, /\|\|"Etsy shipping profile"\}`:"Needs review"/);
+  assert.match(app, /activeBundle&&bundleRecipes\.length>1\?`Approved for \$\{plural\(bundleRecipes\.length,"product"\)\}`:`Approved · \$\{friendlyShippingProfileTitle/);
 });
 
 test("steps 1 to 3 say what their numbers mean — D550", async () => {
@@ -5298,8 +5298,8 @@ test("the number on the button is the number that publishes — D561", async () 
      selection seeding effect and selectedPublishDrafts - because both were
      quietly shrinking the publish back down to the open product. */
   assert.ok(app.indexOf("function bundlePublishDrafts()") > 0);
-  assert.equal((app.match(/bundlePublishDrafts\(\)/g) || []).length, 6,
-    "declared once; the review, publish targets, selections, seeding and cost approval all read it");
+  assert.equal((app.match(/bundlePublishDrafts\(\)/g) || []).length, 7,
+    "declared once; the review, reports, publish targets, selections, seeding and cost approval all read it");
   assert.doesNotMatch(app, /function selectedPublishDrafts\(\)\{const selected=new Set\(selectedPublishIds\);return drafts\.filter/,
     "the button's count must not be taken from the open product alone");
 });

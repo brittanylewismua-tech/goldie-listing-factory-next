@@ -1699,7 +1699,12 @@ export default function ListingFactoryApp() {
     if(progressIndex===2)return goToStep("setup",false,true);
     if(progressIndex===3||progressIndex===4)return goToStep(progressIndex===3?"designs":"review",false,true);
     if(progressIndex===5)return goToStep("review",false,true);
-    setFinishPhase(progressIndex===6?"details":progressIndex===7?"etsy":"mockups");
+    /* D961 · Mockups no longer have their own page (D220 moved them onto Images),
+       but Back from Final review still selected the retired `mockups` phase. No
+       panel renders that phase, leaving only the heading and footer around a
+       completely blank work area. Final review now returns to the real preceding
+       screen: Listing details. */
+    setFinishPhase("details");
     goToStep("finish",false,true);
   }
 
@@ -2978,12 +2983,15 @@ setSavedRevision(current=>current+1);}catch(error){stopWith("This default was no
      publish box, which is where the preview puts the detail about what is
      going to happen. Not one of them is dropped. */
   function publishReports(){
-    /* The same five facts productRows used to return for this phase, computed
-       the same way from the active product's own batch. isActive is true by
-       definition here: step 4 reports on the product being published. */
+    /* D962 · The handoff is bundle-wide, so its report must be bundle-wide too.
+       It previously said “2 listings · 2 products” over the page and then
+       “Listings ready · 1 listing” inside the handoff because these values came
+       from whichever product happened to be open. */
     const isActive=true;
     const recipe=activeRecipe;
-    const mine={designs:files.length,titled:files.filter(file=>file.title.trim()).length,tagged:files.filter(file=>file.tags.length>=13).length,drafts:drafts.filter(draft=>draft.status==="Created").length,described:Boolean(description.trim()),complete,published:Number(batchReceipt?.publishedCount||0),status:"",photos:printifyImageIndices.length,mockups:Object.values(preparedMockupCounts).reduce((sum,count)=>sum+count,0)};
+    const reportFiles=bundlePublishFiles(),reportDrafts=bundlePublishDrafts(),reportSelections=bundlePublishSelections(),reportMockups=bundlePublishMockupCounts();
+    const createdReportDrafts=reportDrafts.filter(draft=>draft.status==="Created");
+    const mine={designs:reportFiles.length,titled:reportFiles.filter(file=>file.title.trim()).length,tagged:reportFiles.filter(file=>file.tags.length>=13).length,drafts:createdReportDrafts.length,described:Boolean(description.trim()),complete,published:Number(batchReceipt?.publishedCount||0),status:"",photos:createdReportDrafts.reduce((sum,draft)=>sum+(draft.id?(reportSelections[draft.id]?.length||0):0),0),mockups:Object.values(reportMockups).reduce((sum,count)=>sum+count,0)};
     const counts=mine;
     const started=true;
     const blank="Not started yet";
@@ -2994,7 +3002,7 @@ setSavedRevision(current=>current+1);}catch(error){stopWith("This default was no
          very short, and whether pricing and shipping were approved -
          and they belong on the rows that own that work. */
       /* D841 · reported, not a gate. Etsy has no minimum title length. */
-      const shortTitles=isActive?files.filter(file=>file.title.trim().length<60).length:0;
+      const shortTitles=isActive?reportFiles.filter(file=>file.title.trim().length<60).length:0;
       return [
         {label:"Listings ready",value:started?plural(counts.drafts,"listing"):blank,pending,done:counts.drafts>0,report:true},
         {label:"Titles and tags",value:started?(()=>{
@@ -3032,7 +3040,7 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
         /* D548 - the checklist read "✓ Hoodies will be applied automatically", which is
            the name of her shipping profile in a sentence that sounds like it is about
            the garment. Say what the name refers to. */
-        {label:"Pricing and shipping",value:isActive?(pricingApproved?`Approved · ${friendlyShippingProfileTitle(etsyShippingProfiles.find(profile=>profile.id===etsyShippingProfileId)?.title)||"Etsy shipping profile"}`:"Needs review"):started?"Approved":blank,pending,done:isActive?pricingApproved:started,report:true},
+        {label:"Pricing and shipping",value:isActive?(pricingApproved?(activeBundle&&bundleRecipes.length>1?`Approved for ${plural(bundleRecipes.length,"product")}`:`Approved · ${friendlyShippingProfileTitle(etsyShippingProfiles.find(profile=>profile.id===etsyShippingProfileId)?.title)||"Etsy shipping profile"}`):"Needs review"):started?"Approved":blank,pending,done:isActive?pricingApproved:started,report:true},
         {label:"Printify status",value:counts.drafts?`${plural(counts.drafts,"draft")} ready`:"No drafts yet",pending,done:counts.drafts>0,report:true},
       ];
   }
