@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {creationVariantIds,exactMockupCoverageComplete,expandPrintAreasForPreview,mergeMockupImages,mockupCoverageComplete,previewVariantChunks,restoredVariants} from "../app/draft-preview-variants.ts";
+import {creationVariantIds,exactMockupCoverageComplete,expandPrintAreasForPreview,mergeMockupImages,mockupCoverageComplete,PREVIEW_MOCKUP_WAITS_MS,previewVariantChunks,restoredVariants} from "../app/draft-preview-variants.ts";
 import fs from "node:fs";
 
 test("D984 creates real previews broadly and restores the paid draft choices",()=>{
@@ -42,6 +42,11 @@ test("D988 rotates through Printify's twenty-image mockup window",()=>{
   assert.equal(exactMockupCoverageComplete(first,[11]),true);
   assert.equal(exactMockupCoverageComplete(first,[11,12]),false);
   assert.deepEqual(mergeMockupImages(first,first,second),[first[0],second[0]]);
+});
+
+test("D989 gives Printify's asynchronous second mockup window a bounded minute",()=>{
+  assert.deepEqual(PREVIEW_MOCKUP_WAITS_MS,[2000,4000,8000,16000,30000]);
+  assert.equal(PREVIEW_MOCKUP_WAITS_MS.reduce((sum,wait)=>sum+wait,0),60000);
 });
 
 test("D984 sends the broad preview set but keeps the seller selection separate",()=>{

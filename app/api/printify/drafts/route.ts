@@ -12,7 +12,7 @@ import { decryptPrintifyToken } from "../token-crypto";
 import { recommendedPrice } from "@/app/pricing";
 import { isOwner } from "@/app/mastermind/access";
 import { actualCostReview } from "@/app/draft-pricing";
-import { creationVariantIds, exactMockupCoverageComplete, expandPrintAreasForPreview, mergeMockupImages, previewVariantChunks, restoredVariants } from "@/app/draft-preview-variants";
+import { creationVariantIds, exactMockupCoverageComplete, expandPrintAreasForPreview, mergeMockupImages, PREVIEW_MOCKUP_WAITS_MS, previewVariantChunks, restoredVariants } from "@/app/draft-preview-variants";
 
 const PRINTIFY_API = "https://api.printify.com/v1";
 type UploadedImage = { id: string; width?: number; height?: number; mime_type?: string };
@@ -263,9 +263,10 @@ async function handlePOST(request: Request) {
             const source=(resolvedProduct.variants||template.variants).find(item=>item.id===variant.id);
             return {...variant,price:Number(source?.price||template.variants.find(item=>item.id===variant.id)?.price||0)};
           });
-          await api<CreatedProduct>(`/shops/${shop.id}/products/${created.id}.json`,token,{method:"PUT",body:JSON.stringify({variants:previewVariants})});
-          let chunkImages:NonNullable<CreatedProduct["images"]>=[];
-          for(const wait of [1000,2000,4000,8000]){
+          const rotated=await api<CreatedProduct>(`/shops/${shop.id}/products/${created.id}.json`,token,{method:"PUT",body:JSON.stringify({variants:previewVariants})});
+          let chunkImages:NonNullable<CreatedProduct["images"]>=rotated.images||[];
+          for(const wait of PREVIEW_MOCKUP_WAITS_MS){
+            if(exactMockupCoverageComplete(chunkImages,chunk))break;
             await new Promise(resolve=>setTimeout(resolve,wait));
             const loaded=await api<CreatedProduct>(`/shops/${shop.id}/products/${created.id}.json`,token);
             resolvedProduct=loaded;

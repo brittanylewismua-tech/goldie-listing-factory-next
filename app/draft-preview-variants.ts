@@ -43,6 +43,11 @@ export function previewVariantChunks(variantIds:number[],size=20){
   return chunks;
 }
 
+/* Printify regenerates mockups asynchronously after a variant rotation. The
+   second window regularly takes longer than fifteen seconds on a real draft,
+   so keep the wait bounded but long enough for the service's observed queue. */
+export const PREVIEW_MOCKUP_WAITS_MS=[2000,4000,8000,16000,30000] as const;
+
 export function mergeMockupImages<T extends DraftMockupImage>(...sets:T[][]){
   const seen=new Set<string>();
   return sets.flat().filter(image=>{const key=image.src||JSON.stringify(image);if(seen.has(key))return false;seen.add(key);return true});
