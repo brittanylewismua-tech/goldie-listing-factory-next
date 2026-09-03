@@ -23,11 +23,11 @@ export function canonicalProductColorIds(options:ProductColorOption[]){
 }
 
 export function productColorVariantIds(color:ProductColorOption,variants:Array<{id:number;title?:string;options?:number[]}>,colorAxisIndex=0){
-  const wanted=color.title.trim().toLocaleLowerCase();
-  const named=variants.filter(variant=>(variant.title||"").split("/")[colorAxisIndex]?.trim().toLocaleLowerCase()===wanted);
-  /* The title identifies the colour axis without relying on option ids that can
-     collide with size/style ids. Unusual blueprints without usable titles keep
-     the raw-option compatibility fallback. */
-  const matches=named.length?named:variants.filter(variant=>(variant.options||[]).some(id=>color.ids.includes(id)));
+  /* Printify variant option ids are positional: each entry corresponds to the
+     product option at the same index. Compare only the colour-axis entry. A
+     bare `some()` lets an unrelated size/style option with the same numeric id
+     turn every colour into the same garment; parsing variant titles is also
+     unsafe because Printify does not promise title-segment order. */
+  const matches=variants.filter(variant=>color.ids.includes((variant.options||[])[colorAxisIndex]));
   return [...new Set(matches.map(variant=>variant.id))];
 }

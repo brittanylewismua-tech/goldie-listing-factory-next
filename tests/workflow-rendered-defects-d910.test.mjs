@@ -79,12 +79,12 @@ test("D976: every color carries its own Printify variant ids into the rendered p
   assert.match(route,/groupProductColors[\s\S]{0,300}variantIds:productColorVariantIds/);
 });
 
-test("D978: color variant mapping uses the named color axis, not a colliding size option",()=>{
+test("D979: color variant mapping uses the positional color axis, not a colliding size option",()=>{
   const color={id:101,ids:[101],title:"Black",swatch:"#000",available:true,templateEnabled:false};
   const variants=[
-    {id:12000,title:"White / Black",options:[100,101]},
-    {id:12001,title:"Black / Small",options:[101,201]},
-    {id:12002,title:"Black / Medium",options:[101,202]},
+    {id:12000,title:"Black / White",options:[100,101]},
+    {id:12001,title:"Small / Black",options:[101,201]},
+    {id:12002,title:"Medium / Black",options:[101,202]},
   ];
   assert.deepEqual(productColorVariantIds(color,variants),[12001,12002]);
 });
