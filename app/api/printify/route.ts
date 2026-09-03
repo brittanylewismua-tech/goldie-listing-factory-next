@@ -8,7 +8,7 @@ import { customerLaunchBlock } from "@/app/customer-launch-gate";
 import { isOwner } from "@/app/mastermind/access";
 import { decryptPrintifyToken, encryptPrintifyToken } from "./token-crypto";
 import { etsyConnection, etsyFetch } from "../etsy/client";
-import { canonicalProductColorIds, groupProductColors, productColorVariantIds } from "@/app/product-color-options";
+import { canonicalProductColorIds, groupProductColors, productColorAxisIndex, productColorVariantIds } from "@/app/product-color-options";
 
 const PRINTIFY_API = "https://api.printify.com/v1";
 type Shop = { id: number; title: string };
@@ -378,8 +378,12 @@ export async function POST(request: Request) {
        different internal option ids (Ash is a real example). Goldie must show
        one choice without throwing away either set of variants, so the visible
        option carries every underlying id and the picker toggles them together. */
-    const colorAxisIndex=Math.max(0,(found.product.options||[]).indexOf(colorOption!));
-    const groupedColors=groupProductColors(colorOption?.values||[],availableColorIds,templateColorIds).map(color=>({...color,variantIds:productColorVariantIds(color,selectableVariants,colorAxisIndex)}));
+    const groupedColorOptions=groupProductColors(colorOption?.values||[],availableColorIds,templateColorIds);
+    /* Printify does not guarantee that `product.options` and every variant's
+       `options[]` use the same axis order. Infer the axis from the real option
+       values carried by the variants, then keep that axis isolated. */
+    const colorAxisIndex=productColorAxisIndex(groupedColorOptions,selectableVariants);
+    const groupedColors=groupedColorOptions.map(color=>({...color,variantIds:productColorVariantIds(color,selectableVariants,colorAxisIndex)}));
     const canonicalColorIds=canonicalProductColorIds(groupedColors);
     return NextResponse.json({ timings, cache: cacheReport, shop: { id: found.shop.id, title: found.shop.title, count: shops.length }, product: { id: found.product.id, batchId, title: found.product.title, description:found.product.description??"", blueprintId:found.product.blueprint_id, blueprintTitle:blueprint.title||found.product.title, brand:blueprint.brand||"", model:blueprint.model||"", provider, previewImage:productMockups[0]||"", previewImages:productMockups, enabledVariants: enabledVariants.length, colorOptions:groupedColors, sizeOptions:(sizeOption?.values||[]).map(value=>({id:value.id,title:value.title||`Size ${value.id}`,available:availableSizeIds.has(value.id),templateEnabled:templateSizeIds.has(value.id)})), variants:selectableVariants.map(variant=>{const rawColorId=(variant.options||[]).find(id=>colorIds.has(id))||null;return {id:variant.id,title:variant.title||`Variant ${variant.id}`,cost:Number(variant.cost??variant.price),templatePrice:Number(variant.price),shipping:shippingByVariant[variant.id]??standardShipping,options:variant.options||[],colorId:rawColorId==null?null:canonicalColorIds.get(rawColorId)??rawColorId,sizeId:(variant.options||[]).find(id=>sizeIds.has(id))||null,templateEnabled:Boolean(variant.is_enabled)}}),printPositions, shop: found.shop.title, standardShipping,shippingCurrency,shippingTemplateId,shippingProfileNeedsSelection,freeShipping:Boolean(found.product.sales_channel_properties?.free_shipping),maxPrintWidth, maxPrintHeight, placementScale, placement,
       /* D614 - the saved product carries artwork in an internal label placeholder.

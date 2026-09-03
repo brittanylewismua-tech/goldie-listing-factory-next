@@ -22,6 +22,17 @@ export function canonicalProductColorIds(options:ProductColorOption[]){
   return new Map(options.flatMap(color=>color.ids.map(id=>[id,color.id] as const)));
 }
 
+export function productColorAxisIndex(colors:ProductColorOption[],variants:Array<{options?:number[]}>){
+  const ids=new Set(colors.flatMap(color=>color.ids));
+  const width=Math.max(0,...variants.map(variant=>(variant.options||[]).length));
+  let best=0,bestScore=-1;
+  for(let index=0;index<width;index++){
+    const score=new Set(variants.map(variant=>(variant.options||[])[index]).filter(id=>ids.has(id))).size;
+    if(score>bestScore){best=index;bestScore=score}
+  }
+  return best;
+}
+
 export function productColorVariantIds(color:ProductColorOption,variants:Array<{id:number;title?:string;options?:number[]}>,colorAxisIndex=0){
   /* Printify variant option ids are positional: each entry corresponds to the
      product option at the same index. Compare only the colour-axis entry. A

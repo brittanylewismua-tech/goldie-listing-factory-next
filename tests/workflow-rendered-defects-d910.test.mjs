@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
 import {printifyMockupDetails,printifyMockupForColor,printifyVariantIdsForColor} from "../app/printify-color-mockup.ts";
-import {productColorVariantIds} from "../app/product-color-options.ts";
+import {productColorAxisIndex,productColorVariantIds} from "../app/product-color-options.ts";
 
 const app=readFileSync(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8");
 const css=readFileSync(new URL("../app/interface-v2.css",import.meta.url),"utf8");
@@ -76,7 +76,7 @@ test("D976: every color carries its own Printify variant ids into the rendered p
   assert.match(app,/type ProductColor=\{id:number;ids\?:number\[\];variantIds\?:number\[\]/);
   assert.match(app,/color\.variantIds\?\.length\?new Set\(color\.variantIds\):printifyVariantIdsForColor/);
   const route=readFileSync(new URL("../app/api/printify/route.ts",import.meta.url),"utf8");
-  assert.match(route,/groupProductColors[\s\S]{0,300}variantIds:productColorVariantIds/);
+  assert.match(route,/groupProductColors[\s\S]{0,900}variantIds:productColorVariantIds/);
 });
 
 test("D979: color variant mapping uses the positional color axis, not a colliding size option",()=>{
@@ -87,6 +87,22 @@ test("D979: color variant mapping uses the positional color axis, not a collidin
     {id:12002,title:"Medium / Black",options:[101,202]},
   ];
   assert.deepEqual(productColorVariantIds(color,variants),[12001,12002]);
+});
+
+test("D980: the color axis is inferred from variants when Printify orders the axes differently",()=>{
+  const colors=[
+    {id:101,ids:[101],title:"Black",swatch:"#000",available:true,templateEnabled:false},
+    {id:102,ids:[102],title:"White",swatch:"#fff",available:true,templateEnabled:false},
+  ];
+  const variants=[
+    {id:1,options:[201,101]},
+    {id:2,options:[202,101]},
+    {id:3,options:[201,102]},
+    {id:4,options:[202,102]},
+  ];
+  const axis=productColorAxisIndex(colors,variants);
+  assert.equal(axis,1);
+  assert.deepEqual(productColorVariantIds(colors[0],variants,axis),[1,2]);
 });
 
 test("D917: restored drafts recover variant metadata from their saved Printify URLs",()=>{
