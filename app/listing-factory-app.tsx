@@ -1545,7 +1545,7 @@ export default function ListingFactoryApp() {
     window.clearTimeout(pricePersist.current);
     pricePersist.current=window.setTimeout(()=>{void establish(recipe,change)},700);
   }
-  function batchStateSnapshot(){const designs=files.map(({file:ignoredFile,previewUrl:ignoredPreview,artworkVersions,...design})=>({...design,artworkVersions:artworkVersions?.map(({file:ignoredArtworkFile,previewUrl:ignoredArtworkPreview,...artwork})=>artwork)}));return {template,templateDetails,description,pricing,selectedColorIds,selectedSizeIds,variantPrices,etsyShippingProfileId,pricingApproved,mockupTheme,activeRecipe,activeBundle,bundleRecipes,bundleIndex,bundleBatchIds,designs,drafts,complete,finishPhase,bulkTitles,batchKeywords,titleJoiner,titleBuilderMode,autoTitleBankId,manualKeywordBankId,sharedMockups,preparedMockupCounts,printifyImageIndices,printifyImageSelections,sizeGuideName,keptAsDrafts,batchReceipt,batchDisplayName}}
+  function batchStateSnapshot(){const designs=files.map(({file:ignoredFile,previewUrl:ignoredPreview,artworkVersions,...design})=>({...design,artworkVersions:artworkVersions?.map(({file:ignoredArtworkFile,previewUrl:ignoredArtworkPreview,...artwork})=>artwork)}));return {template,templateDetails,description,pricing,selectedColorIds,selectedSizeIds,variantPrices,etsyShippingProfileId,pricingApproved,mockupTheme,activeRecipe,activeBundle,bundleRecipes,bundleIndex,bundleBatchIds,bundleQualityDecisions,designs,drafts,complete,finishPhase,bulkTitles,batchKeywords,titleJoiner,titleBuilderMode,autoTitleBankId,manualKeywordBankId,sharedMockups,preparedMockupCounts,printifyImageIndices,printifyImageSelections,sizeGuideName,keptAsDrafts,batchReceipt,batchDisplayName}}
   async function saveDraftBatch(){const name=batchDisplayName.trim();if(!name)return;setSavingDraftBatch(true);try{const id=batchIdRef.current||crypto.randomUUID();batchIdRef.current=id;window.localStorage.setItem("goldie-active-batch",id);await saveBatchFiles(id,files.map(file=>file.file));if(!localPreview){const response=await fetch("/api/batches",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,status:"draft",step:workflowStep,setupName:name,productTitle:templateDetails?.blueprintTitle||"",designCount:files.length,state:{...batchStateSnapshot(),keptAsDrafts:complete}})});if(!response.ok)throw new Error("This batch could not be saved.")}setKeptAsDrafts(true);setDraftSaveOpen(false);setDraftSavedOpen(true)}catch(error){stopWith("This batch was not saved.",[error instanceof Error?error.message:"Try again in a moment."])}finally{setSavingDraftBatch(false)}}
   function jumpToMissingPhotoListing(clientId:string){setMissingPhotoDraftIds([]);window.setTimeout(()=>{
     /* D532 - a listing collapses now, and you cannot scroll to something inside a
@@ -1636,7 +1636,21 @@ export default function ListingFactoryApp() {
      the profile request itself must have succeeded. */etsyShippingProfileReady:etsyShippingSelectionReady(),pricingApproved:activeBundle?bundleRecipes.length>0&&bundleRecipes.every(recipe=>bundleApproved[recipe.id]??recipeCarriesApprovedPricing({defaultProfitTarget:recipe.defaultProfitTarget,etsyShippingProfileId:recipe.etsyShippingProfileId})):pricingApproved,draftsComplete:complete,createdDraftCount,titlesReady:files.length>0&&files.every(file=>Boolean(file.title.trim())&&!file.titleError),tagsReady:files.length>0&&files.every(file=>file.tags.length>0&&!file.titleError),descriptionReady:Boolean(description.trim()),etsyDetailsReady:files.length>0&&files.every(file=>etsyRequiredComplete(file.etsy)),personalizationReady:files.every(file=>!personalizationProblem(file.etsy)),imagesReady:allCreatedListingsHaveImages()}}
   function progressGateIssues(index:number){if(localPreview)return [];const issues=navigationIssues(index,gateState());if(index>=6)issues.push(...runProductGaps());return [...new Set(issues)]}
   /* D444 - leaving Images needs photos, not titles. See leavingImagesIssues. */
-  function imagesStepIssues(){if(localPreview)return [];const issues=leavingImagesIssues(gateState());if(templateDetails?.colorOptions?.length&&!selectedColorIds.length)issues.push("Choose at least one product color.");if(templateDetails?.sizeOptions?.length&&!selectedSizeIds.length)issues.push("Choose at least one product size.");if(savingDraftVariants)issues.push("Wait while the product colors and sizes are saved to Printify.");if(draftVariantError)issues.push(draftVariantError);if(bundleProductsStillReading().length)issues.push("Still reading the finished costs for the other products in this bundle.");const pending=costReviewDrafts().filter(draft=>!draft.costReview?.approved);if(pending.length)issues.push(`${pending.length} ${pending.length===1?"listing needs":"listings need"} final pricing approval after Printify calculated the finished product costs.`);return issues}
+  function imagesStepIssues(){if(localPreview)return [];const issues=leavingImagesIssues(gateState());if(templateDetails?.colorOptions?.length&&!selectedColorIds.length)issues.push("Choose at least one product color.");if(templateDetails?.sizeOptions?.length&&!selectedSizeIds.length)issues.push("Choose at least one product size.");if(savingDraftVariants)issues.push("Wait while the product colors and sizes are saved to Printify.");if(draftVariantError)issues.push(draftVariantError);if(bundleProductsStillReading().length)issues.push("Still reading the finished costs for the other products in this bundle.");const pending=costReviewDrafts().filter(draft=>!draft.costReview?.approved);if(pending.length)issues.push(`${pending.length} ${pending.length===1?"listing needs":"listings need"} final pricing approval after Printify calculated the finished product costs.`);
+    /* The footer advances the whole bundle, so it must validate every child,
+       not only whichever product happens to be open. */
+    if(activeBundle&&bundleRecipes.length>1)for(const recipe of bundleRecipes){
+      if(recipe.id===activeRecipe?.id)continue;
+      const summary=bundleBatchSummary[recipe.id],member=bundleMembers[recipe.id];
+      if(summary?.unreadable){issues.push(`${recipe.name} could not be opened.`);continue}
+      if(!member||!summary?.complete||!member.drafts.some(draft=>draft.status==="Created")){issues.push(`Finish the Printify drafts for ${recipe.name}.`);continue}
+      const memberPrices=member.drafts.filter(draft=>draft.status==="Created"&&draft.costReview?.required&&!draft.costReview?.approved);
+      if(memberPrices.length)issues.push(`${memberPrices.length} ${memberPrices.length===1?"listing needs":"listings need"} final pricing approval for ${recipe.name}.`);
+      const memberPhotos=createdListingsMissingImages(member.drafts);
+      if(memberPhotos.length)issues.push(`${memberPhotos.length} ${memberPhotos.length===1?"listing needs":"listings need"} at least one photo for ${recipe.name}.`);
+      if(!member.shippingProfileId)issues.push(`Choose an Etsy shipping profile for ${recipe.name}.`);
+    }
+    return [...new Set(issues)]}
   function progressStatus(index:number,active:boolean,done:boolean,blocked:boolean){const live=active||!blocked;if(index===0)return connected?"Printify connected":live?"Connect your account":"Not connected";if(index===1)return templateDetails?templateDetails.blueprintTitle:live?"Choose a saved product":"Complete the prior step";if(index===2)return files.length?`${files.length} designs ready`:live?"Add finished designs":"Complete the prior step";if(index===3)return pricingApproved?(pricedVariants.length?`${pricedVariants.length} variants approved`:"Pricing approved"):live?"Review every variant":"Complete the prior step";if(index===4)return complete?`${createdDraftCount} drafts created`:live&&running?`${processed} of ${runTotal} created`:ready?"Ready to create":"Complete the prior step";if(index===5)return titleCount===files.length&&files.length?`${titleCount} titles complete`:live?`${titleCount} of ${files.length} titles complete`:done?"Titles complete":"Complete the prior step";if(index===6)return etsyReadyCount===files.length&&files.length?`${etsyReadyCount} listings ready`:live?`${etsyReadyCount} of ${files.length} ready`:done?"Etsy details complete":"Complete the prior step";if(index===7)return done?"Listing images reviewed":live?`${createdDraftCount} previews ready`:"Complete the prior step";return batchReceipt?`${batchReceipt.publishedCount} listings published`:live?"Ready to publish":"Complete the prior step"}
   async function loadPreviewDemo(){
     const imageResponse=await fetch('/mockups/pink-dorm-01-leaning-frame.png'),blob=await imageResponse.blob(),file=new File([blob],'western-poster.png',{type:blob.type||'image/png'}),secondFile=new File([blob],'cowgirl-poster.png',{type:blob.type||'image/png'});
@@ -1839,9 +1853,11 @@ export default function ListingFactoryApp() {
       runIdRef.current=id;
       if(open&&open.id!==id){const restored=await restoreBatchById(open.id,requestedStep,requestedPhase,push);if(restored){const childMap=Object.fromEntries(children.filter(child=>child.productId&&child.id).map(child=>[child.productId,child.id]));setBundleBatchIds(current=>({...childMap,...current}))}return restored}
     }const state=payload.batch.state as {template?:string;templateDetails?:TemplateDetails;description?:string;pricing?:Pricing;mockupTheme?:string;activeRecipe?:Recipe;activeBundle?:ProductBundle;bundleRecipes?:Recipe[];bundleIndex?:number;bundleBatchIds?:Record<string,string>;designs?:Array<Omit<DesignFile,"file"|"previewUrl"|"artworkVersions">&{artworkVersions?:Array<Omit<ArtworkVersion,"file"|"previewUrl">>}>;drafts?:DraftResult[];complete?:boolean;finishPhase?:FinishPhase;bulkTitles?:string;printifyImageIndices?:number[];printifyImageSelections?:Record<string,number[]>;selectedColorIds?:number[];selectedSizeIds?:number[];variantPrices?:Record<string,number>;etsyShippingProfileId?:number;pricingApproved?:boolean;sizeGuideName?:string;batchKeywords?:string[];titleJoiner?:string;titleBuilderMode?:"ai"|"manual";autoTitleBankId?:string;manualKeywordBankId?:string;sharedMockups?:{theme:string;ids:string[]};preparedMockupCounts?:Record<string,number>;keptAsDrafts?:boolean;batchDisplayName?:string;batchReceipt?:BatchReceipt|null};
+    const restoredBundleQualityDecisions=(payload.batch.state as {bundleQualityDecisions?:Record<string,"proceed"|"exclude">}).bundleQualityDecisions||{};
     const cached=await loadBatchFiles(id).catch(()=>[]);
     const cachedArtwork=await loadBatchArtworkAssets(id).catch(()=>({} as Record<string,File>));
     const savedDrafts=state.drafts||[];
+    setBundleQualityDecisions(restoredBundleQualityDecisions);
     const designs=(state.designs||[]).map((design,index)=>{
       const cachedFile=cached[index],file=cachedFile?.size?cachedFile:undefined,draft=savedDrafts.find(item=>item.clientId===design.id);
       const previewUrl=file?URL.createObjectURL(file):draft?.previewUrl||draft?.printifyImages?.[0]||"";
@@ -4183,11 +4199,20 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
   const [bundleRun,setBundleRun]=useState<{total:number}|null>(null);
   useEffect(()=>{runInProgress.current=Boolean(bundleRun)},[bundleRun]);
   const bundleAdvancing=useRef(false);
+  const bundleFinishing=useRef(false);
   useEffect(()=>{
     if(!bundleRun)return;
     if(running||preparingEtsy||preflightOpen||switchingProduct)return;
     if(complete){
-      if(bundleIndex+1>=bundleRecipes.length){setBundleRun(null);return}
+      if(bundleIndex+1>=bundleRecipes.length){
+        /* Do not declare the bundle finished until the final child's completed
+           snapshot is durable. Otherwise a quick product switch can restore
+           its pre-creation state and offer to create duplicate drafts. */
+        if(bundleFinishing.current)return;
+        bundleFinishing.current=true;
+        void persistBatchNow(batchIdRef.current).finally(()=>{bundleFinishing.current=false;setBundleRun(null)});
+        return
+      }
       if(bundleAdvancing.current)return;
       bundleAdvancing.current=true;
       void continueBundle().finally(()=>{bundleAdvancing.current=false});

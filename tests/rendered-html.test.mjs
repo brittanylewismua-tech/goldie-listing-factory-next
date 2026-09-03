@@ -3765,8 +3765,8 @@ test("one press creates drafts for every product in a bundle — D485", async ()
     "the single confirmation starts the whole run");
   assert.match(app, /Create drafts for all \$\{bundleRecipes\.length\} products/);
 
-  // It advances itself, and stops at the end rather than looping.
-  assert.match(app, /if\(bundleIndex\+1>=bundleRecipes\.length\)\{setBundleRun\(null\);return\}/);
+  // It advances itself, and saves the final child before stopping rather than looping.
+  assert.match(app, /if\(bundleIndex\+1>=bundleRecipes\.length\)\{[\s\S]{0,500}?persistBatchNow\(batchIdRef\.current\)[\s\S]{0,250}?setBundleRun\(null\)/);
   assert.match(app, /void continueBundle\(\)\.finally\(\(\)=>\{bundleAdvancing\.current=false\}\)/);
   assert.match(app, /if\(running\|\|preparingEtsy\|\|preflightOpen\|\|switchingProduct\)return/,
     "it must not start a product while one is mid-flight or awaiting confirmation");
