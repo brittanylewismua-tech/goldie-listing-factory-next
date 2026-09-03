@@ -22,5 +22,6 @@ test("D965: finished costs and shipping live in the product task sequence",()=>{
   assert.ok(rows.indexOf('label:"Final prices"')<rows.indexOf('label:"Etsy shipping"'));
   const task=app.slice(app.indexOf('if(task==="draft-pricing")'),app.indexOf('const listings='));
   assert.match(task,/actual-cost-review/);
+  assert.match(task,/aria-label="Final price review"/);
   assert.match(task,/PricingReview section="shipping"/);
 });
