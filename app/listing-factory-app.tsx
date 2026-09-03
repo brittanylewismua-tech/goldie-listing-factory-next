@@ -1768,13 +1768,33 @@ export default function ListingFactoryApp() {
     goToStep(wanted,true,true);
   },[localPreview,checkingConnection,restoringBatch,connected,etsyConnected,templateLoaded,files.length,complete,workflowStep]);
 
-  function scrollFactoryToTop(){document.querySelector<HTMLElement>(".factory-main")?.scrollTo({top:0,behavior:"auto"});window.scrollTo({top:0,behavior:"auto"})}
+  /* D968 · The workflow scrolls inside .factory-main, not the browser window.
+     Several transitions only reset window.scrollY, while goToStep reset the
+     pane before React replaced the old screen. Scroll anchoring then preserved
+     the old position on the new screen. Reset the real scroller after the new
+     screen has committed, and once more on the next frame so layout changes
+     cannot put the seller halfway down the next task. */
+  function scrollFactoryToTop(){
+    const reset=()=>{
+      const pane=document.querySelector<HTMLElement>(".factory-main");
+      if(pane)pane.scrollTop=0;
+      document.documentElement.scrollTop=0;
+      document.body.scrollTop=0;
+      window.scrollTo({top:0,left:0,behavior:"auto"});
+    };
+    reset();
+    return reset;
+  }
   function goToStep(rawStep:WorkflowStep,replace=false,force=false){
     const step=normalizeStep(rawStep);if(!force){const issues=requiredForStep(step);if(issues.length)return stopWith("Finish all sections first.",issues);if(!canOpenStep(step))return;}setWorkflowStep(normalizeStep(step));const url=new URL(window.location.href);url.searchParams.set("step",step);window.history[replace?"replaceState":"pushState"]({},"",url);scrollFactoryToTop()}
 
-  useEffect(()=>{const read=()=>{const url=new URL(window.location.href),value=url.searchParams.get("step") as WorkflowStep|null,phase=url.searchParams.get("phase") as FinishPhase|null;const canonical=canonicalStep(value);if(canonical)setWorkflowStep(normalizeStep(canonical));if(phase&&["details","etsy","mockups","final"].includes(phase))setFinishPhase(phase)};read();window.addEventListener("popstate",read);return()=>window.removeEventListener("popstate",read)},[]);
+  useEffect(()=>{const read=()=>{const url=new URL(window.location.href),value=url.searchParams.get("step") as WorkflowStep|null,phase=url.searchParams.get("phase") as FinishPhase|null;const canonical=canonicalStep(value);if(canonical)setWorkflowStep(normalizeStep(canonical));if(phase&&["details","etsy","mockups","final"].includes(phase))setFinishPhase(phase);scrollFactoryToTop()};read();window.addEventListener("popstate",read);return()=>window.removeEventListener("popstate",read)},[]);
   useEffect(()=>{if(workflowStep!=="finish")return;const url=new URL(window.location.href);url.searchParams.set("phase",finishPhase);window.history.replaceState({},"",url)},[workflowStep,finishPhase]);
-  useEffect(()=>{scrollFactoryToTop()},[workflowStep,finishPhase]);
+  useLayoutEffect(()=>{
+    const reset=scrollFactoryToTop();
+    const frame=window.requestAnimationFrame(reset);
+    return()=>window.cancelAnimationFrame(frame);
+  },[workflowStep,finishPhase,complete]);
   useEffect(()=>{if(connectionAutoSkip.current||localPreview||checkingConnection||restoringBatch||workflowStep!=="connect"||!connected||!etsyConnected)return;if(askedForConnect.current)return;connectionAutoSkip.current=true;goToStep("setup",true,true)},[localPreview,checkingConnection,restoringBatch,workflowStep,connected,etsyConnected]);
   /* D519 - while a bundle run is advancing, the app is mid-switch: the next
      product's template has not loaded yet, so this fell back to step 1 and she

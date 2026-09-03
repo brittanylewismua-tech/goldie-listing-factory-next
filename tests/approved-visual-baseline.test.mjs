@@ -90,8 +90,8 @@ test("centers every next-step button as one balanced control", async () => {
 
 test("returns every finish-phase transition to the top", async () => {
   const page = await readFile(listingFactoryPage, "utf8");
-  assert.match(page, /function scrollFactoryToTop\(\)\{document\.querySelector<HTMLElement>\("\.factory-main"\)\?\.scrollTo/);
-  assert.match(page, /useEffect\(\(\)=>\{scrollFactoryToTop\(\)\},\[workflowStep,finishPhase\]\)/);
+  assert.match(page, /function scrollFactoryToTop\(\)[\s\S]*?querySelector<HTMLElement>\("\.factory-main"\)[\s\S]*?pane\.scrollTop=0/);
+  assert.match(page, /useLayoutEffect\(\(\)=>\{[\s\S]*?const reset=scrollFactoryToTop\(\);[\s\S]*?requestAnimationFrame\(reset\)[\s\S]*?\},\[workflowStep,finishPhase,complete\]\)/);
 });
 
 test("the connect step swaps its copy on state and hides the timing note once connected", async () => {

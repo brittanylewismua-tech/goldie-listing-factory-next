@@ -8,8 +8,8 @@ const v2=fs.readFileSync(new URL("../app/interface-v2.css",import.meta.url),"utf
 const clarity=fs.readFileSync(new URL("../app/clarity-pass.css",import.meta.url),"utf8");
 
 test("D862: workflow changes reset the pane that actually scrolls",()=>{
-  assert.match(app,/function scrollFactoryToTop\(\)\{document\.querySelector<HTMLElement>\("\.factory-main"\)\?\.scrollTo/);
-  assert.match(app,/useEffect\(\(\)=>\{scrollFactoryToTop\(\)\},\[workflowStep,finishPhase\]\)/);
+  assert.match(app,/function scrollFactoryToTop\(\)[\s\S]*?querySelector<HTMLElement>\("\.factory-main"\)[\s\S]*?pane\.scrollTop=0/);
+  assert.match(app,/useLayoutEffect\(\(\)=>\{[\s\S]*?const reset=scrollFactoryToTop\(\);[\s\S]*?requestAnimationFrame\(reset\)[\s\S]*?\},\[workflowStep,finishPhase,complete\]\)/);
   assert.doesNotMatch(app,/\[workflowStep,finishPhase\]\);?\s*useEffect\(\(\)=>\{window\.scrollTo/);
 });
 
@@ -38,4 +38,3 @@ test("D862: laptop layout reflows at full scale with usable controls",()=>{
   assert.match(v2,/\.context-help-trigger\{width:36px;height:36px/);
   assert.match(v2,/\.bank-keyword-toggle,[\s\S]*\.bank-grid \.edit-bank\{min-height:36px\}/);
 });
-
