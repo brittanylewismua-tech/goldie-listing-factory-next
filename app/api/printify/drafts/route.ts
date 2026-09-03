@@ -13,6 +13,7 @@ import { recommendedPrice } from "@/app/pricing";
 import { isOwner } from "@/app/mastermind/access";
 import { actualCostReview } from "@/app/draft-pricing";
 import { exactMockupCoverageComplete, expandPrintAreasForPreview, mergeMockupImages, PREVIEW_MOCKUP_WAITS_MS, previewVariantChunks, restoredVariants } from "@/app/draft-preview-variants";
+import { signedArtworkUrl } from "../staged-url";
 
 const PRINTIFY_API = "https://api.printify.com/v1";
 type UploadedImage = { id: string; width?: number; height?: number; mime_type?: string };
@@ -182,13 +183,19 @@ async function handlePOST(request: Request) {
 
     diagnosticStage = "printify_upload";
     await recordDiagnostic(runtimeEnv().DB, supportReference, { stage: diagnosticStage, event: "started", shopId: shop.id });
-    const artworkSources = new Map<string, { fileName: string; contents: string }>();
+    const artworkSources = new Map<string, { fileName: string; url: string }>();
+    const artworkSecret = runtimeEnv().PRINTIFY_TOKEN_KEY;
+    if (!artworkSecret) throw new Error("Secure artwork delivery is not configured.");
+    const requestOrigin = new URL(request.url).origin;
     for (const artwork of requestedArtworks) {
       const stagedArtwork = await runtimeEnv().ARTWORK?.get(artwork.stagedId);
       if (!stagedArtwork) throw new Error(`Goldie could not retrieve ${artwork.fileName}.`);
       if (stagedArtwork.customMetadata?.owner !== user.userId) throw new Error("This staged artwork does not belong to the signed-in account.");
       if (Number(stagedArtwork.customMetadata?.expires ?? 0) <= Date.now()) throw new Error(`${artwork.fileName} expired before Printify could retrieve it.`);
-      artworkSources.set(artwork.key, { fileName: artwork.fileName, contents: await artworkContents(stagedArtwork.body) });
+      artworkSources.set(artwork.key, {
+        fileName: artwork.fileName,
+        url: await signedArtworkUrl(requestOrigin, artwork.stagedId, artworkSecret),
+      });
     }
     const uploadedImageIds: Record<string, string> = {};
     const uploadAllArtwork = async () => {
@@ -196,7 +203,10 @@ async function handlePOST(request: Request) {
         const source = artworkSources.get(artwork.key)!;
         const upload = await api<UploadedImage>("/uploads/images.json", token, {
           method: "POST",
-          body: JSON.stringify({ file_name: source.fileName, contents: source.contents }),
+          /* Printify explicitly recommends URL uploads above 5 MB.  The URL is
+             HMAC-signed, expires quickly, and serves only this private R2
+             object, avoiding a 33% base64 expansion inside the Worker. */
+          body: JSON.stringify({ file_name: source.fileName, url: source.url }),
         }, (attempt, status) => recordDiagnostic(runtimeEnv().DB, supportReference, { stage: "printify_upload", event: "retry", attempt, httpStatus: status ?? null, shopId: shop.id }));
         if (!upload.id) throw new Error(`Printify accepted ${source.fileName} but did not return an image ID.`);
         uploadedImageIds[artwork.key] = upload.id;
