@@ -5893,8 +5893,8 @@ test("one list decides whether the press can happen, scoped to the selection —
      the one list - that is what this count protects. */
   assert.ok((app.match(/publishBlockers\(\)/g) || []).length >= 5,
     "every final handoff surface reads the same blocker list");
-  assert.match(app, /<h2>\{publishBlockers\(\)\.length\?"Finish these items before continuing"/,
-    "the heading reads the same list as the button");
+  assert.match(app, /<h2>\{handoffBlockers\(\)\.length\?"Finish these items before continuing"/,
+    "the handoff heading reads the same list as the handoff action");
   assert.match(app, /publishBlockersRef\.current=publishBlockers;/,
     "and by the guard through a ref refreshed every render - D644");
 });
@@ -6938,7 +6938,7 @@ test("the final review reads honestly — D660", async () => {
   assert.match(css, /\.app-shell \.row-value\{min-width:0;overflow-wrap:anywhere\}/);
 
   // The heading must agree with the button underneath it.
-  assert.match(app, /publishBlockers\(\)\.length\?"Finish these items before continuing":activeBundle\?"Your selected listings are ready for final review":"Your batch is ready for its final check"/);
+  assert.match(app, /handoffBlockers\(\)\.length\?"Finish these items before continuing":activeBundle\?"Your listings are ready for final review":"Your batch is ready for its final check"/);
 
   /* The heading and the draft chip overlapped once the chip carried a product
      name: "✓ 2 drafts on Gildan Hoodie" printed through the heading. */

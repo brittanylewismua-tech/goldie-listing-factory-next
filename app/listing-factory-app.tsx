@@ -1473,6 +1473,10 @@ export default function ListingFactoryApp() {
     }
     return [...new Set(issues)];
   }
+  /* The final action no longer publishes selected Etsy listings. It opens the
+     already-created Printify products, so hidden publisher checkboxes must not
+     decide whether it works. Review every created draft in the batch instead. */
+  function handoffBlockers(){return publishBlockers().filter(issue=>issue!=="Select at least one successful listing")}
   function suggestedBatchName(){const product=activeRecipe?.name||templateDetails?.blueprintTitle||"Listing batch",niche=files[0]?.tags?.[0]||files[0]?.title?.split(",")[0]?.trim()||"New designs",date=new Intl.DateTimeFormat("en-US",{month:"short",day:"numeric"}).format(new Date());return `${product} · ${niche} · ${date}`.slice(0,160)}
   /* D378 - Keep the product -> batch map current. continueBundle mints a new
      batch per member, and a batch can also be created lazily on the first save,
@@ -4841,7 +4845,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
               <article className="step-card final-review active-panel"><div className="step-content">{batchReceipt?<OutcomeReceipt goalLine={listingGoal?`That is ${goalDone} of your ${listingGoal.target} listings this ${listingGoal.period}.`:undefined} receipt={batchReceipt} productName={templateDetails?.blueprintTitle||""} shippingProfile={etsyShippingProfiles.find(profile=>profile.id===etsyShippingProfileId)?.title||""} imageCount={printifyImageIndices.length} sizeGuideName={sizeGuideName} tagCount={files.reduce((sum,file)=>sum+file.tags.length,0)} variantCount={pricedVariants.length*files.length} minutesSaved={Math.max(12,Math.round(files.length*11.1))} nextBundleProduct={nextUnfinishedBundleProduct()?.name} bundleComplete={Boolean(activeBundle&&bundleRecipes.length>0&&bundleRecipes.every((recipe,index)=>index===bundleIndex?Number(batchReceipt?.publishedCount)>0:Number(bundleBatchSummary[recipe.id]?.published)>0))} onNextBundleProduct={()=>{const pending=nextUnfinishedBundleProduct();if(pending)void openBundleProduct(bundleRecipes.findIndex(recipe=>recipe.id===pending.id))}} onNewBatch={()=>{clearCurrentBatch(true);goToStep("setup")}}/>:<><div className="step-heading"><div><p className="mini-label">FINAL REVIEW</p>{/* D660 · This said "ready for its final check" over a
                    disabled Publish button and a product with no titles at all.
                    The heading has to agree with the gate directly beneath it. */}
-                   <h2>{publishBlockers().length?"Finish these items before continuing":activeBundle?"Your selected listings are ready for final review":"Your batch is ready for its final check"}</h2></div><span className="done-mark">✓ {drafts.filter(draft=>draft.status==="Created").length} {drafts.filter(draft=>draft.status==="Created").length===1?"draft":"drafts"}{activeBundle&&bundleRecipes.length>1?` on ${activeRecipe?.name||"this product"}`:""}</span></div>{/* D546 - the old lead-in pointed at a checklist that repeated
+                   <h2>{handoffBlockers().length?"Finish these items before continuing":activeBundle?"Your listings are ready for final review":"Your batch is ready for its final check"}</h2></div><span className="done-mark">✓ {drafts.filter(draft=>draft.status==="Created").length} {drafts.filter(draft=>draft.status==="Created").length===1?"draft":"drafts"}{activeBundle&&bundleRecipes.length>1?` on ${activeRecipe?.name||"this product"}`:""}</span></div>{/* D546 - the old lead-in pointed at a checklist that repeated
               what the product cards above already report, line for line. The cards
               own it. What this step still has to say is where the seller finishes. */}<p className="step-copy">{activeBundle&&bundleRecipes.length>1?`Every product in this batch stays as a private Printify draft until you choose what to publish in Printify My Products.`:"This product stays as a private Printify draft until you choose to publish it in Printify My Products."}</p>{/* D546 - her words, looking at it: "this whole section doesn't need to be on
               the final step because above it, you list every product and everything
@@ -4884,11 +4888,11 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
                   {report.detail||report.advice?<dd className="publish-report-detail">{report.detail||report.advice}</dd>:null}
                 </div>))}</dl>
               <div className="printify-handoff" role="status">
-                <b>{publishBlockers().length?"Finish the items above before opening Printify.":"Your listings are ready in Printify."}</b>
+                <b>{handoffBlockers().length?"Finish the items above before opening Printify.":"Your listings are ready in Printify."}</b>
                 <span>Nothing has been published to Etsy, and no Etsy listing fees have been charged.</span>
                 <small>Open My Products, select the products from this batch, then click Publish in Printify when you are ready.</small>
               </div>
-              <a className={`publish-all-button printify-handoff-button${publishBlockers().length?" disabled":""}`} aria-disabled={publishBlockers().length>0} href={publishBlockers().length?undefined:"https://printify.com/app/products"} target="_blank" rel="noopener noreferrer" onClick={event=>{if(publishBlockers().length){event.preventDefault();stopWith("Finish all sections first.",publishBlockers());return}void persistRunNow()}}>
+              <a className={`publish-all-button printify-handoff-button${handoffBlockers().length?" disabled":""}`} aria-disabled={handoffBlockers().length>0} href={handoffBlockers().length?undefined:"https://printify.com/app/products"} target="_blank" rel="noopener noreferrer" onClick={event=>{const issues=handoffBlockers();if(issues.length){event.preventDefault();stopWith("Finish all sections first.",issues);return}void persistRunNow()}}>
                 <span className="publish-all-label">Open My Products in Printify</span>
                 <small className="publish-all-shop">You choose what publishes</small>
               </a>
