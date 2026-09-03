@@ -323,7 +323,7 @@ test("stages each finished mockup group for its exact Etsy listing", async () =>
   assert.match(images, /kind==="size-guide"/);
   assert.match(images, /existing\.objects\.map\(object=>runtime\(\)\.ARTWORK\.delete\(object\.key\)\)/);
   assert.match(images, /catch\(error\)\{await Promise\.all\(saved\.map/);
-  assert.match(page, /Choose one image for every listing in this batch/);
+  assert.match(page, /<IndividualSizeGuide /);
   assert.match(page, /printifyImageIndices/);
 });
 
@@ -1722,7 +1722,7 @@ test("requires a photo on every listing and lets sellers set Etsy photo order",a
   assert.match(page,/Go to this listing/);
   assert.match(page,/Product and design preview/);
   assert.match(page,/createdListingsMissingImages\(\)/);
-  assert.match(page,/preparedMockupCounts\[draft\.id\]/);
+  assert.match(page,/preparedMockupCounts\[draft\.id!\]/);
   assert.match(page,/if\(imageStepError&&allCreatedListingsHaveImages\(\)\)/);
   assert.match(page,/At least one image on every selected listing/);
   assert.match(page,/Personalization settings/);
@@ -4162,7 +4162,7 @@ test("no product on any step falls back to a bare header — D500", async () => 
      were row labels for panels the preview does not have: the work they named
      is checked by name in the D541 test below, which reads the lead and editor
      functions directly. */
-  for (const label of ["Artwork placement", "Product photos", "Final photo order"]) {
+  for (const label of ["Artwork placement", "Listing photos"]) {
     assert.ok(fn.includes(`label:"${label}"`), `${label} row is built`);
   }
   const reportsAt = app.indexOf("function publishReports(");
@@ -4381,7 +4381,7 @@ test("alerts use the app's alert colour, and JSX text is not escape sequences �
   }
 });
 
-test("every step is the same shape: a collapsible card per product — D517", async () => {
+test("every step is the same shape: a collapsible card per product — D517/D971", async () => {
   const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
 
   /* Her words: every step works the same, each product in a collapsible card,
@@ -4400,12 +4400,12 @@ test("every step is the same shape: a collapsible card per product — D517", as
      are the Printify picker and the lifestyle mockup builder, and the page
      already names them that way. */
   /* D539 - step 2's rows own panels rather than pointing at sections. */
-  assert.match(app, /\{label:"Product photos"[^}]*task:"printify"\}/);
+  assert.match(app, /\{label:"Listing photos"[^}]*task:"photos"\}/);
   /* D709 · Uploading photos and arranging them were two rows, and the second
      could not be started until the first was done - it was the back half of the
      same job, advertised as its own step. One row, one panel, one pass through
      the listings. */
-  assert.match(app, /\{label:"Final photo order"[^}]*task:"lifestyle"\}/);
+  assert.doesNotMatch(app, /\{label:"Final photo order"/);
   assert.doesNotMatch(app, /task:"order"/, "the split row is gone");
   assert.match(app, /\{label:"Artwork placement"[^}]*task:"placement"\}/);
   assert.doesNotMatch(app, /target:"details\.recommended-listing-photos"/,
@@ -4425,6 +4425,7 @@ test("every step is the same shape: a collapsible card per product — D517", as
     const next = app.indexOf('{label:"', at + 8);
     return app.slice(at, next > at ? next : app.indexOf("\n];", at));
   };
+  const reports = app.slice(app.indexOf("function publishReports("), app.indexOf("function listingGridScreen("));
   /* D787 - step 3's three rows are gone with the panel stack the preview does
      not have. Each one's work is now reachable directly on the listing grid,
      which is what the row was a lid on. */
@@ -4433,7 +4434,9 @@ test("every step is the same shape: a collapsible card per product — D517", as
   }
   /* And step 4's reports still say they report - none of them opens anything. */
   for (const reporting of ["Listings ready", "Listing photos", "Printify status"]) {
-    assert.ok(row(reporting).includes("report:true"),
+    const at=reports.indexOf(`label:"${reporting}"`);
+    const next=reports.indexOf('{label:"',at+8);
+    assert.ok(at>=0&&reports.slice(at,next>at?next:reports.length).includes("report:true"),
       `step 4 reports ${reporting} rather than pretending to open it`);
   }
 });
@@ -4447,7 +4450,7 @@ test("everything on step 2 that describes one product sits in that product's car
      different products. A hoodie scene is not a tee scene. */
   /* D540 - and specifically inside the task that uses it, rather than floating
      above every task in the card. */
-  assert.match(app, /if\(task==="lifestyle"\)return <>[\s\S]{0,2500}?<UploadedListingPhotos/);
+  assert.match(app, /\["photos","printify","lifestyle","sizeguide"\]\.includes\(task\)[\s\S]{0,3500}?<UploadedListingPhotos/);
 
   /* D520 - "Recommended photos for Unisex Midweight Softstyle Fleece Hoodie"
      rendered above all three cards, describing the open product only, with
@@ -4651,7 +4654,7 @@ test("a task row owns its panel inside the product card — D539", async () => {
      listing-rows.tsx, which is the whole point. */
   assert.match(app, /listingWorkRows\(/, "step 2's photo panels render through the shared rows");
   assert.match(app, /<ListingRows /, "so does designTaskRows");
-  assert.match(app, /\$\{count\} of 20 photos/, "each listing still says how many photos it has - now against the cap");
+  assert.match(app, /<ListingPhotoOrder /, "each listing retains an explicit photo organizer");
   assert.match(css, /\.app-shell \.listing-card-head\{/);
 
   // The legacy shells come off rather than nesting inside the new ones.
@@ -4707,10 +4710,8 @@ test("a product card holds only its rows and the one open task — D540", async 
   const shared = app.slice(0, i);
   assert.ok(shared.includes("sizeGuideName"), "the size guide remains batch-wide state");
   assert.ok(shared.includes("Review all listings in Printify"));
-  assert.match(app, /\{label:"Size guide",value:sizeGuideName\|\|"None chosen"[^}]*optional:true,task:"sizeguide"\}/);
-  assert.match(app, /if\(task==="sizeguide"\)return <div className="size-guide-row-panel">/);
+  assert.match(app, /<IndividualSizeGuide /);
   assert.doesNotMatch(app, /className="batch-size-guide/,"the banner component is gone rather than relocated");
-  assert.match(app, /className="secondary-action"[\s\S]{0,180}?\{sizeGuideName\?"Replace size guide":"Choose size guide"\}/);
 
   // And the heading that described the removed block is gone with it.
   assert.doesNotMatch(app, /Review placement and choose listing images/);
@@ -4723,7 +4724,7 @@ test("the narrowed task card contains every Printify-photo layer — D677", asyn
     "the listing, its heading, work area and picker all use the panel's width");
 });
 
-test("Printify photo views stay compact and visibly selectable — D678/D679", async () => {
+test("Printify photo views stay compact and visibly selectable — D678/D679/D971", async () => {
   const css = await Promise.all([readFile(new URL("../app/clarity-pass.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n"));
   /* D682 · The scroll cap was how D678 kept a listing short, before the
      expander existed. With both, opening "Show N more" just makes a longer
@@ -4737,19 +4738,17 @@ test("Printify photo views stay compact and visibly selectable — D678/D679", a
      The two-column group layout held each tile to 104px, and these are garments
      photographed on white, so the ivory colourways were invisible. One group per
      row at a fixed 168px: readable, and the tiles no longer stretch to 216px. */
-  assert.match(css, /\.task-panel \.printify-view-groups\{display:grid;grid-template-columns:minmax\(0,1fr\)/,
-    "view groups use a stable grid rather than balancing CSS columns");
+  assert.match(css, /\.printify-all-images\{[^}]*grid-template-columns:repeat\(4,minmax\(0,1fr\)\)!important/,
+    "the gallery uses a stable horizontal grid");
   assert.doesNotMatch(css, /printify-view-groups\{[^}]*column-count/,
     "never CSS columns - they fragment horizontally inside an overflow box");
-  assert.match(css, /\.task-panel \.printify-view-group>\.printify-image-grid\{[^}]*grid-template-columns:repeat\(auto-fill,132px\)/,
-    "each named view keeps its photos together on one row");
   assert.match(css, /\.task-panel \.printify-image-option\.selected\{border-color:#7a3f63!important;[^}]*box-shadow:/,
     "a selected photo has contrast beyond its checkbox");
   assert.match(css, /\.image-pref-actions>button>small\{display:none\}/,
     "picker actions remain compact controls rather than paragraph cards");
 });
 
-test("placement previews wrap into identifiable listing cards — D679", async () => {
+test("placement previews wrap into identifiable listing cards — D679/D971", async () => {
   const [app,css] = await Promise.all([
     readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
     Promise.all([readFile(new URL("../app/clarity-pass.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n")),
@@ -4759,13 +4758,13 @@ test("placement previews wrap into identifiable listing cards — D679", async (
   /* D724 · the preview is the ArtworkGrid tile now; it fills its card and is
      capped by the grid track rather than by a bespoke rule. */
   assert.match(css, /\.factory-art-preview ?\{[\s\S]{0,160}height: ?190px/);
-  assert.match(app, /showAll\?"Show fewer Printify photos":`Show \$\{hiddenCount\} more Printify photos`/);
+  assert.match(app, /showAll\?"Show fewer Printify mockups":`Show all \$\{images\.length\} Printify mockups`/);
   /* D688 - what this line is for is the second clause: an angle holding a photo
      she already chose is never hidden. The anchor in the first clause changed
      because \b(front|back)\b also matched "Model 1 front" and "Model 2 back",
      so the collapsed default was showing six groups, not two. */
-  assert.match(app, /const defaults=groups\.filter\(\(\[view,items\]\)=>\/\^\(front\|back\)\$\/i\.test\(view\.trim\(\)\)\|\|items\.some\(\(\[,index\]\)=>selected\.has\(index\)\)\)/,
-    "the collapsed picker never hides an angle containing a selected photo");
+  assert.match(app, /const visible=showAll\?indexed:indexed\.filter\(\(item,index\)=>index<8\|\|selected\.has\(item\.index\)\)/,
+    "the collapsed picker never hides a selected photo");
 });
 
 test("placement cards contain only the preview, identity, DPI and editor link — D680", async () => {
@@ -4773,7 +4772,7 @@ test("placement cards contain only the preview, identity, DPI and editor link �
     readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
     Promise.all([readFile(new URL("../app/clarity-pass.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n")),
   ]);
-  const placement=app.slice(app.indexOf('if(task==="placement")'),app.indexOf('if(task==="printify")'));
+  const placement=app.slice(app.indexOf('if(task==="placement")'),app.indexOf('["photos","printify","lifestyle","sizeguide"].includes(task)'));
   /* D724 · placement renders through the shared ArtworkGrid now. The rule this
      guards - a compact card carrying the preview, the identity, the DPI and the
      way into Printify, and nothing else - is unchanged; the class names are the
@@ -4978,7 +4977,7 @@ test("steps 1 to 3 say what their numbers mean — D550", async () => {
      once Printify photos exist the listing always has photos to arrange. The
      size guide is the optional row on this step now. The rule is unchanged and
      still needs a row to hold it. */
-  assert.match(app, /\{label:"Size guide"[\s\S]{0,200}optional:true/);
+  assert.match(app, /<IndividualSizeGuide /);
   assert.match(app, /row\.done\?"✓":row\.pending\?"…":row\.optional\?"–":"!"/);
   assert.match(css, /\.app-shell \.batch-product-row\.optional \.row-mark\{/);
 
@@ -5050,8 +5049,8 @@ test("opening a task shows the work, not a list of listings to pick from — D55
      separate panels, so the batch's listings were walked twice to finish one
      job. They are one panel now, which is the whole point of the merge - the
      number going down here is the change being verified, not a regression. */
-  assert.equal((app.match(/listingWorkRows\(\(\{draft,design,selectedImages,count\}\)/g) || []).length, 2,
-    "Printify photos, and uploads-with-their-order, render through it");
+  assert.equal((app.match(/listingWorkRows\(\(\{draft,design,selectedImages,count\}\)/g) || []).length, 1,
+    "one coherent photo workspace walks each listing once");
   assert.doesNotMatch(app, /<ListingRows rows=\{files\.map[^]{0,400}defaultOpen/,
     "step 3's text panels stay collapsed - that is the density she approved");
   assert.match(app, /<ArtworkGrid items=/,
@@ -5416,12 +5415,12 @@ test("one mockup set chooser, and the listings follow it — D566", async () => 
   /* At this step nothing has a title, so both listings read "ChatGPT Image Aug 21,
      2026, 05_32_41 PM (1).png" and a 36px thumbnail was all that told them apart.
      D408 measured that once already on another step. */
-  const lifestyle = app.slice(app.indexOf('if(task==="lifestyle")return <>'), app.indexOf('return null;', app.indexOf('if(task==="lifestyle")return <>')));
-  assert.match(lifestyle, /className="task-listing-figure"/);
-  assert.match(css, /\.app-shell \.task-listing-figure img\{width:min\(260px,60%\)/);
+  const photos = app.slice(app.indexOf('["photos","printify","lifestyle","sizeguide"].includes(task)'), app.indexOf('return null;', app.indexOf('["photos","printify","lifestyle","sizeguide"].includes(task)')));
+  assert.match(photos, /className="listing-photo-workspace"/);
+  assert.match(photos, /<ListingPhotoOrder /);
 });
 
-test("the Printify picker is grouped by view, not a wall of 96 — D569", async () => {
+test("the Printify picker is a compact horizontal gallery, not a wall of 96 — D569/D971", async () => {
   const [app, css] = await Promise.all([
     readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
     Promise.all([readFile(new URL("../app/clarity-pass.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n")),
@@ -5433,15 +5432,13 @@ test("the Printify picker is grouped by view, not a wall of 96 — D569", async 
      8 colours she enabled. I checked that before calling it duplication: all 192
      srcs are distinct. But a flat wall of 96 with a repeated one-word caption is
      not something anyone picks 20 photos out of. */
-  assert.match(app, /const groups:Array<\[string,Array<\[string,number\]>\]>=\[\]/);
-  assert.match(app, /const view=printifyViewName\(src\)\|\|"Other photos"/);
-  assert.match(app, /<p className="printify-view-heading">\{view\}<span>\{items\.length\}/);
-  assert.match(css, /\.app-shell \.printify-view-heading\{/);
+  assert.match(app, /const visible=showAll\?indexed:indexed\.filter/);
+  assert.match(app, /Show all \$\{images\.length\} Printify mockups/);
+  assert.match(css, /\.app-shell \.printify-all-images\{[^}]*grid-template-columns:repeat\(4,minmax\(0,1fr\)\)!important/);
 
   /* The original index has to survive the grouping - the selection and the
      publish payload are both by index into printifyImages. */
-  assert.match(app, /found\[1\]\.push\(\[src,index\]\)/);
-  assert.match(app, /items\.map\(\(\[src,index\]\)=>/);
+  assert.match(app, /visible\.map\(\(\{src,index\}\)=>/);
 
   /* Colour is deliberately not labelled: Printify's image order need not follow
      her colour order, and a Cocoa hoodie labelled "White" is worse than one
@@ -5449,7 +5446,7 @@ test("the Printify picker is grouped by view, not a wall of 96 — D569", async 
   assert.doesNotMatch(app, /selectedColorIds\[Math\.floor/);
 });
 
-test("the grouped picker lays out as a grid, not a column — D570", async () => {
+test("the Printify picker lays out as a grid, not a column — D570/D971", async () => {
   const css = await Promise.all([readFile(new URL("../app/clarity-pass.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n"));
 
   /* D569 shipped broken and I found it on the page: eight tiles stacked in a
@@ -5458,9 +5455,7 @@ test("the grouped picker lays out as a grid, not a column — D570", async () =>
      group left the tiles in one cell, and the group itself inherited a
      display:grid from elsewhere. Both are stated outright now rather than
      depending on what a parent happens to say. */
-  assert.match(css, /\.app-shell \.printify-view-group\{display:block!important\}/);
-  assert.match(css, /\.app-shell \.printify-view-group>\.printify-image-grid\{[\s\S]{0,200}display:grid!important/);
-  assert.match(css, /grid-template-columns:repeat\(auto-fill,minmax\(84px,1fr\)\)!important/);
+  assert.match(css, /\.app-shell \.printify-all-images\{[^}]*grid-template-columns:repeat\(4,minmax\(0,1fr\)\)!important/);
 });
 
 test.skip("a scene is measured at the moment it is used — D571", async () => {
@@ -7156,13 +7151,9 @@ test("the photo panel keeps what was approved in the preview — D682", async ()
    photographed on white. Every image loaded - naturalWidth 1200 on all 36 - so
    nothing was broken; the ivory colourways were simply invisible at that size on
    that colour, and she could not tell which photo she was selecting. */
-test("the Printify photo tiles are big enough, on a tile that is not white — D684", async () => {
+test("the Printify photo tiles are big enough, on a tile that is not white — D684/D971", async () => {
   const clarity = await Promise.all([readFile(new URL("../app/clarity-pass.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n"));
-  // One camera group per row is what gives the tiles the panel's full width.
-  assert.match(clarity, /\.app-shell \.task-panel \.printify-view-groups\{display:grid;grid-template-columns:minmax\(0,1fr\);/);
-  /* D685 - fixed 168px, not 1fr: full-width groups made the tiles 216px and that
-     was too much scrolling. */
-  assert.match(clarity, /\.app-shell \.task-panel \.printify-view-group>\.printify-image-grid\{display:grid!important;grid-template-columns:repeat\(auto-fill,132px\)!important;justify-content:start!important/);
+  assert.match(clarity, /\.app-shell \.printify-all-images\{[^}]*grid-template-columns:repeat\(4,minmax\(0,1fr\)\)!important/);
   // The 2-column group layout is what held the tiles to 104px.
   assert.doesNotMatch(clarity, /printify-view-groups\{display:grid;grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
   // A white garment on a white tile is the defect. The tile has to be tinted.
@@ -7237,16 +7228,14 @@ test("each listing in a task panel is separated and numbered — D685", async ()
    toggle said "Show 9 more Printify photos" while twelve view groups - eighteen
    photos across two listings - were rendered and visible. Not a styling problem;
    the filter deciding what "front and back only" means was matching six groups. */
-test("the collapsed photo picker shows front and back, not everything containing the word — D688", async () => {
+test("the collapsed photo picker keeps a compact representative set — D688/D971", async () => {
   const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
   /* \b(front|back)\b matches "Model 1 front" and "Model 2 back" just as happily
      as "Front", which is why the collapse never collapsed. */
   assert.doesNotMatch(app, /\/\\b\(front\|back\)\\b\/i\.test\(view\)/,
     "an unanchored word match lets every model shot through");
-  assert.match(app, /\/\^\(front\|back\)\$\/i\.test\(view\.trim\(\)\)/,
-    "the view has to BE front or back");
-  // A group holding a photo she already chose still shows, collapsed or not.
-  assert.match(app, /\|\|items\.some\(\(\[,index\]\)=>selected\.has\(index\)\)\)/);
+  assert.match(app, /const visible=showAll\?indexed:indexed\.filter\(\(item,index\)=>index<8\|\|selected\.has\(item\.index\)\)/,
+    "the compact gallery keeps selected mockups visible");
 });
 
 /* D690 · Found on the live deploy, not in review: the indent that aligns a text
@@ -7326,7 +7315,7 @@ test("only one implementation of the listing rows survives — D687/D692", async
   // Step 3 through designTaskRows, step 2's photo panels through listingWorkRows.
   assert.equal((app.match(/<ListingRows /g) || []).length, 2);
   /* D709 · Two, since uploads and photo order became one panel. */
-  assert.equal((app.match(/listingWorkRows\(\(/g) || []).length, 2);
+  assert.equal((app.match(/listingWorkRows\(\(\{/g) || []).length, 1);
 
   /* The product name was the last serif in the workflow stage. Its own rule
      exists to make it match the card title, so it follows the card title. */

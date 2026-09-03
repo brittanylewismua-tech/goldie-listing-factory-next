@@ -35,7 +35,7 @@ test("D943: restored work never claims it will publish automatically",()=>{
 });
 
 test("D943: every post-draft panel uses a plain-language task name",()=>{
-  for(const label of ["Product colors","Artwork placement","Product photos","Size guide","Final photo order"]){
+  for(const label of ["Product colors","Artwork placement","Listing photos"]){
     assert.match(app,new RegExp(`label:"${label}"`));
   }
   assert.match(app,/title="Titles for this batch"/);

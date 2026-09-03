@@ -2451,10 +2451,6 @@ body{min-width:0}
 .app-shell .task-panel .printify-image-picker>.image-pref-actions>button{display:block!important;flex:0 0 auto;width:auto!important;min-height:0!important;padding:7px 12px!important;border-radius:16px!important;background:#fff!important;border:1px solid #d8cfd5!important;box-shadow:none!important;text-align:left}
 .app-shell .task-panel .printify-image-picker>.image-pref-actions>button>b{display:block;font-size:11px;font-weight:800;line-height:1}
 .app-shell .task-panel .printify-image-picker>.image-pref-actions>button>small{display:none}
-.app-shell .task-panel .printify-view-groups{display:grid;grid-template-columns:minmax(0,1fr);gap:20px}
-.app-shell .task-panel .printify-view-group{display:block!important;width:auto;margin:0}
-.app-shell .task-panel .printify-view-heading{font-size:10px;letter-spacing:.09em;font-weight:800;color:#6b3f5e;margin:0 0 6px}
-.app-shell .task-panel .printify-view-group>.printify-image-grid{display:grid!important;grid-template-columns:repeat(auto-fill,132px)!important;justify-content:start!important;gap:12px!important}
 .app-shell .task-panel .printify-image-option{margin:0;width:auto;border-radius:10px!important;overflow:hidden;background:#fff!important;box-shadow:0 1px 4px rgba(74,42,62,.14);border:2px solid transparent!important;position:relative}
 .app-shell .task-panel .printify-image-option.selected{border-color:#7a3f63!important;box-shadow:0 2px 9px rgba(122,63,99,.32)!important}
 .app-shell .task-panel .printify-image-option img{display:block;width:100%;height:auto}
@@ -2610,22 +2606,12 @@ body{min-width:0}
 
 /* D569 - 96 tiles in one picker, grouped by the view they show, so choosing 20
    photos is choosing from 12 named groups rather than scrolling a wall. */
-.app-shell .printify-view-group{margin:0 0 14px}
-.app-shell .printify-view-heading{display:flex;align-items:baseline;gap:8px;margin:0 0 6px;font:800 11px/1.2 "Manrope",system-ui,sans-serif;color:#5b304f;letter-spacing:.05em;text-transform:uppercase}
-.app-shell .printify-view-heading span{font-size:10px;font-weight:600;letter-spacing:.02em;text-transform:none;color:#8b6f83}
 
 /* D570 - D569's grouping shipped broken and I caught it on the page: the group
    picked up a display:grid from an inherited rule and the tile grid landed in a
    91px cell, so eight tiles stacked in one narrow column down the whole screen.
    The old flat grid never carried its own layout - it borrowed one from a parent
    selector, which is exactly why wrapping it broke it. Both are explicit now. */
-.app-shell .printify-view-group{display:block!important}
-.app-shell .printify-view-group>.printify-image-grid{
-  display:grid!important;
-  grid-template-columns:repeat(auto-fill,minmax(84px,1fr))!important;
-  gap:8px!important;
-  width:100%!important;
-}
 
 /* D571 - a scene whose print area has never been marked says so, in the picker,
    before it is used. */
@@ -2705,16 +2691,6 @@ body{min-width:0}
 
 /* D651 · The size guide gained a Remove beside its picker, so the two controls
    need to sit as a pair rather than the second one landing wherever it likes. */
-.app-shell .size-guide-remove{
-  background:transparent;
-  border:1px solid #ded5db;
-  color:#6b4a60;
-  border-radius:16px;
-  padding:9px 17px;
-  font:600 12px/1 "Manrope",system-ui,sans-serif;
-  cursor:pointer;
-}
-.app-shell .size-guide-remove:hover{border-color:rgba(91,48,79,.4);color:#4a2a3e}
 
 /* D683 - the "Review all listings in Printify" link now renders as the first
    child of .step-product-cards instead of its own <section class=

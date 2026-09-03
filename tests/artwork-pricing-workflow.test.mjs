@@ -57,7 +57,7 @@ test("draft creation, resume, final review, and publishing share the same safegu
   assert.match(update,/price<cost/);
   assert.match(update,/approved:true/);
   assert.match(app,/costReviewDrafts\(\)\.filter\(draft=>!draft\.costReview\?\.approved\)/);
-  assert.match(app,/Approve final prices for/);
+  assert.match(app,/Save these prices/);
   assert.match(app,/function costReviewGroups\(\)/);
   assert.match(app,/approveActualPricingGroup\(group/);
   assert.match(app,/bundleProductsStillReading\(\)\.length.*reading the finished costs/s);

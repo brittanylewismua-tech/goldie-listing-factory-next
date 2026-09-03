@@ -51,7 +51,7 @@ const FEATURES = [
   ["Printify product photos are selectable", /printify-image-picker bare/],
   ["seller photos can be uploaded", /<UploadedListingPhotos/],
   ["all listing photos can be reordered", /<ListingPhotoOrder/],
-  ["a size guide can be added to every listing", /Choose one image for every listing in this batch/],
+  ["a size guide can be added to every listing", /<IndividualSizeGuide/],
   ["AI titles for the whole batch", /Create titles for the whole batch/],
   ["manual title building from a bank", /Build this title yourself from a keyword bank/],
   /* D541 - the override moved out of a nested disclosure inside step 3's table
@@ -154,8 +154,8 @@ test("step-level controls sit below the cards, product-level inside them", async
      component must not return. */
   assert.ok(!images.body.includes("batch-size-guide") && !images.footer.includes("batch-size-guide"),
     "the old size-guide banner is gone");
-  assert.ok(app.includes('task==="sizeguide"') && app.includes('className="size-guide-row-panel"'),
-    "the Size guide row owns its native task panel");
+  assert.ok(app.includes('<IndividualSizeGuide') && app.includes('className="listing-photo-workspace"'),
+    "the size guide lives inside the listing's one photo workspace");
   for (const perStep of ["workflow-next", "image-step-blocker"]) {
     assert.ok(images.footer.includes(perStep), `${perStep} is about the step`);
     assert.ok(!images.body.includes(perStep), `${perStep} must not sit inside one product's card`);
@@ -281,8 +281,6 @@ test("the Printify picker exists once, not twice", async () => {
 
   // The labels D554 added are on the copy that is actually used.
   const picker = app.slice(app.indexOf('<div className="printify-image-picker bare">'));
-  /* D569 - the tiles are grouped by view now, so the per-tile caption became the
-     group heading. */
-  assert.ok(picker.indexOf('className="printify-view-heading"') > 0,
-    "every group names its Printify view");
+  assert.ok(picker.indexOf('className="printify-image-grid printify-all-images"') > 0,
+    "every available mockup lives in one compact gallery");
 });

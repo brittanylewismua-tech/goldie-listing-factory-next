@@ -662,12 +662,6 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
   .app-shell .connect-step>.step-number{--approved-ring-angle:200deg;background:conic-gradient(from var(--approved-ring-angle),#eee4eb,#a98fa0,#ff8eba,#f6a5ca,#eee4eb);transform:none}
   .app-shell .connect-step>.step-number:after{position:absolute;left:50%;top:50%;animation:none;transform:translate(-50%,-50%)!important}
 
-/* Step 8 lives outside the shared workflow stage because it expands to the
-   full listing-image workspace. Remove the empty stage from layout so the
-   real content begins directly below the step heading. */
-@media(min-width:821px){
-  .workspace.mockup-workspace .workflow-stage:not(:has(.actual-cost-review)){display:none!important}
-}
   .app-shell .connect-step .printify-service-group{display:grid;border:1px solid #ded6dc;border-radius:14px;background:rgba(252,244,254,.46);overflow:visible}
   .app-shell .connect-step .printify-service-group>.connection-row{border:0!important}
   .app-shell .connect-step .printify-service-group>.approved-token-form{margin:0 12px 12px}
@@ -1343,7 +1337,6 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
  * Same specificity, stated after, so the pair reads as one action and one way
  * out of it.
  * ========================================================================== */
-.app-shell .size-guide-row-panel{display:grid;gap:12px;padding:12px 14px 6px}.app-shell .size-guide-row-panel>p{margin:0;color:rgba(74,42,62,.72);font-size:13px;line-height:1.55}.app-shell .size-guide-row-actions{display:flex;gap:9px;align-items:center;flex-wrap:wrap}.app-shell .size-guide-row-actions .secondary-action{width:auto;min-height:38px;margin:0;padding:9px 14px;border:1px solid #ded5db;border-radius:10px;background:rgba(255,255,255,.72);color:#5b304f;box-shadow:none;font:800 12px/1.2 "Manrope",system-ui,sans-serif}.app-shell .size-guide-row-actions .size-guide-remove{color:#963d3d;border-color:#d8aaa7}.app-shell .size-guide-row-panel>p[role="status"]{color:#2f704b;font-size:12px;font-weight:750}
 .app-shell .preflight-timing{margin:0 0 12px;padding:10px 12px;border-radius:10px;background:rgba(139,89,137,.08);color:#684c61;font-size:12px;line-height:1.5}
 
 /* D654 · The Printify store name was appended to the one-line, clamped product

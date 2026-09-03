@@ -14,7 +14,6 @@ import UploadedListingPhotos from "./uploaded-listing-photos";
 import ListingRows, { type ListingFlag } from "./listing-rows";
 import { confirmAction } from "./confirm-dialog";
 import ListingPhotoOrder from "./listing-photo-order";
-import PhotoLayout from "./photo-layout";
 import PageHead from "./page-head";
 import FactoryFooter from "./factory-footer";
 import RequiredDetailsChecklist from "./required-details-checklist";
@@ -441,27 +440,10 @@ function PrintifyImagePicker({ images,indices,reservedPhotos=0,onApplyOne,onAppl
         labelled: Printify's image order need not follow her colour order, and a
         Cocoa hoodie labelled "White" is worse than one labelled only "Front". */}
       {(()=>{
-        const groups:Array<[string,Array<[string,number]>]>=[];
-        images.forEach((src,index)=>{
-          const view=printifyViewName(src)||"Other photos";
-          const found=groups.find(entry=>entry[0]===view);
-          if(found)found[1].push([src,index]);else groups.push([view,[[src,index]]]);
-        });
-        /* D688 · This tested for the WORD front or back anywhere in the view name,
-           so "Model 1 front", "Model 1 back", "Model 2 front" and "Model 2 back"
-           all matched it. The collapsed default has been showing six camera
-           groups - eighteen photos - since D682, while its own button correctly
-           said "Show 9 more". Her instruction was "just show the basic front and
-           back flat lays. And then underneath that, link the rest of all the
-           options of printify photos." Anchored, so the view has to BE front or
-           back, not merely contain the word. A group holding a photo she has
-           already chosen stays visible either way - that clause is untouched. */
-        const defaults=groups.filter(([view,items])=>/^(front|back)$/i.test(view.trim())||items.some(([,index])=>selected.has(index)));
-        const visible=showAll?groups:(defaults.length?defaults:groups.slice(0,2));
-        const hiddenCount=groups.filter(group=>!visible.includes(group)).reduce((total,[,items])=>total+items.length,0);
-        return <><div className="printify-view-groups">{visible.map(([view,items])=><div className="printify-view-group" key={view}>
-          <p className="printify-view-heading">{view}<span>{items.length} {items.length===1?"colour":"colours"}</span></p>
-          <div className="printify-image-grid">{items.map(([src,index])=><PrintifyImageTile key={src} src={src} index={index} selected={selected.has(index)} atLimit={atLimit} onToggle={()=>toggle(index)} onExpand={()=>setExpanded(src)}/>)}</div></div>)}</div>{hiddenCount>0||showAll?<button type="button" className={`printify-more-toggle${showAll?" is-open":""}`} onClick={()=>setShowAll(value=>!value)}><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 7.5 5 5 5-5"/></svg><span>{showAll?"Show fewer Printify photos":`Show ${hiddenCount} more Printify photos`}</span></button>:null}</>})()}</div>{lightbox}</>;
+        const indexed=images.map((src,index)=>({src,index}));
+        const visible=showAll?indexed:indexed.filter((item,index)=>index<8||selected.has(item.index));
+        const hiddenCount=indexed.length-visible.length;
+        return <><div className="printify-image-grid printify-all-images">{visible.map(({src,index})=><PrintifyImageTile key={`${src}:${index}`} src={src} index={index} selected={selected.has(index)} atLimit={atLimit} onToggle={()=>toggle(index)} onExpand={()=>setExpanded(src)}/>)}</div>{hiddenCount>0||showAll?<button type="button" className={`printify-more-toggle${showAll?" is-open":""}`} onClick={()=>setShowAll(value=>!value)}><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 7.5 5 5 5-5"/></svg><span>{showAll?"Show fewer Printify mockups":`Show all ${images.length} Printify mockups`}</span></button>:null}</>})()}</div>{lightbox}</>;
 }
 
 function UploadedDesignPreview({src,name}:{src:string;name:string}){
@@ -2602,10 +2584,9 @@ setSavedRevision(current=>current+1);}catch(error){stopWith("This default was no
       ...(hasColorAxis?[{label:"Product colors",value:rowColors.length?plural(rowColors.length,"color"):"Choose colors",pending,done:rowColors.length>0,task:"draft-colors"}]:[]),
       {label:"Sizes",value:rowSizes.length?plural(rowSizes.length,"size"):"Choose sizes",pending,done:rowSizes.length>0,task:"draft-sizes"},
       {label:"Artwork placement",value:started?plural(counts.drafts,"listing"):blank,pending,done:counts.drafts>0,task:"placement"},
-      {label:"Product photos",value:started?plural(counts.photos,"photo"):blank,pending,done:counts.photos>0,task:"printify"},
-      {label:"Final prices",value:priceApproved?(priceReviewRequired?"Approved":"Ready"):"Review prices",pending,done:priceApproved,task:"draft-pricing"},
+      {label:"Listing photos",value:started?plural(counts.photos+counts.mockups,"photo"):blank,pending,done:counts.photos+counts.mockups>0,task:"photos"},
+      {label:"Set prices",value:priceApproved?(priceReviewRequired?"Saved":"Ready"):"Edit prices",pending,done:priceApproved,task:"draft-pricing"},
       {label:"Etsy shipping",value:shippingReady?"Selected":"Choose shipping",pending,done:shippingReady,task:"draft-shipping"},
-      {label:"Size guide",value:sizeGuideName||"None chosen",pending,done:Boolean(sizeGuideName),optional:true,task:"sizeguide"},
       /* D550 - lifestyle mockups are optional: nothing about publishing requires
          them, and her hoodie published-ready with four Printify photos and none.
          The row still rendered "! None made yet" in alert red on every product
@@ -2614,7 +2595,6 @@ setSavedRevision(current=>current+1);}catch(error){stopWith("This default was no
       /* D709 · One row. Uploading and ordering were two, and the second could
          not be done until the first had been, so the card advertised a step that
          was really the back half of the one above it. */
-      {label:"Final photo order",value:started?plural(counts.photos+counts.mockups,"photo"):blank,pending,done:counts.photos+counts.mockups>0,task:"lifestyle"},
     ];}
     /* D541 - both of these rows pointed at .final-review, so Listings and Titles
        and tags took you to the same block below the cards. Nothing on this step
@@ -2859,7 +2839,6 @@ setSavedRevision(current=>current+1);}catch(error){stopWith("This default was no
   function taskPanel(task:string){
     if(task==="draft-colors"&&templateDetails)return <><DraftColorSelector product={templateDetails} drafts={drafts.filter(draft=>draft.status==="Created")} selected={selectedColorIds} saving={savingDraftVariants} onChange={ids=>void syncDraftVariantChoices(ids,selectedSizeIds)} onArtworkChange={(draft,color,list,reset)=>void updateDraftColorArtwork(draft,color,list,reset)}/>{draftVariantError&&<p className="field-error" role="alert">{draftVariantError}</p>}</>;
     if(task==="draft-sizes"&&templateDetails)return <><ProductSizeSelector product={templateDetails} selected={selectedSizeIds} onChange={ids=>void syncDraftVariantChoices(selectedColorIds,ids)} onRemember={()=>undefined} remembering={savingDraftVariants} remembered inCard/>{draftVariantError&&<p className="field-error" role="alert">{draftVariantError}</p>}</>;
-    if(task==="sizeguide")return <div className="size-guide-row-panel"><p>Choose one image for every listing in this batch.</p><input ref={sizeGuidePicker} type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={event=>{const file=event.target.files?.[0];if(file)void applySizeGuide(file)}}/><div className="size-guide-row-actions"><button type="button" className="secondary-action" onClick={()=>sizeGuidePicker.current?.click()}>{sizeGuideName?"Replace size guide":"Choose size guide"}</button>{sizeGuideName&&<button type="button" className="secondary-action size-guide-remove" onClick={()=>void removeSizeGuide()}>Remove</button>}</div>{sizeGuideStatus&&<p role="status">{sizeGuideStatus}</p>}</div>;
     /* D541 - titles-resolving drives the pulse on each title field as the batch
        run fills them in. It rode on the listing-editor wrapper, so it went out
        with the block; it belongs on whatever holds the title fields. */
@@ -2878,7 +2857,7 @@ setSavedRevision(current=>current+1);}catch(error){stopWith("This default was no
     if(task==="draft-pricing"){
       const ownerPrefix=`${activeRecipe?.id||""}:`;
       const groups=costReviewGroups().filter(group=>group.key.startsWith(ownerPrefix));
-      return <div className="post-draft-pricing-panel" aria-label="Final price review">{groups.length?groups.map(group=>{const costs=group.review.variants.filter(variant=>variant.isEnabled).map(variant=>variant.cost),low=costs.length?Math.min(...costs):0,high=costs.length?Math.max(...costs):0,approved=group.drafts.every(draft=>draft.costReview?.approved),verified=group.drafts.every(draft=>draft.costReview?.verified);return <section className={`actual-cost-review ${approved?"approved":""}`} key={group.key}><div><b>{group.productName}</b><small>{group.drafts.length} {group.drafts.length===1?"listing":"listings"} · Final Printify production cost {low===high?`$${(low/100).toFixed(2)}`:`$${(low/100).toFixed(2)}–$${(high/100).toFixed(2)}`}</small><span>{verified?"Calculated from the finished Printify drafts.":"Finished production costs are still loading."}</span></div>{approved?<strong>✓ Final prices approved</strong>:<button type="button" disabled={!verified||Boolean(pricingApprovalGroup)} onClick={()=>void approveActualPricingGroup(group)}>{pricingApprovalGroup===group.key?"Saving final prices…":verified?`Approve final prices for ${group.drafts.length} ${group.drafts.length===1?"listing":"listings"}`:"Costs unavailable"}</button>}</section>}):<p className="task-panel-empty">No final price review is needed for this product.</p>}</div>;
+      return <div className="post-draft-pricing-panel" aria-label="Edit item prices">{groups.length?groups.map(group=>{const approved=pricingApproved&&group.drafts.every(draft=>draft.costReview?.approved),verified=group.drafts.every(draft=>draft.costReview?.verified),actualVariants=group.review.variants.filter(variant=>variant.isEnabled).map(variant=>({...variant,templatePrice:variant.price,shipping:0}));return <section className="editable-draft-pricing" key={group.key}><PricingReview section="prices" variants={actualVariants} pricing={pricing} prices={variantPrices} productName={group.productName} profiles={etsyShippingProfiles} selectedProfileId={etsyShippingProfileId} templateShippingProfileId={Number(templateDetails?.shippingTemplateId)||0} profilesLoading={shippingProfilesLoading} profilesError={shippingProfilesError} approved={approved} wholeNumber={activeRecipe?.wholeNumberPricing===true} onPricing={value=>{setPricing(value);setPricingApproved(false)}} onPrices={value=>{setVariantPrices(value);setPricingApproved(false)}} onSelectProfile={()=>undefined} onCreateProfile={createCustomShippingProfile} onApprovalChange={()=>undefined}/>{approved?<p className="pricing-approved-state" role="status"><span aria-hidden="true">✓</span> Prices saved to every listing</p>:<button type="button" className="save-draft-prices" disabled={!verified||Boolean(pricingApprovalGroup)} onClick={()=>void approveActualPricingGroup(group,variantPrices)}>{pricingApprovalGroup===group.key?"Saving prices…":verified?"Save these prices":"Costs still loading"}</button>}</section>}):<p className="task-panel-empty">Printify is still calculating the finished product costs.</p>}</div>;
     }
     if(task==="draft-shipping"&&templateDetails)return <div className="post-draft-shipping-review"><PricingReview section="shipping" variants={pricedVariants} pricing={pricing} prices={variantPrices} productName={classifyingProductName||templateDetails.blueprintTitle} profiles={etsyShippingProfiles} selectedProfileId={etsyShippingProfileId} templateShippingProfileId={Number(templateDetails.shippingTemplateId)||0} profilesLoading={shippingProfilesLoading} profilesError={shippingProfilesError} approved={pricingApproved} onPricing={setPricing} onPrices={setVariantPrices} onSelectProfile={value=>{setEtsyShippingProfileId(value);setPricingApproved(Boolean(value)&&costReviewDrafts().every(draft=>!draft.costReview?.required||draft.costReview.approved));if(activeRecipe&&value!==Number(activeRecipe.etsyShippingProfileId))void establish(activeRecipe,{etsyShippingProfileId:value})}} onCreateProfile={createCustomShippingProfile} onApprovalChange={setPricingApproved}/></div>;
     const listings=drafts.map(draft=>({draft,design:files.find(file=>file.id===draft.clientId),selectedImages:draft.id?(printifyImageSelections[draft.id]??printifyImageIndices):printifyImageIndices}));
@@ -2956,35 +2935,14 @@ setSavedRevision(current=>current+1);}catch(error){stopWith("This default was no
         })}/>
       </div>
     </>;
-    if(task==="printify")return <>
+    if(["photos","printify","lifestyle","sizeguide"].includes(task))return <>
           {/* D552 - she asked for this gone once already: "there doesn't need to be
               a link that says recommended photos for the soft...". D540 moved it
               into this panel instead of deleting it, which is not what she asked
               for. The row is called "Choose Printify photos" and the photos are
               listed underneath it with counts; a collapsed essay about which views
               to pick was advice nobody opened. Gone. */}
-          <div className="task-panel-body printify-photo-listings">{listingWorkRows(({draft,design,selectedImages,count})=>(<>{draft.status==="Created"&&<PrintifyImagePicker bare images={(draft.printifyImages||[]).filter(Boolean)} indices={selectedImages} reservedPhotos={(preparedMockupCounts[draft.id||""]||0)+(design?.sizeGuideName||sizeGuideName?1:0)} onApplyOne={values=>{/* D465 - the photos she picks ARE this product's default, the same way its colours and sizes are. There was a "Use these as this product's default" button asking a question with one sensible answer; the selection saves itself now and the button is gone. */if(activeRecipe)void saveImagePreferences(values);if(draft.id)setPrintifyImageSelections(current=>({...current,[draft.id!]:values}))}} onApplyAll={values=>{setPrintifyImageIndices(values);setPrintifyImageSelections(Object.fromEntries(drafts.filter(item=>item.id).map(item=>{const itemDesign=files.find(file=>file.id===item.clientId),reserved=(preparedMockupCounts[item.id!]||0)+(itemDesign?.sizeGuideName||sizeGuideName?1:0);return[item.id!,values.slice(0,Math.max(0,20-reserved))]})))}} onSaveRecipe={activeRecipe?saveImagePreferences:undefined}/>}</>),photoFlags)}</div>
-    </>;
-    if(task==="lifestyle")return <>
-          {/* D709 · Uploading photos and arranging them were two panels, so every
-              listing was walked twice to finish one job - and the ordering panel
-              could only be understood after the uploading panel had been used,
-              which is the definition of a step that should not be its own step.
-              Her words: "I don't think it needs to be two steps." Upload lands
-              the photo; the grid underneath it already holds the Printify photos
-              and the size guide, so the order can be set where the photos are.
-              The old lead here ended "you can arrange them with the Printify
-              photos in the next section" - a sentence that existed only to
-              apologise for the split. */}
-          <div className="task-panel-lead"><p>Add your own photos to each design below, then drag them into the order buyers will see. The first photo is the one that shows in search.</p></div>
-          <div className="task-panel-body">{listingWorkRows(({draft,design,selectedImages,count})=>(<>
-                  {/* D725 - the identity block and the photos are one layout now
-                      (prototype .goldie-photo-layout), so the design stays beside
-                      the photos being chosen for it instead of scrolling away
-                      above them. Every control below is the same component with
-                      the same handlers. */}
-                  <PhotoLayout previewUrl={draft.previewUrl||design.previewUrl} name={listingLabel(design)} meta={`${count} of 20 photos`}>
-                  <UploadedListingPhotos productId={draft.id!} onCountChange={count=>setPreparedMockupCounts(current=>({...current,[draft.id!]:count}))}/>{draft.status==="Created"&&draft.id&&<ListingPhotoOrder productId={draft.id} printifyImages={(draft.printifyImages||[]).filter(Boolean)} indices={selectedImages} refreshKey={`${preparedMockupCounts[draft.id]||0}:${design?.sizeGuideName||sizeGuideName}`}/>}{draft.status==="Created"&&design&&draft.id&&<IndividualSizeGuide productId={draft.id} name={design.sizeGuideName} batchName={sizeGuideName} onSaved={name=>updateDesign(design.id,{sizeGuideName:name})}/>}{draft.status==="Created"&&draft.id&&<DownloadListingPhotos productId={draft.id} name={draft.title||draft.name} indices={selectedImages}/>}</PhotoLayout></>),photoFlags)}</div>
+          <div className="task-panel-body printify-photo-listings">{listingWorkRows(({draft,design,selectedImages,count})=>(<div className="listing-photo-workspace"><PrintifyImagePicker bare images={(draft.printifyImages||[]).filter(Boolean)} indices={selectedImages} reservedPhotos={(preparedMockupCounts[draft.id||""]||0)+(design?.sizeGuideName||sizeGuideName?1:0)} onApplyOne={values=>{if(activeRecipe)void saveImagePreferences(values);if(draft.id)setPrintifyImageSelections(current=>({...current,[draft.id!]:values}))}} onApplyAll={values=>{setPrintifyImageIndices(values);setPrintifyImageSelections(Object.fromEntries(drafts.filter(item=>item.id).map(item=>{const itemDesign=files.find(file=>file.id===item.clientId),reserved=(preparedMockupCounts[item.id!]||0)+(itemDesign?.sizeGuideName||sizeGuideName?1:0);return[item.id!,values.slice(0,Math.max(0,20-reserved))]})))}} onSaveRecipe={activeRecipe?saveImagePreferences:undefined}/><UploadedListingPhotos productId={draft.id!} onCountChange={count=>setPreparedMockupCounts(current=>({...current,[draft.id!]:count}))}/><IndividualSizeGuide productId={draft.id!} name={design.sizeGuideName} batchName={sizeGuideName} onSaved={name=>updateDesign(design.id,{sizeGuideName:name})}/><ListingPhotoOrder productId={draft.id!} printifyImages={(draft.printifyImages||[]).filter(Boolean)} indices={selectedImages} refreshKey={`${preparedMockupCounts[draft.id!]||0}:${design.sizeGuideName||sizeGuideName}`}/><DownloadListingPhotos productId={draft.id!} name={draft.title||draft.name} indices={selectedImages}/></div>),photoFlags)}</div>
     </>;
     /* D709 · The ordering panel is gone; its work happens in the photos panel
        above, on the same pass through the listings. task="order" is aliased to it
@@ -3156,6 +3114,7 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
         </div>
         <RequiredDetailsChecklist items={items}/>
       </div>
+      {files.length>1&&<nav className="factory-listing-next" aria-label="Move between listings"><button type="button" disabled={index===0} onClick={()=>setActiveDesign(files[index-1].id)}>← Previous listing</button><span>Listing {index+1} of {files.length}</span><button type="button" disabled={index===files.length-1} onClick={()=>setActiveDesign(files[index+1].id)}>Next listing →</button></nav>}
     </div>;
   }
 
@@ -4056,9 +4015,10 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
     finally{setSavingDraftVariants(false)}
   }
   async function syncListingFields(design:DesignFile,details?:EtsyDetails){const draft=drafts.find(item=>item.clientId===design.id);if(!draft?.id)throw new Error("The matching Printify draft could not be found.");const response=await fetch("/api/printify/drafts/update",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({productId:draft.id,title:design.title,tags:design.tags,description:finalDescription(design,details),etsyDetails:details})});const payload=await response.json() as {error?:string};if(!response.ok)throw new Error(payload.error||"Printify could not save the completed listing.")}
-  async function saveActualDraftPricing(draft:DraftResult){
+  async function saveActualDraftPricing(draft:DraftResult,editedPrices?:Record<string,number>){
     if(!draft.id||!draft.costReview?.verified)throw new Error("Printify's finished costs are not available for this listing yet.");
-    const variantPrices=pricesFromActualCosts({...draft.costReview,required:true},pricingForDraft(draft));
+    const calculated=pricesFromActualCosts({...draft.costReview,required:true},pricingForDraft(draft));
+    const variantPrices=editedPrices&&Object.keys(editedPrices).length?Object.fromEntries(Object.keys(calculated).map(id=>[id,editedPrices[id]??calculated[id]])):calculated;
     const response=await fetch("/api/printify/drafts/update",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({productId:draft.id,variantPrices})});
     /* D882 · An unhandled worker error returns a bodiless 500, and parsing that
        threw "Unexpected end of JSON input" - which is what the seller saw
@@ -4068,12 +4028,13 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
     setDrafts(current=>current.map(item=>item.id===draft.id?{...item,...payload.draft}:item));
     setBundleMembers(current=>Object.fromEntries(Object.entries(current).map(([recipeId,member])=>[recipeId,{...member,drafts:member.drafts.map(item=>item.id===draft.id?{...item,...payload.draft}:item)}])));
   }
-  async function approveActualPricingGroup(group:{key:string;drafts:DraftResult[]}){
+  async function approveActualPricingGroup(group:{key:string;drafts:DraftResult[]},editedPrices?:Record<string,number>){
     if(pricingApprovalGroup)return;
     setPricingApprovalGroup(group.key);
     const failures:string[]=[];
-    try{await runBounded(group.drafts.filter(draft=>!draft.costReview?.approved),2,async draft=>{try{await saveActualDraftPricing(draft);return true}catch(error){failures.push(`${draft.title||draft.name}: ${error instanceof Error?error.message:"could not save prices"}`);return false}})}finally{setPricingApprovalGroup("")}
-    if(failures.length)stopWith("Some final prices were not approved.",failures);
+    const targets=editedPrices?group.drafts:group.drafts.filter(draft=>!draft.costReview?.approved);
+    try{await runBounded(targets,2,async draft=>{try{await saveActualDraftPricing(draft,editedPrices);return true}catch(error){failures.push(`${draft.title||draft.name}: ${error instanceof Error?error.message:"could not save prices"}`);return false}})}finally{setPricingApprovalGroup("")}
+    if(failures.length)stopWith("Some final prices were not approved.",failures);else setPricingApproved(true);
   }
   async function syncPreparedListing(design:DesignFile,details:EtsyDetails){await syncListingFields(design,details)}
   async function resolveEtsyOptions(details:EtsyDetails,taxonomyId?:number){const response=await fetch("/api/etsy/taxonomy",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({...details,taxonomyId,includeCategories:!haveEtsyCategories.current,product:{blueprintTitle:templateDetails?.blueprintTitle,brand:templateDetails?.brand,model:templateDetails?.model}})}),payload=await response.json() as {categories?:EtsyCategoryOption[];selected?:{id:number;path:string};properties?:EtsyPropertySelection[];error?:string};if(!response.ok||!payload.selected)throw new Error(payload.error||"Etsy listing options could not be loaded.");if(payload.categories?.length){haveEtsyCategories.current=true;setEtsyCategories(payload.categories)}

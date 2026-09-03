@@ -15,10 +15,10 @@ test("D905: Etsy shipping is not required to create private Printify drafts",()=
 
 test("D905: shipping is rendered immediately after finished-cost pricing",()=>{
   const actions=app.slice(app.indexOf('if(task==="draft-pricing")'),app.indexOf("const listings="));
-  assert.match(actions,/actual-cost-review/);
+  assert.match(actions,/editable-draft-pricing/);
   assert.match(actions,/post-draft-shipping-review/);
   assert.match(actions,/section="shipping"/);
-  assert.ok(actions.indexOf("actual-cost-review")<actions.indexOf("post-draft-shipping-review"));
+  assert.ok(actions.indexOf("editable-draft-pricing")<actions.indexOf("post-draft-shipping-review"));
 });
 
 test("D905: the preflight tells the truth about when pricing and shipping happen",()=>{

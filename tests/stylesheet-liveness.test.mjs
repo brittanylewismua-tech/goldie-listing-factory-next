@@ -61,13 +61,12 @@ test("current placement, preview, and size-guide controls retain their protectio
      these two guarantees. The guarantees themselves are unchanged. */
   const v2 = await readFile(new URL("app/interface-v2.css", root), "utf8");
   assert.match(app, /openLabel:.*Adjust in Printify/);
-  assert.match(v2, /\.placement-printify-link\{[^}]*font:800 11px\/1\.35/,
+  assert.match(v2, /\.placement-printify-link\{[^}]*font:800 12px\/1/,
     "the live Printify placement action must remain readable");
   assert.match(v2, /\.factory-art-preview\{[^}]*height:190px/,
     "the live design preview must remain large enough to identify");
-  assert.match(app, /className="secondary-action size-guide-remove"/);
-  assert.match(clarity, /\.size-guide-remove\{[^}]*color:#6b4a60/,
-    "the live size-guide removal control must remain visibly destructive");
+  assert.match(app, /<IndividualSizeGuide /,
+    "the live per-listing size-guide control remains reachable");
 });
 
 /* D236 · An orphaned selector list is invisible and contagious. D234 removed a

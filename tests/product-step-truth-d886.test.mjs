@@ -102,8 +102,8 @@ test("D896: library headings describe the library, not a misleading item count",
 
 test("D886: pricing waits for finished draft costs",()=>{
   assert.match(app,/className="post-draft-shipping-review"/);
-  assert.match(app,/Final Printify production cost/);
-  assert.match(app,/Approve final prices/);
+  assert.match(app,/Printify is still calculating the finished product costs/);
+  assert.match(app,/Save these prices/);
   assert.match(app,/task:"draft-pricing"/);
   assert.match(app,/task:"draft-shipping"/);
 });

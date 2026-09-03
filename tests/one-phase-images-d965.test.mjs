@@ -23,11 +23,11 @@ test("D967: every expanded task closes with a usable control",()=>{
 
 test("D965: finished costs and shipping live in the product task sequence",()=>{
   const rows=app.slice(app.indexOf('if(workflowStep==="designs")'),app.indexOf('if(finishPhase==="final")'));
-  assert.match(rows,/label:"Final prices"[\s\S]*task:"draft-pricing"/);
+  assert.match(rows,/label:"Set prices"[\s\S]*task:"draft-pricing"/);
   assert.match(rows,/label:"Etsy shipping"[\s\S]*task:"draft-shipping"/);
-  assert.ok(rows.indexOf('label:"Final prices"')<rows.indexOf('label:"Etsy shipping"'));
+  assert.ok(rows.indexOf('label:"Set prices"')<rows.indexOf('label:"Etsy shipping"'));
   const task=app.slice(app.indexOf('if(task==="draft-pricing")'),app.indexOf('const listings='));
-  assert.match(task,/actual-cost-review/);
-  assert.match(task,/aria-label="Final price review"/);
+  assert.match(task,/className="editable-draft-pricing"/);
+  assert.match(task,/aria-label="Edit item prices"/);
   assert.match(task,/PricingReview section="shipping"/);
 });

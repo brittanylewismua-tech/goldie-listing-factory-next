@@ -7,17 +7,17 @@ test("seller uploads are exact-listing photos that publish, reorder, download an
   const[app,uploader,images,order,finish,download,nav]=await Promise.all([
     read("app/listing-factory-app.tsx"),read("app/uploaded-listing-photos.tsx"),read("app/api/etsy/images/route.ts"),read("app/listing-photo-order.tsx"),read("app/api/etsy/finish.ts"),read("app/api/listing-photos/download/route.ts"),read("app/factory-shell.tsx")]);
   assert.match(app,/<UploadedListingPhotos productId=\{draft\.id!\}/);
-  assert.match(app,/<PhotoLayout previewUrl=/);
+  assert.match(app,/className="listing-photo-workspace"/);
   /* D684 - the uploads panel showed the design artwork and the design's filename.
      It has to show the listing she is uploading photos to. */
   /* D709 · Uploading and ordering are one panel now, so the identity block
      heads both jobs and no longer says "adding". The rule it enforces is the
      one that matters and is unchanged: this names the LISTING being worked on,
      not the design's upload filename. */
-  assert.match(app,/name=\{listingLabel\(design\)\}/);
+  assert.match(app,/<ListingPhotoOrder productId=\{draft\.id!\}/);
   assert.doesNotMatch(app,/\{design\.name\|\|"Untitled design"\}<\/b>/);
   assert.doesNotMatch(app,/PHOTOS FOR THIS DESIGN/);
-  assert.match(app,/draft\.previewUrl\|\|design\.previewUrl/);
+  assert.match(app,/<PrintifyImagePicker bare/);
   assert.match(uploader,/form\.set\("productId",productId\)/);
   assert.match(uploader,/form\.set\("kind","upload"\)/);
   assert.match(uploader,/multiple type="file"/);

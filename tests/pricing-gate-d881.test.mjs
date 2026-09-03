@@ -28,13 +28,11 @@ test("the cost approval still calls runBounded without an onComplete", () => {
      result. This asserts the shape the guard above exists to support, so the
      guard is not quietly removed later as dead code. */
   const call = app.slice(app.indexOf("approveActualPricingGroup(group:"));
-  assert.match(call.slice(0, 900), /runBounded\(group\.drafts\.filter\(draft=>!draft\.costReview\?\.approved\),2,async draft=>/);
+  assert.match(call.slice(0, 1200), /const targets=editedPrices\?group\.drafts:group\.drafts\.filter\(draft=>!draft\.costReview\?\.approved\)/);
+  assert.match(call.slice(0, 1200), /runBounded\(targets,2,async draft=>/);
 });
 
 test("the post-draft stage no longer owns price approval or retry controls", () => {
-  assert.match(approved,
-    /\.workspace\.mockup-workspace \.workflow-stage:not\(:has\(\.actual-cost-review\)\)\{display:none!important\}/,
-    "legacy empty stages remain hidden without preserving a second retry surface");
   assert.doesNotMatch(approved,
     /\.workspace\.mockup-workspace \.workflow-stage\{display:none!important\}/,
     "the unconditional hide is gone, not merely overridden");
@@ -69,6 +67,6 @@ test("artwork actions use the workflow's button hierarchy instead of bare links"
 });
 
 test("the release control reads as a press", () => {
-  assert.match(v2, /\.actual-cost-review button\{[\s\S]*?background:linear-gradient\(145deg,#ff6ecd,#f52fb2\)/);
-  assert.match(v2, /\.actual-cost-review button:disabled\{/);
+  assert.match(v2, /\.app-shell \.save-draft-prices\{[^}]*background:#111[^}]*color:#fff/);
+  assert.match(v2, /\.app-shell \.save-draft-prices:disabled\{/);
 });

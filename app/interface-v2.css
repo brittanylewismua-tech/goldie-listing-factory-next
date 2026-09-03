@@ -491,21 +491,21 @@ html, body { background: var(--lf-paper); }
   display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:10px;
   padding:12px 13px;border-top:1px solid #eee8ec;
 }
-.app-shell .factory-art-meta strong{display:block;font:700 13px/1.3 Inter,system-ui,sans-serif;color:#3d2538;
+.app-shell .factory-art-meta strong{display:block;font:500 11px/1.3 Inter,system-ui,sans-serif;color:#7d6d78;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.app-shell .factory-art-meta small{display:block;font:400 11px/1.4 Inter,system-ui,sans-serif;color:#7d6d78;margin-top:3px}
+.app-shell .factory-art-meta small{display:block;font:800 14px/1.35 Inter,system-ui,sans-serif;color:#3d2538;margin-top:4px}
 .app-shell .factory-link{
-  border:0;background:none;padding:0;cursor:pointer;
-  color:#6b365a;font:750 11px/1 Inter,system-ui,sans-serif;
+  min-height:36px;border:1px solid #111;border-radius:8px;background:#111;padding:9px 12px;cursor:pointer;
+  color:#fff;font:750 12px/1 Inter,system-ui,sans-serif;
 }
-.app-shell .factory-link:hover{text-decoration:underline;text-underline-offset:3px}
+.app-shell .factory-link:hover{background:#292329}
 
 /* D724 · Protections carried over from clarity-pass when the bespoke placement
    markup became <ArtworkGrid>. Same guarantees, new owner, no !important:
    the print-quality line and the live Printify action stay readable, and the
    design preview stays large enough to tell two listings apart (it was 46px). */
-.app-shell .factory-art-card .placement-dpi{font:650 11px/1.35 Inter,system-ui,sans-serif;color:#7a5a6e}
-.app-shell .factory-art-card .placement-printify-link{font:800 11px/1.35 Inter,system-ui,sans-serif;color:#6b365a}
+.app-shell .factory-art-card .placement-dpi{font:800 14px/1.35 Inter,system-ui,sans-serif;color:#3d2538}
+.app-shell .factory-art-card .placement-printify-link{font:800 12px/1 Inter,system-ui,sans-serif;color:#fff}
 
 /* D725 · .goldie-photo-layout, measured from the prototype's computed styles.
    The artwork sits beside the photos instead of above them, so the design a
@@ -3009,11 +3009,8 @@ html, body { background: var(--lf-paper); }
 .app-shell .artwork-color-required{display:block;margin-top:5px;color:#963f54;font-size:12px;font-style:normal;font-weight:700}
 .artwork-version fieldset i{width:16px;height:16px;border-radius:50%;border:1px solid #ded6dc;flex:none}
 .artwork-version.compact{min-height:72px}.artwork-version.compact img{width:56px;height:56px;object-fit:contain}
-.actual-cost-review{display:flex;align-items:center;justify-content:space-between;gap:16px;width:100%;padding:14px;border:1px solid #e7b9cb;border-radius:12px;background:#fff7fa}
-.actual-cost-review>div{display:grid;gap:3px}.actual-cost-review span{color:#755d6d;font-size:12px}.actual-cost-review button{flex:none}.actual-cost-review.approved{border-color:#b9ddc5;background:#f3faf5}.actual-cost-review>strong{color:#34734a}
 .final-artwork-summary{display:grid;gap:5px;margin:8px 0;padding:8px 10px;border-left:2px solid #b86d91;background:#fbf7fa}
 .final-artwork-summary>span{display:grid;gap:1px}.final-artwork-summary b{font-size:12px}.final-artwork-summary small{font-size:11px;color:#755d6d}
-@media(max-width:1050px){.actual-cost-review{align-items:flex-start;flex-direction:column}}
 
 /* D881 · The artwork assignment matrix was rendering inside the 282px columns
    of the design review grid. At three designs it measured 402px in a 282px
@@ -3029,13 +3026,6 @@ html, body { background: var(--lf-paper); }
   grid-template-columns:76px minmax(0,1fr) auto;align-items:center}
 
 /* The release control for a financial gate was rendering as bare text. */
-.app-shell .actual-cost-review button{
-  border:0;border-radius:10px;padding:10px 16px;
-  background:linear-gradient(145deg,#ff6ecd,#f52fb2);color:#3d0b2b;
-  font-weight:800;cursor:pointer}
-.app-shell .actual-cost-review button:disabled{
-  background:rgba(109,26,78,.12);color:rgba(74,42,62,.55);cursor:not-allowed}
-.app-shell .actual-cost-review.approved>strong{color:#2f6b45}
 
 /* D883 · The card is the selection control. Once chosen, the product becomes
    the working header and the bank recedes; management stays available without
@@ -3161,14 +3151,14 @@ html, body { background: var(--lf-paper); }
   .listing-photo-download button,
   .uploaded-listing-photos .task-panel-heading>button,
   .pricing-approval-button,
+  .save-draft-prices,
   .missing-photo-list button,
   .restart-batch-actions .save-restart,
   .size-selector-actions button:last-child,
   .confirm-action-go:not(.destructive),
   .factory-startup-error button,
   .bundle-load-failed button,
-  .support-chat-form button,
-  .actual-cost-review button
+  .support-chat-form button
 ){
   border-color:#0d0b0c!important;
   background:#0d0b0c!important;
@@ -3196,14 +3186,14 @@ html, body { background: var(--lf-paper); }
   .listing-photo-download button,
   .uploaded-listing-photos .task-panel-heading>button,
   .pricing-approval-button,
+  .save-draft-prices,
   .missing-photo-list button,
   .restart-batch-actions .save-restart,
   .size-selector-actions button:last-child,
   .confirm-action-go:not(.destructive),
   .factory-startup-error button,
   .bundle-load-failed button,
-  .support-chat-form button,
-  .actual-cost-review button
+  .support-chat-form button
 ):hover:not(:disabled){
   background:#171117!important;
   box-shadow:none!important;
@@ -3228,14 +3218,14 @@ html, body { background: var(--lf-paper); }
   .listing-photo-download button,
   .uploaded-listing-photos .task-panel-heading>button,
   .pricing-approval-button,
+  .save-draft-prices,
   .missing-photo-list button,
   .restart-batch-actions .save-restart,
   .size-selector-actions button:last-child,
   .confirm-action-go:not(.destructive),
   .factory-startup-error button,
   .bundle-load-failed button,
-  .support-chat-form button,
-  .actual-cost-review button
+  .support-chat-form button
 ):disabled{
   border-color:#ddd4d9!important;
   background:#eee9ec!important;
@@ -3416,3 +3406,26 @@ html, body { background: var(--lf-paper); }
 .app-shell .bundle-print-products button.selected{border-color:#2f7a50;background:#f1faf4!important;box-shadow:0 0 0 1px #2f7a50}
 .app-shell .bundle-print-products button.selected>span{border-color:#2f7a50;background:#2f7a50}
 .app-shell .preflight-artwork-plan b{max-width:68%;text-align:right;line-height:1.45}
+
+/* D971 · One photo job: choose Printify mockups, add seller photos or a size
+   guide, then arrange the same set. No duplicate design preview and no vertical
+   stack of one-photo view groups. */
+.app-shell .listing-photo-workspace{display:grid;gap:20px;min-width:0}
+.app-shell .listing-photo-workspace>:not(:first-child){padding-top:18px;border-top:1px solid #e7dfe4}
+.app-shell .printify-all-images{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:10px!important}
+.app-shell .printify-all-images .printify-image-option{min-width:0}
+.app-shell .printify-more-toggle{margin-top:12px}
+@media(max-width:1050px){.app-shell .printify-all-images{grid-template-columns:repeat(3,minmax(0,1fr))!important}}
+
+/* The listing selector follows the editor and the same controls repeat at its
+   foot, so a twenty-listing batch never requires a trip back to the top. */
+.app-shell .factory-listing-switch{position:sticky;top:70px;z-index:8;padding:8px!important;border:1px solid #e2d8de;border-radius:10px;background:rgba(255,255,255,.96);box-shadow:0 8px 20px rgba(40,24,36,.08)}
+.app-shell .factory-listing-next{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px;padding:12px;border:1px solid #ded6dc;border-radius:10px;background:#fff}
+.app-shell .factory-listing-next button{min-height:40px;border:1px solid #111;border-radius:8px;background:#111;color:#fff;font-weight:750}
+.app-shell .factory-listing-next button:last-child{justify-self:end}
+.app-shell .factory-listing-next button:disabled{border-color:#e2d9de;background:#f4f0f3;color:#9b8e97}
+.app-shell .factory-listing-next span{color:#756873;font-size:12px;font-weight:700}
+
+.app-shell .editable-draft-pricing{display:grid;gap:14px}
+.app-shell .save-draft-prices{justify-self:end;min-height:42px;padding:10px 16px;border:0;border-radius:8px;background:#111;color:#fff;font-weight:800}
+.app-shell .save-draft-prices:disabled{background:#eee9ec;color:#9b8e96;cursor:not-allowed}

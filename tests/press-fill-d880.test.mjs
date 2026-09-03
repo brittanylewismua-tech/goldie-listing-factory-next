@@ -78,7 +78,7 @@ test("D955: internal workflow actions are flat; only the footer forward action h
   const block=css.slice(css.indexOf("/* D945"));
   for(const selector of [
     ".launch-button",".workflow-next",".save-recipe",".publish-all-button",
-    ".pricing-approval-button",".actual-cost-review button",".support-chat-form button"
+    ".pricing-approval-button",".save-draft-prices",".support-chat-form button"
   ]) assert.ok(block.includes(selector),`${selector} must use the shared primary-action treatment`);
   assert.match(block,/background:#0d0b0c!important;\s*color:#fff!important;\s*box-shadow:none!important/);
   assert.match(block,/\.recipe-card \.recipe-tile \.recipe-use em\{[\s\S]*?background:#0d0b0c!important;[\s\S]*?box-shadow:none!important/);

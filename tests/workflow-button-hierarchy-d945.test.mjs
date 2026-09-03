@@ -10,7 +10,7 @@ test("D955: internal workflow actions use a flat black face",()=>{
   const block=css.slice(start);
   for(const selector of [
     ".launch-button",".workflow-next",".save-recipe",".publish-all-button",
-    ".pricing-approval-button",".actual-cost-review button",".support-chat-form button"
+    ".pricing-approval-button",".save-draft-prices",".support-chat-form button"
   ]) assert.ok(block.includes(selector),`${selector} must use the shared primary-action treatment`);
   assert.match(block,/background:#0d0b0c!important;\s*color:#fff!important;\s*box-shadow:none!important/);
   assert.match(block,/:hover:not\(:disabled\)\{\s*background:#171117!important;\s*box-shadow:none!important;\s*transform:none/);
