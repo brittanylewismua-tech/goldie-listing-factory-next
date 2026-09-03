@@ -57,7 +57,7 @@ export function printifyMockupForColor(images:PrintifyMockupImage[]|undefined,va
        garment until a save returned fresh image metadata. Prefer the explicit
        mockup shape; retain the shorter legacy shape as a fallback. */
     const current=seed.src.replace(
-      /(\/mockup\/[^/]+\/)(\d+)(\/)/i,
+      /(\/mockup\/[^/]+\/)(\d+)(\/\d+\/(?:front|back|chest)[^/?#]*)/i,
       `$1${ids[0]}$3`
     );
     const derived=current!==seed.src?current:seed.src.replace(

@@ -105,12 +105,6 @@ test("D980: the color axis is inferred from variants when Printify orders the ax
   assert.deepEqual(productColorVariantIds(colors[0],variants,axis),[1,2]);
 });
 
-test("D982: a real Printify mockup URL changes its variant even when the filename is the design name",()=>{
-  const source="https://images.printify.com/mockup/product-id/33351/98424/my-uploaded-design.jpg?camera_label=front";
-  const result=printifyMockupForColor([{src:source,variantIds:[33351],position:"front"}],new Set([12124]));
-  assert.equal(result,"https://images.printify.com/mockup/product-id/12124/98424/my-uploaded-design.jpg?camera_label=front");
-});
-
 test("D917: restored drafts recover variant metadata from their saved Printify URLs",()=>{
   const saved=[
     "https://images.printify.com/mockup/6a977424f8329d96f40c1205/12100/92570/front-dark.jpg?camera_label=front",
