@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { customerLaunchBlock } from "@/app/customer-launch-gate";
 
-const WEB3FORMS_ACCESS_KEY = "5b639ca5-fea3-4f99-bf3e-a08f6e9482c2";
 const MAX_SCREENSHOT_BYTES = 5 * 1024 * 1024;
 
 export async function POST(request: Request) {
@@ -10,6 +9,8 @@ export async function POST(request: Request) {
   if (!user) return NextResponse.json({ error: "Sign in to contact support." }, { status: 401 });
   const launchBlock = await customerLaunchBlock(user);
   if (launchBlock) return NextResponse.json({ error: launchBlock }, { status: 403 });
+  const accessKey = process.env.WEB3FORMS_ACCESS_KEY?.trim();
+  if (!accessKey) return NextResponse.json({ error: "Support is temporarily unavailable. Email goldie@beawolfbiz.com directly." }, { status: 503 });
   try {
     const input = await request.formData();
     const email = String(input.get("email") ?? "").trim().slice(0, 254);
@@ -22,7 +23,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "The optional screenshot must be a PNG, JPG or WebP no larger than 5 MB." }, { status: 400 });
     }
     const outbound = new FormData();
-    outbound.append("access_key", WEB3FORMS_ACCESS_KEY);
+    outbound.append("access_key", accessKey);
     outbound.append("subject", `Goldie Listing Factory support: ${email}`);
     outbound.append("from_name", "Goldie Listing Factory Support");
     outbound.append("replyto", email);

@@ -816,6 +816,8 @@ test("keeps support submission authenticated and server-side", async () => {
   assert.match(supportRoute, /MAX_SCREENSHOT_BYTES/);
   assert.match(supportRoute, /authenticated_member/);
   assert.match(supportRoute, /api\.web3forms\.com/);
+  assert.match(supportRoute, /process\.env\.WEB3FORMS_ACCESS_KEY/);
+  assert.doesNotMatch(supportRoute, /5b639ca5-fea3-4f99-bf3e-a08f6e9482c2/);
 });
 
 test("support diagnoses vague reports before prescribing a fix", async () => {
