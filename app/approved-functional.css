@@ -434,7 +434,6 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .app-shell .individual-description button{color:#6b365a!important}
 .app-shell .batch-description>summary em,
 .app-shell .batch-description>summary:after{color:#6b365a!important}
-.app-shell .individual-size-guide button{border-color:#d9cbd3!important;background:rgba(249,236,247,.7)!important;color:#654362!important}
 
 .app-shell .printify-image-picker>.image-pref-actions{
   display:grid!important;
@@ -608,15 +607,6 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .app-shell .draft-card>.printify-image-picker{order:2}
 .app-shell .draft-card>.individual-size-guide{order:4}
 .app-shell .draft-card>.error-help-link{order:5}
-.app-shell .individual-size-guide{
-  border-color:#ded6dc!important;
-  background:rgba(249,236,247,.68)!important;
-}
-.app-shell .individual-size-guide button{
-  border-color:#d9cbd3!important;
-  background:rgba(255,255,255,.58)!important;
-  color:#654362!important;
-}
 .app-shell .integrated-mockups .generate-inline{
   position:static!important;
   width:min(100%,340px);
@@ -1128,7 +1118,6 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .app-shell .image-pref-actions button{position:relative}.app-shell .image-pref-actions button.confirmed{border-color:#68a67b!important;background:#eef9f1!important;color:#285f3a!important;box-shadow:0 0 0 3px rgba(71,145,91,.1)!important}.app-shell .image-pref-actions button.confirmed small{color:#3e704d!important}.app-shell .action-check{position:absolute;right:11px;top:10px;display:grid;width:21px;height:21px;place-items:center;border-radius:50%;background:#3d8b55;color:#fff;font-size:11px;font-weight:900}.app-shell .image-pref-feedback{margin:10px 0 0;padding:9px 12px;border-radius:10px;background:rgba(232,247,236,.9);color:#306342!important;font-size:10px!important;font-weight:750!important;text-align:center}
 .printify-photo-lightbox{position:fixed;inset:0;z-index:1200;display:grid;place-items:center;padding:40px;background:rgba(43,20,36,.38);backdrop-filter:blur(3px);cursor:zoom-out}.printify-photo-lightbox>button{position:fixed;right:24px;top:20px;z-index:2;width:42px;height:42px;border:1px solid rgba(255,255,255,.72);border-radius:50%;background:rgba(255,255,255,.94);box-shadow:0 8px 24px rgba(42,18,34,.2);color:#522d48;font-size:24px;cursor:pointer}.printify-photo-lightbox>img{display:block;width:auto;height:auto;min-width:min(640px,82vw);max-width:92vw;max-height:90vh;border-radius:14px;background:transparent;box-shadow:0 24px 70px rgba(30,12,24,.38);object-fit:contain;cursor:default}@media(max-width:720px){.printify-photo-lightbox{padding:24px 14px}.printify-photo-lightbox>img{min-width:0;width:94vw;max-height:86vh}.printify-photo-lightbox>button{right:12px;top:12px}}
 .missing-photo-backdrop{z-index:1400!important;overflow:auto!important;padding:32px 18px!important}.missing-photo-modal{position:relative!important;width:min(760px,94vw)!important;max-height:none!important;margin:auto!important}.missing-photo-close{position:absolute;right:18px;top:14px;width:38px;height:38px;border:0;border-radius:50%;background:rgba(91,48,79,.1);color:#522d48;font-size:24px;cursor:pointer}.missing-photo-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:16px;margin-top:20px}.missing-photo-list article{display:grid;gap:10px;padding:12px;border:1px solid #ded6dc;border-radius:14px;background:#fff}.missing-photo-list img,.missing-photo-placeholder{width:100%;aspect-ratio:1/1;object-fit:contain;border-radius:10px;background:#f4edf5}.missing-photo-list button{min-height:44px;border:0;border-radius:10px;background:var(--lf-pink);color:#3d0b2b;font-weight:850;cursor:pointer}
-.app-shell .individual-size-guide{min-height:92px!important;margin-top:18px!important;padding:18px 20px!important;border-radius:14px!important}.app-shell .individual-size-guide b{font-size:14px!important;line-height:1.3!important}.app-shell .individual-size-guide small{font-size:11px!important;line-height:1.45!important}.app-shell .individual-size-guide button{min-height:42px;padding:11px 15px!important;font-size:11px!important;font-weight:800!important}
 .app-shell .listing-photo-order{margin-top:20px;padding:22px;border:2px solid #ded1d8;border-radius:16px;background:rgba(255,250,254,.72)}.app-shell .photo-order-strip article{transition:border-color .16s ease,box-shadow .16s ease,transform .16s ease}.app-shell .photo-order-strip article.dragging{border-color:#9e5a91;box-shadow:0 0 0 4px rgba(183,119,176,.17),0 12px 25px rgba(74,42,62,.12);transform:scale(1.02);opacity:1}.app-shell .photo-order-buttons{display:flex;grid-column:1/-1;gap:6px;margin-top:5px}.app-shell .photo-order-buttons button{display:grid;width:30px;height:27px;place-items:center;border:1px solid #ded5db;border-radius:8px;background:rgba(255,255,255,.8);color:#653955;font-size:12px;cursor:pointer}.app-shell .photo-order-buttons button:disabled{opacity:.32;cursor:default}.app-shell .image-step-blocker{font-size:12px!important}
 
 .app-shell .personalization-switch>span{
@@ -1175,12 +1164,6 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .app-shell .everything-else{border-radius:16px 16px 0 0!important}
 
 /* PASS 2C remaining layout defects: D31 and D70. */
-.app-shell .individual-size-guide{display:flex!important;align-items:center!important;min-height:0!important;margin-top:12px!important;padding:5px 2px!important;border:0!important;border-radius:0!important;background:transparent!important}
-.app-shell .individual-size-guide>div{display:flex!important;align-items:center!important;gap:7px!important}
-.app-shell .individual-size-guide b{display:none!important}
-.app-shell .individual-size-guide small{font-size:9px!important;font-weight:750!important}
-.app-shell .individual-size-guide button{min-height:0!important;margin-left:auto!important;padding:4px 0!important;border:0!important;background:transparent!important;box-shadow:none!important;color:#68445f!important;font-size:9px!important;text-decoration:underline!important;text-underline-offset:3px!important}
-.app-shell .individual-size-guide p{flex-basis:100%!important}
 .managementOnly .managementSetList .setPreview{grid-template-columns:repeat(5,minmax(120px,1fr))!important;gap:10px!important}
 .managementOnly .managementSetList .setPreview img{aspect-ratio:4/5!important}
 

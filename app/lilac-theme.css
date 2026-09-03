@@ -93,7 +93,7 @@ button:disabled{transform:none!important;box-shadow:none!important;filter:satura
 
 .variant-pricing,.listing-editor,.post-draft-workspace,.draft-card,.management-create,.bank-library,.usage-card,.pricing-profile{border-color:#d8d0e8!important;background:#fbfaff!important;box-shadow:var(--shadow)}
 .variant-pricing-head,.item-pricing-heading{border-color:#ded6ed}.custom-shipping-builder{border-color:#d8d0e8;background:#fff}.shipping-builder-intro{background:linear-gradient(135deg,#eee8ff,#e7ddff);color:#33254f}.shipping-rate-row{border-color:#ded6eb}.recommendation-result,.etsy-ready-status,.automatic-reference,.publish-message{background:#eee9ff;color:#523b91}
-.individual-title-builder,.individual-description,.printify-image-picker,.individual-size-guide{border-color:#ddd5eb!important;background:#f8f6fc!important}
+.individual-title-builder,.individual-description,.printify-image-picker{border-color:#ddd5eb!important;background:#f8f6fc!important}
 .title-style-toggle button.active{background:var(--lf-pink);border-color:#75576b}.tag-row span,.keyword-chips button{background:#f1ebef!important;color:#5a4152!important;border-color:transparent!important}
 
 .post-draft-workspace{margin-top:-18px;border-radius:16px;padding-top:24px!important;background:transparent!important;box-shadow:none}

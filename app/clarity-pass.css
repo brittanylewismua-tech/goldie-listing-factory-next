@@ -861,7 +861,7 @@
  * converted to plum in approved-functional.css and the `small` was missed.
  * Appears once per draft card, so three times on a three-design batch.
  * Measured after: #654362 at 10.5px, 8.29:1. */
-.app-shell .individual-size-guide small{color:#654362!important;font-size:10px!important}
+.app-shell .individual-size-guide small{color:#654362}
 
 /* D208 · Brittany could not find the reset and believed it had never been built.
  * It had: `.workflow-restart-button` in the sidebar on every workflow step, plus

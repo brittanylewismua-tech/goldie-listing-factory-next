@@ -1223,8 +1223,8 @@ test("D203: cross-screen alignment and destructive-action faults are fixed", asy
   // Permanent delete was 9px underlined text 14px under the primary button.
   assert.match(css, /\.remove-batch\{[^}]*font-size:11px!important/);
   assert.match(css, /\.remove-batch\{[^}]*margin-top:14px!important/);
-  // Legacy warm brown at 9px, 2.8:1.
-  assert.match(css, /\.individual-size-guide small\{color:#654362!important;font-size:10px!important\}/);
+  // Legacy warm brown at 9px, 2.8:1; the unified photo workspace owns a readable caption.
+  assert.match(css, /\.listing-photo-workspace \.individual-size-guide small\{color:var\(--lf-muted\);font-size:12px\}/);
 
   // A batch's first initial is not information — "0 las vegas..." rendered "0".
   assert.doesNotMatch(batches, /display_name\.slice\(0,1\)\.toUpperCase\(\)/, "no initial-as-thumbnail");
