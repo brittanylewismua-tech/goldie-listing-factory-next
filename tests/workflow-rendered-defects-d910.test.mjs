@@ -70,6 +70,13 @@ test("D975: restored batches refresh the full product catalogue before color rev
   assert.match(app,/async function refreshRestoredTemplate[\s\S]*?setTemplateDetails\(current=>current\?\.id&&current\.id!==result\.product!\.id\?current:\{\.\.\.current,\.\.\.result\.product!\}\)/);
 });
 
+test("D976: every color carries its own Printify variant ids into the rendered panel",()=>{
+  assert.match(app,/type ProductColor=\{id:number;ids\?:number\[\];variantIds\?:number\[\]/);
+  assert.match(app,/color\.variantIds\?\.length\?new Set\(color\.variantIds\):printifyVariantIdsForColor/);
+  const route=readFileSync(new URL("../app/api/printify/route.ts",import.meta.url),"utf8");
+  assert.match(route,/groupProductColors[\s\S]{0,300}variantIds:selectableVariants\.filter/);
+});
+
 test("D917: restored drafts recover variant metadata from their saved Printify URLs",()=>{
   const saved=[
     "https://images.printify.com/mockup/6a977424f8329d96f40c1205/12100/92570/front-dark.jpg?camera_label=front",

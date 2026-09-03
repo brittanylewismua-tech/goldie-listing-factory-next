@@ -104,7 +104,7 @@ type EtsyDetails={category:string;taxonomyId?:number;properties?:EtsyPropertySel
 type ArtworkVersion = { id:string;name:string;size:number;file:File;previewUrl:string;side:string;colorIds:number[];productIds?:string[];ownerProductId?:string;originalUnavailable?:boolean;width?:number;height?:number;visibleBounds?:VisibleBounds;hasTransparency?:boolean;paddingStatus?:"checking"|"trimmed"|"full" };
 type DesignFile = { name: string; size: number; id: string; file: File; previewUrl: string; originalUnavailable?:boolean; title: string; tags: string[]; titleWarning?:string;titleError?:string;contentHash?:string; blurb?:string; descriptionOverride?:string; sizeGuideName?:string; width?: number; height?: number; visibleBounds?:VisibleBounds; hasTransparency?:boolean; paddingStatus?:"checking"|"trimmed"|"full";artworkVersions?:ArtworkVersion[];etsy?:EtsyDetails;etsyError?:string };
 type ProductVariant={id:number;title:string;cost:number;templatePrice:number;shipping?:number|null;options?:number[];colorId?:number|null;sizeId?:number|null;templateEnabled?:boolean};
-type ProductColor={id:number;ids?:number[];title:string;swatch:string;available:boolean;templateEnabled:boolean};
+type ProductColor={id:number;ids?:number[];variantIds?:number[];title:string;swatch:string;available:boolean;templateEnabled:boolean};
 type ProductSize={id:number;title:string;available:boolean;templateEnabled:boolean};
 type InternationalShippingRate={key:string;label:string;primary:number;additional:number};
 type EditableInternationalShippingRate={key:string;label:string;primary:string;additional:string};
@@ -508,7 +508,7 @@ function DraftColorSelector({product,drafts,selected,saving,onChange,onArtworkCh
   useEffect(()=>{if(draft?.id&&!activeDraft)setActiveDraft(draft.id)},[draft?.id,activeDraft]);
   if(!colors.length||!draft)return null;
   const idsFor=(color:ProductColor)=>[...new Set([color.id,...(color.ids||[])])];
-  const variantIdsFor=(color:ProductColor)=>printifyVariantIdsForColor(product.variants,idsFor(color));
+  const variantIdsFor=(color:ProductColor)=>color.variantIds?.length?new Set(color.variantIds):printifyVariantIdsForColor(product.variants,idsFor(color));
   const imageFor=(color:ProductColor)=>{
     const variants=variantIdsFor(color);
     return printifyMockupForColor(draft.printifyImageDetails?.length?draft.printifyImageDetails:printifyMockupDetails(draft.printifyImages),variants)
