@@ -5,6 +5,7 @@ import { readFile } from "node:fs/promises";
 const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
 const stage = await readFile(new URL("../app/api/printify/stage/route.ts", import.meta.url), "utf8");
 const drafts = await readFile(new URL("../app/api/printify/drafts/route.ts", import.meta.url), "utf8");
+const intelligence = await readFile(new URL("../app/api/listing-intelligence/route.ts", import.meta.url), "utf8");
 
 test("an HTML upload response cannot be misreported as a bad Printify token", () => {
   assert.doesNotMatch(app, /\/401\|token\|unauthorized\|not accept\/i/);
@@ -31,4 +32,10 @@ test("large staged artwork reaches Printify by short-lived URL, not base64", () 
 test("credential guidance is reserved for credential-shaped failures", () => {
   assert.match(app, /expired\|invalid\|revoked/);
   assert.match(app, /token\\s\+\(\?:was/);
+});
+
+test("visual-analysis downtime cannot block manual listing completion", () => {
+  assert.match(intelligence, /function reviewableCategory/);
+  assert.match(intelligence, /if\(!response\.ok\)return NextResponse\.json\(\{details:/);
+  assert.match(intelligence, /confidence:\"review\"/);
 });

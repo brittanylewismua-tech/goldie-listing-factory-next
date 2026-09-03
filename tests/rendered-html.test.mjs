@@ -539,11 +539,12 @@ test("retries Printify remote-artwork download interruptions before failing the 
   assert.match(drafts, /after three automatic retries/);
 });
 
-test("sends optimized staged artwork directly to Printify", async () => {
+test("sends optimized staged artwork to Printify by a protected URL", async () => {
   const route = await readFile(new URL("../app/api/printify/drafts/route.ts", import.meta.url), "utf8");
   assert.match(route, /ARTWORK\?\.get\(artwork\.stagedId\)/);
-  assert.match(route, /contents: await artworkContents/);
-  assert.match(route, /file_name: source\.fileName, contents: source\.contents/);
+  assert.match(route, /signedArtworkUrl\(requestOrigin, artwork\.stagedId, artworkSecret\)/);
+  assert.match(route, /file_name: source\.fileName, url: source\.url/);
+  assert.doesNotMatch(route, /file_name: source\.fileName, contents: source\.contents/);
   assert.match(route, /for \(const artwork of requestedArtworks\)/, "every colour or print-side asset is ownership-checked and uploaded");
 });
 
@@ -587,7 +588,8 @@ test("validates and isolates staged artwork without decoding or buffering it", a
     readFile(new URL("../app/api/printify/drafts/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/printify/token-crypto.ts", import.meta.url), "utf8"),
   ]);
-  assert.match(stage, /request\.body\.tee\(\)/);
+  assert.doesNotMatch(stage, /request\.body\.tee\(\)/);
+  assert.match(stage, /new FixedLengthStream\(contentLength\)/);
   assert.match(stage, /validateImageHeader/);
   assert.doesNotMatch(stage, /request\.arrayBuffer\(\)/);
   assert.match(stage, /customMetadata: \{ owner: user\.userId/);
