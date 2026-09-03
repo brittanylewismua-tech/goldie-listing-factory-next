@@ -860,7 +860,12 @@ function friendlyUploadError(error: unknown) {
   if (/failed to fetch|networkerror|load failed|secure artwork delivery|temporarily unavailable/i.test(message)) return withReference("The upload connection was interrupted. Printify still could not receive this design after several attempts. Retry it when the batch finishes.");
   if (/request took too long|still completing this exact draft/i.test(message)) return withReference("This draft took longer than the safe waiting period. Retrying will recover the same draft instead of creating a duplicate.");
   if (/batch session expired/i.test(message)) return withReference("The protected batch session expired. Load the same Printify template again; your selected files will stay on this page.");
-  if (/401|token|unauthorized|not accept/i.test(message)) return withReference("Printify rejected the saved connection. Disconnect Printify, create a new token with all scopes, and reconnect.");
+  /* "Unexpected token '<'" is the browser's JSON-parser error for an HTML
+     response from an edge/proxy.  Matching the bare word `token` sent that
+     upload failure down the credentials branch and told the seller to replace
+     a perfectly valid Printify connection.  Only credential-shaped language
+     belongs here. */
+  if (/\b(?:401|403|unauthorized)\b|\b(?:expired|invalid|revoked)\s+(?:access\s+)?token\b|token\s+(?:was\s+)?(?:rejected|not accepted)/i.test(message)) return withReference("Printify rejected the saved connection. Disconnect Printify, create a new token with all scopes, and reconnect.");
   if (/template product was not found|not found in the connected Printify/i.test(message)) return withReference("This template belongs to a different Printify account or shop than the connected token.");
   if (/8150|validation failed|print_areas|placeholder/i.test(message)) return withReference("Printify rejected this template’s print-area setup. Reload the template; if it continues, use a freshly saved copy of the Printify product.");
   if (/429|longer than expected|rate limit/i.test(message)) return withReference("Printify is temporarily limiting requests. Retry this design when the batch finishes.");
@@ -3855,7 +3860,12 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
           headers: { "Content-Type": blob.type || (/\.png$/i.test(fileName) ? "image/png" : "image/jpeg") },
           body: blob,
         }, 90000);
-        const result = await response.json() as { stagedId?: string; error?: string };
+        const responseType=response.headers.get("content-type")||"";
+        const result = /application\/json/i.test(responseType)
+          ? await response.json() as { stagedId?: string; error?: string }
+          : {error:response.status===413
+            ? "This design is too large for the secure upload route. Export an optimized PNG or JPG under 20 MB without changing its pixel dimensions."
+            : `Secure artwork delivery returned HTTP ${response.status} instead of JSON.`};
         if (response.ok && result.stagedId) return { stagedId: result.stagedId, reference };
         lastError = result.error || lastError;
         if (response.status >= 400 && response.status < 500 && response.status !== 429) break;
