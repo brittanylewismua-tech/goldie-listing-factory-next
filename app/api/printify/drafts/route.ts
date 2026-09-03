@@ -216,12 +216,12 @@ async function handlePOST(request: Request) {
     const finalVariantIds=(body.selectedVariantIds||[]).filter(id=>template.variants.some(variant=>variant.id===id));
     const enabledForCreation=creationVariantIds(finalVariantIds,body.mockupVariantIds||[]);
     const creationPrintAreas=expandPrintAreasForPreview(template.print_areas,body.mockupVariantSources||{});
-    const productBody = () => JSON.stringify({
-        title: title || "Untitled design",
+    const productBody = (variantIds=enabledForCreation,previewOnly=false) => JSON.stringify({
+        title: previewOnly?`Preview — ${title || "Untitled design"}`:(title || "Untitled design"),
         description: body.description ?? template.description ?? "",
         blueprint_id: template.blueprint_id,
         print_provider_id: template.print_provider_id,
-        variants: template.variants.map(({ id, price, cost, is_enabled }) => {const approved=Number(body.variantPrices?.[String(id)]);const calculated=recommendedPrice(cost ?? price,body.pricing);const finalPrice=Number.isInteger(approved)&&approved>=Number(cost??price)&&approved<=1000000?approved:calculated;const selected=enabledForCreation.length?enabledForCreation.includes(id):is_enabled;return { id, price:finalPrice, is_enabled:selected }}),
+        variants: template.variants.map(({ id, price, cost, is_enabled }) => {const approved=Number(body.variantPrices?.[String(id)]);const calculated=recommendedPrice(cost ?? price,body.pricing);const finalPrice=Number.isInteger(approved)&&approved>=Number(cost??price)&&approved<=1000000?approved:calculated;const selected=variantIds.length?variantIds.includes(id):is_enabled;return { id, price:finalPrice, is_enabled:selected }}),
         tags: (body.tags ?? []).map(tag => String(tag).trim()).filter(Boolean).slice(0, 13),
         external:{shipping_template_id:selectedShippingTemplateId},
         sales_channel_properties:{free_shipping:Boolean(template.freeShipping)},
@@ -259,22 +259,27 @@ async function handlePOST(request: Request) {
       try{
         for(const chunk of previewVariantChunks(previewVariantIds)){
           if(exactMockupCoverageComplete(previewImages,chunk))continue;
-          const previewVariants=restoredVariants(resolvedProduct.variants||template.variants,chunk).map(variant=>{
-            const source=(resolvedProduct.variants||template.variants).find(item=>item.id===variant.id);
-            return {...variant,price:Number(source?.price||template.variants.find(item=>item.id===variant.id)?.price||0)};
-          });
-          const rotated=await api<CreatedProduct>(`/shops/${shop.id}/products/${created.id}.json`,token,{method:"PUT",body:JSON.stringify({variants:previewVariants})});
-          let chunkImages:NonNullable<CreatedProduct["images"]>=rotated.images||[];
-          for(const wait of PREVIEW_MOCKUP_WAITS_MS){
-            if(exactMockupCoverageComplete(chunkImages,chunk))break;
-            await new Promise(resolve=>setTimeout(resolve,wait));
-            const loaded=await api<CreatedProduct>(`/shops/${shop.id}/products/${created.id}.json`,token);
-            resolvedProduct=loaded;
-            chunkImages=loaded.images||[];
-            if(exactMockupCoverageComplete(chunkImages,chunk))break;
+          let previewProduct:CreatedProduct|undefined;
+          try{
+            /* Updating enabled variants does not make Printify regenerate its
+               cached mockup window. A private, immediately-deleted helper
+               product does: each helper asks for at most twenty colours and
+               supplies real design-on-product images for the chooser. */
+            previewProduct=await createProductWithImageRetries<CreatedProduct>({
+              path:`/shops/${shop.id}/products.json`,token,body:()=>productBody(chunk,true),
+            });
+            let chunkImages=previewProduct.images||[];
+            for(const wait of PREVIEW_MOCKUP_WAITS_MS.slice(0,4)){
+              if(exactMockupCoverageComplete(chunkImages,chunk))break;
+              await new Promise(resolve=>setTimeout(resolve,wait));
+              const loaded=await api<CreatedProduct>(`/shops/${shop.id}/products/${previewProduct.id}.json`,token);
+              chunkImages=loaded.images||[];
+            }
+            if(!exactMockupCoverageComplete(chunkImages,chunk))throw new Error("Printify did not finish generating every product color preview. No draft was kept; try again.");
+            previewImages=mergeMockupImages(previewImages,chunkImages);
+          }finally{
+            if(previewProduct?.id)await fetch(`${PRINTIFY_API}/shops/${shop.id}/products/${previewProduct.id}.json`,{method:"DELETE",headers:{Authorization:`Bearer ${token}`,"User-Agent":"Goldie-Listing-Factory"}}).catch(()=>undefined);
           }
-          if(!exactMockupCoverageComplete(chunkImages,chunk))throw new Error("Printify did not finish generating every product color preview. No draft was kept; try again.");
-          previewImages=mergeMockupImages(previewImages,chunkImages);
         }
         const restored=restoredVariants(resolvedProduct.variants||template.variants,finalVariantIds).map(variant=>{
           const source=(resolvedProduct.variants||template.variants).find(item=>item.id===variant.id);

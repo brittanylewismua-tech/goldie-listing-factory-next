@@ -44,7 +44,7 @@ test("D988 rotates through Printify's twenty-image mockup window",()=>{
   assert.deepEqual(mergeMockupImages(first,first,second),[first[0],second[0]]);
 });
 
-test("D989 gives Printify's asynchronous second mockup window a bounded minute",()=>{
+test("D989 gives Printify's asynchronous mockup window a bounded minute",()=>{
   assert.deepEqual(PREVIEW_MOCKUP_WAITS_MS,[2000,4000,8000,16000,30000]);
   assert.equal(PREVIEW_MOCKUP_WAITS_MS.reduce((sum,wait)=>sum+wait,0),60000);
 });
@@ -60,6 +60,8 @@ test("D984 sends the broad preview set but keeps the seller selection separate",
   assert.match(route,/restoredVariants\(resolvedProduct\.variants\|\|template\.variants,finalVariantIds\)/);
   assert.match(route,/previewVariantChunks\(previewVariantIds\)/);
   assert.match(route,/exactMockupCoverageComplete\(chunkImages,chunk\)/);
+  assert.match(route,/body:\(\)=>productBody\(chunk,true\)/);
+  assert.match(route,/previewProduct\?\.id[\s\S]{0,260}method:"DELETE"/);
   assert.match(route,/catch\(error\)[\s\S]{0,350}method:"DELETE"/);
   assert.match(route,/No draft was kept; try again/);
 });

@@ -12,7 +12,7 @@ test("D904: the saved template supplies the initial draft variants",()=>{
   assert.match(app,/templateSizes=.*templateEnabled/);
   assert.match(app,/rememberedSizes\.length\?rememberedSizes:sessionSizeIds\.length\?sessionSizeIds:templateSizes/);
   assert.match(app,/selectedVariantIds:pricedVariants\.map\(variant=>variant\.id\)/);
-  assert.match(create,/enabledForCreation\.length\?enabledForCreation\.includes\(id\):is_enabled/);
+  assert.match(create,/variantIds\.length\?variantIds\.includes\(id\):is_enabled/);
   assert.match(create,/restoredVariants\(resolvedProduct\.variants\|\|template\.variants,finalVariantIds\)/);
 });
 

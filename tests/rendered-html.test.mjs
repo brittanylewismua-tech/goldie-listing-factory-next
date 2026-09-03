@@ -1751,7 +1751,7 @@ test("chooses exact available Printify colors per batch and remembers optional d
   assert.match(printify,/enabledOtherIds/ /* D164: renamed — size is now selectable, so only the OTHER axes stay gated */);
   assert.match(printify,/availableColorIds/);
   assert.match(printify,/templateEnabled:Boolean\(variant\.is_enabled\)/);
-  assert.match(drafts,/enabledForCreation\.includes\(id\)/);
+  assert.match(drafts,/variantIds\.includes\(id\)/);
   assert.match(recipes,/defaultColorIds/);
   assert.match(css,/\.product-color-selector/);
 });
