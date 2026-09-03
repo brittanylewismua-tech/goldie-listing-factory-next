@@ -17,3 +17,11 @@ test("D1004: runtime fallbacks cannot send customers back to ChatGPT hosting", a
   assert.match(files[2], /url\.origin === new URL\(request\.url\)\.origin/);
   assert.match(files[3], /NextResponse\.redirect\(new URL\(returnTo, url\.origin\)\)/);
 });
+
+test("D1006: the production domain terminates on the Cloudflare Worker", async () => {
+  const config = await readFile(new URL("../wrangler.staging.jsonc", import.meta.url), "utf8");
+  assert.match(config, /"pattern": "thegoldiesuite\.com", "custom_domain": true/);
+  assert.match(config, /"GOLDIE_SITE_URL": "https:\/\/thegoldiesuite\.com"/);
+  assert.match(config, /"ETSY_REDIRECT_URI": "https:\/\/thegoldiesuite\.com\/api\/etsy\/callback"/);
+  assert.doesNotMatch(config, /chatgpt\.site/);
+});
