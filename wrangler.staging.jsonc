@@ -27,5 +27,11 @@
     }
   ],
   "images": { "binding": "IMAGES" },
+  "vars": {
+    "GOLDIE_SITE_URL": "https://goldie-listing-factory-staging.beawolfbiz.workers.dev",
+    "ETSY_REDIRECT_URI": "https://goldie-listing-factory-staging.beawolfbiz.workers.dev/api/etsy/callback",
+    "STRIPE_GOLDIE_PRICE_ID": "price_1U5VndGT9xM3GmXOsLB36B4q",
+    "STRIPE_SCALE_PRICE_ID": "price_1U5VnyGT9xM3GmXOdrR7D5BF"
+  },
   "observability": { "enabled": true }
 }

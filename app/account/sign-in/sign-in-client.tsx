@@ -31,8 +31,7 @@ export default function SignInClient({ returnTo }: { returnTo: string }) {
     <button className="account-provider" type="button" onClick={() => void googleSignIn()} disabled={Boolean(busy)}><b className="google-mark">G</b><span>{busy === "google" ? "Opening Google…" : "Continue with Google"}</span></button>
     <div className="account-divider"><span>or</span></div>
     <form onSubmit={emailSignIn}><label htmlFor="account-email">Email address</label><input id="account-email" type="email" autoComplete="email" required value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@example.com" /><button className="account-primary" disabled={Boolean(busy)}>{busy === "email" ? "Sending your link…" : "Email me a sign-in link"}</button></form>
-    <a className="account-chatgpt" href={`/signin-with-chatgpt?return_to=${encodeURIComponent(returnTo)}`}>Continue with ChatGPT</a>
     {message && <p className="account-message" role="status">{message}</p>}{error && <p className="account-error" role="alert">{error}</p>}
-    <p className="account-fine">No password to remember. Email sign-in uses a secure, one-time link.</p>
+    <p className="account-fine">No password to remember. Email sign-in uses a secure, one-time link.</p>{/* account-chatgpt retired with platform authentication */}
   </section><footer className="account-footer" style={{position:"static",width:"auto",minHeight:0,margin:"22px 0 0",padding:0,border:0,borderRadius:0,background:"transparent",boxShadow:"none",fontSize:11,lineHeight:1.4,textAlign:"center"}}>Powered by Goldie AI · © 2026 Be A Wolf Biz</footer></main>;
 }

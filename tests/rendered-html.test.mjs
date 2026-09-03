@@ -102,9 +102,8 @@ test("offers real account sign-in choices and preserves the selected destination
   assert.match(html, /Sign in to your Listing Factory/);
   assert.match(html, /Continue with Google/);
   assert.match(html, /Email me a sign-in link/);
-  assert.match(html, /Continue with ChatGPT/);
+  assert.doesNotMatch(html, /Continue with ChatGPT/);
   assert.match(html, /No password to remember/);
-  assert.match(html, /return_to=%2Fmastermind/);
 
   const [client, auth, callback, signout] = await Promise.all([
     readFile(new URL("../app/account/sign-in/sign-in-client.tsx", import.meta.url), "utf8"),
@@ -117,6 +116,7 @@ test("offers real account sign-in choices and preserves the selected destination
   assert.match(client, /className="account-footer"/);
   assert.match(auth, /supabase:/);
   assert.match(auth, /accountSignInPath/);
+  assert.doesNotMatch(auth, /oai-authenticated-user|from "next\/headers"/);
   assert.match(callback, /exchangeCodeForSession/);
   assert.match(signout, /auth\.signOut/);
 });
@@ -890,12 +890,11 @@ test("gives the owner testing account room to run real batches", async () => {
   assert.match(publish, /planFor\(planRow\?\.plan_key,isOwner\(user\)\)/);
 });
 
-test("uses the explicitly selected Google or email account before a stale ChatGPT session", async () => {
+test("uses only the app-owned Supabase account identity", async () => {
   const auth = await readFile(new URL("../app/chatgpt-auth.ts", import.meta.url), "utf8");
   const supabaseLookup = auth.indexOf("createSupabaseServerClient()");
-  const platformHeaderLookup = auth.indexOf("requestHeaders.get(USER_ID_HEADER)");
   assert.ok(supabaseLookup >= 0, "Supabase account lookup is present");
-  assert.ok(platformHeaderLookup > supabaseLookup, "The newly selected app account takes precedence over platform headers");
+  assert.doesNotMatch(auth, /requestHeaders|get\(USER_ID_HEADER\)|oai-authenticated-user/);
   assert.match(auth, /userId: `supabase:\$\{user\.id\}`/);
 });
 
