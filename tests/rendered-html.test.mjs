@@ -5034,8 +5034,8 @@ test("opening a task shows the work, not a list of listings to pick from — D55
      What she rejected was being made to CHOOSE a listing before she could work:
      one visible at a time, three clicks to drag one photo. Those guards are above
      and they stay. What she asked for and approved in the D687 preview is
-     different - every listing present at once, several open at once, and the
-     photo panels open on arrival.
+     different - every listing remains present and the current listing opens on
+     arrival, with Previous/Next at its foot instead of a twenty-card wall.
 
      The distinction is the job, not the panel. Dragging a photo is direct
      manipulation and has to be open; reading a title is scanning, and twenty
@@ -5043,8 +5043,8 @@ test("opening a task shows the work, not a list of listings to pick from — D55
      defaultOpen and step 3's text panels do not. If that ever inverts, this
      fails. */
   assert.match(app, /const listingWorkRows=\(work:/);
-  assert.match(app, /return <ListingRows defaultOpen rows=\{usable\.map/,
-    "photo panels open on arrival - dragging is not scanning");
+  assert.match(app, /return <ListingRows defaultOpen singleOpen rows=\{usable\.map/,
+    "the first photo panel opens on arrival and only one working surface opens at a time");
   /* D709 · Two passes, not three. Uploading photos and arranging them were
      separate panels, so the batch's listings were walked twice to finish one
      job. They are one panel now, which is the whole point of the merge - the

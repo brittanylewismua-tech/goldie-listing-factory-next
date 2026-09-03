@@ -2889,7 +2889,7 @@ setSavedRevision(current=>current+1);}catch(error){stopWith("This default was no
     const photoFlags=({count}:{count:number}):ListingFlag[]=>count?[]:[{tone:"attention",label:"No photos yet"}];
     const listingWorkRows=(work:(entry:{draft:typeof drafts[number];design:DesignFile;selectedImages:number[];count:number})=>ReactNode,flags?:(entry:{draft:typeof drafts[number];design:DesignFile;selectedImages:number[];count:number})=>ListingFlag[])=>{
       const usable=listings.filter(({draft,design})=>draft.status==="Created"&&design&&draft.id);
-      return <ListingRows defaultOpen rows={usable.map(({draft,design,selectedImages})=>{
+      return <ListingRows defaultOpen singleOpen rows={usable.map(({draft,design,selectedImages})=>{
         const count=selectedImages.length+(preparedMockupCounts[draft.id||""]||0);
         const entry={draft,design:design as DesignFile,selectedImages,count};
         return {

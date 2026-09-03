@@ -42,6 +42,7 @@ export type ListingRow = {
 export default function ListingRows({
   rows,
   defaultOpen = false,
+  singleOpen = false,
   readyLabel = "Ready",
   noun = "listing",
 }: {
@@ -51,11 +52,12 @@ export default function ListingRows({
      right - dragging is direct manipulation and has to be open. Reading a title
      is scanning, and scanning wants density. The job decides, not the component. */
   defaultOpen?: boolean;
+  singleOpen?: boolean;
   readyLabel?: string;
   noun?: string;
 }) {
   const [open, setOpen] = useState<Set<string>>(
-    () => new Set(defaultOpen ? rows.map(row => row.key) : []),
+    () => new Set(defaultOpen ? (singleOpen ? rows.slice(0, 1).map(row => row.key) : rows.map(row => row.key)) : []),
   );
 
   const flagged = useMemo(
@@ -66,6 +68,7 @@ export default function ListingRows({
 
   const toggle = (key: string) =>
     setOpen(current => {
+      if (singleOpen) return current.has(key) ? new Set() : new Set([key]);
       const next = new Set(current);
       if (next.has(key)) next.delete(key);
       else next.add(key);
@@ -90,7 +93,7 @@ export default function ListingRows({
             · {rows.length - flagged.length} {readyLabel.toLowerCase()}
           </span>
         </div>
-        <div className="listing-rows-actions">
+        {!singleOpen && <div className="listing-rows-actions">
           {/* Expand all changes the VIEW. It is not an action on her listings, so
               it does not get to look like one. */}
           <button
@@ -116,7 +119,7 @@ export default function ListingRows({
               Review {flagged.length} flagged
             </button>
           )}
-        </div>
+        </div>}
       </div>
 
       {rows.map((row, index) => {
@@ -181,9 +184,13 @@ export default function ListingRows({
                   ends. Clicking the body itself is deliberately NOT a close -
                   the body is a form, and a stray click while editing a title
                   must never throw the panel shut. */}
-              <button type="button" className="listing-card-done" onClick={() => toggle(row.key)}>
-                Close listing {index + 1}
-              </button>
+              {singleOpen ? <div className="listing-card-pagination">
+                <button type="button" disabled={index === 0} onClick={() => setOpen(new Set([rows[index - 1].key]))}>← Previous listing</button>
+                <b>Listing {index + 1} of {rows.length}</b>
+                <button type="button" disabled={index === rows.length - 1} onClick={() => setOpen(new Set([rows[index + 1].key]))}>Next listing →</button>
+              </div> : <button type="button" className="listing-card-done" onClick={() => toggle(row.key)}>
+                  Close listing {index + 1}
+                </button>}
             </div>}
           </article>
         );

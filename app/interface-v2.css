@@ -3412,6 +3412,20 @@ html, body { background: var(--lf-paper); }
    stack of one-photo view groups. */
 .app-shell .listing-photo-workspace{display:grid;gap:20px;min-width:0}
 .app-shell .listing-photo-workspace>:not(:first-child){padding-top:18px;border-top:1px solid #e7dfe4}
+.app-shell .listing-photo-workspace .individual-size-guide{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:16px 18px;border:1px solid var(--lf-line);border-radius:10px;background:#fff}
+.app-shell .listing-photo-workspace .individual-size-guide>div{display:grid;gap:3px}
+.app-shell .listing-photo-workspace .individual-size-guide small{color:var(--lf-muted);font-size:12px}
+.app-shell .listing-photo-workspace .individual-size-guide>button{min-height:38px;padding:9px 15px;border:0;border-radius:8px;background:#111;color:#fff;font-weight:750;white-space:nowrap;cursor:pointer}
+.app-shell .listing-photo-workspace .listing-photo-order{display:grid;gap:12px;margin:0;padding:16px 0 0;border:0;border-top:1px solid var(--lf-line);border-radius:0;background:transparent}
+.app-shell .photo-order-heading{display:flex;align-items:baseline;justify-content:space-between;gap:16px}
+.app-shell .photo-order-heading>b{font-size:14px;color:var(--lf-ink)}
+.app-shell .photo-order-heading>small{color:var(--lf-muted);font-size:11px}
+.app-shell .listing-photo-workspace .photo-order-strip{grid-template-columns:repeat(4,minmax(0,1fr));align-items:start}
+.app-shell .listing-card-pagination{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:14px;margin-top:18px;padding-top:16px;border-top:1px solid var(--lf-line)}
+.app-shell .listing-card-pagination>b{text-align:center;font-size:12px;color:var(--lf-muted)}
+.app-shell .listing-card-pagination>button{min-height:38px;padding:9px 14px;border:1px solid var(--lf-line);border-radius:8px;background:#fff;color:var(--lf-ink);font-weight:750;cursor:pointer}
+.app-shell .listing-card-pagination>button:last-child{justify-self:end;background:#111;color:#fff;border-color:#111}
+.app-shell .listing-card-pagination>button:disabled{visibility:hidden}
 .app-shell .printify-all-images{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:10px!important}
 .app-shell .printify-all-images .printify-image-option{min-width:0}
 .app-shell .printify-more-toggle{margin-top:12px}
