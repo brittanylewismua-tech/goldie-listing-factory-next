@@ -61,7 +61,7 @@ export function siteOrigin(request?: Request) {
   const configured = billingRuntime().GOLDIE_SITE_URL?.replace(/\/$/, "");
   if (configured) return configured;
   if (request) return new URL(request.url).origin;
-  return "https://goldie-listing-factory-next.brittanylewismua.chatgpt.site";
+  throw new Error("GOLDIE_SITE_URL is not configured.");
 }
 
 export async function stripeRequest<T>(path: string, init: {method?: string; body?: URLSearchParams; idempotencyKey?:string} = {}) {

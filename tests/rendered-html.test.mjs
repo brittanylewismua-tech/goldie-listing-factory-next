@@ -1258,7 +1258,8 @@ test("connects Etsy with PKCE and finishes only the exact Printify-linked Etsy l
   assert.match(callback,/goldieSiteUrl/);
   assert.match(client,/grant_type:"refresh_token"/);
   assert.match(client,/ETSY_REDIRECT_URI/);
-  assert.match(client,/goldie-listing-factory-next\.brittanylewismua\.chatgpt\.site\/api\/etsy\/callback/);
+  assert.match(client,/ETSY_REDIRECT_URI is not configured/);
+  assert.doesNotMatch(client,/chatgpt\.site/);
   assert.match(client,/ETSY_API_SECRET/);
   /* D637 renamed this: it no longer WAITS, it takes a short bounded look and
      hands the item back to the queue if the id is not ready. */

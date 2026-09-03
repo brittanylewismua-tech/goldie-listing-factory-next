@@ -6,7 +6,7 @@ type Runtime={DB:D1Database;ETSY_API_KEY?:string;ETSY_API_SECRET?:string;ETSY_TO
 const runtime=()=>env as unknown as Runtime;
 const secret=()=>runtime().ETSY_TOKEN_KEY||runtime().PRINTIFY_TOKEN_KEY||"";
 export const apiKey=()=>{const value=runtime().ETSY_API_KEY?.trim();if(!value)throw new Error("Etsy API access is not configured yet.");return value};
-export const etsyRedirectUri=()=>runtime().ETSY_REDIRECT_URI?.trim()||"https://goldie-listing-factory-next.brittanylewismua.chatgpt.site/api/etsy/callback";
+export const etsyRedirectUri=()=>{const value=runtime().ETSY_REDIRECT_URI?.trim();if(!value)throw new Error("ETSY_REDIRECT_URI is not configured.");return value};
 export const goldieSiteUrl=()=>runtime().GOLDIE_SITE_URL?.trim().replace(/\/$/,"")||"https://thegoldiesuite.com";
 export const etsyApiCredential=()=>{const secretValue=runtime().ETSY_API_SECRET?.trim();if(!secretValue)throw new Error("Etsy API access is not configured yet.");return `${apiKey()}:${secretValue}`};
 const hourBucket=(date=new Date())=>date.toISOString().slice(0,13);
