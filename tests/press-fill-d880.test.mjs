@@ -65,7 +65,7 @@ test("working controls resolve to black rather than a flat pink face", () => {
   assert.match(workflowLock,/\.recipe-card \.recipe-tile \.recipe-use em\{[\s\S]*?background:#0d0b0c!important/);
   assert.match(workflowLock,/\.save-recipe,[\s\S]*?background:#0d0b0c!important/);
   assert.match(managementLock,/\.batch-row-actions button:first-child,[\s\S]*?background:#0d0b0c!important/);
-  assert.match(managementLock,/box-shadow:4px 4px 0 #ff4fc3!important/);
+  assert.match(managementLock,/box-shadow:none!important/);
 });
 
 test("destructive presses are still red, not repainted pink", () => {
@@ -73,15 +73,17 @@ test("destructive presses are still red, not repainted pink", () => {
   assert.match(clarity, /\.confirm-action-go\.destructive\{[^}]*background:#a32c4c/);
 });
 
-test("D945: workflow actions use a black face with the pink brand offset",()=>{
+test("D954: internal workflow actions use a flat black face",()=>{
   const css=readFileSync(new URL("interface-v2.css",dir),"utf8");
   const block=css.slice(css.indexOf("/* D945"));
   for(const selector of [
     ".launch-button",".workflow-next",".save-recipe",".publish-all-button",
     ".pricing-approval-button",".actual-cost-review button",".support-chat-form button"
   ]) assert.ok(block.includes(selector),`${selector} must use the shared primary-action treatment`);
-  assert.match(block,/background:#0d0b0c!important;\s*color:#fff!important;\s*box-shadow:4px 4px 0 var\(--lf-pink\)!important/);
-  assert.match(block,/\.recipe-card \.recipe-tile \.recipe-use em\{[\s\S]*?background:#0d0b0c!important;[\s\S]*?box-shadow:4px 4px 0 var\(--lf-pink\)!important/);
+  assert.match(block,/background:#0d0b0c!important;\s*color:#fff!important;\s*box-shadow:none!important/);
+  assert.match(block,/\.recipe-card \.recipe-tile \.recipe-use em\{[\s\S]*?background:#0d0b0c!important;[\s\S]*?box-shadow:none!important/);
+  assert.match(css,/\.app-shell \.workflow-next\{\s*box-shadow:4px 4px 0 var\(--lf-pink\)!important/);
+  assert.match(css,/\.blocking-modal \.publish-confirm-actions button,[\s\S]*?box-shadow:none!important/);
 });
 
 test("D945: disabled actions remain visibly disabled instead of hot pink",()=>{

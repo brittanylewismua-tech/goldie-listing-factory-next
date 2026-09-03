@@ -31,5 +31,5 @@ test("D946: opening the product library hides the previous task instead of stack
 });
 
 test("D948: save-for-later uses the same primary action as the workflow",()=>{
-  assert.match(css,/\.publish-confirm \.save-draft-confirm\{[\s\S]*background:#0d0b0c!important;[\s\S]*color:#fff!important;[\s\S]*box-shadow:4px 4px 0 var\(--lf-pink\)!important/);
+  assert.match(css,/\.publish-confirm \.save-draft-confirm\{[\s\S]*background:#0d0b0c!important;[\s\S]*color:#fff!important;[\s\S]*box-shadow:none!important/);
 });

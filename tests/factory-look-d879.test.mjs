@@ -31,5 +31,5 @@ test("D879: retired aubergine gradients cannot return on factory or management a
 test("D879: the blocking dialog uses the factory action language", async () => {
   const css = await read("app/interface-v2.css");
   assert.match(css, /\.blocking-modal \.publish-confirm-icon\{background:var\(--lf-pink\);color:#171014\}/);
-  assert.match(css, /\.blocking-modal \.publish-confirm-actions button\{border-radius:8px;background:#0d0b0c;color:#fff;box-shadow:4px 4px 0 var\(--lf-pink\)\}/);
+  assert.match(css, /\.blocking-modal \.publish-confirm-actions button,[\s\S]*?box-shadow:none!important/);
 });

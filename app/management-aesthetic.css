@@ -84,7 +84,7 @@
   border-radius:8px!important;
   background:#0d0b0c!important;
   color:#fff!important;
-  box-shadow:4px 4px 0 #ff4fc3!important;
+  box-shadow:none!important;
   text-shadow:none!important;
 }
 :is(.management-page,.usage-page,.keyword-page,.mockupFactory,.operations-page) :is(

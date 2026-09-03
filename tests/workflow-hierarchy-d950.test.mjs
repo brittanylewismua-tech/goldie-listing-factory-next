@@ -29,6 +29,12 @@ test("D953: uploaded artwork outranks its filename",()=>{
   assert.match(lock,/\.design-artwork-primary b\{[\s\S]*?font:500 11px/);
 });
 
+test("D954: optional artwork actions are centered and intentionally spaced",()=>{
+  const css=readFileSync(new URL("../app/interface-v2.css",import.meta.url),"utf8");
+  assert.match(css,/\.artwork-version-tools>div\{[^}]*justify-content:center;[^}]*gap:16px;[^}]*margin-top:15px/);
+  assert.match(css,/\.artwork-version-tools label\.secondary-action\{border-color:#111;background:#111;color:#fff;box-shadow:none\}/);
+});
+
 test("D950: every workflow hero states only the immediate task",()=>{
   for(const copy of [
     "Complete each section from top to bottom.",

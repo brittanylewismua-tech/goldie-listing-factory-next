@@ -17,5 +17,5 @@ test("D949: upload choices read as controls and the work surface separates from 
   assert.match(app,/: "Add a folder"/);
   assert.match(app,/>Add individual images</);
   assert.match(css,/\.designs-step:not\(\.finish-mode\)\{background:#fff!important;border:1px solid #c9b8c2!important/);
-  assert.match(css,/\.browse-chip\{[^}]*background:#0d0b0c!important;color:#fff!important;box-shadow:3px 3px 0 #f52fb2!important/);
+  assert.match(css,/\.browse-chip\{[^}]*background:#0d0b0c!important;color:#fff!important;box-shadow:none!important/);
 });
