@@ -21,3 +21,13 @@ export function groupProductColors(values:RawProductColor[],availableIds:Set<num
 export function canonicalProductColorIds(options:ProductColorOption[]){
   return new Map(options.flatMap(color=>color.ids.map(id=>[id,color.id] as const)));
 }
+
+export function productColorVariantIds(color:ProductColorOption,variants:Array<{id:number;title?:string;options?:number[]}>,colorAxisIndex=0){
+  const wanted=color.title.trim().toLocaleLowerCase();
+  const named=variants.filter(variant=>(variant.title||"").split("/")[colorAxisIndex]?.trim().toLocaleLowerCase()===wanted);
+  /* The title identifies the colour axis without relying on option ids that can
+     collide with size/style ids. Unusual blueprints without usable titles keep
+     the raw-option compatibility fallback. */
+  const matches=named.length?named:variants.filter(variant=>(variant.options||[]).some(id=>color.ids.includes(id)));
+  return [...new Set(matches.map(variant=>variant.id))];
+}
