@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
 
 const app=readFileSync(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8");
+const clarity=readFileSync(new URL("../app/clarity-pass.css",import.meta.url),"utf8");
 
 test("D965: Step 2 renders one phase and one forward path",()=>{
   assert.match(app,/workflowStep==="designs"&&!complete/,
@@ -13,6 +14,11 @@ test("D965: Step 2 renders one phase and one forward path",()=>{
     "Step 2 must never describe forward movement as going back");
   assert.match(app,/\{!files\.length&&<>/,
     "the two large upload choices must collapse after files are selected");
+});
+
+test("D967: every expanded task closes with a usable control",()=>{
+  assert.match(clarity,/\.app-shell \.panel-collapse-foot\{[^}]*min-height:32px!important[^}]*padding:7px 12px!important[^}]*border:1px solid #d8ccd4!important/);
+  assert.doesNotMatch(clarity,/\.panel-collapse-foot\{[^}]*min-height:0/);
 });
 
 test("D965: finished costs and shipping live in the product task sequence",()=>{

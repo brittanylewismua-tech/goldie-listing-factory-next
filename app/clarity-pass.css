@@ -1897,7 +1897,7 @@ body{min-width:0}
 /* D384 - No arrow glyph, and the link centres under the panel it closes.
    The arrow read as a control of its own next to a text link, and a link
    hanging off the left edge of a centred panel looked unfinished. */
-.app-shell .panel-collapse-foot{display:block!important;width:auto!important;margin:14px auto 22px!important;min-height:0!important;padding:2px 0!important;border:0!important;border-radius:0!important;background:none!important;box-shadow:none!important;color:#5b304f!important;font-size:11px!important;font-weight:700!important;text-align:center!important;text-decoration:underline!important;text-underline-offset:3px!important;cursor:pointer!important}
+.app-shell .panel-collapse-foot{display:block!important;width:auto!important;margin:14px auto 22px!important;min-height:32px!important;padding:7px 12px!important;border:1px solid #d8ccd4!important;border-radius:8px!important;background:#fff!important;box-shadow:none!important;color:#3d2538!important;font-size:11px!important;font-weight:700!important;text-align:center!important;text-decoration:none!important;cursor:pointer!important}
 .app-shell .panel-collapse-foot:hover{
   background:none!important;color:#4c293f!important;text-decoration-thickness:2px!important;
 }
