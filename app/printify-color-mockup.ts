@@ -42,7 +42,20 @@ export function printifyMockupForColor(images:PrintifyMockupImage[]|undefined,va
      colour instead. */
   const seed=metadataMatch||pool[0];
   if(seed){
-    const derived=seed.src.replace(/(\/\d+\/)(\d+)(\/(?:front|back|chest)[^/?#]*)/i,`$1${ids[0]}$3`);
+    /* Printify's current CDN path is
+       /mockup/<product uuid>/<variant id>/<blueprint id>/front-dark.jpg.
+       The older replacement changed the last number (the blueprint), leaving
+       the variant untouched, so every unselected colour showed the same white
+       garment until a save returned fresh image metadata. Prefer the explicit
+       mockup shape; retain the shorter legacy shape as a fallback. */
+    const current=seed.src.replace(
+      /(\/mockup\/[^/]+\/)(\d+)(\/\d+\/(?:front|back|chest)[^/?#]*)/i,
+      `$1${ids[0]}$3`
+    );
+    const derived=current!==seed.src?current:seed.src.replace(
+      /(\/mockup\/[^/]+\/)(\d+)(\/(?:front|back|chest)[^/?#]*)/i,
+      `$1${ids[0]}$3`
+    );
     if(derived!==seed.src)return derived;
   }
   return metadataMatch?.src||"";

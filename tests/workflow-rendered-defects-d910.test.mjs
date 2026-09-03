@@ -22,6 +22,11 @@ test("D910: a broad Printify fallback cannot hide color-specific mockups",()=>{
   assert.equal(printifyMockupForColor(images,[21,22]),images[2].src);
 });
 
+test("D969: a current Printify CDN fallback changes the variant, not the blueprint",()=>{
+  const broad=[{src:"https://images.printify.com/mockup/6a977424f8329d96f40c1205/12100/92570/front-dark.jpg?camera_label=front",variantIds:[12100,12124],position:"front"}];
+  assert.equal(printifyMockupForColor(broad,[12124]),"https://images.printify.com/mockup/6a977424f8329d96f40c1205/12124/92570/front-dark.jpg?camera_label=front");
+});
+
 test("D910: footer controls remain visible and aligned",()=>{
   assert.match(css,/workflow-footer-actions>\.workflow-back\{[\s\S]*?height:44px!important/);
   assert.match(css,/factory-footer\.in-bar>\*:not\(small\):disabled\{[\s\S]*?opacity:1/);
