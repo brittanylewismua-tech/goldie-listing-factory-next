@@ -21,16 +21,34 @@ function imageType(fileName: string, supplied: string) {
 async function validateImageHeader(stream: ReadableStream, contentType: string) {
   const reader = stream.getReader();
   const header: number[] = [];
+  const chunks: Uint8Array[] = [];
   while (header.length < 16) {
     const next = await reader.read();
     if (next.done) break;
+    chunks.push(next.value);
     header.push(...next.value.slice(0, 16 - header.length));
   }
-  await reader.cancel();
   const bytes = Uint8Array.from(header);
   const png = bytes.length >= 8 && [137, 80, 78, 71, 13, 10, 26, 10].every((value, index) => bytes[index] === value);
   const jpeg = bytes.length >= 3 && bytes[0] === 255 && bytes[1] === 216 && bytes[2] === 255;
-  if ((contentType === "image/png" && !png) || (contentType === "image/jpeg" && !jpeg)) throw new Error("The file contents do not match a valid PNG or JPG image.");
+  if ((contentType === "image/png" && !png) || (contentType === "image/jpeg" && !jpeg)) {
+    await reader.cancel();
+    throw new Error("The file contents do not match a valid PNG or JPG image.");
+  }
+  /* Return the bytes already inspected followed by the untouched remainder.
+     `ReadableStream.tee()` let the storage branch buffer a full 20–100 MB PNG
+     while the validation branch read only sixteen bytes, needlessly doubling
+     memory at the worker boundary.  A single reconstructed stream validates
+     the same header without copying the upload. */
+  let index=0;
+  return new ReadableStream<Uint8Array>({
+    async pull(controller) {
+      if(index<chunks.length){controller.enqueue(chunks[index++]);return;}
+      const next=await reader.read();
+      if(next.done)controller.close();else controller.enqueue(next.value);
+    },
+    cancel(reason){return reader.cancel(reason);},
+  });
 }
 
 async function removeExpiredArtwork(bucket: ArtworkBucket) {
@@ -59,8 +77,7 @@ export async function POST(request: Request) {
   const stagedId = `stage_${expires}_${crypto.randomUUID()}-${fileName.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
   try {
     if (!request.body) throw new Error("The uploaded file was empty.");
-    const [validationStream, storageStream] = request.body.tee();
-    await validateImageHeader(validationStream, contentType);
+    const storageStream = await validateImageHeader(request.body, contentType);
     await removeExpiredArtwork(artwork);
     await artwork.put(stagedId, storageStream, {
       httpMetadata: { contentType },
