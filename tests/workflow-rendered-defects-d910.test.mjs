@@ -23,9 +23,9 @@ test("D910: a broad Printify fallback cannot hide color-specific mockups",()=>{
   assert.equal(printifyMockupForColor(images,[21,22]),images[2].src);
 });
 
-test("D969: a current Printify CDN fallback changes the variant, not the blueprint",()=>{
+test("D984: a broad Printify CDN fallback is never rewritten into an ungenerated URL",()=>{
   const broad=[{src:"https://images.printify.com/mockup/6a977424f8329d96f40c1205/12100/92570/front-dark.jpg?camera_label=front",variantIds:[12100,12124],position:"front"}];
-  assert.equal(printifyMockupForColor(broad,[12124]),"https://images.printify.com/mockup/6a977424f8329d96f40c1205/12124/92570/front-dark.jpg?camera_label=front");
+  assert.equal(printifyMockupForColor(broad,[12124]),"");
 });
 
 test("D910: footer controls remain visible and aligned",()=>{
@@ -38,10 +38,10 @@ test("D910: bundle language and one-column listing states tell the truth",()=>{
   assert.match(css,/factory-listing-grid:has\(>\.factory-form-card:only-child\)/);
 });
 
-test("D911: a broad single Printify image is addressed by the requested color variant",()=>{
+test("D984: a broad single Printify image cannot impersonate a requested color",()=>{
   const broad=[{src:"https://images-api.printify.com/mockup/12100/92570/front-dark.jpg",variantIds:[92570,92571,92572],position:"front"}];
-  assert.equal(printifyMockupForColor(broad,[92571]),"https://images-api.printify.com/mockup/12100/92571/front-dark.jpg");
-  assert.equal(printifyMockupForColor(broad,[92572]),"https://images-api.printify.com/mockup/12100/92572/front-dark.jpg");
+  assert.equal(printifyMockupForColor(broad,[92571]),"");
+  assert.equal(printifyMockupForColor(broad,[92572]),"");
 });
 
 test("D916: restored batches resolve color variants from raw Printify options",()=>{

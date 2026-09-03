@@ -3884,7 +3884,13 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
           const supportReference = `${referenceRoot}-A${pipelineAttempt}`;
           try {
             const stagedArtworks=await Promise.all(prepared.map(async item=>{const staged=await stageUpload(item.upload.blob,item.upload.fileName,`${supportReference}-${item.key.slice(0,8)}`);return {key:item.key,fileName:item.upload.fileName,stagedId:staged.stagedId,reference:staged.reference,bounds:item.artwork.visibleBounds,maxPlacementScale:isRigidPaperProduct(templateDetails)?1:undefined}}));
-            const variants=pricedVariants;
+            const availableColorIds=(templateDetails?.colorOptions||[]).filter(color=>color.available).map(color=>color.id);
+            const mockupVariants=variantsFor(templateDetails,availableColorIds,selectedSizeIds);
+            /* Printify generates a color mockup only when that variant is both
+               enabled and included in the artwork assignment. Use the broad
+               preview set here; the server restores the seller's narrower
+               paid-draft choices before returning success. */
+            const variants=mockupVariants;
             const primarySide=primaryPrintSide(templateDetails?.printPositions)||"front";
             const assignedPrimaryColors=new Set(versions.filter(artwork=>artwork.side===primarySide).flatMap(artwork=>artwork.colorIds));
             const primaryVariantIds=variants.filter(variant=>variant.colorId==null||!assignedPrimaryColors.has(variant.colorId)).map(variant=>variant.id);
@@ -3895,7 +3901,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
               batchId: templateDetails?.batchId,
               fileName:design.name,
               title: design.title || undefined,
-              tags:design.tags,pricing,etsyBuyerShipping:etsyShippingProfiles.find(profile=>profile.id===etsyShippingProfileId)?.domesticPrimary||0,shippingTemplateId:etsyShippingProfileId,variantPrices,selectedVariantIds:pricedVariants.map(variant=>variant.id),description:fullDescription,
+              tags:design.tags,pricing,etsyBuyerShipping:etsyShippingProfiles.find(profile=>profile.id===etsyShippingProfileId)?.domesticPrimary||0,shippingTemplateId:etsyShippingProfileId,variantPrices,selectedVariantIds:pricedVariants.map(variant=>variant.id),mockupVariantIds:mockupVariants.map(variant=>variant.id),description:fullDescription,
               supportReference: staged.reference,
               clientId:design.id,
             };

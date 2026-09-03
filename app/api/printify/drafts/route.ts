@@ -12,6 +12,7 @@ import { decryptPrintifyToken } from "../token-crypto";
 import { recommendedPrice } from "@/app/pricing";
 import { isOwner } from "@/app/mastermind/access";
 import { actualCostReview } from "@/app/draft-pricing";
+import { creationVariantIds, mockupCoverageComplete, restoredVariants } from "@/app/draft-preview-variants";
 
 const PRINTIFY_API = "https://api.printify.com/v1";
 type UploadedImage = { id: string; width?: number; height?: number; mime_type?: string };
@@ -135,7 +136,7 @@ async function handlePOST(request: Request) {
   let diagnosticStage = "request_validation";
   let idempotencyKey = "";
   try {
-    const body = (await request.json()) as { batchId?: string; title?: string; tags?: string[]; description?: string; visibleBounds?:{left:number;top:number;right:number;bottom:number}; maxPlacementScale?:number; fileName?: string; stagedId?: string; artworks?:Array<{key:string;fileName:string;stagedId:string;bounds?:{left:number;top:number;right:number;bottom:number};maxPlacementScale?:number}>; artworkAssignments?:ArtworkAssignment[]; supportReference?: string; clientId?: string; variantPrices?:Record<string,number>; selectedVariantIds?:number[]; etsyBuyerShipping?:number; shippingTemplateId?:number; pricing?: { targetProfit?: number; etsyFeePercent?: number; fixedFee?: number; listingFee?: number; shippingCost?: number; shippingCharged?: number } };
+    const body = (await request.json()) as { batchId?: string; title?: string; tags?: string[]; description?: string; visibleBounds?:{left:number;top:number;right:number;bottom:number}; maxPlacementScale?:number; fileName?: string; stagedId?: string; artworks?:Array<{key:string;fileName:string;stagedId:string;bounds?:{left:number;top:number;right:number;bottom:number};maxPlacementScale?:number}>; artworkAssignments?:ArtworkAssignment[]; supportReference?: string; clientId?: string; variantPrices?:Record<string,number>; selectedVariantIds?:number[]; mockupVariantIds?:number[]; etsyBuyerShipping?:number; shippingTemplateId?:number; pricing?: { targetProfit?: number; etsyFeePercent?: number; fixedFee?: number; listingFee?: number; shippingCost?: number; shippingCharged?: number } };
     stagedIdsForCleanup.push(...(body.artworks?.map((artwork) => artwork.stagedId) ?? []), ...(body.stagedId ? [body.stagedId] : []));
     supportReference = body.supportReference?.replace(/[^A-Z0-9-]/gi, "").slice(0, 40) ?? "";
     const requestedArtworks = body.artworks?.length
@@ -212,12 +213,14 @@ async function handlePOST(request: Request) {
     const title = body.title?.trim().slice(0, 255) || requestedArtworks[0].fileName.replace(/\.[^.]+$/, "").replace(/[_-]+/g, " ").trim();
     const selectedShippingTemplateId=Number(body.shippingTemplateId)>0?String(Math.trunc(Number(body.shippingTemplateId))):template.shippingTemplateId;
     if(!selectedShippingTemplateId)throw new Error("Choose the shipping profile for this batch before creating drafts.");
+    const finalVariantIds=(body.selectedVariantIds||[]).filter(id=>template.variants.some(variant=>variant.id===id));
+    const enabledForCreation=creationVariantIds(finalVariantIds,body.mockupVariantIds||[]);
     const productBody = () => JSON.stringify({
         title: title || "Untitled design",
         description: body.description ?? template.description ?? "",
         blueprint_id: template.blueprint_id,
         print_provider_id: template.print_provider_id,
-        variants: template.variants.map(({ id, price, cost, is_enabled }) => {const approved=Number(body.variantPrices?.[String(id)]);const calculated=recommendedPrice(cost ?? price,body.pricing);const finalPrice=Number.isInteger(approved)&&approved>=Number(cost??price)&&approved<=1000000?approved:calculated;const selected=Array.isArray(body.selectedVariantIds)?body.selectedVariantIds.includes(id):is_enabled;return { id, price:finalPrice, is_enabled:selected }}),
+        variants: template.variants.map(({ id, price, cost, is_enabled }) => {const approved=Number(body.variantPrices?.[String(id)]);const calculated=recommendedPrice(cost ?? price,body.pricing);const finalPrice=Number.isInteger(approved)&&approved>=Number(cost??price)&&approved<=1000000?approved:calculated;const selected=enabledForCreation.length?enabledForCreation.includes(id):is_enabled;return { id, price:finalPrice, is_enabled:selected }}),
         tags: (body.tags ?? []).map(tag => String(tag).trim()).filter(Boolean).slice(0, 13),
         external:{shipping_template_id:selectedShippingTemplateId},
         sales_channel_properties:{free_shipping:Boolean(template.freeShipping)},
@@ -243,6 +246,36 @@ async function handlePOST(request: Request) {
     await recordDiagnostic(runtimeEnv().DB, supportReference, { stage: diagnosticStage, event: "succeeded", shopId: shop.id });
     let resolvedProduct=created;
     try { resolvedProduct=await api<CreatedProduct>(`/shops/${shop.id}/products/${created.id}.json`,token); } catch { /* The create response remains usable; cost review will stay blocked if costs are absent. */ }
+    /* Printify only generates mockups for enabled variants. Create with one
+       representative size across every available colour, wait for those real
+       images, then restore the seller's exact choices before reporting success.
+       The broad image set is retained in Goldie for the colour picker; the
+       Printify draft itself never remains widened. */
+    const widened=enabledForCreation.some(id=>!finalVariantIds.includes(id));
+    if(widened){
+      for(const wait of [0,1000,2000,4000,8000]){
+        if(wait)await new Promise(resolve=>setTimeout(resolve,wait));
+        const loaded=await api<CreatedProduct>(`/shops/${shop.id}/products/${created.id}.json`,token);
+        resolvedProduct=loaded;
+        if(mockupCoverageComplete(loaded.images||[],enabledForCreation))break;
+      }
+      const previewImages=resolvedProduct.images||[];
+      if(!mockupCoverageComplete(previewImages,enabledForCreation)){
+        await fetch(`${PRINTIFY_API}/shops/${shop.id}/products/${created.id}.json`,{method:"DELETE",headers:{Authorization:`Bearer ${token}`,"User-Agent":"Goldie-Listing-Factory"}}).catch(()=>undefined);
+        throw new Error("Printify did not finish generating the product color previews. No draft was kept; try again.");
+      }
+      try{
+        const restored=restoredVariants(resolvedProduct.variants||template.variants,finalVariantIds).map(variant=>{
+          const source=(resolvedProduct.variants||template.variants).find(item=>item.id===variant.id);
+          return {...variant,price:Number(source?.price||template.variants.find(item=>item.id===variant.id)?.price||0)};
+        });
+        await api<CreatedProduct>(`/shops/${shop.id}/products/${created.id}.json`,token,{method:"PUT",body:JSON.stringify({variants:restored})});
+        resolvedProduct={...resolvedProduct,images:previewImages,variants:(resolvedProduct.variants||[]).map(variant=>({...variant,is_enabled:finalVariantIds.includes(variant.id)}))};
+      }catch(error){
+        await fetch(`${PRINTIFY_API}/shops/${shop.id}/products/${created.id}.json`,{method:"DELETE",headers:{Authorization:`Bearer ${token}`,"User-Agent":"Goldie-Listing-Factory"}}).catch(()=>undefined);
+        throw error;
+      }
+    }
     let productImages = resolvedProduct.images ?? created.images ?? [];
     let previewUrl = productImages.find((image) => image.is_default)?.src || productImages[0]?.src;
     if (!previewUrl) {
@@ -335,7 +368,7 @@ async function handlePOST(request: Request) {
        This is required for every new draft, not only back prints, so a future
        Printify surcharge or provider change cannot bypass the same safeguard. */
     const costReview=actualCostReview(costVariants);
-    const draft = { id: created.id, placement, placementDebug, batchId:body.batchId, clientId: body.clientId ?? body.fileName, name: body.fileName, title, tags: body.tags ?? [], description:body.description??template.description??"", previewUrl, printifyImages: productImages.map((image) => image.src).filter(Boolean), printifyImageDetails:productImages.filter(image=>image.src).map(image=>({src:image.src!,variantIds:image.variant_ids||[],position:image.position||""})), shopId: shop.id, editorUrl: `https://printify.com/app/editor/${created.id}`, status: "Created",costReview };
+    const draft = { id: created.id, placement, placementDebug, batchId:body.batchId, clientId: body.clientId ?? body.fileName, name: body.fileName, title, tags: body.tags ?? [], description:body.description??template.description??"", selectedVariantIds:finalVariantIds, previewUrl, printifyImages: productImages.map((image) => image.src).filter(Boolean), printifyImageDetails:productImages.filter(image=>image.src).map(image=>({src:image.src!,variantIds:image.variant_ids||[],position:image.position||""})), shopId: shop.id, editorUrl: `https://printify.com/app/editor/${created.id}`, status: "Created",costReview };
     await db.prepare("UPDATE printify_draft_results SET status = 'succeeded', response_json = ?, updated_at = CURRENT_TIMESTAMP WHERE request_key = ?").bind(JSON.stringify(draft), idempotencyKey).run();
     return NextResponse.json({ draft });
   } catch (error) {

@@ -43,28 +43,8 @@ export function printifyMockupForColor(images:PrintifyMockupImage[]|undefined,va
     .filter(image=>image.variantIds.some(id=>ids.includes(id)))
     .sort((a,b)=>a.variantIds.length-b.variantIds.length)[0];
   if(metadataMatch&&metadataMatch.variantIds.length<=ids.length)return metadataMatch.src;
-  /* Printify sometimes returns one broad mockup even though its CDN path is
-     variant-addressed: .../<product>/<variant>/front-dark.jpg. In that real
-     response shape, returning the broad image makes every colour identical.
-     Keep the same generated mockup and address the first real variant for the
-     colour instead. */
-  const seed=metadataMatch||pool[0];
-  if(seed){
-    /* Printify's current CDN path is
-       /mockup/<product uuid>/<variant id>/<blueprint id>/front-dark.jpg.
-       The older replacement changed the last number (the blueprint), leaving
-       the variant untouched, so every unselected colour showed the same white
-       garment until a save returned fresh image metadata. Prefer the explicit
-       mockup shape; retain the shorter legacy shape as a fallback. */
-    const current=seed.src.replace(
-      /(\/mockup\/[^/]+\/)(\d+)(\/\d+\/(?:front|back|chest)[^/?#]*)/i,
-      `$1${ids[0]}$3`
-    );
-    const derived=current!==seed.src?current:seed.src.replace(
-      /(\/mockup\/[^/]+\/)(\d+)(\/(?:front|back|chest)[^/?#]*)/i,
-      `$1${ids[0]}$3`
-    );
-    if(derived!==seed.src)return derived;
-  }
-  return metadataMatch?.src||"";
+  /* Never manufacture a Printify CDN URL. A variant-looking path is not proof
+     that the corresponding mockup exists; doing this produced broken images
+     for every colour Printify had not generated. */
+  return metadataMatch&&metadataMatch.variantIds.length<=ids.length?metadataMatch.src:"";
 }
