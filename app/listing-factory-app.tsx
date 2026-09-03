@@ -377,8 +377,8 @@ const PHYSICAL_ETSY_FIELDS=/^(materials?|sleeve length|neckline|clothing style|s
 function productEtsyDefaults(template:TemplateDetails|null,saved?:Record<string,string|number|null>){
   const facts=`${template?.blueprintTitle||""} ${template?.brand||""} ${template?.model||""}`.toLowerCase(),derived:Record<string,string>={};
   if(/cotton/.test(facts))derived.Materials="Cotton";else if(/polyester/.test(facts))derived.Materials="Polyester";else if(/ceramic/.test(facts))derived.Materials="Ceramic";else if(/canvas/.test(facts))derived.Materials="Canvas";else if(/paper|poster|print/.test(facts))derived.Materials="Paper";
-  if(/short.?sleeve|t-?shirt|\btee\b/.test(facts))derived["Sleeve length"]="Short sleeve";else if(/long.?sleeve|sweatshirt|crewneck|hoodie/.test(facts))derived["Sleeve length"]="Long sleeve";
-  if(/v.?neck/.test(facts))derived.Neckline="V-neck";else if(/crewneck|crew neck|t-?shirt|\btee\b|sweatshirt/.test(facts))derived.Neckline="Crew";
+  if(/long.?sleeve|sweatshirt|crewneck|hoodie/.test(facts))derived["Sleeve length"]="Long sleeve";else if(/short.?sleeve|\bt-?shirt\b|\btee\b/.test(facts))derived["Sleeve length"]="Short sleeve";
+  if(/\bv.?neck\b/.test(facts))derived.Neckline="V-neck";else if(/crewneck|crew neck|\bt-?shirt\b|\btee\b/.test(facts))derived.Neckline="Crew";
   if(/hoodie/.test(facts))derived["Clothing style"]="Hoodie";else if(/sweatshirt|crewneck/.test(facts))derived["Clothing style"]="Sweatshirt";else if(/t-?shirt|\btee\b/.test(facts))derived["Clothing style"]="T-shirt";
   if(/\bunisex\b/.test(facts))derived.Size="Unisex";else if(/\byouth\b|\bkids?\b|\bchildren\b/.test(facts))derived.Size="Youth";else if(/\binfant\b|\bbaby\b/.test(facts))derived.Size="Baby";
   /* Product facts are authoritative for physical attributes. AI-prepared or
@@ -1820,7 +1820,7 @@ export default function ListingFactoryApp() {
     /* D632 - IndexedDB belongs to one browser profile, not one computer. Losing
        that cache must never delete the server-saved design records: existing
        Printify drafts can still be finished in Goldie. */
-    const unavailable=designs.filter(design=>design.originalUnavailable).length;
+    const unavailable=designs.filter(design=>design.originalUnavailable&&!savedDrafts.some(draft=>draft.clientId===design.id&&draft.status==="Created"&&draft.id)).length;
     if(unavailable)setRestoreNotice(`${unavailable===designs.length?"The original uploads are":"Some original uploads are"} not available in this browser. Your ${unavailable===1?"listing is":"listings are"} restored and can still be finished in Goldie. Upload the original ${unavailable===1?"file":"files"} again only if you need to recreate a Printify draft.`);
     const savedProductColors=state.templateDetails?.id?JSON.parse(window.localStorage.getItem(`goldie-colors-${state.templateDetails.id}`)||"[]") as number[]:[];const savedProductSizes=state.templateDetails?.id?JSON.parse(window.localStorage.getItem(`goldie-sizes-${state.templateDetails.id}`)||"[]") as number[]:[];batchIdRef.current=id;setBatchDisplayName(state.batchDisplayName||"");/* D693 - restoring this from setup_name is how the stale recipe name kept coming back. D686 stopped Batch History READING setup_name as a seller-chosen name, but restore still seeded the seller-name field from it, autosave then wrote that into the snapshot, and the reader trusted it - the stale name laundered itself into the field meant to hold only what she typed. Measured on batch b8ce58cb after D686 deployed: state.batchDisplayName "Gildan Hoodie", activeRecipe "Comfort Colors 1566 crewneck", product_title "Unisex Garment-Dyed Sweatshirt". A batch she never named restores blank, and Batch History falls through to the design or the product, which is the truth. */setKeptAsDrafts(Boolean(state.keptAsDrafts));/* D703 - the snapshot SAVES batchReceipt and the restore never read it back, so
     opening a batch that had published left the receipt at its initial null, the
@@ -4519,7 +4519,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
                     ? <img className="product-thumb bundle-product-photo" src={photo} alt={templateDetails?.blueprintTitle||"Product"} decoding="async"/>
                     : <div className="product-thumb product-photo-loading" aria-label="Loading product photo"><span className="goldie-spinner" aria-hidden="true"/></div>})()}<div className="template-info">{bundleSelected?<><b>{activeBundle?.name}</b><span>{bundleRecipes.length} products · {bundleRecipes.map(item=>item.name).join(" · ")}</span><span>✓ Each product keeps its own colors, sizes, mockups, and keywords</span></>:<><b>{templateDetails.blueprintTitle}</b><span>{templateDetails.provider} · {variantSummary(summaryAxes(templateDetails,activeRecipe))}</span><span>✓ Product, placement, sizes, and shipping profile imported</span></>}</div></div>:null} verifiedShippingProfileId={Number(templateDetails?.shippingTemplateId)||0} onTemplateUrl={(value) => { templateLoadVersion.current+=1;setLoadingTemplate(false);setTemplate(value);setTemplateDetails(null);setTemplateError(""); }} onUseRecipe={chooseRecipe} onUseBundle={useBundle} onStartNewProduct={startNewProduct} onChangeProduct={changeProduct} onVerifyTemplate={loadTemplateUrl} /></FactoryPanel>
           {localPreview&&!templateDetails&&<button className="preview-demo-button" onClick={()=>void loadPreviewDemo()}>Load a complete poster demo to review every step</button>}
-          {workflowStep==="setup"&&files.length===0&&!bundleCreationMode&&!productFormMode&&<FactoryFooter status="Add at least one design to continue"><button className="workflow-next" type="button" disabled>Add at least one design</button></FactoryFooter>}
+          {workflowStep==="setup"&&files.length===0&&!bundleCreationMode&&!productFormMode&&<FactoryFooter status={`${missingRequirement} to continue`}><button className="workflow-next" type="button" disabled>{missingRequirement}</button></FactoryFooter>}
           {templateError && <p className="field-error recipe-error" role="alert">{templateError}</p>}
           <BatchPreferencesPortal>
           {/* D457 - the "set up this product" framing is gone; a product saves its own defaults as they are chosen. */}
@@ -4698,7 +4698,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
               The card's sections are the real structure and are on screen. */}
               <input ref={folderPicker} className="hidden-picker" type="file" multiple accept=".png,.jpg,.jpeg" {...({ webkitdirectory: "", directory: "" } as React.InputHTMLAttributes<HTMLInputElement>)} onChange={(event) => void chooseFiles(event.target.files)} />
               <input ref={imagePicker} className="hidden-picker" type="file" multiple accept=".png,.jpg,.jpeg" onChange={(event) => void chooseFiles(event.target.files)} />
-              <p className="upload-primary-note">Upload one {uploadPrimaryLabel} design per listing.{uploadSecondaryLabel?` Add optional ${uploadSecondaryLabel} artwork afterward.`:""}</p>
+              <p className="upload-primary-note">{activeBundle&&bundleRecipes.length>1?`Upload each ${uploadPrimaryLabel} design once. Goldie uses it on every product in this bundle.`:`Upload one ${uploadPrimaryLabel} design per listing.`}{uploadSecondaryLabel?` Add optional ${uploadSecondaryLabel} artwork afterward.`:""}</p>
               <div className="upload-actions">
               <button className="folder-drop" onClick={() => folderPicker.current?.click()}>
                 <span className="upload-icon" aria-hidden="true">↑</span>
@@ -4834,7 +4834,6 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
                 <span className="publish-all-label">Open My Products in Printify</span>
                 <small className="publish-all-shop">You choose what publishes</small>
               </a>
-              <button className="keep-drafts-button" type="button" onClick={()=>{setBatchDisplayName(current=>current||suggestedBatchName());setDraftSaveOpen(true)}}>Save this batch for later</button>
               <small className="keep-drafts-note">Goldie will never publish these drafts or charge an Etsy listing fee.</small>
               {false&&<><div className="publish-live-warning">{(()=>{
               /* D560 - the count follows her ticks now that they govern every listing. */

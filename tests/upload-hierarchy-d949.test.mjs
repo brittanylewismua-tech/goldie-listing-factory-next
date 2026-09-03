@@ -7,7 +7,7 @@ const css=readFileSync(new URL("../app/interface-v2.css",import.meta.url),"utf8"
 
 test("D949: the upload screen presents one short instruction and compact progress",()=>{
   assert.match(app,/title: "Add your designs", copy: ""/);
-  assert.match(app,/Upload one \{uploadPrimaryLabel\} design per listing\./);
+  assert.match(app,/activeBundle&&bundleRecipes\.length>1\?`Upload each \$\{uploadPrimaryLabel\} design once\. Goldie uses it on every product in this bundle\.`:`Upload one \$\{uploadPrimaryLabel\} design per listing\.`/);
   assert.doesNotMatch(app,/Main upload: one/);
   assert.doesNotMatch(app,/listings left on your plan/);
   assert.match(app,/`\$\{files\.length\} design\$\{files\.length===1\?"":"s"\} added`/);

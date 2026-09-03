@@ -36,7 +36,8 @@ test("uses the binding batch limit and keeps setup actions in the right hierarch
     Promise.all([readFile(new URL("../app/approved-functional.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n")),
   ]);
   assert.match(page, /PNG or JPG · up to \{batchDesignLimit\} designs · 100 MB each/);
-  assert.match(page, /Upload one \{uploadPrimaryLabel\} design per listing/);
+  assert.match(page, /Upload each \$\{uploadPrimaryLabel\} design once\. Goldie uses it on every product in this bundle/);
+  assert.match(page, /Upload one \$\{uploadPrimaryLabel\} design per listing/);
   assert.doesNotMatch(page, /Your folder can contain up to 20 designs/);
   assert.match(page, /headerActions=\{bundleCreationMode\|\|productFormMode\?undefined:[\s\S]{0,380}>＋ Add a new product<\/button>[\s\S]{0,220}>＋ Create a new bundle<\/button>/);
   assert.match(css, /managementOnly \.newSetButton\{border:0!important;background:transparent!important/);

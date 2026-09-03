@@ -138,7 +138,7 @@ export default function FinalListingReview({drafts,files,selections,defaultIndic
           const named=design?.title?.trim()||draft.title?.trim();
           if(named)return named;
         }
-        return readableDesignName(designName)})()}</span><b>{group.length} {group.length===1?"listing":"listings"}</b><em className={attention?"needs-attention":"ready"}>{attention?`${attention} ${attention===1?"needs":"need"} a look`:"✓ Ready"}</em>{/* D795 · The preview's review row carries its own thumbnail and its own
+        return readableDesignName(designName)})()}</span><b>{group.length} {group.length===1?"listing":"listings"}</b><em className={attention?(handoffOnly?"advice":"needs-attention"):"ready"}>{attention?(handoffOnly?`${attention} optional ${attention===1?"improvement":"improvements"}`:`${attention} ${attention===1?"needs":"need"} a look`):"✓ Ready"}</em>{/* D795 · The preview's review row carries its own thumbnail and its own
         checkbox. Production had neither: the artwork only appeared once the row
         was open, and the only visible control was "Select every listing that is
         ready" - under a heading that says "Choose exactly which listings to
