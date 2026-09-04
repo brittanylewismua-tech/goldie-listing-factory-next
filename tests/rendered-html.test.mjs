@@ -1376,20 +1376,19 @@ test("labels every progress bubble with a short workflow name", async () => {
   assert.match(styles, /\.app-shell \.progress-bubble-label\{/);
 });
 
-test("shows accurate completion feedback above each next step card", async () => {
+test("shows completion feedback only where it adds information", async () => {
   const [page, styles] = await Promise.all([
     readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
     Promise.all([readFile(new URL("../app/approved-functional.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n")),
   ]);
   assert.match(page, /fileNotice&&\(workflowStep==="setup"\|\|workflowStep==="designs"\)&&<p className="file-add-notice"/);
   assert.match(page, /Titles, tags, and descriptions complete/);
-  assert.match(page, /Printify drafts created/);
+  assert.doesNotMatch(page, /workflowStep==="designs"&&complete&&<div className="step-success-banner"/);
   assert.doesNotMatch(page, /workflowStep==="designs"&&complete&&[^\n]*Etsy details complete/);
   assert.match(page, /Listing photos complete/);
   assert.doesNotMatch(page, /fileNotice&&workflowStep!=="designs"/);
   assert.match(styles, /\.app-shell \.step-success-banner\{/);
-  /* D156 recoloured this from green to the app palette; the point of this test is
-   * that the banner exists and is styled, not that it is green. */
+  /* Other genuinely useful completion banners still share one treatment. */
   assert.match(styles, /border:1px solid #dfc8d5/);
 });
 

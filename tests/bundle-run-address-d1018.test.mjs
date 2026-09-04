@@ -9,9 +9,8 @@ test("D1018: a known bundle run remains the public URL while children restore",(
   assert.match(restore,/url\.searchParams\.set\("batch",runIdRef\.current\|\|id\)/);
 });
 
-test("D1018: the draft-created banner reports the whole bundle",()=>{
-  assert.match(app,/Printify drafts created<\/b><small>\{bundleRunDrafts\|\|files\.length\}/);
-  assert.match(app,/\(bundleRunDrafts\|\|files\.length\)===1/);
+test("D1028: the Drafts screen does not repeat its completed state in a banner",()=>{
+  assert.doesNotMatch(app,/workflowStep==="designs"&&complete&&<div className="step-success-banner"/);
 });
 
 test("D1018: grouped Printify color ids all remain eligible for variants",()=>{

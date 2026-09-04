@@ -409,7 +409,7 @@ function PrintifyImageTile({src,index,selected,atLimit,onToggle,onExpand}:{src:s
   const retrySrc=attempt?`${src}${src.includes("?")?"&":"?"}goldie_retry=${attempt}`:src;
   return <div className={`printify-image-option ${selected?"selected":""} ${state==="loading"?"is-loading":state==="failed"?"is-failed":"is-ready"}`}><label className="printify-photo-selector"><input type="checkbox" checked={selected} disabled={state!=="ready"||(!selected&&atLimit)} onChange={onToggle}/><span aria-hidden="true">{selected?"✓":""}</span><span className="sr-only">Select Printify photo {index+1}</span></label><button type="button" className="printify-photo-expand" disabled={state!=="ready"} onClick={onExpand} aria-label={`View ${printifyViewName(src)||`Printify photo ${index+1}`} larger`}><span className="printify-photo-loading" aria-live="polite">{state==="loading"?"Loading photo…":state==="failed"?"Photo unavailable":""}</span><img key={attempt} src={retrySrc} alt={printifyViewName(src)||`Printify product mockup ${index+1}`} decoding="async" onLoad={()=>setState("ready")} onError={()=>setState("failed")}/></button>{state==="failed"?<button type="button" className="printify-photo-retry" onClick={()=>{setState("loading");setAttempt(value=>value+1)}}>Retry</button>:null}</div>;
 }
-function PrintifyImagePicker({ images,indices,reservedPhotos=0,onApplyOne,onApplyAll,onSaveRecipe,bare }: { images: string[];indices:number[];reservedPhotos?:number;onApplyOne:(indices:number[])=>void;onApplyAll:(indices:number[])=>void;bare?:boolean;onSaveRecipe?:(indices:number[])=>void|Promise<void> }) {
+function PrintifyImagePicker({ images,indices,reservedPhotos=0,onApplyOne,onApplyAll,onSaveRecipe,bare,showApplyAll=true }: { images: string[];indices:number[];reservedPhotos?:number;onApplyOne:(indices:number[])=>void;onApplyAll:(indices:number[])=>void;bare?:boolean;showApplyAll?:boolean;onSaveRecipe?:(indices:number[])=>void|Promise<void> }) {
   const [selected,setSelected]=useState<Set<number>>(new Set(indices.slice(0,Math.max(0,20-reservedPhotos)))),[expanded,setExpanded]=useState<string>(""),[showAll,setShowAll]=useState(false),[action,setAction]=useState<"clear"|"all"|"future"|"">(""),[feedback,setFeedback]=useState(""),[savingFuture,setSavingFuture]=useState(false);
   useEffect(()=>setSelected(new Set(indices.slice(0,Math.max(0,20-reservedPhotos)))),[indices,images.length,reservedPhotos]);
   if(!images.length)return <p className="preview-processing">Printify is still processing its product mockups. Open the editor to view them once they appear.</p>;
@@ -431,7 +431,7 @@ function PrintifyImagePicker({ images,indices,reservedPhotos=0,onApplyOne,onAppl
         labelled the tiles in the copy that is used; the dead one still held the
         old unlabelled grid. That is exactly how the mug bug happened - two copies
         of one rule, one of them fixed. One copy. */}
-        <div className="printify-image-picker bare"><p>Etsy allows 20 listing photos total. Photos you upload and a size guide already chosen for this listing count toward that limit. Use the visible checkbox to select a photo.</p><div className="image-pref-actions"><button type="button" className={`clear ${action==="clear"?"confirmed":""}`} disabled={!chosen.length} onClick={deselect}>{action==="clear"&&<span className="action-check">✓</span>}<b>{action==="clear"?"Selections cleared":"Clear this listing’s selections"}</b><small>{selectionHint||"Remove every selected Printify photo from this listing only."}</small></button><button type="button" className={action==="all"?"confirmed":""} disabled={!chosen.length} onClick={applyAll}>{action==="all"&&<span className="action-check">✓</span>}<b>{action==="all"?"Applied to every listing":"Apply these photos to every listing"}</b><small>{selectionHint||"Choose the same Printify photos across the entire batch."}</small></button></div>{feedback&&<p className="image-pref-feedback" role="status">{feedback}</p>}{/* D569 - measured on her hoodie: 96 tiles in one listing's picker, 192 in the
+        <div className="printify-image-picker bare"><p>Etsy allows 20 listing photos total. Photos you upload and a size guide already chosen for this listing count toward that limit. Use the visible checkbox to select a photo.</p><div className="image-pref-actions"><button type="button" className={`clear ${action==="clear"?"confirmed":""}`} disabled={!chosen.length} onClick={deselect}>{action==="clear"&&<span className="action-check">✓</span>}<b>{action==="clear"?"Selections cleared":"Clear this listing’s selections"}</b><small>{selectionHint||"Remove every selected Printify photo from this listing only."}</small></button>{showApplyAll?<button type="button" className={action==="all"?"confirmed":""} disabled={!chosen.length} onClick={applyAll}>{action==="all"&&<span className="action-check">✓</span>}<b>{action==="all"?"Applied to every listing":"Apply these photos to every listing"}</b><small>{selectionHint||"Choose the same Printify photos across the entire batch."}</small></button>:null}</div>{feedback&&<p className="image-pref-feedback" role="status">{feedback}</p>}{/* D569 - measured on her hoodie: 96 tiles in one listing's picker, 192 in the
         panel, and only 12 distinct labels - "Front" sixteen times, "Back" sixteen
         times. Every tile is a real, different image (12 camera views across the 8
         colours she enabled), but a flat wall of 96 with a repeated one-word label
@@ -1896,6 +1896,16 @@ export default function ListingFactoryApp() {
     A child snapshot can be stale and must never manufacture a sibling from a
     different execution. */if(runIdRef.current)setBundleBatchIds({});url.searchParams.set("batch",runIdRef.current||id);url.searchParams.set("step",step);url.searchParams.delete("phase");if(push)window.history.pushState({},"",url);else window.history.replaceState({},"",url);if(payload.batch.status==="processing"&&state.template)void loadTemplateUrl(state.template);return true}finally{snapshotReady.current=true;setRestoringBatch(false)}
   }
+  /* D1028 · A completed Printify draft is not the same thing as an approved
+     final price. Older restore logic treated every completed draft as approved,
+     which let a direct Final Review URL contradict the visible "Save these
+     prices" control. Explicit unfinished cost reviews always win. */
+  useEffect(()=>{
+    if(restoringBatch||!pricingApproved)return;
+    const unfinished=drafts.some(draft=>draft.status==="Created"&&draft.costReview?.required&&!draft.costReview.approved);
+    if(unfinished)setPricingApproved(false);
+  },[restoringBatch,drafts,pricingApproved]);
+
   /* Restored batches keep their exact saved decisions, but refresh the product
      catalogue once so every available colour has a current Printify variant
      before the colour panel is opened. */
@@ -3014,7 +3024,7 @@ setSavedRevision(current=>current+1);}catch(error){stopWith("This default was no
               for. The row is called "Choose Printify photos" and the photos are
               listed underneath it with counts; a collapsed essay about which views
               to pick was advice nobody opened. Gone. */}
-          <div className="task-panel-body printify-photo-listings">{listingWorkRows(({draft,design,selectedImages,count})=>(<div className="listing-photo-workspace"><PrintifyImagePicker bare images={(draft.printifyImages||[]).filter(Boolean)} indices={selectedImages} reservedPhotos={(preparedMockupCounts[draft.id||""]||0)+(design?.sizeGuideName||sizeGuideName?1:0)} onApplyOne={values=>{if(activeRecipe)void saveImagePreferences(values);if(draft.id)setPrintifyImageSelections(current=>({...current,[draft.id!]:values}))}} onApplyAll={values=>{setPrintifyImageIndices(values);setPrintifyImageSelections(Object.fromEntries(drafts.filter(item=>item.id).map(item=>{const itemDesign=files.find(file=>file.id===item.clientId),reserved=(preparedMockupCounts[item.id!]||0)+(itemDesign?.sizeGuideName||sizeGuideName?1:0);return[item.id!,values.slice(0,Math.max(0,20-reserved))]})))}} onSaveRecipe={activeRecipe?saveImagePreferences:undefined}/><UploadedListingPhotos productId={draft.id!} onCountChange={count=>setPreparedMockupCounts(current=>({...current,[draft.id!]:count}))}/><IndividualSizeGuide productId={draft.id!} name={design.sizeGuideName} batchName={sizeGuideName} onSaved={name=>updateDesign(design.id,{sizeGuideName:name})}/><ListingPhotoOrder productId={draft.id!} printifyImages={(draft.printifyImages||[]).filter(Boolean)} indices={selectedImages} refreshKey={`${preparedMockupCounts[draft.id!]||0}:${design.sizeGuideName||sizeGuideName}`}/><DownloadListingPhotos productId={draft.id!} name={draft.title||draft.name} indices={selectedImages}/></div>),photoFlags)}</div>
+          <div className="task-panel-body printify-photo-listings">{listingWorkRows(({draft,design,selectedImages,count})=>(<div className="listing-photo-workspace"><PrintifyImagePicker bare showApplyAll={drafts.filter(item=>item.status==="Created").length>1} images={(draft.printifyImages||[]).filter(Boolean)} indices={selectedImages} reservedPhotos={(preparedMockupCounts[draft.id||""]||0)+(design?.sizeGuideName||sizeGuideName?1:0)} onApplyOne={values=>{if(activeRecipe)void saveImagePreferences(values);if(draft.id)setPrintifyImageSelections(current=>({...current,[draft.id!]:values}))}} onApplyAll={values=>{setPrintifyImageIndices(values);setPrintifyImageSelections(Object.fromEntries(drafts.filter(item=>item.id).map(item=>{const itemDesign=files.find(file=>file.id===item.clientId),reserved=(preparedMockupCounts[item.id!]||0)+(itemDesign?.sizeGuideName||sizeGuideName?1:0);return[item.id!,values.slice(0,Math.max(0,20-reserved))]})))}} onSaveRecipe={activeRecipe?saveImagePreferences:undefined}/><UploadedListingPhotos productId={draft.id!} onCountChange={count=>setPreparedMockupCounts(current=>({...current,[draft.id!]:count}))}/><IndividualSizeGuide productId={draft.id!} name={design.sizeGuideName} batchName={sizeGuideName} onSaved={name=>updateDesign(design.id,{sizeGuideName:name})}/><ListingPhotoOrder productId={draft.id!} printifyImages={(draft.printifyImages||[]).filter(Boolean)} indices={selectedImages} refreshKey={`${preparedMockupCounts[draft.id!]||0}:${design.sizeGuideName||sizeGuideName}`}/><DownloadListingPhotos productId={draft.id!} name={draft.title||draft.name} indices={selectedImages}/></div>),photoFlags)}</div>
     </>;
     /* D709 · The ordering panel is gone; its work happens in the photos panel
        above, on the same pass through the listings. task="order" is aliased to it
@@ -3136,7 +3146,6 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
         <div className={titlePulseIds.size?"titles-resolving":""}>
           {titlesLead()}
           {descriptionLead()}
-          {etsyLead()}
         </div>
       </FactoryPanel>
       {files.length>1&&<nav className="factory-listing-switch" aria-label="Listing">
@@ -3499,6 +3508,15 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
         ?{designs:files.length,titled:files.filter(file=>Boolean(file.title.trim())).length,tagged:files.filter(file=>file.tags.length>0).length,etsyReady:files.filter(file=>etsyRequiredComplete(file.etsy)).length}
         :bundleBatchSummary[recipe.id];
       if(!counts)return [`Still reading ${recipe.name}.`];
+      const memberDrafts=active?drafts:bundleMembers[recipe.id]?.drafts||[];
+      const created=memberDrafts.filter(draft=>draft.status==="Created");
+      if(created.length<counts.designs)return [`Finish the Printify drafts for ${recipe.name}.`];
+      const unpriced=created.filter(draft=>draft.costReview?.required&&!draft.costReview.approved).length;
+      if(unpriced)return [`Save final prices for ${unpriced} ${unpriced===1?"listing":"listings"} on ${recipe.name}.`];
+      const missingPhotos=createdListingsMissingImages(memberDrafts).length;
+      if(missingPhotos)return [`Choose at least one photo for ${missingPhotos} ${missingPhotos===1?"listing":"listings"} on ${recipe.name}.`];
+      const shippingId=active?etsyShippingProfileId:bundleMembers[recipe.id]?.shippingProfileId;
+      if(!shippingId)return [`Choose an Etsy shipping profile for ${recipe.name}.`];
       if(counts.titled<counts.designs)return [`Finish ${counts.designs-counts.titled} ${counts.designs-counts.titled===1?"title":"titles"} for ${recipe.name}.`];
       if(counts.tagged<counts.designs)return [`Add tags to ${counts.designs-counts.tagged} ${counts.designs-counts.tagged===1?"listing":"listings"} for ${recipe.name}.`];
       if(counts.etsyReady<counts.designs)return [`Finish Etsy details for ${counts.designs-counts.etsyReady} ${counts.designs-counts.etsyReady===1?"listing":"listings"} on ${recipe.name}.`];
@@ -4606,7 +4624,6 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
         {progressIndex===5&&titleCount>0&&<ActionReceipt items={[{value:`${titleCount} titles ready`,label:"Validated keyword phrases only"},{value:`${files.reduce((sum,file)=>sum+file.tags.length,0)} matching tags`,label:"Zero invented keywords"}]}/>}
         <div className={`steps-column ${workflowStep}-column`}>
           {workflowStep==="finish"&&finishPhase==="etsy"&&false&&<div className="step-success-banner" role="status"><span aria-hidden="true">✓</span><div><b>Titles, tags, and descriptions complete</b><small>{files.length} {files.length===1?"listing is":"listings are"} ready for Etsy details.</small></div></div>}
-          {workflowStep==="designs"&&complete&&<div className="step-success-banner" role="status"><span aria-hidden="true">✓</span><div><b>Printify drafts created</b><small>{bundleRunDrafts||files.length} {(bundleRunDrafts||files.length)===1?"listing is":"listings are"} ready for listing photos.</small></div></div>}
           
           <article className={`step-card connect-step workflow-panel ${connected ? "done" : ""} ${workflowStep==="connect"?"active-panel":"hidden-panel"}`}>
             
@@ -4886,6 +4903,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
               {/* D728 - prototype .goldie-footer: the designs step's forward
                   action and its status share one bar. Same gate, same handler. */}
               {workflowStep==="setup"&&<FactoryFooter status={setupForwardReady?"Your product and designs are ready":templateError||missingRequirement||failedBundleNames()[0]||`Preparing ${designsPreparing} ${designsPreparing===1?"design":"designs"}…`}><button className="workflow-next" disabled={!setupForwardReady} onClick={()=>goToStep("designs")}>{setupForwardReady?"Review draft plan":templateError||missingRequirement||"Finish the product above"} {setupForwardReady&&<span>→</span>}</button></FactoryFooter>}</>}
+              {workflowStep==="setup"&&files.length>0&&complete&&<FactoryFooter status="Your Printify drafts are ready"><button className="workflow-next" onClick={()=>goToStep("designs")}>Continue to drafts <span>→</span></button></FactoryFooter>}
             </div>
           </article>
           {/* D221 · Etsy details joins titles, tags and descriptions on one Listing page. They
