@@ -3114,6 +3114,7 @@ html, body { background: var(--lf-paper); }
 .app-shell .product-color-rendering{position:relative;display:grid;place-items:center;width:100%;aspect-ratio:1;border:1px solid #ded6dc;border-radius:10px;background:linear-gradient(145deg,#f7f5f6,#eee9ec);overflow:hidden}
 .app-shell .product-color-rendering>.bundle-product-photo{display:grid!important;place-items:center!important;width:88%!important;height:88%!important;margin:0!important;background:transparent!important;filter:drop-shadow(0 10px 9px rgba(30,24,27,.14))}
 .app-shell .product-color-rendering>.bundle-product-photo svg{width:100%!important;height:100%!important;max-width:none!important;max-height:none!important}
+.app-shell .product-color-rendering-base{display:block!important;width:92%!important;height:92%!important;object-fit:contain!important;border:0!important;border-radius:0!important;background:transparent!important;filter:drop-shadow(0 10px 9px rgba(30,24,27,.14))}
 .app-shell .product-color-rendering>.bundle-product-photo svg path:not(.glyph-line){fill:var(--product-glyph-color,#ddd)!important;stroke:rgba(42,34,39,.7);stroke-width:.28;stroke-linejoin:round}
 .app-shell .product-color-rendering>.bundle-product-photo svg .glyph-line{fill:none!important;stroke:rgba(35,29,33,.65)!important;stroke-width:.34!important}
 .app-shell .product-color-rendering-art{position:absolute!important;z-index:2;width:29%!important;height:34%!important;left:35.5%;top:32%;object-fit:contain!important;border:0!important;border-radius:0!important;background:transparent!important;filter:none!important}

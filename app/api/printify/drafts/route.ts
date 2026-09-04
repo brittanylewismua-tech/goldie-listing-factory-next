@@ -16,7 +16,7 @@ import { mergeMockupImages } from "@/app/draft-preview-variants";
 import { signedArtworkUrl } from "../staged-url";
 
 const PRINTIFY_API = "https://api.printify.com/v1";
-type UploadedImage = { id: string; width?: number; height?: number; mime_type?: string };
+type UploadedImage = { id: string; width?: number; height?: number; mime_type?: string; preview_url?:string };
 type TemplateProduct = {
   id: string;
   blueprint_id: number;
@@ -205,6 +205,7 @@ async function handlePOST(request: Request) {
       });
     }
     const uploadedImageIds: Record<string, string> = {};
+    const uploadedArtworkPreviewUrls: Record<string,string> = {};
     const uploadAllArtwork = async () => {
       /* Front/back and color-specific artwork are independent uploads. Sending
          them serially made one listing pay the full upload latency once per
@@ -221,6 +222,7 @@ async function handlePOST(request: Request) {
         }, (attempt, status) => recordDiagnostic(runtimeEnv().DB, supportReference, { stage: "printify_upload", event: "retry", attempt, httpStatus: status ?? null, shopId: shop.id }));
         if (!upload.id) throw new Error(`Printify accepted ${source.fileName} but did not return an image ID.`);
         uploadedImageIds[artwork.key] = upload.id;
+        if(upload.preview_url)uploadedArtworkPreviewUrls[artwork.key]=upload.preview_url;
       }));
     };
     await uploadAllArtwork();
@@ -365,7 +367,7 @@ async function handlePOST(request: Request) {
        This is required for every new draft, not only back prints, so a future
        Printify surcharge or provider change cannot bypass the same safeguard. */
     const costReview=actualCostReview(costVariants);
-    const draft = { id: created.id, placement, placementDebug, batchId:body.batchId, blueprintId:template.blueprint_id, providerId:template.print_provider_id, clientId: body.clientId ?? body.fileName, name: body.fileName, title, tags: body.tags ?? [], description:body.description??template.description??"", selectedVariantIds:finalVariantIds, previewUrl, printifyImages: productImages.map((image) => image.src).filter(Boolean), printifyImageDetails:productImages.filter(image=>image.src).map(image=>({src:image.src!,variantIds:image.variant_ids||[],position:image.position||""})), colorPreviewImageDetails:colorPreviewImages.filter(image=>image.src).map(image=>({src:image.src!,variantIds:image.variant_ids||[],position:image.position||""})), shopId: shop.id, editorUrl: `https://printify.com/app/editor/${created.id}`, status: "Created",costReview };
+    const draft = { id: created.id, placement, placementDebug, batchId:body.batchId, blueprintId:template.blueprint_id, providerId:template.print_provider_id, clientId: body.clientId ?? body.fileName, name: body.fileName, title, tags: body.tags ?? [], description:body.description??template.description??"", selectedVariantIds:finalVariantIds, previewUrl, artworkPreviewUrls:uploadedArtworkPreviewUrls, printifyImages: productImages.map((image) => image.src).filter(Boolean), printifyImageDetails:productImages.filter(image=>image.src).map(image=>({src:image.src!,variantIds:image.variant_ids||[],position:image.position||""})), colorPreviewImageDetails:colorPreviewImages.filter(image=>image.src).map(image=>({src:image.src!,variantIds:image.variant_ids||[],position:image.position||""})), shopId: shop.id, editorUrl: `https://printify.com/app/editor/${created.id}`, status: "Created",costReview };
     await db.prepare("UPDATE printify_draft_results SET status = 'succeeded', response_json = ?, updated_at = CURRENT_TIMESTAMP WHERE request_key = ?").bind(JSON.stringify(draft), idempotencyKey).run();
     const totalMs=Math.round(performance.now()-requestStartedAt);
     await recordDiagnostic(runtimeEnv().DB, supportReference, { stage: "response_ready", event: "succeeded", message:`total_ms=${totalMs}`, shopId: shop.id });
