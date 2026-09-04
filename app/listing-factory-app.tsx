@@ -3227,7 +3227,7 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
     const design=files.find(item=>item.id===activeDesign)||files[0];
     const index=files.findIndex(item=>item.id===design.id);
     const titled=files.filter(item=>(item.title||"").trim()).length;
-    const showListing=(id:string)=>{setActiveDesign(id);window.requestAnimationFrame(()=>window.requestAnimationFrame(()=>document.querySelector<HTMLElement>(".factory-listing-grid")?.scrollIntoView({block:"start"})))};
+    const showListing=(id:string,source:HTMLElement)=>{const editor=source.closest(".factory-listing-screen")?.querySelector<HTMLElement>(".factory-listing-grid");setActiveDesign(id);window.requestAnimationFrame(()=>window.requestAnimationFrame(()=>editor?.scrollIntoView({block:"start"})))};
     return <div className="factory-listing-screen">
       {/* Subordinate, and it says so: one section, collapsed by default once
           the titles exist, holding every batch-wide tool unchanged. */}
@@ -3249,7 +3249,7 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
           return <button type="button" key={item.id}
             className={`${item.id===design.id?"is-active":""} ${ready?"is-ready":"needs-work"}`}
             aria-current={item.id===design.id?"true":undefined}
-            onClick={()=>showListing(item.id)}>
+            onClick={event=>showListing(item.id,event.currentTarget)}>
             <b>Listing {position+1}</b><small>{ready?"Ready":"Needs a look"}</small>
           </button>;
         })}
@@ -3272,7 +3272,7 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
             now occupies that column, where the duplicate checklist used to be. */}
         <div className="factory-etsy-details-column">{etsyRows(design)}</div>
       </div>
-      {files.length>1&&<nav className="factory-listing-next" aria-label="Move between listings"><button type="button" disabled={index===0} onClick={()=>showListing(files[index-1].id)}>← Previous listing</button><span>Listing {index+1} of {files.length}</span><button type="button" disabled={index===files.length-1} onClick={()=>showListing(files[index+1].id)}>Next listing →</button></nav>}
+      {files.length>1&&<nav className="factory-listing-next" aria-label="Move between listings"><button type="button" disabled={index===0} onClick={event=>showListing(files[index-1].id,event.currentTarget)}>← Previous listing</button><span>Listing {index+1} of {files.length}</span><button type="button" disabled={index===files.length-1} onClick={event=>showListing(files[index+1].id,event.currentTarget)}>Next listing →</button></nav>}
     </div>;
   }
 

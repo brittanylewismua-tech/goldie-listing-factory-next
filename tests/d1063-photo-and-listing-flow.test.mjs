@@ -17,7 +17,8 @@ test("D1063 uses sequential listing navigation for colors and returns to the top
   assert.doesNotMatch(app,/className="draft-design-picker"/);
   assert.match(app,/className="factory-listing-next draft-color-next"/);
   assert.match(app,/selectorRef\.current\?\.scrollIntoView\(\{block:"start"\}\)/);
-  assert.match(app,/querySelector<HTMLElement>\("\.factory-listing-grid"\)\?\.scrollIntoView/);
+  assert.match(app,/source.closest\(".factory-listing-screen"\)\?\.querySelector<HTMLElement>\(".factory-listing-grid"\)/);
+  assert.match(app,/editor\?\.scrollIntoView\(\{block:"start"\}\)/);
 });
 
 test("D1063 renders the mockup expander as a horizontal row and gives navigation real padding",()=>{
