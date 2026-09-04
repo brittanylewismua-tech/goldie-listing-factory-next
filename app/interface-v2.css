@@ -3766,3 +3766,6 @@ html, body { background: var(--lf-paper); }
 }
 .app-shell .title-builder-pane > .secondary-action:hover{background:#f7f4f6;color:#171717}
 .app-shell .title-builder-pane > .secondary-action:disabled{opacity:.55;cursor:wait}
+
+/* Keep the listing heading below both the fixed account bar and sticky switcher. */
+.app-shell .factory-listing-screen > .factory-listing-grid{scroll-margin-top:160px}
