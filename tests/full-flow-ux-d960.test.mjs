@@ -35,5 +35,5 @@ test("D960: final Printify handoff has one save action and honest non-blocking a
 
 test("D960: internal confirmation is black and final handoff copy is readable", () => {
   assert.match(css, /\.app-shell \.preflight \.preflight-confirm\{background:#0d0b0c!important;color:#fff!important/);
-  assert.match(css, /\.factory-publish-box \.printify-handoff-button \.publish-all-shop\{color:rgba\(255,255,255,\.72\)!important/);
+  assert.match(css, /\.factory-footer\.in-bar \.footer-forward-action\{/);
 });

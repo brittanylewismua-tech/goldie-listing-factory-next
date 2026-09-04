@@ -21,6 +21,6 @@ test("D964: workflow copy states outcomes without narrating the tool", () => {
 test("D964: brand chrome remains while redundant workflow narration is gone", () => {
   assert.match(source, /<GoldieWordmark className="approved-brand"/);
   assert.doesNotMatch(source, /<GoldieInsight>/);
-  assert.match(source, /Nothing is published automatically\./);
+  assert.match(source, /Nothing publishes until you choose it in Printify\./);
   assert.match(source, /Keep this page open\./);
 });
