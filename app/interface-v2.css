@@ -3569,6 +3569,27 @@ html, body { background: var(--lf-paper); }
 .app-shell .individual-description-disclosure[open]>summary::after{transform:rotate(180deg)}
 .app-shell .individual-description-disclosure .individual-description-body{padding:16px}
 .app-shell .individual-description-disclosure textarea{width:100%;padding:12px;border:1px solid #d8cfd4;border-radius:8px;background:#fff;color:#211a1f;font:500 13px/1.55 inherit}
+
+/* D1055 · The shipping combobox uses its own rendered option classes. Keep the
+   menu quiet and Printify-like: white rows, dark readable text, and an outline
+   cue for the selected profile. */
+.app-shell .shipping-combobox-panel,
+.app-shell .shipping-combobox-list{background:#fff!important;color:#211a1f!important}
+.app-shell .shipping-combobox-option{
+  width:100%;min-height:42px;padding:10px 12px!important;border:0!important;
+  border-bottom:1px solid #e8e0e5!important;border-radius:0!important;
+  background:#fff!important;color:#211a1f!important;text-align:left!important;
+  box-shadow:none!important
+}
+.app-shell .shipping-combobox-option:hover,
+.app-shell .shipping-combobox-option:focus-visible{
+  background:#f8f5f7!important;color:#211a1f!important
+}
+.app-shell .shipping-combobox-option.selected,
+.app-shell .shipping-combobox-option[aria-selected="true"]{
+  padding-left:10px!important;border-left:3px solid #ec5db5!important;
+  background:#fff!important;color:#211a1f!important;font-weight:800!important
+}
 .app-shell .factory-listing-switch{position:sticky!important;top:74px!important;z-index:20!important}
 .app-shell .photo-order-strip>article.drop-target{transform:translateY(-7px) scale(1.025)!important;border-color:#111!important;box-shadow:0 12px 24px rgba(17,17,17,.18)!important}
 .app-shell .save-draft-prices:disabled{background:#eee9ec;color:#9b8e96;cursor:not-allowed}

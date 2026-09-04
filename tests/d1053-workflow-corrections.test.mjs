@@ -36,3 +36,13 @@ test("D1054: Step 3 identifies the listing with its Printify product mockup",asy
   assert.match(app,/drafts\.find\(draft=>draft\.clientId===design\.id\)\?\.previewUrl/);
   assert.match(app,/className="listing-product-preview"/);
 });
+
+test("D1055: the rendered shipping combobox stays white and readable",async()=>{
+  const css=await read("app/interface-v2.css");
+  assert.match(css,/\.shipping-combobox-option\{/);
+  assert.match(css,/\.shipping-combobox-option:hover/);
+  assert.match(css,/\.shipping-combobox-option\[aria-selected="true"\]/);
+  const block=css.slice(css.lastIndexOf(".shipping-combobox-panel"));
+  assert.match(block,/background:#fff!important/);
+  assert.match(block,/color:#211a1f!important/);
+});
