@@ -533,7 +533,7 @@ function DraftColorSelector({product,drafts,selected,saving,artworkByDraft,onCha
     return printifyMockupForColor(draft.colorPreviewImageDetails?.length?draft.colorPreviewImageDetails:draft.printifyImageDetails?.length?draft.printifyImageDetails:printifyMockupDetails(draft.printifyImages),variants)
       ||"";
   };
-  const focused=colors.find(color=>color.id===activeColor)||colors[0];
+  const focused=artworkUploadColor.current||colors.find(color=>color.id===activeColor)||colors[0];
   const realPreview=imageFor(focused);
   const focusedVariants=variantIdsFor(focused);
   const renderingSide=primaryPrintSide(orderedPrintSides(product.printPositions));
