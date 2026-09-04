@@ -3510,11 +3510,12 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
     for(const recipe of bundleRecipes){
       const active=recipe.id===activeRecipe?.id;
       const counts=active
-        ?{designs:files.length,titled:files.filter(file=>Boolean(file.title.trim())).length,tagged:files.filter(file=>file.tags.length>0).length}
+        ?{designs:files.length,titled:files.filter(file=>Boolean(file.title.trim())).length,tagged:files.filter(file=>file.tags.length>0).length,etsyReady:files.filter(file=>etsyRequiredComplete(file.etsy)).length}
         :bundleBatchSummary[recipe.id];
       if(!counts)return [`Still reading ${recipe.name}.`];
       if(counts.titled<counts.designs)return [`Finish ${counts.designs-counts.titled} ${counts.designs-counts.titled===1?"title":"titles"} for ${recipe.name}.`];
       if(counts.tagged<counts.designs)return [`Add tags to ${counts.designs-counts.tagged} ${counts.designs-counts.tagged===1?"listing":"listings"} for ${recipe.name}.`];
+      if(counts.etsyReady<counts.designs)return [`Finish Etsy details for ${counts.designs-counts.etsyReady} ${counts.designs-counts.etsyReady===1?"listing":"listings"} on ${recipe.name}.`];
     }
     return [];
   }

@@ -20,6 +20,7 @@ test("restoring a run seeds every product-to-child link before cards are used",(
 test("listing readiness includes every product in a bundle",()=>{
   assert.match(app,/function runProductGaps\(\)/);
   assert.match(app,/if\(index>=6\)issues\.push\(\.\.\.runProductGaps\(\)\)/);
+  assert.match(app,/Finish Etsy details for \$\{counts\.designs-counts\.etsyReady\}/);
   assert.match(app,/Finish \$\{counts\.designs-counts\.titled\}/);
   assert.match(app,/Add tags to \$\{counts\.designs-counts\.tagged\}/);
 });
