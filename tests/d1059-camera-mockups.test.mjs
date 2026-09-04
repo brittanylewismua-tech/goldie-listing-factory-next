@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {printifyCameraMockups} from "../app/printify-camera-mockups.ts";
+import fs from "node:fs";
 
 test("D1059 builds every compatible Printify camera view for one enabled variant",async()=>{
   const original=globalThis.fetch;
@@ -27,4 +28,11 @@ test("D1059 fails open when Printify camera metadata is unavailable",async()=>{
   globalThis.fetch=async()=>{throw new Error("offline")};
   try{assert.deepEqual(await printifyCameraMockups({productId:"draft",blueprintId:6,providerId:39,variants:[{id:1,is_enabled:true}]}),[])}
   finally{globalThis.fetch=original}
+});
+
+test("D1060 disables late browser scroll restoration for every workflow transition",()=>{
+  const page=fs.readFileSync(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8");
+  assert.match(page,/window\.history\.scrollRestoration="manual"/);
+  assert.match(page,/window\.setTimeout\(reset,80\).*window\.setTimeout\(reset,240\)/s);
+  assert.match(page,/document\.querySelector<HTMLElement>\("\.factory-main"\)/);
 });

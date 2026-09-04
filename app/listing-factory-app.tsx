@@ -1846,7 +1846,14 @@ export default function ListingFactoryApp() {
   useLayoutEffect(()=>{
     const reset=scrollFactoryToTop();
     const frame=window.requestAnimationFrame(reset);
-    return()=>window.cancelAnimationFrame(frame);
+    /* Browser history restoration can run after React's layout pass (seen live
+       when returning from Final review to Drafts: .factory-main was silently
+       restored to 122px even though window.scrollY was zero). Own restoration
+       for this app-level scroller and reset after the late browser pass too. */
+    const previous=window.history.scrollRestoration;
+    window.history.scrollRestoration="manual";
+    const soon=window.setTimeout(reset,80),settled=window.setTimeout(reset,240);
+    return()=>{window.cancelAnimationFrame(frame);window.clearTimeout(soon);window.clearTimeout(settled);window.history.scrollRestoration=previous};
   },[workflowStep,finishPhase,complete]);
   useEffect(()=>{if(connectionAutoSkip.current||localPreview||checkingConnection||restoringBatch||workflowStep!=="connect"||!connected||!etsyConnected)return;if(askedForConnect.current)return;connectionAutoSkip.current=true;goToStep("setup",true,true)},[localPreview,checkingConnection,restoringBatch,workflowStep,connected,etsyConnected]);
   /* D519 - while a bundle run is advancing, the app is mid-switch: the next
