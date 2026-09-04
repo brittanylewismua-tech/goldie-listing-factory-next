@@ -20,6 +20,21 @@ test("D957: the original image is recoverable and a missing variant cannot be si
   assert.throws(()=>replaceArtworkForVariants(areas,"front",[99],"alternate"),/did not expose artwork placement/);
 });
 
+test("D1084: color replacement never sends Printify empty placeholders",()=>{
+  const withCatalogPlaceholders=[{variant_ids:[1,2,3],placeholders:[
+    {position:"front",images:[{id:"main",x:.5,y:.4,scale:.8,angle:0}]},
+    {position:"back",images:[{id:"back",x:.5,y:.5,scale:.6,angle:0}]},
+    {position:"neck",images:[]},
+    {position:"sleeve"},
+  ]}];
+  const next=replaceArtworkForVariants(withCatalogPlaceholders,"front",[2],"alternate");
+  assert.ok(next.every(area=>area.placeholders.every(placeholder=>placeholder.images?.some(image=>image.id))));
+  assert.deepEqual(next.find(area=>area.variant_ids.includes(1)).placeholders.map(item=>item.position),["front","back"]);
+  const changed=next.find(area=>area.variant_ids.includes(2));
+  assert.equal(changed.placeholders.find(item=>item.position==="front").images[0].id,"alternate");
+  assert.equal(changed.placeholders.find(item=>item.position==="back").images[0].id,"back");
+});
+
 test("D957: color artwork lives only in the post-draft color workspace and uses the owned update route",async()=>{
   const [app,route]=await Promise.all([readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8"),readFile(new URL("../app/api/printify/drafts/update/route.ts",import.meta.url),"utf8")]);
   assert.match(app,/Use different artwork for \$\{focused\.title\}/);

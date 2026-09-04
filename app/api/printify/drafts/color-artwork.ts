@@ -13,12 +13,18 @@ export function replaceArtworkForVariants(areas:DraftPrintArea[],position:string
   const requested=new Set(variantIds.map(Number)),covered=new Set<number>(),result:DraftPrintArea[]=[];
   for(const area of areas){
     const chosen=area.variant_ids.filter(id=>requested.has(id)),retained=area.variant_ids.filter(id=>!requested.has(id));
-    if(retained.length)result.push({...area,variant_ids:retained});
+    /* Printify's product response can include catalog placeholders with no
+       artwork. They are useful metadata on reads, but invalid in a product PUT:
+       including one without `images` produces validation code 8150. Preserve
+       every configured print area while omitting only genuinely empty
+       placeholders from both halves of the split. */
+    const configured=(area.placeholders||[]).filter(item=>item.images?.some(image=>image.id));
+    if(retained.length)result.push({...area,variant_ids:retained,placeholders:configured});
     if(!chosen.length)continue;
     const target=area.placeholders?.find(item=>sameSide(item.position,position)),source=target?.images?.find(item=>item.id);
     if(!target||!source)throw new Error(`This Printify draft has no prepared ${position} placement.`);
     const placement=artworkPlacement(source,bounds,maxPlacementScale);
-    result.push({...area,variant_ids:chosen,placeholders:(area.placeholders||[]).map(item=>item===target?{...item,images:[{id:imageId,x:placement.x,y:placement.y,scale:placement.scale,angle:placement.angle}]}:item)});
+    result.push({...area,variant_ids:chosen,placeholders:(area.placeholders||[]).flatMap(item=>item===target?[{...item,images:[{id:imageId,x:placement.x,y:placement.y,scale:placement.scale,angle:placement.angle}]}]:item.images?.some(image=>image.id)?[item]:[])});
     chosen.forEach(id=>covered.add(id));
   }
   const missing=variantIds.filter(id=>!covered.has(id));
