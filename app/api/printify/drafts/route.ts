@@ -12,7 +12,7 @@ import { decryptPrintifyToken } from "../token-crypto";
 import { recommendedPrice } from "@/app/pricing";
 import { isOwner } from "@/app/mastermind/access";
 import { actualCostReview } from "@/app/draft-pricing";
-import { creationVariantIds, expandPrintAreasForPreview, mergeMockupImages, restoredVariants } from "@/app/draft-preview-variants";
+import { mergeMockupImages } from "@/app/draft-preview-variants";
 import { signedArtworkUrl } from "../staged-url";
 
 const PRINTIFY_API = "https://api.printify.com/v1";
@@ -230,17 +230,12 @@ async function handlePOST(request: Request) {
     const selectedShippingTemplateId=Number(body.shippingTemplateId)>0?String(Math.trunc(Number(body.shippingTemplateId))):template.shippingTemplateId;
     if(!selectedShippingTemplateId)throw new Error("Choose the shipping profile for this batch before creating drafts.");
     const finalVariantIds=(body.selectedVariantIds||[]).filter(id=>template.variants.some(variant=>variant.id===id));
-    const previewVariantIds=(body.mockupVariantIds||[]).filter(id=>template.variants.some(variant=>variant.id===id));
-    /* The real product is created only with the seller's saved choices. Broad
-       colour coverage belongs exclusively to the disposable preview helpers;
-       widening the real draft crowds its normal camera angles out of the
-       listing-photo response. */
-    /* Generate colour previews on the real private draft. The previous route
-       created one or more disposable products and waited for every helper's
-       asynchronous mockups before it returned. A measured two-design run left
-       one request stranded and held the successful request open for 78s. */
-    const enabledForCreation=creationVariantIds(finalVariantIds,previewVariantIds);
-    const creationPrintAreas=expandPrintAreasForPreview(template.print_areas,body.mockupVariantSources||{});
+    /* Create the real product once, with exactly the seller's saved choices.
+       Colour and camera previews are now derived from Printify's blueprint
+       metadata when the editor opens, so widening and then restoring every
+       draft only added a second serial Printify request. */
+    const enabledForCreation=finalVariantIds;
+    const creationPrintAreas=template.print_areas;
     const productBody = (variantIds=enabledForCreation,previewOnly=false) => JSON.stringify({
         title: previewOnly?`Preview — ${title || "Untitled design"}`:(title || "Untitled design"),
         description: body.description ?? template.description ?? "",
@@ -270,33 +265,9 @@ async function handlePOST(request: Request) {
       },
     });
     let resolvedProduct=created;
-    /* Printify only generates mockups for enabled variants. Create with one
-       representative size across every available colour, wait for those real
-       images, then restore the seller's exact choices before reporting success.
-       The broad image set is retained in Goldie for the colour picker; the
-       Printify draft itself never remains widened. */
-    let colorPreviewImages=resolvedProduct.images||[];
-    const widened=previewVariantIds.some(id=>!finalVariantIds.includes(id));
-    if(widened){
-      try{
-        /* Never hold the creation screen open waiting for asynchronously
-           generated mockups. The colour panel refreshes the real product when
-           the seller opens it; draft creation only restores their choices. */
-        const restored=restoredVariants(resolvedProduct.variants||template.variants,finalVariantIds).map(variant=>{
-          const source=(resolvedProduct.variants||template.variants).find(item=>item.id===variant.id);
-          return {...variant,price:Number(source?.price||template.variants.find(item=>item.id===variant.id)?.price||0)};
-        });
-        const restoredProduct=await api<CreatedProduct>(`/shops/${shop.id}/products/${created.id}.json`,token,{method:"PUT",body:JSON.stringify({variants:restored})});
-        resolvedProduct={...resolvedProduct,...restoredProduct,variants:(restoredProduct.variants||resolvedProduct.variants||[]).map(variant=>({...variant,is_enabled:finalVariantIds.includes(variant.id)}))};
-      }catch(error){
-        /* The draft exists. A late mockup refresh must never turn that success
-           into a failed listing. Best-effort restore keeps the saved choices. */
-        const restored=restoredVariants(resolvedProduct.variants||template.variants,finalVariantIds);
-        await api<CreatedProduct>(`/shops/${shop.id}/products/${created.id}.json`,token,{method:"PUT",body:JSON.stringify({variants:restored})}).catch(()=>undefined);
-      }
-    }
-    /* Keep every camera view returned while the temporarily widened real draft
-       was generating, then restore the seller's exact enabled variants. */
+    const colorPreviewImages=resolvedProduct.images||[];
+    /* Keep every image Printify returned immediately. Further camera angles
+       and colour thumbnails are populated lazily without delaying creation. */
     let productImages = mergeMockupImages(resolvedProduct.images ?? created.images ?? [],colorPreviewImages);
     let previewUrl = productImages.find((image) => image.is_default)?.src || productImages[0]?.src;
     if (!previewUrl) {

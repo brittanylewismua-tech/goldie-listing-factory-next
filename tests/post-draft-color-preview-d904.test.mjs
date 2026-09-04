@@ -13,7 +13,8 @@ test("D904: the saved template supplies the initial draft variants",()=>{
   assert.match(app,/rememberedSizes\.length\?rememberedSizes:sessionSizeIds\.length\?sessionSizeIds:templateSizes/);
   assert.match(app,/selectedVariantIds:requestPricedVariants\.map\(variant=>variant\.id\)/);
   assert.match(create,/variantIds\.length\?variantIds\.includes\(id\):is_enabled/);
-  assert.match(create,/restoredVariants\(resolvedProduct\.variants\|\|template\.variants,finalVariantIds\)/);
+  assert.match(create,/const enabledForCreation=finalVariantIds/);
+  assert.doesNotMatch(create,/restoredVariants\(resolvedProduct/);
 });
 
 test("D904: color decisions happen after real Printify mockups exist",()=>{
