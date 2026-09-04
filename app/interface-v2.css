@@ -3558,6 +3558,10 @@ html, body { background: var(--lf-paper); }
 .app-shell .title-builder-choice button:first-child b{position:relative;color:transparent!important}
 .app-shell .title-builder-choice button:first-child b::after{content:'Auto-create titles';position:absolute;inset:0;color:#211a1f;font-size:14px}
 .app-shell .factory-listing-form .design-fields{gap:20px!important}
+.app-shell .factory-listing-form>.listing-product-preview{display:block;width:min(300px,100%);padding:0;border:1px solid #d8cfd4;border-radius:10px;background:#fff;overflow:hidden;cursor:zoom-in}
+.app-shell .factory-listing-form>.listing-product-preview img{display:block;width:100%;height:260px;object-fit:contain;background:#fff}
+.app-shell .factory-listing-form .task-listing-edit{grid-template-columns:minmax(0,1fr)!important}
+.app-shell .factory-listing-form .task-listing-edit>.task-listing-preview{display:none!important}
 .app-shell .individual-description-disclosure{margin-top:22px;border:1px solid #d8cfd4;border-radius:10px;background:#fff;overflow:hidden}
 .app-shell .individual-description-disclosure>summary{padding:14px 16px;color:#2f242b;font-size:14px;font-weight:800;cursor:pointer;list-style:none}
 .app-shell .individual-description-disclosure>summary::after{content:'⌄';float:right;color:#756873}

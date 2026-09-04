@@ -30,3 +30,9 @@ test("D1053: per-listing descriptions are intentionally collapsed",async()=>{
   assert.match(app,/details className="individual-description-disclosure"/);
   assert.match(app,/summary>Description for this listing<\/summary>/);
 });
+
+test("D1054: Step 3 identifies the listing with its Printify product mockup",async()=>{
+  const app=await read("app/listing-factory-app.tsx");
+  assert.match(app,/drafts\.find\(draft=>draft\.clientId===design\.id\)\?\.previewUrl/);
+  assert.match(app,/className="listing-product-preview"/);
+});
