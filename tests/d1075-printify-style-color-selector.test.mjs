@@ -20,6 +20,7 @@ test("D1075 hover only changes the local illustrated color",()=>{
 test("D1077 the edit view composites the uploaded design onto a detailed color rendering",()=>{
   assert.match(app,/function ProductColorRendering/);
   assert.match(app,/className="product-color-rendering-art" src=\{artworkUrl\}/);
-  assert.match(app,/artworkByDraft=\{Object\.fromEntries\(files\.map\(file=>\[file\.id,file\.previewUrl\]\)\)\}/);
+  assert.match(app,/artworkByDraft=\{Object\.fromEntries\(files\.map\(file=>\[file\.id,file\.artworkPreviewUrl\|\|""\]\)\)\}/);
+  assert.match(app,/const artworkPreviewUrl=file\?URL\.createObjectURL\(file\):""/);
   assert.match(css,/\.product-color-rendering-art\{[^}]*position:absolute!important;[^}]*width:29%!important/);
 });
