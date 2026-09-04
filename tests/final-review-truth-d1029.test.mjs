@@ -16,6 +16,10 @@ test("bundle approval uses the active product's real approval and loaded sibling
   assert.match(app, /bundlePricingReady&&etsyShippingSelectionReady\(\)/);
 });
 
+test("the sibling approval effect is declared after the sibling state it reads", () => {
+  assert.ok(app.indexOf("const [bundleMembers,setBundleMembers]") < app.indexOf("const member=bundleMembers[recipe.id]"));
+});
+
 test("a one-listing editor does not repeat a one-listing summary bar", () => {
   assert.match(rows, /\{rows\.length>1&&<div className="listing-rows-bar">/);
 });

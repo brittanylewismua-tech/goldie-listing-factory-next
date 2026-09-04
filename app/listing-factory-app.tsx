@@ -1633,21 +1633,6 @@ export default function ListingFactoryApp() {
     const unfinished=drafts.some(draft=>draft.status==="Created"&&draft.costReview?.required&&!draft.costReview.approved);
     if(carries&&!unfinished&&!pricingApproved&&Number(etsyShippingProfileId)===Number(activeRecipe.etsyShippingProfileId))setPricingApproved(true);
   },[restoringBatch,activeRecipe,pricingApproved,etsyShippingProfileId,drafts]);
-  useEffect(()=>{
-    if(restoringBatch||!activeBundle||bundleRecipes.length<2)return;
-    const seed:Record<string,boolean>={};
-    for(const recipe of bundleRecipes){
-      if(recipe.id===activeRecipe?.id)continue;
-      const member=bundleMembers[recipe.id];
-      const created=member?.drafts.filter(draft=>draft.status==="Created")||[];
-      const actual=member
-        ?created.length>0&&created.every(draft=>!draft.costReview?.required||draft.costReview.approved)
-        :recipeCarriesApprovedPricing({defaultProfitTarget:recipe.defaultProfitTarget,etsyShippingProfileId:recipe.etsyShippingProfileId});
-      if(bundleApproved[recipe.id]!==actual)seed[recipe.id]=actual;
-    }
-    if(Object.keys(seed).length)setBundleApproved(current=>({...current,...seed}));
-  },[restoringBatch,activeBundle,bundleRecipes,activeRecipe,bundleApproved,bundleMembers]);
-
   function etsyShippingSelectionReady(){
     if(shippingProfilesLoading||shippingProfilesError||!etsyShippingProfiles.length)return false;
     const available=new Set(etsyShippingProfiles.map(profile=>Number(profile.id)));
@@ -2562,6 +2547,23 @@ setSavedRevision(current=>current+1);}catch(error){stopWith("This default was no
      only?" The same read keeps the listings and the settings each product needs
      to publish, so every listing in the bundle is on the page and selectable. */
   const [bundleMembers,setBundleMembers]=useState<Record<string,{recipeId:string;productName:string;drafts:DraftResult[];designs:Array<Omit<DesignFile,"file"|"previewUrl">>;selections:Record<string,number[]>;indices:number[];shippingProfileId:number;sizeGuideName:string;preparedMockupCounts:Record<string,number>}>>({});
+  /* D1030 · This must live after bundleMembers is declared. Hook dependencies
+     are evaluated during render, so placing it in the earlier saved-defaults
+     section caused a temporal-dead-zone startup crash in D1029. */
+  useEffect(()=>{
+    if(restoringBatch||!activeBundle||bundleRecipes.length<2)return;
+    const seed:Record<string,boolean>={};
+    for(const recipe of bundleRecipes){
+      if(recipe.id===activeRecipe?.id)continue;
+      const member=bundleMembers[recipe.id];
+      const created=member?.drafts.filter(draft=>draft.status==="Created")||[];
+      const actual=member
+        ?created.length>0&&created.every(draft=>!draft.costReview?.required||draft.costReview.approved)
+        :recipeCarriesApprovedPricing({defaultProfitTarget:recipe.defaultProfitTarget,etsyShippingProfileId:recipe.etsyShippingProfileId});
+      if(bundleApproved[recipe.id]!==actual)seed[recipe.id]=actual;
+    }
+    if(Object.keys(seed).length)setBundleApproved(current=>({...current,...seed}));
+  },[restoringBatch,activeBundle,bundleRecipes,activeRecipe,bundleApproved,bundleMembers]);
   useEffect(()=>{
     if(!activeBundle||bundleRecipes.length<2)return;
     const wanted=bundleRecipes.filter(recipe=>recipe.id!==activeRecipe?.id&&bundleBatchIds[recipe.id]);
