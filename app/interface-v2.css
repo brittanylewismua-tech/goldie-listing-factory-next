@@ -3453,3 +3453,19 @@ html, body { background: var(--lf-paper); }
   opacity:1;background:#efe7ec;color:#a2909c;box-shadow:4px 4px 0 #f3d9ea;
   transform:none;cursor:not-allowed;pointer-events:none;
 }
+
+/* D1037 · A narrowed desktop window fell between two incompatible shell rules:
+   the desktop composition stops at 821px, but a later legacy declaration kept
+   the 288px sidebar offset below that width. At 768px the work pane was only
+   480px wide; at 390px it was 102px. Real touch devices continue to receive the
+   deliberate desktop-required card. Fine-pointer windows use the whole width. */
+@media (max-width:820px) and (pointer:fine){
+  .app-shell{display:block!important;padding-left:0!important}
+  .app-shell>.topbar{display:none!important}
+  .app-shell>.factory-main{width:100%!important;height:100vh!important}
+  .app-shell .factory-top{padding-inline:18px!important}
+  .app-shell .factory-work{width:100%!important;max-width:none!important;padding:22px 18px 0!important}
+  .app-shell .workflow-progress{grid-template-columns:repeat(var(--rail-count,4),minmax(72px,1fr));overflow-x:auto}
+  .app-shell .workflow-progress:before{display:none}
+  .app-shell .factory-work footer{width:auto!important;margin-left:0!important}
+}
