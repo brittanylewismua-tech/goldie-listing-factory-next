@@ -2138,7 +2138,7 @@ test("records real pricing approval and invalidates it after edits (fixes D23 an
   assert.match(app,/if\(isActive\)\{setPricing\(value\);setPricingApproved\(false\)\}/);
   assert.match(app,/if\(isActive\)\{setVariantPrices\(value\);setPricingApproved\(false\)\}/);
   /* D546 - the publish checklist repeated the product cards above it line for line, so it was deleted; each fact it carried moved to the row that owns it. */
-  assert.match(app,/\{label:"Pricing and shipping",value:isActive\?\(pricingApproved&&etsyShippingSelectionReady\(\)\?/);
+  assert.match(app,/\{label:"Pricing and shipping",value:isActive\?\(bundlePricingReady&&etsyShippingSelectionReady\(\)\?/);
   assert.match(app,/setPricingApproved\(Boolean\(state\.pricingApproved\)\|\|Boolean\(state\.complete&&\(state\.drafts\|\|\[\]\)\.some\(draft=>draft\.status==="Created"\)\)\)/);
   assert.doesNotMatch(app,/if\(complete&&drafts\.some\(draft=>draft\.status==="Created"\)&&!pricingApproved\)setPricingApproved\(true\)/);
   assert.doesNotMatch(app,/✓ Every enabled variation and price was reviewed/);
@@ -4294,9 +4294,9 @@ test("a card that says Ready is not also asking to approve — D505/D506", async
      gates Next were two different things. A saved product carries an approved
      target and profile; reopening a batch restored pricingApproved as false and
      nothing put it back. */
-  assert.match(app, /if\(carries&&!pricingApproved&&Number\(etsyShippingProfileId\)===Number\(activeRecipe\.etsyShippingProfileId\)\)setPricingApproved\(true\)/,
+  assert.match(app, /if\(carries&&!unfinished&&!pricingApproved&&Number\(etsyShippingProfileId\)===Number\(activeRecipe\.etsyShippingProfileId\)\)setPricingApproved\(true\)/,
     "an untouched saved product is already approved");
-  assert.match(app, /if\(recipeCarriesApprovedPricing\(\{defaultProfitTarget:recipe\.defaultProfitTarget,etsyShippingProfileId:recipe\.etsyShippingProfileId\}\)\)seed\[recipe\.id\]=true/,
+  assert.match(app, /const actual=member[\s\S]*?created\.every\(draft=>!draft\.costReview\?\.required\|\|draft\.costReview\.approved\)/,
     "and so is every other product in a restored bundle");
 
   /* D505 · batch-history-actions styled the selection toolbar, and was also the

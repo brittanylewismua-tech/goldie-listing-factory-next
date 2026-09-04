@@ -1630,17 +1630,23 @@ export default function ListingFactoryApp() {
   useEffect(()=>{
     if(restoringBatch||!activeRecipe)return;
     const carries=recipeCarriesApprovedPricing({defaultProfitTarget:activeRecipe.defaultProfitTarget,etsyShippingProfileId:activeRecipe.etsyShippingProfileId});
-    if(carries&&!pricingApproved&&Number(etsyShippingProfileId)===Number(activeRecipe.etsyShippingProfileId))setPricingApproved(true);
-  },[restoringBatch,activeRecipe,pricingApproved,etsyShippingProfileId]);
+    const unfinished=drafts.some(draft=>draft.status==="Created"&&draft.costReview?.required&&!draft.costReview.approved);
+    if(carries&&!unfinished&&!pricingApproved&&Number(etsyShippingProfileId)===Number(activeRecipe.etsyShippingProfileId))setPricingApproved(true);
+  },[restoringBatch,activeRecipe,pricingApproved,etsyShippingProfileId,drafts]);
   useEffect(()=>{
     if(restoringBatch||!activeBundle||bundleRecipes.length<2)return;
     const seed:Record<string,boolean>={};
     for(const recipe of bundleRecipes){
-      if(recipe.id===activeRecipe?.id||bundleApproved[recipe.id])continue;
-      if(recipeCarriesApprovedPricing({defaultProfitTarget:recipe.defaultProfitTarget,etsyShippingProfileId:recipe.etsyShippingProfileId}))seed[recipe.id]=true;
+      if(recipe.id===activeRecipe?.id)continue;
+      const member=bundleMembers[recipe.id];
+      const created=member?.drafts.filter(draft=>draft.status==="Created")||[];
+      const actual=member
+        ?created.length>0&&created.every(draft=>!draft.costReview?.required||draft.costReview.approved)
+        :recipeCarriesApprovedPricing({defaultProfitTarget:recipe.defaultProfitTarget,etsyShippingProfileId:recipe.etsyShippingProfileId});
+      if(bundleApproved[recipe.id]!==actual)seed[recipe.id]=actual;
     }
     if(Object.keys(seed).length)setBundleApproved(current=>({...current,...seed}));
-  },[restoringBatch,activeBundle,bundleRecipes,activeRecipe,bundleApproved]);
+  },[restoringBatch,activeBundle,bundleRecipes,activeRecipe,bundleApproved,bundleMembers]);
 
   function etsyShippingSelectionReady(){
     if(shippingProfilesLoading||shippingProfilesError||!etsyShippingProfiles.length)return false;
@@ -1648,7 +1654,7 @@ export default function ListingFactoryApp() {
     return activeBundle?bundleRecipes.length>0&&bundleRecipes.every(recipe=>available.has(Number(recipe.etsyShippingProfileId))):available.has(Number(etsyShippingProfileId));
   }
   function gateState():NavigationGateState{return {bundleProductsReady:bundleProductsReady(),connected,etsyConnected,productSelected,templateReady:templateLoaded,shippingReady:Boolean(templateDetails?.shippingTemplateId||templateDetails?.shippingProfileNeedsSelection),variantsReady:Boolean(templateDetails?.enabledVariants),colorsReady:!templateDetails?.colorOptions?.length||selectedColorIds.length>0,pricesReady:pricedVariants.length>0,designCount:files.length,designsReady:files.every(designArtworkReady),/* A stored id is not enough: it must still exist in the connected shop, and
-     the profile request itself must have succeeded. */etsyShippingProfileReady:etsyShippingSelectionReady(),pricingApproved:activeBundle?bundleRecipes.length>0&&bundleRecipes.every(recipe=>bundleApproved[recipe.id]??recipeCarriesApprovedPricing({defaultProfitTarget:recipe.defaultProfitTarget,etsyShippingProfileId:recipe.etsyShippingProfileId})):pricingApproved,draftsComplete:complete,createdDraftCount,titlesReady:files.length>0&&files.every(file=>Boolean(file.title.trim())&&!file.titleError),tagsReady:files.length>0&&files.every(file=>file.tags.length>0&&!file.titleError),descriptionReady:Boolean(description.trim()),etsyDetailsReady:files.length>0&&files.every(file=>etsyRequiredComplete(file.etsy)),personalizationReady:files.every(file=>!personalizationProblem(file.etsy)),imagesReady:allCreatedListingsHaveImages()}}
+     the profile request itself must have succeeded. */etsyShippingProfileReady:etsyShippingSelectionReady(),pricingApproved:activeBundle?bundleRecipes.length>0&&bundleRecipes.every(recipe=>recipe.id===activeRecipe?.id?pricingApproved:(bundleApproved[recipe.id]??false)):pricingApproved,draftsComplete:complete,createdDraftCount,titlesReady:files.length>0&&files.every(file=>Boolean(file.title.trim())&&!file.titleError),tagsReady:files.length>0&&files.every(file=>file.tags.length>0&&!file.titleError),descriptionReady:Boolean(description.trim()),etsyDetailsReady:files.length>0&&files.every(file=>etsyRequiredComplete(file.etsy)),personalizationReady:files.every(file=>!personalizationProblem(file.etsy)),imagesReady:allCreatedListingsHaveImages()}}
   function progressGateIssues(index:number){if(localPreview)return [];const issues=navigationIssues(index,gateState());if(index>=6)issues.push(...runProductGaps());return [...new Set(issues)]}
   /* D444 - leaving Images needs photos, not titles. See leavingImagesIssues. */
   function imagesStepIssues(){if(localPreview)return [];const issues=leavingImagesIssues(gateState());if(templateDetails?.colorOptions?.length&&!selectedColorIds.length)issues.push("Choose at least one product color.");if(templateDetails?.sizeOptions?.length&&!selectedSizeIds.length)issues.push("Choose at least one product size.");if(savingDraftVariants)issues.push("Wait while the product colors and sizes are saved to Printify.");if(draftVariantError)issues.push(draftVariantError);if(bundleProductsStillReading().length)issues.push("Still reading the finished costs for the other products in this bundle.");const pending=costReviewDrafts().filter(draft=>!draft.costReview?.approved);if(pending.length)issues.push(`${pending.length} ${pending.length===1?"listing needs":"listings need"} final pricing approval after Printify calculated the finished product costs.`);
@@ -3087,6 +3093,7 @@ setSavedRevision(current=>current+1);}catch(error){stopWith("This default was no
          and they belong on the rows that own that work. */
       /* D841 · reported, not a gate. Etsy has no minimum title length. */
       const shortTitles=isActive?reportFiles.filter(file=>file.title.trim().length<60).length:0;
+      const bundlePricingReady=!activeBundle||bundleRecipes.length<2||bundleRecipes.every(recipe=>recipe.id===activeRecipe?.id?pricingApproved:(bundleApproved[recipe.id]??false));
       return [
         {label:"Listings ready",value:started?plural(counts.drafts,"listing"):blank,pending,done:counts.drafts>0,report:true},
         {label:"Titles and tags",value:started?(()=>{
@@ -3124,7 +3131,7 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
         /* D548 - the checklist read "✓ Hoodies will be applied automatically", which is
            the name of her shipping profile in a sentence that sounds like it is about
            the garment. Say what the name refers to. */
-        {label:"Pricing and shipping",value:isActive?(pricingApproved&&etsyShippingSelectionReady()?(activeBundle&&bundleRecipes.length>1?`Approved for ${plural(bundleRecipes.length,"product")}`:`Approved · ${friendlyShippingProfileTitle(etsyShippingProfiles.find(profile=>profile.id===etsyShippingProfileId)?.title)||"Etsy shipping profile"}`):shippingProfilesError?"Reconnect Etsy":"Needs review"):started?"Approved":blank,detail:isActive&&shippingProfilesError?shippingProfilesError:undefined,pending,done:isActive?pricingApproved&&etsyShippingSelectionReady():started,report:true},
+        {label:"Pricing and shipping",value:isActive?(bundlePricingReady&&etsyShippingSelectionReady()?(activeBundle&&bundleRecipes.length>1?`Approved for ${plural(bundleRecipes.length,"product")}`:`Approved · ${friendlyShippingProfileTitle(etsyShippingProfiles.find(profile=>profile.id===etsyShippingProfileId)?.title)||"Etsy shipping profile"}`):shippingProfilesError?"Reconnect Etsy":"Needs review"):started?"Approved":blank,detail:isActive&&shippingProfilesError?shippingProfilesError:undefined,pending,done:isActive?bundlePricingReady&&etsyShippingSelectionReady():started,report:true},
         {label:"Printify status",value:counts.drafts?`${plural(counts.drafts,"draft")} ready`:"No drafts yet",pending,done:counts.drafts>0,report:true},
       ];
   }

@@ -16,7 +16,7 @@ test("D1008: an Etsy database row is not reported as a verified connection", () 
 
 test("D1008: failed shipping cannot coexist with a ready handoff", () => {
   assert.match(app, /shippingProfilesError\?"Reconnect Etsy":"Needs review"/);
-  assert.match(app, /done:isActive\?pricingApproved&&etsyShippingSelectionReady\(\):started/);
+  assert.match(app, /done:isActive\?bundlePricingReady&&etsyShippingSelectionReady\(\):started/);
   assert.match(app, /handoffBlockers\(\)\.length\?"Finish the items above before opening Printify\.":"Your listings are ready in Printify\."/);
   assert.match(app, /aria-disabled=\{handoffBlockers\(\)\.length>0\}/,
     "the Printify handoff is disabled while required work remains");

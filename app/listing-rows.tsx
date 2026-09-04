@@ -83,7 +83,7 @@ export default function ListingRows({
        column above it costs 179px, which squeezed the picker to two tiles a row.
        Text panels keep the alignment; work surfaces get the width. */
     <div className={`listing-rows${defaultOpen ? " is-worksurface" : ""}`}>
-      <div className="listing-rows-bar">
+      {rows.length>1&&<div className="listing-rows-bar">
         <div className="listing-rows-summary">
           <b>{rows.length} {rows.length === 1 ? noun : `${noun}s`}</b>
           {flagged.length > 0 && (
@@ -120,7 +120,7 @@ export default function ListingRows({
             </button>
           )}
         </div>}
-      </div>
+      </div>}
 
       {rows.map((row, index) => {
         const flags = row.flags || [];
