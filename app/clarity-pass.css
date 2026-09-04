@@ -2454,7 +2454,7 @@ body{min-width:0}
 .app-shell .task-panel .printify-image-option{margin:0;width:auto;border-radius:10px!important;overflow:hidden;background:#fff!important;box-shadow:0 1px 4px rgba(74,42,62,.14);border:2px solid transparent!important;position:relative}
 .app-shell .task-panel .printify-image-option.selected{border-color:#7a3f63!important;box-shadow:0 2px 9px rgba(122,63,99,.32)!important}
 .app-shell .task-panel .printify-image-option img{display:block;width:100%;height:auto}
-.app-shell .task-panel .printify-photo-selector{top:8px!important;right:8px!important;left:auto!important;width:20px!important;height:20px!important;border-radius:6px!important;background:rgba(255,255,255,.96)!important;box-shadow:0 1px 3px rgba(74,42,62,.28)!important}
+.app-shell .printify-image-picker .printify-photo-selector{top:8px!important;right:8px!important;left:auto!important;width:20px!important;height:20px!important;border-radius:6px!important;background:rgba(255,255,255,.96)!important;box-shadow:0 1px 3px rgba(74,42,62,.28)!important}
 .app-shell .task-panel .printify-image-option.selected .printify-photo-selector{background:#7a3f63!important;color:#fff}
 /* D682 · display:grid with place-items:center puts the chevron on its own row
    ABOVE the label - the same "arrow sitting apart from the text" this was meant

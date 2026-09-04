@@ -3445,7 +3445,7 @@ html, body { background: var(--lf-paper); }
 
 /* D1040 · Keep photo selection clear of Pinterest's upper-left save control,
    make every check visually centred, and make expanded photos reliably closable. */
-.app-shell .task-panel .printify-photo-selector{top:8px!important;right:8px!important;left:auto!important;display:grid!important;place-items:center!important}
+.app-shell .printify-image-picker .printify-photo-selector{top:8px!important;right:8px!important;left:auto!important;display:grid!important;place-items:center!important}
 .app-shell .printify-photo-selector>span[aria-hidden]{display:grid!important;width:100%;height:100%;place-items:center;line-height:1!important;transform:none!important}
 .printify-photo-lightbox>button{display:grid!important;place-items:center!important;padding:0!important;line-height:1!important;text-align:center!important}
 .app-shell .printify-more-toggle{min-height:40px!important;margin:16px auto 0!important;border:2px solid #111!important;border-radius:9px!important;background:#fff!important;color:#111!important;font-size:12px!important}
