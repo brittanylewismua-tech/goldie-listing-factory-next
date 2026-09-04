@@ -145,7 +145,8 @@ test("uses individual shop-aware Printify editor buttons", async () => {
   assert.match(page, /\/api\/printify\/stage/);
   assert.match(page, /prepareArtworkFile/);
   assert.match(page, /fetchWithDeadline/);
-  assert.match(page, /4 \* 60 \* 1000/);
+  assert.match(page, /60_000/);
+  assert.doesNotMatch(page, /4 \* 60 \* 1000/);
   assert.match(page, /Add at least one design/);
   assert.match(page, /title: design\.title \|\| undefined/);
   assert.doesNotMatch(page, /listingTitle/);

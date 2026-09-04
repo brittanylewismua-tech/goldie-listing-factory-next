@@ -12,7 +12,7 @@ import { decryptPrintifyToken } from "../token-crypto";
 import { recommendedPrice } from "@/app/pricing";
 import { isOwner } from "@/app/mastermind/access";
 import { actualCostReview } from "@/app/draft-pricing";
-import { creationVariantIds, expandPrintAreasForPreview, mergeMockupImages, PREVIEW_MOCKUP_WAITS_MS, restoredVariants } from "@/app/draft-preview-variants";
+import { creationVariantIds, expandPrintAreasForPreview, mergeMockupImages, restoredVariants } from "@/app/draft-preview-variants";
 import { signedArtworkUrl } from "../staged-url";
 
 const PRINTIFY_API = "https://api.printify.com/v1";
@@ -73,6 +73,7 @@ async function api<T>(path: string, token: string, init?: RequestInit, onRetry?:
     try {
       response = await fetch(`${PRINTIFY_API}${path}`, {
         ...init,
+        signal: AbortSignal.timeout(30000),
         headers: { Authorization: `Bearer ${token}`, "User-Agent": "Goldie-Listing-Factory", "Content-Type": "application/json", ...(init?.headers ?? {}) },
       });
     } catch {
@@ -124,6 +125,11 @@ async function handleGET(request: Request) {
   const row = await db.prepare("SELECT status, response_json, updated_at FROM printify_draft_results WHERE request_key = ? AND user_id = ?")
     .bind(key, user.userId).first<{ status: string; response_json: string | null; updated_at: string }>();
   if (!row) return NextResponse.json({ status: "not_found" }, { status: 404 });
+  const age=Date.now()-new Date(`${row.updated_at.replace(" ","T")}Z`).getTime();
+  if(row.status==="running"&&age>90_000){
+    await db.prepare("UPDATE printify_draft_results SET status='failed', updated_at=CURRENT_TIMESTAMP WHERE request_key=? AND user_id=? AND status='running'").bind(key,user.userId).run();
+    return NextResponse.json({status:"failed",error:"This draft attempt stopped responding. Retry it; the previous attempt will not be repeated."});
+  }
   return NextResponse.json({ status: row.status, draft: row.status === "succeeded" && row.response_json ? JSON.parse(row.response_json) : undefined, updatedAt: row.updated_at });
 }
 
@@ -153,14 +159,14 @@ async function handlePOST(request: Request) {
     const prior = await db.prepare("SELECT status, response_json, updated_at FROM printify_draft_results WHERE request_key = ? AND user_id = ?")
       .bind(idempotencyKey, user.userId).first<{ status: string; response_json: string | null; updated_at: string }>();
     if (prior?.status === "succeeded" && prior.response_json) return NextResponse.json({ draft: JSON.parse(prior.response_json) });
-    if (prior?.status === "running" && Date.now() - new Date(`${prior.updated_at.replace(" ", "T")}Z`).getTime() < 10 * 60 * 1000) {
+    if (prior?.status === "running" && Date.now() - new Date(`${prior.updated_at.replace(" ", "T")}Z`).getTime() < 90_000) {
       return NextResponse.json({ error: "Goldie is still completing this exact draft. It will be checked again automatically." }, { status: 409 });
     }
     await db.prepare("INSERT INTO printify_draft_results (request_key, user_id, batch_id, client_id, status, updated_at) VALUES (?, ?, ?, ?, 'running', CURRENT_TIMESTAMP) ON CONFLICT(request_key) DO UPDATE SET status = 'running', response_json = NULL, updated_at = CURRENT_TIMESTAMP")
       .bind(idempotencyKey, user.userId, body.batchId, body.clientId ?? body.fileName ?? requestedArtworks[0].fileName).run();
     const planRow = await db.prepare("SELECT plan_key FROM account_plans WHERE user_id=?").bind(user.userId).first<{plan_key:string}>();
     const plan = planFor(planRow?.plan_key, isOwner(user));
-    const reserved = await db.prepare("SELECT COUNT(*) count FROM printify_draft_results WHERE user_id=? AND ((status='succeeded' AND updated_at>=datetime('now','start of month')) OR (status='running' AND updated_at>=datetime('now','-10 minutes')))").bind(user.userId).first<{count:number}>();
+    const reserved = await db.prepare("SELECT COUNT(*) count FROM printify_draft_results WHERE user_id=? AND ((status='succeeded' AND updated_at>=datetime('now','start of month')) OR (status='running' AND updated_at>=datetime('now','-90 seconds')))").bind(user.userId).first<{count:number}>();
     if (Number(reserved?.count || 0) > plan.drafts) {
       await db.prepare("UPDATE printify_draft_results SET status='failed', updated_at=CURRENT_TIMESTAMP WHERE request_key=?").bind(idempotencyKey).run();
       return NextResponse.json({ error: `You have used all ${plan.drafts} successful drafts in your ${plan.name} plan. Your allowance resets next month.` }, { status: 429 });
@@ -263,9 +269,7 @@ async function handlePOST(request: Request) {
         }
       },
     });
-    await recordDiagnostic(runtimeEnv().DB, supportReference, { stage: diagnosticStage, event: "succeeded", shopId: shop.id });
     let resolvedProduct=created;
-    try { resolvedProduct=await api<CreatedProduct>(`/shops/${shop.id}/products/${created.id}.json`,token); } catch { /* The create response remains usable; cost review will stay blocked if costs are absent. */ }
     /* Printify only generates mockups for enabled variants. Create with one
        representative size across every available colour, wait for those real
        images, then restore the seller's exact choices before reporting success.
@@ -275,21 +279,15 @@ async function handlePOST(request: Request) {
     const widened=previewVariantIds.some(id=>!finalVariantIds.includes(id));
     if(widened){
       try{
-        /* One short refresh is enough to pick up mockups that finish just after
-           creation. Preview latency is optional: it may enrich the picker, but
-           it can never delete or fail the real draft the seller just created. */
-        for(const wait of PREVIEW_MOCKUP_WAITS_MS.slice(0,2)){
-          await new Promise(resolve=>setTimeout(resolve,wait));
-          const loaded=await api<CreatedProduct>(`/shops/${shop.id}/products/${created.id}.json`,token);
-          colorPreviewImages=mergeMockupImages(colorPreviewImages,loaded.images||[]);
-          resolvedProduct={...resolvedProduct,...loaded};
-        }
+        /* Never hold the creation screen open waiting for asynchronously
+           generated mockups. The colour panel refreshes the real product when
+           the seller opens it; draft creation only restores their choices. */
         const restored=restoredVariants(resolvedProduct.variants||template.variants,finalVariantIds).map(variant=>{
           const source=(resolvedProduct.variants||template.variants).find(item=>item.id===variant.id);
           return {...variant,price:Number(source?.price||template.variants.find(item=>item.id===variant.id)?.price||0)};
         });
-        await api<CreatedProduct>(`/shops/${shop.id}/products/${created.id}.json`,token,{method:"PUT",body:JSON.stringify({variants:restored})});
-        resolvedProduct={...resolvedProduct,variants:(resolvedProduct.variants||[]).map(variant=>({...variant,is_enabled:finalVariantIds.includes(variant.id)}))};
+        const restoredProduct=await api<CreatedProduct>(`/shops/${shop.id}/products/${created.id}.json`,token,{method:"PUT",body:JSON.stringify({variants:restored})});
+        resolvedProduct={...resolvedProduct,...restoredProduct,variants:(restoredProduct.variants||resolvedProduct.variants||[]).map(variant=>({...variant,is_enabled:finalVariantIds.includes(variant.id)}))};
       }catch(error){
         /* The draft exists. A late mockup refresh must never turn that success
            into a failed listing. Best-effort restore keeps the saved choices. */
@@ -393,6 +391,7 @@ async function handlePOST(request: Request) {
     const costReview=actualCostReview(costVariants);
     const draft = { id: created.id, placement, placementDebug, batchId:body.batchId, clientId: body.clientId ?? body.fileName, name: body.fileName, title, tags: body.tags ?? [], description:body.description??template.description??"", selectedVariantIds:finalVariantIds, previewUrl, printifyImages: productImages.map((image) => image.src).filter(Boolean), printifyImageDetails:productImages.filter(image=>image.src).map(image=>({src:image.src!,variantIds:image.variant_ids||[],position:image.position||""})), colorPreviewImageDetails:colorPreviewImages.filter(image=>image.src).map(image=>({src:image.src!,variantIds:image.variant_ids||[],position:image.position||""})), shopId: shop.id, editorUrl: `https://printify.com/app/editor/${created.id}`, status: "Created",costReview };
     await db.prepare("UPDATE printify_draft_results SET status = 'succeeded', response_json = ?, updated_at = CURRENT_TIMESTAMP WHERE request_key = ?").bind(JSON.stringify(draft), idempotencyKey).run();
+    await recordDiagnostic(runtimeEnv().DB, supportReference, { stage: "response_ready", event: "succeeded", shopId: shop.id });
     return NextResponse.json({ draft });
   } catch (error) {
     const message = error instanceof Error ? error.message : "The draft could not be created.";

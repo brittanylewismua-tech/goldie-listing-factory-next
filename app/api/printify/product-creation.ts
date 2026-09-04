@@ -37,6 +37,7 @@ export async function createProductWithImageRetries<T>(options: {
     try {
       response = await fetcher(`${PRINTIFY_API}${options.path}`, {
         method: "POST",
+        signal: AbortSignal.timeout(45000),
         headers: { Authorization: `Bearer ${options.token}`, "User-Agent": "Goldie-Listing-Factory", "Content-Type": "application/json" },
         body: typeof options.body === "function" ? options.body() : options.body,
       });

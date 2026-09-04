@@ -61,19 +61,21 @@ test("D1045 generates previews on the real draft and restores the seller selecti
   assert.doesNotMatch(route,/catch\(error\)[\s\S]{0,350}method:"DELETE"/);
 });
 
-test("D1045 retains real-draft color previews in the listing-photo collection",()=>{
+test("D1051 returns creation without polling for delayed color previews",()=>{
   const app=fs.readFileSync(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8");
   const route=fs.readFileSync(new URL("../app/api/printify/drafts/route.ts",import.meta.url),"utf8");
   assert.match(route,/let colorPreviewImages=resolvedProduct\.images\|\|\[\]/);
-  assert.match(route,/colorPreviewImages=mergeMockupImages\(colorPreviewImages,loaded\.images\|\|\[\]\)/);
+  assert.doesNotMatch(route,/PREVIEW_MOCKUP_WAITS_MS\.slice/);
+  assert.doesNotMatch(route,/for\(const wait of PREVIEW_MOCKUP_WAITS_MS/);
   assert.match(route,/printifyImages: productImages\.map/);
   assert.match(route,/colorPreviewImageDetails:colorPreviewImages\.filter/);
   assert.match(app,/draft\.colorPreviewImageDetails\?\.length\?draft\.colorPreviewImageDetails:draft\.printifyImageDetails/);
 });
 
-test("D1045 bounds preview refreshes and never deletes a created draft",()=>{
+test("D1051 never blocks creation on preview refreshes and never deletes a created draft",()=>{
   const route=fs.readFileSync(new URL("../app/api/printify/drafts/route.ts",import.meta.url),"utf8");
-  assert.match(route,/PREVIEW_MOCKUP_WAITS_MS\.slice\(0,2\)/);
+  assert.match(route,/Never hold the creation screen open waiting for asynchronously/);
+  assert.match(route,/signal: AbortSignal\.timeout\(30000\)/);
   assert.match(route,/A late mockup refresh must never turn that success/);
   assert.doesNotMatch(route,/DELETE[^]{0,180}created\.id/);
 });

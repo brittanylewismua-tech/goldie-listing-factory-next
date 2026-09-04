@@ -3994,7 +3994,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
           return artwork.colorIds.length>0&&(!activeBundle||products.includes(currentProductId));
         }).map(artwork=>artwork.ownerProductId&&artwork.ownerProductId!==currentProductId?{...artwork,colorIds:[...requestColors]}:artwork);
         const prepared=await Promise.all([{key:"primary",artwork:design as DesignFile},...versions.map(artwork=>({key:artwork.id,artwork}))].map(async item=>({key:item.key,artwork:item.artwork,upload:await preparedUpload(item.artwork)})));
-        for (let pipelineAttempt = 1; pipelineAttempt <= 3; pipelineAttempt += 1) {
+        for (let pipelineAttempt = 1; pipelineAttempt <= 1; pipelineAttempt += 1) {
           const supportReference = `${referenceRoot}-A${pipelineAttempt}`;
           try {
             const stagedArtworks=await Promise.all(prepared.map(async item=>{const staged=await stageUpload(item.upload.blob,item.upload.fileName,`${supportReference}-${item.key.slice(0,8)}`);return {key:item.key,fileName:item.upload.fileName,stagedId:staged.stagedId,reference:staged.reference,bounds:item.artwork.visibleBounds,maxPlacementScale:isRigidPaperProduct(requestDetails)?1:undefined}}));
@@ -4027,7 +4027,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
               clientId:design.id,
             };
             const requestBody=versions.length?{...commonDraftRequest,artworks:stagedArtworks,artworkAssignments}:{...commonDraftRequest,maxPlacementScale:isRigidPaperProduct(requestDetails)?1:undefined,fileName:stagedArtworks[0].fileName,stagedId:stagedArtworks[0].stagedId};
-            const response = await fetchWithDeadline("/api/printify/drafts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(requestBody) }, 4 * 60 * 1000);
+            const response = await fetchWithDeadline("/api/printify/drafts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(requestBody) }, 60_000);
             const result = await response.json() as { draft?: DraftResult; error?: string };
             if ((!response.ok || !result.draft) && (response.status === 409 || /still completing this exact draft/i.test(result.error ?? ""))) {
               const recovered = await recoverDraft(requestDetails!.batchId, design.id);
@@ -4041,14 +4041,14 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
           } catch (attemptError) {
             finalError = attemptError instanceof Error ? attemptError : new Error("The design failed.");
             const permanent = isPermanentUploadError(finalError.message);
-            if (permanent || pipelineAttempt === 3) break;
+            if (permanent || pipelineAttempt === 1) break;
             await new Promise((resolve) => window.setTimeout(resolve, pipelineAttempt * 5000));
           }
         }
         throw finalError ?? new Error("Printify did not create this draft.");
       } catch (error) {
         const rawMessage = error instanceof Error ? error.message : "The design failed.";
-        const supportReference = `${referenceRoot}-A3`;
+        const supportReference = `${referenceRoot}-A1`;
         if (!/Support reference:/i.test(rawMessage)) {
           void fetch("/api/printify/diagnostics", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ reference: supportReference, fileName: design.name, stage: "browser_image_preparation", message: rawMessage }) });
         }
