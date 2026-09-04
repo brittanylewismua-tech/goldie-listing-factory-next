@@ -3773,7 +3773,7 @@ test("one press creates drafts for every product in a bundle — D485", async ()
 
   // A product that is genuinely not set up stops the run instead of spinning.
   // Pricing is intentionally approved only after the finished draft reports its costs.
-  assert.match(app, /if\(!ready\)return/);
+  assert.match(app, /if\(!ready\|\|!templateBelongsToRecipe\(templateDetails,activeRecipe\)\)return/);
 
   // She can see which product it is on.
   assert.match(app, /\$\{bundleIndex\+1\} of \$\{bundleRecipes\.length\}/);

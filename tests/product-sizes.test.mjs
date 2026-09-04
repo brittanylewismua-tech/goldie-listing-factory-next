@@ -1292,7 +1292,7 @@ test("D379: opening a product card does not reload the page", async () => {
   assert.match(app, /await persistBatchNow\(batchIdRef\.current\);[\s\S]{0,200}await restoreBatchById\(existing/,
     "the outgoing product must be saved before batchIdRef points somewhere else");
   assert.match(app, /async function persistBatchNow\(existingId\?:string\)/);
-  assert.match(app, /void persistBatchNow\(\);\},700\);/,
+  assert.match(app, /const targetId=batchIdRef\.current;const timer=window\.setTimeout\(\(\)=>\{void persistBatchNow\(targetId\);\},700\);/,
     "the debounced autosave and the switch share one save");
 
   /* No second click while a load is in flight. */

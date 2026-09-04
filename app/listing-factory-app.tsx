@@ -1293,6 +1293,9 @@ export default function ListingFactoryApp() {
     for(const id of ids){const option=options.find(color=>(color.ids?.length?color.ids:[color.id]).includes(id));if(option)for(const groupedId of new Set([option.id,...(option.ids||[])]))canonical.add(groupedId)}
     return [...canonical];
   }
+  function templateBelongsToRecipe(details:TemplateDetails|null|undefined,recipe:Recipe|null|undefined){
+    return Boolean(details?.id&&recipe?.templateUrl&&recipe.templateUrl.includes(details.id));
+  }
   /* D328 · This filter used to be inlined for the active product only, which is
      why a bundle priced one product and ignored the rest. Every product in a
      bundle has its own template, colours and sizes, so the rule has to be
@@ -2012,7 +2015,10 @@ export default function ListingFactoryApp() {
     void persistRunNow();
     await fetch("/api/batches",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,parentBatchId:runIdRef.current&&runIdRef.current!==id?runIdRef.current:undefined,status:running?"processing":keptAsDrafts?"draft":complete?drafts.some(draft=>draft.status!=="Created")?"needs_attention":"complete":"draft",step:workflowStep,setupName:batchDisplayName||activeBundle?.name||activeRecipe?.name||"",productTitle:templateDetails?.blueprintTitle||"",designCount:files.length,state:batchStateSnapshot()})}).catch(()=>undefined);
   }
-  useEffect(()=>{if(!snapshotReady.current||restoringBatch||batchHeldByAnotherTab||(!files.length&&!drafts.length))return;const timer=window.setTimeout(()=>{void persistBatchNow();},700);return()=>window.clearTimeout(timer);
+  useEffect(()=>{if(!snapshotReady.current||restoringBatch||batchHeldByAnotherTab||(!files.length&&!drafts.length))return;/* D1019 · Capture the child id with the render that produced this snapshot.
+     A bundle transition changes batchIdRef before React cleans up the outgoing
+     autosave. Reading the ref inside the timer let that old product overwrite
+     the new child's record with its own drafts. */const targetId=batchIdRef.current;const timer=window.setTimeout(()=>{void persistBatchNow(targetId);},700);return()=>window.clearTimeout(timer);
   },[restoringBatch,workflowStep,finishPhase,template,templateDetails,description,pricing,selectedColorIds,selectedSizeIds,variantPrices,etsyShippingProfileId,pricingApproved,mockupTheme,activeRecipe,activeBundle,bundleRecipes,bundleIndex,files.map(file=>`${file.id}:${file.title}:${file.tags.join("|")}:${file.blurb||""}:${file.descriptionOverride??""}:${file.sizeGuideName||""}:${JSON.stringify(file.etsy||{})}`).join(";"),drafts,complete,running,bulkTitles,batchKeywords,titleJoiner,titleBuilderMode,autoTitleBankId,manualKeywordBankId,sharedMockups,preparedMockupCounts,printifyImageIndices,printifyImageSelections,sizeGuideName,batchDisplayName,keptAsDrafts,batchReceipt]);
 
   useEffect(() => {
@@ -4232,16 +4238,20 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
     /* Waiting on the incoming product's own saved defaults to land. If one is
        genuinely not set up, stop rather than loop - stopWith names what is
        missing, and pressing the button again resumes from here. */
-    if(!ready)return;
+    /* D1019 · setActiveRecipe and setTemplateDetails settle in separate renders
+       while an automatic bundle run advances. `ready` can therefore still
+       describe the outgoing product for one render. Never create the incoming
+       product's drafts until its own Printify template is the loaded template. */
+    if(!ready||!templateBelongsToRecipe(templateDetails,activeRecipe))return;
     const targets=files.filter(file=>bundleQualityDecisions[`${activeRecipe?.id}:${file.id}`]!=="exclude");
     if(!targets.length){setBundleRun(null);return}
     void runDrafts(targets);
   },[bundleRun,complete,running,preparingEtsy,preflightOpen,switchingProduct,ready,bundleIndex,files,activeRecipe]);
 
   function printPlanFor(design:DesignFile){
-    const productId=activeRecipe?.id||"",primary=primaryPrintSide(templateDetails?.printPositions),extras=(design.artworkVersions||[]).filter(artwork=>{const products=artwork.productIds?.length?artwork.productIds:(artwork.ownerProductId?[artwork.ownerProductId]:productId?[productId]:[]);return products.includes(productId)&&artwork.colorIds.length>0});
+    const productId=activeRecipe?.id||"",primary=primaryPrintSide(templateDetails?.printPositions),noun=productNoun(templateDetails?.blueprintTitle,templateDetails?.brand,templateDetails?.model),primaryLabel=noun==="garment"&&primary?printSideLabel(primary):primary&&/wrap|around/i.test(primary)?"Wrap":"Main",extras=(design.artworkVersions||[]).filter(artwork=>{const products=artwork.productIds?.length?artwork.productIds:(artwork.ownerProductId?[artwork.ownerProductId]:productId?[productId]:[]);return products.includes(productId)&&artwork.colorIds.length>0});
     const extraSides=[...new Set(extras.filter(artwork=>artwork.side!==primary).map(artwork=>printSideLabel(artwork.side)))];
-    return `${design.name}: ${[primary?printSideLabel(primary):"Primary artwork",...extraSides].join(" + ")}`;
+    return `${design.name}: ${[primaryLabel,...extraSides].join(" + ")}`;
   }
 
   function createDrafts() {const issues=requiredForStep("review");if(issues.length)return void stopWith("This batch isn’t ready to create.",issues);const undecided=bundleQualityGroups.filter(group=>group.keys.some(key=>!bundleQualityDecisions[key]));
@@ -4338,7 +4348,14 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
     :WORKFLOW_HELP[progressIndex];
   const uploadPrintSides=orderedPrintSides(templateDetails?.printPositions);
   const uploadPrimarySide=primaryPrintSide(uploadPrintSides);
-  const uploadPrimaryLabel=(uploadPrimarySide?printSideLabel(uploadPrimarySide):"Main").toLocaleLowerCase();
+  const uploadItemNoun=productNoun(templateDetails?.blueprintTitle,templateDetails?.brand,templateDetails?.model);
+  /* Printify calls a phone case's printable exterior "front" in its API even
+     though a seller experiences it as the case back. Preserve the raw position
+     in the payload, but use a neutral primary label outside garments. Wrap is
+     physically meaningful on products such as mugs, so it stays explicit. */
+  const uploadPrimaryLabel=(uploadItemNoun==="garment"&&uploadPrimarySide
+    ?printSideLabel(uploadPrimarySide)
+    :uploadPrimarySide&&/wrap|around/i.test(uploadPrimarySide)?"Wrap":"Main").toLocaleLowerCase();
   const uploadSecondaryLabels=uploadPrintSides.filter(side=>side!==uploadPrimarySide).map(side=>printSideLabel(side).toLocaleLowerCase());
   const uploadSecondaryLabel=uploadSecondaryLabels.length>1?`${uploadSecondaryLabels.slice(0,-1).join(", ")} or ${uploadSecondaryLabels.at(-1)}`:uploadSecondaryLabels[0]||"";
 
@@ -4828,7 +4845,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
               {bundleQualityGroups.length>0&&<section className="bundle-quality-review" aria-label="Product-specific print quality warnings"><div><b>{bundleQualityGroups.length} of {files.length} {files.length===1?"design needs":"designs need"} a print decision</b><span>{productsInBatch.length>1?"The same artwork can be sharp on one product and too small for another. ":""}Anything below 215 DPI is flagged as very low resolution. Nothing is skipped silently.</span>{bundleProductsUnchecked.length?<span className="inline-note" role="status">Some products could not be checked yet, so {bundleProductsUnchecked.length===1?"it is":"they are"} not included in this check. Reopen {bundleProductsUnchecked.length===1?"that product":"those products"} to check {bundleProductsUnchecked.length===1?"it":"them"}.</span>:null}<div className="bundle-quality-bulk"><button type="button" onClick={()=>decideAllQuality("include")}>Proceed with all {bundleQualityGroups.length}</button><button type="button" onClick={()=>decideAllQuality("exclude")}>Exclude all {bundleQualityGroups.length}</button></div></div>{bundleQualityGroups.map(group=>{const decision=qualityGroupDecision(group.keys);const productList=[...new Set(group.products)];return <article className={group.critical?"critical-dpi":""} key={group.fileId}><div><b>{group.fileName}</b><span>{group.critical?<strong>VERY LOW RESOLUTION · {group.worstDpi} DPI · </strong>:null}{group.actualWidth} × {group.actualHeight}px is below the recommended size{productsInBatch.length>1?<> for <strong>{productList.join(", ")}</strong>{productList.length>1?` — ${productList.length} products in this bundle`:""}</>:<> for <strong>{productList[0]||"this product"}</strong></>}.</span></div><div><button className={decision==="include"?"selected":""} onClick={()=>decideQualityGroup(group.keys,"include")}>{group.critical?"I understand — proceed":"Proceed anyway"}</button><button className={decision==="exclude"?"selected exclude":""} onClick={()=>decideQualityGroup(group.keys,"exclude")}>{productList.length>1?"Exclude these listings":"Exclude this listing"}</button></div></article>})}</section>}
               {workflowStep==="designs"&&files.length>0&&<div id="batch-preferences-after-designs" className="batch-preferences-after-designs"/>}
               {files.length>0&&(workflowStep==="setup"||workflowStep==="designs")&&<div className="design-upload-review" aria-label="Review uploaded designs">{files.map(file=>{const colors=(templateDetails?.colorOptions||[]).filter(color=>selectedColorIds.includes(color.id)),sides=orderedPrintSides(templateDetails?.printPositions),primarySide=primaryPrintSide(sides),secondarySides=sides.filter(side=>side!==primarySide),itemNoun=productNoun(templateDetails?.blueprintTitle,templateDetails?.brand,templateDetails?.model),secondaryVersions=(file.artworkVersions||[]).filter(artwork=>artwork.side!==primarySide);return <article className="design-artwork-card" key={file.id}>
-                <div className="design-artwork-primary"><UploadedDesignPreview src={file.previewUrl} name={file.name}/><div><em>{primarySide?`Main design · ${printSideLabel(primarySide)}`:"Main design"}</em><b title={file.name}>{file.name}</b><small>{file.width&&file.height?`${file.width} × ${file.height}px`:"Checking dimensions…"}</small></div><button type="button" className="artwork-remove-action" onClick={()=>removeDesign(file.id)} aria-label={`Remove ${file.name}`}>Remove</button></div>
+                <div className="design-artwork-primary"><UploadedDesignPreview src={file.previewUrl} name={file.name}/><div><em>{itemNoun==="garment"&&primarySide?`Main design · ${printSideLabel(primarySide)}`:primarySide&&/wrap|around/i.test(primarySide)?"Main design · Wrap":"Main design"}</em><b title={file.name}>{file.name}</b><small>{file.width&&file.height?`${file.width} × ${file.height}px`:"Checking dimensions…"}</small></div><button type="button" className="artwork-remove-action" onClick={()=>removeDesign(file.id)} aria-label={`Remove ${file.name}`}>Remove</button></div>
                 {secondarySides.length>0&&<div className="artwork-version-tools"><b>Optional artwork for this listing</b><small>Add artwork only for another print area already prepared in this Printify product.</small><div>{secondarySides.map(side=><label className="secondary-action" role="button" tabIndex={0} onKeyDown={event=>{if(event.key==="Enter"||event.key===" "){event.preventDefault();event.currentTarget.querySelector("input")?.click()}}} key={side}>＋ Add {printSideLabel(side).toLocaleLowerCase()} artwork to this design<input className="hidden-picker" type="file" accept=".png,.jpg,.jpeg" onChange={event=>{void addArtworkVersion(file.id,side,event.target.files);event.target.value=""}}/></label>)}</div></div>}
                 {secondaryVersions.map(artwork=>{const compatibleProducts=productsInBatch.filter(recipe=>orderedPrintSides(bundleProductDetails[recipe.id]?.printPositions).some(side=>side.toLocaleLowerCase()===artwork.side.toLocaleLowerCase())),assignedProducts=artwork.productIds?.length?artwork.productIds:(artwork.ownerProductId?[artwork.ownerProductId]:activeRecipe?.id?[activeRecipe.id]:[]);return <section className="artwork-version" key={artwork.id}><img src={artwork.previewUrl} alt=""/><div><b>{printSideLabel(artwork.side)} artwork for this listing design</b><small>{artwork.name}</small>{!artwork.colorIds.length&&<em className="artwork-color-required">Choose at least one {itemNoun} color for this {printSideLabel(artwork.side).toLocaleLowerCase()} print.</em>}{colors.length?<fieldset><legend>Use it on these {activeRecipe?.name||itemNoun} colors</legend>{colors.map(color=><button type="button" key={color.id} className={artwork.colorIds.includes(color.id)?"selected":""} aria-pressed={artwork.colorIds.includes(color.id)} onClick={()=>toggleArtworkColor(file.id,artwork.id,color.id)}><i style={{background:color.swatch||"#ddd"}}/>{color.title}</button>)}</fieldset>:null}{activeBundle&&bundleRecipes.length>1?<fieldset className="bundle-print-products"><legend>Which products get this {printSideLabel(artwork.side).toLocaleLowerCase()} artwork?</legend><small>Only products that support this print area are included. Every other product keeps its primary artwork only.</small>{compatibleProducts.map(recipe=><button type="button" key={recipe.id} className={assignedProducts.includes(recipe.id)?"selected":""} aria-pressed={assignedProducts.includes(recipe.id)} onClick={()=>toggleArtworkProduct(file.id,artwork.id,recipe.id)}><span aria-hidden="true">{assignedProducts.includes(recipe.id)?"✓":""}</span>{recipe.name}</button>)}</fieldset>:null}</div><button type="button" onClick={()=>removeArtworkVersion(file.id,artwork.id)} aria-label={`Remove ${artwork.name}`}>Remove</button></section>})}
               </article>})}</div>}
@@ -5042,11 +5059,11 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
 
           {!complete ? (
             <>
-            {workflowStep==="designs"&&<FactoryFooter status={running||preparingEtsy||Boolean(bundleRun)?preparationMessage||"Creating private Printify drafts…":!ready?missingRequirement:"Ready to create private Printify drafts"}><button className="launch-button" aria-busy={running||preparingEtsy||Boolean(bundleRun)} disabled={!ready || running||preparingEtsy||Boolean(bundleRun)} onClick={createDrafts}>
+            {workflowStep==="designs"&&<FactoryFooter status={running||preparingEtsy||Boolean(bundleRun)?preparationMessage||"Creating private Printify drafts…":bundleQualityGroups.length?`Review ${bundleQualityGroups.length} resolution ${bundleQualityGroups.length===1?"warning":"warnings"} above`:!ready?missingRequirement:"Ready to create private Printify drafts"}><button className="launch-button" aria-busy={running||preparingEtsy||Boolean(bundleRun)} disabled={!ready || bundleQualityGroups.length>0 || running||preparingEtsy||Boolean(bundleRun)} onClick={createDrafts}>
               {/* D485 - one press covers the whole bundle, so the button says so
                   rather than naming a single product, and reports which product
                   Goldie is on while it works its way through them. */}
-              <span className="button-glint" />{bundleRun&&!running?`Moving to ${bundleRecipes[bundleIndex+1]?.name||"the next product"}…`:preparingEtsy?"Completing Etsy details…":running ? (activeBundle&&bundleRecipes.length>1?`${activeRecipe?.name||"Product"} ${bundleIndex+1} of ${bundleRecipes.length}: creating drafts · ${processed} of ${runTotal} finished…`:`Creating drafts · ${processed} of ${runTotal} finished…`) : !ready ? missingRequirement : activeBundle&&bundleRecipes.length>1?`Create drafts for all ${bundleRecipes.length} products`:"Create Printify drafts"}<span>→</span>
+              <span className="button-glint" />{bundleRun&&!running?`Moving to ${bundleRecipes[bundleIndex+1]?.name||"the next product"}…`:preparingEtsy?"Completing Etsy details…":running ? (activeBundle&&bundleRecipes.length>1?`${activeRecipe?.name||"Product"} ${bundleIndex+1} of ${bundleRecipes.length}: creating drafts · ${processed} of ${runTotal} finished…`:`Creating drafts · ${processed} of ${runTotal} finished…`) : bundleQualityGroups.length?"Review resolution warnings above":!ready ? missingRequirement : activeBundle&&bundleRecipes.length>1?`Create drafts for all ${bundleRecipes.length} products`:"Create Printify drafts"}<span>→</span>
             </button></FactoryFooter>}
               {/* D708 · The label already changes while Goldie works, but a changing
                   label does not tell you HOW LONG. Draft creation and Etsy publishing

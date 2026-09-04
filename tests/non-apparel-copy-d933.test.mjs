@@ -11,7 +11,7 @@ test("the design step describes the product's real print areas instead of assumi
 });
 
 test("the uploaded design uses neutral primary-artwork copy when Printify's side name is misleading",()=>{
-  assert.match(app,/<em>\{primarySide\?`Main design · \$\{printSideLabel\(primarySide\)\}`:"Main design"\}<\/em>/);
+  assert.match(app,/<em>\{itemNoun==="garment"&&primarySide\?`Main design · \$\{printSideLabel\(primarySide\)\}`:primarySide&&\/wrap\|around\/i\.test\(primarySide\)\?"Main design · Wrap":"Main design"\}<\/em>/);
   assert.doesNotMatch(app,/Primary artwork · \{printSideLabel\(primarySide\)\}/);
   assert.doesNotMatch(app,/Primary \{printSideLabel\(primarySide\).*?artwork/);
 });
