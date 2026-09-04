@@ -3444,3 +3444,12 @@ html, body { background: var(--lf-paper); }
 .app-shell .editable-draft-pricing{display:grid;gap:14px}
 .app-shell .save-draft-prices{justify-self:end;min-height:42px;padding:10px 16px;border:0;border-radius:8px;background:#111;color:#fff;font-weight:800}
 .app-shell .save-draft-prices:disabled{background:#eee9ec;color:#9b8e96;cursor:not-allowed}
+
+/* D1036 · The final Printify handoff is an anchor once ready, so the ordinary
+   :disabled rule cannot style its loading state. Keep it visibly unavailable
+   until every product in the restored run has finished loading. */
+.app-shell .factory-footer a.disabled,
+.app-shell .factory-footer a[aria-disabled="true"]{
+  opacity:1;background:#efe7ec;color:#a2909c;box-shadow:4px 4px 0 #f3d9ea;
+  transform:none;cursor:not-allowed;pointer-events:none;
+}

@@ -2232,7 +2232,7 @@ export default function ListingFactoryApp() {
     const publishedThisBatch=Number(batchReceipt?.publishedCount)||0;
     if(priorBatch&&!preserveSavedBatch&&!publishedThisBatch){void clearBatchFiles(priorBatch);void fetch(`/api/batches?id=${encodeURIComponent(priorBatch)}`,{method:"DELETE"})}
     if(!preserveSavedBatch&&!publishedThisBatch)drafts.forEach(draft=>{if(draft.id)void fetch(`/api/etsy/images?productId=${encodeURIComponent(draft.id)}`,{method:"DELETE"})});
-    batchIdRef.current="";window.localStorage.removeItem("goldie-active-batch");
+    batchIdRef.current="";runIdRef.current="";runStartedRef.current="";setBundleRun(null);window.localStorage.removeItem("goldie-active-batch");
     const freshUrl=new URL(window.location.href);freshUrl.searchParams.delete("batch");window.history.replaceState({},"",freshUrl);
     files.forEach(file=>URL.revokeObjectURL(file.previewUrl));
     templateLoadVersion.current+=1;setLoadingTemplate(false);setFiles([]);setFileError("");setDrafts([]);setProcessed(0);setRunTotal(0);setComplete(false);setOpenedDrafts([]);setOpenAllMessage("");setBulkTitles("");setBatchKeywords([]);setTitleJoiner(", ");setTitleBuilderMode("ai");setAutoTitleBank(null);setAutoTitleBankId("");setManualKeywordBankId("");setActiveDesign("");setPreflightOpen(false);setUploadNoticeOpen(false);setPrintifyImageIndices([]);setPrintifyImageSelections({});setSharedMockups(undefined);setPreparedMockupCounts({});setFinishPhase("details");setVariantPrices({});setSelectedColorIds([]);setColorsRemembered(false);setPricingApproved(false);setSizeGuideName("");setSizeGuideStatus("");setBatchReceipt(null);setPublishMessage("");syncedListingSignatures.current.clear();
