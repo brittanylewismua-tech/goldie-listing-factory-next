@@ -7,7 +7,7 @@ const update=fs.readFileSync(new URL("../app/api/printify/drafts/update/route.ts
 
 test("D1069 never substitutes another color's mockup",()=>{
   assert.doesNotMatch(app,/printifyMockupForColor[\s\S]{0,300}\|\|draft\.previewUrl/);
-  assert.match(app,/Printify preview loading/);
+  assert.doesNotMatch(app,/Printify preview loading/);
   assert.match(app,/color=\{focused\.swatch\}/);
 });
 

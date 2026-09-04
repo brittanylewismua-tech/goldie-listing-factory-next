@@ -11,7 +11,7 @@ test("D969: the bulk Printify link is secondary and separated from the products"
   assert.match(css,/\.step-product-cards>\.post-draft-heading \.open-all-button\{[^}]*background:transparent!important;[^}]*font:650 11px/);
 });
 
-test("D969: every draft color identifies itself before its mockup finishes",()=>{
-  assert.match(app,/className="draft-color-chip" style=\{\{background:color\.swatch\|\|"#ddd"\}\}/);
-  assert.match(css,/\.draft-color-grid span \.draft-color-chip\{[^}]*width:13px;[^}]*border-radius:50%/);
+test("D1075: every draft color uses an immediate product illustration",()=>{
+  assert.match(app,/className="draft-color-product-glyph"[\s\S]{0,180}<ProductGlyph title=\{product\.blueprintTitle\} color=\{color\.swatch\}/);
+  assert.match(css,/\.draft-color-grid button>\.draft-color-product-glyph\{[^}]*width:34px;[^}]*height:34px/);
 });
