@@ -7,7 +7,7 @@ const css=fs.readFileSync(new URL("../app/interface-v2.css",import.meta.url),"ut
 
 test("D1075 color browsing never mounts a Printify mockup automatically",()=>{
   assert.match(app,/showRealPreview&&realPreview\?<img/);
-  assert.match(app,/Back to edit view":"Preview"/);
+  assert.match(app,/Back to edit view":previewLoading\?"Loading preview…":"Preview"/);
   assert.doesNotMatch(app,/Printify preview loading/);
 });
 
