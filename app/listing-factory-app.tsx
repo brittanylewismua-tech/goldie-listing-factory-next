@@ -4176,12 +4176,13 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
     if(revision!==variantSaveRevision.current)return;
     setSavingDraftVariants(true);
     try{
-      /* D1025 · A color change applies to every design draft for this product.
-         Parallel PUTs can collide while Printify is regenerating mockups, and a
-         quick add/remove then leaves one draft changed and the other rejected.
-         Update the drafts in order, retrying only transient upstream failures. */
-      const updated:DraftResult[]=[];
-      for(const draft of created){
+      /* D1070 · A choice applies to every design draft, but those are distinct
+         Printify products and do not need to wait on one another. The save queue
+         above still serializes successive UI choices for the same set of drafts;
+         within one choice, update every draft concurrently and retry only the
+         individual transient failures. This keeps a 20-design batch from taking
+         roughly twenty times as long as a single draft. */
+      const updated=await Promise.all(created.map(async draft=>{
         let saved:DraftResult|undefined,lastError="";
         for(let attempt=0;attempt<3&&!saved;attempt++){
           if(attempt)await new Promise(resolve=>window.setTimeout(resolve,600*attempt));
@@ -4192,8 +4193,8 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
           if(response.status!==429&&response.status<500)break;
         }
         if(!saved)throw new Error(lastError||`Printify could not update ${draft.name}.`);
-        updated.push(saved);
-      }
+        return saved;
+      }));
       const byId=new Map(updated.map(draft=>[draft.id,draft]));
       setDrafts(current=>current.map(draft=>byId.get(draft.id)||draft));
       setPricingApproved(false);

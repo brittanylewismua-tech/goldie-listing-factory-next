@@ -53,9 +53,9 @@ test("D1024: automatic creation is anchored to the stable recipe at the bundle i
   assert.match(app,/templateBelongsToRecipe\(templateDetails,expectedRecipe\)/);
 });
 
-test("D1025: multi-draft color changes are serialized and transient failures retry",()=>{
-  assert.match(app,/for\(const draft of created\)/);
+test("D1070: successive choices are queued while distinct drafts update concurrently with retries",()=>{
+  assert.match(app,/variantSaveQueue\.current=variantSaveQueue\.current\.then/);
+  assert.match(app,/Promise\.all\(created\.map\(async draft=>/);
   assert.match(app,/for\(let attempt=0;attempt<3&&!saved;attempt\+\+\)/);
   assert.match(app,/response\.status!==429&&response\.status<500/);
-  assert.doesNotMatch(app,/Promise\.all\(created\.map\(async draft/);
 });
