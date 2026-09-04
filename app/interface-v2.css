@@ -3590,6 +3590,16 @@ html, body { background: var(--lf-paper); }
   padding-left:10px!important;border-left:3px solid #ec5db5!important;
   background:#fff!important;color:#211a1f!important;font-weight:800!important
 }
+/* The legacy action selector is an :is() list whose specificity is inherited
+   from its most-specific member. Repeat the actual option class so these list
+   rows decisively outrank that unrelated action style. */
+.app-shell.app-shell .shipping-combobox-option.shipping-combobox-option.shipping-combobox-option{
+  background:#fff!important;background-image:none!important;color:#211a1f!important
+}
+.app-shell.app-shell .shipping-combobox-option.shipping-combobox-option.shipping-combobox-option:hover,
+.app-shell.app-shell .shipping-combobox-option.shipping-combobox-option.shipping-combobox-option:focus-visible{
+  background:#f8f5f7!important;color:#211a1f!important
+}
 .app-shell .factory-listing-switch{position:sticky!important;top:74px!important;z-index:20!important}
 .app-shell .photo-order-strip>article.drop-target{transform:translateY(-7px) scale(1.025)!important;border-color:#111!important;box-shadow:0 12px 24px rgba(17,17,17,.18)!important}
 .app-shell .save-draft-prices:disabled{background:#eee9ec;color:#9b8e96;cursor:not-allowed}

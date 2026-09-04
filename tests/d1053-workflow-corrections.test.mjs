@@ -52,3 +52,8 @@ test("D1056: global workflow button styling excludes shipping list options",asyn
   assert.doesNotMatch(css,/\n  \.pricing-controls button,\n/);
   assert.equal((css.match(/\.pricing-controls button:not\(\.shipping-combobox-option\),/g)||[]).length,3);
 });
+
+test("D1057: shipping options outrank legacy high-specificity action styles",async()=>{
+  const css=await read("app/interface-v2.css");
+  assert.match(css,/\.app-shell\.app-shell \.shipping-combobox-option\.shipping-combobox-option\.shipping-combobox-option\{/);
+});
