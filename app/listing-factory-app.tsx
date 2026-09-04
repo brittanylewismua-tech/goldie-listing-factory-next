@@ -4098,12 +4098,24 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
     setSelectedColorIds(nextColors);setSelectedSizeIds(nextSizes);
     setSavingDraftVariants(true);setDraftVariantError("");
     try{
-      const updated=await Promise.all(created.map(async draft=>{
-        const response=await fetch("/api/printify/drafts/update",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({productId:draft.id,selectedVariantIds:selectedVariants})});
-        const payload=await response.json().catch(()=>({})) as {draft?:DraftResult;error?:string};
-        if(!response.ok||!payload.draft)throw new Error(payload.error||`Printify could not update ${draft.name}.`);
-        return payload.draft;
-      }));
+      /* D1025 · A color change applies to every design draft for this product.
+         Parallel PUTs can collide while Printify is regenerating mockups, and a
+         quick add/remove then leaves one draft changed and the other rejected.
+         Update the drafts in order, retrying only transient upstream failures. */
+      const updated:DraftResult[]=[];
+      for(const draft of created){
+        let saved:DraftResult|undefined,lastError="";
+        for(let attempt=0;attempt<3&&!saved;attempt++){
+          if(attempt)await new Promise(resolve=>window.setTimeout(resolve,600*attempt));
+          const response=await fetch("/api/printify/drafts/update",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({productId:draft.id,selectedVariantIds:selectedVariants})});
+          const payload=await response.json().catch(()=>({})) as {draft?:DraftResult;error?:string};
+          if(response.ok&&payload.draft){saved=payload.draft;break}
+          lastError=payload.error||`Printify could not update ${draft.name}.`;
+          if(response.status!==429&&response.status<500)break;
+        }
+        if(!saved)throw new Error(lastError||`Printify could not update ${draft.name}.`);
+        updated.push(saved);
+      }
       const byId=new Map(updated.map(draft=>[draft.id,draft]));
       setDrafts(current=>current.map(draft=>byId.get(draft.id)||draft));
       setPricingApproved(false);
