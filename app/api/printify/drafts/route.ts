@@ -134,6 +134,7 @@ async function handleGET(request: Request) {
 }
 
 async function handlePOST(request: Request) {
+  const requestStartedAt = performance.now();
   const user = await getChatGPTUser();
   if (!user) return NextResponse.json({ error: "Sign in to continue." }, { status: 401 });
   const launchBlock = await customerLaunchBlock(user);
@@ -205,7 +206,11 @@ async function handlePOST(request: Request) {
     }
     const uploadedImageIds: Record<string, string> = {};
     const uploadAllArtwork = async () => {
-      for (const artwork of requestedArtworks) {
+      /* Front/back and color-specific artwork are independent uploads. Sending
+         them serially made one listing pay the full upload latency once per
+         file. Printify accepts these independently, so upload them together and
+         preserve the keyed result map used by the product payload. */
+      await Promise.all(requestedArtworks.map(async (artwork) => {
         const source = artworkSources.get(artwork.key)!;
         const upload = await api<UploadedImage>("/uploads/images.json", token, {
           method: "POST",
@@ -216,10 +221,10 @@ async function handlePOST(request: Request) {
         }, (attempt, status) => recordDiagnostic(runtimeEnv().DB, supportReference, { stage: "printify_upload", event: "retry", attempt, httpStatus: status ?? null, shopId: shop.id }));
         if (!upload.id) throw new Error(`Printify accepted ${source.fileName} but did not return an image ID.`);
         uploadedImageIds[artwork.key] = upload.id;
-      }
+      }));
     };
     await uploadAllArtwork();
-    await recordDiagnostic(runtimeEnv().DB, supportReference, { stage: diagnosticStage, event: "succeeded", shopId: shop.id });
+    await recordDiagnostic(runtimeEnv().DB, supportReference, { stage: diagnosticStage, event: "succeeded", message:`elapsed_ms=${Math.round(performance.now()-requestStartedAt)}`, shopId: shop.id });
     // The private app sends the staged bytes directly to Printify. Large opaque
     // artwork is optimized in the browser first so this request stays reliable.
     // creation on GET /uploads/{id}: live Printify accounts can return 404 from
@@ -362,8 +367,9 @@ async function handlePOST(request: Request) {
     const costReview=actualCostReview(costVariants);
     const draft = { id: created.id, placement, placementDebug, batchId:body.batchId, blueprintId:template.blueprint_id, providerId:template.print_provider_id, clientId: body.clientId ?? body.fileName, name: body.fileName, title, tags: body.tags ?? [], description:body.description??template.description??"", selectedVariantIds:finalVariantIds, previewUrl, printifyImages: productImages.map((image) => image.src).filter(Boolean), printifyImageDetails:productImages.filter(image=>image.src).map(image=>({src:image.src!,variantIds:image.variant_ids||[],position:image.position||""})), colorPreviewImageDetails:colorPreviewImages.filter(image=>image.src).map(image=>({src:image.src!,variantIds:image.variant_ids||[],position:image.position||""})), shopId: shop.id, editorUrl: `https://printify.com/app/editor/${created.id}`, status: "Created",costReview };
     await db.prepare("UPDATE printify_draft_results SET status = 'succeeded', response_json = ?, updated_at = CURRENT_TIMESTAMP WHERE request_key = ?").bind(JSON.stringify(draft), idempotencyKey).run();
-    await recordDiagnostic(runtimeEnv().DB, supportReference, { stage: "response_ready", event: "succeeded", shopId: shop.id });
-    return NextResponse.json({ draft });
+    const totalMs=Math.round(performance.now()-requestStartedAt);
+    await recordDiagnostic(runtimeEnv().DB, supportReference, { stage: "response_ready", event: "succeeded", message:`total_ms=${totalMs}`, shopId: shop.id });
+    return NextResponse.json({ draft },{headers:{"Server-Timing":`draft;dur=${totalMs}`}});
   } catch (error) {
     const message = error instanceof Error ? error.message : "The draft could not be created.";
     if (idempotencyKey) await runtimeEnv().DB?.prepare("UPDATE printify_draft_results SET status = 'failed', updated_at = CURRENT_TIMESTAMP WHERE request_key = ? AND status != 'succeeded'").bind(idempotencyKey).run().catch(() => undefined);
