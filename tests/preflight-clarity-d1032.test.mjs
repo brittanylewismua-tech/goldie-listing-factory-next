@@ -14,7 +14,7 @@ test("draft confirmation contains only the decisions needed to continue",()=>{
 });
 
 test("final price approval is persisted before a bundle product can be switched",()=>{
-  assert.match(app,/await persistBatchNow\(batchIdRef\.current,\{drafts:nextDrafts,pricingApproved:true\}\)/);
+  assert.match(app,/await persistBatchNow\(batchIdRef\.current,\{drafts:nextDrafts\.map\(snapshotDraft\),pricingApproved:true\}\)/);
   assert.match(app,/const byId=new Map\(saved\.map\(draft=>\[draft\.id,draft\]\)\),nextDrafts=drafts\.map/);
 });
 
