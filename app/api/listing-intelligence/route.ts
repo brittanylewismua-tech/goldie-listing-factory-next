@@ -18,6 +18,9 @@ function reviewableCategory(product: { blueprintTitle?: string; brand?: string; 
   if (/canvas/.test(name)) return "Wall Decor";
   return "Handmade Items";
 }
+function reviewFallback(product:{blueprintTitle?:string;brand?:string;model?:string}|undefined):Details{
+  return {category:reviewableCategory(product),attributes:{},optional:{},blurb:"",confidence:"review"};
+}
 
 const DESIGN_TEXT_STOPWORDS=new Set(["the","and","for","with","this","that","bride","bridal","party","bachelorette","wedding","shirt","tee"]);
 /* D403 - "fits" and "cannot tell" were both reported as true, so the caller could
@@ -185,9 +188,9 @@ Select only phrases a shopper looking at THIS artwork would call accurate. If a 
      listing.  Etsy's real taxonomy endpoint remains authoritative on the next
      call, so a provider outage falls back to a conservative product category
      and an explicit review state. */
-  if(!response.ok)return NextResponse.json({details:{category:reviewableCategory(body.product),attributes:{},optional:{},blurb:"",confidence:"review"} satisfies Details});
-  const match=payload.output?.match(/\{[\s\S]*\}/);if(!match)return NextResponse.json({error:"Goldie could not read the prepared Etsy details."},{status:502});
-  const raw=JSON.parse(match[0]) as Partial<Details>;
+  if(!response.ok)return NextResponse.json({details:reviewFallback(body.product)});
+  const match=payload.output?.match(/\{[\s\S]*\}/);if(!match)return NextResponse.json({details:reviewFallback(body.product)});
+  let raw:Partial<Details>;try{raw=JSON.parse(match[0]) as Partial<Details>}catch{return NextResponse.json({details:reviewFallback(body.product)})}
   const contextualText=[body.title,...(body.tags||[])].map(clean).join(" ");
   const attributes=supportedOptional(raw.attributes,contextualText),optional=supportedOptional(raw.optional,contextualText);
   return NextResponse.json({details:{category:clean(raw.category)||"Needs review",attributes,optional,blurb:clean(raw.blurb),confidence:raw.confidence==="high"?"high":"review"} satisfies Details});
