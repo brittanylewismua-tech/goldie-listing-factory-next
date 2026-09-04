@@ -83,6 +83,8 @@
   font-size: clamp(44px, 5.2vw, 70px);
   line-height: 0.98;
 }
+.signup-hero h1>span{color:var(--public-pink)!important}
+.signup-hero>.signup-hero-tagline{display:inline-block;max-width:none!important;margin:22px auto 0!important;padding:11px 17px;border:2px solid #111;border-radius:8px;background:var(--public-pink)!important;color:#111!important;font-size:16px!important;font-weight:800!important;line-height:1.35!important;box-shadow:5px 5px 0 #111}
 
 .signup-hero > p {
   margin-top: 22px;
