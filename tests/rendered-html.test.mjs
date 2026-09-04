@@ -2011,7 +2011,7 @@ test("keeps bundle titles, placement decisions, review, and failures product-spe
     "one product is still named, just without the bundle framing");
   assert.match(app,/Proceed anyway/);
   assert.match(app,/Exclude this listing/);
-  assert.match(app,/Nothing is skipped silently/);
+  assert.doesNotMatch(app,/Nothing is skipped silently/);
   assert.match(app,/dpi<215/);
   assert.match(app,/VERY LOW RESOLUTION/);
   assert.match(app,/below 215 DPI/);
@@ -5194,7 +5194,8 @@ test("the publish review names the listing, not the upload — D558", async () =
      name when no listing in it has one. */
   assert.match(review, /const named=design\?\.title\?\.trim\(\)\|\|draft\.title\?\.trim\(\);/);
   assert.match(review, /if\(named\)return named;/);
-  assert.match(review, /return readableDesignName\(designName\)/);
+  assert.match(review, /return "Untitled listing"/);
+  assert.doesNotMatch(review, /readableDesignName/);
   assert.doesNotMatch(review, /<span>\{readableDesignName\(designName\)\}<\/span>/);
 });
 
@@ -6868,7 +6869,7 @@ test("bundle DPI and variant totals cover every product — D659", async () => {
     "a product must not be dropped from the bundle because one fetch was slow");
   // And a product that still could not be read is named, not omitted.
   assert.match(app, /const bundleProductsUnchecked=useMemo\(/);
-  assert.match(app, /could not be checked yet/);
+  assert.match(app, /Reopen the unchecked/);
 
   // Variants total the bundle, with the split inspectable.
   assert.match(app, /const bundleVariantCounts=useMemo\(/);

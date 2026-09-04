@@ -28,8 +28,9 @@ test("warnings are opt-in at final review", async () => {
 test("uploaded artwork can be inspected before draft creation", async () => {
   const app = await read("app/listing-factory-app.tsx");
   assert.match(app, /function UploadedDesignPreview/);
-  assert.match(app, /aria-label=\{`View \$\{name\} larger`\}/);
-  assert.match(app, /Full-size preview of \$\{name\}/);
+  assert.match(app, /aria-label="View design larger"/);
+  assert.match(app, /aria-label="Full-size design preview"/);
+  assert.doesNotMatch(app, /Full-size preview of \$\{name\}/);
 });
 
 test("the final-review count cannot overlap its heading", async () => {
