@@ -37,3 +37,7 @@ test("D1021: a new bundle starts with separate parent-run and first-child ids",(
   assert.match(app,/setBundleBatchIds\(\{\[recipes\[0\]\.id\]:firstBatchId\}\)/);
   assert.match(app,/batchUrl\.searchParams\.set\("batch",runIdRef\.current\|\|durableBatchId\)/);
 });
+
+test("D1022: a parent run never borrows children from another execution of the saved bundle",()=>{
+  assert.match(app,/if\(runIdRef\.current\)return;[\s\S]*?const missing=bundleRecipes\.filter/);
+});

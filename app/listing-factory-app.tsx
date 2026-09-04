@@ -1514,6 +1514,13 @@ export default function ListingFactoryApp() {
   const bundleSiblingsScanned=useRef("");
   useEffect(()=>{
     if(restoringBatch||!activeBundle||bundleRecipes.length<2)return;
+    /* D1022 · A parent run already returns its own children from /api/batches.
+       Searching the global history by saved bundle id here can only cross the
+       run boundary: two executions of the same saved bundle have the same
+       activeBundle.id. That made an incomplete D1020 run borrow an older
+       Hoodie child and falsely report four drafts. Keep this legacy recovery
+       only for pre-parent snapshots, where no run id exists. */
+    if(runIdRef.current)return;
     const missing=bundleRecipes.filter(recipe=>recipe.id!==activeRecipe?.id&&!bundleBatchIds[recipe.id]);
     if(!missing.length)return;
     const key=`${activeBundle.id}:${bundleRecipes.map(recipe=>recipe.id).join(",")}`;
