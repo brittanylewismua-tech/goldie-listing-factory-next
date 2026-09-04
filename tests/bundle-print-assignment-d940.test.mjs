@@ -12,7 +12,7 @@ test("D940: secondary artwork records the product where it was created",()=>{
 
 test("D940: bundle draft creation filters extra artwork by the current product",()=>{
   assert.match(app,/return artwork\.colorIds\.length>0&&\(!activeBundle\|\|products\.includes\(currentProductId\)\)/);
-  assert.match(app,/artwork\.ownerProductId&&artwork\.ownerProductId!==currentProductId\?\{\.\.\.artwork,colorIds:\[\.\.\.selectedColorIds\]\}/);
+  assert.match(app,/artwork\.ownerProductId&&artwork\.ownerProductId!==currentProductId\?\{\.\.\.artwork,colorIds:\[\.\.\.requestColors\]\}/);
 });
 
 test("D940: the upload card makes product scope explicit and selectable",()=>{

@@ -53,7 +53,7 @@ test("D984 sends the broad preview set but keeps the seller selection separate",
   const app=fs.readFileSync(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8");
   const route=fs.readFileSync(new URL("../app/api/printify/drafts/route.ts",import.meta.url),"utf8");
   assert.match(app,/mockupVariantIds:mockupVariants\.map\(variant=>variant\.id\)/);
-  assert.match(app,/selectedSizeIds\.slice\(0,1\)/);
+  assert.match(app,/requestSizes\.slice\(0,1\)/);
   assert.match(app,/const mockupVariants=variantsFor[\s\S]{0,900}const variants=mockupVariants;[\s\S]{0,900}artworkAssignments=/);
   assert.match(route,/const enabledForCreation=finalVariantIds/);
   assert.match(route,/exactMockupCoverageComplete\(chunkImages,chunk\)/);

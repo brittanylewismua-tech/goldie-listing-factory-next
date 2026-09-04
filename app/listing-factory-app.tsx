@@ -3923,27 +3923,37 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
       const referenceRoot = `GLF-${crypto.randomUUID().replace(/-/g, "").slice(0, 10).toUpperCase()}`;
       let finalError: Error | null = null;
       try {
+        /* A bundle transition can render its incoming template before every
+           derived memo and recipe closure has caught up. Anchor this entire
+           request to the template that owns the protected Printify session,
+           resolve its recipe from that immutable product id, and derive the
+           variants here instead of borrowing the previous render's memo. */
+        const requestDetails=templateDetails;
+        const requestRecipe=(requestDetails?bundleRecipes.find(recipe=>recipe.templateUrl.includes(requestDetails.id)):undefined)||activeRecipe;
+        const requestColors=normalizeColorIds(requestDetails,selectedColorIds);
+        const requestSizes=[...selectedSizeIds];
+        const requestPricedVariants=variantsFor(requestDetails,requestColors,requestSizes);
         /* D940 · Extra print files are product-scoped. A bundle may reuse one
            only when the seller explicitly ticked that compatible product. For
            another product, its own selected colours replace the source
            product's numeric colour ids (Printify ids are product-specific). */
-        const currentProductId=activeRecipe?.id||"";
+        const currentProductId=requestRecipe?.id||"";
         const versions=(design.artworkVersions||[]).filter(artwork=>{
           const products=artwork.productIds?.length?artwork.productIds:(artwork.ownerProductId?[artwork.ownerProductId]:currentProductId?[currentProductId]:[]);
           return artwork.colorIds.length>0&&(!activeBundle||products.includes(currentProductId));
-        }).map(artwork=>artwork.ownerProductId&&artwork.ownerProductId!==currentProductId?{...artwork,colorIds:[...selectedColorIds]}:artwork);
+        }).map(artwork=>artwork.ownerProductId&&artwork.ownerProductId!==currentProductId?{...artwork,colorIds:[...requestColors]}:artwork);
         const prepared=await Promise.all([{key:"primary",artwork:design as DesignFile},...versions.map(artwork=>({key:artwork.id,artwork}))].map(async item=>({key:item.key,artwork:item.artwork,upload:await preparedUpload(item.artwork)})));
         for (let pipelineAttempt = 1; pipelineAttempt <= 3; pipelineAttempt += 1) {
           const supportReference = `${referenceRoot}-A${pipelineAttempt}`;
           try {
-            const stagedArtworks=await Promise.all(prepared.map(async item=>{const staged=await stageUpload(item.upload.blob,item.upload.fileName,`${supportReference}-${item.key.slice(0,8)}`);return {key:item.key,fileName:item.upload.fileName,stagedId:staged.stagedId,reference:staged.reference,bounds:item.artwork.visibleBounds,maxPlacementScale:isRigidPaperProduct(templateDetails)?1:undefined}}));
-            const availableColorIds=(templateDetails?.colorOptions||[]).filter(color=>color.available).map(color=>color.id);
+            const stagedArtworks=await Promise.all(prepared.map(async item=>{const staged=await stageUpload(item.upload.blob,item.upload.fileName,`${supportReference}-${item.key.slice(0,8)}`);return {key:item.key,fileName:item.upload.fileName,stagedId:staged.stagedId,reference:staged.reference,bounds:item.artwork.visibleBounds,maxPlacementScale:isRigidPaperProduct(requestDetails)?1:undefined}}));
+            const availableColorIds=(requestDetails?.colorOptions||[]).filter(color=>color.available).map(color=>color.id);
             /* One representative size is enough to generate an honest image
                for every colour. Asking for every colour at every selected size
                can exceed Printify's hard 100-enabled-variant ceiling. */
-            const mockupVariants=variantsFor(templateDetails,availableColorIds,selectedSizeIds.slice(0,1));
+            const mockupVariants=variantsFor(requestDetails,availableColorIds,requestSizes.slice(0,1));
             const mockupVariantSources=Object.fromEntries(mockupVariants.map(variant=>{
-              const source=pricedVariants.find(selected=>selected.sizeId!=null&&selected.sizeId===variant.sizeId)||pricedVariants[0];
+              const source=requestPricedVariants.find(selected=>selected.sizeId!=null&&selected.sizeId===variant.sizeId)||requestPricedVariants[0];
               return [String(variant.id),source?.id||variant.id];
             }));
             /* Printify generates a color mockup only when that variant is both
@@ -3951,32 +3961,32 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
                preview set here; the server restores the seller's narrower
                paid-draft choices before returning success. */
             const variants=mockupVariants;
-            const primarySide=primaryPrintSide(templateDetails?.printPositions)||"front";
+            const primarySide=primaryPrintSide(requestDetails?.printPositions)||"front";
             const assignedPrimaryColors=new Set(versions.filter(artwork=>artwork.side===primarySide).flatMap(artwork=>artwork.colorIds));
             const primaryVariantIds=variants.filter(variant=>variant.colorId==null||!assignedPrimaryColors.has(variant.colorId)).map(variant=>variant.id);
-            const artworkAssignments=[...(primaryVariantIds.length?[{position:primarySide,variantIds:primaryVariantIds,artworkKey:"primary",bounds:design.visibleBounds,maxPlacementScale:isRigidPaperProduct(templateDetails)?1:undefined}]:[]),...versions.map(artwork=>({position:artwork.side,variantIds:variants.filter(variant=>variant.colorId!=null&&artwork.colorIds.includes(variant.colorId)).map(variant=>variant.id),artworkKey:artwork.id,bounds:artwork.visibleBounds,maxPlacementScale:isRigidPaperProduct(templateDetails)?1:undefined})).filter(assignment=>assignment.variantIds.length)];
+            const artworkAssignments=[...(primaryVariantIds.length?[{position:primarySide,variantIds:primaryVariantIds,artworkKey:"primary",bounds:design.visibleBounds,maxPlacementScale:isRigidPaperProduct(requestDetails)?1:undefined}]:[]),...versions.map(artwork=>({position:artwork.side,variantIds:variants.filter(variant=>variant.colorId!=null&&artwork.colorIds.includes(variant.colorId)).map(variant=>variant.id),artworkKey:artwork.id,bounds:artwork.visibleBounds,maxPlacementScale:isRigidPaperProduct(requestDetails)?1:undefined})).filter(assignment=>assignment.variantIds.length)];
             const fullDescription=[design.blurb||design.etsy?.blurb,description].filter(Boolean).join("\n\n");
             const staged=stagedArtworks[0];
             const commonDraftRequest={
-              batchId: templateDetails?.batchId,
+              batchId: requestDetails?.batchId,
               fileName:design.name,
               title: design.title || undefined,
-              tags:design.tags,pricing,etsyBuyerShipping:etsyShippingProfiles.find(profile=>profile.id===etsyShippingProfileId)?.domesticPrimary||0,shippingTemplateId:etsyShippingProfileId,variantPrices,selectedVariantIds:pricedVariants.map(variant=>variant.id),mockupVariantIds:mockupVariants.map(variant=>variant.id),mockupVariantSources,description:fullDescription,
+              tags:design.tags,pricing,etsyBuyerShipping:etsyShippingProfiles.find(profile=>profile.id===etsyShippingProfileId)?.domesticPrimary||0,shippingTemplateId:etsyShippingProfileId,variantPrices,selectedVariantIds:requestPricedVariants.map(variant=>variant.id),mockupVariantIds:mockupVariants.map(variant=>variant.id),mockupVariantSources,description:fullDescription,
               supportReference: staged.reference,
               clientId:design.id,
             };
-            const requestBody=versions.length?{...commonDraftRequest,artworks:stagedArtworks,artworkAssignments}:{...commonDraftRequest,maxPlacementScale:isRigidPaperProduct(templateDetails)?1:undefined,fileName:stagedArtworks[0].fileName,stagedId:stagedArtworks[0].stagedId};
+            const requestBody=versions.length?{...commonDraftRequest,artworks:stagedArtworks,artworkAssignments}:{...commonDraftRequest,maxPlacementScale:isRigidPaperProduct(requestDetails)?1:undefined,fileName:stagedArtworks[0].fileName,stagedId:stagedArtworks[0].stagedId};
             const response = await fetchWithDeadline("/api/printify/drafts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(requestBody) }, 4 * 60 * 1000);
             const result = await response.json() as { draft?: DraftResult; error?: string };
             if ((!response.ok || !result.draft) && (response.status === 409 || /still completing this exact draft/i.test(result.error ?? ""))) {
-              const recovered = await recoverDraft(templateDetails!.batchId, design.id);
+              const recovered = await recoverDraft(requestDetails!.batchId, design.id);
               if (recovered) result.draft = recovered;
             }
             if (!result.draft) throw new Error(result.error || "Printify did not create this draft.");
-            const colorName=new Map((templateDetails?.colorOptions||[]).map(color=>[color.id,color.title]));
-            const summary:ArtworkSummary={[primarySide]:[{name:design.name,colors:(templateDetails?.colorOptions||[]).filter(color=>selectedColorIds.includes(color.id)&&!assignedPrimaryColors.has(color.id)).map(color=>color.title)}]};
+            const colorName=new Map((requestDetails?.colorOptions||[]).map(color=>[color.id,color.title]));
+            const summary:ArtworkSummary={[primarySide]:[{name:design.name,colors:(requestDetails?.colorOptions||[]).filter(color=>requestColors.includes(color.id)&&!assignedPrimaryColors.has(color.id)).map(color=>color.title)}]};
             for(const artwork of versions)(summary[artwork.side]??=[]).push({name:artwork.name,colors:artwork.colorIds.map(id=>colorName.get(id)||`Color ${id}`)});
-            return {...result.draft,artworkSummary:summary};
+            return {...result.draft,productName:requestRecipe?.name||requestDetails?.blueprintTitle||"Saved product",artworkSummary:summary};
           } catch (attemptError) {
             finalError = attemptError instanceof Error ? attemptError : new Error("The design failed.");
             const permanent = isPermanentUploadError(finalError.message);
@@ -4020,7 +4030,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
       await runBounded(targetFiles, batchConcurrency, processDesign, (result) => {
         if(completedDesignIds.has(result.clientId))return;
         completedDesignIds.add(result.clientId);
-        const productResult={...result,productName:activeRecipe?.name||templateDetails?.blueprintTitle||"Saved product"};
+        const productResult={...result,productName:result.productName||activeRecipe?.name||templateDetails?.blueprintTitle||"Saved product"};
         createdDesignResults.push(productResult);
         setDrafts((current) => [...current, productResult]);
         if(result.id)setPrintifyImageSelections(current=>current[result.id!]?current:{...current,[result.id!]:printifyImageIndices});

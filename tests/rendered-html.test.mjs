@@ -492,7 +492,7 @@ test("preflights the account once and reuses a protected batch session", async (
   assert.match(connection, /Place one design in every print area/);
   assert.match(connection, /Publish this product to Etsy once with the shipping profile/);
   assert.match(connection, /expiresAt = Math\.floor\(Date\.now\(\) \/ 1000\) \+ 6 \* 60 \* 60/);
-  assert.match(page, /batchId: templateDetails\?\.batchId/);
+  assert.match(page, /batchId: requestDetails\?\.batchId/);
   assert.match(drafts, /FROM printify_batch_sessions WHERE id = \? AND user_id = \?/);
   assert.doesNotMatch(drafts, /const shops = await api|for \(const candidate of shops\)/);
   assert.match(schema, /printifyBatchSessions/);
@@ -1751,7 +1751,7 @@ test("chooses exact available Printify colors per batch and remembers optional d
   assert.match(page,/<h3>Colors<\/h3>/);
   assert.match(page,/Choose at least one available color before continuing/);
   assert.match(page,/Save these as this product’s default colors/);
-  assert.match(page,/selectedVariantIds:pricedVariants\.map/);
+  assert.match(page,/selectedVariantIds:requestPricedVariants\.map/);
   assert.match(printify,/enabledOtherIds/ /* D164: renamed — size is now selectable, so only the OTHER axes stay gated */);
   assert.match(printify,/availableColorIds/);
   assert.match(printify,/templateEnabled:Boolean\(variant\.is_enabled\)/);

@@ -42,7 +42,7 @@ test("D599 - the batch id is checked in the namespace it actually comes from", (
      ones, which made a total outage look like a passing security fix. */
   assert.match(app, /<IntegratedMockups[^>]*batchId=\{draft\.batchId\|\|""\}/,
     "the editor is handed draft.batchId");
-  assert.match(app, /body: JSON\.stringify\(\{ batchId: templateDetails\?\.batchId,/,
+  assert.match(app, /batchId: requestDetails\?\.batchId,/,
     "draft.batchId originates as templateDetails.batchId");
   assert.match(drafts, /INSERT INTO printify_draft_results \(request_key, user_id, batch_id, client_id/,
     "and that same id is stored as printify_draft_results.batch_id");

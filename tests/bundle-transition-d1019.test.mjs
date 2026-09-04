@@ -23,3 +23,11 @@ test("D1019: non-apparel calls its primary artwork Main, not Front",()=>{
   assert.match(app,/uploadItemNoun==="garment"&&uploadPrimarySide[\s\S]*?\/wrap\|around\/i\.test\(uploadPrimarySide\)\?"Wrap":"Main"/);
   assert.match(app,/\{itemNoun==="garment"&&primarySide\?`Main design · \$\{printSideLabel\(primarySide\)\}`:primarySide&&\/wrap\|around\/i\.test\(primarySide\)\?"Main design · Wrap":"Main design"\}/);
 });
+
+test("D1020: each draft request derives variants and identity from its protected product session",()=>{
+  assert.match(app,/const requestDetails=templateDetails;/);
+  assert.match(app,/bundleRecipes\.find\(recipe=>recipe\.templateUrl\.includes\(requestDetails\.id\)\)/);
+  assert.match(app,/const requestPricedVariants=variantsFor\(requestDetails,requestColors,requestSizes\)/);
+  assert.match(app,/selectedVariantIds:requestPricedVariants\.map\(variant=>variant\.id\)/);
+  assert.match(app,/productName:requestRecipe\?\.name\|\|requestDetails\?\.blueprintTitle/);
+});
