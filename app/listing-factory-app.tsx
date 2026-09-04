@@ -4268,11 +4268,16 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
        while an automatic bundle run advances. `ready` can therefore still
        describe the outgoing product for one render. Never create the incoming
        product's drafts until its own Printify template is the loaded template. */
-    if(!ready||!templateBelongsToRecipe(templateDetails,activeRecipe))return;
+    /* D1024 · During a transition, activeRecipe and templateDetails can both
+       still describe the outgoing product for one render, so comparing only
+       those two stale values passes. The bundle order is stable: require both
+       live values to match the recipe at bundleIndex before creating anything. */
+    const expectedRecipe=bundleRecipes[bundleIndex];
+    if(!ready||!expectedRecipe||activeRecipe?.id!==expectedRecipe.id||!templateBelongsToRecipe(templateDetails,expectedRecipe))return;
     const targets=files.filter(file=>bundleQualityDecisions[`${activeRecipe?.id}:${file.id}`]!=="exclude");
     if(!targets.length){setBundleRun(null);return}
     void runDrafts(targets);
-  },[bundleRun,complete,running,preparingEtsy,preflightOpen,switchingProduct,ready,bundleIndex,files,activeRecipe]);
+  },[bundleRun,complete,running,preparingEtsy,preflightOpen,switchingProduct,ready,bundleIndex,files,activeRecipe,templateDetails,bundleRecipes]);
 
   function printPlanFor(design:DesignFile){
     const productId=activeRecipe?.id||"",primary=primaryPrintSide(templateDetails?.printPositions),noun=productNoun(templateDetails?.blueprintTitle,templateDetails?.brand,templateDetails?.model),primaryLabel=noun==="garment"&&primary?printSideLabel(primary):primary&&/wrap|around/i.test(primary)?"Wrap":"Main",extras=(design.artworkVersions||[]).filter(artwork=>{const products=artwork.productIds?.length?artwork.productIds:(artwork.ownerProductId?[artwork.ownerProductId]:productId?[productId]:[]);return products.includes(productId)&&artwork.colorIds.length>0});

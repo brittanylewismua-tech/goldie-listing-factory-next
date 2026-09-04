@@ -10,7 +10,7 @@ test("D1019: a stale outgoing autosave cannot overwrite the incoming bundle chil
 
 test("D1019: automatic bundle creation waits for the incoming product's own template",()=>{
   assert.match(app,/function templateBelongsToRecipe\([\s\S]*?recipe\.templateUrl\.includes\(details\.id\)/);
-  assert.match(app,/if\(!ready\|\|!templateBelongsToRecipe\(templateDetails,activeRecipe\)\)return;/);
+  assert.match(app,/if\(!ready\|\|!expectedRecipe\|\|activeRecipe\?\.id!==expectedRecipe\.id\|\|!templateBelongsToRecipe\(templateDetails,expectedRecipe\)\)return;/);
 });
 
 test("D1019: unresolved resolution warnings disable and explain the create action",()=>{
@@ -45,4 +45,10 @@ test("D1022: a parent run never borrows children from another execution of the s
 test("D1023: a parented run rebuilds its child map from authoritative server children",()=>{
   assert.match(app,/if\(runIdRef\.current\)setBundleBatchIds\(\{\}\)/);
   assert.match(app,/const childMap=Object\.fromEntries\(children\.filter/);
+});
+
+test("D1024: automatic creation is anchored to the stable recipe at the bundle index",()=>{
+  assert.match(app,/const expectedRecipe=bundleRecipes\[bundleIndex\]/);
+  assert.match(app,/activeRecipe\?\.id!==expectedRecipe\.id/);
+  assert.match(app,/templateBelongsToRecipe\(templateDetails,expectedRecipe\)/);
 });
