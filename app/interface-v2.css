@@ -714,7 +714,7 @@ html, body { background: var(--lf-paper); }
    checks, confirms or recovers from changed. */
 .app-shell .factory-review{display:grid;grid-template-columns:minmax(0,1fr) 290px;gap:16px;align-items:start}
 .app-shell .factory-review-list{min-width:0}
-.app-shell .factory-publish-box{position:sticky;top:16px;align-self:start;padding:20px;border:2px solid #080808;border-radius:12px;background:#080808;color:#fff;box-shadow:7px 7px 0 #000}
+.app-shell .factory-publish-box{position:sticky;top:16px;align-self:start;padding:20px;border:2px solid #080808;border-radius:12px;background:#080808;color:#fff;box-shadow:7px 7px 0 var(--lf-pink)}
 /* D775 superseded the uppercase eyebrow that stood here: production puts the
    whole fee explanation in this <small>, not a one-line label. The rule lives
    once, further down, rather than being declared twice and overridden. */
@@ -3454,7 +3454,43 @@ html, body { background: var(--lf-paper); }
 .app-shell .photo-order-strip article.drop-target{border-color:#111!important;box-shadow:0 0 0 3px rgba(17,17,17,.12)!important;transform:translateY(-3px)}
 .app-shell .photo-order-strip.is-reordering article:not(.dragging){transition:transform .14s ease,border-color .14s ease,box-shadow .14s ease}
 .app-shell .individual-size-guide>button{margin-left:auto}
-.app-shell .save-draft-prices{justify-self:end;min-height:42px;padding:10px 16px;border:0;border-radius:8px;background:#111;color:#fff;font-weight:800}
+.app-shell .save-draft-prices{justify-self:center;min-width:220px;min-height:42px;padding:10px 16px;border:0;border-radius:8px;background:#111;color:#fff;font-weight:800}
+
+/* D1041 · Required Step 3 work is visible on arrival, filenames no longer
+   compete with the listing itself, and the final check is built around the
+   product a buyer will actually see. */
+.app-shell .factory-listing-screen>.step-card>summary button{display:none!important}
+.app-shell .factory-listing-form>h3{font-size:15px!important;letter-spacing:.01em}
+.app-shell .factory-listing-form .task-listing-preview{width:210px!important}
+.app-shell .factory-listing-form .task-listing-preview img{height:210px!important}
+.app-shell .factory-listing-form .task-listing-preview span{display:none!important}
+.app-shell .batch-description-body{display:grid;gap:12px}
+.app-shell .batch-description-body>p{order:2;margin:0;color:#766772;font-size:12px}
+.app-shell .individual-description-body{display:grid;gap:10px}
+.app-shell .individual-description-body label{display:grid;gap:8px}
+.app-shell .etsy-details-editor>summary{pointer-events:none;cursor:default}
+.app-shell .etsy-details-editor>summary::after{display:none!important}
+.app-shell .etsy-details-editor>summary>em,.app-shell .etsy-details-editor>.panel-collapse-foot{display:none!important}
+.app-shell .title-builder-choice{gap:14px!important;margin-top:16px}
+.app-shell .title-builder-choice button{min-height:86px!important;border:2px solid #ded6dc!important;background:#fff!important;text-align:left!important}
+.app-shell .title-builder-choice button.active{border-color:#111!important;box-shadow:4px 4px 0 var(--lf-pink)!important}
+.app-shell .printify-ready-hero{margin:4px 0 28px;text-align:center}
+.app-shell .printify-ready-hero h2{margin:0 0 8px;font-size:30px;line-height:1.15;color:#35202f}
+.app-shell .printify-ready-hero p{margin:0;color:#766772;font-size:13px}
+.app-shell .final-product-preview{display:flex;justify-content:center;padding:20px;border-bottom:1px solid #eee8ec;background:#fffafd}
+.app-shell .final-product-preview img{width:min(360px,70%);max-height:360px;object-fit:contain;border-radius:12px;background:#fff}
+.app-shell .final-listing-card{grid-template-columns:28px 96px minmax(0,1fr)!important;align-items:start!important}
+.app-shell .final-listing-card img,.app-shell .final-listing-card .final-listing-no-image{width:96px!important;height:96px!important}
+.app-shell .final-listing-card>div:not(.final-listing-links)>b{font-size:14px!important;line-height:1.45!important;overflow-wrap:normal!important;word-break:normal!important}
+.app-shell .final-listing-links{grid-column:2/-1!important;display:flex!important;justify-content:flex-start!important}
+.app-shell .final-listing-review.handoff-only .final-listing-card{grid-template-columns:96px minmax(0,1fr)!important}
+.app-shell .final-listing-review.handoff-only .final-listing-links{grid-column:2!important}
+
+/* Shipping profiles are choices in a light list, never dark callouts. */
+.app-shell .shipping-combobox-panel,.app-shell .shipping-combobox-list{background:#fff!important;color:#2f242b!important}
+.app-shell .pricing-controls .shipping-combobox-option,.app-shell .shipping-combobox-option{background:#fff!important;color:#2f242b!important;border-bottom:1px solid #eee8ec!important;border-radius:0!important}
+.app-shell .pricing-controls .shipping-combobox-option:hover,.app-shell .shipping-combobox-option:hover{background:#fff5fb!important;color:#111!important}
+.app-shell .pricing-controls .shipping-combobox-option.selected,.app-shell .shipping-combobox-option.selected{background:#f7eef4!important;color:#111!important;border-left:4px solid var(--lf-pink)!important}
 .app-shell .save-draft-prices:disabled{background:#eee9ec;color:#9b8e96;cursor:not-allowed}
 
 /* D1036 · The final Printify handoff is an anchor once ready, so the ordinary

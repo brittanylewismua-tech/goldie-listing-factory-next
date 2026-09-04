@@ -721,7 +721,7 @@ test("creates unique validated AI titles in bulk with per-listing overrides", as
      carries it now, in the title builder itself. */
   assert.match(page,/No new keywords are ever added/);
   assert.ok(page.indexOf('if(task==="description")')<page.indexOf('individual-description-body'),"The batch description leads the panel, and each listings.");
-  assert.match(page,/The complete description is shown below/);
+  assert.doesNotMatch(page,/The complete description is shown below/);
   assert.match(page,/descriptionOverride/);assert.match(page,/scrollIntoView/);
   assert.match(tools,/keywordListsCache/);assert.match(tools,/selectionOnly/);assert.match(tools,/onSelect/);
   assert.match(intelligence,/selected_keywords/);assert.match(intelligence,/allowedByLower/);assert.match(intelligence,/PRODUCT TYPE RULE/);assert.match(intelligence,/if\(!picked\.length\)return NextResponse\.json\(\{error:"This keyword bank is empty/);
@@ -5320,15 +5320,15 @@ test("the publish review is one collapsed row per design — D562", async () => 
   assert.doesNotMatch(review, /open=\{groups\.length<=3\|\|attention>0\}/,
     "nothing opens itself");
 
-  // The artwork, once, at a size worth judging - not a 54px thumbnail.
-  assert.match(review, /const artwork=\(\(\)=>\{/);
-  assert.match(review, /if\(design\?\.previewUrl\)return design\.previewUrl/);
-  assert.match(review, /<div className="final-design-art"><img src=\{artwork\}/);
-  assert.match(css, /\.app-shell \.final-design-art img\{width:min\(320px,70%\)/);
+  // The finished product, once, at a size worth judging - not the raw upload.
+  assert.match(review, /const productPreview=\(\(\)=>\{/);
+  assert.match(review, /if\(draft\.previewUrl\)return draft\.previewUrl/);
+  assert.match(review, /<div className="final-product-preview"><img src=\{productPreview\}/);
+  assert.match(css, /\.app-shell \.final-product-preview img\{width:min\(360px,70%\)/);
 
   // Then every product carrying it, each with its checkbox.
-  assert.ok(review.indexOf('className="final-design-art"') < review.indexOf('className="final-listing-grid"'),
-    "the design sits above the products that carry it");
+  assert.ok(review.indexOf('className="final-product-preview"') < review.indexOf('className="final-listing-grid"'),
+    "the product preview sits above the listings it represents");
 });
 
 test("a collapsed design row looks like it opens — D563", async () => {
