@@ -2920,6 +2920,10 @@ body{min-width:0}
   background:#fffafc!important;
   border-bottom:1px solid #eee8ec!important;
 }
+/* D1072 · Listing pagination scrolls to this exact header. Reserve the fixed
+   top bar's height so “Next listing” reveals the complete new header instead
+   of parking its first line underneath the app chrome. */
+.app-shell .listing-card-head[data-listing-row]{scroll-margin-top:72px}
 .app-shell .listing-card-done{
   display:block!important;
   width:100%!important;
