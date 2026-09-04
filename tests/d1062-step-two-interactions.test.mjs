@@ -21,5 +21,6 @@ test("D1062 flattens shipping and keeps utility controls readable",()=>{
   assert.match(css,/\.post-draft-shipping-review>[.]variant-pricing/);
   assert.match(css,/\.post-draft-shipping-review \.shipping-pricing-section/);
   assert.match(css,/\.app-shell\.app-shell \.shipping-combobox-trigger:hover,[\s\S]{0,180}background:#f8f5f7!important;color:#111!important/);
+  assert.match(css,/\.post-draft-shipping-review \.shipping-combobox \.shipping-combobox-trigger:hover[\s\S]{0,180}background-color:#f8f5f7!important;background-image:none!important/);
   assert.match(css,/post-draft-heading \.open-all-button:hover[\s\S]{0,180}background:transparent!important;color:#2f242b!important/);
 });

@@ -3649,6 +3649,15 @@ html, body { background: var(--lf-paper); }
 .app-shell.app-shell .shipping-combobox-trigger:focus-visible>span,
 .app-shell.app-shell .shipping-combobox-trigger:hover>em,
 .app-shell.app-shell .shipping-combobox-trigger:focus-visible>em{color:#111!important}
+/* D1067 · The global flat-button hover includes every button inside
+   .pricing-controls, which unintentionally catches this field-like combobox
+   trigger. Override the longhands at the actual shipping workspace so neither
+   stylesheet order nor the global shorthand can paint it black. */
+.app-shell.app-shell.app-shell .post-draft-shipping-review .shipping-combobox .shipping-combobox-trigger:hover,
+.app-shell.app-shell.app-shell .post-draft-shipping-review .shipping-combobox .shipping-combobox-trigger:focus-visible{
+  background-color:#f8f5f7!important;background-image:none!important;
+  color:#111!important;box-shadow:none!important
+}
 
 /* D1063 · The mockup disclosure is one calm horizontal row, not another tile. */
 .app-shell.app-shell .task-panel .printify-more-toggle{
