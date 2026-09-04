@@ -23,3 +23,8 @@ test("D906: actual color changes stay on the post-draft control with real previe
   assert.match(app,/syncDraftVariantChoices\(ids,selectedSizeIds\)/);
   assert.match(app,/updateDraftColorArtwork/);
 });
+
+test("D1082: alternate artwork uses the color card's authoritative Printify variants",()=>{
+  assert.match(app,/const variantIds=color\.variantIds\?\.length\?\[\.\.\.new Set\(color\.variantIds\.map\(Number\)\)\]:\[\.\.\.printifyVariantIdsForColor/);
+  assert.match(app,/Adjust this artwork in Printify ↗/);
+});
