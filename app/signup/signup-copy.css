@@ -32,9 +32,6 @@
 }
 
 .signup-plans.signup-plans-four { max-width: 1360px; grid-template-columns: repeat(4, minmax(0, 1fr)); }
-.signup-credit-explainer { width:min(1180px,100%);margin:28px auto 0;padding:24px 28px;border:1px solid rgba(255,255,255,.64);border-radius:20px;background:rgba(255,255,255,.32);text-align:center }
-.signup-credit-explainer h2{margin:0 0 8px;font:400 28px/1.1 "DM Serif Display",Georgia,serif}.signup-credit-explainer p{max-width:900px;margin:0 auto;color:rgba(74,42,62,.75);font-size:13px;line-height:1.65}.signup-credit-explainer small{display:block;margin-top:13px;color:rgba(74,42,62,.68);font-size:11px}
-
 .signup-resume {
   max-width: 1180px;
   margin: 18px auto 0;

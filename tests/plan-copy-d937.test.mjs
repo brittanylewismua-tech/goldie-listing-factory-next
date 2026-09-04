@@ -6,11 +6,11 @@ const signup=await readFile(new URL("../app/signup/signup-client.tsx",import.met
 const usage=await readFile(new URL("../app/usage/page.tsx",import.meta.url),"utf8");
 
 test("D937: public plan copy charges credits for Printify drafts, never an Etsy publish by Goldie",()=>{
-  for(const source of [signup,usage]){
-    assert.match(source,/unpublished Printify draft/);
-    assert.match(source,/Goldie never publishes to Etsy/);
-    assert.doesNotMatch(source,/Etsy listing successfully created by Goldie/);
-  }
+  assert.match(usage,/unpublished Printify draft/);
+  assert.match(usage,/Goldie never publishes to Etsy/);
+  assert.doesNotMatch(usage,/Etsy listing successfully created by Goldie/);
+  assert.doesNotMatch(signup,/What counts as a listing creation/,
+    "the plan picker stays focused on choosing a plan instead of explaining internal accounting");
 });
 
 test("D937: the obsolete Etsy publishing limit is not presented as a live usage meter",()=>{

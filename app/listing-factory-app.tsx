@@ -1912,6 +1912,7 @@ export default function ListingFactoryApp() {
     A child snapshot can be stale and must never manufacture a sibling from a
     different execution. */if(runIdRef.current)setBundleBatchIds({});url.searchParams.set("batch",runIdRef.current||id);url.searchParams.set("step",step);url.searchParams.delete("phase");if(push)window.history.pushState({},"",url);else window.history.replaceState({},"",url);if(payload.batch.status==="processing"&&state.template)void loadTemplateUrl(state.template);return true}finally{snapshotReady.current=true;setRestoringBatch(false)}
   }
+  useEffect(()=>{if(activeRecipe||template||files.length||drafts.length)setRestoreNotice("")},[activeRecipe,template,files.length,drafts.length]);
   /* D1028 · A completed Printify draft is not the same thing as an approved
      final price. Older restore logic treated every completed draft as approved,
      which let a direct Final Review URL contradict the visible "Save these
