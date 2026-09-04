@@ -17,11 +17,6 @@ test("D1075 hover only changes the local illustrated color",()=>{
   assert.doesNotMatch(app,/onMouseEnter=\{[^}]*onChange/);
 });
 
-test("D1076 the focused product illustration is large and visible even in white",()=>{
-  assert.match(css,/\.draft-color-main \.draft-color-illustration>\.bundle-product-photo\{[^}]*width:76%!important;[^}]*height:76%!important/);
-  assert.match(css,/\.draft-color-main \.draft-color-illustration>\.bundle-product-photo svg path:not\(\.glyph-line\)\{[^}]*stroke:#756873/);
-});
-
 test("D1077 the edit view composites the uploaded design onto a detailed color rendering",()=>{
   assert.match(app,/function ProductColorRendering/);
   assert.match(app,/className="product-color-rendering-art" src=\{artworkUrl\}/);

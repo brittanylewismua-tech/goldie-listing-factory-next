@@ -70,7 +70,7 @@ function ProductGlyph({title,color}:{title?:string;color?:string}){
 
 function ProductColorRendering({title,color,artworkUrl}:{title:string;color:string;artworkUrl?:string}){
   const family=productFamily(title.toLowerCase())||"other";
-  return <div className={`product-color-rendering product-color-rendering-${family}`} style={{"--product-glyph-color":color||"#ddd"} as CSSProperties}>
+  return <div className="product-color-rendering" data-family={family} style={{"--product-glyph-color":color||"#ddd"} as CSSProperties}>
     <ProductGlyph title={title} color={color}/>
     {artworkUrl?<img className="product-color-rendering-art" src={artworkUrl} alt="Design positioned on product"/>:null}
   </div>;
