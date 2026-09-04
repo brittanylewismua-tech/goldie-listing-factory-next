@@ -2481,7 +2481,7 @@ test("D407: nothing on the Images step expands itself", async () => {
   assert.match(page, /still needs a photo/);
 });
 
-test("D226: a listing waiting for its title is not shown as a failure", async () => {
+test("D226/D1064: a listing waiting for its title or Etsy response is not shown as a failure", async () => {
   const page = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
   const css = await Promise.all([readFile(new URL("../app/clarity-pass.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n"));
 
@@ -2493,10 +2493,11 @@ test("D226: a listing waiting for its title is not shown as a failure", async ()
    * Nothing was broken. Etsy details fill in automatically once a title exists,
    * and no titles had been created yet — so the correct state was "waiting", and
    * the retry button could not have succeeded. */
-  assert.match(page, /className=\{design\.title\.trim\(\)\?"etsy-detail-error":"etsy-detail-pending"\}/);
   assert.match(page, /Waiting for this listing’s title\./);
-  assert.match(page, /\{design\.title\.trim\(\)&&<button aria-busy=\{preparingListingId===design\.id\}/,
-    "the retry button only appears when retrying could work");
+  assert.match(page, /className="etsy-detail-loading" role="status"/);
+  assert.match(page, /Loading Etsy details…/);
+  assert.match(page, /design\.etsyError\}<\/span><button aria-busy=\{preparingListingId===design\.id\}/,
+    "the retry button only appears after a real request error");
 
   /* And the success banner must not claim readiness while listings are waiting. */
   assert.match(page, /\{files\.every\(file=>etsyRequiredComplete\(file\.etsy\)\)&&<div className="variant-transfer-note">/);

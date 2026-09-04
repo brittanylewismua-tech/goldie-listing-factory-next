@@ -3669,3 +3669,11 @@ html, body { background: var(--lf-paper); }
 
 .app-shell .factory-listing-next button{padding:10px 18px!important;white-space:nowrap!important}
 .app-shell .draft-color-next{margin-top:4px!important}
+
+/* D1064 · Automatic Etsy preparation is work in progress, not an error. */
+.app-shell .etsy-detail-loading{
+  display:flex;align-items:center;justify-content:center;gap:10px;min-height:112px;
+  padding:18px;border:1px solid #d8cfd4;border-radius:10px;background:#fff;color:#3d2538
+}
+.app-shell .etsy-detail-loading .goldie-spinner{width:18px;height:18px;margin:0}
+.app-shell .etsy-detail-loading b{font-size:15px;line-height:1.3}
