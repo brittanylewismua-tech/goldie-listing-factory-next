@@ -46,3 +46,9 @@ test("D1055: the rendered shipping combobox stays white and readable",async()=>{
   assert.match(block,/background:#fff!important/);
   assert.match(block,/color:#211a1f!important/);
 });
+
+test("D1056: global workflow button styling excludes shipping list options",async()=>{
+  const css=await read("app/interface-v2.css");
+  assert.doesNotMatch(css,/\n  \.pricing-controls button,\n/);
+  assert.equal((css.match(/\.pricing-controls button:not\(\.shipping-combobox-option\),/g)||[]).length,3);
+});
