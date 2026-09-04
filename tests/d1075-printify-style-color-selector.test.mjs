@@ -11,9 +11,9 @@ test("D1075 color browsing never mounts a Printify mockup automatically",()=>{
   assert.doesNotMatch(app,/Printify preview loading/);
 });
 
-test("D1075 hover only changes the local illustrated color",()=>{
+test("D1090 color browsing changes the local illustration only after an explicit click",()=>{
   assert.match(app,/function focusColor\(id:number\)\{if\(artworkUploadColor\.current\)return;setActiveColor\(id\);setShowRealPreview\(false\)\}/);
-  assert.match(app,/onMouseEnter=\{\(\)=>focusColor\(color\.id\)\}/);
+  assert.match(app,/explicitlyChosenColor\.current=color/);
   assert.doesNotMatch(app,/onMouseEnter=\{[^}]*onChange/);
 });
 
