@@ -3381,6 +3381,10 @@ html, body { background: var(--lf-paper); }
   opacity:1;background:#ded4da;color:#675762;box-shadow:4px 4px 0 #ead0e1;cursor:not-allowed;
 }
 .app-shell .factory-listing-grid:has(>.factory-form-card:only-child){grid-template-columns:minmax(0,1fr)}
+.app-shell .factory-listing-grid:has(>.factory-etsy-details-column:empty){grid-template-columns:minmax(0,1fr)}
+.app-shell .factory-etsy-details-column:empty{display:none}
+.app-shell .factory-listing-screen .task-panel-lead .mini-label,
+.app-shell .factory-listing-screen .task-panel-lead>div:first-child>p:not(.mini-label){display:none}
 .app-shell .factory-work .batch-history .remove-batch{
   box-sizing:border-box;min-height:36px;padding:8px 10px!important;
   display:inline-flex;align-items:center;justify-content:center;
