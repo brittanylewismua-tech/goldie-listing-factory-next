@@ -602,7 +602,7 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 
 /* D709 - the ordering panel merged into the photos panel, so its modifier
    class is no longer rendered. The one identity block that survives already
-   carries its own spacing. */.app-shell .photo-order-name{grid-column:1/-1;display:block;min-width:0;overflow-wrap:anywhere;color:#755f70;font-size:10px;line-height:1.35}.app-shell .photo-order-strip>article>b+.photo-order-name{margin-top:1px}
+   carries its own spacing. */
 
 .app-shell .draft-card>.printify-image-picker{order:2}
 .app-shell .draft-card>.individual-size-guide{order:4}

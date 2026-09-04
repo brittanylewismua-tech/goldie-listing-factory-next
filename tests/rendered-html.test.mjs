@@ -1735,7 +1735,7 @@ test("requires a photo on every listing and lets sellers set Etsy photo order",a
   assert.match(organizer,/Rearrange listing photos/);
   assert.match(organizer,/onDragEnter/);
   assert.match(organizer,/orderRef\.current/);
-  assert.match(organizer,/Move \$\{photo\.name\} earlier/);
+  assert.match(organizer,/Move photo \$\{index\+1\} earlier/);
   assert.match(organizer,/Photo order saved in preview/);
   assert.match(images,/order\.json/);
   assert.match(finish,/form\.set\("rank",String\(rank\)\)/);

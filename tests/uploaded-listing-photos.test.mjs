@@ -22,6 +22,8 @@ test("seller uploads are exact-listing photos that publish, reorder, download an
   assert.match(uploader,/form\.set\("kind","upload"\)/);
   assert.match(uploader,/multiple type="file"/);
   assert.match(uploader,/Upload photos/);
+  assert.doesNotMatch(uploader,/<span>\{photo\.name\}<\/span>/);
+  assert.match(uploader,/alt="Uploaded listing photo"/);
   assert.doesNotMatch(uploader,/No additional photos uploaded|keeps the files unchanged|uses them only for this listing/);
   assert.match(images,/if\(!await ownsDraft\(user\.userId,productId\)\)/);
   assert.match(images,/key\.startsWith\(ownedPrefix\)/);

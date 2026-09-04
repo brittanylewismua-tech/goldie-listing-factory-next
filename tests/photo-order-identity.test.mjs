@@ -37,8 +37,8 @@ test("final photo order identifies the exact original design at a readable size"
   assert.match(v2,/\.factory-design-large\{[^}]*width:240px;height:210px/);
 });
 
-test("every reorder tile names the actual photo as well as its source",()=>{
-  assert.match(order,/className="photo-order-name" title=\{photo\.name\}>\{photo\.name\}/);
+test("D1085: reorder tiles identify the source without exposing junk upload filenames",()=>{
+  assert.doesNotMatch(order,/className="photo-order-name" title=\{photo\.name\}>\{photo\.name\}/);
   assert.match(order,/photo\.kind==="uploaded"\?"Uploaded photo"/);
-  assert.match(css,/photo-order-name\{[^}]*overflow-wrap:anywhere/);
+  assert.doesNotMatch(order,/aria-label=\{`Move \$\{photo\.name\}/);
 });
