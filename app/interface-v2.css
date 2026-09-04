@@ -3710,7 +3710,7 @@ html, body { background: var(--lf-paper); }
   appearance:none!important;position:relative!important;inset:auto!important;
   display:block!important;flex:0 0 18px!important;width:18px!important;height:18px!important;
   min-width:18px!important;min-height:18px!important;margin:0!important;padding:0!important;
-  border:1.5px solid #8f8189!important;border-radius:4px!important;background:#fff!important;
+  border:1.5px solid #8f8189!important;border-radius:6px!important;background:#fff!important;
   box-shadow:none!important
 }
 .app-shell .personalization-required input[type="checkbox"]:checked{
