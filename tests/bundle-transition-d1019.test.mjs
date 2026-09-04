@@ -31,3 +31,9 @@ test("D1020: each draft request derives variants and identity from its protected
   assert.match(app,/selectedVariantIds:requestPricedVariants\.map\(variant=>variant\.id\)/);
   assert.match(app,/productName:requestRecipe\?\.name\|\|requestDetails\?\.blueprintTitle/);
 });
+
+test("D1021: a new bundle starts with separate parent-run and first-child ids",()=>{
+  assert.match(app,/runIdRef\.current=crypto\.randomUUID\(\);runStartedRef\.current=new Date\(\)\.toISOString\(\);[\s\S]*?const firstBatchId=crypto\.randomUUID\(\);batchIdRef\.current=firstBatchId/);
+  assert.match(app,/setBundleBatchIds\(\{\[recipes\[0\]\.id\]:firstBatchId\}\)/);
+  assert.match(app,/batchUrl\.searchParams\.set\("batch",runIdRef\.current\|\|durableBatchId\)/);
+});

@@ -2131,7 +2131,7 @@ export default function ListingFactoryApp() {
       stepUrl.searchParams.set("step","designs");
       window.history.replaceState({},"",stepUrl);
     }
-    const durableBatchId=batchIdRef.current||crypto.randomUUID();batchIdRef.current=durableBatchId;window.localStorage.setItem("goldie-active-batch",durableBatchId);const batchUrl=new URL(window.location.href);batchUrl.searchParams.set("batch",durableBatchId);window.history.replaceState({},"",batchUrl);void saveBatchFiles(durableBatchId,combined.map(image=>image.file)).catch(()=>undefined);
+    const durableBatchId=batchIdRef.current||crypto.randomUUID();batchIdRef.current=durableBatchId;window.localStorage.setItem("goldie-active-batch",durableBatchId);const batchUrl=new URL(window.location.href);batchUrl.searchParams.set("batch",runIdRef.current||durableBatchId);window.history.replaceState({},"",batchUrl);void saveBatchFiles(durableBatchId,combined.map(image=>image.file)).catch(()=>undefined);
     if(images.length){setComplete(false);setDrafts([]);setProcessed(0)}
     const restoredAndNew=[...combined.filter(design=>replacements.has(design.id)),...images];
     restoredAndNew.forEach((design) => { const probe = document.createElement("img"); probe.onload = () => { setFiles((current) => current.map((item) => item.id === design.id ? { ...item, width: probe.naturalWidth, height: probe.naturalHeight } : item)); URL.revokeObjectURL(probe.src); }; probe.src = URL.createObjectURL(design.file); });
@@ -2313,8 +2313,14 @@ setSavedRevision(current=>current+1);}catch(error){stopWith("This default was no
        same saved bundle next week mints another: bundle.id identifies the
        bundle she saved, not the run she just started, so it can never be the
        run's identity. */
-    runIdRef.current=crypto.randomUUID();runStartedRef.current=new Date().toISOString();
-    setActiveBundle(bundle);setBundleRecipes(recipes);setBundleIndex(0);const first=await selectRecipe(recipes[0]);if(!first)return false;/* D354 · Written AFTER selectRecipe, because selectRecipe writes the
+    runIdRef.current=crypto.randomUUID();runStartedRef.current=new Date().toISOString();setActiveBundle(bundle);setBundleRecipes(recipes);setBundleIndex(0);
+    /* D1021 · A bundle run is the parent, never the first product's child.
+       Reusing the run id for both let persistRunNow and persistBatchNow race to
+       overwrite one row. The first product then vanished from the saved run
+       even though Printify had created its drafts. Mint its child before the
+       template loads, exactly as continueBundle does for later products. */
+    const firstBatchId=crypto.randomUUID();batchIdRef.current=firstBatchId;window.localStorage.setItem("goldie-active-batch",firstBatchId);setBundleBatchIds({[recipes[0].id]:firstBatchId});
+    const first=await selectRecipe(recipes[0]);if(!first)return false;/* D354 · Written AFTER selectRecipe, because selectRecipe writes the
        single-product key and used to clear this one. Refresh must land on the
        bundle, not on its first member. */
     /* D373 - The other bundle members were fetched one after another, each with a
