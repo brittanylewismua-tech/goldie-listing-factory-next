@@ -41,3 +41,8 @@ test("D1021: a new bundle starts with separate parent-run and first-child ids",(
 test("D1022: a parent run never borrows children from another execution of the saved bundle",()=>{
   assert.match(app,/if\(runIdRef\.current\)return;[\s\S]*?const missing=bundleRecipes\.filter/);
 });
+
+test("D1023: a parented run rebuilds its child map from authoritative server children",()=>{
+  assert.match(app,/if\(runIdRef\.current\)setBundleBatchIds\(\{\}\)/);
+  assert.match(app,/const childMap=Object\.fromEntries\(children\.filter/);
+});
