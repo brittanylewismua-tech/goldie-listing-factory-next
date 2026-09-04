@@ -37,7 +37,7 @@ type TemplateProduct = {
     background?: string;
   }>;
 };
-type PrintAreaImage = { x?: number; y?: number; scale?: number; angle?: number; width?: number; height?: number };
+type PrintAreaImage = { src?:string; x?: number; y?: number; scale?: number; angle?: number; width?: number; height?: number };
 type PrintAreaPlaceholder = { position?: string; images?: PrintAreaImage[] };
 type CreatedProduct = {
   id: string; title?: string;
@@ -346,6 +346,7 @@ async function handlePOST(request: Request) {
         return areaOf(b) - areaOf(a);
       })[0];
     const dominantTemplatePlacement = dominantPlaceholder?.images?.[0];
+    if(!uploadedArtworkPreviewUrls.primary&&dominantTemplatePlacement?.src)uploadedArtworkPreviewUrls.primary=dominantTemplatePlacement.src;
     /* D592 - D591 is running (the side field now appears) but the placement is
        still the default, so dominantPlaceholder is still coming back undefined.
        Rather than guess at Printify's response shape a second time, record what
