@@ -28,3 +28,11 @@ test("D1082: alternate artwork uses the color card's authoritative Printify vari
   assert.match(app,/const variantIds=color\.variantIds\?\.length\?\[\.\.\.new Set\(color\.variantIds\.map\(Number\)\)\]:\[\.\.\.printifyVariantIdsForColor/);
   assert.match(app,/Adjust this artwork in Printify ↗/);
 });
+
+test("D1083: the chosen alternate remains visible in the lightweight color preview",()=>{
+  assert.match(app,/artworkOverridePreviewUrls\?:Record<string,string>/);
+  assert.match(app,/override&&draft\.artworkOverridePreviewUrls\?\.\[String\(focused\.id\)\]/);
+  const update=readFileSync(new URL("../app/api/printify/drafts/update/route.ts",import.meta.url),"utf8");
+  assert.match(update,/preview_url\?:string/);
+  assert.match(update,/artworkOverridePreviewUrls:nextOverridePreviews/);
+});
