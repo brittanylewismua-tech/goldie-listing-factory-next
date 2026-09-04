@@ -3541,6 +3541,32 @@ html, body { background: var(--lf-paper); }
 .app-shell .pricing-controls .shipping-combobox-option,.app-shell .shipping-combobox-option{background:#fff!important;color:#2f242b!important;border-bottom:1px solid #eee8ec!important;border-radius:0!important}
 .app-shell .pricing-controls .shipping-combobox-option:hover,.app-shell .shipping-combobox-option:hover{background:#fff5fb!important;color:#111!important}
 .app-shell .pricing-controls .shipping-combobox-option.selected,.app-shell .shipping-combobox-option.selected{background:#f7eef4!important;color:#111!important;border-left:4px solid var(--lf-pink)!important}
+
+/* D1053 · Keep the post-draft controls consistent and visually quiet. */
+.app-shell .draft-color-bulk-actions{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 16px}
+.app-shell .draft-color-bulk-actions button{min-height:36px;padding:8px 12px;border:1px solid #cfc5cb;border-radius:8px;background:#fff;color:#211a1f;font:750 12px/1.2 inherit;cursor:pointer}
+.app-shell .draft-color-bulk-actions button:hover{border-color:#111;background:#fff;color:#111}
+.app-shell .shipping-combobox-panel{padding:8px!important;border:1px solid #cfc5cb!important;border-radius:10px!important;background:#fff!important}
+.app-shell .shipping-combobox-list{gap:0!important;background:#fff!important}
+.app-shell .pricing-controls .shipping-combobox-option,.app-shell .shipping-combobox-option{min-height:42px!important;padding:10px 12px!important;border:0!important;border-bottom:1px solid #e8e1e5!important;border-radius:0!important;background:#fff!important;color:#211a1f!important;box-shadow:none!important;text-align:left!important}
+.app-shell .pricing-controls .shipping-combobox-option:hover,.app-shell .shipping-combobox-option:hover{background:#f8f5f7!important;color:#111!important}
+.app-shell .pricing-controls .shipping-combobox-option.selected,.app-shell .shipping-combobox-option.selected{background:#fff!important;color:#111!important;border-left:3px solid var(--lf-pink)!important;font-weight:800!important}
+.app-shell .title-builder-choice{gap:10px!important;margin:14px 0 22px!important}
+.app-shell .title-builder-choice button{min-height:62px!important;padding:12px 14px!important}
+.app-shell .title-builder-choice button b{font-size:14px!important;line-height:1.25!important}
+.app-shell .title-builder-choice button span{font-size:12px!important;line-height:1.35!important}
+.app-shell .title-builder-choice button:first-child b{position:relative;color:transparent!important}
+.app-shell .title-builder-choice button:first-child b::after{content:'Auto-create titles';position:absolute;inset:0;color:#211a1f;font-size:14px}
+.app-shell .factory-listing-form .design-fields{gap:20px!important}
+.app-shell .individual-description-disclosure{margin-top:22px;border:1px solid #d8cfd4;border-radius:10px;background:#fff;overflow:hidden}
+.app-shell .individual-description-disclosure>summary{padding:14px 16px;color:#2f242b;font-size:14px;font-weight:800;cursor:pointer;list-style:none}
+.app-shell .individual-description-disclosure>summary::after{content:'⌄';float:right;color:#756873}
+.app-shell .individual-description-disclosure[open]>summary{border-bottom:1px solid #e7dfe4}
+.app-shell .individual-description-disclosure[open]>summary::after{transform:rotate(180deg)}
+.app-shell .individual-description-disclosure .individual-description-body{padding:16px}
+.app-shell .individual-description-disclosure textarea{width:100%;padding:12px;border:1px solid #d8cfd4;border-radius:8px;background:#fff;color:#211a1f;font:500 13px/1.55 inherit}
+.app-shell .factory-listing-switch{position:sticky!important;top:74px!important;z-index:20!important}
+.app-shell .photo-order-strip>article.drop-target{transform:translateY(-7px) scale(1.025)!important;border-color:#111!important;box-shadow:0 12px 24px rgba(17,17,17,.18)!important}
 .app-shell .save-draft-prices:disabled{background:#eee9ec;color:#9b8e96;cursor:not-allowed}
 
 /* D1036 · The final Printify handoff is an anchor once ready, so the ordinary

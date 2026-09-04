@@ -9,7 +9,7 @@ async function artworkContents(stream?:ReadableStream){if(!stream)throw new Erro
 
 export async function PATCH(request:Request){
   const user=await getChatGPTUser();if(!user)return NextResponse.json({error:"Sign in to update this draft."},{status:401});
-  const body=await request.json() as {productId?:string;title?:string;tags?:string[];description?:string;etsyDetails?:unknown;placement?:{x:number;y:number;scale:number};variantPrices?:Record<string,number>;selectedVariantIds?:number[];artworkUpdate?:ArtworkUpdate},productId=String(body.productId||"");
+  const body=await request.json() as {productId?:string;title?:string;tags?:string[];description?:string;etsyDetails?:unknown;placement?:{x:number;y:number;scale:number};variantPrices?:Record<string,number>;selectedVariantIds?:number[];artworkUpdate?:ArtworkUpdate;refreshImages?:boolean},productId=String(body.productId||"");
   const owned=await env.DB.prepare("SELECT response_json FROM printify_draft_results WHERE user_id=? AND status='succeeded' AND json_extract(response_json,'$.id')=? LIMIT 1").bind(user.userId,productId).first<{response_json:string}>();
   if(!owned)return NextResponse.json({error:"That Printify draft was not created by this Listing Factory account."},{status:404});
   const draft=JSON.parse(owned.response_json) as {shopId:number;primaryArtworkImageIds?:Record<string,string>;artworkOverrides?:Record<string,{name:string;position:string}>},connection=await env.DB.prepare("SELECT encrypted_token FROM printify_connections WHERE user_id=?").bind(user.userId).first<{encrypted_token:string}>(),secret=(env as unknown as {PRINTIFY_TOKEN_KEY?:string}).PRINTIFY_TOKEN_KEY;
@@ -18,7 +18,7 @@ export async function PATCH(request:Request){
   let placementPayload:unknown;
   let placementScale:number|undefined;
   let currentProduct:{variants?:Array<{id:number;cost?:number;price?:number;is_enabled?:boolean}>;images?:Array<{src?:string;is_default?:boolean;variant_ids?:number[];position?:string}>;print_areas?:Array<{variant_ids:number[];background?:string;placeholders?:Array<{position:string;images?:Array<{id?:string;x?:number;y?:number;scale?:number;angle?:number}>}>}>}|undefined;
-  if(body.placement||body.variantPrices||body.artworkUpdate){
+  if(body.placement||body.variantPrices||body.artworkUpdate||body.refreshImages){
     const currentResponse=await fetch(url,{headers:{Authorization:`Bearer ${token}`,"User-Agent":"Goldie-Listing-Factory"}});
     if(!currentResponse.ok)return NextResponse.json({error:`Printify could not load this draft (${currentResponse.status}).`},{status:currentResponse.status});
     const current=await currentResponse.json() as typeof currentProduct;
@@ -86,12 +86,12 @@ export async function PATCH(request:Request){
     if(!variants.some(variant=>chosen.has(variant.id)))return NextResponse.json({error:"Choose at least one available color and size combination."},{status:400});
     updateBody.variants=variants.map(variant=>({id:variant.id,price:Number(body.variantPrices?.[String(variant.id)]??variant.price),is_enabled:chosen.has(variant.id)}));
   }
-  const response=await fetch(url,{method:"PUT",headers:{Authorization:`Bearer ${token}`,"Content-Type":"application/json","User-Agent":"Goldie-Listing-Factory"},body:JSON.stringify(updateBody)});
-  if(!response.ok){
+  const response=Object.keys(updateBody).length?await fetch(url,{method:"PUT",headers:{Authorization:`Bearer ${token}`,"Content-Type":"application/json","User-Agent":"Goldie-Listing-Factory"},body:JSON.stringify(updateBody)}):null;
+  if(response&&!response.ok){
     const detail=(await response.text().catch(()=>"")).replace(/[<>]/g,"").trim().slice(0,300);
     return NextResponse.json({error:`Printify could not update this draft (${response.status})${detail?`: ${detail}`:"."}`},{status:response.status});
   }
-  const updated=await response.json().catch(()=>({})) as {images?:Array<{src?:string;is_default?:boolean;variant_ids?:number[];position?:string}>};
+  const updated=response?await response.json().catch(()=>({})) as {images?:Array<{src?:string;is_default?:boolean;variant_ids?:number[];position?:string}>}:currentProduct||{};
   /* Enabling a colour asks Printify to generate mockups it did not need for the
      original template. The PUT can finish before those images are attached, so
      read the product back instead of making the seller reload and hope. */

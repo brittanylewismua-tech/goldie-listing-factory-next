@@ -807,8 +807,8 @@ test("a card picker always opens on the choices — D312", async () => {
    nothing rather than quietly selecting the whole blueprint. */
 test("both pickers can match the Printify template — D315", async () => {
   const app = await read("app/listing-factory-app.tsx");
-  assert.equal((app.match(/Match Printify template<\/button>/g) || []).length, 2,
-    "colours and sizes each offer it");
+  assert.equal((app.match(/Match Printify template<\/button>/g) || []).length, 3,
+    "saved colors, post-draft colors, and sizes each offer it");
   assert.match(app, /colorOptions\|\|\[\]\)\.filter\(color=>color\.available&&color\.templateEnabled\)/);
   assert.match(app, /sizeOptions\|\|\[\]\)\.filter\(size=>size\.available&&size\.templateEnabled\)/);
   assert.doesNotMatch(app, /Matching Printify-cost groups still share one price/,

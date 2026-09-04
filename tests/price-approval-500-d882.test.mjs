@@ -20,7 +20,7 @@ test("print areas are only rebuilt when a placement was actually sent", () => {
 });
 
 test("the price branch still gets the product it needs to validate against", () => {
-  assert.match(route, /if\(body\.placement\|\|body\.variantPrices\|\|body\.artworkUpdate\)\{/,
+  assert.match(route, /if\(body\.placement\|\|body\.variantPrices\|\|body\.artworkUpdate\|\|body\.refreshImages\)\{/,
     "the fetch must still run for a price-only request");
   assert.match(route, /currentProduct=current;/);
   assert.match(route, /const variants=currentProduct\?\.variants\|\|\[\];/);
