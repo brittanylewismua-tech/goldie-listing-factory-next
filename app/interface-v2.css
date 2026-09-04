@@ -3626,3 +3626,33 @@ html, body { background: var(--lf-paper); }
   .app-shell .workflow-progress:before{display:none}
   .app-shell .factory-work footer{width:auto!important;margin-left:0!important}
 }
+
+/* D1062 · Quiet utility links stay readable on hover. */
+.app-shell.app-shell .step-product-cards>.post-draft-heading .open-all-button:hover,
+.app-shell.app-shell .step-product-cards>.post-draft-heading .open-all-button:focus-visible{
+  background:transparent!important;color:#2f242b!important;box-shadow:none!important
+}
+
+.app-shell .placement-printify-note{
+  grid-column:1/-1;margin:0 0 18px;padding:12px 14px;border-left:3px solid #ec5db5;
+  background:#fff7fc;color:#5f4f5a;font:600 12px/1.5 Inter,ui-sans-serif,system-ui,sans-serif
+}
+
+/* Etsy shipping is already inside the open numbered task card. Remove the
+   nested card treatments so the picker reads as one section. */
+.app-shell .post-draft-shipping-review,
+.app-shell .post-draft-shipping-review>.variant-pricing,
+.app-shell .post-draft-shipping-review .shipping-pricing-section{
+  margin:0!important;padding:0!important;border:0!important;border-radius:0!important;
+  background:transparent!important;background-image:none!important;box-shadow:none!important
+}
+.app-shell .post-draft-shipping-review>.variant-pricing>.variant-pricing-head{display:none!important}
+.app-shell.app-shell .pricing-controls .shipping-combobox-trigger,
+.app-shell.app-shell .shipping-combobox-trigger{
+  border:1px solid #cfc5cb!important;background:#fff!important;background-image:none!important;
+  color:#211a1f!important;box-shadow:none!important
+}
+.app-shell.app-shell .pricing-controls .shipping-combobox-trigger:hover,
+.app-shell.app-shell .pricing-controls .shipping-combobox-trigger:focus-visible{
+  background:#f8f5f7!important;color:#111!important
+}

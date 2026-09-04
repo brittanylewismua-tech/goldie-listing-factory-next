@@ -3043,6 +3043,7 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
           apart. Failed listings keep their own row: they have no preview to
           show and they must still offer retry and help. */}
       <div className="task-panel-body placement-review-grid">
+        <p className="placement-printify-note">To adjust these designs in Printify, sign in to Printify first and make sure the correct shop is selected. Otherwise, Printify may show an error when you open a draft.</p>
         {selectedPlacementDrafts.length?<div className="placement-selection-actions"><button type="button" onClick={()=>setSelectedPlacementDrafts(listings.filter(({draft})=>draft.status==="Created"&&draft.id).map(({draft})=>draft.id!))}>Select all</button><button type="button" onClick={()=>{const chosen=drafts.filter(draft=>draft.id&&selectedPlacementDrafts.includes(draft.id)&&draft.editorUrl);const opened:string[]=[];for(const draft of chosen){if(window.open(draft.editorUrl!,"_blank","noopener,noreferrer"))opened.push(draft.id!)}setOpenedDrafts(current=>[...new Set([...current,...opened])]);setOpenAllMessage(opened.length===chosen.length?`${opened.length} Printify editor tabs opened.`:`Your browser opened ${opened.length} of ${chosen.length}. Allow pop-ups to open the rest.`)}}>Open selected listings in Printify ↗</button></div>:null}
         {listings.filter(({draft})=>draft.status!=="Created").map(({draft,design})=>
           <div className="task-listing failed" key={draft.clientId}>
@@ -3060,7 +3061,7 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
             name:`Listing ${listings.findIndex(entry=>entry.draft.clientId===draft.clientId)+1} of ${listings.length}`,
             meta:dpi,
             onOpen:draft.editorUrl&&draft.id?()=>openDraft(draft):(draft.previewUrl?()=>window.open(draft.previewUrl,"_blank","noopener,noreferrer"):undefined),
-            openLabel:draft.editorUrl&&draft.id?(draft.id&&openedDrafts.includes(draft.id)?"Printify opened":"Adjust in Printify"):"View full size",
+            openLabel:draft.editorUrl&&draft.id?"Adjust in Printify":"View full size",
             metaClassName:"placement-dpi",
             linkClassName:"placement-printify-link",
             selected:Boolean(draft.id&&selectedPlacementDrafts.includes(draft.id)),
@@ -3388,7 +3389,7 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
                 {opening?"Opening…":rowOpen?"Close":"Change"}
               </button>}
             </div>
-            {rowOpen&&<div className="task-panel open-task-column" onClick={event=>{if(row.task==="draft-pricing")return;const target=event.target as HTMLElement;if(target.closest("button,a,input,textarea,select,label,summary,[role='button'],[contenteditable='true'],[draggable='true']"))return;const rowElement=event.currentTarget.previousElementSibling as HTMLElement|null;holdRowInPlace(rowElement);openRow(row.target,row.task)}}>{taskPanel(row.task!)}</div>}
+            {rowOpen&&<div className="task-panel open-task-column" onClick={event=>{if(["draft-pricing","draft-colors","draft-shipping"].includes(row.task||""))return;const target=event.target as HTMLElement;if(target.closest("button,a,input,textarea,select,label,summary,[role='button'],[contenteditable='true'],[draggable='true']"))return;const rowElement=event.currentTarget.previousElementSibling as HTMLElement|null;holdRowInPlace(rowElement);openRow(row.target,row.task)}}>{taskPanel(row.task!)}</div>}
             </Fragment>})}</div>;
           })()}
           {open&&<div className="step-product-body">{body}</div>}
