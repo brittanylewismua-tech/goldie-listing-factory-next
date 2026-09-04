@@ -3661,18 +3661,21 @@ html, body { background: var(--lf-paper); }
   color:#111!important;box-shadow:none!important
 }
 
-/* D1063 · The mockup disclosure is one calm horizontal row, not another tile. */
-.app-shell.app-shell .task-panel .printify-more-toggle{
+/* D1071 · The mockup disclosure is one calm horizontal row, not another tile.
+   D1063 targeted a `.task-panel` ancestor that this production workspace does
+   not have, so none of these rules ever applied and the global SVG rule made a
+   huge square tile. Target the picker itself: this is the real, stable owner. */
+.app-shell.app-shell .printify-image-picker .printify-more-toggle{
   display:flex!important;align-items:center!important;justify-content:space-between!important;
   gap:12px!important;width:100%!important;max-width:none!important;min-height:44px!important;
   margin:18px 0 0!important;padding:11px 14px!important;border:1px solid #cfc5cb!important;
   border-radius:9px!important;background:#fff!important;color:#211a1f!important;
   box-shadow:none!important;text-align:left!important
 }
-.app-shell.app-shell .task-panel .printify-more-toggle svg{
+.app-shell.app-shell .printify-image-picker .printify-more-toggle svg{
   flex:0 0 14px!important;width:14px!important;height:14px!important
 }
-.app-shell.app-shell .task-panel .printify-more-toggle span{min-width:0!important}
+.app-shell.app-shell .printify-image-picker .printify-more-toggle span{min-width:0!important}
 
 /* Every point inside the reorder strip is now a usable drop surface. The
    nearest card moves out of the way while dragging, so no precision hit is

@@ -75,6 +75,25 @@ export default function ListingRows({
       return next;
     });
 
+  /* D1071 · Moving to another listing is navigation, not merely a state swap.
+     The old pagination opened the next card while leaving the viewport at the
+     bottom of the previous one, so the seller arrived at the bottom of the new
+     workspace. Open it first, then move the actual workflow viewport to that
+     listing's header after React has committed the new card. */
+  const openListing = (index: number) => {
+    const row = rows[index];
+    if (!row) return;
+    setOpen(new Set([row.key]));
+    if (typeof window !== "undefined")
+      window.requestAnimationFrame(() =>
+        window.requestAnimationFrame(() =>
+          document
+            .querySelector(`[data-listing-row="${CSS.escape(row.key)}"]`)
+            ?.scrollIntoView({ block: "start" }),
+        ),
+      );
+  };
+
   if (!rows.length) return null;
 
   return (
@@ -185,9 +204,9 @@ export default function ListingRows({
                   the body is a form, and a stray click while editing a title
                   must never throw the panel shut. */}
               {singleOpen ? <div className="listing-card-pagination">
-                <button type="button" disabled={index === 0} onClick={() => setOpen(new Set([rows[index - 1].key]))}>← Previous listing</button>
+                <button type="button" disabled={index === 0} onClick={() => openListing(index - 1)}>← Previous listing</button>
                 <b>Listing {index + 1} of {rows.length}</b>
-                <button type="button" disabled={index === rows.length - 1} onClick={() => setOpen(new Set([rows[index + 1].key]))}>Next listing →</button>
+                <button type="button" disabled={index === rows.length - 1} onClick={() => openListing(index + 1)}>Next listing →</button>
               </div> : <button type="button" className="listing-card-done" onClick={() => toggle(row.key)}>
                   Close listing {index + 1}
                 </button>}

@@ -21,7 +21,7 @@ test("D1063 uses sequential listing navigation for colors and returns to the top
 });
 
 test("D1063 renders the mockup expander as a horizontal row and gives navigation real padding",()=>{
-  assert.match(css,/task-panel \.printify-more-toggle\{[\s\S]{0,500}width:100%!important/);
+  assert.match(css,/printify-image-picker \.printify-more-toggle\{[\s\S]{0,500}width:100%!important/);
   assert.match(css,/printify-more-toggle svg\{[\s\S]{0,180}width:14px!important/);
   assert.match(css,/factory-listing-next button\{padding:10px 18px!important/);
 });
