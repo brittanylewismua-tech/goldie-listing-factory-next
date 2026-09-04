@@ -12,7 +12,7 @@ test("D1075 color browsing never mounts a Printify mockup automatically",()=>{
 });
 
 test("D1075 hover only changes the local illustrated color",()=>{
-  assert.match(app,/function focusColor\(id:number\)\{setActiveColor\(id\);setShowRealPreview\(false\)\}/);
+  assert.match(app,/function focusColor\(id:number\)\{if\(artworkUploadColor\.current\)return;setActiveColor\(id\);setShowRealPreview\(false\)\}/);
   assert.match(app,/onMouseEnter=\{\(\)=>focusColor\(color\.id\)\}/);
   assert.doesNotMatch(app,/onMouseEnter=\{[^}]*onChange/);
 });
