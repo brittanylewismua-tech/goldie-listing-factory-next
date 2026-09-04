@@ -1489,7 +1489,20 @@ export default function ListingFactoryApp() {
   /* The final action no longer publishes selected Etsy listings. It opens the
      already-created Printify products, so hidden publisher checkboxes must not
      decide whether it works. Review every created draft in the batch instead. */
-  function handoffBlockers(){return publishBlockers().filter(issue=>issue!=="Select at least one successful listing")}
+  function handoffBlockers(){
+    const issues=publishBlockers().filter(issue=>issue!=="Select at least one successful listing");
+    /* D1031 · The Printify handoff covers every finished draft, not the retired
+       Etsy-publish checkbox selection. A hidden subset must never make an
+       unfinished bundle claim it is ready. */
+    const all=bundlePublishDrafts().filter(draft=>draft.status==="Created");
+    for(const draft of all){
+      if(draft.costReview?.required&&!draft.costReview.verified)issues.push(`${draft.title||draft.name} is waiting for Printify's actual production costs.`);
+      else if(draft.costReview?.required&&!draft.costReview.approved)issues.push(`Review the final prices for ${draft.title||draft.name}.`);
+    }
+    issues.push(...createdListingsMissingImages(all).map(draft=>`${draft.name} needs at least one listing photo.`));
+    issues.push(...runProductGaps());
+    return [...new Set(issues)];
+  }
   function suggestedBatchName(){const product=activeRecipe?.name||templateDetails?.blueprintTitle||"Listing batch",niche=files[0]?.tags?.[0]||files[0]?.title?.split(",")[0]?.trim()||"New designs",date=new Intl.DateTimeFormat("en-US",{month:"short",day:"numeric"}).format(new Date());return `${product} · ${niche} · ${date}`.slice(0,160)}
   /* D378 - Keep the product -> batch map current. continueBundle mints a new
      batch per member, and a batch can also be created lazily on the first save,

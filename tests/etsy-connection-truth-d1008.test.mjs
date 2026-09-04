@@ -20,6 +20,8 @@ test("D1008: failed shipping cannot coexist with a ready handoff", () => {
   assert.match(app, /handoffBlockers\(\)\.length\?"Finish the items above before opening Printify\.":"Your listings are ready in Printify\."/);
   assert.match(app, /aria-disabled=\{handoffBlockers\(\)\.length>0\}/,
     "the Printify handoff is disabled while required work remains");
-  assert.match(app, /function handoffBlockers\(\)\{return publishBlockers\(\)\.filter\(issue=>issue!=="Select at least one successful listing"\)\}/,
-    "the handoff cannot be blocked by hidden publisher selections");
+  const handoff=app.slice(app.indexOf("function handoffBlockers()"),app.indexOf("function suggestedBatchName()"));
+  assert.match(handoff, /issue!=="Select at least one successful listing"/);
+  assert.match(handoff, /bundlePublishDrafts\(\)/,
+    "the handoff validates every finished draft, not only hidden publisher selections");
 });
