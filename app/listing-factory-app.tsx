@@ -3350,12 +3350,12 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
         toggleDisabled={!reachableRow}
         toggleTitle={!reachableRow?`Finish ${list[index-1]?.name||"the product above"} first`:undefined}
       >
-        {/* D553 · clicking the panel's own surface closes it, while every real
-            control inside keeps working. Carried over unchanged from the row
-            implementation this replaces. */}
-        <div onClick={event=>{const target=event.target as HTMLElement;
-          if(target.closest("button,a,input,textarea,select,label,summary,[role='button'],[contenteditable='true'],[draggable='true']"))return;
-          openRow(row.target,row.task)}}>{row.task?taskPanel(row.task):null}</div>
+        {/* D1066 · Work areas never double as collapse controls. Product colors
+            contains a large scrollable selector, so a click between swatches
+            must not close the entire section. The same predictable rule now
+            applies to every task: only the panel header/chevron or the explicit
+            footer control changes its open state. */}
+        <div>{row.task?taskPanel(row.task):null}</div>
       </FactoryPanel>;
       return <Fragment key={row.label}><div
               className={`batch-product-row ${row.done?"settled":row.pending?"pending":row.optional?"optional":"needed"} ${rowOpen?"open":""} ${row.report?"reporting":switchingProduct||(!open&&!reachable)?"":"clickable"}`}

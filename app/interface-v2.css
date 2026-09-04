@@ -3640,9 +3640,15 @@ html, body { background: var(--lf-paper); }
   color:#211a1f!important;box-shadow:none!important
 }
 .app-shell.app-shell .pricing-controls .shipping-combobox-trigger:hover,
-.app-shell.app-shell .pricing-controls .shipping-combobox-trigger:focus-visible{
+.app-shell.app-shell .pricing-controls .shipping-combobox-trigger:focus-visible,
+.app-shell.app-shell .shipping-combobox-trigger:hover,
+.app-shell.app-shell .shipping-combobox-trigger:focus-visible{
   background:#f8f5f7!important;color:#111!important
 }
+.app-shell.app-shell .shipping-combobox-trigger:hover>span,
+.app-shell.app-shell .shipping-combobox-trigger:focus-visible>span,
+.app-shell.app-shell .shipping-combobox-trigger:hover>em,
+.app-shell.app-shell .shipping-combobox-trigger:focus-visible>em{color:#111!important}
 
 /* D1063 · The mockup disclosure is one calm horizontal row, not another tile. */
 .app-shell.app-shell .task-panel .printify-more-toggle{

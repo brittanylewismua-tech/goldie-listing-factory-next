@@ -12,12 +12,14 @@ test("D1062 keeps Printify actions truthful and explains the required account co
 });
 
 test("D1062 blank space cannot collapse interactive color or shipping workspaces",()=>{
-  assert.match(app,/\["draft-pricing","draft-colors","draft-shipping"\]\.includes\(row\.task\|\|""\)/);
+  assert.doesNotMatch(app,/clicking the panel's own surface closes it/);
+  assert.match(app,/D1066 · Work areas never double as collapse controls/);
+  assert.doesNotMatch(app,/clicking the panel's own surface closes it[\s\S]{0,500}openRow\(row\.target,row\.task\)/);
 });
 
 test("D1062 flattens shipping and keeps utility controls readable",()=>{
   assert.match(css,/\.post-draft-shipping-review>[.]variant-pricing/);
   assert.match(css,/\.post-draft-shipping-review \.shipping-pricing-section/);
-  assert.match(css,/shipping-combobox-trigger:hover[\s\S]{0,160}background:#f8f5f7!important;color:#111!important/);
+  assert.match(css,/\.app-shell\.app-shell \.shipping-combobox-trigger:hover,[\s\S]{0,180}background:#f8f5f7!important;color:#111!important/);
   assert.match(css,/post-draft-heading \.open-all-button:hover[\s\S]{0,180}background:transparent!important;color:#2f242b!important/);
 });
