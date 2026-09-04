@@ -3111,7 +3111,7 @@ html, body { background: var(--lf-paper); }
 .app-shell .draft-color-grid button>.draft-color-product-glyph svg{width:30px;height:30px}
 .app-shell .draft-color-grid button>.draft-color-product-glyph svg path:not(.glyph-line){fill:var(--product-glyph-color,#ddd)!important}
 .app-shell .draft-color-grid button:has(>.draft-color-product-glyph){grid-template-columns:34px minmax(0,1fr) auto;min-height:54px}
-.app-shell .product-color-rendering{position:relative;display:grid;place-items:center;width:100%;aspect-ratio:1;border:1px solid #ded6dc;border-radius:10px;background:linear-gradient(145deg,#f7f5f2,#eeece8);overflow:hidden}
+.app-shell .product-color-rendering{position:relative;display:grid;place-items:center;width:100%;aspect-ratio:1;border:1px solid #ded6dc;border-radius:10px;background:linear-gradient(145deg,#f7f5f6,#eee9ec);overflow:hidden}
 .app-shell .product-color-rendering>.bundle-product-photo{display:grid!important;place-items:center!important;width:88%!important;height:88%!important;margin:0!important;background:transparent!important;filter:drop-shadow(0 10px 9px rgba(30,24,27,.14))}
 .app-shell .product-color-rendering>.bundle-product-photo svg{width:100%!important;height:100%!important;max-width:none!important;max-height:none!important}
 .app-shell .product-color-rendering>.bundle-product-photo svg path:not(.glyph-line){fill:var(--product-glyph-color,#ddd)!important;stroke:rgba(42,34,39,.7);stroke-width:.28;stroke-linejoin:round}
