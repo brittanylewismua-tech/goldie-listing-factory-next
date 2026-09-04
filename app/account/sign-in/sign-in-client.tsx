@@ -2,6 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import { createSupabaseBrowserClient } from "@/app/supabase-auth";
+import GoldieWordmark from "@/app/goldie-wordmark";
 
 export default function SignInClient({ returnTo }: { returnTo: string }) {
   const [email, setEmail] = useState("");
@@ -25,7 +26,7 @@ export default function SignInClient({ returnTo }: { returnTo: string }) {
   }
 
   return <main className="account-page" style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",paddingBottom:24}}><section className="account-card">
-    <div className="account-wordmark" aria-label="Goldie Listing Factory"><div>Gold<span>ı<i>✦</i></span>e</div><small>LISTING FACTORY</small></div>
+    <div className="account-wordmark"><GoldieWordmark /></div>
     <p className="account-eyebrow">WELCOME</p><h1>Sign in to your Listing Factory.</h1>
     <p className="account-intro">Choose the easiest option for you. Your saved products, batches, keyword banks, and plan stay with your account.</p>
     <button className="account-provider" type="button" onClick={() => void googleSignIn()} disabled={Boolean(busy)}><b className="google-mark">G</b><span>{busy === "google" ? "Opening Google…" : "Continue with Google"}</span></button>

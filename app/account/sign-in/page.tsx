@@ -1,5 +1,6 @@
 import SignInClient from "./sign-in-client";
 import "./sign-in.css";
+import "./sign-in-v2.css";
 
 export const dynamic = "force-dynamic";
 

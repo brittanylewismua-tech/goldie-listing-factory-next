@@ -907,7 +907,8 @@ test("never strands a signed-in account on the plan screen", async () => {
     readFile(new URL("../app/signup/signup-client.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/listing-factory/page.tsx", import.meta.url), "utf8"),
   ]);
-  assert.match(signup, /Signed in securely\{signedInEmail/);
+  assert.match(signup, /signedInEmail \|\| "Signed in"/);
+  assert.match(signup, /Use a different account/);
   assert.match(signup, /Use a different account/);
   assert.match(signup, /account\/sign-out\?return_to=/);
   assert.match(route, /signedInEmail=\{user\.email\}/);
