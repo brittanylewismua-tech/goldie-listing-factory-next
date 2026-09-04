@@ -445,7 +445,7 @@ function PrintifyImagePicker({ images,indices,reservedPhotos=0,onApplyOne,onAppl
         const indexed=images.map((src,index)=>({src,index}));
         const visible=showAll?indexed:indexed.filter((item,index)=>index<8||selected.has(item.index));
         const hiddenCount=indexed.length-visible.length;
-        return <><div className="printify-image-grid printify-all-images">{visible.map(({src,index})=><PrintifyImageTile key={`${src}:${index}`} src={src} index={index} selected={selected.has(index)} atLimit={atLimit} onToggle={()=>toggle(index)} onExpand={()=>setExpanded(src)}/>)}</div>{hiddenCount>0||showAll?<button type="button" className={`printify-more-toggle${showAll?" is-open":""}`} onClick={()=>setShowAll(value=>!value)}><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 7.5 5 5 5-5"/></svg><span>{showAll?"Show fewer Printify mockups":`Show all ${images.length} Printify mockups`}</span></button>:null}</>})()}</div>{lightbox}</>;
+        return <><div className="printify-image-grid printify-all-images">{visible.map(({src,index})=><PrintifyImageTile key={`${src}:${index}`} src={src} index={index} selected={selected.has(index)} atLimit={atLimit} onToggle={()=>toggle(index)} onExpand={()=>setExpanded(src)}/>)}</div>{hiddenCount>0||showAll?<button type="button" className={`printify-more-toggle${showAll?" is-open":""}`} onClick={()=>setShowAll(value=>!value)}><span>{showAll?"Show fewer Printify mockups":`Show all ${images.length} Printify mockups`}</span><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 7.5 5 5 5-5"/></svg></button>:null}</>})()}</div>{lightbox}</>;
 }
 
 function UploadedDesignPreview({src}:{src:string}){
@@ -507,6 +507,7 @@ function DraftColorSelector({product,drafts,selected,saving,onChange,onArtworkCh
   },new Map<string,ProductColor>()).values()],selectedSet=new Set(selected);
   const [activeDraft,setActiveDraft]=useState("");
   const [activeColor,setActiveColor]=useState<number|null>(selected[0]??colors[0]?.id??null);
+  const selectorRef=useRef<HTMLElement|null>(null);
   const draft=drafts.find(item=>item.id===activeDraft)||drafts.find(item=>item.status==="Created");
   useEffect(()=>{if(draft?.id&&!activeDraft)setActiveDraft(draft.id)},[draft?.id,activeDraft]);
   if(!colors.length||!draft)return null;
@@ -520,14 +521,16 @@ function DraftColorSelector({product,drafts,selected,saving,onChange,onArtworkCh
   const focused=colors.find(color=>color.id===activeColor)||colors[0];
   const override=draft.artworkOverrides?.[String(focused.id)];
   const createdDrafts=drafts.filter(item=>item.id);
+  const activeDraftIndex=Math.max(0,createdDrafts.findIndex(item=>item.id===draft.id));
+  function showDraft(id:string){setActiveDraft(id);window.requestAnimationFrame(()=>window.requestAnimationFrame(()=>selectorRef.current?.scrollIntoView({block:"start"})))}
   function toggle(color:ProductColor){const next=new Set(selectedSet);if(idsFor(color).some(id=>next.has(id))){for(const id of idsFor(color))next.delete(id)}else next.add(color.id);if(next.size){setActiveColor(color.id);onChange([...next])}}
   const selectAll=()=>onChange(colors.map(color=>color.id));
   const matchTemplate=()=>onChange(colors.filter(color=>color.templateEnabled).map(color=>color.id));
-  return <section className="draft-color-selector" aria-label="Preview and choose product colors">
-    <div className="draft-color-heading"><div><h3>Choose product colors</h3><p>Select colors here. The main preview shows the color you are reviewing.</p></div></div>
+  return <section ref={selectorRef} className="draft-color-selector" aria-label="Preview and choose product colors">
+    <div className="draft-color-heading"><div><h3>Choose product colors</h3><p>{createdDrafts.length>1?`Listing ${activeDraftIndex+1} of ${createdDrafts.length}. `:""}Select colors here. The main preview shows the color you are reviewing.</p></div></div>
     <div className="draft-color-bulk-actions" role="group" aria-label="Color selection actions"><button type="button" onClick={selectAll}>Select all available</button><button type="button" onClick={matchTemplate}>Match Printify template</button><button type="button" onClick={()=>onChange([])}>Clear all</button></div>
-    {createdDrafts.length>1?<div className="draft-design-picker" aria-label={`Choose one of ${createdDrafts.length} designs to preview`}><div><b>Choose a design to preview</b><span>{createdDrafts.length} designs</span></div><div>{createdDrafts.map((item,index)=>{const active=item.id===draft.id,preview=item.previewUrl||item.printifyImages?.[0]||"";return <button type="button" key={item.id} className={active?"selected":""} aria-pressed={active} onClick={()=>setActiveDraft(item.id!)}>{preview?<img src={preview} alt=""/>:<ProductGlyph title={product.blueprintTitle}/>}<span><b>Design {index+1}</b></span>{active?<em>Viewing</em>:null}</button>})}</div></div>:null}
     <div className="draft-color-workspace"><div className="draft-color-main">{imageFor(focused)?<img src={imageFor(focused)} alt={`${focused.title} product with this design`}/>:<ProductGlyph title={product.blueprintTitle}/>}<b>{focused.title}</b><span>{saving?"Saving changes…":override?"Using alternate artwork":"Using the main design"}</span><div className="draft-color-artwork-action"><label role="button" tabIndex={0} onKeyDown={event=>{if(event.key==="Enter"||event.key===" "){event.preventDefault();event.currentTarget.querySelector("input")?.click()}}}>{override?`Change artwork for ${focused.title}`:`Use different artwork for ${focused.title}`}<input className="hidden-picker" type="file" accept=".png,.jpg,.jpeg" disabled={saving} onChange={event=>{onArtworkChange(draft,focused,event.target.files);event.target.value=""}}/></label>{override?<button type="button" disabled={saving} onClick={()=>onArtworkChange(draft,focused,null,true)}>Use main design</button>:null}</div></div><div className="draft-color-grid">{colors.map(color=>{const included=idsFor(color).some(id=>selectedSet.has(id));return <button type="button" key={color.id} aria-pressed={included} className={included?"selected":""} onMouseEnter={()=>setActiveColor(color.id)} onFocus={()=>setActiveColor(color.id)} onClick={()=>toggle(color)}><i className="draft-color-chip" style={{background:color.swatch||"#ddd"}}/><span>{color.title}</span><em>{included?"✓ Included":"Add"}</em></button>})}</div></div>
+    {createdDrafts.length>1?<nav className="factory-listing-next draft-color-next" aria-label="Move between product-color listings"><button type="button" disabled={activeDraftIndex===0} onClick={()=>showDraft(createdDrafts[activeDraftIndex-1].id!)}>← Previous listing</button><span>Listing {activeDraftIndex+1} of {createdDrafts.length}</span><button type="button" disabled={activeDraftIndex===createdDrafts.length-1} onClick={()=>showDraft(createdDrafts[activeDraftIndex+1].id!)}>Next listing →</button></nav>:null}
   </section>;
 }
 
@@ -3187,6 +3190,7 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
     const design=files.find(item=>item.id===activeDesign)||files[0];
     const index=files.findIndex(item=>item.id===design.id);
     const titled=files.filter(item=>(item.title||"").trim()).length;
+    const showListing=(id:string)=>{setActiveDesign(id);window.requestAnimationFrame(()=>window.requestAnimationFrame(()=>document.querySelector<HTMLElement>(".factory-listing-grid")?.scrollIntoView({block:"start"})))};
     return <div className="factory-listing-screen">
       {/* Subordinate, and it says so: one section, collapsed by default once
           the titles exist, holding every batch-wide tool unchanged. */}
@@ -3208,7 +3212,7 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
           return <button type="button" key={item.id}
             className={`${item.id===design.id?"is-active":""} ${ready?"is-ready":"needs-work"}`}
             aria-current={item.id===design.id?"true":undefined}
-            onClick={()=>setActiveDesign(item.id)}>
+            onClick={()=>showListing(item.id)}>
             <b>Listing {position+1}</b><small>{ready?"Ready":"Needs a look"}</small>
           </button>;
         })}
@@ -3231,7 +3235,7 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
             now occupies that column, where the duplicate checklist used to be. */}
         <div className="factory-etsy-details-column">{etsyRows(design)}</div>
       </div>
-      {files.length>1&&<nav className="factory-listing-next" aria-label="Move between listings"><button type="button" disabled={index===0} onClick={()=>setActiveDesign(files[index-1].id)}>← Previous listing</button><span>Listing {index+1} of {files.length}</span><button type="button" disabled={index===files.length-1} onClick={()=>setActiveDesign(files[index+1].id)}>Next listing →</button></nav>}
+      {files.length>1&&<nav className="factory-listing-next" aria-label="Move between listings"><button type="button" disabled={index===0} onClick={()=>showListing(files[index-1].id)}>← Previous listing</button><span>Listing {index+1} of {files.length}</span><button type="button" disabled={index===files.length-1} onClick={()=>showListing(files[index+1].id)}>Next listing →</button></nav>}
     </div>;
   }
 

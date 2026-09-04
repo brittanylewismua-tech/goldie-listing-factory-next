@@ -3091,19 +3091,6 @@ html, body { background: var(--lf-paper); }
 .app-shell .draft-color-heading{display:block}
 .app-shell .draft-color-heading h3{margin:2px 0 4px;font:700 18px/1.25 Inter,sans-serif;color:#3d2538}
 .app-shell .draft-color-heading p{margin:0;max-width:650px;color:#756873;font-size:14px;line-height:1.45}
-.app-shell .draft-design-picker{display:grid;gap:9px;padding:12px;border:1px solid #ded1d8;border-radius:10px;background:#faf8f9}
-.app-shell .draft-design-picker>div:first-child{display:flex;align-items:center;justify-content:space-between;gap:12px;color:#3d2538;font-size:13px}
-.app-shell .draft-design-picker>div:first-child span{color:#81737d;font-size:12px}
-.app-shell .draft-design-picker>div:last-child{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
-.app-shell .draft-design-picker button{display:grid;grid-template-columns:42px minmax(0,1fr) auto;align-items:center;gap:9px;min-width:0;min-height:58px;padding:7px;border:1px solid #ded1d8;border-radius:8px;background:#fff;color:#3d2538;text-align:left;cursor:pointer}
-.app-shell .draft-design-picker button:hover{border-color:#9d718d;background:#fffafd}
-.app-shell .draft-design-picker button.selected{border-color:#2f7d53;background:#eff8f2;box-shadow:0 0 0 1px #2f7d53}
-.app-shell .draft-design-picker button>img,.app-shell .draft-design-picker button>.product-glyph{width:42px;height:42px;border-radius:6px;object-fit:contain;background:#fff}
-.app-shell .draft-design-picker button>span{display:grid;gap:3px;min-width:0}
-.app-shell .draft-design-picker button b{font-size:13px;line-height:1.15}
-.app-shell .draft-design-picker button small{overflow:hidden;color:#81737d;font-size:11px;line-height:1.2;text-overflow:ellipsis;white-space:nowrap}
-.app-shell .draft-design-picker button em{color:#2f7d53;font-size:11px;font-style:normal;font-weight:800}
-@media(max-width:1050px){.app-shell .draft-design-picker>div:last-child{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .app-shell .draft-color-workspace{display:grid;grid-template-columns:minmax(260px,36%) minmax(0,1fr);gap:18px;align-items:start}
 .app-shell .draft-color-main{display:grid;gap:7px;align-content:start}
 .app-shell .draft-color-main img{width:100%;aspect-ratio:1/1;object-fit:contain;background-color:#f8f5f7;background-image:linear-gradient(45deg,#ece7ea 25%,transparent 25%),linear-gradient(-45deg,#ece7ea 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#ece7ea 75%),linear-gradient(-45deg,transparent 75%,#ece7ea 75%);background-size:18px 18px;background-position:0 0,0 9px,9px -9px,-9px 0;border:1px solid #ded6dc;border-radius:10px}
@@ -3656,3 +3643,29 @@ html, body { background: var(--lf-paper); }
 .app-shell.app-shell .pricing-controls .shipping-combobox-trigger:focus-visible{
   background:#f8f5f7!important;color:#111!important
 }
+
+/* D1063 · The mockup disclosure is one calm horizontal row, not another tile. */
+.app-shell.app-shell .task-panel .printify-more-toggle{
+  display:flex!important;align-items:center!important;justify-content:space-between!important;
+  gap:12px!important;width:100%!important;max-width:none!important;min-height:44px!important;
+  margin:18px 0 0!important;padding:11px 14px!important;border:1px solid #cfc5cb!important;
+  border-radius:9px!important;background:#fff!important;color:#211a1f!important;
+  box-shadow:none!important;text-align:left!important
+}
+.app-shell.app-shell .task-panel .printify-more-toggle svg{
+  flex:0 0 14px!important;width:14px!important;height:14px!important
+}
+.app-shell.app-shell .task-panel .printify-more-toggle span{min-width:0!important}
+
+/* Every point inside the reorder strip is now a usable drop surface. The
+   nearest card moves out of the way while dragging, so no precision hit is
+   required at a card edge. */
+.app-shell .photo-order-strip.is-reordering{padding:8px!important;margin:-8px!important}
+.app-shell .photo-order-strip.is-reordering article:not(.dragging){opacity:1!important;filter:none!important}
+.app-shell .photo-order-strip>article.drop-target{
+  transform:translateY(-7px) scale(1.025)!important;border-color:#111!important;
+  box-shadow:0 12px 24px rgba(17,17,17,.18)!important
+}
+
+.app-shell .factory-listing-next button{padding:10px 18px!important;white-space:nowrap!important}
+.app-shell .draft-color-next{margin-top:4px!important}

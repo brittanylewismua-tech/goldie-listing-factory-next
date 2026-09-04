@@ -7150,7 +7150,7 @@ test("the photo panel keeps what was approved in the preview — D682", async ()
   assert.match(clarity, /\.printify-more-toggle\{display:inline-flex;align-items:center;justify-content:center;gap:7px;width:max-content/);
   assert.doesNotMatch(clarity, /\.printify-more-toggle\{display:grid;width:100%;place-items:center/);
   // Chevron leads the label and turns over when open.
-  assert.match(app, /className=\{`printify-more-toggle\$\{showAll\?" is-open":""\}`\}[^]{0,160}<svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 7\.5 5 5 5-5"\/><\/svg><span>/);
+  assert.match(app, /className=\{`printify-more-toggle\$\{showAll\?" is-open":""\}`\}[^]{0,160}<span>[^<]+<\/span><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 7\.5 5 5 5-5"\/><\/svg>/);
   assert.match(clarity, /\.printify-more-toggle\.is-open svg\{transform:rotate\(180deg\)\}/);
 });
 
