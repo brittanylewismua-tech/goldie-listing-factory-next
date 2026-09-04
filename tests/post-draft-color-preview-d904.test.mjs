@@ -18,7 +18,7 @@ test("D904: the saved template supplies the initial draft variants",()=>{
 
 test("D904: color decisions happen after real Printify mockups exist",()=>{
   assert.match(app,/function DraftColorSelector/);
-  assert.match(app,/REAL PRINTIFY PREVIEW/);
+  assert.match(app,/Choose product colors/);
   assert.match(app,/task:"draft-colors"/);
   assert.match(app,/className="post-draft-shipping-review"/);
   assert.doesNotMatch(app,/ready\.facets\.filter\(facet=>facet\.name!=="profit"\)/);
@@ -34,7 +34,7 @@ test("D904: Printify image variant metadata survives creation and refresh",()=>{
 });
 
 test("D904: changing colors updates owned private drafts, never Etsy",()=>{
-  const sync=app.slice(app.indexOf("async function syncDraftVariantChoices"),app.indexOf("async function syncListingFields"));
+  const sync=app.slice(app.indexOf("function syncDraftVariantChoices"),app.indexOf("async function syncListingFields"));
   assert.match(sync,/\/api\/printify\/drafts\/update/);
   assert.match(sync,/selectedVariantIds/);
   assert.doesNotMatch(sync,/\/api\/etsy|publish/i);

@@ -26,6 +26,8 @@ export type ArtworkItem = {
      - so replacing the markup does not quietly drop either guarantee. */
   metaClassName?: string;
   linkClassName?: string;
+  selected?: boolean;
+  onSelect?: (selected: boolean) => void;
 };
 
 export default function ArtworkGrid({ items }: { items: ArtworkItem[] }) {
@@ -34,6 +36,7 @@ export default function ArtworkGrid({ items }: { items: ArtworkItem[] }) {
     <div className="factory-art-grid">
       {items.map(item => (
         <article className="factory-art-card" key={item.key}>
+          {item.onSelect ? <label className="factory-art-select"><input type="checkbox" checked={Boolean(item.selected)} onChange={event=>item.onSelect?.(event.target.checked)}/><span aria-hidden="true">{item.selected?"✓":""}</span><span className="sr-only">Select {item.name}</span></label> : null}
           <div className="factory-art-preview">
             {item.previewUrl
               ? /* D829 · no lazy attribute here either. D567 named the deadlock - a lazy

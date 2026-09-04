@@ -30,7 +30,7 @@ test("colour-specific artwork is introduced only after Printify has rendered the
   const app = await read("../app/listing-factory-app.tsx");
   assert.match(app, /Color-specific artwork is chosen later, beside the finished Printify color previews\./);
   assert.doesNotMatch(app, /Review the primary artwork, any color-specific alternatives/);
-  assert.match(app, /heading "Choose colors with the design on the product"|Choose colors with the design on the product/);
+  assert.match(app, /Choose product colors/);
 });
 
 test("ordinary one-artwork listings retain the established request", async () => {

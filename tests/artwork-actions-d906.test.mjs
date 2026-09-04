@@ -18,7 +18,7 @@ test("D906: the alternate-artwork action says exactly what it does",()=>{
 
 test("D906: actual color changes stay on the post-draft control with real previews",()=>{
   assert.match(app,/function DraftColorSelector/);
-  assert.match(app,/REAL PRINTIFY PREVIEW/);
+  assert.match(app,/Choose product colors/);
   assert.match(app,/task==="draft-colors"/);
   assert.match(app,/syncDraftVariantChoices\(ids,selectedSizeIds\)/);
   assert.match(app,/updateDraftColorArtwork/);

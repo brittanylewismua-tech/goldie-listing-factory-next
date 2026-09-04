@@ -521,9 +521,9 @@ function DraftColorSelector({product,drafts,selected,saving,onChange,onArtworkCh
   const createdDrafts=drafts.filter(item=>item.id);
   function toggle(color:ProductColor){const next=new Set(selectedSet);if(idsFor(color).some(id=>next.has(id))){for(const id of idsFor(color))next.delete(id)}else next.add(color.id);if(next.size){setActiveColor(color.id);onChange([...next])}}
   return <section className="draft-color-selector" aria-label="Preview and choose product colors">
-    <div className="draft-color-heading"><div><p className="mini-label">REAL PRINTIFY PREVIEW</p><h3>Choose colors with the design on the product</h3><p>These are the private draft mockups Printify generated. Select only colors where the artwork reads clearly.</p></div></div>
+    <div className="draft-color-heading"><div><h3>Choose product colors</h3><p>Select colors here. The main preview shows the color you are reviewing.</p></div></div>
     {createdDrafts.length>1?<div className="draft-design-picker" aria-label={`Choose one of ${createdDrafts.length} designs to preview`}><div><b>Choose a design to preview</b><span>{createdDrafts.length} designs</span></div><div>{createdDrafts.map((item,index)=>{const active=item.id===draft.id,preview=item.previewUrl||item.printifyImages?.[0]||"";return <button type="button" key={item.id} className={active?"selected":""} aria-pressed={active} onClick={()=>setActiveDraft(item.id!)}>{preview?<img src={preview} alt=""/>:<ProductGlyph title={product.blueprintTitle}/>}<span><b>Design {index+1}</b></span>{active?<em>Viewing</em>:null}</button>})}</div></div>:null}
-    <div className="draft-color-workspace"><div className="draft-color-main">{imageFor(focused)?<img src={imageFor(focused)} alt={`${focused.title} product with this design`}/>:<ProductGlyph title={product.blueprintTitle}/>}<b>{focused.title}</b><span>{saving?"Saving to Printify…":override?`Alternate artwork · ${override.name}`:"Using the main design"}</span><div className="draft-color-artwork-action"><label role="button" tabIndex={0} onKeyDown={event=>{if(event.key==="Enter"||event.key===" "){event.preventDefault();event.currentTarget.querySelector("input")?.click()}}}>{override?`Change artwork for ${focused.title}`:`Use different artwork for ${focused.title}`}<input className="hidden-picker" type="file" accept=".png,.jpg,.jpeg" disabled={saving} onChange={event=>{onArtworkChange(draft,focused,event.target.files);event.target.value=""}}/></label>{override?<button type="button" disabled={saving} onClick={()=>onArtworkChange(draft,focused,null,true)}>Use main design</button>:null}</div></div><div className="draft-color-grid">{colors.map(color=><button type="button" key={color.id} aria-pressed={idsFor(color).some(id=>selectedSet.has(id))} className={idsFor(color).some(id=>selectedSet.has(id))?"selected":""} disabled={saving} onMouseEnter={()=>setActiveColor(color.id)} onFocus={()=>setActiveColor(color.id)} onClick={()=>toggle(color)}>{imageFor(color)?<img src={imageFor(color)} alt=""/>:<i style={{background:color.swatch||"#ddd"}}/>}<span><i className="draft-color-chip" style={{background:color.swatch||"#ddd"}}/>{color.title}</span><em>{idsFor(color).some(id=>selectedSet.has(id))?"✓ Included":"Add"}</em></button>)}</div></div>
+    <div className="draft-color-workspace"><div className="draft-color-main">{imageFor(focused)?<img src={imageFor(focused)} alt={`${focused.title} product with this design`}/>:<ProductGlyph title={product.blueprintTitle}/>}<b>{focused.title}</b><span>{saving?"Saving changes…":override?"Using alternate artwork":"Using the main design"}</span><div className="draft-color-artwork-action"><label role="button" tabIndex={0} onKeyDown={event=>{if(event.key==="Enter"||event.key===" "){event.preventDefault();event.currentTarget.querySelector("input")?.click()}}}>{override?`Change artwork for ${focused.title}`:`Use different artwork for ${focused.title}`}<input className="hidden-picker" type="file" accept=".png,.jpg,.jpeg" disabled={saving} onChange={event=>{onArtworkChange(draft,focused,event.target.files);event.target.value=""}}/></label>{override?<button type="button" disabled={saving} onClick={()=>onArtworkChange(draft,focused,null,true)}>Use main design</button>:null}</div></div><div className="draft-color-grid">{colors.map(color=>{const included=idsFor(color).some(id=>selectedSet.has(id));return <button type="button" key={color.id} aria-pressed={included} className={included?"selected":""} onMouseEnter={()=>setActiveColor(color.id)} onFocus={()=>setActiveColor(color.id)} onClick={()=>toggle(color)}><i className="draft-color-chip" style={{background:color.swatch||"#ddd"}}/><span>{color.title}</span><em>{included?"✓ Included":"Add"}</em></button>})}</div></div>
   </section>;
 }
 
@@ -981,7 +981,11 @@ export default function ListingFactoryApp() {
   const [processed, setProcessed] = useState(0);
   const [drafts, setDrafts] = useState<DraftResult[]>([]);
   const [openedDrafts, setOpenedDrafts] = useState<string[]>([]);
+  const [selectedPlacementDrafts,setSelectedPlacementDrafts]=useState<string[]>([]);
   const [openAllMessage, setOpenAllMessage] = useState("");
+  const variantSaveRevision=useRef(0);
+  const variantSaveTimer=useRef<number|undefined>(undefined);
+  const variantSaveQueue=useRef<Promise<void>>(Promise.resolve());
   const [owner, setOwner] = useState(false);
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
   /* D786 · Whose account this is. The rail used to say "Brittany" to everyone. */
@@ -3028,6 +3032,7 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
           apart. Failed listings keep their own row: they have no preview to
           show and they must still offer retry and help. */}
       <div className="task-panel-body placement-review-grid">
+        {selectedPlacementDrafts.length?<div className="placement-selection-actions"><button type="button" onClick={()=>setSelectedPlacementDrafts(listings.filter(({draft})=>draft.status==="Created"&&draft.id).map(({draft})=>draft.id!))}>Select all</button><button type="button" onClick={()=>{const chosen=drafts.filter(draft=>draft.id&&selectedPlacementDrafts.includes(draft.id)&&draft.editorUrl);const opened:string[]=[];for(const draft of chosen){if(window.open(draft.editorUrl!,"_blank","noopener,noreferrer"))opened.push(draft.id!)}setOpenedDrafts(current=>[...new Set([...current,...opened])]);setOpenAllMessage(opened.length===chosen.length?`${opened.length} Printify editor tabs opened.`:`Your browser opened ${opened.length} of ${chosen.length}. Allow pop-ups to open the rest.`)}}>Open selected listings in Printify ↗</button></div>:null}
         {listings.filter(({draft})=>draft.status!=="Created").map(({draft,design})=>
           <div className="task-listing failed" key={draft.clientId}>
             <div className="task-listing-ident"><span className="task-listing-index">Listing {listings.findIndex(entry=>entry.draft.clientId===draft.clientId)+1} of {listings.length}</span><p className="task-listing-name">{listingLabel(design)}</p></div>
@@ -3047,6 +3052,8 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
             openLabel:draft.editorUrl&&draft.id?(draft.id&&openedDrafts.includes(draft.id)?"Printify opened":"Adjust in Printify"):"View full size",
             metaClassName:"placement-dpi",
             linkClassName:"placement-printify-link",
+            selected:Boolean(draft.id&&selectedPlacementDrafts.includes(draft.id)),
+            onSelect:draft.id?(checked=>setSelectedPlacementDrafts(current=>checked?[...new Set([...current,draft.id!])]:current.filter(id=>id!==draft.id))):undefined,
           };
         })}/>
       </div>
@@ -4124,14 +4131,18 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
   }
 
   function finalDescription(design:DesignFile,details?:EtsyDetails){return design.descriptionOverride??[design.blurb??details?.blurb??"",description].filter(value=>value.trim()).join("\n\n")}
-  async function syncDraftVariantChoices(nextColors:number[],nextSizes:number[]){
+  function syncDraftVariantChoices(nextColors:number[],nextSizes:number[]){
     if(!templateDetails)return;
     const selectedVariants=variantsFor(templateDetails,nextColors,nextSizes).map(variant=>variant.id);
     if(!selectedVariants.length){setDraftVariantError("Choose a color and size combination Printify offers.");return}
     const created=drafts.filter(draft=>draft.status==="Created"&&draft.id);
-    const previousColors=selectedColorIds,previousSizes=selectedSizeIds;
     setSelectedColorIds(nextColors);setSelectedSizeIds(nextSizes);
-    setSavingDraftVariants(true);setDraftVariantError("");
+    setDraftVariantError("");
+    const revision=++variantSaveRevision.current;
+    window.clearTimeout(variantSaveTimer.current);
+    variantSaveTimer.current=window.setTimeout(()=>{variantSaveQueue.current=variantSaveQueue.current.then(async()=>{
+    if(revision!==variantSaveRevision.current)return;
+    setSavingDraftVariants(true);
     try{
       /* D1025 · A color change applies to every design draft for this product.
          Parallel PUTs can collide while Printify is regenerating mockups, and a
@@ -4155,8 +4166,9 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
       setDrafts(current=>current.map(draft=>byId.get(draft.id)||draft));
       setPricingApproved(false);
       if(activeRecipe)void establish(activeRecipe,{defaultColorIds:nextColors,defaultSizeIds:nextSizes});
-    }catch(error){setSelectedColorIds(previousColors);setSelectedSizeIds(previousSizes);setDraftVariantError(error instanceof Error?error.message:"Printify could not save these product choices.")}
-    finally{setSavingDraftVariants(false)}
+    }catch(error){if(revision===variantSaveRevision.current)setDraftVariantError(error instanceof Error?error.message:"Printify could not save these product choices.")}
+    finally{if(revision===variantSaveRevision.current)setSavingDraftVariants(false)}
+    })},450)
   }
   async function updateDraftColorArtwork(draft:DraftResult,color:ProductColor,list:FileList|null,reset=false){
     if(!draft.id||!templateDetails)return;
