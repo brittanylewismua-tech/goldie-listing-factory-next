@@ -93,12 +93,9 @@ test("D613's label re-upload is gone, and no new retry system replaced it", asyn
   assert.ok(!/file_name: `label-/.test(route), "no label upload call remains");
 });
 
-test("the seller is told, once, in the panel where drafts are created", async () => {
+test("inside-label implementation detail does not clutter the draft confirmation", async () => {
   const { readFile } = await import("node:fs/promises");
   const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
-  assert.match(app, /Inside-label artwork is not copied to new products\./);
-  assert.match(app, /templateDetails\?\.hasLabelArtwork\?/, "shown only when there is label artwork");
-  // Informational: it must not become another thing to click.
-  const notice = app.slice(app.indexOf("preflight-note"), app.indexOf("preflight-note") + 260);
-  assert.ok(!/<button/.test(notice), "the notice carries no button");
+  assert.doesNotMatch(app, /Inside-label artwork is not copied to new products\./);
+  assert.doesNotMatch(app, /preflight-note/);
 });

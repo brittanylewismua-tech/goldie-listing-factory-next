@@ -1291,7 +1291,7 @@ test("D379: opening a product card does not reload the page", async () => {
   /* The flush, and that it is awaited before the incoming batch takes over. */
   assert.match(app, /await persistBatchNow\(batchIdRef\.current\);[\s\S]{0,200}await restoreBatchById\(existing/,
     "the outgoing product must be saved before batchIdRef points somewhere else");
-  assert.match(app, /async function persistBatchNow\(existingId\?:string\)/);
+  assert.match(app, /async function persistBatchNow\(existingId\?:string,stateOverrides:Record<string,unknown>=\{\}\)/);
   assert.match(app, /const targetId=batchIdRef\.current;const timer=window\.setTimeout\(\(\)=>\{void persistBatchNow\(targetId\);\},700\);/,
     "the debounced autosave and the switch share one save");
 

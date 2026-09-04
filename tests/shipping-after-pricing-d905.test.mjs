@@ -22,8 +22,8 @@ test("D905: shipping is rendered immediately after finished-cost pricing",()=>{
 });
 
 test("D905: the preflight tells the truth about when pricing and shipping happen",()=>{
-  assert.match(app,/Pricing \+ shipping<\/span><b>Reviewed after Printify calculates the finished drafts/);
-  assert.match(app,/Using the colors and sizes saved in Printify/);
+  assert.match(app,/Next<\/span><b>Review previews, prices, and shipping/);
+  assert.match(app,/Saved Printify colors and sizes/);
   assert.doesNotMatch(app,/enabled variants reviewed and approved/);
   assert.match(gates,/Choose the Etsy shipping profile after approving the finished prices on the Images step/);
 });

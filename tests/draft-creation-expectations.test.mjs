@@ -4,8 +4,8 @@ import fs from "node:fs";
 
 const app=fs.readFileSync(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8");
 
-test("draft creation tells the seller the expected wait before it starts",()=>{
-  assert.match(app,/This usually takes about 15 seconds per listing\. A batch of 20 can take a few minutes\./);
+test("draft creation tells the seller the consequence before it starts",()=>{
+  assert.match(app,/Nothing publishes yet\./);
   assert.match(app,/className="preflight-timing"/);
 });
 

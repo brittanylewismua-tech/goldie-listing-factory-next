@@ -96,31 +96,3 @@
 .diagnostic-context summary{font-size:11px;font-weight:700;cursor:pointer;color:#7c3350}
 .diagnostic-context pre{white-space:pre-wrap;word-break:break-word;background:#faf6fb;border-radius:8px;padding:10px;font-size:11px;margin:8px 0 0;max-height:260px;overflow:auto}
 .diagnostics-empty{font-size:12px;color:#7a6a76;margin:10px 0 0}
-
-/* D614 · Inside-label artwork is not carried into new products. Stated once,
-   plainly, where the seller is about to create drafts - not as another dialog to
-   dismiss, and not discovered later from a Printify preview. */
-/* D708 · This is a caution ("inside-label artwork is not copied"), and it was
-   brown text on cream. D707 repointed the attention family by selector name and
-   this one is called a "note", so it slipped the sweep while reading exactly
-   like the colour that has now been reported three times. */
-.preflight-note{
-  margin:14px 0 0;
-  padding:11px 13px;
-  border-radius:9px;
-  border:1px solid #dfc8d5;
-  background:#fdf3f4;
-  color:#a33a48;
-  font-size:12px;
-}
-/* D708 · This line had no rule in any stylesheet - not deleted, never written -
-   so it fell back to the dialog's default paragraph and printed larger and
-   darker than everything around it. Her words: "really big and different for
-   zero reason." It is a supporting sentence under the summary, so it is sized
-   and coloured as one. */
-.preflight-explainer{
-  margin:12px 0 0;
-  color:#7b6478;
-  font-size:12px;
-  line-height:1.5;
-}

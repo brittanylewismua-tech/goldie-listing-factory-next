@@ -23,7 +23,6 @@ test("D940: the upload card makes product scope explicit and selectable",()=>{
 });
 
 test("D940: final confirmation states listing and print-area scope",()=>{
-  assert.match(app,/one listing per design on each product/);
-  assert.match(app,/Back artwork is never used as another product’s front design/);
-  assert.match(app,/files\.map\(printPlanFor\)/);
+  assert.match(app,/one draft per design\{activeBundle&&bundleRecipes\.length>1\?" on each product":""\}/);
+  assert.match(app,/function printPlanFor\(design:DesignFile\)/);
 });

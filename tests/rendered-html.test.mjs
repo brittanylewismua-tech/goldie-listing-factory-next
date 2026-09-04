@@ -1096,7 +1096,7 @@ test("restores batch colors and blocks publishing until every selected listing h
     readFile(new URL("../app/final-listing-review.tsx", import.meta.url), "utf8"),
   ]);
   assert.match(page,/selectedColorIds\?:number\[\]/);
-  assert.match(page,/function batchStateSnapshot\(\).*selectedColorIds,/s);
+  assert.match(page,/function batchStateSnapshot\(overrides:Record<string,unknown>=\{\}\).*selectedColorIds,/s);
   assert.match(page,/setSelectedColorIds\(state\.selectedColorIds\?\.length/);
   assert.match(page,/selectedPublishDrafts\(\)/);
   assert.match(page,/Add a photo to every selected listing before publishing/);
@@ -1786,7 +1786,7 @@ test("protects batch allowance and lets sellers review uploaded designs",async()
     Promise.all([readFile(new URL("../app/approved-functional.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n")),
   ]);
   assert.match(page,/planDraftsRemaining/);
-  assert.match(page,/Plan allowance/);
+  assert.match(page,/one draft per design/);
   assert.match(page,/removeDesign/);
   assert.match(page,/design-upload-review/);
   assert.doesNotMatch(styles,/\.design-upload-review article\{grid-template-columns:76px/,
@@ -2296,7 +2296,7 @@ test("reports published listings instead of workflow completion (fixes D88)",asy
   /* D386 · "SAVED · NOT YET DRAFTED" is now just "DRAFT" - see above. */
   assert.doesNotMatch(page,/SAVED · NOT YET DRAFTED/);
   assert.doesNotMatch(page,/status\.replace\("_"," "\)/);
-  assert.match(app,/keptAsDrafts,batchReceipt,batchDisplayName\}/);
+  assert.match(app,/keptAsDrafts,batchReceipt,batchDisplayName,\.\.\.overrides\}/);
   assert.match(app,/keptAsDrafts,batchReceipt\]\);/);
 });
 
@@ -3929,13 +3929,11 @@ test("the drafts confirmation describes the run it is confirming — D492", asyn
      drafts are made - read "Create 2 product drafts?", listed only "Unisex
      Midweight Softstyle Fleece Hoodie" under a singular "Printify product", and
      charged the plan allowance for 2. */
-  assert.match(app, /Create \$\{files\.length\*bundleRecipes\.length\} product drafts across \$\{bundleRecipes\.length\} products\?/);
-  assert.match(app, /\{activeBundle&&bundleRecipes\.length>1\?"Printify products":"Printify product"\}/);
-  assert.match(app, /`✓ \$\{bundleRecipes\.map\(recipe=>recipe\.name\)\.join\(", "\)\}`/);
+  assert.match(app, /Create \$\{files\.length\*bundleRecipes\.length\} private drafts\?/);
+  assert.match(app, /\{activeBundle&&bundleRecipes\.length>1\?"Products":"Product"\}/);
+  assert.match(app, /bundleRecipes\.map\(recipe=>recipe\.name\)\.join\(", "\)/);
 
-  // requestedListingCount already accounts for products and exclusions.
-  assert.match(app, /`✓ \$\{requestedListingCount\} of \$\{planDraftsRemaining\} remaining listings`/);
-  assert.doesNotMatch(app, /`✓ \$\{files\.length\} of \$\{planDraftsRemaining\} remaining listings`/);
+  assert.doesNotMatch(app.slice(app.indexOf('<h2 id="preflight-title">'),app.indexOf('</section></div>}',app.indexOf('<h2 id="preflight-title">'))), /Plan allowance/);
 });
 
 test("a bundle run saves each product's work before moving on — D493", async () => {
@@ -6871,9 +6869,8 @@ test("bundle DPI and variant totals cover every product — D659", async () => {
 
   // Variants total the bundle, with the split inspectable.
   assert.match(app, /const bundleVariantCounts=useMemo\(/);
-  assert.match(app, /Using the colors and sizes saved in Printify/);
-  assert.match(app, /Pricing \+ shipping/);
-  assert.match(app, /Reviewed after Printify calculates the finished drafts/);
+  assert.match(app, /Saved Printify colors and sizes/);
+  assert.match(app, /Review previews, prices, and shipping/);
   assert.match(app, /detail:known\.map\(entry=>`\$\{entry\.name\}: \$\{entry\.count\}`\)\.join\(" · "\)/);
   assert.doesNotMatch(app, /All \{pricedVariants\.length\} enabled variants/,
     "the open product's count is not the bundle's count");

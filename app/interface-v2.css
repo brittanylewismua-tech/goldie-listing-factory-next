@@ -3410,8 +3410,6 @@ html, body { background: var(--lf-paper); }
 .app-shell .bundle-print-products button>span{display:grid;place-items:center;flex:0 0 20px;width:20px;height:20px;border:1px solid #cfc4ca;border-radius:50%;background:#fff;color:#fff;font-size:12px}
 .app-shell .bundle-print-products button.selected{border-color:#2f7a50;background:#f1faf4!important;box-shadow:0 0 0 1px #2f7a50}
 .app-shell .bundle-print-products button.selected>span{border-color:#2f7a50;background:#2f7a50}
-.app-shell .preflight-artwork-plan b{max-width:68%;text-align:right;line-height:1.45}
-
 /* D971 · One photo job: choose Printify mockups, add seller photos or a size
    guide, then arrange the same set. No duplicate design preview and no vertical
    stack of one-photo view groups. */
