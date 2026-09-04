@@ -13,7 +13,7 @@ export async function PATCH(request:Request){
   const body=await request.json() as {productId?:string;title?:string;tags?:string[];description?:string;etsyDetails?:unknown;placement?:{x:number;y:number;scale:number};variantPrices?:Record<string,number>;selectedVariantIds?:number[];artworkUpdate?:ArtworkUpdate;refreshImages?:boolean},productId=String(body.productId||"");
   const owned=await env.DB.prepare("SELECT response_json FROM printify_draft_results WHERE user_id=? AND status='succeeded' AND json_extract(response_json,'$.id')=? LIMIT 1").bind(user.userId,productId).first<{response_json:string}>();
   if(!owned)return NextResponse.json({error:"That Printify draft was not created by this Listing Factory account."},{status:404});
-  const draft=JSON.parse(owned.response_json) as {shopId:number;batchId?:string;blueprintId?:number;providerId?:number;primaryArtworkImageIds?:Record<string,string>;artworkOverrides?:Record<string,{name:string;position:string}>;artworkOverridePreviewUrls?:Record<string,string>},connection=await env.DB.prepare("SELECT encrypted_token FROM printify_connections WHERE user_id=?").bind(user.userId).first<{encrypted_token:string}>(),secret=(env as unknown as {PRINTIFY_TOKEN_KEY?:string}).PRINTIFY_TOKEN_KEY;
+  const draft=JSON.parse(owned.response_json) as {shopId:number;batchId?:string;blueprintId?:number;providerId?:number;primaryArtworkAreas?:Record<string,DraftPrintArea[]>;primaryArtworkImageIds?:Record<string,string>;artworkOverrides?:Record<string,{name:string;position:string}>;artworkOverridePreviewUrls?:Record<string,string>},connection=await env.DB.prepare("SELECT encrypted_token FROM printify_connections WHERE user_id=?").bind(user.userId).first<{encrypted_token:string}>(),secret=(env as unknown as {PRINTIFY_TOKEN_KEY?:string}).PRINTIFY_TOKEN_KEY;
   if(!connection||!secret)return NextResponse.json({error:"Reconnect Printify to update this draft."},{status:401});
   const token=await decryptPrintifyToken(connection.encrypted_token,secret),url=`https://api.printify.com/v1/shops/${draft.shopId}/products/${productId}.json`;
   let placementPayload:unknown;
@@ -71,7 +71,9 @@ export async function PATCH(request:Request){
       imageId=String(uploaded.id||"");overridePreviewUrl=uploaded.preview_url;
       if(!imageId)return NextResponse.json({error:"Printify did not return an image ID for that artwork."},{status:502});
     }
-    updateBody.print_areas=replaceArtworkForVariants(areas,change.position,change.variantIds,imageId,change.bounds,change.maxPlacementScale);
+    const originalAreas=draft.primaryArtworkAreas?.[change.position]||areas;
+    updateBody.print_areas=replaceArtworkForVariants(areas,change.position,change.variantIds,imageId,change.bounds,change.maxPlacementScale,primaryArtworkId,originalAreas);
+    draft.primaryArtworkAreas={...(draft.primaryArtworkAreas||{}),[change.position]:originalAreas};
   }
   if(body.variantPrices){
     const variants=currentProduct?.variants||[];

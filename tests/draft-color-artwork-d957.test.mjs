@@ -5,6 +5,24 @@ import {primaryImageForSide,replaceArtworkForVariants} from "../app/api/printify
 
 const areas=[{variant_ids:[1,2,3],background:"#fff",placeholders:[{position:"front",images:[{id:"main",x:.5,y:.4,scale:.8,angle:0}]},{position:"back",images:[{id:"back",x:.5,y:.5,scale:.6,angle:0}]}]}];
 
+test("D1091: repeated padded replacements and reset retain the original placement",()=>{
+  const bounds={left:.25,top:.2,right:.75,bottom:.8};
+  let current=areas;
+  for(const id of ["alternate-1","alternate-2","alternate-3","main"]){
+    current=replaceArtworkForVariants(current,"front",[2],id,bounds,undefined,"main",areas);
+    const target=current.find(area=>area.variant_ids.includes(2));
+    assert.deepEqual(target.placeholders[0].images[0],{id,x:.5,y:.4,scale:.8,angle:0});
+    assert.deepEqual(target.placeholders[1],areas[0].placeholders[1]);
+    assert.deepEqual(current.find(area=>area.variant_ids.includes(1)).placeholders,areas[0].placeholders);
+  }
+});
+
+test("D1091: reset still has the original placement after every variant was replaced",()=>{
+  const changed=replaceArtworkForVariants(areas,"front",[1,2,3],"alternate",undefined,undefined,"main",areas);
+  const reset=replaceArtworkForVariants(changed,"front",[1,2,3],"main",undefined,undefined,"main",areas);
+  assert.deepEqual(reset,areas);
+});
+
 test("D957: one color receives alternate artwork without changing other colors or print sides",()=>{
   const next=replaceArtworkForVariants(areas,"front",[2],"alternate");
   assert.deepEqual(next.map(area=>area.variant_ids),[[1,3],[2]]);
