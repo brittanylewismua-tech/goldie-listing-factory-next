@@ -78,7 +78,10 @@ export async function POST(request: Request) {
   try {
     if (!request.body) throw new Error("The uploaded file was empty.");
     const storageStream = await validateImageHeader(request.body, contentType);
-    await removeExpiredArtwork(artwork);
+    /* Successful draft requests delete their staged objects themselves. Sweep
+       abandoned uploads opportunistically, but never put an R2 list/delete pass
+       in front of the upload the seller is waiting on. */
+    void removeExpiredArtwork(artwork);
     const metadata={
       httpMetadata: { contentType },
       customMetadata: { owner: user.userId, expires: String(expires), fileName },

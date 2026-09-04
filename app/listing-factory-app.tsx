@@ -365,12 +365,12 @@ const MAX_BATCH_FILES = 20;
    number chosen because it happened to work once is the kind of thing this
    comment exists to prevent.
 
-   Draft creation stays at MAX_CONCURRENT_DESIGNS - it uploads full-resolution
-   artwork, so it is bounded by memory rather than by provider latency, and it
-   has not been measured. */
+   Draft creation now uses four independent requests. Production diagnostics
+   show the slow work is remote upload and Printify creation, not Worker CPU;
+   each request owns its own body and Worker invocation. Four keeps a 20-design
+   batch moving without sending an unbounded burst to Printify. */
 const BACKGROUND_ETSY_CONCURRENCY = 2;
-const MAX_CONCURRENT_DESIGNS = 2;
-const LARGE_BATCH_THRESHOLD = 400 * 1024 * 1024;
+const MAX_CONCURRENT_DESIGNS = 4;
 const DEFAULT_PRICING: Pricing = { targetProfit: 10, etsyFeePercent: 9.5, fixedFee: 0.25, listingFee: 0.20, shippingCost: 0, shippingCharged: 0 };
 const PHYSICAL_ETSY_FIELDS=/^(materials?|sleeve length|neckline|clothing style|size|shape|orientation|capacity)$/i;
 function productEtsyDefaults(template:TemplateDetails|null,saved?:Record<string,string|number|null>){
@@ -946,6 +946,7 @@ export default function ListingFactoryApp() {
   const snapshotReady=useRef(false);
   const resumeAttempted=useRef(false);
   const draftRunActive=useRef(false);
+  const stagedArtworkCache=useRef(new Map<string,{file:File;promise:Promise<{stagedId:string;reference:string;fileName:string}>}>());
   const templateLoadVersion=useRef(0);
   const etsyPreparationVersion=useRef(0);
   const etsyPreparationActive=useRef(false);
@@ -2189,6 +2190,7 @@ export default function ListingFactoryApp() {
     const durableBatchId=batchIdRef.current||crypto.randomUUID();batchIdRef.current=durableBatchId;window.localStorage.setItem("goldie-active-batch",durableBatchId);const batchUrl=new URL(window.location.href);batchUrl.searchParams.set("batch",runIdRef.current||durableBatchId);window.history.replaceState({},"",batchUrl);void saveBatchFiles(durableBatchId,combined.map(image=>image.file)).catch(()=>undefined);
     if(images.length){setComplete(false);setDrafts([]);setProcessed(0)}
     const restoredAndNew=[...combined.filter(design=>replacements.has(design.id)),...images];
+    for(const design of restoredAndNew)void stagedArtwork(`${design.id}:primary`,design,`GLF-WARM-${design.id.replace(/-/g,"").slice(0,8).toUpperCase()}-PRIMARY`).catch(()=>undefined);
     restoredAndNew.forEach((design) => { const probe = document.createElement("img"); probe.onload = () => { setFiles((current) => current.map((item) => item.id === design.id ? { ...item, width: probe.naturalWidth, height: probe.naturalHeight } : item)); URL.revokeObjectURL(probe.src); }; probe.src = URL.createObjectURL(design.file); });
     void analyzePadding(restoredAndNew);
     if(folderPicker.current)folderPicker.current.value="";
@@ -3982,6 +3984,18 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
     throw new Error(`${lastError}${/Support reference:/i.test(lastError) ? "" : ` Support reference: ${reference}.`}`);
   }
 
+  /* Stage primary artwork while the seller is still reviewing the upload page.
+     This removes the browser-to-R2 transfer from the Create Drafts critical
+     path. A rejected/expired warm-up is discarded and retried normally. */
+  async function stagedArtwork(cacheKey:string,artwork:DesignFile|ArtworkVersion,reference:string){
+    const cached=stagedArtworkCache.current.get(cacheKey);
+    if(cached?.file===artwork.file){const staged=await cached.promise,expires=Number(staged.stagedId.match(/^stage_(\d+)_/)?.[1]||0);if(expires>Date.now()+60_000)return staged;stagedArtworkCache.current.delete(cacheKey)}
+    const promise=preparedUpload(artwork).then(async upload=>({...await stageUpload(upload.blob,upload.fileName,reference),fileName:upload.fileName}));
+    stagedArtworkCache.current.set(cacheKey,{file:artwork.file,promise});
+    void promise.catch(()=>{if(stagedArtworkCache.current.get(cacheKey)?.promise===promise)stagedArtworkCache.current.delete(cacheKey)});
+    return promise;
+  }
+
   async function recoverDraft(batchId: string, clientId: string) {
     const delays = [1000, 2000, 4000, 8000, 12000, 15000];
     for (const delay of delays) {
@@ -4017,11 +4031,11 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
           const products=artwork.productIds?.length?artwork.productIds:(artwork.ownerProductId?[artwork.ownerProductId]:currentProductId?[currentProductId]:[]);
           return artwork.colorIds.length>0&&(!activeBundle||products.includes(currentProductId));
         }).map(artwork=>artwork.ownerProductId&&artwork.ownerProductId!==currentProductId?{...artwork,colorIds:[...requestColors]}:artwork);
-        const prepared=await Promise.all([{key:"primary",artwork:design as DesignFile},...versions.map(artwork=>({key:artwork.id,artwork}))].map(async item=>({key:item.key,artwork:item.artwork,upload:await preparedUpload(item.artwork)})));
+        const artworkItems=[{key:"primary",artwork:design as DesignFile},...versions.map(artwork=>({key:artwork.id,artwork}))];
         for (let pipelineAttempt = 1; pipelineAttempt <= 1; pipelineAttempt += 1) {
           const supportReference = `${referenceRoot}-A${pipelineAttempt}`;
           try {
-            const stagedArtworks=await Promise.all(prepared.map(async item=>{const staged=await stageUpload(item.upload.blob,item.upload.fileName,`${supportReference}-${item.key.slice(0,8)}`);return {key:item.key,fileName:item.upload.fileName,stagedId:staged.stagedId,reference:staged.reference,bounds:item.artwork.visibleBounds,maxPlacementScale:isRigidPaperProduct(requestDetails)?1:undefined}}));
+            const stagedArtworks=await Promise.all(artworkItems.map(async item=>{const staged=await stagedArtwork(`${design.id}:${item.key}`,item.artwork,`${supportReference}-${item.key.slice(0,8)}`);return {key:item.key,fileName:staged.fileName,stagedId:staged.stagedId,reference:staged.reference,bounds:item.artwork.visibleBounds,maxPlacementScale:isRigidPaperProduct(requestDetails)?1:undefined}}));
             const availableColorIds=(requestDetails?.colorOptions||[]).filter(color=>color.available).map(color=>color.id);
             /* One representative size is enough to generate an honest image
                for every colour. Asking for every colour at every selected size
@@ -4053,6 +4067,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
             const requestBody=versions.length?{...commonDraftRequest,artworks:stagedArtworks,artworkAssignments}:{...commonDraftRequest,maxPlacementScale:isRigidPaperProduct(requestDetails)?1:undefined,fileName:stagedArtworks[0].fileName,stagedId:stagedArtworks[0].stagedId};
             const response = await fetchWithDeadline("/api/printify/drafts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(requestBody) }, 60_000);
             const result = await response.json() as { draft?: DraftResult; error?: string };
+            artworkItems.forEach(item=>stagedArtworkCache.current.delete(`${design.id}:${item.key}`));
             if ((!response.ok || !result.draft) && (response.status === 409 || /still completing this exact draft/i.test(result.error ?? ""))) {
               const recovered = await recoverDraft(requestDetails!.batchId, design.id);
               if (recovered) result.draft = recovered;
@@ -4071,6 +4086,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
         }
         throw finalError ?? new Error("Printify did not create this draft.");
       } catch (error) {
+        for(const key of [...stagedArtworkCache.current.keys()])if(key.startsWith(`${design.id}:`))stagedArtworkCache.current.delete(key);
         const rawMessage = error instanceof Error ? error.message : "The design failed.";
         const supportReference = `${referenceRoot}-A1`;
         if (!/Support reference:/i.test(rawMessage)) {
@@ -4094,9 +4110,8 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
     setRunning(true);
     setRunTotal(targetFiles.length);
     setComplete(false);
-    const batchBytes=targetFiles.reduce((sum,file)=>sum+file.size,0);
-    const batchConcurrency=batchBytes>LARGE_BATCH_THRESHOLD?1:MAX_CONCURRENT_DESIGNS;
-    setPreparationMessage(batchConcurrency===1?"Processing one high-resolution design at a time":`Processing up to ${Math.min(batchConcurrency, targetFiles.length)} ${Math.min(batchConcurrency, targetFiles.length)===1?"design":"designs"} at a time without lowering their print resolution`);
+    const batchConcurrency=MAX_CONCURRENT_DESIGNS;
+    setPreparationMessage(`Processing up to ${Math.min(batchConcurrency, targetFiles.length)} ${Math.min(batchConcurrency, targetFiles.length)===1?"design":"designs"} at a time without lowering their print resolution`);
     if (!keepSuccessful) setDrafts([]);
     else setDrafts((current) => current.filter((draft) => draft.status === "Created"));
     setProcessed(0);

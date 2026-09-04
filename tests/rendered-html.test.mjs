@@ -135,10 +135,10 @@ test("uses individual shop-aware Printify editor buttons", async () => {
   assert.match(route, /shopId: shop\.id/);
   assert.match(page, /MAX_BATCH_FILES = 20/);
   assert.doesNotMatch(page, /MAX_BATCH_BYTES|Reduce it to 500 MB/);
-  assert.match(page, /LARGE_BATCH_THRESHOLD = 400 \* 1024 \* 1024/);
+  assert.doesNotMatch(page, /LARGE_BATCH_THRESHOLD/);
   assert.doesNotMatch(page, /new Worker|OffscreenCanvas|UPNG/);
   assert.match(page, /analyzePadding/);
-  assert.match(page, /MAX_CONCURRENT_DESIGNS = 2/);
+  assert.match(page, /MAX_CONCURRENT_DESIGNS = 4/);
   assert.match(page, /Creating drafts · \$\{processed\} of \$\{runTotal\} finished/);
   assert.match(page, /\{processed\}\/\{runTotal\}/);
   assert.doesNotMatch(page, /Creating \$\{processed \+ 1\} of/);
@@ -455,13 +455,13 @@ test("calculates every Printify variant price from its own cost and Etsy fee pro
   assert.doesNotMatch(drafts, /shipping==null\?body\.pricing/);
 });
 
-test("processes a 20-design batch with bounded two-at-a-time concurrency", async () => {
+test("processes a 20-design batch with bounded four-at-a-time concurrency", async () => {
   const [page, boundedSource] = await Promise.all([readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"), readFile(new URL("../app/bounded-work.ts", import.meta.url), "utf8")]);
   assert.match(page, /const MAX_BATCH_FILES = 20/);
-  assert.match(page, /const MAX_CONCURRENT_DESIGNS = 2/);
+  assert.match(page, /const MAX_CONCURRENT_DESIGNS = 4/);
   assert.match(page, /async function processDesign/);
   assert.match(page, /runBounded\(targetFiles, batchConcurrency, processDesign/);
-  assert.match(page, /batchBytes>LARGE_BATCH_THRESHOLD\?1:MAX_CONCURRENT_DESIGNS/);
+  assert.match(page, /const batchConcurrency=MAX_CONCURRENT_DESIGNS/);
   assert.match(page, /setProcessed\(Math\.min\(completedDesignIds\.size,targetFiles\.length\)\)/);
   assert.match(boundedSource, /Math\.min\(limit, items\.length\)/);
   const { runBounded } = await import("../app/bounded-work.ts");
@@ -7006,9 +7006,8 @@ test("background Etsy preparation runs two at a time, and only two — D662", as
   assert.match(why, /4 requests\s+batch 2954ms/);
   assert.match(why, /No 429, no 5xx/);
 
-  /* Draft creation was deliberately not touched: it uploads full-resolution
-     artwork, so it is bounded by memory rather than provider latency. */
-  assert.match(app, /const MAX_CONCURRENT_DESIGNS = 2;/);
+  /* Draft creation is separately bounded at four independent requests. */
+  assert.match(app, /const MAX_CONCURRENT_DESIGNS = 4;/);
   assert.match(app, /runBounded\(targetFiles, batchConcurrency, processDesign/);
 });
 
