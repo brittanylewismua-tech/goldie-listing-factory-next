@@ -3677,6 +3677,50 @@ html, body { background: var(--lf-paper); }
 }
 .app-shell.app-shell .printify-image-picker .printify-more-toggle span{min-width:0!important}
 
+/* D1073 · Personalization is a short vertical form, not two desktop columns
+   squeezed into a narrow Etsy-details card. Give every field its own row and
+   make the required control a stable 18px checkbox instead of inheriting the
+   application's field-label grid (which stretched it into a tall rectangle). */
+.app-shell .personalization-editor{padding:18px!important;overflow:hidden}
+.app-shell .personalization-heading{align-items:flex-start!important;gap:18px!important}
+.app-shell .personalization-heading>div{min-width:0}
+.app-shell .personalization-heading small{display:block;max-width:34ch;margin-top:4px}
+.app-shell .personalization-questions{gap:16px!important;margin-top:18px!important}
+.app-shell .personalization-questions article{
+  display:grid!important;grid-template-columns:minmax(0,1fr)!important;
+  gap:16px!important;padding:18px!important;min-width:0;overflow:hidden
+}
+.app-shell .personalization-question-head,
+.app-shell .personalization-questions label:has(textarea),
+.app-shell .personalization-required{grid-column:1!important}
+.app-shell .personalization-questions article>label:not(.personalization-required){
+  display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;
+  gap:7px!important;min-width:0;margin:0!important
+}
+.app-shell .personalization-questions article>label :is(input,select,textarea){
+  grid-column:1/-1!important;width:100%!important;max-width:100%!important;box-sizing:border-box
+}
+.app-shell .personalization-questions article>label:has(input[type="number"]){max-width:170px}
+.app-shell .personalization-required{
+  display:flex!important;align-items:center!important;justify-content:flex-start!important;
+  gap:10px!important;width:auto!important;min-width:0;margin:2px 0 0!important;
+  font-size:13px!important;line-height:1.35!important;cursor:pointer
+}
+.app-shell .personalization-required input[type="checkbox"]{
+  appearance:none!important;position:relative!important;inset:auto!important;
+  display:block!important;flex:0 0 18px!important;width:18px!important;height:18px!important;
+  min-width:18px!important;min-height:18px!important;margin:0!important;padding:0!important;
+  border:1.5px solid #8f8189!important;border-radius:4px!important;background:#fff!important;
+  box-shadow:none!important
+}
+.app-shell .personalization-required input[type="checkbox"]:checked{
+  border-color:#6d3a60!important;background:#6d3a60!important
+}
+.app-shell .personalization-required input[type="checkbox"]:checked:after{
+  content:"✓";position:absolute;inset:0;display:grid;place-items:center;
+  color:#fff;font-size:12px;font-weight:900;line-height:1
+}
+
 /* Every point inside the reorder strip is now a usable drop surface. The
    nearest card moves out of the way while dragging, so no precision hit is
    required at a card edge. */
