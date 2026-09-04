@@ -12,7 +12,7 @@ import { decryptPrintifyToken } from "../token-crypto";
 import { recommendedPrice } from "@/app/pricing";
 import { isOwner } from "@/app/mastermind/access";
 import { actualCostReview } from "@/app/draft-pricing";
-import { exactMockupCoverageComplete, expandPrintAreasForPreview, mergeMockupImages, PREVIEW_MOCKUP_WAITS_MS, previewVariantChunks, restoredVariants } from "@/app/draft-preview-variants";
+import { creationVariantIds, expandPrintAreasForPreview, mergeMockupImages, PREVIEW_MOCKUP_WAITS_MS, restoredVariants } from "@/app/draft-preview-variants";
 import { signedArtworkUrl } from "../staged-url";
 
 const PRINTIFY_API = "https://api.printify.com/v1";
@@ -224,11 +224,16 @@ async function handlePOST(request: Request) {
     const selectedShippingTemplateId=Number(body.shippingTemplateId)>0?String(Math.trunc(Number(body.shippingTemplateId))):template.shippingTemplateId;
     if(!selectedShippingTemplateId)throw new Error("Choose the shipping profile for this batch before creating drafts.");
     const finalVariantIds=(body.selectedVariantIds||[]).filter(id=>template.variants.some(variant=>variant.id===id));
+    const previewVariantIds=(body.mockupVariantIds||[]).filter(id=>template.variants.some(variant=>variant.id===id));
     /* The real product is created only with the seller's saved choices. Broad
        colour coverage belongs exclusively to the disposable preview helpers;
        widening the real draft crowds its normal camera angles out of the
        listing-photo response. */
-    const enabledForCreation=finalVariantIds;
+    /* Generate colour previews on the real private draft. The previous route
+       created one or more disposable products and waited for every helper's
+       asynchronous mockups before it returned. A measured two-design run left
+       one request stranded and held the successful request open for 78s. */
+    const enabledForCreation=creationVariantIds(finalVariantIds,previewVariantIds);
     const creationPrintAreas=expandPrintAreasForPreview(template.print_areas,body.mockupVariantSources||{});
     const productBody = (variantIds=enabledForCreation,previewOnly=false) => JSON.stringify({
         title: previewOnly?`Preview — ${title || "Untitled design"}`:(title || "Untitled design"),
@@ -266,54 +271,34 @@ async function handlePOST(request: Request) {
        images, then restore the seller's exact choices before reporting success.
        The broad image set is retained in Goldie for the colour picker; the
        Printify draft itself never remains widened. */
-    const previewVariantIds=(body.mockupVariantIds||[]).filter(id=>template.variants.some(variant=>variant.id===id));
     let colorPreviewImages=resolvedProduct.images||[];
     const widened=previewVariantIds.some(id=>!finalVariantIds.includes(id));
     if(widened){
       try{
-        const missingChunks=previewVariantChunks(previewVariantIds).filter(chunk=>!exactMockupCoverageComplete(colorPreviewImages,chunk));
-        /* Every independent color window is generated at the same time. A
-           39-color product therefore waits for one Printify window, not two
-           consecutive windows that could hold the seller here for a minute. */
-        const generatedWindows=await Promise.all(missingChunks.map(async chunk=>{
-          let previewProduct:CreatedProduct|undefined;
-          try{
-            /* Updating enabled variants does not make Printify regenerate its
-               cached mockup window. A private, immediately-deleted helper
-               product does: each helper asks for at most twenty colours and
-               supplies real design-on-product images for the chooser. */
-            previewProduct=await createProductWithImageRetries<CreatedProduct>({
-              path:`/shops/${shop.id}/products.json`,token,body:()=>productBody(chunk,true),
-            });
-            let chunkImages=previewProduct.images||[];
-            for(const wait of PREVIEW_MOCKUP_WAITS_MS){
-              if(exactMockupCoverageComplete(chunkImages,chunk))break;
-              await new Promise(resolve=>setTimeout(resolve,wait));
-              const loaded=await api<CreatedProduct>(`/shops/${shop.id}/products/${previewProduct.id}.json`,token);
-              chunkImages=loaded.images||[];
-            }
-            if(!exactMockupCoverageComplete(chunkImages,chunk))throw new Error("Printify did not finish generating every product color preview. No draft was kept; try again.");
-            return chunkImages;
-          }finally{
-            if(previewProduct?.id)await fetch(`${PRINTIFY_API}/shops/${shop.id}/products/${previewProduct.id}.json`,{method:"DELETE",headers:{Authorization:`Bearer ${token}`,"User-Agent":"Goldie-Listing-Factory"}}).catch(()=>undefined);
-          }
-        }));
-        const previewImages=mergeMockupImages(colorPreviewImages,...generatedWindows);
+        /* One short refresh is enough to pick up mockups that finish just after
+           creation. Preview latency is optional: it may enrich the picker, but
+           it can never delete or fail the real draft the seller just created. */
+        for(const wait of PREVIEW_MOCKUP_WAITS_MS.slice(0,2)){
+          await new Promise(resolve=>setTimeout(resolve,wait));
+          const loaded=await api<CreatedProduct>(`/shops/${shop.id}/products/${created.id}.json`,token);
+          colorPreviewImages=mergeMockupImages(colorPreviewImages,loaded.images||[]);
+          resolvedProduct={...resolvedProduct,...loaded};
+        }
         const restored=restoredVariants(resolvedProduct.variants||template.variants,finalVariantIds).map(variant=>{
           const source=(resolvedProduct.variants||template.variants).find(item=>item.id===variant.id);
           return {...variant,price:Number(source?.price||template.variants.find(item=>item.id===variant.id)?.price||0)};
         });
         await api<CreatedProduct>(`/shops/${shop.id}/products/${created.id}.json`,token,{method:"PUT",body:JSON.stringify({variants:restored})});
-        colorPreviewImages=previewImages;
         resolvedProduct={...resolvedProduct,variants:(resolvedProduct.variants||[]).map(variant=>({...variant,is_enabled:finalVariantIds.includes(variant.id)}))};
       }catch(error){
-        await fetch(`${PRINTIFY_API}/shops/${shop.id}/products/${created.id}.json`,{method:"DELETE",headers:{Authorization:`Bearer ${token}`,"User-Agent":"Goldie-Listing-Factory"}}).catch(()=>undefined);
-        throw error;
+        /* The draft exists. A late mockup refresh must never turn that success
+           into a failed listing. Best-effort restore keeps the saved choices. */
+        const restored=restoredVariants(resolvedProduct.variants||template.variants,finalVariantIds);
+        await api<CreatedProduct>(`/shops/${shop.id}/products/${created.id}.json`,token,{method:"PUT",body:JSON.stringify({variants:restored})}).catch(()=>undefined);
       }
     }
-    /* The created draft response often exposes only one front mockup per enabled
-       colour. The helper windows above contain Printify's other camera views as
-       well. Keep the complete de-duplicated library for Listing photos. */
+    /* Keep every camera view returned while the temporarily widened real draft
+       was generating, then restore the seller's exact enabled variants. */
     let productImages = mergeMockupImages(resolvedProduct.images ?? created.images ?? [],colorPreviewImages);
     let previewUrl = productImages.find((image) => image.is_default)?.src || productImages[0]?.src;
     if (!previewUrl) {

@@ -3451,6 +3451,36 @@ html, body { background: var(--lf-paper); }
 .app-shell .printify-more-toggle{min-height:40px!important;margin:16px auto 0!important;border:2px solid #111!important;border-radius:9px!important;background:#fff!important;color:#111!important;font-size:12px!important}
 .app-shell .design-upload-review>.add-another-design{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:40px;margin:4px auto 0;padding:10px 16px;border:1px solid #111;border-radius:9px;background:#111;color:#fff;font-weight:800;cursor:pointer}
 .app-shell .design-upload-review>.add-another-design span{font-size:17px;line-height:1}
+
+/* D1045 · Uploaded designs are a collection; the add control is not another
+   design card. Give the cards room to read, then place the compact continuation
+   on its own right-aligned row. */
+.app-shell .design-upload-review{gap:20px!important}
+.app-shell .design-upload-review>.add-another-design{
+  grid-column:1/-1;justify-self:end!important;width:auto!important;min-height:36px!important;
+  margin:8px 0 0!important;padding:8px 13px!important;font-size:12px!important;
+}
+
+/* Failed and successful listings are peers in one placement grid. ArtworkGrid
+   used to become a grid item of its own, squeezing every successful preview
+   into half of that half-width column while a failed row stretched beside it. */
+.app-shell .placement-review-grid{
+  display:grid!important;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));
+  gap:20px!important;align-items:start;
+}
+.app-shell .placement-review-grid>.factory-art-grid{display:contents}
+.app-shell .placement-review-grid>.task-listing.failed{
+  min-width:0;min-height:0!important;padding:18px!important;display:grid!important;gap:16px!important;
+  align-content:start;border:1px solid #ded1d8;border-radius:10px;background:#fff;
+}
+.app-shell .failed-listing-actions{display:flex;flex-wrap:wrap;gap:10px}
+.app-shell .failed-listing-actions .error-help-link{
+  min-height:36px;margin:0!important;padding:9px 12px!important;border:1px solid #111!important;
+  border-radius:8px!important;background:#fff!important;color:#111!important;font-weight:750!important;
+}
+.app-shell .factory-art-meta{grid-template-columns:minmax(0,1fr) auto!important}
+.app-shell .factory-art-card .placement-dpi{white-space:normal!important;overflow-wrap:normal!important}
+@media(max-width:700px){.app-shell .placement-review-grid{grid-template-columns:minmax(0,1fr)}}
 .app-shell .photo-order-strip article.drop-target{border-color:#111!important;box-shadow:0 0 0 3px rgba(17,17,17,.12)!important;transform:translateY(-3px)}
 .app-shell .photo-order-strip.is-reordering article:not(.dragging){transition:transform .14s ease,border-color .14s ease,box-shadow .14s ease}
 .app-shell .individual-size-guide>button{margin-left:auto}

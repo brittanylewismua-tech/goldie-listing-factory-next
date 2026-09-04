@@ -4782,7 +4782,9 @@ test("placement cards contain only the preview, identity, DPI and editor link �
      way into Printify, and nothing else - is unchanged; the class names are the
      component's. */
   assert.match(placement, /<ArtworkGrid items=/);
-  assert.match(placement, /name:design\?\.title\?\.trim\(\)/);
+  assert.match(placement, /name:`Listing \$\{listings\.findIndex/);
+  assert.doesNotMatch(placement, /name:design\?\.title|name:design\?\.name/,
+    "a junk upload filename never outranks the listing number");
   assert.match(placement, /DPI · good to print/);
   assert.match(placement, /openLabel:.*Adjust in Printify/);
   assert.doesNotMatch(placement, /Printify views|Unpublished Printify draft|Choose the correct shop[^\"]*\)<\/small>/);
@@ -7369,7 +7371,7 @@ test("every product's badge summarises its own rows, not just the open one — D
      other panel has - two unlabelled previews side by side. */
   /* D695 - the number only. D694 also added the name, which this card already
      carried under the preview, so each one printed its listing twice. */
-  assert.match(app, /meta:`Listing \$\{listingIndex\+1\} of \$\{listings\.length\}/);
+  assert.match(app, /name:`Listing \$\{listings\.findIndex\([^]+?\)\+1\} of \$\{listings\.length\}`,[^]+?meta:dpi/);
   assert.doesNotMatch(app, /placement-listing-card[^]{0,600}<p className="task-listing-name">/,
     "the name belongs in .placement-design-name, once");
 });

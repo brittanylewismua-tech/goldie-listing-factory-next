@@ -49,38 +49,31 @@ test("D989 keeps each asynchronous Printify mockup window bounded",()=>{
   assert.equal(PREVIEW_MOCKUP_WAITS_MS.reduce((sum,wait)=>sum+wait,0),16000);
 });
 
-test("D984 sends the broad preview set but keeps the seller selection separate",()=>{
+test("D1045 generates previews on the real draft and restores the seller selection",()=>{
   const app=fs.readFileSync(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8");
   const route=fs.readFileSync(new URL("../app/api/printify/drafts/route.ts",import.meta.url),"utf8");
   assert.match(app,/mockupVariantIds:mockupVariants\.map\(variant=>variant\.id\)/);
   assert.match(app,/requestSizes\.slice\(0,1\)/);
   assert.match(app,/const mockupVariants=variantsFor[\s\S]{0,900}const variants=mockupVariants;[\s\S]{0,900}artworkAssignments=/);
-  assert.match(route,/const enabledForCreation=finalVariantIds/);
-  assert.match(route,/exactMockupCoverageComplete\(chunkImages,chunk\)/);
+  assert.match(route,/const enabledForCreation=creationVariantIds\(finalVariantIds,previewVariantIds\)/);
   assert.match(route,/restoredVariants\(resolvedProduct\.variants\|\|template\.variants,finalVariantIds\)/);
-  assert.match(route,/previewVariantChunks\(previewVariantIds\)/);
-  assert.match(route,/exactMockupCoverageComplete\(chunkImages,chunk\)/);
-  assert.match(route,/body:\(\)=>productBody\(chunk,true\)/);
-  assert.match(route,/previewProduct\?\.id[\s\S]{0,260}method:"DELETE"/);
-  assert.match(route,/catch\(error\)[\s\S]{0,350}method:"DELETE"/);
-  assert.match(route,/No draft was kept; try again/);
+  assert.doesNotMatch(route,/previewProduct|productBody\(chunk,true\)/);
+  assert.doesNotMatch(route,/catch\(error\)[\s\S]{0,350}method:"DELETE"/);
 });
 
-test("D992 keeps helper color previews out of the listing-photo collection",()=>{
+test("D1045 retains real-draft color previews in the listing-photo collection",()=>{
   const app=fs.readFileSync(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8");
   const route=fs.readFileSync(new URL("../app/api/printify/drafts/route.ts",import.meta.url),"utf8");
   assert.match(route,/let colorPreviewImages=resolvedProduct\.images\|\|\[\]/);
-  assert.match(route,/colorPreviewImages=previewImages;\s*resolvedProduct=\{\.\.\.resolvedProduct,variants:/);
-  assert.doesNotMatch(route,/resolvedProduct=\{\.\.\.resolvedProduct,images:previewImages/);
+  assert.match(route,/colorPreviewImages=mergeMockupImages\(colorPreviewImages,loaded\.images\|\|\[\]\)/);
   assert.match(route,/printifyImages: productImages\.map/);
   assert.match(route,/colorPreviewImageDetails:colorPreviewImages\.filter/);
   assert.match(app,/draft\.colorPreviewImageDetails\?\.length\?draft\.colorPreviewImageDetails:draft\.printifyImageDetails/);
 });
 
-test("D993 generates every missing color window concurrently",()=>{
+test("D1045 bounds preview refreshes and never deletes a created draft",()=>{
   const route=fs.readFileSync(new URL("../app/api/printify/drafts/route.ts",import.meta.url),"utf8");
-  assert.match(route,/const missingChunks=previewVariantChunks\(previewVariantIds\)\.filter/);
-  assert.match(route,/await Promise\.all\(missingChunks\.map\(async chunk=>/);
-  assert.doesNotMatch(route,/for\(const chunk of previewVariantChunks\(previewVariantIds\)\)/);
-  assert.match(route,/mergeMockupImages\(colorPreviewImages,\.\.\.generatedWindows\)/);
+  assert.match(route,/PREVIEW_MOCKUP_WAITS_MS\.slice\(0,2\)/);
+  assert.match(route,/A late mockup refresh must never turn that success/);
+  assert.doesNotMatch(route,/DELETE[^]{0,180}created\.id/);
 });

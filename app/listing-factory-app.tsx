@@ -3028,21 +3028,21 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
           apart. Failed listings keep their own row: they have no preview to
           show and they must still offer retry and help. */}
       <div className="task-panel-body placement-review-grid">
-        {listings.filter(({draft})=>draft.status!=="Created").map(({draft,design},failedIndex)=>
+        {listings.filter(({draft})=>draft.status!=="Created").map(({draft,design})=>
           <div className="task-listing failed" key={draft.clientId}>
-            <div className="task-listing-ident"><span className="task-listing-index">Listing {failedIndex+1} of {listings.length}</span><p className="task-listing-name">{listingLabel(design)}</p></div>
-            <button className="error-help-link" onClick={()=>window.dispatchEvent(new CustomEvent("goldie-retry-listing",{detail:draft.clientId}))}>Retry this listing</button>
-            <button className="error-help-link" onClick={()=>window.dispatchEvent(new CustomEvent("goldie-support",{detail:draft.error??"A design failed"}))}>Get help with this error</button>
+            <div className="task-listing-ident"><span className="task-listing-index">Listing {listings.findIndex(entry=>entry.draft.clientId===draft.clientId)+1} of {listings.length}</span><p className="task-listing-name">{listingLabel(design)}</p></div>
+            <div className="failed-listing-actions"><button className="error-help-link" onClick={()=>window.dispatchEvent(new CustomEvent("goldie-retry-listing",{detail:draft.clientId}))}>Retry this listing</button>
+            <button className="error-help-link" onClick={()=>window.dispatchEvent(new CustomEvent("goldie-support",{detail:draft.error??"A design failed"}))}>Get help with this error</button></div>
           </div>)}
-        <ArtworkGrid items={listings.filter(({draft})=>draft.status==="Created").map(({draft,design},listingIndex)=>{
+        <ArtworkGrid items={listings.filter(({draft})=>draft.status==="Created").map(({draft,design})=>{
           const displayScale=printTargetFor(templateDetails).scale;
           const quality=design?.width&&templateDetails?.maxPrintWidth&&displayScale?printifyDpi(design.width,templateDetails.maxPrintWidth,displayScale):null;
           const dpi=!quality?"Checking print quality…":quality.dpi>=300?`${quality.dpi} DPI · good to print`:`${quality.dpi} DPI · review before printing`;
           return {
             key:draft.clientId,
             previewUrl:draft.previewUrl||design?.previewUrl,
-            name:design?.title?.trim()||design?.name||draft.name||"Listing",
-            meta:`Listing ${listingIndex+1} of ${listings.length} · ${dpi}`,
+            name:`Listing ${listings.findIndex(entry=>entry.draft.clientId===draft.clientId)+1} of ${listings.length}`,
+            meta:dpi,
             onOpen:draft.editorUrl&&draft.id?()=>openDraft(draft):(draft.previewUrl?()=>window.open(draft.previewUrl,"_blank","noopener,noreferrer"):undefined),
             openLabel:draft.editorUrl&&draft.id?(draft.id&&openedDrafts.includes(draft.id)?"Printify opened":"Adjust in Printify"):"View full size",
             metaClassName:"placement-dpi",
