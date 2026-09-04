@@ -3113,6 +3113,9 @@ html, body { background: var(--lf-paper); }
 .app-shell .draft-color-grid button>.draft-color-product-glyph svg path:not(.glyph-line){fill:var(--product-glyph-color,#ddd)!important}
 .app-shell .draft-color-grid button:has(>.draft-color-product-glyph){grid-template-columns:34px minmax(0,1fr) auto;min-height:54px}
 .app-shell .draft-color-illustration small{display:none!important}
+.app-shell .draft-color-main .draft-color-illustration>.bundle-product-photo{display:grid!important;place-items:center!important;width:76%!important;height:76%!important;min-width:0!important;min-height:0!important;margin:0!important;background:transparent!important}
+.app-shell .draft-color-main .draft-color-illustration>.bundle-product-photo svg{width:100%!important;height:100%!important;max-width:none!important;max-height:none!important}
+.app-shell .draft-color-main .draft-color-illustration>.bundle-product-photo svg path:not(.glyph-line){stroke:#756873;stroke-width:.32;stroke-linejoin:round}
 .app-shell .draft-color-preview{display:inline-flex;align-items:center;justify-content:center;min-height:38px;padding:8px 15px;border:1px solid #111;border-radius:8px;background:#fff;color:#211a1f;font:750 12px/1.2 inherit;cursor:pointer}
 .app-shell .draft-color-preview:hover{background:#f8f5f7}
 .app-shell .draft-color-preview:disabled{border-color:#ddd5da;color:#9b9198;background:#f7f5f6;cursor:not-allowed}
