@@ -22,7 +22,7 @@ test("D918: the receipt can return to an unfinished product in either direction"
 
 test("D919: photo ordering never invents a batch size guide",()=>{
   assert.match(app,/batchName=\{sizeGuideName\}/);
-  assert.match(app,/guide\|\|\"No size guide selected\"/);
+  assert.match(app,/guide\?\"Selected\":\"No size guide selected\"/);
   assert.match(app,/guide\?\"Use a different size guide\":\"Choose a size guide\"/);
   assert.doesNotMatch(app,/name\|\|\"Using the batch size guide\"/);
 });

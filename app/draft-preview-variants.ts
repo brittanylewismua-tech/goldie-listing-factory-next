@@ -46,7 +46,7 @@ export function previewVariantChunks(variantIds:number[],size=20){
 /* Printify generates mockups asynchronously. Each independent window runs in
    parallel, so this is the ceiling for the whole preview phase rather than a
    delay paid once per twenty colors. */
-export const PREVIEW_MOCKUP_WAITS_MS=[2000,4000,8000,16000,30000] as const;
+export const PREVIEW_MOCKUP_WAITS_MS=[1000,1500,2500,4000,7000] as const;
 
 export function mergeMockupImages<T extends DraftMockupImage>(...sets:T[][]){
   const seen=new Set<string>();

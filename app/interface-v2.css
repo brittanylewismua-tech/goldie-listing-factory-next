@@ -3114,7 +3114,7 @@ html, body { background: var(--lf-paper); }
 .app-shell .draft-color-grid button:hover{border-color:rgba(61,37,56,.48);background:#fcfafb}.app-shell .draft-color-grid button.selected{border-color:#2f7a50;background:#f1faf4;box-shadow:0 0 0 1px #2f7a50}
 .app-shell .draft-color-grid img,.app-shell .draft-color-grid i{grid-row:1/3;width:54px;height:54px;object-fit:contain;border-radius:7px;background:#f4f1f3}.app-shell .draft-color-grid span{font-size:13px;font-weight:700;overflow:hidden;text-overflow:ellipsis}.app-shell .draft-color-grid em{font-size:11px;font-style:normal;color:#766873}.app-shell .draft-color-grid button.selected em{color:#2f7a50;font-weight:700}
 .app-shell .draft-color-grid span{display:flex;align-items:center;gap:7px}
-.app-shell .draft-color-grid span .draft-color-chip{display:inline-block;grid-row:auto;width:13px;height:13px;flex:0 0 13px;border:1px solid #d8cfd5;border-radius:50%;box-shadow:inset 0 0 0 1px rgba(255,255,255,.42)}
+.app-shell .draft-color-grid span .draft-color-chip{display:inline-block;grid-row:auto;width:13px;height:13px;flex:0 0 13px;border:1px solid #9f969c;border-radius:50%;box-shadow:none;background-clip:padding-box;filter:none}
 @media(max-width:1050px){.app-shell .draft-color-workspace{grid-template-columns:240px minmax(0,1fr)}.app-shell .draft-color-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .app-shell .post-draft-shipping-review{margin-top:14px;padding:18px;background:#fff;border:1px solid #ded6dc;border-radius:12px;box-shadow:0 1px 2px rgba(40,24,36,.08),0 14px 32px rgba(40,24,36,.08)}
 
@@ -3442,6 +3442,18 @@ html, body { background: var(--lf-paper); }
 .app-shell .factory-listing-next span{color:#756873;font-size:12px;font-weight:700}
 
 .app-shell .editable-draft-pricing{display:grid;gap:14px}
+
+/* D1040 · Keep photo selection clear of Pinterest's upper-left save control,
+   make every check visually centred, and make expanded photos reliably closable. */
+.app-shell .task-panel .printify-photo-selector{top:8px!important;right:8px!important;left:auto!important;display:grid!important;place-items:center!important}
+.app-shell .printify-photo-selector>span[aria-hidden]{display:grid!important;width:100%;height:100%;place-items:center;line-height:1!important;transform:none!important}
+.printify-photo-lightbox>button{display:grid!important;place-items:center!important;padding:0!important;line-height:1!important;text-align:center!important}
+.app-shell .printify-more-toggle{min-height:40px!important;margin:16px auto 0!important;border:2px solid #111!important;border-radius:9px!important;background:#fff!important;color:#111!important;font-size:12px!important}
+.app-shell .design-upload-review>.add-another-design{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:40px;margin:4px auto 0;padding:10px 16px;border:1px solid #111;border-radius:9px;background:#111;color:#fff;font-weight:800;cursor:pointer}
+.app-shell .design-upload-review>.add-another-design span{font-size:17px;line-height:1}
+.app-shell .photo-order-strip article.drop-target{border-color:#111!important;box-shadow:0 0 0 3px rgba(17,17,17,.12)!important;transform:translateY(-3px)}
+.app-shell .photo-order-strip.is-reordering article:not(.dragging){transition:transform .14s ease,border-color .14s ease,box-shadow .14s ease}
+.app-shell .individual-size-guide>button{margin-left:auto}
 .app-shell .save-draft-prices{justify-self:end;min-height:42px;padding:10px 16px;border:0;border-radius:8px;background:#111;color:#fff;font-weight:800}
 .app-shell .save-draft-prices:disabled{background:#eee9ec;color:#9b8e96;cursor:not-allowed}
 

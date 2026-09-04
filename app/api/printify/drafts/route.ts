@@ -286,7 +286,7 @@ async function handlePOST(request: Request) {
               path:`/shops/${shop.id}/products.json`,token,body:()=>productBody(chunk,true),
             });
             let chunkImages=previewProduct.images||[];
-            for(const wait of PREVIEW_MOCKUP_WAITS_MS.slice(0,4)){
+            for(const wait of PREVIEW_MOCKUP_WAITS_MS){
               if(exactMockupCoverageComplete(chunkImages,chunk))break;
               await new Promise(resolve=>setTimeout(resolve,wait));
               const loaded=await api<CreatedProduct>(`/shops/${shop.id}/products/${previewProduct.id}.json`,token);
@@ -311,7 +311,10 @@ async function handlePOST(request: Request) {
         throw error;
       }
     }
-    let productImages = resolvedProduct.images ?? created.images ?? [];
+    /* The created draft response often exposes only one front mockup per enabled
+       colour. The helper windows above contain Printify's other camera views as
+       well. Keep the complete de-duplicated library for Listing photos. */
+    let productImages = mergeMockupImages(resolvedProduct.images ?? created.images ?? [],colorPreviewImages);
     let previewUrl = productImages.find((image) => image.is_default)?.src || productImages[0]?.src;
     if (!previewUrl) {
       try { const loaded = await api<CreatedProduct>(`/shops/${shop.id}/products/${created.id}.json`, token); productImages = loaded.images ?? []; previewUrl = productImages.find((image) => image.is_default)?.src || productImages[0]?.src; } catch { /* Preview can appear moments later. */ }

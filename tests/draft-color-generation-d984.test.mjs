@@ -45,8 +45,8 @@ test("D988 rotates through Printify's twenty-image mockup window",()=>{
 });
 
 test("D989 keeps each asynchronous Printify mockup window bounded",()=>{
-  assert.deepEqual(PREVIEW_MOCKUP_WAITS_MS,[2000,4000,8000,16000,30000]);
-  assert.equal(PREVIEW_MOCKUP_WAITS_MS.slice(0,4).reduce((sum,wait)=>sum+wait,0),30000);
+  assert.deepEqual(PREVIEW_MOCKUP_WAITS_MS,[1000,1500,2500,4000,7000]);
+  assert.equal(PREVIEW_MOCKUP_WAITS_MS.reduce((sum,wait)=>sum+wait,0),16000);
 });
 
 test("D984 sends the broad preview set but keeps the seller selection separate",()=>{

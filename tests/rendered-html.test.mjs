@@ -1182,7 +1182,7 @@ test("keeps pricing simple while using a real Etsy shipping profile and exact te
   assert.match(page,/First item/);
   assert.match(page,/Additional/);
   assert.match(page,/Save new shipping profile/);
-  assert.match(page,/setDraft\(event\.target\.value\)/);
+  assert.match(page,/onChange=\{event=>live\(event\.target\.value\)\}/);
   assert.match(page,/onBlur=\{commit\}/);
   assert.match(profiles,/export async function POST/);
   assert.match(profiles,/destinations\.filter\(item=>item!==domestic\)/);
