@@ -97,7 +97,12 @@ export async function PATCH(request:Request){
      original template. The PUT can finish before those images are attached, so
      read the product back instead of making the seller reload and hope. */
   let refreshed=updated;
-  if(body.selectedVariantIds||body.artworkUpdate){
+  /* Variant selection itself must be instant. Printify generates replacement
+     mockups asynchronously; waiting through the mockup polling ladder made
+     every color click block for several seconds. Artwork replacement still
+     waits because that operation cannot be represented honestly until its new
+     image is attached. */
+  if(body.artworkUpdate){
     const newlyEnabled=new Set((body.selectedVariantIds||body.artworkUpdate?.variantIds||[]).filter(id=>!(currentProduct?.variants||[]).some(variant=>variant.id===id&&variant.is_enabled!==false)));
     for(const wait of [0,900,1800]){
       if(wait)await new Promise(resolve=>setTimeout(resolve,wait));
