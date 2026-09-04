@@ -37,8 +37,10 @@ test("final photo order identifies the exact original design at a readable size"
   assert.match(v2,/\.factory-design-large\{[^}]*width:240px;height:210px/);
 });
 
-test("D1085: reorder tiles identify the source without exposing junk upload filenames",()=>{
+test("D1086: reorder tiles identify the source without exposing junk upload filenames",()=>{
   assert.doesNotMatch(order,/className="photo-order-name" title=\{photo\.name\}>\{photo\.name\}/);
   assert.match(order,/photo\.kind==="uploaded"\?"Uploaded photo"/);
   assert.doesNotMatch(order,/aria-label=\{`Move \$\{photo\.name\}/);
+  assert.match(order,/name:image\.kind==="uploaded"\?"Uploaded photo":"Saved mockup"/);
+  assert.match(order,/name:"Size guide"/);
 });
