@@ -4,6 +4,31 @@ import {DatabaseSync} from 'node:sqlite';
 import {readFileSync} from 'node:fs';
 import {CLAIM_DRAFT_GROUP_SQL,draftCreationSlotReleased} from '../app/api/printify/draft-job-store.ts';
 import {restoreBatchDrafts} from '../app/batch-draft-integrity.ts';
+import {runBounded} from '../app/bounded-work.ts';
+
+test('submission preparation is bounded and settles copies before reporting an error',async()=>{
+  const route=readFileSync(new URL('../app/api/printify/drafts/route.ts',import.meta.url),'utf8');
+  assert.match(route,/await runBounded\(requests,4,async body=>\{try\{/);
+  assert.match(route,/catch\(error\)\{preparationError \|\|= error;\}\}\);/);
+  assert.ok(route.indexOf('if(preparationError)throw preparationError')<route.indexOf('DB.prepare(CLAIM_DRAFT_GROUP_SQL)'));
+  let active=0,peak=0,error,finished=0;
+  await runBounded(Array.from({length:9},(_,i)=>i),4,async i=>{try{
+    active++;peak=Math.max(peak,active);
+    await new Promise(resolve=>setTimeout(resolve, i===0?1:5));
+    if(i===0)throw Error('copy failed');
+  }catch(e){error ||= e;}finally{active--;finished++;}});
+  assert.equal(peak,4);assert.equal(active,0);assert.equal(finished,9);assert.equal(error.message,'copy failed');
+});
+
+test('background progress and saving a not-yet-created batch make no contradictory promises',()=>{
+  const source=readFileSync(new URL('../app/listing-factory-app.tsx',import.meta.url),'utf8');
+  assert.doesNotMatch(source,/\(running\|\|preparingEtsy\|\|Boolean\(bundleRun\)\).*Keep this page open/);
+  assert.match(source,/id="save-draft-title">Save this batch for later\?/);
+  assert.doesNotMatch(source,/The products remain unpublished Printify drafts, and every title/);
+  assert.match(source,/if\(payload.batch.status==="processing"&&!state.complete&&state.template\)void refreshRestoredTemplate/);
+  assert.doesNotMatch(source,/if\(payload.batch.status==="processing"&&state.template\)void loadTemplateUrl/);
+  assert.match(source,/!complete&&bundleQualityGroups.length>0&&<section/);
+});
 
 function fixture(){
   const db=new DatabaseSync(':memory:');

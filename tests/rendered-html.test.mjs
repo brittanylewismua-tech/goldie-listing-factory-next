@@ -1865,7 +1865,7 @@ test("lets a seller name and resume a finished batch without publishing it",asyn
   assert.match(page,/Keep as Printify drafts for now/);
   assert.match(page,/suggestedBatchName/);
   assert.match(page,/Save to Batch History/);
-  assert.match(page,/Great—this batch is waiting for you/);
+  assert.match(page,/Your batch is saved\./);
   /* D386 · A draft is saved from wherever the seller is, so it records the step
      they are actually on rather than always claiming "finish". */
   assert.match(page, /status:"draft",step:workflowStep/);
@@ -7085,7 +7085,7 @@ test("the low-resolution review appears for one product, not only bundles — D6
     "the DPI check must follow the batch, not the bundle");
 
   // The panel itself is no longer bundle-only.
-  assert.match(app, /\{bundleQualityGroups\.length>0&&<section className="bundle-quality-review"/);
+  assert.match(app, /\{!complete&&bundleQualityGroups\.length>0&&<section className="bundle-quality-review"/);
   assert.doesNotMatch(app, /\{activeBundle&&bundleQualityGroups\.length>0&&<section/);
 
   /* The banner's promise is only kept if the seller can actually act, so the

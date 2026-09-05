@@ -6,6 +6,7 @@ import {customerLaunchBlock} from "@/app/customer-launch-gate";
 import {isOwner} from "@/app/mastermind/access";
 import {planFor} from "@/app/plan-limits";
 import {unpackDraftMedia} from "@/app/draft-media-storage";
+import {runBounded} from "@/app/bounded-work";
 import {draftCreationKey} from "../draft-identity";
 import {CLAIM_DRAFT_JOB_SQL,CLAIM_DRAFT_GROUP_SQL,pendingDraftJob,writeJobObject,jobObjectPrefix,type PendingDraftJob} from "../draft-job-store";
 import type {DraftJobBindings,DraftJobInput,DraftRequestBody} from "./execute-job";
@@ -100,7 +101,8 @@ async function handleGroupPOST(request:Request,user:NonNullable<Awaited<ReturnTy
   const seen=new Set<string>();
   const cleanup=async()=>{for(const item of prepared){const current=await lookup(item.key,owner);if(pendingDraftJob(current?.response_json||null)?.workflowId!==item.job.workflowId)await Promise.all([...item.copies,item.job.inputKey].map(key=>runtime.ARTWORK.delete(key).catch(()=>undefined)));}};
   try{
-    for(const body of requests){
+    let preparationError:unknown;
+    await runBounded(requests,4,async body=>{try{
       if(!body.batchId||!body.clientId)throw Error("Every draft needs its prepared product and design identifiers.");
       const legacy=await lookup(await legacyKey(body.batchId,body.clientId),owner);
       if(legacy&&legacy.status!=="failed")throw Error("This older draft is already being tracked. Resume it before starting this submission.");
@@ -110,7 +112,7 @@ async function handleGroupPOST(request:Request,user:NonNullable<Awaited<ReturnTy
       if(seen.has(key))throw Error("The submission contains the same product and design twice.");seen.add(key);
       const prior=await lookup(key,owner);
       if(prior&&prior.status!=="failed"){
-        const job=pendingDraftJob(prior.response_json);if(job)existing.push({key,job});continue;
+        const job=pendingDraftJob(prior.response_json);if(job)existing.push({key,job});return;
       }
       const artworks=body.artworks?.length?body.artworks:body.fileName&&body.stagedId?[{key:"primary",fileName:body.fileName,stagedId:body.stagedId,bounds:body.visibleBounds,maxPlacementScale:body.maxPlacementScale}]:[];
       if(!artworks.length||artworks.length>40||new Set(artworks.map(a=>a.key)).size!==artworks.length)throw Error("Each design needs a prepared artwork file.");
@@ -128,7 +130,10 @@ async function handleGroupPOST(request:Request,user:NonNullable<Awaited<ReturnTy
       }
       const protectedBody=body.artworks?.length?{...body,artworks:protectedArtworks}:{...body,stagedId:protectedArtworks[0].stagedId};
       await writeJobObject(runtime.ARTWORK,owner,workflowId,"input.json",{userId:owner,requestUrl:request.url,body:protectedBody,session} satisfies DraftJobInput);
-    }
+    }catch(error){preparationError ||= error;}});
+    // Settle every copy before cleanup or admission, including after one
+    // preparation fails. Concurrent copies remain streamed, never buffered.
+    if(preparationError)throw preparationError;
     const planRow=await runtime.DB.prepare("SELECT plan_key FROM account_plans WHERE user_id=?").bind(owner).first<{plan_key:string}>();
     const plan=planFor(planRow?.plan_key,isOwner(user));
     if(prepared.length){
