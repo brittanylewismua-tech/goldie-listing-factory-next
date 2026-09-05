@@ -693,7 +693,7 @@ function PricingReview({section="all",variants,pricing,prices,productName,profil
   const wholePrice=(cents:number)=>wholeNumberPricing?Math.ceil(cents/100)*100:cents;
   function recalculate(nextPricing=pricing){const calculated=Object.fromEntries(variants.map(variant=>[String(variant.id),wholePrice(recommendedPrice(variant.cost,nextPricing))])),next=normalizePricesByCost(variants,calculated),changed=variants.filter(variant=>next[String(variant.id)]!==(prices[String(variant.id)]??variant.templatePrice)).length;onPrices(next);setRecommendationMessage(changed?`✓ Updated ${changed} ${changed===1?"price":"prices"}. Review each cost group below before continuing.`:"✓ Your current prices already meet this profit goal. Nothing needed to change.")}
   const initialPriceSignature=variants.map(variant=>`${variant.id}:${variant.cost}:${variant.shipping||0}:${variant.templatePrice}`).join("|");
-  useEffect(()=>{if(!selectedProfile||!variants.length)return;const stillUsingTemplatePrices=variants.every(variant=>(prices[String(variant.id)]??variant.templatePrice)===variant.templatePrice);if(!stillUsingTemplatePrices)return;const calculated=Object.fromEntries(variants.map(variant=>[String(variant.id),recommendedPrice(variant.cost,pricing)]));onPrices(normalizePricesByCost(variants,calculated));setRecommendationMessage("✓ Prices calculated from your profit goal, product costs, and Etsy fees.")},[selectedProfile?.id,initialPriceSignature]);
+  useEffect(()=>{if(approved||!selectedProfile||!variants.length)return;const stillUsingTemplatePrices=variants.every(variant=>(prices[String(variant.id)]??variant.templatePrice)===variant.templatePrice);if(!stillUsingTemplatePrices)return;const calculated=Object.fromEntries(variants.map(variant=>[String(variant.id),recommendedPrice(variant.cost,pricing)]));onPrices(normalizePricesByCost(variants,calculated));setRecommendationMessage("✓ Prices calculated from your profit goal, product costs, and Etsy fees.")},[selectedProfile?.id,initialPriceSignature]);
   /* D320 · Prices shown on arrival were never calculated. The price map starts
      empty and every read falls through to `variant.templatePrice` — the retail
      price already on the Printify template — while the banner claimed Goldie had
@@ -1566,6 +1566,7 @@ export default function ListingFactoryApp() {
      decide whether it works. Review every created draft in the batch instead. */
   function handoffBlockers(){
     const issues=publishBlockers().filter(issue=>issue!=="Select at least one successful listing");
+    if(!gateState().pricingApproved)issues.push("Save the item prices on the Drafts step.");
     /* D1031 · The Printify handoff covers every finished draft, not the retired
        Etsy-publish checkbox selection. A hidden subset must never make an
        unfinished bundle claim it is ready. */
@@ -2683,7 +2684,7 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
      a hoodie t shirt and crew neck batch would it be showing me two hoodies
      only?" The same read keeps the listings and the settings each product needs
      to publish, so every listing in the bundle is on the page and selectable. */
-  const [bundleMembers,setBundleMembers]=useState<Record<string,{recipeId:string;productName:string;drafts:DraftResult[];designs:Array<Omit<DesignFile,"file"|"previewUrl">>;selections:Record<string,number[]>;indices:number[];shippingProfileId:number;sizeGuideName:string;preparedMockupCounts:Record<string,number>}>>({});
+  const [bundleMembers,setBundleMembers]=useState<Record<string,{recipeId:string;productName:string;pricingApproved?:boolean;drafts:DraftResult[];designs:Array<Omit<DesignFile,"file"|"previewUrl">>;selections:Record<string,number[]>;indices:number[];shippingProfileId:number;sizeGuideName:string;preparedMockupCounts:Record<string,number>}>>({});
   /* D1030 · This must live after bundleMembers is declared. Hook dependencies
      are evaluated during render, so placing it in the earlier saved-defaults
      section caused a temporal-dead-zone startup crash in D1029. */
@@ -2695,7 +2696,7 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
       const member=bundleMembers[recipe.id];
       const created=member?.drafts.filter(draft=>draft.status==="Created")||[];
       const actual=member
-        ?created.length>0&&created.every(draft=>!draft.costReview?.required||draft.costReview.approved)
+        ?Boolean(member.pricingApproved)&&created.length>0&&created.every(draft=>!draft.costReview?.required||draft.costReview.approved)
         :recipeCarriesApprovedPricing({defaultProfitTarget:recipe.defaultProfitTarget,etsyShippingProfileId:recipe.etsyShippingProfileId});
       if(bundleApproved[recipe.id]!==actual)seed[recipe.id]=actual;
     }
@@ -2706,13 +2707,13 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
     const wanted=bundleRecipes.filter(recipe=>recipe.id!==activeRecipe?.id&&bundleBatchIds[recipe.id]);
     if(!wanted.length)return;
     let alive=true;
-    const memberScratch:Record<string,{recipeId:string;productName:string;drafts:DraftResult[];designs:Array<Omit<DesignFile,"file"|"previewUrl">>;selections:Record<string,number[]>;indices:number[];shippingProfileId:number;sizeGuideName:string;preparedMockupCounts:Record<string,number>}>={};
+    const memberScratch:Record<string,{recipeId:string;productName:string;pricingApproved?:boolean;drafts:DraftResult[];designs:Array<Omit<DesignFile,"file"|"previewUrl">>;selections:Record<string,number[]>;indices:number[];shippingProfileId:number;sizeGuideName:string;preparedMockupCounts:Record<string,number>}>={};
     void (async()=>{
     const listing=await fetch("/api/batches").then(response=>response.ok?response.json():null).then((payload:{batches?:Array<{id?:string;status?:string;published_count?:number}>}|null)=>payload?.batches||[]).catch(()=>[] as Array<{id?:string;status?:string;published_count?:number}>);
     await Promise.all(wanted.map(async recipe=>{
       const id=bundleBatchIds[recipe.id];
       const payload=await fetch(`/api/batches?id=${encodeURIComponent(id)}`).then(response=>response.ok?response.json():null).catch(()=>null) as {batch?:{state?:Record<string,unknown>}}|null;
-      const state=payload?.batch?.state as {designs?:Array<{id?:string;title?:string;tags?:string[];sizeGuideName?:string}>;drafts?:unknown[];description?:string;complete?:boolean;printifyImageSelections?:Record<string,number[]>;printifyImageIndices?:number[];preparedMockupCounts?:Record<string,number>;etsyShippingProfileId?:number;sizeGuideName?:string}|undefined;
+      const state=payload?.batch?.state as {designs?:Array<{id?:string;title?:string;tags?:string[];sizeGuideName?:string}>;drafts?:unknown[];pricingApproved?:boolean;description?:string;complete?:boolean;printifyImageSelections?:Record<string,number[]>;printifyImageIndices?:number[];preparedMockupCounts?:Record<string,number>;etsyShippingProfileId?:number;sizeGuideName?:string}|undefined;
       /* D627 · This returned null, so no summary was ever written for a member
          whose batch could not be read - and bundleProductsStillReading() reports
          exactly "has a batch id, has no summary". Measured live on ZZ TEST
@@ -2729,7 +2730,7 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
          card. One loader, one map, one answer per product. */
       const listed=listing.find(batch=>String(batch.id||"")===id);
       /* D559 - keep what publishing needs, not just what the card counts. */
-      memberScratch[recipe.id]={recipeId:recipe.id,productName:recipe.name,
+      memberScratch[recipe.id]={recipeId:recipe.id,productName:recipe.name,pricingApproved:Boolean(state.pricingApproved),
         drafts:(state.drafts||[]) as DraftResult[],
         designs:designs as Array<Omit<DesignFile,"file"|"previewUrl">>,
         selections:state.printifyImageSelections||{},
@@ -2805,7 +2806,7 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
       const ownerPrefix=`${recipe.id}:`;
       const priceGroups=costReviewGroups().filter(group=>group.key.startsWith(ownerPrefix));
       const priceReviewRequired=priceGroups.length>0;
-      const priceApproved=productDrafts.length>0&&(!priceReviewRequired||priceGroups.every(group=>group.drafts.every(draft=>draft.costReview?.approved)));
+      const priceApproved=(isActive?pricingApproved:Boolean(bundleApproved[recipe.id]))&&productDrafts.length>0&&(!priceReviewRequired||priceGroups.every(group=>group.drafts.every(draft=>draft.costReview?.approved)));
       const shippingReady=isActive?Boolean(etsyShippingProfileId):Boolean(bundleMembers[recipe.id]?.shippingProfileId||recipe.etsyShippingProfileId);
       return [
       {label:"Artwork placement",value:started?plural(counts.drafts,"listing"):blank,pending,done:counts.drafts>0,task:"placement"},
@@ -2852,7 +2853,7 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
            two titles written but only one tag?" It counted listings on the left and
            listings on the right, but only the left side said so, so the right side
            read as a tag count. Both sides count listings, out loud. */
-        if(counts.tagged===counts.designs&&counts.designs>0)return `${counts.titled} of ${counts.designs} titles · all 13 tags`;
+        if(counts.tagged===counts.designs&&counts.designs>0)return `${counts.titled} of ${counts.designs} titles · tags added`;
         return `${counts.titled} of ${counts.designs} titles · ${counts.tagged} of ${counts.designs} with all 13 tags`;
       })():blank,pending,/* D660 · the same rule as the review row: a title is required,
         thirteen tags are an optimisation Etsy never demands. */
@@ -3270,7 +3271,7 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
            two titles written but only one tag?" It counted listings on the left and
            listings on the right, but only the left side said so, so the right side
            read as a tag count. Both sides count listings, out loud. */
-        if(counts.tagged===counts.designs&&counts.designs>0)return `${counts.titled} of ${counts.designs} titles · all 13 tags`;
+        if(counts.tagged===counts.designs&&counts.designs>0)return `${counts.titled} of ${counts.designs} titles · tags added`;
         return `${counts.titled} of ${counts.designs} titles · ${counts.tagged} of ${counts.designs} with all 13 tags`;
       })():blank,detail:isActive&&shortTitles?`${shortTitles} ${shortTitles===1?"title is":"titles are"} very short`:undefined,pending,/* D660 · Tags were folded into the same done-test as titles, so a listing with
    fewer than 13 tags carried the alert mark and the alert colour beside a
@@ -4359,7 +4360,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
     const targets=editedPrices?group.drafts:group.drafts.filter(draft=>!draft.costReview?.approved);
     try{await runBounded(targets,2,async draft=>{try{const updated=await saveActualDraftPricing(draft,editedPrices);if(updated)saved.push(updated);return true}catch(error){failures.push(`${draft.title||draft.name}: ${error instanceof Error?error.message:"could not save prices"}`);return false}})}finally{setPricingApprovalGroup("")}
     const byId=new Map(saved.map(draft=>[draft.id,draft])),nextDrafts=drafts.map(draft=>byId.get(draft.id)||draft);
-    if(saved.length){setDrafts(current=>mergeMatchingDrafts(current,saved));setBundleMembers(current=>Object.fromEntries(Object.entries(current).map(([recipeId,member])=>[recipeId,{...member,drafts:mergeMatchingDrafts(member.drafts,saved)}])))}
+    if(saved.length){setDrafts(current=>mergeMatchingDrafts(current,saved));setBundleMembers(current=>Object.fromEntries(Object.entries(current).map(([recipeId,member])=>[recipeId,{...member,pricingApproved:recipeId===sourceRecipeId&&!failures.length?true:member.pricingApproved,drafts:mergeMatchingDrafts(member.drafts,saved)}])))}
     if(failures.length)stopWith("Some final prices were not approved.",failures);else{
       if(batchIdRef.current===sourceBatchId&&activeRecipeRef.current?.id===sourceRecipeId)setPricingApproved(true);
       try{await persistBatchNow(sourceBatchId,{...sourceSnapshot,drafts:nextDrafts.map(snapshotDraft),pricingApproved:true});}
