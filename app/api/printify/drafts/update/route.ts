@@ -6,6 +6,7 @@ import { primaryImageForSide,replaceArtworkForVariants,type DraftPrintArea } fro
 import { printifyMockupSet } from "@/app/printify-camera-mockups";
 import { signedArtworkUrl } from "../../staged-url";
 import { mergePreviewDetails,type PreviewDetail } from "@/app/printify-preview-details";
+import { unpackDraftMedia,saveDraftChanges,type MediaBucket } from "@/app/draft-media-storage";
 
 type ArtworkUpdate={stagedId?:string;fileName?:string;position:string;variantIds:number[];colorId:number;colorTitle:string;reset?:boolean;bounds?:{left:number;top:number;right:number;bottom:number};maxPlacementScale?:number};
 
@@ -14,7 +15,9 @@ export async function PATCH(request:Request){
   const body=await request.json() as {productId?:string;title?:string;tags?:string[];description?:string;etsyDetails?:unknown;placement?:{x:number;y:number;scale:number};variantPrices?:Record<string,number>;selectedVariantIds?:number[];artworkUpdate?:ArtworkUpdate;refreshImages?:boolean},productId=String(body.productId||"");
   const owned=await env.DB.prepare("SELECT response_json FROM printify_draft_results WHERE user_id=? AND status='succeeded' AND json_extract(response_json,'$.id')=? LIMIT 1").bind(user.userId,productId).first<{response_json:string}>();
   if(!owned)return NextResponse.json({error:"That Printify draft was not created by this Listing Factory account."},{status:404});
-  const draft=JSON.parse(owned.response_json) as {shopId:number;batchId?:string;blueprintId?:number;providerId?:number;primaryArtworkAreas?:Record<string,DraftPrintArea[]>;primaryArtworkImageIds?:Record<string,string>;artworkOverrides?:Record<string,{name:string;position:string}>;artworkOverridePreviewUrls?:Record<string,string>},connection=await env.DB.prepare("SELECT encrypted_token FROM printify_connections WHERE user_id=?").bind(user.userId).first<{encrypted_token:string}>(),secret=(env as unknown as {PRINTIFY_TOKEN_KEY?:string}).PRINTIFY_TOKEN_KEY;
+  const mediaBucket=(env as unknown as {ARTWORK:MediaBucket}).ARTWORK;
+  const draft=await unpackDraftMedia(owned.response_json,user.userId,mediaBucket) as {shopId:number;batchId?:string;blueprintId?:number;providerId?:number;primaryArtworkAreas?:Record<string,DraftPrintArea[]>;primaryArtworkImageIds?:Record<string,string>;artworkOverrides?:Record<string,{name:string;position:string}>;artworkOverridePreviewUrls?:Record<string,string>},connection=await env.DB.prepare("SELECT encrypted_token FROM printify_connections WHERE user_id=?").bind(user.userId).first<{encrypted_token:string}>(),secret=(env as unknown as {PRINTIFY_TOKEN_KEY?:string}).PRINTIFY_TOKEN_KEY;
+  const originalDraft=structuredClone(draft);
   if(!connection||!secret)return NextResponse.json({error:"Reconnect Printify to update this draft."},{status:401});
   const token=await decryptPrintifyToken(connection.encrypted_token,secret),url=`https://api.printify.com/v1/shops/${draft.shopId}/products/${productId}.json`;
   let placementPayload:unknown;
@@ -137,6 +140,9 @@ export async function PATCH(request:Request){
   Object.assign(draft,{artworkPreviewRevision});
   if(body.artworkUpdate){if(body.artworkUpdate.reset)delete nextOverridePreviews[String(body.artworkUpdate.colorId)];else if(overridePreviewUrl)nextOverridePreviews[String(body.artworkUpdate.colorId)]=overridePreviewUrl;}
   const stored={...draft,...(blueprintId&&providerId?{blueprintId,providerId}:{}),artworkOverrides:nextOverrides,artworkOverridePreviewUrls:nextOverridePreviews,...(body.artworkUpdate&&primaryArtworkId?{primaryArtworkImageIds:{...(draft.primaryArtworkImageIds||{}),[body.artworkUpdate.position]:primaryArtworkId}}:{}),...(body.title!==undefined?{title:String(body.title||"").slice(0,255)}:{}),...(body.tags!==undefined?{tags:(body.tags||[]).slice(0,13)}:{}),...(body.description!==undefined?{description:String(body.description||"")}:{}) ,...(body.etsyDetails!==undefined?{etsyDetails:body.etsyDetails||null}:{}),...(body.placement?{placement:body.placement,placementScale}:{}),...(body.selectedVariantIds?{selectedVariantIds:body.selectedVariantIds,costReview:{...(draft as {costReview?:Record<string,unknown>}).costReview,approved:false,variants:(currentProduct?.variants||[]).map(variant=>({...variant,cost:Number(variant.cost),price:Number(variant.price),isEnabled:body.selectedVariantIds!.includes(variant.id)}))}}:{}),...(body.variantPrices?{costReview:{...(draft as {costReview?:Record<string,unknown>}).costReview,verified:true,approved:true,variants:(currentProduct?.variants||[]).map(variant=>({...variant,cost:Number(variant.cost),price:Number(body.variantPrices?.[String(variant.id)]??variant.price),isEnabled:body.selectedVariantIds?body.selectedVariantIds.includes(variant.id):variant.is_enabled!==false}))}}:{}),...(generated.colorDetails.length?{colorPreviewImageDetails:generated.colorDetails}:{}),...(allDetails.length?{printifyImages:allDetails.map(image=>image.src),printifyImageDetails:allDetails,previewUrl:images?.find(image=>image.is_default)?.src||images?.[0]?.src||allDetails[0]?.src}: {})};
-  await env.DB.prepare("UPDATE printify_draft_results SET response_json=? WHERE user_id=? AND status='succeeded' AND json_extract(response_json,'$.id')=?").bind(JSON.stringify(stored),user.userId,productId).run();
-  return NextResponse.json({ok:true,draft:stored});
+  const saved=await saveDraftChanges({before:originalDraft,after:stored,owner:user.userId,bucket:mediaBucket,
+    read:async()=>{const row=await env.DB.prepare("SELECT response_json FROM printify_draft_results WHERE user_id=? AND status='succeeded' AND json_extract(response_json,'$.id')=? LIMIT 1").bind(user.userId,productId).first<{response_json:string}>();return row?.response_json||null;},
+    compareAndSwap:async(previous,next)=>{const result=await env.DB.prepare("UPDATE printify_draft_results SET response_json=? WHERE user_id=? AND status='succeeded' AND json_extract(response_json,'$.id')=? AND response_json=?").bind(next,user.userId,productId,previous).run();return Number(result.meta.changes)===1;}
+  });
+  return NextResponse.json({ok:true,draft:saved});
 }

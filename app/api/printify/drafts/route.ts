@@ -15,6 +15,7 @@ import { isOwner } from "@/app/mastermind/access";
 import { actualCostReview } from "@/app/draft-pricing";
 import { mergeMockupImages } from "@/app/draft-preview-variants";
 import { signedArtworkUrl } from "../staged-url";
+import { packDraftMedia,unpackDraftMedia,type MediaBucket } from "@/app/draft-media-storage";
 
 const PRINTIFY_API = "https://api.printify.com/v1";
 type UploadedImage = { id: string; width?: number; height?: number; mime_type?: string; preview_url?:string };
@@ -49,7 +50,7 @@ type CreatedProduct = {
 };
 
 type ArtworkObject = { body?: ReadableStream; customMetadata?: Record<string, string> };
-type ArtworkBucket = { get(key: string): Promise<ArtworkObject | null>; delete(key: string): Promise<void> };
+type ArtworkBucket = MediaBucket & { get(key: string): Promise<ArtworkObject | null>; delete(key: string): Promise<void> };
 type BatchSession = { shop_id: number; product_id: string; template_json: string };
 function runtimeEnv() { return env as unknown as { DB?: D1Database; ARTWORK?: ArtworkBucket; PRINTIFY_TOKEN_KEY?: string }; }
 
@@ -131,7 +132,7 @@ async function handleGET(request: Request) {
     await db.prepare("UPDATE printify_draft_results SET status='failed', updated_at=CURRENT_TIMESTAMP WHERE request_key=? AND user_id=? AND status='running'").bind(key,user.userId).run();
     return NextResponse.json({status:"failed",error:"This draft attempt stopped responding. Retry it; the previous attempt will not be repeated."});
   }
-  return NextResponse.json({ status: row.status, draft: row.status === "succeeded" && row.response_json ? JSON.parse(row.response_json) : undefined, updatedAt: row.updated_at });
+  return NextResponse.json({ status: row.status, draft: row.status === "succeeded" && row.response_json ? await unpackDraftMedia(row.response_json,user.userId,runtimeEnv().ARTWORK!) : undefined, updatedAt: row.updated_at });
 }
 
 async function handlePOST(request: Request) {
@@ -160,7 +161,7 @@ async function handlePOST(request: Request) {
     idempotencyKey = await requestKey(body.batchId, body.clientId ?? body.fileName ?? requestedArtworks[0].fileName);
     const prior = await db.prepare("SELECT status, response_json, updated_at FROM printify_draft_results WHERE request_key = ? AND user_id = ?")
       .bind(idempotencyKey, user.userId).first<{ status: string; response_json: string | null; updated_at: string }>();
-    if (prior?.status === "succeeded" && prior.response_json) return NextResponse.json({ draft: JSON.parse(prior.response_json) });
+    if (prior?.status === "succeeded" && prior.response_json) return NextResponse.json({ draft: await unpackDraftMedia(prior.response_json,user.userId,runtimeEnv().ARTWORK!) });
     if (prior?.status === "running" && Date.now() - new Date(`${prior.updated_at.replace(" ", "T")}Z`).getTime() < 90_000) {
       return NextResponse.json({ error: "Goldie is still completing this exact draft. It will be checked again automatically." }, { status: 409 });
     }
@@ -361,7 +362,10 @@ async function handlePOST(request: Request) {
        Printify surcharge or provider change cannot bypass the same safeguard. */
     const costReview=actualCostReview(costVariants);
     const draft = { id: created.id, placement, placementDebug, batchId:body.batchId, sourceTemplateId:session.product_id, blueprintId:template.blueprint_id, providerId:template.print_provider_id, clientId: body.clientId ?? body.fileName, name: body.fileName, title, tags: body.tags ?? [], description:body.description??template.description??"", selectedVariantIds:finalVariantIds, previewUrl, artworkPreviewUrls:uploadedArtworkPreviewUrls, printifyImages: productImages.map((image) => image.src).filter(Boolean), printifyImageDetails:productImages.filter(image=>image.src).map(image=>({src:image.src!,variantIds:image.variant_ids||[],position:image.position||""})), colorPreviewImageDetails:colorPreviewImages.filter(image=>image.src).map(image=>({src:image.src!,variantIds:image.variant_ids||[],position:image.position||""})), shopId: shop.id, editorUrl: `https://printify.com/app/editor/${created.id}`, status: "Created",costReview };
-    await db.prepare("UPDATE printify_draft_results SET status = 'succeeded', response_json = ?, updated_at = CURRENT_TIMESTAMP WHERE request_key = ?").bind(JSON.stringify(draft), idempotencyKey).run();
+    // A successfully created product must still be recorded if optional media
+    // compaction is temporarily unavailable. A later edit can compact it.
+    const packedDraft=await packDraftMedia(draft,user.userId,runtimeEnv().ARTWORK!).catch(()=>draft);
+    await db.prepare("UPDATE printify_draft_results SET status = 'succeeded', response_json = ?, updated_at = CURRENT_TIMESTAMP WHERE request_key = ?").bind(JSON.stringify(packedDraft), idempotencyKey).run();
     const totalMs=Math.round(performance.now()-requestStartedAt);
     await recordDiagnostic(runtimeEnv().DB, supportReference, { stage: "response_ready", event: "succeeded", message:`total_ms=${totalMs}`, shopId: shop.id });
     return NextResponse.json({ draft },{headers:{"Server-Timing":`draft;dur=${totalMs}`}});

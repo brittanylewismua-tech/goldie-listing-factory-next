@@ -2,6 +2,7 @@ import { env } from "cloudflare:workers";
 import { zipSync } from "fflate";
 import { NextResponse } from "next/server";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
+import { unpackDraftMedia } from "@/app/draft-media-storage";
 
 type Runtime={DB:D1Database;ARTWORK:R2Bucket};
 type StoredDraft={id:string;title?:string;name?:string;printifyImages?:string[]};
@@ -17,7 +18,7 @@ export async function POST(request:Request){
   if(!productId)return NextResponse.json({error:"Choose a listing first."},{status:400});
   const row=await runtime().DB.prepare("SELECT response_json FROM printify_draft_results WHERE user_id=? AND status='succeeded' AND json_extract(response_json,'$.id')=? LIMIT 1").bind(user.userId,productId).first<{response_json:string}>();
   if(!row)return NextResponse.json({error:"That Printify draft does not belong to this Listing Factory account."},{status:403});
-  const draft=JSON.parse(row.response_json) as StoredDraft,available=(draft.printifyImages||[]).filter(Boolean);
+  const draft=await unpackDraftMedia(row.response_json,user.userId,runtime().ARTWORK) as StoredDraft,available=(draft.printifyImages||[]).filter(Boolean);
   const chosen=[...new Set((body.printifyImageIndices||[]).map(Number).filter(index=>Number.isInteger(index)&&index>=0&&index<available.length))];
   const files:Record<string,Uint8Array>={},base=safeName(draft.title||draft.name||"listing");
   let total=0;

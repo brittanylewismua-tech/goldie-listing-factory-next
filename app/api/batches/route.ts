@@ -5,8 +5,9 @@ import { bundleHistoryIdentity } from "@/app/batch-history-identity";
 import { APPLY_BUNDLE_KEYWORD_BANK } from "@/app/bundle-keyword-bank";
 import { RENAME_BATCH } from "@/app/batch-display-name";
 import { restoreBatchDrafts, batchDraftIdentityProblem } from "@/app/batch-draft-integrity";
+import { unpackDraftMedia,type MediaBucket } from "@/app/draft-media-storage";
 
-type RuntimeEnv={DB?:D1Database};
+type RuntimeEnv={DB?:D1Database;ARTWORK:MediaBucket};
 type BatchListState={templateDetails?:{batchId?:string;previewImage?:string;previewImages?:string[]};activeBundle?:{name?:string};activeRecipe?:{name?:string};bundleIndex?:number;bundleRecipes?:unknown[];keptAsDrafts?:boolean;batchDisplayName?:string;designs?:Array<{id?:string;name?:string}>;drafts?:Array<{id?:string;clientId?:string;batchId?:string;status?:string;previewUrl?:string}>;batchReceipt?:{publishedCount?:number}};
 function db(){return (env as unknown as RuntimeEnv).DB}
 async function ensure(database:D1Database){await database.prepare("CREATE TABLE IF NOT EXISTS listing_batches (id TEXT PRIMARY KEY, user_id TEXT NOT NULL, status TEXT NOT NULL, step TEXT NOT NULL, setup_name TEXT NOT NULL DEFAULT '', product_title TEXT NOT NULL DEFAULT '', design_count INTEGER NOT NULL DEFAULT 0, state_json TEXT NOT NULL DEFAULT '{}', created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)").run();await database.prepare("CREATE INDEX IF NOT EXISTS idx_listing_batches_user_updated ON listing_batches(user_id, updated_at)").run();
@@ -141,7 +142,7 @@ export async function GET(request:Request){const user=await getChatGPTUser();if(
     const designIds=(Array.isArray(state.designs)?state.designs:[]).map(design=>design?.id).filter((value):value is string=>Boolean(value));
     if(designIds.length){
       const records=await database.prepare(`SELECT r.response_json,s.product_id AS source_template_id FROM printify_draft_results r LEFT JOIN printify_batch_sessions s ON s.id=r.batch_id AND s.user_id=r.user_id WHERE r.user_id=? AND r.status='succeeded' AND r.client_id IN (${designIds.map(()=>'?').join(',')})`).bind(user.userId,...designIds).all<{response_json:string;source_template_id:string|null}>();
-      const authoritative=records.results.flatMap(record=>{try{const draft=JSON.parse(record.response_json);return [{...draft,sourceTemplateId:draft.sourceTemplateId||record.source_template_id||undefined}]}catch{return []}});
+      const authoritative=await Promise.all(records.results.map(async record=>{const draft=await unpackDraftMedia(record.response_json,user.userId,(env as unknown as RuntimeEnv).ARTWORK);return {...draft,sourceTemplateId:String(draft.sourceTemplateId||record.source_template_id||'')||undefined}}));
       state=restoreBatchDrafts(state,authoritative);
     }
     const productIds=(state.drafts||[]).map(draft=>String(draft.id||"")).filter(Boolean);let authoritativeReceipt:{publishedCount:number;etsyUrls:string[];completedAt:string}|null=null;if(productIds.length){const marks=productIds.map(()=>"?").join(","),items=await database.prepare(`SELECT result_json,updated_at FROM etsy_publish_items WHERE user_id=? AND status='completed' AND product_id IN (${marks})`).bind(user.userId,...productIds).all<{result_json:string|null;updated_at:string}>().catch(()=>({results:[]}));const parsed=(items.results||[]).map(item=>{try{return {result:JSON.parse(item.result_json||"{}") as {url?:string},at:String(item.updated_at||"")}}catch{return {result:{},at:String(item.updated_at||"")}}});if(parsed.length)authoritativeReceipt={publishedCount:parsed.length,etsyUrls:parsed.map(item=>String(item.result.url||"")).filter(Boolean),completedAt:parsed.reduce((latest,item)=>item.at>latest?item.at:latest,"")}}/* D871 · A run row is asked for by the URL, and what the page needs is the

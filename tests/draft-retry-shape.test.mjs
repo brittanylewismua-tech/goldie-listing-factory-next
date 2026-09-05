@@ -40,5 +40,5 @@ test("a failed draft charges no quota and leaves no duplicate", () => {
   /* One row per batch+design, and a succeeded row short-circuits before any
      Printify call, so a retry cannot create a second product. */
   assert.match(route, /ON CONFLICT\(request_key\) DO UPDATE/);
-  assert.match(route, /if \(prior\?\.status === "succeeded" && prior\.response_json\) return NextResponse\.json\(\{ draft: JSON\.parse\(prior\.response_json\) \}\)/);
+  assert.match(route, /if \(prior\?\.status === "succeeded" && prior\.response_json\) return NextResponse\.json\(\{ draft: await unpackDraftMedia\(prior\.response_json,user\.userId,runtimeEnv\(\)\.ARTWORK!\) \}\)/);
 });
