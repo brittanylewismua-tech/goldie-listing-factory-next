@@ -9,3 +9,8 @@ test('starting a fresh batch clears its prior name and saved-for-later status', 
   assert.match(reset, /setKeptAsDrafts\(false\)/);
   assert.match(reset, /setBatchToolsOpen\(true\)/);
 });
+test('save and start new persists the name the seller entered', () => {
+  const source = readFileSync(new URL('../app/listing-factory-app.tsx', import.meta.url), 'utf8');
+  const save = source.slice(source.indexOf('async function saveAndRestart('), source.indexOf('function openDraft('));
+  assert.match(save, /state:\{\.\.\.batchStateSnapshot\(\),batchDisplayName:name,keptAsDrafts:true\}/);
+});
