@@ -16,7 +16,7 @@ test("D971: listing photos are one job, not three disconnected rows",()=>{
 test("D971: Printify mockups use one compact grid with a complete expander",()=>{
   assert.doesNotMatch(app,/className="printify-view-groups"/);
   assert.match(app,/className="printify-image-grid printify-all-images"/);
-  assert.match(app,/Show all \$\{images\.length\} Printify mockups/);
+  assert.match(app,/Show all \$\{indexed\.length\} Printify mockups/);
   assert.match(css,/\.printify-all-images\{[^}]*grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/);
 });
 

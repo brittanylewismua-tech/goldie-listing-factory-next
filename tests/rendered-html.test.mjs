@@ -2190,7 +2190,7 @@ test("counts and caps every listing at Etsy's 20-photo limit (fixes D67)",async(
   assert.match(app,/Etsy allows 20 listing photos/);
   assert.match(app,/disabled=\{state!=="ready"\|\|\(!selected&&atLimit\)\}/);
   assert.match(app,/reservedPhotos=\{\(preparedMockupCounts\[draft\.id\|\|""\]\|\|0\)\+\(design\?\.sizeGuideName\?\?sizeGuideName\?1:0\)\}/);
-  assert.match(app,/values\.slice\(0,Math\.max\(0,20-reserved\)\)/);
+  assert.match(app,/correspondingMockupIndices\(draft\.printifyImages\|\|\[\],values,item\.printifyImages\|\|\[\]\)\.slice\(0,Math\.max\(0,20-reserved\)\)/);
 });
 
 test("uses one deterministic Etsy product baseline across a batch (fixes D71)",async()=>{
@@ -4765,7 +4765,7 @@ test("placement previews wrap into identifiable listing cards — D679/D971", as
   /* D724 · the preview is the ArtworkGrid tile now; it fills its card and is
      capped by the grid track rather than by a bespoke rule. */
   assert.match(css, /\.factory-art-preview ?\{[\s\S]{0,160}height: ?190px/);
-  assert.match(app, /showAll\?"Show fewer Printify mockups":`Show all \$\{images\.length\} Printify mockups`/);
+  assert.match(app, /showAll\?"Show fewer Printify mockups":`Show all \$\{indexed\.length\} Printify mockups`/);
   /* D688 - what this line is for is the second clause: an angle holding a photo
      she already chose is never hidden. The anchor in the first clause changed
      because \b(front|back)\b also matched "Model 1 front" and "Model 2 back",
@@ -5444,7 +5444,7 @@ test("the Printify picker is a compact horizontal gallery, not a wall of 96 — 
      srcs are distinct. But a flat wall of 96 with a repeated one-word caption is
      not something anyone picks 20 photos out of. */
   assert.match(app, /const visible=showAll\?indexed:indexed\.filter/);
-  assert.match(app, /Show all \$\{images\.length\} Printify mockups/);
+  assert.match(app, /Show all \$\{indexed\.length\} Printify mockups/);
   assert.match(css, /\.app-shell \.printify-all-images\{[^}]*grid-template-columns:repeat\(4,minmax\(0,1fr\)\)!important/);
 
   /* The original index has to survive the grouping - the selection and the

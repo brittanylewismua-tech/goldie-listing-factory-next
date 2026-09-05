@@ -1,5 +1,6 @@
 "use client";
 import { printifyProductLabel, familyFromVariants } from "./mockup-compatibility";
+import { uniqueMockupEntries,correspondingMockupIndices } from "./printify-preview-details";
 import { requestEtsyOptions } from "./etsy-options-request";
 import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { createPortal } from "react-dom";
@@ -415,7 +416,11 @@ function PrintifyImageTile({src,index,selected,atLimit,onToggle,onExpand}:{src:s
 }
 function PrintifyImagePicker({ images,indices,reservedPhotos=0,onApplyOne,onApplyAll,onSaveRecipe,onRefresh,bare,showApplyAll=true }: { images: string[];indices:number[];reservedPhotos?:number;onApplyOne:(indices:number[])=>void;onApplyAll:(indices:number[])=>void;bare?:boolean;showApplyAll?:boolean;onSaveRecipe?:(indices:number[])=>void|Promise<void>;onRefresh?:()=>void|Promise<void> }) {
   const [selected,setSelected]=useState<Set<number>>(new Set(indices.slice(0,Math.max(0,20-reservedPhotos)))),[expanded,setExpanded]=useState<string>(""),[showAll,setShowAll]=useState(false),[action,setAction]=useState<"clear"|"all"|"future"|"">(""),[feedback,setFeedback]=useState(""),[savingFuture,setSavingFuture]=useState(false);
-  useEffect(()=>setSelected(new Set(indices.slice(0,Math.max(0,20-reservedPhotos)))),[indices,images.length,reservedPhotos]);
+  useEffect(()=>{
+    const chosen=new Set(indices),valid=uniqueMockupEntries(images,indices).filter(item=>chosen.has(item.index)).map(item=>item.index).sort((a,b)=>a-b).slice(0,Math.max(0,20-reservedPhotos));
+    setSelected(new Set(valid));
+    if(valid.length!==indices.length)onApplyOne(valid);
+  },[indices,images.length,reservedPhotos]);
   useEffect(()=>{void onRefresh?.()},[]);
   useEffect(()=>{if(!expanded)return;const previous=document.body.style.overflow;const close=(event:KeyboardEvent)=>{if(event.key==="Escape")setExpanded("")};document.body.style.overflow="hidden";window.addEventListener("keydown",close);return()=>{document.body.style.overflow=previous;window.removeEventListener("keydown",close)}},[expanded]);
   if(!images.length)return <p className="preview-processing">Printify is still processing its product mockups. Open the editor to view them once they appear.</p>;
@@ -446,10 +451,10 @@ function PrintifyImagePicker({ images,indices,reservedPhotos=0,onApplyOne,onAppl
         labelled: Printify's image order need not follow her colour order, and a
         Cocoa hoodie labelled "White" is worse than one labelled only "Front". */}
       {(()=>{
-        const indexed=images.map((src,index)=>({src,index}));
+        const indexed=uniqueMockupEntries(images,[...selected]);
         const visible=showAll?indexed:indexed.filter((item,index)=>index<8||selected.has(item.index));
         const hiddenCount=indexed.length-visible.length;
-        return <><div className="printify-image-grid printify-all-images">{visible.map(({src,index})=><PrintifyImageTile key={`${src}:${index}`} src={src} index={index} selected={selected.has(index)} atLimit={atLimit} onToggle={()=>toggle(index)} onExpand={()=>setExpanded(src)}/>)}</div>{hiddenCount>0||showAll?<button type="button" className={`printify-more-toggle${showAll?" is-open":""}`} onClick={()=>setShowAll(value=>!value)}><span>{showAll?"Show fewer Printify mockups":`Show all ${images.length} Printify mockups`}</span><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 7.5 5 5 5-5"/></svg></button>:null}</>})()}</div>{lightbox}</>;
+        return <><div className="printify-image-grid printify-all-images">{visible.map(({src,index})=><PrintifyImageTile key={`${src}:${index}`} src={src} index={index} selected={selected.has(index)} atLimit={atLimit} onToggle={()=>toggle(index)} onExpand={()=>setExpanded(src)}/>)}</div>{hiddenCount>0||showAll?<button type="button" className={`printify-more-toggle${showAll?" is-open":""}`} onClick={()=>setShowAll(value=>!value)}><span>{showAll?"Show fewer Printify mockups":`Show all ${indexed.length} Printify mockups`}</span><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 7.5 5 5 5-5"/></svg></button>:null}</>})()}</div>{lightbox}</>;
 }
 
 function UploadedDesignPreview({src}:{src:string}){
@@ -3156,7 +3161,7 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
               for. The row is called "Choose Printify photos" and the photos are
               listed underneath it with counts; a collapsed essay about which views
               to pick was advice nobody opened. Gone. */}
-          <div className="task-panel-body printify-photo-listings">{listingWorkRows(({draft,design,selectedImages,count})=>(<div className="listing-photo-workspace"><PrintifyImagePicker bare showApplyAll={drafts.filter(item=>item.status==="Created").length>1} images={(draft.printifyImages||[]).filter(Boolean)} indices={selectedImages} onRefresh={draft.id?()=>refreshDraftPhotos(draft.id!):undefined} reservedPhotos={(preparedMockupCounts[draft.id||""]||0)+(design?.sizeGuideName??sizeGuideName?1:0)} onApplyOne={values=>{if(activeRecipe)void saveImagePreferences(values);if(draft.id)setPrintifyImageSelections(current=>({...current,[draft.id!]:values}))}} onApplyAll={values=>{setPrintifyImageIndices(values);setPrintifyImageSelections(Object.fromEntries(drafts.filter(item=>item.id).map(item=>{const itemDesign=files.find(file=>file.id===item.clientId),reserved=(preparedMockupCounts[item.id!]||0)+(itemDesign?.sizeGuideName??sizeGuideName?1:0);return[item.id!,values.slice(0,Math.max(0,20-reserved))]})))}} onSaveRecipe={activeRecipe?saveImagePreferences:undefined}/><UploadedListingPhotos productId={draft.id!} onCountChange={count=>setPreparedMockupCounts(current=>({...current,[draft.id!]:count}))}/><IndividualSizeGuide productId={draft.id!} name={design.sizeGuideName} batchName={sizeGuideName} onSaved={name=>updateDesign(design.id,{sizeGuideName:name})}/><ListingPhotoOrder productId={draft.id!} printifyImages={(draft.printifyImages||[]).filter(Boolean)} indices={selectedImages} refreshKey={`${preparedMockupCounts[draft.id!]||0}:${design.sizeGuideName??sizeGuideName}`}/><DownloadListingPhotos productId={draft.id!} name={draft.title||draft.name} indices={selectedImages}/></div>),photoFlags)}</div>
+          <div className="task-panel-body printify-photo-listings">{listingWorkRows(({draft,design,selectedImages,count})=>(<div className="listing-photo-workspace"><PrintifyImagePicker bare showApplyAll={drafts.filter(item=>item.status==="Created").length>1} images={(draft.printifyImages||[]).filter(Boolean)} indices={selectedImages} onRefresh={draft.id?()=>refreshDraftPhotos(draft.id!):undefined} reservedPhotos={(preparedMockupCounts[draft.id||""]||0)+(design?.sizeGuideName??sizeGuideName?1:0)} onApplyOne={values=>{if(activeRecipe)void saveImagePreferences(values);if(draft.id)setPrintifyImageSelections(current=>({...current,[draft.id!]:values}))}} onApplyAll={values=>{setPrintifyImageIndices(values);setPrintifyImageSelections(Object.fromEntries(drafts.filter(item=>item.id).map(item=>{const itemDesign=files.find(file=>file.id===item.clientId),reserved=(preparedMockupCounts[item.id!]||0)+(itemDesign?.sizeGuideName??sizeGuideName?1:0);return[item.id!,correspondingMockupIndices(draft.printifyImages||[],values,item.printifyImages||[]).slice(0,Math.max(0,20-reserved))]})))}} onSaveRecipe={activeRecipe?saveImagePreferences:undefined}/><UploadedListingPhotos productId={draft.id!} onCountChange={count=>setPreparedMockupCounts(current=>({...current,[draft.id!]:count}))}/><IndividualSizeGuide productId={draft.id!} name={design.sizeGuideName} batchName={sizeGuideName} onSaved={name=>updateDesign(design.id,{sizeGuideName:name})}/><ListingPhotoOrder productId={draft.id!} printifyImages={(draft.printifyImages||[]).filter(Boolean)} indices={selectedImages} refreshKey={`${preparedMockupCounts[draft.id!]||0}:${design.sizeGuideName??sizeGuideName}`}/><DownloadListingPhotos productId={draft.id!} name={draft.title||draft.name} indices={selectedImages}/></div>),photoFlags)}</div>
     </>;
     /* D709 · The ordering panel is gone; its work happens in the photos panel
        above, on the same pass through the listings. task="order" is aliased to it
