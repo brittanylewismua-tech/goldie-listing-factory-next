@@ -1,5 +1,5 @@
 "use client";
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 /* D687 · One component for "show me every listing in this batch".
 
@@ -43,6 +43,7 @@ export default function ListingRows({
   rows,
   defaultOpen = false,
   singleOpen = false,
+  focusedKey,
   readyLabel = "Ready",
   noun = "listing",
 }: {
@@ -53,12 +54,16 @@ export default function ListingRows({
      is scanning, and scanning wants density. The job decides, not the component. */
   defaultOpen?: boolean;
   singleOpen?: boolean;
+  focusedKey?: string;
   readyLabel?: string;
   noun?: string;
 }) {
   const [open, setOpen] = useState<Set<string>>(
     () => new Set(defaultOpen ? (singleOpen ? rows.slice(0, 1).map(row => row.key) : rows.map(row => row.key)) : []),
   );
+  useEffect(()=>{
+    if(focusedKey&&rows.some(row=>row.key===focusedKey))setOpen(new Set([focusedKey]));
+  },[focusedKey]);
 
   const flagged = useMemo(
     () => rows.filter(row => (row.flags || []).some(flag => flag.tone === "attention")),

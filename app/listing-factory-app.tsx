@@ -519,6 +519,13 @@ function DraftColorSelector({product,drafts,selected,saving,artworkByDraft,onCha
      over another swatch while the native file dialog is closing; that hover is
      a preview affordance, not permission to retarget the upload. */
   const artworkUploadColor=useRef<ProductColor|null>(null);
+  const artworkPickerRef=useRef<HTMLInputElement|null>(null);
+  useEffect(()=>{
+    const input=artworkPickerRef.current;
+    const cancel=()=>{artworkUploadColor.current=null};
+    input?.addEventListener("cancel",cancel);
+    return()=>input?.removeEventListener("cancel",cancel);
+  });
   const explicitlyChosenColor=useRef<ProductColor|null>(colors.find(color=>color.id===activeColor)||colors[0]||null);
   const draft=drafts.find(item=>item.id===activeDraft)||drafts.find(item=>item.status==="Created");
   useEffect(()=>{if(draft?.id&&!activeDraft)setActiveDraft(draft.id)},[draft?.id,activeDraft]);
@@ -534,7 +541,7 @@ function DraftColorSelector({product,drafts,selected,saving,artworkByDraft,onCha
   const focused=artworkUploadColor.current||colors.find(color=>color.id===activeColor)||colors[0];
   const realPreview=imageFor(focused);
   const focusedVariants=variantIdsFor(focused);
-  const renderingSide=primaryPrintSide(orderedPrintSides(product.printPositions));
+  const renderingSide=primaryPrintSide(orderedPrintSides(product.printPositions))||"other";
   const sidePattern=renderingSide==="other"?/.*/:new RegExp(renderingSide==="wrap"?"wrap|around":renderingSide,"i");
   const productRendering=(product.productRenderings||[]).find(view=>sidePattern.test(view.position)&&view.variantIds.some(id=>focusedVariants.has(id)))?.src||(product.productRenderings||[]).find(view=>view.variantIds.some(id=>focusedVariants.has(id)))?.src||(product.productRenderings||[])[0]?.src||"";
   const override=draft.artworkOverrides?.[String(focused.id)];
@@ -557,7 +564,7 @@ function DraftColorSelector({product,drafts,selected,saving,artworkByDraft,onCha
   return <section ref={selectorRef} className="draft-color-selector" aria-label="Preview and choose product colors" onClickCapture={event=>{if((event.target as HTMLElement).closest(".draft-color-artwork-action"))artworkUploadColor.current=focused}}>
     <div className="draft-color-heading"><div><h3>Choose product colors</h3><p>{createdDrafts.length>1?`Listing ${activeDraftIndex+1} of ${createdDrafts.length}. `:""}Choose colors instantly. Open Preview only when you want to see the finished Printify mockup.</p></div></div>
     <div className="draft-color-bulk-actions" role="group" aria-label="Color selection actions"><button type="button" onClick={selectAll}>Select all available</button><button type="button" onClick={matchTemplate}>Match Printify template</button><button type="button" onClick={()=>onChange([])}>Clear all</button>{saving?<span role="status">Saving choices…</span>:null}</div>
-    <div className="draft-color-workspace"><div className="draft-color-main">{showRealPreview&&realPreview?<img src={realPreview} alt={`${focused.title} finished Printify preview`}/>:<ProductColorRendering color={focused.swatch} artworkUrl={mainArtwork} productRenderingUrl={productRendering} placement={draft.placement} side={renderingSide} printWidth={product.maxPrintWidth} printHeight={product.maxPrintHeight}/>}<b>{focused.title}</b><span>{override?"Using alternate artwork":"Using the main design"}</span><button type="button" className="draft-color-preview" aria-busy={previewLoading} disabled={previewLoading} onClick={()=>void openPreview()}>{showRealPreview?"Back to edit view":previewLoading?"Loading preview…":"Preview"}</button>{previewError?<p className="field-error" role="alert">{previewError}</p>:null}<div className="draft-color-artwork-action"><label role="button" tabIndex={0} aria-disabled={saving} onKeyDown={event=>{if(saving)return;if(event.key==="Enter"||event.key===" "){event.preventDefault();event.currentTarget.querySelector("input")?.click()}}}>{override?`Change artwork for ${focused.title}`:`Use different artwork for ${focused.title}`}<input className="hidden-picker" type="file" accept=".png,.jpg,.jpeg" disabled={saving} onCancel={()=>{artworkUploadColor.current=null}} onChange={event=>{const locked=artworkUploadColor.current||focused;onArtworkChange(draft,locked,event.target.files);artworkUploadColor.current=null;event.target.value=""}}/></label>{override?<button type="button" disabled={saving} onClick={()=>{onArtworkChange(draft,focused,null,true);artworkUploadColor.current=null}}>Use main design</button>:null}</div></div><div className="draft-color-grid">{colors.map(color=>{const included=idsFor(color).some(id=>selectedSet.has(id));return <button type="button" key={color.id} aria-pressed={included} className={included?"selected":""} onMouseEnter={()=>focusColor(color.id)} onFocus={()=>focusColor(color.id)} onClick={()=>toggle(color)}><i className="draft-color-swatch" style={{background:color.swatch||"#ddd"}} aria-hidden="true"/><span>{color.title}</span><em>{included?"✓ Included":"Add"}</em></button>})}</div></div>
+    <div className="draft-color-workspace"><div className="draft-color-main">{showRealPreview&&realPreview?<img src={realPreview} alt={`${focused.title} finished Printify preview`}/>:<ProductColorRendering color={focused.swatch} artworkUrl={mainArtwork} productRenderingUrl={productRendering} placement={draft.placement} side={renderingSide} printWidth={product.maxPrintWidth} printHeight={product.maxPrintHeight}/>}<b>{focused.title}</b><span>{override?"Using alternate artwork":"Using the main design"}</span><button type="button" className="draft-color-preview" aria-busy={previewLoading} disabled={previewLoading} onClick={()=>void openPreview()}>{showRealPreview?"Back to edit view":previewLoading?"Loading preview…":"Preview"}</button>{previewError?<p className="field-error" role="alert">{previewError}</p>:null}<div className="draft-color-artwork-action"><label role="button" tabIndex={0} aria-disabled={saving} onKeyDown={event=>{if(saving)return;if(event.key==="Enter"||event.key===" "){event.preventDefault();event.currentTarget.querySelector("input")?.click()}}}>{override?`Change artwork for ${focused.title}`:`Use different artwork for ${focused.title}`}<input className="hidden-picker" ref={artworkPickerRef} type="file" accept=".png,.jpg,.jpeg" disabled={saving} onChange={event=>{const locked=artworkUploadColor.current||focused;onArtworkChange(draft,locked,event.target.files);artworkUploadColor.current=null;event.target.value=""}}/></label>{override?<button type="button" disabled={saving} onClick={()=>{onArtworkChange(draft,focused,null,true);artworkUploadColor.current=null}}>Use main design</button>:null}</div></div><div className="draft-color-grid">{colors.map(color=>{const included=idsFor(color).some(id=>selectedSet.has(id));return <button type="button" key={color.id} aria-pressed={included} className={included?"selected":""} onMouseEnter={()=>focusColor(color.id)} onFocus={()=>focusColor(color.id)} onClick={()=>toggle(color)}><i className="draft-color-swatch" style={{background:color.swatch||"#ddd"}} aria-hidden="true"/><span>{color.title}</span><em>{included?"✓ Included":"Add"}</em></button>})}</div></div>
     {override&&draft.editorUrl?<div className="draft-color-adjust"><a href={draft.editorUrl} target="_blank" rel="noreferrer">Adjust this artwork in Printify ↗</a><span>Resize or reposition this color’s artwork if needed.</span></div>:null}
     {createdDrafts.length>1?<nav className="factory-listing-next draft-color-next" aria-label="Move between product-color listings"><button type="button" disabled={activeDraftIndex===0} onClick={()=>showDraft(createdDrafts[activeDraftIndex-1].id!)}>← Previous listing</button><span>Listing {activeDraftIndex+1} of {createdDrafts.length}</span><button type="button" disabled={activeDraftIndex===createdDrafts.length-1} onClick={()=>showDraft(createdDrafts[activeDraftIndex+1].id!)}>Next listing →</button></nav>:null}
   </section>;
@@ -1040,6 +1047,8 @@ export default function ListingFactoryApp() {
 
   const [bulkTitles, setBulkTitles] = useState("");
   const [activeDesign, setActiveDesign] = useState<string>("");
+  const [photoFocusId,setPhotoFocusId]=useState("");
+  const [reviewEdit,setReviewEdit]=useState<{phase:"details"|"mockups";id:string;clientId:string}|null>(null);
   /* D787 · The batch-wide tools open on their own, above the listing grid. */
   const [batchToolsOpen, setBatchToolsOpen] = useState<boolean>(true);
   const [activeRecipe,setActiveRecipe]=useState<Recipe|null>(null);
@@ -1937,7 +1946,8 @@ export default function ListingFactoryApp() {
       runIdRef.current=id;
       if(open&&open.id!==id){const restored=await restoreBatchById(open.id,requestedStep,requestedPhase,push);if(restored){const childMap=Object.fromEntries(children.filter(child=>child.productId&&child.id).map(child=>[child.productId,child.id]));setBundleBatchIds(current=>({...childMap,...current}))}return restored}
     }const state=payload.batch.state as {template?:string;templateDetails?:TemplateDetails;description?:string;pricing?:Pricing;mockupTheme?:string;activeRecipe?:Recipe;activeBundle?:ProductBundle;bundleRecipes?:Recipe[];bundleIndex?:number;bundleBatchIds?:Record<string,string>;designs?:Array<Omit<DesignFile,"file"|"previewUrl"|"artworkVersions">&{artworkVersions?:Array<Omit<ArtworkVersion,"file"|"previewUrl">>}>;drafts?:DraftResult[];complete?:boolean;finishPhase?:FinishPhase;bulkTitles?:string;printifyImageIndices?:number[];printifyImageSelections?:Record<string,number[]>;selectedColorIds?:number[];selectedSizeIds?:number[];variantPrices?:Record<string,number>;etsyShippingProfileId?:number;pricingApproved?:boolean;sizeGuideName?:string;batchKeywords?:string[];titleJoiner?:string;titleBuilderMode?:"ai"|"manual";autoTitleBankId?:string;manualKeywordBankId?:string;sharedMockups?:{theme:string;ids:string[]};preparedMockupCounts?:Record<string,number>;keptAsDrafts?:boolean;batchDisplayName?:string;batchReceipt?:BatchReceipt|null};
-    const restoredBundleQualityDecisions=(payload.batch.state as {bundleQualityDecisions?:Record<string,"proceed"|"exclude">}).bundleQualityDecisions||{};
+    const savedQuality=(payload.batch.state as {bundleQualityDecisions?:Record<string,"include"|"proceed"|"exclude">}).bundleQualityDecisions||{};
+    const restoredBundleQualityDecisions=Object.fromEntries(Object.entries(savedQuality).filter(([,value])=>["include","proceed","exclude"].includes(value)).map(([key,value])=>[key,value==="proceed"?"include":value])) as Record<string,"include"|"exclude">;
     const cached=await loadBatchFiles(id).catch(()=>[]);
     const cachedArtwork=await loadBatchArtworkAssets(id).catch(()=>({} as Record<string,File>));
     const savedDrafts=state.drafts||[];
@@ -1960,7 +1970,7 @@ export default function ListingFactoryApp() {
     was destroyed by looking at it. Measured on 0b79a9b6: receipt present at
     02:53:56 with four Etsy URLs, null by 02:59:23 after I opened the batch to
     verify it. Batch History then reported it as a DRAFT with a Resume button while
-    its four listings were live on Etsy. */setBatchReceipt(state.batchReceipt||null);setTemplate(state.template||"");setTemplateDetails(state.templateDetails||null);setDescription(state.description||"");if(state.pricing)setPricing(state.pricing);setVariantPrices(state.variantPrices||{});setSelectedColorIds(state.selectedColorIds?.length?state.selectedColorIds:state.activeRecipe?.defaultColorIds?.length?state.activeRecipe.defaultColorIds:savedProductColors);setSelectedSizeIds(state.selectedSizeIds?.length?state.selectedSizeIds:state.activeRecipe?.defaultSizeIds?.length?state.activeRecipe.defaultSizeIds:savedProductSizes);setEtsyShippingProfileId(Number(state.etsyShippingProfileId)||0);setPricingApproved(Boolean(state.pricingApproved)||Boolean(state.complete&&(state.drafts||[]).some(draft=>draft.status==="Created")));setMockupTheme(state.mockupTheme||"");setActiveRecipe(state.activeRecipe||null);setActiveBundle(state.activeBundle||null);setBundleRecipes(state.bundleRecipes||[]);setBundleIndex(Math.max(0,Number(state.bundleIndex)||0));setBundleBatchIds(state.bundleBatchIds||{});setFiles(designs);setDrafts(state.drafts||[]);setComplete(Boolean(state.complete));setFinishPhase(restoredFinishPhase(state.finishPhase||"details",requestedPhase??requestedFinishPhase(requestedStep),Boolean(state.complete)));setBulkTitles(state.bulkTitles||"");setBatchKeywords(state.batchKeywords||[]);setTitleJoiner(state.titleJoiner||", ");setTitleBuilderMode(state.titleBuilderMode||"ai");setAutoTitleBankId(state.autoTitleBankId||"");setManualKeywordBankId(state.manualKeywordBankId||"");setSharedMockups(state.sharedMockups);setPreparedMockupCounts(state.preparedMockupCounts||{});setPrintifyImageIndices(state.printifyImageIndices||[]);setPrintifyImageSelections(state.printifyImageSelections||{});setSizeGuideName(state.sizeGuideName||"");setResumeProcessing(payload.batch.status==="processing"&&designs.length>0);const step=restoredWorkflowStep(payload.batch.step||"connect",requestedStep,Boolean(state.complete));setWorkflowStep(normalizeStep(step));/* Once the parent run is known, its id remains the public address. A child id
+    its four listings were live on Etsy. */setBatchReceipt(state.batchReceipt||null);setTemplate(state.template||"");setTemplateDetails(state.templateDetails||null);setDescription(state.description||"");if(state.pricing)setPricing(state.pricing);setVariantPrices(state.variantPrices||{});setSelectedColorIds(Array.isArray(state.selectedColorIds)?state.selectedColorIds:state.activeRecipe?.defaultColorIds?.length?state.activeRecipe.defaultColorIds:savedProductColors);setSelectedSizeIds(Array.isArray(state.selectedSizeIds)?state.selectedSizeIds:state.activeRecipe?.defaultSizeIds?.length?state.activeRecipe.defaultSizeIds:savedProductSizes);setEtsyShippingProfileId(Number(state.etsyShippingProfileId)||0);setPricingApproved(Boolean(state.pricingApproved)||Boolean(state.complete&&(state.drafts||[]).some(draft=>draft.status==="Created")));setMockupTheme(state.mockupTheme||"");setActiveRecipe(state.activeRecipe||null);setActiveBundle(state.activeBundle||null);setBundleRecipes(state.bundleRecipes||[]);setBundleIndex(Math.max(0,Number(state.bundleIndex)||0));setBundleBatchIds(state.bundleBatchIds||{});setFiles(designs);setDrafts(state.drafts||[]);setComplete(Boolean(state.complete));setFinishPhase(restoredFinishPhase(state.finishPhase||"details",requestedPhase??requestedFinishPhase(requestedStep),Boolean(state.complete)));setBulkTitles(state.bulkTitles||"");setBatchKeywords(state.batchKeywords||[]);setTitleJoiner(state.titleJoiner||", ");setTitleBuilderMode(state.titleBuilderMode||"ai");setAutoTitleBankId(state.autoTitleBankId||"");setManualKeywordBankId(state.manualKeywordBankId||"");setSharedMockups(state.sharedMockups);setPreparedMockupCounts(state.preparedMockupCounts||{});setPrintifyImageIndices(state.printifyImageIndices||[]);setPrintifyImageSelections(state.printifyImageSelections||{});setSizeGuideName(state.sizeGuideName||"");setResumeProcessing(payload.batch.status==="processing"&&designs.length>0);const step=restoredWorkflowStep(payload.batch.step||"connect",requestedStep,Boolean(state.complete));setWorkflowStep(normalizeStep(step));/* Once the parent run is known, its id remains the public address. A child id
     cannot recover the complete bundle after refresh. *//* D1023 · Parented runs
     rebuild the product map from the actual children returned by /api/batches.
     A child snapshot can be stale and must never manufacture a sibling from a
@@ -2839,6 +2849,31 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
      progress index - and they disagreed. */
   const etsyDetailsPrepared=files.length>0&&files.every(file=>Boolean(file.etsy));
   const [activeTask,setActiveTask]=useState<string>("");
+  useEffect(()=>{
+    // Old review shortcuts saved this retired phase. Recover those bookmarks
+    // into the real photo editor instead of rendering an empty final page.
+    if(!restoringBatch&&complete&&workflowStep==="finish"&&finishPhase==="mockups"){
+      setFinishPhase("details");setActiveTask("photos");goToStep("designs",true,true);
+    }
+  },[restoringBatch,complete,workflowStep,finishPhase]);
+  function editReviewedListing(phase:"details"|"mockups",target:{id?:string;clientId:string}){
+    if(!target.id)return;
+    setReviewEdit({phase,id:target.id,clientId:target.clientId});
+    const index=bundleRecipes.findIndex(recipe=>bundleMembers[recipe.id]?.drafts.some(draft=>draft.id===target.id));
+    if(index>=0&&index!==bundleIndex)openBundleProduct(index);
+  }
+  useEffect(()=>{
+    if(!reviewEdit||switchingProduct||restoringBatch||!drafts.some(draft=>draft.id===reviewEdit.id))return;
+    const target=reviewEdit;setReviewEdit(null);setActiveDesign(target.clientId);
+    setFinishPhase("details");
+    if(target.phase==="mockups"){setPhotoFocusId(target.clientId);setActiveTask("photos");goToStep("designs",false,true)}
+    else goToStep("finish",false,true);
+    // Wait for the normal page-top reset, then focus this specific editor.
+    window.setTimeout(()=>{
+      const selector=target.phase==="mockups"?`[data-listing-row="${CSS.escape(target.clientId)}"]`:".factory-listing-grid";
+      document.querySelector(selector)?.scrollIntoView({block:"start"});
+    },300);
+  },[reviewEdit,switchingProduct,restoringBatch,drafts]);
   /* D553 - openListing chose which listing's work was visible. Nothing chooses
      now: opening a task shows every listing's work, which is what step 2 did
      before D541. */
@@ -3064,7 +3099,7 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
     const photoFlags=({count}:{count:number}):ListingFlag[]=>count?[]:[{tone:"attention",label:"No photos yet"}];
     const listingWorkRows=(work:(entry:{draft:typeof drafts[number];design:DesignFile;selectedImages:number[];count:number})=>ReactNode,flags?:(entry:{draft:typeof drafts[number];design:DesignFile;selectedImages:number[];count:number})=>ListingFlag[])=>{
       const usable=listings.filter(({draft,design})=>draft.status==="Created"&&design&&draft.id);
-      return <ListingRows defaultOpen singleOpen rows={usable.map(({draft,design,selectedImages})=>{
+      return <ListingRows defaultOpen singleOpen focusedKey={photoFocusId} rows={usable.map(({draft,design,selectedImages})=>{
         const count=selectedImages.length+(preparedMockupCounts[draft.id||""]||0);
         const entry={draft,design:design as DesignFile,selectedImages,count};
         return {
@@ -5081,7 +5116,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
                 place while the list scrolls. Every gate, warning, confirmation
                 and failure path below is the same code in the same order. */}
             <div className="factory-review"><div className="factory-review-list">
-            <FinalListingReview handoffOnly drafts={bundlePublishDrafts()} files={bundlePublishFiles()} selections={bundlePublishSelections()} defaultIndices={printifyImageIndices} preparedMockupCounts={bundlePublishMockupCounts()} batchSizeGuide={sizeGuideName} onRetry={clientId=>{const design=files.find(file=>file.id===clientId);if(design)void runDrafts([design],true)}} onEdit={setFinishPhase} onSelectionChange={setSelectedPublishIds} onSelectionTouched={()=>{sellerChosePublish.current=true}}/>{/* D548 - read as someone about to spend money, this said two untrue things.
+            <FinalListingReview handoffOnly drafts={bundlePublishDrafts()} files={bundlePublishFiles()} selections={bundlePublishSelections()} defaultIndices={printifyImageIndices} preparedMockupCounts={bundlePublishMockupCounts()} batchSizeGuide={sizeGuideName} onRetry={clientId=>{const design=files.find(file=>file.id===clientId);if(design)void runDrafts([design],true)}} onEdit={editReviewedListing} onSelectionChange={setSelectedPublishIds} onSelectionTouched={()=>{sellerChosePublish.current=true}}/>{/* D548 - read as someone about to spend money, this said two untrue things.
               "Only the listings selected above" - the selection covers the product
               that is open, and on a bundle the button publishes every product, so
               the sentence promised a smaller press than the one it sat under. And

@@ -3547,6 +3547,8 @@ html, body { background: var(--lf-paper); }
 .app-shell .final-listing-links{grid-column:2/-1!important;display:flex!important;justify-content:flex-start!important}
 .app-shell .final-listing-review.handoff-only .final-listing-card{grid-template-columns:96px minmax(0,1fr)!important}
 .app-shell .final-listing-review.handoff-only .final-listing-links{grid-column:2!important}
+.app-shell .final-listing-review.handoff-only .final-listing-card.single-preview{grid-template-columns:minmax(0,1fr)!important}
+.app-shell .final-listing-review.handoff-only .final-listing-card.single-preview .final-listing-links{grid-column:1!important}
 
 /* Shipping profiles are choices in a light list, never dark callouts. */
 .app-shell .shipping-combobox-panel,.app-shell .shipping-combobox-list{background:#fff!important;color:#2f242b!important}

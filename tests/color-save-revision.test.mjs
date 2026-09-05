@@ -16,6 +16,7 @@ test('alternate upload streams through signed delivery after owner verification'
   assert.doesNotMatch(route,/contents:await artworkContents/);
 });
 test('cancelling the file chooser and resetting artwork release its color lock',()=>{
-  assert.match(app,/onCancel=\{\(\)=>\{artworkUploadColor.current=null\}\}/);
+  assert.match(app,/input\?\.addEventListener\("cancel",cancel\)/);
+  assert.match(app,/const cancel=\(\)=>\{artworkUploadColor.current=null\}/);
   assert.match(app,/onArtworkChange\(draft,focused,null,true\);artworkUploadColor.current=null/);
 });
