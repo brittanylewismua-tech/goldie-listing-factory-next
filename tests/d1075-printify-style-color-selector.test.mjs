@@ -5,6 +5,10 @@ import fs from "node:fs";
 const app=fs.readFileSync(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8");
 const css=fs.readFileSync(new URL("../app/interface-v2.css",import.meta.url),"utf8");
 const rendering=fs.readFileSync(new URL("../app/product-color-rendering.tsx",import.meta.url),"utf8");
+test('an absent artwork image cannot be dereferenced while a rendering loads',()=>{
+  assert.match(rendering,/area&&placement&&image&&image\.url===artworkUrl/);
+  assert.doesNotMatch(rendering,/image\?\.url===artworkUrl\?artworkInRendering/);
+});
 
 test("D1075 color browsing never mounts a Printify mockup automatically",()=>{
   assert.match(app,/showRealPreview&&realPreview\?<img/);

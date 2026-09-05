@@ -27,6 +27,18 @@ test('pointers cannot cross owners/products or replace metadata fields',async()=
   const obj=[...b.objects.values()][0];obj.customMetadata.owner='other';
   await assert.rejects(unpackDraftMedia(packed,'owner',b),/could not be loaded/);
 });
+test('large prices and Etsy options stay exact without accumulating in SQL snapshots',async()=>{
+  const b=bucket(),draft={...large,costReview:{approved:false,variants:Array.from({length:900},(_,id)=>({id,price:2589,cost:998,enabled:id%2===0}))},etsyDetails:{category:'T-shirts',properties:Array.from({length:700},(_,id)=>({id,name:`Option ${id}`,values:['one','two']}))}};
+  const packed=await packDraftMedia(draft,'owner',b);
+  assert.equal(packed.costReview,undefined);assert.equal(packed.etsyDetails,undefined);
+  assert.ok(JSON.stringify(packed).length<600);
+  assert.deepEqual(await unpackDraftMedia(packed,'owner',b),draft);
+  let row=JSON.stringify(packed);
+  const saved=await saveDraftChanges({before:draft,after:{...draft,costReview:{...draft.costReview,approved:true}},owner:'owner',bucket:b,read:async()=>row,compareAndSwap:async(previous,next)=>{assert.equal(previous,row);row=next;return true;}});
+  assert.equal(saved.costReview.approved,true);
+  const restored=await unpackDraftMedia(row,'owner',b);
+  assert.equal(restored.costReview.approved,true);assert.deepEqual(restored.etsyDetails,draft.etsyDetails);assert.deepEqual(restored.costReview.variants,draft.costReview.variants);
+});
 test('missing or corrupted media never silently becomes an empty gallery',async()=>{
   const b=bucket(),packed=await packDraftMedia(large,'owner',b),key=packed._draftMedia.key;
   b.objects.get(key).bytes[0]=0;await assert.rejects(unpackDraftMedia(packed,'owner',b));

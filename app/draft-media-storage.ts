@@ -1,7 +1,7 @@
 /** Private, immutable mockup metadata. D1 retains the ownership/search fields;
  * large repeated URL arrays belong in object storage, not every SQL row. */
 export const DRAFT_MEDIA_FIELDS=['printifyImages','printifyImageDetails','colorPreviewImageDetails'] as const;
-export const DRAFT_OBJECT_FIELDS=['primaryArtworkAreas'] as const;
+export const DRAFT_OBJECT_FIELDS=['primaryArtworkAreas','costReview','etsyDetails'] as const;
 export const DRAFT_STORAGE_FIELDS=[...DRAFT_MEDIA_FIELDS,...DRAFT_OBJECT_FIELDS] as const;
 type JsonRecord=Record<string,unknown>;
 export type MediaBucket={

@@ -4,6 +4,7 @@ import { etsyBudget } from "../../../etsy/client";
 import { finishEtsyListing } from "../../../etsy/finish";
 import { logError } from "@/app/error-log";
 import { readPrintifyPublishState } from "../../publish-state";
+import { unpackDraftMedia, type MediaBucket } from "@/app/draft-media-storage";
 
 /* D559 - a job carried ONE settings blob: one shipping profile, one set of image
    selections. A bundle's products each have their own - her hoodie ships on the
@@ -16,7 +17,7 @@ import { readPrintifyPublishState } from "../../publish-state";
 type ProductSettings={indices?:number[];selections?:number[];shippingProfileId?:number};
 type Settings={printifyImageIndices:number[];printifyImageSelections:Record<string,number[]>;etsyShippingProfileId:number;byProduct?:Record<string,ProductSettings>};
 type Draft={id:string;batchId?:string;shopId:number;title?:string;tags?:string[];description?:string;etsyDetails?:unknown};
-type Runtime={DB:D1Database;PRINTIFY_TOKEN_KEY?:string};
+type Runtime={DB:D1Database;PRINTIFY_TOKEN_KEY?:string;ARTWORK:MediaBucket};
 const runtime=()=>env as unknown as Runtime;
 const MAX_CONCURRENT_LISTINGS=4;
 /* D637 - a claim is a heartbeat: an execution that dies leaves locked_at behind,
@@ -81,7 +82,7 @@ export async function processNextPublishItem(userId:string,jobId:string){
   if(!item){await refreshJob(jobId);return {waiting:false,processed:false,budget}}
   try{
     const job=await runtime().DB.prepare("SELECT settings_json FROM etsy_publish_jobs WHERE id=? AND user_id=?").bind(jobId,userId).first<{settings_json:string}>(),row=await runtime().DB.prepare("SELECT response_json FROM printify_draft_results WHERE user_id=? AND status='succeeded' AND json_extract(response_json,'$.id')=? LIMIT 1").bind(userId,item.product_id).first<{response_json:string}>();if(!job||!row)throw new Error("Goldie could not reload this listing safely.");
-    const settings=JSON.parse(job.settings_json) as Settings,draft=JSON.parse(row.response_json) as Draft,connection=await runtime().DB.prepare("SELECT encrypted_token FROM printify_connections WHERE user_id=?").bind(userId).first<{encrypted_token:string}>(),secret=runtime().PRINTIFY_TOKEN_KEY;if(!connection||!secret)throw new Error("Reconnect Printify so Goldie can continue this queued batch.");const token=await decryptPrintifyToken(connection.encrypted_token,secret);
+    const settings=JSON.parse(job.settings_json) as Settings,draft=await unpackDraftMedia(row.response_json,userId,runtime().ARTWORK) as Draft,connection=await runtime().DB.prepare("SELECT encrypted_token FROM printify_connections WHERE user_id=?").bind(userId).first<{encrypted_token:string}>(),secret=runtime().PRINTIFY_TOKEN_KEY;if(!connection||!secret)throw new Error("Reconnect Printify so Goldie can continue this queued batch.");const token=await decryptPrintifyToken(connection.encrypted_token,secret);
     /* D637 · Idempotency, checked in this order before publish is ever called
        again: Goldie's own link record first, then Printify's external Etsy id.
        Either one means the listing exists and must not be created a second
