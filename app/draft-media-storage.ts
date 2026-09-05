@@ -1,6 +1,8 @@
 /** Private, immutable mockup metadata. D1 retains the ownership/search fields;
  * large repeated URL arrays belong in object storage, not every SQL row. */
 export const DRAFT_MEDIA_FIELDS=['printifyImages','printifyImageDetails','colorPreviewImageDetails'] as const;
+export const DRAFT_OBJECT_FIELDS=['primaryArtworkAreas'] as const;
+export const DRAFT_STORAGE_FIELDS=[...DRAFT_MEDIA_FIELDS,...DRAFT_OBJECT_FIELDS] as const;
 type JsonRecord=Record<string,unknown>;
 export type MediaBucket={
   put(key:string,value:Uint8Array,options?:{httpMetadata?:{contentType?:string};customMetadata?:Record<string,string>}):Promise<unknown>;
@@ -14,7 +16,7 @@ const prefix=(owner:string,id:string)=>`draft-media/${encodeURIComponent(owner)}
 export async function packDraftMedia<T extends JsonRecord>(draft:T,owner:string,bucket:MediaBucket):Promise<JsonRecord>{
   if(!owner||typeof draft.id!=='string'||!draft.id)throw new Error('Draft media needs an owned product identity.');
   const media:JsonRecord={};
-  for(const field of DRAFT_MEDIA_FIELDS)if(Array.isArray(draft[field]))media[field]=draft[field];
+  for(const field of DRAFT_STORAGE_FIELDS)if(draft[field]&&typeof draft[field]==='object')media[field]=draft[field];
   if(!Object.keys(media).length)return {...draft};
   const bytes=new TextEncoder().encode(JSON.stringify(media));
   // Small creation responses remain inline; no R2 read is added to that path.
@@ -23,7 +25,7 @@ export async function packDraftMedia<T extends JsonRecord>(draft:T,owner:string,
   const compressed=new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(new CompressionStream('gzip'))).arrayBuffer());
   await bucket.put(key,compressed,{httpMetadata:{contentType:'application/gzip'},customMetadata:{owner,productId:draft.id,sha256}});
   const stored:JsonRecord={...draft,_draftMedia:{version:1,key,sha256} satisfies MediaPointer};
-  for(const field of DRAFT_MEDIA_FIELDS)delete stored[field];
+  for(const field of DRAFT_STORAGE_FIELDS)delete stored[field];
   return stored;
 }
 
@@ -38,7 +40,7 @@ export async function unpackDraftMedia<T extends JsonRecord=JsonRecord>(value:st
   if(await digest(bytes)!==pointer.sha256)throw new Error('Saved mockup metadata failed its integrity check.');
   const media=JSON.parse(new TextDecoder().decode(bytes)) as JsonRecord,restored:JsonRecord={...stored};
   delete restored._draftMedia;
-  for(const field of DRAFT_MEDIA_FIELDS)if(Array.isArray(media[field]))restored[field]=media[field];
+  for(const field of DRAFT_STORAGE_FIELDS)if(media[field]&&typeof media[field]==='object')restored[field]=media[field];
   return restored as T;
 }
 

@@ -16,6 +16,10 @@ test('small and historical inline records do not need object storage',async()=>{
   const small={id:'p',clientId:'d',printifyImages:['one']};
   assert.deepEqual(await packDraftMedia(small,'owner',b),small);assert.deepEqual(await unpackDraftMedia(JSON.stringify(small),'owner',b),small);
 });
+test('large original placement geometry round trips without bloating the SQL row',async()=>{
+  const b=bucket(),draft={...large,primaryArtworkAreas:{front:Array.from({length:300},(_,id)=>({variant_ids:[id],placeholders:[{position:'front',images:[{id:'main',x:.5,y:.4,scale:.6,angle:0}]}]}))}};
+  const packed=await packDraftMedia(draft,'owner',b);assert.equal(packed.primaryArtworkAreas,undefined);assert.ok(JSON.stringify(packed).length<600);assert.deepEqual(await unpackDraftMedia(packed,'owner',b),draft);
+});
 test('pointers cannot cross owners/products or replace metadata fields',async()=>{
   const b=bucket(),packed=await packDraftMedia(large,'owner',b);
   await assert.rejects(unpackDraftMedia(packed,'other-owner',b),/ownership/);
@@ -62,4 +66,9 @@ test('owned-product and design lookups use indexes rather than scanning accumula
 test('all active full-media readers hydrate private storage, while creation has an inline fallback',()=>{
   for(const path of ['app/api/printify/drafts/route.ts','app/api/printify/drafts/update/route.ts','app/api/listing-photos/download/route.ts','app/api/batches/route.ts'])assert.match(readFileSync(new URL('../'+path,import.meta.url),'utf8'),/await unpackDraftMedia/);
   const route=readFileSync(new URL('../app/api/printify/drafts/route.ts',import.meta.url),'utf8');assert.match(route,/packDraftMedia\(draft,user.userId,runtimeEnv\(\).ARTWORK!\)\.catch\(\(\)=>draft\)/);
+});
+
+test('artwork replacement invalidates canonical price approval across reloads',()=>{
+  const route=readFileSync(new URL('../app/api/printify/drafts/update/route.ts',import.meta.url),'utf8');
+  assert.match(route,/body\.artworkUpdate\?\{costReview:\{[^\n]*?approved:false\}\}/);
 });
