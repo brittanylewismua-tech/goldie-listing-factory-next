@@ -14,6 +14,7 @@ import FactoryPanel from "./factory-panel";
 import ArtworkGrid from "./artwork-grid";
 import { runBounded } from "./bounded-work";
 import { bundleMemberDesigns } from "./bundle-member-designs";
+import { draftPhotoSelections } from "./draft-photo-selections";
 import { productReadiness, recipeCarriesApprovedPricing, type Readiness } from "./product-readiness";
 import { KeywordBank, SavedWorkflow, type KeywordList, type Pricing, type ProductBundle, type Recipe } from "./factory-tools";
 import UploadedListingPhotos from "./uploaded-listing-photos";
@@ -3826,9 +3827,13 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
     return bundleRecipes.flatMap(recipe=>recipe.id===activeRecipe?.id?files:(bundleMembers[recipe.id]?.designs||[]).map(design=>({...design,file:undefined as unknown as File,previewUrl:""} as DesignFile)));
   }
   function bundlePublishSelections(){
-    if(!activeBundle||bundleRecipes.length<2)return printifyImageSelections;
+    const activeSelections=draftPhotoSelections(drafts,printifyImageSelections,printifyImageIndices);
+    if(!activeBundle||bundleRecipes.length<2)return activeSelections;
     return bundleRecipes.filter(recipe=>recipe.id!==activeRecipe?.id)
-      .reduce((all,recipe)=>({...all,...(bundleMembers[recipe.id]?.selections||{})}),{...printifyImageSelections});
+      .reduce((all,recipe)=>{
+        const member=bundleMembers[recipe.id];
+        return member?{...all,...draftPhotoSelections(member.drafts,member.selections,member.indices)}:all;
+      },activeSelections);
   }
   function bundlePublishMockupCounts(){
     if(!activeBundle||bundleRecipes.length<2)return preparedMockupCounts;
