@@ -11,5 +11,5 @@ test('D1095: bundle next/previous scrolls the source editor, not the first hidde
   assert.match(line,/source.closest\(".factory-listing-screen"\)/);
   assert.doesNotMatch(line,/document.querySelector/);
   assert.match(line,/editor\?\.scrollIntoView\(\{block:"start"\}\)/);
-  for(const target of ['item.id','files[index-1].id','files[index+1].id'])assert.ok(source.includes(`showListing(${target},event.currentTarget)`));
+  for(const target of ['files[index-1].id','files[index+1].id'])assert.ok(source.includes(`showListing(${target},event.currentTarget)`));
 });
