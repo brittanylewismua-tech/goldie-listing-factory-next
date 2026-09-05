@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { bundleHistoryIdentity } from "@/app/batch-history-identity";
 import { APPLY_BUNDLE_KEYWORD_BANK } from "@/app/bundle-keyword-bank";
+import { RENAME_BATCH } from "@/app/batch-display-name";
 
 type RuntimeEnv={DB?:D1Database};
 type BatchListState={templateDetails?:{previewImage?:string;previewImages?:string[]};activeBundle?:{name?:string};activeRecipe?:{name?:string};bundleIndex?:number;bundleRecipes?:unknown[];keptAsDrafts?:boolean;batchDisplayName?:string;designs?:Array<{name?:string}>;drafts?:Array<{id?:string;previewUrl?:string}>;batchReceipt?:{publishedCount?:number}};
@@ -100,7 +101,7 @@ function batchListItem(row:Record<string,unknown>,publishedByBatch:Record<string
    she was making 4. */
 type RunChild={batchId:string;productName:string;position:number;drafts:number;published:number;done:boolean};
 function withRunProgress(item:Record<string,unknown>,parent:Record<string,unknown>,children:Array<Record<string,unknown>>,publishedByBatch:Record<string,number>,publishedAtByProduct:Record<string,string>){
-  let parentState:{run?:{bundleName?:string;productOrder?:string[];activeProductId?:string}}={};
+  let parentState:{batchDisplayName?:string;run?:{bundleName?:string;productOrder?:string[];activeProductId?:string}}={};
   try{parentState=JSON.parse(String(parent.state_json||"{}"))}catch{/* a damaged parent must not hide the run */}
   const order=parentState.run?.productOrder||[];
   const read=(child:Record<string,unknown>)=>{let state:BatchListState&{activeRecipe?:{id?:string;name?:string}}={};try{state=JSON.parse(String(child.state_json||"{}"))}catch{/* keep going */}return state};
@@ -124,7 +125,7 @@ function withRunProgress(item:Record<string,unknown>,parent:Record<string,unknow
      button over listings that were already live. */
   const resumeInto=members.find(member=>!member.done)?.batchId||members[members.length-1]?.batchId||String(parent.id);
   return {...item,
-    display_name:String(parentState.run?.bundleName||item.display_name||"Bundle run"),
+    display_name:String(parentState.batchDisplayName?.trim()||children.map(read).map(state=>state.batchDisplayName?.trim()).find(Boolean)||parentState.run?.bundleName||item.display_name||"Bundle run"),
     product_title:`${total} products · ${listings} ${listings===1?"listing":"listings"} · ${designs} ${designs===1?"design":"designs"}`,
     design_count:designs,
     draft_count:members.reduce((sum,member)=>sum+member.drafts,0),
@@ -233,7 +234,14 @@ export async function GET(request:Request){const user=await getChatGPTUser();if(
 export async function PATCH(request:Request){
   const user=await getChatGPTUser();if(!user)return NextResponse.json({error:"Sign in to continue."},{status:401});
   const database=db();if(!database)return NextResponse.json({error:"Batch history is unavailable."},{status:503});
-  const body=await request.json().catch(()=>null) as {id?:unknown;keywordBankId?:unknown}|null;
+  const body=await request.json().catch(()=>null) as {id?:unknown;keywordBankId?:unknown;displayName?:unknown}|null;
+  if(typeof body?.displayName==="string"){
+    const name=body.displayName.trim();
+    if(typeof body.id!=="string"||!body.id||body.id.length>80||!name||name.length>160)return NextResponse.json({error:"Enter a batch name."},{status:400});
+    const result=await database.prepare(RENAME_BATCH).bind(name,user.userId,body.id).all<{id:string}>();
+    if(!result.results?.length)return NextResponse.json({error:"That batch was not found."},{status:404});
+    return NextResponse.json({saved:true,updated:result.results.length});
+  }
   if(typeof body?.id!=="string"||typeof body.keywordBankId!=="string"||!body.id||!body.keywordBankId||body.id.length>80||body.keywordBankId.length>80)return NextResponse.json({error:"Choose a batch and keyword bank."},{status:400});
   const result=await database.prepare(APPLY_BUNDLE_KEYWORD_BANK).bind(body.keywordBankId,user.userId,body.id).all<{id:string}>();
   if(!result.results?.length)return NextResponse.json({error:"That batch or keyword bank was not found."},{status:404});
@@ -244,7 +252,7 @@ export async function POST(request:Request){const user=await getChatGPTUser();if
      COALESCE keeps it: a later autosave that omits it must not orphan a child
      mid-run, which would put it back in Batch History as a job of its own. */
   const parentBatchId=String(body.parentBatchId||"").replace(/[^a-zA-Z0-9-]/g,"").slice(0,80)||null;
-  await database.prepare("INSERT INTO listing_batches (id,user_id,status,step,setup_name,product_title,design_count,state_json,parent_batch_id,updated_at) VALUES (?,?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP) ON CONFLICT(id) DO UPDATE SET parent_batch_id=COALESCE(excluded.parent_batch_id,listing_batches.parent_batch_id),status=excluded.status,step=excluded.step,setup_name=excluded.setup_name,product_title=excluded.product_title,design_count=excluded.design_count,state_json=excluded.state_json,updated_at=CURRENT_TIMESTAMP WHERE user_id=excluded.user_id").bind(id,user.userId,status,step,String(body.setupName||"").slice(0,160),String(body.productTitle||"").slice(0,200),Math.max(0,Math.min(20,Number(body.designCount||0))),stateJson,parentBatchId).run();return NextResponse.json({id,saved:true})}
+  await database.prepare("INSERT INTO listing_batches (id,user_id,status,step,setup_name,product_title,design_count,state_json,parent_batch_id,updated_at) VALUES (?,?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP) ON CONFLICT(id) DO UPDATE SET parent_batch_id=COALESCE(excluded.parent_batch_id,listing_batches.parent_batch_id),status=excluded.status,step=excluded.step,setup_name=excluded.setup_name,product_title=excluded.product_title,design_count=excluded.design_count,state_json=CASE WHEN length(trim(COALESCE(json_extract(listing_batches.state_json,'$.batchDisplayName'),'')))>0 THEN json_set(excluded.state_json,'$.batchDisplayName',json_extract(listing_batches.state_json,'$.batchDisplayName')) ELSE excluded.state_json END,updated_at=CURRENT_TIMESTAMP WHERE user_id=excluded.user_id").bind(id,user.userId,status,step,String(body.setupName||"").slice(0,160),String(body.productTitle||"").slice(0,200),Math.max(0,Math.min(20,Number(body.designCount||0))),stateJson,parentBatchId).run();return NextResponse.json({id,saved:true})}
 
 export async function DELETE(request:Request){const user=await getChatGPTUser();if(!user)return NextResponse.json({error:"Sign in to continue."},{status:401});const database=db();if(!database)return NextResponse.json({error:"Batch history is unavailable."},{status:503});await ensure(database);const id=String(new URL(request.url).searchParams.get("id")||"").replace(/[^a-zA-Z0-9-]/g,"").slice(0,80);if(!id)return NextResponse.json({error:"Choose a batch to clear."},{status:400});/* D871 · Deleting a run deletes the run. A child is the run's own record for
      one of its products, not a separate job the seller can keep. */

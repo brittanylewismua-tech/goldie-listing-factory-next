@@ -411,8 +411,14 @@ export function printTargetFor(template:TemplateDetails|null){
 }
 function PrintifyImageTile({src,index,selected,atLimit,onToggle,onExpand}:{src:string;index:number;selected:boolean;atLimit:boolean;onToggle:()=>void;onExpand:()=>void}){
   const [state,setState]=useState<"loading"|"ready"|"failed">("loading"),[attempt,setAttempt]=useState(0);
+  useEffect(()=>{setState("loading");setAttempt(0)},[src]);
+  useEffect(()=>{
+    if(state!=="failed"||attempt>=2)return;
+    const timer=window.setTimeout(()=>{setState("loading");setAttempt(value=>value+1)},800*2**attempt);
+    return()=>window.clearTimeout(timer);
+  },[state,attempt]);
   const retrySrc=attempt?`${src}${src.includes("?")?"&":"?"}goldie_retry=${attempt}`:src;
-  return <div className={`printify-image-option ${selected?"selected":""} ${state==="loading"?"is-loading":state==="failed"?"is-failed":"is-ready"}`}><label className="printify-photo-selector"><input type="checkbox" checked={selected} disabled={state!=="ready"||(!selected&&atLimit)} onChange={onToggle}/><span aria-hidden="true">{selected?"✓":""}</span><span className="sr-only">Select Printify photo {index+1}</span></label><button type="button" className="printify-photo-expand" disabled={state!=="ready"} onClick={onExpand} aria-label={`View ${printifyViewName(src)||`Printify photo ${index+1}`} larger`}><span className="printify-photo-loading" aria-live="polite">{state==="loading"?"Loading photo…":state==="failed"?"Photo unavailable":""}</span><img key={attempt} src={retrySrc} alt={printifyViewName(src)||`Printify product mockup ${index+1}`} decoding="async" onLoad={()=>setState("ready")} onError={()=>setState("failed")}/></button>{state==="failed"?<button type="button" className="printify-photo-retry" onClick={()=>{setState("loading");setAttempt(value=>value+1)}}>Retry</button>:null}</div>;
+  return <div className={`printify-image-option ${selected?"selected":""} ${state==="loading"?"is-loading":state==="failed"?"is-failed":"is-ready"}`}><label className="printify-photo-selector"><input type="checkbox" checked={selected} disabled={state!=="ready"||(!selected&&atLimit)} onChange={onToggle}/><span aria-hidden="true">{selected?"✓":""}</span><span className="sr-only">Select Printify photo {index+1}</span></label><button type="button" className="printify-photo-expand" disabled={state!=="ready"} onClick={onExpand} aria-label={`View ${printifyViewName(src)||`Printify photo ${index+1}`} larger`}><span className="printify-photo-loading" aria-live="polite">{state==="loading"?"Loading photo…":state==="failed"?"Photo unavailable":""}</span><img key={attempt} src={retrySrc} alt={printifyViewName(src)||`Printify product mockup ${index+1}`} decoding="async" loading="lazy" width={800} height={800} onLoad={()=>setState("ready")} onError={()=>setState("failed")}/></button>{state==="failed"?<button type="button" className="printify-photo-retry" onClick={()=>{setState("loading");setAttempt(value=>value+1)}}>Retry</button>:null}</div>;
 }
 function PrintifyImagePicker({ images,indices,reservedPhotos=0,onApplyOne,onApplyAll,onSaveRecipe,onRefresh,bare,showApplyAll=true }: { images: string[];indices:number[];reservedPhotos?:number;onApplyOne:(indices:number[])=>void;onApplyAll:(indices:number[])=>void;bare?:boolean;showApplyAll?:boolean;onSaveRecipe?:(indices:number[])=>void|Promise<void>;onRefresh?:()=>void|Promise<void> }) {
   const [selected,setSelected]=useState<Set<number>>(new Set(indices.slice(0,Math.max(0,20-reservedPhotos)))),[expanded,setExpanded]=useState<string>(""),[showAll,setShowAll]=useState(false),[action,setAction]=useState<"clear"|"all"|"future"|"">(""),[feedback,setFeedback]=useState(""),[savingFuture,setSavingFuture]=useState(false);
@@ -427,7 +433,7 @@ function PrintifyImagePicker({ images,indices,reservedPhotos=0,onApplyOne,onAppl
   const chosen=[...selected].sort((a,b)=>a-b),selectionHint=chosen.length?"":"Select a Printify photo below first.",slotsLeft=Math.max(0,20-reservedPhotos-selected.size),atLimit=slotsLeft===0;
   function toggle(index:number){const next=new Set(selected);if(next.has(index))next.delete(index);else{if(atLimit){setFeedback("Etsy allows 20 listing photos. Remove a selected photo before adding another.");return}next.add(index)}setSelected(next);setAction("");setFeedback("");onApplyOne([...next].sort((a,b)=>a-b))}
   function deselect(){setSelected(new Set());setAction("clear");setFeedback("");onApplyOne([])}
-  function applyAll(){if(!chosen.length)return;onApplyAll(chosen);setAction("all");setFeedback("✓ These Printify photos are now selected on every listing in this batch.")}
+  function applyAll(){if(!chosen.length)return;onApplyAll(chosen);setAction("all");setFeedback("✓ These views are selected for this product’s listings.")}
   async function saveFuture(){if(!onSaveRecipe||savingFuture||!chosen.length)return;setSavingFuture(true);setFeedback("Saving your preference…");try{await onSaveRecipe(chosen);setAction("future");setFeedback("✓ These Printify photos will be preselected for future batches using this product.")}catch(error){setAction("");setFeedback(error instanceof Error?error.message:"These preferences could not be saved.")}finally{setSavingFuture(false)}}
   const lightbox=expanded&&typeof document!=="undefined"?createPortal(<div className="printify-photo-lightbox" role="dialog" aria-modal="true" aria-label="Expanded Printify photo" onMouseDown={event=>{if(event.target===event.currentTarget)setExpanded("")}}><button type="button" onClick={()=>setExpanded("")} aria-label="Close expanded photo">×</button><img src={expanded} alt="Expanded Printify product mockup"/></div>,document.body):null;
   return <>{/* D407 - Was open by default, so arriving on Images dropped you into the
@@ -519,6 +525,7 @@ function DraftColorSelector({product,drafts,selected,saving,artworkByDraft,onCha
   const [showRealPreview,setShowRealPreview]=useState(false);
   const [previewLoading,setPreviewLoading]=useState(false);
   const [previewError,setPreviewError]=useState("");
+  const previewRequestRevision=useRef(0);
   const selectorRef=useRef<HTMLElement|null>(null);
   /* Lock the color at the moment the artwork chooser opens. The mouse can land
      over another swatch while the native file dialog is closing; that hover is
@@ -553,18 +560,19 @@ function DraftColorSelector({product,drafts,selected,saving,artworkByDraft,onCha
   const mainArtwork=(override&&draft.artworkOverridePreviewUrls?.[String(focused.id)])||artworkByDraft[draft.clientId]||"";
   const createdDrafts=drafts.filter(item=>item.id);
   const activeDraftIndex=Math.max(0,createdDrafts.findIndex(item=>item.id===draft.id));
-  function showDraft(id:string){setActiveDraft(id);window.requestAnimationFrame(()=>window.requestAnimationFrame(()=>selectorRef.current?.scrollIntoView({block:"start"})))}
-  function focusColor(id:number){if(artworkUploadColor.current)return;setActiveColor(id);setShowRealPreview(false)}
+  function showDraft(id:string){previewRequestRevision.current++;setPreviewLoading(false);setShowRealPreview(false);setActiveDraft(id);window.requestAnimationFrame(()=>window.requestAnimationFrame(()=>selectorRef.current?.scrollIntoView({block:"start"})))}
+  function focusColor(id:number){if(artworkUploadColor.current||id===activeColor)return;previewRequestRevision.current++;setPreviewLoading(false);setPreviewError("");setActiveColor(id);setShowRealPreview(false)}
   function toggle(color:ProductColor){artworkUploadColor.current=null;explicitlyChosenColor.current=color;const next=new Set(selectedSet);if(idsFor(color).some(id=>next.has(id))){for(const id of idsFor(color))next.delete(id)}else next.add(color.id);focusColor(color.id);onChange([...next])}
   const selectAll=()=>onChange(colors.map(color=>color.id));
   const matchTemplate=()=>onChange(colors.filter(color=>color.templateEnabled).map(color=>color.id));
   async function openPreview(){
     if(showRealPreview){setShowRealPreview(false);return}
     if(!draft?.id)return;
+    const revision=++previewRequestRevision.current;
     setPreviewError("");setPreviewLoading(true);
-    try{await onPreviewRequest(draft.id);setShowRealPreview(true)}
-    catch{setShowRealPreview(false);setPreviewError("Printify preview could not be refreshed. Try Preview again.")}
-    finally{setPreviewLoading(false)}
+    try{await onPreviewRequest(draft.id);if(revision===previewRequestRevision.current)setShowRealPreview(true)}
+    catch{if(revision===previewRequestRevision.current){setShowRealPreview(false);setPreviewError("Printify preview could not be refreshed. Try Preview again.")}}
+    finally{if(revision===previewRequestRevision.current)setPreviewLoading(false)}
   }
   return <section ref={selectorRef} className="draft-color-selector" aria-label="Preview and choose product colors" onClickCapture={event=>{if((event.target as HTMLElement).closest(".draft-color-artwork-action"))artworkUploadColor.current=focused}}>
     <div className="draft-color-heading"><div><h3>Choose product colors</h3><p>{createdDrafts.length>1?`Listing ${activeDraftIndex+1} of ${createdDrafts.length}. `:""}Choose colors instantly. Open Preview only when you want to see the finished Printify mockup.</p></div></div>
@@ -1646,7 +1654,7 @@ export default function ListingFactoryApp() {
     return {...draft,colorPreviewImageDetails:compactPreviews,costReview:review};
   }
   function batchStateSnapshot(overrides:Record<string,unknown>={}){const designs=files.map(({file:ignoredFile,previewUrl:ignoredPreview,artworkPreviewUrl:ignoredArtworkPreview,artworkVersions,...design})=>({...design,artworkVersions:artworkVersions?.map(({file:ignoredArtworkFile,previewUrl:ignoredArtworkVersionPreview,...artwork})=>artwork)}));return {template,templateDetails,description,pricing,selectedColorIds,selectedSizeIds,variantPrices,etsyShippingProfileId,pricingApproved,mockupTheme,activeRecipe,activeBundle,bundleRecipes,bundleIndex,bundleBatchIds,bundleQualityDecisions,designs,drafts:drafts.map(snapshotDraft),complete,finishPhase,bulkTitles,batchKeywords,titleJoiner,titleBuilderMode,autoTitleBankId,manualKeywordBankId,sharedMockups,preparedMockupCounts,printifyImageIndices,printifyImageSelections,sizeGuideName,keptAsDrafts,batchReceipt,batchDisplayName,...overrides}}
-  async function saveDraftBatch(){const name=batchDisplayName.trim();if(!name)return;setSavingDraftBatch(true);try{const id=batchIdRef.current||crypto.randomUUID();batchIdRef.current=id;window.localStorage.setItem("goldie-active-batch",id);await saveBatchFiles(id,files.map(file=>file.file));if(!localPreview){const response=await fetch("/api/batches",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,status:"draft",step:workflowStep,setupName:name,productTitle:templateDetails?.blueprintTitle||"",designCount:files.length,state:{...batchStateSnapshot(),keptAsDrafts:complete}})});if(!response.ok)throw new Error("This batch could not be saved.")}setKeptAsDrafts(true);setDraftSaveOpen(false);setDraftSavedOpen(true)}catch(error){stopWith("This batch was not saved.",[error instanceof Error?error.message:"Try again in a moment."])}finally{setSavingDraftBatch(false)}}
+  async function saveDraftBatch(){const name=batchDisplayName.trim();if(!name)return;setSavingDraftBatch(true);try{const id=batchIdRef.current||crypto.randomUUID();batchIdRef.current=id;window.localStorage.setItem("goldie-active-batch",id);await saveBatchFiles(id,files.map(file=>file.file));if(!localPreview){const response=await fetch("/api/batches",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,status:"draft",step:workflowStep,setupName:name,productTitle:templateDetails?.blueprintTitle||"",designCount:files.length,state:{...batchStateSnapshot(),keptAsDrafts:complete}})});if(!response.ok)throw new Error("This batch could not be saved.");await saveBatchName(id,name)}setKeptAsDrafts(true);setDraftSaveOpen(false);setDraftSavedOpen(true)}catch(error){stopWith("This batch was not saved.",[error instanceof Error?error.message:"Try again in a moment."])}finally{setSavingDraftBatch(false)}}
   function jumpToMissingPhotoListing(clientId:string){setMissingPhotoDraftIds([]);window.setTimeout(()=>{
     /* D532 - a listing collapses now, and you cannot scroll to something inside a
        closed <details>. This is the jump that answers "which listing has no
@@ -2098,6 +2106,10 @@ export default function ListingFactoryApp() {
   /* D871 · The parent row for this run. It holds no product work - only what
      the seller sees: which bundle is running, in what order, and which product
      is open. Written whenever a child is, so the run row is never behind. */
+  async function saveBatchName(id:string,name:string){
+    const response=await fetch("/api/batches",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,displayName:name})});
+    if(!response.ok)throw new Error("This batch name could not be saved.");
+  }
   async function persistRunNow(receipt:BatchReceipt|null=batchReceipt){
     const runId=runIdRef.current;
     if(!runId||!activeBundle||bundleRecipes.length<2)return;
@@ -3512,7 +3524,7 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
           await persistBatchNow(batchIdRef.current);
           setRestoringBatch(true);
           snapshotReady.current=false;
-          await restoreBatchById(existing,workflowStep,null,true);
+          await restoreBatchById(existing,workflowStep,finishPhase,true);
           setTitleBuildMessage("");
           setBundleBatchIds(current=>({...current,...knownBatchIds}));
           window.scrollTo(0,0);
@@ -4475,7 +4487,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
   }
 
   function finishRestart(preserveSavedBatch=false){clearCurrentBatch(true,preserveSavedBatch);/* D488 - the one path that is allowed to discard, because she chose it by name. */setRestartBatchOpen(false);setRestartBatchName("");goToStep(connected?"setup":"connect",true,true)}
-  async function saveAndRestart(){const name=restartBatchName.trim();if(!name)return;setRestartingBatch(true);try{const id=batchIdRef.current||crypto.randomUUID();batchIdRef.current=id;await saveBatchFiles(id,files.map(file=>file.file));if(!localPreview){const response=await fetch("/api/batches",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,status:"draft",step:workflowStep,setupName:name,productTitle:templateDetails?.blueprintTitle||"",designCount:files.length,state:{...batchStateSnapshot(),batchDisplayName:name,keptAsDrafts:true}})});if(!response.ok)throw new Error("This batch could not be saved.")}finishRestart(true)}catch(error){stopWith("This batch was not saved.",[error instanceof Error?error.message:"Try again in a moment."])}finally{setRestartingBatch(false)}}
+  async function saveAndRestart(){const name=restartBatchName.trim();if(!name)return;setRestartingBatch(true);try{const id=batchIdRef.current||crypto.randomUUID();batchIdRef.current=id;await saveBatchFiles(id,files.map(file=>file.file));if(!localPreview){const response=await fetch("/api/batches",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,status:"draft",step:workflowStep,setupName:name,productTitle:templateDetails?.blueprintTitle||"",designCount:files.length,state:{...batchStateSnapshot(),batchDisplayName:name,keptAsDrafts:true}})});if(!response.ok)throw new Error("This batch could not be saved.");await saveBatchName(id,name)}finishRestart(true)}catch(error){stopWith("This batch was not saved.",[error instanceof Error?error.message:"Try again in a moment."])}finally{setRestartingBatch(false)}}
 
   function openDraft(draft: DraftResult) {
     if (!draft.id || !draft.editorUrl) return;

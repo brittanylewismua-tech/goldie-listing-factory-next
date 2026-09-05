@@ -705,7 +705,7 @@ test("D832: no image the seller can see is deferred until it has a size", async 
     const source = await fs.promises.readFile(file, "utf8");
     source.split("\n").forEach((line, index) => {
       for (const tag of line.match(/<img\b[^>]*>/g) || []) {
-        if (/loading=["']lazy["']/.test(tag)) {
+        if (/loading=["']lazy["']/.test(tag)&&!(/width=\{[1-9]\d*\}/.test(tag)&&/height=\{[1-9]\d*\}/.test(tag))) {
           offences.push(`${file.pathname.split("/app/")[1]}:${index + 1}  ${tag.slice(0, 70)}`);
         }
       }

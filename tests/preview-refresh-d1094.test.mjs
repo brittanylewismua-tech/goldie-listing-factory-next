@@ -5,7 +5,7 @@ const source=readFileSync(new URL('../app/listing-factory-app.tsx',import.meta.u
 test('D1094: explicit preview refresh failures retain edit mode and offer retry',async()=>{
   const body=source.match(/async function openPreview\(\)\{([\s\S]*?)\n  \}/)[1];
   let visible=false,loading=false,message='';
-  const run=new Function('draft','showRealPreview','onPreviewRequest','setShowRealPreview','setPreviewLoading','setPreviewError',`return (async()=>{${body}})()`);
+  const run=new Function('draft','showRealPreview','onPreviewRequest','setShowRealPreview','setPreviewLoading','setPreviewError',`const previewRequestRevision={current:0};return (async()=>{${body}})()`);
   await run({id:'draft'},false,async()=>{throw new Error('offline')},v=>visible=v,v=>loading=v,v=>message=v);
   assert.equal(visible,false);assert.equal(loading,false);assert.match(message,/Try Preview again/);
   await run({id:'draft'},false,async()=>{},v=>visible=v,v=>loading=v,v=>message=v);

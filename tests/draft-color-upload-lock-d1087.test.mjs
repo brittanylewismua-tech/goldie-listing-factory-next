@@ -12,6 +12,6 @@ test("Upload locks the visibly previewed color before the file chooser opens",()
   assert.match(selector,/artworkUploadColor\.current=focused/);
   assert.match(selector,/const focused=artworkUploadColor\.current\|\|colors\.find/);
   assert.match(selector,/const locked=artworkUploadColor\.current\|\|focused;onArtworkChange\(draft,locked,event.target.files\);artworkUploadColor.current=null/);
-  assert.match(selector,/function focusColor\(id:number\)\{if\(artworkUploadColor\.current\)return;/);
+  assert.match(selector,/function focusColor\(id:number\)\{if\(artworkUploadColor\.current\|\|id===activeColor\)return;/);
   assert.match(selector,/function toggle\(color:ProductColor\)\{artworkUploadColor\.current=null;/);
 });

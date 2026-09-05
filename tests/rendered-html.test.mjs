@@ -6811,7 +6811,7 @@ test("each bundle product owns its own batch, and switching says so — D659", a
   assert.match(app, /const \[bundleBatchIds,setBundleBatchIds\]=useState<Record<string,string>>\(\{\}\);/);
   // Opening another product intentionally restores THAT product's batch.
   assert.match(app, /const existing=bundleBatchIds\[recipe\.id\];/);
-  assert.match(app, /await restoreBatchById\(existing,workflowStep,null,true\);/);
+  assert.match(app, /await restoreBatchById\(existing,workflowStep,finishPhase,true\);/);
   /* The outgoing product's pending autosave is flushed first, or the last
      keystrokes land on the incoming product's batch. */
   const openBody = app.slice(app.indexOf("function openBundleProduct(index:number){"), app.indexOf("function openBundleProduct(index:number){") + 1400);

@@ -1285,7 +1285,7 @@ test("D379: opening a product card does not reload the page", async () => {
     "a card that reloads the page is not the same card step 1 has");
 
   assert.match(app, /async function restoreBatchById\(id:string,requestedStep:string\|null,requestedPhase:string\|null,push=false\)/);
-  assert.match(app, /await restoreBatchById\(existing,workflowStep,null,true\)/,
+  assert.match(app, /await restoreBatchById\(existing,workflowStep,finishPhase,true\)/,
     "opening a card stays on the step you are on");
 
   /* The flush, and that it is awaited before the incoming batch takes over. */

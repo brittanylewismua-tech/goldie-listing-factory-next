@@ -13,7 +13,9 @@ test("D1075 color browsing never mounts a Printify mockup automatically",()=>{
 });
 
 test("Color browsing changes only the local illustration, never saves",()=>{
-  assert.match(app,/function focusColor\(id:number\)\{if\(artworkUploadColor\.current\)return;setActiveColor\(id\);setShowRealPreview\(false\)\}/);
+  const focus=app.match(/function focusColor\(id:number\)\{([^\n]*)\}/)[1];
+  assert.match(focus,/setActiveColor\(id\);setShowRealPreview\(false\)/);
+  assert.doesNotMatch(focus,/onChange|fetch\(/);
   assert.match(app,/explicitlyChosenColor\.current=color/);
   assert.doesNotMatch(app,/onMouseEnter=\{[^}]*onChange/);
 });
