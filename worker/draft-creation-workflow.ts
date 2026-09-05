@@ -1,6 +1,6 @@
 import {WorkflowEntrypoint,type WorkflowEvent,type WorkflowStep} from 'cloudflare:workers';
 import {executeDraftJob,type DraftJobBindings,type DraftJobInput} from '../app/api/printify/drafts/execute-job';
-import {pendingDraftJob,readJobObject} from '../app/api/printify/draft-job-store';
+import {pendingDraftJob,readJobObject,cleanupCompletedDraftJob} from '../app/api/printify/draft-job-store';
 import {RejectedProductCreation} from '../app/api/printify/product-creation';
 import {RetryDraftLater} from '../app/api/printify/retry-after';
 type Params={key:string;owner:string};
@@ -34,7 +34,13 @@ export class DraftCreationWorkflow extends WorkflowEntrypoint<DraftJobBindings,P
           return {done:terminal};
         }
       });
-      if(result.done)return;
+      if(result.done){
+        await step.do('remove-completed-execution-checkpoints',async()=>{
+          const row=await this.env.DB.prepare('SELECT status FROM printify_draft_results WHERE request_key=? AND user_id=?').bind(key,owner).first<{status:string}>();
+          if(row?.status==='succeeded')await cleanupCompletedDraftJob(this.env.ARTWORK as unknown as Parameters<typeof cleanupCompletedDraftJob>[0],owner,event.instanceId);
+        });
+        return;
+      }
       await step.sleep(`wait-before-recovery-${attempt}`,'wait' in result?result.wait as number:Math.min(600000,5000*2**Math.min(attempt,7)));
     }
     // Preserve the uncertain reservation. Elapsed time is never evidence that

@@ -4261,6 +4261,8 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
       const createdNow=createdDesignResults.filter(result=>result.status==="Created"&&result.id).length;
       if(createdNow>0){
         setComplete(true);
+        // Creation consumes quota here, not later when Etsy details are edited.
+        setUsageRevision(current=>current+1);
         /* D440 - creating the drafts used to jump straight to Listing details,
            which is why she kept arriving at step 3 having never seen step 2. The
            listing-photo tools appear on THIS page the moment the drafts exist, so

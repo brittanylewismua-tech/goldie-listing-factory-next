@@ -2,13 +2,26 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {DatabaseSync} from 'node:sqlite';
 import {createProductWithImageRetries,UncertainProductCreation} from '../app/api/printify/product-creation.ts';
-import {CLAIM_DRAFT_JOB_SQL,pendingDraftJob,writeJobObject,readJobObject} from '../app/api/printify/draft-job-store.ts';
+import {CLAIM_DRAFT_JOB_SQL,pendingDraftJob,writeJobObject,readJobObject,cleanupCompletedDraftJob} from '../app/api/printify/draft-job-store.ts';
 import {draftCreationKey,draftVariantSku} from '../app/api/printify/draft-identity.ts';
 import {reconcileDraftJob} from '../app/api/printify/reconcile-draft-job.ts';
 import {retryAfterMilliseconds,waitForDraftRetry,RetryDraftLater} from '../app/api/printify/retry-after.ts';
 
 test('long provider cooldowns yield to durable scheduling without shortening them',async()=>{
   await assert.rejects(waitForDraftRetry(95000),error=>error instanceof RetryDraftLater&&error.milliseconds===95000);
+});
+test('completed checkpoint cleanup cannot delete saved artwork or another job',async()=>{
+  let deleted=[];
+  await cleanupCompletedDraftJob({async list(options){assert.equal(options.prefix,'draft-jobs/owner/job/');return {objects:[{key:'draft-jobs/owner/job/input.json'},{key:'draft-jobs/owner/other/product.json'},{key:'saved-artwork/design.png'}],truncated:false}},async delete(keys){deleted=keys}},'owner','job');
+  assert.deepEqual(deleted,['draft-jobs/owner/job/input.json']);
+});
+test('checkpoint cleanup is restartable and signals remaining pages',async()=>{
+  const objects=[{key:'draft-jobs/owner/job/input.json'},{key:'draft-jobs/owner/job/product.json'}];
+  const bucket={async list(){return {objects:objects.slice(0,1),truncated:objects.length>1}},async delete(keys){for(const key of keys){const index=objects.findIndex(object=>object.key===key);if(index>=0)objects.splice(index,1)}}};
+  await assert.rejects(cleanupCompletedDraftJob(bucket,'owner','job'),/remain to clean up/);
+  await cleanupCompletedDraftJob(bucket,'owner','job');
+  await cleanupCompletedDraftJob(bucket,'owner','job');
+  assert.equal(objects.length,0);
 });
 
 test('lost, gateway, malformed and ID-less success responses never replay a creation POST',async()=>{
@@ -54,6 +67,6 @@ test('reconciliation is read-only and rejects lookalikes from the same uploaded 
   const key=await draftCreationKey('owner',1,'template','design'),expected={key,shopId:1,blueprintId:2,providerId:3,variantIds:[10]};
   const exact={id:'right',shop_id:1,blueprint_id:2,print_provider_id:3,variants:[{id:10,sku:draftVariantSku(key,10)}]};
   let calls=0;
-  const found=await reconcileDraftJob(expected,'fake',async(url,init)=>{calls++;assert.equal(init.method,undefined);assert.match(String(url),/limit=50&page=1/);return Response.json({data:[{...exact,id:'wrong',variants:[{id:10,sku:'other-job'}]},exact],last_page:1})});
+  const found=await reconcileDraftJob(expected,'fake',async(url,init)=>{calls++;assert.equal(init.method,undefined);assert.match(String(url),/limit=50&page=1/);return Response.json({data:[...Array.from({length:49},(_,n)=>({...exact,id:'wrong'+n,variants:[{id:10,sku:'other-job'}]})),exact],last_page:200})});
   assert.equal(found.id,'right');assert.equal(calls,1);
 });

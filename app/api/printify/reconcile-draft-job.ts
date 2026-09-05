@@ -9,6 +9,10 @@ export async function reconcileDraftJob<T extends Product>(expected:Parameters<t
     const result=await response.json() as {data?:T[];current_page?:number;last_page?:number};
     if(!Array.isArray(result.data))return null;
     for(const product of result.data){if(belongsToCreation(product,expected)){if(match&&match.id!==product.id)throw Error('Multiple drafts matched one creation identity; manual review is required.');match=product;}}
+    // The owner/shop/template/variant nonce is an exact identity, not a title
+    // similarity. Adopting it never creates anything; unrelated older pages
+    // must not prevent recovery in a large shop.
+    if(match)return match;
     if(result.data.length<50||(Number.isInteger(result.last_page)&&page>=Number(result.last_page)))return match;
   }
   // We did not finish scanning: do not claim uniqueness or create a replacement.

@@ -14,6 +14,15 @@ export function pendingDraftJob(value:string|null):PendingDraftJob|null{
   try{const data=JSON.parse(value);return data?.version===1&&typeof data.inputKey==='string'&&typeof data.workflowId==='string'&&['queued','uploaded','creating','created'].includes(data.phase)?data:null;}catch{return null;}
 }
 export const jobObjectPrefix=(owner:string,workflowId:string)=>`draft-jobs/${encodeURIComponent(owner)}/${encodeURIComponent(workflowId)}/`;
+/** Only disposable execution checkpoints are removed, and only after the
+ * canonical successful result is persisted. Saved artwork/media live elsewhere. */
+export async function cleanupCompletedDraftJob(bucket:{list(options:{prefix:string;limit:number}):Promise<{objects:Array<{key:string}>;truncated:boolean}>;delete(keys:string[]):Promise<void>},owner:string,workflowId:string){
+  const prefix=jobObjectPrefix(owner,workflowId);
+  const page=await bucket.list({prefix,limit:100});
+  const keys=page.objects.map(object=>object.key).filter(key=>key.startsWith(prefix));
+  if(keys.length)await bucket.delete(keys);
+  if(page.truncated)throw Error('More execution checkpoints remain to clean up.');
+}
 export type JobBucket={put(key:string,value:Uint8Array,options?:{customMetadata?:Record<string,string>;httpMetadata?:{contentType?:string}}):Promise<unknown>;get(key:string):Promise<{arrayBuffer():Promise<ArrayBuffer>;body?:ReadableStream;customMetadata?:Record<string,string>}|null>};
 export async function writeJobObject(bucket:JobBucket,owner:string,workflowId:string,name:string,value:unknown){
   if(!/^[a-z-]+\.json$/.test(name))throw Error('Invalid job checkpoint name.');
