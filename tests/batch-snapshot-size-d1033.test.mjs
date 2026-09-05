@@ -13,7 +13,7 @@ test("saved batch snapshots compact draft mockups and variant costs",()=>{
 });
 
 test("explicit price approval persists the same compact snapshot",()=>{
-  assert.match(app,/persistBatchNow\(batchIdRef\.current,\{drafts:nextDrafts\.map\(snapshotDraft\),pricingApproved:true\}\)/);
+  assert.match(app,/persistBatchNow\(sourceBatchId,\{\.\.\.sourceSnapshot,drafts:nextDrafts\.map\(snapshotDraft\),pricingApproved:true\}\)/);
 });
 
 test("batch endpoint accepts a compact full 20-design run",()=>{

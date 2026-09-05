@@ -2179,7 +2179,7 @@ test("D903: the Images page describes only work performed on that page",async()=
 test("names every listing missing a required photo (fixes D33)",async()=>{
   const app=await readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8");
   assert.match(app,/missingPhotoDraftIds\.map\(clientId=>/);
-  assert.match(app,/design\?\.name\|\|draft\?\.name\|\|"Listing"/);
+  assert.match(app,/<b>Listing \{files\.findIndex\(file=>file\.id===clientId\)\+1\}<\/b>/);
   assert.match(app,/Product and design preview/);
   assert.match(app,/jumpToMissingPhotoListing\(clientId\)/);
 });
@@ -3770,7 +3770,7 @@ test("one press creates drafts for every product in a bundle — D485", async ()
 
   // It advances itself, and saves the final child before stopping rather than looping.
   assert.match(app, /if\(bundleIndex\+1>=bundleRecipes\.length\)\{[\s\S]{0,500}?persistBatchNow\(batchIdRef\.current\)[\s\S]{0,250}?setBundleRun\(null\)/);
-  assert.match(app, /void continueBundle\(\)\.finally\(\(\)=>\{bundleAdvancing\.current=false\}\)/);
+  assert.match(app, /void continueBundle\(\)\.catch\(error=>\{setBundleRun\(null\);stopWith\([\s\S]{0,250}?\}\)\.finally\(\(\)=>\{bundleAdvancing\.current=false\}\)/);
   assert.match(app, /if\(running\|\|preparingEtsy\|\|preflightOpen\|\|switchingProduct\)return/,
     "it must not start a product while one is mid-flight or awaiting confirmation");
 

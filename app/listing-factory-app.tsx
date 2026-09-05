@@ -3,6 +3,7 @@ import { printifyProductLabel, familyFromVariants } from "./mockup-compatibility
 import { uniqueMockupEntries,correspondingMockupIndices } from "./printify-preview-details";
 import { applyProductFacts } from "./etsy-product-facts";
 import { draftsInDesignOrder } from "./listing-order";
+import { mergeMatchingDrafts, serializedBatchWrites } from "./batch-draft-integrity";
 import { requestEtsyOptions } from "./etsy-options-request";
 import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { createPortal } from "react-dom";
@@ -1000,6 +1001,8 @@ export default function ListingFactoryApp() {
   const runIdRef=useRef("");
   const runStartedRef=useRef("");
   const snapshotReady=useRef(false);
+  const writeBatch=useRef(serializedBatchWrites());
+  const [batchSaveStatus,setBatchSaveStatus]=useState<"idle"|"saving"|"saved"|"failed">("idle");
   const resumeAttempted=useRef(false);
   const draftRunActive=useRef(false);
   const stagedArtworkCache=useRef(new Map<string,{file:File;promise:Promise<{stagedId:string;reference:string;fileName:string}>}>());
@@ -2128,17 +2131,28 @@ export default function ListingFactoryApp() {
 
   async function persistBatchNow(existingId?:string,stateOverrides:Record<string,unknown>={}){
     const id=existingId||batchIdRef.current||crypto.randomUUID();
-    batchIdRef.current=id;
+    // A late save must not navigate back to its source product or change the
+    // current child id. The caller's captured id owns this entire write.
+    const isCurrent=!batchIdRef.current||batchIdRef.current===id;
+    if(isCurrent)batchIdRef.current=id;
     rememberBundleBatch(activeRecipe?.id,id);
-    window.localStorage.setItem("goldie-active-batch",id);
+    if(isCurrent)window.localStorage.setItem("goldie-active-batch",id);
     /* The child names its run, and the run row is kept alongside it. */
-    void persistRunNow();
-    await fetch("/api/batches",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,parentBatchId:runIdRef.current&&runIdRef.current!==id?runIdRef.current:undefined,status:running?"processing":keptAsDrafts?"draft":complete?drafts.some(draft=>draft.status!=="Created")?"needs_attention":"complete":"draft",step:workflowStep,setupName:batchDisplayName||activeBundle?.name||activeRecipe?.name||"",productTitle:templateDetails?.blueprintTitle||"",designCount:files.length,state:batchStateSnapshot(stateOverrides)})}).catch(()=>undefined);
+    if(isCurrent)void persistRunNow();
+    const payload=JSON.stringify({id,parentBatchId:runIdRef.current&&runIdRef.current!==id?runIdRef.current:undefined,status:running?"processing":keptAsDrafts?"draft":complete?drafts.some(draft=>draft.status!=="Created")?"needs_attention":"complete":"draft",step:workflowStep,setupName:batchDisplayName||activeBundle?.name||activeRecipe?.name||"",productTitle:templateDetails?.blueprintTitle||"",designCount:files.length,state:batchStateSnapshot(stateOverrides)});
+    return writeBatch.current(id,async()=>{
+      if(batchIdRef.current===id)setBatchSaveStatus("saving");
+      try{
+        const response=await fetch("/api/batches",{method:"POST",headers:{"Content-Type":"application/json"},body:payload});
+        if(!response.ok)throw new Error("Your latest changes could not be saved.");
+        if(batchIdRef.current===id)setBatchSaveStatus("saved");
+      }catch(error){if(batchIdRef.current===id)setBatchSaveStatus("failed");throw error;}
+    });
   }
   useEffect(()=>{if(!snapshotReady.current||restoringBatch||batchHeldByAnotherTab||(!files.length&&!drafts.length))return;/* D1019 · Capture the child id with the render that produced this snapshot.
      A bundle transition changes batchIdRef before React cleans up the outgoing
      autosave. Reading the ref inside the timer let that old product overwrite
-     the new child's record with its own drafts. */const targetId=batchIdRef.current;const timer=window.setTimeout(()=>{void persistBatchNow(targetId);},700);return()=>window.clearTimeout(timer);
+     the new child's record with its own drafts. */const targetId=batchIdRef.current;const timer=window.setTimeout(()=>{void persistBatchNow(targetId).catch(()=>undefined);},700);return()=>window.clearTimeout(timer);
   },[restoringBatch,workflowStep,finishPhase,template,templateDetails,description,pricing,selectedColorIds,selectedSizeIds,variantPrices,etsyShippingProfileId,pricingApproved,mockupTheme,activeRecipe,activeBundle,bundleRecipes,bundleIndex,files.map(file=>`${file.id}:${file.title}:${file.tags.join("|")}:${file.blurb||""}:${file.descriptionOverride??""}:${file.sizeGuideName||""}:${JSON.stringify(file.etsy||{})}`).join(";"),drafts,complete,running,bulkTitles,batchKeywords,titleJoiner,titleBuilderMode,autoTitleBankId,manualKeywordBankId,sharedMockups,preparedMockupCounts,printifyImageIndices,printifyImageSelections,sizeGuideName,batchDisplayName,keptAsDrafts,batchReceipt]);
 
   useEffect(() => {
@@ -2325,6 +2339,15 @@ export default function ListingFactoryApp() {
     setBatchToolsOpen(true);
     setBatchDisplayName("");
     setKeptAsDrafts(false);
+    setBatchSaveStatus("idle");
+    // Editor focus, validation and approvals belong to a run, not a saved
+    // product. A fresh batch must not reopen a prior batch's color/photo task.
+    setActiveTask("");setPhotoFocusId("");setReviewEdit(null);setOpenFacet({});
+    setSelectedPlacementDrafts([]);setOpenPricing([]);setImageStepError("");setMissingPhotoDraftIds([]);
+    setDraftVariantError("");setFileNotice("");setTitleBuildMessage("");
+    setBundleApproved({});setBundlePrices({});setBundlePricing({});setBundleShipping({});
+    setBundleSizeChoices({});setBundleMockupChoices({});setBundleKeywordChoices({});setBundleLoadErrors({});
+    setSelectedSizeIds([]);setResumeProcessing(false);resumeAttempted.current=false;
     templateLoadVersion.current+=1;setLoadingTemplate(false);setFiles([]);setFileError("");setDrafts([]);setProcessed(0);setRunTotal(0);setComplete(false);setOpenedDrafts([]);setOpenAllMessage("");setBulkTitles("");setBatchKeywords([]);setTitleJoiner(", ");setTitleBuilderMode("ai");setAutoTitleBank(null);setAutoTitleBankId("");setManualKeywordBankId("");setActiveDesign("");setPreflightOpen(false);setUploadNoticeOpen(false);setPrintifyImageIndices([]);setPrintifyImageSelections({});setSharedMockups(undefined);setPreparedMockupCounts({});setFinishPhase("details");setVariantPrices({});setSelectedColorIds([]);setColorsRemembered(false);setPricingApproved(false);setSizeGuideName("");setSizeGuideStatus("");setBatchReceipt(null);setPublishMessage("");syncedListingSignatures.current.clear();
     if(clearProduct){setTemplate("");setTemplateDetails(null);setTemplateError("");setDescription("");setMockupTheme("");setActiveRecipe(null);setActiveBundle(null);setBundleRecipes([]);setBundleIndex(0);setBundleColorProducts({});setBundleBatchIds({});setBundleColorChoices({});setBundleQualityDecisions({});setPricing(current=>({...current,targetProfit:DEFAULT_PRICING.targetProfit,shippingCost:0,shippingCharged:0}))}
     if (folderPicker.current) folderPicker.current.value = "";
@@ -2950,7 +2973,7 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
   function taskSummary(task:string,design:DesignFile):string{
     if(task==="description")return (finalDescription(design,design.etsy)||"").replace(/\s+/g," ").trim()||"No description";
     if(task==="etsy")return design.etsy?.category?.trim()||"No Etsy category yet";
-    return design.title.trim()||design.name;
+    return design.title.trim()||`Listing ${files.findIndex(file=>file.id===design.id)+1}`;
   }
   function designTaskRows(task:string,standing:(design:DesignFile)=>string,inner:(design:DesignFile)=>ReactNode,flags?:(design:DesignFile)=>ListingFlag[],only?:DesignFile){
     /* D787 · With `only`, this returns that one listing's editor and nothing
@@ -3268,7 +3291,7 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
              which is worse than not naming them. Filenames differ at the end, so
              keep both ends. */
           const shorten=(name:string,limit:number)=>name.length<=limit?name:`${name.slice(0,Math.ceil(limit/2)-1)}…${name.slice(-Math.floor(limit/2))}`;
-          const named=missing.map(draft=>files.find(file=>file.id===draft.clientId)?.title?.trim()||files.find(file=>file.id===draft.clientId)?.file.name||"").filter(Boolean);
+          const named=missing.map(draft=>files.find(file=>file.id===draft.clientId)?.title?.trim()||`Listing ${files.findIndex(file=>file.id===draft.clientId)+1}`).filter(Boolean);
           if(missing.length===1&&named[0])return `${shorten(named[0],60)} still needs a photo`;
           if(named.length&&named.length===missing.length)return `${missing.length} listings still need a photo: ${named.map(name=>shorten(name,40)).join(", ")}`;
           return `${missing.length} of ${selectedPublishDrafts().length} selected listings still need a photo`;
@@ -3530,7 +3553,7 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
           setTitleBuildMessage("");
           setBundleBatchIds(current=>({...current,...knownBatchIds}));
           window.scrollTo(0,0);
-        }finally{setSwitchingProduct("")}
+        }catch(error){stopWith("The current product could not be saved.",[error instanceof Error?error.message:"Try saving again."])}finally{setSwitchingProduct("")}
       })();
       return;
     }
@@ -4329,13 +4352,19 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
   }
   async function approveActualPricingGroup(group:{key:string;drafts:DraftResult[]},editedPrices?:Record<string,number>){
     if(pricingApprovalGroup||savingDraftVariants)return;
+    const sourceBatchId=batchIdRef.current,sourceRecipeId=activeRecipe?.id;
+    const sourceSnapshot=batchStateSnapshot();
     setPricingApprovalGroup(group.key);
     const failures:string[]=[],saved:DraftResult[]=[];
     const targets=editedPrices?group.drafts:group.drafts.filter(draft=>!draft.costReview?.approved);
     try{await runBounded(targets,2,async draft=>{try{const updated=await saveActualDraftPricing(draft,editedPrices);if(updated)saved.push(updated);return true}catch(error){failures.push(`${draft.title||draft.name}: ${error instanceof Error?error.message:"could not save prices"}`);return false}})}finally{setPricingApprovalGroup("")}
     const byId=new Map(saved.map(draft=>[draft.id,draft])),nextDrafts=drafts.map(draft=>byId.get(draft.id)||draft);
-    if(saved.length){setDrafts(nextDrafts);setBundleMembers(current=>Object.fromEntries(Object.entries(current).map(([recipeId,member])=>[recipeId,{...member,drafts:member.drafts.map(item=>byId.get(item.id)||item)}])))}
-    if(failures.length)stopWith("Some final prices were not approved.",failures);else{/* The Printify update and the batch snapshot are one user action. Waiting for the debounced autosave let a product switch or reload restore the pre-approval snapshot even though the button had already said Saved. */setPricingApproved(true);await persistBatchNow(batchIdRef.current,{drafts:nextDrafts.map(snapshotDraft),pricingApproved:true});}
+    if(saved.length){setDrafts(current=>mergeMatchingDrafts(current,saved));setBundleMembers(current=>Object.fromEntries(Object.entries(current).map(([recipeId,member])=>[recipeId,{...member,drafts:mergeMatchingDrafts(member.drafts,saved)}])))}
+    if(failures.length)stopWith("Some final prices were not approved.",failures);else{
+      if(batchIdRef.current===sourceBatchId&&activeRecipeRef.current?.id===sourceRecipeId)setPricingApproved(true);
+      try{await persistBatchNow(sourceBatchId,{...sourceSnapshot,drafts:nextDrafts.map(snapshotDraft),pricingApproved:true});}
+      catch(error){stopWith("Prices were saved in Printify; the batch save needs another attempt.",[error instanceof Error?error.message:"Save this batch again."]);}
+    }
   }
   async function syncPreparedListing(design:DesignFile,details:EtsyDetails){await syncListingFields(design,details)}
   async function resolveEtsyOptions(details:EtsyDetails,taxonomyId?:number){const payload=await requestEtsyOptions({...details,taxonomyId,includeCategories:!haveEtsyCategories.current,product:{blueprintTitle:templateDetails?.blueprintTitle,brand:templateDetails?.brand,model:templateDetails?.model}}) as {categories?:EtsyCategoryOption[];selected:{id:number;path:string};properties?:EtsyPropertySelection[]};if(payload.categories?.length){haveEtsyCategories.current=true;setEtsyCategories(payload.categories)}
@@ -4434,12 +4463,12 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
            its pre-creation state and offer to create duplicate drafts. */
         if(bundleFinishing.current)return;
         bundleFinishing.current=true;
-        void persistBatchNow(batchIdRef.current).finally(()=>{bundleFinishing.current=false;setBundleRun(null)});
+        void persistBatchNow(batchIdRef.current).catch(error=>stopWith("The drafts exist in Printify, but this batch needs to be saved again.",[error instanceof Error?error.message:"Try Save as draft."])).finally(()=>{bundleFinishing.current=false;setBundleRun(null)});
         return
       }
       if(bundleAdvancing.current)return;
       bundleAdvancing.current=true;
-      void continueBundle().finally(()=>{bundleAdvancing.current=false});
+      void continueBundle().catch(error=>{setBundleRun(null);stopWith("The current product could not be saved.",[error instanceof Error?error.message:"Save before continuing."])}).finally(()=>{bundleAdvancing.current=false});
       return;
     }
     /* Waiting on the incoming product's own saved defaults to land. If one is
@@ -4614,7 +4643,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
         <header className="factory-top">
           <b className="factory-top-batch">{batchDisplayName?.trim()||"New listing batch"}</b>
           <div className="factory-top-right">
-            <span className="factory-top-save">Saved just now</span>
+            <span className="factory-top-save" role="status">{batchSaveStatus==="failed"?<button type="button" onClick={()=>void persistBatchNow(batchIdRef.current).catch(()=>undefined)}>Changes not saved · Retry</button>:batchSaveStatus==="saving"?"Saving…":batchSaveStatus==="saved"?"Saved":""}</span>
             <div className="factory-account-wrap">
               <button type="button" className="factory-account" aria-haspopup="menu"
                 aria-expanded={accountMenuOpen} onClick={()=>setAccountMenuOpen(open=>!open)}>
@@ -5353,10 +5382,10 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
 
       {blockingModal&&<div className="publish-confirm-backdrop" role="presentation"><section className="publish-confirm blocking-modal" role="alertdialog" aria-modal="true" aria-labelledby="blocking-modal-title"><span className="publish-confirm-icon">!</span><p className="mini-label">REQUIRED BEFORE CONTINUING</p><h2 id="blocking-modal-title">{blockingModal.title}</h2>{blockingModal.copy&&<p>{blockingModal.copy}</p>}<div className="publish-missing"><b>Fix these items:</b><ul>{blockingModal.issues.map(issue=><li key={issue}>{issue}</li>)}</ul></div><div className="publish-confirm-actions"><button autoFocus onClick={()=>setBlockingModal(null)}>Got it. I’ll fix this</button></div></section></div>}
       {pendingCategoryChange&&<div className="publish-confirm-backdrop" role="presentation"><section className="publish-confirm" role="alertdialog" aria-modal="true" aria-labelledby="category-change-title"><span className="publish-confirm-icon">!</span><p className="mini-label">ETSY CATEGORY CHANGE</p><h2 id="category-change-title">Change this listing’s Etsy category?</h2><p>{pendingCategoryChange.clearedCount} completed {pendingCategoryChange.clearedCount===1?"field does":"fields do"} not exist in the new category and will be cleared. Any compatible values will stay filled.</p><div className="publish-confirm-actions"><button autoFocus onClick={()=>setPendingCategoryChange(null)}>Keep current category</button><button className="danger" onClick={()=>{const pending=pendingCategoryChange;setPendingCategoryChange(null);updateDesign(pending.designId,{etsy:pending.details,etsyError:""})}}>Change category and clear {pendingCategoryChange.clearedCount}</button></div></section></div>}
-      {missingPhotoDraftIds.length>0&&typeof document!=="undefined"&&createPortal(<div className="publish-confirm-backdrop missing-photo-backdrop" role="presentation"><section className="publish-confirm missing-photo-modal" role="alertdialog" aria-modal="true" aria-labelledby="missing-photo-title"><button className="missing-photo-close" type="button" aria-label="Close" onClick={()=>setMissingPhotoDraftIds([])}>×</button><span className="publish-confirm-icon">!</span><p className="mini-label">PHOTOS REQUIRED</p><h2 id="missing-photo-title">{missingPhotoDraftIds.length} {missingPhotoDraftIds.length===1?"listing needs":"listings need"} a photo</h2><p>Add at least one Printify photo or lifestyle mockup to every listing shown below.</p><div className="missing-photo-list">{missingPhotoDraftIds.map(clientId=>{const draft=drafts.find(item=>item.clientId===clientId),design=files.find(item=>item.id===clientId),preview=draft?.previewUrl||design?.previewUrl;return <article key={clientId}>{preview?<img src={preview} alt="Product and design preview"/>:<div className="missing-photo-placeholder" aria-hidden="true"/>}<b>{design?.name||draft?.name||"Listing"}</b><button type="button" onClick={()=>jumpToMissingPhotoListing(clientId)}>Go to this listing</button></article>})}</div></section></div>,document.body)}
+      {missingPhotoDraftIds.length>0&&typeof document!=="undefined"&&createPortal(<div className="publish-confirm-backdrop missing-photo-backdrop" role="presentation"><section className="publish-confirm missing-photo-modal" role="alertdialog" aria-modal="true" aria-labelledby="missing-photo-title"><button className="missing-photo-close" type="button" aria-label="Close" onClick={()=>setMissingPhotoDraftIds([])}>×</button><span className="publish-confirm-icon">!</span><p className="mini-label">PHOTOS REQUIRED</p><h2 id="missing-photo-title">{missingPhotoDraftIds.length} {missingPhotoDraftIds.length===1?"listing needs":"listings need"} a photo</h2><p>Add at least one Printify photo or lifestyle mockup to every listing shown below.</p><div className="missing-photo-list">{missingPhotoDraftIds.map(clientId=>{const draft=drafts.find(item=>item.clientId===clientId),design=files.find(item=>item.id===clientId),preview=draft?.previewUrl||design?.previewUrl;return <article key={clientId}>{preview?<img src={preview} alt="Product and design preview"/>:<div className="missing-photo-placeholder" aria-hidden="true"/>}<b>Listing {files.findIndex(file=>file.id===clientId)+1}</b><button type="button" onClick={()=>jumpToMissingPhotoListing(clientId)}>Go to this listing</button></article>})}</div></section></div>,document.body)}
       {pixelWarningOpen&&<div className="publish-confirm-backdrop" role="presentation"><section className="publish-confirm pixel-warning-modal" role="alertdialog" aria-modal="true" aria-labelledby="pixel-warning-title"><span className="publish-confirm-icon">!</span><p className="mini-label">PRINT RESOLUTION CHECK</p><h2 id="pixel-warning-title">One or more of these designs fall below Printify’s pixel size recommendations for this product.</h2><p>These designs may still print, but they may show a lower resolution inside the Printify editor at the largest enabled size. Review the comparison below before deciding whether to continue.</p><div className="pixel-comparison" role="region" aria-label="Uploaded design pixel comparison"><div className="pixel-comparison-head" aria-hidden="true"><b>Design</b><b>Uploaded size</b><b>Printify recommends</b></div><div className="pixel-comparison-rows">{(activeBundle&&bundleQualityIssues.length
-              ?bundleQualityIssues.map(issue=>({id:issue.key,name:`${issue.fileName} · ${issue.productName}`,width:issue.actualWidth,height:issue.actualHeight,needWidth:issue.requiredWidth,needHeight:issue.requiredHeight}))
-              :belowRecommendedPixels.map(file=>({id:file.id,name:file.name,width:file.width||0,height:file.height||0,needWidth:recommendedPixelSize.width,needHeight:recommendedPixelSize.height})))
+              ?bundleQualityIssues.map(issue=>({id:issue.key,name:`Design ${files.findIndex(file=>file.id===issue.fileId)+1} · ${issue.productName}`,width:issue.actualWidth,height:issue.actualHeight,needWidth:issue.requiredWidth,needHeight:issue.requiredHeight}))
+              :belowRecommendedPixels.map(file=>({id:file.id,name:`Design ${files.findIndex(item=>item.id===file.id)+1}`,width:file.width||0,height:file.height||0,needWidth:recommendedPixelSize.width,needHeight:recommendedPixelSize.height})))
               .map(row=><div className="pixel-comparison-row" key={row.id}><b title={row.name}>{row.name}</b><span><small>Uploaded size</small>{row.width.toLocaleString()} × {row.height.toLocaleString()} px</span><span><small>Printify recommends</small>{row.needWidth.toLocaleString()} × {row.needHeight.toLocaleString()} px</span></div>)}</div></div><div className="publish-confirm-actions"><button autoFocus onClick={()=>setPixelWarningOpen(false)}>Go back and review</button><button className="pixel-proceed" onClick={()=>{setPixelWarningOpen(false);
               /* D509 - pressing this on a bundle is the decision the old dialog
                  demanded, so record it and carry on rather than sending her back

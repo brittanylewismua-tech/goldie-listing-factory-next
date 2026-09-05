@@ -5,7 +5,7 @@ import fs from "node:fs";
 const app=fs.readFileSync(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8");
 
 test("D1019: a stale outgoing autosave cannot overwrite the incoming bundle child",()=>{
-  assert.match(app,/const targetId=batchIdRef\.current;const timer=window\.setTimeout\(\(\)=>\{void persistBatchNow\(targetId\);\},700\)/);
+  assert.match(app,/const targetId=batchIdRef\.current;const timer=window\.setTimeout\(\(\)=>\{void persistBatchNow\(targetId\)\.catch\(\(\)=>undefined\);\},700\)/);
 });
 
 test("D1019: automatic bundle creation waits for the incoming product's own template",()=>{

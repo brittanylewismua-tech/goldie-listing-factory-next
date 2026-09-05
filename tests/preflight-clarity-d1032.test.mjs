@@ -13,8 +13,8 @@ test("draft confirmation contains only the decisions needed to continue",()=>{
   assert.equal((modal.match(/<div><span>/g)||[]).length,4);
 });
 
-test("final price approval is persisted before a bundle product can be switched",()=>{
-  assert.match(app,/await persistBatchNow\(batchIdRef\.current,\{drafts:nextDrafts\.map\(snapshotDraft\),pricingApproved:true\}\)/);
+test("final price approval persists to its original product even when a bundle product is switched",()=>{
+  assert.match(app,/await persistBatchNow\(sourceBatchId,\{\.\.\.sourceSnapshot,drafts:nextDrafts\.map\(snapshotDraft\),pricingApproved:true\}\)/);
   assert.match(app,/const byId=new Map\(saved\.map\(draft=>\[draft\.id,draft\]\)\),nextDrafts=drafts\.map/);
 });
 
