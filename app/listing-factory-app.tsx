@@ -3342,7 +3342,7 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
               Shortened from the middle, the way D494 shortens them elsewhere -
               filenames differ at the end, so both ends have to survive. */}
           <h3>Listing {index+1} of {files.length}</h3>
-          {(()=>{const shot=drafts.find(draft=>draft.clientId===design.id)?.previewUrl;return shot?<button type="button" className="listing-product-preview" onClick={()=>window.open(shot,"_blank","noopener,noreferrer")} aria-label="Open the Printify listing preview larger"><img src={shot} alt="Printify listing preview" decoding="async"/></button>:null})()}
+          {(()=>{const shot=drafts.find(draft=>draft.clientId===design.id)?.previewUrl;return shot?<button key={`${design.id}:${shot}`} type="button" className="listing-product-preview" onClick={()=>window.open(shot,"_blank","noopener,noreferrer")} aria-label="Open the Printify listing preview larger"><img src={shot} alt="Printify listing preview" decoding="async"/></button>:null})()}
           {titlesRows(design)}
           {descriptionRows(design)}
         </div>

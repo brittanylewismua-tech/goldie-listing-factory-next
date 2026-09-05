@@ -7,6 +7,10 @@ const fixture=()=>[
   {id:'front-back',costReview:{approved:false,variants:[{id:101,cost:1854,price:2400}]}},
   {id:'front-only',costReview:{approved:true,variants:[{id:101,cost:1238,price:2400}]}},
 ];
+test('switching title listings remounts the preview instead of retaining the previous decoded image',()=>{
+  const source=readFileSync(new URL('../app/listing-factory-app.tsx',import.meta.url),'utf8');
+  assert.match(source,/button key=\{`\$\{design.id\}:\$\{shot\}`\} type="button" className="listing-product-preview"/);
+});
 test('same Printify variant ID can retain distinct front-only and front/back prices',()=>{
   const original=fixture();
   let drafts=updateDraftPriceEdits(original,new Set(['front-back']),{'101':3400});
