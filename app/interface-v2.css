@@ -3781,3 +3781,7 @@ html, body { background: var(--lf-paper); }
 
 /* Keep the listing heading below both the fixed account bar and sticky switcher. */
 .app-shell .factory-listing-screen > .factory-listing-grid{scroll-margin-top:160px}
+/* Do not flash an empty uploader or expose stale controls during restoration. */
+.app-shell .steps-column[data-restoring="true"]{display:none!important}
+.app-shell .size-guide-actions{margin-left:auto;display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:12px}
+.app-shell .size-guide-actions button{margin:0}

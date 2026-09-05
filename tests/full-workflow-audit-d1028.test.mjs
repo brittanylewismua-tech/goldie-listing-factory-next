@@ -12,7 +12,7 @@ test("the listing batch panel does not repeat Etsy guidance above the real edito
 
 test("single-listing photo review hides the meaningless apply-to-every-listing action", () => {
   assert.match(app, /showApplyAll=\{drafts\.filter\(item=>item\.status==="Created"\)\.length>1\}/);
-  assert.match(app, /showApplyAll\?<button[^>]*>[\s\S]*?Apply these photos to every listing/);
+  assert.match(app, /showApplyAll\?<button[^>]*>[\s\S]*?Apply photos to this product’s listings/);
 });
 
 test("returning to Product after drafts exist still has a visible continuation", () => {

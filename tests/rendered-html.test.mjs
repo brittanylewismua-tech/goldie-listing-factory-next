@@ -1666,7 +1666,7 @@ test("explains and styles every Printify photo selection action",async()=>{
     Promise.all([readFile(new URL("../app/approved-functional.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n")),
   ]);
   assert.match(page,/Remove every selected Printify photo from this listing only/);
-  assert.match(page,/Choose the same Printify photos across the entire batch/);
+  assert.match(page,/Use these views for each design on this product/);
   /* D465 · The save-as-default action is gone; the selection saves itself. */
   assert.doesNotMatch(page,/Preselect these photos whenever you use this saved product again/);
   assert.match(page,/Applied to every listing/);
@@ -2002,7 +2002,8 @@ test("keeps bundle titles, placement decisions, review, and failures product-spe
     readFile(new URL("../app/final-listing-review.tsx",import.meta.url),"utf8"),
   ]);
   assert.match(workflow,/bundle-as-product/);
-  assert.match(app,/autoTitleForDesign\(file,bank\.keywords,titleJoiner===", ",nextDetails\)/);
+  const continuation=app.slice(app.indexOf('async function continueBundle('),app.indexOf('async function createCustomShippingProfile('));
+  assert.doesNotMatch(continuation,/autoTitleForDesign/,'AI title creation belongs to the explicit title step, not draft creation');
   assert.match(app,/bundleQualityIssues/);
   /* D167 groups these per design instead of per design-AND-product. */
   /* D664 · The naming is still per product; the sentence now adapts, because a
@@ -2188,7 +2189,7 @@ test("counts and caps every listing at Etsy's 20-photo limit (fixes D67)",async(
   assert.match(app,/slotsLeft=Math\.max\(0,20-reservedPhotos-selected\.size\)/);
   assert.match(app,/Etsy allows 20 listing photos/);
   assert.match(app,/disabled=\{state!=="ready"\|\|\(!selected&&atLimit\)\}/);
-  assert.match(app,/reservedPhotos=\{\(preparedMockupCounts\[draft\.id\|\|""\]\|\|0\)\+\(design\?\.sizeGuideName\|\|sizeGuideName\?1:0\)\}/);
+  assert.match(app,/reservedPhotos=\{\(preparedMockupCounts\[draft\.id\|\|""\]\|\|0\)\+\(design\?\.sizeGuideName\?\?sizeGuideName\?1:0\)\}/);
   assert.match(app,/values\.slice\(0,Math\.max\(0,20-reserved\)\)/);
 });
 

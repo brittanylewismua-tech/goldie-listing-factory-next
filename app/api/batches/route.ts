@@ -2,6 +2,7 @@ import { env } from "cloudflare:workers";
 import { NextResponse } from "next/server";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { bundleHistoryIdentity } from "@/app/batch-history-identity";
+import { APPLY_BUNDLE_KEYWORD_BANK } from "@/app/bundle-keyword-bank";
 
 type RuntimeEnv={DB?:D1Database};
 type BatchListState={templateDetails?:{previewImage?:string;previewImages?:string[]};activeBundle?:{name?:string};activeRecipe?:{name?:string};bundleIndex?:number;bundleRecipes?:unknown[];keptAsDrafts?:boolean;batchDisplayName?:string;designs?:Array<{name?:string}>;drafts?:Array<{id?:string;previewUrl?:string}>;batchReceipt?:{publishedCount?:number}};
@@ -228,6 +229,16 @@ export async function GET(request:Request){const user=await getChatGPTUser();if(
     console.error("batches: listing goal count failed, serving batches without it",error);
   }
   return NextResponse.json({batches:rows.results.map(row=>{const item=batchListItem(row,publishedByBatch,publishedAtByBatch,publishedAtByProduct);const children=childrenByParent.get(String(row.id))||[];return children.length?withRunProgress(item,row,children,publishedByBatch,publishedAtByProduct):item}),prepared:preparedDays,published:publishedDays})}
+
+export async function PATCH(request:Request){
+  const user=await getChatGPTUser();if(!user)return NextResponse.json({error:"Sign in to continue."},{status:401});
+  const database=db();if(!database)return NextResponse.json({error:"Batch history is unavailable."},{status:503});
+  const body=await request.json().catch(()=>null) as {id?:unknown;keywordBankId?:unknown}|null;
+  if(typeof body?.id!=="string"||typeof body.keywordBankId!=="string"||!body.id||!body.keywordBankId||body.id.length>80||body.keywordBankId.length>80)return NextResponse.json({error:"Choose a batch and keyword bank."},{status:400});
+  const result=await database.prepare(APPLY_BUNDLE_KEYWORD_BANK).bind(body.keywordBankId,user.userId,body.id).all<{id:string}>();
+  if(!result.results?.length)return NextResponse.json({error:"That batch or keyword bank was not found."},{status:404});
+  return NextResponse.json({saved:true,updated:result.results.length});
+}
 
 export async function POST(request:Request){const user=await getChatGPTUser();if(!user)return NextResponse.json({error:"Sign in to continue."},{status:401});const database=db();if(!database)return NextResponse.json({error:"Batch history is unavailable."},{status:503});await ensure(database);const body=await request.json() as {id?:string;status?:string;step?:string;setupName?:string;productTitle?:string;designCount?:number;state?:unknown;parentBatchId?:string};const id=String(body.id||crypto.randomUUID()).replace(/[^a-zA-Z0-9-]/g,"").slice(0,80);const allowedStatus=new Set(["draft","processing","needs_attention","complete"]),allowedStep=new Set(["connect","setup","designs","review","finish"]);const status=allowedStatus.has(String(body.status))?String(body.status):"draft",step=allowedStep.has(String(body.step))?String(body.step):"connect";const stateJson=JSON.stringify(body.state??{});if(stateJson.length>1800000)return NextResponse.json({error:"This batch snapshot is too large."},{status:413});/* D871 · A child names its parent run once, when it is first written. The
      COALESCE keeps it: a later autosave that omits it must not orphan a child
