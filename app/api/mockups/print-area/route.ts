@@ -2,6 +2,8 @@ import { printAreaBounds } from "@/app/mockup-compatibility";
 import { NextResponse } from "next/server";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { withErrorLog } from "@/app/error-log";
+import { customerLaunchBlock } from "@/app/customer-launch-gate";
+import { boundedVisionFetch as fetch } from "@/app/paid-vision";
 
 /* D468 - where does a design go on THIS photograph?
  *
@@ -27,6 +29,8 @@ const inRange = (n: unknown) => typeof n === "number" && Number.isFinite(n) && n
 async function handlePOST(request: Request) {
   const user = await getChatGPTUser();
   if (!user) return NextResponse.json({ error: "Sign in to prepare mockups." }, { status: 401 });
+  const blocked = await customerLaunchBlock(user);
+  if (blocked) return NextResponse.json({ error: blocked }, { status: 403 });
   const key = process.env.FAL_KEY;
   if (!key) return NextResponse.json({ corners: null, reason: "not-connected" });
 

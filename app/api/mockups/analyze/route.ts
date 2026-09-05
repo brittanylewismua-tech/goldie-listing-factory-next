@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getChatGPTUser } from "@/app/chatgpt-auth";
+import { customerLaunchBlock } from "@/app/customer-launch-gate";
 
 const MAX_IMAGE_BYTES = 12 * 1024 * 1024;
 
@@ -12,6 +14,10 @@ function allowedImageUrl(value: string, request: Request) {
 
 export async function POST(request: NextRequest) {
   try {
+    const user = await getChatGPTUser();
+    if (!user) return NextResponse.json({ error: "Sign in to prepare mockups." }, { status: 401 });
+    const blocked = await customerLaunchBlock(user);
+    if (blocked) return NextResponse.json({ error: blocked }, { status: 403 });
     const key = process.env.FAL_KEY;
     if (!key) return NextResponse.json({ error: "Smart scene analysis is not connected." }, { status: 503 });
     const body = await request.json() as { imageUrl?: string; prompt?: string };

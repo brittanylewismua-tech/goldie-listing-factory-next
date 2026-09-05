@@ -2,6 +2,7 @@ import { env } from "cloudflare:workers";
 import { and, eq } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
+import { customerLaunchBlock } from "@/app/customer-launch-gate";
 import { getDb } from "@/db";
 import { mockupTemplates } from "@/db/schema";
 import { productSurfaceFamily } from "@/app/mockup-compatibility";
@@ -300,6 +301,8 @@ async function prepareOnce(imageUrl: string, productName: string, key: string, o
 async function handlePOST(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   const user = await getChatGPTUser();
   if (!user) return NextResponse.json({ error: "Sign in to prepare your mockups." }, { status: 401 });
+  const blocked = await customerLaunchBlock(user);
+  if (blocked) return NextResponse.json({ error: blocked }, { status: 403 });
   const key = process.env.FAL_KEY;
   await ensureMockupStorage();
   const { id } = await context.params;

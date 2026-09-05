@@ -3,6 +3,8 @@ import { NextResponse } from "next/server";
 import { bestFitFromBank, clean, normalize } from "../../keyword-ranking.ts";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { excludedProductNouns, namesExcludedProduct } from "@/app/product-type-utils";
+import { customerLaunchBlock } from "@/app/customer-launch-gate";
+import { boundedVisionFetch as fetch } from "@/app/paid-vision";
 
 type Details={category:string;attributes:Record<string,string>;optional:Record<string,string>;blurb:string;confidence:"high"|"review"};
 const validImage=(value:unknown):value is string=>typeof value==="string"&&/^data:image\/(png|jpeg|webp);base64,/i.test(value)&&value.length<18*1024*1024;
@@ -58,6 +60,8 @@ function supportedOptional(input:unknown,context:string){
 }
 async function handlePOST(request:Request){
   const user=await getChatGPTUser();if(!user)return NextResponse.json({error:"Sign in to prepare Etsy details."},{status:401});
+  const blocked=await customerLaunchBlock(user);
+  if(blocked)return NextResponse.json({error:blocked},{status:403});
   const body=await request.json() as {mode?:"details"|"title";image?:string;product?:{blueprintTitle?:string;brand?:string;model?:string;description?:string};title?:string;tags?:string[];keywords?:string[];useCommas?:boolean};
   if(!validImage(body.image))return NextResponse.json({error:"Goldie could not read this design safely."},{status:400});
   const key=process.env.FAL_KEY;if(!key)return NextResponse.json({error:"Automatic Etsy details are temporarily unavailable."},{status:503});
