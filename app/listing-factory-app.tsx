@@ -3098,7 +3098,7 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
         <ArtworkGrid items={listings.filter(({draft})=>draft.status==="Created").map(({draft,design})=>{
           const displayScale=printTargetFor(templateDetails).scale;
           const quality=design?.width&&templateDetails?.maxPrintWidth&&displayScale?printifyDpi(design.width,templateDetails.maxPrintWidth,displayScale):null;
-          const dpi=!quality?"Checking print quality…":quality.dpi>=300?`${quality.dpi} DPI · good to print`:`${quality.dpi} DPI · review before printing`;
+          const dpi=!quality?"Check print quality in Printify":`Estimated ${quality.dpi} DPI · primary design`;
           return {
             key:draft.clientId,
             previewUrl:draft.previewUrl||design?.previewUrl,
