@@ -1,5 +1,6 @@
 "use client";
 import { printifyProductLabel, familyFromVariants } from "./mockup-compatibility";
+import { requestEtsyOptions } from "./etsy-options-request";
 import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import Image from "next/image";
@@ -4291,7 +4292,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
     if(failures.length)stopWith("Some final prices were not approved.",failures);else{/* The Printify update and the batch snapshot are one user action. Waiting for the debounced autosave let a product switch or reload restore the pre-approval snapshot even though the button had already said Saved. */setPricingApproved(true);await persistBatchNow(batchIdRef.current,{drafts:nextDrafts.map(snapshotDraft),pricingApproved:true});}
   }
   async function syncPreparedListing(design:DesignFile,details:EtsyDetails){await syncListingFields(design,details)}
-  async function resolveEtsyOptions(details:EtsyDetails,taxonomyId?:number){const response=await fetch("/api/etsy/taxonomy",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({...details,taxonomyId,includeCategories:!haveEtsyCategories.current,product:{blueprintTitle:templateDetails?.blueprintTitle,brand:templateDetails?.brand,model:templateDetails?.model}})}),payload=await response.json() as {categories?:EtsyCategoryOption[];selected?:{id:number;path:string};properties?:EtsyPropertySelection[];error?:string};if(!response.ok||!payload.selected)throw new Error(payload.error||"Etsy listing options could not be loaded.");if(payload.categories?.length){haveEtsyCategories.current=true;setEtsyCategories(payload.categories)}
+  async function resolveEtsyOptions(details:EtsyDetails,taxonomyId?:number){const payload=await requestEtsyOptions({...details,taxonomyId,includeCategories:!haveEtsyCategories.current,product:{blueprintTitle:templateDetails?.blueprintTitle,brand:templateDetails?.brand,model:templateDetails?.model}}) as {categories?:EtsyCategoryOption[];selected:{id:number;path:string};properties?:EtsyPropertySelection[]};if(payload.categories?.length){haveEtsyCategories.current=true;setEtsyCategories(payload.categories)}
     /* D649 - fill Closure only when the product name settles it, and only when
        Etsy left it blank. An unresolved one stays blank and keeps blocking, which
        is the honest outcome. */
@@ -4328,7 +4329,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
     if(!rest.length)return;
     await runBounded(rest,BACKGROUND_ETSY_CONCURRENCY,async file=>{await prepareOne(file);return file},()=>undefined);
   }
-  async function prepareOne(design:DesignFile){try{const response=await fetch("/api/listing-intelligence",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({
+  async function prepareOne(design:DesignFile){updateDesign(design.id,{etsyError:""});try{const response=await fetch("/api/listing-intelligence",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({
     image:await designPreviewDataUrl(design),
     product:{blueprintTitle:templateDetails?.blueprintTitle,brand:templateDetails?.brand,model:templateDetails?.model,description},title:design.title,tags:design.tags})}),payload=await response.json() as {details?:EtsyDetails;error?:string};if(!response.ok||!payload.details)throw new Error(payload.error||"Etsy details could not be prepared.");const defaults=productEtsyDefaults(templateDetails,activeRecipe?.etsyDefaults),initial={...payload.details,attributes:{...payload.details.attributes,...defaults},blurb:design.blurb?.trim()||payload.details.blurb},baseline=etsyProductBaseline.current,prepared=baseline?{...initial,taxonomyId:baseline.taxonomyId,category:baseline.category,attributes:{...initial.attributes,...baseline.attributes}}:initial,details=await resolveEtsyOptions(prepared);if(!baseline){const physical=Object.fromEntries((details.properties||[]).filter(property=>PHYSICAL_ETSY_FIELDS.test(property.label)&&property.value.trim()).map(property=>[property.label,property.value]));etsyProductBaseline.current={taxonomyId:details.taxonomyId,category:details.category,attributes:physical}}const updatedDesign={...design,blurb:details.blurb};await syncListingFields(updatedDesign,details);updateDesign(design.id,{blurb:details.blurb,etsy:details,etsyError:""});return details}catch(error){updateDesign(design.id,{etsyError:error instanceof Error?error.message:"Etsy details could not be prepared."});return null}}
   async function retryOneEtsyListing(design:DesignFile){if(preparingListingId)return;setPreparingListingId(design.id);try{await prepareOne(design)}finally{setPreparingListingId("")}}
