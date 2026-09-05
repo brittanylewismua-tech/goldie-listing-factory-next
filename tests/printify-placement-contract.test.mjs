@@ -98,8 +98,10 @@ console.log("scene classification ok");
      render logged {x:.5,y:.5,scale:1} with no side. */
   assert.match(route, /let placedAreas = created\.print_areas \?\? \[\]/,
     "placement must start from the created product, not the template");
-  assert.match(route, /const loaded = await api<CreatedProduct>\(`\/shops\/\$\{shop\.id\}\/products\/\$\{created\.id\}\.json`/,
-    "and re-fetch the product when the create response omitted the print areas");
+  assert.match(route, /const resolvedProduct=await completeCreatedProduct\(created, shop\.id, token\)/,
+    "missing metadata is resolved by one bounded read of the created product");
+  assert.match(route, /if\(resolvedProduct\.print_areas\?\.length\)placedAreas=resolvedProduct\.print_areas/,
+    "hydrated placement must be used before considering the template fallback");
   /* D593 - and it is chosen by PRINT SIDE, not by scale. A real draft returned
      positions ["front","back","neck"] with imageCounts [1,0,2]; scale is
      relative to each placeholder's own area, so the neck label at scale 1.0 beat

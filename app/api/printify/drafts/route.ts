@@ -5,6 +5,7 @@ import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { customerLaunchBlock } from "@/app/customer-launch-gate";
 import { publicSupportReference, recordDiagnostic } from "../diagnostics";
 import { createProductWithImageRetries } from "../product-creation";
+import { completeCreatedProduct } from "../created-product-details";
 import { readPrintSide, artworkPlacement } from "../../../placement-math.ts";
 import { printAreasForArtworkAssignments, printAreasWithOnlyCurrentArtwork, type ArtworkAssignment } from "../product-payload";
 import { planFor } from "@/app/plan-limits";
@@ -271,15 +272,12 @@ async function handlePOST(request: Request) {
         }
       },
     });
-    let resolvedProduct=created;
+    const resolvedProduct=await completeCreatedProduct(created, shop.id, token);
     const colorPreviewImages=resolvedProduct.images||[];
     /* Keep every image Printify returned immediately. Further camera angles
        and colour thumbnails are populated lazily without delaying creation. */
     let productImages = mergeMockupImages(resolvedProduct.images ?? created.images ?? [],colorPreviewImages);
     let previewUrl = productImages.find((image) => image.is_default)?.src || productImages[0]?.src;
-    if (!previewUrl) {
-      try { const loaded = await api<CreatedProduct>(`/shops/${shop.id}/products/${created.id}.json`, token); productImages = loaded.images ?? []; previewUrl = productImages.find((image) => image.is_default)?.src || productImages[0]?.src; } catch { /* Preview can appear moments later. */ }
-    }
     // The exact placement this draft used, so the lifestyle mockup can mirror it
     // rather than guessing at a scale of its own.
     /* D573 - this used to reduce to the single largest image across every
@@ -302,12 +300,6 @@ async function handlePOST(request: Request) {
        resort so an older draft still produces something. */
     let placedAreas = created.print_areas ?? [];
     if(resolvedProduct.print_areas?.length)placedAreas=resolvedProduct.print_areas;
-    if (!placedAreas.some((area) => area.placeholders?.some((p) => p.images?.length))) {
-      try {
-        const loaded = await api<CreatedProduct>(`/shops/${shop.id}/products/${created.id}.json`, token);
-        if (loaded.print_areas?.length) placedAreas = loaded.print_areas;
-      } catch { /* fall through to the template below */ }
-    }
     const areas = placedAreas.some((area) => area.placeholders?.some((p) => p.images?.length))
       ? placedAreas
       : (template.print_areas ?? []) as Array<{ placeholders?: PrintAreaPlaceholder[] }>;

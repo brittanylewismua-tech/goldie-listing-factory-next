@@ -17,13 +17,16 @@
   122/500 MB database size. Organization usage includes another project.
 - Supabase warns that exceeding quotas can make projects unresponsive. The cap
   prevents overage charges; it does NOT promise continuous service at the limit.
-- Resend billing/current usage and Stripe account fees have not been verified.
+- Resend Pro is now verified: 32/50,000 monthly emails, unlimited daily sending,
+  renewal October 5. The selected plan is $20/month. Transactional pay-as-you-go
+  remains OFF. The user completed the upgrade; no overages were enabled.
+  Stripe account fees have not been verified.
 
 ## The direct answer about a surprise $300/week
 
 No verified current bill approaches that figure. But there is no honest basis
 for promising it can never happen. $300/week averages roughly $1,300/month.
-Costs follow activity, retained files, AI calls and image transformations—not just
+Costs follow activity, retained files and active AI calls—not just
 the number of registered customers. Alerts cannot guarantee a maximum invoice.
 
 ### Illustrative workload, NOT a measured forecast or an all-in quote
@@ -45,31 +48,16 @@ larger prompts, model changes and other features add cost.
 | 500 | 150,000 | $13.40 | $73.65 | $6 | $272.61–408.91 | $365.66–501.96 |
 
 Excluded: Supabase paid plan, email, payment-processing fees, taxes, domain,
-image transformations, optional generated mockups, scene preparation and any
-future durable-job service. D1 modeled operations fit its included quotas;
+and any future durable-job service. Retired FAL image generation is not an active
+workload and must not be used to inflate this forecast. D1 modeled operations fit its included quotas;
 assumed database stock is 1 GB. Other account projects share included allowances.
 Monthly active customers are NOT the same as simultaneous users; this table does
 not establish throughput or safe concurrency. Reproduce using `tools/cost-model.mjs`.
 
 ### Where the larger bills can come from
 
-- Ten unique Cloudflare image transformations per draft would add $147.50,
-  $447.50 or $747.50/month respectively to those rows. This is a sensitivity
-  scenario, **not a claim that ten transformations currently happen per draft**.
-  Direct Printify images are not automatically Cloudflare transformations.
-  At 500 customers the high subtotal plus that sensitivity is about $1,249/month,
-  before the excluded services—close to $300/week.
 - Keeping 50 MB rather than 10 MB per draft multiplies the storage stock by five.
   Each additional 1,000 GB held for a month adds $15 in standard R2 storage.
-- The legacy `/api/mockups/render` endpoint still uses FLUX.2 flex image editing.
-  No UI caller was found by repository search, and no such endpoint usage was
-  listed in the current-month fal billing view. Do not include its plan allowance
-  as observed ordinary usage. If enabled/used, it is separately expensive:
-  four billed input/output megapixels at $0.05 each would cost $0.20 per render;
-  6,500 such renders would cost $1,300. Actual billing depends on image dimensions
-  and provider rounding, not the count of drafts alone.
-- Generated mockup allowances remain 50/150/300 for Starter/Pro/Scale in source.
-  They are not interchangeable with cheap vision calls or free Printify mockups.
 - Current title/details requests have no durable deduplication or monthly
   monetary reservation. Account entitlement checks do not prevent a paid user
   from repeatedly spending through otherwise valid requests.
@@ -81,7 +69,6 @@ not establish throughput or safe concurrency. Reproduce using `tools/cost-model.
 | Workers | 10M requests + 30M CPU-ms/month | $0.30/M requests + $0.02/M CPU-ms |
 | R2 standard | 10 GB-month, 1M writes, 10M reads | $0.015/GB-month; $4.50/M writes; $0.36/M reads; rounding applies |
 | D1 | 25B rows read, 50M written, 5 GB/month | $0.001/M reads; $1/M writes; $0.75/GB-month |
-| Images | 5,000 unique transformations/month | $0.50/1,000 |
 | Workers logs | 20M events/month | $0.60/M |
 | Workflows, if introduced | 500K steps + 1 GB state/month | $0.80/100K steps + $0.20/GB-month; Workers CPU/invocations also count |
 
@@ -128,12 +115,9 @@ that Cloudflare is proven optimal at hundreds of simultaneous users.
 - https://developers.cloudflare.com/workers/platform/pricing/
 - https://developers.cloudflare.com/r2/pricing/
 - https://developers.cloudflare.com/d1/platform/pricing/
-- https://developers.cloudflare.com/images/pricing/
-- https://developers.cloudflare.com/images/optimization/binding/
 - https://developers.cloudflare.com/workers/observability/logs/workers-logs/
 - https://developers.cloudflare.com/workflows/reference/pricing/
 - https://developers.cloudflare.com/billing/manage/budget-alerts/
 - https://fal.ai/models/openrouter/router/vision/api
-- https://fal.ai/models/fal-ai/flux-2-flex/edit
 - https://supabase.com/pricing
 - https://supabase.com/docs/guides/platform/cost-control
