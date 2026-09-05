@@ -15,3 +15,9 @@ test("Upload locks the visibly previewed color before the file chooser opens",()
   assert.match(selector,/function focusColor\(id:number\)\{if\(artworkUploadColor\.current\|\|id===activeColor\)return;/);
   assert.match(selector,/function toggle\(color:ProductColor\)\{artworkUploadColor\.current=null;/);
 });
+
+test("scrolling under a stationary pointer cannot retarget the artwork picker",()=>{
+  assert.doesNotMatch(selector,/onMouseEnter/);
+  assert.match(selector,/onMouseMove=\{event=>\{if\(event.movementX\|\|event.movementY\)focusColor\(color.id\)\}\}/);
+  assert.match(selector,/onFocus=\{\(\)=>focusColor\(color.id\)\}/);
+});

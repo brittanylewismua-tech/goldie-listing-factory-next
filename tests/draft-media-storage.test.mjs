@@ -45,6 +45,13 @@ test('compare-and-swap retries merge without dropping a concurrent title or gall
 test('identity changes are refused before writing',async()=>{
   await assert.rejects(saveDraftChanges({before:large,after:{...large,clientId:'foreign'},owner:'owner',bucket:bucket(),read:async()=>'',compareAndSwap:async()=>true}),/identity/);
 });
+test('a late gallery refresh cannot replace previews for newer artwork',()=>{
+  const before={id:'p',clientId:'d',title:'old',artworkPreviewRevision:1,printifyImages:['original'],previewUrl:'original',colorPreviewImageDetails:[]};
+  const current={...before,artworkPreviewRevision:2,printifyImages:['replacement'],previewUrl:'replacement',colorPreviewImageDetails:[{src:'replacement',variantIds:[1]}]};
+  const after={...before,title:'new',printifyImages:['stale-refresh'],previewUrl:'stale-refresh',colorPreviewImageDetails:[{src:'stale-refresh',variantIds:[1]}]};
+  assert.deepEqual(mergeDraftChanges(before,after,current),{...current,title:'new'});
+  assert.deepEqual(mergeDraftChanges(current,{...current,artworkPreviewRevision:3,printifyImages:['reset']},current),{...current,artworkPreviewRevision:3,printifyImages:['reset']});
+});
 test('owned-product and design lookups use indexes rather than scanning accumulated drafts',()=>{
   const db=new DatabaseSync(':memory:');db.exec('CREATE TABLE printify_draft_results(user_id TEXT,client_id TEXT,status TEXT,response_json TEXT)');
   db.exec(readFileSync(new URL('../drizzle/0020_draft_lookup_indexes.sql',import.meta.url),'utf8'));
