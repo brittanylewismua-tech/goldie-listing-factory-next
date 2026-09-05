@@ -7,3 +7,7 @@ test('mobile final review gives the title its own flexible row', () => {
   assert.match(css, /\.final-design-group>summary>em\{grid-column:2;grid-row:3/);
   assert.match(css, /\.final-design-group>summary>span\{grid-column:2;grid-row:1;min-width:0;white-space:normal!important/);
 });
+test('next color listing clears the fixed header', () => {
+  const css=readFileSync(new URL('../app/interface-v2.css',import.meta.url),'utf8');
+  assert.match(css, /\.draft-color-selector\{[^}]*scroll-margin-top:100px/);
+});
