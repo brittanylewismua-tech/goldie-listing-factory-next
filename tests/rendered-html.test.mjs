@@ -1330,14 +1330,15 @@ test("recovers published-template shipping and constrains Etsy categories by pro
   assert.match(printify,/if\(externalListingId>0\)/);
   assert.doesNotMatch(printify,/if\(!shippingTemplateId&&externalListingId>0\)/);
   assert.match(taxonomy,/productCategoryScore/);
-  assert.match(taxonomy,/art & collectibles › prints ›/);
-  assert.match(taxonomy,/exactLeaf/);
-  assert.match(taxonomy,/dress shirts\?\|button\[- \]downs\?/);
-  assert.match(taxonomy,/childCategory/);
-  assert.match(taxonomy,/childProduct/);
-  assert.match(taxonomy,/notebook\|journal/);
-  assert.match(taxonomy,/phone case/);
-  assert.match(taxonomy,/gender\[- \]neutral adult/);
+  const categoryScore=await readFile(new URL("../app/etsy-category-score.ts",import.meta.url),"utf8");
+  assert.match(categoryScore,/art & collectibles › prints ›/);
+  assert.match(categoryScore,/exactLeaf/);
+  assert.match(categoryScore,/dress shirts\?\|button\[- \]downs\?/);
+  assert.match(categoryScore,/childCategory/);
+  assert.match(categoryScore,/childProduct/);
+  assert.match(categoryScore,/notebook\|journal/);
+  assert.match(categoryScore,/phone case/);
+  assert.match(categoryScore,/gender\[- \]neutral adult/);
   assert.match(page,/product:\{blueprintTitle:templateDetails/);
 });
 
