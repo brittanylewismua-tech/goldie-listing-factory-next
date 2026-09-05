@@ -38,7 +38,7 @@ test("D943: every post-draft panel uses a plain-language task name",()=>{
   for(const label of ["Product colors","Artwork placement","Listing photos"]){
     assert.match(app,new RegExp(`label:"${label}"`));
   }
-  assert.match(app,/title="Titles for this batch"/);
+  assert.match(app,/title=\{activeBundle\?"Titles for this product":"Titles for this batch"\}/);
 });
 
 test("D943: the Drafts help explains the screen that is actually open",()=>{
