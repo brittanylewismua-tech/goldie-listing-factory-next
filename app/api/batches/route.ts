@@ -167,6 +167,21 @@ export async function GET(request:Request){const user=await getChatGPTUser();if(
   const childRows=parentIds.length
     ?await database.prepare(`SELECT id,parent_batch_id,status,step,product_title,design_count,state_json,updated_at FROM listing_batches WHERE user_id=? AND parent_batch_id IN (${parentIds.map(()=>"?").join(",")})`).bind(user.userId,...parentIds).all<Record<string,unknown>>().catch(()=>({results:[] as Array<Record<string,unknown>>}))
     :{results:[] as Array<Record<string,unknown>>};
+  // History must reflect server-completed jobs even if the browser closed
+  // before saving its last result. Only read small identity/preview fields;
+  // opening History must not fetch every draft's full mockup object from R2.
+  const historyRows=[...rows.results,...childRows.results];
+  const historyStates=historyRows.map(row=>{try{return {row,state:JSON.parse(String(row.state_json||"{}")) as BatchListState};}catch{return {row,state:{} as BatchListState};}});
+  const historyDesignIds=[...new Set(historyStates.flatMap(({state})=>(state.designs||[]).map(design=>design.id).filter(Boolean)))];
+  if(historyDesignIds.length){
+    const records=await database.prepare(`SELECT r.client_id AS clientId,json_extract(r.response_json,'$.id') AS id,
+      json_extract(r.response_json,'$.batchId') AS batchId,
+      COALESCE(json_extract(r.response_json,'$.sourceTemplateId'),s.product_id) AS sourceTemplateId,
+      json_extract(r.response_json,'$.previewUrl') AS previewUrl,'Created' AS status
+      FROM printify_draft_results r LEFT JOIN printify_batch_sessions s ON s.id=r.batch_id AND s.user_id=r.user_id
+      WHERE r.user_id=? AND r.status='succeeded' AND r.client_id IN (SELECT value FROM json_each(?))`).bind(user.userId,JSON.stringify(historyDesignIds)).all<{clientId:string;id:string;batchId:string;sourceTemplateId:string;previewUrl:string;status:string}>();
+    for(const {row,state} of historyStates){const restored=restoreBatchDrafts(state,records.results);row.state_json=JSON.stringify(restored);if(restored.complete)row.status="complete";}
+  }
   const childrenByParent=new Map<string,Array<Record<string,unknown>>>();
   for(const child of childRows.results||[]){const key=String(child.parent_batch_id||"");if(!childrenByParent.has(key))childrenByParent.set(key,[]);childrenByParent.get(key)!.push(child)}/* D701 · Falls back to the job's batch_id when the item has none. D697 added the
      column and a migration to backfill it; the backfill did not populate, so on the

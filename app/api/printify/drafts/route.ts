@@ -7,10 +7,10 @@ import {isOwner} from "@/app/mastermind/access";
 import {planFor} from "@/app/plan-limits";
 import {unpackDraftMedia} from "@/app/draft-media-storage";
 import {draftCreationKey} from "../draft-identity";
-import {CLAIM_DRAFT_JOB_SQL,pendingDraftJob,writeJobObject,jobObjectPrefix,type PendingDraftJob} from "../draft-job-store";
+import {CLAIM_DRAFT_JOB_SQL,CLAIM_DRAFT_GROUP_SQL,pendingDraftJob,writeJobObject,jobObjectPrefix,type PendingDraftJob} from "../draft-job-store";
 import type {DraftJobBindings,DraftJobInput,DraftRequestBody} from "./execute-job";
 
-type WorkflowBinding={create(options:{id:string;params:{key:string;owner:string}}):Promise<unknown>;get(id:string):Promise<{status():Promise<unknown>}>};
+type WorkflowBinding={create(options:{id:string;params:{key:string;owner:string}}):Promise<unknown>;createBatch(options:Array<{id:string;params:{key:string;owner:string}}>):Promise<unknown>;get(id:string):Promise<{status():Promise<unknown>}>};
 type Bindings=DraftJobBindings&{DRAFT_CREATION:WorkflowBinding;ARTWORK:DraftJobBindings["ARTWORK"]&{put(key:string,value:ReadableStream|Uint8Array,options?:{customMetadata?:Record<string,string>;httpMetadata?:{contentType?:string}}):Promise<unknown>;delete(key:string):Promise<void>}};
 const bindings=()=>env as unknown as Bindings;
 type Row={status:string;response_json:string|null;updated_at:string;request_key:string};
@@ -18,8 +18,9 @@ type Session=DraftJobInput["session"];
 async function legacyKey(batchId:string,clientId:string){const hash=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(`${batchId}:${clientId}`));return Array.from(new Uint8Array(hash),b=>b.toString(16).padStart(2,"0")).join("");}
 async function lookup(key:string,owner:string){return bindings().DB.prepare("SELECT request_key,status,response_json,updated_at FROM printify_draft_results WHERE request_key=? AND user_id=?").bind(key,owner).first<Row>();}
 async function startJob(key:string,owner:string,job:PendingDraftJob){
-  try{await bindings().DRAFT_CREATION.create({id:job.workflowId,params:{key,owner}});}
-  catch(error){try{await (await bindings().DRAFT_CREATION.get(job.workflowId)).status();}catch{throw error;}}
+  // createBatch is idempotent: existing IDs are skipped. Normal polling no
+  // longer makes a deliberately failing create followed by a status request.
+  await bindings().DRAFT_CREATION.createBatch([{id:job.workflowId,params:{key,owner}}]);
 }
 async function jobResponse(row:Row,owner:string){
   if(row.status==="succeeded"&&row.response_json)return NextResponse.json({status:"succeeded",draft:await unpackDraftMedia(row.response_json,owner,bindings().ARTWORK)});
@@ -36,7 +37,7 @@ async function handleGET(request:Request){
   const legacy=await lookup(await legacyKey(batchId,clientId),user.userId);
   if(legacy&&legacy.status!=="failed")return jobResponse(legacy,user.userId);
   const session=await bindings().DB.prepare("SELECT shop_id,product_id,template_json FROM printify_batch_sessions WHERE id=? AND user_id=?").bind(batchId,user.userId).first<Session>();
-  if(!session)return NextResponse.json({status:"not_found"},{status:404});
+  if(!session)return NextResponse.json({status:"connection_missing",error:"The saved product connection could not be found."},{status:404});
   const key=await draftCreationKey(user.userId,session.shop_id,session.product_id,clientId),row=await lookup(key,user.userId);
   return row?jobResponse(row,user.userId):NextResponse.json({status:"not_found"},{status:404});
 }
@@ -45,7 +46,8 @@ async function handlePOST(request:Request){
   const blocked=await customerLaunchBlock(user);if(blocked)return NextResponse.json({error:blocked},{status:503});
   const runtime=bindings();
   if(!runtime.DB||!runtime.ARTWORK||!runtime.DRAFT_CREATION||!runtime.PRINTIFY_TOKEN_KEY)return NextResponse.json({error:"Secure draft processing is unavailable."},{status:503});
-  const body=await request.json() as DraftRequestBody;
+  const body=await request.json() as DraftRequestBody&{requests?:DraftRequestBody[]};
+  if(body.requests)return handleGroupPOST(request,user,body.requests);
   if(!body.batchId||!body.clientId)return NextResponse.json({error:"The prepared batch and design identifiers are required."},{status:400});
   const legacy=await lookup(await legacyKey(body.batchId,body.clientId),user.userId);
   if(legacy?.status==="succeeded"||legacy?.status==="running"||legacy?.status==="uncertain")return jobResponse(legacy,user.userId);
@@ -88,6 +90,66 @@ async function handlePOST(request:Request){
     const active=await lookup(key,user.userId),job=pendingDraftJob(active?.response_json||null);
     if(job?.workflowId!==workflowId)await Promise.all(copies.map(id=>runtime.ARTWORK.delete(id).catch(()=>undefined)));
     return NextResponse.json({error:error instanceof Error?error.message:"Draft processing could not start.",status:job?.workflowId===workflowId?"running":undefined},{status:job?.workflowId===workflowId?202:400});
+  }
+}
+async function handleGroupPOST(request:Request,user:NonNullable<Awaited<ReturnType<typeof getChatGPTUser>>>,requests:DraftRequestBody[]){
+  if(!Array.isArray(requests)||!requests.length||requests.length>100)return NextResponse.json({error:"Choose between one and 100 draft requests."},{status:400});
+  const runtime=bindings(),owner=user.userId;
+  const prepared:Array<{key:string;batchId:string;clientId:string;job:PendingDraftJob;copies:string[]}>=[];
+  const existing:Array<{key:string;job:PendingDraftJob}>=[];
+  const seen=new Set<string>();
+  const cleanup=async()=>{for(const item of prepared){const current=await lookup(item.key,owner);if(pendingDraftJob(current?.response_json||null)?.workflowId!==item.job.workflowId)await Promise.all([...item.copies,item.job.inputKey].map(key=>runtime.ARTWORK.delete(key).catch(()=>undefined)));}};
+  try{
+    for(const body of requests){
+      if(!body.batchId||!body.clientId)throw Error("Every draft needs its prepared product and design identifiers.");
+      const legacy=await lookup(await legacyKey(body.batchId,body.clientId),owner);
+      if(legacy&&legacy.status!=="failed")throw Error("This older draft is already being tracked. Resume it before starting this submission.");
+      const session=await runtime.DB.prepare("SELECT shop_id,product_id,template_json FROM printify_batch_sessions WHERE id=? AND user_id=? AND expires_at>unixepoch()").bind(body.batchId,owner).first<Session>();
+      if(!session)throw Error("Reload the saved products to renew this batch connection.");
+      const key=await draftCreationKey(owner,session.shop_id,session.product_id,body.clientId);
+      if(seen.has(key))throw Error("The submission contains the same product and design twice.");seen.add(key);
+      const prior=await lookup(key,owner);
+      if(prior&&prior.status!=="failed"){
+        const job=pendingDraftJob(prior.response_json);if(job)existing.push({key,job});continue;
+      }
+      const artworks=body.artworks?.length?body.artworks:body.fileName&&body.stagedId?[{key:"primary",fileName:body.fileName,stagedId:body.stagedId,bounds:body.visibleBounds,maxPlacementScale:body.maxPlacementScale}]:[];
+      if(!artworks.length||artworks.length>40||new Set(artworks.map(a=>a.key)).size!==artworks.length)throw Error("Each design needs a prepared artwork file.");
+      const workflowId=crypto.randomUUID(),copies:string[]=[];
+      const job:PendingDraftJob={version:1,workflowId,inputKey:jobObjectPrefix(owner,workflowId)+"input.json",phase:"queued"};
+      prepared.push({key,batchId:body.batchId,clientId:body.clientId,job,copies});
+      const protectedArtworks=[];
+      for(let index=0;index<artworks.length;index++){
+        const artwork=artworks[index],source=await runtime.ARTWORK.get(artwork.stagedId);
+        if(!source?.body||source.customMetadata?.owner!==owner||Number(source.customMetadata?.expires||0)<=Date.now())throw Error("Upload this design again; its protected file is no longer available.");
+        const stagedId=jobObjectPrefix(owner,workflowId)+`artwork-${index}.bin`;
+        copies.push(stagedId);
+        await runtime.ARTWORK.put(stagedId,source.body,{customMetadata:{owner,workflowId,expires:String(Date.now()+24*60*60*1000)},httpMetadata:{contentType:artwork.fileName.toLowerCase().endsWith(".png")?"image/png":"image/jpeg"}});
+        protectedArtworks.push({...artwork,stagedId});
+      }
+      const protectedBody=body.artworks?.length?{...body,artworks:protectedArtworks}:{...body,stagedId:protectedArtworks[0].stagedId};
+      await writeJobObject(runtime.ARTWORK,owner,workflowId,"input.json",{userId:owner,requestUrl:request.url,body:protectedBody,session} satisfies DraftJobInput);
+    }
+    const planRow=await runtime.DB.prepare("SELECT plan_key FROM account_plans WHERE user_id=?").bind(owner).first<{plan_key:string}>();
+    const plan=planFor(planRow?.plan_key,isOwner(user));
+    if(prepared.length){
+      // Four durable creation lanes per submission. Later members are already
+      // admitted, but wait server-side for the preceding job in their lane.
+      prepared.forEach((item,index)=>{if(index>=4)item.job.dependencyKey=prepared[index-4].key;});
+      await runtime.DB.prepare(CLAIM_DRAFT_GROUP_SQL).bind(JSON.stringify(prepared.map(({key,batchId,clientId,job})=>({key,batchId,clientId,job}))),owner,plan.drafts).all();
+      // Adopt winners from overlapping submissions, never dispatch our losing
+      // copies or replace a running request's immutable identity.
+      for(const item of prepared){
+        const row=await lookup(item.key,owner);
+        if(!row||row.status==="failed")throw Error(`Your ${plan.name} plan does not have room for this whole submission.`);
+        const job=pendingDraftJob(row.response_json);if(job)existing.push({key:item.key,job});
+      }
+    }
+    if(existing.length)await runtime.DRAFT_CREATION.createBatch(existing.map(({key,job})=>({id:job.workflowId,params:{key,owner}})));
+    await cleanup();
+    return NextResponse.json({status:"running",accepted:requests.length},{status:202});
+  }catch(error){
+    await cleanup();
+    return NextResponse.json({error:error instanceof Error?error.message:"The submission could not be queued. Resume this batch to check its saved jobs."},{status:400});
   }
 }
 export const GET=withErrorLog("printify-drafts",handleGET);

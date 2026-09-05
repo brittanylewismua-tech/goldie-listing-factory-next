@@ -25,7 +25,8 @@ test("D1019: non-apparel calls its primary artwork Main, not Front",()=>{
 });
 
 test("D1020: each draft request derives variants and identity from its protected product session",()=>{
-  assert.match(app,/const requestDetails=templateDetails;/);
+  assert.match(app,/const requestDetails=preparation\?\.details\|\|templateDetails;/);
+  assert.match(app,/if\(!details\|\|!templateBelongsToRecipe\(details,recipe\)\)/);
   assert.match(app,/bundleRecipes\.find\(recipe=>recipe\.templateUrl\.includes\(requestDetails\.id\)\)/);
   assert.match(app,/const requestPricedVariants=variantsFor\(requestDetails,requestColors,requestSizes\)/);
   assert.match(app,/selectedVariantIds:requestPricedVariants\.map\(variant=>variant\.id\)/);

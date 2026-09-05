@@ -155,3 +155,22 @@ D1115 version and real shortcut retests, final alternate-artwork reset/reload/is
 - Changed tee group price $25.89 → $25.90: profit immediately changed $13.00 → $13.01 without blur; panel stayed open. Switched to hoodie before saving: hoodie remained $41.04 and the bundle continuation remained disabled for the unsaved tee. Returned, restored $25.89, saved. Reload retained approved $25.89/$27.97, 24/6 variant groups and Etsy T-shirts/Cotton/Unisex/Short sleeve/Crew attributes.
 - Final bundle review screenshot exposed a duplicate large first-product preview and a group named after the hoodie even though it contains a tee too. D1129 now uses Design 1 for the multi-product group, with each finished product shown once in its own row. Reopened after deployment and inspected screenshot; edit controls have spacing and the duplicate image is gone. A single-product group retains its useful large preview.
 - Canonical tee result now 3,572 bytes with private storage pointer; inline pricing/Etsy option objects absent. No user data discarded.
+# D1134 — durable whole-submission admission (live verification pending)
+
+- Fresh single-product and bundle submissions prepare and save all child/design
+  identities before sending one admission request. All accepted jobs are
+  dispatched together; four server-side creation lanes preserve bounded writes.
+- The quota reservation is one atomic SQL statement, including overlapping
+  submissions and existing uncertain reservations. Job identity remains
+  owner/shop/template/design; connection errors do not manufacture new IDs.
+- Shared original files reuse their staged transfer across bundle products.
+- Reopening a batch and Batch History recover completed background results,
+  including completion state, without requiring the final browser autosave.
+- Poll recovery now uses the idempotent Workflows bulk-create operation instead
+  of a failing create plus a status lookup on each poll.
+- Validation before commit: build passed; 1,354 tests, 1,342 passed, 12 skipped,
+  zero failures. Existing unrelated type-check errors remain.
+- Required live check after deployment: submit a multi-product batch with more
+  than four jobs, close the tab after acceptance, verify all jobs and products,
+  reopen every member, and verify single-product creation as well. Do not infer
+  these live checks passed from this section.

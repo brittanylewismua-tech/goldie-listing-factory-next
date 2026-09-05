@@ -6,7 +6,7 @@ const app=readFileSync(new URL("../app/listing-factory-app.tsx",import.meta.url)
 const gates=readFileSync(new URL("../app/workflow-gates.ts",import.meta.url),"utf8");
 
 test("D905: Etsy shipping is not required to create private Printify drafts",()=>{
-  const create=app.slice(app.indexOf("function createDrafts()"),app.indexOf("function confirmDrafts()"));
+  const create=app.slice(app.indexOf("function createDrafts()"),app.indexOf("async function queueDraftSubmission()"));
   assert.doesNotMatch(create,/etsyShippingProfileId|Choose shipping/);
   const required=app.slice(app.indexOf("function requiredForStep"),app.indexOf("async function openProgressStep"));
   assert.match(required,/step==="finish"&&!etsyShippingProfileId/);

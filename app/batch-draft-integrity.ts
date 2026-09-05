@@ -1,5 +1,5 @@
 type DraftIdentity = { id?:string; clientId?:string; batchId?:string; sourceTemplateId?:string; status?:string; costReview?:{required?:boolean;approved?:boolean;variants?:Array<{id:number;price:number;isEnabled?:boolean}>} };
-type BatchIdentity = { designs?:Array<{id?:string}>; drafts?:DraftIdentity[]; templateDetails?:{id?:string;batchId?:string}; pricingApproved?:boolean;variantPrices?:Record<string,number> };
+type BatchIdentity = { designs?:Array<{id?:string}>; drafts?:DraftIdentity[]; templateDetails?:{id?:string;batchId?:string}; complete?:boolean;pricingApproved?:boolean;variantPrices?:Record<string,number> };
 
 export function pricesMatchSavedDrafts(drafts:DraftIdentity[],prices:Record<string,number>={}){
   return drafts.every(draft=>(draft.costReview?.variants||[]).every(variant=>variant.isEnabled===false||!Object.prototype.hasOwnProperty.call(prices,String(variant.id))||Number(prices[String(variant.id)])===Number(variant.price)));
@@ -17,7 +17,7 @@ export function mergeMatchingDrafts<T extends DraftIdentity>(current:T[], update
 
 /** Recover only using the owner's exact design/session identities. A filename,
  * product nickname, array position or another bundle member is never evidence. */
-export function restoreBatchDrafts<T extends BatchIdentity>(state:T, authoritative:DraftIdentity[]):T{
+export function restoreBatchDrafts<T extends BatchIdentity>(state:T, authoritative:DraftIdentity[]):T&{complete?:boolean}{
   if(!Array.isArray(state.designs)||!state.designs.length)return state;
   const restored:DraftIdentity[]=[];
   for(const design of state.designs){
@@ -30,7 +30,8 @@ export function restoreBatchDrafts<T extends BatchIdentity>(state:T, authoritati
     if(chosen)restored.push({...existing,...chosen});else if(existing)restored.push(existing);
   }
   const approval=restored.filter(draft=>draft.status==='Created'&&draft.costReview?.required);
-  return {...state,drafts:restored,pricingApproved:approval.length?approval.every(draft=>draft.costReview?.approved)&&pricesMatchSavedDrafts(approval,state.variantPrices):state.pricingApproved};
+  const allCreated=state.designs.every(design=>restored.some(draft=>draft.clientId===design.id&&draft.id&&draft.status==='Created'));
+  return {...state,drafts:restored,complete:allCreated||state.complete,pricingApproved:approval.length?approval.every(draft=>draft.costReview?.approved)&&pricesMatchSavedDrafts(approval,state.variantPrices):state.pricingApproved};
 }
 
 export function batchDraftIdentityProblem(state:BatchIdentity):boolean{

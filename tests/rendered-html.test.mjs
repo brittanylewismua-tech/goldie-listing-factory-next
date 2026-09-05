@@ -1503,7 +1503,7 @@ test("keeps a verified Printify template usable when its Etsy listing is inactiv
   assert.doesNotMatch(printify, /shippingTemplateId=String\(found\.product\.external\?\.shipping_template_id/);
   assert.match(printify, /shippingProfileNeedsSelection=!shippingTemplateId&&externalListingId>0/);
   assert.match(page, /!templateDetails\?\.shippingTemplateId&&!templateDetails\?\.shippingProfileNeedsSelection/);
-  assert.match(page, /shippingTemplateId:etsyShippingProfileId/);
+  assert.match(page, /shippingTemplateId:preparation\?\.shippingProfileId\?\?etsyShippingProfileId/);
   assert.match(drafts, /selectedShippingTemplateId/);
   assert.match(drafts, /external:\{shipping_template_id:selectedShippingTemplateId\}/);
   assert.match(printify, /UPDATE product_recipes SET pricing_json/);

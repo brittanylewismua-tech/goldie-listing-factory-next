@@ -1,6 +1,6 @@
 import {WorkflowEntrypoint,type WorkflowEvent,type WorkflowStep} from 'cloudflare:workers';
 import {executeDraftJob,type DraftJobBindings,type DraftJobInput} from '../app/api/printify/drafts/execute-job';
-import {pendingDraftJob,readJobObject,cleanupCompletedDraftJob} from '../app/api/printify/draft-job-store';
+import {pendingDraftJob,readJobObject,cleanupCompletedDraftJob,draftCreationSlotReleased} from '../app/api/printify/draft-job-store';
 import {RejectedProductCreation} from '../app/api/printify/product-creation';
 import {RetryDraftLater} from '../app/api/printify/retry-after';
 type Params={key:string;owner:string};
@@ -9,6 +9,21 @@ type Params={key:string;owner:string};
 export class DraftCreationWorkflow extends WorkflowEntrypoint<DraftJobBindings,Params>{
   async run(event:WorkflowEvent<Params>,step:WorkflowStep){
     const {key,owner}=event.payload;
+    const dependency=await step.do('read-submission-lane',async()=>{
+      const row=await this.env.DB.prepare('SELECT response_json FROM printify_draft_results WHERE request_key=? AND user_id=?').bind(key,owner).first<{response_json:string|null}>();
+      return pendingDraftJob(row?.response_json||null)?.dependencyKey||null;
+    });
+    if(dependency){
+      for(let check=0;;check++){
+        const released=await step.do(`submission-lane-${check}`,async()=>{
+          const row=await this.env.DB.prepare('SELECT status FROM printify_draft_results WHERE request_key=? AND user_id=?').bind(dependency,owner).first<{status:string}>();
+          if(!row)throw Error('The preceding owned draft job is missing.');
+          return draftCreationSlotReleased(row.status);
+        });
+        if(released)break;
+        await step.sleep(`submission-lane-wait-${check}`,'5 seconds');
+      }
+    }
     for(let attempt=0;attempt<48;attempt++){
       const result=await step.do(`complete-draft-${attempt}`,{retries:{limit:2,delay:'5 seconds',backoff:'exponential'},timeout:'10 minutes'},async()=>{
         const row=await this.env.DB.prepare('SELECT status,response_json FROM printify_draft_results WHERE request_key=? AND user_id=?').bind(key,owner).first<{status:string;response_json:string|null}>();

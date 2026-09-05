@@ -1042,6 +1042,7 @@ export default function ListingFactoryApp() {
   const [fileNotice,setFileNotice]=useState("");
   const [fileError, setFileError] = useState("");
   const [running, setRunning] = useState(false);
+  const queuedDesignSessions=useRef(new Map<string,string>());
   const [complete, setComplete] = useState(false);
   const [processed, setProcessed] = useState(0);
   const [draftResults, setDrafts] = useState<DraftResult[]>([]);
@@ -1660,7 +1661,7 @@ export default function ListingFactoryApp() {
     const review=draft.costReview?{...draft.costReview,variants:draft.costReview.variants.map(variant=>({id:variant.id,title:variant.title,cost:variant.cost,price:variant.price,isEnabled:variant.isEnabled}))}:undefined;
     return {...draft,colorPreviewImageDetails:compactPreviews,costReview:review};
   }
-  function batchStateSnapshot(overrides:Record<string,unknown>={}){const designs=files.map(({file:ignoredFile,previewUrl:ignoredPreview,artworkPreviewUrl:ignoredArtworkPreview,artworkVersions,...design})=>({...design,artworkVersions:artworkVersions?.map(({file:ignoredArtworkFile,previewUrl:ignoredArtworkVersionPreview,...artwork})=>artwork)}));return {template,templateDetails,description,pricing,selectedColorIds,selectedSizeIds,variantPrices,etsyShippingProfileId,pricingApproved,mockupTheme,activeRecipe,activeBundle,bundleRecipes,bundleIndex,bundleBatchIds,bundleQualityDecisions,designs,drafts:drafts.map(snapshotDraft),complete,finishPhase,bulkTitles,batchKeywords,titleJoiner,titleBuilderMode,autoTitleBankId,manualKeywordBankId,sharedMockups,preparedMockupCounts,printifyImageIndices,printifyImageSelections,sizeGuideName,keptAsDrafts,batchReceipt,batchDisplayName,...overrides}}
+  function batchStateSnapshot(overrides:Record<string,unknown>={}){const designs=files.map(({file:ignoredFile,previewUrl:ignoredPreview,artworkPreviewUrl:ignoredArtworkPreview,artworkVersions,...design})=>({...design,artworkVersions:artworkVersions?.map(({file:ignoredArtworkFile,previewUrl:ignoredArtworkVersionPreview,...artwork})=>artwork)}));return {queuedDesignSessions:Object.fromEntries(files.filter(file=>queuedDesignSessions.current.has(file.id)).map(file=>[file.id,queuedDesignSessions.current.get(file.id)])),template,templateDetails,description,pricing,selectedColorIds,selectedSizeIds,variantPrices,etsyShippingProfileId,pricingApproved,mockupTheme,activeRecipe,activeBundle,bundleRecipes,bundleIndex,bundleBatchIds,bundleQualityDecisions,designs,drafts:drafts.map(snapshotDraft),complete,finishPhase,bulkTitles,batchKeywords,titleJoiner,titleBuilderMode,autoTitleBankId,manualKeywordBankId,sharedMockups,preparedMockupCounts,printifyImageIndices,printifyImageSelections,sizeGuideName,keptAsDrafts,batchReceipt,batchDisplayName,...overrides}}
   async function saveDraftBatch(){const name=batchDisplayName.trim();if(!name)return;setSavingDraftBatch(true);try{const id=batchIdRef.current||crypto.randomUUID();batchIdRef.current=id;window.localStorage.setItem("goldie-active-batch",id);await saveBatchFiles(id,files.map(file=>file.file));if(!localPreview){const response=await fetch("/api/batches",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,status:"draft",step:workflowStep,setupName:name,productTitle:templateDetails?.blueprintTitle||"",designCount:files.length,state:{...batchStateSnapshot(),keptAsDrafts:complete}})});if(!response.ok)throw new Error("This batch could not be saved.");await saveBatchName(id,name)}setKeptAsDrafts(true);setDraftSaveOpen(false);setDraftSavedOpen(true)}catch(error){stopWith("This batch was not saved.",[error instanceof Error?error.message:"Try again in a moment."])}finally{setSavingDraftBatch(false)}}
   function jumpToMissingPhotoListing(clientId:string){setMissingPhotoDraftIds([]);window.setTimeout(()=>{
     /* D532 - a listing collapses now, and you cannot scroll to something inside a
@@ -1966,6 +1967,8 @@ export default function ListingFactoryApp() {
       runIdRef.current=id;
       if(open&&open.id!==id){const restored=await restoreBatchById(open.id,requestedStep,requestedPhase,push);if(restored){const childMap=Object.fromEntries(children.filter(child=>child.productId&&child.id).map(child=>[child.productId,child.id]));setBundleBatchIds(current=>({...childMap,...current}))}return restored}
     }const state=payload.batch.state as {template?:string;templateDetails?:TemplateDetails;description?:string;pricing?:Pricing;mockupTheme?:string;activeRecipe?:Recipe;activeBundle?:ProductBundle;bundleRecipes?:Recipe[];bundleIndex?:number;bundleBatchIds?:Record<string,string>;designs?:Array<Omit<DesignFile,"file"|"previewUrl"|"artworkVersions">&{artworkVersions?:Array<Omit<ArtworkVersion,"file"|"previewUrl">>}>;drafts?:DraftResult[];complete?:boolean;finishPhase?:FinishPhase;bulkTitles?:string;printifyImageIndices?:number[];printifyImageSelections?:Record<string,number[]>;selectedColorIds?:number[];selectedSizeIds?:number[];variantPrices?:Record<string,number>;etsyShippingProfileId?:number;pricingApproved?:boolean;sizeGuideName?:string;batchKeywords?:string[];titleJoiner?:string;titleBuilderMode?:"ai"|"manual";autoTitleBankId?:string;manualKeywordBankId?:string;sharedMockups?:{theme:string;ids:string[]};preparedMockupCounts?:Record<string,number>;keptAsDrafts?:boolean;batchDisplayName?:string;batchReceipt?:BatchReceipt|null};
+    const queued=(payload.batch.state as {queuedDesignSessions?:Record<string,string>}).queuedDesignSessions||{};
+    for(const [designId,sessionId] of Object.entries(queued))queuedDesignSessions.current.set(designId,sessionId);
     const savedQuality=(payload.batch.state as {bundleQualityDecisions?:Record<string,"include"|"proceed"|"exclude">}).bundleQualityDecisions||{};
     const restoredBundleQualityDecisions=Object.fromEntries(Object.entries(savedQuality).filter(([,value])=>["include","proceed","exclude"].includes(value)).map(([key,value])=>[key,value==="proceed"?"include":value])) as Record<string,"include"|"exclude">;
     const cached=await loadBatchFiles(id).catch(()=>[]);
@@ -4097,6 +4100,12 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
      This removes the browser-to-R2 transfer from the Create Drafts critical
      path. A rejected/expired warm-up is discarded and retried normally. */
   async function stagedArtwork(cacheKey:string,artwork:DesignFile|ArtworkVersion,reference:string){
+    // Bundle members share the original File. Reuse its staged transfer instead
+    // of uploading identical bytes once for every product's new design id.
+    if(!stagedArtworkCache.current.has(cacheKey)){
+      const shared=[...stagedArtworkCache.current.values()].find(entry=>entry.file===artwork.file);
+      if(shared)stagedArtworkCache.current.set(cacheKey,shared);
+    }
     const cached=stagedArtworkCache.current.get(cacheKey);
     if(cached?.file===artwork.file){const staged=await cached.promise,expires=Number(staged.stagedId.match(/^stage_(\d+)_/)?.[1]||0);if(expires>Date.now()+60_000)return staged;stagedArtworkCache.current.delete(cacheKey)}
     const promise=preparedUpload(artwork).then(async upload=>({...await stageUpload(upload.blob,upload.fileName,reference),fileName:upload.fileName}));
@@ -4117,24 +4126,39 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
       const result = await response.json() as { status?: string; draft?: DraftResult;error?:string };
       if (result.status === "succeeded" && result.draft) return result.draft;
       if(result.status==="failed")throw new Error(result.error||"This draft could not be completed.");
+      if(result.status==="connection_missing")throw new Error(result.error||"Reload the saved product connection before continuing.");
       if(result.status==="not_found")return null;
     }
     throw new Error("This draft is still being checked in the background. Reload this batch to see its saved result; do not create a second copy.");
   }
 
-  async function processDesign(design: DesignFile): Promise<DraftResult> {
+  type DraftPreparation={details:TemplateDetails;recipe:Recipe;colors:number[];sizes:number[];pricing:Pricing;variantPrices:Record<string,number>;shippingProfileId:number;description:string;collect:(request:Record<string,unknown>)=>void};
+  type PreparedDesign={clientId:string;name:string;status:"Prepared";error?:never};
+  async function processDesign(design:DesignFile,preparation:DraftPreparation):Promise<DraftResult|PreparedDesign>;
+  async function processDesign(design:DesignFile):Promise<DraftResult>;
+  async function processDesign(design: DesignFile, preparation?:DraftPreparation): Promise<DraftResult|PreparedDesign> {
       const referenceRoot = `GLF-${crypto.randomUUID().replace(/-/g, "").slice(0, 10).toUpperCase()}`;
       let finalError: Error | null = null;
       try {
+        const queuedSession=queuedDesignSessions.current.get(design.id);
+        if(!preparation&&queuedSession){
+          const recovered=await recoverDraft(queuedSession,design.id);
+          if(recovered)return recovered;
+          // Null is exclusively a confirmed absence of this owner's stable job
+          // row, not a missing connection, failed request, timeout or uncertain
+          // Printify response. Preserve design.id and the queued session. The
+          // server derives the SAME owner/shop/template/design key and atomically
+          // adopts a concurrent winner; this cannot mint a new job identity.
+        }
         /* A bundle transition can render its incoming template before every
            derived memo and recipe closure has caught up. Anchor this entire
            request to the template that owns the protected Printify session,
            resolve its recipe from that immutable product id, and derive the
            variants here instead of borrowing the previous render's memo. */
-        const requestDetails=templateDetails;
-        const requestRecipe=(requestDetails?bundleRecipes.find(recipe=>recipe.templateUrl.includes(requestDetails.id)):undefined)||activeRecipe;
-        const requestColors=normalizeColorIds(requestDetails,selectedColorIds);
-        const requestSizes=[...selectedSizeIds];
+        const requestDetails=preparation?.details||templateDetails;
+        const requestRecipe=preparation?.recipe||(requestDetails?bundleRecipes.find(recipe=>recipe.templateUrl.includes(requestDetails.id)):undefined)||activeRecipe;
+        const requestColors=normalizeColorIds(requestDetails,preparation?.colors||selectedColorIds);
+        const requestSizes=[...(preparation?.sizes||selectedSizeIds)];
         const requestPricedVariants=variantsFor(requestDetails,requestColors,requestSizes);
         /* D940 · Extra print files are product-scoped. A bundle may reuse one
            only when the seller explicitly ticked that compatible product. For
@@ -4168,17 +4192,18 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
             const assignedPrimaryColors=new Set(versions.filter(artwork=>artwork.side===primarySide).flatMap(artwork=>artwork.colorIds));
             const primaryVariantIds=variants.filter(variant=>variant.colorId==null||!assignedPrimaryColors.has(variant.colorId)).map(variant=>variant.id);
             const artworkAssignments=[...(primaryVariantIds.length?[{position:primarySide,variantIds:primaryVariantIds,artworkKey:"primary",bounds:design.visibleBounds,maxPlacementScale:isRigidPaperProduct(requestDetails)?1:undefined}]:[]),...versions.map(artwork=>({position:artwork.side,variantIds:variants.filter(variant=>variant.colorId!=null&&artwork.colorIds.includes(variant.colorId)).map(variant=>variant.id),artworkKey:artwork.id,bounds:artwork.visibleBounds,maxPlacementScale:isRigidPaperProduct(requestDetails)?1:undefined})).filter(assignment=>assignment.variantIds.length)];
-            const fullDescription=[design.blurb||design.etsy?.blurb,description].filter(Boolean).join("\n\n");
+            const fullDescription=[design.blurb||design.etsy?.blurb,preparation?.description??description].filter(Boolean).join("\n\n");
             const staged=stagedArtworks[0];
             const commonDraftRequest={
               batchId: requestDetails?.batchId,
               fileName:design.name,
               title: design.title || undefined,
-              tags:design.tags,pricing,etsyBuyerShipping:etsyShippingProfiles.find(profile=>profile.id===etsyShippingProfileId)?.domesticPrimary||0,shippingTemplateId:etsyShippingProfileId,variantPrices,selectedVariantIds:requestPricedVariants.map(variant=>variant.id),mockupVariantIds:mockupVariants.map(variant=>variant.id),mockupVariantSources,description:fullDescription,
+              tags:design.tags,pricing:preparation?.pricing||pricing,etsyBuyerShipping:etsyShippingProfiles.find(profile=>profile.id===(preparation?.shippingProfileId??etsyShippingProfileId))?.domesticPrimary||0,shippingTemplateId:preparation?.shippingProfileId??etsyShippingProfileId,variantPrices:preparation?.variantPrices||variantPrices,selectedVariantIds:requestPricedVariants.map(variant=>variant.id),mockupVariantIds:mockupVariants.map(variant=>variant.id),mockupVariantSources,description:fullDescription,
               supportReference: staged.reference,
               clientId:design.id,
             };
             const requestBody=versions.length?{...commonDraftRequest,artworks:stagedArtworks,artworkAssignments}:{...commonDraftRequest,maxPlacementScale:isRigidPaperProduct(requestDetails)?1:undefined,fileName:stagedArtworks[0].fileName,stagedId:stagedArtworks[0].stagedId};
+            if(preparation){preparation.collect(requestBody);return {clientId:design.id,name:design.name,status:"Prepared"};}
             let response:Response;
             try {
               response = await fetchWithDeadline("/api/printify/drafts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(requestBody) }, 60_000);
@@ -4522,7 +4547,78 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
        table for both now, and it does not block: low resolution is a judgement
        for her to make, not a wall. */
     if(undecided.length){setPixelWarningOpen(true);return}if(planDraftsRemaining!==null&&requestedListingCount>planDraftsRemaining)return void stopWith("This batch is larger than your remaining plan allowance.",[activeBundle?`${files.length} designs × ${bundleProductCount} products = ${requestedListingCount} listings after exclusions. You have ${planDraftsRemaining} listings remaining this month.`:`${planDraftsRemaining} ${planDraftsRemaining===1?"listing remains":"listings remain"} this month, but this batch contains ${files.length} designs.`]);setPreflightOpen(true);}
-  function confirmDrafts() { const recipeId=activeRecipe?.id;const targets=files.filter(file=>bundleQualityDecisions[`${recipeId}:${file.id}`]!=="exclude");setPreflightOpen(false);if(activeBundle&&bundleRecipes.length>1)setBundleRun({total:bundleRecipes.length});void runDrafts(targets); }
+  /** Stage every member before admitting any new job. Once accepted, all
+   * product/design pairs belong to the server, not to browser navigation. */
+  async function queueDraftSubmission(){
+    if(draftRunInFlight.current||!activeRecipe||!templateDetails)return;
+    draftRunInFlight.current=true;draftRunActive.current=true;runInProgress.current=true;
+    setPreflightOpen(false);setRunning(true);setProcessed(0);setRunTotal(requestedListingCount);
+    const sourceRecipe=activeRecipe,sourceId=batchIdRef.current||crypto.randomUUID();
+    batchIdRef.current=sourceId;
+    const recipes=activeBundle&&bundleRecipes.length>1?bundleRecipes:[sourceRecipe];
+    const ids={...bundleBatchIds,[sourceRecipe.id]:sourceId};
+    for(const recipe of recipes)ids[recipe.id] ||= crypto.randomUUID();
+    const requests:Record<string,unknown>[]=[];
+    const members:Array<{id:string;recipe:Recipe;designs:DesignFile[];state:Record<string,unknown>;results:DraftResult[]}>=[];
+    const base=batchStateSnapshot();
+    try{
+      setPreparationMessage("Preparing every listing for background creation…");
+      for(let index=0;index<recipes.length;index++){
+        const recipe=recipes[index],isActive=recipe.id===sourceRecipe.id;
+        const details=isActive?templateDetails:bundleProductDetails[recipe.id];
+        if(!details||!templateBelongsToRecipe(details,recipe))throw Error(`Reload ${recipe.name} before creating drafts.`);
+        const colors=isActive?selectedColorIds:normalizeColorIds(details,recipe.defaultColorIds?.length?recipe.defaultColorIds:(details.colorOptions||[]).filter(color=>color.available&&color.templateEnabled).map(color=>color.id));
+        const sizes=isActive?selectedSizeIds:recipe.defaultSizeIds?.length?recipe.defaultSizeIds:(details.sizeOptions||[]).filter(size=>size.available&&size.templateEnabled).map(size=>size.id);
+        const memberPricing=isActive?pricing:{...pricing,targetProfit:Number(recipe.defaultProfitTarget)||DEFAULT_PRICING.targetProfit,shippingCost:details.standardShipping||0,shippingCharged:0};
+        const prices=isActive?variantPrices:Object.fromEntries(details.variants.map(variant=>[String(variant.id),variant.templatePrice]));
+        const shippingProfileId=isActive?etsyShippingProfileId:Number(recipe.etsyShippingProfileId||details.shippingTemplateId)||0;
+        const designs=files.filter(file=>bundleQualityDecisions[`${recipe.id}:${file.id}`]!=="exclude").map(file=>isActive?file:{...file,id:crypto.randomUUID(),title:"",tags:[],blurb:undefined,descriptionOverride:undefined,sizeGuideName:undefined,etsy:undefined,etsyError:"",artworkVersions:(file.artworkVersions||[]).map(artwork=>artwork.productIds?.length?artwork:{...artwork,ownerProductId:sourceRecipe.id,productIds:[sourceRecipe.id]})});
+        if(!designs.length)throw Error(`${recipe.name} has no included designs.`);
+        if(!variantsFor(details,colors,sizes).length)throw Error(`${recipe.name} needs an available color and size combination.`);
+        const outcomes=await runBounded(designs,MAX_CONCURRENT_DESIGNS,design=>processDesign(design,{details,recipe,colors,sizes,pricing:memberPricing,variantPrices:prices,shippingProfileId,description:isActive?description:details.description,collect:body=>requests.push(body)}));
+        const failed=outcomes.find(outcome=>outcome.status!=="Prepared");if(failed)throw Error(failed.error||"A design could not be prepared.");
+        for(const design of designs)queuedDesignSessions.current.set(design.id,details.batchId);
+        const snapshotDesigns=designs.map(({file,previewUrl,artworkPreviewUrl,artworkVersions,...design})=>({...design,artworkVersions:artworkVersions?.map(({file,previewUrl,...artwork})=>artwork)}));
+        const state={...base,template:recipe.templateUrl,templateDetails:details,activeRecipe:recipe,bundleIndex:index,bundleBatchIds:ids,designs:snapshotDesigns,drafts:[],complete:false,pricing:memberPricing,variantPrices:prices,selectedColorIds:colors,selectedSizeIds:sizes,etsyShippingProfileId:shippingProfileId,description:isActive?description:details.description,pricingApproved:false,autoTitleBankId:recipe.keywordListId||"",manualKeywordBankId:"",printifyImageIndices:recipe.printifyImageIndices||[],printifyImageSelections:{},preparedMockupCounts:{},sizeGuideName:"",batchReceipt:null,queuedDesignSessions:Object.fromEntries(designs.map(design=>[design.id,details.batchId]))};
+        await saveBatchFiles(ids[recipe.id],designs.map(design=>design.file));
+        await saveBatchArtworkAssets(ids[recipe.id],Object.fromEntries(designs.flatMap(design=>(design.artworkVersions||[]).filter(artwork=>artwork.file?.size).map(artwork=>[`${design.id}:${artwork.id}`,artwork.file]))));
+        members.push({id:ids[recipe.id],recipe,designs,state,results:[]});
+      }
+      if(requests.length>100)throw Error("This submission exceeds 100 listings. Use a smaller bundle.");
+      const saveMember=async(member:typeof members[number],finished=false)=>{
+        const allCreated=member.results.length===member.designs.length&&member.results.every(draft=>draft.status==="Created"&&draft.id);
+        const response=await fetch("/api/batches",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:member.id,parentBatchId:activeBundle?runIdRef.current:undefined,status:finished?allCreated?"complete":"needs_attention":"processing",step:"designs",setupName:batchDisplayName||activeBundle?.name||member.recipe.name,productTitle:(member.state.templateDetails as TemplateDetails).blueprintTitle,designCount:member.designs.length,state:{...member.state,drafts:member.results.map(snapshotDraft),complete:allCreated}})});
+        if(!response.ok)throw Error("The batch could not be saved before background processing.");
+      };
+      await persistRunNow();
+      for(const member of members)await saveMember(member);
+      setBundleBatchIds(ids);setRunTotal(requests.length);
+      const response=await fetchWithDeadline("/api/printify/drafts",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({requests})},120000);
+      const result=await response.json() as {accepted?:number;error?:string};
+      if(!response.ok||result.accepted!==requests.length)throw Error(result.error||"The full submission has not been confirmed. Resume this batch to check its saved jobs.");
+      setPreparationMessage("Creating drafts in the background. You can close this tab.");
+      let finishedCount=0;
+      await runBounded(members.flatMap(member=>member.designs.map(design=>({member,design}))),MAX_CONCURRENT_DESIGNS,async({member,design})=>{
+        let draft:DraftResult;
+        try{const recovered=await recoverDraft(queuedDesignSessions.current.get(design.id)!,design.id);if(!recovered)throw Error("A queued draft could not be found. Resume this batch to check again.");draft=recovered;}
+        catch(error){draft={clientId:design.id,name:design.name,status:"NeedsRetry",error:error instanceof Error?error.message:"Resume this batch to check its background job."};}
+        member.results.push({...draft,productName:member.recipe.name});
+        setProcessed(++finishedCount);
+        if(member.recipe.id===sourceRecipe.id)setDrafts([...member.results]);
+        return draft;
+      });
+      for(const member of members)await saveMember(member,true);
+      setComplete(Boolean(members.find(member=>member.recipe.id===sourceRecipe.id)?.results.some(draft=>draft.status==="Created"&&draft.id)));setUsageRevision(current=>current+1);setFinishPhase("details");
+      setSavedRevision(current=>current+1);
+      window.setTimeout(()=>document.querySelector(".draft-card")?.scrollIntoView({block:"start"}),0);
+    }catch(error){stopWith("Check this batch’s saved progress.",[error instanceof Error?error.message:"Resume this batch to check its drafts."],"Existing drafts will not be created twice.");}
+    finally{setRunning(false);setPreparationMessage("");setRunTotal(0);draftRunActive.current=false;draftRunInFlight.current=false;runInProgress.current=false;}
+  }
+  function confirmDrafts() {
+    const fresh=!drafts.length&&(!activeBundle||Object.keys(bundleBatchIds).length<=1);
+    if(fresh){void queueDraftSubmission();return;}
+    const recipeId=activeRecipe?.id;const targets=files.filter(file=>bundleQualityDecisions[`${recipeId}:${file.id}`]!=="exclude");setPreflightOpen(false);if(activeBundle&&bundleRecipes.length>1)setBundleRun({total:bundleRecipes.length});void runDrafts(targets);
+  }
 
   function retryFailed() {
     const failedIds = new Set(drafts.filter((draft) => draft.status !== "Created").map((draft) => draft.clientId));
