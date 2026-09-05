@@ -2035,10 +2035,10 @@ test("keeps bundle titles, placement decisions, review, and failures product-spe
 test("restores completed draft batches to reachable Finish results (fixes D53)",async()=>{
   const [app,batches]=await Promise.all([readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8"),readFile(new URL("../app/batches/page.tsx",import.meta.url),"utf8")]);
   assert.match(app,/hasCreatedDrafts=complete&&drafts\.some\(draft=>draft\.status==="Created"\)/);
-  assert.match(app,/if\(!pricingApproved\)setPricingApproved\(true\)/);
+  assert.doesNotMatch(app,/if\(!pricingApproved\)setPricingApproved\(true\)/);
   assert.match(app,/url\.searchParams\.set\("step","finish"\)/);
   assert.match(app,/setWorkflowStep\("finish"\)/);
-  assert.match(app,/setPricingApproved\(Boolean\(state\.pricingApproved\)\|\|Boolean\(state\.complete&&\(state\.drafts\|\|\[\]\)\.some\(draft=>draft\.status==="Created"\)\)\)/);
+  assert.match(app,/setPricingApproved\(Boolean\(state\.pricingApproved\)\)/);
   assert.match(batches,/&open=results/);
 });
 
@@ -2142,7 +2142,7 @@ test("records real pricing approval and invalidates it after edits (fixes D23 an
   assert.match(app,/if\(isActive\)\{setVariantPrices\(value\);setPricingApproved\(false\)\}/);
   /* D546 - the publish checklist repeated the product cards above it line for line, so it was deleted; each fact it carried moved to the row that owns it. */
   assert.match(app,/\{label:"Pricing and shipping",value:isActive\?\(bundlePricingReady&&etsyShippingSelectionReady\(\)\?/);
-  assert.match(app,/setPricingApproved\(Boolean\(state\.pricingApproved\)\|\|Boolean\(state\.complete&&\(state\.drafts\|\|\[\]\)\.some\(draft=>draft\.status==="Created"\)\)\)/);
+  assert.match(app,/setPricingApproved\(Boolean\(state\.pricingApproved\)\)/);
   assert.doesNotMatch(app,/if\(complete&&drafts\.some\(draft=>draft\.status==="Created"\)&&!pricingApproved\)setPricingApproved\(true\)/);
   assert.doesNotMatch(app,/✓ Every enabled variation and price was reviewed/);
 });

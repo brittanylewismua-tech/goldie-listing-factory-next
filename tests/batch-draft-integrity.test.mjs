@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {DatabaseSync} from 'node:sqlite';
+import {navigationIssues,leavingImagesIssues} from '../app/workflow-gates.ts';
 import {mergeMatchingDrafts,restoreBatchDrafts,batchDraftIdentityProblem,serializedBatchWrites} from '../app/batch-draft-integrity.ts';
 const tee={id:'tee',clientId:'tee-art',batchId:'tee-session',status:'Created',costReview:{required:true,approved:true}};
 const hoodie={id:'hoodie',clientId:'hoodie-art',batchId:'hoodie-session',status:'Created',costReview:{required:true,approved:false}};
@@ -20,6 +21,25 @@ test('restore refreshes approved costs without replacing design text or product 
   const state={designs:[{id:'tee-art',title:'Hand-edited title'}],drafts:[{...tee,costReview:{required:true,approved:false},productName:'Saved tee'}],templateDetails:{batchId:'renewed-session'}};
   const restored=restoreBatchDrafts(state,[tee,hoodie]);
   assert.equal(restored.drafts[0].productName,'Saved tee');assert.equal(restored.designs[0].title,'Hand-edited title');assert.equal(restored.pricingApproved,true);
+});
+test('restoring a draft never approves local price edits that differ from the saved Printify prices',()=>{
+  const draft={...tee,costReview:{required:true,approved:true,variants:[{id:123,price:2479,isEnabled:true}]}};
+  const state={designs:[{id:'tee-art'}],drafts:[draft],pricingApproved:true,variantPrices:{123:2589}};
+  assert.equal(restoreBatchDrafts(state,[draft]).pricingApproved,false);
+  assert.equal(restoreBatchDrafts({...state,variantPrices:{123:2479}},[draft]).pricingApproved,true);
+});
+test('saved product defaults and draft existence cannot silently approve edited final prices',()=>{
+  const source=readFileSync(new URL('../app/listing-factory-app.tsx',import.meta.url),'utf8');
+  assert.match(source,/if\(restoringBatch\|\|!activeRecipe\|\|drafts\.some\(draft=>draft\.status==="Created"\)\)return;\s*const carries=recipeCarriesApprovedPricing/);
+  assert.match(source,/setPricingApproved\(Boolean\(state\.pricingApproved\)\)/);
+  assert.doesNotMatch(source,/setPricingApproved\(Boolean\(state\.pricingApproved\)\|\|Boolean\(state\.complete/);
+  assert.match(source,/if\(index>=5&&complete\)issues\.push\(\.\.\.imagesStepIssues\(\)\)/);
+});
+test('rail and footer both require saving edited final prices before Listing',()=>{
+  const state={connected:true,etsyConnected:true,productSelected:true,templateReady:true,shippingReady:true,variantsReady:true,bundleProductsReady:true,colorsReady:true,pricesReady:true,designCount:1,designsReady:true,etsyShippingProfileReady:true,draftsComplete:true,createdDraftCount:1,pricingApproved:false,imagesReady:true};
+  assert.deepEqual(navigationIssues(5,state),['Save the item prices on the Drafts step.']);
+  assert.deepEqual(leavingImagesIssues(state),['Save the item prices on the Drafts step.']);
+  assert.deepEqual(navigationIssues(5,{...state,pricingApproved:true}),[]);
 });
 test('no matching session or ambiguous candidates never guesses a recovered draft',()=>{
   const state={designs:[{id:'hoodie-art'}],drafts:[],templateDetails:{batchId:'hoodie-session'}};

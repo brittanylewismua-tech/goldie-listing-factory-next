@@ -1,5 +1,9 @@
-type DraftIdentity = { id?:string; clientId?:string; batchId?:string; sourceTemplateId?:string; status?:string; costReview?:{required?:boolean;approved?:boolean} };
-type BatchIdentity = { designs?:Array<{id?:string}>; drafts?:DraftIdentity[]; templateDetails?:{id?:string;batchId?:string}; pricingApproved?:boolean };
+type DraftIdentity = { id?:string; clientId?:string; batchId?:string; sourceTemplateId?:string; status?:string; costReview?:{required?:boolean;approved?:boolean;variants?:Array<{id:number;price:number;isEnabled?:boolean}>} };
+type BatchIdentity = { designs?:Array<{id?:string}>; drafts?:DraftIdentity[]; templateDetails?:{id?:string;batchId?:string}; pricingApproved?:boolean;variantPrices?:Record<string,number> };
+
+export function pricesMatchSavedDrafts(drafts:DraftIdentity[],prices:Record<string,number>={}){
+  return drafts.every(draft=>(draft.costReview?.variants||[]).every(variant=>variant.isEnabled===false||!Object.prototype.hasOwnProperty.call(prices,String(variant.id))||Number(prices[String(variant.id)])===Number(variant.price)));
+}
 
 /** A late product response can update matching records, never insert records
  * from the product that was open when the request started. */
@@ -26,7 +30,7 @@ export function restoreBatchDrafts<T extends BatchIdentity>(state:T, authoritati
     if(chosen)restored.push({...existing,...chosen});else if(existing)restored.push(existing);
   }
   const approval=restored.filter(draft=>draft.status==='Created'&&draft.costReview?.required);
-  return {...state,drafts:restored,pricingApproved:approval.length?approval.every(draft=>draft.costReview?.approved):state.pricingApproved};
+  return {...state,drafts:restored,pricingApproved:approval.length?approval.every(draft=>draft.costReview?.approved)&&pricesMatchSavedDrafts(approval,state.variantPrices):state.pricingApproved};
 }
 
 export function batchDraftIdentityProblem(state:BatchIdentity):boolean{

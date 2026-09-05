@@ -1,4 +1,5 @@
 import { env } from "cloudflare:workers";
+import { DELETE_UNUSED_TEMPLATE_SESSIONS } from "./retention";
 import { NextResponse } from "next/server";
 import { verifyShopPairing, shopMismatch } from "./shop-match";
 import { cachedJson, provenPairing, rememberPairing, forgetPairings } from "../static-cache";
@@ -336,8 +337,7 @@ export async function POST(request: Request) {
       freeShipping:Boolean(found.product.sales_channel_properties?.free_shipping),
     };
     await db.batch([
-      db.prepare("DELETE FROM printify_batch_sessions WHERE expires_at <= unixepoch()"),
-      db.prepare("DELETE FROM printify_draft_results WHERE updated_at < datetime('now', '-30 days')"),
+      db.prepare(DELETE_UNUSED_TEMPLATE_SESSIONS),
       db.prepare("INSERT INTO printify_batch_sessions (id, user_id, shop_id, product_id, template_json, expires_at) VALUES (?, ?, ?, ?, ?, ?)")
         .bind(batchId, user.userId, found.shop.id, found.product.id, JSON.stringify(safeTemplate), expiresAt),
     ]);

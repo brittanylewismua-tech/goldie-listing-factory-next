@@ -114,6 +114,7 @@ export function navigationIssues(index:number,state:NavigationGateState){
   if(index>=5&&!state.etsyShippingProfileReady)issues.push("Choose the Etsy shipping profile after approving the finished prices on the Images step.");
   if(index>=5&&!state.draftsComplete)issues.push("Finish creating the Printify drafts.");
   if(index>=5&&!state.createdDraftCount)issues.push("Create at least one Printify draft.");
+  if(index>=5&&!state.pricingApproved)issues.push("Save the item prices on the Drafts step.");
   if(index>=6&&!state.titlesReady)issues.push("Finish every listing title.");
   if(index>=6&&!state.tagsReady)issues.push("Finish every listing’s tags.");
   if(index>=6&&!state.descriptionReady)issues.push("Add the reusable product description.");
