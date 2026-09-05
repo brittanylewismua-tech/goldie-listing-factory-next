@@ -48,7 +48,7 @@ test('pricing badges and sibling approvals use the saved batch decision, not mer
   assert.match(source,/Boolean\(member.pricingApproved\)&&created.length>0/);
   assert.match(source,/if\(!gateState\(\).pricingApproved\)issues.push\("Save the item prices on the Drafts step."\)/);
   assert.doesNotMatch(source,/titles · all 13 tags/);
-  assert.match(source,/if\(approved\|\|!selectedProfile\|\|!variants.length\)return;const stillUsingTemplatePrices/);
+  assert.match(source,/if\(approved\|\|preserveEdits\|\|!selectedProfile\|\|!variants.length\)return;const stillUsingTemplatePrices/);
 });
 test('no matching session or ambiguous candidates never guesses a recovered draft',()=>{
   const state={designs:[{id:'hoodie-art'}],drafts:[],templateDetails:{batchId:'hoodie-session'}};

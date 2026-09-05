@@ -46,4 +46,12 @@ test('pricing cards read, edit, and save the same isolated group prices',()=>{
   assert.match(panel,/approveActualPricingGroup\(group,groupPrices\)/);
   assert.doesNotMatch(panel,/setVariantPrices|prices=\{variantPrices\}|approved=pricingApproved&&/);
   assert.match(panel,/Prices for/);
+  assert.match(panel,/preserveEdits=\{Boolean\(group.drafts\[0\].priceEdits\)\}/);
+  assert.doesNotMatch(panel,/Prices saved to every listing/);
+});
+test('restored edits opt out of both automatic price initialization paths',()=>{
+  const source=readFileSync(new URL('../app/listing-factory-app.tsx',import.meta.url),'utf8');
+  assert.match(source,/if\(approved\|\|preserveEdits\|\|!selectedProfile/);
+  assert.match(source,/const manualPriceEdit=useRef\(preserveEdits\)/);
+  assert.match(source,/if\(!variants.length\|\|approved\|\|manualPriceEdit.current\)return/);
 });
