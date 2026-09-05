@@ -3376,6 +3376,29 @@ html, body { background: var(--lf-paper); }
 .app-shell .summary-list div button:hover{border-color:#756871!important;background:#faf8f9!important}
 .app-shell .summary-list div button:focus-visible{outline:3px solid rgba(245,47,178,.2);outline-offset:2px}
 .app-shell .workflow-footer-actions>.save-draft-link{min-height:38px;padding:8px 12px}
+/* Keep every continuation reachable when the footer becomes narrower than its controls. */
+@media(max-width:600px){
+  .app-shell .workflow-footer-actions{
+    display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+    gap:10px!important;padding:12px 16px!important;
+  }
+  .app-shell .workflow-footer-actions>.workflow-back{
+    grid-row:2;grid-column:1;width:auto!important;min-width:0!important;margin:0!important;
+  }
+  .app-shell .workflow-footer-actions>.save-draft-link{
+    grid-row:2;grid-column:2;width:auto!important;min-width:0!important;margin:0!important;
+  }
+  .app-shell .workflow-footer-actions .footer-forward-action{
+    grid-row:1;grid-column:1/-1;width:100%!important;max-width:none!important;
+    min-width:0!important;margin:0!important;
+  }
+  .app-shell .workflow-footer-actions .factory-footer.in-bar>small{
+    grid-row:3;grid-column:1/-1;width:auto!important;white-space:normal;text-align:center;
+  }
+  .app-shell .support-root .support-launcher{
+    bottom:calc(var(--goldie-launcher-lift, 70px) + 16px);
+  }
+}
 .app-shell .workflow-footer-actions .launch-button{
   width:auto!important;max-width:min(460px,48%)!important;min-height:44px!important;flex:0 0 auto;
   padding:11px 16px!important;white-space:normal;text-align:center;font-size:13px!important;
@@ -3460,6 +3483,12 @@ html, body { background: var(--lf-paper); }
 .app-shell .factory-listing-next{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px;padding:12px;border:1px solid #ded6dc;border-radius:10px;background:#fff}
 .app-shell .factory-listing-next button{min-height:40px;border:1px solid #111;border-radius:8px;background:#111;color:#fff;font-weight:750}
 .app-shell .factory-listing-next button:last-child{justify-self:end}
+.app-shell .factory-listing-next button:first-child{justify-self:start}
+@media(max-width:600px){
+  .app-shell .factory-listing-next{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+  .app-shell .factory-listing-next span{grid-row:1;grid-column:1/-1;text-align:center}
+  .app-shell .factory-listing-next button{grid-row:2;width:100%;min-width:0;white-space:normal!important}
+}
 .app-shell .factory-listing-next button:disabled{border-color:#e2d9de;background:#f4f0f3;color:#9b8e97}
 .app-shell .factory-listing-next span{color:#756873;font-size:12px;font-weight:700}
 
