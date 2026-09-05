@@ -1,3 +1,4 @@
+import {readDraftImplementation} from "./draft-implementation-source.mjs";
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -35,7 +36,7 @@ test('incomplete or wrong-product responses cannot replace valid existing metada
   assert.equal(await completeCreatedProduct(created,1,'test',async()=>new Response('{')),created);
 });
 test('actual draft route has one bounded hydration call and no long post-creation GET ladder',()=>{
-  const source=readFileSync(new URL('../app/api/printify/drafts/route.ts',import.meta.url),'utf8');
+  const source=readDraftImplementation();
   const finalization=source.slice(source.indexOf('const resolvedProduct='),source.indexOf('const totalMs='));
   assert.equal((finalization.match(/completeCreatedProduct\(/g)||[]).length,1);
   assert.doesNotMatch(finalization,/await api</);

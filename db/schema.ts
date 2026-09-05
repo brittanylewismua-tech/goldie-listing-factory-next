@@ -65,6 +65,7 @@ export const printifyDraftResults = sqliteTable("printify_draft_results", {
   clientId: text("client_id").notNull(),
   status: text("status").notNull(),
   responseJson: text("response_json"),
+  createdAt: text("created_at"),
   updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 }, (table) => [index("idx_printify_draft_results_user_batch").on(table.userId, table.batchId)]);
 

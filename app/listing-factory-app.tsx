@@ -1019,6 +1019,7 @@ export default function ListingFactoryApp() {
   const [connectionError, setConnectionError] = useState("");
   const [connecting, setConnecting] = useState(false);
   const [checkingConnection, setCheckingConnection] = useState(true);
+  const [checkingEtsyConnection, setCheckingEtsyConnection] = useState(true);
   const [template, setTemplate] = useState("");
   const [templateDetails, setTemplateDetails] = useState<TemplateDetails | null>(null);
   /* D611 - what Goldie classifies the product by. Printify's own blueprint
@@ -1739,7 +1740,7 @@ export default function ListingFactoryApp() {
   }
   function gateState():NavigationGateState{return {bundleProductsReady:bundleProductsReady(),connected,etsyConnected,productSelected,templateReady:templateLoaded,shippingReady:Boolean(templateDetails?.shippingTemplateId||templateDetails?.shippingProfileNeedsSelection),variantsReady:Boolean(templateDetails?.enabledVariants),colorsReady:!templateDetails?.colorOptions?.length||selectedColorIds.length>0,pricesReady:pricedVariants.length>0,designCount:files.length,designsReady:files.every(designArtworkReady),/* A stored id is not enough: it must still exist in the connected shop, and
      the profile request itself must have succeeded. */etsyShippingProfileReady:etsyShippingSelectionReady(),pricingApproved:activeBundle?bundleRecipes.length>0&&bundleRecipes.every(recipe=>recipe.id===activeRecipe?.id?pricingApproved:(bundleApproved[recipe.id]??false)):pricingApproved,draftsComplete:complete,createdDraftCount,titlesReady:files.length>0&&files.every(file=>Boolean(file.title.trim())&&!file.titleError),tagsReady:files.length>0&&files.every(file=>file.tags.length>0&&!file.titleError),descriptionReady:Boolean(description.trim()),etsyDetailsReady:files.length>0&&files.every(file=>etsyRequiredComplete(file.etsy)),personalizationReady:files.every(file=>!personalizationProblem(file.etsy)),imagesReady:allCreatedListingsHaveImages()}}
-  function progressGateIssues(index:number){if(localPreview)return [];const issues=navigationIssues(index,gateState());if(index>=5&&complete)issues.push(...imagesStepIssues());if(index>=6)issues.push(...runProductGaps());return [...new Set(issues)]}
+  function progressGateIssues(index:number){if(localPreview)return [];if(index>0&&(checkingConnection||checkingEtsyConnection))return ["Checking saved connections…"];const issues=navigationIssues(index,gateState());if(index>=5&&complete)issues.push(...imagesStepIssues());if(index>=6)issues.push(...runProductGaps());return [...new Set(issues)]}
   /* D444 - leaving Images needs photos, not titles. See leavingImagesIssues. */
   function imagesStepIssues(){if(localPreview)return [];const issues=leavingImagesIssues(gateState());if(templateDetails?.colorOptions?.length&&!selectedColorIds.length)issues.push("Choose at least one product color.");if(templateDetails?.sizeOptions?.length&&!selectedSizeIds.length)issues.push("Choose at least one product size.");if(savingDraftVariants)issues.push("Wait while the product colors and sizes are saved to Printify.");if(draftVariantError)issues.push(draftVariantError);if(bundleProductsStillReading().length)issues.push("Still reading the finished costs for the other products in this bundle.");const pending=costReviewDrafts().filter(draft=>!draft.costReview?.approved);if(pending.length)issues.push(`${pending.length} ${pending.length===1?"listing needs":"listings need"} final pricing approval after Printify calculated the finished product costs.`);
     /* The footer advances the whole bundle, so it must validate every child,
@@ -1795,7 +1796,7 @@ export default function ListingFactoryApp() {
   function failedBundleNames(){
     return bundleRecipes.filter(recipe=>bundleLoadErrors[recipe.id]).map(recipe=>recipe.name);
   }
-  function requiredForStep(step:WorkflowStep){if(localPreview)return [];const issues:string[]=[];if(step!=="connect"&&!connected)issues.push("Connect your Printify account.");if(step!=="connect"&&!etsyConnected)issues.push("Connect the Etsy shop that will receive these listings.");if(["designs","review","finish"].includes(step)){if(!productSelected)issues.push("Save or select a product or product bundle.");if(!templateDetails?.shippingTemplateId&&!templateDetails?.shippingProfileNeedsSelection)issues.push("Choose a valid Printify product with an imported shipping profile.");if(!templateDetails?.enabledVariants)issues.push("The product needs at least one enabled size or color.");if(!templateDetails?.batchId)issues.push("Reload the Printify product before continuing.");}if(["review","finish"].includes(step)){const missingColors=Boolean(templateDetails?.colorOptions?.length&&!selectedColorIds.length);const missingSizes=Boolean(templateDetails?.sizeOptions?.length&&!selectedSizeIds.length);if(missingColors)issues.push("Choose at least one product color for this batch.");else if(missingSizes)issues.push("Choose at least one product size for this batch.");else if(!pricedVariants.length)issues.push(`No color and size combination you picked is available for ${templateDetails?.blueprintTitle||"this product"}. Open its Colors or Sizes and choose a pairing Printify offers.`);}/* D221 · Every bundle member still needs its own keyword bank before titles can
+  function requiredForStep(step:WorkflowStep){if(localPreview)return [];if(step!=="connect"&&(checkingConnection||checkingEtsyConnection))return ["Checking saved connections…"];const issues:string[]=[];if(step!=="connect"&&!connected)issues.push("Connect your Printify account.");if(step!=="connect"&&!etsyConnected)issues.push("Connect the Etsy shop that will receive these listings.");if(["designs","review","finish"].includes(step)){if(!productSelected)issues.push("Save or select a product or product bundle.");if(!templateDetails?.shippingTemplateId&&!templateDetails?.shippingProfileNeedsSelection)issues.push("Choose a valid Printify product with an imported shipping profile.");if(!templateDetails?.enabledVariants)issues.push("The product needs at least one enabled size or color.");if(!templateDetails?.batchId)issues.push("Reload the Printify product before continuing.");}if(["review","finish"].includes(step)){const missingColors=Boolean(templateDetails?.colorOptions?.length&&!selectedColorIds.length);const missingSizes=Boolean(templateDetails?.sizeOptions?.length&&!selectedSizeIds.length);if(missingColors)issues.push("Choose at least one product color for this batch.");else if(missingSizes)issues.push("Choose at least one product size for this batch.");else if(!pricedVariants.length)issues.push(`No color and size combination you picked is available for ${templateDetails?.blueprintTitle||"this product"}. Open its Colors or Sizes and choose a pairing Printify offers.`);}/* D221 · Every bundle member still needs its own keyword bank before titles can
      be generated — the D181 rule is unchanged. It moved off the Product page,
      which was blocking Continue on a choice made two pages later, and onto the
      Listing page where the bank is chosen and used. */
@@ -2166,7 +2167,7 @@ export default function ListingFactoryApp() {
 
   useEffect(()=>{fetch("/api/seller-preferences").then(response=>response.json()).then((result:{pricing?:Partial<Pricing>|null})=>{if(!result.pricing)return;setPricing(current=>({...current,etsyFeePercent:Number(result.pricing?.etsyFeePercent??current.etsyFeePercent),fixedFee:Number(result.pricing?.fixedFee??current.fixedFee),listingFee:Number(result.pricing?.listingFee??current.listingFee)}))}).catch(()=>undefined)},[]);
 
-  useEffect(()=>{fetch("/api/etsy").then(response=>response.json()).then((result:{connected?:boolean;shopName?:string;error?:string})=>{setEtsyConnected(Boolean(result.connected));setEtsyShop(result.shopName||"");if(result.error)setEtsyError(result.error)}).catch(()=>setEtsyConnected(false));const message=new URL(window.location.href).searchParams.get("etsy");if(message){if(message==="connected"){setEtsyConnected(true);setEtsyError("")}else setEtsyError(message);const url=new URL(window.location.href);url.searchParams.delete("etsy");window.history.replaceState({},"",url)}},[]);
+  useEffect(()=>{fetch("/api/etsy").then(response=>response.json()).then((result:{connected?:boolean;shopName?:string;error?:string})=>{setEtsyConnected(Boolean(result.connected));setEtsyShop(result.shopName||"");if(result.error)setEtsyError(result.error)}).catch(()=>setEtsyConnected(false)).finally(()=>setCheckingEtsyConnection(false));const message=new URL(window.location.href).searchParams.get("etsy");if(message){if(message==="connected"){setEtsyConnected(true);setEtsyError("")}else setEtsyError(message);const url=new URL(window.location.href);url.searchParams.delete("etsy");window.history.replaceState({},"",url)}},[]);
   async function loadEtsyShippingProfiles(preselect=0){setShippingProfilesLoading(true);setShippingProfilesError("");try{const response=await fetch("/api/etsy/shipping-profiles"),result=await response.json() as {profiles?:EtsyShippingProfile[];error?:string};if(!response.ok)throw new Error(result.error||"Your Etsy shipping profiles could not be loaded.");const profiles=(result.profiles||[]).map(profile=>({...profile,title:profile.title.replace(/\.{2,}$/,"…")}));setEtsyShippingProfiles(profiles);setEtsyShippingProfileId(current=>{const wanted=preselect||current;return wanted&&profiles.some(profile=>profile.id===wanted)?wanted:0})}catch(error){setShippingProfilesError(error instanceof Error?error.message:"Your Etsy shipping profiles could not be loaded.")}finally{setShippingProfilesLoading(false)}}
   useEffect(()=>{if(etsyConnected)void loadEtsyShippingProfiles()},[etsyConnected]);
   useEffect(()=>{const templateProfileId=Number(templateDetails?.shippingTemplateId);if(!templateProfileId||!etsyShippingProfiles.some(profile=>profile.id===templateProfileId))return;setEtsyShippingProfileId(current=>current||templateProfileId)},[templateDetails?.shippingTemplateId,etsyShippingProfiles]);
@@ -4105,15 +4106,20 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
   }
 
   async function recoverDraft(batchId: string, clientId: string) {
-    const delays = [1000, 2000, 4000, 8000, 12000, 15000];
-    for (const delay of delays) {
+    // The server owns the durable job. Poll quickly for normal completion,
+    // then back off without turning a slow provider response into a new POST.
+    for (let attempt=0;attempt<180;attempt++) {
+      const delay=attempt<10?1000:5000;
       await new Promise((resolve) => window.setTimeout(resolve, delay));
-      const response = await fetchWithDeadline(`/api/printify/drafts?batchId=${encodeURIComponent(batchId)}&clientId=${encodeURIComponent(clientId)}`, {}, 30000);
-      const result = await response.json() as { status?: string; draft?: DraftResult };
+      let response:Response;
+      try{response=await fetchWithDeadline(`/api/printify/drafts?batchId=${encodeURIComponent(batchId)}&clientId=${encodeURIComponent(clientId)}`, {}, 15000);}catch{continue;}
+      if(response.status>=500)continue;
+      const result = await response.json() as { status?: string; draft?: DraftResult;error?:string };
       if (result.status === "succeeded" && result.draft) return result.draft;
-      if (result.status === "failed" || result.status === "not_found") return null;
+      if(result.status==="failed")throw new Error(result.error||"This draft could not be completed.");
+      if(result.status==="not_found")return null;
     }
-    return null;
+    throw new Error("This draft is still being checked in the background. Reload this batch to see its saved result; do not create a second copy.");
   }
 
   async function processDesign(design: DesignFile): Promise<DraftResult> {
@@ -4173,10 +4179,19 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
               clientId:design.id,
             };
             const requestBody=versions.length?{...commonDraftRequest,artworks:stagedArtworks,artworkAssignments}:{...commonDraftRequest,maxPlacementScale:isRigidPaperProduct(requestDetails)?1:undefined,fileName:stagedArtworks[0].fileName,stagedId:stagedArtworks[0].stagedId};
-            const response = await fetchWithDeadline("/api/printify/drafts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(requestBody) }, 60_000);
-            const result = await response.json() as { draft?: DraftResult; error?: string };
+            let response:Response;
+            try {
+              response = await fetchWithDeadline("/api/printify/drafts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(requestBody) }, 60_000);
+            } catch (connectionError) {
+              // A disconnected browser does not mean the server rejected the job.
+              // Recover the same identity; never automatically send another POST.
+              const recovered=await recoverDraft(requestDetails!.batchId,design.id);
+              if(!recovered)throw connectionError;
+              response=Response.json({draft:recovered});
+            }
+            const result = await response.json() as { draft?: DraftResult; error?: string;status?:string };
             artworkItems.forEach(item=>stagedArtworkCache.current.delete(`${design.id}:${item.key}`));
-            if ((!response.ok || !result.draft) && (response.status === 409 || /still completing this exact draft/i.test(result.error ?? ""))) {
+            if (!result.draft && (response.status === 202 || response.status === 409 || result.status==="running" || /still completing this exact draft/i.test(result.error ?? ""))) {
               const recovered = await recoverDraft(requestDetails!.batchId, design.id);
               if (recovered) result.draft = recovered;
             }

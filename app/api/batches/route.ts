@@ -234,7 +234,7 @@ export async function GET(request:Request){const user=await getChatGPTUser();if(
      response for truthful legacy receipts and Batch History attribution. */
   let preparedDays:Array<{day:string;count:number}>=[];
   try{
-    const preparedDayRows=await database.prepare("SELECT substr(updated_at,1,10) day,COUNT(*) count FROM printify_draft_results WHERE user_id=? AND status='succeeded' GROUP BY substr(updated_at,1,10) ORDER BY day DESC").bind(user.userId).all<{day:string;count:number}>();
+    const preparedDayRows=await database.prepare("SELECT substr(COALESCE(created_at,updated_at),1,10) day,COUNT(*) count FROM printify_draft_results WHERE user_id=? AND status='succeeded' GROUP BY substr(COALESCE(created_at,updated_at),1,10) ORDER BY day DESC").bind(user.userId).all<{day:string;count:number}>();
     preparedDays=(preparedDayRows.results||[]).map(row=>({day:String(row.day||""),count:Math.max(0,Number(row.count)||0)})).filter(row=>row.day);
   }catch(error){
     console.error("batches: listing goal count failed, serving batches without it",error);

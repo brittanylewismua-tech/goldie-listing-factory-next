@@ -1,9 +1,14 @@
+import {readDraftImplementation} from "./draft-implementation-source.mjs";
 /* D721 · interface-v2.css owns the shell, card and row selectors after the
    migration. These reads include it so the assertions still describe the
    app's styles. Not one assertion is relaxed — only the file set widens. */
 import assert from "node:assert/strict";
 import { access, readFile } from "node:fs/promises";
 import test from "node:test";
+import {registerHooks} from "node:module";
+// Public-page SSR runs under Node. The Worker now exports a native Workflow
+// class; its constructor is not exercised by these HTTP rendering assertions.
+registerHooks({resolve(specifier,context,next){if(specifier==="cloudflare:workers")return {url:'data:text/javascript,export class WorkflowEntrypoint{};export const env={};',shortCircuit:true};return next(specifier,context);}});
 import { navigationIssues } from "../app/workflow-gates.ts";
 
 test("keeps both connected-account Disconnect actions visually quiet", async () => {
@@ -124,7 +129,7 @@ test("offers real account sign-in choices and preserves the selected destination
 test("uses individual shop-aware Printify editor buttons", async () => {
   const [page, route] = await Promise.all([
     readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../app/api/printify/drafts/route.ts", import.meta.url), "utf8"),
+    readDraftImplementation(),
   ]);
   assert.match(page, /Adjust in Printify/);
   assert.match(page, /Clear this listing’s selections/);
@@ -183,8 +188,8 @@ test("uses individual shop-aware Printify editor buttons", async () => {
   assert.match(page, /8253\|Provided images do not exist/);
   assert.match(page, /Download it fully to your computer/);
   assert.match(page, /const waits = \[0, 1500, 4000\]/);
-  assert.match(route, /stagedIdsForCleanup/);
-  assert.match(route, /finally/);
+  assert.match(route, /const workflowId=crypto.randomUUID\(\),copies:string\[\]=\[\]/);
+  assert.doesNotMatch(route, /finally\s*\{\s*await Promise.all.*staged/,'HTTP completion must not delete artwork owned by a running durable job');
   assert.match(route, /printAreasWithOnlyCurrentArtwork/);
   assert.doesNotMatch(route, /image\.id === primaryTemplateImageId/);
   assert.match(route, /Add one placeholder design/);
@@ -196,7 +201,7 @@ test.skip("unifies saved products, editing, pricing, and mockups without the old
     readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/factory-tools.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/integrated-mockups.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../app/api/printify/drafts/route.ts", import.meta.url), "utf8"),
+    readDraftImplementation(),
   ]);
   assert.doesNotMatch(page, /factory-switcher/);
   assert.match(recipes, /Printify product link/);
@@ -370,7 +375,7 @@ test("imports Printify product facts and automatically prepares product-specific
     readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8"),
     readFile(new URL("../app/api/printify/route.ts",import.meta.url),"utf8"),
     readFile(new URL("../app/api/listing-intelligence/route.ts",import.meta.url),"utf8"),
-    readFile(new URL("../app/api/printify/drafts/route.ts",import.meta.url),"utf8"),
+    readDraftImplementation(),
   ]);
   assert.match(printify,/blueprintTitle/);assert.match(printify,/description:found\.product\.description/);
   assert.match(page,/Completing Etsy details/);
@@ -447,7 +452,7 @@ test("calculates every Printify variant price from its own cost and Etsy fee pro
   assert.ok(estimatedProfit(crewneckPrice, 3100, crewneck) >= 10);
   assert.ok(estimatedProfit(crewneckPrice, 3100, crewneck) < 10.02);
   const page = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
-  const drafts = await readFile(new URL("../app/api/printify/drafts/route.ts", import.meta.url), "utf8");
+  const drafts = await readDraftImplementation();
   assert.match(page, /stillUsingTemplatePrices/);
   assert.match(page, /Prices calculated from your profit goal, product costs, and Etsy fees\./);
   assert.match(page, /if\(profile\)recalculate\(pricing\)/);
@@ -484,7 +489,7 @@ test("preflights the account once and reuses a protected batch session", async (
   const [page, connection, drafts, schema, migration] = await Promise.all([
     readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/api/printify/route.ts", import.meta.url), "utf8"),
-    readFile(new URL("../app/api/printify/drafts/route.ts", import.meta.url), "utf8"),
+    readDraftImplementation(),
     readFile(new URL("../db/schema.ts", import.meta.url), "utf8"),
     readFile(new URL("../drizzle/0004_broad_dazzler.sql", import.meta.url), "utf8"),
   ]);
@@ -494,7 +499,7 @@ test("preflights the account once and reuses a protected batch session", async (
   assert.match(connection, /Publish this product to Etsy once with the shipping profile/);
   assert.match(connection, /expiresAt = Math\.floor\(Date\.now\(\) \/ 1000\) \+ 6 \* 60 \* 60/);
   assert.match(page, /batchId: requestDetails\?\.batchId/);
-  assert.match(drafts, /FROM printify_batch_sessions WHERE id = \? AND user_id = \?/);
+  assert.match(drafts, /FROM printify_batch_sessions WHERE id=\? AND user_id=\?/);
   assert.doesNotMatch(drafts, /const shops = await api|for \(const candidate of shops\)/);
   assert.match(schema, /printifyBatchSessions/);
   assert.match(migration, /printify_batch_sessions/);
@@ -502,15 +507,15 @@ test("preflights the account once and reuses a protected batch session", async (
 
 test("makes draft retries idempotent so a lost response cannot duplicate a listing", async () => {
   const [drafts, schema, migration] = await Promise.all([
-    readFile(new URL("../app/api/printify/drafts/route.ts", import.meta.url), "utf8"),
+    readDraftImplementation(),
     readFile(new URL("../db/schema.ts", import.meta.url), "utf8"),
     readFile(new URL("../drizzle/0004_broad_dazzler.sql", import.meta.url), "utf8"),
   ]);
   assert.match(drafts, /SHA-256/);
-  assert.match(drafts, /prior\?\.status === "succeeded"/);
+  assert.match(drafts, /if\(prior&&prior.status!=="failed"\)return jobResponse/);
   assert.match(drafts, /status = 'succeeded'/);
-  assert.match(drafts, /still completing this exact draft/);
-  assert.match(drafts, /async function handleGET\(request: Request\)/);
+  assert.match(drafts, /await startJob\(row.request_key,owner,job\)/);
+  assert.match(drafts, /async function handleGET\(request:Request\)/);
   const page = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
   assert.match(page, /async function recoverDraft/);
   assert.match(page, /status === "succeeded"/);
@@ -519,7 +524,7 @@ test("makes draft retries idempotent so a lost response cannot duplicate a listi
 });
 
 test("uses draft creation as the authoritative image-readiness check", async () => {
-  const [route, creation] = await Promise.all([readFile(new URL("../app/api/printify/drafts/route.ts", import.meta.url), "utf8"), readFile(new URL("../app/api/printify/product-creation.ts", import.meta.url), "utf8")]);
+  const [route, creation] = await Promise.all([readDraftImplementation(), readFile(new URL("../app/api/printify/product-creation.ts", import.meta.url), "utf8")]);
   assert.doesNotMatch(route, /waitForUploadedImage|fetch\(`\$\{PRINTIFY_API\}\/uploads\/\$\{encodeURIComponent\(imageId\)\}/);
   assert.match(creation, /Provided images do not exist/);
   assert.match(creation, /8253/);
@@ -533,7 +538,7 @@ test("uses draft creation as the authoritative image-readiness check", async () 
 });
 
 test("retries Printify remote-artwork download interruptions before failing the design", async () => {
-  const drafts = await readFile(new URL("../app/api/printify/drafts/route.ts", import.meta.url), "utf8");
+  const drafts = await readDraftImplementation();
   assert.match(drafts, /10300/);
   assert.match(drafts, /image download/);
   assert.match(drafts, /remoteDownloadInterrupted/);
@@ -541,7 +546,7 @@ test("retries Printify remote-artwork download interruptions before failing the 
 });
 
 test("sends optimized staged artwork to Printify by a protected URL", async () => {
-  const route = await readFile(new URL("../app/api/printify/drafts/route.ts", import.meta.url), "utf8");
+  const route = await readDraftImplementation();
   assert.match(route, /ARTWORK\?\.get\(artwork\.stagedId\)/);
   assert.match(route, /signedArtworkUrl\(requestOrigin, artwork\.stagedId, artworkSecret\)/);
   assert.match(route, /file_name: source\.fileName, url: source\.url/);
@@ -586,7 +591,7 @@ test("uses the full Mockup Library width and previews up to ten scenes before ex
 test("validates and isolates staged artwork without decoding or buffering it", async () => {
   const [stage, drafts, cryptoSource] = await Promise.all([
     readFile(new URL("../app/api/printify/stage/route.ts", import.meta.url), "utf8"),
-    readFile(new URL("../app/api/printify/drafts/route.ts", import.meta.url), "utf8"),
+    readDraftImplementation(),
     readFile(new URL("../app/api/printify/token-crypto.ts", import.meta.url), "utf8"),
   ]);
   assert.doesNotMatch(stage, /request\.body\.tee\(\)/);
@@ -636,7 +641,7 @@ test("retries a real 8253 draft response and succeeds without an upload lookup",
   assert.deepEqual(replaced, [1]);
 });
 
-test("recovers from Printify throttling and network interruption without changing the request", async () => {
+test("recovers from a definite Printify throttle without changing the request", async () => {
   const { createProductWithImageRetries } = await import("../app/api/printify/product-creation.ts");
   const waits = [];
   let calls = 0;
@@ -647,15 +652,14 @@ test("recovers from Printify throttling and network interruption without changin
     fetcher:async (_url, init) => {
       calls += 1;
       assert.equal(init?.body, JSON.stringify({ title:"same-draft" }));
-      if (calls === 1) throw new TypeError("network down");
-      if (calls === 2) return new Response("limited", { status:429, headers:{ "retry-after":"1" } });
+      if (calls === 1) return new Response("limited", { status:429, headers:{ "retry-after":"1" } });
       return new Response(JSON.stringify({ id:"recovered" }), { status:200, headers:{ "content-type":"application/json" } });
     },
     sleeper:async(milliseconds)=>{ waits.push(milliseconds); },
   });
   assert.deepEqual(result, { id:"recovered" });
-  assert.equal(calls, 3);
-  assert.deepEqual(waits, [3000, 1000]);
+  assert.equal(calls, 2);
+  assert.deepEqual(waits, [1000]);
 });
 
 test("does not retry permanent Printify validation failures", async () => {
@@ -736,7 +740,7 @@ test("records permanent sanitized Printify diagnostics without blocking listings
   const [page, stage, drafts, diagnostics, admin, adminPage, schema] = await Promise.all([
     readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/api/printify/stage/route.ts", import.meta.url), "utf8"),
-    readFile(new URL("../app/api/printify/drafts/route.ts", import.meta.url), "utf8"),
+    readDraftImplementation(),
     readFile(new URL("../app/api/printify/diagnostics.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/mastermind-admin/admin-control.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/mastermind-admin/page.tsx", import.meta.url), "utf8"),
@@ -885,13 +889,13 @@ test("gives the owner testing account room to run real batches", async () => {
   const [limits, usage, drafts, publish] = await Promise.all([
     readFile(new URL("../app/plan-limits.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/usage/route.ts", import.meta.url), "utf8"),
-    readFile(new URL("../app/api/printify/drafts/route.ts", import.meta.url), "utf8"),
+    readDraftImplementation(),
     readFile(new URL("../app/api/printify/drafts/publish/route.ts", import.meta.url), "utf8"),
   ]);
   assert.match(limits, /OWNER_TEST_PLAN[\s\S]*drafts: 10000/);
   assert.match(limits, /owner \? OWNER_TEST_PLAN/);
   assert.match(usage, /planFor\(planRow\?\.plan_key, isOwner\(user\)\)/);
-  assert.match(drafts, /planFor\(planRow\?\.plan_key, isOwner\(user\)\)/);
+  assert.match(drafts, /planFor\(planRow\?\.plan_key,isOwner\(user\)\)/);
   assert.match(publish, /planFor\(planRow\?\.plan_key,isOwner\(user\)\)/);
 });
 
@@ -992,7 +996,7 @@ test("handles up to eight lifestyle mockups in a reliable queue and shows the re
 test("enforces paid-plan usage on the server and exposes honest usage", async()=>{
   const [plans,drafts,renders,library,usage]=await Promise.all([
     readFile(new URL("../app/plan-limits.ts",import.meta.url),"utf8"),
-    readFile(new URL("../app/api/printify/drafts/route.ts",import.meta.url),"utf8"),
+    readDraftImplementation(),
     readFile(new URL("../app/api/mockups/render/route.ts",import.meta.url),"utf8"),
     readFile(new URL("../app/api/mockups/library/route.ts",import.meta.url),"utf8"),
     readFile(new URL("../app/api/usage/route.ts",import.meta.url),"utf8"),
@@ -1116,7 +1120,7 @@ test("draft progress cannot exceed the selected batch", async () => {
 test("keeps pricing simple while using a real Etsy shipping profile and exact template prices", async () => {
   const [page,drafts,profiles,publish] = await Promise.all([
     readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../app/api/printify/drafts/route.ts", import.meta.url), "utf8"),
+    readDraftImplementation(),
     readFile(new URL("../app/api/etsy/shipping-profiles/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/printify/drafts/publish/route.ts", import.meta.url), "utf8"),
   ]);
@@ -1487,7 +1491,7 @@ test("keeps a verified Printify template usable when its Etsy listing is inactiv
     readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/factory-tools.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/api/printify/route.ts", import.meta.url), "utf8"),
-    readFile(new URL("../app/api/printify/drafts/route.ts", import.meta.url), "utf8"),
+    readDraftImplementation(),
   ]);
   assert.match(workflow, /verifiedShippingProfileId/);
   assert.match(workflow, /etsyShippingProfileId:shippingProfileId/);
@@ -1746,7 +1750,7 @@ test("chooses exact available Printify colors per batch and remembers optional d
   const [page,printify,drafts,recipes,css]=await Promise.all([
     readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8"),
     readFile(new URL("../app/api/printify/route.ts",import.meta.url),"utf8"),
-    readFile(new URL("../app/api/printify/drafts/route.ts",import.meta.url),"utf8"),
+    readDraftImplementation(),
     readFile(new URL("../app/api/product-recipes/route.ts",import.meta.url),"utf8"),
     readFile(new URL("../app/globals.css",import.meta.url),"utf8"),
   ]);
@@ -2658,7 +2662,7 @@ test("the lifestyle mockup mirrors the Printify template placement, whatever the
   const [integrated, payload, drafts, app] = await Promise.all([
     readFile(new URL("../app/integrated-mockups.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/api/printify/product-payload.ts", import.meta.url), "utf8"),
-    readFile(new URL("../app/api/printify/drafts/route.ts", import.meta.url), "utf8"),
+    readDraftImplementation(),
     readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
   ]);
 

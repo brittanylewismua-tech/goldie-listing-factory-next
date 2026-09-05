@@ -1,3 +1,4 @@
+import {readDraftImplementation} from "./draft-implementation-source.mjs";
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {DatabaseSync} from 'node:sqlite';
@@ -20,6 +21,6 @@ test('catalog refresh never ages out the ownership records for saved Printify dr
   const source=readFileSync(new URL('../app/api/printify/route.ts',import.meta.url),'utf8');
   assert.doesNotMatch(source,/DELETE FROM printify_draft_results/);
   assert.match(source,/db\.prepare\(DELETE_UNUSED_TEMPLATE_SESSIONS\)/);
-  const creation=readFileSync(new URL('../app/api/printify/drafts/route.ts',import.meta.url),'utf8');
+  const creation=readDraftImplementation();
   assert.match(creation,/sourceTemplateId:session\.product_id/);
 });

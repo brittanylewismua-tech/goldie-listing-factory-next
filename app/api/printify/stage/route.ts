@@ -73,7 +73,9 @@ export async function POST(request: Request) {
   if (!contentType) return NextResponse.json({ error: "Choose a valid PNG or JPG file." }, { status: 400 });
   const contentLength = Number(request.headers.get("content-length") ?? 0);
   if (Number.isFinite(contentLength) && contentLength > 100 * 1024 * 1024) return NextResponse.json({ error: "This image is larger than Printify can receive." }, { status: 413 });
-  const expires = Date.now() + 30 * 60 * 1000;
+  // Durable draft jobs can outlive the browser. The signed download URL still
+  // lasts twenty minutes; the private staged object survives queue/recovery.
+  const expires = Date.now() + 24 * 60 * 60 * 1000;
   const stagedId = `stage_${expires}_${crypto.randomUUID()}-${fileName.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
   try {
     if (!request.body) throw new Error("The uploaded file was empty.");

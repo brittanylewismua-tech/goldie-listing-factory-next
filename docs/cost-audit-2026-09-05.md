@@ -6,6 +6,10 @@
   per-request CPU ceiling, not proof that testing exhausted a huge monthly budget.
 - Cloudflare usage alerts exist at $10, $25 and $50. These are notifications,
   **not spending caps**. Email delivery has not been confirmed.
+  Rechecked in Chrome after D1129: Billable usage exposes only the R2 product
+  family, even after Reset and Select All. Its $0 usage display is not a whole-
+  account cost total and must not be represented as one. Workers plans separately
+  confirms Paid is the current plan at $5/month plus usage.
 - The signed-in fal billing dashboard shows $0.184466 across 203 billed vision
   requests for the current month. Recent request rows identify the production
   Goldie key by name. This is account-period evidence, not a whole-app invoice.
@@ -104,6 +108,17 @@ Required before an all-in budget/readiness commitment:
 5. Complete durable draft recovery and isolated concurrency tests. The ongoing
    draft changes are deliberately not included in D1108.
 6. Measure complete single/bundle jobs and reconcile estimates to invoices.
+
+### Storage measurement after D1129
+
+The same private tee result measured 128,275 bytes before pricing/options
+compaction and 3,572 bytes after a real pricing save (97.2% less SQL JSON).
+Reload retained $25.89/$27.97 prices, approval, exact variant groups, Etsy category
+and attributes. Large data is retained in compressed private R2 objects, not
+deleted. This is one measured canary, not an average for the entire account;
+historical records are not all migrated and snapshots/retained template sessions
+still contribute database space. No claim that the 10 GB per-database ceiling
+or storage growth has disappeared.
 
 Changing web hosts cannot remove fal, Supabase or Printify dependencies. Keep
 Cloudflare while correcting these issues; reevaluate a fixed-price background

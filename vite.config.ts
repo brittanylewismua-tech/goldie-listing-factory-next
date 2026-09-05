@@ -14,6 +14,7 @@ const isCodexSeatbeltSandbox = process.env.CODEX_SANDBOX === "seatbelt";
 
 const localBindingConfig = {
   main: "./worker/index.ts",
+  workflows:[{binding:"DRAFT_CREATION",name:"goldie-draft-creation",class_name:"DraftCreationWorkflow"}],
   compatibility_flags: ["nodejs_compat"],
   triggers: { crons: ["* * * * *"] },
   d1_databases: d1

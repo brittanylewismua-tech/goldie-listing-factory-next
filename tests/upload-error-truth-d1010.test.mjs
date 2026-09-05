@@ -1,10 +1,11 @@
+import {readDraftImplementation} from "./draft-implementation-source.mjs";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
 const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
 const stage = await readFile(new URL("../app/api/printify/stage/route.ts", import.meta.url), "utf8");
-const drafts = await readFile(new URL("../app/api/printify/drafts/route.ts", import.meta.url), "utf8");
+const drafts = await readDraftImplementation();
 const intelligence = await readFile(new URL("../app/api/listing-intelligence/route.ts", import.meta.url), "utf8");
 
 test("an HTML upload response cannot be misreported as a bad Printify token", () => {

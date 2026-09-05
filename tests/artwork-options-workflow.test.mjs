@@ -1,3 +1,4 @@
+import {readDraftImplementation} from "./draft-implementation-source.mjs";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
@@ -46,10 +47,12 @@ test("Printify reports only print sides with saved placement", async () => {
 });
 
 test("all staged artwork is ownership checked, retried together, and cleaned up", async () => {
-  const route = await read("../app/api/printify/drafts/route.ts");
+  const route = await readDraftImplementation();
   assert.match(route, /for \(const artwork of requestedArtworks\)/);
   assert.match(route, /customMetadata\?\.owner !== user\.userId/);
   assert.match(route, /const uploadAllArtwork = async/);
   assert.match(route, /if \(imageErrors === 1\) \{\s*await uploadAllArtwork\(\)/);
-  assert.match(route, /Promise\.all\(\[\.\.\.new Set\(stagedIdsForCleanup\)\]/);
+  assert.match(route, /jobObjectPrefix\(user.userId,workflowId\)/);
+  assert.match(route, /if\(job\?\.workflowId!==workflowId\)await Promise.all\(copies.map/);
+  assert.doesNotMatch(route,/delete\(artwork.stagedId\)/,"a losing duplicate request must not delete files used by the winning job");
 });

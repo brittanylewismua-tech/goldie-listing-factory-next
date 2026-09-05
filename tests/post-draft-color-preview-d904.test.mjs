@@ -1,9 +1,10 @@
+import {readDraftImplementation} from "./draft-implementation-source.mjs";
 import test from "node:test";
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
 
 const app=readFileSync(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8");
-const create=readFileSync(new URL("../app/api/printify/drafts/route.ts",import.meta.url),"utf8");
+const create=readDraftImplementation();
 const update=readFileSync(new URL("../app/api/printify/drafts/update/route.ts",import.meta.url),"utf8");
 
 test("D904: the saved template supplies the initial draft variants",()=>{

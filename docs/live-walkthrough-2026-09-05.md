@@ -138,3 +138,10 @@ D1115 version and real shortcut retests, final alternate-artwork reset/reload/is
 - Measured the compacted test draft still contained 74,142 bytes of pricing metadata and 50,343 bytes of Etsy option metadata. D1129 moves these objects into the existing integrity-checked private object alongside media/geometry. Exact values, approval state and variant ordering are covered by round-trip plus save/reload regression tests. Retired queue reader also hydrates the representation; no publishing route is enabled.
 - Fixed a missing-image null dereference in the lightweight rendering: optional URL equality could compare undefined to undefined and then access a null image. Added regression assertion.
 - Remaining release work includes durable creation/reconciliation, retention/capacity/load measurements, typecheck cleanup, and the uncompleted live matrix. No claim of launch readiness.
+
+## D1129 live verification
+
+- Live and main `1b956b5c24f11d9c25901869375b680438f84330`, Cloudflare `1d9b4b63-7c51-4e22-a021-e8900a680157`. Full build passed; 1324 tests, 1312 passed, 12 legacy skips, 0 failures. `/api/version` returned D1129 and the exact hash.
+- Changed tee group price $25.89 → $25.90: profit immediately changed $13.00 → $13.01 without blur; panel stayed open. Switched to hoodie before saving: hoodie remained $41.04 and the bundle continuation remained disabled for the unsaved tee. Returned, restored $25.89, saved. Reload retained approved $25.89/$27.97, 24/6 variant groups and Etsy T-shirts/Cotton/Unisex/Short sleeve/Crew attributes.
+- Final bundle review screenshot exposed a duplicate large first-product preview and a group named after the hoodie even though it contains a tee too. D1129 now uses Design 1 for the multi-product group, with each finished product shown once in its own row. Reopened after deployment and inspected screenshot; edit controls have spacing and the duplicate image is gone. A single-product group retains its useful large preview.
+- Canonical tee result now 3,572 bytes with private storage pointer; inline pricing/Etsy option objects absent. No user data discarded.

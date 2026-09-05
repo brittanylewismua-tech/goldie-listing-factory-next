@@ -1,3 +1,4 @@
+import {readDraftImplementation} from "./draft-implementation-source.mjs";
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {packDraftMedia,unpackDraftMedia,mergeDraftChanges,saveDraftChanges} from '../app/draft-media-storage.ts';
@@ -77,7 +78,7 @@ test('owned-product and design lookups use indexes rather than scanning accumula
 });
 test('all active full-media readers hydrate private storage, while creation has an inline fallback',()=>{
   for(const path of ['app/api/printify/drafts/route.ts','app/api/printify/drafts/update/route.ts','app/api/listing-photos/download/route.ts','app/api/batches/route.ts'])assert.match(readFileSync(new URL('../'+path,import.meta.url),'utf8'),/await unpackDraftMedia/);
-  const route=readFileSync(new URL('../app/api/printify/drafts/route.ts',import.meta.url),'utf8');assert.match(route,/packDraftMedia\(draft,user.userId,runtimeEnv\(\).ARTWORK!\)\.catch\(\(\)=>draft\)/);
+  const route=readDraftImplementation();assert.match(route,/packDraftMedia\(draft,user.userId,runtimeEnv\(\).ARTWORK!\)\.catch\(\(\)=>draft\)/);
 });
 
 test('artwork replacement invalidates canonical price approval across reloads',()=>{

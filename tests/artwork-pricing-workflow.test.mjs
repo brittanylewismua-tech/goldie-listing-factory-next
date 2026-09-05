@@ -1,3 +1,4 @@
+import {readDraftImplementation} from "./draft-implementation-source.mjs";
 import test from "node:test";
 import assert from "node:assert/strict";
 import {readFile} from "node:fs/promises";
@@ -48,7 +49,7 @@ test("pricing uses the finished draft costs and refuses incomplete cost data",()
 test("draft creation, resume, final review, and publishing share the same safeguards",async()=>{
   const [app,create,update,review]=await Promise.all([
     readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8"),
-    readFile(new URL("../app/api/printify/drafts/route.ts",import.meta.url),"utf8"),
+    readDraftImplementation(),
     readFile(new URL("../app/api/printify/drafts/update/route.ts",import.meta.url),"utf8"),
     readFile(new URL("../app/final-listing-review.tsx",import.meta.url),"utf8"),
   ]);

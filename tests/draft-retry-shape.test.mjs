@@ -1,3 +1,4 @@
+import {readDraftImplementation} from "./draft-implementation-source.mjs";
 /* D613 - the retry ladder was the wrong shape for a deterministic payload error.
 
    Seven product attempts over 125 seconds is right for a propagation race and
@@ -12,7 +13,7 @@ import { readFile } from "node:fs/promises";
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 const strip = (s) => s.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
 const creation = strip(await read("app/api/printify/product-creation.ts"));
-const route = strip(await read("app/api/printify/drafts/route.ts"));
+const route = strip(await readDraftImplementation());
 
 test("a repeated image error stops instead of running the full ladder", () => {
   assert.match(creation, /const IMAGE_ERROR_LIMIT = 2/);
@@ -26,19 +27,16 @@ test("exactly one controlled re-upload, on the first image error", () => {
   assert.ok(!/attempt === 3/.test(route), "the old third-attempt re-upload is gone");
 });
 
-test("transport faults keep the full ladder", () => {
-  // 429, 5xx and dropped connections really do pass. Only the payload error is final.
-  assert.match(creation, /response\.status === 429 \|\| response\.status >= 500/);
+test("explicit rejections retry but ambiguous transport results reconcile", () => {
+  assert.match(creation, /const retryable = isImageNotReady\(response.status, detail\) \|\| response.status === 429;/);
+  assert.match(creation, /if \(response.status >= 500\)[\s\S]{0,130}return reconcileOrStop\(\)/);
   assert.match(creation, /const waits = \[3000, 7000, 15000, 20000, 30000, 45000\]/);
 });
 
-test("a failed draft charges no quota and leaves no duplicate", () => {
-  /* The row is marked failed on any throw, and the plan check counts only
-     succeeded rows plus recently-running ones, so a failure frees the slot. */
-  assert.match(route, /SET status = 'failed'[\s\S]{0,80}WHERE request_key = \? AND status != 'succeeded'/);
-  assert.match(route, /COUNT\(\*\) count FROM printify_draft_results WHERE user_id=\? AND \(\(status='succeeded'/);
-  /* One row per batch+design, and a succeeded row short-circuits before any
-     Printify call, so a retry cannot create a second product. */
+test("only definite failures release quota; ambiguous drafts keep their identity", () => {
+  assert.match(route, /status IN \('running','uncertain'\)/);
+  assert.doesNotMatch(route, /age>90_000|'-90 seconds'/);
   assert.match(route, /ON CONFLICT\(request_key\) DO UPDATE/);
-  assert.match(route, /if \(prior\?\.status === "succeeded" && prior\.response_json\) return NextResponse\.json\(\{ draft: await unpackDraftMedia\(prior\.response_json,user\.userId,runtimeEnv\(\)\.ARTWORK!\) \}\)/);
+  assert.match(route, /if\(prior&&prior.status!=="failed"\)return jobResponse\(prior,user.userId\)/);
+  assert.match(route, /printify_draft_results.status='failed'/);
 });

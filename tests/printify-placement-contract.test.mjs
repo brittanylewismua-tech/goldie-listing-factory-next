@@ -1,3 +1,4 @@
+import {readDraftImplementation} from "./draft-implementation-source.mjs";
 /* D573 - the placement contract. Printify controls where the artwork goes and how
    big it is; the scene controls only which surface it lands on. These lock the
    behaviours that used to be a flat 42% centred guess. */
@@ -91,7 +92,7 @@ console.log("scene classification ok");
 // D591 - placement must be read from the product that HAS the design on it.
 {
   const { readFile } = await import("node:fs/promises");
-  const route = await readFile(new URL("../app/api/printify/drafts/route.ts", import.meta.url), "utf8");
+  const route = await readDraftImplementation();
   /* The blank saved template has no images in its placeholders, so reading
      placement from it always yielded artworkPlacement(undefined, ...) - the
      no-information default of dead centre at full scale. Confirmed live: every

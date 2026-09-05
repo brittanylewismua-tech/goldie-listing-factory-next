@@ -1,3 +1,4 @@
+import {readDraftImplementation} from "./draft-implementation-source.mjs";
 import test from "node:test";
 import assert from "node:assert/strict";
 import {creationVariantIds,exactMockupCoverageComplete,expandPrintAreasForPreview,mergeMockupImages,mockupCoverageComplete,PREVIEW_MOCKUP_WAITS_MS,previewVariantChunks,restoredVariants} from "../app/draft-preview-variants.ts";
@@ -51,7 +52,7 @@ test("D989 keeps each asynchronous Printify mockup window bounded",()=>{
 
 test("D1061 creates once with the exact seller selection and generates previews lazily",()=>{
   const app=fs.readFileSync(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8");
-  const route=fs.readFileSync(new URL("../app/api/printify/drafts/route.ts",import.meta.url),"utf8");
+  const route=readDraftImplementation();
   assert.match(app,/mockupVariantIds:mockupVariants\.map\(variant=>variant\.id\)/);
   assert.match(app,/requestSizes\.slice\(0,1\)/);
   assert.match(app,/const mockupVariants=variantsFor[\s\S]{0,900}const variants=mockupVariants;[\s\S]{0,900}artworkAssignments=/);
@@ -66,7 +67,7 @@ test("D1061 creates once with the exact seller selection and generates previews 
 
 test("D1051 returns creation without polling for delayed color previews",()=>{
   const app=fs.readFileSync(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8");
-  const route=fs.readFileSync(new URL("../app/api/printify/drafts/route.ts",import.meta.url),"utf8");
+  const route=readDraftImplementation();
   assert.match(route,/const colorPreviewImages=resolvedProduct\.images\|\|\[\]/);
   assert.doesNotMatch(route,/PREVIEW_MOCKUP_WAITS_MS\.slice/);
   assert.doesNotMatch(route,/for\(const wait of PREVIEW_MOCKUP_WAITS_MS/);
@@ -76,7 +77,7 @@ test("D1051 returns creation without polling for delayed color previews",()=>{
 });
 
 test("D1061 never blocks creation on preview refreshes and never rewrites a created draft",()=>{
-  const route=fs.readFileSync(new URL("../app/api/printify/drafts/route.ts",import.meta.url),"utf8");
+  const route=readDraftImplementation();
   assert.match(route,/signal: AbortSignal\.timeout\(30000\)/);
   assert.doesNotMatch(route,/DELETE[^]{0,180}created\.id/);
   assert.doesNotMatch(route,/PUT[^]{0,180}created\.id/);

@@ -1,3 +1,4 @@
+import {readDraftImplementation} from "./draft-implementation-source.mjs";
 /* D614 - internal label placeholders are excluded from new products.
 
    The history matters, because two fixes were built on a misreading.
@@ -88,7 +89,7 @@ test("a product with no label is unaffected", () => {
 
 test("D613's label re-upload is gone, and no new retry system replaced it", async () => {
   const { readFile } = await import("node:fs/promises");
-  const route = await readFile(new URL("../app/api/printify/drafts/route.ts", import.meta.url), "utf8");
+  const route = await readDraftImplementation();
   assert.ok(!/labelImageIds|label_reupload|labelSources/.test(route), "the re-upload machinery is removed");
   assert.ok(!/file_name: `label-/.test(route), "no label upload call remains");
 });

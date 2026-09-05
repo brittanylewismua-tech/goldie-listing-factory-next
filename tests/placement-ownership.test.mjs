@@ -1,3 +1,4 @@
+import {readDraftImplementation} from "./draft-implementation-source.mjs";
 /* D598 - identifiers are not trusted merely because the row would end up under
    the signed-in seller.
 
@@ -12,7 +13,7 @@ import { readFile } from "node:fs/promises";
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 const route = await read("app/api/mockups/placement/route.ts");
 const app = await read("app/listing-factory-app.tsx");
-const drafts = await read("app/api/printify/drafts/route.ts");
+const drafts = await readDraftImplementation();
 
 test("a seller cannot use another seller's scene", () => {
   // The scene lookup is filtered by the session user, so a scene belonging to
