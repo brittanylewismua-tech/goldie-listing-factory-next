@@ -1099,7 +1099,7 @@ test("restores batch colors and blocks publishing until every selected listing h
   ]);
   assert.match(page,/selectedColorIds\?:number\[\]/);
   assert.match(page,/function batchStateSnapshot\(overrides:Record<string,unknown>=\{\}\).*selectedColorIds,/s);
-  assert.match(page,/setSelectedColorIds\(state\.selectedColorIds\?\.length/);
+  assert.match(page,/setSelectedColorIds\(Array.isArray\(state\.selectedColorIds\)/);
   assert.match(page,/selectedPublishDrafts\(\)/);
   assert.match(page,/Add a photo to every selected listing before publishing/);
   assert.match(review,/Choose exactly which listings to publish/);
@@ -5053,7 +5053,7 @@ test("opening a task shows the work, not a list of listings to pick from — D55
      defaultOpen and step 3's text panels do not. If that ever inverts, this
      fails. */
   assert.match(app, /const listingWorkRows=\(work:/);
-  assert.match(app, /return <ListingRows defaultOpen singleOpen rows=\{usable\.map/,
+  assert.match(app, /return <ListingRows defaultOpen singleOpen focusedKey=\{photoFocusId\} rows=\{usable\.map/,
     "the first photo panel opens on arrival and only one working surface opens at a time");
   /* D709 · Two passes, not three. Uploading photos and arranging them were
      separate panels, so the batch's listings were walked twice to finish one

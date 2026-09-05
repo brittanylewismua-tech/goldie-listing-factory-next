@@ -9,7 +9,7 @@ const css=fs.readFileSync(new URL("../app/interface-v2.css",import.meta.url),"ut
 const legacy=fs.readFileSync(new URL("../app/approved-functional.css",import.meta.url),"utf8");
 
 test("D972: the photo workspace shows one listing at a time with navigation at its foot",()=>{
-  assert.match(app,/<ListingRows defaultOpen singleOpen rows=/);
+  assert.match(app,/<ListingRows defaultOpen singleOpen focusedKey=\{photoFocusId\} rows=/);
   assert.match(rows,/singleOpen \? rows\.slice\(0, 1\)/);
   assert.match(rows,/← Previous listing/);
   assert.match(rows,/Next listing →/);

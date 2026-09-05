@@ -84,7 +84,7 @@ test("sizes survive a reload, a batch restore and a bundle hop", async () => {
   const app = await read("app/listing-factory-app.tsx");
   assert.match(app, /goldie-sizes-\$\{templateDetails\.id\}/, "per-product browser memory");
   assert.match(app, /selectedColorIds,selectedSizeIds,variantPrices/, "saved into the batch snapshot");
-  assert.match(app, /setSelectedSizeIds\(state\.selectedSizeIds\?\.length\?state\.selectedSizeIds:state\.activeRecipe\?\.defaultSizeIds\?\.length\?state\.activeRecipe\.defaultSizeIds:savedProductSizes\)/, "restored with colour's precedence");
+  assert.match(app, /setSelectedSizeIds\(Array.isArray\(state\.selectedSizeIds\)\?state\.selectedSizeIds:state\.activeRecipe\?\.defaultSizeIds\?\.length\?state\.activeRecipe\.defaultSizeIds:savedProductSizes\)/, "explicit empty selections survive alongside populated selections");
   assert.match(app, /loadTemplateUrl\(next\.templateUrl,nextPricing,Number\(next\.etsyShippingProfileId\)\|\|0,next\.defaultColorIds\|\|\[\],next\.defaultSizeIds\|\|\[\]\)/, "carried across a bundle hop");
 });
 
