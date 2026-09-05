@@ -6,6 +6,14 @@ import {CLAIM_DRAFT_GROUP_SQL,draftCreationSlotReleased} from '../app/api/printi
 import {restoreBatchDrafts} from '../app/batch-draft-integrity.ts';
 import {runBounded} from '../app/bounded-work.ts';
 
+test('creation prevents upload or product mutations and price changes paint in sync',()=>{
+  const source=readFileSync(new URL('../app/listing-factory-app.tsx',import.meta.url),'utf8');
+  for(const name of ['chooseFiles','removeDesign','changeProduct','addArtworkVersion'])assert.match(source,new RegExp('async function '+name+'\\([^\\n{]*\\)\\s*\\{\\s*if\\(draftRunInFlight.current\\)return'));
+  assert.match(source,/<article inert=\{running\|\|Boolean\(bundleRun\)\} className=\{`step-card designs-step/);
+  assert.match(source,/aria-label="Change saved product" disabled=\{running\|\|Boolean\(bundleRun\)\}/);
+  assert.match(source,/useLayoutEffect\(\(\)=>setDraft\(\(value\/100\).toFixed\(2\)\),\[value\]\)/);
+});
+
 test('submission preparation is bounded and settles copies before reporting an error',async()=>{
   const route=readFileSync(new URL('../app/api/printify/drafts/route.ts',import.meta.url),'utf8');
   assert.match(route,/await runBounded\(requests,4,async body=>\{try\{/);
