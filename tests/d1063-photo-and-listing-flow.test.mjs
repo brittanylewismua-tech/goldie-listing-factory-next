@@ -9,8 +9,9 @@ const css=fs.readFileSync(new URL("../app/interface-v2.css",import.meta.url),"ut
 test("D1063 makes the entire reorder strip a forgiving drop surface",()=>{
   assert.match(order,/onDragOver=\{trackDrag\} onDrop=/);
   assert.match(order,/querySelectorAll<HTMLElement>\("\[data-photo-id\]"\)/);
-  assert.match(order,/Math\.hypot/);
-  assert.match(order,/move\(source,nearest\.card\.dataset\.photoId\|\|"",after\)/);
+  assert.match(order,/closestPhotoSlot\(dragSlots.current,event.clientX,event.clientY\)/);
+  assert.match(order,/movePhotoToSlot\(orderRef.current,source,target\)/);
+  assert.match(order,/onDrop=\{event=>\{trackDrag\(event\)/);
 });
 
 test("D1063 uses sequential listing navigation for colors and returns to the top",()=>{

@@ -1738,7 +1738,7 @@ test("requires a photo on every listing and lets sellers set Etsy photo order",a
   assert.match(page,/Personalization settings/);
   assert.match(organizer,/draggable/);
   assert.match(organizer,/Rearrange listing photos/);
-  assert.match(organizer,/onDragEnter/);
+  assert.match(organizer,/onDragOver=\{trackDrag\}/);
   assert.match(organizer,/orderRef\.current/);
   assert.match(organizer,/Move photo \$\{index\+1\} earlier/);
   assert.match(organizer,/Photo order saved in preview/);

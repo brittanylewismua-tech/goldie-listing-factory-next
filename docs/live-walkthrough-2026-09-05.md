@@ -1,5 +1,15 @@
 # Live acceptance log — September 5
 
+## D1131–D1133 continuation (not a complete launch sign-off)
+
+- D1131: `85dbad074cd1213322ac7445d6832286986b50db`, 1343 tests / 1331 passing / 12 skipped. Bundle `b0f1de87-3253-4abb-921b-4dfd5272207c`: Natural alternate pink Books upload, lightweight and real mockup, exact draft editor, five other colors retaining the original, matching placement measurements, reset and reload were exercised before the memory pause. Hoodie listing 2 custom photo upload completed and persisted; listing 1 retained two original photos.
+- Resumed after closing ten unused tabs and resetting the memory-heavy browser helper. Replaced one stale QA tab, not the user's unrelated tabs. Browser control intermittently reports unavailable debugging or native windows; these errors are not counted as passing product interactions.
+- Uploaded a temporary QA image through the hoodie listing 2 size-guide input, confirmed Selected / Replace / Remove controls, and removed it. Exercised photo-order arrows, product switching, AI titles for the hoodie, independent manual titles/tags for tee listings, generated Hoodie and T-shirt Etsy categories, and reached final review with four drafts and eleven photos. Open My Products opened Printify in the correct shop; no publishing.
+- D1132 live `6ea0c7061ef9434c12f467c243d0504d2d32920f`, 1345 tests / 1333 passed / 12 skipped. Live bundle generation only affected the active product, while copy promised the whole batch. Corrected the section heading, action, manual-choice copy, shared-description label and reset scope. Reloaded production and found all three product-specific labels. Existing single-product wording retained.
+- Continued saved mug `5cc7fee3-82fc-45e8-876c-67928411ac11`: placement checkbox revealed bulk controls; uncheck removed selection. Size Clear all produced an empty selection with explicit continuation requirement; Match template restored 11oz. Saved $18.67 price (cost $6.44, estimated profit $10.01). All six mug camera views available. Manual title/tags generated Etsy Mugs category, without apparel fields.
+- Actual mug photo drag reproduced a missed rightward move onto the image's upper half, although dragging onto text and reverse dragging worked. D1133 captures fixed grid slots at drag start, selects the nearest whole slot rather than mixing horizontal/vertical midpoint rules, and disables nested native image dragging. Executable regressions cover upper/lower targets, both directions, wrapped rows and repeated drag-over stability. Post-deployment mouse retest is required.
+- Remaining: complete current-release live matrix, fresh D1131+ durable-creation cleanup/usage test, browser-independent dispatch of later bundle products, legacy uncertain-job reconciliation, capacity/billing controls, typecheck cleanup. No launch-ready claim.
+
 ## Production tested
 
 D1110, commit 936f91547910000e0b1146c0558a7107b17be774. Chrome, authenticated owner account. Private QA only; no Etsy publishing.
