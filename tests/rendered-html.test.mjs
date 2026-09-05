@@ -5330,6 +5330,10 @@ test("the publish review is one collapsed row per design — D562", async () => 
 
   // The finished product, once, at a size worth judging - not the raw upload.
   assert.match(review, /const productPreview=\(\(\)=>\{/);
+  assert.match(review, /productPreview&&group\.length===1\?<div/,
+    'a bundle shows each product in its own row without repeating the first product above it');
+  assert.match(review, /if\(group\.length>1\)return `Design \$\{designIndex\+1\}`/,
+    'a multi-product design group must not be named after just its first product');
   assert.match(review, /if\(draft\.previewUrl\)return draft\.previewUrl/);
   assert.match(review, /<div className="final-product-preview"><img src=\{productPreview\}/);
   assert.match(css, /\.app-shell \.final-product-preview img\{width:min\(360px,70%\)/);
