@@ -397,7 +397,7 @@ function restoreAuthoritativeProductFacts(design:DesignFile,template:TemplateDet
   const properties=(design.etsy.properties||[]).map(property=>facts[property.label]?{...property,value:facts[property.label]}:property);
   return {...design,etsy:{...design.etsy,attributes:{...design.etsy.attributes,...facts},properties}};
 }
-function isRigidPaperProduct(template:TemplateDetails|null){return /poster|print|canvas|paper/i.test(`${template?.blueprintTitle||""} ${template?.brand||""} ${template?.model||""}`)}
+function isRigidPaperProduct(template:TemplateDetails|null){return /\b(?:posters?|art prints?|canvas|paper|wall art)\b/i.test(`${template?.blueprintTitle||""} ${template?.brand||""} ${template?.model||""}`)}
 /* D512 - the recommended print size was worked out in three separate places and
    the three did not agree. Two used `placementScale || 0`, the bundle check used
    `placementScale || 1`, so a product with no placement scale was silently
@@ -1006,13 +1006,9 @@ export default function ListingFactoryApp() {
      When the variant options identify the product outright - S/M/L, ounces,
      inches, phone models - that wins over any string at all. */
   const classifyingProductName = useMemo(() => {
-    const label = printifyProductLabel(templateDetails);
-    const family = familyFromVariants(templateDetails || {});
-    /* The label still travels, for prompts and messages that read better with a
-       real product name in them. The family is appended so every downstream
-       reader agrees with the structured evidence rather than re-guessing. */
-    const hint = family === "apparel" ? "apparel" : family === "curved" ? "mug" : family === "flat" ? "print" : "";
-    return [label, hint].filter(Boolean).join(" ") || label;
+    // Shipping needs the product identity, not its rendering surface. A phone
+    // case has a flat surface but must never be recommended poster profiles.
+    return printifyProductLabel(templateDetails);
   }, [templateDetails]);
   const [templateError, setTemplateError] = useState("");
   const [loadingTemplate, setLoadingTemplate] = useState(false);

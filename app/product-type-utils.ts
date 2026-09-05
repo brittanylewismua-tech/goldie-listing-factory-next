@@ -5,7 +5,7 @@ const PRODUCT_NOUN_GROUPS = {
   tank: ["tank top", "tank"],
   longSleeve: ["long sleeve", "long sleeved", "longsleeve"],
   koozie: ["koozie", "coozie", "can cooler"], mug: ["mug", "cup"], tumbler: ["tumbler"],
-  tote: ["tote", "bag"], poster: ["poster", "print", "wall art"], sticker: ["sticker"],
+  tote: ["tote", "bag"], phoneCase: ["phone case", "iphone case"], poster: ["poster", "print", "wall art"], sticker: ["sticker"],
   blanket: ["blanket"], banner: ["banner"], sash: ["sash"], decor: ["decor", "decoration"],
   // Party goods that share bachelorette/bridal keyword banks with apparel. These
   // are the nouns that produced the original wrong-garment titles.
@@ -18,6 +18,7 @@ const normalizeProductText = (value: string) => value.toLocaleLowerCase().replac
 
 export function productFamily(blueprintTitle: string) {
   const title = normalizeProductText(blueprintTitle);
+  if (/\b(?:(?:phone|iphone|galaxy|pixel)\s+cases?|cases?\s+for\s+(?:phones?|iphone|galaxy|pixel))\b/.test(title)) return "phoneCase";
   if (/hoodie|hooded sweatshirt/.test(title)) return "hoodie";
   if (/crewneck|crew neck|sweatshirt|sweater/.test(title)) return "crewneck";
   if (/tank top|\btank\b/.test(title)) return "tank";
