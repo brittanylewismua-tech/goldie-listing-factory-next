@@ -3477,6 +3477,8 @@ html, body { background: var(--lf-paper); }
 .app-shell .factory-listing-next span{color:#756873;font-size:12px;font-weight:700}
 
 .app-shell .editable-draft-pricing{display:grid;gap:14px}
+.app-shell .editable-draft-pricing + .editable-draft-pricing{margin-top:40px;padding-top:32px;border-top:2px solid #111}
+.app-shell .draft-price-group-title{margin:0 0 8px;font-size:18px;line-height:1.4;color:#111}
 
 /* D1040 · Keep photo selection clear of Pinterest's upper-left save control,
    make every check visually centred, and make expanded photos reliably closable. */
