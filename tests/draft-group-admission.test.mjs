@@ -18,8 +18,17 @@ test('creation prevents upload or product mutations and price changes paint in s
   const source=readFileSync(new URL('../app/listing-factory-app.tsx',import.meta.url),'utf8');
   for(const name of ['chooseFiles','removeDesign','changeProduct','addArtworkVersion'])assert.match(source,new RegExp('async function '+name+'\\([^\\n{]*\\)\\s*\\{\\s*if\\(draftRunInFlight.current\\)return'));
   assert.match(source,/<article inert=\{running\|\|Boolean\(bundleRun\)\} className=\{`step-card designs-step/);
+  assert.match(source,/<div inert=\{running\|\|Boolean\(bundleRun\)\} className="design-upload-review"/);
   assert.match(source,/aria-label="Change saved product" disabled=\{running\|\|Boolean\(bundleRun\)\}/);
   assert.match(source,/useLayoutEffect\(\(\)=>setDraft\(\(value\/100\).toFixed\(2\)\),\[value\]\)/);
+});
+
+test('whole-submission completion refreshes sibling counts only after durable final saves',()=>{
+  const source=readFileSync(new URL('../app/listing-factory-app.tsx',import.meta.url),'utf8');
+  const queue=source.slice(source.indexOf('async function queueDraftSubmission()'),source.indexOf('function retryFailed()'));
+  assert.ok(queue.indexOf('setBundleCompletionRevision(current=>current+1)')>queue.indexOf('for(const member of members)await saveMember(member,true)'));
+  assert.match(source,/\[activeBundle,bundleRecipes,activeRecipe,bundleBatchIds,bundleCompletionRevision\]/);
+  assert.doesNotMatch(source,/\[activeBundle,bundleRecipes,activeRecipe,bundleBatchIds,[^\]]*savedRevision/);
 });
 
 test('submission preparation is bounded and settles copies before reporting an error',async()=>{

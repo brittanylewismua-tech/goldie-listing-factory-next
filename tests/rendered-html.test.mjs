@@ -4205,7 +4205,7 @@ test("the bundle cards do not churn the network or the tab claim — D501", asyn
      700ms while she types a title. The summary refetched every other product's
      batch on each tick, and the tab claim re-broadcast and cleared its held flag
      on each tick, so a held tab could un-hold itself off a save it never made. */
-  assert.match(app, /\},\[activeBundle,bundleRecipes,activeRecipe,bundleBatchIds\]\);/,
+  assert.match(app, /\},\[activeBundle,bundleRecipes,activeRecipe,bundleBatchIds,bundleCompletionRevision\]\);/,
     "the summary reloads when the active product changes, not on every save");
   assert.doesNotMatch(app, /\},\[activeBundle,bundleRecipes,activeRecipe,bundleBatchIds,savedRevision\]\);/);
   assert.match(app, /const pingedBatch=useRef\(""\)/);
