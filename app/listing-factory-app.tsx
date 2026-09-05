@@ -3247,17 +3247,6 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
           {descriptionLead()}
         </div>
       </FactoryPanel>
-      {files.length>1&&<nav className="factory-listing-switch" aria-label="Listing">
-        {files.map((item,position)=>{
-          const ready=Boolean((item.title||"").trim())&&etsyRequiredComplete(item.etsy);
-          return <button type="button" key={item.id}
-            className={`${item.id===design.id?"is-active":""} ${ready?"is-ready":"needs-work"}`}
-            aria-current={item.id===design.id?"true":undefined}
-            onClick={event=>showListing(item.id,event.currentTarget)}>
-            <b>Listing {position+1}</b><small>{ready?"Ready":"Needs a look"}</small>
-          </button>;
-        })}
-      </nav>}
       <div className="factory-listing-grid">
         <div className="factory-form-card factory-listing-form">
           {/* D793 · Her design filenames run to "ChatGPT Image Aug 28, 2026,

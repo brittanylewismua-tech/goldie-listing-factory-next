@@ -27,9 +27,9 @@ test("D971: finished-cost pricing remains editable",()=>{
   assert.match(app,/saveActualDraftPricing\(draft,editedPrices\)/);
 });
 
-test("D971: listing navigation remains available above and below each editor",()=>{
-  assert.match(app,/className="factory-listing-switch"/);
+test("D1106: sequential listing navigation does not overlay the editor with a tab grid",()=>{
+  assert.doesNotMatch(app,/className="factory-listing-switch"/);
   assert.match(app,/className="factory-listing-next"/);
-  assert.match(css,/\.factory-listing-switch\{position:sticky/);
   assert.match(app,/Next listing →/);
+  assert.match(app,/Previous listing/);
 });
