@@ -26,6 +26,6 @@ test("D1069 ordinary color changes do not block on mockup polling",()=>{
 test("D1070 updates separate Printify drafts concurrently",()=>{
   const start=app.indexOf("function syncDraftVariantChoices");
   const body=app.slice(start,start+2600);
-  assert.match(body,/Promise\.all\(created\.map\(async draft=>/);
+  assert.match(body,/runBounded\(created,4,async draft=>/);
   assert.doesNotMatch(body,/for\(const draft of created\)/);
 });

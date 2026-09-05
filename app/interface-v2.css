@@ -3103,10 +3103,8 @@ html, body { background: var(--lf-paper); }
 .app-shell .product-color-rendering-base{position:relative;z-index:1;mix-blend-mode:multiply}
 .app-shell .product-color-rendering>.bundle-product-photo svg path:not(.glyph-line){fill:var(--product-glyph-color,#ddd)!important;stroke:rgba(42,34,39,.7);stroke-width:.28;stroke-linejoin:round}
 .app-shell .product-color-rendering>.bundle-product-photo svg .glyph-line{fill:none!important;stroke:rgba(35,29,33,.65)!important;stroke-width:.34!important}
-.app-shell .product-color-rendering-art{position:absolute!important;z-index:2;width:29%!important;height:34%!important;left:35.5%;top:32%;object-fit:contain!important;border:0!important;border-radius:0!important;background:transparent!important;filter:none!important}
-.app-shell .product-color-rendering[data-family="hoodie"] .product-color-rendering-art,.app-shell .product-color-rendering[data-family="crewneck"] .product-color-rendering-art,.app-shell .product-color-rendering[data-family="longSleeve"] .product-color-rendering-art{width:27%!important;left:36.5%;top:31%}
-.app-shell .product-color-rendering[data-family="mug"] .product-color-rendering-art,.app-shell .product-color-rendering[data-family="tumbler"] .product-color-rendering-art{width:24%!important;left:38%;top:35%;height:28%!important}
-.app-shell .product-color-rendering[data-family="tote"] .product-color-rendering-art{width:32%!important;left:34%;top:38%;height:30%!important}
+.app-shell .product-color-rendering-overlay{position:absolute!important;z-index:2;inset:4%;width:92%!important;height:92%!important;pointer-events:none;max-width:none!important;max-height:none!important}
+.app-shell .rendering-placement-note{position:absolute;bottom:8px;left:8px;right:8px;text-align:center;font-size:13px;background:#fff;padding:6px;border-radius:6px}
 .app-shell .draft-color-preview{display:inline-flex;align-items:center;justify-content:center;min-height:38px;padding:8px 15px;border:1px solid #111;border-radius:8px;background:#fff;color:#211a1f;font:750 12px/1.2 inherit;cursor:pointer}
 .app-shell .draft-color-preview:hover{background:#f8f5f7}
 .app-shell .draft-color-preview:disabled{border-color:#ddd5da;color:#9b9198;background:#f7f5f6;cursor:not-allowed}

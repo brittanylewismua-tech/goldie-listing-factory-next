@@ -11,7 +11,7 @@ test("D906: no pre-draft control pretends it can change product colors",()=>{
 
 test("D906: the alternate-artwork action says exactly what it does",()=>{
   assert.match(app,/Use different artwork for \$\{focused\.title\}/);
-  assert.match(app,/onArtworkChange\(draft,focused,event\.target\.files\)/);
+  assert.match(app,/const locked=artworkUploadColor\.current\|\|focused;onArtworkChange\(draft,locked,event\.target\.files\)/);
   assert.doesNotMatch(app,/>＋ Use different artwork on some colors/);
   assert.doesNotMatch(app,/Add another front colorway/);
 });

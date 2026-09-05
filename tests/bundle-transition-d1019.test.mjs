@@ -55,7 +55,7 @@ test("D1024: automatic creation is anchored to the stable recipe at the bundle i
 
 test("D1070: successive choices are queued while distinct drafts update concurrently with retries",()=>{
   assert.match(app,/variantSaveQueue\.current=variantSaveQueue\.current\.then/);
-  assert.match(app,/Promise\.all\(created\.map\(async draft=>/);
+  assert.match(app,/runBounded\(created,4,async draft=>/);
   assert.match(app,/for\(let attempt=0;attempt<3&&!saved;attempt\+\+\)/);
   assert.match(app,/response\.status!==429&&response\.status<500/);
 });

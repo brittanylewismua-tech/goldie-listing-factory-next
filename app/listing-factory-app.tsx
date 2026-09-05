@@ -37,6 +37,7 @@ import MobileGate from "./mobile-gate";
 import { productFamily } from "./product-type-utils";
 import { printifyMockupDetails, printifyMockupForColor, printifyVariantIdsForColor } from "./printify-color-mockup";
 import { orderedPrintSides,primaryPrintSide,printSideLabel,productNoun } from "./print-sides";
+import ProductColorRendering from "./product-color-rendering";
 
 /* The product glyph is a last-resort identity image after Printify has answered
    but has not supplied a usable mockup. It must never silently turn an unknown
@@ -69,13 +70,6 @@ function ProductGlyph({title,color}:{title?:string;color?:string}){
   );
 }
 
-function ProductColorRendering({title,color,artworkUrl,productRenderingUrl}:{title:string;color:string;artworkUrl?:string;productRenderingUrl?:string}){
-  const family=productFamily(title.toLowerCase())||"other";
-  return <div className="product-color-rendering" data-family={family} style={{"--product-glyph-color":color||"#ddd"} as CSSProperties}>
-    {productRenderingUrl?<><span className="product-color-rendering-fill" style={{WebkitMaskImage:`url(${productRenderingUrl})`,maskImage:`url(${productRenderingUrl})`}}/><img className="product-color-rendering-base" src={productRenderingUrl} alt=""/></>:<ProductGlyph title={title} color={color}/>}
-    {artworkUrl?<img className="product-color-rendering-art" src={artworkUrl} alt="Design positioned on product"/>:null}
-  </div>;
-}
 import { publishedDaysThisPeriod, type ListingGoal, type PublishedDay } from "./listing-goal";
 
 /* D202 · "25 selected variants" is Printify's word, not a seller's. A seller
@@ -537,7 +531,7 @@ function DraftColorSelector({product,drafts,selected,saving,artworkByDraft,onCha
     return printifyMockupForColor(draft.colorPreviewImageDetails?.length?draft.colorPreviewImageDetails:draft.printifyImageDetails?.length?draft.printifyImageDetails:printifyMockupDetails(draft.printifyImages),variants)
       ||"";
   };
-  const focused=artworkUploadColor.current||explicitlyChosenColor.current||colors.find(color=>color.id===activeColor)||colors[0];
+  const focused=artworkUploadColor.current||colors.find(color=>color.id===activeColor)||colors[0];
   const realPreview=imageFor(focused);
   const focusedVariants=variantIdsFor(focused);
   const renderingSide=primaryPrintSide(orderedPrintSides(product.printPositions));
@@ -560,10 +554,10 @@ function DraftColorSelector({product,drafts,selected,saving,artworkByDraft,onCha
     catch{setShowRealPreview(false);setPreviewError("Printify preview could not be refreshed. Try Preview again.")}
     finally{setPreviewLoading(false)}
   }
-  return <section ref={selectorRef} className="draft-color-selector" aria-label="Preview and choose product colors" onClickCapture={event=>{if((event.target as HTMLElement).closest(".draft-color-artwork-action"))artworkUploadColor.current=explicitlyChosenColor.current||focused}}>
+  return <section ref={selectorRef} className="draft-color-selector" aria-label="Preview and choose product colors" onClickCapture={event=>{if((event.target as HTMLElement).closest(".draft-color-artwork-action"))artworkUploadColor.current=focused}}>
     <div className="draft-color-heading"><div><h3>Choose product colors</h3><p>{createdDrafts.length>1?`Listing ${activeDraftIndex+1} of ${createdDrafts.length}. `:""}Choose colors instantly. Open Preview only when you want to see the finished Printify mockup.</p></div></div>
     <div className="draft-color-bulk-actions" role="group" aria-label="Color selection actions"><button type="button" onClick={selectAll}>Select all available</button><button type="button" onClick={matchTemplate}>Match Printify template</button><button type="button" onClick={()=>onChange([])}>Clear all</button>{saving?<span role="status">Saving choices…</span>:null}</div>
-    <div className="draft-color-workspace"><div className="draft-color-main">{showRealPreview&&realPreview?<img src={realPreview} alt={`${focused.title} finished Printify preview`}/>:<ProductColorRendering title={product.blueprintTitle} color={focused.swatch} artworkUrl={mainArtwork} productRenderingUrl={productRendering}/>}<b>{focused.title}</b><span>{override?"Using alternate artwork":"Using the main design"}</span><button type="button" className="draft-color-preview" aria-busy={previewLoading} disabled={previewLoading} onClick={()=>void openPreview()}>{showRealPreview?"Back to edit view":previewLoading?"Loading preview…":"Preview"}</button>{previewError?<p className="field-error" role="alert">{previewError}</p>:null}<div className="draft-color-artwork-action"><label role="button" tabIndex={0} aria-disabled={saving} onKeyDown={event=>{if(saving)return;if(event.key==="Enter"||event.key===" "){event.preventDefault();event.currentTarget.querySelector("input")?.click()}}}>{override?`Change artwork for ${focused.title}`:`Use different artwork for ${focused.title}`}<input className="hidden-picker" type="file" accept=".png,.jpg,.jpeg" disabled={saving} onChange={event=>{onArtworkChange(draft,focused,event.target.files);event.target.value=""}}/></label>{override?<button type="button" disabled={saving} onClick={()=>onArtworkChange(draft,focused,null,true)}>Use main design</button>:null}</div></div><div className="draft-color-grid">{colors.map(color=>{const included=idsFor(color).some(id=>selectedSet.has(id));return <button type="button" key={color.id} aria-pressed={included} className={included?"selected":""} onMouseEnter={()=>focusColor(color.id)} onFocus={()=>focusColor(color.id)} onClick={()=>toggle(color)}><i className="draft-color-swatch" style={{background:color.swatch||"#ddd"}} aria-hidden="true"/><span>{color.title}</span><em>{included?"✓ Included":"Add"}</em></button>})}</div></div>
+    <div className="draft-color-workspace"><div className="draft-color-main">{showRealPreview&&realPreview?<img src={realPreview} alt={`${focused.title} finished Printify preview`}/>:<ProductColorRendering color={focused.swatch} artworkUrl={mainArtwork} productRenderingUrl={productRendering} placement={draft.placement} side={renderingSide} printWidth={product.maxPrintWidth} printHeight={product.maxPrintHeight}/>}<b>{focused.title}</b><span>{override?"Using alternate artwork":"Using the main design"}</span><button type="button" className="draft-color-preview" aria-busy={previewLoading} disabled={previewLoading} onClick={()=>void openPreview()}>{showRealPreview?"Back to edit view":previewLoading?"Loading preview…":"Preview"}</button>{previewError?<p className="field-error" role="alert">{previewError}</p>:null}<div className="draft-color-artwork-action"><label role="button" tabIndex={0} aria-disabled={saving} onKeyDown={event=>{if(saving)return;if(event.key==="Enter"||event.key===" "){event.preventDefault();event.currentTarget.querySelector("input")?.click()}}}>{override?`Change artwork for ${focused.title}`:`Use different artwork for ${focused.title}`}<input className="hidden-picker" type="file" accept=".png,.jpg,.jpeg" disabled={saving} onCancel={()=>{artworkUploadColor.current=null}} onChange={event=>{const locked=artworkUploadColor.current||focused;onArtworkChange(draft,locked,event.target.files);artworkUploadColor.current=null;event.target.value=""}}/></label>{override?<button type="button" disabled={saving} onClick={()=>{onArtworkChange(draft,focused,null,true);artworkUploadColor.current=null}}>Use main design</button>:null}</div></div><div className="draft-color-grid">{colors.map(color=>{const included=idsFor(color).some(id=>selectedSet.has(id));return <button type="button" key={color.id} aria-pressed={included} className={included?"selected":""} onMouseEnter={()=>focusColor(color.id)} onFocus={()=>focusColor(color.id)} onClick={()=>toggle(color)}><i className="draft-color-swatch" style={{background:color.swatch||"#ddd"}} aria-hidden="true"/><span>{color.title}</span><em>{included?"✓ Included":"Add"}</em></button>})}</div></div>
     {override&&draft.editorUrl?<div className="draft-color-adjust"><a href={draft.editorUrl} target="_blank" rel="noreferrer">Adjust this artwork in Printify ↗</a><span>Resize or reposition this color’s artwork if needed.</span></div>:null}
     {createdDrafts.length>1?<nav className="factory-listing-next draft-color-next" aria-label="Move between product-color listings"><button type="button" disabled={activeDraftIndex===0} onClick={()=>showDraft(createdDrafts[activeDraftIndex-1].id!)}>← Previous listing</button><span>Listing {activeDraftIndex+1} of {createdDrafts.length}</span><button type="button" disabled={activeDraftIndex===createdDrafts.length-1} onClick={()=>showDraft(createdDrafts[activeDraftIndex+1].id!)}>Next listing →</button></nav>:null}
   </section>;
@@ -4194,13 +4188,13 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
   function syncDraftVariantChoices(nextColors:number[],nextSizes:number[]){
     if(!templateDetails)return;
     setSelectedColorIds(nextColors);setSelectedSizeIds(nextSizes);
+    const revision=++variantSaveRevision.current;
+    window.clearTimeout(variantSaveTimer.current);
     const selectedVariants=variantsFor(templateDetails,nextColors,nextSizes).map(variant=>variant.id);
-    if(!selectedVariants.length){setDraftVariantError("Choose a color and size combination Printify offers.");return}
+    if(!selectedVariants.length){setSavingDraftVariants(false);setDraftVariantError("Choose a color and size combination Printify offers.");return}
     const created=drafts.filter(draft=>draft.status==="Created"&&draft.id);
     setDraftVariantError("");
-    const revision=++variantSaveRevision.current;
     setSavingDraftVariants(true);
-    window.clearTimeout(variantSaveTimer.current);
     variantSaveTimer.current=window.setTimeout(()=>{variantSaveQueue.current=variantSaveQueue.current.then(async()=>{
     if(revision!==variantSaveRevision.current)return;
     setSavingDraftVariants(true);
@@ -4211,7 +4205,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
          within one choice, update every draft concurrently and retry only the
          individual transient failures. This keeps a 20-design batch from taking
          roughly twenty times as long as a single draft. */
-      const updated=await Promise.all(created.map(async draft=>{
+      const updated=await runBounded(created,4,async draft=>{
         let saved:DraftResult|undefined,lastError="";
         for(let attempt=0;attempt<3&&!saved;attempt++){
           if(attempt)await new Promise(resolve=>window.setTimeout(resolve,600*attempt));
@@ -4223,7 +4217,8 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
         }
         if(!saved)throw new Error(lastError||`Printify could not update ${draft.name}.`);
         return saved;
-      }));
+      });
+      if(revision!==variantSaveRevision.current)return;
       const byId=new Map(updated.map(draft=>[draft.id,draft]));
       setDrafts(current=>current.map(draft=>byId.get(draft.id)||draft));
       setPricingApproved(false);

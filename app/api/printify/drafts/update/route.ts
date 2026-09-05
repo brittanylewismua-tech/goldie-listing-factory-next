@@ -4,9 +4,10 @@ import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { decryptPrintifyToken } from "../../token-crypto";
 import { primaryImageForSide,replaceArtworkForVariants,type DraftPrintArea } from "../color-artwork";
 import { printifyMockupSet } from "@/app/printify-camera-mockups";
+import { signedArtworkUrl } from "../../staged-url";
+import { mergePreviewDetails,type PreviewDetail } from "@/app/printify-preview-details";
 
 type ArtworkUpdate={stagedId?:string;fileName?:string;position:string;variantIds:number[];colorId:number;colorTitle:string;reset?:boolean;bounds?:{left:number;top:number;right:number;bottom:number};maxPlacementScale?:number};
-async function artworkContents(stream?:ReadableStream){if(!stream)throw new Error("Goldie could not read the staged artwork.");const bytes=new Uint8Array(await new Response(stream).arrayBuffer());let binary="";for(let index=0;index<bytes.length;index+=0x8000)binary+=String.fromCharCode(...bytes.subarray(index,index+0x8000));return btoa(binary)}
 
 export async function PATCH(request:Request){
   const user=await getChatGPTUser();if(!user)return NextResponse.json({error:"Sign in to update this draft."},{status:401});
@@ -65,7 +66,7 @@ export async function PATCH(request:Request){
       const runtime=env as unknown as {ARTWORK?:{get(key:string):Promise<{body?:ReadableStream;customMetadata?:Record<string,string>}|null>}};
       const staged=change.stagedId?await runtime.ARTWORK?.get(change.stagedId):null;
       if(!staged||staged.customMetadata?.owner!==user.userId||Number(staged.customMetadata?.expires||0)<=Date.now())return NextResponse.json({error:"That artwork upload expired. Choose the file again."},{status:400});
-      const upload=await fetch("https://api.printify.com/v1/uploads/images.json",{method:"POST",headers:{Authorization:`Bearer ${token}`,"Content-Type":"application/json","User-Agent":"Goldie-Listing-Factory"},body:JSON.stringify({file_name:String(change.fileName||"alternate-artwork.png"),contents:await artworkContents(staged.body)})});
+      const upload=await fetch("https://api.printify.com/v1/uploads/images.json",{method:"POST",headers:{Authorization:`Bearer ${token}`,"Content-Type":"application/json","User-Agent":"Goldie-Listing-Factory"},body:JSON.stringify({file_name:String(change.fileName||"alternate-artwork.png"),url:await signedArtworkUrl(new URL(request.url).origin,change.stagedId!,secret)})});
       if(!upload.ok)return NextResponse.json({error:`Printify could not upload that artwork (${upload.status}).`},{status:upload.status});
       const uploaded=await upload.json() as {id?:string;preview_url?:string};
       imageId=String(uploaded.id||"");overridePreviewUrl=uploaded.preview_url;
@@ -124,13 +125,16 @@ export async function PATCH(request:Request){
   }
   const generated=body.refreshImages&&currentProduct?await printifyMockupSet({productId,blueprintId,providerId,variants:currentProduct.variants||[]}):{cameraDetails:[],colorDetails:[]},cameraDetails=generated.cameraDetails;
   const apiDetails=(images||[]).filter(image=>image.src).map(image=>({src:image.src!,variantIds:image.variant_ids||[],position:image.position||""}));
-  const allDetails=[...cameraDetails,...apiDetails].filter((image,index,list)=>list.findIndex(item=>item.src===image.src)===index);
+  const previousPreviews=draft as typeof draft&{printifyImageDetails?:PreviewDetail[];artworkPreviewRevision?:number};
+  const artworkPreviewRevision=body.artworkUpdate||body.placement?Date.now():previousPreviews.artworkPreviewRevision;
+  const allDetails=mergePreviewDetails([previousPreviews.printifyImageDetails||[],cameraDetails,apiDetails],artworkPreviewRevision);
   const nextOverrides={...(draft.artworkOverrides||{})};
   if(body.artworkUpdate){if(body.artworkUpdate.reset)delete nextOverrides[String(body.artworkUpdate.colorId)];else nextOverrides[String(body.artworkUpdate.colorId)]={name:String(body.artworkUpdate.fileName||"Alternate artwork"),position:body.artworkUpdate.position};}
   const nextOverridePreviews={...(draft.artworkOverridePreviewUrls||{})};
   // Printify reuses mockup URLs when artwork changes. Invalidate browser/CDN
   // image caches only for an artwork update, including a reset.
-  if(body.artworkUpdate||body.refreshImages)for(const image of [...generated.colorDetails,...allDetails])image.src+=`${image.src.includes("?")?"&":"?"}goldie_artwork=${Date.now()}`;
+  if(artworkPreviewRevision)generated.colorDetails=mergePreviewDetails([generated.colorDetails],artworkPreviewRevision);
+  Object.assign(draft,{artworkPreviewRevision});
   if(body.artworkUpdate){if(body.artworkUpdate.reset)delete nextOverridePreviews[String(body.artworkUpdate.colorId)];else if(overridePreviewUrl)nextOverridePreviews[String(body.artworkUpdate.colorId)]=overridePreviewUrl;}
   const stored={...draft,...(blueprintId&&providerId?{blueprintId,providerId}:{}),artworkOverrides:nextOverrides,artworkOverridePreviewUrls:nextOverridePreviews,...(body.artworkUpdate&&primaryArtworkId?{primaryArtworkImageIds:{...(draft.primaryArtworkImageIds||{}),[body.artworkUpdate.position]:primaryArtworkId}}:{}),...(body.title!==undefined?{title:String(body.title||"").slice(0,255)}:{}),...(body.tags!==undefined?{tags:(body.tags||[]).slice(0,13)}:{}),...(body.description!==undefined?{description:String(body.description||"")}:{}) ,...(body.etsyDetails!==undefined?{etsyDetails:body.etsyDetails||null}:{}),...(body.placement?{placement:body.placement,placementScale}:{}),...(body.selectedVariantIds?{selectedVariantIds:body.selectedVariantIds,costReview:{...(draft as {costReview?:Record<string,unknown>}).costReview,approved:false,variants:(currentProduct?.variants||[]).map(variant=>({...variant,cost:Number(variant.cost),price:Number(variant.price),isEnabled:body.selectedVariantIds!.includes(variant.id)}))}}:{}),...(body.variantPrices?{costReview:{...(draft as {costReview?:Record<string,unknown>}).costReview,verified:true,approved:true,variants:(currentProduct?.variants||[]).map(variant=>({...variant,cost:Number(variant.cost),price:Number(body.variantPrices?.[String(variant.id)]??variant.price),isEnabled:body.selectedVariantIds?body.selectedVariantIds.includes(variant.id):variant.is_enabled!==false}))}}:{}),...(generated.colorDetails.length?{colorPreviewImageDetails:generated.colorDetails}:{}),...(allDetails.length?{printifyImages:allDetails.map(image=>image.src),printifyImageDetails:allDetails,previewUrl:images?.find(image=>image.is_default)?.src||images?.[0]?.src||allDetails[0]?.src}: {})};
   await env.DB.prepare("UPDATE printify_draft_results SET response_json=? WHERE user_id=? AND status='succeeded' AND json_extract(response_json,'$.id')=?").bind(JSON.stringify(stored),user.userId,productId).run();
