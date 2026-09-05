@@ -2294,6 +2294,8 @@ export default function ListingFactoryApp() {
     const freshUrl=new URL(window.location.href);freshUrl.searchParams.delete("batch");window.history.replaceState({},"",freshUrl);
     files.forEach(file=>URL.revokeObjectURL(file.previewUrl));
     setBatchToolsOpen(true);
+    setBatchDisplayName("");
+    setKeptAsDrafts(false);
     templateLoadVersion.current+=1;setLoadingTemplate(false);setFiles([]);setFileError("");setDrafts([]);setProcessed(0);setRunTotal(0);setComplete(false);setOpenedDrafts([]);setOpenAllMessage("");setBulkTitles("");setBatchKeywords([]);setTitleJoiner(", ");setTitleBuilderMode("ai");setAutoTitleBank(null);setAutoTitleBankId("");setManualKeywordBankId("");setActiveDesign("");setPreflightOpen(false);setUploadNoticeOpen(false);setPrintifyImageIndices([]);setPrintifyImageSelections({});setSharedMockups(undefined);setPreparedMockupCounts({});setFinishPhase("details");setVariantPrices({});setSelectedColorIds([]);setColorsRemembered(false);setPricingApproved(false);setSizeGuideName("");setSizeGuideStatus("");setBatchReceipt(null);setPublishMessage("");syncedListingSignatures.current.clear();
     if(clearProduct){setTemplate("");setTemplateDetails(null);setTemplateError("");setDescription("");setMockupTheme("");setActiveRecipe(null);setActiveBundle(null);setBundleRecipes([]);setBundleIndex(0);setBundleColorProducts({});setBundleBatchIds({});setBundleColorChoices({});setBundleQualityDecisions({});setPricing(current=>({...current,targetProfit:DEFAULT_PRICING.targetProfit,shippingCost:0,shippingCharged:0}))}
     if (folderPicker.current) folderPicker.current.value = "";
@@ -3085,7 +3087,7 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
           show and they must still offer retry and help. */}
       <div className="task-panel-body placement-review-grid">
         <p className="placement-printify-note">To adjust these designs in Printify, sign in to Printify first and make sure the correct shop is selected. Otherwise, Printify may show an error when you open a draft.</p>
-        {selectedPlacementDrafts.length?<div className="placement-selection-actions"><button type="button" onClick={()=>setSelectedPlacementDrafts(listings.filter(({draft})=>draft.status==="Created"&&draft.id).map(({draft})=>draft.id!))}>Select all</button><button type="button" onClick={()=>{const chosen=drafts.filter(draft=>draft.id&&selectedPlacementDrafts.includes(draft.id)&&draft.editorUrl);const opened:string[]=[];for(const draft of chosen){if(window.open(draft.editorUrl!,"_blank","noopener,noreferrer"))opened.push(draft.id!)}setOpenedDrafts(current=>[...new Set([...current,...opened])]);setOpenAllMessage(opened.length===chosen.length?`${opened.length} Printify editor tabs opened.`:`Your browser opened ${opened.length} of ${chosen.length}. Allow pop-ups to open the rest.`)}}>Open selected listings in Printify ↗</button></div>:null}
+        {selectedPlacementDrafts.length?<div className="placement-selection-actions"><button type="button" onClick={()=>setSelectedPlacementDrafts(listings.filter(({draft})=>draft.status==="Created"&&draft.id).map(({draft})=>draft.id!))}>Select all</button><button type="button" onClick={()=>requestDraftTabs(drafts.filter(draft=>draft.id&&selectedPlacementDrafts.includes(draft.id)&&draft.editorUrl))}>Open selected listings in Printify ↗</button></div>:null}
         {listings.filter(({draft})=>draft.status!=="Created").map(({draft,design})=>
           <div className="task-listing failed" key={draft.clientId}>
             <div className="task-listing-ident"><span className="task-listing-index">Listing {listings.findIndex(entry=>entry.draft.clientId===draft.clientId)+1} of {listings.length}</span><p className="task-listing-name">{listingLabel(design)}</p></div>
@@ -4450,17 +4452,14 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
   function guardNavigation(event:{preventDefault:()=>void},href:string){if(!running)return;event.preventDefault();setLeaveTarget(href);setUploadNoticeOpen(true)}
 
   function openAllDrafts() {
-    const editableDrafts = drafts.filter((draft) => draft.id && draft.editorUrl);
-    let opened = 0;
-    const openedIds: string[] = [];
-    editableDrafts.forEach((draft) => {
-      const printifyTab = window.open(draft.editorUrl!, "_blank", "noopener,noreferrer");
-      if (!printifyTab) return;
-      opened += 1;
-      openedIds.push(draft.id!);
-    });
-    setOpenedDrafts((current) => [...new Set([...current, ...openedIds])]);
-    setOpenAllMessage(opened === editableDrafts.length ? `${opened} Printify editor tabs opened.` : `Your browser opened ${opened} of ${editableDrafts.length}. Allow pop-ups for this site to open the rest.`);
+    requestDraftTabs(drafts.filter((draft) => draft.id && draft.editorUrl));
+  }
+
+  function requestDraftTabs(editableDrafts:DraftResult[]) {
+    // noopener intentionally returns no WindowProxy, even when a tab opens.
+    // Keep that protection; do not misreport its null return as a blocked tab.
+    editableDrafts.forEach(draft=>window.open(draft.editorUrl!,"_blank","noopener,noreferrer"));
+    setOpenAllMessage("Check your Printify tabs. If any did not open: Allow pop-ups for this site or use Adjust in Printify on that listing.");
   }
 
   /* D726 · The prototype's .goldie-summary chip. Every value is read from the
