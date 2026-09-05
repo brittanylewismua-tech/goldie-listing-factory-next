@@ -178,6 +178,10 @@ D1115 version and real shortcut retests, final alternate-artwork reset/reload/is
 
 ## D1136 follow-through and D1137 exclusion fix
 
+D1137 live alternate-artwork retest: tee listing2 in six-draft bundle, Natural replacement uploaded successfully. Real Printify preview showed the replacement; White showed original. Opened draft6a9c80d1e5fa61628009a2a6 and clicked every other selected color (White, Sport Grey, Daisy, Carolina Blue, Light Pink); all retained default original layer. Natural and original both measured7.98×7.98in,190.9%,rotation0,left17.58%,top11.35%,157DPI. Used main design, waited for save, reloaded, reopened listing2 and Natural: main design restored. No Printify Save product or Publish clicked. Temporary editor tab closed.
+
+Fresh D1137 exclusion test86f72bce-338d-44e1-a3d2-fdf785733a83: two designs×two products, approvedDesign1/excludedDesign2; page correctly said2drafts but confirmation incorrectly said4. Stopped before submission. D1138 makes confirmation heading and details use the exclusion-aware requested count, with a regression. Exact live resubmission still pending at time of this entry.
+
 The phone-case run reached final review with the $29.49 saved price, Phone Cases Etsy category, manual QA title/tags, and actual product photo. My Products opened the correct shop with the unpublished QA draft. Compared directly with Printify's editor: this iPhone 17 product offers one Front mockup, matching the one shown here. No Etsy publishing occurred.
 
 On live D1136, reopened pricing after reload: $29.49 / $14.99 estimated profit. Typed $30.49 and saw $15.89 without blurring. Clicked the profit label; pricing stayed open. Restored $29.49, saved, and observed “Prices saved to every listing.” Captured console errors were empty at this check. Shipping dropdown opened with the correct selected SPOKE profile and other options. Browser connection failed during the search/visual dropdown check; do not mark that interaction passed. Stale QA tab was closed natively; only one replacement QA tab retained.

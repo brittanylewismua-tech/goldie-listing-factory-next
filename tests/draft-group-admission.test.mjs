@@ -6,6 +6,14 @@ import {CLAIM_DRAFT_GROUP_SQL,draftCreationSlotReleased} from '../app/api/printi
 import {restoreBatchDrafts} from '../app/batch-draft-integrity.ts';
 import {runBounded} from '../app/bounded-work.ts';
 
+test('creation confirmation uses the admitted exclusion-aware draft count',()=>{
+  const source=readFileSync(new URL('../app/listing-factory-app.tsx',import.meta.url),'utf8');
+  const modal=source.slice(source.indexOf('<h2 id="preflight-title">'),source.indexOf('</section></div>}',source.indexOf('<h2 id="preflight-title">')));
+  assert.match(modal,/Create \$\{requestedListingCount\} private/);
+  assert.match(modal,/\$\{requestedListingCount\} drafts after exclusions/);
+  assert.doesNotMatch(modal,/Create \$\{files.length\*bundleRecipes.length\}/);
+});
+
 test('creation prevents upload or product mutations and price changes paint in sync',()=>{
   const source=readFileSync(new URL('../app/listing-factory-app.tsx',import.meta.url),'utf8');
   for(const name of ['chooseFiles','removeDesign','changeProduct','addArtworkVersion'])assert.match(source,new RegExp('async function '+name+'\\([^\\n{]*\\)\\s*\\{\\s*if\\(draftRunInFlight.current\\)return'));

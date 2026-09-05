@@ -3938,7 +3938,9 @@ test("the drafts confirmation describes the run it is confirming — D492", asyn
      drafts are made - read "Create 2 product drafts?", listed only "Unisex
      Midweight Softstyle Fleece Hoodie" under a singular "Printify product", and
      charged the plan allowance for 2. */
-  assert.match(app, /Create \$\{files\.length\*bundleRecipes\.length\} private drafts\?/);
+  // D1138: the same bundle total must also respect excluded product/design pairs.
+  assert.match(app, /Create \$\{requestedListingCount\} private/);
+  assert.match(app, /\$\{requestedListingCount\} drafts after exclusions/);
   assert.match(app, /\{activeBundle&&bundleRecipes\.length>1\?"Products":"Product"\}/);
   assert.match(app, /bundleRecipes\.map\(recipe=>recipe\.name\)\.join\(", "\)/);
 
