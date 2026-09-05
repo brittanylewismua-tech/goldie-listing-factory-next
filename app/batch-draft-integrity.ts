@@ -1,8 +1,11 @@
-type DraftIdentity = { id?:string; clientId?:string; batchId?:string; sourceTemplateId?:string; status?:string; costReview?:{required?:boolean;approved?:boolean;variants?:Array<{id:number;price:number;isEnabled?:boolean}>} };
+type DraftIdentity = { id?:string; clientId?:string; batchId?:string; sourceTemplateId?:string; status?:string; priceEdits?:Record<string,number>; costReview?:{required?:boolean;approved?:boolean;variants?:Array<{id:number;price:number;isEnabled?:boolean}>} };
 type BatchIdentity = { designs?:Array<{id?:string}>; drafts?:DraftIdentity[]; templateDetails?:{id?:string;batchId?:string}; complete?:boolean;pricingApproved?:boolean;variantPrices?:Record<string,number> };
 
 export function pricesMatchSavedDrafts(drafts:DraftIdentity[],prices:Record<string,number>={}){
-  return drafts.every(draft=>(draft.costReview?.variants||[]).every(variant=>variant.isEnabled===false||!Object.prototype.hasOwnProperty.call(prices,String(variant.id))||Number(prices[String(variant.id)])===Number(variant.price)));
+  return drafts.every(draft=>{
+    const expected=draft.priceEdits??prices;
+    return (draft.costReview?.variants||[]).every(variant=>variant.isEnabled===false||!Object.prototype.hasOwnProperty.call(expected,String(variant.id))||Number(expected[String(variant.id)])===Number(variant.price));
+  });
 }
 
 /** A late product response can update matching records, never insert records
@@ -27,7 +30,13 @@ export function restoreBatchDrafts<T extends BatchIdentity>(state:T, authoritati
       (draft.id===existing?.id||Boolean(state.templateDetails?.batchId&&draft.batchId===state.templateDetails.batchId)||Boolean(state.templateDetails?.id&&draft.sourceTemplateId===state.templateDetails.id)));
     const exact=candidates.find(draft=>draft.id===existing?.id);
     const chosen=exact||(candidates.length===1?candidates[0]:undefined);
-    if(chosen)restored.push({...existing,...chosen});else if(existing)restored.push(existing);
+    if(chosen){
+      const merged={...existing,...chosen};
+      // A local edit is not a saved Printify price just because an older server
+      // result was approved. Keep the card and continuation gate in agreement.
+      if(merged.costReview?.approved&&!pricesMatchSavedDrafts([merged],state.variantPrices))merged.costReview={...merged.costReview,approved:false};
+      restored.push(merged);
+    }else if(existing)restored.push(existing);
   }
   const approval=restored.filter(draft=>draft.status==='Created'&&draft.costReview?.required);
   const allCreated=state.designs.every(design=>restored.some(draft=>draft.clientId===design.id&&draft.id&&draft.status==='Created'));

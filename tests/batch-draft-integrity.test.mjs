@@ -6,6 +6,21 @@ import {navigationIssues,leavingImagesIssues} from '../app/workflow-gates.ts';
 import {mergeMatchingDrafts,restoreBatchDrafts,batchDraftIdentityProblem,serializedBatchWrites} from '../app/batch-draft-integrity.ts';
 const tee={id:'tee',clientId:'tee-art',batchId:'tee-session',status:'Created',costReview:{required:true,approved:true}};
 const hoodie={id:'hoodie',clientId:'hoodie-art',batchId:'hoodie-session',status:'Created',costReview:{required:true,approved:false}};
+test('reload approves independent saved prices sharing Printify variant IDs',()=>{
+  const drafts=[{...tee,priceEdits:{101:3304},costReview:{required:true,approved:true,variants:[{id:101,price:3304}]}},{...hoodie,priceEdits:{101:2623},costReview:{required:true,approved:true,variants:[{id:101,price:2623}]}}];
+  const state={designs:drafts.map(draft=>({id:draft.clientId})),drafts,variantPrices:{101:2400},pricingApproved:false};
+  const restored=restoreBatchDrafts(state,drafts);
+  assert.equal(restored.pricingApproved,true);
+  assert.ok(restored.drafts.every(draft=>draft.costReview.approved));
+});
+test('reload cannot mark an unsaved per-listing edit approved from old server prices',()=>{
+  const saved={...tee,costReview:{required:true,approved:true,variants:[{id:101,price:3304}]}};
+  const edited={...saved,priceEdits:{101:3404},costReview:{...saved.costReview,approved:false}};
+  const restored=restoreBatchDrafts({designs:[{id:tee.clientId}],drafts:[edited],pricingApproved:false},[saved]);
+  assert.equal(restored.pricingApproved,false);
+  assert.equal(restored.drafts[0].costReview.approved,false);
+  assert.equal(restored.drafts[0].priceEdits[101],3404);
+});
 test('late tee pricing cannot replace the active hoodie results',()=>{
   assert.deepEqual(mergeMatchingDrafts([hoodie],[tee]),[hoodie]);
   assert.deepEqual(mergeMatchingDrafts([hoodie],[{...hoodie,costReview:{required:true,approved:true}}])[0].costReview,{required:true,approved:true});
