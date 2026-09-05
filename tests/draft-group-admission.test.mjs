@@ -88,7 +88,9 @@ test('the fresh submission path stages and saves every member before one bulk ad
   assert.match(queue,/recipes=activeBundle&&bundleRecipes.length>1\?bundleRecipes/);
   assert.ok(queue.indexOf('for(const member of members)await saveMember(member)')<queue.indexOf('JSON.stringify({requests})'));
   assert.ok(queue.indexOf('result.accepted!==requests.length')<queue.indexOf('You can close this tab'));
-  assert.match(queue,/recipe.id.*file.id.*exclude/);
+  assert.match(queue,/bundleMemberDesigns\(files,recipe.id,bundleQualityDecisions/);
+  assert.ok(queue.indexOf('setFiles(activeMember.designs)')>queue.indexOf('result.accepted!==requests.length'));
+  assert.match(queue,/bundleQualityDecisions:memberPlan.decisions/);
   assert.match(queue,/recoverDraft\(queuedDesignSessions.current.get\(design.id\)/);
   const route=readFileSync(new URL('../app/api/printify/drafts/route.ts',import.meta.url),'utf8');
   assert.match(route,/CLAIM_DRAFT_GROUP_SQL/);assert.match(route,/DRAFT_CREATION.createBatch/);

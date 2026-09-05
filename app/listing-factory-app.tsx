@@ -13,6 +13,7 @@ import { workflowScreen } from "./step-videos";
 import FactoryPanel from "./factory-panel";
 import ArtworkGrid from "./artwork-grid";
 import { runBounded } from "./bounded-work";
+import { bundleMemberDesigns } from "./bundle-member-designs";
 import { productReadiness, recipeCarriesApprovedPricing, type Readiness } from "./product-readiness";
 import { KeywordBank, SavedWorkflow, type KeywordList, type Pricing, type ProductBundle, type Recipe } from "./factory-tools";
 import UploadedListingPhotos from "./uploaded-listing-photos";
@@ -4574,7 +4575,8 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
         const memberPricing=isActive?pricing:{...pricing,targetProfit:Number(recipe.defaultProfitTarget)||DEFAULT_PRICING.targetProfit,shippingCost:details.standardShipping||0,shippingCharged:0};
         const prices=isActive?variantPrices:Object.fromEntries(details.variants.map(variant=>[String(variant.id),variant.templatePrice]));
         const shippingProfileId=isActive?etsyShippingProfileId:Number(recipe.etsyShippingProfileId||details.shippingTemplateId)||0;
-        const designs=files.filter(file=>bundleQualityDecisions[`${recipe.id}:${file.id}`]!=="exclude").map(file=>isActive?file:{...file,id:crypto.randomUUID(),title:"",tags:[],blurb:undefined,descriptionOverride:undefined,sizeGuideName:undefined,etsy:undefined,etsyError:"",artworkVersions:(file.artworkVersions||[]).map(artwork=>artwork.productIds?.length?artwork:{...artwork,ownerProductId:sourceRecipe.id,productIds:[sourceRecipe.id]})});
+        const memberPlan=bundleMemberDesigns(files,recipe.id,bundleQualityDecisions,file=>isActive?file:{...file,id:crypto.randomUUID(),title:"",tags:[],blurb:undefined,descriptionOverride:undefined,sizeGuideName:undefined,etsy:undefined,etsyError:"",artworkVersions:(file.artworkVersions||[]).map(artwork=>artwork.productIds?.length?artwork:{...artwork,ownerProductId:sourceRecipe.id,productIds:[sourceRecipe.id]})});
+        const designs=memberPlan.designs;
         if(!designs.length)throw Error(`${recipe.name} has no included designs.`);
         if(!variantsFor(details,colors,sizes).length)throw Error(`${recipe.name} needs an available color and size combination.`);
         const outcomes=await runBounded(designs,MAX_CONCURRENT_DESIGNS,design=>processDesign(design,{details,recipe,colors,sizes,pricing:memberPricing,variantPrices:prices,shippingProfileId,description:isActive?description:details.description,collect:body=>requests.push(body)}));
@@ -4584,7 +4586,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
         const state={...base,template:recipe.templateUrl,templateDetails:details,activeRecipe:recipe,bundleIndex:index,bundleBatchIds:ids,designs:snapshotDesigns,drafts:[],complete:false,pricing:memberPricing,variantPrices:prices,selectedColorIds:colors,selectedSizeIds:sizes,etsyShippingProfileId:shippingProfileId,description:isActive?description:details.description,pricingApproved:false,autoTitleBankId:recipe.keywordListId||"",manualKeywordBankId:"",printifyImageIndices:recipe.printifyImageIndices||[],printifyImageSelections:{},preparedMockupCounts:{},sizeGuideName:"",batchReceipt:null,queuedDesignSessions:Object.fromEntries(designs.map(design=>[design.id,details.batchId]))};
         await saveBatchFiles(ids[recipe.id],designs.map(design=>design.file));
         await saveBatchArtworkAssets(ids[recipe.id],Object.fromEntries(designs.flatMap(design=>(design.artworkVersions||[]).filter(artwork=>artwork.file?.size).map(artwork=>[`${design.id}:${artwork.id}`,artwork.file]))));
-        members.push({id:ids[recipe.id],recipe,designs,state,results:[]});
+        members.push({id:ids[recipe.id],recipe,designs,state:{...state,bundleQualityDecisions:memberPlan.decisions},results:[]});
       }
       if(requests.length>100)throw Error("This submission exceeds 100 listings. Use a smaller bundle.");
       const saveMember=async(member:typeof members[number],finished=false)=>{
@@ -4598,6 +4600,11 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
       const response=await fetchWithDeadline("/api/printify/drafts",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({requests})},120000);
       const result=await response.json() as {accepted?:number;error?:string};
       if(!response.ok||result.accepted!==requests.length)throw Error(result.error||"The full submission has not been confirmed. Resume this batch to check its saved jobs.");
+      // Match the visible member to the exact admitted snapshot. Otherwise a
+      // later autosave restores excluded files with no corresponding job.
+      const activeMember=members.find(member=>member.recipe.id===sourceRecipe.id)!;
+      setFiles(activeMember.designs);
+      setBundleQualityDecisions(activeMember.state.bundleQualityDecisions as Record<string,"include"|"exclude">);
       setPreparationMessage("Creating drafts in the background. You can close this tab.");
       let finishedCount=0;
       await runBounded(members.flatMap(member=>member.designs.map(design=>({member,design}))),MAX_CONCURRENT_DESIGNS,async({member,design})=>{
