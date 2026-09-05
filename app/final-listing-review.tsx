@@ -1,8 +1,10 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { printSideLabel } from "./print-sides";
+import { listingCoverUrl } from "./listing-cover";
+import { runBounded } from "./bounded-work";
 
-type Draft = { clientId:string; id?:string; name:string; title?:string; status:string; previewUrl?:string; editorUrl?:string; error?:string; productName?:string;artworkSummary?:Record<string,Array<{name:string;colors:string[]}>> };
+type Draft = { clientId:string; id?:string; name:string; title?:string; status:string; previewUrl?:string; printifyImages?:string[]; editorUrl?:string; error?:string; productName?:string;artworkSummary?:Record<string,Array<{name:string;colors:string[]}>> };
 type Design = { id:string; name:string; title:string; tags:string[]; previewUrl:string; sizeGuideName?:string };
 type Props = { drafts:Draft[]; files:Design[]; selections:Record<string,number[]>; defaultIndices:number[]; preparedMockupCounts:Record<string,number>; batchSizeGuide:string; productName?:string; onRetry?:(clientId:string)=>void; onEdit:(phase:"details"|"mockups",draft:Draft)=>void; onSelectionChange?:(ids:string[])=>void; onSelectionTouched?:()=>void; handoffOnly?:boolean };
 
@@ -21,6 +23,24 @@ function batchHasMixedProducts(drafts: Array<{ productName?: string }>): boolean
 
 export default function FinalListingReview({drafts,files,selections,defaultIndices,preparedMockupCounts,batchSizeGuide,productName,onRetry,onEdit,onSelectionChange,onSelectionTouched,handoffOnly=false}:Props){
   const selectable=drafts.filter(draft=>draft.status==="Created"&&draft.id);
+  const [covers,setCovers]=useState<Record<string,string>>({});
+  const [coverRevision,setCoverRevision]=useState(0);
+  useEffect(()=>{const refresh=()=>setCoverRevision(value=>value+1);window.addEventListener("goldie-photo-order-saved",refresh);return()=>window.removeEventListener("goldie-photo-order-saved",refresh)},[]);
+  const coverKey=JSON.stringify(selectable.map(draft=>[draft.id,draft.printifyImages,selections[draft.id!]??defaultIndices,preparedMockupCounts[draft.id!]]));
+  useEffect(()=>{
+    const controller=new AbortController();
+    void runBounded(selectable,4,async draft=>{
+      const indices=selections[draft.id!]??defaultIndices;
+      try{
+        const response=await fetch(`/api/etsy/images?productId=${encodeURIComponent(draft.id!)}`,{signal:controller.signal});
+        if(!response.ok)return;
+        const payload=await response.json() as {images?:Array<{id:string;src:string}>;order?:string[]};
+        const cover=listingCoverUrl(draft.printifyImages||[],indices,payload.images||[],payload.order||[],draft.previewUrl);
+        if(!controller.signal.aborted)setCovers(current=>({...current,[draft.id!]:cover}));
+      }catch{/* Keep the available product preview if saved photos cannot be read. */}
+    });
+    return()=>controller.abort();
+  },[coverKey,coverRevision]);
   /* D841 · The title-length half of this is gone. Etsy's limit is 140 and there
      is no minimum, so a 99-character title was being called "needs a look" -
      which unticked it in "select every listing that is ready" and put a
@@ -103,6 +123,7 @@ export default function FinalListingReview({drafts,files,selections,defaultIndic
       judge, with every product carrying it underneath. */
     const productPreview=(()=>{
       for(const draft of group){
+        if(draft.id&&covers[draft.id])return covers[draft.id];
         if(draft.previewUrl)return draft.previewUrl;
       }
       return "";
@@ -144,7 +165,7 @@ export default function FinalListingReview({drafts,files,selections,defaultIndic
       {!handoffOnly&&groupSelectable.length>0&&<label className="final-group-select" onClick={event=>{event.preventDefault();event.stopPropagation();changeSelection(groupAllSelected?selectedIds.filter(id=>!groupIds.includes(id)):[...new Set([...selectedIds,...groupSelectable.map(draft=>draft.id!)])])}}>
         <input type="checkbox" readOnly checked={groupAllSelected} aria-label={`Publish ${group.length===1?"this listing":"these listings"}`}/>
       </label>}</summary>{productPreview?<div className="final-product-preview"><img src={productPreview} alt="Product with this design" decoding="async"/></div>:null}<div className="final-listing-grid">{group.map(draft=>{const design=files.find(file=>file.id===draft.clientId)||files.find(file=>file.name===draft.name),selectedCount=draft.id?(selections[draft.id]??defaultIndices).length:defaultIndices.length,mockupCount=draft.id?preparedMockupCounts[draft.id]||0:0,hasPhoto=selectedCount+mockupCount>0,publishable=draft.status==="Created"&&hasPhoto,review=contentReview(design),reviewMessage=review.shortTitle&&review.missingTags?"Title and tags need review":review.shortTitle?"Title needs review":"Tags need review";return <article className={`final-listing-card ${handoffOnly&&group.length===1?"single-preview":""} ${publishable?(review.needed?"review-needed":""):"failed"}`} key={`${draft.productName||"product"}:${draft.clientId}`}>
-      {!handoffOnly&&(draft.id&&draft.status==="Created"?<label className="final-listing-select" aria-label="Select listing for publishing"><input type="checkbox" checked={selected.has(draft.id)} onChange={()=>toggle(draft.id!)}/></label>:<span className="final-listing-select-placeholder"/>)}{!(handoffOnly&&group.length===1)&&(draft.previewUrl?<img src={draft.previewUrl} alt="Product preview" decoding="async"/>:design?<img src={design.previewUrl} alt="Design preview" decoding="async"/>:<span className="final-listing-no-image">No preview</span>)}
+      {!handoffOnly&&(draft.id&&draft.status==="Created"?<label className="final-listing-select" aria-label="Select listing for publishing"><input type="checkbox" checked={selected.has(draft.id)} onChange={()=>toggle(draft.id!)}/></label>:<span className="final-listing-select-placeholder"/>)}{!(handoffOnly&&group.length===1)&&((covers[draft.id||""]||draft.previewUrl)?<img src={covers[draft.id||""]||draft.previewUrl} alt="Product preview" decoding="async"/>:design?<img src={design.previewUrl} alt="Design preview" decoding="async"/>:<span className="final-listing-no-image">No preview</span>)}
       <div>{mixedProducts&&<small className="final-product-name">{draft.productName||"Saved product"}</small>}<b>{design?.title||draft.title||"Untitled listing"}</b><small>{(design?.title||draft.title||"").length}/140 characters · {design?.tags?.length||0}/13 tags · {selectedCount+mockupCount} {selectedCount+mockupCount===1?"photo":"photos"}{design?.sizeGuideName||batchSizeGuide?" · size guide ready":""}</small>{draft.artworkSummary&&<div className="final-artwork-summary" aria-label="Artwork and print locations">{Object.entries(draft.artworkSummary).flatMap(([side,items])=>items.map((item,index)=><span key={`${side}:${index}`}><b>{printSideLabel(side)} artwork</b><small>{item.colors.length?item.colors.join(", "):"All remaining colors"}</small></span>))}</div>}<span className={!publishable?"needs-attention":review.needed?"content-review":"ready"}>{!publishable?(draft.status!=="Created"?`! ${draft.error||"Draft needs attention"}`:"! Add at least one listing photo"):review.needed?`! ${reviewMessage} · review before publishing in Printify`:handoffOnly?"✓ Ready in Printify":"✓ Ready for final publish"}</span></div>
       <div className="final-listing-links">{draft.status!=="Created"?<button onClick={()=>onRetry?.(draft.clientId)||window.dispatchEvent(new CustomEvent("goldie-retry-listing",{detail:draft.clientId}))}>Retry this listing</button>:<><button onClick={()=>onEdit("details",draft)}>Edit title</button><button onClick={()=>onEdit("mockups",draft)}>Edit images</button></>}{draft.editorUrl&&<a href={draft.editorUrl} target="_blank" rel="noopener noreferrer">View in Printify ↗</a>}</div>
     </article>})}</div></details>})}</div>

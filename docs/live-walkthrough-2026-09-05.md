@@ -60,7 +60,16 @@ Single phone-case Edit images and Edit title both retested successfully after re
 
 Further photo audit found the same product/variant/camera repeated under old and new title filenames. D1116 work in progress: canonical identity ignores title slugs, retains persisted index slots, hides duplicate picker entries, and copies selected views by variant/camera identity rather than assuming another draft has the same array ordering.
 
-Additional open defect: bundle custom name is retained inside the batch but Batch History still labels the parent with its generic bundle name. This needs a parent-name persistence/display correction.
+Bundle custom-name defect fixed in D1117: explicit saves rename the owned parent and children atomically; autosaves preserve that name. Live saved “QA D1117 — Hoodie and Tee — DO NOT PUBLISH”, verified matching History card, reopened it, switched to the tee, and verified the name stayed correct.
+
+## Continued live pass: D1116–D1118
+
+- D1116 deployed `9d2ced07e4d8fde265e68716f66d3365d8b961cb`; 1262 tests, 1250 passed, 12 skipped. Gallery deduplicates physical camera views without shifting persisted image indices. Live tee gallery reduced from 271 accumulated entries to 222 unique views, preserving selections 2/3/7 and order. Product-scoped copy exercised; hoodie count remained five photos. Selected-photo ZIP returned “Download ready”. Next listing opened Listing 2 at the top; screenshot inspected.
+- Expanding all 222 views triggered transient image failures; a live Retry returned HTTP 200. D1117 adds viewport-based lazy loading with explicit 800×800 dimensions plus two bounded automatic retries; full live expanded-gallery retest still required.
+- D1117 deployed `9ca7c9e62f0b490d256b7bc3db6dce123d8203ee`; 1271 tests, 1259 passed, 12 skipped. In-flight preview requests cannot open a different hovered color. A bundle product switch now retains the current editor phase. Live previously jumped from tee Listing details to hoodie final review; after deployment and reload, product switching retained Listing details. Batch-name fix verified as above.
+- D1118 deployed `56c1ad24458b020448e7fa5dc748007bba36d41d`; 1273 tests, 1261 passed, 12 skipped. Live hoodie category change exposed stale enum IDs: displayed Long sleeve still carried Short sleeve’s Etsy value ID, reverting during category change. Product-fact restoration now updates both label and matching enum ID; category changes reapply supported physical facts. D1118 category live retest remains required.
+- QA hoodie Listing 2 was manually changed to the gender-neutral adult Hoodies category via search and confirmation. Listing 1 still has the historical tee category from the old baseline bug; do not claim fresh cross-product category generation has been validated yet.
+- A generated `worker-configuration.d.ts` is untracked, created to diagnose type checking. With runtime types present, type checking reveals remaining real and browser/worker ambient-type conflicts; `/private/tmp/goldie-type-audit-new.log`. It is not a passing typecheck and not included in the deployed commits.
 
 ## Still required (not a pass)
 

@@ -21,7 +21,7 @@ test('bundle target is selected by draft ID, not filename or the currently open 
   assert.equal(find([{id:'tee'},{id:'hoodie'}],{tee:{drafts:[{id:'a',clientId:'same'}]},hoodie:{drafts:[{id:'b',clientId:'same'}]}},{id:'b'}),1);
 });
 test('single listing shows one expanded product preview, not a duplicate thumbnail',()=>{
-  assert.match(review,/!\(handoffOnly&&group.length===1\)&&\(draft.previewUrl/);
+  assert.match(review,/!\(handoffOnly&&group.length===1\)&&\(\(covers\[draft.id\|\|""\]\|\|draft.previewUrl\)/);
 });
 test('saved quality approvals keep both current and legacy inclusion decisions',()=>{
   const expression=app.match(/const restoredBundleQualityDecisions=(Object.fromEntries\([^\n]+\)) as Record/)[1];
