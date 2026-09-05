@@ -26,6 +26,13 @@ test('no matching session or ambiguous candidates never guesses a recovered draf
   assert.deepEqual(restoreBatchDrafts(state,[{...hoodie,batchId:'other'}]).drafts,[]);
   assert.deepEqual(restoreBatchDrafts(state,[hoodie,{...hoodie,id:'ambiguous'}]).drafts,[]);
 });
+test('reopening a template may renew its session but cannot orphan its exact saved design and product',()=>{
+  const state={designs:[{id:'hoodie-art'}],drafts:[],templateDetails:{id:'hoodie-template',batchId:'renewed-session'}};
+  const exact={...hoodie,sourceTemplateId:'hoodie-template'};
+  assert.deepEqual(restoreBatchDrafts(state,[exact]).drafts,[exact]);
+  assert.deepEqual(restoreBatchDrafts(state,[{...exact,sourceTemplateId:'tee-template'}]).drafts,[]);
+  assert.deepEqual(restoreBatchDrafts(state,[exact,{...exact,id:'ambiguous'}]).drafts,[]);
+});
 test('snapshot validator rejects foreign client IDs and duplicate products but accepts pending and parent runs',()=>{
   assert.equal(batchDraftIdentityProblem({designs:[{id:'hoodie-art'}],drafts:[tee]}),true);
   assert.equal(batchDraftIdentityProblem({designs:[{id:'hoodie-art'}],drafts:[hoodie,hoodie]}),true);

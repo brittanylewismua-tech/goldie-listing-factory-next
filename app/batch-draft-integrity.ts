@@ -1,5 +1,5 @@
-type DraftIdentity = { id?:string; clientId?:string; batchId?:string; status?:string; costReview?:{required?:boolean;approved?:boolean} };
-type BatchIdentity = { designs?:Array<{id?:string}>; drafts?:DraftIdentity[]; templateDetails?:{batchId?:string}; pricingApproved?:boolean };
+type DraftIdentity = { id?:string; clientId?:string; batchId?:string; sourceTemplateId?:string; status?:string; costReview?:{required?:boolean;approved?:boolean} };
+type BatchIdentity = { designs?:Array<{id?:string}>; drafts?:DraftIdentity[]; templateDetails?:{id?:string;batchId?:string}; pricingApproved?:boolean };
 
 /** A late product response can update matching records, never insert records
  * from the product that was open when the request started. */
@@ -20,7 +20,7 @@ export function restoreBatchDrafts<T extends BatchIdentity>(state:T, authoritati
     if(!design?.id)continue;
     const existing=(Array.isArray(state.drafts)?state.drafts:[]).find(draft=>draft?.clientId===design.id);
     const candidates=authoritative.filter(draft=>draft?.clientId===design.id&&draft.id&&
-      (draft.id===existing?.id||Boolean(state.templateDetails?.batchId&&draft.batchId===state.templateDetails.batchId)));
+      (draft.id===existing?.id||Boolean(state.templateDetails?.batchId&&draft.batchId===state.templateDetails.batchId)||Boolean(state.templateDetails?.id&&draft.sourceTemplateId===state.templateDetails.id)));
     const exact=candidates.find(draft=>draft.id===existing?.id);
     const chosen=exact||(candidates.length===1?candidates[0]:undefined);
     if(chosen)restored.push({...existing,...chosen});else if(existing)restored.push(existing);
