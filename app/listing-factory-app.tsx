@@ -2526,7 +2526,8 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
         /* A blocker outranks advice here too, so the badge never leads with the
            tag shortfall while Etsy fields underneath cannot publish. */
         if(summary.etsyReady<summary.designs)return {label:`${summary.etsyReady} of ${summary.designs} Etsy details ready`,tone:"attention"};
-        if(summary.tagged<summary.designs)return {label:`${summary.designs-summary.tagged} could use all 13 tags`,tone:"advice"};
+        const fullyTagged=(bundleMembers[recipe.id]?.designs||[]).filter(design=>(design.tags||[]).length>=13).length;
+        if(fullyTagged<summary.designs)return {label:`${summary.designs-fullyTagged} could use all 13 tags`,tone:"advice"};
         return {label:"Titles and tags ready",tone:"ready"};
       }
       if(summary.published)return {label:`${summary.published} published`,tone:"ready"};
@@ -2689,7 +2690,7 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
         preparedMockupCounts:state.preparedMockupCounts||{}};
       return [recipe.id,{designs:designs.length,
         titled:designs.filter(design=>String(design.title||"").trim()).length,
-        tagged:designs.filter(design=>(design.tags||[]).length>=13).length,
+        tagged:designs.filter(design=>(design.tags||[]).length>0).length,
         /* D694 - the badge for a product she is not currently on could not see
            whether its Etsy fields were complete, so it had no way to report the
            one thing on this step that actually blocks publishing. Same map the
