@@ -17,7 +17,7 @@ const route = strip(await read("app/api/printify/drafts/route.ts"));
 test("a repeated image error stops instead of running the full ladder", () => {
   assert.match(creation, /const IMAGE_ERROR_LIMIT = 2/);
   assert.match(creation, /if \(isImageNotReady\(response\.status, detail\)\) imageErrors \+= 1/);
-  assert.match(creation, /if \(imageErrors > IMAGE_ERROR_LIMIT\)/);
+  assert.match(creation, /if \(imageErrors >= IMAGE_ERROR_LIMIT\)/);
   assert.match(creation, /Goldie stopped instead of retrying\. Nothing was created\./);
 });
 

@@ -49,7 +49,7 @@ export async function createProductWithImageRetries<T>(options: {
     const detail = await response.text().catch(() => "");
     if (isImageNotReady(response.status, detail)) imageErrors += 1;
     /* A repeated image error after the re-upload is a payload fault, not a race. */
-    if (imageErrors > IMAGE_ERROR_LIMIT) {
+    if (imageErrors >= IMAGE_ERROR_LIMIT) {
       throw new Error("Printify rejected the images in this draft twice, including after Goldie re-uploaded the artwork. The request itself is wrong, so Goldie stopped instead of retrying. Nothing was created.");
     }
     const retryable = isImageNotReady(response.status, detail) || response.status === 429 || response.status >= 500;

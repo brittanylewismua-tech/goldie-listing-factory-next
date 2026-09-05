@@ -74,3 +74,13 @@ Bundle custom-name defect fixed in D1117: explicit saves rename the owned parent
 ## Still required (not a pass)
 
 D1115 version and real shortcut retests, final alternate-artwork reset/reload/isolation checks, fresh mug and non-apparel bundle run, remaining narrow-layout/control matrix, complete error recovery. Existing durable creation/capacity rewrite remains unshipped in separate worktree. No 100/300/500-user production capacity claim. No claim every control is verified. Type audit additionally found missing Cloudflare type declarations and other existing type errors; full typecheck is not clean.
+# D1119–D1120 follow-up
+
+- D1119 live version: `039b5da773a60076240e0ade2e9c89edb93150e4`.
+- Fresh mug batch `36fc69de-42f7-40cd-b28b-26214f736c0b` reached final review and My Products without publishing. Its creation POST returned 200 in 2.805406 seconds; that is endpoint time, not a capacity forecast. Cleared sizes survived reload, template reset restored 11oz, prices/shipping and manual titles/tags saved. Unsaved custom shipping changes were discarded.
+- Reopening the mug after D1119 shows saved camera 10395 (Right) with the artwork, not Printify's default front angle. Saved QA name is present in Batch History.
+- D1119 uploaded-cover canary: moved the existing QA hoodie upload from position 3 to 1. Final review fetched that exact private uploaded image for hoodie draft `6a9c36ad2525159670071e06`, while the tee retained its own selected camera.
+- D1118 enum correction verified in Chrome: hoodie sleeve select's actual value is 2671 / Long sleeve, including the changed Hoodies category, not merely the visible summary.
+- Expanded 222-photo tee gallery: 32 initially loaded, 120 and then 182 after deeper scrolling, zero failed images at those checks. Did not claim all 222 requests were exercised. Photo Next Listing 2 header top measured 72.01px.
+- Found listing-number mismatch: parallel completion made hoodie photos use Books first while titles used Dachshund first. D1120 derives every active draft view from the original design order and keeps final bundle ordering independent of the active product. Live post-deploy verification still required.
+- D1120 also corrects the repeated 8253 rejection off-by-one: exactly two creation POSTs, one controlled re-upload and one three-second wait, rather than an unnecessary third POST and extra seven-second wait. This does not claim to solve durable recovery or provider latency generally.

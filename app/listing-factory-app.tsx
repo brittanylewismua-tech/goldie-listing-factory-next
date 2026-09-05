@@ -2,6 +2,7 @@
 import { printifyProductLabel, familyFromVariants } from "./mockup-compatibility";
 import { uniqueMockupEntries,correspondingMockupIndices } from "./printify-preview-details";
 import { applyProductFacts } from "./etsy-product-facts";
+import { draftsInDesignOrder } from "./listing-order";
 import { requestEtsyOptions } from "./etsy-options-request";
 import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { createPortal } from "react-dom";
@@ -1039,7 +1040,8 @@ export default function ListingFactoryApp() {
   const [running, setRunning] = useState(false);
   const [complete, setComplete] = useState(false);
   const [processed, setProcessed] = useState(0);
-  const [drafts, setDrafts] = useState<DraftResult[]>([]);
+  const [draftResults, setDrafts] = useState<DraftResult[]>([]);
+  const drafts=useMemo(()=>draftsInDesignOrder(draftResults,files),[draftResults,files]);
   const [openedDrafts, setOpenedDrafts] = useState<string[]>([]);
   const [selectedPlacementDrafts,setSelectedPlacementDrafts]=useState<string[]>([]);
   const [openAllMessage, setOpenAllMessage] = useState("");
@@ -3760,11 +3762,11 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
      taken from whichever product happens to be open. */
   function bundlePublishDrafts(){
     if(!activeBundle||bundleRecipes.length<2)return drafts;
-    const others=bundleRecipes.filter(recipe=>recipe.id!==activeRecipe?.id).flatMap(recipe=>{
+    return bundleRecipes.flatMap(recipe=>{
+      if(recipe.id===activeRecipe?.id)return drafts.map(draft=>({...draft,productName:recipe.name||draft.productName}));
       const member=bundleMembers[recipe.id];if(!member)return [] as DraftResult[];
-      return member.drafts.map(draft=>({...draft,productName:member.productName}));
+      return draftsInDesignOrder(member.drafts,member.designs).map(draft=>({...draft,productName:member.productName}));
     });
-    return [...drafts.map(draft=>({...draft,productName:activeRecipe?.name||draft.productName})),...others];
   }
   function costReviewDrafts(){return bundlePublishDrafts().filter(draft=>draft.costReview?.required)}
   function pricingForDraft(draft:DraftResult){
@@ -3789,8 +3791,7 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
   }
   function bundlePublishFiles(){
     if(!activeBundle||bundleRecipes.length<2)return files;
-    const others=bundleRecipes.filter(recipe=>recipe.id!==activeRecipe?.id).flatMap(recipe=>(bundleMembers[recipe.id]?.designs||[]) as Array<Omit<DesignFile,"file"|"previewUrl">>);
-    return [...files,...others.map(design=>({...design,file:undefined as unknown as File,previewUrl:""} as DesignFile))];
+    return bundleRecipes.flatMap(recipe=>recipe.id===activeRecipe?.id?files:(bundleMembers[recipe.id]?.designs||[]).map(design=>({...design,file:undefined as unknown as File,previewUrl:""} as DesignFile)));
   }
   function bundlePublishSelections(){
     if(!activeBundle||bundleRecipes.length<2)return printifyImageSelections;
