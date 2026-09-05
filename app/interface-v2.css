@@ -3539,9 +3539,6 @@ html, body { background: var(--lf-paper); }
 .app-shell .title-builder-choice{gap:14px!important;margin-top:16px}
 .app-shell .title-builder-choice button{min-height:86px!important;border:2px solid #ded6dc!important;background:#fff!important;text-align:left!important}
 .app-shell .title-builder-choice button.active{border-color:#111!important;box-shadow:4px 4px 0 var(--lf-pink)!important}
-.app-shell .printify-ready-hero{margin:4px 0 28px;text-align:center}
-.app-shell .printify-ready-hero h2{margin:0 0 8px;font-size:30px;line-height:1.15;color:#35202f}
-.app-shell .printify-ready-hero p{margin:0;color:#766772;font-size:13px}
 .app-shell .final-product-preview{display:flex;justify-content:center;padding:20px;border-bottom:1px solid #eee8ec;background:#fffafd}
 .app-shell .final-product-preview img{width:min(360px,70%);max-height:360px;object-fit:contain;border-radius:12px;background:#fff}
 .app-shell .final-listing-card{grid-template-columns:28px 96px minmax(0,1fr)!important;align-items:start!important}

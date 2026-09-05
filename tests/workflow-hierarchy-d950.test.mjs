@@ -42,7 +42,7 @@ test("D950: every workflow hero states only the immediate task",()=>{
     "Review the plan, then create the private drafts.",
     "Finish each listing’s title, tags, and description.",
     "Finish the Etsy details.",
-    "Review the batch, then open it in Printify.",
+    "Review the batch, then open My Products in Printify.",
   ]) assert.ok(app.includes(copy),`missing concise workflow copy: ${copy}`);
   assert.doesNotMatch(app,/Confirm colors, sizes, placement, pricing, shipping, and listing photos/);
 });
