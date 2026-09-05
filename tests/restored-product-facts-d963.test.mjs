@@ -6,8 +6,7 @@ const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta
 
 test("D963: restored Etsy properties cannot override facts proven by the Printify product", () => {
   assert.match(app, /function restoreAuthoritativeProductFacts\(design:DesignFile,template:TemplateDetails\|null,recipe\?:Recipe\|null\):DesignFile/);
-  assert.match(app, /properties=\(design\.etsy\.properties\|\|\[\]\)\.map\(property=>facts\[property\.label\]\?\{\.\.\.property,value:facts\[property\.label\]\}:property\)/);
-  assert.match(app, /attributes:\{\.\.\.design\.etsy\.attributes,\.\.\.facts\},properties/);
+  assert.match(app, /etsy:applyProductFacts\(design\.etsy,facts\)/);
   assert.match(app, /return restoreAuthoritativeProductFacts\([\s\S]{0,420}state\.templateDetails\|\|null,state\.activeRecipe\)/);
 });
 

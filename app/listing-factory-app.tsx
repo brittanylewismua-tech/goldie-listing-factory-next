@@ -1,6 +1,7 @@
 "use client";
 import { printifyProductLabel, familyFromVariants } from "./mockup-compatibility";
 import { uniqueMockupEntries,correspondingMockupIndices } from "./printify-preview-details";
+import { applyProductFacts } from "./etsy-product-facts";
 import { requestEtsyOptions } from "./etsy-options-request";
 import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { createPortal } from "react-dom";
@@ -383,7 +384,7 @@ function productEtsyDefaults(template:TemplateDetails|null,saved?:Record<string,
   if(/cotton/.test(facts))derived.Materials="Cotton";else if(/polyester/.test(facts))derived.Materials="Polyester";else if(/ceramic/.test(facts))derived.Materials="Ceramic";else if(/canvas/.test(facts))derived.Materials="Canvas";else if(/paper|poster|print/.test(facts))derived.Materials="Paper";
   if(/long.?sleeve|sweatshirt|crewneck|hoodie/.test(facts))derived["Sleeve length"]="Long sleeve";else if(/short.?sleeve|\bt-?shirt\b|\btee\b/.test(facts))derived["Sleeve length"]="Short sleeve";
   if(/\bv.?neck\b/.test(facts))derived.Neckline="V-neck";else if(/crewneck|crew neck|\bt-?shirt\b|\btee\b/.test(facts))derived.Neckline="Crew";
-  if(/hoodie/.test(facts))derived["Clothing style"]="Hoodie";else if(/sweatshirt|crewneck/.test(facts))derived["Clothing style"]="Sweatshirt";else if(/t-?shirt|\btee\b/.test(facts))derived["Clothing style"]="T-shirt";
+  if(/hoodie|hooded sweatshirt/.test(facts))derived["Clothing style"]="Hoodie";else if(/sweatshirt|crewneck/.test(facts))derived["Clothing style"]="Sweatshirt";else if(/t-?shirt|\btee\b/.test(facts))derived["Clothing style"]="T-shirt";
   if(/\bunisex\b/.test(facts))derived.Size="Unisex";else if(/\byouth\b|\bkids?\b|\bchildren\b/.test(facts))derived.Size="Youth";else if(/\binfant\b|\bbaby\b/.test(facts))derived.Size="Baby";
   /* Product facts are authoritative for physical attributes. AI-prepared or
      restored values may fill fields Goldie cannot prove, but they must never
@@ -395,8 +396,7 @@ function restoreAuthoritativeProductFacts(design:DesignFile,template:TemplateDet
   if(!design.etsy)return design;
   const facts=productEtsyDefaults(template,recipe?.etsyDefaults);
   if(!Object.keys(facts).length)return design;
-  const properties=(design.etsy.properties||[]).map(property=>facts[property.label]?{...property,value:facts[property.label]}:property);
-  return {...design,etsy:{...design.etsy,attributes:{...design.etsy.attributes,...facts},properties}};
+  return {...design,etsy:applyProductFacts(design.etsy,facts)};
 }
 function isRigidPaperProduct(template:TemplateDetails|null){return /\b(?:posters?|art prints?|canvas|paper|wall art)\b/i.test(`${template?.blueprintTitle||""} ${template?.brand||""} ${template?.model||""}`)}
 /* D512 - the recommended print size was worked out in three separate places and
@@ -4378,7 +4378,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
     image:await designPreviewDataUrl(design),
     product:{blueprintTitle:templateDetails?.blueprintTitle,brand:templateDetails?.brand,model:templateDetails?.model,description},title:design.title,tags:design.tags})}),payload=await response.json() as {details?:EtsyDetails;error?:string};if(!response.ok||!payload.details)throw new Error(payload.error||"Etsy details could not be prepared.");const defaults=productEtsyDefaults(templateDetails,activeRecipe?.etsyDefaults),initial={...payload.details,attributes:{...payload.details.attributes,...defaults},blurb:design.blurb?.trim()||payload.details.blurb},baseline=etsyBaselineProduct.current===templateDetails?.id?etsyProductBaseline.current:null,prepared=baseline?{...initial,taxonomyId:baseline.taxonomyId,category:baseline.category,attributes:{...initial.attributes,...baseline.attributes}}:initial,details=await resolveEtsyOptions(prepared);if(!baseline){etsyBaselineProduct.current=templateDetails?.id||"";const physical=Object.fromEntries((details.properties||[]).filter(property=>PHYSICAL_ETSY_FIELDS.test(property.label)&&property.value.trim()).map(property=>[property.label,property.value]));etsyProductBaseline.current={taxonomyId:details.taxonomyId,category:details.category,attributes:physical}}const updatedDesign={...design,blurb:details.blurb};await syncListingFields(updatedDesign,details);updateDesign(design.id,{blurb:details.blurb,etsy:details,etsyError:""});return details}catch(error){updateDesign(design.id,{etsyError:error instanceof Error?error.message:"Etsy details could not be prepared."});return null}}
   async function retryOneEtsyListing(design:DesignFile){if(preparingListingId)return;setPreparingListingId(design.id);try{await prepareOne(design)}finally{setPreparingListingId("")}}
-  async function changeEtsyCategory(design:DesignFile,taxonomyId:number){if(!design.etsy||taxonomyId===design.etsy.taxonomyId)return;try{const resolved=await resolveEtsyOptions(design.etsy,taxonomyId),merged=preserveCompatibleEtsyProperties(design.etsy.properties||[],resolved.properties||[]),details={...resolved,properties:merged.properties};if(merged.clearedCount){setPendingCategoryChange({designId:design.id,details,clearedCount:merged.clearedCount});return}updateDesign(design.id,{etsy:details,etsyError:""})}catch(error){updateDesign(design.id,{etsyError:error instanceof Error?error.message:"Etsy options could not be loaded."})}}
+  async function changeEtsyCategory(design:DesignFile,taxonomyId:number){if(!design.etsy||taxonomyId===design.etsy.taxonomyId)return;try{const resolved=await resolveEtsyOptions(design.etsy,taxonomyId),merged=preserveCompatibleEtsyProperties(design.etsy.properties||[],resolved.properties||[]),details=applyProductFacts({...resolved,properties:merged.properties},productEtsyDefaults(templateDetails,activeRecipe?.etsyDefaults));if(merged.clearedCount){setPendingCategoryChange({designId:design.id,details,clearedCount:merged.clearedCount});return}updateDesign(design.id,{etsy:details,etsyError:""})}catch(error){updateDesign(design.id,{etsyError:error instanceof Error?error.message:"Etsy options could not be loaded."})}}
   async function continueToEtsyDetails(){
     if(etsyPreparationActive.current)return;
     const missing:string[]=[];
