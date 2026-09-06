@@ -14,44 +14,48 @@ export async function POST(request:Request){
   if(!secret||!signature||!await validSignature(payload,signature,secret))return NextResponse.json({error:"Invalid Stripe signature."},{status:400});
   const event=JSON.parse(payload) as StripeEvent,object=event.data.object,db=runtime.DB;
   await ensureBillingTables(db);
-  const recorded=await db.prepare("INSERT OR IGNORE INTO stripe_events (event_id,event_type) VALUES (?,?)").bind(event.id,event.type).run();
-  if(!recorded.meta.changes)return NextResponse.json({received:true,duplicate:true});
+  const recorded=await db.prepare("SELECT event_id FROM stripe_events WHERE event_id=?").bind(event.id).first();
+  if(recorded)return NextResponse.json({received:true,duplicate:true});
+  const changes:D1PreparedStatement[]=[];
   if(event.type==="checkout.session.completed"){
-    const userId=object.client_reference_id||object.metadata?.user_id,customer=object.customer,subscription=object.subscription;
-    if(userId&&customer)await db.prepare("INSERT INTO billing_customers (user_id,email,stripe_customer_id) VALUES (?, '', ?) ON CONFLICT(user_id) DO UPDATE SET stripe_customer_id=excluded.stripe_customer_id,updated_at=CURRENT_TIMESTAMP").bind(userId,customer).run();
-    if(userId&&subscription){const plan=(object.metadata?.plan_key||"goldie");await db.prepare("INSERT INTO account_plans (user_id,plan_key) VALUES (?,?) ON CONFLICT(user_id) DO UPDATE SET plan_key=excluded.plan_key,updated_at=CURRENT_TIMESTAMP").bind(userId,plan).run();}
+    const userId=object.client_reference_id||object.metadata?.user_id,customer=object.customer;
+    if(userId&&customer)changes.push(db.prepare("INSERT INTO billing_customers (user_id,email,stripe_customer_id) VALUES (?, '', ?) ON CONFLICT(user_id) DO UPDATE SET stripe_customer_id=excluded.stripe_customer_id,updated_at=CURRENT_TIMESTAMP").bind(userId,customer));
+    // Subscription events own access and allowance. Checkout can arrive after
+    // trial activation and must not overwrite the trial's limited allowance.
   }
-  if(event.type.startsWith("customer.subscription.")){
-    const userId=object.metadata?.user_id,customer=object.customer,priceId=object.items?.data?.[0]?.price?.id,plan=(object.metadata?.plan_key as "goldie"|"pro"|"scale"|undefined)||planForPrice(priceId);
-    if(userId&&customer&&plan){
-      await db.prepare("INSERT INTO billing_subscriptions (user_id,stripe_customer_id,stripe_subscription_id,status,plan_key,current_period_end,cancel_at_period_end) VALUES (?,?,?,?,?,?,?) ON CONFLICT(user_id) DO UPDATE SET stripe_customer_id=excluded.stripe_customer_id,stripe_subscription_id=excluded.stripe_subscription_id,status=excluded.status,plan_key=excluded.plan_key,current_period_end=excluded.current_period_end,cancel_at_period_end=excluded.cancel_at_period_end,updated_at=CURRENT_TIMESTAMP")
-        .bind(userId,customer,object.id,object.status||"incomplete",plan,object.current_period_end||null,object.cancel_at_period_end?1:0).run();
-      if(object.status==="trialing"){
-        await db.prepare("INSERT OR IGNORE INTO billing_trials (user_id) VALUES (?)").bind(userId).run();
-        await db.prepare("INSERT INTO account_plans (user_id,plan_key) VALUES (?,'trial') ON CONFLICT(user_id) DO UPDATE SET plan_key='trial',updated_at=CURRENT_TIMESTAMP").bind(userId).run();
-        if(object.trial_end){
-          const existing=await db.prepare("SELECT resend_email_id FROM trial_reminder_emails WHERE user_id=? AND canceled_at IS NULL").bind(userId).first<{resend_email_id:string}>();
-          if(!existing){
-            const customerRecord=await db.prepare("SELECT email FROM billing_customers WHERE user_id=?").bind(userId).first<{email:string}>();
-            try{
-              const reminderId=await scheduleTrialReminder({email:customerRecord?.email||"",plan,trialEnd:object.trial_end});
-              if(reminderId)await db.prepare("INSERT INTO trial_reminder_emails (user_id,subscription_id,resend_email_id,scheduled_for) VALUES (?,?,?,?) ON CONFLICT(user_id) DO UPDATE SET subscription_id=excluded.subscription_id,resend_email_id=excluded.resend_email_id,scheduled_for=excluded.scheduled_for,canceled_at=NULL,updated_at=CURRENT_TIMESTAMP").bind(userId,object.id,reminderId,object.trial_end-86400).run();
-            }catch(error){
-              console.error("Trial reminder scheduling failed",error);
-            }
-          }
-        }
-      }else if(["active","past_due"].includes(object.status||""))await db.prepare("INSERT INTO account_plans (user_id,plan_key) VALUES (?,?) ON CONFLICT(user_id) DO UPDATE SET plan_key=excluded.plan_key,updated_at=CURRENT_TIMESTAMP").bind(userId,plan).run();
-      if(object.status==="canceled"||object.cancel_at_period_end){
-        const reminder=await db.prepare("SELECT resend_email_id FROM trial_reminder_emails WHERE user_id=? AND canceled_at IS NULL").bind(userId).first<{resend_email_id:string}>();
-        if(reminder){
-          try{
-            await cancelTrialReminder(reminder.resend_email_id);
-            await db.prepare("UPDATE trial_reminder_emails SET canceled_at=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP WHERE user_id=?").bind(userId).run();
-          }catch(error){
-            console.error("Trial reminder cancellation failed",error);
-          }
-        }
+  const userId=object.metadata?.user_id,customer=object.customer,priceId=object.items?.data?.[0]?.price?.id;
+  const plan=(object.metadata?.plan_key as "goldie"|"pro"|"scale"|undefined)||planForPrice(priceId);
+  const subscriptionEvent=event.type.startsWith("customer.subscription.")&&userId&&customer&&plan;
+  if(subscriptionEvent){
+    changes.push(db.prepare("INSERT INTO billing_subscriptions (user_id,stripe_customer_id,stripe_subscription_id,status,plan_key,current_period_end,cancel_at_period_end) VALUES (?,?,?,?,?,?,?) ON CONFLICT(user_id) DO UPDATE SET stripe_customer_id=excluded.stripe_customer_id,stripe_subscription_id=excluded.stripe_subscription_id,status=excluded.status,plan_key=excluded.plan_key,current_period_end=excluded.current_period_end,cancel_at_period_end=excluded.cancel_at_period_end,updated_at=CURRENT_TIMESTAMP")
+      .bind(userId,customer,object.id,object.status||"incomplete",plan,object.current_period_end||null,object.cancel_at_period_end?1:0));
+    if(object.status==="trialing"){
+      changes.push(db.prepare("INSERT OR IGNORE INTO billing_trials (user_id) VALUES (?)").bind(userId));
+      changes.push(db.prepare("INSERT INTO account_plans (user_id,plan_key) VALUES (?,'trial') ON CONFLICT(user_id) DO UPDATE SET plan_key='trial',updated_at=CURRENT_TIMESTAMP").bind(userId));
+    }else if(["active","past_due"].includes(object.status||""))changes.push(db.prepare("INSERT INTO account_plans (user_id,plan_key) VALUES (?,?) ON CONFLICT(user_id) DO UPDATE SET plan_key=excluded.plan_key,updated_at=CURRENT_TIMESTAMP").bind(userId,plan));
+  }
+  // D1 batch is transactional: an event is acknowledged only when all access
+  // changes commit. A failed write rolls back its receipt, allowing Stripe's retry.
+  changes.push(db.prepare("INSERT OR IGNORE INTO stripe_events (event_id,event_type) VALUES (?,?)").bind(event.id,event.type));
+  await db.batch(changes);
+  if(subscriptionEvent){
+    if(object.status==="trialing"&&object.trial_end){
+      const existing=await db.prepare("SELECT resend_email_id FROM trial_reminder_emails WHERE user_id=? AND canceled_at IS NULL").bind(userId).first<{resend_email_id:string}>();
+      if(!existing){
+        const customerRecord=await db.prepare("SELECT email FROM billing_customers WHERE user_id=?").bind(userId).first<{email:string}>();
+        try{
+          const reminderId=await scheduleTrialReminder({email:customerRecord?.email||"",plan,trialEnd:object.trial_end});
+          if(reminderId)await db.prepare("INSERT INTO trial_reminder_emails (user_id,subscription_id,resend_email_id,scheduled_for) VALUES (?,?,?,?) ON CONFLICT(user_id) DO UPDATE SET subscription_id=excluded.subscription_id,resend_email_id=excluded.resend_email_id,scheduled_for=excluded.scheduled_for,canceled_at=NULL,updated_at=CURRENT_TIMESTAMP").bind(userId,object.id,reminderId,object.trial_end-86400).run();
+        }catch(error){console.error("Trial reminder scheduling failed",error);}
+      }
+    }
+    if(object.status==="canceled"||object.cancel_at_period_end){
+      const reminder=await db.prepare("SELECT resend_email_id FROM trial_reminder_emails WHERE user_id=? AND canceled_at IS NULL").bind(userId).first<{resend_email_id:string}>();
+      if(reminder){
+        try{
+          await cancelTrialReminder(reminder.resend_email_id);
+          await db.prepare("UPDATE trial_reminder_emails SET canceled_at=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP WHERE user_id=?").bind(userId).run();
+        }catch(error){console.error("Trial reminder cancellation failed",error);}
       }
     }
   }
