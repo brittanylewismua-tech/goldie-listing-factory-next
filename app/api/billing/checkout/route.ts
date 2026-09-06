@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { billingState, customerFor, priceForPlan, siteOrigin, stripeRequest, trialAvailable } from "@/app/billing";
 import { PLANS, type PlanKey } from "@/app/plan-limits";
+import { checkoutRequestIdentity } from "@/app/checkout-request-identity";
 
 export async function POST(request:Request) {
   try {
@@ -16,7 +17,6 @@ export async function POST(request:Request) {
     const priceId = priceForPlan(plan), planDetails = PLANS[plan];
     const params = new URLSearchParams({
       mode:"subscription", customer, client_reference_id:user.userId,
-      integration_identifier:`goldie_${crypto.randomUUID().replace(/-/g,"").slice(0,8)}`,
       "line_items[0][quantity]":"1",
       success_url:`${origin}/signup?checkout=success`, cancel_url:`${origin}/signup?checkout=canceled`,
       allow_promotion_codes:"true", billing_address_collection:"auto",
@@ -34,7 +34,9 @@ export async function POST(request:Request) {
       params.set("line_items[0][price_data][product_data][metadata][plan_key]", plan);
     }
     if(includeTrial)params.set("subscription_data[trial_period_days]","3");
-    const session = await stripeRequest<{url:string}>("checkout/sessions",{method:"POST",body:params,idempotencyKey:`goldie-checkout-${user.userId}-${plan}-${new Date().toISOString().slice(0,10)}`});
+    const identity = await checkoutRequestIdentity(params);
+    params.set("integration_identifier", identity.integrationIdentifier);
+    const session = await stripeRequest<{url:string}>("checkout/sessions",{method:"POST",body:params,idempotencyKey:identity.idempotencyKey});
     return NextResponse.json({url:session.url});
   } catch (error) {
     return NextResponse.json({error:error instanceof Error?error.message:"Secure checkout could not be opened."},{status:502});
