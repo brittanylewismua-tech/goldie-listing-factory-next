@@ -5398,6 +5398,14 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
               the sentence promised a smaller press than the one it sat under. And
               it named the fee per listing without ever multiplying it, on the one
               screen where the total is the thing worth knowing. */}
+            <section className="final-handoff-steps" aria-label="Finish each listing">
+              <h3>Finish each listing</h3>
+              <ol>
+                <li><b>Add your photo set</b><span>Open Photos &amp; download above. Unzip the files, choose Upload under Selected mockups in Printify, keep Replace previous mockup selection checked, and confirm the numbered order.</span></li>
+                <li><b>Review in Printify</b><span>Confirm shipping and personalization. Select Tags under Sync product details before publishing.</span></li>
+                <li><b>Check Etsy details</b><span>After publishing, confirm the category and attributes in Etsy. Your saved choices here are the reference.</span></li>
+              </ol>
+            </section>
             </div><div className="factory-publish-box">{/* D785 - the prototype's box opens by
               naming the connected destination shop without implying Goldie publishes
               in 20px. Production had the shop only inside the press, at 10px,
@@ -5420,8 +5428,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
               <div className="printify-handoff" role="status">
                 <b>{handoffBlockers().length?"Finish the items above before opening Printify.":"Nothing has been published yet."}</b>
                 <span>Nothing has been published to Etsy, and no Etsy listing fees have been charged.</span>
-                <small>Open each product in My Products. Upload the unzipped Goldie photo set under Selected mockups, remove unwanted mockups, and put the numbered photos in order.</small>
-                <small>Before publishing, confirm shipping and personalization, and select Tags under Sync product details. Check the Etsy category and attributes in Etsy after publishing; those choices remain here as your reference.</small>
+
               </div>
               {false&&<><div className="publish-live-warning">{(()=>{
               /* D560 - the count follows her ticks now that they govern every listing. */

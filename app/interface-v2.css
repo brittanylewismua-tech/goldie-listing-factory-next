@@ -3871,3 +3871,13 @@ html, body { background: var(--lf-paper); }
    progress summary was hidden only on desktop, pushing the first mobile
    task beneath the sticky footer and calling earlier saved work incomplete. */
 .app-shell .factory-work .workflow-momentum{display:none!important}
+
+/* D1163: put actionable handoff instructions in the main reading column,
+   instead of burying them beneath totals in the narrow dark summary. */
+.app-shell .final-handoff-steps{margin-top:24px;padding:22px;background:#fffafc;border:2px solid #171717;border-radius:12px;box-shadow:4px 4px 0 #171717}
+.app-shell .final-handoff-steps h3{margin:0 0 16px;color:#171717;font-size:17px;line-height:1.35}
+.app-shell .final-handoff-steps ol{margin:0;padding-left:22px;display:grid;gap:18px}
+.app-shell .final-handoff-steps li{padding-left:6px;color:#171717;font-size:14px;line-height:1.5}
+.app-shell .final-handoff-steps li::marker{font-weight:800}
+.app-shell .final-handoff-steps li b,.app-shell .final-handoff-steps li span{display:block}
+.app-shell .final-handoff-steps li span{margin-top:4px;color:#574c54}
