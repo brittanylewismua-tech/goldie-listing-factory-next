@@ -10,24 +10,33 @@ export default function SignupClient({ signedIn, signedInEmail, checkout, return
   const [loading, setLoading] = useState<OfferKey | null>(null);
   const [error, setError] = useState("");
   const resumed = useRef(false);
+  const checkoutPending = useRef(false);
 
   async function choose(offer: OfferKey) {
+    if (checkoutPending.current) return;
     if (!signedIn) {
       const selectedReturn = `${returnTo}?offer=${offer}`;
       window.location.href = `/account/sign-in?return_to=${encodeURIComponent(selectedReturn)}`;
       return;
     }
+    checkoutPending.current = true;
     setLoading(offer);
     setError("");
     const plan: PlanKey = offer === "trial" ? "goldie" : offer;
-    const response = await fetch("/api/billing/checkout", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ plan }) });
-    const result = await response.json() as { url?: string; error?: string };
-    if (!response.ok || !result.url) {
-      setError(result.error || "Checkout could not start.");
+    try {
+      const response = await fetch("/api/billing/checkout", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ plan }) });
+      const result = await response.json() as { url?: string; error?: string };
+      if (!response.ok || !result.url) {
+        setError(result.error || "Checkout could not start. Please try again.");
+        return;
+      }
+      window.location.href = result.url;
+    } catch {
+      setError("We couldn't open checkout. Check your connection and try again.");
+    } finally {
+      checkoutPending.current = false;
       setLoading(null);
-      return;
     }
-    window.location.href = result.url;
   }
 
   useEffect(() => {

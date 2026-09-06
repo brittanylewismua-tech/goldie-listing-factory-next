@@ -43,3 +43,21 @@ test('sign-in page passes an expired-link explanation to the rendered client',()
   assert.match(page,/initialError=\{query.error \? "Your sign-in link may have expired/);
   assert.match(client,/useState\(initialError\)/);
 });
+const signup=readFileSync(new URL('../app/signup/signup-client.tsx',import.meta.url),'utf8');
+const chooseBody=signup.slice(signup.indexOf('  async function choose'),signup.indexOf('  useEffect'));
+const makeChoose=new Function('env',`with(env){${ts.transpileModule(chooseBody,{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText};return choose;}`);
+function checkoutHarness(fetch){
+  const state={loading:null,error:''},env={checkoutPending:{current:false},signedIn:true,returnTo:'/listing-factory',window:{location:{href:''}},fetch,setLoading:v=>state.loading=v,setError:v=>state.error=v};
+  return {choose:makeChoose(env),env,state};
+}
+for(const failure of ['network','invalid-json','server']){
+  test(`checkout ${failure} failure allows a subsequent retry`,async()=>{
+    let calls=0;const h=checkoutHarness(async()=>{calls++;if(calls>1)return {ok:true,json:async()=>({url:'https://checkout.stripe.com/example'})};if(failure==='network')throw Error('offline');if(failure==='invalid-json')return {ok:false,json:async()=>{throw Error('bad json');}};return {ok:false,json:async()=>({error:'Try again shortly.'})};});
+    await h.choose('goldie');assert.equal(h.state.loading,null);assert.equal(h.env.checkoutPending.current,false);assert.ok(h.state.error);assert.equal(h.env.window.location.href,'');
+    await h.choose('goldie');assert.equal(h.env.window.location.href,'https://checkout.stripe.com/example');assert.equal(calls,2);
+  });
+}
+test('checkout ignores repeat clicks while opening the selected plan',async()=>{
+  let calls=0,finish;const h=checkoutHarness(()=>{calls++;return new Promise(r=>finish=r);});
+  const work=h.choose('trial');await h.choose('pro');assert.equal(calls,1);finish({ok:true,json:async()=>({url:'https://checkout.stripe.com/example'})});await work;assert.equal(h.state.loading,null);
+});
