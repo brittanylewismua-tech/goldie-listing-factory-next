@@ -1,3 +1,4 @@
+import { boundedVisionFetch } from "@/app/paid-vision";
 import { NextResponse } from "next/server";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { isOwner } from "@/app/mastermind/access";
@@ -10,6 +11,11 @@ export async function POST(request:Request){
   if(request.headers.get("origin")!==new URL(request.url).origin)return NextResponse.json({error:"Invalid origin."},{status:403});
   const body=await request.json() as {action?:string;id?:string};
   try{
+    if(body.action==="busy"){
+      let accepted=0;
+      await Promise.all(Array.from({length:20},async()=>{let attempts=0;const response=await boundedVisionFetch("https://fal.run/openrouter/router/vision",{method:"POST",body:'{"prompt":"local-simulation"}'},async()=>{attempts++;if(attempts===1)return new Response("busy",{status:429,headers:{"Retry-After":"0"}});accepted++;return Response.json({output:"ok"});});if(response.status!==200||attempts!==2)throw Error("Busy recovery failed.");}));
+      return NextResponse.json({simulation:true,externalCalls:0,concurrentChecks:20,accepted,message:"Live worker recovered all 20 simulated busy requests. No provider calls or charges."});
+    }
     if(body.action==="cancel"&&body.id){
       const row=await billingRuntime().DB.prepare("SELECT id FROM error_log WHERE id=? AND area='launch/email-test' AND user_id=?").bind(body.id,user.userId).first();
       if(!row)return NextResponse.json({error:"Unknown test email."},{status:400});
