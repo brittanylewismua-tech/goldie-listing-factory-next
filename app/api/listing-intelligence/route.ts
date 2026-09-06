@@ -4,7 +4,9 @@ import { bestFitFromBank, clean, normalize } from "../../keyword-ranking.ts";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { excludedProductNouns, namesExcludedProduct } from "@/app/product-type-utils";
 import { customerLaunchBlock } from "@/app/customer-launch-gate";
-import { boundedVisionFetch as fetch } from "@/app/paid-vision";
+import { boundedVisionFetch } from "@/app/paid-vision";
+import { cachedVisionFetch } from "@/app/vision-request-cache";
+import { env } from "cloudflare:workers";
 
 type Details={category:string;attributes:Record<string,string>;optional:Record<string,string>;blurb:string;confidence:"high"|"review"};
 const validImage=(value:unknown):value is string=>typeof value==="string"&&/^data:image\/(png|jpeg|webp);base64,/i.test(value)&&value.length<18*1024*1024;
@@ -65,6 +67,8 @@ async function handlePOST(request:Request){
   const body=await request.json() as {mode?:"details"|"title";image?:string;product?:{blueprintTitle?:string;brand?:string;model?:string;description?:string};title?:string;tags?:string[];keywords?:string[];useCommas?:boolean};
   if(!validImage(body.image))return NextResponse.json({error:"Goldie could not read this design safely."},{status:400});
   const key=process.env.FAL_KEY;if(!key)return NextResponse.json({error:"Automatic Etsy details are temporarily unavailable."},{status:503});
+  // Explicitly asking for a different title must remain a fresh generation.
+  const fetch=body.mode==="title"?boundedVisionFetch:cachedVisionFetch(user.userId,env.DB,boundedVisionFetch);
   if(body.mode==="title"){
     const keywords=[...new Set((body.keywords||[]).map(clean).filter(Boolean))].slice(0,100);if(!keywords.length)return NextResponse.json({error:"Choose a keyword bank before asking Goldie to build the title."},{status:400});
     const excludedNouns=excludedProductNouns(body.product?.blueprintTitle||"");
