@@ -60,4 +60,5 @@ test('deployed schema matches executable schema; authorization precedes details-
   const source=readFileSync(new URL('../app/api/listing-intelligence/route.ts',import.meta.url),'utf8');
   assert.ok(source.indexOf('customerLaunchBlock(user)')<source.indexOf('cachedVisionFetch(user.userId'));
   assert.match(source,/body.mode==="title"\?boundedVisionFetch:cachedVisionFetch/);
+  assert.match(source,/"X-Goldie-AI-Reused":response.headers.get\("X-Goldie-AI-Reused"\)/);
 });

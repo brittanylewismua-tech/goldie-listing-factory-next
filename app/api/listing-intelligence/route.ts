@@ -201,7 +201,7 @@ Select only phrases a shopper looking at THIS artwork would call accurate. If a 
   let raw:Partial<Details>;try{raw=JSON.parse(match[0]) as Partial<Details>}catch{return NextResponse.json({details:reviewFallback(body.product)})}
   const contextualText=[body.title,...(body.tags||[])].map(clean).join(" ");
   const attributes=supportedOptional(raw.attributes,contextualText),optional=supportedOptional(raw.optional,contextualText);
-  return NextResponse.json({details:{category:clean(raw.category)||"Needs review",attributes,optional,blurb:clean(raw.blurb),confidence:raw.confidence==="high"?"high":"review"} satisfies Details});
+  return NextResponse.json({details:{category:clean(raw.category)||"Needs review",attributes,optional,blurb:clean(raw.blurb),confidence:raw.confidence==="high"?"high":"review"} satisfies Details},{headers:{"X-Goldie-AI-Reused":response.headers.get("X-Goldie-AI-Reused")||"false"}});
 }
 
 export const POST = withErrorLog("listing-intelligence", handlePOST);
