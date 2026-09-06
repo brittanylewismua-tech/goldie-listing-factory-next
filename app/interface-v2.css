@@ -3928,3 +3928,22 @@ html, body { background: var(--lf-paper); }
 .app-shell .etsy-details-editor>summary:focus-visible{outline:3px solid #8b3368;outline-offset:-5px}
 .app-shell .etsy-details-editor-fields.factory-form-card{border:0;box-shadow:none;border-radius:0;background:#fffafc}
 .app-shell .etsy-detail-body>.personalization-editor{border:2px solid #171217;border-radius:12px;background:#fffafc;box-shadow:5px 5px 0 #111;padding:16px;margin-top:0}
+
+/* D1177: bound the artwork grid to its card, including narrow screens. */
+.app-shell .batch-design-drop.active-panel{grid-template-columns:minmax(0,1fr)!important}
+.app-shell .batch-design-drop .step-content{min-width:0;width:100%;box-sizing:border-box}
+.app-shell .design-upload-review{grid-template-columns:repeat(auto-fit,minmax(min(100%,390px),1fr))}
+.app-shell .design-artwork-card{min-width:0}
+.app-shell .etsy-details-editor>summary{min-height:60px!important;padding:16px!important}
+@media(max-width:720px){
+ .app-shell .batch-design-drop .step-content{padding:18px!important}
+ .app-shell .design-artwork-primary{grid-template-columns:64px minmax(0,1fr)!important;gap:12px!important}
+ .app-shell .design-artwork-primary>.artwork-remove-action{grid-column:2;justify-self:start;min-height:44px}
+ .app-shell .design-artwork-primary b,.app-shell .design-artwork-primary small{white-space:normal;overflow-wrap:anywhere}
+ .app-shell .design-upload-review>.add-another-design{max-width:100%;min-height:44px}
+}
+@media(max-width:720px){
+ .app-shell .listing-photo-order .photo-order-strip{grid-template-columns:repeat(auto-fit,minmax(min(100%,140px),1fr))!important}
+}
+/* Separate the batch's product summary from the final review workspace. */
+.app-shell .factory-review{margin-top:32px!important}
