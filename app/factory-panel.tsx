@@ -24,6 +24,7 @@ export default function FactoryPanel({
   description,
   state,
   headerActions,
+  footerActions,
   tone = "done",
   open = false,
   onToggle,
@@ -37,6 +38,7 @@ export default function FactoryPanel({
   description?: ReactNode;
   state?: ReactNode;
   headerActions?: ReactNode;
+  footerActions?: ReactNode;
   tone?: PanelTone;
   open?: boolean;
   onToggle?: () => void;
@@ -112,6 +114,7 @@ export default function FactoryPanel({
       {open && children ? (
         <div className="factory-panel-body">
           {children}
+          {footerActions}
           {onToggle ? (
             <button type="button" className="panel-collapse-foot" onClick={onToggle}>
               Close {typeof title === "string" ? title.toLowerCase() : "this section"}

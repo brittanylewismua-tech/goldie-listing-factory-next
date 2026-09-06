@@ -15,6 +15,7 @@ import Image from "next/image";
 import SupportChat from "./support-chat";
 import { workflowScreen } from "./step-videos";
 import FactoryPanel from "./factory-panel";
+import { unfinishedDraftTask, draftTaskSummary } from "./draft-workflow-guidance";
 import ArtworkGrid from "./artwork-grid";
 import { runBounded } from "./bounded-work";
 import { bundleMemberDesigns } from "./bundle-member-designs";
@@ -2947,6 +2948,30 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
      progress index - and they disagreed. */
   const etsyDetailsPrepared=files.length>0&&files.every(file=>Boolean(file.etsy));
   const [activeTask,setActiveTask]=useState<string>("");
+  const [taskFocusRequest,setTaskFocusRequest]=useState(0);
+  const guidedTaskFocus=useRef(false);
+  useEffect(()=>{
+    if(!guidedTaskFocus.current||switchingProduct||restoringBatch)return;
+    const frame=window.requestAnimationFrame(()=>{
+      const head=document.querySelector<HTMLElement>(".step-product-card.is-open .factory-panel.is-open .factory-panel-head");
+      if(!head)return;
+      guidedTaskFocus.current=false;
+      head.scrollIntoView({block:"start"});head.focus({preventScroll:true});
+    });
+    return()=>window.cancelAnimationFrame(frame);
+  },[taskFocusRequest,activeTask,switchingProduct,restoringBatch,bundleIndex]);
+  function openGuidedDraftTask(task:string,index=bundleIndex){
+    if(switchingProduct||restoringBatch)return;
+    // Guidance may reopen saved products; it must never create a new child batch.
+    if(index!==bundleIndex&&!bundleBatchIds[bundleRecipes[index]?.id])return;
+    guidedTaskFocus.current=true;setTaskFocusRequest(value=>value+1);setActiveTask(task);
+    if(index!==bundleIndex)openBundleProduct(index);
+  }
+  function unfinishedDraftGuidance(){
+    const products=activeBundle&&bundleRecipes.length>1?bundleRecipes:(activeRecipe?[activeRecipe]:[]);
+    return unfinishedDraftTask(products.map((recipe,index)=>({index,name:recipe.name,
+      reachable:index===bundleIndex||Boolean(bundleBatchIds[recipe.id]),rows:productRows(recipe,index===bundleIndex)})));
+  }
   useEffect(()=>{
     // Old review shortcuts saved this retired phase. Recover those bookmarks
     // into the real photo editor instead of rendering an empty final page.
@@ -3459,6 +3484,7 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
                   closed card printed blank twice: once here and once in
                   the chip beside it. The chip owns the status. */}
               <small>{product?.blueprintTitle||""}</small>
+              {many&&!open&&workflowStep==="designs"&&<span className="inactive-product-summary">{opening?"Opening saved work…":draftTaskSummary(productRows(recipe,false))} <span aria-hidden="true">↓</span></span>}
             </span>
             <span className={`batch-product-state step-product-state ${toneClass}`}>{status.label}</span>
           </header>
@@ -3468,7 +3494,7 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
           {/* D501 - the rows were gated on there being more than one product, so a
               single-product batch showed none on steps 2-4 while step 1 shows them
               for one product just the same. A card gets its rows either way. */}
-          {(()=>{const rows=productRows(recipe,index===bundleIndex);if(!rows.length)return null;
+          {(()=>{if(many&&!open&&workflowStep==="designs")return null;const rows=productRows(recipe,index===bundleIndex);if(!rows.length)return null;
             /* D503 - step 1's row is `batch-product-row settled clickable` with
                role=button, tabindex 0 and aria-expanded, so the whole row opens,
                by mouse or keyboard, and its Change carries class row-open. Mine
@@ -3511,6 +3537,7 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
         tone={row.done?"done":row.pending?"pending":row.optional?"optional":"attention"}
         open={rowOpen}
         onToggle={row.report?undefined:()=>{openRow(row.target,row.task)}}
+        footerActions={rowOpen&&workflowStep==="designs"&&rows[rowIndex+1]?.task?<button type="button" className="task-next-section" onClick={()=>openGuidedDraftTask(rows[rowIndex+1].task!,index)}>Next: {rows[rowIndex+1].label} <span aria-hidden="true">→</span></button>:undefined}
         toggleLabel={opening?"Opening…":rowOpen?"Close":"Change"}
         toggleDisabled={!reachableRow}
         toggleTitle={!reachableRow?`Finish ${list[index-1]?.name||"the product above"} first`:undefined}
@@ -5584,7 +5611,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
             from a paragraph under the button to the left of the bar the button
             sits in, so the step states its own gate in one place. The button
             below is unchanged: same gate check, same handler. */}
-        <FactoryFooter status={imagesStepIssues()[0]||"Every listing has at least one photo"}>
+        <FactoryFooter status={imagesStepIssues().length?(()=>{const next=unfinishedDraftGuidance();return <span className="draft-next-guidance"><span>{imagesStepIssues()[0]}</span>{next&&!savingDraftVariants&&!switchingProduct&&!restoringBatch&&<button type="button" className="draft-fix-link" onClick={()=>openGuidedDraftTask(next.task,next.index)}>Open {next.label.toLowerCase()}{activeBundle&&bundleRecipes.length>1?` · ${next.name}`:""} <span aria-hidden="true">↑</span></button>}</span>})():"Every listing has at least one photo"}>
         <button className="workflow-next" type="button" disabled={imagesStepIssues().length>0} title={imagesStepIssues()[0]} onClick={()=>{const missing=createdListingsMissingImages();if(missing.length){setImageStepError(`${missing.length} ${missing.length===1?"listing needs":"listings need"} at least one photo.`);setMissingPhotoDraftIds(missing.map(draft=>draft.clientId));return}setImageStepError("");setMissingPhotoDraftIds([]);/* D427 - one Next step on this page, and it is the one that checks every listing has a photo. The second copy in the card list bypassed that check entirely. Goes to Listing, not Publish. */setFinishPhase("details");void goToStep("finish",false,true);window.scrollTo(0,0)}}>Continue to listing <span aria-hidden="true">→</span></button>
         </FactoryFooter>
         </>

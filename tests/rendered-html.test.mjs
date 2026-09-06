@@ -4107,7 +4107,7 @@ test("step 4's cards drop their open controls now publish covers the bundle — 
     "D502 - every row carries its own Change, as step 1 does, and says why when it cannot be used");
 });
 
-test("every product shows the same rows on every step — D498/D499", async () => {
+test("active products keep their rows and inactive draft products show saved-work summaries — D1166", async () => {
   const [app, css] = await Promise.all([
     readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
     Promise.all([readFile(new URL("../app/clarity-pass.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n")),
@@ -4120,7 +4120,7 @@ test("every product shows the same rows on every step — D498/D499", async () =
   assert.match(app, /function productRows\(recipe:Recipe,isActive:boolean\)/);
   assert.match(app, /const \[bundleBatchSummary,setBundleBatchSummary\]=useState/,
     "the other products' work lives in their own batches and has to be read from them");
-  assert.match(app, /\{\(\(\)=>\{const rows=productRows\(recipe,index===bundleIndex\)/,
+  assert.match(app, /if\(many&&!open&&workflowStep==="designs"\)return null;const rows=productRows\(recipe,index===bundleIndex\)/,
     "D501 - a single-product batch gets its rows too, as step 1 gives them");
   assert.match(app, /<div className="batch-product-rows">\{rows\.map/);
   assert.match(app, /<span className="row-mark" aria-hidden="true">\{row\.done\?"✓":row\.pending\?"…":row\.optional\?"–":"!"\}<\/span>/,

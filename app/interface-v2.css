@@ -3881,3 +3881,17 @@ html, body { background: var(--lf-paper); }
 .app-shell .final-handoff-steps li::marker{font-weight:800}
 .app-shell .final-handoff-steps li b,.app-shell .final-handoff-steps li span{display:block}
 .app-shell .final-handoff-steps li span{margin-top:4px;color:#574c54}
+
+/* D1166: keep the current product's work prominent and put navigation where
+   the user finishes reading. These controls never approve or save a task. */
+.app-shell .inactive-product-summary{display:block;margin-top:8px;font-size:12px;font-weight:650;line-height:1.45;color:#483741}
+.app-shell .inactive-product-summary>span{margin-left:6px}
+.app-shell .step-product-card.is-closed.in-batch>header{margin-bottom:0!important}
+.app-shell .task-next-section{display:flex;align-items:center;justify-content:center;gap:10px;min-height:44px;max-width:100%;margin:20px 0 8px;padding:11px 18px;border:2px solid #171717;border-radius:8px;background:#171717;color:#fff;font-family:inherit;font-size:13px;font-weight:700;line-height:1.4;white-space:normal;text-align:left;box-shadow:none}
+.app-shell .task-next-section:hover{background:#383038;color:#fff}
+.app-shell .draft-next-guidance{display:grid;gap:4px;min-width:0}
+.app-shell .draft-fix-link{justify-self:start;padding:4px 0;min-height:32px;border:0;background:transparent;box-shadow:none;color:#171717;font:inherit;font-weight:750;line-height:1.4;text-align:left;text-decoration:underline;text-underline-offset:3px;white-space:normal}
+.app-shell .draft-fix-link:hover{color:#653f59;background:transparent}
+.app-shell .task-next-section:focus-visible,.app-shell .draft-fix-link:focus-visible{outline:3px solid #75516b;outline-offset:3px}
+.app-shell .step-product-card .factory-panel-head{scroll-margin-top:130px}
+@media(max-width:760px){.app-shell .task-next-section{width:100%}.app-shell .draft-fix-link{min-height:44px}.app-shell .step-product-card .factory-panel-head{scroll-margin-top:100px}}
