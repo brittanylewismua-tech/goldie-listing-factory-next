@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs';
 const app=readFileSync(new URL('../app/listing-factory-app.tsx',import.meta.url),'utf8');
 const panel=readFileSync(new URL('../app/factory-panel.tsx',import.meta.url),'utf8');
 test('pending edits are reported before debounce and old saves cannot acknowledge newer edits',()=>{
-  assert.match(app,/batchEditRevision\.current\+=1;setBatchSaveStatus\("saving"\);const timer=/);
+  assert.match(app,/batchEditRevision\.current\+=1;setBatchSaveStatus\("saving"\);const targetId=batchIdRef\.current;const timer=/);
   assert.match(app,/batchIdRef\.current===id&&batchEditRevision\.current===editRevision/);
   assert.match(app,/if \(!running && batchSaveStatus!=="saving" && batchSaveStatus!=="failed"\) return/);
 });

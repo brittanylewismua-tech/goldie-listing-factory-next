@@ -2207,7 +2207,7 @@ export default function ListingFactoryApp() {
   useEffect(()=>{if(!snapshotReady.current||restoringBatch||batchHeldByAnotherTab||(!files.length&&!drafts.length))return;/* D1019 · Capture the child id with the render that produced this snapshot.
      A bundle transition changes batchIdRef before React cleans up the outgoing
      autosave. Reading the ref inside the timer let that old product overwrite
-     the new child's record with its own drafts. */const targetId=batchIdRef.current;batchEditRevision.current+=1;setBatchSaveStatus("saving");const timer=window.setTimeout(()=>{void persistBatchNow(targetId).catch(()=>undefined);},700);return()=>window.clearTimeout(timer);
+     the new child's record with its own drafts. */batchEditRevision.current+=1;setBatchSaveStatus("saving");const targetId=batchIdRef.current;const timer=window.setTimeout(()=>{void persistBatchNow(targetId).catch(()=>undefined);},700);return()=>window.clearTimeout(timer);
   },[restoringBatch,workflowStep,finishPhase,template,templateDetails,description,pricing,selectedColorIds,selectedSizeIds,variantPrices,etsyShippingProfileId,pricingApproved,mockupTheme,activeRecipe,activeBundle,bundleRecipes,bundleIndex,files.map(file=>`${file.id}:${file.title}:${file.tags.join("|")}:${file.blurb||""}:${file.descriptionOverride??""}:${file.sizeGuideName||""}:${JSON.stringify(file.etsy||{})}`).join(";"),drafts,complete,running,bulkTitles,batchKeywords,titleJoiner,titleBuilderMode,autoTitleBankId,manualKeywordBankId,sharedMockups,preparedMockupCounts,printifyImageIndices,printifyImageSelections,sizeGuideName,batchDisplayName,keptAsDrafts,batchReceipt]);
 
   useEffect(() => {
