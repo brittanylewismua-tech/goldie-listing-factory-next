@@ -49,3 +49,13 @@ test('external Printify navigation is not disabled by local publishing gates',()
  assert.doesNotMatch(app,/Add your photo set|Replace previous mockup selection checked/);
  assert.match(app,/Save a copy for social media or your own use/);
 });
+
+test('main views show one chosen-color preview while extra sizes and colors remain accessible',()=>{
+ const colors=[{id:1,title:'Black',variantIds:[11,12]},{id:2,title:'White',variantIds:[21]},{id:3,title:'Maroon',variantIds:[31]}];
+ const input=[entry(0,11,'front'),entry(1,12,'front'),entry(2,21,'front'),entry(3,31,'front')];
+ const groups=mockupViewGroups(input,colors,[],[],{selectedIndices:[1],colorIds:[1,3]});
+ assert.deepEqual(groups.find(g=>g.key==='front').entries.map(e=>e.index),[1,3]);
+ assert.deepEqual(groups.find(g=>g.key==='additional-front').entries.map(e=>e.index),[0,2]);
+ assert.deepEqual(groups.flatMap(g=>g.entries).map(e=>e.index).sort(),[0,1,2,3]);
+ assert.equal(groups.find(g=>g.key==='additional-front').primary,false);
+});
