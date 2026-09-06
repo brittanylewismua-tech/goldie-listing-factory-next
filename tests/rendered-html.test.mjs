@@ -942,37 +942,34 @@ test("persists mockup sets by signed-in account and protects every image", async
   assert.doesNotMatch(page,/localStorage|sessionStorage|indexedDB/);
 });
 
-test("shows one saved mockup set at a time", async () => {
-  const [page,css]=await Promise.all([
-    readFile(new URL("../app/mockups/page.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../app/mockups/mockups.css", import.meta.url), "utf8"),
-  ]);
-  assert.match(page,/activeTheme===theme/);
-  assert.match(page,/aria-expanded=\{open\}/);
-  assert.match(page,/open&&<>/);
-  assert.match(page,/useState<Set<string>>\(new Set\(\)\)/);
-  assert.match(page,/Add your first mockup set/);
-  assert.match(page,/showAddSet&&<div className="addSet"/);
-  assert.match(page,/Close mockup set builder/);
-  assert.match(page,/className="inlineResults"/);
-  assert.doesNotMatch(page,/<section className="mockupResults"/);
-  assert.match(page,/type="checkbox"/);
-  assert.match(css,/\.collection\.collapsed/);
-  assert.match(css,/repeat\(auto-fill,minmax\(190px,1fr\)\)/);
-  assert.match(css,/\.collection\.open\{grid-column:1\/-1/);
+test("saved mockup management opens one set and exposes the add-set dialog", async () => {
+  const page=await readFile(new URL("../app/mockups/page.tsx", import.meta.url), "utf8");
+  const markup=page.slice(page.indexOf('  return <FactoryShell'));
+  assert.match(markup,/open=activeTheme===theme/);
+  assert.match(markup,/aria-expanded=\{open\}/);
+  assert.match(markup,/onClick=\{\(\)=>setActiveTheme\(open\?"":"?theme\)\}/);
+  assert.match(markup,/open&&<>/);
+  assert.match(markup,/Create your first mockup set/);
+  assert.match(markup,/showAddSet&&<div className="confirmOverlay"/);
+  assert.match(markup,/aria-labelledby="add-set-title"/);
+  assert.match(markup,/aria-label="Close"/);
+  assert.match(markup,/setShowAddSet\(false\)/);
+  assert.doesNotMatch(markup,/<section className="mockupResults"/);
 });
 
-test("caps mockup generation and saved themed sets", async () => {
-  const [page,libraryRoute] = await Promise.all([
+test("saved sets cap at fifty and live listing generation caps at eight", async () => {
+  const [page,libraryRoute,listing] = await Promise.all([
     readFile(new URL("../app/mockups/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/api/mockups/library/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/integrated-mockups.tsx", import.meta.url), "utf8"),
   ]);
-  assert.match(page,/MAX_SELECTED_MOCKUPS=10/);
   assert.match(page,/MAX_MOCKUPS_PER_SET=50/);
-  assert.match(page,/of 10 selected/);
-  assert.match(page,/maximum 50 mockups per set/);
+  assert.match(page,/Each set can hold up to 50 blank mockups/);
+  assert.match(page,/count>MAX_MOCKUPS_PER_SET-existing/);
   assert.match(libraryRoute,/MAX_MOCKUPS_PER_SET = 50/);
   assert.match(libraryRoute,/existing\.length>=MAX_MOCKUPS_PER_SET/);
+  assert.match(listing,/MAX_MOCKUPS_PER_LISTING=8/);
+  assert.match(listing,/next\.size>=MAX_MOCKUPS_PER_LISTING/);
 });
 
 test("handles up to eight lifestyle mockups in a reliable queue and shows the recommended photo mix", async () => {
@@ -1016,7 +1013,8 @@ test("saved mockup sets can be renamed and deleted with confirmation", async () 
     readFile(new URL("../app/mockups/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/api/mockups/library/route.ts", import.meta.url), "utf8"),
   ]);
-  assert.match(page,/aria-label={`Rename \${theme}`}/);
+  assert.match(page,/setRenamingTheme\(theme\);setRenameValue\(theme\)/);
+  assert.match(page,/>Rename set<\/button>/);
   assert.match(page,/Yes, delete set/);
   assert.match(page,/permanently removes the set and every saved mockup inside it/);
   assert.match(libraryRoute,/export async function PATCH/);
@@ -1026,7 +1024,7 @@ test("saved mockup sets can be renamed and deleted with confirmation", async () 
   assert.match(page,/sourceTheme/);
   assert.match(libraryRoute,/mockup_set_preferences/);
   assert.doesNotMatch(page,/items\.some\(item=>item\.custom\).*Rename/);
-  assert.match(page,/setTitleRow.*open&&<button[^>]+className="renameSet"/);
+  assert.match(page,/open&&<>.*collectionActions/s);
   assert.doesNotMatch(page,/collectionActions"><button[^>]+className="renameSet"/);
 });
 
@@ -1695,7 +1693,8 @@ test("shows each saved mockup once with visible controls and a real enlarged pre
   assert.match(managementMarkup,/!open&&/);
   assert.match(managementMarkup,/savedMockupPreview/);
   assert.match(page,/libraryPreview\.src/);
-  assert.match(page,/previewSavedSelection/);
+  assert.match(managementMarkup,/onClick=\{\(\)=>setLibraryPreview\(item\)\}/);
+  assert.match(managementMarkup,/aria-label=\{`Enlarge \${item.name}`\}/);
   assert.match(styles,/\.managementSetList \.collectionActions \{[\s\S]*?position: static/);
   assert.match(styles,/\.savedMockupPreview \{/);
 });
@@ -3412,7 +3411,7 @@ test("saving a product cannot overwrite the seller's Etsy shipping choice — D4
      this component's own copy of the recipe, which is whatever its list held when
      it last loaded. A profile chosen anywhere else since is not in that copy, so
      the guard sees no saved choice and writes the template default over it. */
-  assert.match(tools, /const current=editingId\?await fetch\("\/api\/product-recipes"\)/,
+  assert.match(tools, /const current=editingId\?await \(?fetch\("\/api\/product-recipes"\)/,
     "the recipe is re-read so the guard sees the current choice");
   assert.match(tools, /const savedChoice=Number\(current\?\.etsyShippingProfileId\|\|existing\?\.etsyShippingProfileId\)\|\|0/);
   // The guard itself is unchanged: a template default only fills an empty choice.
@@ -4320,7 +4319,7 @@ test("a card that says Ready is not also asking to approve — D505/D506", async
   assert.match(clarity, /\.batch-row-actions\{[^}]*background:none/);
 });
 
-test("step 2 lists no products, and a mockup set previews ten — D507/D508", async () => {
+test("step 2 lists no products, and collapsed mockup sets preview ten — D507/D508", async () => {
   const [app, mockups, mockupCss] = await Promise.all([
     readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/mockups/page.tsx", import.meta.url), "utf8"),
@@ -4337,12 +4336,12 @@ test("step 2 lists no products, and a mockup set previews ten — D507/D508", as
   assert.match(app, /<\/aside>,false\)\}/, "the designs step asks for no cards");
   assert.doesNotMatch(app, /\{label:"Designs",value:started\?plural/, "and has no row set left");
 
-  /* D508 · An opened mockup set rendered every scene at full size, so a set of
-     fifty was a very long scroll before the next set began. */
-  assert.match(mockups, /const SET_PREVIEW=10;/);
-  assert.match(mockups, /\(expandedSets\.has\(theme\)\?items:items\.slice\(0,SET_PREVIEW\)\)\.map/);
-  assert.match(mockups, /Show \$\{items\.length-SET_PREVIEW\} more in this set/);
-  assert.match(mockups, /Show fewer/);
+  // The live management screen previews ten while collapsed and exposes its full
+  // saved set when opened. The removed second return was unreachable legacy UI.
+  const managementMarkup=mockups.slice(mockups.indexOf('managementSetList'),mockups.indexOf('{showAddSet&&'));
+  assert.match(managementMarkup,/!open&&<span className="setPreview">\{items.slice\(0,10\).map/);
+  assert.match(managementMarkup,/open&&<>/);
+  assert.match(managementMarkup,/className="thumbs">\{items.map/);
   assert.match(mockupCss, /\.thumbs\{grid-template-columns:repeat\(auto-fill,minmax\(112px,1fr\)\)/);
 });
 

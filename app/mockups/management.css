@@ -144,24 +144,6 @@
   transform: translate(-50%, 0);
 }
 
-.previewSavedSelection {
-  display: block;
-  width: calc(100% - 22px);
-  margin: 0 11px 9px;
-  padding: 8px 10px;
-  border: 1px solid #806174;
-  border-radius: 8px;
-  background: #f5e7f2;
-  color: #553248;
-  font-size: 11px;
-  font-weight: 800;
-  cursor: zoom-in;
-}
-
-.previewSavedSelection:hover {
-  background: #ead4e5;
-}
-
 @media (max-width: 760px) {
 
   .managementOnly .mockupHero,
