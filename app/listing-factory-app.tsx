@@ -2391,7 +2391,7 @@ export default function ListingFactoryApp() {
     batchIdRef.current="";runIdRef.current="";runStartedRef.current="";setBundleRun(null);window.localStorage.removeItem("goldie-active-batch");
     const freshUrl=new URL(window.location.href);freshUrl.searchParams.delete("batch");window.history.replaceState({},"",freshUrl);
     files.forEach(file=>URL.revokeObjectURL(file.previewUrl));
-    setBatchToolsOpen(null);
+    setBatchToolsOpen(true);
     setBatchDisplayName("");
     setKeptAsDrafts(false);
     setBatchSaveStatus("idle");
