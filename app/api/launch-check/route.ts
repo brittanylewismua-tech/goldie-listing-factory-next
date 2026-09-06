@@ -5,6 +5,13 @@ import { isOwner } from "@/app/mastermind/access";
 import { scheduleTrialReminder, cancelTrialReminder } from "@/app/trial-reminder";
 import { billingRuntime } from "@/app/billing";
 import { logError } from "@/app/error-log";
+import {inspectLaunchListing} from './listing';
+export async function GET(request:Request){
+ const user=await getChatGPTUser();if(!user||!isOwner(user))return NextResponse.json({error:'Not authorized.'},{status:403});
+ const productId=new URL(request.url).searchParams.get('productId')||'';
+ if(!/^[a-f0-9]{24}$/.test(productId))return NextResponse.json({error:'Choose a valid existing Goldie product.'},{status:400});
+ try{return NextResponse.json(await inspectLaunchListing(user.userId,productId),{headers:{'Cache-Control':'no-store'}})}catch(error){return NextResponse.json({error:error instanceof Error?error.message:'The listing could not be checked.'},{status:502})}
+}
 export async function POST(request:Request){
   const user=await getChatGPTUser();
   if(!user||!isOwner(user))return NextResponse.json({error:"Not authorized."},{status:403});

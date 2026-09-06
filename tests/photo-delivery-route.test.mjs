@@ -7,7 +7,7 @@ const read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
 const url=source=>'data:text/javascript;base64,'+Buffer.from(ts.transpile(source,{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022})).toString('base64');
 const packageUrl=url(read('app/listing-photo-package.ts'));
 const db=new DatabaseSync(':memory:');db.exec(read('drizzle/0022_photo_deliveries.sql'));
-db.exec("CREATE TABLE printify_draft_results(user_id TEXT,status TEXT,response_json TEXT);CREATE TABLE etsy_connections(user_id TEXT,is_active INTEGER,shop_id INTEGER);");
+db.exec("CREATE TABLE printify_draft_results(user_id TEXT,status TEXT,response_json TEXT,request_key TEXT);CREATE TABLE printify_connections(user_id TEXT,encrypted_token TEXT);CREATE TABLE etsy_connections(user_id TEXT,is_active INTEGER,shop_id INTEGER);");
 const DB={prepare(sql){let args=[];return {bind(...values){args=values;return this},async first(){return db.prepare(sql).get(...args)||null},async all(){return {results:db.prepare(sql).all(...args)}},async run(){const r=db.prepare(sql).run(...args);return {meta:{changes:Number(r.changes)}}}}}};
 const stored=new Map();const bucket={async delete(key){stored.delete(key)},async list({prefix}){return {truncated:false,objects:[...stored].filter(([k])=>k.startsWith(prefix)).map(([key])=>({key,etag:key}))}},async get(key){const value=stored.get(key);return value?{size:value.length,httpMetadata:{contentType:'image/png'},async text(){return new TextDecoder().decode(value)},async arrayBuffer(){return new Uint8Array(value).buffer}}:null},async put(key,value){stored.set(key,typeof value==='string'?new TextEncoder().encode(value):new Uint8Array(value))}};
 let creations=[],failStart=false;
@@ -16,6 +16,8 @@ globalThis.__photoRoute={runtime,user:{userId:'owner'}};
 let source=read('app/api/listing-photos/delivery/route.ts')
  .replace(/import \{NextResponse\}[^;]+;/,"const NextResponse={json:(value,init)=>Response.json(value,init)};")
  .replace(/import \{getChatGPTUser\}[^;]+;/,"const getChatGPTUser=async()=>globalThis.__photoRoute.user;")
+ .replace(/import \{decryptPrintifyToken\}[^;]+;/,"const decryptPrintifyToken=async()=>'token';")
+ .replace(/import \{prepareEtsySkus\}[^;]+;/,"const prepareEtsySkus=async()=>{};")
  .replace(/import \{unpackDraftMedia\}[^;]+;/,"const unpackDraftMedia=async value=>JSON.parse(value);")
  .replace(/from '@\/app\/listing-photo-package'/,`from '${packageUrl}'`)
  .replace(/import \{deliveryEnv[^;]+;/,`const deliveryEnv=()=>globalThis.__photoRoute.runtime;
@@ -26,7 +28,7 @@ let source=read('app/api/listing-photos/delivery/route.ts')
  const readSourceImage=async()=>({bytes:new Uint8Array([1,2,3]),type:'image/png'});`);
 const api=await import(url(source));
 const post=(productId='p1',indices=[0])=>api.POST(new Request('https://goldie.test/api/listing-photos/delivery',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({productId,printifyImageIndices:indices})}));
-function reset(){db.exec('DELETE FROM photo_deliveries;DELETE FROM printify_draft_results;DELETE FROM etsy_connections;');stored.clear();creations=[];failStart=false;globalThis.__photoRoute.user={userId:'owner'};db.prepare('INSERT INTO printify_draft_results VALUES(?,?,?)').run('owner','succeeded',JSON.stringify({id:'p1',shopId:100,printifyImages:['https://images.printify.com/front.jpg','https://images.printify.com/back.jpg']}));db.exec("INSERT INTO etsy_connections VALUES('owner',1,200)")}
+function reset(){db.exec('DELETE FROM photo_deliveries;DELETE FROM printify_draft_results;DELETE FROM etsy_connections;DELETE FROM printify_connections;');stored.clear();creations=[];failStart=false;globalThis.__photoRoute.user={userId:'owner'};db.prepare('INSERT INTO printify_draft_results VALUES(?,?,?,?)').run('owner','succeeded',JSON.stringify({id:'p1',shopId:100,printifyImages:['https://images.printify.com/front.jpg','https://images.printify.com/back.jpg']}),'a'.repeat(64));db.exec("INSERT INTO etsy_connections VALUES('owner',1,200);INSERT INTO printify_connections VALUES('owner','encrypted')")}
 test('route creates an immutable ordered snapshot and duplicate submissions reuse one job',async()=>{
  reset();stored.set('etsy-listing-images/owner/p1/upload/custom.png',new Uint8Array([9,9]));stored.set('etsy-listing-images/owner/p1/order.json',new TextEncoder().encode(JSON.stringify(['printify:0','stored:etsy-listing-images/owner/p1/upload/custom.png'])));
  const response=await post();assert.equal(response.status,200);const {delivery}=await response.json();assert.equal(delivery.photoCount,2);assert.equal(delivery.status,'waiting');

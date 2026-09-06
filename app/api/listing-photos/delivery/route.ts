@@ -3,6 +3,8 @@ import {getChatGPTUser} from '@/app/chatgpt-auth';
 import {unpackDraftMedia} from '@/app/draft-media-storage';
 import {orderedPackagePhotos} from '@/app/listing-photo-package';
 import {deliveryEnv,deliveryStatus,readDelivery,readSourceImage,prepareEtsyImage,deliveryMessage,type DeliveryRow} from './service';
+import {decryptPrintifyToken} from '../../printify/token-crypto';
+import {prepareEtsySkus} from '../../printify/etsy-sku-preflight';
 const publicRow=(row:DeliveryRow)=>({id:row.id,productId:row.product_id,status:row.status,error:row.error?deliveryMessage(row.error):null,photoCount:JSON.parse(row.photos_json).length,updatedAt:row.updated_at,expiresAt:row.expires_at,listingId:row.state_json?JSON.parse(row.state_json).listingId:null});
 export async function GET(request:Request){
  const user=await getChatGPTUser();if(!user)return NextResponse.json({error:'Sign in to view photo delivery.'},{status:401});
@@ -16,12 +18,17 @@ export async function POST(request:Request){
  try{
   const body=await request.json() as {productId?:string;printifyImageIndices?:number[]};
   const productId=String(body.productId||'');if(!productId||!Array.isArray(body.printifyImageIndices))return NextResponse.json({error:'Choose a listing and its photos first.'},{status:400});
-  const owned=await runtime.DB.prepare("SELECT response_json FROM printify_draft_results WHERE user_id=? AND status='succeeded' AND json_extract(response_json,'$.id')=? LIMIT 1").bind(user.userId,productId).first<{response_json:string}>();
+  const owned=await runtime.DB.prepare("SELECT response_json,request_key FROM printify_draft_results WHERE user_id=? AND status='succeeded' AND json_extract(response_json,'$.id')=? LIMIT 1").bind(user.userId,productId).first<{response_json:string;request_key:string}>();
   if(!owned)return NextResponse.json({error:'This listing does not belong to your account.'},{status:403});
   const draft=await unpackDraftMedia(owned.response_json,user.userId,runtime.ARTWORK) as {id:string;shopId:number;printifyImages?:string[]};
   if(!Number.isSafeInteger(draft.shopId)||draft.shopId<=0)return NextResponse.json({error:'The original Printify shop could not be verified.'},{status:409});
   const shop=await runtime.DB.prepare('SELECT shop_id FROM etsy_connections WHERE user_id=? AND is_active=1').bind(user.userId).first<{shop_id:number}>();
   if(!shop)return NextResponse.json({error:'Connect Etsy before preparing photo delivery.'},{status:409});
+  const checkSkus=async()=>{
+    const connection=await runtime.DB.prepare('SELECT encrypted_token FROM printify_connections WHERE user_id=?').bind(user.userId).first<{encrypted_token:string}>();
+    if(!connection)throw Error('Reconnect Printify before opening your listings.');
+    await prepareEtsySkus(draft.shopId,productId,owned.request_key,await decryptPrintifyToken(connection.encrypted_token,runtime.PRINTIFY_TOKEN_KEY));
+  };
   const prefix=`etsy-listing-images/${user.userId}/${productId}/`,objects=await runtime.ARTWORK.list({prefix,limit:100});
   if(objects.truncated)throw Error('Too many stored photos. Remove unused photos before preparing delivery.');
   const order=await runtime.ARTWORK.get(`${prefix}order.json`);
@@ -35,11 +42,13 @@ export async function POST(request:Request){
   if(latest){
     if(latest.state_json&&JSON.parse(latest.state_json).pending)return NextResponse.json({error:'The previous delivery has an unconfirmed Etsy change. Contact support before sending another photo set.',delivery:publicRow(latest)},{status:409});
     if(latest.fingerprint===fingerprint&&['waiting','delivering','completed'].includes(latest.status)){
+      if(latest.status==='waiting')await checkSkus();
       if(latest.status==='waiting'){try{await runtime.PHOTO_DELIVERY.create({id:latest.id,params:{id:latest.id,owner:user.userId}})}catch{/* A durable instance with this identity may already exist. GET status remains authoritative. */}}
       return NextResponse.json({delivery:publicRow(latest)});
     }
     if(['preparing','waiting','delivering'].includes(latest.status))return NextResponse.json({error:'A photo set is already scheduled. Cancel the waiting delivery before changing that set.',delivery:publicRow(latest)},{status:409});
   }
+  await checkSkus();
   id=crypto.randomUUID();const now=Date.now();
   await runtime.DB.prepare("INSERT INTO photo_deliveries(id,user_id,product_id,printify_shop_id,etsy_shop_id,fingerprint,status,created_at,updated_at,expires_at) VALUES(?,?,?,?,?,?,'preparing',?,?,?)").bind(id,user.userId,productId,draft.shopId,shop.shop_id,fingerprint,now,now,now+86400000).run();
   const snapshot:Array<{key:string;type:string}>=[];let total=0;
