@@ -7,6 +7,7 @@ import { mergeMatchingDrafts, serializedBatchWrites } from "./batch-draft-integr
 import { requestEtsyOptions } from "./etsy-options-request";
 import { recoverDraftEtsyDetails } from "./recover-draft-etsy-details";
 import { etsyPreparationCoordinator } from "./etsy-preparation-coordinator";
+import { titleResultGuard } from "./title-result-guard";
 import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import Image from "next/image";
@@ -624,7 +625,20 @@ async function designPreviewDataUrl(design:DesignFile){
 }
 async function autoTitleForDesign(design:DesignFile,keywords:string[],useCommas:boolean,template:TemplateDetails|null){const response=await fetch("/api/listing-intelligence",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({mode:"title",image:await designPreviewDataUrl(design),product:{blueprintTitle:template?.blueprintTitle,brand:template?.brand,model:template?.model},keywords,useCommas})}),payload=await response.json() as {title?:string;keywords?:string[];tags?:string[];titleWarning?:string;error?:string};if(!response.ok||!payload.title)throw new Error(payload.error||"This title could not be created.");return {title:payload.title,keywords:payload.keywords||[],tags:payload.tags||[],titleWarning:payload.titleWarning||""}}
 
-function IndividualAutoTitle({design,template,useCommas,initialBankId,paused,onApply}:{design:DesignFile;template:TemplateDetails|null;useCommas:boolean;initialBankId?:string;paused?:boolean;onApply:(title:string,tags:string[],titleWarning?:string)=>void}){const [bank,setBank]=useState<KeywordList|null>(null),[building,setBuilding]=useState(false),[message,setMessage]=useState(""),[openMode,setOpenMode]=useState<"ai"|"manual"|null>(null);async function build(){if(!bank)return;setBuilding(true);setMessage("");try{const result=await autoTitleForDesign(design,bank.keywords,useCommas,template);onApply(result.title,result.tags,result.titleWarning);setMessage(result.titleWarning||"✓ New title and separately ranked Etsy tags applied to this listing only.")}catch(error){setMessage(error instanceof Error?error.message:"This title could not be created.")}finally{setBuilding(false)}}return <>{design.titleWarning&&<p className="title-match-warning" role="status">{design.titleWarning}</p>}{design.titleError&&<p className="field-error" role="alert">{design.titleError}</p>}<details className="individual-title-builder" open={openMode==="ai"} onToggle={event=>{const opened=event.currentTarget.open;setOpenMode(current=>opened?"ai":current==="ai"?null:current)}} onClick={event=>event.stopPropagation()}><summary>Create a different title with AI</summary><KeywordBank compact selectionOnly initialId={initialBankId||""} title="Keyword bank" copy="Only exact validated phrases from this bank are used." onSelect={setBank}/><button className="ai-title-button" title={paused?"This batch is open in another tab, so nothing built here would be kept.":!bank?"Choose a keyword bank first.":undefined} disabled={!bank||building||Boolean(paused)} onClick={()=>void build()}>{building?"Creating this title…":"Create title for this design"}</button>{message&&<p className="title-build-message" role="status">{message}</p>}<button type="button" className="panel-collapse-foot" onClick={event=>{const box=(event.currentTarget as HTMLElement).closest("details");if(box){(box as HTMLDetailsElement).open=false;box.scrollIntoView({block:"nearest"})}}}>Close title builder</button></details><IndividualManualTitle open={openMode==="manual"} onOpenChange={opened=>setOpenMode(current=>opened?"manual":current==="manual"?null:current)} useCommas={useCommas} initialBankId={initialBankId} onApply={(title,tags)=>onApply(title,tags,"")}/></>}
+function IndividualAutoTitle({design,template,useCommas,initialBankId,paused,onApply}:{design:DesignFile;template:TemplateDetails|null;useCommas:boolean;initialBankId?:string;paused?:boolean;onApply:(title:string,tags:string[],titleWarning?:string)=>void}){const [bank,setBank]=useState<KeywordList|null>(null),[building,setBuilding]=useState(false),[message,setMessage]=useState(""),[openMode,setOpenMode]=useState<"ai"|"manual"|null>(null);const resultGuard=useRef(titleResultGuard()),buildingRef=useRef(false);
+  resultGuard.current.update(JSON.stringify([design.id,template?.id,bank?.id,bank?.keywords,useCommas,paused]),[design]);
+  useEffect(()=>()=>resultGuard.current.clear(),[]);
+  async function build(){
+    if(!bank||buildingRef.current||paused)return;
+    const ticket=resultGuard.current.begin(design.id);buildingRef.current=true;setBuilding(true);setMessage("");
+    try{
+      const result=await autoTitleForDesign(design,bank.keywords,useCommas,template);
+      if(!resultGuard.current.current(ticket)){setMessage("Your newer edits were kept. The earlier AI result was not applied.");return;}
+      onApply(result.title,result.tags,result.titleWarning);
+      setMessage(result.titleWarning||"✓ New title and separately ranked Etsy tags applied to this listing only.");
+    }catch(error){if(resultGuard.current.current(ticket))setMessage(error instanceof Error?error.message:"This title could not be created.");}
+    finally{buildingRef.current=false;setBuilding(false);}
+  }return <>{design.titleWarning&&<p className="title-match-warning" role="status">{design.titleWarning}</p>}{design.titleError&&<p className="field-error" role="alert">{design.titleError}</p>}<details className="individual-title-builder" open={openMode==="ai"} onToggle={event=>{const opened=event.currentTarget.open;setOpenMode(current=>opened?"ai":current==="ai"?null:current)}} onClick={event=>event.stopPropagation()}><summary>Create a different title with AI</summary><KeywordBank compact selectionOnly initialId={initialBankId||""} title="Keyword bank" copy="Only exact validated phrases from this bank are used." onSelect={setBank}/><button className="ai-title-button" title={paused?"This batch is open in another tab, so nothing built here would be kept.":!bank?"Choose a keyword bank first.":undefined} disabled={!bank||building||Boolean(paused)} onClick={()=>void build()}>{building?"Creating this title…":"Create title for this design"}</button>{message&&<p className="title-build-message" role="status">{message}</p>}<button type="button" className="panel-collapse-foot" onClick={event=>{const box=(event.currentTarget as HTMLElement).closest("details");if(box){(box as HTMLDetailsElement).open=false;box.scrollIntoView({block:"nearest"})}}}>Close title builder</button></details><IndividualManualTitle open={openMode==="manual"} onOpenChange={opened=>setOpenMode(current=>opened?"manual":current==="manual"?null:current)} useCommas={useCommas} initialBankId={initialBankId} onApply={(title,tags)=>onApply(title,tags,"")}/></>}
 
 function IndividualManualTitle({open,onOpenChange,useCommas,initialBankId,onApply}:{open:boolean;onOpenChange:(open:boolean)=>void;useCommas:boolean;initialBankId?:string;onApply:(title:string,tags:string[])=>void}){const [bankId,setBankId]=useState(initialBankId||""),[keywords,setKeywords]=useState<string[]>([]),[message,setMessage]=useState("");const title=keywords.join(useCommas?", ":" ");function add(keyword:string){setKeywords(current=>current.includes(keyword)?current:[...current,keyword]);setMessage("")}function apply(){if(!title)return;onApply(title,tagsFromTitle(keywords.join(", ")));setMessage("✓ Your title and matching tags were applied to this listing only.")}return <details className="individual-title-builder individual-manual-title" open={open} onToggle={event=>onOpenChange(event.currentTarget.open)} onClick={event=>event.stopPropagation()}><summary>Build this title yourself from a keyword bank</summary><KeywordBank compact initialId={bankId} title="Choose a keyword bank" copy="Click keywords in the order you want them for this listing." onSelect={list=>{setBankId(list?.id||"");setKeywords([]);setMessage("")}} onAdd={add}/><div className="individual-keyword-selection"><div><b>Selected keywords</b>{keywords.length>0&&<button type="button" onClick={()=>setKeywords([])}>Clear all</button>}</div>{keywords.length?<><div className="selected-keyword-chips">{keywords.map(keyword=><button type="button" key={keyword} onClick={()=>setKeywords(current=>current.filter(item=>item!==keyword))}>{keyword}<span>×</span></button>)}</div><div className="individual-title-preview"><small>Title preview</small><span>{title}</span></div><button type="button" className="apply-manual-title" onClick={apply}>Apply to this listing</button></>:<p>Choose a bank, then click the keywords you want to use.</p>}{message&&<p className="title-build-message" role="status">{message}</p>}</div></details>}
 
@@ -1282,6 +1296,7 @@ export default function ListingFactoryApp() {
   const [autoTitleBank,setAutoTitleBank]=useState<KeywordList|null>(null);
   const [autoTitleBankId,setAutoTitleBankId]=useState("");
   const [manualKeywordBankId,setManualKeywordBankId]=useState("");
+
   const [blockingModal,setBlockingModal]=useState<{title:string;issues:string[];copy?:string}|null>(null);
   /* D519 - the guard below runs before either run state is declared, so the fact
      that a run is in progress lives in a ref both of them set. */
@@ -2087,6 +2102,10 @@ export default function ListingFactoryApp() {
   const tabId=useRef<string>("");
   if(typeof window!=="undefined"&&!tabId.current)tabId.current=crypto.randomUUID();
   const [batchHeldByAnotherTab,setBatchHeldByAnotherTab]=useState(false);
+  const batchTitleGuard=useRef(titleResultGuard()),batchTitleBuilding=useRef(false);
+  const batchTitleScope=JSON.stringify([preparationScope,autoTitleBankId,autoTitleBank?.keywords,titleJoiner,titleCaps,batchHeldByAnotherTab]);
+  batchTitleGuard.current.update(batchTitleScope,files);
+  useEffect(()=>()=>batchTitleGuard.current.clear(),[]);
   const batchChannel=useRef<BroadcastChannel|null>(null);
   useEffect(()=>{
     if(typeof BroadcastChannel==="undefined")return;
@@ -3653,11 +3672,27 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
   function clearBatchKeywords(){setBatchKeywords([]);applyBatchTitle("",[])}
   function changeTitleJoiner(joiner:string){setTitleJoiner(joiner);if(batchKeywords.length)applyBatchTitle(batchKeywords.join(joiner),tagsFromTitle(batchKeywords.join(", ")))}
   function changeTitleCaps(enabled:boolean){setTitleCaps(enabled);setFiles(current=>current.map(file=>({...file,title:(enabled?file.title.replace(/\b[\p{L}\p{N}]/gu,character=>character.toLocaleUpperCase()):file.title).slice(0,140),etsy:undefined,etsyError:""})))}
-  async function buildBatchTitle(){if(!autoTitleBank)return setTitleBuildMessage("Choose a keyword bank first.");setTitleBuilding(true);setTitleBuildMessage(`Creating 0 of ${files.length} titles…`);let completed=0,failed=0;await runBounded(files,2,async design=>{try{const result=await autoTitleForDesign(design,autoTitleBank.keywords,titleJoiner===", ",templateDetails);return {design,result}}catch(error){return {design,error:error instanceof Error?error.message:"This title could not be created."}}},item=>{completed+=1;if("result" in item&&item.result){updateDesign(item.design.id,{title:styledTitle(item.result.title),tags:item.result.tags,titleWarning:item.result.titleWarning,titleError:"",etsy:undefined,etsyError:""});pulseTitle(item.design.id)}else{failed+=1;updateDesign(item.design.id,{titleError:item.error,titleWarning:""})}setTitleBuildMessage(`Creating ${completed} of ${files.length} titles…`)});/* D230 · Read "1 titles created. 2 need another try" on a real run. */
-      setTitleBuildMessage(failed?`${files.length-failed} ${files.length-failed===1?"title":"titles"} created. ${failed} ${failed===1?"needs":"need"} another try; each affected listing explains why below.`:`✓ ${files.length} unique ${files.length===1?"title":"titles"} and separately ranked Etsy tags created. Review them below.`);setTitleBuilding(false)/* D541 - this used to hunt down the results table and scroll to it,
-       because the table sat far below the button inside one long block. The
-       results are the rows directly under this button now, in the same open
-       panel, so there is nowhere to travel to. */}
+  async function buildBatchTitle(){
+    if(!autoTitleBank)return setTitleBuildMessage("Choose a keyword bank first.");
+    if(batchTitleBuilding.current||batchHeldByAnotherTab)return;
+    batchTitleBuilding.current=true;setTitleBuilding(true);setTitleBuildMessage(`Creating 0 of ${files.length} titles…`);
+    const sourceScope=batchTitleScope,requests=files.map(design=>({design,ticket:batchTitleGuard.current.begin(design.id)}));
+    let completed=0,failed=0,skipped=0;
+    try{
+      await runBounded(requests,2,async item=>{
+        if(!batchTitleGuard.current.current(item.ticket))return {...item,skipped:true};
+        try{return {...item,result:await autoTitleForDesign(item.design,autoTitleBank.keywords,titleJoiner===", ",templateDetails)};}
+        catch(error){return {...item,error:error instanceof Error?error.message:"This title could not be created."};}
+      },item=>{
+        completed++;
+        if(!batchTitleGuard.current.current(item.ticket)){skipped++;return;}
+        if("result" in item&&item.result){updateDesign(item.design.id,{title:styledTitle(item.result.title),tags:item.result.tags,titleWarning:item.result.titleWarning,titleError:"",etsy:undefined,etsyError:""});pulseTitle(item.design.id);}
+        else if("error" in item){failed++;updateDesign(item.design.id,{titleError:item.error,titleWarning:""});}
+        if(batchTitleGuard.current.inScope(sourceScope))setTitleBuildMessage(`Creating ${completed} of ${files.length} titles…`);
+      });
+      if(batchTitleGuard.current.inScope(sourceScope))setTitleBuildMessage(skipped?`${skipped} ${skipped===1?"listing kept its":"listings kept their"} newer edits. Review the current titles below.`:failed?`${files.length-failed} ${files.length-failed===1?"title":"titles"} created. ${failed} ${failed===1?"needs":"need"} another try; each affected listing explains why below.`:`✓ ${files.length} unique ${files.length===1?"title":"titles"} and separately ranked Etsy tags created. Review them below.`);
+    }finally{batchTitleBuilding.current=false;setTitleBuilding(false);}
+  }
 
   /* D546 - she reached step 4 with two of three products never started, was told
      "Your batch is ready for its final check", and offered "Publish all 3
