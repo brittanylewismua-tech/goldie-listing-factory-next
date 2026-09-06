@@ -58,7 +58,22 @@ export function planForPrice(priceId?: string | null): PlanKey | null {
 
 export function siteOrigin(request?: Request) {
   const configured = billingRuntime().GOLDIE_SITE_URL?.replace(/\/$/, "");
-  if (configured) return configured;
+  if (configured) {
+    const canonical = new URL(configured);
+    if (request) {
+      const incoming = new URL(request.url);
+      const goldieHosts = new Set(["thegoldiesuite.com", "www.thegoldiesuite.com"]);
+      // Keep host-scoped login cookies on the same approved production host.
+      // Never use forwarded headers or an arbitrary incoming host for billing returns.
+      if (incoming.origin === canonical.origin ||
+          (canonical.protocol === "https:" && incoming.protocol === "https:" &&
+           !canonical.port && !incoming.port &&
+           goldieHosts.has(canonical.hostname) && goldieHosts.has(incoming.hostname))) {
+        return incoming.origin;
+      }
+    }
+    return canonical.origin;
+  }
   if (request) return new URL(request.url).origin;
   throw new Error("GOLDIE_SITE_URL is not configured.");
 }

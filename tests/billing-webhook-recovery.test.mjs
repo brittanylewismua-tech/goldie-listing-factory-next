@@ -33,3 +33,16 @@ test('checkout before subscription waits for verified activation, then grants th
 test('active subscription grants its plan and cancellation removes access',async()=>{
   const h=await fixture();try{const active=structuredClone(subscription);active.id='evt-active';active.data.object.status='active';await h.post(await request(active));assert.equal((await h.billing.billingState({userId:'local-user'})).active,true);assert.equal(h.sqlite.prepare('SELECT plan_key FROM account_plans').get().plan_key,'pro');const canceled=structuredClone(active);canceled.id='evt-canceled';canceled.type='customer.subscription.deleted';canceled.data.object.status='canceled';await h.post(await request(canceled));assert.equal((await h.billing.billingState({userId:'local-user'})).active,false);}finally{h.sqlite.close();}
 });
+
+test('real Stripe flexible trial cancellation records end date and cancels the reminder',async()=>{
+  const h=await fixture();try{
+    await h.post(await request(subscription));
+    h.sqlite.exec("INSERT INTO trial_reminder_emails (user_id,subscription_id,resend_email_id,scheduled_for) VALUES ('local-user','sub-local','reminder-local',1788892690)");
+    const event=structuredClone(subscription);event.id='evt-scheduled-cancel';event.type='customer.subscription.updated';
+    Object.assign(event.data.object,{cancel_at:1788979090,cancel_at_period_end:false,trial_end:1788979090,items:{data:[{current_period_end:1788979090}]}});
+    await h.post(await request(event));
+    const state=await h.billing.billingState({userId:'local-user'});
+    assert.equal(state.active,true);assert.equal(state.subscription.cancelAtPeriodEnd,1);assert.equal(state.subscription.currentPeriodEnd,1788979090);
+    assert.ok(h.sqlite.prepare('SELECT canceled_at FROM trial_reminder_emails').get().canceled_at);
+  }finally{h.sqlite.close();}
+});

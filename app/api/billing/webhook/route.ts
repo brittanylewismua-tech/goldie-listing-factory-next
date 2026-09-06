@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { billingRuntime, ensureBillingTables, planForPrice } from "@/app/billing";
 import { cancelTrialReminder, scheduleTrialReminder } from "@/app/trial-reminder";
 
-type StripeObject={id:string;customer?:string;subscription?:string;status?:string;client_reference_id?:string;metadata?:Record<string,string>;current_period_end?:number;trial_end?:number;cancel_at_period_end?:boolean;items?:{data?:Array<{price?:{id?:string}}>}};
+type StripeObject={id:string;customer?:string;subscription?:string;status?:string;client_reference_id?:string;metadata?:Record<string,string>;current_period_end?:number;trial_end?:number;cancel_at_period_end?:boolean;cancel_at?:number|null;items?:{data?:Array<{current_period_end?:number;price?:{id?:string}}>}};
 type StripeEvent={id:string;type:string;data:{object:StripeObject}};
 
 function bytesToHex(bytes:ArrayBuffer){return [...new Uint8Array(bytes)].map(value=>value.toString(16).padStart(2,"0")).join("")}
@@ -26,9 +26,11 @@ export async function POST(request:Request){
   const userId=object.metadata?.user_id,customer=object.customer,priceId=object.items?.data?.[0]?.price?.id;
   const plan=(object.metadata?.plan_key as "goldie"|"pro"|"scale"|undefined)||planForPrice(priceId);
   const subscriptionEvent=event.type.startsWith("customer.subscription.")&&userId&&customer&&plan;
+  const cancellationScheduled=!!(object.cancel_at_period_end||object.cancel_at);
+  const periodEnd=object.current_period_end||object.items?.data?.[0]?.current_period_end||object.trial_end||null;
   if(subscriptionEvent){
     changes.push(db.prepare("INSERT INTO billing_subscriptions (user_id,stripe_customer_id,stripe_subscription_id,status,plan_key,current_period_end,cancel_at_period_end) VALUES (?,?,?,?,?,?,?) ON CONFLICT(user_id) DO UPDATE SET stripe_customer_id=excluded.stripe_customer_id,stripe_subscription_id=excluded.stripe_subscription_id,status=excluded.status,plan_key=excluded.plan_key,current_period_end=excluded.current_period_end,cancel_at_period_end=excluded.cancel_at_period_end,updated_at=CURRENT_TIMESTAMP")
-      .bind(userId,customer,object.id,object.status||"incomplete",plan,object.current_period_end||null,object.cancel_at_period_end?1:0));
+      .bind(userId,customer,object.id,object.status||"incomplete",plan,periodEnd,cancellationScheduled?1:0));
     if(object.status==="trialing"){
       changes.push(db.prepare("INSERT OR IGNORE INTO billing_trials (user_id) VALUES (?)").bind(userId));
       changes.push(db.prepare("INSERT INTO account_plans (user_id,plan_key) VALUES (?,'trial') ON CONFLICT(user_id) DO UPDATE SET plan_key='trial',updated_at=CURRENT_TIMESTAMP").bind(userId));
@@ -39,7 +41,7 @@ export async function POST(request:Request){
   changes.push(db.prepare("INSERT OR IGNORE INTO stripe_events (event_id,event_type) VALUES (?,?)").bind(event.id,event.type));
   await db.batch(changes);
   if(subscriptionEvent){
-    if(object.status==="trialing"&&object.trial_end){
+    if(object.status==="trialing"&&object.trial_end&&!cancellationScheduled){
       const existing=await db.prepare("SELECT resend_email_id FROM trial_reminder_emails WHERE user_id=? AND canceled_at IS NULL").bind(userId).first<{resend_email_id:string}>();
       if(!existing){
         const customerRecord=await db.prepare("SELECT email FROM billing_customers WHERE user_id=?").bind(userId).first<{email:string}>();
@@ -49,7 +51,7 @@ export async function POST(request:Request){
         }catch(error){console.error("Trial reminder scheduling failed",error);}
       }
     }
-    if(object.status==="canceled"||object.cancel_at_period_end){
+    if(object.status==="canceled"||cancellationScheduled){
       const reminder=await db.prepare("SELECT resend_email_id FROM trial_reminder_emails WHERE user_id=? AND canceled_at IS NULL").bind(userId).first<{resend_email_id:string}>();
       if(reminder){
         try{
