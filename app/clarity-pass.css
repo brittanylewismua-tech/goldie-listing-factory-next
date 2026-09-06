@@ -2850,6 +2850,12 @@ body{min-width:0}
 .app-shell .listing-card.is-open .listing-card-thumb{width:132px;height:132px;border-radius:14px}
 .app-shell .listing-card.is-open .listing-card-detail{padding-left:179px}
 @media(max-width:700px){.app-shell .listing-card.is-open .listing-card-head{grid-template-columns:18px 96px minmax(0,1fr)}.app-shell .listing-card.is-open .listing-card-thumb{width:96px;height:96px}.app-shell .listing-card.is-open .listing-card-detail{padding-left:18px}}
+/* D1148 · Keep badges out of the narrow caret column on small screens. */
+@media(max-width:700px){
+  .app-shell .listing-card-head{grid-template-columns:18px 52px minmax(0,1fr)}
+  .app-shell .listing-card-head .listing-card-flags{grid-column:2/-1;grid-row:2;flex-wrap:wrap;min-width:0}
+  .app-shell .listing-card-head .listing-card-meta{grid-column:2/-1;grid-row:3}
+}
 .app-shell .listing-card-detail{padding:18px 18px 18px 99px;background:transparent}
 /* D690 · A work surface uses the full width; only text panels indent to align
    with the summary column. Measured live: the 179px indent left the photo grid
