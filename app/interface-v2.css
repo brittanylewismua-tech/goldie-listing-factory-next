@@ -3846,3 +3846,23 @@ html, body { background: var(--lf-paper); }
   .app-shell .step-product-cards > .step-product-card.in-batch > header .bundle-product-photo{width:48px;height:48px}
   .app-shell .step-product-cards > .step-product-card.in-batch > header .step-product-state{grid-column:2;justify-self:start}
 }
+
+/* D1159: saved-product content no longer has the legacy step-number column.
+   Keeping that two-column grid squeezed the entire library into 54px. */
+.app-shell .factory-panel:has(.recipe-card) .recipe-card{
+  display:block!important;min-width:0;
+}
+.app-shell .recipe-card>.step-content{min-width:0;width:100%}
+@media(max-width:760px){
+  .app-shell .factory-panel:has(.recipe-card)>.factory-panel-head{
+    grid-template-columns:34px minmax(0,1fr);gap:12px;align-items:center;
+  }
+  .app-shell .factory-panel:has(.recipe-card)>.factory-panel-head>.factory-panel-actions{
+    grid-column:1/-1;display:flex;flex-wrap:wrap;width:100%;min-width:0;justify-content:flex-start;
+  }
+  .app-shell .factory-panel:has(.recipe-card) .panel-create-action{
+    flex:1 1 130px;min-width:0;min-height:44px;padding:8px 10px;white-space:normal;
+  }
+  .app-shell .recipe-card .bundle-builder{grid-template-columns:minmax(0,1fr);padding:16px;gap:12px}
+  .app-shell .recipe-card .bundle-builder-instruction{min-width:0;text-align:left}
+}
