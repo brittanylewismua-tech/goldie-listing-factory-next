@@ -3119,11 +3119,15 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
                        So: the title still fills the tags while they are still
                        Goldie's - untouched, or exactly what the previous title
                        produced - and it never replaces them with nothing. */
+                    // Copy edits keep the seller's reviewed Etsy fields and
+                    // personalization. Clearing them here silently bought a
+                    // new AI analysis after each pause in ordinary typing.
+                    // Listings without details still use initial preparation.
                     const derived=tagsFromTitle(design.title);
                     const untouched=!design.tags.length||(design.tags.length===derived.length&&design.tags.every((tag,index)=>tag===derived[index]));
                     const next=tagsFromTitle(title);
                     const keep=!untouched||(!next.length&&design.tags.length>0);
-                    updateDesign(design.id,keep?{title,etsy:undefined,etsyError:""}:{title,tags:next,etsy:undefined,etsyError:""})}}/></label><label>Tags <span>{design.tags.length}/13</span><textarea className="listing-tags-field" rows={3} value={design.tags.join(", ")} onChange={event=>updateDesign(design.id,{tags:[...new Set(event.target.value.split(",").map(tag=>tag.trim().toLowerCase()).filter(tag=>tag&&tag.length<=20))].slice(0,13),etsy:undefined,etsyError:""})} placeholder="Exact title phrases, separated by commas"/></label><div className="tag-row">{design.tags.map(tag=><span key={tag}>{tag}</span>)}{!design.tags.length&&<small>Matching tags will be created with the title.</small>}</div><IndividualAutoTitle design={design} template={templateDetails} useCommas={titleJoiner===", "} paused={batchHeldByAnotherTab} onApply={(title,tags)=>{setActiveDesign(design.id);updateDesign(design.id,{title,tags,etsy:undefined,etsyError:""})}}/>{design.etsyError&&<small className="field-error">{design.etsyError}</small>}</div></div>,titleFlags,only);}
+                    updateDesign(design.id,keep?{title,etsyError:""}:{title,tags:next,etsyError:""})}}/></label><label>Tags <span>{design.tags.length}/13</span><textarea className="listing-tags-field" rows={3} value={design.tags.join(", ")} onChange={event=>updateDesign(design.id,{tags:[...new Set(event.target.value.split(",").map(tag=>tag.trim().toLowerCase()).filter(tag=>tag&&tag.length<=20))].slice(0,13),etsyError:""})} placeholder="Exact title phrases, separated by commas"/></label><div className="tag-row">{design.tags.map(tag=><span key={tag}>{tag}</span>)}{!design.tags.length&&<small>Matching tags will be created with the title.</small>}</div><IndividualAutoTitle design={design} template={templateDetails} useCommas={titleJoiner===", "} paused={batchHeldByAnotherTab} onApply={(title,tags)=>{setActiveDesign(design.id);updateDesign(design.id,{title,tags,etsyError:""})}}/>{design.etsyError&&<small className="field-error">{design.etsyError}</small>}</div></div>,titleFlags,only);}
   function descriptionLead(){return <>
       <div className="task-panel-lead"><div className="batch-description-body"><label>{activeBundle?"Description for this product’s listings":"Description for every listing"}<textarea rows={9} value={description} onChange={event=>setDescription(event.target.value)} placeholder="Add sizing, materials, production, care, and shipping information"/></label><p>{activeBundle?"Applies to this product’s listings only.":"Applies to every listing in this batch."}</p>{/* D232 · "Save this description as the default" went with the settings block. The
                      shared editor survived the move but the way to keep the wording for future
@@ -3685,12 +3689,12 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
   }
   async function saveImagePreferences(indices:number[]){if(!activeRecipe)return;const response=await fetch("/api/product-recipes",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:activeRecipe.id,name:activeRecipe.name,templateUrl:activeRecipe.templateUrl,printifyImageIndices:indices})});if(!response.ok)throw new Error("These Printify photo preferences could not be saved. Please try again.");setPrintifyImageIndices(indices);setActiveRecipe({...activeRecipe,printifyImageIndices:indices})}
   function styledTitle(title:string){return (titleCaps?title.replace(/\b[\p{L}\p{N}]/gu,character=>character.toLocaleUpperCase()):title).slice(0,140)}
-  function applyBatchTitle(title:string,explicitTags?:string[]){const next=styledTitle(title);setFiles(current=>current.map(file=>({...file,title:next,tags:explicitTags||tagsFromTitle(next),etsy:undefined,etsyError:""})))}
+  function applyBatchTitle(title:string,explicitTags?:string[]){const next=styledTitle(title);setFiles(current=>current.map(file=>({...file,title:next,tags:explicitTags||tagsFromTitle(next),etsyError:""})))}
   function addBatchKeyword(keyword:string){if(batchKeywords.some(value=>value.toLocaleLowerCase()===keyword.trim().toLocaleLowerCase()))return;const next=[...batchKeywords,keyword.trim()];setBatchKeywords(next);applyBatchTitle(next.join(titleJoiner),tagsFromTitle(next.join(", ")))}
   function removeBatchKeyword(keyword:string){const next=batchKeywords.filter(value=>value!==keyword);setBatchKeywords(next);applyBatchTitle(next.join(titleJoiner),tagsFromTitle(next.join(", ")))}
   function clearBatchKeywords(){setBatchKeywords([]);applyBatchTitle("",[])}
   function changeTitleJoiner(joiner:string){setTitleJoiner(joiner);if(batchKeywords.length)applyBatchTitle(batchKeywords.join(joiner),tagsFromTitle(batchKeywords.join(", ")))}
-  function changeTitleCaps(enabled:boolean){setTitleCaps(enabled);setFiles(current=>current.map(file=>({...file,title:(enabled?file.title.replace(/\b[\p{L}\p{N}]/gu,character=>character.toLocaleUpperCase()):file.title).slice(0,140),etsy:undefined,etsyError:""})))}
+  function changeTitleCaps(enabled:boolean){setTitleCaps(enabled);setFiles(current=>current.map(file=>({...file,title:(enabled?file.title.replace(/\b[\p{L}\p{N}]/gu,character=>character.toLocaleUpperCase()):file.title).slice(0,140),etsyError:""})))}
   async function buildBatchTitle(){
     if(!autoTitleBank)return setTitleBuildMessage("Choose a keyword bank first.");
     if(batchTitleBuilding.current||batchHeldByAnotherTab)return;
@@ -3705,7 +3709,7 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
       },item=>{
         completed++;
         if(!batchTitleGuard.current.current(item.ticket)){skipped++;return;}
-        if("result" in item&&item.result){updateDesign(item.design.id,{title:styledTitle(item.result.title),tags:item.result.tags,titleWarning:item.result.titleWarning,titleError:"",etsy:undefined,etsyError:""});pulseTitle(item.design.id);}
+        if("result" in item&&item.result){updateDesign(item.design.id,{title:styledTitle(item.result.title),tags:item.result.tags,titleWarning:item.result.titleWarning,titleError:"",etsyError:""});pulseTitle(item.design.id);}
         else if("error" in item){failed++;updateDesign(item.design.id,{titleError:item.error,titleWarning:""});}
         if(batchTitleGuard.current.inScope(sourceScope))setTitleBuildMessage(`Creating ${completed} of ${files.length} titles…`);
       });
