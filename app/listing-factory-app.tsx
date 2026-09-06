@@ -1,4 +1,5 @@
 "use client";
+import { shippingMenuKeyboard } from "./shipping-menu-keyboard";
 import { containModalFocus } from "./modal-focus";
 import { printifyProductLabel, familyFromVariants } from "./mockup-compatibility";
 import { uniqueMockupEntries,correspondingMockupIndices } from "./printify-preview-details";
@@ -832,7 +833,8 @@ function PricingReview({section="all",variants,pricing,prices,productName,profil
   },[profilesLoading,selectedProfileId,profiles,templateShippingProfileId]);
   const templateProfile=profiles.find(profile=>profile.id===Number(templateShippingProfileId||0));
   const [comboOpen,setComboOpen]=useState(false);
-  const comboRef=useRef<HTMLDivElement|null>(null);
+  const comboRef=useRef<HTMLDivElement|null>(null),comboTriggerRef=useRef<HTMLButtonElement|null>(null);
+  function closeShippingMenu(){setComboOpen(false);setProfileSearch("");comboTriggerRef.current?.focus()}
   /* D319 · Clicking away closes the list, the way every other picker behaves. */
   useEffect(()=>{
     if(!comboOpen)return;
@@ -881,9 +883,9 @@ function PricingReview({section="all",variants,pricing,prices,productName,profil
               counting the matches, so the search appeared to do nothing and
               connect to nothing. A native select cannot be filtered while open;
               the control has to own its own list. */}
-          <div className="shipping-combobox" ref={comboRef}>
+          <div className="shipping-combobox" ref={comboRef} onKeyDown={event=>{if(comboOpen)shippingMenuKeyboard(event,event.currentTarget,closeShippingMenu)}}>
             <span className="shipping-combobox-label" id="shipping-combobox-label">Etsy shipping profile</span>
-            <button type="button" className="shipping-combobox-trigger" disabled={profilesLoading}
+            <button ref={comboTriggerRef} type="button" className="shipping-combobox-trigger" disabled={profilesLoading}
               aria-haspopup="listbox" aria-expanded={comboOpen} aria-labelledby="shipping-combobox-label"
               onClick={()=>setComboOpen(open=>!open)}>
               <span>{profilesLoading?"Loading your shipping profiles…":selectedProfile?shippingProfileOptionLabel(selectedProfile):templateProfile?shippingProfileOptionLabel(templateProfile):"Choose your Etsy shipping profile"}</span>
@@ -892,15 +894,14 @@ function PricingReview({section="all",variants,pricing,prices,productName,profil
             {comboOpen&&<div className="shipping-combobox-panel">
               <input className="shipping-combobox-search" type="search" autoFocus value={profileSearch}
                 placeholder={`Search ${profiles.length} shipping profiles`} aria-label="Search shipping profiles"
-                onChange={event=>setProfileSearch(event.target.value)}
-                onKeyDown={event=>{if(event.key==="Escape"){setComboOpen(false);setProfileSearch("")}}}/>
+                onChange={event=>setProfileSearch(event.target.value)}/>
               <div className="shipping-combobox-list" role="listbox" aria-labelledby="shipping-combobox-label">
                 {comboGroups.map(group=>group.items.length>0&&<Fragment key={group.label}>
                   <p className="shipping-combobox-group">{group.label}</p>
                   {group.items.map(profile=><button type="button" role="option" key={profile.id}
                     aria-selected={profile.id===selectedProfileId}
                     className={`shipping-combobox-option${profile.id===selectedProfileId?" selected":""}`}
-                    onClick={()=>{chooseProfile(profile.id);setComboOpen(false);setProfileSearch("")}}>
+                    onClick={()=>{chooseProfile(profile.id);closeShippingMenu()}}>
                     {shippingProfileOptionLabel(profile)}
                   </button>)}
                 </Fragment>)}

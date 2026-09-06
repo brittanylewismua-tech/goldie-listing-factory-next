@@ -19,8 +19,9 @@ test("D1053: opening listing photos refreshes every Printify-generated mockup",a
 
 test("D1053: photo ordering works in both directions and persists the live order",async()=>{
   const order=await read("app/listing-photo-order.tsx");
-  assert.match(order,/nudge\(id,-1\)/);
-  assert.match(order,/nudge\(id,1\)/);
+  assert.match(order,/nudge\(id,-1,event\.detail===0\)/);
+  assert.match(order,/nudge\(id,1,event\.detail===0\)/);
+  assert.match(order,/focusPhotoMoveControl\(stripRef\.current,move\.id,move\.direction\)/);
   assert.match(order,/orderRef\.current=current;setOrder\(current\);void save\(current\)/);
   assert.match(order,/setData\("text\/plain",id\)/);
 });
