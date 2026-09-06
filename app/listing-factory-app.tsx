@@ -5,6 +5,7 @@ import { applyProductFacts } from "./etsy-product-facts";
 import { draftsInDesignOrder } from "./listing-order";
 import { mergeMatchingDrafts, serializedBatchWrites } from "./batch-draft-integrity";
 import { requestEtsyOptions } from "./etsy-options-request";
+import { recoverDraftEtsyDetails } from "./recover-draft-etsy-details";
 import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import Image from "next/image";
@@ -123,7 +124,7 @@ type EtsyShippingProfile={id:number;title:string;originCountry:string;currency:s
 type TemplateDetails = { id: string; batchId: string; title: string; description:string; blueprintId:number;blueprintTitle:string;brand:string;model:string;provider: string; enabledVariants: number;previewImage?:string;previewImages?:string[];productRenderings?:Array<{src:string;variantIds:number[];position:string}>;colorOptions?:ProductColor[];sizeOptions?:ProductSize[]; variants:ProductVariant[];printPositions?:string[]; shop: string; standardShipping?:number|null;shippingCurrency?:string;shippingTemplateId:string;shippingProfileNeedsSelection?:boolean;freeShipping:boolean;maxPrintWidth?: number | null; maxPrintHeight?: number | null; placementScale?: number | null; hasLabelArtwork?: boolean };
 type ArtworkSummary=Record<string,Array<{name:string;colors:string[]}>>;
 type DraftCostReview={required:boolean;verified:boolean;approved:boolean;variants:Array<{id:number;title?:string;cost:number;price:number;isEnabled:boolean}>};
-type DraftResult = { id?: string; batchId?: string; clientId: string; name: string; title?: string; tags?: string[]; previewUrl?: string; artworkPreviewUrls?:Record<string,string>; artworkOverridePreviewUrls?:Record<string,string>; printifyImages?: string[]; printifyImageDetails?:Array<{src:string;variantIds:number[];position:string}>; colorPreviewImageDetails?:Array<{src:string;variantIds:number[];position:string}>; selectedVariantIds?:number[]; shopId?: number; editorUrl?: string; status: "Created" | "Failed" | "NeedsRetry"; error?: string; productName?:string; placement?:{x:number;y:number;scale:number;angle:number};placementScale?:number;artworkSummary?:ArtworkSummary;artworkOverrides?:Record<string,{name:string;position:string}>;primaryArtworkImageIds?:Record<string,string>;priceEdits?:Record<string,number>;costReview?:DraftCostReview };
+type DraftResult = { id?: string; batchId?: string; clientId: string; name: string; title?: string; tags?: string[]; previewUrl?: string; artworkPreviewUrls?:Record<string,string>; artworkOverridePreviewUrls?:Record<string,string>; printifyImages?: string[]; printifyImageDetails?:Array<{src:string;variantIds:number[];position:string}>; colorPreviewImageDetails?:Array<{src:string;variantIds:number[];position:string}>; selectedVariantIds?:number[]; shopId?: number; editorUrl?: string; status: "Created" | "Failed" | "NeedsRetry"; error?: string; productName?:string; placement?:{x:number;y:number;scale:number;angle:number};placementScale?:number;artworkSummary?:ArtworkSummary;artworkOverrides?:Record<string,{name:string;position:string}>;primaryArtworkImageIds?:Record<string,string>;priceEdits?:Record<string,number>;etsyDetails?:EtsyDetails;costReview?:DraftCostReview };
 type WorkflowStep = "connect" | "setup" | "designs" | "review" | "finish";
 type FinishPhase = "details" | "etsy" | "mockups" | "final";
 type PendingCategoryChange={designId:string;details:EtsyDetails;clearedCount:number};
@@ -1983,7 +1984,7 @@ export default function ListingFactoryApp() {
       const artworkPreviewUrl=file?URL.createObjectURL(file):"";
       const previewUrl=draft?.previewUrl||draft?.printifyImages?.[0]||artworkPreviewUrl;
       const artworkVersions=(design.artworkVersions||[]).map(artwork=>{const artworkFile=cachedArtwork[`${design.id}:${artwork.id}`];return {...artwork,file:artworkFile||new File([],artwork.name,{type:"application/octet-stream"}),previewUrl:artworkFile?URL.createObjectURL(artworkFile):"",originalUnavailable:!artworkFile}});
-      return restoreAuthoritativeProductFacts({...design,artworkVersions,file:file||new File([],design.name,{type:"application/octet-stream"}),previewUrl,artworkPreviewUrl,originalUnavailable:!file} as DesignFile,state.templateDetails||null,state.activeRecipe);
+      return restoreAuthoritativeProductFacts(recoverDraftEtsyDetails({...design,artworkVersions,file:file||new File([],design.name,{type:"application/octet-stream"}),previewUrl,artworkPreviewUrl,originalUnavailable:!file} as DesignFile,draft),state.templateDetails||null,state.activeRecipe);
     }) as DesignFile[];
     /* D632 - IndexedDB belongs to one browser profile, not one computer. Losing
        that cache must never delete the server-saved design records: existing
