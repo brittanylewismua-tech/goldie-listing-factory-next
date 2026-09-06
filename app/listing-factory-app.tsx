@@ -5401,7 +5401,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
             <section className="final-handoff-steps" aria-label="Finish each listing">
               <h3>Finish each listing</h3>
               <ol>
-                <li><b>Add your photo set</b><span>Open Photos &amp; download above. Unzip the files, choose Upload under Selected mockups in Printify, keep Replace previous mockup selection checked, and confirm the numbered order.</span></li>
+                <li><b>Add your photo set</b><span>Expand a listing above and choose Photos &amp; download. Unzip the files, choose Upload under Selected mockups in Printify, keep Replace previous mockup selection checked, and confirm the numbered order.</span></li>
                 <li><b>Review in Printify</b><span>Confirm shipping and personalization. Select Tags under Sync product details before publishing.</span></li>
                 <li><b>Check Etsy details</b><span>After publishing, confirm the category and attributes in Etsy. Your saved choices here are the reference.</span></li>
               </ol>
