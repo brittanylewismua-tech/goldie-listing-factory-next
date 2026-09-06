@@ -1564,8 +1564,8 @@ test("downloads each listing's selected Printify photos and uploaded photos as o
   assert.match(page,/Preparing photos…/);
   assert.match(page,/printifyImageIndices:indices/);
   assert.match(route,/SELECT response_json FROM printify_draft_results/);
-  assert.match(route,/01-printify/);
-  assert.match(route,/02-additional-photos/);
+  assert.match(route,/orderedPackagePhotos\(available,.*objects.objects,prefix,order\)/);
+  assert.match(route,/await loadPhotoPackage\(photos/);
   assert.match(route,/zipSync/);
   assert.match(styles,/\.listing-photo-download/);
 });

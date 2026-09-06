@@ -30,7 +30,7 @@ test("seller uploads are exact-listing photos that publish, reorder, download an
   assert.match(images,/id!==`stored:\$\{key\}`/,"removal also clears the saved order");
   assert.match(order,/image\.kind==="mockup"\|\|image\.kind==="uploaded"/);
   assert.match(finish,/object\.key\.includes\("\/mockup\/"\)\|\|object\.key\.includes\("\/upload\/"\)/);
-  assert.match(download,/object\.key\.includes\("\/mockup\/"\)\|\|object\.key\.includes\("\/upload\/"\)/);
+  assert.match(download,/orderedPackagePhotos\(available,.*objects.objects,prefix,order\)/,"ordered package membership includes uploads; behavior covered by listing-photo-package tests");
   assert.doesNotMatch(app,/<IntegratedMockups|<MockupSetSelector|Adjust placement|Create lifestyle mockups/);
   assert.doesNotMatch(nav,/Mockup Library|href:"\/mockups"/);
 });
