@@ -1163,6 +1163,13 @@ export default function ListingFactoryApp() {
   const [restartingBatch,setRestartingBatch]=useState(false);
   const [batchDisplayName,setBatchDisplayName]=useState("");
   const [savingDraftBatch,setSavingDraftBatch]=useState(false);
+  useEffect(()=>{
+    if(!restartBatchOpen&&!preflightOpen)return;
+    const restore=containModalFocus(restartBatchOpen?"restart-batch-title":"preflight-title");
+    const close=(event:KeyboardEvent)=>{if(event.key==="Escape"&&!restartingBatch&&!running){event.preventDefault();setRestartBatchOpen(false);setPreflightOpen(false)}};
+    window.addEventListener("keydown",close);
+    return()=>{window.removeEventListener("keydown",close);restore()};
+  },[restartBatchOpen,preflightOpen,restartingBatch,running]);
   const saveDialogOpener=useRef<HTMLElement|null>(null);
   useEffect(()=>{
     if(!draftSaveOpen&&!draftSavedOpen)return;

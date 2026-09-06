@@ -1,7 +1,7 @@
 /** Contain keyboard focus in an already-mounted modal and restore its opener. */
 export function containModalFocus(label: string, restoreTarget?: HTMLElement | null) {
   const opener = restoreTarget ?? (document.activeElement instanceof HTMLElement ? document.activeElement : null);
-  const dialog = [...document.querySelectorAll<HTMLElement>('[role="dialog"]')].find(node => node.getAttribute("aria-label") === label || node.getAttribute("aria-labelledby") === label);
+  const dialog = [...document.querySelectorAll<HTMLElement>('[role="dialog"],[role="alertdialog"]')].find(node => node.getAttribute("aria-label") === label || node.getAttribute("aria-labelledby") === label);
   if (!dialog) return () => {};
   const controls = () => [...dialog.querySelectorAll<HTMLElement>('button:not(:disabled),a[href],input:not(:disabled),select:not(:disabled),textarea:not(:disabled),[tabindex="0"]')].filter(node => node.getClientRects().length);
   if (!dialog.contains(document.activeElement)) controls()[0]?.focus();
