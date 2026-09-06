@@ -39,6 +39,6 @@ export async function POST(request:Request){
     files[`02-additional-photos/${String(position+1).padStart(2,"0")}-${safeName(name)}`]=bytes;
   }
   if(!Object.keys(files).length)return NextResponse.json({error:"Choose at least one Printify photo or upload a listing photo first."},{status:400});
-  const zip=zipSync(files,{level:0});
+  const zip=zipSync(files,{level:0}) as Uint8Array<ArrayBuffer>;
   return new Response(zip,{headers:{"Content-Type":"application/zip","Content-Disposition":`attachment; filename="${base}-listing-photos.zip"`,"Cache-Control":"private, no-store"}});
 }

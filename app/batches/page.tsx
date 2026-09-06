@@ -28,7 +28,7 @@ export default function BatchesPage() {
      into a single decision. */
   const [selected,setSelected] = useState<string[]>([]);
   const [deleting,setDeleting] = useState(false);
-  useEffect(() => { fetch("/api/batches").then(response => response.json()).then(data => setBatches(data.batches || [])).finally(() => setLoading(false)); }, []);
+  useEffect(() => { fetch("/api/batches").then(response => response.json() as Promise<{batches?:Batch[]}>).then(data => setBatches(data.batches || [])).finally(() => setLoading(false)); }, []);
   function resume(batch:Batch) { window.location.href = `/listing-factory?batch=${encodeURIComponent(batch.id)}${batch.status==="complete"?"&open=results":""}`; }
   function toggleSelected(id:string){setSelected(current=>current.includes(id)?current.filter(item=>item!==id):[...current,id])}
 

@@ -18,7 +18,7 @@ export default function NewBuildNotice(){
     const check=async()=>{
       if(stopped||document.visibilityState==="hidden")return;
       try{
-        const answer=await fetch("/api/version",{cache:"no-store"}).then(response=>response.ok?response.json():null);
+        const answer=await fetch("/api/version",{cache:"no-store"}).then(response=>response.ok?response.json() as Promise<{build?:unknown;commit?:unknown}>:null);
         const live=answer&&typeof answer.build==="string"?answer.build:"";
         /* D629 - this compared the hand-bumped marker only, so a deploy where
            the bump was forgotten was a deploy this notice stayed silent for.

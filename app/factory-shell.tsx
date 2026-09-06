@@ -52,20 +52,20 @@ export default function FactoryShell({ active, title, children }:
   const [switching, setSwitching] = useState(0);
 
   useEffect(() => {
-    void fetch("/api/usage").then(response => response.json()).then((result: { plan?: { drafts: number }; usage?: { drafts: number } }) => {
+    void (fetch("/api/usage").then(response => response.json()) as Promise<{ plan?: { drafts: number }; usage?: { drafts: number } }>).then((result: { plan?: { drafts: number }; usage?: { drafts: number } }) => {
       if (result.plan && result.usage) setUsage({ used: result.usage.drafts, limit: result.plan.drafts });
     }).catch(() => undefined);
-    void fetch("/api/seller-preferences").then(response => response.json()).then((result: { listingGoal?: ListingGoal }) => {
+    void (fetch("/api/seller-preferences").then(response => response.json()) as Promise<{ listingGoal?: ListingGoal }>).then((result: { listingGoal?: ListingGoal }) => {
       if (result.listingGoal?.enabled) setGoal(result.listingGoal);
     }).catch(() => undefined);
-    void fetch("/api/batches").then(response => response.json()).then((result: { prepared?: PublishedDay[] }) => {
+    void (fetch("/api/batches").then(response => response.json()) as Promise<{ prepared?: PublishedDay[] }>).then((result: { prepared?: PublishedDay[] }) => {
       setGoalDays(result.prepared || []);
       setGoalDaysLoaded(true);
     }).catch(() => undefined);
-    void fetch("/api/etsy").then(response => response.json()).then((result: { shops?: { shopId: number; shopName: string; active: boolean }[] }) => {
+    void (fetch("/api/etsy").then(response => response.json()) as Promise<{ shops?: { shopId: number; shopName: string; active: boolean }[] }>).then((result: { shops?: { shopId: number; shopName: string; active: boolean }[] }) => {
       setShops(result.shops || []);
     }).catch(() => undefined);
-    void fetch("/api/account").then(response => response.json()).then((result: { signedIn?: boolean; name?: string; initials?: string }) => {
+    void (fetch("/api/account").then(response => response.json()) as Promise<{ signedIn?: boolean; name?: string; initials?: string }>).then((result: { signedIn?: boolean; name?: string; initials?: string }) => {
       setAccount({ signedIn: Boolean(result.signedIn), name: result.name || "", initials: result.initials || "" });
     }).catch(() => undefined);
   }, []);

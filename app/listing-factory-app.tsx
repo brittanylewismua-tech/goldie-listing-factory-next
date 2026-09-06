@@ -1181,7 +1181,7 @@ export default function ListingFactoryApp() {
     return product.previewImage||(product.previewImages||[]).find(Boolean)||"";
   }
   const [keywordBanks,setKeywordBanks]=useState<Array<{id:string;name:string}>>([]);
-  useEffect(()=>{void fetch("/api/keyword-lists").then(r=>r.json()).then((payload:{lists?:Array<{id?:string;name?:string}>})=>setKeywordBanks((payload.lists||[]).map(list=>({id:String(list.id||""),name:String(list.name||"Bank")})).filter(list=>list.id))).catch(()=>undefined);},[]);
+  useEffect(()=>{void (fetch("/api/keyword-lists").then(r=>r.json()) as Promise<{lists?:Array<{id?:string;name?:string}>}>).then((payload:{lists?:Array<{id?:string;name?:string}>})=>setKeywordBanks((payload.lists||[]).map(list=>({id:String(list.id||""),name:String(list.name||"Bank")})).filter(list=>list.id))).catch(()=>undefined);},[]);
   /* Readiness is computed per product, never read from setupComplete. */
   function readinessFor(product:TemplateDetails,recipe:Recipe|null,approved?:boolean):Readiness{
     const compatible:string[]=[];
@@ -1263,8 +1263,8 @@ export default function ListingFactoryApp() {
   useEffect(()=>{
     if(restoringBatch||!batchIdRef.current)return;
     let alive=true;
-    void fetch(`/api/batches?id=${encodeURIComponent(batchIdRef.current)}`)
-      .then(response=>response.ok?response.json():null)
+    void (fetch(`/api/batches?id=${encodeURIComponent(batchIdRef.current)}`)
+      .then(response=>response.ok?response.json():null) as Promise<{authoritativeReceipt?:BatchReceipt|null}|null>)
       .then((payload:{authoritativeReceipt?:BatchReceipt|null}|null)=>{
         if(alive&&payload?.authoritativeReceipt?.publishedCount)setBatchReceipt(payload.authoritativeReceipt);
       }).catch(()=>undefined);
@@ -1317,11 +1317,11 @@ export default function ListingFactoryApp() {
      itself is unchanged so the sign-out route and return_to are preserved. */
   const [accountMenuOpen,setAccountMenuOpen]=useState(false);
   useEffect(()=>{if(signedIn!==true)return;
-    void fetch("/api/seller-preferences").then(response=>response.json()).then((result:{listingGoal?:ListingGoal})=>{
+    void (fetch("/api/seller-preferences").then(response=>response.json()) as Promise<{listingGoal?:ListingGoal}>).then((result:{listingGoal?:ListingGoal})=>{
       if(result.listingGoal?.enabled)setListingGoal(result.listingGoal)}).catch(()=>undefined);
   },[signedIn]);
   useEffect(()=>{if(!listingGoal)return;
-    void fetch("/api/batches").then(response=>response.json()).then((result:{prepared?:PublishedDay[]})=>{
+    void (fetch("/api/batches").then(response=>response.json()) as Promise<{prepared?:PublishedDay[]}>).then((result:{prepared?:PublishedDay[]})=>{
       setGoalDays(result.prepared||[]);setGoalDaysLoaded(true)}).catch(()=>undefined);
   },[listingGoal,batchReceipt]);
   const goalDone=listingGoal?publishedDaysThisPeriod(goalDays,listingGoal):0;
@@ -2065,8 +2065,8 @@ export default function ListingFactoryApp() {
   function announceShop(recipeId:string,title:string,shopId:number){
     window.dispatchEvent(new CustomEvent("goldie-recipe-shop",{detail:{recipeId,title,shopId}}));
   }
-  useEffect(()=>{void fetch("/api/etsy").then(response=>response.json()).then((result:{shops?:{shopId:number;shopName:string;active:boolean}[]})=>setEtsyShops(result.shops||[])).catch(()=>undefined)},[]);
-  useEffect(()=>{setLocalPreview(["localhost","127.0.0.1"].includes(window.location.hostname));fetch("/api/account").then(response=>response.json()).then((result:{signedIn?:boolean;name?:string|null;initials?:string|null})=>{setSignedIn(Boolean(result.signedIn));setAccountName(result.name||null);setAccountInitials(result.initials||null)}).catch(()=>setSignedIn(null))},[]);
+  useEffect(()=>{void (fetch("/api/etsy").then(response=>response.json()) as Promise<{shops?:{shopId:number;shopName:string;active:boolean}[]}>).then((result:{shops?:{shopId:number;shopName:string;active:boolean}[]})=>setEtsyShops(result.shops||[])).catch(()=>undefined)},[]);
+  useEffect(()=>{setLocalPreview(["localhost","127.0.0.1"].includes(window.location.hostname));(fetch("/api/account").then(response=>response.json()) as Promise<{signedIn?:boolean;name?:string|null;initials?:string|null}>).then((result:{signedIn?:boolean;name?:string|null;initials?:string|null})=>{setSignedIn(Boolean(result.signedIn));setAccountName(result.name||null);setAccountInitials(result.initials||null)}).catch(()=>setSignedIn(null))},[]);
   useEffect(()=>{if(signedIn!==true||publishing)return;const jobId=window.localStorage.getItem("goldie-active-publish-job");if(jobId)void monitorPublishJob(jobId,true);
   },[signedIn]);
 
@@ -2173,16 +2173,16 @@ export default function ListingFactoryApp() {
   },[restoringBatch,workflowStep,finishPhase,template,templateDetails,description,pricing,selectedColorIds,selectedSizeIds,variantPrices,etsyShippingProfileId,pricingApproved,mockupTheme,activeRecipe,activeBundle,bundleRecipes,bundleIndex,files.map(file=>`${file.id}:${file.title}:${file.tags.join("|")}:${file.blurb||""}:${file.descriptionOverride??""}:${file.sizeGuideName||""}:${JSON.stringify(file.etsy||{})}`).join(";"),drafts,complete,running,bulkTitles,batchKeywords,titleJoiner,titleBuilderMode,autoTitleBankId,manualKeywordBankId,sharedMockups,preparedMockupCounts,printifyImageIndices,printifyImageSelections,sizeGuideName,batchDisplayName,keptAsDrafts,batchReceipt]);
 
   useEffect(() => {
-    fetch("/api/printify")
-      .then((response) => response.json())
+    (fetch("/api/printify")
+      .then((response) => response.json()) as Promise<{ connected?: boolean; owner?: boolean; reason?: string; warning?: string }>)
       .then((result: { connected?: boolean; owner?: boolean; reason?: string; warning?: string }) => { setConnected(Boolean(result.connected)); setOwner(Boolean(result.owner)); if (result.reason || result.warning) setConnectionError(result.reason || result.warning || ""); })
       .catch(() => setConnected(false))
       .finally(() => setCheckingConnection(false));
   }, []);
 
-  useEffect(()=>{fetch("/api/seller-preferences").then(response=>response.json()).then((result:{pricing?:Partial<Pricing>|null})=>{if(!result.pricing)return;setPricing(current=>({...current,etsyFeePercent:Number(result.pricing?.etsyFeePercent??current.etsyFeePercent),fixedFee:Number(result.pricing?.fixedFee??current.fixedFee),listingFee:Number(result.pricing?.listingFee??current.listingFee)}))}).catch(()=>undefined)},[]);
+  useEffect(()=>{(fetch("/api/seller-preferences").then(response=>response.json()) as Promise<{pricing?:Partial<Pricing>|null}>).then((result:{pricing?:Partial<Pricing>|null})=>{if(!result.pricing)return;setPricing(current=>({...current,etsyFeePercent:Number(result.pricing?.etsyFeePercent??current.etsyFeePercent),fixedFee:Number(result.pricing?.fixedFee??current.fixedFee),listingFee:Number(result.pricing?.listingFee??current.listingFee)}))}).catch(()=>undefined)},[]);
 
-  useEffect(()=>{fetch("/api/etsy").then(response=>response.json()).then((result:{connected?:boolean;shopName?:string;error?:string})=>{setEtsyConnected(Boolean(result.connected));setEtsyShop(result.shopName||"");if(result.error)setEtsyError(result.error)}).catch(()=>setEtsyConnected(false)).finally(()=>setCheckingEtsyConnection(false));const message=new URL(window.location.href).searchParams.get("etsy");if(message){if(message==="connected"){setEtsyConnected(true);setEtsyError("")}else setEtsyError(message);const url=new URL(window.location.href);url.searchParams.delete("etsy");window.history.replaceState({},"",url)}},[]);
+  useEffect(()=>{(fetch("/api/etsy").then(response=>response.json()) as Promise<{connected?:boolean;shopName?:string;error?:string}>).then((result:{connected?:boolean;shopName?:string;error?:string})=>{setEtsyConnected(Boolean(result.connected));setEtsyShop(result.shopName||"");if(result.error)setEtsyError(result.error)}).catch(()=>setEtsyConnected(false)).finally(()=>setCheckingEtsyConnection(false));const message=new URL(window.location.href).searchParams.get("etsy");if(message){if(message==="connected"){setEtsyConnected(true);setEtsyError("")}else setEtsyError(message);const url=new URL(window.location.href);url.searchParams.delete("etsy");window.history.replaceState({},"",url)}},[]);
   async function loadEtsyShippingProfiles(preselect=0){setShippingProfilesLoading(true);setShippingProfilesError("");try{const response=await fetch("/api/etsy/shipping-profiles"),result=await response.json() as {profiles?:EtsyShippingProfile[];error?:string};if(!response.ok)throw new Error(result.error||"Your Etsy shipping profiles could not be loaded.");const profiles=(result.profiles||[]).map(profile=>({...profile,title:profile.title.replace(/\.{2,}$/,"…")}));setEtsyShippingProfiles(profiles);setEtsyShippingProfileId(current=>{const wanted=preselect||current;return wanted&&profiles.some(profile=>profile.id===wanted)?wanted:0})}catch(error){setShippingProfilesError(error instanceof Error?error.message:"Your Etsy shipping profiles could not be loaded.")}finally{setShippingProfilesLoading(false)}}
   useEffect(()=>{if(etsyConnected)void loadEtsyShippingProfiles()},[etsyConnected]);
   useEffect(()=>{const templateProfileId=Number(templateDetails?.shippingTemplateId);if(!templateProfileId||!etsyShippingProfiles.some(profile=>profile.id===templateProfileId))return;setEtsyShippingProfileId(current=>current||templateProfileId)},[templateDetails?.shippingTemplateId,etsyShippingProfiles]);
@@ -2726,7 +2726,7 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
     let alive=true;
     const memberScratch:Record<string,{recipeId:string;productName:string;pricingApproved?:boolean;drafts:DraftResult[];designs:Array<Omit<DesignFile,"file"|"previewUrl">>;selections:Record<string,number[]>;indices:number[];shippingProfileId:number;sizeGuideName:string;preparedMockupCounts:Record<string,number>}>={};
     void (async()=>{
-    const listing=await fetch("/api/batches").then(response=>response.ok?response.json():null).then((payload:{batches?:Array<{id?:string;status?:string;published_count?:number}>}|null)=>payload?.batches||[]).catch(()=>[] as Array<{id?:string;status?:string;published_count?:number}>);
+    const listing=await (fetch("/api/batches").then(response=>response.ok?response.json():null) as Promise<{batches?:Array<{id?:string;status?:string;published_count?:number}>}|null>).then((payload:{batches?:Array<{id?:string;status?:string;published_count?:number}>}|null)=>payload?.batches||[]).catch(()=>[] as Array<{id?:string;status?:string;published_count?:number}>);
     await Promise.all(wanted.map(async recipe=>{
       const id=bundleBatchIds[recipe.id];
       const payload=await fetch(`/api/batches?id=${encodeURIComponent(id)}`).then(response=>response.ok?response.json():null).catch(()=>null) as {batch?:{state?:Record<string,unknown>}}|null;
@@ -3127,7 +3127,7 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
     if(task==="draft-pricing"){
       const ownerPrefix=`${activeRecipe?.id||""}:`;
       const groups=costReviewGroups().filter(group=>group.key.startsWith(ownerPrefix));
-      return <div className="post-draft-pricing-panel" aria-label="Edit item prices">{groups.length?groups.map(group=>{const approved=group.drafts.every(draft=>draft.costReview?.approved),verified=group.drafts.every(draft=>draft.costReview?.verified),groupPrices=draftPriceEdits(group.drafts[0]),actualVariants=group.review.variants.filter(variant=>variant.isEnabled).map(variant=>({...variant,templatePrice:variant.price,shipping:0}));return <section className="editable-draft-pricing" key={group.key}>{groups.length>1&&<h3 className="draft-price-group-title">Prices for {group.drafts.length===1?"listing":"listings"} {group.drafts.map(draft=>drafts.findIndex(item=>item.id===draft.id)+1).join(", ")}</h3>}<PricingReview section="prices" variants={actualVariants} pricing={pricing} prices={groupPrices} productName={group.productName} profiles={etsyShippingProfiles} selectedProfileId={etsyShippingProfileId} templateShippingProfileId={Number(templateDetails?.shippingTemplateId)||0} profilesLoading={shippingProfilesLoading} profilesError={shippingProfilesError} approved={approved} preserveEdits={Boolean(group.drafts[0].priceEdits)} wholeNumber={activeRecipe?.wholeNumberPricing===true} onPricing={value=>{setPricing(value);setPricingApproved(false)}} onPrices={value=>{const ids=new Set(group.drafts.flatMap(draft=>draft.id?[draft.id]:[]));setDrafts(current=>updateDraftPriceEdits(current,ids,value));setPricingApproved(false)}} onSelectProfile={()=>undefined} onCreateProfile={createCustomShippingProfile} onApprovalChange={()=>undefined}/>{approved?<p className="pricing-approved-state" role="status"><span aria-hidden="true">✓</span> Prices saved</p>:<button type="button" className="save-draft-prices" disabled={savingDraftVariants||!verified||Boolean(pricingApprovalGroup)} onClick={()=>void approveActualPricingGroup(group,groupPrices)}>{savingDraftVariants?"Saving product choices…":pricingApprovalGroup===group.key?"Saving prices…":verified?"Save these prices":"Costs still loading"}</button>}</section>}):<p className="task-panel-empty">Printify is still calculating the finished product costs.</p>}</div>;
+      return <div className="post-draft-pricing-panel" aria-label="Edit item prices">{groups.length?groups.map(group=>{const approved=group.drafts.every(draft=>draft.costReview?.approved),verified=group.drafts.every(draft=>draft.costReview?.verified),groupPrices=draftPriceEdits(group.drafts[0]),actualVariants=group.review.variants.filter(variant=>variant.isEnabled).map(variant=>({...variant,title:variant.title||"",templatePrice:variant.price,shipping:0}));return <section className="editable-draft-pricing" key={group.key}>{groups.length>1&&<h3 className="draft-price-group-title">Prices for {group.drafts.length===1?"listing":"listings"} {group.drafts.map(draft=>drafts.findIndex(item=>item.id===draft.id)+1).join(", ")}</h3>}<PricingReview section="prices" variants={actualVariants} pricing={pricing} prices={groupPrices} productName={group.productName} profiles={etsyShippingProfiles} selectedProfileId={etsyShippingProfileId} templateShippingProfileId={Number(templateDetails?.shippingTemplateId)||0} profilesLoading={shippingProfilesLoading} profilesError={shippingProfilesError} approved={approved} preserveEdits={Boolean(group.drafts[0].priceEdits)} wholeNumber={activeRecipe?.wholeNumberPricing===true} onPricing={value=>{setPricing(value);setPricingApproved(false)}} onPrices={value=>{const ids=new Set(group.drafts.flatMap(draft=>draft.id?[draft.id]:[]));setDrafts(current=>updateDraftPriceEdits(current,ids,value));setPricingApproved(false)}} onSelectProfile={()=>undefined} onCreateProfile={createCustomShippingProfile} onApprovalChange={()=>undefined}/>{approved?<p className="pricing-approved-state" role="status"><span aria-hidden="true">✓</span> Prices saved</p>:<button type="button" className="save-draft-prices" disabled={savingDraftVariants||!verified||Boolean(pricingApprovalGroup)} onClick={()=>void approveActualPricingGroup(group,groupPrices)}>{savingDraftVariants?"Saving product choices…":pricingApprovalGroup===group.key?"Saving prices…":verified?"Save these prices":"Costs still loading"}</button>}</section>}):<p className="task-panel-empty">Printify is still calculating the finished product costs.</p>}</div>;
     }
     if(task==="draft-shipping"&&templateDetails)return <div className="post-draft-shipping-review"><PricingReview section="shipping" variants={pricedVariants} pricing={pricing} prices={variantPrices} productName={classifyingProductName||templateDetails.blueprintTitle} profiles={etsyShippingProfiles} selectedProfileId={etsyShippingProfileId} templateShippingProfileId={Number(templateDetails.shippingTemplateId)||0} profilesLoading={shippingProfilesLoading} profilesError={shippingProfilesError} approved={pricingApproved} onPricing={setPricing} onPrices={setVariantPrices} onSelectProfile={value=>{setEtsyShippingProfileId(value);setPricingApproved(Boolean(value)&&costReviewDrafts().every(draft=>!draft.costReview?.required||draft.costReview.approved));if(activeRecipe&&value!==Number(activeRecipe.etsyShippingProfileId))void establish(activeRecipe,{etsyShippingProfileId:value})}} onCreateProfile={createCustomShippingProfile} onApprovalChange={setPricingApproved}/></div>;
     const listings=drafts.map(draft=>({draft,design:files.find(file=>file.id===draft.clientId),selectedImages:draft.id?(printifyImageSelections[draft.id]??printifyImageIndices):printifyImageIndices}));

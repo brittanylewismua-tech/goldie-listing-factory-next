@@ -30,8 +30,8 @@ export default function KeywordBanks() {
     const form=document.querySelector(".management-create");
     if(form)window.scrollTo(0,form.getBoundingClientRect().top+window.scrollY-20);
   },[scrollToEditor,savedId]);
-  const reload=()=>fetch("/api/keyword-lists").then(r=>r.json()).then(r=>setLists(r.lists||[]));
-  useEffect(()=>{void reload();fetch("/api/product-recipes").then(r=>r.json()).then(r=>setProducts(r.recipes||[])).catch(()=>setProducts([]));const batch=window.localStorage.getItem("goldie-active-batch");setReturnHref(batch?`/?batch=${encodeURIComponent(batch)}`:"/")},[]);
+  const reload=()=>fetch("/api/keyword-lists").then(r=>r.json() as Promise<{lists?:List[]}>).then(r=>setLists(r.lists||[]));
+  useEffect(()=>{void reload();fetch("/api/product-recipes").then(r=>r.json() as Promise<{recipes?:ProductUse[]}>).then(r=>setProducts(r.recipes||[])).catch(()=>setProducts([]));const batch=window.localStorage.getItem("goldie-active-batch");setReturnHref(batch?`/?batch=${encodeURIComponent(batch)}`:"/")},[]);
   useEffect(()=>{if(!notice)return;const timer=window.setTimeout(()=>setNotice(null),5000);return()=>window.clearTimeout(timer)},[notice]);
   const words=useMemo(()=>phrasesFromErank(raw.replace(/;/g,"\n")),[raw]);
   const associatedProducts=products.filter(product=>product.keywordListId===savedId);

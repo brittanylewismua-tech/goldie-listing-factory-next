@@ -11,7 +11,7 @@ export type Pricing = { targetProfit: number; etsyFeePercent: number; fixedFee: 
    batch — which currently fills only 2–3 of 11 fields and is not stable
    across listings in the same batch. */
 export type RecipeEtsyDefaults = Record<string, string | number | null>;
-export type Recipe = { id: string; name: string; templateUrl: string; description: string; defaultTitle: string; defaultMockupTheme?:string; mockupIds?:string[]; setupComplete?:boolean; defaultProfitTarget?:number;wholeNumberPricing?:boolean;variantPrices?:Record<string,number>; keywordListId?:string; printifyImageIndices?:number[]; normalizePadding?:boolean;etsyShippingProfileId?:number;defaultColorIds?:number[];defaultSizeIds?:number[];etsyDefaults?:RecipeEtsyDefaults;printifyShopTitle?:string;printifyShopId?:number;
+export type Recipe = { previewImage?:string; id: string; name: string; templateUrl: string; description: string; defaultTitle: string; defaultMockupTheme?:string; mockupIds?:string[]; setupComplete?:boolean; defaultProfitTarget?:number;wholeNumberPricing?:boolean;variantPrices?:Record<string,number>; keywordListId?:string; printifyImageIndices?:number[]; normalizePadding?:boolean;etsyShippingProfileId?:number;defaultColorIds?:number[];defaultSizeIds?:number[];etsyDefaults?:RecipeEtsyDefaults;printifyShopTitle?:string;printifyShopId?:number;
   requiresColorSelection?:boolean;requiresSizeSelection?:boolean;
   /* D835 · Whether this product's Printify store can publish to the Etsy shop
      the seller is working in. "away" means a proof says it publishes somewhere
@@ -216,7 +216,7 @@ export function SavedWorkflow(props: WorkflowProps) {
     return { away, stores: [...new Set(away.map(recipe => recipe.printifyShopTitle || "another store"))] };
   };
 
-  const reload = () => Promise.all([fetch("/api/product-recipes").then((r) => r.json()),fetch("/api/product-bundles").then(r=>r.json())]).then(([products,groups])=>{setRecipes(products.recipes||[]);setActiveShop(products.activeEtsyShop||null);setBundles(groups.bundles||[]);backfillPhotos(products.recipes||[])}).catch(() => undefined).finally(()=>setRecipesLoaded(true));
+  const reload = () => Promise.all([fetch("/api/product-recipes").then((r) => r.json() as Promise<{recipes?:Recipe[];activeEtsyShop?:{shopId:number;shopName:string}|null}>),fetch("/api/product-bundles").then(r=>r.json() as Promise<{bundles?:ProductBundle[]}>)]).then(([products,groups])=>{setRecipes(products.recipes||[]);setActiveShop(products.activeEtsyShop||null);setBundles(groups.bundles||[]);backfillPhotos(products.recipes||[])}).catch(() => undefined).finally(()=>setRecipesLoaded(true));
   /* D848 · Fill in the flatlays the bank never had. D842 remembers a photo when
      a product is OPENED, which leaves every product saved before it showing the
      placeholder garment forever - all five of hers. Ask the server once, only
@@ -227,14 +227,14 @@ export function SavedWorkflow(props: WorkflowProps) {
   function backfillPhotos(loaded:Recipe[]){
     if(photoBackfill.current)return;
     photoBackfill.current=true;
-    void fetch("/api/product-recipes/photos",{method:"POST"}).then(r=>r.ok?r.json():null).then((payload:{photos?:Record<string,string>}|null)=>{
+    void (fetch("/api/product-recipes/photos",{method:"POST"}).then(r=>r.ok?r.json():null) as Promise<{photos?:Record<string,string>}|null>).then((payload:{photos?:Record<string,string>}|null)=>{
       const photos=payload?.photos||{};
       if(!Object.keys(photos).length)return;
       setRecipes(current=>current.map(recipe=>photos[recipe.id]?{...recipe,previewImage:photos[recipe.id]}:recipe));
     }).catch(()=>undefined);
   }
 
-  useEffect(() => { reload(); fetch("/api/keyword-lists").then(r=>r.json()).then(r=>setKeywordLists(r.lists||[])); }, []);
+  useEffect(() => { reload(); fetch("/api/keyword-lists").then(r=>r.json() as Promise<{lists?:KeywordList[]}>).then(r=>setKeywordLists(r.lists||[])); }, []);
   /* Establishing colors, sizes, mockups or a keyword bank saves straight to the
      recipe, but the tiles above were loaded once on mount. Picking 4 colors and
      8 sizes on the hoodie persisted correctly and its card still read "No
@@ -269,7 +269,7 @@ export function SavedWorkflow(props: WorkflowProps) {
 
          The recipe is re-read here so the guard below sees the current choice
          rather than a remembered one. */
-      const current=editingId?await fetch("/api/product-recipes").then(r=>r.ok?r.json():{recipes:[]}).then((payload:{recipes?:Recipe[]})=>(payload.recipes||[]).find(item=>item.id===editingId)).catch(()=>undefined):undefined;
+      const current=editingId?await (fetch("/api/product-recipes").then(r=>r.ok?r.json():{recipes:[]}) as Promise<{recipes?:Recipe[]}>).then((payload:{recipes?:Recipe[]})=>(payload.recipes||[]).find(item=>item.id===editingId)).catch(()=>undefined):undefined;
       const savedChoice=Number(current?.etsyShippingProfileId||existing?.etsyShippingProfileId)||0;
       let shippingProfileId=savedChoice||props.verifiedShippingProfileId||0;
       if (!props.templateVerified) {
@@ -359,7 +359,7 @@ export function SavedWorkflow(props: WorkflowProps) {
 
 let keywordListsCache:KeywordList[]|null=null;
 let keywordListsRequest:Promise<KeywordList[]>|null=null;
-function loadKeywordLists(){if(keywordListsCache)return Promise.resolve(keywordListsCache);if(!keywordListsRequest)keywordListsRequest=fetch("/api/keyword-lists").then(r=>r.json()).then(r=>{keywordListsCache=r.lists||[];return keywordListsCache!}).catch(()=>[]).finally(()=>{keywordListsRequest=null});return keywordListsRequest}
+function loadKeywordLists(){if(keywordListsCache)return Promise.resolve(keywordListsCache);if(!keywordListsRequest)keywordListsRequest=fetch("/api/keyword-lists").then(r=>r.json() as Promise<{lists?:KeywordList[]}>).then(r=>{keywordListsCache=r.lists||[];return keywordListsCache!}).catch(()=>[]).finally(()=>{keywordListsRequest=null});return keywordListsRequest}
 
 export function KeywordBank({ onAdd=()=>undefined,onSelect,title="Choose a keyword bank",copy="Only phrases from this validated bank will be used.",compact=false,selectionOnly=false,initialId="" }: { onAdd?: (keyword: string) => void;onSelect?:(list:KeywordList|null)=>void;title?:string;copy?:string;compact?:boolean;selectionOnly?:boolean;initialId?:string }) {
   const [lists, setLists] = useState<KeywordList[]>([]), [active, setActive] = useState("");

@@ -16,10 +16,10 @@ export default function GoalsPage() {
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    void Promise.all([
+    void (Promise.all([
       fetch("/api/seller-preferences").then((r) => r.json()).catch(() => ({})),
       fetch("/api/batches").then((r) => r.json()).catch(() => ({})),
-    ]).then(([prefs, list]: [{ listingGoal?: ListingGoal }, { prepared?: PublishedDay[] }]) => {
+    ]) as Promise<[{ listingGoal?: ListingGoal }, { prepared?: PublishedDay[] }]>).then(([prefs, list]: [{ listingGoal?: ListingGoal }, { prepared?: PublishedDay[] }]) => {
       setGoal(prefs.listingGoal || null);
       setDays(list.prepared || []);
       setLoaded(true);

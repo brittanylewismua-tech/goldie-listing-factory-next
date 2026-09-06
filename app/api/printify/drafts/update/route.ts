@@ -26,7 +26,7 @@ export async function PATCH(request:Request){
   if(body.placement||body.variantPrices||body.artworkUpdate||body.refreshImages){
     const currentResponse=await fetch(url,{headers:{Authorization:`Bearer ${token}`,"User-Agent":"Goldie-Listing-Factory"}});
     if(!currentResponse.ok)return NextResponse.json({error:`Printify could not load this draft (${currentResponse.status}).`},{status:currentResponse.status});
-    const current=await currentResponse.json() as typeof currentProduct;
+    const current=await currentResponse.json() as NonNullable<typeof currentProduct>;
     currentProduct=current;
     /* D882 · This block is entered for a placement change OR a price approval,
        but everything below dereferences body.placement. Approving finished

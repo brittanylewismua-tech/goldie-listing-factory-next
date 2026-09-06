@@ -13,8 +13,8 @@ export type CommandCenterData={batches:Batch[];recipes:Recipe[];keywords:Keyword
 export function ReturningCommandCenter({printifyConnected,etsyConnected,onUseProduct,onStartBlank,onData}:{printifyConnected:boolean;etsyConnected:boolean;onUseProduct:(recipe:Recipe)=>void;onStartBlank:()=>void;onData?:(data:CommandCenterData)=>void}){
   const [data,setData]=useState<CommandCenterData|null>(null),[loading,setLoading]=useState(true);
   useEffect(()=>{void Promise.all([
-    fetch("/api/batches").then(r=>r.ok?r.json():{batches:[]}),fetch("/api/product-recipes").then(r=>r.ok?r.json():{recipes:[]}),
-    fetch("/api/keyword-lists").then(r=>r.ok?r.json():{lists:[]}),Promise.resolve({templates:[]}),fetch("/api/usage").then(r=>r.ok?r.json():{}),
+    fetch("/api/batches").then(r=>r.ok?r.json() as Promise<{batches?:Batch[]}>:{batches:[]}),fetch("/api/product-recipes").then(r=>r.ok?r.json() as Promise<{recipes?:Recipe[]}>:{recipes:[]}),
+    fetch("/api/keyword-lists").then(r=>r.ok?r.json() as Promise<{lists?:KeywordBank[]}>:{lists:[]}),Promise.resolve({templates:[]}),fetch("/api/usage").then(r=>r.ok?r.json():{}),
   ]).then(([batches,recipes,keywords,mockups,usage])=>{const next={batches:batches.batches||[],recipes:recipes.recipes||[],keywords:keywords.lists||[],mockups:mockups.templates||[],draftsThisMonth:(usage as Usage).usage?.drafts||0};setData(next);onData?.(next)}).finally(()=>setLoading(false))},[]);
   const sets=useMemo(()=>data?[...new Set(data.mockups.map(item=>item.theme))]:[],[data]);
   if(loading)return <section className="command-center-loading"><span/><div><b>Opening your Goldie workspace</b><small>Loading recent products and batches…</small></div></section>;

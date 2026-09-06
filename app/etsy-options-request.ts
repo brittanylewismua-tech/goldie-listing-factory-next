@@ -5,7 +5,7 @@ export async function requestEtsyOptions(body:unknown,request:typeof fetch=fetch
     const response=await request("/api/etsy/taxonomy",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
     const transient=response.status===429||response.status>=500;
     if(transient&&attempt<2){await response.body?.cancel();await pause(500*(attempt+1));continue}
-    const payload=await response.json().catch(()=>null);
+    const payload=await response.json().catch(()=>null) as {selected?:{id:number;path:string};error?:string}|null;
     if(!response.ok||!payload?.selected)throw new Error(payload?.error||"Etsy details are temporarily unavailable. Your work is saved; try this listing again.");
     return payload;
   }

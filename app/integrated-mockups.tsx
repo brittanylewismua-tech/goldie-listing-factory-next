@@ -329,7 +329,7 @@ export default function IntegratedMockups({design,productId,productName="",defau
     owns what, and that distinction is the whole reason this was safe to ship. */
  useEffect(()=>{if(!design)return;const url=URL.createObjectURL(design);setDesignUrl(url);return ()=>URL.revokeObjectURL(url)},[design]);
  const seededDefaults=useRef(false);
- useEffect(()=>{fetch("/api/mockups/library").then(r=>r.json()).then(p=>setLibrary(p.templates||[]));},[]);
+ useEffect(()=>{fetch("/api/mockups/library").then(r=>r.json() as Promise<{templates?:Template[]}>).then(p=>setLibrary(p.templates||[]));},[]);
  /* D566 - `theme` was seeded from defaultTheme at mount and never looked at it
     again, so changing the set in the panel above left every listing showing the
     set it happened to start with. Measured on her hoodie batch: the panel read
