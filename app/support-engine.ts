@@ -16,7 +16,7 @@ function userContext(turns: SupportTurn[], query: string) {
 
 export function supportResponse(query: string, turns: SupportTurn[]): SupportResponse {
   const clean = query.trim();
-  const lower = clean.toLowerCase();
+  const lower = clean.toLowerCase().replace(/’/g, "'");
   const context = userContext(turns, clean);
   const previousArticle = lastArticle(turns);
   const connectionIssue = /(printify|token).{0,30}(won'?t|will not|doesn'?t|does not|can'?t|cannot|not|fail|failing|problem).{0,20}(connect|work|accept)|(token).{0,30}(fail|failing|not work|rejected)|(?:connect|connection).{0,30}(printify|token)|(?:printify|token).{0,20}(connect|connection)/i.test(lower);
@@ -25,6 +25,18 @@ export function supportResponse(query: string, turns: SupportTurn[]): SupportRes
   const draftIssue = /(?:draft|listing).{0,30}(won'?t|will not|doesn'?t|does not|can'?t|cannot|not|fail|problem|create)|(?:create|creating).{0,20}(draft|listing)/i.test(lower);
   const editorIssue = /(?:edit|open|opening).{0,30}(printify|draft|listing)|(?:printify|draft).{0,30}(login|tab|editor|product not found)/i.test(lower);
   const openAllIssue = /open all.{0,30}(won'?t|will not|doesn'?t|does not|can'?t|cannot|not|nothing|fail|problem|work)/i.test(lower);
+
+  // Follow-up buttons must keep the diagnosis moving instead of falling back
+  // to the opening question after the customer has already described it.
+  if (/^it keeps loading$/i.test(lower)) return { text: "Keep this batch open and check your internet connection. If template loading does not finish, use Contact Support with the product name and any visible message. Do not start another batch or create replacement drafts while this one is loading." };
+  if (/^(it stays on connecting|it changes to connecting)$/i.test(lower)) return { text: "Wait about 30 seconds for the connection check to finish. If it stays on Connecting, use Contact Support with your browser and the exact message shown. Never send your Printify token or include it in a screenshot." };
+  if (/^it returns to the button with no message$/i.test(lower)) return { text: "The connection did not finish. Check your internet connection and try Connect Printify once more. If the button returns without a message again, use Contact Support and describe that behavior; do not send the token." };
+  if (/^still processing$/i.test(lower)) return { text: "Let the current batch continue while the progress count is moving. Do not start a second copy. When it finishes, review the results and keep every successful draft." };
+  if (/^they never appear on the page$/i.test(lower)) return { text: "Check that the files are fully downloaded to your computer, then choose them again. Goldie accepts PNG, JPG/JPEG and WebP. If the same files still do not appear, use Contact Support with the file type and any upload message." };
+  if (/^errors appear under the designs$/i.test(lower)) return { text: "Paste the exact error under one failed design. Keep the successful drafts; there is no need to recreate the whole batch." };
+  if (/^(yes,? it opens normally|they open and are png\/jpg\/webp)$/i.test(lower)) return { text: "The local file is readable. Try selecting that file again and tell me the exact message under the upload area if it still fails. Keep the existing batch and its successful drafts." };
+  if (/^(no,? it will not open|one or more will not open)$/i.test(lower)) return { text: "Download or export a fresh copy from the original design file, then confirm it opens on your computer before selecting it in Goldie. Keep the other working files and drafts." };
+  if (/^they are another format$/i.test(lower)) return { text: "Export the artwork as PNG, JPG/JPEG or WebP before selecting it. Use transparent PNG when the background should not print.", articleId: "wrong-format" };
 
   if (/already (did|tried|made|created|used) (that|it)|i did that already/i.test(lower)) {
     if (/connect|token|printify/i.test(context)) return { text: "Okay, the token step is already done. What exact message appears when you click Connect Printify? If there is no message, tell me whether the button does nothing or stays on Connecting….", suggestions:["I see an error message","The button does nothing","It stays on Connecting"] };
@@ -60,7 +72,7 @@ export function supportResponse(query: string, turns: SupportTurn[]): SupportRes
   if (/yes,? same printify account/i.test(lower)) return { text: "Click the individual Edit in Printify button one more time now that the correct account is active. If that exact draft still says product not found, use Contact Support and include the draft name plus an optional screenshot. The team needs to inspect the generated editor link.", articleId: "editor-login" };
   if (/no,? different account/i.test(lower)) return { text: "Sign out of Printify in that browser, sign into the account connected to Goldie, then return to the Listing Factory and click Edit in Printify again. The draft lives in the account attached to the token.", articleId: "editor-login" };
   if (/blocked pop-up icon/i.test(lower)) return { text: "Click that icon in the browser address bar, choose Always allow pop-ups and redirects from the Goldie Listing Factory, then click Done and use Open all in Printify again.", articleId: "popups" };
-  if (/nothing appears/i.test(lower) && /open all|pop-up|tabs/i.test(context)) return { text: "Use the individual Edit in Printify buttons for now. If those work but Open all does nothing, allow pop-ups for the Listing Factory in the browser’s site settings, then reload only after your current batch is finished.", articleId: "popups" };
+  if (/nothing appears/i.test(lower) && /open all|pop-up|tabs?|no tab opens/i.test(context)) return { text: "Use the individual Edit in Printify buttons for now. If those work but Open all does nothing, allow pop-ups for the Listing Factory in the browser’s site settings, then reload only after your current batch is finished.", articleId: "popups" };
   if (/only \d+ (?:of|out of) \d+ (?:created|worked|finished)|\d+ (?:of|out of) \d+ (?:failed|created)|all (?:of )?(?:them|the designs|the files).{0,20}(failed|error)/i.test(lower)) return { text: "Check the results listed under Latest batch. What exact message appears under one of the failed designs? If they all show the same message, paste it once." };
   if (/returned an error|showing an error|got an error/i.test(lower) && !/\b\d{3,5}\b/.test(lower)) return { text: "Paste the complete error message exactly as it appears. The wording will tell me which step failed without making you repeat anything that already worked." };
 
