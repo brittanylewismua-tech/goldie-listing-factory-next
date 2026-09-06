@@ -61,12 +61,12 @@ test("history stops at the last period with work — D339", () => {
   assert.equal(rows[0].published, 12);
 });
 
-test("the goal is one switch, off by default — D341", async () => {
+test("the goal is one switch, enabled by default — D1165", async () => {
   const api = await readFile(new URL("app/api/seller-preferences/route.ts", root), "utf8");
   const app = await readFile(new URL("app/listing-factory-app.tsx", root), "utf8");
   const ui = await readFile(new URL("app/goldie-ui.tsx", root), "utf8");
 
-  assert.match(api, /enabled: raw\.enabled === true/, "off unless explicitly turned on");
+  assert.match(api, /enabled: raw\.enabled !== false/, "shown unless explicitly turned off");
   assert.match(api, /target: Math\.max\(1,/, "a goal of zero is a bar that is always full");
 
   /* The sidebar and the receipt are the same feature seen twice — they cannot
@@ -138,4 +138,22 @@ test("malformed or empty day rows are ignored, not counted as today — D708", (
   const monday = new Date(2026, 7, 24);
   assert.equal(publishedDaysSince([{ day: "", count: 9 }, { day: null, count: 9 }, { day: "not-a-date", count: 9 }], monday), 0);
   assert.equal(publishedDaysSince([{ day: "2026-08-26", count: -4 }], monday), 0, "a negative count cannot subtract");
+});
+
+// Exercise the actual server normalizer, including users with no saved goal.
+test("weekly goal defaults to 20 without overwriting chosen settings — D1165", async () => {
+  const { transpileModule } = await import("typescript");
+  const api = await readFile(new URL("app/api/seller-preferences/route.ts", root), "utf8");
+  const helper = api.slice(api.indexOf("const DEFAULT_GOAL"), api.indexOf("export async function GET"));
+  const { outputText } = transpileModule(helper + "\nexport { readGoal, DEFAULT_GOAL };", { compilerOptions: { module: 99, target: 99 } });
+  const { readGoal, DEFAULT_GOAL } = await import("data:text/javascript;base64," + Buffer.from(outputText).toString("base64"));
+  const expected = { enabled: true, period: "week", target: 20 };
+  assert.deepEqual(DEFAULT_GOAL, expected);
+  for (const saved of [undefined, null, {}, { target: 20 }]) assert.deepEqual(readGoal(saved), expected);
+  assert.deepEqual(readGoal({ enabled: true, period: "month", target: 75 }), { enabled: true, period: "month", target: 75 });
+  assert.deepEqual(readGoal({ enabled: false, period: "week", target: 30 }), { enabled: false, period: "week", target: 30 });
+  assert.equal(readGoal({ target: -4 }).target, 1);
+  assert.equal(readGoal({ target: 20000 }).target, 10000);
+  assert.equal(publishedDaysThisPeriod([], DEFAULT_GOAL), 0);
+  assert.match(api, /listingGoal: saved && saved.listingGoal \? readGoal\(saved.listingGoal\) : DEFAULT_GOAL/);
 });

@@ -11,12 +11,12 @@ import { sellerPreferences } from "@/db/schema";
    silently clears whatever the caller did not send. */
 export type ListingGoal = { enabled: boolean; period: "week" | "month"; target: number };
 
-const DEFAULT_GOAL: ListingGoal = { enabled: false, period: "week", target: 20 };
+const DEFAULT_GOAL: ListingGoal = { enabled: true, period: "week", target: 20 };
 
 function readGoal(value: unknown): ListingGoal {
   const raw = (value || {}) as Partial<ListingGoal>;
   return {
-    enabled: raw.enabled === true,
+    enabled: raw.enabled !== false,
     period: raw.period === "month" ? "month" : "week",
     /* A goal of zero is a bar that is always full, which is worse than no goal. */
     target: Math.max(1, Math.min(10000, Math.round(Number(raw.target) || DEFAULT_GOAL.target))),

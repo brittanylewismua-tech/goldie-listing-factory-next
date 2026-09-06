@@ -22,7 +22,7 @@ function DecimalField({value,min,max,step,label,onCommit}:{value:number;min:numb
 
 function Meter({label,used,limit,period="month"}:{label:string;used:number;limit:number;period?:"month"|"24 hours"|"total"}){const pct=Math.min(100,Math.round(used/limit*100));const warning=pct>=100?"Limit reached":pct>=95?"Almost at your limit":pct>=80?"You’re getting close":`${limit-used} remaining`;return <article className="usage-card"><div><h2>{label}</h2><b>{used.toLocaleString()} <span>of {limit.toLocaleString()} {period==="total"?"saved":`per ${period}`}</span></b></div><div className="usage-track"><i style={{width:`${pct}%`}} /></div><p className={pct>=80?"usage-warning":""}>{warning}</p></article>}
 export default function UsagePage(){
-  const[data,setData]=useState<Data|null>(null),[loadError,setLoadError]=useState(""),[fees,setFees]=useState<Fees>({etsyFeePercent:9.5,fixedFee:.25,listingFee:.20}),[goal,setGoal]=useState<Goal>({enabled:false,period:"week",target:20}),[goalMessage,setGoalMessage]=useState(""),[feeMessage,setFeeMessage]=useState(""),[billingMessage,setBillingMessage]=useState(""),[checkoutPlan,setCheckoutPlan]=useState<"goldie"|"pro"|"scale"|null>(null);
+  const[data,setData]=useState<Data|null>(null),[loadError,setLoadError]=useState(""),[fees,setFees]=useState<Fees>({etsyFeePercent:9.5,fixedFee:.25,listingFee:.20}),[goal,setGoal]=useState<Goal>({enabled:true,period:"week",target:20}),[goalMessage,setGoalMessage]=useState(""),[feeMessage,setFeeMessage]=useState(""),[billingMessage,setBillingMessage]=useState(""),[checkoutPlan,setCheckoutPlan]=useState<"goldie"|"pro"|"scale"|null>(null);
   useEffect(()=>{fetch("/api/usage").then(async response=>{const result=await response.json() as Partial<Data>&{error?:string};if(!response.ok||!result.plan||!result.usage||!result.resetAt)throw new Error(result.error||"Your usage could not be loaded.");setData(result as Data)}).catch(error=>setLoadError(error instanceof Error?error.message:"Your usage could not be loaded."));fetch("/api/seller-preferences").then(r=>r.json() as Promise<{pricing?:Partial<Fees>;listingGoal?:Goal}>).then(r=>{if(r.pricing)setFees(current=>({...current,...r.pricing}));if(r.listingGoal)setGoal(r.listingGoal)}).catch(()=>undefined)},[]);
   /* D341 · One switch. The sidebar bar and the receipt line are the same
      feature seen twice, so they cannot be turned on independently — half a
@@ -43,10 +43,10 @@ export default function UsagePage(){
       <section className="plan-banner"><div><span>CURRENT PLAN</span><h2>{data.plan.name}</h2><p>{data.plan.key==="owner_test"?"Testing access":data.plan.price?`$${data.plan.price}/month`:"Free trial"}</p></div><div><p>{data.plan.key==="trial"&&data.billing?.subscription?.status==="trialing"&&data.billing.subscription.currentPeriodEnd?`Trial ends ${new Date(data.billing.subscription.currentPeriodEnd*1000).toLocaleDateString(undefined,{month:"long",day:"numeric",year:"numeric"})}`:`Monthly credits reset ${new Date(data.resetAt).toLocaleDateString(undefined,{month:"long",day:"numeric",year:"numeric"})}`}</p>{data.billing?.active&&<button onClick={()=>void manageBilling()}>Manage billing</button>}{billingMessage&&<small role="status">{billingMessage}</small>}</div></section>
       <section className="usage-grid"><Meter label="Monthly listing creations" used={data.usage.drafts} limit={data.plan.drafts}/></section>
       <p className="usage-note">A credit is used only after Goldie successfully creates a unique listing. Failed attempts and retries do not count again.</p>
-      <section className="listing-goal-settings">
-      <p className="mini-label">OPTIONAL</p>
+      <section id="listing-goal" className="listing-goal-settings">
+      <p className="mini-label">YOUR TARGET</p>
       <h2>Listing goal</h2>
-      <p className="listing-goal-intro">Set a target for listings prepared as Printify drafts. Goldie shows your progress here and in the sidebar. Off by default, and you can turn it off again any time.</p>
+      <p className="listing-goal-intro">Your default target for listings prepared as Printify drafts is 20 per week. Change it here, or hide your goal any time.</p>
       <label className="listing-goal-switch">
         <input type="checkbox" checked={goal.enabled} onChange={event=>void saveGoal({...goal,enabled:event.target.checked})}/>
         <span>Show my listing goal</span>

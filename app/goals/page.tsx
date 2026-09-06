@@ -44,9 +44,9 @@ export default function GoalsPage() {
 
       {loaded && !goal?.enabled && (
         <section className="goals-off">
-          <h2>You have not set a goal yet</h2>
+          <h2>Your listing goal is hidden</h2>
           <p>Turn one on in Usage + Plan and Goldie will show your progress here and in the sidebar.</p>
-          <Link className="goals-cta" href="/usage">Set a listing goal</Link>
+          <Link className="goals-cta" href="/usage#listing-goal">Show my listing goal</Link>
         </section>
       )}
 
@@ -58,6 +58,7 @@ export default function GoalsPage() {
             <span className="goals-track" aria-hidden="true">
               <i style={{ width: `${Math.min(100, Math.round((thisPeriod / Math.max(1, goal.target)) * 100))}%` }} />
             </span>
+            <Link className="listing-goal-history-link" href="/usage#listing-goal">Adjust goal ↗</Link>
           </section>
 
           <section className="goals-history">
