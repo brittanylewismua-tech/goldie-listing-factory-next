@@ -15,6 +15,7 @@ export async function readPrintifyPublishState(fetcher:FetchLike,token:string,sh
   }catch{
     return {state:"unknown",reason:"Printify could not be reached."};
   }
+  if(response.status===423)return {state:"unknown",reason:"Printify is still publishing this listing."};
   if(!response.ok)return {state:"unknown",reason:`Printify could not confirm this product's publishing status (${response.status}).`};
   try{
     const product=await response.json() as {external?:{id?:string|number}};

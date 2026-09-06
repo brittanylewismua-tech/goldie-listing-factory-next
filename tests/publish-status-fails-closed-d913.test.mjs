@@ -33,3 +33,8 @@ test("the paid publish call is unreachable while Printify state is unknown",asyn
   assert.ok(lookup>=0&&stop>lookup&&publish>stop,"unknown status must throw before the paid publish endpoint can be called");
   assert.match(queue,/Goldie stopped before publishing so it cannot create a duplicate Etsy listing/);
 });
+
+test('a locked Printify product stays pending with an understandable publishing message',async()=>{
+ const result=await readPrintifyPublishState(async()=>new Response(null,{status:423}),'token',7,'product');
+ assert.deepEqual(result,{state:'unknown',reason:'Printify is still publishing this listing.'});
+});

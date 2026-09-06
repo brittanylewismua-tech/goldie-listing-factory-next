@@ -3,7 +3,7 @@ import {forwardRef,useEffect,useImperativeHandle,useRef,useState} from 'react';
 type Target={id:string;title:string;indices:number[]};
 type Delivery={id:string;productId:string;status:string;error:string|null;photoCount:number;listingId:number|null};
 export type PhotoDeliveryHandle={prepare():Promise<boolean>};
-const label=(status:string)=>({preparing:'Saving photo set',waiting:'Waiting for you to publish',delivering:'Updating Etsy photos',completed:'Photos verified on Etsy',canceled:'Delivery canceled',expired:'Checking ended — prepare again',failed:'Preparation needs another try',needs_attention:'Delivery needs attention'}[status]||'Not prepared');
+const label=(status:string)=>({preparing:'Saving photo set',waiting:'Waiting for publication',delivering:'Updating Etsy photos',completed:'Photos verified on Etsy',canceled:'Delivery canceled',expired:'Checking ended — prepare again',failed:'Preparation needs another try',needs_attention:'Delivery needs attention'}[status]||'Not prepared');
 const PhotoDeliveryHandoff=forwardRef<PhotoDeliveryHandle,{targets:Target[];beforePrepare:()=>Promise<unknown>}>(({targets,beforePrepare},ref)=>{
  const [deliveries,setDeliveries]=useState<Delivery[]>([]),[busy,setBusy]=useState(false),[error,setError]=useState(''),[loading,setLoading]=useState(true);
  const locked=useRef(false),queryKey=useRef(""),panel=useRef<HTMLElement>(null),targetKey=targets.map(t=>t.id).join(',');

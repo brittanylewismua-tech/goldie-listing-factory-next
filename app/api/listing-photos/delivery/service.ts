@@ -47,7 +47,7 @@ export async function runDeliveryTick(id:string,owner:string){
       return {done:false,progress:false};
     }
     if(!row.state_json&&(row.candidate_listing_id!==published.listingId||!row.candidate_seen_at)){
-      await runtime.DB.prepare('UPDATE photo_deliveries SET candidate_listing_id=?,candidate_seen_at=?,updated_at=? WHERE id=? AND user_id=?').bind(published.listingId,Date.now(),Date.now(),id,owner).run();
+      await runtime.DB.prepare('UPDATE photo_deliveries SET candidate_listing_id=?,candidate_seen_at=?,updated_at=?,error=NULL WHERE id=? AND user_id=?').bind(published.listingId,Date.now(),Date.now(),id,owner).run();
       return {done:false,progress:false,waitMs:30000};
     }
     if(!row.state_json&&Date.now()-Number(row.candidate_seen_at)<30000)return {done:false,progress:false,waitMs:30000};
