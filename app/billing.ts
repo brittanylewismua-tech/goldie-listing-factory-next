@@ -40,12 +40,11 @@ export async function ensureBillingTables(db = billingRuntime().DB) {
 
 export function priceForPlan(plan: PlanKey) {
   const runtime = billingRuntime();
-  // The original STRIPE_SCALE_PRICE_ID is the existing $59 price. Treat it as
-  // Pro for backward compatibility. A dedicated $99 Scale price can be added
-  // without interrupting checkout because Checkout can create the recurring
-  // price inline until that environment value is present.
+  // The old $59 Scale price is recognized for existing subscriptions below,
+  // but must not label new Pro checkouts as Scale. Without a dedicated price,
+  // Checkout creates an inline recurring price with the current plan's name.
   if (plan === "goldie") return runtime.STRIPE_GOLDIE_PRICE_ID || null;
-  if (plan === "pro") return runtime.STRIPE_PRO_PRICE_ID || runtime.STRIPE_SCALE_PRICE_ID || null;
+  if (plan === "pro") return runtime.STRIPE_PRO_PRICE_ID || null;
   return runtime.STRIPE_SCALE_99_PRICE_ID || null;
 }
 
