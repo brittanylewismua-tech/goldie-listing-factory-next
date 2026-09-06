@@ -14,6 +14,6 @@ test("draft creation reports a live count instead of looking hung",()=>{
 });
 
 test("the Printify photo limit names current photo sources",()=>{
-  assert.match(app,/Photos you upload and a size guide already chosen for this listing count toward that limit/);
+  assert.match(app,/Your uploads and size guide share the 20-photo limit/);
   assert.doesNotMatch(app,/Lifestyle mockups and a size guide already chosen/);
 });

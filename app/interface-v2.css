@@ -3874,13 +3874,6 @@ html, body { background: var(--lf-paper); }
 
 /* D1163: put actionable handoff instructions in the main reading column,
    instead of burying them beneath totals in the narrow dark summary. */
-.app-shell .final-handoff-steps{margin-top:24px;padding:22px;background:#fffafc;border:2px solid #171717;border-radius:12px;box-shadow:4px 4px 0 #171717}
-.app-shell .final-handoff-steps h3{margin:0 0 16px;color:#171717;font-size:17px;line-height:1.35}
-.app-shell .final-handoff-steps ol{margin:0;padding-left:22px;display:grid;gap:18px}
-.app-shell .final-handoff-steps li{list-style:decimal outside;padding-left:6px;color:#171717;font-size:14px;line-height:1.5}
-.app-shell .final-handoff-steps li::marker{font-weight:800}
-.app-shell .final-handoff-steps li b,.app-shell .final-handoff-steps li span{display:block}
-.app-shell .final-handoff-steps li span{margin-top:4px;color:#574c54}
 
 /* D1166: keep the current product's work prominent and put navigation where
    the user finishes reading. These controls never approve or save a task. */
@@ -3895,3 +3888,25 @@ html, body { background: var(--lf-paper); }
 .app-shell .task-next-section:focus-visible,.app-shell .draft-fix-link:focus-visible{outline:3px solid #75516b;outline-offset:3px}
 .app-shell .step-product-card .factory-panel-head{scroll-margin-top:130px}
 @media(max-width:760px){.app-shell .task-next-section{width:100%}.app-shell .draft-fix-link{min-height:44px}.app-shell .step-product-card .factory-panel-head{scroll-margin-top:100px}}
+
+/* D1167: one listing and one camera view at a time; color choices stay together. */
+.app-shell .mockup-picker-heading{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:10px}
+.app-shell .mockup-picker-heading h4{margin:0;font-size:19px;color:#171717}
+.app-shell .mockup-picker-heading>span{font-size:13px;font-weight:700;white-space:nowrap}
+.app-shell .mockup-view-tabs{display:flex;flex-wrap:wrap;gap:8px;margin:18px 0 12px}
+.app-shell .mockup-view-tabs button{min-height:44px;padding:10px 16px;border:1px solid #171717;border-radius:8px;background:#fff;color:#171717;font-weight:700;box-shadow:none}
+.app-shell .mockup-view-tabs button[aria-pressed="true"]{background:#171717;color:#fff}
+.app-shell .mockup-view-tabs button>span{margin-left:8px;font-size:12px}
+.app-shell .mockup-other-views{margin:0 0 18px;border:1px solid #d8cbd2;border-radius:8px;padding:0 12px;background:#faf6f8}
+.app-shell .mockup-angle-select{display:grid;gap:8px;padding:12px 0;font-size:13px;font-weight:700}
+.app-shell .mockup-angle-select select,.app-shell .photo-listing-switch select{min-height:44px;width:100%;max-width:100%;border:1px solid #bdaeb7;border-radius:8px;background:#fff;color:#171717;padding:10px;font:inherit}
+.app-shell .mockup-tile-caption{display:block;padding:9px 6px;font-size:12px;font-weight:650;line-height:1.4;text-align:center;color:#171717;background:#fff}
+.app-shell .photo-listing-switch{display:grid;gap:8px;margin-bottom:20px;font-size:13px;font-weight:700}
+.app-shell .listing-photo-workspace>.individual-size-guide,.app-shell .listing-photo-workspace>.uploaded-listing-photos,.app-shell .listing-photo-workspace>.listing-photo-order{margin:24px 0!important;padding:20px!important;border:2px solid #171717!important;border-radius:10px!important;background:#fffafc!important;box-shadow:3px 3px 0 #171717!important}
+.app-shell .individual-size-guide>div>b{font-size:18px}
+.app-shell .individual-size-guide em,.app-shell .listing-photo-download em{font-size:11px;font-style:normal;font-weight:600;margin-left:8px;color:#665762}
+.app-shell .mockup-view-tabs button:focus-visible,.app-shell .photo-listing-switch select:focus-visible{outline:3px solid #75516b;outline-offset:3px}
+@media(max-width:760px){.app-shell .listing-photo-workspace>.individual-size-guide{display:grid!important;gap:14px}.app-shell .size-guide-actions{flex-wrap:wrap}.app-shell .size-guide-actions button{min-height:44px;white-space:normal}}
+
+.photo-delivery-handoff{margin:24px 0;padding:22px;border:2px solid #151515;border-radius:12px;box-shadow:4px 4px 0 #151515;background:#fff8fb;color:#171717}
+.photo-delivery-heading{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}.photo-delivery-heading h3{margin:0;font-size:20px}.photo-delivery-heading b{font-size:13px}.photo-delivery-handoff p{margin:12px 0;line-height:1.5}.photo-delivery-note,.photo-delivery-handoff>small{font-size:13px;line-height:1.5}.photo-delivery-handoff>small{display:block;margin-top:14px}.photo-delivery-handoff [role=status]{font-weight:700;margin:14px 0}.photo-delivery-handoff summary{padding:12px 0;cursor:pointer;font-weight:700}.photo-delivery-handoff ul{list-style:none;padding:0;margin:0}.photo-delivery-handoff li{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:14px 0;border-top:1px solid #bcaeb5}.photo-delivery-handoff li strong{flex:1 1 220px;overflow-wrap:anywhere}.photo-delivery-handoff li small{flex-basis:100%}.photo-delivery-handoff button{min-height:44px;border:1px solid #171717;border-radius:7px;background:white;color:#171717;padding:8px 12px;cursor:pointer}.photo-delivery-error{padding:12px;border:2px solid var(--goldie-attention);border-radius:8px;background:#fff;margin-top:14px}.photo-delivery-handoff a{color:#171717;text-decoration:underline;text-underline-offset:3px}

@@ -28,5 +28,5 @@ test("the Printify handoff validates every bundle draft, not retired publish sel
 });
 
 test("a one-listing editor does not repeat a one-listing summary bar", () => {
-  assert.match(rows, /\{rows\.length>1&&<div className="listing-rows-bar">/);
+  assert.match(rows, /\{!compactNavigation&&rows\.length>1&&<div className="listing-rows-bar">/);
 });

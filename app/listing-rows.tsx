@@ -43,6 +43,7 @@ export default function ListingRows({
   rows,
   defaultOpen = false,
   singleOpen = false,
+  compactNavigation = false,
   focusedKey,
   readyLabel = "Ready",
   noun = "listing",
@@ -54,6 +55,7 @@ export default function ListingRows({
      is scanning, and scanning wants density. The job decides, not the component. */
   defaultOpen?: boolean;
   singleOpen?: boolean;
+  compactNavigation?: boolean;
   focusedKey?: string;
   readyLabel?: string;
   noun?: string;
@@ -73,7 +75,7 @@ export default function ListingRows({
 
   const toggle = (key: string) =>
     setOpen(current => {
-      if (singleOpen) return current.has(key) ? new Set() : new Set([key]);
+      if (singleOpen) return current.has(key)&&!compactNavigation ? new Set() : new Set([key]);
       const next = new Set(current);
       if (next.has(key)) next.delete(key);
       else next.add(key);
@@ -107,7 +109,8 @@ export default function ListingRows({
        column above it costs 179px, which squeezed the picker to two tiles a row.
        Text panels keep the alignment; work surfaces get the width. */
     <div className={`listing-rows${defaultOpen ? " is-worksurface" : ""}`}>
-      {rows.length>1&&<div className="listing-rows-bar">
+      {compactNavigation&&rows.length>1&&<label className="photo-listing-switch">Working on<select aria-label="Choose listing to edit photos" value={rows.find(row=>open.has(row.key))?.key||rows[0].key} onChange={event=>openListing(rows.findIndex(row=>row.key===event.target.value))}>{rows.map((row,index)=><option key={row.key} value={row.key}>Listing {index+1} of {rows.length} · {row.summary} · {row.meta}</option>)}</select></label>}
+      {!compactNavigation&&rows.length>1&&<div className="listing-rows-bar">
         <div className="listing-rows-summary">
           <b>{rows.length} {rows.length === 1 ? noun : `${noun}s`}</b>
           {flagged.length > 0 && (
@@ -149,6 +152,7 @@ export default function ListingRows({
       {rows.map((row, index) => {
         const flags = row.flags || [];
         const isOpen = open.has(row.key);
+        if(compactNavigation&&!isOpen)return null;
         const needsAttention = flags.some(flag => flag.tone === "attention");
         return (
           <article

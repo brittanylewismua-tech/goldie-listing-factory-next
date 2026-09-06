@@ -6,6 +6,6 @@ const app=readFileSync(new URL("../app/listing-factory-app.tsx",import.meta.url)
 
 test("the Printify handoff is the persistent footer action, not clipped inside the review box",()=>{
   assert.match(app,/<FactoryFooter status=\{handoffBlockers\(\)\[0\]\|\|"Nothing publishes until you choose it in Printify\."\}>/);
-  assert.match(app,/className=\{`workflow-next\$\{handoffBlockers\(\)\.length\?" disabled":""\}`\}/);
+  assert.match(app,/className="workflow-next" href="https:\/\/printify\.com\/app\/store\/products"/);
   assert.doesNotMatch(app,/publish-all-button printify-handoff-button/);
 });

@@ -4772,13 +4772,13 @@ test("placement previews wrap into identifiable listing cards — D679/D971", as
   /* D724 · the preview is the ArtworkGrid tile now; it fills its card and is
      capped by the grid track rather than by a bespoke rule. */
   assert.match(css, /\.factory-art-preview ?\{[\s\S]{0,160}height: ?190px/);
-  assert.match(app, /showAll\?"Show fewer Printify mockups":`Show all \$\{indexed\.length\} Printify mockups`/);
+  assert.match(app, /More angles &amp; lifestyle/);
   /* D688 - what this line is for is the second clause: an angle holding a photo
      she already chose is never hidden. The anchor in the first clause changed
      because \b(front|back)\b also matched "Model 1 front" and "Model 2 back",
      so the collapsed default was showing six groups, not two. */
-  assert.match(app, /const visible=showAll\?indexed:indexed\.filter\(\(item,index\)=>index<8\|\|selected\.has\(item\.index\)\)/,
-    "the collapsed picker never hides a selected photo");
+  assert.match(app, /const visible=view==="selected"\?selectedEntries:showAll\?/,
+    "the Selected view retains every chosen photo across camera groups");
 });
 
 test("placement cards contain only the preview, identity, DPI and editor link — D680", async () => {
@@ -5060,7 +5060,7 @@ test("opening a task shows the work, not a list of listings to pick from — D55
      defaultOpen and step 3's text panels do not. If that ever inverts, this
      fails. */
   assert.match(app, /const listingWorkRows=\(work:/);
-  assert.match(app, /return <ListingRows defaultOpen singleOpen focusedKey=\{photoFocusId\} rows=\{usable\.map/,
+  assert.match(app, /return <ListingRows defaultOpen singleOpen compactNavigation focusedKey=\{photoFocusId\} rows=\{usable\.map/,
     "the first photo panel opens on arrival and only one working surface opens at a time");
   /* D709 · Two passes, not three. Uploading photos and arranging them were
      separate panels, so the batch's listings were walked twice to finish one
@@ -5311,8 +5311,8 @@ test("the number on the button is the number that publishes — D561", async () 
      selection seeding effect and selectedPublishDrafts - because both were
      quietly shrinking the publish back down to the open product. */
   assert.ok(app.indexOf("function bundlePublishDrafts()") > 0);
-  assert.equal((app.match(/bundlePublishDrafts\(\)/g) || []).length, 8,
-    "declared once; the review, reports, publish targets, selections, seeding, cost approval and Printify handoff all read it");
+  assert.equal((app.match(/bundlePublishDrafts\(\)/g) || []).length, 9,
+    "declared once; the review, reports, publish targets, selections, seeding, cost approval, Printify handoff and photo delivery all read it");
   assert.doesNotMatch(app, /function selectedPublishDrafts\(\)\{const selected=new Set\(selectedPublishIds\);return drafts\.filter/,
     "the button's count must not be taken from the open product alone");
 });
@@ -5454,13 +5454,13 @@ test("the Printify picker is a compact horizontal gallery, not a wall of 96 — 
      8 colours she enabled. I checked that before calling it duplication: all 192
      srcs are distinct. But a flat wall of 96 with a repeated one-word caption is
      not something anyone picks 20 photos out of. */
-  assert.match(app, /const visible=showAll\?indexed:indexed\.filter/);
-  assert.match(app, /Show all \$\{indexed\.length\} Printify mockups/);
+  assert.match(app, /const visible=view==="selected"\?selectedEntries:showAll\?/);
+  assert.match(app, /More angles &amp; lifestyle/);
   assert.match(css, /\.app-shell \.printify-all-images\{[^}]*grid-template-columns:repeat\(4,minmax\(0,1fr\)\)!important/);
 
   /* The original index has to survive the grouping - the selection and the
      publish payload are both by index into printifyImages. */
-  assert.match(app, /visible\.map\(\(\{src,index\}\)=>/);
+  assert.match(app, /visible\.map\(\(\{src,index,color,label\}\)=>/);
 
   /* Colour is deliberately not labelled: Printify's image order need not follow
      her colour order, and a Cocoa hoodie labelled "White" is worse than one
@@ -7254,8 +7254,8 @@ test("the collapsed photo picker keeps a compact representative set — D688/D97
      as "Front", which is why the collapse never collapsed. */
   assert.doesNotMatch(app, /\/\\b\(front\|back\)\\b\/i\.test\(view\)/,
     "an unanchored word match lets every model shot through");
-  assert.match(app, /const visible=showAll\?indexed:indexed\.filter\(\(item,index\)=>index<8\|\|selected\.has\(item\.index\)\)/,
-    "the compact gallery keeps selected mockups visible");
+  assert.match(app, /const visible=view==="selected"\?selectedEntries:showAll\?/,
+    "the Selected view keeps all chosen mockups accessible");
 });
 
 /* D690 · Found on the live deploy, not in review: the indent that aligns a text

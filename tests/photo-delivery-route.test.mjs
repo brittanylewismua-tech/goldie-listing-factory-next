@@ -1,0 +1,54 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {DatabaseSync} from 'node:sqlite';
+import ts from 'typescript';
+const read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
+const url=source=>'data:text/javascript;base64,'+Buffer.from(ts.transpile(source,{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022})).toString('base64');
+const packageUrl=url(read('app/listing-photo-package.ts'));
+const db=new DatabaseSync(':memory:');db.exec(read('drizzle/0022_photo_deliveries.sql'));
+db.exec("CREATE TABLE printify_draft_results(user_id TEXT,status TEXT,response_json TEXT);CREATE TABLE etsy_connections(user_id TEXT,is_active INTEGER,shop_id INTEGER);");
+const DB={prepare(sql){let args=[];return {bind(...values){args=values;return this},async first(){return db.prepare(sql).get(...args)||null},async all(){return {results:db.prepare(sql).all(...args)}},async run(){const r=db.prepare(sql).run(...args);return {meta:{changes:Number(r.changes)}}}}}};
+const stored=new Map();const bucket={async list({prefix}){return {truncated:false,objects:[...stored].filter(([k])=>k.startsWith(prefix)).map(([key])=>({key,etag:key}))}},async get(key){const value=stored.get(key);return value?{size:value.length,httpMetadata:{contentType:'image/png'},async text(){return new TextDecoder().decode(value)},async arrayBuffer(){return new Uint8Array(value).buffer}}:null},async put(key,value){stored.set(key,typeof value==='string'?new TextEncoder().encode(value):new Uint8Array(value))}};
+let creations=[],failStart=false;
+const runtime={DB,ARTWORK:bucket,PHOTO_DELIVERY:{async create(input){creations.push(input);if(failStart)throw Error('start failed')}}};
+globalThis.__photoRoute={runtime,user:{userId:'owner'}};
+let source=read('app/api/listing-photos/delivery/route.ts')
+ .replace(/import \{NextResponse\}[^;]+;/,"const NextResponse={json:(value,init)=>Response.json(value,init)};")
+ .replace(/import \{getChatGPTUser\}[^;]+;/,"const getChatGPTUser=async()=>globalThis.__photoRoute.user;")
+ .replace(/import \{unpackDraftMedia\}[^;]+;/,"const unpackDraftMedia=async value=>JSON.parse(value);")
+ .replace(/from '@\/app\/listing-photo-package'/,`from '${packageUrl}'`)
+ .replace(/import \{deliveryEnv[^;]+;/,`const deliveryEnv=()=>globalThis.__photoRoute.runtime;
+ const readDelivery=(id,owner)=>deliveryEnv().DB.prepare('SELECT * FROM photo_deliveries WHERE id=? AND user_id=?').bind(id,owner).first();
+ const deliveryStatus=(id,owner,status,error)=>deliveryEnv().DB.prepare('UPDATE photo_deliveries SET status=?,error=? WHERE id=? AND user_id=?').bind(status,error,id,owner).run();
+ const readSourceImage=async()=>({bytes:new Uint8Array([1,2,3]),type:'image/png'});`);
+const api=await import(url(source));
+const post=(productId='p1',indices=[0])=>api.POST(new Request('https://goldie.test/api/listing-photos/delivery',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({productId,printifyImageIndices:indices})}));
+function reset(){db.exec('DELETE FROM photo_deliveries;DELETE FROM printify_draft_results;DELETE FROM etsy_connections;');stored.clear();creations=[];failStart=false;globalThis.__photoRoute.user={userId:'owner'};db.prepare('INSERT INTO printify_draft_results VALUES(?,?,?)').run('owner','succeeded',JSON.stringify({id:'p1',shopId:100,printifyImages:['https://images.printify.com/front.jpg','https://images.printify.com/back.jpg']}));db.exec("INSERT INTO etsy_connections VALUES('owner',1,200)")}
+test('route creates an immutable ordered snapshot and duplicate submissions reuse one job',async()=>{
+ reset();stored.set('etsy-listing-images/owner/p1/upload/custom.png',new Uint8Array([9,9]));stored.set('etsy-listing-images/owner/p1/order.json',new TextEncoder().encode(JSON.stringify(['printify:0','stored:etsy-listing-images/owner/p1/upload/custom.png'])));
+ const response=await post();assert.equal(response.status,200);const {delivery}=await response.json();assert.equal(delivery.photoCount,2);assert.equal(delivery.status,'waiting');
+ const row=db.prepare('SELECT * FROM photo_deliveries').get(),photos=JSON.parse(row.photos_json);assert.deepEqual([...stored.get(photos[0].key)],[1,2,3]);assert.deepEqual([...stored.get(photos[1].key)],[9,9]);
+ stored.delete('etsy-listing-images/owner/p1/upload/custom.png');assert.deepEqual([...stored.get(photos[1].key)],[9,9],'snapshot survives editor asset removal');
+ // The changed editor set is refused while delivery is pending.
+ assert.equal((await post()).status,409);stored.set('etsy-listing-images/owner/p1/upload/custom.png',new Uint8Array([9,9]));
+ const duplicate=await (await post()).json();assert.equal(duplicate.delivery.id,delivery.id);assert.equal(db.prepare('SELECT COUNT(*) n FROM photo_deliveries').get().n,1);
+});
+test('ownership and invalid selected indices reject before job or asset writes',async()=>{
+ reset();assert.equal((await post('someone-elses-product')).status,403);assert.equal((await post('p1',[99])).status,409);assert.equal(db.prepare('SELECT COUNT(*) n FROM photo_deliveries').get().n,0);assert.equal(creations.length,0);
+ globalThis.__photoRoute.user=null;assert.equal((await post()).status,401);
+});
+test('waiting cancellation is atomic and cannot cancel a delivery that started editing',async()=>{
+ reset();const {delivery}=await (await post()).json();let request=new Request(`https://goldie.test/api/listing-photos/delivery?id=${delivery.id}`,{method:'DELETE'});
+ db.prepare("UPDATE photo_deliveries SET status='delivering',state_json='{}' WHERE id=?").run(delivery.id);assert.equal((await api.DELETE(request)).status,409);
+ db.prepare("UPDATE photo_deliveries SET status='waiting',state_json=NULL WHERE id=?").run(delivery.id);assert.equal((await api.DELETE(request)).status,200);assert.equal(db.prepare('SELECT status FROM photo_deliveries').get().status,'canceled');
+});
+test('uncertain writes cannot be bypassed by preparing a new delivery',async()=>{
+ reset();await post();db.prepare("UPDATE photo_deliveries SET status='needs_attention',state_json=?").run(JSON.stringify({pending:{rank:1}}));assert.equal((await post()).status,409);assert.equal(db.prepare('SELECT COUNT(*) n FROM photo_deliveries').get().n,1);
+});
+test('failed workflow startup is reported honestly and preparation can be retried',async()=>{
+ reset();failStart=true;assert.equal((await post()).status,409);assert.equal(db.prepare('SELECT status FROM photo_deliveries').get().status,'failed');failStart=false;assert.equal((await post()).status,200);
+});
+test('owner-scoped status cannot expose another sellers delivery',async()=>{
+ reset();await post();globalThis.__photoRoute.user={userId:'other'};const response=await api.GET(new Request('https://goldie.test/api/listing-photos/delivery?productId=p1'));assert.deepEqual((await response.json()).deliveries,[]);
+});

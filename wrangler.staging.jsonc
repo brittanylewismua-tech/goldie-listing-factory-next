@@ -33,7 +33,7 @@
     }
   ],
   "images": { "binding": "IMAGES" },
-  "workflows": [{"binding":"DRAFT_CREATION","name":"goldie-draft-creation","class_name":"DraftCreationWorkflow"}],
+  "workflows": [{"binding":"DRAFT_CREATION","name":"goldie-draft-creation","class_name":"DraftCreationWorkflow"},{"binding":"PHOTO_DELIVERY","name":"goldie-photo-delivery","class_name":"PhotoDeliveryWorkflow"}],
   "vars": {
     "GOLDIE_SITE_URL": "https://thegoldiesuite.com",
     "ETSY_REDIRECT_URI": "https://thegoldiesuite.com/api/etsy/callback",
