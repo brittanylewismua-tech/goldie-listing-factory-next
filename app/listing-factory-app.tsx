@@ -1,4 +1,5 @@
 "use client";
+import { containModalFocus } from "./modal-focus";
 import { printifyProductLabel, familyFromVariants } from "./mockup-compatibility";
 import { uniqueMockupEntries,correspondingMockupIndices } from "./printify-preview-details";
 import { applyProductFacts } from "./etsy-product-facts";
@@ -436,7 +437,7 @@ function PrintifyImagePicker({ images,indices,reservedPhotos=0,onApplyOne,onAppl
     if(valid.length!==indices.length)onApplyOne(valid);
   },[indices,images.length,reservedPhotos]);
   useEffect(()=>{void onRefresh?.()},[]);
-  useEffect(()=>{if(!expanded)return;const previous=document.body.style.overflow;const close=(event:KeyboardEvent)=>{if(event.key==="Escape")setExpanded("")};document.body.style.overflow="hidden";window.addEventListener("keydown",close);return()=>{document.body.style.overflow=previous;window.removeEventListener("keydown",close)}},[expanded]);
+  useEffect(()=>{if(!expanded)return;const restoreFocus=containModalFocus("Expanded Printify photo");const previous=document.body.style.overflow;const close=(event:KeyboardEvent)=>{if(event.key==="Escape")setExpanded("")};document.body.style.overflow="hidden";window.addEventListener("keydown",close);return()=>{document.body.style.overflow=previous;window.removeEventListener("keydown",close);restoreFocus()}},[expanded]);
   if(!images.length)return <p className="preview-processing">Printify is still processing its product mockups. Open the editor to view them once they appear.</p>;
   const chosen=[...selected].sort((a,b)=>a-b),selectionHint=chosen.length?"":"Select a Printify photo below first.",slotsLeft=Math.max(0,20-reservedPhotos-selected.size),atLimit=slotsLeft===0;
   function toggle(index:number){const next=new Set(selected);if(next.has(index))next.delete(index);else{if(atLimit){setFeedback("Etsy allows 20 listing photos. Remove a selected photo before adding another.");return}next.add(index)}setSelected(next);setAction("");setFeedback("");onApplyOne([...next].sort((a,b)=>a-b))}
@@ -473,7 +474,7 @@ function PrintifyImagePicker({ images,indices,reservedPhotos=0,onApplyOne,onAppl
 
 function UploadedDesignPreview({src}:{src:string}){
   const [open,setOpen]=useState(false);
-  useEffect(()=>{if(!open)return;const previous=document.body.style.overflow;const close=(event:KeyboardEvent)=>{if(event.key==="Escape")setOpen(false)};document.body.style.overflow="hidden";window.addEventListener("keydown",close);return()=>{document.body.style.overflow=previous;window.removeEventListener("keydown",close)}},[open]);
+  useEffect(()=>{if(!open)return;const restoreFocus=containModalFocus("Full-size design preview");const previous=document.body.style.overflow;const close=(event:KeyboardEvent)=>{if(event.key==="Escape")setOpen(false)};document.body.style.overflow="hidden";window.addEventListener("keydown",close);return()=>{document.body.style.overflow=previous;window.removeEventListener("keydown",close);restoreFocus()}},[open]);
   return <><button type="button" className="uploaded-design-preview" onClick={()=>setOpen(true)} aria-label="View design larger"><img src={src} alt="" decoding="async"/></button>{open&&typeof document!=="undefined"?createPortal(<div className="printify-photo-lightbox" role="dialog" aria-modal="true" aria-label="Full-size design preview" onMouseDown={event=>{if(event.target===event.currentTarget)setOpen(false)}}><button type="button" onClick={()=>setOpen(false)} aria-label="Close design preview">×</button><img src={src} alt="Full-size design preview"/></div>,document.body):null}</>;
 }
 
@@ -662,12 +663,12 @@ function LegacyEtsyDetailsEditor({design,categories,onChange,onCategory,checklis
   return <details className="etsy-details-editor"><summary><span><b>Etsy details</b><small>{(()=>{const required=properties.filter(property=>property.required),requiredDone=required.filter(property=>property.value.trim());return required.length?`${requiredDone.length} of ${required.length} required set`:`${completed.length} added · all optional`})()}{preview?` · ${preview}`:""}</small></span><em>Edit</em></summary><div className="factory-listing-grid">{/* D730 - prototype .goldie-listing-grid: the fields on the left, and
       beside them the list of what Etsy still needs. The summary line already
       counted them ("2 of 5 required set"); the checklist names them. Every
-      field, handler and validation below is unchanged. */}<div className="etsy-details-editor-fields factory-form-card"><label>Etsy category<select value={details.taxonomyId||""} disabled={loading} onChange={event=>void choose(Number(event.target.value))}>{!details.taxonomyId&&<option value="">Choose an Etsy category</option>}{Boolean(details.taxonomyId)&&!categories.some(category=>category.id===details.taxonomyId)&&<option value={details.taxonomyId}>{details.category||"Category already chosen for this listing"}</option>}{categories.map(category=><option key={category.id} value={category.id}>{category.path}</option>)}</select></label>{loading&&<small>Loading the exact Etsy options for this category…</small>}<div className="etsy-attribute-grid">{properties.map(property=><label key={property.propertyId}>{property.label}{property.required&&<em>Required</em>}{property.possibleValues.length?<select value={property.valueId||""} onChange={event=>setProperty(property,event.target.value)}><option value="">{property.required?"Choose one":"Not applicable"}</option>{property.possibleValues.map(option=><option key={option.value_id} value={option.value_id}>{option.name}</option>)}</select>:<input value={property.value} onChange={event=>setProperty(property,event.target.value)}/>}</label>)}</div><small className="optional-note">These are Etsy’s actual fields for the selected category. Optional fields can stay blank.</small><PersonalizationEditor value={details.personalization} onChange={personalization=>onChange({...details,personalization})}/></div>{checklist?<RequiredDetailsChecklist items={[{key:"category",label:"Etsy category",value:details.category||"",required:true},...properties.filter(property=>property.required||property.value.trim()).map(property=>({key:String(property.propertyId),label:property.label,value:property.value,required:property.required}))]}/>:null}</div><button type="button" className="panel-collapse-foot" onClick={event=>{const box=(event.currentTarget as HTMLElement).closest("details");if(box){(box as HTMLDetailsElement).open=false;box.scrollIntoView({block:"nearest"})}}}>Close Etsy details</button></details>
+      field, handler and validation below is unchanged. */}<div className="etsy-details-editor-fields factory-form-card"><label>Etsy category<select value={details.taxonomyId||""} disabled={loading} onChange={event=>void choose(Number(event.target.value))}>{!details.taxonomyId&&<option value="">Choose an Etsy category</option>}{Boolean(details.taxonomyId)&&!categories.some(category=>category.id===details.taxonomyId)&&<option value={details.taxonomyId}>{details.category||"Category already chosen for this listing"}</option>}{categories.map(category=><option key={category.id} value={category.id}>{category.path}</option>)}</select></label>{loading&&<small>Loading the exact Etsy options for this category…</small>}<div className="etsy-attribute-grid">{properties.map(property=><label key={property.propertyId}>{property.label}{property.required&&<em>Required</em>}{property.possibleValues.length?<select aria-label={property.label} value={property.valueId||""} onChange={event=>setProperty(property,event.target.value)}><option value="">{property.required?"Choose one":"Not applicable"}</option>{property.possibleValues.map(option=><option key={option.value_id} value={option.value_id}>{option.name}</option>)}</select>:<input aria-label={property.label} value={property.value} onChange={event=>setProperty(property,event.target.value)}/>}</label>)}</div><small className="optional-note">These are Etsy’s actual fields for the selected category. Optional fields can stay blank.</small><PersonalizationEditor value={details.personalization} onChange={personalization=>onChange({...details,personalization})}/></div>{checklist?<RequiredDetailsChecklist items={[{key:"category",label:"Etsy category",value:details.category||"",required:true},...properties.filter(property=>property.required||property.value.trim()).map(property=>({key:String(property.propertyId),label:property.label,value:property.value,required:property.required}))]}/>:null}</div><button type="button" className="panel-collapse-foot" onClick={event=>{const box=(event.currentTarget as HTMLElement).closest("details");if(box){(box as HTMLDetailsElement).open=false;box.scrollIntoView({block:"nearest"})}}}>Close Etsy details</button></details>
 }
 
 function LazyEtsyProperty({property,onValue}:{property:EtsyPropertySelection;onValue:(value:string)=>void}){
   const [open,setOpen]=useState(false);
-  return <details className="etsy-lazy-property" open={open} onToggle={event=>setOpen((event.currentTarget as HTMLDetailsElement).open)}><summary><span>{property.label}{property.required&&<em>Required</em>}</span><b>{property.value||"Not set"}</b></summary>{open?<label>{property.possibleValues.length?<select value={property.valueId||""} onChange={event=>onValue(event.target.value)}><option value="">{property.required?"Choose one":"Not applicable"}</option>{property.possibleValues.map(option=><option key={option.value_id} value={option.value_id}>{option.name}</option>)}</select>:<input value={property.value} onChange={event=>onValue(event.target.value)}/>}</label>:null}</details>;
+  return <details className="etsy-lazy-property" open={open} onToggle={event=>setOpen((event.currentTarget as HTMLDetailsElement).open)}><summary><span>{property.label}{property.required&&<em>Required</em>}</span><b>{property.value||"Not set"}</b></summary>{open?<label>{property.possibleValues.length?<select aria-label={property.label} value={property.valueId||""} onChange={event=>onValue(event.target.value)}><option value="">{property.required?"Choose one":"Not applicable"}</option>{property.possibleValues.map(option=><option key={option.value_id} value={option.value_id}>{option.name}</option>)}</select>:<input aria-label={property.label} value={property.value} onChange={event=>onValue(event.target.value)}/>}</label>:null}</details>;
 }
 
 /* D793 · `checklist` off when the screen already shows one. Step 3 is the
@@ -1022,6 +1023,7 @@ export default function ListingFactoryApp() {
   const snapshotReady=useRef(false);
   const writeBatch=useRef(serializedBatchWrites());
   const [batchSaveStatus,setBatchSaveStatus]=useState<"idle"|"saving"|"saved"|"failed">("idle");
+  const batchEditRevision=useRef(0);
   const resumeAttempted=useRef(false);
   const draftRunActive=useRef(false);
   const stagedArtworkCache=useRef(new Map<string,{file:File;promise:Promise<{stagedId:string;reference:string;fileName:string}>}>());
@@ -1161,6 +1163,15 @@ export default function ListingFactoryApp() {
   const [restartingBatch,setRestartingBatch]=useState(false);
   const [batchDisplayName,setBatchDisplayName]=useState("");
   const [savingDraftBatch,setSavingDraftBatch]=useState(false);
+  const saveDialogOpener=useRef<HTMLElement|null>(null);
+  useEffect(()=>{
+    if(!draftSaveOpen&&!draftSavedOpen)return;
+    const restore=containModalFocus(draftSaveOpen?"save-draft-title":"draft-saved-title",saveDialogOpener.current);
+    const close=(event:KeyboardEvent)=>{if(event.key==="Escape"&&!savingDraftBatch){event.preventDefault();setDraftSaveOpen(false);setDraftSavedOpen(false)}};
+    window.addEventListener("keydown",close);
+    return()=>{window.removeEventListener("keydown",close);restore()};
+  },[draftSaveOpen,draftSavedOpen,savingDraftBatch]);
+
   const [keptAsDrafts,setKeptAsDrafts]=useState(false);
   const [titleJoiner,setTitleJoiner]=useState(", ");
   const [titleCaps,setTitleCaps]=useState(true);
@@ -2166,6 +2177,7 @@ export default function ListingFactoryApp() {
   }
 
   async function persistBatchNow(existingId?:string,stateOverrides:Record<string,unknown>={}){
+    const editRevision=batchEditRevision.current;
     const id=existingId||batchIdRef.current||crypto.randomUUID();
     // A late save must not navigate back to its source product or change the
     // current child id. The caller's captured id owns this entire write.
@@ -2181,14 +2193,14 @@ export default function ListingFactoryApp() {
       try{
         const response=await fetch("/api/batches",{method:"POST",headers:{"Content-Type":"application/json"},body:payload});
         if(!response.ok)throw new Error("Your latest changes could not be saved.");
-        if(batchIdRef.current===id)setBatchSaveStatus("saved");
+        if(batchIdRef.current===id&&batchEditRevision.current===editRevision)setBatchSaveStatus("saved");
       }catch(error){if(batchIdRef.current===id)setBatchSaveStatus("failed");throw error;}
     });
   }
   useEffect(()=>{if(!snapshotReady.current||restoringBatch||batchHeldByAnotherTab||(!files.length&&!drafts.length))return;/* D1019 · Capture the child id with the render that produced this snapshot.
      A bundle transition changes batchIdRef before React cleans up the outgoing
      autosave. Reading the ref inside the timer let that old product overwrite
-     the new child's record with its own drafts. */const targetId=batchIdRef.current;const timer=window.setTimeout(()=>{void persistBatchNow(targetId).catch(()=>undefined);},700);return()=>window.clearTimeout(timer);
+     the new child's record with its own drafts. */const targetId=batchIdRef.current;batchEditRevision.current+=1;setBatchSaveStatus("saving");const timer=window.setTimeout(()=>{void persistBatchNow(targetId).catch(()=>undefined);},700);return()=>window.clearTimeout(timer);
   },[restoringBatch,workflowStep,finishPhase,template,templateDetails,description,pricing,selectedColorIds,selectedSizeIds,variantPrices,etsyShippingProfileId,pricingApproved,mockupTheme,activeRecipe,activeBundle,bundleRecipes,bundleIndex,files.map(file=>`${file.id}:${file.title}:${file.tags.join("|")}:${file.blurb||""}:${file.descriptionOverride??""}:${file.sizeGuideName||""}:${JSON.stringify(file.etsy||{})}`).join(";"),drafts,complete,running,bulkTitles,batchKeywords,titleJoiner,titleBuilderMode,autoTitleBankId,manualKeywordBankId,sharedMockups,preparedMockupCounts,printifyImageIndices,printifyImageSelections,sizeGuideName,batchDisplayName,keptAsDrafts,batchReceipt]);
 
   useEffect(() => {
@@ -2216,11 +2228,11 @@ export default function ListingFactoryApp() {
   useEffect(()=>{if(!etsyShippingProfiles.length)return;setEtsyShippingProfileId(current=>current&&!etsyShippingProfiles.some(profile=>profile.id===current)?0:current)},[etsyShippingProfiles]);
 
   useEffect(() => {
-    if (!running) return;
+    if (!running && batchSaveStatus!=="saving" && batchSaveStatus!=="failed") return;
     const protectBatch = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ""; };
     window.addEventListener("beforeunload", protectBatch);
     return () => window.removeEventListener("beforeunload", protectBatch);
-  }, [running]);
+  }, [running,batchSaveStatus]);
 
   /* D644 · The click guard is a document listener registered by an effect, so it
      closes over whatever state existed when that effect last ran - and
@@ -2787,7 +2799,7 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
         complete:Boolean(state.complete),
         published:Number(listed?.published_count)||0,
         status:String(listed?.status||""),
-        photos:Object.values(state.printifyImageSelections||{}).reduce((total,ids)=>total+(Array.isArray(ids)?ids.length:0),0)||(state.printifyImageIndices||[]).length,
+        photos:(Object.values(state.printifyImageSelections||{}).reduce((total,ids)=>total+(Array.isArray(ids)?ids.length:0),0)||(state.printifyImageIndices||[]).length)+(state.designs||[]).filter(file=>file.sizeGuideName??state.sizeGuideName).length,
         mockups:Object.values(state.preparedMockupCounts||{}).reduce((total,count)=>total+(Number(count)||0),0)}] as const;
     })).then(entries=>{
       if(!alive)return;
@@ -2805,7 +2817,7 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
 
   function productRows(recipe:Recipe,isActive:boolean):Array<{label:string;value:string;detail?:string;advice?:string;done:boolean;target?:string;task?:string;report?:boolean;optional?:boolean;pending?:boolean}>{
     const mine=isActive
-      ?{designs:files.length,titled:files.filter(file=>file.title.trim()).length,tagged:files.filter(file=>file.tags.length>0).length,drafts:drafts.filter(draft=>draft.status==="Created").length,described:Boolean(description.trim()),complete,published:Number(batchReceipt?.publishedCount)||0,status:"",photos:Object.values(printifyImageSelections).reduce((total,ids)=>total+ids.length,0)||printifyImageIndices.length,mockups:Object.values(preparedMockupCounts).reduce((total,count)=>total+(Number(count)||0),0)}
+      ?{designs:files.length,titled:files.filter(file=>file.title.trim()).length,tagged:files.filter(file=>file.tags.length>0).length,drafts:drafts.filter(draft=>draft.status==="Created").length,described:Boolean(description.trim()),complete,published:Number(batchReceipt?.publishedCount)||0,status:"",photos:(Object.values(printifyImageSelections).reduce((total,ids)=>total+ids.length,0)||printifyImageIndices.length)+files.filter(file=>file.sizeGuideName??sizeGuideName).length,mockups:Object.values(preparedMockupCounts).reduce((total,count)=>total+(Number(count)||0),0)}
       :bundleBatchSummary[recipe.id];
     /* D500 - a product with no batch yet had no summary to read, so it returned
        no rows and its card collapsed back to a bare header - the exact thing
@@ -3179,7 +3191,7 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
     const listingWorkRows=(work:(entry:{draft:typeof drafts[number];design:DesignFile;selectedImages:number[];count:number})=>ReactNode,flags?:(entry:{draft:typeof drafts[number];design:DesignFile;selectedImages:number[];count:number})=>ListingFlag[])=>{
       const usable=listings.filter(({draft,design})=>draft.status==="Created"&&design&&draft.id);
       return <ListingRows defaultOpen singleOpen focusedKey={photoFocusId} rows={usable.map(({draft,design,selectedImages})=>{
-        const count=selectedImages.length+(preparedMockupCounts[draft.id||""]||0);
+        const count=selectedImages.length+(preparedMockupCounts[draft.id||""]||0)+(design?.sizeGuideName??sizeGuideName?1:0);
         const entry={draft,design:design as DesignFile,selectedImages,count};
         return {
           key:draft.clientId,
@@ -3286,7 +3298,7 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
     const recipe=activeRecipe;
     const reportFiles=bundlePublishFiles(),reportDrafts=bundlePublishDrafts(),reportSelections=bundlePublishSelections(),reportMockups=bundlePublishMockupCounts();
     const createdReportDrafts=reportDrafts.filter(draft=>draft.status==="Created");
-    const mine={designs:reportFiles.length,titled:reportFiles.filter(file=>file.title.trim()).length,tagged:reportFiles.filter(file=>file.tags.length>=13).length,drafts:createdReportDrafts.length,described:Boolean(description.trim()),complete,published:Number(batchReceipt?.publishedCount||0),status:"",photos:createdReportDrafts.reduce((sum,draft)=>sum+(draft.id?(reportSelections[draft.id]?.length||0):0),0),mockups:Object.values(reportMockups).reduce((sum,count)=>sum+count,0)};
+    const mine={designs:reportFiles.length,titled:reportFiles.filter(file=>file.title.trim()).length,tagged:reportFiles.filter(file=>file.tags.length>=13).length,drafts:createdReportDrafts.length,described:Boolean(description.trim()),complete,published:Number(batchReceipt?.publishedCount||0),status:"",photos:createdReportDrafts.reduce((sum,draft)=>sum+(draft.id?(reportSelections[draft.id]?.length||0):0)+(reportFiles.find(file=>file.id===draft.clientId)?.sizeGuideName??sizeGuideName?1:0),0),mockups:Object.values(reportMockups).reduce((sum,count)=>sum+count,0)};
     const counts=mine;
     const started=true;
     const blank="Not started yet";
@@ -5453,7 +5465,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
                  shop it is publishing to. The eyebrow above repeats it larger;
                  it does not replace it. */}
               {etsyShop?<small className="publish-all-shop">to {etsyShop}</small>:null}</button>
-              {(publishing||Boolean(publishRun))&&<p className="working-note" role="status">Publishing to Etsy can take a few minutes. Keep this page open — Each listing will appear here as it goes live.</p>}<button className="keep-drafts-button" type="button" disabled={publishing} onClick={()=>{setBatchDisplayName(current=>current||suggestedBatchName());setDraftSaveOpen(true)}}>Keep as Printify drafts for now</button>{!publishing&&<small className="keep-drafts-note">Nothing will publish to Etsy. Return to this exact batch from Batch History.</small>}</>}{/* D474 - this describes the Keep as drafts button, but sat there while the
+              {(publishing||Boolean(publishRun))&&<p className="working-note" role="status">Publishing to Etsy can take a few minutes. Keep this page open — Each listing will appear here as it goes live.</p>}<button className="keep-drafts-button" type="button" disabled={publishing} onClick={()=>{setBatchDisplayName(current=>current||suggestedBatchName());saveDialogOpener.current=document.activeElement instanceof HTMLElement?document.activeElement:null;setDraftSaveOpen(true)}}>Keep as Printify drafts for now</button>{!publishing&&<small className="keep-drafts-note">Nothing will publish to Etsy. Return to this exact batch from Batch History.</small>}</>}{/* D474 - this describes the Keep as drafts button, but sat there while the
      button above it said Publishing, so the page said both that it was
      publishing and that nothing would publish. It belongs to a choice that is
      no longer available once publishing has started. */}{publishMessage&&<p className="publish-message" role="status">{publishMessage}</p>}{publishFailures.length>0&&<section className="publish-failure-panel" role="alert"><p className="mini-label">NOTHING WAS PUBLISHED</p><h3>{publishFailures.length===1?"1 listing could not be published":`${publishFailures.length} listings could not be published`}</h3><p className="publish-failure-lede">Etsy did not create {publishFailures.length===1?"this listing":"these listings"}, so you have not been charged a listing fee for {publishFailures.length===1?"it":"them"}. Here is exactly what Etsy said:</p><ul className="publish-failure-list">{publishFailures.map(failure=>{const draft=drafts.find(item=>item.id===failure.productId);return <li key={failure.productId}><strong>{draft?.title?.slice(0,60)||draft?.name||"Listing"}</strong><span>{failure.error}</span></li>})}</ul><p className="publish-failure-lede">The error was emailed to you and recorded. You can press publish again once it is fixed.</p></section>}</div></div></>}</div></article>{!batchReceipt&&<FactoryFooter status={handoffBlockers()[0]||"Nothing publishes until you choose it in Printify."}><a className={`workflow-next${handoffBlockers().length?" disabled":""}`} aria-disabled={handoffBlockers().length>0} href={handoffBlockers().length?undefined:"https://printify.com/app/store/products"} target="_blank" rel="noopener noreferrer" onClick={event=>{const issues=handoffBlockers();if(issues.length){event.preventDefault();stopWith("Finish all sections first.",issues);return}void persistRunNow()}}>Open My Products <span aria-hidden="true">↗</span></a></FactoryFooter>}</>)}
@@ -5519,7 +5531,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
         {batchHeldByAnotherTab&&<div className="batch-tab-conflict" role="status"><b>This batch is open in another tab.</b><span>Saving is paused here so the other tab is not overwritten. Continue in the other tab, or take over here and it will pause there instead.</span><button type="button" onClick={takeOverBatchHere}>Take over editing here</button></div>}
         {!(complete&&workflowStep==="designs")&&<div className="workflow-footer-actions">{progressIndex>0&&<button className="workflow-back" type="button" onClick={goBackOneStep}><span aria-hidden="true">←</span> Back</button>}<span className="autosave-note"><i aria-hidden="true">✓</i> Saved automatically</span>{/* D776 - the step's own footer (status + forward) lands here, so the bar the seller can see is the bar with the way forward in it. */}<span className="factory-footer-slot"/>{/* D386 - Saving a draft was only reachable from the Publish step, so
                 stopping halfway meant trusting the autosave and remembering the
-                batch later. Name it and park it from wherever you are. */}{workflowStep!=="connect"&&(files.length>0||drafts.length>0||Boolean(templateDetails))&&<button className="save-draft-link" type="button" onClick={()=>{setBatchDisplayName(current=>current||suggestedBatchName());setDraftSaveOpen(true)}}>Save as draft</button>}</div>}
+                batch later. Name it and park it from wherever you are. */}{workflowStep!=="connect"&&(files.length>0||drafts.length>0||Boolean(templateDetails))&&<button className="save-draft-link" type="button" onClick={()=>{setBatchDisplayName(current=>current||suggestedBatchName());saveDialogOpener.current=document.activeElement instanceof HTMLElement?document.activeElement:null;setDraftSaveOpen(true)}}>Save as draft</button>}</div>}
         </div>
       </section>}
 
@@ -5567,7 +5579,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
         </>
       )}
 
-      {complete && workflowStep==="designs" && <div className="workflow-footer-actions post-draft-footer"><button className="workflow-back" type="button" onClick={goBackOneStep}><span aria-hidden="true">←</span> Back</button><span className="autosave-note"><i aria-hidden="true">✓</i> Saved automatically</span>{/* D778 - this bar replaces the normal one once the drafts exist, and it had no slot, so on step 2 the step's own footer portalled into the hidden bar and the visible one showed no way forward at all. */}<span className="factory-footer-slot"/><button className="save-draft-link" type="button" onClick={()=>{setBatchDisplayName(current=>current||suggestedBatchName());setDraftSaveOpen(true)}}>Save as draft</button></div>}
+      {complete && workflowStep==="designs" && <div className="workflow-footer-actions post-draft-footer"><button className="workflow-back" type="button" onClick={goBackOneStep}><span aria-hidden="true">←</span> Back</button><span className="autosave-note"><i aria-hidden="true">✓</i> Saved automatically</span>{/* D778 - this bar replaces the normal one once the drafts exist, and it had no slot, so on step 2 the step's own footer portalled into the hidden bar and the visible one showed no way forward at all. */}<span className="factory-footer-slot"/><button className="save-draft-link" type="button" onClick={()=>{setBatchDisplayName(current=>current||suggestedBatchName());saveDialogOpener.current=document.activeElement instanceof HTMLElement?document.activeElement:null;setDraftSaveOpen(true)}}>Save as draft</button></div>}
 
       {preflightOpen && <div className="preflight-backdrop" role="presentation" onMouseDown={(e)=>{if(e.target===e.currentTarget)setPreflightOpen(false)}}><section className="preflight" role="dialog" aria-modal="true" aria-labelledby="preflight-title"><p className="mini-label">CREATE PRINTIFY DRAFTS</p>{/* D492 - the button says "Create Printify drafts for all 3 products" and this
     dialog, the last thing before it runs, said "Create 2 product drafts?" and

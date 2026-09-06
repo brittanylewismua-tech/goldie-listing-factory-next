@@ -60,11 +60,11 @@ export default function FactoryPanel({
         role={onToggle ? "button" : undefined}
         tabIndex={onToggle ? 0 : undefined}
         aria-expanded={onToggle ? open : undefined}
-        aria-label={onToggle ? `${toggleLabel ?? (open ? "Close" : "Open")} — ${title}` : undefined}
+        aria-label={onToggle ? `${toggleLabel?.trim() || (open ? "Close" : "Open")} — ${title}` : undefined}
         aria-disabled={onToggle && toggleDisabled ? true : undefined}
         title={toggleTitle}
         onClick={onToggle ? event => { if (toggleDisabled) return; if ((event.target as HTMLElement).closest("button,a,input,select,textarea")) return; onToggle(); } : undefined}
-        onKeyDown={onToggle ? event => { if (toggleDisabled) return; if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onToggle(); } } : undefined}
+        onKeyDown={onToggle ? event => { if (toggleDisabled || event.target !== event.currentTarget) return; if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onToggle(); } } : undefined}
       >
         {/* The prototype prints a zero-padded ordinal. It is decorative: it
             names the seller's position in the step, not an id. */}
