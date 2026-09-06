@@ -1,0 +1,24 @@
+import { NextResponse } from "next/server";
+import { getChatGPTUser } from "@/app/chatgpt-auth";
+import { isOwner } from "@/app/mastermind/access";
+import { scheduleTrialReminder, cancelTrialReminder } from "@/app/trial-reminder";
+import { billingRuntime } from "@/app/billing";
+import { logError } from "@/app/error-log";
+export async function POST(request:Request){
+  const user=await getChatGPTUser();
+  if(!user||!isOwner(user))return NextResponse.json({error:"Not authorized."},{status:403});
+  if(request.headers.get("origin")!==new URL(request.url).origin)return NextResponse.json({error:"Invalid origin."},{status:403});
+  const body=await request.json() as {action?:string;id?:string};
+  try{
+    if(body.action==="cancel"&&body.id){
+      const row=await billingRuntime().DB.prepare("SELECT id FROM error_log WHERE id=? AND area='launch/email-test' AND user_id=?").bind(body.id,user.userId).first();
+      if(!row)return NextResponse.json({error:"Unknown test email."},{status:400});
+      await cancelTrialReminder(body.id);return NextResponse.json({canceled:true});
+    }
+    if(body.action!=="send")return NextResponse.json({error:"Choose a check."},{status:400});
+    // Only the signed-in owner receives a labelled test. No arbitrary recipients.
+    const id=await scheduleTrialReminder({email:user.email,plan:"goldie",trialEnd:Math.floor(Date.now()/1000)+86400+90,test:true});
+    if(id)await billingRuntime().DB.prepare("INSERT INTO error_log (id,area,severity,user_id,message) VALUES (?,'launch/email-test','warning',?,'Owner-requested labelled email delivery check')").bind(id,user.userId).run();
+    return NextResponse.json({id,scheduled:true,message:"Labelled test scheduled to your signed-in email for about 90 seconds from now."});
+  }catch(error){const message=error instanceof Error?error.message:String(error);await logError({area:"launch/email-check",message,userId:user.userId});return NextResponse.json({error:message},{status:502});}
+}

@@ -1,3 +1,4 @@
+import { logError } from "@/app/error-log";
 import { NextResponse } from "next/server";
 import { billingRuntime, ensureBillingTables, planForPrice } from "@/app/billing";
 import { cancelTrialReminder, scheduleTrialReminder } from "@/app/trial-reminder";
@@ -48,7 +49,7 @@ export async function POST(request:Request){
         try{
           const reminderId=await scheduleTrialReminder({email:customerRecord?.email||"",plan,trialEnd:object.trial_end});
           if(reminderId)await db.prepare("INSERT INTO trial_reminder_emails (user_id,subscription_id,resend_email_id,scheduled_for) VALUES (?,?,?,?) ON CONFLICT(user_id) DO UPDATE SET subscription_id=excluded.subscription_id,resend_email_id=excluded.resend_email_id,scheduled_for=excluded.scheduled_for,canceled_at=NULL,updated_at=CURRENT_TIMESTAMP").bind(userId,object.id,reminderId,object.trial_end-86400).run();
-        }catch(error){console.error("Trial reminder scheduling failed",error);}
+        }catch(error){await logError({area:"billing/trial-reminder",message:error instanceof Error?error.message:String(error),userId});}
       }
     }
     if(object.status==="canceled"||cancellationScheduled){
@@ -57,7 +58,7 @@ export async function POST(request:Request){
         try{
           await cancelTrialReminder(reminder.resend_email_id);
           await db.prepare("UPDATE trial_reminder_emails SET canceled_at=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP WHERE user_id=?").bind(userId).run();
-        }catch(error){console.error("Trial reminder cancellation failed",error);}
+        }catch(error){await logError({area:"billing/trial-reminder-cancel",message:error instanceof Error?error.message:String(error),userId});}
       }
     }
   }
