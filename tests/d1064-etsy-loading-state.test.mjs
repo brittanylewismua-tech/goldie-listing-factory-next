@@ -13,8 +13,12 @@ test("D1064 shows automatic Etsy preparation as loading, not an error",()=>{
 });
 
 test("D1064 clears stale Etsy failures whenever titles or tags change",()=>{
-  assert.match(app,/\{title,etsy:undefined,etsyError:""\}/);
-  assert.match(app,/etsy:undefined,etsyError:""\}\)\} placeholder="Exact title phrases/);
+  // A copy edit still clears an obsolete error, but must retain reviewed
+  // fields instead of buying another analysis and replacing personalization.
+  assert.match(app,/\{title,etsyError:""\}/);
+  assert.match(app,/\.slice\(0,13\),etsyError:""\}\)\} placeholder="Exact title phrases/);
+  const manual=app.slice(app.indexOf("const derived=tagsFromTitle(design.title)"),app.indexOf("function descriptionLead()"));
+  assert.doesNotMatch(manual,/etsy:undefined/);
 });
 
 test("D1064 loading state is a centered neutral status with a spinner",()=>{
