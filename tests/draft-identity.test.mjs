@@ -16,3 +16,21 @@ test('recovery requires exact job SKUs, shop, blueprint, provider and every expe
   for(const changed of [{shop_id:2},{blueprint_id:3},{print_provider_id:4},{variants:product.variants.slice(0,1)},{variants:[{id:10,sku:'same-artwork-different-job'},{id:20,sku:product.variants[1].sku}]}])assert.equal(belongsToCreation({...product,...changed},expected),false);
   assert.equal(belongsToCreation(product,{...expected,variantIds:[]}),false);
 });
+
+test('generated SKUs fit Etsy’s 32-character limit including the largest valid variant identity',async()=>{
+ const key=await draftCreationKey('owner',1,'template','design');
+ const ids=[1,10,12124,Number.MAX_SAFE_INTEGER];
+ const skus=ids.map(id=>draftVariantSku(key,id));
+ assert.equal(new Set(skus).size,ids.length);
+ for(const sku of skus){assert.ok(sku.length<=32);assert.match(sku,/^[A-Za-z0-9_-]+$/)}
+});
+test('legacy identity remains recoverable and conversion preserves seller SKUs',async()=>{
+ const {compatibleLegacySku}=await import('../app/api/printify/draft-identity.ts');
+ const key=await draftCreationKey('owner',1,'template','design'),legacy=`LF-${key.slice(0,32)}-12124`;
+ assert.equal(compatibleLegacySku(legacy,12124),draftVariantSku(key,12124));
+ assert.equal(compatibleLegacySku(legacy,12125),legacy);
+ assert.equal(compatibleLegacySku('MY-CUSTOM-SKU',12124),'MY-CUSTOM-SKU');
+ assert.equal(compatibleLegacySku(undefined,12124),undefined);
+ const expected={key,shopId:1,blueprintId:2,providerId:3,variantIds:[12124]};
+ for(const sku of [legacy,draftVariantSku(key,12124)])assert.ok(belongsToCreation({shop_id:1,blueprint_id:2,print_provider_id:3,variants:[{id:12124,sku}]},expected));
+});

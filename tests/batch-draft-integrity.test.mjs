@@ -130,3 +130,12 @@ test('warning modals identify designs without exposing junk filenames',()=>{
   assert.doesNotMatch(block,/name:`\$\{issue\.fileName\}/);
   assert.match(block,/name:`Design \$\{/);
 });
+
+test('verified final price receipts do not inherit obsolete pre-creation batch estimates',()=>{
+ const saved={...tee,costReview:{required:true,verified:true,approved:true,variants:[{id:101,price:3204}]}};
+ const state={designs:[{id:tee.clientId}],drafts:[saved],variantPrices:{101:2600},pricingApproved:false};
+ assert.equal(restoreBatchDrafts(state,[saved]).pricingApproved,true);
+ const edited={...saved,priceEdits:{101:3279}};
+ assert.equal(restoreBatchDrafts({...state,drafts:[edited]},[saved]).pricingApproved,false);
+ assert.equal(restoreBatchDrafts(state,[{...saved,costReview:{...saved.costReview,approved:false}}]).pricingApproved,false);
+});

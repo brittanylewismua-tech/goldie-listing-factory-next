@@ -1,9 +1,11 @@
-type DraftIdentity = { id?:string; clientId?:string; batchId?:string; sourceTemplateId?:string; status?:string; priceEdits?:Record<string,number>; costReview?:{required?:boolean;approved?:boolean;variants?:Array<{id:number;price:number;isEnabled?:boolean}>} };
+type DraftIdentity = { id?:string; clientId?:string; batchId?:string; sourceTemplateId?:string; status?:string; priceEdits?:Record<string,number>; costReview?:{required?:boolean;verified?:boolean;approved?:boolean;variants?:Array<{id:number;price:number;isEnabled?:boolean}>} };
 type BatchIdentity = { designs?:Array<{id?:string}>; drafts?:DraftIdentity[]; templateDetails?:{id?:string;batchId?:string}; complete?:boolean;pricingApproved?:boolean;variantPrices?:Record<string,number> };
 
 export function pricesMatchSavedDrafts(drafts:DraftIdentity[],prices:Record<string,number>={}){
   return drafts.every(draft=>{
-    const expected=draft.priceEdits??prices;
+    // Batch variantPrices are pre-creation estimates. Explicit per-listing edits
+    // still block approval, but cannot borrow another listing’s estimated prices.
+    const expected=draft.priceEdits??(draft.costReview?.verified?{}:prices);
     return (draft.costReview?.variants||[]).every(variant=>variant.isEnabled===false||!Object.prototype.hasOwnProperty.call(expected,String(variant.id))||Number(expected[String(variant.id)])===Number(variant.price));
   });
 }
