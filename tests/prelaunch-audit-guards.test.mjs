@@ -17,3 +17,8 @@ test('lazy Etsy property controls have explicit names and photos count the effec
   assert.match(app,/<input aria-label=\{property.label\}/);
   assert.match(app,/const count=selectedImages.length\+\(preparedMockupCounts\[draft.id\|\|""\]\|\|0\)\+\(design\?\.sizeGuideName\?\?sizeGuideName\?1:0\)/);
 });
+
+test('editing or selecting a bundle member cannot silently detach the active bundle',()=>{
+  assert.match(app,/const changingProduct=Boolean\(activeBundle\|\|/);
+  assert.match(app,/if\(changingProduct&&\(files.length>0\|\|drafts.length>0\|\|complete\)\)/);
+});
