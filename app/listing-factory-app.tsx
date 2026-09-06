@@ -1097,7 +1097,7 @@ export default function ListingFactoryApp() {
   const [photoFocusId,setPhotoFocusId]=useState("");
   const [reviewEdit,setReviewEdit]=useState<{phase:"details"|"mockups";id:string;clientId:string}|null>(null);
   /* D787 · The batch-wide tools open on their own, above the listing grid. */
-  const [batchToolsOpen, setBatchToolsOpen] = useState<boolean>(true);
+  const [batchToolsOpen, setBatchToolsOpen] = useState<boolean|null>(null);
   const [activeRecipe,setActiveRecipe]=useState<Recipe|null>(null);
   /* D653 · loadTemplateUrl records which Printify store a product came from, but
      it read `activeRecipe` from its closure - and chooseRecipe calls it in the
@@ -2391,7 +2391,7 @@ export default function ListingFactoryApp() {
     batchIdRef.current="";runIdRef.current="";runStartedRef.current="";setBundleRun(null);window.localStorage.removeItem("goldie-active-batch");
     const freshUrl=new URL(window.location.href);freshUrl.searchParams.delete("batch");window.history.replaceState({},"",freshUrl);
     files.forEach(file=>URL.revokeObjectURL(file.previewUrl));
-    setBatchToolsOpen(true);
+    setBatchToolsOpen(null);
     setBatchDisplayName("");
     setKeptAsDrafts(false);
     setBatchSaveStatus("idle");
@@ -3376,8 +3376,8 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
         description="Create titles, tags, and the shared description"
         state={`${titled} of ${files.length} titled`}
         tone={titled===files.length?"done":"attention"}
-        open={batchToolsOpen}
-        onToggle={()=>setBatchToolsOpen(open=>!open)}
+        open={batchToolsOpen ?? titled<files.length}
+        onToggle={()=>setBatchToolsOpen(open=>!(open ?? titled<files.length))}
         toggleLabel="">
         <div className={titlePulseIds.size?"titles-resolving":""}>
           {titlesLead()}
