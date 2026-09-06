@@ -18,7 +18,8 @@ test("D883: a chosen product becomes the header and the library recedes",()=>{
 });
 
 test("D896: selected-product header offers one obvious management path",()=>{
-  assert.match(app,/headerActions=\{bundleCreationMode\|\|productFormMode\?undefined:[\s\S]{0,650}<button type="button" className="panel-create-action" onClick=\{\(\)=>setShowProductLibrary\(true\)\}>Choose a different product<\/button>/);
+  assert.match(app,/headerActions=\{bundleCreationMode\|\|productFormMode\?undefined:[^\n]*<button type="button" className="panel-create-action" onClick=\{\(\)=>setShowProductLibrary\(true\)\}>Choose a different product<\/button>/);
+  assert.match(app,/showProductLibrary&&\(productSelected\|\|bundleSelected\)&&<button[^>]*onClick=\{\(\)=>setShowProductLibrary\(false\)\}>Back to this batch<\/button>/);
   assert.doesNotMatch(app,/>Remove from this batch<\/button>/);
   assert.match(tools,/showLibrary\?:boolean/);
 });

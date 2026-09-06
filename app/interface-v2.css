@@ -3535,7 +3535,7 @@ html, body { background: var(--lf-paper); }
 .app-shell .batch-description-body>p{order:2;margin:0;color:#766772;font-size:12px}
 .app-shell .individual-description-body{display:grid;gap:10px}
 .app-shell .individual-description-body label{display:grid;gap:8px}
-.app-shell .etsy-details-editor>summary{pointer-events:none;cursor:default}
+.app-shell .etsy-details-editor>summary{pointer-events:auto;cursor:pointer}
 .app-shell .etsy-details-editor>summary::after{display:none!important}
 .app-shell .etsy-details-editor>summary>em,.app-shell .etsy-details-editor>.panel-collapse-foot{display:none!important}
 .app-shell .title-builder-choice{gap:14px!important;margin-top:16px}
@@ -3917,3 +3917,14 @@ html, body { background: var(--lf-paper); }
 
 .app-shell.app-shell .listing-photo-workspace .size-guide-actions button{min-height:44px!important;font-size:13px!important;padding:10px 14px!important}
 .app-shell.app-shell .listing-photo-workspace .photo-order-buttons button{width:44px!important;min-width:44px!important;height:44px!important;min-height:44px!important}
+
+/* D1176: completed Etsy choices can stay compact; personalization remains visible. */
+.app-shell .etsy-details-editor{border:2px solid #171217;border-radius:12px;background:#fffafc;box-shadow:5px 5px 0 #111;margin-bottom:22px}
+.app-shell .etsy-details-editor>summary{min-height:60px;padding:16px;gap:14px}
+.app-shell .etsy-details-editor>summary b{font-size:14px}
+.app-shell .etsy-details-editor>summary small{font-size:11px;line-height:1.5}
+.app-shell .etsy-details-editor>summary .etsy-details-chevron{display:block;font-size:20px;flex:none;transform:rotate(0deg)}
+.app-shell .etsy-details-editor[open]>summary .etsy-details-chevron{transform:rotate(180deg)}
+.app-shell .etsy-details-editor>summary:focus-visible{outline:3px solid #8b3368;outline-offset:-5px}
+.app-shell .etsy-details-editor-fields.factory-form-card{border:0;box-shadow:none;border-radius:0;background:#fffafc}
+.app-shell .etsy-detail-body>.personalization-editor{border:2px solid #171217;border-radius:12px;background:#fffafc;box-shadow:5px 5px 0 #111;padding:16px;margin-top:0}
