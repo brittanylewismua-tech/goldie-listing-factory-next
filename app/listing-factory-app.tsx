@@ -5421,7 +5421,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
                 <b>{handoffBlockers().length?"Finish the items above before opening Printify.":"Nothing has been published yet."}</b>
                 <span>Nothing has been published to Etsy, and no Etsy listing fees have been charged.</span>
                 <small>Open each product in My Products. Upload the unzipped Goldie photo set under Selected mockups, remove unwanted mockups, and put the numbered photos in order.</small>
-                <small>Before publishing, confirm shipping and personalization, and select Tags under Sync product details. Check the Etsy category and attributes in Etsy after publishing; those choices are saved in Goldie as your reference.</small>
+                <small>Before publishing, confirm shipping and personalization, and select Tags under Sync product details. Check the Etsy category and attributes in Etsy after publishing; those choices remain here as your reference.</small>
               </div>
               {false&&<><div className="publish-live-warning">{(()=>{
               /* D560 - the count follows her ticks now that they govern every listing. */
