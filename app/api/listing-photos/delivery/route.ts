@@ -2,8 +2,8 @@ import {NextResponse} from 'next/server';
 import {getChatGPTUser} from '@/app/chatgpt-auth';
 import {unpackDraftMedia} from '@/app/draft-media-storage';
 import {orderedPackagePhotos} from '@/app/listing-photo-package';
-import {deliveryEnv,deliveryStatus,readDelivery,readSourceImage,type DeliveryRow} from './service';
-const publicRow=(row:DeliveryRow)=>({id:row.id,productId:row.product_id,status:row.status,error:row.error,photoCount:JSON.parse(row.photos_json).length,updatedAt:row.updated_at,expiresAt:row.expires_at,listingId:row.state_json?JSON.parse(row.state_json).listingId:null});
+import {deliveryEnv,deliveryStatus,readDelivery,readSourceImage,prepareEtsyImage,deliveryMessage,type DeliveryRow} from './service';
+const publicRow=(row:DeliveryRow)=>({id:row.id,productId:row.product_id,status:row.status,error:row.error?deliveryMessage(row.error):null,photoCount:JSON.parse(row.photos_json).length,updatedAt:row.updated_at,expiresAt:row.expires_at,listingId:row.state_json?JSON.parse(row.state_json).listingId:null});
 export async function GET(request:Request){
  const user=await getChatGPTUser();if(!user)return NextResponse.json({error:'Sign in to view photo delivery.'},{status:401});
  const ids=[...new Set(new URL(request.url).searchParams.getAll('productId'))];if(!ids.length||ids.length>100)return NextResponse.json({deliveries:[]});
@@ -48,6 +48,7 @@ export async function POST(request:Request){
     if(photo.src)data=await readSourceImage(photo.src);
     else{const object=await runtime.ARTWORK.get(photo.key!);if(!object)throw Error('A selected photo disappeared. Prepare delivery again.');if(object.size>20*1024*1024)throw Error('Each photo must be 20 MB or smaller.');data={bytes:new Uint8Array(await object.arrayBuffer()),type:object.httpMetadata?.contentType||'image/jpeg'}}
     if(!['image/png','image/jpeg','image/webp'].includes(data.type))throw Error('Choose PNG, JPG or WEBP photos.');
+    data=await prepareEtsyImage(data);
     total+=data.bytes.length;if(total>90*1024*1024)throw Error('This photo set is too large. Keep the total below 90 MB.');
     const key=`photo-delivery/${user.userId}/${id}/selected/${index+1}`;await runtime.ARTWORK.put(key,data.bytes,{httpMetadata:{contentType:data.type}});snapshot.push({key,type:data.type});
   }
@@ -55,8 +56,8 @@ export async function POST(request:Request){
   try{await runtime.PHOTO_DELIVERY.create({id,params:{id,owner:user.userId}})}catch{throw Error('Automatic delivery could not start. Your photos are saved; try preparing delivery again.')}
   return NextResponse.json({delivery:publicRow((await readDelivery(id,user.userId))!)});
  }catch(error){
-  if(id){const row=await readDelivery(id,user.userId);if(row&&['preparing','waiting'].includes(row.status))await deliveryStatus(id,user.userId,'failed',error instanceof Error?error.message:'Photo preparation failed.')}
-  return NextResponse.json({error:error instanceof Error?error.message:'Photo delivery could not be prepared.'},{status:409});
+  if(id){const row=await readDelivery(id,user.userId);if(row?.status==='preparing'){const unfinished=await runtime.ARTWORK.list({prefix:`photo-delivery/${user.userId}/${id}/selected/`,limit:25});for(const object of unfinished.objects)await runtime.ARTWORK.delete(object.key)}if(row&&['preparing','waiting'].includes(row.status))await deliveryStatus(id,user.userId,'failed',error instanceof Error?error.message:'Photo preparation failed.')}
+  return NextResponse.json({error:deliveryMessage(error instanceof Error?error.message:'Photo delivery could not be prepared.')},{status:409});
  }
 }
 export async function DELETE(request:Request){

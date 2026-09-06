@@ -9,7 +9,7 @@ const packageUrl=url(read('app/listing-photo-package.ts'));
 const db=new DatabaseSync(':memory:');db.exec(read('drizzle/0022_photo_deliveries.sql'));
 db.exec("CREATE TABLE printify_draft_results(user_id TEXT,status TEXT,response_json TEXT);CREATE TABLE etsy_connections(user_id TEXT,is_active INTEGER,shop_id INTEGER);");
 const DB={prepare(sql){let args=[];return {bind(...values){args=values;return this},async first(){return db.prepare(sql).get(...args)||null},async all(){return {results:db.prepare(sql).all(...args)}},async run(){const r=db.prepare(sql).run(...args);return {meta:{changes:Number(r.changes)}}}}}};
-const stored=new Map();const bucket={async list({prefix}){return {truncated:false,objects:[...stored].filter(([k])=>k.startsWith(prefix)).map(([key])=>({key,etag:key}))}},async get(key){const value=stored.get(key);return value?{size:value.length,httpMetadata:{contentType:'image/png'},async text(){return new TextDecoder().decode(value)},async arrayBuffer(){return new Uint8Array(value).buffer}}:null},async put(key,value){stored.set(key,typeof value==='string'?new TextEncoder().encode(value):new Uint8Array(value))}};
+const stored=new Map();const bucket={async delete(key){stored.delete(key)},async list({prefix}){return {truncated:false,objects:[...stored].filter(([k])=>k.startsWith(prefix)).map(([key])=>({key,etag:key}))}},async get(key){const value=stored.get(key);return value?{size:value.length,httpMetadata:{contentType:'image/png'},async text(){return new TextDecoder().decode(value)},async arrayBuffer(){return new Uint8Array(value).buffer}}:null},async put(key,value){stored.set(key,typeof value==='string'?new TextEncoder().encode(value):new Uint8Array(value))}};
 let creations=[],failStart=false;
 const runtime={DB,ARTWORK:bucket,PHOTO_DELIVERY:{async create(input){creations.push(input);if(failStart)throw Error('start failed')}}};
 globalThis.__photoRoute={runtime,user:{userId:'owner'}};
@@ -21,6 +21,8 @@ let source=read('app/api/listing-photos/delivery/route.ts')
  .replace(/import \{deliveryEnv[^;]+;/,`const deliveryEnv=()=>globalThis.__photoRoute.runtime;
  const readDelivery=(id,owner)=>deliveryEnv().DB.prepare('SELECT * FROM photo_deliveries WHERE id=? AND user_id=?').bind(id,owner).first();
  const deliveryStatus=(id,owner,status,error)=>deliveryEnv().DB.prepare('UPDATE photo_deliveries SET status=?,error=? WHERE id=? AND user_id=?').bind(status,error,id,owner).run();
+ const deliveryMessage=value=>value;
+ const prepareEtsyImage=async data=>data;
  const readSourceImage=async()=>({bytes:new Uint8Array([1,2,3]),type:'image/png'});`);
 const api=await import(url(source));
 const post=(productId='p1',indices=[0])=>api.POST(new Request('https://goldie.test/api/listing-photos/delivery',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({productId,printifyImageIndices:indices})}));

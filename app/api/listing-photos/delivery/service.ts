@@ -3,8 +3,9 @@ import {etsyConnection,etsyApiCredential,etsyBudget,recordEtsyCall} from '../../
 import {decryptPrintifyToken} from '../../printify/token-crypto';
 import {readPrintifyPublishState} from '../../printify/publish-state';
 import {deliveryStep,DeliveryReviewRequired,type DeliveryImage,type DeliveryPhoto,type DeliveryState} from './engine';
-export type DeliveryEnv={DB:D1Database;ARTWORK:R2Bucket;PRINTIFY_TOKEN_KEY:string;PHOTO_DELIVERY:Workflow<{id:string;owner:string}>};
+export type DeliveryEnv={DB:D1Database;ARTWORK:R2Bucket;PRINTIFY_TOKEN_KEY:string;IMAGES?:{input(stream:ReadableStream):{output(options:{format:'image/jpeg';background:string;quality:number}):Promise<{response():Response}>}};PHOTO_DELIVERY:Workflow<{id:string;owner:string}>};
 export type DeliveryRow={id:string;user_id:string;product_id:string;printify_shop_id:number;etsy_shop_id:number;fingerprint:string;status:string;photos_json:string;state_json:string|null;candidate_listing_id:number|null;candidate_seen_at:number|null;error:string|null;created_at:number;updated_at:number;expires_at:number};
+export function deliveryMessage(value:string){return /Invalid redirect|UNIQUE constraint|SQLITE|TypeError|Cannot read|Unexpected token|binding/i.test(value)?'Photo delivery could not be prepared. Your original photos are saved. Please try again.':value.slice(0,500)}
 export const deliveryEnv=()=>env as unknown as DeliveryEnv;
 export const readDelivery=(id:string,owner:string)=>deliveryEnv().DB.prepare('SELECT * FROM photo_deliveries WHERE id=? AND user_id=?').bind(id,owner).first<DeliveryRow>();
 export async function deliveryStatus(id:string,owner:string,status:string,error:string|null=null){await deliveryEnv().DB.prepare('UPDATE photo_deliveries SET status=?,error=?,updated_at=? WHERE id=? AND user_id=?').bind(status,error,Date.now(),id,owner).run()}
@@ -19,7 +20,15 @@ export async function limitedImage(response:Response){
 function trustedImageUrl(value:string,host:'printify'|'etsy'){
   const url=new URL(value);if(url.protocol!=='https:'||!(host==='printify'?url.hostname==='images.printify.com':url.hostname==='i.etsystatic.com'))throw Error('The photo address could not be verified.');return url.toString();
 }
-export async function readSourceImage(src:string){return limitedImage(await fetch(trustedImageUrl(src,'printify'),{signal:AbortSignal.timeout(20000),redirect:'error'}))}
+export async function readSourceImage(src:string){return limitedImage(await fetch(trustedImageUrl(src,'printify'),{signal:AbortSignal.timeout(20000),redirect:'manual'}))}
+/** Etsy does not accept WebP and renders transparent PNG areas black. Match the editor's white photo background. */
+export async function prepareEtsyImage(data:{bytes:Uint8Array;type:string}){
+  if(data.type==='image/jpeg')return data;
+  const images=deliveryEnv().IMAGES;if(!images)throw Error('Photo conversion is temporarily unavailable. Your original upload is safe.');
+  const output=await images.input(new Blob([new Uint8Array(data.bytes)]).stream()).output({format:'image/jpeg',background:'#ffffff',quality:95});
+  return limitedImage(output.response());
+}
+
 export async function runDeliveryTick(id:string,owner:string){
   const row=await readDelivery(id,owner);if(!row||!['waiting','delivering'].includes(row.status))return {done:true,progress:false};
   if(Date.now()>row.expires_at){await deliveryStatus(id,owner,'expired','Automatic checking ended after 24 hours. Prepare photo delivery again when you are ready to publish.');return {done:true,progress:false}}
@@ -67,7 +76,7 @@ export async function runDeliveryTick(id:string,owner:string){
       backup:async images=>{
         for(const image of images){
           if(!image.url_fullxfull)throw Error('An existing Etsy photo could not be backed up. No photos were changed.');
-          const data=await limitedImage(await fetch(trustedImageUrl(image.url_fullxfull,'etsy'),{signal:AbortSignal.timeout(20000),redirect:'error'}));
+          const data=await limitedImage(await fetch(trustedImageUrl(image.url_fullxfull,'etsy'),{signal:AbortSignal.timeout(20000),redirect:'manual'}));
           await runtime.ARTWORK.put(`photo-delivery/${owner}/${id}/backup/${image.listing_image_id}`,data.bytes,{httpMetadata:{contentType:data.type}});
         }
         await runtime.ARTWORK.put(`photo-delivery/${owner}/${id}/backup.json`,JSON.stringify(images),{httpMetadata:{contentType:'application/json'}});
