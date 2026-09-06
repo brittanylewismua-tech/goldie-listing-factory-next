@@ -24,3 +24,11 @@ export function updateDraftPriceEdits<T extends PricedDraft>(drafts: T[], ids: S
   });
   return changed ? next : drafts;
 }
+
+/** Reconcile a stale batch flag only from explicit finished-product price receipts. */
+export function finalPriceApproval(drafts:Array<{status?:string;costReview?:{required?:boolean;verified?:boolean;approved?:boolean}}>):boolean|null{
+  const created=drafts.filter(draft=>draft.status==='Created');
+  if(created.some(draft=>draft.costReview?.required&&(!draft.costReview.approved||!draft.costReview.verified)))return false;
+  if(created.length&&created.every(draft=>draft.costReview?.required&&draft.costReview.verified&&draft.costReview.approved))return true;
+  return null;
+}

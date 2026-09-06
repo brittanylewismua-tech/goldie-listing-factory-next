@@ -22,7 +22,9 @@ test('color labels require unambiguous product metadata and never array order',(
  const input=[entry(0,11,'front'),entry(1,12,'front')];
  assert.deepEqual(mockupViewGroups(input,colors)[0].entries.map(e=>e.color),['Black','White']);
  const details=[{src:input[0].src,position:'front',variantIds:[11,12]}];
- assert.equal(mockupViewGroups(input,colors,[],details)[0].entries[0].color,'');
+ assert.equal(mockupViewGroups(input,colors,[],details)[0].entries[0].color,'Black');
+ const unknown=[{src:'https://images.printify.com/photo.jpg',index:0}];
+ assert.equal(mockupViewGroups(unknown,colors,[],[{src:unknown[0].src,position:'front',variantIds:[11,12]}])[0].entries[0].color,'');
 });
 test('manual group and individual prices preserve cents while automatic whole-number pricing stays available',()=>{
  const app=read('app/listing-factory-app.tsx');

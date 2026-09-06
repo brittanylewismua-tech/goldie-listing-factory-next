@@ -21,7 +21,7 @@ import ArtworkGrid from "./artwork-grid";
 import { runBounded } from "./bounded-work";
 import { bundleMemberDesigns } from "./bundle-member-designs";
 import { draftPhotoSelections } from "./draft-photo-selections";
-import { draftPriceEdits, updateDraftPriceEdits } from "./draft-price-edits";
+import { draftPriceEdits, updateDraftPriceEdits, finalPriceApproval } from "./draft-price-edits";
 import { productReadiness, recipeCarriesApprovedPricing, type Readiness } from "./product-readiness";
 import { KeywordBank, SavedWorkflow, type KeywordList, type Pricing, type ProductBundle, type Recipe } from "./factory-tools";
 import UploadedListingPhotos from "./uploaded-listing-photos";
@@ -2063,9 +2063,9 @@ export default function ListingFactoryApp() {
      which let a direct Final Review URL contradict the visible "Save these
      prices" control. Explicit unfinished cost reviews always win. */
   useEffect(()=>{
-    if(restoringBatch||!pricingApproved)return;
-    const unfinished=drafts.some(draft=>draft.status==="Created"&&draft.costReview?.required&&!draft.costReview.approved);
-    if(unfinished)setPricingApproved(false);
+    if(restoringBatch)return;
+    const approval=finalPriceApproval(drafts);
+    if(approval!==null&&approval!==pricingApproved)setPricingApproved(approval);
   },[restoringBatch,drafts,pricingApproved]);
 
   /* Restored batches keep their exact saved decisions, but refresh the product

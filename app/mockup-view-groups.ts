@@ -13,7 +13,8 @@ export function mockupViewGroups(entries:MockupEntry[],colors:Color[]=[],variant
     const front=/^(?:front|flat-front|front-flat|flat-lay-front)$/.test(camera),back=/^(?:back|flat-back|back-flat|flat-lay-back)$/.test(camera);
     const key=front?'front':back?'back':camera;
     const label=front?'Front':back?'Back':camera.replace(/-/g,' ').replace(/\bperson\b/g,'model').replace(/^./,c=>c.toUpperCase());
-    const ids=detail?.variantIds?.length?detail.variantIds:variantId?[variantId]:[];
+    // Printify may mark one camera with variants from several colors. Its URL identifies the rendered variant.
+    const ids=variantId?[variantId]:detail?.variantIds||[];
     const matches=colors.filter(color=>ids.some(id=>{const variant=variants.find(item=>item.id===id);const colorIds=color.ids||[color.id];return color.variantIds?.includes(id)||colorIds.includes(variant?.colorId??-1)||variant?.options?.some(option=>colorIds.includes(option))}));
     const color=matches.length===1?matches[0].title:'';
     if(!groups.has(key))groups.set(key,{key,label,primary:front||back,entries:[]});
