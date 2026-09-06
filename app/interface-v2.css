@@ -3940,10 +3940,13 @@ html, body { background: var(--lf-paper); }
  .app-shell .design-artwork-primary{grid-template-columns:64px minmax(0,1fr)!important;gap:12px!important}
  .app-shell .design-artwork-primary>.artwork-remove-action{grid-column:2;justify-self:start;min-height:44px}
  .app-shell .design-artwork-primary b,.app-shell .design-artwork-primary small{white-space:normal;overflow-wrap:anywhere}
- .app-shell .design-upload-review>.add-another-design{max-width:100%;min-height:44px}
+ .app-shell .design-upload-review>.add-another-design{max-width:100%;min-height:44px!important}
 }
 @media(max-width:720px){
  .app-shell .listing-photo-order .photo-order-strip{grid-template-columns:repeat(auto-fit,minmax(min(100%,140px),1fr))!important}
 }
 /* Separate the batch's product summary from the final review workspace. */
 .app-shell .factory-review{margin-top:32px!important}
+
+/* D1178: pink shadows identify the bottom next action, not review cards. */
+.app-shell .factory-publish-box{box-shadow:7px 7px 0 #111!important}
