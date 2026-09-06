@@ -3910,3 +3910,10 @@ html, body { background: var(--lf-paper); }
 
 .photo-delivery-handoff{margin:24px 0;padding:22px;border:2px solid #151515;border-radius:12px;box-shadow:4px 4px 0 #151515;background:#fff8fb;color:#171717}
 .photo-delivery-heading{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}.photo-delivery-heading h3{margin:0;font-size:20px}.photo-delivery-heading b{font-size:13px}.photo-delivery-handoff p{margin:12px 0;line-height:1.5}.photo-delivery-note,.photo-delivery-handoff>small{font-size:13px;line-height:1.5}.photo-delivery-handoff>small{display:block;margin-top:14px}.photo-delivery-handoff [role=status]{font-weight:700;margin:14px 0}.photo-delivery-handoff summary{padding:12px 0;cursor:pointer;font-weight:700}.photo-delivery-handoff ul{list-style:none;padding:0;margin:0}.photo-delivery-handoff li{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:14px 0;border-top:1px solid #bcaeb5}.photo-delivery-handoff li strong{flex:1 1 220px;overflow-wrap:anywhere}.photo-delivery-handoff li small{flex-basis:100%}.photo-delivery-handoff button{min-height:44px;border:1px solid #171717;border-radius:7px;background:white;color:#171717;padding:8px 12px;cursor:pointer}.photo-delivery-error{padding:12px;border:2px solid var(--goldie-attention);border-radius:8px;background:#fff;margin-top:14px}.photo-delivery-handoff a{color:#171717;text-decoration:underline;text-underline-offset:3px}
+
+/* D1172: the disclosure is a full-width row, not a cell in the legacy eight-photo grid. */
+.app-shell.app-shell .printify-image-picker>.mockup-other-views{display:block!important;grid-template-columns:none!important}
+.app-shell.app-shell .printify-image-picker .mockup-other-views>.printify-more-toggle{margin:0!important;border:0!important;border-radius:0!important;background:transparent!important}
+
+.app-shell.app-shell .listing-photo-workspace .size-guide-actions button{min-height:44px!important;font-size:13px!important;padding:10px 14px!important}
+.app-shell.app-shell .listing-photo-workspace .photo-order-buttons button{width:44px!important;min-width:44px!important;height:44px!important;min-height:44px!important}
