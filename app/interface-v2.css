@@ -3866,3 +3866,8 @@ html, body { background: var(--lf-paper); }
   .app-shell .recipe-card .bundle-builder{grid-template-columns:minmax(0,1fr);padding:16px;gap:12px}
   .app-shell .recipe-card .bundle-builder-instruction{min-width:0;text-align:left}
 }
+
+/* D1161: the four-step navigation already conveys position. The legacy
+   progress summary was hidden only on desktop, pushing the first mobile
+   task beneath the sticky footer and calling earlier saved work incomplete. */
+.app-shell .factory-work .workflow-momentum{display:none!important}
