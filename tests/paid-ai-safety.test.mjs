@@ -45,6 +45,7 @@ test('all customer vision endpoints check entitlement before contacting fal',()=
   for(const file of ['listing-intelligence','mockups/print-area']){
     const source=readFileSync(new URL(`../app/api/${file}/route.ts`,import.meta.url),'utf8');
     assert.ok(source.indexOf('await customerLaunchBlock(user)')<source.indexOf('await fetch('));
-    assert.match(source,/boundedVisionFetch as fetch/);
+    if(file==='listing-intelligence')assert.match(source,/const fetch=body.mode==="title"\?boundedVisionFetch:cachedVisionFetch\(user.userId,env.DB,boundedVisionFetch\)/);
+    else assert.match(source,/boundedVisionFetch as fetch/);
   }
 });
