@@ -367,7 +367,8 @@ test("guides sellers through the complete resumable nine-step workflow",async()=
   assert.match(page,/etsyPreparationActive\.current/);
   assert.match(page,/etsySaveActive\.current/);
   assert.match(page,/url\.searchParams\.set\("phase","final"\)/);
-  assert.match(page,/version!==etsyPreparationVersion\.current/);
+  assert.match(page,/version===etsyPreparationVersion\.current&&JSON.stringify/);
+  assert.match(page,/if\(!stillCurrent\(\)\)return/);
 });
 
 test("imports Printify product facts and automatically prepares product-specific Etsy details",async()=>{
@@ -2200,16 +2201,16 @@ test("counts and caps every listing at Etsy's 20-photo limit (fixes D67)",async(
 
 test("uses one deterministic Etsy product baseline across a batch (fixes D71)",async()=>{
   const app=await readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8");
-  assert.match(app,/etsyProductBaseline=useRef/);
+  assert.match(app,/etsyPreparation=useRef\(etsyPreparationCoordinator/);
   /* D662 · Concurrency 1 was what held this ordering, quietly. Raising it to 2
      reintroduced D71 and this assertion caught it. The baseline is now
      established explicitly - the first design alone, the rest in pairs - so the
      rule no longer depends on a concurrency number nobody connected to it. */
   assert.match(app,/const \[first,\.\.\.rest\]=pending;\n\s*await prepareOne\(first\);/);
   assert.match(app,/await runBounded\(rest,BACKGROUND_ETSY_CONCURRENCY,/);
-  assert.match(app,/prepared=baseline\?\{\.\.\.initial,taxonomyId:baseline\.taxonomyId,category:baseline\.category,attributes:\{\.\.\.initial\.attributes,\.\.\.baseline\.attributes\}\}:initial/);
-  assert.match(app,/etsyProductBaseline\.current=\{taxonomyId:details\.taxonomyId,category:details\.category,attributes:physical\}/);
-  assert.match(app,/etsyProductBaseline\.current=null;[\s\S]{0,1200}?setActiveRecipe\(recipe\)/);
+  assert.match(app,/etsyPreparation.current.baseline\(scope,async\(\)=>/);
+  assert.match(app,/return \{taxonomyId:details.taxonomyId,category:details.category,attributes:physical\}/);
+  assert.match(app,/attributes:\{\.\.\.initial.attributes,\.\.\.baseline.attributes\}/);
 });
 
 test("rejects over-capacity uploads before creating a batch record (fixes D54)",async()=>{

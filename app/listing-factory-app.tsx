@@ -6,6 +6,7 @@ import { draftsInDesignOrder } from "./listing-order";
 import { mergeMatchingDrafts, serializedBatchWrites } from "./batch-draft-integrity";
 import { requestEtsyOptions } from "./etsy-options-request";
 import { recoverDraftEtsyDetails } from "./recover-draft-etsy-details";
+import { etsyPreparationCoordinator } from "./etsy-preparation-coordinator";
 import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import Image from "next/image";
@@ -1014,8 +1015,8 @@ export default function ListingFactoryApp() {
   const etsyPreparationVersion=useRef(0);
   const etsyPreparationActive=useRef(false);
   const etsySaveActive=useRef(false);
-  const etsyProductBaseline=useRef<{taxonomyId?:number;category:string;attributes:Record<string,string>}|null>(null);
-  const etsyBaselineProduct=useRef("");
+  const etsyPreparation=useRef(etsyPreparationCoordinator<{taxonomyId?:number;category:string;attributes:Record<string,string>},EtsyDetails|null>());
+  const [,refreshEtsyPreparation]=useState(0);
   const connectionAutoSkip=useRef(false);
   const [connected, setConnected] = useState(false);
   const [token, setToken] = useState("");
@@ -1026,6 +1027,8 @@ export default function ListingFactoryApp() {
   const [checkingEtsyConnection, setCheckingEtsyConnection] = useState(true);
   const [template, setTemplate] = useState("");
   const [templateDetails, setTemplateDetails] = useState<TemplateDetails | null>(null);
+  const templateDetailsRef=useRef(templateDetails);
+  templateDetailsRef.current=templateDetails;
   /* D611 - what Goldie classifies the product by. Printify's own blueprint
      title, brand and model, never activeRecipe.name: that is the seller's
      nickname for her saved product and naming it "Bestie Drop" used to make the
@@ -1043,6 +1046,10 @@ export default function ListingFactoryApp() {
   const [loadingTemplate, setLoadingTemplate] = useState(false);
   const [description, setDescription] = useState("");
   const [files, setFiles] = useState<DesignFile[]>([]);
+  const preparationScope=JSON.stringify([batchIdRef.current,templateDetails?.id]);
+  const preparationDesigns=useRef(new Map<string,DesignFile[]>());
+  preparationDesigns.current.set(preparationScope,files);
+  for(const scope of preparationDesigns.current.keys())if(scope!==preparationScope&&!etsyPreparation.current.pending(scope))preparationDesigns.current.delete(scope);
   const [fileNotice,setFileNotice]=useState("");
   const [fileError, setFileError] = useState("");
   const [running, setRunning] = useState(false);
@@ -1122,7 +1129,8 @@ export default function ListingFactoryApp() {
   const [printifyImageIndices,setPrintifyImageIndices]=useState<number[]>([]);
   const [printifyImageSelections,setPrintifyImageSelections]=useState<Record<string,number[]>>({});
   const [sharedMockups,setSharedMockups]=useState<{theme:string;ids:string[]}|undefined>();
-  const [preparingEtsy,setPreparingEtsy]=useState(false);
+  const [manualPreparingEtsy,setPreparingEtsy]=useState(false);
+  const preparingEtsy=manualPreparingEtsy||etsyPreparation.current.pending(preparationScope);
   const [preparingListingId,setPreparingListingId]=useState("");
   const [savingEtsyDetails,setSavingEtsyDetails]=useState(false);
   const [workflowStep,setWorkflowStep]=useState<WorkflowStep>("connect");
@@ -2221,8 +2229,8 @@ export default function ListingFactoryApp() {
     return()=>document.removeEventListener("click",guardFinalActions,true);
   },[files,description,printifyImageIndices,printifyImageSelections,preparedMockupCounts,pricingApproved,complete,drafts,connected,templateDetails,etsyConnected,localPreview]);
 
-  useEffect(()=>{if(localPreview||!complete)return;const pending=files.filter(file=>!file.etsy&&file.title.trim());if(!pending.length)return;const timer=window.setTimeout(()=>{setPreparingEtsy(true);void prepareEtsyBatch(pending).finally(()=>setPreparingEtsy(false))},900);return()=>window.clearTimeout(timer);
-  },[localPreview,complete,files.map(file=>`${file.id}:${file.title}:${file.tags.join("|")}`).join(";")]);
+  useEffect(()=>{if(localPreview||!complete)return;const pending=files.filter(file=>!file.etsy&&file.title.trim());if(!pending.length)return;const timer=window.setTimeout(()=>{void prepareEtsyBatch(pending)},900);return()=>window.clearTimeout(timer);
+  },[localPreview,complete,preparationScope,files.map(file=>`${file.id}:${file.title}:${file.tags.join("|")}`).join(";")]);
   useEffect(()=>{if(localPreview||!complete)return;const pending=files.filter(file=>{const draft=drafts.find(item=>item.clientId===file.id);const signature=`${file.title}\n${file.tags.join("|")}`;return Boolean(draft?.id&&file.title.trim()&&syncedListingSignatures.current.get(file.id)!==signature)});if(!pending.length)return;setDrafts(current=>current.map(draft=>{const file=files.find(item=>item.id===draft.clientId);return file?{...draft,title:file.title,tags:file.tags}:draft}));const timer=window.setTimeout(()=>{void Promise.all(pending.map(async file=>{try{await syncListingFields(file);syncedListingSignatures.current.set(file.id,`${file.title}\n${file.tags.join("|")}`)}catch(error){updateDesign(file.id,{etsyError:error instanceof Error?error.message:"Printify could not save this listing."})}}))},600);return()=>window.clearTimeout(timer);
   },[localPreview,complete,drafts.map(draft=>draft.id||draft.clientId).join(";"),files.map(file=>`${file.id}:${file.title}:${file.tags.join("|")}`).join(";")]);
 
@@ -2332,7 +2340,6 @@ export default function ListingFactoryApp() {
      Deleting now has to be asked for. Leaving a stale batch in history is a
      tidiness problem; deleting a published one cannot be undone. */
   function clearCurrentBatch(clearProduct=true,preserveSavedBatch=true){
-    etsyProductBaseline.current=null;
     /* D301 · Starting over must also forget the remembered product, or the next
        refresh would restore the one that was just cleared. */
     if(clearProduct){try{window.localStorage.removeItem("goldie-active-recipe");window.localStorage.removeItem("goldie-active-bundle")}catch{/* private mode */}}
@@ -2363,7 +2370,7 @@ export default function ListingFactoryApp() {
     if (folderPicker.current) folderPicker.current.value = "";
     if (imagePicker.current) imagePicker.current.value = "";
   }
-  async function selectRecipe(recipe:Recipe):Promise<TemplateDetails|null>{etsyProductBaseline.current=null;/* D301 · Colours and sizes were persisted per template, but the product
+  async function selectRecipe(recipe:Recipe):Promise<TemplateDetails|null>{/* D301 · Colours and sizes were persisted per template, but the product
      SELECTION itself was not — so a refresh kept every choice and lost the
      thing they were choices about, landing you on a blank product step. Only
      a saved ?batch= restored it, and that id does not exist until a batch has
@@ -4432,25 +4439,10 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
       return match?{...property,value:match.name,valueId:match.value_id}:property;
     });
     return {...details,category:payload.selected.path,taxonomyId:payload.selected.id,properties:payload.properties||[]} }
-  async function rememberEtsyDefaults(details:EtsyDetails){if(!activeRecipe)return;const physical=Object.fromEntries((details.properties||[]).filter(property=>PHYSICAL_ETSY_FIELDS.test(property.label)&&property.value.trim()).map(property=>[property.label,property.value]));if(!Object.keys(physical).length)return;const updated={...activeRecipe,etsyDefaults:{...activeRecipe.etsyDefaults,...physical}};const response=await fetch("/api/product-recipes",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:activeRecipe.id,name:activeRecipe.name,templateUrl:activeRecipe.templateUrl,etsyDefaults:{...activeRecipe.etsyDefaults,...physical}})});if(!response.ok)throw new Error("The Etsy details were prepared, but the product defaults could not be saved.");setActiveRecipe(updated)}
+  async function rememberEtsyDefaults(details:EtsyDetails){if(!activeRecipe)return;const physical=Object.fromEntries((details.properties||[]).filter(property=>PHYSICAL_ETSY_FIELDS.test(property.label)&&property.value.trim()).map(property=>[property.label,property.value]));if(!Object.keys(physical).length)return;const updated={...activeRecipe,etsyDefaults:{...activeRecipe.etsyDefaults,...physical}};const response=await fetch("/api/product-recipes",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:activeRecipe.id,name:activeRecipe.name,templateUrl:activeRecipe.templateUrl,etsyDefaults:{...activeRecipe.etsyDefaults,...physical}})});if(!response.ok)throw new Error("The Etsy details were prepared, but the product defaults could not be saved.");setActiveRecipe(current=>current?.id===updated.id?{...current,etsyDefaults:{...current.etsyDefaults,...physical}}:current)}
 
-  /* D662 · Two at a time, but not from the first design.
-     
-     D71 made one batch share one Etsy product baseline: the first design
-     prepared establishes the taxonomy, category and physical attributes, and
-     every design after it inherits them, so a batch cannot publish ten listings
-     under subtly different Etsy categories. Concurrency 1 was what made that
-     ordering hold, quietly - and the D71 test caught this change reintroducing
-     the fault, which is exactly what it is there for.
-
-     prepareOne reads etsyProductBaseline.current, then awaits, then writes it.
-     Start two designs together and both read null, both resolve independently,
-     and the later write wins - the batch is inconsistent again and nothing on
-     screen would say so.
-
-     So the first design runs alone to establish the baseline, and the rest run
-     two at a time inheriting it. A ten-design batch goes from about ten calls
-     in sequence to one plus nine in pairs, and stays deterministic. */
+  /* Establish the first baseline before the remaining designs. The coordinator
+     also protects overlapping calls from title edits, retry, and manual preparation. */
   async function prepareEtsyBatch(pending:DesignFile[]){
     if(!pending.length)return;
     const [first,...rest]=pending;
@@ -4458,9 +4450,51 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
     if(!rest.length)return;
     await runBounded(rest,BACKGROUND_ETSY_CONCURRENCY,async file=>{await prepareOne(file);return file},()=>undefined);
   }
-  async function prepareOne(design:DesignFile){updateDesign(design.id,{etsyError:""});try{const response=await fetch("/api/listing-intelligence",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({
-    image:await designPreviewDataUrl(design),
-    product:{blueprintTitle:templateDetails?.blueprintTitle,brand:templateDetails?.brand,model:templateDetails?.model,description},title:design.title,tags:design.tags})}),payload=await response.json() as {details?:EtsyDetails;error?:string};if(!response.ok||!payload.details)throw new Error(payload.error||"Etsy details could not be prepared.");const defaults=productEtsyDefaults(templateDetails,activeRecipe?.etsyDefaults),initial={...payload.details,attributes:{...payload.details.attributes,...defaults},blurb:design.blurb?.trim()||payload.details.blurb},baseline=etsyBaselineProduct.current===templateDetails?.id?etsyProductBaseline.current:null,prepared=baseline?{...initial,taxonomyId:baseline.taxonomyId,category:baseline.category,attributes:{...initial.attributes,...baseline.attributes}}:initial,details=await resolveEtsyOptions(prepared);if(!baseline){etsyBaselineProduct.current=templateDetails?.id||"";const physical=Object.fromEntries((details.properties||[]).filter(property=>PHYSICAL_ETSY_FIELDS.test(property.label)&&property.value.trim()).map(property=>[property.label,property.value]));etsyProductBaseline.current={taxonomyId:details.taxonomyId,category:details.category,attributes:physical}}const updatedDesign={...design,blurb:details.blurb};await syncListingFields(updatedDesign,details);updateDesign(design.id,{blurb:details.blurb,etsy:details,etsyError:""});return details}catch(error){updateDesign(design.id,{etsyError:error instanceof Error?error.message:"Etsy details could not be prepared."});return null}}
+  function prepareOne(design:DesignFile):Promise<EtsyDetails|null>{
+    const scope=preparationScope;
+    const draftId=drafts.find(item=>item.clientId===design.id)?.id;
+    if(!draftId)return Promise.resolve(null);
+    const isCurrent=()=>JSON.stringify([batchIdRef.current,templateDetailsRef.current?.id])===scope;
+    const latest=()=>preparationDesigns.current.get(scope)?.find(item=>item.id===design.id)||design;
+    const update=(change:Partial<DesignFile>)=>{if(isCurrent())updateDesign(design.id,change)};
+    const promise=etsyPreparation.current.run(scope,draftId,async()=>{
+      // A queued batch may have captured this design before another caller finished it.
+      if(latest().etsy)return latest().etsy!;
+      update({etsyError:""});
+      try{
+        const input=latest();
+        const response=await fetch("/api/listing-intelligence",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({
+          image:await designPreviewDataUrl(input),
+          product:{blueprintTitle:templateDetails?.blueprintTitle,brand:templateDetails?.brand,model:templateDetails?.model,description},title:input.title,tags:input.tags})});
+        const payload=await response.json() as {details?:EtsyDetails;error?:string};
+        if(!response.ok||!payload.details)throw new Error(payload.error||"Etsy details could not be prepared.");
+        const defaults=productEtsyDefaults(templateDetails,activeRecipe?.etsyDefaults);
+        const initial={...payload.details,attributes:{...payload.details.attributes,...defaults},blurb:latest().blurb?.trim()||payload.details.blurb};
+        let firstDetails:EtsyDetails|undefined;
+        const baseline=await etsyPreparation.current.baseline(scope,async()=>{
+          const details=await resolveEtsyOptions(initial);
+          firstDetails=details;
+          const physical=Object.fromEntries((details.properties||[]).filter(property=>PHYSICAL_ETSY_FIELDS.test(property.label)&&property.value.trim()).map(property=>[property.label,property.value]));
+          return {taxonomyId:details.taxonomyId,category:details.category,attributes:physical};
+        });
+        const prepared={...initial,taxonomyId:baseline.taxonomyId,category:baseline.category,attributes:{...initial.attributes,...baseline.attributes}};
+        const resolved=firstDetails||await resolveEtsyOptions(prepared);
+        const current=latest(),details=current.etsy||{...resolved,blurb:current.blurb?.trim()||resolved.blurb};
+        // Preparation writes only Etsy details: an old response must never send an old title or tags.
+        const saved=await fetch("/api/printify/drafts/update",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({productId:draftId,etsyDetails:details})});
+        const savedPayload=await saved.json() as {error?:string};
+        if(!saved.ok)throw new Error(savedPayload.error||"Printify could not save the completed listing.");
+        const newest=latest(),retained=newest.etsy||details;
+        const change={blurb:newest.blurb?.trim()||retained.blurb,etsy:retained,etsyError:""};
+        preparationDesigns.current.set(scope,(preparationDesigns.current.get(scope)||[]).map(item=>item.id===design.id?{...item,...change}:item));
+        update(change);
+        return retained;
+      }catch(error){update({etsyError:error instanceof Error?error.message:"Etsy details could not be prepared."});return null}
+    });
+    refreshEtsyPreparation(current=>current+1);
+    void promise.finally(()=>refreshEtsyPreparation(current=>current+1));
+    return promise;
+  }
   async function retryOneEtsyListing(design:DesignFile){if(preparingListingId)return;setPreparingListingId(design.id);try{await prepareOne(design)}finally{setPreparingListingId("")}}
   async function changeEtsyCategory(design:DesignFile,taxonomyId:number){if(!design.etsy||taxonomyId===design.etsy.taxonomyId)return;try{const resolved=await resolveEtsyOptions(design.etsy,taxonomyId),merged=preserveCompatibleEtsyProperties(design.etsy.properties||[],resolved.properties||[]),details=applyProductFacts({...resolved,properties:merged.properties},productEtsyDefaults(templateDetails,activeRecipe?.etsyDefaults));if(merged.clearedCount){setPendingCategoryChange({designId:design.id,details,clearedCount:merged.clearedCount});return}updateDesign(design.id,{etsy:details,etsyError:""})}catch(error){updateDesign(design.id,{etsyError:error instanceof Error?error.message:"Etsy options could not be loaded."})}}
   async function continueToEtsyDetails(){
@@ -4472,13 +4506,16 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
     if(missing.length)return void stopWith("Finish all sections first.",missing);
     etsyPreparationActive.current=true;
     const version=++etsyPreparationVersion.current;
+    const sourceScope=preparationScope;
+    const stillCurrent=()=>version===etsyPreparationVersion.current&&JSON.stringify([batchIdRef.current,templateDetailsRef.current?.id])===sourceScope;
     setPreparingEtsy(true);
     try{
       let failed=0,firstPrepared:EtsyDetails|null=null;
       await runBounded(files,2,prepareOne,result=>{if(!result)failed+=1;else firstPrepared??=result});
-      if(version!==etsyPreparationVersion.current)return;
+      if(!stillCurrent())return;
       if(failed)return void stopWith("Some Etsy listings could not be completed.",[`${failed} ${failed===1?"listing needs":"listings need"} another attempt. Use the retry button beside each listing.`]);
       if(firstPrepared)await rememberEtsyDefaults(firstPrepared);
+      if(!stillCurrent())return;
       /* D226 · Drafts have just been created, so the sidebar quota is now stale. */
       setUsageRevision(current=>current+1);
       /* D221 · Etsy details live on the Listing page; there is no separate phase to move to. */
