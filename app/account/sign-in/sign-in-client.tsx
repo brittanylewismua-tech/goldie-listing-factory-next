@@ -1,28 +1,43 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useRef, useState } from "react";
 import { createSupabaseBrowserClient } from "@/app/supabase-auth";
 import GoldieWordmark from "@/app/goldie-wordmark";
 
-export default function SignInClient({ returnTo }: { returnTo: string }) {
+export default function SignInClient({ returnTo, initialError = "" }: { returnTo: string; initialError?: string }) {
   const [email, setEmail] = useState("");
   const [busy, setBusy] = useState<"email" | "google" | null>(null);
   const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
+  const [error, setError] = useState(initialError);
+  const pending = useRef(false);
   const callback = () => `${window.location.origin}/auth/callback?return_to=${encodeURIComponent(returnTo)}`;
 
   async function emailSignIn(event: FormEvent) {
-    event.preventDefault(); setBusy("email"); setError(""); setMessage("");
-    const { error: authError } = await createSupabaseBrowserClient().auth.signInWithOtp({ email: email.trim(), options: { emailRedirectTo: callback(), shouldCreateUser: true } });
-    setBusy(null);
-    if (authError) return setError(authError.message);
-    setMessage("Check your email. Your secure sign-in link is on its way.");
+    event.preventDefault();
+    if (pending.current) return;
+    pending.current = true; setBusy("email"); setError(""); setMessage("");
+    try {
+      const { error: authError } = await createSupabaseBrowserClient().auth.signInWithOtp({ email: email.trim(), options: { emailRedirectTo: callback(), shouldCreateUser: true } });
+      if (authError) return setError(authError.message);
+      setMessage("Check your email. Your secure sign-in link is on its way.");
+    } catch {
+      setError("We couldn't send your sign-in link. Check your connection and try again.");
+    } finally {
+      pending.current = false; setBusy(null);
+    }
   }
 
   async function googleSignIn() {
-    setBusy("google"); setError(""); setMessage("");
-    const { error: authError } = await createSupabaseBrowserClient().auth.signInWithOAuth({ provider: "google", options: { redirectTo: callback() } });
-    if (authError) { setBusy(null); setError(authError.message); }
+    if (pending.current) return;
+    pending.current = true; setBusy("google"); setError(""); setMessage("");
+    try {
+      const { error: authError } = await createSupabaseBrowserClient().auth.signInWithOAuth({ provider: "google", options: { redirectTo: callback() } });
+      if (authError) setError(authError.message);
+    } catch {
+      setError("We couldn't open Google sign-in. Check your connection and try again.");
+    } finally {
+      pending.current = false; setBusy(null);
+    }
   }
 
   return <main className="account-page" style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",paddingBottom:24}}><section className="account-card">
