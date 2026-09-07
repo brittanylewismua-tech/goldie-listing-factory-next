@@ -4961,7 +4961,6 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
           titleBuilding||applyingBankToBundle?{title:"Building your listing titles",detail:titleBuildMessage||"Working through the selected designs. Large batches can take several minutes."}:
           savingDraftArtwork?{title:"Updating color artwork",detail:"Uploading the artwork and waiting for Printify to confirm the change."}:
           restoringBatch||switchingProduct||loadingTemplate?{title:"Loading your saved product and artwork",detail:"Reading saved choices and product previews."}:
-          savingDraftBatch||restartingBatch||savingProductDefault?{title:"Saving your work",detail:"Waiting for the saved batch or product settings to be confirmed."}:
           publishing?{title:"Finishing your handoff",detail:publishMessage||"Waiting for the requested handoff to be confirmed."}:null}/>
 
         {/* D721 · Top bar from the approved preview: the batch being worked on,

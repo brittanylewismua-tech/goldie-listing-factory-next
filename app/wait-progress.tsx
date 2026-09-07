@@ -26,7 +26,7 @@ export default function WaitProgress({operation,observeTools=false}:{operation:W
  // Catch scoped tools (photo rendering, downloads, product-library saves) that own their busy state.
  useEffect(()=>{if(!observeTools)return;let element:Element|null=null,since=0;const timer=setInterval(()=>{
   if(title){setFallback(null);element=null;return}
-  const next=[...document.querySelectorAll<HTMLElement>('[aria-busy="true"]')].find(node=>node.getClientRects().length&&!node.closest('.goldie-wait-dialog')&&!node.closest('.photo-delivery-handoff'))||null;
+  const next=[...document.querySelectorAll<HTMLElement>('[aria-busy="true"]')].find(node=>node.getClientRects().length&&!node.closest('[role="dialog"],[role="alertdialog"]')&&!node.closest('.photo-delivery-handoff'))||null;
   if(next!==element){element=next;since=Date.now();setFallback(null)}
   if(element&&Date.now()-since>=15000){const label=element.getAttribute('aria-label')||(element.tagName==='BUTTON'?element.textContent:'');setStarted(since);setFallback({title:(label||'Finishing this step').trim().slice(0,100),detail:'Waiting for the requested operation to finish. Keep this page open.'})}
  },1000);return()=>clearInterval(timer)},[title,observeTools]);
