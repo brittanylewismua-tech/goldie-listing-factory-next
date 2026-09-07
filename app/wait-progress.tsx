@@ -2,7 +2,7 @@
 import {useEffect,useRef,useState} from 'react';
 import {createPortal} from 'react-dom';
 import {waitProgress,progressValue} from './wait-progress-model';
-export type WaitOperation={title:string;detail?:string;done?:number;total?:number};
+export type WaitOperation={title:string;detail?:string;done?:number;total?:number;background?:boolean};
 /** One visible wait surface. A clock is elapsed time, never an invented completion percentage. */
 export function WaitCard({title,detail,started,lastConfirmed,done,total,background=false,onHelp}:{onHelp?:()=>void;title:string;detail?:string;started:number;lastConfirmed?:number;done?:number;total?:number;background?:boolean}){
  const [now,setNow]=useState(Date.now());
@@ -26,7 +26,7 @@ export default function WaitProgress({operation,observeTools=false}:{operation:W
  // Catch scoped tools (photo rendering, downloads, product-library saves) that own their busy state.
  useEffect(()=>{if(!observeTools)return;let element:Element|null=null,since=0;const timer=setInterval(()=>{
   if(title){setFallback(null);element=null;return}
-  const next=[...document.querySelectorAll<HTMLElement>('[aria-busy="true"]')].find(node=>node.getClientRects().length&&!node.closest('[role="dialog"],[role="alertdialog"]')&&!node.closest('.photo-delivery-handoff'))||null;
+  const next=[...document.querySelectorAll<HTMLElement>('[aria-busy="true"]')].find(node=>node.getClientRects().length&&!node.closest('[role="dialog"],[role="alertdialog"]')&&!node.closest('.photo-delivery-handoff')&&!node.closest('[data-inline-progress="true"]'))||null;
   if(next!==element){element=next;since=Date.now();setFallback(null)}
   if(element&&Date.now()-since>=15000){const label=element.getAttribute('aria-label')||(element.tagName==='BUTTON'?element.textContent:'');setStarted(since);setFallback({title:(label||'Finishing this step').trim().slice(0,100),detail:'Waiting for the requested operation to finish. Keep this page open.'})}
  },1000);return()=>clearInterval(timer)},[title,observeTools]);
@@ -35,6 +35,6 @@ export default function WaitProgress({operation,observeTools=false}:{operation:W
  useEffect(()=>{if(!active||helpOpen||!dialog.current)return;const opener=document.activeElement instanceof HTMLElement?document.activeElement:null;dialog.current.showModal();return()=>{dialog.current?.close();if(opener?.isConnected)opener.focus({preventScroll:true})}},[Boolean(active),helpOpen]);
  if(!active||typeof document==='undefined')return null;
  const getHelp=()=>{setHelpOpen(true);window.dispatchEvent(new CustomEvent('goldie-support',{detail:`${active.title} is taking a long time. I have kept this page open and have not repeated the operation.`}))};
- if(helpOpen)return createPortal(<aside className="goldie-wait-reminder" role="status"><b>{active.title}</b><p>The original request is still pending. Keep this page open and do not repeat it.</p><button type="button" onClick={()=>setHelpOpen(false)}>Show progress</button></aside>,document.body);
+ if(helpOpen)return createPortal(<aside className="goldie-wait-reminder" role="status"><b>{active.title}</b><p>{active.background?'The submitted drafts are continuing in the background. You may close this page and return to the saved batch.':'The original request is still pending. Keep this page open and do not repeat it.'}</p><button type="button" onClick={()=>setHelpOpen(false)}>Show progress</button></aside>,document.body);
  return createPortal(<dialog className="goldie-wait-dialog" ref={dialog} tabIndex={-1} onKeyDown={event=>{if(event.key==='Tab'){event.stopPropagation();const button=dialog.current?.querySelector<HTMLButtonElement>('button');event.preventDefault();(button||dialog.current)?.focus()}}} aria-label={active.title} onCancel={event=>event.preventDefault()}><WaitCard {...active} started={started} onHelp={getHelp}/></dialog>,document.body);
 }

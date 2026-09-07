@@ -29,7 +29,8 @@ test("D1053: photo ordering works in both directions and persists the live order
 test("D1053: per-listing descriptions are intentionally collapsed",async()=>{
   const app=await read("app/listing-factory-app.tsx");
   assert.match(app,/details className="individual-description-disclosure"/);
-  assert.match(app,/summary>Description for this listing<\/summary>/);
+  assert.match(app,/summary><span>Description for this listing<\/span><svg className="description-chevron"/);
+  assert.match(app,/d="m5 7\.5 5 5 5-5"/);
 });
 
 test("D1054: Step 3 identifies the listing with its Printify product mockup",async()=>{

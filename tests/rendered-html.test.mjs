@@ -4851,7 +4851,8 @@ test("steps 2, 3 and 4 are the same shape and no row is a bookmark — D541", as
 
   assert.ok(titles.includes("listing-title-field") && titles.includes("listing-tags-field"),
     "titles and tags are edited together, in one panel");
-  assert.ok(titles.includes("<IndividualAutoTitle"), "and one listing can be redone on its own");
+  assert.ok(!titles.includes("<IndividualAutoTitle") && titles.includes("Auto-create titles for this product"),
+    "one product-wide action creates every listing title rather than making the seller repeat it");
   assert.ok(titles.includes("task-listing-preview"), "with the artwork big enough to identify");
   assert.ok(!description.includes("listing-title-field") && !description.includes("listing-tags-field"),
     "and none of that leaks into the description, which is what she was looking at");
@@ -6429,7 +6430,7 @@ test("counts read correctly at one — D647", async () => {
   const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
   assert.match(app, /\$\{drafts\.length\} \$\{drafts\.length===1\?"draft":"drafts"\}/);
   assert.doesNotMatch(app, /\$\{drafts\.length\} drafts`/);
-  assert.match(app, /===1\?"design":"designs"\} at a time without lowering their print resolution/);
+  assert.match(app, /Preparing every listing for background creation\. Keep this page open\./);
 });
 
 /* D648 · Everything the seller walkthrough turned up that was cosmetic or

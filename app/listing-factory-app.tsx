@@ -437,10 +437,10 @@ function PrintifyImageTile({src,index,selected,atLimit,onToggle,onExpand,caption
     return()=>window.clearTimeout(timer);
   },[state,attempt]);
   const retrySrc=attempt?`${src}${src.includes("?")?"&":"?"}goldie_retry=${attempt}`:src;
-  return <div className={`printify-image-option ${selected?"selected":""} ${state==="loading"?"is-loading":state==="failed"?"is-failed":"is-ready"}`}><label className="printify-photo-selector"><input type="checkbox" checked={selected} disabled={state!=="ready"||(!selected&&atLimit)} onChange={onToggle}/><span aria-hidden="true">{selected?"✓":""}</span><span className="sr-only">Select Printify photo {index+1}</span></label><button type="button" className="printify-photo-expand" disabled={state!=="ready"} onClick={onExpand} aria-label={`View ${printifyViewName(src)||`Printify photo ${index+1}`} larger`}><span className="printify-photo-loading" aria-live="polite">{state==="loading"?"Loading photo…":state==="failed"?"Photo unavailable":""}</span><img key={attempt} src={retrySrc} alt={printifyViewName(src)||`Printify product mockup ${index+1}`} decoding="async" loading="lazy" width={800} height={800} onLoad={()=>setState("ready")} onError={()=>setState("failed")}/></button>{caption&&<span className="mockup-tile-caption">{caption}</span>}{state==="failed"?<button type="button" className="printify-photo-retry" onClick={()=>{setState("loading");setAttempt(value=>value+1)}}>Retry</button>:null}</div>;
+  return <div className={`printify-image-option ${selected?"selected":""} ${state==="loading"?"is-loading":state==="failed"?"is-failed":"is-ready"}`}><button type="button" className="printify-photo-select" aria-pressed={selected} disabled={state!=="ready"||(!selected&&atLimit)} onClick={onToggle} aria-label={`${selected?"Deselect":"Select"} ${printifyViewName(src)||`Printify photo ${index+1}`}`}><span className="printify-photo-loading" aria-live="polite">{state==="loading"?"Loading photo…":state==="failed"?"Photo unavailable":""}</span><img key={attempt} src={retrySrc} alt={printifyViewName(src)||`Printify product mockup ${index+1}`} decoding="async" loading="lazy" width={800} height={800} onLoad={()=>setState("ready")} onError={()=>setState("failed")}/><span className="printify-photo-selector" aria-hidden="true">{selected?<svg viewBox="0 0 20 20"><path d="m5 10 3 3 7-7"/></svg>:null}</span></button><button type="button" className="printify-photo-expand" disabled={state!=="ready"} onClick={onExpand} aria-label={`View ${printifyViewName(src)||`Printify photo ${index+1}`} larger`}><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="5.5"/><path d="m15 15 4 4M10.5 8v5M8 10.5h5"/></svg></button>{caption&&<span className="mockup-tile-caption">{caption}</span>}{state==="failed"?<button type="button" className="printify-photo-retry" onClick={()=>{setState("loading");setAttempt(value=>value+1)}}>Retry</button>:null}</div>;
 }
-function PrintifyImagePicker({ images,indices,reservedPhotos=0,onApplyOne,onApplyAll,onSaveRecipe,onRefresh,bare,showApplyAll=true,colors=[],variants=[],details=[],colorIds }: { colorIds?:number[];colors?:ProductColor[];variants?:ProductVariant[];details?:Array<{src:string;position:string;variantIds:number[]}>;images: string[];indices:number[];reservedPhotos?:number;onApplyOne:(indices:number[])=>void;onApplyAll:(indices:number[])=>void;bare?:boolean;showApplyAll?:boolean;onSaveRecipe?:(indices:number[])=>void|Promise<void>;onRefresh?:()=>void|Promise<void> }) {
-  const [selected,setSelected]=useState<Set<number>>(new Set(indices.slice(0,Math.max(0,20-reservedPhotos)))),[expanded,setExpanded]=useState<string>(""),[showAll,setShowAll]=useState(false),[view,setView]=useState(""),[moreView,setMoreView]=useState(""),[action,setAction]=useState<"clear"|"all"|"future"|"">(""),[feedback,setFeedback]=useState(""),[savingFuture,setSavingFuture]=useState(false);
+function PrintifyImagePicker({ images,indices,reservedPhotos=0,onApplyOne,onApplyAll,onSaveRecipe,onRefresh,bare,showApplyAll=true,colors=[],variants=[],details=[],colorIds }: { colorIds?:number[];colors?:ProductColor[];variants?:ProductVariant[];details?:Array<{src:string;position:string;variantIds:number[]}>;images: string[];indices:number[];reservedPhotos?:number;onApplyOne:(indices:number[])=>void;onApplyAll:(indices:number[])=>(()=>void);bare?:boolean;showApplyAll?:boolean;onSaveRecipe?:(indices:number[])=>void|Promise<void>;onRefresh?:()=>void|Promise<void> }) {
+  const [selected,setSelected]=useState<Set<number>>(new Set(indices.slice(0,Math.max(0,20-reservedPhotos)))),[expanded,setExpanded]=useState<string>(""),[showAll,setShowAll]=useState(false),[view,setView]=useState(""),[moreView,setMoreView]=useState(""),[action,setAction]=useState<"clear"|"all"|"future"|"">(""),[feedback,setFeedback]=useState(""),[savingFuture,setSavingFuture]=useState(false);const undoApplyAll=useRef<null|(()=>void)>(null);
   useEffect(()=>{
     const chosen=new Set(indices),valid=uniqueMockupEntries(images,indices).filter(item=>chosen.has(item.index)).map(item=>item.index).sort((a,b)=>a-b).slice(0,Math.max(0,20-reservedPhotos));
     setSelected(new Set(valid));
@@ -452,7 +452,7 @@ function PrintifyImagePicker({ images,indices,reservedPhotos=0,onApplyOne,onAppl
   const chosen=[...selected].sort((a,b)=>a-b),selectionHint=chosen.length?"":"Select a Printify photo below first.",slotsLeft=Math.max(0,20-reservedPhotos-selected.size),atLimit=slotsLeft===0;
   function toggle(index:number){const next=new Set(selected);if(next.has(index))next.delete(index);else{if(atLimit){setFeedback("Etsy allows 20 listing photos. Remove a selected photo before adding another.");return}next.add(index)}setSelected(next);setAction("");setFeedback("");onApplyOne([...next].sort((a,b)=>a-b))}
   function deselect(){setSelected(new Set());setAction("clear");setFeedback("");onApplyOne([])}
-  function applyAll(){if(!chosen.length)return;onApplyAll(chosen);setAction("all");setFeedback("✓ These views are selected for this product’s listings.")}
+  function applyAll(){if(action==="all"&&undoApplyAll.current){undoApplyAll.current();undoApplyAll.current=null;setAction("");setFeedback("Previous photo choices restored.");return}if(!chosen.length)return;undoApplyAll.current=onApplyAll(chosen);setAction("all");setFeedback("✓ These views are selected for this product’s listings.")}
   async function saveFuture(){if(!onSaveRecipe||savingFuture||!chosen.length)return;setSavingFuture(true);setFeedback("Saving your preference…");try{await onSaveRecipe(chosen);setAction("future");setFeedback("✓ These Printify photos will be preselected for future batches using this product.")}catch(error){setAction("");setFeedback(error instanceof Error?error.message:"These preferences could not be saved.")}finally{setSavingFuture(false)}}
   const lightbox=expanded&&typeof document!=="undefined"?createPortal(<div className="printify-photo-lightbox" role="dialog" aria-modal="true" aria-label="Expanded Printify photo" onMouseDown={event=>{if(event.target===event.currentTarget)setExpanded("")}}><button type="button" onClick={()=>setExpanded("")} aria-label="Close expanded photo">×</button><img src={expanded} alt="Expanded Printify product mockup"/></div>,document.body):null;
   return <>{/* D407 - Was open by default, so arriving on Images dropped you into the
@@ -467,7 +467,7 @@ function PrintifyImagePicker({ images,indices,reservedPhotos=0,onApplyOne,onAppl
         labelled the tiles in the copy that is used; the dead one still held the
         old unlabelled grid. That is exactly how the mug bug happened - two copies
         of one rule, one of them fixed. One copy. */}
-        <div className="printify-image-picker bare"><div className="mockup-picker-heading"><h4>Printify mockups</h4><span>{selected.size+reservedPhotos} of 20 photos</span></div><p>{colors.length?"Choose a view, then select the colors you want.":"Choose a view, then select the photos you want."} Your uploads and size guide share the 20-photo limit.</p><div className="image-pref-actions"><button type="button" className={`clear ${action==="clear"?"confirmed":""}`} disabled={!chosen.length} onClick={deselect}>{action==="clear"&&<span className="action-check">✓</span>}<b>{action==="clear"?"Selections cleared":"Clear this listing’s selections"}</b><small>{selectionHint||"Remove every selected Printify photo from this listing only."}</small></button>{showApplyAll?<button type="button" className={action==="all"?"confirmed":""} disabled={!chosen.length} onClick={applyAll}>{action==="all"&&<span className="action-check">✓</span>}<b>{action==="all"?"Applied to this product’s listings":"Apply photos to this product’s listings"}</b><small>{selectionHint||"Use these views for each design on this product."}</small></button>:null}</div>{feedback&&<p className="image-pref-feedback" role="status">{feedback}</p>}{/* D569 - measured on her hoodie: 96 tiles in one listing's picker, 192 in the
+        <div className="printify-image-picker bare"><div className="mockup-picker-heading"><h4>Printify mockups</h4><span>{selected.size+reservedPhotos} of 20 photos</span></div><p>{colors.length?"Choose a view, then select the colors you want.":"Choose a view, then select the photos you want."} Your uploads and size guide share the 20-photo limit.</p><div className="image-pref-actions"><button type="button" className={`clear ${action==="clear"?"confirmed":""}`} disabled={!chosen.length} onClick={deselect}>{action==="clear"&&<span className="action-check">✓</span>}<b>{action==="clear"?"Selections cleared":"Clear this listing’s selections"}</b><small>{selectionHint||"Remove every selected Printify photo from this listing only."}</small></button>{showApplyAll?<button type="button" className={action==="all"?"confirmed":""} disabled={!chosen.length} onClick={applyAll}>{action==="all"&&<span className="action-check">✓</span>}<b>{action==="all"?"Undo apply to product":"Apply photos to this product’s listings"}</b><small>{action==="all"?"Restore every listing’s previous photo choices.":selectionHint||"Use these views for each design on this product."}</small></button>:null}</div>{feedback&&<p className="image-pref-feedback" role="status">{feedback}</p>}{/* D569 - measured on her hoodie: 96 tiles in one listing's picker, 192 in the
         panel, and only 12 distinct labels - "Front" sixteen times, "Back" sixteen
         times. Every tile is a real, different image (12 camera views across the 8
         colours she enabled), but a flat wall of 96 with a repeated one-word label
@@ -486,7 +486,7 @@ function PrintifyImagePicker({ images,indices,reservedPhotos=0,onApplyOne,onAppl
           {(primary.length?primary:groups.slice(0,1)).map(group=><button type="button" key={group.key} aria-pressed={!showAll&&view!=="selected"&&current?.key===group.key} onClick={()=>{setView(group.key);setShowAll(false)}}>{group.label} <span>{group.entries.length}</span></button>)}
           <button type="button" aria-pressed={view==="selected"&&!showAll} onClick={()=>{setView("selected");setShowAll(false)}}>Selected <span>{selected.size}</span></button>
         </div>
-        {other.length>0&&<div className="mockup-other-views"><button type="button" className={`printify-more-toggle${showAll?" is-open":""}`} aria-expanded={showAll} onClick={()=>{setShowAll(value=>!value);if(view==="selected")setView(primary[0]?.key||groups[0]?.key||"")}}><span>More angles &amp; lifestyle · {other.length} views</span><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 7.5 5 5 5-5"/></svg></button>{showAll&&<label className="mockup-angle-select">View<select value={extra?.key||""} onChange={event=>setMoreView(event.target.value)}>{other.map(group=><option key={group.key} value={group.key}>{group.label} · {group.entries.length} photos</option>)}</select></label>}</div>}
+        {other.length>0&&<div className="mockup-other-views"><button type="button" className={`printify-more-toggle${showAll?" is-open":""}`} aria-expanded={showAll} onClick={()=>{setShowAll(value=>!value);if(view==="selected")setView(primary[0]?.key||groups[0]?.key||"")}}><span>More angles &amp; lifestyle · {other.length} views</span><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 7.5 5 5 5-5"/></svg></button>{showAll&&<div className="mockup-angle-controls"><span>Choose a view</span><label><span className="sr-only">More mockup view</span><select value={extra?.key||""} onChange={event=>setMoreView(event.target.value)}>{other.map(group=><option key={group.key} value={group.key}>{group.label} · {group.entries.length} photos</option>)}</select></label></div>}</div>}
         <div className="printify-image-grid printify-all-images">{visible.map(({src,index,color,label})=><PrintifyImageTile key={`${src}:${index}`} src={src} index={index} caption={color?`${color} · ${label}`:label} selected={selected.has(index)} atLimit={atLimit} onToggle={()=>toggle(index)} onExpand={()=>setExpanded(src)}/>)}</div>
         {!visible.length&&<p className="mockup-empty">No photos selected yet. Choose a view above to get started.</p>}
         </>})()}</div>{lightbox}</>;
@@ -644,7 +644,8 @@ async function designPreviewDataUrl(design:DesignFile){
   if(!design.previewUrl)throw new Error("The original upload is not available in this browser. You can still write this listing manually.");
   try{const response=await fetch(design.previewUrl);if(!response.ok)throw new Error();return safeImagePreviewDataUrl(await response.blob(),1200,false)}catch{throw new Error("The saved Printify preview could not be read. You can still write this listing manually.")}
 }
-async function autoTitleForDesign(design:DesignFile,keywords:string[],useCommas:boolean,template:TemplateDetails|null){const response=await fetch("/api/listing-intelligence",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({mode:"title",image:await designPreviewDataUrl(design),product:{blueprintTitle:template?.blueprintTitle,brand:template?.brand,model:template?.model},keywords,useCommas})}),payload=await response.json() as {title?:string;keywords?:string[];tags?:string[];titleWarning?:string;error?:string};if(!response.ok||!payload.title)throw new Error(payload.error||"This title could not be created.");return {title:payload.title,keywords:payload.keywords||[],tags:payload.tags||[],titleWarning:payload.titleWarning||""}}
+function fallbackTagsFromKeywords(keywords:string[]){return [...new Set(keywords.map(keyword=>keyword.trim().toLocaleLowerCase()).filter(keyword=>keyword&&keyword.length<=20))].slice(0,13)}
+async function autoTitleForDesign(design:DesignFile,keywords:string[],useCommas:boolean,template:TemplateDetails|null){const response=await fetch("/api/listing-intelligence",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({mode:"title",image:await designPreviewDataUrl(design),product:{blueprintTitle:template?.blueprintTitle,brand:template?.brand,model:template?.model},keywords,useCommas})}),payload=await response.json() as {title?:string;keywords?:string[];tags?:string[];titleWarning?:string;error?:string};if(!response.ok||!payload.title)throw new Error(payload.error||"This title could not be created.");const returnedTags=fallbackTagsFromKeywords(payload.tags||[]),fallback=fallbackTagsFromKeywords(payload.keywords?.length?payload.keywords:keywords);return {title:payload.title,keywords:payload.keywords||[],tags:returnedTags.length?returnedTags:fallback,titleWarning:payload.titleWarning||""}}
 
 function IndividualAutoTitle({design,template,useCommas,initialBankId,paused,onApply}:{design:DesignFile;template:TemplateDetails|null;useCommas:boolean;initialBankId?:string;paused?:boolean;onApply:(title:string,tags:string[],titleWarning?:string)=>void}){const [bank,setBank]=useState<KeywordList|null>(null),[building,setBuilding]=useState(false),[message,setMessage]=useState(""),[openMode,setOpenMode]=useState<"ai"|"manual"|null>(null);const resultGuard=useRef(titleResultGuard()),buildingRef=useRef(false);
   resultGuard.current.update(JSON.stringify([design.id,template?.id,bank?.id,bank?.keywords,useCommas,paused]),[design]);
@@ -1751,8 +1752,16 @@ export default function ListingFactoryApp() {
     /* D220 · Draft creation is on this page now. If the drafts already exist the
        photos are below, so this moves on to the listing text; if they do not, the
        Create-drafts panel is what comes next and it is right here. */
-    if(complete)return goToStep("finish",false,true);
+    if(complete)return void enterListingDetails();
     document.querySelector(".launch-panel")?.scrollIntoView({block:"start"});
+  }
+  async function enterListingDetails(){
+    if(activeBundle&&bundleRecipes.length>1&&bundleIndex!==0)await openBundleProduct(0);
+    setActiveDesign(files[0]?.id||"");
+    setBatchToolsOpen(true);
+    setFinishPhase("details");
+    await goToStep("finish",false,true);
+    window.scrollTo(0,0);
   }
   /* D220 · Which of the four stages the current legacy index belongs to. The
      "Finish · Images + mockups (3 of 4)" phrasing went with the subrail; there
@@ -2994,6 +3003,7 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
   const [draftStageByProduct,setDraftStageByProduct]=useState<Record<string,string>>({});
   const [taskFocusRequest,setTaskFocusRequest]=useState(0);
   const guidedTaskFocus=useRef(false);
+  const requestedBundleTask=useRef("");
   useEffect(()=>{
     if(!guidedTaskFocus.current||switchingProduct||restoringBatch)return;
     const frame=window.requestAnimationFrame(()=>{
@@ -3009,7 +3019,7 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
     // Guidance may reopen saved products; it must never create a new child batch.
     if(index!==bundleIndex&&!bundleBatchIds[bundleRecipes[index]?.id])return;
     guidedTaskFocus.current=true;setTaskFocusRequest(value=>value+1);setActiveTask(task);
-    if(index!==bundleIndex)openBundleProduct(index);
+    if(index!==bundleIndex){requestedBundleTask.current=task;openBundleProduct(index)}
   }
   function unfinishedDraftGuidance(){
     const products=activeBundle&&bundleRecipes.length>1?bundleRecipes:(activeRecipe?[activeRecipe]:[]);
@@ -3196,13 +3206,13 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
                     const untouched=!design.tags.length||(design.tags.length===derived.length&&design.tags.every((tag,index)=>tag===derived[index]));
                     const next=tagsFromTitle(title);
                     const keep=!untouched||(!next.length&&design.tags.length>0);
-                    updateDesign(design.id,keep?{title,etsyError:""}:{title,tags:next,etsyError:""})}}/></label><label>Tags <span>{design.tags.length}/13</span><textarea className="listing-tags-field" rows={3} value={design.tags.join(", ")} onChange={event=>updateDesign(design.id,{tags:[...new Set(event.target.value.split(",").map(tag=>tag.trim().toLowerCase()).filter(tag=>tag&&tag.length<=20))].slice(0,13),etsyError:""})} placeholder="Exact title phrases, separated by commas"/></label><div className="tag-row">{design.tags.map(tag=><span key={tag}>{tag}</span>)}{!design.tags.length&&<small>Matching tags will be created with the title.</small>}</div><IndividualAutoTitle design={design} template={templateDetails} useCommas={titleJoiner===", "} paused={batchHeldByAnotherTab} onApply={(title,tags)=>{setActiveDesign(design.id);updateDesign(design.id,{title,tags,etsyError:""})}}/>{design.etsyError&&<small className="field-error">{design.etsyError}</small>}</div></div>,titleFlags,only);}
+                    updateDesign(design.id,keep?{title,etsyError:""}:{title,tags:next,etsyError:""})}}/></label><label>Tags <span>{design.tags.length}/13</span><textarea className="listing-tags-field" rows={3} value={design.tags.join(", ")} onChange={event=>updateDesign(design.id,{tags:[...new Set(event.target.value.split(",").map(tag=>tag.trim().toLowerCase()).filter(tag=>tag&&tag.length<=20))].slice(0,13),etsyError:""})} placeholder="Exact title phrases, separated by commas"/></label><div className="tag-row">{design.tags.map(tag=><span key={tag}>{tag}</span>)}{!design.tags.length&&<small>Matching tags appear here when you auto-create this product’s titles.</small>}</div>{design.etsyError&&<small className="field-error">{design.etsyError}</small>}</div></div>,titleFlags,only);}
   function descriptionLead(){return <>
-      <div className="task-panel-lead"><div className="batch-description-body"><label>{activeBundle?"Description for this product’s listings":"Description for every listing"}<textarea rows={9} value={description} onChange={event=>setDescription(event.target.value)} placeholder="Add sizing, materials, production, care, and shipping information"/></label><p>{activeBundle?"Applies to this product’s listings only.":"Applies to every listing in this batch."}</p>{/* D232 · "Save this description as the default" went with the settings block. The
+      <div className="task-panel-lead"><div className="batch-description-body"><label><span className="description-product-heading">{activeBundle?"Description for this product’s listings":"Description for every listing"}</span><textarea rows={9} value={description} onChange={event=>setDescription(event.target.value)} placeholder="Add sizing, materials, production, care, and shipping information"/></label><p>{activeBundle?"Applies to this product’s listings only.":"Applies to every listing in this batch."}</p>{/* D232 · "Save this description as the default" went with the settings block. The
                      shared editor survived the move but the way to keep the wording for future
                      batches did not, so it comes back where the description is now edited. */}{description.trim()!==String(activeRecipe?.description||"").trim()&&<button type="button" className="save-product-default" disabled={!description.trim()||savingProductDefault==="description"} onClick={()=>void saveProductDefaults({description},"description")}>{savingProductDefault==="description"?"Saving…":"Save this description as the default"}</button>}</div></div>
   </>;}
-  function descriptionRows(only?:DesignFile){return designTaskRows("description",design=>`${(finalDescription(design,design.etsy)||"").length} chars`,design=><details className="individual-description-disclosure"><summary>Description for this listing</summary><div className="individual-description-body"><textarea aria-label="Description for this listing" rows={10} value={finalDescription(design,design.etsy)} onChange={event=>updateDesign(design.id,{descriptionOverride:event.target.value,etsyError:""})}/>{design.descriptionOverride!==undefined&&<div className="listing-card-actions"><button type="button" onClick={()=>updateDesign(design.id,{descriptionOverride:undefined,etsyError:""})}>{activeBundle?"Use this product’s description again":"Use the batch description again"}</button></div>}</div></details>,descriptionFlags,only);}
+  function descriptionRows(only?:DesignFile){return designTaskRows("description",design=>`${(finalDescription(design,design.etsy)||"").length} chars`,design=><details className="individual-description-disclosure"><summary><span>Description for this listing</span><svg className="description-chevron" viewBox="0 0 20 20" aria-hidden="true"><path d="m5 7.5 5 5 5-5"/></svg></summary><div className="individual-description-body"><textarea aria-label="Description for this listing" rows={10} value={finalDescription(design,design.etsy)} onChange={event=>updateDesign(design.id,{descriptionOverride:event.target.value,etsyError:""})}/>{design.descriptionOverride!==undefined&&<div className="listing-card-actions"><button type="button" onClick={()=>updateDesign(design.id,{descriptionOverride:undefined,etsyError:""})}>{activeBundle?"Use this product’s description again":"Use the batch description again"}</button></div>}</div></details>,descriptionFlags,only);}
   function etsyLead(){return <>
       <div className="task-panel-lead"><div className="task-panel-heading"><h3>Review your Etsy listing details</h3><span className="done-mark">{files.filter(file=>etsyRequiredComplete(file.etsy)).length}/{files.length} ready</span></div><p className="step-copy">Review the pre-filled Etsy category and product fields for each listing.</p>{files.every(file=>etsyRequiredComplete(file.etsy))&&<div className="variant-transfer-note"><span>✓</span><div><b>Core listing information is ready for your review.</b><small>This step contains additional Etsy category and product fields. Optional fields stay blank when there is not a clear match.</small></div></div>}</div>
   </>;}
@@ -3330,7 +3340,7 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
               for. The row is called "Choose Printify photos" and the photos are
               listed underneath it with counts; a collapsed essay about which views
               to pick was advice nobody opened. Gone. */}
-          <div className="task-panel-body printify-photo-listings">{listingWorkRows(({draft,design,selectedImages,count})=>(<div className="listing-photo-workspace"><PrintifyImagePicker bare showApplyAll={drafts.filter(item=>item.status==="Created").length>1} images={(draft.printifyImages||[]).filter(Boolean)} colors={templateDetails?.colorOptions||[]} colorIds={selectedColorIds} variants={templateDetails?.variants||[]} details={draft.printifyImageDetails||[]} indices={selectedImages} onRefresh={draft.id?()=>refreshDraftPhotos(draft.id!):undefined} reservedPhotos={(preparedMockupCounts[draft.id||""]||0)+(design?.sizeGuideName??sizeGuideName?1:0)} onApplyOne={values=>{if(activeRecipe)void saveImagePreferences(values);if(draft.id)setPrintifyImageSelections(current=>({...current,[draft.id!]:values}))}} onApplyAll={values=>{setPrintifyImageIndices(values);setPrintifyImageSelections(Object.fromEntries(drafts.filter(item=>item.id).map(item=>{const itemDesign=files.find(file=>file.id===item.clientId),reserved=(preparedMockupCounts[item.id!]||0)+(itemDesign?.sizeGuideName??sizeGuideName?1:0);return[item.id!,correspondingMockupIndices(draft.printifyImages||[],values,item.printifyImages||[]).slice(0,Math.max(0,20-reserved))]})))}} onSaveRecipe={activeRecipe?saveImagePreferences:undefined}/><UploadedListingPhotos productId={draft.id!} onCountChange={count=>setPreparedMockupCounts(current=>({...current,[draft.id!]:count}))}/><IndividualSizeGuide productId={draft.id!} name={design.sizeGuideName} batchName={sizeGuideName} onSaved={name=>updateDesign(design.id,{sizeGuideName:name})}/><ListingPhotoOrder productId={draft.id!} printifyImages={(draft.printifyImages||[]).filter(Boolean)} indices={selectedImages} refreshKey={`${preparedMockupCounts[draft.id!]||0}:${design.sizeGuideName??sizeGuideName}`}/><DownloadListingPhotos productId={draft.id!} name={draft.title||draft.name} indices={selectedImages}/></div>),photoFlags)}</div>
+          <div className="task-panel-body printify-photo-listings">{listingWorkRows(({draft,design,selectedImages,count})=>(<div className="listing-photo-workspace"><PrintifyImagePicker bare showApplyAll={drafts.filter(item=>item.status==="Created").length>1} images={(draft.printifyImages||[]).filter(Boolean)} colors={templateDetails?.colorOptions||[]} colorIds={selectedColorIds} variants={templateDetails?.variants||[]} details={draft.printifyImageDetails||[]} indices={selectedImages} onRefresh={draft.id?()=>refreshDraftPhotos(draft.id!):undefined} reservedPhotos={(preparedMockupCounts[draft.id||""]||0)+(design?.sizeGuideName??sizeGuideName?1:0)} onApplyOne={values=>{if(activeRecipe)void saveImagePreferences(values);if(draft.id)setPrintifyImageSelections(current=>({...current,[draft.id!]:values}))}} onApplyAll={values=>{const previousIndices=[...printifyImageIndices],previousSelections=Object.fromEntries(Object.entries(printifyImageSelections).map(([id,items])=>[id,[...items]]));setPrintifyImageIndices(values);setPrintifyImageSelections(Object.fromEntries(drafts.filter(item=>item.id).map(item=>{const itemDesign=files.find(file=>file.id===item.clientId),reserved=(preparedMockupCounts[item.id!]||0)+(itemDesign?.sizeGuideName??sizeGuideName?1:0);return[item.id!,correspondingMockupIndices(draft.printifyImages||[],values,item.printifyImages||[]).slice(0,Math.max(0,20-reserved))]})));return()=>{setPrintifyImageIndices(previousIndices);setPrintifyImageSelections(previousSelections)}}} onSaveRecipe={activeRecipe?saveImagePreferences:undefined}/><UploadedListingPhotos productId={draft.id!} onCountChange={count=>setPreparedMockupCounts(current=>({...current,[draft.id!]:count}))}/><IndividualSizeGuide productId={draft.id!} name={design.sizeGuideName} batchName={sizeGuideName} onSaved={name=>updateDesign(design.id,{sizeGuideName:name})}/><ListingPhotoOrder productId={draft.id!} printifyImages={(draft.printifyImages||[]).filter(Boolean)} indices={selectedImages} refreshKey={`${preparedMockupCounts[draft.id!]||0}:${design.sizeGuideName??sizeGuideName}`}/><DownloadListingPhotos productId={draft.id!} name={draft.title||draft.name} indices={selectedImages}/></div>),photoFlags)}</div>
     </>;
     /* D709 · The ordering panel is gone; its work happens in the photos panel
        above, on the same pass through the listings. task="order" is aliased to it
@@ -3675,14 +3685,15 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
      continueBundle is for. It accepts the selected product index so an older
      partial run can recover an unfinished member that precedes the open one. */
   function openBundleProduct(index:number){
-    if(index===bundleIndex)return;
+    const requestedTask=requestedBundleTask.current;requestedBundleTask.current="";
+    if(index===bundleIndex){if(requestedTask)setActiveTask(requestedTask);return;}
     const recipe=bundleRecipes[index];
     if(!recipe)return;
     const existing=bundleBatchIds[recipe.id];
     if(existing){
       if(switchingProduct)return;
       setSwitchingProduct(recipe.id);
-      void (async()=>{
+      return (async()=>{
         try{
           /* Each child was saved at a different moment in the run, so an older
              child can carry an older map. Keep every link this live session
@@ -3696,6 +3707,7 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
           setRestoringBatch(true);
           snapshotReady.current=false;
           await restoreBatchById(existing,workflowStep,finishPhase,true);
+          setActiveTask(requestedTask||"placement");
           setTitleBuildMessage("");
           setBundleBatchIds(current=>({...current,...knownBatchIds}));
           window.scrollTo(0,0);
@@ -3704,6 +3716,7 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
       return;
     }
     void continueBundle(index);
+    setActiveTask(requestedTask||"placement");
   }
 
   async function continueBundle(targetIndex=bundleIndex+1){
@@ -4423,7 +4436,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
     setRunTotal(targetFiles.length);
     setComplete(false);
     const batchConcurrency=MAX_CONCURRENT_DESIGNS;
-    setPreparationMessage(`Processing up to ${Math.min(batchConcurrency, targetFiles.length)} ${Math.min(batchConcurrency, targetFiles.length)===1?"design":"designs"} at a time without lowering their print resolution`);
+    setPreparationMessage("Preparing every listing for background creation. Keep this page open.");
     if (!keepSuccessful) setDrafts([]);
     else setDrafts((current) => current.filter((draft) => draft.status === "Created"));
     setProcessed(0);
@@ -4450,6 +4463,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
       const createdNow=createdDesignResults.filter(result=>result.status==="Created"&&result.id).length;
       if(createdNow>0){
         setComplete(true);
+        setActiveTask("placement");
         // Creation consumes quota here, not later when Etsy details are edited.
         setUsageRevision(current=>current+1);
         /* D440 - creating the drafts used to jump straight to Listing details,
@@ -4960,9 +4974,8 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
           padding-left reservation the old shell used. */}
       <div className="factory-main">
         <WaitProgress observeTools operation={creatingEtsyDrafts?null:
-          running||bundleRun?{title:"Creating your Printify drafts",detail:preparationMessage||"Uploading artwork and waiting for Printify to create the previews.",done:processed,total:runTotal}:
+          running||bundleRun?{title:"Creating your Printify drafts",detail:preparationMessage||"Uploading artwork and waiting for Printify to create the previews.",done:processed,total:runTotal,background:preparationMessage.includes("in the background")}:
           savingEtsyDetails?{title:"Saving listing details",detail:"Saving and checking the selected details for every listing in this batch."}:
-          preparingEtsy?{title:"Preparing listing details",detail:"Preparing titles, descriptions and product details for this batch."}:
           titleBuilding||applyingBankToBundle?{title:"Building your listing titles",detail:titleBuildMessage||"Working through the selected designs. Large batches can take several minutes."}:
           savingDraftArtwork?{title:"Updating color artwork",detail:"Uploading the artwork and waiting for Printify to confirm the change."}:
           restoringBatch||switchingProduct||loadingTemplate?{title:"Loading your saved product and artwork",detail:"Reading saved choices and product previews."}:
@@ -5459,7 +5472,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
                   after the footer row and the bar. It uses the same row every
                   other step uses: the reason on the left, the action on the
                   right. Same button, same gate, same handler. */}
-              {!etsyDetailsPrepared?<FactoryFooter status={preparingEtsy?"This can take a moment when your batch has several listings. Keep this page open.":progressGateIssues(6)[0]||"Every listing has a title and tags"}><button className="secondary-action prepare-etsy" aria-busy={preparingEtsy} disabled={preparingEtsy||progressGateIssues(6).length>0||batchHeldByAnotherTab} title={batchHeldByAnotherTab?"This batch is open in another tab, so nothing prepared here would be kept.":progressGateIssues(6)[0]} onClick={()=>void continueToEtsyDetails()}>{preparingEtsy?"Preparing Etsy details…":"Prepare Etsy details"}</button></FactoryFooter>:<FactoryFooter status={savingEtsyDetails?"Saving Etsy details…":progressGateIssues(7)[0]||"Every listing is ready for review"}><button className="workflow-next" aria-busy={savingEtsyDetails} disabled={savingEtsyDetails||progressGateIssues(7).length>0} title={progressGateIssues(7)[0]} onClick={()=>void saveAllEtsyDetails()}>{savingEtsyDetails?"Saving Etsy details…":"Review batch"} <span>→</span></button></FactoryFooter>}
+              {!etsyDetailsPrepared?<FactoryFooter status={preparingEtsy?"Preparing each listing in the background. You can keep reviewing this page.":progressGateIssues(6)[0]||"Every listing has a title and tags"}><button className="secondary-action prepare-etsy" data-inline-progress="true" aria-busy={preparingEtsy} disabled={preparingEtsy||progressGateIssues(6).length>0||batchHeldByAnotherTab} title={batchHeldByAnotherTab?"This batch is open in another tab, so nothing prepared here would be kept.":progressGateIssues(6)[0]} onClick={()=>void continueToEtsyDetails()}>{preparingEtsy?"Preparing Etsy details…":"Prepare Etsy details"}</button></FactoryFooter>:<FactoryFooter status={savingEtsyDetails?"Saving Etsy details…":progressGateIssues(7)[0]||"Every listing is ready for review"}><button className="workflow-next" aria-busy={savingEtsyDetails} disabled={savingEtsyDetails||progressGateIssues(7).length>0} title={progressGateIssues(7)[0]} onClick={()=>void saveAllEtsyDetails()}>{savingEtsyDetails?"Saving Etsy details…":"Review batch"} <span>→</span></button></FactoryFooter>}
             </>)}
           {workflowStep==="finish"&&finishPhase==="final"&&stepProductCards(bundleCardStatus("publish"),null,false,<>{/* D497 - publish covered one product until D495, so these cards kept their
     own open controls. Now one press publishes the whole bundle, and a card
@@ -5638,7 +5651,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
                   are the two steps that can sit for minutes, and a screen that looks
                   frozen is when a seller closes the tab or presses again. Her words:
                   "so they know that nothing is wrong." */}
-              {preparingEtsy&&<p className="working-note" role="status">Keep this page open while the listing details are prepared.</p>}
+              {preparingEtsy&&<p className="working-note" role="status">Preparing listing details in the background. You can keep reviewing this page.</p>}
             </>
           ) : null}
           {!complete&&<p className="launch-note">Creates unpublished Printify drafts.</p>}
@@ -5685,7 +5698,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
             sits in, so the step states its own gate in one place. The button
             below is unchanged: same gate check, same handler. */}
         <FactoryFooter status={imagesStepIssues().length?(()=>{const next=unfinishedDraftGuidance();return <span className="draft-next-guidance"><span>{imagesStepIssues()[0]}</span>{next&&!savingDraftVariants&&!switchingProduct&&!restoringBatch&&<button type="button" className="draft-fix-link" onClick={()=>openGuidedDraftTask(next.task,next.index)}>Open {next.label.toLowerCase()}{activeBundle&&bundleRecipes.length>1?` · ${next.name}`:""} <span aria-hidden="true">↑</span></button>}</span>})():"Every listing has at least one photo"}>
-        <button className="workflow-next" type="button" disabled={imagesStepIssues().length>0} title={imagesStepIssues()[0]} onClick={()=>{const missing=createdListingsMissingImages();if(missing.length){setImageStepError(`${missing.length} ${missing.length===1?"listing needs":"listings need"} at least one photo.`);setMissingPhotoDraftIds(missing.map(draft=>draft.clientId));return}setImageStepError("");setMissingPhotoDraftIds([]);/* D427 - one Next step on this page, and it is the one that checks every listing has a photo. The second copy in the card list bypassed that check entirely. Goes to Listing, not Publish. */setFinishPhase("details");void goToStep("finish",false,true);window.scrollTo(0,0)}}>Continue to listing <span aria-hidden="true">→</span></button>
+        <button className="workflow-next" type="button" disabled={imagesStepIssues().length>0} title={imagesStepIssues()[0]} onClick={()=>{const missing=createdListingsMissingImages();if(missing.length){setImageStepError(`${missing.length} ${missing.length===1?"listing needs":"listings need"} at least one photo.`);setMissingPhotoDraftIds(missing.map(draft=>draft.clientId));return}setImageStepError("");setMissingPhotoDraftIds([]);/* D427 - one Next step on this page, and it is the one that checks every listing has a photo. The second copy in the card list bypassed that check entirely. Goes to Listing, not Publish. */setFinishPhase("details");void enterListingDetails()}}>Continue to listing <span aria-hidden="true">→</span></button>
         </FactoryFooter>
         </>
         ,true,

@@ -13,5 +13,5 @@ export function draftStageLabel(stageId:string,tasks:string[]){
   return 'Artwork placement';
 }
 export function visibleDraftStage(rows:Array<{task?:string;done:boolean}>,activeTask:string,remembered?:string){
-  return draftTaskStage(activeTask)||DRAFT_TASK_STAGES.find(stage=>stage.id===remembered)?.id||draftTaskStage(rows.find(row=>!row.done)?.task)||'design';
+  return draftTaskStage(activeTask)||DRAFT_TASK_STAGES.find(stage=>stage.id===remembered)?.id||'design';
 }

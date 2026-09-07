@@ -25,7 +25,7 @@ const read = (path) => readFile(new URL(path, root), "utf8");
 const RENDERED_COMPONENTS = [
   "ActionReceipt", "BatchPreferencesPortal", "ContextHelp", "DownloadListingPhotos",
   "EtsyDetailsEditor", "FinalListingReview", "GoldieCommandBar",
-  "GoldieWordmark", "IndividualAutoTitle", "IndividualManualTitle", "IndividualSizeGuide",
+  "GoldieWordmark", "IndividualSizeGuide",
   "UploadedListingPhotos", "KeywordBank", "ListingPhotoOrder", 
   "OutcomeReceipt", "PersonalizationEditor", "PriceField", "PricingReview",
   "PrintifyImagePicker", "ProductColorSelector", "ProductSizeSelector", "SavedWorkflow",
@@ -261,9 +261,8 @@ test("a batch held by another tab cannot spend credits on work it will discard",
      The batch title builder was the last control still breaking it: with no
      keyword bank chosen it was disabled and silent. */
   assert.match(app, /title=\{batchHeldByAnotherTab\?"This batch is open in another tab, so nothing saved here would be kept\.":!autoTitleBank\?"Choose a keyword bank first\.":!files\.length\?"Upload a design first\.":undefined\}/);
-  assert.match(app, /title=\{paused\?"This batch is open in another tab, so nothing built here would be kept\.":!bank\?"Choose a keyword bank first\.":undefined\}/);
-  // and the per-listing builder is told about it by the page that knows.
-  assert.match(app, /<IndividualAutoTitle design=\{design\}[^>]*paused=\{batchHeldByAnotherTab\}/);
+  assert.doesNotMatch(app, /<IndividualAutoTitle design=\{design\}/,
+    "title generation is product-wide rather than a paid action repeated listing by listing");
 });
 
 /* D555 · The mug bug was one rule written twice, with only one copy fixed. This

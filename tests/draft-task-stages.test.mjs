@@ -11,7 +11,7 @@ test('guided next and recovery actions reveal their target stage; closing retain
  assert.equal(visibleDraftStage(rows,'photos','design'),'photos');
  assert.equal(visibleDraftStage(rows,'draft-pricing','design'),'details');
  assert.equal(visibleDraftStage(rows,'','photos'),'photos');
- assert.equal(visibleDraftStage(rows,'','invalid'),'details');
+ assert.equal(visibleDraftStage(rows,'','invalid'),'design');
 });
 test('product-aware stages support non-apparel rows and fully saved work',()=>{
  const mug=rows.filter(row=>row.task!=='draft-colors');

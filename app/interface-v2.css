@@ -3909,8 +3909,7 @@ html, body { background: var(--lf-paper); }
 .app-shell .mockup-view-tabs button[aria-pressed="true"]{background:#171717;color:#fff}
 .app-shell .mockup-view-tabs button>span{margin-left:8px;font-size:12px}
 .app-shell .mockup-other-views{margin:0 0 18px;border:1px solid #d8cbd2;border-radius:8px;padding:0 12px;background:#faf6f8}
-.app-shell .mockup-angle-select{display:grid;gap:8px;padding:12px 0;font-size:13px;font-weight:700}
-.app-shell .mockup-angle-select select,.app-shell .photo-listing-switch select{min-height:44px;width:100%;max-width:100%;border:1px solid #bdaeb7;border-radius:8px;background:#fff;color:#171717;padding:10px;font:inherit}
+.app-shell .photo-listing-switch select{min-height:44px;width:100%;max-width:100%;border:1px solid #bdaeb7;border-radius:8px;background:#fff;color:#171717;padding:10px;font:inherit}
 .app-shell .mockup-tile-caption{display:block;padding:9px 6px;font-size:12px;font-weight:650;line-height:1.4;text-align:center;color:#171717;background:#fff}
 .app-shell .photo-listing-switch{display:grid;gap:8px;margin-bottom:20px;font-size:13px;font-weight:700}
 .app-shell .listing-photo-workspace>.individual-size-guide,.app-shell .listing-photo-workspace>.uploaded-listing-photos,.app-shell .listing-photo-workspace>.listing-photo-order{margin:24px 0!important;padding:20px!important;border:2px solid #171717!important;border-radius:10px!important;background:#fffafc!important;box-shadow:3px 3px 0 #171717!important}
@@ -3925,6 +3924,38 @@ html, body { background: var(--lf-paper); }
 /* D1172: the disclosure is a full-width row, not a cell in the legacy eight-photo grid. */
 .app-shell.app-shell .printify-image-picker>.mockup-other-views{display:block!important;grid-template-columns:none!important}
 .app-shell.app-shell .printify-image-picker .mockup-other-views>.printify-more-toggle{margin:0!important;border:0!important;border-radius:0!important;background:transparent!important}
+
+/* D1218: mockup choice is the large target; enlargement stays a separate,
+   predictable control. The secondary view chooser reads as one neutral row. */
+.app-shell .printify-image-option{position:relative;overflow:hidden}
+.app-shell .printify-photo-select{display:block;width:100%;padding:0;border:0;background:#f5f4f5;color:#171717;cursor:pointer;box-shadow:none}
+.app-shell .printify-photo-select>img{display:block;width:100%;height:auto;aspect-ratio:1/1;object-fit:cover}
+.app-shell .printify-photo-select:focus-visible,.app-shell .printify-photo-expand:focus-visible{outline:3px solid #75516b;outline-offset:-3px}
+.app-shell .printify-photo-select:disabled{cursor:not-allowed}
+.app-shell .printify-photo-select .printify-photo-selector{position:absolute;top:8px!important;right:8px!important;display:grid!important;place-items:center!important;width:25px;height:25px;border:2px solid #70405f;border-radius:6px;background:#fff;pointer-events:none}
+.app-shell .printify-photo-select[aria-pressed="true"] .printify-photo-selector{border-color:#2f7a4b!important;background:#2f7a4b!important}
+.app-shell .printify-photo-select .printify-photo-selector svg{display:block;width:17px;height:17px;overflow:visible;fill:none;stroke:#fff;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+.app-shell .printify-image-option>.printify-photo-expand{position:absolute;right:8px;bottom:42px;z-index:2;display:grid;width:36px;height:36px;min-width:36px;min-height:36px;padding:0;place-items:center;border:1px solid #171717;border-radius:50%;background:rgba(255,255,255,.94);color:#171717;box-shadow:0 2px 8px rgba(20,16,19,.18);cursor:pointer}
+.app-shell .printify-image-option>.printify-photo-expand svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round}
+.app-shell .mockup-other-views{padding:0!important;border:1px solid #cfc7cc!important;background:#fff!important;overflow:hidden}
+.app-shell .mockup-other-views>.printify-more-toggle{display:flex!important;width:100%!important;min-height:52px!important;padding:12px 16px!important;align-items:center!important;justify-content:space-between!important;text-align:left!important}
+.app-shell .mockup-other-views>.printify-more-toggle svg{width:20px;height:20px;flex:none;fill:none;stroke:currentColor;stroke-width:2}
+.app-shell .mockup-other-views>.printify-more-toggle.is-open svg{transform:rotate(180deg)}
+.app-shell .mockup-angle-controls{display:grid;grid-template-columns:minmax(110px,.7fr) minmax(220px,1.4fr);align-items:center;gap:18px;padding:16px;border-top:1px solid #ddd6da;background:#f7f7f8}
+.app-shell .mockup-angle-controls>span{font-size:13px;font-weight:800;color:#3d2538}
+.app-shell .mockup-angle-controls label{display:block;min-width:0}
+.app-shell .mockup-angle-controls select{width:100%;min-height:46px;padding:10px 40px 10px 14px;border:1px solid #9f949b;border-radius:8px;background:#fff;color:#171717;font:700 13px/1.3 inherit}
+.app-shell .mockup-angle-controls select:focus-visible{outline:3px solid #75516b;outline-offset:2px}
+
+/* Listing-wide controls are visually separate from each listing editor. */
+.app-shell .batch-description-body>label{display:grid;gap:12px}
+.app-shell .description-product-heading{display:block;color:#171217;font-size:18px;font-weight:850;line-height:1.3}
+.app-shell .title-build-message{max-width:720px;margin:18px auto 0!important;padding:11px 14px;border:1px solid #d9cfd5;border-radius:8px;background:#f7f7f8;text-align:center;font-weight:700}
+.app-shell .individual-description-disclosure>summary{display:flex;align-items:center;justify-content:space-between;gap:14px}
+.app-shell .individual-description-disclosure>summary::after{display:none!important;content:none!important}
+.app-shell .individual-description-disclosure .description-chevron{display:block;width:20px;height:20px;flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;transition:transform .16s ease}
+.app-shell .individual-description-disclosure[open] .description-chevron{transform:rotate(180deg)}
+@media(max-width:600px){.app-shell .mockup-angle-controls{grid-template-columns:1fr;gap:8px}.app-shell .printify-image-option>.printify-photo-expand{width:40px;height:40px;bottom:44px}}
 
 .app-shell.app-shell .listing-photo-workspace .size-guide-actions button{min-height:44px!important;font-size:13px!important;padding:10px 14px!important}
 .app-shell.app-shell .listing-photo-workspace .photo-order-buttons button{width:44px!important;min-width:44px!important;height:44px!important;min-height:44px!important}
