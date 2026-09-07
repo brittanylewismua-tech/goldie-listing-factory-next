@@ -106,3 +106,12 @@
 .goldie-wait-card progress{display:block;width:100%;height:14px;accent-color:#111;margin:20px 0 12px}
 .goldie-wait-count{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:14px}.goldie-wait-long{border-top:1px solid #bbb;padding-top:12px}
 @media(prefers-reduced-motion:reduce){.goldie-wait-card progress{animation:none}}
+
+.goldie-wait-dialog{position:fixed;inset:0;margin:auto}
+.goldie-wait-card progress{appearance:none;-webkit-appearance:none;background:#e8e2da;border:1px solid #aaa;border-radius:7px;overflow:hidden}
+.goldie-wait-card progress::-webkit-progress-bar{background:transparent}
+.goldie-wait-card progress::-webkit-progress-value{background:#111}
+.goldie-wait-card progress::-moz-progress-bar{background:#111}
+.goldie-wait-card progress:not([value]){background:linear-gradient(90deg,#e8e2da 20%,#111 50%,#e8e2da 80%);background-size:200% 100%;animation:goldie-wait-sweep 2s linear infinite}
+@keyframes goldie-wait-sweep{from{background-position:100% 0}to{background-position:-100% 0}}
+@media(prefers-reduced-motion:reduce){.goldie-wait-card progress:not([value]){animation:none}}

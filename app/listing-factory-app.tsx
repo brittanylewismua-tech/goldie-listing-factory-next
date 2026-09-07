@@ -5474,7 +5474,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
                   {report.detail||report.advice?<dd className="publish-report-detail">{report.detail||report.advice}</dd>:null}
                 </div>))}</dl>
               <div className="printify-handoff" role="status">
-                <b>{handoffBlockers().length?"Finish the indicated items before preparing your Etsy drafts.":"Finish as an Etsy draft."}</b><p>Your drafts are created and checked in Etsy. Open the verified drafts whenever you are ready to publish.</p>
+                <b>{handoffBlockers().length?"Finish the indicated items before preparing your Etsy drafts.":"Finish as an Etsy draft."}</b><p>Create your Etsy drafts, then wait for “Etsy draft verified” before opening a result to publish.</p>
                 <span>Publishing and renewal stay under your control in Etsy.</span>
 
               </div>

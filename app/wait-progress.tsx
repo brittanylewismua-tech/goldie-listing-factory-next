@@ -31,5 +31,5 @@ export default function WaitProgress({operation,observeTools=false}:{operation:W
  const active=visible?operation:fallback;
  useEffect(()=>{if(!active||!dialog.current)return;const opener=document.activeElement instanceof HTMLElement?document.activeElement:null;dialog.current.showModal();return()=>{dialog.current?.close();if(opener?.isConnected)opener.focus({preventScroll:true})}},[Boolean(active)]);
  if(!active||typeof document==='undefined')return null;
- return createPortal(<dialog className="goldie-wait-dialog" ref={dialog} aria-label={active.title} onCancel={event=>event.preventDefault()}><WaitCard {...active} started={started}/></dialog>,document.body);
+ return createPortal(<dialog className="goldie-wait-dialog" ref={dialog} tabIndex={-1} onKeyDown={event=>{if(event.key==='Tab'){event.preventDefault();event.stopPropagation();dialog.current?.focus()}}} aria-label={active.title} onCancel={event=>event.preventDefault()}><WaitCard {...active} started={started}/></dialog>,document.body);
 }
