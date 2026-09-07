@@ -1,3 +1,4 @@
+import { safeReturnPath } from "@/app/safe-return-path";
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/app/supabase-auth";
 
@@ -5,7 +6,7 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
   const candidate = url.searchParams.get("return_to") || "/listing-factory";
-  const returnTo = candidate.startsWith("/") && !candidate.startsWith("//") ? candidate : "/listing-factory";
+  const returnTo = safeReturnPath(candidate);
   if (code) {
     try {
       const { error } = await (await createSupabaseServerClient()).auth.exchangeCodeForSession(code);

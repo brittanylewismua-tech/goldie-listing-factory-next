@@ -18,10 +18,10 @@ export default function SignInClient({ returnTo, initialError = "" }: { returnTo
     pending.current = true; setBusy("email"); setError(""); setMessage("");
     try {
       const { error: authError } = await createSupabaseBrowserClient().auth.signInWithOtp({ email: email.trim(), options: { emailRedirectTo: callback(), shouldCreateUser: true } });
-      if (authError) return setError(authError.message);
+      if (authError) return setError(authError.name === "AuthRetryableFetchError" ? "We couldn’t confirm your sign-in request. Check your inbox first; if no link arrives, check your connection and try again." : authError.message);
       setMessage("Check your email. Your secure sign-in link is on its way.");
     } catch {
-      setError("We couldn't send your sign-in link. Check your connection and try again.");
+      setError("We couldn’t confirm your sign-in request. Check your inbox first; if no link arrives, check your connection and try again.");
     } finally {
       pending.current = false; setBusy(null);
     }

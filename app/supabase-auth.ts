@@ -1,3 +1,4 @@
+import { createSignInFetch } from "./sign-in-fetch";
 import { createBrowserClient, createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
@@ -5,7 +6,7 @@ export const SUPABASE_URL = "https://ywncfltxrnrchicjwcse.supabase.co";
 export const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_1dP18eUzIVckldFdIR2w7Q_6clKwTmu";
 
 export function createSupabaseBrowserClient() {
-  return createBrowserClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+  return createBrowserClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, { global: { fetch: createSignInFetch() } });
 }
 
 export async function createSupabaseServerClient() {
