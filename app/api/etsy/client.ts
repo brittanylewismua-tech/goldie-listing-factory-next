@@ -1,3 +1,4 @@
+import {paceEtsyRequest,RESERVE_ETSY_SLOT_SQL,EtsyRateLimited} from './request-pacing';
 import { env } from "cloudflare:workers";
 import { decryptPrintifyToken, encryptPrintifyToken } from "../printify/token-crypto";
 
@@ -11,9 +12,17 @@ export const goldieSiteUrl=()=>runtime().GOLDIE_SITE_URL?.trim().replace(/\/$/,"
 export const etsyApiCredential=()=>{const secretValue=runtime().ETSY_API_SECRET?.trim();if(!secretValue)throw new Error("Etsy API access is not configured yet.");return `${apiKey()}:${secretValue}`};
 const hourBucket=(date=new Date())=>date.toISOString().slice(0,13);
 export const etsyQpdLimit=()=>Math.max(100,Number(runtime().ETSY_QPD_LIMIT)||5000);
+export async function waitForEtsyCapacity(){
+ await paceEtsyRequest({now:Date.now,
+  read:async()=>{const row=await runtime().DB.prepare('SELECT p.qps_limit,q.paused_until FROM etsy_request_pacing p LEFT JOIN etsy_queue_state q ON q.id=p.id WHERE p.id=1').first<{qps_limit:number;paused_until:number}>();if(!row)throw Error('Etsy request scheduling is unavailable. Your saved work is safe.');return {qps:row.qps_limit,pausedUntil:Number(row.paused_until||0)*1000}},
+  reserve:async(now,interval)=>{const row=await runtime().DB.prepare(RESERVE_ETSY_SLOT_SQL).bind(now,interval,now).first<{next_at_ms:number}>();if(!row)throw Error('Etsy request scheduling is unavailable. Your saved work is safe.');return row.next_at_ms},
+  wait:ms=>new Promise(resolve=>setTimeout(resolve,ms))});
+}
 export async function recordEtsyCall(response:Response){
   const bucket=hourBucket(),observedLimit=Math.max(0,Number(response.headers.get("x-limit-per-day"))||0);
   const statements=[runtime().DB.prepare("INSERT INTO etsy_api_usage_buckets (bucket,calls,rate_limited,qpd_limit,updated_at) VALUES (?,1,?,?,CURRENT_TIMESTAMP) ON CONFLICT(bucket) DO UPDATE SET calls=calls+1,rate_limited=rate_limited+excluded.rate_limited,qpd_limit=CASE WHEN excluded.qpd_limit>0 THEN excluded.qpd_limit ELSE qpd_limit END,updated_at=CURRENT_TIMESTAMP").bind(bucket,response.status===429?1:0,observedLimit)];
+  const qps=Number(response.headers.get("x-limit-per-second"));
+  if(Number.isSafeInteger(qps)&&qps>0)statements.push(runtime().DB.prepare('UPDATE etsy_request_pacing SET qps_limit=?,updated_at=? WHERE id=1').bind(qps,Date.now()));
   if(response.status===429){const retryAfter=Math.max(60,Math.min(1800,Number(response.headers.get("retry-after"))||300));statements.push(runtime().DB.prepare("INSERT INTO etsy_queue_state (id,paused_until,last_worker_status,last_error,updated_at) VALUES (1,?,'rate_limited','Etsy asked Goldie to slow down.',CURRENT_TIMESTAMP) ON CONFLICT(id) DO UPDATE SET paused_until=MAX(paused_until,excluded.paused_until),last_worker_status=excluded.last_worker_status,last_error=excluded.last_error,updated_at=CURRENT_TIMESTAMP").bind(Math.floor(Date.now()/1000)+retryAfter))}
   await runtime().DB.batch(statements);
 }
@@ -46,9 +55,11 @@ export async function etsyConnection(userId:string){
 
 export async function etsyFetch<T>(path:string,token:string,init?:RequestInit,meter?:{calls:number}):Promise<T>{
   for(let attempt=0;attempt<5;attempt+=1){
+    await waitForEtsyCapacity();
     const response=await fetch(`${API}${path}`,{...init,headers:{"x-api-key":etsyApiCredential(),Authorization:`Bearer ${token}`,...(init?.body instanceof URLSearchParams?{"Content-Type":"application/x-www-form-urlencoded"}:{}),...(init?.headers||{})}});
     if(meter)meter.calls+=1;
     await recordEtsyCall(response);
+    if(response.status===429)throw new EtsyRateLimited('Etsy asked Goldie to slow down. Your saved work will continue automatically.');
     const text=await response.text();let payload:unknown={};try{payload=text?JSON.parse(text):{}}catch{payload={error:text}}
     if(response.ok)return payload as T;
     if((response.status===429||response.status>=500)&&attempt<4){

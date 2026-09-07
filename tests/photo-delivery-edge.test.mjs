@@ -1,5 +1,6 @@
+import {pacingModule} from './etsy-pacing-module.mjs';
 import test from 'node:test';import assert from 'node:assert/strict';import {readFileSync} from 'node:fs';import ts from 'typescript';
-const read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8'),url=s=>'data:text/javascript;base64,'+Buffer.from(ts.transpile(s,{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022})).toString('base64');
+const read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8').replace("from '../../etsy/request-pacing'",`from '${pacingModule}'`),url=s=>'data:text/javascript;base64,'+Buffer.from(ts.transpile(s,{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022})).toString('base64');
 const timing=url(read('app/api/listing-photos/delivery/timing.ts'));
 const transferEngine=url(read('app/api/listing-photos/delivery/transfer-engine.ts'));
 const engine=url(read('app/api/listing-photos/delivery/engine.ts'));

@@ -1,8 +1,9 @@
+import {pacingModule} from './etsy-pacing-module.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import ts from 'typescript';
-const read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
+const read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8').replace("from '../../etsy/request-pacing'",`from '${pacingModule}'`);
 const {deliveryStep}=await import('data:text/javascript;base64,'+Buffer.from(ts.transpile(read('app/api/listing-photos/delivery/engine.ts'),{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022})).toString('base64'));
 function fixture(){
  let images=[1,2,3].map(id=>({listing_image_id:id,rank:id})),saved=null,shop=7,state='active',writes=[],backup=[],counter=10;

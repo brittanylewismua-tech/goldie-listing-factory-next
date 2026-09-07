@@ -1,3 +1,4 @@
+import {EtsyRateLimited} from '../../etsy/request-pacing';
 import {candidateWaitMs,transferPollMs} from './timing';
 import {transferDraft,DraftTransferReviewRequired,type TransferState,type TransferProduct} from './transfer-engine';
 import {verifyShopPairing} from '../../printify/shop-match';
@@ -5,7 +6,7 @@ import {etsyFetch} from '../../etsy/client';
 import {DraftReviewRequired,DraftWriteRejected,type DraftSnapshot,type DraftState} from './draft-engine';
 import {finishDraftMetadata,draftWithSize,type PrintifyDraftProduct} from './draft-service';
 import {env} from 'cloudflare:workers';
-import {etsyConnection,etsyApiCredential,etsyBudget,recordEtsyCall} from '../../etsy/client';
+import {etsyConnection,etsyApiCredential,etsyBudget,recordEtsyCall,waitForEtsyCapacity} from '../../etsy/client';
 import {decryptPrintifyToken} from '../../printify/token-crypto';
 import {readPrintifyPublishState} from '../../printify/publish-state';
 import {deliveryStep,DeliveryReviewRequired,type DeliveryImage,type DeliveryPhoto,type DeliveryState} from './engine';
@@ -92,8 +93,10 @@ export async function runDeliveryTick(id:string,owner:string){
     if(!row.state_json&&remainingWait>0)return {done:false,progress:false,waitMs:remainingWait};
     if((await etsyBudget()).remaining<(row.draft_json?15:6)){await deliveryStatus(id,owner,row.status,'Waiting for Etsy API capacity. Your photo set is saved.');return {done:false,progress:false}}
     const request=async(path:string,init?:RequestInit)=>{
+      await waitForEtsyCapacity();
       const response=await fetch(`https://api.etsy.com/v3/application${path}`,{...init,headers:{...Object.fromEntries(new Headers(init?.headers)), 'x-api-key':etsyApiCredential(),Authorization:`Bearer ${connection.token}`},signal:AbortSignal.timeout(25000)});
       await recordEtsyCall(response);
+      if(response.status===429)throw new EtsyRateLimited('Etsy asked Goldie to slow down. Your saved draft will continue automatically.');
       if(!response.ok){const detail=(await response.text()).replace(/[<>]/g,'').slice(0,250);const message=`Etsy returned ${response.status}: ${detail}`;if(row.draft_json&&[400,401,403,404,409,422].includes(response.status))throw new DraftWriteRejected(message);throw Error(message);}
       return response;
     };

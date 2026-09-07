@@ -1,3 +1,4 @@
+import {EtsyRateLimited} from '../../etsy/request-pacing';
 /** Photos only. This module has no listing creation, publication or renewal capability. */
 export type DeliveryImage={listing_image_id:number;rank:number;url_fullxfull?:string};
 export type DeliveryState={listingId:number;expected:DeliveryImage[];uploaded:number[];pending?:{rank:number;imageId?:number};startedAt:number};
@@ -31,7 +32,11 @@ export async function deliveryStep(io:DeliveryIO,shopId:number,listingId:number,
   if(state.uploaded.length<photos.length){
     const rank=state.uploaded.length+1;
     const next={...state,pending:{rank}};await io.save(next);
-    const imageId=await io.upload(photos[rank-1],rank);
+    let imageId:number;
+    try{imageId=await io.upload(photos[rank-1],rank)}catch(error){
+      if(error instanceof EtsyRateLimited)await io.save(state);
+      throw error;
+    }
     if(!Number.isSafeInteger(imageId)||imageId<=0)throw new DeliveryReviewRequired('Etsy did not return a photo receipt. Delivery paused; it will not upload that photo again.');
     state={...state,uploaded:[...state.uploaded,imageId],expected:[...state.expected.filter(i=>i.rank!==rank),{rank,listing_image_id:imageId}]};
     await io.save(state);
@@ -41,7 +46,10 @@ export async function deliveryStep(io:DeliveryIO,shopId:number,listingId:number,
   const extra=[...state.expected].filter(i=>i.rank>photos.length).sort((a,b)=>b.rank-a.rank)[0];
   if(extra){
     await io.save({...state,pending:{rank:extra.rank,imageId:extra.listing_image_id}});
-    await io.remove(extra.listing_image_id);
+    try{await io.remove(extra.listing_image_id)}catch(error){
+      if(error instanceof EtsyRateLimited)await io.save(state);
+      throw error;
+    }
     state={...state,expected:state.expected.filter(i=>i.listing_image_id!==extra.listing_image_id)};
     await io.save(state);return {done:false,state};
   }

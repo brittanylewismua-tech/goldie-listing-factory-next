@@ -1,3 +1,4 @@
+import {EtsyRateLimited} from '../../etsy/request-pacing';
 /** A draft finisher never creates a listing or changes its publication state. */
 export class DraftReviewRequired extends Error {}
 export class DraftWriteRejected extends DraftReviewRequired {}
@@ -83,6 +84,6 @@ export async function draftStep(io:DraftIO,shopId:number,listingId:number,snapsh
  if(state.index>=ops.length){verifyDraft(view,shopId,snapshot);state={...state,verified:true};await io.save(state);return {done:true}}
  // Final full readback also catches changes to earlier fields while finishing.
  const op=ops[state.index];await io.save({...state,pending:op});
- try{await io.write(op)}catch(error){await io.save({...state,...(error instanceof DraftWriteRejected?{}:{pending:op}),lastError:error instanceof Error?error.message:'Etsy did not confirm the change.'});throw error}
+ try{await io.write(op)}catch(error){await io.save({...state,...(error instanceof DraftWriteRejected||error instanceof EtsyRateLimited?{}:{pending:op}),lastError:error instanceof Error?error.message:'Etsy did not confirm the change.'});throw error}
  return {done:false};
 }
