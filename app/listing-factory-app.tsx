@@ -1958,7 +1958,7 @@ export default function ListingFactoryApp() {
     if(!canOpenStep(wanted))return;
     requestedStep.current=null;
     goToStep(wanted,true,true);
-  },[localPreview,checkingConnection,restoringBatch,connected,etsyConnected,templateLoaded,files.length,complete,workflowStep]);
+  },[localPreview,checkingConnection,checkingEtsyConnection,restoringBatch,connected,etsyConnected,templateLoaded,files.length,complete,workflowStep]);
 
   /* D968 · The workflow scrolls inside .factory-main, not the browser window.
      Several transitions only reset window.scrollY, while goToStep reset the
@@ -2001,8 +2001,8 @@ export default function ListingFactoryApp() {
      her account that the drafts themselves were fine - three batches, two drafts
      each - so this was navigation, not loss. A run in progress is not a broken
      state to recover from. */
-  useEffect(()=>{if(localPreview||checkingConnection||restoringBatch||runInProgress.current||canOpenStep(workflowStep))return;const fallback=!connected||!etsyConnected?"connect":!templateLoaded?"setup":!files.length?"designs":!complete?"review":"finish";goToStep(fallback,true,true);
-  },[localPreview,checkingConnection,restoringBatch,connected,etsyConnected,templateLoaded,files.length,complete,workflowStep]);
+  useEffect(()=>{if(localPreview||checkingConnection||checkingEtsyConnection||restoringBatch||runInProgress.current||canOpenStep(workflowStep))return;const fallback=!connected||!etsyConnected?"connect":!templateLoaded?"setup":!files.length?"designs":!complete?"review":"finish";goToStep(fallback,true,true);
+  },[localPreview,checkingConnection,checkingEtsyConnection,restoringBatch,connected,etsyConnected,templateLoaded,files.length,complete,workflowStep]);
 
   useEffect(()=>{if(restoringBatch)return;const url=new URL(window.location.href);if(url.searchParams.get("open")!=="results")return;const hasCreatedDrafts=complete&&drafts.some(draft=>draft.status==="Created");url.searchParams.delete("open");if(!hasCreatedDrafts){window.history.replaceState({},"",url);return}url.searchParams.set("step","finish");url.searchParams.set("phase",finishPhase||"details");setWorkflowStep("finish");window.history.replaceState({},"",url);window.scrollTo({top:0,behavior:"auto"})},[restoringBatch,complete,drafts,pricingApproved,finishPhase]);
 
