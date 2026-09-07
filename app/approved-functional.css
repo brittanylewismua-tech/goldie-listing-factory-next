@@ -541,6 +541,12 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .blocking-modal>.publish-confirm-icon,.blocking-modal>.mini-label{margin-left:auto!important;margin-right:auto!important;text-align:center!important}
 .blocking-modal>.mini-label{display:block;width:100%;margin-top:12px!important;color:#704d75!important}
 .blocking-modal>h2{text-align:center}
+.connect-etsy-shop-modal{max-width:610px}
+.connect-etsy-shop-modal>p{line-height:1.55}
+.connect-etsy-steps{display:grid;gap:12px;margin:20px 0;padding-left:24px;text-align:left}
+.connect-etsy-steps li{padding-left:5px;line-height:1.5}
+.connect-etsy-steps a{font-weight:850;color:#2e1d2b;text-decoration:underline;text-underline-offset:3px}
+.connect-etsy-safe{padding:11px 14px;border:2px solid #201b20;border-radius:10px;background:#f8f5f7;font-weight:750;text-align:center}
 .title-style-toggle button.active{border-color:#6a3456!important}
 .shipping-api-note,.token-help,.token-shop-warning,.variant-pricing:not(.approved),.keyword-workspace{border-color:#ded6dc!important}
 .shipping-api-note b,.token-shop-warning b,.token-shop-warning span,.batch-description>summary em,.batch-description>summary:after,.individual-description>summary,.individual-description button,.mockup-control-row a{color:#704d75!important}

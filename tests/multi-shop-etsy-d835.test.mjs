@@ -197,6 +197,6 @@ test("D837: one Etsy row, and no path clears the connection without being told t
   /* Every connected Etsy row offers the way to add the next shop - without it
      the switcher can never have anything to switch to. */
   const row = app.slice(app.indexOf("function etsyConnectionRow"));
-  assert.match(row.slice(0, row.indexOf("async function connectEtsy")), /Connect another Etsy shop/,
-    "the connected row offers adding another shop");
+  assert.match(row.slice(0, row.indexOf("async function connectEtsy")), /Connect a different Etsy shop/,
+    "the connected row offers the explicit different-shop flow");
 });

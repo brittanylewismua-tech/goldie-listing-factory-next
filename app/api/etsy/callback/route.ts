@@ -3,9 +3,10 @@ import { forgetPairings } from "../../static-cache";
 import { env } from "cloudflare:workers";
 import { NextResponse } from "next/server";
 import { apiKey, encryptEtsy, etsyFetch, goldieSiteUrl } from "../client";
+import { etsyOauthIntent, sameEtsyShopMessage } from "@/app/etsy-connect-intent";
 
 export async function GET(request:Request){
-  const url=new URL(request.url),state=url.searchParams.get("state")||"",code=url.searchParams.get("code")||"",denied=url.searchParams.get("error");
+  const url=new URL(request.url),state=url.searchParams.get("state")||"",code=url.searchParams.get("code")||"",denied=url.searchParams.get("error"),adding=etsyOauthIntent(state)==="add";
   const pending=state?await env.DB.prepare("SELECT user_id,code_verifier,redirect_uri,return_origin FROM etsy_oauth_states WHERE state=? AND expires_at>unixepoch()").bind(state).first<{user_id:string;code_verifier:string;redirect_uri:string;return_origin?:string|null}>():null;
   const returnOrigin=oauthReturnOrigin(pending?.return_origin||url.origin,goldieSiteUrl());
   const fail=(message:string)=>NextResponse.redirect(`${returnOrigin}/listing-factory?step=connect&etsy=${encodeURIComponent(message)}`);
@@ -18,6 +19,15 @@ export async function GET(request:Request){
     const etsyUserId=Number(tokens.access_token.split(".")[0]);if(!etsyUserId)throw new Error("Etsy did not return a valid account identifier.");
     const shop=await etsyFetch<{shop_id:number;shop_name:string}>(`/users/${etsyUserId}/shops`,tokens.access_token);
     if(!shop||!Number.isSafeInteger(Number(shop.shop_id))||Number(shop.shop_id)<=0||!shop.shop_name)throw new Error("No Etsy shop was found on this account. Connect an account with an existing Etsy shop.");
+    const existing=adding?await env.DB.prepare("SELECT shop_name FROM etsy_connections WHERE user_id=? AND shop_id=?").bind(pending.user_id,shop.shop_id).first<{shop_name:string}>():null;
+    if(existing){
+      /* Refreshing the grant is harmless and useful, but an add-shop attempt
+         must not change the active destination or advance the workflow when
+         Etsy silently reused the browser's current login. */
+      await env.DB.prepare("UPDATE etsy_connections SET encrypted_access_token=?, encrypted_refresh_token=?, expires_at=?, etsy_user_id=?, shop_name=?, updated_at=CURRENT_TIMESTAMP WHERE user_id=? AND shop_id=?")
+        .bind(await encryptEtsy(tokens.access_token),await encryptEtsy(tokens.refresh_token),Math.floor(Date.now()/1000)+Number(tokens.expires_in||3600),etsyUserId,shop.shop_name,pending.user_id,shop.shop_id).run();
+      return fail(sameEtsyShopMessage(shop.shop_name));
+    }
     /* D835 · A second shop is added, not swapped in. The one just authorised
        becomes active; the others stay connected and switchable. */
     await env.DB.batch([
