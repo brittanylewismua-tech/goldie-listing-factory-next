@@ -37,7 +37,7 @@ export async function encryptEtsy(value:string){return encryptPrintifyToken(valu
 export async function decryptEtsy(value:string){return decryptPrintifyToken(value,secret())}
 
 async function refresh(userId:string,refreshToken:string){
-  const response=await fetch("https://api.etsy.com/v3/public/oauth/token",{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:new URLSearchParams({grant_type:"refresh_token",client_id:apiKey(),refresh_token:refreshToken})});
+  const response=await fetch("https://api.etsy.com/v3/public/oauth/token",{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:new URLSearchParams({grant_type:"refresh_token",client_id:apiKey(),refresh_token:refreshToken}),signal:AbortSignal.timeout(20000)});
   const payload=await response.json() as {access_token?:string;refresh_token?:string;expires_in?:number;error_description?:string};
   if(!response.ok||!payload.access_token||!payload.refresh_token)throw new Error(payload.error_description||"Reconnect Etsy to continue.");
   await runtime().DB.prepare("UPDATE etsy_connections SET encrypted_access_token=?, encrypted_refresh_token=?, expires_at=?, updated_at=CURRENT_TIMESTAMP WHERE user_id=? AND is_active=1").bind(await encryptEtsy(payload.access_token),await encryptEtsy(payload.refresh_token),Math.floor(Date.now()/1000)+Number(payload.expires_in||3600),userId).run();
@@ -56,7 +56,7 @@ export async function etsyConnection(userId:string){
 export async function etsyFetch<T>(path:string,token:string,init?:RequestInit,meter?:{calls:number}):Promise<T>{
   for(let attempt=0;attempt<5;attempt+=1){
     await waitForEtsyCapacity();
-    const response=await fetch(`${API}${path}`,{...init,headers:{"x-api-key":etsyApiCredential(),Authorization:`Bearer ${token}`,...(init?.body instanceof URLSearchParams?{"Content-Type":"application/x-www-form-urlencoded"}:{}),...(init?.headers||{})}});
+    const response=await fetch(`${API}${path}`,{...init,signal:init?.signal??AbortSignal.timeout(30000),headers:{"x-api-key":etsyApiCredential(),Authorization:`Bearer ${token}`,...(init?.body instanceof URLSearchParams?{"Content-Type":"application/x-www-form-urlencoded"}:{}),...(init?.headers||{})}});
     if(meter)meter.calls+=1;
     await recordEtsyCall(response);
     if(response.status===429)throw new EtsyRateLimited('Etsy asked Goldie to slow down. Your saved work will continue automatically.');

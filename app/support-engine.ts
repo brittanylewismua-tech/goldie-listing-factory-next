@@ -17,6 +17,7 @@ function userContext(turns: SupportTurn[], query: string) {
 export function supportResponse(query: string, turns: SupportTurn[]): SupportResponse {
   const clean = query.trim();
   const lower = clean.toLowerCase().replace(/’/g, "'");
+  if (/taking a long time.*kept this page open/i.test(clean)) return {text:"The operation has not confirmed a result yet. Keep this page open and do not repeat the request. You can return to the progress panel at any time. If it reports an error, follow that specific recovery action. For human help, use Contact support and include the operation name and elapsed time.",suggestions:["Contact support"]};
   const context = userContext(turns, clean);
   const previousArticle = lastArticle(turns);
   const connectionIssue = /(printify|token).{0,30}(won'?t|will not|doesn'?t|does not|can'?t|cannot|not|fail|failing|problem).{0,20}(connect|work|accept)|(token).{0,30}(fail|failing|not work|rejected)|(?:connect|connection).{0,30}(printify|token)|(?:printify|token).{0,20}(connect|connection)/i.test(lower);
