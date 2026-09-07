@@ -60,6 +60,7 @@ import { printifyMockupDetails, printifyMockupForColor, printifyVariantIdsForCol
 import { orderedPrintSides,primaryPrintSide,printSideLabel,productNoun } from "./print-sides";
 import ProductColorRendering from "./product-color-rendering";
 import {completedGeneratedTags,validEtsyTags} from "./listing-title-tags";
+import {printifyVariantLimitMessage} from "./printify-variant-limit";
 
 /* The product glyph is a last-resort identity image after Printify has answered
    but has not supplied a usable mockup. It must never silently turn an unknown
@@ -1471,6 +1472,7 @@ export default function ListingFactoryApp() {
     return bySize.length?bySize:byColor;
   }
   const pricedVariants=useMemo(()=>variantsFor(templateDetails,selectedColorIds,selectedSizeIds),[templateDetails,selectedColorIds,selectedSizeIds]);
+  const draftVariantLimitError=printifyVariantLimitMessage(pricedVariants.length);
   useEffect(()=>{if(!templateDetails?.id||!selectedColorIds.length)return;window.localStorage.setItem(`goldie-colors-${templateDetails.id}`,JSON.stringify(selectedColorIds))},[templateDetails?.id,selectedColorIds]);
   useEffect(()=>{if(!templateDetails?.id||!selectedSizeIds.length)return;window.localStorage.setItem(`goldie-sizes-${templateDetails.id}`,JSON.stringify(selectedSizeIds))},[templateDetails?.id,selectedSizeIds]);
   const createdDraftCount=drafts.filter(draft=>draft.status==="Created").length,titleCount=files.filter(file=>file.title.trim()).length,etsyReadyCount=files.filter(file=>etsyRequiredComplete(file.etsy)).length;
@@ -1830,7 +1832,7 @@ export default function ListingFactoryApp() {
      the profile request itself must have succeeded. */etsyShippingProfileReady:etsyShippingSelectionReady(),pricingApproved:activeBundle?bundleRecipes.length>0&&bundleRecipes.every(recipe=>recipe.id===activeRecipe?.id?pricingApproved:(bundleApproved[recipe.id]??false)):pricingApproved,draftsComplete:complete,createdDraftCount,titlesReady:files.length>0&&files.every(file=>Boolean(file.title.trim())&&!file.titleError),tagsReady:files.length>0&&files.every(file=>file.tags.length>0&&!file.titleError),descriptionReady:Boolean(description.trim()),etsyDetailsReady:files.length>0&&files.every(file=>etsyRequiredComplete(file.etsy)),personalizationReady:files.every(file=>!personalizationProblem(file.etsy)),imagesReady:allCreatedListingsHaveImages()}}
   function progressGateIssues(index:number){if(localPreview)return [];if(index>0&&(checkingConnection||checkingEtsyConnection))return ["Checking saved connections…"];const issues=navigationIssues(index,gateState());if(index>=5&&complete)issues.push(...imagesStepIssues());if(index>=6)issues.push(...runProductGaps());return [...new Set(issues)]}
   /* D444 - leaving Images needs photos, not titles. See leavingImagesIssues. */
-  function imagesStepIssues(){if(localPreview)return [];const issues=leavingImagesIssues(gateState());if(templateDetails?.colorOptions?.length&&!selectedColorIds.length)issues.push("Choose at least one product color.");if(templateDetails?.sizeOptions?.length&&!selectedSizeIds.length)issues.push("Choose at least one product size.");if(savingDraftVariants)issues.push("Wait while the product colors and sizes are saved to Printify.");if(draftVariantError)issues.push(draftVariantError);if(bundleProductsStillReading().length)issues.push("Still reading the finished costs for the other products in this bundle.");const pending=costReviewDrafts().filter(draft=>!draft.costReview?.approved);if(pending.length)issues.push(`${pending.length} ${pending.length===1?"listing needs":"listings need"} final pricing approval after Printify calculated the finished product costs.`);
+  function imagesStepIssues(){if(localPreview)return [];const issues=leavingImagesIssues(gateState());if(templateDetails?.colorOptions?.length&&!selectedColorIds.length)issues.push("Choose at least one product color.");if(templateDetails?.sizeOptions?.length&&!selectedSizeIds.length)issues.push("Choose at least one product size.");if(savingDraftVariants)issues.push("Wait while the product colors and sizes are saved to Printify.");if(draftVariantLimitError)issues.push(draftVariantLimitError);if(draftVariantError)issues.push(draftVariantError);if(bundleProductsStillReading().length)issues.push("Still reading the finished costs for the other products in this bundle.");const pending=costReviewDrafts().filter(draft=>!draft.costReview?.approved);if(pending.length)issues.push(`${pending.length} ${pending.length===1?"listing needs":"listings need"} final pricing approval after Printify calculated the finished product costs.`);
     /* The footer advances the whole bundle, so it must validate every child,
        not only whichever product happens to be open. */
     if(activeBundle&&bundleRecipes.length>1)for(const recipe of bundleRecipes){
@@ -3234,8 +3236,8 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
         return `${required.filter(property=>(property.value||"").trim()).length}/${required.length} fields`;
       },design=><div className="etsy-detail-body">{design.etsy?<EtsyDetailsEditor design={design} categories={etsyCategories} onChange={etsy=>updateDesign(design.id,{etsy,etsyError:""})} onCategory={taxonomyId=>changeEtsyCategory(design,taxonomyId)} checklist={!only}/>:!design.title.trim()?<div className="etsy-detail-pending"><b>Waiting for this listing’s title.</b><span>Create the title above to prepare the Etsy category and product fields.</span></div>:!design.etsyError?<div className="etsy-detail-loading" role="status"><span className="goldie-spinner" aria-hidden="true"/><b>Loading Etsy details…</b></div>:<div className="etsy-detail-error"><b>Etsy details could not be loaded.</b><span>{design.etsyError}</span><button aria-busy={preparingListingId===design.id} disabled={Boolean(preparingListingId)} onClick={()=>void retryOneEtsyListing(design)}>{preparingListingId===design.id?"Loading Etsy details…":"Try this listing again"}</button></div>}</div>,etsyFlags,only);}
   function taskPanel(task:string){
-    if(task==="draft-colors"&&templateDetails)return <><DraftColorSelector product={templateDetails} drafts={drafts.filter(draft=>draft.status==="Created")} selected={selectedColorIds} saving={savingDraftVariants} artworkByDraft={Object.fromEntries(drafts.map(draft=>{const local=files.find(file=>file.id===draft.clientId)?.artworkPreviewUrl;return [draft.clientId,local||draft.artworkPreviewUrls?.primary||Object.values(draft.artworkPreviewUrls||{})[0]||""]}))} onChange={ids=>void syncDraftVariantChoices(ids,selectedSizeIds)} onArtworkChange={(draft,color,list,reset)=>void updateDraftColorArtwork(draft,color,list,reset)} onPreviewRequest={id=>refreshDraftPhotos(id,true)}/>{draftVariantError&&<p className="field-error" role="alert">{draftVariantError}</p>}</>;
-    if(task==="draft-sizes"&&templateDetails)return <><ProductSizeSelector product={templateDetails} selected={selectedSizeIds} onChange={ids=>void syncDraftVariantChoices(selectedColorIds,ids)} onRemember={()=>undefined} remembering={savingDraftVariants} remembered inCard/>{draftVariantError&&<p className="field-error" role="alert">{draftVariantError}</p>}</>;
+    if(task==="draft-colors"&&templateDetails)return <><DraftColorSelector product={templateDetails} drafts={drafts.filter(draft=>draft.status==="Created")} selected={selectedColorIds} saving={savingDraftVariants} artworkByDraft={Object.fromEntries(drafts.map(draft=>{const local=files.find(file=>file.id===draft.clientId)?.artworkPreviewUrl;return [draft.clientId,local||draft.artworkPreviewUrls?.primary||Object.values(draft.artworkPreviewUrls||{})[0]||""]}))} onChange={ids=>void syncDraftVariantChoices(ids,selectedSizeIds)} onArtworkChange={(draft,color,list,reset)=>void updateDraftColorArtwork(draft,color,list,reset)} onPreviewRequest={id=>refreshDraftPhotos(id,true)}/>{(draftVariantLimitError||draftVariantError)&&<p className="field-error" role="alert">{draftVariantLimitError||draftVariantError}</p>}</>;
+    if(task==="draft-sizes"&&templateDetails)return <><ProductSizeSelector product={templateDetails} selected={selectedSizeIds} onChange={ids=>void syncDraftVariantChoices(selectedColorIds,ids)} onRemember={()=>undefined} remembering={savingDraftVariants} remembered inCard/>{(draftVariantLimitError||draftVariantError)&&<p className="field-error" role="alert">{draftVariantLimitError||draftVariantError}</p>}</>;
     /* D541 - titles-resolving drives the pulse on each title field as the batch
        run fills them in. It rode on the listing-editor wrapper, so it went out
        with the block; it belongs on whatever holds the title fields. */
@@ -4518,10 +4520,12 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
   function finalDescription(design:DesignFile,details?:EtsyDetails){return design.descriptionOverride??[design.blurb??details?.blurb??"",description].filter(value=>value.trim()).join("\n\n")}
   function syncDraftVariantChoices(nextColors:number[],nextSizes:number[]){
     if(!templateDetails)return;
+    const selectedVariants=variantsFor(templateDetails,nextColors,nextSizes).map(variant=>variant.id);
+    const limitError=printifyVariantLimitMessage(selectedVariants.length);
+    if(limitError){setSavingDraftVariants(false);setDraftVariantError(limitError);return}
     setSelectedColorIds(nextColors);setSelectedSizeIds(nextSizes);
     const revision=++variantSaveRevision.current;
     window.clearTimeout(variantSaveTimer.current);
-    const selectedVariants=variantsFor(templateDetails,nextColors,nextSizes).map(variant=>variant.id);
     if(!selectedVariants.length){setSavingDraftVariants(false);setDraftVariantError("Choose a color and size combination Printify offers.");return}
     const created=drafts.filter(draft=>draft.status==="Created"&&draft.id);
     setDraftVariantError("");

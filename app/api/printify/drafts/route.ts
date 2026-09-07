@@ -10,6 +10,7 @@ import {runBounded} from "@/app/bounded-work";
 import {draftCreationKey} from "../draft-identity";
 import {claimDraftJobSql,claimDraftGroupSql,pendingDraftJob,writeJobObject,jobObjectPrefix,type PendingDraftJob} from "../draft-job-store";
 import type {DraftJobBindings,DraftJobInput,DraftRequestBody} from "./execute-job";
+import {printifyVariantLimitMessage} from "@/app/printify-variant-limit";
 
 type WorkflowBinding={create(options:{id:string;params:{key:string;owner:string}}):Promise<unknown>;createBatch(options:Array<{id:string;params:{key:string;owner:string}}>):Promise<unknown>;get(id:string):Promise<{status():Promise<unknown>}>};
 type Bindings=DraftJobBindings&{DRAFT_CREATION:WorkflowBinding;ARTWORK:DraftJobBindings["ARTWORK"]&{put(key:string,value:ReadableStream|Uint8Array,options?:{customMetadata?:Record<string,string>;httpMetadata?:{contentType?:string}}):Promise<unknown>;delete(key:string):Promise<void>}};
@@ -49,6 +50,8 @@ async function handlePOST(request:Request){
   if(!runtime.DB||!runtime.ARTWORK||!runtime.DRAFT_CREATION||!runtime.PRINTIFY_TOKEN_KEY)return NextResponse.json({error:"Secure draft processing is unavailable."},{status:503});
   const body=await request.json() as DraftRequestBody&{requests?:DraftRequestBody[]};
   if(body.requests)return handleGroupPOST(request,user,body.requests);
+  const limitError=printifyVariantLimitMessage(new Set(body.selectedVariantIds||[]).size);
+  if(limitError)return NextResponse.json({error:limitError},{status:400});
   if(!body.batchId||!body.clientId)return NextResponse.json({error:"The prepared batch and design identifiers are required."},{status:400});
   const legacy=await lookup(await legacyKey(body.batchId,body.clientId),user.userId);
   if(legacy?.status==="succeeded"||legacy?.status==="running"||legacy?.status==="uncertain")return jobResponse(legacy,user.userId);
@@ -104,6 +107,8 @@ async function handleGroupPOST(request:Request,user:NonNullable<Awaited<ReturnTy
     let preparationError:unknown;
     await runBounded(requests,4,async body=>{try{
       if(!body.batchId||!body.clientId)throw Error("Every draft needs its prepared product and design identifiers.");
+      const limitError=printifyVariantLimitMessage(new Set(body.selectedVariantIds||[]).size);
+      if(limitError)throw Error(limitError);
       const legacy=await lookup(await legacyKey(body.batchId,body.clientId),owner);
       if(legacy&&legacy.status!=="failed")throw Error("This older draft is already being tracked. Resume it before starting this submission.");
       const session=await runtime.DB.prepare("SELECT shop_id,product_id,template_json FROM printify_batch_sessions WHERE id=? AND user_id=? AND expires_at>unixepoch()").bind(body.batchId,owner).first<Session>();

@@ -7,6 +7,7 @@ import { printifyMockupSet } from "@/app/printify-camera-mockups";
 import { signedArtworkUrl } from "../../staged-url";
 import { mergePreviewDetails,type PreviewDetail } from "@/app/printify-preview-details";
 import { unpackDraftMedia,saveDraftChanges,type MediaBucket } from "@/app/draft-media-storage";
+import {printifyVariantLimitMessage} from "@/app/printify-variant-limit";
 
 type ArtworkUpdate={stagedId?:string;fileName?:string;position:string;variantIds:number[];colorId:number;colorTitle:string;reset?:boolean;bounds?:{left:number;top:number;right:number;bottom:number};maxPlacementScale?:number};
 
@@ -91,7 +92,10 @@ export async function PATCH(request:Request){
     const chosen=new Set(body.selectedVariantIds.map(Number));
     const variants=currentProduct?.variants||[];
     if(!variants.length)return NextResponse.json({error:"Printify did not return the variants for this draft."},{status:409});
-    if(!variants.some(variant=>chosen.has(variant.id)))return NextResponse.json({error:"Choose at least one available color and size combination."},{status:400});
+    const chosenCount=variants.filter(variant=>chosen.has(variant.id)).length;
+    if(!chosenCount)return NextResponse.json({error:"Choose at least one available color and size combination."},{status:400});
+    const limitError=printifyVariantLimitMessage(chosenCount);
+    if(limitError)return NextResponse.json({error:limitError},{status:400});
     updateBody.variants=variants.map(variant=>({id:variant.id,price:Number(body.variantPrices?.[String(variant.id)]??variant.price),is_enabled:chosen.has(variant.id)}));
   }
   const response=Object.keys(updateBody).length?await fetch(url,{method:"PUT",headers:{Authorization:`Bearer ${token}`,"Content-Type":"application/json","User-Agent":"Goldie-Listing-Factory"},body:JSON.stringify(updateBody)}):null;

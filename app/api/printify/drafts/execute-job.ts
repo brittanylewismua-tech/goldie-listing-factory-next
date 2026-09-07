@@ -9,6 +9,7 @@ import { actualCostReview } from "@/app/draft-pricing";
 import { mergeMockupImages } from "@/app/draft-preview-variants";
 import { signedArtworkUrl } from "../staged-url";
 import { packDraftMedia,unpackDraftMedia,type MediaBucket } from "@/app/draft-media-storage";
+import {printifyVariantLimitMessage} from "@/app/printify-variant-limit";
 
 const PRINTIFY_API = "https://api.printify.com/v1";
 type UploadedImage = { id: string; width?: number; height?: number; mime_type?: string; preview_url?:string };
@@ -85,6 +86,8 @@ export type DraftJobInput={userId:string;requestUrl:string;body:DraftRequestBody
 export type DraftJobBindings={DB:D1Database;ARTWORK:JobBucket&MediaBucket&{get(key:string):Promise<{arrayBuffer():Promise<ArrayBuffer>;body?:ReadableStream;customMetadata?:Record<string,string>}|null>};PRINTIFY_TOKEN_KEY:string};
 export async function executeDraftJob(input:DraftJobInput,idempotencyKey:string,checkpoint:PendingDraftJob,bindings:DraftJobBindings){
   const runtimeEnv=()=>bindings,user={userId:input.userId},body=input.body,session=input.session,db=bindings.DB;
+  const variantLimitError=printifyVariantLimitMessage(new Set(body.selectedVariantIds||[]).size);
+  if(variantLimitError)throw Error(variantLimitError);
   const request=new Request(input.requestUrl),requestStartedAt=performance.now();
   const supportReference=body.supportReference?.replace(/[^A-Z0-9-]/gi,"").slice(0,40)||"";
   let diagnosticStage="request_validation";

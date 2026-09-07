@@ -11,7 +11,7 @@ test('routine color and size selection saves inline without opening the blocking
  assert.doesNotMatch(wait,/savingDraftVariants\?\{title:/);
  assert.match(wait,/savingDraftArtwork\?\{title:"Updating color artwork"/);
  assert.match(app,/\{saving\?<span role="status">Saving choices…<\/span>:null\}/);
- assert.match(app,/draftVariantError&&<p className="field-error" role="alert">/);
+ assert.match(app,/\(draftVariantLimitError\|\|draftVariantError\)&&<p className="field-error" role="alert">/);
 });
 
 test('color-specific artwork retains blocking progress and always clears it',()=>{
