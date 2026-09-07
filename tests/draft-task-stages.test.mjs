@@ -5,6 +5,7 @@ const rows=[{task:'placement',done:true},{task:'draft-colors',done:true},{task:'
 test('each of the six setup tasks belongs to exactly one reachable stage',()=>{
  assert.deepEqual(DRAFT_TASK_STAGES.flatMap(stage=>stage.tasks),rows.map(row=>row.task));
  assert.equal(new Set(DRAFT_TASK_STAGES.flatMap(stage=>stage.tasks)).size,6);
+ assert.deepEqual(DRAFT_TASK_STAGES.map(stage=>stage.label),['Artwork, colors & sizes','Pricing & shipping','Listing photos']);
 });
 test('guided next and recovery actions reveal their target stage; closing retains the chosen stage',()=>{
  assert.equal(visibleDraftStage(rows,'photos','design'),'photos');

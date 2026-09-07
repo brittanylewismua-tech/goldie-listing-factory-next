@@ -1,5 +1,5 @@
 export const DRAFT_TASK_STAGES = [
-  {id:'design',label:'Design & options',tasks:['placement','draft-colors','draft-sizes']},
+  {id:'design',label:'Artwork, colors & sizes',tasks:['placement','draft-colors','draft-sizes']},
   {id:'details',label:'Pricing & shipping',tasks:['draft-pricing','draft-shipping']},
   {id:'photos',label:'Listing photos',tasks:['photos']},
 ] as const;

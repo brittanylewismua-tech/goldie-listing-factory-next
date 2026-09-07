@@ -3566,15 +3566,14 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
     const stageId=visibleDraftStage(rows,open?activeTask:"",draftStageByProduct[recipe.id]);
     const stages=DRAFT_TASK_STAGES.filter(stage=>rows.some(row=>draftTaskStage(row.task)===stage.id));
     const stageRows=rows.filter(row=>draftTaskStage(row.task)===stageId);
-    return <div className="batch-product-rows">
-      {grouped&&<nav className="draft-stage-nav" aria-label="Product setup stages">{stages.map((stage,stageIndex)=>{
+    return <div className={`batch-product-rows ${grouped?"has-draft-stages":""}`}>
+      {grouped&&<div className="draft-stage-rail"><nav className="draft-stage-nav" aria-label="Product setup stages">{stages.map((stage,stageIndex)=>{
         const tasks=rows.filter(row=>draftTaskStage(row.task)===stage.id),remaining=tasks.filter(row=>!row.done).length;
         return <button type="button" key={stage.id} aria-current={stage.id===stageId?"step":undefined} disabled={Boolean(switchingProduct)||(!open&&!reachable)} onClick={()=>{
           setDraftStageByProduct(current=>({...current,[recipe.id]:stage.id}));
           const target=tasks.find(row=>!row.done)||tasks[0];if(target?.task)openGuidedDraftTask(target.task,index);
         }}><span>{stageIndex+1}</span><b>{stage.label}</b><small>{remaining?`${remaining} to check`:"Ready to review"}</small></button>;
-      })}</nav>}
-      {grouped&&<p className="draft-stage-position">Stage {stages.findIndex(stage=>stage.id===stageId)+1} of {stages.length} · {stageRows.find(row=>row.task===activeTask)?.label||"Choose a section below"}</p>}
+      })}</nav><p className="draft-stage-position">Stage {stages.findIndex(stage=>stage.id===stageId)+1} of {stages.length} · {stageRows.find(row=>row.task===activeTask)?.label||"Choose a section below"}</p></div>}
       {rows.map((row,rowIndex)=>{if(grouped&&draftTaskStage(row.task)!==stageId)return null;const rowOpen=Boolean(!switchingProduct&&open&&row.task&&activeTask===row.task);
       const reachableRow=!(switchingProduct||(!open&&!reachable));
       /* D767 · A reporting row has nothing of its own to open (D541), which is a
