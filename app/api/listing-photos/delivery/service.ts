@@ -1,3 +1,4 @@
+import {candidateWaitMs,transferPollMs} from './timing';
 import {transferDraft,DraftTransferReviewRequired,type TransferState,type TransferProduct} from './transfer-engine';
 import {verifyShopPairing} from '../../printify/shop-match';
 import {etsyFetch} from '../../etsy/client';
@@ -40,6 +41,11 @@ export async function runDeliveryTick(id:string,owner:string){
   if(Date.now()>row.expires_at){await deliveryStatus(id,owner,'expired','Automatic checking ended after 24 hours. Prepare photo delivery again when you are ready to publish.');return {done:true,progress:false}}
   const runtime=deliveryEnv();
   try{
+    const capacity=await runtime.DB.prepare('SELECT paused_until FROM etsy_queue_state WHERE id=1').first<{paused_until:number}>();
+    if(capacity&&capacity.paused_until*1000>Date.now()){
+      await deliveryStatus(id,owner,row.status,'Etsy asked Goldie to slow down. Your saved draft will continue automatically.');
+      return {done:false,progress:false,waitMs:Math.max(1000,capacity.paused_until*1000-Date.now())};
+    }
     const connection=await etsyConnection(owner);
     if(Number(connection.shopId)!==row.etsy_shop_id)throw new DeliveryReviewRequired('The connected Etsy shop changed. Return to the original shop before preparing delivery again.');
     const tokenRow=await runtime.DB.prepare('SELECT encrypted_token FROM printify_connections WHERE user_id=?').bind(owner).first<{encrypted_token:string}>();
@@ -74,13 +80,16 @@ export async function runDeliveryTick(id:string,owner:string){
       }
       if(published.state==='unknown')await deliveryStatus(id,owner,row.transfer_json?row.status:'waiting',printifyWaitMessage(Boolean(row.transfer_json),Boolean(printifyProduct?.is_locked),published.reason));
       else await deliveryStatus(id,owner,row.transfer_json?row.status:'waiting');
-      return {done:false,progress:false};
+      const waitMs=transferPollMs(row.transfer_json?JSON.parse(row.transfer_json) as TransferState:null,Date.now());
+      return waitMs?{done:false,progress:false,waitMs}:{done:false,progress:false};
     }
+    const automatic=Boolean(row.draft_json&&row.transfer_json);
     if(!row.state_json&&(row.candidate_listing_id!==published.listingId||!row.candidate_seen_at)){
       await runtime.DB.prepare('UPDATE photo_deliveries SET candidate_listing_id=?,candidate_seen_at=?,updated_at=?,error=NULL WHERE id=? AND user_id=?').bind(published.listingId,Date.now(),Date.now(),id,owner).run();
-      return {done:false,progress:false,waitMs:30000};
+      return {done:false,progress:false,waitMs:candidateWaitMs(automatic,null,Date.now())};
     }
-    if(!row.state_json&&Date.now()-Number(row.candidate_seen_at)<30000)return {done:false,progress:false,waitMs:30000};
+    const remainingWait=candidateWaitMs(automatic,row.candidate_seen_at,Date.now());
+    if(!row.state_json&&remainingWait>0)return {done:false,progress:false,waitMs:remainingWait};
     if((await etsyBudget()).remaining<(row.draft_json?15:6)){await deliveryStatus(id,owner,row.status,'Waiting for Etsy API capacity. Your photo set is saved.');return {done:false,progress:false}}
     const request=async(path:string,init?:RequestInit)=>{
       const response=await fetch(`https://api.etsy.com/v3/application${path}`,{...init,headers:{...Object.fromEntries(new Headers(init?.headers)), 'x-api-key':etsyApiCredential(),Authorization:`Bearer ${connection.token}`},signal:AbortSignal.timeout(25000)});
