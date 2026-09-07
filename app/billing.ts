@@ -1,6 +1,6 @@
 import { env } from "cloudflare:workers";
 import type { ChatGPTUser } from "@/app/chatgpt-auth";
-import type { PlanKey } from "@/app/plan-limits";
+import type { PlanKey, BillingInterval } from "@/app/plan-limits";
 
 type BillingRuntime = {
   DB: D1Database;
@@ -10,6 +10,12 @@ type BillingRuntime = {
   STRIPE_PRO_PRICE_ID?: string;
   STRIPE_SCALE_PRICE_ID?: string;
   STRIPE_SCALE_99_PRICE_ID?: string;
+  STRIPE_STARTER_MONTHLY_PRICE_ID?: string;
+  STRIPE_STARTER_YEARLY_PRICE_ID?: string;
+  STRIPE_PRO_MONTHLY_PRICE_ID?: string;
+  STRIPE_PRO_YEARLY_PRICE_ID?: string;
+  STRIPE_SCALE_MONTHLY_PRICE_ID?: string;
+  STRIPE_SCALE_YEARLY_PRICE_ID?: string;
   RESEND_API_KEY?: string;
   GOLDIE_EMAIL_LOGO_URL?: string;
   GOLDIE_SITE_URL?: string;
@@ -38,22 +44,28 @@ export async function ensureBillingTables(db = billingRuntime().DB) {
   }
 }
 
-export function priceForPlan(plan: PlanKey) {
+export function priceForPlan(plan: PlanKey, interval: BillingInterval = "month") {
   const runtime = billingRuntime();
-  // The old $59 Scale price is recognized for existing subscriptions below,
-  // but must not label new Pro checkouts as Scale. Without a dedicated price,
-  // Checkout creates an inline recurring price with the current plan's name.
-  if (plan === "goldie") return runtime.STRIPE_GOLDIE_PRICE_ID || null;
-  if (plan === "pro") return runtime.STRIPE_PRO_PRICE_ID || null;
-  return runtime.STRIPE_SCALE_99_PRICE_ID || null;
+  // Never use a legacy price for a new checkout. Legacy IDs below remain valid
+  // for existing subscriptions, which this release does not reprice.
+  if (plan === "goldie") return (interval === "year" ? runtime.STRIPE_STARTER_YEARLY_PRICE_ID : runtime.STRIPE_STARTER_MONTHLY_PRICE_ID) || null;
+  if (plan === "pro") return (interval === "year" ? runtime.STRIPE_PRO_YEARLY_PRICE_ID : runtime.STRIPE_PRO_MONTHLY_PRICE_ID) || null;
+  return (interval === "year" ? runtime.STRIPE_SCALE_YEARLY_PRICE_ID : runtime.STRIPE_SCALE_MONTHLY_PRICE_ID) || null;
 }
 
 export function planForPrice(priceId?: string | null): PlanKey | null {
   const runtime = billingRuntime();
+  for (const plan of ["goldie", "pro", "scale"] as const) {
+    if (priceId && (priceId === priceForPlan(plan, "month") || priceId === priceForPlan(plan, "year"))) return plan;
+  }
   if (priceId && priceId === runtime.STRIPE_GOLDIE_PRICE_ID) return "goldie";
   if (priceId && (priceId === runtime.STRIPE_PRO_PRICE_ID || priceId === runtime.STRIPE_SCALE_PRICE_ID)) return "pro";
   if (priceId && priceId === runtime.STRIPE_SCALE_99_PRICE_ID) return "scale";
   return null;
+}
+
+export function isCurrentPrice(priceId?: string | null) {
+  return Boolean(priceId && (["goldie", "pro", "scale"] as const).some(plan => priceId === priceForPlan(plan, "month") || priceId === priceForPlan(plan, "year")));
 }
 
 export function siteOrigin(request?: Request) {
@@ -92,13 +104,23 @@ export async function stripeRequest<T>(path: string, init: {method?: string; bod
   return payload;
 }
 
-export async function billingState(user: ChatGPTUser) {
+export async function billingState(user: ChatGPTUser, includeTerms = false) {
   const db = billingRuntime().DB;
   await ensureBillingTables(db);
   const row = await db.prepare("SELECT stripe_customer_id customerId, stripe_subscription_id subscriptionId, status, plan_key planKey, current_period_end currentPeriodEnd, cancel_at_period_end cancelAtPeriodEnd FROM billing_subscriptions WHERE user_id=?")
     .bind(user.userId).first<{customerId:string;subscriptionId:string;status:string;planKey:PlanKey;currentPeriodEnd:number|null;cancelAtPeriodEnd:number}>();
   const active = Boolean(row && ["active","trialing","past_due"].includes(row.status));
-  return { active, subscription: row || null };
+  let terms: { amount: number; currency: string; interval: string; intervalCount: number } | null = null;
+  // Only the Usage + Plan screen requests price details. Access checks do not
+  // depend on Stripe availability and existing subscribers see their real price.
+  if (includeTerms && row) {
+    try {
+      const subscription = await stripeRequest<{items:{data:Array<{price:{unit_amount:number|null;currency:string;recurring?:{interval:string;interval_count:number}}}>}}>(`subscriptions/${encodeURIComponent(row.subscriptionId)}`);
+      const price = subscription.items.data[0]?.price;
+      if (price && price.unit_amount !== null && price.recurring) terms = { amount: price.unit_amount, currency: price.currency, interval: price.recurring.interval, intervalCount: price.recurring.interval_count };
+    } catch { /* The billing portal remains authoritative when terms are unavailable. */ }
+  }
+  return { active, subscription: row || null, terms };
 }
 
 export async function customerFor(user: ChatGPTUser) {

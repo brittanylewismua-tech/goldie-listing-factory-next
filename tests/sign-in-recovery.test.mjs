@@ -52,7 +52,7 @@ const signup=readFileSync(new URL('../app/signup/signup-client.tsx',import.meta.
 const chooseBody=signup.slice(signup.indexOf('  async function choose'),signup.indexOf('  useEffect'));
 const makeChoose=new Function('env',`with(env){${ts.transpileModule(chooseBody,{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText};return choose;}`);
 function checkoutHarness(fetch){
-  const state={loading:null,error:''},env={checkoutPending:{current:false},signedIn:true,returnTo:'/listing-factory',window:{location:{href:''}},fetch,setLoading:v=>state.loading=v,setError:v=>state.error=v};
+  const state={loading:null,error:''},env={checkoutPending:{current:false},signedIn:true,interval:'month',returnTo:'/listing-factory',window:{location:{href:''}},fetch,setLoading:v=>state.loading=v,setError:v=>state.error=v};
   return {choose:makeChoose(env),env,state};
 }
 for(const failure of ['network','invalid-json','server']){

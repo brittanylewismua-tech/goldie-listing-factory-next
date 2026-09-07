@@ -1,4 +1,4 @@
-import ListingFactory from "@/app/page";
+import ListingFactory from "@/app/listing-factory-app";
 import { accountSignInPath, getChatGPTUser } from "@/app/chatgpt-auth";
 import { mastermindState } from "./access";
 import CodeGate from "./code-gate";

@@ -1,6 +1,6 @@
 import "./design-lab.css";
 import { requireChatGPTUser } from "@/app/chatgpt-auth";
-import ListingFactory from "@/app/page";
+import ListingFactory from "@/app/listing-factory-app";
 
 export const dynamic = "force-dynamic";
 

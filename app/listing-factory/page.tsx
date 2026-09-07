@@ -6,6 +6,7 @@ import SignupClient from "@/app/signup/signup-client";
 import "@/app/signup/signup.css";
 import "@/app/signup/signup-copy.css";
 import "@/app/signup/signup-polish.css";
+import "@/app/signup/signup-pricing.css";
 
 export default async function ListingFactoryRoute({searchParams}:{searchParams:Promise<{offer?:string}>}){
   const offerValue = (await searchParams).offer;

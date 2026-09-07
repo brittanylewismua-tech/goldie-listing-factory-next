@@ -5,10 +5,10 @@ import {readFileSync} from 'node:fs';
 import ts from 'typescript';
 function load(path,deps){const src=readFileSync(new URL(path,import.meta.url),'utf8').replace(/^import .*;\n/gm,'');const code=ts.transpileModule(src,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;const out={};new Function('exports',...Object.keys(deps),code)(out,...Object.values(deps));return out;}
 const secret='local-test-secret';
-async function fixture(){
+async function fixture(extraEnv={}){
   const sqlite=new DatabaseSync(':memory:');let failOnce=false;
   const db={prepare(sql){let args=[];return {sql,bind(...values){args=values;return this;},async run(){if(failOnce&&sql.startsWith('INSERT INTO account_plans')){failOnce=false;throw Error('injected storage failure');}return {meta:sqlite.prepare(sql).run(...args)};},async first(){return sqlite.prepare(sql).get(...args)||null;}};},async batch(statements){sqlite.exec('BEGIN');try{const results=[];for(const statement of statements)results.push(await statement.run());sqlite.exec('COMMIT');return results;}catch(error){sqlite.exec('ROLLBACK');throw error;}}};
-  const billing=load('../app/billing.ts',{env:{DB:db,STRIPE_WEBHOOK_SECRET:secret}});await billing.ensureBillingTables();
+  const billing=load('../app/billing.ts',{env:{DB:db,STRIPE_WEBHOOK_SECRET:secret,...extraEnv}});await billing.ensureBillingTables();
   const {POST}=load('../app/api/billing/webhook/route.ts',{...billing,NextResponse:{json:(body,options)=>({body,status:options?.status??200})},logError:async()=>null,scheduleTrialReminder:async()=>null,cancelTrialReminder:async()=>{}});
   return {sqlite,post:POST,failNextPlanWrite:()=>failOnce=true,billing};
 }
@@ -32,6 +32,20 @@ test('checkout before subscription waits for verified activation, then grants th
 });
 test('active subscription grants its plan and cancellation removes access',async()=>{
   const h=await fixture();try{const active=structuredClone(subscription);active.id='evt-active';active.data.object.status='active';await h.post(await request(active));assert.equal((await h.billing.billingState({userId:'local-user'})).active,true);assert.equal(h.sqlite.prepare('SELECT plan_key FROM account_plans').get().plan_key,'pro');const canceled=structuredClone(active);canceled.id='evt-canceled';canceled.type='customer.subscription.deleted';canceled.data.object.status='canceled';await h.post(await request(canceled));assert.equal((await h.billing.billingState({userId:'local-user'})).active,false);}finally{h.sqlite.close();}
+});
+
+for (const interval of ['MONTHLY','YEARLY']) test(`${interval} new Pro price grants 250-listing entitlement, not the legacy allowance`,async()=>{
+  const h=await fixture({[`STRIPE_PRO_${interval}_PRICE_ID`]:'price-new-pro'});try{
+    const active=structuredClone(subscription);active.id=`evt-new-${interval}`;active.data.object.status='active';
+    active.data.object.metadata.plan_key='goldie'; // Price wins over stale metadata after a plan change.
+    active.data.object.items={data:[{price:{id:'price-new-pro'}}]};
+    await h.post(await request(active));
+    assert.equal(h.sqlite.prepare('SELECT plan_key FROM account_plans').get().plan_key,'pro_2026_09');
+    assert.equal((await h.billing.billingState({userId:'local-user'})).subscription.planKey,'pro');
+    const limits=load('../app/plan-limits.ts',{});
+    assert.equal(limits.planFor('pro_2026_09').drafts,250);
+    assert.equal(limits.planFor('pro').drafts,300);
+  }finally{h.sqlite.close();}
 });
 
 test('real Stripe flexible trial cancellation records end date and cancels the reminder',async()=>{

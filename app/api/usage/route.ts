@@ -14,7 +14,7 @@ export async function GET() {
     env.DB.prepare("SELECT COUNT(*) count FROM printify_draft_results WHERE user_id=? AND status='succeeded' AND (EXISTS (SELECT 1 FROM account_plans WHERE user_id=printify_draft_results.user_id AND plan_key='mastermind_beta') OR substr(COALESCE(created_at,updated_at),1,7)=?)").bind(user.userId, month).first<{count:number}>(),
     env.DB.prepare("SELECT COALESCE(SUM(count),0) count FROM mockup_render_usage WHERE user_id=? AND day=?").bind(user.userId, month).first<{count:number}>(),
     env.DB.prepare("SELECT COUNT(DISTINCT theme) count FROM mockup_templates WHERE user_id=?").bind(user.userId).first<{count:number}>(),
-    billingState(user),
+    billingState(user, true),
     env.DB.prepare("SELECT COUNT(*) count FROM etsy_listing_usage WHERE user_id=? AND published_at>=datetime('now','-24 hours')").bind(user.userId).first<{count:number}>(),
     env.DB.prepare("SELECT COUNT(*) count FROM etsy_publish_items WHERE user_id=? AND status IN ('queued','running')").bind(user.userId).first<{count:number}>(),
     env.DB.prepare("SELECT ROUND(AVG(api_calls),1) average FROM etsy_listing_usage WHERE published_at>=datetime('now','-30 days') AND api_calls>0").first<{average:number}>(),

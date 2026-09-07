@@ -10,15 +10,6 @@ const nextConfig: NextConfig = {
   pageExtensions: devOnlyRoutes
     ? ["dev.tsx", "tsx", "ts", "jsx", "js"]
     : ["tsx", "ts", "jsx", "js"],
-  async redirects() {
-    return [
-      {
-        source: "/",
-        destination: "/listing-factory",
-        permanent: false,
-      },
-    ];
-  },
 };
 
 export default nextConfig;

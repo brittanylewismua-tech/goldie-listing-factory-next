@@ -1,0 +1,45 @@
+/* Public pricing extends the factory's existing pink-grid / hard-shadow system. */
+.signup-page .signup-topbar { gap: 24px; flex-wrap: wrap; }
+.signup-page .signup-nav { display: flex; align-items: center; justify-content: flex-end; gap: 28px; }
+.signup-page .signup-nav a, .signup-page .signup-nav button { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; margin: 0; font-family: inherit; font-size: 15px; font-weight: 750; line-height: 1.3; color: #fff; text-decoration: none; white-space: nowrap; }
+.signup-page .signup-nav > a:not(.signup-nav-start):hover { color: #ff72d1; }
+.signup-page .signup-nav .signup-nav-start { padding: 12px 20px; border: 1px solid #fff; border-radius: 8px; background: #fff; color: #111; cursor: pointer; }
+.signup-page .signup-nav .signup-nav-start:hover { background: #ffe5f6; color: #111; }
+.signup-page .signup-hero-action { display: grid; justify-items: center; gap: 18px; margin-top: 30px; }
+.signup-page .signup-start-button { display: inline-flex; align-items: center; justify-content: center; min-height: 52px; padding: 14px 30px; border: 2px solid #111; border-radius: 10px; background: #111; color: #fff; box-shadow: 5px 5px 0 var(--public-pink); font: inherit; font-size: 17px; font-weight: 800; text-decoration: none; cursor: pointer; }
+.signup-page .signup-hero-action p { max-width: 560px; margin: 0; color: #60555d; font-size: 14px; line-height: 1.65; }
+.signup-page .signup-pricing { padding-top: 24px; scroll-margin-top: 24px; }
+.signup-page .signup-billing-toggle { display: flex; gap: 6px; width: max-content; max-width: calc(100% - 40px); margin: 0 auto; padding: 6px; border: 2px solid #111; border-radius: 12px; background: #fff; }
+.signup-page .signup-billing-toggle button { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 46px; padding: 10px 22px; border: 0; border-radius: 7px; background: #fff; color: #111; font: inherit; font-size: 16px; font-weight: 750; cursor: pointer; }
+.signup-page .signup-billing-toggle button[aria-pressed="true"] { background: #111; color: #fff; }
+.signup-page .signup-billing-toggle span { padding: 4px 7px; border-radius: 4px; background: #ffe5f6; color: #111; font-size: 12px; }
+.signup-page .signup-allowance-note { margin: 18px 22px 30px; color: #60555d; font-size: 14px; line-height: 1.5; text-align: center; }
+.signup-page .signup-plans.signup-plans-three { box-sizing: border-box; width: min(1120px, calc(100% - 56px)); max-width: none; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px; }
+.signup-page .signup-plans-three article { display: flex; flex-direction: column; min-width: 0; }
+.signup-page .signup-plans-three article.featured { transform: none !important; }
+.signup-page .signup-plans-three .offer-heading { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; min-height: 132px; padding: 0; }
+.signup-page .signup-plans-three .offer-heading > p { margin: 0; font-size: 22px; }
+.signup-page .signup-plans-three .offer-heading > span { font-size: 14px; line-height: 1.5; }
+.signup-page .signup-plans-three .signup-recommendation { padding: 5px 9px; border-radius: 5px; background: #ffe5f6; color: #111 !important; font-size: 13px; font-weight: 750; }
+.signup-page .signup-plans-three h2 { margin: 22px 0 12px; font-size: clamp(34px, 3.4vw, 46px); }
+.signup-page .signup-plans-three h2 small { font-size: 14px !important; }
+.signup-page .signup-plans-three .signup-billing-summary { min-height: 44px; margin: 0 0 14px; color: #60555d; font-size: 14px; line-height: 1.5; font-weight: 500; }
+.signup-page .signup-plans-three ul { flex: 1; min-height: 104px; margin-bottom: 24px; }
+.signup-page .signup-plans-three li { font-size: 15px; line-height: 1.5; }
+.signup-page .signup-plans-three .offer-button { box-sizing: border-box; padding: 12px 18px; font-size: 16px; }
+.signup-page .signup-account-strip { display: flex; align-items: center; justify-content: flex-end; gap: 10px; flex-wrap: wrap; padding: 14px 5vw 0; font-size: 13px; color: #60555d; }
+.signup-page .signup-account-strip a { color: #60555d; text-underline-offset: 3px; }
+.signup-page :is(a,button):focus-visible { outline: 3px solid #b5207d; outline-offset: 4px; }
+.signup-page button:disabled { cursor: wait; opacity: .65; }
+@media(max-width: 850px) {
+  .signup-page .signup-nav { gap: 16px; }
+  .signup-page .signup-plans.signup-plans-three { grid-template-columns: 1fr; width: min(520px, calc(100% - 48px)); gap: 32px; }
+  .signup-page .signup-plans-three .offer-heading { min-height: 0; }
+  .signup-page .signup-plans-three .signup-billing-summary { min-height: 0; }
+  .signup-page .signup-plans-three h2 { font-size: 42px; }
+}
+@media(max-width: 560px) {
+  .signup-page .signup-topbar { justify-content: center; gap: 16px; }
+  .signup-page .signup-nav { width: 100%; justify-content: center; gap: 24px; }
+  .signup-page .signup-billing-toggle button { padding-inline: 14px; }
+}

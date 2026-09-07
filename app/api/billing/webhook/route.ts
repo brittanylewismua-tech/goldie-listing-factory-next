@@ -1,9 +1,9 @@
 import { logError } from "@/app/error-log";
 import { NextResponse } from "next/server";
-import { billingRuntime, ensureBillingTables, planForPrice } from "@/app/billing";
+import { billingRuntime, ensureBillingTables, planForPrice, isCurrentPrice } from "@/app/billing";
 import { cancelTrialReminder, scheduleTrialReminder } from "@/app/trial-reminder";
 
-type StripeObject={id:string;customer?:string;subscription?:string;status?:string;client_reference_id?:string;metadata?:Record<string,string>;current_period_end?:number;trial_end?:number;cancel_at_period_end?:boolean;cancel_at?:number|null;items?:{data?:Array<{current_period_end?:number;price?:{id?:string}}>}};
+type StripeObject={id:string;customer?:string;subscription?:string;status?:string;client_reference_id?:string;metadata?:Record<string,string>;current_period_end?:number;trial_end?:number;cancel_at_period_end?:boolean;cancel_at?:number|null;items?:{data?:Array<{current_period_end?:number;price?:{id?:string;unit_amount?:number|null;currency?:string;recurring?:{interval?:string}}}>}};
 type StripeEvent={id:string;type:string;data:{object:StripeObject}};
 
 function bytesToHex(bytes:ArrayBuffer){return [...new Uint8Array(bytes)].map(value=>value.toString(16).padStart(2,"0")).join("")}
@@ -25,7 +25,9 @@ export async function POST(request:Request){
     // trial activation and must not overwrite the trial's limited allowance.
   }
   const userId=object.metadata?.user_id,customer=object.customer,priceId=object.items?.data?.[0]?.price?.id;
-  const plan=(object.metadata?.plan_key as "goldie"|"pro"|"scale"|undefined)||planForPrice(priceId);
+  const metadataPlan=object.metadata?.plan_key;
+  const plan=planForPrice(priceId)||(metadataPlan==="goldie"||metadataPlan==="pro"||metadataPlan==="scale"?metadataPlan:null);
+  const entitlement=plan && isCurrentPrice(priceId) ? `${plan}_2026_09` : plan;
   const subscriptionEvent=event.type.startsWith("customer.subscription.")&&userId&&customer&&plan;
   const cancellationScheduled=!!(object.cancel_at_period_end||object.cancel_at);
   const periodEnd=object.current_period_end||object.items?.data?.[0]?.current_period_end||object.trial_end||null;
@@ -35,7 +37,7 @@ export async function POST(request:Request){
     if(object.status==="trialing"){
       changes.push(db.prepare("INSERT OR IGNORE INTO billing_trials (user_id) VALUES (?)").bind(userId));
       changes.push(db.prepare("INSERT INTO account_plans (user_id,plan_key) VALUES (?,'trial') ON CONFLICT(user_id) DO UPDATE SET plan_key='trial',updated_at=CURRENT_TIMESTAMP").bind(userId));
-    }else if(["active","past_due"].includes(object.status||""))changes.push(db.prepare("INSERT INTO account_plans (user_id,plan_key) VALUES (?,?) ON CONFLICT(user_id) DO UPDATE SET plan_key=excluded.plan_key,updated_at=CURRENT_TIMESTAMP").bind(userId,plan));
+    }else if(["active","past_due"].includes(object.status||""))changes.push(db.prepare("INSERT INTO account_plans (user_id,plan_key) VALUES (?,?) ON CONFLICT(user_id) DO UPDATE SET plan_key=excluded.plan_key,updated_at=CURRENT_TIMESTAMP").bind(userId,entitlement));
   }
   // D1 batch is transactional: an event is acknowledged only when all access
   // changes commit. A failed write rolls back its receipt, allowing Stripe's retry.
@@ -47,7 +49,8 @@ export async function POST(request:Request){
       if(!existing){
         const customerRecord=await db.prepare("SELECT email FROM billing_customers WHERE user_id=?").bind(userId).first<{email:string}>();
         try{
-          const reminderId=await scheduleTrialReminder({email:customerRecord?.email||"",plan,trialEnd:object.trial_end});
+          const price=object.items?.data?.[0]?.price;
+          const reminderId=await scheduleTrialReminder({email:customerRecord?.email||"",plan,trialEnd:object.trial_end,amount:price?.unit_amount??undefined,currency:price?.currency,interval:price?.recurring?.interval==="year"?"year":"month"});
           if(reminderId)await db.prepare("INSERT INTO trial_reminder_emails (user_id,subscription_id,resend_email_id,scheduled_for) VALUES (?,?,?,?) ON CONFLICT(user_id) DO UPDATE SET subscription_id=excluded.subscription_id,resend_email_id=excluded.resend_email_id,scheduled_for=excluded.scheduled_for,canceled_at=NULL,updated_at=CURRENT_TIMESTAMP").bind(userId,object.id,reminderId,object.trial_end-86400).run();
         }catch(error){await logError({area:"billing/trial-reminder",message:error instanceof Error?error.message:String(error),userId});}
       }

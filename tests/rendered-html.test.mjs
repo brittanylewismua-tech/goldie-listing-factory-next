@@ -894,7 +894,7 @@ test("gives the owner testing account room to run real batches", async () => {
     readFile(new URL("../app/api/printify/drafts/publish/route.ts", import.meta.url), "utf8"),
   ]);
   assert.match(limits, /OWNER_TEST_PLAN[\s\S]*drafts: 10000/);
-  assert.match(limits, /owner \? OWNER_TEST_PLAN/);
+  assert.match(limits, /if \(owner\) return OWNER_TEST_PLAN/);
   assert.match(usage, /planFor\(planRow\?\.plan_key, isOwner\(user\)\)/);
   assert.match(drafts, /planFor\(planRow\?\.plan_key,isOwner\(user\)\)/);
   assert.match(publish, /planFor\(planRow\?\.plan_key,isOwner\(user\)\)/);
@@ -999,9 +999,9 @@ test("enforces paid-plan usage on the server and exposes honest usage", async()=
     readFile(new URL("../app/api/mockups/library/route.ts",import.meta.url),"utf8"),
     readFile(new URL("../app/api/usage/route.ts",import.meta.url),"utf8"),
   ]);
-  assert.match(plans,/name: "Starter", price: 29, drafts: 100, dailyListings: 40, aiMockups: 50, mockupSets: 10/);
-  assert.match(plans,/name: "Pro", price: 59, drafts: 300, dailyListings: 75, aiMockups: 150, mockupSets: 30/);
-  assert.match(plans,/name: "Scale", price: 99, drafts: 750, dailyListings: 100, aiMockups: 300, mockupSets: 75/);
+  assert.match(plans,/name: "Starter", price: 14.99, drafts: 100, dailyListings: 40, aiMockups: 50, mockupSets: 10/);
+  assert.match(plans,/name: "Pro", price: 24.99, drafts: 250, dailyListings: 75, aiMockups: 150, mockupSets: 30/);
+  assert.match(plans,/name: "Scale", price: 39.99, drafts: 500, dailyListings: 100, aiMockups: 300, mockupSets: 75/);
   assert.match(drafts,/plan\.drafts/);assert.match(drafts,/status='succeeded'/);
   assert.match(renders,/plan\.aiMockups/);assert.match(renders,/MAX\(0,/);
   assert.match(library,/plan\.mockupSets/);assert.match(library,/COUNT\(DISTINCT theme\)/);
@@ -1443,12 +1443,11 @@ test("shows every public plan on Usage and Billing with direct plan controls", a
     readFile(new URL("../app/usage/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/management-aesthetic.css", import.meta.url), "utf8"),
   ]);
-  assert.match(page, /Free Trial/);
-  assert.match(page, />Starter</);
-  assert.match(page, />Pro</);
-  assert.match(page, />Scale</);
-  assert.match(page, /Manage current plan/);
-  assert.match(page, /choosePlan\("scale"\)/);
+  assert.match(page, /Object.values\(PLANS\).map/);
+  assert.match(page, /\{plan.name\}/);
+  assert.match(page, /plan.annualPrice:plan.price/);
+  assert.match(page, /Manage billing/);
+  assert.match(page, /choosePlan\(plan.key\)/);
   assert.match(styles, /\.usage-plan-grid/);
   assert.match(styles, /article\.current/);
 });
@@ -1593,7 +1592,7 @@ test("queues Etsy publishing durably and protects shared API capacity",async()=>
     readFile(new URL("../app/api/usage/route.ts",import.meta.url),"utf8"),
   ]);
   assert.match(plans,/drafts: 100, dailyListings: 40/);
-  assert.match(plans,/drafts: 300, dailyListings: 75/);
+  assert.match(plans,/drafts: 250, dailyListings: 75/);
   assert.match(route,/published_at>=datetime\('now','-24 hours'\)/);
   assert.match(route,/status IN \('queued','running'\)/);
   assert.match(route,/ON CONFLICT\(user_id,product_id\)/);
@@ -1945,7 +1944,7 @@ test("keeps the Listing Factory application outside route modules",async()=>{
     readFile(new URL("../app/listing-factory/page.tsx",import.meta.url),"utf8"),
     readFile(new URL("../app/listing-factory/client-entry.tsx",import.meta.url),"utf8"),
   ]);
-  assert.match(rootRoute,/export \{ default \} from "\.\/listing-factory-app"/);
+  assert.match(rootRoute,/export \{ default \} from "\.\/signup\/page"/);
   assert.match(factoryRoute,/from "\.\/client-entry"/);
   assert.match(clientEntry,/from "@\/app\/listing-factory-app"/);
   assert.match(clientEntry,/if \(!browserReady\)/);

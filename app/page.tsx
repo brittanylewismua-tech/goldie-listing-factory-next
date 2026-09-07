@@ -1,1 +1,1 @@
-export { default } from "./listing-factory-app";
+export { default } from "./signup/page";
