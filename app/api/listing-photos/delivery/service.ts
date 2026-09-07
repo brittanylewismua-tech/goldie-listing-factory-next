@@ -60,6 +60,8 @@ export async function runDeliveryTick(id:string,owner:string){
         }
         const url=`https://api.printify.com/v1/shops/${row.printify_shop_id}/products/${row.product_id}`,headers={Authorization:`Bearer ${token}`,'User-Agent':'Goldie-Listing-Factory','Content-Type':'application/json'};
         await transferDraft({
+          inspect:async product=>{await runtime.ARTWORK.put(`photo-delivery/${owner}/${id}/printify-after-hidden.json`,JSON.stringify(product))},
+          wait:ms=>new Promise(resolve=>setTimeout(resolve,ms)),
           read:async()=>{const response=await fetch(`${url}.json`,{headers,signal:AbortSignal.timeout(15000)});if(!response.ok)throw Error('Printify could not verify the draft before transfer.');return response.json() as Promise<TransferProduct>},
           hide:async()=>{const response=await fetch(`${url}.json`,{method:'PUT',headers,body:JSON.stringify({visible:false}),signal:AbortSignal.timeout(15000)});if(!response.ok)throw Error('Printify could not save the hidden draft setting. No transfer was sent.')},
           backup:async product=>{await runtime.ARTWORK.put(`photo-delivery/${owner}/${id}/printify-before-transfer.json`,JSON.stringify(product))},

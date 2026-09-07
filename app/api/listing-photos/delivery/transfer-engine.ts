@@ -1,7 +1,7 @@
 export class DraftTransferReviewRequired extends Error {}
 export type TransferState={phase:'ready'|'submitted'|'accepted'|'rejected';submittedAt?:number;error?:string};
 export type TransferProduct={id:string;visible?:boolean;is_locked?:boolean;external?:{id?:string|number};title?:string;description?:string;tags?:string[];variants?:unknown[];print_areas?:unknown[]};
-export async function transferDraft(io:{read():Promise<TransferProduct>;hide():Promise<void>;backup(p:TransferProduct):Promise<void>;claim(state:TransferState):Promise<boolean>;save(s:TransferState):Promise<void>;send():Promise<{ok:boolean;status:number;detail?:string}>},productId:string,saved:TransferState){
+export async function transferDraft(io:{read():Promise<TransferProduct>;hide():Promise<void>;backup(p:TransferProduct):Promise<void>;claim(state:TransferState):Promise<boolean>;save(s:TransferState):Promise<void>;inspect?(p:TransferProduct):Promise<void>;wait?(ms:number):Promise<void>;send():Promise<{ok:boolean;status:number;detail?:string}>},productId:string,saved:TransferState){
  const before=await io.read();
  if(before.id!==productId)throw new DraftTransferReviewRequired('Printify returned a different product. Draft creation stopped.');
  if(Number(before.external?.id)>0)return {linked:true};
@@ -11,9 +11,18 @@ export async function transferDraft(io:{read():Promise<TransferProduct>;hide():P
  if(before.is_locked)return {linked:false};
  await io.backup(before);
  if(before.visible!==false)await io.hide();
- const hidden=await io.read();
- const stable=(p:TransferProduct)=>JSON.stringify({id:p.id,title:p.title,description:p.description,tags:p.tags,variants:p.variants,print_areas:p.print_areas});
- if(hidden.visible!==false||hidden.is_locked||hidden.external?.id||stable(before)!==stable(hidden))throw new DraftTransferReviewRequired('Printify did not confirm the unchanged product is hidden. Nothing was sent to Etsy.');
+ let hidden=await io.read();
+ // Visibility updates can be acknowledged before their read model catches up. Only read again; never send until confirmed.
+ for(const ms of [500,1000,2000]){
+  if(hidden.visible===false&&!hidden.is_locked||hidden.external?.id)break;
+  if(io.wait)await io.wait(ms);
+  hidden=await io.read();
+ }
+ if(io.inspect)await io.inspect(hidden);
+ const canonical=(value:unknown):unknown=>Array.isArray(value)?value.map(canonical):value&&typeof value==='object'?Object.fromEntries(Object.entries(value).sort(([a],[b])=>a.localeCompare(b)).map(([key,item])=>[key,canonical(item)])):value;
+ const fields=['id','title','description','tags','variants','print_areas'] as const;
+ const changed=fields.filter(key=>JSON.stringify(canonical(before[key]))!==JSON.stringify(canonical(hidden[key])));
+ if(hidden.visible!==false||hidden.is_locked||hidden.external?.id||changed.length)throw new DraftTransferReviewRequired(`Printify did not confirm a safe hidden draft (hidden: ${hidden.visible===false}, locked: ${Boolean(hidden.is_locked)}${changed.length?`, changed: ${changed.join(', ')}`:''}). Nothing was sent to Etsy.`);
  const pending:TransferState={phase:'submitted',submittedAt:Date.now()};
  if(!await io.claim(pending))return {linked:false};
  const response=await io.send();
