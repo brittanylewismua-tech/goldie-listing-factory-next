@@ -6,7 +6,7 @@ const draftEngine=url(read('app/api/listing-photos/delivery/draft-engine.ts'));
 const draftService=url(read('app/api/listing-photos/delivery/draft-service.ts').replace("from './draft-engine'",`from '${draftEngine}'`));
 globalThis.__photoEdge={};
 const source=read('app/api/listing-photos/delivery/service.ts').replace("from './transfer-engine'",`from '${transferEngine}'`).replace(/import \{verifyShopPairing\}[^;]+;/,'const verifyShopPairing=()=>{};').replace(/import \{etsyFetch\}[^;]+;/,'const etsyFetch=()=>{};').replace(/import \{env\}[^;]+;/,'const env=globalThis.__photoEdge;').replace(/import \{etsyConnection[^;]+;/,'const etsyConnection=()=>{},etsyApiCredential=()=>{},etsyBudget=()=>{},recordEtsyCall=()=>{};').replace(/import \{decryptPrintifyToken\}[^;]+;/,'const decryptPrintifyToken=()=>{};').replace(/import \{readPrintifyPublishState\}[^;]+;/,'const readPrintifyPublishState=()=>{};').replace("from './engine'",`from '${engine}'`).replace("from './draft-engine'",`from '${draftEngine}'`).replace("from './draft-service'",`from '${draftService}'`);
-const {readSourceImage,limitedImage,prepareEtsyImage,deliveryMessage}=await import(url(source));
+const {readSourceImage,limitedImage,prepareEtsyImage,deliveryMessage,printifyWaitMessage}=await import(url(source));
 test('edge fetch uses manual redirect handling and never follows an untrusted destination',async()=>{
  const original=globalThis.fetch;try{globalThis.fetch=async(input,init)=>{assert.equal(init.redirect,'manual');return new Response(null,{status:302,headers:{location:'https://untrusted.example/x'}})};await assert.rejects(readSourceImage('https://images.printify.com/mockup/test.jpg'),/could not be read/)}finally{globalThis.fetch=original}
 });
@@ -23,3 +23,5 @@ test('JPG is preserved; PNG and WebP are flattened onto white in a supported Ets
 });
 
 test('runtime details are not exposed as customer recovery instructions',()=>{assert.match(deliveryMessage('Invalid redirect value, must be one of'),/original photos are saved/);assert.equal(deliveryMessage('Choose between 1 and 20 photos.'),'Choose between 1 and 20 photos.')});
+
+test('normal automatic draft processing is a progress state, while genuine connection uncertainty stays visible',()=>{assert.equal(printifyWaitMessage(true,true,'Printify is still publishing.'),null);assert.match(printifyWaitMessage(true,false,'Printify could not respond.'),/could not respond/);assert.match(printifyWaitMessage(false,true,'Printify is still publishing.'),/Automatic checking will retry/)});

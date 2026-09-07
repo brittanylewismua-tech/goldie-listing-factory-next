@@ -10,6 +10,7 @@ import {readPrintifyPublishState} from '../../printify/publish-state';
 import {deliveryStep,DeliveryReviewRequired,type DeliveryImage,type DeliveryPhoto,type DeliveryState} from './engine';
 export type DeliveryEnv={DB:D1Database;ARTWORK:R2Bucket;PRINTIFY_TOKEN_KEY:string;IMAGES?:{input(stream:ReadableStream):{output(options:{format:'image/jpeg';background:string;quality:number}):Promise<{response():Response}>}};PHOTO_DELIVERY:Workflow<{id:string;owner:string}>};
 export type DeliveryRow={transfer_json?:string|null;draft_json?:string|null;draft_state_json?:string|null;id:string;user_id:string;product_id:string;printify_shop_id:number;etsy_shop_id:number;fingerprint:string;status:string;photos_json:string;state_json:string|null;candidate_listing_id:number|null;candidate_seen_at:number|null;error:string|null;created_at:number;updated_at:number;expires_at:number};
+export const printifyWaitMessage=(automatic:boolean,locked:boolean,reason:string)=>automatic&&locked?null:reason+' Automatic checking will retry.';
 export function deliveryMessage(value:string){return /Invalid redirect|UNIQUE constraint|SQLITE|TypeError|Cannot read|Unexpected token|binding/i.test(value)?'Photo delivery could not be prepared. Your original photos are saved. Please try again.':value.slice(0,500)}
 export const deliveryEnv=()=>env as unknown as DeliveryEnv;
 export const readDelivery=(id:string,owner:string)=>deliveryEnv().DB.prepare('SELECT * FROM photo_deliveries WHERE id=? AND user_id=?').bind(id,owner).first<DeliveryRow>();
@@ -71,7 +72,7 @@ export async function runDeliveryTick(id:string,owner:string){
         },row.product_id,transfer);
         return {done:false,progress:false,waitMs:10000};
       }
-      if(published.state==='unknown')await deliveryStatus(id,owner,row.transfer_json?row.status:'waiting',published.reason+' Automatic checking will retry.');
+      if(published.state==='unknown')await deliveryStatus(id,owner,row.transfer_json?row.status:'waiting',printifyWaitMessage(Boolean(row.transfer_json),Boolean(printifyProduct?.is_locked),published.reason));
       else await deliveryStatus(id,owner,row.transfer_json?row.status:'waiting');
       return {done:false,progress:false};
     }
