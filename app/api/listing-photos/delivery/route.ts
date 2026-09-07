@@ -8,11 +8,41 @@ import {etsyConnection,etsyFetch} from '../../etsy/client';
 import {freezeDraft,type SourceDraft} from './draft-engine';
 import {prepareEtsySkus} from '../../printify/etsy-sku-preflight';
 const publicRow=(row:DeliveryRow)=>({id:row.id,productId:row.product_id,status:row.status,error:row.error?deliveryMessage(row.error):null,photoCount:JSON.parse(row.photos_json).length,updatedAt:row.updated_at,expiresAt:row.expires_at,mode:row.draft_json?'draft':'photos',listingId:row.state_json?JSON.parse(row.state_json).listingId:null});
+async function selectionPlan(runtime:ReturnType<typeof deliveryEnv>,owner:string,productId:string,draft:{printifyImages?:string[]},indices:number[],shopId:number,draftSnapshot:ReturnType<typeof freezeDraft>|null){
+  const prefix=`etsy-listing-images/${owner}/${productId}/`,objects=await runtime.ARTWORK.list({prefix,limit:100});
+  if(objects.truncated)throw Error('Too many stored photos. Remove unused photos before preparing delivery.');
+  const order=await runtime.ARTWORK.get(`${prefix}order.json`);
+  const images=(draft.printifyImages||[]).filter(Boolean);
+  if(indices.some(i=>!Number.isInteger(i)||i<0||!images[i]))throw Error('A selected photo is no longer available. Refresh this listing.');
+  const photos=orderedPackagePhotos(images,indices,objects.objects,prefix,order?JSON.parse(await order.text()):[]);
+  if(!photos.length||photos.length>20)throw Error('Choose between 1 and 20 photos per listing.');
+  const fingerprint=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(JSON.stringify({shop:shopId,...(draftSnapshot?{draft:draftSnapshot}:{}),photos:photos.map(p=>({...p,etag:objects.objects.find(o=>o.key===p.key)?.etag}))}))))).map(b=>b.toString(16).padStart(2,'0')).join('');
+  return {photos,fingerprint};
+}
 export async function GET(request:Request){
  const user=await getChatGPTUser();if(!user)return NextResponse.json({error:'Sign in to view photo delivery.'},{status:401});
- const ids=[...new Set(new URL(request.url).searchParams.getAll('productId'))];if(!ids.length||ids.length>100)return NextResponse.json({deliveries:[]});
+ const params=new URL(request.url).searchParams;const ids=[...new Set(params.getAll('productId'))];if(!ids.length||ids.length>100)return NextResponse.json({deliveries:[]});
  const rows=await deliveryEnv().DB.prepare(`SELECT * FROM photo_deliveries WHERE user_id=? AND product_id IN (${ids.map(()=>'?').join(',')}) ORDER BY created_at DESC`).bind(user.userId,...ids).all<DeliveryRow>();
- const seen=new Set<string>();return NextResponse.json({deliveries:rows.results.filter(r=>{if(seen.has(r.product_id))return false;seen.add(r.product_id);return true}).map(publicRow)},{headers:{'Cache-Control':'no-store'}});
+ const seen=new Set<string>(),deliveries=[];
+ for(const row of rows.results){
+  if(seen.has(row.product_id))continue;seen.add(row.product_id);
+  let choicesChanged=false,choiceCheckUnavailable=false;
+  if(row.draft_json&&['waiting','delivering','completed'].includes(row.status)){
+   // Compare current saved choices with the immutable prepared package. Never contact Etsy or write during a status check.
+   try{
+    const runtime=deliveryEnv(),owned=await runtime.DB.prepare("SELECT response_json FROM printify_draft_results WHERE user_id=? AND status='succeeded' AND json_extract(response_json,'$.id')=? LIMIT 1").bind(user.userId,row.product_id).first<{response_json:string}>();
+    if(!owned)throw Error('Saved listing unavailable');
+    const draft=await unpackDraftMedia(owned.response_json,user.userId,runtime.ARTWORK) as SourceDraft&{printifyImages?:string[]};
+    const indices=JSON.parse(params.get(`images.${row.product_id}`)||'null');
+    if(!Array.isArray(indices)||indices.length>20)throw Error('Selection unavailable');
+    const snapshot=freezeDraft({...draft,etsyShippingProfileId:Number(params.get(`shipping.${row.product_id}`))});
+    const plan=await selectionPlan(runtime,user.userId,row.product_id,draft,indices,row.etsy_shop_id,snapshot);
+    choicesChanged=plan.fingerprint!==row.fingerprint;
+   }catch{choicesChanged=true;choiceCheckUnavailable=true;}
+  }
+  deliveries.push({...publicRow(row),choicesChanged,choiceCheckUnavailable});
+ }
+ return NextResponse.json({deliveries},{headers:{'Cache-Control':'no-store'}});
 }
 export async function POST(request:Request){
  const user=await getChatGPTUser();if(!user)return NextResponse.json({error:'Sign in to prepare photo delivery.'},{status:401});
@@ -48,14 +78,7 @@ export async function POST(request:Request){
     const profile=await etsyFetch<{shipping_profile_id:number;is_deleted?:boolean}>(`/shops/${connection.shopId}/shipping-profiles/${draftSnapshot.shipping_profile_id}`,connection.token);
     if(Number(profile.shipping_profile_id)!==draftSnapshot.shipping_profile_id||profile.is_deleted)throw Error('The selected shipping profile is unavailable in this Etsy shop. Choose another profile.');
   }
-  const prefix=`etsy-listing-images/${user.userId}/${productId}/`,objects=await runtime.ARTWORK.list({prefix,limit:100});
-  if(objects.truncated)throw Error('Too many stored photos. Remove unused photos before preparing delivery.');
-  const order=await runtime.ARTWORK.get(`${prefix}order.json`);
-  const images=(draft.printifyImages||[]).filter(Boolean);
-  if(body.printifyImageIndices.some(i=>!Number.isInteger(i)||i<0||!images[i]))throw Error('A selected photo is no longer available. Refresh this listing.');
-  const photos=orderedPackagePhotos(images,body.printifyImageIndices,objects.objects,prefix,order?JSON.parse(await order.text()):[]);
-  if(!photos.length||photos.length>20)return NextResponse.json({error:'Choose between 1 and 20 photos per listing.'},{status:409});
-  const fingerprint=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(JSON.stringify({shop:shop.shop_id,...(draftSnapshot?{draft:draftSnapshot}:{}),photos:photos.map(p=>({...p,etag:objects.objects.find(o=>o.key===p.key)?.etag}))}))))).map(b=>b.toString(16).padStart(2,'0')).join('');
+  const {photos,fingerprint}=await selectionPlan(runtime,user.userId,productId,draft,body.printifyImageIndices,shop.shop_id,draftSnapshot);
   await runtime.DB.prepare("UPDATE photo_deliveries SET status='failed',error='Photo preparation was interrupted. Prepare delivery again.',updated_at=? WHERE user_id=? AND product_id=? AND status='preparing' AND created_at<?").bind(Date.now(),user.userId,productId,Date.now()-600000).run();
   const latest=await runtime.DB.prepare('SELECT * FROM photo_deliveries WHERE user_id=? AND product_id=? ORDER BY created_at DESC LIMIT 1').bind(user.userId,productId).first<DeliveryRow>();
   if(latest){

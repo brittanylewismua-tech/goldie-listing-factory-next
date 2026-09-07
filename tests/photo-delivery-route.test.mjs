@@ -67,3 +67,23 @@ test('draft mode snapshots server-owned metadata, does not share legacy job iden
 });
 test('missing saved metadata blocks draft mode before job or photo writes; legacy mode remains available',async()=>{reset();assert.equal((await post('p1',[0],'draft')).status,409);assert.equal(creations.length,0);assert.equal((await post()).status,200)});
 test('explicit draft recheck reuses the saved job and cannot bypass an uncertain photo write',async()=>{reset();await post();const row=db.prepare('SELECT * FROM photo_deliveries').get();db.prepare("UPDATE photo_deliveries SET status='needs_attention',draft_json='{}',draft_state_json=? WHERE id=?").run(JSON.stringify({listingId:123,index:0,pending:{key:'basic'}}),row.id);const request=()=>new Request('https://goldie.test/api/listing-photos/delivery',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({productId:'p1',printifyImageIndices:[0],mode:'draft',recheckId:row.id})});const response=await api.POST(request());assert.equal(response.status,200);assert.equal((await response.json()).delivery.id,row.id);assert.equal(creations.at(-1).params.id,row.id);assert.equal(db.prepare('SELECT COUNT(*) n FROM photo_deliveries').get().n,1);assert.equal((await api.POST(request())).status,409);db.prepare("UPDATE photo_deliveries SET status='needs_attention',state_json=? WHERE id=?").run(JSON.stringify({pending:{rank:1}}),row.id);assert.equal((await api.POST(request())).status,409)});
+
+const savedDraft=()=>({id:'p1',shopId:100,printifyImages:['https://images.printify.com/front.jpg','https://images.printify.com/back.jpg'],title:'QA',description:'Saved description',tags:['books'],etsyDetails:{taxonomyId:9,properties:[],personalization:{enabled:false,questions:[]}}});
+const saveDraft=draft=>db.prepare('UPDATE printify_draft_results SET response_json=?').run(JSON.stringify(draft));
+const status=async(indices=[0],shipping=8)=>{const q=new URLSearchParams({productId:'p1','images.p1':JSON.stringify(indices),'shipping.p1':String(shipping)});return (await (await api.GET(new Request(`https://goldie.test/api/listing-photos/delivery?${q}`))).json()).deliveries[0]};
+test('completed draft status compares saved metadata, shipping and photo selection without writes or new jobs',async()=>{
+ reset();const draft=savedDraft();saveDraft(draft);const {delivery}=await (await post('p1',[0],'draft')).json();db.prepare("UPDATE photo_deliveries SET status='completed' WHERE id=?").run(delivery.id);
+ assert.equal((await status()).choicesChanged,false);assert.equal((await status([1])).choicesChanged,true);assert.equal((await status([0],9)).choicesChanged,true);
+ draft.etsyDetails.personalization={enabled:true,questions:[{id:'q',type:'text_input',question:'Name',instructions:'Exact name',required:true,maxCharacters:32,options:[],maxFiles:1}]};saveDraft(draft);assert.equal((await status()).choicesChanged,true);
+ saveDraft(savedDraft());assert.equal((await status()).choicesChanged,false);const duplicate=await (await post('p1',[0],'draft')).json();assert.equal(duplicate.delivery.id,delivery.id);assert.equal(creations.length,1);assert.equal(db.prepare('SELECT COUNT(*) n FROM photo_deliveries').get().n,1);
+});
+test('saved photo additions and order changes invalidate completion; missing selection fails closed',async()=>{
+ reset();saveDraft(savedDraft());await post('p1',[0,1],'draft');db.exec("UPDATE photo_deliveries SET status='completed'");assert.equal((await status([0,1])).choicesChanged,false);
+ stored.set('etsy-listing-images/owner/p1/order.json',new TextEncoder().encode(JSON.stringify(['printify:1','printify:0'])));assert.equal((await status([0,1])).choicesChanged,true);
+ stored.delete('etsy-listing-images/owner/p1/order.json');assert.equal((await status([0,1])).choicesChanged,false);
+ stored.set('etsy-listing-images/owner/p1/upload/custom.png',new Uint8Array([9]));assert.equal((await status([0,1])).choicesChanged,true);
+ assert.equal((await status([99])).choicesChanged,true);const missing=await (await api.GET(new Request('https://goldie.test/api/listing-photos/delivery?productId=p1'))).json();assert.equal(missing.deliveries[0].choicesChanged,true);assert.equal(missing.deliveries[0].choiceCheckUnavailable,true);
+});
+test('in-flight draft status detects later edits while keeping frozen delivery unchanged',async()=>{
+ reset();saveDraft(savedDraft());await post('p1',[0],'draft');const before=db.prepare('SELECT draft_json FROM photo_deliveries').get().draft_json;saveDraft({...savedDraft(),title:'Changed title'});const result=await status();assert.equal(result.status,'waiting');assert.equal(result.choicesChanged,true);assert.equal(db.prepare('SELECT draft_json FROM photo_deliveries').get().draft_json,before);
+});
