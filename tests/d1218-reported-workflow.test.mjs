@@ -39,7 +39,7 @@ test('D1218 product-wide photo apply is reversible',()=>{
 
 test('D1218 one product-wide title action creates validated fallback tags',()=>{
   assert.match(app,/function fallbackTagsFromKeywords/);
-  assert.match(app,/returnedTags\.length\?returnedTags:fallback/);
+  assert.match(app,/completedGeneratedTags\(payload\.tags\|\|\[\],payload\.keywords\|\|\[\],keywords\)/);
   assert.doesNotMatch(app,/function titlesRows[\s\S]{0,5000}<IndividualAutoTitle design=\{design\}/);
   assert.match(app,/Auto-create titles for this product/);
 });

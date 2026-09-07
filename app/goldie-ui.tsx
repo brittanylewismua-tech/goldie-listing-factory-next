@@ -39,7 +39,7 @@ export function OutcomeReceipt({goalLine,receipt,productName,shippingProfile,ima
         reminder of what is outstanding. Same number as the sidebar, different
         register. Shown only when the seller turned the goal on. */}
     {goalLine&&<p className="receipt-goal">{goalLine}</p>}
-    <p>{bundleInProgress?`This product is finished. ${nextBundleProduct} still needs to be completed before the bundle is finished.`:"Your batch is finished. Here is a quick summary of what Goldie completed."}</p>
+    <p>{bundleInProgress?`This product is finished. ${nextBundleProduct} still needs to be completed before the bundle is finished.`:"Your completed batch is summarized below."}</p>
     <div className="receipt-value-strip"><div><b>{receipt.publishedCount}</b><span>Etsy {receipt.publishedCount===1?"listing":"listings"} published</span></div><div><b>{tagCount}</b><span>tags generated</span></div><div><b>{variantCount}</b><span>variant prices approved</span></div><div><b>{Math.floor(minutesSaved/60)}h {minutesSaved%60}m</b><span>estimated setup time saved</span></div></div>
     <div className="receipt-grid">
       <article><span>Published</span><b>{receipt.publishedCount} Etsy {receipt.publishedCount===1?"listing":"listings"}</b></article>

@@ -1303,7 +1303,7 @@ test("makes progress satisfying and returns a precise outcome receipt", async()=
     readFile(new URL("../app/lilac-theme.css",import.meta.url),"utf8"),
   ]);
   assert.match(page,/WorkflowMomentum/);assert.match(page,/OutcomeReceipt/);assert.match(page,/setBatchReceipt/);
-  assert.match(ui,/Autosave on/);assert.match(ui,/steps complete/);assert.match(ui,/quick summary of what Goldie completed/);
+  assert.match(ui,/Autosave on/);assert.match(ui,/steps complete/);assert.match(ui,/Your completed batch is summarized below/);
   assert.match(ui,/Open Etsy listing/);assert.match(ui,/Duplicate this workflow/);assert.match(ui,/Choose another product/);assert.match(ui,/View batch history/);
   assert.match(theme,/workflow-momentum/);assert.match(theme,/outcome-receipt/);assert.match(theme,/prefers-reduced-motion/);
 });
@@ -1662,7 +1662,7 @@ test("renders final publishing readiness with the defined personalization valida
   assert.doesNotMatch(page,/draft\.fileName/);
   assert.match(page,/async function selectRecipe\(recipe:Recipe\):Promise<TemplateDetails\|null>/);
   assert.doesNotMatch(page,/return Boolean\(await loadTemplateUrl/);
-  assert.match(page,/if\(!localPreview\)await runBounded\(files,2/);
+  assert.match(page,/if\(!localPreview\)await runBounded\(files\.map\(\(design,index\)=>\(\{design,index\}\)\),2/);
 });
 
 test("explains and styles every Printify photo selection action",async()=>{
@@ -2080,9 +2080,9 @@ test("shows underfilled titles and tags as a non-blocking review state (fixes D6
   /* D549 - "2 of 2 written · 1 at 13 tags" counted listings on both sides but
      only said so on one, so the right-hand number read as a tag count. Her
      question: "is that supposed to say one of thirteen tags?" */
-  assert.match(app,/\$\{counts\.tagged\} of \$\{counts\.designs\} with all 13 tags/);
+  assert.match(app,/tags added to \$\{counts\.tagged\} of \$\{counts\.designs\}/);
   assert.doesNotMatch(app,/at 13 tags`/);
-  assert.match(app,/\$\{counts\.titled\} of \$\{counts\.designs\} titles · \$\{counts\.tagged\} of \$\{counts\.designs\} with all 13 tags/,
+  assert.match(app,/\$\{counts\.titled\} of \$\{counts\.designs\} titles · tags added to \$\{counts\.tagged\} of \$\{counts\.designs\}/,
     "and must count them, the same as the titles line");
   /* D153 recoloured this from the gold-era #8a5a12 to the app's plum. The point
    * of D64 is that it is a distinct non-blocking review state, not that it is amber. */
@@ -6973,7 +6973,7 @@ test("the final review reads honestly — D660", async () => {
   assert.match(app, /done:started&&counts\.designs>0&&counts\.titled===counts\.designs,advice:/);
   assert.doesNotMatch(app, /done:started&&counts\.designs>0&&counts\.titled===counts\.designs&&counts\.tagged===counts\.designs/,
     "a short tag count must not mark the row as incomplete");
-  assert.match(app, /could use all 13 tags — optional, but Etsy ranks on them/);
+  assert.match(app, /have fewer than 13 tags\. This is optional and does not block Review batch\./);
   assert.match(app, /\{row\.advice\?<small className="row-advice">\{row\.advice\}<\/small>:null\}/);
   assert.match(css, /\.row-advice[^{]*\{[^}]*color:var\(--muted/);
 });
@@ -7360,7 +7360,7 @@ test("the stale recipe name cannot launder itself into the seller's name — D69
   assert.doesNotMatch(app, /setBatchDisplayName\(payload\.batch\.setup_name/,
     "setup_name is a recipe snapshot and must never seed the seller's own name");
   // And the badge says the opportunity rather than counting a deficit.
-  assert.match(app, /`\$\{files\.length-tagged\} could use all 13 tags`/);
+  assert.match(app, /`\$\{files\.length-tagged\} with fewer than 13 tags · optional`/);
   assert.doesNotMatch(app, /`\$\{tagged\} of \$\{files\.length\} fully tagged`/);
 });
 

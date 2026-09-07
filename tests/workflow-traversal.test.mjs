@@ -491,7 +491,7 @@ test("the Listing card badge agrees with the row it summarises — D624", async 
      three green ticks read as a failure; the tone was already advice, the words
      were a deficit counter. What D624 protects is that the badge and the row
      agree, and they still do - both advisory, both about the same shortfall. */
-  assert.match(badge, /if\(tagged<files\.length\)return \{label:`\$\{files\.length-tagged\} could use all 13 tags`,tone:"advice"\};/,
+  assert.match(badge, /if\(tagged<files\.length\)return \{label:`\$\{files\.length-tagged\} with fewer than 13 tags · optional`,tone:"advice"\};/,
     "reported, but in the advice tone the row now uses");
   // A real blocker still outranks advice, so the badge never leads with it.
   assert.ok(badge.indexOf("Etsy details ready") < badge.indexOf('tone:"advice"'),

@@ -3994,16 +3994,32 @@ html, body { background: var(--lf-paper); }
 .app-shell .factory-publish-box{box-shadow:7px 7px 0 #111!important}
 
 /* Draft-first handoff: one sequence, clear per-listing boundaries. */
-.draft-handoff-steps{display:grid;gap:20px;padding-left:24px;margin:20px 0}.draft-handoff-steps li{padding-left:8px}.draft-handoff-steps p{margin:6px 0 0;line-height:1.55}.draft-handoff-results{list-style:none;padding:0;display:grid;gap:16px;margin:20px 0}.draft-handoff-results li{display:grid;gap:10px;border:1px solid #111;background:#fff;padding:16px;border-radius:8px;box-shadow:3px 3px 0 #111;overflow-wrap:anywhere}.draft-handoff-results li>strong{line-height:1.4}.draft-handoff-results button,.draft-handoff-results a{min-height:44px;padding:10px 14px;width:fit-content;max-width:100%;border:1px solid #111;border-radius:6px;background:#fff;color:#111;font:inherit;cursor:pointer}.draft-handoff-results button:disabled{opacity:.5;cursor:wait}.draft-handoff-results small{color:#8c2727}.draft-handoff-results a:focus-visible,.draft-handoff-results button:focus-visible{outline:3px solid #111;outline-offset:3px}
-.photo-delivery-handoff .draft-handoff-steps li{display:list-item;border:0;padding:0 0 0 8px}.photo-delivery-handoff .draft-handoff-results{margin:20px 0}.photo-delivery-handoff .draft-handoff-results li{padding:16px;display:grid}
+.draft-handoff-results{list-style:none;padding:0;display:grid;gap:16px;margin:20px 0}.draft-handoff-results li{display:grid;gap:10px;border:1px solid #111;background:#fff;padding:16px;border-radius:8px;box-shadow:3px 3px 0 #111;overflow-wrap:anywhere}.draft-handoff-results li>strong{line-height:1.4}.draft-handoff-results button,.draft-handoff-results a{min-height:44px;padding:10px 14px;width:fit-content;max-width:100%;border:1px solid #111;border-radius:6px;background:#fff;color:#111;font:inherit;cursor:pointer}.draft-handoff-results button:disabled{opacity:.5;cursor:wait}.draft-handoff-results small{color:#8c2727}.draft-handoff-results a:focus-visible,.draft-handoff-results button:focus-visible{outline:3px solid #111;outline-offset:3px}
+.photo-delivery-handoff .draft-handoff-results{margin:20px 0}.photo-delivery-handoff .draft-handoff-results li{padding:16px;display:grid}
 
 .photo-delivery-handoff .draft-handoff-results .draft-prepare{background:#111;color:#fff}
-
-.photo-delivery-handoff .draft-handoff-steps{list-style:decimal}
 
 /* Verified drafts lead with the actual next action. */
 .photo-delivery-handoff .draft-handoff-results .draft-open{background:#111;color:#fff;text-decoration:none;text-align:center}
 .photo-delivery-handoff .draft-handoff-results .draft-open:hover{background:#333;color:#fff}
+
+/* D1219: Step 4 is a batch overview, not another stack of large editable
+   product chapters. Ten products stay scannable without ten empty hero cards. */
+.app-shell .final-product-overview{margin:0 0 28px;padding:20px;border:2px solid #171717;border-radius:12px;background:#fff;box-shadow:4px 4px 0 #171717}
+.app-shell .final-product-overview-heading{display:flex;align-items:end;justify-content:space-between;gap:16px;margin-bottom:16px}
+.app-shell .final-product-overview-heading :is(p,h2){margin:0}.app-shell .final-product-overview-heading h2{font-size:22px;line-height:1.25}.app-shell .final-product-overview-heading>span{font-size:13px;font-weight:750;color:#684f60}
+.app-shell .final-product-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.app-shell .final-product-item{display:grid;grid-template-columns:52px minmax(0,1fr);align-items:center;gap:12px;min-width:0;padding:12px;border:1px solid #d7cbd2;border-radius:9px;background:#faf7f9}
+.app-shell .final-product-item>img,.app-shell .final-product-item>.bundle-product-photo{width:52px;height:52px;box-sizing:border-box;border:1px solid #d7cbd2;border-radius:7px;background:#fff;object-fit:cover}
+.app-shell .final-product-item>div{display:grid;gap:3px;min-width:0}.app-shell .final-product-item small{font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#725e6b}.app-shell .final-product-item b{font-size:14px;line-height:1.3;overflow-wrap:anywhere}.app-shell .final-product-item span{font-size:12px;color:#665762}
+
+.app-shell .listing-review-gate{display:grid;gap:8px;margin:20px 0;padding:16px 18px;border:2px solid #171717;border-radius:10px;background:#fff;box-shadow:3px 3px 0 #171717}
+.app-shell .listing-review-gate.is-blocked{border-color:#8c2727;box-shadow:3px 3px 0 #8c2727}.app-shell .listing-review-gate b{font-size:16px}.app-shell .listing-review-gate :is(p,ul){margin:0}.app-shell .listing-review-gate ul{display:grid;gap:5px;padding-left:20px}.app-shell .listing-review-gate li,.app-shell .listing-review-gate p{font-size:13px;line-height:1.5}
+
+.app-shell .draft-destination-choice{display:grid;gap:10px;margin:18px 0;padding-top:16px;border-top:1px solid rgba(255,255,255,.22)}
+.app-shell .draft-destination-choice h4{margin:0;color:#fff;font-size:15px;line-height:1.35}.app-shell .draft-destination-choice article{display:grid;gap:8px;padding:12px;border:1px solid rgba(255,255,255,.24);border-radius:8px;background:rgba(255,255,255,.07)}
+.app-shell .draft-destination-choice article>div{display:grid;gap:3px}.app-shell .draft-destination-choice article span{color:rgba(255,255,255,.74);font-size:11px;line-height:1.45}.app-shell .draft-destination-choice :is(a,button){display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:9px 12px;border:1px solid rgba(255,255,255,.46);border-radius:7px;background:transparent;color:#fff;text-decoration:none;font:750 12px/1.3 Inter,ui-sans-serif,system-ui,sans-serif;cursor:pointer}.app-shell .draft-destination-choice :is(a,button):hover:not(:disabled){background:#fff;color:#171717}.app-shell .draft-destination-choice button:not(:disabled){background:var(--lf-pink);border-color:var(--lf-pink);color:#171717}.app-shell .draft-destination-choice button:disabled{cursor:not-allowed;opacity:.7}.app-shell .draft-destination-choice small{color:rgba(255,255,255,.72)}
+@media(max-width:640px){.app-shell .final-product-overview{padding:16px}.app-shell .final-product-overview-heading{align-items:start}.app-shell .final-product-grid{grid-template-columns:minmax(0,1fr)}}
 
 /* Three persistent stages keep orientation beside long product forms. */
 .app-shell .batch-product-rows.has-draft-stages{display:grid;grid-template-columns:minmax(0,1fr);align-items:start}
