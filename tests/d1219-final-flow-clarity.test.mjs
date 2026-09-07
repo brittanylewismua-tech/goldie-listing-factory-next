@@ -6,6 +6,7 @@ import { completedGeneratedTags } from "../app/listing-title-tags.ts";
 const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
 const handoff = await readFile(new URL("../app/photo-delivery-handoff.tsx", import.meta.url), "utf8");
 const css = await readFile(new URL("../app/interface-v2.css", import.meta.url), "utf8");
+const usage = await readFile(new URL("../app/usage/page.tsx", import.meta.url), "utf8");
 
 test("D1219 fills partial generated tag sets from valid keyword fallbacks", () => {
   const tags=completedGeneratedTags(["Jane Austen"],["Pride and Prejudice"],["Jane Austen","Most Ardently","This phrase is far too long to be an Etsy tag","Book Lover Gift"]);
@@ -46,4 +47,7 @@ test("D1219 removes the confusing handoff essay and product nickname", () => {
   assert.doesNotMatch(handoff, /Checking lasts up to 24 hours/);
   assert.match(handoff, /The Listing Factory never publishes or renews a listing/);
   assert.doesNotMatch(app, /Goldie sends finished listings|sign in to Goldie/i);
+  assert.doesNotMatch(usage, /Goldie (successfully|never)|Goldie AI calculates/);
+  assert.match(usage, /The Listing Factory never publishes to Etsy/);
+  assert.doesNotMatch(usage, /from "next\/link"/);
 });

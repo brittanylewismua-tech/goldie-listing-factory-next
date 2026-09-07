@@ -5,9 +5,9 @@ import {readFile} from "node:fs/promises";
 const signup=await readFile(new URL("../app/signup/signup-client.tsx",import.meta.url),"utf8");
 const usage=await readFile(new URL("../app/usage/page.tsx",import.meta.url),"utf8");
 
-test("D937: public plan copy charges credits for Printify drafts, never an Etsy publish by Goldie",()=>{
+test("D937: public plan copy charges credits for Printify drafts, never an automatic Etsy publish",()=>{
   assert.match(usage,/unpublished Printify draft/);
-  assert.match(usage,/Goldie never publishes to Etsy/);
+  assert.match(usage,/The Listing Factory never publishes to Etsy/);
   assert.doesNotMatch(usage,/Etsy listing successfully created by Goldie/);
   assert.doesNotMatch(signup,/What counts as a listing creation/,
     "the plan picker stays focused on choosing a plan instead of explaining internal accounting");

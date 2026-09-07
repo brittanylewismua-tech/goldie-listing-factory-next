@@ -79,10 +79,14 @@ async function render(path = "/") {
   }, { waitUntil() {}, passThroughOnException() {} });
 }
 
-test("serves the Listing Factory from its canonical product path", async () => {
+test("serves pricing at home while retaining the canonical Listing Factory path", async () => {
   const response = await render();
-  assert.equal(response.status, 307);
-  assert.equal(response.headers.get("location"), "/listing-factory");
+  assert.equal(response.status, 200);
+  const homepage = await response.text();
+  assert.match(homepage, /Main navigation/);
+  assert.match(homepage, /Start for free/);
+  assert.match(homepage, /Choose your plan/);
+  assert.equal((await render("/listing-factory")).status, 200);
   const pageSource = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
   const globalCss = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
   const approvedCss = await Promise.all([readFile(new URL("../app/approved-functional.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n"));

@@ -1,7 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
 import {readBatchHistory,preparedDaysFromHistory} from "../batch-history-read";
-import Link from "next/link";
 import FactoryShell from "../factory-shell";
 import { periodHistoryFromDays, publishedDaysThisPeriod, type ListingGoal, type PublishedDay } from "../listing-goal";
 
@@ -47,7 +46,7 @@ export default function GoalsPage() {
         <section className="goals-off">
           <h2>Your listing goal is hidden</h2>
           <p>Turn one on in Usage + Plan and Goldie will show your progress here and in the sidebar.</p>
-          <Link className="goals-cta" href="/usage#listing-goal">Show my listing goal</Link>
+          <a className="goals-cta" href="/usage#listing-goal">Show my listing goal</a>
         </section>
       )}
 
@@ -59,7 +58,7 @@ export default function GoalsPage() {
             <span className="goals-track" aria-hidden="true">
               <i style={{ width: `${Math.min(100, Math.round((thisPeriod / Math.max(1, goal.target)) * 100))}%` }} />
             </span>
-            <Link className="listing-goal-history-link" href="/usage#listing-goal">Adjust goal ↗</Link>
+            <a className="listing-goal-history-link" href="/usage#listing-goal">Adjust goal ↗</a>
           </section>
 
           <section className="goals-history">
