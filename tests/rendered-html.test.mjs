@@ -4125,7 +4125,8 @@ test("active products keep their rows and inactive draft products show saved-wor
     "the other products' work lives in their own batches and has to be read from them");
   assert.match(app, /if\(many&&!open&&workflowStep==="designs"\)return null;const rows=productRows\(recipe,index===bundleIndex\)/,
     "D501 - a single-product batch gets its rows too, as step 1 gives them");
-  assert.match(app, /<div className="batch-product-rows">\{rows\.map/);
+  assert.match(app, /<div className="batch-product-rows">[\s\S]*\{rows\.map/);
+  assert.match(app, /grouped&&draftTaskStage\(row.task\)!==stageId/);
   assert.match(app, /<span className="row-mark" aria-hidden="true">\{row\.done\?"✓":row\.pending\?"…":row\.optional\?"–":"!"\}<\/span>/,
     "the same row markup step 1 uses");
 

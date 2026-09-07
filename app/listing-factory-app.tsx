@@ -4892,14 +4892,14 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
       ? { eyebrow: "STEP 1 OF 4", title: "Add your designs", copy: "" }
       : { eyebrow: "STEP 1 OF 4", title: "Choose a product or bundle", copy: "Select one to start your batch." },
     designs: complete
-      ? { eyebrow: "STEP 2 OF 4", title: "Finish your Printify drafts", copy: activeBundle&&bundleRecipes.length>1?"Complete each product from top to bottom.":"Complete each section from top to bottom." }
+      ? { eyebrow: "STEP 2 OF 4", title: "Finish your Printify drafts", copy: activeBundle&&bundleRecipes.length>1?"Complete three stages for each product.":"Complete the three stages below." }
       : { eyebrow: "STEP 2 OF 4", title: "Add your designs", copy: "" },
     review: { eyebrow: "STEP 3 OF 4", title: "Create Printify drafts", copy: "Review the plan, then create the private drafts." },
     finish: finishPhase==="details" ? { eyebrow: "STEP 3 OF 4 · LISTING", title: "Listing details", copy: "Finish each listing’s title, tags, and description." } : finishPhase==="etsy" ? { eyebrow: "STEP 3 OF 4 · LISTING", title: "Listing details", copy: "Finish the Etsy details." } : { eyebrow: "STEP 4 OF 4 · FINISH", title: handoffBlockers().length?"Final review":"Finish your Etsy drafts", copy: "Send your listings directly to Etsy Drafts." },
   }[workflowStep];
   const workflowHelp=workflowStep==="designs"
     ?complete
-      ?{title:"Finish your Printify drafts",intro:"Work from top to bottom for every product. Continue when every section is complete.",sections:[{heading:"Product colors and sizes",copy:"Use the real Printify previews to keep only the options that work with this design."},{heading:"Artwork placement",copy:"Check the finished draft in Printify and correct the placement there if it needs adjustment."},{heading:"Product photos",copy:"Choose the Printify product views buyers should see."},{heading:"Pricing and shipping",copy:"Approve prices only after Printify has calculated the finished production cost, then confirm the Etsy shipping profile."},{heading:"Final photo order",copy:"Add any extra photos or a size guide, then arrange the final order for the listing."}]}
+      ?{title:"Finish your Printify drafts",intro:"Review design and options, pricing and shipping, then listing photos for each product.",sections:[{heading:"Product colors and sizes",copy:"Use the real Printify previews to keep only the options that work with this design."},{heading:"Artwork placement",copy:"Check the finished draft in Printify and correct the placement there if it needs adjustment."},{heading:"Product photos",copy:"Choose the Printify product views buyers should see."},{heading:"Pricing and shipping",copy:"Approve prices only after Printify has calculated the finished production cost, then confirm the Etsy shipping profile."},{heading:"Final photo order",copy:"Add any extra photos or a size guide, then arrange the final order for the listing."}]}
       :WORKFLOW_HELP[3]
     :WORKFLOW_HELP[progressIndex];
   const uploadPrintSides=orderedPrintSides(templateDetails?.printPositions);
