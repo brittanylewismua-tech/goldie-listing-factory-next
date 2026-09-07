@@ -1,5 +1,5 @@
 import test from 'node:test';import assert from 'node:assert/strict';
-import {deliveryWrite,resolvedDeliveryUncertainty} from '../app/delivery-write.ts';
+import {deliveryWrite,resolvedDeliveryUncertainty,deliveryChoiceRecovery} from '../app/delivery-write.ts';
 import {readFileSync} from 'node:fs';import ts from 'typescript';
 const url=s=>'data:text/javascript;base64,'+Buffer.from(ts.transpile(s,{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022})).toString('base64');
 const bounded=url(readFileSync(new URL('../app/bounded-work.ts',import.meta.url),'utf8'));
@@ -17,4 +17,9 @@ test('mixed preparation preserves successful siblings when one write loses its r
 test('only a matching current receipt resolves uncertainty; old, unreadable and failed receipts do not',()=>{
  for(const status of ['waiting','delivering','completed'])assert.equal(resolvedDeliveryUncertainty({status,choicesChanged:false}),true);
  for(const item of [{status:'completed'},{status:'completed',choicesChanged:true},{status:'completed',choicesChanged:false,choiceCheckUnavailable:true},{status:'failed',choicesChanged:false}])assert.equal(resolvedDeliveryUncertainty(item),false);
+});
+
+test('stopped deliveries never tell the seller to wait for them to finish',()=>{
+ for(const status of ['failed','expired','canceled','needs_attention']){const message=deliveryChoiceRecovery({status});assert.match(message,/attempt has stopped/);assert.doesNotMatch(message,/after it finishes|while waiting/)}
+ assert.match(deliveryChoiceRecovery({status:'waiting'}),/after it finishes/);assert.match(deliveryChoiceRecovery({status:'completed'}),/before publishing/);assert.match(deliveryChoiceRecovery({status:'completed',choiceCheckUnavailable:true}),/Check saved progress/);
 });
