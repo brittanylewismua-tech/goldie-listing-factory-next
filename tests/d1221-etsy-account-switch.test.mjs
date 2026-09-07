@@ -16,10 +16,16 @@ test("add-shop OAuth intent survives the provider round trip",()=>{
 
 test("re-authorizing the same Etsy shop is explained rather than reported as a new shop",()=>{
   assert.equal(sameEtsyShopMessage("godisagirlapparel"),"godisagirlapparel is already connected. Etsy reused the account currently signed in. Sign out of Etsy, sign into the account that owns the other shop, then choose Connect that shop.");
-  assert.match(callback,/if\(existing\)[\s\S]*UPDATE etsy_connections[\s\S]*sameEtsyShopMessage\(shop\.shop_name\)/);
-  const sameShopBranch=callback.slice(callback.indexOf("if(existing)"),callback.indexOf("/* D835"));
+  assert.match(callback,/if\(existing\?\.is_active===1\)[\s\S]*UPDATE etsy_connections[\s\S]*sameEtsyShopMessage\(shop\.shop_name\)/);
+  const sameShopBranch=callback.slice(callback.indexOf("if(existing?.is_active===1)"),callback.indexOf("/* D835"));
   assert.doesNotMatch(sameShopBranch,/is_active=1/);
   assert.doesNotMatch(sameShopBranch,/UPDATE etsy_connections SET is_active=0/);
+});
+
+test("re-authorizing a saved inactive Etsy shop activates it",()=>{
+  assert.match(callback,/SELECT shop_name,is_active FROM etsy_connections/);
+  assert.match(callback,/if\(existing\?\.is_active===1\)/);
+  assert.match(callback,/ON CONFLICT\(user_id,shop_id\) DO UPDATE SET[\s\S]*is_active=1/);
 });
 
 test("the UI explains Etsy's separate-login requirement before starting add-shop OAuth",()=>{

@@ -19,8 +19,8 @@ export async function GET(request:Request){
     const etsyUserId=Number(tokens.access_token.split(".")[0]);if(!etsyUserId)throw new Error("Etsy did not return a valid account identifier.");
     const shop=await etsyFetch<{shop_id:number;shop_name:string}>(`/users/${etsyUserId}/shops`,tokens.access_token);
     if(!shop||!Number.isSafeInteger(Number(shop.shop_id))||Number(shop.shop_id)<=0||!shop.shop_name)throw new Error("No Etsy shop was found on this account. Connect an account with an existing Etsy shop.");
-    const existing=adding?await env.DB.prepare("SELECT shop_name FROM etsy_connections WHERE user_id=? AND shop_id=?").bind(pending.user_id,shop.shop_id).first<{shop_name:string}>():null;
-    if(existing){
+    const existing=adding?await env.DB.prepare("SELECT shop_name,is_active FROM etsy_connections WHERE user_id=? AND shop_id=?").bind(pending.user_id,shop.shop_id).first<{shop_name:string;is_active:number}>():null;
+    if(existing?.is_active===1){
       /* Refreshing the grant is harmless and useful, but an add-shop attempt
          must not change the active destination or advance the workflow when
          Etsy silently reused the browser's current login. */
