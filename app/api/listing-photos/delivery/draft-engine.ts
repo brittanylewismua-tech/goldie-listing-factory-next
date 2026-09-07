@@ -55,16 +55,16 @@ export function canonicalQuestions(questions:Question[]){return questions.map(q=
 })}
 const same=(a:unknown,b:unknown)=>JSON.stringify(a)===JSON.stringify(b);
 function operations(s:DraftSnapshot):DraftOperation[]{const {properties,questions,...basic}=s;return [{key:'basic',value:basic},...properties.map(p=>({key:`property:${p.property_id}`,value:p})),{key:'questions',value:canonicalQuestions(questions)}]}
-function currentValue(view:DraftView,key:string){
+function currentValue(view:DraftView,key:string,requested?:DraftOperation){
  if(key==='basic')return {...view.basic,tags:[...view.basic.tags].sort()};
  if(key==='questions')return canonicalQuestions(view.questions);
- const id=Number(key.split(':')[1]),p=view.properties.find(p=>p.property_id===id);return p?{property_id:p.property_id,value_ids:[...p.value_ids].sort((a,b)=>a-b),values:[...p.values].sort()}:null;
+ const id=Number(key.split(':')[1]),p=view.properties.find(p=>p.property_id===id);return p?{property_id:p.property_id,value_ids:requested&&!(requested.value as DraftSnapshot['properties'][number]).value_ids.length?[]:[...p.value_ids].sort((a,b)=>a-b),values:[...p.values].sort()}:null;
 }
 function desiredValue(op:DraftOperation){if(op.key==='basic'){const v=op.value as DraftView['basic'];return {...v,tags:[...v.tags].sort()}}if(op.key.startsWith('property:')){const p=op.value as DraftSnapshot['properties'][number];return {...p,value_ids:[...p.value_ids].sort((a,b)=>a-b),values:[...p.values].sort()}}return op.value}
 export function verifyDraft(view:DraftView,shopId:number,snapshot:DraftSnapshot){
  if(view.shopId!==shopId)fail('This Etsy draft belongs to another shop. Nothing further was changed.');
  if(view.state!=='draft')fail('This listing is no longer an Etsy draft. Finishing stopped; Goldie will not edit a live listing in draft mode.');
- const mismatch=operations(snapshot).find(op=>!same(currentValue(view,op.key),desiredValue(op)));
+ const mismatch=operations(snapshot).find(op=>!same(currentValue(view,op.key,op),desiredValue(op)));
  if(mismatch)fail(`Etsy did not match the saved ${mismatch.key==='basic'?'listing details':mismatch.key==='questions'?'personalization':'attribute '+mismatch.key.split(':')[1]}. Review this draft before publishing.`);
 }
 /** At most one write. A lost response is reconciled by reading, never by repeating a POST. */
@@ -75,10 +75,10 @@ export async function draftStep(io:DraftIO,shopId:number,listingId:number,snapsh
  let state=saved||{listingId,index:0};const ops=operations(snapshot);
  if(!saved){await io.backup(view);await io.save(state)}
  if(state.pending){
-  if(!same(currentValue(view,state.pending.key),desiredValue(state.pending)))fail('Etsy did not confirm the last draft change. Finishing paused to prevent duplicate or conflicting changes.');
+  if(!same(currentValue(view,state.pending.key,state.pending),desiredValue(state.pending)))fail('Etsy did not confirm the last draft change. Finishing paused to prevent duplicate or conflicting changes.');
   state={listingId,index:state.index+1};await io.save(state);
  }
- while(state.index<ops.length&&same(currentValue(view,ops[state.index].key),desiredValue(ops[state.index]))){state={listingId,index:state.index+1};await io.save(state)}
+ while(state.index<ops.length&&same(currentValue(view,ops[state.index].key,ops[state.index]),desiredValue(ops[state.index]))){state={listingId,index:state.index+1};await io.save(state)}
  if(state.index>=ops.length){verifyDraft(view,shopId,snapshot);state={...state,verified:true};await io.save(state);return {done:true}}
  // Final full readback also catches changes to earlier fields while finishing.
  const op=ops[state.index];await io.save({...state,pending:op});await io.write(op);

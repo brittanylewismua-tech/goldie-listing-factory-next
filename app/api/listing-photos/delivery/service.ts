@@ -72,7 +72,7 @@ export async function runDeliveryTick(id:string,owner:string){
       save:async(state:DraftState)=>{await runtime.DB.prepare('UPDATE photo_deliveries SET draft_state_json=?,updated_at=? WHERE id=? AND user_id=?').bind(JSON.stringify(state),Date.now(),id,owner).run()},
       backup:async(view:unknown)=>{await runtime.ARTWORK.put(`photo-delivery/${owner}/${id}/draft-backup.json`,JSON.stringify(view),{httpMetadata:{contentType:'application/json'}})}
     }:null;
-    if(metadataArgs){const metadata=await finishDraftMetadata(metadataArgs);if(!metadata.done)return {done:false,progress:true};}
+    if(metadataArgs&&!metadataArgs.saved?.verified){const metadata=await finishDraftMetadata(metadataArgs);if(!metadata.done)return {done:false,progress:true};}
     const result=await deliveryStep({
       read:async()=>{
         const listing=await (await request(`/listings/${listingId}`)).json() as {shop_id:number;state:string};
