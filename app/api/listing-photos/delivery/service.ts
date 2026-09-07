@@ -30,18 +30,28 @@ function trustedImageUrl(value:string,host:'printify'|'etsy'){
   const url=new URL(value);if(url.protocol!=='https:'||!(host==='printify'?url.hostname==='images.printify.com':url.hostname==='i.etsystatic.com'))throw Error('The photo address could not be verified.');return url.toString();
 }
 export async function readSourceImage(src:string,wait:(ms:number)=>Promise<unknown>=ms=>new Promise(resolve=>setTimeout(resolve,ms))){
-  const url=trustedImageUrl(src,'printify');
+  const originalUrl=trustedImageUrl(src,'printify');
   for(let attempt=0;attempt<3;attempt++){
-    let response:Response;
+    let currentUrl=originalUrl,response:Response|undefined,retryable=false;
     try{
-      response=await fetch(url,{signal:AbortSignal.timeout(20000),redirect:'manual'});
+      for(let redirect=0;redirect<3;redirect++){
+        response=await fetch(currentUrl,{signal:AbortSignal.timeout(20000),redirect:'manual'});
+        if(response.status>=300&&response.status<400&&response.headers.get('location')){
+          await response.body?.cancel().catch(()=>undefined);
+          if(redirect===2)throw Error('A listing photo could not be read.');
+          currentUrl=trustedImageUrl(new URL(response.headers.get('location')!,currentUrl).toString(),'printify');
+          continue;
+        }
+        break;
+      }
     }catch(error){
+      if(error instanceof Error&&/could not be verified/.test(error.message))throw error;
       if(attempt===2)throw Error('A listing photo could not be read.',{cause:error});
       await wait(attempt===0?250:750);continue;
     }
-    if(response.ok)return limitedImage(response);
-    const retryable=response.status===429||response.status>=500;
-    await response.body?.cancel().catch(()=>undefined);
+    if(response?.ok)return limitedImage(response);
+    retryable=Boolean(response&&(response.status===429||response.status>=500));
+    await response?.body?.cancel().catch(()=>undefined);
     if(!retryable||attempt===2)throw Error('A listing photo could not be read.');
     await wait(attempt===0?250:750);
   }
